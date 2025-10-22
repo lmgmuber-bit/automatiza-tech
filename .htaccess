@@ -19,6 +19,7 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule . /automatiza-tech/index.php [L]
 </IfModule>
+# Se Agrega para que soporte subida de archivos grandes
 php_value upload_max_filesize 128M
 php_value post_max_size 128M
 php_value memory_limit 256M

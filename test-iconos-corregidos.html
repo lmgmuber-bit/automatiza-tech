@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Íconos Hamburguesa Corregidos - Automatiza Tech</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .site-header {
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .site-branding .logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: #1e40af;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .main-navigation ul {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            gap: 2rem;
+        }
+
+        .main-navigation a {
+            text-decoration: none;
+            color: #1f2937;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .main-navigation a:hover {
+            color: #1e40af;
+        }
+
+        /* Mobile Menu Styles */
+        .mobile-menu-toggle {
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .mobile-menu-toggle:hover {
+            background-color: rgba(30, 64, 175, 0.1);
+        }
+
+        .navbar-toggler-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .navbar-toggler-icon i {
+            font-size: 1.2rem;
+            color: #1e40af;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-navigation {
+            background-color: #ffffff;
+            border-top: 1px solid #e5e7eb;
+            padding: 1rem 0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .mobile-nav-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .mobile-nav-menu li {
+            margin: 0;
+        }
+
+        .mobile-nav-menu a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #1f2937;
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px solid #f3f4f6;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-nav-menu a:hover {
+            background-color: #f8fafc;
+            color: #1e40af;
+            padding-left: 1.5rem;
+        }
+
+        .mobile-nav-menu li:last-child a {
+            border-bottom: none;
+        }
+
+        /* Collapse animations */
+        .collapse:not(.show) {
+            display: none;
+        }
+
+        .collapse.show {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 767.98px) {
+            .main-navigation {
+                display: none;
+            }
+            
+            #mobile-menu {
+                width: 100%;
+                margin-top: 0.5rem;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .mobile-menu-toggle {
+                display: none !important;
+            }
+        }
+
+        body {
+            padding-top: 100px;
+            background: #f8f9fa;
+        }
+
+        .test-content {
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .icon-status {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1001;
+            display: none;
+        }
+
+        .icon-demo {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+
+        .icon-example {
+            text-align: center;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .icon-example i {
+            font-size: 2rem;
+            color: #1e40af;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Icon status indicator -->
+    <div id="icon-status" class="icon-status">
+        <strong>Estado del Ícono:</strong><br>
+        <span id="current-icon">fa-bars (☰)</span>
+    </div>
+
+    <header class="site-header">
+        <div class="container">
+            <div class="header-content">
+                <div class="site-branding">
+                    <a href="#" class="logo">
+                        <i class="fas fa-robot me-2"></i>
+                        <span class="logo-text">Automatiza Tech</span>
+                    </a>
+                </div>
+
+                <!-- Desktop Navigation -->
+                <nav class="main-navigation d-none d-md-block">
+                    <ul>
+                        <li><a href="#beneficios">Beneficios</a></li>
+                        <li><a href="#integraciones">Integraciones</a></li>
+                        <li><a href="#industrias">Casos de Uso</a></li>
+                        <li><a href="#planes">Precios</a></li>
+                        <li><a href="#contact">Contacto</a></li>
+                    </ul>
+                </nav>
+
+                <!-- Mobile Menu Button -->
+                <button class="mobile-menu-toggle d-md-none" type="button" aria-controls="mobile-menu" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon">
+                        <i class="fas fa-bars"></i>
+                    </span>
+                </button>
+            </div>
+
+            <!-- Mobile Menu -->
+            <div class="collapse" id="mobile-menu">
+                <nav class="mobile-navigation">
+                    <ul class="mobile-nav-menu">
+                        <li><a href="#beneficios">Beneficios</a></li>
+                        <li><a href="#integraciones">Integraciones</a></li>
+                        <li><a href="#industrias">Casos de Uso</a></li>
+                        <li><a href="#planes">Precios</a></li>
+                        <li><a href="#contact">Contacto</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <div class="test-content">
+        <h1>Test Íconos Hamburguesa Corregidos</h1>
+        
+        <div class="alert alert-success">
+            <h4><i class="fas fa-check-circle"></i> Corrección de Íconos:</h4>
+            <ul>
+                <li>✅ <strong>Menú cerrado:</strong> Muestra ☰ (fa-bars)</li>
+                <li>✅ <strong>Menú abierto:</strong> Muestra ✕ (fa-times)</li>
+                <li>✅ <strong>Sin rotación:</strong> No hay transformaciones CSS problemáticas</li>
+                <li>✅ <strong>Cambio suave:</strong> Transición entre íconos</li>
+                <li>✅ <strong>Estado consistente:</strong> Siempre vuelve al ícono correcto</li>
+            </ul>
+        </div>
+
+        <div class="icon-demo">
+            <div class="icon-example">
+                <i class="fas fa-bars"></i>
+                <div><strong>Cerrado</strong></div>
+                <div>fa-bars (☰)</div>
+            </div>
+            <div class="icon-example">
+                <i class="fas fa-times"></i>
+                <div><strong>Abierto</strong></div>
+                <div>fa-times (✕)</div>
+            </div>
+        </div>
+
+        <div class="alert alert-info">
+            <h4><i class="fas fa-mobile-alt"></i> Pasos de Prueba:</h4>
+            <ol>
+                <li><strong>Cambiar a vista móvil</strong> (F12 → Device toolbar)</li>
+                <li><strong>Verificar ícono inicial:</strong> Debe mostrar ☰</li>
+                <li><strong>Hacer clic:</strong> Debe cambiar a ✕ y abrir menú</li>
+                <li><strong>Hacer clic de nuevo:</strong> Debe volver a ☰ y cerrar menú</li>
+                <li><strong>Probar cierre automático:</strong> Clic en enlace o fuera del menú</li>
+            </ol>
+        </div>
+
+        <div class="alert alert-warning">
+            <h4><i class="fas fa-eye"></i> Indicador Visual:</h4>
+            <p>En la esquina superior derecha verás el estado actual del ícono en tiempo real.</p>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5>Área de Prueba</h5>
+                <p>Haz clic aquí para probar el cierre automático del menú.</p>
+                <button class="btn btn-primary" onclick="alert('El menú debería cerrarse y mostrar ☰')">
+                    <i class="fas fa-mouse-pointer"></i> Botón de Prueba
+                </button>
+                
+                <div style="height: 100vh; background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%); padding: 2rem; margin-top: 2rem; border-radius: 8px;">
+                    <h3>Contenido de Scroll</h3>
+                    <p>El ícono debe mantenerse consistente durante el scroll.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Script mejorado con cambio de íconos
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleButton = document.querySelector('.mobile-menu-toggle');
+        const mobileMenu = document.querySelector('#mobile-menu');
+        const iconStatus = document.getElementById('icon-status');
+        const currentIconSpan = document.getElementById('current-icon');
+        
+        // Mostrar indicador solo en móvil
+        function updateStatusDisplay() {
+            if (window.innerWidth < 768) {
+                iconStatus.style.display = 'block';
+            } else {
+                iconStatus.style.display = 'none';
+            }
+        }
+        
+        updateStatusDisplay();
+        window.addEventListener('resize', updateStatusDisplay);
+        
+        if (toggleButton && mobileMenu) {
+            const iconElement = toggleButton.querySelector('i');
+            
+            function updateIcon(isOpen) {
+                if (iconElement) {
+                    if (isOpen) {
+                        iconElement.className = 'fas fa-times';
+                        currentIconSpan.textContent = 'fa-times (✕)';
+                        currentIconSpan.style.color = '#dc3545';
+                    } else {
+                        iconElement.className = 'fas fa-bars';
+                        currentIconSpan.textContent = 'fa-bars (☰)';
+                        currentIconSpan.style.color = '#28a745';
+                    }
+                }
+            }
+            
+            // Función para toggle manual del menú
+            toggleButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
+                
+                if (isExpanded) {
+                    // Cerrar menú
+                    closeMenu();
+                } else {
+                    // Abrir menú
+                    openMenu();
+                }
+            });
+            
+            function openMenu() {
+                mobileMenu.classList.add('show');
+                toggleButton.setAttribute('aria-expanded', 'true');
+                updateIcon(true);
+                console.log('Menú abierto - Ícono: fa-times (✕)');
+            }
+            
+            function closeMenu() {
+                mobileMenu.classList.remove('show');
+                toggleButton.setAttribute('aria-expanded', 'false');
+                updateIcon(false);
+                console.log('Menú cerrado - Ícono: fa-bars (☰)');
+            }
+            
+            // Cerrar menú al hacer clic en un enlace
+            const menuLinks = mobileMenu.querySelectorAll('a');
+            menuLinks.forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    closeMenu();
+                    console.log('Menú cerrado por clic en enlace');
+                });
+            });
+            
+            // Cerrar menú al hacer clic fuera de él
+            document.addEventListener('click', function(e) {
+                if (!toggleButton.contains(e.target) && !mobileMenu.contains(e.target)) {
+                    if (toggleButton.getAttribute('aria-expanded') === 'true') {
+                        closeMenu();
+                        console.log('Menú cerrado por clic exterior');
+                    }
+                }
+            });
+            
+            // Inicializar con el ícono correcto
+            updateIcon(false);
+        }
+    });
+    </script>
+</body>
+</html>

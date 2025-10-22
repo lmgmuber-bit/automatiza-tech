@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <!-- Fondo degradado suave -->
+  <defs>
+    <radialGradient id="backgroundGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#f8f9fa"/>
+      <stop offset="100%" style="stop-color:#e9ecef"/>
+    </radialGradient>
+    
+    <!-- Gradiente para el círculo principal -->
+    <linearGradient id="circleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a"/>
+      <stop offset="100%" style="stop-color:#3b82f6"/>
+    </linearGradient>
+    
+    <!-- Gradiente para las órbitas -->
+    <linearGradient id="orbitGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06d6a0"/>
+      <stop offset="50%" style="stop-color:#39c3a1"/>
+      <stop offset="100%" style="stop-color:#10b981"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Fondo -->
+  <rect width="800" height="600" fill="url(#backgroundGradient)"/>
+  
+  <!-- Elementos decorativos - puntos flotantes -->
+  <circle cx="150" cy="120" r="3" fill="#06d6a0" opacity="0.6"/>
+  <circle cx="680" cy="150" r="2" fill="#39c3a1" opacity="0.7"/>
+  <circle cx="120" cy="480" r="2.5" fill="#10b981" opacity="0.5"/>
+  <circle cx="720" cy="450" r="2" fill="#06d6a0" opacity="0.6"/>
+  
+  <!-- Puntos en órbita superior -->
+  <circle cx="450" cy="180" r="4" fill="#06d6a0" opacity="0.8"/>
+  <circle cx="470" cy="175" r="3" fill="#39c3a1" opacity="0.7"/>
+  <circle cx="490" cy="172" r="2.5" fill="#10b981" opacity="0.6"/>
+  <circle cx="510" cy="170" r="2" fill="#06d6a0" opacity="0.5"/>
+  <circle cx="530" cy="169" r="1.5" fill="#39c3a1" opacity="0.4"/>
+  
+  <!-- Círculo principal con gradiente -->
+  <circle cx="400" cy="220" r="100" fill="url(#circleGradient)" stroke="#ffffff" stroke-width="8"/>
+  
+  <!-- Círculo interno decorativo -->
+  <circle cx="400" cy="220" r="85" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.3"/>
+  
+  <!-- Letra "AT" estilizada -->
+  <g transform="translate(400, 220)">
+    <!-- Conexiones tipo circuito -->
+    <path d="M-45 -30 L-25 -30 M-25 -30 L-25 -10 M-25 -10 L-5 -10" stroke="#ffffff" stroke-width="2" fill="none"/>
+    <path d="M5 -10 L25 -10 M25 -10 L25 -30 M25 -30 L45 -30" stroke="#ffffff" stroke-width="2" fill="none"/>
+    <path d="M-25 10 L-5 10 M5 10 L25 10" stroke="#ffffff" stroke-width="2" fill="none"/>
+    
+    <!-- Puntos de conexión -->
+    <circle cx="-45" cy="-30" r="3" fill="#ffffff"/>
+    <circle cx="-25" cy="-30" r="2" fill="#ffffff"/>
+    <circle cx="-25" cy="-10" r="2" fill="#ffffff"/>
+    <circle cx="-5" cy="-10" r="2" fill="#ffffff"/>
+    <circle cx="5" cy="-10" r="2" fill="#ffffff"/>
+    <circle cx="25" cy="-10" r="2" fill="#ffffff"/>
+    <circle cx="25" cy="-30" r="2" fill="#ffffff"/>
+    <circle cx="45" cy="-30" r="3" fill="#ffffff"/>
+    <circle cx="-25" cy="10" r="2" fill="#ffffff"/>
+    <circle cx="-5" cy="10" r="2" fill="#ffffff"/>
+    <circle cx="5" cy="10" r="2" fill="#ffffff"/>
+    <circle cx="25" cy="10" r="2" fill="#ffffff"/>
+    
+    <!-- Letra A -->
+    <path d="M-40 30 L-20 -25 L0 30 M-30 10 L-10 10" stroke="#ffffff" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Letra T -->
+    <path d="M10 -25 L40 -25 M25 -25 L25 30" stroke="#ffffff" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  
+  <!-- Órbita exterior animada -->
+  <circle cx="400" cy="220" r="130" fill="none" stroke="url(#orbitGradient)" stroke-width="4" opacity="0.7" stroke-dasharray="10,5"/>
+  
+  <!-- Flecha de crecimiento -->
+  <g transform="translate(530, 120) rotate(45)">
+    <path d="M0 20 L20 0 L0 -20" stroke="url(#orbitGradient)" stroke-width="4" fill="url(#orbitGradient)" opacity="0.8"/>
+    <path d="M20 0 L-10 0" stroke="url(#orbitGradient)" stroke-width="4" opacity="0.8"/>
+  </g>
+  
+  <!-- Órbita inferior con puntos -->
+  <g transform="translate(400, 220)">
+    <circle cx="0" cy="0" r="150" fill="none" stroke="url(#orbitGradient)" stroke-width="2" opacity="0.4" stroke-dasharray="2,8"/>
+    <!-- Puntos en la órbita inferior -->
+    <circle cx="0" cy="150" r="3" fill="#06d6a0" opacity="0.8"/>
+    <circle cx="106" cy="106" r="2.5" fill="#39c3a1" opacity="0.7"/>
+    <circle cx="150" cy="0" r="3" fill="#10b981" opacity="0.8"/>
+    <circle cx="106" cy="-106" r="2.5" fill="#06d6a0" opacity="0.7"/>
+    <circle cx="0" cy="-150" r="3" fill="#39c3a1" opacity="0.8"/>
+    <circle cx="-106" cy="-106" r="2.5" fill="#10b981" opacity="0.7"/>
+    <circle cx="-150" cy="0" r="3" fill="#06d6a0" opacity="0.8"/>
+    <circle cx="-106" cy="106" r="2.5" fill="#39c3a1" opacity="0.7"/>
+  </g>
+  
+  <!-- Texto principal -->
+  <text x="400" y="390" text-anchor="middle" font-family="Arial, sans-serif" font-size="54" font-weight="700" fill="#1e3a8a">
+    Automatiza 
+    <tspan fill="url(#orbitGradient)">Tech</tspan>
+  </text>
+  
+  <!-- Subtítulo -->
+  <text x="400" y="430" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="400" fill="#6b7280">
+    Conectamos tus ventas, web y CRM.
+  </text>
+  
+  <!-- Elementos decorativos adicionales -->
+  <g opacity="0.3">
+    <circle cx="200" cy="350" r="1.5" fill="#06d6a0"/>
+    <circle cx="600" cy="380" r="2" fill="#39c3a1"/>
+    <circle cx="180" cy="400" r="1" fill="#10b981"/>
+    <circle cx="620" cy="340" r="1.5" fill="#06d6a0"/>
+  </g>
+</svg>

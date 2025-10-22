@@ -1,0 +1,623 @@
+<?php
+/**
+ * Automatiza Tech Theme Functions
+ * 
+ * @package AutomatizaTech
+ * @version 1.0
+ */
+
+// Evitar acceso directo
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+// Incluir sistema de gestión de servicios
+$services_manager_path = get_template_directory() . '/services-manager.php';
+$services_admin_path = get_template_directory() . '/services-admin.php';
+$services_frontend_path = get_template_directory() . '/services-frontend.php';
+
+if (file_exists($services_manager_path)) {
+    require_once $services_manager_path;
+} else {
+    error_log('No se pudo cargar services-manager.php desde: ' . $services_manager_path);
+}
+
+if (file_exists($services_admin_path)) {
+    require_once $services_admin_path;
+} else {
+    error_log('No se pudo cargar services-admin.php desde: ' . $services_admin_path);
+}
+
+if (file_exists($services_frontend_path)) {
+    require_once $services_frontend_path;
+} else {
+    error_log('No se pudo cargar services-frontend.php desde: ' . $services_frontend_path);
+}
+
+// Crear menú de administración directamente aquí como respaldo
+add_action('admin_menu', 'automatiza_services_admin_menu');
+function automatiza_services_admin_menu() {
+    // Usar una capacidad más básica y verificar permisos múltiples
+    $capability = current_user_can('manage_options') ? 'manage_options' : 'edit_posts';
+    
+    add_menu_page(
+        'Gestión de Servicios',
+        'Servicios AT',
+        $capability,
+        'services-admin',
+        'automatiza_services_admin_page',
+        'dashicons-admin-generic',
+        30
+    );
+}
+
+// Página de administración básica
+function automatiza_services_admin_page() {
+    // Verificar permisos de forma más flexible
+    if (!current_user_can('manage_options') && !current_user_can('edit_posts') && !current_user_can('administrator')) {
+        wp_die(__('No tienes permisos suficientes para acceder a esta página.'));
+    }
+    
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_services';
+    
+    // Verificar si la tabla existe
+    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
+    
+    echo '<div class="wrap">';
+    echo '<h1>Gestión de Servicios - Automatiza Tech</h1>';
+    
+    // Información de debug
+    echo '<div class="notice notice-info">';
+    echo '<h4>Información de Usuario y Permisos:</h4>';
+    echo '<ul>';
+    echo '<li><strong>Usuario actual:</strong> ' . wp_get_current_user()->user_login . '</li>';
+    echo '<li><strong>ID de usuario:</strong> ' . get_current_user_id() . '</li>';
+    echo '<li><strong>Rol:</strong> ' . implode(', ', wp_get_current_user()->roles) . '</li>';
+    echo '<li><strong>manage_options:</strong> ' . (current_user_can('manage_options') ? '✅ SÍ' : '❌ NO') . '</li>';
+    echo '<li><strong>edit_posts:</strong> ' . (current_user_can('edit_posts') ? '✅ SÍ' : '❌ NO') . '</li>';
+    echo '<li><strong>administrator:</strong> ' . (current_user_can('administrator') ? '✅ SÍ' : '❌ NO') . '</li>';
+    echo '</ul>';
+    echo '</div>';
+    
+    if (!$table_exists) {
+        echo '<div class="notice notice-error"><p><strong>Error:</strong> La tabla de servicios no existe. ';
+        echo '<a href="' . admin_url('admin.php?page=services-admin&action=create_table') . '" class="button">Crear Tabla</a></p></div>';
+        
+        if (isset($_GET['action']) && $_GET['action'] === 'create_table') {
+            if (function_exists('create_services_table')) {
+                create_services_table();
+                echo '<div class="notice notice-success"><p>Tabla creada correctamente. Recargue la página.</p></div>';
+            } else {
+                echo '<div class="notice notice-error"><p>La función create_services_table no está disponible.</p></div>';
+            }
+        }
+    } else {
+        // Mostrar servicios existentes
+        $services = $wpdb->get_results("SELECT * FROM $table_name ORDER BY created_at DESC");
+        
+        echo '<h2>Servicios Actuales (' . count($services) . ')</h2>';
+        
+        if (empty($services)) {
+            echo '<p>No hay servicios configurados. ';
+            echo '<a href="' . admin_url('admin.php?page=services-admin&action=insert_sample') . '" class="button button-primary">Insertar Servicios de Ejemplo</a></p>';
+            
+            if (isset($_GET['action']) && $_GET['action'] === 'insert_sample') {
+                // Aquí podríamos ejecutar el script de inserción
+                echo '<div class="notice notice-info"><p>Para insertar servicios de ejemplo, ejecute el archivo insert-sample-services.php desde la raíz de WordPress.</p></div>';
+            }
+        } else {
+            echo '<table class="widefat fixed striped">';
+            echo '<thead><tr><th>ID</th><th>Nombre</th><th>Categoría</th><th>Precio USD</th><th>Precio CLP</th><th>Estado</th><th>Acciones</th></tr></thead>';
+            echo '<tbody>';
+            
+            foreach ($services as $service) {
+                echo '<tr>';
+                echo '<td>' . $service->id . '</td>';
+                echo '<td><strong>' . esc_html($service->name) . '</strong></td>';
+                echo '<td>' . esc_html($service->category) . '</td>';
+                echo '<td>$' . number_format($service->price_usd, 2) . '</td>';
+                echo '<td>$' . number_format($service->price_clp, 0) . '</td>';
+                echo '<td>' . esc_html($service->status) . '</td>';
+                echo '<td><a href="#" class="button button-small">Editar</a> <a href="#" class="button button-small">Eliminar</a></td>';
+                echo '</tr>';
+            }
+            
+            echo '</tbody></table>';
+        }
+        
+        // Información del sistema
+        echo '<h3>Información del Sistema</h3>';
+        echo '<ul>';
+        echo '<li><strong>Tabla:</strong> ' . $table_name . ' ✅</li>';
+        echo '<li><strong>Ruta del tema:</strong> ' . get_template_directory() . '</li>';
+        echo '<li><strong>Archivos cargados:</strong></li>';
+        echo '<ul>';
+        echo '<li>services-manager.php: ' . (file_exists(get_template_directory() . '/services-manager.php') ? '✅' : '❌') . '</li>';
+        echo '<li>services-admin.php: ' . (file_exists(get_template_directory() . '/services-admin.php') ? '✅' : '❌') . '</li>';
+        echo '<li>services-frontend.php: ' . (file_exists(get_template_directory() . '/services-frontend.php') ? '✅' : '❌') . '</li>';
+        echo '</ul>';
+        echo '</ul>';
+    }
+    
+    echo '</div>';
+}
+
+/**
+ * Configuracion del tema
+ */
+function automatiza_tech_setup() {
+    // Soporte para titulo automatico
+    add_theme_support('title-tag');
+    
+    // Soporte para imagenes destacadas
+    add_theme_support('post-thumbnails');
+    
+    // Soporte para logos personalizados
+    add_theme_support('custom-logo', array(
+        'height'      => 100,
+        'width'       => 300,
+        'flex-height' => true,
+        'flex-width'  => true,
+    ));
+    
+    // Soporte para HTML5
+    add_theme_support('html5', array(
+        'search-form',
+        'comment-form',
+        'comment-list',
+        'gallery',
+        'caption',
+        'script',
+        'style',
+    ));
+    
+    // Soporte para Feed Links
+    add_theme_support('automatic-feed-links');
+    
+    // Menus de navegacion
+    register_nav_menus(array(
+        'primary' => __('Menu Principal', 'automatiza-tech'),
+        'footer'  => __('Menu Footer', 'automatiza-tech'),
+    ));
+    
+    // Tamanos de imagen personalizados
+    add_image_size('hero-image', 1200, 600, true);
+    add_image_size('feature-image', 400, 300, true);
+}
+add_action('after_setup_theme', 'automatiza_tech_setup');
+
+/**
+ * Encolar estilos y scripts
+ */
+function automatiza_tech_scripts() {
+    // Bootstrap CSS (CDN para mejor performance)
+    wp_enqueue_style(
+        'bootstrap',
+        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
+        array(),
+        '5.3.0'
+    );
+    
+    // Google Fonts
+    wp_enqueue_style(
+        'google-fonts',
+        'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap',
+        array(),
+        null
+    );
+    
+    // Estilo principal del tema
+    wp_enqueue_style(
+        'automatiza-tech-style',
+        get_stylesheet_uri(),
+        array('bootstrap'),
+        wp_get_theme()->get('Version')
+    );
+    
+    // Bootstrap JS
+    wp_enqueue_script(
+        'bootstrap',
+        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
+        array(),
+        '5.3.0',
+        true
+    );
+    
+    // Script personalizado del tema
+    wp_enqueue_script(
+        'automatiza-tech-script',
+        get_template_directory_uri() . '/assets/js/main.js',
+        array('jquery', 'bootstrap'),
+        wp_get_theme()->get('Version'),
+        true
+    );
+    
+    // Localizar script para AJAX
+    wp_localize_script('automatiza-tech-script', 'ajax_object', array(
+        'ajax_url' => admin_url('admin-ajax.php'),
+        'nonce'    => wp_create_nonce('automatiza_tech_nonce')
+    ));
+}
+add_action('wp_enqueue_scripts', 'automatiza_tech_scripts');
+
+/**
+ * Registrar widgets
+ */
+function automatiza_tech_widgets_init() {
+    register_sidebar(array(
+        'name'          => __('Sidebar Principal', 'automatiza-tech'),
+        'id'            => 'sidebar-1',
+        'description'   => __('Widgets para la barra lateral principal.', 'automatiza-tech'),
+        'before_widget' => '<section id="%1$s" class="widget %2$s">',
+        'after_widget'  => '</section>',
+        'before_title'  => '<h3 class="widget-title">',
+        'after_title'   => '</h3>',
+    ));
+    
+    register_sidebar(array(
+        'name'          => __('Footer 1', 'automatiza-tech'),
+        'id'            => 'footer-1',
+        'description'   => __('Primera columna del footer.', 'automatiza-tech'),
+        'before_widget' => '<div id="%1$s" class="widget %2$s">',
+        'after_widget'  => '</div>',
+        'before_title'  => '<h4 class="widget-title">',
+        'after_title'   => '</h4>',
+    ));
+    
+    register_sidebar(array(
+        'name'          => __('Footer 2', 'automatiza-tech'),
+        'id'            => 'footer-2',
+        'description'   => __('Segunda columna del footer.', 'automatiza-tech'),
+        'before_widget' => '<div id="%1$s" class="widget %2$s">',
+        'after_widget'  => '</div>',
+        'before_title'  => '<h4 class="widget-title">',
+        'after_title'   => '</h4>',
+    ));
+    
+    register_sidebar(array(
+        'name'          => __('Footer 3', 'automatiza-tech'),
+        'id'            => 'footer-3',
+        'description'   => __('Tercera columna del footer.', 'automatiza-tech'),
+        'before_widget' => '<div id="%1$s" class="widget %2$s">',
+        'after_widget'  => '</div>',
+        'before_title'  => '<h4 class="widget-title">',
+        'after_title'   => '</h4>',
+    ));
+}
+add_action('widgets_init', 'automatiza_tech_widgets_init');
+
+/**
+ * Optimizaciones de rendimiento
+ */
+function automatiza_tech_performance_optimizations() {
+    // Remover jQuery Migrate para mejorar velocidad - SOLO en frontend
+    if (!is_admin() && !is_customize_preview()) {
+        wp_deregister_script('jquery');
+        wp_register_script('jquery', 'https://code.jquery.com/jquery-3.6.0.min.js', array(), '3.6.0', true);
+        wp_enqueue_script('jquery');
+    }
+    
+    // Preload de recursos criticos
+    add_action('wp_head', function() {
+        echo '<link rel="preload" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" as="style" onload="this.onload=null;this.rel=\'stylesheet\'">';
+        echo '<link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" as="style">';
+    });
+}
+add_action('init', 'automatiza_tech_performance_optimizations');
+
+/**
+ * Manejar formulario de contacto
+ */
+function handle_contact_form() {
+    // Verificar nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'automatiza_tech_nonce')) {
+        wp_die('Error de seguridad');
+    }
+    
+    // Sanitizar datos
+    $name = sanitize_text_field($_POST['name']);
+    $email = sanitize_email($_POST['email']);
+    $company = sanitize_text_field($_POST['company']);
+    $phone = sanitize_text_field($_POST['phone']);
+    $message = sanitize_textarea_field($_POST['message']);
+    
+    // Validar email
+    if (!is_email($email)) {
+        wp_send_json_error('Email no valido');
+    }
+    
+    // Configurar email
+    $to = get_option('admin_email');
+    $subject = 'Nuevo contacto desde Automatiza Tech - ' . $name;
+    $body = "
+    Nuevo mensaje de contacto:
+
+    Nombre: $name
+    Email: $email
+    Empresa: $company
+    Telefono: $phone
+
+    Mensaje:
+    $message
+    ";
+    
+    $headers = array(
+        'Content-Type: text/html; charset=UTF-8',
+        'From: ' . $name . ' <' . $email . '>'
+    );
+    
+    // Enviar email
+    $sent = wp_mail($to, $subject, $body, $headers);
+    
+    if ($sent) {
+        wp_send_json_success('Mensaje enviado correctamente');
+    } else {
+        wp_send_json_error('Error al enviar el mensaje');
+    }
+}
+add_action('wp_ajax_contact_form', 'handle_contact_form');
+add_action('wp_ajax_nopriv_contact_form', 'handle_contact_form');
+
+/**
+ * Customizer options
+ */
+function automatiza_tech_customize_register($wp_customize) {
+    // Seccion de configuracion
+    $wp_customize->add_section('automatiza_tech_options', array(
+        'title'    => __('Opciones Automatiza Tech', 'automatiza-tech'),
+        'priority' => 120,
+    ));
+    
+    // WhatsApp numero
+    $wp_customize->add_setting('whatsapp_number', array(
+        'default'           => '+56936800925',
+        'sanitize_callback' => 'sanitize_text_field',
+    ));
+    
+    $wp_customize->add_control('whatsapp_number', array(
+        'label'   => __('Numero de WhatsApp', 'automatiza-tech'),
+        'section' => 'automatiza_tech_options',
+        'type'    => 'text',
+    ));
+    
+    // Hero title
+    $wp_customize->add_setting('hero_title', array(
+        'default'           => 'Automatiza Tech',
+        'sanitize_callback' => 'sanitize_text_field',
+    ));
+    
+    $wp_customize->add_control('hero_title', array(
+        'label'   => __('Titulo Principal', 'automatiza-tech'),
+        'section' => 'automatiza_tech_options',
+        'type'    => 'text',
+    ));
+    
+    // Hero subtitle
+    $wp_customize->add_setting('hero_subtitle', array(
+        'default'           => 'Conectamos tus ventas, web y CRM.',
+        'sanitize_callback' => 'sanitize_text_field',
+    ));
+    
+    $wp_customize->add_control('hero_subtitle', array(
+        'label'   => __('Subtitulo', 'automatiza-tech'),
+        'section' => 'automatiza_tech_options',
+        'type'    => 'text',
+    ));
+    
+    // Hero tagline
+    $wp_customize->add_setting('hero_tagline', array(
+        'default'           => 'Bots inteligentes para negocios que no se detienen.',
+        'sanitize_callback' => 'sanitize_text_field',
+    ));
+    
+    $wp_customize->add_control('hero_tagline', array(
+        'label'   => __('Tagline', 'automatiza-tech'),
+        'section' => 'automatiza_tech_options',
+        'type'    => 'text',
+    ));
+}
+add_action('customize_register', 'automatiza_tech_customize_register');
+
+/**
+ * Obtener URL de WhatsApp
+ */
+function get_whatsapp_url($message = '') {
+    $number = get_theme_mod('whatsapp_number', '+56936800925');
+    $number = preg_replace('/[^0-9+]/', '', $number);
+    
+    if ($message) {
+        $message = urlencode($message);
+        return "https://wa.me/{$number}?text={$message}";
+    }
+    
+    return "https://wa.me/{$number}";
+}
+
+/**
+ * Shortcode para formulario de contacto
+ */
+function automatiza_tech_contact_form_shortcode() {
+    ob_start();
+    ?>
+    <form id="contact-form" class="contact-form">
+        <?php wp_nonce_field('automatiza_tech_nonce', 'nonce'); ?>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="name">Nombre *</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="company">Empresa</label>
+                    <input type="text" id="company" name="company">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="phone">Telefono</label>
+                    <input type="tel" id="phone" name="phone">
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="message">Mensaje *</label>
+            <textarea id="message" name="message" rows="5" required placeholder="Cuentanos sobre tu proyecto y como podemos ayudarte..."></textarea>
+        </div>
+        
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary">Enviar Mensaje</button>
+        </div>
+    </form>
+    
+    <div id="form-response" style="display: none;"></div>
+    <?php
+    return ob_get_clean();
+}
+add_shortcode('contact_form', 'automatiza_tech_contact_form_shortcode');
+
+/**
+ * Optimizaciones SEO basicas
+ */
+function automatiza_tech_seo_optimizations() {
+    // Meta tags basicos
+    add_action('wp_head', function() {
+        if (is_front_page()) {
+            echo '<meta name="description" content="Automatiza Tech - Conectamos tus ventas, web y CRM. Bots inteligentes para negocios que no se detienen. Mejora tu atencion al cliente 24/7.">';
+            echo '<meta name="keywords" content="automatizacion, chatbots, CRM, ventas, WhatsApp, Instagram, atencion al cliente">';
+            echo '<meta property="og:title" content="Automatiza Tech - Conectamos tus ventas, web y CRM">';
+            echo '<meta property="og:description" content="Bots inteligentes para negocios que no se detienen. Automatiza tu atencion, ahorra tiempo, escala tu negocio.">';
+            echo '<meta property="og:type" content="website">';
+            echo '<meta property="og:url" content="' . home_url() . '">';
+        }
+    });
+}
+add_action('init', 'automatiza_tech_seo_optimizations');
+
+/**
+ * Limite de revisiones de posts para mejor rendimiento
+ */
+if (!defined('WP_POST_REVISIONS')) {
+    define('WP_POST_REVISIONS', 3);
+}
+
+// Menú alternativo para servicios (más permisivo)
+add_action('admin_menu', 'automatiza_services_alternative_menu', 99);
+function automatiza_services_alternative_menu() {
+    add_submenu_page(
+        'tools.php',  // Agregar bajo "Herramientas"
+        'Servicios Automatiza Tech',
+        'Servicios AT',
+        'read',  // Capacidad muy básica
+        'services-alt',
+        'automatiza_services_alternative_page'
+    );
+}
+
+function automatiza_services_alternative_page() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_services';
+    
+    echo '<div class="wrap">';
+    echo '<h1>🚀 Sistema de Servicios - Automatiza Tech</h1>';
+    
+    // Mostrar información del usuario
+    $current_user = wp_get_current_user();
+    echo '<div class="notice notice-info">';
+    echo '<h3>👤 Información del Usuario</h3>';
+    echo '<p><strong>Usuario:</strong> ' . $current_user->user_login . ' (ID: ' . $current_user->ID . ')</p>';
+    echo '<p><strong>Roles:</strong> ' . implode(', ', $current_user->roles) . '</p>';
+    echo '<p><strong>Email:</strong> ' . $current_user->user_email . '</p>';
+    echo '</div>';
+    
+    // Verificar permisos específicos
+    echo '<div class="notice notice-warning">';
+    echo '<h3>🔐 Estado de Permisos</h3>';
+    echo '<ul>';
+    echo '<li>read: ' . (current_user_can('read') ? '✅ SÍ' : '❌ NO') . '</li>';
+    echo '<li>edit_posts: ' . (current_user_can('edit_posts') ? '✅ SÍ' : '❌ NO') . '</li>';
+    echo '<li>manage_options: ' . (current_user_can('manage_options') ? '✅ SÍ' : '❌ NO') . '</li>';
+    echo '<li>administrator: ' . (in_array('administrator', $current_user->roles) ? '✅ SÍ' : '❌ NO') . '</li>';
+    echo '</ul>';
+    echo '</div>';
+    
+    // Verificar tabla
+    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
+    
+    echo '<div class="notice ' . ($table_exists ? 'notice-success' : 'notice-error') . '">';
+    echo '<h3>🗄️ Estado de la Base de Datos</h3>';
+    echo '<p><strong>Tabla:</strong> ' . $table_name . ' ' . ($table_exists ? '✅ EXISTE' : '❌ NO EXISTE') . '</p>';
+    
+    if (!$table_exists) {
+        echo '<p><strong>Solución:</strong> Ejecutar el siguiente SQL en phpMyAdmin:</p>';
+        echo '<textarea readonly style="width:100%;height:200px;">';
+        echo "CREATE TABLE IF NOT EXISTS {$table_name} (\n";
+        echo "    id int(11) NOT NULL AUTO_INCREMENT,\n";
+        echo "    name varchar(255) NOT NULL,\n";
+        echo "    category varchar(50) DEFAULT 'pricing',\n";
+        echo "    price_usd decimal(10,2) DEFAULT 0.00,\n";
+        echo "    price_clp decimal(12,0) DEFAULT 0,\n";
+        echo "    description text,\n";
+        echo "    features text,\n";
+        echo "    icon varchar(100) DEFAULT 'fas fa-star',\n";
+        echo "    highlight tinyint(1) DEFAULT 0,\n";
+        echo "    button_text varchar(100) DEFAULT '',\n";
+        echo "    whatsapp_message text,\n";
+        echo "    status varchar(20) DEFAULT 'active',\n";
+        echo "    created_at timestamp DEFAULT CURRENT_TIMESTAMP,\n";
+        echo "    updated_at timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n";
+        echo "    PRIMARY KEY (id)\n";
+        echo ");";
+        echo '</textarea>';
+    } else {
+        // Mostrar servicios
+        $services = $wpdb->get_results("SELECT * FROM $table_name ORDER BY created_at DESC");
+        echo '<p><strong>Servicios encontrados:</strong> ' . count($services) . '</p>';
+        
+        if (!empty($services)) {
+            echo '<table class="widefat fixed striped">';
+            echo '<thead><tr><th>ID</th><th>Nombre</th><th>Categoría</th><th>Precio USD</th><th>Precio CLP</th><th>Estado</th></tr></thead>';
+            echo '<tbody>';
+            foreach ($services as $service) {
+                echo '<tr>';
+                echo '<td>' . $service->id . '</td>';
+                echo '<td>' . esc_html($service->name) . '</td>';
+                echo '<td>' . esc_html($service->category) . '</td>';
+                echo '<td>$' . number_format($service->price_usd, 2) . '</td>';
+                echo '<td>$' . number_format($service->price_clp, 0) . '</td>';
+                echo '<td>' . esc_html($service->status) . '</td>';
+                echo '</tr>';
+            }
+            echo '</tbody></table>';
+        }
+    }
+    echo '</div>';
+    
+    // Información de archivos
+    echo '<div class="notice notice-info">';
+    echo '<h3>📁 Estado de Archivos del Sistema</h3>';
+    echo '<ul>';
+    echo '<li>Tema activo: ' . get_template() . '</li>';
+    echo '<li>Directorio del tema: ' . get_template_directory() . '</li>';
+    echo '<li>services-manager.php: ' . (file_exists(get_template_directory() . '/services-manager.php') ? '✅' : '❌') . '</li>';
+    echo '<li>services-admin.php: ' . (file_exists(get_template_directory() . '/services-admin.php') ? '✅' : '❌') . '</li>';
+    echo '<li>services-frontend.php: ' . (file_exists(get_template_directory() . '/services-frontend.php') ? '✅' : '❌') . '</li>';
+    echo '</ul>';
+    echo '</div>';
+    
+    echo '</div>';
+}
+?>

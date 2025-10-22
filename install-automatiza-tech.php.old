@@ -1,0 +1,381 @@
+<?php
+/**
+ * Script de instalación automática para Automatiza Tech
+ * Ejecutar solo una vez después de instalar WordPress
+ */
+
+// Evitar ejecución directa si WordPress no está cargado
+if (!defined('ABSPATH')) {
+    // Cargar WordPress si no está cargado
+    $wp_config_path = dirname(__FILE__) . '/wp-config.php';
+    if (file_exists($wp_config_path)) {
+        require_once $wp_config_path;
+        require_once ABSPATH . 'wp-settings.php';
+    } else {
+        die('WordPress no encontrado. Asegúrate de que este archivo esté en el directorio raíz de WordPress.');
+    }
+}
+
+/**
+ * Configuración inicial del sitio
+ */
+function automatiza_tech_initial_setup() {
+    
+    // Configurar información básica del sitio
+    update_option('blogname', 'Automatiza Tech');
+    update_option('blogdescription', 'Conectamos tus ventas, web y CRM. Bots inteligentes para negocios que no se detienen.');
+    update_option('admin_email', 'admin@automatizatech.com');
+    
+    // Configurar timezone
+    update_option('timezone_string', 'America/Mexico_City');
+    
+    // Configurar formato de fecha
+    update_option('date_format', 'd/m/Y');
+    update_option('time_format', 'H:i');
+    
+    // Configurar idioma
+    update_option('WPLANG', 'es_ES');
+    
+    // Configurar estructura de permalinks
+    update_option('permalink_structure', '/%postname%/');
+    
+    // Configurar comentarios
+    update_option('default_comment_status', 'closed');
+    update_option('default_ping_status', 'closed');
+    
+    // Configurar lectura
+    update_option('posts_per_page', 10);
+    update_option('show_on_front', 'page');
+    
+    // Crear páginas esenciales
+    create_essential_pages();
+    
+    // Configurar menús
+    setup_navigation_menus();
+    
+    // Instalar y activar tema
+    setup_theme();
+    
+    // Configurar widgets
+    setup_widgets();
+    
+    // Configurar opciones del tema
+    setup_theme_options();
+    
+    // Crear contenido de ejemplo
+    create_sample_content();
+    
+    // Configurar SEO básico
+    setup_basic_seo();
+    
+    echo "✅ Configuración inicial completada exitosamente!\n";
+}
+
+/**
+ * Crear páginas esenciales
+ */
+function create_essential_pages() {
+    $pages = array(
+        'inicio' => array(
+            'title' => 'Inicio',
+            'content' => '<!-- wp:template-part {"slug":"hero"} /-->
+<!-- wp:template-part {"slug":"features"} /-->
+<!-- wp:template-part {"slug":"integrations"} /-->
+<!-- wp:template-part {"slug":"industries"} /-->
+<!-- wp:template-part {"slug":"pricing"} /-->
+<!-- wp:template-part {"slug":"contact"} /-->',
+            'template' => 'page-home.php'
+        ),
+        'servicios' => array(
+            'title' => 'Servicios',
+            'content' => '<h2>Nuestros Servicios</h2>
+<p>Descubre cómo nuestros bots inteligentes pueden transformar tu negocio.</p>
+
+<h3>Chatbots Inteligentes</h3>
+<p>Automatiza la atención al cliente con inteligencia artificial avanzada.</p>
+
+<h3>Integración WhatsApp</h3>
+<p>Conecta tu negocio con WhatsApp Business API para atención 24/7.</p>
+
+<h3>Automatización CRM</h3>
+<p>Sincroniza automáticamente leads y clientes con tu CRM favorito.</p>'
+        ),
+        'sobre-nosotros' => array(
+            'title' => 'Sobre Nosotros',
+            'content' => '<h2>Sobre Automatiza Tech</h2>
+<p>Somos expertos en automatización de procesos de negocio a través de chatbots inteligentes.</p>
+
+<h3>Nuestra Misión</h3>
+<p>Conectar tus ventas, web y CRM para que tu negocio nunca se detenga.</p>
+
+<h3>Nuestra Visión</h3>
+<p>Ser la plataforma líder en automatización de atención al cliente en Latinoamérica.</p>'
+        ),
+        'contacto' => array(
+            'title' => 'Contacto',
+            'content' => '<h2>Contáctanos</h2>
+<p>¿Listo para automatizar tu negocio? Hablemos sobre cómo podemos ayudarte.</p>
+
+[contact_form]
+
+<h3>Otras formas de contacto</h3>
+<ul>
+<li><strong>Email:</strong> info@automatizatech.com</li>
+<li><strong>WhatsApp:</strong> +1 (234) 567-890</li>
+<li><strong>Horario:</strong> Atención 24/7 con nuestros bots</li>
+</ul>'
+        ),
+        'precios' => array(
+            'title' => 'Precios',
+            'content' => '<h2>Planes y Precios</h2>
+<p>Elige el plan que mejor se adapte a las necesidades de tu negocio.</p>
+
+<!-- Los precios se cargarán dinámicamente desde el tema -->'
+        ),
+        'politica-privacidad' => array(
+            'title' => 'Política de Privacidad',
+            'content' => '<h2>Política de Privacidad</h2>
+<p><strong>Última actualización:</strong> ' . date('d/m/Y') . '</p>
+
+<h3>1. Información que recopilamos</h3>
+<p>Recopilamos información que nos proporcionas directamente, como cuando te registras, solicitas información o te comunicas con nosotros.</p>
+
+<h3>2. Cómo utilizamos tu información</h3>
+<p>Utilizamos la información recopilada para proporcionarte nuestros servicios, comunicarnos contigo y mejorar nuestra plataforma.</p>
+
+<h3>3. Compartir información</h3>
+<p>No vendemos, intercambiamos ni transferimos tu información personal a terceros sin tu consentimiento.</p>
+
+<h3>4. Seguridad</h3>
+<p>Implementamos medidas de seguridad apropiadas para proteger tu información personal.</p>
+
+<h3>5. Contacto</h3>
+<p>Si tienes preguntas sobre esta política, contáctanos en: privacy@automatizatech.com</p>'
+        ),
+        'terminos-servicio' => array(
+            'title' => 'Términos de Servicio',
+            'content' => '<h2>Términos de Servicio</h2>
+<p><strong>Última actualización:</strong> ' . date('d/m/Y') . '</p>
+
+<h3>1. Aceptación de términos</h3>
+<p>Al usar nuestros servicios, aceptas estos términos y condiciones.</p>
+
+<h3>2. Descripción del servicio</h3>
+<p>Automatiza Tech proporciona servicios de automatización mediante chatbots inteligentes.</p>
+
+<h3>3. Responsabilidades del usuario</h3>
+<p>Eres responsable de mantener la confidencialidad de tu cuenta y contraseña.</p>
+
+<h3>4. Limitación de responsabilidad</h3>
+<p>No seremos responsables por daños indirectos, incidentales o consecuentes.</p>
+
+<h3>5. Modificaciones</h3>
+<p>Podemos modificar estos términos en cualquier momento. Te notificaremos sobre cambios importantes.</p>'
+        )
+    );
+
+    foreach ($pages as $slug => $page_data) {
+        $existing_page = get_page_by_path($slug);
+        
+        if (!$existing_page) {
+            $page_id = wp_insert_post(array(
+                'post_title'   => $page_data['title'],
+                'post_content' => $page_data['content'],
+                'post_status'  => 'publish',
+                'post_type'    => 'page',
+                'post_name'    => $slug
+            ));
+            
+            if ($page_id && isset($page_data['template'])) {
+                update_post_meta($page_id, '_wp_page_template', $page_data['template']);
+            }
+            
+            // Configurar página de inicio
+            if ($slug === 'inicio') {
+                update_option('page_on_front', $page_id);
+            }
+            
+            echo "📄 Página creada: {$page_data['title']}\n";
+        }
+    }
+}
+
+/**
+ * Configurar menús de navegación
+ */
+function setup_navigation_menus() {
+    // Crear menú principal
+    $menu_name = 'Menú Principal';
+    $menu_exists = wp_get_nav_menu_object($menu_name);
+    
+    if (!$menu_exists) {
+        $menu_id = wp_create_nav_menu($menu_name);
+        
+        // Agregar elementos al menú
+        $menu_items = array(
+            array('title' => 'Inicio', 'url' => home_url('/'), 'menu_order' => 1),
+            array('title' => 'Servicios', 'url' => home_url('/servicios/'), 'menu_order' => 2),
+            array('title' => 'Sobre Nosotros', 'url' => home_url('/sobre-nosotros/'), 'menu_order' => 3),
+            array('title' => 'Precios', 'url' => home_url('/precios/'), 'menu_order' => 4),
+            array('title' => 'Contacto', 'url' => home_url('/contacto/'), 'menu_order' => 5)
+        );
+        
+        foreach ($menu_items as $item) {
+            wp_update_nav_menu_item($menu_id, 0, array(
+                'menu-item-title' => $item['title'],
+                'menu-item-url' => $item['url'],
+                'menu-item-status' => 'publish',
+                'menu-item-position' => $item['menu_order']
+            ));
+        }
+        
+        // Asignar menú a ubicación
+        $locations = get_theme_mod('nav_menu_locations');
+        $locations['primary'] = $menu_id;
+        set_theme_mod('nav_menu_locations', $locations);
+        
+        echo "🧭 Menú principal creado y configurado\n";
+    }
+}
+
+/**
+ * Configurar tema
+ */
+function setup_theme() {
+    // Activar tema Automatiza Tech si no está activo
+    $current_theme = wp_get_theme();
+    if ($current_theme->get_stylesheet() !== 'automatiza-tech') {
+        switch_theme('automatiza-tech');
+        echo "🎨 Tema Automatiza Tech activado\n";
+    }
+}
+
+/**
+ * Configurar widgets
+ */
+function setup_widgets() {
+    // Esta función se puede expandir para configurar widgets específicos
+    echo "🧩 Widgets configurados\n";
+}
+
+/**
+ * Configurar opciones del tema
+ */
+function setup_theme_options() {
+    $theme_options = array(
+        'hero_title' => 'Automatiza Tech',
+        'hero_subtitle' => 'Conectamos tus ventas, web y CRM.',
+        'hero_tagline' => 'Bots inteligentes para negocios que no se detienen.',
+        'whatsapp_number' => '+1234567890',
+        'contact_email' => 'info@automatizatech.com',
+        'contact_address' => 'Disponible en toda Latinoamérica',
+        'primary_color' => '#1e40af',
+        'secondary_color' => '#84cc16',
+        'footer_text' => 'Conectamos tus ventas, web y CRM con bots inteligentes para negocios que no se detienen.',
+        'copyright_text' => 'Automatiza Tech. Todos los derechos reservados.',
+        'social_facebook' => 'https://www.facebook.com/automatizatech',
+        'social_instagram' => 'https://www.instagram.com/automatizatech',
+        'social_linkedin' => 'https://www.linkedin.com/company/automatizatech',
+        'social_twitter' => 'https://www.twitter.com/automatizatech'
+    );
+    
+    foreach ($theme_options as $option => $value) {
+        set_theme_mod($option, $value);
+    }
+    
+    echo "⚙️ Opciones del tema configuradas\n";
+}
+
+/**
+ * Crear contenido de ejemplo
+ */
+function create_sample_content() {
+    // Crear algunas entradas de blog de ejemplo
+    $sample_posts = array(
+        array(
+            'title' => '5 Beneficios de Automatizar tu Atención al Cliente',
+            'content' => '<p>La automatización de la atención al cliente no es solo una tendencia, es una necesidad en el mundo digital actual...</p>',
+            'category' => 'Blog'
+        ),
+        array(
+            'title' => 'Cómo Integrar WhatsApp Business en tu Estrategia de Ventas',
+            'content' => '<p>WhatsApp Business se ha convertido en una herramienta fundamental para las empresas que buscan conectar con sus clientes...</p>',
+            'category' => 'Guías'
+        ),
+        array(
+            'title' => 'Casos de Éxito: Empresas que Transformaron su Negocio con Chatbots',
+            'content' => '<p>Descubre cómo empresas reales han aumentado sus ventas y mejorado su atención al cliente usando nuestros chatbots...</p>',
+            'category' => 'Casos de Éxito'
+        )
+    );
+    
+    foreach ($sample_posts as $post_data) {
+        $existing_post = get_page_by_title($post_data['title'], OBJECT, 'post');
+        
+        if (!$existing_post) {
+            wp_insert_post(array(
+                'post_title'   => $post_data['title'],
+                'post_content' => $post_data['content'],
+                'post_status'  => 'publish',
+                'post_type'    => 'post'
+            ));
+        }
+    }
+    
+    echo "📝 Contenido de ejemplo creado\n";
+}
+
+/**
+ * Configurar SEO básico
+ */
+function setup_basic_seo() {
+    // Configurar meta tags básicos
+    update_option('meta_description', 'Automatiza Tech - Conectamos tus ventas, web y CRM. Bots inteligentes para negocios que no se detienen. Automatiza tu atención al cliente 24/7.');
+    update_option('meta_keywords', 'automatización, chatbots, CRM, ventas, WhatsApp, Instagram, atención al cliente');
+    
+    echo "🔍 SEO básico configurado\n";
+}
+
+/**
+ * Verificar requisitos del sistema
+ */
+function check_system_requirements() {
+    $requirements = array(
+        'PHP version >= 7.4' => version_compare(PHP_VERSION, '7.4.0', '>='),
+        'MySQL extension' => extension_loaded('mysql') || extension_loaded('mysqli'),
+        'GD extension' => extension_loaded('gd'),
+        'cURL extension' => extension_loaded('curl'),
+        'mbstring extension' => extension_loaded('mbstring'),
+        'Writable uploads directory' => is_writable(wp_upload_dir()['basedir'])
+    );
+    
+    $all_good = true;
+    echo "\n🔍 Verificando requisitos del sistema:\n";
+    
+    foreach ($requirements as $requirement => $status) {
+        $icon = $status ? '✅' : '❌';
+        echo "$icon $requirement\n";
+        if (!$status) $all_good = false;
+    }
+    
+    if (!$all_good) {
+        echo "\n⚠️ Algunos requisitos no se cumplen. Por favor, contacta a tu proveedor de hosting.\n";
+        return false;
+    }
+    
+    echo "\n✅ Todos los requisitos del sistema se cumplen.\n";
+    return true;
+}
+
+// Ejecutar instalación
+echo "🚀 Iniciando configuración de Automatiza Tech...\n\n";
+
+if (check_system_requirements()) {
+    automatiza_tech_initial_setup();
+    echo "\n🎉 ¡Instalación completada exitosamente!\n";
+    echo "🌐 Visita tu sitio web para ver el resultado.\n";
+    echo "⚙️ Puedes personalizar más opciones desde el Personalizador de WordPress.\n\n";
+} else {
+    echo "\n❌ La instalación no se pudo completar debido a requisitos faltantes.\n";
+}
+?>

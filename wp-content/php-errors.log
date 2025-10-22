@@ -1,0 +1,221 @@
+[20-Oct-2025 11:43:35 UTC] PHP Deprecated:  ¡La función get_page_by_title ha quedado <strong>obsoleta</strong> desde la versión 6.2.0! Usa WP_Query en su lugar. in C:\wamp64\www\automatiza-tech\wp-includes\functions.php on line 6121
+[20-Oct-2025 11:43:35 UTC] PHP Stack trace:
+[20-Oct-2025 11:43:35 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\install-automatiza-tech.php:0
+[20-Oct-2025 11:43:35 UTC] PHP   2. automatiza_tech_initial_setup() C:\wamp64\www\automatiza-tech\install-automatiza-tech.php:374
+[20-Oct-2025 11:43:35 UTC] PHP   3. create_sample_content() C:\wamp64\www\automatiza-tech\install-automatiza-tech.php:66
+[20-Oct-2025 11:43:35 UTC] PHP   4. get_page_by_title() C:\wamp64\www\automatiza-tech\install-automatiza-tech.php:313
+[20-Oct-2025 11:43:35 UTC] PHP   5. _deprecated_function() C:\wamp64\www\automatiza-tech\wp-includes\deprecated.php:4575
+[20-Oct-2025 11:43:35 UTC] PHP   6. wp_trigger_error() C:\wamp64\www\automatiza-tech\wp-includes\functions.php:5586
+[20-Oct-2025 11:43:35 UTC] PHP   7. trigger_error() C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121
+[20-Oct-2025 11:43:35 UTC] PHP Deprecated:  ¡La función get_page_by_title ha quedado <strong>obsoleta</strong> desde la versión 6.2.0! Usa WP_Query en su lugar. in C:\wamp64\www\automatiza-tech\wp-includes\functions.php on line 6121
+[20-Oct-2025 11:43:35 UTC] PHP Stack trace:
+[20-Oct-2025 11:43:35 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\install-automatiza-tech.php:0
+[20-Oct-2025 11:43:35 UTC] PHP   2. automatiza_tech_initial_setup() C:\wamp64\www\automatiza-tech\install-automatiza-tech.php:374
+[20-Oct-2025 11:43:35 UTC] PHP   3. create_sample_content() C:\wamp64\www\automatiza-tech\install-automatiza-tech.php:66
+[20-Oct-2025 11:43:35 UTC] PHP   4. get_page_by_title() C:\wamp64\www\automatiza-tech\install-automatiza-tech.php:313
+[20-Oct-2025 11:43:35 UTC] PHP   5. _deprecated_function() C:\wamp64\www\automatiza-tech\wp-includes\deprecated.php:4575
+[20-Oct-2025 11:43:35 UTC] PHP   6. wp_trigger_error() C:\wamp64\www\automatiza-tech\wp-includes\functions.php:5586
+[20-Oct-2025 11:43:35 UTC] PHP   7. trigger_error() C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121
+[20-Oct-2025 11:43:35 UTC] PHP Deprecated:  ¡La función get_page_by_title ha quedado <strong>obsoleta</strong> desde la versión 6.2.0! Usa WP_Query en su lugar. in C:\wamp64\www\automatiza-tech\wp-includes\functions.php on line 6121
+[20-Oct-2025 11:43:35 UTC] PHP Stack trace:
+[20-Oct-2025 11:43:35 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\install-automatiza-tech.php:0
+[20-Oct-2025 11:43:35 UTC] PHP   2. automatiza_tech_initial_setup() C:\wamp64\www\automatiza-tech\install-automatiza-tech.php:374
+[20-Oct-2025 11:43:35 UTC] PHP   3. create_sample_content() C:\wamp64\www\automatiza-tech\install-automatiza-tech.php:66
+[20-Oct-2025 11:43:35 UTC] PHP   4. get_page_by_title() C:\wamp64\www\automatiza-tech\install-automatiza-tech.php:313
+[20-Oct-2025 11:43:35 UTC] PHP   5. _deprecated_function() C:\wamp64\www\automatiza-tech\wp-includes\deprecated.php:4575
+[20-Oct-2025 11:43:35 UTC] PHP   6. wp_trigger_error() C:\wamp64\www\automatiza-tech\wp-includes\functions.php:5586
+[20-Oct-2025 11:43:35 UTC] PHP   7. trigger_error() C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121
+[20-Oct-2025 11:45:24 UTC] PHP Notice:  La función wp_deregister_script ha sido llamada <strong>de forma incorrecta</strong>. No hagas deregister del script <code>jquery</code> en el área de administración. Para enlazar la portada del tema, utiliza el gancho <code>wp_enqueue_scripts</code>. Por favor, ve <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">depuración en WordPress</a> para más información. (Este mensaje fue añadido en la versión 3.6.0). in C:\wamp64\www\automatiza-tech\wp-includes\functions.php on line 6121
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. require() C:\wamp64\www\automatiza-tech\wp-login.php:12
+[20-Oct-2025 11:45:24 UTC] PHP   3. require_once() C:\wamp64\www\automatiza-tech\wp-load.php:50
+[20-Oct-2025 11:45:24 UTC] PHP   4. require_once() C:\wamp64\www\automatiza-tech\wp-config.php:157
+[20-Oct-2025 11:45:24 UTC] PHP   5. do_action() C:\wamp64\www\automatiza-tech\wp-settings.php:727
+[20-Oct-2025 11:45:24 UTC] PHP   6. WP_Hook->do_action() C:\wamp64\www\automatiza-tech\wp-includes\plugin.php:517
+[20-Oct-2025 11:45:24 UTC] PHP   7. WP_Hook->apply_filters() C:\wamp64\www\automatiza-tech\wp-includes\class-wp-hook.php:348
+[20-Oct-2025 11:45:24 UTC] PHP   8. automatiza_tech_performance_optimizations() C:\wamp64\www\automatiza-tech\wp-includes\class-wp-hook.php:324
+[20-Oct-2025 11:45:24 UTC] PHP   9. wp_deregister_script() C:\wamp64\www\automatiza-tech\wp-content\themes\automatiza-tech\functions.php:164
+[20-Oct-2025 11:45:24 UTC] PHP  10. _doing_it_wrong() C:\wamp64\www\automatiza-tech\wp-includes\functions.wp-scripts.php:322
+[20-Oct-2025 11:45:24 UTC] PHP  11. wp_trigger_error() C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6061
+[20-Oct-2025 11:45:24 UTC] PHP  12. trigger_error() C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-login.php on line 515
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. header() C:\wamp64\www\automatiza-tech\wp-login.php:515
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-login.php on line 531
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. setcookie() C:\wamp64\www\automatiza-tech\wp-login.php:531
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\functions.php on line 7144
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. do_action() C:\wamp64\www\automatiza-tech\wp-login.php:546
+[20-Oct-2025 11:45:24 UTC] PHP   3. WP_Hook->do_action() C:\wamp64\www\automatiza-tech\wp-includes\plugin.php:517
+[20-Oct-2025 11:45:24 UTC] PHP   4. WP_Hook->apply_filters() C:\wamp64\www\automatiza-tech\wp-includes\class-wp-hook.php:348
+[20-Oct-2025 11:45:24 UTC] PHP   5. send_frame_options_header() C:\wamp64\www\automatiza-tech\wp-includes\class-wp-hook.php:322
+[20-Oct-2025 11:45:24 UTC] PHP   6. header() C:\wamp64\www\automatiza-tech\wp-includes\functions.php:7144
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\functions.php on line 7168
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. do_action() C:\wamp64\www\automatiza-tech\wp-login.php:546
+[20-Oct-2025 11:45:24 UTC] PHP   3. WP_Hook->do_action() C:\wamp64\www\automatiza-tech\wp-includes\plugin.php:517
+[20-Oct-2025 11:45:24 UTC] PHP   4. WP_Hook->apply_filters() C:\wamp64\www\automatiza-tech\wp-includes\class-wp-hook.php:348
+[20-Oct-2025 11:45:24 UTC] PHP   5. wp_admin_headers() C:\wamp64\www\automatiza-tech\wp-includes\class-wp-hook.php:324
+[20-Oct-2025 11:45:24 UTC] PHP   6. header() C:\wamp64\www\automatiza-tech\wp-includes\functions.php:7168
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1137
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1137
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1138
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1138
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1139
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1139
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1140
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1140
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1141
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1141
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1142
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1142
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1145
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1145
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1146
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1146
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1149
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1149
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1150
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1150
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1151
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1151
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1152
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1152
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1155
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1155
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1156
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1156
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1157
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1157
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1158
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1158
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1161
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_logout() C:\wamp64\www\automatiza-tech\wp-login.php:805
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_clear_auth_cookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:665
+[20-Oct-2025 11:45:24 UTC] PHP   4. setcookie() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1161
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1450
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_safe_redirect() C:\wamp64\www\automatiza-tech\wp-login.php:833
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_redirect() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1560
+[20-Oct-2025 11:45:24 UTC] PHP   4. header() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1450
+[20-Oct-2025 11:45:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php on line 1453
+[20-Oct-2025 11:45:24 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:24 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:24 UTC] PHP   2. wp_safe_redirect() C:\wamp64\www\automatiza-tech\wp-login.php:833
+[20-Oct-2025 11:45:24 UTC] PHP   3. wp_redirect() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1560
+[20-Oct-2025 11:45:24 UTC] PHP   4. header() C:\wamp64\www\automatiza-tech\wp-includes\pluggable.php:1453
+[20-Oct-2025 11:45:30 UTC] PHP Notice:  La función wp_deregister_script ha sido llamada <strong>de forma incorrecta</strong>. No hagas deregister del script <code>jquery</code> en el área de administración. Para enlazar la portada del tema, utiliza el gancho <code>wp_enqueue_scripts</code>. Por favor, ve <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">depuración en WordPress</a> para más información. (Este mensaje fue añadido en la versión 3.6.0). in C:\wamp64\www\automatiza-tech\wp-includes\functions.php on line 6121
+[20-Oct-2025 11:45:30 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:30 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:30 UTC] PHP   2. require() C:\wamp64\www\automatiza-tech\wp-login.php:12
+[20-Oct-2025 11:45:30 UTC] PHP   3. require_once() C:\wamp64\www\automatiza-tech\wp-load.php:50
+[20-Oct-2025 11:45:30 UTC] PHP   4. require_once() C:\wamp64\www\automatiza-tech\wp-config.php:157
+[20-Oct-2025 11:45:30 UTC] PHP   5. do_action() C:\wamp64\www\automatiza-tech\wp-settings.php:727
+[20-Oct-2025 11:45:30 UTC] PHP   6. WP_Hook->do_action() C:\wamp64\www\automatiza-tech\wp-includes\plugin.php:517
+[20-Oct-2025 11:45:30 UTC] PHP   7. WP_Hook->apply_filters() C:\wamp64\www\automatiza-tech\wp-includes\class-wp-hook.php:348
+[20-Oct-2025 11:45:30 UTC] PHP   8. automatiza_tech_performance_optimizations() C:\wamp64\www\automatiza-tech\wp-includes\class-wp-hook.php:324
+[20-Oct-2025 11:45:30 UTC] PHP   9. wp_deregister_script() C:\wamp64\www\automatiza-tech\wp-content\themes\automatiza-tech\functions.php:164
+[20-Oct-2025 11:45:30 UTC] PHP  10. _doing_it_wrong() C:\wamp64\www\automatiza-tech\wp-includes\functions.wp-scripts.php:322
+[20-Oct-2025 11:45:30 UTC] PHP  11. wp_trigger_error() C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6061
+[20-Oct-2025 11:45:30 UTC] PHP  12. trigger_error() C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121
+[20-Oct-2025 11:45:30 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-login.php on line 515
+[20-Oct-2025 11:45:30 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:30 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:30 UTC] PHP   2. header() C:\wamp64\www\automatiza-tech\wp-login.php:515
+[20-Oct-2025 11:45:30 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-login.php on line 531
+[20-Oct-2025 11:45:30 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:30 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:30 UTC] PHP   2. setcookie() C:\wamp64\www\automatiza-tech\wp-login.php:531
+[20-Oct-2025 11:45:30 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-login.php on line 538
+[20-Oct-2025 11:45:30 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:30 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:30 UTC] PHP   2. setcookie() C:\wamp64\www\automatiza-tech\wp-login.php:538
+[20-Oct-2025 11:45:30 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\functions.php on line 7144
+[20-Oct-2025 11:45:30 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:30 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:30 UTC] PHP   2. do_action() C:\wamp64\www\automatiza-tech\wp-login.php:546
+[20-Oct-2025 11:45:30 UTC] PHP   3. WP_Hook->do_action() C:\wamp64\www\automatiza-tech\wp-includes\plugin.php:517
+[20-Oct-2025 11:45:30 UTC] PHP   4. WP_Hook->apply_filters() C:\wamp64\www\automatiza-tech\wp-includes\class-wp-hook.php:348
+[20-Oct-2025 11:45:30 UTC] PHP   5. send_frame_options_header() C:\wamp64\www\automatiza-tech\wp-includes\class-wp-hook.php:322
+[20-Oct-2025 11:45:30 UTC] PHP   6. header() C:\wamp64\www\automatiza-tech\wp-includes\functions.php:7144
+[20-Oct-2025 11:45:30 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\wamp64\www\automatiza-tech\wp-includes\functions.php:6121) in C:\wamp64\www\automatiza-tech\wp-includes\functions.php on line 7168
+[20-Oct-2025 11:45:30 UTC] PHP Stack trace:
+[20-Oct-2025 11:45:30 UTC] PHP   1. {main}() C:\wamp64\www\automatiza-tech\wp-login.php:0
+[20-Oct-2025 11:45:30 UTC] PHP   2. do_action() C:\wamp64\www\automatiza-tech\wp-login.php:546
+[20-Oct-2025 11:45:30 UTC] PHP   3. WP_Hook->do_action() C:\wamp64\www\automatiza-tech\wp-includes\plugin.php:517
+[20-Oct-2025 11:45:30 UTC] PHP   4. WP_Hook->apply_filters() C:\wamp64\www\automatiza-tech\wp-includes\class-wp-hook.php:348
+[20-Oct-2025 11:45:30 UTC] PHP   5. wp_admin_headers() C:\wamp64\www\automatiza-tech\wp-includes\class-wp-hook.php:324
+[20-Oct-2025 11:45:30 UTC] PHP   6. header() C:\wamp64\www\automatiza-tech\wp-includes\functions.php:7168

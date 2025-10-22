@@ -1,0 +1,240 @@
+<?php
+/**
+ * Template principal de Automatiza Tech
+ *
+ * @package AutomatizaTech
+ */
+
+get_header(); ?>
+
+<main class="main-content">
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="hero-content fade-in-up">
+                <h1 class="hero-title">
+                    <?php echo esc_html(get_theme_mod('hero_title', 'Automatiza Tech')); ?>
+                </h1>
+                <p class="hero-subtitle">
+                    <?php echo esc_html(get_theme_mod('hero_subtitle', 'Conectamos tus ventas, web y CRM.')); ?>
+                </p>
+                <p class="hero-tagline">
+                    <?php echo esc_html(get_theme_mod('hero_tagline', 'Bots inteligentes para negocios que no se detienen.')); ?>
+                </p>
+                <div class="hero-cta">
+                    <a href="#contact" class="btn btn-secondary">Solicita tu Demo</a>
+                    <a href="<?php echo esc_url(get_whatsapp_url('Hola! Me interesa conocer mas sobre Automatiza Tech')); ?>" 
+                       class="btn btn-outline" target="_blank">
+                        <i class="fab fa-whatsapp"></i> Contactar por WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="beneficios">
+        <div class="container">
+            <h2 class="section-title">¿Por qué elegir Automatiza Tech?</h2>
+            <p class="text-center text-muted mb-5">Automatiza tu atención, ahorra tiempo, escala tu negocio</p>
+            
+            <?php echo do_shortcode('[features_services columns="3"]'); ?>
+        </div>
+    </section>
+
+    <!-- Integrations Section -->
+    <section class="integrations-section" id="integraciones">
+        <div class="container">
+            <h2 class="section-title">Integraciones Disponibles</h2>
+            <p class="text-center text-muted mb-5">Conecta con todas las plataformas que ya usas</p>
+            
+            <div class="integrations-grid">
+                <div class="integration-item">
+                    <div class="integration-icon text-success mb-3">
+                        <i class="fab fa-whatsapp fa-3x"></i>
+                    </div>
+                    <h4>WhatsApp</h4>
+                    <p>Automatiza conversaciones en WhatsApp Business</p>
+                </div>
+                
+                <div class="integration-item">
+                    <div class="integration-icon text-danger mb-3">
+                        <i class="fab fa-instagram fa-3x"></i>
+                    </div>
+                    <h4>Instagram</h4>
+                    <p>Gestiona mensajes directos automaticamente</p>
+                </div>
+                
+                <div class="integration-item">
+                    <div class="integration-icon text-primary mb-3">
+                        <i class="fas fa-globe fa-3x"></i>
+                    </div>
+                    <h4>Sitio Web</h4>
+                    <p>Chat widget para tu pagina web</p>
+                </div>
+                
+                <div class="integration-item">
+                    <div class="integration-icon text-warning mb-3">
+                        <i class="fas fa-database fa-3x"></i>
+                    </div>
+                    <h4>CRM</h4>
+                    <p>Sincroniza con tu CRM favorito</p>
+                </div>
+                
+                <div class="integration-item">
+                    <div class="integration-icon text-info mb-3">
+                        <i class="fab fa-facebook-messenger fa-3x"></i>
+                    </div>
+                    <h4>Messenger</h4>
+                    <p>Automatiza Facebook Messenger</p>
+                </div>
+                
+                <div class="integration-item">
+                    <div class="integration-icon text-secondary mb-3">
+                        <i class="fas fa-envelope fa-3x"></i>
+                    </div>
+                    <h4>Email</h4>
+                    <p>Integra con tu sistema de email marketing</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Industries Section -->
+    <section class="industries-section bg-light" id="industrias">
+        <div class="container">
+            <h2 class="section-title">Casos de Uso por Industria</h2>
+            <p class="text-center text-muted mb-5">Soluciones especificas para cada tipo de negocio</p>
+            
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="industry-card card h-100">
+                        <div class="card-body text-center">
+                            <div class="industry-icon text-primary mb-3">
+                                <i class="fas fa-store fa-3x"></i>
+                            </div>
+                            <h5 class="card-title">E-commerce</h5>
+                            <p class="card-text">Automatiza consultas de productos, seguimiento de pedidos y soporte post-venta.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-4">
+                    <div class="industry-card card h-100">
+                        <div class="card-body text-center">
+                            <div class="industry-icon text-success mb-3">
+                                <i class="fas fa-heartbeat fa-3x"></i>
+                            </div>
+                            <h5 class="card-title">Salud</h5>
+                            <p class="card-text">Gestiona citas medicas, recordatorios y consultas basicas de pacientes.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-4">
+                    <div class="industry-card card h-100">
+                        <div class="card-body text-center">
+                            <div class="industry-icon text-warning mb-3">
+                                <i class="fas fa-graduation-cap fa-3x"></i>
+                            </div>
+                            <h5 class="card-title">Educacion</h5>
+                            <p class="card-text">Atiende consultas de estudiantes, informacion de cursos y procesos de inscripcion.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-4">
+                    <div class="industry-card card h-100">
+                        <div class="card-body text-center">
+                            <div class="industry-icon text-danger mb-3">
+                                <i class="fas fa-utensils fa-3x"></i>
+                            </div>
+                            <h5 class="card-title">Restaurantes</h5>
+                            <p class="card-text">Toma pedidos automaticamente, gestiona reservas y ofrece menus interactivos.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-4">
+                    <div class="industry-card card h-100">
+                        <div class="card-body text-center">
+                            <div class="industry-icon text-info mb-3">
+                                <i class="fas fa-home fa-3x"></i>
+                            </div>
+                            <h5 class="card-title">Inmobiliaria</h5>
+                            <p class="card-text">Califica leads, agenda visitas y proporciona informacion de propiedades.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-4">
+                    <div class="industry-card card h-100">
+                        <div class="card-body text-center">
+                            <div class="industry-icon text-secondary mb-3">
+                                <i class="fas fa-briefcase fa-3x"></i>
+                            </div>
+                            <h5 class="card-title">Servicios</h5>
+                            <p class="card-text">Gestiona cotizaciones, agenda citas y brinda soporte tecnico automatizado.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing-section" id="planes">
+        <div class="container">
+            <h2 class="section-title">Nuestros Servicios</h2>
+            <p class="text-center text-muted mb-5">Elige el plan perfecto para automatizar tu negocio</p>
+            
+            <?php echo do_shortcode('[pricing_services columns="3"]'); ?>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact-section" id="contact">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <h2 class="section-title text-white text-center">Listo para automatizar tu negocio?</h2>
+                    <p class="text-center text-white mb-5">Completa el formulario y uno de nuestros expertos te contactara en menos de 24 horas</p>
+                    
+                    <?php echo do_shortcode('[contact_form]'); ?>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- WhatsApp Float Button -->
+<a href="<?php echo esc_url(get_whatsapp_url('Hola! Me interesa conocer mas sobre Automatiza Tech')); ?>" 
+   class="whatsapp-float" target="_blank" title="Contactanos por WhatsApp">
+    <i class="fab fa-whatsapp"></i>
+</a>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Funcionalidad para el boton del servicio de emprendimientos
+    const serviceButton = document.querySelector('.cta-button');
+    if (serviceButton) {
+        serviceButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Mensaje personalizado para el servicio de emprendimientos
+            const message = encodeURIComponent('Hola! Me interesa el servicio Web + WhatsApp Business para emprendimientos. Me gustaria recibir mas informacion sobre el paquete completo y conocer como puede ayudar a mi negocio.');
+            
+            // Numero de WhatsApp
+            const phoneNumber = '56936800925'; // Numero actualizado
+            
+            // URL de WhatsApp
+            const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+            
+            // Abrir WhatsApp
+            window.open(whatsappUrl, '_blank');
+        });
+    }
+});
+</script>
+
+<?php get_footer(); ?>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Menú Móvil - Automatiza Tech</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .site-header {
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .site-branding .logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: #1e40af;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .main-navigation ul {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            gap: 2rem;
+        }
+
+        .main-navigation a {
+            text-decoration: none;
+            color: #1f2937;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .main-navigation a:hover {
+            color: #1e40af;
+        }
+
+        /* Mobile Menu Styles */
+        .mobile-menu-toggle {
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-menu-toggle:hover {
+            background-color: rgba(30, 64, 175, 0.1);
+        }
+
+        .navbar-toggler-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .navbar-toggler-icon i {
+            font-size: 1.2rem;
+            color: #1e40af;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-menu-toggle[aria-expanded="true"] .navbar-toggler-icon i {
+            transform: rotate(90deg);
+        }
+
+        .mobile-navigation {
+            background-color: #ffffff;
+            border-top: 1px solid #e5e7eb;
+            padding: 1rem 0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .mobile-nav-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .mobile-nav-menu li {
+            margin: 0;
+        }
+
+        .mobile-nav-menu a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #1f2937;
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px solid #f3f4f6;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-nav-menu a:hover {
+            background-color: #f8fafc;
+            color: #1e40af;
+            padding-left: 1.5rem;
+        }
+
+        .mobile-nav-menu li:last-child a {
+            border-bottom: none;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 767.98px) {
+            .site-header {
+                padding: 0.5rem 0;
+            }
+            
+            .header-content {
+                flex-wrap: wrap;
+            }
+            
+            .main-navigation {
+                display: none;
+            }
+            
+            #mobile-menu {
+                width: 100%;
+                margin-top: 0.5rem;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .mobile-menu-toggle {
+                display: none !important;
+            }
+        }
+
+        body {
+            padding-top: 100px;
+            background: #f8f9fa;
+        }
+
+        .test-content {
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .alert {
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <div class="container">
+            <div class="header-content">
+                <div class="site-branding">
+                    <a href="#" class="logo">
+                        <i class="fas fa-robot me-2"></i>
+                        <span class="logo-text">Automatiza Tech</span>
+                    </a>
+                </div>
+
+                <!-- Desktop Navigation -->
+                <nav class="main-navigation d-none d-md-block">
+                    <ul>
+                        <li><a href="#beneficios">Beneficios</a></li>
+                        <li><a href="#integraciones">Integraciones</a></li>
+                        <li><a href="#industrias">Casos de Uso</a></li>
+                        <li><a href="#planes">Precios</a></li>
+                        <li><a href="#contact">Contacto</a></li>
+                    </ul>
+                </nav>
+
+                <!-- Mobile Menu Button -->
+                <button class="mobile-menu-toggle d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#mobile-menu" aria-controls="mobile-menu" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon">
+                        <i class="fas fa-bars"></i>
+                    </span>
+                </button>
+            </div>
+
+            <!-- Mobile Menu -->
+            <div class="collapse" id="mobile-menu">
+                <nav class="mobile-navigation">
+                    <ul class="mobile-nav-menu">
+                        <li><a href="#beneficios">Beneficios</a></li>
+                        <li><a href="#integraciones">Integraciones</a></li>
+                        <li><a href="#industrias">Casos de Uso</a></li>
+                        <li><a href="#planes">Precios</a></li>
+                        <li><a href="#contact">Contacto</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <div class="test-content">
+        <h1>Test del Menú Móvil Responsivo</h1>
+        
+        <div class="alert alert-info">
+            <h4><i class="fas fa-info-circle"></i> Instrucciones:</h4>
+            <ul>
+                <li><strong>En escritorio:</strong> Deberías ver el menú horizontal en la parte superior</li>
+                <li><strong>En móvil:</strong> El menú se oculta y aparece el botón hamburguesa (☰)</li>
+                <li><strong>Al hacer clic:</strong> El menú se despliega como accordion</li>
+                <li><strong>Animación:</strong> El ícono gira y el menú se desliza suavemente</li>
+            </ul>
+        </div>
+
+        <div class="alert alert-success">
+            <h4><i class="fas fa-check-circle"></i> Funcionalidades Implementadas:</h4>
+            <ul>
+                <li>✅ Botón hamburguesa con ícono Font Awesome</li>
+                <li>✅ Menú accordion con Bootstrap collapse</li>
+                <li>✅ Animaciones suaves y transiciones</li>
+                <li>✅ Responsive design (oculta/muestra según pantalla)</li>
+                <li>✅ Hover effects en los enlaces</li>
+                <li>✅ Rotación del ícono al expandir</li>
+            </ul>
+        </div>
+
+        <div class="alert alert-warning">
+            <h4><i class="fas fa-mobile-alt"></i> Para probar:</h4>
+            <p>1. <strong>Reduce el ancho de la ventana</strong> o usa las herramientas de desarrollador para simular un dispositivo móvil</p>
+            <p>2. <strong>Busca el botón ☰</strong> en la esquina superior derecha</p>
+            <p>3. <strong>Haz clic</strong> para abrir/cerrar el menú</p>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5>Contenido de prueba</h5>
+                <p>Este es contenido adicional para probar el scroll y la funcionalidad del menú fijo.</p>
+                <p>El header debería permanecer fijo en la parte superior mientras haces scroll.</p>
+                
+                <div style="height: 200vh; background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%); padding: 2rem; margin-top: 2rem; border-radius: 8px;">
+                    <h3>Área de scroll largo</h3>
+                    <p>Haz scroll hacia abajo para probar que el header se mantiene fijo...</p>
+                    
+                    <div style="position: absolute; bottom: 2rem;">
+                        <p><strong>Final del contenido</strong> - El header debería seguir visible arriba.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Script adicional para mejorar la funcionalidad del menú móvil
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleButton = document.querySelector('.mobile-menu-toggle');
+            const mobileMenu = document.querySelector('#mobile-menu');
+            
+            // Cerrar menú al hacer clic en un enlace
+            const menuLinks = document.querySelectorAll('.mobile-nav-menu a');
+            menuLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    const bsCollapse = new bootstrap.Collapse(mobileMenu, {
+                        hide: true
+                    });
+                });
+            });
+
+            // Actualizar el ícono cuando el menú se abre/cierra
+            mobileMenu.addEventListener('shown.bs.collapse', function() {
+                toggleButton.setAttribute('aria-expanded', 'true');
+            });
+
+            mobileMenu.addEventListener('hidden.bs.collapse', function() {
+                toggleButton.setAttribute('aria-expanded', 'false');
+            });
+        });
+    </script>
+</body>
+</html>

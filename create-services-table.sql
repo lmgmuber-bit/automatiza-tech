@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS wp_automatiza_services (
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
 );
-
+--Esto es para el nuevo sistema de servicios y planes en la web esto son los datos iniciales
 -- Insertar servicios de ejemplo
 INSERT INTO wp_automatiza_services (name, category, price_usd, price_clp, description, features, icon, highlight, button_text, whatsapp_message, status) VALUES
 ('Plan Básico', 'pricing', 99.00, 79200, 'Perfecto para pequeños emprendimientos que inician su automatización', '["Hasta 1,000 conversaciones/mes","WhatsApp Business API","Respuestas automáticas básicas","Soporte por email","Analíticas básicas","Integración con 1 plataforma"]', 'fas fa-seedling', 0, 'Comenzar Ahora', 'Hola! Me interesa el Plan Básico de automatización. ¿Podrías darme más información?', 'active'),

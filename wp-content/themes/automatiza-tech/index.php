@@ -202,6 +202,9 @@ get_header(); ?>
     <!-- Pricing Section - Dynamic Content -->
     <?php echo render_pricing_section(); ?>
 
+    <!-- Spacer between Pricing and Contact -->
+    <div class="section-spacer"></div>
+
     <!-- Contact Section -->
     <section class="contact-section" id="contact">
         <div class="container">
@@ -413,4 +416,3 @@ window.addEventListener('beforeunload', () => {
 </script>
 
 <?php get_footer(); ?>
-

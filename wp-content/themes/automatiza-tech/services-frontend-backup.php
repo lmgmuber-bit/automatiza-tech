@@ -1,14 +1,14 @@
-﻿<?php
+<?php
 /**
  * Funciones para mostrar servicios en el frontend
  */
 
-// FunciÃ³n para renderizar secciÃ³n de features/beneficios
+// Función para renderizar sección de features/beneficios
 function render_features_section() {
     $features = get_active_automatiza_services('features');
     
     if (empty($features)) {
-        // Fallback a contenido estÃ¡tico si no hay servicios en BD
+        // Fallback a contenido estático si no hay servicios en BD
         return get_default_features_content();
     }
     
@@ -16,8 +16,8 @@ function render_features_section() {
     ?>
     <section class="features-section" id="beneficios">
         <div class="container">
-            <h2 class="section-title">Â¿Por quÃ© elegir Automatiza Tech?</h2>
-            <p class="text-center text-muted mb-5">Automatiza tu atenciÃ³n, ahorra tiempo, escala tu negocio</p>
+            <h2 class="section-title">¿Por qué elegir Automatiza Tech?</h2>
+            <p class="text-center text-muted mb-5">Automatiza tu atención, ahorra tiempo, escala tu negocio</p>
             
             <div class="features-grid">
                 <?php foreach ($features as $feature): ?>
@@ -31,7 +31,7 @@ function render_features_section() {
                 <?php endforeach; ?>
                 
                 <?php if (count($features) < 6): ?>
-                <!-- Agregar beneficios estÃ¡ticos adicionales si hay menos de 6 -->
+                <!-- Agregar beneficios estáticos adicionales si hay menos de 6 -->
                 <?php if (!in_array('Ahorra Tiempo', array_column($features, 'name'))): ?>
                 <div class="feature-card fade-in-up">
                     <div class="feature-icon">
@@ -48,7 +48,7 @@ function render_features_section() {
                         <i class="fas fa-users"></i>
                     </div>
                     <h3>Mejor Experiencia</h3>
-                    <p>Respuestas instantÃ¡neas y personalizadas que mejoran la satisfacciÃ³n de tus clientes.</p>
+                    <p>Respuestas instantáneas y personalizadas que mejoran la satisfacción de tus clientes.</p>
                 </div>
                 <?php endif; ?>
                 <?php endif; ?>
@@ -59,12 +59,12 @@ function render_features_section() {
     return ob_get_clean();
 }
 
-// FunciÃ³n para renderizar secciÃ³n de servicios especiales
+// Función para renderizar sección de servicios especiales
 function render_special_services_section() {
     $services = get_active_automatiza_services('special');
     
     if (empty($services)) {
-        // Fallback al contenido estÃ¡tico
+        // Fallback al contenido estático
         return get_default_special_services_content();
     }
     
@@ -101,7 +101,7 @@ function render_special_services_section() {
                                         if (is_array($features)):
                                     ?>
                                     <div class="features-list">
-                                        <h5 class="mb-3">Â¿QuÃ© incluye?</h5>
+                                        <h5 class="mb-3">¿Qué incluye?</h5>
                                         <div class="row">
                                             <?php 
                                             $half = ceil(count($features) / 2);
@@ -140,7 +140,7 @@ function render_special_services_section() {
                                         <div class="robot-container d-inline-block position-relative">
                                             <?php 
                                             $whatsapp_message = !empty($service->whatsapp_message) ? $service->whatsapp_message : 'Hola! Me interesa el servicio: ' . $service->name;
-                                            $button_text = !empty($service->button_text) ? $service->button_text : 'Â¡Quiero este servicio!';
+                                            $button_text = !empty($service->button_text) ? $service->button_text : '¡Quiero este servicio!';
                                             ?>
                                             <a href="<?php echo esc_url(get_whatsapp_url($whatsapp_message)); ?>" 
                                                target="_blank" class="btn btn-success btn-lg w-100 cta-button">
@@ -172,7 +172,7 @@ function pricing_services_shortcode($atts) {
 }
 add_shortcode('pricing_services', 'pricing_services_shortcode');
 
-// Renderizar secciÃ³n de precios
+// Renderizar sección de precios
 function render_pricing_section() {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_services';
@@ -181,7 +181,7 @@ function render_pricing_section() {
         "SELECT * FROM $table_name WHERE category = 'pricing' AND status = 'active' ORDER BY service_order ASC, name ASC"
     );
     
-    // Debug temporal - eliminar despuÃ©s
+    // Debug temporal - eliminar después
     // error_log('Services data: ' . print_r($services, true));
     
     if (empty($services)) {
@@ -458,6 +458,142 @@ function render_pricing_section() {
     echo ob_get_clean();
 }
 
+// Renderizar servicios especiales
+function render_special_services_section() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_services';
+    
+    $services = $wpdb->get_results(
+        "SELECT * FROM $table_name WHERE service_category = 'features' AND is_active = 1 ORDER BY service_order ASC, service_name ASC"
+    );
+    
+    if (empty($services)) {
+        return;
+    }
+    
+    ob_start();
+    ?>
+    <section class="special-services-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h2 class="section-title">Nuestros Servicios Especializados</h2>
+                    <p class="section-subtitle">Nuestros servicios especializados te brindan todo lo que necesitas</p>
+                </div>
+            </div>
+            
+            <div class="row services-grid">
+                <?php foreach ($services as $service): 
+                    $features = json_decode($service->service_features, true) ?: [];
+                ?>
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        <div class="service-item">
+                            <div class="service-icon">
+                                <i class="<?php echo esc_attr($service->service_icon); ?>"></i>
+                            </div>
+                            <h4><?php echo esc_html($service->service_name); ?></h4>
+                            <p><?php echo esc_html($service->service_description); ?></p>
+                            
+                            <?php if (!empty($features)): ?>
+                                <ul class="service-features">
+                                    <?php foreach ($features as $feature): ?>
+                                        <li><?php echo esc_html($feature); ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+    
+    <style>
+    .special-services-section {
+        padding: 80px 0;
+        background: white;
+    }
+    
+    .services-grid {
+        margin-top: 50px;
+    }
+    
+    .service-item {
+        text-align: center;
+        padding: 40px 20px;
+        height: 100%;
+        transition: all 0.3s ease;
+    }
+    
+    .service-item:hover {
+        transform: translateY(-5px);
+    }
+    
+    .service-icon {
+        margin-bottom: 25px;
+    }
+    
+    .service-icon i {
+        font-size: 3.5em;
+        color: #007cba;
+        background: linear-gradient(45deg, #007cba, #005a87);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .service-item h4 {
+        font-size: 1.4em;
+        color: #333;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+    
+    .service-item p {
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 20px;
+    }
+    
+    .service-features {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        text-align: left;
+    }
+    
+    .service-features li {
+        color: #555;
+        padding: 5px 0;
+        position: relative;
+        padding-left: 20px;
+    }
+    
+    .service-features li:before {
+        content: "✓";
+        color: #28a745;
+        font-weight: bold;
+        position: absolute;
+        left: 0;
+    }
+    
+    @media (max-width: 768px) {
+        .special-services-section {
+            padding: 60px 0;
+        }
+        
+        .service-item {
+            padding: 30px 15px;
+        }
+        
+        .service-icon i {
+            font-size: 3em;
+        }
+    }
+    </style>
+    <?php
+    echo ob_get_clean();
+}
 
 // Widget de tipo de cambio
 function exchange_rate_widget() {
@@ -491,16 +627,16 @@ function get_default_features_content() {
     ?>
     <section class="features-section" id="beneficios">
         <div class="container">
-            <h2 class="section-title">Â¿Por quÃ© elegir Automatiza Tech?</h2>
-            <p class="text-center text-muted mb-5">Automatiza tu atenciÃ³n, ahorra tiempo, escala tu negocio</p>
+            <h2 class="section-title">¿Por qué elegir Automatiza Tech?</h2>
+            <p class="text-center text-muted mb-5">Automatiza tu atención, ahorra tiempo, escala tu negocio</p>
             
             <div class="features-grid">
                 <div class="feature-card fade-in-up">
                     <div class="feature-icon">
                         <i class="fas fa-robot"></i>
                     </div>
-                    <h3>AtenciÃ³n 24/7</h3>
-                    <p>Chatbots inteligentes que nunca descansan. Atiende a tus clientes las 24 horas del dÃ­a, los 7 dÃ­as de la semana.</p>
+                    <h3>Atención 24/7</h3>
+                    <p>Chatbots inteligentes que nunca descansan. Atiende a tus clientes las 24 horas del día, los 7 días de la semana.</p>
                 </div>
                 
                 <div class="feature-card fade-in-up">
@@ -508,14 +644,14 @@ function get_default_features_content() {
                         <i class="fas fa-chart-line"></i>
                     </div>
                     <h3>Aumenta tus Ventas</h3>
-                    <p>Convierte mÃ¡s leads en clientes con respuestas automÃ¡ticas inteligentes y seguimiento personalizado.</p>
+                    <p>Convierte más leads en clientes con respuestas automáticas inteligentes y seguimiento personalizado.</p>
                 </div>
                 
                 <div class="feature-card fade-in-up">
                     <div class="feature-icon">
                         <i class="fas fa-cogs"></i>
                     </div>
-                    <h3>FÃ¡cil IntegraciÃ³n</h3>
+                    <h3>Fácil Integración</h3>
                     <p>Se integra perfectamente con WhatsApp, Instagram, tu sitio web y tu CRM existente.</p>
                 </div>
                 
@@ -532,7 +668,7 @@ function get_default_features_content() {
                         <i class="fas fa-users"></i>
                     </div>
                     <h3>Mejor Experiencia</h3>
-                    <p>Respuestas instantÃ¡neas y personalizadas que mejoran la satisfacciÃ³n de tus clientes.</p>
+                    <p>Respuestas instantáneas y personalizadas que mejoran la satisfacción de tus clientes.</p>
                 </div>
                 
                 <div class="feature-card fade-in-up">
@@ -540,7 +676,7 @@ function get_default_features_content() {
                         <i class="fas fa-shield-alt"></i>
                     </div>
                     <h3>Seguridad Garantizada</h3>
-                    <p>ProtecciÃ³n de datos y comunicaciones seguras con los mÃ¡s altos estÃ¡ndares de la industria.</p>
+                    <p>Protección de datos y comunicaciones seguras con los más altos estándares de la industria.</p>
                 </div>
             </div>
         </div>
@@ -575,26 +711,26 @@ function get_default_special_services_content() {
                             <div class="row">
                                 <div class="col-md-8">
                                     <p class="service-description mb-4">
-                                        Impulsa tu emprendimiento con una soluciÃ³n completa que incluye sitio web profesional 
-                                        y automatizaciÃ³n de WhatsApp Business para generar mÃ¡s ventas y mejorar la atenciÃ³n al cliente.
+                                        Impulsa tu emprendimiento con una solución completa que incluye sitio web profesional 
+                                        y automatización de WhatsApp Business para generar más ventas y mejorar la atención al cliente.
                                     </p>
                                     <div class="features-list">
-                                        <h5 class="mb-3">Â¿QuÃ© incluye?</h5>
+                                        <h5 class="mb-3">¿Qué incluye?</h5>
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <ul class="list-unstyled">
                                                     <li><i class="fas fa-check text-success me-2"></i>Sitio web responsivo</li>
-                                                    <li><i class="fas fa-check text-success me-2"></i>CatÃ¡logo de productos</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Catálogo de productos</li>
                                                     <li><i class="fas fa-check text-success me-2"></i>WhatsApp Business API</li>
                                                     <li><i class="fas fa-check text-success me-2"></i>Chat automatizado</li>
                                                 </ul>
                                             </div>
                                             <div class="col-md-6">
                                                 <ul class="list-unstyled">
-                                                    <li><i class="fas fa-check text-success me-2"></i>BotÃ³n de WhatsApp integrado</li>
-                                                    <li><i class="fas fa-check text-success me-2"></i>Respuestas automÃ¡ticas</li>
-                                                    <li><i class="fas fa-check text-success me-2"></i>Horarios de atenciÃ³n</li>
-                                                    <li><i class="fas fa-check text-success me-2"></i>Soporte tÃ©cnico</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Botón de WhatsApp integrado</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Respuestas automáticas</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Horarios de atención</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Soporte técnico</li>
                                                 </ul>
                                             </div>
                                         </div>
@@ -612,7 +748,7 @@ function get_default_special_services_content() {
                                         <div class="robot-container d-inline-block position-relative">
                                             <a href="<?php echo esc_url(get_whatsapp_url('Hola! Me interesa el servicio Web + WhatsApp Business')); ?>" 
                                                target="_blank" class="btn btn-success btn-lg w-100 cta-button">
-                                                Â¡Quiero mi Web + WhatsApp!
+                                                ¡Quiero mi Web + WhatsApp!
                                             </a>
                                             <div class="robot-peek">
                                                 <i class="fas fa-robot"></i>

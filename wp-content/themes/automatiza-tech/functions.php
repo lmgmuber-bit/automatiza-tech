@@ -362,4 +362,5 @@ require_once get_template_directory() . '/inc/services-manager.php';
 /**
  * Incluir funciones de frontend para servicios
  */
-require_once get_template_directory() . '/inc/services-frontend.php';
+// require_once get_template_directory() . '/inc/services-frontend.php'; // Comentado para evitar conflictos
+require_once get_template_directory() . '/services-frontend.php';

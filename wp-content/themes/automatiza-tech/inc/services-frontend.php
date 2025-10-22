@@ -134,7 +134,7 @@ function render_pricing_section() {
                         </div>
                         <div class="card-footer text-center">
                             <?php 
-                            $button_text = !empty($plan->button_text) && !$plan->highlight ? $plan->button_text : 'Comenzar';
+                            $button_text = !empty($plan->button_text) ? $plan->button_text : 'Comenzar';
                             $whatsapp_message = !empty($plan->whatsapp_message) ? $plan->whatsapp_message : 'Hola! Me interesa el ' . $plan->name . '. ¿Podrías darme más información?';
                             ?>
                             <a href="<?php echo esc_url(get_whatsapp_url($whatsapp_message)); ?>" 
@@ -339,7 +339,7 @@ function render_special_services_section() {
                             <div class="row align-items-center">
                                 <div class="col-md-8">
                                     <h3 class="mb-1"><?php echo esc_html($service->name); ?></h3>
-                                    <p class="mb-0 opacity-90"><?php echo esc_html($service->description); ?></p>
+                                    <p class="mb-0 opacity-90">Para Emprendimientos</p>
                                 </div>
                                 <div class="col-md-4 text-md-end">
                                     <div class="service-icon">

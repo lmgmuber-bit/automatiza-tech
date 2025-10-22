@@ -53,8 +53,63 @@ get_header(); ?>
         </div>
     </section>
 
-    <!-- Features Section - Dynamic Content -->
-    <?php echo render_features_section(); ?>
+    <!-- Features Section -->
+    <section class="features-section" id="beneficios">
+        <div class="container">
+            <h2 class="section-title">¿Por qué elegir Automatiza Tech?</h2>
+            <p class="text-center text-muted mb-5">Automatiza tu atención, ahorra tiempo, escala tu negocio</p>
+            
+            <div class="features-grid">
+                <div class="feature-card fade-in-up">
+                    <div class="feature-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>Atención 24/7</h3>
+                    <p>Chatbots inteligentes que nunca descansan. Atiende a tus clientes las 24 horas del día, los 7 días de la semana.</p>
+                </div>
+                
+                <div class="feature-card fade-in-up">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Aumenta tus Ventas</h3>
+                    <p>Convierte más leads en clientes con respuestas automáticas inteligentes y seguimiento personalizado.</p>
+                </div>
+                
+                <div class="feature-card fade-in-up">
+                    <div class="feature-icon">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <h3>Fácil Integración</h3>
+                    <p>Se integra perfectamente con WhatsApp, Instagram, tu sitio web y tu CRM existente.</p>
+                </div>
+                
+                <div class="feature-card fade-in-up">
+                    <div class="feature-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3>Ahorra Tiempo</h3>
+                    <p>Automatiza respuestas frecuentes y libera tiempo para enfocarte en hacer crecer tu negocio.</p>
+                </div>
+                
+                <div class="feature-card fade-in-up">
+                    <div class="feature-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3>Mejor Experiencia</h3>
+                    <p>Respuestas instantáneas y personalizadas que mejoran la satisfacción de tus clientes.</p>
+                </div>
+                
+                <div class="feature-card fade-in-up">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h3>Analíticas avanzadas</h3>
+                    <p>Métricas detalladas para optimizar tu estrategia de atención al cliente y ventas.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Integrations Section -->
     <section class="integrations-section" id="integraciones">
@@ -114,8 +169,82 @@ get_header(); ?>
         </div>
     </section>
 
-    <!-- Services Section - Dynamic Content -->
-    <?php echo render_special_services_section(); ?>
+    <!-- Services Section -->
+    <section class="services-section py-5" id="servicios">
+        <div class="container">
+            <h2 class="section-title text-center mb-5">Nuestros Servicios Especializados</h2>
+            <div class="row justify-content-center">
+                <div class="col-lg-8 col-md-10">
+                    <div class="service-card shadow-lg border-0 rounded-lg overflow-hidden">
+                        <div class="service-header bg-gradient-primary text-white p-4">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h3 class="mb-1">Web + WhatsApp Business</h3>
+                                    <p class="mb-0 opacity-90">Para Emprendimientos</p>
+                                </div>
+                                <div class="col-md-4 text-md-end">
+                                    <div class="service-icon">
+                                        <i class="fas fa-store fa-3x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="service-body p-4">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <p class="service-description mb-4">
+                                        Impulsa tu emprendimiento con una solución completa que incluye sitio web profesional 
+                                        y automatización de WhatsApp Business para generar más ventas y mejorar la atención al cliente.
+                                    </p>
+                                    <div class="features-list">
+                                        <h5 class="mb-3">¿Qué incluye?</h5>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <ul class="list-unstyled">
+                                                    <li><i class="fas fa-check text-success me-2"></i>Sitio web responsivo</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Catálogo de productos</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>WhatsApp Business API</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Chat automatizado</li>
+                                                </ul>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <ul class="list-unstyled">
+                                                    <li><i class="fas fa-check text-success me-2"></i>Botón de WhatsApp integrado</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Respuestas automáticas</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Horarios de atención</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Soporte técnico</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="pricing-card bg-light rounded p-4 text-center">
+                                        <h4 class="text-primary mb-3">Precio Especial</h4>
+                                        <div class="price-display mb-3">
+                                            <span class="currency">$</span>
+                                            <span class="amount">299</span>
+                                            <span class="period">/mes</span>
+                                        </div>
+                                        <p class="small text-muted mb-3">Setup inicial: $500</p>
+                                        <div class="robot-container d-inline-block position-relative">
+                                            <button class="btn btn-success btn-lg w-100 cta-button">
+                                                ¡Quiero mi Web + WhatsApp!
+                                            </button>
+                                            <div class="robot-peek">
+                                                <i class="fas fa-robot"></i>
+                                            </div>
+                                        </div>
+                                        <p class="small text-muted mt-2">Sin permanencia</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Industries Section -->
     <section class="industries-section bg-light" id="industrias">
@@ -199,8 +328,93 @@ get_header(); ?>
         </div>
     </section>
 
-    <!-- Pricing Section - Dynamic Content -->
-    <?php echo render_pricing_section(); ?>
+    <!-- Pricing Section -->
+    <section class="pricing-section" id="planes">
+        <div class="container">
+            <h2 class="section-title">Planes y Precios</h2>
+            <p class="text-center text-muted mb-5">Elige el plan que mejor se adapte a tu negocio</p>
+            
+            <div class="row justify-content-center">
+                <div class="col-md-4 mb-4">
+                    <div class="pricing-card card h-100">
+                        <div class="card-header text-center bg-light">
+                            <h5 class="card-title">Básico</h5>
+                            <div class="price">
+                                <span class="currency">$</span>
+                                <span class="amount">99</span>
+                                <span class="period">/mes</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> Hasta 1,000 conversaciones/mes</li>
+                                <li><i class="fas fa-check text-success"></i> WhatsApp y Web Chat</li>
+                                <li><i class="fas fa-check text-success"></i> Respuestas automáticas básicas</li>
+                                <li><i class="fas fa-check text-success"></i> Soporte por email</li>
+                                <li><i class="fas fa-check text-success"></i> Analíticas básicas</li>
+                            </ul>
+                        </div>
+                        <div class="card-footer text-center">
+                            <a href="#contact" class="btn btn-outline-primary">Comenzar</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-4">
+                    <div class="pricing-card card h-100 border-primary">
+                        <div class="card-header text-center bg-primary text-white">
+                            <h5 class="card-title">Profesional</h5>
+                            <div class="price">
+                                <span class="currency">$</span>
+                                <span class="amount">199</span>
+                                <span class="period">/mes</span>
+                            </div>
+                            <span class="badge badge-light">Más Popular</span>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> Hasta 5,000 conversaciones/mes</li>
+                                <li><i class="fas fa-check text-success"></i> Todas las integraciones</li>
+                                <li><i class="fas fa-check text-success"></i> IA avanzada</li>
+                                <li><i class="fas fa-check text-success"></i> Soporte prioritario</li>
+                                <li><i class="fas fa-check text-success"></i> Analíticas avanzadas</li>
+                                <li><i class="fas fa-check text-success"></i> API personalizada</li>
+                            </ul>
+                        </div>
+                        <div class="card-footer text-center">
+                            <a href="#contact" class="btn btn-primary">Comenzar</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-4">
+                    <div class="pricing-card card h-100">
+                        <div class="card-header text-center bg-secondary text-white">
+                            <h5 class="card-title">Enterprise</h5>
+                            <div class="price">
+                                <span class="currency">$</span>
+                                <span class="amount">399</span>
+                                <span class="period">/mes</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> Conversaciones ilimitadas</li>
+                                <li><i class="fas fa-check text-success"></i> Integraciones personalizadas</li>
+                                <li><i class="fas fa-check text-success"></i> IA ultra avanzada</li>
+                                <li><i class="fas fa-check text-success"></i> Soporte 24/7</li>
+                                <li><i class="fas fa-check text-success"></i> Gerente de cuenta dedicado</li>
+                                <li><i class="fas fa-check text-success"></i> Implementación personalizada</li>
+                            </ul>
+                        </div>
+                        <div class="card-footer text-center">
+                            <a href="#contact" class="btn btn-secondary">Contactar</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Contact Section -->
     <section class="contact-section" id="contact">

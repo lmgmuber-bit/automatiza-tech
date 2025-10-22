@@ -1,6 +1,6 @@
 ﻿/*
 Theme Name: Automatiza Tech
-Description: Tema personalizado para Automatiza Tech - Conectamos tus ventas, web y CRM. Tema optimizado para SEO, responsive y de carga rÃ¡pida.
+Description: Tema personalizado para Automatiza Tech - Conectamos tus ventas, web y CRM. Tema optimizado para SEO, responsive y de carga rápida.
 Author: Automatiza Tech Team
 Version: 1.0
 Text Domain: automatiza-tech
@@ -9,9 +9,9 @@ License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Paleta de colores:
-- Azul elÃ©ctrico: #1e40af (tecnologÃ­a y confianza)
+- Azul eléctrico: #1e40af (tecnología y confianza)
 - Blanco: #ffffff (claridad y simplicidad) 
-- Verde lima: #06d6a0 (innovaciÃ³n y energÃ­a)
+- Verde lima: #06d6a0 (innovación y energía)
 - Gris: #6b7280
 */
 
@@ -1048,10 +1048,14 @@ img {
     background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
 }
 
-.pricing-card::before {
+.pricing-card.pricing-card-special {
+    margin-top: 30px;
+}
+
+.pricing-card.pricing-card-special::before {
     content: '🔥 OFERTA ESPECIAL';
     position: absolute;
-    top: -12px;
+    top: -20px;
     left: 50%;
     transform: translateX(-50%);
     background: var(--color-secondary);

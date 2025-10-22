@@ -1,0 +1,1115 @@
+<?php
+/**
+ * Sistema de Gestión de Servicios para Automatiza Tech
+ * Maneja la administración completa de servicios con CRUD
+ */
+
+// Evitar acceso directo
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class AutomatizaTechServicesManager {
+    
+    private $table_name;
+    
+    public function __construct() {
+        global $wpdb;
+        $this->table_name = $wpdb->prefix . 'automatiza_services';
+        
+        // Hooks de WordPress
+        add_action('admin_menu', array($this, 'add_admin_menu'));
+        add_action('admin_enqueue_scripts', array($this, 'admin_scripts'));
+        add_action('wp_ajax_save_service', array($this, 'save_service'));
+        add_action('wp_ajax_delete_service', array($this, 'delete_service'));
+        add_action('wp_ajax_toggle_service_status', array($this, 'toggle_service_status'));
+        add_action('wp_ajax_get_service_details', array($this, 'get_service_details'));
+        add_action('wp_ajax_duplicate_service', array($this, 'duplicate_service'));
+        
+        // Crear la tabla si no existe
+        add_action('after_setup_theme', array($this, 'create_table'));
+    }
+    
+    /**
+     * Crear tabla de servicios si no existe
+     */
+    public function create_table() {
+        global $wpdb;
+        
+        $charset_collate = $wpdb->get_charset_collate();
+        
+        $sql = "CREATE TABLE IF NOT EXISTS {$this->table_name} (
+            id int(11) NOT NULL AUTO_INCREMENT,
+            name varchar(255) NOT NULL,
+            category varchar(50) DEFAULT 'pricing',
+            price_usd decimal(10,2) DEFAULT 0.00,
+            price_clp decimal(12,0) DEFAULT 0,
+            description text,
+            features text,
+            icon varchar(100) DEFAULT 'fas fa-star',
+            highlight tinyint(1) DEFAULT 0,
+            button_text varchar(100) DEFAULT '',
+            whatsapp_message text,
+            status varchar(20) DEFAULT 'active',
+            service_order int(11) DEFAULT 0,
+            created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+            updated_at timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY category (category),
+            KEY status (status),
+            KEY service_order (service_order)
+        ) $charset_collate;";
+        
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+    }
+    
+    /**
+     * Agregar menú de administración
+     */
+    public function add_admin_menu() {
+        add_menu_page(
+            'Gestión de Servicios',
+            'Servicios AT',
+            'manage_options',
+            'automatiza-services',
+            array($this, 'admin_page'),
+            'dashicons-admin-tools',
+            25
+        );
+        
+        add_submenu_page(
+            'automatiza-services',
+            'Agregar Servicio',
+            'Agregar Nuevo',
+            'manage_options',
+            'automatiza-services-new',
+            array($this, 'new_service_page')
+        );
+        
+        add_submenu_page(
+            'automatiza-services',
+            'Configuración',
+            'Configuración',
+            'manage_options',
+            'automatiza-services-config',
+            array($this, 'config_page')
+        );
+    }
+    
+    /**
+     * Enqueue scripts y estilos del admin
+     */
+    public function admin_scripts($hook) {
+        if (strpos($hook, 'automatiza-services') !== false) {
+            wp_enqueue_script('jquery');
+            wp_enqueue_script('jquery-ui-sortable');
+            wp_enqueue_style('automatiza-services-admin', get_template_directory_uri() . '/assets/css/admin-services.css', array(), '1.0.0');
+            
+            // JavaScript personalizado
+            wp_add_inline_script('jquery', $this->get_admin_js());
+            
+            // Localize script para AJAX
+            wp_localize_script('jquery', 'automatiza_ajax', array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('automatiza_services_nonce'),
+                'confirm_delete' => '¿Estás seguro de que quieres eliminar este servicio?',
+                'confirm_duplicate' => '¿Quieres duplicar este servicio?'
+            ));
+        }
+    }
+    
+    /**
+     * Página principal de administración
+     */
+    public function admin_page() {
+        global $wpdb;
+        
+        // Obtener servicios
+        $services = $wpdb->get_results(
+            "SELECT * FROM {$this->table_name} ORDER BY category, service_order, name ASC"
+        );
+        
+        // Agrupar por categoría
+        $services_by_category = array();
+        foreach ($services as $service) {
+            $services_by_category[$service->category][] = $service;
+        }
+        
+        ?>
+        <div class="wrap">
+            <h1>Gestión de Servicios <a href="<?php echo admin_url('admin.php?page=automatiza-services-new'); ?>" class="page-title-action">Agregar Nuevo</a></h1>
+            
+            <div id="service-message" class="notice" style="display:none;"></div>
+            
+            <div class="services-admin-container">
+                
+                <!-- Estadísticas -->
+                <div class="services-stats">
+                    <div class="stat-box">
+                        <h3><?php echo count($services); ?></h3>
+                        <p>Total Servicios</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3><?php echo count(array_filter($services, function($s) { return $s->status === 'active'; })); ?></h3>
+                        <p>Activos</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3><?php echo count(array_filter($services, function($s) { return $s->category === 'pricing'; })); ?></h3>
+                        <p>Planes</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3><?php echo count(array_filter($services, function($s) { return $s->category === 'features'; })); ?></h3>
+                        <p>Beneficios</p>
+                    </div>
+                </div>
+                
+                <!-- Filtros -->
+                <div class="services-filters">
+                    <select id="filter-category">
+                        <option value="">Todas las categorías</option>
+                        <option value="pricing">Planes (Pricing)</option>
+                        <option value="features">Beneficios (Features)</option>
+                        <option value="special">Especiales</option>
+                    </select>
+                    
+                    <select id="filter-status">
+                        <option value="">Todos los estados</option>
+                        <option value="active">Activos</option>
+                        <option value="inactive">Inactivos</option>
+                    </select>
+                    
+                    <button type="button" class="button" onclick="clearFilters()">Limpiar Filtros</button>
+                </div>
+                
+                <!-- Servicios por categoría -->
+                <?php foreach ($services_by_category as $category => $category_services): ?>
+                <div class="category-section" data-category="<?php echo esc_attr($category); ?>">
+                    <h2 class="category-title">
+                        <?php 
+                        switch($category) {
+                            case 'pricing': echo 'Planes de Precios'; break;
+                            case 'features': echo 'Beneficios/Características'; break;
+                            case 'special': echo 'Ofertas Especiales'; break;
+                            default: echo ucfirst($category); break;
+                        }
+                        ?>
+                        <span class="category-count">(<?php echo count($category_services); ?>)</span>
+                    </h2>
+                    
+                    <div class="services-grid" id="services-<?php echo esc_attr($category); ?>">
+                        <?php foreach ($category_services as $service): ?>
+                        <div class="service-card" data-id="<?php echo $service->id; ?>" data-category="<?php echo esc_attr($service->category); ?>" data-status="<?php echo esc_attr($service->status); ?>">
+                            <div class="service-header">
+                                <h3>
+                                    <i class="<?php echo esc_attr($service->icon); ?>"></i>
+                                    <?php echo esc_html($service->name); ?>
+                                </h3>
+                                <div class="service-status-badge <?php echo $service->status; ?>">
+                                    <?php echo $service->status === 'active' ? 'Activo' : 'Inactivo'; ?>
+                                </div>
+                            </div>
+                            
+                            <div class="service-meta">
+                                <p><strong>Categoría:</strong> <?php echo esc_html($service->category); ?></p>
+                                <?php if ($service->price_usd > 0): ?>
+                                <p><strong>Precio:</strong> $<?php echo number_format($service->price_usd, 0); ?> USD / $<?php echo number_format($service->price_clp, 0, ',', '.'); ?> CLP</p>
+                                <?php endif; ?>
+                                <?php if ($service->highlight): ?>
+                                <p><span class="highlight-badge">⭐ Destacado</span></p>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <div class="service-description">
+                                <p><?php echo esc_html(wp_trim_words($service->description, 15)); ?></p>
+                            </div>
+                            
+                            <div class="service-actions">
+                                <button type="button" class="button button-primary button-small" onclick="editService(<?php echo $service->id; ?>)">
+                                    <span class="dashicons dashicons-edit"></span> Editar
+                                </button>
+                                <button type="button" class="button button-small" onclick="duplicateService(<?php echo $service->id; ?>)">
+                                    <span class="dashicons dashicons-admin-page"></span> Duplicar
+                                </button>
+                                <button type="button" class="button button-small" onclick="toggleServiceStatus(<?php echo $service->id; ?>)">
+                                    <span class="dashicons dashicons-<?php echo $service->status === 'active' ? 'hidden' : 'visibility'; ?>"></span>
+                                    <?php echo $service->status === 'active' ? 'Desactivar' : 'Activar'; ?>
+                                </button>
+                                <button type="button" class="button button-link-delete button-small" onclick="deleteService(<?php echo $service->id; ?>)">
+                                    <span class="dashicons dashicons-trash"></span> Eliminar
+                                </button>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+                
+                <?php if (empty($services)): ?>
+                <div class="no-services">
+                    <h3>No hay servicios configurados</h3>
+                    <p>¡Comienza agregando tu primer servicio!</p>
+                    <a href="<?php echo admin_url('admin.php?page=automatiza-services-new'); ?>" class="button button-primary">Agregar Primer Servicio</a>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        
+        <!-- Modal para editar servicio -->
+        <div id="edit-service-modal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <span class="modal-close">&times;</span>
+                <h2>Editar Servicio</h2>
+                <form id="edit-service-form">
+                    <!-- El contenido se cargará dinámicamente -->
+                </form>
+            </div>
+        </div>
+        
+        <style>
+        .services-admin-container { margin-top: 20px; }
+        
+        .services-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-box {
+            background: #fff;
+            border: 1px solid #ccd0d4;
+            border-radius: 4px;
+            padding: 20px;
+            text-align: center;
+            min-width: 120px;
+        }
+        
+        .stat-box h3 {
+            font-size: 2em;
+            margin: 0;
+            color: #0073aa;
+        }
+        
+        .stat-box p {
+            margin: 5px 0 0 0;
+            color: #666;
+        }
+        
+        .services-filters {
+            background: #fff;
+            border: 1px solid #ccd0d4;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .category-section {
+            margin-bottom: 40px;
+        }
+        
+        .category-title {
+            color: #23282d;
+            border-bottom: 2px solid #0073aa;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .category-count {
+            font-size: 0.8em;
+            color: #666;
+            font-weight: normal;
+        }
+        
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        
+        .service-card {
+            background: #fff;
+            border: 1px solid #ccd0d4;
+            border-radius: 6px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .service-card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-color: #0073aa;
+        }
+        
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .service-header h3 {
+            margin: 0;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .service-status-badge {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .service-status-badge.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .service-status-badge.inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .service-meta {
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+        
+        .service-meta p {
+            margin: 5px 0;
+            color: #666;
+        }
+        
+        .highlight-badge {
+            background: #fff3cd;
+            color: #856404;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.8em;
+        }
+        
+        .service-description {
+            margin-bottom: 15px;
+            color: #555;
+            line-height: 1.4;
+        }
+        
+        .service-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .service-actions .button-small {
+            padding: 4px 8px;
+            font-size: 11px;
+            height: auto;
+            line-height: 1.4;
+        }
+        
+        .no-services {
+            text-align: center;
+            padding: 60px 20px;
+            background: #fff;
+            border: 1px solid #ccd0d4;
+            border-radius: 6px;
+        }
+        
+        .no-services h3 {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        /* Modal */
+        .modal {
+            position: fixed;
+            z-index: 999999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 6px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .modal-close:hover {
+            color: #000;
+        }
+        </style>
+        <?php
+    }
+    
+    /**
+     * Página para agregar nuevo servicio
+     */
+    public function new_service_page() {
+        ?>
+        <div class="wrap">
+            <h1>Agregar Nuevo Servicio</h1>
+            
+            <form method="post" id="new-service-form" class="service-form">
+                <?php wp_nonce_field('automatiza_new_service', 'service_nonce'); ?>
+                
+                <table class="form-table" role="presentation">
+                    <tbody>
+                        <tr>
+                            <th scope="row"><label for="service_name">Nombre del Servicio *</label></th>
+                            <td>
+                                <input name="service_name" type="text" id="service_name" class="regular-text" required>
+                                <p class="description">Nombre que aparecerá en el frontend</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row"><label for="service_category">Categoría *</label></th>
+                            <td>
+                                <select name="service_category" id="service_category" required>
+                                    <option value="">Seleccionar categoría</option>
+                                    <option value="pricing">Planes de Precios</option>
+                                    <option value="features">Beneficios/Características</option>
+                                    <option value="special">Ofertas Especiales</option>
+                                </select>
+                                <p class="description">Determina dónde aparecerá en el sitio web</p>
+                            </td>
+                        </tr>
+                        
+                        <tr class="pricing-fields">
+                            <th scope="row"><label for="price_usd">Precio USD</label></th>
+                            <td>
+                                <input name="price_usd" type="number" id="price_usd" class="small-text" step="0.01" min="0">
+                                <p class="description">Precio en dólares (solo para planes)</p>
+                            </td>
+                        </tr>
+                        
+                        <tr class="pricing-fields">
+                            <th scope="row"><label for="price_clp">Precio CLP</label></th>
+                            <td>
+                                <input name="price_clp" type="number" id="price_clp" class="regular-text" step="1" min="0">
+                                <p class="description">Precio en pesos chilenos</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row"><label for="service_description">Descripción</label></th>
+                            <td>
+                                <textarea name="service_description" id="service_description" rows="3" class="large-text"></textarea>
+                                <p class="description">Descripción que aparecerá en el frontend</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row"><label for="service_features">Características</label></th>
+                            <td>
+                                <textarea name="service_features" id="service_features" rows="5" class="large-text" placeholder='["Característica 1","Característica 2","Característica 3"]'></textarea>
+                                <p class="description">Lista de características en formato JSON. Una por línea entre comillas y separadas por comas.</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row"><label for="service_icon">Icono</label></th>
+                            <td>
+                                <input name="service_icon" type="text" id="service_icon" value="fas fa-star" class="regular-text">
+                                <p class="description">Clase CSS del icono FontAwesome (ej: fas fa-star)</p>
+                            </td>
+                        </tr>
+                        
+                        <tr class="pricing-fields">
+                            <th scope="row"><label for="service_highlight">Destacado</label></th>
+                            <td>
+                                <input name="service_highlight" type="checkbox" id="service_highlight" value="1">
+                                <label for="service_highlight">Marcar como plan destacado</label>
+                            </td>
+                        </tr>
+                        
+                        <tr class="pricing-fields">
+                            <th scope="row"><label for="button_text">Texto del Botón</label></th>
+                            <td>
+                                <input name="button_text" type="text" id="button_text" class="regular-text" placeholder="Comenzar">
+                                <p class="description">Texto que aparecerá en el botón</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row"><label for="whatsapp_message">Mensaje WhatsApp</label></th>
+                            <td>
+                                <textarea name="whatsapp_message" id="whatsapp_message" rows="3" class="large-text"></textarea>
+                                <p class="description">Mensaje predefinido para WhatsApp cuando hagan clic</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row"><label for="service_order">Orden</label></th>
+                            <td>
+                                <input name="service_order" type="number" id="service_order" value="0" class="small-text">
+                                <p class="description">Orden de aparición (0 = primero)</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row"><label for="service_status">Estado</label></th>
+                            <td>
+                                <select name="service_status" id="service_status">
+                                    <option value="active">Activo</option>
+                                    <option value="inactive">Inactivo</option>
+                                </select>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <?php submit_button('Guardar Servicio', 'primary', 'save_service'); ?>
+            </form>
+        </div>
+        
+        <style>
+        .service-form .form-table th {
+            width: 200px;
+        }
+        
+        .pricing-fields {
+            display: none;
+        }
+        
+        .pricing-fields.show {
+            display: table-row;
+        }
+        </style>
+        
+        <script>
+        jQuery(document).ready(function($) {
+            // Mostrar/ocultar campos según categoría
+            $('#service_category').on('change', function() {
+                var category = $(this).val();
+                if (category === 'pricing' || category === 'special') {
+                    $('.pricing-fields').addClass('show');
+                } else {
+                    $('.pricing-fields').removeClass('show');
+                }
+            });
+            
+            // Manejar envío del formulario
+            $('#new-service-form').on('submit', function(e) {
+                e.preventDefault();
+                
+                var formData = new FormData(this);
+                formData.append('action', 'save_service');
+                formData.append('nonce', '<?php echo wp_create_nonce('automatiza_services_nonce'); ?>');
+                
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response.success) {
+                            alert('Servicio guardado exitosamente');
+                            window.location.href = '<?php echo admin_url('admin.php?page=automatiza-services'); ?>';
+                        } else {
+                            alert('Error: ' + response.data.message);
+                        }
+                    },
+                    error: function() {
+                        alert('Error de conexión');
+                    }
+                });
+            });
+        });
+        </script>
+        <?php
+    }
+    
+    /**
+     * Página de configuración
+     */
+    public function config_page() {
+        ?>
+        <div class="wrap">
+            <h1>Configuración de Servicios</h1>
+            
+            <form method="post" action="options.php">
+                <?php
+                settings_fields('automatiza_services_config');
+                do_settings_sections('automatiza_services_config');
+                ?>
+                
+                <table class="form-table" role="presentation">
+                    <tbody>
+                        <tr>
+                            <th scope="row">Tipo de Cambio USD a CLP</th>
+                            <td>
+                                <input name="usd_to_clp_rate" type="number" value="<?php echo esc_attr(get_option('usd_to_clp_rate', 800)); ?>" class="regular-text" step="0.01">
+                                <p class="description">Tipo de cambio actual para convertir automáticamente precios</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row">WhatsApp por Defecto</th>
+                            <td>
+                                <input name="default_whatsapp_number" type="text" value="<?php echo esc_attr(get_option('default_whatsapp_number', '+56912345678')); ?>" class="regular-text">
+                                <p class="description">Número de WhatsApp por defecto (incluir código de país)</p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row">Mostrar Precios en CLP</th>
+                            <td>
+                                <input name="show_clp_prices" type="checkbox" value="1" <?php checked(1, get_option('show_clp_prices', 1)); ?>>
+                                <label>Mostrar precios en pesos chilenos en el frontend</label>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <?php submit_button(); ?>
+            </form>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Obtener servicios por categoría
+     */
+    public function get_services_by_category($category = '', $status = 'active') {
+        global $wpdb;
+        
+        $where_clause = "WHERE status = %s";
+        $params = array($status);
+        
+        if (!empty($category)) {
+            $where_clause .= " AND category = %s";
+            $params[] = $category;
+        }
+        
+        $sql = "SELECT * FROM {$this->table_name} {$where_clause} ORDER BY service_order ASC, name ASC";
+        
+        return $wpdb->get_results($wpdb->prepare($sql, $params));
+    }
+    
+    /**
+     * Obtener servicios activos para el frontend
+     */
+    public function get_active_services($category = '') {
+        return $this->get_services_by_category($category, 'active');
+    }
+    
+    /**
+     * JavaScript para administración
+     */
+    private function get_admin_js() {
+        return "
+        // Funciones para gestión de servicios
+        function editService(serviceId) {
+            jQuery.ajax({
+                url: automatiza_ajax.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'get_service_details',
+                    service_id: serviceId,
+                    nonce: automatiza_ajax.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        showEditModal(response.data);
+                    } else {
+                        alert('Error al cargar el servicio');
+                    }
+                }
+            });
+        }
+        
+        function deleteService(serviceId) {
+            if (confirm(automatiza_ajax.confirm_delete)) {
+                jQuery.ajax({
+                    url: automatiza_ajax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'delete_service',
+                        service_id: serviceId,
+                        nonce: automatiza_ajax.nonce
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert('Error al eliminar el servicio');
+                        }
+                    }
+                });
+            }
+        }
+        
+        function toggleServiceStatus(serviceId) {
+            jQuery.ajax({
+                url: automatiza_ajax.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'toggle_service_status',
+                    service_id: serviceId,
+                    nonce: automatiza_ajax.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('Error al cambiar el estado');
+                    }
+                }
+            });
+        }
+        
+        function duplicateService(serviceId) {
+            if (confirm(automatiza_ajax.confirm_duplicate)) {
+                jQuery.ajax({
+                    url: automatiza_ajax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'duplicate_service',
+                        service_id: serviceId,
+                        nonce: automatiza_ajax.nonce
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert('Error al duplicar el servicio');
+                        }
+                    }
+                });
+            }
+        }
+        
+        function clearFilters() {
+            jQuery('#filter-category, #filter-status').val('');
+            filterServices();
+        }
+        
+        function filterServices() {
+            var category = jQuery('#filter-category').val();
+            var status = jQuery('#filter-status').val();
+            
+            jQuery('.service-card').each(function() {
+                var card = jQuery(this);
+                var cardCategory = card.data('category');
+                var cardStatus = card.data('status');
+                
+                var showCard = true;
+                
+                if (category && cardCategory !== category) {
+                    showCard = false;
+                }
+                
+                if (status && cardStatus !== status) {
+                    showCard = false;
+                }
+                
+                if (showCard) {
+                    card.show();
+                } else {
+                    card.hide();
+                }
+            });
+        }
+        
+        // Event listeners
+        jQuery(document).ready(function($) {
+            $('#filter-category, #filter-status').on('change', filterServices);
+            
+            // Cerrar modal
+            $('.modal-close').on('click', function() {
+                $('#edit-service-modal').hide();
+            });
+            
+            // Cerrar modal al hacer clic fuera
+            $('#edit-service-modal').on('click', function(e) {
+                if (e.target === this) {
+                    $(this).hide();
+                }
+            });
+        });
+        
+        function showEditModal(service) {
+            var modal = jQuery('#edit-service-modal');
+            var form = jQuery('#edit-service-form');
+            
+            // Construir formulario de edición
+            var formHtml = generateEditForm(service);
+            form.html(formHtml);
+            
+            modal.show();
+        }
+        
+        function generateEditForm(service) {
+            return '<input type=\"hidden\" name=\"service_id\" value=\"' + service.id + '\">' +
+                   '<table class=\"form-table\">' +
+                   '<tr><th>Nombre:</th><td><input type=\"text\" name=\"name\" value=\"' + service.name + '\" class=\"regular-text\" required></td></tr>' +
+                   '<tr><th>Categoría:</th><td><select name=\"category\"><option value=\"pricing\"' + (service.category === 'pricing' ? ' selected' : '') + '>Planes</option><option value=\"features\"' + (service.category === 'features' ? ' selected' : '') + '>Beneficios</option><option value=\"special\"' + (service.category === 'special' ? ' selected' : '') + '>Especiales</option></select></td></tr>' +
+                   '<tr><th>Precio USD:</th><td><input type=\"number\" name=\"price_usd\" value=\"' + service.price_usd + '\" step=\"0.01\"></td></tr>' +
+                   '<tr><th>Precio CLP:</th><td><input type=\"number\" name=\"price_clp\" value=\"' + service.price_clp + '\"></td></tr>' +
+                   '<tr><th>Descripción:</th><td><textarea name=\"description\" rows=\"3\" class=\"large-text\">' + service.description + '</textarea></td></tr>' +
+                   '<tr><th>Icono:</th><td><input type=\"text\" name=\"icon\" value=\"' + service.icon + '\" class=\"regular-text\"></td></tr>' +
+                   '<tr><th>Destacado:</th><td><input type=\"checkbox\" name=\"highlight\" value=\"1\"' + (service.highlight ? ' checked' : '') + '></td></tr>' +
+                   '<tr><th>Texto Botón:</th><td><input type=\"text\" name=\"button_text\" value=\"' + service.button_text + '\"></td></tr>' +
+                   '<tr><th>Estado:</th><td><select name=\"status\"><option value=\"active\"' + (service.status === 'active' ? ' selected' : '') + '>Activo</option><option value=\"inactive\"' + (service.status === 'inactive' ? ' selected' : '') + '>Inactivo</option></select></td></tr>' +
+                   '</table>' +
+                   '<p class=\"submit\"><button type=\"button\" class=\"button button-primary\" onclick=\"saveService()\">Guardar Cambios</button></p>';
+        }
+        
+        function saveService() {
+            var formData = new FormData(document.getElementById('edit-service-form'));
+            formData.append('action', 'save_service');
+            formData.append('nonce', automatiza_ajax.nonce);
+            
+            jQuery.ajax({
+                url: automatiza_ajax.ajax_url,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('Error al guardar: ' + response.data.message);
+                    }
+                }
+            });
+        }
+        ";
+    }
+    
+    /**
+     * AJAX: Guardar servicio
+     */
+    public function save_service() {
+        // Verificar nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'automatiza_services_nonce')) {
+            wp_die('Error de seguridad');
+        }
+        
+        // Verificar permisos
+        if (!current_user_can('manage_options')) {
+            wp_die('No tienes permisos para realizar esta acción');
+        }
+        
+        global $wpdb;
+        
+        // Sanitizar datos
+        $service_data = array(
+            'name' => sanitize_text_field($_POST['service_name'] ?? $_POST['name']),
+            'category' => sanitize_text_field($_POST['service_category'] ?? $_POST['category']),
+            'price_usd' => floatval($_POST['price_usd'] ?? 0),
+            'price_clp' => intval($_POST['price_clp'] ?? 0),
+            'description' => sanitize_textarea_field($_POST['service_description'] ?? $_POST['description']),
+            'features' => sanitize_textarea_field($_POST['service_features'] ?? $_POST['features']),
+            'icon' => sanitize_text_field($_POST['service_icon'] ?? $_POST['icon']),
+            'highlight' => isset($_POST['service_highlight']) || isset($_POST['highlight']) ? 1 : 0,
+            'button_text' => sanitize_text_field($_POST['button_text'] ?? ''),
+            'whatsapp_message' => sanitize_textarea_field($_POST['whatsapp_message'] ?? ''),
+            'status' => sanitize_text_field($_POST['service_status'] ?? $_POST['status']),
+            'service_order' => intval($_POST['service_order'] ?? 0)
+        );
+        
+        // Validar datos requeridos
+        if (empty($service_data['name']) || empty($service_data['category'])) {
+            wp_send_json_error(array('message' => 'Nombre y categoría son requeridos'));
+        }
+        
+        // Actualizar o insertar
+        if (isset($_POST['service_id']) && !empty($_POST['service_id'])) {
+            // Actualizar
+            $result = $wpdb->update(
+                $this->table_name,
+                $service_data,
+                array('id' => intval($_POST['service_id'])),
+                array('%s', '%s', '%f', '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%d'),
+                array('%d')
+            );
+        } else {
+            // Insertar
+            $result = $wpdb->insert(
+                $this->table_name,
+                $service_data,
+                array('%s', '%s', '%f', '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%d')
+            );
+        }
+        
+        if ($result !== false) {
+            wp_send_json_success(array('message' => 'Servicio guardado exitosamente'));
+        } else {
+            wp_send_json_error(array('message' => 'Error al guardar el servicio'));
+        }
+    }
+    
+    /**
+     * AJAX: Eliminar servicio
+     */
+    public function delete_service() {
+        if (!wp_verify_nonce($_POST['nonce'], 'automatiza_services_nonce')) {
+            wp_die('Error de seguridad');
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_die('No tienes permisos');
+        }
+        
+        global $wpdb;
+        
+        $service_id = intval($_POST['service_id']);
+        
+        $result = $wpdb->delete(
+            $this->table_name,
+            array('id' => $service_id),
+            array('%d')
+        );
+        
+        if ($result !== false) {
+            wp_send_json_success();
+        } else {
+            wp_send_json_error();
+        }
+    }
+    
+    /**
+     * AJAX: Cambiar estado del servicio
+     */
+    public function toggle_service_status() {
+        if (!wp_verify_nonce($_POST['nonce'], 'automatiza_services_nonce')) {
+            wp_die('Error de seguridad');
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_die('No tienes permisos');
+        }
+        
+        global $wpdb;
+        
+        $service_id = intval($_POST['service_id']);
+        
+        // Obtener estado actual
+        $current_status = $wpdb->get_var($wpdb->prepare(
+            "SELECT status FROM {$this->table_name} WHERE id = %d",
+            $service_id
+        ));
+        
+        $new_status = ($current_status === 'active') ? 'inactive' : 'active';
+        
+        $result = $wpdb->update(
+            $this->table_name,
+            array('status' => $new_status),
+            array('id' => $service_id),
+            array('%s'),
+            array('%d')
+        );
+        
+        if ($result !== false) {
+            wp_send_json_success();
+        } else {
+            wp_send_json_error();
+        }
+    }
+    
+    /**
+     * AJAX: Obtener detalles del servicio
+     */
+    public function get_service_details() {
+        if (!wp_verify_nonce($_POST['nonce'], 'automatiza_services_nonce')) {
+            wp_die('Error de seguridad');
+        }
+        
+        global $wpdb;
+        
+        $service_id = intval($_POST['service_id']);
+        
+        $service = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$this->table_name} WHERE id = %d",
+            $service_id
+        ));
+        
+        if ($service) {
+            wp_send_json_success($service);
+        } else {
+            wp_send_json_error();
+        }
+    }
+    
+    /**
+     * AJAX: Duplicar servicio
+     */
+    public function duplicate_service() {
+        if (!wp_verify_nonce($_POST['nonce'], 'automatiza_services_nonce')) {
+            wp_die('Error de seguridad');
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_die('No tienes permisos');
+        }
+        
+        global $wpdb;
+        
+        $service_id = intval($_POST['service_id']);
+        
+        // Obtener servicio original
+        $original = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$this->table_name} WHERE id = %d",
+            $service_id
+        ), ARRAY_A);
+        
+        if ($original) {
+            // Remover ID y modificar nombre
+            unset($original['id']);
+            $original['name'] = $original['name'] . ' (Copia)';
+            $original['status'] = 'inactive'; // Crear copia inactiva
+            
+            $result = $wpdb->insert($this->table_name, $original);
+            
+            if ($result !== false) {
+                wp_send_json_success();
+            } else {
+                wp_send_json_error();
+            }
+        } else {
+            wp_send_json_error();
+        }
+    }
+}
+
+// Inicializar la clase
+new AutomatizaTechServicesManager();
+
+/**
+ * Función helper para obtener servicios en el frontend
+ */
+function get_automatiza_services($category = '', $status = 'active') {
+    $manager = new AutomatizaTechServicesManager();
+    return $manager->get_services_by_category($category, $status);
+}
+
+/**
+ * Función helper para obtener servicios activos
+ */
+function get_active_automatiza_services($category = '') {
+    return get_automatiza_services($category, 'active');
+}

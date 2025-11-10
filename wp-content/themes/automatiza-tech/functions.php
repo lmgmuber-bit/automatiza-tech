@@ -165,13 +165,6 @@ add_action('widgets_init', 'automatiza_tech_widgets_init');
  * Optimizaciones de rendimiento
  */
 function automatiza_tech_performance_optimizations() {
-    // Remover jQuery Migrate para mejorar velocidad
-    if (!is_admin()) {
-        wp_deregister_script('jquery');
-        wp_register_script('jquery', 'https://code.jquery.com/jquery-3.6.0.min.js', array(), '3.6.0', true);
-        wp_enqueue_script('jquery');
-    }
-    
     // Preload de recursos críticos
     add_action('wp_head', function() {
         echo '<link rel="preload" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" as="style" onload="this.onload=null;this.rel=\'stylesheet\'">';
@@ -179,6 +172,22 @@ function automatiza_tech_performance_optimizations() {
     });
 }
 add_action('init', 'automatiza_tech_performance_optimizations');
+
+/**
+ * Reemplazar jQuery en el FRONT usando el gancho correcto.
+ * Evita avisos al no ejecutar deregister en admin o en hooks incorrectos.
+ */
+function automatiza_tech_override_jquery() {
+    // Solo en el frontend
+    if (is_admin()) {
+        return;
+    }
+    // Reemplazar jQuery core por CDN en el hook recomendado
+    wp_deregister_script('jquery');
+    wp_register_script('jquery', 'https://code.jquery.com/jquery-3.6.0.min.js', array(), '3.6.0', true);
+    // No forzamos wp_enqueue_script('jquery') aquí; se cargará por dependencia
+}
+add_action('wp_enqueue_scripts', 'automatiza_tech_override_jquery', 0);
 
 /**
  * Manejar formulario de contacto
@@ -243,7 +252,7 @@ function automatiza_tech_customize_register($wp_customize) {
     
     // WhatsApp número
     $wp_customize->add_setting('whatsapp_number', array(
-        'default'           => '+56964324169',
+        'default'           => '+56940331127',
         'sanitize_callback' => 'sanitize_text_field',
     ));
     
@@ -295,7 +304,7 @@ add_action('customize_register', 'automatiza_tech_customize_register');
  * Obtener URL de WhatsApp
  */
 function get_whatsapp_url($message = '') {
-    $number = get_theme_mod('whatsapp_number', '+56964324169');
+    $number = get_theme_mod('whatsapp_number', '+56940331127');
     $number = preg_replace('/[^0-9+]/', '', $number);
     
     if ($message) {

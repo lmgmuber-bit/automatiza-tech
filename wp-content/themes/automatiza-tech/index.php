@@ -202,8 +202,11 @@ get_header(); ?>
     <!-- Pricing Section - Dynamic Content -->
     <?php echo render_pricing_section(); ?>
 
-    <!-- Spacer between Pricing and Contact -->
-    <div class="section-spacer"></div>
+    <!-- Special Price Section (deshabilitada a solicitud) -->
+    <?php /* echo render_special_price_section(); */ ?>
+
+    <!-- Spacer between Pricing and Contact (removido) -->
+    <!-- <div class="section-spacer"></div> -->
 
     <!-- Contact Section -->
     <section class="contact-section" id="contact">

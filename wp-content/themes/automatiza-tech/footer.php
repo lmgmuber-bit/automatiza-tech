@@ -57,7 +57,7 @@
                         <li>
                             <i class="fab fa-whatsapp"></i>
                             <a href="<?php echo esc_url(get_whatsapp_url('Hola! Me interesa conocer más sobre Automatiza Tech')); ?>" target="_blank">
-                                <?php echo esc_html(get_theme_mod('whatsapp_number', '+1 (234) 567-890')); ?>
+                                <?php echo esc_html(get_theme_mod('whatsapp_number', '+56 9 4033 1127')); ?>
                             </a>
                         </li>
                         <li>
@@ -79,6 +79,23 @@
                     </div>
                 </div>
             </div><!-- .footer-content -->
+
+            <!-- Logo centrado entre el contenido y el bar inferior -->
+            <?php
+            $theme_dir = get_template_directory();
+            $theme_uri = get_template_directory_uri();
+            $svg_rel   = '/assets/images/Logo-slogan-tagline.svg';
+            $png_rel   = '/assets/images/Logo-slogan-tagline-2x.png';
+            $mid_logo_uri = file_exists($theme_dir . $svg_rel) ? ($theme_uri . $svg_rel) : ($theme_uri . $png_rel);
+            ?>
+            <div class="footer-mid-logo">
+                <a href="<?php echo esc_url(home_url('/')); ?>" class="footer-mid-logo-link" rel="home">
+                    <img src="<?php echo esc_url($mid_logo_uri); ?>"
+                         alt="<?php echo esc_attr(get_bloginfo('name')); ?>"
+                         class="footer-mid-logo-img"
+                         loading="lazy" />
+                </a>
+            </div>
 
             <div class="footer-bottom">
                 <div class="row align-items-center">

@@ -23,7 +23,7 @@ function render_features_section() {
     ?>
     <section class="features-section" id="beneficios">
         <div class="container">
-            <h2 class="section-title">¿Por qué elegir Automatiza Tech?</h2>
+            <h2 class="section-title">¿Por qu&eacute; elegir Automatiza Tech?</h2>
             <p class="text-center text-muted mb-5">Automatiza tu atención, ahorra tiempo, escala tu negocio</p>
             
             <div class="features-grid">
@@ -106,6 +106,11 @@ function render_pricing_section() {
                 ?>
                 <div class="<?php echo $col_class; ?> mb-4">
                     <div class="pricing-card card h-100 <?php echo $card_class; ?>">
+                        <?php if ($plan->highlight): ?>
+                        <div class="special-offer-badge">
+                            🔥 OFERTA ESPECIAL
+                        </div>
+                        <?php endif; ?>
                         <div class="card-header text-center <?php echo $header_class; ?>">
                             <h5 class="card-title"><?php echo esc_html($plan->name); ?></h5>
                             <?php if ($plan->price_usd > 0): ?>

@@ -359,6 +359,220 @@ h3 { font-size: 1.5rem; }
     box-shadow: var(--shadow-lg);
 }
 
+/* Global smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Respect accessibility preferences */
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}
+
+/* =============================
+   Halloween decorations & UI
+   ============================= */
+/* Corner spider webs (SVG data-uri) */
+.halloween-web {
+    position: fixed;
+    width: 220px;
+    height: 220px;
+    background-repeat: no-repeat;
+    background-size: contain;
+    opacity: 0.28;
+    pointer-events: none;
+    z-index: 998;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'><g fill='none' stroke='%23ff8c00' stroke-width='1.3'><path d='M0 0 L220 0 M0 0 L0 220' /><path d='M0 0 C70 10 120 40 150 90' /><path d='M0 0 C40 60 90 100 160 120' /><path d='M0 0 C20 90 80 140 170 150' /><path d='M0 0 C35 12 65 32 90 60' /><path d='M0 0 C60 25 100 55 120 90' /><path d='M0 0 C80 35 130 80 150 120' /></g></svg>");
+}
+
+.halloween-web.web-tl { top: 0; left: 0; transform: scale(1); }
+.halloween-web.web-tr { top: 0; right: 0; transform: scaleX(-1); }
+.halloween-web.web-bl { bottom: 0; left: 0; transform: scaleY(-1); }
+.halloween-web.web-br { bottom: 0; right: 0; transform: scale(-1); }
+
+/* Halloween modal (reemplaza banner fijo) */
+.halloween-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 110, 0, 0.28); /* tinte naranja para Halloween */
+    z-index: 1003;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.halloween-modal {
+    position: relative;
+    background: #ffffff;
+    color: #111827;
+    border-radius: 12px;
+    max-width: 520px;
+    width: 100%;
+    padding: 20px 56px 20px 20px;
+    box-shadow: 0 24px 60px rgba(255,110,0,0.25), 0 8px 22px rgba(0,0,0,0.18);
+    border: 2px solid #ff8c00; /* acento naranja Halloween */
+    font-weight: 600;
+    animation: modalPop 280ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.halloween-modal-content { font-size: 1rem; line-height: 1.4; }
+
+.halloween-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    border: none;
+    background: #e5e7eb;
+    color: #111827;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.halloween-modal-close:hover { background: #d1d5db; }
+
+/* Cabecera y acciones del modal */
+.halloween-modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; background: linear-gradient(135deg, #ff6a00, #ff8c00); color: #fff; padding: 12px 56px 12px 14px; margin-top: -20px; margin-left: -20px; margin-right: -56px; border-radius: 10px 10px 0 0; }
+.halloween-modal-header h3 { margin: 0; font-size: 1.1rem; color: #fff; }
+.halloween-badge { font-size: 28px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.2)); animation: wobbleX 2500ms ease-in-out infinite; }
+.halloween-modal-content p { margin: 0 0 12px 0; font-weight: 500; color: #111827; }
+.h-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+.h-modal-actions { align-items: center; }
+.bot-invite { display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; }
+.bot-invite .bot { font-size: 22px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.15)); }
+.bot-invite .bot-wave { animation: botWave 2.2s ease-in-out infinite; transform-origin: 60% 60%; }
+.bot-invite .bot-bounce { animation: botBounce 2.4s ease-in-out infinite; }
+.bot-invite .bot-arrow { font-size: 20px; animation: pointRight 1.6s ease-in-out infinite; }
+.halloween-modal .btn-primary { background: linear-gradient(135deg, #ff6a00, #ff8c00); color: #fff; padding: 10px 14px; border-radius: 8px; border: none; text-decoration: none; font-weight: 700; box-shadow: 0 8px 18px rgba(255,110,0,.35); transition: transform .12s ease, box-shadow .2s ease, filter .2s ease; }
+.halloween-modal .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(255,110,0,.42); filter: brightness(1.03); }
+.halloween-modal .btn-primary.cta-pulse { animation: ctaPulse var(--pulseDur, 6.8s) ease-in-out infinite; }
+.halloween-modal .btn-ghost { background: transparent; border: 1px solid #ffb26b; color: #111827; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+.halloween-modal .btn-ghost:hover { background: #f3f4f6; }
+
+@keyframes modalPop { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes wobbleX { 0% { transform: rotate(0deg) translateY(0); } 50% { transform: rotate(8deg) translateY(-2px); } 100% { transform: rotate(0deg) translateY(0); } }
+@keyframes botWave { 0%{ transform: rotate(0deg);} 40%{ transform: rotate(16deg);} 80%{ transform: rotate(-8deg);} 100%{ transform: rotate(0deg);} }
+@keyframes botBounce { 0%{ transform: translateY(0);} 50%{ transform: translateY(-5px);} 100%{ transform: translateY(0);} }
+@keyframes pointRight { 0%{ transform: translateX(0);} 50%{ transform: translateX(6px);} 100%{ transform: translateX(0);} }
+@keyframes ctaPulse { 0%{ transform: scale(1); box-shadow: 0 8px 18px rgba(255,110,0,.35);} 8%{ transform: scale(1.045); box-shadow: 0 10px 26px rgba(255,110,0,.5);} 16%{ transform: scale(1); box-shadow: 0 8px 18px rgba(255,110,0,.35);} 100%{ transform: scale(1); box-shadow: 0 8px 18px rgba(255,110,0,.35);} }
+
+/* Toggle button */
+.halloween-toggle {
+    position: fixed;
+    right: 16px;
+    bottom: 20px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: none;
+    background: #ff7a00;
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(255,122,0,0.45);
+    z-index: 1002;
+    cursor: pointer;
+}
+
+.halloween-toggle:hover { filter: brightness(1.1); }
+.halloween-toggle:active { transform: translateY(1px); }
+
+/* Respect reduced motion: remove decorations */
+@media (prefers-reduced-motion: reduce) {
+    .halloween-web, .halloween-banner, .halloween-toggle { display: none !important; }
+}
+
+/* Respeto motion-reduce para el modal */
+@media (prefers-reduced-motion: reduce) {
+    .halloween-modal { animation: none; }
+    .halloween-badge { animation: none; }
+    .bot-invite .bot-wave,
+    .bot-invite .bot-bounce,
+    .bot-invite .bot-arrow { animation: none; }
+    .halloween-modal .btn-primary.cta-pulse { animation: none; }
+}
+
+/* =============================
+   Halloween animations (global)
+   ============================= */
+body.halloween-mode .btn,
+body.halloween-mode .btn-plan,
+body.halloween-mode .btn-special,
+body.halloween-mode .btn-special-compact,
+body.halloween-mode a.button,
+body.halloween-mode button {
+    animation: halloweenGlow 2.2s ease-in-out infinite alternate;
+}
+
+@keyframes halloweenGlow {
+    0% { box-shadow: 0 0 0 rgba(255, 102, 0, 0.0); }
+    100% { box-shadow: 0 0 18px rgba(255, 102, 0, 0.7), 0 0 36px rgba(255, 165, 0, 0.35); }
+}
+
+/* Floating layer for emojis (lightweight, accessible) */
+.halloween-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 999;
+}
+
+.halloween-item {
+    position: absolute;
+    will-change: transform, opacity;
+    opacity: 0.85;
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,0.25));
+}
+
+/* Simple float animations */
+@keyframes floatDrift {
+    0% { transform: translate3d(var(--x,0), var(--y,0), 0) rotate(0deg); }
+    50% { transform: translate3d(calc(var(--x,0) + 10px), calc(var(--y,0) - 20px), 0) rotate(2deg); }
+    100% { transform: translate3d(var(--x,0), var(--y,0), 0) rotate(0deg); }
+}
+
+@keyframes flyAcross {
+    0% { transform: translateX(-10vw) translateY(var(--startY, 10vh)) scale(0.9) rotate(-2deg); opacity: 0; }
+    10% { opacity: 1; }
+    50% { transform: translateX(55vw) translateY(calc(var(--startY, 10vh) + 8vh)) scale(1); }
+    100% { transform: translateX(110vw) translateY(calc(var(--startY, 10vh) - 6vh)) scale(0.95) rotate(2deg); opacity: 0; }
+}
+
+.halloween-item.ghost { font-size: 36px; animation: floatDrift 4.5s ease-in-out infinite; }
+.halloween-item.bat   { font-size: 28px; animation: flyAcross var(--dur, 12s) linear infinite; }
+.halloween-item.pumpkin { font-size: 30px; animation: floatDrift 5.2s ease-in-out infinite; }
+/* Robots disfrazados */
+.halloween-item.robot { font-size: 34px; animation: bobWiggle 6s ease-in-out infinite; }
+
+@keyframes bobWiggle {
+    0% { transform: translateY(0) rotate(0deg); }
+    20% { transform: translateY(-8px) rotate(2deg); }
+    40% { transform: translateY(0) rotate(0deg); }
+    60% { transform: translateY(-6px) rotate(-2deg); }
+    100% { transform: translateY(0) rotate(0deg); }
+}
+
+/* Reduce/disable on accessibility preference */
+@media (prefers-reduced-motion: reduce) {
+    body.halloween-mode .btn,
+    body.halloween-mode .btn-plan,
+    body.halloween-mode .btn-special,
+    body.halloween-mode .btn-special-compact,
+    body.halloween-mode a.button,
+    body.halloween-mode button { animation: none; }
+    .halloween-layer { display: none; }
+}
+
 .form-group {
     margin-bottom: 1.5rem;
 }
@@ -489,6 +703,50 @@ h3 { font-size: 1.5rem; }
     color: var(--color-gray);
 }
 
+/* Logo centrado entre contenido y barra inferior */
+.footer-mid-logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem 0 1.25rem;
+}
+
+.footer-mid-logo-img {
+    height: 125px;
+    width: auto;
+    max-width: 100%;
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .footer-mid-logo-img {
+        height: 120px;
+    }
+}
+
+/* Footer brand logo */
+.footer-brand {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-top: 2rem;
+}
+
+.footer-brand .footer-logo {
+    height: 48px;
+    width: auto;
+    max-width: 25%;
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .footer-brand .footer-logo {
+        height: 30px;
+    }
+}
+
+/* Keep centered on all viewports */
+
 /* WhatsApp Button */
 .whatsapp-float {
     position: fixed;
@@ -567,7 +825,6 @@ h3 { font-size: 1.5rem; }
 img {
     max-width: 100%;
     height: auto;
-    loading: lazy;
 }
 
 /* WhatsApp Container with Robot Animation */
@@ -1055,22 +1312,51 @@ img {
 }
 
 .pricing-card.pricing-card-special {
-    margin-top: 30px;
+    margin-top: 60px !important;
+}
+
+/* Asegurar espacio para el badge en el contenedor */
+.pricing-section .col-md-4,
+.pricing-section .col-md-3 {
+    position: relative;
+    padding-top: 20px;
+}
+
+/* Badge naranja visible encima de la tarjeta */
+.special-offer-badge {
+    position: absolute !important;
+    top: -30px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    background: #ff5722 !important;
+    background: linear-gradient(135deg, #ff5722 0%, #ff9800 100%) !important;
+    color: #ffffff !important;
+    padding: 0.7rem 1.8rem !important;
+    border-radius: 30px !important;
+    font-size: 0.95rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.5px !important;
+    box-shadow: 0 6px 20px rgba(255, 87, 34, 0.6) !important;
+    animation: pulse-badge 2s ease-in-out infinite !important;
+    z-index: 999 !important;
+    white-space: nowrap !important;
+    border: 2px solid #ff3d00 !important;
+}
+
+@keyframes pulse-badge {
+    0%, 100% {
+        transform: translateX(-50%) scale(1);
+        box-shadow: 0 6px 20px rgba(255, 87, 34, 0.6);
+    }
+    50% {
+        transform: translateX(-50%) scale(1.08);
+        box-shadow: 0 8px 30px rgba(255, 87, 34, 0.9);
+    }
 }
 
 .pricing-card.pricing-card-special::before {
-    content: '🔥 OFERTA ESPECIAL';
-    position: absolute;
-    top: -20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--color-secondary);
-    color: var(--color-white);
-    padding: 0.3rem 1rem;
-    border-radius: 1rem;
-    font-size: 0.75rem;
-    font-weight: bold;
-    animation: bounce 2s infinite;
+    content: none;
 }
 
 .price-display {

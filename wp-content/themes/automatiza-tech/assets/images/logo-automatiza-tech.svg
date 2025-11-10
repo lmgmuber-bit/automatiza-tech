@@ -104,6 +104,11 @@
     Conectamos tus ventas, web y CRM.
   </text>
   
+  <!-- Lema adicional corregido -->
+  <text x="400" y="460" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="400" fill="#6b7280">
+    Bots inteligentes para negocios que no se detienen.
+  </text>
+  
   <!-- Elementos decorativos adicionales -->
   <g opacity="0.3">
     <circle cx="200" cy="350" r="1.5" fill="#06d6a0"/>

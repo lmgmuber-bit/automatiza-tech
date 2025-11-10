@@ -867,7 +867,7 @@ INSERT INTO `wp_automatiza_tech_contacts` (`id`, `name`, `email`, `company`, `ph
 (40, 'Prueba Sistema', 'prueba@test.com', 'Test Company', '+57 300 000 0000', 'Este es un mensaje de prueba del sistema.', '2025-10-20 22:27:26', 'new', NULL),
 (41, 'Prueba Sistema', 'prueba@test.com', 'Test Company', '+57 300 000 0000', 'Este es un mensaje de prueba del sistema.', '2025-10-20 22:27:26', 'new', NULL),
 (42, 'Prueba Sistema', 'prueba@test.com', 'Test Company', '+57 300 000 0000', 'Este es un mensaje de prueba del sistema.', '2025-10-20 22:27:27', 'new', NULL),
-(43, 'Luis Morales', 'lmgm.0303@gmail.com', 'Automatiza tech', '+56964324169', 'Quiero automatizar mi tienda online', '2025-10-21 02:28:13', 'new', NULL);
+(43, 'Luis Morales', 'lmgm.0303@gmail.com', 'Automatiza tech', '+56940331127', 'Quiero automatizar mi tienda online', '2025-10-21 02:28:13', 'new', NULL);
 
 -- --------------------------------------------------------
 
@@ -1107,7 +1107,7 @@ INSERT INTO `wp_options` (`option_id`, `option_name`, `option_value`, `autoload`
 (250, '_transient_contact_form_837ec5754f503cfaaee0929fd48974e7', '1', 'off'),
 (206, '_site_transient_wp_plugin_dependencies_plugin_data', 'a:0:{}', 'off'),
 (207, 'recently_activated', 'a:0:{}', 'off'),
-(210, 'whatsapp_number', '+56964324169', 'yes'),
+(210, 'whatsapp_number', '+56940331127', 'yes'),
 (228, '_site_transient_timeout_browser_bfe921b394bf10c8d08c5999edfccc8d', '1761589004', 'off'),
 (229, '_site_transient_browser_bfe921b394bf10c8d08c5999edfccc8d', 'a:10:{s:4:\"name\";s:7:\"Firefox\";s:7:\"version\";s:5:\"144.0\";s:8:\"platform\";s:7:\"Windows\";s:10:\"update_url\";s:32:\"https://www.mozilla.org/firefox/\";s:7:\"img_src\";s:44:\"http://s.w.org/images/browsers/firefox.png?1\";s:11:\"img_src_ssl\";s:45:\"https://s.w.org/images/browsers/firefox.png?1\";s:15:\"current_version\";s:2:\"56\";s:7:\"upgrade\";b:0;s:8:\"insecure\";b:0;s:6:\"mobile\";b:0;}', 'off'),
 (230, '_site_transient_timeout_community-events-1aecf33ab8525ff212ebdffbb438372e', '1761027405', 'off'),
@@ -1149,7 +1149,7 @@ INSERT INTO `wp_options` (`option_id`, `option_name`, `option_value`, `autoload`
 (271, '_transient_dash_v2_c05853b002c443ec8e57ff884f56cdde', '<div class=\"rss-widget\"><ul><li><a class=\'rsswidget\' href=\'https://es.wordpress.org/2025/10/10/wordpress-diversity-day-2025-volvemos-a-la-carga/\'>WordPress Diversity Day 2025: ¡Volvemos a la carga!</a></li><li><a class=\'rsswidget\' href=\'https://es.wordpress.org/2025/09/30/wordpress-6-8-3-actualizacion-de-seguridad/\'>WordPress 6.8.3 – Actualización de seguridad</a></li></ul></div><div class=\"rss-widget\"><ul><li><a class=\'rsswidget\' href=\'https://ma.tt/2025/10/make-no-little-plans/\'>Matt: Make No Little Plans</a></li><li><a class=\'rsswidget\' href=\'https://ma.tt/2025/10/albumin/\'>Matt: Albumin</a></li><li><a class=\'rsswidget\' href=\'https://gutenbergtimes.com/abilities-api-block-accessibility-check-gutenberg-framework-ai-creating-blocks-and-themes-weekend-edition-345/\'>Gutenberg Times: Abilities API, Block Accessibility Check, Gutenberg Framework, AI creating Blocks and themes—Weekend Edition 345</a></li></ul></div>', 'off'),
 (221, '_transient_timeout_contact_form_f528764d624db129b32c21fbca0cb8d6', '1760988661', 'off'),
 (222, '_transient_contact_form_f528764d624db129b32c21fbca0cb8d6', '5', 'off'),
-(166, 'theme_mods_automatiza-tech', 'a:2:{s:18:\"custom_css_post_id\";i:-1;s:15:\"whatsapp_number\";s:12:\"+56964324169\";}', 'on'),
+(166, 'theme_mods_automatiza-tech', 'a:2:{s:18:\"custom_css_post_id\";i:-1;s:15:\"whatsapp_number\";s:12:\"+56940331127\";}', 'on'),
 (167, 'current_theme', 'Automatiza Tech', 'auto'),
 (168, 'theme_switched', '', 'auto');
 

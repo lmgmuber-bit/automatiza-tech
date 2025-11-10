@@ -256,7 +256,9 @@ function get_default_pricing_content() {
                             </ul>
                         </div>
                         <div class="card-footer text-center">
-                            <a href="#contact" class="btn btn-outline-primary">Comenzar</a>
+                            <a href="<?php echo esc_url(get_whatsapp_url('Hola! Me interesa el Plan Básico de Automatiza Tech. ¿Podrías darme más información?')); ?>" 
+                               class="btn btn-outline-primary" 
+                               target="_blank" rel="noopener">Comenzar</a>
                         </div>
                     </div>
                 </div>
@@ -283,7 +285,9 @@ function get_default_pricing_content() {
                             </ul>
                         </div>
                         <div class="card-footer text-center">
-                            <a href="#contact" class="btn btn-primary">Comenzar</a>
+                            <a href="<?php echo esc_url(get_whatsapp_url('Hola! Me interesa el Plan Profesional de Automatiza Tech. ¿Podrías darme más información?')); ?>" 
+                               class="btn btn-primary" 
+                               target="_blank" rel="noopener">Comenzar</a>
                         </div>
                     </div>
                 </div>
@@ -309,7 +313,9 @@ function get_default_pricing_content() {
                             </ul>
                         </div>
                         <div class="card-footer text-center">
-                            <a href="#contact" class="btn btn-secondary">Contactar</a>
+                            <a href="<?php echo esc_url(get_whatsapp_url('Hola! Me interesa el Plan Enterprise de Automatiza Tech. ¿Podrías darme más información?')); ?>" 
+                               class="btn btn-secondary" 
+                               target="_blank" rel="noopener">Contactar</a>
                         </div>
                     </div>
                 </div>

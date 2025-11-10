@@ -349,7 +349,7 @@ function render_pricing_section() {
                                 $message = !empty($service->whatsapp_message) 
                                     ? $service->whatsapp_message 
                                     : "Hola, me interesa el plan: " . $service->name;
-                                $whatsapp_url = "https://wa.me/56912345678?text=" . urlencode($message);
+                                $whatsapp_url = "https://wa.me/56940331127?text=" . urlencode($message);
                                 ?>
                                 <a href="<?php echo esc_url($whatsapp_url); ?>" class="btn-plan" target="_blank" 
                                    style="background: <?php echo esc_attr($button_color); ?>; color: white;">

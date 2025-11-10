@@ -16,6 +16,24 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"></noscript>
 
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17691911857"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'AW-17691911857');
+    </script>
+
+    <!-- Event snippet for Compra conversion page -->
+    <script>
+      gtag('event', 'conversion', {
+          'send_to': 'AW-17691911857/AmZuCJaF-7YbELHNlPRB',
+          'transaction_id': ''
+      });
+    </script>
+
     <?php wp_head(); ?>
 
     <!-- Critical CSS inline -->
@@ -675,7 +693,7 @@
                     +           "<span class='bot bot-bounce'>🎄</span>"
                     +           "<span class='bot bot-arrow'>👉</span>"
                     +       "</div>"
-                    +       "<a href='https://wa.me/56940331127?text=Hola!%20Me%20interesa%20conocer%20los%20planes%20de%20Automatiza%20Tech%20para%20esta%20Navidad' target='_blank' class='btn-primary h-modal-primary cta-pulse-xmas'>Consultar por WhatsApp</a>"
+                    +       "<a href='#planes' class='btn-primary h-modal-primary cta-pulse-xmas'>Ver Planes</a>"
                     +       "<button type='button' class='btn-ghost h-modal-dismiss'>Cerrar</button>"
                     +   "</div>"
                     + "</div>";
@@ -686,9 +704,9 @@
                 overlay.addEventListener('click', function(e){ if(e.target === overlay) dismiss(); });
                 // Accesibilidad: cerrar con ESC
                 document.addEventListener('keydown', function onKey(e){ if(e.key === 'Escape'){ dismiss(); document.removeEventListener('keydown', onKey); } });
-                // CTA principal: abrir WhatsApp en nueva pestaña
+                // CTA principal: ir a la sección de planes y cerrar modal
                 var primary = overlay.querySelector('.h-modal-primary');
-                if(primary){ primary.addEventListener('click', function(ev){ dismiss(); }); }
+                if(primary){ primary.addEventListener('click', function(ev){ ev.preventDefault(); dismiss(); window.location.hash = '#planes'; }); }
                 // Botón cerrar secundario
                 var dismissBtn = overlay.querySelector('.h-modal-dismiss');
                 if(dismissBtn){ dismissBtn.addEventListener('click', dismiss); }
@@ -704,9 +722,52 @@
             }
             function populate(layer){ if(layer.childElementCount>0) return; function add(cls, txt, x,y){ var el=document.createElement('span'); el.className='christmas-item '+cls; el.textContent=txt; el.style.left=x+'vw'; el.style.top=y+'vh'; layer.appendChild(el);} add('flake','❄', 8, 12); add('flake','❄', 24, 28); add('flake','❄', 70, 18); add('flake','❄', 45, 8); add('tree','🎄', 12, 66); add('tree','🎄', 32, 72); add('tree','🎄', 78, 68); add('tree','🎄', 88, 75); add('gift','🎁', 82, 22); add('gift','🎁', 18, 24); add('star','⭐', 18, 75); add('star','⭐', 88, 15); add('santa','🎅', 25, 45); add('santa','🎅', 65, 52); add('robot','⛄', 52, 30); add('sleigh-convoy','🦌🦌🎅🛷', -10, 45); }
 
-            function enable(){ document.body.classList.add('christmas-mode'); var layer=ensureLayer(); populate(layer); ensureStars(); localStorage.setItem('christmasDisabled','0'); localStorage.setItem('christmasEnabled','1'); }
-            function disable(){ document.body.classList.remove('christmas-mode'); document.querySelectorAll('.christmas-layer,.christmas-star').forEach(function(el){ el.remove(); }); localStorage.setItem('christmasDisabled','1'); }
-            function ensureToggle(){ if(qs('.christmas-toggle')) return; var t=document.createElement('button'); t.className='christmas-toggle'; t.type='button'; t.title='Activar/Desactivar Navidad'; t.setAttribute('aria-label','Alternar modo Navidad'); t.textContent='❄'; t.addEventListener('click', function(){ if(document.body.classList.contains('christmas-mode')){ disable(); } else { enable(); } }); document.body.appendChild(t); }
+            function enable(){ 
+                document.body.classList.add('christmas-mode'); 
+                var layer=ensureLayer(); 
+                populate(layer); 
+                ensureStars(); 
+                localStorage.setItem('christmasDisabled','0'); 
+                localStorage.setItem('christmasEnabled','1');
+                showMessage('🎄 ¡Modo Navidad activado! Disfruta de la magia navideña ✨', 'success');
+            }
+            
+            function disable(){ 
+                document.body.classList.remove('christmas-mode'); 
+                document.querySelectorAll('.christmas-layer,.christmas-star').forEach(function(el){ el.remove(); }); 
+                localStorage.setItem('christmasDisabled','1'); 
+                showMessage('❄ Modo Navidad desactivado. Puedes reactivarlo cuando quieras 🎅', 'info');
+            }
+            
+            function showMessage(text, type){
+                var msg = document.createElement('div');
+                msg.className = 'christmas-notification christmas-notification-' + type;
+                msg.textContent = text;
+                msg.style.cssText = 'position:fixed;top:20px;right:20px;background:' + (type === 'success' ? '#16a34a' : '#0ea5e9') + ';color:white;padding:16px 24px;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.2);z-index:10000;font-size:14px;max-width:320px;animation:slideInRight 0.3s ease-out;';
+                document.body.appendChild(msg);
+                setTimeout(function(){ 
+                    msg.style.animation = 'slideOutRight 0.3s ease-in';
+                    setTimeout(function(){ msg.remove(); }, 300);
+                }, 4000);
+            }
+            
+            function ensureToggle(){ 
+                if(qs('.christmas-toggle')) return; 
+                var t=document.createElement('button'); 
+                t.className='christmas-toggle'; 
+                t.type='button'; 
+                t.title='Activar/Desactivar Navidad'; 
+                t.setAttribute('aria-label','Alternar modo Navidad'); 
+                t.textContent='❄'; 
+                t.addEventListener('click', function(){ 
+                    if(document.body.classList.contains('christmas-mode')){ 
+                        disable(); 
+                    } else { 
+                        enable(); 
+                    } 
+                }); 
+                document.body.appendChild(t); 
+            }
 
             // Modal siempre se muestra independientemente del modo navideño
             ensureModal();

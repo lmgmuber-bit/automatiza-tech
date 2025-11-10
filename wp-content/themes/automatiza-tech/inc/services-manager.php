@@ -1613,7 +1613,7 @@ class AutomatizaTechServicesManager {
                         <tr>
                             <th scope="row">WhatsApp por Defecto</th>
                             <td>
-                                <input name="default_whatsapp_number" type="text" value="<?php echo esc_attr(get_option('default_whatsapp_number', '+56912345678')); ?>" class="regular-text">
+                                <input name="default_whatsapp_number" type="text" value="<?php echo esc_attr(get_option('default_whatsapp_number', '+56 9 4033 1127')); ?>" class="regular-text">
                                 <p class="description">Número de WhatsApp por defecto (incluir código de país)</p>
                             </td>
                         </tr>

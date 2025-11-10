@@ -145,7 +145,7 @@
     "name": "Automatiza Tech",
     "description": "Conectamos tus ventas, web y CRM. Bots inteligentes para negocios que no se detienen.",
     "url": "<?php echo esc_url(home_url()); ?>",
-    "telephone": "<?php echo esc_attr(get_theme_mod('whatsapp_number', '+1234567890')); ?>",
+    "telephone": "<?php echo esc_attr(get_theme_mod('whatsapp_number', '+56 9 4033 1127')); ?>",
     "email": "info@automatizatech.com",
     "address": {
         "@type": "PostalAddress",

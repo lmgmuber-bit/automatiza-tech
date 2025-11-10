@@ -291,7 +291,7 @@ add_action('customize_register', 'automatiza_tech_customize_register');
  * Obtener URL de WhatsApp
  */
 function get_whatsapp_url($message = '') {
-    $number = get_theme_mod('whatsapp_number', '+1234567890');
+    $number = get_theme_mod('whatsapp_number', '+56940331127');
     $number = preg_replace('/[^0-9+]/', '', $number);
     
     if ($message) {

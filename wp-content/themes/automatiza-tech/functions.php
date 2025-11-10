@@ -252,7 +252,7 @@ function automatiza_tech_customize_register($wp_customize) {
     
     // WhatsApp número
     $wp_customize->add_setting('whatsapp_number', array(
-        'default'           => '+56940331127',
+        'default'           => '+56 9 4033 1127',
         'sanitize_callback' => 'sanitize_text_field',
     ));
     
@@ -304,7 +304,8 @@ add_action('customize_register', 'automatiza_tech_customize_register');
  * Obtener URL de WhatsApp
  */
 function get_whatsapp_url($message = '') {
-    $number = get_theme_mod('whatsapp_number', '+56940331127');
+    $number = get_theme_mod('whatsapp_number', '+56 9 4033 1127');
+    // Limpiar el número: remover espacios, guiones, paréntesis pero mantener el +
     $number = preg_replace('/[^0-9+]/', '', $number);
     
     if ($message) {

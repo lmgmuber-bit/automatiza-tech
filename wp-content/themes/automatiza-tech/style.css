@@ -149,7 +149,7 @@ h3 { font-size: 1.5rem; }
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 0;
+    padding: 0.5rem 0;
 }
 
 .logo {
@@ -344,9 +344,24 @@ h3 { font-size: 1.5rem; }
 
 /* Contact Section */
 .contact-section {
-    padding: 5rem 0;
+    padding: 5rem 0 0 0;
     background: linear-gradient(135deg, var(--color-primary) 0%, #1d4ed8 100%);
     color: var(--color-white);
+    margin-bottom: 0;
+    display: block;
+}
+
+.contact-section .container {
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.contact-section > *:last-child,
+.contact-section .container > *:last-child,
+.contact-section .row,
+.contact-section p:last-child {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
 }
 
 .contact-form {
@@ -372,31 +387,108 @@ html {
 }
 
 /* =============================
-   Halloween decorations & UI
+   Christmas decorations & UI
    ============================= */
-/* Corner spider webs (SVG data-uri) */
-.halloween-web {
-    position: fixed;
-    width: 220px;
-    height: 220px;
-    background-repeat: no-repeat;
-    background-size: contain;
-    opacity: 0.28;
+
+/* Christmas Lights in Header */
+.christmas-lights {
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    right: 0;
+    height: 16px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
     pointer-events: none;
-    z-index: 998;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'><g fill='none' stroke='%23ff8c00' stroke-width='1.3'><path d='M0 0 L220 0 M0 0 L0 220' /><path d='M0 0 C70 10 120 40 150 90' /><path d='M0 0 C40 60 90 100 160 120' /><path d='M0 0 C20 90 80 140 170 150' /><path d='M0 0 C35 12 65 32 90 60' /><path d='M0 0 C60 25 100 55 120 90' /><path d='M0 0 C80 35 130 80 150 120' /></g></svg>");
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
-.halloween-web.web-tl { top: 0; left: 0; transform: scale(1); }
-.halloween-web.web-tr { top: 0; right: 0; transform: scaleX(-1); }
-.halloween-web.web-bl { bottom: 0; left: 0; transform: scaleY(-1); }
-.halloween-web.web-br { bottom: 0; right: 0; transform: scale(-1); }
+.christmas-mode .christmas-lights {
+    opacity: 1;
+}
 
-/* Halloween modal (reemplaza banner fijo) */
-.halloween-modal-overlay {
+.christmas-lights .light {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    position: relative;
+    box-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+    animation: twinkle 1.5s ease-in-out infinite;
+}
+
+.christmas-lights .light::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 6px;
+    background: #666;
+}
+
+.christmas-lights .light.red {
+    background: #ef4444;
+    color: #ef4444;
+    animation-delay: 0s;
+}
+
+.christmas-lights .light.yellow {
+    background: #fbbf24;
+    color: #fbbf24;
+    animation-delay: 0.3s;
+}
+
+.christmas-lights .light.green {
+    background: #10b981;
+    color: #10b981;
+    animation-delay: 0.6s;
+}
+
+.christmas-lights .light.blue {
+    background: #3b82f6;
+    color: #3b82f6;
+    animation-delay: 0.9s;
+}
+
+@keyframes twinkle {
+    0%, 100% { 
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.4;
+        transform: scale(0.8);
+    }
+}
+
+/* Corner stars (emoji) */
+.christmas-star {
+    position: fixed;
+    width: 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    opacity: 0.22;
+    pointer-events: none;
+    z-index: 998;
+}
+
+.christmas-star.star-tl { top: 0; left: 0; transform: rotate(-15deg); }
+.christmas-star.star-tr { top: 0; right: 0; transform: rotate(15deg); }
+.christmas-star.star-bl { bottom: 0; left: 0; transform: rotate(10deg); }
+.christmas-star.star-br { bottom: 0; right: 0; transform: rotate(-10deg); }
+
+/* Christmas modal (replaces banner) */
+.christmas-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(255, 110, 0, 0.28); /* tinte naranja para Halloween */
+    background: rgba(22, 163, 74, 0.26); /* green tint */
     z-index: 1003;
     display: flex;
     align-items: center;
@@ -404,7 +496,7 @@ html {
     padding: 24px;
 }
 
-.halloween-modal {
+.christmas-modal {
     position: relative;
     background: #ffffff;
     color: #111827;
@@ -412,15 +504,15 @@ html {
     max-width: 520px;
     width: 100%;
     padding: 20px 56px 20px 20px;
-    box-shadow: 0 24px 60px rgba(255,110,0,0.25), 0 8px 22px rgba(0,0,0,0.18);
-    border: 2px solid #ff8c00; /* acento naranja Halloween */
+    box-shadow: 0 24px 60px rgba(22,163,74,0.22), 0 8px 22px rgba(0,0,0,0.18);
+    border: 2px solid #16a34a; /* green accent */
     font-weight: 600;
     animation: modalPop 280ms cubic-bezier(.2,.8,.2,1) both;
 }
 
-.halloween-modal-content { font-size: 1rem; line-height: 1.4; }
+.christmas-modal-content { font-size: 1rem; line-height: 1.4; }
 
-.halloween-modal-close {
+.christmas-modal-close {
     position: absolute;
     top: 10px;
     right: 10px;
@@ -436,35 +528,34 @@ html {
     cursor: pointer;
 }
 
-.halloween-modal-close:hover { background: #d1d5db; }
+.christmas-modal-close:hover { background: #d1d5db; }
 
-/* Cabecera y acciones del modal */
-.halloween-modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; background: linear-gradient(135deg, #ff6a00, #ff8c00); color: #fff; padding: 12px 56px 12px 14px; margin-top: -20px; margin-left: -20px; margin-right: -56px; border-radius: 10px 10px 0 0; }
-.halloween-modal-header h3 { margin: 0; font-size: 1.1rem; color: #fff; }
-.halloween-badge { font-size: 28px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.2)); animation: wobbleX 2500ms ease-in-out infinite; }
-.halloween-modal-content p { margin: 0 0 12px 0; font-weight: 500; color: #111827; }
-.h-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
-.h-modal-actions { align-items: center; }
+/* Header and actions */
+.christmas-modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; background: linear-gradient(135deg, #16a34a, #dc2626); color: #fff; padding: 12px 56px 12px 14px; margin-top: -20px; margin-left: -20px; margin-right: -56px; border-radius: 10px 10px 0 0; }
+.christmas-modal-header h3 { margin: 0; font-size: 1.1rem; color: #fff; }
+.christmas-badge { font-size: 28px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.2)); animation: wobbleX 2500ms ease-in-out infinite; }
+.christmas-modal-content p { margin: 0 0 12px 0; font-weight: 500; color: #111827; }
+.h-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; align-items: center; }
 .bot-invite { display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; }
 .bot-invite .bot { font-size: 22px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.15)); }
 .bot-invite .bot-wave { animation: botWave 2.2s ease-in-out infinite; transform-origin: 60% 60%; }
 .bot-invite .bot-bounce { animation: botBounce 2.4s ease-in-out infinite; }
 .bot-invite .bot-arrow { font-size: 20px; animation: pointRight 1.6s ease-in-out infinite; }
-.halloween-modal .btn-primary { background: linear-gradient(135deg, #ff6a00, #ff8c00); color: #fff; padding: 10px 14px; border-radius: 8px; border: none; text-decoration: none; font-weight: 700; box-shadow: 0 8px 18px rgba(255,110,0,.35); transition: transform .12s ease, box-shadow .2s ease, filter .2s ease; }
-.halloween-modal .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(255,110,0,.42); filter: brightness(1.03); }
-.halloween-modal .btn-primary.cta-pulse { animation: ctaPulse var(--pulseDur, 6.8s) ease-in-out infinite; }
-.halloween-modal .btn-ghost { background: transparent; border: 1px solid #ffb26b; color: #111827; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
-.halloween-modal .btn-ghost:hover { background: #f3f4f6; }
+.christmas-modal .btn-primary { background: linear-gradient(135deg, #16a34a, #dc2626); color: #fff; padding: 10px 14px; border-radius: 8px; border: none; text-decoration: none; font-weight: 700; box-shadow: 0 8px 18px rgba(34,197,94,.35); transition: transform .12s ease, box-shadow .2s ease, filter .2s ease; }
+.christmas-modal .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(34,197,94,.45); filter: brightness(1.03); }
+.christmas-modal .btn-primary.cta-pulse-xmas { animation: ctaPulseXmas var(--pulseDur, 6.8s) ease-in-out infinite; }
+.christmas-modal .btn-ghost { background: transparent; border: 1px solid #facc15; color: #111827; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+.christmas-modal .btn-ghost:hover { background: #f3f4f6; }
 
 @keyframes modalPop { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes wobbleX { 0% { transform: rotate(0deg) translateY(0); } 50% { transform: rotate(8deg) translateY(-2px); } 100% { transform: rotate(0deg) translateY(0); } }
 @keyframes botWave { 0%{ transform: rotate(0deg);} 40%{ transform: rotate(16deg);} 80%{ transform: rotate(-8deg);} 100%{ transform: rotate(0deg);} }
 @keyframes botBounce { 0%{ transform: translateY(0);} 50%{ transform: translateY(-5px);} 100%{ transform: translateY(0);} }
 @keyframes pointRight { 0%{ transform: translateX(0);} 50%{ transform: translateX(6px);} 100%{ transform: translateX(0);} }
-@keyframes ctaPulse { 0%{ transform: scale(1); box-shadow: 0 8px 18px rgba(255,110,0,.35);} 8%{ transform: scale(1.045); box-shadow: 0 10px 26px rgba(255,110,0,.5);} 16%{ transform: scale(1); box-shadow: 0 8px 18px rgba(255,110,0,.35);} 100%{ transform: scale(1); box-shadow: 0 8px 18px rgba(255,110,0,.35);} }
+@keyframes ctaPulseXmas { 0%{ transform: scale(1); box-shadow: 0 8px 18px rgba(34,197,94,.35);} 8%{ transform: scale(1.045); box-shadow: 0 10px 26px rgba(34,197,94,.5);} 16%{ transform: scale(1); box-shadow: 0 8px 18px rgba(34,197,94,.35);} 100%{ transform: scale(1); box-shadow: 0 8px 18px rgba(34,197,94,.35);} }
 
 /* Toggle button */
-.halloween-toggle {
+.christmas-toggle {
     position: fixed;
     right: 16px;
     bottom: 20px;
@@ -472,65 +563,65 @@ html {
     height: 48px;
     border-radius: 50%;
     border: none;
-    background: #ff7a00;
+    background: #16a34a;
     color: #fff;
     font-size: 22px;
     line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 20px rgba(255,122,0,0.45);
+    box-shadow: 0 8px 20px rgba(34,197,94,0.4);
     z-index: 1002;
     cursor: pointer;
 }
 
-.halloween-toggle:hover { filter: brightness(1.1); }
-.halloween-toggle:active { transform: translateY(1px); }
+.christmas-toggle:hover { filter: brightness(1.1); }
+.christmas-toggle:active { transform: translateY(1px); }
 
 /* Respect reduced motion: remove decorations */
 @media (prefers-reduced-motion: reduce) {
-    .halloween-web, .halloween-banner, .halloween-toggle { display: none !important; }
+    .christmas-star, .christmas-toggle { display: none !important; }
 }
 
-/* Respeto motion-reduce para el modal */
+/* Reduced-motion for modal */
 @media (prefers-reduced-motion: reduce) {
-    .halloween-modal { animation: none; }
-    .halloween-badge { animation: none; }
+    .christmas-modal { animation: none; }
+    .christmas-badge { animation: none; }
     .bot-invite .bot-wave,
     .bot-invite .bot-bounce,
     .bot-invite .bot-arrow { animation: none; }
-    .halloween-modal .btn-primary.cta-pulse { animation: none; }
+    .christmas-modal .btn-primary.cta-pulse-xmas { animation: none; }
 }
 
 /* =============================
-   Halloween animations (global)
+   Christmas animations (global)
    ============================= */
-body.halloween-mode .btn,
-body.halloween-mode .btn-plan,
-body.halloween-mode .btn-special,
-body.halloween-mode .btn-special-compact,
-body.halloween-mode a.button,
-body.halloween-mode button {
-    animation: halloweenGlow 2.2s ease-in-out infinite alternate;
+body.christmas-mode .btn,
+body.christmas-mode .btn-plan,
+body.christmas-mode .btn-special,
+body.christmas-mode .btn-special-compact,
+body.christmas-mode a.button,
+body.christmas-mode button {
+    animation: christmasGlow 2.2s ease-in-out infinite alternate;
 }
 
-@keyframes halloweenGlow {
-    0% { box-shadow: 0 0 0 rgba(255, 102, 0, 0.0); }
-    100% { box-shadow: 0 0 18px rgba(255, 102, 0, 0.7), 0 0 36px rgba(255, 165, 0, 0.35); }
+@keyframes christmasGlow {
+    0% { box-shadow: 0 0 0 rgba(34, 197, 94, 0.0); }
+    100% { box-shadow: 0 0 18px rgba(34, 197, 94, 0.6), 0 0 36px rgba(220, 38, 38, 0.3); }
 }
 
 /* Floating layer for emojis (lightweight, accessible) */
-.halloween-layer {
+.christmas-layer {
     position: fixed;
     inset: 0;
     pointer-events: none;
     z-index: 999;
 }
 
-.halloween-item {
+.christmas-item {
     position: absolute;
     will-change: transform, opacity;
-    opacity: 0.85;
+    opacity: 0.9;
     filter: drop-shadow(0 3px 4px rgba(0,0,0,0.25));
 }
 
@@ -541,18 +632,18 @@ body.halloween-mode button {
     100% { transform: translate3d(var(--x,0), var(--y,0), 0) rotate(0deg); }
 }
 
-@keyframes flyAcross {
-    0% { transform: translateX(-10vw) translateY(var(--startY, 10vh)) scale(0.9) rotate(-2deg); opacity: 0; }
-    10% { opacity: 1; }
-    50% { transform: translateX(55vw) translateY(calc(var(--startY, 10vh) + 8vh)) scale(1); }
-    100% { transform: translateX(110vw) translateY(calc(var(--startY, 10vh) - 6vh)) scale(0.95) rotate(2deg); opacity: 0; }
+.christmas-item.flake { font-size: 26px; animation: floatDrift 6s ease-in-out infinite; }
+.christmas-item.tree  { font-size: 30px; animation: floatDrift 5.2s ease-in-out infinite; }
+.christmas-item.gift  { font-size: 28px; animation: floatDrift 5.6s ease-in-out infinite; }
+.christmas-item.star  { font-size: 24px; animation: floatDrift 6.4s ease-in-out infinite; }
+.christmas-item.santa { font-size: 32px; animation: bobWiggle 5s ease-in-out infinite; }
+.christmas-item.robot { font-size: 34px; animation: bobWiggle 6s ease-in-out infinite; }
+.christmas-item.sleigh { font-size: 36px; animation: santaSleigh 18s linear infinite; }
+.christmas-item.sleigh-convoy { 
+    font-size: 40px; 
+    letter-spacing: -8px;
+    animation: santaSleighConvoy 20s linear infinite; 
 }
-
-.halloween-item.ghost { font-size: 36px; animation: floatDrift 4.5s ease-in-out infinite; }
-.halloween-item.bat   { font-size: 28px; animation: flyAcross var(--dur, 12s) linear infinite; }
-.halloween-item.pumpkin { font-size: 30px; animation: floatDrift 5.2s ease-in-out infinite; }
-/* Robots disfrazados */
-.halloween-item.robot { font-size: 34px; animation: bobWiggle 6s ease-in-out infinite; }
 
 @keyframes bobWiggle {
     0% { transform: translateY(0) rotate(0deg); }
@@ -562,15 +653,68 @@ body.halloween-mode button {
     100% { transform: translateY(0) rotate(0deg); }
 }
 
+@keyframes santaSleigh {
+    0% { 
+        transform: translateX(-10vw) translateY(var(--startY, 15vh)) scale(0.8); 
+        opacity: 0; 
+    }
+    5% { opacity: 1; }
+    25% { 
+        transform: translateX(30vw) translateY(calc(var(--startY, 15vh) - 5vh)) scale(1);
+    }
+    50% { 
+        transform: translateX(60vw) translateY(calc(var(--startY, 15vh) + 2vh)) scale(0.95);
+    }
+    75% { 
+        transform: translateX(90vw) translateY(calc(var(--startY, 15vh) - 8vh)) scale(0.9);
+    }
+    95% { opacity: 1; }
+    100% { 
+        transform: translateX(115vw) translateY(calc(var(--startY, 15vh) - 12vh)) scale(0.7);
+        opacity: 0;
+    }
+}
+
+@keyframes santaSleighConvoy {
+    0% { 
+        transform: translateX(-15vw) translateY(0) scale(0.9) rotate(-2deg); 
+        opacity: 0;
+        filter: drop-shadow(0 5px 10px rgba(0,0,0,0.3));
+    }
+    3% { opacity: 1; }
+    15% { 
+        transform: translateX(20vw) translateY(-8vh) scale(1.1) rotate(1deg);
+        filter: drop-shadow(0 8px 15px rgba(0,0,0,0.35));
+    }
+    35% { 
+        transform: translateX(50vw) translateY(-4vh) scale(1) rotate(-1deg);
+        filter: drop-shadow(0 6px 12px rgba(0,0,0,0.3));
+    }
+    55% { 
+        transform: translateX(75vw) translateY(-10vh) scale(0.95) rotate(2deg);
+        filter: drop-shadow(0 7px 13px rgba(0,0,0,0.32));
+    }
+    75% { 
+        transform: translateX(95vw) translateY(-6vh) scale(0.85) rotate(-1deg);
+        filter: drop-shadow(0 5px 10px rgba(0,0,0,0.28));
+    }
+    97% { opacity: 1; }
+    100% { 
+        transform: translateX(120vw) translateY(-15vh) scale(0.7) rotate(3deg);
+        opacity: 0;
+        filter: drop-shadow(0 3px 8px rgba(0,0,0,0.2));
+    }
+}
+
 /* Reduce/disable on accessibility preference */
 @media (prefers-reduced-motion: reduce) {
-    body.halloween-mode .btn,
-    body.halloween-mode .btn-plan,
-    body.halloween-mode .btn-special,
-    body.halloween-mode .btn-special-compact,
-    body.halloween-mode a.button,
-    body.halloween-mode button { animation: none; }
-    .halloween-layer { display: none; }
+    body.christmas-mode .btn,
+    body.christmas-mode .btn-plan,
+    body.christmas-mode .btn-special,
+    body.christmas-mode .btn-special-compact,
+    body.christmas-mode a.button,
+    body.christmas-mode button { animation: none; }
+    .christmas-layer { display: none; }
 }
 
 .form-group {
@@ -664,13 +808,14 @@ body.halloween-mode button {
     background-color: var(--color-dark);
     color: var(--color-white);
     padding: 0 0 1rem;
+    margin-top: 0;
 }
 
 .footer-content {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 2rem;
-    margin: 3rem 0 2rem 0;
+    margin: 1rem 0 2rem 0;
 }
 
 .footer-section h3 {

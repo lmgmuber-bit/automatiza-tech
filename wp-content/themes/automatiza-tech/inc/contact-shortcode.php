@@ -57,13 +57,51 @@ function automatiza_tech_contact_form_shortcode($atts) {
                 <label for="contact_phone">Teléfono</label>
                 <div class="phone-input-container">
                     <select id="country_code" name="country_code" class="form-control country-selector">
-                        <option value="+56" data-country="CL" selected>🇨🇱 Chile (+56)</option>
-                        <option value="+54" data-country="AR">🇦🇷 Argentina (+54)</option>
-                        <option value="+57" data-country="CO">🇨🇴 Colombia (+57)</option>
-                        <option value="+51" data-country="PE">🇵🇪 Perú (+51)</option>
-                        <option value="+52" data-country="MX">🇲🇽 México (+52)</option>
-                        <option value="+34" data-country="ES">🇪🇸 España (+34)</option>
-                        <option value="+1" data-country="US">🇺🇸 USA (+1)</option>
+                        <!-- América del Sur -->
+                        <optgroup label="--- America del Sur ---">
+                            <option value="+54" data-country="AR">AR Argentina (+54)</option>
+                            <option value="+591" data-country="BO">BO Bolivia (+591)</option>
+                            <option value="+55" data-country="BR">BR Brasil (+55)</option>
+                            <option value="+56" data-country="CL" selected>CL Chile (+56)</option>
+                            <option value="+57" data-country="CO">CO Colombia (+57)</option>
+                            <option value="+593" data-country="EC">EC Ecuador (+593)</option>
+                            <option value="+594" data-country="GF">GF Guyana Francesa (+594)</option>
+                            <option value="+592" data-country="GY">GY Guyana (+592)</option>
+                            <option value="+595" data-country="PY">PY Paraguay (+595)</option>
+                            <option value="+51" data-country="PE">PE Peru (+51)</option>
+                            <option value="+597" data-country="SR">SR Surinam (+597)</option>
+                            <option value="+598" data-country="UY">UY Uruguay (+598)</option>
+                            <option value="+58" data-country="VE">VE Venezuela (+58)</option>
+                        </optgroup>
+                        
+                        <!-- América Central -->
+                        <optgroup label="--- America Central ---">
+                            <option value="+501" data-country="BZ">BZ Belice (+501)</option>
+                            <option value="+506" data-country="CR">CR Costa Rica (+506)</option>
+                            <option value="+503" data-country="SV">SV El Salvador (+503)</option>
+                            <option value="+502" data-country="GT">GT Guatemala (+502)</option>
+                            <option value="+504" data-country="HN">HN Honduras (+504)</option>
+                            <option value="+52" data-country="MX">MX Mexico (+52)</option>
+                            <option value="+505" data-country="NI">NI Nicaragua (+505)</option>
+                            <option value="+507" data-country="PA">PA Panama (+507)</option>
+                        </optgroup>
+                        
+                        <!-- Caribe -->
+                        <optgroup label="--- Caribe ---">
+                            <option value="+53" data-country="CU">CU Cuba (+53)</option>
+                            <option value="+509" data-country="HT">HT Haiti (+509)</option>
+                            <option value="+1787" data-country="PR">PR Puerto Rico (+1787)</option>
+                            <option value="+1809" data-country="DO">DO Rep. Dominicana (+1809)</option>
+                        </optgroup>
+                        
+                        <!-- Otros Países -->
+                        <optgroup label="--- Otros Paises ---">
+                            <option value="+1" data-country="US">US USA/Canada (+1)</option>
+                            <option value="+34" data-country="ES">ES Espana (+34)</option>
+                            <option value="+351" data-country="PT">PT Portugal (+351)</option>
+                            <option value="+44" data-country="GB">GB Reino Unido (+44)</option>
+                            <option value="+33" data-country="FR">FR Francia (+33)</option>
+                        </optgroup>
                     </select>
                     <input type="tel" 
                            id="contact_phone" 
@@ -457,9 +495,90 @@ function automatiza_tech_contact_form_shortcode($atts) {
             return message.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').trim();
         }
         
+        // Bloquear letras en el campo de teléfono (solo números)
+        var phoneInput = document.getElementById('contact_phone');
+        var countrySelect = document.getElementById('country_code');
+        
+        if (phoneInput) {
+            phoneInput.addEventListener('keypress', function(e) {
+                var char = String.fromCharCode(e.which);
+                
+                // Validación especial para Chile: el primer dígito debe ser 9
+                if (countrySelect && countrySelect.value === '+56') {
+                    if (phoneInput.value.length === 0 && char !== '9') {
+                        e.preventDefault();
+                        return;
+                    }
+                }
+                
+                // Permitir solo números (0-9)
+                if (!/[0-9]/.test(char)) {
+                    e.preventDefault();
+                }
+            });
+            
+            phoneInput.addEventListener('paste', function(e) {
+                // Limpiar cualquier caracter que no sea número al pegar
+                setTimeout(function() {
+                    var cleanValue = phoneInput.value.replace(/[^0-9]/g, '');
+                    
+                    // Validación especial para Chile: debe empezar con 9
+                    if (countrySelect && countrySelect.value === '+56') {
+                        if (cleanValue.length > 0 && cleanValue[0] !== '9') {
+                            // Si no empieza con 9, limpiar el campo
+                            phoneInput.value = '';
+                            alert('Los números chilenos deben comenzar con 9');
+                            return;
+                        }
+                    }
+                    
+                    phoneInput.value = cleanValue;
+                }, 0);
+            });
+            
+            phoneInput.addEventListener('input', function(e) {
+                // Remover cualquier caracter que no sea número en tiempo real
+                var cleanValue = this.value.replace(/[^0-9]/g, '');
+                
+                // Validación especial para Chile: debe empezar con 9
+                if (countrySelect && countrySelect.value === '+56') {
+                    if (cleanValue.length > 0 && cleanValue[0] !== '9') {
+                        // Si no empieza con 9, mantener vacío o solo el 9
+                        this.value = '';
+                        return;
+                    }
+                }
+                
+                this.value = cleanValue;
+            });
+        }
+        
+        // Bloquear números en el campo de nombre (solo letras)
+        var nameInput = document.getElementById('contact_name');
+        if (nameInput) {
+            nameInput.addEventListener('keypress', function(e) {
+                // Permitir letras, espacios, guiones y puntos
+                var char = String.fromCharCode(e.which);
+                if (!/[a-zA-ZáéíóúñüÁÉÍÓÚÑÜ\s\-\.]/.test(char)) {
+                    e.preventDefault();
+                }
+            });
+            
+            nameInput.addEventListener('paste', function(e) {
+                // Limpiar números y caracteres especiales al pegar
+                setTimeout(function() {
+                    nameInput.value = nameInput.value.replace(/[^a-zA-ZáéíóúñüÁÉÍÓÚÑÜ\s\-\.]/g, '');
+                }, 0);
+            });
+            
+            nameInput.addEventListener('input', function(e) {
+                // Remover números y caracteres especiales en tiempo real
+                this.value = this.value.replace(/[^a-zA-ZáéíóúñüÁÉÍÓÚÑÜ\s\-\.]/g, '');
+            });
+        }
+        
         // Manejo del selector de país y teléfono
         var countrySelect = document.getElementById('country_code');
-        var phoneInput = document.getElementById('contact_phone');
         var phonePreview = document.getElementById('phone-preview');
         
         function updatePhonePreview() {
@@ -468,28 +587,75 @@ function automatiza_tech_contact_form_shortcode($atts) {
             var preview = 'Formato: ' + countryCode + ' ' + (phoneNumber || 'XXXXXXXXX');
             phonePreview.textContent = preview;
             
-            // Validación específica para Chile (+56) - máximo 9 dígitos
+            // Validación específica según el país
             updatePhoneValidation(countryCode);
         }
         
         function updatePhoneValidation(countryCode) {
+            // Configuración de longitud según el país
+            var phoneConfig = {
+                '+56': { min: 9, max: 9, digits: 9, example: '964324169', name: 'Chile' },
+                '+54': { min: 9, max: 10, digits: '9-10', example: '91234567890', name: 'Argentina' },
+                '+55': { min: 10, max: 11, digits: '10-11', example: '11987654321', name: 'Brasil' },
+                '+57': { min: 10, max: 10, digits: 10, example: '3001234567', name: 'Colombia' },
+                '+51': { min: 9, max: 9, digits: 9, example: '987654321', name: 'Perú' },
+                '+52': { min: 10, max: 10, digits: 10, example: '5512345678', name: 'México' },
+                '+591': { min: 8, max: 9, digits: '8-9', example: '71234567', name: 'Bolivia' },
+                '+593': { min: 9, max: 9, digits: 9, example: '987654321', name: 'Ecuador' },
+                '+595': { min: 9, max: 9, digits: 9, example: '981234567', name: 'Paraguay' },
+                '+598': { min: 9, max: 9, digits: 9, example: '91234567', name: 'Uruguay' },
+                '+58': { min: 10, max: 10, digits: 10, example: '4121234567', name: 'Venezuela' },
+                '+501': { min: 7, max: 7, digits: 7, example: '6221234', name: 'Belice' },
+                '+506': { min: 8, max: 8, digits: 8, example: '88881234', name: 'Costa Rica' },
+                '+503': { min: 8, max: 8, digits: 8, example: '78901234', name: 'El Salvador' },
+                '+502': { min: 8, max: 8, digits: 8, example: '51234567', name: 'Guatemala' },
+                '+504': { min: 8, max: 8, digits: 8, example: '91234567', name: 'Honduras' },
+                '+505': { min: 8, max: 8, digits: 8, example: '81234567', name: 'Nicaragua' },
+                '+507': { min: 8, max: 8, digits: 8, example: '61234567', name: 'Panamá' },
+                '+53': { min: 8, max: 8, digits: 8, example: '51234567', name: 'Cuba' },
+                '+509': { min: 8, max: 8, digits: 8, example: '34123456', name: 'Haití' },
+                '+1787': { min: 10, max: 10, digits: 10, example: '7871234567', name: 'Puerto Rico' },
+                '+1809': { min: 10, max: 10, digits: 10, example: '8091234567', name: 'Rep. Dominicana' },
+                '+34': { min: 9, max: 9, digits: 9, example: '612345678', name: 'España' },
+                '+1': { min: 10, max: 10, digits: 10, example: '2025551234', name: 'USA/Canadá' },
+                '+351': { min: 9, max: 9, digits: 9, example: '912345678', name: 'Portugal' },
+                '+44': { min: 10, max: 10, digits: 10, example: '7912345678', name: 'Reino Unido' },
+                '+33': { min: 9, max: 9, digits: 9, example: '612345678', name: 'Francia' }
+            };
+            
+            var config = phoneConfig[countryCode] || { min: 8, max: 15, digits: '8-15', example: '123456789', name: 'Internacional' };
+            
+            phoneInput.setAttribute('minlength', config.min);
+            phoneInput.setAttribute('maxlength', config.max);
+            
+            // Validación especial para Chile: debe empezar con 9
             if (countryCode === '+56') {
-                // Chile: exactamente 9 dígitos
-                phoneInput.setAttribute('maxlength', '9');
-                phoneInput.setAttribute('pattern', '[0-9]{9}');
-                phoneInput.setAttribute('title', 'Ingresa exactamente 9 dígitos para números chilenos (ej: 964324169)');
-                phoneInput.setAttribute('placeholder', 'Ej: 964324169');
+                phoneInput.setAttribute('pattern', '9[0-9]{8}');
+                phoneInput.setAttribute('title', 'Ingresa exactamente 9 dígitos comenzando con 9 para Chile (ej: ' + config.example + ')');
+                phoneInput.setAttribute('placeholder', 'Ej: ' + config.example);
+                
+                // Si ya tiene un número y no empieza con 9, limpiar
+                if (phoneInput.value.length > 0 && phoneInput.value[0] !== '9') {
+                    phoneInput.value = '';
+                }
                 
                 // Si ya tiene más de 9 dígitos, recortar
                 if (phoneInput.value.length > 9) {
                     phoneInput.value = phoneInput.value.substring(0, 9);
                 }
+            } else if (config.min === config.max) {
+                phoneInput.setAttribute('pattern', '[0-9]{' + config.min + '}');
+                phoneInput.setAttribute('title', 'Ingresa exactamente ' + config.digits + ' dígitos para ' + config.name + ' (ej: ' + config.example + ')');
+                phoneInput.setAttribute('placeholder', 'Ej: ' + config.example);
+                
+                // Si ya tiene más dígitos de los permitidos, recortar
+                if (phoneInput.value.length > config.max) {
+                    phoneInput.value = phoneInput.value.substring(0, config.max);
+                }
             } else {
-                // Otros países: 8-15 dígitos
-                phoneInput.setAttribute('maxlength', '15');
-                phoneInput.setAttribute('pattern', '[0-9]{8,15}');
-                phoneInput.setAttribute('title', 'Ingresa el número sin el código de país (8-15 dígitos)');
-                phoneInput.setAttribute('placeholder', 'Ej: 1234567890');
+                phoneInput.setAttribute('pattern', '[0-9]{' + config.min + ',' + config.max + '}');
+                phoneInput.setAttribute('title', 'Ingresa entre ' + config.digits + ' dígitos para ' + config.name + ' (ej: ' + config.example + ')');
+                phoneInput.setAttribute('placeholder', 'Ej: ' + config.example);
             }
         }
         

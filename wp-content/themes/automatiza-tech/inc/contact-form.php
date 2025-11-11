@@ -327,13 +327,44 @@ class AutomatizaTechContactForm {
         
         // Validar códigos de país permitidos y longitud específica
         $country_validations = array(
+            // América del Sur
+            '+54' => array('length' => array(12, 13), 'digits' => array(9, 10)), // Argentina
+            '+591' => array('length' => array(11, 12), 'digits' => array(8, 9)), // Bolivia
+            '+55' => array('length' => array(12, 13), 'digits' => array(10, 11)), // Brasil
             '+56' => array('length' => 12, 'digits' => 9), // Chile: +56 + 9 dígitos = 12 total
-            '+54' => array('length' => array(12, 13), 'digits' => array(9, 10)), // Argentina: variable
-            '+57' => array('length' => 13, 'digits' => 10), // Colombia: +57 + 10 dígitos
-            '+51' => array('length' => 12, 'digits' => 9), // Perú: +51 + 9 dígitos  
-            '+52' => array('length' => 13, 'digits' => 10), // México: +52 + 10 dígitos
-            '+34' => array('length' => 12, 'digits' => 9), // España: +34 + 9 dígitos
-            '+1' => array('length' => 12, 'digits' => 10) // USA: +1 + 10 dígitos
+            '+57' => array('length' => 13, 'digits' => 10), // Colombia
+            '+593' => array('length' => 12, 'digits' => 9), // Ecuador
+            '+594' => array('length' => 12, 'digits' => 9), // Guyana Francesa
+            '+592' => array('length' => 11, 'digits' => 7), // Guyana
+            '+595' => array('length' => 12, 'digits' => 9), // Paraguay
+            '+51' => array('length' => 12, 'digits' => 9), // Perú
+            '+597' => array('length' => 11, 'digits' => 7), // Surinam
+            '+598' => array('length' => 12, 'digits' => 9), // Uruguay
+            '+58' => array('length' => 13, 'digits' => 10), // Venezuela
+            
+            // América Central y Caribe
+            '+501' => array('length' => 11, 'digits' => 7), // Belice
+            '+506' => array('length' => 12, 'digits' => 8), // Costa Rica
+            '+53' => array('length' => 12, 'digits' => 8), // Cuba
+            '+503' => array('length' => 12, 'digits' => 8), // El Salvador
+            '+502' => array('length' => 12, 'digits' => 8), // Guatemala
+            '+509' => array('length' => 12, 'digits' => 8), // Haití
+            '+504' => array('length' => 12, 'digits' => 8), // Honduras
+            '+52' => array('length' => 13, 'digits' => 10), // México
+            '+505' => array('length' => 12, 'digits' => 8), // Nicaragua
+            '+507' => array('length' => 12, 'digits' => 8), // Panamá
+            '+1787' => array('length' => 14, 'digits' => 10), // Puerto Rico
+            '+1939' => array('length' => 14, 'digits' => 10), // Puerto Rico (alternativo)
+            '+1809' => array('length' => 14, 'digits' => 10), // República Dominicana
+            '+1829' => array('length' => 14, 'digits' => 10), // República Dominicana (alternativo)
+            '+1849' => array('length' => 14, 'digits' => 10), // República Dominicana (alternativo)
+            
+            // Otros países comunes
+            '+34' => array('length' => 12, 'digits' => 9), // España
+            '+1' => array('length' => 12, 'digits' => 10), // USA/Canadá
+            '+351' => array('length' => 12, 'digits' => 9), // Portugal
+            '+44' => array('length' => 13, 'digits' => 10), // Reino Unido
+            '+33' => array('length' => 12, 'digits' => 9) // Francia
         );
         
         $country_code_found = false;
@@ -352,6 +383,10 @@ class AutomatizaTechContactForm {
                     $number_part = substr($phone, 3); // Remover +56
                     if (!preg_match('/^[0-9]{9}$/', $number_part)) {
                         return ''; // Debe tener exactamente 9 dígitos después de +56
+                    }
+                    // NUEVO: Validar que el primer dígito sea 9 (números móviles chilenos)
+                    if ($number_part[0] !== '9') {
+                        return ''; // Los números chilenos deben empezar con 9
                     }
                 } else {
                     // Para otros países, validación más flexible

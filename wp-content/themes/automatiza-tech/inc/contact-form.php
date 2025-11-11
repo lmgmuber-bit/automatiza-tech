@@ -32,6 +32,8 @@ class AutomatizaTechContactForm {
         add_action('wp_ajax_nopriv_search_contacts', array($this, 'search_contacts'));
         add_action('wp_ajax_search_clients', array($this, 'search_clients'));
         add_action('wp_ajax_nopriv_search_clients', array($this, 'search_clients'));
+        add_action('wp_ajax_filter_contacts', array($this, 'filter_contacts'));
+        add_action('wp_ajax_send_email_to_new_contacts', array($this, 'send_email_to_new_contacts'));
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'admin_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'frontend_scripts'));
@@ -453,22 +455,116 @@ class AutomatizaTechContactForm {
      * Enviar email de notificación
      */
     private function send_notification_email($name, $email, $company, $phone, $message) {
-        $to = get_option('admin_email');
-        $subject = 'Nuevo contacto desde Automatiza Tech - ' . $name;
-        $body = "
-        <h2>Nuevo mensaje de contacto</h2>
-        <p><strong>Nombre:</strong> {$name}</p>
-        <p><strong>Email:</strong> {$email}</p>
-        <p><strong>Empresa:</strong> {$company}</p>
-        <p><strong>Teléfono:</strong> {$phone}</p>
-        <p><strong>Mensaje:</strong></p>
-        <p>{$message}</p>
-        <p><small>Enviado desde: " . home_url() . "</small></p>
-        ";
+        // Enviar notificación a automatizatech.bots@gmail.com
+        $to = 'automatizatech.bots@gmail.com';
+        $subject = '📧 Nuevo contacto desde Automatiza Tech - ' . $name;
+        
+        // Plantilla HTML mejorada para la notificación
+        $body = '
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif; background: #f5f5f5;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background: #f5f5f5; padding: 20px;">
+                <tr>
+                    <td align="center">
+                        <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                            <!-- Header -->
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                                    <h1 style="color: #ffffff; margin: 0; font-size: 24px;">🆕 Nuevo Contacto</h1>
+                                    <p style="color: #f0f0f0; margin: 10px 0 0 0; font-size: 14px;">Automatiza Tech</p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Contenido -->
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <div style="background: #f8f9ff; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin-bottom: 20px;">
+                                        <h2 style="color: #667eea; margin: 0 0 15px 0; font-size: 18px;">👤 Información del Contacto</h2>
+                                        
+                                        <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse: collapse;">
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e0e0e0; width: 30%;">
+                                                    <strong style="color: #667eea;">Nombre:</strong>
+                                                </td>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
+                                                    ' . esc_html($name) . '
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
+                                                    <strong style="color: #667eea;">Email:</strong>
+                                                </td>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
+                                                    <a href="mailto:' . esc_attr($email) . '" style="color: #667eea; text-decoration: none;">' . esc_html($email) . '</a>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
+                                                    <strong style="color: #667eea;">Empresa:</strong>
+                                                </td>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
+                                                    ' . (empty($company) ? '<em style="color: #999;">No especificada</em>' : esc_html($company)) . '
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
+                                                    <strong style="color: #667eea;">Teléfono:</strong>
+                                                </td>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
+                                                    ' . (empty($phone) ? '<em style="color: #999;">No especificado</em>' : '<a href="tel:' . esc_attr($phone) . '" style="color: #667eea; text-decoration: none;">' . esc_html($phone) . '</a>') . '
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <strong style="color: #667eea;">Fecha:</strong>
+                                                </td>
+                                                <td style="padding: 8px 0;">
+                                                    ' . current_time('d/m/Y H:i:s') . '
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    
+                                    <div style="background: #fff9f0; padding: 20px; border-radius: 8px; border-left: 4px solid #ff9800; margin-bottom: 20px;">
+                                        <h3 style="color: #ff9800; margin: 0 0 10px 0; font-size: 16px;">💬 Mensaje:</h3>
+                                        <p style="color: #333; margin: 0; line-height: 1.6; white-space: pre-wrap;">' . esc_html($message) . '</p>
+                                    </div>
+                                    
+                                    <div style="text-align: center; margin-top: 25px;">
+                                        <a href="' . admin_url('admin.php?page=automatiza-tech-contacts') . '" style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);">
+                                            📋 Ver en Panel de Admin
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="background: #f8f9ff; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
+                                    <p style="color: #666; margin: 0; font-size: 12px;">
+                                        🌐 Enviado desde: <a href="' . home_url() . '" style="color: #667eea; text-decoration: none;">' . home_url() . '</a>
+                                    </p>
+                                    <p style="color: #999; margin: 5px 0 0 0; font-size: 11px;">
+                                        Este es un mensaje automático del sistema de contacto de Automatiza Tech
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        ';
         
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
-            'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>',
+            'From: Automatiza Tech <' . get_option('admin_email') . '>',
             'Reply-To: ' . $name . ' <' . $email . '>'
         );
         
@@ -1121,6 +1217,436 @@ class AutomatizaTechContactForm {
     }
     
     /**
+     * Filtrar contactos por búsqueda y estado
+     */
+    public function filter_contacts() {
+        // Limpiar cualquier output previo
+        if (ob_get_level()) {
+            ob_clean();
+        }
+        
+        // Verificar nonce para seguridad
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'filter_contacts')) {
+            wp_send_json_error('Error de seguridad');
+            wp_die();
+        }
+        
+        $search_term = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
+        $status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
+        
+        global $wpdb;
+        
+        $where_clauses = array();
+        $values = array();
+        
+        // Si hay término de búsqueda
+        if (!empty($search_term)) {
+            $like_term = '%' . $wpdb->esc_like($search_term) . '%';
+            $where_clauses[] = "(name LIKE %s OR email LIKE %s OR company LIKE %s OR phone LIKE %s OR message LIKE %s)";
+            $values = array_merge($values, array($like_term, $like_term, $like_term, $like_term, $like_term));
+        }
+        
+        // Si hay filtro de estado
+        if (!empty($status)) {
+            $where_clauses[] = "status = %s";
+            $values[] = $status;
+        }
+        
+        // Construir la consulta
+        $sql = "SELECT * FROM {$this->table_name}";
+        if (!empty($where_clauses)) {
+            $sql .= " WHERE " . implode(" AND ", $where_clauses);
+        }
+        $sql .= " ORDER BY submitted_at DESC";
+        
+        if (!empty($values)) {
+            $contacts = $wpdb->get_results($wpdb->prepare($sql, $values));
+        } else {
+            $contacts = $wpdb->get_results($sql);
+        }
+        
+        wp_send_json_success($contacts);
+        wp_die();
+    }
+    
+    /**
+     * Enviar email a todos los contactos con estado "Nuevo"
+     */
+    public function send_email_to_new_contacts() {
+        // Verificar permisos
+        if (!current_user_can('administrator')) {
+            wp_send_json_error('No tienes permisos para realizar esta acción');
+            wp_die();
+        }
+        
+        // Verificar nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'send_email_new_contacts')) {
+            wp_send_json_error('Error de seguridad');
+            wp_die();
+        }
+        
+        global $wpdb;
+        
+        // Obtener todos los contactos con estado "new"
+        $contacts = $wpdb->get_results("SELECT * FROM {$this->table_name} WHERE status = 'new'");
+        
+        if (empty($contacts)) {
+            wp_send_json_error('No hay contactos con estado "Nuevo" para enviar correos');
+            wp_die();
+        }
+        
+        $sent_count = 0;
+        $failed_count = 0;
+        $failed_emails = array();
+        
+        foreach ($contacts as $contact) {
+            $subject = '¡Descubre cómo Automatiza Tech puede transformar tu negocio! 🚀';
+            
+            $body = $this->get_email_template($contact->name);
+            
+            $headers = array(
+                'Content-Type: text/html; charset=UTF-8',
+                'From: Automatiza Tech <' . get_option('admin_email') . '>',
+                'Reply-To: Automatiza Tech <info@automatizatech.cl>',
+                'Bcc: automatizatech.bots@gmail.com'
+            );
+            
+            $result = wp_mail($contact->email, $subject, $body, $headers);
+            
+            if ($result) {
+                $sent_count++;
+                
+                // Cambiar estado a "contacted" después del envío exitoso
+                $wpdb->update(
+                    $this->table_name,
+                    array('status' => 'contacted'),
+                    array('id' => $contact->id),
+                    array('%s'),
+                    array('%d')
+                );
+                
+                // Log de éxito
+                if (WP_DEBUG && WP_DEBUG_LOG) {
+                    error_log('Automatiza Tech - Correo enviado exitosamente a: ' . $contact->email . ' - Estado cambiado a "contacted"');
+                }
+            } else {
+                $failed_count++;
+                $failed_emails[] = $contact->email;
+                
+                // Log de error
+                if (WP_DEBUG && WP_DEBUG_LOG) {
+                    error_log('Automatiza Tech - Error al enviar correo a: ' . $contact->email);
+                }
+            }
+            
+            // Pausa pequeña entre envíos para evitar sobrecarga del servidor SMTP
+            usleep(500000); // 0.5 segundos
+        }
+        
+        $message = "✅ Se enviaron $sent_count correos exitosamente.";
+        
+        if ($sent_count > 0) {
+            $message .= "\n📋 Los contactos han sido actualizados al estado 'Contactado'.";
+        }
+        
+        if ($failed_count > 0) {
+            $message .= "\n⚠️ $failed_count correos fallaron: " . implode(', ', $failed_emails);
+            $message .= "\nLos contactos con fallos permanecen en estado 'Nuevo'.";
+        }
+        
+        wp_send_json_success($message);
+        wp_die();
+    }
+    
+    /**
+     * Plantilla de email profesional con información de planes
+     */
+    private function get_email_template($name) {
+        global $wpdb;
+        
+        $whatsapp_number = get_theme_mod('whatsapp_number', '+56 9 4033 1127');
+        $whatsapp_url = get_whatsapp_url('Hola! Me interesa conocer más sobre los planes de Automatiza Tech');
+        
+        // Obtener planes desde la base de datos
+        $plans = get_active_automatiza_services('pricing');
+        
+        if (empty($plans)) {
+            // Fallback si no hay planes en BD
+            $plans = array();
+        }
+        
+        $template = '
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Automatiza Tech - Nuestros Planes</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px;">
+                <tr>
+                    <td align="center">
+                        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                            <!-- Header con logo y bot animado -->
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; position: relative;">
+                                    <!-- Logo de Automatiza Tech -->
+                                    <div style="margin-bottom: 25px;">
+                                        <img src="' . esc_url(get_template_directory_uri() . '/assets/images/logo-automatiza-tech.png') . '" alt="Automatiza Tech - Bots inteligentes para negocios" style="max-width: 320px; width: 100%; height: auto; display: block; margin: 0 auto;" />
+                                    </div>
+                                    <!-- Bot animado -->
+                                    <div style="font-size: 60px; margin-bottom: 10px; animation: bounce 2s infinite;">🤖</div>
+                                    <p style="color: #f0f0f0; margin: 10px 0 0 0; font-size: 18px; font-weight: 300;">✨ Bots inteligentes para negocios que no se detienen ✨</p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Decoración de bots -->
+                            <tr>
+                                <td style="background: linear-gradient(to bottom, #667eea, #ffffff); padding: 30px 20px; text-align: center;">
+                                    <div style="font-size: 40px; letter-spacing: 20px;">🤖💬🚀⚡🎯</div>
+                                </td>
+                            </tr>
+                            
+                            <!-- Saludo personalizado -->
+                            <tr>
+                                <td style="padding: 40px 40px 30px 40px; background: #ffffff;">
+                                    <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 25px; border-radius: 15px; text-align: center; margin-bottom: 25px;">
+                                        <h2 style="color: #ffffff; margin: 0; font-size: 28px; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">¡Hola ' . esc_html($name) . '! 👋✨</h2>
+                                    </div>
+                                    <div style="background: #f8f9ff; border-left: 5px solid #667eea; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                                        <p style="color: #333333; font-size: 16px; line-height: 1.8; margin: 0 0 15px 0;">
+                                            <strong style="color: #667eea;">🎉 ¡Gracias por tu interés!</strong><br>
+                                            Nos emociona enormemente poder ayudarte a transformar tu negocio con nuestras soluciones de automatización inteligente 🚀
+                                        </p>
+                                        <p style="color: #555555; font-size: 15px; line-height: 1.8; margin: 0;">
+                                            Nuestros bots están diseñados para hacer tu vida más fácil, automatizando tareas repetitivas y permitiéndote enfocarte en lo que realmente importa: <strong>hacer crecer tu negocio</strong> 💪
+                                        </p>
+                                    </div>
+                                    <div style="text-align: center; padding: 20px 0;">
+                                        <div style="display: inline-block; background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); padding: 15px 30px; border-radius: 50px; box-shadow: 0 4px 15px rgba(252, 182, 159, 0.4);">
+                                            <p style="margin: 0; color: #333; font-size: 16px; font-weight: bold;">🎁 Descubre el plan perfecto para ti 🎁</p>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>';
+            
+            // Generar planes dinámicamente desde la base de datos
+            if (!empty($plans)) {
+                $plan_colors = array(
+                    array('border' => '#06d6a0', 'color' => '#06d6a0', 'bg' => '#ffffff', 'icon' => '🌟'),
+                    array('border' => '#1e40af', 'color' => '#1e40af', 'bg' => '#f8f9ff', 'icon' => '🚀'),
+                    array('border' => '#dc2626', 'color' => '#dc2626', 'bg' => '#ffffff', 'icon' => '💼')
+                );
+                
+                foreach ($plans as $index => $plan) {
+                    $color_scheme = $plan_colors[$index % count($plan_colors)];
+                    $features_array = json_decode($plan->features, true);
+                    if (!is_array($features_array)) {
+                        $features_array = explode(',', $plan->features);
+                    }
+                    
+                    $price_text = $plan->price_usd > 0 
+                        ? '$' . number_format($plan->price_usd, 0) . ' USD/mes' 
+                        : 'Cotización personalizada';
+                    
+                    // Crear gradiente único para cada plan
+                    $plan_gradients = array(
+                        array('from' => '#a8edea', 'to' => '#fed6e3', 'border' => '#06d6a0'),
+                        array('from' => '#d299c2', 'to' => '#fef9d7', 'border' => '#1e40af'),
+                        array('from' => '#ffecd2', 'to' => '#fcb69f', 'border' => '#dc2626')
+                    );
+                    $gradient = $plan_gradients[$index % count($plan_gradients)];
+                    
+                    $template .= '
+                            <tr>
+                                <td style="padding: 0 40px ' . ($index === count($plans) - 1 ? '30px' : '20px') . ' 40px;">
+                                    <div style="background: linear-gradient(135deg, ' . $gradient['from'] . ' 0%, ' . $gradient['to'] . ' 100%); border-radius: 20px; padding: 5px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); transition: transform 0.3s;">
+                                        <div style="background: #ffffff; border-radius: 15px; padding: 30px; position: relative;">';
+                    
+                    // Badge destacado si el plan tiene highlight
+                    if ($plan->highlight) {
+                        $template .= '
+                                            <div style="position: absolute; top: -15px; right: 20px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 8px 20px; border-radius: 25px; font-size: 12px; font-weight: bold; box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4); animation: pulse 2s infinite;">
+                                                ⭐ ' . strtoupper(esc_html($plan->button_text ? $plan->button_text : 'MÁS POPULAR')) . ' ⭐
+                                            </div>';
+                    }
+                    
+                    $template .= '
+                                            <div style="text-align: center; margin-bottom: 20px;">
+                                                <div style="font-size: 60px; margin-bottom: 10px;">' . $color_scheme['icon'] . '</div>
+                                                <h3 style="color: ' . $color_scheme['color'] . '; margin: 0 0 10px 0; font-size: 26px; font-weight: bold;">
+                                                    ' . esc_html($plan->name) . '
+                                                </h3>
+                                                <div style="width: 80px; height: 3px; background: linear-gradient(to right, ' . $gradient['from'] . ', ' . $gradient['to'] . '); margin: 0 auto; border-radius: 2px;"></div>
+                                            </div>';
+                    
+                    if (!empty($plan->description)) {
+                        $template .= '
+                                            <div style="background: ' . $gradient['from'] . '20; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid ' . $color_scheme['border'] . ';">
+                                                <p style="color: #555; font-size: 15px; margin: 0; line-height: 1.6; font-style: italic;">
+                                                    💡 ' . esc_html($plan->description) . '
+                                                </p>
+                                            </div>';
+                    }
+                    
+                    $template .= '
+                                            <div style="background: #f8f9ff; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                                                <div style="font-weight: bold; color: #667eea; margin-bottom: 15px; font-size: 16px;">✨ Características incluidas:</div>
+                                                <ul style="color: #333333; font-size: 14px; line-height: 2; padding-left: 0; list-style: none; margin: 0;">';
+                    
+                    foreach ($features_array as $feature_index => $feature) {
+                        $check_emojis = array('✅', '🎯', '⚡', '💎', '🚀', '💪', '🌟', '🔥');
+                        $check_emoji = $check_emojis[$feature_index % count($check_emojis)];
+                        $template .= '
+                                                    <li style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;"><span style="margin-right: 10px;">' . $check_emoji . '</span>' . esc_html(trim($feature)) . '</li>';
+                    }
+                    
+                    $template .= '
+                                                </ul>
+                                            </div>
+                                            <div style="text-align: center; background: linear-gradient(135deg, ' . $gradient['from'] . ' 0%, ' . $gradient['to'] . ' 100%); padding: 20px; border-radius: 12px; margin-top: 20px;">
+                                                <div style="color: #333; font-size: 14px; margin-bottom: 5px; font-weight: 600;">💰 Precio especial</div>
+                                                <div style="color: ' . $color_scheme['color'] . '; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px rgba(255,255,255,0.5);">
+                                                    ' . $price_text . '
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>';
+                }
+            } else {
+                // Fallback si no hay planes en BD
+                $template .= '
+                            <tr>
+                                <td style="padding: 0 40px 30px 40px;">
+                                    <div style="border: 2px solid #06d6a0; border-radius: 10px; padding: 25px; text-align: center;">
+                                        <p style="color: #666666; font-size: 16px;">
+                                            Para conocer nuestros planes y precios, por favor contáctanos directamente.
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>';
+            }
+            
+            $template .= '
+                            
+                            <!-- Separador con bots -->
+                            <tr>
+                                <td style="padding: 30px 40px; text-align: center;">
+                                    <div style="font-size: 35px; letter-spacing: 15px; opacity: 0.6;">🤖💬🤖💬🤖</div>
+                                </td>
+                            </tr>
+                            
+                            <!-- CTA -->
+                            <tr>
+                                <td style="padding: 40px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); text-align: center; position: relative;">
+                                    <div style="font-size: 50px; margin-bottom: 15px;">🎯</div>
+                                    <h3 style="color: #ffffff; margin: 0 0 15px 0; font-size: 26px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">🚀 ¿Listo para despegar?</h3>
+                                    <p style="color: #f0f0f0; font-size: 16px; margin: 0 0 25px 0; line-height: 1.6;">
+                                        ✨ Contáctanos hoy mismo y descubre cómo nuestros bots pueden revolucionar tu negocio ✨
+                                    </p>
+                                    <div style="margin: 20px 0;">
+                                        <a href="' . esc_url($whatsapp_url) . '" style="display: inline-block; background: linear-gradient(135deg, #25D366, #128C7E); color: white; padding: 18px 45px; text-decoration: none; border-radius: 50px; font-size: 17px; font-weight: bold; margin: 10px; box-shadow: 0 8px 20px rgba(37, 211, 102, 0.4); transition: transform 0.3s;">
+                                            💬 Hablar por WhatsApp
+                                        </a>
+                                        <br>
+                                        <a href="' . esc_url(home_url('/#contacto')) . '" style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 18px 45px; text-decoration: none; border-radius: 50px; font-size: 17px; font-weight: bold; margin: 10px; box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); border: 2px solid #ffffff;">
+                                            📧 Visitar Sitio Web
+                                        </a>
+                                    </div>
+                                    <div style="margin-top: 25px; padding: 20px; background: rgba(255,255,255,0.2); border-radius: 15px; backdrop-filter: blur(10px);">
+                                        <p style="color: #ffffff; margin: 0; font-size: 14px; line-height: 1.8;">
+                                            � <strong>¿Tienes dudas?</strong><br>
+                                            Nuestro equipo está listo para ayudarte a elegir el plan perfecto<br>
+                                            ¡Escríbenos sin compromiso! 😊
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer mejorado -->
+                            <tr>
+                                <td style="padding: 40px; background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); text-align: center;">
+                                    <div style="font-size: 45px; margin-bottom: 15px;">🤖</div>
+                                    <p style="color: #ffffff; margin: 0 0 15px 0; font-size: 18px; font-weight: bold;">
+                                        Automatiza Tech
+                                    </p>
+                                    <p style="color: #a5b4fc; margin: 0 0 20px 0; font-size: 14px; line-height: 1.6;">
+                                        ✨ Conectamos tus ventas, web y CRM ✨<br>
+                                        🤖 Bots inteligentes que trabajan 24/7 para ti
+                                    </p>
+                                    <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                                        <p style="color: #ffffff; margin: 0 0 10px 0; font-size: 14px;">
+                                            📱 WhatsApp: <a href="https://wa.me/' . str_replace([' ', '+'], '', $whatsapp_number) . '" style="color: #25D366; text-decoration: none; font-weight: bold;">' . esc_html($whatsapp_number) . '</a>
+                                        </p>
+                                        <p style="color: #ffffff; margin: 0 0 10px 0; font-size: 14px;">
+                                            📧 Email: <a href="mailto:info@automatizatech.cl" style="color: #60a5fa; text-decoration: none; font-weight: bold;">info@automatizatech.cl</a>
+                                        </p>
+                                        <p style="color: #ffffff; margin: 0; font-size: 14px;">
+                                            🌐 Web: <a href="' . esc_url(home_url()) . '" style="color: #60a5fa; text-decoration: none; font-weight: bold;">' . str_replace(['http://', 'https://'], '', home_url()) . '</a>
+                                        </p>
+                                    </div>
+                                    
+                                    <!-- Redes Sociales -->
+                                    <div style="margin: 25px 0; padding: 20px 0; border-top: 2px solid rgba(255,255,255,0.2); border-bottom: 2px solid rgba(255,255,255,0.2);">
+                                        <p style="color: #ffffff; margin: 0 0 15px 0; font-size: 16px; font-weight: bold;">
+                                            📱 Síguenos en Redes Sociales
+                                        </p>
+                                        <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+                                            <tr>
+                                                <td style="padding: 0 15px;">
+                                                    <a href="https://www.instagram.com/automatizatech.cl" target="_blank" style="display: inline-block; text-decoration: none;">
+                                                        <table cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); border-radius: 12px; padding: 12px 20px;">
+                                                            <tr>
+                                                                <td style="text-align: center;">
+                                                                    <span style="font-size: 24px;">📷</span>
+                                                                    <span style="color: #ffffff; font-size: 14px; font-weight: bold; margin-left: 8px; vertical-align: middle;">Instagram</span>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </a>
+                                                </td>
+                                                <td style="padding: 0 15px;">
+                                                    <a href="https://www.facebook.com/AutomatizaTech.cl" target="_blank" style="display: inline-block; text-decoration: none;">
+                                                        <table cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #4267B2 0%, #3b5998 100%); border-radius: 12px; padding: 12px 20px;">
+                                                            <tr>
+                                                                <td style="text-align: center;">
+                                                                    <span style="font-size: 24px;">👍</span>
+                                                                    <span style="color: #ffffff; font-size: 14px; font-weight: bold; margin-left: 8px; vertical-align: middle;">Facebook</span>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        <p style="color: #a5b4fc; margin: 15px 0 0 0; font-size: 13px;">
+                                            ✨ Únete a nuestra comunidad y mantente al día con tips, novedades y ofertas exclusivas
+                                        </p>
+                                    </div>
+                                    
+                                    <div style="padding-top: 20px; margin-top: 0;">
+                                        <p style="color: #a5b4fc; margin: 0; font-size: 12px; line-height: 1.6;">
+                                            © ' . date('Y') . ' Automatiza Tech. Todos los derechos reservados.<br>
+                                            Impulsando negocios con tecnología inteligente 🚀
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        ';
+        
+        return $template;
+    }
+    
+    /**
      * Manejar acción de exportación antes de cargar la página
      */
     public function handle_export_action() {
@@ -1342,9 +1868,9 @@ class AutomatizaTechContactForm {
             </div>
             <?php endif; ?>
             
-            <!-- Campo de búsqueda asíncrona -->
+            <!-- Campo de búsqueda y filtros -->
             <div class="search-box" style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e3e6f0;">
-                <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                     <span class="dashicons dashicons-search" style="color: #2271b1; font-size: 20px;"></span>
                     <input type="text" id="contact-search" placeholder="🔍 Buscar contactos por nombre, email, empresa, teléfono o mensaje..." 
                            style="flex: 1; padding: 10px 15px; border: 2px solid #e3e6f0; border-radius: 25px; font-size: 14px; transition: border-color 0.3s;"
@@ -1353,6 +1879,29 @@ class AutomatizaTechContactForm {
                     <button type="button" id="clear-search" class="button button-secondary" style="border-radius: 20px; padding: 8px 15px;">
                         <span class="dashicons dashicons-no-alt" style="font-size: 16px;"></span> Limpiar
                     </button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px; margin-top: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label for="status-filter" style="font-weight: 600; color: #2271b1;">
+                            <span class="dashicons dashicons-filter" style="font-size: 16px;"></span> Filtrar por Estado:
+                        </label>
+                        <select id="status-filter" style="padding: 8px 12px; border: 2px solid #e3e6f0; border-radius: 20px; font-size: 14px;">
+                            <option value="">📋 Todos los estados</option>
+                            <option value="new">🆕 Nuevo</option>
+                            <option value="contacted">📞 Contactado</option>
+                            <option value="follow_up">📅 Seguimiento</option>
+                            <option value="interested">💡 Interesado</option>
+                            <option value="not_interested">👎 No Interesado</option>
+                            <option value="contracted">⭐ Contratado</option>
+                            <option value="closed">🔒 Cerrado</option>
+                        </select>
+                    </div>
+                    <?php if (current_user_can('administrator')): ?>
+                    <button type="button" id="send-email-new-contacts" class="button button-primary" 
+                            style="background: linear-gradient(135deg, #16a34a, #15803d); border: none; padding: 8px 15px; border-radius: 20px; font-weight: 600; box-shadow: 0 2px 8px rgba(22,163,74,0.3);">
+                        <span class="dashicons dashicons-email" style="font-size: 16px;"></span> Enviar Email a Contactos "Nuevo"
+                    </button>
+                    <?php endif; ?>
                 </div>
                 <div id="search-results-info" style="margin-top: 10px; font-size: 13px; color: #666; display: none;">
                     <span class="dashicons dashicons-info" style="font-size: 14px; margin-right: 5px;"></span>
@@ -1399,6 +1948,9 @@ class AutomatizaTechContactForm {
                                             class="status-selector">
                                         <option value="new" <?php selected($contact->status, 'new'); ?>>🆕 Nuevo</option>
                                         <option value="contacted" <?php selected($contact->status, 'contacted'); ?>>📞 Contactado</option>
+                                        <option value="follow_up" <?php selected($contact->status, 'follow_up'); ?>>📅 Seguimiento</option>
+                                        <option value="interested" <?php selected($contact->status, 'interested'); ?>>💡 Interesado</option>
+                                        <option value="not_interested" <?php selected($contact->status, 'not_interested'); ?>>👎 No Interesado</option>
                                         <option value="contracted" <?php selected($contact->status, 'contracted'); ?>>⭐ Contratado</option>
                                         <option value="closed" <?php selected($contact->status, 'closed'); ?>>🔒 Cerrado</option>
                                     </select>
@@ -1658,6 +2210,21 @@ class AutomatizaTechContactForm {
             border-color: #ff9800;
         }
         
+        .status-selector[data-original-value="follow_up"] {
+            background-color: #fff9c4;
+            border-color: #fbc02d;
+        }
+        
+        .status-selector[data-original-value="interested"] {
+            background-color: #f3e5f5;
+            border-color: #9c27b0;
+        }
+        
+        .status-selector[data-original-value="not_interested"] {
+            background-color: #ffebee;
+            border-color: #f44336;
+        }
+        
         .status-selector[data-original-value="contracted"] {
             background-color: #e8f5e8;
             border-color: #4caf50;
@@ -1789,11 +2356,12 @@ class AutomatizaTechContactForm {
             // Para otros estados, proceder normalmente con confirmación simple
             else {
                 var statusNames = {
-                    'pending': '⏳ Pendiente',
+                    'new': '🆕 Nuevo',
                     'contacted': '📞 Contactado',
-                    'interested': '👍 Interesado',
+                    'follow_up': '📅 Seguimiento',
+                    'interested': '� Interesado',
                     'not_interested': '👎 No Interesado',
-                    'follow_up': '📅 Seguimiento'
+                    'closed': '� Cerrado'
                 };
                 
                 var statusName = statusNames[status] || status;
@@ -1803,14 +2371,14 @@ class AutomatizaTechContactForm {
                     window.location.href = '<?php echo admin_url('admin.php?page=automatiza-tech-contacts&action=update_status'); ?>&id=' + id + '&status=' + status + '&_wpnonce=<?php echo wp_create_nonce('update_status'); ?>';
                 } else {
                     // Revertir el selector
-                    event.target.value = event.target.getAttribute('data-original-value') || 'pending';
+                    event.target.value = event.target.getAttribute('data-original-value') || 'new';
                     return false;
                 }
             }
         }
         
-        // Nueva función para mostrar detalles del contacto en modal mejorado
-        function showContactDetails(id) {
+        // Nueva función para mostrar detalles del contacto en modal mejorado (GLOBAL)
+        window.showContactDetails = function(id) {
             // Debug: verificar si automatizaTechAjax está definido
             console.log('automatizaTechAjax:', typeof automatizaTechAjax !== 'undefined' ? automatizaTechAjax : 'undefined');
             
@@ -1871,8 +2439,23 @@ class AutomatizaTechContactForm {
             });
         }
         
-        // Función para mostrar detalles del cliente en modal
-        function showClientDetailsModal(id) {
+        // Función para mostrar detalles del cliente en modal (GLOBAL)
+        window.showClientDetailsModal = function(id) {
+            console.log('showClientDetailsModal called with id:', id);
+            
+            // Verificar que jQuery esté disponible
+            if (typeof jQuery === 'undefined') {
+                alert('Error: jQuery no está disponible');
+                return;
+            }
+            
+            // Obtener la URL de AJAX
+            var ajaxUrl = (typeof automatizaTechAjax !== 'undefined' && automatizaTechAjax.ajaxurl) 
+                         ? automatizaTechAjax.ajaxurl 
+                         : (typeof ajaxurl !== 'undefined' ? ajaxurl : '<?php echo admin_url('admin-ajax.php'); ?>');
+            
+            console.log('Using AJAX URL:', ajaxUrl);
+            
             // Crear modal de carga
             var loadingModal = `
                 <div id="client-details-modal" style="position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center;">
@@ -1887,13 +2470,18 @@ class AutomatizaTechContactForm {
             document.body.insertAdjacentHTML('beforeend', loadingModal);
             
             // Obtener detalles del cliente via AJAX
-            jQuery.post(automatizaTechAjax.ajaxurl, {
+            jQuery.post(ajaxUrl, {
                 action: 'get_client_details',
                 id: id,
                 nonce: '<?php echo wp_create_nonce('get_client_details'); ?>'
             }, function(response) {
+                console.log('AJAX response:', response);
+                
                 // Remover modal de carga
-                document.getElementById('client-details-modal').remove();
+                var loadingModal = document.getElementById('client-details-modal');
+                if (loadingModal) {
+                    loadingModal.remove();
+                }
                 
                 if (response.success) {
                     // Crear modal con los detalles
@@ -1912,33 +2500,43 @@ class AutomatizaTechContactForm {
                     `;
                     document.body.insertAdjacentHTML('beforeend', detailsModal);
                 } else {
+                    console.error('Error from server:', response.data);
                     alert('Error al cargar los detalles del cliente: ' + response.data);
                 }
-            }).fail(function() {
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                console.error('AJAX request failed:', textStatus, errorThrown);
+                console.error('Response:', jqXHR.responseText);
+                
                 // Remover modal de carga en caso de error
-                document.getElementById('client-details-modal').remove();
-                alert('Error de conexión al cargar los detalles del cliente');
+                var loadingModal = document.getElementById('client-details-modal');
+                if (loadingModal) {
+                    loadingModal.remove();
+                }
+                alert('Error de conexión al cargar los detalles del cliente. Por favor, revisa la consola para más detalles.');
             });
         }
         
-        // Funciones para cerrar modales de detalles
-        function closeContactDetailsModal() {
+        // Funciones para cerrar modales de detalles (GLOBALES)
+        window.closeContactDetailsModal = function() {
             var modal = document.getElementById('contact-details-modal');
             if (modal) {
                 modal.remove();
             }
         }
         
-        function closeClientDetailsModal() {
+        window.closeClientDetailsModal = function() {
             var modal = document.getElementById('client-details-modal');
             if (modal) {
                 modal.remove();
             }
         }
         
-        // Función de búsqueda asíncrona para contactos
-        function searchContacts(searchTerm) {
-            jQuery.post(automatizaTechAjax.ajaxurl, {
+        // Función de búsqueda asíncrona para contactos (GLOBAL)
+        window.searchContacts = function(searchTerm) {
+            var ajaxUrl = (typeof automatizaTechAjax !== 'undefined' && automatizaTechAjax.ajaxurl) 
+                         ? automatizaTechAjax.ajaxurl 
+                         : (typeof ajaxurl !== 'undefined' ? ajaxurl : '<?php echo admin_url('admin-ajax.php'); ?>');
+            jQuery.post(ajaxUrl, {
                 action: 'search_contacts',
                 search: searchTerm,
                 nonce: '<?php echo wp_create_nonce('search_contacts'); ?>'
@@ -1949,9 +2547,12 @@ class AutomatizaTechContactForm {
             });
         }
         
-        // Función de búsqueda asíncrona para clientes
-        function searchClients(searchTerm) {
-            jQuery.post(automatizaTechAjax.ajaxurl, {
+        // Función de búsqueda asíncrona para clientes (GLOBAL)
+        window.searchClients = function(searchTerm) {
+            var ajaxUrl = (typeof automatizaTechAjax !== 'undefined' && automatizaTechAjax.ajaxurl) 
+                         ? automatizaTechAjax.ajaxurl 
+                         : (typeof ajaxurl !== 'undefined' ? ajaxurl : '<?php echo admin_url('admin-ajax.php'); ?>');
+            jQuery.post(ajaxUrl, {
                 action: 'search_clients',
                 search: searchTerm,
                 nonce: '<?php echo wp_create_nonce('search_clients'); ?>'
@@ -2068,9 +2669,9 @@ class AutomatizaTechContactForm {
                     // Acciones
                     html += '<td><div class="client-actions">';
                     html += '<button onclick="toggleClientStatus(' + client.id + ', \'' + client.contract_status + '\')" class="button button-small toggle-status-btn ' + (client.contract_status === 'active' ? 'status-active' : 'status-inactive') + '" title="' + (client.contract_status === 'active' ? 'Desactivar cliente' : 'Activar cliente') + '">' + (client.contract_status === 'active' ? '🟢' : '🔴') + '</button>';
-                    html += '<a href="#" onclick="showClientDetailsModal(' + client.id + ')" class="button button-small view-client-btn" style="background: linear-gradient(135deg, #0073aa, #005a87); color: white; margin-right: 3px;" title="Ver detalles completos del cliente">👁️ Ver Detalles</a>';
-                    html += '<a href="#" onclick="editClient(' + client.id + ', this)" class="button button-small edit-client-btn" style="background: linear-gradient(135deg, #72aee6, #2271b1); color: white; border: none; font-weight: 600; padding: 6px 12px; border-radius: 20px; text-decoration: none; transition: all 0.3s; box-shadow: 0 2px 8px rgba(34, 113, 177, 0.3);" data-client-id="' + client.id + '" data-client-name="' + escapeHtml(client.name) + '" data-client-email="' + escapeHtml(client.email) + '" data-client-company="' + escapeHtml(client.company || '') + '" data-client-phone="' + escapeHtml(client.phone || '') + '" data-client-value="' + client.contract_value + '" data-client-type="' + escapeHtml(client.project_type || '') + '" data-client-status="' + client.contract_status + '" data-client-notes="' + escapeHtml(client.notes || '') + '" title="Editar datos del cliente">✏️ Editar Datos</a>';
-                    html += '<a href="<?php echo admin_url('admin.php?page=automatiza-tech-clients&action=delete_client&id='); ?>' + client.id + '&_wpnonce=<?php echo wp_create_nonce('delete_client'); ?>" class="button button-small delete-client-btn" onclick="return confirmDeleteClient(this)">🗑️ Eliminar</a>';
+                    html += '<a href="#" onclick="showClientDetailsModal(' + client.id + '); return false;" class="button button-small view-client-btn" style="background: linear-gradient(135deg, #0073aa, #005a87); color: white; border: none; padding: 6px 12px; border-radius: 15px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; box-shadow: 0 2px 5px rgba(0,115,170,0.3); margin-right: 3px;" title="Ver detalles completos del cliente">👁️ Ver</a>';
+                    html += '<a href="#" onclick="editClient(' + client.id + ', this); return false;" class="button button-small edit-client-btn" style="background: linear-gradient(135deg, #72aee6, #2271b1); color: white; border: none; font-weight: 600; padding: 6px 12px; border-radius: 20px; text-decoration: none; cursor: pointer; display: inline-block; transition: all 0.3s; box-shadow: 0 2px 8px rgba(34, 113, 177, 0.3); margin-right: 3px;" data-client-id="' + client.id + '" data-client-name="' + escapeHtml(client.name) + '" data-client-email="' + escapeHtml(client.email) + '" data-client-company="' + escapeHtml(client.company || '') + '" data-client-phone="' + escapeHtml(client.phone || '') + '" data-client-value="' + client.contract_value + '" data-client-type="' + escapeHtml(client.project_type || '') + '" data-client-status="' + client.contract_status + '" data-client-notes="' + escapeHtml(client.notes || '') + '" title="Editar datos del cliente">✏️ Editar</a>';
+                    html += '<a href="<?php echo admin_url('admin.php?page=automatiza-tech-clients&action=delete_client&id='); ?>' + client.id + '&_wpnonce=<?php echo wp_create_nonce('delete_client'); ?>" class="button button-small delete-client-btn" onclick="return confirmDeleteClient(this)" style="margin-right: 3px;">🗑️ Eliminar</a>';
                     html += '</div></td>';
                     html += '</tr>';
                 });
@@ -2340,10 +2941,95 @@ class AutomatizaTechContactForm {
             if (clearContactSearch) {
                 clearContactSearch.addEventListener('click', function() {
                     var searchInput = document.getElementById('contact-search');
+                    var statusFilter = document.getElementById('status-filter');
                     if (searchInput) {
                         searchInput.value = '';
-                        searchContacts('');
                     }
+                    if (statusFilter) {
+                        statusFilter.value = '';
+                    }
+                    filterContacts('', '');
+                });
+            }
+            
+            // Event listener para filtro por estado
+            var statusFilter = document.getElementById('status-filter');
+            if (statusFilter) {
+                statusFilter.addEventListener('change', function() {
+                    var searchInput = document.getElementById('contact-search');
+                    var searchTerm = searchInput ? searchInput.value.trim() : '';
+                    var statusValue = this.value;
+                    filterContacts(searchTerm, statusValue);
+                });
+            }
+            
+            // También actualizar la búsqueda para incluir el filtro
+            if (contactSearchInput) {
+                contactSearchInput.removeEventListener('input', contactSearchInput._handler);
+                contactSearchInput._handler = function() {
+                    clearTimeout(contactSearchTimeout);
+                    var searchTerm = this.value.trim();
+                    var statusFilter = document.getElementById('status-filter');
+                    var statusValue = statusFilter ? statusFilter.value : '';
+                    
+                    contactSearchTimeout = setTimeout(function() {
+                        filterContacts(searchTerm, statusValue);
+                    }, 300);
+                };
+                contactSearchInput.addEventListener('input', contactSearchInput._handler);
+            }
+            
+            // Función para filtrar contactos por búsqueda y estado
+            window.filterContacts = function(searchTerm, status) {
+                var ajaxUrl = (typeof automatizaTechAjax !== 'undefined' && automatizaTechAjax.ajaxurl) 
+                             ? automatizaTechAjax.ajaxurl 
+                             : (typeof ajaxurl !== 'undefined' ? ajaxurl : '<?php echo admin_url('admin-ajax.php'); ?>');
+                jQuery.post(ajaxUrl, {
+                    action: 'filter_contacts',
+                    search: searchTerm,
+                    status: status,
+                    nonce: '<?php echo wp_create_nonce('filter_contacts'); ?>'
+                }, function(response) {
+                    if (response.success) {
+                        updateContactsTable(response.data, searchTerm);
+                    }
+                });
+            }
+            
+            // Event listener para enviar email a contactos nuevos
+            var sendEmailBtn = document.getElementById('send-email-new-contacts');
+            if (sendEmailBtn) {
+                sendEmailBtn.addEventListener('click', function() {
+                    if (!confirm('¿Estás seguro de enviar un correo a todos los contactos con estado "Nuevo"? Esta acción enviará un email profesional con información de los planes de Automatiza Tech.')) {
+                        return;
+                    }
+                    
+                    var btn = this;
+                    var originalText = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="dashicons dashicons-update" style="animation: spin 1s linear infinite;"></span> Enviando correos...';
+                    
+                    var ajaxUrl = (typeof automatizaTechAjax !== 'undefined' && automatizaTechAjax.ajaxurl) 
+                                 ? automatizaTechAjax.ajaxurl 
+                                 : (typeof ajaxurl !== 'undefined' ? ajaxurl : '<?php echo admin_url('admin-ajax.php'); ?>');
+                    
+                    jQuery.post(ajaxUrl, {
+                        action: 'send_email_to_new_contacts',
+                        nonce: '<?php echo wp_create_nonce('send_email_new_contacts'); ?>'
+                    }, function(response) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                        
+                        if (response.success) {
+                            alert('✅ ' + response.data);
+                        } else {
+                            alert('❌ Error: ' + response.data);
+                        }
+                    }).fail(function() {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                        alert('❌ Error de conexión al enviar los correos');
+                    });
                 });
             }
             
@@ -2653,11 +3339,13 @@ class AutomatizaTechContactForm {
                                 
                                 <!-- Ver Detalles -->
                                 <td style="text-align: center;">
-                                    <a href="#" onclick="showClientDetailsModal(<?php echo $client->id; ?>)" 
+                                    <a href="#" onclick="showClientDetailsModal(<?php echo $client->id; ?>); return false;" 
                                        class="button button-small view-client-btn"
-                                       style="background: linear-gradient(135deg, #0073aa, #005a87); color: white; border: none; padding: 4px 8px; border-radius: 15px; font-size: 16px;"
+                                       style="background: linear-gradient(135deg, #0073aa, #005a87); color: white; border: none; padding: 6px 12px; border-radius: 15px; font-size: 14px; cursor: pointer; text-decoration: none; display: inline-block; font-weight: 600; box-shadow: 0 2px 5px rgba(0,115,170,0.3); transition: all 0.3s ease;"
+                                       onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,115,170,0.4)';"
+                                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(0,115,170,0.3)';"
                                        title="Ver detalles completos del cliente">
-                                       👁️
+                                       👁️ Ver
                                     </a>
                                 </td>
                                 

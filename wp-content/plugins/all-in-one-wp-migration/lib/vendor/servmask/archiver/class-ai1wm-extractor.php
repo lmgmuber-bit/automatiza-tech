@@ -584,8 +584,8 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 
 			// Set file details
 			$data['filename'] = trim( $data['filename'] );
-			$data['size']     = trim( $data['size'] );
-			$data['mtime']    = trim( $data['mtime'] );
+			$data['size']     = (int) trim( $data['size'] );
+			$data['mtime']    = (int) trim( $data['mtime'] );
 			$data['path']     = trim( $data['path'] );
 
 			// Set file name

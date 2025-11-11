@@ -360,6 +360,11 @@ if (!defined('WP_POST_REVISIONS')) {
 require_once get_template_directory() . '/inc/contact-form.php';
 
 /**
+ * Incluir configuración SMTP para correos
+ */
+require_once get_template_directory() . '/inc/smtp-config.php';
+
+/**
  * Incluir shortcode del formulario de contacto
  */
 require_once get_template_directory() . '/inc/contact-shortcode.php';

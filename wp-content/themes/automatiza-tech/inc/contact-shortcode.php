@@ -641,7 +641,7 @@ function automatiza_tech_contact_form_shortcode($atts) {
                     // Redirigir a WhatsApp después de 2 segundos
                     setTimeout(function() {
                         var whatsappMsg = encodeURIComponent('Hola! Acabo de enviar el formulario de contacto desde su sitio web. Me gustaría conocer más sobre Automatiza Tech.');
-                        var whatsappUrl = 'https://wa.me/573001234567?text=' + whatsappMsg;
+                        var whatsappUrl = 'https://wa.me/56940331127?text=' + whatsappMsg;
                         window.open(whatsappUrl, '_blank');
                     }, 2000);
                 } else {

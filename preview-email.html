@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vista Previa - Email Automatiza Tech</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        .email-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .email-header {
+            background: #667eea;
+            padding: 20px;
+            text-align: center;
+        }
+        .preview-info {
+            background: #fff9f0;
+            border-left: 4px solid #ff9800;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 8px;
+        }
+        .preview-info h3 {
+            margin: 0 0 10px 0;
+            color: #ff9800;
+        }
+        .subject-line {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 15px 20px;
+            margin: 20px;
+            border-radius: 8px;
+        }
+        .subject-line strong {
+            color: #667eea;
+        }
+        iframe {
+            width: 100%;
+            height: 1200px;
+            border: none;
+        }
+        .tabs {
+            display: flex;
+            background: #f8f9ff;
+            border-bottom: 2px solid #667eea;
+        }
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+        }
+        .tab:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .code-block .keyword {
+            color: #569cd6;
+        }
+        .code-block .string {
+            color: #ce9178;
+        }
+        .code-block .comment {
+            color: #6a9955;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 20px;
+        }
+        .metric-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .metric-card h4 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .metric-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .checklist {
+            padding: 20px;
+        }
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            background: #f8f9ff;
+            border-radius: 8px;
+            border-left: 4px solid #06d6a0;
+        }
+        .checklist-item.warning {
+            border-left-color: #ff9800;
+            background: #fff9f0;
+        }
+        .checklist-item.danger {
+            border-left-color: #dc2626;
+            background: #fff5f5;
+        }
+        .checklist-item input[type="checkbox"] {
+            margin-right: 15px;
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="preview-info">
+            <h3>📧 Vista Previa del Email Masivo</h3>
+            <p><strong>Sistema:</strong> Automatiza Tech Email Marketing v2.0</p>
+            <p><strong>Última actualización:</strong> 11 de Noviembre, 2025</p>
+            <p><strong>Optimizado para:</strong> Evitar carpeta de Promociones de Gmail</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('preview')">👁️ Vista Previa</button>
+            <button class="tab" onclick="showTab('headers')">📋 Headers</button>
+            <button class="tab" onclick="showTab('metrics')">📊 Métricas</button>
+            <button class="tab" onclick="showTab('checklist')">✅ Checklist</button>
+        </div>
+
+        <div id="preview" class="tab-content active">
+            <div class="subject-line">
+                <strong>📧 Subject:</strong> Re: Tu consulta en Automatiza Tech - Juan Pérez
+            </div>
+            
+            <iframe srcdoc='<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                    <!-- Header simple y profesional -->
+                    <tr>
+                        <td style="background: #667eea; padding: 30px 20px; text-align: center;">
+                            <div style="background: white; padding: 15px; border-radius: 10px; display: inline-block;">
+                                <h1 style="margin: 0; color: #667eea; font-size: 28px;">🤖 Automatiza Tech</h1>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Separador sutil -->
+                    <tr>
+                        <td style="background: #ffffff; padding: 0;">
+                            <div style="height: 4px; background: linear-gradient(to right, #667eea, #764ba2);"></div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Saludo personalizado -->
+                    <tr>
+                        <td style="padding: 40px 40px 30px 40px; background: #ffffff;">
+                            <div style="background: #f8f9ff; border-left: 4px solid #667eea; padding: 25px; border-radius: 10px; margin-bottom: 25px;">
+                                <h2 style="color: #333333; margin: 0 0 15px 0; font-size: 24px;">Hola Juan,</h2>
+                                <p style="color: #555555; font-size: 16px; line-height: 1.7; margin: 0 0 15px 0;">
+                                    Gracias por contactarnos. Como prometí, aquí está la información sobre nuestros servicios de automatización.
+                                </p>
+                                <p style="color: #555555; font-size: 15px; line-height: 1.7; margin: 0;">
+                                    He preparado un resumen de nuestras soluciones que podrían ayudarte a optimizar tu negocio. ¿Tienes alguna duda específica? Estoy aquí para ayudarte.
+                                </p>
+                            </div>
+                            <div style="background: #fff9f0; border-left: 4px solid #ff9800; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+                                <p style="margin: 0; color: #666; font-size: 15px; line-height: 1.6;">
+                                    <strong style="color: #ff9800;">Nota:</strong> Basándome en tu consulta, estos son los planes que mejor podrían adaptarse a tus necesidades:
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Plan Básico -->
+                    <tr>
+                        <td style="padding: 0 40px 30px 40px;">
+                            <div style="border: 3px solid #06d6a0; border-radius: 15px; padding: 30px; background: #ffffff; box-shadow: 0 4px 15px rgba(6, 214, 160, 0.2);">
+                                <div style="text-align: center; margin-bottom: 20px;">
+                                    <span style="font-size: 50px;">🌟</span>
+                                    <h3 style="color: #06d6a0; margin: 10px 0; font-size: 26px;">Plan Básico</h3>
+                                    <p style="color: #666; margin: 5px 0; font-size: 14px;">Ideal para pequeñas empresas</p>
+                                </div>
+                                <div style="background: #f8fff8; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                                    <ul style="list-style: none; padding: 0; margin: 0; color: #333;">
+                                        <li style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">✅ Bot de WhatsApp básico</li>
+                                        <li style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">🎯 Respuestas automáticas</li>
+                                        <li style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">⚡ Integración con formulario web</li>
+                                        <li style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">💎 Soporte técnico incluido</li>
+                                    </ul>
+                                </div>
+                                <div style="text-align: center; background: linear-gradient(135deg, #06d6a0, #02a076); padding: 20px; border-radius: 12px;">
+                                    <div style="color: #333; font-size: 14px; margin-bottom: 5px; font-weight: 600;">Precio</div>
+                                    <div style="color: #ffffff; font-size: 32px; font-weight: bold;">$99 USD/mes</div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Plan Profesional -->
+                    <tr>
+                        <td style="padding: 0 40px 30px 40px;">
+                            <div style="border: 3px solid #1e40af; border-radius: 15px; padding: 30px; background: #f8f9ff; box-shadow: 0 4px 15px rgba(30, 64, 175, 0.2);">
+                                <div style="text-align: center; margin-bottom: 20px;">
+                                    <span style="font-size: 50px;">🚀</span>
+                                    <h3 style="color: #1e40af; margin: 10px 0; font-size: 26px;">Plan Profesional</h3>
+                                    <p style="color: #666; margin: 5px 0; font-size: 14px;">Más completo y potente</p>
+                                </div>
+                                <div style="background: #ffffff; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                                    <ul style="list-style: none; padding: 0; margin: 0; color: #333;">
+                                        <li style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">🚀 Bot avanzado con IA</li>
+                                        <li style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">💪 Integración CRM completa</li>
+                                        <li style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">🌟 Automatización de seguimiento</li>
+                                        <li style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">🔥 Analytics y reportes</li>
+                                    </ul>
+                                </div>
+                                <div style="text-align: center; background: linear-gradient(135deg, #1e40af, #1e3a8a); padding: 20px; border-radius: 12px;">
+                                    <div style="color: #333; font-size: 14px; margin-bottom: 5px; font-weight: 600;">Precio</div>
+                                    <div style="color: #ffffff; font-size: 32px; font-weight: bold;">$199 USD/mes</div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Plan Empresarial -->
+                    <tr>
+                        <td style="padding: 0 40px 30px 40px;">
+                            <div style="border: 3px solid #dc2626; border-radius: 15px; padding: 30px; background: #ffffff; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.2);">
+                                <div style="text-align: center; margin-bottom: 20px;">
+                                    <span style="font-size: 50px;">💼</span>
+                                    <h3 style="color: #dc2626; margin: 10px 0; font-size: 26px;">Plan Empresarial</h3>
+                                    <p style="color: #666; margin: 5px 0; font-size: 14px;">Solución completa para empresas</p>
+                                </div>
+                                <div style="background: #fff5f5; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                                    <ul style="list-style: none; padding: 0; margin: 0; color: #333;">
+                                        <li style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">💎 Todo el Plan Profesional</li>
+                                        <li style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">🚀 Múltiples bots personalizados</li>
+                                        <li style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">💪 Desarrollo a medida</li>
+                                        <li style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">⚡ Soporte prioritario 24/7</li>
+                                    </ul>
+                                </div>
+                                <div style="text-align: center; background: linear-gradient(135deg, #dc2626, #991b1b); padding: 20px; border-radius: 12px;">
+                                    <div style="color: #333; font-size: 14px; margin-bottom: 5px; font-weight: 600;">Precio</div>
+                                    <div style="color: #ffffff; font-size: 32px; font-weight: bold;">$399 USD/mes</div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Separador simple -->
+                    <tr>
+                        <td style="padding: 20px 40px;">
+                            <div style="height: 1px; background: #e0e0e0;"></div>
+                        </td>
+                    </tr>
+                    
+                    <!-- CTA conversacional -->
+                    <tr>
+                        <td style="padding: 30px 40px; background: #f8f9ff;">
+                            <div style="background: #ffffff; border: 2px solid #667eea; border-radius: 12px; padding: 30px; text-align: center;">
+                                <h3 style="color: #333333; margin: 0 0 15px 0; font-size: 20px;">¿Alguna pregunta?</h3>
+                                <p style="color: #666666; font-size: 15px; margin: 0 0 20px 0; line-height: 1.6;">
+                                    Estoy disponible para resolver cualquier duda que tengas sobre nuestros servicios.
+                                </p>
+                                <div style="margin: 20px 0;">
+                                    <a href="https://wa.me/56940331127?text=Hola!%20Me%20interesa%20conocer%20más%20sobre%20los%20planes%20de%20Automatiza%20Tech" style="display: inline-block; background: #25D366; color: white; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin: 8px;">
+                                        Responder por WhatsApp
+                                    </a>
+                                </div>
+                                <p style="color: #999999; margin: 15px 0 0 0; font-size: 13px;">
+                                    También puedes responder directamente a este email
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer simple -->
+                    <tr>
+                        <td style="padding: 30px 40px; background: #f8f9ff; text-align: center; border-top: 1px solid #e0e0e0;">
+                            <p style="color: #333; margin: 0 0 10px 0; font-size: 16px; font-weight: 600;">
+                                Automatiza Tech
+                            </p>
+                            <p style="color: #666; margin: 0 0 15px 0; font-size: 14px; line-height: 1.6;">
+                                📱 WhatsApp: +56 9 4033 1127<br>
+                                📧 Email: info@automatizatech.cl<br>
+                                🌐 Web: automatizatech.shop
+                            </p>
+                            <div style="margin: 20px 0;">
+                                <a href="https://www.instagram.com/automatizatech.cl" style="display: inline-block; margin: 0 10px;">
+                                    <img src="data:image/svg+xml,%3Csvg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;32&quot; height=&quot;32&quot; viewBox=&quot;0 0 24 24&quot;%3E%3Cpath fill=&quot;%23E4405F&quot; d=&quot;M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z&quot;/%3E%3C/svg%3E" alt="Instagram" style="width: 32px; height: 32px;">
+                                </a>
+                                <a href="https://www.facebook.com/AutomatizaTech.cl" style="display: inline-block; margin: 0 10px;">
+                                    <img src="data:image/svg+xml,%3Csvg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;32&quot; height=&quot;32&quot; viewBox=&quot;0 0 24 24&quot;%3E%3Cpath fill=&quot;%231877F2&quot; d=&quot;M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z&quot;/%3E%3C/svg%3E" alt="Facebook" style="width: 32px; height: 32px;">
+                                </a>
+                            </div>
+                            <p style="color: #999; margin: 15px 0 0 0; font-size: 12px; line-height: 1.6;">
+                                Este mensaje fue enviado en respuesta a tu consulta.<br>
+                                Si no deseas recibir más correos, <a href="mailto:info@automatizatech.cl?subject=unsubscribe" style="color: #667eea; text-decoration: none;">haz clic aquí</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>'></iframe>
+        </div>
+
+        <div id="headers" class="tab-content">
+            <div class="code-block">
+<span class="comment">// Headers optimizados para evitar Promociones</span>
+<span class="keyword">From:</span> <span class="string">Juan Pérez en Automatiza Tech &lt;info@automatizatech.shop&gt;</span>
+<span class="keyword">Reply-To:</span> <span class="string">Automatiza Tech &lt;info@automatizatech.cl&gt;</span>
+<span class="keyword">Subject:</span> <span class="string">Re: Tu consulta en Automatiza Tech - Juan Pérez</span>
+<span class="keyword">Content-Type:</span> <span class="string">text/html; charset=UTF-8</span>
+<span class="keyword">X-Priority:</span> <span class="string">3</span> <span class="comment">(Normal, no urgente)</span>
+<span class="keyword">Importance:</span> <span class="string">Normal</span>
+<span class="keyword">List-Unsubscribe:</span> <span class="string">&lt;mailto:info@automatizatech.cl?subject=unsubscribe&gt;</span>
+<span class="keyword">Precedence:</span> <span class="string">bulk</span> <span class="comment">(Email masivo legítimo)</span>
+<span class="keyword">Bcc:</span> <span class="string">automatizatech.bots@gmail.com</span>
+<span class="keyword">X-Mailer:</span> <span class="string">WordPress/6.8.3</span>
+            </div>
+            
+            <div style="padding: 20px;">
+                <h3 style="color: #667eea; margin: 0 0 15px 0;">✅ Por qué estos headers funcionan:</h3>
+                <div style="background: #f8f9ff; padding: 20px; border-radius: 8px; border-left: 4px solid #06d6a0;">
+                    <p><strong>✅ From personalizado:</strong> Incluye el nombre del destinatario</p>
+                    <p><strong>✅ Subject conversacional:</strong> Sin emojis, usa "Re:" para parecer respuesta</p>
+                    <p><strong>✅ List-Unsubscribe:</strong> Cumplimiento profesional</p>
+                    <p><strong>✅ Prioridad Normal:</strong> No parece spam urgente</p>
+                    <p><strong>✅ Precedence bulk:</strong> Identifica email masivo legítimo</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="metrics" class="tab-content">
+            <div class="metrics">
+                <div class="metric-card">
+                    <h4>📊 Palabras Trigger</h4>
+                    <div class="value">0</div>
+                    <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">Sin palabras promocionales</p>
+                </div>
+                <div class="metric-card">
+                    <h4>😊 Emojis en Subject</h4>
+                    <div class="value">0</div>
+                    <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">Subject line limpio</p>
+                </div>
+                <div class="metric-card">
+                    <h4>📝 Ratio Texto/Imagen</h4>
+                    <div class="value">80%</div>
+                    <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">Óptimo para deliverability</p>
+                </div>
+                <div class="metric-card">
+                    <h4>🎯 Personalización</h4>
+                    <div class="value">100%</div>
+                    <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">Nombre en Subject y From</p>
+                </div>
+            </div>
+            
+            <div style="padding: 20px;">
+                <h3 style="color: #667eea; margin: 0 0 15px 0;">📈 Score Estimado</h3>
+                <div style="background: linear-gradient(135deg, #06d6a0, #02a076); color: white; padding: 30px; border-radius: 15px; text-align: center;">
+                    <div style="font-size: 72px; font-weight: bold; margin-bottom: 10px;">8.5/10</div>
+                    <p style="margin: 0; font-size: 18px; opacity: 0.9;">Excelente probabilidad de llegar a Inbox Principal</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="checklist" class="tab-content">
+            <div class="checklist">
+                <h3 style="color: #667eea; margin: 0 0 20px 0;">✅ Checklist Pre-Envío</h3>
+                
+                <div class="checklist-item">
+                    <input type="checkbox" checked disabled>
+                    <span><strong>Subject personalizado</strong> - Sin emojis, incluye nombre del contacto</span>
+                </div>
+                
+                <div class="checklist-item">
+                    <input type="checkbox" checked disabled>
+                    <span><strong>From personalizado</strong> - Incluye nombre del destinatario</span>
+                </div>
+                
+                <div class="checklist-item">
+                    <input type="checkbox" checked disabled>
+                    <span><strong>Headers profesionales</strong> - List-Unsubscribe, X-Priority, Precedence</span>
+                </div>
+                
+                <div class="checklist-item">
+                    <input type="checkbox" checked disabled>
+                    <span><strong>Contenido conversacional</strong> - Sin lenguaje promocional</span>
+                </div>
+                
+                <div class="checklist-item">
+                    <input type="checkbox" checked disabled>
+                    <span><strong>Ratio texto/imagen</strong> - Balanceado (70/30)</span>
+                </div>
+                
+                <div class="checklist-item warning">
+                    <input type="checkbox">
+                    <span><strong>SPF/DKIM/DMARC</strong> - Verificar en Hostinger Panel</span>
+                </div>
+                
+                <div class="checklist-item warning">
+                    <input type="checkbox">
+                    <span><strong>Test con Mail-Tester</strong> - Score debe ser > 8/10</span>
+                </div>
+                
+                <div class="checklist-item warning">
+                    <input type="checkbox">
+                    <span><strong>Warm-up del dominio</strong> - Empezar con 10-20 correos/día</span>
+                </div>
+                
+                <div class="checklist-item">
+                    <input type="checkbox">
+                    <span><strong>Lista limpia</strong> - Sin emails inválidos o test</span>
+                </div>
+                
+                <div class="checklist-item">
+                    <input type="checkbox">
+                    <span><strong>BCC configurado</strong> - Copia a automatizatech.bots@gmail.com</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabName) {
+            // Ocultar todos los tabs
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            // Remover active de todos los botones
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Mostrar el tab seleccionado
+            document.getElementById(tabName).classList.add('active');
+            
+            // Activar el botón correspondiente
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

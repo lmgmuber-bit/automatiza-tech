@@ -84,10 +84,10 @@ INSERT INTO at_local_theme_options (option_name, option_value) VALUES
 ('secondary_color', '#84cc16'),
 ('footer_text', 'Automatiza Tech - Entorno de Desarrollo Local'),
 ('copyright_text', 'Automatiza Tech - Desarrollo Local. Todos los derechos reservados.'),
-('social_facebook', 'https://www.facebook.com/automatizatech'),
-('social_instagram', 'https://www.instagram.com/automatizatech'),
+('social_facebook', 'https://www.facebook.com/automatizatech.cl'),
+('social_instagram', 'https://www.instagram.com/automatizatech.cl/'),
 ('social_linkedin', 'https://www.linkedin.com/company/automatizatech'),
-('social_twitter', 'https://www.twitter.com/automatizatech'),
+('social_twitter', 'https://www.twitter.com/automatizatech.cl'),
 ('google_analytics_id', ''), -- Vacío en desarrollo
 ('facebook_pixel_id', ''), -- Vacío en desarrollo
 ('site_optimization_enabled', 'no'), -- Desactivado en desarrollo

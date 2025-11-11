@@ -6,16 +6,16 @@
                     <h3>Automatiza Tech</h3>
                     <p>Conectamos tus ventas, web y CRM con bots inteligentes para negocios que no se detienen.</p>
                     <div class="social-links">
-                        <a href="https://www.facebook.com/automatizatech" target="_blank" rel="noopener" title="Facebook">
+                        <a href="https://www.facebook.com/automatizatech.cl" target="_blank" rel="noopener" title="Facebook">
                             <i class="fab fa-facebook"></i>
                         </a>
-                        <a href="https://www.instagram.com/automatizatech" target="_blank" rel="noopener" title="Instagram">
+                        <a href="https://www.instagram.com/automatizatech.cl/" target="_blank" rel="noopener" title="Instagram">
                             <i class="fab fa-instagram"></i>
                         </a>
                         <a href="https://www.linkedin.com/company/automatizatech" target="_blank" rel="noopener" title="LinkedIn">
                             <i class="fab fa-linkedin"></i>
                         </a>
-                        <a href="https://www.twitter.com/automatizatech" target="_blank" rel="noopener" title="Twitter">
+                        <a href="https://www.twitter.com/automatizatech.cl" target="_blank" rel="noopener" title="Twitter">
                             <i class="fab fa-twitter"></i>
                         </a>
                     </div>
@@ -52,7 +52,7 @@
                     <ul>
                         <li>
                             <i class="fas fa-envelope"></i>
-                            <a href="mailto:info@automatizatech.com">info@automatizatech.com</a>
+                            <a href="mailto:info@automatizatech.cl">info@automatizatech.cl</a>
                         </li>
                         <li>
                             <i class="fab fa-whatsapp"></i>
@@ -146,7 +146,7 @@
     "description": "Conectamos tus ventas, web y CRM. Bots inteligentes para negocios que no se detienen.",
     "url": "<?php echo esc_url(home_url()); ?>",
     "telephone": "<?php echo esc_attr(get_theme_mod('whatsapp_number', '+56 9 4033 1127')); ?>",
-    "email": "info@automatizatech.com",
+    "email": "info@automatizatech.cl",
     "address": {
         "@type": "PostalAddress",
         "addressRegion": "Latinoamérica"

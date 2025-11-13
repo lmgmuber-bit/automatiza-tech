@@ -1,0 +1,702 @@
+[11-Nov-2025 04:39:31 UTC] Automatiza Tech - Correo enviado exitosamente a: lmgm.0303@gmail.com
+[11-Nov-2025 04:39:36 UTC] Automatiza Tech - Correo enviado exitosamente a: chachita.m3@gmail.com
+[11-Nov-2025 04:39:43 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 04:39:43 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 04:44:26 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 04:45:07 UTC] === CONTACT FORM SUBMISSION ===
+[11-Nov-2025 04:45:07 UTC] POST data: Array
+(
+    [action] => submit_contact_form
+    [name] => Luis Miguel
+    [email] => luism.unefa2015@gmail.com
+    [company] => Prueba
+    [phone] => +56974940006
+    [message] => prueba prueba prueba
+    [nonce] => f8d8632a36
+)
+
+[11-Nov-2025 04:45:07 UTC] Contact form saved successfully with ID: 46
+[11-Nov-2025 04:45:45 UTC] Automatiza Tech - Correo enviado exitosamente a: lmgm.0303@gmail.com - Estado cambiado a "contacted"
+[11-Nov-2025 04:45:50 UTC] Automatiza Tech - Correo enviado exitosamente a: luism.unefa2015@gmail.com - Estado cambiado a "contacted"
+[11-Nov-2025 04:49:06 UTC] === CONTACT FORM SUBMISSION ===
+[11-Nov-2025 04:49:06 UTC] POST data: Array
+(
+    [action] => submit_contact_form
+    [name] => prueba
+    [email] => lmgm.uber@gmail.com
+    [company] => Uber
+    [phone] => +56974940069
+    [message] => prueba prueba
+    [nonce] => f8d8632a36
+)
+
+[11-Nov-2025 04:49:06 UTC] Contact form saved successfully with ID: 47
+[11-Nov-2025 04:50:01 UTC] Automatiza Tech - Correo enviado exitosamente a: lmgm.uber@gmail.com - Estado cambiado a "contacted"
+[11-Nov-2025 04:50:13 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 04:50:14 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 04:50:16 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 05:01:43 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 05:01:46 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 05:16:22 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 05:16:47 UTC] === CONTACT FORM SUBMISSION ===
+[11-Nov-2025 05:16:47 UTC] POST data: Array
+(
+    [action] => submit_contact_form
+    [name] => Luis Miguel
+    [email] => luism.unefa2015@gmail.com
+    [company] => Luis miguel de Automatiza Tech
+    [phone] => +56989565656
+    [message] => Luis miguel de Automatiza Tech
+    [nonce] => f8d8632a36
+)
+
+[11-Nov-2025 05:16:47 UTC] Contact form saved successfully with ID: 48
+[11-Nov-2025 05:17:31 UTC] Automatiza Tech - Correo enviado exitosamente a: chachita.m3@gmail.com - Estado cambiado a "contacted"
+[11-Nov-2025 05:17:37 UTC] Automatiza Tech - Correo enviado exitosamente a: luism.unefa2015@gmail.com - Estado cambiado a "contacted"
+[11-Nov-2025 05:17:37 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 05:17:37 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 05:27:16 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 05:27:21 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 05:27:22 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 07:14:57 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 09:12:45 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 09:12:46 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 09:38:04 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 09:49:05 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 09:49:14 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 12:01:53 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 12:08:20 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 12:08:34 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 12:08:34 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 12:08:34 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 12:08:34 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 12:08:59 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 12:08:59 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 12:08:59 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 12:09:00 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 13:36:52 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 13:36:54 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 13:36:54 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 13:36:55 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 13:36:55 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 13:36:55 UTC] Automatic updates starting...
+[11-Nov-2025 13:36:56 UTC] Automatic updates complete.
+[11-Nov-2025 13:41:45 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 13:41:52 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 13:42:00 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 13:42:11 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 13:42:12 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 13:42:26 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 14:06:31 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 14:06:33 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 14:07:58 UTC] === CONTACT FORM SUBMISSION ===
+[11-Nov-2025 14:07:58 UTC] POST data: Array
+(
+    [action] => submit_contact_form
+    [name] => Luis Miguel
+    [email] => lmgm.uber@gmail.com
+    [company] => AutomarizaTech
+    [phone] => +56974940007
+    [message] => Tech quiero automatizar mi negocio
+    [nonce] => 78ffb462e7
+)
+
+[11-Nov-2025 14:07:58 UTC] Contact form saved successfully with ID: 49
+[11-Nov-2025 14:08:33 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 14:08:36 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 14:08:38 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 14:09:16 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 14:10:11 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 14:11:14 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 14:13:24 UTC] === CONTACT FORM SUBMISSION ===
+[11-Nov-2025 14:13:24 UTC] POST data: Array
+(
+    [action] => submit_contact_form
+    [name] => Douglas Sandoval
+    [email] => dsandovalrodriguez@gmail.com
+    [company] => Lu&josuemi
+    [phone] => +56941932138
+    [message] => Quiero probar como me va por mis formularios.
+    [nonce] => 78ffb462e7
+)
+
+[11-Nov-2025 14:13:24 UTC] Contact form saved successfully with ID: 50
+[11-Nov-2025 14:18:14 UTC] Automatiza Tech - Correo enviado exitosamente a: lmgm.uber@gmail.com - Estado cambiado a "contacted"
+[11-Nov-2025 14:18:18 UTC] Automatiza Tech - Correo enviado exitosamente a: dsandovalrodriguez@gmail.com - Estado cambiado a "contacted"
+[11-Nov-2025 14:41:46 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 15:01:33 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 15:17:42 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 15:20:55 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 16:05:15 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 16:25:08 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 17:43:40 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 17:43:42 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 17:43:45 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 17:43:46 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 17:43:47 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 17:43:49 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 18:09:05 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 18:53:44 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 18:53:53 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 19:14:30 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 19:15:41 UTC] === CONTACT FORM SUBMISSION ===
+[11-Nov-2025 19:15:41 UTC] POST data: Array
+(
+    [action] => submit_contact_form
+    [name] => Adriana
+    [email] => adrianalph7@gmail.com
+    [company] => Adu
+    [phone] => +56920462280
+    [message] => Quiero automatizar mi emprendimiento
+    [nonce] => 78ffb462e7
+)
+
+[11-Nov-2025 19:15:41 UTC] Contact form saved successfully with ID: 51
+[11-Nov-2025 19:16:18 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 20:25:13 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 20:44:48 UTC] Automatiza Tech - Correo enviado exitosamente a: adrianalph7@gmail.com - Estado cambiado a "contacted"
+[11-Nov-2025 21:02:15 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 21:17:12 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 21:55:44 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 22:41:56 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 22:56:27 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 22:56:28 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 23:49:02 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 23:50:44 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>all-in-one-wp-migration</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in /home/u187918280/domains/automatizatech.shop/public_html/wp-includes/functions.php on line 6121
+[11-Nov-2025 23:50:44 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>all-in-one-wp-migration</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in /home/u187918280/domains/automatizatech.shop/public_html/wp-includes/functions.php on line 6121
+[11-Nov-2025 23:50:53 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 23:50:55 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 23:50:55 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 23:50:57 UTC] === SHORTCODE EJECUTADO ===
+[11-Nov-2025 23:51:01 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>all-in-one-wp-migration</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in /home/u187918280/domains/automatizatech.shop/public_html/wp-includes/functions.php on line 6121
+[12-Nov-2025 00:27:35 UTC] === SHORTCODE EJECUTADO ===
+[12-Nov-2025 00:54:18 UTC] === SHORTCODE EJECUTADO ===
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 146
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 151
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 153
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 155
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 157
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 216
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 249
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 254
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 283
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 300
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 300
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 300
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 383
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 389
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 412
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 415
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 418
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 428
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 433
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 436
+[12-Nov-2025 01:05:52 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 443
+[12-Nov-2025 01:05:53 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 183
+[12-Nov-2025 01:05:53 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 185
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 146
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 151
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 153
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 155
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 157
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 216
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 249
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 254
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 283
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 300
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 300
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 300
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 350
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 383
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 389
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 412
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 415
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 418
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 428
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 433
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 436
+[12-Nov-2025 01:06:12 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 443
+[12-Nov-2025 01:06:13 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 183
+[12-Nov-2025 01:06:13 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 185
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 146
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 151
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 153
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 155
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 157
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 216
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 249
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 254
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 283
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 300
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 300
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 300
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 350
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 383
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 389
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 412
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 415
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 418
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 428
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 433
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 436
+[12-Nov-2025 01:06:15 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 443
+[12-Nov-2025 01:06:16 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 183
+[12-Nov-2025 01:06:16 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 185
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 146
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 151
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 153
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 155
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 157
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 216
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 249
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 254
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 283
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 300
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 300
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 300
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 350
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 383
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 389
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 412
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 415
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 418
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 428
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 433
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 436
+[12-Nov-2025 01:06:20 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 443
+[12-Nov-2025 01:06:21 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 183
+[12-Nov-2025 01:06:21 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 185
+[12-Nov-2025 01:06:42 UTC] WordPress database error Unknown column 'price' in 'SELECT' for query SELECT id, name, price, description FROM wp_automatiza_services WHERE category = 'pricing' AND status = 'active' ORDER BY display_order ASC made by do_action('toplevel_page_automatiza-tech-contacts'), WP_Hook->do_action, WP_Hook->apply_filters, AutomatizaTechContactForm->admin_page
+[12-Nov-2025 01:09:45 UTC] Automatic updates starting...
+[12-Nov-2025 01:09:45 UTC] Automatic updates complete.
+[12-Nov-2025 01:16:16 UTC] === SHORTCODE EJECUTADO ===
+[12-Nov-2025 01:16:17 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>all-in-one-wp-migration</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in /home/u187918280/domains/automatizatech.shop/public_html/wp-includes/functions.php on line 6121
+[12-Nov-2025 01:16:17 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>all-in-one-wp-migration</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in /home/u187918280/domains/automatizatech.shop/public_html/wp-includes/functions.php on line 6121
+[12-Nov-2025 01:16:17 UTC] === SHORTCODE EJECUTADO ===
+[12-Nov-2025 01:16:18 UTC] === SHORTCODE EJECUTADO ===
+[12-Nov-2025 01:16:19 UTC] === SHORTCODE EJECUTADO ===
+[12-Nov-2025 01:16:26 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>all-in-one-wp-migration</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in /home/u187918280/domains/automatizatech.shop/public_html/wp-includes/functions.php on line 6121
+[12-Nov-2025 01:16:42 UTC] PHP Notice:  Function _load_textdomain_just_in_time was called <strong>incorrectly</strong>. Translation loading for the <code>all-in-one-wp-migration</code> domain was triggered too early. This is usually an indicator for some code in the plugin or theme running too early. Translations should be loaded at the <code>init</code> action or later. Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information. (This message was added in version 6.7.0.) in /home/u187918280/domains/automatizatech.shop/public_html/wp-includes/functions.php on line 6121
+[12-Nov-2025 01:21:43 UTC] === SHORTCODE EJECUTADO ===
+[12-Nov-2025 01:22:08 UTC] WordPress database error Unknown column 'price' in 'SELECT' for query SELECT id, name, price, description FROM wp_automatiza_services WHERE category = 'pricing' AND status = 'active' ORDER BY display_order ASC made by do_action('toplevel_page_automatiza-tech-contacts'), WP_Hook->do_action, WP_Hook->apply_filters, AutomatizaTechContactForm->admin_page
+[12-Nov-2025 01:22:21 UTC] === SHORTCODE EJECUTADO ===
+[12-Nov-2025 01:23:17 UTC] === CONTACT FORM SUBMISSION ===
+[12-Nov-2025 01:23:17 UTC] POST data: Array
+(
+    [action] => submit_contact_form
+    [name] => Anamaría
+    [email] => sandovalrodriguez@gmail.com
+    [company] => Lu&Josuemí Sa
+    [phone] => +56964324169
+    [message] => quiero emprender en mi negocio y no dar más clases
+    [nonce] => b12daca6c9
+)
+
+[12-Nov-2025 01:23:17 UTC] Contact form saved successfully with ID: 52
+[12-Nov-2025 01:23:30 UTC] WordPress database error Unknown column 'price' in 'SELECT' for query SELECT id, name, price, description FROM wp_automatiza_services WHERE category = 'pricing' AND status = 'active' ORDER BY display_order ASC made by do_action('toplevel_page_automatiza-tech-contacts'), WP_Hook->do_action, WP_Hook->apply_filters, AutomatizaTechContactForm->admin_page
+[12-Nov-2025 01:23:53 UTC] Automatiza Tech - Correo enviado exitosamente a: sandovalrodriguez@gmail.com - Estado cambiado a "contacted"
+[12-Nov-2025 01:25:27 UTC] WordPress database error Unknown column 'price' in 'SELECT' for query SELECT id, name, price, description FROM wp_automatiza_services WHERE category = 'pricing' AND status = 'active' ORDER BY display_order ASC made by do_action('toplevel_page_automatiza-tech-contacts'), WP_Hook->do_action, WP_Hook->apply_filters, AutomatizaTechContactForm->admin_page
+[12-Nov-2025 01:38:48 UTC] === SHORTCODE EJECUTADO ===
+[12-Nov-2025 01:53:18 UTC] === SHORTCODE EJECUTADO ===
+[12-Nov-2025 02:00:46 UTC] === SHORTCODE EJECUTADO ===
+[12-Nov-2025 02:01:10 UTC] WordPress database error Unknown column 'price' in 'SELECT' for query SELECT id, name, price, description FROM wp_automatiza_services WHERE category = 'pricing' AND status = 'active' ORDER BY display_order ASC made by do_action('toplevel_page_automatiza-tech-contacts'), WP_Hook->do_action, WP_Hook->apply_filters, AutomatizaTechContactForm->admin_page
+[12-Nov-2025 02:01:17 UTC] WordPress database error Unknown column 'price' in 'SELECT' for query SELECT id, name, price, description FROM wp_automatiza_services WHERE category = 'pricing' AND status = 'active' ORDER BY display_order ASC made by do_action('toplevel_page_automatiza-tech-contacts'), WP_Hook->do_action, WP_Hook->apply_filters, AutomatizaTechContactForm->admin_page
+[12-Nov-2025 02:01:18 UTC] WordPress database error Unknown column 'price' in 'SELECT' for query SELECT id, name, price, description FROM wp_automatiza_services WHERE category = 'pricing' AND status = 'active' ORDER BY display_order ASC made by do_action('toplevel_page_automatiza-tech-contacts'), WP_Hook->do_action, WP_Hook->apply_filters, AutomatizaTechContactForm->admin_page
+[12-Nov-2025 02:29:06 UTC] WordPress database error Unknown column 'price' in 'SELECT' for query SELECT id, name, price, description FROM wp_automatiza_services WHERE category = 'pricing' AND status = 'active' ORDER BY display_order ASC made by do_action('toplevel_page_automatiza-tech-contacts'), WP_Hook->do_action, WP_Hook->apply_filters, AutomatizaTechContactForm->admin_page
+[12-Nov-2025 02:29:36 UTC] WordPress database error Unknown column 'price' in 'SELECT' for query SELECT id, name, price, description FROM wp_automatiza_services WHERE category = 'pricing' AND status = 'active' ORDER BY display_order ASC made by do_action('toplevel_page_automatiza-tech-contacts'), WP_Hook->do_action, WP_Hook->apply_filters, AutomatizaTechContactForm->admin_page
+[12-Nov-2025 02:29:55 UTC] WordPress database error Unknown column 'price' in 'SELECT' for query SELECT id, name, price, description FROM wp_automatiza_services WHERE category = 'pricing' AND status = 'active' ORDER BY display_order ASC made by do_action('toplevel_page_automatiza-tech-contacts'), WP_Hook->do_action, WP_Hook->apply_filters, AutomatizaTechContactForm->admin_page
+[12-Nov-2025 02:30:53 UTC] WordPress database error Unknown column 'price' in 'SELECT' for query SELECT id, name, price, description FROM wp_automatiza_services WHERE category = 'pricing' AND status = 'active' ORDER BY display_order ASC made by do_action('toplevel_page_automatiza-tech-contacts'), WP_Hook->do_action, WP_Hook->apply_filters, AutomatizaTechContactForm->admin_page
+[12-Nov-2025 03:01:09 UTC] CLIENTE CONVERTIDO: Luis Miguel (luism.unefa2015@gmail.com) movido de contactos a clientes. Plan: Plan Enterprise
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 146
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 151
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 153
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 155
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 157
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 216
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 249
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 254
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 283
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 300
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 383
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 389
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 412
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 415
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 418
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 428
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 433
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 436
+[12-Nov-2025 03:01:10 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 443
+[12-Nov-2025 03:01:11 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 183
+[12-Nov-2025 03:01:11 UTC] PHP Deprecated:  Function utf8_decode() is deprecated in /home/u187918280/domains/automatizatech.shop/public_html/wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php on line 185
+[12-Nov-2025 03:01:11 UTC] PDF generado exitosamente con FPDF: /home/u187918280/domains/automatizatech.shop/public_html/wp-content/uploads/automatiza-tech-invoices/AT-20251112-0006-Luis-Miguel.pdf (87635 bytes)
+[12-Nov-2025 03:01:11 UTC] WordPress database error Table 'u187918280_automatizatech.wp_automatiza_tech_invoices' doesn't exist for query SELECT id FROM wp_automatiza_tech_invoices WHERE invoice_number = 'AT-20251112-0006' made by do_action('toplevel_page_automatiza-tech-contacts'), WP_Hook->do_action, WP_Hook->apply_filters, AutomatizaTechContactForm->admin_page, AutomatizaTechContactForm->move_to_clients, AutomatizaTechContactForm->send_contracted_client_email, AutomatizaTechContactForm->send_invoice_email_to_client, AutomatizaTechContactForm->save_invoice_to_database
+[12-Nov-2025 03:01:11 UTC] WordPress database error Table 'u187918280_automatizatech.wp_automatiza_tech_invoices' doesn't exist for query SHOW FULL COLUMNS FROM `wp_automatiza_tech_invoices` made by do_action('toplevel_page_automatiza-tech-contacts'), WP_Hook->do_action, WP_Hook->apply_filters, AutomatizaTechContactForm->admin_page, AutomatizaTechContactForm->move_to_clients, AutomatizaTechContactForm->send_contracted_client_email, AutomatizaTechContactForm->send_invoice_email_to_client, AutomatizaTechContactForm->save_invoice_to_database
+[12-Nov-2025 03:01:11 UTC] FACTURA GUARDADA EN BD: AT-20251112-0006
+[12-Nov-2025 03:01:11 UTC] SMTP CONFIGURADO: Host=smtp.hostinger.com, Port=587, Auth=true
+[12-Nov-2025 03:01:14 UTC] Automatiza Tech - Error de email: WP_Error Object
+(
+    [errors] => Array
+        (
+            [wp_mail_failed] => Array
+                (
+                    [0] => Error STMP: fallaron los siguientes destinatarios: luism.unefa2015@gmail.com: <noreply@automatizatech.com>: Sender address rejected: not owned by user info@automatizatech.shop
+automatizatech.bots@gmail.com: <noreply@automatizatech.com>: Sender address rejected: not owned by user info@automatizatech.shop
+
+                )
+
+        )
+
+    [error_data] => Array
+        (
+            [wp_mail_failed] => Array
+                (
+                    [to] => Array
+                        (
+                            [0] => luism.unefa2015@gmail.com
+                        )
+
+                    [subject] => Bienvenido a AutomatizaTech - Factura AT-20251112-0006 - Luis Miguel
+                    [message] => <!DOCTYPE html>
+<html lang='es'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            line-height: 1.6; 
+            color: #333;
+            background: #f5f5f5;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .email-header {
+            background: #1e3a8a;
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 4px solid #06d6a0;
+        }
+        .email-header h1 {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+        }
+        .email-header p {
+            font-size: 1em;
+        }
+        .email-body {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 1.2em;
+            color: #1e3a8a;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .message-text {
+            margin: 15px 0;
+            color: #555;
+            line-height: 1.8;
+        }
+        .plan-highlight {
+            background: #f8f9fa;
+            border-left: 4px solid #06d6a0;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .plan-highlight h3 {
+            color: #1e3a8a;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .plan-name {
+            font-size: 1.4em;
+            color: #06d6a0;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .plan-price {
+            font-size: 2em;
+            color: #1e3a8a;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        .invoice-info {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .invoice-info h4 {
+            color: #1e3a8a;
+            margin-bottom: 10px;
+        }
+        .invoice-number {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #06d6a0;
+            margin: 10px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #06d6a0, #05c29a);
+            color: white;
+            padding: 15px 40px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1em;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(6, 214, 160, 0.3);
+            transition: transform 0.3s;
+        }
+        .support-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .support-box h4 {
+            color: #1e3a8a;
+            margin-bottom: 10px;
+        }
+        .contact-info {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+        .email-footer {
+            background: #1e3a8a;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .email-footer p {
+            margin: 8px 0;
+            opacity: 0.9;
+        }
+        .social-links {
+            margin: 15px 0;
+        }
+        .social-links a {
+            color: #06d6a0;
+            text-decoration: none;
+            margin: 0 10px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class='email-container'>
+        <div class='email-header'>
+            <img src='https://automatizatech.shop/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png' alt='AutomatizaTech Logo' style='max-width: 160px; height: auto; margin-bottom: 15px;'>
+            <h1>Bienvenido a AutomatizaTech</h1>
+            <p>Gracias por confiar en nosotros</p>
+        </div>
+        
+        <div class='email-body'>
+            <div class='greeting'>
+                Hola Luis Miguel,
+            </div>
+            
+            <p class='message-text'>
+                Gracias por confiar en AutomatizaTech para tu proyecto de transformación digital. 
+                <strong><img src="https://s.w.org/images/core/emoji/16.0.1/72x72/1f4ce.png" alt="📎" class="wp-smiley" style="height: 1em; max-height: 1em;" /> Encontrarás tu factura adjunta en formato PDF</strong> con todos los detalles de tu contratación.
+            </p>
+            
+        <div class='plan-highlight'>
+            <h3>Plan Contratado</h3>
+            <div class='plan-name'>Plan Enterprise</div>
+            <div class='plan-price'>$319.200</div>
+            <p class='message-text' style='margin-top: 15px;'>Solución completa para grandes empresas con necesidades específicas</p>
+        </div>            <p class='message-text'>
+                <img src="https://s.w.org/images/core/emoji/16.0.1/72x72/1f4c4.png" alt="📄" class="wp-smiley" style="height: 1em; max-height: 1em;" /> <strong>Factura PDF adjunta:</strong> Revisa el archivo adjunto para ver el detalle completo 
+                de tu contratación. Te recomendamos guardar este documento para tus registros contables.
+            </p>
+            
+            <div class='invoice-info'>
+                <h4>Informacion de la Factura</h4>
+                <div class='invoice-number'>AT-20251112-0006</div>
+                <p style='color: #666;'>Fecha: 12/11/2025 03:01</p>
+            </div>
+            
+            <p class='message-text'>
+                Nuestro equipo se pondrá en contacto contigo en las próximas 24-48 horas para coordinar 
+                el inicio de tu proyecto y resolver cualquier consulta que puedas tener.
+            </p>
+            
+            <div class='support-box'>
+                <h4>Informacion de Contacto</h4>
+                <p style='color: #666; margin-bottom: 10px;'>Si tienes consultas, puedes contactarnos:</p>
+                <div class='contact-info'>
+                    Email: <strong>info@automatizatech.shop</strong><br>
+                    Telefono: <strong>+56 9 6432 4169</strong><br>
+                    Sitio web: <strong>https://automatizatech.shop</strong>
+                </div>
+            </div>
+            
+            <p class='message-text' style='margin-top: 20px; color: #666;'>
+                Saludos cordiales,<br>
+                <strong>Equipo AutomatizaTech</strong>
+            </p>
+        </div>
+        
+        <div class='email-footer'>
+            <p style='font-size: 1em; margin-bottom: 10px;'><strong>AutomatizaTech</strong></p>
+            <p style='font-size: 0.9em;'>Soluciones de automatizacion digital</p>
+            <p style='font-size: 0.85em; margin-top: 15px;'>
+                https://automatizatech.shop | info@automatizatech.shop<br>
+                Copyright 2025 AutomatizaTech. Todos los derechos reservados.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+                    [headers] => Array
+                        (
+                            [X-Priority] => 1 (Highest)
+                            [X-MSMail-Priority] => High
+                            [Importance] => High
+                            [X-Mailer] => AutomatizaTech Invoicing System v1.0
+                            [List-Unsubscribe] => <mailto:unsubscribe@automatizatech.shop>
+                            [Precedence] => bulk
+                            [X-Auto-Response-Suppress] => OOF, DR, RN, NRN, AutoReply
+                        )
+
+                    [attachments] => Array
+                        (
+                            [0] => /home/u187918280/domains/automatizatech.shop/public_html/wp-content/uploads/automatiza-tech-invoices/AT-20251112-0006-Luis-Miguel.pdf
+                        )
+
+                    [phpmailer_exception_code] => 1
+                )
+
+        )
+
+    [additional_data:protected] => Array
+        (
+        )
+
+)
+
+[12-Nov-2025 03:01:14 UTC] ERROR FACTURA: No se pudo enviar factura AT-20251112-0006 a luism.unefa2015@gmail.com
+[12-Nov-2025 03:01:14 UTC] SMTP CONFIGURADO: Host=smtp.hostinger.com, Port=587, Auth=true
+[12-Nov-2025 03:01:16 UTC] Automatiza Tech - Error de email: WP_Error Object
+(
+    [errors] => Array
+        (
+            [wp_mail_failed] => Array
+                (
+                    [0] => Error STMP: fallaron los siguientes destinatarios: automatizatech.bots@gmail.com: <noreply@automatizatech.com>: Sender address rejected: not owned by user info@automatizatech.shop
+
+                )
+
+        )
+
+    [error_data] => Array
+        (
+            [wp_mail_failed] => Array
+                (
+                    [to] => Array
+                        (
+                            [0] => automatizatech.bots@gmail.com
+                        )
+
+                    [subject] => 🎉 ¡Nuevo Cliente Contratado! - Luis Miguel - Plan: Plan Enterprise
+                    [message] => 
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .header { background: linear-gradient(135deg, #1e3a8a, #06d6a0); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+                .content { background: #f8f9fa; padding: 25px; border-radius: 0 0 8px 8px; }
+                .info-box { background: white; padding: 20px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                .label { font-weight: bold; color: #1e3a8a; display: inline-block; width: 120px; }
+                .value { color: #495057; }
+                .footer { text-align: center; margin-top: 20px; color: #6c757d; font-size: 0.9em; }
+                .cta { background: #06d6a0; color: white; padding: 12px 25px; text-decoration: none; border-radius: 25px; display: inline-block; margin: 10px 0; }
+                .message-box { background: #e3f2fd; padding: 15px; border-left: 4px solid #1976d2; margin: 15px 0; }
+            </style>
+        </head>
+        <body>
+            <div class='header'>
+                <img src='https://automatizatech.shop/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png' alt='AutomatizaTech Logo' style='max-width: 140px; height: auto; margin-bottom: 10px;'>
+                <h1><img src="https://s.w.org/images/core/emoji/16.0.1/72x72/1f389.png" alt="🎉" class="wp-smiley" style="height: 1em; max-height: 1em;" /> ¡Nuevo Cliente Contratado!</h1>
+                <p>Se ha convertido un contacto a cliente en AutomatizaTech</p>
+            </div>
+            
+            <div class='content'>
+                <div class='info-box'>
+                    <h3 style='color: #1e3a8a; margin-top: 0;'><img src="https://s.w.org/images/core/emoji/16.0.1/72x72/1f4cb.png" alt="📋" class="wp-smiley" style="height: 1em; max-height: 1em;" /> Información del Cliente</h3>
+                    <p><span class='label'>Nombre:</span> <span class='value'>Luis Miguel</span></p>
+                    <p><span class='label'>Email:</span> <span class='value'>luism.unefa2015@gmail.com</span></p>
+                    <p><span class='label'>Empresa:</span> <span class='value'>Luis miguel de Automatiza Tech</span></p>
+                    <p><span class='label'>Teléfono:</span> <span class='value'>+56989565656</span></p>
+                    <p><span class='label'>Contactado:</span> <span class='value'>11/11/2025 06:16</span></p>
+                    <p><span class='label'>Contratado:</span> <span class='value'>12/11/2025 04:01</span></p>
+                </div>
+                
+            
+            <div class='info-box' style='border-left: 4px solid #06d6a0;'>
+                <h3 style='color: #06d6a0; margin-top: 0;'><img src="https://s.w.org/images/core/emoji/16.0.1/72x72/1f4bc.png" alt="💼" class="wp-smiley" style="height: 1em; max-height: 1em;" /> Plan Contratado</h3>
+                <p><span class='label'>Plan:</span> <span class='value' style='font-weight: bold; font-size: 1.1em;'>Plan Enterprise</span></p>
+                <p><span class='label'>Precio:</span> <span class='value' style='font-weight: bold; color: #06d6a0; font-size: 1.2em;'>$319.200</span></p>
+                <p style='margin-top: 10px;'><em>Solución completa para grandes empresas con necesidades específicas</em></p>
+                <p style='margin-top: 10px; padding: 10px; background: #e8f5f1; border-radius: 5px;'><img src="https://s.w.org/images/core/emoji/16.0.1/72x72/2709.png" alt="✉" class="wp-smiley" style="height: 1em; max-height: 1em;" /> <strong>Se ha enviado la factura automáticamente al cliente</strong></p>
+            </div>
+                            
+                <div class='message-box'>
+                    <h4 style='color: #1976d2; margin-top: 0;'><img src="https://s.w.org/images/core/emoji/16.0.1/72x72/1f4ac.png" alt="💬" class="wp-smiley" style="height: 1em; max-height: 1em;" /> Mensaje Original</h4>
+                    <p>Luis miguel de Automatiza Tech</p>
+                </div>
+                
+                
+                
+                
+                <div style='text-align: center; margin: 20px 0;'>
+                    <a href='https://automatizatech.shop/wp-admin/admin.php?page=automatiza-tech-clients' class='cta'><img src="https://s.w.org/images/core/emoji/16.0.1/72x72/1f465.png" alt="👥" class="wp-smiley" style="height: 1em; max-height: 1em;" /> Ver Panel de Clientes</a>
+                </div>
+                
+                <div class='footer'>
+                    <p><img src="https://s.w.org/images/core/emoji/16.0.1/72x72/1f4e7.png" alt="📧" class="wp-smiley" style="height: 1em; max-height: 1em;" /> Correo enviado automáticamente desde <strong>AutomatizaTech</strong></p>
+                    <p><img src="https://s.w.org/images/core/emoji/16.0.1/72x72/1f310.png" alt="🌐" class="wp-smiley" style="height: 1em; max-height: 1em;" /> <a href='https://automatizatech.shop'>https://automatizatech.shop</a></p>
+                    <p><img src="https://s.w.org/images/core/emoji/16.0.1/72x72/1f4c5.png" alt="📅" class="wp-smiley" style="height: 1em; max-height: 1em;" /> 12/11/2025 03:01:14</p>
+                </div>
+            </div>
+        </body>
+        </html>
+                    [headers] => Array
+                        (
+                        )
+
+                    [attachments] => Array
+                        (
+                        )
+
+                    [phpmailer_exception_code] => 1
+                )
+
+        )
+
+    [additional_data:protected] => Array
+        (
+        )
+
+)
+
+[12-Nov-2025 03:01:16 UTC] ERROR CORREO: No se pudo enviar notificación de cliente contratado para Luis Miguel (luism.unefa2015@gmail.com)
+[12-Nov-2025 03:01:16 UTC] EMAIL BACKUP: Correo guardado en archivo: /home/u187918280/domains/automatizatech.shop/public_html/wp-content/uploads/automatiza-tech-emails/cliente-contratado-2025-11-12_03-01-16-Luis-Miguel.html
+[12-Nov-2025 03:01:28 UTC] WordPress database error Table 'u187918280_automatizatech.wp_automatiza_tech_invoices' doesn't exist for query SELECT id, invoice_number FROM wp_automatiza_tech_invoices WHERE invoice_number = 'AT-20251112-0006' AND status = 'active' made by do_action('contactos_page_automatiza-tech-clients'), WP_Hook->do_action, WP_Hook->apply_filters, AutomatizaTechContactForm->clients_page
+[12-Nov-2025 03:01:38 UTC] WordPress database error Table 'u187918280_automatizatech.wp_automatiza_tech_invoices' doesn't exist for query SELECT id, invoice_number FROM wp_automatiza_tech_invoices WHERE invoice_number = 'AT-20251112-0006' AND status = 'active' made by do_action('contactos_page_automatiza-tech-clients'), WP_Hook->do_action, WP_Hook->apply_filters, AutomatizaTechContactForm->clients_page

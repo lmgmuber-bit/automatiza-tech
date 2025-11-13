@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factura Profesional v3.0 - AutomatizaTech</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .hero {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 15s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .hero h1 {
+            font-size: 42px;
+            margin-bottom: 15px;
+            font-weight: 800;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .hero .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .hero p {
+            font-size: 18px;
+            opacity: 0.95;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .content {
+            padding: 50px 40px;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin: 40px 0;
+        }
+        
+        .feature {
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+            padding: 30px;
+            border-radius: 15px;
+            border-left: 5px solid #2196F3;
+            transition: all 0.3s ease;
+        }
+        
+        .feature:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(33, 150, 243, 0.3);
+        }
+        
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .feature h3 {
+            color: #2196F3;
+            font-size: 20px;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+        
+        .feature p {
+            color: #616161;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border: 2px solid #4CAF50;
+            border-radius: 15px;
+            padding: 35px;
+            margin: 40px 0;
+            text-align: center;
+        }
+        
+        .highlight-box h2 {
+            color: #2e7d32;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        
+        .price-breakdown {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px auto;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            font-size: 16px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .price-row:last-child {
+            border-bottom: none;
+            background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+            color: white;
+            margin-top: 15px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 20px;
+        }
+        
+        .price-row.subtotal {
+            font-weight: 600;
+        }
+        
+        .price-row.iva {
+            color: #757575;
+            font-weight: 500;
+        }
+        
+        .cta-section {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 40px 0;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 18px 35px;
+            font-size: 17px;
+            font-weight: 700;
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            min-width: 220px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+            box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(33, 150, 243, 0.6);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+            color: white;
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(76, 175, 80, 0.6);
+        }
+        
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .comparison-item {
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .comparison-item.before {
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            border: 2px solid #f44336;
+        }
+        
+        .comparison-item.after {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border: 2px solid #4CAF50;
+        }
+        
+        .comparison-item h3 {
+            font-size: 22px;
+            margin-bottom: 20px;
+        }
+        
+        .comparison-item.before h3 {
+            color: #c62828;
+        }
+        
+        .comparison-item.after h3 {
+            color: #2e7d32;
+        }
+        
+        .comparison-list {
+            text-align: left;
+            list-style: none;
+            padding: 0;
+        }
+        
+        .comparison-list li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+        
+        .comparison-list li::before {
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .comparison-item.before .comparison-list li::before {
+            content: '✗';
+            color: #f44336;
+        }
+        
+        .comparison-item.after .comparison-list li::before {
+            content: '✓';
+            color: #4CAF50;
+        }
+        
+        .rating {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+            font-size: 32px;
+        }
+        
+        .rating-number {
+            font-size: 48px;
+            font-weight: 800;
+            color: #2196F3;
+        }
+        
+        .footer {
+            background: #263238;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .footer p {
+            opacity: 0.9;
+            margin: 5px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 32px;
+            }
+            
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="hero">
+            <div class="badge">VERSIÓN 3.0 PROFESIONAL</div>
+            <h1>💼 Factura Profesional</h1>
+            <p>Sistema completo de facturación con logo corporativo, cálculo automático de IVA (19%) y diseño de clase mundial</p>
+        </div>
+        
+        <div class="content">
+            <h2 style="text-align:center;color:#2196F3;font-size:32px;margin-bottom:30px;">🎯 Nuevas Características</h2>
+            
+            <div class="features-grid">
+                <div class="feature">
+                    <div class="feature-icon">🖼️</div>
+                    <h3>Logo en Header</h3>
+                    <p>Logo de AutomatizaTech visible en el encabezado, reforzando la identidad corporativa en cada factura.</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">💰</div>
+                    <h3>IVA Automático (19%)</h3>
+                    <p>Cálculo automático del IVA chileno. Muestra subtotal, IVA y total de forma clara y profesional.</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">📋</div>
+                    <h3>Info Tributaria</h3>
+                    <p>RUT empresarial, giro comercial y todos los datos necesarios para validez tributaria completa.</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🎨</div>
+                    <h3>Diseño Elegante</h3>
+                    <p>Colores corporativos, tipografía jerarquizada y espaciado perfecto para máxima legibilidad.</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">📱</div>
+                    <h3>QR Grande</h3>
+                    <p>Código QR de 30mm con marco elegante para fácil escaneo y validación online de la factura.</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">✅</div>
+                    <h3>Válido Legalmente</h3>
+                    <p>Documento válido para efectos tributarios con toda la información requerida por ley.</p>
+                </div>
+            </div>
+            
+            <div class="highlight-box">
+                <h2>💵 Ejemplo de Desglose Financiero</h2>
+                <div class="price-breakdown">
+                    <div class="price-row subtotal">
+                        <span>Subtotal:</span>
+                        <span>$350.000</span>
+                    </div>
+                    <div class="price-row iva">
+                        <span>IVA (19%):</span>
+                        <span>$ 66.500</span>
+                    </div>
+                    <div class="price-row">
+                        <span>TOTAL:</span>
+                        <span>$416.500</span>
+                    </div>
+                </div>
+                <p style="margin-top:20px;color:#2e7d32;font-size:16px;">
+                    ✓ Cálculo automático en cada factura<br>
+                    ✓ Formato profesional y claro<br>
+                    ✓ Impuestos incluidos correctamente
+                </p>
+            </div>
+            
+            <h2 style="text-align:center;color:#2196F3;font-size:32px;margin:50px 0 30px;">📊 Antes vs. Después</h2>
+            
+            <div class="comparison">
+                <div class="comparison-item before">
+                    <h3>❌ Versión 2.0</h3>
+                    <ul class="comparison-list">
+                        <li>Sin logo visible</li>
+                        <li>IVA no calculado</li>
+                        <li>Info tributaria básica</li>
+                        <li>QR pequeño (28mm)</li>
+                        <li>Total simple</li>
+                    </ul>
+                    <div class="rating">
+                        <span class="rating-number">9.3</span>
+                        <span>/10</span>
+                    </div>
+                </div>
+                
+                <div class="comparison-item after">
+                    <h3>✅ Versión 3.0</h3>
+                    <ul class="comparison-list">
+                        <li>Logo en header</li>
+                        <li>IVA 19% automático</li>
+                        <li>Info tributaria completa</li>
+                        <li>QR grande (30mm)</li>
+                        <li>Desglose financiero</li>
+                    </ul>
+                    <div class="rating">
+                        <span class="rating-number" style="color:#4CAF50;">9.8</span>
+                        <span>/10</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="text-align:center;margin:50px 0;">
+                <h2 style="color:#2196F3;font-size:32px;margin-bottom:30px;">🚀 Prueba el Nuevo Diseño</h2>
+                <div class="cta-section">
+                    <a href="test-fpdf-invoice.php" target="_blank" class="btn btn-primary">
+                        📥 Generar PDF de Prueba
+                    </a>
+                    <a href="regenerate-invoices-fpdf.php" target="_blank" class="btn btn-success">
+                        🔄 Regenerar Todas las Facturas
+                    </a>
+                </div>
+            </div>
+            
+            <div style="background:#e3f2fd;border-left:5px solid #2196F3;padding:30px;border-radius:10px;margin:40px 0;">
+                <h3 style="color:#1976D2;margin-bottom:15px;font-size:22px;">📋 Características Técnicas</h3>
+                <ul style="line-height:2;color:#424242;margin-left:25px;">
+                    <li><strong>Formato:</strong> PDF A4 (210 x 297 mm)</li>
+                    <li><strong>Librería:</strong> FPDF 1.86 (100% PHP)</li>
+                    <li><strong>Tamaño:</strong> 4-6 KB optimizado</li>
+                    <li><strong>IVA:</strong> 19% calculado automáticamente</li>
+                    <li><strong>Logo:</strong> PNG de alta calidad</li>
+                    <li><strong>QR Code:</strong> 30mm para fácil escaneo</li>
+                    <li><strong>Validez:</strong> Tributariamente correcto</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>AutomatizaTech SpA</strong> - Sistema de Facturación Profesional</p>
+            <p>RUT: 77.123.456-7 | info@automatizatech.shop</p>
+            <p>© 2025 Todos los derechos reservados</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang='es'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Factura AT-20251113-0012</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            line-height: 1.4; 
+            color: #333;
+            background: #f5f5f5;
+            padding: 0;
+            margin: 0;
+        }
+        .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            page-break-after: avoid;
+        }
+        .invoice-header {
+            background: linear-gradient(135deg, #1e3a8a, #06d6a0);
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+        }
+        .invoice-header img {
+            max-width: 110px !important;
+            margin-bottom: 8px !important;
+        }
+        .invoice-header h1 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .invoice-header p {
+            font-size: 1em;
+            opacity: 0.9;
+        }
+        .invoice-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 20px 30px;
+            background: #f9fafb;
+        }
+        .info-block {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #06d6a0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .info-block h3 {
+            color: #1e3a8a;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .info-block p {
+            margin: 8px 0;
+            font-size: 0.95em;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #555;
+            display: inline-block;
+            width: 120px;
+        }
+        .invoice-details {
+            padding: 25px 30px;
+        }
+        .invoice-details h2 {
+            color: #1e3a8a;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 3px solid #06d6a0;
+            font-size: 1.3em;
+        }
+        .service-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .service-table thead {
+            background: #1e3a8a;
+            color: white;
+        }
+        .service-table th {
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+        .service-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .service-table tbody tr:hover {
+            background: #f9fafb;
+        }
+        .service-description {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        .totals {
+            margin-top: 20px;
+            text-align: right;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+        .totals .row {
+            display: flex;
+            justify-content: flex-end;
+            margin: 8px 0;
+            font-size: 1em;
+        }
+        .totals .label {
+            margin-right: 40px;
+            color: #555;
+            font-weight: 600;
+            min-width: 150px;
+            text-align: right;
+        }
+        .totals .amount {
+            min-width: 150px;
+            text-align: right;
+            font-weight: bold;
+        }
+        .total-row {
+            border-top: 3px solid #06d6a0;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+        .total-row .label {
+            color: #1e3a8a;
+            font-size: 1.3em;
+        }
+        .total-row .amount {
+            color: #06d6a0;
+            font-size: 1.5em;
+        }
+        .invoice-footer {
+            background: linear-gradient(135deg, #1e3a8a, #06d6a0);
+            color: white;
+            padding: 15px 30px;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+        .footer-column {
+            text-align: left;
+        }
+        .footer-column h3 {
+            font-size: 0.95em;
+            margin-bottom: 8px;
+            opacity: 0.95;
+        }
+        .footer-column p {
+            margin: 4px 0;
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+        .thank-you {
+            background: white;
+            color: #1e3a8a;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: 600;
+            text-align: center;
+        }
+        .features-list {
+            list-style: none;
+            padding: 8px 0;
+        }
+        .features-list li {
+            padding: 4px 0;
+            padding-left: 20px;
+            position: relative;
+            font-size: 0.9em;
+        }
+        .features-list li:before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #06d6a0;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .qr-validation {
+            page-break-inside: avoid;
+            padding: 12px 30px !important;
+        }
+        .qr-validation h3 {
+            font-size: 0.95em !important;
+            margin-bottom: 6px !important;
+        }
+        .qr-validation p {
+            margin-bottom: 8px !important;
+            font-size: 0.85em !important;
+        }
+        .qr-validation img {
+            max-width: 120px !important;
+            height: auto !important;
+        }
+        @media print {
+            body { background: white; padding: 0; margin: 0; }
+            .invoice-container { box-shadow: none; border-radius: 0; }
+            .invoice-header { padding: 15px 25px; }
+            .invoice-info { padding: 12px 25px; gap: 8px; }
+            .info-block { padding: 8px 10px; }
+            .invoice-details { padding: 20px 25px; }
+            .invoice-footer { padding: 10px 25px; gap: 15px; }
+            .qr-validation { padding: 10px 25px !important; }
+            .footer-column p { font-size: 0.8em; }
+        }
+    </style>
+</head>
+<body>
+    <div class='invoice-container'>
+        <!-- Header -->
+        <div class='invoice-header'>
+            <img src='https://automatizatech.shop/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png' alt='AutomatizaTech Logo' style='max-width: 110px; height: auto; margin-bottom: 8px;'>
+            <h1>🧾 FACTURA</h1>
+            <p>AutomatizaTech - Soluciones Digitales Profesionales</p>
+        </div>
+        
+        <!-- Info de Factura y Cliente -->
+        <div class='invoice-info'>
+            <div class='info-block'>
+                <h3>📋 Datos de la Factura</h3>
+                <p><span class='info-label'>N° Factura:</span> <strong>AT-20251113-0012</strong></p>
+                <p><span class='info-label'>Fecha:</span> 13/11/2025</p>
+                <p><span class='info-label'>Válido hasta:</span> 13/12/2025</p>
+            </div>
+            
+            <div class='info-block'>
+                <h3>👤 Datos del Cliente</h3>
+                <p><span class='info-label'>Nombre:</span> <strong>Luis Miguel</strong></p>
+                <p><span class='info-label'>Email:</span> lmgm.0303@gmail.com</p>
+                <p><span class='info-label'>Empresa:</span> Tech automatiza</p>
+                <p><span class='info-label'>Teléfono:</span> +56974940072</p>
+            </div>
+        </div>
+        
+        <!-- Detalles del Servicio -->
+        <div class='invoice-details'>
+            <h2>💼 Detalle del Servicio Contratado</h2>
+            
+            <table class='service-table'>
+                <thead>
+                    <tr>
+                        <th style='width: 60%'>Descripción</th>
+                        <th style='width: 20%; text-align: center;'>Cantidad</th>
+                        <th style='width: 20%; text-align: right;'>Precio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <strong style='color: #1e3a8a; font-size: 1.1em;'>Plan Profesional</strong>
+                            <div class='service-description'>Para empresas en crecimiento que buscan automatización avanzada</div>
+                            
+                            <ul class='features-list'>
+                                <li>[&quot;Todo del Plan B\u00e1sico&quot;,&quot;Hasta 5,000 conversaciones\/mes&quot;,&quot;IA avanzada personalizada&quot;,&quot;Integraci\u00f3n con m\u00faltiples plataformas&quot;,&quot;Anal\u00edticas avanzadas&quot;,&quot;API personalizada&quot;,&quot;Soporte prioritario&quot;,&quot;Men\u00fa interactivo&quot;]</li>
+                            </ul>
+                            
+                        </td>
+                        <td style='text-align: center; font-size: 1.1em; font-weight: 600;'>1</td>
+                        <td style='text-align: right; font-size: 1.1em; font-weight: 600;'>$186.000</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <!-- Totales -->
+            <div class='totals'>
+                <div class='row'>
+                    <span class='label'>Subtotal:</span>
+                    <span class='amount'>$186.000</span>
+                </div>
+                <div class='row'>
+                    <span class='label'>IVA (19%):</span>
+                    <span class='amount'>$35.340</span>
+                </div>
+                <div class='row total-row'>
+                    <span class='label'>TOTAL:</span>
+                    <span class='amount'>$221.340</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Código QR de Validación -->
+        <div class='qr-validation' style='text-align: center; padding: 12px 30px; background: #f9fafb; border-top: 2px solid #06d6a0;'>
+            <h3 style='color: #1e3a8a; margin-bottom: 6px;'>🔒 Validación de Factura</h3>
+            <p style='margin-bottom: 8px; color: #666;'>Escanea el QR para validar la autenticidad</p>
+            <img src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4AQMAAAADqqSRAAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAABj0lEQVQ4jZ2VMY7EIAxFjSjohgtE4RoUI82VKKcj3Za5EtIWXIMoFyAdRYT3MzurlbZYhnETvcLC/rZ/iP6EZw5OcGQykbl22ZGMmXdejj0uNI8zfwa/Jev0Hj/qSxxzotsiknqTg57Jaj5fY9S7ElmH/J/6Rxh6xXWerEO/T/2G+BGzDP4y/Q7pH/b8yWzw9sHlfqRhJrpaR6S4TmrRtcsab7tqiqsyFuSPM2reTui+F7pQlx3dituwO6hX5XH29apW1KDzhJ2o4yygl0jkNDTDt8duC4989BxLq3+QiW68zLiZI1kvUpf9fCVPkteM+Rx1mClJZoZeVQZq+9BhvQXrkyxan1a1eQ0ywUtyknERXB79DLJPV3Jz20fDj3467Fqv7T6xTwr1D7M4cW9k6SKDglxdxmwWk7A7kK35wyAj4COyeOitLn1u/pHrhPdN/OA0zOg36AQ/gc+rb38f46ffZrEzt/t7gRezx5VP65/5o5wFB8rQrVKf4c9s9kCV7P0N/vZn0/5/hY40zH/iC/RgdzrJ1s0dAAAAAElFTkSuQmCC' alt='Código QR de Validación' style='width: 120px; height: 120px; border: 2px solid #06d6a0; border-radius: 6px; padding: 6px; background: white;'>
+            <p style='margin-top: 4px; font-size: 0.7em; color: #888;'>
+                Código: <strong style='color: #1e3a8a;'>AT-20251113-0012</strong>
+            </p>
+        </div>
+        
+        <!-- Footer -->
+        <div class='invoice-footer'>
+            <div class='footer-column'>
+                <div class='thank-you'>
+                    ¡Gracias por confiar en AutomatizaTech! 🎉
+                </div>
+                <p style='margin-top: 8px; font-size: 0.75em; opacity: 0.85;'>
+                    Generada: 13/11/2025 13:27
+                </p>
+            </div>
+            
+            <div class='footer-column'>
+                <h3>📞 Contacto</h3>
+                <p>📧 info@automatizatech.shop</p>
+                <p>📱 +56 9 6432 4169</p>
+            </div>
+            
+            <div class='footer-column'>
+                <h3>🌐 Web</h3>
+                <p>https://automatizatech.shop</p>
+                <p>Soluciones Digitales</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Funciones helper para renderizar servicios dinámicamente
  * Mantiene el diseño exacto del frontend

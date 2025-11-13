@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Automatiza Tech - Contact Form Handler
  * Maneja el formulario de contacto y administración de datos
@@ -34,6 +34,8 @@ class AutomatizaTechContactForm {
         add_action('wp_ajax_nopriv_search_clients', array($this, 'search_clients'));
         add_action('wp_ajax_filter_contacts', array($this, 'filter_contacts'));
         add_action('wp_ajax_send_email_to_new_contacts', array($this, 'send_email_to_new_contacts'));
+        add_action('wp_ajax_get_available_plans', array($this, 'get_available_plans'));
+        add_action('wp_ajax_download_invoice', array($this, 'download_invoice'));
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'admin_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'frontend_scripts'));
@@ -61,6 +63,14 @@ class AutomatizaTechContactForm {
         if (empty($column_exists)) {
             // Agregar la columna updated_at si no existe
             $wpdb->query("ALTER TABLE {$this->clients_table_name} ADD COLUMN updated_at datetime AFTER notes");
+        }
+        
+        // Verificar si existe la columna plan_id y agregarla si no existe
+        $column_plan = $wpdb->get_results("SHOW COLUMNS FROM {$this->clients_table_name} LIKE 'plan_id'");
+        
+        if (empty($column_plan)) {
+            // Agregar la columna plan_id si no existe
+            $wpdb->query("ALTER TABLE {$this->clients_table_name} ADD COLUMN plan_id mediumint(9) AFTER contracted_at");
         }
     }
     
@@ -407,6 +417,52 @@ class AutomatizaTechContactForm {
     }
     
     /**
+     * Detectar país basado en código telefónico
+     */
+    private function detect_country_from_phone($phone) {
+        if (empty($phone)) {
+            return 'CL'; // Por defecto Chile
+        }
+        
+        // Códigos telefónicos internacionales
+        $country_codes = array(
+            '+56' => 'CL',  // Chile
+            '+1'  => 'US',  // USA/Canadá
+            '+54' => 'AR',  // Argentina
+            '+57' => 'CO',  // Colombia
+            '+52' => 'MX',  // México
+            '+51' => 'PE',  // Perú
+            '+34' => 'ES',  // España
+            '+55' => 'BR',  // Brasil
+            '+593' => 'EC', // Ecuador
+            '+595' => 'PY', // Paraguay
+            '+598' => 'UY', // Uruguay
+            '+58' => 'VE',  // Venezuela
+            '+506' => 'CR', // Costa Rica
+            '+507' => 'PA', // Panamá
+            '+503' => 'SV', // El Salvador
+            '+504' => 'HN', // Honduras
+            '+505' => 'NI', // Nicaragua
+            '+502' => 'GT', // Guatemala
+        );
+        
+        // Buscar el código más largo primero (para evitar conflictos como +1 vs +1787)
+        $codes_by_length = $country_codes;
+        uksort($codes_by_length, function($a, $b) {
+            return strlen($b) - strlen($a);
+        });
+        
+        foreach ($codes_by_length as $code => $country) {
+            if (strpos($phone, $code) === 0) {
+                return $country;
+            }
+        }
+        
+        // Por defecto Chile
+        return 'CL';
+    }
+    
+    /**
      * Validar y sanitizar mensaje
      */
     private function validate_and_sanitize_message($message) {
@@ -651,7 +707,7 @@ class AutomatizaTechContactForm {
     /**
      * Mover contacto a tabla de clientes
      */
-    private function move_to_clients($contact_id) {
+    private function move_to_clients($contact_id, $plan_id = null) {
         global $wpdb;
         
         // Obtener datos del contacto
@@ -660,6 +716,50 @@ class AutomatizaTechContactForm {
         if (!$contact) {
             return false;
         }
+        
+        // Manejar múltiples planes (si vienen separados por comas)
+        $plan_ids = array();
+        $plans_data = array();
+        $contract_value = 0.00;
+        $project_types = array();
+        
+        // DEBUG: Log del plan_id recibido
+        error_log("DEBUG move_to_clients: plan_id recibido = " . var_export($plan_id, true));
+        
+        if ($plan_id) {
+            // Si vienen múltiples IDs separados por comas
+            if (strpos($plan_id, ',') !== false) {
+                $plan_ids = array_map('intval', explode(',', $plan_id));
+                error_log("DEBUG: Múltiples planes detectados: " . implode(', ', $plan_ids));
+            } else {
+                $plan_ids = array(intval($plan_id));
+                error_log("DEBUG: Un solo plan detectado: " . $plan_id);
+            }
+            
+            // Obtener datos de todos los planes
+            foreach ($plan_ids as $pid) {
+                $plan = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM {$wpdb->prefix}automatiza_services WHERE id = %d",
+                    $pid
+                ));
+                if ($plan) {
+                    $plans_data[] = $plan;
+                    $contract_value += floatval($plan->price_clp);
+                    $project_types[] = $plan->name;
+                    error_log("DEBUG: Plan agregado: ID={$pid}, Nombre={$plan->name}, Precio={$plan->price_clp}");
+                }
+            }
+            
+            error_log("DEBUG: Total de planes procesados: " . count($plans_data));
+        }
+        
+        // Usar el primer plan como principal (para compatibilidad)
+        $plan_data = !empty($plans_data) ? $plans_data[0] : null;
+        $plan_id_main = !empty($plan_ids) ? $plan_ids[0] : null;
+        $project_type = !empty($project_types) ? implode(' + ', $project_types) : '';
+        
+        // Detectar país del cliente basado en código telefónico
+        $country = $this->detect_country_from_phone($contact->phone);
         
         // Insertar en tabla de clientes
         $result = $wpdb->insert(
@@ -670,26 +770,39 @@ class AutomatizaTechContactForm {
                 'email' => $contact->email,
                 'company' => $contact->company,
                 'phone' => $contact->phone,
+                'country' => $country,
                 'original_message' => $contact->message,
                 'contacted_at' => $contact->submitted_at,
                 'contracted_at' => current_time('mysql'),
-                'contract_value' => 0.00,
-                'project_type' => '',
+                'plan_id' => $plan_id_main,
+                'contract_value' => $contract_value,
+                'project_type' => $project_type,
                 'contract_status' => 'active',
                 'notes' => $contact->notes
             ),
-            array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%s', '%s', '%s')
+            array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%f', '%s', '%s', '%s')
         );
         
         if ($result) {
+            // Obtener el ID del cliente recién creado
+            $client_id = $wpdb->insert_id;
+            
+            // Obtener datos completos del cliente
+            $client_data = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$this->clients_table_name} WHERE id = %d",
+                $client_id
+            ));
+            
             // Eliminar de tabla de contactos
             $wpdb->delete($this->table_name, array('id' => $contact_id), array('%d'));
             
             // Log de la conversión
-            error_log("CLIENTE CONVERTIDO: {$contact->name} ({$contact->email}) movido de contactos a clientes.");
+            $plans_log = !empty($project_types) ? implode(' + ', $project_types) : 'Sin plan';
+            error_log("CLIENTE CONVERTIDO: {$contact->name} ({$contact->email}) movido de contactos a clientes. Plan(es): {$plans_log}");
             
-            // Enviar correo de notificación para cliente contratado
-            $this->send_contracted_client_email($contact);
+            // Enviar correo de notificación para cliente contratado con factura
+            // Pasar todos los planes para la factura
+            $this->send_contracted_client_email($client_data, $plans_data);
             
             return true;
         }
@@ -700,19 +813,63 @@ class AutomatizaTechContactForm {
     /**
      * Enviar correo de notificación cuando un cliente es contratado
      */
-    private function send_contracted_client_email($contact) {
+    private function send_contracted_client_email($client_data, $plans_data = null) {
         // Configurar SMTP para desarrollo local
         add_action('phpmailer_init', array($this, 'configure_smtp'));
         
-        // Email de destino
+        // Enviar correo al cliente con la factura
+        if ($plans_data) {
+            $this->send_invoice_email_to_client($client_data, $plans_data);
+        }
+        
+        // Email de destino para notificación interna
         $to = 'automatizatech.bots@gmail.com';
         
+        // Preparar información de planes para el asunto
+        $plans_names = array();
+        if (is_array($plans_data)) {
+            foreach ($plans_data as $plan) {
+                $plans_names[] = $plan->name;
+            }
+        }
+        $plans_text = !empty($plans_names) ? ' - Plan(es): ' . implode(', ', $plans_names) : '';
+        
         // Asunto del correo
-        $subject = '🎉 ¡Nuevo Cliente Contratado! - ' . $contact->name;
+        $subject = '🎉 ¡Nuevo Cliente Contratado! - ' . $client_data->name . $plans_text;
         
         // Obtener URL del sitio para el encabezado
         $site_url = get_site_url();
         $admin_url = admin_url('admin.php?page=automatiza-tech-clients');
+        $logo_url = get_template_directory_uri() . '/assets/images/logo-automatiza-tech.png';
+        
+        // Construir HTML de planes contratados
+        $plans_html = '';
+        if (is_array($plans_data) && !empty($plans_data)) {
+            $total_clp = 0;
+            $plans_list = '';
+            
+            foreach ($plans_data as $index => $plan) {
+                $plan_num = $index + 1;
+                $total_clp += floatval($plan->price_clp);
+                
+                $plans_list .= "
+                <div style='background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 6px; border-left: 3px solid #06d6a0;'>
+                    <p style='margin: 5px 0;'><strong style='color: #1e3a8a;'>Plan {$plan_num}:</strong> <span style='font-size: 1.1em;'>" . esc_html($plan->name) . "</span></p>
+                    <p style='margin: 5px 0;'><strong style='color: #06d6a0;'>Precio:</strong> <span style='font-weight: bold;'>$" . number_format($plan->price_clp, 0, ',', '.') . " CLP</span></p>
+                    " . (!empty($plan->description) ? "<p style='margin: 5px 0; color: #6c757d;'><em>" . esc_html($plan->description) . "</em></p>" : "") . "
+                </div>";
+            }
+            
+            $plans_html = "
+            <div class='info-box' style='border-left: 4px solid #06d6a0;'>
+                <h3 style='color: #06d6a0; margin-top: 0;'>💼 Planes Contratados</h3>
+                {$plans_list}
+                <div style='margin-top: 15px; padding: 12px; background: #e8f5f1; border-radius: 5px; text-align: center;'>
+                    <p style='margin: 5px 0; font-size: 1.2em;'><strong>TOTAL:</strong> <span style='color: #06d6a0; font-size: 1.3em; font-weight: bold;'>$" . number_format($total_clp, 0, ',', '.') . " CLP</span></p>
+                </div>
+                <p style='margin-top: 10px; padding: 10px; background: #e3f2fd; border-radius: 5px; text-align: center;'>✉️ <strong>Se ha enviado la factura automáticamente al cliente</strong></p>
+            </div>";
+        }
         
         // Construir el mensaje HTML
         $message = "
@@ -733,6 +890,7 @@ class AutomatizaTechContactForm {
         </head>
         <body>
             <div class='header'>
+                <img src='{$logo_url}' alt='AutomatizaTech Logo' style='max-width: 140px; height: auto; margin-bottom: 10px;'>
                 <h1>🎉 ¡Nuevo Cliente Contratado!</h1>
                 <p>Se ha convertido un contacto a cliente en AutomatizaTech</p>
             </div>
@@ -740,25 +898,25 @@ class AutomatizaTechContactForm {
             <div class='content'>
                 <div class='info-box'>
                     <h3 style='color: #1e3a8a; margin-top: 0;'>📋 Información del Cliente</h3>
-                    <p><span class='label'>Nombre:</span> <span class='value'>" . esc_html($contact->name) . "</span></p>
-                    <p><span class='label'>Email:</span> <span class='value'>" . esc_html($contact->email) . "</span></p>
-                    <p><span class='label'>Empresa:</span> <span class='value'>" . esc_html($contact->company ?: 'No especificada') . "</span></p>
-                    <p><span class='label'>Teléfono:</span> <span class='value'>" . esc_html($contact->phone ?: 'No especificado') . "</span></p>
-                    <p><span class='label'>Contactado:</span> <span class='value'>" . date('d/m/Y H:i', strtotime($contact->submitted_at)) . "</span></p>
-                    <p><span class='label'>Contratado:</span> <span class='value'>" . date('d/m/Y H:i') . "</span></p>
+                    <p><span class='label'>Nombre:</span> <span class='value'>" . esc_html($client_data->name) . "</span></p>
+                    <p><span class='label'>Email:</span> <span class='value'>" . esc_html($client_data->email) . "</span></p>
+                    <p><span class='label'>Empresa:</span> <span class='value'>" . esc_html($client_data->company ?: 'No especificada') . "</span></p>
+                    <p><span class='label'>Teléfono:</span> <span class='value'>" . esc_html($client_data->phone ?: 'No especificado') . "</span></p>
+                    <p><span class='label'>Contactado:</span> <span class='value'>" . date('d/m/Y H:i', strtotime($client_data->contacted_at)) . "</span></p>
+                    <p><span class='label'>Contratado:</span> <span class='value'>" . date('d/m/Y H:i', strtotime($client_data->contracted_at)) . "</span></p>
                 </div>
                 
-                " . (!empty($contact->message) ? "
+            " . $plans_html . "                " . (!empty($client_data->original_message) ? "
                 <div class='message-box'>
                     <h4 style='color: #1976d2; margin-top: 0;'>💬 Mensaje Original</h4>
-                    <p>" . nl2br(esc_html($contact->message)) . "</p>
+                    <p>" . nl2br(esc_html($client_data->original_message)) . "</p>
                 </div>
                 " : "") . "
                 
-                " . (!empty($contact->notes) ? "
+                " . (!empty($client_data->notes) ? "
                 <div class='info-box'>
                     <h4 style='color: #1e3a8a; margin-top: 0;'>📝 Notas</h4>
-                    <p>" . nl2br(esc_html($contact->notes)) . "</p>
+                    <p>" . nl2br(esc_html($client_data->notes)) . "</p>
                 </div>
                 " : "") . "
                 
@@ -778,8 +936,8 @@ class AutomatizaTechContactForm {
         // Headers para HTML
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
-            'From: AutomatizaTech <noreply@automatizatech.com>',
-            'Reply-To: automatizatech.bots@gmail.com'
+            'From: AutomatizaTech <info@automatizatech.shop>',
+            'Reply-To: info@automatizatech.shop'
         );
         
         // Enviar el correo
@@ -787,12 +945,366 @@ class AutomatizaTechContactForm {
         
         // Log del resultado
         if ($sent) {
-            error_log("CORREO ENVIADO: Notificación de cliente contratado enviada a {$to} para {$contact->name} ({$contact->email})");
+            error_log("CORREO ENVIADO: Notificación de cliente contratado enviada a {$to} para {$client_data->name} ({$client_data->email})");
         } else {
-            error_log("ERROR CORREO: No se pudo enviar notificación de cliente contratado para {$contact->name} ({$contact->email})");
+            error_log("ERROR CORREO: No se pudo enviar notificación de cliente contratado para {$client_data->name} ({$client_data->email})");
             
             // Crear backup del correo en archivo para revisión manual
-            $this->save_email_to_file($to, $subject, $message, $contact);
+            $this->save_email_to_file($to, $subject, $message, $client_data);
+        }
+        
+        return $sent;
+    }
+    
+    /**
+     * Enviar correo con factura al cliente
+     */
+    private function send_invoice_email_to_client($client_data, $plans_data) {
+        // Configurar SMTP
+        add_action('phpmailer_init', array($this, 'configure_smtp'));
+        
+        // Generar factura HTML (para BD)
+        $invoice_html = $this->generate_invoice_html($client_data, $plans_data);
+        $invoice_number = 'AT-' . date('Ymd') . '-' . str_pad($client_data->id, 4, '0', STR_PAD_LEFT);
+        
+        // Guardar factura HTML en archivo (para backup)
+        $invoice_html_path = $this->save_invoice_file($invoice_html, $client_data, $invoice_number);
+        
+        // Generar PDF para adjuntar al correo
+        $invoice_pdf_path = $this->generate_and_save_pdf($client_data, $plans_data, $invoice_number);
+        
+        // Guardar factura en base de datos
+        $this->save_invoice_to_database($client_data, $plans_data, $invoice_number, $invoice_html, $invoice_pdf_path);
+        
+        // Colores de AutomatizaTech
+        $primary_color = '#1e3a8a';
+        $secondary_color = '#06d6a0';
+        $logo_url = get_template_directory_uri() . '/assets/images/logo-automatiza-tech.png';
+        
+        // Email del cliente
+        $to = $client_data->email;
+        
+        // ANTI-SPAM: Asunto personalizado sin emojis, con nombre del cliente
+        $subject = 'Bienvenido a AutomatizaTech - Factura ' . $invoice_number . ' - ' . $client_data->name;
+        
+        $site_url = get_site_url();
+        
+        // Construir el mensaje HTML profesional y amable
+        $message = "<!DOCTYPE html>
+<html lang='es'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            line-height: 1.6; 
+            color: #333;
+            background: #f5f5f5;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .email-header {
+            background: {$primary_color};
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 4px solid {$secondary_color};
+        }
+        .email-header h1 {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+        }
+        .email-header p {
+            font-size: 1em;
+        }
+        .email-body {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 1.2em;
+            color: {$primary_color};
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .message-text {
+            margin: 15px 0;
+            color: #555;
+            line-height: 1.8;
+        }
+        .plan-highlight {
+            background: #f8f9fa;
+            border-left: 4px solid {$secondary_color};
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .plan-highlight h3 {
+            color: {$primary_color};
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .plan-name {
+            font-size: 1.4em;
+            color: {$secondary_color};
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .plan-price {
+            font-size: 2em;
+            color: {$primary_color};
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        .invoice-info {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .invoice-info h4 {
+            color: {$primary_color};
+            margin-bottom: 10px;
+        }
+        .invoice-number {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: {$secondary_color};
+            margin: 10px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, {$secondary_color}, #05c29a);
+            color: white;
+            padding: 15px 40px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1em;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(6, 214, 160, 0.3);
+            transition: transform 0.3s;
+        }
+        .support-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .support-box h4 {
+            color: {$primary_color};
+            margin-bottom: 10px;
+        }
+        .contact-info {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+        .email-footer {
+            background: {$primary_color};
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .email-footer p {
+            margin: 8px 0;
+            opacity: 0.9;
+        }
+        .social-links {
+            margin: 15px 0;
+        }
+        .social-links a {
+            color: {$secondary_color};
+            text-decoration: none;
+            margin: 0 10px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class='email-container'>
+        <div class='email-header'>
+            <img src='{$logo_url}' alt='AutomatizaTech Logo' style='max-width: 160px; height: auto; margin-bottom: 15px;'>
+            <h1>Bienvenido a AutomatizaTech</h1>
+            <p>Gracias por confiar en nosotros</p>
+        </div>
+        
+        <div class='email-body'>
+            <div class='greeting'>
+                Hola " . esc_html($client_data->name) . ",
+            </div>
+            
+            <p class='message-text'>
+                Gracias por confiar en AutomatizaTech para tu proyecto de transformación digital. 
+                <strong>📎 Encontrarás tu factura adjunta en formato PDF</strong> con todos los detalles de tu contratación.
+            </p>";
+            
+        // Generar HTML de planes contratados
+        if (is_array($plans_data) && !empty($plans_data)) {
+            $total_clp = 0;
+            $message .= "<div class='plan-highlight'>
+                <h3>" . (count($plans_data) > 1 ? 'Planes Contratados' : 'Plan Contratado') . "</h3>";
+            
+            foreach ($plans_data as $index => $plan) {
+                $total_clp += floatval($plan->price_clp);
+                
+                if (count($plans_data) > 1) {
+                    $message .= "<div style='background: white; padding: 15px; margin: 10px 0; border-radius: 5px; border: 2px solid {$secondary_color};'>";
+                    $message .= "<div style='font-size: 0.9em; color: #6c757d; margin-bottom: 5px;'>Plan " . ($index + 1) . "</div>";
+                }
+                
+                $message .= "<div class='plan-name'>" . esc_html($plan->name) . "</div>";
+                $message .= "<div class='plan-price'>$" . number_format($plan->price_clp, 0, ',', '.') . " CLP</div>";
+                
+                if (!empty($plan->description)) {
+                    $message .= "<p class='message-text' style='margin-top: 15px;'>" . esc_html($plan->description) . "</p>";
+                }
+                
+                if (count($plans_data) > 1) {
+                    $message .= "</div>";
+                }
+            }
+            
+            if (count($plans_data) > 1) {
+                $message .= "<div style='margin-top: 20px; padding: 15px; background: {$secondary_color}; color: white; border-radius: 8px; text-align: center;'>
+                    <div style='font-size: 1.2em; font-weight: bold;'>TOTAL: $" . number_format($total_clp, 0, ',', '.') . " CLP</div>
+                </div>";
+            }
+            
+            $message .= "</div>";
+        }
+        
+        $message .= "            <p class='message-text'>
+                📄 <strong>Factura PDF adjunta:</strong> Revisa el archivo adjunto para ver el detalle completo 
+                de tu contratación. Te recomendamos guardar este documento para tus registros contables.
+            </p>
+            
+            <div class='invoice-info'>
+                <h4>Informacion de la Factura</h4>
+                <div class='invoice-number'>{$invoice_number}</div>
+                <p style='color: #666;'>Fecha: " . date('d/m/Y H:i') . "</p>
+            </div>
+            
+            <p class='message-text'>
+                Nuestro equipo se pondrá en contacto contigo en las próximas 24-48 horas para coordinar 
+                el inicio de tu proyecto y resolver cualquier consulta que puedas tener.
+            </p>
+            
+            <div class='support-box'>
+                <h4>Informacion de Contacto</h4>
+                <p style='color: #666; margin-bottom: 10px;'>Si tienes consultas, puedes contactarnos:</p>
+                <div class='contact-info'>
+                    Email: <strong>info@automatizatech.shop</strong><br>
+                    Telefono: <strong>+56 9 6432 4169</strong><br>
+                    Sitio web: <strong>{$site_url}</strong>
+                </div>
+            </div>
+            
+            <p class='message-text' style='margin-top: 20px; color: #666;'>
+                Saludos cordiales,<br>
+                <strong>Equipo AutomatizaTech</strong>
+            </p>
+        </div>
+        
+        <div class='email-footer'>
+            <p style='font-size: 1em; margin-bottom: 10px;'><strong>AutomatizaTech</strong></p>
+            <p style='font-size: 0.9em;'>Soluciones de automatizacion digital</p>
+            <p style='font-size: 0.85em; margin-top: 15px;'>
+                {$site_url} | info@automatizatech.shop<br>
+                Copyright " . date('Y') . " AutomatizaTech. Todos los derechos reservados.
+            </p>
+        </div>
+    </div>
+</body>
+</html>";
+        
+        // ANTI-SPAM: Headers profesionales y transaccionales
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: AutomatizaTech <info@automatizatech.shop>',
+            'Reply-To: info@automatizatech.shop',
+            'Bcc: automatizatech.bots@gmail.com',
+            'X-Priority: 1 (Highest)',
+            'X-MSMail-Priority: High',
+            'Importance: High',
+            'X-Mailer: AutomatizaTech Invoicing System v1.0',
+            'List-Unsubscribe: <mailto:unsubscribe@automatizatech.shop>',
+            'Precedence: bulk',
+            'X-Auto-Response-Suppress: OOF, DR, RN, NRN, AutoReply'
+        );
+        
+        // Adjuntar factura PDF
+        $attachments = array();
+        if ($invoice_pdf_path && file_exists($invoice_pdf_path)) {
+            $attachments = array($invoice_pdf_path);
+        }
+        
+        // ANTI-SPAM: Agregar versión texto plano alternativa
+        add_action('phpmailer_init', function($phpmailer) use ($client_data, $plans_data, $invoice_number, $site_url) {
+            // Versión texto plano para mejor deliverability
+            $plain_text = "Hola " . $client_data->name . ",\n\n";
+            $plain_text .= "Gracias por confiar en AutomatizaTech para tu proyecto de transformacion digital.\n\n";
+            $plain_text .= "** FACTURA PDF ADJUNTA **\n\n";
+            $plain_text .= "Encontraras tu factura en formato PDF adjunta a este correo.\n";
+            $plain_text .= "Te recomendamos guardarla para tus registros contables.\n\n";
+            
+            // Manejar múltiples planes
+            if (is_array($plans_data) && !empty($plans_data)) {
+                if (count($plans_data) > 1) {
+                    $plain_text .= "PLANES CONTRATADOS\n";
+                    $plain_text .= "------------------\n";
+                    $total_clp = 0;
+                    foreach ($plans_data as $index => $plan) {
+                        $plan_num = $index + 1;
+                        $total_clp += floatval($plan->price_clp);
+                        $plain_text .= "Plan {$plan_num}: " . $plan->name . "\n";
+                        $plain_text .= "Precio: $" . number_format($plan->price_clp, 0, ',', '.') . " CLP\n\n";
+                    }
+                    $plain_text .= "TOTAL: $" . number_format($total_clp, 0, ',', '.') . " CLP\n\n";
+                } else {
+                    // Un solo plan
+                    $plan = $plans_data[0];
+                    $plain_text .= "PLAN CONTRATADO\n";
+                    $plain_text .= "---------------\n";
+                    $plain_text .= "Plan: " . $plan->name . "\n";
+                    $plain_text .= "Precio: $" . number_format($plan->price_clp, 0, ',', '.') . " CLP\n\n";
+                }
+            }
+            
+            $plain_text .= "FACTURA\n";
+            $plain_text .= "-------\n";
+            $plain_text .= "Numero: " . $invoice_number . "\n";
+            $plain_text .= "Fecha: " . date('d/m/Y H:i') . "\n\n";
+            $plain_text .= "Nuestro equipo se pondra en contacto contigo en las proximas 24-48 horas.\n\n";
+            $plain_text .= "INFORMACION DE CONTACTO\n";
+            $plain_text .= "-----------------------\n";
+            $plain_text .= "Email: info@automatizatech.shop\n";
+            $plain_text .= "Telefono: +56 9 6432 4169\n";
+            $plain_text .= "Web: " . $site_url . "\n\n";
+            $plain_text .= "Saludos cordiales,\n";
+            $plain_text .= "Equipo AutomatizaTech\n";
+            
+            $phpmailer->AltBody = $plain_text;
+        });
+        
+        // Enviar correo
+        $sent = wp_mail($to, $subject, $message, $headers, $attachments);
+        
+        // Log
+        if ($sent) {
+            error_log("FACTURA ENVIADA: Factura {$invoice_number} enviada a {$client_data->email} ({$client_data->name})");
+        } else {
+            error_log("ERROR FACTURA: No se pudo enviar factura {$invoice_number} a {$client_data->email}");
         }
         
         return $sent;
@@ -820,11 +1332,556 @@ class AutomatizaTechContactForm {
             $phpmailer->SMTPSecure = false;
         }
         
-        $phpmailer->From     = 'noreply@automatizatech.com';
+        $phpmailer->From     = 'info@automatizatech.shop';
         $phpmailer->FromName = 'AutomatizaTech';
         
         // Log de configuración
         error_log("SMTP CONFIGURADO: Host={$phpmailer->Host}, Port={$phpmailer->Port}, Auth=" . ($phpmailer->SMTPAuth ? 'true' : 'false'));
+    }
+    
+    /**
+     * Guardar factura en la base de datos
+     */
+    private function save_invoice_to_database($client_data, $plans_data, $invoice_number, $invoice_html, $invoice_path) {
+        global $wpdb;
+        
+        $invoices_table = $wpdb->prefix . 'automatiza_tech_invoices';
+        
+        // Soportar tanto un solo plan como múltiples planes
+        $plans_array = is_array($plans_data) ? $plans_data : array($plans_data);
+        
+        // Calcular totales sumando todos los planes
+        $subtotal = 0;
+        $plan_names = array();
+        $first_plan_id = null;
+        
+        foreach ($plans_array as $plan) {
+            $subtotal += floatval($plan->price_clp);
+            $plan_names[] = $plan->name;
+            if ($first_plan_id === null && isset($plan->id)) {
+                $first_plan_id = $plan->id;
+            }
+        }
+        
+        $iva = $subtotal * 0.19;
+        $total = $subtotal + $iva;
+        
+        // Concatenar nombres de planes
+        $all_plan_names = implode(' + ', $plan_names);
+        
+        // Datos para el QR
+        $qr_data = "FACTURA: {$invoice_number}\nCliente: {$client_data->name}\nPlan(es): {$all_plan_names}\nTotal: $" . number_format($total, 0, ',', '.');
+        
+        // Insertar o actualizar factura
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$invoices_table} WHERE invoice_number = %s",
+            $invoice_number
+        ));
+        
+        if ($existing) {
+            // Actualizar factura existente
+            $wpdb->update(
+                $invoices_table,
+                [
+                    'invoice_html' => $invoice_html,
+                    'invoice_file_path' => $invoice_path,
+                    'qr_code_data' => $qr_data
+                ],
+                ['id' => $existing],
+                ['%s', '%s', '%s'],
+                ['%d']
+            );
+        } else {
+            // Insertar nueva factura
+            $wpdb->insert(
+                $invoices_table,
+                [
+                    'invoice_number' => $invoice_number,
+                    'client_id' => $client_data->id,
+                    'client_name' => $client_data->name,
+                    'client_email' => $client_data->email,
+                    'plan_id' => $first_plan_id,
+                    'plan_name' => $all_plan_names,
+                    'subtotal' => $subtotal,
+                    'iva' => $iva,
+                    'total' => $total,
+                    'invoice_html' => $invoice_html,
+                    'invoice_file_path' => $invoice_path,
+                    'qr_code_data' => $qr_data,
+                    'status' => 'active'
+                ],
+                ['%s', '%d', '%s', '%s', '%d', '%s', '%f', '%f', '%f', '%s', '%s', '%s', '%s']
+            );
+        }
+        
+        error_log("FACTURA GUARDADA EN BD: {$invoice_number} - Planes: {$all_plan_names}");
+    }
+    
+    /**
+     * Generar factura/boleta en HTML para el cliente
+     */
+    private function generate_invoice_html($client_data, $plans_data) {
+        // Cargar librería de QR Code
+        require_once(get_template_directory() . '/lib/qrcode.php');
+        
+        // Número de factura único
+        $invoice_number = 'AT-' . date('Ymd') . '-' . str_pad($client_data->id ?? rand(1000, 9999), 4, '0', STR_PAD_LEFT);
+        $invoice_date = date('d/m/Y');
+        $site_url = get_site_url();
+        $logo_url = get_template_directory_uri() . '/assets/images/logo-automatiza-tech.png';
+        
+        // Colores de AutomatizaTech
+        $primary_color = '#1e3a8a';    // Azul oscuro
+    $secondary_color = '#06d6a0';   // Verde agua
+    $accent_color = '#f59e0b';      // Naranja
+    
+    // Soportar tanto un solo plan como múltiples planes
+    $plans_array = is_array($plans_data) ? $plans_data : array($plans_data);
+    
+    // Calcular IVA (19% en Chile) sumando todos los planes
+    $subtotal = 0;
+    foreach ($plans_array as $plan) {
+        $subtotal += floatval($plan->price_clp);
+    }
+    $iva = $subtotal * 0.19;
+    $total = $subtotal + $iva;        $html = "<!DOCTYPE html>
+<html lang='es'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Factura {$invoice_number}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            line-height: 1.4; 
+            color: #333;
+            background: #f5f5f5;
+            padding: 0;
+            margin: 0;
+        }
+        .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            page-break-after: avoid;
+        }
+        .invoice-header {
+            background: linear-gradient(135deg, {$primary_color}, {$secondary_color});
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+        }
+        .invoice-header img {
+            max-width: 110px !important;
+            margin-bottom: 8px !important;
+        }
+        .invoice-header h1 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .invoice-header p {
+            font-size: 1em;
+            opacity: 0.9;
+        }
+        .invoice-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 20px 30px;
+            background: #f9fafb;
+        }
+        .info-block {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid {$secondary_color};
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .info-block h3 {
+            color: {$primary_color};
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .info-block p {
+            margin: 8px 0;
+            font-size: 0.95em;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #555;
+            display: inline-block;
+            width: 120px;
+        }
+        .invoice-details {
+            padding: 25px 30px;
+        }
+        .invoice-details h2 {
+            color: {$primary_color};
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 3px solid {$secondary_color};
+            font-size: 1.3em;
+        }
+        .service-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .service-table thead {
+            background: {$primary_color};
+            color: white;
+        }
+        .service-table th {
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+        .service-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .service-table tbody tr:hover {
+            background: #f9fafb;
+        }
+        .service-description {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        .totals {
+            margin-top: 20px;
+            text-align: right;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+        .totals .row {
+            display: flex;
+            justify-content: flex-end;
+            margin: 8px 0;
+            font-size: 1em;
+        }
+        .totals .label {
+            margin-right: 40px;
+            color: #555;
+            font-weight: 600;
+            min-width: 150px;
+            text-align: right;
+        }
+        .totals .amount {
+            min-width: 150px;
+            text-align: right;
+            font-weight: bold;
+        }
+        .total-row {
+            border-top: 3px solid {$secondary_color};
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+        .total-row .label {
+            color: {$primary_color};
+            font-size: 1.3em;
+        }
+        .total-row .amount {
+            color: {$secondary_color};
+            font-size: 1.5em;
+        }
+        .invoice-footer {
+            background: linear-gradient(135deg, {$primary_color}, {$secondary_color});
+            color: white;
+            padding: 15px 30px;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+        .footer-column {
+            text-align: left;
+        }
+        .footer-column h3 {
+            font-size: 0.95em;
+            margin-bottom: 8px;
+            opacity: 0.95;
+        }
+        .footer-column p {
+            margin: 4px 0;
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+        .thank-you {
+            background: white;
+            color: {$primary_color};
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: 600;
+            text-align: center;
+        }
+        .features-list {
+            list-style: none;
+            padding: 8px 0;
+        }
+        .features-list li {
+            padding: 4px 0;
+            padding-left: 20px;
+            position: relative;
+            font-size: 0.9em;
+        }
+        .features-list li:before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: {$secondary_color};
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .qr-validation {
+            page-break-inside: avoid;
+            padding: 12px 30px !important;
+        }
+        .qr-validation h3 {
+            font-size: 0.95em !important;
+            margin-bottom: 6px !important;
+        }
+        .qr-validation p {
+            margin-bottom: 8px !important;
+            font-size: 0.85em !important;
+        }
+        .qr-validation img {
+            max-width: 120px !important;
+            height: auto !important;
+        }
+        @media print {
+            body { background: white; padding: 0; margin: 0; }
+            .invoice-container { box-shadow: none; border-radius: 0; }
+            .invoice-header { padding: 15px 25px; }
+            .invoice-info { padding: 12px 25px; gap: 8px; }
+            .info-block { padding: 8px 10px; }
+            .invoice-details { padding: 20px 25px; }
+            .invoice-footer { padding: 10px 25px; gap: 15px; }
+            .qr-validation { padding: 10px 25px !important; }
+            .footer-column p { font-size: 0.8em; }
+        }
+    </style>
+</head>
+<body>
+    <div class='invoice-container'>
+        <!-- Header -->
+        <div class='invoice-header'>
+            <img src='{$logo_url}' alt='AutomatizaTech Logo' style='max-width: 110px; height: auto; margin-bottom: 8px;'>
+            <h1>🧾 FACTURA</h1>
+            <p>AutomatizaTech - Soluciones Digitales Profesionales</p>
+        </div>
+        
+        <!-- Info de Factura y Cliente -->
+        <div class='invoice-info'>
+            <div class='info-block'>
+                <h3>📋 Datos de la Factura</h3>
+                <p><span class='info-label'>N° Factura:</span> <strong>{$invoice_number}</strong></p>
+                <p><span class='info-label'>Fecha:</span> {$invoice_date}</p>
+                <p><span class='info-label'>Válido hasta:</span> " . date('d/m/Y', strtotime('+30 days')) . "</p>
+            </div>
+            
+            <div class='info-block'>
+                <h3>👤 Datos del Cliente</h3>
+                <p><span class='info-label'>Nombre:</span> <strong>" . esc_html($client_data->name) . "</strong></p>
+                <p><span class='info-label'>Email:</span> " . esc_html($client_data->email) . "</p>
+                " . ($client_data->company ? "<p><span class='info-label'>Empresa:</span> " . esc_html($client_data->company) . "</p>" : "") . "
+                " . ($client_data->phone ? "<p><span class='info-label'>Teléfono:</span> " . esc_html($client_data->phone) . "</p>" : "") . "
+            </div>
+        </div>
+        
+        <!-- Detalles del Servicio -->
+        <div class='invoice-details'>
+            <h2>💼 Detalle del Servicio Contratado</h2>
+            
+            <table class='service-table'>
+                <thead>
+                    <tr>
+                        <th style='width: 60%'>Descripción</th>
+                        <th style='width: 20%; text-align: center;'>Cantidad</th>
+                        <th style='width: 20%; text-align: right;'>Precio</th>
+                    </tr>
+                </thead>
+                <tbody>";
+                
+                // Iterar sobre todos los planes
+                foreach ($plans_array as $plan) {
+                    $plan_price = floatval($plan->price_clp);
+                    $html .= "
+                    <tr>
+                        <td>
+                            <strong style='color: {$primary_color}; font-size: 1.1em;'>" . esc_html($plan->name) . "</strong>
+                            <div class='service-description'>" . esc_html($plan->description) . "</div>
+                            " . (!empty($plan->features) ? "
+                            <ul class='features-list'>
+                                " . implode('', array_map(function($feature) {
+                                    return "<li>" . esc_html(trim($feature)) . "</li>";
+                                }, explode("\n", $plan->features))) . "
+                            </ul>
+                            " : "") . "
+                        </td>
+                        <td style='text-align: center; font-size: 1.1em; font-weight: 600;'>1</td>
+                        <td style='text-align: right; font-size: 1.1em; font-weight: 600;'>$" . number_format($plan_price, 0, ',', '.') . "</td>
+                    </tr>";
+                }
+                
+                $html .= "
+                </tbody>
+            </table>
+            
+            <!-- Totales -->
+            <div class='totals'>
+                <div class='row'>
+                    <span class='label'>Subtotal:</span>
+                    <span class='amount'>$" . number_format($subtotal, 0, ',', '.') . "</span>
+                </div>
+                <div class='row'>
+                    <span class='label'>IVA (19%):</span>
+                    <span class='amount'>$" . number_format($iva, 0, ',', '.') . "</span>
+                </div>
+                <div class='row total-row'>
+                    <span class='label'>TOTAL:</span>
+                    <span class='amount'>$" . number_format($total, 0, ',', '.') . "</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Código QR de Validación -->
+        <div class='qr-validation' style='text-align: center; padding: 12px 30px; background: #f9fafb; border-top: 2px solid {$secondary_color};'>
+            <h3 style='color: {$primary_color}; margin-bottom: 6px;'>🔒 Validación de Factura</h3>
+            <p style='margin-bottom: 8px; color: #666;'>Escanea el QR para validar la autenticidad</p>";
+    
+    // Generar URL de validación para el QR (apunta directamente a la página de validación)
+    $validation_url = $site_url . '/validar-factura.php?id=' . urlencode($invoice_number);
+    
+    // Generar QR Code en base64 con la URL de validación
+    $qr_base64 = SimpleQRCode::generateBase64($validation_url, 120);
+    
+    $html .= "
+            <img src='{$qr_base64}' alt='Código QR de Validación' style='width: 120px; height: 120px; border: 2px solid {$secondary_color}; border-radius: 6px; padding: 6px; background: white;'>
+            <p style='margin-top: 4px; font-size: 0.7em; color: #888;'>
+                Código: <strong style='color: {$primary_color};'>{$invoice_number}</strong>
+            </p>
+        </div>
+        
+        <!-- Footer -->
+        <div class='invoice-footer'>
+            <div class='footer-column'>
+                <div class='thank-you'>
+                    ¡Gracias por confiar en AutomatizaTech! 🎉
+                </div>
+                <p style='margin-top: 8px; font-size: 0.75em; opacity: 0.85;'>
+                    Generada: " . date('d/m/Y H:i') . "
+                </p>
+            </div>
+            
+            <div class='footer-column'>
+                <h3>📞 Contacto</h3>
+                <p>📧 info@automatizatech.shop</p>
+                <p>📱 +56 9 6432 4169</p>
+            </div>
+            
+            <div class='footer-column'>
+                <h3>🌐 Web</h3>
+                <p>{$site_url}</p>
+                <p>Soluciones Digitales</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>";
+        
+        return $html;
+    }
+    
+    /**
+     * Guardar factura como archivo HTML
+     */
+    private function save_invoice_file($html_content, $client_data, $invoice_number) {
+        $upload_dir = wp_upload_dir();
+        $invoices_dir = $upload_dir['basedir'] . '/automatiza-tech-invoices/';
+        
+        // Crear directorio si no existe
+        if (!file_exists($invoices_dir)) {
+            wp_mkdir_p($invoices_dir);
+        }
+        
+        // Nombre del archivo
+        $filename = $invoice_number . '-' . sanitize_file_name($client_data->name) . '.html';
+        $filepath = $invoices_dir . $filename;
+        
+        // Guardar archivo
+        file_put_contents($filepath, $html_content);
+        
+        return $filepath;
+    }
+    
+    /**
+     * Generar y guardar factura en formato PDF usando FPDF
+     */
+    private function generate_and_save_pdf($client_data, $plans_data, $invoice_number) {
+        // DEBUG: Verificar cuántos planes se reciben
+        error_log("DEBUG generate_and_save_pdf: Recibiendo " . count($plans_data) . " planes");
+        if (is_array($plans_data)) {
+            foreach ($plans_data as $idx => $plan) {
+                error_log("DEBUG PDF: Plan " . ($idx + 1) . " - ID={$plan->id}, Nombre={$plan->name}");
+            }
+        }
+        
+        // Cargar generador de PDF con FPDF
+        require_once(get_template_directory() . '/lib/invoice-pdf-fpdf.php');
+        
+        $upload_dir = wp_upload_dir();
+        $invoices_dir = $upload_dir['basedir'] . '/automatiza-tech-invoices/';
+        
+        // Crear directorio si no existe
+        if (!file_exists($invoices_dir)) {
+            wp_mkdir_p($invoices_dir);
+        }
+        
+        try {
+            // Generar PDF con FPDF (100% PHP, sin dependencias externas)
+            // Pasar array de planes al generador
+            $pdf_generator = new InvoicePDFFPDF($client_data, $plans_data, $invoice_number);
+            
+            $pdf_path = $invoices_dir . $invoice_number . '-' . sanitize_file_name($client_data->name) . '.pdf';
+            
+            // Guardar PDF
+            $success = $pdf_generator->save($pdf_path);
+            
+            if ($success && file_exists($pdf_path) && filesize($pdf_path) > 0) {
+                error_log("PDF generado exitosamente con FPDF: {$pdf_path} (" . filesize($pdf_path) . " bytes)");
+                return $pdf_path;
+            } else {
+                error_log("Error: PDF generado pero archivo vacío o no existe");
+                return false;
+            }
+            
+        } catch (Exception $e) {
+            error_log("Error al generar PDF con FPDF: " . $e->getMessage());
+            return false;
+        }
     }
     
     /**
@@ -1162,6 +2219,85 @@ class AutomatizaTechContactForm {
     }
     
     /**
+     * Obtener lista de planes disponibles para el combo
+     */
+    public function get_available_plans() {
+        // Limpiar cualquier output previo
+        if (ob_get_level()) {
+            ob_clean();
+        }
+        
+        global $wpdb;
+        
+        // Obtener planes activos con precios definidos
+        $plans = $wpdb->get_results("
+            SELECT id, name, description, price_clp, price_usd
+            FROM {$wpdb->prefix}automatiza_services
+            WHERE status = 'active'
+            AND (price_clp > 0 OR price_usd > 0)
+            ORDER BY id ASC
+        ");
+        
+        if (!$plans) {
+            wp_send_json_error('No hay planes disponibles');
+            wp_die();
+        }
+        
+        wp_send_json_success($plans);
+        wp_die();
+    }
+    
+    /**
+     * Descargar factura en PDF
+     */
+    public function download_invoice() {
+        // Verificar que el usuario esté autenticado
+        if (!is_user_logged_in()) {
+            wp_die('No autorizado', 'Error', array('response' => 403));
+        }
+        
+        // Obtener número de factura
+        if (!isset($_GET['invoice_number']) || empty($_GET['invoice_number'])) {
+            wp_die('Número de factura no proporcionado', 'Error', array('response' => 400));
+        }
+        
+        $invoice_number = sanitize_text_field($_GET['invoice_number']);
+        
+        // Construir ruta del archivo PDF
+        $upload_dir = wp_upload_dir();
+        $invoices_dir = $upload_dir['basedir'] . '/automatiza-tech-invoices/';
+        
+        // Buscar el archivo PDF (puede tener el nombre del cliente al final)
+        $pdf_files = glob($invoices_dir . $invoice_number . '*.pdf');
+        
+        if (empty($pdf_files)) {
+            wp_die('Factura no encontrada: ' . esc_html($invoice_number), 'Error 404', array('response' => 404));
+        }
+        
+        $pdf_file = $pdf_files[0]; // Tomar el primero si hay varios
+        
+        if (!file_exists($pdf_file)) {
+            wp_die('Archivo de factura no existe', 'Error 404', array('response' => 404));
+        }
+        
+        // Limpiar cualquier output previo
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+        
+        // Configurar headers para descarga
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="' . basename($pdf_file) . '"');
+        header('Content-Length: ' . filesize($pdf_file));
+        header('Cache-Control: private, max-age=0, must-revalidate');
+        header('Pragma: public');
+        
+        // Enviar archivo
+        readfile($pdf_file);
+        exit;
+    }
+    
+    /**
      * Búsqueda asíncrona de contactos
      */
     public function search_contacts() {
@@ -1389,7 +2525,13 @@ class AutomatizaTechContactForm {
             $message .= "\nLos contactos con fallos permanecen en estado 'Nuevo'.";
         }
         
-        wp_send_json_success($message);
+        // Enviar respuesta con flag de recarga
+        wp_send_json_success(array(
+            'message' => $message,
+            'sent' => $sent_count,
+            'failed' => $failed_count,
+            'reload' => true  // Flag para recargar la página
+        ));
         wp_die();
     }
     
@@ -1728,9 +2870,15 @@ class AutomatizaTechContactForm {
                         
                         // Si el estado es "contratado", mover a tabla de clientes
                         if ($new_status === 'contracted') {
-                            $result = $this->move_to_clients($contact_id);
+                            // Soportar múltiples planes: "1,2,3" → mantener como string
+                            $plan_id = isset($_GET['plan_id']) ? sanitize_text_field($_GET['plan_id']) : null;
+                            $result = $this->move_to_clients($contact_id, $plan_id);
                             if ($result) {
-                                echo '<div class="notice notice-success"><p>🎉 ¡Contacto movido a Clientes exitosamente! El cliente ahora aparece en la sección de Clientes.</p></div>';
+                                if ($plan_id) {
+                                    echo '<div class="notice notice-success"><p>🎉 ¡Contacto movido a Clientes exitosamente! Se ha generado y enviado la factura al cliente por correo electrónico.</p></div>';
+                                } else {
+                                    echo '<div class="notice notice-success"><p>🎉 ¡Contacto movido a Clientes exitosamente! El cliente ahora aparece en la sección de Clientes.</p></div>';
+                                }
                             } else {
                                 echo '<div class="notice notice-error"><p>❌ Error al mover el contacto a Clientes.</p></div>';
                             }
@@ -2231,7 +3379,7 @@ class AutomatizaTechContactForm {
         }
         
         .status-selector option {
-            padding: 5px;
+            padding: 5px;                                                                     
         }
         
         /* Estados específicos con colores */
@@ -2338,55 +3486,8 @@ class AutomatizaTechContactForm {
                     }
                 }
                 
-                // Crear mensaje de confirmación detallado
-                var confirmMessage = 
-                    "🎉 ¿CONFIRMAR CAMBIO A CONTRATADO?\n\n" +
-                    "� Cliente: " + contactName + "\n" +
-                    "📧 Email: " + contactEmail + "\n\n" +
-                    "⚠️ ESTA ACCIÓN REALIZARÁ LOS SIGUIENTES CAMBIOS:\n\n" +
-                    "✅ Moverá el contacto a la tabla de CLIENTES\n" +
-                    "📧 Enviará correo automático a automatizatech.bots@gmail.com\n" +
-                    "🗑️ Eliminará el contacto de esta lista de contactos\n" +
-                    "📋 Registrará la conversión en los logs del sistema\n" +
-                    "📊 El cliente aparecerá en el panel de Clientes\n\n" +
-                    "⚠️ IMPORTANTE: Esta acción NO se puede deshacer\n\n" +
-                    "¿Confirmas que este cliente está oficialmente CONTRATADO?";
-                
-                // Mostrar confirmación
-                if (confirm(confirmMessage)) {
-                    // Cambiar el selector para mostrar procesamiento
-                    selectElement.disabled = true;
-                    selectElement.style.background = '#ffc107';
-                    selectElement.style.color = '#000';
-                    selectElement.style.fontWeight = 'bold';
-                    
-                    // Crear nueva opción de procesamiento
-                    var processingOption = document.createElement('option');
-                    processingOption.value = 'processing';
-                    processingOption.text = '⏳ Procesando... Por favor espera';
-                    processingOption.selected = true;
-                    selectElement.innerHTML = '';
-                    selectElement.appendChild(processingOption);
-                    
-                    // Mostrar mensaje de procesamiento en la fila
-                    var statusCell = selectElement.closest('td');
-                    var originalHTML = statusCell.innerHTML;
-                    
-                    // Agregar indicador visual
-                    var processingIndicator = document.createElement('div');
-                    processingIndicator.style.cssText = 'background: #fff3cd; padding: 5px; border-radius: 4px; font-size: 11px; margin-top: 5px; border: 1px solid #ffc107;';
-                    processingIndicator.innerHTML = '⏳ Moviendo a Clientes y enviando correo...';
-                    statusCell.appendChild(processingIndicator);
-                    
-                    // Proceder con el cambio después de un breve delay para mostrar el feedback
-                    setTimeout(function() {
-                        window.location.href = '<?php echo admin_url('admin.php?page=automatiza-tech-contacts&action=update_status'); ?>&id=' + id + '&status=' + status + '&_wpnonce=<?php echo wp_create_nonce('update_status'); ?>';
-                    }, 1000);
-                } else {
-                    // Usuario canceló - revertir el selector
-                    selectElement.value = selectElement.getAttribute('data-original-value') || 'new';
-                    return false;
-                }
+                // Mostrar modal de selección de plan
+                showPlanSelectionModal(id, contactName, contactEmail, selectElement);
             }
             // Para otros estados, proceder normalmente con confirmación simple
             else {
@@ -2411,6 +3512,207 @@ class AutomatizaTechContactForm {
                 }
             }
         }
+        
+        // Función para mostrar modal de selección de plan cuando se marca como contratado
+        window.showPlanSelectionModal = function(contactId, contactName, contactEmail, selectElement) {
+            // Crear modal con selector de planes
+            var modalHTML = `
+                <div id="plan-selection-modal" style="position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; animation: fadeIn 0.3s;">
+                    <div style="background: linear-gradient(135deg, #ffffff, #f0f9ff); padding: 0; border-radius: 20px; width: 90%; max-width: 600px; max-height: 90%; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideUp 0.3s;">
+                        <div style="background: linear-gradient(135deg, #1e3a8a, #06d6a0); color: white; padding: 30px; text-align: center; border-radius: 20px 20px 0 0;">
+                            <h2 style="margin: 0 0 10px 0; font-size: 2em;">💼 Plan Contratado</h2>
+                            <p style="margin: 0; opacity: 0.9; font-size: 1.1em;">Selecciona el plan que contrató el cliente</p>
+                        </div>
+                        
+                        <div style="padding: 30px;">
+                            <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 25px; border-left: 4px solid #06d6a0;">
+                                <h3 style="color: #1e3a8a; margin: 0 0 15px 0; font-size: 1.2em;">👤 Cliente</h3>
+                                <p style="margin: 5px 0; color: #555;"><strong>Nombre:</strong> ${contactName}</p>
+                                <p style="margin: 5px 0; color: #555;"><strong>Email:</strong> ${contactEmail}</p>
+                            </div>
+                            
+                            <div style="background: #fef3c7; padding: 20px; border-radius: 12px; margin-bottom: 25px; border-left: 4px solid #f59e0b;">
+                                <h3 style="color: #92400e; margin: 0 0 10px 0; font-size: 1.1em;">⚠️ Importante</h3>
+                                <p style="margin: 0; color: #78350f; font-size: 0.95em;">
+                                    Al confirmar, se generará una factura automática y se enviará por correo electrónico al cliente junto con un mensaje de bienvenida profesional.
+                                </p>
+                            </div>
+                            
+                            <div style="margin-bottom: 25px;">
+                                <label style="display: block; color: #1e3a8a; font-weight: 600; margin-bottom: 10px; font-size: 1.1em;">
+                                    📊 Selecciona los Planes (puedes seleccionar varios):
+                                </label>
+                                
+                                <!-- Instrucciones visuales para selección múltiple -->
+                                <div style="background: #fff3cd; border: 2px dashed #ffc107; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                                    <p style="margin: 0; font-size: 0.95em; color: #856404; line-height: 1.6;">
+                                        <strong>💡 Para seleccionar MÚLTIPLES planes:</strong><br>
+                                        • <strong>Windows:</strong> Mantén presionado <kbd style="background: white; padding: 2px 6px; border-radius: 3px; border: 1px solid #ccc;">CTRL</kbd> y haz clic en cada plan<br>
+                                        • <strong>Mac:</strong> Mantén presionado <kbd style="background: white; padding: 2px 6px; border-radius: 3px; border: 1px solid #ccc;">⌘ CMD</kbd> y haz clic en cada plan<br>
+                                        • Los planes seleccionados quedarán <span style="background: #0096C7; color: white; padding: 2px 6px; border-radius: 3px;">resaltados en azul</span>
+                                    </p>
+                                </div>
+                                
+                                <select id="plan-selector" multiple size="5" style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 1em; background: white; color: #333; cursor: pointer; transition: all 0.3s;">
+                                    <?php
+                                    global $wpdb;
+                                    $plans = $wpdb->get_results("SELECT id, name, price_clp, price_usd, description FROM {$wpdb->prefix}automatiza_services WHERE status = 'active' AND (price_clp > 0 OR price_usd > 0) ORDER BY id ASC");
+                                    foreach ($plans as $plan) {
+                                        echo '<option value="' . $plan->id . '" data-price-clp="' . $plan->price_clp . '" data-price-usd="' . $plan->price_usd . '">' . 
+                                             esc_html($plan->name) . ' - $' . number_format($plan->price_usd, 2) . ' USD / $' . number_format($plan->price_clp, 0, ',', '.') . ' CLP</option>';
+                                    }
+                                    ?>
+                                </select>
+                                
+                                <!-- Contador de planes seleccionados -->
+                                <div id="selected-count" style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 6px; text-align: center; font-weight: 600; color: #1976d2; display: none;">
+                                    <span id="count-number">0</span> plan(es) seleccionado(s)
+                                </div>
+                            </div>
+                            
+                            <div id="plan-preview" style="display: none; background: linear-gradient(135deg, #f0f9ff, #e0f2fe); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 2px solid #06d6a0;">
+                                <h4 style="color: #1e3a8a; margin: 0 0 10px 0;">Plan seleccionado:</h4>
+                                <p id="plan-name-preview" style="font-size: 1.3em; color: #06d6a0; font-weight: bold; margin: 5px 0;"></p>
+                                <p id="plan-price-preview" style="font-size: 1.5em; color: #1e3a8a; font-weight: bold; margin: 5px 0;"></p>
+                            </div>
+                            
+                            <div style="display: flex; gap: 15px; margin-top: 30px;">
+                                <button onclick="confirmPlanSelection(${contactId}, '${contactName}', '${contactEmail}')" 
+                                        style="flex: 1; background: linear-gradient(135deg, #06d6a0, #05c29a); color: white; border: none; padding: 15px 30px; border-radius: 25px; font-size: 1.1em; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(6, 214, 160, 0.3); transition: all 0.3s;">
+                                    ✅ Confirmar Contrato
+                                </button>
+                                <button onclick="cancelPlanSelection()" 
+                                        style="flex: 1; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 15px 30px; border-radius: 25px; font-size: 1.1em; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); transition: all 0.3s;">
+                                    ❌ Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <style>
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    @keyframes slideUp {
+                        from { transform: translateY(50px); opacity: 0; }
+                        to { transform: translateY(0); opacity: 1; }
+                    }
+                    #plan-selector:focus {
+                        outline: none;
+                        border-color: #06d6a0;
+                        box-shadow: 0 0 0 3px rgba(6, 214, 160, 0.1);
+                    }
+                    button:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+                    }
+                </style>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Agregar evento al selector de planes (soporte múltiple)
+            document.getElementById('plan-selector').addEventListener('change', function() {
+                var preview = document.getElementById('plan-preview');
+                var selectedOptions = Array.from(this.selectedOptions);
+                var countDiv = document.getElementById('selected-count');
+                var countNumber = document.getElementById('count-number');
+                
+                // Actualizar contador de planes seleccionados
+                if (selectedOptions.length > 0) {
+                    countDiv.style.display = 'block';
+                    countNumber.textContent = selectedOptions.length;
+                } else {
+                    countDiv.style.display = 'none';
+                }
+                
+                if (selectedOptions.length > 0) {
+                    var planNames = [];
+                    var totalUsd = 0;
+                    var totalClp = 0;
+                    
+                    selectedOptions.forEach(function(option) {
+                        var planName = option.textContent.split(' - ')[0];
+                        var priceUsd = parseFloat(option.getAttribute('data-price-usd'));
+                        var priceClp = parseInt(option.getAttribute('data-price-clp'));
+                        
+                        planNames.push(planName);
+                        totalUsd += priceUsd;
+                        totalClp += priceClp;
+                    });
+                    
+                    var planText = selectedOptions.length === 1 
+                        ? planNames[0] 
+                        : planNames.join(' + ');
+                    
+                    document.getElementById('plan-name-preview').textContent = planText;
+                    document.getElementById('plan-price-preview').textContent = 
+                        '$' + totalUsd.toFixed(2) + ' USD / $' + totalClp.toLocaleString('es-CL') + ' CLP';
+                    preview.style.display = 'block';
+                } else {
+                    preview.style.display = 'none';
+                }
+            });
+            
+            // Guardar referencia al selector original para poder revertir
+            window.originalSelectElement = selectElement;
+        };
+        
+        // Función para confirmar la selección del plan (soporte múltiple)
+        window.confirmPlanSelection = function(contactId, contactName, contactEmail) {
+            var planSelector = document.getElementById('plan-selector');
+            var selectedOptions = Array.from(planSelector.selectedOptions);
+            var planIds = selectedOptions.map(opt => opt.value);
+            
+            if (planIds.length === 0) {
+                alert('❌ Por favor selecciona al menos un plan antes de continuar.');
+                return;
+            }
+            
+            // Convertir array de IDs a string separado por comas
+            var planId = planIds.join(',');
+            
+            // Cerrar modal
+            document.getElementById('plan-selection-modal').remove();
+            
+            // Mostrar indicador de procesamiento
+            if (window.originalSelectElement) {
+                window.originalSelectElement.disabled = true;
+                window.originalSelectElement.style.background = '#ffc107';
+                window.originalSelectElement.style.color = '#000';
+                window.originalSelectElement.style.fontWeight = 'bold';
+                
+                var processingOption = document.createElement('option');
+                processingOption.value = 'processing';
+                processingOption.text = '⏳ Procesando... Por favor espera';
+                processingOption.selected = true;
+                window.originalSelectElement.innerHTML = '';
+                window.originalSelectElement.appendChild(processingOption);
+                
+                var statusCell = window.originalSelectElement.closest('td');
+                var processingIndicator = document.createElement('div');
+                processingIndicator.style.cssText = 'background: #fff3cd; padding: 10px; border-radius: 8px; font-size: 12px; margin-top: 8px; border: 1px solid #ffc107; text-align: center;';
+                processingIndicator.innerHTML = '⏳ Moviendo a Clientes, generando factura y enviando correo...';
+                statusCell.appendChild(processingIndicator);
+            }
+            
+            // Redirigir con el plan_id
+            setTimeout(function() {
+                window.location.href = '<?php echo admin_url('admin.php?page=automatiza-tech-contacts&action=update_status'); ?>&id=' + contactId + '&status=contracted&plan_id=' + planId + '&_wpnonce=<?php echo wp_create_nonce('update_status'); ?>';
+            }, 1000);
+        };
+        
+        // Función para cancelar la selección
+        window.cancelPlanSelection = function() {
+            document.getElementById('plan-selection-modal').remove();
+            
+            // Revertir el selector al valor original
+            if (window.originalSelectElement) {
+                window.originalSelectElement.value = window.originalSelectElement.getAttribute('data-original-value') || 'new';
+            }
+        };
         
         // Nueva función para mostrar detalles del contacto en modal mejorado (GLOBAL)
         window.showContactDetails = function(id) {
@@ -3056,7 +4358,14 @@ class AutomatizaTechContactForm {
                         btn.innerHTML = originalText;
                         
                         if (response.success) {
-                            alert('✅ ' + response.data);
+                            // Mostrar mensaje
+                            var message = typeof response.data === 'object' ? response.data.message : response.data;
+                            alert('✅ ' + message);
+                            
+                            // Recargar página si el servidor lo indica
+                            if (typeof response.data === 'object' && response.data.reload === true) {
+                                location.reload();
+                            }
                         } else {
                             alert('❌ Error: ' + response.data);
                         }
@@ -3317,13 +4626,14 @@ class AutomatizaTechContactForm {
                         <?php else: ?>
                         <th style="text-align: center; width: 70px;">🚫 Editar</th>
                         <?php endif; ?>
+                        <th style="text-align: center; width: 80px;">📄 Factura</th>
                         <th style="text-align: center; width: 70px;">🗑️ Eliminar</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($clients)): ?>
                         <tr>
-                            <td colspan="13" style="text-align: center; padding: 20px;">
+                            <td colspan="14" style="text-align: center; padding: 20px;">
                                 <div style="color: #666;">
                                     <span class="dashicons dashicons-businessman" style="font-size: 48px; margin-bottom: 10px;"></span>
                                     <p><strong>No hay clientes contratados aún.</strong></p>
@@ -3408,6 +4718,47 @@ class AutomatizaTechContactForm {
                                     <span title="Sin permisos">🚫</span>
                                 </td>
                                 <?php endif; ?>
+                                
+                                <!-- Descargar Factura -->
+                                <td style="text-align: center;">
+                                    <?php
+                                    // Verificar si existe factura para este cliente
+                                    $invoice_number = 'AT-' . date('Ymd', strtotime($client->contracted_at)) . '-' . str_pad($client->id, 4, '0', STR_PAD_LEFT);
+                                    $invoices_table = $wpdb->prefix . 'automatiza_tech_invoices';
+                                    $invoice = $wpdb->get_row($wpdb->prepare(
+                                        "SELECT id, invoice_number FROM {$invoices_table} WHERE invoice_number = %s AND status = 'active'",
+                                        $invoice_number
+                                    ));
+                                    
+                                    if ($invoice): ?>
+                                        <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+                                            <!-- Botón Ver Validación -->
+                                            <a href="<?php echo site_url('/validar-factura.php?id=' . urlencode($invoice->invoice_number)); ?>" 
+                                               target="_blank"
+                                               class="button button-small view-invoice-btn"
+                                               style="background: linear-gradient(135deg, #1e3a8a, #1e40af); color: white; border: none; padding: 6px 10px; border-radius: 15px; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-block; font-weight: 600; box-shadow: 0 2px 5px rgba(30,58,138,0.3); transition: all 0.3s ease;"
+                                               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(30,58,138,0.4)';"
+                                               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(30,58,138,0.3)';"
+                                               title="Ver validación de factura <?php echo esc_attr($invoice->invoice_number); ?>">
+                                               👁️ Ver
+                                            </a>
+                                            
+                                            <!-- Botón Descargar -->
+                                            <a href="<?php echo admin_url('admin-ajax.php?action=download_invoice&invoice_number=' . urlencode($invoice->invoice_number)); ?>" target="_blank" 
+                                               class="button button-small download-invoice-btn"
+                                               style="background: linear-gradient(135deg, #46b450, #00a32a); color: white; border: none; padding: 6px 10px; border-radius: 15px; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-block; font-weight: 600; box-shadow: 0 2px 5px rgba(70,180,80,0.3); transition: all 0.3s ease;"
+                                               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(70,180,80,0.4)';"
+                                               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(70,180,80,0.3)';"
+                                               title="Descargar factura <?php echo esc_attr($invoice->invoice_number); ?>">
+                                               � Descargar
+                                            </a>
+                                        </div>
+                                    <?php else: ?>
+                                        <span style="color: #999; font-size: 12px; font-style: italic;" title="No hay factura generada para este cliente">
+                                            Sin factura
+                                        </span>
+                                    <?php endif; ?>
+                                </td>
                                 
                                 <!-- Eliminar -->
                                 <td style="text-align: center;">

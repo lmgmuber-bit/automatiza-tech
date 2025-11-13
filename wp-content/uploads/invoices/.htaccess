@@ -1,0 +1,17 @@
+
+```apache
+# Proteger facturas
+Order Deny,Allow
+Deny from all
+<FilesMatch "\.(pdf)$">
+    Allow from all
+</FilesMatch>
+
+# Prevenir listado de directorio
+Options -Indexes
+
+# Solo permitir acceso desde dominio propio
+SetEnvIf Referer "^https://automatizatech.shop" local_ref=1
+Order Allow,Deny
+Allow from env=local_ref
+```

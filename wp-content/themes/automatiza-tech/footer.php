@@ -1,4 +1,4 @@
-﻿    <footer id="colophon" class="site-footer">
+    <footer id="colophon" class="site-footer">
         <div class="container">
             <div class="footer-content">
                 <!-- Company Info -->

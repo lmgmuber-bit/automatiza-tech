@@ -370,6 +370,21 @@ require_once get_template_directory() . '/inc/smtp-config.php';
 require_once get_template_directory() . '/inc/contact-shortcode.php';
 
 /**
+ * Incluir configuración de datos de facturación
+ */
+require_once get_template_directory() . '/inc/invoice-settings.php';
+
+/**
+ * Incluir actualizador automático de precios CLP
+ */
+require_once get_template_directory() . '/inc/currency-updater.php';
+
+/**
+ * Incluir panel de administración de precios CLP
+ */
+require_once get_template_directory() . '/inc/currency-admin.php';
+
+/**
  * Incluir sistema de gestión de servicios
  */
 require_once get_template_directory() . '/inc/services-manager.php';

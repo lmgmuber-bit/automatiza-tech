@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Funciones para mostrar servicios en el frontend
  */

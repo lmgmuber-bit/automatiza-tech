@@ -1,0 +1,135 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║  ✅ CORRECCIONES APLICADAS: contact-form.php                                 ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+📝 CAMBIOS REALIZADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣  HOOK AJAX AGREGADO (Línea ~38)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ✅ add_action('wp_ajax_get_available_plans', array($this, 'get_available_plans'));
+   
+   Este hook registra el método para que WordPress lo reconozca como action AJAX válido.
+
+
+2️⃣  MÉTODO get_available_plans() CREADO (Línea ~2073)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   
+   Query corregida:
+   ✅ SELECT id, name, description, price_clp, price_usd
+   ✅ WHERE status = 'active'
+   ✅ AND (price_clp > 0 OR price_usd > 0)
+   ✅ ORDER BY id ASC
+   
+   ❌ Eliminados campos inexistentes:
+      - price (no existe, ahora usa price_clp y price_usd)
+      - display_order (no existe, ahora usa id)
+      - category = 'pricing' (no aplica en esta tabla)
+
+
+3️⃣  QUERY EN MODAL HTML CORREGIDA (Línea ~3341)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   
+   Antes (INCORRECTA):
+   ❌ SELECT id, name, price, description
+   ❌ WHERE category = 'pricing' AND status = 'active'
+   ❌ ORDER BY display_order ASC
+   
+   Después (CORRECTA):
+   ✅ SELECT id, name, price_clp, price_usd, description
+   ✅ WHERE status = 'active' AND (price_clp > 0 OR price_usd > 0)
+   ✅ ORDER BY id ASC
+   
+   
+4️⃣  ATRIBUTOS DATA EN OPTIONS CORREGIDOS (Línea ~3343)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   
+   Antes:
+   ❌ data-price="<?php echo $plan->price; ?>"
+   ❌ Solo mostraba precio en una moneda
+   
+   Después:
+   ✅ data-price-clp="<?php echo $plan->price_clp; ?>"
+   ✅ data-price-usd="<?php echo $plan->price_usd; ?>"
+   ✅ Muestra ambas monedas en el texto de la opción
+
+
+5️⃣  JAVASCRIPT DE PREVIEW ACTUALIZADO (Línea ~3394)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   
+   Antes:
+   ❌ getAttribute('data-price')
+   ❌ Solo mostraba un precio
+   
+   Después:
+   ✅ getAttribute('data-price-usd')
+   ✅ getAttribute('data-price-clp')
+   ✅ Muestra: "$99.00 USD / $79.200 CLP"
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  📊 RESUMEN DE CAMPOS CORREGIDOS                                             ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Campo Incorrecto       →  Campo Correcto        Estado
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+price                  →  price_clp, price_usd   ✅ Corregido
+display_order          →  id                     ✅ Eliminado
+category = 'pricing'   →  (removido)             ✅ Eliminado
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  🔍 VALIDACIÓN DE ESTRUCTURA DE TABLA                                        ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Tabla: wp_automatiza_services
+
+Campos existentes verificados:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ id              - INT (Primary Key)
+✅ name            - VARCHAR
+✅ description     - TEXT
+✅ status          - VARCHAR ('active' / 'inactive')
+✅ price_clp       - DECIMAL (Pesos Chilenos)
+✅ price_usd       - DECIMAL (Dólares)
+
+Campos que NO existen (ahora corregidos):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ price           - No existe (se usaban price_clp y price_usd)
+❌ display_order   - No existe (ahora se ordena por id)
+❌ category        - No existe en esta tabla
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  🎯 PRÓXIMOS PASOS                                                           ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+1. Sube el archivo corregido a producción:
+   📁 wp-content/themes/automatiza-tech/inc/contact-form.php
+
+2. Ejecuta el SQL para asignar precios a planes 4, 5, 6:
+   📄 fix-planes-sin-precio.sql
+
+3. Prueba el combo en el panel CRM:
+   🌐 https://automatizatech.shop/wp-admin/admin.php?page=automatiza-tech-contactos
+
+4. Verifica la respuesta AJAX:
+   🔧 DevTools → Console → Ejecuta el script de prueba
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  ✨ ESTADO FINAL                                                             ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+✅ Método get_available_plans() creado y registrado
+✅ Query SQL corregida (sin campos inexistentes)
+✅ Multi-moneda implementado (CLP/USD)
+✅ JavaScript actualizado para ambas monedas
+✅ Sin errores de sintaxis PHP
+✅ Listo para despliegue en producción
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 ARCHIVO LISTO PARA SUBIR A PRODUCCIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

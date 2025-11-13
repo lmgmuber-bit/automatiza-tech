@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Template principal de Automatiza Tech
  *

@@ -1,0 +1,75 @@
+# WordPress Core
+wp-admin/
+wp-includes/
+wp-content/index.php
+wp-content/languages/
+wp-content/plugins/index.php
+wp-content/themes/index.php
+
+# WordPress Cache
+wp-content/cache/
+wp-content/object-cache.php
+
+# Backups - CRÍTICO: Archivos muy grandes
+wp-content/ai1wm-backups/
+*.wpress
+sql/*.sql
+*.sql
+
+# Uploads - Comentado por defecto, descomenta si no quieres versionar
+# wp-content/uploads/
+
+# Configuration files - Información sensible
+wp-config.php
+wp-config-local.php
+wp-config-*.php
+.htaccess
+
+# Logs
+*.log
+debug.log
+wp-content/debug.log
+error_log
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Editor files
+*.sublime-project
+*.sublime-workspace
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# Node modules (si usas npm/node)
+node_modules/
+package-lock.json
+
+# Composer (si usas composer)
+vendor/
+
+# Scripts temporales de desarrollo
+test-*.php
+debug-*.php
+check-*.php
+clean-*.php
+fix-*.php
+verify*.php
+init-*.php
+install-*.php
+setup-*.php
+full-diagnosis.php

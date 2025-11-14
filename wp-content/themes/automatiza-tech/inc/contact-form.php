@@ -811,6 +811,84 @@ class AutomatizaTechContactForm {
     }
     
     /**
+     * Generar cotización cuando un contacto pasa a estado "interested"
+     * Similar a move_to_clients pero:
+     * - NO mueve a tabla de clientes
+     * - Genera cotización (no factura)
+     * - Número formato: C-AT-YYYYMMDD-XXXX
+     * - Validez: 3 días
+     */
+    private function move_to_interested($contact_id, $plan_id = null) {
+        global $wpdb;
+        
+        // Obtener datos del contacto
+        $contact = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->table_name} WHERE id = %d", $contact_id));
+        
+        if (!$contact) {
+            return false;
+        }
+        
+        // Manejar múltiples planes (si vienen separados por comas)
+        $plan_ids = array();
+        $plans_data = array();
+        $quotation_value = 0.00;
+        $plan_types = array();
+        
+        // DEBUG: Log del plan_id recibido
+        error_log("DEBUG move_to_interested: plan_id recibido = " . var_export($plan_id, true));
+        
+        if ($plan_id) {
+            // Si vienen múltiples IDs separados por comas
+            if (strpos($plan_id, ',') !== false) {
+                $plan_ids = array_map('intval', explode(',', $plan_id));
+                error_log("DEBUG: Múltiples planes detectados: " . implode(', ', $plan_ids));
+            } else {
+                $plan_ids = array(intval($plan_id));
+                error_log("DEBUG: Un solo plan detectado: " . $plan_id);
+            }
+            
+            // Obtener datos de todos los planes
+            foreach ($plan_ids as $pid) {
+                $plan = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM {$wpdb->prefix}automatiza_services WHERE id = %d",
+                    $pid
+                ));
+                if ($plan) {
+                    $plans_data[] = $plan;
+                    $quotation_value += floatval($plan->price_clp);
+                    $plan_types[] = $plan->name;
+                    error_log("DEBUG: Plan agregado: ID={$pid}, Nombre={$plan->name}, Precio={$plan->price_clp}");
+                }
+            }
+            
+            error_log("DEBUG: Total de planes procesados: " . count($plans_data));
+        }
+        
+        if (empty($plans_data)) {
+            error_log("ERROR move_to_interested: No se encontraron planes válidos");
+            return false;
+        }
+        
+        // Log de la generación de cotización
+        $plans_log = implode(' + ', $plan_types);
+        error_log("COTIZACION GENERADA: {$contact->name} ({$contact->email}) - Plan(es): {$plans_log}");
+        
+        // Generar y enviar cotización
+        $this->send_quotation_email($contact, $plans_data);
+        
+        // Actualizar estado a "interested" (el contacto NO se mueve a clientes)
+        $wpdb->update(
+            $this->table_name,
+            array('status' => 'interested'),
+            array('id' => $contact_id),
+            array('%s'),
+            array('%d')
+        );
+        
+        return true;
+    }
+    
+    /**
      * Enviar correo de notificación cuando un cliente es contratado
      */
     private function send_contracted_client_email($client_data, $plans_data = null) {
@@ -976,9 +1054,9 @@ class AutomatizaTechContactForm {
         // Guardar factura en base de datos
         $this->save_invoice_to_database($client_data, $plans_data, $invoice_number, $invoice_html, $invoice_pdf_path);
         
-        // Colores de AutomatizaTech
-        $primary_color = '#1e3a8a';
-        $secondary_color = '#06d6a0';
+        // Colores de AutomatizaTech (azul-turquesa del logo)
+        $primary_color = '#0047AB';
+        $secondary_color = '#00CED1';
         $logo_url = get_template_directory_uri() . '/assets/images/logo-automatiza-tech.png';
         
         // Email del cliente
@@ -1416,6 +1494,581 @@ class AutomatizaTechContactForm {
         
         error_log("FACTURA GUARDADA EN BD: {$invoice_number} - Planes: {$all_plan_names}");
     }
+    
+    /**
+     * ========================================================================
+     * FUNCIONES PARA COTIZACIONES (ESTADO "INTERESTED")
+     * ========================================================================
+     */
+    
+    /**
+     * Enviar cotización al contacto interesado
+     */
+    private function send_quotation_email($contact_data, $plans_data) {
+        // Configurar SMTP
+        add_action('phpmailer_init', array($this, 'configure_smtp'));
+        
+        // Generar número de cotización: C-AT-YYYYMMDD-XXXX
+        $quotation_number = $this->generate_quotation_number();
+        
+        // Fecha de validez (3 días desde ahora)
+        $valid_until = date('Y-m-d H:i:s', strtotime('+3 days'));
+        
+        // Generar PDF de cotización
+        $quotation_pdf_path = $this->generate_and_save_quotation_pdf($contact_data, $plans_data, $quotation_number, $valid_until);
+        
+        // Generar HTML de cotización
+        $quotation_html = $this->generate_quotation_html($contact_data, $plans_data, $quotation_number, $valid_until);
+        
+        // Guardar cotización en BD
+        $this->save_quotation_to_database($contact_data, $plans_data, $quotation_number, $quotation_html, $quotation_pdf_path, $valid_until);
+        
+        // Enviar email al contacto con la cotización
+        $this->send_quotation_email_to_contact($contact_data, $plans_data, $quotation_number, $quotation_pdf_path, $valid_until);
+        
+        // Enviar notificación interna
+        $this->send_quotation_notification_internal($contact_data, $plans_data, $quotation_number);
+    }
+    
+    /**
+     * Generar número de cotización formato: C-AT-YYYYMMDD-XXXX
+     */
+    private function generate_quotation_number() {
+        global $wpdb;
+        $quotations_table = $wpdb->prefix . 'automatiza_tech_quotations';
+        
+        // Obtener último número del día
+        $today = date('Ymd');
+        $prefix = "C-AT-{$today}-";
+        
+        $last_number = $wpdb->get_var($wpdb->prepare(
+            "SELECT quotation_number FROM {$quotations_table} 
+             WHERE quotation_number LIKE %s 
+             ORDER BY id DESC LIMIT 1",
+            $prefix . '%'
+        ));
+        
+        if ($last_number) {
+            // Extraer el número secuencial
+            $parts = explode('-', $last_number);
+            $seq = intval(end($parts)) + 1;
+        } else {
+            $seq = 1;
+        }
+        
+        return $prefix . str_pad($seq, 4, '0', STR_PAD_LEFT);
+    }
+    
+    /**
+     * Generar PDF de cotización usando QuotationPDFFPDF
+     */
+    private function generate_and_save_quotation_pdf($contact_data, $plans_data, $quotation_number, $valid_until) {
+        error_log("DEBUG generate_and_save_quotation_pdf: Recibiendo " . count($plans_data) . " planes");
+        if (is_array($plans_data)) {
+            foreach ($plans_data as $idx => $plan) {
+                error_log("DEBUG Quotation PDF: Plan " . ($idx + 1) . " - ID={$plan->id}, Nombre={$plan->name}");
+            }
+        }
+        
+        // Cargar clase QuotationPDF
+        require_once(get_template_directory() . '/lib/quotation-pdf-fpdf.php');
+        
+        try {
+            // Crear PDF
+            $pdf = new QuotationPDFFPDF($contact_data, $plans_data, $quotation_number, $valid_until);
+            $pdf->build();
+            
+            // Ruta de guardado
+            $upload_dir = wp_upload_dir();
+            $quotations_dir = $upload_dir['basedir'] . '/automatiza-tech-quotations/';
+            
+            if (!file_exists($quotations_dir)) {
+                wp_mkdir_p($quotations_dir);
+            }
+            
+            $filename = $quotation_number . '-' . sanitize_file_name($contact_data->name) . '.pdf';
+            $filepath = $quotations_dir . $filename;
+            
+            // Guardar PDF
+            $result = $pdf->save_to_file($filepath);
+            
+            if ($result && file_exists($filepath)) {
+                $filesize = filesize($filepath);
+                error_log("PDF COTIZACION generado exitosamente con FPDF: {$filepath} ({$filesize} bytes)");
+                return $filepath;
+            } else {
+                error_log("ERROR: No se pudo guardar PDF de cotización en: {$filepath}");
+                return null;
+            }
+            
+        } catch (Exception $e) {
+            error_log("ERROR generando PDF de cotización: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Generar HTML de cotización
+     */
+    private function generate_quotation_html($contact_data, $plans_data, $quotation_number, $valid_until) {
+        $site_url = get_site_url();
+        $logo_url = get_template_directory_uri() . '/assets/images/logo-automatiza-tech.png';
+        
+        // Calcular totales
+        $subtotal = 0;
+        $plans_html = '';
+        $plans_names = array();
+        
+        foreach ($plans_data as $index => $plan) {
+            $plan_num = $index + 1;
+            $price = floatval($plan->price_clp);
+            $subtotal += $price;
+            $plans_names[] = $plan->name;
+            
+            $plans_html .= "
+            <tr>
+                <td style='padding: 10px; border: 1px solid #e3e6f0; text-align: center;'>{$plan_num}</td>
+                <td style='padding: 10px; border: 1px solid #e3e6f0;'>" . esc_html($plan->name) . "</td>
+                <td style='padding: 10px; border: 1px solid #e3e6f0; text-align: center;'>1</td>
+                <td style='padding: 10px; border: 1px solid #e3e6f0; text-align: right;'>$" . number_format($price, 0, ',', '.') . "</td>
+            </tr>";
+        }
+        
+        $fecha_emision = date('d-m-Y H:i');
+        $fecha_validez = date('d-m-Y', strtotime($valid_until));
+        
+        $html = "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <title>Cotización {$quotation_number}</title>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; }
+                .header { background: linear-gradient(135deg, #1e3a8a, #06d6a0); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .header h1 { margin: 0; font-size: 28px; }
+                .content { background: #fff; padding: 30px; border: 1px solid #e3e6f0; }
+                .quotation-info { background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center; }
+                .contact-info { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                th { background: #00bfb3; color: white; padding: 12px; text-align: left; }
+                td { padding: 10px; border: 1px solid #e3e6f0; }
+                .total-row { background: #e8f5f1; font-weight: bold; font-size: 18px; }
+                .conditions { background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; }
+                .footer { text-align: center; padding: 20px; color: #6c757d; font-size: 12px; border-top: 2px solid #e3e6f0; }
+            </style>
+        </head>
+        <body>
+            <div class='header'>
+                <img src='{$logo_url}' alt='AutomatizaTech' style='max-width: 150px; margin-bottom: 10px;'>
+                <h1>🎯 COTIZACIÓN</h1>
+                <p>Nro: {$quotation_number}</p>
+            </div>
+            
+            <div class='content'>
+                <div class='quotation-info'>
+                    <p><strong>Fecha de emisión:</strong> {$fecha_emision}</p>
+                    <p style='color: #ff9800; font-weight: bold; font-size: 16px;'>⏰ Válida hasta: {$fecha_validez} (3 días)</p>
+                </div>
+                
+                <div class='contact-info'>
+                    <h3>Datos del Contacto</h3>
+                    <p><strong>Nombre:</strong> " . esc_html($contact_data->name) . "</p>
+                    <p><strong>Email:</strong> " . esc_html($contact_data->email) . "</p>
+                    " . (!empty($contact_data->company) ? "<p><strong>Empresa:</strong> " . esc_html($contact_data->company) . "</p>" : "") . "
+                    " . (!empty($contact_data->phone) ? "<p><strong>Teléfono:</strong> " . esc_html($contact_data->phone) . "</p>" : "") . "
+                </div>
+                
+                <h3>Servicios Cotizados</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style='width: 50px;'>#</th>
+                            <th>Descripción</th>
+                            <th style='width: 100px;'>Cantidad</th>
+                            <th style='width: 150px;'>Precio CLP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {$plans_html}
+                        <tr class='total-row'>
+                            <td colspan='3' style='text-align: right; padding: 15px;'>TOTAL COTIZADO:</td>
+                            <td style='text-align: right; padding: 15px;'>$" . number_format($subtotal, 0, ',', '.') . "</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <p style='font-size: 12px; color: #6c757d; font-style: italic;'>* Los precios no incluyen IVA. Al contratar se emitirá factura con impuestos vigentes.</p>
+                
+                <div class='conditions'>
+                    <h3 style='color: #ff9800;'>📋 Condiciones de la Cotización</h3>
+                    <ul>
+                        <li>Esta cotización tiene una validez de <strong>3 días calendario</strong> desde su emisión.</li>
+                        <li>Los precios están expresados en pesos chilenos (CLP) y no incluyen IVA.</li>
+                        <li>Al aceptar esta cotización y contratar el servicio, se emitirá factura tributaria.</li>
+                        <li>Los plazos de implementación se definirán en conjunto al confirmar el servicio.</li>
+                        <li>Para confirmar su interés, responda a este correo o contáctenos directamente.</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class='footer'>
+                <p><strong>IMPORTANTE:</strong> Este documento es una COTIZACIÓN y NO tiene efectos tributarios.</p>
+                <p>AutomatizaTech - Transformación Digital</p>
+                <p>{$site_url}</p>
+            </div>
+        </body>
+        </html>";
+        
+        return $html;
+    }
+    
+    /**
+     * Guardar cotización en base de datos
+     */
+    private function save_quotation_to_database($contact_data, $plans_data, $quotation_number, $quotation_html, $quotation_path, $valid_until) {
+        global $wpdb;
+        
+        $quotations_table = $wpdb->prefix . 'automatiza_tech_quotations';
+        
+        // Calcular totales
+        $subtotal = 0;
+        $plan_names = array();
+        $first_plan_id = null;
+        
+        foreach ($plans_data as $plan) {
+            $subtotal += floatval($plan->price_clp);
+            $plan_names[] = $plan->name;
+            if ($first_plan_id === null && isset($plan->id)) {
+                $first_plan_id = $plan->id;
+            }
+        }
+        
+        $iva = $subtotal * 0.19;
+        $total = $subtotal + $iva;
+        
+        $all_plan_names = implode(' + ', $plan_names);
+        
+        // Datos para el QR
+        $qr_data = "COTIZACION: {$quotation_number}\nContacto: {$contact_data->name}\nPlan(es): {$all_plan_names}\nTotal: $" . number_format($total, 0, ',', '.');
+        
+        // Insertar cotización
+        $wpdb->insert(
+            $quotations_table,
+            [
+                'quotation_number' => $quotation_number,
+                'contact_id' => $contact_data->id,
+                'contact_name' => $contact_data->name,
+                'contact_email' => $contact_data->email,
+                'contact_company' => $contact_data->company ?? '',
+                'contact_phone' => $contact_data->phone ?? '',
+                'plan_id' => $first_plan_id,
+                'plan_name' => $all_plan_names,
+                'subtotal' => $subtotal,
+                'iva' => $iva,
+                'total' => $total,
+                'quotation_html' => $quotation_html,
+                'quotation_file_path' => $quotation_path,
+                'qr_code_data' => $qr_data,
+                'status' => 'pending',
+                'valid_until' => $valid_until
+            ],
+            ['%s', '%d', '%s', '%s', '%s', '%s', '%d', '%s', '%f', '%f', '%f', '%s', '%s', '%s', '%s', '%s']
+        );
+        
+        error_log("COTIZACION GUARDADA EN BD: {$quotation_number} - Planes: {$all_plan_names} - Válida hasta: {$valid_until}");
+    }
+    
+    /**
+     * Enviar email con cotización al contacto
+     */
+    private function send_quotation_email_to_contact($contact_data, $plans_data, $quotation_number, $quotation_pdf_path, $valid_until) {
+        $to = $contact_data->email;
+        $subject = 'Tu Cotizacion ' . $quotation_number . ' - AutomatizaTech';
+        
+        $site_url = get_site_url();
+        $logo_url = get_template_directory_uri() . '/assets/images/logo-automatiza-tech.png';
+        
+        // Detectar país y configurar moneda
+        $country = 'CL';
+        if (isset($contact_data->country) && !empty($contact_data->country)) {
+            $country = strtoupper($contact_data->country);
+        } elseif (isset($contact_data->phone)) {
+            if (strpos($contact_data->phone, '+56') === 0) $country = 'CL';
+            elseif (strpos($contact_data->phone, '+1') === 0) $country = 'US';
+        }
+        
+        $currency = ($country === 'CL') ? 'CLP' : 'USD';
+        $currency_symbol = ($country === 'CL') ? '$' : 'USD $';
+        
+        // Preparar lista de planes y calcular totales
+        $plans_list = '';
+        $subtotal = 0;
+        
+        foreach ($plans_data as $index => $plan) {
+            $plan_num = $index + 1;
+            $price = floatval($plan->price_clp);
+            $subtotal += $price;
+            
+            $plans_list .= "
+            <tr>
+                <td style='padding: 12px 15px; border-bottom: 1px solid #e5e7eb; color: #374151;'>
+                    <strong>" . esc_html($plan->name) . "</strong>
+                    " . (!empty($plan->description) ? "<br><span style='font-size: 12px; color: #6b7280;'>" . esc_html($plan->description) . "</span>" : "") . "
+                </td>
+                <td style='padding: 12px 15px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #374151;'>1</td>
+                <td style='padding: 12px 15px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #374151; font-weight: 600;'>" . $currency_symbol . " " . number_format($price, 0, ',', '.') . "</td>
+            </tr>";
+        }
+        
+        // Calcular IVA y total
+        $iva = 0;
+        $total = $subtotal;
+        if ($country === 'CL') {
+            $iva = $subtotal * 0.19;
+            $total = $subtotal + $iva;
+        }
+        
+        $fecha_validez = date('d/m/Y', strtotime($valid_until));
+        
+        // HTML optimizado para evitar spam con colores del degradado azul-turquesa
+        $message = '<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotizacion AutomatizaTech</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f4f4;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4; padding: 20px 0;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    
+                    <!-- Header con degradado azul-turquesa -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #0047AB 0%, #00CED1 100%); padding: 40px 20px; text-align: center;">
+                            <img src="' . $logo_url . '" alt="AutomatizaTech" style="max-width: 150px; height: auto; display: block; margin: 0 auto 20px auto; background-color: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: bold; letter-spacing: 0.5px;">AutomatizaTech SpA</h1>
+                            <p style="color: #e0f2f1; margin: 8px 0 0 0; font-size: 14px;">Soluciones tecnologicas profesionales</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Contenido principal -->
+                    <tr>
+                        <td style="padding: 35px 30px;">
+                            <h2 style="color: #0047AB; margin: 0 0 20px 0; font-size: 22px;">Hola ' . esc_html($contact_data->name) . '</h2>
+                            
+                            <p style="color: #374151; line-height: 1.6; margin: 0 0 20px 0; font-size: 15px;">
+                                Gracias por tu interes en nuestros servicios. Te enviamos la cotizacion <strong>' . $quotation_number . '</strong> con el detalle de los planes seleccionados.
+                            </p>
+                            
+                            <!-- Info de la cotizacion -->
+                            <table width="100%" cellpadding="15" cellspacing="0" border="0" style="background-color: #f0f9ff; border-left: 4px solid #00CED1; border-radius: 4px; margin: 20px 0;">
+                                <tr>
+                                    <td>
+                                        <p style="margin: 5px 0; color: #0047AB; font-size: 14px;"><strong>Numero de Cotizacion:</strong> ' . $quotation_number . '</p>
+                                        <p style="margin: 5px 0; color: #0047AB; font-size: 14px;"><strong>Valida hasta:</strong> ' . $fecha_validez . ' (3 dias calendario)</p>
+                                        <p style="margin: 5px 0; color: #0047AB; font-size: 14px;"><strong>Moneda:</strong> ' . $currency . '</p>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Tabla de servicios -->
+                            <h3 style="color: #0047AB; margin: 25px 0 15px 0; font-size: 18px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+                                Servicios Cotizados
+                            </h3>
+                            
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 20px;">
+                                <thead>
+                                    <tr style="background-color: #00CED1;">
+                                        <th style="padding: 12px 15px; text-align: left; color: #ffffff; font-size: 13px; font-weight: 600;">Plan</th>
+                                        <th style="padding: 12px 15px; text-align: center; color: #ffffff; font-size: 13px; font-weight: 600; width: 80px;">Cant.</th>
+                                        <th style="padding: 12px 15px; text-align: right; color: #ffffff; font-size: 13px; font-weight: 600; width: 120px;">Precio</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ' . $plans_list . '
+                                    
+                                    <!-- Subtotal -->
+                                    <tr>
+                                        <td colspan="2" style="padding: 12px 15px; text-align: right; color: #374151; font-weight: 600; border-top: 2px solid #e5e7eb;">
+                                            Subtotal:
+                                        </td>
+                                        <td style="padding: 12px 15px; text-align: right; color: #374151; font-weight: 600; border-top: 2px solid #e5e7eb;">
+                                            ' . $currency_symbol . ' ' . number_format($subtotal, 0, ',', '.') . '
+                                        </td>
+                                    </tr>';
+        
+        // Agregar IVA solo para Chile
+        if ($country === 'CL') {
+            $message .= '
+                                    <tr>
+                                        <td colspan="2" style="padding: 12px 15px; text-align: right; color: #374151;">
+                                            IVA (19%):
+                                        </td>
+                                        <td style="padding: 12px 15px; text-align: right; color: #374151;">
+                                            ' . $currency_symbol . ' ' . number_format($iva, 0, ',', '.') . '
+                                        </td>
+                                    </tr>';
+        }
+        
+        $message .= '
+                                    <!-- Total -->
+                                    <tr style="background-color: #f0f9ff;">
+                                        <td colspan="2" style="padding: 15px; text-align: right; color: #0047AB; font-size: 16px; font-weight: bold; border-top: 2px solid #00CED1;">
+                                            TOTAL COTIZADO:
+                                        </td>
+                                        <td style="padding: 15px; text-align: right; color: #0047AB; font-size: 16px; font-weight: bold; border-top: 2px solid #00CED1;">
+                                            ' . $currency_symbol . ' ' . number_format($total, 0, ',', '.') . '
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            
+                            <!-- Boton de accion -->
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 25px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="mailto:info@automatizatech.shop?subject=Consulta sobre Cotizacion ' . $quotation_number . '" style="display: inline-block; background: linear-gradient(135deg, #0047AB 0%, #00CED1 100%); color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-weight: bold; font-size: 15px;">
+                                            Responder Cotizacion
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="color: #6b7280; line-height: 1.6; margin: 20px 0 0 0; font-size: 13px; text-align: center;">
+                                Si tienes preguntas o necesitas mas informacion, no dudes en contactarnos. Estamos aqui para ayudarte.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; padding: 20px 30px; border-top: 1px solid #e5e7eb; text-align: center;">
+                            <p style="margin: 0 0 8px 0; color: #374151; font-size: 14px; font-weight: 600;">AutomatizaTech SpA</p>
+                            <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 12px;">info@automatizatech.shop</p>
+                            <p style="margin: 0; color: #6b7280; font-size: 12px;">' . $site_url . '</p>
+                        </td>
+                    </tr>
+                </table>
+                
+                <!-- Nota legal -->
+                <p style="color: #9ca3af; font-size: 11px; text-align: center; margin: 15px 0 0 0; max-width: 600px;">
+                    Este correo contiene informacion sobre tu cotizacion. Para consultas, responde directamente a este email.
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>';
+        
+        // Headers optimizados para evitar spam
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: AutomatizaTech <info@automatizatech.shop>',
+            'Reply-To: info@automatizatech.shop',
+            'X-Mailer: PHP/' . phpversion(),
+            'X-Priority: 3',
+            'Importance: Normal'
+        );
+        
+        // Adjuntar PDF si existe
+        $attachments = array();
+        if ($quotation_pdf_path && file_exists($quotation_pdf_path)) {
+            $attachments[] = $quotation_pdf_path;
+        }
+        
+        $sent = wp_mail($to, $subject, $message, $headers, $attachments);
+        
+        if ($sent) {
+            error_log("COTIZACION ENVIADA: Cotización {$quotation_number} enviada a {$contact_data->email} ({$contact_data->name})");
+        } else {
+            error_log("ERROR COTIZACION: No se pudo enviar cotización {$quotation_number} a {$contact_data->email}");
+        }
+        
+        return $sent;
+    }
+    
+    /**
+     * Enviar notificación interna sobre nueva cotización
+     */
+    private function send_quotation_notification_internal($contact_data, $plans_data, $quotation_number) {
+        $to = 'automatizatech.bots@gmail.com';
+        
+        $plans_names = array();
+        $total = 0;
+        foreach ($plans_data as $plan) {
+            $plans_names[] = $plan->name;
+            $total += floatval($plan->price_clp);
+        }
+        $plans_text = implode(', ', $plans_names);
+        
+        $subject = '💰 Nueva Cotización Generada - ' . $quotation_number . ' - ' . $contact_data->name;
+        
+        $site_url = get_site_url();
+        $logo_url = get_template_directory_uri() . '/assets/images/logo-automatiza-tech.png';
+        $admin_url = admin_url('admin.php?page=automatiza-tech-contacts');
+        
+        $message = "
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .header { background: linear-gradient(135deg, #ff9800, #06d6a0); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+                .content { background: #f8f9fa; padding: 25px; border-radius: 0 0 8px 8px; }
+                .info-box { background: white; padding: 20px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                .label { font-weight: bold; color: #1e3a8a; display: inline-block; width: 120px; }
+                .cta { background: #06d6a0; color: white; padding: 12px 25px; text-decoration: none; border-radius: 25px; display: inline-block; margin: 10px 0; }
+            </style>
+        </head>
+        <body>
+            <div class='header'>
+                <img src='{$logo_url}' alt='AutomatizaTech Logo' style='max-width: 140px; height: auto; margin-bottom: 10px;'>
+                <h1>💰 Nueva Cotización Generada</h1>
+                <p>Se ha enviado una cotización a un contacto interesado</p>
+            </div>
+            
+            <div class='content'>
+                <div class='info-box'>
+                    <h3 style='color: #1e3a8a; margin-top: 0;'>📋 Información de la Cotización</h3>
+                    <p><span class='label'>Número:</span> {$quotation_number}</p>
+                    <p><span class='label'>Contacto:</span> " . esc_html($contact_data->name) . "</p>
+                    <p><span class='label'>Email:</span> " . esc_html($contact_data->email) . "</p>
+                    " . (!empty($contact_data->company) ? "<p><span class='label'>Empresa:</span> " . esc_html($contact_data->company) . "</p>" : "") . "
+                    " . (!empty($contact_data->phone) ? "<p><span class='label'>Teléfono:</span> " . esc_html($contact_data->phone) . "</p>" : "") . "
+                </div>
+                
+                <div class='info-box' style='border-left: 4px solid #ff9800;'>
+                    <h3 style='color: #ff9800; margin-top: 0;'>💼 Servicios Cotizados</h3>
+                    <p><strong>{$plans_text}</strong></p>
+                    <p style='font-size: 1.2em;'><strong>Total:</strong> <span style='color: #06d6a0; font-weight: bold;'>$" . number_format($total, 0, ',', '.') . " CLP</span></p>
+                </div>
+                
+                <div style='text-align: center; margin-top: 20px;'>
+                    <a href='{$admin_url}' class='cta'>Ver en Panel de Administración</a>
+                </div>
+            </div>
+        </body>
+        </html>";
+        
+        $headers = array('Content-Type: text/html; charset=UTF-8');
+        
+        $sent = wp_mail($to, $subject, $message, $headers);
+        
+        if ($sent) {
+            error_log("CORREO ENVIADO: Notificación de cotización enviada a automatizatech.bots@gmail.com para {$contact_data->name}");
+        }
+        
+        return $sent;
+    }
+    
+    /**
+     * ========================================================================
+     * FIN FUNCIONES PARA COTIZACIONES
+     * ========================================================================
+     */
     
     /**
      * Generar factura/boleta en HTML para el cliente
@@ -2882,6 +3535,28 @@ class AutomatizaTechContactForm {
                             } else {
                                 echo '<div class="notice notice-error"><p>❌ Error al mover el contacto a Clientes.</p></div>';
                             }
+                        } elseif ($new_status === 'interested') {
+                            // Si el estado es "interested", generar cotización
+                            // Soportar múltiples planes: "1,2,3" → mantener como string
+                            $plan_id = isset($_GET['plan_id']) ? sanitize_text_field($_GET['plan_id']) : null;
+                            if ($plan_id) {
+                                $result = $this->move_to_interested($contact_id, $plan_id);
+                                if ($result) {
+                                    echo '<div class="notice notice-success"><p>💰 ¡Cotización generada exitosamente! Se ha enviado la cotización al contacto por correo electrónico. Validez: 3 días.</p></div>';
+                                } else {
+                                    echo '<div class="notice notice-error"><p>❌ Error al generar la cotización. Asegúrate de seleccionar al menos un plan.</p></div>';
+                                }
+                            } else {
+                                // Sin planes, solo actualizar estado
+                                $wpdb->update(
+                                    $this->table_name,
+                                    array('status' => $new_status),
+                                    array('id' => $contact_id),
+                                    array('%s'),
+                                    array('%d')
+                                );
+                                echo '<div class="notice notice-warning"><p>⚠️ Estado actualizado a "interested" pero no se generó cotización porque no se seleccionaron planes.</p></div>';
+                            }
                         } else {
                             // Actualización normal de estado
                             $wpdb->update(
@@ -3464,8 +4139,8 @@ class AutomatizaTechContactForm {
         
         <script>
         function updateStatus(id, status) {
-            // Confirmación especial para estado "Contratado"
-            if (status === 'contracted') {
+            // Confirmación especial para estado "Contratado" o "Interesado"
+            if (status === 'contracted' || status === 'interested') {
                 // Obtener información del contacto para mostrar en la confirmación
                 var selectElement = event.target;
                 var contactRow = selectElement.closest('tr');
@@ -3487,7 +4162,11 @@ class AutomatizaTechContactForm {
                 }
                 
                 // Mostrar modal de selección de plan
-                showPlanSelectionModal(id, contactName, contactEmail, selectElement);
+                if (status === 'contracted') {
+                    showPlanSelectionModal(id, contactName, contactEmail, selectElement, 'contracted');
+                } else {
+                    showPlanSelectionModal(id, contactName, contactEmail, selectElement, 'interested');
+                }
             }
             // Para otros estados, proceder normalmente con confirmación simple
             else {
@@ -3495,9 +4174,9 @@ class AutomatizaTechContactForm {
                     'new': '🆕 Nuevo',
                     'contacted': '📞 Contactado',
                     'follow_up': '📅 Seguimiento',
-                    'interested': '� Interesado',
+                    'interested': '💰 Interesado',
                     'not_interested': '👎 No Interesado',
-                    'closed': '� Cerrado'
+                    'closed': '🔒 Cerrado'
                 };
                 
                 var statusName = statusNames[status] || status;
@@ -3513,20 +4192,35 @@ class AutomatizaTechContactForm {
             }
         }
         
-        // Función para mostrar modal de selección de plan cuando se marca como contratado
-        window.showPlanSelectionModal = function(contactId, contactName, contactEmail, selectElement) {
+        // Función para mostrar modal de selección de plan cuando se marca como contratado o interesado
+        window.showPlanSelectionModal = function(contactId, contactName, contactEmail, selectElement, mode) {
+            // mode puede ser 'contracted' o 'interested'
+            mode = mode || 'contracted';
+            
+            var isQuotation = (mode === 'interested');
+            var headerTitle = isQuotation ? '💰 Generar Cotización' : '💼 Plan Contratado';
+            var headerSubtitle = isQuotation ? 'Selecciona los servicios a cotizar' : 'Selecciona el plan que contrató el cliente';
+            var headerGradient = isQuotation ? 'linear-gradient(135deg, #ff9800, #06d6a0)' : 'linear-gradient(135deg, #1e3a8a, #06d6a0)';
+            var importantText = isQuotation ? 
+                'Al confirmar, se generará una cotización con validez de 3 días y se enviará por correo electrónico al contacto.' :
+                'Al confirmar, se generará una factura automática y se enviará por correo electrónico al cliente junto con un mensaje de bienvenida profesional.';
+            var buttonText = isQuotation ? '✅ Generar Cotización' : '✅ Confirmar Contrato';
+            var buttonOnclick = isQuotation ? 
+                `confirmQuotationSelection(${contactId}, '${contactName}', '${contactEmail}')` :
+                `confirmPlanSelection(${contactId}, '${contactName}', '${contactEmail}')`;
+            
             // Crear modal con selector de planes
             var modalHTML = `
                 <div id="plan-selection-modal" style="position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; animation: fadeIn 0.3s;">
                     <div style="background: linear-gradient(135deg, #ffffff, #f0f9ff); padding: 0; border-radius: 20px; width: 90%; max-width: 600px; max-height: 90%; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideUp 0.3s;">
-                        <div style="background: linear-gradient(135deg, #1e3a8a, #06d6a0); color: white; padding: 30px; text-align: center; border-radius: 20px 20px 0 0;">
-                            <h2 style="margin: 0 0 10px 0; font-size: 2em;">💼 Plan Contratado</h2>
-                            <p style="margin: 0; opacity: 0.9; font-size: 1.1em;">Selecciona el plan que contrató el cliente</p>
+                        <div style="background: ${headerGradient}; color: white; padding: 30px; text-align: center; border-radius: 20px 20px 0 0;">
+                            <h2 style="margin: 0 0 10px 0; font-size: 2em;">${headerTitle}</h2>
+                            <p style="margin: 0; opacity: 0.9; font-size: 1.1em;">${headerSubtitle}</p>
                         </div>
                         
                         <div style="padding: 30px;">
                             <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 25px; border-left: 4px solid #06d6a0;">
-                                <h3 style="color: #1e3a8a; margin: 0 0 15px 0; font-size: 1.2em;">👤 Cliente</h3>
+                                <h3 style="color: #1e3a8a; margin: 0 0 15px 0; font-size: 1.2em;">👤 Contacto</h3>
                                 <p style="margin: 5px 0; color: #555;"><strong>Nombre:</strong> ${contactName}</p>
                                 <p style="margin: 5px 0; color: #555;"><strong>Email:</strong> ${contactEmail}</p>
                             </div>
@@ -3534,7 +4228,7 @@ class AutomatizaTechContactForm {
                             <div style="background: #fef3c7; padding: 20px; border-radius: 12px; margin-bottom: 25px; border-left: 4px solid #f59e0b;">
                                 <h3 style="color: #92400e; margin: 0 0 10px 0; font-size: 1.1em;">⚠️ Importante</h3>
                                 <p style="margin: 0; color: #78350f; font-size: 0.95em;">
-                                    Al confirmar, se generará una factura automática y se enviará por correo electrónico al cliente junto con un mensaje de bienvenida profesional.
+                                    ${importantText}
                                 </p>
                             </div>
                             
@@ -3577,9 +4271,9 @@ class AutomatizaTechContactForm {
                             </div>
                             
                             <div style="display: flex; gap: 15px; margin-top: 30px;">
-                                <button onclick="confirmPlanSelection(${contactId}, '${contactName}', '${contactEmail}')" 
+                                <button onclick="${buttonOnclick}" 
                                         style="flex: 1; background: linear-gradient(135deg, #06d6a0, #05c29a); color: white; border: none; padding: 15px 30px; border-radius: 25px; font-size: 1.1em; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(6, 214, 160, 0.3); transition: all 0.3s;">
-                                    ✅ Confirmar Contrato
+                                    ${buttonText}
                                 </button>
                                 <button onclick="cancelPlanSelection()" 
                                         style="flex: 1; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 15px 30px; border-radius: 25px; font-size: 1.1em; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); transition: all 0.3s;">
@@ -3701,6 +4395,50 @@ class AutomatizaTechContactForm {
             // Redirigir con el plan_id
             setTimeout(function() {
                 window.location.href = '<?php echo admin_url('admin.php?page=automatiza-tech-contacts&action=update_status'); ?>&id=' + contactId + '&status=contracted&plan_id=' + planId + '&_wpnonce=<?php echo wp_create_nonce('update_status'); ?>';
+            }, 1000);
+        };
+        
+        // Función para confirmar selección de planes para COTIZACIÓN (estado interested)
+        window.confirmQuotationSelection = function(contactId, contactName, contactEmail) {
+            var planSelector = document.getElementById('plan-selector');
+            var selectedOptions = Array.from(planSelector.selectedOptions);
+            var planIds = selectedOptions.map(opt => opt.value);
+            
+            if (planIds.length === 0) {
+                alert('❌ Por favor selecciona al menos un plan antes de continuar.');
+                return;
+            }
+            
+            // Convertir array de IDs a string separado por comas
+            var planId = planIds.join(',');
+            
+            // Cerrar modal
+            document.getElementById('plan-selection-modal').remove();
+            
+            // Mostrar indicador de procesamiento
+            if (window.originalSelectElement) {
+                window.originalSelectElement.disabled = true;
+                window.originalSelectElement.style.background = '#ff9800';
+                window.originalSelectElement.style.color = '#fff';
+                window.originalSelectElement.style.fontWeight = 'bold';
+                
+                var processingOption = document.createElement('option');
+                processingOption.value = 'processing';
+                processingOption.text = '⏳ Procesando... Por favor espera';
+                processingOption.selected = true;
+                window.originalSelectElement.innerHTML = '';
+                window.originalSelectElement.appendChild(processingOption);
+                
+                var statusCell = window.originalSelectElement.closest('td');
+                var processingIndicator = document.createElement('div');
+                processingIndicator.style.cssText = 'background: #fff3cd; padding: 10px; border-radius: 8px; font-size: 12px; margin-top: 8px; border: 1px solid #ff9800; text-align: center;';
+                processingIndicator.innerHTML = '⏳ Generando cotización y enviando correo...';
+                statusCell.appendChild(processingIndicator);
+            }
+            
+            // Redirigir con el plan_id al estado 'interested'
+            setTimeout(function() {
+                window.location.href = '<?php echo admin_url('admin.php?page=automatiza-tech-contacts&action=update_status'); ?>&id=' + contactId + '&status=interested&plan_id=' + planId + '&_wpnonce=<?php echo wp_create_nonce('update_status'); ?>';
             }, 1000);
         };
         

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Generador de facturas en PDF usando FPDF
  * SoluciÃ³n 100% PHP, sin dependencias externas
@@ -102,11 +102,11 @@ class InvoicePDFFPDF extends FPDF {
             // CÃ³digos telefÃ³nicos internacionales
             $country_codes = [
                 '+56' => 'CL',  // Chile
-                '+1'  => 'US',  // USA/CanadÃ¡
+                '+1'  => 'US',  // USA/Canadá
                 '+54' => 'AR',  // Argentina
                 '+57' => 'CO',  // Colombia
                 '+52' => 'MX',  // MÃ©xico
-                '+51' => 'PE',  // PerÃº
+                '+51' => 'PE',  // Perú
                 '+34' => 'ES',  // EspaÃ±a
                 '+55' => 'BR',  // Brasil
             ];
@@ -123,7 +123,7 @@ class InvoicePDFFPDF extends FPDF {
     }
     
     /**
-     * Configurar moneda segÃºn el paÃ­s
+     * Configurar moneda según el paÃ­s
      */
     private function configure_currency($country) {
         if ($country === 'CL') {
@@ -336,7 +336,7 @@ class InvoicePDFFPDF extends FPDF {
         error_log("DEBUG PDF Render: Renderizando " . count($items) . " items en la tabla");
         
         foreach ($items as $index => $item) {
-            // Obtener precio segÃºn moneda del cliente
+            // Obtener precio según moneda del cliente
             $item_price = $this->get_item_price($item);
             
             error_log("DEBUG PDF Render: Item " . ($index + 1) . " - Nombre: {$item->name}, Precio: {$item_price}");
@@ -355,7 +355,7 @@ class InvoicePDFFPDF extends FPDF {
         
         $this->Ln(8);
         
-        // CÃ¡lculos segÃºn paÃ­s y moneda
+        // Cálculos según paÃ­s y moneda
         if ($this->apply_iva) {
             // Chile: Precio incluye IVA del 19%
             $total_con_iva = $total_items;
@@ -518,7 +518,7 @@ class InvoicePDFFPDF extends FPDF {
     }
     
     /**
-     * Obtener precio del item segÃºn moneda del cliente
+     * Obtener precio del item según moneda del cliente
      */
     private function get_item_price($item) {
         if ($this->currency === 'CLP') {
@@ -531,7 +531,7 @@ class InvoicePDFFPDF extends FPDF {
     }
     
     /**
-     * Formatear moneda segÃºn paÃ­s
+     * Formatear moneda según paÃ­s
      */
     private function format_currency($amount) {
         if ($this->currency === 'CLP') {
@@ -554,5 +554,6 @@ class InvoicePDFFPDF extends FPDF {
         return file_exists($filepath);
     }
 }
+
 
 

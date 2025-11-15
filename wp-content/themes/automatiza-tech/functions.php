@@ -394,3 +394,10 @@ require_once get_template_directory() . '/inc/services-manager.php';
  */
 // require_once get_template_directory() . '/inc/services-frontend.php'; // Comentado para evitar conflictos
 require_once get_template_directory() . '/services-frontend.php';
+
+/**
+ * Incluir handlers AJAX para facturas (descarga y validación)
+ */
+require_once get_template_directory() . '/inc/invoice-handlers.php';
+
+

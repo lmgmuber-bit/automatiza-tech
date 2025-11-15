@@ -1,0 +1,62 @@
+# BEGIN WordPress
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteBase /
+RewriteRule ^validar-factura\.php$ - [L]
+RewriteRule ^index\.php$ - [L]
+
+# Permitir acceso a archivos de verificación y testing
+RewriteRule ^check-production-readiness\.php$ - [L]
+RewriteRule ^test-invoice-download\.php$ - [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>
+
+# Se Agrega para que soporte subida de archivos grandes
+php_value upload_max_filesize 128M
+php_value post_max_size 128M
+php_value memory_limit 256M
+php_value max_execution_time 300
+php_value max_input_time 300
+
+# Seguridad: Proteger archivos sensibles
+<FilesMatch "^(wp-config\.php|\.htaccess)">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Permitir acceso al directorio de facturas (PDFs)
+<IfModule mod_rewrite.c>
+    RewriteCond %{REQUEST_URI} ^/wp-content/uploads/automatiza-tech-invoices/.*\.pdf$
+    RewriteRule ^(.*)$ - [L]
+</IfModule>
+
+# Proteger directorio de uploads excepto archivos específicos
+<IfModule mod_rewrite.c>
+    RewriteCond %{REQUEST_URI} ^/wp-content/uploads/
+    RewriteCond %{REQUEST_URI} !.*\.(jpg|jpeg|png|gif|pdf|svg|webp)$
+    RewriteRule ^(.*)$ - [F,L]
+</IfModule>
+
+# Habilitar compresión GZIP para mejor rendimiento
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/x-javascript application/json
+</IfModule>
+
+# Cache del navegador
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType application/pdf "access plus 1 month"
+</IfModule>
+
+# END WordPress

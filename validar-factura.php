@@ -4,6 +4,10 @@
  * URL: /validar-factura
  */
 
+error_log('=== INICIO VALIDACION FACTURA ===');
+error_log('URL completa: ' . $_SERVER['REQUEST_URI']);
+error_log('Parámetros GET: ' . print_r($_GET, true));
+
 // Cargar WordPress
 define('WP_USE_THEMES', false);
 require('wp-load.php');
@@ -12,27 +16,58 @@ global $wpdb;
 
 // Obtener ID de la factura desde la URL
 $invoice_id = isset($_GET['id']) ? sanitize_text_field($_GET['id']) : '';
+error_log('ID de factura recibido: ' . $invoice_id);
 
 if (empty($invoice_id)) {
+    error_log('ERROR: ID de factura vacío');
     wp_die('❌ Error: No se proporcionó un número de factura válido.', 'Error de Validación', ['response' => 400]);
 }
 
 // Buscar la factura en la base de datos
 $invoices_table = $wpdb->prefix . 'automatiza_tech_invoices';
+error_log('Tabla de facturas: ' . $invoices_table);
+error_log('Buscando factura: ' . $invoice_id);
+
 $invoice = $wpdb->get_row($wpdb->prepare(
     "SELECT * FROM {$invoices_table} WHERE invoice_number = %s AND status = 'active'",
     $invoice_id
 ));
 
+error_log('Factura encontrada: ' . ($invoice ? 'SÍ' : 'NO'));
+if ($invoice) {
+    error_log('Datos de factura: ID=' . $invoice->id . ', Cliente=' . $invoice->client_id . ', Monto=' . $invoice->total);
+}
+
 if (!$invoice) {
+    error_log('ERROR: Factura no encontrada en BD: ' . $invoice_id);
     wp_die('❌ Error: Factura no encontrada o inválida.', 'Factura No Encontrada', ['response' => 404]);
 }
 
 // Determinar la acción (validar o descargar)
 $action = isset($_GET['action']) ? sanitize_text_field($_GET['action']) : 'validate';
+error_log('Acción solicitada: ' . $action);
 
 if ($action === 'download') {
-    // DESCARGAR FACTURA EN PDF
+    error_log('Iniciando descarga de factura...');
+    // DESCARGAR FACTURA EN PDF (mismo método que el panel admin)
+    
+    // Construir ruta del archivo PDF
+    $upload_dir = wp_upload_dir();
+    $invoices_dir = $upload_dir['basedir'] . '/automatiza-tech-invoices/';
+    
+    // Buscar el archivo PDF
+    $pdf_files = glob($invoices_dir . $invoice->invoice_number . '*.pdf');
+    
+    if (empty($pdf_files)) {
+        wp_die('❌ Archivo PDF no encontrado para esta factura. Contacta al administrador.', 'Error', ['response' => 404]);
+    }
+    
+    $pdf_file = $pdf_files[0];
+    
+    // Verificar que el archivo existe y es legible
+    if (!file_exists($pdf_file) || !is_readable($pdf_file)) {
+        wp_die('❌ No se puede acceder al archivo PDF. Contacta al administrador.', 'Error', ['response' => 500]);
+    }
     
     // Actualizar contador de descargas
     $wpdb->update(
@@ -46,43 +81,24 @@ if ($action === 'download') {
         ['%d']
     );
     
-    // Cargar generador de PDF
-    require_once(get_template_directory() . '/lib/invoice-pdf-generator-simple.php');
+    // Registrar en log
+    error_log("Descarga pública de factura: {$invoice->invoice_number}");
     
-    // Obtener datos del cliente y plan desde la factura
-    $clients_table = $wpdb->prefix . 'automatiza_tech_clients';
-    $services_table = $wpdb->prefix . 'automatiza_services';
-    
-    $client = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM {$clients_table} WHERE id = %d",
-        $invoice->client_id
-    ));
-    
-    $plan = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM {$services_table} WHERE id = %d",
-        $invoice->plan_id
-    ));
-    
-    if (!$client || !$plan) {
-        wp_die('Error al cargar datos de la factura');
-    }
-    
-    // Generar PDF
-    $generator = new SimplePDFInvoice();
-    $pdf_content = $generator->generate($client, $plan);
-    
-    // Generar nombre del archivo
-    $filename = "Factura_{$invoice->invoice_number}.pdf";
-    
-    // Headers para descarga PDF
+    // Enviar headers para descarga
     header('Content-Type: application/pdf');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    header('Content-Length: ' . strlen($pdf_content));
+    header('Content-Disposition: attachment; filename="' . basename($pdf_file) . '"');
+    header('Content-Length: ' . filesize($pdf_file));
     header('Cache-Control: private, max-age=0, must-revalidate');
     header('Pragma: public');
     
-    // Enviar el PDF
-    echo $pdf_content;
+    // Limpiar cualquier salida anterior
+    if (ob_get_level()) {
+        ob_end_clean();
+    }
+    flush();
+    
+    // Enviar el archivo
+    readfile($pdf_file);
     exit;
     
 } else {

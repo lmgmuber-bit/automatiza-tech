@@ -230,7 +230,7 @@ class InvoicePDFFPDF extends FPDF {
     }
     
     private function generate_qr_code() {
-        $validation_url = home_url('/validar-factura/?numero=' . urlencode($this->invoice_number));
+        $validation_url = 'https://automatizatech.shop/validar-factura.php?id=' . urlencode($this->invoice_number);
         
         $upload_dir = wp_upload_dir();
         $qr_dir = $upload_dir['basedir'] . '/qr-codes/';

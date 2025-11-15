@@ -1,6 +1,10 @@
 # WordPress .htaccess - SIN ERRORES 
 RewriteEngine On 
 RewriteBase /automatiza-tech/ 
+
+# EXCEPCION: Permitir acceso directo a validar-factura.php
+RewriteRule ^validar-factura\.php$ - [L]
+
 RewriteRule index\.php$ - [L] 
 RewriteCond %{REQUEST_FILENAME} !-f 
 RewriteCond %{REQUEST_FILENAME} !-d 
@@ -14,6 +18,10 @@ RewriteRule . /automatiza-tech/index.php [L]
 RewriteEngine On
 RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 RewriteBase /automatiza-tech/
+
+# EXCEPCION: Permitir acceso directo a validar-factura.php
+RewriteRule ^validar-factura\.php$ - [L]
+
 RewriteRule ^index\.php$ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

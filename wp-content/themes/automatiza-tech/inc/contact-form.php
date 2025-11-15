@@ -2904,32 +2904,57 @@ class AutomatizaTechContactForm {
      * Descargar factura en PDF
      */
     public function download_invoice() {
+        // LOG: Inicio de descarga
+        error_log('=== INICIO DESCARGA FACTURA ===');
+        error_log('Usuario autenticado: ' . (is_user_logged_in() ? 'SÍ' : 'NO'));
+        
         // Verificar que el usuario esté autenticado
         if (!is_user_logged_in()) {
+            error_log('ERROR: Usuario no autenticado');
             wp_die('No autorizado', 'Error', array('response' => 403));
         }
         
         // Obtener número de factura
         if (!isset($_GET['invoice_number']) || empty($_GET['invoice_number'])) {
+            error_log('ERROR: Número de factura no proporcionado');
             wp_die('Número de factura no proporcionado', 'Error', array('response' => 400));
         }
         
         $invoice_number = sanitize_text_field($_GET['invoice_number']);
+        error_log('Factura solicitada: ' . $invoice_number);
         
         // Construir ruta del archivo PDF
         $upload_dir = wp_upload_dir();
         $invoices_dir = $upload_dir['basedir'] . '/automatiza-tech-invoices/';
+        error_log('Directorio de facturas: ' . $invoices_dir);
+        error_log('Existe directorio: ' . (is_dir($invoices_dir) ? 'SÍ' : 'NO'));
         
         // Buscar el archivo PDF (puede tener el nombre del cliente al final)
         $pdf_files = glob($invoices_dir . $invoice_number . '*.pdf');
+        error_log('Patrón de búsqueda: ' . $invoices_dir . $invoice_number . '*.pdf');
+        error_log('Archivos encontrados: ' . count($pdf_files));
+        if (!empty($pdf_files)) {
+            error_log('Primer archivo: ' . $pdf_files[0]);
+        }
         
         if (empty($pdf_files)) {
+            error_log('ERROR: No se encontraron archivos PDF para: ' . $invoice_number);
+            // Listar todos los archivos en el directorio
+            if (is_dir($invoices_dir)) {
+                $all_files = scandir($invoices_dir);
+                error_log('Archivos en directorio: ' . print_r($all_files, true));
+            }
             wp_die('Factura no encontrada: ' . esc_html($invoice_number), 'Error 404', array('response' => 404));
         }
         
         $pdf_file = $pdf_files[0]; // Tomar el primero si hay varios
+        error_log('Archivo PDF seleccionado: ' . $pdf_file);
+        error_log('Existe archivo: ' . (file_exists($pdf_file) ? 'SÍ' : 'NO'));
+        error_log('Es legible: ' . (is_readable($pdf_file) ? 'SÍ' : 'NO'));
+        error_log('Tamaño: ' . (file_exists($pdf_file) ? filesize($pdf_file) . ' bytes' : 'N/A'));
         
         if (!file_exists($pdf_file)) {
+            error_log('ERROR: El archivo no existe: ' . $pdf_file);
             wp_die('Archivo de factura no existe', 'Error 404', array('response' => 404));
         }
         
@@ -2938,6 +2963,8 @@ class AutomatizaTechContactForm {
             ob_end_clean();
         }
         
+        error_log('Enviando headers para descarga...');
+        
         // Configurar headers para descarga
         header('Content-Type: application/pdf');
         header('Content-Disposition: attachment; filename="' . basename($pdf_file) . '"');
@@ -2945,8 +2972,11 @@ class AutomatizaTechContactForm {
         header('Cache-Control: private, max-age=0, must-revalidate');
         header('Pragma: public');
         
+        error_log('Enviando archivo PDF: ' . basename($pdf_file));
+        
         // Enviar archivo
         readfile($pdf_file);
+        error_log('=== FIN DESCARGA FACTURA ===');
         exit;
     }
     
@@ -3758,6 +3788,10 @@ class AutomatizaTechContactForm {
                     <button type="button" id="send-email-new-contacts" class="button button-primary" 
                             style="background: linear-gradient(135deg, #16a34a, #15803d); border: none; padding: 8px 15px; border-radius: 20px; font-weight: 600; box-shadow: 0 2px 8px rgba(22,163,74,0.3);">
                         <span class="dashicons dashicons-email" style="font-size: 16px;"></span> Enviar Email a Contactos "Nuevo"
+                    </button>
+                    <button type="button" id="regenerate-invoices-qr" class="button button-primary" 
+                            style="background: linear-gradient(135deg, #dc3545, #c82333); border: none; padding: 8px 15px; border-radius: 20px; font-weight: 600; box-shadow: 0 2px 8px rgba(220,53,69,0.3); margin-left: 10px;">
+                        <span class="dashicons dashicons-update" style="font-size: 16px;"></span> Regenerar Facturas con QR
                     </button>
                     <?php endif; ?>
                 </div>
@@ -5321,6 +5355,11 @@ class AutomatizaTechContactForm {
                     <a href="<?php echo admin_url('admin.php?page=automatiza-tech-contacts'); ?>" class="button button-secondary">
                         <span class="dashicons dashicons-arrow-left-alt2"></span> Volver a Contactos
                     </a>
+                    <?php if (current_user_can('administrator')): ?>
+                    <button type="button" onclick="regenerateAllInvoicesQR()" class="button button-primary" style="margin-left: 10px; background: linear-gradient(135deg, #06d6a0, #059f7f); border: none; box-shadow: 0 2px 5px rgba(6, 214, 160, 0.3);">
+                        <span class="dashicons dashicons-update"></span> Regenerar QR de Facturas
+                    </button>
+                    <?php endif; ?>
                 </div>
                 <div class="alignright">
                     <span class="displaying-num"><?php echo count($clients); ?> clientes</span>
@@ -5470,14 +5509,14 @@ class AutomatizaTechContactForm {
                                     
                                     if ($invoice): ?>
                                         <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
-                                            <!-- Botón Ver Validación -->
-                                            <a href="<?php echo site_url('/validar-factura.php?id=' . urlencode($invoice->invoice_number)); ?>" 
+                                            <!-- Botón Ver PDF -->
+                                            <a href="<?php echo admin_url('admin-ajax.php?action=download_invoice&invoice_number=' . urlencode($invoice->invoice_number)); ?>" 
                                                target="_blank"
                                                class="button button-small view-invoice-btn"
                                                style="background: linear-gradient(135deg, #1e3a8a, #1e40af); color: white; border: none; padding: 6px 10px; border-radius: 15px; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-block; font-weight: 600; box-shadow: 0 2px 5px rgba(30,58,138,0.3); transition: all 0.3s ease;"
                                                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(30,58,138,0.4)';"
                                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(30,58,138,0.3)';"
-                                               title="Ver validación de factura <?php echo esc_attr($invoice->invoice_number); ?>">
+                                               title="Ver PDF de factura <?php echo esc_attr($invoice->invoice_number); ?>">
                                                👁️ Ver
                                             </a>
                                             
@@ -5832,6 +5871,58 @@ class AutomatizaTechContactForm {
             } else {
                 return false;
             }
+        }
+        
+        /**
+         * Regenerar QR de todas las facturas
+         */
+        function regenerateAllInvoicesQR() {
+            if (!confirm('🔄 ¿Regenerar el código QR de todas las facturas?\n\nEsto actualizará todas las facturas existentes para que tengan el código QR correcto con la URL de validación.\n\n⚠️ Este proceso puede tardar varios segundos dependiendo de la cantidad de facturas.\n\n¿Deseas continuar?')) {
+                return;
+            }
+            
+            // Mostrar indicador de carga
+            const btn = event.target;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<span class="dashicons dashicons-update spin" style="animation: rotation 1s infinite linear;"></span> Regenerando...';
+            btn.disabled = true;
+            
+            // Agregar animación de rotación
+            const style = document.createElement('style');
+            style.innerHTML = '@keyframes rotation { from { transform: rotate(0deg); } to { transform: rotate(359deg); } } .spin { display: inline-block; }';
+            document.head.appendChild(style);
+            
+            // Realizar la petición AJAX
+            jQuery.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'regenerate_all_invoices_qr',
+                    nonce: '<?php echo wp_create_nonce("regenerate_invoices_qr"); ?>'
+                },
+                success: function(response) {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    
+                    if (response.success) {
+                        alert('✅ Éxito\n\n' + response.data.message + '\n\n' + 
+                              '📊 Facturas procesadas: ' + response.data.processed + '\n' +
+                              '❌ Errores: ' + response.data.errors);
+                        
+                        // Recargar la página para mostrar los cambios
+                        if (response.data.processed > 0) {
+                            location.reload();
+                        }
+                    } else {
+                        alert('❌ Error\n\n' + (response.data.message || 'Error desconocido al regenerar las facturas.'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    alert('❌ Error de conexión\n\nNo se pudo completar la operación. Por favor, intenta nuevamente.\n\nError: ' + error);
+                }
+            });
         }
         </script>
         

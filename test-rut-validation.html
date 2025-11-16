@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Validación RUT Chileno</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1e3a8a;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #1e3a8a;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #1e3a8a;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .help-text {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .valid {
+            color: #28a745;
+            border-color: #28a745 !important;
+        }
+        .invalid {
+            color: #dc3545;
+            border-color: #dc3545 !important;
+        }
+        .test-cases {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .test-case {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 3px;
+        }
+        button {
+            background: #1e3a8a;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #152c6d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🇨🇱 Test Validación RUT Chileno</h1>
+        
+        <div class="form-group">
+            <label for="rut">Ingresa un RUT:</label>
+            <input type="text" id="rut" placeholder="Ej: 12345678 o 12345678-9">
+            <div class="help-text" id="help">Ingresa tu RUT sin puntos ni guión. El sistema lo formateará automáticamente.</div>
+        </div>
+        
+        <div class="test-cases">
+            <h3>Casos de Prueba:</h3>
+            <button onclick="testRut('12345678')">12345678 (sin DV)</button>
+            <button onclick="testRut('17615128')">17615128 (válido)</button>
+            <button onclick="testRut('11111111-1')">11111111-1</button>
+            <button onclick="testRut('9999999-9')">9999999-9</button>
+            <button onclick="testRut('12.345.678-5')">12.345.678-5 (con puntos)</button>
+            <button onclick="testRut('invalid')">invalid (inválido)</button>
+        </div>
+        
+        <div id="result" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        // Funciones de validación y formateo de RUT
+        function cleanRut(rut) {
+            return rut.replace(/[^0-9kK]/g, '').toUpperCase();
+        }
+        
+        function calculateDV(rut) {
+            var rutNumerico = parseInt(rut, 10);
+            var m = 0, s = 1;
+            
+            while (rutNumerico > 0) {
+                s = (s + rutNumerico % 10 * (9 - m++ % 6)) % 11;
+                rutNumerico = Math.floor(rutNumerico / 10);
+            }
+            
+            return s ? (s - 1).toString() : 'K';
+        }
+        
+        function validateRut(rut) {
+            if (!rut || rut.length < 2) return false;
+            
+            var cleaned = cleanRut(rut);
+            if (cleaned.length < 2) return false;
+            
+            var body = cleaned.slice(0, -1);
+            var dv = cleaned.slice(-1);
+            
+            if (!/^[0-9]+$/.test(body)) return false;
+            if (body.length < 7 || body.length > 8) return false;
+            
+            return calculateDV(body) === dv;
+        }
+        
+        function formatRut(rut) {
+            var cleaned = cleanRut(rut);
+            if (cleaned.length < 2) return cleaned;
+            
+            var body = cleaned.slice(0, -1);
+            var dv = cleaned.slice(-1);
+            
+            var formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            
+            return formatted + '-' + dv;
+        }
+        
+        function autoCompleteRut(rut) {
+            var cleaned = cleanRut(rut);
+            
+            if (rut.includes('-') || /[kK]$/.test(rut)) {
+                return rut;
+            }
+            
+            if (cleaned.length >= 7 && cleaned.length <= 8 && /^[0-9]+$/.test(cleaned)) {
+                var dv = calculateDV(cleaned);
+                return formatRut(cleaned + dv);
+            }
+            
+            return rut;
+        }
+        
+        // Manejo del input
+        var rutInput = document.getElementById('rut');
+        var helpText = document.getElementById('help');
+        var resultDiv = document.getElementById('result');
+        
+        rutInput.addEventListener('input', function(e) {
+            var cleaned = cleanRut(this.value);
+            
+            if (cleaned.length >= 7 && cleaned.length <= 9) {
+                if (cleaned.length >= 7 && cleaned.length <= 8 && /^[0-9]+$/.test(cleaned)) {
+                    var dv = calculateDV(cleaned);
+                    this.value = formatRut(cleaned + dv);
+                } else if (cleaned.length === 9) {
+                    this.value = formatRut(cleaned);
+                }
+            } else if (cleaned.length < 7) {
+                this.value = cleaned;
+            }
+        });
+        
+        rutInput.addEventListener('blur', function(e) {
+            var value = this.value.trim();
+            if (value) {
+                if (validateRut(value)) {
+                    helpText.className = 'help-text valid';
+                    helpText.textContent = '✓ RUT válido: ' + value;
+                    this.className = 'valid';
+                    
+                    resultDiv.innerHTML = '<div style="color: #28a745; padding: 15px; background: #d4edda; border-radius: 5px;"><strong>✓ RUT VÁLIDO</strong><br>Formato: ' + value + '</div>';
+                } else {
+                    helpText.className = 'help-text invalid';
+                    helpText.textContent = '❌ RUT inválido';
+                    this.className = 'invalid';
+                    
+                    resultDiv.innerHTML = '<div style="color: #dc3545; padding: 15px; background: #f8d7da; border-radius: 5px;"><strong>❌ RUT INVÁLIDO</strong><br>Verifica el número ingresado</div>';
+                }
+            }
+        });
+        
+        rutInput.addEventListener('focus', function(e) {
+            helpText.className = 'help-text';
+            helpText.textContent = 'Ingresa tu RUT sin puntos ni guión. El sistema lo formateará automáticamente.';
+            this.className = '';
+            resultDiv.innerHTML = '';
+        });
+        
+        // Función para probar casos
+        function testRut(value) {
+            rutInput.value = value;
+            rutInput.dispatchEvent(new Event('input'));
+            setTimeout(() => {
+                rutInput.dispatchEvent(new Event('blur'));
+            }, 100);
+        }
+    </script>
+</body>
+</html>

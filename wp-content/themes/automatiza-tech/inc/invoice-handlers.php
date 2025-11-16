@@ -68,16 +68,17 @@ function automatiza_download_invoice() {
     // Registrar en log (opcional)
     error_log("Descarga de factura: {$invoice_number} por usuario " . get_current_user_id());
     
+    // Limpiar cualquier salida anterior
+    if (ob_get_level()) {
+        ob_end_clean();
+    }
+    
     // Enviar headers para descarga
     header('Content-Type: application/pdf');
     header('Content-Disposition: attachment; filename="' . basename($pdf_file) . '"');
     header('Content-Length: ' . filesize($pdf_file));
     header('Cache-Control: private, max-age=0, must-revalidate');
     header('Pragma: public');
-    
-    // Limpiar cualquier salida anterior
-    ob_clean();
-    flush();
     
     // Enviar el archivo
     readfile($pdf_file);

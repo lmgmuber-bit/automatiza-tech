@@ -117,6 +117,24 @@ function automatiza_tech_contact_form_shortcode($atts) {
                 </small>
             </div>
             
+            <!-- RUT/DNI/Pasaporte en nueva fila -->
+            <div class="form-group">
+                <label for="contact_tax_id"><span id="tax-id-label">RUT</span> *</label>
+                <input type="text" 
+                       id="contact_tax_id" 
+                       name="tax_id" 
+                       class="form-control"
+                       placeholder="Ej: 154972986"
+                       required
+                       minlength="5"
+                       maxlength="10"
+                       title="Ingresa tu RUT, DNI, Cédula o Pasaporte según tu país.">
+                <small class="form-text text-muted">
+                    <span id="tax-id-help">Ingresa tu RUT completo (9 dígitos con dígito verificador). Ejemplo: 261918072</span>
+                </small>
+                <div id="tax-id-validation" style="display: none; margin-top: 0.5rem; padding: 0.5rem; border-radius: 4px; font-size: 0.9rem;"></div>
+            </div>
+            
             <div class="form-row">
                 <div class="form-group col-12">
                     <label for="contact_message">Mensaje *</label>
@@ -411,8 +429,95 @@ function automatiza_tech_contact_form_shortcode($atts) {
         
         console.log('Form script loaded with config:', window.automatiza_ajax);
         
+        // ============================================
+        // FUNCIONES DE VALIDACIÓN Y FORMATEO DE RUT CHILENO
+        // ============================================
+        
+        /**
+         * Limpia el RUT dejando solo números y K
+         */
+        function cleanRut(rut) {
+            return rut.replace(/[^0-9kK]/g, '').toUpperCase();
+        }
+        
+        /**
+         * Calcula el dígito verificador de un RUT chileno
+         */
+        function calculateDV(rut) {
+            var rutNumerico = parseInt(rut, 10);
+            var m = 0, s = 1;
+            
+            while (rutNumerico > 0) {
+                s = (s + rutNumerico % 10 * (9 - m++ % 6)) % 11;
+                rutNumerico = Math.floor(rutNumerico / 10);
+            }
+            
+            return s ? (s - 1).toString() : 'K';
+        }
+        
+        /**
+         * Valida un RUT completo
+         */
+        function validateRut(rut) {
+            if (!rut || rut.length < 2) return false;
+            
+            var cleaned = cleanRut(rut);
+            if (cleaned.length < 2) return false;
+            
+            var body = cleaned.slice(0, -1);
+            var dv = cleaned.slice(-1);
+            
+            // Validar que el cuerpo sea numérico
+            if (!/^[0-9]+$/.test(body)) return false;
+            
+            // Validar longitud (RUT chileno tiene entre 7 y 8 dígitos + DV)
+            if (body.length < 7 || body.length > 8) return false;
+            
+            return calculateDV(body) === dv;
+        }
+        
+        /**
+         * Formatea un RUT con puntos y guión
+         */
+        function formatRut(rut) {
+            var cleaned = cleanRut(rut);
+            if (cleaned.length < 2) return cleaned;
+            
+            var body = cleaned.slice(0, -1);
+            var dv = cleaned.slice(-1);
+            
+            // Agregar puntos cada 3 dígitos desde la derecha
+            var formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            
+            return formatted + '-' + dv;
+        }
+        
+        /**
+         * Autocompleta el dígito verificador si falta
+         */
+        function autoCompleteRut(rut) {
+            var cleaned = cleanRut(rut);
+            
+            // Si ya tiene DV (tiene guión o K al final), no hacer nada
+            if (rut.includes('-') || /[kK]$/.test(rut)) {
+                return rut;
+            }
+            
+            // Si tiene entre 7 y 8 dígitos sin DV, calcularlo
+            if (cleaned.length >= 7 && cleaned.length <= 8 && /^[0-9]+$/.test(cleaned)) {
+                var dv = calculateDV(cleaned);
+                return formatRut(cleaned + dv);
+            }
+            
+            return rut;
+        }
+        
+        // ============================================
+        // FIN FUNCIONES RUT
+        // ============================================
+        
         // Funciones de validación del lado cliente
-        function validateFormData(name, email, company, phone, message) {
+        function validateFormData(name, email, company, phone, tax_id, message) {
             // Validar nombre
             if (!name || name.length < 2 || name.length > 100) {
                 return 'El nombre debe tener entre 2 y 100 caracteres.';
@@ -432,6 +537,24 @@ function automatiza_tech_contact_form_shortcode($atts) {
             // Validar empresa (opcional)
             if (company && company.length > 100) {
                 return 'El nombre de la empresa no puede tener más de 100 caracteres.';
+            }
+            
+            // Validar RUT/DNI/Pasaporte (obligatorio)
+            if (!tax_id || tax_id.length < 5 || tax_id.length > 50) {
+                return 'El RUT/DNI/Pasaporte es obligatorio y debe tener entre 5 y 50 caracteres.';
+            }
+            
+            // Validación especial para RUT chileno
+            var selectedCountryCode = document.getElementById('country_code').value;
+            if (selectedCountryCode === '+56') {
+                if (!validateRut(tax_id)) {
+                    return 'El RUT chileno ingresado no es válido. Verifica el número y el dígito verificador.';
+                }
+            } else {
+                // Otros países: solo validar formato básico
+                if (!/^[a-zA-Z0-9\.\-]+$/.test(tax_id)) {
+                    return 'El RUT/DNI/Pasaporte solo puede contener letras, números, puntos y guiones.';
+                }
             }
             
             // Validar teléfono (opcional pero si se ingresa debe ser válido)
@@ -468,7 +591,7 @@ function automatiza_tech_contact_form_shortcode($atts) {
                 /UNION.*SELECT/i, /DROP.*TABLE/i
             ];
             
-            var allContent = name + ' ' + email + ' ' + company + ' ' + phone + ' ' + message;
+            var allContent = name + ' ' + email + ' ' + company + ' ' + phone + ' ' + tax_id + ' ' + message;
             for (var i = 0; i < dangerousPatterns.length; i++) {
                 if (dangerousPatterns[i].test(allContent)) {
                     return 'Se detectó contenido no permitido en el formulario.';
@@ -580,6 +703,9 @@ function automatiza_tech_contact_form_shortcode($atts) {
         // Manejo del selector de país y teléfono
         var countrySelect = document.getElementById('country_code');
         var phonePreview = document.getElementById('phone-preview');
+        var taxIdLabel = document.getElementById('tax-id-label');
+        var taxIdHelp = document.getElementById('tax-id-help');
+        var taxIdInput = document.getElementById('contact_tax_id');
         
         function updatePhonePreview() {
             var countryCode = countrySelect.value;
@@ -589,7 +715,176 @@ function automatiza_tech_contact_form_shortcode($atts) {
             
             // Validación específica según el país
             updatePhoneValidation(countryCode);
+            
+            // Actualizar label y ayuda de RUT/DNI según el país
+            updateTaxIdLabel(countryCode);
         }
+        
+        function updateTaxIdLabel(countryCode) {
+            if (countryCode === '+56') {
+                // Chile
+                taxIdLabel.textContent = 'RUT';
+                taxIdHelp.textContent = 'Ingresa tu RUT completo (9 dígitos con dígito verificador). Ejemplo: 261918072';
+                taxIdInput.placeholder = 'Ej: 261918072';
+                taxIdInput.maxLength = 10; // 9 dígitos máximo
+            } else {
+                // Otros países
+                taxIdLabel.textContent = 'DNI/Cédula/Pasaporte';
+                taxIdHelp.textContent = 'Ingresa tu número de identificación (DNI, Cédula, CI o Pasaporte según tu país)';
+                taxIdInput.placeholder = 'Ej: 12345678 o ABC123456';
+                taxIdInput.maxLength = 50;
+            }
+        }
+        
+        // ============================================
+        // MANEJO DEL CAMPO RUT/DNI
+        // ============================================
+        
+        var taxIdValidationDiv = document.getElementById('tax-id-validation');
+        var isRutValid = false; // Variable para controlar si el RUT es válido
+        
+        if (taxIdInput && countrySelect) {
+            // Permitir solo números y K en tiempo real para Chile
+            taxIdInput.addEventListener('keypress', function(e) {
+                var countryCode = countrySelect.value;
+                
+                if (countryCode === '+56') {
+                    var char = String.fromCharCode(e.which);
+                    // Permitir solo números y K/k
+                    if (!/[0-9kK]/.test(char)) {
+                        e.preventDefault();
+                    }
+                }
+            });
+            
+            // Formatear y validar automáticamente cuando el usuario escribe
+            taxIdInput.addEventListener('input', function(e) {
+                var countryCode = countrySelect.value;
+                
+                if (countryCode === '+56') {
+                    // Solo para Chile: validar y formatear RUT
+                    var cleaned = cleanRut(this.value);
+                    
+                    // Limitar a 9 caracteres (8 dígitos + 1 DV)
+                    if (cleaned.length > 9) {
+                        cleaned = cleaned.substring(0, 9);
+                    }
+                    
+                    // Actualizar el valor sin formato mientras escribe
+                    this.value = cleaned;
+                    
+                    // Validar en línea cuando tenga 9 caracteres
+                    if (cleaned.length === 9) {
+                        var body = cleaned.slice(0, -1);
+                        var dv = cleaned.slice(-1);
+                        
+                        // Validar que el cuerpo sea numérico
+                        if (!/^[0-9]+$/.test(body)) {
+                            showValidationMessage('error', '❌ El RUT debe contener solo números y el dígito verificador (0-9 o K)');
+                            isRutValid = false;
+                            return;
+                        }
+                        
+                        // Validar longitud del cuerpo (7-8 dígitos)
+                        if (body.length < 7 || body.length > 8) {
+                            showValidationMessage('error', '❌ El RUT debe tener entre 8 y 9 dígitos en total');
+                            isRutValid = false;
+                            return;
+                        }
+                        
+                        // Validar el dígito verificador
+                        if (validateRut(cleaned)) {
+                            // RUT válido: formatear con guión
+                            var formatted = body + '-' + dv;
+                            this.value = formatted;
+                            showValidationMessage('success', '✓ RUT válido: ' + formatted);
+                            isRutValid = true;
+                        } else {
+                            showValidationMessage('error', '❌ RUT inválido. Verifica el dígito verificador.');
+                            isRutValid = false;
+                        }
+                    } else if (cleaned.length > 0 && cleaned.length < 9) {
+                        // Todavía está escribiendo
+                        showValidationMessage('info', 'Ingresa los ' + (9 - cleaned.length) + ' caracteres restantes...');
+                        isRutValid = false;
+                    } else {
+                        hideValidationMessage();
+                        isRutValid = false;
+                    }
+                } else {
+                    // Otros países: solo permitir alfanumérico, puntos y guiones
+                    this.value = this.value.replace(/[^a-zA-Z0-9\.\-]/g, '');
+                    isRutValid = true; // Para otros países, asumimos válido si tiene contenido
+                }
+            });
+            
+            // Limpiar formato al hacer focus para permitir edición
+            taxIdInput.addEventListener('focus', function(e) {
+                var countryCode = countrySelect.value;
+                
+                if (countryCode === '+56') {
+                    // Remover el guión para permitir edición
+                    var value = this.value.replace('-', '');
+                    this.value = value;
+                    hideValidationMessage();
+                }
+            });
+            
+            // Validar al salir del campo (blur)
+            taxIdInput.addEventListener('blur', function(e) {
+                var countryCode = countrySelect.value;
+                
+                if (countryCode === '+56') {
+                    var cleaned = cleanRut(this.value);
+                    
+                    if (cleaned.length === 9 && validateRut(cleaned)) {
+                        var body = cleaned.slice(0, -1);
+                        var dv = cleaned.slice(-1);
+                        var formatted = body + '-' + dv;
+                        this.value = formatted;
+                        showValidationMessage('success', '✓ RUT válido: ' + formatted);
+                        isRutValid = true;
+                    } else if (cleaned.length > 0) {
+                        showValidationMessage('error', '❌ RUT inválido. Debe tener 9 dígitos con dígito verificador correcto.');
+                        isRutValid = false;
+                    } else {
+                        hideValidationMessage();
+                        isRutValid = false;
+                    }
+                }
+            });
+        }
+        
+        function showValidationMessage(type, message) {
+            if (!taxIdValidationDiv) return;
+            
+            taxIdValidationDiv.style.display = 'block';
+            taxIdValidationDiv.textContent = message;
+            
+            if (type === 'success') {
+                taxIdValidationDiv.style.backgroundColor = '#d4edda';
+                taxIdValidationDiv.style.color = '#155724';
+                taxIdValidationDiv.style.borderLeft = '4px solid #28a745';
+            } else if (type === 'error') {
+                taxIdValidationDiv.style.backgroundColor = '#f8d7da';
+                taxIdValidationDiv.style.color = '#721c24';
+                taxIdValidationDiv.style.borderLeft = '4px solid #dc3545';
+            } else if (type === 'info') {
+                taxIdValidationDiv.style.backgroundColor = '#d1ecf1';
+                taxIdValidationDiv.style.color = '#0c5460';
+                taxIdValidationDiv.style.borderLeft = '4px solid #17a2b8';
+            }
+        }
+        
+        function hideValidationMessage() {
+            if (taxIdValidationDiv) {
+                taxIdValidationDiv.style.display = 'none';
+            }
+        }
+        
+        // ============================================
+        // FIN MANEJO RUT/DNI
+        // ============================================
         
         function updatePhoneValidation(countryCode) {
             // Configuración de longitud según el país
@@ -717,10 +1012,11 @@ function automatiza_tech_contact_form_shortcode($atts) {
             var email = document.getElementById('contact_email').value.trim();
             var company = document.getElementById('contact_company').value.trim();
             var phone = document.getElementById('contact_phone').value.trim();
+            var tax_id = document.getElementById('contact_tax_id').value.trim();
             var message = document.getElementById('contact_message').value.trim();
             
             // Validaciones del lado cliente
-            var validationError = validateFormData(name, email, company, phone, message);
+            var validationError = validateFormData(name, email, company, phone, tax_id, message);
             if (validationError) {
                 messages.className = 'error';
                 messages.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + validationError;
@@ -730,11 +1026,25 @@ function automatiza_tech_contact_form_shortcode($atts) {
                 return;
             }
             
+            // Validación adicional de RUT para Chile
+            var selectedCountryCode = document.getElementById('country_code').value;
+            if (selectedCountryCode === '+56' && !isRutValid) {
+                messages.className = 'error';
+                messages.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Debes ingresar un RUT chileno válido antes de enviar el formulario.';
+                messages.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+                // Hacer focus en el campo RUT
+                document.getElementById('contact_tax_id').focus();
+                return;
+            }
+            
+            // Preparar teléfono completo con código de país
+            var countryCode = document.getElementById('country_code').value;
+            var fullPhone = phone ? countryCode + phone : '';
+            
             // Si hay teléfono, verificar si ya existe
             if (phone) {
-                var countryCode = document.getElementById('country_code').value;
-                var fullPhone = countryCode + phone;
-                
                 checkPhoneExists(fullPhone, function(exists) {
                     if (exists) {
                         messages.className = 'error';
@@ -762,6 +1072,7 @@ function automatiza_tech_contact_form_shortcode($atts) {
             formData.append('email', sanitizeEmail(email));
             formData.append('company', sanitizeInput(company));
             formData.append('phone', sanitizePhone(fullPhone)); // Enviar teléfono completo con código de país
+            formData.append('tax_id', sanitizeInput(tax_id)); // Agregar RUT/DNI con guión
             formData.append('message', sanitizeMessage(message));
             formData.append('nonce', window.automatiza_ajax.nonce);
             

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Validación RUT en Línea</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #1e3a8a;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .help-text {
+            display: block;
+            margin-top: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+        #validation-message {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+            font-size: 14px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+        button {
+            background: #06d6a0;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #05b08a;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .test-cases {
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 5px;
+        }
+        .test-cases h3 {
+            margin-top: 0;
+        }
+        .test-case {
+            padding: 8px;
+            margin: 5px 0;
+            background: #f9f9f9;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .test-case:hover {
+            background: #e9e9e9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Validación RUT en Línea</h1>
+    
+    <form id="test-form">
+        <div class="form-group">
+            <label for="rut">RUT *</label>
+            <input type="text" 
+                   id="rut" 
+                   name="rut" 
+                   placeholder="Ej: 261918072"
+                   maxlength="10"
+                   required>
+            <span class="help-text">Ingresa tu RUT completo (9 dígitos con dígito verificador). Ejemplo: 261918072</span>
+            <div id="validation-message"></div>
+        </div>
+        
+        <button type="submit" id="submit-btn">Enviar Formulario</button>
+    </form>
+    
+    <div class="test-cases">
+        <h3>Casos de Prueba (Click para probar)</h3>
+        <div class="test-case" onclick="testRut('261918072')">✓ RUT Válido: 261918072 → 26191807-2</div>
+        <div class="test-case" onclick="testRut('12345678')">✗ RUT Inválido: 12345678 (DV incorrecto)</div>
+        <div class="test-case" onclick="testRut('176969238')">✓ RUT Válido: 176969238 → 17696923-8</div>
+        <div class="test-case" onclick="testRut('111111111')">✗ RUT Inválido: 111111111</div>
+        <div class="test-case" onclick="testRut('123456785')">✓ RUT Válido: 123456785 → 12345678-5</div>
+    </div>
+    
+    <script>
+        // Funciones de validación y formateo de RUT
+        function cleanRut(rut) {
+            return rut.replace(/[^0-9kK]/g, '').toUpperCase();
+        }
+        
+        function calculateDV(rut) {
+            var rutNumerico = parseInt(rut, 10);
+            var m = 0, s = 1;
+            
+            while (rutNumerico > 0) {
+                s = (s + rutNumerico % 10 * (9 - m++ % 6)) % 11;
+                rutNumerico = Math.floor(rutNumerico / 10);
+            }
+            
+            return s ? (s - 1).toString() : 'K';
+        }
+        
+        function validateRut(rut) {
+            if (!rut || rut.length < 2) return false;
+            
+            var cleaned = cleanRut(rut);
+            if (cleaned.length < 2) return false;
+            
+            var body = cleaned.slice(0, -1);
+            var dv = cleaned.slice(-1);
+            
+            if (!/^[0-9]+$/.test(body)) return false;
+            if (body.length < 7 || body.length > 8) return false;
+            
+            return calculateDV(body) === dv;
+        }
+        
+        var isRutValid = false;
+        var rutInput = document.getElementById('rut');
+        var validationDiv = document.getElementById('validation-message');
+        var submitBtn = document.getElementById('submit-btn');
+        
+        function showValidationMessage(type, message) {
+            validationDiv.style.display = 'block';
+            validationDiv.textContent = message;
+            validationDiv.className = type;
+        }
+        
+        function hideValidationMessage() {
+            validationDiv.style.display = 'none';
+        }
+        
+        // Permitir solo números y K
+        rutInput.addEventListener('keypress', function(e) {
+            var char = String.fromCharCode(e.which);
+            if (!/[0-9kK]/.test(char)) {
+                e.preventDefault();
+            }
+        });
+        
+        // Validar en línea mientras escribe
+        rutInput.addEventListener('input', function(e) {
+            var cleaned = cleanRut(this.value);
+            
+            // Limitar a 9 caracteres
+            if (cleaned.length > 9) {
+                cleaned = cleaned.substring(0, 9);
+            }
+            
+            // Actualizar valor sin formato
+            this.value = cleaned;
+            
+            // Validar cuando tenga 9 caracteres
+            if (cleaned.length === 9) {
+                var body = cleaned.slice(0, -1);
+                var dv = cleaned.slice(-1);
+                
+                if (!/^[0-9]+$/.test(body)) {
+                    showValidationMessage('error', '❌ El RUT debe contener solo números y el dígito verificador (0-9 o K)');
+                    isRutValid = false;
+                    return;
+                }
+                
+                if (body.length < 7 || body.length > 8) {
+                    showValidationMessage('error', '❌ El RUT debe tener entre 8 y 9 dígitos en total');
+                    isRutValid = false;
+                    return;
+                }
+                
+                if (validateRut(cleaned)) {
+                    var formatted = body + '-' + dv;
+                    this.value = formatted;
+                    showValidationMessage('success', '✓ RUT válido: ' + formatted);
+                    isRutValid = true;
+                } else {
+                    showValidationMessage('error', '❌ RUT inválido. Verifica el dígito verificador.');
+                    isRutValid = false;
+                }
+            } else if (cleaned.length > 0 && cleaned.length < 9) {
+                showValidationMessage('info', 'Ingresa los ' + (9 - cleaned.length) + ' caracteres restantes...');
+                isRutValid = false;
+            } else {
+                hideValidationMessage();
+                isRutValid = false;
+            }
+        });
+        
+        // Limpiar formato al hacer focus
+        rutInput.addEventListener('focus', function(e) {
+            var value = this.value.replace('-', '');
+            this.value = value;
+            hideValidationMessage();
+        });
+        
+        // Validar al salir del campo
+        rutInput.addEventListener('blur', function(e) {
+            var cleaned = cleanRut(this.value);
+            
+            if (cleaned.length === 9 && validateRut(cleaned)) {
+                var body = cleaned.slice(0, -1);
+                var dv = cleaned.slice(-1);
+                var formatted = body + '-' + dv;
+                this.value = formatted;
+                showValidationMessage('success', '✓ RUT válido: ' + formatted);
+                isRutValid = true;
+            } else if (cleaned.length > 0) {
+                showValidationMessage('error', '❌ RUT inválido. Debe tener 9 dígitos con dígito verificador correcto.');
+                isRutValid = false;
+            } else {
+                hideValidationMessage();
+                isRutValid = false;
+            }
+        });
+        
+        // Validar formulario antes de enviar
+        document.getElementById('test-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!isRutValid) {
+                alert('⚠️ Debes ingresar un RUT válido antes de enviar el formulario.');
+                rutInput.focus();
+                return;
+            }
+            
+            alert('✓ Formulario válido. RUT: ' + rutInput.value);
+        });
+        
+        // Función para probar RUTs
+        function testRut(rut) {
+            rutInput.value = rut;
+            rutInput.focus();
+            rutInput.dispatchEvent(new Event('input'));
+            setTimeout(function() {
+                rutInput.blur();
+            }, 100);
+        }
+        
+        // Hacer la función testRut global
+        window.testRut = testRut;
+    </script>
+</body>
+</html>

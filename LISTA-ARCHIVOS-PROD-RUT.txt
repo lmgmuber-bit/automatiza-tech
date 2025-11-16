@@ -1,0 +1,134 @@
+═══════════════════════════════════════════════════════════════
+  LISTA DE ARCHIVOS PARA SUBIR A PRODUCCIÓN - RUT EN FACTURAS
+═══════════════════════════════════════════════════════════════
+
+📅 Fecha: 2025-11-16
+🎯 Objetivo: RUT en facturas + Ocultar botones + Validación RUT inline
+
+⚠️ ORDEN CRÍTICO: Base de Datos PRIMERO, Archivos DESPUÉS
+
+═══════════════════════════════════════════════════════════════
+
+🗄️ PASO 1: BASE DE DATOS (EJECUTAR PRIMERO EN PRODUCCIÓN)
+
+CRÍTICO: Ejecutar este SQL ANTES de subir archivos:
+
+-- Agregar campo tax_id a tabla clients (clientes)
+ALTER TABLE clients 
+ADD COLUMN IF NOT EXISTS tax_id VARCHAR(20) NULL AFTER country;
+
+-- Verificar que se creó correctamente
+SHOW COLUMNS FROM clients LIKE 'tax_id';
+
+⚠️ NO CONTINUAR hasta confirmar que el campo existe
+
+═══════════════════════════════════════════════════════════════
+
+✅ PASO 2: ARCHIVOS A SUBIR (DESPUÉS DEL PASO 1)
+
+1. wp-content/themes/automatiza-tech/inc/contact-form.php
+   └─ Validación RUT inline, campo tax_id, botones ocultos
+
+2. clear-rate-limit.php
+   └─ Script para limpiar límite de intentos (NUEVO archivo en raíz)
+
+NOTA IMPORTANTE:
+   ✅ invoice-pdf-fpdf.php YA está correcto en PROD (verificado línea 302)
+   ❌ NO es necesario subirlo de nuevo
+
+═══════════════════════════════════════════════════════════════
+
+📋 PASO 3: PASOS DE DESPLIEGUE
+
+1. BACKUP (Siempre primero)
+   ✓ Hacer backup completo del sitio
+   ✓ Backup de base de datos
+
+2. BASE DE DATOS (Crítico)
+   ✓ Conectar a phpMyAdmin de Hostinger
+   ✓ Ejecutar: ALTER TABLE clients ADD COLUMN...
+   ✓ Verificar: SHOW COLUMNS FROM clients LIKE 'tax_id';
+   ✓ CONFIRMAR que el campo existe antes de continuar
+
+3. SUBIR ARCHIVOS (Solo después de verificar BD)
+   ✓ Subir contact-form.php a /wp-content/themes/automatiza-tech/inc/
+   ✓ Subir clear-rate-limit.php a raíz del sitio /
+   ✗ NO subir invoice-pdf-fpdf.php (ya está correcto en PROD)
+
+4. PROBAR FUNCIONAMIENTO
+   ✓ Ir a: https://automatizatech.shop/#contacto
+   ✓ Ingresar RUT: 261918072 (debe formatear a 26191807-2)
+   ✓ Enviar formulario y verificar que se guarda
+   ✓ Crear factura de un cliente
+   ✓ VERIFICAR que el RUT aparece en "DATOS DEL CLIENTE"
+   ✓ Verificar que botón "Regenerar Facturas" está oculto
+
+═══════════════════════════════════════════════════════════════
+
+⚠️ PROBLEMA: "LA FACTURA NO MUESTRA EL RUT"
+
+CAUSA: El campo tax_id no existe en la tabla clients
+
+SOLUCIÓN: Ejecutar en phpMyAdmin:
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS tax_id VARCHAR(20) NULL AFTER country;
+
+VERIFICAR: 
+SHOW COLUMNS FROM clients LIKE 'tax_id';
+
+Si el campo ya existe pero no se muestra:
+• Verificar que el cliente tiene tax_id guardado en BD
+• Regenerar la factura del cliente
+• Revisar línea 302 de invoice-pdf-fpdf.php (debe tener: $this->client_data->tax_id)
+
+═══════════════════════════════════════════════════════════════
+
+🔍 TROUBLESHOOTING:
+
+• "Error al guardar el mensaje" → Falta campo tax_id en BD
+• "Has excedido el límite" → Ejecutar clear-rate-limit.php
+• RUT no valida en tiempo real → Limpiar caché del navegador
+• Factura sin RUT → Ver solución arriba
+
+═══════════════════════════════════════════════════════════════
+
+📞 VERIFICACIÓN RÁPIDA EN BD:
+
+-- Ver estructura de tabla clients
+DESCRIBE clients;
+
+-- Ver RUTs guardados en clientes
+SELECT id, name, email, tax_id FROM clients 
+WHERE tax_id IS NOT NULL 
+ORDER BY id DESC LIMIT 10;
+
+-- Actualizar RUT manualmente (ejemplo)
+UPDATE clients SET tax_id = '26191807-2' WHERE id = 1;
+
+═══════════════════════════════════════════════════════════════
+
+✅ RESULTADO ESPERADO:
+
+Después del despliegue correcto:
+✓ Campo tax_id existe en tabla clients
+✓ Formulario valida RUT en tiempo real (verde/rojo)
+✓ RUT se guarda con formato correcto (12345678-9)
+✓ Facturas PDF muestran el RUT en "DATOS DEL CLIENTE"
+✓ Botón "Regenerar Facturas" está oculto en panel admin
+✓ Rate limiting funciona (máx 3 envíos por hora)
+
+═══════════════════════════════════════════════════════════════
+
+📝 NOTAS FINALES:
+
+• invoice-pdf-fpdf.php YA tiene el código correcto (línea 302)
+• Solo falta agregar el campo tax_id a la tabla clients
+• Una vez agregado, las nuevas facturas mostrarán el RUT
+• Para clientes antiguos, actualizar manualmente el campo tax_id
+
+═══════════════════════════════════════════════════════════════
+
+Última actualización: 16 de Noviembre 2025
+Versión: 3.0 - Fix Factura + Validación RUT Inline
+Estado: invoice-pdf-fpdf.php verificado correcto en PROD
+
+═══════════════════════════════════════════════════════════════

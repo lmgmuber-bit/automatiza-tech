@@ -57,6 +57,9 @@ class InvoicePDFFPDF extends FPDF {
         parent::__construct('P', 'mm', 'A4');
         $this->client_data = $client_data;
         
+        // Configurar zona horaria de Chile al inicio
+        date_default_timezone_set('America/Santiago');
+        
         // DEBUG: Log de lo que recibe el constructor
         error_log("DEBUG InvoicePDFFPDF Constructor: tipo de plan_data = " . gettype($plan_data));
         if (is_array($plan_data)) {
@@ -226,7 +229,7 @@ class InvoicePDFFPDF extends FPDF {
         $this->SetTextColor($this->gray_color[0], $this->gray_color[1], $this->gray_color[2]);
         $this->Cell(0, 3, utf8_to_latin1($company_name . ' - RUT: ' . $company_rut . ' - Factura válida para efectos tributarios'), 0, 1, 'C');
         $this->SetFont('Arial', 'I', 6);
-        $this->Cell(0, 3, utf8_to_latin1('© ' . date('Y') . ' ' . $company_name . '. Todos los derechos reservados. Documento generado electrónicamente.'), 0, 0, 'C');
+        $this->Cell(0, 3, utf8_to_latin1('© ' . current_time('Y') . ' ' . $company_name . '. Todos los derechos reservados. Documento generado electrónicamente.'), 0, 0, 'C');
     }
     
     private function generate_qr_code() {
@@ -261,7 +264,7 @@ class InvoicePDFFPDF extends FPDF {
         
         // Fecha al lado derecho (en negrita) - ancho 70mm para llegar al margen derecho
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(70, 8, 'Fecha: ' . date('d/m/Y H:i'), 0, 1, 'R');
+        $this->Cell(70, 8, 'Fecha: ' . current_time('d/m/Y H:i'), 0, 1, 'R');
         
         $this->Ln(8);
         
@@ -269,8 +272,8 @@ class InvoicePDFFPDF extends FPDF {
         $this->SetDrawColor($this->primary_color[0], $this->primary_color[1], $this->primary_color[2]);
         $this->SetLineWidth(0.6);
         
-        // RectÃ¡ngulo compacto
-        $this->Rect(15, $this->GetY(), 180, 28, 'D');
+        // Rectángulo compacto ajustado para 4 líneas (RUT/DNI, Nombre, Teléfono, Email)
+        $this->Rect(15, $this->GetY(), 180, 33, 'D');
         
         // Fondo para el tÃ­tulo
         $box_y = $this->GetY();
@@ -285,6 +288,23 @@ class InvoicePDFFPDF extends FPDF {
         
         // Datos del cliente compactos
         $this->SetXY(20, $box_y + 8);
+        $this->SetFont('Arial', '', 8);
+        $this->SetTextColor($this->gray_color[0], $this->gray_color[1], $this->gray_color[2]);
+        
+        // Determinar label del tax_id según el país
+        $tax_id_label = 'RUT/DNI/Pasaporte:';
+        if (!empty($this->client_data->country)) {
+            if ($this->client_data->country === 'Chile' || $this->client_data->country === 'CL') {
+                $tax_id_label = 'RUT:';
+            }
+        }
+        
+        $this->Cell(25, 5, $tax_id_label, 0, 0, 'L');
+        $this->SetFont('Arial', 'B', 8);
+        $this->SetTextColor($this->text_color[0], $this->text_color[1], $this->text_color[2]);
+        $this->Cell(0, 5, utf8_to_latin1(!empty($this->client_data->tax_id) ? $this->client_data->tax_id : 'N/A'), 0, 1, 'L');
+        
+        $this->SetX(20);
         $this->SetFont('Arial', '', 8);
         $this->SetTextColor($this->gray_color[0], $this->gray_color[1], $this->gray_color[2]);
         $this->Cell(25, 5, 'Nombre:', 0, 0, 'L');
@@ -447,7 +467,7 @@ class InvoicePDFFPDF extends FPDF {
         
         // Columna 1: Contacto (configurables desde panel admin)
         $company_email = get_option('company_email', 'info@automatizatech.shop');
-        $company_phone = get_option('company_phone', '+56 9 1234 5678');
+        $company_phone = get_option('company_phone', '+56 9 4033 1127');
         $company_website = get_option('company_website', 'www.automatizatech.shop');
         
         $this->SetXY($x_start, $y_start);

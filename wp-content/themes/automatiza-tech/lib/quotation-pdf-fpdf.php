@@ -57,6 +57,9 @@ class QuotationPDFFPDF extends FPDF {
         parent::__construct('P', 'mm', 'A4');
         $this->contact_data = $contact_data;
         
+        // Configurar zona horaria de Chile al inicio
+        date_default_timezone_set('America/Santiago');
+        
         // DEBUG: Log de lo que recibe el constructor
         error_log("DEBUG QuotationPDFFPDF Constructor: tipo de plan_data = " . gettype($plan_data));
         if (is_array($plan_data)) {
@@ -174,7 +177,7 @@ class QuotationPDFFPDF extends FPDF {
         // Info empresa (derecha)
         $company_name = get_option('company_name', 'AutomatizaTech SpA');
         $company_email = get_option('company_email', 'info@automatizatech.shop');
-        $company_phone = get_option('company_phone', '+56 9 1234 5678');
+        $company_phone = get_option('company_phone', '+56 9 4033 1127');
         $company_website = get_option('company_website', 'www.automatizatech.shop');
         
         $this->SetFont('Arial', 'B', 11);

@@ -35,7 +35,7 @@ class AutomatizaTechContactForm {
         add_action('wp_ajax_filter_contacts', array($this, 'filter_contacts'));
         add_action('wp_ajax_send_email_to_new_contacts', array($this, 'send_email_to_new_contacts'));
         add_action('wp_ajax_get_available_plans', array($this, 'get_available_plans'));
-        add_action('wp_ajax_download_invoice', array($this, 'download_invoice'));
+        // Hook de download_invoice movido a invoice-handlers.php para evitar duplicados
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'admin_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'frontend_scripts'));
@@ -89,6 +89,7 @@ class AutomatizaTechContactForm {
             email varchar(100) NOT NULL,
             company varchar(100),
             phone varchar(20),
+            tax_id varchar(50),
             message text NOT NULL,
             submitted_at datetime DEFAULT CURRENT_TIMESTAMP,
             status varchar(20) DEFAULT 'new',
@@ -106,6 +107,7 @@ class AutomatizaTechContactForm {
             email varchar(100) NOT NULL,
             company varchar(100),
             phone varchar(20),
+            tax_id varchar(50),
             original_message text,
             contacted_at datetime DEFAULT CURRENT_TIMESTAMP,
             contracted_at datetime DEFAULT CURRENT_TIMESTAMP,
@@ -158,6 +160,7 @@ class AutomatizaTechContactForm {
         $email = $this->validate_and_sanitize_email($_POST['email'] ?? '');
         $company = $this->validate_and_sanitize_company($_POST['company'] ?? '');
         $phone = $this->validate_and_sanitize_phone($_POST['phone'] ?? '');
+        $tax_id = $this->validate_and_sanitize_tax_id($_POST['tax_id'] ?? '');
         $message = $this->validate_and_sanitize_message($_POST['message'] ?? '');
         
         // Validaciones obligatorias
@@ -169,6 +172,19 @@ class AutomatizaTechContactForm {
         if (empty($email)) {
             wp_send_json_error('El email es obligatorio y debe ser válido.');
             wp_die();
+        }
+        
+        if (empty($tax_id)) {
+            wp_send_json_error('El RUT/DNI/Pasaporte es obligatorio.');
+            wp_die();
+        }
+        
+        // Validar RUT chileno si el teléfono es de Chile
+        if (!empty($phone) && strpos($phone, '+56') === 0) {
+            if (!$this->validate_chilean_rut($tax_id)) {
+                wp_send_json_error('El RUT chileno ingresado no es válido. Por favor verifica el número y el dígito verificador.');
+                wp_die();
+            }
         }
         
         if (empty($message)) {
@@ -215,10 +231,11 @@ class AutomatizaTechContactForm {
                 'email' => $email,
                 'company' => $company,
                 'phone' => $phone,
+                'tax_id' => $tax_id,
                 'message' => $message,
                 'submitted_at' => current_time('mysql')
             ),
-            array('%s', '%s', '%s', '%s', '%s', '%s')
+            array('%s', '%s', '%s', '%s', '%s', '%s', '%s')
         );
         
         if ($result === false) {
@@ -313,6 +330,79 @@ class AutomatizaTechContactForm {
         }
         
         return $company;
+    }
+    
+    /**
+     * Validar y sanitizar RUT/DNI/Pasaporte
+     */
+    private function validate_and_sanitize_tax_id($tax_id) {
+        // Remover espacios
+        $tax_id = trim($tax_id);
+        
+        // Sanitizar
+        $tax_id = sanitize_text_field($tax_id);
+        
+        // Remover caracteres peligrosos pero mantener guiones, puntos y letras (para RUT, DNI, Pasaportes)
+        $tax_id = preg_replace('/[<>"\']/', '', $tax_id);
+        
+        // Validar longitud (entre 5 y 50 caracteres)
+        if (strlen($tax_id) < 5 || strlen($tax_id) > 50) {
+            return '';
+        }
+        
+        // Validar que contenga solo números, letras, guiones y puntos
+        if (!preg_match('/^[a-zA-Z0-9\.\-]+$/', $tax_id)) {
+            return '';
+        }
+        
+        return $tax_id;
+    }
+    
+    /**
+     * Validar RUT chileno
+     */
+    private function validate_chilean_rut($rut) {
+        // Limpiar el RUT
+        $rut = preg_replace('/[^0-9kK]/', '', strtoupper($rut));
+        
+        if (strlen($rut) < 2) {
+            return false;
+        }
+        
+        // Separar cuerpo y dígito verificador
+        $body = substr($rut, 0, -1);
+        $dv = substr($rut, -1);
+        
+        // Validar que el cuerpo sea numérico
+        if (!is_numeric($body)) {
+            return false;
+        }
+        
+        // Validar longitud (7-8 dígitos)
+        if (strlen($body) < 7 || strlen($body) > 8) {
+            return false;
+        }
+        
+        // Calcular dígito verificador
+        $sum = 0;
+        $multiplier = 2;
+        
+        for ($i = strlen($body) - 1; $i >= 0; $i--) {
+            $sum += $body[$i] * $multiplier;
+            $multiplier = $multiplier < 7 ? $multiplier + 1 : 2;
+        }
+        
+        $calculated_dv = 11 - ($sum % 11);
+        
+        if ($calculated_dv == 11) {
+            $calculated_dv = '0';
+        } elseif ($calculated_dv == 10) {
+            $calculated_dv = 'K';
+        } else {
+            $calculated_dv = (string)$calculated_dv;
+        }
+        
+        return $dv === $calculated_dv;
     }
     
     /**
@@ -770,6 +860,7 @@ class AutomatizaTechContactForm {
                 'email' => $contact->email,
                 'company' => $contact->company,
                 'phone' => $contact->phone,
+                'tax_id' => $contact->tax_id,
                 'country' => $country,
                 'original_message' => $contact->message,
                 'contacted_at' => $contact->submitted_at,
@@ -780,7 +871,7 @@ class AutomatizaTechContactForm {
                 'contract_status' => 'active',
                 'notes' => $contact->notes
             ),
-            array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%f', '%s', '%s', '%s')
+            array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%f', '%s', '%s', '%s')
         );
         
         if ($result) {
@@ -980,8 +1071,8 @@ class AutomatizaTechContactForm {
                     <p><span class='label'>Email:</span> <span class='value'>" . esc_html($client_data->email) . "</span></p>
                     <p><span class='label'>Empresa:</span> <span class='value'>" . esc_html($client_data->company ?: 'No especificada') . "</span></p>
                     <p><span class='label'>Teléfono:</span> <span class='value'>" . esc_html($client_data->phone ?: 'No especificado') . "</span></p>
-                    <p><span class='label'>Contactado:</span> <span class='value'>" . date('d/m/Y H:i', strtotime($client_data->contacted_at)) . "</span></p>
-                    <p><span class='label'>Contratado:</span> <span class='value'>" . date('d/m/Y H:i', strtotime($client_data->contracted_at)) . "</span></p>
+                    <p><span class='label'>Contactado:</span> <span class='value'>" . current_time('d/m/Y H:i', strtotime($client_data->contacted_at)) . "</span></p>
+                    <p><span class='label'>Contratado:</span> <span class='value'>" . current_time('d/m/Y H:i', strtotime($client_data->contracted_at)) . "</span></p>
                 </div>
                 
             " . $plans_html . "                " . (!empty($client_data->original_message) ? "
@@ -1005,7 +1096,7 @@ class AutomatizaTechContactForm {
                 <div class='footer'>
                     <p>📧 Correo enviado automáticamente desde <strong>AutomatizaTech</strong></p>
                     <p>🌐 <a href='{$site_url}'>{$site_url}</a></p>
-                    <p>📅 " . date('d/m/Y H:i:s') . "</p>
+                    <p>📅 " . current_time('d/m/Y H:i:s') . "</p>
                 </div>
             </div>
         </body>
@@ -1362,7 +1453,7 @@ class AutomatizaTechContactForm {
             $plain_text .= "FACTURA\n";
             $plain_text .= "-------\n";
             $plain_text .= "Numero: " . $invoice_number . "\n";
-            $plain_text .= "Fecha: " . date('d/m/Y H:i') . "\n\n";
+            $plain_text .= "Fecha: " . current_time('d/m/Y H:i') . "\n\n";
             $plain_text .= "Nuestro equipo se pondra en contacto contigo en las proximas 24-48 horas.\n\n";
             $plain_text .= "INFORMACION DE CONTACTO\n";
             $plain_text .= "-----------------------\n";
@@ -1829,7 +1920,7 @@ class AutomatizaTechContactForm {
             $total = $subtotal + $iva;
         }
         
-        $fecha_validez = date('d/m/Y', strtotime($valid_until));
+        $fecha_validez = current_time('d/m/Y', strtotime($valid_until));
         
         // HTML optimizado para evitar spam con colores del degradado azul-turquesa
         $message = '<!DOCTYPE html>
@@ -2550,7 +2641,7 @@ class AutomatizaTechContactForm {
         }
         
         // Nombre del archivo con timestamp
-        $filename = 'cliente-contratado-' . date('Y-m-d_H-i-s') . '-' . sanitize_file_name($contact->name) . '.html';
+        $filename = 'cliente-contratado-' . current_time('Y-m-d_H-i-s') . '-' . sanitize_file_name($contact->name) . '.html';
         $filepath = $emails_dir . $filename;
         
         // Contenido del archivo
@@ -2566,7 +2657,7 @@ class AutomatizaTechContactForm {
             <div style='background: #dc3545; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;'>
                 <h2>⚠️ Correo No Enviado - Guardado para Revisión</h2>
                 <p><strong>Para:</strong> {$to}</p>
-                <p><strong>Fecha:</strong> " . date('Y-m-d H:i:s') . "</p>
+                <p><strong>Fecha:</strong> " . current_time('Y-m-d H:i:s') . "</p>
             </div>
             
             <div style='border: 2px solid #1e3a8a; padding: 15px; border-radius: 8px;'>
@@ -2656,7 +2747,7 @@ class AutomatizaTechContactForm {
                 $filename = basename($file);
                 $file_url = $upload_url . $filename;
                 $file_time = filemtime($file);
-                $formatted_time = date('Y-m-d H:i:s', $file_time);
+                $formatted_time = current_time('Y-m-d H:i:s', $file_time);
                 
                 $index .= "
                 <div class='email-item'>
@@ -3789,10 +3880,13 @@ class AutomatizaTechContactForm {
                             style="background: linear-gradient(135deg, #16a34a, #15803d); border: none; padding: 8px 15px; border-radius: 20px; font-weight: 600; box-shadow: 0 2px 8px rgba(22,163,74,0.3);">
                         <span class="dashicons dashicons-email" style="font-size: 16px;"></span> Enviar Email a Contactos "Nuevo"
                     </button>
+                    <?php /* 
+                    // Botón de regenerar facturas desactivado
                     <button type="button" id="regenerate-invoices-qr" class="button button-primary" 
                             style="background: linear-gradient(135deg, #dc3545, #c82333); border: none; padding: 8px 15px; border-radius: 20px; font-weight: 600; box-shadow: 0 2px 8px rgba(220,53,69,0.3); margin-left: 10px;">
                         <span class="dashicons dashicons-update" style="font-size: 16px;"></span> Regenerar Facturas con QR
                     </button>
+                    */ ?>
                     <?php endif; ?>
                 </div>
                 <div id="search-results-info" style="margin-top: 10px; font-size: 13px; color: #666; display: none;">
@@ -5355,11 +5449,14 @@ class AutomatizaTechContactForm {
                     <a href="<?php echo admin_url('admin.php?page=automatiza-tech-contacts'); ?>" class="button button-secondary">
                         <span class="dashicons dashicons-arrow-left-alt2"></span> Volver a Contactos
                     </a>
-                    <?php if (current_user_can('administrator')): ?>
+                    <?php /* 
+                    // Botón de regenerar facturas desactivado
+                    if (current_user_can('administrator')): ?>
                     <button type="button" onclick="regenerateAllInvoicesQR()" class="button button-primary" style="margin-left: 10px; background: linear-gradient(135deg, #06d6a0, #059f7f); border: none; box-shadow: 0 2px 5px rgba(6, 214, 160, 0.3);">
                         <span class="dashicons dashicons-update"></span> Regenerar QR de Facturas
                     </button>
-                    <?php endif; ?>
+                    <?php endif;
+                    */ ?>
                 </div>
                 <div class="alignright">
                     <span class="displaying-num"><?php echo count($clients); ?> clientes</span>
@@ -5527,7 +5624,7 @@ class AutomatizaTechContactForm {
                                                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(70,180,80,0.4)';"
                                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(70,180,80,0.3)';"
                                                title="Descargar factura <?php echo esc_attr($invoice->invoice_number); ?>">
-                                               � Descargar
+                                               📥 Descargar
                                             </a>
                                         </div>
                                     <?php else: ?>

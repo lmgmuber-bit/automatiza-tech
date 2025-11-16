@@ -173,7 +173,7 @@ function generate_client_email_preview($client_data, $plan_data, $invoice_number
                 <p style='color: #666; margin-bottom: 10px;'>Si tienes consultas, puedes contactarnos:</p>
                 <div class='contact-info'>
                     Email: <strong>info@automatizatech.shop</strong><br>
-                    Telefono: <strong>+56 9 6432 4169</strong><br>
+                    Teléfono: <strong>+56 9 4033 1127</strong><br>
                     Sitio web: <strong>{$site_url}</strong>
                 </div>
             </div>

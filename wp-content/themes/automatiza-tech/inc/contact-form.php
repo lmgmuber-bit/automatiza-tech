@@ -1359,7 +1359,7 @@ class AutomatizaTechContactForm {
             </p>
             
             <div class='invoice-info'>
-                <h4>Informacion de la Factura</h4>
+                <h4>Información de la Factura</h4>
                 <div class='invoice-number'>{$invoice_number}</div>
                 <p style='color: #666;'>Fecha: " . date('d/m/Y H:i') . "</p>
             </div>
@@ -1370,11 +1370,11 @@ class AutomatizaTechContactForm {
             </p>
             
             <div class='support-box'>
-                <h4>Informacion de Contacto</h4>
+                <h4>Información de Contacto</h4>
                 <p style='color: #666; margin-bottom: 10px;'>Si tienes consultas, puedes contactarnos:</p>
                 <div class='contact-info'>
                     Email: <strong>info@automatizatech.shop</strong><br>
-                    Telefono: <strong>+56 9 6432 4169</strong><br>
+                    Teléfono: <strong>+56 9 6432 4169</strong><br>
                     Sitio web: <strong>{$site_url}</strong>
                 </div>
             </div>
@@ -1387,7 +1387,7 @@ class AutomatizaTechContactForm {
         
         <div class='email-footer'>
             <p style='font-size: 1em; margin-bottom: 10px;'><strong>AutomatizaTech</strong></p>
-            <p style='font-size: 0.9em;'>Soluciones de automatizacion digital</p>
+            <p style='font-size: 0.9em;'>Soluciones de automatización digital</p>
             <p style='font-size: 0.85em; margin-top: 15px;'>
                 {$site_url} | info@automatizatech.shop<br>
                 Copyright " . date('Y') . " AutomatizaTech. Todos los derechos reservados.
@@ -1422,9 +1422,9 @@ class AutomatizaTechContactForm {
         add_action('phpmailer_init', function($phpmailer) use ($client_data, $plans_data, $invoice_number, $site_url) {
             // Versión texto plano para mejor deliverability
             $plain_text = "Hola " . $client_data->name . ",\n\n";
-            $plain_text .= "Gracias por confiar en AutomatizaTech para tu proyecto de transformacion digital.\n\n";
+            $plain_text .= "Gracias por confiar en AutomatizaTech para tu proyecto de transformación digital.\n\n";
             $plain_text .= "** FACTURA PDF ADJUNTA **\n\n";
-            $plain_text .= "Encontraras tu factura en formato PDF adjunta a este correo.\n";
+            $plain_text .= "Encontrarás tu factura en formato PDF adjunta a este correo.\n";
             $plain_text .= "Te recomendamos guardarla para tus registros contables.\n\n";
             
             // Manejar múltiples planes
@@ -1452,13 +1452,13 @@ class AutomatizaTechContactForm {
             
             $plain_text .= "FACTURA\n";
             $plain_text .= "-------\n";
-            $plain_text .= "Numero: " . $invoice_number . "\n";
+            $plain_text .= "Número: " . $invoice_number . "\n";
             $plain_text .= "Fecha: " . current_time('d/m/Y H:i') . "\n\n";
-            $plain_text .= "Nuestro equipo se pondra en contacto contigo en las proximas 24-48 horas.\n\n";
-            $plain_text .= "INFORMACION DE CONTACTO\n";
+            $plain_text .= "Nuestro equipo se pondrá en contacto contigo en las próximas 24-48 horas.\n\n";
+            $plain_text .= "INFORMACIÓN DE CONTACTO\n";
             $plain_text .= "-----------------------\n";
             $plain_text .= "Email: info@automatizatech.shop\n";
-            $plain_text .= "Telefono: +56 9 6432 4169\n";
+            $plain_text .= "Teléfono: +56 9 6432 4169\n";
             $plain_text .= "Web: " . $site_url . "\n\n";
             $plain_text .= "Saludos cordiales,\n";
             $plain_text .= "Equipo AutomatizaTech\n";
@@ -1841,7 +1841,7 @@ class AutomatizaTechContactForm {
         $all_plan_names = implode(' + ', $plan_names);
         
         // Datos para el QR
-        $qr_data = "COTIZACION: {$quotation_number}\nContacto: {$contact_data->name}\nPlan(es): {$all_plan_names}\nTotal: $" . number_format($total, 0, ',', '.');
+        $qr_data = "COTIZACIÓN: {$quotation_number}\nContacto: {$contact_data->name}\nPlan(es): {$all_plan_names}\nTotal: $" . number_format($total, 0, ',', '.');
         
         // Insertar cotización
         $wpdb->insert(
@@ -1875,7 +1875,7 @@ class AutomatizaTechContactForm {
      */
     private function send_quotation_email_to_contact($contact_data, $plans_data, $quotation_number, $quotation_pdf_path, $valid_until) {
         $to = $contact_data->email;
-        $subject = 'Tu Cotizacion ' . $quotation_number . ' - AutomatizaTech';
+        $subject = 'Tu Cotización ' . $quotation_number . ' - AutomatizaTech';
         
         $site_url = get_site_url();
         $logo_url = get_template_directory_uri() . '/assets/images/logo-automatiza-tech.png';
@@ -1941,7 +1941,7 @@ class AutomatizaTechContactForm {
                         <td style="background: linear-gradient(135deg, #0047AB 0%, #00CED1 100%); padding: 40px 20px; text-align: center;">
                             <img src="' . $logo_url . '" alt="AutomatizaTech" style="max-width: 150px; height: auto; display: block; margin: 0 auto 20px auto; background-color: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px;">
                             <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: bold; letter-spacing: 0.5px;">AutomatizaTech SpA</h1>
-                            <p style="color: #e0f2f1; margin: 8px 0 0 0; font-size: 14px;">Soluciones tecnologicas profesionales</p>
+                            <p style="color: #e0f2f1; margin: 8px 0 0 0; font-size: 14px;">Soluciones tecnológicas profesionales</p>
                         </td>
                     </tr>
                     
@@ -1951,15 +1951,15 @@ class AutomatizaTechContactForm {
                             <h2 style="color: #0047AB; margin: 0 0 20px 0; font-size: 22px;">Hola ' . esc_html($contact_data->name) . '</h2>
                             
                             <p style="color: #374151; line-height: 1.6; margin: 0 0 20px 0; font-size: 15px;">
-                                Gracias por tu interes en nuestros servicios. Te enviamos la cotizacion <strong>' . $quotation_number . '</strong> con el detalle de los planes seleccionados.
+                                Gracias por tu interés en nuestros servicios. Te enviamos la cotización <strong>' . $quotation_number . '</strong> con el detalle de los planes seleccionados.
                             </p>
                             
                             <!-- Info de la cotizacion -->
                             <table width="100%" cellpadding="15" cellspacing="0" border="0" style="background-color: #f0f9ff; border-left: 4px solid #00CED1; border-radius: 4px; margin: 20px 0;">
                                 <tr>
                                     <td>
-                                        <p style="margin: 5px 0; color: #0047AB; font-size: 14px;"><strong>Numero de Cotizacion:</strong> ' . $quotation_number . '</p>
-                                        <p style="margin: 5px 0; color: #0047AB; font-size: 14px;"><strong>Valida hasta:</strong> ' . $fecha_validez . ' (3 dias calendario)</p>
+                                        <p style="margin: 5px 0; color: #0047AB; font-size: 14px;"><strong>Número de Cotización:</strong> ' . $quotation_number . '</p>
+                                        <p style="margin: 5px 0; color: #0047AB; font-size: 14px;"><strong>Válida hasta:</strong> ' . $fecha_validez . ' (3 días calendario)</p>
                                         <p style="margin: 5px 0; color: #0047AB; font-size: 14px;"><strong>Moneda:</strong> ' . $currency . '</p>
                                     </td>
                                 </tr>
@@ -2022,14 +2022,14 @@ class AutomatizaTechContactForm {
                                 <tr>
                                     <td align="center">
                                         <a href="mailto:info@automatizatech.shop?subject=Consulta sobre Cotizacion ' . $quotation_number . '" style="display: inline-block; background: linear-gradient(135deg, #0047AB 0%, #00CED1 100%); color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-weight: bold; font-size: 15px;">
-                                            Responder Cotizacion
+                                            Responder Cotización
                                         </a>
                                     </td>
                                 </tr>
                             </table>
                             
                             <p style="color: #6b7280; line-height: 1.6; margin: 20px 0 0 0; font-size: 13px; text-align: center;">
-                                Si tienes preguntas o necesitas mas informacion, no dudes en contactarnos. Estamos aqui para ayudarte.
+                                Si tienes preguntas o necesitas más información, no dudes en contactarnos. Estamos aquí para ayudarte.
                             </p>
                         </td>
                     </tr>
@@ -2046,7 +2046,7 @@ class AutomatizaTechContactForm {
                 
                 <!-- Nota legal -->
                 <p style="color: #9ca3af; font-size: 11px; text-align: center; margin: 15px 0 0 0; max-width: 600px;">
-                    Este correo contiene informacion sobre tu cotizacion. Para consultas, responde directamente a este email.
+                    Este correo contiene información sobre tu cotización. Para consultas, responde directamente a este email.
                 </p>
             </td>
         </tr>

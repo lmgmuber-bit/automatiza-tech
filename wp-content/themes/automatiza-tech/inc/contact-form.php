@@ -1638,6 +1638,7 @@ class AutomatizaTechContactForm {
             $sent_count = 0;
             $failed_count = 0;
             $failed_emails = array();
+            $processed_ids = array();
 
             foreach ($contacts as $contact) {
                 $subject = '¡Descubre cómo Automatiza Tech puede transformar tu negocio! 🚀';
@@ -1651,6 +1652,7 @@ class AutomatizaTechContactForm {
                 $result = wp_mail($contact->email, $subject, $body, $headers);
                 if ($result) {
                     $sent_count++;
+                    $processed_ids[] = $contact->id;
                     // Cambiar estado a "contacted" después del envío exitoso
                     $wpdb->update(
                         $this->table_name,
@@ -1684,6 +1686,7 @@ class AutomatizaTechContactForm {
                 'message' => $message,
                 'sent' => $sent_count,
                 'failed' => $failed_count,
+                'processed_ids' => $processed_ids,
                 'reload' => true
             ));
             wp_die();

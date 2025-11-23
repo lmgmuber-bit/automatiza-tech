@@ -4,11 +4,6 @@
  * Maneja el formulario de contacto y administración de datos
  */
 
-// Evitar acceso directo
-if (!defined('ABSPATH')) {
-    exit;
-}
-
 class AutomatizaTechContactForm {
     
     private $table_name;
@@ -1556,105 +1551,143 @@ class AutomatizaTechContactForm {
                 [
                     'invoice_html' => $invoice_html,
                     'invoice_file_path' => $invoice_path,
-    }
-
-    /**
-     * Enviar email a todos los contactos con estado "Nuevo" (N8N)
-     */
-    public function send_email_to_new_contacts_n8n() {
-        // Permitir ejecución solo si se pasa un token seguro por POST
-        $token = $_POST['n8n_token'] ?? '';
-        $expected_token = getenv('N8N_API_TOKEN') ?: 'n8n_test_token'; // Puedes definirlo en .env o wp-config
-        if ($token !== $expected_token) {
-            wp_send_json_error('Token inválido');
-            wp_die();
-        }
-        global $wpdb;
-        $contacts = $wpdb->get_results("SELECT * FROM {$this->table_name} WHERE status = 'new'");
-        if (empty($contacts)) {
-            wp_send_json_error('No hay contactos con estado "Nuevo" para enviar correos');
-            wp_die();
-        }
-        $sent_count = 0;
-        $failed_count = 0;
-        $failed_emails = array();
-        foreach ($contacts as $contact) {
-            $subject = '¡Descubre cómo Automatiza Tech puede transformar tu negocio! 🚀';
-            $body = $this->get_email_template($contact->name);
-            $headers = array(
-                'Content-Type: text/html; charset=UTF-8',
-                'From: Automatiza Tech <' . get_option('admin_email') . '>',
-                'Reply-To: Automatiza Tech <info@automatizatech.cl>',
-                'Bcc: automatizatech.bots@gmail.com'
-            );
-            $result = wp_mail($contact->email, $subject, $body, $headers);
-            if ($result) {
-                $sent_count++;
-                $wpdb->update(
-                    $this->table_name,
-                    array('status' => 'contacted'),
-                    array('id' => $contact->id),
-                    array('%s'),
-                    array('%d')
-                );
-                if (WP_DEBUG && WP_DEBUG_LOG) {
-                    error_log('Automatiza Tech N8N - Correo enviado exitosamente a: ' . $contact->email . ' - Estado cambiado a "contacted"');
-                }
-            } else {
-                $failed_count++;
-                $failed_emails[] = $contact->email;
-                if (WP_DEBUG && WP_DEBUG_LOG) {
-                    error_log('Automatiza Tech N8N - Error al enviar correo a: ' . $contact->email);
-                }
-            }
-            usleep(500000); // 0.5 segundos
-        }
-        $message = "✅ N8N: Se enviaron $sent_count correos exitosamente.";
-        if ($sent_count > 0) {
-            $message .= "\n📋 Los contactos han sido actualizados al estado 'Contactado'.";
-        }
-        if ($failed_count > 0) {
-            $message .= "\n⚠️ $failed_count correos fallaron: " . implode(', ', $failed_emails);
-            $message .= "\nLos contactos con fallos permanecen en estado 'Nuevo'.";
-        }
-        wp_send_json_success(array(
-            'message' => $message,
-            'sent' => $sent_count,
-            'failed' => $failed_count,
-            'reload' => false
-        ));
-        wp_die();
                     'qr_code_data' => $qr_data
                 ],
-                ['id' => $existing],
-                ['%s', '%s', '%s'],
-                ['%d']
+                [
+                    'invoice_number' => $invoice_number
+                ]
             );
         } else {
             // Insertar nueva factura
             $wpdb->insert(
                 $invoices_table,
                 [
-                    'invoice_number' => $invoice_number,
                     'client_id' => $client_data->id,
-                    'client_name' => $client_data->name,
-                    'client_email' => $client_data->email,
                     'plan_id' => $first_plan_id,
-                    'plan_name' => $all_plan_names,
-                    'subtotal' => $subtotal,
-                    'iva' => $iva,
-                    'total' => $total,
+                    'invoice_number' => $invoice_number,
                     'invoice_html' => $invoice_html,
                     'invoice_file_path' => $invoice_path,
                     'qr_code_data' => $qr_data,
-                    'status' => 'active'
-                ],
-                ['%s', '%d', '%s', '%s', '%d', '%s', '%f', '%f', '%f', '%s', '%s', '%s', '%s']
+                    'subtotal' => $subtotal,
+                    'iva' => $iva,
+                    'total' => $total,
+                    'created_at' => current_time('mysql')
+                ]
             );
         }
-        
-        error_log("FACTURA GUARDADA EN BD: {$invoice_number} - Planes: {$all_plan_names}");
     }
+
+        /**
+         * Endpoint para N8N: enviar correos a contactos nuevos y cambiar estatus
+         * Activación por token seguro
+         */
+        public function send_email_to_new_contacts_n8n() {
+            // Token seguro definido en el sistema (ajusta según tu config)
+            $expected_token = 'n8n_test_token';
+            
+            $received_token = '';
+
+            // 1. Intentar obtener de POST
+            if (isset($_POST['n8n_token'])) {
+                $received_token = $_POST['n8n_token'];
+            }
+            
+            // 2. Si está vacío, intentar leer JSON input
+            if (empty($received_token)) {
+                $json_input = file_get_contents('php://input');
+                $data = json_decode($json_input, true);
+                if (isset($data['n8n_token'])) {
+                    $received_token = $data['n8n_token'];
+                }
+            }
+
+            // 3. Intentar GET/REQUEST
+            if (empty($received_token) && isset($_REQUEST['n8n_token'])) {
+                $received_token = $_REQUEST['n8n_token'];
+            }
+
+            // 4. Intentar Headers (usando $_SERVER para mayor compatibilidad)
+            if (empty($received_token) && isset($_SERVER['HTTP_X_N8N_TOKEN'])) {
+                $received_token = $_SERVER['HTTP_X_N8N_TOKEN'];
+            }
+
+            // Debug log mejorado
+            error_log('=== N8N DEBUG START ===');
+            error_log('Token final detectado: "' . $received_token . '"');
+            error_log('Request Method: ' . ($_SERVER['REQUEST_METHOD'] ?? 'Unknown'));
+            error_log('Content Type: ' . ($_SERVER['CONTENT_TYPE'] ?? 'Not set'));
+            error_log('Query String: ' . ($_SERVER['QUERY_STRING'] ?? 'Empty'));
+            error_log('Body Size: ' . strlen(file_get_contents('php://input')));
+            error_log('=== N8N DEBUG END ===');
+
+            if (trim($received_token) !== $expected_token) {
+                wp_send_json_error('Token inválido. Recibido: "' . $received_token . '"');
+                wp_die();
+            }
+
+            global $wpdb;
+
+            // Obtener todos los contactos con estado "new"
+            $contacts = $wpdb->get_results("SELECT * FROM {$this->table_name} WHERE status = 'new'");
+
+            if (empty($contacts)) {
+                wp_send_json_error('No hay contactos con estado "Nuevo" para enviar correos');
+                wp_die();
+            }
+
+            $sent_count = 0;
+            $failed_count = 0;
+            $failed_emails = array();
+
+            foreach ($contacts as $contact) {
+                $subject = '¡Descubre cómo Automatiza Tech puede transformar tu negocio! 🚀';
+                $body = $this->get_email_template($contact->name);
+                $headers = array(
+                    'Content-Type: text/html; charset=UTF-8',
+                    'From: Automatiza Tech <' . get_option('admin_email') . '>',
+                    'Reply-To: Automatiza Tech <info@automatizatech.cl>',
+                    'Bcc: automatizatech.bots@gmail.com'
+                );
+                $result = wp_mail($contact->email, $subject, $body, $headers);
+                if ($result) {
+                    $sent_count++;
+                    // Cambiar estado a "contacted" después del envío exitoso
+                    $wpdb->update(
+                        $this->table_name,
+                        array('status' => 'contacted'),
+                        array('id' => $contact->id),
+                        array('%s'),
+                        array('%d')
+                    );
+                    if (WP_DEBUG && WP_DEBUG_LOG) {
+                        error_log('Automatiza Tech N8N - Correo enviado exitosamente a: ' . $contact->email . ' - Estado cambiado a "contacted"');
+                    }
+                } else {
+                    $failed_count++;
+                    $failed_emails[] = $contact->email;
+                    if (WP_DEBUG && WP_DEBUG_LOG) {
+                        error_log('Automatiza Tech N8N - Error al enviar correo a: ' . $contact->email);
+                    }
+                }
+                usleep(500000); // 0.5 segundos
+            }
+
+            $message = "✅ Se enviaron $sent_count correos exitosamente.";
+            if ($sent_count > 0) {
+                $message .= "\n📋 Los contactos han sido actualizados al estado 'Contactado'.";
+            }
+            if ($failed_count > 0) {
+                $message .= "\n⚠️ $failed_count correos fallaron: " . implode(', ', $failed_emails);
+                $message .= "\nLos contactos con fallos permanecen en estado 'Nuevo'.";
+            }
+            wp_send_json_success(array(
+                'message' => $message,
+                'sent' => $sent_count,
+                'failed' => $failed_count,
+                'reload' => true
+            ));
+            wp_die();
+        }
     
     /**
      * ========================================================================

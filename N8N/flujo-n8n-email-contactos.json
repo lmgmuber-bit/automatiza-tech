@@ -1,0 +1,52 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyHour"
+            }
+          ]
+        }
+      },
+      "name": "Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://automatizatech.shop/wp-admin/admin-ajax.php?action=send_email_to_new_contacts_n8n",
+        "method": "POST",
+        "responseFormat": "json",
+        "options": {},
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "n8n_token",
+              "value": "n8n_test_token"
+            }
+          ]
+        }
+      },
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [480, 300]
+    }
+  ],
+  "connections": {
+    "Cron": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

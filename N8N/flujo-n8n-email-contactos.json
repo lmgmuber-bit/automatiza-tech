@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "url": "https://automatizatech.shop/wp-admin/admin-ajax.php?action=send_email_to_new_contacts_n8n",
+        "url": "https://automatizatech.shop/wp-admin/admin-ajax.php?action=send_email_to_new_contacts_n8n&n8n_token=n8n_test_token",
         "method": "POST",
         "responseFormat": "json",
         "options": {},

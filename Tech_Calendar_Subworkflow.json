@@ -1,0 +1,441 @@
+{
+  "name": "Tech Calendar Subworkflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "start-trigger",
+      "name": "Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "date",
+              "name": "date",
+              "value": "={{ $json.body?.leadData?.scheduled_date || $json.leadData?.scheduled_date || $json.date }}",
+              "type": "string"
+            },
+            {
+              "id": "time",
+              "name": "time",
+              "value": "={{ $json.body?.leadData?.scheduled_time || $json.leadData?.scheduled_time || $json.time }}",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "value": "={{ $json.body?.leadData?.email || $json.leadData?.email || $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "name",
+              "name": "name",
+              "value": "={{ $json.body?.leadData?.name || $json.leadData?.name || $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "phone",
+              "name": "phone",
+              "value": "={{ $json.body?.leadData?.phone || $json.leadData?.phone || $json.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "session_id",
+              "name": "session_id",
+              "value": "={{ $json.body?.sessionId || $json.sessionId || $json.session_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        120,
+        0
+      ],
+      "id": "normalize-data",
+      "name": "Normalize Data"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "automatizacionesbotcore@gmail.com",
+          "mode": "list",
+          "cachedResultName": "automatizacionesbotcore@gmail.com"
+        },
+        "options": {
+          "timeMin": "={{ DateTime.fromISO($('Normalize Data').item.json.date + 'T' + $('Normalize Data').item.json.time, { zone: 'America/Santiago' }).toISO() }}",
+          "timeMax": "={{ DateTime.fromISO($('Normalize Data').item.json.date + 'T' + $('Normalize Data').item.json.time, { zone: 'America/Santiago' }).plus({ hours: 1 }).toISO() }}",
+          "singleEvents": true
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.1,
+      "position": [
+        340,
+        0
+      ],
+      "alwaysOutputData": true,
+      "id": "check-availability",
+      "name": "Check Availability",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.id }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ],
+      "id": "is-busy",
+      "name": "Is Busy?"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "automatizacionesbotcore@gmail.com",
+          "mode": "list",
+          "cachedResultName": "automatizacionesbotcore@gmail.com"
+        },
+        "start": "={{ DateTime.fromISO($('Normalize Data').item.json.date + 'T' + $('Normalize Data').item.json.time, { zone: 'America/Santiago' }).toISO() }}",
+        "end": "={{ DateTime.fromISO($('Normalize Data').item.json.date + 'T' + $('Normalize Data').item.json.time, { zone: 'America/Santiago' }).plus({ hours: 1 }).toISO() }}",
+        "summary": "Demo de AutomatizaTech",
+        "description": "Reunión agendada con {{ $('Normalize Data').item.json.name }} ({{ $('Normalize Data').item.json.email }})",
+        "attendees": [
+          "={{ $('Normalize Data').item.json.email }}"
+        ],
+        "options": {
+          "timeZone": "America/Santiago",
+          "sendUpdates": "all",
+          "conferenceData": "1"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        100
+      ],
+      "id": "create-event",
+      "name": "Create Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://automatizatech.shop/wp-json/automatiza-tech/v1/leads",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $('Normalize Data').item.json.name || 'Usuario Agendado' }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $('Normalize Data').item.json.email }}"
+            },
+            {
+              "name": "scheduled_date",
+              "value": "={{ $('Normalize Data').item.json.date }}"
+            },
+            {
+              "name": "scheduled_time",
+              "value": "={{ $('Normalize Data').item.json.time }}"
+            },
+            {
+              "name": "phone",
+              "value": "={{ $('Normalize Data').item.json.phone }}"
+            },
+            {
+              "name": "session_id",
+              "value": "={{ $('Normalize Data').item.json.session_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        880,
+        100
+      ],
+      "id": "save-appointment-wp",
+      "name": "Save Appointment to WP"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "ics_content",
+              "value": "={{ 'BEGIN:VCALENDAR\\r\\nVERSION:2.0\\r\\nPRODID:-//Automatiza Tech//NONSGML Event//EN\\r\\nMETHOD:PUBLISH\\r\\nBEGIN:VEVENT\\r\\nUID:' + $('Normalize Data').item.json.session_id + '-' + $now.format('yyyyMMddHHmmss') + '@automatizatech.shop\\r\\nDTSTAMP:' + $now.format('yyyyMMdd\\'T\\'HHmmss') + 'Z\\r\\nDTSTART:' + DateTime.fromISO($('Normalize Data').item.json.date + 'T' + $('Normalize Data').item.json.time, { zone: 'America/Santiago' }).toUTC().toFormat('yyyyMMdd\\'T\\'HHmmss') + 'Z\\r\\nDTEND:' + DateTime.fromISO($('Normalize Data').item.json.date + 'T' + $('Normalize Data').item.json.time, { zone: 'America/Santiago' }).plus({ hours: 1 }).toUTC().toFormat('yyyyMMdd\\'T\\'HHmmss') + 'Z\\r\\nSUMMARY:Demo de AutomatizaTech\\r\\nDESCRIPTION:Reunión agendada con ' + $('Normalize Data').item.json.name + '\\\\n\\\\nEnlace de la reunión: ' + ($('Create Event').item.json.hangoutLink || 'Ver detalles en el calendario') + '\\\\n\\\\nPara reprogramar, contacta a info@automatizatech.shop\\r\\nLOCATION:' + ($('Create Event').item.json.hangoutLink || 'Google Meet') + '\\r\\nSTATUS:CONFIRMED\\r\\nSEQUENCE:0\\r\\nEND:VEVENT\\r\\nEND:VCALENDAR' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        100
+      ],
+      "id": "generate-ics",
+      "name": "Generate ICS"
+    },
+    {
+      "parameters": {
+        "mode": "jsonToBinary",
+        "convertAllData": false,
+        "sourceKey": "ics_content",
+        "destinationKey": "data",
+        "options": {
+          "fileName": "invitacion.ics",
+          "mimeType": "text/calendar"
+        }
+      },
+      "type": "n8n-nodes-base.moveBinaryData",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        100
+      ],
+      "id": "convert-to-binary",
+      "name": "Convert to Binary"
+    },
+    {
+      "parameters": {
+        "fromEmail": "Automatiza Tech <info@automatizatech.shop>",
+        "toEmail": "={{ $('Normalize Data').item.json.email }}",
+        "subject": "Confirmación de Reunión: Demo AutomatizaTech",
+        "text": "={{ 'Hola ' + $('Normalize Data').item.json.name + ',\\n\\nTu reunión ha sido confirmada para el ' + $('Normalize Data').item.json.date + ' a las ' + $('Normalize Data').item.json.time + '.\\n\\nHemos adjuntado una invitación para tu calendario.\\n\\nSaludos,\\nEquipo AutomatizaTech' }}",
+        "html": "={{ '<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style>body{font-family:\\'Segoe UI\\',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.header{background-color:#1e40af;padding:30px;text-align:center;color:#ffffff}.header h1{margin:10px 0 0;font-size:24px;font-weight:600}.content{padding:40px 30px;color:#333333;line-height:1.6}.details{background-color:#f9fafb;padding:20px;border-radius:6px;margin:20px 0;border-left:4px solid #06d6a0}.details p{margin:5px 0}.footer{background-color:#1f2937;padding:20px;text-align:center;color:#9ca3af;font-size:12px}.btn{display:inline-block;background-color:#06d6a0;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;margin-top:20px}img{max-width:100%;height:auto;display:block;margin:0 auto}</style></head><body><div class=\"container\"><div class=\"header\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td align=\"center\"><img src=\"https://automatizatech.shop/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" width=\"200\" style=\"width:200px;max-width:100%;height:auto;display:block;border:0;\"></td></tr></table><h1 style=\"margin-top:20px;\">Confirmación de Reunión</h1></div><div class=\"content\"><p>Hola <strong>' + $('Normalize Data').item.json.name + '</strong>,</p><p>Tu reunión de demostración ha sido confirmada exitosamente. Estamos emocionados de mostrarte cómo podemos automatizar tu negocio.</p><div class=\"details\"><p><strong>📅 Fecha:</strong> ' + $('Normalize Data').item.json.date + '</p><p><strong>⏰ Hora:</strong> ' + $('Normalize Data').item.json.time + ' (Hora Chile)</p><p><strong>📍 Lugar:</strong> ' + ($('Create Event').item.json.hangoutLink ? '<a href=\"' + $('Create Event').item.json.hangoutLink + '\" style=\"color:#06d6a0;text-decoration:none;font-weight:bold;\">Google Meet (Clic para unirse)</a>' : 'Google Meet (Enlace pendiente)') + '</p></div><p>Hemos adjuntado una invitación a este correo. Por favor, acéptala para añadirla a tu calendario.</p><center><a href=\"https://automatizatech.shop\" class=\"btn\">Visitar Sitio Web</a></center></div><div class=\"footer\"><p>&copy; 2025 Automatiza Tech. Todos los derechos reservados.</p><p>Este es un correo automático, por favor no responder directamente si no es necesario.</p></div></div></body></html>' }}",
+        "attachments": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        1540,
+        100
+      ],
+      "id": "send-email-smtp",
+      "name": "Send Email SMTP",
+      "credentials": {
+        "smtp": {
+          "id": "YOUR_SMTP_CREDENTIAL_ID",
+          "name": "SMTP Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "result",
+              "value": "Lo siento, ese horario ya está ocupado. Por favor elige otro."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -100
+      ],
+      "id": "set-busy-msg",
+      "name": "Set Busy Message"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "result",
+              "value": "=¡Listo {{ $('Normalize Data').item.json.name }}! He agendado la reunión para el {{ $('Normalize Data').item.json.date }} a las {{ $('Normalize Data').item.json.time }}. Te llegará una invitación a tu correo {{ $('Normalize Data').item.json.email }}."
+            },
+            {
+              "name": "name",
+              "value": "={{ $('Normalize Data').item.json.name }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $('Normalize Data').item.json.email }}"
+            },
+            {
+              "name": "phone",
+              "value": "={{ $('Normalize Data').item.json.phone }}"
+            },
+            {
+              "name": "session_id",
+              "value": "={{ $('Normalize Data').item.json.session_id }}"
+            },
+            {
+              "name": "date",
+              "value": "={{ $('Normalize Data').item.json.date }}"
+            },
+            {
+              "name": "time",
+              "value": "={{ $('Normalize Data').item.json.time }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        100
+      ],
+      "id": "set-success-msg",
+      "name": "Set Success Message"
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Data": {
+      "main": [
+        [
+          {
+            "node": "Check Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Availability": {
+      "main": [
+        [
+          {
+            "node": "Is Busy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Busy?": {
+      "main": [
+        [
+          {
+            "node": "Set Busy Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event": {
+      "main": [
+        [
+          {
+            "node": "Save Appointment to WP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Appointment to WP": {
+      "main": [
+        [
+          {
+            "node": "Generate ICS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate ICS": {
+      "main": [
+        [
+          {
+            "node": "Convert to Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to Binary": {
+      "main": [
+        [
+          {
+            "node": "Send Email SMTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email SMTP": {
+      "main": [
+        [
+          {
+            "node": "Set Success Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "id": "calendar-subworkflow-123"
+}

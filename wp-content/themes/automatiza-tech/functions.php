@@ -400,4 +400,14 @@ require_once get_template_directory() . '/services-frontend.php';
  */
 require_once get_template_directory() . '/inc/invoice-handlers.php';
 
+/**
+ * Incluir módulo de Chat IA
+ */
+require_once get_template_directory() . '/inc/chat-widget.php';
+
+/**
+ * Incluir Endpoints API personalizados
+ */
+require_once get_template_directory() . '/inc/api-endpoints.php';
+
 

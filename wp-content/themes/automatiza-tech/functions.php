@@ -410,4 +410,14 @@ require_once get_template_directory() . '/inc/chat-widget.php';
  */
 require_once get_template_directory() . '/inc/api-endpoints.php';
 
+/**
+ * Incluir panel de recordatorios manuales
+ */
+require_once get_template_directory() . '/inc/admin-reminders.php';
+
+/**
+ * Incluir gestor de citas (CRUD)
+ */
+require_once get_template_directory() . '/inc/admin-leads-manager.php';
+
 

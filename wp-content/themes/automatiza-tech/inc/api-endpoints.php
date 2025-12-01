@@ -33,6 +33,34 @@ add_action('rest_api_init', function () {
         'callback' => 'automatiza_tech_check_availability',
         'permission_callback' => '__return_true'
     ));
+
+    // Endpoint para obtener leads para recordatorios
+    register_rest_route('automatiza-tech/v1', '/leads/reminders', array(
+        'methods' => 'GET',
+        'callback' => 'automatiza_tech_get_leads_for_reminders',
+        'permission_callback' => '__return_true'
+    ));
+
+    // Endpoint para actualizar estado de recordatorio
+    register_rest_route('automatiza-tech/v1', '/leads/mark-reminder', array(
+        'methods' => 'POST',
+        'callback' => 'automatiza_tech_mark_reminder_sent',
+        'permission_callback' => '__return_true'
+    ));
+
+    // Endpoint para acciones de usuario (Confirmar/Rechazar/Eliminar)
+    register_rest_route('automatiza-tech/v1', '/leads/action', array(
+        'methods' => 'GET', // GET para que funcione desde enlaces de correo
+        'callback' => 'automatiza_tech_handle_lead_action',
+        'permission_callback' => '__return_true'
+    ));
+
+    // Endpoint para reagendar cita
+    register_rest_route('automatiza-tech/v1', '/leads/reschedule', array(
+        'methods' => 'POST',
+        'callback' => 'automatiza_tech_reschedule_lead',
+        'permission_callback' => '__return_true'
+    ));
 });
 
 /**
@@ -41,6 +69,7 @@ add_action('rest_api_init', function () {
 function automatiza_tech_create_leads_table() {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_leads';
+    $logs_table_name = $wpdb->prefix . 'automatiza_leads_logs';
     $charset_collate = $wpdb->get_charset_collate();
 
     $sql = "CREATE TABLE $table_name (
@@ -52,21 +81,36 @@ function automatiza_tech_create_leads_table() {
         session_id varchar(100) DEFAULT '' NOT NULL,
         scheduled_date date DEFAULT NULL,
         scheduled_time time DEFAULT NULL,
+        confirmed_attendance tinyint(1) DEFAULT NULL,
+        recordatorio72h tinyint(1) DEFAULT 0,
+        recordatorio24h tinyint(1) DEFAULT 0,
+        recordatorio1h tinyint(1) DEFAULT 0,
+        PRIMARY KEY  (id)
+    ) $charset_collate;";
+
+    $sql_logs = "CREATE TABLE $logs_table_name (
+        id mediumint(9) NOT NULL AUTO_INCREMENT,
+        original_lead_id mediumint(9) NOT NULL,
+        deleted_at datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+        name tinytext NOT NULL,
+        email varchar(100) NOT NULL,
+        reason tinytext NOT NULL,
         PRIMARY KEY  (id)
     ) $charset_collate;";
 
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
     dbDelta($sql);
+    dbDelta($sql_logs);
 }
 // Ejecutar creación de tabla al cambiar al tema
 add_action('after_switch_theme', 'automatiza_tech_create_leads_table');
 
 // También intentamos crearla si no existe al iniciar (para desarrollo)
 add_action('init', function() {
-    // Forzamos actualización de tabla v2
-    if (!get_option('automatiza_leads_table_created_v2')) {
+    // Forzamos actualización de tabla v4
+    if (!get_option('automatiza_leads_table_created_v4')) {
         automatiza_tech_create_leads_table();
-        update_option('automatiza_leads_table_created_v2', true);
+        update_option('automatiza_leads_table_created_v4', true);
     }
 });
 
@@ -91,6 +135,7 @@ function automatiza_tech_save_lead($request) {
     $session_id = isset($params['session_id']) ? sanitize_text_field($params['session_id']) : '';
     $scheduled_date = isset($params['scheduled_date']) ? sanitize_text_field($params['scheduled_date']) : null;
     $scheduled_time = isset($params['scheduled_time']) ? sanitize_text_field($params['scheduled_time']) : null;
+    $confirmed_attendance = isset($params['confirmed_attendance']) ? (int)$params['confirmed_attendance'] : null;
 
     // Insertar en base de datos
     $data = array(
@@ -103,6 +148,7 @@ function automatiza_tech_save_lead($request) {
 
     if ($scheduled_date) $data['scheduled_date'] = $scheduled_date;
     if ($scheduled_time) $data['scheduled_time'] = $scheduled_time;
+    if ($confirmed_attendance !== null) $data['confirmed_attendance'] = $confirmed_attendance;
 
     $result = $wpdb->insert($table_name, $data);
 
@@ -223,6 +269,392 @@ function automatiza_tech_check_availability($request) {
     return array(
         'isFullDay' => ($available_slots === 0),
         'busySlots' => $busy_slots,
-        'availableSlotsCount' => $available_slots
+        'availableSlotsCount' => $available_slots,
+        'workingHours' => array('start' => $start_time, 'end' => $end_time)
+    );
+}
+
+/**
+ * Callback para obtener leads para recordatorios
+ */
+function automatiza_tech_get_leads_for_reminders($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_leads';
+    $type = $request->get_param('type'); // 72h, 24h, 1h
+
+    if (!in_array($type, ['72h', '24h', '1h'])) {
+        return new WP_Error('invalid_type', 'Tipo de recordatorio inválido', array('status' => 400));
+    }
+
+    $now = current_time('mysql');
+    $leads = [];
+
+    if ($type === '72h') {
+        // Entre 49 y 72 horas antes
+        $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 49 hours'));
+        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 72 hours'));
+        
+        $leads = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table_name 
+             WHERE CONCAT(scheduled_date, ' ', scheduled_time) BETWEEN %s AND %s 
+             AND recordatorio72h = 0",
+            $start_range, $end_range
+        ));
+    } elseif ($type === '24h') {
+        // Entre 2 y 24 horas antes
+        $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 2 hours'));
+        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 24 hours'));
+
+        $leads = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table_name 
+             WHERE CONCAT(scheduled_date, ' ', scheduled_time) BETWEEN %s AND %s 
+             AND recordatorio24h = 0",
+            $start_range, $end_range
+        ));
+    } elseif ($type === '1h') {
+        // Entre 1 hora y 1 hora 59 minutos antes
+        $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 1 hour'));
+        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 1 hour 59 minutes'));
+
+        $leads = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table_name 
+             WHERE CONCAT(scheduled_date, ' ', scheduled_time) BETWEEN %s AND %s 
+             AND recordatorio1h = 0",
+            $start_range, $end_range
+        ));
+    }
+
+    return $leads;
+}
+
+/**
+ * Callback para marcar recordatorio como enviado
+ */
+function automatiza_tech_mark_reminder_sent($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_leads';
+    $params = $request->get_json_params();
+    
+    $lead_id = isset($params['lead_id']) ? (int)$params['lead_id'] : 0;
+    $type = isset($params['type']) ? $params['type'] : '';
+
+    if (!$lead_id || !in_array($type, ['72h', '24h', '1h'])) {
+        return new WP_Error('invalid_params', 'Parámetros inválidos', array('status' => 400));
+    }
+
+    $column = 'recordatorio' . $type;
+    
+    $result = $wpdb->update(
+        $table_name,
+        array($column => 1),
+        array('id' => $lead_id),
+        array('%d'),
+        array('%d')
+    );
+
+    return array('success' => true, 'updated' => $result);
+}
+
+/**
+ * Callback para manejar acciones de usuario (Confirmar/Rechazar/Eliminar)
+ */
+function automatiza_tech_handle_lead_action($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_leads';
+    $logs_table_name = $wpdb->prefix . 'automatiza_leads_logs';
+    
+    $lead_id = $request->get_param('id');
+    $action = $request->get_param('action'); // confirm, reject, delete
+
+    if (!$lead_id || !in_array($action, ['confirm', 'reject', 'delete'])) {
+        wp_die('Enlace inválido o expirado.', 'Error', array('response' => 400));
+    }
+
+    // Configuración visual común
+    $site_title = get_bloginfo('name');
+    $home_url = home_url();
+    $logo_src = 'https://automatizatech.shop/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
+    
+    // Forzar cabecera HTML
+    header('Content-Type: text/html; charset=UTF-8');
+
+    // --- LÓGICA PARA REAGENDAR (REJECT) ---
+    if ($action === 'reject') {
+        // No actualizamos nada aún, mostramos formulario de reagendamiento
+        ?>
+        <!DOCTYPE html>
+        <html lang="<?php echo get_bloginfo('language'); ?>">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Reagendar Cita - <?php echo esc_html($site_title); ?></title>
+            <style>
+                body { font-family: "Poppins", Arial, sans-serif; background-color: #f9f9f9; margin: 0; padding: 0; color: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+                .card { background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; max-width: 500px; width: 90%; overflow: hidden; }
+                .header { background-color: #1e40af; padding: 30px 20px; }
+                .logo { max-height: 60px; width: auto; display: block; margin: 0 auto; }
+                .content { padding: 40px 30px; }
+                h2 { color: #1e40af; margin-top: 0; }
+                p { color: #555; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem; }
+                
+                .form-group { margin-bottom: 15px; text-align: left; }
+                label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #666; }
+                input[type="date"], select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+                
+                .btn { display: block; width: 100%; padding: 12px 0; margin-top: 10px; color: white; text-decoration: none; border-radius: 50px; font-weight: bold; transition: all 0.3s; font-size: 14px; border: none; cursor: pointer; }
+                .btn-primary { background-color: #1e40af; }
+                .btn-primary:hover { background-color: #15308a; }
+                .btn-danger { background-color: white; color: #dc3545; border: 1px solid #dc3545; margin-top: 15px; }
+                .btn-danger:hover { background-color: #fff5f5; }
+                
+                .loading { opacity: 0.6; pointer-events: none; }
+                #message-box { margin-top: 15px; font-size: 13px; display: none; }
+                .success { color: #06d6a0; }
+                .error { color: #dc3545; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="header">
+                    <img src="<?php echo esc_url($logo_src); ?>" alt="<?php echo esc_attr($site_title); ?>" class="logo">
+                </div>
+                <div class="content" id="reschedule-container">
+                    <h2>Reagendar Cita</h2>
+                    <p>Lamentamos que no puedas asistir. Por favor selecciona una nueva fecha y hora para tu reunión.</p>
+                    
+                    <form id="reschedule-form">
+                        <input type="hidden" id="lead_id" value="<?php echo esc_attr($lead_id); ?>">
+                        
+                        <div class="form-group">
+                            <label>Nueva Fecha:</label>
+                            <input type="date" id="date" required min="<?php echo date('Y-m-d'); ?>">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Nuevo Horario:</label>
+                            <select id="time" required disabled>
+                                <option value="">Selecciona una fecha primero</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" id="submit-btn">Confirmar Nuevo Horario</button>
+                    </form>
+
+                    <div id="message-box"></div>
+
+                    <a href="<?php echo esc_url(home_url('/wp-json/automatiza-tech/v1/leads/action?id=' . $lead_id . '&action=delete')); ?>" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que deseas cancelar definitivamente la cita?');">Cancelar Cita Definitivamente</a>
+                </div>
+            </div>
+
+            <script>
+                const dateInput = document.getElementById('date');
+                const timeSelect = document.getElementById('time');
+                const form = document.getElementById('reschedule-form');
+                const submitBtn = document.getElementById('submit-btn');
+                const msgBox = document.getElementById('message-box');
+                const leadId = document.getElementById('lead_id').value;
+
+                dateInput.addEventListener('change', function() {
+                    const dateVal = this.value;
+                    if (!dateVal) return;
+
+                    timeSelect.innerHTML = '<option>Cargando horarios...</option>';
+                    timeSelect.disabled = true;
+
+                    fetch('/wp-json/automatiza-tech/v1/check-availability', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ date: dateVal })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        timeSelect.innerHTML = '';
+                        if (data.isFullDay) {
+                            timeSelect.innerHTML = '<option value="">Día completo</option>';
+                        } else {
+                            // Usar horarios devueltos por el backend (respetando configuración del panel)
+                            const startHour = parseInt(data.workingHours.start.split(':')[0]); 
+                            const endHour = parseInt(data.workingHours.end.split(':')[0]);
+                            let hasSlots = false;
+                            
+                            timeSelect.innerHTML = '<option value="">Selecciona una hora</option>';
+
+                            for (let h = startHour; h < endHour; h++) {
+                                const timeStr = h.toString().padStart(2, '0') + ':00';
+                                if (!data.busySlots.includes(timeStr)) {
+                                    const option = document.createElement('option');
+                                    option.value = timeStr;
+                                    option.textContent = timeStr;
+                                    timeSelect.appendChild(option);
+                                    hasSlots = true;
+                                }
+                            }
+                            
+                            if (!hasSlots) {
+                                timeSelect.innerHTML = '<option value="">Sin horarios disponibles</option>';
+                                timeSelect.disabled = true;
+                            } else {
+                                timeSelect.disabled = false;
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        timeSelect.innerHTML = '<option>Error al cargar</option>';
+                    });
+                });
+
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const date = dateInput.value;
+                    const time = timeSelect.value;
+
+                    if (!date || !time) return;
+
+                    submitBtn.textContent = 'Procesando...';
+                    submitBtn.classList.add('loading');
+
+                    fetch('/wp-json/automatiza-tech/v1/leads/reschedule', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ lead_id: leadId, date: date, time: time })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById('reschedule-container').innerHTML = `
+                                <h2>¡Cita Reagendada!</h2>
+                                <p>Tu nueva cita ha sido confirmada para el <strong>${date}</strong> a las <strong>${time}</strong>.</p>
+                                <a href="<?php echo esc_url($home_url); ?>" class="btn btn-primary">Volver al Inicio</a>
+                            `;
+                        } else {
+                            throw new Error(data.message || 'Error desconocido');
+                        }
+                    })
+                    .catch(err => {
+                        msgBox.style.display = 'block';
+                        msgBox.className = 'error';
+                        msgBox.textContent = err.message;
+                        submitBtn.textContent = 'Confirmar Nuevo Horario';
+                        submitBtn.classList.remove('loading');
+                    });
+                });
+            </script>
+        </body>
+        </html>
+        <?php
+        exit;
+    }
+
+    // --- LÓGICA PARA CONFIRMAR O ELIMINAR ---
+    if ($action === 'confirm') {
+        $wpdb->update($table_name, array('confirmed_attendance' => 1), array('id' => $lead_id));
+        $message = '¡Gracias! Tu asistencia ha sido confirmada.';
+    } elseif ($action === 'delete') {
+        // Obtener datos antes de borrar
+        $lead = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $lead_id));
+        
+        if ($lead) {
+            // Mover a logs
+            $wpdb->insert($logs_table_name, array(
+                'original_lead_id' => $lead->id,
+                'deleted_at' => current_time('mysql'),
+                'name' => $lead->name,
+                'email' => $lead->email,
+                'reason' => 'Usuario eliminó agendamiento desde correo'
+            ));
+            
+            // Borrar de leads
+            $wpdb->delete($table_name, array('id' => $lead_id));
+            $message = 'Lamentamos que no puedas asistir, pero entendemos que surgen imprevistos.<br><br>Te invitamos a seguir visitando nuestro sitio web y, cuando estés listo, volver a coordinar una llamada para descubrir cómo nuestras automatizaciones pueden potenciar tu negocio.<br><br>¡Esperamos verte pronto!';
+        } else {
+            $message = 'El agendamiento ya no existe.';
+        }
+    }
+
+    echo '<!DOCTYPE html>
+    <html lang="' . get_bloginfo('language') . '">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>' . esc_html($site_title) . ' - Respuesta</title>
+        <style>
+            body { font-family: "Poppins", Arial, sans-serif; background-color: #f9f9f9; margin: 0; padding: 0; color: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+            .card { background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; max-width: 500px; width: 90%; overflow: hidden; }
+            .header { background-color: #1e40af; padding: 30px 20px; }
+            .logo { max-height: 60px; width: auto; display: block; margin: 0 auto; }
+            .content { padding: 40px 30px; }
+            p { color: #555; font-size: 1.1rem; line-height: 1.6; margin-bottom: 2rem; }
+            .btn { display: inline-block; padding: 12px 30px; background-color: #1e40af; color: white; text-decoration: none; border-radius: 50px; font-weight: bold; transition: background 0.3s; font-size: 14px; }
+            .btn:hover { background-color: #15308a; }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="header">
+                <img src="' . esc_url($logo_src) . '" alt="' . esc_attr($site_title) . '" class="logo">
+            </div>
+            <div class="content">
+                <p>' . $message . '</p>
+                <a href="' . esc_url($home_url) . '" class="btn">Volver al Inicio</a>
+            </div>
+        </div>
+    </body>
+    </html>';
+    exit;
+}
+
+/**
+ * Callback para reagendar cita
+ */
+function automatiza_tech_reschedule_lead($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_leads';
+    
+    $params = $request->get_json_params();
+    $lead_id = isset($params['lead_id']) ? (int)$params['lead_id'] : 0;
+    $new_date = isset($params['date']) ? sanitize_text_field($params['date']) : '';
+    $new_time = isset($params['time']) ? sanitize_text_field($params['time']) : '';
+
+    if (!$lead_id || !$new_date || !$new_time) {
+        return new WP_Error('missing_params', 'Faltan datos para reagendar', array('status' => 400));
+    }
+
+    // Verificar disponibilidad nuevamente (doble check)
+    $availability_req = new WP_REST_Request('POST', '/automatiza-tech/v1/check-availability');
+    $availability_req->set_body_params(array('date' => $new_date));
+    $availability = automatiza_tech_check_availability($availability_req);
+
+    if (is_wp_error($availability) || (isset($availability['isFullDay']) && $availability['isFullDay'])) {
+         return new WP_Error('unavailable', 'El día seleccionado ya no está disponible', array('status' => 400));
+    }
+    
+    if (in_array(substr($new_time, 0, 5), $availability['busySlots'])) {
+        return new WP_Error('unavailable_slot', 'El horario seleccionado ya no está disponible', array('status' => 400));
+    }
+
+    // Actualizar cita
+    $result = $wpdb->update(
+        $table_name,
+        array(
+            'scheduled_date' => $new_date,
+            'scheduled_time' => $new_time,
+            'confirmed_attendance' => 1, // Se asume confirmado al reagendar
+            'recordatorio72h' => 0, // Resetear recordatorios
+            'recordatorio24h' => 0,
+            'recordatorio1h' => 0
+        ),
+        array('id' => $lead_id),
+        array('%s', '%s', '%d', '%d', '%d', '%d'),
+        array('%d')
+    );
+
+    if ($result === false) {
+        return new WP_Error('db_error', 'Error al actualizar la cita', array('status' => 500));
+    }
+
+    return array(
+        'success' => true, 
+        'message' => 'Cita reagendada correctamente'
     );
 }

@@ -162,52 +162,25 @@
     },
     {
       "parameters": {
-        "values": {
-          "string": [
-            {
-              "name": "ics_content",
-              "value": "={{ 'BEGIN:VCALENDAR\\r\\nVERSION:2.0\\r\\nPRODID:-//Automatiza Tech//NONSGML Event//EN\\r\\nMETHOD:REQUEST\\r\\nBEGIN:VEVENT\\r\\nUID:' + $('Normalize Data').item.json.session_id + '-' + $now.format('yyyyMMddHHmmss') + '@automatizatech.shop\\r\\nDTSTAMP:' + $now.format('yyyyMMdd\\'T\\'HHmmss') + 'Z\\r\\nDTSTART:' + DateTime.fromISO($('Normalize Data').item.json.date + 'T' + $('Normalize Data').item.json.time, { zone: 'America/Santiago' }).toUTC().toFormat('yyyyMMdd\\'T\\'HHmmss') + 'Z\\r\\nDTEND:' + DateTime.fromISO($('Normalize Data').item.json.date + 'T' + $('Normalize Data').item.json.time, { zone: 'America/Santiago' }).plus({ hours: 1 }).toUTC().toFormat('yyyyMMdd\\'T\\'HHmmss') + 'Z\\r\\nSUMMARY:Demo de AutomatizaTech\\r\\nDESCRIPTION:Enlace de reunión: ' + ($('Create Event').item.json.hangoutLink || 'Google Meet') + '\\r\\nLOCATION:' + ($('Create Event').item.json.hangoutLink || 'Google Meet') + '\\r\\nORGANIZER;CN=Automatiza Tech:mailto:info@automatizatech.shop\\r\\nATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN=' + $('Normalize Data').item.json.name + ':mailto:' + $('Normalize Data').item.json.email + '\\r\\nSTATUS:CONFIRMED\\r\\nSEQUENCE:0\\r\\nEND:VEVENT\\r\\nEND:VCALENDAR' }}"
-            }
-          ]
-        },
-        "options": {}
+        "amount": 5,
+        "unit": "seconds"
       },
-      "type": "n8n-nodes-base.set",
+      "type": "n8n-nodes-base.wait",
       "typeVersion": 1,
       "position": [
-        -192,
+        -100,
         880
       ],
-      "id": "ba76a5c4-fd0b-4346-b9fd-91fef9bff569",
-      "name": "Generate ICS"
-    },
-    {
-      "parameters": {
-        "mode": "jsonToBinary",
-        "convertAllData": false,
-        "sourceKey": "ics_content",
-        "options": {
-          "fileName": "invitacion.ics",
-          "mimeType": "text/calendar"
-        }
-      },
-      "type": "n8n-nodes-base.moveBinaryData",
-      "typeVersion": 1,
-      "position": [
-        32,
-        880
-      ],
-      "id": "ea1ec3a0-eec5-466a-a6c3-a991d070a410",
-      "name": "Convert to Binary"
+      "id": "wait-node-id-12345",
+      "name": "Wait"
     },
     {
       "parameters": {
         "fromEmail": "Automatiza Tech <info@automatizatech.shop>",
-        "toEmail": "={{ $('Normalize Data').item.json.email }}",
+        "toEmail": "={{ $('Normalize Data').item.json.email }}, info@automatizatech.shop",
         "subject": "Confirmación de Reunión: Demo AutomatizaTech",
-        "text": "={{ 'Hola ' + $('Normalize Data').item.json.name + ',\\n\\nTu reunión ha sido confirmada para el ' + $('Normalize Data').item.json.date + ' a las ' + $('Normalize Data').item.json.time + '.\\n\\nHemos adjuntado una invitación para tu calendario.\\n\\nSaludos,\\nEquipo AutomatizaTech' }}",
-        "html": "={{ '<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style>body{font-family:\\'Segoe UI\\',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.header{background-color:#1e40af;padding:30px;text-align:center;color:#ffffff}.header h1{margin:10px 0 0;font-size:24px;font-weight:600}.content{padding:40px 30px;color:#333333;line-height:1.6}.details{background-color:#f9fafb;padding:20px;border-radius:6px;margin:20px 0;border-left:4px solid #06d6a0}.details p{margin:5px 0}.footer{background-color:#1f2937;padding:20px;text-align:center;color:#9ca3af;font-size:12px}.btn{display:inline-block;background-color:#06d6a0;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;margin-top:20px}img{max-width:100%;height:auto;display:block;margin:0 auto}</style></head><body><div class=\"container\"><div class=\"header\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td align=\"center\"><img src=\"https://automatizatech.shop/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" width=\"200\" style=\"width:200px;max-width:100%;height:auto;display:block;border:0;\"></td></tr></table><h1 style=\"margin-top:20px;\">Confirmación de Reunión</h1></div><div class=\"content\"><p>Hola <strong>' + $('Normalize Data').item.json.name + '</strong>,</p><p>Tu reunión de demostración ha sido confirmada exitosamente. Estamos emocionados de mostrarte cómo podemos automatizar tu negocio.</p><div class=\"details\"><p><strong>📅 Fecha:</strong> ' + $('Normalize Data').item.json.date + '</p><p><strong>⏰ Hora:</strong> ' + $('Normalize Data').item.json.time + ' (Hora Chile)</p><p><strong>📍 Lugar:</strong> ' + ($('Create Event').item.json.hangoutLink ? '<a href=\"' + $('Create Event').item.json.hangoutLink + '\" style=\"color:#06d6a0;text-decoration:none;font-weight:bold;\">Google Meet (Clic para unirse)</a>' : 'Google Meet (Enlace pendiente)') + '</p></div><p>Hemos adjuntado una invitación a este correo. Por favor, acéptala para añadirla a tu calendario.</p><center><a href=\"https://automatizatech.shop\" class=\"btn\">Visitar Sitio Web</a></center></div><div class=\"footer\"><p>&copy; 2025 Automatiza Tech. Todos los derechos reservados.</p><p>Este es un correo automático, por favor no responder directamente si no es necesario.</p></div></div></body></html>' }}",
-        "attachments": "data",
+        "text": "={{ 'Hola ' + $('Normalize Data').item.json.name + ',\\n\\nTu reunión ha sido confirmada para el ' + $('Normalize Data').item.json.date + ' a las ' + $('Normalize Data').item.json.time + '.\\n\\nPor favor acepta la invitación que te llegó en el correo anterior (de Google Calendar) para agregarla a tu calendario.\\n\\nSaludos,\\nEquipo AutomatizaTech' }}",
+        "html": "={{ '<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style>body{font-family:\\'Segoe UI\\',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.header{background-color:#1e40af;padding:30px;text-align:center;color:#ffffff}.header h1{margin:10px 0 0;font-size:24px;font-weight:600}.content{padding:40px 30px;color:#333333;line-height:1.6}.details{background-color:#f9fafb;padding:20px;border-radius:6px;margin:20px 0;border-left:4px solid #06d6a0}.details p{margin:5px 0}.footer{background-color:#1f2937;padding:20px;text-align:center;color:#9ca3af;font-size:12px}.btn{display:inline-block;background-color:#06d6a0;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;margin-top:20px}img{max-width:100%;height:auto;display:block;margin:0 auto}</style></head><body><div class=\"container\"><div class=\"header\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td align=\"center\"><img src=\"https://automatizatech.shop/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" width=\"200\" style=\"width:200px;max-width:100%;height:auto;display:block;border:0;\"></td></tr></table><h1 style=\"margin-top:20px;\">Confirmación de Reunión</h1></div><div class=\"content\"><p>Hola <strong>' + $('Normalize Data').item.json.name + '</strong>,</p><p>Tu reunión de demostración ha sido confirmada exitosamente. Estamos emocionados de mostrarte cómo podemos automatizar tu negocio.</p><div class=\"details\"><p><strong>📅 Fecha:</strong> ' + $('Normalize Data').item.json.date + '</p><p><strong>⏰ Hora:</strong> ' + $('Normalize Data').item.json.time + ' (Hora Chile)</p><p><strong>📍 Lugar:</strong> ' + ($('Create Event').item.json.hangoutLink ? '<a href=\"' + $('Create Event').item.json.hangoutLink + '\" style=\"color:#06d6a0;text-decoration:none;font-weight:bold;\">Google Meet (Clic para unirse)</a>' : 'Google Meet (Enlace pendiente)') + '</p></div><p>Por favor acepta la invitación que te llegó en el correo anterior (de Google Calendar) para agregarla a tu calendario.</p><center><a href=\"https://automatizatech.shop\" class=\"btn\">Visitar Sitio Web</a></center></div><div class=\"footer\"><p>&copy; 2025 Automatiza Tech. Todos los derechos reservados.</p><p>Este es un correo automático, por favor no responder directamente si no es necesario.</p></div></div></body></html>' }}",
         "options": {}
       },
       "type": "n8n-nodes-base.emailSend",
@@ -418,25 +391,14 @@
       "main": [
         [
           {
-            "node": "Generate ICS",
+            "node": "Wait",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Generate ICS": {
-      "main": [
-        [
-          {
-            "node": "Convert to Binary",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Convert to Binary": {
+    "Wait": {
       "main": [
         [
           {

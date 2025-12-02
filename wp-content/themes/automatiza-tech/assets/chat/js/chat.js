@@ -267,11 +267,11 @@ jQuery(document).ready(function($) {
         }
 
         // 2. Length Checks
-        if (name.length > 20) {
-            return { valid: false, message: 'El nombre no puede exceder los 20 caracteres.' };
+        if (name.length < 2 || name.length > 30) {
+            return { valid: false, message: 'El nombre debe tener entre 2 y 30 caracteres.' };
         }
-        if (phone.length > 20) {
-            return { valid: false, message: 'El teléfono no puede exceder los 20 caracteres.' };
+        if (phone.length < 9 || phone.length > 30) {
+            return { valid: false, message: 'El teléfono debe tener entre 9 y 30 caracteres.' };
         }
 
         // 3. Email Validation
@@ -290,9 +290,9 @@ jQuery(document).ready(function($) {
         const $form = $(`
             <div class="chat-form">
                 <h4>Agendar Demo</h4>
-                <input type="text" name="name" placeholder="Tu Nombre" required>
-                <input type="email" name="email" placeholder="Tu Correo" required maxlength="25">
-                <input type="tel" name="phone" placeholder="Tu Teléfono (+56...)" required>
+                <input type="text" name="name" placeholder="Tu Nombre" required minlength="2" maxlength="30">
+                <input type="email" name="email" placeholder="Tu Correo" required maxlength="50">
+                <input type="tel" name="phone" placeholder="Tu Teléfono (+56...)" required minlength="9" maxlength="30">
                 
                 <label style="font-size: 12px; margin-top: 10px; display: block;">Fecha deseada:</label>
                 <input type="date" name="date" required min="${new Date().toISOString().split('T')[0]}">

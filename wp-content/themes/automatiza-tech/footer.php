@@ -197,13 +197,13 @@
         <div class="demo-modal-body">
             <form id="demo-modal-form">
                 <div class="form-group">
-                    <input type="text" name="name" placeholder="Tu Nombre" required>
+                    <input type="text" name="name" placeholder="Tu Nombre" required minlength="2" maxlength="30">
                 </div>
                 <div class="form-group">
-                    <input type="email" name="email" placeholder="Tu Correo" required maxlength="25">
+                    <input type="email" name="email" placeholder="Tu Correo" required maxlength="50">
                 </div>
                 <div class="form-group">
-                    <input type="tel" name="phone" placeholder="Tu Teléfono (+56...)" required>
+                    <input type="tel" name="phone" placeholder="Tu Teléfono (+56...)" required minlength="9" maxlength="30">
                 </div>
                 
                 <div class="form-group">

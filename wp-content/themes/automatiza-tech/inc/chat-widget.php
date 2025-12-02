@@ -12,7 +12,7 @@ function automatiza_tech_chat_scripts() {
         'automatiza-ai-chat-style',
         get_template_directory_uri() . '/assets/chat/css/style.css',
         array(),
-        '1.1'
+        '1.8'
     );
 
     wp_enqueue_script(

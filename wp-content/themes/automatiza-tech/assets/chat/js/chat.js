@@ -181,6 +181,7 @@ jQuery(document).ready(function($) {
                 contentType: 'application/json',
                 dataType: 'text', // Force text to avoid parsererror
                 data: JSON.stringify(payload),
+                timeout: 60000, // 60 seconds timeout
                 success: function(responseRaw) {
                     $loadingElement.remove();
                     
@@ -226,7 +227,12 @@ jQuery(document).ready(function($) {
                 error: function(xhr, status, error) {
                     $loadingElement.remove();
                     console.error("Chat Error:", error, xhr.responseText);
-                    addMessage("Lo siento, hubo un error al conectar con el servidor. (" + status + ")", 'bot');
+                    
+                    if (status === 'timeout') {
+                        addMessage("Hubo error al procesar la solicitud, intente de nuevo.", 'bot');
+                    } else {
+                        addMessage("Lo siento, hubo un error al conectar con el servidor. (" + status + ")", 'bot');
+                    }
                 }
             });
         } else {
@@ -244,6 +250,39 @@ jQuery(document).ready(function($) {
         }
     }
 
+    // Validation Helper
+    function validateFormInputs(name, email, phone) {
+        // 1. SQL Injection Blacklist (Basic patterns)
+        const sqlBlacklist = [
+            /\bSELECT\b/i, /\bINSERT\b/i, /\bUPDATE\b/i, /\bDELETE\b/i, /\bDROP\b/i, 
+            /\bUNION\b/i, /\bALTER\b/i, /--/, /\/\*/, /\*\//, /;/
+        ];
+
+        const checkSQL = (str) => {
+            return sqlBlacklist.some(pattern => pattern.test(str));
+        };
+
+        if (checkSQL(name) || checkSQL(email) || checkSQL(phone)) {
+            return { valid: false, message: 'Entrada inválida detectada (caracteres no permitidos).' };
+        }
+
+        // 2. Length Checks
+        if (name.length > 20) {
+            return { valid: false, message: 'El nombre no puede exceder los 20 caracteres.' };
+        }
+        if (phone.length > 20) {
+            return { valid: false, message: 'El teléfono no puede exceder los 20 caracteres.' };
+        }
+
+        // 3. Email Validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return { valid: false, message: 'Por favor ingresa un correo válido.' };
+        }
+
+        return { valid: true };
+    }
+
     function showDemoForm() {
         const $formContainer = $('<div class="message-row bot"></div>');
         const $avatar = $('<img class="chat-message-avatar" src="' + AutomatizaAIChat.logoUrl + '" alt="Bot">');
@@ -251,9 +290,8 @@ jQuery(document).ready(function($) {
         const $form = $(`
             <div class="chat-form">
                 <h4>Agendar Demo</h4>
-                <div class="error-msg"></div>
                 <input type="text" name="name" placeholder="Tu Nombre" required>
-                <input type="email" name="email" placeholder="Tu Correo" required>
+                <input type="email" name="email" placeholder="Tu Correo" required maxlength="25">
                 <input type="tel" name="phone" placeholder="Tu Teléfono (+56...)" required>
                 
                 <label style="font-size: 12px; margin-top: 10px; display: block;">Fecha deseada:</label>
@@ -265,6 +303,7 @@ jQuery(document).ready(function($) {
                 </select>
 
                 <button type="button" class="submit-demo-btn">Agendar Reunión</button>
+                <div class="error-msg" style="margin-top: 10px;"></div>
             </div>
         `);
 
@@ -315,7 +354,7 @@ jQuery(document).ready(function($) {
             };
 
             $.ajax({
-                url: '/wp-json/automatiza-tech/v1/check-availability',
+                url: AutomatizaAIChat.apiUrl + 'check-availability',
                 method: 'POST',
                 contentType: 'application/json',
                 dataType: 'json',
@@ -379,9 +418,10 @@ jQuery(document).ready(function($) {
                 return;
             }
 
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                $error.text('Por favor ingresa un correo válido.').slideDown();
+            // Advanced Validation
+            const validation = validateFormInputs(name, email, phone);
+            if (!validation.valid) {
+                $error.text(validation.message).slideDown();
                 return;
             }
 
@@ -389,42 +429,271 @@ jQuery(document).ready(function($) {
             $btn.prop('disabled', true).text('Verificando disponibilidad...');
             $error.slideUp();
 
-            // Send to n8n
-            const payload = {
-                action: 'saveLead', // Different action for n8n to handle
-                sessionId: sessionId,
-                leadData: {
-                    name: name,
-                    email: email,
-                    phone: phone,
-                    scheduled_date: date,
-                    scheduled_time: time
-                }
-            };
+            console.log("Verificando límite para:", email); // Debug
 
+            // 1. Check Booking Limit (Pre-validation)
             $.ajax({
-                url: AutomatizaAIChat.webhookUrl,
+                url: AutomatizaAIChat.apiUrl + 'check-limit',
                 method: 'POST',
                 contentType: 'application/json',
-                dataType: 'text', // Force text to avoid parsererror
-                data: JSON.stringify(payload),
-                success: function(responseRaw) {
-                    $form.remove(); // Remove form
-                    
-                    // Check if response contains "Ocupado" or similar error from n8n
-                    let responseText = responseRaw;
-                    try {
-                        const json = JSON.parse(responseRaw);
-                        responseText = json.text || json.output || json.message || JSON.stringify(json);
-                    } catch(e) {}
+                dataType: 'json',
+                data: JSON.stringify({ email: email }),
+                success: function(limitResponse) {
+                    console.log("Respuesta límite:", limitResponse); // Debug
+                    if (limitResponse.allowed) {
+                        // 2. If allowed, proceed to n8n
+                        $btn.text('Agendando...');
+                        
+                        const payload = {
+                            action: 'saveLead',
+                            sessionId: sessionId,
+                            leadData: {
+                                name: name,
+                                email: email,
+                                phone: phone,
+                                scheduled_date: date,
+                                scheduled_time: time
+                            }
+                        };
 
-                    addMessage(responseText, 'bot');
+                        $.ajax({
+                            url: AutomatizaAIChat.webhookUrl,
+                            method: 'POST',
+                            contentType: 'application/json',
+                            dataType: 'text',
+                            data: JSON.stringify(payload),
+                            success: function(responseRaw) {
+                                $form.remove(); 
+                                
+                                let responseText = responseRaw;
+                                try {
+                                    const json = JSON.parse(responseRaw);
+                                    responseText = json.text || json.output || json.message || JSON.stringify(json);
+                                } catch(e) {}
+
+                                addMessage(responseText, 'bot');
+                            },
+                            error: function() {
+                                $btn.prop('disabled', false).text('Agendar Reunión');
+                                $error.text('Error al conectar con el servidor de agendamiento.').slideDown();
+                            }
+                        });
+
+                    } else {
+                        // Limit reached
+                        $btn.prop('disabled', false).text('Agendar Reunión'); // Re-enable button to allow editing
+                        $error.text(limitResponse.message || 'Límite de agendamientos alcanzado.').slideDown();
+                        
+                        // Auto-hide after 10 seconds
+                        setTimeout(function() {
+                            $error.slideUp();
+                        }, 10000);
+                    }
                 },
                 error: function() {
                     $btn.prop('disabled', false).text('Agendar Reunión');
-                    $error.text('Error al conectar. Intenta nuevamente.').slideDown();
+                    $error.text('Error al verificar disponibilidad. Intente nuevamente.').slideDown();
                 }
             });
         });
     }
+
+    // --- MODAL LOGIC (Standalone Form) ---
+    const $modal = $('#demo-modal');
+    const $modalForm = $('#demo-modal-form');
+    const $closeModal = $('.close-demo-modal');
+    
+    // Open Modal
+    $('.demo-btn').on('click', function(e) {
+        e.preventDefault();
+        $modal.css('display', 'block');
+    });
+
+    // Close Modal
+    $closeModal.on('click', function() {
+        $modal.css('display', 'none');
+    });
+
+    // Close on outside click
+    $(window).on('click', function(e) {
+        if ($(e.target).is($modal)) {
+            $modal.css('display', 'none');
+        }
+    });
+
+    // Modal Date/Time Logic (Replicated from Chat)
+    const $modalDate = $modalForm.find('input[name="date"]');
+    const $modalTime = $modalForm.find('select[name="time"]');
+
+    $modalDate.on('change', function() {
+        const dateVal = $(this).val();
+        if (!dateVal) return;
+
+        const dateObj = new Date(dateVal + 'T00:00:00');
+        const dayIndex = dateObj.getDay();
+        const daysMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dayName = daysMap[dayIndex];
+        
+        // Check Holidays
+        const holidays = AutomatizaAIChat.schedule.holidays ? AutomatizaAIChat.schedule.holidays.split('\n').map(d => d.trim()) : [];
+        if (holidays.includes(dateVal)) {
+            $modalTime.empty().prop('disabled', true).append('<option value="">Día feriado / No disponible</option>');
+            return;
+        }
+
+        // Get Schedule
+        const daySchedule = AutomatizaAIChat.schedule[dayName];
+        if (!daySchedule || !daySchedule.enabled) {
+            $modalTime.empty().prop('disabled', true).append('<option value="">No hay atención este día</option>');
+            return;
+        }
+
+        const startStr = daySchedule.start;
+        const endStr = daySchedule.end;
+
+        if (!startStr || !endStr) {
+            $modalTime.empty().prop('disabled', true).append('<option value="">No hay horarios disponibles</option>');
+            return;
+        }
+
+        // Show loading
+        $modalTime.empty().prop('disabled', true).append('<option value="">Verificando disponibilidad...</option>');
+
+        // Async Check
+        $.ajax({
+            url: AutomatizaAIChat.apiUrl + 'check-availability',
+            method: 'POST',
+            contentType: 'application/json',
+            dataType: 'json',
+            data: JSON.stringify({ date: dateVal }),
+            success: function(response) {
+                if (response.isFullDay) {
+                     $modalTime.empty().prop('disabled', true).append('<option value="">Día completo / Sin cupos</option>');
+                     return;
+                }
+
+                const busySlots = response.busySlots || [];
+                $modalTime.empty().prop('disabled', false).append('<option value="">Selecciona una hora</option>');
+
+                const startHour = parseInt(startStr.split(':')[0]);
+                const endHour = parseInt(endStr.split(':')[0]);
+                let availableCount = 0;
+
+                for (let h = startHour; h < endHour; h++) {
+                    const timeStr = h.toString().padStart(2, '0') + ':00';
+                    if (!busySlots.includes(timeStr)) {
+                        $modalTime.append(`<option value="${timeStr}">${timeStr}</option>`);
+                        availableCount++;
+                    }
+                }
+
+                if (availableCount === 0) {
+                    $modalTime.empty().prop('disabled', true).append('<option value="">Sin horarios disponibles hoy</option>');
+                }
+            },
+            error: function() {
+                $modalTime.empty().prop('disabled', true).append('<option value="">Error al verificar disponibilidad</option>');
+            }
+        });
+    });
+
+    // Modal Submit Logic
+    $modalForm.on('submit', function(e) {
+        e.preventDefault();
+        
+        const $btn = $(this).find('.submit-demo-modal-btn');
+        const $error = $(this).find('.error-msg');
+        const $success = $(this).find('.success-msg');
+        
+        const name = $(this).find('input[name="name"]').val().trim();
+        const email = $(this).find('input[name="email"]').val().trim();
+        const phone = $(this).find('input[name="phone"]').val().trim();
+        const date = $(this).find('input[name="date"]').val();
+        const time = $(this).find('select[name="time"]').val();
+
+        // Basic Validation
+        if (!name || !email || !phone || !date || !time) {
+            $error.text('Por favor completa todos los campos.').slideDown();
+            return;
+        }
+
+        // Advanced Validation
+        const validation = validateFormInputs(name, email, phone);
+        if (!validation.valid) {
+            $error.text(validation.message).slideDown();
+            return;
+        }
+
+        // Disable button
+        $btn.prop('disabled', true).text('Verificando disponibilidad...');
+        $error.slideUp();
+        $success.slideUp();
+
+        // 1. Check Booking Limit
+        $.ajax({
+            url: AutomatizaAIChat.apiUrl + 'check-limit',
+            method: 'POST',
+            contentType: 'application/json',
+            dataType: 'json',
+            data: JSON.stringify({ email: email }),
+            success: function(limitResponse) {
+                if (limitResponse.allowed) {
+                    // 2. If allowed, proceed to n8n (Direct Call, no chat interaction)
+                    $btn.text('Agendando...');
+                    
+                    const payload = {
+                        action: 'saveLead',
+                        sessionId: sessionId, // Use existing session ID or generate new one if needed
+                        leadData: {
+                            name: name,
+                            email: email,
+                            phone: phone,
+                            scheduled_date: date,
+                            scheduled_time: time
+                        }
+                    };
+
+                    $.ajax({
+                        url: AutomatizaAIChat.webhookUrl,
+                        method: 'POST',
+                        contentType: 'application/json',
+                        dataType: 'text',
+                        data: JSON.stringify(payload),
+                        success: function(responseRaw) {
+                            $btn.prop('disabled', false).text('Agendar Reunión');
+                            $modalForm[0].reset();
+                            $modalTime.empty().prop('disabled', true).append('<option value="">Selecciona una fecha primero</option>');
+                            
+                            $success.text('¡Reunión agendada con éxito! Te hemos enviado un correo de confirmación.').slideDown();
+                            
+                            // Close modal after 3 seconds
+                            setTimeout(function() {
+                                $modal.fadeOut();
+                                $success.slideUp();
+                            }, 3000);
+                        },
+                        error: function() {
+                            $btn.prop('disabled', false).text('Agendar Reunión');
+                            $error.text('Error al conectar con el servidor de agendamiento.').slideDown();
+                        }
+                    });
+
+                } else {
+                    // Limit reached
+                    $btn.prop('disabled', false).text('Agendar Reunión');
+                    $error.text(limitResponse.message || 'Límite de agendamientos alcanzado.').slideDown();
+                    
+                    // Auto-hide error
+                    setTimeout(function() {
+                        $error.slideUp();
+                    }, 10000);
+                }
+            },
+            error: function() {
+                $btn.prop('disabled', false).text('Agendar Reunión');
+                $error.text('Error al verificar disponibilidad. Intente nuevamente.').slideDown();
+            }
+        });
+    });
+
 });

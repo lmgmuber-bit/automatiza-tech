@@ -12,14 +12,14 @@ function automatiza_tech_chat_scripts() {
         'automatiza-ai-chat-style',
         get_template_directory_uri() . '/assets/chat/css/style.css',
         array(),
-        '1.0'
+        '1.1'
     );
 
     wp_enqueue_script(
         'automatiza-ai-chat-script',
         get_template_directory_uri() . '/assets/chat/js/chat.js',
         array('jquery'),
-        '1.0',
+        '1.6', // Updated version to force cache refresh
         true
     );
 
@@ -47,7 +47,8 @@ function automatiza_tech_chat_scripts() {
         'webhookUrl' => 'https://n8n-n8n.kchiba.easypanel.host/webhook/becd5a16-7b3a-4961-8a2c-e86ca01d069e', // URL Producción
         'greeting' => '¡Hola! Soy Tech 🤖 tu asistente virtual de Automatiza Tech. ¿En qué puedo ayudarte hoy?',
         'logoUrl' => get_template_directory_uri() . '/assets/images/solo-logo.svg',
-        'schedule' => $schedule_settings
+        'schedule' => $schedule_settings,
+        'apiUrl' => get_rest_url(null, 'automatiza-tech/v1/')
     ));
 }
 add_action('wp_enqueue_scripts', 'automatiza_tech_chat_scripts');

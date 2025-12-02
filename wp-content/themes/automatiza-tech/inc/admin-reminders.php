@@ -42,22 +42,86 @@ function automatiza_tech_reminders_page() {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_leads';
     
-    // Obtener leads futuros
-    $leads = $wpdb->get_results("SELECT * FROM $table_name WHERE scheduled_date >= CURDATE() ORDER BY scheduled_date ASC, scheduled_time ASC");
+    // --- FILTROS Y ORDENAMIENTO ---
+    $filter_date = isset($_GET['filter_date']) ? sanitize_text_field($_GET['filter_date']) : '';
+    $orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'scheduled_date';
+    $order = isset($_GET['order']) ? sanitize_text_field($_GET['order']) : 'ASC';
+    
+    // Whitelist para ordenamiento
+    $allowed_sort_cols = ['id', 'name', 'scheduled_date', 'scheduled_time'];
+    if (!in_array($orderby, $allowed_sort_cols)) $orderby = 'scheduled_date';
+    if (!in_array(strtoupper($order), ['ASC', 'DESC'])) $order = 'ASC';
+
+    // Obtener fecha y hora actual según zona horaria de WP
+    $tz = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone(get_option('timezone_string') ?: 'UTC');
+    $now_dt = new DateTime('now', $tz);
+    $current_date_db = $now_dt->format('Y-m-d');
+    $current_time_db = $now_dt->format('H:i:s');
+
+    // Construir Query
+    $where = "1=1";
+    if ($filter_date) {
+        $where .= $wpdb->prepare(" AND scheduled_date = %s", $filter_date);
+    } else {
+        // Por defecto mostrar solo futuros (incluyendo los de hoy que aún no pasan)
+        $where .= $wpdb->prepare(" AND (scheduled_date > %s OR (scheduled_date = %s AND scheduled_time > %s))", $current_date_db, $current_date_db, $current_time_db);
+    }
+
+    $query = "SELECT * FROM $table_name WHERE $where ORDER BY $orderby $order, scheduled_time ASC";
+    $leads = $wpdb->get_results($query);
+    
+    // Helper para URLs de ordenamiento
+    $get_sort_url = function($col) use ($orderby, $order, $filter_date) {
+        $new_order = ($orderby === $col && $order === 'ASC') ? 'DESC' : 'ASC';
+        $url = add_query_arg(array(
+            'orderby' => $col,
+            'order' => $new_order
+        ));
+        if ($filter_date) $url = add_query_arg('filter_date', $filter_date, $url);
+        return esc_url($url);
+    };
+
+    // Icono de ordenamiento
+    $sort_icon = function($col) use ($orderby, $order) {
+        if ($orderby !== $col) return '';
+        return ($order === 'ASC') ? ' &#9650;' : ' &#9660;';
+    };
     
     ?>
     <div class="wrap">
         <h1 class="wp-heading-inline">Gestión de Recordatorios Manuales</h1>
         <p>Utiliza este panel para enviar recordatorios manualmente en caso de fallo de las automatizaciones.</p>
         
+        <!-- BARRA DE HERRAMIENTAS -->
+        <div class="tablenav top" style="height: auto; padding-bottom: 10px;">
+            <div class="alignleft actions">
+                <form method="get">
+                    <input type="hidden" name="page" value="automatiza-reminders">
+                    <input type="date" name="filter_date" value="<?php echo esc_attr($filter_date); ?>" style="height: 30px; line-height: normal;">
+                    <input type="submit" class="button" value="Filtrar por Fecha">
+                    <?php if ($filter_date): ?>
+                        <a href="<?php echo admin_url('admin.php?page=automatiza-reminders'); ?>" class="button">Limpiar Filtro</a>
+                    <?php endif; ?>
+                </form>
+            </div>
+            
+            <div class="alignright actions">
+                <strong>Acciones Masivas (Visibles): </strong>
+                <button class="button button-primary bulk-send-btn" data-type="72h">Enviar Todos (72h)</button>
+                <button class="button button-primary bulk-send-btn" data-type="24h">Enviar Todos (24h)</button>
+                <button class="button button-primary bulk-send-btn" data-type="1h">Enviar Todos (1h)</button>
+            </div>
+            <br class="clear">
+        </div>
+
         <table class="wp-list-table widefat fixed striped">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
+                    <th><a href="<?php echo $get_sort_url('id'); ?>">ID<?php echo $sort_icon('id'); ?></a></th>
+                    <th><a href="<?php echo $get_sort_url('name'); ?>">Nombre<?php echo $sort_icon('name'); ?></a></th>
                     <th>Email</th>
-                    <th>Fecha Agendada</th>
-                    <th>Hora</th>
+                    <th><a href="<?php echo $get_sort_url('scheduled_date'); ?>">Fecha Agendada<?php echo $sort_icon('scheduled_date'); ?></a></th>
+                    <th><a href="<?php echo $get_sort_url('scheduled_time'); ?>">Hora<?php echo $sort_icon('scheduled_time'); ?></a></th>
                     <th>Estado Asistencia</th>
                     <th>Recordatorio 72h</th>
                     <th>Recordatorio 24h</th>
@@ -66,11 +130,15 @@ function automatiza_tech_reminders_page() {
             </thead>
             <tbody>
                 <?php if (empty($leads)): ?>
-                    <tr><td colspan="9">No hay agendamientos futuros.</td></tr>
+                    <tr><td colspan="9">No hay agendamientos para los criterios seleccionados.</td></tr>
                 <?php else: foreach ($leads as $lead): 
-                    $scheduled = strtotime($lead->scheduled_date . ' ' . $lead->scheduled_time);
-                    $now = current_time('timestamp');
-                    $diff_hours = ($scheduled - $now) / 3600;
+                    // Cálculo robusto usando la zona horaria configurada en WordPress (ej. Chile)
+                    $tz = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone(get_option('timezone_string') ?: 'UTC');
+                    $scheduled_dt = new DateTime($lead->scheduled_date . ' ' . $lead->scheduled_time, $tz);
+                    $now_dt = new DateTime('now', $tz);
+                    
+                    $diff_seconds = $scheduled_dt->getTimestamp() - $now_dt->getTimestamp();
+                    $diff_hours = $diff_seconds / 3600;
                     
                     // Determinar estado de botones
                     $can_send_72h = ($diff_hours <= 72 && $diff_hours > 48);
@@ -81,8 +149,8 @@ function automatiza_tech_reminders_page() {
                         <td><?php echo $lead->id; ?></td>
                         <td><?php echo esc_html($lead->name); ?></td>
                         <td><?php echo esc_html($lead->email); ?></td>
-                        <td><?php echo $lead->scheduled_date; ?></td>
-                        <td><?php echo $lead->scheduled_time; ?></td>
+                        <td><?php echo date('d-m-Y', strtotime($lead->scheduled_date)); ?></td>
+                        <td><?php echo substr($lead->scheduled_time, 0, 5); ?></td>
                         <td>
                             <?php 
                             if ($lead->confirmed_attendance === '1') echo '<span style="color:green;font-weight:bold;">Confirmado</span>';
@@ -94,7 +162,7 @@ function automatiza_tech_reminders_page() {
                             <?php if ($lead->recordatorio72h): ?>
                                 <span class="dashicons dashicons-yes" style="color:green;"></span> Enviado
                             <?php else: ?>
-                                <button class="button action-btn" 
+                                <button class="button action-btn btn-72h" 
                                         data-id="<?php echo $lead->id; ?>" 
                                         data-type="72h"
                                         <?php echo (!$can_send_72h && !isset($_GET['force'])) ? 'disabled title="Fuera de rango (48h-72h)"' : ''; ?>>
@@ -106,7 +174,7 @@ function automatiza_tech_reminders_page() {
                             <?php if ($lead->recordatorio24h): ?>
                                 <span class="dashicons dashicons-yes" style="color:green;"></span> Enviado
                             <?php else: ?>
-                                <button class="button action-btn" 
+                                <button class="button action-btn btn-24h" 
                                         data-id="<?php echo $lead->id; ?>" 
                                         data-type="24h"
                                         <?php echo (!$can_send_24h && !isset($_GET['force'])) ? 'disabled title="Fuera de rango (2h-24h)"' : ''; ?>>
@@ -118,7 +186,7 @@ function automatiza_tech_reminders_page() {
                             <?php if ($lead->recordatorio1h): ?>
                                 <span class="dashicons dashicons-yes" style="color:green;"></span> Enviado
                             <?php else: ?>
-                                <button class="button action-btn" 
+                                <button class="button action-btn btn-1h" 
                                         data-id="<?php echo $lead->id; ?>" 
                                         data-type="1h"
                                         <?php echo (!$can_send_1h && !isset($_GET['force'])) ? 'disabled title="Fuera de rango (0h-2h)"' : ''; ?>>
@@ -130,11 +198,24 @@ function automatiza_tech_reminders_page() {
                 <?php endforeach; endif; ?>
             </tbody>
         </table>
+        
+        <!-- Progress Modal -->
+        <div id="bulk-progress-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+            <div style="background:white; padding:20px; border-radius:5px; width:300px; text-align:center;">
+                <h3>Enviando Correos...</h3>
+                <p id="bulk-progress-text">0 / 0</p>
+                <div style="width:100%; background:#eee; height:10px; border-radius:5px; overflow:hidden;">
+                    <div id="bulk-progress-bar" style="width:0%; background:#2271b1; height:100%; transition:width 0.3s;"></div>
+                </div>
+            </div>
+        </div>
+
         <p class="description">Nota: Los botones se habilitan automáticamente cuando el tiempo es el adecuado. Para forzar el envío en cualquier momento, añade <code>&force=true</code> a la URL.</p>
     </div>
 
     <script>
     jQuery(document).ready(function($) {
+        // Envío Individual
         $('.action-btn').click(function() {
             var btn = $(this);
             var lead_id = btn.data('id');
@@ -142,7 +223,59 @@ function automatiza_tech_reminders_page() {
             
             if (!confirm('¿Estás seguro de enviar el recordatorio de ' + type + ' a este usuario?')) return;
             
-            btn.prop('disabled', true).text('Enviando...');
+            sendReminder(btn, lead_id, type, function(success) {
+                if (success) {
+                    alert('Correo enviado correctamente');
+                    location.reload();
+                }
+            });
+        });
+
+        // Envío Masivo
+        $('.bulk-send-btn').click(function(e) {
+            e.preventDefault();
+            var type = $(this).data('type');
+            
+            // Seleccionar botones habilitados de ese tipo
+            var buttons = $('.action-btn.btn-' + type + ':not(:disabled)');
+            
+            if (buttons.length === 0) {
+                alert('No hay correos pendientes o habilitados para enviar en la categoría ' + type + '.');
+                return;
+            }
+
+            if (!confirm('Se enviarán ' + buttons.length + ' correos de tipo ' + type + '. ¿Deseas continuar?')) return;
+
+            // Iniciar proceso masivo
+            $('#bulk-progress-modal').css('display', 'flex');
+            var total = buttons.length;
+            var current = 0;
+            
+            function processNext() {
+                if (current >= total) {
+                    alert('Proceso completado.');
+                    location.reload();
+                    return;
+                }
+
+                var btn = $(buttons[current]);
+                var lead_id = btn.data('id');
+                
+                $('#bulk-progress-text').text((current + 1) + ' / ' + total);
+                $('#bulk-progress-bar').css('width', ((current + 1) / total * 100) + '%');
+
+                sendReminder(btn, lead_id, type, function() {
+                    current++;
+                    processNext();
+                });
+            }
+
+            processNext();
+        });
+
+        // Función Helper AJAX
+        function sendReminder(btn, lead_id, type, callback) {
+            btn.prop('disabled', true).text('...');
             
             $.post(ajaxurl, {
                 action: 'send_manual_reminder',
@@ -151,14 +284,19 @@ function automatiza_tech_reminders_page() {
                 nonce: '<?php echo wp_create_nonce("manual_reminder_nonce"); ?>'
             }, function(response) {
                 if (response.success) {
-                    alert('Correo enviado correctamente');
-                    location.reload();
+                    btn.text('Enviado').removeClass('button-primary').addClass('button-disabled');
+                    // Actualizar visualmente la fila si es necesario
+                    callback(true);
                 } else {
-                    alert('Error: ' + (response.data || 'Desconocido'));
+                    console.error('Error ID ' + lead_id + ': ' + (response.data || 'Unknown'));
                     btn.prop('disabled', false).text('Reintentar');
+                    callback(false);
                 }
+            }).fail(function() {
+                btn.prop('disabled', false).text('Error');
+                callback(false);
             });
-        });
+        }
     });
     </script>
     <?php
@@ -188,22 +326,27 @@ function automatiza_tech_send_manual_reminder() {
     
     // Construir contenido del correo
     $base_url = 'https://automatizatech.shop/wp-json/automatiza-tech/v1/leads/action';
-    $confirm_url = "$base_url?id=$lead_id&action=confirm";
-    $reject_url = "$base_url?id=$lead_id&action=reject";
-    $delete_url = "$base_url?id=$lead_id&action=delete";
+    $token_param = '&token=' . $lead->token;
+    $confirm_url = "$base_url?id=$lead_id&action=confirm$token_param";
+    $reject_url = "$base_url?id=$lead_id&action=reject$token_param";
+    $delete_url = "$base_url?id=$lead_id&action=delete$token_param";
     
     $context_msg = "";
     $subject = "";
     
+    // Formatear fecha y hora (DD-MM-YYYY y HH:mm)
+    $formatted_date = date('d-m-Y', strtotime($lead->scheduled_date));
+    $formatted_time = substr($lead->scheduled_time, 0, 5);
+
     if ($type === '72h') {
         $subject = "Recordatorio de Agendamiento (72h)";
-        $context_msg = "para el <strong>{$lead->scheduled_date}</strong> a las <strong>{$lead->scheduled_time}</strong>";
+        $context_msg = "para el <strong>{$formatted_date}</strong> a las <strong>{$formatted_time}</strong>";
     } elseif ($type === '24h') {
         $subject = "Recordatorio de Agendamiento (24h)";
-        $context_msg = "para mañana <strong>{$lead->scheduled_date}</strong> a las <strong>{$lead->scheduled_time}</strong>";
+        $context_msg = "para mañana <strong>{$formatted_date}</strong> a las <strong>{$formatted_time}</strong>";
     } elseif ($type === '1h') {
         $subject = "Recordatorio de Agendamiento (1h)";
-        $context_msg = "para hoy <strong>{$lead->scheduled_date}</strong> a las <strong>{$lead->scheduled_time}</strong> (en aproximadamente 1 hora)";
+        $context_msg = "para hoy <strong>{$formatted_date}</strong> a las <strong>{$formatted_time}</strong> (en aproximadamente 1 hora)";
     } else {
         wp_send_json_error('Tipo inválido');
     }

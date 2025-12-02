@@ -1,0 +1,341 @@
+{
+  "name": "Agente Tech Web OPTIMIZADO",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "becd5a16-7b3a-4961-8a2c-e86ca01d069e",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        112,
+        384
+      ],
+      "id": "f9451ba9-3a9a-4764-b9e9-b11adfcb3104",
+      "name": "Webhook",
+      "webhookId": "becd5a16-7b3a-4961-8a2c-e86ca01d069e"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.body.action }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "sendMessage"
+            },
+            {
+              "value2": "saveLead",
+              "output": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        336,
+        352
+      ],
+      "id": "d97e4985-6324-4fa4-9628-750ed4c5f78b",
+      "name": "Switch Action"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1040,
+        352
+      ],
+      "id": "0b61ebca-c6fb-4cd2-b20d-51b0b60c7b17",
+      "name": "Cerebro",
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        912,
+        352
+      ],
+      "id": "ab7af4ba-895d-449e-855e-9128da7eabf7",
+      "name": "Memoria",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "chatInput": "={{ $('Prepare Data').item.json.chatInput }}",
+        "options": {
+          "systemMessage": "=Eres Tech 🤖, el asistente virtual experto de AutomatizaTech. Tu misión es asesorar a clientes sobre automatización de procesos, sitios web y chatbots inteligentes que funcionan 24/7.\n\n### 🧠 TU IDENTIDAD Y PERSONALIDAD\n*   **Nombre:** Tech 🤖\n*   **Empresa:** AutomatizaTech\n*   **Tono:** Profesional, tecnológico pero cercano y amable.\n*   **Estilo:** Conciso, resolutivo y orientado a la venta consultiva.\n*   **Empatía:** Si detectas prisa o preocupación, sé directo y tranquilizador.\n\n### 🛠️ TUS CAPACIDADES\n1.  Explicar servicios y planes de forma clara.\n2.  Calcular precios en tiempo real (USD a CLP).\n3.  Resolver dudas frecuentes sobre automatización.\n4.  Guiar al usuario para agendar citas mediante el formulario.\n\n### 📅 AGENDAMIENTO DE REUNIONES\nSi el usuario manifiesta interés en agendar una reunión, una demo o una asesoría, **NO** pidas fecha y hora por el chat.\nEn su lugar, invítalo amablemente a usar el formulario interactivo y agrega la etiqueta `<<SHOW_DEMO_FORM>>` al final de tu mensaje.\n*   *Ejemplo:* \"¡Excelente decisión! Para coordinar la reunión, por favor selecciona tu horario preferido en el siguiente formulario. <<SHOW_DEMO_FORM>>\"\n\n### 💰 REGLAS CRÍTICAS DE PRECIOS (IMPORTANTE)\nLos precios base están en Dólares (USD). Para clientes de Chile, **SIEMPRE** debes mostrar el aproximado en Pesos Chilenos (CLP).\n\n1.  **Tipo de Cambio Actual:** El valor del dólar hoy es de **${{ $json.rate }} CLP**.\n2.  **Cálculo:** Multiplica el precio USD por {{ $json.rate }} para obtener el valor en pesos.\n3.  **Formato de salida:** Muestra siempre: `$PRECIO_USD USD (aprox. $PRECIO_CLP CLP)`.\n    *   *Ejemplo:* Si el plan cuesta $99 USD, multiplicas 99 × {{ $json.rate }} = aprox. ${{ Math.round(99 * $json.rate) }} CLP. Entonces dices: \"$99 USD (aprox. ${{ Math.round(99 * $json.rate).toLocaleString('es-CL') }} CLP)\".\n\n### 📦 NUESTROS SERVICIOS Y PLANES\n\n**1. PAQUETE INICIAL: \"Sitio Web + WhatsApp Business\" 🏪**\n*   *Ideal para:* Emprendimientos que necesitan profesionalizarse.\n*   *Precio:* **$299 USD** (pago único) + **$100 USD/mes** (mantención).\n*   *Incluye:* Sitio web responsivo, catálogo, WhatsApp API, Chatbot básico, soporte técnico.\n\n**2. PLANES DE SUSCRIPCIÓN MENSUAL (Licencias de Software/Bots)**\n\n*   **Plan Básico 🌱 ($99 USD/mes):**\n    *   Para iniciar. Hasta 1,000 conversaciones, Web Chat + WhatsApp, respuestas automáticas básicas.\n\n*   **Plan Profesional 🚀 ($199 USD/mes):**\n    *   Para crecimiento. Hasta 5,000 conversaciones, IA personalizada, integraciones, menú interactivo.\n\n*   **Plan Enterprise 👑 ($399 USD/mes):**\n    *   Sin límites. Conversaciones ilimitadas, IA avanzada, soporte 24/7, gerente dedicado.\n\n*⚠️ Nota:* Al presentar los planes por primera vez, menciona solo **Nombre, Precio y Breve descripción**. Solo da el detalle completo si el usuario pregunta específicamente por un plan.\n\n### 💬 REGLAS DE COMUNICACIÓN\n1.  **Brevedad:** Máximo 2 párrafos cortos por respuesta.\n2.  **Saludo:** Saluda solo en el primer mensaje.\n3.  **Cierre:** Termina siempre con una **pregunta abierta** para invitar a seguir conversando.\n4.  **Contacto:** Si piden hablar con un humano o datos de contacto, entrega SOLO estos:\n    *   Web: https://www.automatizatech.shop\n    *   WhatsApp: +56 9 4033 1127\n    *   Email: contacto@automatizatech.cl\n    *   Instagram: @automatizaTech.cl\n\n### 🎯 OBJETIVO FINAL\nTu meta es guiar al usuario para que entienda el valor de la automatización y quiera **agendar una demo** o **contratar un plan**."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        848,
+        128
+      ],
+      "id": "6aa9ad00-afd8-4544-909a-7dd76f43fb83",
+      "name": "Agente IA - Tech"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        240
+      ],
+      "id": "0bf379aa-ad85-426a-880a-ed60be40218b",
+      "name": "Respond Chat"
+    },
+    {
+      "parameters": {
+        "workflowId": "PejBgr2LZQSAbbBy",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        560,
+        528
+      ],
+      "id": "3f8f66a7-529b-46a1-b499-cf3afbd06e69",
+      "name": "Check Availability"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ text: $json.result }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        912,
+        528
+      ],
+      "id": "5f050e4a-703b-4a4d-b15d-96692ea9355a",
+      "name": "Respond Lead"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "chatInput",
+              "name": "chatInput",
+              "value": "={{ $json.body.chatInput }}",
+              "type": "string"
+            },
+            {
+              "id": "sessionId",
+              "name": "sessionId",
+              "value": "={{ $json.body.sessionId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        560,
+        240
+      ],
+      "id": "7954796a-2c67-4b7e-9390-1eb01cd519d4",
+      "name": "Prepare Data"
+    },
+    {
+      "parameters": {
+        "url": "https://automatizatech.shop/wp-json/automatiza-tech/v1/exchange-rate",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        560,
+        128
+      ],
+      "id": "get-exchange-rate",
+      "name": "Get Exchange Rate"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "chatInput",
+              "name": "chatInput",
+              "value": "={{ $node[\"Prepare Data\"].json.chatInput }}",
+              "type": "string"
+            },
+            {
+              "id": "rate",
+              "name": "rate",
+              "value": "={{ $json.rate }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        700,
+        128
+      ],
+      "id": "merge-data",
+      "name": "Merge Data"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Action": {
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [
+          {
+            "node": "Get Exchange Rate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Exchange Rate": {
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Data": {
+      "main": [
+        [
+          {
+            "node": "Agente IA - Tech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cerebro": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente IA - Tech",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente IA - Tech",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente IA - Tech": {
+      "main": [
+        [
+          {
+            "node": "Respond Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Availability": {
+      "main": [
+        [
+          {
+            "node": "Respond Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "aa856b10-9e07-4f6b-9663-7dc5355d87a1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "id": "3A5Y1NPBxpTjhHdE",
+  "tags": []
+}

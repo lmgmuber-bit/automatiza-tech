@@ -186,6 +186,47 @@
 </script>
 <?php endif; ?>
 
+<!-- Demo Modal -->
+<div id="demo-modal" class="demo-modal">
+    <div class="demo-modal-content">
+        <span class="close-demo-modal">&times;</span>
+        <div class="demo-modal-header">
+            <h3>Agendar Demo</h3>
+            <p>Selecciona una fecha y hora para tu reunión</p>
+        </div>
+        <div class="demo-modal-body">
+            <form id="demo-modal-form">
+                <div class="form-group">
+                    <input type="text" name="name" placeholder="Tu Nombre" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" name="email" placeholder="Tu Correo" required maxlength="25">
+                </div>
+                <div class="form-group">
+                    <input type="tel" name="phone" placeholder="Tu Teléfono (+56...)" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Fecha deseada:</label>
+                    <input type="date" name="date" required min="<?php echo date('Y-m-d'); ?>">
+                </div>
+                
+                <div class="form-group">
+                    <label>Hora:</label>
+                    <select name="time" required disabled>
+                        <option value="">Selecciona una fecha primero</option>
+                    </select>
+                </div>
+
+                <div class="error-msg" style="display:none; color: #dc3545; margin-bottom: 10px; text-align: center;"></div>
+                <div class="success-msg" style="display:none; color: #06d6a0; margin-bottom: 10px; text-align: center;"></div>
+
+                <button type="submit" class="submit-demo-modal-btn btn btn-primary w-100">Agendar Reunión</button>
+            </form>
+        </div>
+    </div>
+</div>
+
 <?php wp_footer(); ?>
 
 <!-- Performance monitoring script -->

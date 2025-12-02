@@ -34,16 +34,31 @@ add_action('rest_api_init', function () {
         'permission_callback' => '__return_true'
     ));
 
+    // Endpoint para verificar límite de agendamientos
+    register_rest_route('automatiza-tech/v1', '/check-limit', array(
+        'methods' => 'POST',
+        'callback' => 'automatiza_tech_check_booking_limit',
+        'permission_callback' => '__return_true'
+    ));
+
     // Endpoint para obtener leads para recordatorios
-    register_rest_route('automatiza-tech/v1', '/leads/reminders', array(
+    // Modificado para aceptar parámetro en la URL (ej: /leads/reminders/72h) para evitar problemas de query params
+    register_rest_route('automatiza-tech/v1', '/leads/reminders(?:/(?P<type>[a-zA-Z0-9]+))?', array(
         'methods' => 'GET',
         'callback' => 'automatiza_tech_get_leads_for_reminders',
         'permission_callback' => '__return_true'
     ));
 
-    // Endpoint para actualizar estado de recordatorio
-    register_rest_route('automatiza-tech/v1', '/leads/mark-reminder', array(
-        'methods' => 'POST',
+    // Endpoint para actualizar estado de recordatorio (Ruta con parámetros obligatorios en URL)
+    register_rest_route('automatiza-tech/v1', '/leads/update-reminder/(?P<lead_id>\d+)/(?P<type>[a-zA-Z0-9]+)', array(
+        'methods' => array('POST', 'GET'),
+        'callback' => 'automatiza_tech_mark_reminder_sent',
+        'permission_callback' => '__return_true'
+    ));
+
+    // Endpoint FALLBACK para actualizar estado (para compatibilidad con versiones anteriores de n8n)
+    register_rest_route('automatiza-tech/v1', '/leads/update-reminder', array(
+        'methods' => array('POST', 'GET'),
         'callback' => 'automatiza_tech_mark_reminder_sent',
         'permission_callback' => '__return_true'
     ));
@@ -85,6 +100,7 @@ function automatiza_tech_create_leads_table() {
         recordatorio72h tinyint(1) DEFAULT 0,
         recordatorio24h tinyint(1) DEFAULT 0,
         recordatorio1h tinyint(1) DEFAULT 0,
+        token varchar(64) DEFAULT '' NOT NULL,
         PRIMARY KEY  (id)
     ) $charset_collate;";
 
@@ -107,10 +123,26 @@ add_action('after_switch_theme', 'automatiza_tech_create_leads_table');
 
 // También intentamos crearla si no existe al iniciar (para desarrollo)
 add_action('init', function() {
-    // Forzamos actualización de tabla v4
-    if (!get_option('automatiza_leads_table_created_v4')) {
+    // Forzamos actualización de tabla v5
+    if (!get_option('automatiza_leads_table_created_v5')) {
         automatiza_tech_create_leads_table();
-        update_option('automatiza_leads_table_created_v4', true);
+        
+        // Populate missing tokens for existing leads
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'automatiza_leads';
+        $leads_without_token = $wpdb->get_results("SELECT id FROM $table_name WHERE token = ''");
+        
+        if ($leads_without_token) {
+            foreach ($leads_without_token as $lead) {
+                $wpdb->update(
+                    $table_name,
+                    array('token' => bin2hex(random_bytes(16))),
+                    array('id' => $lead->id)
+                );
+            }
+        }
+        
+        update_option('automatiza_leads_table_created_v5', true);
     }
 });
 
@@ -136,6 +168,28 @@ function automatiza_tech_save_lead($request) {
     $scheduled_date = isset($params['scheduled_date']) ? sanitize_text_field($params['scheduled_date']) : null;
     $scheduled_time = isset($params['scheduled_time']) ? sanitize_text_field($params['scheduled_time']) : null;
     $confirmed_attendance = isset($params['confirmed_attendance']) ? (int)$params['confirmed_attendance'] : null;
+    
+    // Validación: Verificar si el email ya tiene 2 o más agendamientos ACTIVOS (futuros)
+    $test_email = 'lmgm.uber@gmail.com';
+    if (strtolower($email) !== strtolower($test_email)) {
+        $current_datetime = current_time('mysql');
+        
+        // Contamos solo los agendamientos cuya fecha y hora sean mayores o iguales al momento actual
+        $count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $table_name 
+             WHERE email = %s 
+             AND CONCAT(scheduled_date, ' ', scheduled_time) >= %s",
+            $email,
+            $current_datetime
+        ));
+        
+        if ($count >= 2) {
+            return new WP_Error('email_limit_reached', 'Este correo ya tiene 2 agendamientos activos. Solo se permiten 2 reuniones pendientes simultáneas.', array('status' => 400));
+        }
+    }
+    
+    // Generar token de seguridad
+    $token = bin2hex(random_bytes(16));
 
     // Insertar en base de datos
     $data = array(
@@ -143,7 +197,8 @@ function automatiza_tech_save_lead($request) {
         'name' => $name,
         'email' => $email,
         'phone' => $phone,
-        'session_id' => $session_id
+        'session_id' => $session_id,
+        'token' => $token
     );
 
     if ($scheduled_date) $data['scheduled_date'] = $scheduled_date;
@@ -275,15 +330,80 @@ function automatiza_tech_check_availability($request) {
 }
 
 /**
+ * Callback para verificar límite de agendamientos
+ */
+function automatiza_tech_check_booking_limit($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_leads';
+    
+    $params = $request->get_json_params();
+    $email = isset($params['email']) ? sanitize_email($params['email']) : '';
+    
+    if (empty($email)) {
+        return new WP_Error('missing_email', 'Email requerido', array('status' => 400));
+    }
+
+    $test_email = 'lmgm.uber@gmail.com';
+    
+    // Si es el email de prueba, siempre permitir
+    if (strtolower($email) === strtolower($test_email)) {
+        return array(
+            'allowed' => true,
+            'message' => 'Email de prueba permitido'
+        );
+    }
+
+    $current_datetime = current_time('mysql');
+    
+    // Contamos solo los agendamientos cuya fecha y hora sean mayores o iguales al momento actual
+    $count = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $table_name 
+         WHERE email = %s 
+         AND CONCAT(scheduled_date, ' ', scheduled_time) >= %s",
+        $email,
+        $current_datetime
+    ));
+    
+    if ($count >= 2) {
+        return array(
+            'allowed' => false,
+            'message' => 'Este correo ya tiene 2 agendamientos activos. Solo se permiten 2 reuniones pendientes simultáneas.'
+        );
+    }
+
+    return array(
+        'allowed' => true,
+        'message' => 'Agendamiento permitido'
+    );
+}
+
+/**
  * Callback para obtener leads para recordatorios
  */
 function automatiza_tech_get_leads_for_reminders($request) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_leads';
-    $type = $request->get_param('type'); // 72h, 24h, 1h
+    $type = $request['type']; // Prioridad: Parámetro de ruta
+    
+    if (empty($type)) {
+        $type = $request->get_param('type'); // Fallback: Query param
+    }
+    
+    // Fallback extremo: $_GET/$_REQUEST
+    if (empty($type) && isset($_GET['type'])) $type = $_GET['type'];
+    if (empty($type) && isset($_REQUEST['type'])) $type = $_REQUEST['type'];
 
+    // Debug logging
+    error_log("Reminder API called. Type resolved: " . print_r($type, true));
+    
     if (!in_array($type, ['72h', '24h', '1h'])) {
-        return new WP_Error('invalid_type', 'Tipo de recordatorio inválido', array('status' => 400));
+        $debug_info = array(
+            'received_params' => $request->get_params(),
+            'GET_params' => $_GET,
+            'REQUEST_params' => $_REQUEST
+        );
+        error_log("Invalid type. Debug info: " . print_r($debug_info, true));
+        return new WP_Error('invalid_type', 'Tipo de recordatorio inválido. Debug: ' . json_encode($debug_info), array('status' => 400));
     }
 
     $now = current_time('mysql');
@@ -324,6 +444,14 @@ function automatiza_tech_get_leads_for_reminders($request) {
         ));
     }
 
+    // Formatear fechas para visualización (DD-MM-YYYY)
+    if (!empty($leads)) {
+        foreach ($leads as $lead) {
+            $lead->scheduled_date = date('d-m-Y', strtotime($lead->scheduled_date));
+            $lead->scheduled_time = substr($lead->scheduled_time, 0, 5);
+        }
+    }
+
     return $leads;
 }
 
@@ -333,13 +461,34 @@ function automatiza_tech_get_leads_for_reminders($request) {
 function automatiza_tech_mark_reminder_sent($request) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_leads';
-    $params = $request->get_json_params();
     
-    $lead_id = isset($params['lead_id']) ? (int)$params['lead_id'] : 0;
-    $type = isset($params['type']) ? $params['type'] : '';
+    // 1. Intentar obtener de la ruta (URL Path)
+    $lead_id = isset($request['lead_id']) ? $request['lead_id'] : null;
+    $type = isset($request['type']) ? $request['type'] : null;
+
+    // 2. Si no están en la ruta, buscar en Body/Query (Fallback)
+    if (empty($lead_id)) {
+        $lead_id = $request->get_param('lead_id');
+    }
+    if (empty($type)) {
+        $type = $request->get_param('type');
+    }
+    
+    // 3. Fallback final para JSON Body crudo (si n8n envía JSON pero WP no lo parsea)
+    if (empty($lead_id) || empty($type)) {
+        $json_params = $request->get_json_params();
+        if (!empty($json_params)) {
+            if (empty($lead_id) && isset($json_params['lead_id'])) $lead_id = $json_params['lead_id'];
+            if (empty($type) && isset($json_params['type'])) $type = $json_params['type'];
+        }
+    }
+    
+    $lead_id = (int)$lead_id;
 
     if (!$lead_id || !in_array($type, ['72h', '24h', '1h'])) {
-        return new WP_Error('invalid_params', 'Parámetros inválidos', array('status' => 400));
+        // Log para depuración
+        error_log("Update Reminder Failed. ID: $lead_id, Type: $type. Request Params: " . print_r($request->get_params(), true));
+        return new WP_Error('invalid_params', 'Parámetros inválidos. Recibido ID: ' . $lead_id . ' Type: ' . $type, array('status' => 400));
     }
 
     $column = 'recordatorio' . $type;
@@ -364,10 +513,18 @@ function automatiza_tech_handle_lead_action($request) {
     $logs_table_name = $wpdb->prefix . 'automatiza_leads_logs';
     
     $lead_id = $request->get_param('id');
+    $token = $request->get_param('token');
     $action = $request->get_param('action'); // confirm, reject, delete
 
     if (!$lead_id || !in_array($action, ['confirm', 'reject', 'delete'])) {
         wp_die('Enlace inválido o expirado.', 'Error', array('response' => 400));
+    }
+
+    // Verificar Token de Seguridad
+    $lead = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $lead_id));
+    
+    if (!$lead || !$token || !hash_equals($lead->token, $token)) {
+         wp_die('Enlace no autorizado o token inválido.', 'Acceso Denegado', array('response' => 403));
     }
 
     // Configuración visual común
@@ -424,6 +581,7 @@ function automatiza_tech_handle_lead_action($request) {
                     
                     <form id="reschedule-form">
                         <input type="hidden" id="lead_id" value="<?php echo esc_attr($lead_id); ?>">
+                        <input type="hidden" id="token" value="<?php echo esc_attr($token); ?>">
                         
                         <div class="form-group">
                             <label>Nueva Fecha:</label>
@@ -442,7 +600,7 @@ function automatiza_tech_handle_lead_action($request) {
 
                     <div id="message-box"></div>
 
-                    <a href="<?php echo esc_url(home_url('/wp-json/automatiza-tech/v1/leads/action?id=' . $lead_id . '&action=delete')); ?>" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que deseas cancelar definitivamente la cita?');">Cancelar Cita Definitivamente</a>
+                    <a href="<?php echo esc_url(home_url('/wp-json/automatiza-tech/v1/leads/action?id=' . $lead_id . '&token=' . $token . '&action=delete')); ?>" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que deseas cancelar definitivamente la cita?');">Cancelar Cita Definitivamente</a>
                 </div>
             </div>
 
@@ -453,6 +611,7 @@ function automatiza_tech_handle_lead_action($request) {
                 const submitBtn = document.getElementById('submit-btn');
                 const msgBox = document.getElementById('message-box');
                 const leadId = document.getElementById('lead_id').value;
+                const token = document.getElementById('token').value;
 
                 dateInput.addEventListener('change', function() {
                     const dateVal = this.value;
@@ -517,14 +676,18 @@ function automatiza_tech_handle_lead_action($request) {
                     fetch('/wp-json/automatiza-tech/v1/leads/reschedule', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ lead_id: leadId, date: date, time: time })
+                        body: JSON.stringify({ lead_id: leadId, token: token, date: date, time: time })
                     })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
+                            // Formatear fecha para mostrar
+                            const [year, month, day] = date.split('-');
+                            const formattedDate = `${day}-${month}-${year}`;
+
                             document.getElementById('reschedule-container').innerHTML = `
                                 <h2>¡Cita Reagendada!</h2>
-                                <p>Tu nueva cita ha sido confirmada para el <strong>${date}</strong> a las <strong>${time}</strong>.</p>
+                                <p>Tu nueva cita ha sido confirmada para el <strong>${formattedDate}</strong> a las <strong>${time}</strong>.</p>
                                 <a href="<?php echo esc_url($home_url); ?>" class="btn btn-primary">Volver al Inicio</a>
                             `;
                         } else {
@@ -613,11 +776,18 @@ function automatiza_tech_reschedule_lead($request) {
     
     $params = $request->get_json_params();
     $lead_id = isset($params['lead_id']) ? (int)$params['lead_id'] : 0;
+    $token = isset($params['token']) ? sanitize_text_field($params['token']) : '';
     $new_date = isset($params['date']) ? sanitize_text_field($params['date']) : '';
     $new_time = isset($params['time']) ? sanitize_text_field($params['time']) : '';
 
     if (!$lead_id || !$new_date || !$new_time) {
         return new WP_Error('missing_params', 'Faltan datos para reagendar', array('status' => 400));
+    }
+
+    // Verificar Token
+    $lead = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $lead_id));
+    if (!$lead || !hash_equals($lead->token, $token)) {
+        return new WP_Error('invalid_token', 'Token inválido', array('status' => 403));
     }
 
     // Verificar disponibilidad nuevamente (doble check)

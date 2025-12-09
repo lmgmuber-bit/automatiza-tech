@@ -52,7 +52,7 @@
                     <ul>
                         <li>
                             <i class="fas fa-envelope"></i>
-                            <a href="mailto:info@automatizatech.cl">info@automatizatech.cl</a>
+                            <a href="mailto:contacto@automatizatech.cl">contacto@automatizatech.cl</a>
                         </li>
                         <li>
                             <i class="fab fa-whatsapp"></i>
@@ -146,7 +146,7 @@
     "description": "Conectamos tus ventas, web y CRM. Bots inteligentes para negocios que no se detienen.",
     "url": "<?php echo esc_url(home_url()); ?>",
     "telephone": "<?php echo esc_attr(get_theme_mod('whatsapp_number', '+56 9 4033 1127')); ?>",
-    "email": "info@automatizatech.cl",
+    "email": "contacto@automatizatech.cl",
     "address": {
         "@type": "PostalAddress",
         "addressRegion": "Latinoamérica"

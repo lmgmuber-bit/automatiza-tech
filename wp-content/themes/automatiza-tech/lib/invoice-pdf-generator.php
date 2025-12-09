@@ -100,7 +100,8 @@ class InvoicePDFGenerator {
         
         // Generar QR Code
         require_once(__DIR__ . '/qrcode.php');
-        $validation_url = $site_url . '/validar-factura.php?id=' . urlencode($invoice_number);
+        // Forzar dominio automatizatech.cl para el QR
+        $validation_url = 'https://automatizatech.cl/validar-factura.php?id=' . urlencode($invoice_number);
         $qr_base64 = SimpleQRCode::generateBase64($validation_url, 120);
         
         $html = '<!DOCTYPE html>
@@ -417,7 +418,7 @@ class InvoicePDFGenerator {
             </div>
             <div class="footer-col">
                 <h4>📞 Contacto</h4>
-                <p>📧 info@automatizatech.shop</p>
+                <p>📧 contacto@automatizatech.cl</p>
                 <p>📱 +56 9 6432 4169</p>
             </div>
             <div class="footer-col">

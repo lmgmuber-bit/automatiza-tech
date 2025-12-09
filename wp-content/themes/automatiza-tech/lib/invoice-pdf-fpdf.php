@@ -183,7 +183,7 @@ class InvoicePDFFPDF extends FPDF {
         // Info empresa (derecha) - diseÃ±o mejorado (configurables desde panel admin)
         $company_name = get_option('company_name', 'AutomatizaTech SpA');
         $company_rut = get_option('company_rut', '77.123.456-7');
-        $company_email = get_option('company_email', 'info@automatizatech.shop');
+        $company_email = get_option('company_email', 'contacto@automatizatech.cl');
         $company_phone = get_option('company_phone', '+56 9 1234 5678');
         $company_website = get_option('company_website', 'www.automatizatech.shop');
         
@@ -233,7 +233,8 @@ class InvoicePDFFPDF extends FPDF {
     }
     
     private function generate_qr_code() {
-        $validation_url = 'https://automatizatech.shop/validar-factura.php?id=' . urlencode($this->invoice_number);
+        // Forzar dominio automatizatech.cl para el QR
+        $validation_url = 'https://automatizatech.cl/validar-factura.php?id=' . urlencode($this->invoice_number);
         
         $upload_dir = wp_upload_dir();
         $qr_dir = $upload_dir['basedir'] . '/qr-codes/';
@@ -466,7 +467,7 @@ class InvoicePDFFPDF extends FPDF {
         $y_start = $this->GetY();
         
         // Columna 1: Contacto (configurables desde panel admin)
-        $company_email = get_option('company_email', 'info@automatizatech.shop');
+        $company_email = get_option('company_email', 'contacto@automatizatech.cl');
         $company_phone = get_option('company_phone', '+56 9 4033 1127');
         $company_website = get_option('company_website', 'www.automatizatech.shop');
         

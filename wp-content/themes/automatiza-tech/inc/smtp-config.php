@@ -13,16 +13,39 @@ if (!defined('ABSPATH')) {
  * Configurar SMTP para envío de correos en producción
  */
 function automatiza_tech_smtp_config($phpmailer) {
-    // Solo aplicar en producción (Hostinger)
-    if (strpos($_SERVER['HTTP_HOST'], 'localhost') !== false || 
-        strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false) {
-        return; // No aplicar en local
+    // Detectar entorno local
+    $is_local = (strpos($_SERVER['HTTP_HOST'], 'localhost') !== false || 
+                 strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false);
+
+    if ($is_local) {
+        // Configuración para desarrollo local con MailHog
+        $phpmailer->isSMTP();
+        $phpmailer->Host       = 'localhost';
+        $phpmailer->SMTPAuth   = false;
+        $phpmailer->Port       = 1025; // Puerto de MailHog
+        $phpmailer->SMTPSecure = false;
+        $phpmailer->From       = 'contacto@automatizatech.cl';
+        $phpmailer->FromName   = 'Automatiza Tech (Local)';
+        return;
     }
     
     $phpmailer->isSMTP();
-    $phpmailer->Host       = 'smtp.hostinger.com';
+    
+    // Usar constantes si están definidas, sino fallback a Hostinger
+    if (defined('SMTP_HOST')) {
+        $phpmailer->Host = SMTP_HOST;
+    } else {
+        $phpmailer->Host = 'smtp.hostinger.com';
+    }
+    
     $phpmailer->SMTPAuth   = true;
-    $phpmailer->Port       = 587; // Puerto TLS
+    
+    if (defined('SMTP_PORT')) {
+        $phpmailer->Port = SMTP_PORT;
+    } else {
+        $phpmailer->Port = 587; // Puerto TLS
+    }
+    
     $phpmailer->SMTPSecure = 'tls';
     
     // Credenciales SMTP - DEBE estar definido en wp-config.php
@@ -185,7 +208,11 @@ add_action('admin_footer', 'automatiza_tech_add_test_email_button');
  */
 function automatiza_tech_log_email_errors($wp_error) {
     if (WP_DEBUG && WP_DEBUG_LOG) {
-        error_log('Automatiza Tech - Error de email: ' . print_r($wp_error, true));
+        error_log('=== SMTP ERROR DETAILS ===');
+        error_log('Message: ' . $wp_error->get_error_message());
+        error_log('Data: ' . print_r($wp_error->get_error_data(), true));
+        error_log('Full Object: ' . print_r($wp_error, true));
+        error_log('=== END SMTP ERROR ===');
     }
 }
 add_action('wp_mail_failed', 'automatiza_tech_log_email_errors');

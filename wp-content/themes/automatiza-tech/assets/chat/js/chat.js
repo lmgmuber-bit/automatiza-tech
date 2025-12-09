@@ -166,6 +166,16 @@ jQuery(document).ready(function($) {
         // Update session timestamp on activity
         localStorage.setItem(STORAGE_KEY_TIMESTAMP, now);
 
+        // FIX: Intercept greetings locally to prevent backend confusion (e.g. "Hola" -> "Dolar")
+        const lowerMsg = userMessage.toLowerCase().trim();
+        if (lowerMsg === 'hola' || lowerMsg === 'hola!' || lowerMsg === 'buenas' || lowerMsg.includes('buenos dias') || lowerMsg.includes('buenas tardes')) {
+            setTimeout(function() {
+                $loadingElement.remove();
+                addMessage("¡Hola! Bienvenido a Automatiza Tech. ¿En qué puedo ayudarte hoy con tu proyecto?", 'bot');
+            }, 600);
+            return;
+        }
+
         // If a webhook URL is configured, use it. Otherwise, simulate response.
         if (AutomatizaAIChat.webhookUrl) {
             // Prepare payload for n8n Chat Trigger
@@ -375,11 +385,24 @@ jQuery(document).ready(function($) {
                     const startHour = parseInt(startStr.split(':')[0]);
                     const endHour = parseInt(endStr.split(':')[0]);
                     
+                    // Get current date/time for filtering past slots
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const day = String(now.getDate()).padStart(2, '0');
+                    const todayStr = `${year}-${month}-${day}`;
+                    const currentHour = now.getHours();
+
                     let availableCount = 0;
 
                     for (let h = startHour; h < endHour; h++) {
                         const timeStr = h.toString().padStart(2, '0') + ':00';
                         
+                        // Filter past hours if today
+                        if (dateVal === todayStr && h <= currentHour) {
+                            continue;
+                        }
+
                         // Check if this slot is in busySlots
                         if (!busySlots.includes(timeStr)) {
                             $timeSelect.append(`<option value="${timeStr}">${timeStr}</option>`);
@@ -577,10 +600,25 @@ jQuery(document).ready(function($) {
 
                 const startHour = parseInt(startStr.split(':')[0]);
                 const endHour = parseInt(endStr.split(':')[0]);
+                
+                // Get current date/time for filtering past slots
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const todayStr = `${year}-${month}-${day}`;
+                const currentHour = now.getHours();
+
                 let availableCount = 0;
 
                 for (let h = startHour; h < endHour; h++) {
                     const timeStr = h.toString().padStart(2, '0') + ':00';
+                    
+                    // Filter past hours if today
+                    if (dateVal === todayStr && h <= currentHour) {
+                        continue;
+                    }
+
                     if (!busySlots.includes(timeStr)) {
                         $modalTime.append(`<option value="${timeStr}">${timeStr}</option>`);
                         availableCount++;

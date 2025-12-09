@@ -64,7 +64,7 @@ function automatiza_tech_customize_register_extended($wp_customize) {
     
     // Email
     $wp_customize->add_setting('contact_email', array(
-        'default'           => 'info@automatizatech.cl',
+        'default'           => 'contacto@automatizatech.cl',
         'sanitize_callback' => 'sanitize_email',
     ));
     

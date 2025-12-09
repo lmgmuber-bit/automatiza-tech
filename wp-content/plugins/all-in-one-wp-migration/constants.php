@@ -500,7 +500,9 @@ if ( ! defined( 'AI1WM_DEFAULT_BACKUPS_PATH' ) ) {
 // ================
 // = Backups Path =
 // ================
-define( 'AI1WM_BACKUPS_PATH', get_option( AI1WM_BACKUPS_PATH_OPTION, AI1WM_DEFAULT_BACKUPS_PATH ) );
+if ( ! defined( 'AI1WM_BACKUPS_PATH' ) ) {
+	define( 'AI1WM_BACKUPS_PATH', get_option( AI1WM_BACKUPS_PATH_OPTION, AI1WM_DEFAULT_BACKUPS_PATH ) );
+}
 
 // ==========================
 // = Storage index.php File =

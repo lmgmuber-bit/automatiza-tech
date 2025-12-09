@@ -405,7 +405,11 @@ function automatiza_tech_send_manual_reminder() {
     </body>
     </html>';
     
-    $headers = array('Content-Type: text/html; charset=UTF-8');
+    $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+    $headers = array(
+        'Content-Type: text/html; charset=UTF-8',
+        'From: Automatiza Tech <' . $from_email . '>'
+    );
     $sent = wp_mail($lead->email, $subject, $html, $headers);
     
     if ($sent) {

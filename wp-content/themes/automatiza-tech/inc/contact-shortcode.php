@@ -421,13 +421,26 @@ function automatiza_tech_contact_form_shortcode($atts) {
     <script>
     // Usar JavaScript vanilla para mayor compatibilidad
     document.addEventListener('DOMContentLoaded', function() {
-        // Definir configuración AJAX
-        window.automatiza_ajax = {
-            ajaxurl: '<?php echo admin_url("admin-ajax.php"); ?>',
-            nonce: '<?php echo wp_create_nonce("automatiza_ajax_nonce"); ?>'
-        };
+        // Definir configuración AJAX si no existe
+        if (typeof window.automatiza_ajax === 'undefined') {
+            window.automatiza_ajax = {
+                ajaxurl: '<?php echo admin_url("admin-ajax.php"); ?>',
+                nonce: '<?php echo wp_create_nonce("automatiza_ajax_nonce"); ?>'
+            };
+        }
         
         console.log('Form script loaded with config:', window.automatiza_ajax);
+
+        // Refrescar nonce para evitar problemas de caché
+        fetch(window.automatiza_ajax.ajaxurl + '?action=get_nonce')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data.nonce) {
+                    window.automatiza_ajax.nonce = data.data.nonce;
+                    console.log('Nonce refreshed successfully');
+                }
+            })
+            .catch(e => console.log('Nonce refresh skipped or failed', e));
         
         // ============================================
         // FUNCIONES DE VALIDACIÓN Y FORMATEO DE RUT CHILENO
@@ -1146,4 +1159,3 @@ function automatiza_tech_contact_form_shortcode($atts) {
     return ob_get_clean();
 }
 add_shortcode('contact_form', 'automatiza_tech_contact_form_shortcode');
-?>

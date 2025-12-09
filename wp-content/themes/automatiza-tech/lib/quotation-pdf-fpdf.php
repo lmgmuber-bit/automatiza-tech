@@ -176,7 +176,7 @@ class QuotationPDFFPDF extends FPDF {
         
         // Info empresa (derecha)
         $company_name = get_option('company_name', 'AutomatizaTech SpA');
-        $company_email = get_option('company_email', 'info@automatizatech.shop');
+        $company_email = get_option('company_email', 'contacto@automatizatech.cl');
         $company_phone = get_option('company_phone', '+56 9 4033 1127');
         $company_website = get_option('company_website', 'www.automatizatech.shop');
         

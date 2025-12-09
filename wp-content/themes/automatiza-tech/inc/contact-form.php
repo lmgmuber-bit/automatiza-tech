@@ -32,6 +32,8 @@ class AutomatizaTechContactForm {
         add_action('wp_ajax_send_email_to_new_contacts_n8n', array($this, 'send_email_to_new_contacts_n8n'));
         add_action('wp_ajax_nopriv_send_email_to_new_contacts_n8n', array($this, 'send_email_to_new_contacts_n8n'));
         add_action('wp_ajax_get_available_plans', array($this, 'get_available_plans'));
+        add_action('wp_ajax_get_nonce', array($this, 'get_nonce'));
+        add_action('wp_ajax_nopriv_get_nonce', array($this, 'get_nonce'));
         // Hook de download_invoice movido a invoice-handlers.php para evitar duplicados
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'admin_scripts'));
@@ -45,6 +47,15 @@ class AutomatizaTechContactForm {
         add_action('init', array($this, 'check_table_structure'));
     }
     
+    /**
+     * Obtener nonce fresco para AJAX
+     */
+    public function get_nonce() {
+        wp_send_json_success(array(
+            'nonce' => wp_create_nonce('automatiza_ajax_nonce')
+        ));
+    }
+
     /**
      * Verificar y actualizar estructura de tabla
      */
@@ -740,9 +751,12 @@ class AutomatizaTechContactForm {
         </html>
         ';
         
+        // Usar el correo SMTP configurado o fallback a contacto@automatizatech.cl
+        $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
-            'From: Automatiza Tech <' . get_option('admin_email') . '>',
+            'From: Automatiza Tech <' . $from_email . '>',
             'Reply-To: ' . $name . ' <' . $email . '>'
         );
         
@@ -980,9 +994,6 @@ class AutomatizaTechContactForm {
      * Enviar correo de notificación cuando un cliente es contratado
      */
     private function send_contracted_client_email($client_data, $plans_data = null) {
-        // Configurar SMTP para desarrollo local
-        add_action('phpmailer_init', array($this, 'configure_smtp'));
-        
         // Enviar correo al cliente con la factura
         if ($plans_data) {
             $this->send_invoice_email_to_client($client_data, $plans_data);
@@ -1100,10 +1111,11 @@ class AutomatizaTechContactForm {
         </html>";
         
         // Headers para HTML
+        $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
-            'From: AutomatizaTech <info@automatizatech.shop>',
-            'Reply-To: info@automatizatech.shop'
+            'From: AutomatizaTech <' . $from_email . '>',
+            'Reply-To: contacto@automatizatech.cl'
         );
         
         // Enviar el correo
@@ -1126,9 +1138,6 @@ class AutomatizaTechContactForm {
      * Enviar correo con factura al cliente
      */
     private function send_invoice_email_to_client($client_data, $plans_data) {
-        // Configurar SMTP
-        add_action('phpmailer_init', array($this, 'configure_smtp'));
-        
         // Generar factura HTML (para BD)
         $invoice_html = $this->generate_invoice_html($client_data, $plans_data);
         $invoice_number = 'AT-' . date('Ymd') . '-' . str_pad($client_data->id, 4, '0', STR_PAD_LEFT);
@@ -1370,7 +1379,7 @@ class AutomatizaTechContactForm {
                 <h4>Información de Contacto</h4>
                 <p style='color: #666; margin-bottom: 10px;'>Si tienes consultas, puedes contactarnos:</p>
                 <div class='contact-info'>
-                    Email: <strong>info@automatizatech.shop</strong><br>
+                    Email: <strong>contacto@automatizatech.cl</strong><br>
                     Teléfono: <strong>+56 9 6432 4169</strong><br>
                     Sitio web: <strong>{$site_url}</strong>
                 </div>
@@ -1386,7 +1395,7 @@ class AutomatizaTechContactForm {
             <p style='font-size: 1em; margin-bottom: 10px;'><strong>AutomatizaTech</strong></p>
             <p style='font-size: 0.9em;'>Soluciones de automatización digital</p>
             <p style='font-size: 0.85em; margin-top: 15px;'>
-                {$site_url} | info@automatizatech.shop<br>
+                {$site_url} | contacto@automatizatech.cl<br>
                 Copyright " . date('Y') . " AutomatizaTech. Todos los derechos reservados.
             </p>
         </div>
@@ -1395,16 +1404,17 @@ class AutomatizaTechContactForm {
 </html>";
         
         // ANTI-SPAM: Headers profesionales y transaccionales
+        $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
-            'From: AutomatizaTech <info@automatizatech.shop>',
-            'Reply-To: info@automatizatech.shop',
+            'From: AutomatizaTech <' . $from_email . '>',
+            'Reply-To: contacto@automatizatech.cl',
             'Bcc: automatizatech.bots@gmail.com',
             'X-Priority: 1 (Highest)',
             'X-MSMail-Priority: High',
             'Importance: High',
             'X-Mailer: AutomatizaTech Invoicing System v1.0',
-            'List-Unsubscribe: <mailto:unsubscribe@automatizatech.shop>',
+            'List-Unsubscribe: <mailto:unsubscribe@automatizatech.cl>',
             'Precedence: bulk',
             'X-Auto-Response-Suppress: OOF, DR, RN, NRN, AutoReply'
         );
@@ -1454,7 +1464,7 @@ class AutomatizaTechContactForm {
             $plain_text .= "Nuestro equipo se pondrá en contacto contigo en las próximas 24-48 horas.\n\n";
             $plain_text .= "INFORMACIÓN DE CONTACTO\n";
             $plain_text .= "-----------------------\n";
-            $plain_text .= "Email: info@automatizatech.shop\n";
+            $plain_text .= "Email: contacto@automatizatech.cl\n";
             $plain_text .= "Teléfono: +56 9 6432 4169\n";
             $plain_text .= "Web: " . $site_url . "\n\n";
             $plain_text .= "Saludos cordiales,\n";
@@ -1474,35 +1484,6 @@ class AutomatizaTechContactForm {
         }
         
         return $sent;
-    }
-    
-    /**
-     * Configurar SMTP para correo electrónico
-     */
-    public function configure_smtp($phpmailer) {
-        $phpmailer->isSMTP();
-        
-        // Configuración para Gmail SMTP (recomendado para producción)
-        if (defined('SMTP_HOST') && defined('SMTP_USER') && defined('SMTP_PASS')) {
-            $phpmailer->Host       = SMTP_HOST;
-            $phpmailer->SMTPAuth   = true;
-            $phpmailer->Port       = SMTP_PORT ?? 587;
-            $phpmailer->Username   = SMTP_USER;
-            $phpmailer->Password   = SMTP_PASS;
-            $phpmailer->SMTPSecure = 'tls';
-        } else {
-            // Configuración para desarrollo local con MailHog o similar
-            $phpmailer->Host       = 'localhost';
-            $phpmailer->SMTPAuth   = false;
-            $phpmailer->Port       = 1025; // Puerto de MailHog
-            $phpmailer->SMTPSecure = false;
-        }
-        
-        $phpmailer->From     = 'info@automatizatech.shop';
-        $phpmailer->FromName = 'AutomatizaTech';
-        
-        // Log de configuración
-        error_log("SMTP CONFIGURADO: Host={$phpmailer->Host}, Port={$phpmailer->Port}, Auth=" . ($phpmailer->SMTPAuth ? 'true' : 'false'));
     }
     
     /**
@@ -1549,6 +1530,9 @@ class AutomatizaTechContactForm {
             $wpdb->update(
                 $invoices_table,
                 [
+                    'client_name' => $client_data->name,
+                    'client_email' => $client_data->email,
+                    'plan_name' => $all_plan_names,
                     'invoice_html' => $invoice_html,
                     'invoice_file_path' => $invoice_path,
                     'qr_code_data' => $qr_data
@@ -1563,7 +1547,10 @@ class AutomatizaTechContactForm {
                 $invoices_table,
                 [
                     'client_id' => $client_data->id,
+                    'client_name' => $client_data->name,
+                    'client_email' => $client_data->email,
                     'plan_id' => $first_plan_id,
+                    'plan_name' => $all_plan_names,
                     'invoice_number' => $invoice_number,
                     'invoice_html' => $invoice_html,
                     'invoice_file_path' => $invoice_path,
@@ -1643,10 +1630,14 @@ class AutomatizaTechContactForm {
             foreach ($contacts as $contact) {
                 $subject = '¡Descubre cómo Automatiza Tech puede transformar tu negocio! 🚀';
                 $body = $this->get_email_template($contact->name);
+                
+                // Usar el correo SMTP configurado o fallback a contacto@automatizatech.cl
+                $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+                
                 $headers = array(
                     'Content-Type: text/html; charset=UTF-8',
-                    'From: Automatiza Tech <' . get_option('admin_email') . '>',
-                    'Reply-To: Automatiza Tech <info@automatizatech.cl>',
+                    'From: Automatiza Tech <' . $from_email . '>',
+                    'Reply-To: Automatiza Tech <contacto@automatizatech.cl>',
                     'Bcc: automatizatech.bots@gmail.com'
                 );
                 $result = wp_mail($contact->email, $subject, $body, $headers);
@@ -1702,9 +1693,6 @@ class AutomatizaTechContactForm {
      * Enviar cotización al contacto interesado
      */
     private function send_quotation_email($contact_data, $plans_data) {
-        // Configurar SMTP
-        add_action('phpmailer_init', array($this, 'configure_smtp'));
-        
         // Generar número de cotización: C-AT-YYYYMMDD-XXXX
         $quotation_number = $this->generate_quotation_number();
         
@@ -2127,7 +2115,7 @@ class AutomatizaTechContactForm {
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 25px 0;">
                                 <tr>
                                     <td align="center">
-                                        <a href="mailto:info@automatizatech.shop?subject=Consulta sobre Cotizacion ' . $quotation_number . '" style="display: inline-block; background: linear-gradient(135deg, #0047AB 0%, #00CED1 100%); color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-weight: bold; font-size: 15px;">
+                                        <a href="mailto:contacto@automatizatech.cl?subject=Consulta sobre Cotizacion ' . $quotation_number . '" style="display: inline-block; background: linear-gradient(135deg, #0047AB 0%, #00CED1 100%); color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-weight: bold; font-size: 15px;">
                                             Responder Cotización
                                         </a>
                                     </td>
@@ -2144,7 +2132,7 @@ class AutomatizaTechContactForm {
                     <tr>
                         <td style="background-color: #f9fafb; padding: 20px 30px; border-top: 1px solid #e5e7eb; text-align: center;">
                             <p style="margin: 0 0 8px 0; color: #374151; font-size: 14px; font-weight: 600;">AutomatizaTech SpA</p>
-                            <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 12px;">info@automatizatech.shop</p>
+                            <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 12px;">contacto@automatizatech.cl</p>
                             <p style="margin: 0; color: #6b7280; font-size: 12px;">' . $site_url . '</p>
                         </td>
                     </tr>
@@ -2161,10 +2149,11 @@ class AutomatizaTechContactForm {
 </html>';
         
         // Headers optimizados para evitar spam
+        $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
-            'From: AutomatizaTech <info@automatizatech.shop>',
-            'Reply-To: info@automatizatech.shop',
+            'From: AutomatizaTech <' . $from_email . '>',
+            'Reply-To: contacto@automatizatech.cl',
             'X-Mailer: PHP/' . phpversion(),
             'X-Priority: 3',
             'Importance: Normal'
@@ -2250,7 +2239,11 @@ class AutomatizaTechContactForm {
         </body>
         </html>";
         
-        $headers = array('Content-Type: text/html; charset=UTF-8');
+        $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: Automatiza Tech <' . $from_email . '>'
+        );
         
         $sent = wp_mail($to, $subject, $message, $headers);
         
@@ -2623,7 +2616,8 @@ class AutomatizaTechContactForm {
             <p style='margin-bottom: 8px; color: #666;'>Escanea el QR para validar la autenticidad</p>";
     
     // Generar URL de validación para el QR (apunta directamente a la página de validación)
-    $validation_url = $site_url . '/validar-factura.php?id=' . urlencode($invoice_number);
+    // Forzar dominio automatizatech.cl para el QR
+    $validation_url = 'https://automatizatech.cl/validar-factura.php?id=' . urlencode($invoice_number);
     
     // Generar QR Code en base64 con la URL de validación
     $qr_base64 = SimpleQRCode::generateBase64($validation_url, 120);
@@ -2648,7 +2642,7 @@ class AutomatizaTechContactForm {
             
             <div class='footer-column'>
                 <h3>📞 Contacto</h3>
-                <p>📧 info@automatizatech.shop</p>
+                <p>📧 contacto@automatizatech.cl</p>
                 <p>📱 +56 9 6432 4169</p>
             </div>
             
@@ -3355,10 +3349,11 @@ class AutomatizaTechContactForm {
             
             $body = $this->get_email_template($contact->name);
             
+            $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
             $headers = array(
                 'Content-Type: text/html; charset=UTF-8',
-                'From: Automatiza Tech <' . get_option('admin_email') . '>',
-                'Reply-To: Automatiza Tech <info@automatizatech.cl>',
+                'From: Automatiza Tech <' . $from_email . '>',
+                'Reply-To: Automatiza Tech <contacto@automatizatech.cl>',
                 'Bcc: automatizatech.bots@gmail.com'
             );
             
@@ -3639,7 +3634,7 @@ class AutomatizaTechContactForm {
                                             📱 WhatsApp: <a href="https://wa.me/' . str_replace([' ', '+'], '', $whatsapp_number) . '" style="color: #25D366; text-decoration: none; font-weight: bold;">' . esc_html($whatsapp_number) . '</a>
                                         </p>
                                         <p style="color: #ffffff; margin: 0 0 10px 0; font-size: 14px;">
-                                            📧 Email: <a href="mailto:info@automatizatech.cl" style="color: #60a5fa; text-decoration: none; font-weight: bold;">info@automatizatech.cl</a>
+                                            📧 Email: <a href="mailto:contacto@automatizatech.cl" style="color: #60a5fa; text-decoration: none; font-weight: bold;">contacto@automatizatech.cl</a>
                                         </p>
                                         <p style="color: #ffffff; margin: 0; font-size: 14px;">
                                             🌐 Web: <a href="' . esc_url(home_url()) . '" style="color: #60a5fa; text-decoration: none; font-weight: bold;">' . str_replace(['http://', 'https://'], '', home_url()) . '</a>
@@ -6412,4 +6407,3 @@ add_action('admin_head', function() {
         <?php
     }
 });
-?>

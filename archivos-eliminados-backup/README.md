@@ -204,7 +204,7 @@ Auth: Yes
 - Password: Contraseña de aplicación de Gmail
 
 **From:**
-- Email: noreply@automatizatech.shop
+- Email: noreply@automatizatech.cl
 - Nombre: AutomatizaTech
 
 ---
@@ -225,7 +225,7 @@ URL: /wp-admin/admin.php?page=automatiza-invoice-settings
 | **RUT** | Rol Único Tributario | 76.123.456-7 |
 | **Giro** | Actividad comercial | Servicios de Automatización Digital |
 | **Dirección** | Dirección completa | Av. Providencia 1234, Of. 567 |
-| **Email** | Email de contacto | info@automatizatech.shop |
+| **Email** | Email de contacto | contacto@automatizatech.cl |
 | **Teléfono** | Teléfono | +56 9 1234 5678 |
 | **Sitio Web** | URL | https://automatizatech.shop |
 
@@ -432,7 +432,7 @@ company_name: AutomatizaTech SpA
 company_rut: 76.123.456-7
 company_giro: Servicios de Automatización Digital
 company_address: Av. Providencia 1234, Of. 567, Santiago
-company_email: info@automatizatech.shop
+company_email: contacto@automatizatech.cl
 company_phone: +56 9 1234 5678
 company_website: https://automatizatech.shop
 ```
@@ -638,7 +638,7 @@ private function configure_smtp($phpmailer) {
     $phpmailer->Username = 'automatizatech.bots@gmail.com';
     $phpmailer->Password = 'tu-contraseña-de-aplicacion';
     $phpmailer->SMTPSecure = 'tls';
-    $phpmailer->From = 'noreply@automatizatech.shop';
+    $phpmailer->From = 'noreply@automatizatech.cl';
     $phpmailer->FromName = 'AutomatizaTech';
     $phpmailer->CharSet = 'UTF-8';
 }
@@ -1000,7 +1000,7 @@ private function send_invoice_email_to_client($client_id, $pdf_info) {
     // Headers
     $headers = array(
         'Content-Type: text/html; charset=UTF-8',
-        'From: AutomatizaTech <noreply@automatizatech.shop>'
+        'From: AutomatizaTech <noreply@automatizatech.cl>'
     );
     
     // Adjuntar PDF

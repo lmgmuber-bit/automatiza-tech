@@ -127,10 +127,10 @@ function automatiza_tech_contact_form_shortcode($atts) {
                        placeholder="Ej: 154972986"
                        required
                        minlength="5"
-                       maxlength="10"
+                       maxlength="12"
                        title="Ingresa tu RUT, DNI, Cédula o Pasaporte según tu país.">
                 <small class="form-text text-muted">
-                    <span id="tax-id-help">Ingresa tu RUT completo (9 dígitos con dígito verificador). Ejemplo: 261918072</span>
+                    <span id="tax-id-help">Ingresa tu RUT completo (8-9 dígitos con dígito verificador). Ejemplo: 62131241 o 261918072</span>
                 </small>
                 <div id="tax-id-validation" style="display: none; margin-top: 0.5rem; padding: 0.5rem; border-radius: 4px; font-size: 0.9rem;"></div>
             </div>
@@ -737,9 +737,9 @@ function automatiza_tech_contact_form_shortcode($atts) {
             if (countryCode === '+56') {
                 // Chile
                 taxIdLabel.textContent = 'RUT';
-                taxIdHelp.textContent = 'Ingresa tu RUT completo (9 dígitos con dígito verificador). Ejemplo: 261918072';
-                taxIdInput.placeholder = 'Ej: 261918072';
-                taxIdInput.maxLength = 10; // 9 dígitos máximo
+                taxIdHelp.textContent = 'Ingresa tu RUT completo (8-9 dígitos con dígito verificador). Ejemplo: 62131241 o 261918072';
+                taxIdInput.placeholder = 'Ej: 62131241';
+                taxIdInput.maxLength = 12; // 8-9 dígitos + guión formateado
             } else {
                 // Otros países
                 taxIdLabel.textContent = 'DNI/Cédula/Pasaporte';
@@ -786,8 +786,8 @@ function automatiza_tech_contact_form_shortcode($atts) {
                     // Actualizar el valor sin formato mientras escribe
                     this.value = cleaned;
                     
-                    // Validar en línea cuando tenga 9 caracteres
-                    if (cleaned.length === 9) {
+                    // Validar en línea cuando tenga 8 o 9 caracteres
+                    if (cleaned.length >= 8 && cleaned.length <= 9) {
                         var body = cleaned.slice(0, -1);
                         var dv = cleaned.slice(-1);
                         
@@ -816,9 +816,9 @@ function automatiza_tech_contact_form_shortcode($atts) {
                             showValidationMessage('error', '❌ RUT inválido. Verifica el dígito verificador.');
                             isRutValid = false;
                         }
-                    } else if (cleaned.length > 0 && cleaned.length < 9) {
+                    } else if (cleaned.length > 0 && cleaned.length < 8) {
                         // Todavía está escribiendo
-                        showValidationMessage('info', 'Ingresa los ' + (9 - cleaned.length) + ' caracteres restantes...');
+                        showValidationMessage('info', 'Ingresa al menos ' + (8 - cleaned.length) + ' caracteres más...');
                         isRutValid = false;
                     } else {
                         hideValidationMessage();
@@ -850,7 +850,7 @@ function automatiza_tech_contact_form_shortcode($atts) {
                 if (countryCode === '+56') {
                     var cleaned = cleanRut(this.value);
                     
-                    if (cleaned.length === 9 && validateRut(cleaned)) {
+                    if (cleaned.length >= 8 && cleaned.length <= 9 && validateRut(cleaned)) {
                         var body = cleaned.slice(0, -1);
                         var dv = cleaned.slice(-1);
                         var formatted = body + '-' + dv;
@@ -858,7 +858,7 @@ function automatiza_tech_contact_form_shortcode($atts) {
                         showValidationMessage('success', '✓ RUT válido: ' + formatted);
                         isRutValid = true;
                     } else if (cleaned.length > 0) {
-                        showValidationMessage('error', '❌ RUT inválido. Debe tener 9 dígitos con dígito verificador correcto.');
+                        showValidationMessage('error', '❌ RUT inválido. Debe tener 8 o 9 dígitos con dígito verificador correcto.');
                         isRutValid = false;
                     } else {
                         hideValidationMessage();

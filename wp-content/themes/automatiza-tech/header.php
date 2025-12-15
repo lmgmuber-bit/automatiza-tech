@@ -496,28 +496,29 @@
                 </button>
             </div><!-- .header-content -->
 
-            <!-- Christmas Lights -->
+            <!-- Christmas Lights with Reindeer and Santa -->
             <div class="christmas-lights">
+                <span class="christmas-emoji reindeer">🦌</span>
                 <span class="light red"></span>
                 <span class="light yellow"></span>
                 <span class="light green"></span>
                 <span class="light blue"></span>
+                <span class="christmas-emoji reindeer">🦌</span>
                 <span class="light red"></span>
                 <span class="light yellow"></span>
                 <span class="light green"></span>
                 <span class="light blue"></span>
+                <span class="christmas-emoji santa">🎅</span>
                 <span class="light red"></span>
                 <span class="light yellow"></span>
                 <span class="light green"></span>
                 <span class="light blue"></span>
+                <span class="christmas-emoji reindeer">🦌</span>
                 <span class="light red"></span>
                 <span class="light yellow"></span>
                 <span class="light green"></span>
                 <span class="light blue"></span>
-                <span class="light red"></span>
-                <span class="light yellow"></span>
-                <span class="light green"></span>
-                <span class="light blue"></span>
+                <span class="christmas-emoji reindeer">🦌</span>
             </div>
 
             <!-- Mobile Menu -->
@@ -570,30 +571,7 @@
                 layer.appendChild(el);
             }
 
-            // Floating snowflakes
-            addItem('flake', '❄', 8, 12);
-            addItem('flake', '❄', 24, 28);
-            addItem('flake', '❄', 70, 18);
-            addItem('flake', '❄', 45, 8);
-            
-            // Árboles de Navidad
-            addItem('tree',  '🎄', 12, 66);
-            addItem('tree',  '🎄', 32, 72);
-            addItem('tree',  '🎄', 78, 68);
-            addItem('tree',  '🎄', 88, 75);
-            
-            // Regalos y estrellas
-            addItem('gift',  '🎁', 82, 22);
-            addItem('gift',  '🎁', 18, 24);
-            addItem('star',  '⭐',  18, 74);
-            addItem('star',  '⭐',  88, 16);
-            
-            // Santa Claus
-            addItem('santa', '🎅', 25, 45);
-            addItem('santa', '🎅', 65, 52);
-
-            // Muñeco de nieve (robot navideño)
-            addItem('robot', '⛄', 52, 30);
+            // Elementos navideños removidos - ahora están en las luces
         } catch(e) { /* no-op */ }
     })();
             
@@ -668,20 +646,20 @@
 
             function qs(sel){ return document.querySelector(sel); }
             function ensureLayer(){ var l = qs('.christmas-layer'); if(!l){ l = document.createElement('div'); l.className='christmas-layer'; document.body.appendChild(l); } return l; }
-            function ensureStars(){ if(qs('.christmas-star')) return; ['star-tl','star-tr','star-bl','star-br'].forEach(function(cls){ var s=document.createElement('div'); s.className='christmas-star '+cls; s.textContent='⭐'; document.body.appendChild(s); }); }
+            function ensureStars(){ /* Estrellas deshabilitadas */ }
             // Replacement modal: accessible, styled and light animation
             function ensureModal(){
                 if(qs('.christmas-modal-overlay')) return;
-                var shown = parseInt(localStorage.getItem('christmasModalShownCount_v2') || '0', 10);
+                var shown = parseInt(localStorage.getItem('christmasModalShownCount_v3') || '0', 10);
                 if (shown >= 10) return; // límite de 10 veces por navegador
-                localStorage.setItem('christmasModalShownCount_v2', String(shown + 1));
+                localStorage.setItem('christmasModalShownCount_v3', String(shown + 1));
                 var overlay = document.createElement('div');
                 overlay.className = 'christmas-modal-overlay';
                 overlay.innerHTML = ""
                     + "<div class='christmas-modal' role='dialog' aria-modal='true' aria-labelledby='christmas-title'>"
                     +   "<button class='christmas-modal-close' aria-label='Cerrar'>✖</button>"
                     +   "<div class='christmas-modal-header'>"
-                    +       "<span class='christmas-badge' aria-hidden='true'>❄</span>"
+                    +       "<span class='christmas-badge' aria-hidden='true'>🎅</span>"
                     +       "<h3 id='christmas-title'>Automatiza tu web en Navidad</h3>"
                     +   "</div>"
                     +   "<div class='christmas-modal-content'>"
@@ -689,9 +667,9 @@
                     +   "</div>"
                     +   "<div class='h-modal-actions'>"
                     +       "<div class='bot-invite' aria-hidden='true'>"
-                    +           "<span class='bot bot-wave'>⛄</span>"
-                    +           "<span class='bot bot-bounce'>🎄</span>"
-                    +           "<span class='bot bot-arrow'>👉</span>"
+                    +           "<span class='bot bot-wave'>🦌</span>"
+                    +           "<span class='bot bot-bounce'>🎅</span>"
+                    +           "<span class='bot bot-arrow'>🦌</span>"
                     +       "</div>"
                     +       "<a href='#planes' class='btn-primary h-modal-primary cta-pulse-xmas'>Ver Planes</a>"
                     +       "<button type='button' class='btn-ghost h-modal-dismiss'>Cerrar</button>"
@@ -715,12 +693,12 @@
                 // Randomizar bots/costos
                 try {
                     var bots = overlay.querySelectorAll('.bot-invite .bot');
-                    var faces = ['⛄','🎄','🎁','⭐','❄'];
+                    var faces = ['🦌','🎅','🦌','🎅','🦌'];
                     if(bots[0]) bots[0].textContent = faces[Math.floor(Math.random()*faces.length)];
                     if(bots[1]) bots[1].textContent = faces[Math.floor(Math.random()*faces.length)];
                 } catch(_) {}
             }
-            function populate(layer){ if(layer.childElementCount>0) return; function add(cls, txt, x,y){ var el=document.createElement('span'); el.className='christmas-item '+cls; el.textContent=txt; el.style.left=x+'vw'; el.style.top=y+'vh'; layer.appendChild(el);} add('flake','❄', 8, 12); add('flake','❄', 24, 28); add('flake','❄', 70, 18); add('flake','❄', 45, 8); add('tree','🎄', 12, 66); add('tree','🎄', 32, 72); add('tree','🎄', 78, 68); add('tree','🎄', 88, 75); add('gift','🎁', 82, 22); add('gift','🎁', 18, 24); add('star','⭐', 18, 75); add('star','⭐', 88, 15); add('santa','🎅', 25, 45); add('santa','🎅', 65, 52); add('robot','⛄', 52, 30); add('sleigh-convoy','🦌🦌🎅🛷', -10, 45); }
+            function populate(layer){ /* Emojis flotantes deshabilitados - renos y santa ahora están en las luces */ }
 
             function enable(){ 
                 document.body.classList.add('christmas-mode'); 
@@ -729,14 +707,14 @@
                 ensureStars(); 
                 localStorage.setItem('christmasDisabled','0'); 
                 localStorage.setItem('christmasEnabled','1');
-                showMessage('🎄 ¡Modo Navidad activado! Disfruta de la magia navideña ✨', 'success');
+                showMessage('🎅 ¡Modo Navidad activado! Disfruta de la magia navideña 🦌', 'success');
             }
             
             function disable(){ 
                 document.body.classList.remove('christmas-mode'); 
                 document.querySelectorAll('.christmas-layer,.christmas-star').forEach(function(el){ el.remove(); }); 
                 localStorage.setItem('christmasDisabled','1'); 
-                showMessage('❄ Modo Navidad desactivado. Puedes reactivarlo cuando quieras 🎅', 'info');
+                showMessage('🦌 Modo Navidad desactivado. Puedes reactivarlo cuando quieras 🎅', 'info');
             }
             
             function showMessage(text, type){

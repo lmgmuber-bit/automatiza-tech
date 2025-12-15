@@ -145,7 +145,7 @@ Bienvenido a AutomatizaTech - Factura AT-20251116-XXXX - [Tu Nombre]
 │  Archivo: AT-20251116-XXXX.pdf     │
 ├─────────────────────────────────────┤
 │  📞 Información de Contacto:       │
-│  • Email: info@automatizatech.shop │
+│  • Email: contacto@automatizatech.cl │
 │  • Teléfono: +56 9 1234 5678       │
 │  • Horario: Lun-Vie 9:00-18:00     │
 └─────────────────────────────────────┘
@@ -173,7 +173,7 @@ Bienvenido a AutomatizaTech - Factura AT-20251116-XXXX - [Tu Nombre]
 ║  AutomatizaTech SpA                  ║
 ║  RUT: XX.XXX.XXX-X                   ║
 ║  Dirección: [Dirección completa]     ║
-║  Email: info@automatizatech.shop     ║
+║  Email: contacto@automatizatech.cl     ║
 ╠═══════════════════════════════════════╣
 ║  DATOS DEL CLIENTE                   ║
 ║  Nombre: [Tu Nombre]                 ║
@@ -243,7 +243,7 @@ Bienvenido a AutomatizaTech - Factura AT-20251116-XXXX - [Tu Nombre]
 - Te enviaremos una factura corregida
 
 **4. Para consultas**
-- Email: info@automatizatech.shop
+- Email: contacto@automatizatech.cl
 - Teléfono: +56 9 1234 5678
 - Horario: Lunes a Viernes, 9:00 - 18:00
 
@@ -493,7 +493,7 @@ Este panel te permite configurar los datos de tu empresa que aparecerán en toda
 ║                                       ║
 ║  📧 Email                             ║
 ║  ┌─────────────────────────────────┐ ║
-║  │ info@automatizatech.shop        │ ║
+║  │ contacto@automatizatech.cl        │ ║
 ║  └─────────────────────────────────┘ ║
 ║                                       ║
 ║  📞 Teléfono                          ║
@@ -524,7 +524,7 @@ Debajo del formulario verás una vista previa en tiempo real de cómo se verán 
 │  ─────────────────────────────     │
 │  📍 Av. Providencia 1234, Of. 567  │
 │     Santiago, Chile                │
-│  📧 info@automatizatech.shop       │
+│  📧 contacto@automatizatech.cl       │
 │  📞 +56 9 1234 5678                │
 │  🌐 https://automatizatech.shop    │
 └─────────────────────────────────────┘
@@ -803,7 +803,7 @@ El sistema envía 3 tipos de emails automáticos:
 
 **Configurar filtros:**
 ```
-De: noreply@automatizatech.shop
+De: noreply@automatizatech.cl
 Asunto: (Nuevo contacto|Nuevo Cliente)
 → Etiquetar como: "Sistema AutomatizaTech"
 → Marcar como importante
@@ -987,7 +987,7 @@ R: No, solo se envían. Si falla el envío, se registra en el log (`wp-content/d
 ## 📞 Soporte
 
 ### Para Clientes
-- **Email:** info@automatizatech.shop
+- **Email:** contacto@automatizatech.cl
 - **Teléfono:** +56 9 1234 5678
 - **Horario:** Lunes a Viernes, 9:00 - 18:00
 

@@ -385,7 +385,7 @@ WHERE c.status = 'contracted' AND i.id IS NULL;
 ## 📞 Soporte
 
 Para problemas o mejoras:
-- **Email:** info@automatizatech.shop
+- **Email:** contacto@automatizatech.cl
 - **Teléfono:** +56 9 6432 4169
 - **Documentación:** Ver archivos `.md` en el proyecto
 

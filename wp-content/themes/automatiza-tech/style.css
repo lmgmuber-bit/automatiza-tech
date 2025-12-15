@@ -465,6 +465,37 @@ html {
     }
 }
 
+/* Christmas emojis in lights (reindeer and santa) */
+.christmas-lights .christmas-emoji {
+    font-size: 18px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    animation: bounce-emoji 2s ease-in-out infinite;
+}
+
+.christmas-mode .christmas-lights .christmas-emoji {
+    opacity: 1;
+}
+
+.christmas-lights .christmas-emoji.reindeer {
+    animation-delay: 0.2s;
+}
+
+.christmas-lights .christmas-emoji.santa {
+    animation-delay: 0s;
+    font-size: 20px;
+}
+
+@keyframes bounce-emoji {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-3px);
+    }
+}
+
 /* Corner stars (emoji) */
 .christmas-star {
     position: fixed;

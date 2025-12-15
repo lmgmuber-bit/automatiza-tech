@@ -51,7 +51,7 @@ function automatiza_invoice_settings_page() {
     $company_giro = get_option('company_giro', 'Servicios tecnológicos');
     $company_email = get_option('company_email', 'contacto@automatizatech.cl');
     $company_phone = get_option('company_phone', '+56 9 1234 5678');
-    $company_website = get_option('company_website', 'www.automatizatech.shop');
+    $company_website = get_option('company_website', 'www.automatizatech.cl');
     $company_address = get_option('company_address', 'Santiago, Chile');
 
     ?>

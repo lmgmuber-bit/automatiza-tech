@@ -690,7 +690,7 @@ jQuery.post(ajaxurl, {
 
 Para reportar problemas o solicitar nuevas funcionalidades:
 
-- **Email:** info@automatizatech.shop
+- **Email:** contacto@automatizatech.cl
 - **WordPress Admin:** Panel de Precios CLP
 - **Script de Prueba:** test-currency-updater.php
 

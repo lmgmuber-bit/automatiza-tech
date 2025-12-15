@@ -432,8 +432,8 @@ function automatiza_tech_get_leads_for_reminders($request) {
             $start_range, $end_range
         ));
     } elseif ($type === '1h') {
-        // Entre 1 hora y 1 hora 59 minutos antes
-        $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 1 hour'));
+        // Entre 30 minutos y 1 hora 59 minutos antes (ampliado para evitar que se pierdan)
+        $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 30 minutes'));
         $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 1 hour 59 minutes'));
 
         $leads = $wpdb->get_results($wpdb->prepare(
@@ -530,7 +530,7 @@ function automatiza_tech_handle_lead_action($request) {
     // Configuración visual común
     $site_title = get_bloginfo('name');
     $home_url = home_url();
-    $logo_src = 'https://automatizatech.shop/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
+    $logo_src = 'https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
     
     // Forzar cabecera HTML
     header('Content-Type: text/html; charset=UTF-8');

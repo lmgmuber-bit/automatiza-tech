@@ -358,7 +358,7 @@ function generate_invoice_preview($client_data, $plan_data) {
             
             <div class='footer-column'>
                 <h3>📞 Contacto</h3>
-                <p>📧 info@automatizatech.shop</p>
+                <p>📧 contacto@automatizatech.cl</p>
                 <p>📱 +56 9 6432 4169</p>
             </div>
             

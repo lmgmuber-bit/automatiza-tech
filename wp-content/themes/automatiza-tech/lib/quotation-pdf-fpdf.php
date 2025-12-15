@@ -178,7 +178,7 @@ class QuotationPDFFPDF extends FPDF {
         $company_name = get_option('company_name', 'AutomatizaTech SpA');
         $company_email = get_option('company_email', 'contacto@automatizatech.cl');
         $company_phone = get_option('company_phone', '+56 9 4033 1127');
-        $company_website = get_option('company_website', 'www.automatizatech.shop');
+        $company_website = get_option('company_website', 'www.automatizatech.cl');
         
         $this->SetFont('Arial', 'B', 11);
         $this->SetTextColor($this->text_color[0], $this->text_color[1], $this->text_color[2]);

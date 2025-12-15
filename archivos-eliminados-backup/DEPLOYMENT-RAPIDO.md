@@ -14,7 +14,7 @@
 3. Click en **Cuentas de correo**
 4. Click en **Crear**
 5. Configurar:
-   - Email: `info@automatizatech.cl`
+   - Email: `contacto@automatizatech.cl`
    - Contraseña: (crea una segura y **guárdala**)
    - Espacio: 1GB
 6. Click en **Crear**
@@ -54,7 +54,7 @@ C:\wamp64\www\automatiza-tech\wp-content\themes\automatiza-tech\
 /**
  * Configuración SMTP para envío de correos
  */
-define('SMTP_USER', 'info@automatizatech.cl');
+define('SMTP_USER', 'contacto@automatizatech.cl');
 define('SMTP_PASS', 'AQUI_TU_CONTRASEÑA');  // La del paso 1
 define('SMTP_HOST', 'smtp.hostinger.com');
 define('SMTP_PORT', 587);
@@ -71,7 +71,7 @@ define('SMTP_PORT', 587);
 
 1. Ve a tu WordPress Admin
 2. Click en **Ajustes** → **Generales**
-3. Cambia **Dirección de correo electrónico** a: `info@automatizatech.cl`
+3. Cambia **Dirección de correo electrónico** a: `contacto@automatizatech.cl`
 4. Click en **Guardar cambios**
 
 ---
@@ -82,7 +82,7 @@ define('SMTP_PORT', 587);
 2. Deberías ver un **porcentaje ≥ 80%** ✅
 3. Si hay errores en rojo ❌, corrígelos
 4. Una vez todo verde, click en **"📧 Enviar Test de Correo"**
-5. Revisa tu bandeja de entrada de `info@automatizatech.cl`
+5. Revisa tu bandeja de entrada de `contacto@automatizatech.cl`
 
 ### ¿Todo OK?
 - ✅ Correo de prueba recibido

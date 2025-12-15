@@ -325,7 +325,7 @@ function automatiza_tech_send_manual_reminder() {
     }
     
     // Construir contenido del correo
-    $base_url = 'https://automatizatech.shop/wp-json/automatiza-tech/v1/leads/action';
+    $base_url = 'https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/action';
     $token_param = '&token=' . $lead->token;
     $confirm_url = "$base_url?id=$lead_id&action=confirm$token_param";
     $reject_url = "$base_url?id=$lead_id&action=reject$token_param";
@@ -353,7 +353,7 @@ function automatiza_tech_send_manual_reminder() {
     
     // Obtener logo y nombre del sitio
     $site_title = get_bloginfo('name');
-    $logo_url = 'https://automatizatech.shop/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
+    $logo_url = 'https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
     $footer_text = get_bloginfo('description');
     
     $html = '

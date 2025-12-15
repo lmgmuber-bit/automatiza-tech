@@ -185,7 +185,7 @@ class InvoicePDFFPDF extends FPDF {
         $company_rut = get_option('company_rut', '77.123.456-7');
         $company_email = get_option('company_email', 'contacto@automatizatech.cl');
         $company_phone = get_option('company_phone', '+56 9 1234 5678');
-        $company_website = get_option('company_website', 'www.automatizatech.shop');
+        $company_website = get_option('company_website', 'www.automatizatech.cl');
         
         $this->SetFont('Arial', 'B', 11);
         $this->SetTextColor($this->text_color[0], $this->text_color[1], $this->text_color[2]);
@@ -469,7 +469,7 @@ class InvoicePDFFPDF extends FPDF {
         // Columna 1: Contacto (configurables desde panel admin)
         $company_email = get_option('company_email', 'contacto@automatizatech.cl');
         $company_phone = get_option('company_phone', '+56 9 4033 1127');
-        $company_website = get_option('company_website', 'www.automatizatech.shop');
+        $company_website = get_option('company_website', 'www.automatizatech.cl');
         
         $this->SetXY($x_start, $y_start);
         $this->SetFont('Arial', 'B', 8);
@@ -490,7 +490,7 @@ class InvoicePDFFPDF extends FPDF {
         // Columna 2: Información Tributaria (configurables desde panel admin)
         $company_rut = get_option('company_rut', '77.123.456-7');
         $company_giro = get_option('company_giro', 'Servicios tecnológicos');
-        $company_website = get_option('company_website', 'www.automatizatech.shop');
+        $company_website = get_option('company_website', 'www.automatizatech.cl');
         
         $this->SetXY($x_start + $col_width, $y_start);
         $this->SetFont('Arial', 'B', 8);

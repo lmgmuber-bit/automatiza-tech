@@ -389,7 +389,7 @@
 │        • Genera ticket automático                          │
 │                                                            │
 │  2. 📧 Email                                               │
-│     └─ info@automatizatech.shop                           │
+│     └─ contacto@automatizatech.cl                           │
 │        • Consultas generales                               │
 │        • Soporte técnico                                   │
 │        • Solicitud de facturas                             │

@@ -232,6 +232,19 @@
 <!-- Performance monitoring script -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Detectar #AgendarDemo en la URL y abrir el modal de demo
+    if (window.location.hash === '#AgendarDemo' || window.location.hash === '#agendardemo') {
+        var demoModal = document.getElementById('demo-modal');
+        if (demoModal) {
+            demoModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            // Limpiar el hash de la URL sin recargar
+            if (history.replaceState) {
+                history.replaceState(null, null, window.location.pathname + window.location.search);
+            }
+        }
+    }
+
     // Smooth scrolling for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {

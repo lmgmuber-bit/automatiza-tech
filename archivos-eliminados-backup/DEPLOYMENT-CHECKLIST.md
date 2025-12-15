@@ -22,7 +22,7 @@
 ### 1. Crear Cuenta de Correo
 - [ ] Acceder a hPanel de Hostinger
 - [ ] Ir a **Correos** → **Cuentas de correo**
-- [ ] Crear correo: `info@automatizatech.cl`
+- [ ] Crear correo: `contacto@automatizatech.cl`
 - [ ] Establecer contraseña segura (guárdala en lugar seguro)
 - [ ] Verificar que la cuenta esté activa
 
@@ -35,7 +35,7 @@
 /**
  * Configuración SMTP para envío de correos
  */
-define('SMTP_USER', 'info@automatizatech.cl');
+define('SMTP_USER', 'contacto@automatizatech.cl');
 define('SMTP_PASS', 'TU_CONTRASEÑA_DEL_CORREO');
 define('SMTP_HOST', 'smtp.hostinger.com');
 define('SMTP_PORT', 587);
@@ -46,7 +46,7 @@ define('SMTP_PORT', 587);
 
 ### 3. Actualizar Ajustes de WordPress
 - [ ] Ir a **Ajustes** → **Generales**
-- [ ] Cambiar **Dirección de correo electrónico** a: `info@automatizatech.cl`
+- [ ] Cambiar **Dirección de correo electrónico** a: `contacto@automatizatech.cl`
 - [ ] Guardar cambios
 
 ---
@@ -62,7 +62,7 @@ define('SMTP_PORT', 587);
 ### 2. Test de Correo
 - [ ] En la página de verificación, hacer clic en **"📧 Enviar Test de Correo"**
 - [ ] Verificar que muestre mensaje de éxito
-- [ ] Revisar bandeja de entrada de `info@automatizatech.cl`
+- [ ] Revisar bandeja de entrada de `contacto@automatizatech.cl`
 - [ ] Verificar que el correo llegó correctamente
 - [ ] Revisar que el logo se vea correctamente
 - [ ] Verificar links de WhatsApp y sitio web
@@ -102,7 +102,7 @@ define('SMTP_PORT', 587);
 
 ### Primera Semana
 - [ ] Revisar logs diarios en `wp-content/debug.log`
-- [ ] Monitorear bandeja de entrada de `info@automatizatech.cl`
+- [ ] Monitorear bandeja de entrada de `contacto@automatizatech.cl`
 - [ ] Verificar que no haya correos en SPAM
 - [ ] Confirmar tasa de entrega exitosa
 - [ ] Revisar reportes de apertura (si tienes analytics)

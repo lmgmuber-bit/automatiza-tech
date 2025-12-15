@@ -33,7 +33,7 @@ Sistema de configuración que permite modificar desde el panel de administració
 
 | Campo | Descripción | Ejemplo |
 |-------|-------------|---------|
-| **Email** | Email de contacto principal | `info@automatizatech.shop` |
+| **Email** | Email de contacto principal | `contacto@automatizatech.cl` |
 | **Teléfono** | Número con código de país | `+56 9 1234 5678` |
 | **Sitio Web** | URL sin http:// | `www.automatizatech.shop` |
 
@@ -74,7 +74,7 @@ require_once get_template_directory() . '/inc/invoice-settings.php';
 ```php
 $company_name = get_option('company_name', 'AutomatizaTech SpA');
 $company_rut = get_option('company_rut', '77.123.456-7');
-$company_email = get_option('company_email', 'info@automatizatech.shop');
+$company_email = get_option('company_email', 'contacto@automatizatech.cl');
 $company_phone = get_option('company_phone', '+56 9 1234 5678');
 $company_website = get_option('company_website', 'www.automatizatech.shop');
 ```
@@ -104,7 +104,7 @@ $this->Cell(0, 5, utf8_decode('¡Gracias por confiar en ' . $company_name . '!')
 
 #### Sección de Contacto (Líneas 314-333)
 ```php
-$company_email = get_option('company_email', 'info@automatizatech.shop');
+$company_email = get_option('company_email', 'contacto@automatizatech.cl');
 $company_phone = get_option('company_phone', '+56 9 1234 5678');
 $company_website = get_option('company_website', 'www.automatizatech.shop');
 ```
@@ -163,7 +163,7 @@ $defaults = array(
     'company_name'    => 'AutomatizaTech SpA',
     'company_rut'     => '77.123.456-7',
     'company_giro'    => 'Servicios tecnológicos',
-    'company_email'   => 'info@automatizatech.shop',
+    'company_email'   => 'contacto@automatizatech.cl',
     'company_phone'   => '+56 9 1234 5678',
     'company_website' => 'www.automatizatech.shop',
     'company_address' => 'Santiago, Chile'

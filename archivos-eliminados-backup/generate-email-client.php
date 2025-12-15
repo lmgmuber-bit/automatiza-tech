@@ -172,7 +172,7 @@ function generate_client_email_preview($client_data, $plan_data, $invoice_number
                 <h4>Informacion de Contacto</h4>
                 <p style='color: #666; margin-bottom: 10px;'>Si tienes consultas, puedes contactarnos:</p>
                 <div class='contact-info'>
-                    Email: <strong>info@automatizatech.shop</strong><br>
+                    Email: <strong>contacto@automatizatech.cl</strong><br>
                     Teléfono: <strong>+56 9 4033 1127</strong><br>
                     Sitio web: <strong>{$site_url}</strong>
                 </div>
@@ -188,7 +188,7 @@ function generate_client_email_preview($client_data, $plan_data, $invoice_number
             <p style='font-size: 1em; margin-bottom: 10px;'><strong>AutomatizaTech</strong></p>
             <p style='font-size: 0.9em;'>Soluciones de automatizacion digital</p>
             <p style='font-size: 0.85em; margin-top: 15px;'>
-                {$site_url} | info@automatizatech.shop<br>
+                {$site_url} | contacto@automatizatech.cl<br>
                 Copyright " . date('Y') . " AutomatizaTech. Todos los derechos reservados.
             </p>
         </div>

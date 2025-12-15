@@ -420,4 +420,9 @@ require_once get_template_directory() . '/inc/admin-reminders.php';
  */
 require_once get_template_directory() . '/inc/admin-leads-manager.php';
 
+/**
+ * Incluir panel de aprobación de propuestas
+ */
+require_once get_template_directory() . '/inc/admin-proposals.php';
+
 

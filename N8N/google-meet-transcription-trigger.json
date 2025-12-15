@@ -1,0 +1,340 @@
+{
+  "name": "Google Meet → Propuesta AutomatizaTech",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Meet Recordings"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        300
+      ],
+      "id": "google-drive-trigger",
+      "name": "Nueva Transcripción en Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-transcript-name",
+              "leftValue": "={{ $json.name }}",
+              "rightValue": "Transcript",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "check-google-doc",
+              "leftValue": "={{ $json.mimeType }}",
+              "rightValue": "application/vnd.google-apps.document",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -176,
+        300
+      ],
+      "id": "check-is-transcript",
+      "name": "¿Es Transcripción?"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "text/plain"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        48,
+        300
+      ],
+      "id": "download-transcript",
+      "name": "Descargar Transcripción",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        272,
+        300
+      ],
+      "id": "extract-text",
+      "name": "Extraer Texto"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener el contenido de la transcripción\nconst transcriptContent = $input.first().json.data || $input.first().json.text || '';\nconst fileName = $('Nueva Transcripción en Drive').first().json.name || 'Sin nombre';\nconst fileCreatedTime = $('Nueva Transcripción en Drive').first().json.createdTime || '';\n\n// Extraer posible email del cliente del nombre del archivo o contenido\n// Por defecto, usar un placeholder que deberás completar\nlet clientEmail = '';\n\n// Intentar extraer email del contenido de la transcripción\nconst emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g;\nconst emailsFound = transcriptContent.match(emailRegex);\nif (emailsFound && emailsFound.length > 0) {\n  // Filtrar emails de automatizatech para no usarlos como cliente\n  const clientEmails = emailsFound.filter(e => !e.includes('automatizatech'));\n  if (clientEmails.length > 0) {\n    clientEmail = clientEmails[0];\n  }\n}\n\nreturn {\n  transcript: transcriptContent,\n  client_email: clientEmail,\n  file_name: fileName,\n  file_created: fileCreatedTime,\n  needs_email: clientEmail === '' ? true : false\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        300
+      ],
+      "id": "prepare-data",
+      "name": "Preparar Datos"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-has-email",
+              "leftValue": "={{ $json.needs_email }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        300
+      ],
+      "id": "check-email",
+      "name": "¿Tiene Email Cliente?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n-n8n.kchiba.easypanel.host/webhook/generar-propuesta-v2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"transcript\": {{ JSON.stringify($json.transcript) }},\n  \"client_email\": {{ JSON.stringify($json.client_email) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        944,
+        200
+      ],
+      "id": "send-to-proposal",
+      "name": "Enviar a Workflow Propuestas"
+    },
+    {
+      "parameters": {
+        "fromEmail": "contacto@automatizatech.cl",
+        "toEmail": "lmgm.0303@gmail.com",
+        "subject": "=⚠️ Transcripción detectada - Falta email del cliente",
+        "html": "=<h3>📝 Nueva Transcripción de Google Meet</h3>\n<p><strong>Archivo:</strong> {{ $json.file_name }}</p>\n<p><strong>Fecha:</strong> {{ $json.file_created }}</p>\n<hr>\n<h4>⚠️ No se detectó email del cliente</h4>\n<p>Para procesar esta transcripción, necesitas ingresar el email del cliente manualmente.</p>\n<h4>📋 Vista previa de la transcripción:</h4>\n<pre style='background:#f4f4f4; padding:15px; max-height:400px; overflow:auto; white-space:pre-wrap;'>{{ $json.transcript.substring(0, 2000) }}{{ $json.transcript.length > 2000 ? '\\n\\n... (transcripción truncada)' : '' }}</pre>\n<hr>\n<h4>🚀 Procesar Manualmente</h4>\n<p>Copia la transcripción completa y envíala al webhook con el email del cliente:</p>\n<p><a href='https://automatizatech.cl/wp-admin/admin.php?page=automatiza-proposals' style='background-color:#007bff; color:white; padding:12px 24px; text-decoration:none; border-radius:5px; display:inline-block; font-weight:bold;'>📝 IR AL PANEL DE PROPUESTAS</a></p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        944,
+        400
+      ],
+      "id": "notify-missing-email",
+      "name": "Notificar Email Faltante",
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success-msg",
+              "name": "status",
+              "value": "Transcripción enviada exitosamente al workflow de propuestas",
+              "type": "string"
+            },
+            {
+              "id": "client-email",
+              "name": "client_email",
+              "value": "={{ $('Preparar Datos').item.json.client_email }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1168,
+        200
+      ],
+      "id": "success-response",
+      "name": "Éxito"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Nueva Transcripción en Drive": {
+      "main": [
+        [
+          {
+            "node": "¿Es Transcripción?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es Transcripción?": {
+      "main": [
+        [
+          {
+            "node": "Descargar Transcripción",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Descargar Transcripción": {
+      "main": [
+        [
+          {
+            "node": "Extraer Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Texto": {
+      "main": [
+        [
+          {
+            "node": "Preparar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Datos": {
+      "main": [
+        [
+          {
+            "node": "¿Tiene Email Cliente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Tiene Email Cliente?": {
+      "main": [
+        [
+          {
+            "node": "Enviar a Workflow Propuestas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notificar Email Faltante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar a Workflow Propuestas": {
+      "main": [
+        [
+          {
+            "node": "Éxito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago"
+  },
+  "versionId": "meet-transcription-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

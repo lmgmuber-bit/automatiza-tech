@@ -197,7 +197,7 @@ Líneas 436-453:
 ```php
 <div class="footer-col">
     <h4>📞 Contacto</h4>
-    <p>📧 info@automatizatech.shop</p>
+    <p>📧 contacto@automatizatech.cl</p>
     <p>📱 +56 9 6432 4169</p>
 </div>
 ```

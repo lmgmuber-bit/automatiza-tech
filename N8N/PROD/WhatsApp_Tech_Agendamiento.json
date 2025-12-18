@@ -1,0 +1,276 @@
+{
+  "name": "WhatsApp Tech - Agendamiento (PROD)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-appointments",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [-800, 300],
+      "id": "wa-appointments-webhook",
+      "name": "Appointments Webhook",
+      "webhookId": "whatsapp-appointments"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.body.action }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "create",
+              "output": 0
+            },
+            {
+              "value2": "cancel",
+              "output": 1
+            },
+            {
+              "value2": "reschedule",
+              "output": 2
+            },
+            {
+              "value2": "get_slots",
+              "output": 3
+            }
+          ]
+        },
+        "fallbackOutput": 4
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [-600, 300],
+      "id": "wa-appointment-action",
+      "name": "Appointment Action"
+    },
+    {
+      "parameters": {
+        "resource": "event",
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "primary",
+          "mode": "list"
+        },
+        "returnAll": false,
+        "limit": 20,
+        "options": {
+          "singleEvents": true
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.1,
+      "position": [-400, 600],
+      "id": "wa-get-events",
+      "name": "Get Calendar Events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YOUR_GOOGLE_CALENDAR_CREDENTIAL_ID",
+          "name": "Google Calendar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generar slots disponibles (9 AM - 6 PM, Lun-Vie)\nconst existingEvents = $input.all();\nconst occupiedSlots = new Set();\n\n// Mapear eventos existentes\nexistingEvents.forEach(event => {\n  if (event.json.start && event.json.start.dateTime) {\n    occupiedSlots.add(event.json.start.dateTime.substring(0, 16));\n  }\n});\n\nconst availableSlots = [];\nconst now = new Date();\n\n// Generar slots para los próximos 14 días\nfor (let day = 1; day <= 14; day++) {\n  const date = new Date(now);\n  date.setDate(date.getDate() + day);\n  \n  // Solo Lunes a Viernes (0 = Domingo, 6 = Sábado)\n  const dayOfWeek = date.getDay();\n  if (dayOfWeek === 0 || dayOfWeek === 6) continue;\n  \n  // Horarios disponibles: 9:00, 10:00, 11:00, 14:00, 15:00, 16:00, 17:00\n  const hours = [9, 10, 11, 14, 15, 16, 17];\n  \n  for (const hour of hours) {\n    const slotDate = new Date(date);\n    slotDate.setHours(hour, 0, 0, 0);\n    \n    const slotKey = slotDate.toISOString().substring(0, 16);\n    \n    if (!occupiedSlots.has(slotKey)) {\n      const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];\n      const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];\n      \n      availableSlots.push({\n        date: slotDate.toISOString().split('T')[0],\n        time: hour + ':00',\n        datetime: slotDate.toISOString(),\n        displayDate: dias[slotDate.getDay()] + ' ' + slotDate.getDate() + ' de ' + meses[slotDate.getMonth()],\n        displayTime: hour + ':00 hrs'\n      });\n    }\n  }\n}\n\n// Limitar a los próximos 10 slots disponibles\nreturn availableSlots.slice(0, 10).map(slot => ({ json: slot }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [-200, 600],
+      "id": "wa-generate-slots",
+      "name": "Generate Available Slots"
+    },
+    {
+      "parameters": {
+        "resource": "event",
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "value": "primary",
+          "mode": "list"
+        },
+        "start": "={{ $json.body.datetime }}",
+        "end": "={{ new Date(new Date($json.body.datetime).getTime() + 30*60000).toISOString() }}",
+        "additionalFields": {
+          "summary": "=Demo AutomatizaTech - {{ $json.body.contactName }}",
+          "description": "=Teléfono WhatsApp: {{ $json.body.phoneNumber }}\nNombre: {{ $json.body.contactName }}\nTipo: Demo de servicios\n\nAgendado automáticamente vía WhatsApp Bot."
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.1,
+      "position": [-400, 100],
+      "id": "wa-create-event",
+      "name": "Create Calendar Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YOUR_GOOGLE_CALENDAR_CREDENTIAL_ID",
+          "name": "Google Calendar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Citas",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ $node['Appointments Webhook'].json.body.datetime }}",
+            "Nombre": "={{ $node['Appointments Webhook'].json.body.contactName }}",
+            "Telefono": "={{ $node['Appointments Webhook'].json.body.phoneNumber }}",
+            "Estado": "Agendada",
+            "Tipo": "Demo",
+            "EventId": "={{ $json.id }}",
+            "FechaCreacion": "={{ new Date().toISOString() }}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [-200, 100],
+      "id": "wa-save-appointment",
+      "name": "Save to Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $node['Appointments Webhook'].json.body.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $node['Appointments Webhook'].json.body.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"✅ ¡Tu demo ha sido agendada!\\n\\n📅 Fecha: {{ $node['Appointments Webhook'].json.body.displayDate }}\\n🕐 Hora: {{ $node['Appointments Webhook'].json.body.displayTime }}\\n\\nTe enviaremos un recordatorio 24 horas antes. ¡Nos vemos! 🚀\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [0, 100],
+      "id": "wa-confirm-appointment",
+      "name": "Send Confirmation",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Formatear slots para mensaje de WhatsApp\nconst slots = $input.all();\n\nlet slotsText = '📅 *Horarios disponibles:*\\n\\n';\n\nslots.forEach((slot, index) => {\n  slotsText += (index + 1) + '. ' + slot.json.displayDate + ' a las ' + slot.json.displayTime + '\\n';\n});\n\nslotsText += '\\nResponde con el número del horario que prefieras.';\n\nconst phoneNumber = $node['Appointments Webhook'].json.body.phoneNumber;\nconst phoneNumberId = $node['Appointments Webhook'].json.body.phoneNumberId;\n\nreturn {\n  json: {\n    slotsMessage: slotsText,\n    slots: slots.map(s => s.json),\n    phoneNumber: phoneNumber,\n    phoneNumberId: phoneNumberId\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [0, 600],
+      "id": "wa-format-slots",
+      "name": "Format Slots Message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"{{ $json.slotsMessage }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [200, 600],
+      "id": "wa-send-slots",
+      "name": "Send Available Slots",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.body.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.body.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"❌ Tu cita ha sido cancelada.\\n\\nSi deseas reagendar, solo escríbeme y con gusto te ayudo a encontrar un nuevo horario. 📅\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [-200, 300],
+      "id": "wa-confirm-cancellation",
+      "name": "Send Cancellation Confirm",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Appointments Webhook": {
+      "main": [[{"node": "Appointment Action", "type": "main", "index": 0}]]
+    },
+    "Appointment Action": {
+      "main": [
+        [{"node": "Create Calendar Event", "type": "main", "index": 0}],
+        [{"node": "Send Cancellation Confirm", "type": "main", "index": 0}],
+        [{"node": "Get Calendar Events", "type": "main", "index": 0}],
+        [{"node": "Get Calendar Events", "type": "main", "index": 0}],
+        []
+      ]
+    },
+    "Create Calendar Event": {
+      "main": [[{"node": "Save to Sheets", "type": "main", "index": 0}]]
+    },
+    "Save to Sheets": {
+      "main": [[{"node": "Send Confirmation", "type": "main", "index": 0}]]
+    },
+    "Get Calendar Events": {
+      "main": [[{"node": "Generate Available Slots", "type": "main", "index": 0}]]
+    },
+    "Generate Available Slots": {
+      "main": [[{"node": "Format Slots Message", "type": "main", "index": 0}]]
+    },
+    "Format Slots Message": {
+      "main": [[{"node": "Send Available Slots", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago",
+    "saveManualExecutions": true
+  },
+  "versionId": "wa-appointments-v2",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "automatizatech-whatsapp"
+  },
+  "id": "WhatsApp_Tech_Agendamiento",
+  "tags": []
+}

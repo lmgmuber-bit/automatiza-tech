@@ -697,8 +697,34 @@ jQuery(document).ready(function($) {
                         contentType: 'application/json',
                         dataType: 'text',
                         data: JSON.stringify(payload),
+                        timeout: 90000, // 90 segundos de espera máxima
                         success: function(responseRaw) {
                             $btn.prop('disabled', false).text('Agendar Reunión');
+                            
+                            // Verificar si la respuesta indica que el horario está ocupado
+                            const responseText = responseRaw.toLowerCase();
+                            if (responseText.includes('ocupado') || responseText.includes('busy') || responseText.includes('no disponible')) {
+                                // Mostrar error y mantener formulario abierto para elegir otro horario
+                                $error.text('Lo siento, ese horario ya está ocupado. Por favor elige otro.').slideDown();
+                                
+                                // Limpiar solo fecha y hora para que elija de nuevo
+                                $modalForm.find('input[name="date"]').val('');
+                                $modalTime.empty().prop('disabled', true).append('<option value="">Selecciona una fecha primero</option>');
+                                
+                                // Auto-hide error after 5 seconds
+                                setTimeout(function() {
+                                    $error.slideUp();
+                                }, 5000);
+                                return;
+                            }
+                            
+                            // Verificar si hubo algún error en la respuesta
+                            if (responseText.includes('error') || responseText.includes('falló') || responseText.includes('failed')) {
+                                $error.text('Hubo un problema al agendar. Por favor intenta nuevamente.').slideDown();
+                                return;
+                            }
+                            
+                            // Éxito - Limpiar formulario y cerrar modal
                             $modalForm[0].reset();
                             $modalTime.empty().prop('disabled', true).append('<option value="">Selecciona una fecha primero</option>');
                             
@@ -710,9 +736,20 @@ jQuery(document).ready(function($) {
                                 $success.slideUp();
                             }, 3000);
                         },
-                        error: function() {
+                        error: function(jqXHR, textStatus, errorThrown) {
                             $btn.prop('disabled', false).text('Agendar Reunión');
-                            $error.text('Error al conectar con el servidor de agendamiento.').slideDown();
+                            
+                            let errorMsg = 'Error al conectar con el servidor de agendamiento.';
+                            
+                            if (textStatus === 'timeout') {
+                                errorMsg = 'El servidor tardó demasiado en responder. Por favor, verifica tu conexión e inténtalo nuevamente.';
+                            } else if (jqXHR.status === 0) {
+                                errorMsg = 'Error de conexión. Por favor verifica tu internet.';
+                            } else if (jqXHR.status >= 500) {
+                                errorMsg = 'Error interno del servidor. Por favor intenta más tarde.';
+                            }
+                            
+                            $error.text(errorMsg).slideDown();
                         }
                     });
 

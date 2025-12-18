@@ -1,0 +1,708 @@
+{
+  "name": "WhatsApp - Agendamiento Calendar (PROD)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        400
+      ],
+      "id": "wa-calendar-trigger",
+      "name": "Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "phoneNumber",
+              "name": "phoneNumber",
+              "value": "={{ $json.phoneNumber }}",
+              "type": "string"
+            },
+            {
+              "id": "phoneNumberId",
+              "name": "phoneNumberId",
+              "value": "={{ $json.phoneNumberId }}",
+              "type": "string"
+            },
+            {
+              "id": "contactName",
+              "name": "contactName",
+              "value": "={{ $json.contactName || 'Cliente' }}",
+              "type": "string"
+            },
+            {
+              "id": "action",
+              "name": "action",
+              "value": "={{ $json.action || 'show_days' }}",
+              "type": "string"
+            },
+            {
+              "id": "selectedDay",
+              "name": "selectedDay",
+              "value": "={{ $json.selectedDay }}",
+              "type": "string"
+            },
+            {
+              "id": "selectedTime",
+              "name": "selectedTime",
+              "value": "={{ $json.selectedTime }}",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -560,
+        400
+      ],
+      "id": "wa-normalize-data",
+      "name": "Normalize Input"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "show_days",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Mostrar Días"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "show_times",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Mostrar Horarios"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "confirm_booking",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Confirmar Reserva"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -320,
+        400
+      ],
+      "id": "wa-action-switch",
+      "name": "Route Action"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generar los próximos 3 días hábiles (Lun-Vie)\nconst now = DateTime.now().setZone('America/Santiago');\nconst days = [];\nlet checkDate = now;\n\nwhile (days.length < 3) {\n  checkDate = checkDate.plus({ days: 1 });\n  const dayOfWeek = checkDate.weekday;\n  \n  // Solo días hábiles (1-5 = Lun-Vie)\n  if (dayOfWeek >= 1 && dayOfWeek <= 5) {\n    const dayNames = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];\n    days.push({\n      date: checkDate.toFormat('yyyy-MM-dd'),\n      display: `${dayNames[dayOfWeek]} ${checkDate.toFormat('dd/MM')}`,\n      btnId: `day_${checkDate.toFormat('yyyy-MM-dd')}`\n    });\n  }\n}\n\nreturn {\n  json: {\n    ...$input.first().json,\n    availableDays: days\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        200
+      ],
+      "id": "wa-generate-days",
+      "name": "Generate Available Days"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"button\",\n    \"body\": {\n      \"text\": \"📅 ¡Perfecto {{ $json.contactName }}! Selecciona el día que prefieras para tu demo:\"\n    },\n    \"action\": {\n      \"buttons\": [\n        {\n          \"type\": \"reply\",\n          \"reply\": {\n            \"id\": \"{{ $json.availableDays[0].btnId }}\",\n            \"title\": \"{{ $json.availableDays[0].display }}\"\n          }\n        },\n        {\n          \"type\": \"reply\",\n          \"reply\": {\n            \"id\": \"{{ $json.availableDays[1].btnId }}\",\n            \"title\": \"{{ $json.availableDays[1].display }}\"\n          }\n        },\n        {\n          \"type\": \"reply\",\n          \"reply\": {\n            \"id\": \"{{ $json.availableDays[2].btnId }}\",\n            \"title\": \"{{ $json.availableDays[2].display }}\"\n          }\n        }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        160,
+        200
+      ],
+      "id": "wa-send-days-buttons",
+      "name": "Send Days Buttons",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "TVTLZP26kDJjR0KP",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "contacto@automatizatech.cl",
+          "mode": "list",
+          "cachedResultName": "contacto@automatizatech.cl"
+        },
+        "options": {
+          "timeMin": "={{ DateTime.fromISO($json.selectedDay + 'T09:00:00', { zone: 'America/Santiago' }).toISO() }}",
+          "timeMax": "={{ DateTime.fromISO($json.selectedDay + 'T18:00:00', { zone: 'America/Santiago' }).toISO() }}",
+          "singleEvents": true
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.1,
+      "position": [
+        -80,
+        400
+      ],
+      "alwaysOutputData": true,
+      "id": "wa-check-calendar",
+      "name": "Get Calendar Events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "ziZmOO4DlgXb4Vet",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener eventos del día seleccionado\nconst items = $input.all();\nconst inputData = $('Normalize Input').first().json;\nconst selectedDay = inputData.selectedDay;\n\n// Horarios disponibles (9:00 - 17:00, cada hora)\nconst allSlots = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00'];\n\n// Obtener horarios ocupados\nconst busySlots = [];\nfor (const item of items) {\n  if (item.json.start && item.json.start.dateTime) {\n    const startTime = DateTime.fromISO(item.json.start.dateTime).setZone('America/Santiago');\n    busySlots.push(startTime.toFormat('HH:mm'));\n  }\n}\n\n// Filtrar horarios disponibles\nconst availableSlots = allSlots.filter(slot => !busySlots.includes(slot));\n\n// Tomar los primeros 3 disponibles\nconst slotsToShow = availableSlots.slice(0, 3);\n\n// Si no hay horarios disponibles\nif (slotsToShow.length === 0) {\n  return {\n    json: {\n      ...inputData,\n      hasAvailability: false,\n      message: 'Lo siento, no hay horarios disponibles para ese día. ¿Te gustaría elegir otro día?'\n    }\n  };\n}\n\n// Formatear para botones\nconst formattedSlots = slotsToShow.map(slot => ({\n  time: slot,\n  display: slot + ' hrs',\n  btnId: `time_${selectedDay}_${slot.replace(':', '')}`\n}));\n\nreturn {\n  json: {\n    ...inputData,\n    hasAvailability: true,\n    availableSlots: formattedSlots\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        400
+      ],
+      "id": "wa-find-available-slots",
+      "name": "Find Available Slots"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.hasAvailability }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        400,
+        400
+      ],
+      "id": "wa-check-availability",
+      "name": "Has Availability?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"button\",\n    \"body\": {\n      \"text\": \"⏰ Horarios disponibles para el {{ DateTime.fromISO($json.selectedDay).setZone('America/Santiago').toFormat('dd/MM/yyyy') }}:\\n\\nSelecciona tu horario preferido:\"\n    },\n    \"action\": {\n      \"buttons\": [\n        {\n          \"type\": \"reply\",\n          \"reply\": {\n            \"id\": \"{{ $json.availableSlots[0].btnId }}\",\n            \"title\": \"{{ $json.availableSlots[0].display }}\"\n          }\n        }{{ $json.availableSlots[1] ? ',{\"type\":\"reply\",\"reply\":{\"id\":\"' + $json.availableSlots[1].btnId + '\",\"title\":\"' + $json.availableSlots[1].display + '\"}}' : '' }}{{ $json.availableSlots[2] ? ',{\"type\":\"reply\",\"reply\":{\"id\":\"' + $json.availableSlots[2].btnId + '\",\"title\":\"' + $json.availableSlots[2].display + '\"}}' : '' }}\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        640,
+        360
+      ],
+      "id": "wa-send-times-buttons",
+      "name": "Send Times Buttons",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "TVTLZP26kDJjR0KP",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"😕 {{ $json.message }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        640,
+        520
+      ],
+      "id": "wa-send-no-availability",
+      "name": "Send No Availability",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "TVTLZP26kDJjR0KP",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"📧 ¡Excelente elección!\\n\\nHas seleccionado:\\n📅 {{ DateTime.fromISO($json.selectedDay).setZone('America/Santiago').toFormat('dd/MM/yyyy') }}\\n⏰ {{ $json.selectedTime }} hrs\\n\\nPor favor, escribe tu correo electrónico para enviarte la invitación con el enlace de Google Meet:\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -80,
+        600
+      ],
+      "id": "wa-ask-email",
+      "name": "Ask For Email",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "TVTLZP26kDJjR0KP",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": "PejBgr2LZQSAbbBy",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        400,
+        600
+      ],
+      "id": "wa-call-calendar-subworkflow",
+      "name": "Create Appointment"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "date",
+              "name": "date",
+              "value": "={{ $('Normalize Input').first().json.selectedDay }}",
+              "type": "string"
+            },
+            {
+              "id": "time",
+              "name": "time",
+              "value": "={{ $('Normalize Input').first().json.selectedTime }}",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "value": "={{ $('Normalize Input').first().json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "name",
+              "name": "name",
+              "value": "={{ $('Normalize Input').first().json.contactName }}",
+              "type": "string"
+            },
+            {
+              "id": "phone",
+              "name": "phone",
+              "value": "={{ $('Normalize Input').first().json.phoneNumber }}",
+              "type": "string"
+            },
+            {
+              "id": "session_id",
+              "name": "session_id",
+              "value": "=whatsapp_{{ $('Normalize Input').first().json.phoneNumber }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        160,
+        600
+      ],
+      "id": "wa-prepare-booking-data",
+      "name": "Prepare Booking Data"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/{{ $('Normalize Input').first().json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $('Normalize Input').first().json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"{{ $json.result }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        640,
+        600
+      ],
+      "id": "wa-send-confirmation",
+      "name": "Send Confirmation",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "TVTLZP26kDJjR0KP",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "result",
+              "name": "result",
+              "value": "days_sent",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        400,
+        200
+      ],
+      "id": "wa-result-days",
+      "name": "Result Days"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "result",
+              "name": "result",
+              "value": "times_sent",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        880,
+        360
+      ],
+      "id": "wa-result-times",
+      "name": "Result Times"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "result",
+              "name": "result",
+              "value": "email_requested",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        160,
+        760
+      ],
+      "id": "wa-result-email-asked",
+      "name": "Result Email Asked"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "result",
+              "name": "result",
+              "value": "=booking_{{ $json.result.includes('Listo') ? 'success' : 'error' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        880,
+        600
+      ],
+      "id": "wa-result-booking",
+      "name": "Result Booking"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "Generate Available Days",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Calendar Events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask For Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Available Days": {
+      "main": [
+        [
+          {
+            "node": "Send Days Buttons",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Days Buttons": {
+      "main": [
+        [
+          {
+            "node": "Result Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Calendar Events": {
+      "main": [
+        [
+          {
+            "node": "Find Available Slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Available Slots": {
+      "main": [
+        [
+          {
+            "node": "Has Availability?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Availability?": {
+      "main": [
+        [
+          {
+            "node": "Send Times Buttons",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send No Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Times Buttons": {
+      "main": [
+        [
+          {
+            "node": "Result Times",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask For Email": {
+      "main": [
+        [
+          {
+            "node": "Result Email Asked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Booking Data": {
+      "main": [
+        [
+          {
+            "node": "Create Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Appointment": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Confirmation": {
+      "main": [
+        [
+          {
+            "node": "Result Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "id": "",
+  "tags": []
+}

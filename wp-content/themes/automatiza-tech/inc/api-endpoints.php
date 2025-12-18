@@ -168,6 +168,7 @@ function automatiza_tech_save_lead($request) {
     $scheduled_date = isset($params['scheduled_date']) ? sanitize_text_field($params['scheduled_date']) : null;
     $scheduled_time = isset($params['scheduled_time']) ? sanitize_text_field($params['scheduled_time']) : null;
     $confirmed_attendance = isset($params['confirmed_attendance']) ? (int)$params['confirmed_attendance'] : null;
+    $meet_link = isset($params['meet_link']) ? esc_url_raw($params['meet_link']) : '';
     
     // Validación: Verificar si el email ya tiene 2 o más agendamientos ACTIVOS (futuros)
     $test_email = 'lmgm.uber@gmail.com';
@@ -198,6 +199,7 @@ function automatiza_tech_save_lead($request) {
         'email' => $email,
         'phone' => $phone,
         'session_id' => $session_id,
+        'meet_link' => $meet_link,
         'token' => $token
     );
 
@@ -410,9 +412,9 @@ function automatiza_tech_get_leads_for_reminders($request) {
     $leads = [];
 
     if ($type === '72h') {
-        // Entre 49 y 72 horas antes
-        $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 49 hours'));
-        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 72 hours'));
+        // Citas entre 48 y 96 horas antes (ampliado para cubrir más casos)
+        $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 48 hours'));
+        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 96 hours'));
         
         $leads = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM $table_name 
@@ -421,9 +423,9 @@ function automatiza_tech_get_leads_for_reminders($request) {
             $start_range, $end_range
         ));
     } elseif ($type === '24h') {
-        // Entre 2 y 24 horas antes
+        // Citas entre 2 y 48 horas antes (ampliado)
         $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 2 hours'));
-        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 24 hours'));
+        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 48 hours'));
 
         $leads = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM $table_name 
@@ -432,9 +434,9 @@ function automatiza_tech_get_leads_for_reminders($request) {
             $start_range, $end_range
         ));
     } elseif ($type === '1h') {
-        // Entre 30 minutos y 1 hora 59 minutos antes (ampliado para evitar que se pierdan)
+        // Citas entre 30 minutos y 2 horas antes
         $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 30 minutes'));
-        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 1 hour 59 minutes'));
+        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 2 hours'));
 
         $leads = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM $table_name 
@@ -449,6 +451,10 @@ function automatiza_tech_get_leads_for_reminders($request) {
         foreach ($leads as $lead) {
             $lead->scheduled_date = date('d-m-Y', strtotime($lead->scheduled_date));
             $lead->scheduled_time = substr($lead->scheduled_time, 0, 5);
+            // Asegurar que meet_link esté presente (aunque sea vacío)
+            if (!isset($lead->meet_link)) {
+                $lead->meet_link = '';
+            }
         }
     }
 
@@ -779,6 +785,7 @@ function automatiza_tech_reschedule_lead($request) {
     $token = isset($params['token']) ? sanitize_text_field($params['token']) : '';
     $new_date = isset($params['date']) ? sanitize_text_field($params['date']) : '';
     $new_time = isset($params['time']) ? sanitize_text_field($params['time']) : '';
+    $meet_link = isset($params['meet_link']) ? esc_url_raw($params['meet_link']) : '';
 
     if (!$lead_id || !$new_date || !$new_time) {
         return new WP_Error('missing_params', 'Faltan datos para reagendar', array('status' => 400));
@@ -804,18 +811,27 @@ function automatiza_tech_reschedule_lead($request) {
     }
 
     // Actualizar cita
+    $update_data = array(
+        'scheduled_date' => $new_date,
+        'scheduled_time' => $new_time,
+        'confirmed_attendance' => 1, // Se asume confirmado al reagendar
+        'recordatorio72h' => 0, // Resetear recordatorios
+        'recordatorio24h' => 0,
+        'recordatorio1h' => 0
+    );
+    
+    $update_format = array('%s', '%s', '%d', '%d', '%d', '%d');
+
+    if (!empty($meet_link)) {
+        $update_data['meet_link'] = $meet_link;
+        $update_format[] = '%s';
+    }
+
     $result = $wpdb->update(
         $table_name,
-        array(
-            'scheduled_date' => $new_date,
-            'scheduled_time' => $new_time,
-            'confirmed_attendance' => 1, // Se asume confirmado al reagendar
-            'recordatorio72h' => 0, // Resetear recordatorios
-            'recordatorio24h' => 0,
-            'recordatorio1h' => 0
-        ),
+        $update_data,
         array('id' => $lead_id),
-        array('%s', '%s', '%d', '%d', '%d', '%d'),
+        $update_format,
         array('%d')
     );
 

@@ -1,0 +1,374 @@
+{
+  "name": "WhatsApp Tech - Buffer y Agente IA (PROD)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-process-message",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [-800, 300],
+      "id": "wa-process-webhook",
+      "name": "Process Message Webhook",
+      "webhookId": "whatsapp-process-message"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sistema de buffer simple usando Static Data de N8N\n// Agrupa mensajes enviados en ráfaga por el mismo usuario\n\nconst phoneNumber = $json.body.phoneNumber;\nconst textContent = $json.body.textContent;\nconst contactName = $json.body.contactName;\nconst phoneNumberId = $json.body.phoneNumberId;\nconst currentTime = Date.now();\n\n// Obtener buffer existente del Static Data\nconst staticData = $getWorkflowStaticData('global');\n\nif (!staticData.messageBuffers) {\n  staticData.messageBuffers = {};\n}\n\nconst bufferKey = 'buffer_' + phoneNumber;\nconst existingBuffer = staticData.messageBuffers[bufferKey];\n\nif (existingBuffer && (currentTime - existingBuffer.timestamp) < 5000) {\n  // Agregar mensaje al buffer existente\n  existingBuffer.messages.push(textContent);\n  existingBuffer.timestamp = currentTime;\n  \n  return {\n    json: {\n      action: 'wait',\n      phoneNumber: phoneNumber,\n      message: 'Mensaje agregado al buffer'\n    }\n  };\n} else {\n  // Crear nuevo buffer\n  staticData.messageBuffers[bufferKey] = {\n    messages: [textContent],\n    timestamp: currentTime,\n    phoneNumber: phoneNumber,\n    contactName: contactName,\n    phoneNumberId: phoneNumberId\n  };\n  \n  return {\n    json: {\n      action: 'process',\n      phoneNumber: phoneNumber,\n      contactName: contactName,\n      phoneNumberId: phoneNumberId,\n      bufferKey: bufferKey\n    }\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [-600, 300],
+      "id": "wa-buffer-manager",
+      "name": "Buffer Manager"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.action }}",
+              "value2": "process"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-400, 300],
+      "id": "wa-should-process",
+      "name": "Should Process?"
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [-200, 200],
+      "id": "wa-wait-buffer",
+      "name": "Wait 5 Seconds"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener y combinar todos los mensajes del buffer\nconst phoneNumber = $json.phoneNumber;\nconst contactName = $json.contactName;\nconst phoneNumberId = $json.phoneNumberId;\nconst bufferKey = $json.bufferKey;\n\nconst staticData = $getWorkflowStaticData('global');\nconst buffer = staticData.messageBuffers[bufferKey];\n\nif (!buffer) {\n  return {\n    json: {\n      error: 'Buffer not found',\n      phoneNumber: phoneNumber\n    }\n  };\n}\n\n// Combinar todos los mensajes\nconst combinedMessage = buffer.messages.join(' ');\nconst messageCount = buffer.messages.length;\n\n// Limpiar el buffer\ndelete staticData.messageBuffers[bufferKey];\n\nreturn {\n  json: {\n    chatInput: combinedMessage,\n    sessionId: phoneNumber,\n    phoneNumber: phoneNumber,\n    contactName: contactName,\n    phoneNumberId: phoneNumberId,\n    messageCount: messageCount\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [0, 200],
+      "id": "wa-combine-messages",
+      "name": "Combine Messages"
+    },
+    {
+      "parameters": {
+        "url": "https://automatizatech.cl/wp-json/automatiza-tech/v1/exchange-rate",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [200, 200],
+      "id": "wa-get-exchange",
+      "name": "Get Exchange Rate"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "chatInput",
+              "value": "={{ $node['Combine Messages'].json.chatInput }}"
+            },
+            {
+              "name": "sessionId",
+              "value": "={{ $node['Combine Messages'].json.sessionId }}"
+            },
+            {
+              "name": "phoneNumber",
+              "value": "={{ $node['Combine Messages'].json.phoneNumber }}"
+            },
+            {
+              "name": "contactName",
+              "value": "={{ $node['Combine Messages'].json.contactName }}"
+            },
+            {
+              "name": "phoneNumberId",
+              "value": "={{ $node['Combine Messages'].json.phoneNumberId }}"
+            }
+          ],
+          "number": [
+            {
+              "name": "rate",
+              "value": "={{ $json.rate }}"
+            },
+            {
+              "name": "messageCount",
+              "value": "={{ $node['Combine Messages'].json.messageCount }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [400, 200],
+      "id": "wa-prepare-agent",
+      "name": "Prepare for Agent"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "=Eres Tech, el asistente virtual experto de AutomatizaTech en WhatsApp. Tu misión es asesorar a clientes sobre automatización de procesos, sitios web y chatbots inteligentes que funcionan 24/7.\n\nTU IDENTIDAD Y PERSONALIDAD\n- Nombre: Tech\n- Empresa: AutomatizaTech\n- Canal: WhatsApp Business\n- Tono: Profesional, tecnológico pero cercano y amable.\n- Estilo: Conciso, resolutivo y orientado a la venta consultiva.\n- Empatía: Si detectas prisa o preocupación, sé directo y tranquilizador.\n\nTUS CAPACIDADES\n1. Explicar servicios y planes de forma clara.\n2. Calcular precios en tiempo real (USD a CLP).\n3. Resolver dudas frecuentes sobre automatización.\n4. Guiar al usuario para agendar, cancelar o reprogramar citas.\n5. Brindar soporte técnico básico a clientes existentes.\n\nAGENDAMIENTO DE REUNIONES\nSi el usuario quiere agendar una demo o reunión, responde con la etiqueta:\n<<ACTION:SHOW_CALENDAR>>\n\nSi quiere cancelar una cita:\n<<ACTION:CANCEL_APPOINTMENT>>\n\nSi quiere reprogramar:\n<<ACTION:RESCHEDULE_APPOINTMENT>>\n\nREGLAS DE PRECIOS\n1. Tipo de Cambio Actual: ${{ $json.rate }} CLP por USD.\n2. Formato: Muestra siempre: $PRECIO_USD USD (aprox. $PRECIO_CLP CLP).\n\nNUESTROS SERVICIOS Y PLANES\n\n1. PAQUETE INICIAL: Sitio Web + WhatsApp Business\n- $299 USD (único) + $100 USD/mes (mantención).\n\n2. PLANES DE SUSCRIPCIÓN:\n- Básico: $99 USD/mes - Hasta 1,000 conversaciones\n- Profesional: $199 USD/mes - Hasta 5,000 conversaciones\n- Enterprise: $399 USD/mes - Ilimitado + soporte 24/7\n\nSOPORTE TÉCNICO\nSi el usuario menciona problemas técnicos, bugs o errores:\n<<ACTION:ESCALATE_SUPPORT>>\n\nREGLAS DE COMUNICACIÓN WHATSAPP\n1. Brevedad: Máximo 1-2 párrafos por mensaje (WhatsApp es conversacional).\n2. Emojis: Usa emojis con moderación para hacer el mensaje amigable.\n3. Sin formato complejo: No uses markdown avanzado, solo texto simple y emojis.\n4. Saludo: Solo en el primer mensaje de la conversación.\n\nCONTACTO\n- Web: https://www.automatizatech.cl\n- WhatsApp: +56 9 4033 1127\n- Email: contacto@automatizatech.cl\n- Instagram: @automatizaTech.cl\n\nOBJETIVO\nGuiar al usuario para que entienda el valor de la automatización y quiera agendar una demo o contratar un plan."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [600, 200],
+      "id": "wa-agent-tech",
+      "name": "Agente IA - Tech WhatsApp"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [500, 420],
+      "id": "wa-cerebro",
+      "name": "Cerebro GPT-4o-mini",
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionKey": "={{ $node['Prepare for Agent'].json.sessionId }}",
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [700, 420],
+      "id": "wa-memory",
+      "name": "Memory Buffer (by Phone)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Detectar acciones especiales en la respuesta\nconst output = $json.output;\nconst phoneNumber = $node['Prepare for Agent'].json.phoneNumber;\nconst phoneNumberId = $node['Prepare for Agent'].json.phoneNumberId;\nconst contactName = $node['Prepare for Agent'].json.contactName;\n\nlet action = 'send_text';\nlet cleanMessage = output;\n\n// Detectar acciones especiales\nif (output.includes('<<ACTION:SHOW_CALENDAR>>')) {\n  action = 'show_calendar';\n  cleanMessage = output.replace('<<ACTION:SHOW_CALENDAR>>', '').trim();\n} else if (output.includes('<<ACTION:CANCEL_APPOINTMENT>>')) {\n  action = 'cancel_appointment';\n  cleanMessage = output.replace('<<ACTION:CANCEL_APPOINTMENT>>', '').trim();\n} else if (output.includes('<<ACTION:RESCHEDULE_APPOINTMENT>>')) {\n  action = 'reschedule_appointment';\n  cleanMessage = output.replace('<<ACTION:RESCHEDULE_APPOINTMENT>>', '').trim();\n} else if (output.includes('<<ACTION:ESCALATE_SUPPORT>>')) {\n  action = 'escalate_support';\n  cleanMessage = output.replace('<<ACTION:ESCALATE_SUPPORT>>', '').trim();\n}\n\nreturn {\n  json: {\n    action: action,\n    message: cleanMessage,\n    phoneNumber: phoneNumber,\n    phoneNumberId: phoneNumberId,\n    contactName: contactName\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [800, 200],
+      "id": "wa-parse-response",
+      "name": "Parse Response Actions"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.action }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "send_text",
+              "output": 0
+            },
+            {
+              "value2": "show_calendar",
+              "output": 1
+            },
+            {
+              "value2": "cancel_appointment",
+              "output": 2
+            },
+            {
+              "value2": "reschedule_appointment",
+              "output": 3
+            },
+            {
+              "value2": "escalate_support",
+              "output": 4
+            }
+          ]
+        },
+        "fallbackOutput": 0
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [1000, 200],
+      "id": "wa-action-router",
+      "name": "Route Action"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": \"{{ $json.message.replace(/\"/g, '\\\\\"').replace(/\\n/g, '\\\\n') }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1200, 0],
+      "id": "wa-send-text",
+      "name": "Send Text Message",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"button\",\n    \"body\": {\n      \"text\": \"{{ $json.message.replace(/\"/g, '\\\\\"').replace(/\\n/g, '\\\\n') }}\\n\\n📅 Selecciona una opción:\"\n    },\n    \"action\": {\n      \"buttons\": [\n        {\n          \"type\": \"reply\",\n          \"reply\": {\n            \"id\": \"btn_agenda_manana\",\n            \"title\": \"Mañana\"\n          }\n        },\n        {\n          \"type\": \"reply\",\n          \"reply\": {\n            \"id\": \"btn_agenda_semana\",\n            \"title\": \"Esta semana\"\n          }\n        },\n        {\n          \"type\": \"reply\",\n          \"reply\": {\n            \"id\": \"btn_ver_horarios\",\n            \"title\": \"Ver horarios\"\n          }\n        }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1200, 200],
+      "id": "wa-send-calendar-buttons",
+      "name": "Send Calendar Buttons",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"button\",\n    \"body\": {\n      \"text\": \"{{ $json.message.replace(/\"/g, '\\\\\"').replace(/\\n/g, '\\\\n') }}\\n\\n⚠️ ¿Confirmas la cancelación?\"\n    },\n    \"action\": {\n      \"buttons\": [\n        {\n          \"type\": \"reply\",\n          \"reply\": {\n            \"id\": \"btn_confirmar_cancelar\",\n            \"title\": \"Sí, cancelar\"\n          }\n        },\n        {\n          \"type\": \"reply\",\n          \"reply\": {\n            \"id\": \"btn_mantener_cita\",\n            \"title\": \"No, mantener\"\n          }\n        }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1200, 400],
+      "id": "wa-send-cancel-confirm",
+      "name": "Send Cancel Confirmation",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": \"{{ $json.message.replace(/\"/g, '\\\\\"').replace(/\\n/g, '\\\\n') }}\\n\\n🔧 Tu caso ha sido escalado a nuestro equipo de soporte. Te contactaremos pronto.\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1200, 600],
+      "id": "wa-send-support-escalation",
+      "name": "Send Support Escalation",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\": \"buffered\", \"message\": \"Message added to buffer\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [-200, 400],
+      "id": "wa-respond-buffered",
+      "name": "Respond Buffered"
+    }
+  ],
+  "connections": {
+    "Process Message Webhook": {
+      "main": [[{"node": "Buffer Manager", "type": "main", "index": 0}]]
+    },
+    "Buffer Manager": {
+      "main": [[{"node": "Should Process?", "type": "main", "index": 0}]]
+    },
+    "Should Process?": {
+      "main": [
+        [{"node": "Wait 5 Seconds", "type": "main", "index": 0}],
+        [{"node": "Respond Buffered", "type": "main", "index": 0}]
+      ]
+    },
+    "Wait 5 Seconds": {
+      "main": [[{"node": "Combine Messages", "type": "main", "index": 0}]]
+    },
+    "Combine Messages": {
+      "main": [[{"node": "Get Exchange Rate", "type": "main", "index": 0}]]
+    },
+    "Get Exchange Rate": {
+      "main": [[{"node": "Prepare for Agent", "type": "main", "index": 0}]]
+    },
+    "Prepare for Agent": {
+      "main": [[{"node": "Agente IA - Tech WhatsApp", "type": "main", "index": 0}]]
+    },
+    "Cerebro GPT-4o-mini": {
+      "ai_languageModel": [[{"node": "Agente IA - Tech WhatsApp", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Memory Buffer (by Phone)": {
+      "ai_memory": [[{"node": "Agente IA - Tech WhatsApp", "type": "ai_memory", "index": 0}]]
+    },
+    "Agente IA - Tech WhatsApp": {
+      "main": [[{"node": "Parse Response Actions", "type": "main", "index": 0}]]
+    },
+    "Parse Response Actions": {
+      "main": [[{"node": "Route Action", "type": "main", "index": 0}]]
+    },
+    "Route Action": {
+      "main": [
+        [{"node": "Send Text Message", "type": "main", "index": 0}],
+        [{"node": "Send Calendar Buttons", "type": "main", "index": 0}],
+        [{"node": "Send Cancel Confirmation", "type": "main", "index": 0}],
+        [{"node": "Send Calendar Buttons", "type": "main", "index": 0}],
+        [{"node": "Send Support Escalation", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago",
+    "saveManualExecutions": true
+  },
+  "versionId": "wa-buffer-agent-v2",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "automatizatech-whatsapp"
+  },
+  "id": "WhatsApp_Tech_Buffer_Agent",
+  "tags": []
+}

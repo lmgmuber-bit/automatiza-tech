@@ -123,7 +123,7 @@
             {
               "id": "json",
               "name": "json",
-              "value": "={{ { name: $('Normalize Data').item.json.name || 'Usuario Agendado', email: $('Normalize Data').item.json.email, scheduled_date: $('Normalize Data').item.json.date, scheduled_time: $('Normalize Data').item.json.time, phone: $('Normalize Data').item.json.phone, session_id: $('Normalize Data').item.json.session_id } }}",
+              "value": "={{ { name: $('Normalize Data').item.json.name || 'Usuario Agendado', email: $('Normalize Data').item.json.email, scheduled_date: $('Normalize Data').item.json.date, scheduled_time: $('Normalize Data').item.json.time, phone: $('Normalize Data').item.json.phone, session_id: $('Normalize Data').item.json.session_id, meet_link: $('Create Event').item.json.hangoutLink } }}",
               "type": "object"
             }
           ]
@@ -299,6 +299,10 @@
             {
               "name": "time",
               "value": "={{ $('Normalize Data').item.json.time }}"
+            },
+            {
+              "name": "meet_link",
+              "value": "={{ $('Create Event').item.json.hangoutLink }}"
             }
           ]
         },

@@ -27,11 +27,13 @@ function automatiza_tech_reminders_menu() {
     add_submenu_page(
         'automatiza-reminders',
         'Gestión de Recordatorios',
-        'Recordatorios',
+        'Citas Activas',
         'manage_options',
         'automatiza-reminders',
         'automatiza_tech_reminders_page'
     );
+    
+    // Nota: El submenú "Todas las Citas" está en admin-leads-manager.php
 }
 add_action('admin_menu', 'automatiza_tech_reminders_menu');
 
@@ -44,11 +46,12 @@ function automatiza_tech_reminders_page() {
     
     // --- FILTROS Y ORDENAMIENTO ---
     $filter_date = isset($_GET['filter_date']) ? sanitize_text_field($_GET['filter_date']) : '';
+    $filter_channel = isset($_GET['filter_channel']) ? sanitize_text_field($_GET['filter_channel']) : '';
     $orderby = isset($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'scheduled_date';
     $order = isset($_GET['order']) ? sanitize_text_field($_GET['order']) : 'ASC';
     
     // Whitelist para ordenamiento
-    $allowed_sort_cols = ['id', 'name', 'scheduled_date', 'scheduled_time'];
+    $allowed_sort_cols = ['id', 'name', 'scheduled_date', 'scheduled_time', 'source'];
     if (!in_array($orderby, $allowed_sort_cols)) $orderby = 'scheduled_date';
     if (!in_array(strtoupper($order), ['ASC', 'DESC'])) $order = 'ASC';
 
@@ -60,24 +63,34 @@ function automatiza_tech_reminders_page() {
 
     // Construir Query
     $where = "1=1";
+    
+    // Excluir citas canceladas de la vista principal
+    $where .= " AND (status IS NULL OR status != 'cancelled')";
+    
     if ($filter_date) {
         $where .= $wpdb->prepare(" AND scheduled_date = %s", $filter_date);
     } else {
         // Por defecto mostrar solo futuros (incluyendo los de hoy que aún no pasan)
         $where .= $wpdb->prepare(" AND (scheduled_date > %s OR (scheduled_date = %s AND scheduled_time > %s))", $current_date_db, $current_date_db, $current_time_db);
     }
+    
+    // Filtro por canal
+    if ($filter_channel) {
+        $where .= $wpdb->prepare(" AND source = %s", $filter_channel);
+    }
 
     $query = "SELECT * FROM $table_name WHERE $where ORDER BY $orderby $order, scheduled_time ASC";
     $leads = $wpdb->get_results($query);
     
+    // Obtener lista de canales únicos para el filtro
+    $channels = $wpdb->get_col("SELECT DISTINCT COALESCE(source, 'web') as source FROM $table_name ORDER BY source");
+    
     // Helper para URLs de ordenamiento
-    $get_sort_url = function($col) use ($orderby, $order, $filter_date) {
+    $get_sort_url = function($col) use ($orderby, $order, $filter_date, $filter_channel) {
         $new_order = ($orderby === $col && $order === 'ASC') ? 'DESC' : 'ASC';
-        $url = add_query_arg(array(
-            'orderby' => $col,
-            'order' => $new_order
-        ));
+        $url = add_query_arg(array('orderby' => $col, 'order' => $new_order));
         if ($filter_date) $url = add_query_arg('filter_date', $filter_date, $url);
+        if ($filter_channel) $url = add_query_arg('filter_channel', $filter_channel, $url);
         return esc_url($url);
     };
 
@@ -87,50 +100,196 @@ function automatiza_tech_reminders_page() {
         return ($order === 'ASC') ? ' &#9650;' : ' &#9660;';
     };
     
+    // Labels para canales
+    $channel_labels = array(
+        'web' => '🌐 Web',
+        'whatsapp' => '📱 WhatsApp',
+        'instagram' => '📸 Instagram',
+        'messenger' => '💬 Messenger',
+        'phone' => '📞 Teléfono',
+        'email' => '📧 Email',
+    );
+    
     ?>
     <div class="wrap">
-        <h1 class="wp-heading-inline">Gestión de Recordatorios Manuales</h1>
-        <p>Utiliza este panel para enviar recordatorios manualmente en caso de fallo de las automatizaciones.</p>
+        <h1 class="wp-heading-inline">📅 Gestión de Citas y Recordatorios</h1>
+        <p>Panel unificado de todas las citas agendadas (Web, WhatsApp, y otros canales). Los recordatorios manuales se envían por <strong>correo electrónico</strong>.</p>
         
         <!-- BARRA DE HERRAMIENTAS -->
         <div class="tablenav top" style="height: auto; padding-bottom: 10px;">
             <div class="alignleft actions">
-                <form method="get">
+                <form method="get" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                     <input type="hidden" name="page" value="automatiza-reminders">
-                    <input type="date" name="filter_date" value="<?php echo esc_attr($filter_date); ?>" style="height: 30px; line-height: normal;">
-                    <input type="submit" class="button" value="Filtrar por Fecha">
-                    <?php if ($filter_date): ?>
-                        <a href="<?php echo admin_url('admin.php?page=automatiza-reminders'); ?>" class="button">Limpiar Filtro</a>
+                    
+                    <label style="display:flex; align-items:center; gap:5px;">
+                        📅 <input type="date" name="filter_date" value="<?php echo esc_attr($filter_date); ?>" style="height: 30px;">
+                    </label>
+                    
+                    <label style="display:flex; align-items:center; gap:5px;">
+                        Canal:
+                        <select name="filter_channel" style="height: 30px;">
+                            <option value="">Todos</option>
+                            <?php foreach ($channels as $ch): 
+                                $label = isset($channel_labels[$ch]) ? $channel_labels[$ch] : ucfirst($ch);
+                            ?>
+                                <option value="<?php echo esc_attr($ch); ?>" <?php selected($filter_channel, $ch); ?>><?php echo esc_html($label); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    
+                    <input type="submit" class="button" value="Filtrar">
+                    <?php if ($filter_date || $filter_channel): ?>
+                        <a href="<?php echo admin_url('admin.php?page=automatiza-reminders'); ?>" class="button">Limpiar</a>
                     <?php endif; ?>
                 </form>
             </div>
             
             <div class="alignright actions">
-                <strong>Acciones Masivas (Visibles): </strong>
-                <button class="button button-primary bulk-send-btn" data-type="72h">Enviar Todos (72h)</button>
-                <button class="button button-primary bulk-send-btn" data-type="24h">Enviar Todos (24h)</button>
-                <button class="button button-primary bulk-send-btn" data-type="1h">Enviar Todos (1h)</button>
+                <strong>📧 Envío Masivo por Email: </strong>
+                <button class="button button-primary bulk-send-btn" data-type="72h">72h</button>
+                <button class="button button-primary bulk-send-btn" data-type="24h">24h</button>
+                <button class="button button-primary bulk-send-btn" data-type="1h">1h</button>
             </div>
             <br class="clear">
         </div>
 
-        <table class="wp-list-table widefat fixed striped">
-            <thead>
-                <tr>
-                    <th><a href="<?php echo $get_sort_url('id'); ?>">ID<?php echo $sort_icon('id'); ?></a></th>
-                    <th><a href="<?php echo $get_sort_url('name'); ?>">Nombre<?php echo $sort_icon('name'); ?></a></th>
-                    <th>Email</th>
-                    <th><a href="<?php echo $get_sort_url('scheduled_date'); ?>">Fecha Agendada<?php echo $sort_icon('scheduled_date'); ?></a></th>
-                    <th><a href="<?php echo $get_sort_url('scheduled_time'); ?>">Hora<?php echo $sort_icon('scheduled_time'); ?></a></th>
-                    <th>Estado Asistencia</th>
-                    <th>Recordatorio 72h</th>
-                    <th>Recordatorio 24h</th>
-                    <th>Recordatorio 1h</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($leads)): ?>
-                    <tr><td colspan="9">No hay agendamientos para los criterios seleccionados.</td></tr>
+        <?php
+        // Función helper para mostrar icono de canal
+        $get_channel_icon = function($source) {
+            $channels = array(
+                'web' => array('icon' => '🌐', 'label' => 'Web', 'color' => '#2271b1'),
+                'whatsapp' => array('icon' => '📱', 'label' => 'WhatsApp', 'color' => '#25D366'),
+                'instagram' => array('icon' => '📸', 'label' => 'Instagram', 'color' => '#E4405F'),
+                'messenger' => array('icon' => '💬', 'label' => 'Messenger', 'color' => '#0084FF'),
+                'phone' => array('icon' => '📞', 'label' => 'Teléfono', 'color' => '#FF9800'),
+                'email' => array('icon' => '📧', 'label' => 'Email', 'color' => '#EA4335'),
+            );
+            
+            $source = strtolower($source ?? 'web');
+            $channel = isset($channels[$source]) ? $channels[$source] : array('icon' => '❓', 'label' => ucfirst($source), 'color' => '#666');
+            
+            return sprintf(
+                '<span style="display:inline-flex;align-items:center;gap:4px;" title="%s"><span style="font-size:16px;">%s</span><span style="color:%s;font-size:11px;">%s</span></span>',
+                esc_attr($channel['label']),
+                $channel['icon'],
+                $channel['color'],
+                esc_html($channel['label'])
+            );
+        };
+        ?>
+
+        <style>
+            .reminders-table-wrapper {
+                overflow-x: auto;
+                margin-top: 10px;
+            }
+            .reminders-table {
+                border-collapse: collapse;
+                width: 100%;
+                min-width: 1100px;
+                font-size: 13px;
+            }
+            .reminders-table th,
+            .reminders-table td {
+                padding: 10px 8px;
+                text-align: left;
+                border-bottom: 1px solid #e1e1e1;
+                white-space: nowrap;
+            }
+            .reminders-table th {
+                background: #f6f7f7;
+                font-weight: 600;
+                position: sticky;
+                top: 0;
+            }
+            .reminders-table th a {
+                text-decoration: none;
+                color: #1d2327;
+            }
+            .reminders-table th a:hover {
+                color: #2271b1;
+            }
+            .reminders-table tbody tr:hover {
+                background-color: #f0f6fc;
+            }
+            .reminders-table .col-id { width: 50px; }
+            .reminders-table .col-name { min-width: 120px; }
+            .reminders-table .col-email { min-width: 180px; }
+            .reminders-table .col-canal { width: 90px; text-align: center; }
+            .reminders-table .col-fecha { width: 95px; }
+            .reminders-table .col-hora { width: 60px; }
+            .reminders-table .col-estado { width: 100px; }
+            .reminders-table .col-reminder-email { width: 80px; text-align: center; }
+            .reminders-table .col-reminder-wa { width: 55px; text-align: center; }
+            
+            .reminders-table .th-group {
+                text-align: center;
+                background: #e7e8e9;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .reminders-table .th-group-email { background: #dbeafe; color: #1e40af; }
+            .reminders-table .th-group-wa { background: #dcfce7; color: #166534; }
+            
+            .reminder-btn {
+                font-size: 11px !important;
+                padding: 2px 8px !important;
+                min-height: 26px !important;
+                line-height: 1.4 !important;
+            }
+            .reminder-sent {
+                color: #166534;
+                font-weight: 500;
+                font-size: 12px;
+            }
+            .reminder-pending {
+                color: #9ca3af;
+            }
+            .wa-check {
+                color: #25D366;
+                font-size: 16px;
+            }
+            .status-confirmed { color: #166534; font-weight: 600; }
+            .status-rejected { color: #dc2626; font-weight: 600; }
+            .status-pending { color: #6b7280; }
+            
+            @media screen and (max-width: 1400px) {
+                .reminders-table .col-email {
+                    max-width: 150px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+            }
+        </style>
+
+        <div class="reminders-table-wrapper">
+            <table class="reminders-table">
+                <thead>
+                    <tr>
+                        <th colspan="7" style="background:#fff; border-bottom: 2px solid #e1e1e1;"></th>
+                        <th colspan="3" class="th-group th-group-email">📧 Email</th>
+                        <th colspan="3" class="th-group th-group-wa">📱 WhatsApp</th>
+                    </tr>
+                    <tr>
+                        <th class="col-id"><a href="<?php echo $get_sort_url('id'); ?>">ID<?php echo $sort_icon('id'); ?></a></th>
+                        <th class="col-name"><a href="<?php echo $get_sort_url('name'); ?>">Nombre<?php echo $sort_icon('name'); ?></a></th>
+                        <th class="col-email">Email</th>
+                        <th class="col-canal">Canal</th>
+                        <th class="col-fecha"><a href="<?php echo $get_sort_url('scheduled_date'); ?>">Fecha<?php echo $sort_icon('scheduled_date'); ?></a></th>
+                        <th class="col-hora"><a href="<?php echo $get_sort_url('scheduled_time'); ?>">Hora<?php echo $sort_icon('scheduled_time'); ?></a></th>
+                        <th class="col-estado">Estado</th>
+                        <th class="col-reminder-email" title="Recordatorio Email 72h">72h</th>
+                        <th class="col-reminder-email" title="Recordatorio Email 24h">24h</th>
+                        <th class="col-reminder-email" title="Recordatorio Email 1h">1h</th>
+                        <th class="col-reminder-wa" title="Recordatorio WhatsApp 72h">72h</th>
+                        <th class="col-reminder-wa" title="Recordatorio WhatsApp 24h">24h</th>
+                        <th class="col-reminder-wa" title="Recordatorio WhatsApp 1h">1h</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($leads)): ?>
+                    <tr><td colspan="13" style="text-align:center; padding:20px; color:#666;">No hay agendamientos para los criterios seleccionados.</td></tr>
                 <?php else: foreach ($leads as $lead): 
                     // Cálculo robusto usando la zona horaria configurada en WordPress (ej. Chile)
                     $tz = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone(get_option('timezone_string') ?: 'UTC');
@@ -146,58 +305,82 @@ function automatiza_tech_reminders_page() {
                     $can_send_1h = ($diff_hours <= 2 && $diff_hours > 0);
                 ?>
                     <tr>
-                        <td><?php echo $lead->id; ?></td>
-                        <td><?php echo esc_html($lead->name); ?></td>
-                        <td><?php echo esc_html($lead->email); ?></td>
-                        <td><?php echo date('d-m-Y', strtotime($lead->scheduled_date)); ?></td>
-                        <td><?php echo substr($lead->scheduled_time, 0, 5); ?></td>
-                        <td>
+                        <td class="col-id"><?php echo $lead->id; ?></td>
+                        <td class="col-name"><?php echo esc_html($lead->name); ?></td>
+                        <td class="col-email" title="<?php echo esc_attr($lead->email); ?>"><?php echo esc_html($lead->email); ?></td>
+                        <td class="col-canal"><?php echo $get_channel_icon($lead->source ?? 'web'); ?></td>
+                        <td class="col-fecha"><?php echo date('d-m-Y', strtotime($lead->scheduled_date)); ?></td>
+                        <td class="col-hora"><?php echo substr($lead->scheduled_time, 0, 5); ?></td>
+                        <td class="col-estado">
                             <?php 
-                            if ($lead->confirmed_attendance === '1') echo '<span style="color:green;font-weight:bold;">Confirmado</span>';
-                            elseif ($lead->confirmed_attendance === '0') echo '<span style="color:red;font-weight:bold;">Rechazado</span>';
-                            else echo '<span style="color:gray;">Pendiente</span>';
+                            if ($lead->confirmed_attendance === '1') echo '<span class="status-confirmed">✓ Confirmado</span>';
+                            elseif ($lead->confirmed_attendance === '0') echo '<span class="status-rejected">✗ Rechazado</span>';
+                            else echo '<span class="status-pending">⏳ Pendiente</span>';
                             ?>
                         </td>
-                        <td>
+                        <td class="col-reminder-email">
                             <?php if ($lead->recordatorio72h): ?>
-                                <span class="dashicons dashicons-yes" style="color:green;"></span> Enviado
+                                <span class="reminder-sent">✓ Enviado</span>
                             <?php else: ?>
-                                <button class="button action-btn btn-72h" 
+                                <button class="button reminder-btn action-btn btn-72h" 
                                         data-id="<?php echo $lead->id; ?>" 
                                         data-type="72h"
                                         <?php echo (!$can_send_72h && !isset($_GET['force'])) ? 'disabled title="Fuera de rango (48h-72h)"' : ''; ?>>
-                                    Enviar 72h
+                                    72h
                                 </button>
                             <?php endif; ?>
                         </td>
-                        <td>
+                        <td class="col-reminder-email">
                             <?php if ($lead->recordatorio24h): ?>
-                                <span class="dashicons dashicons-yes" style="color:green;"></span> Enviado
+                                <span class="reminder-sent">✓ Enviado</span>
                             <?php else: ?>
-                                <button class="button action-btn btn-24h" 
+                                <button class="button reminder-btn action-btn btn-24h" 
                                         data-id="<?php echo $lead->id; ?>" 
                                         data-type="24h"
                                         <?php echo (!$can_send_24h && !isset($_GET['force'])) ? 'disabled title="Fuera de rango (2h-24h)"' : ''; ?>>
-                                    Enviar 24h
+                                    24h
                                 </button>
                             <?php endif; ?>
                         </td>
-                        <td>
+                        <td class="col-reminder-email">
                             <?php if ($lead->recordatorio1h): ?>
-                                <span class="dashicons dashicons-yes" style="color:green;"></span> Enviado
+                                <span class="reminder-sent">✓ Enviado</span>
                             <?php else: ?>
-                                <button class="button action-btn btn-1h" 
+                                <button class="button reminder-btn action-btn btn-1h" 
                                         data-id="<?php echo $lead->id; ?>" 
                                         data-type="1h"
                                         <?php echo (!$can_send_1h && !isset($_GET['force'])) ? 'disabled title="Fuera de rango (0h-2h)"' : ''; ?>>
-                                    Enviar 1h
+                                    1h
                                 </button>
+                            <?php endif; ?>
+                        </td>
+                        <!-- WhatsApp Reminder Status (Read-only - Auto-sent by N8N) -->
+                        <td class="col-reminder-wa">
+                            <?php if (!empty($lead->recordatorio72h_wa)): ?>
+                                <span class="wa-check" title="WhatsApp 72h enviado">✓</span>
+                            <?php else: ?>
+                                <span class="reminder-pending" title="WhatsApp 72h pendiente">—</span>
+                            <?php endif; ?>
+                        </td>
+                        <td class="col-reminder-wa">
+                            <?php if (!empty($lead->recordatorio24h_wa)): ?>
+                                <span class="wa-check" title="WhatsApp 24h enviado">✓</span>
+                            <?php else: ?>
+                                <span class="reminder-pending" title="WhatsApp 24h pendiente">—</span>
+                            <?php endif; ?>
+                        </td>
+                        <td class="col-reminder-wa">
+                            <?php if (!empty($lead->recordatorio1h_wa)): ?>
+                                <span class="wa-check" title="WhatsApp 1h enviado">✓</span>
+                            <?php else: ?>
+                                <span class="reminder-pending" title="WhatsApp 1h pendiente">—</span>
                             <?php endif; ?>
                         </td>
                     </tr>
                 <?php endforeach; endif; ?>
             </tbody>
         </table>
+        </div>
         
         <!-- Progress Modal -->
         <div id="bulk-progress-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
@@ -210,7 +393,20 @@ function automatiza_tech_reminders_page() {
             </div>
         </div>
 
-        <p class="description">Nota: Los botones se habilitan automáticamente cuando el tiempo es el adecuado. Para forzar el envío en cualquier momento, añade <code>&force=true</code> a la URL.</p>
+        <div style="background:#f0f0f1; padding:15px; border-left:4px solid #2271b1; margin-top:20px;">
+            <p style="margin:0;"><strong>📧 Recordatorios por Email (Manual)</strong></p>
+            <p style="margin:5px 0 0 0; color:#666;">
+                Los botones <strong>📧</strong> envían recordatorios por <strong>correo electrónico</strong> de forma manual.
+            </p>
+        </div>
+        <div style="background:#f0f0f1; padding:15px; border-left:4px solid #25D366; margin-top:10px;">
+            <p style="margin:0;"><strong>📱 Recordatorios por WhatsApp (Automático)</strong></p>
+            <p style="margin:5px 0 0 0; color:#666;">
+                Las columnas <strong>📱</strong> muestran el estado de los recordatorios por <strong>WhatsApp</strong>.<br>
+                Estos se envían <strong>automáticamente</strong> mediante N8N según el horario programado.
+            </p>
+        </div>
+        <p class="description" style="margin-top:10px;">Los botones se habilitan automáticamente cuando el tiempo es el adecuado. Para forzar el envío: añade <code>&force=true</code> a la URL.</p>
     </div>
 
     <script>
@@ -221,11 +417,11 @@ function automatiza_tech_reminders_page() {
             var lead_id = btn.data('id');
             var type = btn.data('type');
             
-            if (!confirm('¿Estás seguro de enviar el recordatorio de ' + type + ' a este usuario?')) return;
+            if (!confirm('¿Enviar recordatorio por EMAIL de ' + type + ' a este usuario?')) return;
             
             sendReminder(btn, lead_id, type, function(success) {
                 if (success) {
-                    alert('Correo enviado correctamente');
+                    alert('📧 Correo enviado correctamente');
                     location.reload();
                 }
             });
@@ -422,3 +618,5 @@ function automatiza_tech_send_manual_reminder() {
     }
 }
 add_action('wp_ajax_send_manual_reminder', 'automatiza_tech_send_manual_reminder');
+
+// Nota: La página "Todas las Citas" está implementada en admin-leads-manager.php

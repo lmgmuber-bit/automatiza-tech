@@ -173,7 +173,7 @@ function generate_client_email_preview($client_data, $plan_data, $invoice_number
                 <p style='color: #666; margin-bottom: 10px;'>Si tienes consultas, puedes contactarnos:</p>
                 <div class='contact-info'>
                     Email: <strong>contacto@automatizatech.cl</strong><br>
-                    Teléfono: <strong>+56 9 4033 1127</strong><br>
+                    Teléfono: <strong>+56 9 2700 2984</strong><br>
                     Sitio web: <strong>{$site_url}</strong>
                 </div>
             </div>

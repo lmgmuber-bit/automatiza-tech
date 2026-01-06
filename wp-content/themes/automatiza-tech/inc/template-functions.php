@@ -386,7 +386,7 @@ function automatiza_tech_format_price($price, $currency = '$') {
 function automatiza_tech_get_contact_info() {
     return array(
         'email' => get_theme_mod('contact_email', 'contacto@automatizatech.cl'),
-        'phone' => get_theme_mod('whatsapp_number', '+56 9 4033 1127'),
+        'phone' => get_theme_mod('whatsapp_number', '+56 9 2700 2984'),
         'address' => get_theme_mod('contact_address', 'Disponible en toda Latinoamérica'),
         'hours' => 'Atención 24/7 con nuestros bots'
     );

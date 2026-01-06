@@ -257,7 +257,7 @@
 
     // Get WhatsApp URL helper
     function getWhatsAppUrl(message) {
-        const number = '+56940331127'; // This should be dynamic from WordPress
+        const number = '+56927002984'; // This should be dynamic from WordPress
         const encodedMessage = encodeURIComponent(message);
         return `https://wa.me/${number.replace(/[^0-9]/g, '')}?text=${encodedMessage}`;
     }

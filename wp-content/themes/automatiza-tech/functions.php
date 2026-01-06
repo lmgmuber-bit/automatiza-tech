@@ -12,6 +12,35 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * Excluir REST API de LiteSpeed Cache
+ * Especialmente las rutas de recordatorios que N8N consulta frecuentemente
+ */
+add_action('init', function() {
+    // Si es una petición a la REST API, desactivar caché
+    if (isset($_SERVER['REQUEST_URI']) && 
+        (strpos($_SERVER['REQUEST_URI'], '/wp-json/') !== false || 
+         strpos($_SERVER['REQUEST_URI'], 'rest_route=') !== false)) {
+        
+        // Headers para prevenir caché
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0, private');
+            header('Pragma: no-cache');
+            header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
+            header('X-LiteSpeed-Cache-Control: no-cache, private');
+            header('X-Accel-Expires: 0');
+        }
+        
+        // Constante para LiteSpeed Cache plugin
+        if (!defined('DONOTCACHEPAGE')) {
+            define('DONOTCACHEPAGE', true);
+        }
+        if (!defined('LSCACHE_NO_CACHE')) {
+            define('LSCACHE_NO_CACHE', true);
+        }
+    }
+}, 1); // Prioridad muy alta (1)
+
+/**
  * Configuración del tema
  */
 function automatiza_tech_setup() {
@@ -252,7 +281,7 @@ function automatiza_tech_customize_register($wp_customize) {
     
     // WhatsApp número
     $wp_customize->add_setting('whatsapp_number', array(
-        'default'           => '+56 9 4033 1127',
+        'default'           => '+56 9 2700 2984',
         'sanitize_callback' => 'sanitize_text_field',
     ));
     
@@ -304,7 +333,7 @@ add_action('customize_register', 'automatiza_tech_customize_register');
  * Obtener URL de WhatsApp
  */
 function get_whatsapp_url($message = '') {
-    $number = get_theme_mod('whatsapp_number', '+56 9 4033 1127');
+    $number = get_theme_mod('whatsapp_number', '+56 9 2700 2984');
     // Limpiar el número: remover espacios, guiones, paréntesis pero mantener el +
     $number = preg_replace('/[^0-9+]/', '', $number);
     

@@ -19,7 +19,7 @@ function automatiza_tech_chat_scripts() {
         'automatiza-ai-chat-script',
         get_template_directory_uri() . '/assets/chat/js/chat.js',
         array('jquery'),
-        '1.6', // Updated version to force cache refresh
+        '2.1', // Updated version to force cache refresh - Phone length limits by country
         true
     );
 

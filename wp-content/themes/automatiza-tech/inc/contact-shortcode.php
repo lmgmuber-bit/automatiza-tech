@@ -113,7 +113,7 @@ function automatiza_tech_contact_form_shortcode($atts) {
                            title="Ingresa solo el número sin el código de país (8-15 dígitos).">
                 </div>
                 <small class="form-text text-muted">
-                    <span id="phone-preview">Formato: +56 964324169</span>
+                    <span id="phone-preview">Formato: +56 927002984</span>
                 </small>
             </div>
             
@@ -1131,7 +1131,7 @@ function automatiza_tech_contact_form_shortcode($atts) {
                     // Redirigir a WhatsApp después de 2 segundos
                     setTimeout(function() {
                         var whatsappMsg = encodeURIComponent('Hola! Acabo de enviar el formulario de contacto desde su sitio web. Me gustaría conocer más sobre Automatiza Tech.');
-                        var whatsappUrl = 'https://wa.me/56940331127?text=' + whatsappMsg;
+                        var whatsappUrl = 'https://wa.me/56927002984?text=' + whatsappMsg;
                         window.open(whatsappUrl, '_blank');
                     }, 2000);
                 } else {

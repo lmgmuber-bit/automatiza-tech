@@ -112,7 +112,7 @@
 ├─────────────────────────────────────────┤
 │  🤖 FOOTER PROFESIONAL                  │
 │  📧 contacto@automatizatech.cl             │
-│  📱 +56 9 4033 1127                    │
+│  📱 +56 9 2700 2984                    │
 │  🌐 www.automatizatech.cl              │
 │  © 2025 Automatiza Tech                │
 └─────────────────────────────────────────┘

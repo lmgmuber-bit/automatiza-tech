@@ -57,7 +57,7 @@
                         <li>
                             <i class="fab fa-whatsapp"></i>
                             <a href="<?php echo esc_url(get_whatsapp_url('Hola! Me interesa conocer más sobre Automatiza Tech')); ?>" target="_blank">
-                                <?php echo esc_html(get_theme_mod('whatsapp_number', '+56 9 4033 1127')); ?>
+                                <?php echo esc_html(get_theme_mod('whatsapp_number', '+56 9 2700 2984')); ?>
                             </a>
                         </li>
                         <li>
@@ -145,7 +145,7 @@
     "name": "Automatiza Tech",
     "description": "Conectamos tus ventas, web y CRM. Bots inteligentes para negocios que no se detienen.",
     "url": "<?php echo esc_url(home_url()); ?>",
-    "telephone": "<?php echo esc_attr(get_theme_mod('whatsapp_number', '+56 9 4033 1127')); ?>",
+    "telephone": "<?php echo esc_attr(get_theme_mod('whatsapp_number', '+56 9 2700 2984')); ?>",
     "email": "contacto@automatizatech.cl",
     "address": {
         "@type": "PostalAddress",
@@ -203,7 +203,46 @@
                     <input type="email" name="email" placeholder="Tu Correo" required maxlength="50">
                 </div>
                 <div class="form-group">
-                    <input type="tel" name="phone" placeholder="Tu Teléfono (+56...)" required minlength="9" maxlength="30">
+                    <label>País:</label>
+                    <select name="country_code" class="form-control">
+                        <optgroup label="América del Sur">
+                            <option value="+54">🇦🇷 Argentina (+54)</option>
+                            <option value="+591">🇧🇴 Bolivia (+591)</option>
+                            <option value="+55">🇧🇷 Brasil (+55)</option>
+                            <option value="+56" selected>🇨🇱 Chile (+56)</option>
+                            <option value="+57">🇨🇴 Colombia (+57)</option>
+                            <option value="+593">🇪🇨 Ecuador (+593)</option>
+                            <option value="+595">🇵🇾 Paraguay (+595)</option>
+                            <option value="+51">🇵🇪 Perú (+51)</option>
+                            <option value="+598">🇺🇾 Uruguay (+598)</option>
+                            <option value="+58">🇻🇪 Venezuela (+58)</option>
+                        </optgroup>
+                        <optgroup label="América Central">
+                            <option value="+506">🇨🇷 Costa Rica (+506)</option>
+                            <option value="+503">🇸🇻 El Salvador (+503)</option>
+                            <option value="+502">🇬🇹 Guatemala (+502)</option>
+                            <option value="+504">🇭🇳 Honduras (+504)</option>
+                            <option value="+52">🇲🇽 México (+52)</option>
+                            <option value="+505">🇳🇮 Nicaragua (+505)</option>
+                            <option value="+507">🇵🇦 Panamá (+507)</option>
+                        </optgroup>
+                        <optgroup label="Caribe">
+                            <option value="+53">🇨🇺 Cuba (+53)</option>
+                            <option value="+1809">🇩🇴 Rep. Dominicana (+1809)</option>
+                            <option value="+1787">🇵🇷 Puerto Rico (+1787)</option>
+                        </optgroup>
+                        <optgroup label="Otros">
+                            <option value="+1">🇺🇸 USA/Canadá (+1)</option>
+                            <option value="+34">🇪🇸 España (+34)</option>
+                            <option value="+351">🇵🇹 Portugal (+351)</option>
+                            <option value="+44">🇬🇧 Reino Unido (+44)</option>
+                            <option value="+33">🇫🇷 Francia (+33)</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Teléfono:</label>
+                    <input type="tel" name="phone" placeholder="912345678" required minlength="8" maxlength="15">
                 </div>
                 
                 <div class="form-group">
@@ -226,6 +265,80 @@
         </div>
     </div>
 </div>
+
+<!-- Validación de teléfono para el modal de demo (misma lógica que formulario de contacto) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var modalPhoneInput = document.querySelector('#demo-modal-form input[name="phone"]');
+    var modalCountrySelect = document.querySelector('#demo-modal-form select[name="country_code"]');
+    
+    if (modalPhoneInput && modalCountrySelect) {
+        // Bloquear letras, solo permitir números
+        modalPhoneInput.addEventListener('keypress', function(e) {
+            var char = String.fromCharCode(e.which);
+            // Chile: primer dígito debe ser 9
+            if (modalCountrySelect.value === '+56' && this.value.length === 0 && char !== '9') {
+                e.preventDefault();
+                return;
+            }
+            // Solo números
+            if (!/[0-9]/.test(char)) {
+                e.preventDefault();
+            }
+        });
+        
+        // Limpiar al pegar
+        modalPhoneInput.addEventListener('paste', function(e) {
+            var self = this;
+            setTimeout(function() {
+                var cleanValue = self.value.replace(/[^0-9]/g, '');
+                if (modalCountrySelect.value === '+56' && cleanValue.length > 0 && cleanValue[0] !== '9') {
+                    self.value = '';
+                    return;
+                }
+                self.value = cleanValue;
+            }, 0);
+        });
+        
+        // Validación en tiempo real
+        modalPhoneInput.addEventListener('input', function() {
+            var cleanValue = this.value.replace(/[^0-9]/g, '');
+            if (modalCountrySelect.value === '+56' && cleanValue.length > 0 && cleanValue[0] !== '9') {
+                this.value = '';
+                return;
+            }
+            this.value = cleanValue;
+        });
+        
+        // Función para ajustar límites del teléfono según país
+        function updateModalPhoneLimits() {
+            if (modalCountrySelect.value === '+56') {
+                // Chile: exactamente 9 dígitos
+                modalPhoneInput.setAttribute('minlength', '9');
+                modalPhoneInput.setAttribute('maxlength', '9');
+                modalPhoneInput.setAttribute('placeholder', '912345678');
+            } else {
+                // Otros países: 8-15 dígitos
+                modalPhoneInput.setAttribute('minlength', '8');
+                modalPhoneInput.setAttribute('maxlength', '15');
+                modalPhoneInput.setAttribute('placeholder', 'Número de teléfono');
+            }
+        }
+        
+        // Aplicar límites al cargar
+        updateModalPhoneLimits();
+        
+        // Al cambiar país, limpiar si no cumple y actualizar límites
+        modalCountrySelect.addEventListener('change', function() {
+            var phone = modalPhoneInput.value;
+            if (this.value === '+56' && phone.length > 0 && phone[0] !== '9') {
+                modalPhoneInput.value = '';
+            }
+            updateModalPhoneLimits();
+        });
+    }
+});
+</script>
 
 <?php wp_footer(); ?>
 

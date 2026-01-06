@@ -46,15 +46,6 @@
           },
           "conditions": [
             {
-              "id": "check-transcript-name",
-              "leftValue": "={{ $json.name }}",
-              "rightValue": "Transcript",
-              "operator": {
-                "type": "string",
-                "operation": "contains"
-              }
-            },
-            {
               "id": "check-google-doc",
               "leftValue": "={{ $json.mimeType }}",
               "rightValue": "application/vnd.google-apps.document",
@@ -75,34 +66,24 @@
         300
       ],
       "id": "check-is-transcript",
-      "name": "¿Es Transcripción?"
+      "name": "¿Es Google Doc?"
     },
     {
       "parameters": {
-        "operation": "download",
-        "fileId": {
-          "__rl": true,
-          "value": "={{ $json.id }}",
-          "mode": "id"
-        },
-        "options": {
-          "googleFileConversion": {
-            "conversion": {
-              "docsToFormat": "text/plain"
-            }
-          }
-        }
+        "operation": "get",
+        "documentURL": "={{ $json.id }}",
+        "simple": false
       },
-      "type": "n8n-nodes-base.googleDrive",
-      "typeVersion": 3,
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
       "position": [
         48,
         300
       ],
       "id": "download-transcript",
-      "name": "Descargar Transcripción",
+      "name": "Leer Documento Google Docs",
       "credentials": {
-        "googleDriveOAuth2Api": {
+        "googleDocsOAuth2Api": {
           "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
           "name": "Google Drive account"
         }
@@ -110,26 +91,12 @@
     },
     {
       "parameters": {
-        "operation": "text",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.extractFromFile",
-      "typeVersion": 1,
-      "position": [
-        272,
-        300
-      ],
-      "id": "extract-text",
-      "name": "Extraer Texto"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Obtener el contenido de la transcripción\nconst transcriptContent = $input.first().json.data || $input.first().json.text || '';\nconst fileName = $('Nueva Transcripción en Drive').first().json.name || 'Sin nombre';\nconst fileCreatedTime = $('Nueva Transcripción en Drive').first().json.createdTime || '';\n\n// Extraer posible email del cliente del nombre del archivo o contenido\n// Por defecto, usar un placeholder que deberás completar\nlet clientEmail = '';\n\n// Intentar extraer email del contenido de la transcripción\nconst emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g;\nconst emailsFound = transcriptContent.match(emailRegex);\nif (emailsFound && emailsFound.length > 0) {\n  // Filtrar emails de automatizatech para no usarlos como cliente\n  const clientEmails = emailsFound.filter(e => !e.includes('automatizatech'));\n  if (clientEmails.length > 0) {\n    clientEmail = clientEmails[0];\n  }\n}\n\nreturn {\n  transcript: transcriptContent,\n  client_email: clientEmail,\n  file_name: fileName,\n  file_created: fileCreatedTime,\n  needs_email: clientEmail === '' ? true : false\n};"
+        "jsCode": "// Obtener el contenido desde Google Docs API\nconst items = $input.all();\nconst docData = items[0].json;\nlet fullContent = '';\n\n// Debug info\nconst debugInfo = {\n  hasBody: !!docData.body,\n  hasContent: !!(docData.body && docData.body.content),\n  docTitle: docData.title || 'Sin título',\n  topLevelKeys: Object.keys(docData)\n};\n\n// Función para extraer texto de los elementos de Google Docs\nfunction extractText(content) {\n  let text = '';\n  if (!content) return text;\n  \n  for (const element of content) {\n    if (element.paragraph && element.paragraph.elements) {\n      for (const el of element.paragraph.elements) {\n        // Texto normal\n        if (el.textRun && el.textRun.content) {\n          text += el.textRun.content;\n        }\n        // Smart Chips de Personas (Emails)\n        if (el.person && el.person.personProperties && el.person.personProperties.email) {\n           text += ` ${el.person.personProperties.email} `;\n        }\n        // Enlaces ricos (Rich Links)\n        if (el.richLink && el.richLink.richLinkProperties) {\n           if (el.richLink.richLinkProperties.uri) {\n             text += ` ${el.richLink.richLinkProperties.uri} `;\n           } else if (el.richLink.richLinkProperties.title) {\n             text += ` ${el.richLink.richLinkProperties.title} `;\n           }\n        }\n      }\n    }\n    if (element.table) {\n      for (const row of element.table.tableRows || []) {\n        for (const cell of row.tableCells || []) {\n          text += extractText(cell.content);\n        }\n      }\n    }\n    if (element.sectionBreak) {\n      text += '\\n---\\n';\n    }\n  }\n  return text;\n}\n\n// Extraer contenido del documento\nif (docData.body && docData.body.content) {\n  fullContent = extractText(docData.body.content);\n}\n\n// Si no hay contenido en body, intentar tabs (nuevo formato de Gemini)\nif (!fullContent && docData.tabs) {\n  for (const tab of docData.tabs) {\n    if (tab.documentTab && tab.documentTab.body && tab.documentTab.body.content) {\n      fullContent += extractText(tab.documentTab.body.content);\n      fullContent += '\\n\\n---\\n\\n';\n    }\n  }\n}\n\nconst fileName = $('Nueva Transcripción en Drive').first().json.name || docData.title || 'Sin nombre';\nconst fileCreatedTime = $('Nueva Transcripción en Drive').first().json.createdTime || '';\n\n// Parsear el formato de Google Meet/Gemini Notes\nlet summary = '';\nlet transcript = '';\n\nconst summaryPatterns = /(?:#{1,3}\\s*)?(?:Summary|Resumen|Notas|Notes|Overview)[:\\s]*/i;\nconst transcriptPatterns = /(?:#{1,3}\\s*)?(?:Transcript|Transcripción|Transcription)[:\\s]*/i;\n\nconst transcriptMatch = fullContent.search(transcriptPatterns);\n\nif (transcriptMatch > 0) {\n  summary = fullContent.substring(0, transcriptMatch).trim();\n  transcript = fullContent.substring(transcriptMatch).replace(transcriptPatterns, '').trim();\n} else {\n  transcript = fullContent;\n}\n\nsummary = summary.replace(summaryPatterns, '').trim();\n\nconst combinedContent = summary ? `RESUMEN DE LA REUNIÓN:\\n${summary}\\n\\n---\\n\\nTRANSCRIPCIÓN COMPLETA:\\n${transcript}` : transcript;\n\n// ===== EXTRAER EMAIL DEL CLIENTE =====\nlet clientEmail = '';\nlet emailsFound = [];\n\n// 1. Buscar patrón específico\nconst clientEmailPattern = /(?:Correo del cliente|Email del cliente|Invitados)[:\\s]*\\[?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})\\]?/i;\nconst clientMatch = fullContent.match(clientEmailPattern);\nif (clientMatch && clientMatch[1]) {\n  clientEmail = clientMatch[1];\n}\n\n// 2. Buscar en formato mailto:\nif (!clientEmail) {\n  const mailtoPattern = /mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})/gi;\n  const mailtoMatches = fullContent.match(mailtoPattern);\n  if (mailtoMatches && mailtoMatches.length > 0) {\n    const firstMailto = mailtoMatches[0].replace('mailto:', '');\n    if (!firstMailto.toLowerCase().includes('automatizatech') && \n        !firstMailto.toLowerCase().includes('google.com')) {\n      clientEmail = firstMailto;\n    }\n  }\n}\n\n// 3. Buscar cualquier email\nif (!clientEmail) {\n  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g;\n  emailsFound = fullContent.match(emailRegex) || [];\n  const filtered = emailsFound.filter(e => \n    !e.toLowerCase().includes('automatizatech') && \n    !e.toLowerCase().includes('google.com') && \n    !e.toLowerCase().includes('calendar-notification') &&\n    !e.toLowerCase().includes('support.google')\n  );\n  if (filtered.length > 0) {\n    clientEmail = filtered[0];\n  }\n}\n\n// Extraer participantes\nlet participants = [];\nconst participantRegex = /(?:Participantes|Participants|Asistentes|Attendees|Invitados)[:\\s]*([^\\n]+)/i;\nconst participantMatch = fullContent.match(participantRegex);\nif (participantMatch) {\n  participants = participantMatch[1].split(/[,;]/).map(p => p.trim()).filter(p => p);\n}\n\nreturn {\n  transcript: combinedContent,\n  summary: summary,\n  full_transcript: transcript,\n  raw_content: fullContent,\n  client_email: clientEmail,\n  participants: participants,\n  file_name: fileName,\n  file_created: fileCreatedTime,\n  needs_email: clientEmail === '' ? true : false,\n  debug_info: debugInfo,\n  debug_emails_found: emailsFound,\n  debug_content_preview: fullContent.substring(0, 500),\n  debug_content_length: fullContent.length\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        496,
+        380,
         300
       ],
       "id": "prepare-data",
@@ -245,18 +212,18 @@
       "main": [
         [
           {
-            "node": "¿Es Transcripción?",
+            "node": "¿Es Google Doc?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "¿Es Transcripción?": {
+    "¿Es Google Doc?": {
       "main": [
         [
           {
-            "node": "Descargar Transcripción",
+            "node": "Leer Documento Google Docs",
             "type": "main",
             "index": 0
           }
@@ -264,18 +231,7 @@
         []
       ]
     },
-    "Descargar Transcripción": {
-      "main": [
-        [
-          {
-            "node": "Extraer Texto",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extraer Texto": {
+    "Leer Documento Google Docs": {
       "main": [
         [
           {

@@ -302,9 +302,42 @@ jQuery(document).ready(function($) {
                 <h4>Agendar Demo</h4>
                 <input type="text" name="name" placeholder="Tu Nombre" required minlength="2" maxlength="30">
                 <input type="email" name="email" placeholder="Tu Correo" required maxlength="50">
-                <input type="tel" name="phone" placeholder="Tu Teléfono (+56...)" required minlength="9" maxlength="30">
                 
-                <label style="font-size: 12px; margin-top: 10px; display: block;">Fecha deseada:</label>
+                <label style="font-size: 12px; margin-top: 10px; display: block;">País:</label>
+                <select name="country_code" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 10px; box-sizing: border-box;">
+                    <optgroup label="América">
+                        <option value="+54">🇦🇷 Argentina (+54)</option>
+                        <option value="+591">🇧🇴 Bolivia (+591)</option>
+                        <option value="+55">🇧🇷 Brasil (+55)</option>
+                        <option value="+56" selected>🇨🇱 Chile (+56)</option>
+                        <option value="+57">🇨🇴 Colombia (+57)</option>
+                        <option value="+506">🇨🇷 Costa Rica (+506)</option>
+                        <option value="+593">🇪🇨 Ecuador (+593)</option>
+                        <option value="+503">🇸🇻 El Salvador (+503)</option>
+                        <option value="+502">🇬🇹 Guatemala (+502)</option>
+                        <option value="+504">🇭🇳 Honduras (+504)</option>
+                        <option value="+52">🇲🇽 México (+52)</option>
+                        <option value="+505">🇳🇮 Nicaragua (+505)</option>
+                        <option value="+507">🇵🇦 Panamá (+507)</option>
+                        <option value="+595">🇵🇾 Paraguay (+595)</option>
+                        <option value="+51">🇵🇪 Perú (+51)</option>
+                        <option value="+1809">🇩🇴 Rep. Dominicana (+1809)</option>
+                        <option value="+598">🇺🇾 Uruguay (+598)</option>
+                        <option value="+58">🇻🇪 Venezuela (+58)</option>
+                        <option value="+1">🇺🇸 USA/Canadá (+1)</option>
+                    </optgroup>
+                    <optgroup label="Europa">
+                        <option value="+34">🇪🇸 España (+34)</option>
+                        <option value="+351">🇵🇹 Portugal (+351)</option>
+                        <option value="+44">🇬🇧 Reino Unido (+44)</option>
+                        <option value="+33">🇫🇷 Francia (+33)</option>
+                    </optgroup>
+                </select>
+                
+                <label style="font-size: 12px; display: block;">Teléfono:</label>
+                <input type="tel" name="phone" placeholder="912345678" required minlength="8" maxlength="15" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 10px; box-sizing: border-box;">
+                
+                <label style="font-size: 12px; display: block;">Fecha deseada:</label>
                 <input type="date" name="date" required min="${new Date().toISOString().split('T')[0]}">
                 
                 <label style="font-size: 12px; margin-top: 5px; display: block;">Hora:</label>
@@ -316,6 +349,76 @@ jQuery(document).ready(function($) {
                 <div class="error-msg" style="margin-top: 10px;"></div>
             </div>
         `);
+
+        // === VALIDACIÓN DE TELÉFONO (misma lógica que formulario de contacto) ===
+        const $phoneInput = $form.find('input[name="phone"]');
+        const $countrySelect = $form.find('select[name="country_code"]');
+        
+        // Bloquear letras, solo permitir números
+        $phoneInput.on('keypress', function(e) {
+            const char = String.fromCharCode(e.which);
+            // Validación especial para Chile: primer dígito debe ser 9
+            if ($countrySelect.val() === '+56' && $(this).val().length === 0 && char !== '9') {
+                e.preventDefault();
+                return;
+            }
+            // Solo permitir números
+            if (!/[0-9]/.test(char)) {
+                e.preventDefault();
+            }
+        });
+        
+        // Limpiar al pegar
+        $phoneInput.on('paste', function(e) {
+            const self = this;
+            setTimeout(function() {
+                let cleanValue = $(self).val().replace(/[^0-9]/g, '');
+                // Chile: debe empezar con 9
+                if ($countrySelect.val() === '+56' && cleanValue.length > 0 && cleanValue[0] !== '9') {
+                    $(self).val('');
+                    return;
+                }
+                $(self).val(cleanValue);
+            }, 0);
+        });
+        
+        // Validación en tiempo real
+        $phoneInput.on('input', function() {
+            let cleanValue = $(this).val().replace(/[^0-9]/g, '');
+            // Chile: debe empezar con 9
+            if ($countrySelect.val() === '+56' && cleanValue.length > 0 && cleanValue[0] !== '9') {
+                $(this).val('');
+                return;
+            }
+            $(this).val(cleanValue);
+        });
+        
+        // Función para ajustar límites del teléfono según país
+        function updatePhoneLimits() {
+            if ($countrySelect.val() === '+56') {
+                // Chile: exactamente 9 dígitos
+                $phoneInput.attr('minlength', '9');
+                $phoneInput.attr('maxlength', '9');
+                $phoneInput.attr('placeholder', '912345678');
+            } else {
+                // Otros países: 8-15 dígitos
+                $phoneInput.attr('minlength', '8');
+                $phoneInput.attr('maxlength', '15');
+                $phoneInput.attr('placeholder', 'Número de teléfono');
+            }
+        }
+        
+        // Aplicar límites al cargar
+        updatePhoneLimits();
+        
+        // Al cambiar de país, limpiar el teléfono si no cumple las reglas y actualizar límites
+        $countrySelect.on('change', function() {
+            const phone = $phoneInput.val();
+            if ($(this).val() === '+56' && phone.length > 0 && phone[0] !== '9') {
+                $phoneInput.val('');
+            }
+            updatePhoneLimits();
+        });
 
         // Logic for Date/Time
         const $dateInput = $form.find('input[name="date"]');
@@ -430,18 +533,40 @@ jQuery(document).ready(function($) {
             const $btn = $(this);
             const name = $form.find('input[name="name"]').val().trim();
             const email = $form.find('input[name="email"]').val().trim();
-            const phone = $form.find('input[name="phone"]').val().trim();
+            const countryCode = $form.find('select[name="country_code"]').val() || '+56';
+            const phoneRaw = $form.find('input[name="phone"]').val().trim().replace(/[^0-9]/g, '');
+            // Concatenar prefijo + número
+            const phone = countryCode + phoneRaw;
             const date = $form.find('input[name="date"]').val();
             const time = $form.find('select[name="time"]').val();
             const $error = $form.find('.error-msg');
 
             // Basic Validation
-            if (!name || !email || !phone || !date || !time) {
+            if (!name || !email || !phoneRaw || !date || !time) {
                 $error.text('Por favor completa todos los campos.').slideDown();
                 return;
             }
+            
+            // Validación de teléfono según país (misma lógica que contacto)
+            if (countryCode === '+56') {
+                // Chile: exactamente 9 dígitos, empezando con 9
+                if (phoneRaw.length !== 9) {
+                    $error.text('Los números chilenos deben tener exactamente 9 dígitos.').slideDown();
+                    return;
+                }
+                if (phoneRaw[0] !== '9') {
+                    $error.text('Los números chilenos deben comenzar con 9.').slideDown();
+                    return;
+                }
+            } else {
+                // Otros países: 8-15 dígitos
+                if (phoneRaw.length < 8 || phoneRaw.length > 15) {
+                    $error.text('El número de teléfono debe tener entre 8 y 15 dígitos.').slideDown();
+                    return;
+                }
+            }
 
-            // Advanced Validation
+            // Advanced Validation (name, email)
             const validation = validateFormInputs(name, email, phone);
             if (!validation.valid) {
                 $error.text(validation.message).slideDown();
@@ -645,17 +770,39 @@ jQuery(document).ready(function($) {
         
         const name = $(this).find('input[name="name"]').val().trim();
         const email = $(this).find('input[name="email"]').val().trim();
-        const phone = $(this).find('input[name="phone"]').val().trim();
+        const countryCode = $(this).find('select[name="country_code"]').val() || '+56';
+        const phoneRaw = $(this).find('input[name="phone"]').val().trim().replace(/[^0-9]/g, '');
+        // Concatenar prefijo + número
+        const phone = countryCode + phoneRaw;
         const date = $(this).find('input[name="date"]').val();
         const time = $(this).find('select[name="time"]').val();
 
         // Basic Validation
-        if (!name || !email || !phone || !date || !time) {
+        if (!name || !email || !phoneRaw || !date || !time) {
             $error.text('Por favor completa todos los campos.').slideDown();
             return;
         }
+        
+        // Validación de teléfono según país (misma lógica que contacto)
+        if (countryCode === '+56') {
+            // Chile: exactamente 9 dígitos, empezando con 9
+            if (phoneRaw.length !== 9) {
+                $error.text('Los números chilenos deben tener exactamente 9 dígitos.').slideDown();
+                return;
+            }
+            if (phoneRaw[0] !== '9') {
+                $error.text('Los números chilenos deben comenzar con 9.').slideDown();
+                return;
+            }
+        } else {
+            // Otros países: 8-15 dígitos
+            if (phoneRaw.length < 8 || phoneRaw.length > 15) {
+                $error.text('El número de teléfono debe tener entre 8 y 15 dígitos.').slideDown();
+                return;
+            }
+        }
 
-        // Advanced Validation
+        // Advanced Validation (name, email)
         const validation = validateFormInputs(name, email, phone);
         if (!validation.valid) {
             $error.text(validation.message).slideDown();

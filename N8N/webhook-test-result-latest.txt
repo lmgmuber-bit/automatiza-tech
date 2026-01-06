@@ -1,0 +1,12 @@
+Testing: https://n8n-n8n.kchiba.easypanel.host/webhook/c8d76c94-d759-462d-a575-e423f16cc992/webhook
+Timestamp: 2025-12-21T23:19:18.7370351-03:00
+--- curl ---
+HTTP/1.1 403 Forbidden
+Content-Length: 42
+Content-Type: application/json; charset=utf-8
+Date: Mon, 22 Dec 2025 02:19:19 GMT
+Etag: W/"2a-Plb6pGpcZSyuHGnHxzB8g34Sx2w"
+Vary: Accept-Encoding
+
+{"message":"Provided secret is not valid"}
+--- EOF ---

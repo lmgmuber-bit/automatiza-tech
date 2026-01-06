@@ -1,0 +1,12 @@
+Testing: https://n8n-n8n.kchiba.easypanel.host/webhook/c8d76c94-d759-462d-a575-e423f16cc992/webhook
+Timestamp: 2025-12-21T09:11:46.4721471-03:00
+--- curl ---
+HTTP/1.1 404 Not Found
+Content-Length: 388
+Content-Type: application/json; charset=utf-8
+Date: Sun, 21 Dec 2025 12:11:47 GMT
+Etag: W/"184-AFIjcJvrHg6aRNBQMYtpspGsAss"
+Vary: Accept-Encoding
+
+{"code":404,"message":"The requested webhook \"POST c8d76c94-d759-462d-a575-e423f16cc992/webhook\" is not registered.","hint":"The workflow must be active for a production URL to run successfully. You can activate the workflow using the toggle in the top-right of the editor. Note that unlike test URL calls, production URL calls aren't shown on the canvas (only in the executions list)"}
+--- EOF ---

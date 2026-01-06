@@ -419,7 +419,7 @@ class InvoicePDFGenerator {
             <div class="footer-col">
                 <h4>📞 Contacto</h4>
                 <p>📧 contacto@automatizatech.cl</p>
-                <p>📱 +56 9 6432 4169</p>
+                <p>📱 +56 9 2700 2984</p>
             </div>
             <div class="footer-col">
                 <h4>🌐 Web</h4>

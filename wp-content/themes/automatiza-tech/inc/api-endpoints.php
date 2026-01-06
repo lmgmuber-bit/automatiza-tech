@@ -10,6 +10,109 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * Desactivar caché para endpoints de recordatorios
+ */
+add_filter('rest_post_dispatch', function($response, $server, $request) {
+    $route = $request->get_route();
+    
+    // Desactivar caché para rutas de recordatorios
+    if (strpos($route, '/leads/reminders') !== false) {
+        $response->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        $response->header('Pragma', 'no-cache');
+        $response->header('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT');
+        $response->header('X-No-Cache', 'true');
+    }
+    
+    return $response;
+}, 10, 3);
+
+/**
+ * Normalizar teléfono a formato internacional
+ * Detecta el país por el prefijo y normaliza el formato
+ * Prefijos soportados: América del Sur, Central, Caribe y otros países
+ */
+function automatiza_tech_normalize_phone($phone) {
+    // Remover espacios, guiones y paréntesis
+    $phone = preg_replace('/[\s\-\(\)]+/', '', $phone);
+    
+    // Si está vacío, retornar vacío
+    if (empty($phone)) {
+        return '';
+    }
+    
+    // Si ya tiene + al inicio, asumir que está formateado correctamente
+    if (strpos($phone, '+') === 0) {
+        return $phone;
+    }
+    
+    // Lista de prefijos de países soportados (ordenados por longitud descendente para matching)
+    $country_prefixes = array(
+        // Prefijos de 4 dígitos
+        '1787' => '+1787',  // Puerto Rico
+        '1809' => '+1809',  // Rep. Dominicana
+        // Prefijos de 3 dígitos
+        '591' => '+591',    // Bolivia
+        '593' => '+593',    // Ecuador
+        '594' => '+594',    // Guyana Francesa
+        '592' => '+592',    // Guyana
+        '595' => '+595',    // Paraguay
+        '597' => '+597',    // Surinam
+        '598' => '+598',    // Uruguay
+        '501' => '+501',    // Belice
+        '506' => '+506',    // Costa Rica
+        '503' => '+503',    // El Salvador
+        '502' => '+502',    // Guatemala
+        '504' => '+504',    // Honduras
+        '505' => '+505',    // Nicaragua
+        '507' => '+507',    // Panamá
+        '509' => '+509',    // Haití
+        '351' => '+351',    // Portugal
+        // Prefijos de 2 dígitos
+        '54' => '+54',      // Argentina
+        '55' => '+55',      // Brasil
+        '56' => '+56',      // Chile
+        '57' => '+57',      // Colombia
+        '51' => '+51',      // Perú
+        '58' => '+58',      // Venezuela
+        '52' => '+52',      // México
+        '53' => '+53',      // Cuba
+        '34' => '+34',      // España
+        '44' => '+44',      // Reino Unido
+        '33' => '+33',      // Francia
+        // Prefijos de 1 dígito
+        '1' => '+1',        // USA/Canadá
+    );
+    
+    // Intentar detectar prefijo existente en el número
+    foreach ($country_prefixes as $prefix => $formatted) {
+        if (strpos($phone, $prefix) === 0) {
+            // Ya tiene el prefijo, solo agregar +
+            return '+' . $phone;
+        }
+    }
+    
+    // Si no tiene prefijo detectado, asumir Chile (+56) por defecto
+    // Celulares chilenos empiezan con 9 y tienen 9 dígitos
+    if (preg_match('/^9\d{8}$/', $phone)) {
+        return '+56' . $phone;
+    }
+    
+    // Teléfonos fijos chilenos (2 para Santiago, otros para regiones)
+    if (preg_match('/^[2-9]\d{8}$/', $phone)) {
+        return '+56' . $phone;
+    }
+    
+    // Si no coincide con ningún patrón, retornar con +56 por defecto (Chile)
+    // ya que es el mercado principal
+    if (preg_match('/^\d{8,9}$/', $phone)) {
+        return '+56' . $phone;
+    }
+    
+    // Si no coincide con nada, retornar como está
+    return $phone;
+}
+
+/**
  * Register API routes
  */
 add_action('rest_api_init', function () {
@@ -41,7 +144,7 @@ add_action('rest_api_init', function () {
         'permission_callback' => '__return_true'
     ));
 
-    // Endpoint para obtener leads para recordatorios
+    // Endpoint para obtener leads para recordatorios por CORREO
     // Modificado para aceptar parámetro en la URL (ej: /leads/reminders/72h) para evitar problemas de query params
     register_rest_route('automatiza-tech/v1', '/leads/reminders(?:/(?P<type>[a-zA-Z0-9]+))?', array(
         'methods' => 'GET',
@@ -49,10 +152,25 @@ add_action('rest_api_init', function () {
         'permission_callback' => '__return_true'
     ));
 
-    // Endpoint para actualizar estado de recordatorio (Ruta con parámetros obligatorios en URL)
+    // Endpoint para obtener leads para recordatorios por WHATSAPP
+    // Usa campos separados: recordatorio72h_wa, recordatorio24h_wa, recordatorio1h_wa
+    register_rest_route('automatiza-tech/v1', '/leads/reminders-wa(?:/(?P<type>[a-zA-Z0-9]+))?', array(
+        'methods' => 'GET',
+        'callback' => 'automatiza_tech_get_leads_for_reminders_wa',
+        'permission_callback' => '__return_true'
+    ));
+
+    // Endpoint para actualizar estado de recordatorio por CORREO (Ruta con parámetros obligatorios en URL)
     register_rest_route('automatiza-tech/v1', '/leads/update-reminder/(?P<lead_id>\d+)/(?P<type>[a-zA-Z0-9]+)', array(
         'methods' => array('POST', 'GET'),
         'callback' => 'automatiza_tech_mark_reminder_sent',
+        'permission_callback' => '__return_true'
+    ));
+
+    // Endpoint para actualizar estado de recordatorio por WHATSAPP
+    register_rest_route('automatiza-tech/v1', '/leads/update-reminder-wa/(?P<lead_id>\d+)/(?P<type>[a-zA-Z0-9]+)', array(
+        'methods' => array('POST', 'GET'),
+        'callback' => 'automatiza_tech_mark_reminder_sent_wa',
         'permission_callback' => '__return_true'
     ));
 
@@ -76,6 +194,13 @@ add_action('rest_api_init', function () {
         'callback' => 'automatiza_tech_reschedule_lead',
         'permission_callback' => '__return_true'
     ));
+
+    // Endpoint para confirmar asistencia desde WhatsApp (recordatorios)
+    register_rest_route('automatiza-tech/v1', '/leads/confirm-attendance/(?P<lead_id>\d+)/(?P<type>[a-zA-Z0-9]+)', array(
+        'methods' => array('POST', 'GET'),
+        'callback' => 'automatiza_tech_confirm_attendance',
+        'permission_callback' => '__return_true'
+    ));
 });
 
 /**
@@ -97,6 +222,9 @@ function automatiza_tech_create_leads_table() {
         scheduled_date date DEFAULT NULL,
         scheduled_time time DEFAULT NULL,
         confirmed_attendance tinyint(1) DEFAULT NULL,
+        confirmed_attendance72h tinyint(1) DEFAULT 0,
+        confirmed_attendance24h tinyint(1) DEFAULT 0,
+        confirmed_attendance1h tinyint(1) DEFAULT 0,
         recordatorio72h tinyint(1) DEFAULT 0,
         recordatorio24h tinyint(1) DEFAULT 0,
         recordatorio1h tinyint(1) DEFAULT 0,
@@ -123,13 +251,33 @@ add_action('after_switch_theme', 'automatiza_tech_create_leads_table');
 
 // También intentamos crearla si no existe al iniciar (para desarrollo)
 add_action('init', function() {
-    // Forzamos actualización de tabla v5
-    if (!get_option('automatiza_leads_table_created_v5')) {
+    // Forzamos actualización de tabla v6 - Campos de confirmación por recordatorio
+    if (!get_option('automatiza_leads_table_created_v6')) {
         automatiza_tech_create_leads_table();
         
-        // Populate missing tokens for existing leads
+        // Agregar columnas de confirmación si no existen
         global $wpdb;
         $table_name = $wpdb->prefix . 'automatiza_leads';
+        
+        // Agregar confirmed_attendance72h si no existe
+        $column_exists = $wpdb->get_results("SHOW COLUMNS FROM $table_name LIKE 'confirmed_attendance72h'");
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN confirmed_attendance72h tinyint(1) DEFAULT 0");
+        }
+        
+        // Agregar confirmed_attendance24h si no existe
+        $column_exists = $wpdb->get_results("SHOW COLUMNS FROM $table_name LIKE 'confirmed_attendance24h'");
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN confirmed_attendance24h tinyint(1) DEFAULT 0");
+        }
+        
+        // Agregar confirmed_attendance1h si no existe
+        $column_exists = $wpdb->get_results("SHOW COLUMNS FROM $table_name LIKE 'confirmed_attendance1h'");
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN confirmed_attendance1h tinyint(1) DEFAULT 0");
+        }
+        
+        // Populate missing tokens for existing leads
         $leads_without_token = $wpdb->get_results("SELECT id FROM $table_name WHERE token = ''");
         
         if ($leads_without_token) {
@@ -142,7 +290,7 @@ add_action('init', function() {
             }
         }
         
-        update_option('automatiza_leads_table_created_v5', true);
+        update_option('automatiza_leads_table_created_v6', true);
     }
 });
 
@@ -163,8 +311,27 @@ function automatiza_tech_save_lead($request) {
 
     $name = sanitize_text_field($params['name']);
     $email = sanitize_email($params['email']);
-    $phone = isset($params['phone']) ? sanitize_text_field($params['phone']) : '';
+    $phone_raw = isset($params['phone']) ? sanitize_text_field($params['phone']) : '';
+    
+    // Normalizar teléfono para que siempre tenga formato internacional +56
+    $phone = automatiza_tech_normalize_phone($phone_raw);
+    
     $session_id = isset($params['session_id']) ? sanitize_text_field($params['session_id']) : '';
+    $source = isset($params['source']) ? sanitize_text_field($params['source']) : 'web';
+    
+    // Auto-detectar source como 'whatsapp' si:
+    // 1. session_id contiene "whatsapp" (flujo antiguo)
+    // 2. Tiene teléfono y no tiene session_id (indica que viene de N8N/WhatsApp)
+    // 3. El source no fue especificado explícitamente como algo diferente a 'web'
+    if ($source === 'web') {
+        if (strpos(strtolower($session_id), 'whatsapp') !== false) {
+            $source = 'whatsapp';
+        } elseif (!empty($phone) && empty($session_id)) {
+            // Si tiene teléfono pero no session_id, viene del flujo de WhatsApp/N8N
+            $source = 'whatsapp';
+        }
+    }
+    
     $scheduled_date = isset($params['scheduled_date']) ? sanitize_text_field($params['scheduled_date']) : null;
     $scheduled_time = isset($params['scheduled_time']) ? sanitize_text_field($params['scheduled_time']) : null;
     $confirmed_attendance = isset($params['confirmed_attendance']) ? (int)$params['confirmed_attendance'] : null;
@@ -200,7 +367,8 @@ function automatiza_tech_save_lead($request) {
         'phone' => $phone,
         'session_id' => $session_id,
         'meet_link' => $meet_link,
-        'token' => $token
+        'token' => $token,
+        'source' => $source
     );
 
     if ($scheduled_date) $data['scheduled_date'] = $scheduled_date;
@@ -412,37 +580,46 @@ function automatiza_tech_get_leads_for_reminders($request) {
     $leads = [];
 
     if ($type === '72h') {
-        // Citas entre 48 y 96 horas antes (ampliado para cubrir más casos)
+        // Citas entre 48 y 96 horas antes
+        // EMAIL: Solo verificar que no se haya enviado por EMAIL (se envía 1 vez por canal)
         $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 48 hours'));
         $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 96 hours'));
         
         $leads = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM $table_name 
              WHERE CONCAT(scheduled_date, ' ', scheduled_time) BETWEEN %s AND %s 
-             AND recordatorio72h = 0",
-            $start_range, $end_range
+             AND CONCAT(scheduled_date, ' ', scheduled_time) > %s
+             AND (recordatorio72h IS NULL OR recordatorio72h = 0)
+             AND (status IS NULL OR status != 'cancelled')",
+            $start_range, $end_range, $now
         ));
     } elseif ($type === '24h') {
-        // Citas entre 2 y 48 horas antes (ampliado)
+        // Citas entre 2 y 48 horas antes
+        // EMAIL: Solo verificar que no se haya enviado por EMAIL (se envía 1 vez por canal)
         $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 2 hours'));
         $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 48 hours'));
 
         $leads = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM $table_name 
              WHERE CONCAT(scheduled_date, ' ', scheduled_time) BETWEEN %s AND %s 
-             AND recordatorio24h = 0",
-            $start_range, $end_range
+             AND CONCAT(scheduled_date, ' ', scheduled_time) > %s
+             AND (recordatorio24h IS NULL OR recordatorio24h = 0)
+             AND (status IS NULL OR status != 'cancelled')",
+            $start_range, $end_range, $now
         ));
     } elseif ($type === '1h') {
         // Citas entre 30 minutos y 2 horas antes
+        // EMAIL: Solo verificar que no se haya enviado por EMAIL (se envía 1 vez por canal)
         $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 30 minutes'));
         $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 2 hours'));
 
         $leads = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM $table_name 
              WHERE CONCAT(scheduled_date, ' ', scheduled_time) BETWEEN %s AND %s 
-             AND recordatorio1h = 0",
-            $start_range, $end_range
+             AND CONCAT(scheduled_date, ' ', scheduled_time) > %s
+             AND (recordatorio1h IS NULL OR recordatorio1h = 0)
+             AND (status IS NULL OR status != 'cancelled')",
+            $start_range, $end_range, $now
         ));
     }
 
@@ -507,7 +684,254 @@ function automatiza_tech_mark_reminder_sent($request) {
         array('%d')
     );
 
-    return array('success' => true, 'updated' => $result);
+    return array('success' => true, 'updated' => $result, 'channel' => 'email');
+}
+
+/**
+ * Callback para obtener leads para recordatorios por WHATSAPP
+ * Usa campos separados: recordatorio72h_wa, recordatorio24h_wa, recordatorio1h_wa
+ */
+function automatiza_tech_get_leads_for_reminders_wa($request) {
+    // Evitar caché - Headers agresivos para LiteSpeed
+    nocache_headers();
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0, private');
+    header('Pragma: no-cache');
+    header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
+    header('X-LiteSpeed-Cache-Control: no-cache');
+    header('X-Accel-Expires: 0');
+    
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_leads';
+    $type = $request['type'];
+    
+    if (empty($type)) {
+        $type = $request->get_param('type');
+    }
+    
+    if (empty($type) && isset($_GET['type'])) $type = $_GET['type'];
+    if (empty($type) && isset($_REQUEST['type'])) $type = $_REQUEST['type'];
+
+    error_log("Reminder WA API called. Type resolved: " . print_r($type, true));
+    
+    if (!in_array($type, ['72h', '24h', '1h'])) {
+        return new WP_Error('invalid_type', 'Tipo de recordatorio inválido', array('status' => 400));
+    }
+
+    $now = current_time('mysql');
+    $leads = [];
+
+    if ($type === '72h') {
+        // WHATSAPP: Solo verificar que no se haya enviado por WHATSAPP (se envía 1 vez por canal)
+        $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 48 hours'));
+        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 96 hours'));
+        
+        $leads = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table_name 
+             WHERE CONCAT(scheduled_date, ' ', scheduled_time) BETWEEN %s AND %s 
+             AND CONCAT(scheduled_date, ' ', scheduled_time) > %s
+             AND (recordatorio72h_wa IS NULL OR recordatorio72h_wa = 0)
+             AND (status IS NULL OR status != 'cancelled')
+             AND phone IS NOT NULL AND phone != ''",
+            $start_range, $end_range, $now
+        ));
+    } elseif ($type === '24h') {
+        // WHATSAPP: Solo verificar que no se haya enviado por WHATSAPP (se envía 1 vez por canal)
+        $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 2 hours'));
+        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 48 hours'));
+
+        $leads = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table_name 
+             WHERE CONCAT(scheduled_date, ' ', scheduled_time) BETWEEN %s AND %s 
+             AND CONCAT(scheduled_date, ' ', scheduled_time) > %s
+             AND (recordatorio24h_wa IS NULL OR recordatorio24h_wa = 0)
+             AND (status IS NULL OR status != 'cancelled')
+             AND phone IS NOT NULL AND phone != ''",
+            $start_range, $end_range, $now
+        ));
+    } elseif ($type === '1h') {
+        // WHATSAPP 1h: Se envía MÚLTIPLES VECES cada 30min hasta que el usuario CONFIRME
+        $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 30 minutes'));
+        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 2 hours'));
+        
+        // Debug log
+        error_log("WA 1h Reminder - Now: $now, Start: $start_range, End: $end_range");
+
+        // Verificar confirmación general Y específica de 1h
+        $leads = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table_name 
+             WHERE CONCAT(scheduled_date, ' ', scheduled_time) BETWEEN %s AND %s 
+             AND CONCAT(scheduled_date, ' ', scheduled_time) > %s
+             AND (confirmed_attendance IS NULL OR confirmed_attendance = 0)
+             AND (confirmed_attendance1h IS NULL OR confirmed_attendance1h = 0)
+             AND (confirmed_attendance1h_wa IS NULL OR confirmed_attendance1h_wa = 0)
+             AND (status IS NULL OR status != 'cancelled')
+             AND phone IS NOT NULL AND phone != ''",
+            $start_range, $end_range, $now
+        ));
+        
+        error_log("WA 1h Reminder - Found " . count($leads) . " leads");
+    }
+
+    // Formatear fechas para visualización
+    if (!empty($leads)) {
+        foreach ($leads as $lead) {
+            $lead->scheduled_date = date('d-m-Y', strtotime($lead->scheduled_date));
+            $lead->scheduled_time = substr($lead->scheduled_time, 0, 5);
+            if (!isset($lead->meet_link)) {
+                $lead->meet_link = '';
+            }
+        }
+    }
+
+    return $leads;
+}
+
+/**
+ * Callback para marcar recordatorio por WHATSAPP como enviado
+ * Usa campos: recordatorio72h_wa, recordatorio24h_wa, recordatorio1h_wa
+ */
+function automatiza_tech_mark_reminder_sent_wa($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_leads';
+    
+    $lead_id = isset($request['lead_id']) ? $request['lead_id'] : null;
+    $type = isset($request['type']) ? $request['type'] : null;
+
+    if (empty($lead_id)) {
+        $lead_id = $request->get_param('lead_id');
+    }
+    if (empty($type)) {
+        $type = $request->get_param('type');
+    }
+    
+    if (empty($lead_id) || empty($type)) {
+        $json_params = $request->get_json_params();
+        if (!empty($json_params)) {
+            if (empty($lead_id) && isset($json_params['lead_id'])) $lead_id = $json_params['lead_id'];
+            if (empty($type) && isset($json_params['type'])) $type = $json_params['type'];
+        }
+    }
+    
+    $lead_id = (int)$lead_id;
+
+    if (!$lead_id || !in_array($type, ['72h', '24h', '1h'])) {
+        error_log("Update Reminder WA Failed. ID: $lead_id, Type: $type");
+        return new WP_Error('invalid_params', 'Parámetros inválidos. ID: ' . $lead_id . ' Type: ' . $type, array('status' => 400));
+    }
+
+    // Usar campo _wa para WhatsApp
+    $column = 'recordatorio' . $type . '_wa';
+    
+    $result = $wpdb->update(
+        $table_name,
+        array($column => 1),
+        array('id' => $lead_id),
+        array('%d'),
+        array('%d')
+    );
+
+    return array('success' => true, 'updated' => $result, 'channel' => 'whatsapp', 'column' => $column);
+}
+
+/**
+ * Callback para confirmar asistencia desde WhatsApp (recordatorios con botones)
+ * Lógica igual que correos: marca confirmed_attendance{tipo} = 1
+ * Si type='auto', detecta automáticamente cuál recordatorio fue el último enviado
+ */
+function automatiza_tech_confirm_attendance($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_leads';
+    
+    // Obtener parámetros de la URL
+    $lead_id = isset($request['lead_id']) ? (int)$request['lead_id'] : 0;
+    $type = isset($request['type']) ? $request['type'] : null;
+
+    if (!$lead_id) {
+        error_log("Confirm Attendance Failed. ID: $lead_id");
+        return new WP_Error('invalid_params', 'ID de lead inválido', array('status' => 400));
+    }
+
+    // Si el tipo es 'auto', detectar cuál recordatorio fue el último enviado
+    if ($type === 'auto') {
+        $lead = $wpdb->get_row($wpdb->prepare(
+            "SELECT recordatorio1h, recordatorio24h, recordatorio72h, 
+                    confirmed_attendance1h, confirmed_attendance24h, confirmed_attendance72h 
+             FROM $table_name WHERE id = %d", 
+            $lead_id
+        ));
+        
+        if (!$lead) {
+            return new WP_Error('not_found', 'Lead no encontrado', array('status' => 404));
+        }
+        
+        // Prioridad: 1h > 24h > 72h (el más reciente primero)
+        // Solo confirmar si el recordatorio fue enviado Y aún no está confirmado
+        if ($lead->recordatorio1h == 1 && $lead->confirmed_attendance1h == 0) {
+            $type = '1h';
+        } elseif ($lead->recordatorio24h == 1 && $lead->confirmed_attendance24h == 0) {
+            $type = '24h';
+        } elseif ($lead->recordatorio72h == 1 && $lead->confirmed_attendance72h == 0) {
+            $type = '72h';
+        } else {
+            // Si todos ya están confirmados o ninguno enviado, confirmar el más reciente enviado
+            if ($lead->recordatorio1h == 1) {
+                $type = '1h';
+            } elseif ($lead->recordatorio24h == 1) {
+                $type = '24h';
+            } elseif ($lead->recordatorio72h == 1) {
+                $type = '72h';
+            } else {
+                // Ningún recordatorio enviado, usar 72h por defecto
+                $type = '72h';
+            }
+        }
+    }
+
+    if (!in_array($type, ['72h', '24h', '1h'])) {
+        error_log("Confirm Attendance Failed. Invalid Type: $type");
+        return new WP_Error('invalid_type', 'Tipo de recordatorio inválido', array('status' => 400));
+    }
+
+    // Columna de confirmación según el tipo de recordatorio
+    $confirm_column = 'confirmed_attendance' . $type;
+    
+    // Preparar datos para actualizar
+    $update_data = array($confirm_column => 1);
+    $update_format = array('%d');
+    
+    // Solo para recordatorio de 1h: también actualizar confirmed_attendance general
+    if ($type === '1h') {
+        $update_data['confirmed_attendance'] = 1;
+        $update_format[] = '%d';
+    }
+    
+    // Actualizar la confirmación de asistencia
+    $result = $wpdb->update(
+        $table_name,
+        $update_data,
+        array('id' => $lead_id),
+        $update_format,
+        array('%d')
+    );
+
+    if ($result === false) {
+        return new WP_Error('db_error', 'Error al actualizar la confirmación', array('status' => 500));
+    }
+
+    // Obtener datos del lead para la respuesta
+    $lead = $wpdb->get_row($wpdb->prepare("SELECT name, email, scheduled_date, scheduled_time FROM $table_name WHERE id = %d", $lead_id));
+
+    return array(
+        'success' => true, 
+        'updated' => $result,
+        'lead_id' => $lead_id,
+        'type' => $type,
+        'confirmed_column' => $confirm_column,
+        'confirmed_attendance' => ($type === '1h') ? 1 : null,
+        'lead_name' => $lead ? $lead->name : null,
+        'scheduled_date' => $lead ? $lead->scheduled_date : null,
+        'scheduled_time' => $lead ? $lead->scheduled_time : null
+    );
 }
 
 /**
@@ -717,7 +1141,26 @@ function automatiza_tech_handle_lead_action($request) {
 
     // --- LÓGICA PARA CONFIRMAR O ELIMINAR ---
     if ($action === 'confirm') {
-        $wpdb->update($table_name, array('confirmed_attendance' => 1), array('id' => $lead_id));
+        // Obtener tipo de recordatorio desde el parámetro (72h, 24h, 1h)
+        $reminder_type = $request->get_param('reminder_type');
+        
+        // Determinar qué campo actualizar según el tipo de recordatorio
+        $update_data = array('confirmed_attendance' => 1); // Campo general siempre se actualiza
+        
+        if ($reminder_type === '72h') {
+            $update_data['confirmed_attendance72h'] = 1;
+        } elseif ($reminder_type === '24h') {
+            $update_data['confirmed_attendance24h'] = 1;
+        } elseif ($reminder_type === '1h') {
+            $update_data['confirmed_attendance1h'] = 1;
+        } else {
+            // Si no se especifica tipo, actualizar todos (compatibilidad hacia atrás)
+            $update_data['confirmed_attendance72h'] = 1;
+            $update_data['confirmed_attendance24h'] = 1;
+            $update_data['confirmed_attendance1h'] = 1;
+        }
+        
+        $wpdb->update($table_name, $update_data, array('id' => $lead_id));
         $message = '¡Gracias! Tu asistencia ha sido confirmada.';
     } elseif ($action === 'delete') {
         // Obtener datos antes de borrar

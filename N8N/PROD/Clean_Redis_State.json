@@ -1,0 +1,203 @@
+{
+  "name": "Clean Redis State - 56974940070",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "id": "manual-trigger",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "booking_56974940070"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [460, 100],
+      "id": "delete-booking",
+      "name": "Delete Booking",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "booking_date_56974940070"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [460, 220],
+      "id": "delete-booking-date",
+      "name": "Delete Booking Date",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "reschedule_56974940070"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [460, 340],
+      "id": "delete-reschedule",
+      "name": "Delete Reschedule",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "reschedule_event_56974940070"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [460, 460],
+      "id": "delete-reschedule-event",
+      "name": "Delete Reschedule Event",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "cancel_56974940070"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [460, 580],
+      "id": "delete-cancel",
+      "name": "Delete Cancel",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "cancel_event_56974940070"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [460, 700],
+      "id": "delete-cancel-event",
+      "name": "Delete Cancel Event",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "messages_56974940070"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [460, 820],
+      "id": "delete-messages",
+      "name": "Delete Messages",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "result",
+              "value": "Todas las keys de Redis para 56974940070 han sido eliminadas"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [700, 400],
+      "id": "result-node",
+      "name": "Done"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          { "node": "Delete Booking", "type": "main", "index": 0 },
+          { "node": "Delete Booking Date", "type": "main", "index": 0 },
+          { "node": "Delete Reschedule", "type": "main", "index": 0 },
+          { "node": "Delete Reschedule Event", "type": "main", "index": 0 },
+          { "node": "Delete Cancel", "type": "main", "index": 0 },
+          { "node": "Delete Cancel Event", "type": "main", "index": 0 },
+          { "node": "Delete Messages", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Delete Booking": {
+      "main": [
+        [{ "node": "Done", "type": "main", "index": 0 }]
+      ]
+    },
+    "Delete Booking Date": {
+      "main": [
+        [{ "node": "Done", "type": "main", "index": 0 }]
+      ]
+    },
+    "Delete Reschedule": {
+      "main": [
+        [{ "node": "Done", "type": "main", "index": 0 }]
+      ]
+    },
+    "Delete Reschedule Event": {
+      "main": [
+        [{ "node": "Done", "type": "main", "index": 0 }]
+      ]
+    },
+    "Delete Cancel": {
+      "main": [
+        [{ "node": "Done", "type": "main", "index": 0 }]
+      ]
+    },
+    "Delete Cancel Event": {
+      "main": [
+        [{ "node": "Done", "type": "main", "index": 0 }]
+      ]
+    },
+    "Delete Messages": {
+      "main": [
+        [{ "node": "Done", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

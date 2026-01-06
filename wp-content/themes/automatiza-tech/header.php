@@ -496,31 +496,6 @@
                 </button>
             </div><!-- .header-content -->
 
-            <!-- Christmas Lights with Reindeer and Santa -->
-            <div class="christmas-lights">
-                <span class="christmas-emoji reindeer">🦌</span>
-                <span class="light red"></span>
-                <span class="light yellow"></span>
-                <span class="light green"></span>
-                <span class="light blue"></span>
-                <span class="christmas-emoji reindeer">🦌</span>
-                <span class="light red"></span>
-                <span class="light yellow"></span>
-                <span class="light green"></span>
-                <span class="light blue"></span>
-                <span class="christmas-emoji santa">🎅</span>
-                <span class="light red"></span>
-                <span class="light yellow"></span>
-                <span class="light green"></span>
-                <span class="light blue"></span>
-                <span class="christmas-emoji reindeer">🦌</span>
-                <span class="light red"></span>
-                <span class="light yellow"></span>
-                <span class="light green"></span>
-                <span class="light blue"></span>
-                <span class="christmas-emoji reindeer">🦌</span>
-            </div>
-
             <!-- Mobile Menu -->
             <div class="collapse" id="mobile-menu">
                 <nav class="mobile-navigation">
@@ -647,111 +622,33 @@
             function qs(sel){ return document.querySelector(sel); }
             function ensureLayer(){ var l = qs('.christmas-layer'); if(!l){ l = document.createElement('div'); l.className='christmas-layer'; document.body.appendChild(l); } return l; }
             function ensureStars(){ /* Estrellas deshabilitadas */ }
-            // Replacement modal: accessible, styled and light animation
+            // Modal de Año Nuevo 2026
             function ensureModal(){
-                if(qs('.christmas-modal-overlay')) return;
-                var shown = parseInt(localStorage.getItem('christmasModalShownCount_v3') || '0', 10);
+                if(qs('.newyear-modal-overlay')) return;
+                var shown = parseInt(localStorage.getItem('newyearModalShownCount_2026') || '0', 10);
                 if (shown >= 10) return; // límite de 10 veces por navegador
-                localStorage.setItem('christmasModalShownCount_v3', String(shown + 1));
+                localStorage.setItem('newyearModalShownCount_2026', String(shown + 1));
                 var overlay = document.createElement('div');
-                overlay.className = 'christmas-modal-overlay';
+                overlay.className = 'newyear-modal-overlay';
                 overlay.innerHTML = ""
-                    + "<div class='christmas-modal' role='dialog' aria-modal='true' aria-labelledby='christmas-title'>"
-                    +   "<button class='christmas-modal-close' aria-label='Cerrar'>✖</button>"
-                    +   "<div class='christmas-modal-header'>"
-                    +       "<span class='christmas-badge' aria-hidden='true'>🎅</span>"
-                    +       "<h3 id='christmas-title'>Automatiza tu web en Navidad</h3>"
-                    +   "</div>"
-                    +   "<div class='christmas-modal-content'>"
-                    +       "<p>Impulsa tu negocio esta temporada: bots, integraciones y paneles sin complicaciones. Descubre nuestros planes.</p>"
-                    +   "</div>"
-                    +   "<div class='h-modal-actions'>"
-                    +       "<div class='bot-invite' aria-hidden='true'>"
-                    +           "<span class='bot bot-wave'>🦌</span>"
-                    +           "<span class='bot bot-bounce'>🎅</span>"
-                    +           "<span class='bot bot-arrow'>🦌</span>"
-                    +       "</div>"
-                    +       "<a href='#planes' class='btn-primary h-modal-primary cta-pulse-xmas'>Ver Planes</a>"
-                    +       "<button type='button' class='btn-ghost h-modal-dismiss'>Cerrar</button>"
-                    +   "</div>"
+                    + "<div class='newyear-modal' role='dialog' aria-modal='true' aria-labelledby='newyear-title'>"
+                    +   "<button class='newyear-modal-close' aria-label='Cerrar'>✖</button>"
+                    +   "<img src='" + (window.templateUrl || '/wp-content/themes/automatiza-tech') + "/assets/images/feliz-2026.png' alt='Feliz Año Nuevo 2026 - AutomatizaTech' class='newyear-modal-image'>"
                     + "</div>";
                 document.body.appendChild(overlay);
                 function dismiss(){ overlay.remove(); }
-                var closeBtn = overlay.querySelector('.christmas-modal-close');
+                var closeBtn = overlay.querySelector('.newyear-modal-close');
                 closeBtn.addEventListener('click', dismiss);
                 overlay.addEventListener('click', function(e){ if(e.target === overlay) dismiss(); });
                 // Accesibilidad: cerrar con ESC
                 document.addEventListener('keydown', function onKey(e){ if(e.key === 'Escape'){ dismiss(); document.removeEventListener('keydown', onKey); } });
-                // CTA principal: ir a la sección de planes y cerrar modal
-                var primary = overlay.querySelector('.h-modal-primary');
-                if(primary){ primary.addEventListener('click', function(ev){ ev.preventDefault(); dismiss(); window.location.hash = '#planes'; }); }
-                // Botón cerrar secundario
-                var dismissBtn = overlay.querySelector('.h-modal-dismiss');
-                if(dismissBtn){ dismissBtn.addEventListener('click', dismiss); }
                 // Llevar el foco al botón cerrar para lectores de pantalla/teclado
                 try { closeBtn.focus(); } catch(_) {}
-                // Randomizar bots/costos
-                try {
-                    var bots = overlay.querySelectorAll('.bot-invite .bot');
-                    var faces = ['🦌','🎅','🦌','🎅','🦌'];
-                    if(bots[0]) bots[0].textContent = faces[Math.floor(Math.random()*faces.length)];
-                    if(bots[1]) bots[1].textContent = faces[Math.floor(Math.random()*faces.length)];
-                } catch(_) {}
             }
             function populate(layer){ /* Emojis flotantes deshabilitados - renos y santa ahora están en las luces */ }
 
-            function enable(){ 
-                document.body.classList.add('christmas-mode'); 
-                var layer=ensureLayer(); 
-                populate(layer); 
-                ensureStars(); 
-                localStorage.setItem('christmasDisabled','0'); 
-                localStorage.setItem('christmasEnabled','1');
-                showMessage('🎅 ¡Modo Navidad activado! Disfruta de la magia navideña 🦌', 'success');
-            }
-            
-            function disable(){ 
-                document.body.classList.remove('christmas-mode'); 
-                document.querySelectorAll('.christmas-layer,.christmas-star').forEach(function(el){ el.remove(); }); 
-                localStorage.setItem('christmasDisabled','1'); 
-                showMessage('🦌 Modo Navidad desactivado. Puedes reactivarlo cuando quieras 🎅', 'info');
-            }
-            
-            function showMessage(text, type){
-                var msg = document.createElement('div');
-                msg.className = 'christmas-notification christmas-notification-' + type;
-                msg.textContent = text;
-                msg.style.cssText = 'position:fixed;top:20px;right:20px;background:' + (type === 'success' ? '#16a34a' : '#0ea5e9') + ';color:white;padding:16px 24px;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.2);z-index:10000;font-size:14px;max-width:320px;animation:slideInRight 0.3s ease-out;';
-                document.body.appendChild(msg);
-                setTimeout(function(){ 
-                    msg.style.animation = 'slideOutRight 0.3s ease-in';
-                    setTimeout(function(){ msg.remove(); }, 300);
-                }, 4000);
-            }
-            
-            function ensureToggle(){ 
-                if(qs('.christmas-toggle')) return; 
-                var t=document.createElement('button'); 
-                t.className='christmas-toggle'; 
-                t.type='button'; 
-                t.title='Activar/Desactivar Navidad'; 
-                t.setAttribute('aria-label','Alternar modo Navidad'); 
-                t.textContent='❄'; 
-                t.addEventListener('click', function(){ 
-                    if(document.body.classList.contains('christmas-mode')){ 
-                        disable(); 
-                    } else { 
-                        enable(); 
-                    } 
-                }); 
-                document.body.appendChild(t); 
-            }
-
-            // Modal siempre se muestra independientemente del modo navideño
+            // Modal de Año Nuevo
             ensureModal();
-            
-            if(enableInitially) enable();
-            ensureToggle();
         } catch(e) {}
     })();
     </script>

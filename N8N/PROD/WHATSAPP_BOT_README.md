@@ -225,5 +225,5 @@ El sistema incluye varias medidas para evitar bloqueos:
 
 Si tienes problemas con la configuración:
 - Web: https://www.automatizatech.cl
-- WhatsApp: +56 9 4033 1127
+- WhatsApp: +56 9 2700 2984
 - Email: contacto@automatizatech.cl

@@ -1380,7 +1380,7 @@ class AutomatizaTechContactForm {
                 <p style='color: #666; margin-bottom: 10px;'>Si tienes consultas, puedes contactarnos:</p>
                 <div class='contact-info'>
                     Email: <strong>contacto@automatizatech.cl</strong><br>
-                    Teléfono: <strong>+56 9 6432 4169</strong><br>
+                    Teléfono: <strong>+56 9 2700 2984</strong><br>
                     Sitio web: <strong>{$site_url}</strong>
                 </div>
             </div>
@@ -1465,7 +1465,7 @@ class AutomatizaTechContactForm {
             $plain_text .= "INFORMACIÓN DE CONTACTO\n";
             $plain_text .= "-----------------------\n";
             $plain_text .= "Email: contacto@automatizatech.cl\n";
-            $plain_text .= "Teléfono: +56 9 6432 4169\n";
+            $plain_text .= "Teléfono: +56 9 2700 2984\n";
             $plain_text .= "Web: " . $site_url . "\n\n";
             $plain_text .= "Saludos cordiales,\n";
             $plain_text .= "Equipo AutomatizaTech\n";
@@ -2643,7 +2643,7 @@ class AutomatizaTechContactForm {
             <div class='footer-column'>
                 <h3>📞 Contacto</h3>
                 <p>📧 contacto@automatizatech.cl</p>
-                <p>📱 +56 9 6432 4169</p>
+                <p>📱 +56 9 2700 2984</p>
             </div>
             
             <div class='footer-column'>
@@ -3416,7 +3416,7 @@ class AutomatizaTechContactForm {
     private function get_email_template($name) {
         global $wpdb;
         
-        $whatsapp_number = get_theme_mod('whatsapp_number', '+56 9 4033 1127');
+        $whatsapp_number = get_theme_mod('whatsapp_number', '+56 9 2700 2984');
         $whatsapp_url = get_whatsapp_url('Hola! Me interesa conocer más sobre los planes de Automatiza Tech');
         
         // Obtener planes desde la base de datos

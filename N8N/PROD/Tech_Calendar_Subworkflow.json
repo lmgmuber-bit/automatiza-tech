@@ -67,6 +67,41 @@
     },
     {
       "parameters": {
+        "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/appointments/search?scheduled_date={{ $('Normalize Data').item.json.date }}&scheduled_time={{ $('Normalize Data').item.json.time }}&status=active",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -1200,
+        784
+      ],
+      "alwaysOutputData": true,
+      "id": "check-wp-availability",
+      "name": "Check WP Availability"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.data && $json.data.length > 0 ? 'busy' : 'free' }}",
+              "value2": "busy"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -976,
+        784
+      ],
+      "id": "check-wp-busy",
+      "name": "WP Has Appointments?"
+    },
+    {
+      "parameters": {
         "operation": "getAll",
         "calendar": {
           "__rl": true,
@@ -402,6 +437,35 @@
     },
     "Normalize Data": {
       "main": [
+        [
+          {
+            "node": "Check WP Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check WP Availability": {
+      "main": [
+        [
+          {
+            "node": "WP Has Appointments?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WP Has Appointments?": {
+      "main": [
+        [
+          {
+            "node": "Set Busy Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Check Availability",

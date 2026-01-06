@@ -1,0 +1,150 @@
+{
+  "name": "WhatsApp Recordatorio 24h - AutomatizaTech (PROD) v3",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300],
+      "id": "cron-24h-wa",
+      "name": "Cron cada 30 min"
+    },
+    {
+      "parameters": {
+        "url": "https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/reminders/24h",
+        "options": {
+          "splitIntoItems": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, 300],
+      "id": "get-leads-24h-wa",
+      "name": "Get Leads 24h"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-has-leads",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "id": "has-leads-24h-wa",
+      "name": "Has Leads?"
+    },
+    {
+      "parameters": {
+        "maxItems": 10
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [920, 260],
+      "id": "limit-24h-wa",
+      "name": "Limit 10 Anti-Spam"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesar cada lead secuencialmente con delay\nconst items = $input.all();\nconst results = [];\n\nconst sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));\n\nfor (let i = 0; i < items.length; i++) {\n  const lead = items[i].json;\n  \n  try {\n    // Enviar WhatsApp\n    const waResponse = await fetch('https://graph.facebook.com/v22.0/946501128543201/messages', {\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/json',\n        'Authorization': 'Bearer ' + $env.WHATSAPP_TOKEN\n      },\n      body: JSON.stringify({\n        messaging_product: 'whatsapp',\n        recipient_type: 'individual',\n        to: lead.phone,\n        type: 'interactive',\n        interactive: {\n          type: 'button',\n          body: {\n            text: `📅 *Recordatorio - Tu cita es mañana*\\n\\nHola ${lead.name}, te recordamos que tienes una reunión agendada con AutomatizaTech.\\n\\n📅 *Fecha:* ${lead.scheduled_date}\\n🕐 *Hora:* ${lead.scheduled_time} hrs\\n📍 *Enlace:* ${lead.meet_link || 'Te llegará por correo'}\\n\\n¿Podrás asistir?`\n          },\n          action: {\n            buttons: [\n              { type: 'reply', reply: { id: `btn_reminder_confirm_${lead.id}`, title: '✅ Sí, confirmo' }},\n              { type: 'reply', reply: { id: `btn_reminder_no_${lead.id}`, title: '❌ No podré' }}\n            ]\n          }\n        }\n      })\n    });\n    \n    const waResult = await waResponse.json();\n    \n    // Marcar como enviado\n    const markResponse = await fetch(`https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/update-reminder/${lead.id}/24h`, {\n      method: 'POST'\n    });\n    \n    results.push({\n      json: {\n        lead_id: lead.id,\n        name: lead.name,\n        phone: lead.phone,\n        whatsapp_sent: waResponse.ok,\n        marked_sent: markResponse.ok,\n        wa_response: waResult\n      }\n    });\n    \n    // Esperar 5 segundos antes del siguiente (excepto el último)\n    if (i < items.length - 1) {\n      await sleep(5000);\n    }\n    \n  } catch (error) {\n    results.push({\n      json: {\n        lead_id: lead.id,\n        name: lead.name,\n        error: error.message\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 260],
+      "id": "process-all-wa",
+      "name": "Process All with Rate Limit"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [920, 420],
+      "id": "no-leads-24h-wa",
+      "name": "No Leads"
+    }
+  ],
+  "connections": {
+    "Cron cada 30 min": {
+      "main": [
+        [
+          {
+            "node": "Get Leads 24h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Leads 24h": {
+      "main": [
+        [
+          {
+            "node": "Has Leads?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Leads?": {
+      "main": [
+        [
+          {
+            "node": "Limit 10 Anti-Spam",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit 10 Anti-Spam": {
+      "main": [
+        [
+          {
+            "node": "Process All with Rate Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago"
+  },
+  "active": false
+}

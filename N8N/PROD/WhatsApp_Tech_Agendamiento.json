@@ -76,7 +76,38 @@
     },
     {
       "parameters": {
-        "jsCode": "// Generar slots disponibles (9 AM - 6 PM, Lun-Vie)\nconst existingEvents = $input.all();\nconst occupiedSlots = new Set();\n\n// Mapear eventos existentes\nexistingEvents.forEach(event => {\n  if (event.json.start && event.json.start.dateTime) {\n    occupiedSlots.add(event.json.start.dateTime.substring(0, 16));\n  }\n});\n\nconst availableSlots = [];\nconst now = new Date();\n\n// Generar slots para los próximos 14 días\nfor (let day = 1; day <= 14; day++) {\n  const date = new Date(now);\n  date.setDate(date.getDate() + day);\n  \n  // Solo Lunes a Viernes (0 = Domingo, 6 = Sábado)\n  const dayOfWeek = date.getDay();\n  if (dayOfWeek === 0 || dayOfWeek === 6) continue;\n  \n  // Horarios disponibles: 9:00, 10:00, 11:00, 14:00, 15:00, 16:00, 17:00\n  const hours = [9, 10, 11, 14, 15, 16, 17];\n  \n  for (const hour of hours) {\n    const slotDate = new Date(date);\n    slotDate.setHours(hour, 0, 0, 0);\n    \n    const slotKey = slotDate.toISOString().substring(0, 16);\n    \n    if (!occupiedSlots.has(slotKey)) {\n      const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];\n      const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];\n      \n      availableSlots.push({\n        date: slotDate.toISOString().split('T')[0],\n        time: hour + ':00',\n        datetime: slotDate.toISOString(),\n        displayDate: dias[slotDate.getDay()] + ' ' + slotDate.getDate() + ' de ' + meses[slotDate.getMonth()],\n        displayTime: hour + ':00 hrs'\n      });\n    }\n  }\n}\n\n// Limitar a los próximos 10 slots disponibles\nreturn availableSlots.slice(0, 10).map(slot => ({ json: slot }));"
+        "url": "https://automatizatech.cl/wp-json/automatiza-tech/v1/appointments-config",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [-400, 700],
+      "id": "wa-get-settings-api",
+      "name": "Get Appointments Config API"
+    },
+    {
+      "parameters": {
+        "mode": "multiplex"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [-200, 650],
+      "id": "wa-merge-data",
+      "name": "Merge Calendar and Holidays"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesar datos del API y eventos de calendario\nconst allInputs = $input.all();\n\nlet calendarEvents = [];\nlet dbHolidays = [];\nlet weekSchedule = null;\n\n// Separar eventos de calendario y respuesta del API\nallInputs.forEach(item => {\n  if (item.json.data && item.json.data.holidays) {\n    // Es la respuesta del API de WordPress\n    dbHolidays = item.json.data.holidays || [];\n    weekSchedule = item.json.data.weekSchedule || {};\n  } else if (item.json.start) {\n    // Es un evento del calendario\n    calendarEvents.push(item.json);\n  }\n});\n\nreturn [{\n  json: {\n    calendarEvents: calendarEvents,\n    dbHolidays: dbHolidays,\n    weekSchedule: weekSchedule\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [0, 650],
+      "id": "wa-process-combined-data",
+      "name": "Process Combined Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generar slots disponibles usando configuración dinámica de WordPress\nconst inputData = $input.first().json;\nconst existingEvents = inputData.calendarEvents || [];\nconst dbHolidays = inputData.dbHolidays || [];\nconst weekSchedule = inputData.weekSchedule || {};\nconst occupiedSlots = new Set();\n\n// Mapear eventos existentes\nif (Array.isArray(existingEvents)) {\n  existingEvents.forEach(event => {\n    if (event.start && event.start.dateTime) {\n      occupiedSlots.add(event.start.dateTime.substring(0, 16));\n    }\n  });\n}\n\n// Definir feriados base de Chile (formato: 'YYYY-MM-DD')\n// Estos se combinan con los de la configuración de WordPress\nconst feriadosBase = [\n  // 2025\n  '2025-01-01', // Año Nuevo\n  '2025-04-18', // Viernes Santo\n  '2025-04-19', // Sábado Santo\n  '2025-05-01', // Día del Trabajador\n  '2025-05-21', // Día de las Glorias Navales\n  '2025-06-29', // San Pedro y San Pablo (movido)\n  '2025-07-16', // Día de la Virgen del Carmen\n  '2025-08-15', // Asunción de la Virgen\n  '2025-09-18', // Independencia Nacional\n  '2025-09-19', // Día de las Glorias del Ejército\n  '2025-09-20', // Feriado adicional (puente)\n  '2025-10-12', // Encuentro de Dos Mundos (movido)\n  '2025-10-31', // Día de las Iglesias Evangélicas\n  '2025-11-01', // Día de Todos los Santos\n  '2025-12-08', // Inmaculada Concepción\n  '2025-12-25', // Navidad\n  // 2026\n  '2026-01-01', // Año Nuevo\n  '2026-04-03', // Viernes Santo\n  '2026-04-04', // Sábado Santo\n  '2026-05-01', // Día del Trabajador\n  '2026-05-21', // Día de las Glorias Navales\n  '2026-06-29', // San Pedro y San Pablo\n  '2026-07-16', // Día de la Virgen del Carmen\n  '2026-08-15', // Asunción de la Virgen\n  '2026-09-18', // Independencia Nacional\n  '2026-09-19', // Día de las Glorias del Ejército\n  '2026-10-12', // Encuentro de Dos Mundos\n  '2026-10-31', // Día de las Iglesias Evangélicas\n  '2026-11-01', // Día de Todos los Santos\n  '2026-12-08', // Inmaculada Concepción\n  '2026-12-25'  // Navidad\n];\n\n// Combinar feriados base con los de la configuración de WordPress\nconst todosLosFeriados = [...feriadosBase, ...dbHolidays];\nconst feriadosSet = new Set(todosLosFeriados);\n\n// Mapeo de días\nconst dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];\nconst dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];\nconst meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];\n\nconst availableSlots = [];\nconst now = new Date();\n\n// Generar slots para los próximos 14 días\nfor (let day = 1; day <= 14; day++) {\n  const date = new Date(now);\n  date.setDate(date.getDate() + day);\n  \n  const dayOfWeek = date.getDay();\n  const dayName = dayNames[dayOfWeek];\n  \n  // Verificar si el día está habilitado en la configuración\n  const dayConfig = weekSchedule[dayName] || { enabled: false };\n  if (!dayConfig.enabled) continue;\n  \n  // Verificar si es feriado\n  const dateKey = date.toISOString().split('T')[0];\n  if (feriadosSet.has(dateKey)) continue;\n  \n  // Obtener horarios de inicio y fin del día\n  const startTime = dayConfig.start || '09:00';\n  const endTime = dayConfig.end || '18:00';\n  \n  // Extraer horas de inicio y fin\n  const [startHour] = startTime.split(':').map(Number);\n  const [endHour] = endTime.split(':').map(Number);\n  \n  // Generar slots cada hora dentro del rango configurado\n  for (let hour = startHour; hour < endHour; hour++) {\n    const slotDate = new Date(date);\n    slotDate.setHours(hour, 0, 0, 0);\n    \n    const slotKey = slotDate.toISOString().substring(0, 16);\n    \n    if (!occupiedSlots.has(slotKey)) {\n      availableSlots.push({\n        date: slotDate.toISOString().split('T')[0],\n        time: hour + ':00',\n        datetime: slotDate.toISOString(),\n        displayDate: dias[dayOfWeek] + ' ' + slotDate.getDate() + ' de ' + meses[slotDate.getMonth()],\n        displayTime: hour + ':00 hrs'\n      });\n    }\n  }\n}\n\n// Limitar a los próximos 10 slots disponibles\nreturn availableSlots.slice(0, 10).map(slot => ({ json: slot }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
@@ -251,6 +282,18 @@
       "main": [[{"node": "Send Confirmation", "type": "main", "index": 0}]]
     },
     "Get Calendar Events": {
+      "main": [[
+        {"node": "Merge Calendar and Holidays", "type": "main", "index": 0},
+        {"node": "Get Appointments Config API", "type": "main", "index": 0}
+      ]]
+    },
+    "Get Appointments Config API": {
+      "main": [[{"node": "Merge Calendar and Holidays", "type": "main", "index": 1}]]
+    },
+    "Merge Calendar and Holidays": {
+      "main": [[{"node": "Process Combined Data", "type": "main", "index": 0}]]
+    },
+    "Process Combined Data": {
       "main": [[{"node": "Generate Available Slots", "type": "main", "index": 0}]]
     },
     "Generate Available Slots": {

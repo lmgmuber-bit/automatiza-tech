@@ -7,7 +7,7 @@
           "interval": [
             {
               "field": "minutes",
-              "minutesInterval": 30
+              "minutesInterval": 5
             }
           ]
         }
@@ -16,7 +16,7 @@
       "typeVersion": 1.2,
       "position": [260, 300],
       "id": "cron-1h-wa",
-      "name": "Cada 30 minutos"
+      "name": "Cron cada 5min"
     },
     {
       "parameters": {
@@ -62,58 +62,47 @@
     },
     {
       "parameters": {
-        "batchSize": 1,
-        "options": {}
+        "maxItems": 10
       },
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
       "position": [920, 260],
-      "id": "split-1h-wa",
-      "name": "Process One"
-    },
-    {
-      "parameters": {
-        "amount": 2,
-        "unit": "seconds"
-      },
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [1140, 260],
-      "id": "wait-1h-wa",
-      "name": "Rate Limit"
+      "id": "limit-1h-wa",
+      "name": "Limit 10 Anti-Spam"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://graph.facebook.com/v22.0/{{ $credentials.phoneNumberId }}/messages",
+        "url": "=https://graph.facebook.com/v22.0/946501128543201/messages",
         "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "nodeCredentialType": "whatsAppApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": true,\n    \"body\": \"⏰ *¡Tu cita es en 1 hora!*\\n\\nHola {{ $json.name }}, te recordamos que tu reunión con AutomatizaTech está por comenzar.\\n\\n🕐 *Hora:* {{ $json.scheduled_time }} hrs\\n📍 *Enlace de Meet:* {{ $json.meet_link ? $json.meet_link : 'Te llegó por correo' }}\\n\\n¡Nos vemos pronto! 🚀\"\n  }\n}",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', to: $json.phone, type: 'interactive', interactive: { type: 'button', body: { text: '* Tu cita es en 1 hora! *\n\nHola ' + $json.name + ', te recordamos que tu reunion con AutomatizaTech esta programada para hoy.\n\n* Fecha: * ' + $json.scheduled_date + '\n* Hora: * ' + $json.scheduled_time + ' hrs\n* Enlace: * ' + ($json.meet_link || 'Te llego por correo') + '\n\nPodras asistir?' }, action: { buttons: [{ type: 'reply', reply: { id: 'btn_confirm_' + $json.id, title: 'Si, confirmo' }}, { type: 'reply', reply: { id: 'btn_no_' + $json.id, title: 'No podre' }}] } } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1140, 260],
+      "id": "send-wa-1h",
+      "name": "Send WhatsApp 1h",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "SH8OXr93p852Ll6m",
+          "name": "WhatsApp Tech"
+        }
+      },
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/update-reminder/{{ $json.id }}/1h",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [1360, 260],
-      "id": "send-wa-1h",
-      "name": "Send WhatsApp 1h",
-      "credentials": {
-        "whatsAppBusinessCloudApi": {
-          "id": "TVTLZP26kDJjR0KP",
-          "name": "WhatsApp account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/update-reminder/{{ $('Process One').item.json.id }}/1h",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1580, 260],
       "id": "mark-sent-1h-wa",
       "name": "Mark 1h Sent"
     },
@@ -127,7 +116,7 @@
     }
   ],
   "connections": {
-    "Cada 30 minutos": {
+    "Cron cada 5min": {
       "main": [
         [
           {
@@ -153,7 +142,7 @@
       "main": [
         [
           {
-            "node": "Process One",
+            "node": "Limit 10 Anti-Spam",
             "type": "main",
             "index": 0
           }
@@ -167,18 +156,7 @@
         ]
       ]
     },
-    "Process One": {
-      "main": [
-        [
-          {
-            "node": "Rate Limit",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Rate Limit": {
+    "Limit 10 Anti-Spam": {
       "main": [
         [
           {
@@ -194,17 +172,6 @@
         [
           {
             "node": "Mark 1h Sent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Mark 1h Sent": {
-      "main": [
-        [
-          {
-            "node": "Process One",
             "type": "main",
             "index": 0
           }

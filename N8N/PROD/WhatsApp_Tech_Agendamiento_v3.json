@@ -1,0 +1,665 @@
+{
+  "name": "WhatsApp Tech - Agendamiento (PROD)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-appointments",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [-800, 300],
+      "id": "wa-appointments-webhook",
+      "name": "Appointments Webhook",
+      "webhookId": "whatsapp-appointments"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "phoneNumber",
+              "name": "phoneNumber",
+              "value": "={{ $json.body.phoneNumber }}",
+              "type": "string"
+            },
+            {
+              "id": "phoneNumberId",
+              "name": "phoneNumberId",
+              "value": "={{ $json.body.phoneNumberId }}",
+              "type": "string"
+            },
+            {
+              "id": "contactName",
+              "name": "contactName",
+              "value": "={{ $json.body.contactName || 'Cliente' }}",
+              "type": "string"
+            },
+            {
+              "id": "action",
+              "name": "action",
+              "value": "={{ $json.body.action || 'show_days' }}",
+              "type": "string"
+            },
+            {
+              "id": "selectedDay",
+              "name": "selectedDay",
+              "value": "={{ $json.body.selectedDay }}",
+              "type": "string"
+            },
+            {
+              "id": "selectedTime",
+              "name": "selectedTime",
+              "value": "={{ $json.body.selectedTime }}",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "value": "={{ $json.body.email }}",
+              "type": "string"
+            },
+            {
+              "id": "dateText",
+              "name": "dateText",
+              "value": "={{ $json.body.dateText }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-600, 300],
+      "id": "wa-normalize-input",
+      "name": "Normalize Input"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "show_days",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Mostrar Días"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "show_times",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Mostrar Horarios"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "confirm_booking",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Confirmar Reserva"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "other_date",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Otra Fecha"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "parse_date",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Procesar Fecha Texto"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [-400, 300],
+      "id": "wa-route-action",
+      "name": "Route Action"
+    },
+    {
+      "parameters": {
+        "url": "https://automatizatech.cl/wp-json/automatiza-tech/v1/appointments-config",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [-200, 100],
+      "id": "wa-get-settings-api",
+      "name": "Get Appointments Config"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener configuración de WordPress\nconst config = $input.first().json;\nconst weekSchedule = config.data?.weekSchedule || {};\nconst holidays = config.data?.holidays || [];\n\n// Generar los próximos días disponibles con validación\nconst now = new Date();\nconst days = [];\nlet checkDate = now;\n\nconst dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];\nconst diasES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];\n\nwhile (days.length < 3 && checkDate < new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)) {\n  checkDate = new Date(checkDate.getTime() + 24 * 60 * 60 * 1000);\n  const dayOfWeek = checkDate.getDay();\n  const dayName = dayNames[dayOfWeek];\n  const dateKey = checkDate.toISOString().split('T')[0];\n  \n  // Verificar si el día está habilitado\n  const dayConfig = weekSchedule[dayName] || { enabled: false };\n  if (!dayConfig.enabled) continue;\n  \n  // Verificar si es feriado\n  if (holidays.includes(dateKey)) continue;\n  \n  // Agregar día disponible\n  const [year, month, day] = dateKey.split('-');\n  days.push({\n    date: dateKey,\n    display: `${diasES[dayOfWeek]} ${day}/${month}`,\n    btnId: `day_${dateKey}`\n  });\n}\n\nreturn {\n  json: {\n    ...$('Normalize Input').first().json,\n    availableDays: days\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, 100],
+      "id": "wa-generate-days",
+      "name": "Generate Available Days"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"header\": {\n      \"type\": \"text\",\n      \"text\": \"Agendar Demo\"\n    },\n    \"body\": {\n      \"text\": \"📅 ¡Perfecto {{ $json.contactName }}! Selecciona el día que prefieras para tu demo:\"\n    },\n    \"action\": {\n      \"button\": \"Ver opciones\",\n      \"sections\": [\n        {\n          \"title\": \"Próximas fechas\",\n          \"rows\": [\n            {\n              \"id\": \"{{ $json.availableDays[0].btnId }}\",\n              \"title\": \"{{ $json.availableDays[0].display }}\"\n            },\n            {\n              \"id\": \"{{ $json.availableDays[1].btnId }}\",\n              \"title\": \"{{ $json.availableDays[1].display }}\"\n            },\n            {\n              \"id\": \"{{ $json.availableDays[2].btnId }}\",\n              \"title\": \"{{ $json.availableDays[2].display }}\"\n            },\n            {\n              \"id\": \"other_date\",\n              \"title\": \"📆 Otra fecha\",\n              \"description\": \"Agendar para más adelante\"\n            }\n          ]\n        }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [200, 100],
+      "id": "wa-send-days-buttons",
+      "name": "Send Days Buttons",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "event",
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "primary",
+          "mode": "list"
+        },
+        "returnAll": false,
+        "limit": 20,
+        "options": {
+          "timeMin": "={{ new Date($json.selectedDay + 'T00:00:00').toISOString() }}",
+          "timeMax": "={{ new Date($json.selectedDay + 'T23:59:59').toISOString() }}",
+          "singleEvents": true
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.1,
+      "position": [-200, 300],
+      "alwaysOutputData": true,
+      "id": "wa-get-events",
+      "name": "Get Calendar Events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YOUR_GOOGLE_CALENDAR_CREDENTIAL_ID",
+          "name": "Google Calendar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://automatizatech.cl/wp-json/automatiza-tech/v1/appointments-config",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [-200, 400],
+      "id": "wa-get-settings-api-2",
+      "name": "Get Appointments Config 2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener eventos del día y configuración\nconst events = $input.all().filter(i => i.json.start);\nconst config = $input.all().filter(i => i.json.data)[0]?.json || {};\nconst inputData = $('Normalize Input').first().json;\n\nconst selectedDay = inputData.selectedDay;\nconst weekSchedule = config.data?.weekSchedule || {};\n\n// Obtener día de la semana\nconst date = new Date(selectedDay + 'T12:00:00');\nconst dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];\nconst dayName = dayNames[date.getDay()];\nconst dayConfig = weekSchedule[dayName] || { enabled: true, start: '09:00', end: '18:00' };\n\nif (!dayConfig.enabled) {\n  return {\n    json: {\n      ...inputData,\n      hasAvailability: false,\n      message: 'Lo siento, ese día no hay atención disponible. ¿Te gustaría elegir otro día?'\n    }\n  };\n}\n\n// Obtener horarios ocupados\nconst busySlots = [];\nfor (const event of events) {\n  if (event.json.start && event.json.start.dateTime) {\n    const startTime = new Date(event.json.start.dateTime);\n    busySlots.push(startTime.getHours() + ':00');\n  }\n}\n\n// Generar horarios disponibles según configuración\nconst [startHour] = dayConfig.start.split(':').map(Number);\nconst [endHour] = dayConfig.end.split(':').map(Number);\n\nconst allSlots = [];\nfor (let hour = startHour; hour < endHour; hour++) {\n  allSlots.push(hour + ':00');\n}\n\nconst availableSlots = allSlots.filter(slot => !busySlots.includes(slot));\n\nif (availableSlots.length === 0) {\n  return {\n    json: {\n      ...inputData,\n      hasAvailability: false,\n      message: 'Lo siento, no hay horarios disponibles para ese día. ¿Te gustaría elegir otro día?'\n    }\n  };\n}\n\n// Tomar los primeros 3 disponibles\nconst slotsToShow = availableSlots.slice(0, 3);\nconst formattedSlots = slotsToShow.map(slot => ({\n  time: slot,\n  display: slot + ' hrs',\n  btnId: `time_${selectedDay}_${slot.replace(':', '')}`\n}));\n\nreturn {\n  json: {\n    ...inputData,\n    hasAvailability: true,\n    availableSlots: formattedSlots\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, 350],
+      "id": "wa-find-slots",
+      "name": "Find Available Slots"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.hasAvailability }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [200, 350],
+      "id": "wa-has-availability",
+      "name": "Has Availability?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"button\",\n    \"body\": {\n      \"text\": \"⏰ Horarios disponibles para el {{ new Date($json.selectedDay + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }) }}:\\n\\nSelecciona tu horario preferido:\"\n    },\n    \"action\": {\n      \"buttons\": [\n        {\n          \"type\": \"reply\",\n          \"reply\": {\n            \"id\": \"{{ $json.availableSlots[0].btnId }}\",\n            \"title\": \"{{ $json.availableSlots[0].display }}\"\n          }\n        }{{ $json.availableSlots[1] ? ',{\"type\":\"reply\",\"reply\":{\"id\":\"' + $json.availableSlots[1].btnId + '\",\"title\":\"' + $json.availableSlots[1].display + '\"}}' : '' }}{{ $json.availableSlots[2] ? ',{\"type\":\"reply\",\"reply\":{\"id\":\"' + $json.availableSlots[2].btnId + '\",\"title\":\"' + $json.availableSlots[2].display + '\"}}' : '' }}\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [400, 300],
+      "id": "wa-send-times-buttons",
+      "name": "Send Times Buttons",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"😕 {{ $json.message }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [400, 450],
+      "id": "wa-send-no-availability",
+      "name": "Send No Availability",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"📧 ¡Excelente elección!\\n\\nHas seleccionado:\\n📅 {{ new Date($json.selectedDay + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }) }}\\n⏰ {{ $json.selectedTime }} hrs\\n\\nPor favor, escribe tu correo electrónico para enviarte la invitación con el enlace de Google Meet:\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [-200, 600],
+      "id": "wa-ask-email",
+      "name": "Ask For Email",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "date",
+              "name": "date",
+              "value": "={{ $('Normalize Input').first().json.selectedDay }}",
+              "type": "string"
+            },
+            {
+              "id": "time",
+              "name": "time",
+              "value": "={{ $('Normalize Input').first().json.selectedTime }}",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "value": "={{ $('Normalize Input').first().json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "name",
+              "name": "name",
+              "value": "={{ $('Normalize Input').first().json.contactName }}",
+              "type": "string"
+            },
+            {
+              "id": "phone",
+              "name": "phone",
+              "value": "={{ $('Normalize Input').first().json.phoneNumber }}",
+              "type": "string"
+            },
+            {
+              "id": "session_id",
+              "name": "session_id",
+              "value": "=whatsapp_{{ $('Normalize Input').first().json.phoneNumber }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [0, 600],
+      "id": "wa-prepare-booking",
+      "name": "Prepare Booking Data"
+    },
+    {
+      "parameters": {
+        "workflowId": "PejBgr2LZQSAbbBy",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [200, 600],
+      "id": "wa-create-appointment",
+      "name": "Create Appointment"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $('Normalize Input').first().json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $('Normalize Input').first().json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"{{ $json.result }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [400, 600],
+      "id": "wa-send-confirmation",
+      "name": "Send Confirmation",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"📆 ¡Perfecto! Tienes dos opciones para agendar una fecha más adelante:\\n\\n1️⃣ *Escríbeme la fecha exacta* que deseas (por ejemplo: '15 de enero a las 14:00')\\n\\n2️⃣ *Agenda directamente desde la web:*\\nhttps://automatizatech.cl/#AgendarDemo\\n\\n¿Qué prefieres?\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [-200, 800],
+      "id": "wa-send-other-date-options",
+      "name": "Send Other Date Options",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://automatizatech.cl/wp-json/automatiza-tech/v1/appointments-config",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [-200, 1000],
+      "id": "wa-get-config-for-parsing",
+      "name": "Get Config For Date Parsing"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parsear fecha en texto natural español\nconst inputData = $('Normalize Input').first().json;\nconst config = $input.first().json;\nconst dateText = (inputData.dateText || '').toLowerCase().trim();\n\nconst weekSchedule = config.data?.weekSchedule || {};\nconst holidays = config.data?.holidays || [];\n\n// Meses en español\nconst meses = {\n  'enero': 0, 'ene': 0,\n  'febrero': 1, 'feb': 1,\n  'marzo': 2, 'mar': 2,\n  'abril': 3, 'abr': 3,\n  'mayo': 4, 'may': 4,\n  'junio': 5, 'jun': 5,\n  'julio': 6, 'jul': 6,\n  'agosto': 7, 'ago': 7,\n  'septiembre': 8, 'sep': 8, 'sept': 8,\n  'octubre': 9, 'oct': 9,\n  'noviembre': 10, 'nov': 10,\n  'diciembre': 11, 'dic': 11\n};\n\nconst dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];\n\nlet parsedDate = null;\nlet parsedTime = null;\n\n// Patrones de fecha: \"15 de enero\", \"15 enero\", \"enero 15\"\nconst datePatterns = [\n  /(\\d{1,2})\\s*(?:de)?\\s*(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|ene|feb|mar|abr|may|jun|jul|ago|sep|sept|oct|nov|dic)/i,\n  /(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|ene|feb|mar|abr|may|jun|jul|ago|sep|sept|oct|nov|dic)\\s*(\\d{1,2})/i\n];\n\nfor (const pattern of datePatterns) {\n  const match = dateText.match(pattern);\n  if (match) {\n    const day = parseInt(match[1]) || parseInt(match[2]);\n    const monthName = (match[2] || match[1]).toLowerCase();\n    const month = meses[monthName];\n    \n    if (month !== undefined && day >= 1 && day <= 31) {\n      const now = new Date();\n      let year = now.getFullYear();\n      \n      // Si el mes ya pasó este año, usar el año siguiente\n      if (month < now.getMonth() || (month === now.getMonth() && day < now.getDate())) {\n        year++;\n      }\n      \n      parsedDate = new Date(year, month, day);\n      break;\n    }\n  }\n}\n\n// Patrones de hora: \"14:00\", \"2 pm\", \"14 horas\", \"a las 14\"\nconst timePatterns = [\n  /(\\d{1,2}):(\\d{2})/,\n  /(?:a las|las)?\\s*(\\d{1,2})\\s*(?:hrs?|horas?)?/i,\n  /(\\d{1,2})\\s*(?:am|pm)/i\n];\n\nfor (const pattern of timePatterns) {\n  const match = dateText.match(pattern);\n  if (match) {\n    let hour = parseInt(match[1]);\n    const minute = match[2] ? parseInt(match[2]) : 0;\n    \n    // Manejar AM/PM\n    if (dateText.includes('pm') && hour < 12) {\n      hour += 12;\n    } else if (dateText.includes('am') && hour === 12) {\n      hour = 0;\n    }\n    \n    if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {\n      parsedTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;\n      break;\n    }\n  }\n}\n\n// Validar que se pudo parsear\nif (!parsedDate || !parsedTime) {\n  return {\n    json: {\n      ...inputData,\n      isValid: false,\n      error: 'No pude entender la fecha. Por favor usa el formato: \"15 de enero a las 14:00\" o agenda desde la web.'\n    }\n  };\n}\n\nconst dateKey = parsedDate.toISOString().split('T')[0];\nconst dayOfWeek = parsedDate.getDay();\nconst dayName = dayNames[dayOfWeek];\n\n// Validar que no sea pasado\nconst now = new Date();\nif (parsedDate < now) {\n  return {\n    json: {\n      ...inputData,\n      isValid: false,\n      error: 'Esa fecha ya pasó. Por favor elige una fecha futura.'\n    }\n  };\n}\n\n// Validar que el día esté habilitado\nconst dayConfig = weekSchedule[dayName] || { enabled: false };\nif (!dayConfig.enabled) {\n  const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];\n  return {\n    json: {\n      ...inputData,\n      isValid: false,\n      error: `Lo siento, los ${dias[dayOfWeek]}s no hay atención disponible. Por favor elige otro día.`\n    }\n  };\n}\n\n// Validar que no sea feriado\nif (holidays.includes(dateKey)) {\n  return {\n    json: {\n      ...inputData,\n      isValid: false,\n      error: 'Ese día es feriado o está bloqueado. Por favor elige otra fecha.'\n    }\n  };\n}\n\n// Validar horario dentro del rango configurado\nconst [startHour] = dayConfig.start.split(':').map(Number);\nconst [endHour] = dayConfig.end.split(':').map(Number);\nconst [requestHour] = parsedTime.split(':').map(Number);\n\nif (requestHour < startHour || requestHour >= endHour) {\n  return {\n    json: {\n      ...inputData,\n      isValid: false,\n      error: `El horario de atención ese día es de ${dayConfig.start} a ${dayConfig.end} hrs. Por favor elige un horario dentro de ese rango.`\n    }\n  };\n}\n\n// Todo válido\nreturn {\n  json: {\n    ...inputData,\n    isValid: true,\n    selectedDay: dateKey,\n    selectedTime: parsedTime,\n    parsedDateDisplay: parsedDate.toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' })\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, 1000],
+      "id": "wa-parse-date-text",
+      "name": "Parse Date from Text"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.isValid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [200, 1000],
+      "id": "wa-is-date-valid",
+      "name": "Is Date Valid?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"❌ {{ $json.error }}\\n\\nTambién puedes agendar directamente desde la web:\\nhttps://automatizatech.cl/#AgendarDemo\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [400, 1100],
+      "id": "wa-send-date-error",
+      "name": "Send Date Error",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.phoneNumberId }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"📧 ¡Perfecto!\\n\\nHas elegido:\\n📅 {{ $json.parsedDateDisplay }}\\n⏰ {{ $json.selectedTime }} hrs\\n\\nPor favor, escribe tu correo electrónico para enviarte la invitación con el enlace de Google Meet:\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [400, 900],
+      "id": "wa-ask-email-custom-date",
+      "name": "Ask Email for Custom Date",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Appointments Webhook": {
+      "main": [[{"node": "Normalize Input", "type": "main", "index": 0}]]
+    },
+    "Normalize Input": {
+      "main": [[{"node": "Route Action", "type": "main", "index": 0}]]
+    },
+    "Route Action": {
+      "main": [
+        [{"node": "Get Appointments Config", "type": "main", "index": 0}],
+        [
+          {"node": "Get Calendar Events", "type": "main", "index": 0},
+          {"node": "Get Appointments Config 2", "type": "main", "index": 0}
+        ],
+        [{"node": "Ask For Email", "type": "main", "index": 0}],
+        [{"node": "Send Other Date Options", "type": "main", "index": 0}],
+        [{"node": "Get Config For Date Parsing", "type": "main", "index": 0}]
+      ]
+    },
+    "Get Config For Date Parsing": {
+      "main": [[{"node": "Parse Date from Text", "type": "main", "index": 0}]]
+    },
+    "Parse Date from Text": {
+      "main": [[{"node": "Is Date Valid?", "type": "main", "index": 0}]]
+    },
+    "Is Date Valid?": {
+      "main": [
+        [{"node": "Ask Email for Custom Date", "type": "main", "index": 0}],
+        [{"node": "Send Date Error", "type": "main", "index": 0}]
+      ]
+    },
+    "Ask Email for Custom Date": {
+      "main": [[{"node": "Prepare Booking Data", "type": "main", "index": 0}]]
+    },
+    "Get Appointments Config": {
+      "main": [[{"node": "Generate Available Days", "type": "main", "index": 0}]]
+    },
+    "Generate Available Days": {
+      "main": [[{"node": "Send Days Buttons", "type": "main", "index": 0}]]
+    },
+    "Get Calendar Events": {
+      "main": [[{"node": "Find Available Slots", "type": "main", "index": 0}]]
+    },
+    "Get Appointments Config 2": {
+      "main": [[{"node": "Find Available Slots", "type": "main", "index": 0}]]
+    },
+    "Find Available Slots": {
+      "main": [[{"node": "Has Availability?", "type": "main", "index": 0}]]
+    },
+    "Has Availability?": {
+      "main": [
+        [{"node": "Send Times Buttons", "type": "main", "index": 0}],
+        [{"node": "Send No Availability", "type": "main", "index": 0}]
+      ]
+    },
+    "Ask For Email": {
+      "main": [[{"node": "Prepare Booking Data", "type": "main", "index": 0}]]
+    },
+    "Prepare Booking Data": {
+      "main": [[{"node": "Create Appointment", "type": "main", "index": 0}]]
+    },
+    "Create Appointment": {
+      "main": [[{"node": "Send Confirmation", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago",
+    "saveManualExecutions": true
+  },
+  "versionId": "wa-appointments-v3",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "automatizatech-whatsapp"
+  },
+  "id": "WhatsApp_Tech_Agendamiento",
+  "tags": []
+}

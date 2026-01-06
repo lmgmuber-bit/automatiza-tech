@@ -320,7 +320,7 @@ chmod 644 logo-automatiza-tech.png
 
 ### Contacto Técnico
 - Email: automatizatech.bots@gmail.com
-- WhatsApp: +56 9 4033 1127
+- WhatsApp: +56 9 2700 2984
 - Web: https://automatizatech.cl
 
 ---

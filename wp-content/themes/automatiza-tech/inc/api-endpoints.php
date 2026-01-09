@@ -464,9 +464,9 @@ function automatiza_tech_check_availability($request) {
     $start_time = $settings[$day_name]['start'];
     $end_time = $settings[$day_name]['end'];
 
-    // 2. Get Booked Slots from DB
+    // 2. Get Booked Slots from DB (excluyendo citas canceladas)
     $booked_results = $wpdb->get_results($wpdb->prepare(
-        "SELECT scheduled_time FROM $table_name WHERE scheduled_date = %s",
+        "SELECT scheduled_time FROM $table_name WHERE scheduled_date = %s AND (status IS NULL OR status != 'cancelled')",
         $date
     ));
 
@@ -580,9 +580,9 @@ function automatiza_tech_get_leads_for_reminders($request) {
     $leads = [];
 
     if ($type === '72h') {
-        // Citas entre 48 y 96 horas antes
+        // Citas entre 26 y 96 horas antes (de 1 a 4 días, NO dice "mañana")
         // EMAIL: Solo verificar que no se haya enviado por EMAIL (se envía 1 vez por canal)
-        $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 48 hours'));
+        $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 26 hours'));
         $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 96 hours'));
         
         $leads = $wpdb->get_results($wpdb->prepare(
@@ -594,10 +594,10 @@ function automatiza_tech_get_leads_for_reminders($request) {
             $start_range, $end_range, $now
         ));
     } elseif ($type === '24h') {
-        // Citas entre 2 y 48 horas antes
+        // Citas entre 2 y 26 horas antes (realmente "mañana", no 2 días)
         // EMAIL: Solo verificar que no se haya enviado por EMAIL (se envía 1 vez por canal)
         $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 2 hours'));
-        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 48 hours'));
+        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 26 hours'));
 
         $leads = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM $table_name 
@@ -608,10 +608,10 @@ function automatiza_tech_get_leads_for_reminders($request) {
             $start_range, $end_range, $now
         ));
     } elseif ($type === '1h') {
-        // Citas entre 30 minutos y 2 horas antes
+        // Citas entre 30 minutos y 1 hora 15 minutos antes
         // EMAIL: Solo verificar que no se haya enviado por EMAIL (se envía 1 vez por canal)
         $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 30 minutes'));
-        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 2 hours'));
+        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 1 hour 15 minutes'));
 
         $leads = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM $table_name 
@@ -721,8 +721,8 @@ function automatiza_tech_get_leads_for_reminders_wa($request) {
     $leads = [];
 
     if ($type === '72h') {
-        // WHATSAPP: Solo verificar que no se haya enviado por WHATSAPP (se envía 1 vez por canal)
-        $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 48 hours'));
+        // WHATSAPP 72h: Citas entre 26 y 96 horas (NO dice "mañana")
+        $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 26 hours'));
         $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 96 hours'));
         
         $leads = $wpdb->get_results($wpdb->prepare(
@@ -735,9 +735,9 @@ function automatiza_tech_get_leads_for_reminders_wa($request) {
             $start_range, $end_range, $now
         ));
     } elseif ($type === '24h') {
-        // WHATSAPP: Solo verificar que no se haya enviado por WHATSAPP (se envía 1 vez por canal)
+        // WHATSAPP 24h: Citas entre 2 y 26 horas (realmente "mañana")
         $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 2 hours'));
-        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 48 hours'));
+        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 26 hours'));
 
         $leads = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM $table_name 
@@ -749,18 +749,22 @@ function automatiza_tech_get_leads_for_reminders_wa($request) {
             $start_range, $end_range, $now
         ));
     } elseif ($type === '1h') {
-        // WHATSAPP 1h: Se envía MÚLTIPLES VECES cada 30min hasta que el usuario CONFIRME
+        // WHATSAPP 1h: Se envía UNA VEZ cuando la cita está entre 30min y 1h 15min
+        // Si el usuario no confirma, puede recibir otro recordatorio en el próximo ciclo
+        // PERO solo si han pasado al menos 30 minutos desde el último envío
         $start_range = date('Y-m-d H:i:s', strtotime($now . ' + 30 minutes'));
-        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 2 hours'));
+        $end_range = date('Y-m-d H:i:s', strtotime($now . ' + 1 hour 15 minutes'));
         
         // Debug log
         error_log("WA 1h Reminder - Now: $now, Start: $start_range, End: $end_range");
 
-        // Verificar confirmación general Y específica de 1h
+        // Solo enviar si NO se ha enviado aún (recordatorio1h_wa = 0)
+        // O si el usuario no ha confirmado aún
         $leads = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM $table_name 
              WHERE CONCAT(scheduled_date, ' ', scheduled_time) BETWEEN %s AND %s 
              AND CONCAT(scheduled_date, ' ', scheduled_time) > %s
+             AND (recordatorio1h_wa IS NULL OR recordatorio1h_wa = 0)
              AND (confirmed_attendance IS NULL OR confirmed_attendance = 0)
              AND (confirmed_attendance1h IS NULL OR confirmed_attendance1h = 0)
              AND (confirmed_attendance1h_wa IS NULL OR confirmed_attendance1h_wa = 0)

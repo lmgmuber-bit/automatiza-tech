@@ -1,0 +1,2951 @@
+{
+  "name": "WhatsApp Bot - Demo Template v6 Redis (Google Sheets)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        142432,
+        60944
+      ],
+      "id": "1c8ef7a6-40f1-443e-9bae-28ad00c88398",
+      "name": "📖 INSTRUCCIONES",
+      "notes": "# 🚀 WhatsApp Bot Demo v6 Redis (Google Sheets)\n\n## 📋 Características\n- ✅ Servicios con duración y precio parametrizable\n- ✅ Bloqueos de horarios (únicos, diarios, anuales)\n- ✅ **Buffer Redis v6**: Sistema atómico de cola con ciclo de re-lectura\n- ✅ Notas de voz: recibe audio → transcribe → responde con audio\n- ✅ Validación de servicio antes de seleccionar día\n- ✅ Cancelación de citas con confirmación\n\n## ⚙️ CONFIGURACIÓN REDIS (REQUERIDO)\n\n**Antes de usar este workflow, debes:**\n1. Tener un servidor Redis disponible (Redis Cloud, local, o Docker)\n2. Crear credenciales Redis en n8n: Settings → Credentials → + → Redis\n3. Actualizar los 3 nodos Redis (Push, Get, Delete) con tus credenciales\n\n## 🔄 Sistema de Buffer v6 (Redis con Ciclo)\n\n**Flujo con CICLO** (atómico y robusto):\n```\nWebhook → Redis Push → Redis Get → Check Message Status\n                           ↑              ↓↓↓\n                           ├── Wait 7s ← Esperar\n                           │             Ignorar ──→ (fin)\n                           └────────── Procesar → Redis Delete → Concat → IA\n```\n\n**Lógica de 4 salidas**:\n1. **Ignorar**: sessionID actual ≠ último en Redis (otra ejecución procesará)\n2. **Procesar (Audio)**: Si es audio → procesar inmediatamente (sin esperar 7s)\n3. **Procesar (Tiempo)**: último mensaje tiene +7 segundos → Limpiar cola y procesar\n4. **Esperar**: fallback → Wait 7s → Vuelve a Redis Get (CICLO)\n\n**Por qué Redis?**\n- staticData NO es atómico entre ejecuciones paralelas\n- Redis garantiza operaciones atómicas\n- El ciclo permite re-verificar después de cada Wait\n\n**Resultado**: Múltiples mensajes rápidos → 1 respuesta ✅"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "KellsCapilar",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        142432,
+        62184
+      ],
+      "id": "90023071-8ff8-4d84-a5e9-5ad7f0fc9870",
+      "name": "WhatsApp Webhook",
+      "webhookId": "whatsapp-demo-webhook"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "whatsapp.inbound_message.received",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "filter-inbound"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ClienteEscribe"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "whatsapp.smb.message.echoes",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "filter-echo"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DuenoResponde"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        142656,
+        62184
+      ],
+      "id": "3b84cf47-f4f2-461a-888b-4498b94b7995",
+      "name": "Filter Event Type"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        142880,
+        62280
+      ],
+      "id": "7830430d-3c36-4620-b3a1-69931aa166f8",
+      "name": "🔇 Dueño Respondió (Silencio)"
+    },
+    {
+      "parameters": {
+        "path": "whatsapp-demo-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        142432,
+        61168
+      ],
+      "id": "e9d3eb26-3311-436f-bed4-a508f13e55da",
+      "name": "Verify Webhook (GET)",
+      "webhookId": "whatsapp-demo-webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        142656,
+        61168
+      ],
+      "id": "b57f6993-1eed-4fc6-a0f6-cf7f53a0ddf1",
+      "name": "Respond Challenge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.whatsappInboundMessage?.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              },
+              "id": "f829ad92-aa9e-4b03-9552-c5657757d533"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        142880,
+        62088
+      ],
+      "id": "d8a30299-d713-4add-87bc-6b66537b6202",
+      "name": "Has Message?"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"phoneNumber\": \"{{ $json.body.whatsappInboundMessage.from }}\",\n  \"businessPhone\": \"{{ $json.body.whatsappInboundMessage.to }}\",\n  \"messageId\": \"{{ $json.body.whatsappInboundMessage.id }}\",\n  \"messageType\": \"{{ $json.body.whatsappInboundMessage.type }}\",\n  \"contactName\": \"{{ $json.body.whatsappInboundMessage.customerProfile?.name || $json.body.whatsappInboundMessage.from }}\",\n  \"phoneNumberId\": \"{{ $json.body.whatsappInboundMessage.wabaId }}\",\n  \"textContent\": {{ JSON.stringify($json.body.whatsappInboundMessage.text?.body || $json.body.whatsappInboundMessage.button?.payload || $json.body.whatsappInboundMessage.interactive?.button_reply?.id || $json.body.whatsappInboundMessage.interactive?.list_reply?.id || '') }},\n  \"audioId\": \"{{ $json.body.whatsappInboundMessage.audio?.id || '' }}\",\n  \"audioLink\": \"{{ $json.body.whatsappInboundMessage.audio?.link || '' }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        143104,
+        62088
+      ],
+      "id": "6faf1e43-7bc5-480f-8b6e-f4f30674b9eb",
+      "name": "Extract Message Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Deduplicación mejorada con limpieza automática\nconst messageId = $input.first().json.messageId;\nconst staticData = $getWorkflowStaticData('global');\nconst now = Date.now();\n\nif (!staticData.processedIds) staticData.processedIds = {};\n\n// Limpiar IDs antiguos (más de 1 hora)\nfor (const id in staticData.processedIds) {\n  if (now - staticData.processedIds[id] > 3600000) {\n    delete staticData.processedIds[id];\n  }\n}\n\nif (staticData.processedIds[messageId]) return [];\n\nstaticData.processedIds[messageId] = now;\n\nreturn [{ json: $input.first().json }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        143328,
+        62088
+      ],
+      "id": "0e8553ed-8ec7-4695-b9c9-c4db8129e11e",
+      "name": "Deduplication"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.messageType }}",
+              "rightValue": "audio",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        143552,
+        62088
+      ],
+      "id": "31e89750-a30c-4ecd-9060-2dba024a3c7a",
+      "name": "Is Audio?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        143776,
+        62160
+      ],
+      "id": "ed7ac965-66d0-4891-bd84-6c07414be164",
+      "name": "Get Audio URL"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Extract Message Data').first().json.audioLink }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        144000,
+        62160
+      ],
+      "id": "66470c9f-02b3-4afe-a0e8-41d3c7a05a78",
+      "name": "Download Audio",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.3,
+      "position": [
+        144224,
+        62160
+      ],
+      "id": "56def779-0c04-49ce-8812-e442ce1a4b2c",
+      "name": "Transcribe Audio (Whisper)",
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"phoneNumber\": \"{{ $('Extract Message Data').first().json.phoneNumber }}\",\n  \"businessPhone\": \"{{ $('Extract Message Data').first().json.businessPhone }}\",\n  \"messageId\": \"{{ $('Extract Message Data').first().json.messageId }}\",\n  \"messageType\": \"text\",\n  \"contactName\": \"{{ $('Extract Message Data').first().json.contactName }}\",\n  \"phoneNumberId\": \"{{ $('Extract Message Data').first().json.phoneNumberId }}\",\n  \"textContent\": {{ JSON.stringify($json.text || '') }},\n  \"audioId\": \"\",\n  \"isFromAudio\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        144448,
+        62160
+      ],
+      "id": "ee1aaa2b-7fff-4fc9-b8e8-07c1cc5190da",
+      "name": "Audio to Text"
+    },
+    {
+      "parameters": {
+        "operation": "push",
+        "list": "={{ $json.phoneNumber }}",
+        "messageData": "={{ JSON.stringify({ message: $json.textContent, sessionID: $json.messageId, date_time: new Date().toISOString(), phoneNumber: $json.phoneNumber, contactName: $json.contactName, phoneNumberId: $json.phoneNumberId, businessPhone: $json.businessPhone, isFromAudio: $json.isFromAudio || false }) }}",
+        "tail": true,
+        "options": {
+          "dotNotation": false
+        }
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        144672,
+        62088
+      ],
+      "id": "55383bbb-2a3e-49bb-8b6a-84190ef84ae4",
+      "name": "Redis Push",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "Mensaje",
+        "key": "={{ $json.phoneNumber || $input.first().json.phoneNumber || $('Extract Message Data').first().json.phoneNumber }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        144896,
+        62088
+      ],
+      "id": "c270f944-f9ef-42e4-9bb5-038f56ee0d9c",
+      "name": "Redis Get",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ JSON.parse($json.Mensaje.filter(m => m.trim().startsWith('{')).slice(-1)[0]).sessionID }}",
+                    "rightValue": "={{ $('Redis Push').item.json.messageData ? JSON.parse($('Redis Push').item.json.messageData).sessionID : $('Extract Message Data').first().json.messageId }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Ignorar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ (() => { const msgs = $json.Mensaje || []; for (const m of msgs) { try { const p = JSON.parse(m); if (p.isFromAudio) return true; } catch(e) {} } return false; })() }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Procesar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ new Date(JSON.parse($json.Mensaje.filter(m => m.trim().startsWith('{')).slice(-1)[0]).date_time) }}",
+                    "rightValue": "={{ new Date(Date.now() - 7000) }}",
+                    "operator": {
+                      "type": "dateTime",
+                      "operation": "before"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Procesar"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Esperar"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        145120,
+        62088
+      ],
+      "id": "28735a7f-dbd7-4e9f-b6c1-b23bf772a5a7",
+      "name": "Check Message Status"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "={{ (() => { const msgs = $json.Mensaje || []; for (const m of msgs) { try { const p = JSON.parse(m); if (p.phoneNumber) return p.phoneNumber; } catch(e) {} } return ''; })() }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        145344,
+        62000
+      ],
+      "id": "redis-delete-buffer",
+      "name": "Redis Delete",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine Messages - Detectar acciones interactivas con prioridad\nconst messages = $json.Mensaje || [];\n\n// Parsear todos los mensajes y filtrar solo los del buffer (que tienen phoneNumber)\nconst parsed = [];\nlet phoneNumber = '';\nlet contactName = '';\nlet phoneNumberId = '';\nlet businessPhone = '';\nlet isFromAudio = false;\n\nfor (const m of messages) {\n  try {\n    const p = JSON.parse(m);\n    // Solo considerar mensajes del buffer (tienen phoneNumber y message)\n    if (p.phoneNumber && p.message !== undefined) {\n      parsed.push(p);\n      // Guardar datos del usuario del primer mensaje válido\n      if (!phoneNumber) {\n        phoneNumber = p.phoneNumber;\n        contactName = p.contactName || '';\n        phoneNumberId = p.phoneNumberId || '';\n        businessPhone = p.businessPhone || '';\n      }\n      // Si alguno fue de audio\n      if (p.isFromAudio) isFromAudio = true;\n    }\n  } catch(e) {}\n}\n\n// Buscar si hay alguna acción interactiva (prioridad al ÚLTIMO mensaje con acción)\nconst actionPrefixes = ['svc_', 'day_', 'time_', 'cancel_confirm_', 'cancel_keep'];\nlet interactiveAction = null;\n\nfor (let i = parsed.length - 1; i >= 0; i--) {\n  const msg = parsed[i].message || '';\n  for (const prefix of actionPrefixes) {\n    if (msg.startsWith(prefix) || msg === prefix.replace('_', '')) {\n      interactiveAction = msg;\n      break;\n    }\n  }\n  if (interactiveAction) break;\n}\n\n// Si hay acción interactiva, usar SOLO esa acción\n// Si no hay, concatenar todos los mensajes para la IA\nconst textContent = interactiveAction || parsed.map(p => p.message).join(' ');\n\nreturn {\n  json: {\n    textContent,\n    phoneNumber,\n    contactName,\n    phoneNumberId,\n    businessPhone,\n    isFromAudio,\n    hasInteractiveAction: !!interactiveAction\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        145568,
+        62000
+      ],
+      "id": "concat-messages-node",
+      "name": "Combine Messages"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ JSON.stringify({ phoneNumber: (() => { const msgs = $json.Mensaje || []; for (const m of msgs) { try { const p = JSON.parse(m); if (p.phoneNumber) return p.phoneNumber; } catch(e) {} } return ''; })() }) }}"
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        145200,
+        62200
+      ],
+      "id": "prepare-wait-data",
+      "name": "Prepare Wait Data"
+    },
+    {
+      "parameters": {
+        "amount": 7,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        145400,
+        62200
+      ],
+      "id": "wait-7-sec-buffer",
+      "name": "Wait 7s",
+      "webhookId": "buffer-wait-resume"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.textContent }}",
+                    "rightValue": "svc_",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "id": "c71861c2-591d-4c3a-807f-366c6648383a"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Servicio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.textContent }}",
+                    "rightValue": "day_",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "id": "367ad62e-5f99-40ad-88bf-ca0e0f6ea900"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Día"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.textContent }}",
+                    "rightValue": "time_",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "id": "e9ddd79a-9be5-4a2c-bef4-2eb0a3ad0ee4"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Hora"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.textContent }}",
+                    "rightValue": "cancel_confirm_",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "id": "dd35aa3c-fca2-4611-84da-5770b1afe9d8"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ConfirmarCancel"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.textContent }}",
+                    "rightValue": "cancel_keep",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "7154cdbd-b41c-4579-8f34-be4c43b12828"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "MantenerCita"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        145568,
+        62024
+      ],
+      "id": "d5ae9fa2-2352-4f47-8441-37f4b9d8edd7",
+      "name": "Tipo de Mensaje"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Servicios",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        147264,
+        61896
+      ],
+      "id": "5402ad32-6c17-4019-b07f-0f42d72bc7ed",
+      "name": "Read Servicios",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Construir listas de servicios para WhatsApp (máx 10 por mensaje)\nconst rows = $input.all().map(i => i.json).filter(r => r.id && r.nombre && r.duracion_min);\nconst maxPerMessage = 10;\nconst totalServices = rows.length;\nconst totalMessages = Math.ceil(totalServices / maxPerMessage);\n\n// Dividir en chunks de 10\nconst chunks = [];\nfor (let i = 0; i < totalServices; i += maxPerMessage) {\n  chunks.push(rows.slice(i, i + maxPerMessage));\n}\n\n// Retornar un item por cada chunk\nreturn chunks.map((chunk, index) => {\n  const start = index * maxPerMessage + 1;\n  const end = Math.min((index + 1) * maxPerMessage, totalServices);\n  \n  const listRows = chunk.map(r => ({\n    id: `svc_${r.id}`,\n    title: String(r.nombre).slice(0, 24),\n    description: `${r.duracion_min} min - ${r.precio || 'Consultar'}`.slice(0, 72),\n  }));\n  \n  const headerText = totalMessages === 1 \n    ? '🛍️ Servicios' \n    : `🛍️ Servicios (${index + 1}/${totalMessages})`;\n  \n  const bodyText = index === 0\n    ? `Selecciona el servicio que deseas agendar (${totalServices} disponibles):`\n    : `Más servicios disponibles (${start}-${end} de ${totalServices}):`;\n  \n  return { json: { services: rows, listRows, headerText, bodyText, chunkIndex: index, totalChunks: totalMessages } };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        147488,
+        61896
+      ],
+      "id": "09f88fd7-c84b-4a7d-b309-6b4f8b2dd086",
+      "name": "Build Services List"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.ycloud.com/v2/whatsapp/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $('Combine Messages').first().json.phoneNumber }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"header\": {\n      \"type\": \"text\",\n      \"text\": \"{{ $json.headerText }}\"\n    },\n    \"body\": {\n      \"text\": \"{{ $json.bodyText }}\"\n    },\n    \"action\": {\n      \"button\": \"Ver servicios\",\n      \"sections\": [\n        {\n          \"title\": \"Servicios disponibles\",\n          \"rows\": {{ JSON.stringify($json.listRows) }}\n        }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        147712,
+        61896
+      ],
+      "id": "ef896691-b92a-436f-b8fd-2f912bab896f",
+      "name": "Send Services List",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Servicios",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        145792,
+        61392
+      ],
+      "id": "18ba3b2b-ad8d-4bff-a289-319c62c6d73d",
+      "name": "Get Servicios",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Guardar servicio seleccionado (duración) en staticData por teléfono\nconst payload = $('Combine Messages').first().json;\nconst selectedId = String(payload.textContent || '').replace('svc_', '');\nconst services = $input.all().map(i => i.json);\nconst svc = services.find(s => String(s.id) === String(selectedId));\n\nif (!svc) {\n  // Servicio no encontrado - enviar mensaje de error\n  return [{ json: { ...payload, error: 'SERVICE_NOT_FOUND', errorMessage: 'Lo siento, no encontré ese servicio. Por favor selecciona uno de la lista.' } }];\n}\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.selectedServiceByPhone) staticData.selectedServiceByPhone = {};\nstaticData.selectedServiceByPhone[payload.phoneNumber] = { \n  id: String(svc.id), \n  nombre: svc.nombre, \n  duracion_min: Number(svc.duracion_min || 30),\n  precio: svc.precio || '',\n  selectedAt: Date.now()\n};\n\nreturn [{ json: { ...payload, selectedService: staticData.selectedServiceByPhone[payload.phoneNumber] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        146016,
+        61392
+      ],
+      "id": "e8b15ed1-7485-4f21-a0e3-bf705f8f7f6a",
+      "name": "Save Selected Service"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generar próximos 7 días hábiles con validación de servicio\nconst { phoneNumber, phoneNumberId, businessPhone, contactName, selectedService, error } = $json;\n\n// Si hubo error en selección de servicio, retornar para manejar\nif (error) {\n  return [{ json: { phoneNumber, phoneNumberId, businessPhone, error, errorMessage: $json.errorMessage } }];\n}\n\nconst diasHabiles = [1,2,3,4,5]; // Lun-Vie\nconst availableDays = [];\nlet date = new Date();\ndate.setDate(date.getDate() + 1); // Empezar desde mañana\n\nwhile (availableDays.length < 7) {\n  if (diasHabiles.includes(date.getDay())) {\n    const dateStr = date.toISOString().split('T')[0];\n    const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];\n    const display = `${dayNames[date.getDay()]} ${date.getDate()}/${date.getMonth()+1}`;\n    availableDays.push({ date: dateStr, display, btnId: `day_${dateStr}` });\n  }\n  date.setDate(date.getDate()+1);\n}\n\nreturn [{ json: { phoneNumber, phoneNumberId, businessPhone, contactName, availableDays, selectedService } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        146240,
+        61392
+      ],
+      "id": "a89eeba4-581f-4415-b005-2e2a1dae65de",
+      "name": "Generate Days"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.ycloud.com/v2/whatsapp/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"body\": {\n      \"text\": \"✨ {{ $json.selectedService.nombre }}\\n⏱️ {{ $json.selectedService.duracion_min }} min\\n\\nElige un día para tu cita:\"\n    },\n    \"action\": {\n      \"button\": \"📅 Elegir día\",\n      \"sections\": [\n        {\n          \"title\": \"Días disponibles\",\n          \"rows\": [\n            { \"id\": \"{{ $json.availableDays[0].btnId }}\", \"title\": \"{{ $json.availableDays[0].display }}\" },\n            { \"id\": \"{{ $json.availableDays[1].btnId }}\", \"title\": \"{{ $json.availableDays[1].display }}\" },\n            { \"id\": \"{{ $json.availableDays[2].btnId }}\", \"title\": \"{{ $json.availableDays[2].display }}\" },\n            { \"id\": \"{{ $json.availableDays[3].btnId }}\", \"title\": \"{{ $json.availableDays[3].display }}\" },\n            { \"id\": \"{{ $json.availableDays[4].btnId }}\", \"title\": \"{{ $json.availableDays[4].display }}\" },\n            { \"id\": \"{{ $json.availableDays[5].btnId }}\", \"title\": \"{{ $json.availableDays[5].display }}\" },\n            { \"id\": \"{{ $json.availableDays[6].btnId }}\", \"title\": \"{{ $json.availableDays[6].display }}\" }\n          ]\n        }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        146528,
+        61392
+      ],
+      "id": "257ab1fb-61fd-41a5-8ee0-11b7fda5c4ff",
+      "name": "Send Day Buttons",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validar que hay servicio seleccionado antes de procesar día\nconst payload = $('Combine Messages').first().json;\nconst { phoneNumber, phoneNumberId, textContent } = payload;\nconst selectedDay = String(textContent || '').replace('day_', '');\n\nconst staticData = $getWorkflowStaticData('global');\nconst selectedService = staticData.selectedServiceByPhone?.[phoneNumber];\n\nif (!selectedService) {\n  // No hay servicio seleccionado - redirigir a selección de servicios\n  return [{ json: { phoneNumber, phoneNumberId, error: 'NO_SERVICE_SELECTED', needsServiceFirst: true } }];\n}\n\n// Validar que el servicio no expiró (más de 30 min)\nif (Date.now() - selectedService.selectedAt > 1800000) {\n  delete staticData.selectedServiceByPhone[phoneNumber];\n  return [{ json: { phoneNumber, phoneNumberId, error: 'SERVICE_EXPIRED', needsServiceFirst: true } }];\n}\n\nreturn [{ json: { ...payload, selectedDay, selectedService } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        145792,
+        61584
+      ],
+      "id": "7dd22dec-e9f0-4c78-8a75-140ff284cb40",
+      "name": "Validate Service Selection"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.needsServiceFirst }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        146016,
+        61584
+      ],
+      "id": "c256ce20-acc0-442d-ab8b-17f72ed1db8c",
+      "name": "Service Valid?"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2101861815,
+          "mode": "list",
+          "cachedResultName": "Configuracion",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=2101861815"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        146240,
+        61584
+      ],
+      "id": "15960485-36c6-42d0-9c03-9af8435918f3",
+      "name": "Read Configuracion",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1427452735,
+          "mode": "list",
+          "cachedResultName": "Bloqueos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=1427452735"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        146528,
+        61584
+      ],
+      "id": "605f3115-e888-4d9a-92a8-cfe3f26fae5d",
+      "name": "Read Bloqueos",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1703053541,
+          "mode": "list",
+          "cachedResultName": "Citas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=1703053541"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        146816,
+        61584
+      ],
+      "id": "4ee1db87-7178-4d5e-b677-bd13c53fd6b5",
+      "name": "Read Citas del Día",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calcular slots disponibles (duración + horario + bloqueos + solapes)\nfunction toMinutes(hhmm) { const [h, m] = String(hhmm).split(':').map(Number); return h * 60 + m; }\nfunction toHHMM(mins) { const h = Math.floor(mins / 60); const m = mins % 60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; }\nfunction overlaps(aStart, aEnd, bStart, bEnd) { return aStart < bEnd && bStart < aEnd; }\n\nconst validationData = $('Validate Service Selection').first().json;\nconst { phoneNumber, phoneNumberId, selectedDay, selectedService } = validationData;\n\nif (!selectedService) {\n  return [{ json: { phoneNumber, phoneNumberId, selectedDay, listRows: [], slots: [], hasSlots: false, error: 'NO_SERVICE' } }];\n}\n\nconst configRows = $('Read Configuracion').all().map(i => i.json);\nconst config = configRows.reduce((acc, r) => { acc[r.parametro] = r.valor; return acc; }, {});\nconst horarioInicio = config.horario_inicio || '09:00';\nconst horarioFin = config.horario_fin || '18:00';\nconst bufferEntreCitas = Number(config.buffer_entre_citas || 0);\n\nconst openMin = toMinutes(horarioInicio);\nconst closeMin = toMinutes(horarioFin);\nconst serviceDuration = Number(selectedService.duracion_min || 30);\n\n// Intervalo de 30 min para mostrar más opciones de horarios\nconst intervaloSlots = 30;\n\nconst blockRows = $('Read Bloqueos').all().map(i => i.json);\n// Filtrar citas por fecha y estado en código (sin filtro en Google Sheets)\nconst allCitas = $('Read Citas del Día').all().map(i => i.json);\nconst existing = allCitas.filter(c => c.fecha === selectedDay && c.estado === 'Confirmado');\n\nconst blocked = [];\nfor (const b of blockRows) {\n  const fecha = String(b.fecha || '').trim();\n  const recurrente = String(b.recurrente || 'no').trim().toLowerCase();\n  if (!b.hora_inicio || !b.hora_fin) continue;\n  let applies = false;\n  if (fecha === selectedDay) applies = true;\n  else if (fecha === '*' && recurrente === 'diario') applies = true;\n  else if (recurrente === 'anual' && fecha && fecha !== '*') { \n    const mmdd = selectedDay.slice(5); \n    applies = String(fecha).slice(5) === mmdd; \n  }\n  if (!applies) continue;\n  blocked.push({ start: toMinutes(b.hora_inicio), end: toMinutes(b.hora_fin) });\n}\n\nconst busy = [];\nfor (const a of existing) {\n  if (!a.hora || !a.hora_fin) continue;\n  const start = toMinutes(a.hora);\n  const end = toMinutes(a.hora_fin);\n  busy.push({ start: Math.max(openMin, start - bufferEntreCitas), end: Math.min(closeMin, end + bufferEntreCitas) });\n}\n\nconst slots = [];\nfor (let start = openMin; start + serviceDuration <= closeMin; start += intervaloSlots) {\n  const end = start + serviceDuration;\n  if (blocked.some(r => overlaps(start, end, r.start, r.end))) continue;\n  if (busy.some(r => overlaps(start, end, r.start, r.end))) continue;\n  slots.push({ startMin: start, endMin: end, start: toHHMM(start), end: toHHMM(end), btnId: `time_${selectedDay}_${toHHMM(start).replace(':','')}` });\n}\n\nconst dateObj = new Date(selectedDay + 'T12:00:00');\nconst dayNames = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];\nconst monthNames = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];\nconst displayDate = `${dayNames[dateObj.getDay()]} ${dateObj.getDate()} de ${monthNames[dateObj.getMonth()]}`;\n\nconst listRows = slots.slice(0, 10).map(s => ({ id: s.btnId, title: `${s.start} (${serviceDuration} min)`, description: `Termina ${s.end}` }));\n\nconst hasSlots = slots.length > 0;\n\n// Guardar config del negocio en staticData para usarla en confirmación\nconst staticData = $getWorkflowStaticData('global');\nstaticData.businessConfig = {\n  nombre: config.negocio_nombre || 'Nuestro negocio',\n  direccion: config.negocio_direccion || '',\n  maps_url: config.negocio_enlace_maps || '',\n  email: config.negocio_email || ''\n};\n\nreturn [{ json: { phoneNumber, phoneNumberId, selectedDay, displayDate, selectedService, serviceDuration, slots, listRows, hasSlots } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        147040,
+        61584
+      ],
+      "id": "f78de07c-5ed1-4f14-9662-e4ee134bffd4",
+      "name": "Compute Availability"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.hasSlots }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        147264,
+        61584
+      ],
+      "id": "67d612ce-f4cb-49c2-9ed8-3da2b0ae0abc",
+      "name": "Has Slots?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.ycloud.com/v2/whatsapp/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"header\": {\n      \"type\": \"text\",\n      \"text\": \"🕐 Horarios disponibles\"\n    },\n    \"body\": {\n      \"text\": \"📅 {{ $json.displayDate }}\\n🛍️ {{ $json.selectedService.nombre }} ({{ $json.serviceDuration }} min)\\n\\nSelecciona un horario disponible:\"\n    },\n    \"action\": {\n      \"button\": \"Ver horarios\",\n      \"sections\": [\n        {\n          \"title\": \"Disponibles\",\n          \"rows\": {{ JSON.stringify($json.listRows) }}\n        }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        147488,
+        61488
+      ],
+      "id": "3976465d-f0af-4031-9030-f8148b47a1e9",
+      "name": "Send Available Times",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.ycloud.com/v2/whatsapp/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"😔 Lo siento, no encontré horarios disponibles para el {{ $json.displayDate }}.\\n\\nPrueba seleccionando otro día escribiendo *agendar* para comenzar de nuevo.\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        147488,
+        61680
+      ],
+      "id": "2f17bb10-af38-49f3-8af5-657efafe01ed",
+      "name": "Send No Slots",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Confirmar hora elegida (usa duración del servicio guardada)\nconst payload = $('Combine Messages').first().json;\nconst { phoneNumber, phoneNumberId, contactName } = payload;\nconst buttonId = String(payload.textContent || '');\nconst parts = buttonId.replace('time_', '').split('_');\nconst selectedDay = parts[0];\nconst startHHMM = parts[1].slice(0,2) + ':' + parts[1].slice(2);\n\nconst staticData = $getWorkflowStaticData('global');\nconst selectedService = staticData.selectedServiceByPhone?.[phoneNumber];\n\nif (!selectedService) {\n  return [{ json: { phoneNumber, phoneNumberId, error: 'NO_SERVICE', errorMessage: 'Tu sesión expiró. Por favor escribe *agendar* para comenzar de nuevo.' } }];\n}\n\nconst dur = Number(selectedService.duracion_min || 30);\nfunction toMinutes(hhmm){ const [h,m]=hhmm.split(':').map(Number); return h*60+m; }\nfunction toHHMM(mins){ const h=Math.floor(mins/60); const m=mins%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; }\nconst endHHMM = toHHMM(toMinutes(startHHMM) + dur);\n\nconst appointmentId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);\nconst dateObj = new Date(selectedDay + 'T12:00:00');\nconst dayNames = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];\nconst monthNames = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];\nconst displayDate = `${dayNames[dateObj.getDay()]} ${dateObj.getDate()} de ${monthNames[dateObj.getMonth()]}`;\n\n// Limpiar servicio seleccionado después de agendar\ndelete staticData.selectedServiceByPhone[phoneNumber];\n\n// Obtener config del negocio\nconst businessConfig = staticData.businessConfig || {};\n\n// Retornar SOLO campos para Google Sheets (las columnas de la hoja Citas)\n// Los campos extras se guardan en staticData para el mensaje de confirmación\nstaticData.lastAppointment = {\n  phoneNumber,\n  phoneNumberId,\n  appointmentId,\n  displayDate,\n  duracion_min: dur,\n  servicio: selectedService.nombre,\n  hora: startHHMM,\n  hora_fin: endHHMM,\n  negocio_nombre: businessConfig.nombre || 'Nuestro negocio',\n  negocio_direccion: businessConfig.direccion || '',\n  negocio_maps: businessConfig.maps_url || ''\n};\n\nreturn [{ json: { \n  id: appointmentId,\n  nombre: contactName,\n  telefono: phoneNumber,\n  fecha: selectedDay, \n  hora: startHHMM, \n  hora_fin: endHHMM, \n  servicio: selectedService.nombre, \n  estado: 'Confirmado', \n  created_at: new Date().toISOString(),\n  displayDate,\n  duracion_min: dur,\n  phoneNumberId,\n  negocio_nombre: businessConfig.nombre || 'Nuestro negocio',\n  negocio_direccion: businessConfig.direccion || '',\n  negocio_maps: businessConfig.maps_url || '',\n  negocio_email: businessConfig.email || ''\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        146528,
+        62280
+      ],
+      "id": "393f710b-b3a8-4f1e-b090-da29472b948c",
+      "name": "Build Appointment"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1703053541,
+          "mode": "list",
+          "cachedResultName": "Citas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=1703053541"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "telefono",
+              "lookupValue": "={{ $('Combine Messages').first().json.phoneNumber.replace('+', '') }}"
+            },
+            {
+              "lookupColumn": "estado",
+              "lookupValue": "Confirmado"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        145792,
+        62376
+      ],
+      "id": "a426de39-9f7c-4462-9c7b-443e6081de8d",
+      "name": "Check User Appointments",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verificar límite de citas (máximo 3 por teléfono)\nconst MAX_APPOINTMENTS = 3;\nconst existingAppointments = $input.all();\nconst appointmentCount = existingAppointments.filter(item => item.json.id).length;\n\nconst payload = $('Combine Messages').first().json;\nconst { phoneNumber, phoneNumberId, contactName } = payload;\n\nif (appointmentCount >= MAX_APPOINTMENTS) {\n  return [{\n    json: {\n      phoneNumber,\n      phoneNumberId,\n      contactName,\n      limitReached: true,\n      appointmentCount,\n      message: `⚠️ Has alcanzado el límite máximo de ${MAX_APPOINTMENTS} citas activas.\\n\\nPara agendar una nueva cita, primero debes cancelar alguna de tus citas existentes escribiendo *cancelar*.`\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    phoneNumber,\n    phoneNumberId,\n    contactName,\n    limitReached: false,\n    appointmentCount\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        146016,
+        62376
+      ],
+      "id": "b4b1fb08-e34e-4957-af16-334905027c2d",
+      "name": "Validate Appointment Limit"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.limitReached }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        146240,
+        62376
+      ],
+      "id": "f13d72cf-ef52-481a-8134-24eca30cef37",
+      "name": "Limit OK?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.ycloud.com/v2/whatsapp/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"{{ $json.message }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        146528,
+        62472
+      ],
+      "id": "6eca92a8-ea77-4e45-bfb0-986886fd21b4",
+      "name": "Send Limit Message",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1703053541,
+          "mode": "list",
+          "cachedResultName": "Citas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=1703053541"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        146816,
+        62280
+      ],
+      "id": "980933f8-5884-47ce-a2a6-77a917f5907e",
+      "name": "Save Appointment",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.ycloud.com/v2/whatsapp/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $('Build Appointment').first().json.telefono }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"✅ ¡Listo {{ $('Build Appointment').first().json.nombre }}! Reserva confirmada 🎉\\n\\n🛍️ Servicio: {{ $('Build Appointment').first().json.servicio }} ({{ $('Build Appointment').first().json.duracion_min }} min)\\n📅 {{ $('Build Appointment').first().json.displayDate }}\\n🕐 {{ $('Build Appointment').first().json.hora }} - {{ $('Build Appointment').first().json.hora_fin }}\\n\\n🎫 Código: {{ $('Build Appointment').first().json.id }}\\n\\n📍 Dirección: {{ $('Build Appointment').first().json.negocio_direccion }}\\n🗺️ {{ $('Build Appointment').first().json.negocio_maps }}\\n\\n¡Te esperamos! En {{ $('Build Appointment').first().json.negocio_nombre }} es grato que confíes en nosotros, que tengas un feliz día ✨\\n\\nSi necesitas cancelar, escribe *cancelar*.\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        147040,
+        62184
+      ],
+      "id": "540883ad-a3fc-4084-a7f6-a45cee1ea58e",
+      "name": "Send Confirmation",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "Automatiza Tech <contacto@automatizatech.cl>",
+        "toEmail": "={{ $('Build Appointment').first().json.negocio_email || 'Kellysisabel1504@gmail.com' }}",
+        "bccEmail": "automatizacionesbotcore@gmail.com",
+        "subject": "=Nueva Reserva - {{ $('Build Appointment').first().json.nombre }} - {{ $('Build Appointment').first().json.servicio }}",
+        "text": "={{ 'Nueva reserva recibida en ' + ($('Build Appointment').first().json.negocio_nombre || 'tu negocio') + '\\n\\n📋 DETALLES DE LA CITA:\\n\\n👤 Cliente: ' + $('Build Appointment').first().json.nombre + '\\n📱 Teléfono: ' + $('Build Appointment').first().json.telefono + '\\n🛍️ Servicio: ' + $('Build Appointment').first().json.servicio + ' (' + $('Build Appointment').first().json.duracion_min + ' min)\\n📅 Fecha: ' + $('Build Appointment').first().json.displayDate + '\\n🕐 Horario: ' + $('Build Appointment').first().json.hora + ' - ' + $('Build Appointment').first().json.hora_fin + '\\n🎫 Código: ' + $('Build Appointment').first().json.id + '\\n\\n📆 Registrado: ' + $now.setZone(\"America/Santiago\").toFormat('dd-MM-yyyy HH:mm:ss') + ' (Hora Chile)\\n\\nSaludos,\\nEquipo AutomatizaTech' }}",
+        "html": "={{ '<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style>body{font-family:\\'Segoe UI\\',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.header{background-color:#06d6a0;padding:30px;text-align:center;color:#ffffff}.header h1{margin:10px 0;font-size:24px;font-weight:600}.content{padding:40px 30px;color:#333333;line-height:1.6}.details{background-color:#f0fdf4;padding:20px;border-radius:6px;margin:20px 0;border-left:4px solid #06d6a0}.details p{margin:8px 0;font-size:15px}.footer{background-color:#1f2937;padding:20px;text-align:center;color:#9ca3af;font-size:12px}.badge{display:inline-block;background-color:#06d6a0;color:white;padding:5px 15px;border-radius:20px;font-size:14px;font-weight:600}</style></head><body><div class=\"container\"><div class=\"header\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td align=\"center\"><img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" width=\"200\" style=\"width:200px;max-width:100%;height:auto;display:block;border:0;\"></td></tr></table><h1 style=\"margin-top:20px;\">🗓️ Nueva Reserva Confirmada</h1></div><div class=\"content\"><p>¡Hola! Se ha registrado una nueva reserva en <strong>' + ($('Build Appointment').first().json.negocio_nombre || 'tu negocio') + '</strong>.</p><div class=\"details\"><p style=\"font-size:18px;font-weight:600;color:#059669;margin-bottom:15px;\">📋 Detalles de la Cita</p><p>👤 <strong>Cliente:</strong> ' + $('Build Appointment').first().json.nombre + '</p><p>📱 <strong>Teléfono:</strong> <a href=\"https://wa.me/' + $('Build Appointment').first().json.telefono + '\" style=\"color:#06d6a0\">' + $('Build Appointment').first().json.telefono + '</a></p><p>🛍️ <strong>Servicio:</strong> ' + $('Build Appointment').first().json.servicio + ' <span class=\"badge\">' + $('Build Appointment').first().json.duracion_min + ' min</span></p><p>📅 <strong>Fecha:</strong> ' + $('Build Appointment').first().json.displayDate + '</p><p>🕐 <strong>Horario:</strong> ' + $('Build Appointment').first().json.hora + ' - ' + $('Build Appointment').first().json.hora_fin + '</p><p>🎫 <strong>Código:</strong> <code style=\"background:#e5e7eb;padding:3px 8px;border-radius:4px;\">' + $('Build Appointment').first().json.id + '</code></p></div><p style=\"color:#6b7280;font-size:13px;\">📆 Registrado el ' + $now.setZone(\"America/Santiago\").toFormat('dd-MM-yyyy') + ' a las ' + $now.setZone(\"America/Santiago\").toFormat('HH:mm:ss') + ' (Hora Chile)</p></div><div class=\"footer\"><p>&copy; 2025 Automatiza Tech. Todos los derechos reservados.</p><p>Notificación automática del sistema de reservas.</p></div></div></body></html>' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        147040,
+        62404
+      ],
+      "id": "6da8e1f5-72ef-4fe6-a954-7ea081741bda",
+      "name": "Send Email New Appointment",
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1703053541,
+          "mode": "list",
+          "cachedResultName": "Citas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=1703053541"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        147264,
+        62716
+      ],
+      "id": "8d96f90f-3339-482a-96ec-c50342398723",
+      "name": "Search Appointments",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar cancelación - filtrar y mostrar TODAS las citas del usuario\nconst { phoneNumber, phoneNumberId } = $('Parse Actions').first().json;\nconst phoneClean = String(phoneNumber).replace('+', '').replace(/\\s/g, '');\n\n// Filtrar citas: mismo teléfono Y estado Confirmado\n// Convertir ambos a string para comparación correcta\nconst appointments = $input.all().filter(item => {\n  const apt = item.json;\n  const aptPhone = String(apt.telefono).replace(/\\s/g, '');\n  return aptPhone === phoneClean && apt.estado === 'Confirmado' && apt.id;\n});\n\nif (appointments.length === 0) {\n  return [{ json: { phoneNumber, phoneNumberId, hasAppointment: false, appointmentCount: 0, message: 'No encontré citas activas asociadas a tu número.' } }];\n}\n\n// Construir lista de citas para el mensaje\nconst citasList = appointments.map((item, idx) => {\n  const apt = item.json;\n  return `${idx + 1}. 📅 ${apt.fecha} | 🕐 ${apt.hora}-${apt.hora_fin} | 🛍️ ${apt.servicio}`;\n}).join('\\n');\n\n// Construir rows para la lista interactiva (max 10)\nconst listRows = appointments.slice(0, 10).map(item => {\n  const apt = item.json;\n  return {\n    id: `cancel_confirm_${apt.id}`,\n    title: `${apt.fecha} ${apt.hora}`.slice(0, 24),\n    description: `${apt.servicio} (${apt.hora}-${apt.hora_fin})`.slice(0, 72)\n  };\n});\n\nconst message = appointments.length === 1 \n  ? `Encontré tu cita:\\n\\n📅 ${appointments[0].json.fecha}\\n🕐 ${appointments[0].json.hora} - ${appointments[0].json.hora_fin}\\n🛍️ ${appointments[0].json.servicio}\\n\\n¿Confirmas que deseas cancelarla?`\n  : `Encontré ${appointments.length} citas activas:\\n\\n${citasList}\\n\\nSelecciona la cita que deseas cancelar:`;\n\nreturn [{ \n  json: { \n    phoneNumber, \n    phoneNumberId, \n    hasAppointment: true, \n    appointmentCount: appointments.length,\n    appointmentId: appointments[0].json.id,\n    listRows,\n    message\n  } \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        147488,
+        62716
+      ],
+      "id": "74089e25-6cfa-4f9d-a761-c5af31437a2c",
+      "name": "Process Cancel Search"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.ycloud.com/v2/whatsapp/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.appointmentCount === 1 ? JSON.stringify({\n  from: $('Combine Messages').first().json.businessPhone,\n  to: $json.phoneNumber,\n  type: 'interactive',\n  interactive: {\n    type: 'button',\n    body: { text: $json.message },\n    action: {\n      buttons: [\n        { type: 'reply', reply: { id: 'cancel_confirm_' + $json.appointmentId, title: '✅ Sí, cancelar' } },\n        { type: 'reply', reply: { id: 'cancel_keep', title: '❌ No, mantener' } }\n      ]\n    }\n  }\n}) : JSON.stringify({\n  from: $('Combine Messages').first().json.businessPhone,\n  to: $json.phoneNumber,\n  type: 'interactive',\n  interactive: {\n    type: 'list',\n    body: { text: $json.message },\n    action: {\n      button: '📅 Ver mis citas',\n      sections: [{\n        title: 'Selecciona para cancelar',\n        rows: $json.listRows\n      }]\n    }\n  }\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        147712,
+        62716
+      ],
+      "id": "fde991c3-ff6e-4f19-9b34-bef9a3a15aeb",
+      "name": "Send Cancel Confirmation",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Confirmación cancelación\nconst payload = $('Combine Messages').first().json;\nconst appointmentId = String(payload.textContent || '').replace('cancel_confirm_', '');\nreturn { json: { phoneNumber: payload.phoneNumber, phoneNumberId: payload.phoneNumberId, id: appointmentId, appointmentId, newStatus: 'cancelado' } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        145792,
+        62088
+      ],
+      "id": "f7b38790-3372-4895-9814-8422c60c32b0",
+      "name": "Process Cancel Confirm"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1703053541,
+          "mode": "list",
+          "cachedResultName": "Citas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=1703053541"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "id",
+              "lookupValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        145892,
+        62088
+      ],
+      "id": "a8c3f901-2e4a-4b5d-9f6c-3d7e8a9b0c1d",
+      "name": "Fetch Appointment Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1703053541,
+          "mode": "list",
+          "cachedResultName": "Citas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=1703053541"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "estado": "={{ $('Process Cancel Confirm').first().json.newStatus }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "hora",
+              "displayName": "hora",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "hora_fin",
+              "displayName": "hora_fin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "servicio",
+              "displayName": "servicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phoneNumber",
+              "displayName": "phoneNumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phoneNumberId",
+              "displayName": "phoneNumberId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "appointmentId",
+              "displayName": "appointmentId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "displayDate",
+              "displayName": "displayDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "duracion_min",
+              "displayName": "duracion_min",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "negocio_nombre",
+              "displayName": "negocio_nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "negocio_direccion",
+              "displayName": "negocio_direccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "negocio_maps",
+              "displayName": "negocio_maps",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        146016,
+        62088
+      ],
+      "id": "35536643-5601-457c-b93f-50cb021f1a7d",
+      "name": "Update Appointment Status",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.ycloud.com/v2/whatsapp/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $('Process Cancel Confirm').first().json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"✅ Tu cita fue cancelada.\\n\\nSi quieres agendar otra, escribe *agendar*.\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        146240,
+        61992
+      ],
+      "id": "57914701-b923-469b-a865-a53db978bbed",
+      "name": "Send Cancel Success",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "Automatiza Tech <contacto@automatizatech.cl>",
+        "toEmail": "={{ $('Fetch Appointment Data').first().json.negocio_email || 'Kellysisabel1504@gmail.com' }}",
+        "bccEmail": "automatizacionesbotcore@gmail.com",
+        "subject": "=Cita Cancelada - {{ $('Fetch Appointment Data').first().json.nombre }} - {{ $('Fetch Appointment Data').first().json.servicio }}",
+        "text": "={{ 'Estimados Sres. ' + $('Fetch Appointment Data').first().json.negocio_nombre + ',\\n\\nDesde AutomatizaTech te informamos que un cliente ha CANCELADO su cita.\\n\\n📋 DETALLES DE LA CITA CANCELADA:\\n\\n👤 Cliente: ' + $('Fetch Appointment Data').first().json.nombre + '\\n📱 Teléfono: ' + $('Fetch Appointment Data').first().json.telefono + '\\n🛍️ Servicio: ' + $('Fetch Appointment Data').first().json.servicio + '\\n📅 Fecha: ' + $('Fetch Appointment Data').first().json.fecha + '\\n🕐 Horario: ' + $('Fetch Appointment Data').first().json.hora + ' - ' + $('Fetch Appointment Data').first().json.hora_fin + '\\n🎫 Código: ' + $('Fetch Appointment Data').first().json.id + '\\n\\n📆 Cancelado el: ' + $now.setZone(\"America/Santiago\").toFormat('dd-MM-yyyy HH:mm:ss') + ' (Hora Chile)\\n\\nEste horario ahora está disponible para otros clientes.\\n\\nSaludos,\\nEquipo AutomatizaTech' }}",
+        "html": "={{ '<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style>body{font-family:\\'Segoe UI\\',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.header{background-color:#0d9488;padding:30px;text-align:center;color:#ffffff}.header h1{margin:10px 0;font-size:24px;font-weight:600}.content{padding:40px 30px;color:#333333;line-height:1.6}.details{background-color:#f0fdfa;padding:20px;border-radius:6px;margin:20px 0;border-left:4px solid #0d9488}.details p{margin:8px 0;font-size:15px}.footer{background-color:#1f2937;padding:20px;text-align:center;color:#9ca3af;font-size:12px}.badge{display:inline-block;background-color:#0d9488;color:white;padding:5px 15px;border-radius:20px;font-size:14px;font-weight:600}</style></head><body><div class=\"container\"><div class=\"header\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td align=\"center\"><img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" width=\"200\" style=\"width:200px;max-width:100%;height:auto;display:block;border:0;\"></td></tr></table><h1 style=\"margin-top:20px;\">Cita Cancelada</h1></div><div class=\"content\"><p>Estimados Sres. ' + $('Fetch Appointment Data').first().json.negocio_nombre + '</p><p>Desde <strong>AutomatizaTech</strong> te informamos que un cliente ha <strong style=\"color:#0d9488;\">CANCELADO</strong> su cita.</p><div class=\"details\"><p style=\"font-size:18px;font-weight:600;color:#0d9488;margin-bottom:15px;\">📋 Detalles de la Cita Cancelada</p><p>👤 <strong>Cliente:</strong> ' + $('Fetch Appointment Data').first().json.nombre + '</p><p>📱 <strong>Teléfono:</strong> <a href=\"https://wa.me/' + $('Fetch Appointment Data').first().json.telefono + '\" style=\"color:#0d9488\">' + $('Fetch Appointment Data').first().json.telefono + '</a></p><p>🛍️ <strong>Servicio:</strong> ' + $('Fetch Appointment Data').first().json.servicio + '</p><p>📅 <strong>Fecha:</strong> ' + $('Fetch Appointment Data').first().json.fecha + '</p><p>🕐 <strong>Horario:</strong> ' + $('Fetch Appointment Data').first().json.hora + ' - ' + $('Fetch Appointment Data').first().json.hora_fin + '</p><p>🎫 <strong>Código:</strong> <code style=\"background:#99f6e4;padding:3px 8px;border-radius:4px;\">' + $('Fetch Appointment Data').first().json.id + '</code></p></div><p style=\"color:#059669;font-weight:600;\">✅ Este horario ahora está disponible para otros clientes.</p><p style=\"color:#6b7280;font-size:13px;\">📆 Cancelado el ' + $now.setZone(\"America/Santiago\").toFormat('dd-MM-yyyy') + ' a las ' + $now.setZone(\"America/Santiago\").toFormat('HH:mm:ss') + ' (Hora Chile)</p></div><div class=\"footer\"><p>&copy; 2025 Automatiza Tech. Todos los derechos reservados.</p><p>Notificación automática del sistema de reservas.</p></div></div></body></html>' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        146240,
+        62184
+      ],
+      "id": "52226040-ebf3-4234-a446-ea3610bd16e6",
+      "name": "Send Email Cancellation",
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.ycloud.com/v2/whatsapp/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $('Combine Messages').first().json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"👍 Perfecto, tu cita se mantiene sin cambios.\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        145792,
+        62620
+      ],
+      "id": "dec4db37-595c-46f6-a386-e3a7073248e2",
+      "name": "Send Keep Message",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"chatInput\": {{ JSON.stringify($json.textContent) }},\n  \"phoneNumber\": \"{{ $json.phoneNumber }}\",\n  \"phoneNumberId\": \"{{ $json.phoneNumberId }}\",\n  \"contactName\": \"{{ $json.contactName }}\",\n  \"isFromAudio\": {{ $json.isFromAudio || false }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        145792,
+        62812
+      ],
+      "id": "b206fd4e-c7f7-4670-a602-973264ed208d",
+      "name": "Prepare Chat Input"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": 1177271620
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        146016,
+        62812
+      ],
+      "id": "b0147228-4dfc-4bb9-911b-b004f1bd5ec0",
+      "name": "Read Bot Config",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convertir configuración de Google Sheets a objeto key-value\nconst config = {};\n\n// Leer configuración del bot (Configuracion_Bot)\nconst botConfigRows = $input.all();\nbotConfigRows.forEach(item => {\n  const parametro = item.json.parametro;\n  const valor = item.json.valor;\n  if (parametro && valor !== undefined) {\n    config[parametro] = valor;\n  }\n});\n\n// Obtener datos del chat del nodo anterior\nconst chatData = $('Prepare Chat Input').first().json;\n\nreturn [{\n  json: {\n    ...chatData,\n    config: config\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        146240,
+        62812
+      ],
+      "id": "0a9c35c0-7414-4ae9-9942-be0d9b6f5fa2",
+      "name": "Merge Config"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "=Eres {{ $json.config.nombre_asistente || 'el asistente virtual' }}, asistente virtual de {{ $json.config.nombre_negocio || 'nuestro negocio' }} {{ $json.config.emoji_principal || '👋' }}\n\n## IDENTIDAD\n- Nombre del negocio: {{ $json.config.nombre_negocio }}\n- Tu nombre es: {{ $json.config.nombre_asistente }}\n- Cliente actual: {{ $json.contactName }}\n\n## TU FUNCIÓN\n{{ $json.config.funcion_asistente || 'Dar información sobre servicios, coordinar citas y responder consultas generales' }}\n\n## 🎯 REGLAS DE SALUDO - MUY IMPORTANTE 🎯\n- **PRIMER MENSAJE**: Saluda con: '¡Hola! 😊 Soy {{ $json.config.nombre_asistente }} {{ $json.config.emoji_principal || '👑' }}, asistente virtual de {{ $json.config.nombre_negocio }}, ¿en qué puedo ayudarte hoy?'\n- **MENSAJES SIGUIENTES**: NO repitas el saludo completo, ve directo al tema\n- Si el cliente saluda de nuevo, responde brevemente sin repetir tu presentación completa\n\n## REGLAS DE COMUNICACIÓN\n- **IMPORTANTE**: SIEMPRE analiza el mensaje COMPLETO del cliente. Si dice 'Hola, quiero información' debes dar la información solicitada (puedes incluir un saludo breve SOLO si es el PRIMER mensaje).\n- **NO RESPONDAS SOLO CON UN SALUDO** - siempre incluye contenido útil\n- Máximo {{ $json.config.max_parrafos || '2' }} párrafos cortos por respuesta\n- Usa emojis ocasionalmente ({{ $json.config.emojis || '😊' }})\n- Termina con una pregunta para continuar ayudando\n\n## CATEGORÍAS DE SERVICIOS\n{{ $json.config.categorias_servicios || 'Consulta nuestra lista de servicios' }}\n\n## INFORMACIÓN SOBRE SERVICIOS\n{{ $json.config.info_servicios || 'Los servicios están disponibles en nuestra lista.' }}\n\n## CATÁLOGO DETALLADO DE SERVICIOS\n{{ $json.config.catalogo_servicios_detallado || '' }}\n\n## ESTRATEGIA CONVERSACIONAL\n{{ $json.config.estrategia_conversacional || 'Guía al cliente paso a paso' }}\n\n## INFORMACIÓN TÉCNICA\n{{ $json.config.info_tecnica || '' }}\n\n## HORARIO Y DURACIÓN\n- Horarios: {{ $json.config.horario || 'Consultar disponibilidad' }}\n- Duración: {{ $json.config.duracion_servicios || 'Varía según el servicio' }}\n\n## REQUERIMIENTOS DEL CLIENTE\n{{ $json.config.requerimientos || '' }}\n\n## INFORMACIÓN DE CONTACTO Y UBICACIÓN\n- Teléfono: {{ $json.config.negocio_telefono || 'No disponible' }}\n- Dirección: {{ $json.config.negocio_direccion || 'No disponible' }}\n- Instagram: {{ $json.config.negocio_instagram || 'No disponible' }}\n- Facebook: {{ $json.config.negocio_facebook || 'No disponible' }}\n- TikTok: {{ $json.config.negocio_tiktok || 'No disponible' }}\n- Google Maps: {{ $json.config.negocio_enlace_maps || 'No disponible' }}\n- Sitio Web: {{ $json.config.negocio_web || 'No disponible' }}\n\nCuando te pregunten por redes sociales, dirección o ubicación, usa esta información.\n\n## ⚠️ DETECCIÓN DE ACCIONES - MUY IMPORTANTE ⚠️\n\nANTES de responder, analiza el mensaje del cliente y detecta si quiere realizar alguna de estas acciones:\n\n### 1. CANCELAR CITA (PRIORIDAD ALTA)\nSi el cliente menciona CUALQUIERA de estas palabras/frases, DEBES incluir <<ACTION:CANCEL_APPOINTMENT>>:\n- 'cancelar', 'cancela', 'cancelación'\n- 'anular', 'anula', 'anulación'\n- 'eliminar mi cita', 'borrar mi cita'\n- 'ya no quiero la cita', 'no puedo asistir'\n- 'quitar mi reserva', 'deshacer reserva'\n\n**Respuesta OBLIGATORIA**: '{{ $json.config.respuesta_cancelar || 'Entiendo. Voy a buscar tus citas para que puedas cancelarlas 📋' }} <<ACTION:CANCEL_APPOINTMENT>>'\n\n### 2. AGENDAR CITA\nSi el cliente quiere agendar/reservar, incluye <<ACTION:SHOW_SERVICES>>:\n- 'agendar', 'reservar', 'hacer una cita', 'quiero una hora', 'necesito un turno'\n\n**Respuesta**: '{{ $json.config.respuesta_agendar || '¡Perfecto! Te muestro los servicios disponibles 📋' }} <<ACTION:SHOW_SERVICES>>'\n\n### 3. ESCALAR A HUMANO (SOLO cuando sea necesario)\nUSA <<ACTION:ESCALATE_TO_HUMAN>> ÚNICAMENTE cuando:\n- El cliente dice EXPLÍCITAMENTE: 'quiero hablar con una persona', 'necesito un humano', 'pásame con alguien'\n- NO puedes resolver una consulta que NO sea sobre citas\n\n**NUNCA escales si el cliente quiere cancelar o agendar una cita** - eso lo manejas tú con las acciones correspondientes.\n\n**Respuesta**: '{{ $json.config.respuesta_escalacion }} <<ACTION:ESCALATE_TO_HUMAN>>'\n\n## LO QUE NO PUEDES HACER ❌\n{{ $json.config.restricciones || '- Dar información confidencial\\n- Prometer resultados específicos\\n- Inventar información' }}\n\n## LO QUE SÍ PUEDES HACER ✅\n{{ $json.config.capacidades || '- Explicar servicios\\n- Informar precios\\n- Programar citas\\n- Cancelar citas\\n- Responder consultas generales' }}\n\n## EJEMPLO DE CONVERSACIÓN\n{{ $json.config.ejemplo_conversacion || '' }}\n\n## REGLAS FINALES\n- Mantén un tono {{ $json.config.tono || 'cálido y profesional' }}\n- **CRÍTICO**: Si detectas palabras como 'cancelar', 'anular', 'eliminar cita' → USA <<ACTION:CANCEL_APPOINTMENT>>, NO escales a humano\n- **CRÍTICO**: NUNCA repitas '¡Hola!' si ya lo dijiste en mensajes anteriores del historial"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        146464,
+        62812
+      ],
+      "id": "7fc50588-7189-4469-bca4-623e8e43763d",
+      "name": "Agente IA"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        146472,
+        63036
+      ],
+      "id": "40de8eea-812d-45d7-9e50-8e01fba91d97",
+      "name": "GPT-4o Mini",
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Prepare Chat Input').first().json.phoneNumber }}",
+        "contextWindowLength": 15
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        142432,
+        63324
+      ],
+      "id": "ee3b37de-ec39-4845-b99c-df6ccf0dcd5e",
+      "name": "Chat Memory",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse actions y detectar si debe responder con audio\nconst output = $json.output || '';\nconst base = $('Prepare Chat Input').first().json;\nconst isFromAudio = base.isFromAudio || false;\n\nlet action = 'send_text';\nlet clean = output;\n\n// Detectar acciones especiales\nif (output.includes('<<ACTION:SHOW_SERVICES>>')) {\n  action = 'show_services';\n  clean = output.replace(/<<ACTION:SHOW_SERVICES>>/g,'').trim();\n} else if (output.includes('<<ACTION:CANCEL_APPOINTMENT>>')) {\n  action = 'cancel_appointment';\n  clean = output.replace(/<<ACTION:CANCEL_APPOINTMENT>>/g,'').trim();\n} else if (output.includes('<<ACTION:ESCALATE_TO_HUMAN>>')) {\n  action = 'escalate_to_human';\n  clean = output.replace(/<<ACTION:ESCALATE_TO_HUMAN>>/g,'').trim();\n} else if (isFromAudio) {\n  // Si el mensaje original fue audio y no hay acción especial, responder con audio\n  action = 'send_audio';\n}\n\nreturn { json: { action, output: clean, isFromAudio, ...base } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        146816,
+        62812
+      ],
+      "id": "4e1325e4-cf72-4998-8c8b-9738a5283dcd",
+      "name": "Parse Actions"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "send_text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Texto"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "show_services",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Servicios"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "cancel_appointment",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Cancelar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "send_audio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "escalate_to_human",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Escalar"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        147040,
+        62764
+      ],
+      "id": "cb8ca220-09c5-4063-94c6-ce8ef1eec5ac",
+      "name": "Route Action"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.ycloud.com/v2/whatsapp/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": {{ JSON.stringify($json.output) }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        147264,
+        62404
+      ],
+      "id": "5daef02b-2b17-4fd1-9a60-d6129d00f65e",
+      "name": "Send Text Response",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.ycloud.com/v2/whatsapp/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": {{ JSON.stringify($json.output) }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        147264,
+        63100
+      ],
+      "id": "de107120-733b-424d-9907-03f8643eb371",
+      "name": "Send Escalation Message",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "Automatiza Tech <contacto@automatizatech.cl>",
+        "toEmail": "={{ $('Merge Config').first().json.config?.negocio_email || 'Kellysisabel1504@gmail.com' }}",
+        "bccEmail": "automatizacionesbotcore@gmail.com",
+        "subject": "=Cliente requiere atención humana - {{ $('Parse Actions').first().json.contactName }}",
+        "text": "={{ 'Estimados Sres. ' + ($('Merge Config').first().json.config?.nombre_negocio || 'del Negocio') + ',\\n\\nDesde AutomatizaTech te informamos que un cliente ha solicitado atención personalizada a través del asistente virtual de WhatsApp.\\n\\nResumen de la conversación:\\n\\n👤 Cliente: ' + $('Parse Actions').first().json.contactName + '\\n📱 Teléfono: ' + $('Parse Actions').first().json.phoneNumber + '\\n💬 Último mensaje: ' + $('Parse Actions').first().json.chatInput + '\\n🤖 Respuesta del bot: ' + $('Parse Actions').first().json.output + '\\n📅 Fecha y Hora: ' + $now.setZone(\"America/Santiago\").toFormat('dd-MM-yyyy HH:mm:ss') + ' (Hora Chile)\\n\\nPor favor, contacta al cliente a la brevedad posible para brindarle la atención personalizada que requiere.\\n\\nSaludos,\\nEquipo AutomatizaTech' }}",
+        "html": "={{ '<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style>body{font-family:\\'Segoe UI\\',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.header{background-color:#1e40af;padding:30px;text-align:center;color:#ffffff}.header h1{margin:10px 0;font-size:24px;font-weight:600}.content{padding:40px 30px;color:#333333;line-height:1.6}.details{background-color:#f9fafb;padding:20px;border-radius:6px;margin:20px 0;border-left:4px solid #06d6a0}.details p{margin:5px 0}.footer{background-color:#1f2937;padding:20px;text-align:center;color:#9ca3af;font-size:12px}</style></head><body><div class=\"container\"><div class=\"header\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td align=\"center\"><img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" width=\"200\" style=\"width:200px;max-width:100%;height:auto;display:block;border:0;\"></td></tr></table><h1 style=\"margin-top:20px;\">Alerta de Atención al Cliente</h1></div><div class=\"content\"><p>Estimados Sres. <strong>' + ($('Merge Config').first().json.config?.nombre_negocio || 'del Negocio') + '</strong>,</p><p>Desde <strong>AutomatizaTech</strong> te informamos que un cliente ha solicitado atención personalizada a través del asistente virtual de WhatsApp.</p><p>A continuación, te compartimos el resumen de la conversación:</p><div class=\"details\"><p>👤 <strong>Cliente:</strong> ' + $('Parse Actions').first().json.contactName + '</p><p>📱 <strong>Teléfono:</strong> ' + $('Parse Actions').first().json.phoneNumber + '</p><p>💬 <strong>Último mensaje:</strong><br>' + $('Parse Actions').first().json.chatInput + '</p><p>🤖 <strong>Respuesta del bot:</strong><br>' + $('Parse Actions').first().json.output + '</p><p>📅 <strong>Fecha y Hora:</strong> ' + $now.setZone(\"America/Santiago\").toFormat('dd-MM-yyyy HH:mm:ss') + ' (Hora Chile)</p></div><p><strong>Por favor, contacta al cliente a la brevedad posible para brindarle la atención personalizada que requiere.</strong></p></div><div class=\"footer\"><p>&copy; 2025 Automatiza Tech. Todos los derechos reservados.</p><p>Si tienes consultas sobre este servicio, contáctanos a <a href=\"mailto:contacto@automatizatech.cl\" style=\"color:#06d6a0\">contacto@automatizatech.cl</a></p></div></div></body></html>' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        147488,
+        63100
+      ],
+      "id": "0605398a-2184-4b71-ab4c-003142023217",
+      "name": "Send Email to Business",
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "input": "={{ $json.output }}",
+        "voice": "nova",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        147264,
+        62908
+      ],
+      "id": "be6aa817-8f93-4d5b-8605-58bdc9f1e049",
+      "name": "Generate Audio (TTS)",
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar audio con mime type correcto para WhatsApp\nconst item = $input.first();\nconst originalBinary = item.binary.data;\n\nreturn [{\n  json: {\n    phoneNumber: $('Parse Actions').first().json.phoneNumber,\n    phoneNumberId: $('Parse Actions').first().json.phoneNumberId,\n    output: $('Parse Actions').first().json.output\n  },\n  binary: {\n    data: {\n      ...originalBinary,\n      mimeType: 'audio/mpeg',\n      fileName: 'response.mp3',\n      fileExtension: 'mp3'\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        147488,
+        62908
+      ],
+      "id": "74d4ff30-b38b-4bb9-b570-2203ecc00439",
+      "name": "Fix Audio MimeType"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.ycloud.com/v2/whatsapp/media/{{ $('Combine Messages').first().json.businessPhone }}/upload",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "type",
+              "value": "audio/mpeg"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        147712,
+        62908
+      ],
+      "id": "7b931dff-e7a8-4c47-a5d3-2946d81cc629",
+      "name": "Upload Audio to WhatsApp",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.ycloud.com/v2/whatsapp/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $('Fix Audio MimeType').first().json.phoneNumber }}\",\n  \"type\": \"audio\",\n  \"audio\": {\n    \"id\": \"{{ $json.id }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        147936,
+        62908
+      ],
+      "id": "7bcccba7-a8d6-4094-9a80-7d338c46a062",
+      "name": "Send Audio Response",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Prepare Chat Input').first().json.phoneNumber }}",
+        "contextWindowLength": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.5,
+      "position": [
+        146600,
+        63036
+      ],
+      "id": "7987549e-f345-430c-8862-3dfa2c0cb778",
+      "name": "Redis Chat Memory",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "WhatsApp Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n-n8n.kchiba.easypanel.host",
+            "user-agent": "Go-http-client/2.0",
+            "content-length": "488",
+            "accept-encoding": "gzip",
+            "baggage": "Eagleeye-Pappname=1fof0zltrv1@d3b96e44a5c9fa6,Eagleeye-Prpc=",
+            "content-type": "application/json",
+            "traceparent": "00-beb38cd1919f693b2afd7f9b685b25ff-f7e0df52c7957804-00",
+            "x-forwarded-for": "8.219.65.77",
+            "x-forwarded-host": "n8n-n8n.kchiba.easypanel.host",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "9c63e9570f63",
+            "x-real-ip": "8.219.65.77",
+            "x-webhook-endpoint-id": "695e63b4d8a985479470c0e2",
+            "ycloud-signature": "t=1767830900,s=dba5ee9a7d6cc71dc4d4808a56bd092469e0e361e852efa549ec5ce8f3eb40bc"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "id": "evt_695ef5743a192171bcd34781",
+            "type": "whatsapp.inbound_message.received",
+            "apiVersion": "v2",
+            "createTime": "2026-01-08T00:08:20.098Z",
+            "whatsappInboundMessage": {
+              "id": "695ef57463e35f3cf79514fa",
+              "wamid": "wamid.HBgLNTY5NzQ5NDAwNzAVAgASGCBBQzdBNUZDNjIxN0RCMjc1REVFNEVEMzEyRjMwRjVGOQA=",
+              "wabaId": "834724865935491",
+              "from": "+56974940070",
+              "customerProfile": {
+                "name": "Luis Miguel 🇻🇪🇨🇱"
+              },
+              "to": "+56940331127",
+              "sendTime": "2026-01-08T00:08:18.000Z",
+              "type": "text",
+              "text": {
+                "body": "Hola"
+              }
+            }
+          },
+          "webhookUrl": "https://n8n-n8n.kchiba.easypanel.host/webhook/KellsCapilar",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Verify Webhook (GET)": {
+      "main": [
+        [
+          {
+            "node": "Respond Challenge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filter Event Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Message?": {
+      "main": [
+        [
+          {
+            "node": "Extract Message Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Message Data": {
+      "main": [
+        [
+          {
+            "node": "Deduplication",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplication": {
+      "main": [
+        [
+          {
+            "node": "Is Audio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Audio?": {
+      "main": [
+        [
+          {
+            "node": "Get Audio URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Redis Push",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Audio URL": {
+      "main": [
+        [
+          {
+            "node": "Download Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Audio": {
+      "main": [
+        [
+          {
+            "node": "Transcribe Audio (Whisper)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe Audio (Whisper)": {
+      "main": [
+        [
+          {
+            "node": "Audio to Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio to Text": {
+      "main": [
+        [
+          {
+            "node": "Redis Push",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Push": {
+      "main": [
+        [
+          {
+            "node": "Redis Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Get": {
+      "main": [
+        [
+          {
+            "node": "Check Message Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Message Status": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Redis Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Redis Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Wait Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Wait Data": {
+      "main": [
+        [
+          {
+            "node": "Wait 7s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Delete": {
+      "main": [
+        [
+          {
+            "node": "Combine Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Messages": {
+      "main": [
+        [
+          {
+            "node": "Tipo de Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 7s": {
+      "main": [
+        [
+          {
+            "node": "Redis Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Get Servicios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate Service Selection",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check User Appointments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Cancel Confirm",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Keep Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Chat Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Servicios": {
+      "main": [
+        [
+          {
+            "node": "Save Selected Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Selected Service": {
+      "main": [
+        [
+          {
+            "node": "Generate Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Days": {
+      "main": [
+        [
+          {
+            "node": "Send Day Buttons",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Service Selection": {
+      "main": [
+        [
+          {
+            "node": "Service Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Service Valid?": {
+      "main": [
+        [
+          {
+            "node": "Read Servicios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Configuracion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Configuracion": {
+      "main": [
+        [
+          {
+            "node": "Read Bloqueos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Bloqueos": {
+      "main": [
+        [
+          {
+            "node": "Read Citas del Día",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Citas del Día": {
+      "main": [
+        [
+          {
+            "node": "Compute Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Availability": {
+      "main": [
+        [
+          {
+            "node": "Has Slots?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Slots?": {
+      "main": [
+        [
+          {
+            "node": "Send Available Times",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send No Slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check User Appointments": {
+      "main": [
+        [
+          {
+            "node": "Validate Appointment Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Appointment Limit": {
+      "main": [
+        [
+          {
+            "node": "Limit OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit OK?": {
+      "main": [
+        [
+          {
+            "node": "Build Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Limit Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Appointment": {
+      "main": [
+        [
+          {
+            "node": "Save Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Appointment": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Email New Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Cancel Confirm": {
+      "main": [
+        [
+          {
+            "node": "Fetch Appointment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Appointment Data": {
+      "main": [
+        [
+          {
+            "node": "Update Appointment Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Appointment Status": {
+      "main": [
+        [
+          {
+            "node": "Send Cancel Success",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Email Cancellation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Chat Input": {
+      "main": [
+        [
+          {
+            "node": "Read Bot Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Bot Config": {
+      "main": [
+        [
+          {
+            "node": "Merge Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Config": {
+      "main": [
+        [
+          {
+            "node": "Agente IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o Mini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente IA",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente IA": {
+      "main": [
+        [
+          {
+            "node": "Parse Actions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Actions": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "Send Text Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Servicios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search Appointments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate Audio (TTS)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Escalation Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Audio (TTS)": {
+      "main": [
+        [
+          {
+            "node": "Fix Audio MimeType",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fix Audio MimeType": {
+      "main": [
+        [
+          {
+            "node": "Upload Audio to WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Audio to WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Send Audio Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Servicios": {
+      "main": [
+        [
+          {
+            "node": "Build Services List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Services List": {
+      "main": [
+        [
+          {
+            "node": "Send Services List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Appointments": {
+      "main": [
+        [
+          {
+            "node": "Process Cancel Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Cancel Search": {
+      "main": [
+        [
+          {
+            "node": "Send Cancel Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Event Type": {
+      "main": [
+        [
+          {
+            "node": "Has Message?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔇 Dueño Respondió (Silencio)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Escalation Message": {
+      "main": [
+        [
+          {
+            "node": "Send Email to Business",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente IA",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "1de18300-4aef-4737-a431-1b833ee3f170",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "id": "tlCivKmc2ZQF4FyV",
+  "tags": [
+    {
+      "updatedAt": "2026-01-07T00:49:29.893Z",
+      "createdAt": "2026-01-07T00:49:29.893Z",
+      "id": "0OdeFP8ZGjJMwQNC",
+      "name": "VoiceNotes"
+    },
+    {
+      "updatedAt": "2026-01-07T00:49:29.840Z",
+      "createdAt": "2026-01-07T00:49:29.840Z",
+      "id": "4N9MVAK8muCJIEYe",
+      "name": "Template"
+    },
+    {
+      "updatedAt": "2026-01-07T02:00:06.599Z",
+      "createdAt": "2026-01-07T02:00:06.599Z",
+      "id": "GG8mR5Iw5Kdy11sC",
+      "name": "v5"
+    },
+    {
+      "updatedAt": "2026-01-07T00:49:29.887Z",
+      "createdAt": "2026-01-07T00:49:29.887Z",
+      "id": "Nymx4zdlkPRv447n",
+      "name": "Demo"
+    },
+    {
+      "updatedAt": "2026-01-07T00:49:29.865Z",
+      "createdAt": "2026-01-07T00:49:29.865Z",
+      "id": "qKCUJ8CtKeEmfNUC",
+      "name": "WhatsApp"
+    }
+  ]
+}

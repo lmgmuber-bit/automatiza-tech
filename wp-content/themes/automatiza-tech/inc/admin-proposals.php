@@ -33,6 +33,34 @@ function automatiza_tech_proposals_page() {
     $table_name = $wpdb->prefix . 'automatiza_propuestas';
     $message = '';
 
+    // --- PROCESAR ELIMINACIÓN MASIVA ---
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_delete']) && isset($_POST['proposal_ids'])) {
+        if (!isset($_POST['automatiza_bulk_nonce']) || !wp_verify_nonce($_POST['automatiza_bulk_nonce'], 'bulk_delete_proposals')) {
+            $message = '<div class="notice notice-error"><p>Error de seguridad. Intente nuevamente.</p></div>';
+        } else {
+            $ids = array_map('intval', $_POST['proposal_ids']);
+            if (!empty($ids)) {
+                $ids_placeholder = implode(',', array_fill(0, count($ids), '%d'));
+                $wpdb->query($wpdb->prepare(
+                    "DELETE FROM $table_name WHERE id IN ($ids_placeholder)",
+                    ...$ids
+                ));
+                $message = '<div class="notice notice-success is-dismissible"><p>🗑️ ' . count($ids) . ' propuesta(s) eliminada(s) correctamente.</p></div>';
+            }
+        }
+    }
+
+    // --- PROCESAR ELIMINACIÓN INDIVIDUAL ---
+    if (isset($_GET['delete_id']) && isset($_GET['_wpnonce'])) {
+        if (wp_verify_nonce($_GET['_wpnonce'], 'delete_proposal_' . $_GET['delete_id'])) {
+            $delete_id = intval($_GET['delete_id']);
+            $wpdb->delete($table_name, ['id' => $delete_id]);
+            $message = '<div class="notice notice-success is-dismissible"><p>🗑️ Propuesta eliminada correctamente.</p></div>';
+        } else {
+            $message = '<div class="notice notice-error"><p>Error de seguridad al eliminar.</p></div>';
+        }
+    }
+
     // --- PROCESAR FORMULARIO ---
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proposal_id'])) {
         // Verificar nonce para seguridad
@@ -44,6 +72,7 @@ function automatiza_tech_proposals_page() {
         $id = intval($_POST['proposal_id']);
         $client_name = sanitize_text_field($_POST['client_name']);
         $company_name = sanitize_text_field($_POST['company_name']);
+        $phone = sanitize_text_field($_POST['phone'] ?? '');
         $client_email = sanitize_email($_POST['client_email']);
         $email_subject = sanitize_text_field($_POST['email_subject']);
         $email_intro = wp_kses_post($_POST['email_intro']);
@@ -89,6 +118,7 @@ function automatiza_tech_proposals_page() {
         $update_data = [
             'client_name' => $client_name,
             'company_name' => $company_name,
+            'phone' => $phone,
             'client_email' => $client_email,
             'gamma_iframe_url' => $gamma_url,
             'n8n_chat_url' => $n8n_url,
@@ -265,25 +295,65 @@ function automatiza_tech_proposals_page() {
 
         <div style="display: flex; gap: 20px; margin-top: 20px;">
             <!-- LISTA DE PROPUESTAS -->
-            <div style="flex: 1; max-width: 350px;">
+            <div style="flex: 1; max-width: 400px;">
                 <div class="postbox">
-                    <div class="postbox-header"><h2 class="hndle">Últimas Solicitudes</h2></div>
+                    <div class="postbox-header">
+                        <h2 class="hndle">Últimas Solicitudes</h2>
+                    </div>
                     <div class="inside" style="padding: 0;">
-                        <ul style="list-style: none; margin: 0;">
-                            <?php foreach ($proposals as $p): ?>
-                                <li style="padding: 10px; border-bottom: 1px solid #eee; <?php echo ($edit_proposal && $edit_proposal->id == $p->id) ? 'background-color: #f0f0f1;' : ''; ?>">
-                                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <div>
-                                            <strong><?php echo esc_html($p->client_email); ?></strong><br>
-                                            <small style="color: #666;"><?php echo $p->created_at; ?></small>
+                        <form method="POST" id="bulk-delete-form">
+                            <?php wp_nonce_field('bulk_delete_proposals', 'automatiza_bulk_nonce'); ?>
+                            
+                            <!-- Acciones masivas -->
+                            <div style="padding: 10px; background: #f6f7f7; border-bottom: 1px solid #ddd; display: flex; gap: 10px; align-items: center;">
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="checkbox" id="select-all-proposals" style="margin: 0;">
+                                    <span style="font-size: 12px;">Todos</span>
+                                </label>
+                                <button type="submit" name="bulk_delete" value="1" class="button button-small" style="color: #b32d2e;" 
+                                    onclick="return confirm('¿Estás seguro de eliminar las propuestas seleccionadas?');">
+                                    🗑️ Eliminar seleccionadas
+                                </button>
+                            </div>
+                            
+                            <ul style="list-style: none; margin: 0; max-height: 500px; overflow-y: auto;">
+                                <?php foreach ($proposals as $p): ?>
+                                    <li style="padding: 10px; border-bottom: 1px solid #eee; <?php echo ($edit_proposal && $edit_proposal->id == $p->id) ? 'background-color: #f0f0f1;' : ''; ?>">
+                                        <div style="display: flex; gap: 8px; align-items: flex-start;">
+                                            <input type="checkbox" name="proposal_ids[]" value="<?php echo $p->id; ?>" class="proposal-checkbox" style="margin-top: 3px;">
+                                            <div style="flex: 1; min-width: 0;">
+                                                <strong style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?php echo esc_attr($p->client_email); ?>">
+                                                    <?php echo esc_html($p->client_email); ?>
+                                                </strong>
+                                                <small style="color: #666;"><?php echo $p->created_at; ?></small>
+                                                <?php if ($p->status === 'sent'): ?>
+                                                    <span style="background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 5px;">Enviada</span>
+                                                <?php elseif ($p->status === 'pending'): ?>
+                                                    <span style="background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 5px;">Pendiente</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                                <a href="<?php echo admin_url('admin.php?page=automatiza-proposals&edit_id=' . $p->id); ?>" class="button button-small" title="Editar">✏️</a>
+                                                <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=automatiza-proposals&delete_id=' . $p->id), 'delete_proposal_' . $p->id); ?>" 
+                                                   class="button button-small" style="color: #b32d2e;" title="Eliminar"
+                                                   onclick="return confirm('¿Estás seguro de eliminar esta propuesta?');">🗑️</a>
+                                            </div>
                                         </div>
-                                        <a href="<?php echo admin_url('admin.php?page=automatiza-proposals&edit_id=' . $p->id); ?>" class="button button-small">Seleccionar</a>
-                                    </div>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
+                                    </li>
+                                <?php endforeach; ?>
+                                <?php if (empty($proposals)): ?>
+                                    <li style="padding: 20px; text-align: center; color: #666;">No hay propuestas registradas</li>
+                                <?php endif; ?>
+                            </ul>
+                        </form>
                     </div>
                 </div>
+                
+                <script>
+                document.getElementById('select-all-proposals')?.addEventListener('change', function() {
+                    document.querySelectorAll('.proposal-checkbox').forEach(cb => cb.checked = this.checked);
+                });
+                </script>
             </div>
 
             <!-- FORMULARIO DE EDICIÓN -->
@@ -325,6 +395,13 @@ function automatiza_tech_proposals_page() {
                                     <tr>
                                         <th scope="row"><label for="company_name">Nombre de la Empresa</label></th>
                                         <td><input type="text" name="company_name" id="company_name" class="regular-text" required value="<?php echo esc_attr($edit_proposal->company_name); ?>"></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row"><label for="phone">📱 Teléfono</label></th>
+                                        <td>
+                                            <input type="text" name="phone" id="phone" class="regular-text" value="<?php echo esc_attr($edit_proposal->phone ?? ''); ?>" placeholder="+56 9 1234 5678">
+                                            <p class="description">Teléfono de contacto del cliente (para seguimientos)</p>
+                                        </td>
                                     </tr>
                                     <tr>
                                         <th scope="row"><label for="gamma_url">URL Iframe Gamma</label></th>

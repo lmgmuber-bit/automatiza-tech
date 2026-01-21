@@ -171,6 +171,7 @@ class AutomatizaTechServicesManager {
                         <option value="pricing">Planes (Pricing)</option>
                         <option value="features">Beneficios (Features)</option>
                         <option value="special">Especiales</option>
+                        <option value="custom">Proyectos Personalizados</option>
                     </select>
                     
                     <select id="filter-status">
@@ -191,6 +192,7 @@ class AutomatizaTechServicesManager {
                             case 'pricing': echo 'Planes de Precios'; break;
                             case 'features': echo 'Beneficios/Características'; break;
                             case 'special': echo 'Ofertas Especiales'; break;
+                            case 'custom': echo 'Proyectos Personalizados'; break;
                             default: echo ucfirst($category); break;
                         }
                         ?>
@@ -490,6 +492,7 @@ class AutomatizaTechServicesManager {
                                     <option value="pricing">Planes de Precios</option>
                                     <option value="features">Beneficios/Características</option>
                                     <option value="special">Ofertas Especiales</option>
+                                    <option value="custom">Proyectos Personalizados</option>
                                 </select>
                                 <p class="description">Determina dónde aparecerá en el sitio web</p>
                             </td>
@@ -862,10 +865,27 @@ class AutomatizaTechServicesManager {
         }
         
         function generateEditForm(service) {
+            // Generar opciones de categorías dinámicamente
+            var categoryOptions = '';
+            var categories = (typeof automatiza_ajax !== 'undefined' && automatiza_ajax.categories) ? automatiza_ajax.categories : [];
+            if (categories.length > 0) {
+                for (var i = 0; i < categories.length; i++) {
+                    var cat = categories[i];
+                    var isSelected = service.category === cat.slug ? ' selected' : '';
+                    categoryOptions += '<option value=\"' + cat.slug + '\"' + isSelected + '>' + cat.name + '</option>';
+                }
+            } else {
+                // Fallback a categorías por defecto
+                categoryOptions = '<option value=\"pricing\"' + (service.category === 'pricing' ? ' selected' : '') + '>Planes</option>' +
+                                  '<option value=\"features\"' + (service.category === 'features' ? ' selected' : '') + '>Beneficios</option>' +
+                                  '<option value=\"special\"' + (service.category === 'special' ? ' selected' : '') + '>Especiales</option>' +
+                                  '<option value=\"custom\"' + (service.category === 'custom' ? ' selected' : '') + '>Proyectos Personalizados</option>';
+            }
+            
             return '<input type=\"hidden\" name=\"service_id\" value=\"' + service.id + '\">' +
                    '<table class=\"form-table\">' +
                    '<tr><th>Nombre:</th><td><input type=\"text\" name=\"name\" value=\"' + service.name + '\" class=\"regular-text\" required></td></tr>' +
-                   '<tr><th>Categoría:</th><td><select name=\"category\"><option value=\"pricing\"' + (service.category === 'pricing' ? ' selected' : '') + '>Planes</option><option value=\"features\"' + (service.category === 'features' ? ' selected' : '') + '>Beneficios</option><option value=\"special\"' + (service.category === 'special' ? ' selected' : '') + '>Especiales</option></select></td></tr>' +
+                   '<tr><th>Categoría:</th><td><select name=\"category\">' + categoryOptions + '</select></td></tr>' +
                    '<tr><th>Precio USD:</th><td><input type=\"number\" name=\"price_usd\" value=\"' + service.price_usd + '\" step=\"0.01\"></td></tr>' +
                    '<tr><th>Precio CLP:</th><td><input type=\"number\" name=\"price_clp\" value=\"' + service.price_clp + '\"></td></tr>' +
                    '<tr><th>Descripción:</th><td><textarea name=\"description\" rows=\"3\" class=\"large-text\">' + service.description + '</textarea></td></tr>' +

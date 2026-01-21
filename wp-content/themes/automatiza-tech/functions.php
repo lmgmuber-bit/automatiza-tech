@@ -414,6 +414,11 @@ require_once get_template_directory() . '/inc/currency-updater.php';
 require_once get_template_directory() . '/inc/currency-admin.php';
 
 /**
+ * Incluir sistema de gestión de categorías de servicios
+ */
+require_once get_template_directory() . '/inc/service-categories-manager.php';
+
+/**
  * Incluir sistema de gestión de servicios
  */
 require_once get_template_directory() . '/inc/services-manager.php';
@@ -454,4 +459,12 @@ require_once get_template_directory() . '/inc/admin-leads-manager.php';
  */
 require_once get_template_directory() . '/inc/admin-proposals.php';
 
+/**
+ * Incluir panel de reuniones de seguimiento
+ */
+require_once get_template_directory() . '/inc/admin-followup-meetings.php';
 
+/**
+ * Incluir panel de monitoreo de errores N8N - ARGOS
+ */
+require_once get_template_directory() . '/inc/admin-n8n-errors.php';

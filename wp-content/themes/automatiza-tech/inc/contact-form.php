@@ -1801,21 +1801,38 @@ class AutomatizaTechContactForm {
         
         // Calcular totales
         $subtotal = 0;
+        $total_descuento = 0;
         $plans_html = '';
         $plans_names = array();
         
         foreach ($plans_data as $index => $plan) {
             $plan_num = $index + 1;
-            $price = floatval($plan->price_clp);
-            $subtotal += $price;
+            $price_original = floatval($plan->price_clp);
+            $discount_percent = isset($plan->discount_percent) ? floatval($plan->discount_percent) : 0;
+            
+            // Calcular precio con descuento
+            $discount_amount = $price_original * ($discount_percent / 100);
+            $price_final = $price_original - $discount_amount;
+            
+            $subtotal += $price_original;
+            $total_descuento += $discount_amount;
             $plans_names[] = $plan->name;
+            
+            // Mostrar precio con descuento si aplica
+            if ($discount_percent > 0) {
+                $price_display = "<span style='text-decoration: line-through; color: #999;'>$" . number_format($price_original, 0, ',', '.') . "</span><br>" .
+                                 "<span style='color: #e74c3c; font-size: 0.85em;'>-{$discount_percent}%</span><br>" .
+                                 "<strong style='color: #27ae60;'>$" . number_format($price_final, 0, ',', '.') . "</strong>";
+            } else {
+                $price_display = "$" . number_format($price_original, 0, ',', '.');
+            }
             
             $plans_html .= "
             <tr>
                 <td style='padding: 10px; border: 1px solid #e3e6f0; text-align: center;'>{$plan_num}</td>
                 <td style='padding: 10px; border: 1px solid #e3e6f0;'>" . esc_html($plan->name) . "</td>
                 <td style='padding: 10px; border: 1px solid #e3e6f0; text-align: center;'>1</td>
-                <td style='padding: 10px; border: 1px solid #e3e6f0; text-align: right;'>$" . number_format($price, 0, ',', '.') . "</td>
+                <td style='padding: 10px; border: 1px solid #e3e6f0; text-align: right;'>{$price_display}</td>
             </tr>";
         }
         
@@ -1876,9 +1893,19 @@ class AutomatizaTechContactForm {
                     </thead>
                     <tbody>
                         {$plans_html}
+                        " . ($total_descuento > 0 ? "
+                        <tr style='background: #fff3cd;'>
+                            <td colspan='3' style='text-align: right; padding: 10px; color: #856404;'>Subtotal:</td>
+                            <td style='text-align: right; padding: 10px; color: #856404;'>$" . number_format($subtotal, 0, ',', '.') . "</td>
+                        </tr>
+                        <tr style='background: #d4edda;'>
+                            <td colspan='3' style='text-align: right; padding: 10px; color: #155724;'><strong>🎉 Descuento Aplicado:</strong></td>
+                            <td style='text-align: right; padding: 10px; color: #155724; font-weight: bold;'>-$" . number_format($total_descuento, 0, ',', '.') . "</td>
+                        </tr>
+                        " : "") . "
                         <tr class='total-row'>
                             <td colspan='3' style='text-align: right; padding: 15px;'>TOTAL COTIZADO:</td>
-                            <td style='text-align: right; padding: 15px;'>$" . number_format($subtotal, 0, ',', '.') . "</td>
+                            <td style='text-align: right; padding: 15px;'>$" . number_format($subtotal - $total_descuento, 0, ',', '.') . "</td>
                         </tr>
                     </tbody>
                 </table>
@@ -2281,11 +2308,20 @@ class AutomatizaTechContactForm {
     // Soportar tanto un solo plan como múltiples planes
     $plans_array = is_array($plans_data) ? $plans_data : array($plans_data);
     
-    // Calcular IVA (19% en Chile) sumando todos los planes
+    // Calcular IVA (19% en Chile) sumando todos los planes (con descuentos)
+    $subtotal_original = 0;
     $subtotal = 0;
+    $total_descuento = 0;
     foreach ($plans_array as $plan) {
-        $subtotal += floatval($plan->price_clp);
+        $precio_original = floatval($plan->price_clp);
+        $descuento = isset($plan->discount_percent) ? floatval($plan->discount_percent) : 0;
+        $precio_final = $descuento > 0 ? $precio_original * (1 - $descuento/100) : $precio_original;
+        
+        $subtotal_original += $precio_original;
+        $subtotal += $precio_final;
+        $total_descuento += ($precio_original - $precio_final);
     }
+    $hay_descuentos = $total_descuento > 0;
     $iva = $subtotal * 0.19;
     $total = $subtotal + $iva;        $html = "<!DOCTYPE html>
 <html lang='es'>
@@ -2498,6 +2534,32 @@ class AutomatizaTechContactForm {
             font-weight: bold;
             font-size: 1.2em;
         }
+        .price-original {
+            text-decoration: line-through;
+            color: #999;
+            font-size: 0.85em;
+            margin-right: 8px;
+        }
+        .price-discount {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .price-final {
+            color: {$secondary_color};
+            font-weight: bold;
+        }
+        .discount-badge {
+            background: #e74c3c;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-left: 8px;
+        }
+        .savings-row {
+            color: #27ae60;
+            font-weight: bold;
+        }
         .qr-validation {
             page-break-inside: avoid;
             padding: 12px 30px !important;
@@ -2570,7 +2632,22 @@ class AutomatizaTechContactForm {
                 
                 // Iterar sobre todos los planes
                 foreach ($plans_array as $plan) {
-                    $plan_price = floatval($plan->price_clp);
+                    $plan_price_original = floatval($plan->price_clp);
+                    $plan_descuento = isset($plan->discount_percent) ? floatval($plan->discount_percent) : 0;
+                    $plan_price_final = $plan_descuento > 0 ? $plan_price_original * (1 - $plan_descuento/100) : $plan_price_original;
+                    
+                    // Construir celda de precio con o sin descuento
+                    $precio_html = '';
+                    if ($plan_descuento > 0) {
+                        $precio_html = "
+                            <span class='price-original'>$" . number_format($plan_price_original, 0, ',', '.') . "</span>
+                            <span class='discount-badge'>-" . number_format($plan_descuento, 0) . "%</span>
+                            <br>
+                            <span class='price-final'>$" . number_format($plan_price_final, 0, ',', '.') . "</span>";
+                    } else {
+                        $precio_html = "$" . number_format($plan_price_original, 0, ',', '.');
+                    }
+                    
                     $html .= "
                     <tr>
                         <td>
@@ -2585,7 +2662,7 @@ class AutomatizaTechContactForm {
                             " : "") . "
                         </td>
                         <td style='text-align: center; font-size: 1.1em; font-weight: 600;'>1</td>
-                        <td style='text-align: right; font-size: 1.1em; font-weight: 600;'>$" . number_format($plan_price, 0, ',', '.') . "</td>
+                        <td style='text-align: right; font-size: 1.1em;'>{$precio_html}</td>
                     </tr>";
                 }
                 
@@ -2594,7 +2671,22 @@ class AutomatizaTechContactForm {
             </table>
             
             <!-- Totales -->
-            <div class='totals'>
+            <div class='totals'>";
+                
+                // Mostrar subtotal original si hay descuentos
+                if ($hay_descuentos) {
+                    $html .= "
+                <div class='row'>
+                    <span class='label'>Subtotal Original:</span>
+                    <span class='amount' style='text-decoration: line-through; color: #999;'>$" . number_format($subtotal_original, 0, ',', '.') . "</span>
+                </div>
+                <div class='row savings-row'>
+                    <span class='label'>🎉 Ahorro Total:</span>
+                    <span class='amount'>-$" . number_format($total_descuento, 0, ',', '.') . "</span>
+                </div>";
+                }
+                
+                $html .= "
                 <div class='row'>
                     <span class='label'>Subtotal:</span>
                     <span class='amount'>$" . number_format($subtotal, 0, ',', '.') . "</span>
@@ -4476,12 +4568,29 @@ class AutomatizaTechContactForm {
                                     </p>
                                 </div>
                                 
-                                <select id="plan-selector" multiple size="5" style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 1em; background: white; color: #333; cursor: pointer; transition: all 0.3s;">
+                                <?php
+                                global $wpdb;
+                                $plans = $wpdb->get_results("SELECT id, name, price_clp, price_usd, description, category FROM {$wpdb->prefix}automatiza_services WHERE status = 'active' AND (price_clp > 0 OR price_usd > 0) ORDER BY category ASC, id ASC");
+                                $plan_count = count($plans);
+                                $select_size = min(max($plan_count, 6), 12); // Mínimo 6, máximo 12 filas visibles
+                                ?>
+                                <select id="plan-selector" multiple size="<?php echo $select_size; ?>" style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 0.95em; background: white; color: #333; cursor: pointer; transition: all 0.3s; max-height: 350px;">
                                     <?php
-                                    global $wpdb;
-                                    $plans = $wpdb->get_results("SELECT id, name, price_clp, price_usd, description FROM {$wpdb->prefix}automatiza_services WHERE status = 'active' AND (price_clp > 0 OR price_usd > 0) ORDER BY id ASC");
+                                    $current_category = '';
+                                    $category_labels = [
+                                        'pricing' => '📦 Planes de Precios',
+                                        'features' => '⭐ Características',
+                                        'special' => '🎁 Ofertas Especiales',
+                                        'custom' => '🛠️ Proyectos Personalizados'
+                                    ];
                                     foreach ($plans as $plan) {
-                                        echo '<option value="' . $plan->id . '" data-price-clp="' . $plan->price_clp . '" data-price-usd="' . $plan->price_usd . '">' . 
+                                        // Agregar separador de categoría si cambió
+                                        if ($plan->category !== $current_category) {
+                                            $current_category = $plan->category;
+                                            $cat_label = isset($category_labels[$current_category]) ? $category_labels[$current_category] : ucfirst($current_category);
+                                            echo '<option disabled style="background: #f0f0f0; font-weight: bold; color: #666;">── ' . $cat_label . ' ──</option>';
+                                        }
+                                        echo '<option value="' . $plan->id . '" data-price-clp="' . $plan->price_clp . '" data-price-usd="' . $plan->price_usd . '" data-category="' . esc_attr($plan->category) . '">' . 
                                              esc_html($plan->name) . ' - $' . number_format($plan->price_usd, 2) . ' USD / $' . number_format($plan->price_clp, 0, ',', '.') . ' CLP</option>';
                                     }
                                     ?>

@@ -105,16 +105,32 @@ function automatiza_tech_leads_manager_page() {
             // Mantenemos $action = 'edit' para mostrar el formulario de nuevo
         } else {
             // Update Logic
+            $new_confirmed_attendance = sanitize_text_field($_POST['confirmed_attendance']) === '' ? null : intval($_POST['confirmed_attendance']);
+            
             $data = array(
                 'name' => sanitize_text_field($_POST['name']),
                 'email' => sanitize_email($_POST['email']),
                 'phone' => sanitize_text_field($_POST['phone']),
                 'scheduled_date' => $new_date,
                 'scheduled_time' => $new_time,
-                'confirmed_attendance' => sanitize_text_field($_POST['confirmed_attendance']) === '' ? null : intval($_POST['confirmed_attendance'])
+                'confirmed_attendance' => $new_confirmed_attendance
             );
             
+            // Detectar si cambió a "No Asistió" (confirmed_attendance = 0) y antes no estaba en ese estado
+            $changed_to_noshow = ($new_confirmed_attendance === 0 && $original_lead->confirmed_attendance != '0');
+            
+            // Si cambió a No Asistió, también actualizar attendance_status
+            if ($changed_to_noshow) {
+                $data['attendance_status'] = 'no_show';
+            }
+            // Si cambió a Asistió
+            if ($new_confirmed_attendance === 1 && $original_lead->confirmed_attendance != '1') {
+                $data['attendance_status'] = 'attended';
+            }
+            
             $wpdb->update($table_name, $data, array('id' => $id));
+            
+            $messages = array();
             
             // Si cambió fecha u hora, enviar email de reprogramación
             if ($date_changed || $time_changed) {
@@ -122,10 +138,28 @@ function automatiza_tech_leads_manager_page() {
                 $email_sent = automatiza_tech_send_reschedule_email($updated_lead, $original_lead);
                 
                 if ($email_sent) {
-                    echo '<div class="notice notice-success"><p>✅ Cita actualizada correctamente. 📧 <strong>Email de reprogramación enviado.</strong></p></div>';
+                    $messages[] = '📧 <strong>Email de reprogramación enviado.</strong>';
                 } else {
-                    echo '<div class="notice notice-warning"><p>✅ Cita actualizada correctamente. ⚠️ <strong>No se pudo enviar el email de reprogramación.</strong></p></div>';
+                    $messages[] = '⚠️ <strong>No se pudo enviar el email de reprogramación.</strong>';
                 }
+            }
+            
+            // Si cambió a No Asistió, enviar email de "lamentamos que no vinieras"
+            if ($changed_to_noshow) {
+                $lead_for_email = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $id));
+                $noshow_email_sent = automatiza_tech_send_no_show_email($lead_for_email);
+                
+                if ($noshow_email_sent) {
+                    // Registrar que se envió el email
+                    $wpdb->update($table_name, array('no_show_email_sent' => current_time('mysql')), array('id' => $id));
+                    $messages[] = '📧 <strong>Email de "No Asistió" enviado.</strong>';
+                } else {
+                    $messages[] = '⚠️ <strong>No se pudo enviar el email de "No Asistió".</strong>';
+                }
+            }
+            
+            if (!empty($messages)) {
+                echo '<div class="notice notice-success"><p>✅ Cita actualizada correctamente. ' . implode(' ', $messages) . '</p></div>';
             } else {
                 echo '<div class="notice notice-success"><p>✅ Cita actualizada correctamente.</p></div>';
             }

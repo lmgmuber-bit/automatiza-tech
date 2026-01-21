@@ -367,14 +367,21 @@ class QuotationPDFFPDF extends FPDF {
         
         $fill = false;
         $total = 0;
+        $total_descuento = 0;
         
         foreach ($items as $index => $item) {
             $item_num = $index + 1;
             $item_name = isset($item->name) ? utf8_to_latin1($item->name) : 'Servicio ' . $item_num;
             $item_price = $this->get_item_price($item);
-            $total += $item_price;
+            $original_price = $this->get_item_original_price($item);
+            $has_discount = $this->item_has_discount($item);
             
-            error_log("DEBUG Quotation PDF Render: Item " . $item_num . " - Nombre: {$item->name}, Precio: {$item_price}");
+            $total += $item_price;
+            if ($has_discount) {
+                $total_descuento += ($original_price - $item_price);
+            }
+            
+            error_log("DEBUG Quotation PDF Render: Item " . $item_num . " - Nombre: {$item->name}, Precio: {$item_price}" . ($has_discount ? " (Descuento: {$item->discount_percent}%)" : ""));
             
             // Número
             $this->Cell($w[0], 10, $item_num, 'LR', 0, 'C', $fill);
@@ -382,6 +389,13 @@ class QuotationPDFFPDF extends FPDF {
             // Descripción (puede ser multilínea)
             $x = $this->GetX();
             $y = $this->GetY();
+            
+            // Si tiene descuento, agregar info del descuento en el nombre
+            if ($has_discount) {
+                $discount_text = " (-" . number_format($item->discount_percent, 0) . "%)";
+                $item_name = $item_name . $discount_text;
+            }
+            
             $this->MultiCell($w[1], 5, $item_name, 'LR', 'L', $fill);
             $current_y = $this->GetY();
             $height = $current_y - $y;
@@ -396,7 +410,7 @@ class QuotationPDFFPDF extends FPDF {
             // Cantidad
             $this->Cell($w[2], 10, '1', 'LR', 0, 'C', $fill);
             
-            // Precio
+            // Precio (mostrar precio con descuento ya aplicado)
             $this->Cell($w[3], 10, $this->currency_symbol . ' ' . number_format($item_price, 0, ',', '.'), 'LR', 0, 'R', $fill);
             
             $this->Ln();
@@ -415,6 +429,15 @@ class QuotationPDFFPDF extends FPDF {
         if ($this->contact_country === 'CL') {
             $iva = $subtotal * 0.19;
             $total_con_iva = $subtotal + $iva;
+        }
+        
+        // Si hay descuento, mostrar línea especial
+        if ($total_descuento > 0) {
+            $this->SetFont('Arial', 'B', 10);
+            $this->SetTextColor(39, 174, 96); // Verde
+            $this->SetFillColor(212, 237, 218); // Verde claro
+            $this->Cell($w[0] + $w[1] + $w[2], 8, utf8_to_latin1('Ahorro total por descuento:'), 1, 0, 'R', true);
+            $this->Cell($w[3], 8, '-' . $this->currency_symbol . ' ' . number_format($total_descuento, 0, ',', '.'), 1, 1, 'R', true);
         }
         
         // SUBTOTAL
@@ -548,27 +571,63 @@ class QuotationPDFFPDF extends FPDF {
     }
     
     /**
-     * Obtener precio del item según moneda del contacto
+     * Obtener precio del item según moneda del contacto (con descuento aplicado)
      */
     private function get_item_price($item) {
+        $price = 0.00;
+        
         if ($this->currency === 'CLP') {
             // Chile: usar precio en pesos chilenos
+            if (isset($item->price_clp) && $item->price_clp > 0) {
+                $price = floatval($item->price_clp);
+            }
+        } else {
+            // Otros países: usar precio en dólares
+            if (isset($item->price_usd) && $item->price_usd > 0) {
+                $price = floatval($item->price_usd);
+            }
+        }
+        
+        // Fallback a price genérico
+        if ($price == 0 && isset($item->price) && $item->price > 0) {
+            $price = floatval($item->price);
+        }
+        
+        // Aplicar descuento si existe
+        if (isset($item->discount_percent) && $item->discount_percent > 0) {
+            $discount = floatval($item->discount_percent);
+            $price = $price * (1 - $discount / 100);
+        }
+        
+        return $price;
+    }
+    
+    /**
+     * Obtener precio original del item (sin descuento)
+     */
+    private function get_item_original_price($item) {
+        if ($this->currency === 'CLP') {
             if (isset($item->price_clp) && $item->price_clp > 0) {
                 return floatval($item->price_clp);
             }
         } else {
-            // Otros países: usar precio en dólares
             if (isset($item->price_usd) && $item->price_usd > 0) {
                 return floatval($item->price_usd);
             }
         }
         
-        // Fallback a price genérico
         if (isset($item->price) && $item->price > 0) {
             return floatval($item->price);
         }
         
         return 0.00;
+    }
+    
+    /**
+     * Verificar si el item tiene descuento
+     */
+    private function item_has_discount($item) {
+        return isset($item->discount_percent) && floatval($item->discount_percent) > 0;
     }
     
     /**

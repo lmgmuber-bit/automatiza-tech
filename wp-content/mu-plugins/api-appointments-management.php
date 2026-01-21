@@ -75,6 +75,13 @@ class AutomatizaTech_Appointments_API {
             'permission_callback' => '__return_true'
         ));
         
+        // POST /appointments/{id}/cancel - Cancelar cita (alternativa a DELETE)
+        register_rest_route('automatiza-tech/v1', '/appointments/(?P<id>\d+)/cancel', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'delete_appointment'),
+            'permission_callback' => '__return_true'
+        ));
+        
         // POST /send-email - Enviar correo corporativo
         register_rest_route('automatiza-tech/v1', '/send-email', array(
             'methods' => 'POST',
@@ -240,10 +247,34 @@ class AutomatizaTech_Appointments_API {
         
         $results = $wpdb->get_results($query);
         
+        // Si se busca por fecha y hora específicas, también verificar tabla de seguimientos
+        // Esto permite validación cruzada DEMO/Seguimiento
+        $followup_results = array();
+        if ($scheduled_date && $scheduled_time) {
+            $followup_table = $wpdb->prefix . 'automatiza_followup_meetings';
+            $time_parts = explode(':', $scheduled_time);
+            $hour_minute = $time_parts[0] . ':' . (isset($time_parts[1]) ? $time_parts[1] : '00');
+            
+            $followup_query = $wpdb->prepare(
+                "SELECT id, client_name as name, client_email as email, phone, meeting_date as scheduled_date, 
+                        meeting_time as scheduled_time, meet_link, status, 'followup' as appointment_type
+                 FROM $followup_table 
+                 WHERE meeting_date = %s 
+                 AND LEFT(meeting_time, 5) = %s 
+                 AND status NOT IN ('cancelled', 'completed')",
+                $scheduled_date,
+                $hour_minute
+            );
+            $followup_results = $wpdb->get_results($followup_query);
+        }
+        
+        // Combinar resultados de DEMOs y Seguimientos
+        $all_results = array_merge($results, $followup_results);
+        
         return new WP_REST_Response(array(
             'success' => true,
-            'data' => $results,
-            'count' => count($results)
+            'data' => $all_results,
+            'count' => count($all_results)
         ), 200);
     }
     

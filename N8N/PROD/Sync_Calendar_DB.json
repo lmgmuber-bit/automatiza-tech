@@ -1,0 +1,363 @@
+{
+  "name": "Sync Calendar with DB",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        250,
+        300
+      ],
+      "id": "schedule-trigger",
+      "name": "Run Every 6 Hours"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "contacto@automatizatech.cl",
+          "mode": "list",
+          "cachedResultName": "contacto@automatizatech.cl"
+        },
+        "returnAll": false,
+        "limit": 100,
+        "options": {
+          "timeMin": "={{ DateTime.now().setZone('America/Santiago').toISO() }}",
+          "timeMax": "={{ DateTime.now().setZone('America/Santiago').plus({ days: 30 }).toISO() }}",
+          "singleEvents": true,
+          "q": "Seguimiento"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.1,
+      "position": [
+        470,
+        200
+      ],
+      "id": "get-seguimiento-events",
+      "name": "Get Seguimiento Events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "NrhQQuWgel9eWwzp",
+          "name": "Google Calendar AutomatizaTech.cl"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "contacto@automatizatech.cl",
+          "mode": "list",
+          "cachedResultName": "contacto@automatizatech.cl"
+        },
+        "returnAll": false,
+        "limit": 100,
+        "options": {
+          "timeMin": "={{ DateTime.now().setZone('America/Santiago').toISO() }}",
+          "timeMax": "={{ DateTime.now().setZone('America/Santiago').plus({ days: 30 }).toISO() }}",
+          "singleEvents": true,
+          "q": "Demo"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.1,
+      "position": [
+        470,
+        400
+      ],
+      "id": "get-demo-events",
+      "name": "Get Demo Events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "NrhQQuWgel9eWwzp",
+          "name": "Google Calendar AutomatizaTech.cl"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "event_type",
+              "name": "event_type",
+              "value": "seguimiento",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        690,
+        200
+      ],
+      "id": "set-type-seguimiento",
+      "name": "Set Type Seguimiento"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "event_type",
+              "name": "event_type",
+              "value": "demo",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        690,
+        400
+      ],
+      "id": "set-type-demo",
+      "name": "Set Type Demo"
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        910,
+        300
+      ],
+      "id": "merge-events",
+      "name": "Merge All Events"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.event_type === 'seguimiento' ? 'https://automatizatech.cl/wp-json/automatiza-tech/v1/followup-meetings/check-event?event_id=' + encodeURIComponent($json.id) : 'https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/check-event?event_id=' + encodeURIComponent($json.id) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1130,
+        300
+      ],
+      "id": "check-event-in-db",
+      "name": "Check Event Exists in DB"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.exists }}",
+              "value2": false
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1350,
+        300
+      ],
+      "id": "is-orphan-check",
+      "name": "Is Orphan?"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "contacto@automatizatech.cl",
+          "mode": "list",
+          "cachedResultName": "contacto@automatizatech.cl"
+        },
+        "eventId": "={{ $('Check Event Exists in DB').item.json.event_id }}",
+        "options": {
+          "sendUpdates": "all"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.1,
+      "position": [
+        1570,
+        200
+      ],
+      "id": "delete-orphan-event",
+      "name": "Delete Orphan Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "NrhQQuWgel9eWwzp",
+          "name": "Google Calendar AutomatizaTech.cl"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v22.0/946501128543201/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', to: '56974940070', type: 'text', text: { preview_url: false, body: '🧹 SYNC: Evento huérfano eliminado de Google Calendar\\n\\nTipo: ' + ($('Merge All Events').item.json.event_type === 'demo' ? 'DEMO' : 'Seguimiento') + '\\nEvento: ' + $('Merge All Events').item.json.summary + '\\nFecha: ' + ($('Merge All Events').item.json.start?.dateTime || $('Merge All Events').item.json.start?.date || 'Sin fecha').substring(0,10) + '\\n\\n(No existía en BD)' } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1790,
+        200
+      ],
+      "id": "notify-admin",
+      "name": "Notify Admin",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "SH8OXr93p852Ll6m",
+          "name": "WhatsApp Tech"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Run Every 6 Hours": {
+      "main": [
+        [
+          {
+            "node": "Get Seguimiento Events",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Demo Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Seguimiento Events": {
+      "main": [
+        [
+          {
+            "node": "Set Type Seguimiento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Demo Events": {
+      "main": [
+        [
+          {
+            "node": "Set Type Demo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Type Seguimiento": {
+      "main": [
+        [
+          {
+            "node": "Merge All Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Type Demo": {
+      "main": [
+        [
+          {
+            "node": "Merge All Events",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge All Events": {
+      "main": [
+        [
+          {
+            "node": "Check Event Exists in DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Event Exists in DB": {
+      "main": [
+        [
+          {
+            "node": "Is Orphan?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Orphan?": {
+      "main": [
+        [
+          {
+            "node": "Delete Orphan Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Delete Orphan Event": {
+      "main": [
+        [
+          {
+            "node": "Notify Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "active": false
+}

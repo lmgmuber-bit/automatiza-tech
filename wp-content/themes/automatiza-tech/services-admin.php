@@ -292,6 +292,7 @@ function new_service_page() {
                             <option value="pricing" <?php echo ($service && $service->service_category === 'pricing') ? 'selected' : ''; ?>>Pricing</option>
                             <option value="features" <?php echo ($service && $service->service_category === 'features') ? 'selected' : ''; ?>>Features</option>
                             <option value="special" <?php echo ($service && $service->service_category === 'special') ? 'selected' : ''; ?>>Special</option>
+                            <option value="custom" <?php echo ($service && $service->service_category === 'custom') ? 'selected' : ''; ?>>Proyectos Personalizados</option>
                             <option value="general" <?php echo ($service && $service->service_category === 'general') ? 'selected' : ''; ?>>General</option>
                         </select>
                     </td>

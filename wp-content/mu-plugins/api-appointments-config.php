@@ -67,16 +67,26 @@ function automatiza_get_appointments_config() {
     $today = date('Y-m-d');
     $end_date = date('Y-m-d', strtotime('+30 days'));
     
-    // Obtener todas las citas de los próximos 30 días (excluyendo canceladas)
+    // Obtener todas las citas de DEMO de los próximos 30 días (excluyendo canceladas)
     $booked_slots = $wpdb->get_results($wpdb->prepare(
         "SELECT scheduled_date, scheduled_time FROM $table_name 
          WHERE scheduled_date >= %s AND scheduled_date <= %s 
-         AND (status IS NULL OR status != 'cancelled')",
+         AND (status IS NULL OR status NOT IN ('cancelled', 'no_show'))",
         $today,
         $end_date
     ));
     
-    // Agrupar slots ocupados por fecha
+    // Obtener citas de SEGUIMIENTO de los próximos 30 días (validación cruzada)
+    $followup_table = $wpdb->prefix . 'automatiza_followup_meetings';
+    $followup_slots = $wpdb->get_results($wpdb->prepare(
+        "SELECT meeting_date, meeting_time FROM $followup_table 
+         WHERE meeting_date >= %s AND meeting_date <= %s 
+         AND status NOT IN ('cancelled', 'completed')",
+        $today,
+        $end_date
+    ));
+    
+    // Agrupar slots ocupados por fecha (DEMOs)
     $slots_by_date = array();
     foreach ($booked_slots as $slot) {
         $date = $slot->scheduled_date;
@@ -85,6 +95,19 @@ function automatiza_get_appointments_config() {
         }
         // Formato HH:mm
         $slots_by_date[$date][] = substr($slot->scheduled_time, 0, 5);
+    }
+    
+    // Agregar slots de SEGUIMIENTO (validación cruzada)
+    foreach ($followup_slots as $slot) {
+        $date = $slot->meeting_date;
+        if (!isset($slots_by_date[$date])) {
+            $slots_by_date[$date] = array();
+        }
+        $time = substr($slot->meeting_time, 0, 5);
+        // Evitar duplicados
+        if (!in_array($time, $slots_by_date[$date])) {
+            $slots_by_date[$date][] = $time;
+        }
     }
     
     // Para cada fecha con citas, verificar si está llena

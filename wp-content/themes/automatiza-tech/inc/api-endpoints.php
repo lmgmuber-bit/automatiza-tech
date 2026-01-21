@@ -113,6 +113,35 @@ function automatiza_tech_normalize_phone($phone) {
 }
 
 /**
+ * Eliminar evento de Google Calendar vía N8N webhook
+ * 
+ * @param string $event_id ID del evento de Google Calendar
+ * @return bool True si se eliminó correctamente
+ */
+function automatiza_tech_delete_google_calendar_event($event_id) {
+    if (empty($event_id)) {
+        return false;
+    }
+    
+    $webhook_url = 'https://n8n-n8n.kchiba.easypanel.host/webhook/delete-calendar-event';
+    
+    $response = wp_remote_post($webhook_url, array(
+        'method' => 'POST',
+        'timeout' => 30,
+        'headers' => array('Content-Type' => 'application/json'),
+        'body' => json_encode(array('event_id' => $event_id))
+    ));
+    
+    if (is_wp_error($response)) {
+        error_log('Error eliminando evento de Google Calendar: ' . $response->get_error_message());
+        return false;
+    }
+    
+    $response_code = wp_remote_retrieve_response_code($response);
+    return $response_code >= 200 && $response_code < 300;
+}
+
+/**
  * Register API routes
  */
 add_action('rest_api_init', function () {
@@ -160,6 +189,48 @@ add_action('rest_api_init', function () {
         'permission_callback' => '__return_true'
     ));
 
+    // Endpoint para recordatorio 8PM (citas del día siguiente) - EMAIL
+    register_rest_route('automatiza-tech/v1', '/leads/reminders-8pm', array(
+        'methods' => 'GET',
+        'callback' => 'automatiza_tech_get_leads_reminder_8pm',
+        'permission_callback' => '__return_true'
+    ));
+
+    // Endpoint para recordatorio 8AM (citas del mismo día) - EMAIL
+    register_rest_route('automatiza-tech/v1', '/leads/reminders-8am', array(
+        'methods' => 'GET',
+        'callback' => 'automatiza_tech_get_leads_reminder_8am',
+        'permission_callback' => '__return_true'
+    ));
+
+    // Endpoint para recordatorio 8PM (citas del día siguiente) - WHATSAPP
+    register_rest_route('automatiza-tech/v1', '/leads/reminders-wa-8pm', array(
+        'methods' => 'GET',
+        'callback' => 'automatiza_tech_get_leads_reminder_8pm_wa',
+        'permission_callback' => '__return_true'
+    ));
+
+    // Endpoint para recordatorio 8AM (citas del mismo día) - WHATSAPP
+    register_rest_route('automatiza-tech/v1', '/leads/reminders-wa-8am', array(
+        'methods' => 'GET',
+        'callback' => 'automatiza_tech_get_leads_reminder_8am_wa',
+        'permission_callback' => '__return_true'
+    ));
+
+    // Endpoint para marcar recordatorio 8PM/8AM como enviado - EMAIL
+    register_rest_route('automatiza-tech/v1', '/leads/update-reminder-daily/(?P<lead_id>\d+)/(?P<type>8pm|8am)', array(
+        'methods' => array('POST', 'GET'),
+        'callback' => 'automatiza_tech_mark_reminder_daily_sent',
+        'permission_callback' => '__return_true'
+    ));
+
+    // Endpoint para marcar recordatorio 8PM/8AM como enviado - WHATSAPP
+    register_rest_route('automatiza-tech/v1', '/leads/update-reminder-wa-daily/(?P<lead_id>\d+)/(?P<type>8pm|8am)', array(
+        'methods' => array('POST', 'GET'),
+        'callback' => 'automatiza_tech_mark_reminder_daily_sent_wa',
+        'permission_callback' => '__return_true'
+    ));
+
     // Endpoint para actualizar estado de recordatorio por CORREO (Ruta con parámetros obligatorios en URL)
     register_rest_route('automatiza-tech/v1', '/leads/update-reminder/(?P<lead_id>\d+)/(?P<type>[a-zA-Z0-9]+)', array(
         'methods' => array('POST', 'GET'),
@@ -199,6 +270,13 @@ add_action('rest_api_init', function () {
     register_rest_route('automatiza-tech/v1', '/leads/confirm-attendance/(?P<lead_id>\d+)/(?P<type>[a-zA-Z0-9]+)', array(
         'methods' => array('POST', 'GET'),
         'callback' => 'automatiza_tech_confirm_attendance',
+        'permission_callback' => '__return_true'
+    ));
+    
+    // Endpoint para verificar si un evento de DEMO existe en BD (para sync con Google Calendar)
+    register_rest_route('automatiza-tech/v1', '/leads/check-event', array(
+        'methods' => 'GET',
+        'callback' => 'automatiza_tech_check_lead_event_exists',
         'permission_callback' => '__return_true'
     ));
 });
@@ -336,6 +414,7 @@ function automatiza_tech_save_lead($request) {
     $scheduled_time = isset($params['scheduled_time']) ? sanitize_text_field($params['scheduled_time']) : null;
     $confirmed_attendance = isset($params['confirmed_attendance']) ? (int)$params['confirmed_attendance'] : null;
     $meet_link = isset($params['meet_link']) ? esc_url_raw($params['meet_link']) : '';
+    $google_event_id = isset($params['google_event_id']) ? sanitize_text_field($params['google_event_id']) : '';
     
     // Validación: Verificar si el email ya tiene 2 o más agendamientos ACTIVOS (futuros)
     $test_email = 'lmgm.uber@gmail.com';
@@ -356,6 +435,40 @@ function automatiza_tech_save_lead($request) {
         }
     }
     
+    // Validación CRUZADA: Verificar disponibilidad del slot (DEMO y Seguimiento)
+    if ($scheduled_date && $scheduled_time) {
+        $followup_table = $wpdb->prefix . 'automatiza_followup_meetings';
+        $time_normalized = substr($scheduled_time, 0, 5);
+        
+        // Verificar si existe conflicto con otra DEMO
+        $demo_conflict = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM $table_name 
+             WHERE scheduled_date = %s 
+             AND LEFT(scheduled_time, 5) = %s 
+             AND (status IS NULL OR status NOT IN ('cancelled', 'no_show'))",
+            $scheduled_date,
+            $time_normalized
+        ));
+        
+        if ($demo_conflict) {
+            return new WP_Error('slot_taken', 'Este horario ya está ocupado por otra DEMO. Por favor selecciona otro horario.', array('status' => 400));
+        }
+        
+        // Verificar si existe conflicto con reunión de Seguimiento
+        $followup_conflict = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM $followup_table 
+             WHERE meeting_date = %s 
+             AND LEFT(meeting_time, 5) = %s 
+             AND status NOT IN ('cancelled', 'completed')",
+            $scheduled_date,
+            $time_normalized
+        ));
+        
+        if ($followup_conflict) {
+            return new WP_Error('slot_taken', 'Este horario ya está ocupado por una reunión de seguimiento. Por favor selecciona otro horario.', array('status' => 400));
+        }
+    }
+    
     // Generar token de seguridad
     $token = bin2hex(random_bytes(16));
 
@@ -367,6 +480,7 @@ function automatiza_tech_save_lead($request) {
         'phone' => $phone,
         'session_id' => $session_id,
         'meet_link' => $meet_link,
+        'google_event_id' => $google_event_id,
         'token' => $token,
         'source' => $source
     );
@@ -424,8 +538,15 @@ function automatiza_tech_get_exchange_rate() {
 function automatiza_tech_check_availability($request) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_leads';
+    
+    // Obtener fecha de múltiples fuentes para mayor compatibilidad
     $params = $request->get_json_params();
     $date = isset($params['date']) ? sanitize_text_field($params['date']) : null;
+    
+    // Fallback a get_param si no viene en JSON
+    if (!$date) {
+        $date = $request->get_param('date');
+    }
 
     if (!$date) {
         return new WP_Error('missing_date', 'Fecha requerida', array('status' => 400));
@@ -464,9 +585,9 @@ function automatiza_tech_check_availability($request) {
     $start_time = $settings[$day_name]['start'];
     $end_time = $settings[$day_name]['end'];
 
-    // 2. Get Booked Slots from DB (excluyendo citas canceladas)
+    // 2. Get Booked Slots from DB - DEMOS (excluyendo citas canceladas y no_show)
     $booked_results = $wpdb->get_results($wpdb->prepare(
-        "SELECT scheduled_time FROM $table_name WHERE scheduled_date = %s AND (status IS NULL OR status != 'cancelled')",
+        "SELECT scheduled_time FROM $table_name WHERE scheduled_date = %s AND (status IS NULL OR status NOT IN ('cancelled', 'no_show'))",
         $date
     ));
 
@@ -474,6 +595,20 @@ function automatiza_tech_check_availability($request) {
     foreach ($booked_results as $row) {
         // Format to HH:mm
         $busy_slots[] = substr($row->scheduled_time, 0, 5);
+    }
+    
+    // 2.1 Get Booked Slots from FOLLOWUP MEETINGS table (validación cruzada)
+    $followup_table = $wpdb->prefix . 'automatiza_followup_meetings';
+    $followup_results = $wpdb->get_results($wpdb->prepare(
+        "SELECT meeting_time FROM $followup_table WHERE meeting_date = %s AND status NOT IN ('cancelled', 'completed')",
+        $date
+    ));
+    
+    foreach ($followup_results as $row) {
+        $slot = substr($row->meeting_time, 0, 5);
+        if (!in_array($slot, $busy_slots)) {
+            $busy_slots[] = $slot;
+        }
     }
 
     // 3. Calculate if Full Day
@@ -1171,6 +1306,11 @@ function automatiza_tech_handle_lead_action($request) {
         $lead = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $lead_id));
         
         if ($lead) {
+            // Eliminar de Google Calendar si existe el event_id
+            if (!empty($lead->google_event_id)) {
+                automatiza_tech_delete_google_calendar_event($lead->google_event_id);
+            }
+            
             // Mover a logs
             $wpdb->insert($logs_table_name, array(
                 'original_lead_id' => $lead->id,
@@ -1246,7 +1386,7 @@ function automatiza_tech_reschedule_lead($request) {
 
     // Verificar disponibilidad nuevamente (doble check)
     $availability_req = new WP_REST_Request('POST', '/automatiza-tech/v1/check-availability');
-    $availability_req->set_body_params(array('date' => $new_date));
+    $availability_req->set_param('date', $new_date);
     $availability = automatiza_tech_check_availability($availability_req);
 
     if (is_wp_error($availability) || (isset($availability['isFullDay']) && $availability['isFullDay'])) {
@@ -1290,4 +1430,294 @@ function automatiza_tech_reschedule_lead($request) {
         'success' => true, 
         'message' => 'Cita reagendada correctamente'
     );
+}
+
+/**
+ * Verificar si un evento de DEMO existe en la base de datos (para sync con Google Calendar)
+ */
+function automatiza_tech_check_lead_event_exists($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_leads';
+    
+    $event_id = $request->get_param('event_id');
+    
+    if (empty($event_id)) {
+        return array(
+            'exists' => false,
+            'event_id' => null,
+            'error' => 'event_id requerido'
+        );
+    }
+    
+    // Buscar evento en la base de datos con ese google_event_id
+    // Solo consideramos activos (no tiene status 'cancelled')
+    $lead = $wpdb->get_row($wpdb->prepare(
+        "SELECT id, name, email, scheduled_date, scheduled_time, google_event_id 
+         FROM $table_name 
+         WHERE google_event_id = %s 
+         AND (status IS NULL OR status NOT IN ('cancelled', 'no_show'))",
+        $event_id
+    ));
+    
+    if ($lead) {
+        return array(
+            'exists' => true,
+            'event_id' => $event_id,
+            'lead_id' => $lead->id,
+            'name' => $lead->name,
+            'scheduled_date' => $lead->scheduled_date
+        );
+    }
+    
+    return array(
+        'exists' => false,
+        'event_id' => $event_id
+    );
+}
+
+/**
+ * Recordatorio 8PM - Seguimientos del día siguiente (para EMAIL)
+ * Se ejecuta a las 8PM Chile y envía recordatorios para citas de seguimiento del día siguiente
+ */
+function automatiza_tech_get_leads_reminder_8pm($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
+    
+    // Forzar zona horaria de Chile
+    $chile_tz = new DateTimeZone('America/Santiago');
+    $now_chile = new DateTime('now', $chile_tz);
+    $tomorrow_chile = clone $now_chile;
+    $tomorrow_chile->modify('+1 day');
+    $tomorrow = $tomorrow_chile->format('Y-m-d');
+    
+    error_log("Reminder 8PM EMAIL Followup - Chile now: " . $now_chile->format('Y-m-d H:i:s') . " - Tomorrow: $tomorrow");
+    
+    // Buscar seguimientos con citas mañana que no hayan recibido el recordatorio 8PM por email
+    $meetings = $wpdb->get_results($wpdb->prepare(
+        "SELECT id, client_name as name, client_email as email, company_name, phone, 
+                meeting_date, meeting_time, meet_link, meeting_subject, status,
+                recordatorio_8pm, recordatorio_8am, recordatorio_8pm_wa, recordatorio_8am_wa
+         FROM $table_name 
+         WHERE meeting_date = %s 
+         AND (recordatorio_8pm IS NULL OR recordatorio_8pm = 0)
+         AND (status IS NULL OR status NOT IN ('cancelled', 'no_show'))
+         AND client_email IS NOT NULL AND client_email != ''",
+        $tomorrow
+    ));
+
+    // Formatear fechas para visualización
+    if (!empty($meetings)) {
+        foreach ($meetings as $meeting) {
+            $meeting->scheduled_date = date('d-m-Y', strtotime($meeting->meeting_date));
+            $meeting->scheduled_time = substr($meeting->meeting_time, 0, 5);
+            if (!isset($meeting->meet_link) || empty($meeting->meet_link)) {
+                $meeting->meet_link = '';
+            }
+        }
+    }
+
+    error_log("Reminder 8PM EMAIL Followup - Found " . count($meetings) . " meetings");
+    return $meetings;
+}
+
+/**
+ * Recordatorio 8AM - Seguimientos del mismo día (para EMAIL)
+ * Se ejecuta a las 8AM Chile y envía recordatorios para citas de seguimiento de ese mismo día
+ */
+function automatiza_tech_get_leads_reminder_8am($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
+    
+    // Forzar zona horaria de Chile
+    $chile_tz = new DateTimeZone('America/Santiago');
+    $now_chile = new DateTime('now', $chile_tz);
+    $today = $now_chile->format('Y-m-d');
+    
+    error_log("Reminder 8AM EMAIL Followup - Chile now: " . $now_chile->format('Y-m-d H:i:s') . " - Today: $today");
+    
+    // Buscar seguimientos con citas hoy que no hayan recibido el recordatorio 8AM por email
+    // Solo citas a partir de las 09:00 para dar tiempo
+    $meetings = $wpdb->get_results($wpdb->prepare(
+        "SELECT id, client_name as name, client_email as email, company_name, phone, 
+                meeting_date, meeting_time, meet_link, meeting_subject, status,
+                recordatorio_8pm, recordatorio_8am, recordatorio_8pm_wa, recordatorio_8am_wa
+         FROM $table_name 
+         WHERE meeting_date = %s 
+         AND meeting_time >= '09:00:00'
+         AND (recordatorio_8am IS NULL OR recordatorio_8am = 0)
+         AND (status IS NULL OR status NOT IN ('cancelled', 'no_show'))
+         AND client_email IS NOT NULL AND client_email != ''",
+        $today
+    ));
+
+    // Formatear fechas para visualización
+    if (!empty($meetings)) {
+        foreach ($meetings as $meeting) {
+            $meeting->scheduled_date = date('d-m-Y', strtotime($meeting->meeting_date));
+            $meeting->scheduled_time = substr($meeting->meeting_time, 0, 5);
+            if (!isset($meeting->meet_link) || empty($meeting->meet_link)) {
+                $meeting->meet_link = '';
+            }
+        }
+    }
+
+    error_log("Reminder 8AM EMAIL Followup - Found " . count($meetings) . " meetings");
+    return $meetings;
+}
+
+/**
+ * Recordatorio 8PM - Seguimientos del día siguiente (para WHATSAPP)
+ * Se ejecuta a las 8PM Chile y envía recordatorios para citas de seguimiento del día siguiente
+ */
+function automatiza_tech_get_leads_reminder_8pm_wa($request) {
+    nocache_headers();
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0, private');
+    header('Pragma: no-cache');
+    header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
+    
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
+    
+    // Forzar zona horaria de Chile
+    $chile_tz = new DateTimeZone('America/Santiago');
+    $now_chile = new DateTime('now', $chile_tz);
+    $tomorrow_chile = clone $now_chile;
+    $tomorrow_chile->modify('+1 day');
+    $tomorrow = $tomorrow_chile->format('Y-m-d');
+    
+    error_log("Reminder 8PM WA Followup - Chile now: " . $now_chile->format('Y-m-d H:i:s') . " - Tomorrow: $tomorrow");
+    
+    // Buscar seguimientos con citas mañana que no hayan recibido el recordatorio 8PM por WhatsApp
+    $meetings = $wpdb->get_results($wpdb->prepare(
+        "SELECT id, client_name as name, client_email as email, company_name, phone, 
+                meeting_date, meeting_time, meet_link, meeting_subject, status,
+                recordatorio_8pm, recordatorio_8am, recordatorio_8pm_wa, recordatorio_8am_wa
+         FROM $table_name 
+         WHERE meeting_date = %s 
+         AND (recordatorio_8pm_wa IS NULL OR recordatorio_8pm_wa = 0)
+         AND (status IS NULL OR status NOT IN ('cancelled', 'no_show'))
+         AND phone IS NOT NULL AND phone != ''",
+        $tomorrow
+    ));
+
+    // Formatear fechas para visualización
+    if (!empty($meetings)) {
+        foreach ($meetings as $meeting) {
+            $meeting->scheduled_date = date('d-m-Y', strtotime($meeting->meeting_date));
+            $meeting->scheduled_time = substr($meeting->meeting_time, 0, 5);
+            if (!isset($meeting->meet_link) || empty($meeting->meet_link)) {
+                $meeting->meet_link = '';
+            }
+        }
+    }
+
+    error_log("Reminder 8PM WA Followup - Found " . count($meetings) . " meetings");
+    return $meetings;
+}
+
+/**
+ * Recordatorio 8AM - Seguimientos del mismo día (para WHATSAPP)
+ * Se ejecuta a las 8AM Chile y envía recordatorios para citas de seguimiento de ese mismo día
+ * También pregunta confirmación de asistencia
+ */
+function automatiza_tech_get_leads_reminder_8am_wa($request) {
+    nocache_headers();
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0, private');
+    header('Pragma: no-cache');
+    header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
+    
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
+    
+    // Forzar zona horaria de Chile
+    $chile_tz = new DateTimeZone('America/Santiago');
+    $now_chile = new DateTime('now', $chile_tz);
+    $today = $now_chile->format('Y-m-d');
+    
+    error_log("Reminder 8AM WA Followup - Chile now: " . $now_chile->format('Y-m-d H:i:s') . " - Today: $today");
+    
+    // Buscar seguimientos con citas hoy que no hayan recibido el recordatorio 8AM por WhatsApp
+    // Solo citas a partir de las 09:00 para dar tiempo
+    $meetings = $wpdb->get_results($wpdb->prepare(
+        "SELECT id, client_name as name, client_email as email, company_name, phone, 
+                meeting_date, meeting_time, meet_link, meeting_subject, status,
+                recordatorio_8pm, recordatorio_8am, recordatorio_8pm_wa, recordatorio_8am_wa
+         FROM $table_name 
+         WHERE meeting_date = %s 
+         AND meeting_time >= '09:00:00'
+         AND (recordatorio_8am_wa IS NULL OR recordatorio_8am_wa = 0)
+         AND (status IS NULL OR status NOT IN ('cancelled', 'no_show'))
+         AND phone IS NOT NULL AND phone != ''",
+        $today
+    ));
+
+    // Formatear fechas para visualización
+    if (!empty($meetings)) {
+        foreach ($meetings as $meeting) {
+            $meeting->scheduled_date = date('d-m-Y', strtotime($meeting->meeting_date));
+            $meeting->scheduled_time = substr($meeting->meeting_time, 0, 5);
+            if (!isset($meeting->meet_link) || empty($meeting->meet_link)) {
+                $meeting->meet_link = '';
+            }
+        }
+    }
+
+    error_log("Reminder 8AM WA Followup - Found " . count($meetings) . " meetings");
+    return $meetings;
+}
+
+/**
+ * Marcar recordatorio 8PM/8AM como enviado (EMAIL) - Para Seguimientos
+ */
+function automatiza_tech_mark_reminder_daily_sent($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
+    
+    $meeting_id = isset($request['lead_id']) ? (int)$request['lead_id'] : 0;
+    $type = isset($request['type']) ? $request['type'] : null;
+
+    if (!$meeting_id || !in_array($type, ['8pm', '8am'])) {
+        error_log("Update Reminder Daily EMAIL Followup Failed. ID: $meeting_id, Type: $type");
+        return new WP_Error('invalid_params', 'Parámetros inválidos', array('status' => 400));
+    }
+
+    $column = 'recordatorio_' . $type;
+    
+    $result = $wpdb->update(
+        $table_name,
+        array($column => 1),
+        array('id' => $meeting_id),
+        array('%d'),
+        array('%d')
+    );
+
+    return array('success' => true, 'updated' => $result, 'channel' => 'email', 'type' => $type);
+}
+
+/**
+ * Marcar recordatorio 8PM/8AM como enviado (WHATSAPP) - Para Seguimientos
+ */
+function automatiza_tech_mark_reminder_daily_sent_wa($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
+    
+    $meeting_id = isset($request['lead_id']) ? (int)$request['lead_id'] : 0;
+    $type = isset($request['type']) ? $request['type'] : null;
+
+    if (!$meeting_id || !in_array($type, ['8pm', '8am'])) {
+        error_log("Update Reminder Daily WA Followup Failed. ID: $meeting_id, Type: $type");
+        return new WP_Error('invalid_params', 'Parámetros inválidos', array('status' => 400));
+    }
+
+    $column = 'recordatorio_' . $type . '_wa';
+    
+    $result = $wpdb->update(
+        $table_name,
+        array($column => 1),
+        array('id' => $meeting_id),
+        array('%d'),
+        array('%d')
+    );
+
+    return array('success' => true, 'updated' => $result, 'channel' => 'whatsapp', 'type' => $type);
 }

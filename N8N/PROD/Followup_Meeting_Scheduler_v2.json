@@ -1,0 +1,657 @@
+{
+  "name": "Reunión de Seguimiento - AutomatizaTech (PROD)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "followup-meeting",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [-800, 300],
+      "id": "followup-webhook",
+      "name": "Followup Webhook",
+      "webhookId": "followup-meeting"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "meeting_id",
+              "name": "meeting_id",
+              "value": "={{ $json.body.meeting_id }}",
+              "type": "number"
+            },
+            {
+              "id": "date",
+              "name": "date",
+              "value": "={{ $json.body.meeting_date }}",
+              "type": "string"
+            },
+            {
+              "id": "time",
+              "name": "time",
+              "value": "={{ $json.body.meeting_time }}",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "value": "={{ $json.body.client_email }}",
+              "type": "string"
+            },
+            {
+              "id": "name",
+              "name": "name",
+              "value": "={{ $json.body.client_name }}",
+              "type": "string"
+            },
+            {
+              "id": "company",
+              "name": "company",
+              "value": "={{ $json.body.company_name || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "phone",
+              "name": "phone",
+              "value": "={{ $json.body.phone || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "subject",
+              "name": "subject",
+              "value": "={{ $json.body.meeting_subject || 'Reunión de Seguimiento - AutomatizaTech' }}",
+              "type": "string"
+            },
+            {
+              "id": "notes",
+              "name": "notes",
+              "value": "={{ $json.body.notes || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-600, 300],
+      "id": "normalize-followup-data",
+      "name": "Normalize Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.email }}",
+              "operation": "isNotEmpty"
+            },
+            {
+              "value1": "={{ $json.date }}",
+              "operation": "isNotEmpty"
+            },
+            {
+              "value1": "={{ $json.time }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        },
+        "combineOperation": "all"
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-400, 300],
+      "id": "validate-input",
+      "name": "Validate Input"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/calendar/v3/calendars/contacto@automatizatech.cl/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "conferenceDataVersion",
+              "value": "1"
+            },
+            {
+              "name": "sendUpdates",
+              "value": "all"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "summary",
+              "value": "={{ $('Normalize Data').item.json.subject }}"
+            },
+            {
+              "name": "description",
+              "value": "={{ 'Reunión de Seguimiento - AutomatizaTech\\n\\n📋 Detalles:\\n- Cliente: ' + $('Normalize Data').item.json.name + '\\n- Empresa: ' + ($('Normalize Data').item.json.company || 'No especificada') + '\\n- Email: ' + $('Normalize Data').item.json.email + '\\n- Teléfono: ' + ($('Normalize Data').item.json.phone || 'No especificado') + '\\n\\n📝 Notas:\\n' + ($('Normalize Data').item.json.notes || 'Sin notas') + '\\n\\n---\\nEsta reunión fue agendada desde el panel de administración de AutomatizaTech.' }}"
+            },
+            {
+              "name": "start",
+              "value": "={{ { \"dateTime\": DateTime.fromISO($('Normalize Data').item.json.date + 'T' + $('Normalize Data').item.json.time, { zone: 'America/Santiago' }).toISO(), \"timeZone\": \"America/Santiago\" } }}"
+            },
+            {
+              "name": "end",
+              "value": "={{ { \"dateTime\": DateTime.fromISO($('Normalize Data').item.json.date + 'T' + $('Normalize Data').item.json.time, { zone: 'America/Santiago' }).plus({ hours: 1 }).toISO(), \"timeZone\": \"America/Santiago\" } }}"
+            },
+            {
+              "name": "attendees",
+              "value": "={{ [ { \"email\": $('Normalize Data').item.json.email }, { \"email\": \"contacto@automatizatech.cl\" } ] }}"
+            },
+            {
+              "name": "organizer",
+              "value": "={{ { \"displayName\": \"Automatiza Tech\", \"email\": \"contacto@automatizatech.cl\" } }}"
+            },
+            {
+              "name": "conferenceData",
+              "value": "={{ { \"createRequest\": { \"requestId\": 'followup-' + $('Normalize Data').item.json.meeting_id + '-' + Date.now(), \"conferenceSolutionKey\": { \"type\": \"hangoutsMeet\" } } } }}"
+            },
+            {
+              "name": "reminders",
+              "value": "={{ { \"useDefault\": false, \"overrides\": [ { \"method\": \"email\", \"minutes\": 1440 }, { \"method\": \"popup\", \"minutes\": 60 }, { \"method\": \"popup\", \"minutes\": 10 } ] } }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [-200, 200],
+      "id": "create-followup-event",
+      "name": "Create Calendar Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "ziZmOO4DlgXb4Vet",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body?.id || $json.id }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [0, 200],
+      "id": "check-event-created",
+      "name": "Event Created?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "meet_link",
+              "name": "meet_link",
+              "value": "={{ $json.body?.hangoutLink || $json.hangoutLink || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "event_id",
+              "name": "event_id",
+              "value": "={{ $json.body?.id || $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "meeting_id",
+              "name": "meeting_id",
+              "value": "={{ $('Normalize Data').item.json.meeting_id }}",
+              "type": "number"
+            },
+            {
+              "id": "client_name",
+              "name": "client_name",
+              "value": "={{ $('Normalize Data').item.json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "client_email",
+              "name": "client_email",
+              "value": "={{ $('Normalize Data').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "company",
+              "name": "company",
+              "value": "={{ $('Normalize Data').item.json.company }}",
+              "type": "string"
+            },
+            {
+              "id": "date",
+              "name": "date",
+              "value": "={{ $('Normalize Data').item.json.date }}",
+              "type": "string"
+            },
+            {
+              "id": "time",
+              "name": "time",
+              "value": "={{ $('Normalize Data').item.json.time }}",
+              "type": "string"
+            },
+            {
+              "id": "subject",
+              "name": "subject",
+              "value": "={{ $('Normalize Data').item.json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "Evento creado exitosamente en Google Calendar",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [200, 100],
+      "id": "prepare-success-response",
+      "name": "Prepare Success Response"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/followup-meetings/{{ $json.meeting_id }}/update-meet",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ meet_link: $json.meet_link, event_id: $json.event_id }) }}",
+        "options": {
+          "ignoreResponseCode": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [400, 100],
+      "id": "update-wp-meet-link",
+      "name": "Update WP Meet Link"
+    },
+    {
+      "parameters": {
+        "fromEmail": "contacto@automatizatech.cl",
+        "toEmail": "={{ $('Prepare Success Response').item.json.client_email }}",
+        "subject": "=📅 {{ $('Prepare Success Response').item.json.subject }} - {{ DateTime.fromISO($('Prepare Success Response').item.json.date).setLocale('es').toFormat('cccc dd LLLL yyyy') }}",
+        "emailType": "html",
+        "html": "=<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <style>\n        body { \n            font-family: \"Poppins\", \"Segoe UI\", Arial, sans-serif; \n            background-color: #f0fdfa; \n            margin: 0; \n            padding: 0; \n            color: #333333; \n            line-height: 1.6;\n        }\n        .container { \n            max-width: 600px; \n            margin: 20px auto; \n            background-color: #ffffff; \n            border-radius: 16px; \n            overflow: hidden; \n            box-shadow: 0 10px 40px rgba(13, 148, 136, 0.15); \n        }\n        .header { \n            background: linear-gradient(135deg, #0d9488, #14b8a6, #2dd4bf); \n            padding: 45px 20px; \n            text-align: center; \n        }\n        .header img { \n            max-height: 70px; \n            width: auto; \n            margin-bottom: 15px;\n            filter: brightness(0) invert(1);\n        }\n        .header h1 { \n            margin: 0; \n            font-size: 26px; \n            color: #ffffff; \n            font-weight: 700; \n            text-transform: uppercase; \n            letter-spacing: 2px;\n            text-shadow: 0 2px 4px rgba(0,0,0,0.1);\n        }\n        .header p {\n            color: rgba(255,255,255,0.9);\n            margin: 10px 0 0 0;\n            font-size: 14px;\n        }\n        .content { \n            padding: 40px 35px; \n        }\n        .greeting {\n            font-size: 18px;\n            color: #0d9488;\n            margin-bottom: 20px;\n        }\n        .meeting-card {\n            background: linear-gradient(135deg, #f0fdfa, #ccfbf1);\n            border: 2px solid #14b8a6;\n            border-radius: 12px;\n            padding: 25px;\n            margin: 25px 0;\n        }\n        .meeting-card h3 {\n            color: #0f766e;\n            margin: 0 0 20px 0;\n            font-size: 18px;\n            border-bottom: 2px solid #99f6e4;\n            padding-bottom: 10px;\n        }\n        .meeting-detail {\n            display: flex;\n            align-items: center;\n            margin: 12px 0;\n            font-size: 15px;\n        }\n        .meeting-detail .icon {\n            display: inline-block;\n            margin-right: 12px;\n            font-size: 20px;\n            vertical-align: middle;\n        }\n        .meeting-detail strong {\n            color: #0f766e;\n        }\n        .cta-container { \n            text-align: center; \n            margin: 30px 0; \n        }\n        .btn { \n            display: inline-block; \n            padding: 14px 32px; \n            margin: 8px; \n            color: #ffffff !important; \n            text-decoration: none; \n            border-radius: 50px; \n            font-weight: 600; \n            font-size: 14px; \n        }\n        .btn-whatsapp { \n            background: linear-gradient(135deg, #25D366, #20bd5a); \n            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3); \n        }\n        .btn-calendar { \n            background: linear-gradient(135deg, #0d9488, #14b8a6); \n            box-shadow: 0 4px 15px rgba(13, 148, 136, 0.3); \n        }\n        .tips-box {\n            background: #fefce8;\n            border-left: 4px solid #eab308;\n            padding: 15px 20px;\n            margin: 25px 0;\n            border-radius: 0 8px 8px 0;\n        }\n        .tips-box h4 {\n            color: #854d0e;\n            margin: 0 0 10px 0;\n        }\n        .tips-box ul {\n            color: #713f12;\n            margin: 0;\n            padding-left: 20px;\n        }\n        .tips-box li {\n            margin: 5px 0;\n        }\n        .footer { \n            background: linear-gradient(135deg, #f0fdfa, #e6fffa); \n            padding: 25px; \n            text-align: center; \n            font-size: 12px; \n            color: #666666;\n            border-top: 1px solid #99f6e4;\n        }\n        .footer a { \n            color: #0d9488; \n            text-decoration: none; \n        }\n        .footer p {\n            margin: 5px 0;\n        }\n        .social-links {\n            margin: 15px 0;\n        }\n        .social-links a {\n            display: inline-block;\n            margin: 0 8px;\n            padding: 8px 16px;\n            background: #14b8a6;\n            color: #fff !important;\n            border-radius: 20px;\n            font-size: 11px;\n            text-decoration: none;\n        }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"header\">\n            <img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech+slogan.png\" alt=\"Automatiza Tech\">\n            <h1>Reunión de Seguimiento</h1>\n            <p>Tu próximo paso hacia la automatización</p>\n        </div>\n        <div class=\"content\">\n            <p class=\"greeting\">Hola <strong>{{ $('Prepare Success Response').item.json.client_name }}</strong>,</p>\n            \n            <p>¡Excelente! Hemos programado nuestra reunión de seguimiento para continuar afinando los detalles de tu proyecto de automatización{{ $('Prepare Success Response').item.json.company ? ' con <strong>' + $('Prepare Success Response').item.json.company + '</strong>' : '' }}.</p>\n            \n            <div class=\"meeting-card\">\n                <h3>Detalles de la Reunion</h3>\n                \n                <div class=\"meeting-detail\">\n                    <span class=\"icon\">&#128197;</span>\n                    <div>\n                        <strong>Fecha:</strong> {{ DateTime.fromISO($('Prepare Success Response').item.json.date).setLocale('es').toFormat('cccc dd LLLL yyyy') }}\n                    </div>\n                </div>\n                \n                <div class=\"meeting-detail\">\n                    <span class=\"icon\">&#128336;</span>\n                    <div>\n                        <strong>Hora:</strong> {{ $('Prepare Success Response').item.json.time }} hrs (Chile)\n                    </div>\n                </div>\n                \n                <div class=\"meeting-detail\">\n                    <span class=\"icon\">&#11088;</span>\n                    <div>\n                        <strong>Tema:</strong> {{ $('Prepare Success Response').item.json.subject }}\n                    </div>\n                </div>\n                \n                <div class=\"meeting-detail\">\n                    <span class=\"icon\">&#128187;</span>\n                    <div>\n                        <strong>Modalidad:</strong> Videollamada (Google Meet)\n                    </div>\n                </div>\n            </div>\n            \n            {{ $('Prepare Success Response').item.json.meet_link ? '<div style=\"background: linear-gradient(135deg, #0d9488, #14b8a6); border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center;\"><p style=\"color: #ffffff; margin: 0 0 15px 0; font-size: 16px;\"><strong>🔗 Únete a la Reunión</strong></p><a href=\"' + $('Prepare Success Response').item.json.meet_link + '\" style=\"display: inline-block; background-color: #ffffff; color: #0d9488 !important; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);\">📹 Unirse a Google Meet</a><p style=\"color: rgba(255,255,255,0.9); margin: 15px 0 0 0; font-size: 12px;\">' + $('Prepare Success Response').item.json.meet_link + '</p></div>' : '' }}\n            \n            <div class=\"tips-box\">\n                <h4 style=\"color:#0f766e;margin-bottom:10px;\">&#128161; Para aprovechar al maximo la reunion:</h4>\n                <ul>\n                    <li>Prepara tus dudas o preguntas específicas</li>\n                    <li>Ten a mano información relevante de tu negocio</li>\n                    <li>Asegúrate de tener buena conexión a internet</li>\n                    <li>Busca un lugar tranquilo para la llamada</li>\n                </ul>\n            </div>\n            \n            <p>Si necesitas reagendar o tienes alguna consulta previa, no dudes en contactarnos. ¡Estamos aquí para ayudarte!</p>\n            \n            <div class=\"cta-container\">\n                <a href=\"https://wa.me/56962530039?text=Hola,%20tengo%20una%20consulta%20sobre%20mi%20reunion%20de%20seguimiento\" class=\"btn btn-whatsapp\">&#128172; Escríbenos por WhatsApp</a>\n            </div>\n            \n            <p style=\"margin-top: 30px;\">¡Nos vemos pronto!</p>\n            <p><strong>El equipo de Automatiza Tech</strong> 🚀</p>\n        </div>\n        <div class=\"footer\">\n            <div class=\"social-links\">\n                <a href=\"https://automatizatech.cl\">🌐 Sitio Web</a>\n                <a href=\"https://wa.me/56962530039\">💬 WhatsApp</a>\n            </div>\n            <p>&copy; 2026 Automatiza Tech. Todos los derechos reservados.</p>\n            <p>Transformando negocios con automatización inteligente</p>\n            <p style=\"margin-top: 10px;\">\n                📧 <a href=\"mailto:contacto@automatizatech.cl\">contacto@automatizatech.cl</a> | \n                📱 +56 9 6253 0039\n            </p>\n            <p style=\"margin-top: 15px; font-size: 11px; color: #999;\">\n                Este correo fue enviado porque tienes una reunión programada con nosotros.<br>\n                Si no reconoces esta cita, por favor contáctanos.\n            </p>\n        </div>\n    </div>\n</body>\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "replyTo": "contacto@automatizatech.cl"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [600, 100],
+      "id": "send-followup-email",
+      "name": "Send Followup Email",
+      "credentials": {
+        "smtp": {
+          "id": "YOUR_SMTP_CREDENTIAL_ID",
+          "name": "SMTP AutomatizaTech"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "meet_link",
+              "name": "meet_link",
+              "value": "={{ $('Prepare Success Response').item.json.meet_link }}",
+              "type": "string"
+            },
+            {
+              "id": "event_id",
+              "name": "event_id",
+              "value": "={{ $('Prepare Success Response').item.json.event_id }}",
+              "type": "string"
+            },
+            {
+              "id": "meeting_id",
+              "name": "meeting_id",
+              "value": "={{ $('Prepare Success Response').item.json.meeting_id }}",
+              "type": "number"
+            },
+            {
+              "id": "email_sent",
+              "name": "email_sent",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "Reunión de seguimiento creada y correo enviado exitosamente",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [800, 100],
+      "id": "final-success-response",
+      "name": "Final Success Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1000, 100],
+      "id": "respond-success",
+      "name": "Respond Success"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success",
+              "name": "success",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "meet_link",
+              "name": "meet_link",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "event_id",
+              "name": "event_id",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "Error al crear el evento en Google Calendar",
+              "type": "string"
+            },
+            {
+              "id": "error",
+              "name": "error",
+              "value": "={{ $json.error?.message || $json.message || 'Error desconocido' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [200, 300],
+      "id": "prepare-error-response",
+      "name": "Prepare Error Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [400, 300],
+      "id": "respond-error",
+      "name": "Respond Error"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success",
+              "name": "success",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "Datos incompletos: se requiere email, fecha y hora",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-200, 400],
+      "id": "validation-error-response",
+      "name": "Validation Error"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [0, 400],
+      "id": "respond-validation-error",
+      "name": "Respond Validation Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Followup Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Data": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Create Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Event Created?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Event Created?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Success Response": {
+      "main": [
+        [
+          {
+            "node": "Update WP Meet Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update WP Meet Link": {
+      "main": [
+        [
+          {
+            "node": "Send Followup Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Followup Email": {
+      "main": [
+        [
+          {
+            "node": "Final Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Success Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Error Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validation Error": {
+      "main": [
+        [
+          {
+            "node": "Respond Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "followup-v2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "id": "followup-meeting-scheduler",
+  "tags": [
+    {
+      "name": "Producción"
+    },
+    {
+      "name": "Seguimiento"
+    }
+  ]
+}

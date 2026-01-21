@@ -1,0 +1,263 @@
+{
+  "name": "WhatsApp Recordatorio Seguimiento 8PM - AutomatizaTech (PROD)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 20 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300],
+      "id": "cron-8pm-wa",
+      "name": "Cron 8PM Chile"
+    },
+    {
+      "parameters": {
+        "url": "https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/reminders-wa-8pm",
+        "options": {
+          "splitIntoItems": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, 300],
+      "id": "get-leads-8pm-wa",
+      "name": "Get Seguimientos Tomorrow"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-has-leads",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "id": "has-leads-8pm-wa",
+      "name": "Has Meetings?"
+    },
+    {
+      "parameters": {
+        "maxItems": 10
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [920, 260],
+      "id": "limit-8pm-wa",
+      "name": "Limit 10 Anti-Spam"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1140, 260],
+      "id": "split-batches-8pm-wa",
+      "name": "Split In Batches"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar datos para envío de WhatsApp\nconst meeting = $input.first().json;\n\n// Limpiar teléfono\nconst phone = (meeting.phone || '').replace(/^\\+/, '');\n\n// Información personalizada\nconst clientName = meeting.name || 'Cliente';\nconst companyName = meeting.company_name || '';\nconst projectInfo = meeting.meeting_subject || 'Reunión de Seguimiento';\n\n// Construir saludo personalizado\nlet greeting = `Hola ${clientName}`;\nif (companyName) {\n  greeting += ` de *${companyName}*`;\n}\n\n// Construir mensaje\nconst messageBody = `📅 *Recordatorio - Tu reunión de seguimiento es mañana*\\n\\n${greeting}, te recordamos tu próxima reunión con AutomatizaTech.\\n\\n📋 *Proyecto:* ${projectInfo}\\n📅 *Fecha:* ${meeting.scheduled_date}\\n🕐 *Hora:* ${meeting.scheduled_time} hrs\\n📍 *Enlace:* ${meeting.meet_link || 'Te llegará por correo'}\\n\\n💡 *Recordatorio:*\\n• Recibirás otro recordatorio el día de la reunión\\n• Asegúrate de tener buena conexión a internet\\n• El enlace de Meet ya está configurado arriba\\n\\n¿Podrás asistir mañana?`;\n\nreturn {\n  json: {\n    meeting_id: meeting.id,\n    phone: phone,\n    clientName: clientName,\n    companyName: companyName,\n    projectInfo: projectInfo,\n    messageBody: messageBody,\n    btnConfirmId: `btn_followup_confirm_${meeting.id}`,\n    btnRescheduleId: `btn_followup_reschedule_${meeting.id}`,\n    btnCancelId: `btn_followup_cancel_${meeting.id}`\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1360, 260],
+      "id": "prepare-wa-8pm",
+      "name": "Prepare WA Data"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v22.0/946501128543201/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpCustomAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"button\",\n    \"body\": {\n      \"text\": {{ JSON.stringify($json.messageBody) }}\n    },\n    \"action\": {\n      \"buttons\": [\n        { \"type\": \"reply\", \"reply\": { \"id\": \"{{ $json.btnConfirmId }}\", \"title\": \"✅ Confirmo\" }},\n        { \"type\": \"reply\", \"reply\": { \"id\": \"{{ $json.btnRescheduleId }}\", \"title\": \"🔄 Reagendar\" }},\n        { \"type\": \"reply\", \"reply\": { \"id\": \"{{ $json.btnCancelId }}\", \"title\": \"❌ Cancelar\" }}\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1580, 260],
+      "id": "send-wa-8pm",
+      "name": "Send WhatsApp",
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "JhVF3l8jRxBpP1n1",
+          "name": "WhatsApp Graph API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/update-reminder-wa-daily/{{ $('Prepare WA Data').item.json.meeting_id }}/8pm",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1800, 260],
+      "id": "mark-sent-8pm-wa",
+      "name": "Mark as Sent"
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2020, 260],
+      "id": "wait-8pm-wa",
+      "name": "Wait 5s Rate Limit"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [920, 420],
+      "id": "no-leads-8pm-wa",
+      "name": "No Meetings"
+    }
+  ],
+  "connections": {
+    "Cron 8PM Chile": {
+      "main": [
+        [
+          {
+            "node": "Get Seguimientos Tomorrow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Seguimientos Tomorrow": {
+      "main": [
+        [
+          {
+            "node": "Has Meetings?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Meetings?": {
+      "main": [
+        [
+          {
+            "node": "Limit 10 Anti-Spam",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Meetings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit 10 Anti-Spam": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Prepare WA Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare WA Data": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Mark as Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark as Sent": {
+      "main": [
+        [
+          {
+            "node": "Wait 5s Rate Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 5s Rate Limit": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago"
+  },
+  "active": false
+}

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Automatiza Tech - Contact Form Handler
  * Maneja el formulario de contacto y administración de datos
@@ -779,8 +779,8 @@ class AutomatizaTechContactForm {
         
         add_submenu_page(
             'automatiza-tech-contacts',
-            'Clientes Contratados',
-            'Clientes',
+            'Directorio de Clientes: Administración Rápida', // Título página
+            'Directorio de Clientes', // Título menú
             'manage_options',
             'automatiza-tech-clients',
             array($this, 'clients_page')
@@ -894,6 +894,29 @@ class AutomatizaTechContactForm {
                 "SELECT * FROM {$this->clients_table_name} WHERE id = %d",
                 $client_id
             ));
+            
+            // Buscar si el contacto tiene una propuesta asociada (por email o teléfono)
+            $propuesta_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}automatiza_propuestas 
+                WHERE client_email = %s OR phone = %s
+                ORDER BY created_at DESC LIMIT 1",
+                $contact->email,
+                $contact->phone
+            ));
+            
+            // Si tiene propuesta, migrar los detalles de seguimiento al cliente
+            if ($propuesta_id && function_exists('automatiza_migrate_prospect_to_client')) {
+                automatiza_migrate_prospect_to_client($client_id, $propuesta_id);
+                
+                // Actualizar status de la propuesta a contratado
+                $wpdb->update(
+                    $wpdb->prefix . 'automatiza_propuestas',
+                    array('status' => 'contracted'),
+                    array('id' => $propuesta_id)
+                );
+                
+                error_log("MIGRACIÓN: Detalles de propuesta ID {$propuesta_id} migrados a cliente ID {$client_id}");
+            }
             
             // Eliminar de tabla de contactos
             $wpdb->delete($this->table_name, array('id' => $contact_id), array('%d'));
@@ -1137,7 +1160,7 @@ class AutomatizaTechContactForm {
     /**
      * Enviar correo con factura al cliente
      */
-    private function send_invoice_email_to_client($client_data, $plans_data) {
+    public function send_invoice_email_to_client($client_data, $plans_data) {
         // Generar factura HTML (para BD)
         $invoice_html = $this->generate_invoice_html($client_data, $plans_data);
         $invoice_number = 'AT-' . date('Ymd') . '-' . str_pad($client_data->id, 4, '0', STR_PAD_LEFT);
@@ -3148,6 +3171,16 @@ class AutomatizaTechContactForm {
             $html .= '</div>';
         }
         
+        // Agregar sección de Detalles de Seguimiento del Proyecto
+        if (function_exists('automatiza_render_client_details')) {
+            $html .= '<div class="detail-tracking" style="margin-top: 25px; padding-top: 20px; border-top: 2px dashed #e0e0e0;">';
+            $html .= '<h4 style="color: #10b981; margin: 0 0 15px 0;">📋 Seguimiento del Proyecto</h4>';
+            ob_start();
+            automatiza_render_client_details($client_id);
+            $html .= ob_get_clean();
+            $html .= '</div>';
+        }
+        
         $html .= '</div>';
         
         wp_send_json_success($html);
@@ -4447,13 +4480,188 @@ class AutomatizaTechContactForm {
             opacity: 0.7;
         }
         
-        /* Responsive para botones de acción */
-        @media (max-width: 768px) {
-            .edit-contact-btn {
-                display: block !important;
+        /* ========== RESPONSIVE STYLES - CONTACTOS ========== */
+        
+        /* Tablet (768px - 1024px) */
+        @media screen and (max-width: 1024px) {
+            #contacts-table {
+                font-size: 13px;
+            }
+            #contacts-table th,
+            #contacts-table td {
+                padding: 8px 6px;
+            }
+            .search-box > div {
+                flex-wrap: wrap;
+            }
+        }
+        
+        /* Mobile (hasta 767px) */
+        @media screen and (max-width: 767px) {
+            .wrap { 
+                padding: 10px !important; 
+                margin-left: 0 !important; 
+            }
+            .wrap h1 { 
+                font-size: 18px; 
+                margin-bottom: 15px;
+            }
+            
+            /* Filtros y búsqueda */
+            .search-box {
+                padding: 12px !important;
+                margin: 10px 0 !important;
+            }
+            .search-box > div {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 10px !important;
+            }
+            .search-box > div > div {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 8px !important;
+            }
+            #contact-search {
                 width: 100% !important;
-                margin: 2px 0 !important;
-                text-align: center !important;
+                font-size: 16px !important;
+                padding: 12px 15px !important;
+            }
+            #clear-search {
+                width: 100%;
+            }
+            #status-filter {
+                width: 100% !important;
+                font-size: 16px !important;
+                padding: 10px 12px !important;
+                height: auto !important;
+            }
+            #send-email-new-contacts {
+                width: 100% !important;
+                margin-left: 0 !important;
+                padding: 12px !important;
+            }
+            
+            /* Tabla de contactos */
+            .table-wrapper,
+            #contacts-table {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin: 0 -10px;
+                padding: 0 10px;
+            }
+            #contacts-table {
+                min-width: 700px;
+                font-size: 12px;
+            }
+            #contacts-table th,
+            #contacts-table td {
+                padding: 8px 5px;
+                white-space: nowrap;
+            }
+            #contacts-table th:nth-child(1),
+            #contacts-table td:nth-child(1) { width: 40px; } /* ID */
+            #contacts-table th:nth-child(2),
+            #contacts-table td:nth-child(2) { min-width: 100px; } /* Nombre */
+            #contacts-table th:nth-child(3),
+            #contacts-table td:nth-child(3) { 
+                max-width: 120px; 
+                overflow: hidden;
+                text-overflow: ellipsis;
+            } /* Email */
+            #contacts-table th:nth-child(4),
+            #contacts-table td:nth-child(4) { 
+                max-width: 100px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            } /* Empresa */
+            
+            .status-selector {
+                font-size: 11px !important;
+                padding: 4px 6px !important;
+                min-width: 100px;
+            }
+            
+            .view-contact-btn,
+            .edit-contact-btn,
+            .delete-contact-btn {
+                padding: 6px 8px !important;
+                font-size: 11px !important;
+            }
+            
+            /* Modales */
+            .contact-modal-content,
+            .delete-all-modal-content {
+                width: 95% !important;
+                max-width: none !important;
+                margin: 5% auto !important;
+                padding: 15px !important;
+            }
+            
+            /* Notices */
+            .notice.inline {
+                padding: 10px !important;
+                font-size: 12px !important;
+            }
+            .notice.inline p {
+                font-size: 12px !important;
+            }
+            
+            /* Tablenav */
+            .tablenav.top {
+                padding: 10px;
+                background: #f6f7f7;
+                border-radius: 8px;
+            }
+            .tablenav.top .alignleft.actions {
+                width: 100%;
+                float: none;
+            }
+            .tablenav.top .button {
+                width: 100%;
+                margin: 5px 0 !important;
+                text-align: center;
+            }
+        }
+        
+        /* Mobile Small (hasta 480px) */
+        @media screen and (max-width: 480px) {
+            .wrap { padding: 5px !important; }
+            .wrap h1 { font-size: 16px; }
+            
+            #contacts-table {
+                min-width: 600px;
+                font-size: 11px;
+            }
+            #contacts-table th,
+            #contacts-table td {
+                padding: 6px 4px;
+            }
+            
+            .status-selector {
+                font-size: 10px !important;
+                padding: 3px 5px !important;
+            }
+            
+            .contact-modal-content {
+                margin: 2% auto !important;
+                max-height: 95vh;
+                overflow-y: auto;
+            }
+        }
+        
+        /* Touch improvements */
+        @media (hover: none) and (pointer: coarse) {
+            #contact-search,
+            #status-filter,
+            #clear-search,
+            #send-email-new-contacts,
+            .view-contact-btn,
+            .edit-contact-btn,
+            .delete-contact-btn,
+            .status-selector {
+                min-height: 44px;
             }
         }
         </style>
@@ -5638,7 +5846,7 @@ class AutomatizaTechContactForm {
         
         ?>
         <div class="wrap">
-            <h1>Clientes Contratados - Automatiza Tech</h1>
+            <h1>Directorio de Clientes: Administración Rápida</h1>
             
             <?php
             $current_user = wp_get_current_user();
@@ -5704,13 +5912,13 @@ class AutomatizaTechContactForm {
                         <th style="width: 120px;">Estado</th>
                         <th style="width: 130px;">Fecha Contrato</th>
                         <th style="text-align: center; width: 70px;">🔄 Toggle</th>
-                        <th style="text-align: center; width: 70px;">👁️ Ver</th>
+                        <th style="text-align: center; width: 80px;">📋 Ficha</th>
                         <?php if (current_user_can('administrator')): ?>
                         <th style="text-align: center; width: 70px;">✏️ Editar</th>
                         <?php else: ?>
                         <th style="text-align: center; width: 70px;">🚫 Editar</th>
                         <?php endif; ?>
-                        <th style="text-align: center; width: 80px;">📄 Factura</th>
+                        <th style="text-align: center; width: 240px;">📄 Factura</th>
                         <th style="text-align: center; width: 70px;">🗑️ Eliminar</th>
                     </tr>
                 </thead>
@@ -5766,15 +5974,15 @@ class AutomatizaTechContactForm {
                                     </button>
                                 </td>
                                 
-                                <!-- Ver Detalles -->
+                                <!-- Ver Detalles - Ficha Completa -->
                                 <td style="text-align: center;">
-                                    <a href="#" onclick="showClientDetailsModal(<?php echo $client->id; ?>); return false;" 
+                                    <a href="#" onclick="openClientFullModal(<?php echo $client->id; ?>); return false;" 
                                        class="button button-small view-client-btn"
-                                       style="background: linear-gradient(135deg, #0073aa, #005a87); color: white; border: none; padding: 6px 12px; border-radius: 15px; font-size: 14px; cursor: pointer; text-decoration: none; display: inline-block; font-weight: 600; box-shadow: 0 2px 5px rgba(0,115,170,0.3); transition: all 0.3s ease;"
-                                       onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,115,170,0.4)';"
-                                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(0,115,170,0.3)';"
-                                       title="Ver detalles completos del cliente">
-                                       👁️ Ver
+                                       style="background: linear-gradient(135deg, #d63384, #e91e8c); color: white; border: none; padding: 6px 12px; border-radius: 15px; font-size: 14px; cursor: pointer; text-decoration: none; display: inline-block; font-weight: 600; box-shadow: 0 2px 5px rgba(214,51,132,0.3); transition: all 0.3s ease;"
+                                       onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(214,51,132,0.4)';"
+                                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(214,51,132,0.3)';"
+                                       title="Ver ficha completa del cliente">
+                                       📋 Ficha
                                     </a>
                                 </td>
                                 
@@ -5836,6 +6044,11 @@ class AutomatizaTechContactForm {
                                                title="Descargar factura <?php echo esc_attr($invoice->invoice_number); ?>">
                                                📥 Descargar
                                             </a>
+                                            
+                                            <?php 
+                                            // Hook para acciones adicionales, como el botón de regenerar factura
+                                            echo apply_filters('automatiza_tech_clients_actions', '', $client); 
+                                            ?>
                                         </div>
                                     <?php else: ?>
                                         <span style="color: #999; font-size: 12px; font-style: italic;" title="No hay factura generada para este cliente">
@@ -5921,6 +6134,141 @@ class AutomatizaTechContactForm {
         
         .deleting-row td {
             color: #666 !important;
+        }
+        
+        /* ==================== ESTILOS RESPONSIVOS CLIENTES CONTRATADOS ==================== */
+        
+        /* Tablet (1024px y menos) */
+        @media screen and (max-width: 1024px) {
+            #clients-table th:nth-child(4),
+            #clients-table td:nth-child(4),
+            #clients-table th:nth-child(7),
+            #clients-table td:nth-child(7) {
+                display: none; /* Ocultar Empresa y Tipo Proyecto */
+            }
+        }
+        
+        /* Mobile (767px y menos) */
+        @media screen and (max-width: 767px) {
+            .wrap h1 {
+                font-size: 20px;
+            }
+            
+            /* Notice y info box */
+            .notice.notice-info {
+                padding: 10px;
+            }
+            .notice.notice-info p {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+            .notice.notice-info span {
+                margin-left: 0 !important;
+            }
+            
+            /* Barra de navegación */
+            .tablenav.top {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .tablenav .alignleft,
+            .tablenav .alignright {
+                width: 100%;
+                text-align: center;
+            }
+            .tablenav .button {
+                width: 100%;
+                min-height: 44px;
+            }
+            
+            /* Campo de búsqueda */
+            .search-box {
+                padding: 12px;
+            }
+            .search-box > div {
+                flex-direction: column !important;
+                align-items: stretch !important;
+            }
+            .search-box input[type="text"] {
+                width: 100% !important;
+                min-height: 44px;
+                font-size: 16px !important;
+            }
+            .search-box .button {
+                width: 100%;
+                min-height: 44px;
+                margin-top: 10px;
+            }
+            
+            /* Tabla - Scroll horizontal */
+            .wp-list-table.widefat {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            #clients-table {
+                min-width: 900px;
+                font-size: 13px;
+            }
+            #clients-table th,
+            #clients-table td {
+                padding: 10px 8px;
+            }
+            /* Ocultar más columnas en móvil */
+            #clients-table th:nth-child(1),
+            #clients-table td:nth-child(1),
+            #clients-table th:nth-child(4),
+            #clients-table td:nth-child(4),
+            #clients-table th:nth-child(5),
+            #clients-table td:nth-child(5),
+            #clients-table th:nth-child(7),
+            #clients-table td:nth-child(7) {
+                display: none;
+            }
+            
+            /* Botones de acción más compactos */
+            .toggle-status-btn,
+            .view-client-btn,
+            .edit-client-btn,
+            .delete-client-btn {
+                padding: 6px 10px !important;
+                font-size: 14px !important;
+            }
+            
+            /* Status selector */
+            .client-status-selector {
+                min-height: 36px;
+                font-size: 11px !important;
+            }
+        }
+        
+        /* Móviles pequeños (480px y menos) */
+        @media screen and (max-width: 480px) {
+            #clients-table {
+                min-width: 700px;
+            }
+            .view-invoice-btn,
+            .download-invoice-btn {
+                padding: 4px 8px !important;
+                font-size: 11px !important;
+            }
+        }
+        
+        /* Touch-friendly */
+        @media (hover: none) and (pointer: coarse) {
+            .toggle-status-btn,
+            .view-client-btn,
+            .edit-client-btn,
+            .delete-client-btn,
+            .view-invoice-btn,
+            .download-invoice-btn {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            .client-status-selector {
+                min-height: 44px;
+            }
         }
         </style>
         

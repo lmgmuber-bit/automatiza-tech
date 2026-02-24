@@ -190,6 +190,19 @@
     },
     {
       "parameters": {
+        "jsCode": "// Safety: No borrar eventos creados hace menos de 3 horas\n// Esto da tiempo al sistema (Scheduler) para grabar el google_event_id en la BD\nconst items = $input.all();\nconst safeItems = [];\nconst now = Date.now();\nconst THREE_HOURS_MS = 3 * 60 * 60 * 1000;\n\nfor (const item of items) {\n  const created = item.json.created;\n  const updated = item.json.updated;\n  const ref = created || updated;\n  if (ref) {\n    const eventTime = new Date(ref).getTime();\n    const ageMs = now - eventTime;\n    if (ageMs < THREE_HOURS_MS) {\n      // Evento reciente - NO borrar, puede ser legítimo aún no sincronizado\n      continue;\n    }\n  }\n  safeItems.push(item);\n}\n\nreturn safeItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1460,
+        200
+      ],
+      "id": "safety-check",
+      "name": "Safety Check"
+    },
+    {
+      "parameters": {
         "operation": "delete",
         "calendar": {
           "__rl": true,
@@ -329,6 +342,18 @@
       ]
     },
     "Is Orphan?": {
+      "main": [
+        [
+          {
+            "node": "Safety Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Safety Check": {
       "main": [
         [
           {

@@ -73,3 +73,62 @@ init-*.php
 install-*.php
 setup-*.php
 full-diagnosis.php
+add-*.php
+mark-*.php
+run-*.php
+flush-*.php
+purge-*.php
+reset-*.php
+revert-*.php
+migrate-*.php
+convert-*.php
+create_*.php
+check_*.php
+send_*.php
+diagnostico-*.php
+
+# Scripts utilitarios raíz
+gestion-ai.php
+openai-controller.php
+reporte-consumo-ai.php
+admin-ai-dashboard.php
+api-openai-usage.php
+validar-boleta.php
+status-flujo-comercial.php
+contexto-sistema.md
+
+# Archivos de respaldo
+*.bk
+.htaccess.bk
+
+# Previews HTML
+*-preview.html
+vault-setup-output.html
+
+# LiteSpeed cache
+wp-content/litespeed/
+wp-content/plugins/litespeed-cache/
+
+# Uploads generados (facturas, boletas, QR, audio)
+wp-content/uploads/automatiza-tech-invoices/
+wp-content/uploads/automatiza-tech-receipts/
+wp-content/uploads/qr-codes/
+wp-content/uploads/aria-audio/
+wp-content/uploads/2026/
+
+# Plugins de terceros
+wp-content/plugins/litespeed-cache/
+wp-content/plugins/all-in-one-wp-migration/storage/
+
+# PDFs en carpetas de código
+wp-content/themes/automatiza-tech/inc/*.pdf
+
+# Copia backup del QA module en raíz del tema
+wp-content/themes/automatiza-tech/admin-qa-module.php
+
+# Documentación de seguimiento
+wp-content/themes/automatiza-tech/SISTEMA_SEGUIMIENTO_CLIENTES.md
+
+# Archivos eliminados de wp-content raíz
+wp-content/*.html
+wp-content/*.pdf

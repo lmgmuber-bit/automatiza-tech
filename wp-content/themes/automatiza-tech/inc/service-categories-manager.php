@@ -373,6 +373,100 @@ class AutomatizaTechServiceCategoriesManager {
                     margin: 5px 0 0 0;
                     color: #666;
                 }
+                
+                /* ==================== ESTILOS RESPONSIVOS CATEGORÍAS ==================== */
+                
+                /* Tablet (1024px y menos) */
+                @media screen and (max-width: 1024px) {
+                    .categories-grid {
+                        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                    }
+                }
+                
+                /* Mobile (767px y menos) */
+                @media screen and (max-width: 767px) {
+                    .wrap h1.wp-heading-inline {
+                        font-size: 18px;
+                        display: flex;
+                        align-items: center;
+                        flex-wrap: wrap;
+                    }
+                    .page-title-action {
+                        margin-top: 10px;
+                        width: 100%;
+                        text-align: center;
+                    }
+                    
+                    /* Stats cards */
+                    .categories-stats {
+                        flex-direction: column;
+                        gap: 10px;
+                    }
+                    .stat-card {
+                        padding: 12px 15px;
+                    }
+                    .stat-card h3 {
+                        font-size: 22px;
+                    }
+                    
+                    /* Categories grid */
+                    .categories-grid {
+                        grid-template-columns: 1fr;
+                        gap: 15px;
+                    }
+                    .category-card {
+                        padding: 15px;
+                    }
+                    .category-header {
+                        flex-wrap: wrap;
+                    }
+                    .category-actions {
+                        width: 100%;
+                        justify-content: space-between;
+                    }
+                    .category-actions button {
+                        flex: 1;
+                        min-height: 40px;
+                    }
+                    
+                    /* Modal fullscreen en móvil */
+                    .modal-content {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        height: 100vh;
+                        max-height: 100vh !important;
+                        margin: 0;
+                        border-radius: 0;
+                    }
+                    .modal-body {
+                        padding: 15px;
+                    }
+                    .modal-body input[type="text"],
+                    .modal-body input[type="color"],
+                    .modal-body select,
+                    .modal-body textarea {
+                        width: 100% !important;
+                        min-height: 44px;
+                        font-size: 16px !important;
+                    }
+                    .modal-footer {
+                        flex-direction: column;
+                    }
+                    .modal-footer button {
+                        width: 100%;
+                        min-height: 44px;
+                    }
+                }
+                
+                /* Touch-friendly */
+                @media (hover: none) and (pointer: coarse) {
+                    .category-actions button,
+                    .modal-body input,
+                    .modal-body select,
+                    .modal-footer button {
+                        min-height: 48px;
+                    }
+                }
             </style>
             
             <!-- Estadísticas -->

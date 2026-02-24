@@ -1,0 +1,76 @@
+{
+  "meta": {
+    "instanceId": "template-openai-proxy"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://automatizatech.cl/api-chat-proxy.php",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4o"
+            },
+            {
+              "name": "user_id",
+              "value": "1"
+            },
+            {
+              "name": "client_identifier",
+              "value": "={{ $json.client_email || $json.phone || $json.contactName || 'cliente_desconocido' }}"
+            },
+            {
+              "name": "messages",
+              "value": "={{ JSON.stringify([\n  {\n    \"role\": \"system\",\n    \"content\": \"Eres un asistente útil.\"\n  },\n  {\n    \"role\": \"user\",\n    \"content\": $json.user_message || $json.chatInput || $json.message\n  }\n]) }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "template-http-openai-proxy",
+      "name": "🤖 OpenAI (Con Tracking)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        500,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Este nodo envía la petición a través del proxy PHP que registra el consumo de tokens por cliente en la base de datos."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesar respuesta de OpenAI\nconst response = $input.first().json;\n\n// Extraer mensaje del asistente\nconst aiMessage = response.choices?.[0]?.message?.content || 'Sin respuesta';\n\n// Extraer datos de uso (ya quedaron guardados en BD por el proxy)\nconst usage = response.usage || {};\n\nreturn {\n  json: {\n    reply: aiMessage,\n    model: response.model,\n    tokens_input: usage.prompt_tokens || 0,\n    tokens_output: usage.completion_tokens || 0,\n    tokens_total: usage.total_tokens || 0\n  }\n};"
+      },
+      "id": "template-code-parse-response",
+      "name": "📊 Parsear Respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Extrae el mensaje y los tokens de la respuesta. El registro en BD ya fue hecho por el proxy."
+    }
+  ],
+  "connections": {
+    "🤖 OpenAI (Con Tracking)": {
+      "main": [
+        [
+          {
+            "node": "📊 Parsear Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

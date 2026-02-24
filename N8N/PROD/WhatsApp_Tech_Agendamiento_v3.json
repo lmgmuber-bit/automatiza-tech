@@ -10,8 +10,11 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
-      "position": [-800, 300],
-      "id": "wa-appointments-webhook",
+      "position": [
+        -352,
+        1696
+      ],
+      "id": "496ed351-7b0d-4e75-9d0d-7e3bf8ef3974",
       "name": "Appointments Webhook",
       "webhookId": "whatsapp-appointments"
     },
@@ -73,8 +76,11 @@
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [-600, 300],
-      "id": "wa-normalize-input",
+      "position": [
+        -128,
+        1696
+      ],
+      "id": "9786938a-0e3e-4b49-9466-f38231d71990",
       "name": "Normalize Input"
     },
     {
@@ -189,8 +195,11 @@
       },
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
-      "position": [-400, 300],
-      "id": "wa-route-action",
+      "position": [
+        96,
+        1648
+      ],
+      "id": "f731f309-df71-44b8-b668-282a5f892c8e",
       "name": "Route Action"
     },
     {
@@ -200,8 +209,11 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [-200, 100],
-      "id": "wa-get-settings-api",
+      "position": [
+        320,
+        1184
+      ],
+      "id": "bd3d2443-22fe-4a73-ac47-cb82b5a00809",
       "name": "Get Appointments Config"
     },
     {
@@ -210,8 +222,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [0, 100],
-      "id": "wa-generate-days",
+      "position": [
+        544,
+        1184
+      ],
+      "id": "7bf42d24-b168-40ae-8c6e-fe62adb2ab56",
       "name": "Generate Available Days"
     },
     {
@@ -227,26 +242,21 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [200, 100],
-      "id": "wa-send-days-buttons",
-      "name": "Send Days Buttons",
-      "credentials": {
-        "whatsAppBusinessCloudApi": {
-          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
-          "name": "WhatsApp Business Cloud API"
-        }
-      }
+      "position": [
+        768,
+        1184
+      ],
+      "id": "ed48f6a5-c120-4d22-b892-44bd6ffd4732",
+      "name": "Send Days Buttons"
     },
     {
       "parameters": {
-        "resource": "event",
         "operation": "getAll",
         "calendar": {
           "__rl": true,
           "value": "primary",
           "mode": "list"
         },
-        "returnAll": false,
         "limit": 20,
         "options": {
           "timeMin": "={{ new Date($json.selectedDay + 'T00:00:00').toISOString() }}",
@@ -256,14 +266,17 @@
       },
       "type": "n8n-nodes-base.googleCalendar",
       "typeVersion": 1.1,
-      "position": [-200, 300],
+      "position": [
+        320,
+        1376
+      ],
       "alwaysOutputData": true,
-      "id": "wa-get-events",
+      "id": "069f94ec-2b2b-4955-82c5-b38a53149bfb",
       "name": "Get Calendar Events",
       "credentials": {
         "googleCalendarOAuth2Api": {
-          "id": "YOUR_GOOGLE_CALENDAR_CREDENTIAL_ID",
-          "name": "Google Calendar"
+          "id": "NrhQQuWgel9eWwzp",
+          "name": "Google Calendar AutomatizaTech.cl"
         }
       }
     },
@@ -274,8 +287,11 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [-200, 400],
-      "id": "wa-get-settings-api-2",
+      "position": [
+        320,
+        1600
+      ],
+      "id": "4b5fcef1-1fae-4dde-8ba3-e0f965831f7e",
       "name": "Get Appointments Config 2"
     },
     {
@@ -284,8 +300,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [0, 350],
-      "id": "wa-find-slots",
+      "position": [
+        544,
+        1472
+      ],
+      "id": "658ee86c-5116-46f2-83e9-30068d9e51f2",
       "name": "Find Available Slots"
     },
     {
@@ -310,8 +329,11 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [200, 350],
-      "id": "wa-has-availability",
+      "position": [
+        768,
+        1472
+      ],
+      "id": "540f8161-49f0-4584-87f8-145f6382418f",
       "name": "Has Availability?"
     },
     {
@@ -327,15 +349,12 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [400, 300],
-      "id": "wa-send-times-buttons",
-      "name": "Send Times Buttons",
-      "credentials": {
-        "whatsAppBusinessCloudApi": {
-          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
-          "name": "WhatsApp Business Cloud API"
-        }
-      }
+      "position": [
+        992,
+        1376
+      ],
+      "id": "a63bb43c-8829-413b-95a5-b09fd72822d7",
+      "name": "Send Times Buttons"
     },
     {
       "parameters": {
@@ -350,15 +369,12 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [400, 450],
-      "id": "wa-send-no-availability",
-      "name": "Send No Availability",
-      "credentials": {
-        "whatsAppBusinessCloudApi": {
-          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
-          "name": "WhatsApp Business Cloud API"
-        }
-      }
+      "position": [
+        992,
+        1568
+      ],
+      "id": "3104a60f-7541-4c61-88db-9215100dbee1",
+      "name": "Send No Availability"
     },
     {
       "parameters": {
@@ -373,15 +389,12 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [-200, 600],
-      "id": "wa-ask-email",
-      "name": "Ask For Email",
-      "credentials": {
-        "whatsAppBusinessCloudApi": {
-          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
-          "name": "WhatsApp Business Cloud API"
-        }
-      }
+      "position": [
+        992,
+        1760
+      ],
+      "id": "3af2d4f6-b858-41dc-846c-45a15b110331",
+      "name": "Ask For Email"
     },
     {
       "parameters": {
@@ -429,8 +442,11 @@
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [0, 600],
-      "id": "wa-prepare-booking",
+      "position": [
+        1216,
+        1856
+      ],
+      "id": "6e5005bc-4ef4-4611-8678-2c77324139f3",
       "name": "Prepare Booking Data"
     },
     {
@@ -440,8 +456,11 @@
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [200, 600],
-      "id": "wa-create-appointment",
+      "position": [
+        1440,
+        1856
+      ],
+      "id": "782747fc-4fc7-4407-b2e5-1e9ae37ff009",
       "name": "Create Appointment"
     },
     {
@@ -457,15 +476,12 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [400, 600],
-      "id": "wa-send-confirmation",
-      "name": "Send Confirmation",
-      "credentials": {
-        "whatsAppBusinessCloudApi": {
-          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
-          "name": "WhatsApp Business Cloud API"
-        }
-      }
+      "position": [
+        1664,
+        1856
+      ],
+      "id": "1d4c9a5c-9e58-4fcc-8c9d-af12bc82674b",
+      "name": "Send Confirmation"
     },
     {
       "parameters": {
@@ -480,15 +496,12 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [-200, 800],
-      "id": "wa-send-other-date-options",
-      "name": "Send Other Date Options",
-      "credentials": {
-        "whatsAppBusinessCloudApi": {
-          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
-          "name": "WhatsApp Business Cloud API"
-        }
-      }
+      "position": [
+        320,
+        1904
+      ],
+      "id": "f8d0fd1a-218c-4894-aa61-2f2a85003ce2",
+      "name": "Send Other Date Options"
     },
     {
       "parameters": {
@@ -497,8 +510,11 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [-200, 1000],
-      "id": "wa-get-config-for-parsing",
+      "position": [
+        320,
+        2128
+      ],
+      "id": "8c9f0201-d3b9-4a72-a42c-fbd6006c7cbf",
       "name": "Get Config For Date Parsing"
     },
     {
@@ -507,8 +523,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [0, 1000],
-      "id": "wa-parse-date-text",
+      "position": [
+        544,
+        2128
+      ],
+      "id": "c765702b-06b0-4181-a11c-e2000357dad8",
       "name": "Parse Date from Text"
     },
     {
@@ -533,8 +552,11 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [200, 1000],
-      "id": "wa-is-date-valid",
+      "position": [
+        768,
+        2128
+      ],
+      "id": "9f13cd38-32e3-4177-b1e1-02843ebd7aa0",
       "name": "Is Date Valid?"
     },
     {
@@ -550,15 +572,12 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [400, 1100],
-      "id": "wa-send-date-error",
-      "name": "Send Date Error",
-      "credentials": {
-        "whatsAppBusinessCloudApi": {
-          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
-          "name": "WhatsApp Business Cloud API"
-        }
-      }
+      "position": [
+        992,
+        2224
+      ],
+      "id": "8af1e133-a9ed-4b8a-9f42-5d62f34a04be",
+      "name": "Send Date Error"
     },
     {
       "parameters": {
@@ -573,93 +592,253 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [400, 900],
-      "id": "wa-ask-email-custom-date",
-      "name": "Ask Email for Custom Date",
-      "credentials": {
-        "whatsAppBusinessCloudApi": {
-          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
-          "name": "WhatsApp Business Cloud API"
-        }
-      }
+      "position": [
+        992,
+        2032
+      ],
+      "id": "51a1499a-e1a0-4e52-b63a-4651e2fe225a",
+      "name": "Ask Email for Custom Date"
     }
   ],
+  "pinData": {},
   "connections": {
     "Appointments Webhook": {
-      "main": [[{"node": "Normalize Input", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Normalize Input": {
-      "main": [[{"node": "Route Action", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Route Action": {
       "main": [
-        [{"node": "Get Appointments Config", "type": "main", "index": 0}],
         [
-          {"node": "Get Calendar Events", "type": "main", "index": 0},
-          {"node": "Get Appointments Config 2", "type": "main", "index": 0}
+          {
+            "node": "Get Appointments Config",
+            "type": "main",
+            "index": 0
+          }
         ],
-        [{"node": "Ask For Email", "type": "main", "index": 0}],
-        [{"node": "Send Other Date Options", "type": "main", "index": 0}],
-        [{"node": "Get Config For Date Parsing", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Get Calendar Events",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Appointments Config 2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask For Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Other Date Options",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Config For Date Parsing",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Get Config For Date Parsing": {
-      "main": [[{"node": "Parse Date from Text", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Parse Date from Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parse Date from Text": {
-      "main": [[{"node": "Is Date Valid?", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Is Date Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Is Date Valid?": {
       "main": [
-        [{"node": "Ask Email for Custom Date", "type": "main", "index": 0}],
-        [{"node": "Send Date Error", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Ask Email for Custom Date",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Date Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Ask Email for Custom Date": {
-      "main": [[{"node": "Prepare Booking Data", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Prepare Booking Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Get Appointments Config": {
-      "main": [[{"node": "Generate Available Days", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Generate Available Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Generate Available Days": {
-      "main": [[{"node": "Send Days Buttons", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Send Days Buttons",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Get Calendar Events": {
-      "main": [[{"node": "Find Available Slots", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Find Available Slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Get Appointments Config 2": {
-      "main": [[{"node": "Find Available Slots", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Find Available Slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Find Available Slots": {
-      "main": [[{"node": "Has Availability?", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Has Availability?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Has Availability?": {
       "main": [
-        [{"node": "Send Times Buttons", "type": "main", "index": 0}],
-        [{"node": "Send No Availability", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Send Times Buttons",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send No Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Ask For Email": {
-      "main": [[{"node": "Prepare Booking Data", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Prepare Booking Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Prepare Booking Data": {
-      "main": [[{"node": "Create Appointment", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Create Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Create Appointment": {
-      "main": [[{"node": "Send Confirmation", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Send Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
-    "timezone": "America/Santiago",
-    "saveManualExecutions": true
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "p7ISUf0J5GycHscc"
   },
-  "versionId": "wa-appointments-v3",
+  "versionId": "be0d2ed0-f032-45b0-9694-dbf74af4a2c8",
   "meta": {
-    "templateCredsSetupCompleted": false,
-    "instanceId": "automatizatech-whatsapp"
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
   },
-  "id": "WhatsApp_Tech_Agendamiento",
+  "id": "j0NFGWnOXOSemf4e",
   "tags": []
 }

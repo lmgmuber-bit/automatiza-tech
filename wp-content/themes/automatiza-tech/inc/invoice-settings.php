@@ -253,6 +253,153 @@ function automatiza_invoice_settings_page() {
             font-style: italic;
             margin-top: 5px;
         }
+        
+        /* ========== RESPONSIVE STYLES - INVOICE SETTINGS ========== */
+        
+        /* Tablet (768px - 1024px) */
+        @media screen and (max-width: 1024px) {
+            .form-table th {
+                width: 150px;
+            }
+            .form-table input[type="text"],
+            .form-table input[type="email"] {
+                max-width: 400px;
+            }
+        }
+        
+        /* Mobile (hasta 767px) */
+        @media screen and (max-width: 767px) {
+            .wrap {
+                padding: 10px !important;
+                margin-left: 0 !important;
+            }
+            .wrap h1 {
+                font-size: 18px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .wrap h1 .dashicons {
+                font-size: 24px !important;
+            }
+            .wrap > p {
+                font-size: 13px !important;
+            }
+            
+            /* Form container */
+            .wrap > form > div,
+            .wrap > div {
+                padding: 15px !important;
+                margin: 10px 0 !important;
+            }
+            
+            /* Section headers */
+            .wrap h2 {
+                font-size: 16px;
+                padding-bottom: 8px !important;
+            }
+            .wrap h3 {
+                font-size: 15px;
+            }
+            
+            /* Form table responsive */
+            .form-table {
+                display: block;
+            }
+            .form-table tbody {
+                display: block;
+            }
+            .form-table tr {
+                display: block;
+                margin-bottom: 15px;
+                padding-bottom: 15px;
+                border-bottom: 1px solid #eee;
+            }
+            .form-table tr:last-child {
+                border-bottom: none;
+                margin-bottom: 0;
+                padding-bottom: 0;
+            }
+            .form-table th {
+                display: block;
+                width: 100% !important;
+                padding: 0 0 5px 0 !important;
+                font-size: 14px;
+            }
+            .form-table td {
+                display: block;
+                width: 100%;
+                padding: 0 !important;
+            }
+            .form-table input[type="text"],
+            .form-table input[type="email"] {
+                width: 100% !important;
+                max-width: none !important;
+                font-size: 16px !important;
+                padding: 12px !important;
+                box-sizing: border-box;
+            }
+            .form-table .description {
+                font-size: 12px;
+            }
+            
+            /* Info boxes */
+            div[style*="background: #e3f2fd"],
+            div[style*="background: #fff3cd"] {
+                padding: 12px !important;
+                margin: 15px 0 !important;
+            }
+            div[style*="background: #e3f2fd"] p,
+            div[style*="background: #fff3cd"] p {
+                font-size: 13px !important;
+            }
+            
+            /* Preview box */
+            div[style*="background: #f5f5f5"] {
+                padding: 12px !important;
+                font-size: 11px !important;
+                word-break: break-word;
+            }
+            
+            /* Submit button */
+            .button-primary.large {
+                width: 100% !important;
+                padding: 12px 20px !important;
+                font-size: 15px !important;
+            }
+        }
+        
+        /* Mobile Small (hasta 480px) */
+        @media screen and (max-width: 480px) {
+            .wrap {
+                padding: 5px !important;
+            }
+            .wrap h1 {
+                font-size: 16px;
+            }
+            .wrap h2 {
+                font-size: 14px;
+            }
+            
+            .wrap > form > div,
+            .wrap > div {
+                padding: 10px !important;
+            }
+            
+            .form-table input[type="text"],
+            .form-table input[type="email"] {
+                padding: 10px !important;
+            }
+        }
+        
+        /* Touch improvements */
+        @media (hover: none) and (pointer: coarse) {
+            .form-table input[type="text"],
+            .form-table input[type="email"],
+            .button-primary.large {
+                min-height: 48px;
+            }
+        }
     </style>
     <?php
 }

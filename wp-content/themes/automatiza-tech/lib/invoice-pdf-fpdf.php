@@ -352,13 +352,20 @@ class InvoicePDFFPDF extends FPDF {
         // Filas de datos (soporta múltiples items)
         $items = is_array($this->plan_data) ? $this->plan_data : array($this->plan_data);
         $total_items = 0;
+        $total_descuento = 0;
         
         // DEBUG: Log de cuántos items se van a renderizar
         error_log("DEBUG PDF Render: Renderizando " . count($items) . " items en la tabla");
         
         foreach ($items as $index => $item) {
-            // Obtener precio según moneda del cliente
+            // Obtener precio según moneda del cliente (con descuento)
             $item_price = $this->get_item_price($item);
+            $original_price = $this->get_original_item_price($item);
+            
+            // Calcular descuento acumulado
+            if ($original_price > $item_price) {
+                $total_descuento += ($original_price - $item_price);
+            }
             
             error_log("DEBUG PDF Render: Item " . ($index + 1) . " - Nombre: {$item->name}, Precio: {$item_price}");
             
@@ -372,6 +379,20 @@ class InvoicePDFFPDF extends FPDF {
             $this->SetFont('Arial', 'B', 10);
             $this->Cell(40, 12, $this->format_currency($item_price), 1, 1, 'R', true);
             $total_items += $item_price;
+        }
+        
+        // Mostrar fila de ahorro si hay descuentos
+        if ($total_descuento > 0) {
+            $this->SetX(15);
+            $this->SetFont('Arial', 'B', 10);
+            $this->SetTextColor(39, 174, 96); // Verde éxito
+            $this->SetFillColor(212, 237, 218); // Verde claro fondo
+            // 100 + 40 = 140 ancho total de las dos primeras columnas
+            $this->Cell(140, 8, utf8_to_latin1('Ahorro total por descuento:'), 1, 0, 'R', true);
+            $this->Cell(40, 8, '-' . $this->format_currency($total_descuento), 1, 1, 'R', true);
+            
+            // Restaurar color texto
+            $this->SetTextColor($this->text_color[0], $this->text_color[1], $this->text_color[2]);
         }
         
         $this->Ln(8);
@@ -539,16 +560,31 @@ class InvoicePDFFPDF extends FPDF {
     }
     
     /**
-     * Obtener precio del item según moneda del cliente
+     * Obtener precio original del item (sin descuento)
      */
-    private function get_item_price($item) {
+    private function get_original_item_price($item) {
         if ($this->currency === 'CLP') {
             // Chile: usar price_clp
             return isset($item->price_clp) ? floatval($item->price_clp) : 0;
         } else {
-            // Otros paÃ­ses: usar price_usd
+            // Otros países: usar price_usd
             return isset($item->price_usd) ? floatval($item->price_usd) : 0;
         }
+    }
+
+    /**
+     * Obtener precio del item según moneda del cliente (con descuento aplicado)
+     */
+    private function get_item_price($item) {
+        $price = $this->get_original_item_price($item);
+        
+        // Aplicar descuento si existe
+        if (isset($item->discount_percent) && $item->discount_percent > 0) {
+            $discount = floatval($item->discount_percent);
+            $price = $price * (1 - $discount / 100);
+        }
+        
+        return $price;
     }
     
     /**

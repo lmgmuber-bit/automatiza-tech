@@ -288,14 +288,298 @@ function automatiza_tech_proposals_page() {
     $proposals = $wpdb->get_results("SELECT * FROM $table_name ORDER BY created_at DESC LIMIT 10");
     ?>
 
-    <div class="wrap">
+    <div class="wrap proposals-admin">
+        <style>
+            /* ==================== ESTILOS PROPUESTAS ADMIN ==================== */
+            .proposals-admin .proposals-layout {
+                display: flex;
+                gap: 20px;
+                margin-top: 20px;
+            }
+            .proposals-admin .proposals-sidebar {
+                flex: 1;
+                max-width: 400px;
+                min-width: 280px;
+            }
+            .proposals-admin .proposals-main {
+                flex: 2;
+                min-width: 0;
+            }
+            .proposals-admin .proposal-list {
+                list-style: none;
+                margin: 0;
+                max-height: 500px;
+                overflow-y: auto;
+            }
+            .proposals-admin .proposal-item {
+                padding: 12px;
+                border-bottom: 1px solid #eee;
+            }
+            .proposals-admin .proposal-item.active {
+                background-color: #f0f0f1;
+            }
+            .proposals-admin .proposal-item-content {
+                display: flex;
+                gap: 8px;
+                align-items: flex-start;
+            }
+            .proposals-admin .proposal-email {
+                display: block;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .proposals-admin .proposal-actions {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .proposals-admin .bulk-actions {
+                padding: 10px;
+                background: #f6f7f7;
+                border-bottom: 1px solid #ddd;
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+            .proposals-admin .status-badge {
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-size: 10px;
+                margin-left: 5px;
+                white-space: nowrap;
+            }
+            .proposals-admin .status-sent {
+                background: #d1fae5;
+                color: #065f46;
+            }
+            .proposals-admin .status-pending {
+                background: #fef3c7;
+                color: #92400e;
+            }
+            .proposals-admin .preview-box {
+                margin-bottom: 20px;
+                padding: 15px;
+                background: #f6f7f7;
+                border: 1px solid #c3c4c7;
+                border-left: 4px solid #2271b1;
+            }
+            .proposals-admin .preview-buttons {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            .proposals-admin .prompts-section {
+                margin-top: 20px;
+                padding: 20px;
+                background: #f0f9ff;
+                border: 1px solid #0284c7;
+                border-radius: 8px;
+            }
+            .proposals-admin .email-section {
+                margin-top: 20px;
+                padding: 20px;
+                background: #fff8e1;
+                border: 1px solid #ffcc02;
+                border-radius: 8px;
+            }
+            .proposals-admin .checkbox-section {
+                margin-top: 20px;
+                padding: 15px;
+                background: #d1fae5;
+                border: 2px solid #10b981;
+                border-radius: 8px;
+            }
+            
+            /* ==================== ESTILOS RESPONSIVOS ==================== */
+            
+            /* Tablet (1024px y menos) */
+            @media screen and (max-width: 1024px) {
+                .proposals-admin .proposals-layout {
+                    flex-direction: column;
+                }
+                .proposals-admin .proposals-sidebar {
+                    max-width: 100%;
+                    order: 2;
+                }
+                .proposals-admin .proposals-main {
+                    order: 1;
+                }
+                .proposals-admin .proposal-list {
+                    max-height: 300px;
+                }
+            }
+            
+            /* Mobile (767px y menos) */
+            @media screen and (max-width: 767px) {
+                .proposals-admin {
+                    margin: 0 -10px;
+                }
+                .proposals-admin h1.wp-heading-inline {
+                    font-size: 20px;
+                    padding: 0 10px;
+                }
+                .proposals-admin .proposals-layout {
+                    gap: 15px;
+                    padding: 0 10px;
+                }
+                .proposals-admin .proposals-sidebar {
+                    min-width: 100%;
+                }
+                
+                /* Formulario */
+                .proposals-admin .form-table th,
+                .proposals-admin .form-table td {
+                    display: block;
+                    width: 100%;
+                    padding: 10px 0;
+                }
+                .proposals-admin .form-table th {
+                    padding-bottom: 5px;
+                }
+                .proposals-admin input[type="text"],
+                .proposals-admin input[type="email"],
+                .proposals-admin input[type="url"],
+                .proposals-admin textarea,
+                .proposals-admin select {
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    font-size: 16px !important; /* Evita zoom iOS */
+                    min-height: 44px;
+                }
+                .proposals-admin textarea {
+                    min-height: 100px;
+                }
+                
+                /* Botones touch-friendly */
+                .proposals-admin .button {
+                    min-height: 44px;
+                    padding: 10px 16px;
+                    font-size: 14px;
+                }
+                .proposals-admin .button-large {
+                    width: 100%;
+                    justify-content: center;
+                    display: flex;
+                    align-items: center;
+                }
+                
+                /* Preview buttons */
+                .proposals-admin .preview-buttons {
+                    flex-direction: column;
+                }
+                .proposals-admin .preview-buttons .button {
+                    width: 100%;
+                    justify-content: center;
+                }
+                
+                /* Bulk actions */
+                .proposals-admin .bulk-actions {
+                    flex-wrap: wrap;
+                }
+                .proposals-admin .bulk-actions .button {
+                    flex: 1;
+                    min-width: 120px;
+                    text-align: center;
+                }
+                
+                /* Proposal items */
+                .proposals-admin .proposal-item {
+                    padding: 15px 10px;
+                }
+                .proposals-admin .proposal-item-content {
+                    flex-wrap: wrap;
+                }
+                .proposals-admin .proposal-actions {
+                    flex-direction: row;
+                    width: 100%;
+                    margin-top: 10px;
+                    justify-content: flex-end;
+                }
+                .proposals-admin .proposal-actions .button {
+                    min-width: 44px;
+                    min-height: 44px;
+                }
+                
+                /* Secciones colapsables */
+                .proposals-admin .prompts-section,
+                .proposals-admin .email-section,
+                .proposals-admin .checkbox-section {
+                    padding: 15px;
+                }
+                .proposals-admin .prompts-section h3,
+                .proposals-admin .prompts-section h4,
+                .proposals-admin .email-section h3 {
+                    font-size: 16px;
+                }
+                
+                /* Details/Summary */
+                .proposals-admin details summary {
+                    padding: 12px;
+                    min-height: 44px;
+                }
+                
+                /* Postbox */
+                .proposals-admin .postbox {
+                    margin: 0;
+                }
+                .proposals-admin .postbox-header {
+                    padding: 12px;
+                }
+                .proposals-admin .inside {
+                    padding: 15px !important;
+                }
+            }
+            
+            /* Móviles pequeños (480px y menos) */
+            @media screen and (max-width: 480px) {
+                .proposals-admin h1.wp-heading-inline {
+                    font-size: 18px;
+                }
+                .proposals-admin .proposal-email {
+                    font-size: 13px;
+                }
+                .proposals-admin .status-badge {
+                    display: block;
+                    margin: 5px 0 0 0;
+                    width: fit-content;
+                }
+            }
+            
+            /* Touch-friendly improvements */
+            @media (hover: none) and (pointer: coarse) {
+                .proposals-admin input[type="checkbox"] {
+                    width: 22px;
+                    height: 22px;
+                }
+                .proposals-admin .button,
+                .proposals-admin input,
+                .proposals-admin select,
+                .proposals-admin textarea {
+                    min-height: 48px;
+                }
+                .proposals-admin .proposal-checkbox {
+                    margin-top: 0 !important;
+                }
+            }
+            
+            /* Safe area para iPhones con notch */
+            @supports (padding-bottom: env(safe-area-inset-bottom)) {
+                @media screen and (max-width: 767px) {
+                    .proposals-admin .submit {
+                        padding-bottom: calc(20px + env(safe-area-inset-bottom));
+                    }
+                }
+            }
+        </style>
+        
         <h1 class="wp-heading-inline">Panel de Aprobación de Propuestas</h1>
         
         <?php echo $message; ?>
 
-        <div style="display: flex; gap: 20px; margin-top: 20px;">
+        <div class="proposals-layout">
             <!-- LISTA DE PROPUESTAS -->
-            <div style="flex: 1; max-width: 400px;">
+            <div class="proposals-sidebar">
                 <div class="postbox">
                     <div class="postbox-header">
                         <h2 class="hndle">Últimas Solicitudes</h2>
@@ -305,7 +589,7 @@ function automatiza_tech_proposals_page() {
                             <?php wp_nonce_field('bulk_delete_proposals', 'automatiza_bulk_nonce'); ?>
                             
                             <!-- Acciones masivas -->
-                            <div style="padding: 10px; background: #f6f7f7; border-bottom: 1px solid #ddd; display: flex; gap: 10px; align-items: center;">
+                            <div class="bulk-actions">
                                 <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
                                     <input type="checkbox" id="select-all-proposals" style="margin: 0;">
                                     <span style="font-size: 12px;">Todos</span>
@@ -316,23 +600,24 @@ function automatiza_tech_proposals_page() {
                                 </button>
                             </div>
                             
-                            <ul style="list-style: none; margin: 0; max-height: 500px; overflow-y: auto;">
+                            <ul class="proposal-list">
                                 <?php foreach ($proposals as $p): ?>
-                                    <li style="padding: 10px; border-bottom: 1px solid #eee; <?php echo ($edit_proposal && $edit_proposal->id == $p->id) ? 'background-color: #f0f0f1;' : ''; ?>">
-                                        <div style="display: flex; gap: 8px; align-items: flex-start;">
+                                    <li class="proposal-item <?php echo ($edit_proposal && $edit_proposal->id == $p->id) ? 'active' : ''; ?>">
+                                        <div class="proposal-item-content">
                                             <input type="checkbox" name="proposal_ids[]" value="<?php echo $p->id; ?>" class="proposal-checkbox" style="margin-top: 3px;">
                                             <div style="flex: 1; min-width: 0;">
-                                                <strong style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?php echo esc_attr($p->client_email); ?>">
+                                                <strong class="proposal-email" title="<?php echo esc_attr($p->client_email); ?>">
                                                     <?php echo esc_html($p->client_email); ?>
                                                 </strong>
                                                 <small style="color: #666;"><?php echo $p->created_at; ?></small>
                                                 <?php if ($p->status === 'sent'): ?>
-                                                    <span style="background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 5px;">Enviada</span>
+                                                    <span class="status-badge status-sent">Enviada</span>
                                                 <?php elseif ($p->status === 'pending'): ?>
-                                                    <span style="background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 5px;">Pendiente</span>
+                                                    <span class="status-badge status-pending">Pendiente</span>
                                                 <?php endif; ?>
                                             </div>
-                                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                            <div class="proposal-actions">
+                                                <button type="button" class="button button-small btn-convert-lead" data-id="<?php echo $p->id; ?>" data-email="<?php echo esc_attr($p->client_email); ?>" title="Convertir a Cliente">👤+</button>
                                                 <a href="<?php echo admin_url('admin.php?page=automatiza-proposals&edit_id=' . $p->id); ?>" class="button button-small" title="Editar">✏️</a>
                                                 <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=automatiza-proposals&delete_id=' . $p->id), 'delete_proposal_' . $p->id); ?>" 
                                                    class="button button-small" style="color: #b32d2e;" title="Eliminar"
@@ -342,7 +627,7 @@ function automatiza_tech_proposals_page() {
                                     </li>
                                 <?php endforeach; ?>
                                 <?php if (empty($proposals)): ?>
-                                    <li style="padding: 20px; text-align: center; color: #666;">No hay propuestas registradas</li>
+                                    <li class="proposal-item" style="text-align: center; color: #666;">No hay propuestas registradas</li>
                                 <?php endif; ?>
                             </ul>
                         </form>
@@ -350,23 +635,53 @@ function automatiza_tech_proposals_page() {
                 </div>
                 
                 <script>
-                document.getElementById('select-all-proposals')?.addEventListener('change', function() {
-                    document.querySelectorAll('.proposal-checkbox').forEach(cb => cb.checked = this.checked);
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.getElementById('select-all-proposals')?.addEventListener('change', function() {
+                        document.querySelectorAll('.proposal-checkbox').forEach(cb => cb.checked = this.checked);
+                    });
+
+                    // Convertir Propuesta a Cliente
+                    document.querySelectorAll('.btn-convert-lead').forEach(function(btn) {
+                        btn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            if (!confirm('¿Convertir esta propuesta en Cliente activo? Se creará la ficha del cliente.')) return;
+                            
+                            var id = this.getAttribute('data-id');
+                            var btn = this;
+                            btn.disabled = true;
+                            btn.textContent = '⏳';
+                            
+                            jQuery.post(ajaxurl, {
+                                action: 'crm_convertir_propuesta',
+                                nonce: '<?php echo wp_create_nonce('crm_nonce'); ?>',
+                                propuesta_id: id
+                            }, function(response) {
+                                if (response.success) {
+                                    alert('✅ ¡Cliente creado correctamente! Redirigiendo a su ficha...');
+                                    window.location.href = 'admin.php?page=automatiza-crm-ficha&id=' + response.data.cliente_id;
+                                } else {
+                                    alert('❌ Error: ' + (response.data || 'Desconocido'));
+                                    btn.disabled = false;
+                                    btn.textContent = '👤+';
+                                }
+                            });
+                        });
+                    });
                 });
                 </script>
             </div>
 
             <!-- FORMULARIO DE EDICIÓN -->
-            <div style="flex: 2;">
+            <div class="proposals-main">
                 <?php if ($edit_proposal): ?>
                     <div class="postbox">
                         <div class="postbox-header"><h2 class="hndle">Aprobar y Enviar: <?php echo esc_html($edit_proposal->client_email); ?></h2></div>
                         <div class="inside">
                             
-                            <div style="margin-bottom: 20px; padding: 15px; background: #f6f7f7; border: 1px solid #c3c4c7; border-left: 4px solid #2271b1;">
+                            <div class="preview-box">
                                 <h3 style="margin-top: 0;">👁️ Vista Previa</h3>
                                 <p>Verifica cómo verá el cliente la propuesta antes de enviarla:</p>
-                                <div style="display: flex; gap: 10px;">
+                                <div class="preview-buttons">
                                     <a href="<?php echo get_site_url() . '/ver-presentacion.php?id=' . $edit_proposal->unique_link_id; ?>" target="_blank" class="button button-secondary">
                                         <span class="dashicons dashicons-media-document" style="vertical-align: middle;"></span> Ver Presentación
                                     </a>
@@ -434,7 +749,7 @@ function automatiza_tech_proposals_page() {
                                 </table>
 
                                 <!-- SECCIÓN DE PROMPTS -->
-                                <div style="margin-top: 20px; padding: 20px; background: #f0f9ff; border: 1px solid #0284c7; border-radius: 8px;">
+                                <div class="prompts-section">
                                     <h3 style="margin-top: 0; color: #0369a1;">🤖 Prompts del Sistema</h3>
                                     <p style="color: #0369a1; margin-bottom: 15px;">Visualiza y edita los prompts generados por la IA.</p>
                                     
@@ -475,8 +790,17 @@ function automatiza_tech_proposals_page() {
                                     </div>
                                 </div>
 
+                                <!-- SECCIÓN DE DETALLES DE SEGUIMIENTO -->
+                                <?php if (function_exists('automatiza_render_prospect_details')): ?>
+                                <div class="tracking-section" style="margin-top: 20px; padding: 20px; background: #faf5ff; border: 1px solid #a855f7; border-radius: 8px;">
+                                    <h3 style="margin-top: 0; color: #7c3aed;">📋 Detalles de Seguimiento</h3>
+                                    <p style="color: #7c3aed; margin-bottom: 15px;">Registra reuniones, cotizaciones, estados y notas del prospecto.</p>
+                                    <?php automatiza_render_prospect_details($edit_proposal->id); ?>
+                                </div>
+                                <?php endif; ?>
+
                                 <!-- CHECKBOX PARA ENVIAR CORREO -->
-                                <div style="margin-top: 20px; padding: 15px; background: #d1fae5; border: 2px solid #10b981; border-radius: 8px;">
+                                <div class="checkbox-section">
                                     <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 15px;">
                                         <input type="checkbox" name="send_email" value="1" id="send_email" checked style="width: 20px; height: 20px;">
                                         <span style="color: #065f46; font-weight: 600;">📧 Enviar correo con la propuesta al cliente</span>
@@ -485,7 +809,7 @@ function automatiza_tech_proposals_page() {
                                 </div>
 
                                 <!-- SECCIÓN DE PERSONALIZACIÓN DEL CORREO -->
-                                <div style="margin-top: 20px; padding: 20px; background: #fff8e1; border: 1px solid #ffcc02; border-radius: 8px;">
+                                <div class="email-section">
                                     <h3 style="margin-top: 0; color: #856404;">✉️ Personalizar Contenido del Correo</h3>
                                     <p style="color: #856404; margin-bottom: 15px;">Edita el contenido del correo antes de enviarlo. Deja en blanco para usar el texto por defecto.</p>
                                     

@@ -34,6 +34,9 @@
       });
     </script>
 
+    <!-- Favicon -->
+    <link rel="icon" href="<?php echo get_template_directory_uri(); ?>/assets/images/solo-logo.svg" type="image/svg+xml">
+
     <?php wp_head(); ?>
 
     <!-- Critical CSS inline -->
@@ -622,18 +625,18 @@
             function qs(sel){ return document.querySelector(sel); }
             function ensureLayer(){ var l = qs('.christmas-layer'); if(!l){ l = document.createElement('div'); l.className='christmas-layer'; document.body.appendChild(l); } return l; }
             function ensureStars(){ /* Estrellas deshabilitadas */ }
-            // Modal de Año Nuevo 2026
+            // Modal Informativo
             function ensureModal(){
                 if(qs('.newyear-modal-overlay')) return;
-                var shown = parseInt(localStorage.getItem('newyearModalShownCount_2026') || '0', 10);
+                var shown = parseInt(localStorage.getItem('botWhatsappModalShown') || '0', 10);
                 if (shown >= 10) return; // límite de 10 veces por navegador
-                localStorage.setItem('newyearModalShownCount_2026', String(shown + 1));
+                localStorage.setItem('botWhatsappModalShown', String(shown + 1));
                 var overlay = document.createElement('div');
                 overlay.className = 'newyear-modal-overlay';
                 overlay.innerHTML = ""
                     + "<div class='newyear-modal' role='dialog' aria-modal='true' aria-labelledby='newyear-title'>"
                     +   "<button class='newyear-modal-close' aria-label='Cerrar'>✖</button>"
-                    +   "<img src='" + (window.templateUrl || '/wp-content/themes/automatiza-tech') + "/assets/images/feliz-2026.png' alt='Feliz Año Nuevo 2026 - AutomatizaTech' class='newyear-modal-image'>"
+                    +   "<img src='<?php echo get_template_directory_uri(); ?>/assets/images/ModalBotWhatsapp.png' alt='AutomatizaTech Bot WhatsApp' class='newyear-modal-image'>"
                     + "</div>";
                 document.body.appendChild(overlay);
                 function dismiss(){ overlay.remove(); }

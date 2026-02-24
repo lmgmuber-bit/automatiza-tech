@@ -119,16 +119,24 @@ function automatiza_tech_leads_manager_page() {
             // Detectar si cambió a "No Asistió" (confirmed_attendance = 0) y antes no estaba en ese estado
             $changed_to_noshow = ($new_confirmed_attendance === 0 && $original_lead->confirmed_attendance != '0');
             
+            // Verificar si existe la columna attendance_status
+            $has_attendance_status = $wpdb->get_var("SHOW COLUMNS FROM $table_name LIKE 'attendance_status'");
+            
             // Si cambió a No Asistió, también actualizar attendance_status
-            if ($changed_to_noshow) {
+            if ($changed_to_noshow && $has_attendance_status) {
                 $data['attendance_status'] = 'no_show';
             }
             // Si cambió a Asistió
-            if ($new_confirmed_attendance === 1 && $original_lead->confirmed_attendance != '1') {
+            if ($new_confirmed_attendance === 1 && $original_lead->confirmed_attendance != '1' && $has_attendance_status) {
                 $data['attendance_status'] = 'attended';
             }
             
-            $wpdb->update($table_name, $data, array('id' => $id));
+            $update_result = $wpdb->update($table_name, $data, array('id' => $id));
+            
+            // Debug: si hay error, mostrarlo
+            if ($update_result === false) {
+                echo '<div class="notice notice-error"><p>❌ Error al actualizar: ' . esc_html($wpdb->last_error) . '</p></div>';
+            }
             
             $messages = array();
             
@@ -141,6 +149,18 @@ function automatiza_tech_leads_manager_page() {
                     $messages[] = '📧 <strong>Email de reprogramación enviado.</strong>';
                 } else {
                     $messages[] = '⚠️ <strong>No se pudo enviar el email de reprogramación.</strong>';
+                }
+            }
+            
+            // Enviar WhatsApp si se marcó el checkbox
+            $send_whatsapp = isset($_POST['send_whatsapp']) && $_POST['send_whatsapp'] === '1';
+            if ($send_whatsapp && !empty($original_lead->phone)) {
+                $wa_context = ($date_changed || $time_changed) ? 'reschedule' : 'new';
+                $wa_sent = automatiza_tech_send_lead_whatsapp($id, $wa_context);
+                if ($wa_sent) {
+                    $messages[] = '💬 <strong>WhatsApp enviado al prospecto.</strong>';
+                } else {
+                    $messages[] = '⚠️ <strong>No se pudo enviar el WhatsApp.</strong>';
                 }
             }
             
@@ -199,6 +219,9 @@ function automatiza_tech_leads_manager_page() {
             
             <div style="background: #f0f6fc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2271b1;">
                 <strong>💡 Nota:</strong> Si cambias la <strong>fecha</strong> o la <strong>hora</strong>, se enviará automáticamente un correo al cliente notificando la reprogramación.
+                <?php if (!empty($lead->phone)): ?>
+                <br>También puedes enviar una <strong>notificación WhatsApp</strong> marcando la casilla correspondiente.
+                <?php endif; ?>
             </div>
             
             <form method="post" action="?page=automatiza-leads-manager&action=edit&id=<?php echo $lead->id; ?>">
@@ -241,6 +264,17 @@ function automatiza_tech_leads_manager_page() {
                         </td>
                     </tr>
                 </table>
+                <?php if (!empty($lead->phone)): ?>
+                <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #25D366;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" name="send_whatsapp" value="1" <?php echo ($date_changed_for_form ?? false) ? 'checked' : ''; ?>>
+                        <span>💬 <strong>Enviar notificación WhatsApp</strong> al prospecto (<?php echo esc_html($lead->phone); ?>)</span>
+                    </label>
+                    <p style="margin: 8px 0 0 28px; color: #555; font-size: 13px;">
+                        Se enviará un mensaje con los datos de la cita y botones de confirmar/reagendar/cancelar.
+                    </p>
+                </div>
+                <?php endif; ?>
                 <p class="submit">
                     <input type="submit" name="submit_edit" id="submit" class="button button-primary" value="💾 Guardar Cambios">
                     <a href="?page=automatiza-leads-manager" class="button">Cancelar</a>
@@ -425,6 +459,7 @@ function automatiza_tech_leads_manager_page() {
                                 <?php endif; ?>
                             </td>
                             <td>
+                                <a href="?page=automatiza-leads-manager&action=convert_to_client&source=leads&id=<?php echo $lead->id; ?>&_wpnonce=<?php echo wp_create_nonce('convert_to_client_' . $lead->id); ?>" class="button button-small button-primary" onclick="return confirm('¿Convertir este prospecto en Cliente?');" title="Convertir a Cliente">👤+</a>
                                 <a href="?page=automatiza-leads-manager&action=edit&id=<?php echo $lead->id; ?>" class="button button-small">Editar</a>
                                 <a href="?page=automatiza-leads-manager&action=delete&id=<?php echo $lead->id; ?>&_wpnonce=<?php echo wp_create_nonce('delete_lead_' . $lead->id); ?>" class="button button-small button-link-delete" onclick="return confirm('¿Estás seguro de eliminar esta cita?');">Eliminar</a>
                             </td>
@@ -490,6 +525,318 @@ function automatiza_tech_leads_manager_page() {
                 });
             });
             </script>
+            
+            <style>
+            /* ==================== ESTILOS RESPONSIVOS LEADS MANAGER ==================== */
+            
+            /* Tablet (1024px y menos) */
+            @media screen and (max-width: 1024px) {
+                .wp-list-table th:nth-child(3),
+                .wp-list-table td:nth-child(3),
+                .wp-list-table th:nth-child(4),
+                .wp-list-table td:nth-child(4) {
+                    display: none; /* Ocultar Email y Teléfono */
+                }
+            }
+            
+            /* Mobile (767px y menos) */
+            @media screen and (max-width: 767px) {
+                .wrap h1.wp-heading-inline {
+                    font-size: 18px;
+                }
+                
+                /* Stats cards */
+                .wrap > div[style*="display: flex"] {
+                    flex-direction: column !important;
+                    gap: 10px !important;
+                }
+                .wrap > div[style*="display: flex"] > div {
+                    width: 100%;
+                }
+                
+                /* Filtros */
+                .tablenav.top {
+                    flex-direction: column !important;
+                    align-items: stretch !important;
+                }
+                .tablenav.top form {
+                    flex-direction: column !important;
+                    width: 100%;
+                }
+                .tablenav.top form label {
+                    width: 100%;
+                }
+                .tablenav.top form select,
+                .tablenav.top form input[type="date"] {
+                    width: 100% !important;
+                    min-height: 44px;
+                    font-size: 16px !important;
+                }
+                .tablenav.top form .button {
+                    width: 100%;
+                    min-height: 44px;
+                    margin-top: 10px;
+                }
+                .tablenav.top > div {
+                    width: 100%;
+                    margin-top: 10px;
+                }
+                .tablenav.top > div .button {
+                    width: 100%;
+                    min-height: 44px;
+                }
+                
+                /* Tabla - scroll horizontal */
+                .wp-list-table.widefat {
+                    display: block;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                }
+                .wp-list-table {
+                    min-width: 700px;
+                    font-size: 13px;
+                }
+                .wp-list-table th,
+                .wp-list-table td {
+                    padding: 10px 8px;
+                }
+                /* Ocultar más columnas en móvil */
+                .wp-list-table th:nth-child(3),
+                .wp-list-table td:nth-child(3),
+                .wp-list-table th:nth-child(4),
+                .wp-list-table td:nth-child(4),
+                .wp-list-table th:nth-child(5),
+                .wp-list-table td:nth-child(5) {
+                    display: none;
+                }
+                
+                /* Botones más pequeños */
+                .wp-list-table .button-small {
+                    padding: 4px 8px;
+                    font-size: 12px;
+                }
+                .attendance-buttons {
+                    display: flex;
+                    gap: 5px;
+                }
+                .attendance-buttons .button-small {
+                    min-width: 36px;
+                    min-height: 36px;
+                }
+                
+                /* Formulario de edición */
+                .form-table th,
+                .form-table td {
+                    display: block;
+                    width: 100%;
+                    padding: 10px 0;
+                }
+                .form-table th {
+                    padding-bottom: 5px;
+                }
+                .form-table input[type="text"],
+                .form-table input[type="email"],
+                .form-table input[type="date"],
+                .form-table input[type="time"],
+                .form-table select {
+                    width: 100% !important;
+                    min-height: 44px;
+                    font-size: 16px !important;
+                }
+                .submit .button {
+                    width: 100%;
+                    min-height: 44px;
+                    margin-bottom: 10px;
+                }
+            }
+            
+            /* Móviles pequeños (480px y menos) */
+            @media screen and (max-width: 480px) {
+                .wp-list-table {
+                    min-width: 550px;
+                }
+            }
+            
+            /* Touch-friendly */
+            @media (hover: none) and (pointer: coarse) {
+                .tablenav.top form select,
+                .tablenav.top form input,
+                .tablenav.top .button,
+                .form-table input,
+                .form-table select,
+                .submit .button,
+                .attendance-buttons .button-small {
+                    min-height: 48px;
+                }
+            }
+            </style>
+            
+            <!-- ========== TABLA DE CITAS DE SEGUIMIENTO ========== -->
+            <?php
+            $followup_table = $wpdb->prefix . 'automatiza_followup_meetings';
+            $followup_where = "1=1";
+            if ($filter_status === 'cancelled') {
+                $followup_where .= " AND status = 'cancelled'";
+            } elseif ($filter_status === 'active') {
+                $followup_where .= " AND status != 'cancelled'";
+            }
+            if ($filter_date) {
+                $followup_where .= $wpdb->prepare(" AND meeting_date = %s", $filter_date);
+            }
+            $followup_meetings = $wpdb->get_results("SELECT * FROM $followup_table WHERE $followup_where ORDER BY meeting_date DESC, meeting_time DESC");
+            $followup_total = $wpdb->get_var("SELECT COUNT(*) FROM $followup_table");
+            $followup_cancelled = $wpdb->get_var("SELECT COUNT(*) FROM $followup_table WHERE status = 'cancelled'");
+            $followup_active = $followup_total - $followup_cancelled;
+            ?>
+            
+            <h2 style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e1e1e1;">🔄 Citas de Seguimiento (Clientes)</h2>
+            <p style="color:#666; margin-top:5px;">Reuniones de seguimiento con clientes activos. Los recordatorios se envían a las 8pm (día anterior) y 8am (día de la cita).</p>
+            
+            <div style="display: flex; gap: 15px; margin: 15px 0;">
+                <div style="background: #fff; padding: 10px 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #7c3aed;">
+                    <strong style="color: #7c3aed;">📊 Total:</strong> <?php echo $followup_total; ?>
+                </div>
+                <div style="background: #fff; padding: 10px 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #00a32a;">
+                    <strong style="color: #00a32a;">✅ Activas:</strong> <?php echo $followup_active; ?>
+                </div>
+                <div style="background: #fff; padding: 10px 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #d63638;">
+                    <strong style="color: #d63638;">❌ Canceladas:</strong> <?php echo $followup_cancelled; ?>
+                </div>
+            </div>
+            
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th style="width:50px;">ID</th>
+                        <th>Nombre</th>
+                        <th>Empresa</th>
+                        <th>Email</th>
+                        <th>Teléfono</th>
+                        <th style="width:100px;">Fecha</th>
+                        <th style="width:70px;">Hora</th>
+                        <th style="width:100px;">Estado</th>
+                        <th style="width:180px;">Notificaciones</th>
+                        <th style="width:180px;">Recordatorios</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($followup_meetings)): ?>
+                        <tr><td colspan="10" style="text-align:center; padding:15px; color:#666;">No hay citas de seguimiento para los filtros seleccionados.</td></tr>
+                    <?php else: foreach ($followup_meetings as $fm):
+                        $tz_fu = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone('America/Santiago');
+                        $fm_dt = new DateTime($fm->meeting_date . ' ' . $fm->meeting_time, $tz_fu);
+                        $now_fu = new DateTime('now', $tz_fu);
+                        $is_past_fu = $fm_dt < $now_fu;
+                        $is_cancelled_fu = ($fm->status === 'cancelled');
+                        $row_style_fu = $is_cancelled_fu ? 'background-color: #fff0f0;' : '';
+                    ?>
+                        <tr style="<?php echo $row_style_fu; ?>">
+                            <td><?php echo $fm->id; ?></td>
+                            <td><?php echo esc_html($fm->client_name); ?></td>
+                            <td><?php echo esc_html($fm->company_name); ?></td>
+                            <td><?php echo esc_html($fm->client_email); ?></td>
+                            <td><?php echo esc_html($fm->phone); ?></td>
+                            <td><?php echo date('d-m-Y', strtotime($fm->meeting_date)); ?></td>
+                            <td><?php echo substr($fm->meeting_time, 0, 5); ?></td>
+                            <td>
+                                <?php if ($is_cancelled_fu): ?>
+                                    <span style="color:#d63638; font-weight:bold;">❌ Cancelada</span>
+                                <?php elseif ($is_past_fu): ?>
+                                    <span style="color:#666;">📅 Pasada</span>
+                                <?php else: ?>
+                                    <span style="color:#00a32a;">✅ Programada</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php
+                                // Notificaciones iniciales (email + WhatsApp de invitación)
+                                $notif_parts = array();
+                                if (!empty($fm->email_sent)) {
+                                    $notif_parts[] = '<span style="color:#166534;" title="Email de invitación enviado">📧 ✓</span>';
+                                } else {
+                                    $notif_parts[] = '<span style="color:#9ca3af;" title="Email de invitación pendiente">📧 —</span>';
+                                }
+                                if (!empty($fm->whatsapp_sent)) {
+                                    $notif_parts[] = '<span style="color:#25D366;" title="WhatsApp de invitación enviado">📱 ✓</span>';
+                                } else {
+                                    $notif_parts[] = '<span style="color:#9ca3af;" title="WhatsApp de invitación pendiente">📱 —</span>';
+                                }
+                                echo implode(' &nbsp; ', $notif_parts);
+                                ?>
+                            </td>
+                            <td>
+                                <?php
+                                // Recordatorios (8pm día anterior + 8am día de)
+                                $rem_parts = array();
+                                // Email recordatorios
+                                $rem_parts[] = !empty($fm->recordatorio_8pm) 
+                                    ? '<span style="color:#166534;" title="Email 8pm enviado">📧8pm✓</span>' 
+                                    : '<span style="color:#9ca3af;" title="Email 8pm pendiente">📧8pm—</span>';
+                                $rem_parts[] = !empty($fm->recordatorio_8am) 
+                                    ? '<span style="color:#166534;" title="Email 8am enviado">📧8am✓</span>' 
+                                    : '<span style="color:#9ca3af;" title="Email 8am pendiente">📧8am—</span>';
+                                // WhatsApp recordatorios
+                                $rem_parts[] = !empty($fm->recordatorio_8pm_wa) 
+                                    ? '<span style="color:#25D366;" title="WA 8pm enviado">📱8pm✓</span>' 
+                                    : '<span style="color:#9ca3af;" title="WA 8pm pendiente">📱8pm—</span>';
+                                $rem_parts[] = !empty($fm->recordatorio_8am_wa) 
+                                    ? '<span style="color:#25D366;" title="WA 8am enviado">📱8am✓</span>' 
+                                    : '<span style="color:#9ca3af;" title="WA 8am pendiente">📱8am—</span>';
+                                echo implode(' ', $rem_parts);
+                                ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
+            
+            <!-- Tabla de Propuestas -->
+            <?php
+            $propuestas_table = $wpdb->prefix . 'automatiza_propuestas';
+            $propuestas = $wpdb->get_results("SELECT * FROM $propuestas_table ORDER BY created_at DESC LIMIT 50");
+            ?>
+            <h2 style="margin-top: 40px;">📄 Propuestas y Demos Recientes</h2>
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th style="width:50px;">ID</th>
+                        <th>Cliente</th>
+                        <th>Empresa</th>
+                        <th>Email</th>
+                        <th>Estado</th>
+                        <th>Fecha</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($propuestas)): ?>
+                        <tr><td colspan="7">No hay propuestas registradas.</td></tr>
+                    <?php else: foreach ($propuestas as $p): ?>
+                        <tr>
+                            <td><?php echo $p->id; ?></td>
+                            <td><?php echo esc_html($p->client_name); ?></td>
+                            <td><?php echo esc_html($p->company_name); ?></td>
+                            <td><?php echo esc_html($p->client_email); ?></td>
+                            <td>
+                                <?php if ($p->status === 'sent'): ?>
+                                    <span style="color:green;">Enviada</span>
+                                <?php else: ?>
+                                    <span style="color:orange;">Pendiente</span>
+                                <?php endif; ?>
+                            </td>
+                            <td><?php echo date('d-m-Y', strtotime($p->created_at)); ?></td>
+                            <td>
+                                <a href="?page=automatiza-leads-manager&action=convert_to_client&source=propuestas&id=<?php echo $p->id; ?>&_wpnonce=<?php echo wp_create_nonce('convert_to_client_' . $p->id); ?>" 
+                                   class="button button-small button-primary" 
+                                   onclick="return confirm('¿Convertir este prospecto (Propuesta #<?php echo $p->id; ?>) en Cliente?');" 
+                                   title="Convertir a Cliente">
+                                   👤+ Convertir
+                                </a>
+                            </td>
+                        </tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
         </div>
         <?php
     }
@@ -842,4 +1189,186 @@ function automatiza_tech_send_reschedule_email($lead, $original_lead) {
     );
     
     return wp_mail($to, $subject, $body, $headers);
+}
+
+// ==================== NUEVAS ACCIONES Y MEJORAS ==================== //
+
+/**
+ * Acción: Convertir a Cliente
+ */
+add_action('admin_action_convert_to_client', 'automatiza_tech_convert_to_client');
+function automatiza_tech_convert_to_client() {
+    if (!current_user_can('manage_options')) {
+        wp_die('No tienes permisos suficientes para realizar esta acción.');
+    }
+    
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_leads';
+    $clients_table = $wpdb->prefix . 'automatiza_tech_clients';
+    
+    // Verificar nonce
+    $nonce = isset($_GET['_wpnonce']) ? $_GET['_wpnonce'] : '';
+    if (!wp_verify_nonce($nonce, 'convert_to_client_' . $_GET['id'])) {
+        wp_die('Nonce de seguridad no válido.');
+    }
+    
+    $source = sanitize_text_field($_GET['source']);
+    $source_id = intval($_GET['id']);
+    
+    $data = null;
+    
+    if ($source === 'leads') {
+        $lead = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $source_id));
+        if ($lead) {
+            $data = [
+                'name' => $lead->name,
+                'email' => $lead->email,
+                'phone' => $lead->phone,
+                'company' => '', // Leads might not have company
+                'notes' => $lead->notes
+            ];
+        }
+    } elseif ($source === 'propuestas') {
+        $propuestas_table = $wpdb->prefix . 'automatiza_propuestas';
+        $prop = $wpdb->get_row($wpdb->prepare("SELECT * FROM $propuestas_table WHERE id = %d", $source_id));
+        if ($prop) {
+            $data = [
+                'name' => $prop->client_name,
+                'email' => $prop->client_email,
+                'phone' => $prop->phone,
+                'company' => $prop->company_name,
+                'notes' => 'Convertido desde propuesta #' . $prop->id
+            ];
+        }
+    }
+    
+    if ($data) {
+        // Verificar si ya existe por email
+        $existing = $wpdb->get_row($wpdb->prepare("SELECT id FROM $clients_table WHERE email = %s", $data['email']));
+        
+        if ($existing) {
+            echo '<div class="notice notice-warning"><p>⚠️ Este cliente ya existe con el email ' . esc_html($data['email']) . '. <a href="' . admin_url('admin.php?page=automatiza-tech-clients') . '">Ver Clientes</a></p></div>';
+        } else {
+            $inserted = $wpdb->insert($clients_table, [
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'],
+                'company' => $data['company'],
+                'notes' => $data['notes'],
+                'contracted_at' => current_time('mysql'),
+                'contract_status' => 'active'
+            ]);
+            
+            if ($inserted) {
+                echo '<div class="notice notice-success"><p>🎉 ¡Prospecto convertido a cliente exitosamente! <a href="' . admin_url('admin.php?page=automatiza-tech-clients') . '">Ver nuevo cliente</a></p></div>';
+            } else {
+                echo '<div class="notice notice-error"><p>❌ Error al crear cliente: ' . $wpdb->last_error . '</p></div>';
+            }
+        }
+    } else {
+        echo '<div class="notice notice-error"><p>❌ No se encontró el registro original.</p></div>';
+    }
+    
+    // Redirigir de vuelta a la lista
+    wp_redirect(admin_url('admin.php?page=automatiza-leads-manager'));
+    exit;
+}
+
+/**
+ * Enviar notificación WhatsApp a prospecto (demo) via N8N Webhook
+ * Reutiliza el mismo workflow Followup_WhatsApp_Send con type=demo
+ * La diferencia: prospectos no tienen ficha/timeline/MAXTECH
+ *
+ * @param int $lead_id ID del lead en wp_automatiza_leads
+ * @param string $context 'new' para agendamiento nuevo, 'reschedule' para reprogramación
+ * @return bool True si se envió correctamente
+ */
+function automatiza_tech_send_lead_whatsapp($lead_id, $context = 'new') {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_leads';
+
+    $lead = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $lead_id));
+    if (!$lead) {
+        error_log('WhatsApp Lead: Lead no encontrado ID ' . $lead_id);
+        return false;
+    }
+
+    // Verificar teléfono válido
+    $phone_raw = trim($lead->phone ?? '');
+    $phone_digits = preg_replace('/[^0-9]/', '', $phone_raw);
+    if (strlen($phone_digits) < 8) {
+        error_log("WhatsApp Lead #{$lead_id}: Teléfono inválido '{$phone_raw}'");
+        return false;
+    }
+
+    // Formato internacional (Chile por defecto)
+    if (strlen($phone_digits) === 9 && substr($phone_digits, 0, 1) === '9') {
+        $phone_digits = '56' . $phone_digits;
+    }
+    $phone = '+' . $phone_digits;
+
+    // Formatear fecha en español
+    $days_es = array('Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado');
+    $months_es = array('', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre');
+    $day_num = date('w', strtotime($lead->scheduled_date));
+    $month_num = date('n', strtotime($lead->scheduled_date));
+    $day = date('d', strtotime($lead->scheduled_date));
+    $year = date('Y', strtotime($lead->scheduled_date));
+    $formatted_date = $days_es[$day_num] . ' ' . $day . ' de ' . $months_es[$month_num] . ' de ' . $year;
+    $formatted_time = substr($lead->scheduled_time, 0, 5);
+
+    $payload = array(
+        'action'          => 'send_lead_whatsapp',
+        'type'            => 'demo',           // Clave: le dice al workflow que es prospecto
+        'context'         => $context,          // 'new' o 'reschedule'
+        'meeting_id'      => $lead_id,
+        'phone'           => $phone,
+        'client_name'     => $lead->name,
+        'client_email'    => $lead->email,
+        'company_name'    => '',                // Prospectos normalmente no tienen empresa
+        'meeting_date'    => $lead->scheduled_date,
+        'meeting_time'    => $lead->scheduled_time,
+        'formatted_date'  => $formatted_date,
+        'formatted_time'  => $formatted_time,
+        'meeting_subject' => 'Demo de AutomatizaTech',
+        'meet_link'       => $lead->meet_link ?? '',
+        'notes'           => $lead->notes ?? '',
+        'source'          => 'crm_admin',
+        'ficha_url'       => '',                // Prospectos NO tienen ficha
+    );
+
+    // Reutilizar el mismo webhook de followup-whatsapp
+    $n8n_webhook_url = 'https://n8n-n8n.kchiba.easypanel.host/webhook/followup-whatsapp';
+
+    $response = wp_remote_post($n8n_webhook_url, array(
+        'method'  => 'POST',
+        'timeout' => 30,
+        'headers' => array('Content-Type' => 'application/json'),
+        'body'    => json_encode($payload)
+    ));
+
+    if (is_wp_error($response)) {
+        error_log('WhatsApp Lead Error: ' . $response->get_error_message());
+        return false;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    error_log("WhatsApp Lead #{$lead_id} Response: HTTP {$response_code} - " . $response_body);
+
+    if ($response_code === 200 && !empty(trim($response_body))) {
+        // Marcar whatsapp_sent en BD (la columna se crea si no existe vía el endpoint)
+        $col_exists = $wpdb->get_var("SHOW COLUMNS FROM $table_name LIKE 'whatsapp_sent'");
+        if (!$col_exists) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN whatsapp_sent tinyint(1) DEFAULT 0");
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN whatsapp_sent_at datetime DEFAULT NULL");
+        }
+        $wpdb->update($table_name, ['whatsapp_sent' => 1, 'whatsapp_sent_at' => current_time('mysql')], ['id' => $lead_id]);
+        error_log("WhatsApp Lead #{$lead_id}: Enviado exitosamente al {$phone}");
+        return true;
+    }
+
+    error_log("WhatsApp Lead #{$lead_id}: Falló - HTTP {$response_code}");
+    return false;
 }

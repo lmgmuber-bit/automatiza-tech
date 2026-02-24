@@ -279,7 +279,40 @@ add_action('rest_api_init', function () {
         'callback' => 'automatiza_tech_check_lead_event_exists',
         'permission_callback' => '__return_true'
     ));
+
+    // Endpoint para marcar WhatsApp enviado en leads (llamado por N8N)
+    register_rest_route('automatiza-tech/v1', '/leads/(?P<lead_id>\d+)/mark-whatsapp-sent', array(
+        'methods' => 'POST',
+        'callback' => 'automatiza_tech_mark_lead_whatsapp_sent',
+        'permission_callback' => '__return_true'
+    ));
 });
+
+/**
+ * Marcar WhatsApp enviado en tabla leads
+ */
+function automatiza_tech_mark_lead_whatsapp_sent($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_leads';
+    $lead_id = intval($request['lead_id']);
+
+    // Asegurar que exista la columna whatsapp_sent
+    $col_exists = $wpdb->get_var("SHOW COLUMNS FROM $table_name LIKE 'whatsapp_sent'");
+    if (!$col_exists) {
+        $wpdb->query("ALTER TABLE $table_name ADD COLUMN whatsapp_sent tinyint(1) DEFAULT 0");
+        $wpdb->query("ALTER TABLE $table_name ADD COLUMN whatsapp_sent_at datetime DEFAULT NULL");
+    }
+
+    $result = $wpdb->update($table_name, [
+        'whatsapp_sent' => 1,
+        'whatsapp_sent_at' => current_time('mysql')
+    ], ['id' => $lead_id]);
+
+    if ($result !== false) {
+        return new WP_REST_Response(['success' => true, 'message' => 'WhatsApp marcado como enviado'], 200);
+    }
+    return new WP_REST_Response(['success' => false, 'message' => 'Error al actualizar'], 500);
+}
 
 /**
  * Crear tabla de leads al activar el tema (o verificar existencia)
@@ -1449,8 +1482,7 @@ function automatiza_tech_check_lead_event_exists($request) {
         );
     }
     
-    // Buscar evento en la base de datos con ese google_event_id
-    // Solo consideramos activos (no tiene status 'cancelled')
+    // Buscar evento en la tabla de leads (demos)
     $lead = $wpdb->get_row($wpdb->prepare(
         "SELECT id, name, email, scheduled_date, scheduled_time, google_event_id 
          FROM $table_name 
@@ -1465,8 +1497,25 @@ function automatiza_tech_check_lead_event_exists($request) {
             'event_id' => $event_id,
             'lead_id' => $lead->id,
             'name' => $lead->name,
-            'scheduled_date' => $lead->scheduled_date
+            'scheduled_date' => $lead->scheduled_date,
+            'source' => 'leads'
         );
+    }
+    
+    // También buscar en followup_meetings (por si el título contiene "Demo" pero es un seguimiento)
+    $followup_table = $wpdb->prefix . 'automatiza_followup_meetings';
+    if ($wpdb->get_var("SHOW TABLES LIKE '$followup_table'") === $followup_table) {
+        $followup = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $followup_table WHERE google_event_id = %s AND status != 'cancelled'",
+            $event_id
+        ));
+        if (intval($followup) > 0) {
+            return array(
+                'exists' => true,
+                'event_id' => $event_id,
+                'source' => 'followup_meetings'
+            );
+        }
     }
     
     return array(

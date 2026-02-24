@@ -131,6 +131,7 @@ Sin intervención manual.
 
 #### Versión Completa:
 ```
+¿Eres dueño de peluquería/barbería/spa?
 ¡Hola! 👋 Tengo algo para ti:
 
 ¿Cuánto tiempo gastas DIARIAMENTE:
@@ -221,12 +222,12 @@ Nuestro bot inteligente:
 
 **¿Cuánto cuesta?**
 
-Desde solo $99/mes.
+Desde solo $100.000/mes.
 Incluye: Setup + WhatsApp integrado + Validación de pagos.
 
 **¿Quieres probarlo GRATIS?**
 
-Te ofrezco una demo de 15 minutos donde:
+Te ofrezco una demo de 10 días donde:
 • Te muestro exactamente cómo funciona
 • Vemos si aplica para tu negocio
 • Respondes todas tus dudas

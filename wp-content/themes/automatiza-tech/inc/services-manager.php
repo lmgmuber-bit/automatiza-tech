@@ -499,6 +499,137 @@ class AutomatizaTechServicesManager {
         .modal-close:hover {
             color: #000;
         }
+        
+        /* ==================== ESTILOS RESPONSIVOS SERVICES MANAGER ==================== */
+        
+        /* Tablet (1024px y menos) */
+        @media screen and (max-width: 1024px) {
+            .services-stats {
+                flex-wrap: wrap;
+            }
+            .stat-box {
+                flex: 1;
+                min-width: 100px;
+            }
+            .services-grid {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            }
+        }
+        
+        /* Mobile (767px y menos) */
+        @media screen and (max-width: 767px) {
+            .wrap h1 {
+                font-size: 20px;
+            }
+            .wrap h1 .page-title-action {
+                display: block;
+                margin-top: 10px;
+            }
+            
+            /* Stats grid */
+            .services-stats {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            .stat-box {
+                padding: 15px;
+                min-width: auto;
+            }
+            .stat-box h3 {
+                font-size: 1.5em;
+            }
+            .stat-box p {
+                font-size: 12px;
+            }
+            
+            /* Filtros */
+            .services-filters {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            .services-filters select {
+                width: 100%;
+                min-height: 44px;
+                font-size: 16px;
+            }
+            .services-filters .button {
+                width: 100%;
+                min-height: 44px;
+            }
+            
+            /* Services grid */
+            .services-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            .service-card {
+                padding: 15px;
+            }
+            .service-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .service-header h3 {
+                font-size: 1em;
+            }
+            .service-actions {
+                justify-content: space-between;
+            }
+            .service-actions .button-small {
+                flex: 1;
+                text-align: center;
+                min-height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            /* Modal fullscreen en móvil */
+            .modal-content {
+                margin: 0;
+                width: 100%;
+                height: 100%;
+                max-height: 100vh;
+                border-radius: 0;
+                padding: 15px;
+            }
+            .modal-close {
+                font-size: 32px;
+                padding: 10px;
+            }
+            
+            /* Category sections */
+            .category-title {
+                font-size: 1.1em;
+            }
+        }
+        
+        /* Móviles pequeños (480px y menos) */
+        @media screen and (max-width: 480px) {
+            .services-stats {
+                grid-template-columns: 1fr 1fr;
+            }
+            .stat-box h3 {
+                font-size: 1.3em;
+            }
+            .service-actions {
+                flex-direction: column;
+            }
+            .service-actions .button-small {
+                width: 100%;
+            }
+        }
+        
+        /* Touch-friendly */
+        @media (hover: none) and (pointer: coarse) {
+            .services-filters select,
+            .services-filters .button,
+            .service-actions .button-small {
+                min-height: 48px;
+            }
+        }
         </style>
         <?php
     }

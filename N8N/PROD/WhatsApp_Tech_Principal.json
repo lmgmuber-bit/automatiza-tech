@@ -10,10 +10,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
       "position": [
-        126240,
-        165760
+        245792,
+        274592
       ],
-      "id": "aac71a0e-b20c-4ea7-903b-c44bf10a8e60",
+      "id": "1235b437-027a-45c8-8afd-827d638f3758",
       "name": "WhatsApp Webhook",
       "webhookId": "whatsapp-webhook-tech"
     },
@@ -26,10 +26,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
       "position": [
-        126240,
-        163408
+        245792,
+        272096
       ],
-      "id": "cbc675cb-47f5-4db7-b26b-1af9c8ed687f",
+      "id": "7c4ac8b8-7392-416f-9ba6-d3aef79a1c13",
       "name": "Verify Webhook (GET)",
       "webhookId": "whatsapp-webhook-tech-verify"
     },
@@ -42,10 +42,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        126464,
-        163408
+        246016,
+        272096
       ],
-      "id": "9948ac4a-6626-471d-9491-32767832c205",
+      "id": "c20bedd2-8448-4d56-a0e2-5ba686b72f0f",
       "name": "Respond Challenge"
     },
     {
@@ -62,10 +62,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        126464,
-        165760
+        246016,
+        274592
       ],
-      "id": "ae99435b-f5f0-4339-b2b3-6d5f0dbd2c74",
+      "id": "a3c68cd7-0d38-43af-bd1c-9918ce3a6f85",
       "name": "Has Message?"
     },
     {
@@ -103,10 +103,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        126688,
-        165760
+        246240,
+        274592
       ],
-      "id": "cb5c803e-f762-46f5-8c75-130ce551d148",
+      "id": "703bf72b-28f8-4ae1-ac3c-f97ed7d54fe7",
       "name": "Extract Message Data"
     },
     {
@@ -116,10 +116,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        126912,
-        165760
+        246464,
+        274592
       ],
-      "id": "64756986-829d-474c-b696-1e484d2557c2",
+      "id": "9c2bb0d8-1635-43f6-8f6c-e046d3627a6b",
       "name": "Deduplication"
     },
     {
@@ -150,10 +150,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
       "position": [
-        127136,
-        165728
+        246688,
+        274560
       ],
-      "id": "1fcef443-fd68-463f-aa6e-12d1a38cfa42",
+      "id": "cc0bf727-c78f-4525-b6b2-a3fc09d98bf0",
       "name": "Message Type"
     },
     {
@@ -183,10 +183,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        127360,
-        165024
+        246912,
+        273648
       ],
-      "id": "8717d128-ed68-45bd-a4a2-f677b999d74d",
+      "id": "e3b07cdc-f353-41db-9a8c-f32a6c9f5f49",
       "name": "Process Text"
     },
     {
@@ -216,10 +216,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        128704,
-        165952
+        248256,
+        274928
       ],
-      "id": "8c6e0960-f739-4c8d-a397-8d22b262dfaf",
+      "id": "1b4ac30c-7564-4449-a0ab-2bcf383d078f",
       "name": "Process Audio"
     },
     {
@@ -232,10 +232,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128928,
-        165952
+        248480,
+        274928
       ],
-      "id": "e11702fd-9822-4965-9b92-3eaaae7d3d85",
+      "id": "00ebd431-6e67-4f0f-bf47-a7a548eaac14",
       "name": "Get Audio URL",
       "credentials": {
         "whatsAppBusinessCloudApi": {
@@ -264,10 +264,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        129152,
-        165952
+        248704,
+        274928
       ],
-      "id": "e0aaede0-b539-42fb-8cd8-6279e2c5552d",
+      "id": "a2b73374-fb7e-484d-bc4a-d0626a59af71",
       "name": "Download Audio",
       "credentials": {
         "whatsAppBusinessCloudApi": {
@@ -289,10 +289,10 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.3,
       "position": [
-        129376,
-        165952
+        248928,
+        274928
       ],
-      "id": "acb5fc85-885e-4ed6-8216-7f08a59ba4ed",
+      "id": "d8d68e4b-e275-4c0c-a016-11c3e11941d4",
       "name": "Transcribe Audio (Whisper)",
       "credentials": {
         "openAiApi": {
@@ -328,10 +328,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        129600,
-        165952
+        249152,
+        274928
       ],
-      "id": "b4b3017f-4f88-4967-b6ec-36836e282ac9",
+      "id": "99a41894-4350-4227-bb7d-0acf60515cd7",
       "name": "Audio to Text"
     },
     {
@@ -365,10 +365,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        128480,
-        166144
+        248032,
+        275216
       ],
-      "id": "216bec59-e698-4f83-a330-523ba3667bc1",
+      "id": "223a7a8c-38fe-44b9-8b70-2d85bf06f62a",
       "name": "Process Image"
     },
     {
@@ -381,10 +381,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128704,
-        166144
+        248256,
+        275216
       ],
-      "id": "4d904d74-73ec-4c65-8c71-a06dfb3e2cc2",
+      "id": "8aaed3f0-6977-4dc5-967e-0f83ae89452c",
       "name": "Get Image URL",
       "credentials": {
         "whatsAppBusinessCloudApi": {
@@ -414,10 +414,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128928,
-        166144
+        248480,
+        275216
       ],
-      "id": "fb56645b-8d00-4da8-998e-382877ecafa8",
+      "id": "0457c167-125c-4f8d-83cf-847cd0c65e73",
       "name": "Download Image",
       "credentials": {
         "whatsAppBusinessCloudApi": {
@@ -437,10 +437,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        129152,
-        166144
+        248704,
+        275216
       ],
-      "id": "05e66707-e566-4c24-bf80-0cb2b8a9253d",
+      "id": "8a05c935-1300-4de8-9bac-14d613c337fc",
       "name": "Prepare Base64 Image"
     },
     {
@@ -457,10 +457,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        129376,
-        166144
+        248928,
+        275216
       ],
-      "id": "31cd9554-dced-41c5-8e28-722229a8a73f",
+      "id": "f4db4134-9658-4e16-93b9-6c92136ddaba",
       "name": "Analyze Image (Vision)",
       "credentials": {
         "openAiApi": {
@@ -497,10 +497,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        129600,
-        166144
+        249152,
+        275216
       ],
-      "id": "1421b98a-36e2-4c41-8704-6cc29cec3222",
+      "id": "00f395e0-1463-491c-875f-f754e3d5361e",
       "name": "Image to Text"
     },
     {
@@ -538,10 +538,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        129600,
-        167424
+        249152,
+        276848
       ],
-      "id": "3cd9f44a-a38d-43c1-9e63-96382d8e2ed5",
+      "id": "7aab5ed7-cad3-4408-869e-2061860e732f",
       "name": "Process Interactive"
     },
     {
@@ -1063,10 +1063,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        129824,
-        167168
+        249376,
+        276512
       ],
-      "id": "2c85efd6-add6-40c9-b3b5-f40369c9bb96",
+      "id": "0d113f1e-1999-4db7-a09e-988161983152",
       "name": "Button Action"
     },
     {
@@ -1083,10 +1083,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131072,
-        164816
+        250624,
+        273536
       ],
-      "id": "864bd02d-4c0d-4cf1-95b8-13c81f5bc7b9",
+      "id": "a7d2a2c7-ad62-4eb9-8187-3b8b4ebd2dbb",
       "name": "Send WhatsApp Response",
       "credentials": {
         "whatsAppBusinessCloudApi": {
@@ -1107,10 +1107,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        129824,
-        164304
+        249376,
+        272992
       ],
-      "id": "4b04ffc9-eda5-42fa-8a1c-a32f21a95b4f",
+      "id": "bef08905-6175-444d-82f1-5be91d6780df",
       "name": "Get Exchange Rate"
     },
     {
@@ -1146,10 +1146,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        130048,
-        164304
+        249600,
+        272992
       ],
-      "id": "494d96e7-39e5-4cf8-b3d9-2ba9b329dd9f",
+      "id": "a7ebc44c-f447-4cb6-b760-af097dae9a94",
       "name": "Merge Data"
     },
     {
@@ -1163,10 +1163,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.6,
       "position": [
-        130272,
-        165760
+        249824,
+        274688
       ],
-      "id": "56927d5a-f5a2-42be-827a-92ffa078230e",
+      "id": "bb0638f9-310e-4033-8215-4b187f8c20c7",
       "name": "Agente IA - Tech WhatsApp"
     },
     {
@@ -1177,10 +1177,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
       "position": [
-        130288,
-        165984
+        249840,
+        274912
       ],
-      "id": "af01df6f-1298-4a42-b920-6d82c126c570",
+      "id": "e7bb9bbd-dd44-4db3-bd92-8e4807b4abbd",
       "name": "Cerebro GPT-4o",
       "credentials": {
         "openAiApi": {
@@ -1196,10 +1196,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        130624,
-        165760
+        250176,
+        274688
       ],
-      "id": "ba3808d7-220c-43a2-9ac6-fd34513f5084",
+      "id": "98a732ee-4e91-415e-a795-01f958961383",
       "name": "Parse Response Actions"
     },
     {
@@ -1422,10 +1422,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        130848,
-        165680
+        250400,
+        274576
       ],
-      "id": "266ac39e-56c5-432c-aa1d-a86a189bdbfc",
+      "id": "02e51613-879d-4794-800a-44a08b04a9b9",
       "name": "Route Action"
     },
     {
@@ -1436,10 +1436,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131744,
-        167824
+        251296,
+        276112
       ],
-      "id": "ae38fcd8-46fa-4a79-a8f1-c8bf8e281072",
+      "id": "581b1915-315e-476a-ad28-574c58a1fea1",
       "name": "Get Appointments Config"
     },
     {
@@ -1449,10 +1449,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        131968,
-        167824
+        251520,
+        276112
       ],
-      "id": "f9a829d9-52b9-4e19-9fab-871095e595f2",
+      "id": "bbb77175-48ba-451b-80f8-6b8d25e93fa6",
       "name": "Generate Days"
     },
     {
@@ -1469,10 +1469,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        132192,
-        167824
+        251744,
+        276112
       ],
-      "id": "bb71a252-7219-4c2e-aa33-16a4c8944085",
+      "id": "937c6fa9-c5fb-466c-8985-90b470a18801",
       "name": "Send Calendar Buttons",
       "credentials": {
         "whatsAppApi": {
@@ -1495,10 +1495,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131072,
-        165584
+        250624,
+        274304
       ],
-      "id": "2e91d88f-3750-43fa-a542-e3db06921b58",
+      "id": "9b7d8acb-cef4-407a-b782-8b92b6cc91b8",
       "name": "Send Support Escalation",
       "credentials": {
         "whatsAppBusinessCloudApi": {
@@ -1525,10 +1525,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131072,
-        165808
+        250624,
+        274496
       ],
-      "id": "9dd7fb58-fde3-4d3e-9bca-3f5013f6cdab",
+      "id": "7715635a-dcc8-4dd9-bbf2-09402ffdf89f",
       "name": "Send Plans Buttons",
       "credentials": {
         "whatsAppBusinessCloudApi": {
@@ -1549,10 +1549,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        129824,
-        165952
+        249376,
+        274928
       ],
-      "id": "928e457b-4d70-4ea2-9594-2b46dcf1ea1a",
+      "id": "7ef84499-da7a-454f-a063-ba4014584b80",
       "name": "Get Exchange Rate Audio"
     },
     {
@@ -1588,10 +1588,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        130048,
-        165952
+        249600,
+        274928
       ],
-      "id": "6e6c559f-ea97-44d6-af7b-dc2c85072356",
+      "id": "c5fd04e7-ef26-46c3-ada1-21405015c578",
       "name": "Merge Audio Data"
     },
     {
@@ -1602,10 +1602,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        129824,
-        166144
+        249376,
+        275216
       ],
-      "id": "12725147-690d-47fb-87a8-dfe96f69e859",
+      "id": "21827258-9e2f-4b9a-a8ff-ad7d8c3ab8e2",
       "name": "Get Exchange Rate Image"
     },
     {
@@ -1641,10 +1641,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        130048,
-        166144
+        249600,
+        275216
       ],
-      "id": "5aff9b75-e3b4-42e4-8c7b-b3b5d638d936",
+      "id": "a2b989e8-eb7a-4937-a7be-4649787a7942",
       "name": "Merge Image Data"
     },
     {
@@ -1680,10 +1680,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        130048,
-        166768
+        249600,
+        275648
       ],
-      "id": "de2c9090-23cf-424f-9a5d-4aee90bb840c",
+      "id": "c6b99ef1-6bd7-4122-9a92-07b333e24901",
       "name": "Button to Text"
     },
     {
@@ -1696,10 +1696,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        128704,
-        164592
+        248256,
+        273232
       ],
-      "id": "125a81d6-0fdd-4605-8578-e58005056890",
+      "id": "e0260b7b-8120-4516-a67c-a87bfd1350a8",
       "name": "Redis Push",
       "credentials": {
         "redis": {
@@ -1718,10 +1718,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        128928,
-        164592
+        248480,
+        273232
       ],
-      "id": "d3428092-e43c-45b3-bc72-872be8330be4",
+      "id": "65915ca8-ebe3-4412-b17d-59b7d1293377",
       "name": "Redis Get",
       "credentials": {
         "redis": {
@@ -1790,10 +1790,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        129152,
-        164400
+        248704,
+        273088
       ],
-      "id": "b73ba976-fa8a-40a7-86fe-0f8daeef872b",
+      "id": "818e8ca7-cd60-42b0-984e-39a66baaf2a8",
       "name": "Check Message Status"
     },
     {
@@ -1804,10 +1804,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        129376,
-        164304
+        248928,
+        272992
       ],
-      "id": "b2ee1cd8-21a3-4e09-bd76-b0f805c41ff0",
+      "id": "b38b0aea-3b03-40ba-a1bc-1ab23e085b86",
       "name": "Redis Delete",
       "credentials": {
         "redis": {
@@ -1851,10 +1851,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        129600,
-        164304
+        249152,
+        272992
       ],
-      "id": "e02c4975-9877-4223-98c5-f5a775294a8a",
+      "id": "1571445d-0abf-46ed-8724-6019ecd64685",
       "name": "Concat Messages"
     },
     {
@@ -1864,10 +1864,10 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        129376,
-        164768
+        248928,
+        273456
       ],
-      "id": "3ea8c92f-d163-4f4e-8888-9de80712fad4",
+      "id": "a162fae4-1c9b-46ba-89f5-e6e2228d9d20",
       "name": "Wait 5 Seconds",
       "webhookId": "wa-buffer-resume"
     },
@@ -1880,10 +1880,10 @@
       "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
       "typeVersion": 1.5,
       "position": [
-        130416,
-        165984
+        249968,
+        274912
       ],
-      "id": "4afc6f62-5be0-41d7-82e3-94b1dcd8a64b",
+      "id": "2ffbc02e-78c6-49eb-bc4a-8c586591d46b",
       "name": "Redis Chat Memory",
       "credentials": {
         "redis": {
@@ -1899,10 +1899,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        130048,
-        167680
+        249600,
+        276560
       ],
-      "id": "3a47634d-b882-4c45-9cd3-be68c675d6cb",
+      "id": "2a4a5d3a-5b9f-4ba4-b4d7-9d4954c0dde3",
       "name": "Extract Day"
     },
     {
@@ -1917,10 +1917,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130336,
-        167680
+        249888,
+        276560
       ],
-      "id": "1aed014c-b155-4f5d-9813-c5ba5d19657d",
+      "id": "ea65afa9-c69a-4682-a97d-81dfce77fb2b",
       "name": "Get Appointments Config 2"
     },
     {
@@ -1930,10 +1930,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        130624,
-        167680
+        250176,
+        276560
       ],
-      "id": "f8cfdc0a-baeb-4d06-93a6-892a1efd9d74",
+      "id": "7b8b4658-bd6d-44c8-a5da-1a74c471d761",
       "name": "Find Available Slots"
     },
     {
@@ -1959,10 +1959,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        130848,
-        167680
+        250400,
+        276560
       ],
-      "id": "204e10bd-5181-44d7-9eab-7554225f2fc6",
+      "id": "daad7f2d-5cb9-494d-8da4-54692756cd0e",
       "name": "Has Slots?"
     },
     {
@@ -1979,10 +1979,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131072,
-        167584
+        250624,
+        276464
       ],
-      "id": "07b9a0f1-76bf-44a7-8b0e-3b7d04bd2b30",
+      "id": "7b437235-b554-4256-9d93-acf338737445",
       "name": "Send Times Buttons",
       "credentials": {
         "whatsAppApi": {
@@ -2005,10 +2005,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131072,
-        167872
+        250624,
+        276752
       ],
-      "id": "09533457-11ab-47ac-984c-4f99cc0a31e2",
+      "id": "a2d0ddad-a535-4ec5-a7f6-552512e6c866",
       "name": "Send No Slots",
       "credentials": {
         "whatsAppApi": {
@@ -2024,10 +2024,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        130048,
-        168544
+        249600,
+        277744
       ],
-      "id": "a898e529-fd6c-4407-9669-eec432572944",
+      "id": "e2fc734e-d83b-4333-99f8-e1d8fbef7c55",
       "name": "Extract Time"
     },
     {
@@ -2041,10 +2041,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        130336,
-        168544
+        249888,
+        277744
       ],
-      "id": "31df0041-ed48-4857-a7e7-ce14ce5f931a",
+      "id": "52fd8069-abe5-43b9-8d12-ac7db7f0bc1a",
       "name": "Save Booking State",
       "credentials": {
         "redis": {
@@ -2067,10 +2067,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        130480,
-        168544
+        250176,
+        277840
       ],
-      "id": "is-seguimiento-check",
+      "id": "8f4c206f-6bad-459b-ae8e-4209ff5c0b38",
       "name": "Is Seguimiento?"
     },
     {
@@ -2082,10 +2082,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        130600,
-        168400
+        250400,
+        277744
       ],
-      "id": "prepare-seguimiento-data",
+      "id": "f1b81c1e-7bfd-4359-871a-8acf1c769c93",
       "name": "Prepare Seguimiento Data Direct"
     },
     {
@@ -2096,10 +2096,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
       "position": [
-        130700,
-        168400
+        250624,
+        277744
       ],
-      "id": "create-seguimiento-direct",
+      "id": "e3cce51c-3de3-4f2e-ae3c-ba23c61df016",
       "name": "Create Seguimiento Direct"
     },
     {
@@ -2110,10 +2110,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        130920,
-        168400
+        250848,
+        277744
       ],
-      "id": "delete-seguimiento-state",
+      "id": "27e3d5b2-005d-4065-97f8-4802fa87fc69",
       "name": "Delete Seguimiento State",
       "credentials": {
         "redis": {
@@ -2136,10 +2136,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131140,
-        168400
+        251072,
+        277808
       ],
-      "id": "send-seguimiento-confirmation",
+      "id": "339c62e5-2ef5-4ab8-80d5-7f9215b63d00",
       "name": "Send Seguimiento Confirmation",
       "credentials": {
         "whatsAppApi": {
@@ -2162,10 +2162,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130624,
-        168700
+        250400,
+        277936
       ],
-      "id": "97c4154e-22ba-4576-aa7c-ab00e89df6a3",
+      "id": "f3ec9f61-f8a9-46c8-808b-3fc2faf60b2c",
       "name": "Ask For Name",
       "credentials": {
         "whatsAppApi": {
@@ -2184,10 +2184,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        127584,
-        164160
+        247136,
+        272688
       ],
-      "id": "a8c05578-551d-4c9b-9f0d-ad93ff6c4923",
+      "id": "21ffee39-0d81-40d0-9ab1-42733d6a1b81",
       "name": "Check Pending Booking",
       "credentials": {
         "redis": {
@@ -2206,10 +2206,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        127808,
-        164160
+        247360,
+        272688
       ],
-      "id": "6c60a2f1-a3ca-483a-8897-e2f9bda605e0",
+      "id": "028f4fa6-1b4b-4bbe-a74e-06bdd8287c40",
       "name": "Check Pending Date",
       "credentials": {
         "redis": {
@@ -2241,10 +2241,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        128032,
-        164160
+        247584,
+        272688
       ],
-      "id": "ef506363-543a-4de4-b0b3-9481135515d8",
+      "id": "f22ca2b3-2475-4bce-89c5-11e3f5a6c829",
       "name": "Merge Booking Data"
     },
     {
@@ -2254,10 +2254,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        128256,
-        164160
+        247808,
+        272688
       ],
-      "id": "3b1168f2-2200-4c6b-9ff2-fa9baa100d91",
+      "id": "81449315-2cf0-43ad-af45-42d858788a0d",
       "name": "Check Email Booking"
     },
     {
@@ -2409,10 +2409,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        128480,
-        164096
+        248032,
+        272624
       ],
-      "id": "435149ee-4b79-46d5-97be-86c16e0c3cc9",
+      "id": "7581903f-e1db-40da-81e7-1f118df41511",
       "name": "Booking Status"
     },
     {
@@ -2423,10 +2423,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
       "position": [
-        128704,
-        164016
+        248256,
+        272656
       ],
-      "id": "1fb038ea-f165-4c83-b380-74f127897b89",
+      "id": "feb04622-c373-41c0-bcda-f215174dfbf4",
       "name": "Create Appointment"
     },
     {
@@ -2437,10 +2437,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        128928,
-        164016
+        248480,
+        272656
       ],
-      "id": "b597eff2-d94d-4442-aebb-a952a53e56a6",
+      "id": "809b269b-cd2e-46fe-9dc1-945cc1a7529f",
       "name": "Delete Booking State",
       "credentials": {
         "redis": {
@@ -2463,10 +2463,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        129152,
-        164016
+        248704,
+        272656
       ],
-      "id": "13b24bed-89c2-4a88-a67e-9e577325bc7b",
+      "id": "7d47ae6f-a766-4f0e-981a-4dca00a5d941",
       "name": "Send Booking Confirmation",
       "credentials": {
         "whatsAppApi": {
@@ -2489,10 +2489,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128704,
-        164784
+        248256,
+        273424
       ],
-      "id": "279e7971-2c0b-4385-98dd-27439b8adbe9",
+      "id": "8aea4658-b93a-4592-bc8e-a5eec5e38ae8",
       "name": "Remind Email",
       "credentials": {
         "whatsAppApi": {
@@ -2512,10 +2512,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        128704,
-        164224
+        248256,
+        272848
       ],
-      "id": "f928e647-39b0-47bc-9b27-b838467ce218",
+      "id": "dcd6a191-e07e-4d88-9461-a90d79baf0b8",
       "name": "Save Name",
       "credentials": {
         "redis": {
@@ -2538,10 +2538,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128928,
-        164400
+        248480,
+        273040
       ],
-      "id": "0382ac22-5432-4824-be20-b01e6cda2c16",
+      "id": "58605c12-8eb9-465c-b748-98ca1c77c0d0",
       "name": "Ask For Email",
       "credentials": {
         "whatsAppApi": {
@@ -2564,10 +2564,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128704,
-        164976
+        248256,
+        273616
       ],
-      "id": "9ffca1af-bacf-40a4-9b6c-895eba768bde",
+      "id": "59655ccd-5e39-4edf-aca7-834209d46a56",
       "name": "Ask Valid Name",
       "credentials": {
         "whatsAppApi": {
@@ -2590,10 +2590,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130048,
-        167008
+        249600,
+        275888
       ],
-      "id": "cdc6d5d6-71b1-4460-95b8-a995ecd850a3",
+      "id": "59ee0143-edc5-475a-ac5e-125e2a8ea67c",
       "name": "Send Other Date Options",
       "credentials": {
         "whatsAppApi": {
@@ -2613,10 +2613,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        130336,
-        167104
+        249888,
+        275984
       ],
-      "id": "baf05572-c0fa-4b01-a3b9-ac0b1babd97c",
+      "id": "f3896d86-1f15-4bdf-a1b0-35b5c7287dde",
       "name": "Set Date State",
       "credentials": {
         "redis": {
@@ -2633,10 +2633,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128704,
-        163824
+        248256,
+        272464
       ],
-      "id": "15cefe89-f618-4f59-99cb-53f765a8a7fd",
+      "id": "04e715aa-4755-4850-8b9d-6593f5507824",
       "name": "Get Config For Parsing"
     },
     {
@@ -2646,10 +2646,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        128928,
-        163824
+        248480,
+        272464
       ],
-      "id": "26012bba-82dd-468d-870b-d1d7a8088ac9",
+      "id": "93e81288-3e90-4d6d-99ba-bc0f9fe5a199",
       "name": "Parse Custom Date"
     },
     {
@@ -2678,10 +2678,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        129152,
-        163824
+        248704,
+        272464
       ],
-      "id": "2bb72a43-fb0e-437a-916c-8efe4d6c75be",
+      "id": "a19b117c-6e98-46b5-a08a-eaf727195db0",
       "name": "Is Custom Date Valid?"
     },
     {
@@ -2698,10 +2698,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        129376,
-        164112
+        248928,
+        272800
       ],
-      "id": "4a605dc4-978b-479c-b775-7bd2682c5eb5",
+      "id": "5b014dfb-512e-48d8-b228-e7e5642a8591",
       "name": "Send Custom Date Error",
       "credentials": {
         "whatsAppApi": {
@@ -2721,10 +2721,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        129600,
-        163728
+        249152,
+        272416
       ],
-      "id": "fa2bf0df-fa4d-4e0b-9a0c-412dbe81f30e",
+      "id": "54308120-8b82-4346-8ffb-a349f6999937",
       "name": "Save Custom Booking State",
       "credentials": {
         "redis": {
@@ -2747,10 +2747,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        129824,
-        164016
+        249376,
+        272704
       ],
-      "id": "f7b8e5e0-f380-402f-8a8e-c4c88f26b521",
+      "id": "59bfa040-7b05-44fb-9257-f43e4f251d1a",
       "name": "Ask Name for Custom Date",
       "credentials": {
         "whatsAppApi": {
@@ -2773,10 +2773,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131072,
-        165008
+        250624,
+        273728
       ],
-      "id": "489f4dbf-d01f-4137-aba4-be71ea00e467",
+      "id": "4f3d69c5-6fd7-4994-9efc-a1d10a34577f",
       "name": "Ask Reschedule Data",
       "credentials": {
         "whatsAppApi": {
@@ -2796,10 +2796,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        131296,
-        165008
+        250848,
+        273728
       ],
-      "id": "23edfa12-2602-40f7-86c6-e6cede5d5ecd",
+      "id": "4639c44b-5271-48af-9398-ea5c9f265166",
       "name": "Save Reschedule State",
       "credentials": {
         "redis": {
@@ -2818,10 +2818,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        127584,
-        165184
+        247136,
+        273808
       ],
-      "id": "0afbd965-43c5-467d-bf44-37e50a6505da",
+      "id": "0e5ba7fe-d30a-44c6-9ab6-505a84ba10d7",
       "name": "Check Reschedule State",
       "credentials": {
         "redis": {
@@ -2840,10 +2840,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        127584,
-        165400
+        247136,
+        274192
       ],
-      "id": "check-reschedule-followup-state",
+      "id": "a932728e-c2da-4e21-bccb-5322b5734c3f",
       "name": "Check Reschedule Followup State",
       "credentials": {
         "redis": {
@@ -2859,10 +2859,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        127808,
-        165184
+        247360,
+        273808
       ],
-      "id": "5842286b-2fc8-4a6b-8d89-72dfecf77da0",
+      "id": "5af26770-3b5a-4083-9a83-82bbe3e5ddc5",
       "name": "Parse Reschedule Data"
     },
     {
@@ -2872,10 +2872,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        127808,
-        165400
+        247360,
+        274192
       ],
-      "id": "parse-reschedule-followup-data",
+      "id": "1c56231c-dbbe-4764-8997-d5d967d5fa1f",
       "name": "Parse Reschedule Followup Data"
     },
     {
@@ -2904,25 +2904,24 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        128032,
-        165400
+        247584,
+        274192
       ],
-      "id": "check-parse-followup-status",
+      "id": "9fa7dfe3-1769-4c2d-aacb-9832a07183a3",
       "name": "Check Parse Followup Status"
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/followup-meetings/search?email={{ encodeURIComponent($json.email) }}&date={{ $json.scheduledDate }}&time={{ $json.scheduledTime }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128256,
-        165400
+        247808,
+        274192
       ],
-      "id": "search-followup-meeting",
+      "id": "518a5c98-644f-4a90-b287-8f4efd122226",
       "name": "Search Followup Meeting"
     },
     {
@@ -2950,10 +2949,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        128480,
-        165400
+        248032,
+        274192
       ],
-      "id": "check-followup-found",
+      "id": "0367b2db-d294-4586-8a8c-1bd790f1acf1",
       "name": "Followup Meeting Found?"
     },
     {
@@ -2965,10 +2964,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128704,
-        165300
+        248256,
+        274176
       ],
-      "id": "cancel-old-followup",
+      "id": "d2980314-1d63-4d3e-a335-7c8f719d5ad5",
       "name": "Cancel Old Followup Meeting"
     },
     {
@@ -2979,10 +2978,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        128928,
-        165300
+        248480,
+        274176
       ],
-      "id": "clear-reschedule-followup-state",
+      "id": "8d2eec41-6442-4498-997f-1df734fb3f26",
       "name": "Clear Reschedule Followup State",
       "credentials": {
         "redis": {
@@ -3005,10 +3004,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        129152,
-        165300
+        248704,
+        274176
       ],
-      "id": "send-followup-cancelled-msg",
+      "id": "649bdd9c-3729-4122-b58b-dff93f74e6a1",
       "name": "Send Followup Cancelled Message",
       "credentials": {
         "whatsAppApi": {
@@ -3031,10 +3030,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        129376,
-        165300
+        248928,
+        274176
       ],
-      "id": "notify-admin-followup-reschedule",
+      "id": "e91e6b2a-ec98-44a6-b310-1b24de7f0769",
       "name": "Notify Admin Followup Rescheduled",
       "credentials": {
         "whatsAppApi": {
@@ -3057,10 +3056,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128704,
-        165500
+        248256,
+        274368
       ],
-      "id": "send-followup-not-found",
+      "id": "08bdf363-54c9-4d55-804e-5c56e96b6c00",
       "name": "Send Followup Not Found",
       "credentials": {
         "whatsAppApi": {
@@ -3095,10 +3094,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        128032,
-        165184
+        247584,
+        273808
       ],
-      "id": "5759acab-ffa1-4c36-926f-62996d69c5ac",
+      "id": "03639d3c-2fee-4f87-8662-c97aac2f3fea",
       "name": "Check Parse Status"
     },
     {
@@ -3136,10 +3135,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        128032,
-        165376
+        247584,
+        274000
       ],
-      "id": "a787f0d3-ea37-4a5c-8f89-0a0113a2cca6",
+      "id": "47f32987-c304-410e-8fda-c2ad0308780c",
       "name": "Is Reschedule Error?"
     },
     {
@@ -3154,10 +3153,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        128256,
-        165184
+        247808,
+        273808
       ],
-      "id": "f60b113c-7277-452a-ad91-99a5bfe9245c",
+      "id": "5426d4f1-e97a-4099-bf22-da7063dd756f",
       "name": "Search User Appointment"
     },
     {
@@ -3167,10 +3166,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        128480,
-        165184
+        248032,
+        273808
       ],
-      "id": "7710488f-be73-4058-ae17-18b07a838894",
+      "id": "59c3f81a-4f53-47cd-8152-275bbcd0dfd2",
       "name": "Process Search Results"
     },
     {
@@ -3199,10 +3198,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        128704,
-        165184
+        248256,
+        273808
       ],
-      "id": "86173a47-59a3-41de-8be1-ae2ec97af724",
+      "id": "46258ae9-6c56-41f6-849e-7b3201d75c7e",
       "name": "Check Appointment Found"
     },
     {
@@ -3219,10 +3218,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128928,
-        164976
+        248480,
+        273664
       ],
-      "id": "7762f310-af80-46ed-a18e-4b63f0d70180",
+      "id": "9d6b4eb9-0c01-4f53-8c79-181767d8016f",
       "name": "Show Confirmation Buttons",
       "credentials": {
         "whatsAppApi": {
@@ -3242,10 +3241,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        129152,
-        164976
+        248704,
+        273664
       ],
-      "id": "8856dec3-ad7e-44c7-960f-7c83b2d550ec",
+      "id": "9387ddde-5b8d-4541-80c0-24f337e3f691",
       "name": "Save Event To Delete",
       "credentials": {
         "redis": {
@@ -3267,10 +3266,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        131520,
-        168976
+        251072,
+        278896
       ],
-      "id": "8bde6751-0b89-4c2a-b519-151b701d6758",
+      "id": "846c254a-2267-4427-8f6e-091e47778186",
       "name": "Delete Old Appointment",
       "onError": "continueRegularOutput"
     },
@@ -3288,10 +3287,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128928,
-        165296
+        248480,
+        273984
       ],
-      "id": "f83defc5-0faa-4c1c-a23f-4f26e0b941f2",
+      "id": "7f331882-802e-483d-acee-ba02ee61bba1",
       "name": "Send Not Found Message",
       "credentials": {
         "whatsAppApi": {
@@ -3314,10 +3313,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128256,
-        165376
+        247808,
+        274000
       ],
-      "id": "bd696832-21eb-41c1-b39e-1208f7147b79",
+      "id": "f91c96dd-0ee1-45bb-8506-2af5c10577b4",
       "name": "Send Invalid Format Message",
       "credentials": {
         "whatsAppApi": {
@@ -3336,10 +3335,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        130048,
-        167296
+        249600,
+        276176
       ],
-      "id": "58b27112-82c0-4e2d-95b5-a58741ce2da0",
+      "id": "f7565405-37f2-4d53-a4e1-58a6c6a6d04e",
       "name": "Get Reschedule Event",
       "credentials": {
         "redis": {
@@ -3355,10 +3354,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        131296,
-        168976
+        250848,
+        278896
       ],
-      "id": "421e0db5-d9cb-48ac-b631-0df6d6670444",
+      "id": "80d6a661-fa69-4f76-bd4a-71b163399216",
       "name": "Parse Event To Delete"
     },
     {
@@ -3375,10 +3374,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130048,
-        167488
+        249600,
+        276368
       ],
-      "id": "7d0cf1ee-d5d1-4d8f-b6c9-9303f5e365d6",
+      "id": "39449a66-f981-4a55-b987-c77bf89e5aff",
       "name": "Send Not My Appointment",
       "credentials": {
         "whatsAppApi": {
@@ -3395,10 +3394,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        130336,
-        167488
+        249888,
+        276368
       ],
-      "id": "043e5dc1-fe2e-479d-bf8c-d53dca22b2cd",
+      "id": "82c6681d-e52f-4422-800c-d4822eb1f6d6",
       "name": "Clear Reschedule State",
       "credentials": {
         "redis": {
@@ -3415,10 +3414,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        130624,
-        167488
+        250176,
+        276368
       ],
-      "id": "d61e232e-2a8d-4cc5-8218-37606d226b14",
+      "id": "d0a42b7b-b01d-4272-835e-0d6a7656adab",
       "name": "Clear Confirmed State",
       "credentials": {
         "redis": {
@@ -3441,10 +3440,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131072,
-        165392
+        250624,
+        274112
       ],
-      "id": "c67aa3e6-185c-4342-897a-c6318eb4e47a",
+      "id": "9233c233-ba7f-40d4-a151-56a06437888f",
       "name": "Ask Cancel Data",
       "credentials": {
         "whatsAppApi": {
@@ -3464,10 +3463,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        131296,
-        165616
+        250848,
+        274640
       ],
-      "id": "ed949046-66bc-4c34-89a9-71daebc2a35a",
+      "id": "eb33aa4e-5761-4256-92a8-e3cd21e422ad",
       "name": "Save Cancel State",
       "credentials": {
         "redis": {
@@ -3486,10 +3485,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        127584,
-        165568
+        247136,
+        274576
       ],
-      "id": "73bdccd6-be9d-4eaa-b328-72290bca1af4",
+      "id": "42a088b1-d393-4f65-87bc-70bd1825b18e",
       "name": "Check Cancel State",
       "credentials": {
         "redis": {
@@ -3505,10 +3504,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        127808,
-        165568
+        247360,
+        274576
       ],
-      "id": "846d10c6-d577-4806-8628-ee68f0c6c072",
+      "id": "14ec3df1-d32e-41c1-9bfb-5bc44576578f",
       "name": "Parse Cancel Data"
     },
     {
@@ -3537,10 +3536,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        128032,
-        165568
+        247584,
+        274560
       ],
-      "id": "3a7dbcc1-fa20-4d1e-801a-44f66b25a73c",
+      "id": "89cc0515-afaf-4387-9f64-90f06b9b6dcd",
       "name": "Check Cancel Parse Status"
     },
     {
@@ -3578,10 +3577,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        128032,
-        165808
+        247584,
+        274784
       ],
-      "id": "c8fad30c-95da-4ee4-82e0-a3091185480f",
+      "id": "7631589d-5152-4c52-92df-181b209a16b2",
       "name": "Is Cancel Error?"
     },
     {
@@ -3592,10 +3591,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128256,
-        165568
+        247808,
+        274560
       ],
-      "id": "0ea51a22-5e55-448b-a893-56bc9d8619a7",
+      "id": "3c2a37cc-32aa-44ae-9a67-e45d0772dca9",
       "name": "Search Cancel Appointment"
     },
     {
@@ -3605,10 +3604,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        128480,
-        165568
+        248032,
+        274560
       ],
-      "id": "2a06723b-330e-46a5-983c-05c07c89ebab",
+      "id": "36900074-23c1-479c-86b2-fc357b3f0089",
       "name": "Process Cancel Results"
     },
     {
@@ -3637,10 +3636,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        128704,
-        165568
+        248256,
+        274560
       ],
-      "id": "f8c60fe1-122c-4988-a8ff-7dacb81646ea",
+      "id": "e3dd7b2a-9003-4d2a-8e80-6c38c4c7bf7e",
       "name": "Check Cancel Found"
     },
     {
@@ -3657,10 +3656,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128928,
-        165488
+        248480,
+        274464
       ],
-      "id": "dfc846c6-649b-46bd-9c4e-160c92fed19f",
+      "id": "d9f6c444-4f9b-48a2-9843-70c8cb28bbb8",
       "name": "Show Cancel Confirmation",
       "credentials": {
         "whatsAppApi": {
@@ -3680,10 +3679,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        129152,
-        165488
+        248704,
+        274464
       ],
-      "id": "775caefe-d54f-48ac-a4a2-e57e2273b50b",
+      "id": "cd6b1824-5bf8-4ef7-90b4-7ad367f16613",
       "name": "Save Cancel Event",
       "credentials": {
         "redis": {
@@ -3706,10 +3705,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128928,
-        165680
+        248480,
+        274656
       ],
-      "id": "6dd42182-bf4f-4644-bc0f-cac58c634280",
+      "id": "8ff68a4d-a090-4c0f-9995-14a154d9641e",
       "name": "Send Cancel Not Found",
       "credentials": {
         "whatsAppApi": {
@@ -3732,10 +3731,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        128256,
-        165808
+        247808,
+        274784
       ],
-      "id": "d6e97519-2af3-4491-8660-c601a50b0d38",
+      "id": "813bb421-d80e-46f0-a43c-3d7496ea700e",
       "name": "Send Cancel Invalid Format",
       "credentials": {
         "whatsAppApi": {
@@ -3754,10 +3753,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        130048,
-        168256
+        249600,
+        277136
       ],
-      "id": "23290137-a0c6-4d2d-a987-33851a1952c4",
+      "id": "e2b772c8-134e-4545-aa1f-28123b1b22af",
       "name": "Get Cancel Event",
       "credentials": {
         "redis": {
@@ -3773,10 +3772,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        130336,
-        168256
+        249888,
+        277136
       ],
-      "id": "5a584eac-26c9-4805-90a3-15eef8c20db0",
+      "id": "536ab3c2-f6c3-4316-b2e6-0a5ce87d2418",
       "name": "Parse Cancel Event"
     },
     {
@@ -3804,10 +3803,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130848,
-        168064
+        250400,
+        276944
       ],
-      "id": "cd5a5bf1-c55b-4078-b364-b6e75a222cb2",
+      "id": "c8bdde0c-f09b-4069-8000-04010c9b7c4a",
       "name": "Delete Cancelled Appointment",
       "onError": "continueRegularOutput"
     },
@@ -3825,10 +3824,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131072,
-        168064
+        250624,
+        276944
       ],
-      "id": "a16d4991-2a27-4f15-a690-70142b6f9d0e",
+      "id": "efae6e93-3bde-44bf-ae35-71b5c5a1c593",
       "name": "Send Cancel Success",
       "credentials": {
         "whatsAppApi": {
@@ -3851,10 +3850,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131296,
-        168784
+        250848,
+        278176
       ],
-      "id": "3e14d257-2cd8-47bb-9da7-3ce81e6bb5bc",
+      "id": "9ebff019-7c8e-4e86-a990-0a60db7f4ff8",
       "name": "Send Keep Appointment",
       "credentials": {
         "whatsAppApi": {
@@ -3871,10 +3870,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        131520,
-        168688
+        251072,
+        277280
       ],
-      "id": "0fc8d526-d6b4-43b7-a1dd-719e7bf32de8",
+      "id": "c83cd57f-81fd-453e-aa83-371bc35e4760",
       "name": "Clear Cancel State",
       "credentials": {
         "redis": {
@@ -3891,10 +3890,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        131744,
-        168880
+        251296,
+        277504
       ],
-      "id": "fe604fd3-4aaf-49cc-8e9b-dc4d9f75d1b9",
+      "id": "2dad1823-bcd0-4bac-9845-3ea68dded5d2",
       "name": "Clear Cancel Confirmed",
       "credentials": {
         "redis": {
@@ -3912,10 +3911,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        130048,
-        166576
+        249600,
+        275456
       ],
-      "id": "297f484a-9bf4-466d-8753-09933a6469fa",
+      "id": "737d821a-9a8f-4e6a-982d-88e84cb647df",
       "name": "Set Plan Info"
     },
     {
@@ -3932,10 +3931,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        130336,
-        166576
+        249888,
+        275456
       ],
-      "id": "627ddd54-8e93-44e8-bfa7-0fca991180ec",
+      "id": "f9d3ff44-9075-4e58-be22-b92e153ce354",
       "name": "Send Plan Details",
       "credentials": {
         "whatsAppApi": {
@@ -3970,10 +3969,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        130624,
-        168256
+        250176,
+        277136
       ],
-      "id": "96cf9167-ba6f-4fcb-a98d-4687f3916d77",
+      "id": "1472da46-9997-4675-866b-f41560eecc2e",
       "name": "Check Cancel Event Status"
     },
     {
@@ -3990,10 +3989,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130848,
-        168448
+        250400,
+        277232
       ],
-      "id": "85535ae6-e4fe-4158-8b31-716f37e94159",
+      "id": "5cc2c9ee-ebd5-404e-8cd1-a3c14ea193fd",
       "name": "Send Cancel Event Error",
       "credentials": {
         "whatsAppApi": {
@@ -4010,10 +4009,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        129376,
-        163728
+        248928,
+        272416
       ],
-      "id": "1649f09b-235a-45ed-acb9-6d6b13e75e25",
+      "id": "0f10a43e-5be3-4ff5-a9d0-9f554fc45d2c",
       "name": "Clear Pending Date State",
       "credentials": {
         "redis": {
@@ -4029,10 +4028,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        130336,
-        167296
+        249888,
+        276176
       ],
-      "id": "72a35ce5-64eb-4059-958e-29de5aacf50d",
+      "id": "c947f46a-d94e-4434-833b-784b846d2b14",
       "name": "Parse Reschedule Event"
     },
     {
@@ -4044,10 +4043,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        130624,
-        167296
+        250176,
+        276176
       ],
-      "id": "86c214c9-4669-4d85-96ec-197f61a6e9a8",
+      "id": "11420476-04d5-4d38-a55e-515038105358",
       "name": "Delete For Reschedule",
       "onError": "continueRegularOutput"
     },
@@ -4065,10 +4064,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130848,
-        167296
+        250400,
+        276176
       ],
-      "id": "cbccf469-309f-4c9b-b0be-9af36bf5dc9d",
+      "id": "6f1c81e9-30bb-431a-b9c8-1eb4aeb4d00c",
       "name": "Send Reschedule Cancelled",
       "credentials": {
         "whatsAppApi": {
@@ -4106,10 +4105,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        131072,
-        167296
+        250624,
+        276176
       ],
-      "id": "fd10bdd6-262a-497b-aa95-4444d05ee862",
+      "id": "f47d2241-5479-4ce7-9c37-496f7ffd5054",
       "name": "Set Reschedule Data"
     },
     {
@@ -4120,10 +4119,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        131296,
-        167296
+        250848,
+        276176
       ],
-      "id": "a1f466f1-18a7-492d-9ea6-9a04b77b9b6c",
+      "id": "c00c6230-f101-4827-821b-8e85b992b9a5",
       "name": "Clear Reschedule States",
       "credentials": {
         "redis": {
@@ -4141,10 +4140,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        131520,
-        167296
+        251072,
+        276176
       ],
-      "id": "a6148589-51f9-46d9-9482-e8c491c60cbd",
+      "id": "be0e19a0-f171-48fa-8cd7-982db1029eb8",
       "name": "Clear Reschedule Search",
       "credentials": {
         "redis": {
@@ -4168,10 +4167,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        131296,
-        168064
+        250848,
+        276944
       ],
-      "id": "3bb57bb8-6ee2-44d0-83f2-2edc9db97aff",
+      "id": "a0b87351-5209-44ab-83f4-413551cb3185",
       "name": "Send Cancel Email",
       "onError": "continueRegularOutput"
     },
@@ -4182,10 +4181,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        130048,
-        168640
+        249600,
+        278032
       ],
-      "id": "followup-extract-confirm-id",
+      "id": "749a62e4-80cf-4d56-bce9-c8c9d01219fb",
       "name": "Extract Followup Confirm ID"
     },
     {
@@ -4199,10 +4198,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130336,
-        168640
+        249888,
+        278032
       ],
-      "id": "followup-confirm-attendance",
+      "id": "cd1bbb8d-8a5a-4be3-93b3-76be93bc8712",
       "name": "Confirm Followup Attendance",
       "onError": "continueRegularOutput"
     },
@@ -4220,10 +4219,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130624,
-        168640
+        250176,
+        278032
       ],
-      "id": "followup-send-confirm-success",
+      "id": "7d56ed8e-3b0e-46b5-a304-daec1ddfdd8c",
       "name": "Send Followup Confirm Success",
       "credentials": {
         "whatsAppApi": {
@@ -4239,10 +4238,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        130048,
-        168832
+        250624,
+        278368
       ],
-      "id": "followup-extract-reschedule-id",
+      "id": "ce516de3-e1d7-4314-b2b2-feb826f35d20",
       "name": "Extract Followup Reschedule ID"
     },
     {
@@ -4254,10 +4253,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130240,
-        168832
+        250848,
+        278368
       ],
-      "id": "followup-cancel-for-reschedule",
+      "id": "5aa3c188-3ee1-4870-93f4-181b67a14523",
       "name": "Cancel Followup For Reschedule"
     },
     {
@@ -4269,25 +4268,24 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        130432,
-        168832
+        251072,
+        278368
       ],
-      "id": "prepare-followup-reschedule-data",
+      "id": "c95476bf-23e0-464d-a1bb-58c1f7cff3f0",
       "name": "Prepare Followup Reschedule Data"
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/followup-meetings/{{ $('Extract Followup Reschedule ID').first().json.meetingId }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130240,
-        168600
+        245792,
+        279344
       ],
-      "id": "followup-get-meeting-details",
+      "id": "7ccc1196-7a85-41a2-b81c-d9c306c4621d",
       "name": "Get Followup Meeting Details"
     },
     {
@@ -4304,10 +4302,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130432,
-        168832
+        246016,
+        279344
       ],
-      "id": "followup-send-reschedule-msg",
+      "id": "2b213264-8ab3-41e8-83b4-6b0f62410243",
       "name": "Send Followup Reschedule Msg",
       "credentials": {
         "whatsAppApi": {
@@ -4330,10 +4328,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130624,
-        168832
+        246240,
+        279344
       ],
-      "id": "followup-notify-admin-reschedule",
+      "id": "8cbd6ff1-e422-4d88-8740-034dad42c8ce",
       "name": "Notify Admin Reschedule",
       "credentials": {
         "whatsAppApi": {
@@ -4349,10 +4347,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        130048,
-        169200
+        249600,
+        278512
       ],
-      "id": "followup-extract-cancel-id",
+      "id": "b7595670-dded-4a86-9c43-ab6769eb36c2",
       "name": "Extract Followup Cancel ID"
     },
     {
@@ -4369,10 +4367,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130240,
-        169200
+        249888,
+        278512
       ],
-      "id": "followup-ask-confirm-cancel",
+      "id": "a3290a22-a1f7-4973-92d9-b8649110f5b3",
       "name": "Ask Confirm Cancel Followup",
       "credentials": {
         "whatsAppApi": {
@@ -4388,25 +4386,24 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        130048,
-        169568
+        249600,
+        278704
       ],
-      "id": "followup-extract-confirm-cancel-id",
+      "id": "22983a77-7f1a-47c7-aa46-26a943ee72f4",
       "name": "Extract Followup Confirm Cancel ID"
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/followup-meetings/{{ $json.meetingId }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130048,
-        169650
+        249888,
+        278704
       ],
-      "id": "followup-get-cancel-meeting-details",
+      "id": "6f3c4973-8f2b-4312-88de-03625ad5d167",
       "name": "Get Cancel Meeting Details"
     },
     {
@@ -4418,10 +4415,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        130432,
-        169650
+        250176,
+        278704
       ],
-      "id": "followup-prepare-cancel-data",
+      "id": "db672161-bc95-4fab-a0c3-28df874e7e9f",
       "name": "Prepare Cancel Data"
     },
     {
@@ -4433,10 +4430,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130624,
-        169650
+        250400,
+        278704
       ],
-      "id": "followup-cancel-meeting",
+      "id": "8b3d1788-c52a-4731-b7bb-3232f2050e2f",
       "name": "Cancel Followup Meeting"
     },
     {
@@ -4453,10 +4450,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130432,
-        169568
+        250624,
+        278704
       ],
-      "id": "followup-send-cancel-success",
+      "id": "1f67fc86-823d-423c-b95d-202436853955",
       "name": "Send Followup Cancel Success",
       "credentials": {
         "whatsAppApi": {
@@ -4480,11 +4477,12 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        130240,
-        169750
+        250848,
+        278704
       ],
-      "id": "followup-send-cancel-email",
+      "id": "51260598-5cd8-4e25-aafe-298df66cdb35",
       "name": "Send Followup Cancel Email",
+      "webhookId": "157e33de-f589-4c5d-b372-5f6837e8147f",
       "credentials": {
         "smtp": {
           "id": "dyhVFWmjRNC45ccA",
@@ -4506,10 +4504,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130624,
-        169568
+        251072,
+        278704
       ],
-      "id": "followup-notify-admin-cancel",
+      "id": "763fe7ea-d340-4e8a-bf0f-02b001c0bea4",
       "name": "Notify Admin Cancel Followup",
       "credentials": {
         "whatsAppApi": {
@@ -4525,10 +4523,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        130048,
-        169568
+        249600,
+        278896
       ],
-      "id": "followup-extract-newdate-id",
+      "id": "4f9a78d4-ba34-4cae-9cae-dcb0dfecd94f",
       "name": "Extract Followup NewDate ID"
     },
     {
@@ -4545,10 +4543,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130240,
-        169568
+        249888,
+        278896
       ],
-      "id": "followup-send-newdate-prompt",
+      "id": "2c405454-91a8-48b2-a3a3-43fb4fb314f8",
       "name": "Send Followup NewDate Prompt",
       "credentials": {
         "whatsAppApi": {
@@ -4571,10 +4569,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130432,
-        169568
+        250176,
+        278896
       ],
-      "id": "followup-notify-admin-newdate",
+      "id": "cde256b5-a00a-4d38-96a3-de2b1d4fb2a7",
       "name": "Notify Admin NewDate Followup",
       "credentials": {
         "whatsAppApi": {
@@ -4597,10 +4595,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131200,
-        166500
+        245792,
+        279120
       ],
-      "id": "followup-send-request-prompt",
+      "id": "bb83c922-533f-44cb-b7a5-57c543b52be0",
       "name": "Send Followup Request Prompt",
       "credentials": {
         "whatsAppApi": {
@@ -4623,10 +4621,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131392,
-        166500
+        246016,
+        279120
       ],
-      "id": "followup-notify-admin-request",
+      "id": "f568c4ec-d021-4092-aa8b-76764fa598ce",
       "name": "Notify Admin Followup Request",
       "credentials": {
         "whatsAppApi": {
@@ -4649,10 +4647,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131072,
-        166700
+        250624,
+        275504
       ],
-      "id": "reschedule-followup-ask-data",
+      "id": "1691fa29-93a2-4a75-b247-626f8bf2eeb3",
       "name": "Ask Reschedule Followup Data",
       "credentials": {
         "whatsAppApi": {
@@ -4672,10 +4670,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        131296,
-        166700
+        250848,
+        275504
       ],
-      "id": "reschedule-followup-save-state",
+      "id": "234edc04-d1f3-4543-82c8-0d3b82375f8c",
       "name": "Save Reschedule Followup State",
       "credentials": {
         "redis": {
@@ -4691,10 +4689,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        130048,
-        167872
+        249600,
+        276752
       ],
-      "id": "a7cfccf9-8834-47db-b8e0-6dfb2ac61811",
+      "id": "e73b648e-fed9-44df-a8a4-b03f0bcd428a",
       "name": "Extract Confirm Lead ID"
     },
     {
@@ -4706,10 +4704,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130336,
-        167872
+        249888,
+        276752
       ],
-      "id": "177df394-bcec-4210-a01e-89cf6f8b6f99",
+      "id": "f48276dd-5cba-4628-94b7-88ceca790294",
       "name": "Confirm Attendance 1h"
     },
     {
@@ -4726,10 +4724,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130624,
-        167872
+        250176,
+        276752
       ],
-      "id": "eccc7759-b4fe-4b81-9dd1-068c519b6a4a",
+      "id": "566edf69-bbb0-4107-bd96-ac39a9c8f00f",
       "name": "Send Confirmation Success",
       "credentials": {
         "whatsAppApi": {
@@ -4745,10 +4743,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        130048,
-        168064
+        249600,
+        276944
       ],
-      "id": "178f2532-3913-48d6-880d-542b141b38ca",
+      "id": "dc3d98fd-8415-43cc-8172-84dc1782a1b0",
       "name": "Extract No Lead ID"
     },
     {
@@ -4765,10 +4763,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130336,
-        168064
+        249888,
+        276944
       ],
-      "id": "50629f2a-026e-434f-ae49-42e129ffbdb3",
+      "id": "5370251f-6e72-44c0-bb6f-83b1eb535bb2",
       "name": "Send Cancel Or Reschedule Options",
       "credentials": {
         "whatsAppApi": {
@@ -4787,10 +4785,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        130624,
-        168448
+        250176,
+        277616
       ],
-      "id": "9b63c0c8-d5e3-4f69-8d4b-160f708a50aa",
+      "id": "42e28dca-0fc1-4274-82fd-f90454f2b95a",
       "name": "Index Booking State",
       "credentials": {
         "redis": {
@@ -4809,10 +4807,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        128928,
-        164208
+        248480,
+        272848
       ],
-      "id": "6889f756-cefb-46cf-82de-9de70cd0bddf",
+      "id": "436f8a8d-506a-40d7-8556-9fe66b60618a",
       "name": "Index Save Name",
       "credentials": {
         "redis": {
@@ -4831,10 +4829,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        130336,
-        166912
+        249888,
+        275792
       ],
-      "id": "29f55869-f126-4a28-a242-1b105b88cbf3",
+      "id": "64e2e5f5-9165-4bbb-ae34-40170190bfb3",
       "name": "Index Pending Date",
       "credentials": {
         "redis": {
@@ -4853,10 +4851,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        129824,
-        163632
+        249376,
+        272320
       ],
-      "id": "9335f850-834d-4d0c-b45d-0d8e83f09256",
+      "id": "a06acfe1-933a-4688-94a9-0d0a33014e8b",
       "name": "Index Custom Booking",
       "credentials": {
         "redis": {
@@ -4875,10 +4873,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        131296,
-        164816
+        250848,
+        273536
       ],
-      "id": "50f77801-c5c1-4d52-88e5-538ca03158f8",
+      "id": "f495be5e-9092-479e-a367-e9732306d13d",
       "name": "Index Reschedule State",
       "credentials": {
         "redis": {
@@ -4897,10 +4895,10 @@
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
       "position": [
-        131296,
-        165200
+        250848,
+        273920
       ],
-      "id": "386bfac8-e626-4d30-aaa6-c7925a58afe0",
+      "id": "5f860202-85cd-4f3a-91ee-3992ed48b6ac",
       "name": "Index Cancel State",
       "credentials": {
         "redis": {
@@ -4919,10 +4917,10 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        131072,
-        166000
+        250624,
+        275312
       ],
-      "id": "d56fffde-7d0f-4c4c-80d0-41c8bc628be3",
+      "id": "648887d8-f26b-4545-8d0c-b837e811dae1",
       "name": "Generate Audio (TTS)",
       "credentials": {
         "openAiApi": {
@@ -4938,10 +4936,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        131296,
-        166000
+        250848,
+        275312
       ],
-      "id": "3dbf4653-e0f6-4c35-8967-afc9600c3ccc",
+      "id": "a17558b0-d07b-413b-802f-3c3401426c97",
       "name": "Fix Audio MimeType"
     },
     {
@@ -4974,10 +4972,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131520,
-        166000
+        251072,
+        275312
       ],
-      "id": "722dfb76-325d-47eb-be91-5f13742e3cdc",
+      "id": "85762d05-491e-4875-b395-28f4f992dbd1",
       "name": "Upload Audio to WhatsApp",
       "credentials": {
         "whatsAppApi": {
@@ -5000,10 +4998,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131744,
-        166000
+        251296,
+        276688
       ],
-      "id": "9acc3555-96f9-45f4-95fb-638a59517574",
+      "id": "b45137d2-58ca-4099-8846-8bb0209cece9",
       "name": "Send Audio Response",
       "credentials": {
         "whatsAppApi": {
@@ -5019,10 +5017,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        130560,
-        168320
+        249600,
+        277328
       ],
-      "id": "extract-cancel-lead-id",
+      "id": "552eccd7-9b45-410d-9833-4a66618d7efe",
       "name": "Extract Cancel Lead ID"
     },
     {
@@ -5034,10 +5032,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130784,
-        168320
+        249888,
+        277328
       ],
-      "id": "delete-lead-direct",
+      "id": "40391274-73b8-4bfb-b513-5e977b17a1a4",
       "name": "Delete Lead Direct"
     },
     {
@@ -5054,10 +5052,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131008,
-        168320
+        250176,
+        277328
       ],
-      "id": "send-cancel-success-direct",
+      "id": "2e9b0b02-58a1-4fa8-98a0-36cbdb02baff",
       "name": "Send Cancel Success Direct",
       "credentials": {
         "whatsAppApi": {
@@ -5073,10 +5071,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        130560,
-        168480
+        250624,
+        277472
       ],
-      "id": "extract-reprogramar-lead-id",
+      "id": "bf850bf6-6046-4217-8792-c9b5f9088a8f",
       "name": "Extract Reprogramar Lead ID"
     },
     {
@@ -5088,10 +5086,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        130784,
-        168480
+        250848,
+        277472
       ],
-      "id": "delete-lead-for-reschedule",
+      "id": "3c957f25-1aab-4f83-a62f-06130f76aad3",
       "name": "Delete Lead For Reschedule"
     },
     {
@@ -5103,10 +5101,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        131008,
-        168480
+        251072,
+        277552
       ],
-      "id": "prepare-reschedule-data",
+      "id": "2ba4ed20-4958-49af-afdf-0c87c29e377d",
       "name": "Prepare Reschedule Data"
     },
     {
@@ -5119,10 +5117,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131072,
-        165904
+        250624,
+        275024
       ],
-      "id": "verify-client-node",
+      "id": "2ab4a1f0-fb00-492c-9e13-0e748c749d28",
       "name": "Verify Client"
     },
     {
@@ -5139,10 +5137,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        131296,
-        165904
+        250848,
+        275024
       ],
-      "id": "is-client-check",
+      "id": "829e9cdf-c001-4c85-982d-36734299a317",
       "name": "Is Client?"
     },
     {
@@ -5159,10 +5157,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        131520,
-        166016
+        251072,
+        275120
       ],
-      "id": "send-not-client-message",
+      "id": "0b0c401a-0332-415a-9984-5f0f6af35e22",
       "name": "Send Not Client Message",
       "credentials": {
         "whatsAppApi": {
@@ -5180,10 +5178,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        131520,
-        165792
+        251072,
+        274928
       ],
-      "id": "prepare-followup-data",
+      "id": "70544301-fc3a-4167-ae4a-c54271ab7059",
       "name": "Prepare Followup Data"
     }
   ],
@@ -7136,13 +7134,45 @@
     "timeSavedMode": "fixed",
     "timezone": "America/Santiago",
     "callerPolicy": "workflowsFromSameOwner",
-    "availableInMCP": false
+    "availableInMCP": false,
+    "errorWorkflow": "p7ISUf0J5GycHscc"
   },
-  "versionId": "8302d012-c7b0-4060-b0ca-367989555ecf",
+  "versionId": "5c7484af-4ad2-48dc-8757-1149926cbb03",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
   },
   "id": "bBcNlFgBzQ0766Mq",
-  "tags": []
+  "tags": [
+    {
+      "updatedAt": "2026-01-07T00:49:29.893Z",
+      "createdAt": "2026-01-07T00:49:29.893Z",
+      "id": "0OdeFP8ZGjJMwQNC",
+      "name": "VoiceNotes"
+    },
+    {
+      "updatedAt": "2026-01-07T00:49:29.840Z",
+      "createdAt": "2026-01-07T00:49:29.840Z",
+      "id": "4N9MVAK8muCJIEYe",
+      "name": "Template"
+    },
+    {
+      "updatedAt": "2026-01-07T02:00:06.599Z",
+      "createdAt": "2026-01-07T02:00:06.599Z",
+      "id": "GG8mR5Iw5Kdy11sC",
+      "name": "v5"
+    },
+    {
+      "updatedAt": "2026-01-07T00:49:29.887Z",
+      "createdAt": "2026-01-07T00:49:29.887Z",
+      "id": "Nymx4zdlkPRv447n",
+      "name": "Demo"
+    },
+    {
+      "updatedAt": "2026-01-07T00:49:29.865Z",
+      "createdAt": "2026-01-07T00:49:29.865Z",
+      "id": "qKCUJ8CtKeEmfNUC",
+      "name": "WhatsApp"
+    }
+  ]
 }

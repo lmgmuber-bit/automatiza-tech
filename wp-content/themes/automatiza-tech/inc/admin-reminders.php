@@ -261,6 +261,151 @@ function automatiza_tech_reminders_page() {
                     text-overflow: ellipsis;
                 }
             }
+            
+            /* ========== RESPONSIVE STYLES ========== */
+            
+            /* Tablet (768px - 1024px) */
+            @media screen and (max-width: 1024px) {
+                .reminders-table {
+                    min-width: 900px;
+                }
+                .tablenav.top .alignleft.actions form {
+                    flex-wrap: wrap;
+                }
+                .tablenav.top .alignright.actions {
+                    margin-top: 10px;
+                    width: 100%;
+                    text-align: left;
+                }
+            }
+            
+            /* Mobile (hasta 767px) */
+            @media screen and (max-width: 767px) {
+                .wrap { padding: 10px !important; margin-left: 0 !important; }
+                .wrap h1.wp-heading-inline { font-size: 18px; }
+                .wrap > p { font-size: 13px; }
+                
+                .tablenav.top {
+                    padding: 10px !important;
+                    background: #f6f7f7;
+                    border-radius: 8px;
+                    margin-bottom: 15px;
+                }
+                .tablenav.top .alignleft.actions {
+                    width: 100%;
+                }
+                .tablenav.top .alignleft.actions form {
+                    flex-direction: column;
+                    gap: 10px;
+                }
+                .tablenav.top .alignleft.actions form label {
+                    width: 100%;
+                    display: flex;
+                    gap: 8px;
+                    align-items: center;
+                }
+                .tablenav.top .alignleft.actions form label input[type="date"],
+                .tablenav.top .alignleft.actions form label select {
+                    flex: 1;
+                    height: 40px;
+                    font-size: 16px;
+                    padding: 8px 12px;
+                }
+                .tablenav.top .alignleft.actions form input[type="submit"],
+                .tablenav.top .alignleft.actions form .button {
+                    width: 48%;
+                    height: 40px;
+                    font-size: 14px;
+                }
+                
+                .tablenav.top .alignright.actions {
+                    width: 100%;
+                    margin-top: 15px;
+                    padding-top: 15px;
+                    border-top: 1px solid #ddd;
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                    align-items: center;
+                }
+                .tablenav.top .alignright.actions strong {
+                    width: 100%;
+                    margin-bottom: 5px;
+                    font-size: 13px;
+                }
+                .tablenav.top .alignright.actions .bulk-send-btn {
+                    flex: 1;
+                    min-width: 60px;
+                    height: 40px;
+                }
+                
+                .reminders-table-wrapper {
+                    margin: 0 -10px;
+                    padding: 0 10px;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                }
+                .reminders-table {
+                    min-width: 800px;
+                    font-size: 12px;
+                }
+                .reminders-table th,
+                .reminders-table td {
+                    padding: 8px 5px;
+                }
+                .reminders-table .col-id { width: 40px; }
+                .reminders-table .col-name { min-width: 100px; }
+                .reminders-table .col-email { max-width: 120px; }
+                .reminders-table .col-canal { width: 70px; }
+                .reminders-table .col-fecha { width: 80px; }
+                .reminders-table .col-hora { width: 50px; }
+                .reminders-table .col-estado { width: 85px; }
+                .reminders-table .col-reminder-email,
+                .reminders-table .col-reminder-wa { width: 45px; }
+                
+                .reminder-btn {
+                    font-size: 10px !important;
+                    padding: 4px 6px !important;
+                    min-height: 28px !important;
+                }
+                .reminder-sent { font-size: 11px; }
+                .wa-check { font-size: 14px; }
+                
+                #bulk-progress-modal > div {
+                    width: 90% !important;
+                    max-width: 300px;
+                }
+            }
+            
+            /* Mobile Small (hasta 480px) */
+            @media screen and (max-width: 480px) {
+                .wrap { padding: 5px !important; }
+                .wrap h1.wp-heading-inline { font-size: 16px; }
+                
+                .tablenav.top .alignright.actions .bulk-send-btn {
+                    font-size: 12px;
+                    padding: 8px 12px;
+                }
+                
+                .reminders-table {
+                    font-size: 11px;
+                }
+                .reminders-table th,
+                .reminders-table td {
+                    padding: 6px 4px;
+                }
+            }
+            
+            /* Touch improvements */
+            @media (hover: none) and (pointer: coarse) {
+                .tablenav.top .alignleft.actions form input[type="date"],
+                .tablenav.top .alignleft.actions form select,
+                .tablenav.top .alignleft.actions form .button,
+                .bulk-send-btn,
+                .reminder-btn {
+                    min-height: 44px;
+                }
+            }
         </style>
 
         <div class="reminders-table-wrapper">
@@ -393,6 +538,130 @@ function automatiza_tech_reminders_page() {
             </div>
         </div>
 
+        <!-- ========== SECCIÓN DE SEGUIMIENTO (CLIENTES) ========== -->
+        <?php
+        $followup_table_name = $wpdb->prefix . 'automatiza_followup_meetings';
+        
+        // Query: solo futuras y no canceladas (misma lógica que citas normales)
+        $fu_where = "1=1 AND status != 'cancelled'";
+        if ($filter_date) {
+            $fu_where .= $wpdb->prepare(" AND meeting_date = %s", $filter_date);
+        } else {
+            $fu_where .= $wpdb->prepare(
+                " AND (meeting_date > %s OR (meeting_date = %s AND meeting_time > %s))",
+                $current_date_db, $current_date_db, $current_time_db
+            );
+        }
+        $followup_leads = $wpdb->get_results("SELECT * FROM $followup_table_name WHERE $fu_where ORDER BY meeting_date ASC, meeting_time ASC");
+        ?>
+        
+        <h2 style="margin-top: 35px; padding-top: 20px; border-top: 2px solid #7c3aed;">🔄 Seguimiento de Clientes — Recordatorios</h2>
+        <p style="color:#666; margin-bottom:10px;">
+            Citas de seguimiento con clientes activos. Los recordatorios se envían automáticamente:
+            <strong>📧 Email</strong> y <strong>📱 WhatsApp</strong> a las <strong>8pm</strong> (día anterior) y <strong>8am</strong> (día de la cita).
+        </p>
+        
+        <div class="reminders-table-wrapper">
+            <table class="reminders-table">
+                <thead>
+                    <tr>
+                        <th colspan="7" style="background:#fff; border-bottom: 2px solid #e1e1e1;"></th>
+                        <th colspan="2" class="th-group" style="background:#e8dff5; color:#5b21b6;">📧 Invitación</th>
+                        <th colspan="2" class="th-group" style="background:#fde68a; color:#92400e;">📧 Recordatorio Email</th>
+                        <th colspan="2" class="th-group th-group-wa">📱 Recordatorio WA</th>
+                    </tr>
+                    <tr>
+                        <th class="col-id">ID</th>
+                        <th class="col-name">Nombre</th>
+                        <th style="min-width:100px;">Empresa</th>
+                        <th class="col-email">Email</th>
+                        <th class="col-fecha">Fecha</th>
+                        <th class="col-hora">Hora</th>
+                        <th class="col-estado">Estado</th>
+                        <th class="col-reminder-email" title="Email de invitación">Email</th>
+                        <th class="col-reminder-wa" title="WhatsApp de invitación">WA</th>
+                        <th class="col-reminder-email" title="Recordatorio Email 8pm (día anterior)">8pm</th>
+                        <th class="col-reminder-email" title="Recordatorio Email 8am (día de la cita)">8am</th>
+                        <th class="col-reminder-wa" title="Recordatorio WhatsApp 8pm (día anterior)">8pm</th>
+                        <th class="col-reminder-wa" title="Recordatorio WhatsApp 8am (día de la cita)">8am</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($followup_leads)): ?>
+                    <tr><td colspan="13" style="text-align:center; padding:20px; color:#666;">No hay citas de seguimiento próximas.</td></tr>
+                    <?php else: foreach ($followup_leads as $fu):
+                        $fu_dt = new DateTime($fu->meeting_date . ' ' . $fu->meeting_time, $tz);
+                        $fu_diff = $fu_dt->getTimestamp() - $now_dt->getTimestamp();
+                        $fu_hours = $fu_diff / 3600;
+                    ?>
+                    <tr>
+                        <td class="col-id"><?php echo $fu->id; ?></td>
+                        <td class="col-name"><?php echo esc_html($fu->client_name); ?></td>
+                        <td><?php echo esc_html($fu->company_name); ?></td>
+                        <td class="col-email" title="<?php echo esc_attr($fu->client_email); ?>"><?php echo esc_html($fu->client_email); ?></td>
+                        <td class="col-fecha"><?php echo date('d-m-Y', strtotime($fu->meeting_date)); ?></td>
+                        <td class="col-hora"><?php echo substr($fu->meeting_time, 0, 5); ?></td>
+                        <td class="col-estado">
+                            <?php 
+                            if ($fu->status === 'confirmed') echo '<span class="status-confirmed">✓ Confirmado</span>';
+                            elseif ($fu->status === 'scheduled') echo '<span class="status-pending">⏳ Programada</span>';
+                            else echo '<span class="status-pending">⏳ ' . esc_html(ucfirst($fu->status)) . '</span>';
+                            ?>
+                        </td>
+                        <!-- Invitación Email -->
+                        <td class="col-reminder-email">
+                            <?php if (!empty($fu->email_sent)): ?>
+                                <span class="reminder-sent" title="Email de invitación enviado">✓ Enviado</span>
+                            <?php else: ?>
+                                <span class="reminder-pending" title="Email pendiente">—</span>
+                            <?php endif; ?>
+                        </td>
+                        <!-- Invitación WhatsApp -->
+                        <td class="col-reminder-wa">
+                            <?php if (!empty($fu->whatsapp_sent)): ?>
+                                <span class="wa-check" title="WhatsApp de invitación enviado">✓</span>
+                            <?php else: ?>
+                                <span class="reminder-pending" title="WhatsApp pendiente">—</span>
+                            <?php endif; ?>
+                        </td>
+                        <!-- Recordatorio Email 8pm -->
+                        <td class="col-reminder-email">
+                            <?php if (!empty($fu->recordatorio_8pm)): ?>
+                                <span class="reminder-sent" title="Email 8pm enviado">✓ Enviado</span>
+                            <?php else: ?>
+                                <span class="reminder-pending" title="Email 8pm pendiente">—</span>
+                            <?php endif; ?>
+                        </td>
+                        <!-- Recordatorio Email 8am -->
+                        <td class="col-reminder-email">
+                            <?php if (!empty($fu->recordatorio_8am)): ?>
+                                <span class="reminder-sent" title="Email 8am enviado">✓ Enviado</span>
+                            <?php else: ?>
+                                <span class="reminder-pending" title="Email 8am pendiente">—</span>
+                            <?php endif; ?>
+                        </td>
+                        <!-- Recordatorio WA 8pm -->
+                        <td class="col-reminder-wa">
+                            <?php if (!empty($fu->recordatorio_8pm_wa)): ?>
+                                <span class="wa-check" title="WA 8pm enviado">✓</span>
+                            <?php else: ?>
+                                <span class="reminder-pending" title="WA 8pm pendiente">—</span>
+                            <?php endif; ?>
+                        </td>
+                        <!-- Recordatorio WA 8am -->
+                        <td class="col-reminder-wa">
+                            <?php if (!empty($fu->recordatorio_8am_wa)): ?>
+                                <span class="wa-check" title="WA 8am enviado">✓</span>
+                            <?php else: ?>
+                                <span class="reminder-pending" title="WA 8am pendiente">—</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
+        </div>
+
         <div style="background:#f0f0f1; padding:15px; border-left:4px solid #2271b1; margin-top:20px;">
             <p style="margin:0;"><strong>📧 Recordatorios por Email (Manual)</strong></p>
             <p style="margin:5px 0 0 0; color:#666;">
@@ -404,6 +673,12 @@ function automatiza_tech_reminders_page() {
             <p style="margin:5px 0 0 0; color:#666;">
                 Las columnas <strong>📱</strong> muestran el estado de los recordatorios por <strong>WhatsApp</strong>.<br>
                 Estos se envían <strong>automáticamente</strong> mediante N8N según el horario programado.
+            </p>
+        </div>
+        <div style="background:#f0f0f1; padding:15px; border-left:4px solid #7c3aed; margin-top:10px;">
+            <p style="margin:0;"><strong>🔄 Seguimiento de Clientes</strong></p>
+            <p style="margin:5px 0 0 0; color:#666;">
+                Las citas de seguimiento tienen recordatorios automáticos a las <strong>8pm</strong> (día anterior) y <strong>8am</strong> (día de la cita), tanto por Email como por WhatsApp.
             </p>
         </div>
         <p class="description" style="margin-top:10px;">Los botones se habilitan automáticamente cuando el tiempo es el adecuado. Para forzar el envío: añade <code>&force=true</code> a la URL.</p>

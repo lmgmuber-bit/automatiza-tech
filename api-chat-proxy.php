@@ -1,52 +1,111 @@
 <?php
-// api-chat-proxy.php
-// Proxy simple para ocultar la API Key de OpenAI
+/**
+ * API Proxy para Consumo de OpenAI
+ * Endpoint centralizado para N8N, PetsGo y otros servicios/clientes
+ * Registra automáticamente el consumo en ai_usage_log
+ * 
+ * IMPORTANTE: Este archivo DEBE devolver JSON limpio siempre.
+ * Se usa output buffering para capturar y descartar cualquier output 
+ * accidental de WordPress (errores HTML, BOM, notices, etc.)
+ */
+
+// Iniciar output buffering ANTES de cargar WordPress para capturar cualquier output
+ob_start();
+
+// Suprimir display errors para evitar HTML en la respuesta JSON
+@ini_set('display_errors', 0);
+error_reporting(E_ERROR | E_PARSE);
+
 require_once('wp-load.php');
+require_once('openai-controller.php');
 
-header('Content-Type: application/json');
+// Descartar TODO el output que haya generado WordPress al cargar
+ob_end_clean();
 
+// Ahora sí, enviar headers limpios
+header('Content-Type: application/json; charset=utf-8');
+header('X-Proxy-Version: 2.1');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+
+// Manejar preflight CORS
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
+
+// Recibir datos
 $input = json_decode(file_get_contents('php://input'), true);
-$messages = $input['messages'] ?? [];
+
+if (!$input) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Invalid JSON']);
+    exit;
+}
+
+$messages = isset($input['messages']) ? $input['messages'] : [];
+$model = isset($input['model']) ? $input['model'] : 'gpt-4o';
+$userId = isset($input['user_id']) ? intval($input['user_id']) : 1; 
+$clientIdentifier = isset($input['client_identifier']) ? sanitize_text_field($input['client_identifier']) : null;
 
 if (empty($messages)) {
-    echo json_encode(['error' => 'No messages']);
+    http_response_code(400);
+    echo json_encode(['error' => 'Messages array is required']);
     exit;
 }
 
-// IMPORTANTE: Configura tu API Key aquí o en wp-config.php
-// define('OPENAI_API_KEY', 'sk-...'); 
-// Por seguridad, intentaré leerla de una constante o variable de entorno si existe.
-$api_key = defined('OPENAI_API_KEY') ? OPENAI_API_KEY : getenv('OPENAI_API_KEY');
+try {
+    $controller = new OpenAIController();
+    
+    // Verificar que la API Key esté configurada
+    if (empty($controller->getApiKey())) {
+        http_response_code(500);
+        echo json_encode([
+            'error' => 'OPENAI_API_KEY no está configurada en el servidor.',
+            'reply' => 'Error: API Key no configurada en el servidor. Por favor configura OPENAI_API_KEY en wp-config.php'
+        ]);
+        exit;
+    }
+    
+    // Capturar cualquier output accidental durante la llamada (errores de BD, notices, etc.)
+    ob_start();
+    $response = $controller->chatCompletion($userId, $messages, $model, $clientIdentifier);
+    $accidental_output = ob_get_clean();
+    
+    // Loguear output accidental si hubo (para debugging, sin romper el JSON)
+    if (!empty(trim($accidental_output))) {
+        error_log('api-chat-proxy: Output accidental capturado (' . strlen($accidental_output) . ' bytes): ' . substr(strip_tags($accidental_output), 0, 500));
+    }
+    
+    // Agregar metadata de tracking
+    $trackingReady = $controller->isTrackingReady();
+    
+    if (isset($response['error'])) {
+        $code = isset($response['code']) ? $response['code'] : 500;
+        http_response_code($code > 0 ? $code : 500);
+        if (!isset($response['reply'])) {
+            $response['reply'] = 'Error: ' . $response['error'];
+        }
+    }
+    
+    // Agregar info de tracking a la respuesta (no invasivo)
+    $response['_tracking'] = [
+        'client_identifier' => $clientIdentifier,
+        'tracked' => $trackingReady,
+    ];
+    
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
-// Fallback para demo (NO RECOMENDADO EN PRODUCCIÓN REAL SIN KEY)
-if (!$api_key) {
-    // Intentar buscar en n8n credentials? No, no puedo acceder a eso desde PHP.
-    // Para que esto funcione, el usuario debe configurar la KEY en wp-config.php
-    echo json_encode(['reply' => 'Error: API Key no configurada en el servidor (api-chat-proxy.php). Por favor configura OPENAI_API_KEY en wp-config.php']);
-    exit;
+} catch (Exception $e) {
+    // Limpiar cualquier output buffering pendiente
+    while (ob_get_level()) { ob_end_clean(); }
+    header('Content-Type: application/json; charset=utf-8');
+    
+    http_response_code(500);
+    echo json_encode([
+        'error' => $e->getMessage(),
+        'reply' => 'Error interno del servidor: ' . $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE);
 }
-
-$ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, 'https://api.openai.com/v1/chat/completions');
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-curl_setopt($ch, CURLOPT_POST, 1);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-    'model' => 'gpt-3.5-turbo', // O gpt-4 si prefieres
-    'messages' => $messages,
-    'temperature' => 0.7
-]));
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    'Content-Type: application/json',
-    'Authorization: Bearer ' . $api_key
-]);
-
-$result = curl_exec($ch);
-if (curl_errno($ch)) {
-    echo json_encode(['reply' => 'Error de conexión: ' . curl_error($ch)]);
-} else {
-    $response = json_decode($result, true);
-    $reply = $response['choices'][0]['message']['content'] ?? 'No pude generar una respuesta.';
-    echo json_encode(['reply' => $reply]);
-}
-curl_close($ch);
 ?>

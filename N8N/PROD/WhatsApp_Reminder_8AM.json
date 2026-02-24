@@ -6,29 +6,32 @@
         "rule": {
           "interval": [
             {
-              "field": "cronExpression",
-              "expression": "0 8 * * *"
+              "triggerAtHour": 8
             }
           ]
         }
       },
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [260, 300],
-      "id": "cron-8am-wa",
+      "position": [
+        -496,
+        208
+      ],
+      "id": "470aa72c-91e0-45bb-981d-206d2f32410d",
       "name": "Cron 8AM Chile"
     },
     {
       "parameters": {
-        "url": "https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/reminders-wa-8am",
-        "options": {
-          "splitIntoItems": true
-        }
+        "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/reminders-wa-8am",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [480, 300],
-      "id": "get-leads-8am-wa",
+      "position": [
+        -288,
+        208
+      ],
+      "id": "e3aeaf17-61db-461c-ac5b-1d7728e8c22f",
       "name": "Get Seguimientos Today"
     },
     {
@@ -56,8 +59,11 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [700, 300],
-      "id": "has-leads-8am-wa",
+      "position": [
+        -64,
+        208
+      ],
+      "id": "840ddc16-d7e2-474a-bf6a-c94c0abe9e4c",
       "name": "Has Meetings?"
     },
     {
@@ -66,19 +72,24 @@
       },
       "type": "n8n-nodes-base.limit",
       "typeVersion": 1,
-      "position": [920, 260],
-      "id": "limit-8am-wa",
+      "position": [
+        160,
+        160
+      ],
+      "id": "2c90752e-dd7a-4b29-9bc9-4ab58c1d1d1e",
       "name": "Limit 10 Anti-Spam"
     },
     {
       "parameters": {
-        "batchSize": 1,
         "options": {}
       },
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [1140, 260],
-      "id": "split-batches-8am-wa",
+      "position": [
+        384,
+        160
+      ],
+      "id": "0cb22b6e-df27-45dc-bb32-6dc5c0df9efa",
       "name": "Split In Batches"
     },
     {
@@ -87,8 +98,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1360, 260],
-      "id": "prepare-wa-8am",
+      "position": [
+        608,
+        160
+      ],
+      "id": "d4b48c0f-a25e-40d0-a4bc-990d0decb656",
       "name": "Prepare WA Data"
     },
     {
@@ -96,7 +110,7 @@
         "method": "POST",
         "url": "https://graph.facebook.com/v22.0/946501128543201/messages",
         "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "httpCustomAuth",
+        "nodeCredentialType": "whatsAppApi",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"button\",\n    \"body\": {\n      \"text\": {{ JSON.stringify($json.messageBody) }}\n    },\n    \"action\": {\n      \"buttons\": [\n        { \"type\": \"reply\", \"reply\": { \"id\": \"{{ $json.btnConfirmId }}\", \"title\": \"✅ Confirmo\" }},\n        { \"type\": \"reply\", \"reply\": { \"id\": \"{{ $json.btnRescheduleId }}\", \"title\": \"🔄 Reagendar\" }},\n        { \"type\": \"reply\", \"reply\": { \"id\": \"{{ $json.btnCancelId }}\", \"title\": \"❌ Cancelar\" }}\n      ]\n    }\n  }\n}",
@@ -104,48 +118,59 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1580, 260],
-      "id": "send-wa-8am",
+      "position": [
+        832,
+        160
+      ],
+      "id": "439c05af-4736-4a0a-8527-afa7fb930e4a",
       "name": "Send WhatsApp",
       "credentials": {
-        "httpCustomAuth": {
-          "id": "JhVF3l8jRxBpP1n1",
-          "name": "WhatsApp Graph API"
+        "whatsAppApi": {
+          "id": "SH8OXr93p852Ll6m",
+          "name": "WhatsApp Tech"
         }
       }
     },
     {
       "parameters": {
-        "method": "POST",
+        "method": "=POST",
         "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/update-reminder-wa-daily/{{ $('Prepare WA Data').item.json.meeting_id }}/8am",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1800, 260],
-      "id": "mark-sent-8am-wa",
+      "position": [
+        1040,
+        160
+      ],
+      "id": "502242e6-5fec-40bf-a9fb-66e33f87801e",
       "name": "Mark as Sent"
     },
     {
-      "parameters": {
-        "amount": 5,
-        "unit": "seconds"
-      },
+      "parameters": {},
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [2020, 260],
-      "id": "wait-8am-wa",
-      "name": "Wait 5s Rate Limit"
+      "position": [
+        1264,
+        160
+      ],
+      "id": "2eb50ec0-c93c-4d44-a989-edacb6e19b5d",
+      "name": "Wait 5s Rate Limit",
+      "webhookId": "f8398600-5bab-4981-a927-7e088a88791d"
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [920, 420],
-      "id": "no-leads-8am-wa",
+      "position": [
+        160,
+        320
+      ],
+      "id": "8ffe606b-7eb7-4829-ab7a-62eb6cb0ffb3",
       "name": "No Meetings"
     }
   ],
+  "pinData": {},
   "connections": {
     "Cron 8AM Chile": {
       "main": [
@@ -255,9 +280,19 @@
       ]
     }
   },
+  "active": true,
   "settings": {
     "executionOrder": "v1",
-    "timezone": "America/Santiago"
+    "timeSavedMode": "fixed",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "p7ISUf0J5GycHscc"
   },
-  "active": false
+  "versionId": "9ea8fd95-beb5-4608-88ba-22d2b65f2366",
+  "meta": {
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "id": "MchisrkbuXDOqKvQ",
+  "tags": []
 }

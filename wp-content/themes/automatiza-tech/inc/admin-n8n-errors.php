@@ -605,6 +605,187 @@ function automatiza_n8n_errors_page() {
                 font-size: 64px;
                 margin-bottom: 20px;
             }
+            
+            /* ==================== ESTILOS RESPONSIVOS ARGOS ==================== */
+            
+            /* Tablet (1024px y menos) */
+            @media screen and (max-width: 1024px) {
+                .stats-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                .errors-table th:nth-child(1),
+                .errors-table td:nth-child(1) {
+                    display: none; /* Ocultar columna ID en tablet */
+                }
+                .modal-content {
+                    width: 95%;
+                    max-width: none;
+                }
+            }
+            
+            /* Mobile (767px y menos) */
+            @media screen and (max-width: 767px) {
+                .argos-admin {
+                    margin: 0 -10px;
+                }
+                .argos-header {
+                    padding: 20px 15px;
+                    border-radius: 0;
+                    margin: 0 -10px 20px;
+                }
+                .argos-header h1 {
+                    font-size: 20px;
+                    flex-wrap: wrap;
+                    justify-content: center;
+                    text-align: center;
+                }
+                .argos-header p {
+                    font-size: 14px;
+                    text-align: center;
+                }
+                
+                /* Stats Grid - 2x2 en móvil */
+                .stats-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 10px;
+                    padding: 0 5px;
+                }
+                .stat-card {
+                    padding: 15px;
+                    border-radius: 8px;
+                }
+                .stat-number {
+                    font-size: 24px;
+                }
+                .stat-label {
+                    font-size: 12px;
+                }
+                
+                /* Filtros - Stack vertical */
+                .filters-bar {
+                    flex-direction: column;
+                    align-items: stretch;
+                    padding: 15px;
+                    gap: 10px;
+                }
+                .filters-bar select,
+                .filters-bar input[type="text"] {
+                    width: 100%;
+                    min-height: 44px; /* Touch-friendly */
+                    font-size: 16px; /* Evita zoom iOS */
+                }
+                .filters-bar .button {
+                    min-height: 44px;
+                    width: 100%;
+                    justify-content: center;
+                }
+                
+                /* Tabla de errores - Scroll horizontal */
+                .table-wrapper {
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                    margin: 0 -15px;
+                    padding: 0 15px;
+                }
+                .errors-table {
+                    min-width: 700px;
+                    font-size: 13px;
+                }
+                .errors-table th,
+                .errors-table td {
+                    padding: 12px 10px;
+                }
+                .errors-table th:nth-child(1),
+                .errors-table td:nth-child(1) {
+                    display: none;
+                }
+                .error-message {
+                    max-width: 200px;
+                }
+                .action-btn {
+                    padding: 8px 10px;
+                    min-height: 36px;
+                }
+                
+                /* Modal fullscreen en móvil */
+                .modal-content {
+                    width: 100%;
+                    height: 100%;
+                    max-height: 100vh;
+                    border-radius: 0;
+                    padding: 20px 15px;
+                }
+                .modal-header {
+                    padding-bottom: 15px;
+                }
+                .modal-header h3 {
+                    font-size: 18px;
+                }
+                .modal-close {
+                    font-size: 28px;
+                    padding: 10px;
+                    min-width: 44px;
+                    min-height: 44px;
+                }
+                .detail-box {
+                    font-size: 12px;
+                    padding: 12px;
+                }
+                
+                /* No errors message */
+                .no-errors {
+                    padding: 40px 15px;
+                }
+                .no-errors .icon {
+                    font-size: 48px;
+                }
+            }
+            
+            /* Móviles pequeños (480px y menos) */
+            @media screen and (max-width: 480px) {
+                .stats-grid {
+                    grid-template-columns: 1fr 1fr;
+                    gap: 8px;
+                }
+                .stat-card {
+                    padding: 12px;
+                }
+                .stat-number {
+                    font-size: 20px;
+                }
+                .stat-label {
+                    font-size: 11px;
+                }
+                .argos-header h1 {
+                    font-size: 18px;
+                }
+                .severity-badge,
+                .status-badge {
+                    font-size: 10px;
+                    padding: 3px 8px;
+                }
+            }
+            
+            /* Touch-friendly improvements */
+            @media (hover: none) and (pointer: coarse) {
+                .action-btn {
+                    min-height: 44px;
+                    min-width: 44px;
+                }
+                .filters-bar select,
+                .filters-bar input {
+                    min-height: 48px;
+                }
+            }
+            
+            /* Safe area para iPhones con notch */
+            @supports (padding-bottom: env(safe-area-inset-bottom)) {
+                @media screen and (max-width: 767px) {
+                    .modal-content {
+                        padding-bottom: calc(20px + env(safe-area-inset-bottom));
+                    }
+                }
+            }
         </style>
         
         <div class="argos-header">
@@ -673,6 +854,7 @@ function automatiza_n8n_errors_page() {
                 <p>No hay errores que coincidan con los filtros seleccionados.</p>
             </div>
         <?php else: ?>
+            <div class="table-wrapper">
             <table class="errors-table">
                 <thead>
                     <tr>
@@ -743,6 +925,7 @@ function automatiza_n8n_errors_page() {
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            </div><!-- /.table-wrapper -->
         <?php endif; ?>
         
         <!-- Modal para detalles del error -->

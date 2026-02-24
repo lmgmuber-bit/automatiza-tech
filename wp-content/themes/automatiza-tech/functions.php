@@ -435,6 +435,26 @@ require_once get_template_directory() . '/services-frontend.php';
 require_once get_template_directory() . '/inc/invoice-handlers.php';
 
 /**
+ * Incluir módulo de generación de Boletas (Receipts)
+ */
+require_once get_template_directory() . '/inc/receipts-module.php';
+
+/**
+ * Incluir módulo de Detalles de Clientes (Seguimiento y Proyectos)
+ */
+require_once get_template_directory() . '/inc/client-details-module.php';
+
+/**
+ * Incluir módulo de Información Operativa de Clientes
+ */
+require_once get_template_directory() . '/inc/client-operations-module.php';
+
+/**
+ * Incluir Bóveda de Credenciales (accesos técnicos encriptados)
+ */
+require_once get_template_directory() . '/inc/credentials-vault-module.php';
+
+/**
  * Incluir módulo de Chat IA
  */
 require_once get_template_directory() . '/inc/chat-widget.php';
@@ -463,8 +483,44 @@ require_once get_template_directory() . '/inc/admin-proposals.php';
  * Incluir panel de reuniones de seguimiento
  */
 require_once get_template_directory() . '/inc/admin-followup-meetings.php';
+require_once get_template_directory() . '/inc/client-pdf-report.php';
 
 /**
  * Incluir panel de monitoreo de errores N8N - ARGOS
  */
 require_once get_template_directory() . '/inc/admin-n8n-errors.php';
+
+/**
+ * Panel de QA — Gestión de pruebas por proyecto/cliente
+ * Casos de prueba, evidencias, aprobaciones y comentarios
+ */
+require_once get_template_directory() . '/inc/admin-qa-module.php';
+
+/**
+ * Encolar scripts específicos para el área de administración.
+ */
+function automatiza_tech_admin_scripts($hook) {
+    // Solo cargar en la página de clientes
+    if ('contactos_page_automatiza-tech-clients' !== $hook) {
+        return;
+    }
+
+    // Usar la última hora de modificación del archivo como versión para evitar caché
+    $script_path = get_template_directory() . '/assets/js/client-operations.js';
+    $script_url = get_template_directory_uri() . '/assets/js/client-operations.js';
+    $version = file_exists($script_path) ? filemtime($script_path) : '1.0';
+
+    wp_enqueue_script(
+        'automatiza-tech-client-operations',
+        $script_url,
+        array('jquery'),
+        $version,
+        true
+    );
+
+    wp_localize_script('automatiza-tech-client-operations', 'automatiza_ajax', array(
+        'ajaxurl' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('regenerate_invoice_op_nonce') // Nonce específico
+    ));
+}
+add_action('admin_enqueue_scripts', 'automatiza_tech_admin_scripts');

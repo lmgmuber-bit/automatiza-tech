@@ -37,8 +37,13 @@ function automatiza_tech_followup_create_table() {
         whatsapp_sent tinyint(1) DEFAULT 0,
         reminder_24h_sent tinyint(1) DEFAULT 0,
         reminder_1h_sent tinyint(1) DEFAULT 0,
+        recordatorio_8pm tinyint(1) DEFAULT 0,
+        recordatorio_8am tinyint(1) DEFAULT 0,
+        recordatorio_8pm_wa tinyint(1) DEFAULT 0,
+        recordatorio_8am_wa tinyint(1) DEFAULT 0,
         created_at datetime DEFAULT CURRENT_TIMESTAMP,
         updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        google_event_id varchar(255) DEFAULT '',
         PRIMARY KEY (id),
         KEY idx_meeting_date (meeting_date),
         KEY idx_status (status),
@@ -50,12 +55,31 @@ function automatiza_tech_followup_create_table() {
 }
 add_action('after_switch_theme', 'automatiza_tech_followup_create_table');
 
-// Ejecutar creación de tabla si no existe
+// Ejecutar creación de tabla si no existe + asegurar columnas necesarias
 add_action('init', function() {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
+    
     if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
         automatiza_tech_followup_create_table();
+        return;
+    }
+    
+    // Migración: asegurar que todas las columnas necesarias existan
+    $required_columns = [
+        'whatsapp_sent'       => "ADD COLUMN whatsapp_sent tinyint(1) DEFAULT 0 AFTER email_sent",
+        'google_event_id'     => "ADD COLUMN google_event_id varchar(255) DEFAULT '' AFTER updated_at",
+        'recordatorio_8pm'    => "ADD COLUMN recordatorio_8pm tinyint(1) DEFAULT 0 AFTER reminder_1h_sent",
+        'recordatorio_8am'    => "ADD COLUMN recordatorio_8am tinyint(1) DEFAULT 0 AFTER recordatorio_8pm",
+        'recordatorio_8pm_wa' => "ADD COLUMN recordatorio_8pm_wa tinyint(1) DEFAULT 0 AFTER recordatorio_8am",
+        'recordatorio_8am_wa' => "ADD COLUMN recordatorio_8am_wa tinyint(1) DEFAULT 0 AFTER recordatorio_8pm_wa",
+    ];
+    
+    $existing = $wpdb->get_col("SHOW COLUMNS FROM $table_name", 0);
+    foreach ($required_columns as $col_name => $alter_sql) {
+        if (!in_array($col_name, $existing)) {
+            $wpdb->query("ALTER TABLE $table_name $alter_sql");
+        }
     }
 });
 
@@ -192,6 +216,7 @@ function automatiza_tech_followup_page() {
             $meeting_subject = sanitize_text_field($_POST['meeting_subject']);
             $notes = sanitize_textarea_field($_POST['notes']);
             $send_email = isset($_POST['send_email']) && $_POST['send_email'] === '1';
+            $send_whatsapp = isset($_POST['send_whatsapp']) && $_POST['send_whatsapp'] === '1';
             $create_calendar_event = isset($_POST['create_calendar_event']) && $_POST['create_calendar_event'] === '1';
             $meeting_id_edit = isset($_POST['meeting_id']) && !empty($_POST['meeting_id']) ? intval($_POST['meeting_id']) : null;
             
@@ -222,6 +247,15 @@ function automatiza_tech_followup_page() {
                         'status' => 'scheduled'
                     );
                     
+                    // Determinar si es reprogramación o nueva
+                    $is_reschedule = !empty($meeting_id_edit);
+                    $old_meeting = null;
+                    
+                    // Si es reschedule, capturar datos ANTES de actualizar (event_id, etc.)
+                    if ($is_reschedule) {
+                        $old_meeting = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $meeting_id_edit));
+                    }
+                    
                     // Verificar si es actualización o nueva
                     if ($meeting_id_edit) {
                         $meeting_id = $meeting_id_edit;
@@ -233,59 +267,135 @@ function automatiza_tech_followup_page() {
                         $action_msg = 'programada';
                     }
                 
-                // Crear evento en Google Calendar via N8N si está marcado
+                // Variables de estado de notificaciones
                 $n8n_result = null;
-                if ($create_calendar_event && $meeting_id) {
-                    $n8n_result = automatiza_tech_create_followup_calendar_event($meeting_id);
-                    if ($n8n_result && $n8n_result['success']) {
-                        // Actualizar meet_link si N8N lo devolvió
-                        if (!empty($n8n_result['meet_link'])) {
-                            $wpdb->update($table_name, array('meet_link' => $n8n_result['meet_link']), array('id' => $meeting_id));
-                            $data['meet_link'] = $n8n_result['meet_link'];
+                $n8n_sent_email = false;
+                $n8n_sent_wa = false;
+                $email_ok = false;
+                $wa_ok = false;
+                $calendar_msg = '';
+                
+                if ($is_reschedule && $old_meeting) {
+                    // ============================================================
+                    // FLUJO REPROGRAMACIÓN
+                    // ============================================================
+                    error_log("Followup #{$meeting_id}: REPROGRAMACIÓN detectada desde admin. old_event_id=" . ($old_meeting->google_event_id ?? 'ninguno') . " | Calendar=" . ($create_calendar_event ? 'SI' : 'NO') . " | Email=" . ($send_email ? 'SI' : 'NO') . " | WA=" . ($send_whatsapp ? 'SI' : 'NO'));
+                    
+                    if ($create_calendar_event) {
+                        // ---- Calendario marcado: usar Reschedule Handler completo (Calendar + Email + WA) ----
+                        $n8n_result = automatiza_tech_call_followup_reschedule_workflow(
+                            $old_meeting,
+                            $meeting_date,
+                            $meeting_time,
+                            $old_meeting->google_event_id ?? null
+                        );
+                        
+                        if ($n8n_result && $n8n_result['success']) {
+                            $update_fields = [];
+                            if (!empty($n8n_result['meet_link'])) {
+                                $update_fields['meet_link'] = $n8n_result['meet_link'];
+                            }
+                            if (!empty($n8n_result['event_id'])) {
+                                $update_fields['google_event_id'] = $n8n_result['event_id'];
+                            }
+                            if (!empty($update_fields)) {
+                                $wpdb->update($table_name, $update_fields, array('id' => $meeting_id));
+                            }
+                            
+                            $calendar_msg = ' 📅 Evento reagendado en Google Calendar.';
+                            if (!empty($n8n_result['meet_link'])) {
+                                $calendar_msg .= ' 🔗 Link Meet actualizado.';
+                            }
+                            
+                            // El Reschedule Handler envía Calendar + Email + WA automáticamente
+                            if ($send_email) { $email_ok = true; $n8n_sent_email = true; }
+                            if ($send_whatsapp) { $wa_ok = true; $n8n_sent_wa = true; }
+                            
+                            error_log("Followup #{$meeting_id}: Reschedule Handler exitoso - Calendar+Email+WA.");
+                        } else {
+                            $calendar_msg = ' ⚠️ Error en workflow de reagendamiento.';
+                            error_log("Followup #{$meeting_id}: Reschedule Handler FALLÓ - " . ($n8n_result['message'] ?? 'sin detalle'));
+                        }
+                    }
+                    
+                    // ---- Email: enviar si está marcado Y el workflow no lo envió ya ----
+                    if ($send_email && !$n8n_sent_email && $meeting_id) {
+                        $email_sent = automatiza_tech_send_followup_email($meeting_id);
+                        if ($email_sent) {
+                            $wpdb->update($table_name, array('email_sent' => 1), array('id' => $meeting_id));
+                            $email_ok = true;
+                        }
+                    }
+                    
+                    // ---- WhatsApp: enviar si está marcado Y el workflow no lo envió ya ----
+                    if ($send_whatsapp && !$n8n_sent_wa && $meeting_id) {
+                        if (function_exists('automatiza_tech_send_followup_whatsapp')) {
+                            error_log("Followup #{$meeting_id}: Enviando WA de reschedule directamente (sin Reschedule Handler).");
+                            $wa_result = automatiza_tech_send_followup_whatsapp($meeting_id, 'reschedule');
+                            if ($wa_result) { $wa_ok = true; }
+                        }
+                    }
+                    
+                } else {
+                    // ============================================================
+                    // FLUJO NUEVA REUNIÓN: Crear evento + notificaciones
+                    // ============================================================
+                    
+                    if ($create_calendar_event && $meeting_id) {
+                        $n8n_result = automatiza_tech_create_followup_calendar_event($meeting_id);
+                        if ($n8n_result && $n8n_result['success']) {
+                            if (!empty($n8n_result['meet_link'])) {
+                                $wpdb->update($table_name, array('meet_link' => $n8n_result['meet_link']), array('id' => $meeting_id));
+                                $data['meet_link'] = $n8n_result['meet_link'];
+                            }
+                            $n8n_sent_email = !empty($n8n_result['email_sent']);
+                            $n8n_sent_wa = !empty($n8n_result['whatsapp_sent']);
+                            
+                            $calendar_msg = ' 📅 Evento creado en Google Calendar.';
+                            if (!empty($n8n_result['meet_link'])) {
+                                $calendar_msg .= ' 🔗 Link Meet generado automáticamente.';
+                            }
+                        } else {
+                            $calendar_msg = ' ⚠️ No se pudo crear el evento en calendario.';
+                        }
+                    }
+                    
+                    // Enviar correo si está marcado Y N8N no lo envió ya
+                    if ($send_email && $meeting_id) {
+                        if ($n8n_sent_email) {
+                            $email_ok = true;
+                            error_log("Followup #{$meeting_id}: Email ya enviado por N8N Calendar, saltando envío PHP.");
+                        } else {
+                            $meeting_updated = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $meeting_id));
+                            $email_sent = automatiza_tech_send_followup_email($meeting_id);
+                            if ($email_sent) {
+                                $wpdb->update($table_name, array('email_sent' => 1), array('id' => $meeting_id));
+                                $email_ok = true;
+                            }
+                        }
+                    }
+                    
+                    // Enviar WhatsApp si está marcado Y N8N no lo envió ya
+                    if ($send_whatsapp && $meeting_id) {
+                        if ($n8n_sent_wa) {
+                            $wa_ok = true;
+                            error_log("Followup #{$meeting_id}: WhatsApp ya enviado por N8N Calendar, saltando envío PHP.");
+                        } elseif (function_exists('automatiza_tech_send_followup_whatsapp')) {
+                            $wa_result = automatiza_tech_send_followup_whatsapp($meeting_id, 'new');
+                            if ($wa_result) { $wa_ok = true; }
                         }
                     }
                 }
                 
-                // Enviar correo si está marcado
-                if ($send_email && $meeting_id) {
-                    // Re-obtener datos actualizados (con meet_link de N8N si aplica)
-                    $meeting_updated = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $meeting_id));
-                    $email_sent = automatiza_tech_send_followup_email($meeting_id);
-                    if ($email_sent) {
-                        $wpdb->update($table_name, array('email_sent' => 1), array('id' => $meeting_id));
-                        
-                        // Mensaje de éxito con info de calendario
-                        $calendar_msg = '';
-                        if ($create_calendar_event) {
-                            if ($n8n_result && $n8n_result['success']) {
-                                $calendar_msg = ' 📅 Evento creado en Google Calendar.';
-                                if (!empty($n8n_result['meet_link'])) {
-                                    $calendar_msg .= ' 🔗 Link Meet generado automáticamente.';
-                                }
-                            } else {
-                                $calendar_msg = ' ⚠️ No se pudo crear el evento en calendario.';
-                            }
-                        }
-                        
-                        $message = '<div class="notice notice-success is-dismissible"><p>✅ Reunión ' . $action_msg . ' y correo enviado correctamente a <strong>' . esc_html($client_email) . '</strong>.' . $calendar_msg . '</p></div>';
-                    } else {
-                        $message = '<div class="notice notice-warning is-dismissible"><p>⚠️ Reunión ' . $action_msg . ' pero hubo un error al enviar el correo. Revise la configuración SMTP.</p></div>';
-                    }
-                } else {
-                    // Sin envío de correo
-                    $calendar_msg = '';
-                    if ($create_calendar_event) {
-                        if ($n8n_result && $n8n_result['success']) {
-                            $calendar_msg = ' 📅 Evento creado en Google Calendar.';
-                            if (!empty($n8n_result['meet_link'])) {
-                                $calendar_msg .= ' 🔗 Link Meet: <a href="' . esc_url($n8n_result['meet_link']) . '" target="_blank">' . esc_html($n8n_result['meet_link']) . '</a>';
-                            }
-                        } else {
-                            $calendar_msg = ' ⚠️ No se pudo crear el evento en calendario: ' . esc_html($n8n_result['message'] ?? 'Error desconocido');
-                        }
-                    }
-                    $message = '<div class="notice notice-success is-dismissible"><p>✅ Reunión ' . $action_msg . ' correctamente. No se envió correo (opción desmarcada).' . $calendar_msg . '</p></div>';
-                }
+                // Construir mensaje de resultado unificado
+                $notif_parts = [];
+                if ($send_email && $email_ok) $notif_parts[] = '📧 correo enviado';
+                if ($send_email && !$email_ok) $notif_parts[] = '⚠️ error al enviar correo';
+                if ($send_whatsapp && $wa_ok) $notif_parts[] = '💬 WhatsApp enviado';
+                if ($send_whatsapp && !$wa_ok) $notif_parts[] = '⚠️ error al enviar WhatsApp';
+                
+                $notif_msg = !empty($notif_parts) ? ' | ' . implode(' | ', $notif_parts) : ' (sin notificaciones)';
+                $message = '<div class="notice notice-success is-dismissible"><p>✅ Reunión ' . $action_msg . ' correctamente.' . $notif_msg . $calendar_msg . '</p></div>';
                 } // Cierre del else de disponibilidad
             }
         }
@@ -551,6 +661,23 @@ function automatiza_tech_followup_page() {
                                 </p>
                             </div>
                             
+                            <!-- Checkbox enviar WhatsApp -->
+                            <div style="margin-top:15px; padding:15px; background:#dcfce7; border:2px solid #22c55e; border-radius:8px;">
+                                <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:15px;">
+                                    <input type="checkbox" name="send_whatsapp" value="1" id="send_whatsapp" 
+                                        <?php echo (!$edit_meeting || !(isset($edit_meeting->whatsapp_sent) && $edit_meeting->whatsapp_sent)) ? 'checked' : ''; ?>
+                                        style="width:20px; height:20px;">
+                                    <span style="color:#15803d; font-weight:600;">💬 Enviar mensaje de WhatsApp al cliente</span>
+                                </label>
+                                <p style="margin:8px 0 0 30px; color:#16a34a; font-size:13px;">
+                                    <?php if ($edit_meeting && isset($edit_meeting->whatsapp_sent) && $edit_meeting->whatsapp_sent): ?>
+                                        ✓ Ya se envió un WhatsApp anteriormente. Marca para reenviar.
+                                    <?php else: ?>
+                                        El cliente recibirá un mensaje de WhatsApp con los detalles de la reunión y botones de Confirmar/Reagendar/Cancelar.
+                                    <?php endif; ?>
+                                </p>
+                            </div>
+                            
                             <p class="submit" style="display:flex; gap:10px;">
                                 <button type="submit" class="button button-primary button-large">
                                     <?php echo $edit_meeting ? '💾 Actualizar Reunión' : '📅 Programar Reunión'; ?>
@@ -605,6 +732,143 @@ function automatiza_tech_followup_page() {
                             .status-completed { color:#166534; font-weight:500; }
                             .status-cancelled { color:#dc2626; font-weight:500; }
                             .action-links a { margin-right:10px; text-decoration:none; }
+                            
+                            /* ========== RESPONSIVE STYLES - SEGUIMIENTOS ========== */
+                            
+                            /* Tablet (768px - 1024px) */
+                            @media screen and (max-width: 1024px) {
+                                .followup-table { font-size: 12px; }
+                                .followup-table th, .followup-table td { padding: 8px 10px; }
+                            }
+                            
+                            /* Mobile (hasta 767px) */
+                            @media screen and (max-width: 767px) {
+                                .wrap { padding: 10px !important; margin-left: 0 !important; }
+                                .wrap h1 { font-size: 18px; }
+                                
+                                /* Filtros */
+                                .tablenav.top { padding: 10px; background: #f6f7f7; border-radius: 8px; }
+                                .tablenav.top .alignleft form {
+                                    display: flex;
+                                    flex-direction: column;
+                                    gap: 10px;
+                                }
+                                .tablenav.top .alignleft form label {
+                                    display: flex;
+                                    flex-direction: column;
+                                    gap: 5px;
+                                    width: 100%;
+                                }
+                                .tablenav.top .alignleft form select,
+                                .tablenav.top .alignleft form input[type="date"] {
+                                    width: 100%;
+                                    height: 40px;
+                                    font-size: 16px;
+                                    padding: 8px 12px;
+                                }
+                                .tablenav.top .alignleft form .button {
+                                    width: 48%;
+                                    height: 40px;
+                                }
+                                
+                                /* Tabla con scroll horizontal */
+                                .followup-table-wrapper {
+                                    overflow-x: auto;
+                                    -webkit-overflow-scrolling: touch;
+                                    margin: 0 -10px;
+                                    padding: 0 10px;
+                                }
+                                .followup-table {
+                                    min-width: 650px;
+                                    font-size: 12px;
+                                }
+                                .followup-table th, .followup-table td {
+                                    padding: 8px 6px;
+                                    white-space: nowrap;
+                                }
+                                .followup-table td:first-child {
+                                    min-width: 120px;
+                                    white-space: normal;
+                                }
+                                .followup-table td:first-child small {
+                                    font-size: 10px;
+                                    word-break: break-all;
+                                }
+                                
+                                .action-links a {
+                                    margin-right: 6px;
+                                    font-size: 14px;
+                                }
+                                
+                                /* Formulario de nueva reunión */
+                                .form-table { display: block; }
+                                .form-table tbody { display: block; }
+                                .form-table tr {
+                                    display: flex;
+                                    flex-direction: column;
+                                    margin-bottom: 15px;
+                                    padding-bottom: 15px;
+                                    border-bottom: 1px solid #eee;
+                                }
+                                .form-table th {
+                                    display: block;
+                                    width: 100%;
+                                    padding: 0 0 5px 0;
+                                    font-size: 13px;
+                                }
+                                .form-table td {
+                                    display: block;
+                                    width: 100%;
+                                    padding: 0;
+                                }
+                                .form-table input[type="text"],
+                                .form-table input[type="email"],
+                                .form-table input[type="tel"],
+                                .form-table input[type="date"],
+                                .form-table input[type="time"],
+                                .form-table select,
+                                .form-table textarea {
+                                    width: 100% !important;
+                                    font-size: 16px !important;
+                                    padding: 10px 12px !important;
+                                    box-sizing: border-box;
+                                }
+                            }
+                            
+                            /* Mobile Small (hasta 480px) */
+                            @media screen and (max-width: 480px) {
+                                .wrap { padding: 5px !important; }
+                                .wrap h1 { font-size: 16px; }
+                                
+                                .followup-table {
+                                    min-width: 550px;
+                                    font-size: 11px;
+                                }
+                                .followup-table th, .followup-table td {
+                                    padding: 6px 4px;
+                                }
+                                
+                                .action-links a { margin-right: 4px; font-size: 12px; }
+                            }
+                            
+                            /* Touch improvements */
+                            @media (hover: none) and (pointer: coarse) {
+                                .tablenav.top .alignleft form select,
+                                .tablenav.top .alignleft form input[type="date"],
+                                .tablenav.top .alignleft form .button,
+                                .form-table input,
+                                .form-table select,
+                                .form-table textarea {
+                                    min-height: 44px;
+                                }
+                                .action-links a {
+                                    display: inline-block;
+                                    padding: 8px;
+                                    min-width: 44px;
+                                    min-height: 44px;
+                                    text-align: center;
+                                }
+                            }
                         </style>
                         
                         <table class="followup-table">
@@ -997,6 +1261,47 @@ function automatiza_tech_send_followup_email($meeting_id) {
         </div>';
     }
     
+    // Generar sección de timeline link para prospecto o cliente
+    $timeline_section = '';
+    if (!empty($meeting->client_email)) {
+        // Verificar si es cliente convertido
+        $tabla_clientes_email = $wpdb->prefix . 'crm_clientes';
+        $cliente_email_row = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, email FROM $tabla_clientes_email WHERE email = %s LIMIT 1",
+            $meeting->client_email
+        ));
+        if ($cliente_email_row) {
+            // Cliente convertido → enlace a ficha pública existente
+            $token_cl = md5($cliente_email_row->id . 'AUTOMATIZA_CRM_V2' . $cliente_email_row->email);
+            $timeline_link = 'https://automatizatech.cl/?crm_view=timeline&cid=' . $cliente_email_row->id . '&token=' . $token_cl;
+            $timeline_section = '
+            <div style="background: linear-gradient(135deg, #ebf4ff, #e0e7ff); border: 2px solid #667eea; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center;">
+                <p style="color: #4c51bf; margin: 0 0 15px 0; font-size: 16px;"><strong>📂 Tu Portal de Cliente</strong></p>
+                <p style="color: #555; margin: 0 0 15px; font-size: 14px;">Accede a tu ficha personalizada para ver proyectos, historial y consultar con MAXTECH 🤖</p>
+                <a href="' . esc_url($timeline_link) . '" 
+                   style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: #ffffff !important; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 15px; box-shadow: 0 4px 15px rgba(102,126,234,0.3);">
+                    🔗 Ver Mi Portal
+                </a>
+            </div>';
+        } else {
+            // Prospecto → enlace a timeline de prospecto
+            if (class_exists('AutomatizaTech_CRM_AI') && method_exists('AutomatizaTech_CRM_AI', 'get_prospect_timeline_url_by_email')) {
+                $prospect_link = AutomatizaTech_CRM_AI::get_prospect_timeline_url_by_email($meeting->client_email);
+                if ($prospect_link) {
+                    $timeline_section = '
+                    <div style="background: linear-gradient(135deg, #ebf4ff, #e0e7ff); border: 2px solid #667eea; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center;">
+                        <p style="color: #4c51bf; margin: 0 0 15px 0; font-size: 16px;"><strong>📋 Tu Seguimiento</strong></p>
+                        <p style="color: #555; margin: 0 0 15px; font-size: 14px;">Revisa el historial completo de tu proceso, propuesta y reuniones con nosotros.</p>
+                        <a href="' . esc_url($prospect_link) . '" 
+                           style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: #ffffff !important; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 15px; box-shadow: 0 4px 15px rgba(102,126,234,0.3);">
+                            🔗 Ver Mi Seguimiento
+                        </a>
+                    </div>';
+                }
+            }
+        }
+    }
+    
     // Template HTML con colores corporativos TURQUESA
     $html = '
 <!DOCTYPE html>
@@ -1201,6 +1506,8 @@ function automatiza_tech_send_followup_email($meeting_id) {
             
             ' . $meet_section . '
             
+            ' . $timeline_section . '
+            
             <div class="tips-box">
                 <h4 style="color:#0f766e;margin-bottom:10px;">&#128161; Para aprovechar al maximo la reunion:</h4>
                 <ul>
@@ -1246,7 +1553,9 @@ function automatiza_tech_send_followup_email($meeting_id) {
         'Content-Type: text/html; charset=UTF-8',
         'From: Automatiza Tech <' . $from_email . '>',
         'Reply-To: ' . $contact_email,
-        'Bcc: automatizacionesbotcore@gmail.com'
+        'Bcc: automatizacionesbotcore@gmail.com',
+        'Bcc: lgonzalez@automatizatech.cl',
+        'Bcc: adriana.perez@automatizatech.cl'
     );
     
     $subject = '📅 ' . $meeting->meeting_subject . ' - ' . $formatted_date;
@@ -1293,7 +1602,16 @@ add_action('wp_ajax_followup_update_status', 'automatiza_tech_followup_update_st
  * AJAX Handler para verificar disponibilidad de horario
  */
 function automatiza_tech_followup_check_availability_ajax() {
-    check_ajax_referer('followup_availability_nonce', 'nonce');
+    // Aceptar tanto el nonce de followup como el nonce del CRM
+    $nonce_valid = false;
+    if (!empty($_POST['nonce'])) {
+        if (wp_verify_nonce($_POST['nonce'], 'followup_availability_nonce') || wp_verify_nonce($_POST['nonce'], 'crm_nonce')) {
+            $nonce_valid = true;
+        }
+    }
+    if (!$nonce_valid) {
+        wp_send_json_error('Nonce inválido');
+    }
     
     if (!current_user_can('manage_options')) {
         wp_send_json_error('Permisos insuficientes');
@@ -1415,6 +1733,9 @@ function automatiza_tech_create_followup_calendar_event($meeting_id) {
             'success' => true,
             'meet_link' => $result['meet_link'] ?? '',
             'event_id' => $result['event_id'] ?? '',
+            'meeting_id' => $result['meeting_id'] ?? '',
+            'email_sent' => !empty($result['email_sent']),
+            'whatsapp_sent' => !empty($result['whatsapp_sent']),
             'message' => $result['message'] ?? 'Evento creado exitosamente'
         );
     } else {
@@ -1422,9 +1743,150 @@ function automatiza_tech_create_followup_calendar_event($meeting_id) {
             'success' => false,
             'meet_link' => '',
             'event_id' => '',
+            'meeting_id' => '',
+            'email_sent' => false,
+            'whatsapp_sent' => false,
             'message' => $result['message'] ?? $result['error'] ?? 'Error desconocido de N8N (HTTP ' . $response_code . ')'
         );
     }
+}
+
+/**
+ * Enviar notificación WhatsApp de reunión de seguimiento via N8N Webhook
+ * Envía un mensaje interactivo con botones de confirmar/reagendar/cancelar
+ * 
+ * @param int $meeting_id ID de la reunión en la tabla followup_meetings
+ * @return bool True si se envió correctamente
+ */
+function automatiza_tech_send_followup_whatsapp($meeting_id, $context = 'new') {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
+    
+    $meeting = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $meeting_id));
+    
+    if (!$meeting) {
+        error_log('WhatsApp Followup: Reunión no encontrada ID ' . $meeting_id);
+        return false;
+    }
+    
+    // Verificar que tenga teléfono válido
+    $phone_raw = trim($meeting->phone ?? '');
+    $phone_digits = preg_replace('/[^0-9]/', '', $phone_raw);
+    if (strlen($phone_digits) < 8) {
+        error_log("WhatsApp Followup #{$meeting_id}: Teléfono inválido '{$phone_raw}' (solo {$phone_digits} dígitos)");
+        return false;
+    }
+    
+    // Asegurar formato internacional con + (Chile por defecto)
+    if (strlen($phone_digits) === 9 && substr($phone_digits, 0, 1) === '9') {
+        $phone_digits = '56' . $phone_digits;
+    }
+    // Formato final: con símbolo + para WhatsApp API
+    $phone = '+' . $phone_digits;
+    
+    // Formatear fecha en español
+    $days_es = array('Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado');
+    $months_es = array('', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre');
+    $day_num = date('w', strtotime($meeting->meeting_date));
+    $month_num = date('n', strtotime($meeting->meeting_date));
+    $day = date('d', strtotime($meeting->meeting_date));
+    $year = date('Y', strtotime($meeting->meeting_date));
+    $formatted_date = $days_es[$day_num] . ' ' . $day . ' de ' . $months_es[$month_num] . ' de ' . $year;
+    $formatted_time = substr($meeting->meeting_time, 0, 5);
+    
+    // Auto-detectar tipo de reunión:
+    // Si el email existe en wp_crm_clientes → es cliente convertido (seguimiento)
+    // Si NO existe → es prospecto que ya tuvo demo (seguimiento_prospecto)
+    $meeting_type = 'seguimiento_prospecto'; // Por defecto: prospecto
+    $ficha_url = '';
+    
+    if (!empty($meeting->client_email)) {
+        $tabla_clientes = $wpdb->prefix . 'crm_clientes';
+        $cliente_row = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, email FROM $tabla_clientes WHERE email = %s LIMIT 1",
+            $meeting->client_email
+        ));
+        if ($cliente_row) {
+            // Es cliente convertido → tipo seguimiento con ficha
+            $meeting_type = 'seguimiento';
+            $token = md5($cliente_row->id . 'AUTOMATIZA_CRM_V2' . $cliente_row->email);
+            $ficha_url = 'https://automatizatech.cl/?crm_view=timeline&cid=' . $cliente_row->id . '&token=' . $token;
+        }
+    }
+    
+    // Para prospectos, generar URL de timeline de prospecto
+    $prospect_timeline_url = '';
+    if ($meeting_type === 'seguimiento_prospecto' && !empty($meeting->client_email)) {
+        if (class_exists('AutomatizaTech_CRM_AI') && method_exists('AutomatizaTech_CRM_AI', 'get_prospect_timeline_url_by_email')) {
+            $prospect_timeline_url = AutomatizaTech_CRM_AI::get_prospect_timeline_url_by_email($meeting->client_email);
+        }
+    }
+    
+    error_log("WhatsApp Followup #{$meeting_id}: Tipo detectado = {$meeting_type}");
+    
+    // Construir datos del payload para N8N
+    $payload = array(
+        'action' => 'send_followup_whatsapp',
+        'type' => $meeting_type,       // 'seguimiento' o 'seguimiento_prospecto'
+        'context' => $context,          // 'new' o 'reschedule'
+        'meeting_id' => $meeting_id,
+        'phone' => $phone,
+        'client_name' => $meeting->client_name,
+        'client_email' => $meeting->client_email,
+        'company_name' => $meeting->company_name ?? '',
+        'meeting_date' => $meeting->meeting_date,
+        'meeting_time' => $meeting->meeting_time,
+        'formatted_date' => $formatted_date,
+        'formatted_time' => $formatted_time,
+        'meeting_subject' => $meeting->meeting_subject ?? 'Reunión de Seguimiento',
+        'meet_link' => $meeting->meet_link ?? '',
+        'notes' => $meeting->notes ?? '',
+        'source' => 'crm_ficha_cliente',
+        'ficha_url' => $ficha_url,
+        'prospect_timeline_url' => $prospect_timeline_url,
+    );
+    
+    // URL del webhook de N8N para WhatsApp de seguimiento
+    $n8n_webhook_url = 'https://n8n-n8n.kchiba.easypanel.host/webhook/followup-whatsapp';
+    
+    $response = wp_remote_post($n8n_webhook_url, array(
+        'method' => 'POST',
+        'timeout' => 30,
+        'headers' => array(
+            'Content-Type' => 'application/json',
+        ),
+        'body' => json_encode($payload)
+    ));
+    
+    if (is_wp_error($response)) {
+        error_log('WhatsApp Followup Error: ' . $response->get_error_message());
+        return false;
+    }
+    
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+    
+    error_log("WhatsApp Followup #{$meeting_id} Response Code: " . $response_code);
+    error_log("WhatsApp Followup #{$meeting_id} Response Body: " . $response_body);
+    error_log("WhatsApp Followup #{$meeting_id} Payload enviado: " . json_encode($payload));
+    
+    // Si el body está vacío con 200, el workflow N8N probablemente no está activo o tiene error interno
+    if ($response_code === 200 && empty(trim($response_body))) {
+        error_log("WhatsApp Followup #{$meeting_id}: ALERTA - N8N respondió 200 con body vacío. Verificar que el workflow Followup_WhatsApp_Send esté ACTIVO en N8N y que las credenciales WhatsApp Tech estén configuradas.");
+        return false;
+    }
+    
+    $result = json_decode($response_body, true);
+    
+    if ($response_code === 200 && is_array($result) && (!isset($result['success']) || $result['success'])) {
+        // Actualizar whatsapp_sent en BD
+        $wpdb->update($table_name, ['whatsapp_sent' => 1], ['id' => $meeting_id]);
+        error_log("WhatsApp Followup #{$meeting_id}: Enviado exitosamente al {$phone}");
+        return true;
+    }
+    
+    error_log("WhatsApp Followup #{$meeting_id}: N8N respondió con error HTTP {$response_code} - Body: {$response_body}");
+    return false;
 }
 
 /**
@@ -1452,6 +1914,21 @@ function automatiza_tech_register_followup_api_routes() {
         'methods' => 'POST',
         'callback' => 'automatiza_tech_update_followup_meet_link',
         'permission_callback' => '__return_true', // N8N llama sin autenticación
+        'args' => array(
+            'id' => array(
+                'required' => true,
+                'validate_callback' => function($param) {
+                    return is_numeric($param);
+                }
+            )
+        )
+    ));
+    
+    // Endpoint para marcar WhatsApp como enviado (llamado desde N8N Followup_WhatsApp_Send)
+    register_rest_route('automatiza-tech/v1', '/followup-meetings/(?P<id>\d+)/mark-whatsapp-sent', array(
+        'methods' => 'POST',
+        'callback' => 'automatiza_tech_mark_followup_whatsapp_sent',
+        'permission_callback' => '__return_true',
         'args' => array(
             'id' => array(
                 'required' => true,
@@ -2019,6 +2496,54 @@ function automatiza_tech_confirm_followup_attendance($request) {
 /**
  * Callback para actualizar el meet_link de una reunión desde N8N
  */
+/**
+ * Marcar WhatsApp como enviado en tabla followup_meetings
+ * Llamado desde N8N Followup_WhatsApp_Send workflow
+ */
+function automatiza_tech_mark_followup_whatsapp_sent($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
+    $meeting_id = intval($request['id']);
+    
+    // Verificar que exista la reunión
+    $meeting = $wpdb->get_row($wpdb->prepare("SELECT id FROM $table_name WHERE id = %d", $meeting_id));
+    if (!$meeting) {
+        return new WP_REST_Response(array(
+            'success' => false,
+            'message' => 'Reunión no encontrada'
+        ), 404);
+    }
+    
+    // Asegurar que existan las columnas necesarias
+    $col_sent = $wpdb->get_var("SHOW COLUMNS FROM $table_name LIKE 'whatsapp_sent'");
+    if (!$col_sent) {
+        $wpdb->query("ALTER TABLE $table_name ADD COLUMN whatsapp_sent tinyint(1) DEFAULT 0");
+    }
+    $col_sent_at = $wpdb->get_var("SHOW COLUMNS FROM $table_name LIKE 'whatsapp_sent_at'");
+    if (!$col_sent_at) {
+        $wpdb->query("ALTER TABLE $table_name ADD COLUMN whatsapp_sent_at datetime DEFAULT NULL");
+    }
+    
+    $result = $wpdb->update($table_name, [
+        'whatsapp_sent' => 1,
+        'whatsapp_sent_at' => current_time('mysql')
+    ], ['id' => $meeting_id]);
+    
+    if ($result !== false) {
+        error_log("Followup #{$meeting_id}: WhatsApp marcado como enviado via API (N8N callback)");
+        return new WP_REST_Response(array(
+            'success' => true,
+            'message' => 'WhatsApp marcado como enviado',
+            'meeting_id' => $meeting_id
+        ), 200);
+    }
+    
+    return new WP_REST_Response(array(
+        'success' => false,
+        'message' => 'Error al actualizar la reunión'
+    ), 500);
+}
+
 function automatiza_tech_update_followup_meet_link($request) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
@@ -2360,6 +2885,33 @@ function automatiza_tech_followup_email_cancel($request) {
     
     error_log("Followup Meeting #{$meeting_id} CANCELADO desde Email (confirmado) - Cliente: {$meeting->client_name}");
     
+    // Notificar a los administradores sobre la cancelación
+    $fecha_cancelada = date('d/m/Y', strtotime($meeting->meeting_date));
+    $hora_cancelada = substr($meeting->meeting_time, 0, 5);
+    $cancel_subject = '❌ Reunión Cancelada por Cliente - ' . $meeting->client_name;
+    $cancel_body = '<html><body style="font-family:Segoe UI,Arial,sans-serif;">';
+    $cancel_body .= '<div style="max-width:600px;margin:0 auto;padding:20px;">';
+    $cancel_body .= '<div style="background:#fef2f2;border-left:4px solid #ef4444;padding:20px;border-radius:8px;">';
+    $cancel_body .= '<h2 style="color:#dc2626;margin-top:0;">❌ Reunión Cancelada por el Cliente</h2>';
+    $cancel_body .= '<p>El cliente ha cancelado su reunión de seguimiento desde el enlace del correo.</p>';
+    $cancel_body .= '<table style="width:100%;border-collapse:collapse;margin:15px 0;">';
+    $cancel_body .= '<tr><td style="padding:8px;font-weight:bold;color:#555;">👤 Cliente:</td><td style="padding:8px;">' . esc_html($meeting->client_name) . '</td></tr>';
+    $cancel_body .= '<tr><td style="padding:8px;font-weight:bold;color:#555;">📧 Email:</td><td style="padding:8px;">' . esc_html($meeting->client_email) . '</td></tr>';
+    $cancel_body .= '<tr><td style="padding:8px;font-weight:bold;color:#555;">🏢 Empresa:</td><td style="padding:8px;">' . esc_html($meeting->company_name ?: 'N/A') . '</td></tr>';
+    $cancel_body .= '<tr><td style="padding:8px;font-weight:bold;color:#555;">📋 Asunto:</td><td style="padding:8px;">' . esc_html($meeting->meeting_subject ?: 'Reunión de Seguimiento') . '</td></tr>';
+    $cancel_body .= '<tr><td style="padding:8px;font-weight:bold;color:#555;">📅 Fecha:</td><td style="padding:8px;">' . $fecha_cancelada . '</td></tr>';
+    $cancel_body .= '<tr><td style="padding:8px;font-weight:bold;color:#555;">🕐 Hora:</td><td style="padding:8px;">' . $hora_cancelada . ' hrs</td></tr>';
+    $cancel_body .= '</table>';
+    $cancel_body .= '<p style="color:#888;font-size:12px;">Cancelado el ' . date('d/m/Y H:i') . ' hrs (Chile)</p>';
+    $cancel_body .= '</div></div></body></html>';
+    
+    $cancel_headers = array(
+        'Content-Type: text/html; charset=UTF-8',
+        'From: Automatiza Tech <noreply@automatizatech.cl>'
+    );
+    wp_mail('lgonzalez@automatizatech.cl', $cancel_subject, $cancel_body, $cancel_headers);
+    wp_mail('adriana.perez@automatizatech.cl', $cancel_subject, $cancel_body, $cancel_headers);
+    
     automatiza_tech_render_followup_action_page($logo_src, $site_title, $home_url,
         'Reunión Cancelada',
         "Lamentamos que no puedas asistir, <strong>{$meeting->client_name}</strong>.<br><br>
@@ -2692,8 +3244,34 @@ function automatiza_tech_followup_reschedule_api($request) {
 function automatiza_tech_call_followup_reschedule_workflow($meeting, $new_date, $new_time, $old_event_id = null) {
     $webhook_url = 'https://n8n-n8n.kchiba.easypanel.host/webhook/followup-reschedule';
     
+    // Auto-detectar tipo: prospecto vs cliente convertido
+    $ficha_url = '';
+    $meeting_type = 'seguimiento_prospecto';
+    if (!empty($meeting->client_email)) {
+        global $wpdb;
+        $tabla_clientes = $wpdb->prefix . 'crm_clientes';
+        $cliente_row = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, email FROM $tabla_clientes WHERE email = %s LIMIT 1",
+            $meeting->client_email
+        ));
+        if ($cliente_row) {
+            $meeting_type = 'seguimiento';
+            $token = md5($cliente_row->id . 'AUTOMATIZA_CRM_V2' . $cliente_row->email);
+            $ficha_url = 'https://automatizatech.cl/?crm_view=timeline&cid=' . $cliente_row->id . '&token=' . $token;
+        }
+    }
+
+    // Para prospectos, generar URL de timeline de prospecto (reschedule)
+    $prospect_timeline_url_resc = '';
+    if ($meeting_type === 'seguimiento_prospecto' && !empty($meeting->client_email)) {
+        if (class_exists('AutomatizaTech_CRM_AI') && method_exists('AutomatizaTech_CRM_AI', 'get_prospect_timeline_url_by_email')) {
+            $prospect_timeline_url_resc = AutomatizaTech_CRM_AI::get_prospect_timeline_url_by_email($meeting->client_email);
+        }
+    }
+
     $payload = array(
         'meeting_id' => $meeting->id,
+        'type' => $meeting_type,       // 'seguimiento' o 'seguimiento_prospecto'
         'date' => $new_date,
         'time' => $new_time,
         'client_email' => $meeting->client_email,
@@ -2701,7 +3279,9 @@ function automatiza_tech_call_followup_reschedule_workflow($meeting, $new_date, 
         'company_name' => $meeting->company_name,
         'phone' => $meeting->phone,
         'meeting_subject' => $meeting->meeting_subject ?: 'Reunión de Seguimiento',
-        'old_event_id' => $old_event_id
+        'old_event_id' => $old_event_id,
+        'ficha_url' => $ficha_url,
+        'prospect_timeline_url' => $prospect_timeline_url_resc,
     );
     
     // Debug: Log del payload que se envía
@@ -2852,7 +3432,9 @@ function automatiza_tech_send_followup_reschedule_email($meeting_id, $new_date, 
     // Enviar correo
     $headers = array(
         'Content-Type: text/html; charset=UTF-8',
-        'From: ' . $site_title . ' <noreply@automatizatech.cl>'
+        'From: ' . $site_title . ' <noreply@automatizatech.cl>',
+        'Bcc: lgonzalez@automatizatech.cl',
+        'Bcc: adriana.perez@automatizatech.cl'
     );
     
     $email_subject = '🔄 Reunión Reagendada - ' . $formatted_date . ' a las ' . $formatted_time . ' hrs';

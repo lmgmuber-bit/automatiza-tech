@@ -6,29 +6,32 @@
         "rule": {
           "interval": [
             {
-              "field": "cronExpression",
-              "expression": "0 20 * * *"
+              "triggerAtHour": 20
             }
           ]
         }
       },
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [260, 300],
-      "id": "cron-8pm-wa",
+      "position": [
+        -112,
+        160
+      ],
+      "id": "32b7dce4-b5c4-4fc9-8ea3-84bb459e5ddb",
       "name": "Cron 8PM Chile"
     },
     {
       "parameters": {
-        "url": "https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/reminders-wa-8pm",
-        "options": {
-          "splitIntoItems": true
-        }
+        "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/reminders-wa-8pm",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [480, 300],
-      "id": "get-leads-8pm-wa",
+      "position": [
+        112,
+        160
+      ],
+      "id": "997bcc9c-d837-4cbd-a392-a6688786342a",
       "name": "Get Seguimientos Tomorrow"
     },
     {
@@ -56,8 +59,11 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [700, 300],
-      "id": "has-leads-8pm-wa",
+      "position": [
+        336,
+        160
+      ],
+      "id": "0771b1e8-0f0b-43d8-ace7-cfaec73201e9",
       "name": "Has Meetings?"
     },
     {
@@ -66,29 +72,37 @@
       },
       "type": "n8n-nodes-base.limit",
       "typeVersion": 1,
-      "position": [920, 260],
-      "id": "limit-8pm-wa",
+      "position": [
+        544,
+        112
+      ],
+      "id": "846d7a89-ea60-4428-a17b-fbf9bfe9cdde",
       "name": "Limit 10 Anti-Spam"
     },
     {
       "parameters": {
-        "batchSize": 1,
         "options": {}
       },
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [1140, 260],
-      "id": "split-batches-8pm-wa",
+      "position": [
+        768,
+        112
+      ],
+      "id": "9c281c48-4481-4d5c-bb0a-9783f13537f0",
       "name": "Split In Batches"
     },
     {
       "parameters": {
-        "jsCode": "// Preparar datos para envío de WhatsApp\nconst meeting = $input.first().json;\n\n// Limpiar teléfono\nconst phone = (meeting.phone || '').replace(/^\\+/, '');\n\n// Información personalizada\nconst clientName = meeting.name || 'Cliente';\nconst companyName = meeting.company_name || '';\nconst projectInfo = meeting.meeting_subject || 'Reunión de Seguimiento';\n\n// Construir saludo personalizado\nlet greeting = `Hola ${clientName}`;\nif (companyName) {\n  greeting += ` de *${companyName}*`;\n}\n\n// Construir mensaje\nconst messageBody = `📅 *Recordatorio - Tu reunión de seguimiento es mañana*\\n\\n${greeting}, te recordamos tu próxima reunión con AutomatizaTech.\\n\\n📋 *Proyecto:* ${projectInfo}\\n📅 *Fecha:* ${meeting.scheduled_date}\\n🕐 *Hora:* ${meeting.scheduled_time} hrs\\n📍 *Enlace:* ${meeting.meet_link || 'Te llegará por correo'}\\n\\n💡 *Recordatorio:*\\n• Recibirás otro recordatorio el día de la reunión\\n• Asegúrate de tener buena conexión a internet\\n• El enlace de Meet ya está configurado arriba\\n\\n¿Podrás asistir mañana?`;\n\nreturn {\n  json: {\n    meeting_id: meeting.id,\n    phone: phone,\n    clientName: clientName,\n    companyName: companyName,\n    projectInfo: projectInfo,\n    messageBody: messageBody,\n    btnConfirmId: `btn_followup_confirm_${meeting.id}`,\n    btnRescheduleId: `btn_followup_reschedule_${meeting.id}`,\n    btnCancelId: `btn_followup_cancel_${meeting.id}`\n  }\n};"
+        "jsCode": "// Preparar datos para envío de WhatsApp\nconst meeting = $input.first().json;\n\n// Limpiar teléfono\nconst phone = (meeting.phone || '').replace(/^\\+/, '');\n\n// Información personalizada\nconst clientName = meeting.name || 'Cliente';\nconst companyName = meeting.company_name || '';\nconst projectInfo = meeting.meeting_subject || 'Reunión de Seguimiento';\n\n// Construir saludo personalizado\nlet greeting = `Hola ${clientName}`;\nif (companyName) {\n  greeting += ` de *${companyName}*`;\n}\n\n// Construir mensaje\nconst messageBody = `📅 *Recordatorio - Tu reunión de seguimiento es mañana*\\n\\n${greeting}, te recordamos tu próxima reunión con AutomatizaTech.\\n\\n📋 *Proyecto:* ${projectInfo}\\n📅 *Fecha:* ${meeting.scheduled_date}\\n🕐 *Hora:* ${meeting.scheduled_time} hrs\\n📍 *Enlace:* ${meeting.meet_link || 'Te llegará por correo'}\\n\\n💡 *Recordatorio:*\\n•Recibirás otro recordatorio el día de la reunión\\n•Asegúrate de tener buena conexión a internet\\n•El enlace de Meet ya está configurado arriba\\n\\n¿Podrás asistir mañana?`;\n\nreturn {\n  json: {\n    meeting_id: meeting.id,\n    phone: phone,\n    clientName: clientName,\n    companyName: companyName,\n    projectInfo: projectInfo,\n    messageBody: messageBody,\n    btnConfirmId: `btn_followup_confirm_${meeting.id}`,\n    btnRescheduleId: `btn_followup_reschedule_${meeting.id}`,\n    btnCancelId: `btn_followup_cancel_${meeting.id}`\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1360, 260],
-      "id": "prepare-wa-8pm",
+      "position": [
+        992,
+        112
+      ],
+      "id": "3fad9aa4-51f1-4384-9e6b-289b0d12d893",
       "name": "Prepare WA Data"
     },
     {
@@ -96,21 +110,24 @@
         "method": "POST",
         "url": "https://graph.facebook.com/v22.0/946501128543201/messages",
         "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "httpCustomAuth",
+        "nodeCredentialType": "whatsAppApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"button\",\n    \"body\": {\n      \"text\": {{ JSON.stringify($json.messageBody) }}\n    },\n    \"action\": {\n      \"buttons\": [\n        { \"type\": \"reply\", \"reply\": { \"id\": \"{{ $json.btnConfirmId }}\", \"title\": \"✅ Confirmo\" }},\n        { \"type\": \"reply\", \"reply\": { \"id\": \"{{ $json.btnRescheduleId }}\", \"title\": \"🔄 Reagendar\" }},\n        { \"type\": \"reply\", \"reply\": { \"id\": \"{{ $json.btnCancelId }}\", \"title\": \"❌ Cancelar\" }}\n      ]\n    }\n  }\n}",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"button\",\n    \"body\": {\n      \"text\": {{ JSON.stringify($json.messageBody) }}\n    },\n    \"action\": {\n      \"buttons\": [\n        { \"type\": \"reply\", \"reply\": { \"id\": \"{{ $json.btnConfirmId }}\", \"title\": \"✅Confirmo\" }},\n        { \"type\": \"reply\", \"reply\": { \"id\": \"{{ $json.btnRescheduleId }}\", \"title\": \"🔄 Reagendar\" }},\n        { \"type\": \"reply\", \"reply\": { \"id\": \"{{ $json.btnCancelId }}\", \"title\": \"❌Cancelar\" }}\n      ]\n    }\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1580, 260],
-      "id": "send-wa-8pm",
+      "position": [
+        1216,
+        112
+      ],
+      "id": "48188b37-a1fc-4c89-9ed6-ac976ea12875",
       "name": "Send WhatsApp",
       "credentials": {
-        "httpCustomAuth": {
-          "id": "JhVF3l8jRxBpP1n1",
-          "name": "WhatsApp Graph API"
+        "whatsAppApi": {
+          "id": "SH8OXr93p852Ll6m",
+          "name": "WhatsApp Tech"
         }
       }
     },
@@ -122,30 +139,38 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1800, 260],
-      "id": "mark-sent-8pm-wa",
+      "position": [
+        1424,
+        112
+      ],
+      "id": "d2adf024-60f6-46a8-992b-8af2244483d9",
       "name": "Mark as Sent"
     },
     {
-      "parameters": {
-        "amount": 5,
-        "unit": "seconds"
-      },
+      "parameters": {},
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [2020, 260],
-      "id": "wait-8pm-wa",
-      "name": "Wait 5s Rate Limit"
+      "position": [
+        1648,
+        112
+      ],
+      "id": "af2fad74-aff5-45b6-befb-9e9efcaf988d",
+      "name": "Wait 5s Rate Limit",
+      "webhookId": "2b615c37-1f56-47a1-a452-3c7e62287795"
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [920, 420],
-      "id": "no-leads-8pm-wa",
+      "position": [
+        544,
+        272
+      ],
+      "id": "ce1471e7-0a2a-48ee-834f-815cfa627851",
       "name": "No Meetings"
     }
   ],
+  "pinData": {},
   "connections": {
     "Cron 8PM Chile": {
       "main": [
@@ -255,9 +280,19 @@
       ]
     }
   },
+  "active": true,
   "settings": {
     "executionOrder": "v1",
-    "timezone": "America/Santiago"
+    "timeSavedMode": "fixed",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "p7ISUf0J5GycHscc"
   },
-  "active": false
+  "versionId": "2056f067-4dee-46eb-a2ca-6cdb80ca3080",
+  "meta": {
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "id": "uU39aWmvJ4gGj8T2",
+  "tags": []
 }

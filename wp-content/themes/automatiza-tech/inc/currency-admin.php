@@ -306,6 +306,97 @@ class AutomatizaTech_Currency_Admin {
             @keyframes spinner-border {
                 to { transform: rotate(360deg); }
             }
+            
+            /* ==================== ESTILOS RESPONSIVOS CURRENCY ADMIN ==================== */
+            
+            /* Tablet (1024px y menos) */
+            @media screen and (max-width: 1024px) {
+                .wrap[style*="max-width: 1400px"] {
+                    max-width: 100% !important;
+                    padding: 0 15px;
+                }
+            }
+            
+            /* Mobile (767px y menos) */
+            @media screen and (max-width: 767px) {
+                .wrap h1 {
+                    font-size: 20px;
+                }
+                .wrap > p.description {
+                    font-size: 14px;
+                }
+                
+                /* Grid de cards */
+                div[style*="grid-template-columns"] {
+                    grid-template-columns: 1fr !important;
+                    gap: 15px !important;
+                    padding: 0 !important;
+                }
+                
+                /* Postbox cards */
+                .postbox {
+                    padding: 15px !important;
+                }
+                .postbox h2 {
+                    font-size: 16px;
+                }
+                
+                /* Tipo de cambio grande */
+                div[style*="font-size: 2.5em"] {
+                    font-size: 2em !important;
+                }
+                
+                /* Botón actualizar */
+                #update-now-btn {
+                    height: 50px !important;
+                    font-size: 1em !important;
+                }
+                
+                /* Tabla de servicios - scroll horizontal */
+                .postbox table.wp-list-table {
+                    display: block;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                }
+                .postbox table.wp-list-table {
+                    min-width: 600px;
+                }
+                .postbox table.wp-list-table th,
+                .postbox table.wp-list-table td {
+                    padding: 10px 8px;
+                    font-size: 13px;
+                }
+                
+                /* Info box */
+                div[style*="border-left: 4px solid #1e3a8a"] {
+                    padding: 12px !important;
+                }
+                div[style*="border-left: 4px solid #1e3a8a"] h4 {
+                    font-size: 15px;
+                }
+                div[style*="border-left: 4px solid #1e3a8a"] ul {
+                    font-size: 13px;
+                    padding-left: 15px !important;
+                }
+            }
+            
+            /* Móviles pequeños (480px y menos) */
+            @media screen and (max-width: 480px) {
+                div[style*="font-size: 2.5em"] {
+                    font-size: 1.8em !important;
+                }
+                .postbox table.wp-list-table {
+                    min-width: 500px;
+                    font-size: 12px;
+                }
+            }
+            
+            /* Touch-friendly */
+            @media (hover: none) and (pointer: coarse) {
+                #update-now-btn {
+                    min-height: 50px;
+                }
+            }
         </style>
         <?php
     }

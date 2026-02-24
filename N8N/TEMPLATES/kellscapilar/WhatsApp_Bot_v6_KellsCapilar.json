@@ -617,7 +617,7 @@
         "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ (function() { const data = $json; return JSON.stringify({ from: data.businessPhone, to: data.phoneNumber, type: 'text', text: { body: '⚠️ *Transferencia ya registrada*\\n\\nLo sentimos, el ID de transferencia #' + data.transferId + ' ya fue utilizado para confirmar otra cita.\\n\\n🔄 *Por favor:*\\n\\n1️⃣ Realiza una nueva transferencia\\n2️⃣ Toma una captura de pantalla del nuevo comprobante\\n3️⃣ Envíamela para validar tu pago\\n\\n💡 Recuerda que cada transferencia debe tener un ID de transferencia único.\\n\\n¿Necesitas ayuda? Estamos aquí para asistirte 😊' } }); })() }}",
+        "jsonBody": "={{ (function() { const data = $json; return JSON.stringify({ from: data.businessPhone, to: data.phoneNumber, type: 'text', text: { body: '⚠️ *Transferencia ya registrada*\\n\\nLo sentimos, el ID de transferencia #' + data.transferId + ' ya fue utilizado para confirmar otra cita.\\n\\n🔄 *Por favor:*\\n\\n1️⃣ Realiza una nueva transferencia\\n2️⃣ Toma una captura de pantalla del nuevo comprobante\\n3️⃣ Envíamela para validar tu pago\\n\\n💡 Recuerda que cada transferencia debe tener un ID único.\\n\\n📲 *Intenta de nuevo con una transferencia válida*\\n\\n¿Necesitas ayuda? Estamos aquí para asistirte 😊' } }); })() }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -649,7 +649,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        365168,
+        365380,
         178960
       ],
       "id": "93fbe86e-e673-4233-b9b1-2c5409607b33",
@@ -663,7 +663,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ===========================================\n// VALIDATE TRANSFER_ID UNIQUENESS AGAINST GOOGLE SHEETS\n// ===========================================\nconst input = $json;\nconst transferId = input.transferId || input.validationResult?.transfer_id_normalized || '';\n\n// Get all existing citas from Google Sheets (passed from previous node)\nconst allCitas = input.allCitas || [];\n\n// Check if transfer_id already exists in any confirmed appointment\nif (transferId) {\n  const transferIdStr = String(transferId).trim();\n  \n  // Check against all confirmed citas in Google Sheets\n  const duplicateInSheets = allCitas.some(cita => {\n    const citaTransferId = String(cita.transfer_id || cita.id_transferencia || '').trim();\n    const citaEstado = String(cita.estado || '').toLowerCase();\n    return citaTransferId === transferIdStr && (citaEstado === 'confirmado' || citaEstado === 'pago validado');\n  });\n  \n  if (duplicateInSheets) {\n    return [{\n      json: {\n        error: true,\n        mensaje: '❌ *Este ID de transferencia ya fue utilizado*\\n\\nNo puedes usar el mismo comprobante de pago dos veces. Por favor, verifica el número de transferencia e intenta con otro comprobante.',\n        transferId: transferId,\n        skipAppointment: true\n      }\n    }];\n  }\n}\n\n// ===========================================\n// PREPARE CONFIRMED APPOINTMENT FOR GOOGLE SHEETS\n// ===========================================\nconst appointment = input.pendingAppointment;\nconst staticData = $getWorkflowStaticData('global');\nconst phoneNumber = input.phoneNumber;\n\n// Clear pending payment and selection\nif (staticData.pendingPayments) {\n  delete staticData.pendingPayments[phoneNumber];\n}\nif (staticData.serviceSelections) {\n  delete staticData.serviceSelections[phoneNumber];\n}\n\n// Get business config if available\nconst businessConfig = staticData.businessConfig || {};\n\n// Get binary data (payment proof image)\nconst binaryData = $binary;\n\n// Return data for Google Sheets with status CONFIRMED\nreturn [{\n  json: {\n    id: appointment.id || appointment.appointmentId,\n    nombre: appointment.nombre || appointment.contactName,\n    email: '',\n    telefono: appointment.telefono || appointment.phoneNumber,\n    servicio: appointment.servicio,\n    fecha: appointment.fecha || appointment.selectedDay,\n    hora: appointment.hora,\n    hora_fin: appointment.hora_fin,\n    estado: 'Confirmado',\n    precio: appointment.precio,\n    notas: 'Pago validado automáticamente por IA - ' + new Date().toISOString(),\n    creado: appointment.creado || appointment.createdAt || new Date().toISOString(),\n    negocio_id: appointment.negocio_id || '1',\n    negocio_email: businessConfig.email || 'Kellysisabel1504@gmail.com',\n    negocio_nombre: businessConfig.nombre || 'Kells Capilar',\n    displayDate: appointment.displayDate || appointment.fecha,\n    transfer_id: transferId\n  },\n  binary: binaryData\n}];"
+        "jsCode": "// ===========================================\n// VALIDATE TRANSFER_ID UNIQUENESS AGAINST GOOGLE SHEETS\n// ===========================================\nconst input = $json;\nconst transferId = input.transferId || input.validationResult?.transfer_id_normalized || '';\nconst phoneNumber = input.phoneNumber || '';\nconst businessPhone = input.businessPhone || '';\n\n// Get all existing citas from Google Sheets (passed from previous node)\nconst allCitas = input.allCitas || [];\n\n// Check if transfer_id already exists in any confirmed appointment\nif (transferId) {\n  const transferIdStr = String(transferId).trim();\n  \n  // Check against all confirmed citas in Google Sheets\n  const duplicateInSheets = allCitas.some(cita => {\n    const citaTransferId = String(cita.transfer_id || cita.id_transferencia || '').trim();\n    const citaEstado = String(cita.estado || '').toLowerCase();\n    return citaTransferId === transferIdStr && (citaEstado === 'confirmado' || citaEstado === 'pago validado');\n  });\n  \n  if (duplicateInSheets) {\n    return [{\n      json: {\n        error: true,\n        mensaje: '❌ *Este ID de transferencia ya fue utilizado*\\n\\nNo puedes usar el mismo comprobante de pago dos veces. Por favor, verifica el número de transferencia e intenta con otro comprobante.',\n        transferId: transferId,\n        phoneNumber: phoneNumber,\n        businessPhone: businessPhone,\n        skipAppointment: true\n      }\n    }];\n  }\n}\n\n// ===========================================\n// PREPARE CONFIRMED APPOINTMENT FOR GOOGLE SHEETS\n// ===========================================\nconst appointment = input.pendingAppointment;\nconst staticData = $getWorkflowStaticData('global');\n\n// Clear pending payment and selection\nif (staticData.pendingPayments) {\n  delete staticData.pendingPayments[phoneNumber];\n}\nif (staticData.serviceSelections) {\n  delete staticData.serviceSelections[phoneNumber];\n}\n\n// Get business config if available\nconst businessConfig = staticData.businessConfig || {};\n\n// Get binary data (payment proof image)\nconst binaryData = $binary;\n\n// Return data for Google Sheets with status CONFIRMED\nreturn [{\n  json: {\n    id: appointment.id || appointment.appointmentId,\n    nombre: appointment.nombre || appointment.contactName,\n    email: '',\n    telefono: appointment.telefono || phoneNumber,\n    servicio: appointment.servicio,\n    fecha: appointment.fecha || appointment.selectedDay,\n    hora: appointment.hora,\n    hora_fin: appointment.hora_fin,\n    estado: 'Confirmado',\n    precio: appointment.precio,\n    notas: 'Pago validado automáticamente por IA - ' + new Date().toISOString(),\n    creado: appointment.creado || appointment.createdAt || new Date().toISOString(),\n    negocio_id: appointment.negocio_id || '1',\n    negocio_email: businessConfig.email || 'Kellysisabel1504@gmail.com',\n    negocio_nombre: businessConfig.nombre || 'Kells Capilar',\n    displayDate: appointment.displayDate || appointment.fecha,\n    transfer_id: transferId\n  },\n  binary: binaryData\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -801,10 +801,10 @@
           ]
         }
       },
-      "type": "n8n-nodes-base.switchNode",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
       "position": [
-        364640,
+        364940,
         178960
       ],
       "id": "validate-transfer-id-error",
@@ -835,7 +835,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.4,
       "position": [
-        364944,
+        365160,
         178960
       ],
       "id": "e861071a-bc20-4287-8c40-d22076bee77b",
@@ -1505,7 +1505,7 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 1,
       "position": [
-        365392,
+        365600,
         178960
       ],
       "id": "688d2264-56d1-4d6e-b41e-63fa0ff1a1bf",
@@ -3000,7 +3000,7 @@
       "main": [
         [
           {
-            "node": "Save Confirmed Appointment",
+            "node": "Validate Transfer ID Error",
             "type": "main",
             "index": 0
           }
@@ -3052,7 +3052,7 @@
       "main": [
         [
           {
-            "node": "Validate Transfer ID Error",
+            "node": "Prepare Confirmed Data",
             "type": "main",
             "index": 0
           }
@@ -3077,7 +3077,7 @@
         ],
         [
           {
-            "node": "Prepare Confirmed Data",
+            "node": "Save Confirmed Appointment",
             "type": "main",
             "index": 0
           }

@@ -35,6 +35,12 @@ function at_qa_table_names() {
 // 1b. HELPER: Enviar correo QA con plantilla AT
 // ──────────────────────────────────────────────
 function at_qa_send_notification($to, $subject, $heading, $subtitle, $body_html, $extra_headers = []) {
+    // En localhost no enviar correos (solo funciona en PROD)
+    $host = $_SERVER['SERVER_NAME'] ?? $_SERVER['HTTP_HOST'] ?? '';
+    if (in_array($host, ['localhost', '127.0.0.1']) || strpos($host, 'localhost') !== false) {
+        return false;
+    }
+
     $logo_url = 'https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
     $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
     $html = '<!DOCTYPE html>
@@ -69,11 +75,29 @@ body{font-family:Arial,sans-serif;background:#f0f0f0;color:#222;margin:0;padding
     $headers = [
         'Content-Type: text/html; charset=UTF-8',
         'From: Automatiza Tech <' . $from_email . '>',
-        'Bcc: lgonzalez@automatizatech.cl',
-        'Bcc: automatizacionesbotcore@gmail.com',
+        'Bcc: lgonzalez@automatizatech.cl, anamaria.sandoval@automatizatech.cl, automatizacionesbotcore@gmail.com',
     ];
     $headers = array_merge($headers, $extra_headers);
-    return wp_mail($to, $subject, $html, $headers);
+
+    error_log('[QA-EMAIL] Intentando enviar correo...');
+    error_log('[QA-EMAIL] To: ' . $to);
+    error_log('[QA-EMAIL] Subject: ' . $subject);
+    error_log('[QA-EMAIL] From: ' . $from_email);
+    error_log('[QA-EMAIL] Headers: ' . print_r($headers, true));
+
+    $result = wp_mail($to, $subject, $html, $headers);
+
+    if ($result) {
+        error_log('[QA-EMAIL] ✅ wp_mail() retornó TRUE — correo enviado a: ' . $to);
+    } else {
+        error_log('[QA-EMAIL] ❌ wp_mail() retornó FALSE — FALLÓ envío a: ' . $to);
+        global $phpmailer;
+        if (isset($phpmailer) && !empty($phpmailer->ErrorInfo)) {
+            error_log('[QA-EMAIL] PHPMailer Error: ' . $phpmailer->ErrorInfo);
+        }
+    }
+
+    return $result;
 }
 
 /**
@@ -83,7 +107,7 @@ function at_qa_get_context($case_db_id) {
     global $wpdb;
     $t = at_qa_table_names();
     $caso = $wpdb->get_row($wpdb->prepare(
-        "SELECT c.*, m.name as module_name, m.assigned_tester, m.project_id 
+        "SELECT c.*, m.title as module_name, m.assigned_tester, m.project_id 
          FROM {$t['cases']} c 
          JOIN {$t['modules']} m ON m.id = c.module_id 
          WHERE c.id = %d", $case_db_id
@@ -191,8 +215,15 @@ function at_qa_setup_tables() {
         user_id INT UNSIGNED NOT NULL,
         comment TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT NULL,
         INDEX idx_case (case_id)
     ) $charset;");
+
+    // Migración: agregar columna updated_at si no existe
+    $col_exists = $wpdb->get_var("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$t['comments']}' AND COLUMN_NAME = 'updated_at'");
+    if (!$col_exists) {
+        $wpdb->query("ALTER TABLE {$t['comments']} ADD COLUMN updated_at DATETIME DEFAULT NULL AFTER created_at");
+    }
 
     // Limpiar tablas antiguas si existen (migración desde versión PetsGO-only)
     $old_tables = [
@@ -536,6 +567,7 @@ add_action('wp_ajax_at_qa_update_status', function() {
 
     // ─── Notificaciones por correo al cambiar estado ───
     if ($old_status !== $status && $status !== 'not_tested') {
+      try {
         $ctx = at_qa_get_context($case_db_id);
         if ($ctx) {
             $status_labels = [
@@ -589,7 +621,18 @@ add_action('wp_ajax_at_qa_update_status', function() {
         <a class="cta" href="' . esc_url($qa_url) . '">🧪 Ver Suite de Pruebas</a>
       </p>';
 
-            // 1) Correo al TESTER asignado (si no es el mismo que hizo el cambio)
+            // 1) Correo al USUARIO que hizo la acción (confirmación)
+            if ($user->user_email) {
+                at_qa_send_notification(
+                    $user->user_email,
+                    '🧪 Confirmación QA: ' . $case_name . ' → ' . $st_label,
+                    '🧪 Actualización de Prueba',
+                    'Confirmación de tu cambio en caso de prueba',
+                    '<p>Hola <strong>' . esc_html($user->display_name) . '</strong>, confirmamos tu actualización:</p>' . $body_content
+                );
+            }
+
+            // 2) Correo al TESTER asignado (si no es el mismo que hizo el cambio)
             if ($ctx->tester && $ctx->tester->user_email && $ctx->tester->ID !== $user->ID) {
                 $tester_body = '<p>Hola <strong>' . esc_html($ctx->tester->display_name) . '</strong>,</p>' . $body_content;
                 at_qa_send_notification(
@@ -601,7 +644,127 @@ add_action('wp_ajax_at_qa_update_status', function() {
                 );
             }
 
-            // 2) Correo al CLIENTE (si tiene email)
+            // ─── Verificar si el MÓDULO quedó 100% completado ───
+            $module_id = $ctx->caso->module_id;
+            $mod_total = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$t['cases']} WHERE module_id = %d", $module_id
+            ));
+            $mod_tested = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$t['cases']} WHERE module_id = %d AND status != 'not_tested'", $module_id
+            ));
+            $mod_passed = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$t['cases']} WHERE module_id = %d AND status = 'pass'", $module_id
+            ));
+
+            if ($mod_total > 0 && $mod_tested == $mod_total) {
+                $mod_pct_pass = round(($mod_passed / $mod_total) * 100);
+                $mod_body = '
+      <p>🎉 <strong>¡El módulo ha sido completamente probado!</strong></p>
+      <div class="info-box">
+        <p style="margin:0 0 8px;"><strong>📋 Proyecto:</strong> ' . esc_html($project_name) . '</p>
+        <p style="margin:0 0 8px;"><strong>📦 Módulo:</strong> ' . esc_html($module_name) . '</p>
+        <p style="margin:0 0 8px;"><strong>✅ Casos aprobados:</strong> ' . $mod_passed . '/' . $mod_total . ' (' . $mod_pct_pass . '%)</p>
+        <p style="margin:0 0 8px;"><strong>👤 Completado por:</strong> ' . esc_html($user->display_name) . '</p>
+        <p style="margin:0;"><strong>📅 Fecha:</strong> ' . date('d/m/Y H:i') . '</p>
+      </div>
+      <div style="margin:15px 0;">
+        <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">Progreso del módulo: <strong>' . $mod_passed . '/' . $mod_total . '</strong> aprobados (<strong>' . $mod_pct_pass . '%</strong>)</p>
+        <div style="background:#e5e7eb;border-radius:6px;height:10px;overflow:hidden;">
+          <div style="background:linear-gradient(90deg,#0d9488,#14b8a6);width:' . $mod_pct_pass . '%;height:100%;border-radius:6px;"></div>
+        </div>
+      </div>
+      <p style="text-align:center;margin-top:20px;">
+        <a class="cta" href="' . esc_url($qa_url . '&module=' . $module_id) . '">🧪 Ver Módulo Completo</a>
+      </p>';
+
+                // Notificar a admin/tester
+                $admin_email = get_option('admin_email');
+                at_qa_send_notification(
+                    $admin_email,
+                    '🎉 Módulo Completado: ' . $module_name . ' — ' . $project_name,
+                    '🎉 Módulo 100% Probado',
+                    $project_name . ' — ' . $module_name,
+                    $mod_body
+                );
+                if ($ctx->tester && $ctx->tester->user_email && $ctx->tester->user_email !== $admin_email) {
+                    at_qa_send_notification(
+                        $ctx->tester->user_email,
+                        '🎉 Módulo Completado: ' . $module_name . ' — ' . $project_name,
+                        '🎉 Módulo 100% Probado',
+                        $project_name . ' — ' . $module_name,
+                        '<p>Hola <strong>' . esc_html($ctx->tester->display_name) . '</strong>,</p>' . $mod_body
+                    );
+                }
+            }
+
+            // ─── Verificar si el PROYECTO quedó 100% completado ───
+            if ($pct === 100) {
+                $proj_fail = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$t['cases']} c JOIN {$t['modules']} m ON c.module_id=m.id WHERE m.project_id=%d AND c.status='fail'",
+                    $ctx->project->id
+                ));
+                $proj_blocked = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$t['cases']} c JOIN {$t['modules']} m ON c.module_id=m.id WHERE m.project_id=%d AND c.status='blocked'",
+                    $ctx->project->id
+                ));
+                $proj_body = '
+      <p>🏆 <strong>¡El proyecto ha alcanzado el 100% de pruebas aprobadas!</strong></p>
+      <div class="info-box">
+        <p style="margin:0 0 8px;"><strong>📋 Proyecto:</strong> ' . esc_html($project_name) . '</p>
+        <p style="margin:0 0 8px;"><strong>👤 Cliente:</strong> ' . esc_html($client_name) . '</p>
+        <p style="margin:0 0 8px;"><strong>✅ Total casos aprobados:</strong> ' . $passed . '/' . $total . '</p>
+        <p style="margin:0 0 8px;"><strong>❌ Fallidos:</strong> ' . $proj_fail . '</p>
+        <p style="margin:0 0 8px;"><strong>⚠️ Bloqueados:</strong> ' . $proj_blocked . '</p>
+        <p style="margin:0 0 8px;"><strong>👤 Última actualización por:</strong> ' . esc_html($user->display_name) . '</p>
+        <p style="margin:0;"><strong>📅 Fecha:</strong> ' . date('d/m/Y H:i') . '</p>
+      </div>
+      <div style="background:#ecfdf5;border:2px solid #10b981;padding:16px;border-radius:8px;text-align:center;margin:15px 0;">
+        <span style="font-size:36px;">🏆</span><br>
+        <strong style="font-size:18px;color:#065f46;">100% Aprobado</strong><br>
+        <p style="color:#047857;margin:8px 0 0;">Todas las pruebas han sido completadas exitosamente. El informe formal puede ser generado.</p>
+      </div>
+      <p style="text-align:center;margin-top:20px;">
+        <a class="cta" href="' . esc_url($qa_url) . '">📊 Generar Informe QA</a>
+      </p>';
+
+                // Notificar a admin
+                $admin_email = get_option('admin_email');
+                at_qa_send_notification(
+                    $admin_email,
+                    '🏆 Proyecto 100% Completado: ' . $project_name,
+                    '🏆 Proyecto QA 100% Completado',
+                    $project_name . ' — Todas las pruebas aprobadas',
+                    $proj_body
+                );
+
+                // Notificar al cliente
+                if ($ctx->client && !empty($ctx->client->email)) {
+                    $token_func_proj = function($cid, $email) {
+                        return md5($cid . $email . wp_salt());
+                    };
+                    $ficha_url_proj = home_url('/?crm_view=timeline&cid=' . $ctx->client->id . '&token=' . $token_func_proj($ctx->client->id, $ctx->client->email));
+                    $client_proj_body = '<p>Hola <strong>' . esc_html($ctx->client->nombre) . '</strong>,</p>
+      <p>¡Excelentes noticias! Su proyecto <strong>' . esc_html($project_name) . '</strong> ha completado exitosamente todas las pruebas de calidad.</p>
+      <div style="background:#ecfdf5;border:2px solid #10b981;padding:16px;border-radius:8px;text-align:center;margin:15px 0;">
+        <span style="font-size:36px;">🏆</span><br>
+        <strong style="font-size:18px;color:#065f46;">100% Aprobado</strong><br>
+        <p style="color:#047857;margin:8px 0 0;">Todas las ' . $total . ' pruebas han sido completadas exitosamente.</p>
+      </div>
+      <p>En breve recibirá el informe formal de pruebas QA con todos los detalles.</p>
+      <p style="text-align:center;margin-top:20px;">
+        <a class="cta" href="' . esc_url($ficha_url_proj) . '">📊 Ver Mi Proyecto</a>
+      </p>';
+                    at_qa_send_notification(
+                        $ctx->client->email,
+                        '🏆 ¡Su proyecto ' . esc_html($project_name) . ' está 100% aprobado!',
+                        '🏆 Proyecto QA Completado',
+                        esc_html($client_name) . ' — Pruebas completadas',
+                        $client_proj_body
+                    );
+                }
+            }
+
+            // 3) Correo al CLIENTE (si tiene email)
             if ($ctx->client && !empty($ctx->client->email)) {
                 $ficha_url = '';
                 // Generar link de timeline público si existe el método
@@ -638,6 +801,11 @@ add_action('wp_ajax_at_qa_update_status', function() {
                 );
             }
         }
+      } catch (\Exception $e) {
+          error_log('QA Email Error: ' . $e->getMessage());
+      } catch (\Throwable $e) {
+          error_log('QA Email Error: ' . $e->getMessage());
+      }
     }
     // ─── Fin notificaciones ───
 
@@ -676,11 +844,77 @@ add_action('wp_ajax_at_qa_add_comment', function() {
         'comment' => $comment,
     ]);
 
+    // ─── Notificación por correo: nuevo comentario ───
+    {
+      try {
+        $ctx = at_qa_get_context($case_db_id);
+        if ($ctx) {
+            $project_name = $ctx->project ? $ctx->project->name : 'N/A';
+            $module_name  = $ctx->caso->module_name;
+            $case_name    = $ctx->caso->title ?? $ctx->caso->case_id ?? 'Caso #' . $case_db_id;
+            $qa_url       = admin_url('admin.php?page=at-qa&view=suite&project=' . ($ctx->project ? $ctx->project->id : '') . '&module=' . ($ctx->caso->module_id ?? ''));
+
+            $body = '<p><strong>' . esc_html($user->display_name) . '</strong> agregó un comentario en una prueba QA:</p>
+            <div class="info-box">
+                <p style="margin:0 0 8px;"><strong>📋 Proyecto:</strong> ' . esc_html($project_name) . '</p>
+                <p style="margin:0 0 8px;"><strong>📦 Módulo:</strong> ' . esc_html($module_name) . '</p>
+                <p style="margin:0 0 8px;"><strong>🔬 Caso:</strong> ' . esc_html($case_name) . '</p>
+                <p style="margin:0 0 8px;"><strong>👤 Por:</strong> ' . esc_html($user->display_name) . '</p>
+                <p style="margin:0;"><strong>📅 Fecha:</strong> ' . current_time('d/m/Y H:i') . '</p>
+            </div>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:15px 0;">
+                <p style="margin:0 0 6px;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">💬 Comentario</p>
+                <p style="margin:0;font-size:15px;line-height:1.5;">' . nl2br(esc_html($comment)) . '</p>
+            </div>
+            <p style="text-align:center;margin-top:20px;">
+                <a class="cta" href="' . esc_url($qa_url) . '">🧪 Ver Caso de Prueba</a>
+            </p>';
+
+            // Notificar al USUARIO que comentó (confirmación)
+            if ($user->user_email) {
+                at_qa_send_notification(
+                    $user->user_email,
+                    '💬 Confirmación: Tu comentario en ' . $case_name,
+                    '💬 Comentario Registrado',
+                    esc_html($project_name) . ' — ' . esc_html($module_name),
+                    '<p>Hola <strong>' . esc_html($user->display_name) . '</strong>, tu comentario fue registrado:</p>' . $body
+                );
+            }
+
+            // Notificar al tester asignado si no fue él quien comentó
+            if ($ctx->tester && $ctx->tester->user_email && $ctx->tester->ID !== $user->ID) {
+                at_qa_send_notification(
+                    $ctx->tester->user_email,
+                    '💬 Nuevo comentario QA: ' . $case_name,
+                    '💬 Nuevo Comentario QA',
+                    esc_html($project_name) . ' — ' . esc_html($module_name),
+                    '<p>Hola <strong>' . esc_html($ctx->tester->display_name) . '</strong>,</p>' . $body
+                );
+            }
+
+            // Notificar al admin principal
+            $admin_email = get_option('admin_email');
+            if ($admin_email && $user->user_email !== $admin_email) {
+                at_qa_send_notification(
+                    $admin_email,
+                    '💬 Nuevo comentario QA: ' . $case_name . ' — ' . $user->display_name,
+                    '💬 Nuevo Comentario QA',
+                    esc_html($project_name) . ' — ' . esc_html($module_name),
+                    $body
+                );
+            }
+        }
+      } catch (\Throwable $e) {
+          error_log('QA Comment Email Error: ' . $e->getMessage());
+      }
+    }
+    // ─── Fin notificación comentario ───
+
     wp_send_json_success([
-        'id'      => $wpdb->insert_id,
-        'user'    => $user->display_name,
-        'comment' => $comment,
-        'date'    => current_time('d/m/Y H:i'),
+        'id'         => $wpdb->insert_id,
+        'user_name'  => $user->display_name,
+        'comment'    => $comment,
+        'created_at' => current_time('d/m/Y H:i'),
     ]);
 });
 
@@ -726,13 +960,101 @@ add_action('wp_ajax_at_qa_upload_evidence', function() {
         'description' => $description,
     ]);
 
+    $evidence_id = $wpdb->insert_id;
+    $user = wp_get_current_user();
+    $orig_name = $_FILES['evidence_file']['name'];
+    $file_size_fmt = size_format($_FILES['evidence_file']['size']);
+    $file_type = $_FILES['evidence_file']['type'];
+    $evidence_url = $qa_url . '/' . $safe;
+
+    // ─── Notificación por correo: nueva evidencia ───
+    {
+      try {
+        $ctx = at_qa_get_context($case_db_id);
+        if ($ctx) {
+            $project_name = $ctx->project ? $ctx->project->name : 'N/A';
+            $module_name  = $ctx->caso->module_name;
+            $case_name    = $ctx->caso->title ?? $ctx->caso->case_id ?? 'Caso #' . $case_db_id;
+            $suite_url    = admin_url('admin.php?page=at-qa&view=suite&project=' . ($ctx->project ? $ctx->project->id : '') . '&module=' . ($ctx->caso->module_id ?? ''));
+
+            // Icono según tipo
+            $type_icon = '📎';
+            if (strpos($file_type, 'image') !== false) $type_icon = '🖼️';
+            elseif (strpos($file_type, 'video') !== false) $type_icon = '🎬';
+            elseif (strpos($file_type, 'pdf') !== false) $type_icon = '📄';
+
+            $preview_html = '';
+            if (strpos($file_type, 'image') !== false) {
+                $preview_html = '<div style="text-align:center;margin:15px 0;"><img src="' . esc_url($evidence_url) . '" alt="Evidencia" style="max-width:100%;max-height:300px;border-radius:8px;border:1px solid #e2e8f0;"></div>';
+            }
+
+            $body = '<p><strong>' . esc_html($user->display_name) . '</strong> subió una evidencia en una prueba QA:</p>
+            <div class="info-box">
+                <p style="margin:0 0 8px;"><strong>📋 Proyecto:</strong> ' . esc_html($project_name) . '</p>
+                <p style="margin:0 0 8px;"><strong>📦 Módulo:</strong> ' . esc_html($module_name) . '</p>
+                <p style="margin:0 0 8px;"><strong>🔬 Caso:</strong> ' . esc_html($case_name) . '</p>
+                <p style="margin:0 0 8px;"><strong>👤 Por:</strong> ' . esc_html($user->display_name) . '</p>
+                <p style="margin:0;"><strong>📅 Fecha:</strong> ' . current_time('d/m/Y H:i') . '</p>
+            </div>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:15px 0;">
+                <p style="margin:0 0 6px;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">' . $type_icon . ' Evidencia adjunta</p>
+                <p style="margin:0 0 4px;"><strong>Archivo:</strong> ' . esc_html($orig_name) . '</p>
+                <p style="margin:0 0 4px;"><strong>Tamaño:</strong> ' . esc_html($file_size_fmt) . '</p>
+                ' . (!empty($description) ? '<p style="margin:0;"><strong>Descripción:</strong> ' . esc_html($description) . '</p>' : '') . '
+            </div>
+            ' . $preview_html . '
+            <p style="text-align:center;margin-top:20px;">
+                <a class="cta" href="' . esc_url($suite_url) . '">🧪 Ver Caso de Prueba</a>
+                <a class="cta-secondary" href="' . esc_url($evidence_url) . '">📎 Ver Evidencia</a>
+            </p>';
+
+            // Notificar al USUARIO que subió (confirmación)
+            if ($user->user_email) {
+                at_qa_send_notification(
+                    $user->user_email,
+                    $type_icon . ' Confirmación: Evidencia subida en ' . $case_name,
+                    $type_icon . ' Evidencia Registrada',
+                    esc_html($project_name) . ' — ' . esc_html($module_name),
+                    '<p>Hola <strong>' . esc_html($user->display_name) . '</strong>, tu evidencia fue registrada:</p>' . $body
+                );
+            }
+
+            // Notificar al tester asignado si no fue él quien subió
+            if ($ctx->tester && $ctx->tester->user_email && $ctx->tester->ID !== $user->ID) {
+                at_qa_send_notification(
+                    $ctx->tester->user_email,
+                    $type_icon . ' Nueva evidencia QA: ' . $case_name,
+                    $type_icon . ' Nueva Evidencia QA',
+                    esc_html($project_name) . ' — ' . esc_html($module_name),
+                    '<p>Hola <strong>' . esc_html($ctx->tester->display_name) . '</strong>,</p>' . $body
+                );
+            }
+
+            // Notificar al admin principal
+            $admin_email = get_option('admin_email');
+            if ($admin_email && $user->user_email !== $admin_email) {
+                at_qa_send_notification(
+                    $admin_email,
+                    $type_icon . ' Nueva evidencia QA: ' . $case_name . ' — ' . $user->display_name,
+                    $type_icon . ' Nueva Evidencia QA',
+                    esc_html($project_name) . ' — ' . esc_html($module_name),
+                    $body
+                );
+            }
+        }
+      } catch (\Throwable $e) {
+          error_log('QA Evidence Email Error: ' . $e->getMessage());
+      }
+    }
+    // ─── Fin notificación evidencia ───
+
     wp_send_json_success([
-        'id'   => $wpdb->insert_id,
-        'url'  => $qa_url . '/' . $safe,
-        'name' => $_FILES['evidence_file']['name'],
-        'type' => $_FILES['evidence_file']['type'],
-        'size' => size_format($_FILES['evidence_file']['size']),
-        'user' => wp_get_current_user()->display_name,
+        'id'   => $evidence_id,
+        'url'  => $evidence_url,
+        'name' => $orig_name,
+        'type' => $file_type,
+        'size' => $file_size_fmt,
+        'user' => $user->display_name,
     ]);
 });
 
@@ -753,6 +1075,39 @@ add_action('wp_ajax_at_qa_delete_evidence', function() {
 
     $wpdb->delete($t['evidence'], ['id' => $eid]);
     wp_send_json_success();
+});
+
+// Editar comentario
+add_action('wp_ajax_at_qa_update_comment', function() {
+    if (!current_user_can('at_qa_access')) wp_die('Sin permisos');
+    check_ajax_referer('at_qa_nonce', 'nonce');
+
+    global $wpdb;
+    $t = at_qa_table_names();
+    $comment_id = intval($_POST['comment_id']);
+    $new_text   = sanitize_textarea_field($_POST['comment']);
+    if (empty($new_text)) wp_send_json_error('El comentario no puede estar vacío');
+
+    // Solo el autor o admin puede editar
+    $comment = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$t['comments']} WHERE id = %d", $comment_id));
+    if (!$comment) wp_send_json_error('Comentario no encontrado');
+
+    $user = wp_get_current_user();
+    if ($comment->user_id != $user->ID && !current_user_can('manage_options')) {
+        wp_send_json_error('Solo puedes editar tus propios comentarios');
+    }
+
+    $wpdb->update($t['comments'], [
+        'comment'    => $new_text,
+        'updated_at' => current_time('mysql'),
+    ], ['id' => $comment_id]);
+
+    wp_send_json_success([
+        'id'         => $comment_id,
+        'comment'    => $new_text,
+        'user_name'  => $user->display_name,
+        'updated_at' => current_time('mysql'),
+    ]);
 });
 
 // Eliminar comentario
@@ -818,8 +1173,7 @@ add_action('wp_ajax_at_qa_assign_module_tester', function() {
         $tester_name = $tester ? $tester->display_name : '';
         $tester_email = $tester ? $tester->user_email : '';
         // ─── Enviar correo de asignación al tester ───
-        $is_local = in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1']) || strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false;
-        if ($tester && $tester->user_email && $module && !$is_local) {
+        if ($tester && $tester->user_email && $module) {
             $client_name = '';
             $client_empresa = '';
             if ($module && $module->client_id) {
@@ -913,6 +1267,7 @@ add_action('wp_ajax_at_qa_assign_module_tester', function() {
                 'Content-Type: text/html; charset=UTF-8',
                 'From: Automatiza Tech <' . $from_email . '>',
                 'Bcc: lgonzalez@automatizatech.cl',
+                'Bcc: anamaria.sandoval@automatizatech.cl',
                 'Bcc: automatizacionesbotcore@gmail.com',
             ];
             try {
@@ -1221,14 +1576,15 @@ function at_qa_shared_styles() {
     .at-qa-field textarea { min-height:70px; resize:vertical; }
 
     /* Toast */
-    .at-qa-toast { position:fixed; bottom:30px; right:30px; padding:12px 24px; background:#333; color:#fff; border-radius:8px; font-size:14px; z-index:200001; opacity:0; transition:opacity .3s; pointer-events:none; box-shadow:0 4px 20px rgba(0,0,0,.2); }
-    .at-qa-toast.show { opacity:1; }
-    .at-qa-toast.success { background:#065f46; }
-    .at-qa-toast.error { background:#991b1b; }
+    .at-qa-toast { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(.8); padding:20px 36px; background:#333; color:#fff; border-radius:12px; font-size:16px; font-weight:600; z-index:1000001; opacity:0; transition:all .3s ease; pointer-events:none; box-shadow:0 8px 40px rgba(0,0,0,.35); text-align:center; min-width:220px; }
+    .at-qa-toast.show { opacity:1; transform:translate(-50%,-50%) scale(1); }
+    .at-qa-toast.success { background:linear-gradient(135deg,#065f46,#0d9488); }
+    .at-qa-toast.error { background:linear-gradient(135deg,#991b1b,#dc2626); }
 
     /* Loading */
     .qa-spin { display:inline-block; width:16px; height:16px; border:2px solid #ddd; border-top-color:#0d9488; border-radius:50%; animation:qaspin .6s linear infinite; }
     @keyframes qaspin { to { transform:rotate(360deg); } }
+    .qa-btn:disabled { opacity:0.65; cursor:not-allowed; pointer-events:none; }
 
     /* Empty state */
     .at-qa-empty { text-align:center; padding:60px 20px; color:#999; }
@@ -1494,7 +1850,7 @@ function at_qa_render_projects_page() {
             fd.append('description', document.getElementById('projDesc').value);
             fd.append('assigned_testers', testers);
 
-            fetch(AJAX, {method:'POST', body:fd}).then(r=>r.json()).then(res => {
+            fetch(AJAX, {method:'POST', body:fd}).then(r=>safeJson(r)).then(res => {
                 if (res.success) {
                     toast('Proyecto guardado', 'success');
                     setTimeout(() => location.reload(), 600);
@@ -1510,7 +1866,7 @@ function at_qa_render_projects_page() {
             fd.append('action', 'at_qa_delete_project');
             fd.append('nonce', NONCE);
             fd.append('project_id', pid);
-            fetch(AJAX, {method:'POST', body:fd}).then(r=>r.json()).then(res => {
+            fetch(AJAX, {method:'POST', body:fd}).then(r=>safeJson(r)).then(res => {
                 if (res.success) { toast('Proyecto eliminado', 'success'); setTimeout(()=>location.reload(), 600); }
                 else toast('Error', 'error');
             });
@@ -1524,7 +1880,7 @@ function at_qa_render_projects_page() {
             fd.append('nonce', NONCE);
             fd.append('project_id', pid);
             toast('Generando informe...', '');
-            fetch(AJAX, {method:'POST', body:fd}).then(r=>r.json()).then(res => {
+            fetch(AJAX, {method:'POST', body:fd}).then(r=>safeJson(r)).then(res => {
                 if (res.success) {
                     toast('✅ Informe generado: ' + res.data.verdict + ' — ' + res.data.pass_rate + '%', 'success');
                     window.open(res.data.url, '_blank');
@@ -1693,6 +2049,21 @@ function at_qa_render_suite_page() {
         /* Chatbot en mobile */
         body.at-qa-page #aria-toggle { width:40px !important; height:40px !important; bottom:10px !important; right:10px !important; }
         body.at-qa-page #aria-panel { width:calc(100vw - 20px) !important; right:10px !important; bottom:60px !important; max-height:70vh !important; }
+
+        /* Toast responsive */
+        .at-qa-toast { min-width:180px; max-width:85vw; padding:16px 20px; font-size:14px; }
+
+        /* Lightbox responsive */
+        .qa-lightbox-bg img { max-width:95vw; max-height:85vh; border-radius:4px; }
+        .qa-lightbox-close { top:10px; right:12px; width:38px; height:38px; font-size:28px; }
+        .qa-lightbox-nav { width:38px; height:38px; font-size:28px; }
+        .qa-lightbox-nav.prev { left:8px; }
+        .qa-lightbox-nav.next { right:8px; }
+
+        /* Edit comment responsive */
+        .cm-item .cm-edit-area { font-size:13px; min-height:50px; }
+        .cm-item .cm-edit-actions { flex-wrap:wrap; }
+        .cm-item .cm-edit-actions button { flex:1; min-width:80px; padding:6px 10px; font-size:12px; }
     }
     @media (max-width:480px) {
         .qa-layout { gap:8px; padding-bottom:60px; }
@@ -1781,6 +2152,22 @@ function at_qa_render_suite_page() {
     .ev-card .ev-info { padding:6px 8px; font-size:10px; }
     .ev-card .ev-del { position:absolute; top:3px; right:3px; background:rgba(239,68,68,.9); color:#fff; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; }
     .ev-file-icon { width:100%; height:110px; display:flex; align-items:center; justify-content:center; background:#f8fafc; font-size:36px; }
+    .ev-card img { cursor:zoom-in; }
+
+    /* Lightbox */
+    .qa-lightbox-bg { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.85); z-index:999999; display:none; align-items:center; justify-content:center; cursor:zoom-out; }
+    .qa-lightbox-bg.active { display:flex; }
+    .qa-lightbox-bg img { max-width:90vw; max-height:90vh; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,.5); object-fit:contain; cursor:default; }
+    .qa-lightbox-close { position:fixed; top:16px; right:24px; color:#fff; font-size:36px; cursor:pointer; z-index:1000000; background:rgba(0,0,0,.5); border:none; border-radius:50%; width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
+    .qa-lightbox-close:hover { background:rgba(239,68,68,.8); }
+    .qa-lightbox-nav { position:fixed; top:50%; transform:translateY(-50%); color:#fff; font-size:40px; cursor:pointer; z-index:1000000; background:rgba(0,0,0,.45); border:none; border-radius:50%; width:48px; height:48px; display:flex; align-items:center; justify-content:center; transition:.2s; user-select:none; }
+    .qa-lightbox-nav:hover { background:rgba(13,148,136,.8); }
+    .qa-lightbox-nav.prev { left:16px; }
+    .qa-lightbox-nav.next { right:16px; }
+    .qa-lightbox-nav:disabled { opacity:.3; cursor:default; background:rgba(0,0,0,.25); }
+    .qa-lightbox-counter { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); color:#fff; font-size:14px; background:rgba(0,0,0,.5); padding:4px 14px; border-radius:20px; z-index:1000000; }
+    .qa-download-all { display:inline-flex; align-items:center; gap:6px; background:#0d9488; color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:12px; cursor:pointer; transition:.2s; margin-left:8px; vertical-align:middle; }
+    .qa-download-all:hover { background:#0f766e; }
 
     .qa-upload-area { border:2px dashed #d1d5db; border-radius:8px; padding:18px; text-align:center; cursor:pointer; transition:.15s; margin-top:10px; }
     .qa-upload-area:hover { border-color:#0d9488; background:#f0fdfa; }
@@ -1792,6 +2179,15 @@ function at_qa_render_suite_page() {
     .cm-item .cm-text { font-size:13px; margin:0; }
     .cm-item .cm-del { float:right; background:none; border:none; color:#ccc; cursor:pointer; font-size:13px; }
     .cm-item .cm-del:hover { color:#ef4444; }
+    .cm-item .cm-edit { float:right; background:none; border:none; color:#ccc; cursor:pointer; font-size:12px; margin-right:6px; }
+    .cm-item .cm-edit:hover { color:#0d9488; }
+    .cm-item .cm-edit-area { width:100%; border:1px solid #0d9488; border-radius:6px; padding:6px 10px; font-size:12px; resize:vertical; min-height:40px; margin-top:4px; font-family:inherit; }
+    .cm-item .cm-edit-actions { display:flex; gap:6px; margin-top:6px; justify-content:flex-end; }
+    .cm-item .cm-edit-actions button { font-size:11px; padding:4px 12px; border-radius:5px; border:none; cursor:pointer; }
+    .cm-item .cm-save-btn { background:#0d9488; color:#fff; }
+    .cm-item .cm-save-btn:hover { background:#0f766e; }
+    .cm-item .cm-cancel-btn { background:#e5e7eb; color:#374151; }
+    .cm-item .cm-cancel-btn:hover { background:#d1d5db; }
 
     .cm-form { display:flex; gap:8px; margin-top:10px; }
     .cm-form textarea { flex:1; border:1px solid #d1d5db; border-radius:6px; padding:7px 10px; font-size:12px; resize:vertical; min-height:50px; }
@@ -1807,6 +2203,8 @@ function at_qa_render_suite_page() {
             </div>
         </div>
         <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="qa-btn" onclick="document.getElementById('modalEstados').classList.add('active')" style="background:rgba(255,255,255,.15); color:#fff; border-color:rgba(255,255,255,.3);" title="Ver significado de cada estado">🚦 Estados</button>
+            <button class="qa-btn" onclick="document.getElementById('modalGlosario').classList.add('active')" style="background:rgba(255,255,255,.15); color:#fff; border-color:rgba(255,255,255,.3);" title="Glosario de términos técnicos">📚 Glosario</button>
             <?php if (current_user_can('manage_options')): ?>
             <button class="qa-btn" onclick="atQaGenerateReport(<?php echo $project_id; ?>)" style="background:rgba(255,255,255,.15); color:#fff; border-color:rgba(255,255,255,.3);">📄 Generar Informe</button>
             <?php endif; ?>
@@ -1998,17 +2396,194 @@ function at_qa_render_suite_page() {
 
     <div id="atQaToast" class="at-qa-toast"></div>
 
+    <!-- Modal: Estados -->
+    <div id="modalEstados" class="at-qa-modal-bg" onclick="if(event.target===this)this.classList.remove('active')">
+        <div class="at-qa-modal" style="max-width:560px;">
+            <div class="at-qa-modal-hd">
+                <h3>🚦 Significado de los Estados</h3>
+                <button class="at-qa-modal-close" onclick="document.getElementById('modalEstados').classList.remove('active')">&times;</button>
+            </div>
+            <div class="at-qa-modal-body">
+                <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                    <thead><tr style="background:#f0fdfa;"><th style="padding:10px 14px;text-align:left;border-bottom:2px solid #0d9488;color:#0d9488;">Estado</th><th style="padding:10px 14px;text-align:left;border-bottom:2px solid #0d9488;color:#0d9488;">Descripción</th></tr></thead>
+                    <tbody>
+                        <tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:10px 14px;"><span style="background:#e5e7eb;color:#374151;padding:3px 12px;border-radius:20px;font-weight:700;font-size:12px;">🔘 Sin probar</span></td><td style="padding:10px 14px;color:#555;">El caso de prueba aún no ha sido ejecutado. Estado inicial por defecto.</td></tr>
+                        <tr style="border-bottom:1px solid #f0f0f0;background:#f9fafb;"><td style="padding:10px 14px;"><span style="background:#059669;color:#fff;padding:3px 12px;border-radius:20px;font-weight:700;font-size:12px;">✅ PASS</span></td><td style="padding:10px 14px;color:#555;">El caso fue ejecutado y el resultado obtenido coincide con el resultado esperado. Sin errores.</td></tr>
+                        <tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:10px 14px;"><span style="background:#dc2626;color:#fff;padding:3px 12px;border-radius:20px;font-weight:700;font-size:12px;">❌ FAIL</span></td><td style="padding:10px 14px;color:#555;">El caso fue ejecutado pero el resultado es incorrecto. Se encontró un defecto o error en el sistema.</td></tr>
+                        <tr style="border-bottom:1px solid #f0f0f0;background:#f9fafb;"><td style="padding:10px 14px;"><span style="background:#f59e0b;color:#fff;padding:3px 12px;border-radius:20px;font-weight:700;font-size:12px;">⚠️ Bloqueado</span></td><td style="padding:10px 14px;color:#555;">No se puede ejecutar el caso porque existe un impedimento externo (otro bug, dependencia, acceso, etc).</td></tr>
+                        <tr><td style="padding:10px 14px;"><span style="background:#6366f1;color:#fff;padding:3px 12px;border-radius:20px;font-weight:700;font-size:12px;">⏭️ Omitido</span></td><td style="padding:10px 14px;color:#555;">El caso fue excluido intencionalmente de esta iteración (fuera de alcance, sin tiempo, no aplica).</td></tr>
+                    </tbody>
+                </table>
+                <p style="margin-top:16px;font-size:12px;color:#999;">💡 El <strong>Pass Rate</strong> se calcula como: (PASS ÷ Total ejecutados) × 100. Se considera exitoso cuando supera el 95%.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Glosario -->
+    <div id="modalGlosario" class="at-qa-modal-bg" onclick="if(event.target===this)this.classList.remove('active')">
+        <div class="at-qa-modal" style="max-width:640px;">
+            <div class="at-qa-modal-hd">
+                <h3>📚 Glosario de Términos</h3>
+                <button class="at-qa-modal-close" onclick="document.getElementById('modalGlosario').classList.remove('active')">&times;</button>
+            </div>
+            <div class="at-qa-modal-body">
+                <input type="text" id="glosarioBuscar" placeholder="🔍 Buscar término..." oninput="filtrarGlosario(this.value)" style="width:100%;padding:9px 13px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;margin-bottom:14px;box-sizing:border-box;">
+                <div style="display:grid;gap:12px;" id="glosarioGrid">
+                    <?php
+                    $glosario = [
+                        ['QA', 'Quality Assurance', 'Proceso de garantía de calidad del software. Conjunto de actividades para asegurar que el producto cumple los requisitos y estándares definidos.'],
+                        ['Caso de Prueba', 'Test Case', 'Documento que especifica las condiciones, pasos a seguir, datos de entrada y resultado esperado para verificar una funcionalidad específica.'],
+                        ['Módulo', 'Module', 'Agrupación lógica de casos de prueba relacionados con una sección o funcionalidad del sistema (ej: Registro de Cliente, Carrito de Compras).'],
+                        ['Bug', 'Defecto / Error', 'Comportamiento incorrecto o inesperado encontrado en el sistema durante la ejecución de pruebas. Se documenta con un Bug ID o ticket.'],
+                        ['Bug ID / Ticket', 'Issue ID', 'Código de referencia del defecto en el sistema de gestión (ej: BUG-042, JIRA-123). Permite trazar el error y su resolución.'],
+                        ['Pass Rate', 'Tasa de Aprobación', 'Porcentaje de casos de prueba que pasaron exitosamente sobre el total de ejecutados. Meta recomendada: ≥ 95%.'],
+                        ['Precondición', 'Precondition', 'Estado del sistema o requisitos previos que deben cumplirse antes de ejecutar el caso de prueba (ej: usuario logueado, datos cargados).'],
+                        ['Evidencia', 'Evidence / Artifact', 'Captura de pantalla, video o archivo que demuestra el resultado de una prueba. Documenta tanto los PASS como los FAIL.'],
+                        ['Regresión', 'Regression', 'Pruebas que verifican que cambios recientes en el código no rompieron funcionalidades que ya funcionaban correctamente.'],
+                        ['Sprint', 'Iteración', 'Período de tiempo fijo (usualmente 1-4 semanas) en metodologías ágiles durante el cual se desarrollan y prueban funcionalidades.'],
+                        ['Tester', 'Ejecutor de Pruebas', 'Persona responsable de ejecutar los casos de prueba, documentar resultados y reportar defectos encontrados.'],
+                        ['Alcance', 'Scope', 'Conjunto de funcionalidades o módulos incluidos en una sesión de pruebas. Lo que queda fuera del alcance se marca como Omitido.'],
+                        // Frontend / Web
+                        ['LocalStorage', 'Almacenamiento Local del Navegador', 'Espacio del navegador donde una web puede guardar datos de forma persistente en el dispositivo del usuario (sin fecha de expiración). Si algo "queda guardado aunque cierres el navegador", probablemente usa LocalStorage.'],
+                        ['SessionStorage', 'Almacenamiento de Sesión', 'Similar al LocalStorage pero los datos se borran al cerrar la pestaña o el navegador. Ideal para datos temporales de sesión.'],
+                        ['Cookie', 'Galleta / Cookie', 'Pequeño archivo que el servidor guarda en el navegador del usuario. Se usa para recordar sesiones, preferencias o rastrear visitas. Tiene fecha de expiración configurable.'],
+                        ['Caché', 'Cache', 'Copia temporal de datos (páginas, imágenes, respuestas) guardada para no tener que descargarla de nuevo. Cuando algo "no se actualiza", a veces es problema de caché.'],
+                        ['API', 'Application Programming Interface', 'Canal de comunicación entre sistemas. Permite que una aplicación solicite datos o acciones a otra (ej: el frontend pide datos al backend a través de una API).'],
+                        ['AJAX', 'Asynchronous JavaScript and XML', 'Técnica que permite actualizar partes de una página web sin recargarla completamente. Es lo que hace que los botones "Enviar" respondan sin refrescar la pantalla.'],
+                        ['Endpoint', 'Punto de Acceso / Ruta de API', 'URL específica a la que se envían solicitudes para ejecutar una acción o recibir datos. Ej: /wp-admin/admin-ajax.php es un endpoint de WordPress.'],
+                        ['Token', 'Token de Autenticación', 'Código único generado al iniciar sesión que identifica al usuario en cada solicitud. Como un "pase temporal" que confirma identidad sin re-ingresar contraseña.'],
+                        ['Frontend', 'Capa de Presentación', 'Todo lo que el usuario ve e interactúa en pantalla: botones, formularios, estilos, animaciones. Se ejecuta en el navegador.'],
+                        ['Backend', 'Capa de Servidor / Lógica de Negocio', 'Parte del sistema que el usuario no ve: servidor, base de datos, lógica de negocio, envío de correos. Se ejecuta en el servidor.'],
+                        ['Base de Datos', 'Database / DB', 'Sistema donde se almacena y organiza toda la información de la aplicación (usuarios, pedidos, configuraciones). Ej: MySQL, PostgreSQL.'],
+                        ['Query', 'Consulta SQL', 'Instrucción que se envía a la base de datos para obtener, insertar, actualizar o eliminar información. Ej: SELECT, INSERT, UPDATE, DELETE.'],
+                        ['Deploy / Despliegue', 'Deployment', 'Proceso de subir y activar una nueva versión del sistema en el servidor de producción (PROD). "Deployar" = publicar los cambios en vivo.'],
+                        ['Entorno PROD', 'Production Environment', 'El servidor real donde corre la aplicación y los usuarios reales la usan. Los errores aquí tienen impacto directo.'],
+                        ['Entorno Local', 'Local / Development Environment', 'El computador del desarrollador donde se prueba antes de subir a PROD. Los errores aquí no afectan a usuarios reales.'],
+                        ['Debug / Depuración', 'Debugging', 'Proceso de encontrar y corregir errores en el código. "Debuggear" = investigar por qué algo falla.'],
+                        ['Log / Registro', 'Log File', 'Archivo donde el sistema anota automáticamente eventos, errores y acciones. Es la "caja negra" que se revisa cuando algo falla.'],
+                        ['Responsive', 'Diseño Responsivo', 'Característica de una web que adapta su diseño automáticamente a distintos tamaños de pantalla (celular, tablet, escritorio).'],
+                        ['Nonce', 'Token de Seguridad WordPress', 'Código único y temporal que WordPress genera para validar que una solicitud proviene de un lugar autorizado. Previene ataques de falsificación.'],
+                        ['SMTP', 'Simple Mail Transfer Protocol', 'Protocolo estándar para enviar correos electrónicos. La configuración SMTP define qué servidor se usa para mandar los emails del sistema.'],
+                        ['Hook / Acción', 'WordPress Hook', 'Punto de enganche en WordPress que permite ejecutar código en momentos específicos del ciclo de vida (ej: al guardar un post, al cargar la página).'],
+                        ['Workflow / Flujo', 'Automated Workflow', 'Secuencia automatizada de pasos que se ejecuta ante un evento (ej: cuando se crea un lead, automáticamente se envía un correo y se agenda una reunión).'],
+                        ['n8n', 'Motor de Automatización', 'Herramienta de automatización de flujos de trabajo que conecta distintos sistemas y servicios sin necesidad de programar manualmente cada integración.'],
+                    ];
+                    foreach ($glosario as $g): ?>
+                    <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px 15px;" class="glosario-item">
+                        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;">
+                            <strong style="color:#0d9488;font-size:14px;"><?php echo esc_html($g[0]); ?></strong>
+                            <span style="font-size:11px;color:#9ca3af;font-style:italic;"><?php echo esc_html($g[1]); ?></span>
+                        </div>
+                        <p style="margin:0;font-size:13px;color:#555;line-height:1.5;"><?php echo esc_html($g[2]); ?></p>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox para evidencias -->
+    <div class="qa-lightbox-bg" id="qaLightbox" onclick="lbBgClick(event)">
+        <button class="qa-lightbox-close" onclick="closeLightbox()">&times;</button>
+        <button class="qa-lightbox-nav prev" id="lbPrev" onclick="lbNav(-1)">&lsaquo;</button>
+        <img id="qaLightboxImg" src="" alt="Vista previa">
+        <button class="qa-lightbox-nav next" id="lbNext" onclick="lbNav(1)">&rsaquo;</button>
+        <div class="qa-lightbox-counter" id="lbCounter"></div>
+    </div>
+
     <script>
     (function(){
         const N = '<?php echo $nonce; ?>', A = '<?php echo admin_url("admin-ajax.php"); ?>';
 
-        function toast(m,t){ const e=document.getElementById('atQaToast'); e.textContent=m; e.className='at-qa-toast show '+(t||''); setTimeout(()=>e.className='at-qa-toast',3000); }
+        function toast(m,t){
+            const e=document.getElementById('atQaToast');
+            const icon = (t==='success') ? '✅ ' : (t==='error') ? '❌ ' : 'ℹ️ ';
+            e.innerHTML = '<div style="font-size:28px;margin-bottom:6px;">' + ((t==='success')?'✅':'❌') + '</div>' + m;
+            e.className='at-qa-toast show '+(t||'');
+            setTimeout(()=>e.className='at-qa-toast',3500);
+        }
         function esc(s){ if(!s) return ''; const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+        /* Parseo seguro: ignora warnings/notices de PHP antes del JSON */
+        function safeJson(r){
+            return r.text().then(function(t){
+                const start=t.indexOf('{'), end=t.lastIndexOf('}');
+                if(start===-1||end===-1) return {success:false,data:'Respuesta inválida del servidor'};
+                try{ return JSON.parse(t.substring(start,end+1)); }
+                catch(e){ return {success:false,data:'Respuesta inválida del servidor'}; }
+            });
+        }
+
+        /* Lightbox con navegación */
+        var lbImages=[], lbCaptions=[], lbIndex=0;
+        function lbCollectImages(){
+            lbImages=[]; lbCaptions=[];
+            document.querySelectorAll('#evGrid .ev-card img[onclick]').forEach(function(img){
+                var m=img.getAttribute('onclick').match(/openLightbox\('([^']+)'\)/);
+                if(m){ lbImages.push(m[1]); lbCaptions.push(img.getAttribute('title')||''); }
+            });
+        }
+        function lbUpdateNav(){
+            var prev=document.getElementById('lbPrev'), next=document.getElementById('lbNext'), cnt=document.getElementById('lbCounter');
+            if(lbImages.length<=1){ prev.style.display='none'; next.style.display='none'; cnt.style.display='none'; return; }
+            prev.style.display='flex'; next.style.display='flex'; cnt.style.display='block';
+            prev.disabled=(lbIndex===0); next.disabled=(lbIndex===lbImages.length-1);
+            cnt.textContent=(lbIndex+1)+' / '+lbImages.length;
+        }
+        function lbUpdateCaption(){
+            var cap=document.getElementById('lbCaption');
+            cap.textContent=lbCaptions[lbIndex]||'';
+            cap.style.display=lbCaptions[lbIndex]?'block':'none';
+        }
+        window.openLightbox = function(url){
+            lbCollectImages();
+            lbIndex=lbImages.indexOf(url); if(lbIndex<0) lbIndex=0;
+            var lb=document.getElementById('qaLightbox'), img=document.getElementById('qaLightboxImg');
+            img.src=url; lb.classList.add('active');
+            lbUpdateNav(); lbUpdateCaption();
+            document.addEventListener('keydown', lbKeys);
+        };
+        window.closeLightbox = function(){
+            document.getElementById('qaLightbox').classList.remove('active');
+            document.removeEventListener('keydown', lbKeys);
+        };
+        window.lbNav = function(dir){
+            var ni=lbIndex+dir;
+            if(ni<0||ni>=lbImages.length) return;
+            lbIndex=ni;
+            document.getElementById('qaLightboxImg').src=lbImages[lbIndex];
+            lbUpdateNav(); lbUpdateCaption();
+        };
+        window.lbBgClick = function(e){
+            if(e.target.id==='qaLightbox') closeLightbox();
+        };
+        function lbKeys(e){
+            if(e.key==='Escape') closeLightbox();
+            else if(e.key==='ArrowLeft') lbNav(-1);
+            else if(e.key==='ArrowRight') lbNav(1);
+        }
+
+        /* Descargar todas las evidencias */
+        window.atQaDownloadAll = function(){
+            var links=[];
+            document.querySelectorAll('#evGrid .ev-card a[href], #evGrid .ev-card img[onclick]').forEach(function(el){
+                if(el.tagName==='A') links.push(el.href);
+                else { var m=el.getAttribute('onclick').match(/openLightbox\('([^']+)'\)/); if(m) links.push(m[1]); }
+            });
+            if(!links.length){ toast('No hay evidencias para descargar','error'); return; }
+            links.forEach(function(url,i){
+                setTimeout(function(){
+                    var a=document.createElement('a'); a.href=url; a.download=''; a.target='_blank';
+                    a.style.display='none'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                }, i*300);
+            });
+            toast('Descargando '+links.length+' archivo'+(links.length>1?'s':'')+'...','success');
+        };
 
         window.atQaStatus = function(id,st,el){
             el.disabled=true;
             const fd=new FormData(); fd.append('action','at_qa_update_status'); fd.append('nonce',N); fd.append('case_db_id',id); fd.append('status',st);
-            fetch(A,{method:'POST',body:fd}).then(r=>r.json()).then(res=>{
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
                 el.disabled=false;
                 if(res.success){
                     el.className='st-sel status-'+st; toast('Actualizado','success');
@@ -2016,6 +2591,7 @@ function at_qa_render_suite_page() {
                     let ti=td.querySelector('.tester-info');
                     if(!ti){ ti=document.createElement('div'); ti.className='tester-info'; td.appendChild(ti); }
                     ti.textContent = st!=='not_tested' ? res.data.tester+' · Ahora' : '';
+                    setTimeout(()=>location.reload(),2500);
                 } else toast('Error','error');
             }).catch(()=>{ el.disabled=false; toast('Error de conexión','error'); });
         };
@@ -2024,7 +2600,7 @@ function at_qa_render_suite_page() {
             document.getElementById('caseModal').classList.add('active');
             document.getElementById('cmBody').innerHTML='<div style="text-align:center;padding:30px"><div class="qa-spin"></div></div>';
             const fd=new FormData(); fd.append('action','at_qa_get_case_detail'); fd.append('nonce',N); fd.append('case_db_id',id);
-            fetch(A,{method:'POST',body:fd}).then(r=>r.json()).then(res=>{
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
                 if(res.success) renderDetail(res.data,id); else document.getElementById('cmBody').innerHTML='<p style="color:red">Error</p>';
             });
         };
@@ -2062,14 +2638,25 @@ function at_qa_render_suite_page() {
             h+='</div></div>';
 
             // Evidencias
-            h+='<div class="qa-detail-section"><h4>📎 Evidencias ('+d.evidence.length+')</h4>';
+            h+='<div class="qa-detail-section"><h4>📎 Evidencias ('+d.evidence.length+')';
+            if(d.evidence.length>0) h+=' <button class="qa-download-all" onclick="atQaDownloadAll()" title="Descargar todas">⬇️ Descargar todo</button>';
+            h+='</h4>';
             h+='<div class="evidence-grid" id="evGrid">';
             d.evidence.forEach(ev=>{ h+=evCard(ev); });
             if(!d.evidence.length) h+='<p style="color:#999;grid-column:1/-1;">Sin evidencias</p>';
             h+='</div>';
             h+='<div class="qa-upload-area" id="qaUpArea" onclick="document.getElementById(\'qaFI\').click()">📤 <strong>Click aquí</strong> o arrastra archivos<br><small style="color:#999">JPG, PNG, GIF, WEBP, MP4, WEBM, PDF — Máx 10MB</small></div>';
-            h+='<input type="file" id="qaFI" style="display:none" accept=".jpg,.jpeg,.png,.gif,.webp,.mp4,.webm,.pdf" onchange="atQaUpload('+cid+',this)">';
-            h+='<input type="text" id="evDesc" placeholder="Descripción (opcional)" style="width:100%;padding:5px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;margin-top:6px;">';
+            h+='<input type="file" id="qaFI" style="display:none" accept=".jpg,.jpeg,.png,.gif,.webp,.mp4,.webm,.pdf" onchange="atQaPreview(this)">';
+            h+='<div id="qaUpPreview" style="display:none;margin-top:10px;border:1px solid #d1d5db;border-radius:8px;padding:12px;background:#f8fafc;">';
+            h+='<div style="display:flex;gap:12px;align-items:flex-start;">';
+            h+='<div id="qaUpThumb" style="flex-shrink:0;width:100px;height:80px;border-radius:6px;overflow:hidden;background:#e5e7eb;display:flex;align-items:center;justify-content:center;"></div>';
+            h+='<div style="flex:1;min-width:0;">';
+            h+='<div id="qaUpFileName" style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>';
+            h+='<input type="text" id="evDesc" placeholder="Descripción (opcional)" style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;box-sizing:border-box;">';
+            h+='<div style="display:flex;gap:8px;margin-top:8px;">';
+            h+='<button class="qa-btn qa-btn-primary" onclick="atQaUpload('+cid+')" style="font-size:12px;padding:5px 16px;">📤 Subir evidencia</button>';
+            h+='<button class="qa-btn" onclick="atQaCancelPreview()" style="font-size:12px;padding:5px 12px;background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;">Cancelar</button>';
+            h+='</div></div></div></div>';
             h+='</div>';
 
             // Comentarios
@@ -2079,7 +2666,7 @@ function at_qa_render_suite_page() {
             if(!d.comments.length) h+='<p style="color:#999" id="noCm">Sin comentarios</p>';
             h+='</div>';
             h+='<div class="cm-form"><textarea id="newCm" placeholder="Escribe un comentario... (Ctrl+Enter para enviar)"></textarea>';
-            h+='<button class="qa-btn qa-btn-primary" onclick="atQaComment('+cid+')" style="height:auto;">Enviar</button></div></div>';
+            h+='<button id="cmSendBtn" class="qa-btn qa-btn-primary" onclick="atQaComment('+cid+')" style="height:auto;">Enviar</button></div></div>';
 
             document.getElementById('cmBody').innerHTML=h;
             setupDrop(cid);
@@ -2089,7 +2676,7 @@ function at_qa_render_suite_page() {
             let h='<div class="ev-card" id="ev-'+ev.id+'">';
             h+='<button class="ev-del" onclick="atQaDelEv('+ev.id+')">&times;</button>';
             if(ev.file_type&&ev.file_type.startsWith('image/'))
-                h+='<a href="'+esc(ev.file_url)+'" target="_blank"><img src="'+esc(ev.file_url)+'" alt=""></a>';
+                h+='<img src="'+esc(ev.file_url)+'" alt="" onclick="openLightbox(\''+esc(ev.file_url)+'\')">'; 
             else if(ev.file_type&&ev.file_type.startsWith('video/'))
                 h+='<div class="ev-file-icon"><a href="'+esc(ev.file_url)+'" target="_blank">🎬</a></div>';
             else
@@ -2103,75 +2690,175 @@ function at_qa_render_suite_page() {
         function cmItem(cm){
             let h='<div class="cm-item" id="cm-'+cm.id+'">';
             h+='<button class="cm-del" onclick="atQaDelCm('+cm.id+')">&times;</button>';
-            h+='<div class="cm-meta"><strong>'+esc(cm.user_name||'')+'</strong> · '+esc(cm.created_at)+'</div>';
-            h+='<p class="cm-text">'+esc(cm.comment)+'</p></div>';
+            h+='<button class="cm-edit" onclick="atQaEditCm('+cm.id+')" title="Editar">✏️</button>';
+            h+='<div class="cm-meta"><strong>'+esc(cm.user_name||'')+'</strong> · '+esc(cm.created_at);
+            if(cm.updated_at) h+=' · <em style="color:#0d9488">editado</em>';
+            h+='</div>';
+            h+='<p class="cm-text" id="cmText-'+cm.id+'">'+esc(cm.comment)+'</p></div>';
             return h;
         }
 
         window.atQaStatusModal = function(id,st,el){
+            const stLabels={'not_tested':'Sin probar','pass':'✅ PASS','fail':'❌ FAIL','blocked':'⚠️ Bloqueado','skipped':'⏭️ Omitido'};
+            const prevClass=el.className, prevVal=el.value;
+            el.disabled=true; el.style.opacity='0.6';
             const fd=new FormData(); fd.append('action','at_qa_update_status'); fd.append('nonce',N); fd.append('case_db_id',id); fd.append('status',st);
-            fetch(A,{method:'POST',body:fd}).then(r=>r.json()).then(res=>{
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
+                el.disabled=false; el.style.opacity='';
                 if(res.success){
-                    el.className='st-sel status-'+st; toast('Actualizado','success');
+                    // Actualizar select en modal
+                    el.className='st-sel status-'+st;
+                    // Actualizar fila en la grilla de fondo
                     const row=document.querySelector('tr[data-cid="'+id+'"]');
                     if(row){ const s=row.querySelector('.st-sel'); if(s){ s.value=st; s.className='st-sel status-'+st; }}
-                } else toast('Error','error');
+                    // Feedback visual inline junto al select
+                    const wrap=el.closest('.qa-detail-item')||el.parentNode;
+                    const old=wrap.querySelector('.st-inline-ok'); if(old) old.remove();
+                    const ok=document.createElement('span');
+                    ok.className='st-inline-ok';
+                    ok.textContent='✔ Guardado';
+                    ok.style.cssText='display:inline-block;margin-left:8px;color:#059669;font-size:11px;font-weight:700;animation:qaspin 0s;';
+                    el.parentNode.appendChild(ok);
+                    setTimeout(()=>{ if(ok.parentNode) ok.remove(); }, 3000);
+                    toast('Estado actualizado: '+(stLabels[st]||st),'success');
+                } else {
+                    el.className=prevClass; el.value=prevVal;
+                    toast(res.data||'Error al actualizar estado','error');
+                }
+            }).catch(()=>{
+                el.disabled=false; el.style.opacity='';
+                el.className=prevClass; el.value=prevVal;
+                toast('Error de conexión','error');
             });
         };
 
         window.atQaSaveBug = function(id,val){
             const fd=new FormData(); fd.append('action','at_qa_update_bug_id'); fd.append('nonce',N); fd.append('case_db_id',id); fd.append('bug_id',val);
-            fetch(A,{method:'POST',body:fd}).then(r=>r.json()).then(res=>{
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
                 if(res.success) toast('Bug ID guardado','success');
             });
         };
 
-        window.atQaUpload = function(cid,inp){
-            const f=inp.files[0]; if(!f) return;
+        /* Preview de archivo antes de subir */
+        window.atQaPreview = function(inp){
+            var f=inp.files[0]; if(!f) return;
             if(f.size>10*1024*1024){ toast('Máx 10MB','error'); inp.value=''; return; }
-            const fd=new FormData(); fd.append('action','at_qa_upload_evidence'); fd.append('nonce',N); fd.append('case_db_id',cid); fd.append('evidence_file',f);
+            var prev=document.getElementById('qaUpPreview'), thumb=document.getElementById('qaUpThumb'), fname=document.getElementById('qaUpFileName');
+            fname.textContent=f.name;
+            thumb.innerHTML='';
+            if(f.type.startsWith('image/')){
+                var img=document.createElement('img'); img.style.cssText='width:100%;height:100%;object-fit:cover;';
+                img.src=URL.createObjectURL(f); thumb.appendChild(img);
+            } else if(f.type.startsWith('video/')){
+                thumb.innerHTML='<span style="font-size:32px;">🎬</span>';
+            } else {
+                thumb.innerHTML='<span style="font-size:32px;">📄</span>';
+            }
+            prev.style.display='block';
+            document.getElementById('qaUpArea').style.display='none';
+            document.getElementById('evDesc').value='';
+            document.getElementById('evDesc').focus();
+        };
+        window.atQaCancelPreview = function(){
+            document.getElementById('qaUpPreview').style.display='none';
+            document.getElementById('qaUpArea').style.display='';
+            document.getElementById('qaFI').value='';
+        };
+        window.atQaUpload = function(cid){
+            var inp=document.getElementById('qaFI');
+            var f=inp.files[0]; if(!f){ toast('Selecciona un archivo','error'); return; }
+            var fd=new FormData(); fd.append('action','at_qa_upload_evidence'); fd.append('nonce',N); fd.append('case_db_id',cid); fd.append('evidence_file',f);
             fd.append('description', document.getElementById('evDesc')?.value||'');
-            const area=document.getElementById('qaUpArea'); area.innerHTML='<div class="qa-spin"></div> Subiendo...';
-            fetch(A,{method:'POST',body:fd}).then(r=>r.json()).then(res=>{
+            var prev=document.getElementById('qaUpPreview');
+            prev.innerHTML='<div style="text-align:center;padding:10px;"><div class="qa-spin"></div> Subiendo...</div>';
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
                 if(res.success){ toast('Evidencia subida','success'); atQaDetail(cid); }
-                else { toast(res.data||'Error','error'); area.innerHTML='📤 <strong>Click aquí</strong> o arrastra archivos'; }
-            }).catch(()=>{ toast('Error de conexión','error'); area.innerHTML='📤 Click para subir'; });
+                else { toast(res.data||'Error','error'); atQaCancelPreview(); }
+            }).catch(()=>{ toast('Error de conexión','error'); atQaCancelPreview(); });
             inp.value='';
         };
 
         function setupDrop(cid){
-            const a=document.getElementById('qaUpArea'); if(!a) return;
+            var a=document.getElementById('qaUpArea'); if(!a) return;
             ['dragenter','dragover'].forEach(e=>a.addEventListener(e,ev=>{ev.preventDefault();a.classList.add('dragover');}));
             ['dragleave','drop'].forEach(e=>a.addEventListener(e,ev=>{ev.preventDefault();a.classList.remove('dragover');}));
             a.addEventListener('drop',e=>{
-                const f=e.dataTransfer.files[0]; if(f){ const inp=document.getElementById('qaFI'); const dt=new DataTransfer(); dt.items.add(f); inp.files=dt.files; atQaUpload(cid,inp); }
+                var f=e.dataTransfer.files[0]; if(f){ var inp=document.getElementById('qaFI'); var dt=new DataTransfer(); dt.items.add(f); inp.files=dt.files; atQaPreview(inp); }
             });
         }
 
         window.atQaComment = function(cid){
             const ta=document.getElementById('newCm'), txt=ta.value.trim();
             if(!txt){ toast('Escribe un comentario','error'); return; }
+            const btn=document.getElementById('cmSendBtn');
+            if(btn){ btn.disabled=true; btn.innerHTML='<span style="display:inline-flex;align-items:center;gap:6px;"><svg style="animation:qaspin .6s linear infinite;width:15px;height:15px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10" stroke-opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10" /></svg>Enviando...</span>'; }
             const fd=new FormData(); fd.append('action','at_qa_add_comment'); fd.append('nonce',N); fd.append('case_db_id',cid); fd.append('comment',txt);
-            fetch(A,{method:'POST',body:fd}).then(r=>r.json()).then(res=>{
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
                 if(res.success){
                     const list=document.getElementById('cmList');
                     const nc=document.getElementById('noCm'); if(nc) nc.remove();
                     list.insertAdjacentHTML('beforeend',cmItem(res.data));
                     ta.value=''; list.scrollTop=list.scrollHeight; toast('Comentario agregado','success');
-                } else toast(res.data||'Error','error');
+                    setTimeout(()=>location.reload(),2500);
+                } else {
+                    if(btn){ btn.disabled=false; btn.innerHTML='Enviar'; }
+                    toast(res.data||'Error','error');
+                }
+            }).catch(()=>{
+                if(btn){ btn.disabled=false; btn.innerHTML='Enviar'; }
+                toast('Error de conexión','error');
             });
         };
 
         window.atQaDelEv = function(id){
             if(!confirm('¿Eliminar evidencia?')) return;
             const fd=new FormData(); fd.append('action','at_qa_delete_evidence'); fd.append('nonce',N); fd.append('evidence_id',id);
-            fetch(A,{method:'POST',body:fd}).then(r=>r.json()).then(res=>{ if(res.success){ const el=document.getElementById('ev-'+id); if(el) el.remove(); toast('Eliminada','success'); }});
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{ if(res.success){ const el=document.getElementById('ev-'+id); if(el) el.remove(); toast('Eliminada','success'); }});
+        };
+
+        window.atQaEditCm = function(id){
+            const container=document.getElementById('cm-'+id);
+            const textEl=document.getElementById('cmText-'+id);
+            if(!textEl||!container) return;
+            const original=textEl.textContent;
+            textEl.style.display='none';
+            // Insertar textarea y botones
+            let editDiv=document.createElement('div'); editDiv.id='cmEditWrap-'+id;
+            editDiv.innerHTML='<textarea class="cm-edit-area" id="cmEditTA-'+id+'">'+esc(original)+'</textarea>'
+                +'<div class="cm-edit-actions"><button class="cm-cancel-btn" onclick="atQaCancelEdit('+id+')">Cancelar</button>'
+                +'<button class="cm-save-btn" onclick="atQaSaveCm('+id+')">💾 Guardar</button></div>';
+            textEl.parentNode.insertBefore(editDiv,textEl.nextSibling);
+            document.getElementById('cmEditTA-'+id).focus();
+        };
+        window.atQaCancelEdit = function(id){
+            const wrap=document.getElementById('cmEditWrap-'+id);
+            if(wrap) wrap.remove();
+            const textEl=document.getElementById('cmText-'+id);
+            if(textEl) textEl.style.display='';
+        };
+        window.atQaSaveCm = function(id){
+            const ta=document.getElementById('cmEditTA-'+id);
+            const txt=ta.value.trim();
+            if(!txt){ toast('El comentario no puede estar vacío','error'); return; }
+            const fd=new FormData(); fd.append('action','at_qa_update_comment'); fd.append('nonce',N); fd.append('comment_id',id); fd.append('comment',txt);
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
+                if(res.success){
+                    const textEl=document.getElementById('cmText-'+id);
+                    textEl.textContent=res.data.comment; textEl.style.display='';
+                    const wrap=document.getElementById('cmEditWrap-'+id);
+                    if(wrap) wrap.remove();
+                    // Añadir indicador "editado" si no existe
+                    const meta=document.querySelector('#cm-'+id+' .cm-meta');
+                    if(meta && !meta.querySelector('em')) meta.insertAdjacentHTML('beforeend',' · <em style="color:#0d9488">editado</em>');
+                    toast('Comentario actualizado','success');
+                } else toast(res.data||'Error al actualizar','error');
+            });
         };
 
         window.atQaDelCm = function(id){
             if(!confirm('¿Eliminar comentario?')) return;
             const fd=new FormData(); fd.append('action','at_qa_delete_comment'); fd.append('nonce',N); fd.append('comment_id',id);
-            fetch(A,{method:'POST',body:fd}).then(r=>r.json()).then(res=>{ if(res.success){ const el=document.getElementById('cm-'+id); if(el) el.remove(); toast('Eliminado','success'); }});
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{ if(res.success){ const el=document.getElementById('cm-'+id); if(el) el.remove(); toast('Eliminado','success'); }});
         };
 
         /* Asignar tester a módulo */
@@ -2181,7 +2868,7 @@ function at_qa_render_suite_page() {
             fd.append('nonce',N);
             fd.append('module_id',moduleId);
             fd.append('tester_id',testerId);
-            fetch(A,{method:'POST',body:fd}).then(r=>r.json()).then(res=>{
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
                 if(res.success){
                     const d = res.data;
                     if(!testerId || testerId==='0'){
@@ -2248,7 +2935,7 @@ function at_qa_render_suite_page() {
             fd.append('action','at_qa_generate_report');
             fd.append('nonce',N);
             fd.append('project_id',pid);
-            fetch(A,{method:'POST',body:fd}).then(r=>r.json()).then(res=>{
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
                 if(res.success){
                     toast('Informe generado','success');
                     if(res.data.url) window.open(res.data.url,'_blank');
@@ -2267,6 +2954,32 @@ function at_qa_render_suite_page() {
             testerSel.addEventListener('blur', function(){ setTimeout(()=>{ document.body.classList.remove('at-qa-chatbot-hidden'); }, 300); });
             testerSel.addEventListener('mousedown', function(){ document.body.classList.add('at-qa-chatbot-hidden'); });
         }
+
+        /* Filtro buscador del Glosario */
+        window.filtrarGlosario = function(q){
+            const items = document.querySelectorAll('#glosarioGrid .glosario-item');
+            const term = q.toLowerCase().trim();
+            let found = 0;
+            items.forEach(function(el){
+                const txt = el.textContent.toLowerCase();
+                const show = !term || txt.indexOf(term) !== -1;
+                el.style.display = show ? '' : 'none';
+                if(show) found++;
+            });
+            let noRes = document.getElementById('glosarioNoRes');
+            if(!noRes){
+                noRes = document.createElement('p');
+                noRes.id = 'glosarioNoRes';
+                noRes.style.cssText = 'text-align:center;color:#9ca3af;padding:20px 0;grid-column:1/-1;';
+                noRes.textContent = 'No se encontraron términos.';
+                document.getElementById('glosarioGrid').appendChild(noRes);
+            }
+            noRes.style.display = (found === 0 && term) ? '' : 'none';
+        };
+        document.querySelector('#modalGlosario .at-qa-modal-close').addEventListener('click', function(){
+            const inp = document.getElementById('glosarioBuscar');
+            if(inp){ inp.value=''; filtrarGlosario(''); }
+        });
 
         /* Auto-scroll módulo activo al centro en mobile */
         const activeMod = document.querySelector('.qa-mod-list a.active');

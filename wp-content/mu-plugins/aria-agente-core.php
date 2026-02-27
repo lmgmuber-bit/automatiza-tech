@@ -34,6 +34,12 @@ class ARIA_Agente {
         $this->n8n_api_key = get_option('maxtech_n8n_api_key', '');
         
         // AJAX handlers - Chat
+        add_action('wp_ajax_aria_chat', array($this, 'limpiar_output'), 1);
+        add_action('wp_ajax_aria_upload', array($this, 'limpiar_output'), 1);
+        add_action('wp_ajax_aria_tts', array($this, 'limpiar_output'), 1);
+        add_action('wp_ajax_aria_historial', array($this, 'limpiar_output'), 1);
+        add_action('wp_ajax_aria_cargar_sesion', array($this, 'limpiar_output'), 1);
+        add_action('wp_ajax_aria_nueva_sesion', array($this, 'limpiar_output'), 1);
         add_action('wp_ajax_aria_chat', array($this, 'procesar_chat'));
         add_action('wp_ajax_aria_upload', array($this, 'procesar_upload'));
         add_action('wp_ajax_aria_tts', array($this, 'generar_audio'));
@@ -171,6 +177,20 @@ class ARIA_Agente {
     }
     
     /**
+     * Limpiar output buffer antes de respuestas AJAX.
+     * Descarta warnings/notices de PHP y Xdebug para que solo llegue JSON limpio.
+     */
+    public function limpiar_output() {
+        // Silenciar display de errores (Xdebug puede ignorar WP_DEBUG_DISPLAY)
+        @ini_set('display_errors', '0');
+        // Limpiar cualquier output previo
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        ob_start();
+    }
+    
+    /**
      * Procesar mensaje del chat
      */
     public function procesar_chat() {
@@ -195,9 +215,12 @@ class ARIA_Agente {
         
         // Obtener historial de la sesión para contexto
         $historial = $this->obtener_historial_sesion($session_id);
+
+        // Determinar si el usuario actual es administrador
+        $es_admin = current_user_can('manage_options');
         
         // Construir mensajes para OpenAI
-        $messages = $this->construir_mensajes($contexto_crm, $historial, $mensaje, $archivos);
+        $messages = $this->construir_mensajes($contexto_crm, $historial, $mensaje, $archivos, $es_admin);
         
         // Llamar a OpenAI
         $respuesta = $this->llamar_openai($messages, !empty($archivos));
@@ -574,13 +597,20 @@ class ARIA_Agente {
     /**
      * Construir mensajes para OpenAI
      */
-    private function construir_mensajes($contexto_crm, $historial, $mensaje_actual, $archivos = array()) {
+    private function construir_mensajes($contexto_crm, $historial, $mensaje_actual, $archivos = array(), $es_admin = false) {
         $messages = array();
         
         // System prompt
         $system = "Eres {$this->nombre_agente}, el Manager de AutomatizaTech eXpert - Tu experto en CRM, Automatizaciones y Monitoreo de Errores. ";
         $system .= "Tienes acceso COMPLETO a los datos de AutomatizaTech: leads, propuestas, reuniones de seguimiento, workflows N8N y errores ARGOS. ";
         $system .= "Eres amigable, profesional y muy técnico cuando se requiere. Respondes en español.\n\n";
+
+        // Identificar al usuario actual
+        $current_user = wp_get_current_user();
+        $nombre_usuario = $current_user->first_name ?: $current_user->display_name;
+        $system .= "USUARIO ACTUAL: {$nombre_usuario}\n";
+        $system .= "Salúdalo por su nombre cuando sea la primera interacción de la conversación.\n\n";
+
         $system .= "DATOS ACTUALES:\n" . $contexto_crm;
         $system .= "\n\nINSTRUCCIONES GENERALES:\n";
         $system .= "1. Responde de forma clara y estructurada\n";
@@ -643,7 +673,133 @@ class ARIA_Agente {
         $system .= "[AGENDAR_SEGUIMIENTO]{\"nombre\":\"X\",\"email\":\"X\",\"empresa\":\"X\",\"telefono\":\"X\",\"fecha\":\"YYYY-MM-DD\",\"hora\":\"HH:MM\",\"asunto\":\"Reunión de Seguimiento - AutomatizaTech\"}[/AGENDAR_SEGUIMIENTO]\n";
         $system .= "RECUERDA: Si el cliente está en CUALQUIERA de las 2 listas (propuestas activas o clientes contratados), usa sus datos del contexto directamente. NO pidas email ni teléfono si ya los tienes.\n";
         $system .= "El sistema procesará automáticamente esta instrucción.\n";
-        
+
+        $system .= "\nMÓDULO QA — GESTIÓN DE PRUEBAS DE SOFTWARE:\n";
+        $system .= "Tienes conocimiento experto del módulo de QA (Control de Calidad) de AutomatizaTech. Puedes responder preguntas sobre su uso.\n";
+        $system .= "MENÚ Y ACCESOS:\n";
+        $system .= "- Acceso: Panel de WordPress → menú 'QA Testing' → 'Proyectos QA'\n";
+        $system .= "- Puede haber múltiples proyectos (ej: Petsgo Marketplace, sitios de clientes)\n";
+        $system .= "- Cada proyecto tiene módulos (secciones del sistema a probar)\n";
+        $system .= "- Cada módulo contiene casos de prueba individuales\n\n";
+        $system .= "FLUJO DE TRABAJO QA:\n";
+        $system .= "1. Crear o importar casos de prueba (ID, título, pasos, resultado esperado)\n";
+        $system .= "2. Asignar un tester responsable a cada módulo\n";
+        $system .= "3. El tester ejecuta cada caso y cambia el estado\n";
+        $system .= "4. Agregar evidencias (capturas, videos) a cada caso\n";
+        $system .= "5. Dejar comentarios y Bug ID si se encuentra un defecto\n";
+        $system .= "6. Generar informe formal del proyecto\n\n";
+        $system .= "ESTADOS DE CASOS:\n";
+        $system .= "- Sin probar (🔘): no ejecutado aún — estado inicial\n";
+        $system .= "- PASS (✅): ejecutado y resultado correcto\n";
+        $system .= "- FAIL (❌): ejecutado, resultado incorrecto — hay un bug\n";
+        $system .= "- Bloqueado (⚠️): no se puede ejecutar por impedimento externo\n";
+        $system .= "- Omitido (⏭️): excluido intencionalmente del alcance\n";
+        $system .= "MÉTRICAS:\n";
+        $system .= "- Pass Rate = (PASS / total ejecutados) × 100. Meta: ≥95%\n";
+        $system .= "- Vista de módulo muestra barra de progreso por colores\n\n";
+        $system .= "FUNCIONALIDADES CLAVE:\n";
+        $system .= "- Evidencias: subir JPG, PNG, GIF, WEBP, MP4, WEBM, PDF (máx 10MB)\n";
+        $system .= "- Comentarios: agregar, editar (✏️) y eliminar por caso\n";
+        $system .= "- Bug ID / Ticket: campo para referenciar JIRA, BUG-XXX, etc.\n";
+        $system .= "- Lightbox: clic en imagen abre vista previa ampliada\n";
+        $system .= "- Cambio de estado: desde la grilla (tabla) o desde el modal de detalle\n";
+        $system .= "- Módulo completado (100%): notificación automática al tester asignado\n";
+        $system .= "- Proyecto completado (100%): notificación al cliente\n";
+        $system .= "- Glosario: botón 'Glosario' en el header explica términos técnicos\n";
+        $system .= "- Estados: botón '🚦 Estados' explica qué significa cada estado QA\n\n";
+        $system .= "PERMISOS:\n";
+        $system .= "- Administradores: acceso total (crear proyectos, asignar testers, generar informes)\n";
+        $system .= "- Testers: ejecutar pruebas, subir evidencias, comentar\n\n";
+
+        // =========================================================
+        // CONOCIMIENTO COMPLETO DE AUTOMATIZATECH — EMPRESA Y BACKEND
+        // =========================================================
+        $system .= "AUTOMATIZATECH — EMPRESA:\n";
+        $system .= "AutomatizaTech es una empresa chilena de tecnología especializada en automatización de negocios.\n";
+        $system .= "Misión: ayudar a emprendimientos y empresas a optimizar ventas, atención al cliente y operaciones mediante WordPress, CRM personalizado, n8n e IA.\n";
+        $system .= "Web: automatizatech.cl | Email: contacto@automatizatech.cl\n\n";
+
+        $system .= "SERVICIOS QUE OFRECE AT:\n";
+        $system .= "1. 🌐 Sitio Web WordPress personalizado — landing configurada para capturar leads\n";
+        $system .= "2. 🤖 Chatbot WhatsApp Business — responde consultas, agenda reuniones, confirma pagos\n";
+        $system .= "3. 📊 CRM personalizado — gestión de leads, propuestas, proyectos, historial y pagos\n";
+        $system .= "4. ⚙️ Automatización con n8n — flujos: recordatorios (72h/24h/1h), sincronización de calendario, limpieza de estados Redis\n";
+        $system .= "5. 🧠 IA integrada — MAXTECH (asistente interno), análisis de documentos, tracking de consumo OpenAI\n";
+        $system .= "6. 🔍 ARGOS — monitoreo de errores en workflows n8n, diagnóstico automático con IA\n";
+        $system .= "7. 📋 QA Testing — módulo de pruebas de software para proyectos de clientes\n";
+        $system .= "8. 📄 Generación de PDF — cotizaciones, boletas, facturas, informes QA\n";
+        $system .= "9. 🔐 Bóveda de Credenciales — almacenamiento encriptado (AES-256) de claves y contraseñas\n";
+        $system .= "10. 📈 Dashboard de consumo IA — monitoreo de tokens y costos OpenAI por cliente\n\n";
+
+        $system .= "PLANES COMERCIALES:\n";
+        $system .= "- Plan Básico: sitio web + formulario de contacto\n";
+        $system .= "- Plan Pro: web + chatbot WhatsApp + CRM\n";
+        $system .= "- Plan Ultimate: todo lo anterior + automatizaciones n8n + IA\n";
+        $system .= "- Proyectos Personalizados: desarrollo a medida según necesidad del cliente\n";
+        $system .= "- Precio base en USD y CLP — el markup para facturación de IA es 30%\n\n";
+
+        $system .= "EQUIPO (usuarios conocidos del backend):\n";
+        $system .= "- lgonzalez@automatizatech.cl — administrador principal\n";
+        $system .= "- anamaria.sandoval@automatizatech.cl — equipo AT (BCC en notificaciones)\n";
+        $system .= "- automatizacionesbotcore@gmail.com — cuenta operativa n8n/bots\n\n";
+
+        $system .= "MENÚS Y SECCIONES DEL PANEL DE ADMINISTRACIÓN WORDPRESS:\n";
+        $system .= "Puedes guiar a cualquier usuario backend diciéndole exactamente dónde ir.\n\n";
+        $system .= "📌 CONTACTOS (menú principal):\n";
+        $system .= "  → 'Leads / Demos': verifica y gestiona demos agendadas desde el sitio web\n";
+        $system .= "  → 'Clientes AT': CRM principal con todos los clientes contratados y prospectos activos\n";
+        $system .= "  → 'Propuestas': lista de cotizaciones enviadas (con links únicos)\n";
+        $system .= "  → 'Seguimientos': reuniones de seguimiento de proyectos activos\n\n";
+        $system .= "📌 QA TESTING (menú):\n";
+        $system .= "  → 'Proyectos QA': lista de todos los proyectos de prueba\n";
+        $system .= "  → Al entrar a un proyecto: ver módulos, casos, estados, evidencias\n";
+        $system .= "  → 'Configuración QA': gestionar permisos, importar casos desde Markdown\n\n";
+        $system .= "📌 AUTOMATIZA AI (menú):\n";
+        $system .= "  → Dashboard de consumo de tokens OpenAI por cliente y por mes\n";
+        $system .= "  → Costos estimados, # de llamadas, alertas de uso\n\n";
+        $system .= "📌 ARGOS — N8N (menú):\n";
+        $system .= "  → Lista de errores de workflows n8n capturados automáticamente\n";
+        $system .= "  → Estado, diagnóstico IA, workflow afectado y timestamp\n\n";
+        $system .= "📌 MAXTECH / ARIA (widget flotante, esquina inferior derecha):\n";
+        $system .= "  → Este chat — disponible en TODAS las páginas del admin\n";
+        $system .= "  → Historial de conversaciones por sesión\n";
+        $system .= "  → Soporta: texto, imágenes, audio (grabación), archivos (PDF, Excel, Word, PPT)\n\n";
+        $system .= "📌 HERRAMIENTAS → 'Bóveda de Credenciales':\n";
+        $system .= "  → Guardar/consultar contraseñas y claves de API encriptadas\n\n";
+        $system .= "📌 AJUSTES → sub-menú MAXTECH Config:\n";
+        $system .= "  → Configurar modelo GPT, temperatura, máximo de tokens para ARIA\n\n";
+
+        $system .= "TECNOLOGÍAS DEL STACK:\n";
+        $system .= "- WordPress (PHP) — base del sistema, mu-plugins para módulos críticos\n";
+        $system .= "- MySQL — base de datos: tablas wp_crm_*, wp_at_qa_*, wp_automatiza_*, wp_n8n_*\n";
+        $system .= "- n8n — motor de automatización de flujos (self-hosted)\n";
+        $system .= "- Redis — estado de conversaciones WhatsApp (sesiones temporales)\n";
+        $system .= "- OpenAI API (GPT-4, GPT-4o) — procesamiento de lenguaje natural y visión\n";
+        $system .= "- Google Calendar API — disponibilidad y agendamiento de reuniones\n";
+        $system .= "- Google Drive API — vinculación de carpetas de clientes\n";
+        $system .= "- SMTP Hostinger (PROD) / MailHog (local) — envío de correos\n";
+        $system .= "- FPDF (PHP) — generación de PDFs\n";
+        $system .= "- AES-256-CBC — encriptación de credenciales\n\n";
+
+        $system .= "INSTRUCCIONES PARA RESPONDER A USUARIOS BACKEND:\n";
+        $system .= "- Si preguntan '¿cómo hago X?', explica el flujo paso a paso con el menú exacto donde ir\n";
+        $system .= "- Si preguntan por un cliente, búscalo en el contexto CRM y entrega sus datos\n";
+        $system .= "- Si preguntan por errores de PROD, revisa el contexto ARGOS e interpreta el error\n";
+        $system .= "- Si preguntan por el estado de un proyecto QA, indica cómo acceder a él\n";
+        $system .= "- Si no tienes datos específicos en el contexto, di que no tienes acceso a ese dato en tiempo real pero explica cómo encontrarlo manualmente\n";
+        $system .= "- NUNCA inventes datos de clientes, leads o estados — usa solo lo del contexto\n\n";
+
+        // Informar a ARIA sobre el rol del usuario actual
+        $rol_usuario = $es_admin ? 'ADMINISTRADOR' : 'Usuario estándar (no administrador)';
+        $system .= "ROL DEL USUARIO ACTUAL: {$rol_usuario}\n\n";
+
+        $system .= "PRIVACIDAD Y ALCANCE DE DATOS:\n";
+        $system .= "- Ayuda a TODOS los usuarios con: cómo navegar el backend, cómo usar el módulo QA, cómo crear casos, cómo cambiar estados, cómo asignar testers, y cualquier procedimiento o pregunta funcional del sistema\n";
+        $system .= "- Los DATOS PRIVADOS de clientes (emails, teléfonos, RUTs, montos, propuestas específicas, leads concretos) son CONFIDENCIALES — compártelos SOLO con ADMINISTRADORES\n";
+        $system .= "- Si el usuario NO es administrador y pide datos privados de un cliente específico (ej: '¿cuál es el email de Juan Pérez?'), niégalo cortésmente y explica que no tienes autorización\n";
+        $system .= "- Cuando tengas contexto de un cliente específico, responde SOLO sobre ese cliente — no mezcles información entre clientes\n";
+        $system .= "- Nunca reveles datos de un cliente a otro usuario no autorizado\n\n";
+
         $messages[] = array('role' => 'system', 'content' => $system);
         
         // Historial de la conversación
@@ -744,16 +900,19 @@ class ARIA_Agente {
         $contexto .= "Fecha actual: {$fecha}\n\n";
         
         // Stats del mes
-        $stats = $wpdb->get_row($wpdb->prepare("
+        $stats = $wpdb->get_row("
             SELECT 
                 COUNT(*) as requests,
                 COALESCE(SUM(tokens_total), 0) as tokens,
                 COALESCE(SUM(costo_usd), 0) as costo,
-                COALESCE(SUM(CASE WHEN client_identifier LIKE 'cliente_%%' THEN costo_usd ELSE 0 END), 0) as facturable
+                COALESCE(SUM(CASE WHEN client_identifier LIKE 'cliente_%' THEN costo_usd ELSE 0 END), 0) as facturable
             FROM {$wpdb->prefix}ai_usage_log
             WHERE MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())
-        "), ARRAY_A);
+        ", ARRAY_A);
         
+        if (!$stats) {
+            $stats = array('requests' => 0, 'tokens' => 0, 'costo' => 0, 'facturable' => 0);
+        }
         $facturar = number_format(floatval($stats['facturable']) * 1.3, 2);
         $contexto .= "CONSUMO AI MES ACTUAL:\n";
         $contexto .= "- Peticiones: {$stats['requests']}\n";
@@ -762,15 +921,16 @@ class ARIA_Agente {
         $contexto .= "- A facturar (+30%): USD {$facturar}\n\n";
         
         // Top clientes
-        $clientes = $wpdb->get_results($wpdb->prepare("
+        $clientes = $wpdb->get_results("
             SELECT client_identifier, SUM(costo_usd) as costo, COUNT(*) as requests
             FROM {$wpdb->prefix}ai_usage_log
-            WHERE client_identifier LIKE 'cliente_%%'
+            WHERE client_identifier LIKE 'cliente_%'
             GROUP BY client_identifier
             ORDER BY costo DESC
             LIMIT 5
-        "), ARRAY_A);
+        ", ARRAY_A);
         
+        if (!$clientes) { $clientes = array(); }
         $contexto .= "TOP CLIENTES AI:\n";
         foreach ($clientes as $c) {
             $nombre = str_replace(array('cliente_', '_'), array('', ' '), $c['client_identifier']);
@@ -778,13 +938,14 @@ class ARIA_Agente {
         }
         
         // Demos AI activos
-        $demos = $wpdb->get_results($wpdb->prepare("
+        $demos = $wpdb->get_results("
             SELECT client_identifier, COUNT(*) as interacciones
             FROM {$wpdb->prefix}ai_usage_log
-            WHERE client_identifier LIKE 'demo_%%'
+            WHERE client_identifier LIKE 'demo_%'
             GROUP BY client_identifier
-        "), ARRAY_A);
+        ", ARRAY_A);
         
+        if (!$demos) { $demos = array(); }
         $contexto .= "\nDEMOS AI ACTIVOS: " . count($demos) . "\n";
         
         // Agregar contexto completo de AutomatizaTech
@@ -795,10 +956,91 @@ class ARIA_Agente {
         
         // Agregar contexto de errores ARGOS
         $contexto .= $this->obtener_contexto_argos();
+
+        // Agregar contexto del módulo QA
+        $contexto .= $this->obtener_contexto_qa();
         
         return $contexto;
     }
-    
+
+    /**
+     * Obtener contexto en tiempo real del módulo QA
+     */
+    private function obtener_contexto_qa() {
+        global $wpdb;
+        $t_projects = $wpdb->prefix . 'at_qa_projects';
+        $t_modules  = $wpdb->prefix . 'at_qa_modules';
+        $t_cases    = $wpdb->prefix . 'at_qa_cases';
+
+        // Verificar que las tablas existen
+        if ($wpdb->get_var("SHOW TABLES LIKE '{$t_projects}'") !== $t_projects) {
+            return '';
+        }
+
+        $ctx = "\n\n=== 🧪 MÓDULO QA — ESTADO ACTUAL ===\n";
+
+        $projects = $wpdb->get_results("SELECT * FROM {$t_projects} ORDER BY created_at DESC LIMIT 10", ARRAY_A);
+        if (empty($projects)) {
+            $ctx .= "No hay proyectos QA registrados aún.\n";
+            return $ctx;
+        }
+
+        foreach ($projects as $p) {
+            $pid = intval($p['id']);
+            // Totales por proyecto
+            $stats = $wpdb->get_row($wpdb->prepare("
+                SELECT
+                    COUNT(*) as total,
+                    SUM(CASE WHEN c.status='pass' THEN 1 ELSE 0 END) as pass,
+                    SUM(CASE WHEN c.status='fail' THEN 1 ELSE 0 END) as fail,
+                    SUM(CASE WHEN c.status='blocked' THEN 1 ELSE 0 END) as blocked,
+                    SUM(CASE WHEN c.status='skipped' THEN 1 ELSE 0 END) as skipped,
+                    SUM(CASE WHEN c.status='not_tested' OR c.status IS NULL THEN 1 ELSE 0 END) as not_tested
+                FROM {$t_cases} c
+                JOIN {$t_modules} m ON m.id = c.module_id
+                WHERE m.project_id = %d
+            ", $pid), ARRAY_A);
+
+            $total    = intval($stats['total'] ?? 0);
+            $pass     = intval($stats['pass'] ?? 0);
+            $fail     = intval($stats['fail'] ?? 0);
+            $blocked  = intval($stats['blocked'] ?? 0);
+            $skipped  = intval($stats['skipped'] ?? 0);
+            $untested = intval($stats['not_tested'] ?? 0);
+            $ejecutados = $pass + $fail + $blocked + $skipped;
+            $pass_rate = $ejecutados > 0 ? round(($pass / $ejecutados) * 100, 1) : 0;
+
+            $ctx .= "\n📁 Proyecto: {$p['name']} (ID:{$pid})\n";
+            $ctx .= "   Cliente: " . ($p['client_name'] ?? 'N/A') . "\n";
+            $ctx .= "   Casos: {$total} total | ✅ {$pass} PASS | ❌ {$fail} FAIL | ⚠️ {$blocked} BLQ | ⏭️ {$skipped} OMIT | 🔘 {$untested} sin probar\n";
+            $ctx .= "   Pass Rate: {$pass_rate}%\n";
+
+            // Módulos del proyecto
+            $modules = $wpdb->get_results($wpdb->prepare("
+                SELECT m.id, m.title, m.assigned_tester, COUNT(c.id) as total_cases,
+                    SUM(CASE WHEN c.status='pass' THEN 1 ELSE 0 END) as pass_cases,
+                    SUM(CASE WHEN c.status='fail' THEN 1 ELSE 0 END) as fail_cases
+                FROM {$t_modules} m
+                LEFT JOIN {$t_cases} c ON c.module_id = m.id
+                WHERE m.project_id = %d
+                GROUP BY m.id
+                ORDER BY m.id ASC
+            ", $pid), ARRAY_A);
+
+            foreach ($modules as $mod) {
+                $mtotal = intval($mod['total_cases'] ?? 0);
+                $mpass  = intval($mod['pass_cases'] ?? 0);
+                $mfail  = intval($mod['fail_cases'] ?? 0);
+                $tester = $mod['assigned_tester'] ? get_userdata($mod['assigned_tester']) : null;
+                $tester_name = $tester ? $tester->display_name : 'Sin asignar';
+                $mod_name = $mod['title'] ?? '(sin nombre)';
+                $ctx .= "   └─ Módulo: {$mod_name} | {$mtotal} casos | ✅{$mpass} ❌{$mfail} | Tester: {$tester_name}\n";
+            }
+        }
+
+        return $ctx;
+    }
+
     /**
      * Obtener contexto completo de AutomatizaTech (Leads, Propuestas, Seguimientos)
      */
@@ -808,6 +1050,14 @@ class ARIA_Agente {
         $leads_table = $wpdb->prefix . 'automatiza_leads';
         $propuestas_table = $wpdb->prefix . 'automatiza_propuestas';
         $followup_table = $wpdb->prefix . 'automatiza_followup_meetings';
+        
+        // Verificar que las tablas principales existan antes de consultarlas
+        $tablas_requeridas = array($leads_table, $propuestas_table, $followup_table);
+        foreach ($tablas_requeridas as $t) {
+            if ($wpdb->get_var("SHOW TABLES LIKE '{$t}'") !== $t) {
+                return "\n\nDATOS COMERCIALES: Tablas no encontradas en esta instalación.\n";
+            }
+        }
         
         $contexto = "\n\n=== 📊 DATOS COMERCIALES AUTOMATIZATECH ===\n";
         
@@ -940,6 +1190,10 @@ class ARIA_Agente {
         
         // ========== CLIENTES CONTRATADOS ==========
         $clients_table = $wpdb->prefix . 'automatiza_tech_clients';
+        if ($wpdb->get_var("SHOW TABLES LIKE '{$clients_table}'") !== $clients_table) {
+            $contexto .= "\n✅ CLIENTES CONTRATADOS: Tabla no encontrada.\n";
+            return $contexto;
+        }
         $contexto .= "\n✅ CLIENTES CONTRATADOS (ya tienen servicio activo):\n";
         
         $total_clientes = $wpdb->get_var("SELECT COUNT(*) FROM $clients_table") ?: 0;

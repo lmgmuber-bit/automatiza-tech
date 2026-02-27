@@ -15,6 +15,10 @@ class ARIA_Widget_Flotante {
         $user_id = get_current_user_id();
         $session_id = 'aria_' . $user_id . '_' . time();
         $nonce = wp_create_nonce('aria_nonce');
+        $user = wp_get_current_user();
+        $first_name = !empty($user->first_name) ? $user->first_name : $user->display_name;
+        $hora = (int) current_time('G');
+        $saludo = $hora < 12 ? 'Buenos días' : ($hora < 19 ? 'Buenas tardes' : 'Buenas noches');
         ?>
         
         <style>
@@ -71,6 +75,60 @@ class ARIA_Widget_Flotante {
             0% { transform: scale(1); opacity: 0.5; }
             100% { transform: scale(1.5); opacity: 0; }
         }
+
+        /* Burbuja de saludo */
+        #aria-greeting-bubble {
+            position: fixed;
+            bottom: 100px;
+            right: 22px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px 16px 4px 16px;
+            padding: 12px 16px;
+            max-width: 240px;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #1e293b;
+            box-shadow: 0 8px 30px rgba(99,102,241,0.2);
+            z-index: 999998;
+            display: none;
+            animation: bubbleIn .4s cubic-bezier(.34,1.56,.64,1) forwards;
+        }
+        #aria-greeting-bubble.show { display: block; }
+        #aria-greeting-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            right: 22px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 0;
+            border-top: 8px solid #fff;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,.08));
+        }
+        #aria-greeting-bubble .bubble-close {
+            position: absolute;
+            top: 5px;
+            right: 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #94a3b8;
+            font-size: 14px;
+            line-height: 1;
+            padding: 0;
+        }
+        #aria-greeting-bubble .bubble-close:hover { color: #475569; }
+        @keyframes bubbleIn {
+            from { opacity: 0; transform: scale(.7) translateY(10px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes bubbleOut {
+            from { opacity: 1; transform: scale(1); }
+            to   { opacity: 0; transform: scale(.8) translateY(5px); }
+        }
+        #aria-greeting-bubble.hiding { animation: bubbleOut .3s ease forwards; }
         
         /* Panel principal */
         #aria-panel {
@@ -658,6 +716,14 @@ class ARIA_Widget_Flotante {
         }
         </style>
         
+        <!-- Burbuja de saludo -->
+        <div id="aria-greeting-bubble">
+            <button class="bubble-close" id="ariaGreetingClose" title="Cerrar">&times;</button>
+            <strong style="color:#6366f1;">🤖 MAXTECH</strong><br>
+            <?php echo esc_html($saludo); ?>, <strong><?php echo esc_html($first_name); ?></strong>! 👋<br>
+            Estoy aquí para ayudarte.
+        </div>
+
         <!-- Botón flotante -->
         <button id="aria-toggle" title="MAXTECH - Asistente IA">
             <div class="pulse"></div>
@@ -694,8 +760,8 @@ class ARIA_Widget_Flotante {
                 <div class="aria-msg bot">
                     <div class="aria-msg-avatar">🤖</div>
                     <div class="aria-msg-content">
-                        ¡Hola! Soy <strong>MAXTECH</strong>, tu experto en CRM. 🚀<br><br>
-                        Puedo ayudarte con consultas del CRM, analizar documentos, o responder por voz. ¿En qué te ayudo?
+                        👋 <?php echo esc_html($saludo); ?>, <strong><?php echo esc_html($first_name); ?></strong>! Soy <strong>MAXTECH</strong>. 🚀<br><br>
+                        Puedo ayudarte con el <strong>CRM</strong>, módulo <strong>QA</strong>, automatizaciones, analizar documentos o responder por voz. ¿En qué te ayudo?
                     </div>
                 </div>
             </div>
@@ -735,11 +801,61 @@ class ARIA_Widget_Flotante {
         var recordInterval = null;
         var recognition = null;
         
+        // Extrae JSON de WordPress aunque haya warnings/Xdebug antes
+        function safeJson(text) {
+            if (typeof text === 'object') return text;
+            // Buscar patrón WordPress específico primero
+            var idx = text.indexOf('{"success":');
+            if (idx === -1) idx = text.indexOf('{"data":');
+            if (idx === -1) idx = text.indexOf('{');
+            if (idx === -1) return null;
+            var end = text.lastIndexOf('}');
+            if (end === -1 || end <= idx) return null;
+            try { return JSON.parse(text.substring(idx, end + 1)); } catch(e) {
+                // Si falla, intentar encontrar el JSON más corto válido desde idx
+                for (var i = end; i > idx; i--) {
+                    try { return JSON.parse(text.substring(idx, i + 1)); } catch(e2) {}
+                }
+                return null;
+            }
+        }
+
         // Toggle panel
         function toggleAriaPanel() {
             document.getElementById('aria-panel').classList.toggle('active');
         }
-        document.getElementById('aria-toggle').addEventListener('click', toggleAriaPanel);
+        document.getElementById('aria-toggle').addEventListener('click', function() {
+            // Ocultar burbuja al abrir el panel
+            hideGreetingBubble();
+            toggleAriaPanel();
+        });
+
+        // === Burbuja de saludo ===
+        const BUBBLE_KEY = 'aria_greeted_<?php echo get_current_user_id(); ?>_' + new Date().toDateString();
+        function showGreetingBubble(){
+            const bubble = document.getElementById('aria-greeting-bubble');
+            if(!bubble) return;
+            bubble.classList.add('show');
+            // Auto-dismiss en 6 segundos
+            window._ariaBubbleTimer = setTimeout(hideGreetingBubble, 6000);
+        }
+        function hideGreetingBubble(){
+            const bubble = document.getElementById('aria-greeting-bubble');
+            if(!bubble || !bubble.classList.contains('show')) return;
+            clearTimeout(window._ariaBubbleTimer);
+            bubble.classList.add('hiding');
+            setTimeout(function(){ bubble.classList.remove('show','hiding'); }, 320);
+        }
+        document.getElementById('ariaGreetingClose').addEventListener('click', function(e){
+            e.stopPropagation();
+            hideGreetingBubble();
+            localStorage.setItem(BUBBLE_KEY, '1');
+        });
+        // Mostrar solo una vez por día
+        if(!localStorage.getItem(BUBBLE_KEY)){
+            setTimeout(showGreetingBubble, 1200);
+            localStorage.setItem(BUBBLE_KEY, '1');
+        }
         
         // Enviar mensaje
         function ariaEnviar() {
@@ -764,30 +880,49 @@ class ARIA_Widget_Flotante {
             input.value = '';
             
             // Enviar al servidor
-            jQuery.post(ajaxurl, {
-                action: 'aria_chat',
-                nonce: ariaNonce,
-                mensaje: mensaje,
-                session_id: ariaSessionId,
-                archivos: JSON.stringify(ariaArchivos)
-            }, function(response) {
-                var el = document.getElementById(loadId);
-                if (response.success) {
-                    var texto = response.data.respuesta;
-                    // Formatear markdown básico
-                    texto = texto.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-                    texto = texto.replace(/\n/g, '<br>');
-                    
-                    var audioHtml = '';
-                    if (document.getElementById('ariaVoiceResponse').checked) {
-                        audioHtml = '<div class="aria-audio-player" id="audioPlayer-' + loadId + '"><button onclick="playAriaAudio(\'' + loadId + '\', \'' + encodeURIComponent(response.data.respuesta.substring(0, 500)) + '\')">▶️</button><span>Reproducir respuesta</span></div>';
+            jQuery.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                dataType: 'text',  // recibir texto crudo para tolerar WP_DEBUG
+                timeout: 90000,
+                data: {
+                    action: 'aria_chat',
+                    nonce: ariaNonce,
+                    mensaje: mensaje,
+                    session_id: ariaSessionId,
+                    archivos: JSON.stringify(ariaArchivos)
+                },
+                success: function(raw) {
+                    var el = document.getElementById(loadId);
+                    if (!el) return;
+                    var response = safeJson(raw);
+                    if (response && response.success) {
+                        var texto = response.data.respuesta;
+                        texto = texto.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                        texto = texto.replace(/\n/g, '<br>');
+                        
+                        var audioHtml = '';
+                        if (document.getElementById('ariaVoiceResponse') && document.getElementById('ariaVoiceResponse').checked) {
+                            audioHtml = '<div class="aria-audio-player" id="audioPlayer-' + loadId + '"><button onclick="playAriaAudio(\'' + loadId + '\', \'' + encodeURIComponent(response.data.respuesta.substring(0, 500)) + '\')">▶️</button><span>Reproducir respuesta</span></div>';
+                        }
+                        
+                        el.querySelector('.aria-msg-content').innerHTML = texto + audioHtml;
+                    } else if (response && !response.success) {
+                        el.querySelector('.aria-msg-content').innerHTML = '❌ ' + (response.data || 'Error al procesar');
+                    } else {
+                        el.querySelector('.aria-msg-content').innerHTML = '❌ Respuesta inesperada del servidor. Intenta de nuevo.';
                     }
-                    
-                    el.querySelector('.aria-msg-content').innerHTML = texto + audioHtml;
-                } else {
-                    el.querySelector('.aria-msg-content').innerHTML = '❌ Error al procesar';
+                    messages.scrollTop = messages.scrollHeight;
+                },
+                error: function(xhr, status) {
+                    var el = document.getElementById(loadId);
+                    if (!el) return;
+                    var msg = status === 'timeout'
+                        ? '⏱️ La respuesta tardó demasiado. Intenta de nuevo.'
+                        : '❌ Error de conexión. Intenta de nuevo.';
+                    el.querySelector('.aria-msg-content').innerHTML = msg;
+                    messages.scrollTop = messages.scrollHeight;
                 }
-                messages.scrollTop = messages.scrollHeight;
             });
             
             // Limpiar archivos
@@ -819,11 +954,13 @@ class ARIA_Widget_Flotante {
                 data: formData,
                 processData: false,
                 contentType: false,
-                success: function(response) {
-                    if (response.success) {
+                dataType: 'text',
+                success: function(raw) {
+                    var response = safeJson(raw);
+                    if (response && response.success) {
                         ariaArchivos.push(response.data);
                     } else {
-                        document.getElementById(tempId).innerHTML = '❌ Error: ' + response.data;
+                        document.getElementById(tempId).innerHTML = '❌ Error: ' + (response ? response.data : 'respuesta inválida');
                     }
                 }
             });
@@ -894,18 +1031,19 @@ class ARIA_Widget_Flotante {
             var btn = document.querySelector('#audioPlayer-' + id + ' button');
             btn.textContent = '⏳';
             
-            jQuery.post(ajaxurl, {
-                action: 'aria_tts',
-                nonce: ariaNonce,
-                texto: decodeURIComponent(texto)
-            }, function(response) {
-                if (response.success) {
-                    var audio = new Audio(response.data.audio_url);
-                    audio.play();
-                    btn.textContent = '🔊';
-                    audio.onended = function() { btn.textContent = '▶️'; };
-                } else {
-                    btn.textContent = '❌';
+            jQuery.ajax({
+                url: ajaxurl, type: 'POST', dataType: 'text',
+                data: { action: 'aria_tts', nonce: ariaNonce, texto: decodeURIComponent(texto) },
+                success: function(raw) {
+                    var response = safeJson(raw);
+                    if (response && response.success) {
+                        var audio = new Audio(response.data.audio_url);
+                        audio.play();
+                        btn.textContent = '🔊';
+                        audio.onended = function() { btn.textContent = '▶️'; };
+                    } else {
+                        btn.textContent = '❌';
+                    }
                 }
             });
         }
@@ -915,19 +1053,23 @@ class ARIA_Widget_Flotante {
             var panel = document.getElementById('aria-historial');
             panel.classList.add('active');
             
-            jQuery.post(ajaxurl, {
-                action: 'aria_historial',
-                nonce: ariaNonce
-            }, function(response) {
-                if (response.success) {
-                    var html = '';
-                    response.data.forEach(function(s) {
-                        html += '<div class="historial-item" onclick="cargarSesion(\'' + s.session_id + '\')">';
-                        html += '<div class="fecha">' + s.inicio + ' (' + s.mensajes + ' mensajes)</div>';
-                        html += '<div class="preview">' + (s.primer_mensaje || '').substring(0, 50) + '...</div>';
-                        html += '</div>';
-                    });
-                    document.getElementById('historialList').innerHTML = html || '<p style="padding:20px;color:#94a3b8;">No hay conversaciones anteriores</p>';
+            jQuery.ajax({
+                url: ajaxurl, type: 'POST', dataType: 'text',
+                data: { action: 'aria_historial', nonce: ariaNonce },
+                success: function(raw) {
+                    var response = safeJson(raw);
+                    if (response && response.success) {
+                        var html = '';
+                        response.data.forEach(function(s) {
+                            html += '<div class="historial-item" onclick="cargarSesion(\'' + s.session_id + '\')">';
+                            html += '<div class="fecha">' + s.inicio + ' (' + s.mensajes + ' mensajes)</div>';
+                            html += '<div class="preview">' + (s.primer_mensaje || '').substring(0, 50) + '...</div>';
+                            html += '</div>';
+                        });
+                        document.getElementById('historialList').innerHTML = html || '<p style="padding:20px;color:#94a3b8;">No hay conversaciones anteriores</p>';
+                    } else {
+                        document.getElementById('historialList').innerHTML = '<p style="padding:20px;color:#94a3b8;">Error al cargar historial</p>';
+                    }
                 }
             });
         }
@@ -940,41 +1082,43 @@ class ARIA_Widget_Flotante {
             ariaSessionId = sessionId;
             cerrarHistorial();
             
-            // Cargar mensajes de esa sesión
             var messages = document.getElementById('ariaMessages');
             messages.innerHTML = '<div class="aria-msg bot"><div class="aria-msg-avatar">⏳</div><div class="aria-msg-content">Cargando conversación...</div></div>';
             
-            jQuery.post(ajaxurl, {
-                action: 'aria_cargar_sesion',
-                nonce: ariaNonce,
-                session_id: sessionId
-            }, function(response) {
-                if (response.success && response.data.length > 0) {
-                    var html = '';
-                    response.data.forEach(function(msg) {
-                        var isBot = msg.role === 'assistant';
-                        var avatar = isBot ? '🤖' : '👤';
-                        var clase = isBot ? 'bot' : 'user';
-                        var contenido = msg.content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-                        html += '<div class="aria-msg ' + clase + '"><div class="aria-msg-avatar">' + avatar + '</div><div class="aria-msg-content">' + contenido + '</div></div>';
-                    });
-                    messages.innerHTML = html;
-                    messages.scrollTop = messages.scrollHeight;
-                } else {
-                    messages.innerHTML = '<div class="aria-msg bot"><div class="aria-msg-avatar">🤖</div><div class="aria-msg-content">No se encontraron mensajes en esta sesión.</div></div>';
+            jQuery.ajax({
+                url: ajaxurl, type: 'POST', dataType: 'text',
+                data: { action: 'aria_cargar_sesion', nonce: ariaNonce, session_id: sessionId },
+                success: function(raw) {
+                    var response = safeJson(raw);
+                    if (response && response.success && response.data.length > 0) {
+                        var html = '';
+                        response.data.forEach(function(msg) {
+                            var isBot = msg.role === 'assistant';
+                            var avatar = isBot ? '🤖' : '👤';
+                            var clase = isBot ? 'bot' : 'user';
+                            var contenido = msg.content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                            html += '<div class="aria-msg ' + clase + '"><div class="aria-msg-avatar">' + avatar + '</div><div class="aria-msg-content">' + contenido + '</div></div>';
+                        });
+                        messages.innerHTML = html;
+                        messages.scrollTop = messages.scrollHeight;
+                    } else {
+                        messages.innerHTML = '<div class="aria-msg bot"><div class="aria-msg-avatar">🤖</div><div class="aria-msg-content">No se encontraron mensajes en esta sesión.</div></div>';
+                    }
                 }
             });
         }
         
         // Nueva sesión
         function ariaNuevaSesion() {
-            jQuery.post(ajaxurl, {
-                action: 'aria_nueva_sesion',
-                nonce: ariaNonce
-            }, function(response) {
-                if (response.success) {
-                    ariaSessionId = response.data.session_id;
-                    document.getElementById('ariaMessages').innerHTML = '<div class="aria-msg bot"><div class="aria-msg-avatar">🤖</div><div class="aria-msg-content">¡Nueva conversación iniciada! ¿En qué te ayudo? 🚀</div></div>';
+            jQuery.ajax({
+                url: ajaxurl, type: 'POST', dataType: 'text',
+                data: { action: 'aria_nueva_sesion', nonce: ariaNonce },
+                success: function(raw) {
+                    var response = safeJson(raw);
+                    if (response && response.success) {
+                        ariaSessionId = response.data.session_id;
+                        document.getElementById('ariaMessages').innerHTML = '<div class="aria-msg bot"><div class="aria-msg-avatar">🤖</div><div class="aria-msg-content">¡Nueva conversación iniciada! ¿En qué te ayudo? 🚀</div></div>';
+                    }
                 }
             });
         }

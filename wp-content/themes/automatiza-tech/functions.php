@@ -524,3 +524,160 @@ function automatiza_tech_admin_scripts($hook) {
     ));
 }
 add_action('admin_enqueue_scripts', 'automatiza_tech_admin_scripts');
+
+/**
+ * =====================================================
+ * PERSONALIZACIÓN DEL LOGIN DE WORDPRESS
+ * Usa hooks oficiales de WP — no modifica ningún archivo core
+ * =====================================================
+ */
+
+// 1. Estilos personalizados en la página de login
+add_action('login_enqueue_scripts', function() {
+    $logo_url = get_template_directory_uri() . '/assets/images/logo-automatiza-tech.png';
+    ?>
+    <style>
+    /* Fondo con gradiente corporativo AT */
+    body.login {
+        background: linear-gradient(135deg, #0d9488 0%, #0f766e 40%, #134e4a 100%) !important;
+    }
+    body.login::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* Logo personalizado */
+    #login h1 a, .login h1 a {
+        background-image: url('<?php echo esc_url($logo_url); ?>') !important;
+        background-size: contain !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+        width: 260px !important;
+        height: 80px !important;
+        display: block;
+        text-indent: -9999px;
+    }
+
+    /* Caja del formulario */
+    #loginform, #lostpasswordform, #registerform {
+        background: rgba(255,255,255,0.97) !important;
+        border-radius: 16px !important;
+        border: none !important;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.25) !important;
+        padding: 30px 30px 24px !important;
+    }
+
+    /* Labels */
+    #loginform label, #lostpasswordform label {
+        color: #374151 !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+    }
+
+    /* Inputs */
+    #loginform input[type=text],
+    #loginform input[type=password],
+    #lostpasswordform input[type=text] {
+        border: 1.5px solid #d1d5db !important;
+        border-radius: 8px !important;
+        padding: 10px 12px !important;
+        font-size: 14px !important;
+        box-shadow: none !important;
+        transition: border-color .2s !important;
+    }
+    #loginform input[type=text]:focus,
+    #loginform input[type=password]:focus,
+    #lostpasswordform input[type=text]:focus {
+        border-color: #0d9488 !important;
+        outline: none !important;
+        box-shadow: 0 0 0 3px rgba(13,148,136,.15) !important;
+    }
+
+    /* Botón principal */
+    .wp-core-ui .button-primary,
+    #loginform .button-primary {
+        background: linear-gradient(135deg, #0d9488, #14b8a6) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 10px 20px !important;
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.3px !important;
+        box-shadow: 0 4px 14px rgba(13,148,136,.35) !important;
+        transition: all .2s !important;
+        text-shadow: none !important;
+    }
+    .wp-core-ui .button-primary:hover {
+        background: linear-gradient(135deg, #0f766e, #0d9488) !important;
+        box-shadow: 0 6px 18px rgba(13,148,136,.45) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    /* Links */
+    #nav a, #backtoblog a, .login #nav a, .login #backtoblog a {
+        color: rgba(255,255,255,0.85) !important;
+        text-decoration: none !important;
+        font-size: 13px !important;
+    }
+    #nav a:hover, #backtoblog a:hover { color: #fff !important; text-decoration: underline !important; }
+
+    /* Checkbox rememberme */
+    #loginform .forgetmenot label { font-weight: 400 !important; color: #6b7280 !important; }
+
+    /* Mensajes de error */
+    #login_error {
+        border-left-color: #ef4444 !important;
+        color: #dc2626 !important;
+        border-radius: 8px !important;
+    }
+
+    /* Contenedor centrado */
+    #login { padding-top: 80px !important; }
+
+    /* Footer login */
+    .login #backtoblog { text-align: center; }
+
+    /* Tag "Powered by" oculto */
+    #login #backtoblog { margin-top: 12px; }
+    </style>
+    <?php
+});
+
+// 2. Redirigir el logo al sitio (no a wordpress.org)
+add_filter('login_headerurl', function() {
+    return home_url();
+});
+
+// 3. Texto alternativo del logo
+add_filter('login_headertext', function() {
+    return get_bloginfo('name') . ' — Panel de Administración';
+});
+
+// 4. Título de la página
+add_filter('login_title', function($title) {
+    return get_bloginfo('name') . ' — Acceso al Panel';
+});
+
+// 5. JS: bloquear botón al enviar el formulario
+add_action('login_footer', function() {
+    ?>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var form = document.getElementById('loginform');
+        if (!form) return;
+        form.addEventListener('submit', function() {
+            var btn = document.getElementById('wp-submit');
+            if (!btn) return;
+            btn.disabled = true;
+            btn.value = '⏳ Iniciando sesión...';
+            btn.style.opacity = '0.75';
+            btn.style.cursor = 'not-allowed';
+        });
+    });
+    </script>
+    <?php
+});

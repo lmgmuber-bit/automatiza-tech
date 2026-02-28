@@ -38,7 +38,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<small><?php esc_html_e( '(click to expand)', 'all-in-one-wp-migration' ); ?></small>
 		</h4>
 		<ul>
-			<li><strong><?php esc_html_e( 'Security Options' ); ?></strong></li>
+			<li><strong><?php esc_html_e( 'Security Options', 'all-in-one-wp-migration' ); ?></strong></li>
 			<?php if ( ai1wm_can_encrypt() ) : ?>
 				<li class="ai1wm-encrypt-backups-container">
 					<label for="ai1wm-encrypt-backups">
@@ -67,6 +67,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<a href="https://help.servmask.com/knowledgebase/unable-to-encrypt-and-decrypt-backups/" target="_blank"><span class="ai1wm-icon-help"></span></a>
 				</li>
 			<?php endif; ?>
+
+			<?php do_action( 'ai1wm_export_compression_types' ); ?>
 
 			<li><strong><?php esc_html_e( 'Database Options' ); ?></strong></li>
 			<li>

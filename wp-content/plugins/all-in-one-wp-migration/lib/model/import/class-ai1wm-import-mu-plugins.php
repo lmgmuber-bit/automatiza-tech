@@ -36,6 +36,29 @@ class Ai1wm_Import_Mu_Plugins {
 		// Set progress
 		Ai1wm_Status::info( __( 'Activating mu-plugins...', 'all-in-one-wp-migration' ) );
 
+		// Set decryption password
+		$decryption_password = null;
+		if ( isset( $params['decryption_password'] ) ) {
+			$decryption_password = $params['decryption_password'];
+		}
+
+		// Read package.json file
+		$handle = ai1wm_open( ai1wm_package_path( $params ), 'r' );
+
+		// Parse package.json file
+		$config = ai1wm_read( $handle, filesize( ai1wm_package_path( $params ) ) );
+		$config = json_decode( $config, true );
+
+		// Close handle
+		ai1wm_close( $handle );
+
+		// Get compression type
+		$compression_type = null;
+		if ( ! empty( $config['Compression']['Enabled'] ) ) {
+			$compression_type = $config['Compression']['Type'];
+		}
+
+		// List of must-use plugins
 		$exclude_files = array(
 			AI1WM_MUPLUGINS_NAME . DIRECTORY_SEPARATOR . AI1WM_ENDURANCE_PAGE_CACHE_NAME,
 			AI1WM_MUPLUGINS_NAME . DIRECTORY_SEPARATOR . AI1WM_ENDURANCE_PHP_EDGE_NAME,
@@ -50,10 +73,11 @@ class Ai1wm_Import_Mu_Plugins {
 			AI1WM_MUPLUGINS_NAME . DIRECTORY_SEPARATOR . AI1WM_WP_CERBER_SECURITY_NAME,
 			AI1WM_MUPLUGINS_NAME . DIRECTORY_SEPARATOR . AI1WM_SQLITE_DATABASE_INTEGRATION_NAME,
 			AI1WM_MUPLUGINS_NAME . DIRECTORY_SEPARATOR . AI1WM_SQLITE_DATABASE_ZERO_NAME,
+			AI1WM_MUPLUGINS_NAME . DIRECTORY_SEPARATOR . AI1WM_EOS_DEACTIVATE_PLUGINS_NAME,
 		);
 
 		// Open the archive file for reading
-		$archive = new Ai1wm_Extractor( ai1wm_archive_path( $params ) );
+		$archive = new Ai1wm_Extractor( ai1wm_archive_path( $params ), $decryption_password, $compression_type );
 
 		// Unpack mu-plugins files
 		$archive->extract_by_files_array( WP_CONTENT_DIR, array( AI1WM_MUPLUGINS_NAME ), $exclude_files );

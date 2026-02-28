@@ -130,72 +130,7 @@ class AutomatizaTech_Credentials_Vault {
         
         return $decrypted !== false ? $decrypted : '';
     }
-
-    /**
-     * Obtener API Key desencriptada de la bóveda por nombre de servicio y categoría.
-     * Uso: AutomatizaTech_Credentials_Vault::get_instance()->get_api_key('OpenAI', 'ai')
-     *
-     * @param string $service_name  Nombre del servicio (ej: 'OpenAI', 'Google Drive')
-     * @param string $category      Categoría opcional (ej: 'ai', 'api', 'google')
-     * @return string               API Key desencriptada o cadena vacía
-     */
-    public function get_api_key($service_name, $category = '') {
-        global $wpdb;
-
-        $where = "WHERE service_name = %s AND is_active = 1";
-        $params = array($service_name);
-
-        if (!empty($category)) {
-            $where .= " AND category = %s";
-            $params[] = $category;
-        }
-
-        $row = $wpdb->get_row(
-            $wpdb->prepare(
-                "SELECT api_key_encrypted FROM {$this->table_name} {$where} LIMIT 1",
-                $params
-            )
-        );
-
-        if ($row && !empty($row->api_key_encrypted)) {
-            return $this->decrypt_password($row->api_key_encrypted);
-        }
-
-        return '';
-    }
-
-    /**
-     * Obtener contraseña desencriptada de la bóveda por nombre de servicio.
-     *
-     * @param string $service_name  Nombre del servicio
-     * @param string $category      Categoría opcional
-     * @return string               Contraseña desencriptada o cadena vacía
-     */
-    public function get_password($service_name, $category = '') {
-        global $wpdb;
-
-        $where = "WHERE service_name = %s AND is_active = 1";
-        $params = array($service_name);
-
-        if (!empty($category)) {
-            $where .= " AND category = %s";
-            $params[] = $category;
-        }
-
-        $row = $wpdb->get_row(
-            $wpdb->prepare(
-                "SELECT password_encrypted FROM {$this->table_name} {$where} LIMIT 1",
-                $params
-            )
-        );
-
-        if ($row && !empty($row->password_encrypted)) {
-            return $this->decrypt_password($row->password_encrypted);
-        }
-
-        return '';
-    }
-
+    
     /**
      * Crear tablas necesarias
      */

@@ -32,6 +32,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Ai1wm_Export_Database {
 
 	public static function execute( $params ) {
+
 		// Set exclude database
 		if ( isset( $params['options']['no_database'] ) ) {
 			return $params;

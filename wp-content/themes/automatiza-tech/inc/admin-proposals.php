@@ -617,7 +617,6 @@ function automatiza_tech_proposals_page() {
                                                 <?php endif; ?>
                                             </div>
                                             <div class="proposal-actions">
-                                                <button type="button" class="button button-small btn-convert-lead" data-id="<?php echo $p->id; ?>" data-email="<?php echo esc_attr($p->client_email); ?>" title="Convertir a Cliente">👤+</button>
                                                 <a href="<?php echo admin_url('admin.php?page=automatiza-proposals&edit_id=' . $p->id); ?>" class="button button-small" title="Editar">✏️</a>
                                                 <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=automatiza-proposals&delete_id=' . $p->id), 'delete_proposal_' . $p->id); ?>" 
                                                    class="button button-small" style="color: #b32d2e;" title="Eliminar"
@@ -635,38 +634,8 @@ function automatiza_tech_proposals_page() {
                 </div>
                 
                 <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    document.getElementById('select-all-proposals')?.addEventListener('change', function() {
-                        document.querySelectorAll('.proposal-checkbox').forEach(cb => cb.checked = this.checked);
-                    });
-
-                    // Convertir Propuesta a Cliente
-                    document.querySelectorAll('.btn-convert-lead').forEach(function(btn) {
-                        btn.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            if (!confirm('¿Convertir esta propuesta en Cliente activo? Se creará la ficha del cliente.')) return;
-                            
-                            var id = this.getAttribute('data-id');
-                            var btn = this;
-                            btn.disabled = true;
-                            btn.textContent = '⏳';
-                            
-                            jQuery.post(ajaxurl, {
-                                action: 'crm_convertir_propuesta',
-                                nonce: '<?php echo wp_create_nonce('crm_nonce'); ?>',
-                                propuesta_id: id
-                            }, function(response) {
-                                if (response.success) {
-                                    alert('✅ ¡Cliente creado correctamente! Redirigiendo a su ficha...');
-                                    window.location.href = 'admin.php?page=automatiza-crm-ficha&id=' + response.data.cliente_id;
-                                } else {
-                                    alert('❌ Error: ' + (response.data || 'Desconocido'));
-                                    btn.disabled = false;
-                                    btn.textContent = '👤+';
-                                }
-                            });
-                        });
-                    });
+                document.getElementById('select-all-proposals')?.addEventListener('change', function() {
+                    document.querySelectorAll('.proposal-checkbox').forEach(cb => cb.checked = this.checked);
                 });
                 </script>
             </div>

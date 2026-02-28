@@ -48,11 +48,13 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 	/**
 	 * Overloaded constructor that opens the passed file for reading
 	 *
-	 * @param string $file_name File to use as archive
+	 * @param string $file_name        File to use as archive
+	 * @param string $file_password    File password string
+	 * @param string $file_compression File compression type
 	 */
-	public function __construct( $file_name ) {
+	public function __construct( $file_name, $file_password = null, $file_compression = null ) {
 		// Call parent, to initialize variables
-		parent::__construct( $file_name );
+		parent::__construct( $file_name, $file_password, $file_compression, false );
 	}
 
 	public function list_files() {
@@ -63,18 +65,20 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 			throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to beginning of file. File: %s', 'all-in-one-wp-migration' ), $this->file_name ) );
 		}
 
+		$offset = 0;
+
 		// Loop over files
-		while ( $block = @fread( $this->file_handle, 4377 ) ) {
+		while ( ( $block = @fread( $this->file_handle, 4377 ) ) ) {
 
 			// End block has been reached
-			if ( $block === $this->eof ) {
+			if ( $block === $this->file_eof ) {
 				continue;
 			}
 
 			// Get file data from the block
 			if ( ( $data = $this->get_data_from_block( $block ) ) ) {
 				// Store the position where the file begins - used for downloading from archive directly
-				$data['offset'] = @ftell( $this->file_handle );
+				$data['offset'] = $offset;
 
 				// Skip file content, so we can move forward to the next file
 				if ( @fseek( $this->file_handle, $data['size'], SEEK_CUR ) === -1 ) {
@@ -83,6 +87,8 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 
 				$files[] = $data;
 			}
+
+			$offset = @ftell( $this->file_handle );
 		}
 
 		return $files;
@@ -108,10 +114,10 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 			}
 
 			// Loop over files
-			while ( $block = @fread( $this->file_handle, 4377 ) ) {
+			while ( ( $block = @fread( $this->file_handle, 4377 ) ) ) {
 
 				// End block has been reached
-				if ( $block === $this->eof ) {
+				if ( $block === $this->file_eof ) {
 					continue;
 				}
 
@@ -155,10 +161,10 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 			}
 
 			// Loop over files
-			while ( $block = @fread( $this->file_handle, 4377 ) ) {
+			while ( ( $block = @fread( $this->file_handle, 4377 ) ) ) {
 
 				// End block has been reached
-				if ( $block === $this->eof ) {
+				if ( $block === $this->file_eof ) {
 					continue;
 				}
 
@@ -190,15 +196,16 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 	 * @param array  $exclude_extensions Exclude files by extension
 	 * @param array  $old_paths          Old replace paths
 	 * @param array  $new_paths          New replace paths
-	 * @param int    $file_written       File written (in bytes)
-	 * @param int    $file_offset        File offset (in bytes)
+	 * @param int    $file_bytes_read    Amount of the bytes we read
+	 * @param int    $file_bytes_offset  File bytes offset
+	 * @param int    $file_bytes_written Amount of the bytes we wrote
 	 *
 	 * @throws \Ai1wm_Not_Directory_Exception
 	 * @throws \Ai1wm_Not_Seekable_Exception
 	 *
 	 * @return bool
 	 */
-	public function extract_one_file_to( $location, $exclude_files = array(), $exclude_extensions = array(), $old_paths = array(), $new_paths = array(), &$file_written = 0, &$file_offset = 0 ) {
+	public function extract_one_file_to( $location, $exclude_files = array(), $exclude_extensions = array(), $old_paths = array(), $new_paths = array(), &$file_bytes_read = 0, &$file_bytes_offset = 0, &$file_bytes_written = 0 ) {
 		if ( false === is_dir( $location ) ) {
 			throw new Ai1wm_Not_Directory_Exception( sprintf( __( 'Location is not a directory: %s', 'all-in-one-wp-migration' ), $location ) );
 		}
@@ -210,9 +217,9 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 		$completed = true;
 
 		// Seek to file offset to archive file
-		if ( $file_offset > 0 ) {
-			if ( @fseek( $this->file_handle, - $file_offset - 4377, SEEK_CUR ) === -1 ) {
-				throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to offset of file. File: %s Offset: %d', 'all-in-one-wp-migration' ), $this->file_name, - $file_offset - 4377 ) );
+		if ( $file_bytes_offset > 0 ) {
+			if ( @fseek( $this->file_handle, - $file_bytes_offset - 4377, SEEK_CUR ) === -1 ) {
+				throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to offset of file. File: %s Offset: %d', 'all-in-one-wp-migration' ), $this->file_name, - $file_bytes_offset - 4377 ) );
 			}
 		}
 
@@ -220,7 +227,7 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 		if ( ( $block = @fread( $this->file_handle, 4377 ) ) ) {
 
 			// We reached end of file, set the pointer to the end of the file so that feof returns true
-			if ( $block === $this->eof ) {
+			if ( $block === $this->file_eof ) {
 
 				// Seek to end of archive file minus 1 byte
 				@fseek( $this->file_handle, 1, SEEK_END );
@@ -245,10 +252,8 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 					// Set file path
 					$file_path = $data['path'];
 
-					// Set should exclude file
-					$should_exclude_file = false;
-
 					// Should we skip this file by name?
+					$should_exclude_file = false;
 					for ( $i = 0; $i < count( $exclude_files ); $i++ ) {
 						if ( strpos( $file_name . DIRECTORY_SEPARATOR, ai1wm_replace_forward_slash_with_directory_separator( $exclude_files[ $i ] ) . DIRECTORY_SEPARATOR ) === 0 ) {
 							$should_exclude_file = true;
@@ -278,28 +283,28 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 
 						// Escape Windows directory separator in file path
 						if ( path_is_absolute( $file_path ) ) {
-							$file_path = ai1wm_escape_windows_directory_separator( $file_path );
+							$location_file_path = ai1wm_escape_windows_directory_separator( $file_path );
 						} else {
-							$file_path = ai1wm_escape_windows_directory_separator( $location . DIRECTORY_SEPARATOR . $file_path );
+							$location_file_path = ai1wm_escape_windows_directory_separator( $location . DIRECTORY_SEPARATOR . $file_path );
 						}
 
 						// Escape Windows directory separator in file name
 						if ( path_is_absolute( $file_name ) ) {
-							$file_name = ai1wm_escape_windows_directory_separator( $file_name );
+							$location_file_name = ai1wm_escape_windows_directory_separator( $file_name );
 						} else {
-							$file_name = ai1wm_escape_windows_directory_separator( $location . DIRECTORY_SEPARATOR . $file_name );
+							$location_file_name = ai1wm_escape_windows_directory_separator( $location . DIRECTORY_SEPARATOR . $file_name );
 						}
 
 						// Check if location doesn't exist, then create it
-						if ( false === is_dir( $file_path ) ) {
-							@mkdir( $file_path, $this->get_permissions_for_directory(), true );
+						if ( false === is_dir( $location_file_path ) ) {
+							@mkdir( $location_file_path, $this->get_permissions_for_directory(), true );
 						}
 
-						$file_written = 0;
+						$file_bytes_read = 0;
 
 						// We have a match, let's extract the file
-						if ( ( $completed = $this->extract_to( $file_name, $file_size, $file_mtime, $file_written, $file_offset ) ) ) {
-							$file_offset = 0;
+						if ( ( $completed = $this->extract_to( $location_file_name, $file_name, $file_size, $file_mtime, $file_bytes_read, $file_bytes_offset, $file_bytes_written ) ) ) {
+							$file_bytes_offset = $file_bytes_written = 0;
 						}
 					} else {
 
@@ -322,15 +327,16 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 	 * @param array  $include_files      Include files by name
 	 * @param array  $exclude_files      Exclude files by name
 	 * @param array  $exclude_extensions Exclude files by extension
-	 * @param int    $file_written       File written (in bytes)
-	 * @param int    $file_offset        File offset (in bytes)
+	 * @param int    $file_bytes_read    Amount of the bytes we read
+	 * @param int    $file_bytes_offset  File bytes offset
+	 * @param int    $file_bytes_written Amount of the bytes we wrote
 	 *
 	 * @throws \Ai1wm_Not_Directory_Exception
 	 * @throws \Ai1wm_Not_Seekable_Exception
 	 *
 	 * @return bool
 	 */
-	public function extract_by_files_array( $location, $include_files = array(), $exclude_files = array(), $exclude_extensions = array(), &$file_written = 0, &$file_offset = 0 ) {
+	public function extract_by_files_array( $location, $include_files = array(), $exclude_files = array(), $exclude_extensions = array(), &$file_bytes_read = 0, &$file_bytes_offset = 0, &$file_bytes_written = 0 ) {
 		if ( false === is_dir( $location ) ) {
 			throw new Ai1wm_Not_Directory_Exception( sprintf( __( 'Location is not a directory: %s', 'all-in-one-wp-migration' ), $location ) );
 		}
@@ -345,9 +351,9 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 		$start = microtime( true );
 
 		// Seek to file offset to archive file
-		if ( $file_offset > 0 ) {
-			if ( @fseek( $this->file_handle, - $file_offset - 4377, SEEK_CUR ) === -1 ) {
-				throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to offset of file. File: %s Offset: %d', 'all-in-one-wp-migration' ), $this->file_name, - $file_offset - 4377 ) );
+		if ( $file_bytes_offset > 0 ) {
+			if ( @fseek( $this->file_handle, - $file_bytes_offset - 4377, SEEK_CUR ) === -1 ) {
+				throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to offset of file. File: %s Offset: %d', 'all-in-one-wp-migration' ), $this->file_name, - $file_bytes_offset - 4377 ) );
 			}
 		}
 
@@ -355,7 +361,7 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 		while ( ( $block = @fread( $this->file_handle, 4377 ) ) ) {
 
 			// We reached end of file, set the pointer to the end of the file so that feof returns true
-			if ( $block === $this->eof ) {
+			if ( $block === $this->file_eof ) {
 
 				// Seek to end of archive file minus 1 byte
 				@fseek( $this->file_handle, 1, SEEK_END );
@@ -380,10 +386,8 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 					// Set file path
 					$file_path = $data['path'];
 
-					// Set should include file
-					$should_include_file = false;
-
 					// Should we extract this file by name?
+					$should_include_file = false;
 					for ( $i = 0; $i < count( $include_files ); $i++ ) {
 						if ( strpos( $file_name . DIRECTORY_SEPARATOR, ai1wm_replace_forward_slash_with_directory_separator( $include_files[ $i ] ) . DIRECTORY_SEPARATOR ) === 0 ) {
 							$should_include_file = true;
@@ -411,21 +415,21 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 					if ( $should_include_file === true ) {
 
 						// Escape Windows directory separator in file path
-						$file_path = ai1wm_escape_windows_directory_separator( $location . DIRECTORY_SEPARATOR . $file_path );
+						$location_file_path = ai1wm_escape_windows_directory_separator( $location . DIRECTORY_SEPARATOR . $file_path );
 
 						// Escape Windows directory separator in file name
-						$file_name = ai1wm_escape_windows_directory_separator( $location . DIRECTORY_SEPARATOR . $file_name );
+						$location_file_name = ai1wm_escape_windows_directory_separator( $location . DIRECTORY_SEPARATOR . $file_name );
 
 						// Check if location doesn't exist, then create it
-						if ( false === is_dir( $file_path ) ) {
-							@mkdir( $file_path, $this->get_permissions_for_directory(), true );
+						if ( false === is_dir( $location_file_path ) ) {
+							@mkdir( $location_file_path, $this->get_permissions_for_directory(), true );
 						}
 
-						$file_written = 0;
+						$file_bytes_read = 0;
 
-						// We have a match, let's extract the file and remove it from the array
-						if ( ( $completed = $this->extract_to( $file_name, $file_size, $file_mtime, $file_written, $file_offset ) ) ) {
-							$file_offset = 0;
+						// We have a match, let's extract the file
+						if ( ( $completed = $this->extract_to( $location_file_name, $file_name, $file_size, $file_mtime, $file_bytes_read, $file_bytes_offset, $file_bytes_written ) ) ) {
+							$file_bytes_offset = $file_bytes_written = 0;
 						}
 					} else {
 
@@ -452,11 +456,13 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 	/**
 	 * Extract file to
 	 *
-	 * @param string $file_name    File name
-	 * @param array  $file_size    File size (in bytes)
-	 * @param array  $file_mtime   File modified time (in seconds)
-	 * @param int    $file_written File written (in bytes)
-	 * @param int    $file_offset  File offset (in bytes)
+	 * @param string $location_file_name Location file name
+	 * @param string $file_name          File name
+	 * @param array  $file_size          File size (in bytes)
+	 * @param array  $file_mtime         File modified time (in seconds)
+	 * @param int    $file_bytes_read    Amount of the bytes we read
+	 * @param int    $file_bytes_offset  File bytes offset
+	 * @param int    $file_bytes_written Amount of the bytes we wrote
 	 *
 	 * @throws \Ai1wm_Not_Seekable_Exception
 	 * @throws \Ai1wm_Not_Readable_Exception
@@ -464,10 +470,7 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 	 *
 	 * @return bool
 	 */
-	private function extract_to( $file_name, $file_size, $file_mtime, &$file_written = 0, &$file_offset = 0 ) {
-		global $ai1wm_params;
-		$file_written = 0;
-
+	private function extract_to( $location_file_name, $file_name, $file_size, $file_mtime, &$file_bytes_read = 0, &$file_bytes_offset = 0, &$file_bytes_written = 0 ) {
 		// Flag to hold if file data has been processed
 		$completed = true;
 
@@ -475,79 +478,131 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 		$start = microtime( true );
 
 		// Seek to file offset to archive file
-		if ( $file_offset > 0 ) {
-			if ( @fseek( $this->file_handle, $file_offset, SEEK_CUR ) === -1 ) {
+		if ( $file_bytes_offset > 0 ) {
+			if ( @fseek( $this->file_handle, $file_bytes_offset, SEEK_CUR ) === -1 ) {
 				throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to offset of file. File: %s Offset: %d', 'all-in-one-wp-migration' ), $this->file_name, $file_size ) );
 			}
 		}
 
 		// Set file size
-		$file_size -= $file_offset;
+		$file_size -= $file_bytes_offset;
 
 		// Should the extract overwrite the file if it exists? (fopen may return null for quarantined files)
-		if ( ( $file_handle = @fopen( $file_name, ( $file_offset === 0 ? 'wb' : 'ab' ) ) ) ) {
-			$file_bytes = 0;
+		if ( ( $file_handle = @fopen( $location_file_name, ( $file_bytes_offset === 0 ? 'wb' : 'cb' ) ) ) ) {
 
-			// Is the filesize more than 0 bytes?
-			while ( $file_size > 0 ) {
+			// Set file offset
+			if ( @fseek( $file_handle, $file_bytes_written, SEEK_SET ) !== -1 ) {
+				$file_bytes_read = 0;
 
-				// Read the file in chunks of 512KB
-				$chunk_size = $file_size > 512000 ? 512000 : $file_size;
+				// Is the filesize more than 0 bytes?
+				while ( $file_size > 0 ) {
 
-				if ( ! empty( $ai1wm_params['decryption_password'] ) && basename( $file_name ) !== 'package.json' ) {
-					if ( $file_size > 512000 ) {
-						$chunk_size += ai1wm_crypt_iv_length() * 2;
-						$chunk_size  = $chunk_size > $file_size ? $file_size : $chunk_size;
-					}
-				}
+					// Read the file in chunks of 512KB
+					$chunk_size = min( $file_size, 512000 );
 
-				// Read data chunk by chunk from archive file
-				if ( $chunk_size > 0 ) {
-					$file_content = null;
+					// Do not decrypt or decompress config files
+					if ( ! in_array( $file_name, ai1wm_config_filters() ) ) {
 
-					// Read the file in chunks of 512KB from archiver
-					if ( ( $file_content = @fread( $this->file_handle, $chunk_size ) ) === false ) {
-						throw new Ai1wm_Not_Readable_Exception( sprintf( __( 'Could not read content from file. File: %s', 'all-in-one-wp-migration' ), $this->file_name ) );
-					}
+						// Get decryption chunk size
+						if ( ! empty( $this->file_password ) ) {
+							if ( $file_size > 512000 ) {
+								$chunk_size += ai1wm_crypt_iv_length() * 2;
+								$chunk_size  = min( $chunk_size, $file_size );
+							}
+						}
 
-					// Remove the amount of bytes we read
-					$file_size -= $chunk_size;
+						// Read chunk header data
+						if ( ! empty( $this->file_compression ) ) {
+							$chunk_header_size = 4;
 
-					if ( ! empty( $ai1wm_params['decryption_password'] ) && basename( $file_name ) !== 'package.json' ) {
-						$file_content = ai1wm_decrypt_string( $file_content, $ai1wm_params['decryption_password'], $file_name );
-					}
+							// Get chunk header block
+							if ( ( $chunk_header_block = fread( $this->file_handle, $chunk_header_size ) ) === false ) {
+								throw new Ai1wm_Not_Readable_Exception( sprintf( __( 'Could not read content from file. File: %s', 'all-in-one-wp-migration' ), $this->file_name ) );
+							}
 
-					// Write file contents
-					if ( ( $file_bytes = @fwrite( $file_handle, $file_content ) ) !== false ) {
-						if ( strlen( $file_content ) !== $file_bytes ) {
-							throw new Ai1wm_Quota_Exceeded_Exception( sprintf( __( 'Out of disk space. Could not write content to file. File: %s', 'all-in-one-wp-migration' ), $file_name ) );
+							// Get chunk header data
+							if ( ( $chunk_header_data = unpack( 'Nsize', $chunk_header_block ) ) ) {
+								if ( isset( $chunk_header_data['size'] ) ) {
+									$chunk_size = $chunk_header_data['size'];
+								}
+							}
+
+							// Add the amount of bytes we read
+							$file_bytes_read += $chunk_header_size;
+
+							// Remove the amout of bytes we read
+							$file_size -= $chunk_header_size;
 						}
 					}
 
-					// Set file written
-					$file_written += $chunk_size;
-				}
+					// Read data chunk by chunk from archive file
+					if ( $chunk_size > 0 ) {
 
-				// Time elapsed
-				if ( ( $timeout = apply_filters( 'ai1wm_completed_timeout', 10 ) ) ) {
-					if ( ( microtime( true ) - $start ) > $timeout ) {
-						$completed = false;
-						break;
+						// Read the file in chunks of 512KB from archiver
+						if ( ( $file_content = @fread( $this->file_handle, $chunk_size ) ) === false ) {
+							throw new Ai1wm_Not_Readable_Exception( sprintf( __( 'Could not read content from file. File: %s', 'all-in-one-wp-migration' ), $this->file_name ) );
+						}
+
+						// Add the amount of bytes we read
+						$file_bytes_read += $chunk_size;
+
+						// Remove the amout of bytes we read
+						$file_size -= $chunk_size;
+
+						// Do not decrypt or decompress config files
+						if ( ! in_array( $file_name, ai1wm_config_filters() ) ) {
+
+							// Add chunk data decryption
+							if ( ! empty( $this->file_password ) ) {
+								$file_content = ai1wm_decrypt_string( $file_content, $this->file_password );
+							}
+
+							// Add chunk data decompression
+							if ( ! empty( $this->file_compression ) ) {
+								switch ( $this->file_compression ) {
+									case 'gzip':
+										$file_content = gzuncompress( $file_content );
+										break;
+
+									case 'bzip2':
+										$file_content = bzdecompress( $file_content );
+										break;
+								}
+							}
+						}
+
+						// Write file contents
+						if ( ( $file_bytes = @fwrite( $file_handle, $file_content ) ) !== false ) {
+							if ( strlen( $file_content ) !== $file_bytes ) {
+								throw new Ai1wm_Quota_Exceeded_Exception( sprintf( __( 'Out of disk space. Could not write content to file. File: %s', 'all-in-one-wp-migration' ), $location_file_name ) );
+							}
+						}
+
+						// Add the amount of bytes we wrote
+						$file_bytes_written += $file_bytes;
+					}
+
+					// Time elapsed
+					if ( ( $timeout = apply_filters( 'ai1wm_completed_timeout', 10 ) ) ) {
+						if ( ( microtime( true ) - $start ) > $timeout ) {
+							$completed = false;
+							break;
+						}
 					}
 				}
-			}
 
-			// Set file offset
-			$file_offset += $file_written;
+				// Add the amount of bytes we read
+				$file_bytes_offset += $file_bytes_read;
+			}
 
 			// Close the handle
 			@fclose( $file_handle );
 
 			// Let's apply last modified date
-			@touch( $file_name, $file_mtime );
+			@touch( $location_file_name, $file_mtime );
 
 			// All files should chmoded to 644
-			@chmod( $file_name, $this->get_permissions_for_file() );
+			@chmod( $location_file_name, $this->get_permissions_for_file() );
 
 		} else {
 

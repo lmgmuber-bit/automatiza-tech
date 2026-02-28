@@ -37,7 +37,7 @@ define( 'AI1WM_DEBUG', false );
 // ==================
 // = Plugin Version =
 // ==================
-define( 'AI1WM_VERSION', '7.101' );
+define( 'AI1WM_VERSION', '7.102' );
 
 // ===============
 // = Plugin Name =
@@ -289,6 +289,11 @@ define( 'AI1WM_WP_ENGINE_SECURITY_AUDITOR_NAME', 'wpengine-security-auditor.php'
 // ===========================
 define( 'AI1WM_WP_CERBER_SECURITY_NAME', 'aaa-wp-cerber.php' );
 
+// =============================
+// = EOS Deactivate Plugins Name
+// =============================
+define( 'AI1WM_EOS_DEACTIVATE_PLUGINS_NAME', 'eos-deactivate-plugins.php' );
+
 // ===============================
 // = W3TC config file to exclude =
 // ===============================
@@ -500,9 +505,7 @@ if ( ! defined( 'AI1WM_DEFAULT_BACKUPS_PATH' ) ) {
 // ================
 // = Backups Path =
 // ================
-if ( ! defined( 'AI1WM_BACKUPS_PATH' ) ) {
-	define( 'AI1WM_BACKUPS_PATH', get_option( AI1WM_BACKUPS_PATH_OPTION, AI1WM_DEFAULT_BACKUPS_PATH ) );
-}
+define( 'AI1WM_BACKUPS_PATH', get_option( AI1WM_BACKUPS_PATH_OPTION, AI1WM_DEFAULT_BACKUPS_PATH ) );
 
 // ==========================
 // = Storage index.php File =

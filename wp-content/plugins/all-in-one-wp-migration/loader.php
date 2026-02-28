@@ -90,12 +90,13 @@ require_once AI1WM_MODEL_PATH . '/export/class-ai1wm-export-plugins.php';
 require_once AI1WM_MODEL_PATH . '/export/class-ai1wm-export-themes.php';
 
 require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-blogs.php';
-require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-check-decryption-password.php';
+require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-check-compression.php';
 require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-check-encryption.php';
 require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-clean.php';
 require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-compatibility.php';
 require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-confirm.php';
 require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-content.php';
+require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-database-file.php';
 require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-database.php';
 require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-done.php';
 require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-enumerate.php';

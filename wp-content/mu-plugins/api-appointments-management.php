@@ -75,13 +75,6 @@ class AutomatizaTech_Appointments_API {
             'permission_callback' => '__return_true'
         ));
         
-        // POST /appointments/{id}/cancel - Cancelar cita (alternativa a DELETE)
-        register_rest_route('automatiza-tech/v1', '/appointments/(?P<id>\d+)/cancel', array(
-            'methods' => 'POST',
-            'callback' => array($this, 'delete_appointment'),
-            'permission_callback' => '__return_true'
-        ));
-        
         // POST /send-email - Enviar correo corporativo
         register_rest_route('automatiza-tech/v1', '/send-email', array(
             'methods' => 'POST',

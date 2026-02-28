@@ -34,19 +34,23 @@ class Ai1wm_Compressor extends Ai1wm_Archiver {
 	/**
 	 * Overloaded constructor that opens the passed file for writing
 	 *
-	 * @param string $file_name File to use as archive
+	 * @param string $file_name        File to use as archive
+	 * @param string $file_password    File password string
+	 * @param string $file_compression File compression type
 	 */
-	public function __construct( $file_name ) {
-		parent::__construct( $file_name, true );
+	public function __construct( $file_name, $file_password = null, $file_compression = null ) {
+		// Call parent, to initialize variables
+		parent::__construct( $file_name, $file_password, $file_compression, true );
 	}
 
 	/**
 	 * Add a file to the archive
 	 *
-	 * @param string $file_name     File to add to the archive
-	 * @param string $new_file_name Write the file with a different name
-	 * @param int    $file_written  File written (in bytes)
-	 * @param int    $file_offset   File offset (in bytes)
+	 * @param string $file_name          File to add to the archive
+	 * @param string $new_file_name      Write the file with a different name
+	 * @param int    $file_bytes_read    Amount of the bytes we read
+	 * @param int    $file_bytes_offset  File bytes offset
+	 * @param int    $file_bytes_written Amount of the bytes we wrote
 	 *
 	 * @throws \Ai1wm_Not_Seekable_Exception
 	 * @throws \Ai1wm_Not_Writable_Exception
@@ -54,11 +58,7 @@ class Ai1wm_Compressor extends Ai1wm_Archiver {
 	 *
 	 * @return bool
 	 */
-	public function add_file( $file_name, $new_file_name = '', &$file_written = 0, &$file_offset = 0 ) {
-		global $ai1wm_params;
-
-		$file_written = 0;
-
+	public function add_file( $file_name, $new_file_name = '', &$file_bytes_read = 0, &$file_bytes_offset = 0, &$file_bytes_written = 0 ) {
 		// Replace forward slash with current directory separator in file name
 		$file_name = ai1wm_replace_forward_slash_with_directory_separator( $file_name );
 
@@ -73,12 +73,12 @@ class Ai1wm_Compressor extends Ai1wm_Archiver {
 
 		// Open the file for reading in binary mode (fopen may return null for quarantined files)
 		if ( ( $file_handle = @fopen( $file_name, 'rb' ) ) ) {
-			$file_bytes = 0;
 
 			// Get header block
 			if ( ( $block = $this->get_file_block( $file_name, $new_file_name ) ) ) {
+
 				// Write header block
-				if ( $file_offset === 0 ) {
+				if ( $file_bytes_offset === 0 ) {
 					if ( ( $file_bytes = @fwrite( $this->file_handle, $block ) ) !== false ) {
 						if ( strlen( $block ) !== $file_bytes ) {
 							throw new Ai1wm_Quota_Exceeded_Exception( sprintf( __( 'Out of disk space. Could not write header to file. File: %s', 'all-in-one-wp-migration' ), $this->file_name ) );
@@ -89,16 +89,41 @@ class Ai1wm_Compressor extends Ai1wm_Archiver {
 				}
 
 				// Set file offset
-				if ( @fseek( $file_handle, $file_offset, SEEK_SET ) !== -1 ) {
+				if ( @fseek( $file_handle, $file_bytes_offset, SEEK_SET ) !== -1 ) {
+					$file_bytes_read = 0;
 
 					// Read the file in 512KB chunks
 					while ( false === @feof( $file_handle ) ) {
-
-						// Read the file in chunks of 512KB
 						if ( ( $file_content = @fread( $file_handle, 512000 ) ) !== false ) {
-							// Don't encrypt package.json
-							if ( isset( $ai1wm_params['options']['encrypt_backups'] ) && basename( $file_name ) !== 'package.json' ) {
-								$file_content = ai1wm_encrypt_string( $file_content, $ai1wm_params['options']['encrypt_password'] );
+
+							// Add the amount of bytes we read
+							$file_bytes_read += strlen( $file_content );
+
+							// Do not encrypt or compress config files
+							if ( ! in_array( $new_file_name, ai1wm_config_filters() ) ) {
+
+								// Add chunk data compression
+								if ( ! empty( $this->file_compression ) ) {
+									switch ( $this->file_compression ) {
+										case 'gzip':
+											$file_content = gzcompress( $file_content, 9 );
+											break;
+
+										case 'bzip2':
+											$file_content = bzcompress( $file_content, 9 );
+											break;
+									}
+								}
+
+								// Add chunk data encryption
+								if ( ! empty( $this->file_password ) ) {
+									$file_content = ai1wm_encrypt_string( $file_content, $this->file_password );
+								}
+
+								// Add variable length chunk size before chunk data
+								if ( ! empty( $this->file_compression ) ) {
+									$file_content = pack( 'N', strlen( $file_content ) ) . $file_content;
+								}
 							}
 
 							if ( ( $file_bytes = @fwrite( $this->file_handle, $file_content ) ) !== false ) {
@@ -109,8 +134,8 @@ class Ai1wm_Compressor extends Ai1wm_Archiver {
 								throw new Ai1wm_Not_Writable_Exception( sprintf( __( 'Could not write content to file. File: %s', 'all-in-one-wp-migration' ), $this->file_name ) );
 							}
 
-							// Set file written
-							$file_written += $file_bytes;
+							// Add the amount of bytes we wrote
+							$file_bytes_written += $file_bytes;
 						}
 
 						// Time elapsed
@@ -121,16 +146,16 @@ class Ai1wm_Compressor extends Ai1wm_Archiver {
 							}
 						}
 					}
+
+					// Add the amount of bytes we read
+					$file_bytes_offset += $file_bytes_read;
 				}
 
-				// Set file offset
-				$file_offset += $file_written;
-
 				// Write file size to file header
-				if ( ( $block = $this->get_file_size_block( $file_offset ) ) ) {
+				if ( ( $block = $this->get_file_size_block( $file_bytes_written ) ) ) {
 
 					// Seek to beginning of file size
-					if ( @fseek( $this->file_handle, - $file_offset - 4096 - 12 - 14, SEEK_CUR ) === -1 ) {
+					if ( @fseek( $this->file_handle, - $file_bytes_written - 4096 - 12 - 14, SEEK_CUR ) === -1 ) {
 						throw new Ai1wm_Not_Seekable_Exception( __( 'Your PHP is 32-bit. In order to export your file, please change your PHP version to 64-bit and try again. <a href="https://help.servmask.com/knowledgebase/php-32bit/" target="_blank">Technical details</a>', 'all-in-one-wp-migration' ) );
 					}
 
@@ -144,7 +169,7 @@ class Ai1wm_Compressor extends Ai1wm_Archiver {
 					}
 
 					// Seek to end of file content
-					if ( @fseek( $this->file_handle, + $file_offset + 4096 + 12, SEEK_CUR ) === -1 ) {
+					if ( @fseek( $this->file_handle, + $file_bytes_written + 4096 + 12, SEEK_CUR ) === -1 ) {
 						throw new Ai1wm_Not_Seekable_Exception( __( 'Your PHP is 32-bit. In order to export your file, please change your PHP version to 64-bit and try again. <a href="https://help.servmask.com/knowledgebase/php-32bit/" target="_blank">Technical details</a>', 'all-in-one-wp-migration' ) );
 					}
 				}

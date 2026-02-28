@@ -175,9 +175,19 @@ class Ai1wm_Export_Config {
 		// Set server info
 		$config['Server'] = array( '.htaccess' => base64_encode( ai1wm_get_htaccess() ), 'web.config' => base64_encode( ai1wm_get_webconfig() ) );
 
+		// Set encrypt backups
 		if ( isset( $params['options']['encrypt_backups'] ) ) {
-			$config['Encrypted']          = true;
+			$config['Encrypted'] = true;
+		}
+
+		// Set encrypt password
+		if ( isset( $params['options']['encrypt_password'] ) ) {
 			$config['EncryptedSignature'] = base64_encode( ai1wm_encrypt_string( AI1WM_SIGN_TEXT, $params['options']['encrypt_password'] ) );
+		}
+
+		// Set compression type
+		if ( ! empty( $params['options']['compression_type'] ) ) {
+			$config['Compression'] = array( 'Enabled' => true, 'Type' => $params['options']['compression_type'] );
 		}
 
 		// Save package.json file

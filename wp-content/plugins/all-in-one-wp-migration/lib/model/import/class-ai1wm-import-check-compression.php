@@ -29,73 +29,44 @@ if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Kangaroos cannot jump here' );
 }
 
-class Ai1wm_Import_Validate {
+class Ai1wm_Import_Check_Compression {
 
 	public static function execute( $params ) {
 
-		// Verify file if size > 2GB and PHP = 32-bit
-		if ( ! ai1wm_is_filesize_supported( ai1wm_archive_path( $params ) ) ) {
+		// Read package.json file
+		$handle = ai1wm_open( ai1wm_package_path( $params ), 'r' );
+
+		// Parse package.json file
+		$package = ai1wm_read( $handle, filesize( ai1wm_package_path( $params ) ) );
+		$package = json_decode( $package, true );
+
+		// Close handle
+		ai1wm_close( $handle );
+
+		// No compression provided
+		if ( empty( $package['Compression']['Enabled'] ) || empty( $package['Compression']['Type'] ) ) {
+			return $params;
+		}
+
+		// Check if server supports decompression
+		if ( ! ai1wm_has_compression_type( $package['Compression']['Type'] ) ) {
 			throw new Ai1wm_Import_Exception(
 				wp_kses(
-					__(
-						'Your server uses 32-bit PHP and cannot process files larger than 2GB. Please switch to 64-bit PHP and try again.
-						<a href="https://help.servmask.com/knowledgebase/php-32bit/" target="_blank">Technical details</a>',
-						'all-in-one-wp-migration'
+					sprintf(
+						__(
+							'Importing a compressed backup is not supported on this server.
+							Please ensure <strong>%s</strong> extension is enabled. <a href="https://help.servmask.com/knowledgebase/compressed-backups/" target="_blank">Technical details</a>',
+							'all-in-one-wp-migration'
+						),
+						$package['Compression']['Type']
 					),
 					ai1wm_allowed_html_tags()
 				)
 			);
 		}
 
-		// Verify file name extension
-		if ( ! ai1wm_is_filename_supported( ai1wm_archive_path( $params ) ) ) {
-			throw new Ai1wm_Import_Exception(
-				wp_kses(
-					__(
-						'Invalid file type. Please ensure your file is a <strong>.wpress</strong> backup created with All-in-One WP Migration.
-						<a href="https://help.servmask.com/knowledgebase/invalid-backup-file/" target="_blank">Technical details</a>',
-						'all-in-one-wp-migration'
-					),
-					ai1wm_allowed_html_tags()
-				)
-			);
-		}
-
-		// Set progress
-		Ai1wm_Status::info( __( 'Unpacking configuration...', 'all-in-one-wp-migration' ) );
-
-		// Open the archive file for reading
-		$archive = new Ai1wm_Extractor( ai1wm_archive_path( $params ) );
-
-		// Validate the archive file consistency
-		if ( ! $archive->is_valid() ) {
-			throw new Ai1wm_Import_Exception(
-				wp_kses(
-					__( 'The archive file appears to be corrupted. Follow <a href="https://help.servmask.com/knowledgebase/corrupted-archive/" target="_blank">this article</a> for possible fixes.', 'all-in-one-wp-migration' ),
-					ai1wm_allowed_html_tags()
-				)
-			);
-		}
-
-		// Unpack package.json and multisite.json files
-		$archive->extract_by_files_array( ai1wm_storage_path( $params ), array( AI1WM_PACKAGE_NAME, AI1WM_MULTISITE_NAME ) );
-
-		// Check package.json file
-		if ( false === is_file( ai1wm_package_path( $params ) ) ) {
-			throw new Ai1wm_Import_Exception(
-				wp_kses(
-					__(
-						'Please ensure your file was created with the All-in-One WP Migration plugin.
-						<a href="https://help.servmask.com/knowledgebase/invalid-backup-file/" target="_blank">Technical details</a>',
-						'all-in-one-wp-migration'
-					),
-					ai1wm_allowed_html_tags()
-				)
-			);
-		}
-
-		// Close the archive file
-		$archive->close();
+		// Set progres
+		Ai1wm_Status::info( __( 'Compressed backup detected. Compression will be handled automatically.', 'all-in-one-wp-migration' ) );
 
 		return $params;
 	}

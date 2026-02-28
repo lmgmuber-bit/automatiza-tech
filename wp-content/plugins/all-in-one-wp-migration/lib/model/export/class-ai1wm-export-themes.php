@@ -33,6 +33,18 @@ class Ai1wm_Export_Themes {
 
 	public static function execute( $params ) {
 
+		// Set encrypt password
+		$encrypt_password = null;
+		if ( isset( $params['options']['encrypt_backups'], $params['options']['encrypt_password'] ) ) {
+			$encrypt_password = $params['options']['encrypt_password'];
+		}
+
+		// Set compression type
+		$compression_type = null;
+		if ( isset( $params['options']['compression_type'] ) ) {
+			$compression_type = $params['options']['compression_type'];
+		}
+
 		// Set archive bytes offset
 		if ( isset( $params['archive_bytes_offset'] ) ) {
 			$archive_bytes_offset = (int) $params['archive_bytes_offset'];
@@ -45,6 +57,13 @@ class Ai1wm_Export_Themes {
 			$file_bytes_offset = (int) $params['file_bytes_offset'];
 		} else {
 			$file_bytes_offset = 0;
+		}
+
+		// Set file bytes written
+		if ( isset( $params['file_bytes_written'] ) ) {
+			$file_bytes_written = (int) $params['file_bytes_written'];
+		} else {
+			$file_bytes_written = 0;
 		}
 
 		// Set themes bytes offset
@@ -95,25 +114,25 @@ class Ai1wm_Export_Themes {
 		if ( fseek( $themes_list, $themes_bytes_offset ) !== -1 ) {
 
 			// Open the archive file for writing
-			$archive = new Ai1wm_Compressor( ai1wm_archive_path( $params ) );
+			$archive = new Ai1wm_Compressor( ai1wm_archive_path( $params ), $encrypt_password, $compression_type );
 
 			// Set the file pointer to the one that we have saved
 			$archive->set_file_pointer( $archive_bytes_offset );
 
 			// Loop over files
 			while ( list( $file_abspath, $file_relpath, $file_size, $file_mtime ) = ai1wm_getcsv( $themes_list ) ) {
-				$file_bytes_written = 0;
+				$file_bytes_read = 0;
 
 				// Add file to archive
-				if ( ( $completed = $archive->add_file( $file_abspath, 'themes' . DIRECTORY_SEPARATOR . $file_relpath, $file_bytes_written, $file_bytes_offset ) ) ) {
-					$file_bytes_offset = 0;
+				if ( ( $completed = $archive->add_file( $file_abspath, 'themes' . DIRECTORY_SEPARATOR . $file_relpath, $file_bytes_read, $file_bytes_offset, $file_bytes_written ) ) ) {
+					$file_bytes_offset = $file_bytes_written = 0;
 
 					// Get themes bytes offset
 					$themes_bytes_offset = ftell( $themes_list );
 				}
 
 				// Increment processed files size
-				$processed_files_size += $file_bytes_written;
+				$processed_files_size += $file_bytes_read;
 
 				// What percent of files have we processed?
 				$progress = (int) min( ( $processed_files_size / $total_themes_files_size ) * 100, 100 );
@@ -150,6 +169,9 @@ class Ai1wm_Export_Themes {
 			// Unset file bytes offset
 			unset( $params['file_bytes_offset'] );
 
+			// Unset file bytes written
+			unset( $params['file_bytes_written'] );
+
 			// Unset themes bytes offset
 			unset( $params['themes_bytes_offset'] );
 
@@ -172,6 +194,9 @@ class Ai1wm_Export_Themes {
 
 			// Set file bytes offset
 			$params['file_bytes_offset'] = $file_bytes_offset;
+
+			// Set file bytes written
+			$params['file_bytes_written'] = $file_bytes_written;
 
 			// Set themes bytes offset
 			$params['themes_bytes_offset'] = $themes_bytes_offset;

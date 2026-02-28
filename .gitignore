@@ -6,24 +6,67 @@ wp-content/languages/
 wp-content/plugins/index.php
 wp-content/themes/index.php
 
-# WordPress Cache
+# WordPress Core files en raíz
+license.txt
+readme.html
+wp-activate.php
+wp-blog-header.php
+wp-comments-post.php
+wp-cron.php
+wp-links-opml.php
+wp-load.php
+wp-login.php
+wp-mail.php
+wp-settings.php
+wp-signup.php
+wp-trackback.php
+xmlrpc.php
+index.php
+
+# WordPress Cache y LiteSpeed
 wp-content/cache/
 wp-content/object-cache.php
+wp-content/litespeed/
+wp-content/advanced-cache.php
 
 # Backups - CRÍTICO: Archivos muy grandes
 wp-content/ai1wm-backups/
+wp-content/ai1wm-backups_old/
+wp-content/backups-dup-lite/
+wp-content/uploads/ai1wm-backups/
 *.wpress
 sql/*.sql
 *.sql
 
-# Uploads - Comentado por defecto, descomenta si no quieres versionar
-# wp-content/uploads/
+# Archivos _old de respaldo en PROD
+*_old
+*_old[0-9]*
+
+# Duplicator
+wp-content/backups-dup-lite/
+dup-installer/
+
+# Uploads - Archivos binarios (PDFs, imágenes, QR, audio) no van en git
+wp-content/uploads/
+
+# Plugins de terceros (instalables desde WordPress.org)
+wp-content/plugins/duplicator/
+wp-content/plugins/litespeed-cache/
+wp-content/plugins/pixelyoursite/
+
+# Archivos de respaldo con sufijos numéricos o _old
+*.php2
+*.php3
+*_old.php
+*_OLD.php
+*functions.php3
 
 # Configuration files - Información sensible
 wp-config.php
 wp-config-local.php
 wp-config-*.php
 .htaccess
+.htaccess.bk
 
 # Logs
 *.log
@@ -62,10 +105,11 @@ package-lock.json
 # Composer (si usas composer)
 vendor/
 
-# Scripts temporales de desarrollo
+# Scripts temporales de desarrollo y utilidades raíz
 test-*.php
 debug-*.php
 check-*.php
+check_*.php
 clean-*.php
 fix-*.php
 verify*.php
@@ -74,61 +118,33 @@ install-*.php
 setup-*.php
 full-diagnosis.php
 add-*.php
-mark-*.php
 run-*.php
-flush-*.php
-purge-*.php
+mark-*.php
 reset-*.php
 revert-*.php
+flush-*.php
+purge-*.php
 migrate-*.php
 convert-*.php
 create_*.php
-check_*.php
-send_*.php
 diagnostico-*.php
 
-# Scripts utilitarios raíz
-gestion-ai.php
+# Archivos sueltos en raíz (scripts PROD one-off)
+contact-form.php
+invoice-handlers.php
 openai-controller.php
 reporte-consumo-ai.php
-admin-ai-dashboard.php
-api-openai-usage.php
 validar-boleta.php
-status-flujo-comercial.php
-contexto-sistema.md
+validar-factura2.php
+admin-ai-dashboard.php
+admin-approve-proposal.php
+gestion-ai.php
 
-# Archivos de respaldo
-*.bk
-.htaccess.bk
-
-# Previews HTML
-*-preview.html
-vault-setup-output.html
-
-# LiteSpeed cache
-wp-content/litespeed/
-wp-content/plugins/litespeed-cache/
-
-# Uploads generados (facturas, boletas, QR, audio)
-wp-content/uploads/automatiza-tech-invoices/
-wp-content/uploads/automatiza-tech-receipts/
-wp-content/uploads/qr-codes/
-wp-content/uploads/aria-audio/
-wp-content/uploads/2026/
-
-# Plugins de terceros
-wp-content/plugins/litespeed-cache/
-wp-content/plugins/all-in-one-wp-migration/storage/
-
-# PDFs en carpetas de código
-wp-content/themes/automatiza-tech/inc/*.pdf
-
-# Copia backup del QA module en raíz del tema
-wp-content/themes/automatiza-tech/admin-qa-module.php
-
-# Documentación de seguimiento
-wp-content/themes/automatiza-tech/SISTEMA_SEGUIMIENTO_CLIENTES.md
-
-# Archivos eliminados de wp-content raíz
-wp-content/*.html
+# Archivos PDF/binarios en wp-content raíz
 wp-content/*.pdf
+
+# Temas por defecto de WP (no los personalizamos)
+wp-content/themes/twentytwenty*/
+
+# Artefacto de migración dentro de akismet
+wp-content/plugins/akismet/all-in-one-wp-migration/

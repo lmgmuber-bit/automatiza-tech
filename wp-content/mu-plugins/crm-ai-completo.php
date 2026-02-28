@@ -1882,8 +1882,8 @@ class AutomatizaTech_CRM_AI {
                 $qp['modules'] = $wpdb->get_results($wpdb->prepare(
                     "SELECT m.*, 
                         (SELECT COUNT(*) FROM {$qa_table_cases} WHERE module_id = m.id) as total_cases,
-                        (SELECT COUNT(*) FROM {$qa_table_cases} WHERE module_id = m.id AND status = 'passed') as passed,
-                        (SELECT COUNT(*) FROM {$qa_table_cases} WHERE module_id = m.id AND status = 'failed') as failed,
+                        (SELECT COUNT(*) FROM {$qa_table_cases} WHERE module_id = m.id AND status = 'pass') as passed,
+                        (SELECT COUNT(*) FROM {$qa_table_cases} WHERE module_id = m.id AND status = 'fail') as failed,
                         (SELECT COUNT(*) FROM {$qa_table_cases} WHERE module_id = m.id AND status = 'blocked') as blocked
                     FROM {$qa_table_modules} m WHERE m.project_id = %d ORDER BY sort_order",
                     $qp['id']

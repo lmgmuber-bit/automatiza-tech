@@ -2269,9 +2269,22 @@ class AutomatizaTech_CRM_AI {
                         .qa-case-row.st-blocked{border-left-color:#f59e0b;}
                         .qa-case-row.st-not_tested{border-left-color:#9ca3af;}
                         .qa-case-row.st-skipped{border-left-color:#6366f1;}
-                        .qa-ev-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
-                        .qa-ev-thumb{width:64px;height:64px;border-radius:6px;object-fit:cover;border:2px solid #e5e7eb;cursor:pointer;transition:transform .15s,border-color .15s;}
-                        .qa-ev-thumb:hover{transform:scale(1.08);border-color:#14b8a6;}
+                        .adm-qa-carousel{position:relative;overflow:hidden;border-radius:8px;background:#f9fafb;border:1px solid #e5e7eb;margin-top:6px;}
+                        .adm-qa-carousel-track{display:flex;transition:transform .3s ease;}
+                        .adm-qa-carousel-slide{min-width:100%;display:flex;align-items:center;justify-content:center;padding:6px;}
+                        .adm-qa-carousel-slide img{max-height:180px;max-width:100%;border-radius:6px;cursor:zoom-in;object-fit:contain;}
+                        .adm-qa-carousel-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.45);color:#fff;border:none;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;z-index:2;}
+                        .adm-qa-carousel-btn:hover{background:rgba(0,0,0,.7);}
+                        .adm-qa-carousel-btn.prev{left:4px;}
+                        .adm-qa-carousel-btn.next{right:4px;}
+                        .adm-qa-carousel-dots{display:flex;justify-content:center;gap:4px;padding:4px 0;}
+                        .adm-qa-carousel-dot{width:7px;height:7px;border-radius:50%;background:#d1d5db;border:none;cursor:pointer;padding:0;}
+                        .adm-qa-carousel-dot.active{background:#0d9488;}
+                        .adm-qa-carousel-counter{text-align:center;font-size:10px;color:#6b7280;margin-top:2px;}
+                        .adm-qa-lightbox{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:99999;align-items:center;justify-content:center;cursor:zoom-out;}
+                        .adm-qa-lightbox.show{display:flex;}
+                        .adm-qa-lightbox img{max-width:92vw;max-height:90vh;border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,.5);}
+                        .adm-qa-lightbox-close{position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:32px;cursor:pointer;z-index:100000;}
                         .qa-comment-item{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:6px 10px;margin-top:4px;font-size:12px;}
                         .qa-section-header{background:#0d9488;color:#fff;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:700;margin:8px 0 4px;letter-spacing:.3px;}
                         .qa-filter-bar{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap;}
@@ -2442,21 +2455,41 @@ class AutomatizaTech_CRM_AI {
                                                 <?php if ($has_ev): ?>
                                                 <div style="margin-bottom:6px;">
                                                     <span style="font-size:11px; font-weight:600; color:#0d9488;">📸 Evidencias (<?php echo count($caso['evidence']); ?>)</span>
-                                                    <div class="qa-ev-grid">
-                                                        <?php foreach ($caso['evidence'] as $ev): ?>
-                                                            <?php if (in_array($ev['file_type'], ['image/png','image/jpeg','image/gif','image/webp',''])): ?>
-                                                                <a href="<?php echo esc_url($ev['file_url']); ?>" target="_blank" title="<?php echo esc_attr($ev['description'] ?: $ev['file_name']); ?>">
-                                                                    <img src="<?php echo esc_url($ev['file_url']); ?>" alt="<?php echo esc_attr($ev['file_name']); ?>" class="qa-ev-thumb" loading="lazy">
-                                                                </a>
-                                                            <?php else: ?>
-                                                                <a href="<?php echo esc_url($ev['file_url']); ?>" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:#f3f4f6;border-radius:6px;font-size:11px;text-decoration:none;color:#374151;border:1px solid #e5e7eb;" title="<?php echo esc_attr($ev['description']); ?>">
-                                                                    📎 <?php echo esc_html($ev['file_name']); ?>
-                                                                </a>
-                                                            <?php endif; ?>
+                                                    <?php
+                                                    $adm_images = array_filter($caso['evidence'], function($e){ return in_array($e['file_type'], ['image/png','image/jpeg','image/gif','image/webp','']); });
+                                                    $adm_files  = array_filter($caso['evidence'], function($e){ return !in_array($e['file_type'], ['image/png','image/jpeg','image/gif','image/webp','']); });
+                                                    $adm_images = array_values($adm_images);
+                                                    if (count($adm_images) > 0):
+                                                        $adm_car_id = $case_uid . '-acar';
+                                                    ?>
+                                                    <div class="adm-qa-carousel" style="max-width:320px;">
+                                                        <div class="adm-qa-carousel-track" id="<?php echo $adm_car_id; ?>-track">
+                                                            <?php foreach ($adm_images as $ai): ?>
+                                                            <div class="adm-qa-carousel-slide">
+                                                                <img src="<?php echo esc_url($ai['file_url']); ?>" alt="<?php echo esc_attr($ai['description']?:$ai['file_name']); ?>" onclick="admQaLightbox(this.src)" loading="lazy">
+                                                            </div>
+                                                            <?php endforeach; ?>
+                                                        </div>
+                                                        <?php if (count($adm_images) > 1): ?>
+                                                        <button class="adm-qa-carousel-btn prev" onclick="admQaCarouselNav('<?php echo $adm_car_id; ?>',-1)">&#8249;</button>
+                                                        <button class="adm-qa-carousel-btn next" onclick="admQaCarouselNav('<?php echo $adm_car_id; ?>',1)">&#8250;</button>
+                                                        <div class="adm-qa-carousel-dots" id="<?php echo $adm_car_id; ?>-dots">
+                                                            <?php for ($di=0; $di<count($adm_images); $di++): ?>
+                                                            <button class="adm-qa-carousel-dot<?php echo $di===0?' active':''; ?>" onclick="admQaCarouselGo('<?php echo $adm_car_id; ?>',<?php echo $di; ?>)"></button>
+                                                            <?php endfor; ?>
+                                                        </div>
+                                                        <div class="adm-qa-carousel-counter" id="<?php echo $adm_car_id; ?>-counter">1 / <?php echo count($adm_images); ?></div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <?php endif; ?>
+                                                    <?php if (count($adm_files) > 0): ?>
+                                                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+                                                        <?php foreach ($adm_files as $af): ?>
+                                                        <a href="<?php echo esc_url($af['file_url']); ?>" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:#f3f4f6;border-radius:6px;font-size:11px;text-decoration:none;color:#374151;border:1px solid #e5e7eb;" title="<?php echo esc_attr($af['description']); ?>">📎 <?php echo esc_html($af['file_name']); ?></a>
                                                         <?php endforeach; ?>
                                                     </div>
+                                                    <?php endif; ?>
                                                     <?php
-                                                    // Show descriptions if any
                                                     foreach ($caso['evidence'] as $ev) {
                                                         if (!empty($ev['description'])) {
                                                             echo '<p style="font-size:11px;color:#6b7280;margin:4px 0 0;">📝 <em>' . esc_html($ev['description']) . '</em></p>';
@@ -2526,7 +2559,50 @@ class AutomatizaTech_CRM_AI {
                             });
                         }
                     }
+                    // Admin QA Carousel
+                    var admQaState = {};
+                    function admQaCarouselNav(carId, dir) {
+                        var track = document.getElementById(carId + '-track');
+                        if (!track) return;
+                        var total = track.querySelectorAll('.adm-qa-carousel-slide').length;
+                        if (!admQaState[carId]) admQaState[carId] = 0;
+                        admQaState[carId] += dir;
+                        if (admQaState[carId] < 0) admQaState[carId] = total - 1;
+                        if (admQaState[carId] >= total) admQaState[carId] = 0;
+                        admQaCarouselGo(carId, admQaState[carId]);
+                    }
+                    function admQaCarouselGo(carId, idx) {
+                        var track = document.getElementById(carId + '-track');
+                        if (!track) return;
+                        var total = track.querySelectorAll('.adm-qa-carousel-slide').length;
+                        admQaState[carId] = idx;
+                        track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+                        var counter = document.getElementById(carId + '-counter');
+                        if (counter) counter.textContent = (idx + 1) + ' / ' + total;
+                        var dots = document.getElementById(carId + '-dots');
+                        if (dots) {
+                            dots.querySelectorAll('.adm-qa-carousel-dot').forEach(function(d, i) {
+                                d.classList.toggle('active', i === idx);
+                            });
+                        }
+                    }
+                    // Admin QA Lightbox
+                    function admQaLightbox(src) {
+                        var overlay = document.getElementById('adm-qa-lightbox-overlay');
+                        var img = document.getElementById('adm-qa-lightbox-img');
+                        if (overlay && img) { img.src = src; overlay.classList.add('show'); }
+                    }
+                    function admQaLightboxClose() {
+                        var overlay = document.getElementById('adm-qa-lightbox-overlay');
+                        if (overlay) overlay.classList.remove('show');
+                    }
+                    document.addEventListener('keydown', function(e){ if(e.key==='Escape') admQaLightboxClose(); });
                     </script>
+                    <!-- Lightbox overlay -->
+                    <div class="adm-qa-lightbox" id="adm-qa-lightbox-overlay" onclick="admQaLightboxClose()">
+                        <button class="adm-qa-lightbox-close" onclick="admQaLightboxClose()">&times;</button>
+                        <img id="adm-qa-lightbox-img" src="" alt="Evidencia">
+                    </div>
                     </div><!-- /tab-qa -->
                     <?php endif; ?>
 
@@ -4254,6 +4330,59 @@ class AutomatizaTech_CRM_AI {
                 return $b['timestamp'] - $a['timestamp'];
             });
 
+            // ─── QA Data for public timeline ───
+            $qa_projects_pub = [];
+            $qa_t_projects  = $wpdb->prefix . 'at_qa_projects';
+            $qa_t_modules   = $wpdb->prefix . 'at_qa_modules';
+            $qa_t_cases     = $wpdb->prefix . 'at_qa_cases';
+            $qa_t_evidence  = $wpdb->prefix . 'at_qa_evidence';
+            $qa_t_comments  = $wpdb->prefix . 'at_qa_comments';
+            if ($wpdb->get_var("SHOW TABLES LIKE '{$qa_t_projects}'") === $qa_t_projects) {
+                $qa_projects_pub = $wpdb->get_results($wpdb->prepare(
+                    "SELECT * FROM {$qa_t_projects} WHERE client_id = %d ORDER BY created_at DESC",
+                    $cliente_id
+                ), ARRAY_A);
+                foreach ($qa_projects_pub as &$_qp) {
+                    $_qp['modules'] = $wpdb->get_results($wpdb->prepare(
+                        "SELECT m.*,
+                            (SELECT COUNT(*) FROM {$qa_t_cases} WHERE module_id = m.id) as total_cases,
+                            (SELECT COUNT(*) FROM {$qa_t_cases} WHERE module_id = m.id AND status = 'pass') as passed,
+                            (SELECT COUNT(*) FROM {$qa_t_cases} WHERE module_id = m.id AND status = 'fail') as failed,
+                            (SELECT COUNT(*) FROM {$qa_t_cases} WHERE module_id = m.id AND status = 'blocked') as blocked
+                        FROM {$qa_t_modules} m WHERE m.project_id = %d ORDER BY sort_order",
+                        $_qp['id']
+                    ), ARRAY_A);
+                    $_qp['total'] = 0; $_qp['passed_total'] = 0; $_qp['failed_total'] = 0; $_qp['blocked_total'] = 0;
+                    foreach ($_qp['modules'] as &$_mod) {
+                        $_qp['total'] += (int)$_mod['total_cases'];
+                        $_qp['passed_total'] += (int)$_mod['passed'];
+                        $_qp['failed_total'] += (int)$_mod['failed'];
+                        $_qp['blocked_total'] += (int)$_mod['blocked'];
+                        $_mod['cases'] = $wpdb->get_results($wpdb->prepare(
+                            "SELECT * FROM {$qa_t_cases} WHERE module_id = %d ORDER BY sort_order, id",
+                            $_mod['id']
+                        ), ARRAY_A);
+                        foreach ($_mod['cases'] as &$_caso) {
+                            $_caso['evidence'] = $wpdb->get_results($wpdb->prepare(
+                                "SELECT * FROM {$qa_t_evidence} WHERE case_id = %d ORDER BY created_at DESC",
+                                $_caso['id']
+                            ), ARRAY_A);
+                            $_caso['comments'] = $wpdb->get_results($wpdb->prepare(
+                                "SELECT c.*, u.display_name as author_name FROM {$qa_t_comments} c
+                                 LEFT JOIN {$wpdb->users} u ON c.user_id = u.ID
+                                 WHERE c.case_id = %d ORDER BY c.created_at ASC",
+                                $_caso['id']
+                            ), ARRAY_A);
+                        }
+                        unset($_caso);
+                    }
+                    unset($_mod);
+                    $_qp['progress'] = $_qp['total'] > 0 ? round(($_qp['passed_total'] / $_qp['total']) * 100) : 0;
+                }
+                unset($_qp);
+            }
+            // ─── End QA Data ───
+
             // Configuración de tipos de detalle (iconos y colores)
             $detail_types = [
                 'propuesta_enviada' => ['label' => '📄 Propuesta Enviada', 'icon' => '📄', 'color' => '#667eea', 'bg' => '#ebf4ff'],
@@ -4577,6 +4706,9 @@ class AutomatizaTech_CRM_AI {
                         <button class="tl-tab" data-tab="notas" onclick="switchTimelineTab('notas')">📝 Notas <span class="tl-tab-count"><?php echo $tab_counts['notas']; ?></span></button>
                         <button class="tl-tab" data-tab="pagos" onclick="switchTimelineTab('pagos')">💰 Pagos <span class="tl-tab-count"><?php echo $tab_counts['pagos']; ?></span></button>
                         <button class="tl-tab" data-tab="sistema" onclick="switchTimelineTab('sistema')">⚙️ Sistema <span class="tl-tab-count"><?php echo $tab_counts['sistema']; ?></span></button>
+                        <?php if (!empty($qa_projects_pub)): ?>
+                        <button class="tl-tab" data-tab="qa" onclick="switchTimelineTab('qa')">🧪 QA <span class="tl-tab-count"><?php echo count($qa_projects_pub); ?></span></button>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Pestaña: Todos -->
@@ -4613,6 +4745,270 @@ class AutomatizaTech_CRM_AI {
                             <?php $render_pub_tab($timeline_tabs['sistema'], 'sistema', 10); ?>
                         </div>
                     </div>
+
+                    <?php if (!empty($qa_projects_pub)): ?>
+                    <!-- Pestaña: QA -->
+                    <div class="tl-tab-content" id="tl-content-qa" style="display:none;">
+                        <style>
+                            .pub-qa-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:20px;margin-bottom:20px;}
+                            .pub-qa-mod{border:1px solid #e5e7eb;border-radius:8px;margin-top:12px;overflow:hidden;}
+                            .pub-qa-mod-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f9fafb;cursor:pointer;user-select:none;transition:background .15s;gap:8px;border-bottom:1px solid #e5e7eb;}
+                            .pub-qa-mod-hdr:hover{background:#f0fdfa;}
+                            .pub-qa-mod-hdr .arrow{transition:transform .2s;display:inline-block;font-size:10px;color:#6b7280;}
+                            .pub-qa-mod-hdr.open .arrow{transform:rotate(90deg);}
+                            .pub-qa-mod-body{display:none;padding:10px 14px;}
+                            .pub-qa-mod-body.open{display:block;animation:qaFadeIn .2s ease;}
+                            @keyframes qaFadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+                            .pub-qa-case{border-left:3px solid #e5e7eb;padding:10px 14px;margin:6px 0;border-radius:0 8px 8px 0;background:#fafafa;transition:background .15s;}
+                            .pub-qa-case:hover{background:#f0fdfa;}
+                            .pub-qa-case.st-pass{border-left-color:#059669;}
+                            .pub-qa-case.st-fail{border-left-color:#dc2626;}
+                            .pub-qa-case.st-blocked{border-left-color:#f59e0b;}
+                            .pub-qa-case.st-not_tested{border-left-color:#9ca3af;}
+                            .pub-qa-case.st-skipped{border-left-color:#6366f1;}
+                            /* Carousel */
+                            .qa-carousel{position:relative;overflow:hidden;border-radius:8px;background:#f3f4f6;margin-top:8px;}
+                            .qa-carousel-track{display:flex;transition:transform .3s ease;will-change:transform;}
+                            .qa-carousel-slide{min-width:100%;display:flex;align-items:center;justify-content:center;padding:8px;}
+                            .qa-carousel-slide img{max-width:100%;max-height:350px;border-radius:6px;object-fit:contain;cursor:pointer;}
+                            .qa-carousel-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.5);color:#fff;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;z-index:2;transition:background .15s;}
+                            .qa-carousel-btn:hover{background:rgba(0,0,0,0.7);}
+                            .qa-carousel-btn.prev{left:8px;}
+                            .qa-carousel-btn.next{right:8px;}
+                            .qa-carousel-dots{display:flex;justify-content:center;gap:6px;padding:8px 0;}
+                            .qa-carousel-dot{width:8px;height:8px;border-radius:50%;background:#d1d5db;border:none;cursor:pointer;padding:0;transition:background .15s;}
+                            .qa-carousel-dot.active{background:#0d9488;}
+                            .qa-carousel-counter{text-align:center;font-size:11px;color:#6b7280;padding:0 0 6px;}
+                            .pub-qa-comment{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;margin-top:6px;font-size:13px;}
+                            .pub-qa-section{background:linear-gradient(135deg,#0d9488,#14b8a6);color:#fff;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:700;margin:10px 0 6px;letter-spacing:.3px;display:inline-block;}
+                            .pub-qa-filter{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap;}
+                            .pub-qa-fbtn{padding:4px 12px;border-radius:14px;font-size:11px;font-weight:600;border:1px solid #e5e7eb;background:#fff;cursor:pointer;transition:all .15s;}
+                            .pub-qa-fbtn:hover,.pub-qa-fbtn.active{background:#0d9488;color:#fff;border-color:#0d9488;}
+                            /* Lightbox */
+                            .qa-lightbox{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:99999;align-items:center;justify-content:center;cursor:zoom-out;}
+                            .qa-lightbox.show{display:flex;}
+                            .qa-lightbox img{max-width:92vw;max-height:90vh;border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,.5);}
+                            .qa-lightbox-close{position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:32px;cursor:pointer;z-index:100000;}
+                        </style>
+
+                        <?php foreach ($qa_projects_pub as $qp_pub_idx => $qp_pub): ?>
+                        <div class="pub-qa-card">
+                            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                                <h3 style="margin:0;font-size:1.2em;">🧪 <?php echo esc_html($qp_pub['name']); ?></h3>
+                                <?php
+                                $pub_badge = '#6b7280'; $pub_blabel = ucfirst($qp_pub['qa_status']);
+                                if ($qp_pub['qa_status'] === 'passed') { $pub_badge = '#059669'; $pub_blabel = 'Aprobado'; }
+                                elseif ($qp_pub['qa_status'] === 'failed') { $pub_badge = '#dc2626'; $pub_blabel = 'Fallido'; }
+                                elseif ($qp_pub['qa_status'] === 'in_progress') { $pub_badge = '#d97706'; $pub_blabel = 'En Progreso'; }
+                                elseif ($qp_pub['qa_status'] === 'pending') { $pub_badge = '#6b7280'; $pub_blabel = 'Pendiente'; }
+                                ?>
+                                <span style="background:<?php echo $pub_badge;?>;color:#fff;padding:4px 12px;border-radius:14px;font-size:12px;font-weight:600;"><?php echo $pub_blabel;?></span>
+                            </div>
+
+                            <!-- Stats -->
+                            <div style="display:flex;gap:14px;margin:12px 0;flex-wrap:wrap;font-size:13px;">
+                                <span>📋 <strong><?php echo $qp_pub['total'];?></strong> Total</span>
+                                <span style="color:#059669;">✅ <strong><?php echo $qp_pub['passed_total'];?></strong> Pass</span>
+                                <span style="color:#dc2626;">❌ <strong><?php echo $qp_pub['failed_total'];?></strong> Fail</span>
+                                <span style="color:#f59e0b;">⚠️ <strong><?php echo $qp_pub['blocked_total'];?></strong> Bloqueados</span>
+                                <?php $nt = max(0, $qp_pub['total'] - $qp_pub['passed_total'] - $qp_pub['failed_total'] - $qp_pub['blocked_total']); ?>
+                                <span style="color:#9ca3af;">⏳ <strong><?php echo $nt;?></strong> Sin probar</span>
+                            </div>
+
+                            <!-- Progress bar multicolor -->
+                            <div style="margin-bottom:6px;">
+                                <div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;margin-bottom:4px;">
+                                    <span><?php echo $qp_pub['passed_total'];?> / <?php echo $qp_pub['total'];?> aprobados</span>
+                                    <span style="font-weight:700;"><?php echo $qp_pub['progress'];?>%</span>
+                                </div>
+                                <div style="background:#e5e7eb;border-radius:6px;height:10px;overflow:hidden;">
+                                    <?php
+                                    $pp = $qp_pub['total'] > 0 ? round(($qp_pub['passed_total']/$qp_pub['total'])*100,1) : 0;
+                                    $pf = $qp_pub['total'] > 0 ? round(($qp_pub['failed_total']/$qp_pub['total'])*100,1) : 0;
+                                    $pb = $qp_pub['total'] > 0 ? round(($qp_pub['blocked_total']/$qp_pub['total'])*100,1) : 0;
+                                    ?>
+                                    <div style="display:flex;height:100%;">
+                                        <div style="background:#059669;width:<?php echo $pp;?>%;height:100%;"></div>
+                                        <div style="background:#dc2626;width:<?php echo $pf;?>%;height:100%;"></div>
+                                        <div style="background:#f59e0b;width:<?php echo $pb;?>%;height:100%;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modules -->
+                            <?php foreach ($qp_pub['modules'] as $pm_idx => $pm):
+                                $pm_pct = $pm['total_cases'] > 0 ? round(($pm['passed']/$pm['total_cases'])*100) : 0;
+                                $pm_tested = (int)$pm['passed'] + (int)$pm['failed'] + (int)$pm['blocked'];
+                                $pm_uid = 'pub-qa-' . $qp_pub_idx . '-' . $pm_idx;
+                            ?>
+                            <div class="pub-qa-mod">
+                                <div class="pub-qa-mod-hdr" id="<?php echo $pm_uid;?>-hdr"
+                                     onclick="var b=document.getElementById('<?php echo $pm_uid;?>-body'),h=this;if(b.classList.contains('open')){b.classList.remove('open');h.classList.remove('open');}else{b.classList.add('open');h.classList.add('open');}">
+                                    <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+                                        <span class="arrow">▶</span>
+                                        <span style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?php echo esc_html($pm['code'] . ' — ' . $pm['title']);?></span>
+                                    </div>
+                                    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:11px;">
+                                        <span style="color:#059669;font-weight:600;">✅<?php echo $pm['passed'];?></span>
+                                        <span style="color:#dc2626;font-weight:600;">❌<?php echo $pm['failed'];?></span>
+                                        <span style="color:#f59e0b;font-weight:600;">⚠️<?php echo $pm['blocked'];?></span>
+                                        <span style="color:#6b7280;"><?php echo $pm_tested;?>/<?php echo $pm['total_cases'];?></span>
+                                        <div style="display:inline-flex;align-items:center;gap:4px;">
+                                            <div style="background:#e5e7eb;border-radius:4px;height:6px;width:50px;overflow:hidden;">
+                                                <div style="background:<?php echo $pm_pct===100?'#059669':'#14b8a6';?>;width:<?php echo $pm_pct;?>%;height:100%;"></div>
+                                            </div>
+                                            <span style="font-weight:600;color:<?php echo $pm_pct===100?'#059669':'#6b7280';?>;"><?php echo $pm_pct;?>%</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pub-qa-mod-body" id="<?php echo $pm_uid;?>-body">
+                                    <?php if (!empty($pm['cases'])):
+                                        $sections_pub = [];
+                                        foreach ($pm['cases'] as $c) {
+                                            $sec = !empty($c['section']) ? $c['section'] : '__none__';
+                                            $sections_pub[$sec][] = $c;
+                                        }
+                                    ?>
+                                    <!-- Filter bar -->
+                                    <div class="pub-qa-filter" id="<?php echo $pm_uid;?>-filters">
+                                        <button class="pub-qa-fbtn active" onclick="pubQaFilter('<?php echo $pm_uid;?>','all',this)">Todos</button>
+                                        <button class="pub-qa-fbtn" onclick="pubQaFilter('<?php echo $pm_uid;?>','pass',this)">✅ Pass</button>
+                                        <button class="pub-qa-fbtn" onclick="pubQaFilter('<?php echo $pm_uid;?>','fail',this)">❌ Fail</button>
+                                        <button class="pub-qa-fbtn" onclick="pubQaFilter('<?php echo $pm_uid;?>','blocked',this)">⚠️ Bloqueado</button>
+                                        <button class="pub-qa-fbtn" onclick="pubQaFilter('<?php echo $pm_uid;?>','not_tested',this)">⏳ Sin probar</button>
+                                    </div>
+
+                                    <?php foreach ($sections_pub as $sec_name => $sec_cases): ?>
+                                        <?php if ($sec_name !== '__none__'): ?>
+                                            <div class="pub-qa-section pub-qa-sec-<?php echo $pm_uid;?>"><?php echo esc_html(strtoupper($sec_name));?></div>
+                                        <?php endif; ?>
+                                        <?php foreach ($sec_cases as $caso):
+                                            $st = $caso['status'];
+                                            $st_map = [
+                                                'pass'=>['✅ PASS','#059669'],'fail'=>['❌ FAIL','#dc2626'],
+                                                'blocked'=>['⚠️ BLOQUEADO','#f59e0b'],'not_tested'=>['⏳ Sin probar','#9ca3af'],
+                                                'skipped'=>['⏭️ Omitido','#6366f1']
+                                            ];
+                                            $st_i = $st_map[$st] ?? ['❓ '.$st,'#6b7280'];
+                                            $has_ev = !empty($caso['evidence']);
+                                            $has_cm = !empty($caso['comments']);
+                                            $c_uid = $pm_uid . '-c-' . $caso['id'];
+                                        ?>
+                                        <div class="pub-qa-case st-<?php echo esc_attr($st);?>" data-qa-st="<?php echo esc_attr($st);?>" data-qa-mod="<?php echo $pm_uid;?>">
+                                            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                                                <div style="flex:1;min-width:0;">
+                                                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                                        <span style="font-size:11px;color:#6b7280;font-weight:600;"><?php echo esc_html($caso['case_id']);?></span>
+                                                        <span style="font-size:13px;font-weight:500;"><?php echo esc_html($caso['title']);?></span>
+                                                        <?php if ($caso['priority']==='Alta'): ?>
+                                                            <span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600;">ALTA</span>
+                                                        <?php elseif ($caso['priority']==='Media'): ?>
+                                                            <span style="background:#fef3c7;color:#d97706;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600;">MEDIA</span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <?php if (!empty($caso['tester'])): ?>
+                                                        <div style="font-size:10px;color:#9ca3af;margin-top:2px;"><?php echo esc_html($caso['tester']);?><?php echo $caso['tested_at'] ? ' · '.date('d/m/Y H:i',strtotime($caso['tested_at'])) : '';?></div>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($caso['bug_id'])): ?>
+                                                        <span style="font-size:10px;color:#dc2626;">🐛 <?php echo esc_html($caso['bug_id']);?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div style="flex-shrink:0;display:flex;align-items:center;gap:6px;">
+                                                    <span style="background:<?php echo $st_i[1];?>;color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap;"><?php echo $st_i[0];?></span>
+                                                    <?php if ($has_ev || $has_cm): ?>
+                                                        <button onclick="var d=document.getElementById('<?php echo $c_uid;?>-det');d.style.display=d.style.display==='none'?'block':'none';" style="background:none;border:1px solid #d1d5db;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;" title="Ver detalle">
+                                                            <?php if($has_ev):?>📸<?php echo count($caso['evidence']);?><?php endif;?><?php if($has_cm):?> 💬<?php echo count($caso['comments']);?><?php endif;?>
+                                                        </button>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+
+                                            <?php if ($has_ev || $has_cm): ?>
+                                            <div id="<?php echo $c_uid;?>-det" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #e5e7eb;">
+                                                <?php if ($has_ev):
+                                                    $images = []; $files = [];
+                                                    foreach ($caso['evidence'] as $ev) {
+                                                        if (in_array($ev['file_type'],['image/png','image/jpeg','image/gif','image/webp',''])) {
+                                                            $images[] = $ev;
+                                                        } else {
+                                                            $files[] = $ev;
+                                                        }
+                                                    }
+                                                ?>
+                                                <div style="margin-bottom:8px;">
+                                                    <span style="font-size:12px;font-weight:600;color:#0d9488;">📸 Evidencias (<?php echo count($caso['evidence']);?>)</span>
+                                                    <?php if (!empty($images)): $car_id = $c_uid . '-car'; ?>
+                                                    <!-- Image Carousel -->
+                                                    <div class="qa-carousel" id="<?php echo $car_id;?>" style="max-width:500px;">
+                                                        <div class="qa-carousel-track" id="<?php echo $car_id;?>-track">
+                                                            <?php foreach ($images as $img_i => $img): ?>
+                                                            <div class="qa-carousel-slide">
+                                                                <img src="<?php echo esc_url($img['file_url']);?>" alt="<?php echo esc_attr($img['description']?:$img['file_name']);?>" onclick="qaLightbox(this.src)" loading="lazy">
+                                                            </div>
+                                                            <?php endforeach; ?>
+                                                        </div>
+                                                        <?php if (count($images) > 1): ?>
+                                                        <button class="qa-carousel-btn prev" onclick="qaCarouselNav('<?php echo $car_id;?>',-1)">‹</button>
+                                                        <button class="qa-carousel-btn next" onclick="qaCarouselNav('<?php echo $car_id;?>',1)">›</button>
+                                                        <div class="qa-carousel-counter" id="<?php echo $car_id;?>-counter">1 / <?php echo count($images);?></div>
+                                                        <div class="qa-carousel-dots" id="<?php echo $car_id;?>-dots">
+                                                            <?php foreach ($images as $di => $dimg): ?>
+                                                            <button class="qa-carousel-dot<?php echo $di===0?' active':'';?>" onclick="qaCarouselGo('<?php echo $car_id;?>',<?php echo $di;?>)"></button>
+                                                            <?php endforeach; ?>
+                                                        </div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <?php
+                                                    // Descriptions for images
+                                                    foreach ($images as $img) {
+                                                        if (!empty($img['description'])) {
+                                                            echo '<p style="font-size:11px;color:#6b7280;margin:4px 0 0;">📝 <em>'.esc_html($img['description']).'</em></p>';
+                                                        }
+                                                    }
+                                                    endif; // images
+                                                    // Non-image files
+                                                    foreach ($files as $f): ?>
+                                                        <a href="<?php echo esc_url($f['file_url']);?>" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#f3f4f6;border-radius:6px;font-size:12px;text-decoration:none;color:#374151;border:1px solid #e5e7eb;margin-top:4px;">📎 <?php echo esc_html($f['file_name']);?></a>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                                <?php endif; // has_ev ?>
+
+                                                <?php if ($has_cm): ?>
+                                                <div>
+                                                    <span style="font-size:12px;font-weight:600;color:#6366f1;">💬 Comentarios (<?php echo count($caso['comments']);?>)</span>
+                                                    <?php foreach ($caso['comments'] as $cm): ?>
+                                                    <div class="pub-qa-comment">
+                                                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+                                                            <strong style="font-size:12px;color:#374151;"><?php echo esc_html($cm['author_name']?:'Usuario #'.$cm['user_id']);?></strong>
+                                                            <span style="font-size:10px;color:#9ca3af;"><?php echo date('d/m/Y H:i',strtotime($cm['created_at']));?></span>
+                                                        </div>
+                                                        <p style="margin:0;font-size:13px;color:#4b5563;white-space:pre-line;"><?php echo esc_html($cm['comment']);?></p>
+                                                    </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                                <?php endif; ?>
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <?php endforeach; // cases ?>
+                                    <?php endforeach; // sections ?>
+                                    <?php else: ?>
+                                        <p style="font-size:12px;color:#9ca3af;margin:4px 0;">No hay casos registrados aún.</p>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <?php endforeach; // modules ?>
+                        </div>
+                        <?php endforeach; // qa_projects ?>
+
+                        <!-- Lightbox overlay -->
+                        <div class="qa-lightbox" id="qa-lightbox-overlay" onclick="qaLightboxClose()">
+                            <button class="qa-lightbox-close" onclick="qaLightboxClose()">&times;</button>
+                            <img id="qa-lightbox-img" src="" alt="Evidencia">
+                        </div>
+                    </div><!-- /tl-content-qa -->
+                    <?php endif; ?>
                     
                     <div class="footer">
                         &copy; <?php echo date('Y'); ?> AutomatizaTech. Todos los derechos reservados.
@@ -5121,6 +5517,76 @@ class AutomatizaTech_CRM_AI {
                     document.querySelectorAll('.tl-page-' + tabName).forEach(function(el) { el.style.display = 'block'; });
                     var moreBtn = document.getElementById('tl-more-' + tabName);
                     if (moreBtn) moreBtn.style.display = 'none';
+                }
+
+                // ========== QA CAROUSEL ==========
+                var qaCarouselState = {};
+                function qaCarouselNav(carId, dir) {
+                    var track = document.getElementById(carId + '-track');
+                    if (!track) return;
+                    var slides = track.querySelectorAll('.qa-carousel-slide');
+                    var total = slides.length;
+                    if (!qaCarouselState[carId]) qaCarouselState[carId] = 0;
+                    qaCarouselState[carId] += dir;
+                    if (qaCarouselState[carId] < 0) qaCarouselState[carId] = total - 1;
+                    if (qaCarouselState[carId] >= total) qaCarouselState[carId] = 0;
+                    qaCarouselGo(carId, qaCarouselState[carId]);
+                }
+                function qaCarouselGo(carId, idx) {
+                    var track = document.getElementById(carId + '-track');
+                    if (!track) return;
+                    var total = track.querySelectorAll('.qa-carousel-slide').length;
+                    qaCarouselState[carId] = idx;
+                    track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+                    // Update counter
+                    var counter = document.getElementById(carId + '-counter');
+                    if (counter) counter.textContent = (idx + 1) + ' / ' + total;
+                    // Update dots
+                    var dots = document.getElementById(carId + '-dots');
+                    if (dots) {
+                        dots.querySelectorAll('.qa-carousel-dot').forEach(function(d, i) {
+                            d.classList.toggle('active', i === idx);
+                        });
+                    }
+                }
+
+                // ========== QA LIGHTBOX ==========
+                function qaLightbox(src) {
+                    var overlay = document.getElementById('qa-lightbox-overlay');
+                    var img = document.getElementById('qa-lightbox-img');
+                    if (overlay && img) {
+                        img.src = src;
+                        overlay.classList.add('show');
+                    }
+                }
+                function qaLightboxClose() {
+                    var overlay = document.getElementById('qa-lightbox-overlay');
+                    if (overlay) overlay.classList.remove('show');
+                }
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') qaLightboxClose();
+                });
+
+                // ========== QA FILTER (Public) ==========
+                function pubQaFilter(modUid, status, btn) {
+                    var bar = document.getElementById(modUid + '-filters');
+                    if (bar) bar.querySelectorAll('.pub-qa-fbtn').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    document.querySelectorAll('.pub-qa-case[data-qa-mod="' + modUid + '"]').forEach(function(row) {
+                        row.style.display = (status === 'all' || row.getAttribute('data-qa-st') === status) ? '' : 'none';
+                    });
+                    // Show/hide section headers
+                    var body = document.getElementById(modUid + '-body');
+                    if (body) {
+                        body.querySelectorAll('.pub-qa-sec-' + modUid).forEach(function(hdr) {
+                            var next = hdr.nextElementSibling, anyVisible = false;
+                            while (next && !next.classList.contains('pub-qa-section')) {
+                                if (next.classList.contains('pub-qa-case') && next.style.display !== 'none') anyVisible = true;
+                                next = next.nextElementSibling;
+                            }
+                            hdr.style.display = anyVisible ? '' : 'none';
+                        });
+                    }
                 }
                 </script>
             </body>

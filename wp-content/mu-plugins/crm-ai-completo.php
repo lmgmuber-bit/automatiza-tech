@@ -2269,18 +2269,20 @@ class AutomatizaTech_CRM_AI {
                         .qa-case-row.st-blocked{border-left-color:#f59e0b;}
                         .qa-case-row.st-not_tested{border-left-color:#9ca3af;}
                         .qa-case-row.st-skipped{border-left-color:#6366f1;}
-                        .adm-qa-carousel{position:relative;overflow:hidden;border-radius:8px;background:#f9fafb;border:1px solid #e5e7eb;margin-top:6px;}
+                        .adm-qa-carousel{position:relative;overflow:hidden;border-radius:10px;background:#f9fafb;border:1px solid #e5e7eb;margin:8px auto 0;width:100%;max-width:680px;}
                         .adm-qa-carousel-track{display:flex;transition:transform .3s ease;}
-                        .adm-qa-carousel-slide{min-width:100%;display:flex;align-items:center;justify-content:center;padding:6px;}
-                        .adm-qa-carousel-slide img{max-height:180px;max-width:100%;border-radius:6px;cursor:zoom-in;object-fit:contain;}
-                        .adm-qa-carousel-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.45);color:#fff;border:none;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;z-index:2;}
+                        .adm-qa-carousel-slide{min-width:100%;display:flex;align-items:center;justify-content:center;padding:12px;}
+                        .adm-qa-carousel-slide img{max-height:420px;max-width:100%;width:auto;border-radius:8px;cursor:zoom-in;object-fit:contain;}
+                        .adm-qa-carousel-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.45);color:#fff;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;z-index:2;transition:background .15s;}
                         .adm-qa-carousel-btn:hover{background:rgba(0,0,0,.7);}
-                        .adm-qa-carousel-btn.prev{left:4px;}
-                        .adm-qa-carousel-btn.next{right:4px;}
-                        .adm-qa-carousel-dots{display:flex;justify-content:center;gap:4px;padding:4px 0;}
-                        .adm-qa-carousel-dot{width:7px;height:7px;border-radius:50%;background:#d1d5db;border:none;cursor:pointer;padding:0;}
+                        .adm-qa-carousel-btn.prev{left:8px;}
+                        .adm-qa-carousel-btn.next{right:8px;}
+                        .adm-qa-carousel-dots{display:flex;justify-content:center;gap:5px;padding:6px 0;}
+                        .adm-qa-carousel-dot{width:8px;height:8px;border-radius:50%;background:#d1d5db;border:none;cursor:pointer;padding:0;transition:background .15s;}
                         .adm-qa-carousel-dot.active{background:#0d9488;}
-                        .adm-qa-carousel-counter{text-align:center;font-size:10px;color:#6b7280;margin-top:2px;}
+                        .adm-qa-carousel-counter{text-align:center;font-size:11px;color:#6b7280;margin-top:2px;}
+                        @media(max-width:768px){.adm-qa-carousel{max-width:100%;}.adm-qa-carousel-slide img{max-height:280px;}.adm-qa-carousel-btn{width:30px;height:30px;font-size:15px;}}
+                        @media(max-width:480px){.adm-qa-carousel-slide{padding:6px;}.adm-qa-carousel-slide img{max-height:200px;}.adm-qa-carousel-btn{width:26px;height:26px;font-size:13px;}}
                         .adm-qa-lightbox{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.92);z-index:99999;align-items:center;justify-content:center;flex-direction:column;}
                         .adm-qa-lightbox.show{display:flex;}
                         .adm-qa-lightbox-img-wrap{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;max-width:94vw;max-height:82vh;}
@@ -2472,7 +2474,7 @@ class AutomatizaTech_CRM_AI {
                                                     if (count($adm_images) > 0):
                                                         $adm_car_id = $case_uid . '-acar';
                                                     ?>
-                                                    <div class="adm-qa-carousel" style="max-width:320px;">
+                                                    <div class="adm-qa-carousel">
                                                         <div class="adm-qa-carousel-track" id="<?php echo $adm_car_id; ?>-track">
                                                             <?php foreach ($adm_images as $ai): ?>
                                                             <div class="adm-qa-carousel-slide">
@@ -4842,18 +4844,21 @@ class AutomatizaTech_CRM_AI {
                             .pub-qa-case.st-not_tested{border-left-color:#9ca3af;}
                             .pub-qa-case.st-skipped{border-left-color:#6366f1;}
                             /* Carousel */
-                            .qa-carousel{position:relative;overflow:hidden;border-radius:8px;background:#f3f4f6;margin-top:8px;}
+                            /* Carousel */
+                            .qa-carousel{position:relative;overflow:hidden;border-radius:10px;background:#f3f4f6;margin:10px auto 0;width:100%;max-width:720px;}
                             .qa-carousel-track{display:flex;transition:transform .3s ease;will-change:transform;}
-                            .qa-carousel-slide{min-width:100%;display:flex;align-items:center;justify-content:center;padding:8px;}
-                            .qa-carousel-slide img{max-width:100%;max-height:350px;border-radius:6px;object-fit:contain;cursor:pointer;}
-                            .qa-carousel-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.5);color:#fff;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;z-index:2;transition:background .15s;}
+                            .qa-carousel-slide{min-width:100%;display:flex;align-items:center;justify-content:center;padding:14px;}
+                            .qa-carousel-slide img{max-width:100%;max-height:440px;width:auto;border-radius:8px;object-fit:contain;cursor:pointer;}
+                            .qa-carousel-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.5);color:#fff;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;z-index:2;transition:background .15s;}
                             .qa-carousel-btn:hover{background:rgba(0,0,0,0.7);}
-                            .qa-carousel-btn.prev{left:8px;}
-                            .qa-carousel-btn.next{right:8px;}
+                            .qa-carousel-btn.prev{left:10px;}
+                            .qa-carousel-btn.next{right:10px;}
                             .qa-carousel-dots{display:flex;justify-content:center;gap:6px;padding:8px 0;}
-                            .qa-carousel-dot{width:8px;height:8px;border-radius:50%;background:#d1d5db;border:none;cursor:pointer;padding:0;transition:background .15s;}
+                            .qa-carousel-dot{width:9px;height:9px;border-radius:50%;background:#d1d5db;border:none;cursor:pointer;padding:0;transition:background .15s;}
                             .qa-carousel-dot.active{background:#0d9488;}
-                            .qa-carousel-counter{text-align:center;font-size:11px;color:#6b7280;padding:0 0 6px;}
+                            .qa-carousel-counter{text-align:center;font-size:12px;color:#6b7280;padding:0 0 8px;}
+                            @media(max-width:768px){.qa-carousel{max-width:100%;border-radius:8px;}.qa-carousel-slide{padding:8px;}.qa-carousel-slide img{max-height:300px;}.qa-carousel-btn{width:34px;height:34px;font-size:17px;}}
+                            @media(max-width:480px){.qa-carousel-slide{padding:4px;}.qa-carousel-slide img{max-height:220px;}.qa-carousel-btn{width:28px;height:28px;font-size:14px;}.qa-carousel-btn.prev{left:4px;}.qa-carousel-btn.next{right:4px;}}
                             .pub-qa-comment{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;margin-top:6px;font-size:13px;}
                             .pub-qa-section{background:linear-gradient(135deg,#0d9488,#14b8a6);color:#fff;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:700;margin:10px 0 6px;letter-spacing:.3px;display:inline-block;}
                             .pub-qa-filter{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap;}
@@ -5025,7 +5030,7 @@ class AutomatizaTech_CRM_AI {
                                                     <span style="font-size:12px;font-weight:600;color:#0d9488;">📸 Evidencias (<?php echo count($caso['evidence']);?>)</span>
                                                     <?php if (!empty($images)): $car_id = $c_uid . '-car'; ?>
                                                     <!-- Image Carousel -->
-                                                    <div class="qa-carousel" id="<?php echo $car_id;?>" style="max-width:500px;">
+                                                    <div class="qa-carousel" id="<?php echo $car_id;?>">
                                                         <div class="qa-carousel-track" id="<?php echo $car_id;?>-track">
                                                             <?php foreach ($images as $img_i => $img): ?>
                                                             <div class="qa-carousel-slide">

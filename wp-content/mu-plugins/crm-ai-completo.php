@@ -2283,7 +2283,7 @@ class AutomatizaTech_CRM_AI {
                                         $tested = (int)$mod['passed'] + (int)$mod['failed'] + (int)$mod['blocked'];
                                     ?>
                                     <tr style="border-bottom:1px solid #e5e7eb;">
-                                        <td style="padding:6px 8px; font-weight:500;"><?php echo esc_html($mod['name']); ?></td>
+                                        <td style="padding:6px 8px; font-weight:500;"><?php echo esc_html($mod['title']); ?></td>
                                         <td style="text-align:center; padding:6px 4px; color:#059669; font-weight:600;"><?php echo $mod['passed']; ?></td>
                                         <td style="text-align:center; padding:6px 4px; color:#dc2626; font-weight:600;"><?php echo $mod['failed']; ?></td>
                                         <td style="text-align:center; padding:6px 4px; color:#f59e0b; font-weight:600;"><?php echo $mod['blocked']; ?></td>

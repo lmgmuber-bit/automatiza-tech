@@ -377,6 +377,61 @@ if (defined('WP_DEBUG') && WP_DEBUG && (strpos(home_url(), 'localhost') !== fals
 }
 
 /**
+ * Banner visual de ambiente LOCAL (solo se muestra en localhost)
+ * Para diferenciar visualmente del entorno de producción.
+ */
+function at_local_environment_banner() {
+    if (strpos(home_url(), 'localhost') === false && strpos(home_url(), '.local') === false) {
+        return; // Solo en local
+    }
+    ?>
+    <style>
+        #at-local-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 999999;
+            background: repeating-linear-gradient(
+                45deg,
+                #ff6b00,
+                #ff6b00 10px,
+                #e05500 10px,
+                #e05500 20px
+            );
+            color: #fff;
+            text-align: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            padding: 6px 0;
+            text-transform: uppercase;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+        #at-local-banner span {
+            background: rgba(0,0,0,0.35);
+            padding: 2px 18px;
+            border-radius: 3px;
+        }
+        /* Desplazar la página para que no tape contenido */
+        html { margin-top: 32px !important; }
+        /* Si el admin bar está activo, sumar al margen */
+        html.wp-toolbar { margin-top: 32px !important; }
+        #wpadminbar { top: 32px !important; }
+    </style>
+    <div id="at-local-banner">
+        <span>⚠ AMBIENTE LOCAL — NO ES PRODUCCIÓN ⚠</span>
+    </div>
+    <?php
+}
+add_action('wp_head', 'at_local_environment_banner', 1);
+add_action('admin_head', 'at_local_environment_banner', 1);
+add_action('login_head', 'at_local_environment_banner', 1);
+
+/**
  * Límite de revisiones de posts para mejor rendimiento
  */
 if (!defined('WP_POST_REVISIONS')) {

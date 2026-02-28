@@ -2281,10 +2281,20 @@ class AutomatizaTech_CRM_AI {
                         .adm-qa-carousel-dot{width:7px;height:7px;border-radius:50%;background:#d1d5db;border:none;cursor:pointer;padding:0;}
                         .adm-qa-carousel-dot.active{background:#0d9488;}
                         .adm-qa-carousel-counter{text-align:center;font-size:10px;color:#6b7280;margin-top:2px;}
-                        .adm-qa-lightbox{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:99999;align-items:center;justify-content:center;cursor:zoom-out;}
+                        .adm-qa-lightbox{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.92);z-index:99999;align-items:center;justify-content:center;flex-direction:column;}
                         .adm-qa-lightbox.show{display:flex;}
-                        .adm-qa-lightbox img{max-width:92vw;max-height:90vh;border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,.5);}
-                        .adm-qa-lightbox-close{position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:32px;cursor:pointer;z-index:100000;}
+                        .adm-qa-lightbox-img-wrap{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;max-width:94vw;max-height:82vh;}
+                        .adm-qa-lightbox-img-wrap img{max-width:92vw;max-height:80vh;border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,.5);transition:transform .25s ease;cursor:grab;user-select:none;}
+                        .adm-qa-lightbox-close{position:absolute;top:12px;right:16px;background:rgba(0,0,0,.5);border:none;color:#fff;font-size:28px;cursor:pointer;z-index:100000;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+                        .adm-qa-lightbox-close:hover{background:rgba(255,255,255,.2);}
+                        .adm-qa-lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:22px;display:flex;align-items:center;justify-content:center;transition:background .2s;z-index:100000;backdrop-filter:blur(4px);}
+                        .adm-qa-lb-nav:hover{background:rgba(255,255,255,.3);}
+                        .adm-qa-lb-nav.prev{left:16px;}
+                        .adm-qa-lb-nav.next{right:16px;}
+                        .adm-qa-lb-toolbar{display:flex;gap:10px;align-items:center;margin-top:12px;}
+                        .adm-qa-lb-toolbar button{background:rgba(255,255,255,.12);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .2s;backdrop-filter:blur(4px);}
+                        .adm-qa-lb-toolbar button:hover{background:rgba(255,255,255,.25);}
+                        .adm-qa-lb-counter{color:rgba(255,255,255,.8);font-size:13px;font-weight:600;letter-spacing:.5px;}
                         .qa-comment-item{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:6px 10px;margin-top:4px;font-size:12px;}
                         .qa-section-header{background:#0d9488;color:#fff;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:700;margin:8px 0 4px;letter-spacing:.3px;}
                         .qa-filter-bar{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap;}
@@ -2586,22 +2596,87 @@ class AutomatizaTech_CRM_AI {
                             });
                         }
                     }
-                    // Admin QA Lightbox
+                    // Admin QA Lightbox - Gallery with prev/next/zoom
+                    var admQaLbImages = [];
+                    var admQaLbIdx = 0;
+                    var admQaLbZoomLevel = 1;
                     function admQaLightbox(src) {
+                        // Collect all carousel images from same carousel
+                        var clicked = event.target;
+                        var carousel = clicked.closest('.adm-qa-carousel');
+                        admQaLbImages = [];
+                        if (carousel) {
+                            carousel.querySelectorAll('.adm-qa-carousel-slide img').forEach(function(im) {
+                                admQaLbImages.push(im.src);
+                            });
+                            admQaLbIdx = admQaLbImages.indexOf(src);
+                            if (admQaLbIdx < 0) admQaLbIdx = 0;
+                        } else {
+                            admQaLbImages = [src];
+                            admQaLbIdx = 0;
+                        }
+                        admQaLbZoomLevel = 1;
+                        admQaLbShow();
+                    }
+                    function admQaLbShow() {
                         var overlay = document.getElementById('adm-qa-lightbox-overlay');
                         var img = document.getElementById('adm-qa-lightbox-img');
-                        if (overlay && img) { img.src = src; overlay.classList.add('show'); }
+                        var counter = document.getElementById('adm-qa-lb-counter');
+                        if (!overlay || !img) return;
+                        img.src = admQaLbImages[admQaLbIdx];
+                        img.style.transform = 'scale(1)';
+                        admQaLbZoomLevel = 1;
+                        overlay.classList.add('show');
+                        if (counter) counter.textContent = (admQaLbIdx + 1) + ' / ' + admQaLbImages.length;
+                        // Show/hide nav arrows
+                        overlay.querySelectorAll('.adm-qa-lb-nav').forEach(function(b) {
+                            b.style.display = admQaLbImages.length > 1 ? '' : 'none';
+                        });
+                    }
+                    function admQaLbNav(dir) {
+                        event.stopPropagation();
+                        admQaLbIdx += dir;
+                        if (admQaLbIdx < 0) admQaLbIdx = admQaLbImages.length - 1;
+                        if (admQaLbIdx >= admQaLbImages.length) admQaLbIdx = 0;
+                        admQaLbShow();
+                    }
+                    function admQaLbZoom(dir) {
+                        event.stopPropagation();
+                        var img = document.getElementById('adm-qa-lightbox-img');
+                        if (!img) return;
+                        if (dir === 0) { admQaLbZoomLevel = 1; }
+                        else { admQaLbZoomLevel += dir * 0.3; }
+                        admQaLbZoomLevel = Math.max(0.3, Math.min(admQaLbZoomLevel, 5));
+                        img.style.transform = 'scale(' + admQaLbZoomLevel + ')';
                     }
                     function admQaLightboxClose() {
                         var overlay = document.getElementById('adm-qa-lightbox-overlay');
                         if (overlay) overlay.classList.remove('show');
                     }
-                    document.addEventListener('keydown', function(e){ if(e.key==='Escape') admQaLightboxClose(); });
+                    document.addEventListener('keydown', function(e){
+                        var overlay = document.getElementById('adm-qa-lightbox-overlay');
+                        if (!overlay || !overlay.classList.contains('show')) return;
+                        if (e.key === 'Escape') admQaLightboxClose();
+                        else if (e.key === 'ArrowLeft') admQaLbNav(-1);
+                        else if (e.key === 'ArrowRight') admQaLbNav(1);
+                        else if (e.key === '+' || e.key === '=') admQaLbZoom(1);
+                        else if (e.key === '-') admQaLbZoom(-1);
+                    });
                     </script>
                     <!-- Lightbox overlay -->
-                    <div class="adm-qa-lightbox" id="adm-qa-lightbox-overlay" onclick="admQaLightboxClose()">
+                    <div class="adm-qa-lightbox" id="adm-qa-lightbox-overlay">
                         <button class="adm-qa-lightbox-close" onclick="admQaLightboxClose()">&times;</button>
-                        <img id="adm-qa-lightbox-img" src="" alt="Evidencia">
+                        <button class="adm-qa-lb-nav prev" onclick="admQaLbNav(-1)">&#8249;</button>
+                        <button class="adm-qa-lb-nav next" onclick="admQaLbNav(1)">&#8250;</button>
+                        <div class="adm-qa-lightbox-img-wrap" onclick="admQaLightboxClose()">
+                            <img id="adm-qa-lightbox-img" src="" alt="Evidencia" onclick="event.stopPropagation()">
+                        </div>
+                        <div class="adm-qa-lb-toolbar">
+                            <button onclick="admQaLbZoom(-1)" title="Alejar">&#8722;</button>
+                            <button onclick="admQaLbZoom(0)" title="Restablecer">&#8634;</button>
+                            <button onclick="admQaLbZoom(1)" title="Acercar">&#43;</button>
+                            <span class="adm-qa-lb-counter" id="adm-qa-lb-counter"></span>
+                        </div>
                     </div>
                     </div><!-- /tab-qa -->
                     <?php endif; ?>
@@ -4784,11 +4859,21 @@ class AutomatizaTech_CRM_AI {
                             .pub-qa-filter{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap;}
                             .pub-qa-fbtn{padding:4px 12px;border-radius:14px;font-size:11px;font-weight:600;border:1px solid #e5e7eb;background:#fff;cursor:pointer;transition:all .15s;}
                             .pub-qa-fbtn:hover,.pub-qa-fbtn.active{background:#0d9488;color:#fff;border-color:#0d9488;}
-                            /* Lightbox */
-                            .qa-lightbox{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:99999;align-items:center;justify-content:center;cursor:zoom-out;}
+                            /* Lightbox Gallery */
+                            .qa-lightbox{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.92);z-index:99999;align-items:center;justify-content:center;flex-direction:column;}
                             .qa-lightbox.show{display:flex;}
-                            .qa-lightbox img{max-width:92vw;max-height:90vh;border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,.5);}
-                            .qa-lightbox-close{position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:32px;cursor:pointer;z-index:100000;}
+                            .qa-lb-img-wrap{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;max-width:94vw;max-height:82vh;}
+                            .qa-lb-img-wrap img{max-width:92vw;max-height:80vh;border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,.5);transition:transform .25s ease;cursor:grab;user-select:none;}
+                            .qa-lightbox-close{position:absolute;top:12px;right:16px;background:rgba(0,0,0,.5);border:none;color:#fff;font-size:28px;cursor:pointer;z-index:100000;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+                            .qa-lightbox-close:hover{background:rgba(255,255,255,.2);}
+                            .qa-lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:22px;display:flex;align-items:center;justify-content:center;transition:background .2s;z-index:100000;backdrop-filter:blur(4px);}
+                            .qa-lb-nav:hover{background:rgba(255,255,255,.3);}
+                            .qa-lb-nav.prev{left:16px;}
+                            .qa-lb-nav.next{right:16px;}
+                            .qa-lb-toolbar{display:flex;gap:10px;align-items:center;margin-top:12px;}
+                            .qa-lb-toolbar button{background:rgba(255,255,255,.12);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .2s;backdrop-filter:blur(4px);}
+                            .qa-lb-toolbar button:hover{background:rgba(255,255,255,.25);}
+                            .qa-lb-counter{color:rgba(255,255,255,.8);font-size:13px;font-weight:600;letter-spacing:.5px;}
                         </style>
 
                         <?php foreach ($qa_projects_pub as $qp_pub_idx => $qp_pub): ?>
@@ -5002,10 +5087,20 @@ class AutomatizaTech_CRM_AI {
                         </div>
                         <?php endforeach; // qa_projects ?>
 
-                        <!-- Lightbox overlay -->
-                        <div class="qa-lightbox" id="qa-lightbox-overlay" onclick="qaLightboxClose()">
+                        <!-- Lightbox Gallery overlay -->
+                        <div class="qa-lightbox" id="qa-lightbox-overlay">
                             <button class="qa-lightbox-close" onclick="qaLightboxClose()">&times;</button>
-                            <img id="qa-lightbox-img" src="" alt="Evidencia">
+                            <button class="qa-lb-nav prev" onclick="qaLbNav(-1)">&#8249;</button>
+                            <button class="qa-lb-nav next" onclick="qaLbNav(1)">&#8250;</button>
+                            <div class="qa-lb-img-wrap" onclick="qaLightboxClose()">
+                                <img id="qa-lightbox-img" src="" alt="Evidencia" onclick="event.stopPropagation()">
+                            </div>
+                            <div class="qa-lb-toolbar">
+                                <button onclick="qaLbZoom(-1)" title="Alejar">&#8722;</button>
+                                <button onclick="qaLbZoom(0)" title="Restablecer">&#8634;</button>
+                                <button onclick="qaLbZoom(1)" title="Acercar">&#43;</button>
+                                <span class="qa-lb-counter" id="qa-lb-counter"></span>
+                            </div>
                         </div>
                     </div><!-- /tl-content-qa -->
                     <?php endif; ?>
@@ -5550,22 +5645,78 @@ class AutomatizaTech_CRM_AI {
                     }
                 }
 
-                // ========== QA LIGHTBOX ==========
+                // ========== QA LIGHTBOX GALLERY ==========
+                var qaLbImages = [];
+                var qaLbIdx = 0;
+                var qaLbZoomLevel = 1;
                 function qaLightbox(src) {
+                    // Collect all images from the same carousel
+                    var clicked = event.target;
+                    var carousel = clicked.closest('.qa-carousel');
+                    qaLbImages = [];
+                    if (carousel) {
+                        carousel.querySelectorAll('.qa-carousel-slide img').forEach(function(im) {
+                            qaLbImages.push(im.src);
+                        });
+                        qaLbIdx = qaLbImages.indexOf(src);
+                        if (qaLbIdx < 0) qaLbIdx = 0;
+                    } else {
+                        qaLbImages = [src];
+                        qaLbIdx = 0;
+                    }
+                    qaLbZoomLevel = 1;
+                    qaLbShow();
+                }
+                function qaLbShow() {
                     var overlay = document.getElementById('qa-lightbox-overlay');
                     var img = document.getElementById('qa-lightbox-img');
-                    if (overlay && img) {
-                        img.src = src;
-                        overlay.classList.add('show');
-                    }
+                    var counter = document.getElementById('qa-lb-counter');
+                    if (!overlay || !img) return;
+                    img.src = qaLbImages[qaLbIdx];
+                    img.style.transform = 'scale(1)';
+                    qaLbZoomLevel = 1;
+                    overlay.classList.add('show');
+                    if (counter) counter.textContent = (qaLbIdx + 1) + ' / ' + qaLbImages.length;
+                    overlay.querySelectorAll('.qa-lb-nav').forEach(function(b) {
+                        b.style.display = qaLbImages.length > 1 ? '' : 'none';
+                    });
+                }
+                function qaLbNav(dir) {
+                    event.stopPropagation();
+                    qaLbIdx += dir;
+                    if (qaLbIdx < 0) qaLbIdx = qaLbImages.length - 1;
+                    if (qaLbIdx >= qaLbImages.length) qaLbIdx = 0;
+                    qaLbShow();
+                }
+                function qaLbZoom(dir) {
+                    event.stopPropagation();
+                    var img = document.getElementById('qa-lightbox-img');
+                    if (!img) return;
+                    if (dir === 0) { qaLbZoomLevel = 1; }
+                    else { qaLbZoomLevel += dir * 0.3; }
+                    qaLbZoomLevel = Math.max(0.3, Math.min(qaLbZoomLevel, 5));
+                    img.style.transform = 'scale(' + qaLbZoomLevel + ')';
                 }
                 function qaLightboxClose() {
                     var overlay = document.getElementById('qa-lightbox-overlay');
                     if (overlay) overlay.classList.remove('show');
                 }
                 document.addEventListener('keydown', function(e) {
+                    var overlay = document.getElementById('qa-lightbox-overlay');
+                    if (!overlay || !overlay.classList.contains('show')) return;
                     if (e.key === 'Escape') qaLightboxClose();
+                    else if (e.key === 'ArrowLeft') qaLbNav(-1);
+                    else if (e.key === 'ArrowRight') qaLbNav(1);
+                    else if (e.key === '+' || e.key === '=') qaLbZoom(1);
+                    else if (e.key === '-') qaLbZoom(-1);
                 });
+                // Mouse wheel zoom in lightbox
+                document.addEventListener('wheel', function(e) {
+                    var overlay = document.getElementById('qa-lightbox-overlay');
+                    if (!overlay || !overlay.classList.contains('show')) return;
+                    e.preventDefault();
+                    qaLbZoom(e.deltaY < 0 ? 1 : -1);
+                }, {passive: false});
 
                 // ========== QA FILTER (Public) ==========
                 function pubQaFilter(modUid, status, btn) {

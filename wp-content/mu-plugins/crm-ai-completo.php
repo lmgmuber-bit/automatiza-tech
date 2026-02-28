@@ -1870,9 +1870,11 @@ class AutomatizaTech_CRM_AI {
 
         // ─── QA Data for this client ───
         $qa_projects = [];
-        $qa_table_projects = $wpdb->prefix . 'at_qa_projects';
-        $qa_table_modules  = $wpdb->prefix . 'at_qa_modules';
-        $qa_table_cases    = $wpdb->prefix . 'at_qa_cases';
+        $qa_table_projects  = $wpdb->prefix . 'at_qa_projects';
+        $qa_table_modules   = $wpdb->prefix . 'at_qa_modules';
+        $qa_table_cases     = $wpdb->prefix . 'at_qa_cases';
+        $qa_table_evidence  = $wpdb->prefix . 'at_qa_evidence';
+        $qa_table_comments  = $wpdb->prefix . 'at_qa_comments';
         if ($wpdb->get_var("SHOW TABLES LIKE '{$qa_table_projects}'") === $qa_table_projects) {
             $qa_projects = $wpdb->get_results($wpdb->prepare(
                 "SELECT * FROM {$qa_table_projects} WHERE client_id = %d ORDER BY created_at DESC",
@@ -1889,11 +1891,31 @@ class AutomatizaTech_CRM_AI {
                     $qp['id']
                 ), ARRAY_A);
                 $qp['total'] = 0; $qp['passed_total'] = 0; $qp['failed_total'] = 0;
-                foreach ($qp['modules'] as $mod) {
+                foreach ($qp['modules'] as &$mod) {
                     $qp['total'] += (int)$mod['total_cases'];
                     $qp['passed_total'] += (int)$mod['passed'];
                     $qp['failed_total'] += (int)$mod['failed'];
+                    // Fetch cases for this module
+                    $mod['cases'] = $wpdb->get_results($wpdb->prepare(
+                        "SELECT * FROM {$qa_table_cases} WHERE module_id = %d ORDER BY sort_order, id",
+                        $mod['id']
+                    ), ARRAY_A);
+                    // Fetch evidence and comments per case
+                    foreach ($mod['cases'] as &$caso) {
+                        $caso['evidence'] = $wpdb->get_results($wpdb->prepare(
+                            "SELECT * FROM {$qa_table_evidence} WHERE case_id = %d ORDER BY created_at DESC",
+                            $caso['id']
+                        ), ARRAY_A);
+                        $caso['comments'] = $wpdb->get_results($wpdb->prepare(
+                            "SELECT c.*, u.display_name as author_name FROM {$qa_table_comments} c
+                             LEFT JOIN {$wpdb->users} u ON c.user_id = u.ID
+                             WHERE c.case_id = %d ORDER BY c.created_at ASC",
+                            $caso['id']
+                        ), ARRAY_A);
+                    }
+                    unset($caso);
                 }
+                unset($mod);
                 $qp['progress'] = $qp['total'] > 0 ? round(($qp['passed_total'] / $qp['total']) * 100) : 0;
                 // Check for report
                 $upload_dir = wp_upload_dir();
@@ -2232,7 +2254,31 @@ class AutomatizaTech_CRM_AI {
                     <?php if (!empty($qa_projects)): ?>
                     <!-- Tab: QA Pruebas -->
                     <div class="ficha-tab-content" id="tab-qa">
-                    <?php foreach ($qa_projects as $qp): ?>
+                    <style>
+                        .qa-mod-toggle{cursor:pointer;user-select:none;transition:background .2s;}
+                        .qa-mod-toggle:hover{background:#f0fdfa !important;}
+                        .qa-mod-toggle .qa-arrow{transition:transform .2s;display:inline-block;}
+                        .qa-mod-toggle.open .qa-arrow{transform:rotate(90deg);}
+                        .qa-cases-wrap{display:none;animation:qaSlide .2s ease;}
+                        .qa-cases-wrap.open{display:block;}
+                        @keyframes qaSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+                        .qa-case-row{border-left:3px solid #e5e7eb;padding:8px 12px;margin:4px 0;border-radius:0 6px 6px 0;background:#fafafa;transition:background .15s;}
+                        .qa-case-row:hover{background:#f0fdfa;}
+                        .qa-case-row.st-pass{border-left-color:#059669;}
+                        .qa-case-row.st-fail{border-left-color:#dc2626;}
+                        .qa-case-row.st-blocked{border-left-color:#f59e0b;}
+                        .qa-case-row.st-not_tested{border-left-color:#9ca3af;}
+                        .qa-case-row.st-skipped{border-left-color:#6366f1;}
+                        .qa-ev-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+                        .qa-ev-thumb{width:64px;height:64px;border-radius:6px;object-fit:cover;border:2px solid #e5e7eb;cursor:pointer;transition:transform .15s,border-color .15s;}
+                        .qa-ev-thumb:hover{transform:scale(1.08);border-color:#14b8a6;}
+                        .qa-comment-item{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:6px 10px;margin-top:4px;font-size:12px;}
+                        .qa-section-header{background:#0d9488;color:#fff;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:700;margin:8px 0 4px;letter-spacing:.3px;}
+                        .qa-filter-bar{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap;}
+                        .qa-filter-btn{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;border:1px solid #e5e7eb;background:#fff;cursor:pointer;transition:all .15s;}
+                        .qa-filter-btn:hover,.qa-filter-btn.active{background:#0d9488;color:#fff;border-color:#0d9488;}
+                    </style>
+                    <?php foreach ($qa_projects as $qp_idx => $qp): ?>
                         <div class="ficha-card" style="margin-bottom:15px;">
                             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                                 <h3 style="margin:0;">🧪 <?php echo esc_html($qp['name']); ?></h3>
@@ -2245,6 +2291,8 @@ class AutomatizaTech_CRM_AI {
                                     elseif ($qp['qa_status'] === 'in_progress') { $badge_color = '#d97706'; $badge_label = 'En Progreso'; }
                                     elseif ($qp['qa_status'] === 'observations') { $badge_color = '#f59e0b'; $badge_label = 'Observaciones'; }
                                     elseif ($qp['qa_status'] === 'pending') { $badge_color = '#6b7280'; $badge_label = 'Pendiente'; }
+                                    elseif ($qp['qa_status'] === 'passed') { $badge_color = '#059669'; $badge_label = 'Aprobado'; }
+                                    elseif ($qp['qa_status'] === 'failed') { $badge_color = '#dc2626'; $badge_label = 'Fallido'; }
                                     ?>
                                     <span style="background:<?php echo $badge_color; ?>; color:#fff; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:600;"><?php echo $badge_label; ?></span>
                                     <?php if ($qp['report_url']): ?>
@@ -2253,53 +2301,196 @@ class AutomatizaTech_CRM_AI {
                                 </div>
                             </div>
 
+                            <!-- Summary stats -->
+                            <div style="display:flex; gap:16px; margin:10px 0 4px; flex-wrap:wrap;">
+                                <span style="font-size:12px;">📋 <strong><?php echo $qp['total']; ?></strong> Total</span>
+                                <span style="font-size:12px; color:#059669;">✅ <strong><?php echo $qp['passed_total']; ?></strong> Pass</span>
+                                <span style="font-size:12px; color:#dc2626;">❌ <strong><?php echo $qp['failed_total']; ?></strong> Fail</span>
+                                <?php
+                                $blocked_total = 0;
+                                $not_tested_total = 0;
+                                foreach ($qp['modules'] as $m) {
+                                    $blocked_total += (int)$m['blocked'];
+                                    $not_tested_total += (int)$m['total_cases'] - (int)$m['passed'] - (int)$m['failed'] - (int)$m['blocked'];
+                                }
+                                ?>
+                                <span style="font-size:12px; color:#f59e0b;">⚠️ <strong><?php echo $blocked_total; ?></strong> Bloqueados</span>
+                                <span style="font-size:12px; color:#9ca3af;">⏳ <strong><?php echo max(0, $not_tested_total); ?></strong> Sin probar</span>
+                            </div>
+
                             <!-- Progress bar -->
-                            <div style="margin:12px 0 8px;">
+                            <div style="margin:8px 0;">
                                 <div style="display:flex; justify-content:space-between; font-size:12px; color:#6b7280; margin-bottom:4px;">
                                     <span><?php echo $qp['passed_total']; ?> / <?php echo $qp['total']; ?> casos aprobados</span>
                                     <span style="font-weight:600;"><?php echo $qp['progress']; ?>%</span>
                                 </div>
                                 <div style="background:#e5e7eb; border-radius:6px; height:10px; overflow:hidden;">
-                                    <div style="background:linear-gradient(90deg,#0d9488,#14b8a6); width:<?php echo $qp['progress']; ?>%; height:100%; border-radius:6px; transition:width .3s;"></div>
+                                    <?php
+                                    $pct_pass = $qp['total'] > 0 ? round(($qp['passed_total'] / $qp['total']) * 100, 1) : 0;
+                                    $pct_fail = $qp['total'] > 0 ? round(($qp['failed_total'] / $qp['total']) * 100, 1) : 0;
+                                    $pct_block = $qp['total'] > 0 ? round(($blocked_total / $qp['total']) * 100, 1) : 0;
+                                    ?>
+                                    <div style="display:flex; height:100%;">
+                                        <div style="background:#059669; width:<?php echo $pct_pass; ?>%; height:100%;"></div>
+                                        <div style="background:#dc2626; width:<?php echo $pct_fail; ?>%; height:100%;"></div>
+                                        <div style="background:#f59e0b; width:<?php echo $pct_block; ?>%; height:100%;"></div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Modules breakdown -->
+                            <!-- Modules with expandable cases -->
                             <?php if (!empty($qp['modules'])): ?>
-                            <table style="width:100%; font-size:12px; border-collapse:collapse; margin-top:10px;">
-                                <thead>
-                                    <tr style="background:#f0fdfa; border-bottom:2px solid #99f6e4;">
-                                        <th style="text-align:left; padding:6px 8px;">Módulo</th>
-                                        <th style="text-align:center; padding:6px 4px; color:#059669;">✅</th>
-                                        <th style="text-align:center; padding:6px 4px; color:#dc2626;">❌</th>
-                                        <th style="text-align:center; padding:6px 4px; color:#f59e0b;">⚠️</th>
-                                        <th style="text-align:center; padding:6px 4px;">Total</th>
-                                        <th style="text-align:right; padding:6px 8px;">Progreso</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($qp['modules'] as $mod):
-                                        $mod_pct = $mod['total_cases'] > 0 ? round(($mod['passed'] / $mod['total_cases']) * 100) : 0;
-                                        $tested = (int)$mod['passed'] + (int)$mod['failed'] + (int)$mod['blocked'];
-                                    ?>
-                                    <tr style="border-bottom:1px solid #e5e7eb;">
-                                        <td style="padding:6px 8px; font-weight:500;"><?php echo esc_html($mod['title']); ?></td>
-                                        <td style="text-align:center; padding:6px 4px; color:#059669; font-weight:600;"><?php echo $mod['passed']; ?></td>
-                                        <td style="text-align:center; padding:6px 4px; color:#dc2626; font-weight:600;"><?php echo $mod['failed']; ?></td>
-                                        <td style="text-align:center; padding:6px 4px; color:#f59e0b; font-weight:600;"><?php echo $mod['blocked']; ?></td>
-                                        <td style="text-align:center; padding:6px 4px;"><?php echo $mod['total_cases']; ?></td>
-                                        <td style="text-align:right; padding:6px 8px;">
-                                            <div style="display:inline-flex; align-items:center; gap:6px;">
-                                                <div style="background:#e5e7eb; border-radius:4px; height:6px; width:60px; overflow:hidden;">
-                                                    <div style="background:<?php echo $mod_pct === 100 ? '#059669' : '#14b8a6'; ?>; width:<?php echo $mod_pct; ?>%; height:100%;"></div>
-                                                </div>
-                                                <span style="font-size:11px; font-weight:600; color:<?php echo $mod_pct === 100 ? '#059669' : '#6b7280'; ?>;"><?php echo $mod_pct; ?>%</span>
+                            <?php foreach ($qp['modules'] as $mod_idx => $mod):
+                                $mod_pct = $mod['total_cases'] > 0 ? round(($mod['passed'] / $mod['total_cases']) * 100) : 0;
+                                $mod_uid = 'qa-mod-' . $qp_idx . '-' . $mod_idx;
+                                $tested_count = (int)$mod['passed'] + (int)$mod['failed'] + (int)$mod['blocked'];
+                                $has_cases = !empty($mod['cases']);
+                            ?>
+                            <div style="border:1px solid #e5e7eb; border-radius:8px; margin-top:10px; overflow:hidden;">
+                                <!-- Module header (clickable) -->
+                                <div class="qa-mod-toggle" id="<?php echo $mod_uid; ?>-hdr"
+                                     onclick="var w=document.getElementById('<?php echo $mod_uid; ?>-body');var h=this;if(w.classList.contains('open')){w.classList.remove('open');h.classList.remove('open');}else{w.classList.add('open');h.classList.add('open');}"
+                                     style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:#f9fafb; border-bottom:1px solid #e5e7eb; gap:8px;">
+                                    <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
+                                        <span class="qa-arrow" style="font-size:10px; color:#6b7280;">▶</span>
+                                        <span style="font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?php echo esc_html($mod['code'] . ' — ' . $mod['title']); ?></span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                                        <span style="font-size:11px; color:#059669; font-weight:600;">✅<?php echo $mod['passed']; ?></span>
+                                        <span style="font-size:11px; color:#dc2626; font-weight:600;">❌<?php echo $mod['failed']; ?></span>
+                                        <span style="font-size:11px; color:#f59e0b; font-weight:600;">⚠️<?php echo $mod['blocked']; ?></span>
+                                        <span style="font-size:11px; color:#6b7280;"><?php echo $tested_count; ?>/<?php echo $mod['total_cases']; ?></span>
+                                        <div style="display:inline-flex; align-items:center; gap:4px;">
+                                            <div style="background:#e5e7eb; border-radius:4px; height:6px; width:50px; overflow:hidden;">
+                                                <div style="background:<?php echo $mod_pct === 100 ? '#059669' : '#14b8a6'; ?>; width:<?php echo $mod_pct; ?>%; height:100%;"></div>
                                             </div>
-                                        </td>
-                                    </tr>
+                                            <span style="font-size:11px; font-weight:600; color:<?php echo $mod_pct === 100 ? '#059669' : '#6b7280'; ?>;"><?php echo $mod_pct; ?>%</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Cases list (hidden by default) -->
+                                <div class="qa-cases-wrap" id="<?php echo $mod_uid; ?>-body" style="padding:8px 12px;">
+                                    <?php if ($has_cases):
+                                        // Group cases by section
+                                        $sections = [];
+                                        foreach ($mod['cases'] as $caso) {
+                                            $sec = !empty($caso['section']) ? $caso['section'] : '__sin_seccion__';
+                                            $sections[$sec][] = $caso;
+                                        }
+                                        // Filter bar
+                                    ?>
+                                    <div class="qa-filter-bar" id="<?php echo $mod_uid; ?>-filters">
+                                        <button class="qa-filter-btn active" onclick="qaFilterCases('<?php echo $mod_uid; ?>','all',this)">Todos</button>
+                                        <button class="qa-filter-btn" onclick="qaFilterCases('<?php echo $mod_uid; ?>','pass',this)">✅ Pass</button>
+                                        <button class="qa-filter-btn" onclick="qaFilterCases('<?php echo $mod_uid; ?>','fail',this)">❌ Fail</button>
+                                        <button class="qa-filter-btn" onclick="qaFilterCases('<?php echo $mod_uid; ?>','blocked',this)">⚠️ Bloqueado</button>
+                                        <button class="qa-filter-btn" onclick="qaFilterCases('<?php echo $mod_uid; ?>','not_tested',this)">⏳ Sin probar</button>
+                                    </div>
+
+                                    <?php foreach ($sections as $sec_name => $sec_cases): ?>
+                                        <?php if ($sec_name !== '__sin_seccion__'): ?>
+                                            <div class="qa-section-header"><?php echo esc_html(strtoupper($sec_name)); ?></div>
+                                        <?php endif; ?>
+                                        <?php foreach ($sec_cases as $caso):
+                                            $status_labels = [
+                                                'pass'       => ['✅ PASS', '#059669'],
+                                                'fail'       => ['❌ FAIL', '#dc2626'],
+                                                'blocked'    => ['⚠️ BLOQUEADO', '#f59e0b'],
+                                                'not_tested' => ['⏳ Sin probar', '#9ca3af'],
+                                                'skipped'    => ['⏭️ Omitido', '#6366f1'],
+                                            ];
+                                            $st = $caso['status'];
+                                            $st_info = $status_labels[$st] ?? ['❓ ' . $st, '#6b7280'];
+                                            $has_ev = !empty($caso['evidence']);
+                                            $has_cm = !empty($caso['comments']);
+                                            $case_uid = $mod_uid . '-case-' . $caso['id'];
+                                        ?>
+                                        <div class="qa-case-row st-<?php echo esc_attr($st); ?>" data-qa-status="<?php echo esc_attr($st); ?>" data-qa-mod="<?php echo $mod_uid; ?>">
+                                            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+                                                <div style="flex:1; min-width:0;">
+                                                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                                        <span style="font-size:11px; color:#6b7280; font-weight:600;"><?php echo esc_html($caso['case_id']); ?></span>
+                                                        <span style="font-size:13px; font-weight:500;"><?php echo esc_html($caso['title']); ?></span>
+                                                        <?php if ($caso['priority'] === 'Alta'): ?>
+                                                            <span style="background:#fee2e2; color:#dc2626; padding:1px 6px; border-radius:8px; font-size:10px; font-weight:600;">ALTA</span>
+                                                        <?php elseif ($caso['priority'] === 'Media'): ?>
+                                                            <span style="background:#fef3c7; color:#d97706; padding:1px 6px; border-radius:8px; font-size:10px; font-weight:600;">MEDIA</span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <?php if (!empty($caso['tester'])): ?>
+                                                        <span style="font-size:10px; color:#9ca3af;"><?php echo esc_html($caso['tester']); ?><?php echo $caso['tested_at'] ? ' · ' . date('d/m/Y H:i', strtotime($caso['tested_at'])) : ''; ?></span>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($caso['bug_id'])): ?>
+                                                        <span style="font-size:10px; color:#dc2626; margin-left:6px;">🐛 <?php echo esc_html($caso['bug_id']); ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div style="flex-shrink:0; display:flex; align-items:center; gap:6px;">
+                                                    <span style="background:<?php echo $st_info[1]; ?>; color:#fff; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; white-space:nowrap;"><?php echo $st_info[0]; ?></span>
+                                                    <?php if ($has_ev || $has_cm): ?>
+                                                        <button onclick="var d=document.getElementById('<?php echo $case_uid; ?>-detail');d.style.display=d.style.display==='none'?'block':'none';" style="background:none;border:1px solid #d1d5db;border-radius:6px;padding:2px 6px;cursor:pointer;font-size:11px;" title="Ver detalle">
+                                                            <?php if ($has_ev): ?>📸<?php echo count($caso['evidence']); ?><?php endif; ?>
+                                                            <?php if ($has_cm): ?>💬<?php echo count($caso['comments']); ?><?php endif; ?>
+                                                        </button>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+
+                                            <!-- Expandable detail: evidence + comments -->
+                                            <?php if ($has_ev || $has_cm): ?>
+                                            <div id="<?php echo $case_uid; ?>-detail" style="display:none; margin-top:8px; padding-top:8px; border-top:1px dashed #e5e7eb;">
+                                                <?php if ($has_ev): ?>
+                                                <div style="margin-bottom:6px;">
+                                                    <span style="font-size:11px; font-weight:600; color:#0d9488;">📸 Evidencias (<?php echo count($caso['evidence']); ?>)</span>
+                                                    <div class="qa-ev-grid">
+                                                        <?php foreach ($caso['evidence'] as $ev): ?>
+                                                            <?php if (in_array($ev['file_type'], ['image/png','image/jpeg','image/gif','image/webp',''])): ?>
+                                                                <a href="<?php echo esc_url($ev['file_url']); ?>" target="_blank" title="<?php echo esc_attr($ev['description'] ?: $ev['file_name']); ?>">
+                                                                    <img src="<?php echo esc_url($ev['file_url']); ?>" alt="<?php echo esc_attr($ev['file_name']); ?>" class="qa-ev-thumb" loading="lazy">
+                                                                </a>
+                                                            <?php else: ?>
+                                                                <a href="<?php echo esc_url($ev['file_url']); ?>" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:#f3f4f6;border-radius:6px;font-size:11px;text-decoration:none;color:#374151;border:1px solid #e5e7eb;" title="<?php echo esc_attr($ev['description']); ?>">
+                                                                    📎 <?php echo esc_html($ev['file_name']); ?>
+                                                                </a>
+                                                            <?php endif; ?>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                    <?php
+                                                    // Show descriptions if any
+                                                    foreach ($caso['evidence'] as $ev) {
+                                                        if (!empty($ev['description'])) {
+                                                            echo '<p style="font-size:11px;color:#6b7280;margin:4px 0 0;">📝 <em>' . esc_html($ev['description']) . '</em></p>';
+                                                        }
+                                                    }
+                                                    ?>
+                                                </div>
+                                                <?php endif; ?>
+
+                                                <?php if ($has_cm): ?>
+                                                <div>
+                                                    <span style="font-size:11px; font-weight:600; color:#6366f1;">💬 Comentarios (<?php echo count($caso['comments']); ?>)</span>
+                                                    <?php foreach ($caso['comments'] as $cm): ?>
+                                                    <div class="qa-comment-item">
+                                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                                                            <strong style="font-size:11px; color:#374151;"><?php echo esc_html($cm['author_name'] ?: 'Usuario #' . $cm['user_id']); ?></strong>
+                                                            <span style="font-size:10px; color:#9ca3af;"><?php echo date('d/m/Y H:i', strtotime($cm['created_at'])); ?></span>
+                                                        </div>
+                                                        <p style="margin:0; font-size:12px; color:#4b5563; white-space:pre-line;"><?php echo esc_html($cm['comment']); ?></p>
+                                                    </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                                <?php endif; ?>
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <?php endforeach; ?>
                                     <?php endforeach; ?>
-                                </tbody>
-                            </table>
+                                    <?php else: ?>
+                                        <p style="font-size:12px; color:#9ca3af; margin:4px 0;">No hay casos de prueba registrados.</p>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
                             <?php endif; ?>
 
                             <?php if ($qp['finished_at']): ?>
@@ -2307,6 +2498,35 @@ class AutomatizaTech_CRM_AI {
                             <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
+
+                    <script>
+                    function qaFilterCases(modUid, status, btn) {
+                        // Update active button
+                        var bar = document.getElementById(modUid + '-filters');
+                        if (bar) {
+                            bar.querySelectorAll('.qa-filter-btn').forEach(function(b){ b.classList.remove('active'); });
+                        }
+                        btn.classList.add('active');
+                        // Filter case rows
+                        document.querySelectorAll('.qa-case-row[data-qa-mod="' + modUid + '"]').forEach(function(row) {
+                            if (status === 'all') { row.style.display = ''; }
+                            else { row.style.display = row.getAttribute('data-qa-status') === status ? '' : 'none'; }
+                        });
+                        // Show/hide section headers
+                        var body = document.getElementById(modUid + '-body');
+                        if (body) {
+                            body.querySelectorAll('.qa-section-header').forEach(function(hdr) {
+                                var next = hdr.nextElementSibling;
+                                var anyVisible = false;
+                                while (next && !next.classList.contains('qa-section-header')) {
+                                    if (next.classList.contains('qa-case-row') && next.style.display !== 'none') anyVisible = true;
+                                    next = next.nextElementSibling;
+                                }
+                                hdr.style.display = anyVisible ? '' : 'none';
+                            });
+                        }
+                    }
+                    </script>
                     </div><!-- /tab-qa -->
                     <?php endif; ?>
 

@@ -2054,11 +2054,13 @@ function at_qa_render_suite_page() {
         .at-qa-toast { min-width:180px; max-width:85vw; padding:16px 20px; font-size:14px; }
 
         /* Lightbox responsive */
-        .qa-lightbox-bg img { max-width:95vw; max-height:85vh; border-radius:4px; }
-        .qa-lightbox-close { top:10px; right:12px; width:38px; height:38px; font-size:28px; }
-        .qa-lightbox-nav { width:38px; height:38px; font-size:28px; }
+        .qa-lb-img-wrap img { max-width:95vw; max-height:82vh; border-radius:4px; }
+        .qa-lightbox-close { top:10px; right:12px; width:38px; height:38px; font-size:24px; }
+        .qa-lightbox-nav { width:38px; height:38px; font-size:22px; }
         .qa-lightbox-nav.prev { left:8px; }
         .qa-lightbox-nav.next { right:8px; }
+        .qa-lb-toolbar button { width:32px; height:32px; font-size:14px; }
+        .qa-lb-counter { font-size:12px; }
 
         /* Edit comment responsive */
         .cm-item .cm-edit-area { font-size:13px; min-height:50px; }
@@ -2154,18 +2156,21 @@ function at_qa_render_suite_page() {
     .ev-file-icon { width:100%; height:110px; display:flex; align-items:center; justify-content:center; background:#f8fafc; font-size:36px; }
     .ev-card img { cursor:zoom-in; }
 
-    /* Lightbox */
-    .qa-lightbox-bg { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.85); z-index:999999; display:none; align-items:center; justify-content:center; cursor:zoom-out; }
+    /* Lightbox Gallery */
+    .qa-lightbox-bg { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.92); z-index:999999; display:none; align-items:center; justify-content:center; flex-direction:column; }
     .qa-lightbox-bg.active { display:flex; }
-    .qa-lightbox-bg img { max-width:90vw; max-height:90vh; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,.5); object-fit:contain; cursor:default; }
-    .qa-lightbox-close { position:fixed; top:16px; right:24px; color:#fff; font-size:36px; cursor:pointer; z-index:1000000; background:rgba(0,0,0,.5); border:none; border-radius:50%; width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
-    .qa-lightbox-close:hover { background:rgba(239,68,68,.8); }
-    .qa-lightbox-nav { position:fixed; top:50%; transform:translateY(-50%); color:#fff; font-size:40px; cursor:pointer; z-index:1000000; background:rgba(0,0,0,.45); border:none; border-radius:50%; width:48px; height:48px; display:flex; align-items:center; justify-content:center; transition:.2s; user-select:none; }
-    .qa-lightbox-nav:hover { background:rgba(13,148,136,.8); }
-    .qa-lightbox-nav.prev { left:16px; }
-    .qa-lightbox-nav.next { right:16px; }
-    .qa-lightbox-nav:disabled { opacity:.3; cursor:default; background:rgba(0,0,0,.25); }
-    .qa-lightbox-counter { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); color:#fff; font-size:14px; background:rgba(0,0,0,.5); padding:4px 14px; border-radius:20px; z-index:1000000; }
+    .qa-lb-img-wrap { position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; max-width:94vw; max-height:80vh; }
+    .qa-lb-img-wrap img { max-width:92vw; max-height:78vh; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,.5); object-fit:contain; cursor:default; transition:transform .25s ease; user-select:none; }
+    .qa-lightbox-close { position:absolute; top:14px; right:18px; color:#fff; font-size:28px; cursor:pointer; z-index:1000000; background:rgba(0,0,0,.5); border:none; border-radius:50%; width:44px; height:44px; display:flex; align-items:center; justify-content:center; transition:background .2s; }
+    .qa-lightbox-close:hover { background:rgba(239,68,68,.85); }
+    .qa-lightbox-nav { position:absolute; top:50%; transform:translateY(-50%); color:#fff; font-size:24px; cursor:pointer; z-index:1000000; background:rgba(255,255,255,.15); border:none; border-radius:50%; width:48px; height:48px; display:flex; align-items:center; justify-content:center; transition:background .2s; user-select:none; backdrop-filter:blur(4px); }
+    .qa-lightbox-nav:hover { background:rgba(255,255,255,.3); }
+    .qa-lightbox-nav.prev { left:18px; }
+    .qa-lightbox-nav.next { right:18px; }
+    .qa-lb-toolbar { display:flex; gap:10px; align-items:center; margin-top:14px; }
+    .qa-lb-toolbar button { background:rgba(255,255,255,.12); border:none; color:#fff; width:38px; height:38px; border-radius:50%; cursor:pointer; font-size:17px; display:flex; align-items:center; justify-content:center; transition:background .2s; backdrop-filter:blur(4px); }
+    .qa-lb-toolbar button:hover { background:rgba(255,255,255,.25); }
+    .qa-lb-counter { color:rgba(255,255,255,.85); font-size:14px; font-weight:600; letter-spacing:.5px; }
     .qa-download-all { display:inline-flex; align-items:center; gap:6px; background:#0d9488; color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:12px; cursor:pointer; transition:.2s; margin-left:8px; vertical-align:middle; }
     .qa-download-all:hover { background:#0f766e; }
 
@@ -2483,12 +2488,19 @@ function at_qa_render_suite_page() {
     </div>
 
     <!-- Lightbox para evidencias -->
-    <div class="qa-lightbox-bg" id="qaLightbox" onclick="lbBgClick(event)">
+    <div class="qa-lightbox-bg" id="qaLightbox">
         <button class="qa-lightbox-close" onclick="closeLightbox()">&times;</button>
         <button class="qa-lightbox-nav prev" id="lbPrev" onclick="lbNav(-1)">&lsaquo;</button>
-        <img id="qaLightboxImg" src="" alt="Vista previa">
         <button class="qa-lightbox-nav next" id="lbNext" onclick="lbNav(1)">&rsaquo;</button>
-        <div class="qa-lightbox-counter" id="lbCounter"></div>
+        <div class="qa-lb-img-wrap" onclick="lbBgClick(event)">
+            <img id="qaLightboxImg" src="" alt="Vista previa" onclick="event.stopPropagation()">
+        </div>
+        <div class="qa-lb-toolbar">
+            <button onclick="lbZoom(-1)" title="Alejar">&#8722;</button>
+            <button onclick="lbZoom(0)" title="Restablecer">&#8634;</button>
+            <button onclick="lbZoom(1)" title="Acercar">&#43;</button>
+            <span class="qa-lb-counter" id="lbCounter"></span>
+        </div>
     </div>
 
     <script>
@@ -2514,8 +2526,8 @@ function at_qa_render_suite_page() {
             });
         }
 
-        /* Lightbox con navegación */
-        var lbImages=[], lbCaptions=[], lbIndex=0;
+        /* Lightbox con navegación y zoom */
+        var lbImages=[], lbCaptions=[], lbIndex=0, lbZoomLevel=1;
         function lbCollectImages(){
             lbImages=[]; lbCaptions=[];
             document.querySelectorAll('#evGrid .ev-card img[onclick]').forEach(function(img){
@@ -2525,21 +2537,23 @@ function at_qa_render_suite_page() {
         }
         function lbUpdateNav(){
             var prev=document.getElementById('lbPrev'), next=document.getElementById('lbNext'), cnt=document.getElementById('lbCounter');
-            if(lbImages.length<=1){ prev.style.display='none'; next.style.display='none'; cnt.style.display='none'; return; }
-            prev.style.display='flex'; next.style.display='flex'; cnt.style.display='block';
-            prev.disabled=(lbIndex===0); next.disabled=(lbIndex===lbImages.length-1);
+            if(lbImages.length<=1){ prev.style.display='none'; next.style.display='none'; }
+            else { prev.style.display='flex'; next.style.display='flex'; }
             cnt.textContent=(lbIndex+1)+' / '+lbImages.length;
         }
         function lbUpdateCaption(){
             var cap=document.getElementById('lbCaption');
+            if(!cap) return;
             cap.textContent=lbCaptions[lbIndex]||'';
             cap.style.display=lbCaptions[lbIndex]?'block':'none';
         }
         window.openLightbox = function(url){
             lbCollectImages();
             lbIndex=lbImages.indexOf(url); if(lbIndex<0) lbIndex=0;
+            lbZoomLevel=1;
             var lb=document.getElementById('qaLightbox'), img=document.getElementById('qaLightboxImg');
-            img.src=url; lb.classList.add('active');
+            img.src=url; img.style.transform='scale(1)';
+            lb.classList.add('active');
             lbUpdateNav(); lbUpdateCaption();
             document.addEventListener('keydown', lbKeys);
         };
@@ -2548,20 +2562,41 @@ function at_qa_render_suite_page() {
             document.removeEventListener('keydown', lbKeys);
         };
         window.lbNav = function(dir){
+            if(event) event.stopPropagation();
             var ni=lbIndex+dir;
-            if(ni<0||ni>=lbImages.length) return;
+            if(ni<0) ni=lbImages.length-1;
+            if(ni>=lbImages.length) ni=0;
             lbIndex=ni;
-            document.getElementById('qaLightboxImg').src=lbImages[lbIndex];
+            lbZoomLevel=1;
+            var img=document.getElementById('qaLightboxImg');
+            img.src=lbImages[lbIndex]; img.style.transform='scale(1)';
             lbUpdateNav(); lbUpdateCaption();
         };
+        window.lbZoom = function(dir){
+            if(event) event.stopPropagation();
+            var img=document.getElementById('qaLightboxImg');
+            if(!img) return;
+            if(dir===0){ lbZoomLevel=1; }
+            else { lbZoomLevel += dir * 0.3; }
+            lbZoomLevel = Math.max(0.3, Math.min(lbZoomLevel, 5));
+            img.style.transform='scale('+lbZoomLevel+')';
+        };
         window.lbBgClick = function(e){
-            if(e.target.id==='qaLightbox') closeLightbox();
+            if(e.target.classList.contains('qa-lb-img-wrap') || e.target.id==='qaLightbox') closeLightbox();
         };
         function lbKeys(e){
             if(e.key==='Escape') closeLightbox();
             else if(e.key==='ArrowLeft') lbNav(-1);
             else if(e.key==='ArrowRight') lbNav(1);
+            else if(e.key==='+'||e.key==='=') lbZoom(1);
+            else if(e.key==='-') lbZoom(-1);
         }
+        // Mouse wheel zoom in lightbox
+        document.getElementById('qaLightbox').addEventListener('wheel', function(e){
+            if(!this.classList.contains('active')) return;
+            e.preventDefault();
+            lbZoom(e.deltaY < 0 ? 1 : -1);
+        }, {passive: false});
 
         /* Descargar todas las evidencias */
         window.atQaDownloadAll = function(){

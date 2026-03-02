@@ -4522,11 +4522,11 @@ class AutomatizaTech_CRM_AI {
                     .proj-tab .proj-tab-badge.completado { background:#22c55e; }
                     .proj-viewport { position:relative; overflow:hidden; border-radius:10px; background:#fff; border:1px solid #e5e7eb; min-height:140px; }
                     .proj-track { display:flex; transition:transform .45s cubic-bezier(.4,0,.2,1); will-change:transform; }
-                    .proj-slide { min-width:100%; box-sizing:border-box; padding:24px; }
+                    .proj-slide { min-width:100%; box-sizing:border-box; padding:24px 56px; text-align:center; }
                     .proj-slide h3 { margin:0 0 10px; font-size:1.1em; color:#1e293b; }
-                    .proj-slide p { margin:0 0 10px; color:#475569; line-height:1.5; }
+                    .proj-slide p { margin:0 auto 10px; color:#475569; line-height:1.6; max-width:600px; }
                     .proj-slide small { color:#94a3b8; font-size:12px; }
-                    .proj-slide .proj-meta { display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; font-size:12px; color:#64748b; }
+                    .proj-slide .proj-meta { display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; font-size:12px; color:#64748b; justify-content:center; }
                     .proj-nav-btn { position:absolute; top:50%; transform:translateY(-50%); background:rgba(0,0,0,.35); color:#fff; border:none; width:34px; height:34px; border-radius:50%; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; z-index:3; transition:background .2s; }
                     .proj-nav-btn:hover { background:rgba(0,0,0,.6); }
                     .proj-nav-btn.prev { left:8px; }
@@ -4565,7 +4565,7 @@ class AutomatizaTech_CRM_AI {
                         h2 { font-size: 1.2em; }
                         .container { padding: 25px 20px; margin: -20px 10px 30px; border-radius: 10px; }
                         .client-info { padding: 15px; font-size: 14px; }
-                        .proj-slide { padding:15px; }
+                        .proj-slide { padding:15px 48px; }
                         .proj-slide h3 { font-size:.95em; }
                         .proj-tab { padding:8px 12px; font-size:12px; }
                         .proj-nav-btn { width:28px; height:28px; font-size:13px; }
@@ -4590,7 +4590,7 @@ class AutomatizaTech_CRM_AI {
                         .container { padding: 18px 14px; margin: -15px 6px 25px; border-radius: 8px; }
                         .client-info { padding: 12px; font-size: 13px; border-left-width: 3px; }
                         .client-info div[style*="display:flex"] { flex-wrap: wrap; }
-                        .proj-slide { padding:12px; }
+                        .proj-slide { padding:12px 42px; }
                         .proj-slide h3 { font-size:.9em; }
                         .proj-tab { padding:7px 10px; font-size:11px; }
                         .proj-nav-btn { width:26px; height:26px; font-size:12px; }

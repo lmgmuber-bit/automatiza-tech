@@ -4509,9 +4509,32 @@ class AutomatizaTech_CRM_AI {
                     .timeline-content { background: #f9f9f9; padding: 15px 20px; border-radius: 8px; border: 1px solid #eee; }
                     .timeline-content h3 { margin: 0 0 5px; color: #333; font-size: 1.1em; }
                     
-                    /* Project Styles */
-                    .project-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: white; transition: transform 0.2s; }
-                    .project-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+                    /* Project Carousel */
+                    .proj-carousel-wrap { position:relative; margin-bottom:24px; }
+                    .proj-tabs { display:flex; gap:0; border-bottom:2px solid #e2e8f0; margin-bottom:0; overflow-x:auto; scrollbar-width:none; }
+                    .proj-tabs::-webkit-scrollbar { display:none; }
+                    .proj-tab { padding:10px 18px; border:none; background:none; cursor:pointer; font-size:13px; font-weight:500; color:#64748b; border-bottom:3px solid transparent; transition:all .2s; white-space:nowrap; display:flex; align-items:center; gap:6px; font-family:inherit; }
+                    .proj-tab:hover { color:#1e3a8a; background:#eff6ff; }
+                    .proj-tab.active { color:#1e3a8a; border-bottom-color:#1e3a8a; font-weight:600; }
+                    .proj-tab .proj-tab-badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:700; color:#fff; }
+                    .proj-tab .proj-tab-badge.pendiente { background:#f59e0b; color:#333; }
+                    .proj-tab .proj-tab-badge.en_progreso { background:#0ea5e9; }
+                    .proj-tab .proj-tab-badge.completado { background:#22c55e; }
+                    .proj-viewport { position:relative; overflow:hidden; border-radius:10px; background:#fff; border:1px solid #e5e7eb; min-height:140px; }
+                    .proj-track { display:flex; transition:transform .45s cubic-bezier(.4,0,.2,1); will-change:transform; }
+                    .proj-slide { min-width:100%; box-sizing:border-box; padding:24px; }
+                    .proj-slide h3 { margin:0 0 10px; font-size:1.1em; color:#1e293b; }
+                    .proj-slide p { margin:0 0 10px; color:#475569; line-height:1.5; }
+                    .proj-slide small { color:#94a3b8; font-size:12px; }
+                    .proj-slide .proj-meta { display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; font-size:12px; color:#64748b; }
+                    .proj-nav-btn { position:absolute; top:50%; transform:translateY(-50%); background:rgba(0,0,0,.35); color:#fff; border:none; width:34px; height:34px; border-radius:50%; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; z-index:3; transition:background .2s; }
+                    .proj-nav-btn:hover { background:rgba(0,0,0,.6); }
+                    .proj-nav-btn.prev { left:8px; }
+                    .proj-nav-btn.next { right:8px; }
+                    .proj-progress { height:3px; background:#e5e7eb; border-radius:0 0 10px 10px; overflow:hidden; }
+                    .proj-progress-bar { height:100%; background:linear-gradient(90deg,#0d9488,#14b8a6); transition:width .3s ease; width:0%; }
+                    .proj-timer-bar { height:3px; background:#e2e8f0; overflow:hidden; margin-top:-1px; border-radius:0 0 10px 10px; }
+                    .proj-timer-fill { height:100%; background:linear-gradient(90deg,#3b82f6,#60a5fa); width:0%; transition:width 15s linear; }
                     .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.8em; font-weight: bold; color: white; background: #6c757d; }
                     .badge.pendiente { background: #ffc107; color: #333; }
                     .badge.en_progreso { background: #17a2b8; }
@@ -4542,8 +4565,10 @@ class AutomatizaTech_CRM_AI {
                         h2 { font-size: 1.2em; }
                         .container { padding: 25px 20px; margin: -20px 10px 30px; border-radius: 10px; }
                         .client-info { padding: 15px; font-size: 14px; }
-                        .project-card { padding: 15px; }
-                        .project-card h3 { font-size: 1em; }
+                        .proj-slide { padding:15px; }
+                        .proj-slide h3 { font-size:.95em; }
+                        .proj-tab { padding:8px 12px; font-size:12px; }
+                        .proj-nav-btn { width:28px; height:28px; font-size:13px; }
                         .badge { font-size: 0.7em; padding: 3px 8px; }
                         .timeline-tabs { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
                         .timeline-tabs::-webkit-scrollbar { display: none; }
@@ -4565,10 +4590,10 @@ class AutomatizaTech_CRM_AI {
                         .container { padding: 18px 14px; margin: -15px 6px 25px; border-radius: 8px; }
                         .client-info { padding: 12px; font-size: 13px; border-left-width: 3px; }
                         .client-info div[style*="display:flex"] { flex-wrap: wrap; }
-                        .project-card { padding: 12px; margin-bottom: 15px; }
-                        .project-card > div:first-child { flex-direction: column; align-items: flex-start !important; gap: 8px; }
-                        .project-card h3 { font-size: 0.95em; }
-                        .project-card small { font-size: 0.8em; }
+                        .proj-slide { padding:12px; }
+                        .proj-slide h3 { font-size:.9em; }
+                        .proj-tab { padding:7px 10px; font-size:11px; }
+                        .proj-nav-btn { width:26px; height:26px; font-size:12px; }
                         .badge { font-size: 0.7em; }
                         .timeline { padding-left: 22px; }
                         .timeline::before { width: 2px; }
@@ -4590,7 +4615,7 @@ class AutomatizaTech_CRM_AI {
                     /* Touch improvements */
                     @media (hover: none) and (pointer: coarse) {
                         .tl-tab { min-height: 44px; display: flex; align-items: center; }
-                        .project-card:hover { transform: none; }
+                        .proj-viewport:hover { transform: none; }
                         .timeline-content { -webkit-tap-highlight-color: transparent; }
                     }
                 </style>
@@ -4638,16 +4663,45 @@ class AutomatizaTech_CRM_AI {
                     <?php if (empty($proyectos)): ?>
                         <p>No hay proyectos activos por el momento.</p>
                     <?php else: ?>
-                        <?php foreach ($proyectos as $p): ?>
-                            <div class="project-card">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                    <h3 style="margin:0;"><?php echo esc_html($p['nombre']); ?></h3>
-                                    <span class="badge <?php echo $p['estado']; ?>"><?php echo ucfirst(str_replace('_', ' ', $p['estado'])); ?></span>
-                                </div>
-                                <p><?php echo nl2br(esc_html($p['descripcion'])); ?></p>
-                                <small>Inicio: <?php echo $p['fecha_inicio'] ? date('d/m/Y', strtotime($p['fecha_inicio'])) : 'Pendiente'; ?> | Entrega: <?php echo $p['fecha_entrega'] ? date('d/m/Y', strtotime($p['fecha_entrega'])) : 'Por definir'; ?></small>
+                        <div class="proj-carousel-wrap" id="projCarousel">
+                            <!-- Tabs -->
+                            <div class="proj-tabs" id="projTabs">
+                                <?php foreach ($proyectos as $pi => $p): ?>
+                                <button class="proj-tab<?php echo $pi===0?' active':''; ?>" onclick="projGoTo(<?php echo $pi; ?>)" data-idx="<?php echo $pi; ?>">
+                                    🚀 <?php echo esc_html(mb_strimwidth($p['nombre'], 0, 35, '…')); ?>
+                                    <span class="proj-tab-badge <?php echo esc_attr($p['estado']); ?>"><?php echo ucfirst(str_replace('_', ' ', $p['estado'])); ?></span>
+                                </button>
+                                <?php endforeach; ?>
                             </div>
-                        <?php endforeach; ?>
+                            <!-- Carousel -->
+                            <div class="proj-viewport">
+                                <?php if (count($proyectos) > 1): ?>
+                                <button class="proj-nav-btn prev" onclick="projNav(-1)">&#8249;</button>
+                                <button class="proj-nav-btn next" onclick="projNav(1)">&#8250;</button>
+                                <?php endif; ?>
+                                <div class="proj-track" id="projTrack">
+                                    <?php foreach ($proyectos as $pi => $p): ?>
+                                    <div class="proj-slide">
+                                        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                                            <h3>🚀 <?php echo esc_html($p['nombre']); ?></h3>
+                                            <span class="badge <?php echo esc_attr($p['estado']); ?>"><?php echo ucfirst(str_replace('_', ' ', $p['estado'])); ?></span>
+                                        </div>
+                                        <p><?php echo nl2br(esc_html($p['descripcion'])); ?></p>
+                                        <div class="proj-meta">
+                                            <span>📅 Inicio: <?php echo $p['fecha_inicio'] ? date('d/m/Y', strtotime($p['fecha_inicio'])) : 'Pendiente'; ?></span>
+                                            <span>🎯 Entrega: <?php echo $p['fecha_entrega'] ? date('d/m/Y', strtotime($p['fecha_entrega'])) : 'Por definir'; ?></span>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <!-- Timer bar -->
+                            <?php if (count($proyectos) > 1): ?>
+                            <div class="proj-timer-bar">
+                                <div class="proj-timer-fill" id="projTimerFill"></div>
+                            </div>
+                            <?php endif; ?>
+                        </div>
                     <?php endif; ?>
                     
                     <h2>📜 Historial / Timeline</h2>
@@ -5604,6 +5658,65 @@ class AutomatizaTech_CRM_AI {
                     .typing-dots { font-family: monospace; }
                 </style>
                 <script>
+                // ========== PROJECT CAROUSEL ==========
+                (function(){
+                    var track = document.getElementById('projTrack');
+                    var tabs = document.querySelectorAll('#projTabs .proj-tab');
+                    var timerFill = document.getElementById('projTimerFill');
+                    if (!track || !tabs.length) return;
+                    var total = tabs.length;
+                    var current = 0;
+                    var interval = null;
+                    var DURATION = 15000; // 15 seconds
+
+                    function goTo(idx) {
+                        current = idx;
+                        if (current < 0) current = total - 1;
+                        if (current >= total) current = 0;
+                        track.style.transform = 'translateX(-' + (current * 100) + '%)';
+                        tabs.forEach(function(t, i) { t.classList.toggle('active', i === current); });
+                        // Scroll active tab into view
+                        if (tabs[current]) tabs[current].scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+                        resetTimer();
+                    }
+                    function resetTimer() {
+                        if (timerFill) {
+                            timerFill.style.transition = 'none';
+                            timerFill.style.width = '0%';
+                            // Force reflow
+                            void timerFill.offsetWidth;
+                            timerFill.style.transition = 'width ' + (DURATION/1000) + 's linear';
+                            timerFill.style.width = '100%';
+                        }
+                        clearInterval(interval);
+                        if (total > 1) {
+                            interval = setInterval(function() { goTo(current + 1); }, DURATION);
+                        }
+                    }
+                    // Pause on hover
+                    var wrap = document.getElementById('projCarousel');
+                    if (wrap) {
+                        wrap.addEventListener('mouseenter', function() {
+                            clearInterval(interval);
+                            if (timerFill) { timerFill.style.transition = 'none'; }
+                        });
+                        wrap.addEventListener('mouseleave', function() { resetTimer(); });
+                    }
+                    // Touch swipe support
+                    var startX = 0;
+                    track.addEventListener('touchstart', function(e) { startX = e.touches[0].clientX; }, {passive:true});
+                    track.addEventListener('touchend', function(e) {
+                        var diff = startX - e.changedTouches[0].clientX;
+                        if (Math.abs(diff) > 50) goTo(current + (diff > 0 ? 1 : -1));
+                    }, {passive:true});
+
+                    window.projGoTo = function(idx) { goTo(idx); };
+                    window.projNav = function(dir) { goTo(current + dir); };
+
+                    // Start autoplay
+                    resetTimer();
+                })();
+
                 // ========== TIMELINE TABS (Public) ==========
                 function switchTimelineTab(tabName) {
                     document.querySelectorAll('.tl-tab-content').forEach(function(el) { el.style.display = 'none'; });

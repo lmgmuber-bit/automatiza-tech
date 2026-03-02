@@ -4606,10 +4606,25 @@ class AutomatizaTech_CRM_AI {
                         .tl-tab-count { font-size: 9px; }
                         .footer { font-size: 0.8em; margin-top: 30px; }
                         
-                        /* Chat widget mobile */
-                        #maxtech-widget { bottom: 10px !important; right: 10px !important; }
-                        #maxtech-chat { width: calc(100vw - 20px) !important; height: calc(100vh - 80px) !important; max-height: 600px; border-radius: 12px !important; }
+                        /* Chat widget mobile - FULLSCREEN */
+                        #maxtech-widget { bottom: 15px !important; right: 15px !important; }
+                        #maxtech-chat {
+                            position: fixed !important;
+                            top: 0 !important;
+                            left: 0 !important;
+                            width: 100vw !important;
+                            height: 100vh !important;
+                            height: 100dvh !important;
+                            max-height: 100vh !important;
+                            max-height: 100dvh !important;
+                            border-radius: 0 !important;
+                            z-index: 99999 !important;
+                        }
+                        #maxtech-chat > div:first-child {
+                            padding-top: calc(15px + env(safe-area-inset-top, 0px)) !important;
+                        }
                         #chat-history-sidebar { width: 100% !important; }
+                        #maxtech-tooltip { display: none !important; }
                     }
                     
                     /* Touch improvements */

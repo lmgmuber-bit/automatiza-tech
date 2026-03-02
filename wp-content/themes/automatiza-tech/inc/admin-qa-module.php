@@ -2046,9 +2046,11 @@ function at_qa_render_suite_page() {
         /* Stats */
         .qa-mod-header .qa-progress { min-width:100px; }
 
-        /* Chatbot en mobile */
-        body.at-qa-page #aria-toggle { width:40px !important; height:40px !important; bottom:10px !important; right:10px !important; }
-        body.at-qa-page #aria-panel { width:calc(100vw - 20px) !important; right:10px !important; bottom:60px !important; max-height:70vh !important; }
+        /* Chatbot en mobile - FULLSCREEN */
+        body.at-qa-page #aria-toggle { width:50px !important; height:50px !important; bottom:15px !important; right:15px !important; }
+        body.at-qa-page #aria-panel { position:fixed !important; top:0 !important; left:0 !important; right:0 !important; bottom:0 !important; width:100% !important; height:100% !important; max-height:100% !important; border-radius:0 !important; z-index:9999999 !important; }
+        body.at-qa-page #aria-panel.active ~ #aria-toggle { display:none !important; }
+        body.at-qa-page.aria-open #aria-toggle { display:none !important; }
 
         /* Toast responsive */
         .at-qa-toast { min-width:180px; max-width:85vw; padding:16px 20px; font-size:14px; }

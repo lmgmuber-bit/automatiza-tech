@@ -1,0 +1,934 @@
+/* ==========================================
+   LOGIN PAGE - DISEÑO CENTRADO PREMIUM
+   ========================================== */
+.login-page {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1e40af 100%);
+    position: relative;
+    overflow: hidden;
+    padding: 1.5rem;
+}
+
+/* Entrance Animation */
+.login-enter .login-centered-wrapper {
+    animation: page-enter 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes page-enter {
+    from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Exit Animation */
+.login-exit .login-centered-wrapper {
+    animation: page-exit 0.8s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
+}
+
+@keyframes page-exit {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+        filter: blur(0);
+    }
+
+    50% {
+        transform: scale(1.02) translateY(-10px);
+        opacity: 0.7;
+    }
+
+    100% {
+        transform: scale(0.9) translateY(60px);
+        opacity: 0;
+        filter: blur(12px);
+    }
+}
+
+/* ==========================================
+   FONDO DINÁMICO CON MOVIMIENTO
+   ========================================== */
+.login-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.particle {
+    position: absolute;
+    border-radius: 50%;
+}
+
+/* Orbe grande verde — órbita diagonal amplia */
+.p1 {
+    width: 350px;
+    height: 350px;
+    top: -15%;
+    right: -10%;
+    background: radial-gradient(circle, rgba(6, 214, 160, 0.2) 0%, transparent 70%);
+    animation: orbit-1 16s ease-in-out infinite;
+}
+
+/* Orbe mediano azul — movimiento de onda */
+.p2 {
+    width: 250px;
+    height: 250px;
+    bottom: -10%;
+    left: -8%;
+    background: radial-gradient(circle, rgba(30, 64, 175, 0.25) 0%, transparent 70%);
+    animation: orbit-2 12s ease-in-out infinite;
+}
+
+/* Estrella fugaz 1 */
+.p3 {
+    width: 3px;
+    height: 3px;
+    top: 20%;
+    left: -5%;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 6px 2px rgba(255, 255, 255, 0.6), -30px 0 30px 4px rgba(255, 255, 255, 0.1);
+    animation: shooting-star-1 6s linear infinite;
+}
+
+/* Estrella fugaz 2 */
+.p4 {
+    width: 2px;
+    height: 2px;
+    top: 50%;
+    left: -5%;
+    background: rgba(6, 214, 160, 0.9);
+    box-shadow: 0 0 6px 2px rgba(6, 214, 160, 0.6), -20px 0 20px 3px rgba(6, 214, 160, 0.1);
+    animation: shooting-star-2 8s linear infinite 3s;
+}
+
+/* Burbuja flotante 1 */
+.p5 {
+    width: 18px;
+    height: 18px;
+    bottom: 10%;
+    right: 20%;
+    background: rgba(6, 214, 160, 0.15);
+    border: 1px solid rgba(6, 214, 160, 0.3);
+    animation: bubble-float 10s ease-in-out infinite;
+}
+
+/* Burbuja flotante 2 */
+.p6 {
+    width: 12px;
+    height: 12px;
+    top: 30%;
+    left: 20%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    animation: bubble-float 14s ease-in-out infinite 2s reverse;
+}
+
+/* === ÓRBITAS === */
+@keyframes orbit-1 {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    25% {
+        transform: translate(-80px, 60px) scale(1.1);
+    }
+
+    50% {
+        transform: translate(-40px, 120px) scale(0.95);
+    }
+
+    75% {
+        transform: translate(60px, 40px) scale(1.05);
+    }
+
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+}
+
+@keyframes orbit-2 {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    25% {
+        transform: translate(70px, -50px) scale(1.15);
+    }
+
+    50% {
+        transform: translate(100px, -100px) scale(0.9);
+    }
+
+    75% {
+        transform: translate(30px, -30px) scale(1.1);
+    }
+
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+}
+
+/* === ESTRELLAS FUGACES === */
+@keyframes shooting-star-1 {
+    0% {
+        transform: translate(-10vw, 0) rotate(-30deg);
+        opacity: 0;
+    }
+
+    5% {
+        opacity: 1;
+    }
+
+    30% {
+        transform: translate(110vw, 30vh) rotate(-30deg);
+        opacity: 0;
+    }
+
+    100% {
+        transform: translate(110vw, 30vh) rotate(-30deg);
+        opacity: 0;
+    }
+}
+
+@keyframes shooting-star-2 {
+    0% {
+        transform: translate(-10vw, 0) rotate(-20deg);
+        opacity: 0;
+    }
+
+    5% {
+        opacity: 1;
+    }
+
+    35% {
+        transform: translate(110vw, 20vh) rotate(-20deg);
+        opacity: 0;
+    }
+
+    100% {
+        transform: translate(110vw, 20vh) rotate(-20deg);
+        opacity: 0;
+    }
+}
+
+/* === BURBUJAS === */
+@keyframes bubble-float {
+    0% {
+        transform: translate(0, 0) scale(1);
+        opacity: 0.5;
+    }
+
+    25% {
+        transform: translate(40px, -60px) scale(1.3);
+        opacity: 0.8;
+    }
+
+    50% {
+        transform: translate(-30px, -120px) scale(0.8);
+        opacity: 0.4;
+    }
+
+    75% {
+        transform: translate(20px, -80px) scale(1.1);
+        opacity: 0.7;
+    }
+
+    100% {
+        transform: translate(0, 0) scale(1);
+        opacity: 0.5;
+    }
+}
+
+/* ==========================================
+   WRAPPER CENTRADO
+   ========================================== */
+.login-centered-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 10;
+    gap: 0;
+    width: 100%;
+    max-width: 440px;
+    margin: 0 auto;
+}
+
+/* ==========================================
+   ROBOT ANIMADO CSS COMPLETO
+   ========================================== */
+.robot-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    position: relative;
+}
+
+/* Burbuja de diálogo */
+.robot-speech-bubble {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 0.6rem 1.2rem;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    color: #1e3a8a;
+    font-weight: 600;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    margin-bottom: 0.75rem;
+    position: relative;
+    text-align: center;
+    max-width: 280px;
+    animation: bubble-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    transition: all 0.4s ease;
+}
+
+.robot-speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 8px 6px 0;
+    border-style: solid;
+    border-color: rgba(255, 255, 255, 0.95) transparent transparent transparent;
+}
+
+@keyframes bubble-in {
+    from {
+        opacity: 0;
+        transform: scale(0.5) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Imagen del Robot */
+.robot-image-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: robot-float 6s ease-in-out infinite;
+}
+
+.robot-img {
+    width: 180px;
+    height: auto;
+    filter: drop-shadow(0 10px 30px rgba(6, 214, 160, 0.3));
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    mix-blend-mode: lighten;
+    border-radius: 20px;
+    animation: robot-breathe 3s ease-in-out infinite;
+}
+
+.robot-glow {
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 24px;
+    background: radial-gradient(ellipse, rgba(6, 214, 160, 0.35) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: glow-sync 6s ease-in-out infinite;
+}
+
+/* Movimiento principal: flotar en múltiples ejes */
+@keyframes robot-float {
+    0% {
+        transform: translateY(0) translateX(0) rotate(0deg);
+    }
+
+    15% {
+        transform: translateY(-18px) translateX(6px) rotate(2deg);
+    }
+
+    30% {
+        transform: translateY(-10px) translateX(-4px) rotate(-1deg);
+    }
+
+    50% {
+        transform: translateY(-22px) translateX(3px) rotate(1.5deg);
+    }
+
+    70% {
+        transform: translateY(-8px) translateX(-6px) rotate(-2deg);
+    }
+
+    85% {
+        transform: translateY(-16px) translateX(2px) rotate(0.5deg);
+    }
+
+    100% {
+        transform: translateY(0) translateX(0) rotate(0deg);
+    }
+}
+
+/* Respiración: escala sutil como si estuviera vivo */
+@keyframes robot-breathe {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.04);
+    }
+}
+
+/* Sombra se sincroniza con la flotación */
+@keyframes glow-sync {
+    0% {
+        opacity: 0.7;
+        transform: translateX(-50%) scale(1);
+    }
+
+    15% {
+        opacity: 0.3;
+        transform: translateX(-50%) scale(0.7);
+    }
+
+    50% {
+        opacity: 0.2;
+        transform: translateX(-50%) scale(0.6);
+    }
+
+    70% {
+        opacity: 0.5;
+        transform: translateX(-50%) scale(0.85);
+    }
+
+    100% {
+        opacity: 0.7;
+        transform: translateX(-50%) scale(1);
+    }
+}
+
+/* ==========================================
+   ESTADOS DEL ROBOT (Image-based)
+   ========================================== */
+
+/* Saludando — inclinación sutil */
+.robot-waving .robot-img {
+    animation: wave-tilt 1.5s ease-in-out infinite;
+}
+
+@keyframes wave-tilt {
+
+    0%,
+    100% {
+        transform: rotate(0deg) scale(1);
+    }
+
+    25% {
+        transform: rotate(-6deg) scale(1.03);
+    }
+
+    75% {
+        transform: rotate(6deg) scale(1.03);
+    }
+}
+
+/* Pensando — balanceo + pulso */
+.robot-thinking .robot-img {
+    animation: think-sway 1s ease-in-out infinite;
+    filter: drop-shadow(0 10px 30px rgba(30, 64, 175, 0.5));
+}
+
+.robot-thinking .robot-glow {
+    background: radial-gradient(ellipse, rgba(30, 64, 175, 0.4) 0%, transparent 70%);
+    animation: glow-pulse 0.6s ease-in-out infinite;
+}
+
+@keyframes think-sway {
+
+    0%,
+    100% {
+        transform: rotate(0deg) translateY(0);
+    }
+
+    25% {
+        transform: rotate(-3deg) translateY(-4px);
+    }
+
+    75% {
+        transform: rotate(3deg) translateY(-4px);
+    }
+}
+
+/* Celebrando — salto y brillo */
+.robot-celebrating .robot-img {
+    animation: celebrate-bounce 0.6s ease-in-out infinite;
+    filter: drop-shadow(0 10px 40px rgba(6, 214, 160, 0.6));
+}
+
+.robot-celebrating .robot-glow {
+    background: radial-gradient(ellipse, rgba(6, 214, 160, 0.5) 0%, transparent 70%);
+    animation: glow-pulse 0.4s ease-in-out infinite;
+}
+
+@keyframes celebrate-bounce {
+
+    0%,
+    100% {
+        transform: translateY(0) scale(1) rotate(0deg);
+    }
+
+    30% {
+        transform: translateY(-25px) scale(1.08) rotate(-3deg);
+    }
+
+    60% {
+        transform: translateY(-25px) scale(1.08) rotate(3deg);
+    }
+}
+
+/* ==========================================
+   TARJETA DE LOGIN
+   ========================================== */
+.login-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 2.5rem 2rem;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 10;
+    animation: card-appear 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+}
+
+@keyframes card-appear {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.login-card-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.login-logo {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 0.75rem;
+    filter: drop-shadow(0 2px 8px rgba(30, 64, 175, 0.2));
+    animation: logo-spin-in 1s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s both;
+}
+
+@keyframes logo-spin-in {
+    from {
+        opacity: 0;
+        transform: rotate(-180deg) scale(0);
+    }
+
+    to {
+        opacity: 1;
+        transform: rotate(0) scale(1);
+    }
+}
+
+.login-card-header h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.3rem;
+    color: #1f2937;
+}
+
+.login-card-header h1 span {
+    color: var(--color-secondary, #06d6a0);
+}
+
+.login-card-header p {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+/* ==========================================
+   FORMULARIO
+   ========================================== */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.input-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.4rem;
+}
+
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 1rem;
+    color: #9ca3af;
+    transition: color 0.3s ease;
+}
+
+.input-with-icon input {
+    width: 100%;
+    padding: 0.85rem 1rem 0.85rem 3rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 14px;
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #f9fafb;
+    color: #111827;
+}
+
+.input-with-icon input:focus {
+    border-color: #1e40af;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.1);
+}
+
+.input-with-icon input:focus+.input-icon,
+.input-with-icon input:focus~.input-icon {
+    color: #1e40af;
+}
+
+.login-error {
+    color: #ef4444;
+    font-size: 0.82rem;
+    text-align: center;
+    background: #fef2f2;
+    padding: 0.6rem;
+    border-radius: 10px;
+    border: 1px solid #fecaca;
+    animation: shake 0.4s ease-in-out;
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-8px);
+    }
+
+    75% {
+        transform: translateX(8px);
+    }
+}
+
+/* Botón de Login */
+.btn-login {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.95rem;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-top: 0.5rem;
+    box-shadow: 0 4px 14px rgba(30, 64, 175, 0.4);
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-secondary);
+}
+
+.btn-login:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(30, 64, 175, 0.5);
+}
+
+.btn-login:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-login:disabled {
+    background: linear-gradient(135deg, #6b7280, #4b5563);
+    cursor: wait;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Spinner */
+.spin-animation {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Credenciales helper */
+.login-credentials-hint {
+    text-align: center;
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+/* Footer Login */
+.login-footer {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.login-footer a {
+    color: #1e40af;
+    font-weight: 600;
+    transition: color 0.3s;
+}
+
+.login-footer a:hover {
+    color: #06d6a0;
+    text-decoration: underline;
+}
+
+/* ==========================================
+   BRANDING INFERIOR
+   ========================================== */
+.login-branding {
+    position: absolute;
+    bottom: 1rem;
+    text-align: center;
+    z-index: 10;
+}
+
+.login-branding p {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.75rem;
+}
+
+.login-branding span {
+    color: #06d6a0;
+}
+
+/* ==========================================
+   RESPONSIVIDAD
+   ========================================== */
+
+/* Pantallas con altura limitada (laptops, tablets landscape) */
+@media (max-height: 750px) {
+    .login-page {
+        padding: 1rem;
+        justify-content: flex-start;
+        padding-top: 1.5rem;
+        overflow-y: auto;
+    }
+
+    .robot-img {
+        width: 120px;
+    }
+
+    .robot-speech-bubble {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .robot-container {
+        margin-bottom: 0.25rem;
+    }
+
+    .login-card {
+        padding: 1.5rem 1.5rem;
+    }
+
+    .login-card-header {
+        margin-bottom: 1rem;
+    }
+
+    .login-card-header h1 {
+        font-size: 1.4rem;
+    }
+
+    .login-logo {
+        width: 45px;
+        height: 45px;
+    }
+
+    .login-form {
+        gap: 0.8rem;
+    }
+
+    .login-footer {
+        margin-top: 1rem;
+    }
+
+    .login-branding {
+        position: relative;
+        bottom: auto;
+        margin-top: 1rem;
+    }
+}
+
+/* Móviles pequeños */
+@media (max-width: 480px) {
+    .login-page {
+        padding: 0.75rem;
+        overflow-y: auto;
+        justify-content: flex-start;
+        padding-top: 1rem;
+    }
+
+    .robot-img {
+        width: 100px;
+    }
+
+    .robot-glow {
+        width: 70px;
+    }
+
+    .robot-speech-bubble {
+        font-size: 0.72rem;
+        padding: 0.4rem 0.8rem;
+        max-width: 220px;
+    }
+
+    .login-card {
+        padding: 1.5rem 1.25rem;
+        border-radius: 18px;
+    }
+
+    .login-card-header h1 {
+        font-size: 1.3rem;
+    }
+
+    .login-card-header p {
+        font-size: 0.8rem;
+    }
+
+    .login-logo {
+        width: 40px;
+        height: 40px;
+    }
+
+    .login-branding {
+        display: none;
+    }
+}
+
+/* Tablets */
+@media (min-width: 481px) and (max-width: 768px) {
+    .login-page {
+        overflow-y: auto;
+    }
+
+    .robot-img {
+        width: 140px;
+    }
+
+    .login-card {
+        padding: 2rem 1.75rem;
+    }
+}
+
+/* Pantallas grandes — más espacio, robot más grande */
+@media (min-height: 900px) {
+    .robot-img {
+        width: 200px;
+    }
+
+    .login-card {
+        padding: 3rem 2.5rem;
+    }
+
+    .robot-container {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Dark mode adjustments */
+[data-theme='dark'] .login-card {
+    background: rgba(17, 24, 39, 0.95);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+[data-theme='dark'] .login-card-header h1 {
+    color: #f3f4f6;
+}
+
+[data-theme='dark'] .login-card-header p {
+    color: #9ca3af;
+}
+
+[data-theme='dark'] .input-group label {
+    color: #d1d5db;
+}
+
+[data-theme='dark'] .input-with-icon input {
+    background: #1f2937;
+    border-color: #374151;
+    color: #f9fafb;
+}
+
+[data-theme='dark'] .input-with-icon input:focus {
+    border-color: #1e40af;
+    background: #111827;
+}
+
+[data-theme='dark'] .robot-speech-bubble {
+    background: rgba(31, 41, 55, 0.95);
+    color: #e5e7eb;
+}
+
+[data-theme='dark'] .robot-speech-bubble::after {
+    border-color: rgba(31, 41, 55, 0.95) transparent transparent transparent;
+}
+
+[data-theme='dark'] .login-credentials-hint {
+    color: #6b7280;
+}
+
+[data-theme='dark'] .login-footer {
+    color: #9ca3af;
+}
+
+[data-theme='dark'] .login-error {
+    background: rgba(153, 27, 27, 0.2);
+    border-color: #991b1b;
+}

@@ -825,6 +825,300 @@ add_action('wp_ajax_at_qa_update_bug_id', function() {
     wp_send_json_success();
 });
 
+// ──────────────────────────────────────────────
+// NOTIFICACIÓN MASIVA DE CORRECCIONES
+// ──────────────────────────────────────────────
+add_action('wp_ajax_at_qa_bulk_corrections_notify', function() {
+    if (!current_user_can('at_qa_access')) wp_die('Sin permisos');
+    check_ajax_referer('at_qa_nonce', 'nonce');
+
+    global $wpdb;
+    $t = at_qa_table_names();
+
+    // Recibir IDs de casos y mensaje opcional
+    $case_ids_raw = isset($_POST['case_ids']) ? $_POST['case_ids'] : '';
+    $message      = sanitize_textarea_field($_POST['message'] ?? '');
+    $reset_status = isset($_POST['reset_status']) && $_POST['reset_status'] === '1';
+
+    // Recibir destinatarios TO personalizados (los que quedaron después de quitar con X)
+    $to_emails_raw = isset($_POST['to_emails']) ? (array) $_POST['to_emails'] : [];
+    $custom_to     = array_filter(array_map('sanitize_email', $to_emails_raw));
+
+    // Recibir CC y BCC adicionales
+    $cc_emails_raw  = isset($_POST['cc_emails']) ? (array) $_POST['cc_emails'] : [];
+    $bcc_emails_raw = isset($_POST['bcc_emails']) ? (array) $_POST['bcc_emails'] : [];
+    $extra_cc  = array_filter(array_map('sanitize_email', $cc_emails_raw));
+    $extra_bcc = array_filter(array_map('sanitize_email', $bcc_emails_raw));
+
+    // Parsear IDs
+    if (is_array($case_ids_raw)) {
+        $case_ids = array_map('intval', $case_ids_raw);
+    } else {
+        $case_ids = array_map('intval', array_filter(explode(',', $case_ids_raw)));
+    }
+    $case_ids = array_filter($case_ids); // Eliminar ceros
+
+    if (empty($case_ids)) {
+        wp_send_json_error('No se seleccionaron casos.');
+    }
+
+    $user = wp_get_current_user();
+    $now  = current_time('mysql');
+
+    // Obtener datos de todos los casos seleccionados
+    $ph = implode(',', array_fill(0, count($case_ids), '%d'));
+    $cases = $wpdb->get_results($wpdb->prepare(
+        "SELECT c.*, m.title as module_name, m.code as module_code, m.assigned_tester, m.project_id
+         FROM {$t['cases']} c
+         JOIN {$t['modules']} m ON m.id = c.module_id
+         WHERE c.id IN ($ph)
+         ORDER BY m.code ASC, c.sort_order ASC",
+        ...$case_ids
+    ));
+
+    if (empty($cases)) {
+        wp_send_json_error('No se encontraron los casos seleccionados.');
+    }
+
+    // Obtener proyecto y cliente del primer caso
+    $first = $cases[0];
+    $project = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$t['projects']} WHERE id = %d", $first->project_id));
+    $client = null;
+    if ($project && $project->client_id) {
+        $client = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $project->client_id));
+    }
+
+    // Si se pidió resetear estado a not_tested (listo para re-test)
+    if ($reset_status) {
+        $wpdb->query($wpdb->prepare(
+            "UPDATE {$t['cases']} SET status = 'not_tested', updated_at = %s WHERE id IN ($ph)",
+            $now, ...$case_ids
+        ));
+    }
+
+    // Agregar comentario automático en cada caso seleccionado
+    foreach ($case_ids as $cid) {
+        $auto_comment = '🔧 Corrección aplicada — Caso marcado como listo para re-test.';
+        if ($message) {
+            $auto_comment .= "\n📝 Nota del desarrollador: " . $message;
+        }
+        $wpdb->insert($t['comments'], [
+            'case_id' => $cid,
+            'user_id' => $user->ID,
+            'comment' => $auto_comment,
+        ]);
+    }
+
+    // ─── Construir correo consolidado ───
+    $project_name = $project ? $project->name : 'N/A';
+    $client_name  = $client ? ($client->empresa ?: $client->nombre) : '';
+    $qa_url       = admin_url('admin.php?page=at-qa&view=suite&project=' . ($project ? $project->id : ''));
+
+    // Agrupar casos por módulo
+    $by_module = [];
+    foreach ($cases as $c) {
+        $key = $c->module_code . ' — ' . $c->module_name;
+        if (!isset($by_module[$key])) $by_module[$key] = [];
+        $by_module[$key][] = $c;
+    }
+
+    // Tabla HTML de casos corregidos
+    $cases_html = '';
+    foreach ($by_module as $mod_label => $mod_cases) {
+        $cases_html .= '<tr style="background:#f0fdfa;"><td colspan="4" style="padding:10px 14px;font-weight:700;color:#0d9488;font-size:13px;border-bottom:1px solid #e5e7eb;">📦 ' . esc_html($mod_label) . '</td></tr>';
+        foreach ($mod_cases as $c) {
+            $pri_colors = ['Alta' => '#dc2626', 'Media' => '#d97706', 'Baja' => '#0d9488'];
+            $pri_color  = $pri_colors[$c->priority] ?? '#666';
+            $old_status_labels = [
+                'not_tested' => 'Sin probar',
+                'pass'       => '✅ Pass',
+                'fail'       => '❌ Fail',
+                'blocked'    => '⚠️ Bloqueado',
+                'skipped'    => '⏭️ Omitido'
+            ];
+            $old_st = $old_status_labels[$c->status] ?? $c->status;
+            $cases_html .= '<tr style="border-bottom:1px solid #f0f0f0;">
+                <td style="padding:8px 14px;font-family:monospace;font-size:12px;font-weight:700;">' . esc_html($c->case_id) . '</td>
+                <td style="padding:8px 14px;font-size:13px;">' . esc_html($c->title) . '</td>
+                <td style="padding:8px 14px;text-align:center;"><span style="color:' . $pri_color . ';font-size:11px;font-weight:600;">' . esc_html($c->priority) . '</span></td>
+                <td style="padding:8px 14px;text-align:center;font-size:11px;">' . ($reset_status ? '🔄 Listo para re-test' : $old_st) . '</td>
+            </tr>';
+        }
+    }
+
+    $body_html = '
+    <p>El equipo de desarrollo ha notificado que las siguientes correcciones fueron aplicadas y los casos están listos para ser probados nuevamente:</p>
+    <div class="info-box">
+        <p style="margin:0 0 8px;"><strong>📋 Proyecto:</strong> ' . esc_html($project_name) . '</p>' .
+        ($client_name ? '<p style="margin:0 0 8px;"><strong>👤 Cliente:</strong> ' . esc_html($client_name) . '</p>' : '') . '
+        <p style="margin:0 0 8px;"><strong>🔧 Corregido por:</strong> ' . esc_html($user->display_name) . '</p>
+        <p style="margin:0 0 8px;"><strong>📅 Fecha:</strong> ' . date('d/m/Y H:i') . '</p>
+        <p style="margin:0;"><strong>📊 Casos corregidos:</strong> <span style="background:#0d9488;color:#fff;padding:2px 10px;border-radius:10px;font-weight:700;">' . count($cases) . '</span></p>
+    </div>';
+
+    if ($message) {
+        $body_html .= '
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:15px 0;">
+        <p style="margin:0 0 6px;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">📝 Nota del desarrollador</p>
+        <p style="margin:0;font-size:14px;line-height:1.5;">' . nl2br(esc_html($message)) . '</p>
+    </div>';
+    }
+
+    $body_html .= '
+    <table style="width:100%;border-collapse:collapse;margin:18px 0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+        <thead>
+            <tr style="background:#f8fafc;">
+                <th style="padding:10px 14px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;border-bottom:2px solid #e5e7eb;">ID</th>
+                <th style="padding:10px 14px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;border-bottom:2px solid #e5e7eb;">Caso de Prueba</th>
+                <th style="padding:10px 14px;text-align:center;font-size:11px;color:#888;text-transform:uppercase;border-bottom:2px solid #e5e7eb;">Prioridad</th>
+                <th style="padding:10px 14px;text-align:center;font-size:11px;color:#888;text-transform:uppercase;border-bottom:2px solid #e5e7eb;">Estado</th>
+            </tr>
+        </thead>
+        <tbody>' . $cases_html . '</tbody>
+    </table>';
+
+    // Progreso global actualizado
+    $total = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$t['cases']} c JOIN {$t['modules']} m ON c.module_id=m.id WHERE m.project_id=%d",
+        $project->id
+    ));
+    $passed = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$t['cases']} c JOIN {$t['modules']} m ON c.module_id=m.id WHERE m.project_id=%d AND c.status='pass'",
+        $project->id
+    ));
+    $failed = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$t['cases']} c JOIN {$t['modules']} m ON c.module_id=m.id WHERE m.project_id=%d AND c.status='fail'",
+        $project->id
+    ));
+    $pct = $total > 0 ? round(($passed / $total) * 100) : 0;
+
+    $body_html .= '
+    <div style="margin:15px 0;">
+        <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">Progreso general: <strong>' . $passed . '/' . $total . '</strong> aprobados · <strong>' . $failed . '</strong> fallidos (<strong>' . $pct . '%</strong>)</p>
+        <div style="background:#e5e7eb;border-radius:6px;height:10px;overflow:hidden;">
+            <div style="background:linear-gradient(90deg,#0d9488,#14b8a6);width:' . $pct . '%;height:100%;border-radius:6px;"></div>
+        </div>
+    </div>';
+
+    $body_html .= '<p style="text-align:center;margin-top:20px;">
+        <a class="cta" href="' . esc_url($qa_url) . '">🧪 Ir a la Suite de Pruebas</a>
+    </p>';
+
+    // ─── Enviar correos ───
+    $emails_sent = 0;
+    $recipients   = [];
+
+    // Construir headers extra de CC/BCC para los correos principales
+    $extra_headers = [];
+    if (!empty($extra_cc)) {
+        foreach ($extra_cc as $cc) {
+            $extra_headers[] = 'Cc: ' . $cc;
+        }
+    }
+    if (!empty($extra_bcc)) {
+        foreach ($extra_bcc as $bcc) {
+            $extra_headers[] = 'Bcc: ' . $bcc;
+        }
+    }
+
+    // ─── Determinar destinatarios TO ───
+    // Si el frontend envió lista personalizada (custom_to), usar esa.
+    // De lo contrario, auto-detectar testers de módulos + admin.
+    $to_list = []; // [ email => display_name ]
+
+    if (!empty($custom_to)) {
+        // Usar la lista editada por el usuario (excluyendo el email del sender, que va aparte)
+        foreach ($custom_to as $em) {
+            if ($em === $user->user_email) continue; // sender va en confirmación aparte
+            $found_user = get_user_by('email', $em);
+            $to_list[$em] = $found_user ? $found_user->display_name : $em;
+        }
+    } else {
+        // Auto-detectar: testers de módulos afectados + admin
+        $module_ids = array_unique(array_map(function($c) { return $c->module_id; }, $cases));
+        $tester_ids = [];
+        foreach ($module_ids as $mid) {
+            $tid = $wpdb->get_var($wpdb->prepare("SELECT assigned_tester FROM {$t['modules']} WHERE id = %d", $mid));
+            if ($tid) $tester_ids[] = intval($tid);
+        }
+        $tester_ids = array_unique($tester_ids);
+        foreach ($tester_ids as $tid) {
+            $tester_user = get_userdata($tid);
+            if ($tester_user && $tester_user->user_email && $tester_user->ID !== $user->ID) {
+                $to_list[$tester_user->user_email] = $tester_user->display_name;
+            }
+        }
+        // Agregar admin
+        $admin_email = get_option('admin_email');
+        if ($admin_email && $admin_email !== $user->user_email) {
+            $to_list[$admin_email] = 'Admin';
+        }
+        // Agregar testers de proyecto
+        if ($project && !empty($project->assigned_testers)) {
+            $proj_ids = array_filter(array_map('intval', explode(',', $project->assigned_testers)));
+            foreach ($proj_ids as $ptid) {
+                $pu = get_userdata($ptid);
+                if ($pu && $pu->user_email && !isset($to_list[$pu->user_email]) && $pu->ID !== $user->ID) {
+                    $to_list[$pu->user_email] = $pu->display_name;
+                }
+            }
+        }
+        // Agregar cliente/responsable del proyecto (desde CRM)
+        if ($project && $project->client_id) {
+            $crm_client = $wpdb->get_row($wpdb->prepare(
+                "SELECT nombre, email FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $project->client_id
+            ));
+            if ($crm_client && !empty($crm_client->email) && !isset($to_list[$crm_client->email])) {
+                $to_list[$crm_client->email] = $crm_client->nombre;
+            }
+        }
+    }
+
+    // 1) Enviar correo a cada destinatario TO
+    foreach ($to_list as $to_email => $to_name) {
+        $personal_body = '<p>Hola <strong>' . esc_html($to_name) . '</strong>,</p>' . $body_html;
+        $sent = at_qa_send_notification(
+            $to_email,
+            '🔧 Correcciones Listas — ' . count($cases) . ' casos listos para re-test — ' . $project_name,
+            '🔧 Correcciones Aplicadas',
+            $project_name . ' — ' . count($cases) . ' casos corregidos',
+            $personal_body,
+            $extra_headers
+        );
+        if ($sent) { $emails_sent++; $recipients[] = $to_name; }
+        // Solo agregar CC/BCC al primer correo para evitar duplicados
+        $extra_headers = [];
+    }
+
+    // 2) Confirmación al desarrollador que envía (siempre)
+    if ($user->user_email) {
+        $dev_body = '<p>Hola <strong>' . esc_html($user->display_name) . '</strong>, confirmamos el envío de tu notificación de correcciones:</p>' . $body_html;
+        $sent = at_qa_send_notification(
+            $user->user_email,
+            '✅ Confirmación: Correcciones notificadas — ' . count($cases) . ' casos — ' . $project_name,
+            '✅ Notificación Enviada',
+            'Confirmación de correcciones notificadas',
+            $dev_body,
+            $extra_headers
+        );
+        if ($sent) $emails_sent++;
+    }
+
+    // Registrar destinatarios CC/BCC en la respuesta
+    foreach ($extra_cc as $cc) $recipients[] = $cc . ' (CC)';
+    foreach ($extra_bcc as $bcc) $recipients[] = $bcc . ' (BCC)';
+
+    wp_send_json_success([
+        'cases_count'  => count($cases),
+        'emails_sent'  => $emails_sent,
+        'recipients'   => $recipients,
+        'reset_status' => $reset_status,
+        'cc_count'     => count($extra_cc),
+        'bcc_count'    => count($extra_bcc),
+        'message'      => 'Notificación enviada exitosamente. ' . count($cases) . ' caso(s) notificados.',
+    ]);
+});
+
 // Agregar comentario
 add_action('wp_ajax_at_qa_add_comment', function() {
     if (!current_user_can('at_qa_access')) wp_die('Sin permisos');
@@ -2025,6 +2319,7 @@ function at_qa_render_suite_page() {
         .qa-table thead { display:none; }
         .qa-table tbody tr { display:flex; flex-wrap:wrap; padding:10px 12px; border-bottom:1px solid #eee; gap:4px; align-items:center; }
         .qa-table td { border:none; padding:2px 0; }
+        .qa-table .c-chk { width:auto; order:-1; margin-right:4px; }
         .qa-table .c-id { width:auto; font-size:11px; margin-right:6px; }
         .qa-table .c-name { flex:1 1 100%; order:1; font-size:13px; font-weight:500; }
         .qa-table .c-pri { width:auto; order:2; text-align:left; }
@@ -2188,6 +2483,8 @@ function at_qa_render_suite_page() {
     .cm-item .cm-del:hover { color:#ef4444; }
     .cm-item .cm-edit { float:right; background:none; border:none; color:#ccc; cursor:pointer; font-size:12px; margin-right:6px; }
     .cm-item .cm-edit:hover { color:#0d9488; }
+    .cm-item .cm-copy { float:right; background:none; border:none; color:#ccc; cursor:pointer; font-size:12px; margin-right:6px; }
+    .cm-item .cm-copy:hover { color:#2563eb; }
     .cm-item .cm-edit-area { width:100%; border:1px solid #0d9488; border-radius:6px; padding:6px 10px; font-size:12px; resize:vertical; min-height:40px; margin-top:4px; font-family:inherit; }
     .cm-item .cm-edit-actions { display:flex; gap:6px; margin-top:6px; justify-content:flex-end; }
     .cm-item .cm-edit-actions button { font-size:11px; padding:4px 12px; border-radius:5px; border:none; cursor:pointer; }
@@ -2198,6 +2495,65 @@ function at_qa_render_suite_page() {
 
     .cm-form { display:flex; gap:8px; margin-top:10px; }
     .cm-form textarea { flex:1; border:1px solid #d1d5db; border-radius:6px; padding:7px 10px; font-size:12px; resize:vertical; min-height:50px; }
+
+    /* ─── Bulk Corrections UI ─── */
+    .qa-table .c-chk { width:36px; text-align:center; }
+    .qa-table .c-chk input[type=checkbox] { width:16px; height:16px; cursor:pointer; accent-color:#0d9488; }
+    .qa-bulk-bar { position:fixed; bottom:0; left:0; right:0; background:linear-gradient(135deg,#0d9488,#0f766e); color:#fff; padding:12px 24px; display:flex; align-items:center; gap:16px; z-index:99998; box-shadow:0 -4px 20px rgba(0,0,0,.25); transform:translateY(100%); transition:transform .3s ease; }
+    .qa-bulk-bar.active { transform:translateY(0); }
+    .qa-bulk-bar .bulk-count { font-size:15px; font-weight:700; }
+    .qa-bulk-bar .bulk-btn { background:rgba(255,255,255,.2); color:#fff; border:1px solid rgba(255,255,255,.4); padding:8px 20px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:.2s; display:inline-flex; align-items:center; gap:6px; }
+    .qa-bulk-bar .bulk-btn:hover { background:rgba(255,255,255,.35); }
+    .qa-bulk-bar .bulk-btn-primary { background:#fff; color:#0d9488; border-color:#fff; font-weight:700; }
+    .qa-bulk-bar .bulk-btn-primary:hover { background:#f0fdfa; }
+    .qa-bulk-bar .bulk-deselect { background:none; border:none; color:rgba(255,255,255,.7); cursor:pointer; font-size:12px; text-decoration:underline; }
+    .qa-bulk-bar .bulk-deselect:hover { color:#fff; }
+    .qa-bulk-bar .bulk-spacer { flex:1; }
+    @media (max-width:768px) {
+        .qa-bulk-bar { flex-wrap:wrap; gap:8px; padding:10px 14px; }
+        .qa-bulk-bar .bulk-spacer { display:none; }
+        .qa-bulk-bar .bulk-btn { font-size:12px; padding:6px 14px; flex:1; justify-content:center; }
+    }
+
+    /* Modal de correcciones masivas */
+    #bulkCorrModal .at-qa-modal { max-width:700px; }
+    #bulkCorrModal .bulk-cases-list { max-height:260px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:8px; margin:12px 0; }
+    #bulkCorrModal .bulk-cases-list table { width:100%; border-collapse:collapse; font-size:13px; }
+    #bulkCorrModal .bulk-cases-list table th { background:#f8fafc; padding:8px 12px; text-align:left; font-size:11px; color:#888; text-transform:uppercase; position:sticky; top:0; border-bottom:1px solid #e5e7eb; }
+    #bulkCorrModal .bulk-cases-list table td { padding:7px 12px; border-bottom:1px solid #f0f0f0; }
+    #bulkCorrModal .bulk-msg-area { width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px 14px; font-size:13px; resize:vertical; min-height:70px; font-family:inherit; box-sizing:border-box; }
+    #bulkCorrModal .bulk-msg-area:focus { border-color:#0d9488; outline:none; box-shadow:0 0 0 3px rgba(13,148,136,.15); }
+    #bulkCorrModal .bulk-opt { display:flex; align-items:center; gap:8px; padding:8px 12px; background:#f8fafc; border-radius:6px; margin:8px 0; font-size:13px; cursor:pointer; }
+    #bulkCorrModal .bulk-opt input { accent-color:#0d9488; width:16px; height:16px; }
+    #bulkCorrModal .bulk-send-btn { background:linear-gradient(135deg,#0d9488,#14b8a6); color:#fff; border:none; padding:12px 28px; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; transition:.2s; display:inline-flex; align-items:center; gap:8px; }
+    #bulkCorrModal .bulk-send-btn:hover { box-shadow:0 4px 15px rgba(13,148,136,.35); }
+    #bulkCorrModal .bulk-send-btn:disabled { opacity:.6; cursor:not-allowed; }
+
+    /* CC / BCC email fields */
+    .bulk-email-section { margin:14px 0 6px; }
+    .bulk-email-section summary { font-size:13px; font-weight:600; color:#374151; cursor:pointer; padding:8px 0; user-select:none; }
+    .bulk-email-section summary:hover { color:#0d9488; }
+    .bulk-email-section[open] summary { color:#0d9488; }
+    .bulk-email-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:10px; }
+    @media (max-width:640px) { .bulk-email-grid { grid-template-columns:1fr; } }
+    .bulk-email-col label { display:block; font-size:12px; font-weight:600; color:#6b7280; margin-bottom:6px; text-transform:uppercase; letter-spacing:.3px; }
+    .bulk-team-chips { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px; }
+    .bulk-team-chip { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border:1px solid #d1d5db; border-radius:20px; font-size:11px; cursor:pointer; transition:.15s; background:#fff; user-select:none; }
+    .bulk-team-chip:hover { border-color:#0d9488; background:#f0fdfa; }
+    .bulk-team-chip.selected { background:#0d9488; color:#fff; border-color:#0d9488; }
+    .bulk-team-chip .chip-avatar { width:18px; height:18px; border-radius:50%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#666; }
+    .bulk-team-chip.selected .chip-avatar { background:rgba(255,255,255,.3); color:#fff; }
+    .bulk-email-tags { display:flex; flex-wrap:wrap; gap:4px; padding:6px 8px; border:1px solid #d1d5db; border-radius:8px; min-height:36px; align-items:center; cursor:text; transition:.2s; }
+    .bulk-email-tags:focus-within { border-color:#0d9488; box-shadow:0 0 0 3px rgba(13,148,136,.12); }
+    .bulk-email-tag { display:inline-flex; align-items:center; gap:3px; background:#e0f2fe; color:#0369a1; padding:3px 8px; border-radius:14px; font-size:11px; font-weight:500; animation:tagIn .2s ease; }
+    @keyframes tagIn { from{opacity:0;transform:scale(.8)} to{opacity:1;transform:scale(1)} }
+    .bulk-email-tag .tag-remove { background:none; border:none; color:#0369a1; cursor:pointer; font-size:13px; padding:0 2px; line-height:1; opacity:.6; }
+    .bulk-email-tag .tag-remove:hover { opacity:1; color:#dc2626; }
+    .bulk-email-tags input { border:none; outline:none; font-size:12px; min-width:140px; flex:1; padding:2px 4px; background:transparent; }
+    .bulk-email-tags input::placeholder { color:#aaa; }
+    .bulk-email-error { color:#dc2626; font-size:11px; margin-top:3px; display:none; }
+    .qa-table tbody tr.bulk-selected { background:#f0fdfa !important; }
+    .qa-table tbody tr.bulk-selected td:first-child { box-shadow:inset 3px 0 0 #0d9488; }
     </style>
 
     <!-- HEADER -->
@@ -2339,6 +2695,7 @@ function at_qa_render_suite_page() {
             <!-- TABLA -->
             <table class="qa-table">
                 <thead><tr>
+                    <th class="c-chk"><input type="checkbox" id="bulkSelectAll" title="Seleccionar/deseleccionar todos" onchange="atQaBulkToggleAll(this.checked)"></th>
                     <th class="c-id">ID</th>
                     <th>Caso de Uso</th>
                     <th class="c-pri">Prior.</th>
@@ -2352,12 +2709,13 @@ function at_qa_render_suite_page() {
                 foreach ($cases as $c):
                     if ($c->section !== $cur_sec) {
                         $cur_sec = $c->section;
-                        echo '<tr class="section-row section-header"><td colspan="6">' . esc_html($cur_sec) . '</td></tr>';
+                        echo '<tr class="section-row section-header"><td colspan="7">' . esc_html($cur_sec) . '</td></tr>';
                     }
                     $ev = $ev_counts[$c->id] ?? 0;
                     $cm = $cm_counts[$c->id] ?? 0;
                 ?>
-                <tr data-cid="<?php echo $c->id; ?>">
+                <tr data-cid="<?php echo $c->id; ?>" data-caseid="<?php echo esc_attr($c->case_id); ?>" data-title="<?php echo esc_attr($c->title); ?>" data-priority="<?php echo esc_attr($c->priority); ?>" data-status="<?php echo esc_attr($c->status); ?>">
+                    <td class="c-chk"><input type="checkbox" class="bulk-chk" value="<?php echo $c->id; ?>" onchange="atQaBulkUpdate()"></td>
                     <td class="c-id"><?php echo esc_html($c->case_id); ?></td>
                     <td class="c-name">
                         <strong><?php echo esc_html($c->title); ?></strong>
@@ -2383,7 +2741,7 @@ function at_qa_render_suite_page() {
                 </tr>
                 <?php endforeach; ?>
                 <?php if (empty($cases)): ?>
-                <tr><td colspan="6" style="text-align:center; padding:30px; color:#999;">Sin casos que coincidan.</td></tr>
+                <tr><td colspan="7" style="text-align:center; padding:30px; color:#999;">Sin casos que coincidan.</td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>
@@ -2484,6 +2842,183 @@ function at_qa_render_suite_page() {
                         <p style="margin:0;font-size:13px;color:#555;line-height:1.5;"><?php echo esc_html($g[2]); ?></p>
                     </div>
                     <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BARRA FLOTANTE DE SELECCIÓN MASIVA -->
+    <div class="qa-bulk-bar" id="bulkBar">
+        <span class="bulk-count" id="bulkCount">0 casos seleccionados</span>
+        <button class="bulk-deselect" onclick="atQaBulkDeselectAll()">Deseleccionar todo</button>
+        <span class="bulk-spacer"></span>
+        <button class="bulk-btn" onclick="atQaBulkSelectFailed()" title="Seleccionar solo los casos con estado FAIL">❌ Seleccionar Fallidos</button>
+        <button class="bulk-btn bulk-btn-primary" onclick="atQaBulkOpenModal()">🔧 Notificar Correcciones</button>
+    </div>
+
+    <!-- MODAL CORRECCIONES MASIVAS -->
+    <div id="bulkCorrModal" class="at-qa-modal-bg" onclick="if(event.target===this)this.classList.remove('active')">
+        <div class="at-qa-modal" style="max-width:700px;">
+            <div class="at-qa-modal-hd" style="background:linear-gradient(135deg,#0d9488,#14b8a6);">
+                <h3 style="color:#fff;margin:0;">🔧 Notificar Correcciones al Equipo QA</h3>
+                <button class="at-qa-modal-close" style="color:#fff;" onclick="document.getElementById('bulkCorrModal').classList.remove('active')">&times;</button>
+            </div>
+            <div class="at-qa-modal-body" style="padding:24px;">
+                <p style="color:#555;margin:0 0 14px;">Se enviará <strong>un único correo</strong> al equipo de QA notificando que los siguientes casos fueron corregidos y están listos para ser probados de nuevo.</p>
+                
+                <div id="bulkCasesPreview" class="bulk-cases-list">
+                    <!-- Se llena dinámicamente -->
+                </div>
+
+                <label style="display:block;margin:14px 0 6px;font-size:13px;font-weight:600;color:#374151;">📝 Mensaje para el equipo QA (opcional):</label>
+                <textarea id="bulkCorrMessage" class="bulk-msg-area" placeholder="Describe brevemente las correcciones realizadas. Ej: Se corrigió la validación del formulario de registro y el cálculo de precios en el carrito."></textarea>
+
+                <label class="bulk-opt">
+                    <input type="checkbox" id="bulkResetStatus" checked>
+                    <span>🔄 Resetear estado de los casos a <strong>"Sin probar"</strong> (listo para re-test)</span>
+                </label>
+
+                <!-- Destinatarios principales (editables) -->
+                <?php
+                    $admin_email_display = get_option('admin_email');
+                    $current_user_display = wp_get_current_user();
+
+                    // 1) Recopilar testers asignados a MÓDULOS del proyecto
+                    $assigned_testers_display = [];
+                    foreach ($modules as $_m) {
+                        if ($_m->assigned_tester) {
+                            $tu = get_userdata($_m->assigned_tester);
+                            if ($tu && !isset($assigned_testers_display[$tu->ID])) {
+                                $assigned_testers_display[$tu->ID] = [
+                                    'name'  => $tu->display_name,
+                                    'email' => $tu->user_email,
+                                    'role'  => 'tester',
+                                    'label' => 'Tester — ' . $_m->code,
+                                ];
+                            }
+                        }
+                    }
+
+                    // 2) Recopilar testers asignados a nivel de PROYECTO
+                    if (!empty($project->assigned_testers)) {
+                        $proj_tester_ids = array_filter(array_map('intval', explode(',', $project->assigned_testers)));
+                        foreach ($proj_tester_ids as $ptid) {
+                            if (!isset($assigned_testers_display[$ptid])) {
+                                $pu = get_userdata($ptid);
+                                if ($pu) {
+                                    $assigned_testers_display[$pu->ID] = [
+                                        'name'  => $pu->display_name,
+                                        'email' => $pu->user_email,
+                                        'role'  => 'project',
+                                        'label' => 'Encargado proyecto',
+                                    ];
+                                }
+                            }
+                        }
+                    }
+
+                    // 3) Cliente / Responsable del proyecto (desde CRM)
+                    $client_display = null;
+                    if ($project->client_id) {
+                        $client_display = $wpdb->get_row($wpdb->prepare(
+                            "SELECT * FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $project->client_id
+                        ));
+                    }
+                ?>
+                <style>
+                    .to-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px 4px 12px;border-radius:20px;font-size:11px;font-weight:600;color:#fff;transition:opacity .2s;}
+                    .to-chip .to-x{background:rgba(255,255,255,.3);border:none;color:#fff;border-radius:50%;width:18px;height:18px;font-size:13px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;margin-left:4px;transition:background .15s;}
+                    .to-chip .to-x:hover{background:rgba(255,255,255,.55);}
+                    .to-chip.removed{opacity:.35;text-decoration:line-through;}
+                    .to-chip.removed .to-x{display:none;}
+                    .to-chip .to-undo{display:none;background:rgba(255,255,255,.4);border:none;color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;cursor:pointer;margin-left:4px;}
+                    .to-chip.removed .to-undo{display:inline-block;}
+                </style>
+                <div style="margin:14px 0 6px;">
+                    <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:8px;">📨 Destinatarios principales <span style="font-size:11px;font-weight:400;color:#9ca3af;">(clic en ✕ para quitar)</span></div>
+                    <div id="bulkToRecipients" style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;padding:12px 14px;">
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                            <!-- Admin / Email principal -->
+                            <span class="to-chip" data-email="<?php echo esc_attr($admin_email_display); ?>" data-type="admin" style="background:#0d9488;" title="Email principal del sitio (admin)">
+                                ⭐ <?php echo esc_html($admin_email_display); ?>
+                                <button class="to-x" onclick="atQaBulkRemoveToChip(this)" title="Quitar destinatario">×</button>
+                                <button class="to-undo" onclick="atQaBulkUndoToChip(this)" title="Restaurar">↩ restaurar</button>
+                            </span>
+                            <!-- Testers asignados (módulos + proyecto) -->
+                            <?php foreach ($assigned_testers_display as $at): ?>
+                            <?php
+                                $bg = $at['role'] === 'project' ? '#7c3aed' : '#14b8a6';
+                                $icon = $at['role'] === 'project' ? '📋' : '🧪';
+                            ?>
+                            <span class="to-chip" data-email="<?php echo esc_attr($at['email']); ?>" data-type="<?php echo esc_attr($at['role']); ?>" style="background:<?php echo $bg; ?>;" title="<?php echo esc_attr($at['label']); ?>">
+                                <?php echo $icon; ?> <?php echo esc_html($at['name']); ?> (<?php echo esc_html($at['email']); ?>)
+                                <button class="to-x" onclick="atQaBulkRemoveToChip(this)" title="Quitar destinatario">×</button>
+                                <button class="to-undo" onclick="atQaBulkUndoToChip(this)" title="Restaurar">↩ restaurar</button>
+                            </span>
+                            <?php endforeach; ?>
+                            <?php if (empty($assigned_testers_display)): ?>
+                            <span style="font-size:11px;color:#6b7280;font-style:italic;">Sin testers asignados</span>
+                            <?php endif; ?>
+                            <!-- Cliente / Responsable del proyecto -->
+                            <?php if ($client_display && !empty($client_display->email)): ?>
+                            <span class="to-chip" data-email="<?php echo esc_attr($client_display->email); ?>" data-type="client" style="background:#e11d48;" title="Cliente/Responsable del proyecto — <?php echo esc_attr($client_display->empresa ?: ''); ?>">
+                                👑 <?php echo esc_html($client_display->nombre); ?> (<?php echo esc_html($client_display->email); ?>)
+                                <button class="to-x" onclick="atQaBulkRemoveToChip(this)" title="Quitar destinatario">×</button>
+                                <button class="to-undo" onclick="atQaBulkUndoToChip(this)" title="Restaurar">↩ restaurar</button>
+                            </span>
+                            <?php endif; ?>
+                            <!-- Desarrollador (confirmación — no removible) -->
+                            <span class="to-chip" data-email="<?php echo esc_attr($current_user_display->user_email); ?>" data-type="sender" style="background:#64748b;" title="Siempre recibe confirmación">
+                                👤 <?php echo esc_html($current_user_display->display_name); ?> (confirmación)
+                            </span>
+                        </div>
+                        <p style="margin:8px 0 0;font-size:11px;color:#6b7280;">⭐ Admin · 🧪 Testers · 📋 Encargado · 👑 Cliente/Responsable · 👤 Confirmación (fijo)</p>
+                    </div>
+                </div>
+
+                <!-- CC / BCC Destinatarios -->
+                <details class="bulk-email-section" id="bulkEmailSection">
+                    <summary>📧 Destinatarios adicionales (CC / BCC)</summary>
+                    <p style="font-size:12px;color:#6b7280;margin:6px 0 10px;">Por defecto se envía a los testers asignados y al admin. Aquí puedes agregar destinatarios extra en copia (CC) o copia oculta (BCC).</p>
+                    <div class="bulk-email-grid">
+                        <div class="bulk-email-col">
+                            <label>📋 CC (Copia)</label>
+                            <div class="bulk-team-chips" id="bulkCcChips">
+                                <?php foreach ($testers as $tst): ?>
+                                <span class="bulk-team-chip" data-email="<?php echo esc_attr($tst->user_email); ?>" data-name="<?php echo esc_attr($tst->display_name); ?>" data-target="cc" onclick="atQaBulkToggleChip(this)">
+                                    <span class="chip-avatar"><?php echo esc_html(mb_strtoupper(mb_substr($tst->display_name, 0, 1))); ?></span>
+                                    <?php echo esc_html($tst->display_name); ?>
+                                </span>
+                                <?php endforeach; ?>
+                            </div>
+                            <div class="bulk-email-tags" id="bulkCcTags" onclick="this.querySelector('input').focus()">
+                                <input type="text" id="bulkCcInput" placeholder="Agregar email y presionar Enter..." onkeydown="atQaBulkEmailKey(event,'cc')">
+                            </div>
+                            <div class="bulk-email-error" id="bulkCcError"></div>
+                        </div>
+                        <div class="bulk-email-col">
+                            <label>🔒 BCC (Copia oculta)</label>
+                            <div class="bulk-team-chips" id="bulkBccChips">
+                                <?php foreach ($testers as $tst): ?>
+                                <span class="bulk-team-chip" data-email="<?php echo esc_attr($tst->user_email); ?>" data-name="<?php echo esc_attr($tst->display_name); ?>" data-target="bcc" onclick="atQaBulkToggleChip(this)">
+                                    <span class="chip-avatar"><?php echo esc_html(mb_strtoupper(mb_substr($tst->display_name, 0, 1))); ?></span>
+                                    <?php echo esc_html($tst->display_name); ?>
+                                </span>
+                                <?php endforeach; ?>
+                            </div>
+                            <div class="bulk-email-tags" id="bulkBccTags" onclick="this.querySelector('input').focus()">
+                                <input type="text" id="bulkBccInput" placeholder="Agregar email y presionar Enter..." onkeydown="atQaBulkEmailKey(event,'bcc')">
+                            </div>
+                            <div class="bulk-email-error" id="bulkBccError"></div>
+                        </div>
+                    </div>
+                </details>
+
+                <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap;">
+                    <button class="qa-btn" onclick="document.getElementById('bulkCorrModal').classList.remove('active')" style="padding:10px 20px;">Cancelar</button>
+                    <button class="bulk-send-btn" id="bulkSendBtn" onclick="atQaBulkSendNotify()">
+                        📨 Enviar Notificación Única
+                    </button>
                 </div>
             </div>
         </div>
@@ -2728,6 +3263,7 @@ function at_qa_render_suite_page() {
             let h='<div class="cm-item" id="cm-'+cm.id+'">';
             h+='<button class="cm-del" onclick="atQaDelCm('+cm.id+')">&times;</button>';
             h+='<button class="cm-edit" onclick="atQaEditCm('+cm.id+')" title="Editar">✏️</button>';
+            h+='<button class="cm-copy" onclick="atQaCopyCm('+cm.id+')" title="Copiar comentario">📋</button>';
             h+='<div class="cm-meta"><strong>'+esc(cm.user_name||'')+'</strong> · '+esc(cm.created_at);
             if(cm.updated_at) h+=' · <em style="color:#0d9488">editado</em>';
             h+='</div>';
@@ -2853,6 +3389,23 @@ function at_qa_render_suite_page() {
             fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{ if(res.success){ const el=document.getElementById('ev-'+id); if(el) el.remove(); toast('Eliminada','success'); }});
         };
 
+        window.atQaCopyCm = function(id){
+            const textEl=document.getElementById('cmText-'+id);
+            if(!textEl) return;
+            const text=textEl.textContent;
+            navigator.clipboard.writeText(text).then(function(){
+                toast('Comentario copiado','success');
+            }).catch(function(){
+                // Fallback para contextos sin HTTPS
+                const ta=document.createElement('textarea');
+                ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+                document.body.appendChild(ta); ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                toast('Comentario copiado','success');
+            });
+        };
+
         window.atQaEditCm = function(id){
             const container=document.getElementById('cm-'+id);
             const textEl=document.getElementById('cmText-'+id);
@@ -2897,6 +3450,266 @@ function at_qa_render_suite_page() {
             const fd=new FormData(); fd.append('action','at_qa_delete_comment'); fd.append('nonce',N); fd.append('comment_id',id);
             fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{ if(res.success){ const el=document.getElementById('cm-'+id); if(el) el.remove(); toast('Eliminado','success'); }});
         };
+
+        /* ══════════════════════════════════════════════
+           SELECCIÓN MASIVA Y NOTIFICACIÓN DE CORRECCIONES
+           ══════════════════════════════════════════════ */
+        function getSelectedIds(){
+            return Array.from(document.querySelectorAll('.bulk-chk:checked')).map(c=>parseInt(c.value));
+        }
+
+        window.atQaBulkUpdate = function(){
+            const ids = getSelectedIds();
+            const bar = document.getElementById('bulkBar');
+            const cnt = document.getElementById('bulkCount');
+            const selectAll = document.getElementById('bulkSelectAll');
+            cnt.textContent = ids.length + ' caso' + (ids.length!==1?'s':'') + ' seleccionado' + (ids.length!==1?'s':'');
+            if(ids.length > 0){ bar.classList.add('active'); } else { bar.classList.remove('active'); }
+            // Highlight selected rows
+            document.querySelectorAll('.qa-table tbody tr[data-cid]').forEach(tr=>{
+                const chk=tr.querySelector('.bulk-chk');
+                if(chk && chk.checked) tr.classList.add('bulk-selected');
+                else tr.classList.remove('bulk-selected');
+            });
+            // Sync "select all" checkbox
+            const allChks=document.querySelectorAll('.bulk-chk');
+            const allChecked=document.querySelectorAll('.bulk-chk:checked');
+            if(selectAll) selectAll.checked = allChks.length>0 && allChks.length===allChecked.length;
+        };
+
+        window.atQaBulkToggleAll = function(checked){
+            document.querySelectorAll('.bulk-chk').forEach(c=>{c.checked=checked;});
+            atQaBulkUpdate();
+        };
+
+        window.atQaBulkDeselectAll = function(){
+            document.querySelectorAll('.bulk-chk').forEach(c=>{c.checked=false;});
+            const selectAll=document.getElementById('bulkSelectAll');
+            if(selectAll) selectAll.checked=false;
+            atQaBulkUpdate();
+        };
+
+        window.atQaBulkSelectFailed = function(){
+            atQaBulkDeselectAll();
+            document.querySelectorAll('.qa-table tbody tr[data-cid]').forEach(tr=>{
+                if(tr.getAttribute('data-status')==='fail'){
+                    const chk=tr.querySelector('.bulk-chk');
+                    if(chk) chk.checked=true;
+                }
+            });
+            atQaBulkUpdate();
+            const sel=getSelectedIds();
+            if(sel.length===0) toast('No hay casos con estado FAIL en este módulo','error');
+            else toast(sel.length+' caso'+(sel.length>1?'s':'')+' fallido'+(sel.length>1?'s':'')+' seleccionado'+(sel.length>1?'s':''),'success');
+        };
+
+        window.atQaBulkOpenModal = function(){
+            const ids=getSelectedIds();
+            if(ids.length===0){ toast('Selecciona al menos un caso','error'); return; }
+            // Construir preview de casos
+            let html='<table><thead><tr><th>ID</th><th>Caso</th><th>Prioridad</th><th>Estado</th></tr></thead><tbody>';
+            const stLabels={'not_tested':'🔘 Sin probar','pass':'✅ Pass','fail':'❌ Fail','blocked':'⚠️ Bloqueado','skipped':'⏭️ Omitido'};
+            document.querySelectorAll('.bulk-chk:checked').forEach(chk=>{
+                const tr=chk.closest('tr');
+                if(!tr) return;
+                const caseId=tr.getAttribute('data-caseid')||'';
+                const title=tr.getAttribute('data-title')||'';
+                const pri=tr.getAttribute('data-priority')||'';
+                const st=tr.getAttribute('data-status')||'';
+                const priColors={'Alta':'#dc2626','Media':'#d97706','Baja':'#0d9488'};
+                html+='<tr>';
+                html+='<td style="font-family:monospace;font-weight:700;font-size:11px;">'+esc(caseId)+'</td>';
+                html+='<td>'+esc(title)+'</td>';
+                html+='<td style="text-align:center;"><span style="color:'+(priColors[pri]||'#666')+';font-size:11px;font-weight:600;">'+esc(pri)+'</span></td>';
+                html+='<td style="text-align:center;font-size:12px;">'+(stLabels[st]||st)+'</td>';
+                html+='</tr>';
+            });
+            html+='</tbody></table>';
+            document.getElementById('bulkCasesPreview').innerHTML=html;
+            document.getElementById('bulkCorrMessage').value='';
+            document.getElementById('bulkResetStatus').checked=true;
+            // Reset CC/BCC
+            atQaBulkResetEmails();
+            // Restore all TO recipients
+            document.querySelectorAll('#bulkToRecipients .to-chip.removed').forEach(ch=>ch.classList.remove('removed'));
+            document.getElementById('bulkCorrModal').classList.add('active');
+        };
+
+        window.atQaBulkSendNotify = function(){
+            const ids=getSelectedIds();
+            if(ids.length===0){ toast('No hay casos seleccionados','error'); return; }
+            const msg=document.getElementById('bulkCorrMessage').value.trim();
+            const reset=document.getElementById('bulkResetStatus').checked;
+            const ccEmails=atQaBulkCollectEmails('cc');
+            const bccEmails=atQaBulkCollectEmails('bcc');
+            const btn=document.getElementById('bulkSendBtn');
+            btn.disabled=true;
+            btn.innerHTML='<svg style="animation:qaspin .6s linear infinite;width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10" stroke-opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> Enviando...';
+
+            // Collect active TO recipients (not removed)
+            const toEmails=[];
+            document.querySelectorAll('#bulkToRecipients .to-chip:not(.removed)').forEach(ch=>{
+                const em=ch.getAttribute('data-email');
+                if(em) toEmails.push(em);
+            });
+
+            const fd=new FormData();
+            fd.append('action','at_qa_bulk_corrections_notify');
+            fd.append('nonce',N);
+            fd.append('message',msg);
+            fd.append('reset_status',reset?'1':'0');
+            ids.forEach(id=>fd.append('case_ids[]',id));
+            toEmails.forEach(e=>fd.append('to_emails[]',e));
+            ccEmails.forEach(e=>fd.append('cc_emails[]',e));
+            bccEmails.forEach(e=>fd.append('bcc_emails[]',e));
+
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
+                btn.disabled=false;
+                btn.innerHTML='📨 Enviar Notificación Única';
+                if(res.success){
+                    document.getElementById('bulkCorrModal').classList.remove('active');
+                    // Mostrar modal de confirmación
+                    let d=res.data;
+                    let confirmHtml='<div style="text-align:center;padding:20px;">';
+                    confirmHtml+='<span style="font-size:56px;">✅</span>';
+                    confirmHtml+='<h2 style="margin:12px 0 6px;color:#065f46;">¡Notificación Enviada!</h2>';
+                    confirmHtml+='<p style="color:#6b7280;margin:0 0 18px;">Se envió <strong>un único correo</strong> consolidado al equipo de QA.</p>';
+                    confirmHtml+='<div style="background:#f0fdfa;border-left:4px solid #0d9488;padding:14px;border-radius:8px;text-align:left;margin:0 auto;max-width:400px;">';
+                    confirmHtml+='<p style="margin:0 0 6px;"><strong>📊 Casos notificados:</strong> '+d.cases_count+'</p>';
+                    confirmHtml+='<p style="margin:0 0 6px;"><strong>📨 Correos enviados:</strong> '+d.emails_sent+'</p>';
+                    if(d.recipients&&d.recipients.length) confirmHtml+='<p style="margin:0 0 6px;"><strong>👥 Destinatarios:</strong> '+d.recipients.join(', ')+'</p>';
+                    if(d.cc_count>0) confirmHtml+='<p style="margin:0 0 6px;"><strong>📋 CC:</strong> '+d.cc_count+' destinatario'+(d.cc_count>1?'s':'')+'</p>';
+                    if(d.bcc_count>0) confirmHtml+='<p style="margin:0 0 6px;"><strong>🔒 BCC:</strong> '+d.bcc_count+' destinatario'+(d.bcc_count>1?'s':'')+'</p>';
+                    if(d.reset_status) confirmHtml+='<p style="margin:0;"><strong>🔄 Estado:</strong> Resetados a "Sin probar"</p>';
+                    confirmHtml+='</div>';
+                    confirmHtml+='<button class="qa-btn qa-btn-primary" style="margin-top:18px;padding:10px 28px;" onclick="location.reload()">Entendido</button>';
+                    confirmHtml+='</div>';
+                    document.getElementById('cmBody').innerHTML=confirmHtml;
+                    document.getElementById('cmTitle').textContent='✅ Notificación de Correcciones Enviada';
+                    document.getElementById('caseModal').classList.add('active');
+                    atQaBulkDeselectAll();
+                } else {
+                    toast(res.data||'Error al enviar notificación','error');
+                }
+            }).catch(()=>{
+                btn.disabled=false;
+                btn.innerHTML='📨 Enviar Notificación Única';
+                toast('Error de conexión al enviar notificación','error');
+            });
+        };
+        /* ─── CC/BCC email management ─── */
+        function isValidEmail(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+
+        window.atQaBulkToggleChip = function(chip){
+            const email=chip.getAttribute('data-email');
+            const target=chip.getAttribute('data-target'); // 'cc' or 'bcc'
+            chip.classList.toggle('selected');
+            const tagsContainer=document.getElementById('bulk'+target.charAt(0).toUpperCase()+target.slice(1)+'Tags');
+            if(chip.classList.contains('selected')){
+                // Add tag
+                atQaBulkAddTag(tagsContainer, email, chip.getAttribute('data-name')||email, target);
+                // Deselect same email from the other column if selected
+                const other=target==='cc'?'bcc':'cc';
+                const otherChips=document.getElementById('bulk'+other.charAt(0).toUpperCase()+other.slice(1)+'Chips');
+                otherChips.querySelectorAll('.bulk-team-chip.selected').forEach(oc=>{
+                    if(oc.getAttribute('data-email')===email){
+                        oc.classList.remove('selected');
+                        const otherTags=document.getElementById('bulk'+other.charAt(0).toUpperCase()+other.slice(1)+'Tags');
+                        const existing=otherTags.querySelector('.bulk-email-tag[data-email="'+email+'"]');
+                        if(existing) existing.remove();
+                    }
+                });
+            } else {
+                // Remove tag
+                const existing=tagsContainer.querySelector('.bulk-email-tag[data-email="'+email+'"]');
+                if(existing) existing.remove();
+            }
+        };
+
+        function atQaBulkAddTag(container, email, label, target){
+            // Don't add duplicate
+            if(container.querySelector('.bulk-email-tag[data-email="'+email+'"]')) return;
+            const tag=document.createElement('span');
+            tag.className='bulk-email-tag';
+            tag.setAttribute('data-email',email);
+            tag.innerHTML=esc(label||email)+' <button class="tag-remove" onclick="atQaBulkRemoveTag(this,\''+target+'\')">×</button>';
+            const input=container.querySelector('input');
+            container.insertBefore(tag, input);
+        }
+
+        window.atQaBulkRemoveTag = function(btn, target){
+            const tag=btn.closest('.bulk-email-tag');
+            const email=tag.getAttribute('data-email');
+            tag.remove();
+            // Deselect chip if it was a team member
+            const chipsContainer=document.getElementById('bulk'+target.charAt(0).toUpperCase()+target.slice(1)+'Chips');
+            chipsContainer.querySelectorAll('.bulk-team-chip').forEach(c=>{
+                if(c.getAttribute('data-email')===email) c.classList.remove('selected');
+            });
+        };
+
+        window.atQaBulkEmailKey = function(e, target){
+            if(e.key==='Enter'||e.key===','||e.key===';'||e.key==='Tab'){
+                e.preventDefault();
+                const input=e.target;
+                const val=input.value.trim().replace(/[,;]/g,'');
+                const errEl=document.getElementById('bulk'+target.charAt(0).toUpperCase()+target.slice(1)+'Error');
+                if(!val) return;
+                if(!isValidEmail(val)){
+                    errEl.textContent='Email inválido: '+val;
+                    errEl.style.display='block';
+                    setTimeout(()=>{errEl.style.display='none';},3000);
+                    return;
+                }
+                errEl.style.display='none';
+                const container=document.getElementById('bulk'+target.charAt(0).toUpperCase()+target.slice(1)+'Tags');
+                atQaBulkAddTag(container, val, val, target);
+                input.value='';
+            }
+            if(e.key==='Backspace'&&!e.target.value){
+                const container=e.target.closest('.bulk-email-tags');
+                const tags=container.querySelectorAll('.bulk-email-tag');
+                if(tags.length){
+                    const last=tags[tags.length-1];
+                    const email=last.getAttribute('data-email');
+                    last.remove();
+                    // Deselect chip
+                    const chipsContainer=document.getElementById('bulk'+target.charAt(0).toUpperCase()+target.slice(1)+'Chips');
+                    chipsContainer.querySelectorAll('.bulk-team-chip').forEach(c=>{
+                        if(c.getAttribute('data-email')===email) c.classList.remove('selected');
+                    });
+                }
+            }
+        };
+
+        window.atQaBulkCollectEmails = function(target){
+            const container=document.getElementById('bulk'+target.charAt(0).toUpperCase()+target.slice(1)+'Tags');
+            const emails=[];
+            container.querySelectorAll('.bulk-email-tag').forEach(tag=>{
+                emails.push(tag.getAttribute('data-email'));
+            });
+            return emails;
+        };
+
+        window.atQaBulkResetEmails = function(){
+            ['Cc','Bcc'].forEach(t=>{
+                document.getElementById('bulk'+t+'Tags').querySelectorAll('.bulk-email-tag').forEach(tag=>tag.remove());
+                document.getElementById('bulk'+t+'Chips').querySelectorAll('.bulk-team-chip.selected').forEach(c=>c.classList.remove('selected'));
+                document.getElementById('bulk'+t+'Input').value='';
+                document.getElementById('bulk'+t+'Error').style.display='none';
+            });
+        };
+
+        /* ─── TO recipients management ─── */
+        window.atQaBulkRemoveToChip = function(btn){
+            const chip = btn.closest('.to-chip');
+            if(chip) chip.classList.add('removed');
+        };
+        window.atQaBulkUndoToChip = function(btn){
+            const chip = btn.closest('.to-chip');
+            if(chip) chip.classList.remove('removed');
+        };
+        /* ═══════════ Fin selección masiva ═══════════ */
 
         /* Asignar tester a módulo */
         window.atQaAssignTester = function(moduleId, testerId){

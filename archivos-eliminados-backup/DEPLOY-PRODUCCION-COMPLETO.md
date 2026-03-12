@@ -347,7 +347,7 @@ WHERE id = 2 AND price_clp = 1050000;
    - RUT: 12.345.678-9
    - Giro: Servicios de Automatización Digital
    - Dirección: Tu dirección real
-   - Email: info@automatizatech.shop
+   - Email: contacto@automatizatech.cl
    - Teléfono: +56 9 XXXX XXXX
    - Web: https://automatizatech.shop
 4. Clic en "Guardar Cambios"

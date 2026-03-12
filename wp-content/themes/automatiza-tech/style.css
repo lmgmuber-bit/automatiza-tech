@@ -465,6 +465,37 @@ html {
     }
 }
 
+/* Christmas emojis in lights (reindeer and santa) */
+.christmas-lights .christmas-emoji {
+    font-size: 18px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    animation: bounce-emoji 2s ease-in-out infinite;
+}
+
+.christmas-mode .christmas-lights .christmas-emoji {
+    opacity: 1;
+}
+
+.christmas-lights .christmas-emoji.reindeer {
+    animation-delay: 0.2s;
+}
+
+.christmas-lights .christmas-emoji.santa {
+    animation-delay: 0s;
+    font-size: 20px;
+}
+
+@keyframes bounce-emoji {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-3px);
+    }
+}
+
 /* Corner stars (emoji) */
 .christmas-star {
     position: fixed;
@@ -484,7 +515,82 @@ html {
 .christmas-star.star-bl { bottom: 0; left: 0; transform: rotate(10deg); }
 .christmas-star.star-br { bottom: 0; right: 0; transform: rotate(-10deg); }
 
-/* Christmas modal (replaces banner) */
+/* =============================
+   Modal Año Nuevo 2026
+   ============================= */
+.newyear-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 30, 60, 0.85);
+    z-index: 1003;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    backdrop-filter: blur(4px);
+}
+
+.newyear-modal {
+    position: relative;
+    background: transparent;
+    border-radius: 16px;
+    max-width: 600px;
+    width: 100%;
+    animation: modalPop 280ms cubic-bezier(.2,.8,.2,1) both;
+    overflow: hidden;
+}
+
+.newyear-modal-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(0, 200, 150, 0.3), 0 8px 22px rgba(0,0,0,0.3);
+}
+
+.newyear-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    border: none;
+    background: rgba(255, 255, 255, 0.95);
+    color: #111827;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: transform 0.2s ease, background 0.2s ease;
+    z-index: 10;
+}
+
+.newyear-modal-close:hover { 
+    background: #fff; 
+    transform: scale(1.1);
+}
+
+/* Responsive para móviles */
+@media (max-width: 640px) {
+    .newyear-modal-overlay {
+        padding: 16px;
+    }
+    .newyear-modal {
+        max-width: 95%;
+    }
+    .newyear-modal-close {
+        top: 8px;
+        right: 8px;
+        width: 32px;
+        height: 32px;
+    }
+}
+
+/* Christmas modal (replaces banner) - LEGACY */
 .christmas-modal-overlay {
     position: fixed;
     inset: 0;
@@ -557,7 +663,7 @@ html {
 /* Toggle button */
 .christmas-toggle {
     position: fixed;
-    right: 16px;
+    left: 20px;
     bottom: 20px;
     width: 48px;
     height: 48px;

@@ -61,39 +61,11 @@ class Ai1wm_Import_Validate {
 			);
 		}
 
-		// Set archive bytes offset
-		if ( isset( $params['archive_bytes_offset'] ) ) {
-			$archive_bytes_offset = (int) $params['archive_bytes_offset'];
-		} else {
-			$archive_bytes_offset = 0;
-		}
-
-		// Set file bytes offset
-		if ( isset( $params['file_bytes_offset'] ) ) {
-			$file_bytes_offset = (int) $params['file_bytes_offset'];
-		} else {
-			$file_bytes_offset = 0;
-		}
-
-		// Get total archive size
-		if ( isset( $params['total_archive_size'] ) ) {
-			$total_archive_size = (int) $params['total_archive_size'];
-		} else {
-			$total_archive_size = ai1wm_archive_bytes( $params );
-		}
-
-		// What percent of archive have we processed?
-		$progress = (int) min( ( $archive_bytes_offset / $total_archive_size ) * 100, 100 );
-
 		// Set progress
-		/* translators: Progress. */
-		Ai1wm_Status::info( sprintf( __( 'Unpacking archive...<br />%d%% complete', 'all-in-one-wp-migration' ), $progress ) );
+		Ai1wm_Status::info( __( 'Unpacking configuration...', 'all-in-one-wp-migration' ) );
 
 		// Open the archive file for reading
 		$archive = new Ai1wm_Extractor( ai1wm_archive_path( $params ) );
-
-		// Set the file pointer to the one that we have saved
-		$archive->set_file_pointer( $archive_bytes_offset );
 
 		// Validate the archive file consistency
 		if ( ! $archive->is_valid() ) {
@@ -105,73 +77,21 @@ class Ai1wm_Import_Validate {
 			);
 		}
 
-		// Flag to hold if file data has been processed
-		$completed = true;
+		// Unpack package.json and multisite.json files
+		$archive->extract_by_files_array( ai1wm_storage_path( $params ), array( AI1WM_PACKAGE_NAME, AI1WM_MULTISITE_NAME ) );
 
-		if ( $archive->has_not_reached_eof() ) {
-			$file_bytes_written = 0;
-
-			// Unpack package.json, multisite.json and database.sql files
-			if ( ( $completed = $archive->extract_by_files_array( ai1wm_storage_path( $params ), array( AI1WM_PACKAGE_NAME, AI1WM_MULTISITE_NAME, AI1WM_DATABASE_NAME ), array(), array(), $file_bytes_written, $file_bytes_offset ) ) ) {
-				$file_bytes_offset = 0;
-			}
-
-			// Get archive bytes offset
-			$archive_bytes_offset = $archive->get_file_pointer();
-		}
-
-		// End of the archive?
-		if ( $archive->has_reached_eof() ) {
-
-			// Check package.json file
-			if ( false === is_file( ai1wm_package_path( $params ) ) ) {
-				throw new Ai1wm_Import_Exception(
-					wp_kses(
-						__(
-							'Please ensure your file was created with the All-in-One WP Migration plugin.
-							<a href="https://help.servmask.com/knowledgebase/invalid-backup-file/" target="_blank">Technical details</a>',
-							'all-in-one-wp-migration'
-						),
-						ai1wm_allowed_html_tags()
-					)
-				);
-			}
-
-			// Set progress
-			Ai1wm_Status::info( __( 'Archive unpacked.', 'all-in-one-wp-migration' ) );
-
-			// Unset archive bytes offset
-			unset( $params['archive_bytes_offset'] );
-
-			// Unset file bytes offset
-			unset( $params['file_bytes_offset'] );
-
-			// Unset total archive size
-			unset( $params['total_archive_size'] );
-
-			// Unset completed flag
-			unset( $params['completed'] );
-
-		} else {
-
-			// What percent of archive have we processed?
-			$progress = (int) min( ( $archive_bytes_offset / $total_archive_size ) * 100, 100 );
-
-			// Set progress
-			/* translators: Progress. */
-			Ai1wm_Status::info( sprintf( __( 'Unpacking archive...<br />%d%% complete', 'all-in-one-wp-migration' ), $progress ) );
-
-			// Set archive bytes offset
-			$params['archive_bytes_offset'] = $archive_bytes_offset;
-
-			// Set file bytes offset
-			$params['file_bytes_offset'] = $file_bytes_offset;
-
-			// Set total archive size
-			$params['total_archive_size'] = $total_archive_size;
-
-			// Set completed flag
-			$params['completed'] = $completed;
+		// Check package.json file
+		if ( false === is_file( ai1wm_package_path( $params ) ) ) {
+			throw new Ai1wm_Import_Exception(
+				wp_kses(
+					__(
+						'Please ensure your file was created with the All-in-One WP Migration plugin.
+						<a href="https://help.servmask.com/knowledgebase/invalid-backup-file/" target="_blank">Technical details</a>',
+						'all-in-one-wp-migration'
+					),
+					ai1wm_allowed_html_tags()
+				)
+			);
 		}
 
 		// Close the archive file

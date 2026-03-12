@@ -44,7 +44,6 @@ class Ai1wm_Export_Download {
 
 		// Rename archive file
 		if ( rename( ai1wm_archive_path( $params ), ai1wm_backup_path( $params ) ) ) {
-
 			$blog_id = null;
 
 			// Get subsite Blog ID

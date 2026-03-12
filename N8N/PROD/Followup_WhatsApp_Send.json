@@ -1,0 +1,294 @@
+{
+  "name": "Followup WhatsApp Send - AutomatizaTech (PROD)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "followup-whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        160
+      ],
+      "id": "wh-followup-wa-001",
+      "name": "Webhook Followup WhatsApp",
+      "webhookId": "followup-whatsapp"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validar y preparar datos recibidos desde WordPress CRM\n// Soporta 3 tipos:\n//   type='demo'                  → 1ra reunión con prospecto\n//   type='seguimiento_prospecto' → Prospecto que ya tuvo demo (sin ficha/MAXTECH)\n//   type='seguimiento'           → Cliente convertido (con ficha/portal/MAXTECH)\ntry {\n  const data = $input.first().json.body || $input.first().json;\n\n  const phone = (data.phone || '').toString().replace(/^\\+/, '').replace(/\\s/g, '');\n  const meetingId = data.meeting_id;\n  const clientName = data.client_name || 'Cliente';\n  const companyName = data.company_name || '';\n  const formattedDate = data.formatted_date || data.meeting_date || '';\n  const formattedTime = data.formatted_time || data.meeting_time || '';\n  const meetLink = data.meet_link || 'Te llegará por correo';\n  const meetingSubject = data.meeting_subject || 'Reunión de Seguimiento';\n  const fichaUrl = data.ficha_url || '';\n  const meetingType = data.type || 'seguimiento';\n  const context = data.context || 'new';\n  const prospectTimelineUrl = data.prospect_timeline_url || '';\n\n  // Validar campos requeridos\n  if (!meetingId || !phone || phone.length < 8) {\n    return {\n      json: {\n        error: true,\n        errorMessage: `Datos incompletos: meeting_id=${meetingId}, phone=${phone} (len=${phone.length})`,\n        meeting_id: meetingId || 0,\n        phone: phone || 'N/A'\n      }\n    };\n  }\n\n  // Construir saludo personalizado\n  let greeting = `Hola ${clientName}`;\n  if (companyName) {\n    greeting += ` de *${companyName}*`;\n  }\n\n  let messageBody = '';\n  let btnPrefix = '';\n\n  if (meetingType === 'demo') {\n    // === TIPO 1: DEMO - Primera reunión con prospecto ===\n    btnPrefix = 'btn_demo';\n    if (context === 'reschedule') {\n      messageBody = `*Demo Reprogramada*\\n\\n${greeting}, tu demo con *AutomatizaTech* ha sido reprogramada.\\n\\n*Nueva Fecha:* ${formattedDate}\\n*Nueva Hora:* ${formattedTime} hrs (Chile)\\n*Modalidad:* Videollamada Google Meet\\n\\n📧 *Revisa tu correo*, ahí encontrarás el enlace actualizado de la reunión.\\n\\n¿Confirmas tu asistencia a la nueva fecha?`;\n    } else {\n      messageBody = `*Demo Agendada con AutomatizaTech* 🚀\\n\\n${greeting}, tu demo ha sido agendada exitosamente.\\n\\n*Fecha:* ${formattedDate}\\n*Hora:* ${formattedTime} hrs (Chile)\\n*Modalidad:* Videollamada Google Meet\\n*Duración:* Aprox. 30 minutos\\n\\n📧 *Revisa tu correo*, ahí encontrarás el enlace de la reunión.\\n\\n💡 En la demo te mostraremos cómo la automatización puede transformar tu negocio.\\n\\n¿Confirmas tu asistencia?`;\n    }\n\n  } else if (meetingType === 'seguimiento_prospecto') {\n    // === TIPO 2: SEGUIMIENTO DE PROSPECTO - Ya tuvo demo, aún no es cliente ===\n    btnPrefix = 'btn_prospect';\n    const prospectLine = prospectTimelineUrl ? `\\n\\n📋 *Tu Seguimiento:*\\n${prospectTimelineUrl}\\n\\n👆 Desde ahí puedes ver el historial completo de tu proceso, propuesta y reuniones.` : '';\n    if (context === 'reschedule') {\n      messageBody = `*Reunión Reagendada* 📅\\n\\n${greeting}, tu reunión con *AutomatizaTech* ha sido reagendada.\\n\\n*Asunto:* ${meetingSubject}\\n*Nueva Fecha:* ${formattedDate}\\n*Nueva Hora:* ${formattedTime} hrs (Chile)\\n*Modalidad:* Videollamada Google Meet${prospectLine}\\n\\n📧 *Revisa tu correo*, ahí encontrarás el enlace actualizado de la reunión.\\n\\n¿Confirmas tu asistencia a la nueva fecha?`;\n    } else {\n      messageBody = `*Reunión Agendada con AutomatizaTech* 📅\\n\\n${greeting}, se ha agendado una nueva reunión contigo.\\n\\n*Asunto:* ${meetingSubject}\\n*Fecha:* ${formattedDate}\\n*Hora:* ${formattedTime} hrs (Chile)\\n*Modalidad:* Videollamada Google Meet${prospectLine}\\n\\n📧 *Revisa tu correo*, ahí encontrarás el enlace de la reunión.\\n\\n¿Confirmas tu asistencia?`;\n    }\n\n  } else {\n    // === TIPO 3: SEGUIMIENTO DE CLIENTE - Convertido, con ficha/portal/MAXTECH ===\n    btnPrefix = 'btn_followup';\n    const fichaLine = fichaUrl ? `\\n\\n📂 *Tu Portal de Cliente:*\\n${fichaUrl}\\n\\n👆 Desde tu ficha puedes:\\n• Ver todo el historial de tu proyecto\\n• Revisar reuniones, pagos y entregables\\n• Consultar con *MAXTECH* 🤖, tu agente IA especializado que tiene contexto completo de tu proyecto` : '';\n\n    if (context === 'reschedule') {\n      messageBody = `*Reunión de Seguimiento Reagendada*\\n\\n${greeting}, tu reunión de seguimiento con *AutomatizaTech* ha sido reagendada.\\n\\n*Proyecto:* ${meetingSubject}\\n*Nueva Fecha:* ${formattedDate}\\n*Nueva Hora:* ${formattedTime} hrs (Chile)${fichaLine}\\n\\n📧 *Revisa tu correo*, ahí encontrarás el enlace actualizado de la reunión.\\n\\n¿Confirmas tu asistencia a la nueva fecha?`;\n    } else {\n      messageBody = `*Reunión de Seguimiento Agendada*\\n\\n${greeting}, se ha agendado una reunión de seguimiento con *AutomatizaTech*.\\n\\n*Proyecto:* ${meetingSubject}\\n*Fecha:* ${formattedDate}\\n*Hora:* ${formattedTime} hrs (Chile)${fichaLine}\\n\\n📧 *Revisa tu correo*, ahí encontrarás el enlace de la reunión.\\n\\n¿Confirmas tu asistencia?`;\n    }\n  }\n\n  return {\n    json: {\n      error: false,\n      meeting_id: meetingId,\n      phone: phone,\n      clientName: clientName,\n      companyName: companyName,\n      meetingType: meetingType,\n      messageBody: messageBody,\n      btnConfirmId: `${btnPrefix}_confirm_${meetingId}`,\n      btnRescheduleId: `${btnPrefix}_reschedule_${meetingId}`,\n      btnCancelId: `${btnPrefix}_cancel_${meetingId}`\n    }\n  };\n} catch (err) {\n  return {\n    json: {\n      error: true,\n      errorMessage: `Error en Prepare WA Message: ${err.message}`,\n      meeting_id: 0,\n      phone: 'N/A'\n    }\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        136,
+        160
+      ],
+      "id": "code-followup-wa-001",
+      "name": "Prepare WA Message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v22.0/946501128543201/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"button\",\n    \"body\": {\n      \"text\": {{ JSON.stringify($json.messageBody) }}\n    },\n    \"action\": {\n      \"buttons\": [\n        {\n          \"type\": \"reply\",\n          \"reply\": {\n            \"id\": \"{{ $json.btnConfirmId }}\",\n            \"title\": \"✅ Confirmar\"\n          }\n        },\n        {\n          \"type\": \"reply\",\n          \"reply\": {\n            \"id\": \"{{ $json.btnRescheduleId }}\",\n            \"title\": \"⏰ Reagendar\"\n          }\n        },\n        {\n          \"type\": \"reply\",\n          \"reply\": {\n            \"id\": \"{{ $json.btnCancelId }}\",\n            \"title\": \"❌ Cancelar\"\n          }\n        }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        384,
+        160
+      ],
+      "id": "http-followup-wa-send",
+      "name": "Send WhatsApp",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "SH8OXr93p852Ll6m",
+          "name": "WhatsApp Tech"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-wa-success",
+              "leftValue": "={{ JSON.stringify($json.messages || '') }}",
+              "rightValue": "wamid",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        560,
+        160
+      ],
+      "id": "if-followup-wa-check",
+      "name": "WA Sent OK?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Prepare WA Message').item.json.meetingType === 'demo' ? 'https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/' + $('Prepare WA Message').item.json.meeting_id + '/mark-whatsapp-sent' : 'https://automatizatech.cl/wp-json/automatiza-tech/v1/followup-meetings/' + $('Prepare WA Message').item.json.meeting_id + '/mark-whatsapp-sent' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"whatsapp_sent\": true,\n  \"whatsapp_sent_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        632,
+        112
+      ],
+      "id": "http-followup-wa-mark",
+      "name": "Mark WA Sent in WP",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"WhatsApp enviado exitosamente\",\n  \"meeting_id\": {{ $('Prepare WA Message').item.json.meeting_id }},\n  \"type\": \"{{ $('Prepare WA Message').item.json.meetingType }}\",\n  \"phone\": \"{{ $('Prepare WA Message').item.json.phone }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        112
+      ],
+      "id": "resp-followup-wa-ok",
+      "name": "Respond Success"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"message\": \"Error al enviar WhatsApp\",\n  \"detail\": {{ JSON.stringify($json.error || $json.message || $json) }}\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        632,
+        320
+      ],
+      "id": "resp-followup-wa-err",
+      "name": "Respond Error"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-data-valid",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "false"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        260,
+        160
+      ],
+      "id": "if-data-valid",
+      "name": "Data Valid?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"message\": \"Datos inválidos: {{ $json.errorMessage || 'Error desconocido en validación' }}\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        260,
+        380
+      ],
+      "id": "resp-validation-err",
+      "name": "Respond Validation Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Followup WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Prepare WA Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare WA Message": {
+      "main": [
+        [
+          {
+            "node": "Data Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Valid?": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "WA Sent OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WA Sent OK?": {
+      "main": [
+        [
+          {
+            "node": "Mark WA Sent in WP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark WA Sent in WP": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "p7ISUf0J5GycHscc"
+  },
+  "versionId": "1.0.0",
+  "meta": {
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "id": "followup-wa-send-001",
+  "tags": []
+}

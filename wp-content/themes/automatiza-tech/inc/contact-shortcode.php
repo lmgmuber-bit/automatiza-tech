@@ -113,7 +113,7 @@ function automatiza_tech_contact_form_shortcode($atts) {
                            title="Ingresa solo el número sin el código de país (8-15 dígitos).">
                 </div>
                 <small class="form-text text-muted">
-                    <span id="phone-preview">Formato: +56 964324169</span>
+                    <span id="phone-preview">Formato: +56 927002984</span>
                 </small>
             </div>
             
@@ -127,10 +127,10 @@ function automatiza_tech_contact_form_shortcode($atts) {
                        placeholder="Ej: 154972986"
                        required
                        minlength="5"
-                       maxlength="10"
+                       maxlength="12"
                        title="Ingresa tu RUT, DNI, Cédula o Pasaporte según tu país.">
                 <small class="form-text text-muted">
-                    <span id="tax-id-help">Ingresa tu RUT completo (9 dígitos con dígito verificador). Ejemplo: 261918072</span>
+                    <span id="tax-id-help">Ingresa tu RUT completo (8-9 dígitos con dígito verificador). Ejemplo: 62131241 o 261918072</span>
                 </small>
                 <div id="tax-id-validation" style="display: none; margin-top: 0.5rem; padding: 0.5rem; border-radius: 4px; font-size: 0.9rem;"></div>
             </div>
@@ -421,13 +421,26 @@ function automatiza_tech_contact_form_shortcode($atts) {
     <script>
     // Usar JavaScript vanilla para mayor compatibilidad
     document.addEventListener('DOMContentLoaded', function() {
-        // Definir configuración AJAX
-        window.automatiza_ajax = {
-            ajaxurl: '<?php echo admin_url("admin-ajax.php"); ?>',
-            nonce: '<?php echo wp_create_nonce("automatiza_ajax_nonce"); ?>'
-        };
+        // Definir configuración AJAX si no existe
+        if (typeof window.automatiza_ajax === 'undefined') {
+            window.automatiza_ajax = {
+                ajaxurl: '<?php echo admin_url("admin-ajax.php"); ?>',
+                nonce: '<?php echo wp_create_nonce("automatiza_ajax_nonce"); ?>'
+            };
+        }
         
         console.log('Form script loaded with config:', window.automatiza_ajax);
+
+        // Refrescar nonce para evitar problemas de caché
+        fetch(window.automatiza_ajax.ajaxurl + '?action=get_nonce')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data.nonce) {
+                    window.automatiza_ajax.nonce = data.data.nonce;
+                    console.log('Nonce refreshed successfully');
+                }
+            })
+            .catch(e => console.log('Nonce refresh skipped or failed', e));
         
         // ============================================
         // FUNCIONES DE VALIDACIÓN Y FORMATEO DE RUT CHILENO
@@ -724,9 +737,9 @@ function automatiza_tech_contact_form_shortcode($atts) {
             if (countryCode === '+56') {
                 // Chile
                 taxIdLabel.textContent = 'RUT';
-                taxIdHelp.textContent = 'Ingresa tu RUT completo (9 dígitos con dígito verificador). Ejemplo: 261918072';
-                taxIdInput.placeholder = 'Ej: 261918072';
-                taxIdInput.maxLength = 10; // 9 dígitos máximo
+                taxIdHelp.textContent = 'Ingresa tu RUT completo (8-9 dígitos con dígito verificador). Ejemplo: 62131241 o 261918072';
+                taxIdInput.placeholder = 'Ej: 62131241';
+                taxIdInput.maxLength = 12; // 8-9 dígitos + guión formateado
             } else {
                 // Otros países
                 taxIdLabel.textContent = 'DNI/Cédula/Pasaporte';
@@ -773,8 +786,8 @@ function automatiza_tech_contact_form_shortcode($atts) {
                     // Actualizar el valor sin formato mientras escribe
                     this.value = cleaned;
                     
-                    // Validar en línea cuando tenga 9 caracteres
-                    if (cleaned.length === 9) {
+                    // Validar en línea cuando tenga 8 o 9 caracteres
+                    if (cleaned.length >= 8 && cleaned.length <= 9) {
                         var body = cleaned.slice(0, -1);
                         var dv = cleaned.slice(-1);
                         
@@ -803,9 +816,9 @@ function automatiza_tech_contact_form_shortcode($atts) {
                             showValidationMessage('error', '❌ RUT inválido. Verifica el dígito verificador.');
                             isRutValid = false;
                         }
-                    } else if (cleaned.length > 0 && cleaned.length < 9) {
+                    } else if (cleaned.length > 0 && cleaned.length < 8) {
                         // Todavía está escribiendo
-                        showValidationMessage('info', 'Ingresa los ' + (9 - cleaned.length) + ' caracteres restantes...');
+                        showValidationMessage('info', 'Ingresa al menos ' + (8 - cleaned.length) + ' caracteres más...');
                         isRutValid = false;
                     } else {
                         hideValidationMessage();
@@ -837,7 +850,7 @@ function automatiza_tech_contact_form_shortcode($atts) {
                 if (countryCode === '+56') {
                     var cleaned = cleanRut(this.value);
                     
-                    if (cleaned.length === 9 && validateRut(cleaned)) {
+                    if (cleaned.length >= 8 && cleaned.length <= 9 && validateRut(cleaned)) {
                         var body = cleaned.slice(0, -1);
                         var dv = cleaned.slice(-1);
                         var formatted = body + '-' + dv;
@@ -845,7 +858,7 @@ function automatiza_tech_contact_form_shortcode($atts) {
                         showValidationMessage('success', '✓ RUT válido: ' + formatted);
                         isRutValid = true;
                     } else if (cleaned.length > 0) {
-                        showValidationMessage('error', '❌ RUT inválido. Debe tener 9 dígitos con dígito verificador correcto.');
+                        showValidationMessage('error', '❌ RUT inválido. Debe tener 8 o 9 dígitos con dígito verificador correcto.');
                         isRutValid = false;
                     } else {
                         hideValidationMessage();
@@ -1118,7 +1131,7 @@ function automatiza_tech_contact_form_shortcode($atts) {
                     // Redirigir a WhatsApp después de 2 segundos
                     setTimeout(function() {
                         var whatsappMsg = encodeURIComponent('Hola! Acabo de enviar el formulario de contacto desde su sitio web. Me gustaría conocer más sobre Automatiza Tech.');
-                        var whatsappUrl = 'https://wa.me/56940331127?text=' + whatsappMsg;
+                        var whatsappUrl = 'https://wa.me/56927002984?text=' + whatsappMsg;
                         window.open(whatsappUrl, '_blank');
                     }, 2000);
                 } else {
@@ -1146,4 +1159,3 @@ function automatiza_tech_contact_form_shortcode($atts) {
     return ob_get_clean();
 }
 add_shortcode('contact_form', 'automatiza_tech_contact_form_shortcode');
-?>

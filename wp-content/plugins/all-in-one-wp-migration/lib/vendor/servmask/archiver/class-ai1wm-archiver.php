@@ -32,11 +32,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 abstract class Ai1wm_Archiver {
 
 	/**
-	 * Filename including path to the file
+	 * File name including path to the file
 	 *
 	 * @type string
 	 */
 	protected $file_name = null;
+
+	/**
+	 * File password string
+	 *
+	 * @type string
+	 */
+	protected $file_password = null;
+
+	/**
+	 * File compression type
+	 *
+	 * @type string
+	 */
+	protected $file_compression = null;
 
 	/**
 	 * Handle to the file
@@ -68,24 +82,28 @@ abstract class Ai1wm_Archiver {
 	 *
 	 * @type string
 	 */
-	protected $eof = null;
+	protected $file_eof = null;
 
 	/**
 	 * Default constructor
 	 *
 	 * Initializes filename and end of file block
 	 *
-	 * @param string $file_name Archive file
-	 * @param bool   $write     Read/write mode
+	 * @param string $file_name        File to use as archive
+	 * @param string $file_password    File password string
+	 * @param string $file_compression File compression type
+	 * @param bool   $file_write       File Read/write mode
 	 */
-	public function __construct( $file_name, $write = false ) {
-		$this->file_name = $file_name;
+	public function __construct( $file_name, $file_password = null, $file_compression = null, $file_write = false ) {
+		$this->file_name        = $file_name;
+		$this->file_password    = $file_password;
+		$this->file_compression = $file_compression;
 
 		// Initialize end of file block
-		$this->eof = pack( 'a4377', '' );
+		$this->file_eof = pack( 'a4377', '' );
 
 		// Open archive file
-		if ( $write ) {
+		if ( $file_write ) {
 			// Open archive file for writing
 			if ( ( $this->file_handle = @fopen( $file_name, 'cb' ) ) === false ) {
 				throw new Ai1wm_Not_Accessible_Exception( sprintf( __( 'Could not open file for writing. File: %s', 'all-in-one-wp-migration' ), $this->file_name ) );
@@ -149,8 +167,8 @@ abstract class Ai1wm_Archiver {
 		}
 
 		// Write end of file block
-		if ( ( $file_bytes = @fwrite( $this->file_handle, $this->eof ) ) !== false ) {
-			if ( strlen( $this->eof ) !== $file_bytes ) {
+		if ( ( $file_bytes = @fwrite( $this->file_handle, $this->file_eof ) ) !== false ) {
+			if ( strlen( $this->file_eof ) !== $file_bytes ) {
 				throw new Ai1wm_Quota_Exceeded_Exception( sprintf( __( 'Out of disk space. Could not write end of block to file. File: %s', 'all-in-one-wp-migration' ), $this->file_name ) );
 			}
 		} else {
@@ -208,7 +226,7 @@ abstract class Ai1wm_Archiver {
 		}
 
 		// Trailing block does not match EOL: file is incomplete
-		if ( @fread( $this->file_handle, 4377 ) !== $this->eof ) {
+		if ( @fread( $this->file_handle, 4377 ) !== $this->file_eof ) {
 			return false;
 		}
 

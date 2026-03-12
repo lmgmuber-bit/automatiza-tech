@@ -1,0 +1,336 @@
+{
+  "name": "WhatsApp Tech - Recordatorios (PROD)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [-800, 300],
+      "id": "wa-reminder-trigger",
+      "name": "Check Reminders (Hourly)"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Citas",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [-600, 300],
+      "id": "wa-get-appointments",
+      "name": "Get All Appointments",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtrar citas que necesitan recordatorio\n// Recordatorio 24h antes y 1h antes\nconst appointments = $input.all();\nconst now = new Date();\nconst remindersToSend = [];\n\nappointments.forEach(apt => {\n  // Solo citas agendadas (no canceladas)\n  if (apt.json.Estado !== 'Agendada') return;\n  \n  const appointmentDate = new Date(apt.json.Fecha);\n  const hoursUntil = (appointmentDate - now) / (1000 * 60 * 60);\n  \n  // Recordatorio 24 horas antes (entre 23.5 y 24.5 horas)\n  if (hoursUntil >= 23.5 && hoursUntil <= 24.5) {\n    if (!apt.json.Recordatorio24h) {\n      remindersToSend.push({\n        ...apt.json,\n        reminderType: '24h',\n        hoursUntil: Math.round(hoursUntil),\n        row: apt.json.row_number\n      });\n    }\n  }\n  \n  // Recordatorio 1 hora antes (entre 0.5 y 1.5 horas)\n  if (hoursUntil >= 0.5 && hoursUntil <= 1.5) {\n    if (!apt.json.Recordatorio1h) {\n      remindersToSend.push({\n        ...apt.json,\n        reminderType: '1h',\n        hoursUntil: Math.round(hoursUntil),\n        row: apt.json.row_number\n      });\n    }\n  }\n});\n\nreturn remindersToSend.map(r => ({ json: r }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [-400, 300],
+      "id": "wa-filter-reminders",
+      "name": "Filter Pending Reminders"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $input.all().length }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-200, 300],
+      "id": "wa-has-reminders",
+      "name": "Has Reminders?"
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 2,
+      "position": [0, 200],
+      "id": "wa-batch-reminders",
+      "name": "Process One at Time"
+    },
+    {
+      "parameters": {
+        "amount": "={{ Math.floor(Math.random() * 20) + 10 }}",
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [200, 200],
+      "id": "wa-rate-limit-wait",
+      "name": "Rate Limit (10-30s)"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.reminderType }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "24h",
+              "output": 0
+            },
+            {
+              "value2": "1h",
+              "output": 1
+            }
+          ]
+        },
+        "fallbackOutput": 2
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [400, 200],
+      "id": "wa-reminder-type",
+      "name": "Reminder Type"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/YOUR_PHONE_NUMBER_ID/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.Telefono }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"¡Hola {{ $json.Nombre }}! 👋\\n\\nTe recordamos que tienes una cita agendada con AutomatizaTech:\\n\\n📅 Fecha: {{ $json.Fecha.split('T')[0] }}\\n🕐 Hora: {{ $json.Fecha.split('T')[1].substring(0,5) }}\\n\\n¡Te esperamos! Si necesitas reagendar, responde a este mensaje.\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [600, 100],
+      "id": "wa-send-24h-reminder",
+      "name": "Send 24h Reminder",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/YOUR_PHONE_NUMBER_ID/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppBusinessCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.Telefono }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"¡Hola {{ $json.Nombre }}! ⏰\\n\\nTu cita con AutomatizaTech es en 1 hora.\\n\\n¡Nos vemos pronto! 🚀\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [600, 300],
+      "id": "wa-send-1h-reminder",
+      "name": "Send 1h Reminder",
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Citas",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Recordatorio24h": "={{ new Date().toISOString() }}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [800, 100],
+      "id": "wa-mark-24h-sent",
+      "name": "Mark 24h Sent",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Citas",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Recordatorio1h": "={{ new Date().toISOString() }}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [800, 300],
+      "id": "wa-mark-1h-sent",
+      "name": "Mark 1h Sent",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1000, 200],
+      "id": "wa-next-batch",
+      "name": "Next Batch"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $node['Process One at Time'].context.currentRunIndex }}",
+              "operation": "smallerEqual",
+              "value2": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1000, 400],
+      "id": "wa-check-batch-limit",
+      "name": "Under Limit (10)?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1200, 500],
+      "id": "wa-stop-batch",
+      "name": "Stop (Limit)"
+    }
+  ],
+  "connections": {
+    "Check Reminders (Hourly)": {
+      "main": [[{"node": "Get All Appointments", "type": "main", "index": 0}]]
+    },
+    "Get All Appointments": {
+      "main": [[{"node": "Filter Pending Reminders", "type": "main", "index": 0}]]
+    },
+    "Filter Pending Reminders": {
+      "main": [[{"node": "Has Reminders?", "type": "main", "index": 0}]]
+    },
+    "Has Reminders?": {
+      "main": [
+        [{"node": "Process One at Time", "type": "main", "index": 0}],
+        []
+      ]
+    },
+    "Process One at Time": {
+      "main": [
+        [{"node": "Rate Limit (10-30s)", "type": "main", "index": 0}],
+        []
+      ]
+    },
+    "Rate Limit (10-30s)": {
+      "main": [[{"node": "Reminder Type", "type": "main", "index": 0}]]
+    },
+    "Reminder Type": {
+      "main": [
+        [{"node": "Send 24h Reminder", "type": "main", "index": 0}],
+        [{"node": "Send 1h Reminder", "type": "main", "index": 0}],
+        []
+      ]
+    },
+    "Send 24h Reminder": {
+      "main": [[{"node": "Mark 24h Sent", "type": "main", "index": 0}]]
+    },
+    "Send 1h Reminder": {
+      "main": [[{"node": "Mark 1h Sent", "type": "main", "index": 0}]]
+    },
+    "Mark 24h Sent": {
+      "main": [[{"node": "Next Batch", "type": "main", "index": 0}]]
+    },
+    "Mark 1h Sent": {
+      "main": [[{"node": "Next Batch", "type": "main", "index": 0}]]
+    },
+    "Next Batch": {
+      "main": [[{"node": "Under Limit (10)?", "type": "main", "index": 0}]]
+    },
+    "Under Limit (10)?": {
+      "main": [
+        [{"node": "Process One at Time", "type": "main", "index": 0}],
+        [{"node": "Stop (Limit)", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago",
+    "saveManualExecutions": true
+  },
+  "versionId": "wa-reminders-v2",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "automatizatech-whatsapp"
+  },
+  "id": "WhatsApp_Tech_Recordatorios",
+  "tags": []
+}

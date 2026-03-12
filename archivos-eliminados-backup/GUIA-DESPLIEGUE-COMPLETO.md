@@ -10,7 +10,7 @@
 **Ruta:** `wp-content/themes/automatiza-tech/inc/contact-form.php`
 
 **Correcciones aplicadas:**
-✅ Remitente de emails corregido (info@automatizatech.shop)
+✅ Remitente de emails corregido (contacto@automatizatech.cl)
 ✅ Hook AJAX para descarga de facturas agregado
 ✅ Método download_invoice() creado
 ✅ Botón de descarga actualizado con URL correcta
@@ -19,8 +19,8 @@
 
 **Líneas modificadas:**
 - Línea 38: Hook download_invoice agregado
-- Línea 1135: setFrom('info@automatizatech.shop')
-- Línea 1224: setFrom('info@automatizatech.shop')  
+- Línea 1135: setFrom('contacto@automatizatech.cl')
+- Línea 1224: setFrom('contacto@automatizatech.cl')  
 - Línea 2101: Método download_invoice() completo
 - Línea 4539: URL del botón actualizada
 - Línea 4545: Emoji corregido
@@ -142,7 +142,7 @@ Abre cualquier PDF generado y verifica:
 ```
 Convierte un contacto y verifica logs:
 ✅ Sin error: "Sender address rejected"
-✅ From: info@automatizatech.shop
+✅ From: contacto@automatizatech.cl
 ✅ Email llega a cliente
 ✅ Email de notificación llega a admin
 ```

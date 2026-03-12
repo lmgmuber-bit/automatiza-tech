@@ -1,0 +1,187 @@
+{
+  "name": "WhatsApp Recordatorio 24h - AutomatizaTech (PROD)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300],
+      "id": "cron-24h-wa",
+      "name": "Cron cada 30 min"
+    },
+    {
+      "parameters": {
+        "url": "https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/reminders/24h",
+        "options": {
+          "splitIntoItems": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, 300],
+      "id": "get-leads-24h-wa",
+      "name": "Get Leads 24h"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-has-leads",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "id": "has-leads-24h-wa",
+      "name": "Has Leads?"
+    },
+    {
+      "parameters": {
+        "maxItems": 10
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [920, 260],
+      "id": "limit-24h-wa",
+      "name": "Limit 10 Anti-Spam"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/946501128543201/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', to: $json.phone, type: 'interactive', interactive: { type: 'button', body: { text: '* Recordatorio - Tu cita es manana *\n\nHola ' + $json.name + ', te recordamos que tienes una reunion agendada con AutomatizaTech.\n\n* Fecha: * ' + $json.scheduled_date + '\n* Hora: * ' + $json.scheduled_time + ' hrs\n* Enlace: * ' + ($json.meet_link || 'Te llegara por correo') + '\n\nPodras asistir?' }, action: { buttons: [{ type: 'reply', reply: { id: 'btn_confirm_' + $json.id, title: 'Si, confirmo' }}, { type: 'reply', reply: { id: 'btn_no_' + $json.id, title: 'No podre' }}] } } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1140, 260],
+      "id": "send-wa-24h",
+      "name": "Send WhatsApp 24h",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "SH8OXr93p852Ll6m",
+          "name": "WhatsApp Tech"
+        }
+      },
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/update-reminder/{{ $json.id }}/24h",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1360, 260],
+      "id": "mark-sent-24h-wa",
+      "name": "Mark 24h Sent"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [920, 420],
+      "id": "no-leads-24h-wa",
+      "name": "No Leads"
+    }
+  ],
+  "connections": {
+    "Cron cada 30 min": {
+      "main": [
+        [
+          {
+            "node": "Get Leads 24h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Leads 24h": {
+      "main": [
+        [
+          {
+            "node": "Has Leads?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Leads?": {
+      "main": [
+        [
+          {
+            "node": "Limit 10 Anti-Spam",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit 10 Anti-Spam": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp 24h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp 24h": {
+      "main": [
+        [
+          {
+            "node": "Mark 24h Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago"
+  },
+  "active": false
+}

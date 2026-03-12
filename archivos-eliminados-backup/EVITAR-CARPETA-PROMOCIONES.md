@@ -22,12 +22,12 @@ $subject = 'Re: Tu consulta en Automatiza Tech - ' . $contact->name;
 $headers = array(
     'Content-Type: text/html; charset=UTF-8',
     'From: ' . $contact->name . ' en Automatiza Tech <' . get_option('admin_email') . '>',
-    'Reply-To: Automatiza Tech <info@automatizatech.cl>',
+    'Reply-To: Automatiza Tech <contacto@automatizatech.cl>',
     'Bcc: automatizatech.bots@gmail.com',
     'X-Priority: 3',                    // Prioridad normal (no urgente)
     'X-Mailer: WordPress/' . get_bloginfo('version'),
     'Importance: Normal',               // No marcar como importante
-    'List-Unsubscribe: <mailto:info@automatizatech.cl?subject=unsubscribe>',
+    'List-Unsubscribe: <mailto:contacto@automatizatech.cl?subject=unsubscribe>',
     'Precedence: bulk'                  // Identifica como email masivo legítimo
 );
 ```

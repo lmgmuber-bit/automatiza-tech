@@ -167,6 +167,55 @@ function services_admin_page() {
         .badge-features { background: #00a32a; }
         .badge-special { background: #d63638; }
         .badge-general { background: #8c8f94; }
+        
+        /* ==================== ESTILOS RESPONSIVOS SERVICES ADMIN ==================== */
+        
+        /* Mobile (767px y menos) */
+        @media screen and (max-width: 767px) {
+            .wrap h1 {
+                font-size: 20px;
+            }
+            
+            /* Card de tipo de cambio */
+            .card {
+                padding: 12px !important;
+            }
+            .card h3 {
+                font-size: 16px;
+            }
+            .card .button {
+                width: 100%;
+                min-height: 44px;
+                margin-top: 10px;
+            }
+            
+            /* Tabla - scroll horizontal */
+            .wp-list-table.widefat {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .wp-list-table {
+                min-width: 700px;
+                font-size: 13px;
+            }
+            .wp-list-table th,
+            .wp-list-table td {
+                padding: 10px 8px;
+            }
+            .wp-list-table .button-small {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+        }
+        
+        /* Touch-friendly */
+        @media (hover: none) and (pointer: coarse) {
+            .card .button,
+            .wp-list-table .button-small {
+                min-height: 44px;
+            }
+        }
         </style>
     </div>
     <?php
@@ -292,6 +341,7 @@ function new_service_page() {
                             <option value="pricing" <?php echo ($service && $service->service_category === 'pricing') ? 'selected' : ''; ?>>Pricing</option>
                             <option value="features" <?php echo ($service && $service->service_category === 'features') ? 'selected' : ''; ?>>Features</option>
                             <option value="special" <?php echo ($service && $service->service_category === 'special') ? 'selected' : ''; ?>>Special</option>
+                            <option value="custom" <?php echo ($service && $service->service_category === 'custom') ? 'selected' : ''; ?>>Proyectos Personalizados</option>
                             <option value="general" <?php echo ($service && $service->service_category === 'general') ? 'selected' : ''; ?>>General</option>
                         </select>
                     </td>

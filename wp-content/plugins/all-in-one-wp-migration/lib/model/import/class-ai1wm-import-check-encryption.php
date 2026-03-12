@@ -32,6 +32,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Ai1wm_Import_Check_Encryption {
 
 	public static function execute( $params ) {
+
 		// Read package.json file
 		$handle = ai1wm_open( ai1wm_package_path( $params ), 'r' );
 
@@ -42,30 +43,44 @@ class Ai1wm_Import_Check_Encryption {
 		// Close handle
 		ai1wm_close( $handle );
 
-		if ( empty( $package['Encrypted'] ) || empty( $package['EncryptedSignature'] ) || ! empty( $params['is_decryption_password_valid'] ) ) {
+		// No encryption provided
+		if ( empty( $package['Encrypted'] ) || empty( $package['EncryptedSignature'] ) ) {
 			return $params;
 		}
 
+		// Check decryption support
 		if ( ! ai1wm_can_decrypt() ) {
-			$message = __( 'Importing an encrypted backup is not supported on this server. The process cannot continue. <a href="https://help.servmask.com/knowledgebase/unable-to-encrypt-and-decrypt-backups/" target="_blank">Technical details</a>', 'all-in-one-wp-migration' );
-
 			if ( defined( 'WP_CLI' ) ) {
-				WP_CLI::error( $message );
+				WP_CLI::error( __( 'Importing an encrypted backup is not supported on this server. The process cannot continue. Technical details: https://help.servmask.com/knowledgebase/unable-to-encrypt-and-decrypt-backups/', 'all-in-one-wp-migration' ) );
 			} else {
-				Ai1wm_Status::server_cannot_decrypt( $message );
+				Ai1wm_Status::server_cannot_decrypt( __( 'Importing an encrypted backup is not supported on this server. The process cannot continue. <a href="https://help.servmask.com/knowledgebase/unable-to-encrypt-and-decrypt-backups/" target="_blank">Technical details</a>', 'all-in-one-wp-migration' ) );
 				exit;
 			}
 		}
 
+		// Get WP CLI decryption password
 		if ( defined( 'WP_CLI' ) ) {
-			$message = __(
-				'Backup is encrypted. Please provide decryption password: ',
-				'all-in-one-wp-migration'
-			);
+			$params['decryption_password'] = readline( __( 'Backup is encrypted. Please provide decryption password: ', 'all-in-one-wp-migration' ) );
+		}
 
-			$params['decryption_password'] = readline( $message );
+		// Validate decryption password
+		if ( ! empty( $params['decryption_password'] ) ) {
+			if ( ai1wm_is_decryption_password_valid( $package['EncryptedSignature'], $params['decryption_password'] ) ) {
 
-			return $params;
+				// Set progress
+				Ai1wm_Status::info( __( 'Decryption password validated.', 'all-in-one-wp-migration' ) );
+
+				return $params;
+			}
+
+			$decryption_password_error = __( 'The decryption password is not valid. The process cannot continue.', 'all-in-one-wp-migration' );
+
+			if ( defined( 'WP_CLI' ) ) {
+				WP_CLI::error( $decryption_password_error );
+			} else {
+				Ai1wm_Status::backup_is_encrypted( $decryption_password_error );
+				exit;
+			}
 		}
 
 		Ai1wm_Status::backup_is_encrypted( null );

@@ -1,0 +1,337 @@
+{
+  "name": "Reporte Semanal - KellsCapilar",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 21,
+              "triggerAtMinute": 0,
+              "triggerAtDay": 0
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1696,
+        368
+      ],
+      "id": "weekly-cron-001",
+      "name": "Cron Domingos 21:00"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calcular rango de la próxima semana (lunes a viernes)\nconst now = DateTime.now().setZone('America/Santiago');\n\n// Obtener el próximo lunes\nlet nextMonday = now.plus({ days: 1 });\nwhile (nextMonday.weekday !== 1) {\n  nextMonday = nextMonday.plus({ days: 1 });\n}\n\n// Viernes de esa semana\nconst nextFriday = nextMonday.plus({ days: 4 });\n\nconst meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];\n\n// Generar array de fechas de lunes a viernes\nconst weekDates = [];\nfor (let i = 0; i < 5; i++) {\n  const date = nextMonday.plus({ days: i });\n  weekDates.push(date.toFormat('yyyy-MM-dd'));\n}\n\nreturn [{ \n  json: { \n    weekDates: weekDates,\n    mondayDate: nextMonday.toFormat('yyyy-MM-dd'),\n    fridayDate: nextFriday.toFormat('yyyy-MM-dd'),\n    weekRangeDisplay: `${nextMonday.day} al ${nextFriday.day} de ${meses[nextMonday.month - 1]}`,\n    mondayDisplay: `${nextMonday.day} de ${meses[nextMonday.month - 1]}`\n  } \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1472,
+        368
+      ],
+      "id": "calc-week-001",
+      "name": "Calcular Semana"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2101861815,
+          "mode": "list",
+          "cachedResultName": "Configuracion",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=2101861815"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1248,
+        368
+      ],
+      "id": "read-config-weekly-001",
+      "name": "Read Configuracion",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1703053541,
+          "mode": "list",
+          "cachedResultName": "Citas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=1703053541"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1040,
+        368
+      ],
+      "id": "read-citas-weekly-001",
+      "name": "Read Todas las Citas",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtrar citas de la próxima semana (lunes a viernes)\nconst configRows = $('Read Configuracion').all().map(i => i.json);\nconst allCitas = $input.all().map(i => i.json);\nconst weekData = $('Calcular Semana').first().json;\nconst weekDates = weekData.weekDates;\n\n// Convertir filas de configuración (parametro/valor) a objeto\nconst config = {};\nfor (const row of configRows) {\n  const param = String(row.parametro || '').trim();\n  const valor = row.valor;\n  if (param) {\n    config[param] = valor;\n  }\n}\n\n// FILTRAR: solo citas de la semana con estado Confirmado\nconst citasSemana = allCitas.filter(cita => {\n  const fecha = String(cita.fecha || '').trim();\n  const estado = String(cita.estado || '').trim().toLowerCase();\n  return weekDates.includes(fecha) && estado === 'confirmado';\n});\n\n// Ordenar por fecha y hora\ncitasSemana.sort((a, b) => {\n  const fechaA = String(a.fecha || '');\n  const fechaB = String(b.fecha || '');\n  if (fechaA !== fechaB) return fechaA.localeCompare(fechaB);\n  const horaA = String(a.hora || '00:00');\n  const horaB = String(b.hora || '00:00');\n  return horaA.localeCompare(horaB);\n});\n\n// Agrupar citas por día\nconst citasPorDia = {};\nconst diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];\n\nfor (const fecha of weekDates) {\n  const dateObj = new Date(fecha + 'T12:00:00');\n  const diaNombre = diasSemana[dateObj.getDay()];\n  const dia = dateObj.getDate();\n  citasPorDia[fecha] = {\n    nombre: diaNombre,\n    dia: dia,\n    fecha: fecha,\n    citas: []\n  };\n}\n\nfor (const cita of citasSemana) {\n  const fecha = String(cita.fecha || '').trim();\n  if (citasPorDia[fecha]) {\n    citasPorDia[fecha].citas.push(cita);\n  }\n}\n\n// Obtener datos de configuración\nconst negocioNombre = config.negocio_nombre || 'Tu Negocio';\nconst negocioEmail = config.negocio_email || '';\n\nreturn [{ \n  json: { \n    citasSemana: citasSemana,\n    citasPorDia: citasPorDia,\n    totalCitas: citasSemana.length,\n    weekRangeDisplay: weekData.weekRangeDisplay,\n    negocioNombre,\n    negocioEmail,\n    hasCitas: citasSemana.length > 0\n  } \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -816,
+        368
+      ],
+      "id": "filter-citas-weekly-001",
+      "name": "Filtrar Citas de la Semana"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.hasCitas }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              },
+              "id": "weekly-condition-001"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [
+        -592,
+        368
+      ],
+      "id": "check-citas-weekly-001",
+      "name": "¿Hay Citas esta Semana?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generar HTML del reporte semanal con tarjetas de citas\nconst data = $input.first().json;\nconst citasPorDia = data.citasPorDia;\nconst negocioNombre = data.negocioNombre;\nconst totalCitas = data.totalCitas;\nconst weekRangeDisplay = data.weekRangeDisplay;\n\nconst meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];\n\n// Generar contenido por día\nlet diasContent = '';\nfor (const fecha of Object.keys(citasPorDia).sort()) {\n  const diaData = citasPorDia[fecha];\n  const cantidadDia = diaData.citas.length;\n  \n  // Header del día\n  diasContent += `\n    <div style=\"margin-bottom:20px;\">\n      <div style=\"background-color:#06d6a0;color:white;padding:10px 15px;border-radius:6px 6px 0 0;font-weight:600;\">\n        📅 ${diaData.nombre} ${diaData.dia} - ${cantidadDia} cita${cantidadDia !== 1 ? 's' : ''}\n      </div>`;\n  \n  if (cantidadDia === 0) {\n    diasContent += `\n      <div style=\"background-color:#f9fafb;padding:15px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 6px 6px;text-align:center;color:#9ca3af;\">\n        Sin citas programadas\n      </div>`;\n  } else {\n    diasContent += `<div style=\"border:1px solid #e5e7eb;border-top:none;border-radius:0 0 6px 6px;overflow:hidden;\">`;\n    \n    for (let i = 0; i < diaData.citas.length; i++) {\n      const cita = diaData.citas[i];\n      const nombre = cita.nombre || 'N/A';\n      const telefono = cita.telefono || 'N/A';\n      const email = cita.email || '';\n      const servicio = cita.servicio || 'N/A';\n      const hora = cita.hora || 'N/A';\n      const horaFin = cita.hora_fin || 'N/A';\n      \n      const confirmoAsistencia = String(cita.confirmo_asistencia || '').trim().toLowerCase();\n      let estadoBadge;\n      if (confirmoAsistencia === 'si' || confirmoAsistencia === 'sí') {\n        estadoBadge = '<span style=\"background-color:#059669;color:white;padding:2px 8px;border-radius:10px;font-size:11px;\">✅ Confirmado</span>';\n      } else if (confirmoAsistencia === 'no') {\n        estadoBadge = '<span style=\"background-color:#dc2626;color:white;padding:2px 8px;border-radius:10px;font-size:11px;\">❌ Rechazó</span>';\n      } else {\n        estadoBadge = '<span style=\"background-color:#f59e0b;color:white;padding:2px 8px;border-radius:10px;font-size:11px;\">⏳ Pendiente</span>';\n      }\n      \n      const bgColor = i % 2 === 0 ? '#ffffff' : '#f9fafb';\n      \n      diasContent += `\n        <div style=\"background-color:${bgColor};padding:12px 15px;border-bottom:1px solid #e5e7eb;\">\n          <div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;\">\n            <span style=\"font-weight:600;color:#1f2937;\">👤 ${nombre}</span>\n            ${estadoBadge}\n          </div>\n          <div style=\"font-size:13px;color:#4b5563;\">\n            <span>🕐 ${hora} - ${horaFin}</span> · \n            <span>🛍️ ${servicio}</span> · \n            <span>📱 <a href=\"https://wa.me/${telefono}\" style=\"color:#06d6a0;text-decoration:none;\">${telefono}</a></span>\n          </div>\n        </div>`;\n    }\n    diasContent += `</div>`;\n  }\n  diasContent += `</div>`;\n}\n\n// HTML completo del email\nconst htmlContent = `<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n</head>\n<body style=\"font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0;\">\n  <div style=\"max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1);\">\n    \n    <!-- Header -->\n    <div style=\"background-color:#06d6a0;padding:30px;text-align:center;color:#ffffff;\">\n      <img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" width=\"150\" style=\"width:150px;max-width:100%;height:auto;display:block;margin:0 auto;\">\n      <h1 style=\"margin:15px 0 5px 0;font-size:20px;font-weight:600;\">📆 Resumen Semanal de Citas</h1>\n      <p style=\"margin:0;font-size:14px;opacity:0.9;\">${negocioNombre}</p>\n    </div>\n    \n    <!-- Content -->\n    <div style=\"padding:20px;color:#333333;line-height:1.6;\">\n      \n      <!-- Saludo -->\n      <p style=\"font-size:15px;margin:0 0 15px 0;\">Estimados Sres. <strong>${negocioNombre}</strong>,</p>\n      <p style=\"font-size:14px;margin:0 0 20px 0;\">Desde <strong>AutomatizaTech</strong> le informamos sobre las citas programadas para la próxima semana:</p>\n      \n      <!-- Resumen -->\n      <div style=\"background-color:#f0fdf4;padding:15px;border-radius:6px;margin-bottom:20px;border-left:4px solid #06d6a0;\">\n        <p style=\"margin:0;font-size:15px;\">\n          <strong>📅 Semana:</strong> ${weekRangeDisplay}<br>\n          <strong>📊 Total:</strong> <span style=\"color:#059669;font-weight:700;font-size:18px;\">${totalCitas} cita${totalCitas !== 1 ? 's' : ''}</span>\n        </p>\n      </div>\n      \n      <!-- Citas por día -->\n      ${diasContent}\n      \n      <!-- Nota -->\n      <p style=\"margin-top:20px;color:#6b7280;font-size:12px;text-align:center;\">\n        Este reporte se genera automáticamente cada domingo a las 21:00 hrs (Hora Chile).\n      </p>\n      \n    </div>\n    \n    <!-- Footer -->\n    <div style=\"background-color:#1f2937;padding:15px;text-align:center;color:#9ca3af;font-size:11px;\">\n      <p style=\"margin:0;\">&copy; 2025 Automatiza Tech. Todos los derechos reservados.</p>\n    </div>\n    \n  </div>\n</body>\n</html>`;\n\n// Texto plano alternativo\nlet textContent = `📆 RESUMEN SEMANAL DE CITAS\\n\\n`;\ntextContent += `Estimados Sres. ${negocioNombre},\\n\\n`;\ntextContent += `Desde AutomatizaTech le informamos sobre las citas de la próxima semana:\\n\\n`;\ntextContent += `📅 Semana: ${weekRangeDisplay}\\n`;\ntextContent += `📊 Total: ${totalCitas} cita${totalCitas !== 1 ? 's' : ''}\\n\\n`;\ntextContent += `${'='.repeat(40)}\\n\\n`;\n\nfor (const fecha of Object.keys(citasPorDia).sort()) {\n  const diaData = citasPorDia[fecha];\n  textContent += `📅 ${diaData.nombre} ${diaData.dia} (${diaData.citas.length} citas)\\n`;\n  if (diaData.citas.length === 0) {\n    textContent += `   Sin citas\\n`;\n  } else {\n    for (const cita of diaData.citas) {\n      textContent += `   • ${cita.hora} - ${cita.nombre} - ${cita.servicio}\\n`;\n    }\n  }\n  textContent += `\\n`;\n}\n\nreturn [{ \n  json: { \n    htmlContent,\n    textContent,\n    subject: `📆 Citas semana ${weekRangeDisplay} - ${negocioNombre} (${totalCitas} cita${totalCitas !== 1 ? 's' : ''})`,\n    negocioEmail: data.negocioEmail\n  } \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        256
+      ],
+      "id": "gen-email-weekly-001",
+      "name": "Generar Email HTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Email cuando no hay citas en la semana\nconst data = $input.first().json;\nconst negocioNombre = data.negocioNombre;\nconst weekRangeDisplay = data.weekRangeDisplay;\n\nconst htmlContent = `<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n</head>\n<body style=\"font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0;\">\n  <div style=\"max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1);\">\n    \n    <!-- Header -->\n    <div style=\"background-color:#06d6a0;padding:30px;text-align:center;color:#ffffff;\">\n      <img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" width=\"150\" style=\"width:150px;max-width:100%;height:auto;display:block;margin:0 auto;\">\n      <h1 style=\"margin:15px 0 5px 0;font-size:20px;font-weight:600;\">📆 Resumen Semanal de Citas</h1>\n      <p style=\"margin:0;font-size:14px;opacity:0.9;\">${negocioNombre}</p>\n    </div>\n    \n    <!-- Content -->\n    <div style=\"padding:40px 30px;color:#333333;line-height:1.6;\">\n      \n      <!-- Saludo -->\n      <p style=\"font-size:16px;margin:0 0 15px 0;\">Estimados Sres. <strong>${negocioNombre}</strong>,</p>\n      <p style=\"font-size:15px;margin:0 0 25px 0;\">Desde <strong>AutomatizaTech</strong> le informamos que:</p>\n      \n      <div style=\"text-align:center;\">\n        <div style=\"font-size:60px;margin-bottom:20px;\">📭</div>\n        \n        <h2 style=\"color:#6b7280;font-weight:500;margin:0 0 10px 0;\">No hay citas programadas</h2>\n        <p style=\"color:#9ca3af;font-size:14px;margin:0;\">para la semana del ${weekRangeDisplay}</p>\n        \n        <div style=\"margin-top:30px;padding:20px;background-color:#f9fafb;border-radius:6px;\">\n          <p style=\"margin:0;color:#6b7280;font-size:14px;\">💡 ¡Buen momento para promocionar tus servicios y llenar tu agenda!</p>\n        </div>\n      </div>\n      \n    </div>\n    \n    <!-- Footer -->\n    <div style=\"background-color:#1f2937;padding:15px;text-align:center;color:#9ca3af;font-size:11px;\">\n      <p style=\"margin:0;\">&copy; 2025 Automatiza Tech. Todos los derechos reservados.</p>\n    </div>\n    \n  </div>\n</body>\n</html>`;\n\nconst textContent = `📆 RESUMEN SEMANAL DE CITAS\\n\\nEstimados Sres. ${negocioNombre},\\n\\nDesde AutomatizaTech le informamos que no hay citas programadas para la semana del ${weekRangeDisplay}.\\n\\n💡 ¡Buen momento para promocionar tus servicios y llenar tu agenda!`;\n\nreturn [{ \n  json: { \n    htmlContent,\n    textContent,\n    subject: `📆 Sin citas semana ${weekRangeDisplay} - ${negocioNombre}`,\n    negocioEmail: data.negocioEmail\n  } \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        464
+      ],
+      "id": "no-citas-weekly-001",
+      "name": "Email Sin Citas"
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -128,
+        368
+      ],
+      "id": "merge-weekly-001",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "fromEmail": "Automatiza Tech <contacto@automatizatech.cl>",
+        "toEmail": "={{ $json.negocioEmail || 'Kellysisabel1504@gmail.com' }}",
+        "bccEmail": "automatizacionesbotcore@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.textContent }}",
+        "html": "={{ $json.htmlContent }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        96,
+        368
+      ],
+      "id": "send-email-weekly-001",
+      "name": "Enviar Email Reporte",
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Cron Domingos 21:00": {
+      "main": [
+        [
+          {
+            "node": "Calcular Semana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Semana": {
+      "main": [
+        [
+          {
+            "node": "Read Configuracion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Configuracion": {
+      "main": [
+        [
+          {
+            "node": "Read Todas las Citas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Todas las Citas": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Citas de la Semana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Citas de la Semana": {
+      "main": [
+        [
+          {
+            "node": "¿Hay Citas esta Semana?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay Citas esta Semana?": {
+      "main": [
+        [
+          {
+            "node": "Generar Email HTML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Sin Citas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Email HTML": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Sin Citas": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Enviar Email Reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "tags": [
+    {
+      "name": "Reportes",
+      "createdAt": "2026-01-09T00:00:00.000Z",
+      "updatedAt": "2026-01-09T00:00:00.000Z"
+    }
+  ],
+  "versionId": "1"
+}

@@ -16,12 +16,12 @@
 
 2️⃣  REMITENTE DE EMAIL INCORRECTO
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   ❌ Error SMTP: "Sender address rejected: not owned by user info@automatizatech.shop"
+   ❌ Error SMTP: "Sender address rejected: not owned by user contacto@automatizatech.cl"
    ❌ Remitente rechazado: noreply@automatizatech.com
    
    ✅ Correcciones en contact-form.php (líneas 1135 y 1224):
       Antes: $phpmailer->setFrom('noreply@automatizatech.com', ...);
-      Ahora: $phpmailer->setFrom('info@automatizatech.shop', ...);
+      Ahora: $phpmailer->setFrom('contacto@automatizatech.cl', ...);
 
 
 3️⃣  FUNCIÓN utf8_decode() DEPRECADA (PHP 8.2+)
@@ -147,7 +147,7 @@ PASO 3: Probar Sistema Completo
 
 Ahora los emails deberían enviarse correctamente con:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ From: info@automatizatech.shop
+✅ From: contacto@automatizatech.cl
 ✅ SMTP Host: smtp.hostinger.com
 ✅ SMTP Port: 587
 ✅ Adjunto: Factura PDF sin caracteres dañados
@@ -158,8 +158,8 @@ Ahora los emails deberían enviarse correctamente con:
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
 1. wp-content/themes/automatiza-tech/inc/contact-form.php
-   - Línea 1135: setFrom('info@automatizatech.shop')
-   - Línea 1224: setFrom('info@automatizatech.shop')
+   - Línea 1135: setFrom('contacto@automatizatech.cl')
+   - Línea 1224: setFrom('contacto@automatizatech.cl')
 
 2. wp-content/themes/automatiza-tech/lib/invoice-pdf-fpdf.php
    - Líneas 15-38: Función utf8_to_latin1() agregada

@@ -1,0 +1,296 @@
+{
+  "name": "Google Meet → Propuesta AutomatizaTech",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Meet Recordings"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        300
+      ],
+      "id": "google-drive-trigger",
+      "name": "Nueva Transcripción en Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-google-doc",
+              "leftValue": "={{ $json.mimeType }}",
+              "rightValue": "application/vnd.google-apps.document",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -176,
+        300
+      ],
+      "id": "check-is-transcript",
+      "name": "¿Es Google Doc?"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.id }}",
+        "simple": false
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        48,
+        300
+      ],
+      "id": "download-transcript",
+      "name": "Leer Documento Google Docs",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener el contenido desde Google Docs API\nconst items = $input.all();\nconst docData = items[0].json;\nlet fullContent = '';\n\n// Debug info\nconst debugInfo = {\n  hasBody: !!docData.body,\n  hasContent: !!(docData.body && docData.body.content),\n  docTitle: docData.title || 'Sin título',\n  topLevelKeys: Object.keys(docData)\n};\n\n// Función para extraer texto de los elementos de Google Docs\nfunction extractText(content) {\n  let text = '';\n  if (!content) return text;\n  \n  for (const element of content) {\n    if (element.paragraph && element.paragraph.elements) {\n      for (const el of element.paragraph.elements) {\n        // Texto normal\n        if (el.textRun && el.textRun.content) {\n          text += el.textRun.content;\n        }\n        // Smart Chips de Personas (Emails)\n        if (el.person && el.person.personProperties && el.person.personProperties.email) {\n           text += ` ${el.person.personProperties.email} `;\n        }\n        // Enlaces ricos (Rich Links)\n        if (el.richLink && el.richLink.richLinkProperties) {\n           if (el.richLink.richLinkProperties.uri) {\n             text += ` ${el.richLink.richLinkProperties.uri} `;\n           } else if (el.richLink.richLinkProperties.title) {\n             text += ` ${el.richLink.richLinkProperties.title} `;\n           }\n        }\n      }\n    }\n    if (element.table) {\n      for (const row of element.table.tableRows || []) {\n        for (const cell of row.tableCells || []) {\n          text += extractText(cell.content);\n        }\n      }\n    }\n    if (element.sectionBreak) {\n      text += '\\n---\\n';\n    }\n  }\n  return text;\n}\n\n// Extraer contenido del documento\nif (docData.body && docData.body.content) {\n  fullContent = extractText(docData.body.content);\n}\n\n// Si no hay contenido en body, intentar tabs (nuevo formato de Gemini)\nif (!fullContent && docData.tabs) {\n  for (const tab of docData.tabs) {\n    if (tab.documentTab && tab.documentTab.body && tab.documentTab.body.content) {\n      fullContent += extractText(tab.documentTab.body.content);\n      fullContent += '\\n\\n---\\n\\n';\n    }\n  }\n}\n\nconst fileName = $('Nueva Transcripción en Drive').first().json.name || docData.title || 'Sin nombre';\nconst fileCreatedTime = $('Nueva Transcripción en Drive').first().json.createdTime || '';\n\n// Parsear el formato de Google Meet/Gemini Notes\nlet summary = '';\nlet transcript = '';\n\nconst summaryPatterns = /(?:#{1,3}\\s*)?(?:Summary|Resumen|Notas|Notes|Overview)[:\\s]*/i;\nconst transcriptPatterns = /(?:#{1,3}\\s*)?(?:Transcript|Transcripción|Transcription)[:\\s]*/i;\n\nconst transcriptMatch = fullContent.search(transcriptPatterns);\n\nif (transcriptMatch > 0) {\n  summary = fullContent.substring(0, transcriptMatch).trim();\n  transcript = fullContent.substring(transcriptMatch).replace(transcriptPatterns, '').trim();\n} else {\n  transcript = fullContent;\n}\n\nsummary = summary.replace(summaryPatterns, '').trim();\n\nconst combinedContent = summary ? `RESUMEN DE LA REUNIÓN:\\n${summary}\\n\\n---\\n\\nTRANSCRIPCIÓN COMPLETA:\\n${transcript}` : transcript;\n\n// ===== EXTRAER EMAIL DEL CLIENTE =====\nlet clientEmail = '';\nlet emailsFound = [];\n\n// 1. Buscar patrón específico\nconst clientEmailPattern = /(?:Correo del cliente|Email del cliente|Invitados)[:\\s]*\\[?([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})\\]?/i;\nconst clientMatch = fullContent.match(clientEmailPattern);\nif (clientMatch && clientMatch[1]) {\n  clientEmail = clientMatch[1];\n}\n\n// 2. Buscar en formato mailto:\nif (!clientEmail) {\n  const mailtoPattern = /mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})/gi;\n  const mailtoMatches = fullContent.match(mailtoPattern);\n  if (mailtoMatches && mailtoMatches.length > 0) {\n    const firstMailto = mailtoMatches[0].replace('mailto:', '');\n    if (!firstMailto.toLowerCase().includes('automatizatech') && \n        !firstMailto.toLowerCase().includes('google.com')) {\n      clientEmail = firstMailto;\n    }\n  }\n}\n\n// 3. Buscar cualquier email\nif (!clientEmail) {\n  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g;\n  emailsFound = fullContent.match(emailRegex) || [];\n  const filtered = emailsFound.filter(e => \n    !e.toLowerCase().includes('automatizatech') && \n    !e.toLowerCase().includes('google.com') && \n    !e.toLowerCase().includes('calendar-notification') &&\n    !e.toLowerCase().includes('support.google')\n  );\n  if (filtered.length > 0) {\n    clientEmail = filtered[0];\n  }\n}\n\n// Extraer participantes\nlet participants = [];\nconst participantRegex = /(?:Participantes|Participants|Asistentes|Attendees|Invitados)[:\\s]*([^\\n]+)/i;\nconst participantMatch = fullContent.match(participantRegex);\nif (participantMatch) {\n  participants = participantMatch[1].split(/[,;]/).map(p => p.trim()).filter(p => p);\n}\n\nreturn {\n  transcript: combinedContent,\n  summary: summary,\n  full_transcript: transcript,\n  raw_content: fullContent,\n  client_email: clientEmail,\n  participants: participants,\n  file_name: fileName,\n  file_created: fileCreatedTime,\n  needs_email: clientEmail === '' ? true : false,\n  debug_info: debugInfo,\n  debug_emails_found: emailsFound,\n  debug_content_preview: fullContent.substring(0, 500),\n  debug_content_length: fullContent.length\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        380,
+        300
+      ],
+      "id": "prepare-data",
+      "name": "Preparar Datos"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-has-email",
+              "leftValue": "={{ $json.needs_email }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        300
+      ],
+      "id": "check-email",
+      "name": "¿Tiene Email Cliente?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n-n8n.kchiba.easypanel.host/webhook/generar-propuesta-v2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"transcript\": {{ JSON.stringify($json.transcript) }},\n  \"client_email\": {{ JSON.stringify($json.client_email) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        944,
+        200
+      ],
+      "id": "send-to-proposal",
+      "name": "Enviar a Workflow Propuestas"
+    },
+    {
+      "parameters": {
+        "fromEmail": "contacto@automatizatech.cl",
+        "toEmail": "lmgm.0303@gmail.com",
+        "subject": "=⚠️ Transcripción detectada - Falta email del cliente",
+        "html": "=<h3>📝 Nueva Transcripción de Google Meet</h3>\n<p><strong>Archivo:</strong> {{ $json.file_name }}</p>\n<p><strong>Fecha:</strong> {{ $json.file_created }}</p>\n<hr>\n<h4>⚠️ No se detectó email del cliente</h4>\n<p>Para procesar esta transcripción, necesitas ingresar el email del cliente manualmente.</p>\n<h4>📋 Vista previa de la transcripción:</h4>\n<pre style='background:#f4f4f4; padding:15px; max-height:400px; overflow:auto; white-space:pre-wrap;'>{{ $json.transcript.substring(0, 2000) }}{{ $json.transcript.length > 2000 ? '\\n\\n... (transcripción truncada)' : '' }}</pre>\n<hr>\n<h4>🚀 Procesar Manualmente</h4>\n<p>Copia la transcripción completa y envíala al webhook con el email del cliente:</p>\n<p><a href='https://automatizatech.cl/wp-admin/admin.php?page=automatiza-proposals' style='background-color:#007bff; color:white; padding:12px 24px; text-decoration:none; border-radius:5px; display:inline-block; font-weight:bold;'>📝 IR AL PANEL DE PROPUESTAS</a></p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        944,
+        400
+      ],
+      "id": "notify-missing-email",
+      "name": "Notificar Email Faltante",
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success-msg",
+              "name": "status",
+              "value": "Transcripción enviada exitosamente al workflow de propuestas",
+              "type": "string"
+            },
+            {
+              "id": "client-email",
+              "name": "client_email",
+              "value": "={{ $('Preparar Datos').item.json.client_email }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1168,
+        200
+      ],
+      "id": "success-response",
+      "name": "Éxito"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Nueva Transcripción en Drive": {
+      "main": [
+        [
+          {
+            "node": "¿Es Google Doc?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es Google Doc?": {
+      "main": [
+        [
+          {
+            "node": "Leer Documento Google Docs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Leer Documento Google Docs": {
+      "main": [
+        [
+          {
+            "node": "Preparar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Datos": {
+      "main": [
+        [
+          {
+            "node": "¿Tiene Email Cliente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Tiene Email Cliente?": {
+      "main": [
+        [
+          {
+            "node": "Enviar a Workflow Propuestas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notificar Email Faltante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar a Workflow Propuestas": {
+      "main": [
+        [
+          {
+            "node": "Éxito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago"
+  },
+  "versionId": "meet-transcription-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

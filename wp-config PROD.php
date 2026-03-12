@@ -71,7 +71,7 @@ define( 'WP_CACHE', true );
 define( 'CACHE_EXPIRATION_TIME', 3600 );
 
 // Configuración de cookies
-define( 'COOKIE_DOMAIN', '.automatizatech.com' );
+define( 'COOKIE_DOMAIN', '.automatizatech.cl' );
 
 // Configuración de SSL
 define( 'FORCE_SSL_ADMIN', true );

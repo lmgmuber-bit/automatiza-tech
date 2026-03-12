@@ -1,7 +1,7 @@
 <?php
 /* ==========================================
    WordPress config — Hostinger (SAFE TEMPLATE)
-   Dominio: automatizatech.shop
+   Dominio: automatizatech.cl
    ========================================== */
 
 /* 1) Rellena con los datos reales de hPanel */
@@ -29,8 +29,8 @@ if (!defined('WP_HOME') && !defined('WP_SITEURL') && !empty($_SERVER['HTTP_HOST'
 /*
    Si prefieres forzar el dominio fijo, descomenta estas dos líneas cuando
    la web ya resuelva bien por HTTPS y dominio correcto:
-   define('WP_HOME',    'https://automatizatech.shop');
-   define('WP_SITEURL', 'https://automatizatech.shop');
+   define('WP_HOME',    'https://automatizatech.cl');
+   define('WP_SITEURL', 'https://automatizatech.cl');
 */
 
 /* Prefijo de tablas (ajusta si tu base ya tiene otro) */

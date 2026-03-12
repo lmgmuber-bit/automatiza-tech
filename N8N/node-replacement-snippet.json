@@ -1,0 +1,38 @@
+{
+  "parameters": {
+    "method": "POST",
+    "url": "https://automatizatech.cl/api-chat-proxy.php",
+    "authentication": "none",
+    "sendBody": true,
+    "contentType": "json",
+    "bodyParameters": {
+      "parameters": [
+        {
+          "name": "model",
+          "value": "gpt-4o"
+        },
+        {
+          "name": "messages",
+          "value": "={{ $json.prompt.messages }}"
+        },
+        {
+          "name": "client_identifier",
+          "value": "={{ $('Webhook (Entrada)').item.json.client_email || $('Webhook (Entrada)').item.json.body.client_email || 'Cliente Desconocido' }}"
+        },
+        {
+          "name": "user_id",
+          "value": 999
+        }
+      ]
+    },
+    "options": {}
+  },
+  "id": "8ce34597-3920-4f85-812e-8e370ab40926-REPLACEMENT",
+  "name": "OpenAI (Proxy Controlado)",
+  "type": "n8n-nodes-base.httpRequest",
+  "typeVersion": 3,
+  "position": [
+    28432,
+    -976
+  ]
+}

@@ -93,14 +93,30 @@ class InvoicePDFGenerator {
             $logo_base64 = 'data:image/png;base64,' . base64_encode($logo_data);
         }
         
-        // Calcular totales
-        $subtotal = floatval($plan_data->price_clp);
+        // Soportar tanto un solo plan como múltiples planes
+        $plans_array = is_array($plan_data) ? $plan_data : array($plan_data);
+        
+        // Calcular totales con descuentos
+        $subtotal_original = 0;
+        $subtotal = 0;
+        $total_descuento = 0;
+        foreach ($plans_array as $plan) {
+            $precio_original = floatval($plan->price_clp);
+            $descuento = isset($plan->discount_percent) ? floatval($plan->discount_percent) : 0;
+            $precio_final = $descuento > 0 ? $precio_original * (1 - $descuento/100) : $precio_original;
+            
+            $subtotal_original += $precio_original;
+            $subtotal += $precio_final;
+            $total_descuento += ($precio_original - $precio_final);
+        }
+        $hay_descuentos = $total_descuento > 0;
         $iva = $subtotal * 0.19;
         $total = $subtotal + $iva;
         
         // Generar QR Code
         require_once(__DIR__ . '/qrcode.php');
-        $validation_url = $site_url . '/validar-factura.php?id=' . urlencode($invoice_number);
+        // Forzar dominio automatizatech.cl para el QR
+        $validation_url = 'https://automatizatech.cl/validar-factura.php?id=' . urlencode($invoice_number);
         $qr_base64 = SimpleQRCode::generateBase64($validation_url, 120);
         
         $html = '<!DOCTYPE html>
@@ -195,6 +211,27 @@ class InvoicePDFGenerator {
             font-size: 8pt;
             color: #666;
             margin-top: 3px;
+        }
+        .price-original {
+            text-decoration: line-through;
+            color: #999;
+            font-size: 8pt;
+        }
+        .discount-badge {
+            background: #e74c3c;
+            color: white;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 7pt;
+            margin-left: 5px;
+        }
+        .price-final {
+            color: ' . $this->secondary_color . ';
+            font-weight: bold;
+            font-size: 10pt;
+        }
+        .savings-row {
+            color: #27ae60;
         }
         .features {
             font-size: 8pt;
@@ -353,35 +390,71 @@ class InvoicePDFGenerator {
                     <th style="width: 25%; text-align: right;">Precio</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody>';
+    
+    // Iterar sobre todos los planes
+    foreach ($plans_array as $plan) {
+        $precio_original = floatval($plan->price_clp);
+        $descuento = isset($plan->discount_percent) ? floatval($plan->discount_percent) : 0;
+        $precio_final = $descuento > 0 ? $precio_original * (1 - $descuento/100) : $precio_original;
+        
+        // Construir celda de precio
+        $precio_html = '';
+        if ($descuento > 0) {
+            $precio_html = '<span class="price-original">$' . number_format($precio_original, 0, ',', '.') . '</span>' .
+                           '<span class="discount-badge">-' . number_format($descuento, 0) . '%</span><br>' .
+                           '<span class="price-final">$' . number_format($precio_final, 0, ',', '.') . '</span>';
+        } else {
+            $precio_html = '<strong>$' . number_format($precio_original, 0, ',', '.') . '</strong>';
+        }
+        
+        $html .= '
                 <tr>
                     <td>
-                        <div class="service-name">' . esc_html($plan_data->name) . '</div>
-                        <div class="service-description">' . esc_html($plan_data->description) . '</div>';
-    
-    if (!empty($plan_data->features)) {
-        $features = explode("\n", $plan_data->features);
-        $html .= '<ul class="features">';
-        foreach ($features as $feature) {
-            if (trim($feature)) {
-                $html .= '<li>✓ ' . esc_html(trim($feature)) . '</li>';
+                        <div class="service-name">' . esc_html($plan->name) . '</div>
+                        <div class="service-description">' . esc_html($plan->description) . '</div>';
+        
+        if (!empty($plan->features)) {
+            $features = explode("\n", $plan->features);
+            $html .= '<ul class="features">';
+            foreach ($features as $feature) {
+                if (trim($feature)) {
+                    $html .= '<li>✓ ' . esc_html(trim($feature)) . '</li>';
+                }
             }
+            $html .= '</ul>';
         }
-        $html .= '</ul>';
+        
+        $html .= '
+                    </td>
+                    <td style="text-align: center; font-weight: bold;">1</td>
+                    <td style="text-align: right;">' . $precio_html . '</td>
+                </tr>';
     }
     
     $html .= '
-                    </td>
-                    <td style="text-align: center; font-weight: bold;">1</td>
-                    <td style="text-align: right; font-weight: bold;">$' . number_format($subtotal, 0, ',', '.') . '</td>
-                </tr>
             </tbody>
         </table>
         
         <!-- Totals -->
         <div class="totals">
             <div class="totals-table">
-                <table>
+                <table>';
+    
+    // Mostrar subtotal original si hay descuentos
+    if ($hay_descuentos) {
+        $html .= '
+                    <tr>
+                        <td class="label">Subtotal Original:</td>
+                        <td class="amount" style="text-decoration: line-through; color: #999;">$' . number_format($subtotal_original, 0, ',', '.') . '</td>
+                    </tr>
+                    <tr class="savings-row">
+                        <td class="label">🎉 Ahorro Total:</td>
+                        <td class="amount">-$' . number_format($total_descuento, 0, ',', '.') . '</td>
+                    </tr>';
+    }
+    
+    $html .= '
                     <tr>
                         <td class="label">Subtotal:</td>
                         <td class="amount">$' . number_format($subtotal, 0, ',', '.') . '</td>
@@ -417,8 +490,8 @@ class InvoicePDFGenerator {
             </div>
             <div class="footer-col">
                 <h4>📞 Contacto</h4>
-                <p>📧 info@automatizatech.shop</p>
-                <p>📱 +56 9 6432 4169</p>
+                <p>📧 contacto@automatizatech.cl</p>
+                <p>📱 +56 9 2700 2984</p>
             </div>
             <div class="footer-col">
                 <h4>🌐 Web</h4>

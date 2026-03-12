@@ -183,9 +183,9 @@ class InvoicePDFFPDF extends FPDF {
         // Info empresa (derecha) - diseÃ±o mejorado (configurables desde panel admin)
         $company_name = get_option('company_name', 'AutomatizaTech SpA');
         $company_rut = get_option('company_rut', '77.123.456-7');
-        $company_email = get_option('company_email', 'info@automatizatech.shop');
+        $company_email = get_option('company_email', 'contacto@automatizatech.cl');
         $company_phone = get_option('company_phone', '+56 9 1234 5678');
-        $company_website = get_option('company_website', 'www.automatizatech.shop');
+        $company_website = get_option('company_website', 'www.automatizatech.cl');
         
         $this->SetFont('Arial', 'B', 11);
         $this->SetTextColor($this->text_color[0], $this->text_color[1], $this->text_color[2]);
@@ -233,7 +233,8 @@ class InvoicePDFFPDF extends FPDF {
     }
     
     private function generate_qr_code() {
-        $validation_url = 'https://automatizatech.shop/validar-factura.php?id=' . urlencode($this->invoice_number);
+        // Forzar dominio automatizatech.cl para el QR
+        $validation_url = 'https://automatizatech.cl/validar-factura.php?id=' . urlencode($this->invoice_number);
         
         $upload_dir = wp_upload_dir();
         $qr_dir = $upload_dir['basedir'] . '/qr-codes/';
@@ -351,13 +352,20 @@ class InvoicePDFFPDF extends FPDF {
         // Filas de datos (soporta múltiples items)
         $items = is_array($this->plan_data) ? $this->plan_data : array($this->plan_data);
         $total_items = 0;
+        $total_descuento = 0;
         
         // DEBUG: Log de cuántos items se van a renderizar
         error_log("DEBUG PDF Render: Renderizando " . count($items) . " items en la tabla");
         
         foreach ($items as $index => $item) {
-            // Obtener precio según moneda del cliente
+            // Obtener precio según moneda del cliente (con descuento)
             $item_price = $this->get_item_price($item);
+            $original_price = $this->get_original_item_price($item);
+            
+            // Calcular descuento acumulado
+            if ($original_price > $item_price) {
+                $total_descuento += ($original_price - $item_price);
+            }
             
             error_log("DEBUG PDF Render: Item " . ($index + 1) . " - Nombre: {$item->name}, Precio: {$item_price}");
             
@@ -371,6 +379,20 @@ class InvoicePDFFPDF extends FPDF {
             $this->SetFont('Arial', 'B', 10);
             $this->Cell(40, 12, $this->format_currency($item_price), 1, 1, 'R', true);
             $total_items += $item_price;
+        }
+        
+        // Mostrar fila de ahorro si hay descuentos
+        if ($total_descuento > 0) {
+            $this->SetX(15);
+            $this->SetFont('Arial', 'B', 10);
+            $this->SetTextColor(39, 174, 96); // Verde éxito
+            $this->SetFillColor(212, 237, 218); // Verde claro fondo
+            // 100 + 40 = 140 ancho total de las dos primeras columnas
+            $this->Cell(140, 8, utf8_to_latin1('Ahorro total por descuento:'), 1, 0, 'R', true);
+            $this->Cell(40, 8, '-' . $this->format_currency($total_descuento), 1, 1, 'R', true);
+            
+            // Restaurar color texto
+            $this->SetTextColor($this->text_color[0], $this->text_color[1], $this->text_color[2]);
         }
         
         $this->Ln(8);
@@ -466,9 +488,9 @@ class InvoicePDFFPDF extends FPDF {
         $y_start = $this->GetY();
         
         // Columna 1: Contacto (configurables desde panel admin)
-        $company_email = get_option('company_email', 'info@automatizatech.shop');
-        $company_phone = get_option('company_phone', '+56 9 4033 1127');
-        $company_website = get_option('company_website', 'www.automatizatech.shop');
+        $company_email = get_option('company_email', 'contacto@automatizatech.cl');
+        $company_phone = get_option('company_phone', '+56 9 2700 2984');
+        $company_website = get_option('company_website', 'www.automatizatech.cl');
         
         $this->SetXY($x_start, $y_start);
         $this->SetFont('Arial', 'B', 8);
@@ -489,7 +511,7 @@ class InvoicePDFFPDF extends FPDF {
         // Columna 2: Información Tributaria (configurables desde panel admin)
         $company_rut = get_option('company_rut', '77.123.456-7');
         $company_giro = get_option('company_giro', 'Servicios tecnológicos');
-        $company_website = get_option('company_website', 'www.automatizatech.shop');
+        $company_website = get_option('company_website', 'www.automatizatech.cl');
         
         $this->SetXY($x_start + $col_width, $y_start);
         $this->SetFont('Arial', 'B', 8);
@@ -538,16 +560,31 @@ class InvoicePDFFPDF extends FPDF {
     }
     
     /**
-     * Obtener precio del item según moneda del cliente
+     * Obtener precio original del item (sin descuento)
      */
-    private function get_item_price($item) {
+    private function get_original_item_price($item) {
         if ($this->currency === 'CLP') {
             // Chile: usar price_clp
             return isset($item->price_clp) ? floatval($item->price_clp) : 0;
         } else {
-            // Otros paÃ­ses: usar price_usd
+            // Otros países: usar price_usd
             return isset($item->price_usd) ? floatval($item->price_usd) : 0;
         }
+    }
+
+    /**
+     * Obtener precio del item según moneda del cliente (con descuento aplicado)
+     */
+    private function get_item_price($item) {
+        $price = $this->get_original_item_price($item);
+        
+        // Aplicar descuento si existe
+        if (isset($item->discount_percent) && $item->discount_percent > 0) {
+            $discount = floatval($item->discount_percent);
+            $price = $price * (1 - $discount / 100);
+        }
+        
+        return $price;
     }
     
     /**

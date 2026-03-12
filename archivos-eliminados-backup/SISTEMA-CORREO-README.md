@@ -52,7 +52,7 @@ Raíz del proyecto:
 ### 1. Crear Cuenta de Correo en Hostinger
 ```
 Panel Hostinger → Correos → Crear cuenta
-Email: info@automatizatech.cl
+Email: contacto@automatizatech.cl
 Contraseña: [crear contraseña segura]
 ```
 
@@ -60,7 +60,7 @@ Contraseña: [crear contraseña segura]
 Agregar antes de `/* That's all, stop editing! */`:
 
 ```php
-define('SMTP_USER', 'info@automatizatech.cl');
+define('SMTP_USER', 'contacto@automatizatech.cl');
 define('SMTP_PASS', 'tu_contraseña_real');
 define('SMTP_HOST', 'smtp.hostinger.com');
 define('SMTP_PORT', 587);
@@ -235,7 +235,7 @@ Admin → Automatiza Tech → Contactos
 **Solución 1**: Verificar credenciales
 ```php
 // En wp-config.php
-define('SMTP_USER', 'info@automatizatech.cl'); // ✅ Correo completo
+define('SMTP_USER', 'contacto@automatizatech.cl'); // ✅ Correo completo
 define('SMTP_PASS', 'contraseña_correcta');    // ✅ Sin espacios
 ```
 
@@ -320,7 +320,7 @@ chmod 644 logo-automatiza-tech.png
 
 ### Contacto Técnico
 - Email: automatizatech.bots@gmail.com
-- WhatsApp: +56 9 4033 1127
+- WhatsApp: +56 9 2700 2984
 - Web: https://automatizatech.cl
 
 ---

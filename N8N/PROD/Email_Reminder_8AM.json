@@ -1,0 +1,227 @@
+{
+  "name": "Email Recordatorio Seguimiento 8AM - AutomatizaTech (PROD)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -656,
+        48
+      ],
+      "id": "2af9c8f7-5c22-4e52-b2c0-cb4dee576b6b",
+      "name": "Cron 8AM Chile"
+    },
+    {
+      "parameters": {
+        "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/reminders-8am",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -448,
+        48
+      ],
+      "id": "8196b01c-ea3f-424a-9f6e-cf84ecc3c57e",
+      "name": "Get Seguimientos Today"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-has-leads",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        48
+      ],
+      "id": "5b77ad42-6c3b-4619-8b12-a4fa8335b2cb",
+      "name": "Has Meetings?"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c146858c-8d51-4c40-a929-2686549eb5bd",
+      "name": "Split In Batches"
+    },
+    {
+      "parameters": {
+        "fromEmail": "Automatiza Tech <contacto@automatizatech.cl>",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ '☀️ ¡Tu reunión de seguimiento es HOY!' + ($json.company_name ? ' | ' + $json.company_name : '') }}",
+        "html": "={{ '<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body { font-family: \"Poppins\", Arial, sans-serif; background-color: #f9f9f9; margin: 0; padding: 0; color: #333333; } .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); } .header { background-color: #1e40af; padding: 40px 20px; text-align: center; } .header img { max-height: 80px; width: auto; margin-bottom: 15px; } .header h1 { margin: 0; font-size: 24px; color: #ffffff; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; } .content { padding: 40px 30px; line-height: 1.6; } .cta-container { text-align: center; margin: 30px 0; } .btn { display: inline-block; padding: 14px 28px; margin: 8px; color: #ffffff !important; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 14px; transition: all 0.3s ease; } .btn-confirm { background-color: #06d6a0; box-shadow: 0 4px 6px rgba(6, 214, 160, 0.3); } .btn-reschedule { background-color: #fca311; box-shadow: 0 4px 6px rgba(252, 163, 17, 0.3); } .btn-cancel { background-color: #ef4444; box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3); } .appointment-box { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 4px; } .footer { background-color: #f1f1f1; padding: 20px; text-align: center; font-size: 12px; color: #888888; } .footer a { color: #1e40af; text-decoration: none; }</style></head><body><div class=\"container\"><div class=\"header\"><img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" style=\"display: block; margin: 0 auto;\"><h1>¡Tu reunión de seguimiento es HOY!</h1></div><div class=\"content\"><p>¡Buenos días <strong>' + $json.name + '</strong>' + ($json.company_name ? ' de <strong>' + $json.company_name + '</strong>' : '') + '!</p><p>Te recordamos que tienes una reunión de seguimiento agendada con <strong>AutomatizaTech</strong> para el día de hoy.</p><div class=\"appointment-box\"><p><strong>📋 Proyecto:</strong> ' + ($json.meeting_subject || 'Reunión de Seguimiento') + '</p><p><strong>📅 Fecha:</strong> ' + $json.scheduled_date + '</p><p><strong>🕐 Hora:</strong> ' + $json.scheduled_time + ' hrs</p><p><strong>📍 Enlace:</strong> ' + ($json.meet_link || 'Te llegará por correo antes de la reunión') + '</p></div><div class=\"cta-container\"><a href=\"https://automatizatech.cl/wp-json/automatiza-tech/v1/followup-meetings/email-action/confirm/' + $json.id + '\" class=\"btn btn-confirm\">✅ Confirmar Asistencia</a><a href=\"https://automatizatech.cl/wp-json/automatiza-tech/v1/followup-meetings/email-action/reschedule/' + $json.id + '\" class=\"btn btn-reschedule\">🔄 Reagendar</a><a href=\"https://automatizatech.cl/wp-json/automatiza-tech/v1/followup-meetings/email-action/cancel/' + $json.id + '\" class=\"btn btn-cancel\">❌ Cancelar</a></div><div style=\"background: #fefce8; border-left: 4px solid #eab308; padding: 15px 20px; margin: 25px 0; border-radius: 0 8px 8px 0;\"><h4 style=\"color: #854d0e; margin: 0 0 10px 0;\">💡 Recordatorio:</h4><ul style=\"color: #713f12; margin: 0; padding-left: 20px;\"><li style=\"margin: 5px 0;\">Recibirás un recordatorio antes de la reunión</li><li style=\"margin: 5px 0;\">Asegúrate de tener buena conexión a internet</li><li style=\"margin: 5px 0;\">El enlace de Meet ya está configurado arriba</li></ul></div><p>¡Te esperamos! 🚀</p></div><div class=\"footer\"><p>&copy; 2026 Automatiza Tech. Todos los derechos reservados.</p><p>Conectamos tus ventas, web y CRM.</p></div></div></body></html>' }}",
+        "options": {
+          "bccEmail": "automatizacionesbotcore@gmail.com"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "7f29dccb-8e70-4be9-8998-cc0bf317a82e",
+      "name": "Send Email",
+      "webhookId": "c4226290-c075-4ac9-b7d5-78f506534574",
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/update-reminder-daily/{{ $('Split In Batches').item.json.id }}/8am",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "f320bacb-79cd-4723-b38a-4ee22bfe71c0",
+      "name": "Mark Sent"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        0,
+        160
+      ],
+      "id": "15e350bb-0dae-46ad-8fae-0c6d25639f27",
+      "name": "No Meetings"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Cron 8AM Chile": {
+      "main": [
+        [
+          {
+            "node": "Get Seguimientos Today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Seguimientos Today": {
+      "main": [
+        [
+          {
+            "node": "Has Meetings?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Meetings?": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Meetings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Mark Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Sent": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "p7ISUf0J5GycHscc"
+  },
+  "versionId": "0746fcdf-a693-45b1-8326-602c44a74ef1",
+  "meta": {
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "id": "TaKE4ekUXTgVPZTM",
+  "tags": []
+}

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Validación de Facturas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3a8a, #06d6a0);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            color: #1e3a8a;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1.1em;
+            transition: all 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #06d6a0;
+            box-shadow: 0 0 0 3px rgba(6, 214, 160, 0.1);
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #1e3a8a, #06d6a0);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .info-box {
+            background: #f0f9ff;
+            border-left: 4px solid #06d6a0;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        
+        .info-box h3 {
+            color: #1e3a8a;
+            margin-bottom: 10px;
+        }
+        
+        .info-box p {
+            color: #4b5563;
+            line-height: 1.6;
+        }
+        
+        .examples {
+            margin-top: 15px;
+        }
+        
+        .example-item {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .example-code {
+            font-family: 'Courier New', monospace;
+            color: #1e3a8a;
+            font-weight: 600;
+        }
+        
+        .copy-btn {
+            background: #06d6a0;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+        
+        .copy-btn:hover {
+            background: #05b88a;
+        }
+        
+        .footer {
+            background: #f9fafb;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Validar Factura</h1>
+            <p>Sistema de Validación AutomatizaTech</p>
+        </div>
+        
+        <div class="content">
+            <div class="info-box">
+                <h3>📋 Instrucciones</h3>
+                <p>Ingresa el número de factura que deseas validar. El formato es: <strong>AT-YYYYMMDD-XXXX</strong></p>
+                
+                <div class="examples">
+                    <p style="margin-bottom: 10px; font-weight: 600;">Facturas disponibles para prueba:</p>
+                    <div class="example-item">
+                        <span class="example-code">AT-20251113-0012</span>
+                        <button class="copy-btn" onclick="copyToInput('AT-20251113-0012')">Usar esta</button>
+                    </div>
+                </div>
+            </div>
+            
+            <form id="validateForm" onsubmit="validateInvoice(event)">
+                <div class="form-group">
+                    <label for="invoiceNumber">
+                        📄 Número de Factura
+                    </label>
+                    <input 
+                        type="text" 
+                        id="invoiceNumber" 
+                        name="invoiceNumber" 
+                        placeholder="Ej: AT-20251113-0012"
+                        required
+                    >
+                </div>
+                
+                <button type="submit" class="btn">
+                    ✅ Validar Factura
+                </button>
+            </form>
+            
+            <div class="info-box" style="margin-top: 30px; background: #fef3c7; border-left-color: #f59e0b;">
+                <h3>💡 ¿Cómo funciona?</h3>
+                <p>
+                    1. Ingresa el número de factura<br>
+                    2. El sistema verificará si existe en la base de datos<br>
+                    3. Si es válida, verás todos los detalles<br>
+                    4. Podrás descargar el PDF completo
+                </p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>🔐 Sistema de validación local - AutomatizaTech</p>
+            <p style="margin-top: 5px;">Testing en: http://localhost/automatiza-tech/</p>
+        </div>
+    </div>
+    
+    <script>
+        function copyToInput(invoiceNumber) {
+            document.getElementById('invoiceNumber').value = invoiceNumber;
+            document.getElementById('invoiceNumber').focus();
+        }
+        
+        function validateInvoice(event) {
+            event.preventDefault();
+            
+            const invoiceNumber = document.getElementById('invoiceNumber').value.trim();
+            
+            if (!invoiceNumber) {
+                alert('❌ Por favor ingresa un número de factura');
+                return;
+            }
+            
+            // Redirigir a la página de validación
+            window.location.href = `validar-factura.php?id=${encodeURIComponent(invoiceNumber)}`;
+        }
+    </script>
+</body>
+</html>

@@ -44,6 +44,7 @@ class AutomatizaTechServicesManager {
             category varchar(50) DEFAULT 'pricing',
             price_usd decimal(10,2) DEFAULT 0.00,
             price_clp decimal(12,0) DEFAULT 0,
+            discount_percent decimal(5,2) DEFAULT 0.00,
             description text,
             features text,
             icon varchar(100) DEFAULT 'fas fa-star',
@@ -127,12 +128,25 @@ class AutomatizaTechServicesManager {
             // JavaScript personalizado
             wp_add_inline_script('jquery', $this->get_admin_js());
             
+            // Obtener categorías dinámicas para JavaScript
+            $js_categories = array();
+            if (function_exists('get_automatiza_service_categories')) {
+                $categories = get_automatiza_service_categories('active');
+                foreach ($categories as $cat) {
+                    $js_categories[] = array(
+                        'slug' => $cat->slug,
+                        'name' => $cat->name
+                    );
+                }
+            }
+            
             // Localize script para AJAX
             wp_localize_script('jquery', 'automatiza_ajax', array(
                 'ajax_url' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('automatiza_services_nonce'),
                 'confirm_delete' => '¿Estás seguro de que quieres eliminar este servicio?',
-                'confirm_duplicate' => '¿Quieres duplicar este servicio?'
+                'confirm_duplicate' => '¿Quieres duplicar este servicio?',
+                'categories' => $js_categories
             ));
         }
     }
@@ -186,9 +200,11 @@ class AutomatizaTechServicesManager {
                 <div class="services-filters">
                     <select id="filter-category">
                         <option value="">Todas las categorías</option>
-                        <option value="pricing">Planes (Pricing)</option>
-                        <option value="features">Beneficios (Features)</option>
-                        <option value="special">Especiales</option>
+                        <?php 
+                        $all_categories = function_exists('get_automatiza_service_categories') ? get_automatiza_service_categories('all') : array();
+                        foreach ($all_categories as $cat): ?>
+                        <option value="<?php echo esc_attr($cat->slug); ?>"><?php echo esc_html($cat->name); ?></option>
+                        <?php endforeach; ?>
                     </select>
                     
                     <select id="filter-status">
@@ -205,12 +221,8 @@ class AutomatizaTechServicesManager {
                 <div class="category-section" data-category="<?php echo esc_attr($category); ?>">
                     <h2 class="category-title">
                         <?php 
-                        switch($category) {
-                            case 'pricing': echo 'Planes de Precios'; break;
-                            case 'features': echo 'Beneficios/Características'; break;
-                            case 'special': echo 'Ofertas Especiales'; break;
-                            default: echo ucfirst($category); break;
-                        }
+                        // Usar función dinámica para obtener nombre de categoría
+                        echo function_exists('get_service_category_name') ? get_service_category_name($category) : ucfirst($category);
                         ?>
                         <span class="category-count">(<?php echo count($category_services); ?>)</span>
                     </h2>
@@ -231,7 +243,19 @@ class AutomatizaTechServicesManager {
                             <div class="service-meta">
                                 <p><strong>Categoría:</strong> <?php echo esc_html($service->category); ?></p>
                                 <?php if ($service->price_usd > 0): ?>
+                                <?php 
+                                    $has_discount = isset($service->discount_percent) && $service->discount_percent > 0;
+                                    $discount = $has_discount ? floatval($service->discount_percent) : 0;
+                                    $price_usd_final = $service->price_usd * (1 - $discount/100);
+                                    $price_clp_final = $service->price_clp * (1 - $discount/100);
+                                ?>
+                                <?php if ($has_discount): ?>
+                                <p><strong>Precio Original:</strong> <span style="text-decoration: line-through; color: #999;">$<?php echo number_format($service->price_usd, 0); ?> USD</span></p>
+                                <p><strong>Descuento:</strong> <span style="color: #e74c3c; font-weight: bold;"><?php echo number_format($discount, 0); ?>% OFF</span></p>
+                                <p><strong>Precio Final:</strong> <span style="color: #27ae60; font-weight: bold;">$<?php echo number_format($price_usd_final, 0); ?> USD / $<?php echo number_format($price_clp_final, 0, ',', '.'); ?> CLP</span></p>
+                                <?php else: ?>
                                 <p><strong>Precio:</strong> $<?php echo number_format($service->price_usd, 0); ?> USD / $<?php echo number_format($service->price_clp, 0, ',', '.'); ?> CLP</p>
+                                <?php endif; ?>
                                 <?php endif; ?>
                                 <?php if ($service->highlight): ?>
                                 <p><span class="highlight-badge">⭐ Destacado</span></p>
@@ -475,6 +499,137 @@ class AutomatizaTechServicesManager {
         .modal-close:hover {
             color: #000;
         }
+        
+        /* ==================== ESTILOS RESPONSIVOS SERVICES MANAGER ==================== */
+        
+        /* Tablet (1024px y menos) */
+        @media screen and (max-width: 1024px) {
+            .services-stats {
+                flex-wrap: wrap;
+            }
+            .stat-box {
+                flex: 1;
+                min-width: 100px;
+            }
+            .services-grid {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            }
+        }
+        
+        /* Mobile (767px y menos) */
+        @media screen and (max-width: 767px) {
+            .wrap h1 {
+                font-size: 20px;
+            }
+            .wrap h1 .page-title-action {
+                display: block;
+                margin-top: 10px;
+            }
+            
+            /* Stats grid */
+            .services-stats {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            .stat-box {
+                padding: 15px;
+                min-width: auto;
+            }
+            .stat-box h3 {
+                font-size: 1.5em;
+            }
+            .stat-box p {
+                font-size: 12px;
+            }
+            
+            /* Filtros */
+            .services-filters {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            .services-filters select {
+                width: 100%;
+                min-height: 44px;
+                font-size: 16px;
+            }
+            .services-filters .button {
+                width: 100%;
+                min-height: 44px;
+            }
+            
+            /* Services grid */
+            .services-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            .service-card {
+                padding: 15px;
+            }
+            .service-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .service-header h3 {
+                font-size: 1em;
+            }
+            .service-actions {
+                justify-content: space-between;
+            }
+            .service-actions .button-small {
+                flex: 1;
+                text-align: center;
+                min-height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            /* Modal fullscreen en móvil */
+            .modal-content {
+                margin: 0;
+                width: 100%;
+                height: 100%;
+                max-height: 100vh;
+                border-radius: 0;
+                padding: 15px;
+            }
+            .modal-close {
+                font-size: 32px;
+                padding: 10px;
+            }
+            
+            /* Category sections */
+            .category-title {
+                font-size: 1.1em;
+            }
+        }
+        
+        /* Móviles pequeños (480px y menos) */
+        @media screen and (max-width: 480px) {
+            .services-stats {
+                grid-template-columns: 1fr 1fr;
+            }
+            .stat-box h3 {
+                font-size: 1.3em;
+            }
+            .service-actions {
+                flex-direction: column;
+            }
+            .service-actions .button-small {
+                width: 100%;
+            }
+        }
+        
+        /* Touch-friendly */
+        @media (hover: none) and (pointer: coarse) {
+            .services-filters select,
+            .services-filters .button,
+            .service-actions .button-small {
+                min-height: 48px;
+            }
+        }
         </style>
         <?php
     }
@@ -503,12 +658,18 @@ class AutomatizaTechServicesManager {
                         <tr>
                             <th scope="row"><label for="service_category">Categoría *</label></th>
                             <td>
+                                <?php 
+                                if (function_exists('render_service_categories_select')) {
+                                    echo render_service_categories_select('', 'service_category', 'service_category');
+                                } else { ?>
                                 <select name="service_category" id="service_category" required>
                                     <option value="">Seleccionar categoría</option>
                                     <option value="pricing">Planes de Precios</option>
                                     <option value="features">Beneficios/Características</option>
                                     <option value="special">Ofertas Especiales</option>
+                                    <option value="custom">Proyectos Personalizados</option>
                                 </select>
+                                <?php } ?>
                                 <p class="description">Determina dónde aparecerá en el sitio web</p>
                             </td>
                         </tr>
@@ -526,6 +687,15 @@ class AutomatizaTechServicesManager {
                             <td>
                                 <input name="price_clp" type="number" id="price_clp" class="regular-text" step="1" min="0">
                                 <p class="description">Precio en pesos chilenos</p>
+                            </td>
+                        </tr>
+                        
+                        <tr class="pricing-fields">
+                            <th scope="row"><label for="discount_percent">% Descuento</label></th>
+                            <td>
+                                <input name="discount_percent" type="number" id="discount_percent" class="small-text" step="0.01" min="0" max="100" value="0">
+                                <span style="margin-left: 10px; color: #666;">%</span>
+                                <p class="description">Porcentaje de descuento (0-100). Se mostrará precio original tachado y precio final en cotizaciones.</p>
                             </td>
                         </tr>
                         
@@ -1613,7 +1783,7 @@ class AutomatizaTechServicesManager {
                         <tr>
                             <th scope="row">WhatsApp por Defecto</th>
                             <td>
-                                <input name="default_whatsapp_number" type="text" value="<?php echo esc_attr(get_option('default_whatsapp_number', '+56 9 4033 1127')); ?>" class="regular-text">
+                                <input name="default_whatsapp_number" type="text" value="<?php echo esc_attr(get_option('default_whatsapp_number', '+56 9 2700 2984')); ?>" class="regular-text">
                                 <p class="description">Número de WhatsApp por defecto (incluir código de país)</p>
                             </td>
                         </tr>
@@ -1807,12 +1977,32 @@ class AutomatizaTechServicesManager {
         }
         
         function generateEditForm(service) {
+            var discountValue = service.discount_percent || 0;
+            
+            // Generar opciones de categorías dinámicamente
+            var categoryOptions = '';
+            var categories = automatiza_ajax.categories || [];
+            if (categories.length > 0) {
+                for (var i = 0; i < categories.length; i++) {
+                    var cat = categories[i];
+                    var isSelected = service.category === cat.slug ? ' selected' : '';
+                    categoryOptions += '<option value=\"' + cat.slug + '\"' + isSelected + '>' + cat.name + '</option>';
+                }
+            } else {
+                // Fallback a categorías por defecto
+                categoryOptions = '<option value=\"pricing\"' + (service.category === 'pricing' ? ' selected' : '') + '>Planes</option>' +
+                                  '<option value=\"features\"' + (service.category === 'features' ? ' selected' : '') + '>Beneficios</option>' +
+                                  '<option value=\"special\"' + (service.category === 'special' ? ' selected' : '') + '>Especiales</option>' +
+                                  '<option value=\"custom\"' + (service.category === 'custom' ? ' selected' : '') + '>Proyectos Personalizados</option>';
+            }
+            
             return '<input type=\"hidden\" name=\"service_id\" value=\"' + service.id + '\">' +
                    '<table class=\"form-table\">' +
                    '<tr><th>Nombre:</th><td><input type=\"text\" name=\"name\" value=\"' + service.name + '\" class=\"regular-text\" required></td></tr>' +
-                   '<tr><th>Categoría:</th><td><select name=\"category\"><option value=\"pricing\"' + (service.category === 'pricing' ? ' selected' : '') + '>Planes</option><option value=\"features\"' + (service.category === 'features' ? ' selected' : '') + '>Beneficios</option><option value=\"special\"' + (service.category === 'special' ? ' selected' : '') + '>Especiales</option></select></td></tr>' +
+                   '<tr><th>Categoría:</th><td><select name=\"category\">' + categoryOptions + '</select></td></tr>' +
                    '<tr><th>Precio USD:</th><td><input type=\"number\" name=\"price_usd\" value=\"' + service.price_usd + '\" step=\"0.01\"></td></tr>' +
                    '<tr><th>Precio CLP:</th><td><input type=\"number\" name=\"price_clp\" value=\"' + service.price_clp + '\"></td></tr>' +
+                   '<tr><th>% Descuento:</th><td><input type=\"number\" name=\"discount_percent\" value=\"' + discountValue + '\" step=\"0.01\" min=\"0\" max=\"100\" class=\"small-text\"> <span style=\"color:#666\">%</span><p class=\"description\">Se mostrará precio tachado y precio final en cotizaciones</p></td></tr>' +
                    '<tr><th>Descripción:</th><td><textarea name=\"description\" rows=\"3\" class=\"large-text\">' + service.description + '</textarea></td></tr>' +
                    '<tr><th>Icono:</th><td><input type=\"text\" name=\"icon\" value=\"' + service.icon + '\" class=\"regular-text\"></td></tr>' +
                    '<tr><th>Destacado:</th><td><input type=\"checkbox\" name=\"highlight\" value=\"1\"' + (service.highlight ? ' checked' : '') + '></td></tr>' +
@@ -1875,6 +2065,7 @@ class AutomatizaTechServicesManager {
             'category' => sanitize_text_field($_POST['service_category'] ?? $_POST['category']),
             'price_usd' => floatval($_POST['price_usd'] ?? 0),
             'price_clp' => intval($_POST['price_clp'] ?? 0),
+            'discount_percent' => floatval($_POST['discount_percent'] ?? 0),
             'description' => sanitize_textarea_field($_POST['service_description'] ?? $_POST['description']),
             'features' => sanitize_textarea_field($_POST['service_features'] ?? $_POST['features']),
             'icon' => sanitize_text_field($_POST['service_icon'] ?? $_POST['icon']),
@@ -1897,7 +2088,7 @@ class AutomatizaTechServicesManager {
                 $this->table_name,
                 $service_data,
                 array('id' => intval($_POST['service_id'])),
-                array('%s', '%s', '%f', '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%d'),
+                array('%s', '%s', '%f', '%d', '%f', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%d'),
                 array('%d')
             );
         } else {
@@ -1905,7 +2096,7 @@ class AutomatizaTechServicesManager {
             $result = $wpdb->insert(
                 $this->table_name,
                 $service_data,
-                array('%s', '%s', '%f', '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%d')
+                array('%s', '%s', '%f', '%d', '%f', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%d')
             );
         }
         

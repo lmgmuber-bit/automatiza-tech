@@ -151,7 +151,7 @@ if (!current_user_can('administrator')) {
             echo '/**<br>';
             echo ' * Configuración SMTP para envío de correos<br>';
             echo ' */<br>';
-            echo "define('SMTP_USER', 'info@automatizatech.shop');<br>";
+            echo "define('SMTP_USER', 'contacto@automatizatech.cl');<br>";
             echo "define('SMTP_PASS', 'tu_contraseña_aqui');<br>";
             echo "define('SMTP_HOST', 'smtp.hostinger.com');<br>";
             echo "define('SMTP_PORT', 587);";

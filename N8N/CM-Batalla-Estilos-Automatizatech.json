@@ -1,0 +1,2048 @@
+{
+  "name": "CM Automatiza Tech - Master Fusion",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "id": "f263271c-e6f4-4f06-a1a6-062e853aba57",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        528,
+        7920
+      ],
+      "webhookId": "f0c575be-21ea-4be4-953e-a6cdf515d04c",
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition_1",
+              "leftValue": "={{ $json.callback_query ? 'button' : 'message' }}",
+              "rightValue": "button",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "72fbb746-c4d2-409b-b8ee-db71e767bc60",
+      "name": "Router Principal",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        752,
+        7920
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition_audio",
+              "leftValue": "={{ $json.message.voice ? 'voice' : 'text' }}",
+              "rightValue": "voice",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1e622128-747a-4d6f-a7fe-65a4f30a8a84",
+      "name": "Es Audio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1648,
+        7200
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message?.text?.toLowerCase().includes('crear') || $json.message?.text?.toLowerCase().includes('genera') || $json.message?.text?.toLowerCase().includes('publica') || $json.message?.text?.toLowerCase().includes('haz') || $json.message?.text?.toLowerCase().includes('quiero') || (!$json.message?.reply_to_message) }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "4336012f-3597-4aa5-8771-772bcdadf2d2",
+      "name": "Detectar Tipo Mensaje",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.1,
+      "position": [
+        976,
+        7512
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "id": "9b49cdb5-697f-450f-a042-1c5daff230ea",
+      "name": "Obtener Archivo Audio",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1872,
+        7080
+      ],
+      "webhookId": "f1d8459b-89ac-4f32-a65a-230b35245329",
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "id": "f82d4e08-c40a-417d-86c1-dda1d731e7cd",
+      "name": "Transcribir Audio",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.3,
+      "position": [
+        2096,
+        7080
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message?.text || $json.text || 'Crea contenido sobre automatización de negocios' }}",
+        "options": {
+          "systemMessage": "Eres el Senior Community Manager y Director Creativo de 'Automatiza Tech' (automatizatech.cl).\n\n🏢 SOBRE LA EMPRESA:\n- Sitio Web: https://automatizatech.cl\n- Instagram: @automatizatech.cl\n- TikTok: @automatizatech7\n- Servicios: Chatbots con IA, CRM automatizado, Web + WhatsApp Business\n- Planes: Básico $99/mes, Pro $199/mes, Enterprise $399/mes\n- Beneficios: Atención 24/7, integración en 48 horas, soporte técnico incluido\n\nTU MISIÓN:\n1. **SI ES CONVERSACIÓN (Hola, Gracias, Ayuda, Buenos días):** Responde amablemente y pregunta qué contenido quieres crear. CLASIFICA COMO: `conversation`.\n2. **SI ES SOLICITUD DE CONTENIDO:** Analiza y decide el MEJOR formato. CLASIFICA COMO: `single_image`, `carousel` o `video`.\n\n🎨 ESTILO VISUAL DE MARCA AUTOMATIZA TECH:\n- Fondo: Azul oscuro navy (#1a2744)\n- Color acento: Turquesa/cyan (#2dd4bf)\n- Estilo: Profesional, limpio, tecnológico\n- Elementos: Circuitos, nodos, iconos flat, dispositivos\n\n🖼️ INSTRUCCIÓN DE VISUAL_PROMPT (MUY IMPORTANTE):\nCuando generes el campo 'visual_prompt' para infografías o comparativas (antes/después, problema/solución), USA ESTA ESTRUCTURA:\n\n\"A split-screen infographic image for social media. Dark navy blue background (#1a2744) with turquoise accents (#2dd4bf). Left panel shows [PROBLEMA - descripción visual]. Large white text overlay reads exactly: '[TEXTO DEL PROBLEMA]'. Right panel shows [SOLUCIÓN - descripción visual con logo AT y elementos tech]. Large turquoise text overlay reads exactly: '[TEXTO DE BENEFICIOS CON EMOJIS]'. Professional tech style with circuit patterns and flat icons.\"\n\nPara imágenes simples (no comparativas):\n\"Professional tech illustration on dark navy background (#1a2744). [Descripción del concepto]. Turquoise/cyan accents (#2dd4bf). Flat icons, circuit board patterns, glowing nodes. Text overlay reads exactly: '[MENSAJE PRINCIPAL]'. Clean minimalist corporate style. AutomatizaTech branding.\"\n\n🧠 MEMORIA Y CONTEXTO:\nUsa la memoria para mantener el hilo.\n\nRESPONDE SIEMPRE EN FORMATO JSON VÁLIDO:\n\nOPCIÓN A - SOLO CHARLA:\n{\n  \"media_type\": \"conversation\",\n  \"response_text\": \"Tu respuesta aquí...\"\n}\n\nOPCIÓN B - CREAR CONTENIDO:\n{\n  \"media_type\": \"carousel\" | \"single_image\" | \"video\",\n  \"content_plan\": \"Descripción detallada...\",\n  \"copy_ig\": \"Copy para IG...\",\n  \"copy_fb\": \"Copy para FB...\",\n  \"copy_tt\": \"Guion TikTok...\",\n  \"visual_prompt\": \"Prompt en INGLÉS siguiendo la estructura indicada...\"\n}"
+        }
+      },
+      "id": "49c32f07-9af7-4f03-a6af-fbcaf9b9436f",
+      "name": "Cerebro CM",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        2320,
+        7368
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "maxTokens": 2000,
+          "temperature": 0.7
+        }
+      },
+      "id": "ff9d8537-4960-4ae4-bbb8-f21d2cea9db2",
+      "name": "Modelo GPT-4o",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        2328,
+        7592
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message?.chat?.id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id || 'default_session' }}",
+        "contextWindowLength": 200
+      },
+      "id": "0c3f26f7-5945-4c7a-8085-9a719a14028b",
+      "name": "Memoria Buffer",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        2456,
+        7592
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message?.chat?.id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id }}",
+        "text": "⚠️ *Generación de videos no disponible*\n\nLos servicios de video (Google Veo y Replicate) están temporalmente deshabilitados.\n\n¿Te gustaría que cree una *imagen* en su lugar?\n\nResponde con tu idea y la genero como imagen.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "video-no-disponible",
+      "name": "Video No Disponible",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3120,
+        7000
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parsear la respuesta del agente a JSON\nconst output = $input.first().json.output || $input.first().json.text || '{}';\n\nlet parsed;\ntry {\n  const jsonMatch = output.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    parsed = JSON.parse(jsonMatch[0]);\n  } else {\n    parsed = JSON.parse(output);\n  }\n} catch (e) {\n  parsed = {\n    media_type: 'conversation',\n    response_text: output || 'Lo siento, no entendí bien. ¿Podrías repetir?'\n  };\n}\n\n// Normalizar media_type\nif (!['video', 'carousel', 'single_image', 'conversation'].includes(parsed.media_type)) {\n    // Si la IA inventa un tipo, asumimos conversación o imagen según contexto, \n    // pero por seguridad 'conversation' para no gastar créditos.\n    parsed.media_type = 'conversation'; \n    if (!parsed.response_text) parsed.response_text = \"Entendido. ¿Qué quieres crear hoy?\";\n}\n\nreturn [{ json: parsed }];"
+      },
+      "id": "be32760a-d4eb-4699-82dd-6180179f8c76",
+      "name": "Parsear JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2672,
+        7368
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.media_type }}",
+                    "rightValue": "video",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.media_type }}",
+                    "rightValue": "carousel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.media_type }}",
+                    "rightValue": "single_image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.media_type }}",
+                    "rightValue": "conversation",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "fda87df6-f970-4ed2-9f13-310b4f32af39",
+      "name": "Tipo de Media?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.1,
+      "position": [
+        2896,
+        7320
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "prompt": "={{ 'Digital illustration of ' + $json.visual_prompt + '. Dark navy blue background (#1a2744). Turquoise/cyan accent color (#2dd4bf). Tech aesthetic with circuit board patterns, glowing nodes, network connections. Modern flat icons, growth arrows, smartphones, abstract tech elements. Clean minimalist corporate style. No text, no letters, no words. Professional technology marketing visual.' }}",
+        "options": {
+          "size": "1024x1024",
+          "style": "vivid"
+        }
+      },
+      "id": "b33f65a3-b52f-4d91-8e03-1982130833b0",
+      "name": "Generar DALL-E 3 A",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.3,
+      "position": [
+        3120,
+        7056
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "prompt": "={{ 'High quality 3D render of ' + $json.visual_prompt + '. Dark blue gradient background with subtle purple tones. Glowing turquoise and cyan neon accents. Floating smartphones, holographic interfaces, digital coins, chat bubbles, upward arrows showing growth. Circuit board patterns, data streams, futuristic tech aesthetic. Dramatic lighting, glossy surfaces. No text, no letters. Professional marketing visual for technology company.' }}",
+        "options": {
+          "size": "1024x1024",
+          "style": "vivid"
+        }
+      },
+      "id": "dalle3-style-b",
+      "name": "Generar DALL-E 3 B",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.3,
+      "position": [
+        3120,
+        7180
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://us-central1-aiplatform.googleapis.com/v1/projects/flowing-design-480223-d4/locations/us-central1/publishers/google/models/imagen-3.0-generate-001:predict",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"instances\": [\n    {\n      \"prompt\": \"{{ $json.visual_prompt }}\"\n    }\n  ],\n  \"parameters\": {\n    \"sampleCount\": 1,\n    \"aspectRatio\": \"1:1\",\n    \"sampleImageSize\": 1024\n  }\n}",
+        "options": {}
+      },
+      "id": "13580863-4afb-4074-9aeb-811756f0d30e",
+      "name": "Generar Google Imagen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3120,
+        7272
+      ],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "mdP5TlIAwDyX3pHP",
+          "name": "Google account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.replicate.com/v1/predictions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"version\": \"d68b6a0728f9b8ab30f90c5c8c72caeb8c0e8ade85bfe0e2f1acbaaf5fb6e04e\",\n  \"input\": {\n    \"prompt\": \"{{ $json.visual_prompt }}\",\n    \"video_length\": \"14_frames_with_svd_xt\",\n    \"sizing_strategy\": \"maintain_aspect_ratio\",\n    \"frames_per_second\": 6,\n    \"motion_bucket_id\": 127\n  }\n}",
+        "options": {}
+      },
+      "id": "48668a91-86da-4233-8688-c0968874985d",
+      "name": "Generar Video A (SVD)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3568,
+        7440
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PFW0cZNaEeyO1Hhz",
+          "name": "Header Auth account Img"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.replicate.com/v1/predictions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"version\": \"3f0457e4619daac51203dedb472816f3afc5788d9c12de450146317208226074\",\n  \"input\": {\n    \"prompt\": \"{{ $json.visual_prompt }}\",\n    \"num_frames\": 24,\n    \"fps\": 12\n  }\n}",
+        "options": {}
+      },
+      "id": "187c6fa7-3a18-45d9-9b83-0e9adb7969f5",
+      "name": "Generar Video B (Zeroscope)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3568,
+        7728
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PFW0cZNaEeyO1Hhz",
+          "name": "Header Auth account Img"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://us-central1-aiplatform.googleapis.com/v1/projects/flowing-design-480223-d4/locations/us-central1/publishers/google/models/veo:predict",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"instances\": [\n    {\n      \"prompt\": \"{{ $json.visual_prompt }}\"\n    }\n  ],\n  \"parameters\": {\n    \"sampleCount\": 1,\n    \"videoLengthSeconds\": 6\n  }\n}",
+        "options": {}
+      },
+      "id": "google-veo-video-c",
+      "name": "Generar Video C (Google Veo)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3568,
+        8016
+      ],
+      "disabled": true,
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "mdP5TlIAwDyX3pHP",
+          "name": "Google account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "options": {}
+      },
+      "id": "63179671-9b92-45b1-a96b-814b6090673a",
+      "name": "Unir Imágenes",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        3344,
+        7152
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message?.chat?.id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id }}",
+        "text": "=🤖 *BATALLA DE ESTILOS VISUALES*\n\n*Formato Recomendado:* {{ $('Parsear JSON').item.json.media_type }}\n\n*Plan de Contenido:*\n{{ $('Parsear JSON').item.json.content_plan }}\n\n👇 He generado la **Portada/Visual** en 2 estilos para que elijas:",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "5a780481-0e22-41d6-a4a3-858bce717be9",
+      "name": "Aviso Imágenes",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3568,
+        7152
+      ],
+      "webhookId": "166f8b8c-9e0d-46b9-af5d-292ebdbbe327",
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message?.chat?.id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id }}",
+        "text": "🎬 *BATALLA DE VIDEOS EN PROCESO*\n\nGenerando 2 opciones:\n🔵 *Opción A:* Stable Video Diffusion (cinemático)\n🟣 *Opción B:* Zeroscope (animado)\n\n⚪ *Opción C:* Google Veo _(próximamente)_\n\n⏳ Te llegarán los videos en breve.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "8a89efc5-3040-4afe-b132-02239e1aff6d",
+      "name": "Aviso Inicio Video",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3120,
+        7584
+      ],
+      "webhookId": "b8f7f21e-5c58-4ee9-bd9c-c6beb87a9a46",
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Telegram Trigger').item.json.message?.chat?.id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id }}",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "additionalFields": {
+          "caption": "🅰️ ESTILO A: DALL-E Flat (navy + turquesa)"
+        }
+      },
+      "id": "ea928adb-561b-4b61-93ef-8f00b5f37f70",
+      "name": "Enviar Foto DALL-E A",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3792,
+        7056
+      ],
+      "webhookId": "ec3f0a66-db15-440b-a1d2-3af903a784bb",
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Telegram Trigger').item.json.message?.chat?.id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id }}",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "additionalFields": {
+          "caption": "🅱️ ESTILO B: DALL-E 3D (futurista)"
+        }
+      },
+      "id": "7e90f69e-3416-4736-a724-512faacbcdc5",
+      "name": "Enviar Foto DALL-E B",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3792,
+        7248
+      ],
+      "webhookId": "21dfc95b-76d1-4dba-95c3-4e0d0f6d4828",
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convertir Base64 de Google Imagen a binario para Telegram\nconst base64Data = $json.predictions?.[0]?.bytesBase64Encoded;\n\nif (!base64Data) {\n  throw new Error('No se recibió imagen de Google Imagen 3');\n}\n\n// Convertir base64 a Buffer binario\nconst binaryData = Buffer.from(base64Data, 'base64');\n\nreturn [{\n  json: { success: true },\n  binary: {\n    data: {\n      data: base64Data,\n      mimeType: 'image/png',\n      fileName: 'google_imagen.png'\n    }\n  }\n}];"
+      },
+      "id": "google-img-to-binary",
+      "name": "Convertir Google Base64",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3344,
+        7368
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Telegram Trigger').item.json.message?.chat?.id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id }}",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "additionalFields": {
+          "caption": "🅲 ESTILO C: Google Imagen 3 (con texto)"
+        }
+      },
+      "id": "enviar-foto-google",
+      "name": "Enviar Foto Google",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3792,
+        7368
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message?.chat?.id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id }}",
+        "text": "=🎥 *Opción A: Stable Video Diffusion*\n\n🔗 Link: {{ $json.urls?.get || 'Procesando...' }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "4aaaf3ed-7f40-41d0-b452-aef043adbd0e",
+      "name": "Enviar Video A (SVD)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3792,
+        7440
+      ],
+      "webhookId": "779b1505-2959-41ec-9eb6-51942f879269",
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message?.chat?.id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id }}",
+        "text": "=🎥 *Opción B: Zeroscope*\n\n🔗 Link: {{ $json.urls?.get || 'Procesando...' }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "55321d94-fa82-438f-885a-4d10f7166a2b",
+      "name": "Enviar Video B (Zeroscope)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3792,
+        7728
+      ],
+      "webhookId": "e866e905-a4d3-493c-94d4-948314aa484b",
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message?.chat?.id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id }}",
+        "text": "=🎥 *Opción C: Google Veo*\n\n{{ $json.predictions ? '✅ Video generado' : '⏳ Procesando...' }}\n\n_Modelo de alta calidad de Google_",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "enviar-video-google-veo",
+      "name": "Enviar Video C (Google Veo)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3792,
+        8016
+      ],
+      "disabled": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message?.chat?.id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id }}",
+        "text": "=📋 *DECISIÓN FINAL*\n\n¿Qué estilo y canal aprobamos?\n\n📸 *IG:* {{ $('Parsear JSON').item.json.copy_ig }}\n\n📘 *FB:* {{ $('Parsear JSON').item.json.copy_fb }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🅰️ Flat",
+                    "additionalFields": {
+                      "callback_data": "approve_a"
+                    }
+                  },
+                  {
+                    "text": "🅱️ 3D",
+                    "additionalFields": {
+                      "callback_data": "approve_b"
+                    }
+                  },
+                  {
+                    "text": "🅲 Google",
+                    "additionalFields": {
+                      "callback_data": "approve_c"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "❌ Pedir Cambios",
+                    "additionalFields": {
+                      "callback_data": "edit"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "0e543c05-01e6-498c-a38d-a27a82099744",
+      "name": "Menu Aprobacion",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4016,
+        7272
+      ],
+      "webhookId": "22023e1c-23dd-407d-8356-2acf13439993",
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query?.data }}",
+                    "rightValue": "approve_a",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query?.data }}",
+                    "rightValue": "approve_b",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query?.data }}",
+                    "rightValue": "edit",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "75d5dbd8-2e73-4b1c-8973-cdc8cd929ef8",
+      "name": "Router Botones",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.1,
+      "position": [
+        976,
+        8528
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar datos para publicación - Estilo A (DALL-E)\nconst callbackData = $input.first().json;\nconst parsedContent = $('Parsear JSON').first().json;\nconst dalleImage = $('Generar DALL-E 3 A').first().json;\n\nreturn [{\n  json: {\n    style: 'A',\n    style_name: 'DALL-E 3',\n    image_url: dalleImage.data?.[0]?.url || '',\n    copy_ig: parsedContent.copy_ig,\n    copy_fb: parsedContent.copy_fb,\n    copy_tt: parsedContent.copy_tt,\n    media_type: parsedContent.media_type,\n    chat_id: callbackData.callback_query?.message?.chat?.id\n  }\n}];"
+      },
+      "id": "17054942-3665-4707-bb36-f613c53946ee",
+      "name": "Preparar Datos Estilo A",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        7920
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar datos para publicación - Estilo B (Google)\nconst callbackData = $input.first().json;\nconst parsedContent = $('Parsear JSON').first().json;\nconst googleImage = $('Generar Google Imagen').first().json;\n\n// Google Imagen devuelve base64, construir data URI\nlet imageUrl = '';\nif (googleImage.predictions?.[0]?.bytesBase64Encoded) {\n  imageUrl = 'data:image/png;base64,' + googleImage.predictions[0].bytesBase64Encoded;\n}\n\nreturn [{\n  json: {\n    style: 'B',\n    style_name: 'Google Imagen 3',\n    image_url: imageUrl,\n    image_base64: googleImage.predictions?.[0]?.bytesBase64Encoded || '',\n    copy_ig: parsedContent.copy_ig,\n    copy_fb: parsedContent.copy_fb,\n    copy_tt: parsedContent.copy_tt,\n    media_type: parsedContent.media_type,\n    chat_id: callbackData.callback_query?.message?.chat?.id\n  }\n}];"
+      },
+      "id": "0904f99c-03fc-4ac0-9490-02e555325375",
+      "name": "Preparar Datos Estilo B",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        8448
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/YOUR_PAGE_ID/photos",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"url\": \"{{ $json.image_url }}\",\n  \"caption\": \"{{ $json.copy_fb }}\",\n  \"published\": true\n}",
+        "options": {}
+      },
+      "id": "82f7397a-167c-4d85-ab76-2fdf4d5afa1b",
+      "name": "Publicar Facebook A",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1648,
+        7680
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "3SVvHB3KQP59DKOG",
+          "name": "conexion meta"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/YOUR_PAGE_ID/photos",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"url\": \"{{ $json.image_url }}\",\n  \"caption\": \"{{ $json.copy_fb }}\",\n  \"published\": true\n}",
+        "options": {}
+      },
+      "id": "cf4916eb-01b4-472b-8688-1b7090ec6df6",
+      "name": "Publicar Facebook B",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1648,
+        8208
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "3SVvHB3KQP59DKOG",
+          "name": "conexion meta"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $env.INSTAGRAM_BUSINESS_ACCOUNT_ID }}/media",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"image_url\": \"{{ $json.image_url }}\",\n  \"caption\": \"{{ $json.copy_ig }}\"\n}",
+        "options": {}
+      },
+      "id": "12c6470c-6951-49c5-8d46-2b4dd27b791c",
+      "name": "Crear Container IG A",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1424,
+        8016
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "3SVvHB3KQP59DKOG",
+          "name": "conexion meta"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $env.INSTAGRAM_BUSINESS_ACCOUNT_ID }}/media",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"image_url\": \"{{ $json.image_url }}\",\n  \"caption\": \"{{ $json.copy_ig }}\"\n}",
+        "options": {}
+      },
+      "id": "789a2d91-200d-4a83-9c5e-6b05e5ba2400",
+      "name": "Crear Container IG B",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1424,
+        8544
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "3SVvHB3KQP59DKOG",
+          "name": "conexion meta"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $env.INSTAGRAM_BUSINESS_ACCOUNT_ID }}/media_publish",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"creation_id\": \"{{ $json.id }}\"\n}",
+        "options": {}
+      },
+      "id": "5f9dc8df-9a88-4112-8070-f73a4d0af148",
+      "name": "Publicar Instagram A",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1648,
+        8016
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "3SVvHB3KQP59DKOG",
+          "name": "conexion meta"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $env.INSTAGRAM_BUSINESS_ACCOUNT_ID }}/media_publish",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"creation_id\": \"{{ $json.id }}\"\n}",
+        "options": {}
+      },
+      "id": "d360f9ea-a2e9-4ab6-859e-ccb1c5d04113",
+      "name": "Publicar Instagram B",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1648,
+        8544
+      ],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "3SVvHB3KQP59DKOG",
+          "name": "conexion meta"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.tiktokapis.com/v2/post/publish/inbox/video/init/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json; charset=UTF-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"source_info\": {\n    \"source\": \"PULL_FROM_URL\",\n    \"video_url\": \"{{ $('Preparar Datos Estilo A').item.json.image_url }}\"\n  },\n  \"post_info\": {\n    \"title\": \"{{ $('Preparar Datos Estilo A').item.json.copy_tt }}\",\n    \"privacy_level\": \"PUBLIC_TO_EVERYONE\",\n    \"disable_duet\": false,\n    \"disable_comment\": false,\n    \"disable_stitch\": false\n  }\n}",
+        "options": {}
+      },
+      "id": "bf35b9bc-1b92-4e48-aa97-29f6032abf6a",
+      "name": "Publicar TikTok A",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1424,
+        7824
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PFW0cZNaEeyO1Hhz",
+          "name": "Header Auth account Img"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://open.tiktokapis.com/v2/post/publish/inbox/video/init/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json; charset=UTF-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"source_info\": {\n    \"source\": \"PULL_FROM_URL\",\n    \"video_url\": \"{{ $('Preparar Datos Estilo B').item.json.image_url }}\"\n  },\n  \"post_info\": {\n    \"title\": \"{{ $('Preparar Datos Estilo B').item.json.copy_tt }}\",\n    \"privacy_level\": \"PUBLIC_TO_EVERYONE\",\n    \"disable_duet\": false,\n    \"disable_comment\": false,\n    \"disable_stitch\": false\n  }\n}",
+        "options": {}
+      },
+      "id": "2b2f1deb-ec30-42f0-b66b-a7bc88afdef3",
+      "name": "Publicar TikTok B",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1424,
+        8352
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PFW0cZNaEeyO1Hhz",
+          "name": "Header Auth account Img"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Consolidar resultados de publicación Estilo A\nconst fbResult = $('Publicar Facebook A').first().json;\nconst igResult = $('Publicar Instagram A').first().json;\nconst ttResult = $('Publicar TikTok A').first().json;\nconst prepData = $('Preparar Datos Estilo A').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    style: 'A (DALL-E 3)',\n    chat_id: prepData.chat_id,\n    results: {\n      facebook: fbResult.id ? '✅ Publicado' : '❌ Error',\n      facebook_post_id: fbResult.id || fbResult.error?.message,\n      instagram: igResult.id ? '✅ Publicado' : '❌ Error',\n      instagram_media_id: igResult.id || igResult.error?.message,\n      tiktok: ttResult.data ? '✅ Enviado a bandeja' : '⚠️ Revisar',\n      tiktok_status: ttResult.data?.publish_id || ttResult.error?.message || 'Pendiente'\n    }\n  }\n}];"
+      },
+      "id": "a194898b-51cb-41a4-a41a-953d669a6535",
+      "name": "Consolidar Resultados A",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2096,
+        8016
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Consolidar resultados de publicación Estilo B\nconst fbResult = $('Publicar Facebook B').first().json;\nconst igResult = $('Publicar Instagram B').first().json;\nconst ttResult = $('Publicar TikTok B').first().json;\nconst prepData = $('Preparar Datos Estilo B').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    style: 'B (Google Imagen 3)',\n    chat_id: prepData.chat_id,\n    results: {\n      facebook: fbResult.id ? '✅ Publicado' : '❌ Error',\n      facebook_post_id: fbResult.id || fbResult.error?.message,\n      instagram: igResult.id ? '✅ Publicado' : '❌ Error',\n      instagram_media_id: igResult.id || igResult.error?.message,\n      tiktok: ttResult.data ? '✅ Enviado a bandeja' : '⚠️ Revisar',\n      tiktok_status: ttResult.data?.publish_id || ttResult.error?.message || 'Pendiente'\n    }\n  }\n}];"
+      },
+      "id": "155d1a7f-4deb-4922-96f8-bcd1a19a9c49",
+      "name": "Consolidar Resultados B",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2096,
+        8544
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=🎉 *¡PUBLICACIÓN COMPLETADA!*\n\n🎨 *Estilo:* {{ $json.style }}\n\n📊 *Resultados:*\n\n📘 *Facebook:* {{ $json.results.facebook }}\n   ID: {{ $json.results.facebook_post_id }}\n\n📸 *Instagram:* {{ $json.results.instagram }}\n   ID: {{ $json.results.instagram_media_id }}\n\n🎵 *TikTok:* {{ $json.results.tiktok }}\n   Status: {{ $json.results.tiktok_status }}\n\n✨ _Tu contenido ya está en vivo en todas las plataformas!_",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "594587f8-f5e0-448b-ad8c-796ca8005324",
+      "name": "Notificar Éxito A",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2384,
+        8016
+      ],
+      "webhookId": "19505ffb-4fda-45aa-92b6-6c080f8a6168",
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=🎉 *¡PUBLICACIÓN COMPLETADA!*\n\n🎨 *Estilo:* {{ $json.style }}\n\n📊 *Resultados:*\n\n📘 *Facebook:* {{ $json.results.facebook }}\n   ID: {{ $json.results.facebook_post_id }}\n\n📸 *Instagram:* {{ $json.results.instagram }}\n   ID: {{ $json.results.instagram_media_id }}\n\n🎵 *TikTok:* {{ $json.results.tiktok }}\n   Status: {{ $json.results.tiktok_status }}\n\n✨ _Tu contenido ya está en vivo en todas las plataformas!_",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "8fd6b08e-fd5d-4903-b17f-c9c00bbcce2b",
+      "name": "Notificar Éxito B",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2384,
+        8544
+      ],
+      "webhookId": "8f0ed778-137f-4c5b-b6c6-5f512fe130fa",
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query?.message?.chat?.id }}",
+        "text": "📝 *Modo Edición Activado*\n\n¿Qué no te gustó? Escribe tu feedback o envía un *audio* con tus correcciones:\n\n_Ejemplos:_\n• \"Cambia el fondo a rojo\"\n• \"Haz el texto más corto\"\n• \"Quiero más emojis\"\n• \"Estilo más minimalista\"\n• 🎤 _O envía una nota de voz explicando los cambios_\n\n✏️ Te escucho...",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "3614afdf-6b83-411b-ba19-24ff3b0d3775",
+      "name": "Pedir Feedback",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        8736
+      ],
+      "webhookId": "d710f32b-c16a-4c30-9b3d-083e9734bd92",
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Guardar en memoria el contenido previo para contexto\n// Usamos try-catch porque estos nodos pueden no estar disponibles en esta ejecución\nlet parsedContent = {};\nlet originalPrompt = '';\n\ntry {\n  parsedContent = $('Parsear JSON').first()?.json || {};\n} catch (e) {\n  // Parsear JSON no disponible en esta ejecución\n  parsedContent = {};\n}\n\ntry {\n  originalPrompt = $('Cerebro CM').first()?.json?.input || '';\n} catch (e) {\n  // Cerebro CM no disponible en esta ejecución\n  originalPrompt = '';\n}\n\nreturn [{\n  json: {\n    waiting_feedback: true,\n    original_content: parsedContent,\n    original_prompt: originalPrompt,\n    chat_id: $json.callback_query?.message?.chat?.id || $json.message?.chat?.id\n  }\n}];"
+      },
+      "id": "a1d75374-1156-4e46-80fe-b29331aa79af",
+      "name": "Guardar Contexto Previo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1424,
+        8736
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is_feedback_audio",
+              "leftValue": "={{ $json.message?.voice ? 'voice' : 'text' }}",
+              "rightValue": "voice",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "eb8804f4-dc87-4f8b-bacc-1526a7b62078",
+      "name": "Feedback es Audio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        7536
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "id": "dfb6796e-3f29-4231-afb5-f65053d752be",
+      "name": "Obtener Audio Feedback",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1424,
+        7392
+      ],
+      "webhookId": "eb9f8621-f61e-4ca2-9b93-20a53a453dce",
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "id": "cc535729-445b-428d-b306-2c2d91cb4639",
+      "name": "Transcribir Feedback",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.3,
+      "position": [
+        1648,
+        7392
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combinar feedback con contenido original para regenerar\nconst feedback = $json.text || $json.message?.text || '';\nconst chatId = $json.message?.chat?.id;\n\n// Construir prompt mejorado con el feedback\nconst enhancedPrompt = `CORRECCIONES DEL USUARIO:\n${feedback}\n\nPor favor regenera el contenido aplicando estas correcciones. Mantén el mismo formato de respuesta JSON.`;\n\nreturn [{\n  json: {\n    message: {\n      text: enhancedPrompt,\n      chat: { id: chatId }\n    },\n    is_revision: true,\n    feedback: feedback\n  }\n}];"
+      },
+      "id": "a4c0c0d1-ad97-4454-8fee-635d66061e03",
+      "name": "Preparar Revisión",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1872,
+        7536
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message?.chat?.id }}",
+        "text": "🔄 *Procesando tus correcciones...*\n\n📝 Feedback recibido:\n_{{ $json.feedback }}_\n\n⏳ Regenerando contenido con tus cambios...",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "6afc4703-0236-49c4-bcc7-bc748870ebd2",
+      "name": "Notificar Procesando",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2096,
+        7536
+      ],
+      "webhookId": "2d825c4d-5884-46c0-811c-652eeec00c6f",
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message?.chat?.id || $('Telegram Trigger').item.json.callback_query?.message?.chat?.id }}",
+        "text": "={{ $json.response_text }}",
+        "additionalFields": {}
+      },
+      "id": "31bfcb68-1b75-40fa-b5f2-b0c947bf407f",
+      "name": "Responder Chat",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3120,
+        7872
+      ],
+      "webhookId": "01df1cfe-0ca3-4749-9519-134deca9a11f",
+      "credentials": {
+        "telegramApi": {
+          "id": "nFQXlS5PE97ruk0W",
+          "name": "Telegram account ADMIN CM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "wait",
+        "options": {}
+      },
+      "id": "bb39a7bc-71ae-4408-ae90-e3861252aa47",
+      "name": "Esperar Todo A",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        1872,
+        8016
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "wait",
+        "options": {}
+      },
+      "id": "38960b5f-00d2-42f2-bc6f-8e8539fe6a56",
+      "name": "Esperar Todo B",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        1872,
+        8544
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Router Principal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router Principal": {
+      "main": [
+        [
+          {
+            "node": "Router Botones",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Detectar Tipo Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detectar Tipo Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Es Audio?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Feedback es Audio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es Audio?": {
+      "main": [
+        [
+          {
+            "node": "Obtener Archivo Audio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cerebro CM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Archivo Audio": {
+      "main": [
+        [
+          {
+            "node": "Transcribir Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribir Audio": {
+      "main": [
+        [
+          {
+            "node": "Cerebro CM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo GPT-4o": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Cerebro CM",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria Buffer": {
+      "ai_memory": [
+        [
+          {
+            "node": "Cerebro CM",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cerebro CM": {
+      "main": [
+        [
+          {
+            "node": "Parsear JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear JSON": {
+      "main": [
+        [
+          {
+            "node": "Tipo de Media?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de Media?": {
+      "main": [
+        [
+          {
+            "node": "Generar Video A (SVD)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generar Video B (Zeroscope)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generar Video C (Google Veo)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Aviso Inicio Video",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generar DALL-E 3 A",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generar DALL-E 3 B",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generar Google Imagen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Aviso Imágenes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generar DALL-E 3 A",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generar DALL-E 3 B",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generar Google Imagen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Aviso Imágenes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar DALL-E 3 A": {
+      "main": [
+        [
+          {
+            "node": "Enviar Foto DALL-E A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar DALL-E 3 B": {
+      "main": [
+        [
+          {
+            "node": "Enviar Foto DALL-E B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Google Imagen": {
+      "main": [
+        [
+          {
+            "node": "Convertir Google Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convertir Google Base64": {
+      "main": [
+        [
+          {
+            "node": "Enviar Foto Google",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Foto Google": {
+      "main": [
+        [
+          {
+            "node": "Unir Imágenes",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Unir Imágenes": {
+      "main": [
+        [
+          {
+            "node": "Menu Aprobacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Video A (SVD)": {
+      "main": [
+        [
+          {
+            "node": "Enviar Video A (SVD)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Video B (Zeroscope)": {
+      "main": [
+        [
+          {
+            "node": "Enviar Video B (Zeroscope)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Video C (Google Veo)": {
+      "main": [
+        [
+          {
+            "node": "Enviar Video C (Google Veo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aviso Imágenes": {
+      "main": [
+        []
+      ]
+    },
+    "Enviar Foto DALL-E A": {
+      "main": [
+        [
+          {
+            "node": "Unir Imágenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Foto DALL-E B": {
+      "main": [
+        [
+          {
+            "node": "Unir Imágenes",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Enviar Video A (SVD)": {
+      "main": [
+        [
+          {
+            "node": "Menu Aprobacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Video B (Zeroscope)": {
+      "main": [
+        [
+          {
+            "node": "Menu Aprobacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Video C (Google Veo)": {
+      "main": [
+        [
+          {
+            "node": "Menu Aprobacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router Botones": {
+      "main": [
+        [
+          {
+            "node": "Preparar Datos Estilo A",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Datos Estilo B",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pedir Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Datos Estilo A": {
+      "main": [
+        [
+          {
+            "node": "Publicar Facebook A",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Crear Container IG A",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Publicar TikTok A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Datos Estilo B": {
+      "main": [
+        [
+          {
+            "node": "Publicar Facebook B",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Crear Container IG B",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Publicar TikTok B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Container IG A": {
+      "main": [
+        [
+          {
+            "node": "Publicar Instagram A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Container IG B": {
+      "main": [
+        [
+          {
+            "node": "Publicar Instagram B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publicar Facebook A": {
+      "main": [
+        [
+          {
+            "node": "Esperar Todo A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publicar Instagram A": {
+      "main": [
+        [
+          {
+            "node": "Esperar Todo A",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Publicar Facebook B": {
+      "main": [
+        [
+          {
+            "node": "Esperar Todo B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publicar Instagram B": {
+      "main": [
+        [
+          {
+            "node": "Esperar Todo B",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Esperar Todo A": {
+      "main": [
+        [
+          {
+            "node": "Consolidar Resultados A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Esperar Todo B": {
+      "main": [
+        [
+          {
+            "node": "Consolidar Resultados B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consolidar Resultados A": {
+      "main": [
+        [
+          {
+            "node": "Notificar Éxito A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consolidar Resultados B": {
+      "main": [
+        [
+          {
+            "node": "Notificar Éxito B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pedir Feedback": {
+      "main": [
+        [
+          {
+            "node": "Guardar Contexto Previo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feedback es Audio?": {
+      "main": [
+        [
+          {
+            "node": "Obtener Audio Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Revisión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Audio Feedback": {
+      "main": [
+        [
+          {
+            "node": "Transcribir Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribir Feedback": {
+      "main": [
+        [
+          {
+            "node": "Preparar Revisión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Revisión": {
+      "main": [
+        [
+          {
+            "node": "Notificar Procesando",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notificar Procesando": {
+      "main": [
+        [
+          {
+            "node": "Cerebro CM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9a13f9c5-0d4a-46c0-9470-288854145e3e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "id": "Gf39eHTr2Nl8I0Eg",
+  "tags": []
+}

@@ -12,7 +12,7 @@ Configurar el envío de correos electrónicos desde WordPress en el servidor de 
 1. Accede al **Panel de Hostinger** (hPanel)
 2. Ve a **Correos** → **Cuentas de correo**
 3. Crea una cuenta de correo:
-   - **Email**: `info@automatizatech.cl` (o el dominio que uses)
+   - **Email**: `contacto@automatizatech.cl` (o el dominio que uses)
    - **Contraseña**: Crea una contraseña segura y guárdala
    - **Espacio**: 1GB es suficiente
 
@@ -25,7 +25,7 @@ Agrega estas líneas al archivo `wp-config.php` en el servidor de producción (A
  * Configuración SMTP para envío de correos
  * Automatiza Tech - Hostinger
  */
-define('SMTP_USER', 'info@automatizatech.cl'); // Tu correo de Hostinger
+define('SMTP_USER', 'contacto@automatizatech.cl'); // Tu correo de Hostinger
 define('SMTP_PASS', 'TU_CONTRASEÑA_AQUI');     // La contraseña del correo
 define('SMTP_HOST', 'smtp.hostinger.com');
 define('SMTP_PORT', 587);
@@ -36,7 +36,7 @@ define('SMTP_PORT', 587);
 ### 3️⃣ Verificar Configuración del Correo Admin
 
 1. En el panel de WordPress, ve a **Ajustes** → **Generales**
-2. Cambia **Dirección de correo electrónico** a: `info@automatizatech.cl`
+2. Cambia **Dirección de correo electrónico** a: `contacto@automatizatech.cl`
 3. Guarda los cambios
 
 ---
@@ -48,7 +48,7 @@ define('SMTP_PORT', 587);
 1. Ve a **Automatiza Tech** → **Contactos**
 2. Haz clic en el botón **"📧 Test de Correo"** (junto al botón de enviar correos)
 3. Deberías ver un mensaje de éxito
-4. Revisa tu bandeja de entrada en `info@automatizatech.cl`
+4. Revisa tu bandeja de entrada en `contacto@automatizatech.cl`
 
 ### Método 2: Test Manual con Plugin (Opcional)
 
@@ -84,7 +84,7 @@ Una vez configurado, ya puedes usar el sistema:
 Servidor SMTP: smtp.hostinger.com
 Puerto: 587 (TLS) o 465 (SSL)
 Seguridad: TLS/STARTTLS
-Usuario: info@automatizatech.cl (tu correo completo)
+Usuario: contacto@automatizatech.cl (tu correo completo)
 Contraseña: La contraseña del correo
 ```
 
@@ -106,7 +106,7 @@ define('SMTP_SECURE', 'ssl'); // En vez de 'tls'
 
 1. **Credenciales incorrectas**
    - Verifica usuario y contraseña en `wp-config.php`
-   - Asegúrate de usar el correo completo (`info@automatizatech.cl`)
+   - Asegúrate de usar el correo completo (`contacto@automatizatech.cl`)
 
 2. **Puerto bloqueado**
    - Contacta a Hostinger para verificar que el puerto 587 esté abierto
@@ -126,7 +126,7 @@ define('SMTP_SECURE', 'ssl'); // En vez de 'tls'
    - Copia los registros DNS y agrégalos a tu dominio
 
 2. **Verificar remitente**
-   - Usa siempre `info@automatizatech.cl` como remitente
+   - Usa siempre `contacto@automatizatech.cl` como remitente
    - No uses correos genéricos como `wordpress@` o `noreply@`
 
 3. **Contenido del correo**
@@ -175,7 +175,7 @@ Puedes ver en el panel de WordPress:
 
 Antes de activar en producción, verifica:
 
-- [ ] Cuenta de correo creada en Hostinger (`info@automatizatech.cl`)
+- [ ] Cuenta de correo creada en Hostinger (`contacto@automatizatech.cl`)
 - [ ] Credenciales SMTP agregadas a `wp-config.php`
 - [ ] Correo admin cambiado en WordPress
 - [ ] Test de correo realizado exitosamente
@@ -230,7 +230,7 @@ Si tienes problemas con la configuración:
 
 Una vez configurado correctamente:
 
-1. Los correos se enviarán desde `info@automatizatech.cl`
+1. Los correos se enviarán desde `contacto@automatizatech.cl`
 2. Los contactos nuevos recibirán el email profesional
 3. Se verá el logo de Automatiza Tech
 4. Diseño moderno con bots y emojis

@@ -258,7 +258,7 @@ public function configure_smtp($phpmailer) {
     $phpmailer->Username = 'automatizatech.bots@gmail.com';
     $phpmailer->Password = '***'; // Contraseña de aplicación
     $phpmailer->SMTPSecure = 'tls';
-    $phpmailer->From = 'noreply@automatizatech.shop';
+    $phpmailer->From = 'noreply@automatizatech.cl';
     $phpmailer->FromName = 'AutomatizaTech';
     $phpmailer->CharSet = 'UTF-8';
 }
@@ -295,7 +295,7 @@ URL: /wp-admin/admin.php?page=automatiza-invoice-settings
 | **RUT** | Rol Único Tributario | 76.123.456-7 |
 | **Giro** | Actividad comercial | Servicios de Automatización Digital |
 | **Dirección** | Dirección completa | Av. Providencia 1234, Of. 567, Santiago |
-| **Email** | Email de contacto | info@automatizatech.shop |
+| **Email** | Email de contacto | contacto@automatizatech.cl |
 | **Teléfono** | Teléfono de contacto | +56 9 1234 5678 |
 | **Sitio Web** | URL del sitio | https://automatizatech.shop |
 
@@ -316,7 +316,7 @@ URL: /wp-admin/admin.php?page=automatiza-invoice-settings
 │  Servicios de Automatización       │
 │  ─────────────────────────────     │
 │  📍 Av. Providencia 1234, Of. 567 │
-│  📧 info@automatizatech.shop       │
+│  📧 contacto@automatizatech.cl       │
 │  📞 +56 9 1234 5678                │
 │  🌐 https://automatizatech.shop    │
 └─────────────────────────────────────┘
@@ -689,7 +689,7 @@ INSERT INTO wp_options (option_name, option_value, autoload) VALUES
 ('company_rut', '76.123.456-7', 'yes'),
 ('company_giro', 'Servicios de Automatización Digital', 'yes'),
 ('company_address', 'Av. Providencia 1234, Of. 567, Santiago', 'yes'),
-('company_email', 'info@automatizatech.shop', 'yes'),
+('company_email', 'contacto@automatizatech.cl', 'yes'),
 ('company_phone', '+56 9 1234 5678', 'yes'),
 ('company_website', 'https://automatizatech.shop', 'yes');
 ```

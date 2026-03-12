@@ -1,0 +1,529 @@
+{
+  "name": "Agente IA - DEMO DINÁMICO v2 (con Historial MySQL)",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "mode": "webhook",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        6304,
+        2016
+      ],
+      "id": "7542a00f-5f75-4783-8033-f38d405a0a00",
+      "name": "When chat message received",
+      "webhookId": "demo-dinamico"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://automatizatech.cl/api-chat-history.php?action=save",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ session_id: $json.sessionId, role: 'user', message: $json.chatInput }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6528,
+        2016
+      ],
+      "id": "0a17e59b-d83a-4025-89bf-bc27a9db07f5",
+      "name": "Guardar Mensaje Usuario"
+    },
+    {
+      "parameters": {
+        "url": "=https://automatizatech.cl/api-get-prompt.php?id={{ $('When chat message received').item.json.sessionId }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6752,
+        2016
+      ],
+      "id": "5c5964cc-8738-418c-8f28-c57c906a569c",
+      "name": "Obtener Prompt de BD"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        7216,
+        1984
+      ],
+      "id": "52cefabc-3413-4e0d-8b4f-811d9bc433a6",
+      "name": "Cerebro",
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        7344,
+        1984
+      ],
+      "id": "8b60d456-46aa-4b8b-843e-0133dfd3596a",
+      "name": "Memoria"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('When chat message received').item.json.chatInput }}",
+        "options": {
+          "systemMessage": "={{ $('Obtener Prompt de BD').item.json.data.system_prompt }}\n\n--- CONTEXTO TEMPORAL ---\nFecha y hora actual: {{ $now.setZone('America/Santiago').toFormat('EEEE d \\\"de\\\" MMMM \\\"de\\\" yyyy, HH:mm \\\"hrs\\\"', { locale: 'es' }) }}\nZona horaria: Chile (America/Santiago)\n\n--- INSTRUCCIÓN ADICIONAL PARA FINALIZAR CONVERSACIÓN ---\nCuando el usuario indique que quiere terminar la conversación (usando palabras como: 'terminar', 'finalizar', 'adiós', 'gracias eso es todo', 'hasta luego', 'bye', 'chao', 'eso sería todo', 'no necesito nada más'), debes:\n1. Despedirte amablemente agradeciéndole por probar la demo\n2. Indicarle que recibirá un resumen de la conversación en su correo\n3. IMPORTANTE: Tu respuesta DEBE terminar exactamente con la frase: [CONVERSACION_FINALIZADA]\n\nEsto activará el envío automático del historial. Solo agrega [CONVERSACION_FINALIZADA] cuando realmente se despidan, no en otros mensajes."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        7200,
+        2160
+      ],
+      "id": "5e067a95-0e18-48d4-860f-c4f2a69bd03f",
+      "name": "Agente IA - DEMO"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "condition-check-success",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6976,
+        2016
+      ],
+      "id": "8cdff843-4163-44b9-9c97-e9096fd18d75",
+      "name": "¿Prompt encontrado?"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Eres un asistente virtual de demostración de AutomatizaTech. Actualmente no hay una configuración específica para esta demo. Por favor, contacta al equipo de AutomatizaTech en contacto@automatizatech.cl para más información."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        7200,
+        1760
+      ],
+      "id": "a9d035ac-dfac-4acf-9ca7-6efc589627e0",
+      "name": "Agente Fallback"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://automatizatech.cl/api-chat-history.php?action=save",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ session_id: $('When chat message received').item.json.sessionId, role: 'assistant', message: $json.output }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7552,
+        2160
+      ],
+      "id": "6484a735-50ef-44e5-aac2-4333642fd2f8",
+      "name": "Guardar Respuesta Bot"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-conversation-ended",
+              "leftValue": "={{ $('Agente IA - DEMO').item.json.output }}",
+              "rightValue": "[CONVERSACION_FINALIZADA]",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7776,
+        2160
+      ],
+      "id": "28fd3e31-0e58-4dd6-95ff-bf7417e7c726",
+      "name": "¿Conversación Finalizada?"
+    },
+    {
+      "parameters": {
+        "url": "=https://automatizatech.cl/api-chat-history.php?action=get&session_id={{ $('When chat message received').item.json.sessionId }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8000,
+        2256
+      ],
+      "id": "f391f364-c6cb-4f0d-9fa0-59732a03d386",
+      "name": "Obtener Historial MySQL"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener datos del contexto\nconst promptData = $('Obtener Prompt de BD').first().json;\nconst agentOutput = $('Agente IA - DEMO').first().json;\nconst chatInput = $('When chat message received').first().json;\nconst historyData = $('Obtener Historial MySQL').first().json;\n\n// Limpiar la respuesta (quitar el marcador)\nlet cleanOutput = agentOutput.output || '';\ncleanOutput = cleanOutput.replace('[CONVERSACION_FINALIZADA]', '').trim();\n\n// Obtener historial HTML de la API MySQL\nlet historialHTML = historyData.historial_html || '';\n\n// Si no hay historial, usar mensaje actual\nif (!historialHTML || historialHTML.trim() === '') {\n  historialHTML = `\n<div style=\"background: linear-gradient(135deg, #1e40af, #3b82f6); color: white; padding: 12px 16px; border-radius: 12px; margin: 10px 0 10px 20%; text-align: right;\">\n  <strong>👤 Usuario:</strong> ${chatInput.chatInput || 'N/A'}\n</div>\n<div style=\"background: white; border: 1px solid #e0e0e0; padding: 12px 16px; border-radius: 12px; margin: 10px 20% 10px 0;\">\n  <strong style=\"color: #06d6a0;\">🤖 Asistente:</strong> ${cleanOutput}\n</div>`;\n}\n\nreturn {\n  client_email: promptData.data?.client_email || '',\n  company_name: promptData.data?.company_name || 'Cliente',\n  session_id: chatInput.sessionId || '',\n  historial_html: historialHTML,\n  message_count: historyData.message_count || 0,\n  clean_output: cleanOutput,\n  output: cleanOutput,\n  fecha: new Date().toLocaleDateString('es-CL', { \n    day: '2-digit', \n    month: '2-digit', \n    year: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit'\n  })\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8224,
+        2256
+      ],
+      "id": "e991740e-7647-4507-ab16-1f15ec6c896b",
+      "name": "Preparar Datos Email"
+    },
+    {
+      "parameters": {
+        "fromEmail": "contacto@automatizatech.cl",
+        "toEmail": "={{ $json.client_email }}",
+        "subject": "=Resumen de tu Demo - {{ $json.company_name }} | AutomatizaTech",
+        "html": "=<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"UTF-8\">\n    <style>\n        body { font-family: 'Poppins', Arial, sans-serif; background-color: #f9f9f9; margin: 0; padding: 0; color: #333333; }\n        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }\n        .header { background: linear-gradient(135deg, #1e40af 0%, #06d6a0 100%); padding: 40px 20px; text-align: center; }\n        .header img { max-height: 80px; width: auto; margin-bottom: 15px; }\n        .header h1 { margin: 0; font-size: 22px; color: #ffffff; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }\n        .content { padding: 40px 30px; line-height: 1.6; }\n        .conversation-box { background: #f8f9fa; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #06d6a0; }\n        .cta-container { text-align: center; margin: 30px 0; }\n        .btn { display: inline-block; padding: 14px 28px; margin: 5px; color: #ffffff !important; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 14px; }\n        .btn-primary { background: linear-gradient(135deg, #06d6a0, #10b981); }\n        .footer { background-color: #f1f1f1; padding: 20px; text-align: center; font-size: 12px; color: #888888; }\n        .footer a { color: #1e40af; text-decoration: none; }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"header\">\n            <img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"AutomatizaTech\">\n            <h1>Resumen de tu Demo</h1>\n        </div>\n        <div class=\"content\">\n            <p>Hola,</p>\n            <p>¡Gracias por probar la demo del asistente virtual de <strong>{{ $json.company_name }}</strong>!</p>\n            <p>A continuación encontrarás el historial completo de la conversación ({{ $json.message_count }} mensajes):</p>\n            \n            <div class=\"conversation-box\">\n                <h3 style=\"margin-top: 0; color: #1e40af;\">💬 Historial de Conversación</h3>\n                <p style=\"font-size: 12px; color: #666;\">Fecha: {{ $json.fecha }}</p>\n                {{ $json.historial_html }}\n            </div>\n            \n            <p>Este es solo un ejemplo de lo que la automatización puede hacer por tu negocio. Imagina tener un asistente disponible 24/7 atendiendo a tus clientes.</p>\n            \n            <div class=\"cta-container\">\n                <a href=\"https://automatizatech.cl/#contacto\" class=\"btn btn-primary\">💬 Quiero mi propio Asistente</a>\n            </div>\n            \n            <p>Si tienes alguna pregunta o deseas más información, no dudes en contactarnos.</p>\n            <p>¡Saludos cordiales!<br><strong>El equipo de AutomatizaTech</strong></p>\n        </div>\n        <div class=\"footer\">\n            <p>&copy; 2025 AutomatizaTech. Todos los derechos reservados.</p>\n            <p>Automatización inteligente para tu negocio</p>\n            <p>\n                <a href=\"https://automatizatech.cl\">Web</a> | \n                <a href=\"https://wa.me/56927002984\">WhatsApp</a> | \n                <a href=\"https://instagram.com/automatizatech.cl\">Instagram</a>\n            </p>\n        </div>\n    </div>\n</body>\n</html>",
+        "options": {
+          "bccEmail": "automatizacionesbotcore@gmail.com"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        8448,
+        2160
+      ],
+      "id": "0dd8d8aa-0d13-48e9-9e89-fc84d043f6c6",
+      "name": "Enviar Historial por Email",
+      "webhookId": "a4360c97-f0ea-455f-b967-fdcc3fa6677f",
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "output-clean",
+              "name": "output",
+              "value": "={{ $('Agente IA - DEMO').item.json.output.replace('[CONVERSACION_FINALIZADA]', '').trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8000,
+        2064
+      ],
+      "id": "08558658-44c0-42fa-8115-71d5acbb0eef",
+      "name": "Limpiar Output"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "output-return",
+              "name": "output",
+              "value": "={{ $('Preparar Datos Email').item.json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8672,
+        2160
+      ],
+      "id": "f8cbd6e4-9534-45c9-a68b-03e5ec6264d1",
+      "name": "Retornar Respuesta"
+    },
+    {
+      "parameters": {
+        "amount": 90
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        8448,
+        2352
+      ],
+      "id": "453fd6d3-19d0-48f4-b093-d978983cc311",
+      "name": "Esperar 10 segundos",
+      "webhookId": "545883a3-8fcc-4f59-aee8-667875b3fde2"
+    },
+    {
+      "parameters": {
+        "url": "=https://automatizatech.cl/api-chat-history.php?action=clear&session_id={{ $('When chat message received').item.json.sessionId }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8672,
+        2352
+      ],
+      "id": "b3f55e27-7540-49d0-93a2-d9c463761b9b",
+      "name": "Limpiar Historial (Opcional)"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Guardar Mensaje Usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Mensaje Usuario": {
+      "main": [
+        [
+          {
+            "node": "Obtener Prompt de BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Prompt de BD": {
+      "main": [
+        [
+          {
+            "node": "¿Prompt encontrado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Prompt encontrado?": {
+      "main": [
+        [
+          {
+            "node": "Agente IA - DEMO",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agente Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cerebro": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente IA - DEMO",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Agente Fallback",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente IA - DEMO",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "Agente Fallback",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente IA - DEMO": {
+      "main": [
+        [
+          {
+            "node": "Guardar Respuesta Bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Respuesta Bot": {
+      "main": [
+        [
+          {
+            "node": "¿Conversación Finalizada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Conversación Finalizada?": {
+      "main": [
+        [
+          {
+            "node": "Obtener Historial MySQL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Limpiar Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Historial MySQL": {
+      "main": [
+        [
+          {
+            "node": "Preparar Datos Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Datos Email": {
+      "main": [
+        [
+          {
+            "node": "Enviar Historial por Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Esperar 10 segundos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Historial por Email": {
+      "main": [
+        [
+          {
+            "node": "Retornar Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retornar Respuesta": {
+      "main": [
+        []
+      ]
+    },
+    "Esperar 10 segundos": {
+      "main": [
+        [
+          {
+            "node": "Limpiar Historial (Opcional)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "ebca005d-61bf-4d96-8805-7df63d3342fc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "id": "GPyqretXwyoc845T",
+  "tags": []
+}

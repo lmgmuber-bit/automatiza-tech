@@ -1,0 +1,207 @@
+{
+  "name": "WhatsApp Recordatorio 1h - AutomatizaTech (PROD)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300],
+      "id": "cron-1h-wa",
+      "name": "Cron cada 5min"
+    },
+    {
+      "parameters": {
+        "url": "https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/reminders-wa/1h",
+        "options": {
+          "splitIntoItems": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, 300],
+      "id": "get-leads-1h-wa",
+      "name": "Get Leads 1h"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-has-leads",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "id": "has-leads-1h-wa",
+      "name": "Has Leads?"
+    },
+    {
+      "parameters": {
+        "maxItems": 10
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [920, 260],
+      "id": "limit-1h-wa",
+      "name": "Limit 10 Anti-Spam"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\n// Función para obtener hora actual en Chile (UTC-3 o UTC-4 según horario de verano)\nfunction getChileNow() {\n  const now = new Date();\n  // Usar toLocaleString para obtener la hora en Chile y reconvertirla\n  const chileStr = now.toLocaleString('en-US', { timeZone: 'America/Santiago' });\n  return new Date(chileStr);\n}\n\nfor (const item of items) {\n  const data = item.json;\n  \n  // Limpiar el + del teléfono para la API de WhatsApp\n  const phone = (data.phone || '').replace(/^\\+/, '');\n  \n  const meetLink = data.meet_link || 'Te llegó por correo';\n  \n  // Calcular tiempo restante hasta la cita\n  // scheduled_date: \"09-01-2026\" (DD-MM-YYYY), scheduled_time: \"12:00\" o \"12:00:00\"\n  const dateParts = data.scheduled_date.split('-');\n  const day = parseInt(dateParts[0], 10);\n  const month = parseInt(dateParts[1], 10) - 1; // Mes es 0-indexado\n  const year = parseInt(dateParts[2], 10);\n  \n  const timeParts = data.scheduled_time.split(':');\n  const hour = parseInt(timeParts[0], 10);\n  const minute = parseInt(timeParts[1], 10);\n  \n  // Obtener hora actual EN CHILE\n  const nowChile = getChileNow();\n  \n  // Crear fecha de la cita (también en hora Chile, ya que los datos vienen en hora local)\n  const appointmentDate = new Date(year, month, day, hour, minute, 0);\n  \n  // Calcular diferencia en minutos\n  const diffMs = appointmentDate.getTime() - nowChile.getTime();\n  const diffMinutes = Math.floor(diffMs / 60000);\n  \n  // Debug info mejorado\n  const debugInfo = {\n    scheduled_date: data.scheduled_date,\n    scheduled_time: data.scheduled_time,\n    parsed: { year, month: month + 1, day, hour, minute },\n    appointmentDate: appointmentDate.toString(),\n    nowChile: nowChile.toString(),\n    nowChileHour: nowChile.getHours(),\n    nowChileMinute: nowChile.getMinutes(),\n    serverNow: new Date().toISOString(),\n    diffMs,\n    diffMinutes\n  };\n  \n  // Generar mensaje dinámico según tiempo restante\n  let timeMessage = '';\n  if (diffMinutes >= 115) {\n    // Entre 1h 55min y 2h\n    timeMessage = '⏰ *¡Tu cita es en casi 2 horas!*';\n  } else if (diffMinutes >= 90) {\n    // Entre 1h 30min y 1h 55min\n    const hours = Math.floor(diffMinutes / 60);\n    const mins = diffMinutes % 60;\n    timeMessage = `⏰ *¡Tu cita es en ${hours} hora y ${mins} minutos!*`;\n  } else if (diffMinutes >= 75) {\n    // Entre 1h 15min y 1h 30min\n    timeMessage = '⏰ *¡Tu cita es en 1 hora y media!*';\n  } else if (diffMinutes >= 55) {\n    // Entre 55min y 1h 15min (aproximadamente 1 hora)\n    timeMessage = '⏰ *¡Tu cita es en 1 hora!*';\n  } else if (diffMinutes >= 30) {\n    // Entre 30min y 55min\n    timeMessage = `⏰ *¡Tu cita es en ${diffMinutes} minutos!*`;\n  } else if (diffMinutes > 0) {\n    // Menos de 30 minutos\n    timeMessage = '⏰ *¡Tu cita es en menos de 30 minutos!*';\n  } else {\n    // Ya pasó o es ahora\n    timeMessage = '⏰ *¡Tu cita es AHORA!*';\n  }\n  \n  const messageBody = {\n    messaging_product: 'whatsapp',\n    recipient_type: 'individual',\n    to: phone,\n    type: 'interactive',\n    interactive: {\n      type: 'button',\n      body: {\n        text: `${timeMessage}\\n\\nHola ${data.name}, te recordamos que tu reunión con AutomatizaTech está programada para hoy.\\n\\n📅 *Fecha:* ${data.scheduled_date}\\n🕐 *Hora:* ${data.scheduled_time} hrs\\n📍 *Enlace:* ${meetLink}\\n\\n¿Podrás asistir?`\n      },\n      action: {\n        buttons: [\n          {\n            type: 'reply',\n            reply: {\n              id: `btn_reminder_confirm_${data.id}`,\n              title: '✅ Sí, confirmo'\n            }\n          },\n          {\n            type: 'reply',\n            reply: {\n              id: `btn_reminder_no_${data.id}`,\n              title: '❌ No podré'\n            }\n          }\n        ]\n      }\n    }\n  };\n  \n  results.push({\n    json: {\n      ...data,\n      debugInfo: debugInfo,\n      diffMinutes: diffMinutes,\n      timeMessage: timeMessage,\n      whatsappBody: JSON.stringify(messageBody)\n    }\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 260],
+      "id": "build-body-1h-wa",
+      "name": "Build WhatsApp Body"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v22.0/946501128543201/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.whatsappBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1360, 260],
+      "id": "send-wa-1h",
+      "name": "Send WhatsApp 1h",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "SH8OXr93p852Ll6m",
+          "name": "WhatsApp Tech"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/leads/update-reminder-wa/{{ $('Build WhatsApp Body').item.json.id }}/1h",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1580, 260],
+      "id": "mark-sent-1h-wa",
+      "name": "Mark 1h Sent"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [920, 420],
+      "id": "no-leads-1h-wa",
+      "name": "No Leads"
+    }
+  ],
+  "connections": {
+    "Cron cada 5min": {
+      "main": [
+        [
+          {
+            "node": "Get Leads 1h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Leads 1h": {
+      "main": [
+        [
+          {
+            "node": "Has Leads?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Leads?": {
+      "main": [
+        [
+          {
+            "node": "Limit 10 Anti-Spam",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit 10 Anti-Spam": {
+      "main": [
+        [
+          {
+            "node": "Build WhatsApp Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build WhatsApp Body": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp 1h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp 1h": {
+      "main": [
+        [
+          {
+            "node": "Mark 1h Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago"
+  },
+  "active": false
+}

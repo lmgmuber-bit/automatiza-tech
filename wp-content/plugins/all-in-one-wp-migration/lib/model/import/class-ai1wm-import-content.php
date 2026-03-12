@@ -33,6 +33,12 @@ class Ai1wm_Import_Content {
 
 	public static function execute( $params ) {
 
+		// Set decryption password
+		$decryption_password = null;
+		if ( isset( $params['decryption_password'] ) ) {
+			$decryption_password = $params['decryption_password'];
+		}
+
 		// Set archive bytes offset
 		if ( isset( $params['archive_bytes_offset'] ) ) {
 			$archive_bytes_offset = (int) $params['archive_bytes_offset'];
@@ -45,6 +51,13 @@ class Ai1wm_Import_Content {
 			$file_bytes_offset = (int) $params['file_bytes_offset'];
 		} else {
 			$file_bytes_offset = 0;
+		}
+
+		// Set file bytes written
+		if ( isset( $params['file_bytes_written'] ) ) {
+			$file_bytes_written = (int) $params['file_bytes_written'];
+		} else {
+			$file_bytes_written = 0;
 		}
 
 		// Get processed files size
@@ -78,6 +91,16 @@ class Ai1wm_Import_Content {
 		// Close handle
 		ai1wm_close( $handle );
 
+		// Read package.json file
+		$handle = ai1wm_open( ai1wm_package_path( $params ), 'r' );
+
+		// Parse package.json file
+		$config = ai1wm_read( $handle, filesize( ai1wm_package_path( $params ) ) );
+		$config = json_decode( $config, true );
+
+		// Close handle
+		ai1wm_close( $handle );
+
 		// What percent of files have we processed?
 		$progress = (int) min( ( $processed_files_size / $total_files_size ) * 100, 100 );
 
@@ -91,8 +114,14 @@ class Ai1wm_Import_Content {
 		// Start time
 		$start = microtime( true );
 
+		// Get compression type
+		$compression_type = null;
+		if ( ! empty( $config['Compression']['Enabled'] ) ) {
+			$compression_type = $config['Compression']['Type'];
+		}
+
 		// Open the archive file for reading
-		$archive = new Ai1wm_Extractor( ai1wm_archive_path( $params ) );
+		$archive = new Ai1wm_Extractor( ai1wm_archive_path( $params ), $decryption_password, $compression_type );
 
 		// Set the file pointer to the one that we have saved
 		$archive->set_file_pointer( $archive_bytes_offset );
@@ -166,7 +195,7 @@ class Ai1wm_Import_Content {
 		$new_paths[] = ai1wm_blog_sites_abspath();
 
 		while ( $archive->has_not_reached_eof() ) {
-			$file_bytes_written = 0;
+			$file_bytes_read = 0;
 
 			// Exclude WordPress files
 			$exclude_files = array_keys( _get_dropins() );
@@ -195,15 +224,15 @@ class Ai1wm_Import_Content {
 			$exclude_extensions = array( AI1WM_LESS_CACHE_EXTENSION, AI1WM_SQLITE_DATABASE_EXTENSION );
 
 			// Extract a file from archive to WP_CONTENT_DIR
-			if ( ( $completed = $archive->extract_one_file_to( WP_CONTENT_DIR, $exclude_files, $exclude_extensions, $old_paths, $new_paths, $file_bytes_written, $file_bytes_offset ) ) ) {
-				$file_bytes_offset = 0;
+			if ( ( $completed = $archive->extract_one_file_to( WP_CONTENT_DIR, $exclude_files, $exclude_extensions, $old_paths, $new_paths, $file_bytes_read, $file_bytes_offset, $file_bytes_written ) ) ) {
+				$file_bytes_offset = $file_bytes_written = 0;
 			}
 
 			// Get archive bytes offset
 			$archive_bytes_offset = $archive->get_file_pointer();
 
 			// Increment processed files size
-			$processed_files_size += $file_bytes_written;
+			$processed_files_size += $file_bytes_read;
 
 			// What percent of files have we processed?
 			$progress = (int) min( ( $processed_files_size / $total_files_size ) * 100, 100 );
@@ -230,6 +259,9 @@ class Ai1wm_Import_Content {
 			// Unset file bytes offset
 			unset( $params['file_bytes_offset'] );
 
+			// Unset file bytes written
+			unset( $params['file_bytes_written'] );
+
 			// Unset processed files size
 			unset( $params['processed_files_size'] );
 
@@ -249,6 +281,9 @@ class Ai1wm_Import_Content {
 
 			// Set file bytes offset
 			$params['file_bytes_offset'] = $file_bytes_offset;
+
+			// Set file bytes written
+			$params['file_bytes_written'] = $file_bytes_written;
 
 			// Set processed files size
 			$params['processed_files_size'] = $processed_files_size;

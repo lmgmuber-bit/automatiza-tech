@@ -1,0 +1,354 @@
+{
+  "name": "WhatsApp Limpieza de Estados - AutomatizaTech (PROD)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hour": 0
+            },
+            {
+              "field": "hours",
+              "hour": 6
+            },
+            {
+              "field": "hours",
+              "hour": 12
+            },
+            {
+              "field": "hours",
+              "hour": 18
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300],
+      "id": "cron-cleanup",
+      "name": "Cron cada 6 horas"
+    },
+    {
+      "parameters": {
+        "operation": "pop",
+        "list": "wa_state_index",
+        "tail": false,
+        "propertyName": "indexEntry",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [480, 300],
+      "id": "get-index-list",
+      "name": "Get Index Entry",
+      "alwaysOutputData": true,
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesar entrada del índice\nconst input = $input.first().json;\nconst indexEntry = input.indexEntry;\n\n// Si no hay más entradas, terminar\nif (!indexEntry) {\n  return {\n    json: {\n      hasMore: false,\n      action: 'DONE',\n      message: 'No hay más estados en el índice'\n    }\n  };\n}\n\n// Parsear la entrada (formato: key|timestamp)\nlet key, timestamp;\ntry {\n  if (typeof indexEntry === 'string') {\n    const parts = indexEntry.split('|');\n    key = parts[0];\n    timestamp = parseInt(parts[1]) || 0;\n  } else {\n    key = indexEntry.key || indexEntry;\n    timestamp = indexEntry.timestamp || 0;\n  }\n} catch (e) {\n  key = String(indexEntry);\n  timestamp = 0;\n}\n\n// Verificar si es una clave válida de estado\nconst isValidStateKey = key && (\n  key.startsWith('booking_') ||\n  key.startsWith('pending_date_') ||\n  key.startsWith('reschedule_') ||\n  key.startsWith('cancel_')\n);\n\nif (!isValidStateKey) {\n  return {\n    json: {\n      hasMore: true,\n      action: 'SKIP',\n      key: key,\n      reason: 'Clave no válida'\n    }\n  };\n}\n\n// Calcular edad en horas\nconst now = Date.now();\nconst ageMs = now - timestamp;\nconst ageHours = ageMs / (1000 * 60 * 60);\nconst thresholdHours = 2; // Limpiar estados mayores a 2 horas\n\nif (ageHours >= thresholdHours) {\n  return {\n    json: {\n      hasMore: true,\n      action: 'DELETE',\n      key: key,\n      ageHours: Math.round(ageHours * 10) / 10,\n      timestamp: timestamp\n    }\n  };\n} else {\n  // Estado reciente, volver a poner en el índice\n  return {\n    json: {\n      hasMore: true,\n      action: 'KEEP',\n      key: key,\n      indexEntry: indexEntry,\n      ageHours: Math.round(ageHours * 10) / 10\n    }\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "id": "parse-entry",
+      "name": "Parse Entry"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "DELETE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Delete"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "KEEP",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Keep"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "DONE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Done"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [920, 300],
+      "id": "action-router",
+      "name": "Action Router"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "={{ $json.key }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [1140, 140],
+      "id": "delete-state",
+      "name": "Delete State",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contar eliminación\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.deleted) staticData.deleted = [];\nstaticData.deleted.push($json.key);\n\nreturn { json: { deleted: $json.key, total: staticData.deleted.length } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1360, 140],
+      "id": "count-delete",
+      "name": "Count Delete"
+    },
+    {
+      "parameters": {
+        "operation": "push",
+        "list": "wa_state_index",
+        "messageData": "={{ $json.indexEntry }}",
+        "tail": true
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [1140, 300],
+      "id": "re-add-to-index",
+      "name": "Re-add to Index",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contar conservación\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.kept) staticData.kept = [];\nstaticData.kept.push($json.key);\n\nreturn { json: { kept: $json.key, total: staticData.kept.length } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1360, 300],
+      "id": "count-keep",
+      "name": "Count Keep"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "output": "empty"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1580, 220],
+      "id": "merge-continue",
+      "name": "Merge Continue"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generar reporte final\nconst staticData = $getWorkflowStaticData('global');\nconst deleted = staticData.deleted || [];\nconst kept = staticData.kept || [];\n\n// Limpiar para próxima ejecución\nstaticData.deleted = [];\nstaticData.kept = [];\n\nreturn {\n  json: {\n    timestamp: new Date().toISOString(),\n    deleted: deleted.length,\n    kept: kept.length,\n    deletedKeys: deleted,\n    keptKeys: kept,\n    message: deleted.length > 0 \n      ? `✅ Limpieza completada: ${deleted.length} estados eliminados, ${kept.length} conservados`\n      : `✅ Limpieza completada: No había estados antiguos para eliminar`\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 460],
+      "id": "final-report",
+      "name": "Final Report"
+    }
+  ],
+  "connections": {
+    "Cron cada 6 horas": {
+      "main": [
+        [
+          {
+            "node": "Get Index Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Index Entry": {
+      "main": [
+        [
+          {
+            "node": "Parse Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Entry": {
+      "main": [
+        [
+          {
+            "node": "Action Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action Router": {
+      "main": [
+        [
+          {
+            "node": "Delete State",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Re-add to Index",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Final Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Index Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete State": {
+      "main": [
+        [
+          {
+            "node": "Count Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count Delete": {
+      "main": [
+        [
+          {
+            "node": "Merge Continue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-add to Index": {
+      "main": [
+        [
+          {
+            "node": "Count Keep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count Keep": {
+      "main": [
+        [
+          {
+            "node": "Merge Continue",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Continue": {
+      "main": [
+        [
+          {
+            "node": "Get Index Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago"
+  },
+  "active": false
+}

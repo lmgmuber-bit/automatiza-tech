@@ -222,37 +222,7 @@ get_header(); ?>
     </section>
 </main>
 
-<!-- WhatsApp Float Button with Robot Animation -->
-<div class="whatsapp-container">
-    <!-- Robot Peek Animation -->
-    <div class="robot-peek">
-        <div class="robot-bot">
-            🤖
-        </div>
-        <div class="chat-bubble">
-            <span class="chat-text" id="robotMessage">¡Hablemos!</span>
-            <div class="bubble-tail"></div>
-        </div>
-    </div>
-    
-    <!-- WhatsApp Button -->
-    <a href="<?php echo esc_url(get_whatsapp_url('Hola! Me interesa conocer más sobre Automatiza Tech')); ?>" 
-       class="whatsapp-float" target="_blank" title="Contáctanos por WhatsApp" id="whatsappBtn">
-        <i class="fab fa-whatsapp"></i>
-    </a>
-</div>
-
 <script>
-// Mensajes rotativos del robot flotante
-const robotMessages = [
-    "¡Hablemos! 💬",
-    "¿Dudas? ¡Pregúntame! 🤔",
-    "Estoy aquí para ayudarte 😊",
-    "¡Automatiza tu negocio! 🚀",
-    "¿Te ayudo? ¡Clic aquí! 👆",
-    "Respuesta inmediata ⚡"
-];
-
 // Mensajes para el botón de Demo
 const demoMessages = [
     "¡Prueba gratis! 🎯",
@@ -271,26 +241,8 @@ const whatsappMessages = [
     "¡Te respondo ya! ⚡"
 ];
 
-let messageIndex = 0;
 let demoIndex = 0;
 let whatsappIndex = 0;
-let isHovering = false;
-let messageInterval;
-
-function rotateFloatMessage() {
-    if (!isHovering) {
-        const messageElement = document.getElementById('robotMessage');
-        if (messageElement) {
-            // Efecto de transición suave
-            messageElement.style.opacity = '0.7';
-            setTimeout(() => {
-                messageElement.textContent = robotMessages[messageIndex];
-                messageElement.style.opacity = '1';
-                messageIndex = (messageIndex + 1) % robotMessages.length;
-            }, 300);
-        }
-    }
-}
 
 function rotateDemoMessage() {
     const demoElement = document.querySelector('.demo-robot .chat-text');
@@ -318,46 +270,6 @@ function rotateWhatsAppMessage() {
 
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
-    // Robot flotante - cambiar mensaje cada 6 segundos
-    const whatsappBtn = document.getElementById('whatsappBtn');
-    const robotPeek = document.querySelector('.robot-peek');
-    
-    if (whatsappBtn && robotPeek) {
-        messageInterval = setInterval(rotateFloatMessage, 6000);
-
-        // Hover events para robot flotante
-        whatsappBtn.addEventListener('mouseenter', () => {
-            isHovering = true;
-            const msgElement = document.getElementById('robotMessage');
-            if (msgElement) {
-                msgElement.style.opacity = '0.7';
-                setTimeout(() => {
-                    msgElement.textContent = "¡Perfecto! ¡Haz clic! 🎯";
-                    msgElement.style.opacity = '1';
-                }, 200);
-            }
-        });
-        
-        whatsappBtn.addEventListener('mouseleave', () => {
-            isHovering = false;
-        });
-        
-        whatsappBtn.addEventListener('touchstart', () => {
-            isHovering = true;
-            const msgElement = document.getElementById('robotMessage');
-            if (msgElement) {
-                msgElement.textContent = "¡Genial! ¡Te esperamos! 🚀";
-            }
-        }, { passive: true });
-        
-        whatsappBtn.addEventListener('click', () => {
-            whatsappBtn.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                whatsappBtn.style.transform = '';
-            }, 100);
-        });
-    }
-    
     // Robots de los botones del hero
     // Rotar mensajes del demo cada 8 segundos
     setInterval(rotateDemoMessage, 8000);

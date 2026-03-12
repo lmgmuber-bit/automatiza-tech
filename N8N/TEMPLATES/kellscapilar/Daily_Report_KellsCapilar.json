@@ -1,0 +1,344 @@
+{
+  "name": "Reporte Diario - KellsCapilar",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1696,
+        368
+      ],
+      "id": "5368deb8-b981-4ea0-8545-7c9de8e1d723",
+      "name": "Cron Lunes a Viernes 7:30am"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verificar si es día de semana (Lunes a Viernes)\nconst now = DateTime.now().setZone('America/Santiago');\nconst dayOfWeek = now.weekday; // 1=Lunes, 7=Domingo\n\nif (dayOfWeek >= 1 && dayOfWeek <= 5) {\n  // Es día de semana\n  return [{ json: { isWeekday: true, today: now.toFormat('yyyy-MM-dd'), displayDate: now.toFormat('dd-MM-yyyy') } }];\n} else {\n  // Es fin de semana, no ejecutar\n  return [];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1472,
+        368
+      ],
+      "id": "78f9877a-6196-411f-abe3-01671f1e0897",
+      "name": "Verificar Día de Semana"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2101861815,
+          "mode": "list",
+          "cachedResultName": "Configuracion",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=2101861815"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1248,
+        368
+      ],
+      "id": "8953b7a5-5205-41ce-8fea-3f70cf1e8e05",
+      "name": "Read Configuracion",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1703053541,
+          "mode": "list",
+          "cachedResultName": "Citas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=1703053541"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1040,
+        368
+      ],
+      "id": "9be7a917-3efb-46f3-a3ed-41ec4375bb8f",
+      "name": "Read Todas las Citas",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtrar citas por fecha=hoy y estado=Confirmado en código\nconst configRows = $('Read Configuracion').all().map(i => i.json);\nconst allCitas = $input.all().map(i => i.json);\nconst today = $('Verificar Día de Semana').first().json.today;\nconst displayDate = $('Verificar Día de Semana').first().json.displayDate;\n\n// Convertir filas de configuración (parametro/valor) a objeto\nconst config = {};\nfor (const row of configRows) {\n  const param = String(row.parametro || '').trim();\n  const valor = row.valor;\n  if (param) {\n    config[param] = valor;\n  }\n}\n\n// FILTRAR: solo citas de HOY con estado Confirmado\nconst citasDelDia = allCitas.filter(cita => {\n  const fecha = String(cita.fecha || '').trim();\n  const estado = String(cita.estado || '').trim().toLowerCase();\n  return fecha === today && estado === 'confirmado';\n});\n\n// Ordenar por hora\ncitasDelDia.sort((a, b) => {\n  const horaA = String(a.hora || '00:00');\n  const horaB = String(b.hora || '00:00');\n  return horaA.localeCompare(horaB);\n});\n\n// Obtener datos de configuración\nconst negocioNombre = config.negocio_nombre || 'Tu Negocio';\nconst negocioEmail = config.negocio_email || '';\n\nreturn [{ \n  json: { \n    citas: citasDelDia,\n    totalCitas: citasDelDia.length,\n    today,\n    displayDate,\n    negocioNombre,\n    negocioEmail,\n    hasCitas: citasDelDia.length > 0\n  } \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -816,
+        368
+      ],
+      "id": "c3242938-22b5-4610-a23c-660cd565a77a",
+      "name": "Filtrar Citas del Día"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.hasCitas }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              },
+              "id": "9eaba47b-0288-42a4-9a74-f506b5a5c6be"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [
+        -592,
+        368
+      ],
+      "id": "c5a33d16-3375-43ff-ab0f-def3a510c5b4",
+      "name": "¿Hay Citas Hoy?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generar HTML del reporte con tarjetas de citas (responsive)\nconst data = $input.first().json;\nconst citas = data.citas;\nconst negocioNombre = data.negocioNombre;\nconst displayDate = data.displayDate;\nconst totalCitas = data.totalCitas;\n\n// Formato de fecha legible: \"viernes 09 de Enero\"\nconst now = DateTime.now().setZone('America/Santiago');\nconst diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];\nconst meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];\nconst diaSemana = diasSemana[now.weekday % 7];\nconst dia = now.day.toString().padStart(2, '0');\nconst mes = meses[now.month - 1];\nconst fechaLegible = `${diaSemana} ${dia} de ${mes}`;\n\n// Generar tarjetas de citas (responsive)\nlet citasCards = '';\nfor (let i = 0; i < citas.length; i++) {\n  const cita = citas[i];\n  const nombre = cita.nombre || 'N/A';\n  const telefono = cita.telefono || 'N/A';\n  const email = cita.email || 'N/A';\n  const servicio = cita.servicio || 'N/A';\n  const hora = cita.hora || 'N/A';\n  const horaFin = cita.hora_fin || 'N/A';\n  \n  // Leer columna confirmo_asistencia (columna T)\n  const confirmoAsistencia = String(cita.confirmo_asistencia || '').trim().toLowerCase();\n  \n  // Estado de confirmación con colores\n  let estadoBadge;\n  if (confirmoAsistencia === 'si' || confirmoAsistencia === 'sí') {\n    estadoBadge = '<span style=\"background-color:#059669;color:white;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;\">✅ Confirmado</span>';\n  } else if (confirmoAsistencia === 'no') {\n    estadoBadge = '<span style=\"background-color:#dc2626;color:white;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;\">❌ Rechazó</span>';\n  } else {\n    estadoBadge = '<span style=\"background-color:#f59e0b;color:white;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;\">⏳ Pendiente</span>';\n  }\n  \n  citasCards += `\n    <div style=\"background-color:#ffffff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);\">\n      <div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;\">\n        <span style=\"font-size:16px;font-weight:600;color:#1f2937;\">👤 ${nombre}</span>\n        ${estadoBadge}\n      </div>\n      <div style=\"font-size:14px;color:#4b5563;line-height:1.8;\">\n        <div>🕐 <strong>${hora} - ${horaFin}</strong></div>\n        <div>🛍️ ${servicio}</div>\n        <div>📱 <a href=\"https://wa.me/${telefono}\" style=\"color:#06d6a0;text-decoration:none;\">${telefono}</a></div>\n        ${email && email !== 'N/A' ? '<div>📧 ' + email + '</div>' : ''}\n      </div>\n    </div>`;\n}\n\n// HTML completo del email\nconst htmlContent = `<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n</head>\n<body style=\"font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0;\">\n  <div style=\"max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1);\">\n    \n    <!-- Header -->\n    <div style=\"background-color:#06d6a0;padding:30px;text-align:center;color:#ffffff;\">\n      <img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" width=\"150\" style=\"width:150px;max-width:100%;height:auto;display:block;margin:0 auto;\">\n      <h1 style=\"margin:15px 0 5px 0;font-size:20px;font-weight:600;\">📅 Reporte Diario de Citas</h1>\n      <p style=\"margin:0;font-size:14px;opacity:0.9;\">${negocioNombre}</p>\n    </div>\n    \n    <!-- Content -->\n    <div style=\"padding:20px;color:#333333;line-height:1.6;\">\n      \n      <!-- Saludo -->\n      <p style=\"font-size:15px;margin:0 0 15px 0;\">Estimados Sres. <strong>${negocioNombre}</strong>,</p>\n      <p style=\"font-size:14px;margin:0 0 20px 0;\">Desde <strong>AutomatizaTech</strong> le informamos que tiene las siguientes citas para hoy:</p>\n      \n      <!-- Resumen -->\n      <div style=\"background-color:#f0fdf4;padding:15px;border-radius:6px;margin-bottom:20px;border-left:4px solid #06d6a0;\">\n        <p style=\"margin:0;font-size:15px;\">\n          <strong>📆 Fecha:</strong> ${fechaLegible}<br>\n          <strong>📊 Total:</strong> <span style=\"color:#059669;font-weight:700;font-size:18px;\">${totalCitas} cita${totalCitas > 1 ? 's' : ''}</span>\n        </p>\n      </div>\n      \n      <!-- Tarjetas de Citas -->\n      ${citasCards}\n      \n      <!-- Nota -->\n      <p style=\"margin-top:20px;color:#6b7280;font-size:12px;text-align:center;\">\n        Este reporte se genera automáticamente de lunes a viernes a las 7:30 AM (Hora Chile).\n      </p>\n      \n    </div>\n    \n    <!-- Footer -->\n    <div style=\"background-color:#1f2937;padding:15px;text-align:center;color:#9ca3af;font-size:11px;\">\n      <p style=\"margin:0;\">&copy; 2025 Automatiza Tech. Todos los derechos reservados.</p>\n    </div>\n    \n  </div>\n</body>\n</html>`;\n\n// Texto plano alternativo\nlet textContent = `📅 REPORTE DIARIO DE CITAS\\n\\n`;\ntextContent += `Estimados Sres. ${negocioNombre},\\n\\n`;\ntextContent += `Desde AutomatizaTech le informamos que tiene las siguientes citas para hoy:\\n\\n`;\ntextContent += `📆 Fecha: ${fechaLegible}\\n`;\ntextContent += `📊 Total: ${totalCitas} cita${totalCitas > 1 ? 's' : ''}\\n\\n`;\ntextContent += `${'='.repeat(40)}\\n\\n`;\n\nfor (const cita of citas) {\n  textContent += `👤 ${cita.nombre || 'N/A'}\\n`;\n  textContent += `   🕐 ${cita.hora || 'N/A'} - ${cita.hora_fin || 'N/A'}\\n`;\n  textContent += `   🛍️ ${cita.servicio || 'N/A'}\\n`;\n  textContent += `   📱 ${cita.telefono || 'N/A'}\\n`;\n  if (cita.email) textContent += `   📧 ${cita.email}\\n`;\n  const confirmo = String(cita.confirmo_asistencia || '').trim().toLowerCase();\n  let estadoTexto = confirmo === 'si' || confirmo === 'sí' ? '✅ Confirmado' : confirmo === 'no' ? '❌ Rechazó' : '⏳ Pendiente';\n  textContent += `   Estado: ${estadoTexto}\\n\\n`;\n}\n\nreturn [{ \n  json: { \n    htmlContent,\n    textContent,\n    subject: `📅 Citas hoy ${fechaLegible} - ${negocioNombre} (${totalCitas} cita${totalCitas > 1 ? 's' : ''})`,\n    negocioEmail: data.negocioEmail\n  } \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        256
+      ],
+      "id": "42bdf7b1-4d59-4713-b456-6c0e4c4034dc",
+      "name": "Generar Email HTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Email cuando no hay citas\nconst data = $input.first().json;\nconst negocioNombre = data.negocioNombre;\nconst displayDate = data.displayDate;\n\n// Formato de fecha legible\nconst now = DateTime.now().setZone('America/Santiago');\nconst diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];\nconst meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];\nconst diaSemana = diasSemana[now.weekday % 7];\nconst dia = now.day.toString().padStart(2, '0');\nconst mes = meses[now.month - 1];\nconst fechaLegible = `${diaSemana} ${dia} de ${mes}`;\n\nconst htmlContent = `<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n</head>\n<body style=\"font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0;\">\n  <div style=\"max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1);\">\n    \n    <!-- Header -->\n    <div style=\"background-color:#06d6a0;padding:30px;text-align:center;color:#ffffff;\">\n      <img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" width=\"180\" style=\"width:180px;max-width:100%;height:auto;display:block;margin:0 auto;\">\n      <h1 style=\"margin:20px 0 10px 0;font-size:24px;font-weight:600;\">📅 Reporte Diario de Citas</h1>\n      <p style=\"margin:0;font-size:16px;opacity:0.9;\">${negocioNombre}</p>\n    </div>\n    \n    <!-- Content -->\n    <div style=\"padding:40px 30px;color:#333333;line-height:1.6;\">\n      \n      <!-- Saludo -->\n      <p style=\"font-size:16px;margin:0 0 15px 0;\">Estimados Sres. <strong>${negocioNombre}</strong>,</p>\n      <p style=\"font-size:15px;margin:0 0 25px 0;\">Desde <strong>AutomatizaTech</strong> le informamos que:</p>\n      \n      <div style=\"text-align:center;\">\n        <div style=\"font-size:60px;margin-bottom:20px;\">📭</div>\n        \n        <h2 style=\"color:#6b7280;font-weight:500;margin:0 0 10px 0;\">No hay citas programadas</h2>\n      <p style=\"color:#9ca3af;font-size:14px;margin:0;\">para el día ${displayDate}</p>\n      \n      <div style=\"margin-top:30px;padding:20px;background-color:#f9fafb;border-radius:6px;\">\n        <p style=\"margin:0;color:#6b7280;font-size:14px;\">💡 ¡Buen momento para promocionar tus servicios!</p>\n      </div>\n      </div>\n      \n    </div>\n    \n    <!-- Footer -->\n    <div style=\"background-color:#1f2937;padding:20px;text-align:center;color:#9ca3af;font-size:12px;\">\n      <p style=\"margin:0;\">&copy; 2025 Automatiza Tech. Todos los derechos reservados.</p>\n    </div>\n    \n  </div>\n</body>\n</html>`;\n\nconst textContent = `📅 REPORTE DIARIO DE CITAS\\n\\nEstimados Sres. ${negocioNombre},\\n\\nDesde AutomatizaTech le informamos que no hay citas programadas para hoy ${fechaLegible}.\\n\\n💡 ¡Buen momento para promocionar tus servicios!`;\n\nreturn [{ \n  json: { \n    htmlContent,\n    textContent,\n    subject: `📅 Sin citas hoy ${fechaLegible} - ${negocioNombre}`,\n    negocioEmail: data.negocioEmail\n  } \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        464
+      ],
+      "id": "ee978fbe-8cb0-46e8-838d-16701af7a9e4",
+      "name": "Email Sin Citas"
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -128,
+        368
+      ],
+      "id": "e602416e-2cb0-4f23-b0ff-47a931c13bd5",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "fromEmail": "Automatiza Tech <contacto@automatizatech.cl>",
+        "toEmail": "={{ $json.negocioEmail || 'Kellysisabel1504@gmail.com' }}",
+        "bccEmail": "automatizacionesbotcore@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.textContent }}",
+        "html": "={{ $json.htmlContent }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        96,
+        368
+      ],
+      "id": "efbb793d-e2e8-4828-8fc2-b4b258fe8333",
+      "name": "Enviar Email Reporte",
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Cron Lunes a Viernes 7:30am": {
+      "main": [
+        [
+          {
+            "node": "Verificar Día de Semana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Día de Semana": {
+      "main": [
+        [
+          {
+            "node": "Read Configuracion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Configuracion": {
+      "main": [
+        [
+          {
+            "node": "Read Todas las Citas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Todas las Citas": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Citas del Día",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Citas del Día": {
+      "main": [
+        [
+          {
+            "node": "¿Hay Citas Hoy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay Citas Hoy?": {
+      "main": [
+        [
+          {
+            "node": "Generar Email HTML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Sin Citas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Email HTML": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Sin Citas": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Enviar Email Reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1,
+    "availableInMCP": false
+  },
+  "versionId": "f781162a-0fb5-408e-8fca-b88954ae2c1e",
+  "meta": {
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "id": "arIjzp5goTYAsN8R",
+  "tags": [
+    {
+      "name": "Reportes",
+      "id": "gSXACiz2G38UEBXU",
+      "updatedAt": "2026-01-09T03:38:26.677Z",
+      "createdAt": "2026-01-09T03:38:26.677Z"
+    }
+  ]
+}

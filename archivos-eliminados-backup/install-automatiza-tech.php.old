@@ -267,7 +267,7 @@ function setup_theme_options() {
         'hero_subtitle' => 'Conectamos tus ventas, web y CRM.',
         'hero_tagline' => 'Bots inteligentes para negocios que no se detienen.',
         'whatsapp_number' => '+1234567890',
-        'contact_email' => 'info@automatizatech.cl',
+        'contact_email' => 'contacto@automatizatech.cl',
         'contact_address' => 'Disponible en toda Latinoamérica',
         'primary_color' => '#1e40af',
         'secondary_color' => '#84cc16',

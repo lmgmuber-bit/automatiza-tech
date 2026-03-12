@@ -930,6 +930,22 @@ function ai1wm_table_prefix( $blog_id = null ) {
 }
 
 /**
+ * Get default config filters
+ *
+ * @param  array $filters List of files and directories
+ * @return array
+ */
+function ai1wm_config_filters( $filters = array() ) {
+	return array_merge(
+		$filters,
+		array(
+			AI1WM_PACKAGE_NAME,
+			AI1WM_MULTISITE_NAME,
+		)
+	);
+}
+
+/**
  * Get default content filters
  *
  * @param  array $filters List of files and directories
@@ -2325,7 +2341,7 @@ function ai1wm_crypt_iv_length() {
 }
 
 /**
- * Decrypts a string with a eky
+ * Decrypts a string with a key
  *
  * @param string $encrypted_string String to decrypt
  * @param string $key              Key to decrypt the string with
@@ -2512,4 +2528,23 @@ function ai1wm_register_script( $handle, $src, $deps = array(), $ver = false, $a
  */
 function ai1wm_enqueue_script( $handle, $src = '', $deps = array(), $ver = false, $args = array() ) {
 	wp_enqueue_script( $handle, $src, $deps, $ver, $args );
+}
+
+/**
+ * Check for compression type availability
+ *
+ * @param  string  $name Compression type
+ * @return boolean
+ */
+function ai1wm_has_compression_type( $name ) {
+	switch ( strtolower( $name ) ) {
+		case 'gzip':
+			return function_exists( 'gzcompress' );
+
+		case 'bzip2':
+			return function_exists( 'bzcompress' );
+
+		default:
+			return false;
+	}
 }

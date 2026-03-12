@@ -13,8 +13,8 @@
 
 ### 2. **Headers Profesionales**
 ```php
-'From: ' . $contact->name . ' en Automatiza Tech <info@automatizatech.shop>'
-'List-Unsubscribe: <mailto:info@automatizatech.cl?subject=unsubscribe>'
+'From: ' . $contact->name . ' en Automatiza Tech <contacto@automatizatech.cl>'
+'List-Unsubscribe: <mailto:contacto@automatizatech.cl?subject=unsubscribe>'
 'X-Priority: 3'  // Normal, no urgente
 'Importance: Normal'
 'Precedence: bulk'

@@ -1,0 +1,256 @@
+{
+  "name": "Argos detección de Errores N8N",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [-200, 0],
+      "id": "504523bf-0941-42bd-8504-cb8b6d29b326",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://automatizatech.cl/wp-json/automatiza/v1/n8n-errors/search?workflow_name={{ encodeURIComponent($json.workflow.name) }}&error_node={{ encodeURIComponent($json.execution.error.node?.name || '') }}&error_message={{ encodeURIComponent($json.execution.error.message?.substring(0, 100) || '') }}&days=30",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "argos-automatiza-2024-secret"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [0, 0],
+      "id": "search-history-node",
+      "name": "Buscar Historial BD",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {
+          "systemMessage": "# 🛡️ ARGOS - El Guardián de los 100 Ojos\n## Sistema de Monitoreo Inteligente de AutomatizaTech\n\nSoy ARGOS PANOPTES, el guardián que nunca duerme. Mi misión es proteger los sistemas de AutomatizaTech.\n\n## MI MISIÓN\n1. VIGILAR - Monitoreo 24/7 de todos los workflows\n2. DETECTAR - Identificar errores antes del impacto\n3. ANALIZAR - Diagnóstico preciso incluyendo si es RECURRENTE\n4. RESOLVER - Proponer soluciones concretas\n5. INFORMAR - Notificar a Luis González\n\n## SEVERIDAD\n- 🔴 CRÍTICO: Sistema caído, cliente afectado, ERROR RECURRENTE\n- 🟠 ALTO: Funcionalidad bloqueada\n- 🟡 MEDIO: Workaround disponible\n- 🟢 BAJO: Warning cosmético\n\n## FORMATO DE REPORTE (máx 1000 chars)\n\n🛡️ ARGOS - Reporte\n━━━━━━━━━━━━━━━━━━━━\n⚠️ SEVERIDAD: [emoji] [nivel]\n🔄 RECURRENCIA: [NUEVO/RECURRENTE]\n📋 WORKFLOW: [nombre]\n🔧 NODO: [nombre]\n\n📝 RESUMEN:\n[descripción breve]\n\n🔍 CAUSA:\n[análisis técnico corto]\n\n💡 SOLUCIÓN:\n[pasos concretos]\n━━━━━━━━━━━━━━━━━━━━\n👁️ Argos vigila. Argos protege."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [280, 200],
+      "id": "a09eef93-d29c-4b5e-b08a-6654f0130b8a",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [420, 200],
+      "id": "9e046710-3f27-44f5-ba88-c661ed8bf845",
+      "name": "Think"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analiza este error de N8N y genera un reporte BREVE (máximo 800 caracteres):\n\n**Workflow:** {{ $('Error Trigger').item.json.workflow.name }}\n**Nodo:** {{ $('Error Trigger').item.json.execution.error.node?.name || 'Desconocido' }}\n**Error:** {{ $('Error Trigger').item.json.execution.error.message }}\n**Modo:** {{ $('Error Trigger').item.json.execution.mode }}\n\n📚 HISTORIAL:\n{{ $json.argos_context || 'Sin historial disponible.' }}\n- ¿Es recurrente?: {{ $json.summary?.is_recurring ? 'SÍ' : 'NO' }}\n- Errores previos: {{ $json.summary?.total_errors_workflow || 0 }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [208, 0],
+      "id": "53923abd-db6b-4904-a28c-286bc63edc65",
+      "name": "ARGOS"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $('Error Trigger').item.json;\nconst argosOutput = $('ARGOS').item.json.output || 'Error sin análisis';\nconst historial = $('Buscar Historial BD').item.json;\n\nconst workflowName = errorData.workflow?.name || 'Unknown';\nconst errorNode = errorData.execution?.error?.node?.name || 'Desconocido';\nconst errorMessage = errorData.execution?.error?.message || '';\nconst executionMode = errorData.execution?.mode || 'unknown';\nconst executionId = errorData.execution?.id || '';\nconst isRecurring = historial.summary?.is_recurring || false;\nconst occurrenceCount = (historial.summary?.errors_exact_match || 0) + 1;\nconst timestamp = new Date().toLocaleString('es-CL', { timeZone: 'America/Santiago' });\n\n// Determinar severidad basado en el análisis\nlet severity = '🟡 MEDIO';\nlet severityEmoji = '⚠️';\nif (isRecurring || argosOutput.toLowerCase().includes('crítico')) {\n  severity = '🔴 CRÍTICO';\n  severityEmoji = '🚨';\n} else if (argosOutput.toLowerCase().includes('alto')) {\n  severity = '🟠 ALTO';\n  severityEmoji = '⚠️';\n}\n\n// ═══════════════════════════════════════════════════════════════\n// FORMATO WHATSAPP - Visual y compacto\n// ═══════════════════════════════════════════════════════════════\nconst waMessage = `🛡️ *ARGOS* - Detección de Error\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n${severityEmoji} *Severidad:* ${severity}\n${isRecurring ? '🔄 *RECURRENTE* (#' + occurrenceCount + ')' : '🆕 *NUEVO*'}\n\n📋 *Workflow:* ${workflowName}\n🔧 *Nodo:* ${errorNode}\n⏰ *Hora:* ${timestamp}\n🆔 *ID:* ${executionId.substring(0,8)}...\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n💬 *Mensaje de Error:*\n\\`\\`\\`\n${errorMessage.substring(0, 300)}${errorMessage.length > 300 ? '...' : ''}\n\\`\\`\\`\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n🤖 *Análisis ARGOS:*\n\n${argosOutput.substring(0, 1500)}\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n👁️ _Argos vigila. Argos protege._\n🔗 Ver más: automatizatech.cl/admin-tools/`;\n\n// ═══════════════════════════════════════════════════════════════\n// FORMATO EMAIL - HTML bonito\n// ═══════════════════════════════════════════════════════════════\nconst severityColor = isRecurring ? '#dc3545' : (severity.includes('ALTO') ? '#fd7e14' : '#ffc107');\nconst severityBg = isRecurring ? '#fff5f5' : (severity.includes('ALTO') ? '#fff8f0' : '#fffef0');\n\nconst emailHtml = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n</head>\n<body style=\"margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;\">\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff;\">\n    \n    <!-- Header -->\n    <tr>\n      <td style=\"background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px 40px; text-align: center;\">\n        <h1 style=\"color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;\">\n          🛡️ ARGOS\n        </h1>\n        <p style=\"color: #a0a0a0; margin: 5px 0 0 0; font-size: 14px;\">Sistema de Monitoreo Inteligente</p>\n      </td>\n    </tr>\n    \n    <!-- Severity Banner -->\n    <tr>\n      <td style=\"background-color: ${severityBg}; border-left: 4px solid ${severityColor}; padding: 20px 40px;\">\n        <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n          <tr>\n            <td>\n              <span style=\"font-size: 28px;\">${severityEmoji}</span>\n            </td>\n            <td style=\"padding-left: 15px;\">\n              <p style=\"margin: 0; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px;\">Severidad</p>\n              <p style=\"margin: 5px 0 0 0; font-size: 20px; font-weight: 700; color: ${severityColor};\">${severity.replace(/🔴|🟠|🟡/g, '').trim()}</p>\n            </td>\n            <td style=\"text-align: right;\">\n              ${isRecurring ? '<span style=\"background-color: #dc3545; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;\">🔄 RECURRENTE #' + occurrenceCount + '</span>' : '<span style=\"background-color: #28a745; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;\">🆕 NUEVO</span>'}\n            </td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n    \n    <!-- Info Cards -->\n    <tr>\n      <td style=\"padding: 30px 40px;\">\n        <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #f8f9fa; border-radius: 12px; overflow: hidden;\">\n          <tr>\n            <td style=\"padding: 20px; border-bottom: 1px solid #e9ecef;\">\n              <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n                <tr>\n                  <td width=\"50%\" style=\"padding-right: 10px;\">\n                    <p style=\"margin: 0; font-size: 11px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px;\">📋 Workflow</p>\n                    <p style=\"margin: 5px 0 0 0; font-size: 16px; font-weight: 600; color: #212529;\">${workflowName}</p>\n                  </td>\n                  <td width=\"50%\" style=\"padding-left: 10px;\">\n                    <p style=\"margin: 0; font-size: 11px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px;\">🔧 Nodo</p>\n                    <p style=\"margin: 5px 0 0 0; font-size: 16px; font-weight: 600; color: #212529;\">${errorNode}</p>\n                  </td>\n                </tr>\n              </table>\n            </td>\n          </tr>\n          <tr>\n            <td style=\"padding: 20px;\">\n              <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n                <tr>\n                  <td width=\"50%\" style=\"padding-right: 10px;\">\n                    <p style=\"margin: 0; font-size: 11px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px;\">⏰ Timestamp</p>\n                    <p style=\"margin: 5px 0 0 0; font-size: 14px; color: #495057;\">${timestamp}</p>\n                  </td>\n                  <td width=\"50%\" style=\"padding-left: 10px;\">\n                    <p style=\"margin: 0; font-size: 11px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px;\">🔖 Modo</p>\n                    <p style=\"margin: 5px 0 0 0; font-size: 14px; color: #495057;\">${executionMode}</p>\n                  </td>\n                </tr>\n              </table>\n            </td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n    \n    <!-- Error Message -->\n    <tr>\n      <td style=\"padding: 0 40px 30px 40px;\">\n        <p style=\"margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #212529;\">💬 Mensaje de Error</p>\n        <div style=\"background-color: #2d2d2d; border-radius: 8px; padding: 20px; overflow-x: auto;\">\n          <code style=\"color: #f8f8f2; font-family: 'Fira Code', 'Consolas', monospace; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;\">${errorMessage.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>\n        </div>\n      </td>\n    </tr>\n    \n    <!-- ARGOS Analysis -->\n    <tr>\n      <td style=\"padding: 0 40px 30px 40px;\">\n        <p style=\"margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #212529;\">🤖 Análisis de ARGOS</p>\n        <div style=\"background-color: #e8f4fd; border-left: 4px solid #0d6efd; border-radius: 0 8px 8px 0; padding: 20px;\">\n          <p style=\"margin: 0; font-size: 14px; color: #212529; line-height: 1.6; white-space: pre-wrap;\">${argosOutput.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>\n        </div>\n      </td>\n    </tr>\n    \n    <!-- CTA Button -->\n    <tr>\n      <td style=\"padding: 0 40px 30px 40px; text-align: center;\">\n        <a href=\"https://automatizatech.cl/admin-tools/\" style=\"display: inline-block; background: linear-gradient(135deg, #0d6efd 0%, #0056b3 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;\">Ver Panel de Errores →</a>\n      </td>\n    </tr>\n    \n    <!-- Footer -->\n    <tr>\n      <td style=\"background-color: #1a1a2e; padding: 25px 40px; text-align: center;\">\n        <p style=\"margin: 0; color: #a0a0a0; font-size: 13px;\">👁️ Argos vigila. Argos protege.</p>\n        <p style=\"margin: 10px 0 0 0; color: #6c757d; font-size: 11px;\">AutomatizaTech © 2026 - Sistema de Monitoreo</p>\n      </td>\n    </tr>\n    \n  </table>\n</body>\n</html>\n`;\n\n// Body para WhatsApp API\nconst whatsappBody = {\n  messaging_product: 'whatsapp',\n  recipient_type: 'individual',\n  to: '56974940070',\n  type: 'text',\n  text: {\n    preview_url: false,\n    body: waMessage\n  }\n};\n\nreturn {\n  json: {\n    workflow_name: workflowName,\n    workflow_id: errorData.workflow?.id || '',\n    execution_id: executionId,\n    error_message: errorMessage,\n    error_node: errorNode,\n    error_stack: errorData.execution?.error?.stack || 'No disponible',\n    error_timestamp: new Date().toISOString(),\n    execution_mode: executionMode,\n    argos_analysis: argosOutput,\n    is_recurring: isRecurring,\n    occurrence_count: occurrenceCount,\n    whatsappBody: JSON.stringify(whatsappBody),\n    emailHtml: emailHtml\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 0],
+      "id": "prepare-data-node",
+      "name": "Preparar Datos"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v22.0/946501128543201/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.whatsappBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, -120],
+      "id": "wa-send-node",
+      "name": "WhatsApp Meta",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "SH8OXr93p852Ll6m",
+          "name": "WhatsApp Tech"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "Automatiza Tech <contacto@automatizatech.cl>",
+        "toEmail": "lgonzalez@automatizatech.cl",
+        "bccEmail": "automatizacionesbotcore@gmail.com",
+        "subject": "={{ $json.is_recurring ? '🔄 RECURRENTE' : '🚨 Error' }}: {{ $json.workflow_name }} - {{ $json.error_node }}",
+        "emailFormat": "html",
+        "html": "={{ $json.emailHtml }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [640, 0],
+      "id": "send-email-node",
+      "name": "Enviar Email",
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://automatizatech.cl/wp-json/automatiza/v1/n8n-errors",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "argos-automatiza-2024-secret"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ workflow_name: $json.workflow_name, workflow_id: $json.workflow_id, execution_id: $json.execution_id, error_message: $json.error_message, error_node: $json.error_node, error_stack: $json.error_stack, error_timestamp: $json.error_timestamp, execution_mode: $json.execution_mode, argos_analysis: $json.argos_analysis, severity: $json.is_recurring ? 'critical' : 'high', status: 'new' }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 120],
+      "id": "save-to-db-node",
+      "name": "Guardar en BD"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Buscar Historial BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Historial BD": {
+      "main": [
+        [
+          {
+            "node": "ARGOS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "ARGOS",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think": {
+      "ai_tool": [
+        [
+          {
+            "node": "ARGOS",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ARGOS": {
+      "main": [
+        [
+          {
+            "node": "Preparar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Datos": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Meta",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Enviar Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Guardar en BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "id": "p7ISUf0J5GycHscc",
+  "tags": []
+}

@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arquitectura Técnica - MG Muebles | AutomatizaTech</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .header h2 {
+            color: #aaa;
+            font-weight: 400;
+        }
+        
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        
+        .logo {
+            padding: 15px 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .logo.automatiza {
+            color: #00d9ff;
+            border: 2px solid #00d9ff;
+        }
+        
+        .logo.mg {
+            color: #ff9500;
+            border: 2px solid #ff9500;
+        }
+        
+        /* Sección de Arquitectura Principal */
+        .architecture-section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            font-size: 1.8rem;
+            color: #00d9ff;
+            margin-bottom: 25px;
+            padding-left: 20px;
+            border-left: 4px solid #00ff88;
+        }
+        
+        /* Diagrama de Capas */
+        .layers-diagram {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .layer {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .layer:hover {
+            transform: translateX(10px);
+            background: rgba(255,255,255,0.08);
+        }
+        
+        .layer-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .layer-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .layer-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .layer.frontend .layer-icon { background: linear-gradient(135deg, #61dafb, #00d9ff); }
+        .layer.backend .layer-icon { background: linear-gradient(135deg, #68a063, #3c873a); }
+        .layer.database .layer-icon { background: linear-gradient(135deg, #336791, #0064a5); }
+        .layer.infra .layer-icon { background: linear-gradient(135deg, #ff9900, #ff6600); }
+        
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .tech-item {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .tech-item:hover {
+            border-color: #00d9ff;
+            transform: translateY(-3px);
+        }
+        
+        .tech-item .name {
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+        
+        .tech-item .desc {
+            font-size: 0.8rem;
+            color: #888;
+        }
+        
+        /* Diagrama de Flujo 3D */
+        .flow-diagram {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 50px;
+        }
+        
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .flow-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .flow-box {
+            background: linear-gradient(135deg, rgba(0,217,255,0.2), rgba(0,255,136,0.2));
+            border: 2px solid #00d9ff;
+            border-radius: 15px;
+            padding: 20px 30px;
+            text-align: center;
+            min-width: 200px;
+            transition: all 0.3s ease;
+        }
+        
+        .flow-box:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 40px rgba(0,217,255,0.3);
+        }
+        
+        .flow-box.highlight {
+            background: linear-gradient(135deg, rgba(255,149,0,0.3), rgba(255,102,0,0.3));
+            border-color: #ff9500;
+        }
+        
+        .flow-box h4 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+        
+        .flow-box p {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        
+        .arrow {
+            font-size: 2rem;
+            color: #00ff88;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .arrow.down {
+            transform: rotate(90deg);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Diagrama del Configurador 3D */
+        .configurator-diagram {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 50px;
+        }
+        
+        .config-flow {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        @media (max-width: 900px) {
+            .config-flow {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .config-step {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            position: relative;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .config-step::before {
+            content: attr(data-step);
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            color: #1a1a2e;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .config-step h4 {
+            margin: 15px 0 10px;
+            color: #00d9ff;
+        }
+        
+        .config-step ul {
+            list-style: none;
+            text-align: left;
+            margin-top: 15px;
+        }
+        
+        .config-step li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+        
+        .config-step li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #00ff88;
+        }
+        
+        /* Timeline */
+        .timeline-section {
+            margin-bottom: 50px;
+        }
+        
+        .timeline {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            padding: 40px 0;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .timeline::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #00d9ff, #00ff88, #ff9500);
+            border-radius: 2px;
+        }
+        
+        .timeline-item {
+            flex: 1;
+            min-width: 150px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .timeline-dot {
+            width: 20px;
+            height: 20px;
+            background: #00ff88;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            border: 4px solid #1a1a2e;
+            box-shadow: 0 0 20px rgba(0,255,136,0.5);
+        }
+        
+        .timeline-content {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .timeline-content h5 {
+            color: #00d9ff;
+            margin-bottom: 5px;
+        }
+        
+        .timeline-content .weeks {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #00ff88;
+        }
+        
+        .timeline-content p {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 5px;
+        }
+        
+        /* WhatsApp Integration */
+        .whatsapp-section {
+            background: rgba(37, 211, 102, 0.1);
+            border: 2px solid #25d366;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 50px;
+        }
+        
+        .whatsapp-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+        
+        .wa-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            min-width: 180px;
+        }
+        
+        .wa-box .icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .wa-box h4 {
+            color: #25d366;
+            margin-bottom: 10px;
+        }
+        
+        /* Database Schema */
+        .db-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 50px;
+        }
+        
+        .db-tables {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .db-table {
+            background: rgba(0,0,0,0.4);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .db-table-header {
+            background: linear-gradient(135deg, #336791, #0064a5);
+            padding: 15px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .db-table-header::before {
+            content: "📊";
+        }
+        
+        .db-table-body {
+            padding: 15px;
+        }
+        
+        .db-field {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.9rem;
+        }
+        
+        .db-field:last-child {
+            border-bottom: none;
+        }
+        
+        .db-field .name {
+            color: #00d9ff;
+        }
+        
+        .db-field .type {
+            color: #888;
+            font-size: 0.8rem;
+        }
+        
+        /* Summary Box */
+        .summary-box {
+            background: linear-gradient(135deg, rgba(0,217,255,0.1), rgba(0,255,136,0.1));
+            border: 2px solid #00ff88;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .summary-box h3 {
+            font-size: 2rem;
+            color: #00ff88;
+            margin-bottom: 20px;
+        }
+        
+        .summary-stats {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat .number {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat .label {
+            color: #888;
+            margin-top: 5px;
+        }
+        
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+            
+            .layer, .flow-box, .config-step, .timeline-content, .wa-box, .db-table, .summary-box {
+                border: 1px solid #ccc;
+                background: #f9f9f9;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🏗️ Arquitectura Técnica</h1>
+            <h2>Plataforma Digital con Configurador 3D</h2>
+            <div class="logo-container">
+                <div class="logo automatiza">AutomatizaTech</div>
+                <span style="font-size: 2rem;">→</span>
+                <div class="logo mg">MG Muebles</div>
+            </div>
+        </div>
+        
+        <!-- Stack Tecnológico -->
+        <div class="architecture-section">
+            <h2 class="section-title">Stack Tecnológico</h2>
+            <div class="layers-diagram">
+                <!-- Frontend -->
+                <div class="layer frontend">
+                    <div class="layer-header">
+                        <div class="layer-icon">🎨</div>
+                        <div class="layer-title">Frontend - Capa de Presentación</div>
+                    </div>
+                    <div class="tech-grid">
+                        <div class="tech-item">
+                            <div class="name">React.js / Next.js</div>
+                            <div class="desc">Framework UI</div>
+                        </div>
+                        <div class="tech-item">
+                            <div class="name">Three.js</div>
+                            <div class="desc">Motor 3D WebGL</div>
+                        </div>
+                        <div class="tech-item">
+                            <div class="name">React Three Fiber</div>
+                            <div class="desc">React + Three.js</div>
+                        </div>
+                        <div class="tech-item">
+                            <div class="name">TailwindCSS</div>
+                            <div class="desc">Estilos Utility-First</div>
+                        </div>
+                        <div class="tech-item">
+                            <div class="name">TypeScript</div>
+                            <div class="desc">Tipado Estático</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Backend -->
+                <div class="layer backend">
+                    <div class="layer-header">
+                        <div class="layer-icon">⚙️</div>
+                        <div class="layer-title">Backend - Capa de Lógica</div>
+                    </div>
+                    <div class="tech-grid">
+                        <div class="tech-item">
+                            <div class="name">Node.js</div>
+                            <div class="desc">Runtime JavaScript</div>
+                        </div>
+                        <div class="tech-item">
+                            <div class="name">NestJS / Express</div>
+                            <div class="desc">Framework API</div>
+                        </div>
+                        <div class="tech-item">
+                            <div class="name">GraphQL</div>
+                            <div class="desc">Query Language</div>
+                        </div>
+                        <div class="tech-item">
+                            <div class="name">WhatsApp API</div>
+                            <div class="desc">Mensajería</div>
+                        </div>
+                        <div class="tech-item">
+                            <div class="name">JWT Auth</div>
+                            <div class="desc">Autenticación</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Database -->
+                <div class="layer database">
+                    <div class="layer-header">
+                        <div class="layer-icon">🗄️</div>
+                        <div class="layer-title">Base de Datos - Capa de Persistencia</div>
+                    </div>
+                    <div class="tech-grid">
+                        <div class="tech-item">
+                            <div class="name">PostgreSQL</div>
+                            <div class="desc">Datos Estructurados</div>
+                        </div>
+                        <div class="tech-item">
+                            <div class="name">MongoDB</div>
+                            <div class="desc">Configs 3D (JSON)</div>
+                        </div>
+                        <div class="tech-item">
+                            <div class="name">Redis</div>
+                            <div class="desc">Caché & Sesiones</div>
+                        </div>
+                        <div class="tech-item">
+                            <div class="name">S3 / CloudStorage</div>
+                            <div class="desc">Assets 3D</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Infrastructure -->
+                <div class="layer infra">
+                    <div class="layer-header">
+                        <div class="layer-icon">☁️</div>
+                        <div class="layer-title">Infraestructura - Cloud</div>
+                    </div>
+                    <div class="tech-grid">
+                        <div class="tech-item">
+                            <div class="name">AWS / GCP</div>
+                            <div class="desc">Cloud Provider</div>
+                        </div>
+                        <div class="tech-item">
+                            <div class="name">Docker</div>
+                            <div class="desc">Contenedores</div>
+                        </div>
+                        <div class="tech-item">
+                            <div class="name">Kubernetes</div>
+                            <div class="desc">Orquestación</div>
+                        </div>
+                        <div class="tech-item">
+                            <div class="name">Cloudflare</div>
+                            <div class="desc">CDN & Security</div>
+                        </div>
+                        <div class="tech-item">
+                            <div class="name">GitHub Actions</div>
+                            <div class="desc">CI/CD</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Flujo del Configurador 3D -->
+        <div class="configurator-diagram">
+            <h2 class="section-title">Flujo del Configurador 3D</h2>
+            <div class="config-flow">
+                <div class="config-step" data-step="1">
+                    <h4>📦 Selección de Producto</h4>
+                    <p>El cliente elige el tipo de mueble base</p>
+                    <ul>
+                        <li>Closet / Ropero</li>
+                        <li>Escritorio</li>
+                        <li>Estante / Repisa</li>
+                        <li>Mueble de Cocina</li>
+                        <li>Mueble de Baño</li>
+                    </ul>
+                </div>
+                
+                <div class="config-step" data-step="2">
+                    <h4>📐 Personalización</h4>
+                    <p>Ajuste de parámetros en tiempo real</p>
+                    <ul>
+                        <li>Dimensiones (ancho, alto, prof.)</li>
+                        <li>Color de Melamina</li>
+                        <li>Tipo de Material</li>
+                        <li>Número de Estantes</li>
+                        <li>Accesorios</li>
+                    </ul>
+                </div>
+                
+                <div class="config-step" data-step="3">
+                    <h4>💰 Cotización Automática</h4>
+                    <p>Precio calculado instantáneamente</p>
+                    <ul>
+                        <li>Cálculo por volumen</li>
+                        <li>Factor por material</li>
+                        <li>Costo de accesorios</li>
+                        <li>Guardar diseño</li>
+                        <li>Enviar por WhatsApp</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Flujo de Datos -->
+        <div class="flow-diagram">
+            <h2 class="section-title">Flujo de Datos del Sistema</h2>
+            <div class="flow-container">
+                <div class="flow-row">
+                    <div class="flow-box">
+                        <h4>🖥️ Cliente (Browser)</h4>
+                        <p>React + Three.js</p>
+                    </div>
+                </div>
+                
+                <div class="arrow down">→</div>
+                
+                <div class="flow-row">
+                    <div class="flow-box">
+                        <h4>🔐 API Gateway</h4>
+                        <p>Autenticación & Rate Limiting</p>
+                    </div>
+                </div>
+                
+                <div class="arrow down">→</div>
+                
+                <div class="flow-row">
+                    <div class="flow-box">
+                        <h4>📊 API REST/GraphQL</h4>
+                        <p>Lógica de Negocio</p>
+                    </div>
+                    <span class="arrow">↔</span>
+                    <div class="flow-box highlight">
+                        <h4>📱 WhatsApp API</h4>
+                        <p>Notificaciones & Chat</p>
+                    </div>
+                </div>
+                
+                <div class="arrow down">→</div>
+                
+                <div class="flow-row">
+                    <div class="flow-box">
+                        <h4>🗄️ PostgreSQL</h4>
+                        <p>Usuarios, Pedidos</p>
+                    </div>
+                    <div class="flow-box">
+                        <h4>📄 MongoDB</h4>
+                        <p>Diseños 3D</p>
+                    </div>
+                    <div class="flow-box">
+                        <h4>⚡ Redis</h4>
+                        <p>Caché</p>
+                    </div>
+                    <div class="flow-box">
+                        <h4>📁 S3</h4>
+                        <p>Texturas & Modelos</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- WhatsApp Integration -->
+        <div class="whatsapp-section">
+            <h2 class="section-title" style="color: #25d366; border-color: #25d366;">Integración WhatsApp Business API</h2>
+            <div class="whatsapp-flow">
+                <div class="wa-box">
+                    <div class="icon">👤</div>
+                    <h4>Cliente</h4>
+                    <p>Solicita cotización</p>
+                </div>
+                <span class="arrow">→</span>
+                <div class="wa-box">
+                    <div class="icon">🤖</div>
+                    <h4>Chatbot IA</h4>
+                    <p>Respuesta automática</p>
+                </div>
+                <span class="arrow">→</span>
+                <div class="wa-box">
+                    <div class="icon">📋</div>
+                    <h4>Cotización</h4>
+                    <p>Diseño + Precio</p>
+                </div>
+                <span class="arrow">→</span>
+                <div class="wa-box">
+                    <div class="icon">✅</div>
+                    <h4>Confirmación</h4>
+                    <p>Pedido registrado</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Database Schema -->
+        <div class="db-section">
+            <h2 class="section-title">Esquema de Base de Datos</h2>
+            <div class="db-tables">
+                <div class="db-table">
+                    <div class="db-table-header">productos</div>
+                    <div class="db-table-body">
+                        <div class="db-field">
+                            <span class="name">id</span>
+                            <span class="type">SERIAL PK</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">nombre</span>
+                            <span class="type">VARCHAR(255)</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">categoria</span>
+                            <span class="type">VARCHAR(100)</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">modelo_3d_url</span>
+                            <span class="type">TEXT</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">precio_base</span>
+                            <span class="type">DECIMAL(10,2)</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="db-table">
+                    <div class="db-table-header">materiales</div>
+                    <div class="db-table-body">
+                        <div class="db-field">
+                            <span class="name">id</span>
+                            <span class="type">SERIAL PK</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">nombre</span>
+                            <span class="type">VARCHAR(255)</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">tipo</span>
+                            <span class="type">VARCHAR(50)</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">textura_url</span>
+                            <span class="type">TEXT</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">factor_precio</span>
+                            <span class="type">DECIMAL(4,2)</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="db-table">
+                    <div class="db-table-header">disenos_personalizados</div>
+                    <div class="db-table-body">
+                        <div class="db-field">
+                            <span class="name">id</span>
+                            <span class="type">SERIAL PK</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">usuario_id</span>
+                            <span class="type">FK → usuarios</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">configuracion</span>
+                            <span class="type">JSONB</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">precio_calculado</span>
+                            <span class="type">DECIMAL(10,2)</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">estado</span>
+                            <span class="type">VARCHAR(50)</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="db-table">
+                    <div class="db-table-header">cotizaciones</div>
+                    <div class="db-table-body">
+                        <div class="db-field">
+                            <span class="name">id</span>
+                            <span class="type">SERIAL PK</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">diseno_id</span>
+                            <span class="type">FK → diseños</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">cliente_nombre</span>
+                            <span class="type">VARCHAR(255)</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">cliente_telefono</span>
+                            <span class="type">VARCHAR(20)</span>
+                        </div>
+                        <div class="db-field">
+                            <span class="name">precio_final</span>
+                            <span class="type">DECIMAL(10,2)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Timeline -->
+        <div class="timeline-section">
+            <h2 class="section-title">Cronograma de Desarrollo</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <h5>Diseño UX/UI</h5>
+                        <div class="weeks">2-3</div>
+                        <p>semanas</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <h5>Frontend + 3D</h5>
+                        <div class="weeks">6-8</div>
+                        <p>semanas</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <h5>Backend + API</h5>
+                        <div class="weeks">4-5</div>
+                        <p>semanas</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <h5>WhatsApp</h5>
+                        <div class="weeks">2</div>
+                        <p>semanas</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <h5>Testing</h5>
+                        <div class="weeks">2</div>
+                        <p>semanas</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <h5>Deploy</h5>
+                        <div class="weeks">1</div>
+                        <p>semana</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Summary -->
+        <div class="summary-box">
+            <h3>📊 Resumen del Proyecto</h3>
+            <p>Plataforma completa para MG Muebles con configurador 3D interactivo</p>
+            <div class="summary-stats">
+                <div class="stat">
+                    <div class="number">17-21</div>
+                    <div class="label">Semanas Totales</div>
+                </div>
+                <div class="stat">
+                    <div class="number">4-5</div>
+                    <div class="label">Meses Estimados</div>
+                </div>
+                <div class="stat">
+                    <div class="number">5</div>
+                    <div class="label">Capas de Arquitectura</div>
+                </div>
+                <div class="stat">
+                    <div class="number">∞</div>
+                    <div class="label">Diseños Posibles</div>
+                </div>
+            </div>
+        </div>
+        
+        <footer style="text-align: center; padding: 40px; color: #666;">
+            <p>© 2025 AutomatizaTech - Informe Técnico para MG Muebles</p>
+            <p style="margin-top: 10px; font-size: 0.9rem;">Generado el 11 de Diciembre de 2025</p>
+        </footer>
+    </div>
+</body>
+</html>

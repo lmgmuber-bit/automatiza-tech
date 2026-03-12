@@ -1,13 +1,8 @@
-﻿<?php
+<?php
 /**
  * Automatiza Tech - Contact Form Handler
  * Maneja el formulario de contacto y administración de datos
  */
-
-// Evitar acceso directo
-if (!defined('ABSPATH')) {
-    exit;
-}
 
 class AutomatizaTechContactForm {
     
@@ -34,7 +29,11 @@ class AutomatizaTechContactForm {
         add_action('wp_ajax_nopriv_search_clients', array($this, 'search_clients'));
         add_action('wp_ajax_filter_contacts', array($this, 'filter_contacts'));
         add_action('wp_ajax_send_email_to_new_contacts', array($this, 'send_email_to_new_contacts'));
+        add_action('wp_ajax_send_email_to_new_contacts_n8n', array($this, 'send_email_to_new_contacts_n8n'));
+        add_action('wp_ajax_nopriv_send_email_to_new_contacts_n8n', array($this, 'send_email_to_new_contacts_n8n'));
         add_action('wp_ajax_get_available_plans', array($this, 'get_available_plans'));
+        add_action('wp_ajax_get_nonce', array($this, 'get_nonce'));
+        add_action('wp_ajax_nopriv_get_nonce', array($this, 'get_nonce'));
         // Hook de download_invoice movido a invoice-handlers.php para evitar duplicados
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'admin_scripts'));
@@ -48,6 +47,15 @@ class AutomatizaTechContactForm {
         add_action('init', array($this, 'check_table_structure'));
     }
     
+    /**
+     * Obtener nonce fresco para AJAX
+     */
+    public function get_nonce() {
+        wp_send_json_success(array(
+            'nonce' => wp_create_nonce('automatiza_ajax_nonce')
+        ));
+    }
+
     /**
      * Verificar y actualizar estructura de tabla
      */
@@ -743,9 +751,12 @@ class AutomatizaTechContactForm {
         </html>
         ';
         
+        // Usar el correo SMTP configurado o fallback a contacto@automatizatech.cl
+        $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
-            'From: Automatiza Tech <' . get_option('admin_email') . '>',
+            'From: Automatiza Tech <' . $from_email . '>',
             'Reply-To: ' . $name . ' <' . $email . '>'
         );
         
@@ -768,8 +779,8 @@ class AutomatizaTechContactForm {
         
         add_submenu_page(
             'automatiza-tech-contacts',
-            'Clientes Contratados',
-            'Clientes',
+            'Directorio de Clientes: Administración Rápida', // Título página
+            'Directorio de Clientes', // Título menú
             'manage_options',
             'automatiza-tech-clients',
             array($this, 'clients_page')
@@ -884,6 +895,29 @@ class AutomatizaTechContactForm {
                 $client_id
             ));
             
+            // Buscar si el contacto tiene una propuesta asociada (por email o teléfono)
+            $propuesta_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}automatiza_propuestas 
+                WHERE client_email = %s OR phone = %s
+                ORDER BY created_at DESC LIMIT 1",
+                $contact->email,
+                $contact->phone
+            ));
+            
+            // Si tiene propuesta, migrar los detalles de seguimiento al cliente
+            if ($propuesta_id && function_exists('automatiza_migrate_prospect_to_client')) {
+                automatiza_migrate_prospect_to_client($client_id, $propuesta_id);
+                
+                // Actualizar status de la propuesta a contratado
+                $wpdb->update(
+                    $wpdb->prefix . 'automatiza_propuestas',
+                    array('status' => 'contracted'),
+                    array('id' => $propuesta_id)
+                );
+                
+                error_log("MIGRACIÓN: Detalles de propuesta ID {$propuesta_id} migrados a cliente ID {$client_id}");
+            }
+            
             // Eliminar de tabla de contactos
             $wpdb->delete($this->table_name, array('id' => $contact_id), array('%d'));
             
@@ -983,9 +1017,6 @@ class AutomatizaTechContactForm {
      * Enviar correo de notificación cuando un cliente es contratado
      */
     private function send_contracted_client_email($client_data, $plans_data = null) {
-        // Configurar SMTP para desarrollo local
-        add_action('phpmailer_init', array($this, 'configure_smtp'));
-        
         // Enviar correo al cliente con la factura
         if ($plans_data) {
             $this->send_invoice_email_to_client($client_data, $plans_data);
@@ -1103,10 +1134,11 @@ class AutomatizaTechContactForm {
         </html>";
         
         // Headers para HTML
+        $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
-            'From: AutomatizaTech <info@automatizatech.shop>',
-            'Reply-To: info@automatizatech.shop'
+            'From: AutomatizaTech <' . $from_email . '>',
+            'Reply-To: contacto@automatizatech.cl'
         );
         
         // Enviar el correo
@@ -1128,10 +1160,7 @@ class AutomatizaTechContactForm {
     /**
      * Enviar correo con factura al cliente
      */
-    private function send_invoice_email_to_client($client_data, $plans_data) {
-        // Configurar SMTP
-        add_action('phpmailer_init', array($this, 'configure_smtp'));
-        
+    public function send_invoice_email_to_client($client_data, $plans_data) {
         // Generar factura HTML (para BD)
         $invoice_html = $this->generate_invoice_html($client_data, $plans_data);
         $invoice_number = 'AT-' . date('Ymd') . '-' . str_pad($client_data->id, 4, '0', STR_PAD_LEFT);
@@ -1373,8 +1402,8 @@ class AutomatizaTechContactForm {
                 <h4>Información de Contacto</h4>
                 <p style='color: #666; margin-bottom: 10px;'>Si tienes consultas, puedes contactarnos:</p>
                 <div class='contact-info'>
-                    Email: <strong>info@automatizatech.shop</strong><br>
-                    Teléfono: <strong>+56 9 6432 4169</strong><br>
+                    Email: <strong>contacto@automatizatech.cl</strong><br>
+                    Teléfono: <strong>+56 9 2700 2984</strong><br>
                     Sitio web: <strong>{$site_url}</strong>
                 </div>
             </div>
@@ -1389,7 +1418,7 @@ class AutomatizaTechContactForm {
             <p style='font-size: 1em; margin-bottom: 10px;'><strong>AutomatizaTech</strong></p>
             <p style='font-size: 0.9em;'>Soluciones de automatización digital</p>
             <p style='font-size: 0.85em; margin-top: 15px;'>
-                {$site_url} | info@automatizatech.shop<br>
+                {$site_url} | contacto@automatizatech.cl<br>
                 Copyright " . date('Y') . " AutomatizaTech. Todos los derechos reservados.
             </p>
         </div>
@@ -1398,16 +1427,17 @@ class AutomatizaTechContactForm {
 </html>";
         
         // ANTI-SPAM: Headers profesionales y transaccionales
+        $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
-            'From: AutomatizaTech <info@automatizatech.shop>',
-            'Reply-To: info@automatizatech.shop',
+            'From: AutomatizaTech <' . $from_email . '>',
+            'Reply-To: contacto@automatizatech.cl',
             'Bcc: automatizatech.bots@gmail.com',
             'X-Priority: 1 (Highest)',
             'X-MSMail-Priority: High',
             'Importance: High',
             'X-Mailer: AutomatizaTech Invoicing System v1.0',
-            'List-Unsubscribe: <mailto:unsubscribe@automatizatech.shop>',
+            'List-Unsubscribe: <mailto:unsubscribe@automatizatech.cl>',
             'Precedence: bulk',
             'X-Auto-Response-Suppress: OOF, DR, RN, NRN, AutoReply'
         );
@@ -1457,8 +1487,8 @@ class AutomatizaTechContactForm {
             $plain_text .= "Nuestro equipo se pondrá en contacto contigo en las próximas 24-48 horas.\n\n";
             $plain_text .= "INFORMACIÓN DE CONTACTO\n";
             $plain_text .= "-----------------------\n";
-            $plain_text .= "Email: info@automatizatech.shop\n";
-            $plain_text .= "Teléfono: +56 9 6432 4169\n";
+            $plain_text .= "Email: contacto@automatizatech.cl\n";
+            $plain_text .= "Teléfono: +56 9 2700 2984\n";
             $plain_text .= "Web: " . $site_url . "\n\n";
             $plain_text .= "Saludos cordiales,\n";
             $plain_text .= "Equipo AutomatizaTech\n";
@@ -1477,35 +1507,6 @@ class AutomatizaTechContactForm {
         }
         
         return $sent;
-    }
-    
-    /**
-     * Configurar SMTP para correo electrónico
-     */
-    public function configure_smtp($phpmailer) {
-        $phpmailer->isSMTP();
-        
-        // Configuración para Gmail SMTP (recomendado para producción)
-        if (defined('SMTP_HOST') && defined('SMTP_USER') && defined('SMTP_PASS')) {
-            $phpmailer->Host       = SMTP_HOST;
-            $phpmailer->SMTPAuth   = true;
-            $phpmailer->Port       = SMTP_PORT ?? 587;
-            $phpmailer->Username   = SMTP_USER;
-            $phpmailer->Password   = SMTP_PASS;
-            $phpmailer->SMTPSecure = 'tls';
-        } else {
-            // Configuración para desarrollo local con MailHog o similar
-            $phpmailer->Host       = 'localhost';
-            $phpmailer->SMTPAuth   = false;
-            $phpmailer->Port       = 1025; // Puerto de MailHog
-            $phpmailer->SMTPSecure = false;
-        }
-        
-        $phpmailer->From     = 'info@automatizatech.shop';
-        $phpmailer->FromName = 'AutomatizaTech';
-        
-        // Log de configuración
-        error_log("SMTP CONFIGURADO: Host={$phpmailer->Host}, Port={$phpmailer->Port}, Auth=" . ($phpmailer->SMTPAuth ? 'true' : 'false'));
     }
     
     /**
@@ -1552,39 +1553,158 @@ class AutomatizaTechContactForm {
             $wpdb->update(
                 $invoices_table,
                 [
+                    'client_name' => $client_data->name,
+                    'client_email' => $client_data->email,
+                    'plan_name' => $all_plan_names,
                     'invoice_html' => $invoice_html,
                     'invoice_file_path' => $invoice_path,
                     'qr_code_data' => $qr_data
                 ],
-                ['id' => $existing],
-                ['%s', '%s', '%s'],
-                ['%d']
+                [
+                    'invoice_number' => $invoice_number
+                ]
             );
         } else {
             // Insertar nueva factura
             $wpdb->insert(
                 $invoices_table,
                 [
-                    'invoice_number' => $invoice_number,
                     'client_id' => $client_data->id,
                     'client_name' => $client_data->name,
                     'client_email' => $client_data->email,
                     'plan_id' => $first_plan_id,
                     'plan_name' => $all_plan_names,
-                    'subtotal' => $subtotal,
-                    'iva' => $iva,
-                    'total' => $total,
+                    'invoice_number' => $invoice_number,
                     'invoice_html' => $invoice_html,
                     'invoice_file_path' => $invoice_path,
                     'qr_code_data' => $qr_data,
-                    'status' => 'active'
-                ],
-                ['%s', '%d', '%s', '%s', '%d', '%s', '%f', '%f', '%f', '%s', '%s', '%s', '%s']
+                    'subtotal' => $subtotal,
+                    'iva' => $iva,
+                    'total' => $total,
+                    'created_at' => current_time('mysql')
+                ]
             );
         }
-        
-        error_log("FACTURA GUARDADA EN BD: {$invoice_number} - Planes: {$all_plan_names}");
     }
+
+        /**
+         * Endpoint para N8N: enviar correos a contactos nuevos y cambiar estatus
+         * Activación por token seguro
+         */
+        public function send_email_to_new_contacts_n8n() {
+            // Token seguro definido en el sistema (ajusta según tu config)
+            $expected_token = 'n8n_test_token';
+            
+            $received_token = '';
+
+            // 1. Intentar obtener de POST
+            if (isset($_POST['n8n_token'])) {
+                $received_token = $_POST['n8n_token'];
+            }
+            
+            // 2. Si está vacío, intentar leer JSON input
+            if (empty($received_token)) {
+                $json_input = file_get_contents('php://input');
+                $data = json_decode($json_input, true);
+                if (isset($data['n8n_token'])) {
+                    $received_token = $data['n8n_token'];
+                }
+            }
+
+            // 3. Intentar GET/REQUEST
+            if (empty($received_token) && isset($_REQUEST['n8n_token'])) {
+                $received_token = $_REQUEST['n8n_token'];
+            }
+
+            // 4. Intentar Headers (usando $_SERVER para mayor compatibilidad)
+            if (empty($received_token) && isset($_SERVER['HTTP_X_N8N_TOKEN'])) {
+                $received_token = $_SERVER['HTTP_X_N8N_TOKEN'];
+            }
+
+            // Debug log mejorado
+            error_log('=== N8N DEBUG START ===');
+            error_log('Token final detectado: "' . $received_token . '"');
+            error_log('Request Method: ' . ($_SERVER['REQUEST_METHOD'] ?? 'Unknown'));
+            error_log('Content Type: ' . ($_SERVER['CONTENT_TYPE'] ?? 'Not set'));
+            error_log('Query String: ' . ($_SERVER['QUERY_STRING'] ?? 'Empty'));
+            error_log('Body Size: ' . strlen(file_get_contents('php://input')));
+            error_log('=== N8N DEBUG END ===');
+
+            if (trim($received_token) !== $expected_token) {
+                wp_send_json_error('Token inválido. Recibido: "' . $received_token . '"');
+                wp_die();
+            }
+
+            global $wpdb;
+
+            // Obtener todos los contactos con estado "new"
+            $contacts = $wpdb->get_results("SELECT * FROM {$this->table_name} WHERE status = 'new'");
+
+            if (empty($contacts)) {
+                wp_send_json_error('No hay contactos con estado "Nuevo" para enviar correos');
+                wp_die();
+            }
+
+            $sent_count = 0;
+            $failed_count = 0;
+            $failed_emails = array();
+            $processed_ids = array();
+
+            foreach ($contacts as $contact) {
+                $subject = '¡Descubre cómo Automatiza Tech puede transformar tu negocio! 🚀';
+                $body = $this->get_email_template($contact->name);
+                
+                // Usar el correo SMTP configurado o fallback a contacto@automatizatech.cl
+                $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+                
+                $headers = array(
+                    'Content-Type: text/html; charset=UTF-8',
+                    'From: Automatiza Tech <' . $from_email . '>',
+                    'Reply-To: Automatiza Tech <contacto@automatizatech.cl>',
+                    'Bcc: automatizatech.bots@gmail.com'
+                );
+                $result = wp_mail($contact->email, $subject, $body, $headers);
+                if ($result) {
+                    $sent_count++;
+                    $processed_ids[] = $contact->id;
+                    // Cambiar estado a "contacted" después del envío exitoso
+                    $wpdb->update(
+                        $this->table_name,
+                        array('status' => 'contacted'),
+                        array('id' => $contact->id),
+                        array('%s'),
+                        array('%d')
+                    );
+                    if (WP_DEBUG && WP_DEBUG_LOG) {
+                        error_log('Automatiza Tech N8N - Correo enviado exitosamente a: ' . $contact->email . ' - Estado cambiado a "contacted"');
+                    }
+                } else {
+                    $failed_count++;
+                    $failed_emails[] = $contact->email;
+                    if (WP_DEBUG && WP_DEBUG_LOG) {
+                        error_log('Automatiza Tech N8N - Error al enviar correo a: ' . $contact->email);
+                    }
+                }
+                usleep(500000); // 0.5 segundos
+            }
+
+            $message = "✅ Se enviaron $sent_count correos exitosamente.";
+            if ($sent_count > 0) {
+                $message .= "\n📋 Los contactos han sido actualizados al estado 'Contactado'.";
+            }
+            if ($failed_count > 0) {
+                $message .= "\n⚠️ $failed_count correos fallaron: " . implode(', ', $failed_emails);
+                $message .= "\nLos contactos con fallos permanecen en estado 'Nuevo'.";
+            }
+            wp_send_json_success(array(
+                'message' => $message,
+                'sent' => $sent_count,
+                'failed' => $failed_count,
+                'processed_ids' => $processed_ids,
+                'reload' => true
+            ));
+            wp_die();
+        }
     
     /**
      * ========================================================================
@@ -1596,9 +1716,6 @@ class AutomatizaTechContactForm {
      * Enviar cotización al contacto interesado
      */
     private function send_quotation_email($contact_data, $plans_data) {
-        // Configurar SMTP
-        add_action('phpmailer_init', array($this, 'configure_smtp'));
-        
         // Generar número de cotización: C-AT-YYYYMMDD-XXXX
         $quotation_number = $this->generate_quotation_number();
         
@@ -1707,21 +1824,38 @@ class AutomatizaTechContactForm {
         
         // Calcular totales
         $subtotal = 0;
+        $total_descuento = 0;
         $plans_html = '';
         $plans_names = array();
         
         foreach ($plans_data as $index => $plan) {
             $plan_num = $index + 1;
-            $price = floatval($plan->price_clp);
-            $subtotal += $price;
+            $price_original = floatval($plan->price_clp);
+            $discount_percent = isset($plan->discount_percent) ? floatval($plan->discount_percent) : 0;
+            
+            // Calcular precio con descuento
+            $discount_amount = $price_original * ($discount_percent / 100);
+            $price_final = $price_original - $discount_amount;
+            
+            $subtotal += $price_original;
+            $total_descuento += $discount_amount;
             $plans_names[] = $plan->name;
+            
+            // Mostrar precio con descuento si aplica
+            if ($discount_percent > 0) {
+                $price_display = "<span style='text-decoration: line-through; color: #999;'>$" . number_format($price_original, 0, ',', '.') . "</span><br>" .
+                                 "<span style='color: #e74c3c; font-size: 0.85em;'>-{$discount_percent}%</span><br>" .
+                                 "<strong style='color: #27ae60;'>$" . number_format($price_final, 0, ',', '.') . "</strong>";
+            } else {
+                $price_display = "$" . number_format($price_original, 0, ',', '.');
+            }
             
             $plans_html .= "
             <tr>
                 <td style='padding: 10px; border: 1px solid #e3e6f0; text-align: center;'>{$plan_num}</td>
                 <td style='padding: 10px; border: 1px solid #e3e6f0;'>" . esc_html($plan->name) . "</td>
                 <td style='padding: 10px; border: 1px solid #e3e6f0; text-align: center;'>1</td>
-                <td style='padding: 10px; border: 1px solid #e3e6f0; text-align: right;'>$" . number_format($price, 0, ',', '.') . "</td>
+                <td style='padding: 10px; border: 1px solid #e3e6f0; text-align: right;'>{$price_display}</td>
             </tr>";
         }
         
@@ -1782,9 +1916,19 @@ class AutomatizaTechContactForm {
                     </thead>
                     <tbody>
                         {$plans_html}
+                        " . ($total_descuento > 0 ? "
+                        <tr style='background: #fff3cd;'>
+                            <td colspan='3' style='text-align: right; padding: 10px; color: #856404;'>Subtotal:</td>
+                            <td style='text-align: right; padding: 10px; color: #856404;'>$" . number_format($subtotal, 0, ',', '.') . "</td>
+                        </tr>
+                        <tr style='background: #d4edda;'>
+                            <td colspan='3' style='text-align: right; padding: 10px; color: #155724;'><strong>🎉 Descuento Aplicado:</strong></td>
+                            <td style='text-align: right; padding: 10px; color: #155724; font-weight: bold;'>-$" . number_format($total_descuento, 0, ',', '.') . "</td>
+                        </tr>
+                        " : "") . "
                         <tr class='total-row'>
                             <td colspan='3' style='text-align: right; padding: 15px;'>TOTAL COTIZADO:</td>
-                            <td style='text-align: right; padding: 15px;'>$" . number_format($subtotal, 0, ',', '.') . "</td>
+                            <td style='text-align: right; padding: 15px;'>$" . number_format($subtotal - $total_descuento, 0, ',', '.') . "</td>
                         </tr>
                     </tbody>
                 </table>
@@ -2021,7 +2165,7 @@ class AutomatizaTechContactForm {
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 25px 0;">
                                 <tr>
                                     <td align="center">
-                                        <a href="mailto:info@automatizatech.shop?subject=Consulta sobre Cotizacion ' . $quotation_number . '" style="display: inline-block; background: linear-gradient(135deg, #0047AB 0%, #00CED1 100%); color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-weight: bold; font-size: 15px;">
+                                        <a href="mailto:contacto@automatizatech.cl?subject=Consulta sobre Cotizacion ' . $quotation_number . '" style="display: inline-block; background: linear-gradient(135deg, #0047AB 0%, #00CED1 100%); color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-weight: bold; font-size: 15px;">
                                             Responder Cotización
                                         </a>
                                     </td>
@@ -2038,7 +2182,7 @@ class AutomatizaTechContactForm {
                     <tr>
                         <td style="background-color: #f9fafb; padding: 20px 30px; border-top: 1px solid #e5e7eb; text-align: center;">
                             <p style="margin: 0 0 8px 0; color: #374151; font-size: 14px; font-weight: 600;">AutomatizaTech SpA</p>
-                            <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 12px;">info@automatizatech.shop</p>
+                            <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 12px;">contacto@automatizatech.cl</p>
                             <p style="margin: 0; color: #6b7280; font-size: 12px;">' . $site_url . '</p>
                         </td>
                     </tr>
@@ -2055,10 +2199,11 @@ class AutomatizaTechContactForm {
 </html>';
         
         // Headers optimizados para evitar spam
+        $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
-            'From: AutomatizaTech <info@automatizatech.shop>',
-            'Reply-To: info@automatizatech.shop',
+            'From: AutomatizaTech <' . $from_email . '>',
+            'Reply-To: contacto@automatizatech.cl',
             'X-Mailer: PHP/' . phpversion(),
             'X-Priority: 3',
             'Importance: Normal'
@@ -2144,7 +2289,11 @@ class AutomatizaTechContactForm {
         </body>
         </html>";
         
-        $headers = array('Content-Type: text/html; charset=UTF-8');
+        $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: Automatiza Tech <' . $from_email . '>'
+        );
         
         $sent = wp_mail($to, $subject, $message, $headers);
         
@@ -2182,11 +2331,20 @@ class AutomatizaTechContactForm {
     // Soportar tanto un solo plan como múltiples planes
     $plans_array = is_array($plans_data) ? $plans_data : array($plans_data);
     
-    // Calcular IVA (19% en Chile) sumando todos los planes
+    // Calcular IVA (19% en Chile) sumando todos los planes (con descuentos)
+    $subtotal_original = 0;
     $subtotal = 0;
+    $total_descuento = 0;
     foreach ($plans_array as $plan) {
-        $subtotal += floatval($plan->price_clp);
+        $precio_original = floatval($plan->price_clp);
+        $descuento = isset($plan->discount_percent) ? floatval($plan->discount_percent) : 0;
+        $precio_final = $descuento > 0 ? $precio_original * (1 - $descuento/100) : $precio_original;
+        
+        $subtotal_original += $precio_original;
+        $subtotal += $precio_final;
+        $total_descuento += ($precio_original - $precio_final);
     }
+    $hay_descuentos = $total_descuento > 0;
     $iva = $subtotal * 0.19;
     $total = $subtotal + $iva;        $html = "<!DOCTYPE html>
 <html lang='es'>
@@ -2399,6 +2557,32 @@ class AutomatizaTechContactForm {
             font-weight: bold;
             font-size: 1.2em;
         }
+        .price-original {
+            text-decoration: line-through;
+            color: #999;
+            font-size: 0.85em;
+            margin-right: 8px;
+        }
+        .price-discount {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .price-final {
+            color: {$secondary_color};
+            font-weight: bold;
+        }
+        .discount-badge {
+            background: #e74c3c;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-left: 8px;
+        }
+        .savings-row {
+            color: #27ae60;
+            font-weight: bold;
+        }
         .qr-validation {
             page-break-inside: avoid;
             padding: 12px 30px !important;
@@ -2471,7 +2655,22 @@ class AutomatizaTechContactForm {
                 
                 // Iterar sobre todos los planes
                 foreach ($plans_array as $plan) {
-                    $plan_price = floatval($plan->price_clp);
+                    $plan_price_original = floatval($plan->price_clp);
+                    $plan_descuento = isset($plan->discount_percent) ? floatval($plan->discount_percent) : 0;
+                    $plan_price_final = $plan_descuento > 0 ? $plan_price_original * (1 - $plan_descuento/100) : $plan_price_original;
+                    
+                    // Construir celda de precio con o sin descuento
+                    $precio_html = '';
+                    if ($plan_descuento > 0) {
+                        $precio_html = "
+                            <span class='price-original'>$" . number_format($plan_price_original, 0, ',', '.') . "</span>
+                            <span class='discount-badge'>-" . number_format($plan_descuento, 0) . "%</span>
+                            <br>
+                            <span class='price-final'>$" . number_format($plan_price_final, 0, ',', '.') . "</span>";
+                    } else {
+                        $precio_html = "$" . number_format($plan_price_original, 0, ',', '.');
+                    }
+                    
                     $html .= "
                     <tr>
                         <td>
@@ -2486,7 +2685,7 @@ class AutomatizaTechContactForm {
                             " : "") . "
                         </td>
                         <td style='text-align: center; font-size: 1.1em; font-weight: 600;'>1</td>
-                        <td style='text-align: right; font-size: 1.1em; font-weight: 600;'>$" . number_format($plan_price, 0, ',', '.') . "</td>
+                        <td style='text-align: right; font-size: 1.1em;'>{$precio_html}</td>
                     </tr>";
                 }
                 
@@ -2495,7 +2694,22 @@ class AutomatizaTechContactForm {
             </table>
             
             <!-- Totales -->
-            <div class='totals'>
+            <div class='totals'>";
+                
+                // Mostrar subtotal original si hay descuentos
+                if ($hay_descuentos) {
+                    $html .= "
+                <div class='row'>
+                    <span class='label'>Subtotal Original:</span>
+                    <span class='amount' style='text-decoration: line-through; color: #999;'>$" . number_format($subtotal_original, 0, ',', '.') . "</span>
+                </div>
+                <div class='row savings-row'>
+                    <span class='label'>🎉 Ahorro Total:</span>
+                    <span class='amount'>-$" . number_format($total_descuento, 0, ',', '.') . "</span>
+                </div>";
+                }
+                
+                $html .= "
                 <div class='row'>
                     <span class='label'>Subtotal:</span>
                     <span class='amount'>$" . number_format($subtotal, 0, ',', '.') . "</span>
@@ -2517,7 +2731,8 @@ class AutomatizaTechContactForm {
             <p style='margin-bottom: 8px; color: #666;'>Escanea el QR para validar la autenticidad</p>";
     
     // Generar URL de validación para el QR (apunta directamente a la página de validación)
-    $validation_url = $site_url . '/validar-factura.php?id=' . urlencode($invoice_number);
+    // Forzar dominio automatizatech.cl para el QR
+    $validation_url = 'https://automatizatech.cl/validar-factura.php?id=' . urlencode($invoice_number);
     
     // Generar QR Code en base64 con la URL de validación
     $qr_base64 = SimpleQRCode::generateBase64($validation_url, 120);
@@ -2542,8 +2757,8 @@ class AutomatizaTechContactForm {
             
             <div class='footer-column'>
                 <h3>📞 Contacto</h3>
-                <p>📧 info@automatizatech.shop</p>
-                <p>📱 +56 9 6432 4169</p>
+                <p>📧 contacto@automatizatech.cl</p>
+                <p>📱 +56 9 2700 2984</p>
             </div>
             
             <div class='footer-column'>
@@ -2956,6 +3171,16 @@ class AutomatizaTechContactForm {
             $html .= '</div>';
         }
         
+        // Agregar sección de Detalles de Seguimiento del Proyecto
+        if (function_exists('automatiza_render_client_details')) {
+            $html .= '<div class="detail-tracking" style="margin-top: 25px; padding-top: 20px; border-top: 2px dashed #e0e0e0;">';
+            $html .= '<h4 style="color: #10b981; margin: 0 0 15px 0;">📋 Seguimiento del Proyecto</h4>';
+            ob_start();
+            automatiza_render_client_details($client_id);
+            $html .= ob_get_clean();
+            $html .= '</div>';
+        }
+        
         $html .= '</div>';
         
         wp_send_json_success($html);
@@ -3249,10 +3474,11 @@ class AutomatizaTechContactForm {
             
             $body = $this->get_email_template($contact->name);
             
+            $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
             $headers = array(
                 'Content-Type: text/html; charset=UTF-8',
-                'From: Automatiza Tech <' . get_option('admin_email') . '>',
-                'Reply-To: Automatiza Tech <info@automatizatech.cl>',
+                'From: Automatiza Tech <' . $from_email . '>',
+                'Reply-To: Automatiza Tech <contacto@automatizatech.cl>',
                 'Bcc: automatizatech.bots@gmail.com'
             );
             
@@ -3315,7 +3541,7 @@ class AutomatizaTechContactForm {
     private function get_email_template($name) {
         global $wpdb;
         
-        $whatsapp_number = get_theme_mod('whatsapp_number', '+56 9 4033 1127');
+        $whatsapp_number = get_theme_mod('whatsapp_number', '+56 9 2700 2984');
         $whatsapp_url = get_whatsapp_url('Hola! Me interesa conocer más sobre los planes de Automatiza Tech');
         
         // Obtener planes desde la base de datos
@@ -3533,7 +3759,7 @@ class AutomatizaTechContactForm {
                                             📱 WhatsApp: <a href="https://wa.me/' . str_replace([' ', '+'], '', $whatsapp_number) . '" style="color: #25D366; text-decoration: none; font-weight: bold;">' . esc_html($whatsapp_number) . '</a>
                                         </p>
                                         <p style="color: #ffffff; margin: 0 0 10px 0; font-size: 14px;">
-                                            📧 Email: <a href="mailto:info@automatizatech.cl" style="color: #60a5fa; text-decoration: none; font-weight: bold;">info@automatizatech.cl</a>
+                                            📧 Email: <a href="mailto:contacto@automatizatech.cl" style="color: #60a5fa; text-decoration: none; font-weight: bold;">contacto@automatizatech.cl</a>
                                         </p>
                                         <p style="color: #ffffff; margin: 0; font-size: 14px;">
                                             🌐 Web: <a href="' . esc_url(home_url()) . '" style="color: #60a5fa; text-decoration: none; font-weight: bold;">' . str_replace(['http://', 'https://'], '', home_url()) . '</a>
@@ -4254,13 +4480,188 @@ class AutomatizaTechContactForm {
             opacity: 0.7;
         }
         
-        /* Responsive para botones de acción */
-        @media (max-width: 768px) {
-            .edit-contact-btn {
-                display: block !important;
+        /* ========== RESPONSIVE STYLES - CONTACTOS ========== */
+        
+        /* Tablet (768px - 1024px) */
+        @media screen and (max-width: 1024px) {
+            #contacts-table {
+                font-size: 13px;
+            }
+            #contacts-table th,
+            #contacts-table td {
+                padding: 8px 6px;
+            }
+            .search-box > div {
+                flex-wrap: wrap;
+            }
+        }
+        
+        /* Mobile (hasta 767px) */
+        @media screen and (max-width: 767px) {
+            .wrap { 
+                padding: 10px !important; 
+                margin-left: 0 !important; 
+            }
+            .wrap h1 { 
+                font-size: 18px; 
+                margin-bottom: 15px;
+            }
+            
+            /* Filtros y búsqueda */
+            .search-box {
+                padding: 12px !important;
+                margin: 10px 0 !important;
+            }
+            .search-box > div {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 10px !important;
+            }
+            .search-box > div > div {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 8px !important;
+            }
+            #contact-search {
                 width: 100% !important;
-                margin: 2px 0 !important;
-                text-align: center !important;
+                font-size: 16px !important;
+                padding: 12px 15px !important;
+            }
+            #clear-search {
+                width: 100%;
+            }
+            #status-filter {
+                width: 100% !important;
+                font-size: 16px !important;
+                padding: 10px 12px !important;
+                height: auto !important;
+            }
+            #send-email-new-contacts {
+                width: 100% !important;
+                margin-left: 0 !important;
+                padding: 12px !important;
+            }
+            
+            /* Tabla de contactos */
+            .table-wrapper,
+            #contacts-table {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin: 0 -10px;
+                padding: 0 10px;
+            }
+            #contacts-table {
+                min-width: 700px;
+                font-size: 12px;
+            }
+            #contacts-table th,
+            #contacts-table td {
+                padding: 8px 5px;
+                white-space: nowrap;
+            }
+            #contacts-table th:nth-child(1),
+            #contacts-table td:nth-child(1) { width: 40px; } /* ID */
+            #contacts-table th:nth-child(2),
+            #contacts-table td:nth-child(2) { min-width: 100px; } /* Nombre */
+            #contacts-table th:nth-child(3),
+            #contacts-table td:nth-child(3) { 
+                max-width: 120px; 
+                overflow: hidden;
+                text-overflow: ellipsis;
+            } /* Email */
+            #contacts-table th:nth-child(4),
+            #contacts-table td:nth-child(4) { 
+                max-width: 100px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            } /* Empresa */
+            
+            .status-selector {
+                font-size: 11px !important;
+                padding: 4px 6px !important;
+                min-width: 100px;
+            }
+            
+            .view-contact-btn,
+            .edit-contact-btn,
+            .delete-contact-btn {
+                padding: 6px 8px !important;
+                font-size: 11px !important;
+            }
+            
+            /* Modales */
+            .contact-modal-content,
+            .delete-all-modal-content {
+                width: 95% !important;
+                max-width: none !important;
+                margin: 5% auto !important;
+                padding: 15px !important;
+            }
+            
+            /* Notices */
+            .notice.inline {
+                padding: 10px !important;
+                font-size: 12px !important;
+            }
+            .notice.inline p {
+                font-size: 12px !important;
+            }
+            
+            /* Tablenav */
+            .tablenav.top {
+                padding: 10px;
+                background: #f6f7f7;
+                border-radius: 8px;
+            }
+            .tablenav.top .alignleft.actions {
+                width: 100%;
+                float: none;
+            }
+            .tablenav.top .button {
+                width: 100%;
+                margin: 5px 0 !important;
+                text-align: center;
+            }
+        }
+        
+        /* Mobile Small (hasta 480px) */
+        @media screen and (max-width: 480px) {
+            .wrap { padding: 5px !important; }
+            .wrap h1 { font-size: 16px; }
+            
+            #contacts-table {
+                min-width: 600px;
+                font-size: 11px;
+            }
+            #contacts-table th,
+            #contacts-table td {
+                padding: 6px 4px;
+            }
+            
+            .status-selector {
+                font-size: 10px !important;
+                padding: 3px 5px !important;
+            }
+            
+            .contact-modal-content {
+                margin: 2% auto !important;
+                max-height: 95vh;
+                overflow-y: auto;
+            }
+        }
+        
+        /* Touch improvements */
+        @media (hover: none) and (pointer: coarse) {
+            #contact-search,
+            #status-filter,
+            #clear-search,
+            #send-email-new-contacts,
+            .view-contact-btn,
+            .edit-contact-btn,
+            .delete-contact-btn,
+            .status-selector {
+                min-height: 44px;
             }
         }
         </style>
@@ -4375,12 +4776,29 @@ class AutomatizaTechContactForm {
                                     </p>
                                 </div>
                                 
-                                <select id="plan-selector" multiple size="5" style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 1em; background: white; color: #333; cursor: pointer; transition: all 0.3s;">
+                                <?php
+                                global $wpdb;
+                                $plans = $wpdb->get_results("SELECT id, name, price_clp, price_usd, description, category FROM {$wpdb->prefix}automatiza_services WHERE status = 'active' AND (price_clp > 0 OR price_usd > 0) ORDER BY category ASC, id ASC");
+                                $plan_count = count($plans);
+                                $select_size = min(max($plan_count, 6), 12); // Mínimo 6, máximo 12 filas visibles
+                                ?>
+                                <select id="plan-selector" multiple size="<?php echo $select_size; ?>" style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 0.95em; background: white; color: #333; cursor: pointer; transition: all 0.3s; max-height: 350px;">
                                     <?php
-                                    global $wpdb;
-                                    $plans = $wpdb->get_results("SELECT id, name, price_clp, price_usd, description FROM {$wpdb->prefix}automatiza_services WHERE status = 'active' AND (price_clp > 0 OR price_usd > 0) ORDER BY id ASC");
+                                    $current_category = '';
+                                    $category_labels = [
+                                        'pricing' => '📦 Planes de Precios',
+                                        'features' => '⭐ Características',
+                                        'special' => '🎁 Ofertas Especiales',
+                                        'custom' => '🛠️ Proyectos Personalizados'
+                                    ];
                                     foreach ($plans as $plan) {
-                                        echo '<option value="' . $plan->id . '" data-price-clp="' . $plan->price_clp . '" data-price-usd="' . $plan->price_usd . '">' . 
+                                        // Agregar separador de categoría si cambió
+                                        if ($plan->category !== $current_category) {
+                                            $current_category = $plan->category;
+                                            $cat_label = isset($category_labels[$current_category]) ? $category_labels[$current_category] : ucfirst($current_category);
+                                            echo '<option disabled style="background: #f0f0f0; font-weight: bold; color: #666;">── ' . $cat_label . ' ──</option>';
+                                        }
+                                        echo '<option value="' . $plan->id . '" data-price-clp="' . $plan->price_clp . '" data-price-usd="' . $plan->price_usd . '" data-category="' . esc_attr($plan->category) . '">' . 
                                              esc_html($plan->name) . ' - $' . number_format($plan->price_usd, 2) . ' USD / $' . number_format($plan->price_clp, 0, ',', '.') . ' CLP</option>';
                                     }
                                     ?>
@@ -5428,7 +5846,7 @@ class AutomatizaTechContactForm {
         
         ?>
         <div class="wrap">
-            <h1>Clientes Contratados - Automatiza Tech</h1>
+            <h1>Directorio de Clientes: Administración Rápida</h1>
             
             <?php
             $current_user = wp_get_current_user();
@@ -5494,13 +5912,13 @@ class AutomatizaTechContactForm {
                         <th style="width: 120px;">Estado</th>
                         <th style="width: 130px;">Fecha Contrato</th>
                         <th style="text-align: center; width: 70px;">🔄 Toggle</th>
-                        <th style="text-align: center; width: 70px;">👁️ Ver</th>
+                        <th style="text-align: center; width: 80px;">📋 Ficha</th>
                         <?php if (current_user_can('administrator')): ?>
                         <th style="text-align: center; width: 70px;">✏️ Editar</th>
                         <?php else: ?>
                         <th style="text-align: center; width: 70px;">🚫 Editar</th>
                         <?php endif; ?>
-                        <th style="text-align: center; width: 80px;">📄 Factura</th>
+                        <th style="text-align: center; width: 240px;">📄 Factura</th>
                         <th style="text-align: center; width: 70px;">🗑️ Eliminar</th>
                     </tr>
                 </thead>
@@ -5556,15 +5974,15 @@ class AutomatizaTechContactForm {
                                     </button>
                                 </td>
                                 
-                                <!-- Ver Detalles -->
+                                <!-- Ver Detalles - Ficha Completa -->
                                 <td style="text-align: center;">
-                                    <a href="#" onclick="showClientDetailsModal(<?php echo $client->id; ?>); return false;" 
+                                    <a href="#" onclick="openClientFullModal(<?php echo $client->id; ?>); return false;" 
                                        class="button button-small view-client-btn"
-                                       style="background: linear-gradient(135deg, #0073aa, #005a87); color: white; border: none; padding: 6px 12px; border-radius: 15px; font-size: 14px; cursor: pointer; text-decoration: none; display: inline-block; font-weight: 600; box-shadow: 0 2px 5px rgba(0,115,170,0.3); transition: all 0.3s ease;"
-                                       onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,115,170,0.4)';"
-                                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(0,115,170,0.3)';"
-                                       title="Ver detalles completos del cliente">
-                                       👁️ Ver
+                                       style="background: linear-gradient(135deg, #d63384, #e91e8c); color: white; border: none; padding: 6px 12px; border-radius: 15px; font-size: 14px; cursor: pointer; text-decoration: none; display: inline-block; font-weight: 600; box-shadow: 0 2px 5px rgba(214,51,132,0.3); transition: all 0.3s ease;"
+                                       onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(214,51,132,0.4)';"
+                                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(214,51,132,0.3)';"
+                                       title="Ver ficha completa del cliente">
+                                       📋 Ficha
                                     </a>
                                 </td>
                                 
@@ -5626,6 +6044,11 @@ class AutomatizaTechContactForm {
                                                title="Descargar factura <?php echo esc_attr($invoice->invoice_number); ?>">
                                                📥 Descargar
                                             </a>
+                                            
+                                            <?php 
+                                            // Hook para acciones adicionales, como el botón de regenerar factura
+                                            echo apply_filters('automatiza_tech_clients_actions', '', $client); 
+                                            ?>
                                         </div>
                                     <?php else: ?>
                                         <span style="color: #999; font-size: 12px; font-style: italic;" title="No hay factura generada para este cliente">
@@ -5711,6 +6134,141 @@ class AutomatizaTechContactForm {
         
         .deleting-row td {
             color: #666 !important;
+        }
+        
+        /* ==================== ESTILOS RESPONSIVOS CLIENTES CONTRATADOS ==================== */
+        
+        /* Tablet (1024px y menos) */
+        @media screen and (max-width: 1024px) {
+            #clients-table th:nth-child(4),
+            #clients-table td:nth-child(4),
+            #clients-table th:nth-child(7),
+            #clients-table td:nth-child(7) {
+                display: none; /* Ocultar Empresa y Tipo Proyecto */
+            }
+        }
+        
+        /* Mobile (767px y menos) */
+        @media screen and (max-width: 767px) {
+            .wrap h1 {
+                font-size: 20px;
+            }
+            
+            /* Notice y info box */
+            .notice.notice-info {
+                padding: 10px;
+            }
+            .notice.notice-info p {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+            .notice.notice-info span {
+                margin-left: 0 !important;
+            }
+            
+            /* Barra de navegación */
+            .tablenav.top {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .tablenav .alignleft,
+            .tablenav .alignright {
+                width: 100%;
+                text-align: center;
+            }
+            .tablenav .button {
+                width: 100%;
+                min-height: 44px;
+            }
+            
+            /* Campo de búsqueda */
+            .search-box {
+                padding: 12px;
+            }
+            .search-box > div {
+                flex-direction: column !important;
+                align-items: stretch !important;
+            }
+            .search-box input[type="text"] {
+                width: 100% !important;
+                min-height: 44px;
+                font-size: 16px !important;
+            }
+            .search-box .button {
+                width: 100%;
+                min-height: 44px;
+                margin-top: 10px;
+            }
+            
+            /* Tabla - Scroll horizontal */
+            .wp-list-table.widefat {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            #clients-table {
+                min-width: 900px;
+                font-size: 13px;
+            }
+            #clients-table th,
+            #clients-table td {
+                padding: 10px 8px;
+            }
+            /* Ocultar más columnas en móvil */
+            #clients-table th:nth-child(1),
+            #clients-table td:nth-child(1),
+            #clients-table th:nth-child(4),
+            #clients-table td:nth-child(4),
+            #clients-table th:nth-child(5),
+            #clients-table td:nth-child(5),
+            #clients-table th:nth-child(7),
+            #clients-table td:nth-child(7) {
+                display: none;
+            }
+            
+            /* Botones de acción más compactos */
+            .toggle-status-btn,
+            .view-client-btn,
+            .edit-client-btn,
+            .delete-client-btn {
+                padding: 6px 10px !important;
+                font-size: 14px !important;
+            }
+            
+            /* Status selector */
+            .client-status-selector {
+                min-height: 36px;
+                font-size: 11px !important;
+            }
+        }
+        
+        /* Móviles pequeños (480px y menos) */
+        @media screen and (max-width: 480px) {
+            #clients-table {
+                min-width: 700px;
+            }
+            .view-invoice-btn,
+            .download-invoice-btn {
+                padding: 4px 8px !important;
+                font-size: 11px !important;
+            }
+        }
+        
+        /* Touch-friendly */
+        @media (hover: none) and (pointer: coarse) {
+            .toggle-status-btn,
+            .view-client-btn,
+            .edit-client-btn,
+            .delete-client-btn,
+            .view-invoice-btn,
+            .download-invoice-btn {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            .client-status-selector {
+                min-height: 44px;
+            }
         }
         </style>
         
@@ -6306,4 +6864,3 @@ add_action('admin_head', function() {
         <?php
     }
 });
-?>

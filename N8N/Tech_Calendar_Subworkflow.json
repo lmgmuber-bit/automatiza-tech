@@ -1,0 +1,526 @@
+{
+  "name": "Agendar Reunión AutomatizaTech - Cliente",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1536,
+        784
+      ],
+      "id": "df86a777-c645-4e7b-860e-dd7128526a38",
+      "name": "Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "date",
+              "name": "date",
+              "value": "={{ $json.body?.leadData?.scheduled_date || $json.leadData?.scheduled_date || $json.date }}",
+              "type": "string"
+            },
+            {
+              "id": "time",
+              "name": "time",
+              "value": "={{ $json.body?.leadData?.scheduled_time || $json.leadData?.scheduled_time || $json.time }}",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "value": "={{ $json.body?.leadData?.email || $json.leadData?.email || $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "name",
+              "name": "name",
+              "value": "={{ $json.body?.leadData?.name || $json.leadData?.name || $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "phone",
+              "name": "phone",
+              "value": "={{ $json.body?.leadData?.phone || $json.leadData?.phone || $json.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "session_id",
+              "name": "session_id",
+              "value": "={{ $json.body?.sessionId || $json.sessionId || $json.session_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1312,
+        784
+      ],
+      "id": "88bde38c-8dc6-4eaa-92d2-f8a7d727cfe1",
+      "name": "Normalize Data"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "automatizacionesbotcore@gmail.com",
+          "mode": "list",
+          "cachedResultName": "automatizacionesbotcore@gmail.com"
+        },
+        "options": {
+          "timeMin": "={{ DateTime.fromISO($('Normalize Data').item.json.date + 'T' + $('Normalize Data').item.json.time, { zone: 'America/Santiago' }).toISO() }}",
+          "timeMax": "={{ DateTime.fromISO($('Normalize Data').item.json.date + 'T' + $('Normalize Data').item.json.time, { zone: 'America/Santiago' }).plus({ hours: 1 }).toISO() }}",
+          "singleEvents": true
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.1,
+      "position": [
+        -1088,
+        784
+      ],
+      "alwaysOutputData": true,
+      "id": "ffb00df4-cf4f-42ab-9bd0-087c1414b23f",
+      "name": "Check Availability",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "ziZmOO4DlgXb4Vet",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.id }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        784
+      ],
+      "id": "cb9babae-d6dc-4d41-a6c6-95dc9ab610d3",
+      "name": "Is Busy?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "json",
+              "name": "json",
+              "value": "={{ { name: $('Normalize Data').item.json.name || 'Usuario Agendado', email: $('Normalize Data').item.json.email, scheduled_date: $('Normalize Data').item.json.date, scheduled_time: $('Normalize Data').item.json.time, phone: $('Normalize Data').item.json.phone, session_id: $('Normalize Data').item.json.session_id } }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -540,
+        880
+      ],
+      "id": "prepare-payload",
+      "name": "Prepare Payload"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://automatizatech.shop/wp-json/automatiza-tech/v1/leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.json }}",
+        "options": {
+          "ignoreResponseCode": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -380,
+        880
+      ],
+      "id": "a1958561-3b4e-4346-969e-ed213bef474b",
+      "name": "Save Appointment to WP"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -250,
+        880
+      ],
+      "id": "check-wp-response",
+      "name": "Check WP Response"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "result",
+              "value": "Ha ocurrido un error al agendar, por favor intente nuevamente."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        -250,
+        1080
+      ],
+      "id": "set-error-message",
+      "name": "Set Error Message"
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        -100,
+        880
+      ],
+      "id": "wait-node-id-12345",
+      "name": "Wait"
+    },
+    {
+      "parameters": {
+        "fromEmail": "Automatiza Tech <info@automatizatech.shop>",
+        "toEmail": "={{ $('Normalize Data').item.json.email }}, info@automatizatech.shop",
+        "subject": "Confirmación de Reunión: Demo AutomatizaTech",
+        "text": "={{ 'Hola ' + $('Normalize Data').item.json.name + ',\\n\\nTu reunión ha sido confirmada para el ' + $('Normalize Data').item.json.date.split('-').reverse().join('-') + ' a las ' + $('Normalize Data').item.json.time + ' hrs.\\n\\nPor favor acepta la invitación que te llegó en el correo anterior (de Google Calendar) para agregarla a tu calendario.\\n\\nSaludos,\\nEquipo AutomatizaTech' }}",
+        "html": "={{ '<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style>body{font-family:\\'Segoe UI\\',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.header{background-color:#1e40af;padding:30px;text-align:center;color:#ffffff}.header h1{margin:10px 0 0;font-size:24px;font-weight:600}.content{padding:40px 30px;color:#333333;line-height:1.6}.details{background-color:#f9fafb;padding:20px;border-radius:6px;margin:20px 0;border-left:4px solid #06d6a0}.details p{margin:5px 0}.footer{background-color:#1f2937;padding:20px;text-align:center;color:#9ca3af;font-size:12px}.btn{display:inline-block;background-color:#06d6a0;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;margin-top:20px}img{max-width:100%;height:auto;display:block;margin:0 auto}</style></head><body><div class=\"container\"><div class=\"header\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td align=\"center\"><img src=\"https://automatizatech.shop/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" width=\"200\" style=\"width:200px;max-width:100%;height:auto;display:block;border:0;\"></td></tr></table><h1 style=\"margin-top:20px;\">Confirmación de Reunión</h1></div><div class=\"content\"><p>Hola <strong>' + $('Normalize Data').item.json.name + '</strong>,</p><p>Tu reunión de demostración ha sido confirmada exitosamente. Estamos emocionados de mostrarte cómo podemos automatizar tu negocio.</p><div class=\"details\"><p><strong>📅 Fecha:</strong> ' + $('Normalize Data').item.json.date.split('-').reverse().join('-') + '</p><p><strong>⏰ Hora:</strong> ' + $('Normalize Data').item.json.time + ' hrs. (Hora Chile)</p><p><strong>📍 Lugar:</strong> ' + ($('Create Event').item.json.hangoutLink ? '<a href=\"' + $('Create Event').item.json.hangoutLink + '\" style=\"color:#06d6a0;text-decoration:none;font-weight:bold;\">Google Meet (Clic para unirse)</a>' : 'Google Meet (Enlace pendiente)') + '</p></div><p>Por favor acepta la invitación que te llegó en el correo anterior (de Google Calendar) para agregarla a tu calendario.</p><center><a href=\"https://automatizatech.shop\" class=\"btn\">Visitar Sitio Web</a></center></div><div class=\"footer\"><p>&copy; 2025 Automatiza Tech. Todos los derechos reservados.</p><p>Este es un correo automático, por favor no responder directamente si no es necesario.</p></div></div></body></html>' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        256,
+        880
+      ],
+      "id": "f3d6cd2c-b301-4432-bf8a-bd1469f98191",
+      "name": "Send Email SMTP",
+      "credentials": {
+        "smtp": {
+          "id": "NeCx3dcdXq2DJoWj",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "result",
+              "value": "Lo siento, ese horario ya está ocupado. Por favor elige otro."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        688
+      ],
+      "id": "fe2f0e15-e163-48ff-93b7-453288a2f630",
+      "name": "Set Busy Message"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "result",
+              "value": "=¡Listo {{ $('Normalize Data').item.json.name }}! He agendado la reunión para el {{ $('Normalize Data').item.json.date.split('-').reverse().join('-') }} a las {{ $('Normalize Data').item.json.time }} hrs. Te llegará una invitación a tu correo {{ $('Normalize Data').item.json.email }}."
+            },
+            {
+              "name": "name",
+              "value": "={{ $('Normalize Data').item.json.name }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $('Normalize Data').item.json.email }}"
+            },
+            {
+              "name": "phone",
+              "value": "={{ $('Normalize Data').item.json.phone }}"
+            },
+            {
+              "name": "session_id",
+              "value": "={{ $('Normalize Data').item.json.session_id }}"
+            },
+            {
+              "name": "date",
+              "value": "={{ $('Normalize Data').item.json.date }}"
+            },
+            {
+              "name": "time",
+              "value": "={{ $('Normalize Data').item.json.time }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        480,
+        880
+      ],
+      "id": "4c014eae-d470-4ad1-b92b-87a1fa9276d1",
+      "name": "Set Success Message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/calendar/v3/calendars/automatizacionesbotcore@gmail.com/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "conferenceDataVersion",
+              "value": "1"
+            },
+            {
+              "name": "sendUpdates",
+              "value": "all"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "summary",
+              "value": "Invitación: Demo de AutomatizaTech"
+            },
+            {
+              "name": "description",
+              "value": "={{ 'Automatiza Tech\\nautomatizacionesbotcore@gmail.com\\n\\nReunión agendada con ' + $('Normalize Data').item.json.name + ' (' + $('Normalize Data').item.json.email + ')' }}"
+            },
+            {
+              "name": "start",
+              "value": "={{ { \"dateTime\": DateTime.fromISO($('Normalize Data').item.json.date + 'T' + $('Normalize Data').item.json.time, { zone: 'America/Santiago' }).toISO(), \"timeZone\": \"America/Santiago\" } }}"
+            },
+            {
+              "name": "end",
+              "value": "={{ { \"dateTime\": DateTime.fromISO($('Normalize Data').item.json.date + 'T' + $('Normalize Data').item.json.time, { zone: 'America/Santiago' }).plus({ hours: 1 }).toISO(), \"timeZone\": \"America/Santiago\" } }}"
+            },
+            {
+              "name": "attendees",
+              "value": "={{ [ { \"email\": $('Normalize Data').item.json.email } ] }}"
+            },
+            {
+              "name": "organizer",
+              "value": "={{ { \"displayName\": \"Automatiza Tech\", \"email\": \"automatizacionesbotcore@gmail.com\" } }}"
+            },
+            {
+              "name": "conferenceData",
+              "value": "={{ { \"createRequest\": { \"requestId\": $execution.id, \"conferenceSolutionKey\": { \"type\": \"hangoutsMeet\" } } } }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -640,
+        880
+      ],
+      "id": "126d7dce-5fd8-48b0-8aa7-fd43be21e957",
+      "name": "Create Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "ziZmOO4DlgXb4Vet",
+          "name": "Google Calendar account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Data": {
+      "main": [
+        [
+          {
+            "node": "Check Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Availability": {
+      "main": [
+        [
+          {
+            "node": "Is Busy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Busy?": {
+      "main": [
+        [
+          {
+            "node": "Set Busy Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Appointment to WP": {
+      "main": [
+        [
+          {
+            "node": "Check WP Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check WP Response": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Send Email SMTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email SMTP": {
+      "main": [
+        [
+          {
+            "node": "Set Success Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event": {
+      "main": [
+        [
+          {
+            "node": "Prepare Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Payload": {
+      "main": [
+        [
+          {
+            "node": "Save Appointment to WP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "bcce15df-5deb-4314-8913-f11a9cc5ab30",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "id": "PejBgr2LZQSAbbBy",
+  "tags": []
+}

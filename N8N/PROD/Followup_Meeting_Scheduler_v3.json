@@ -1,0 +1,721 @@
+{
+  "name": "Agendar Reunión AutomatizaTech - Cliente (PROD)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1248,
+        3648
+      ],
+      "id": "6cd6e973-e1c6-4336-aea6-cb30d25536f2",
+      "name": "Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "date",
+              "name": "date",
+              "value": "={{ $json.body?.leadData?.scheduled_date || $json.leadData?.scheduled_date || $json.date }}",
+              "type": "string"
+            },
+            {
+              "id": "time",
+              "name": "time",
+              "value": "={{ $json.body?.leadData?.scheduled_time || $json.leadData?.scheduled_time || $json.time }}",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "value": "={{ $json.body?.leadData?.email || $json.leadData?.email || $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "name",
+              "name": "name",
+              "value": "={{ $json.body?.leadData?.name || $json.leadData?.name || $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "phone",
+              "name": "phone",
+              "value": "={{ $json.body?.leadData?.phone || $json.leadData?.phone || $json.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "session_id",
+              "name": "session_id",
+              "value": "={{ $json.body?.sessionId || $json.sessionId || $json.session_id }}",
+              "type": "string"
+            },
+            {
+              "id": "appointmentType",
+              "name": "appointmentType",
+              "value": "={{ $json.body?.appointmentType || $json.appointmentType || 'Demo' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1024,
+        3648
+      ],
+      "id": "30787fa7-a21a-4b75-8ebd-e63d6b9f200b",
+      "name": "Normalize Data"
+    },
+    {
+      "parameters": {
+        "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/verify-client?phone={{ encodeURIComponent($json.phone) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -800,
+        3648
+      ],
+      "id": "8fda68b0-6720-4d53-86d0-5d9f933d98d6",
+      "name": "Get Client Data",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "date",
+              "name": "date",
+              "value": "={{ $('Normalize Data').item.json.date }}",
+              "type": "string"
+            },
+            {
+              "id": "time",
+              "name": "time",
+              "value": "={{ $('Normalize Data').item.json.time }}",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "value": "={{ $('Normalize Data').item.json.appointmentType === 'Seguimiento' && $json.client_email ? $json.client_email : $('Normalize Data').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "name",
+              "name": "name",
+              "value": "={{ $('Normalize Data').item.json.appointmentType === 'Seguimiento' && $json.client_name ? $json.client_name : $('Normalize Data').item.json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "phone",
+              "name": "phone",
+              "value": "={{ $('Normalize Data').item.json.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "company_name",
+              "name": "company_name",
+              "value": "={{ $('Normalize Data').item.json.appointmentType === 'Seguimiento' && $json.company_name ? $json.company_name : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "session_id",
+              "name": "session_id",
+              "value": "={{ $('Normalize Data').item.json.session_id }}",
+              "type": "string"
+            },
+            {
+              "id": "appointmentType",
+              "name": "appointmentType",
+              "value": "={{ $('Normalize Data').item.json.appointmentType }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -576,
+        3648
+      ],
+      "id": "5744c9f3-4d81-48a5-bb73-e73d0727ca6a",
+      "name": "Merge Client Data"
+    },
+    {
+      "parameters": {
+        "url": "=https://automatizatech.cl/wp-json/automatiza-tech/v1/appointments/search?scheduled_date={{ $('Merge Client Data').item.json.date }}&scheduled_time={{ $('Merge Client Data').item.json.time }}&status=active",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -352,
+        3648
+      ],
+      "alwaysOutputData": true,
+      "id": "082ad016-f77a-442f-8bcd-2e77871b406b",
+      "name": "Check WP Availability"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.data && $json.data.length > 0 ? 'busy' : 'free' }}",
+              "value2": "busy"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        3648
+      ],
+      "id": "ce75483d-4aea-49ff-a69f-8aea5e1ce313",
+      "name": "WP Has Appointments?"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "contacto@automatizatech.cl",
+          "mode": "list",
+          "cachedResultName": "contacto@automatizatech.cl"
+        },
+        "options": {
+          "timeMin": "={{ DateTime.fromISO($('Merge Client Data').item.json.date + 'T' + $('Merge Client Data').item.json.time, { zone: 'America/Santiago' }).toISO() }}",
+          "timeMax": "={{ DateTime.fromISO($('Merge Client Data').item.json.date + 'T' + $('Merge Client Data').item.json.time, { zone: 'America/Santiago' }).plus({ hours: 1 }).toISO() }}",
+          "singleEvents": true
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.1,
+      "position": [
+        96,
+        3728
+      ],
+      "alwaysOutputData": true,
+      "id": "46cfe7b1-1d6d-418e-9753-b2279ada723b",
+      "name": "Check Availability",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "NrhQQuWgel9eWwzp",
+          "name": "Google Calendar AutomatizaTech.cl"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.id }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        320,
+        3728
+      ],
+      "id": "0a74cf15-cd9a-4226-917d-f8031e8d299a",
+      "name": "Is Busy?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "json",
+              "name": "json",
+              "value": "={{ $('Merge Client Data').item.json.appointmentType === 'Seguimiento' ? { name: $('Merge Client Data').item.json.name || 'Usuario Agendado', email: $('Merge Client Data').item.json.email, date: $('Merge Client Data').item.json.date, time: $('Merge Client Data').item.json.time, phone: $('Merge Client Data').item.json.phone, company_name: $('Merge Client Data').item.json.company_name || '', subject: 'Reunión de Seguimiento', source: 'whatsapp', meet_link: $('Create Event').item.json.hangoutLink, google_event_id: $('Create Event').item.json.id } : { name: $('Merge Client Data').item.json.name || 'Usuario Agendado', email: $('Merge Client Data').item.json.email, scheduled_date: $('Merge Client Data').item.json.date, scheduled_time: $('Merge Client Data').item.json.time, phone: $('Merge Client Data').item.json.phone, session_id: $('Merge Client Data').item.json.session_id, meet_link: $('Create Event').item.json.hangoutLink, google_event_id: $('Create Event').item.json.id } }}",
+              "type": "object"
+            },
+            {
+              "id": "appointmentType",
+              "name": "appointmentType",
+              "value": "={{ $('Merge Client Data').item.json.appointmentType }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        768,
+        3776
+      ],
+      "id": "aceb17d3-fd9c-4b0f-b7b0-078e1b89275c",
+      "name": "Prepare Payload"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.appointmentType === 'Seguimiento' ? 'https://automatizatech.cl/wp-json/automatiza-tech/v1/followup-meetings' : 'https://automatizatech.cl/wp-json/automatiza-tech/v1/leads' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        992,
+        3776
+      ],
+      "id": "65a96804-3961-4094-8bd6-d87aa0884728",
+      "name": "Save Appointment to WP"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        3776
+      ],
+      "id": "b39359a8-f043-45bb-96d0-124e6457d0f9",
+      "name": "Check WP Response"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "result",
+              "value": "={{ $('Save Appointment to WP').item.json.message || 'Ha ocurrido un error al agendar, por favor intente nuevamente.' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        3872
+      ],
+      "id": "e50c8905-3850-4af9-9e25-07b6af514c1e",
+      "name": "Set Error Message"
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        3680
+      ],
+      "id": "c0aadd61-02f6-4781-9113-1ec7e5bcb6c3",
+      "name": "Wait",
+      "webhookId": "5933a1ca-b997-4aab-a484-063697506b9c"
+    },
+    {
+      "parameters": {
+        "fromEmail": "Automatiza Tech <contacto@automatizatech.cl>",
+        "toEmail": "={{ $('Merge Client Data').item.json.email }}",
+        "bccEmail": "automatizacionesbotcore@gmail.com",
+        "subject": "={{ $('Merge Client Data').item.json.appointmentType === 'Seguimiento' ? '📅 Reunión de Seguimiento - ' + $('Merge Client Data').item.json.date.split('-').reverse().join('/') : 'Confirmación de Reunión: Demo AutomatizaTech' }}",
+        "text": "={{ 'Hola ' + $('Merge Client Data').item.json.name + ',\\n\\nTu ' + ($('Merge Client Data').item.json.appointmentType === 'Seguimiento' ? 'reunión de seguimiento' : 'reunión de demostración') + ' ha sido confirmada para el ' + $('Merge Client Data').item.json.date.split('-').reverse().join('-') + ' a las ' + $('Merge Client Data').item.json.time + ' hrs.\\n\\nPor favor acepta la invitación que te llegó en el correo anterior (de Google Calendar) para agregarla a tu calendario.\\n\\nSaludos,\\nEquipo AutomatizaTech' }}",
+        "html": "={{ $('Merge Client Data').item.json.appointmentType === 'Seguimiento' ? '<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style>body{font-family:Poppins,Segoe UI,Arial,sans-serif;background-color:#f0fdfa;margin:0;padding:0;color:#333333;line-height:1.6}.container{max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 40px rgba(13,148,136,0.15)}.header{background:linear-gradient(135deg,#0d9488,#14b8a6,#2dd4bf);padding:45px 20px;text-align:center}.header img{max-height:70px;width:auto;margin-bottom:15px;filter:brightness(0) invert(1)}.header h1{margin:0;font-size:26px;color:#ffffff;font-weight:700;text-transform:uppercase;letter-spacing:2px;text-shadow:0 2px 4px rgba(0,0,0,0.1)}.header p{color:rgba(255,255,255,0.9);margin:10px 0 0 0;font-size:14px}.content{padding:40px 35px}.greeting{font-size:18px;color:#0d9488;margin-bottom:20px}.meeting-card{background:linear-gradient(135deg,#f0fdfa,#ccfbf1);border:2px solid #14b8a6;border-radius:12px;padding:25px;margin:25px 0}.meeting-card h3{color:#0f766e;margin:0 0 20px 0;font-size:18px;border-bottom:2px solid #99f6e4;padding-bottom:10px}.meeting-detail{margin:12px 0;font-size:15px}.meeting-detail strong{color:#0f766e}.meet-box{background:linear-gradient(135deg,#0d9488,#14b8a6);border-radius:12px;padding:20px;margin:25px 0;text-align:center;word-break:break-word;overflow-wrap:break-word}.meet-box p{color:#ffffff;margin:0 0 15px 0;font-size:16px;word-break:break-all;overflow-wrap:break-word}.meet-box a{display:inline-block;background-color:#ffffff;color:#0d9488;padding:14px 32px;border-radius:50px;text-decoration:none;font-weight:bold;font-size:15px;box-shadow:0 4px 15px rgba(0,0,0,0.15)}.tips-box{background:#fefce8;border-left:4px solid #eab308;padding:15px 20px;margin:25px 0;border-radius:0 8px 8px 0}.tips-box h4{color:#0f766e;margin:0 0 10px 0}.tips-box ul{color:#713f12;margin:0;padding-left:20px}.tips-box li{margin:5px 0}.cta-container{text-align:center;margin:30px 0}.btn-whatsapp{display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#25D366,#20bd5a);color:#ffffff;text-decoration:none;border-radius:50px;font-weight:600;font-size:14px;box-shadow:0 4px 15px rgba(37,211,102,0.3)}.footer{background:linear-gradient(135deg,#f0fdfa,#e6fffa);padding:25px;text-align:center;font-size:12px;color:#666666;border-top:1px solid #99f6e4}.footer a{color:#0d9488;text-decoration:none}.social-links{margin:15px 0}.social-links a{display:inline-block;margin:0 8px;padding:8px 16px;background:#14b8a6;color:#fff;border-radius:20px;font-size:11px;text-decoration:none}</style></head><body><div class=\"container\"><div class=\"header\"><img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\"><h1>Reunión de Seguimiento</h1><p>Tu próximo paso hacia la automatización</p></div><div class=\"content\"><p class=\"greeting\">Hola <strong>' + $('Merge Client Data').item.json.name + '</strong>,</p><p>¡Excelente! Hemos programado nuestra reunión de seguimiento para continuar afinando los detalles de tu proyecto de automatización.</p><div class=\"meeting-card\"><h3>📋 Detalles de la Reunión</h3><div class=\"meeting-detail\">📅 <strong>Fecha:</strong> ' + $('Merge Client Data').item.json.date.split('-').reverse().join('/') + '</div><div class=\"meeting-detail\">⏰<strong>Hora:</strong> ' + $('Merge Client Data').item.json.time + ' hrs (Chile)</div><div class=\"meeting-detail\">📌 <strong>Tema:</strong> Seguimiento de proyecto</div><div class=\"meeting-detail\">💻 <strong>Modalidad:</strong> Videollamada (Google Meet)</div></div>' + ($('Create Event').item.json.hangoutLink ? '<div class=\"meet-box\"><p><strong>🔗 Únete a la Reunión</strong></p><a href=\"' + $('Create Event').item.json.hangoutLink + '\">📹 Unirse a Google Meet</a><p style=\"color:rgba(255,255,255,0.9);margin:15px 0 0 0;font-size:12px;word-break:break-all;\">' + $('Create Event').item.json.hangoutLink + '</p></div>' : '') + '<div class=\"tips-box\"><h4>💡 Para aprovechar al máximo la reunión:</h4><ul><li>Prepara tus dudas o preguntas específicas</li><li>Ten a mano información relevante de tu negocio</li><li>Asegúrate de tener buena conexión a internet</li><li>Busca un lugar tranquilo para la llamada</li></ul></div><p>Si necesitas reagendar o tienes alguna consulta previa, no dudes en contactarnos. ¡Estamos aquí para ayudarte!</p><div class=\"cta-container\"><a href=\"https://wa.me/56927002984?text=Hola,%20tengo%20una%20consulta%20sobre%20mi%20reunion%20de%20seguimiento\" class=\"btn-whatsapp\">💬 Escríbenos por WhatsApp</a></div><p style=\"margin-top:30px;\">¡Nos vemos pronto!</p><p><strong>El equipo de Automatiza Tech</strong> 🚀</p></div><div class=\"footer\"><div class=\"social-links\"><a href=\"https://automatizatech.cl\">🌐 Sitio Web</a><a href=\"https://wa.me/56927002984\">💬 WhatsApp</a></div><p>© 2026 Automatiza Tech. Todos los derechos reservados.</p><p>📧 <a href=\"mailto:contacto@automatizatech.cl\">contacto@automatizatech.cl</a> | 📱 +56 9 2700 2984</p><p style=\"margin-top:15px;font-size:11px;color:#999;\">Este correo fue enviado porque tienes una reunión programada con nosotros.</p></div></div></body></html>' : '<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style>body{font-family:\\'Segoe UI\\',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.header{background-color:#1e40af;padding:30px;text-align:center;color:#ffffff}.header h1{margin:10px 0 0;font-size:24px;font-weight:600}.content{padding:40px 30px;color:#333333;line-height:1.6}.details{background-color:#f9fafb;padding:20px;border-radius:6px;margin:20px 0;border-left:4px solid #06d6a0}.details p{margin:5px 0}.footer{background-color:#1f2937;padding:20px;text-align:center;color:#9ca3af;font-size:12px}.btn{display:inline-block;background-color:#06d6a0;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;margin-top:20px}img{max-width:100%;height:auto;display:block;margin:0 auto}</style></head><body><div class=\"container\"><div class=\"header\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td align=\"center\"><img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" width=\"200\" style=\"width:200px;max-width:100%;height:auto;display:block;border:0;\"></td></tr></table><h1 style=\"margin-top:20px;\">Confirmación de Reunión</h1></div><div class=\"content\"><p>Hola <strong>' + $('Merge Client Data').item.json.name + '</strong>,</p><p>Tu reunión de demostración ha sido confirmada exitosamente. Estamos emocionados de mostrarte cómo podemos automatizar tu negocio.</p><div class=\"details\"><p><strong>📅 Fecha:</strong> ' + $('Merge Client Data').item.json.date.split('-').reverse().join('-') + '</p><p><strong>⏰Hora:</strong> ' + $('Merge Client Data').item.json.time + ' hrs. (Hora Chile)</p><p><strong>📍 Lugar:</strong> ' + ($('Create Event').item.json.hangoutLink ? '<a href=\"' + $('Create Event').item.json.hangoutLink + '\" style=\"color:#06d6a0;text-decoration:none;font-weight:bold;\">Google Meet (Clic para unirse)</a>' : 'Google Meet (Enlace pendiente)') + '</p></div><p>Por favor acepta la invitación que te llegó en el correo anterior (de Google Calendar) para agregarla a tu calendario.</p><center><a href=\"https://automatizatech.cl\" class=\"btn\">Visitar Sitio Web</a></center></div><div class=\"footer\"><p>© 2026 Automatiza Tech. Todos los derechos reservados.</p><p>Este es un correo automático, por favor no responder directamente si no es necesario.</p></div></div></body></html>' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        1664,
+        3680
+      ],
+      "id": "ef6fbf12-062c-49e7-8a69-881d4900b8e0",
+      "name": "Send Email SMTP",
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "result",
+              "value": "Lo siento, ese horario ya está ocupado. Por favor elige otro."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        544,
+        3552
+      ],
+      "id": "5f5f2618-cd42-4c17-ba01-11f716003ecd",
+      "name": "Set Busy Message"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "result",
+              "value": "={{ $('Merge Client Data').item.json.appointmentType === 'Seguimiento' ? '¡Listo ' + $('Merge Client Data').item.json.name + '! He agendado tu reunión de seguimiento para el ' + $('Merge Client Data').item.json.date.split('-').reverse().join('-') + ' a las ' + $('Merge Client Data').item.json.time + ' hrs. Te llegará una invitación a tu correo ' + $('Merge Client Data').item.json.email + '.' : '¡Listo ' + $('Merge Client Data').item.json.name + '! He agendado la reunión para el ' + $('Merge Client Data').item.json.date.split('-').reverse().join('-') + ' a las ' + $('Merge Client Data').item.json.time + ' hrs. Te llegará una invitación a tu correo ' + $('Merge Client Data').item.json.email + '.' }}"
+            },
+            {
+              "name": "name",
+              "value": "={{ $('Merge Client Data').item.json.name }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $('Merge Client Data').item.json.email }}"
+            },
+            {
+              "name": "phone",
+              "value": "={{ $('Merge Client Data').item.json.phone }}"
+            },
+            {
+              "name": "session_id",
+              "value": "={{ $('Merge Client Data').item.json.session_id }}"
+            },
+            {
+              "name": "date",
+              "value": "={{ $('Merge Client Data').item.json.date }}"
+            },
+            {
+              "name": "time",
+              "value": "={{ $('Merge Client Data').item.json.time }}"
+            },
+            {
+              "name": "meet_link",
+              "value": "={{ $('Create Event').item.json.hangoutLink }}"
+            },
+            {
+              "name": "event_id",
+              "value": "={{ $('Create Event').item.json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1888,
+        3680
+      ],
+      "id": "b88a88b8-3730-4b43-a61e-77375bc86c79",
+      "name": "Set Success Message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/calendar/v3/calendars/contacto@automatizatech.cl/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "conferenceDataVersion",
+              "value": "1"
+            },
+            {
+              "name": "sendUpdates",
+              "value": "all"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "summary",
+              "value": "={{ $('Merge Client Data').item.json.appointmentType === 'Seguimiento' ? 'Reunión de Seguimiento - AutomatizaTech' : 'Invitación: Demo de AutomatizaTech' }}"
+            },
+            {
+              "name": "description",
+              "value": "={{ 'Automatiza Tech\\ncontacto@automatizatech.cl\\n\\nReunión agendada con ' + $('Merge Client Data').item.json.name + ' (' + $('Merge Client Data').item.json.email + ')' }}"
+            },
+            {
+              "name": "start",
+              "value": "={{ { \"dateTime\": DateTime.fromISO($('Merge Client Data').item.json.date + 'T' + $('Merge Client Data').item.json.time, { zone: 'America/Santiago' }).toISO(), \"timeZone\": \"America/Santiago\" } }}"
+            },
+            {
+              "name": "end",
+              "value": "={{ { \"dateTime\": DateTime.fromISO($('Merge Client Data').item.json.date + 'T' + $('Merge Client Data').item.json.time, { zone: 'America/Santiago' }).plus({ hours: 1 }).toISO(), \"timeZone\": \"America/Santiago\" } }}"
+            },
+            {
+              "name": "attendees",
+              "value": "={{ [ { \"email\": $('Merge Client Data').item.json.email } ] }}"
+            },
+            {
+              "name": "organizer",
+              "value": "={{ { \"displayName\": \"Automatiza Tech\", \"email\": \"contacto@automatizatech.cl\" } }}"
+            },
+            {
+              "name": "conferenceData",
+              "value": "={{ { \"createRequest\": { \"requestId\": $execution.id, \"conferenceSolutionKey\": { \"type\": \"hangoutsMeet\" } } } }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        544,
+        3776
+      ],
+      "id": "3c0f5d15-985e-4e4f-b33b-9ca521a4018b",
+      "name": "Create Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "NrhQQuWgel9eWwzp",
+          "name": "Google Calendar AutomatizaTech.cl"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Data": {
+      "main": [
+        [
+          {
+            "node": "Get Client Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Client Data": {
+      "main": [
+        [
+          {
+            "node": "Merge Client Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Client Data": {
+      "main": [
+        [
+          {
+            "node": "Check WP Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check WP Availability": {
+      "main": [
+        [
+          {
+            "node": "WP Has Appointments?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WP Has Appointments?": {
+      "main": [
+        [
+          {
+            "node": "Set Busy Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Availability": {
+      "main": [
+        [
+          {
+            "node": "Is Busy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Busy?": {
+      "main": [
+        [
+          {
+            "node": "Set Busy Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Appointment to WP": {
+      "main": [
+        [
+          {
+            "node": "Check WP Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check WP Response": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Send Email SMTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email SMTP": {
+      "main": [
+        [
+          {
+            "node": "Set Success Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event": {
+      "main": [
+        [
+          {
+            "node": "Prepare Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Payload": {
+      "main": [
+        [
+          {
+            "node": "Save Appointment to WP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner",
+    "timeSavedMode": "fixed",
+    "availableInMCP": false,
+    "errorWorkflow": "p7ISUf0J5GycHscc"
+  },
+  "versionId": "125e35c0-db5d-4b9f-9907-d77b99b1fb81",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "id": "PejBgr2LZQSAbbBy",
+  "tags": []
+}

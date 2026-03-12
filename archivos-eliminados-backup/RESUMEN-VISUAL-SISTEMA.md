@@ -111,8 +111,8 @@
 │  [💚 WhatsApp] [🌐 Sitio Web]          │
 ├─────────────────────────────────────────┤
 │  🤖 FOOTER PROFESIONAL                  │
-│  📧 info@automatizatech.cl             │
-│  📱 +56 9 4033 1127                    │
+│  📧 contacto@automatizatech.cl             │
+│  📱 +56 9 2700 2984                    │
 │  🌐 www.automatizatech.cl              │
 │  © 2025 Automatiza Tech                │
 └─────────────────────────────────────────┘
@@ -140,7 +140,7 @@
    │
    ├─► Host: smtp.hostinger.com
    ├─► Port: 587 (TLS)
-   ├─► Auth: info@automatizatech.cl
+   ├─► Auth: contacto@automatizatech.cl
    ├─► Charset: UTF-8
    │
 4. Logging:
@@ -159,7 +159,7 @@
 ```php
 // wp-config.php (Producción)
 
-define('SMTP_USER', 'info@automatizatech.cl');
+define('SMTP_USER', 'contacto@automatizatech.cl');
 define('SMTP_PASS', 'contraseña_segura');
 define('SMTP_HOST', 'smtp.hostinger.com');
 define('SMTP_PORT', 587);
@@ -193,7 +193,7 @@ add_action('phpmailer_init', 'automatiza_tech_smtp_config');
 ### PASO 1: HOSTINGER (2 min)
 ```
 1. hPanel → Correos → Crear cuenta
-   Email: info@automatizatech.cl
+   Email: contacto@automatizatech.cl
    Password: [contraseña segura]
 
 2. Guardar contraseña ✅
@@ -216,7 +216,7 @@ Subir vía FTP/SFTP:
    Agregar credenciales SMTP
 
 2. WordPress → Ajustes → Generales:
-   Cambiar email a: info@automatizatech.cl
+   Cambiar email a: contacto@automatizatech.cl
 
 3. Verificar:
    https://tudominio.com/verify-email-setup.php

@@ -1,0 +1,18 @@
+{
+  "name": "AutomatizaTech Portal Omnicanal",
+  "short_name": "AutomatizaTech",
+  "description": "Portal de clientes - Gestión omnicanal de WhatsApp, Instagram, Telegram y Messenger",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e40af",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./logo-automatiza-tech.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

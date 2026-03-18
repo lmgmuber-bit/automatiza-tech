@@ -1,0 +1,559 @@
+# Contexto Completo: Client Portal Omnichannel
+
+> [!IMPORTANT]
+> Este documento contiene **todo el contexto disponible** del módulo `client-portal-omnichannel` del proyecto AutomatizaTech. Fue generado a partir del análisis exhaustivo de los archivos compilados (build output), ya que **no existe código fuente** en este directorio — sólo el output de Vite (`dist/`).
+
+---
+
+## 1. Visión General
+
+| Atributo | Valor |
+|---|---|
+| **Nombre** | Client Portal Omnichannel |
+| **Ubicación** | `c:\wamp64\www\automatiza-tech\client-portal-omnichannel\` |
+| **Tipo** | SPA (Single Page Application) |
+| **Framework** | React 19.1.0 + ReactDOM 19.1.0 |
+| **Bundler** | Vite (build de producción) |
+| **Propósito** | Portal de cliente para gestión omnicanal de conversaciones (WhatsApp, Instagram, Facebook, Telegram) |
+
+### Estructura del Directorio
+
+```
+client-portal-omnichannel/
+├── dist/
+│   ├── index.html                    (Entry point HTML)
+│   └── assets/
+│       ├── index-CCRm3-DE.js         (209 KB - React + App JS bundle)
+│       └── index-Cb4NRmYc.css        (21.6 KB - Estilos compilados)
+└── node_modules/                      (Dependencias instaladas)
+```
+
+> [!WARNING]
+> **No existe `package.json`, `src/`, ni archivos fuente.** El directorio solo contiene el build compilado (`dist/`) y `node_modules`. El código fuente original probablemente fue desarrollado en otro lugar o no fue comiteado al repositorio.
+
+---
+
+## 2. Dependencias Identificadas
+
+Dependencias detectadas dentro del bundle JS compilado:
+
+| Dependencia | Versión | Propósito |
+|---|---|---|
+| **React** | 19.1.0 | UI framework |
+| **ReactDOM** | 19.1.0 | DOM rendering |
+| **Scheduler** | (built-in React 19) | React internal scheduling |
+
+El bundle JS pesa **209,925 bytes** (≈210 KB) y contiene todo React 19 + ReactDOM + el código de la aplicación minificado.
+
+---
+
+## 3. Entry Point HTML
+
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Portal de clientes AutomatizaTech">
+    <title>Portal de Clientes | AutomatizaTech</title>
+    <link rel="icon" type="image/svg+xml" href="/vite.svg">
+    <script type="module" crossorigin src="/assets/index-CCRm3-DE.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Cb4NRmYc.css">
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>
+```
+
+**Datos clave del HTML:**
+- Idioma: `es` (español)
+- Meta description: *"Portal de clientes AutomatizaTech"*
+- Título: *"Portal de Clientes | AutomatizaTech"*
+- Favicon: `vite.svg` (default de Vite)
+- Mount point: `<div id="root">`
+
+---
+
+## 4. Sistema de Diseño (CSS Design System)
+
+### 4.1 Tipografías
+
+```
+Google Fonts importados:
+- Poppins (400, 500, 600, 700) → Títulos y encabezados
+- Open Sans (400, 500, 600) → Texto body y botones
+```
+
+### 4.2 Variables CSS (Design Tokens)
+
+#### Colores Principales
+```css
+--color-primary: #1e40af        /* Azul corporativo */
+--color-primary-dark: #1e3a8a   /* Azul oscuro */
+--color-secondary: #06d6a0      /* Verde/turquesa accent */
+--color-white: #ffffff
+--color-dark: #111827
+```
+
+#### Escala de Grises
+```css
+--color-gray-50:  #f9fafb
+--color-gray-100: #f3f4f6
+--color-gray-200: #e5e7eb
+--color-gray-300: #d1d5db
+--color-gray-400: #9ca3af
+--color-gray-500: #6b7280
+--color-gray-800: #1f2937
+--color-border:   #e5e7eb
+```
+
+#### Glassmorphism
+```css
+--glass-bg: rgba(255, 255, 255, 0.7)
+--glass-border: rgba(255, 255, 255, 0.5)
+```
+
+#### Sombras
+```css
+--shadow-sm:    0 1px 2px rgba(0,0,0,0.05)
+--shadow:       0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06)
+--shadow-lg:    0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05)
+--shadow-glass: 0 8px 32px rgba(31,38,135,0.1)
+```
+
+#### Badges de Plataformas
+```css
+--badge-wa: #25D366                    /* WhatsApp verde */
+--badge-ig: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)  /* Instagram gradient */
+--badge-fb: #1877F2                    /* Facebook azul */
+--badge-tg: #229ED9                    /* Telegram azul */
+```
+
+### 4.3 Dark Mode
+
+Se implementa mediante el atributo `[data-theme="dark"]` que sobrescribe las variables CSS:
+
+```css
+[data-theme="dark"] {
+    --color-white: #111827
+    --color-gray-50: #030712
+    --color-gray-100: #1f2937
+    --color-gray-200: #374151
+    --color-gray-300: #4b5563
+    --color-gray-400: #6b7280
+    --color-gray-500: #9ca3af
+    --color-gray-800: #f3f4f6
+    --color-dark: #f9fafb
+    --color-border: #374151
+    --glass-bg: rgba(17,24,39,0.7)
+    --glass-border: rgba(55,65,81,0.5)
+}
+```
+
+Componentes con estilos dark específicos:
+- `.login-card` → fondo `#111827f2`, sombra más oscura
+- `.login-card-header h1/p` → colores invertidos
+- `.input-group label` + `.input-with-icon input` → colores adaptados
+- `.robot-speech-bubble` → fondo `#1f2937f2`
+- `.login-credentials-hint`, `.login-footer`, `.login-error` → ajustados
+
+---
+
+## 5. Componentes UI Implementados
+
+### 5.1 Página de Login (`login-page`)
+
+**Layout principal:**
+- Full viewport (`min-height: 100vh`)
+- Fondo con gradiente: `linear-gradient(135deg, #0f172a, #1e3a8a, #1e40af)`
+- Centrado con Flexbox (vertical + horizontal)
+- Padding responsive
+
+**Elementos:**
+
+#### Partículas de Fondo (`.login-particles`)
+6 partículas animadas con diferentes efectos:
+- **p1** (350px): Gradiente radial verde, animación de órbita (16s)
+- **p2** (250px): Gradiente radial azul, animación de órbita (12s)
+- **p3** (3px): Estrella fugaz blanca (6s, linear)
+- **p4** (2px): Estrella fugaz verde (8s, linear, delay 3s)
+- **p5** (18px): Burbuja flotante verde (10s)
+- **p6** (12px): Burbuja flotante blanca (14s, reverse)
+
+#### Robot Animado (`.robot-container`)
+- Imagen del robot (160px ancho) con sombra `drop-shadow` verde
+- Animación de flotación continua (`robot-float`, 4s)
+- Efecto glow debajo del robot (`robot-glow`) con pulso
+
+**Estados del Robot:**
+| Clase CSS | Comportamiento | Contexto |
+|---|---|---|
+| `.robot-waving` | Inclinación suave (±6°) | Estado inicial / bienvenida |
+| `.robot-thinking` | Balanceo lento, glow azul | Procesando login |
+| `.robot-celebrating` | Rebote alegre, glow verde intenso | Login exitoso |
+
+#### Burbuja de Diálogo (`.robot-speech-bubble`)
+- Fondo blanco semitransparente, bordes redondeados (16px)
+- Triángulo inferior (CSS pseudo-element `:after`)
+- Animación de entrada (`bubble-in`, 0.5s)
+- Max-width: 280px
+
+#### Tarjeta de Login (`.login-card`)
+- Max-width: 420px
+- Padding: 2.5rem × 2rem
+- Border-radius: 24px
+- Fondo: `#fffffff7` (casi opaco)
+- Sombra prominente: `0 25px 60px rgba(0,0,0,0.3)`
+- Animación de entrada (`card-appear`, 0.8s, delay 0.3s)
+
+**Contenido de la tarjeta:**
+- **Header**: Logo (60px) con animación spin-in, título con `<span>` para color accent
+- **Formulario** (`.login-form`): Campos con iconos a la izquierda (`.input-with-icon`), inputs con focus en azul corporativo
+- **Botón de login** (`.btn-login`): Gradiente azul, sombra hover, estado disabled gris, spinner de carga
+- **Error** (`.login-error`): Fondo rojo claro, borde rojo, animación shake
+- **Hint de credenciales** (`.login-credentials-hint`)
+- **Footer**: Enlace con hover verde
+
+#### Transiciones de Página
+- **Entrada** (`.login-enter`): translateY(40px→0), scale(0.95→1), 1s
+- **Salida** (`.login-exit`): scale(1→0.9), blur(0→12px), 0.8s
+
+#### Branding (`.login-branding`)
+- Posición absoluta, bottom, centrado
+- Texto blanco con opacidad, span verde accent
+- Oculto en móvil (≤480px)
+
+---
+
+### 5.2 Dashboard Layout (`.dashboard-layout`)
+
+**Estructura:**
+```
+┌──────────────────────────────────────────────┐
+│ .dashboard-layout (flex, 100vh × 100vw)      │
+│ ┌──────────┬─────────────────────────────────┐│
+│ │ .sidebar │ .main-content                   ││
+│ │ (280px)  │ ┌────────────┬──────────────────┐││
+│ │          │ │.inbox-panel│.chat-window-panel│││
+│ │          │ │ (350px)    │ (flex: 1)        │││
+│ │          │ │            │                  │││
+│ │          │ └────────────┴──────────────────┘││
+│ └──────────┴─────────────────────────────────┘│
+└──────────────────────────────────────────────┘
+```
+
+**Animación de logout** (`.dashboard-log-out`):
+- Scale(1→0.95), fade out, blur(0→8px), 0.5s
+
+---
+
+### 5.3 Sidebar (`.sidebar`, 280px)
+
+**Secciones:**
+
+1. **Header** (`.sidebar-header`):
+   - Logo abreviado (`.logo-abbr`): Cuadrado 40×40px, fondo azul, texto blanco
+   - Nombre de marca (`.brand-name`): Poppins, 700, 1.25rem
+
+2. **Navegación** (`.sidebar-nav`):
+   - Items (`.nav-item`): Flex con icono + texto, padding 0.85rem
+   - Estado active: Fondo `#1e40af14` (azul semitransparente)
+   - Hover: Fondo gris claro
+
+3. **Footer** (`.sidebar-footer`):
+   - Perfil de usuario (`.user-profile`): Avatar 40×40px circular + info
+   - Nombre (`.user-name`) y rol (`.user-role`)
+   - Acciones: Botón de tema (`.theme-toggle-btn`) + Botón de logout (`.logout-btn`)
+
+**Mobile (≤768px):**
+- Sidebar se convierte en overlay (position: absolute, left: -280px)
+- Se muestra con clase `.mobile-open` (left: 0)
+- Botón de cerrar visible (`.mobile-close-btn`)
+- Shadow-lg para efecto de drawer
+
+---
+
+### 5.4 Panel de Inbox (`.inbox-panel`, 350px)
+
+**Componentes:**
+
+1. **Header** (`.inbox-header`):
+   - Título "Inbox" con badge de conteo (`.badge-count`)
+   - Barra de búsqueda (`.search-bar`) con icono y input redondeado (12px)
+   - Botón hamburguesa para móvil (`.mobile-menu-btn`)
+
+2. **Lista de Chats** (`.chats-list`):
+   - Scroll vertical
+   - Cada chat (`.chat-item`): flex con gap de 1rem
+
+3. **Estructura de cada Chat Item:**
+   ```
+   ┌─────────────────────────────────────────┐
+   │ [Avatar 48px]  Nombre          14:30   │
+   │ [Badge plat.]  Último mensaje...  (3)  │
+   └─────────────────────────────────────────┘
+   ```
+   - Avatar (`.chat-avatar`, 48×48px, circular)
+   - Badge de plataforma (`.platform-badge`, 20×20px):
+     - `.wa` → WhatsApp (#25D366)
+     - `.ig` → Instagram (gradiente)
+     - `.fb` → Facebook (#1877F2)
+     - `.tg` → Telegram (#229ED9)
+   - Info superior: Nombre + hora (`.chat-time`)
+   - Info inferior: Extracto (`.chat-excerpt`, ellipsis) + Badge no leídos (`.unread-badge`, verde)
+
+**Mobile (≤768px):**
+- Ocupa 100% del ancho
+- Se oculta con `.mobile-hidden`
+
+---
+
+### 5.5 Ventana de Chat (`.chat-window-panel`)
+
+**Secciones:**
+
+1. **Header** (`.chat-window-header`):
+   - Información del usuario activo (`.active-chat-user`): Avatar 44×44px + nombre + detalle
+   - Botón de retroceso móvil (`.back-btn-mobile`, hidden en desktop)
+   - Botón outline (`.btn-outline-small`)
+   - Fondo con backdrop-filter blur
+
+2. **Área de Mensajes** (`.chat-messages-container`):
+   - Fondo con patrón SVG sutil (cruces en azul 3% opacidad)
+   - Scroll vertical
+   - Disclaimer (`.chat-disclaimer`): Texto centrado, fondo gris
+
+3. **Tipos de Burbujas de Mensaje** (`.message-bubble`):
+
+   | Tipo | Clase | Alineación | Estilo |
+   |---|---|---|---|
+   | Lead/Cliente | `.lead` | Izquierda (`flex-start`) | Fondo blanco, borde gris, sombra suave |
+   | Bot | `.bot` | Derecha (`flex-end`) | Fondo gris claro |
+   | Humano/Agente | `.human` | Derecha (`flex-end`) | Fondo azul corporativo, texto blanco |
+
+   - Max-width: 75%
+   - Border-radius: 16px (con variación en esquina inferior según tipo)
+   - Contenido (`.message-content`): texto + timestamp (`.message-time`, 0.7rem, opacidad 0.7)
+
+4. **Área de Input** (`.chat-input-area`):
+   - Botón adjuntar (`.attach-btn`)
+   - Formulario (`.input-form`): Input redondeado (24px) con fondo gris
+   - Botón enviar (`.send-btn`): Circular 40×40px, azul, se agranda al hover
+   - Estado disabled: gris, cursor not-allowed
+
+5. **Estado Vacío** (`.empty-chat-state`):
+   - Centrado vertical y horizontal
+   - Icono grande gris (`.empty-icon`)
+   - Texto descriptivo
+   - Fondo gris claro
+
+---
+
+## 6. Animaciones y Micro-interacciones
+
+### Animaciones definidas
+
+| Nombre | Duración | Uso |
+|---|---|---|
+| `page-enter` | 1s | Entrada de la página de login |
+| `page-exit` | 0.8s | Salida de la página de login (con blur) |
+| `orbit-1` | 16s | Partícula decorativa 1 |
+| `orbit-2` | 12s | Partícula decorativa 2 |
+| `shooting-star-1` | 6s | Estrella fugaz 1 |
+| `shooting-star-2` | 8s | Estrella fugaz 2 |
+| `bubble-float` | 10-14s | Burbujas flotantes decorativas |
+| `robot-float` | 4s | Robot flotando suavemente |
+| `glow-pulse` | 0.4-3s | Pulso del glow bajo el robot |
+| `wave-tilt` | 1.5s | Robot saludando |
+| `think-sway` | 1s | Robot pensando |
+| `celebrate-bounce` | 0.6s | Robot celebrando |
+| `bubble-in` | 0.5s | Burbuja de diálogo apareciendo |
+| `card-appear` | 0.8s | Tarjeta de login entrando |
+| `logo-spin-in` | 1s | Logo girando al aparecer |
+| `shake` | 0.4s | Error de login temblando |
+| `spin` | 1s | Spinner de carga |
+| `dashboard-disconnect` | 0.5s | Logout del dashboard |
+| `fade-in/fade-out` | 0.8s | Transiciones globales |
+
+### Transiciones CSS
+```css
+--transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)  /* Global suave */
+```
+
+- Hover en botones: `translateY(-2px)`
+- Focus en inputs: `box-shadow: 0 0 0 4px rgba(30,64,175,0.1)`
+- Active en botones: `translateY(0)`
+- Scrollbar personalizada: 6px, border-radius 10px
+
+---
+
+## 7. Responsividad
+
+### Breakpoints
+
+| Breakpoint | Comportamiento |
+|---|---|
+| **≤ 480px** (Móvil) | Login: Padding reducido, card 20px radius, títulos más pequeños, robot reducido, branding oculto |
+| **481px - 768px** (Tablet) | Login: Padding intermedio |
+| **≤ 768px** (Tablet/Móvil) | Dashboard: Sidebar se convierte en drawer overlay, inbox ocupa 100%, chat se oculta, back button aparece |
+| **> 768px** (Desktop) | Layout completo con sidebar + inbox + chat side-by-side |
+
+### Patrón Mobile del Dashboard
+1. **Estado inicial**: Se muestra la lista de inbox (100% width)
+2. **Al seleccionar chat**: Se oculta inbox (`.mobile-hidden`), se muestra chat window
+3. **Botón back**: Regresa a la lista de inbox
+4. **Menú hamburguesa**: Abre sidebar como overlay lateral
+
+---
+
+## 8. Plataformas Soportadas
+
+El portal soporta conversaciones de **4 plataformas** de mensajería:
+
+| Plataforma | Clase CSS | Color/Estilo |
+|---|---|---|
+| WhatsApp | `.platform-badge.wa` | `#25D366` (verde) |
+| Instagram | `.platform-badge.ig` | Gradiente multicolor |
+| Facebook | `.platform-badge.fb` | `#1877F2` (azul) |
+| Telegram | `.platform-badge.tg` | `#229ED9` (azul claro) |
+
+Cada conversación muestra un badge circular de 20×20px sobre el avatar indicando la plataforma de origen.
+
+---
+
+## 9. Flujo de Usuario Inferido
+
+```mermaid
+graph TD
+    A[Acceso al Portal] --> B[Página de Login]
+    B --> C{Autenticación}
+    C -->|Error| D[Shake + Mensaje Error]
+    D --> B
+    C -->|Éxito| E[Robot Celebra]
+    E --> F[Transición page-exit]
+    F --> G[Dashboard]
+    G --> H[Sidebar + Inbox + Chat]
+    H --> I[Seleccionar Conversación]
+    I --> J[Ver Mensajes]
+    J --> K[Enviar Mensaje]
+    K --> J
+    G --> L[Toggle Dark Mode]
+    G --> M[Logout]
+    M --> N[Animación dashboard-disconnect]
+    N --> B
+```
+
+### Flujo de Login detallado:
+1. Aparece robot en estado **waving** (saludando) con burbuja de diálogo
+2. Usuario ingresa credenciales (campos con iconos)
+3. Al enviar, robot pasa a estado **thinking** (pensando), glow azul
+4. Si **error**: Animación shake, mensaje rojo, robot vuelve a waving
+5. Si **éxito**: Robot pasa a **celebrating** (celebrando), glow verde intenso
+6. Transición `page-exit` con blur + scale hacia el dashboard
+
+### Flujo de Dashboard:
+1. Layout aparece con sidebar + inbox + chat
+2. Inbox muestra lista de conversaciones con badges de plataforma
+3. Cada chat muestra: avatar, nombre, hora, extracto, conteo no leídos
+4. Al seleccionar un chat: Se muestra la ventana de chat con historial
+5. Tres tipos de mensajes: lead (izq), bot (der, gris), human (der, azul)
+6. Input con botón adjuntar + campo de texto + botón enviar
+7. Toggle de tema oscuro en sidebar footer
+8. Logout con animación de desconexión
+
+---
+
+## 10. Identidad Corporativa Aplicada
+
+| Elemento | Valor |
+|---|---|
+| **Color primario** | `#1e40af` (Azul) |
+| **Color secondary/accent** | `#06d6a0` (Verde turquesa) |
+| **Fondo login** | Gradiente azul oscuro → azul (`#0f172a` → `#1e40af`) |
+| **Font títulos** | Poppins (600-700) |
+| **Font body** | Open Sans (400-600) |
+| **Border radius tarjetas** | 24px |
+| **Border radius inputs** | 14px |
+| **Border radius chat bubbles** | 16px |
+| **Transición global** | `cubic-bezier(0.4, 0, 0.2, 1)` |
+
+---
+
+## 11. Patrones Técnicos Identificados
+
+1. **SPA con React 19**: Usa la versión más reciente de React con el nuevo scheduler y concurrent features
+2. **Vite como bundler**: Build de producción con code-splitting mínimo (un solo chunk JS + CSS)
+3. **CSS Variables para temas**: Dark mode mediante `[data-theme="dark"]` que sobrescribe variables
+4. **Glassmorphism**: Clases `.glass` con `backdrop-filter: blur(10px)`
+5. **CSS-only animations**: Todas las animaciones son CSS puro (keyframes), no usan librerías JS
+6. **Responsive Design**: Mobile-first con breakpoints en 480px y 768px
+7. **Patrón de mensajería**: Sistema de burbujas con 3 tipos de mensajes (lead, bot, human)
+8. **Custom scrollbar**: Scrollbar estilizada para WebKit
+9. **No hay APIs visibles**: Las URLs de API o endpoints no son detectables en el bundle minificado
+10. **No hay router explícito**: No se detectó React Router; las vistas probablemente se manejan con estado local
+
+---
+
+## 12. Elementos Faltantes / A Implementar
+
+> [!CAUTION]
+> Los siguientes elementos no están presentes y se necesitarían para una aplicación funcional:
+
+| Elemento | Estado | Notas |
+|---|---|---|
+| Código fuente (`src/`) | ❌ Ausente | Solo existe el build compilado |
+| `package.json` | ❌ Ausente | No se pueden verificar dependencias exactas |
+| Conexión a API/Backend | ❓ Desconocido | No se pueden extraer URLs del JS minificado |
+| WebSocket/Real-time | ❓ Desconocido | No se detectó en los archivos analizados |
+| Autenticación real | ❓ Desconocido | El formulario existe pero el backend no es visible |
+| Estado management (Redux/Zustand) | ❓ Desconocido | Posiblemente `useState`/`useReducer` de React |
+| i18n / Internacionalización | ⚠️ Solo español | HTML `lang="es"`, contenido en español |
+| Tests | ❌ Ausente | No hay archivos de test |
+| CI/CD | ❌ Ausente | No hay configuración de deployment |
+| Vite config | ❌ Ausente | No está `vite.config.js` |
+| Variables de entorno | ❌ Ausente | No está `.env` |
+
+---
+
+## 13. Relación con el Proyecto AutomatizaTech
+
+Este módulo forma parte del ecosistema **AutomatizaTech** (`automatizatech.cl`):
+
+- **CRM Module**: El portal podría conectarse al CRM para obtener datos de leads/clientes
+- **WhatsApp Bot (N8N)**: Los mensajes de WhatsApp probablemente llegan via la integración N8N existente
+- **Meta Business API**: Instagram y Facebook se integrarían a través de la API de Meta ya configurada
+- **MAXTECH (AI Agent)**: Los mensajes tipo "bot" en el chat podrían corresponder a respuestas de MAXTECH
+- **Dominio principal**: Podría desplegarse como subpath o subdominio de `automatizatech.cl`
+
+### Conversación de referencia sobre el Login
+El diseño del login fue trabajado en la conversación **"Login Page Overhaul"** (ID: `801b0a75-79cd-413b-950c-d9181551ee8b`) donde se rediseñó con:
+- Formulario centrado
+- Animaciones de fondo dinámicas
+- Robot interactivo y animado
+- Experiencia premium, responsiva y animada
+- Identidad corporativa consistente en login/logout
+
+---
+
+## 14. Resumen para Reconstrucción
+
+Para reconstruir este proyecto desde cero, una IA necesitaría:
+
+1. **Crear un proyecto Vite + React 19** con TypeScript o JavaScript
+2. **Replicar el sistema de diseño** usando las variables CSS documentadas arriba
+3. **Implementar 3 vistas principales**: Login, Dashboard (Inbox + Chat), Estado vacío
+4. **Integrar las 4 plataformas**: WhatsApp, Instagram, Facebook, Telegram con sus badges
+5. **Implementar el robot animado** del login con sus 3 estados (waving, thinking, celebrating)
+6. **Agregar las 6 partículas** de fondo animadas en el login
+7. **Implementar dark mode** con `data-theme` toggle
+8. **Hacer responsive** con drawer sidebar en mobile, inbox/chat toggle
+9. **Conectar con APIs** del backend WordPress/N8N de AutomatizaTech
+10. **Implementar autenticación** contra el sistema existente
+11. **Integrar WebSocket o polling** para mensajes en tiempo real
+12. **Mantener la identidad corporativa**: Colores `#1e40af` + `#06d6a0`, tipografías Poppins + Open Sans
+
+---
+
+*Documento generado por análisis de archivos compilados en `client-portal-omnichannel/dist/`. Fecha de análisis: Marzo 2026.*

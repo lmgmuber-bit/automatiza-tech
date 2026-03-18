@@ -1,4 +1,4 @@
-export const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api-omnichannel.php' : '/automatiza-tech/api-omnichannel.php');
+export const API_BASE = import.meta.env.VITE_API_URL || '/api-omnichannel.php';
 
 let apiKey = localStorage.getItem('omni_api_key') || '';
 let isAdmin = localStorage.getItem('omni_is_admin') === 'true';

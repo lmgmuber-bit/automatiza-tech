@@ -174,7 +174,7 @@ try {
     }
 
     // ---- CRON: Expiry reminders (called by N8N, secured with secret) ----
-    if (isset($segments[0]) && $segments[0] === 'cron' && isset($segments[1]) && $segments[1] === 'expiry-reminders' && $method === 'POST') {
+    if (isset($segments[0]) && $segments[0] === 'cron' && isset($segments[1]) && $segments[1] === 'expiry-reminders') {
         $provided_secret = sanitize_text_field($_GET['secret'] ?? ($body['secret'] ?? ''));
         $cron_secret = defined('OMNICHANNEL_CRON_SECRET') ? OMNICHANNEL_CRON_SECRET : 'omni_cron_2026_s3cur3';
 

@@ -414,6 +414,7 @@ $wpdb->query("CREATE TABLE IF NOT EXISTS `{$t}` (
     sender_type ENUM('agent','admin','system') NOT NULL,
     sender_id BIGINT UNSIGNED DEFAULT NULL,
     sender_name VARCHAR(255) DEFAULT NULL,
+    sender_email VARCHAR(255) DEFAULT NULL,
     message TEXT NOT NULL,
     attachments TEXT DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -422,6 +423,9 @@ $wpdb->query("CREATE TABLE IF NOT EXISTS `{$t}` (
     KEY idx_created (created_at)
 ) {$charset};");
 $results[] = check_table($wpdb, $t) ? "✅ {$t}" : "❌ {$t}: {$wpdb->last_error}";
+
+// Add sender_email column if missing (needed for public ticket creation)
+add_col($wpdb, $t, 'sender_email', "`sender_email` VARCHAR(255) DEFAULT NULL AFTER `sender_name`", $results);
 
 // =====================================================
 // PASO 5: COLUMNAS EXTRA EN CLIENTES (period management)

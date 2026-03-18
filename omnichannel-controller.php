@@ -1414,6 +1414,13 @@ class OmnichannelController {
         ));
 
         if (!$agent) {
+            // Check if email exists at all (inactive or not)
+            $exists = $this->wpdb->get_var($this->wpdb->prepare(
+                "SELECT COUNT(*) FROM {$this->prefix}agents WHERE email = %s", $email
+            ));
+            if (!$exists) {
+                return ['error' => 'El correo ingresado no se encuentra en nuestros registros.'];
+            }
             return ['error' => 'Credenciales inválidas'];
         }
 

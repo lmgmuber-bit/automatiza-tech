@@ -1128,7 +1128,7 @@ class OmnichannelController {
      * Send welcome email to a newly created agent with their credentials
      */
     public function send_agent_welcome_email($agent_id, $name, $email, $plain_password, $company_name) {
-        $login_url = get_site_url() . '/client-portal-omnichannel/';
+        $login_url = get_site_url() . '/omnicliente/';
 
         $subject = "🎉 Bienvenido al equipo — AutomatizaTech Portal Omnicanal";
 
@@ -1221,7 +1221,7 @@ class OmnichannelController {
         );
 
         // Build reset URL — the frontend handles the token via query param
-        $portal_url = get_site_url() . '/client-portal-omnichannel/';
+        $portal_url = get_site_url() . '/omnicliente/';
         $reset_url = $portal_url . '?reset_token=' . urlencode($raw_token) . '&email=' . urlencode($email);
 
         $subject = "🔑 Recuperar contraseña — AutomatizaTech Portal";
@@ -3129,7 +3129,7 @@ class OmnichannelController {
         }
 
         $logo_url = get_site_url() . '/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
-        $portal_url = get_site_url() . '/portal-omnichannel/';
+        $portal_url = get_site_url() . '/omnicliente/';
 
         $html = "<div style='font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#f8fafc;'>
             <!-- Branded header with logo -->

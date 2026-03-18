@@ -6365,28 +6365,12 @@ class AutomatizaTech_CRM_AI {
     private function _ensure_db_schema() {
         global $wpdb;
 
-        // Verificar existencia de tabla o de columna clave 'archivos'
-        // Si falta la tabla o la columna 'archivos' (schema nuevo), ejecutamos dbDelta
-        $needs_update = false;
-        
-        // 1. Check Table Exists
-        if ($wpdb->get_var("SHOW TABLES LIKE '{$this->tabla_chat_historial}'") != $this->tabla_chat_historial) {
-            $needs_update = true;
-        } else {
-             // 2. Check Column Exists
-             $col = $wpdb->get_results("SHOW COLUMNS FROM {$this->tabla_chat_historial} LIKE 'archivos'");
-             if (empty($col)) {
-                 $needs_update = true;
-             }
-        }
+        $tabla = $this->tabla_chat_historial;
 
-        if ($needs_update) {
+        // 1. Si la tabla no existe, crearla completa con dbDelta
+        if ($wpdb->get_var("SHOW TABLES LIKE '{$tabla}'") != $tabla) {
             $charset = $wpdb->get_charset_collate();
-            // IMPORTANTE: dbDelta requiere formato estricto:
-            // - Cada campo en una linea
-            // - PRIMARY KEY (id) con dos espacios
-            // - KEY en vez de INDEX
-            $sql = "CREATE TABLE {$this->tabla_chat_historial} (
+            $sql = "CREATE TABLE {$tabla} (
               id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
               session_id varchar(100) NOT NULL,
               user_id bigint(20) unsigned DEFAULT NULL,
@@ -6399,14 +6383,42 @@ class AutomatizaTech_CRM_AI {
               KEY idx_session (session_id),
               KEY idx_user (user_id)
             ) $charset;";
-            
             require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
             dbDelta($sql);
+            return;
+        }
+
+        // 2. Tabla existe: agregar columnas faltantes con ALTER TABLE
+        $columnas_requeridas = [
+            'archivos'  => "ALTER TABLE {$tabla} ADD COLUMN archivos json DEFAULT NULL AFTER content",
+            'audio_url' => "ALTER TABLE {$tabla} ADD COLUMN audio_url varchar(500) DEFAULT NULL AFTER archivos",
+        ];
+
+        foreach ($columnas_requeridas as $col_name => $alter_sql) {
+            $col = $wpdb->get_results("SHOW COLUMNS FROM {$tabla} LIKE '{$col_name}'");
+            if (empty($col)) {
+                $wpdb->query($alter_sql);
+            }
         }
     }
 
     // ========== API: RECUPERAR HISTORIAL DE CHAT ==========
     public function ajax_crm_recover_chat_history() {
+        // Limpiar output buffer
+        @ini_set('display_errors', '0');
+        while (ob_get_level() > 0) { ob_end_clean(); }
+        ob_start();
+
+        try {
+            $this->_ajax_chat_history_inner();
+        } catch (\Throwable $e) {
+            error_log('MAXTECH Chat History Error: ' . $e->getMessage());
+            ob_end_clean();
+            wp_send_json_error('Error al cargar historial.');
+        }
+    }
+
+    private function _ajax_chat_history_inner() {
         global $wpdb;
         
         // Ensure Schema
@@ -6470,6 +6482,21 @@ class AutomatizaTech_CRM_AI {
     
     // ========== CHAT MAXTECH CLIENTE ==========
     public function ajax_chat_cliente() {
+        // Limpiar output buffer para evitar que warnings/notices corrompan la respuesta JSON
+        @ini_set('display_errors', '0');
+        while (ob_get_level() > 0) { ob_end_clean(); }
+        ob_start();
+
+        try {
+            $this->_ajax_chat_cliente_inner();
+        } catch (\Throwable $e) {
+            error_log('MAXTECH Client Chat Error: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
+            ob_end_clean();
+            wp_send_json_error('Error interno del chat. Por favor intenta de nuevo.');
+        }
+    }
+
+    private function _ajax_chat_cliente_inner() {
         global $wpdb;
 
         // Ensure Schema
@@ -6532,14 +6559,8 @@ class AutomatizaTech_CRM_AI {
              $upload = wp_handle_upload($_FILES['audio'], ['test_form' => false]);
              if (!isset($upload['error']) && isset($upload['file'])) {
                  $audio_path = $upload['file'];
-                 // Llamada a Whisper - API key desde Bóveda o wp-config.php
-                 $api_key = '';
-                 if (class_exists('AutomatizaTech_Credentials_Vault')) {
-                     $api_key = AutomatizaTech_Credentials_Vault::get_instance()->get_api_key('OpenAI', 'ai');
-                 }
-                 if (empty($api_key)) {
-                     $api_key = defined('OPENAI_API_KEY') ? OPENAI_API_KEY : '';
-                 }
+                 // API key desde wp-config.php
+                 $api_key = defined('OPENAI_API_KEY') ? OPENAI_API_KEY : '';
                  
                  $curl = curl_init();
                  curl_setopt_array($curl, [
@@ -6705,14 +6726,8 @@ class AutomatizaTech_CRM_AI {
             $messages[] = $msg_obj;
         }
 
-        // Llamada a OpenAI - API key desde Bóveda o wp-config.php
-        $api_key = '';
-        if (class_exists('AutomatizaTech_Credentials_Vault')) {
-            $api_key = AutomatizaTech_Credentials_Vault::get_instance()->get_api_key('OpenAI', 'ai');
-        }
-        if (empty($api_key)) {
-            $api_key = defined('OPENAI_API_KEY') ? OPENAI_API_KEY : '';
-        }
+        // API key desde wp-config.php
+        $api_key = defined('OPENAI_API_KEY') ? OPENAI_API_KEY : '';
 
         $payload = [
             'model' => 'gpt-4o', // Usamos 4o para todo (visión y texto)

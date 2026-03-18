@@ -1,0 +1,206 @@
+{
+  "name": "OmniChannel Expiry Reminders Cron 8AM/8PM - AutomatizaTech (PROD)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            },
+            {
+              "triggerAtHour": 20
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-460, 60],
+      "id": "a1b2c3d4-cron-8am-8pm-expiry",
+      "name": "Cron 8AM & 8PM Chile"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://automatizatech.cl/automatiza-tech/api-omnichannel.php?route=cron/expiry-reminders&secret=omni_cron_2026_s3cur3",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [-220, 60],
+      "id": "b2c3d4e5-http-expiry-check",
+      "name": "Trigger Expiry Reminders"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-success",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [20, 60],
+      "id": "c3d4e5f6-if-success",
+      "name": "API OK?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-expired",
+              "leftValue": "={{ $json.expired_clients }}",
+              "rightValue": "0",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [260, 0],
+      "id": "d4e5f6g7-if-has-expired",
+      "name": "Has Expired?"
+    },
+    {
+      "parameters": {
+        "fromEmail": "Automatiza Tech <contacto@automatizatech.cl>",
+        "toEmail": "automatizacionesbotcore@gmail.com",
+        "subject": "=⛔ OmniChannel: {{ $json.expired_clients }} cliente(s) expirado(s) — {{ $json.timestamp }}",
+        "html": "=<div style='font-family:Arial;max-width:600px;margin:0 auto;'><div style='background:linear-gradient(135deg,#dc2626,#991b1b);padding:24px;text-align:center;border-radius:8px 8px 0 0;'><h1 style='color:#fff;margin:0;font-size:18px;'>⛔ Alerta de Expiración OmniChannel</h1></div><div style='background:#fff;padding:24px;border:1px solid #e5e7eb;'><p style='color:#334155;font-size:14px;'>Se detectaron clientes con período expirado:</p><table style='width:100%;border-collapse:collapse;font-size:13px;'><tr><td style='padding:8px;border-bottom:1px solid #e5e7eb;'>📊 Clientes revisados:</td><td style='font-weight:600;'>{{ $json.checked_clients }}</td></tr><tr><td style='padding:8px;border-bottom:1px solid #e5e7eb;color:#dc2626;'>⛔ Expirados/suspendidos:</td><td style='font-weight:600;color:#dc2626;'>{{ $json.expired_clients }}</td></tr><tr><td style='padding:8px;'>🕐 Ejecutado:</td><td>{{ $json.timestamp }}</td></tr></table></div><div style='padding:12px;text-align:center;'><p style='font-size:11px;color:#94a3b8;'>AutomatizaTech · OmniChannel Cron</p></div></div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [520, -60],
+      "id": "e5f6g7h8-email-alert-expired",
+      "name": "Alert Admin: Expired",
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [520, 80],
+      "id": "f6g7h8i9-noop-ok",
+      "name": "All Good (no expired)"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [260, 180],
+      "id": "g7h8i9j0-noop-error",
+      "name": "API Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Cron 8AM & 8PM Chile": {
+      "main": [
+        [
+          {
+            "node": "Trigger Expiry Reminders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Expiry Reminders": {
+      "main": [
+        [
+          {
+            "node": "API OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API OK?": {
+      "main": [
+        [
+          {
+            "node": "Has Expired?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "API Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Expired?": {
+      "main": [
+        [
+          {
+            "node": "Alert Admin: Expired",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "All Good (no expired)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "p7ISUf0J5GycHscc"
+  },
+  "meta": {
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "tags": []
+}

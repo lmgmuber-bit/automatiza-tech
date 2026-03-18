@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Loader2, Shield, Key, Headphones, ArrowLeft, Mail, CheckCircle, LifeBuoy, X, Paperclip, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Shield, Key, Headphones, ArrowLeft, Mail, CheckCircle, LifeBuoy, X, Paperclip, Image as ImageIcon, Moon, Sun } from 'lucide-react';
 import { API_BASE, uploadPublicImages, submitPublicSupportTicket } from '../api';
 
 export default function LoginScreen({ onLogin }) {
@@ -45,6 +45,17 @@ export default function LoginScreen({ onLogin }) {
   const [supportSent, setSupportSent] = useState(false);
   const [supportTicketNum, setSupportTicketNum] = useState('');
   const supportFileRef = useRef(null);
+
+  // Dark mode toggle
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('omni_theme') === 'dark');
+  function toggleDark() {
+    const next = !darkMode;
+    setDarkMode(next);
+    const root = document.documentElement;
+    root.setAttribute('data-theme', next ? 'dark' : 'light');
+    root.classList.toggle('dark', next);
+    localStorage.setItem('omni_theme', next ? 'dark' : 'light');
+  }
 
   // Check for existing admin or agent token
   useEffect(() => {
@@ -412,6 +423,15 @@ export default function LoginScreen({ onLogin }) {
         <div className="p6" />
       </div>
 
+      {/* Theme toggle */}
+      <button
+        onClick={toggleDark}
+        className="fixed top-4 right-4 z-50 p-2.5 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all shadow-lg"
+        title={darkMode ? 'Modo Claro' : 'Modo Oscuro'}
+      >
+        {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+      </button>
+
       {/* Content */}
       <div className="flex flex-col items-center relative z-10 w-full max-w-md">
         {/* Robot */}
@@ -433,13 +453,13 @@ export default function LoginScreen({ onLogin }) {
 
           {/* Mode Tabs — hide during password reset */}
           {!resetMode && (
-          <div className="flex rounded-xl bg-gray-100 p-1 mb-5">
+          <div className="login-tabs flex rounded-xl bg-gray-100 p-1 mb-5">
             <button
               type="button"
               onClick={() => switchMode('agent')}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
                 loginMode === 'agent'
-                  ? 'bg-white text-indigo-700 shadow-sm'
+                  ? 'login-tab-active bg-white text-indigo-700 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -450,7 +470,7 @@ export default function LoginScreen({ onLogin }) {
               onClick={() => switchMode('admin')}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
                 loginMode === 'admin'
-                  ? 'bg-white text-green-700 shadow-sm'
+                  ? 'login-tab-active bg-white text-green-700 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -461,7 +481,7 @@ export default function LoginScreen({ onLogin }) {
               onClick={() => switchMode('client')}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
                 loginMode === 'client'
-                  ? 'bg-white text-blue-700 shadow-sm'
+                  ? 'login-tab-active bg-white text-blue-700 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -842,7 +862,7 @@ export default function LoginScreen({ onLogin }) {
       {/* Support form modal */}
       {showSupport && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4" onClick={() => setShowSupport(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="support-modal-card bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b border-gray-100 flex items-center justify-between">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2"><LifeBuoy size={18} className="text-indigo-600" /> Solicitud de Soporte</h3>
               <button onClick={() => setShowSupport(false)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-500"><X size={18} /></button>

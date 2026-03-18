@@ -706,7 +706,7 @@ try {
                 send_json(['error' => 'Email requerido'], 400);
             }
             $result = $controller->request_password_reset($email);
-            send_json($result);
+            send_json($result, isset($result['error']) ? 404 : 200);
         }
 
         // Validate reset token: no requiere auth previa

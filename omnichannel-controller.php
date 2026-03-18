@@ -1201,9 +1201,8 @@ class OmnichannelController {
             $email
         ));
 
-        // Always return success to prevent email enumeration
         if (!$agent) {
-            return ['success' => true, 'message' => 'Si el email existe, recibirás un enlace de recuperación.'];
+            return ['error' => 'El correo ingresado no se encuentra en nuestros registros.'];
         }
 
         // Generate a random 64-char token

@@ -4,6 +4,10 @@ RewriteEngine On
 RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 RewriteBase /
 RewriteRule ^validar-factura\.php$ - [L]
+RewriteRule ^api-omnichannel\.php$ - [L]
+RewriteRule ^omnichannel-controller\.php$ - [L]
+RewriteRule ^webhook-omnichannel\.php$ - [L]
+RewriteRule ^setup-omnichannel-prod\.php$ - [L]
 RewriteRule ^index\.php$ - [L]
 
 # Permitir acceso a archivos de verificación y testing

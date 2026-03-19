@@ -3087,6 +3087,10 @@ class OmnichannelController {
                         <tr><td style='padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;'>Prioridad</td><td style='padding:6px 12px;border:1px solid #e2e8f0;'>{$pri}</td></tr>
                         <tr><td style='padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;'>Estado</td><td style='padding:6px 12px;border:1px solid #e2e8f0;'>Abierto</td></tr>
                     </table>
+                    <div style='margin:12px 0;padding:12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;'>
+                        <p style='font-weight:600;margin-bottom:4px;'>Descripción:</p>
+                        <p style='color:#475569;'>" . nl2br(esc_html($ticket->description)) . "</p>
+                    </div>
                     <p style='color:#64748b;font-size:13px;'>Te notificaremos cuando haya actualizaciones en tu ticket.</p>";
                 break;
 
@@ -3140,7 +3144,7 @@ class OmnichannelController {
         $html = "<div style='font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#f8fafc;'>
             <!-- Branded header with logo -->
             <div style='background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:28px 24px;border-radius:12px 12px 0 0;text-align:center;'>
-                <img src='" . esc_url($logo_url) . "' alt='AutomatizaTech' style='width:60px;height:60px;border-radius:12px;margin-bottom:12px;' />
+                <img src='" . esc_url($logo_url) . "' alt='AutomatizaTech' style='height:60px;width:auto;border-radius:12px;margin-bottom:12px;' />
                 <h1 style='color:#fff;margin:0;font-size:20px;font-weight:bold;'>AutomatizaTech</h1>
                 <p style='color:#c7d2fe;margin:6px 0 0;font-size:12px;letter-spacing:0.5px;'>Portal Omnicanal · Sistema de Soporte</p>
             </div>
@@ -3164,7 +3168,7 @@ class OmnichannelController {
             <div style='padding:16px 24px;text-align:center;background:#f1f5f9;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;'>
                 <p style='margin:0 0 4px;font-size:11px;color:#64748b;font-weight:600;'>AutomatizaTech</p>
                 <p style='margin:0 0 4px;font-size:10px;color:#94a3b8;'>Automatización Inteligente para tu Negocio</p>
-                <p style='margin:0;font-size:10px;color:#94a3b8;'>soporte@automatizatech.com · automatizatech.com</p>
+                <p style='margin:0;font-size:10px;color:#94a3b8;'>soporte@automatizatech.cl · automatizatech.cl</p>
             </div>
         </div>";
 

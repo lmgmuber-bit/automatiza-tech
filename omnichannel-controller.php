@@ -1210,7 +1210,7 @@ class OmnichannelController {
         $token_hash = hash('sha256', $raw_token);
         $expires = gmdate('Y-m-d H:i:s', time() + 3600); // 1 hour
 
-        $this->wpdb->update(
+        $updated = $this->wpdb->update(
             $this->prefix . 'agents',
             [
                 'reset_token'         => $token_hash,
@@ -1218,6 +1218,10 @@ class OmnichannelController {
             ],
             ['id' => $agent->id]
         );
+
+        if ($updated === false) {
+            return ['error' => 'Error al generar el token de recuperación.'];
+        }
 
         // Build reset URL — the frontend handles the token via query param
         $portal_url = get_site_url() . '/omnicliente/';
@@ -2953,7 +2957,7 @@ class OmnichannelController {
             $attachments = wp_json_encode($clean);
         }
 
-        $this->wpdb->insert($this->prefix . 'ticket_messages', [
+        $inserted = $this->wpdb->insert($this->prefix . 'ticket_messages', [
             'ticket_id'    => $ticket_id,
             'sender_type'  => $sender_type,
             'sender_name'  => sanitize_text_field($data['sender_name'] ?? ''),
@@ -2961,6 +2965,10 @@ class OmnichannelController {
             'message'      => $message,
             'attachments'  => $attachments,
         ]);
+
+        if (!$inserted) {
+            return ['error' => 'Error al guardar el mensaje.'];
+        }
 
         // If admin replied, email the agent
         if ($sender_type === 'admin') {

@@ -389,6 +389,7 @@ $t = $prefix . 'support_tickets';
 $wpdb->query("CREATE TABLE IF NOT EXISTS `{$t}` (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     ticket_number VARCHAR(30) NOT NULL,
+    client_id BIGINT UNSIGNED DEFAULT NULL,
     agent_id BIGINT UNSIGNED DEFAULT NULL,
     agent_name VARCHAR(255) DEFAULT NULL,
     agent_email VARCHAR(255) DEFAULT NULL,
@@ -426,6 +427,10 @@ $results[] = check_table($wpdb, $t) ? "✅ {$t}" : "❌ {$t}: {$wpdb->last_error
 
 // Add sender_email column if missing (needed for public ticket creation)
 add_col($wpdb, $t, 'sender_email', "`sender_email` VARCHAR(255) DEFAULT NULL AFTER `sender_name`", $results);
+
+// Add client_id to support_tickets if missing
+$st = $prefix . 'support_tickets';
+add_col($wpdb, $st, 'client_id', "`client_id` BIGINT UNSIGNED DEFAULT NULL AFTER `ticket_number`", $results);
 
 // =====================================================
 // PASO 5: COLUMNAS EXTRA EN CLIENTES (period management)

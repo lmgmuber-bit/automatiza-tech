@@ -408,6 +408,10 @@ $wpdb->query("CREATE TABLE IF NOT EXISTS `{$t}` (
 ) {$charset};");
 $results[] = check_table($wpdb, $t) ? "✅ {$t}" : "❌ {$t}: {$wpdb->last_error}";
 
+// Add columns that may not exist in older installations
+add_col($wpdb, $t, 'resolved_at', "`resolved_at` DATETIME DEFAULT NULL AFTER `updated_at`", $results);
+add_col($wpdb, $t, 'admin_notes', "`admin_notes` TEXT DEFAULT NULL AFTER `resolved_at`", $results);
+
 $t = $prefix . 'ticket_messages';
 $wpdb->query("CREATE TABLE IF NOT EXISTS `{$t}` (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -428,8 +432,12 @@ $results[] = check_table($wpdb, $t) ? "✅ {$t}" : "❌ {$t}: {$wpdb->last_error
 // Add sender_email column if missing (needed for public ticket creation)
 add_col($wpdb, $t, 'sender_email', "`sender_email` VARCHAR(255) DEFAULT NULL AFTER `sender_name`", $results);
 
-// Add client_id to support_tickets if missing
+// Add resolved_at column to support_tickets if missing
 $st = $prefix . 'support_tickets';
+add_col($wpdb, $st, 'resolved_at', "`resolved_at` DATETIME DEFAULT NULL AFTER `updated_at`", $results);
+add_col($wpdb, $st, 'admin_notes', "`admin_notes` TEXT DEFAULT NULL AFTER `resolved_at`", $results);
+
+// Add client_id to support_tickets if missing
 add_col($wpdb, $st, 'client_id', "`client_id` BIGINT UNSIGNED DEFAULT NULL AFTER `ticket_number`", $results);
 
 // =====================================================

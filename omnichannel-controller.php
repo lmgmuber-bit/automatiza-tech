@@ -2914,11 +2914,15 @@ class OmnichannelController {
 
         if (empty($update)) return ['error' => 'Nada que actualizar'];
 
-        $this->wpdb->update($this->prefix . 'support_tickets', $update, ['id' => $ticket_id]);
+        $result = $this->wpdb->update($this->prefix . 'support_tickets', $update, ['id' => $ticket_id]);
+
+        if ($result === false) {
+            return ['error' => 'Error al actualizar el ticket: ' . $this->wpdb->last_error];
+        }
 
         $this->audit_log('update', 'ticket', $ticket_id, "Ticket {$ticket->ticket_number} actualizado: {$old_status} → " . ($update['status'] ?? $old_status), null, $update, $ticket->client_id);
 
-        // Notify user about status change
+        // Notify user about status change only if DB update succeeded
         if (!empty($update['status']) && $update['status'] !== $old_status) {
             $email_type = $update['status'] === 'closed' ? 'closed' : 'status_changed';
             $this->send_ticket_email($ticket_id, $email_type, $update['status']);

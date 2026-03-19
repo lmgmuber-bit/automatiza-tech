@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Loader2, Settings, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { getChannels, createChannel, updateChannel, getIsAdmin, getClients, getChannelTypes } from '../api';
 import ChannelBadge from './ChannelBadge';
+import ResultModal from './ResultModal';
 
 export default function ChannelsView() {
   const [channels, setChannels] = useState([]);
@@ -11,6 +12,7 @@ export default function ChannelsView() {
   const [submitting, setSubmitting] = useState(false);
   const [clientsList, setClientsList] = useState([]);
   const [channelTypesList, setChannelTypesList] = useState([]);
+  const [resultModal, setResultModal] = useState(null);
 
   useEffect(() => {
     if (getIsAdmin()) {
@@ -47,15 +49,15 @@ export default function ChannelsView() {
     try {
       const result = await createChannel(form);
       if (result.error) {
-        alert(result.error);
+        setResultModal({ type: 'error', title: 'Error', message: result.error });
       } else {
-        alert(`Canal creado. Webhook Secret: ${result.webhook_secret}`);
+        setResultModal({ type: 'success', title: 'Canal creado', message: 'El canal fue creado exitosamente.', detail: result.webhook_secret, detailLabel: 'Webhook Secret' });
         setShowForm(false);
         setForm({ channel_type: 'whatsapp', channel_name: '', phone_number: '', page_id: '', bot_token: '', client_id: '' });
         loadChannels();
       }
     } catch (err) {
-      alert('Error: ' + err.message);
+      setResultModal({ type: 'error', title: 'Error', message: err.message });
     } finally {
       setSubmitting(false);
     }
@@ -66,7 +68,7 @@ export default function ChannelsView() {
       await updateChannel(channel.id, { is_active: channel.is_active === '1' ? '0' : '1' });
       loadChannels();
     } catch (err) {
-      alert('Error: ' + err.message);
+      setResultModal({ type: 'error', title: 'Error', message: err.message });
     }
   }
 
@@ -218,6 +220,8 @@ export default function ChannelsView() {
           </div>
         )}
       </div>
+
+      {resultModal && <ResultModal {...resultModal} onClose={() => setResultModal(null)} />}
     </div>
   );
 }

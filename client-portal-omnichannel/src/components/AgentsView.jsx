@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Loader2, Users, UserCheck, ShieldCheck, Headphones, Pencil, Trash2, X, Search, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getAgentsPaginated, createAgent, updateAgent, deleteAgent, getIsAdmin, getIsAgent, isSupervisorOrAdmin, getAgentRole, getClients } from '../api';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
+import ResultModal from './ResultModal';
 
 const roleIcons = {
   admin: ShieldCheck,
@@ -32,6 +33,7 @@ export default function AgentsView() {
   const [editForm, setEditForm] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [resultModal, setResultModal] = useState(null);
 
   const isClientLogin = !getIsAdmin() && !getIsAgent();
   const canManage = getIsAdmin() || isClientLogin || isSupervisorOrAdmin();
@@ -86,14 +88,14 @@ export default function AgentsView() {
     try {
       const result = await createAgent(form);
       if (result.error) {
-        alert(result.error);
+        setResultModal({ type: 'error', title: 'Error', message: result.error });
       } else {
         setShowForm(false);
         setForm({ name: '', email: '', role: 'agent', max_concurrent_chats: 5, client_id: '', password: '' });
         loadAgents();
       }
     } catch (err) {
-      alert('Error: ' + err.message);
+      setResultModal({ type: 'error', title: 'Error', message: err.message });
     } finally {
       setSubmitting(false);
     }
@@ -122,7 +124,7 @@ export default function AgentsView() {
       setEditingAgent(null);
       loadAgents();
     } catch (err) {
-      alert('Error: ' + err.message);
+      setResultModal({ type: 'error', title: 'Error', message: err.message });
     } finally {
       setSubmitting(false);
     }
@@ -485,6 +487,8 @@ export default function AgentsView() {
           loading={deleting}
           skipApiKey={getIsAdmin()}
         />
+
+        {resultModal && <ResultModal {...resultModal} onClose={() => setResultModal(null)} />}
       </div>
     </div>
   );

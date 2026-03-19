@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Loader2, Pencil, Trash2, X, Save, GripVertical } from 'lucide-react';
 import { getChannelTypes, createChannelType, updateChannelType, deleteChannelType } from '../api';
+import ResultModal from './ResultModal';
 
 const COLOR_OPTIONS = [
   'green-500', 'pink-500', 'sky-500', 'blue-500', 'purple-500',
@@ -14,6 +15,7 @@ export default function ChannelTypesView() {
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [resultModal, setResultModal] = useState(null);
 
   const emptyForm = { slug: '', label: '', emoji: '📡', color: 'gray-500', sort_order: 0, fields: [] };
   const [form, setForm] = useState(emptyForm);
@@ -92,17 +94,24 @@ export default function ChannelTypesView() {
     }
   }
 
-  async function handleDelete(type) {
-    if (!confirm(`¿Eliminar el tipo "${type.label}"? Solo se puede si no hay canales usándolo.`)) return;
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  function requestDelete(type) {
+    setDeleteConfirm(type);
+    setResultModal({ type: 'confirm', title: '¿Eliminar tipo de canal?', message: `¿Eliminar el tipo "${type.label}"? Solo se puede si no hay canales usándolo.`, onConfirm: () => executeDelete(type) });
+  }
+
+  async function executeDelete(type) {
+    setResultModal(null);
     try {
       const result = await deleteChannelType(type.id);
       if (result.error) {
-        alert(result.error);
+        setResultModal({ type: 'error', title: 'Error', message: result.error });
       } else {
         loadTypes();
       }
     } catch (err) {
-      alert(err.message);
+      setResultModal({ type: 'error', title: 'Error', message: err.message });
     }
   }
 
@@ -321,7 +330,7 @@ export default function ChannelTypesView() {
                       <Pencil size={13} /> Editar
                     </button>
                     <button
-                      onClick={() => handleDelete(type)}
+                      onClick={() => requestDelete(type)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                     >
                       <Trash2 size={13} /> Eliminar
@@ -333,6 +342,8 @@ export default function ChannelTypesView() {
           </div>
         )}
       </div>
+
+      {resultModal && <ResultModal {...resultModal} onClose={() => setResultModal(null)} />}
     </div>
   );
 }

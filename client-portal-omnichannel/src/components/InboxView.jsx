@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, Send, UserCheck, RotateCcw, Loader2, MessageSquare, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { getConversations, getMessages, sendMessage, takeoverConversation, releaseConversation, getAgents, getIsAdmin, getIsAgent, isSupervisorOrAdmin } from '../api';
 import ChannelBadge from './ChannelBadge';
+import ResultModal from './ResultModal';
 
 export default function InboxView() {
   const [conversations, setConversations] = useState([]);
@@ -16,6 +17,7 @@ export default function InboxView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [scope, setScope] = useState('all'); // 'all' or 'mine' (for agents)
   const [mobileShowChat, setMobileShowChat] = useState(false);
+  const [resultModal, setResultModal] = useState(null);
   const messagesEndRef = useRef(null);
   const isAgentMode = getIsAgent();
   const canSupervisor = isAgentMode && isSupervisorOrAdmin();
@@ -82,7 +84,7 @@ export default function InboxView() {
       await loadMessages(selectedConv.id);
       loadConversations();
     } catch (err) {
-      alert('Error al enviar: ' + err.message);
+      setResultModal({ type: 'error', title: 'Error al enviar', message: err.message });
     } finally {
       setSending(false);
     }
@@ -96,7 +98,7 @@ export default function InboxView() {
       loadConversations();
       loadMessages(selectedConv.id);
     } catch (err) {
-      alert('Error: ' + err.message);
+      setResultModal({ type: 'error', title: 'Error', message: err.message });
     }
   }
 
@@ -108,7 +110,7 @@ export default function InboxView() {
       loadConversations();
       loadMessages(selectedConv.id);
     } catch (err) {
-      alert('Error: ' + err.message);
+      setResultModal({ type: 'error', title: 'Error', message: err.message });
     }
   }
 
@@ -421,6 +423,8 @@ export default function InboxView() {
           </div>
         )}
       </div>
+
+      {resultModal && <ResultModal {...resultModal} onClose={() => setResultModal(null)} />}
     </div>
   );
 }

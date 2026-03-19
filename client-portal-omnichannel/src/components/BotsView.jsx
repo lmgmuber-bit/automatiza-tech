@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Loader2, Save, Bot, Settings } from 'lucide-react';
 import { getBotConfigs, updateBotConfig, getIsAdmin } from '../api';
 import ChannelBadge from './ChannelBadge';
+import ResultModal from './ResultModal';
 
 export default function BotsView() {
   const [configs, setConfigs] = useState([]);
@@ -9,6 +10,7 @@ export default function BotsView() {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
+  const [resultModal, setResultModal] = useState(null);
 
   useEffect(() => {
     loadConfigs();
@@ -51,7 +53,7 @@ export default function BotsView() {
       setEditingId(null);
       loadConfigs();
     } catch (err) {
-      alert('Error: ' + err.message);
+      setResultModal({ type: 'error', title: 'Error', message: err.message });
     } finally {
       setSaving(false);
     }
@@ -274,6 +276,8 @@ export default function BotsView() {
           </div>
         )}
       </div>
+
+      {resultModal && <ResultModal {...resultModal} onClose={() => setResultModal(null)} />}
     </div>
   );
 }

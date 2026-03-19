@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { LifeBuoy, Plus, Search, ChevronLeft, Send, Loader2, AlertCircle, CheckCircle, Clock, Filter, X, Paperclip, Image as ImageIcon } from 'lucide-react';
 import { getTickets, createTicket, getTicket, addTicketMessage, updateTicketStatus, getIsAdmin, uploadTicketImages } from '../api';
+import ResultModal from './ResultModal';
 
 const statusConfig = {
   open:          { label: 'Abierto',     color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
@@ -66,6 +67,7 @@ export default function SupportView() {
 
   // Admin status update
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusModal, setStatusModal] = useState(null);
 
   useEffect(() => { loadTickets(); }, [page, perPage, statusFilter]);
 
@@ -154,13 +156,16 @@ export default function SupportView() {
 
   async function handleStatusChange(newStatus) {
     if (!selectedTicket) return;
+    const statusLabel = statusConfig[newStatus]?.label || newStatus;
     setUpdatingStatus(true);
     try {
       await updateTicketStatus(selectedTicket.id, { status: newStatus });
       await openTicket(selectedTicket.id);
       loadTickets();
+      setStatusModal({ type: 'success', title: 'Estado actualizado', message: `El ticket se actualizó a "${statusLabel}" correctamente.` });
     } catch (err) {
       console.error(err);
+      setStatusModal({ type: 'error', title: 'Error al actualizar', message: err.message || 'No se pudo actualizar el estado del ticket.' });
     } finally {
       setUpdatingStatus(false);
     }
@@ -433,6 +438,8 @@ export default function SupportView() {
             <img src={lightboxImg} alt="Vista ampliada" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
           </div>
         )}
+
+        {statusModal && <ResultModal {...statusModal} onClose={() => setStatusModal(null)} />}
       </div>
     );
   }
@@ -460,6 +467,8 @@ export default function SupportView() {
             <Loader2 size={32} className="animate-spin text-indigo-600" />
           </div>
         )}
+
+        {statusModal && <ResultModal {...statusModal} onClose={() => setStatusModal(null)} />}
       </div>
     );
   }
@@ -639,6 +648,8 @@ export default function SupportView() {
           <img src={lightboxImg} alt="Vista ampliada" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
         </div>
       )}
+
+      {statusModal && <ResultModal {...statusModal} onClose={() => setStatusModal(null)} />}
     </div>
   );
 }

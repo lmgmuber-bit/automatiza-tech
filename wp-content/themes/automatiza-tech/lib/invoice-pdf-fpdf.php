@@ -455,8 +455,24 @@ class InvoicePDFFPDF extends FPDF {
         
         $this->SetLineWidth(0.2);
         $this->Ln(20); // Mayor separaciÃ³n (de 8 a 20)
-        
-        // Mensaje de agradecimiento profesional (mÃ¡s compacto)
+                // Nota de promoción gratuita si el total es $0 y hay descuentos
+        if ($total_final == 0 && $total_descuento > 0) {
+            $this->SetFillColor(236, 253, 245); // Verde muy suave
+            $this->SetDrawColor(16, 185, 129); // Verde esmeralda
+            $this->SetLineWidth(0.5);
+            $this->Rect(15, $this->GetY(), 180, 14, 'DF');
+            $this->SetXY(20, $this->GetY() + 2);
+            $this->SetFont('Arial', 'B', 10);
+            $this->SetTextColor(6, 95, 70);
+            $this->Cell(0, 5, utf8_to_latin1('PROMOCIÓN APLICADA: 1 MES DE EVALUACIÓN GRATUITA'), 0, 1, 'C');
+            $this->SetX(20);
+            $this->SetFont('Arial', '', 8);
+            $this->SetTextColor(4, 120, 87);
+            $this->MultiCell(160, 3, utf8_to_latin1('Este documento refleja un período de evaluación sin costo. Valor regular: ' . $this->format_currency($total_descuento) . '/mes.'), 0, 'C');
+            $this->SetLineWidth(0.2);
+            $this->Ln(10);
+        }
+                // Mensaje de agradecimiento profesional (mÃ¡s compacto)
         $this->SetFillColor(232, 245, 233); // Verde muy claro
         $this->SetDrawColor($this->secondary_color[0], $this->secondary_color[1], $this->secondary_color[2]);
         $this->SetLineWidth(0.5);

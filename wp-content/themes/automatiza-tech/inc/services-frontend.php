@@ -79,6 +79,30 @@ function render_pricing_section() {
     
     ob_start();
     ?>
+    <style>
+    .promo-badge {
+        position: absolute;
+        top: 10px;
+        right: -5px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: #fff;
+        padding: 5px 14px 5px 10px;
+        border-radius: 4px 0 0 4px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 3px 10px rgba(16,185,129,0.4);
+        z-index: 10;
+        white-space: nowrap;
+        animation: pulse-promo 2.5s ease-in-out infinite;
+    }
+    .pricing-card.card { position: relative; overflow: visible; }
+    @keyframes pulse-promo {
+        0%, 100% { box-shadow: 0 3px 10px rgba(16,185,129,0.4); }
+        50% { box-shadow: 0 5px 20px rgba(16,185,129,0.7); }
+    }
+    </style>
     <section class="pricing-section" id="planes">
         <div class="container">
             <h2 class="section-title">Planes y Precios</h2>
@@ -106,6 +130,15 @@ function render_pricing_section() {
                 ?>
                 <div class="<?php echo $col_class; ?> mb-4">
                     <div class="pricing-card card h-100 <?php echo $card_class; ?>">
+                        <?php 
+                        $plan_name_lower = strtolower($plan->name);
+                        $is_promo_plan = (strpos($plan_name_lower, 'basic') !== false || strpos($plan_name_lower, 'básico') !== false || strpos($plan_name_lower, 'profesional') !== false || strpos($plan_name_lower, 'professional') !== false);
+                        ?>
+                        <?php if ($is_promo_plan): ?>
+                        <div class="promo-badge">
+                            🎁 PROMOCIÓN: 1 MES GRATIS
+                        </div>
+                        <?php endif; ?>
                         <?php if ($plan->highlight): ?>
                         <div class="special-offer-badge">
                             🔥 OFERTA ESPECIAL

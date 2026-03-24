@@ -1,4 +1,15 @@
-export const API_BASE = import.meta.env.VITE_API_URL || '/api-omnichannel.php';
+// Detectar automáticamente la ruta de la API según el entorno
+function detectApiBase() {
+  const hostname = window.location.hostname;
+  // En localhost (WAMP), la app vive en /automatiza-tech/
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return '/automatiza-tech/api-omnichannel.php';
+  }
+  // En producción, la API está en la raíz del dominio
+  return '/api-omnichannel.php';
+}
+
+export const API_BASE = detectApiBase();
 
 let apiKey = localStorage.getItem('omni_api_key') || '';
 let isAdmin = localStorage.getItem('omni_is_admin') === 'true';

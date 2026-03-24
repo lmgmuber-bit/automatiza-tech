@@ -1,0 +1,3630 @@
+{
+  "name": "WhatsApp Bot - v7 Portal OmniCliente (Google Sheets)",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\n  \"callback_token\": \"{{ $('Combine Messages').first().json.callbackToken }}\",\n  \"conversation_id\": {{ $('Combine Messages').first().json.conversationId }},\n  \"channel_id\": {{ $('Combine Messages').first().json.channelId }},\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"{{ $json.errorMessage }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        364272,
+        178096
+      ],
+      "id": "76b13b4c-7bdc-4ce8-83d7-7653550c47ce",
+      "name": "Send Cancel Denied"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.canCancel }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "can-cancel-check-001"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PuedeCancelar"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        363984,
+        178000
+      ],
+      "id": "e3bb30c7-07d4-4f97-8c40-7dfdc1d02fde",
+      "name": "Can Cancel Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validar si se puede cancelar (más de 24 horas antes)\n// Luxon está disponible como variable global en n8n\n\nconst appointment = $json;\nconst cancelData = $('Process Cancel Confirm').first().json;\nconst staticData = $getWorkflowStaticData('global');\nconst businessConfig = staticData.businessConfig || {};\n\n// Obtener fecha y hora de la cita\nconst appointmentDate = appointment.fecha; // formato: YYYY-MM-DD\nconst appointmentTime = appointment.hora; // formato: HH:MM\n\n// Crear DateTime de la cita en zona horaria de Chile\nconst appointmentDateTime = DateTime.fromISO(`${appointmentDate}T${appointmentTime}:00`, { zone: 'America/Santiago' });\n\n// Obtener hora actual de Chile usando Luxon (disponible globalmente en n8n)\nconst nowChile = DateTime.now().setZone('America/Santiago');\n\n// Calcular diferencia en horas\nconst diffHours = appointmentDateTime.diff(nowChile, 'hours').hours;\n\n// Verificar si faltan más de 24 horas\nconst canCancel = diffHours >= 24;\n\n// Mensaje si no puede cancelar\nconst condicionCambios = businessConfig.pago_cambios;\nconst condicionReembolso = businessConfig.pago_reembolso;\n\nconst horasRestantes = Math.max(0, Math.round(diffHours * 10) / 10);\nconst errorMessage = `⚠️ *No es posible cancelar esta cita*\\n\\nTu cita es el ${appointment.fecha} a las ${appointment.hora} y faltan solo ${horasRestantes} horas (se requieren mínimo 24 horas de anticipación).\\n\\n📋 *Según nuestras condiciones:*\\n\\n🔄 ${condicionCambios}\\n\\n💰 ${condicionReembolso}\\n\\nSi tienes alguna emergencia, por favor comunícate directamente con nosotros.`;\n\nreturn [{\n  json: {\n    ...appointment,\n    canCancel,\n    diffHours: Math.round(diffHours * 10) / 10,\n    phoneNumber: cancelData.phoneNumber,\n    phoneNumberId: cancelData.phoneNumberId,\n    appointmentId: cancelData.appointmentId,\n    newStatus: cancelData.newStatus,\n    errorMessage,\n    debugInfo: {\n      nowChile: nowChile.toISO(),\n      appointmentDateTime: appointmentDateTime.toISO(),\n      diffHours: diffHours\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        363696,
+        178000
+      ],
+      "id": "0e0d624d-ea63-41a2-9fb9-ca006c04fd0f",
+      "name": "Validate Cancel Time"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ callback_token: $('Combine Messages').first().json.callbackToken, conversation_id: $('Combine Messages').first().json.conversationId, channel_id: $('Combine Messages').first().json.channelId,  from: $json.businessPhone, to: $json.phoneNumber, type: 'text', text: { body: $json.message } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        363472,
+        178576
+      ],
+      "id": "e52b2f88-05df-44c5-828c-9b4a931e8b12",
+      "name": "Send Terms Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesar respuesta a términos y condiciones\nconst payload = $('Combine Messages').first().json;\nconst { phoneNumber, phoneNumberId, contactName, textContent, businessPhone } = payload;\nconst staticData = $getWorkflowStaticData('global');\n\n// Extraer ID de la cita y tipo de respuesta\nconst isAccept = textContent.startsWith('terms_accept_');\nconst isReject = textContent.startsWith('terms_reject_');\nconst appointmentId = textContent.replace('terms_accept_', '').replace('terms_reject_', '');\n\n// Buscar el pago pendiente\nconst pendingPayment = staticData.pendingPayments?.[phoneNumber];\n\nif (!pendingPayment) {\n  return [{\n    json: {\n      action: 'expired',\n      phoneNumber,\n      phoneNumberId,\n      businessPhone,\n      message: 'Tu sesión ha expirado. Por favor escribe *agendar* para comenzar de nuevo.'\n    }\n  }];\n}\n\nif (isReject) {\n  // Usuario rechazó los términos - cancelar reserva pendiente\n  delete staticData.pendingPayments[phoneNumber];\n  return [{\n    json: {\n      action: 'rejected',\n      phoneNumber,\n      phoneNumberId,\n      businessPhone,\n      contactName,\n      message: 'Entendido. Tu reserva ha sido cancelada.\\n\\nSi cambias de opinión, escríbeme *agendar* para ver los horarios disponibles. 😊'\n    }\n  }];\n}\n\nif (isAccept) {\n  // Usuario aceptó los términos - obtener configuración bancaria\n  const config = staticData.businessConfig || {};\n  \n  // DEBUG: Log de la configuración para verificar\n  console.log('CONFIG BANCARIA:', JSON.stringify(config, null, 2));\n  console.log('tiene_cuenta2:', config.tiene_cuenta2);\n  console.log('banco2_nombre:', config.banco2_nombre);\n  \n  // Construir mensaje con datos bancarios\n  let bankMessage = '✅ *¡Términos Aceptados!*\\n\\n';\n  bankMessage += 'Gracias por aceptar las condiciones. A continuación te comparto los datos para realizar la transferencia:\\n\\n';\n  bankMessage += '━━━━━━━━━━━━━━━━━━━━\\n\\n';\n  bankMessage += '🏦 *CUENTA BANCARIA 1:*\\n\\n';\n  bankMessage += '👤 Nombre: ' + (config.banco_nombre || 'KELLYS TIRADO') + '\\n';\n  bankMessage += '🆔 RUT: ' + (config.banco_rut || '26.312.327-1') + '\\n';\n  bankMessage += '🏛️ Banco: ' + (config.banco_institucion || 'Banco Itaú') + '\\n';\n  bankMessage += '💳 Tipo: ' + (config.banco_tipo_cuenta || 'Cuenta Corriente') + '\\n';\n  bankMessage += '🔢 N° Cuenta: ' + (config.banco_numero || '0224080048') + '\\n';\n  bankMessage += '📧 Email: ' + (config.banco_email || 'KELLYSISABEL1504@GMAIL.COM') + '\\n';\n  \n  // Si hay segunda cuenta bancaria - verificar ambas condiciones\n  const hasCuenta2 = config.tiene_cuenta2 === true && config.banco2_nombre && config.banco2_nombre.trim() !== '';\n  console.log('hasCuenta2 calculado:', hasCuenta2);\n  \n  if (hasCuenta2) {\n    bankMessage += '\\n━━━━━━━━━━━━━━━━━━━━\\n\\n';\n    bankMessage += '🏦 *CUENTA BANCARIA 2 (Alternativa):*\\n\\n';\n    bankMessage += '👤 Nombre: ' + config.banco2_nombre + '\\n';\n    bankMessage += '🆔 RUT: ' + config.banco2_rut + '\\n';\n    bankMessage += '🏛️ Banco: ' + config.banco2_institucion + '\\n';\n    bankMessage += '💳 Tipo: ' + config.banco2_tipo_cuenta + '\\n';\n    bankMessage += '🔢 N° Cuenta: ' + config.banco2_numero + '\\n';\n    bankMessage += '📧 Email: ' + config.banco2_email + '\\n';\n  }\n  \n  bankMessage += '\\n━━━━━━━━━━━━━━━━━━━━\\n\\n';\n  bankMessage += '📸 *IMPORTANTE:* Una vez realizada la transferencia, envía el comprobante (captura de pantalla) por este chat para confirmar tu reserva.\\n\\n';\n  bankMessage += '⏰ Tienes 30 minutos para completar el pago, de lo contrario tu reserva será cancelada automáticamente.';\n  \n  return [{\n    json: {\n      action: 'accepted',\n      phoneNumber,\n      phoneNumberId,\n      businessPhone,\n      contactName,\n      appointmentId: pendingPayment.appointmentId,\n      message: bankMessage,\n      debugConfig: config\n    }\n  }];\n}\n\n// Si no es ni accept ni reject\nreturn [{\n  json: {\n    action: 'unknown',\n    phoneNumber,\n    phoneNumberId,\n    businessPhone,\n    message: 'No pude entender tu respuesta. Por favor usa los botones de Aceptar o No Acepto.'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        363248,
+        178576
+      ],
+      "id": "bd35cf16-6d3b-43d8-9287-b26f3b547647",
+      "name": "Process Terms Response"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Prepare Chat Input').first().json.phoneNumber }}",
+        "contextWindowLength": 200
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.5,
+      "position": [
+        364064,
+        179664
+      ],
+      "id": "c83d4a49-41d5-47e7-b37a-c0d7f47d1185",
+      "name": "Redis Chat Memory",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\n  \"callback_token\": \"{{ $('Combine Messages').first().json.callbackToken }}\",\n  \"conversation_id\": {{ $('Combine Messages').first().json.conversationId }},\n  \"channel_id\": {{ $('Combine Messages').first().json.channelId }},\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $('Fix Audio MimeType').first().json.phoneNumber }}\",\n  \"type\": \"audio\",\n  \"audio\": {\n    \"id\": \"{{ $json.id }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        365392,
+        179728
+      ],
+      "id": "c7b2bf5b-cda5-46d5-95b9-9d93a06b596a",
+      "name": "Send Audio Response"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.ycloud.com/v2/whatsapp/media/{{ $('Combine Messages').first().json.businessPhone }}/upload",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "type",
+              "value": "audio/mpeg"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        365168,
+        179728
+      ],
+      "id": "54a4804a-bcab-4c51-a940-a97007f91b17",
+      "name": "Upload Audio to WhatsApp",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar audio con mime type correcto para WhatsApp\nconst item = $input.first();\nconst originalBinary = item.binary.data;\n\nreturn [{\n  json: {\n    phoneNumber: $('Parse Actions').first().json.phoneNumber,\n    phoneNumberId: $('Parse Actions').first().json.phoneNumberId,\n    output: $('Parse Actions').first().json.output\n  },\n  binary: {\n    data: {\n      ...originalBinary,\n      mimeType: 'audio/mpeg',\n      fileName: 'response.mp3',\n      fileExtension: 'mp3'\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        364944,
+        179728
+      ],
+      "id": "df42ff07-46ac-4b9b-aa37-0cbf68458c41",
+      "name": "Fix Audio MimeType"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "input": "={{ $json.output }}",
+        "voice": "nova",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        364720,
+        179728
+      ],
+      "id": "da63300b-45bb-4ba6-b31a-ee245db18008",
+      "name": "Generate Audio (TTS)",
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "Automatiza Tech <contacto@automatizatech.cl>",
+        "toEmail": "={{ $('Merge Config').first().json.config?.negocio_email || 'Kellysisabel1504@gmail.com' }}",
+        "bccEmail": "automatizacionesbotcore@gmail.com",
+        "subject": "=Cliente requiere atención humana - {{ $('Parse Actions').first().json.contactName }}",
+        "text": "={{ 'Estimados Sres. ' + ($('Merge Config').first().json.config?.nombre_negocio || 'del Negocio') + ',\\n\\nDesde AutomatizaTech te informamos que un cliente ha solicitado atención personalizada a través del asistente virtual de WhatsApp.\\n\\nResumen de la conversación:\\n\\n👤 Cliente: ' + $('Parse Actions').first().json.contactName + '\\n📱 Teléfono: ' + $('Parse Actions').first().json.phoneNumber + '\\n💬 Último mensaje: ' + $('Parse Actions').first().json.chatInput + '\\n🤖 Respuesta del bot: ' + $('Parse Actions').first().json.output + '\\n📅 Fecha y Hora: ' + $now.setZone(\"America/Santiago\").toFormat('dd-MM-yyyy HH:mm:ss') + ' (Hora Chile)\\n\\nPor favor, contacta al cliente a la brevedad posible para brindarle la atención personalizada que requiere.\\n\\nSaludos,\\nEquipo AutomatizaTech' }}",
+        "html": "={{ '<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style>body{font-family:\\'Segoe UI\\',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.header{background-color:#1e40af;padding:30px;text-align:center;color:#ffffff}.header h1{margin:10px 0;font-size:24px;font-weight:600}.content{padding:40px 30px;color:#333333;line-height:1.6}.details{background-color:#f9fafb;padding:20px;border-radius:6px;margin:20px 0;border-left:4px solid #06d6a0}.details p{margin:5px 0}.footer{background-color:#1f2937;padding:20px;text-align:center;color:#9ca3af;font-size:12px}</style></head><body><div class=\"container\"><div class=\"header\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td align=\"center\"><img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" width=\"200\" style=\"width:200px;max-width:100%;height:auto;display:block;border:0;\"></td></tr></table><h1 style=\"margin-top:20px;\">Alerta de Atención al Cliente</h1></div><div class=\"content\"><p>Estimados Sres. <strong>' + ($('Merge Config').first().json.config?.nombre_negocio || 'del Negocio') + '</strong>,</p><p>Desde <strong>AutomatizaTech</strong> te informamos que un cliente ha solicitado atención personalizada a través del asistente virtual de WhatsApp.</p><p>A continuación, te compartimos el resumen de la conversación:</p><div class=\"details\"><p>👤 <strong>Cliente:</strong> ' + $('Parse Actions').first().json.contactName + '</p><p>📱 <strong>Teléfono:</strong> ' + $('Parse Actions').first().json.phoneNumber + '</p><p>💬 <strong>Último mensaje:</strong><br>' + $('Parse Actions').first().json.chatInput + '</p><p>🤖 <strong>Respuesta del bot:</strong><br>' + $('Parse Actions').first().json.output + '</p><p>📅 <strong>Fecha y Hora:</strong> ' + $now.setZone(\"America/Santiago\").toFormat('dd-MM-yyyy HH:mm:ss') + ' (Hora Chile)</p></div><p><strong>Por favor, contacta al cliente a la brevedad posible para brindarle la atención personalizada que requiere.</strong></p></div><div class=\"footer\"><p>&copy; 2025 Automatiza Tech. Todos los derechos reservados.</p><p>Si tienes consultas sobre este servicio, contáctanos a <a href=\"mailto:contacto@automatizatech.cl\" style=\"color:#06d6a0\">contacto@automatizatech.cl</a></p></div></div></body></html>' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        364944,
+        179920
+      ],
+      "id": "9f39d3bd-471f-4e75-9886-1bb1a479f5dc",
+      "name": "Send Email to Business",
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\n  \"callback_token\": \"{{ $('Combine Messages').first().json.callbackToken }}\",\n  \"conversation_id\": {{ $('Combine Messages').first().json.conversationId }},\n  \"channel_id\": {{ $('Combine Messages').first().json.channelId }},\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": {{ JSON.stringify($json.output) }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        364720,
+        179920
+      ],
+      "id": "90fc3bff-e4f2-4143-9df3-01b92d3616c6",
+      "name": "Send Escalation Message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\n  \"callback_token\": \"{{ $('Combine Messages').first().json.callbackToken }}\",\n  \"conversation_id\": {{ $('Combine Messages').first().json.conversationId }},\n  \"channel_id\": {{ $('Combine Messages').first().json.channelId }},\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": {{ JSON.stringify($json.output) }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        364720,
+        179344
+      ],
+      "id": "63d90efc-98a1-4243-bd3e-2137a4d0162c",
+      "name": "Send Text Response"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "send_text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Texto"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "show_services",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Servicios"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "cancel_appointment",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Cancelar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "send_audio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "escalate_to_human",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Escalar"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        364496,
+        179392
+      ],
+      "id": "2cf263d9-e3ee-4084-8a06-648090fa57ff",
+      "name": "Route Action"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse actions y detectar si debe responder con audio\nconst output = $json.output || '';\nconst base = $('Prepare Chat Input').first().json;\nconst isFromAudio = base.isFromAudio || false;\n\nlet action = 'send_text';\nlet clean = output;\n\n// Detectar acciones especiales\nif (output.includes('<<ACTION:SHOW_SERVICES>>')) {\n  action = 'show_services';\n  clean = output.replace(/<<ACTION:SHOW_SERVICES>>/g,'').trim();\n} else if (output.includes('<<ACTION:CANCEL_APPOINTMENT>>')) {\n  action = 'cancel_appointment';\n  clean = output.replace(/<<ACTION:CANCEL_APPOINTMENT>>/g,'').trim();\n} else if (output.includes('<<ACTION:ESCALATE_TO_HUMAN>>')) {\n  action = 'escalate_to_human';\n  clean = output.replace(/<<ACTION:ESCALATE_TO_HUMAN>>/g,'').trim();\n} else if (isFromAudio) {\n  // Si el mensaje original fue audio y no hay acción especial, responder con audio\n  action = 'send_audio';\n}\n\nreturn { json: { action, output: clean, isFromAudio, ...base } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        364272,
+        179440
+      ],
+      "id": "6c59ca5b-cb79-43f2-85fb-83de53dad2d1",
+      "name": "Parse Actions"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        363936,
+        179664
+      ],
+      "id": "f735926b-00de-4928-84bc-f8c46559c7f9",
+      "name": "GPT-4o Mini",
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "=Eres {{ $json.config.nombre_asistente || 'el asistente virtual' }}, asistente virtual de {{ $json.config.nombre_negocio || 'nuestro negocio' }} {{ $json.config.emoji_principal || '👋' }}\n\n## IDENTIDAD\n- Nombre del negocio: {{ $json.config.nombre_negocio }}\n- Tu nombre es: {{ $json.config.nombre_asistente }}\n- Cliente actual: {{ $json.contactName }}\n\n## TU FUNCIÓN\n{{ $json.config.funcion_asistente || 'Dar información sobre servicios, coordinar citas y responder consultas generales' }}\n\n## 🎯 REGLAS DE SALUDO - MUY IMPORTANTE 🎯\n- **PRIMER MENSAJE**: Saluda con: '¡Hola! 😊 Soy {{ $json.config.nombre_asistente }} {{ $json.config.emoji_principal || '👑' }}, asistente virtual de {{ $json.config.nombre_negocio }}, ¿en qué puedo ayudarte hoy?'\n- **MENSAJES SIGUIENTES**: NO repitas el saludo completo, ve directo al tema\n- Si el cliente saluda de nuevo, responde brevemente sin repetir tu presentación completa\n\n## REGLAS DE COMUNICACIÓN\n- **IMPORTANTE**: SIEMPRE analiza el mensaje COMPLETO del cliente. Si dice 'Hola, quiero información' debes dar la información solicitada (puedes incluir un saludo breve SOLO si es el PRIMER mensaje).\n- **NO RESPONDAS SOLO CON UN SALUDO** - siempre incluye contenido útil\n- Máximo {{ $json.config.max_parrafos || '2' }} párrafos cortos por respuesta\n- Usa emojis ocasionalmente ({{ $json.config.emojis || '😊' }})\n- Termina con una pregunta para continuar ayudando\n\n⚠️ **DIFERENCIA CRÍTICA - INFORMACIÓN vs AGENDAMIENTO:**\n- Si dice \"quiero AGENDAR/RESERVAR\" → Lista CORTA (solo nombres + precios)\n- Si dice \"dame INFORMACIÓN/DETALLES\" → Descripción COMPLETA (beneficios, combinaciones, etc.)\n\n## CATEGORÍAS DE SERVICIOS\n{{ $json.config.categorias_servicios || 'Consulta nuestra lista de servicios' }}\n\n## INFORMACIÓN SOBRE SERVICIOS\n{{ $json.config.info_servicios || 'Los servicios están disponibles en nuestra lista.' }}\n\n## CATÁLOGO DETALLADO DE SERVICIOS\n{{ $json.config.catalogo_servicios_detallado || '' }}\n\n## ESTRATEGIA CONVERSACIONAL\n{{ $json.config.estrategia_conversacional || 'Guía al cliente paso a paso' }}\n\n## INFORMACIÓN TÉCNICA\n{{ $json.config.info_tecnica || '' }}\n\n## HORARIO Y DURACIÓN\n- Horarios: {{ $json.config.horario || 'Consultar disponibilidad' }}\n- Duración: {{ $json.config.duracion_servicios || 'Varía según el servicio' }}\n\n## REQUERIMIENTOS DEL CLIENTE\n{{ $json.config.requerimientos || '' }}\n\n## 📋 REGLA DE REQUERIMIENTOS - IMPORTANTE\nCuando informes sobre servicios, categorías o precios, SIEMPRE incluye al final de tu respuesta uno de estos títulos: '📋 *Recuerda:*', '📋 *Importante:*' o '📋 *Recomendaciones adicionales:*' seguido de los items EN FORMATO DE LISTA con guiones (-):\n- Debes llegar con el cabello limpio (ojalá recién lavado)\n- (Alterna entre): 'Si tienes cabello muy abundante, puede haber un costo extra' O 'La abundancia del cabello implica un costo extra en el servicio'\n\nEJEMPLO CORRECTO:\n📋 *Recuerda:*\n- Debes llegar con el cabello limpio (ojalá recién lavado)\n- Si tienes cabello muy abundante, puede haber un costo extra\n\nNUNCA escribas las recomendaciones en una sola línea o párrafo.\n\n## FORMATO DE SERVICIOS\nCuando listes servicios con precios, NO uses asteriscos alrededor del nombre del servicio. Usa emojis o números para dar formato.\nPara servicios que varían según el largo del cabello (Alisados, Botox, etc.), SIEMPRE especifica 'Para cabello corto/medio/largo':\nEJEMPLOS CORRECTOS:\n- Alisado Corto: Para cabello corto - 120 min - $45,000\n- Alisado Medio: Para cabello medio - 240 min - $55,000\n- Botox Corto: Para cabello corto - 90 min - $35,000\n- Botox Medio: Para cabello medio - 120 min - $45,000\n- Botox Largo: Para cabello largo - 120 min - $55,000\n\n## INFORMACIÓN DE CONTACTO Y UBICACIÓN\n- Teléfono: {{ $json.config.negocio_telefono || 'No disponible' }}\n- Dirección: {{ $json.config.negocio_direccion || 'No disponible' }}\n- Instagram: {{ $json.config.negocio_instagram || 'No disponible' }}\n- Facebook: {{ $json.config.negocio_facebook || 'No disponible' }}\n- TikTok: {{ $json.config.negocio_tiktok || 'No disponible' }}\n- Google Maps: {{ $json.config.negocio_enlace_maps || 'No disponible' }}\n- Sitio Web: {{ $json.config.negocio_web || 'No disponible' }}\n\nCuando te pregunten por redes sociales, dirección o ubicación, usa esta información.\n\n## ⚠️ DETECCIÓN DE ACCIONES - MUY IMPORTANTE ⚠️\n\nANTES de responder, analiza el mensaje del cliente y detecta si quiere realizar alguna de estas acciones:\n\n### 1. CANCELAR CITA (PRIORIDAD ALTA)\nSi el cliente menciona CUALQUIERA de estas palabras/frases, DEBES incluir <<ACTION:CANCEL_APPOINTMENT>>:\n- 'cancelar', 'cancela', 'cancelación'\n- 'anular', 'anula', 'anulación'\n- 'eliminar mi cita', 'borrar mi cita'\n- 'ya no quiero la cita', 'no puedo asistir'\n- 'quitar mi reserva', 'deshacer reserva'\n\n**Respuesta OBLIGATORIA**: '{{ $json.config.respuesta_cancelar || 'Entiendo. Voy a buscar tus citas para que puedas cancelarlas 📋' }} <<ACTION:CANCEL_APPOINTMENT>>'\n\n### 2. AGENDAR CITA - FLUJO SIMPLE Y DIRECTO\nSi el cliente quiere agendar/reservar, SIEMPRE incluye <<ACTION:SHOW_SERVICES>>:\n- 'agendar', 'reservar', 'hacer una cita', 'quiero una hora', 'necesito un turno', 'quiero reservar'\n\nCRÍTICO - OBLIGATORIO: SIEMPRE incluye <<ACTION:SHOW_SERVICES>> al final.\nEsta acción dispara la LISTA INTERACTIVA real con botones.\nSin ella, solo ves texto y el cliente no puede clickear.\n\n**Respuesta**: '{{ $json.config.respuesta_agendar || '¡Perfecto! Te muestro los servicios disponibles 📋' }} <<ACTION:SHOW_SERVICES>>'\n\n### 2.1 INFORMACIÓN DETALLADA DE SERVICIOS (diferente a agendamiento)\nSi el cliente pide \"información\", \"detalles\", \"qué es\", \"diferencia entre\", \"cuáles son los beneficios\":\n- Solo en este caso SÍ envías descripciones largas, beneficios, combinaciones y recomendaciones\n- NO incluyas <<ACTION:SHOW_SERVICES>> en este caso\n- Responde de forma educativa pero SIN presionar a reservar\n\n### 3. ESCALAR A HUMANO (SOLO cuando sea necesario)\nUSA <<ACTION:ESCALATE_TO_HUMAN>> ÚNICAMENTE cuando:\n- El cliente dice EXPLÍCITAMENTE: 'quiero hablar con una persona', 'necesito un humano', 'pásame con alguien'\n- NO puedes resolver una consulta que NO sea sobre citas\n\n**NUNCA escales si el cliente quiere cancelar o agendar una cita** - eso lo manejas tú con las acciones correspondientes.\n\n**Respuesta**: '{{ $json.config.respuesta_escalacion }} <<ACTION:ESCALATE_TO_HUMAN>>'\n\n## LO QUE NO PUEDES HACER ❌\n{{ $json.config.restricciones || '- Dar información confidencial\\n- Prometer resultados específicos\\n- Inventar información' }}\n\n## LO QUE SÍ PUEDES HACER ✅\n{{ $json.config.capacidades || '- Explicar servicios\\n- Informar precios\\n- Programar citas\\n- Cancelar citas\\n- Responder consultas generales' }}\n\n## EJEMPLO DE CONVERSACIÓN\n{{ $json.config.ejemplo_conversacion || '' }}\n\n## REGLAS FINALES\n- Mantén un tono {{ $json.config.tono || 'cálido y profesional' }}\n- **CRÍTICO**: Si detectas palabras como 'cancelar', 'anular', 'eliminar cita' → USA <<ACTION:CANCEL_APPOINTMENT>>, NO escales a humano\n- **CRÍTICO**: NUNCA repitas '¡Hola!' si ya lo dijiste en mensajes anteriores del historial\n\n## 🙏 DETECCIÓN DE AGRADECIMIENTO DESPUÉS DE CITA CONFIRMADA\nSi el cliente escribe palabras como: 'gracias', 'thanks', 'ok', 'dale', 'perfecto', 'listo' DESPUÉS de haber confirmado una cita en la conversación:\n\n**RESPONDE SOLO CON:**\n¡De nada! 😊\n¡Te esperamos! 💇‍♀️✨\n\nIMPORTANTE:\n- NO hagas preguntas adicionales\n- NO ofrezcas más servicios\n- NO incluyas detalles de la cita\n- Este es el mensaje de CIERRE"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        363920,
+        179440
+      ],
+      "id": "d307fa93-4961-4dc3-bd78-9a5dac9c52d3",
+      "name": "Agente IA"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convertir configuración de Google Sheets a objeto key-value\nconst config = {};\n\n// Leer configuración del bot (Configuracion_Bot)\nconst botConfigRows = $input.all();\nbotConfigRows.forEach(item => {\n  const parametro = item.json.parametro;\n  const valor = item.json.valor;\n  if (parametro && valor !== undefined) {\n    config[parametro] = valor;\n  }\n});\n\n// Obtener datos del chat del nodo anterior\nconst chatData = $('Prepare Chat Input').first().json;\n\nreturn [{\n  json: {\n    ...chatData,\n    config: config\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        363696,
+        179440
+      ],
+      "id": "6a31f22b-f198-491e-a63a-20fab2627fba",
+      "name": "Merge Config"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": 1177271620
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        363472,
+        179440
+      ],
+      "id": "5090265a-a63f-4c6e-80e0-9e767d3691ed",
+      "name": "Read Bot Config",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar input del chat con contexto de mensajes del humano\nconst input = $json;\nconst staticData = $getWorkflowStaticData('global');\nconst phoneNumber = input.phoneNumber;\n\n// Obtener mensajes recientes del humano (dueño) para este cliente\nlet humanContext = '';\nif (staticData.humanMessages && staticData.humanMessages[phoneNumber]) {\n  const humanMsgs = staticData.humanMessages[phoneNumber];\n  // Solo incluir mensajes de las últimas 24 horas como contexto adicional\n  const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);\n  const recentHumanMsgs = humanMsgs.filter(m => m.timestamp > oneDayAgo);\n  if (recentHumanMsgs.length > 0) {\n    humanContext = '\\n\\n[CONTEXTO: El dueño del negocio respondió directamente a este cliente con los siguientes mensajes recientes:]\\n' + \n      recentHumanMsgs.map(m => `- \"${m.content}\"`).join('\\n') + '\\n[FIN CONTEXTO]\\n\\n';\n  }\n}\n\nreturn [{\n  json: {\n    chatInput: humanContext + input.textContent,\n    phoneNumber: phoneNumber,\n    phoneNumberId: input.phoneNumberId,\n    contactName: input.contactName,\n    isFromAudio: input.isFromAudio || false,\n    hasHumanContext: humanContext.length > 0\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        363248,
+        179440
+      ],
+      "id": "18266760-7603-4f81-ae24-cba82d748b51",
+      "name": "Prepare Chat Input"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\n  \"callback_token\": \"{{ $('Combine Messages').first().json.callbackToken }}\",\n  \"conversation_id\": {{ $('Combine Messages').first().json.conversationId }},\n  \"channel_id\": {{ $('Combine Messages').first().json.channelId }},\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"⏰ *Tiempo Expirado*\\n\\n{{ $json.message }}\\n\\nSi deseas agendar una cita, escríbeme 'quiero agendar' y te mostraré los servicios disponibles.\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        363696,
+        179056
+      ],
+      "id": "98122b39-49d6-484e-b9ec-015afd8f7b41",
+      "name": "Send Payment Expired"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (function() { const data = $json; const cuentas = data.cuentasAutorizadas || []; let verificaTexto = ''; cuentas.forEach((c, i) => { verificaTexto += '\\n\\n🏦 *Cuenta ' + (i+1) + ':*\\n'; verificaTexto += '👤 Destinatario: ' + c.nombre + '\\n'; verificaTexto += '🔢 RUT: ' + c.rut + '\\n'; verificaTexto += '🏛️ Banco: ' + c.banco + '\\n'; verificaTexto += '📋 Tipo: ' + (c.tipoCuenta || 'Cuenta Corriente') + '\\n'; verificaTexto += '💳 N° Cuenta: ' + c.numeroCuenta; }); return JSON.stringify({ callback_token: $('Combine Messages').first().json.callbackToken, conversation_id: $('Combine Messages').first().json.conversationId, channel_id: $('Combine Messages').first().json.channelId,  from: data.businessPhone, to: data.phoneNumber, type: 'text', text: { body: '❌ *Comprobante no válido*\\n\\nLo sentimos, no pudimos validar tu comprobante de transferencia.\\n\\n📋 *Razón:* ' + (data.validationResult?.razon || 'No se pudo verificar') + '\\n\\n*Por favor verifica que el pago sea a alguna de estas cuentas:*' + verificaTexto + '\\n\\n⏰ La transferencia debe ser reciente (últimos 3 días)\\n\\n📸 Envía nuevamente una captura de pantalla clara del comprobante.' } }); })() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        364720,
+        179152
+      ],
+      "id": "2082dd34-a735-4457-ab46-044395a9050b",
+      "name": "Send Payment Invalid"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (function() { const data = $json; return JSON.stringify({ callback_token: $('Combine Messages').first().json.callbackToken, conversation_id: $('Combine Messages').first().json.conversationId, channel_id: $('Combine Messages').first().json.channelId,  from: data.businessPhone, to: data.phoneNumber, type: 'text', text: { body: '⚠️ *Transferencia ya registrada*\\n\\nLo sentimos, el ID de transferencia #' + data.transferId + ' ya fue utilizado para confirmar otra cita.\\n\\n🔄 *Por favor:*\\n\\n1️⃣ Realiza una nueva transferencia\\n2️⃣ Toma una captura de pantalla del nuevo comprobante\\n3️⃣ Envíamela para validar tu pago\\n\\n💡 Recuerda que cada transferencia debe tener un ID único.\\n\\n📲 *Intenta de nuevo con una transferencia válida*\\n\\n¿Necesitas ayuda? Estamos aquí para asistirte 😊' } }); })() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        364350,
+        179250
+      ],
+      "id": "send-duplicate-transfer-id-error",
+      "name": "Send Duplicate Transfer ID"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\n  \"callback_token\": \"{{ $('Combine Messages').first().json.callbackToken }}\",\n  \"conversation_id\": {{ $('Combine Messages').first().json.conversationId }},\n  \"channel_id\": {{ $('Combine Messages').first().json.channelId }},\n  \"from\": \"{{ $('Validate Payment Image').first().json.businessPhone }}\",\n  \"to\": \"{{ $('Validate Payment Image').first().json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"✅ *¡Pago Validado y Cita Confirmada!*\\n\\n{{ $('Validate Payment Image').first().json.contactName }}, tu comprobante de transferencia ha sido verificado correctamente.\\n\\n📋 *Detalles de tu cita:*\\n\\n🛍️ Servicio: {{ $('Validate Payment Image').first().json.serviceName }}\\n📅 Fecha: {{ $('Validate Payment Image').first().json.appointmentDate }}\\n🕐 Hora: {{ $('Validate Payment Image').first().json.appointmentTime }}\\n🎫 Código: {{ $('Validate Payment Image').first().json.pendingAppointment.id }}\\n\\n📍 *Recuerda llegar con el cabello limpio* (ojalá recién lavado)\\n\\n¡Te esperamos! 💇‍♀️✨\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        365380,
+        178960
+      ],
+      "id": "93fbe86e-e673-4233-b9b1-2c5409607b33",
+      "name": "Send Payment Confirmed"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===========================================\n// VALIDATE TRANSFER_ID UNIQUENESS AGAINST GOOGLE SHEETS\n// ===========================================\nconst input = $json;\nconst transferId = input.transferId || input.validationResult?.transfer_id_normalized || '';\nconst phoneNumber = input.phoneNumber || '';\nconst businessPhone = input.businessPhone || '';\n\n// Get all existing citas from Google Sheets (passed from previous node)\nconst allCitas = input.allCitas || [];\n\n// Check if transfer_id already exists in any confirmed appointment\nif (transferId) {\n  const transferIdStr = String(transferId).trim();\n  \n  // Check against all confirmed citas in Google Sheets\n  const duplicateInSheets = allCitas.some(cita => {\n    const citaTransferId = String(cita.transfer_id || cita.id_transferencia || '').trim();\n    const citaEstado = String(cita.estado || '').toLowerCase();\n    return citaTransferId === transferIdStr && (citaEstado === 'confirmado' || citaEstado === 'pago validado');\n  });\n  \n  if (duplicateInSheets) {\n    return [{\n      json: {\n        error: true,\n        mensaje: '❌ *Este ID de transferencia ya fue utilizado*\\n\\nNo puedes usar el mismo comprobante de pago dos veces. Por favor, verifica el número de transferencia e intenta con otro comprobante.',\n        transferId: transferId,\n        phoneNumber: phoneNumber,\n        businessPhone: businessPhone,\n        skipAppointment: true\n      }\n    }];\n  }\n}\n\n// ===========================================\n// PREPARE CONFIRMED APPOINTMENT FOR GOOGLE SHEETS\n// ===========================================\nconst appointment = input.pendingAppointment;\nconst staticData = $getWorkflowStaticData('global');\n\n// Clear pending payment and selection\nif (staticData.pendingPayments) {\n  delete staticData.pendingPayments[phoneNumber];\n}\nif (staticData.serviceSelections) {\n  delete staticData.serviceSelections[phoneNumber];\n}\n\n// Get business config if available\nconst businessConfig = staticData.businessConfig || {};\n\n// Get binary data (payment proof image)\nconst binaryData = $binary;\n\n// Return data for Google Sheets with status CONFIRMED\nreturn [{\n  json: {\n    id: appointment.id || appointment.appointmentId,\n    nombre: appointment.nombre || appointment.contactName,\n    email: '',\n    telefono: appointment.telefono || phoneNumber,\n    servicio: appointment.servicio,\n    fecha: appointment.fecha || appointment.selectedDay,\n    hora: appointment.hora,\n    hora_fin: appointment.hora_fin,\n    estado: 'Confirmado',\n    precio: appointment.precio,\n    notas: 'Pago validado automáticamente por IA - ' + new Date().toISOString(),\n    creado: appointment.creado || appointment.createdAt || new Date().toISOString(),\n    negocio_id: appointment.negocio_id || '1',\n    negocio_email: businessConfig.email || 'Kellysisabel1504@gmail.com',\n    negocio_nombre: businessConfig.nombre || 'Kells Capilar',\n    displayDate: appointment.displayDate || appointment.fecha,\n    transfer_id: transferId\n  },\n  binary: binaryData\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        364720,
+        178960
+      ],
+      "id": "4acb2844-43ad-4a66-b7ba-aa9eb175df10",
+      "name": "Prepare Confirmed Data"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": 1703053541,
+          "cachedResultName": "Citas"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        364400,
+        178850
+      ],
+      "id": "get-all-citas-validation",
+      "name": "Get All Citas",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combinar datos de validación con citas existentes\nconst validationData = $('Validation Result').first().json;\nconst allCitasData = $input.all();\n\nreturn [{\n  json: {\n    ...validationData,\n    allCitas: allCitasData.map(item => item.json)\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        364560,
+        178900
+      ],
+      "id": "merge-citas-validation",
+      "name": "Merge Citas with Validation"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.skipAppointment }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DuplicateTransferId"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.error }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "leftValue": "={{ $json.skipAppointment }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PaymentError"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.error }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Valid"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        364940,
+        178960
+      ],
+      "id": "validate-transfer-id-error",
+      "name": "Validate Transfer ID Error"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": 1703053541,
+          "cachedResultName": "Citas"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        365160,
+        178960
+      ],
+      "id": "e861071a-bc20-4287-8c40-d22076bee77b",
+      "name": "Save Confirmed Appointment",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.skipProcessing }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "skip-duplicate-check"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Skip"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.isValid }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "validation-success-check"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Valido"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        364496,
+        178752
+      ],
+      "id": "52e951ce-e096-4877-ad79-adc5e9b973bd",
+      "name": "Validation Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===========================================\n// PROCESS VISION VALIDATION RESULT\n// ===========================================\nconst visionResponse = $json;\nconst pendingData = $('Validate Payment Image').first().json;\nconst staticData = $getWorkflowStaticData('global');\nconst phoneNumber = pendingData.phoneNumber;\n\n// Initialize cache on first use\nif (!staticData.usedTransferIds) {\n  staticData.usedTransferIds = {};\n}\n\n// DEDUPLICACIÓN: Verificar si ya procesamos esta imagen\nif (!staticData.processedImages) staticData.processedImages = {};\nconst imageLink = pendingData.imageLink || '';\nconst imageHash = imageLink.split('/').pop() || imageLink;\n\nif (staticData.processedImages[imageHash]) {\n  return [{\n    json: {\n      isValid: false,\n      isDuplicate: true,\n      skipProcessing: true,\n      phoneNumber: phoneNumber,\n      message: 'Imagen ya procesada anteriormente'\n    }\n  }];\n}\n\nstaticData.processedImages[imageHash] = Date.now();\n\n// Limpiar imágenes procesadas antiguas (más de 1 hora)\nconst oneHourAgo = Date.now() - (60 * 60 * 1000);\nObject.keys(staticData.processedImages).forEach(key => {\n  if (staticData.processedImages[key] < oneHourAgo) {\n    delete staticData.processedImages[key];\n  }\n});\n\n// Parse GPT-4 Vision response\nlet validationResult;\ntry {\n  const content = visionResponse.choices[0].message.content;\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    validationResult = JSON.parse(jsonMatch[0]);\n  } else {\n    throw new Error('No JSON found in response');\n  }\n} catch (e) {\n  validationResult = {\n    valido: false,\n    confianza: 'baja',\n    razon: 'No se pudo analizar la imagen correctamente',\n    fecha_valida: false,\n    transfer_id: '',\n    detalles: {}\n  };\n}\n\n// NORMALIZAR TRANSFER_ID: Remover ceros a la izquierda\nlet normalizedTransferId = '';\nif (validationResult.transfer_id) {\n  const rawId = String(validationResult.transfer_id).trim();\n  // Extraer solo números\n  const numbersOnly = rawId.replace(/[^0-9]/g, '');\n  // Remover ceros a la izquierda\n  normalizedTransferId = String(parseInt(numbersOnly, 10) || numbersOnly).trim();\n  validationResult.transfer_id_normalized = normalizedTransferId;\n}\n\n// USAR LA RAZÓN ORIGINAL DE GPT-4 (no sobrescribir)\nconst razonOriginal = validationResult.razon || '';\n\n// Determine final result - usar los campos de validación de GPT-4\nconst isValid = validationResult.valido === true && \n                (validationResult.confianza === 'alta' || validationResult.confianza === 'media');\n\nif (isValid) {\n  if (staticData.pendingPayments) {\n    delete staticData.pendingPayments[phoneNumber];\n  }\n}\n\nconst binaryData = $('Download Payment Image').first().binary;\nconst cuentasAutorizadas = pendingData.cuentasAutorizadas || [];\n\nreturn [{\n  json: {\n    isValid: isValid,\n    validationResult: validationResult,\n    phoneNumber: phoneNumber,\n    contactName: pendingData.contactName,\n    phoneNumberId: pendingData.phoneNumberId,\n    businessPhone: pendingData.businessPhone,\n    pendingAppointment: pendingData.pendingAppointment,\n    serviceName: pendingData.serviceName,\n    appointmentDate: pendingData.appointmentDate,\n    appointmentTime: pendingData.appointmentTime,\n    imageLink: pendingData.imageLink,\n    cuentasAutorizadas: cuentasAutorizadas,\n    montoAbono: pendingData.montoAbono,\n    transferId: normalizedTransferId\n  },\n  binary: binaryData\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        364272,
+        178768
+      ],
+      "id": "8f9e0a21-ed98-4f16-bf92-0fe178a4d6d2",
+      "name": "Process Validation Result"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (function() { const data = $('Validate Payment Image').first().json; const cuentasTexto = data.cuentasTexto; const numCuentas = data.numeroCuentas; const montoAbono = data.montoAbono || '$20.000'; const now = new Date(); const fechaHoy = now.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Santiago' }); const hace3Dias = new Date(now.getTime() - 3*24*60*60*1000).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Santiago' }); return JSON.stringify({ model: 'gpt-4o', messages: [{ role: 'system', content: 'Eres un validador de comprobantes de transferencia bancaria chilena.\\n\\n🏦 CUENTAS AUTORIZADAS:\\n' + cuentasTexto + '\\n\\n💰 MONTO MÍNIMO: ' + montoAbono + ' CLP\\n\\n📅 FECHA: HOY es ' + fechaHoy + '. Acepta transferencias desde ' + hace3Dias + '.\\n\\n⚠️ VALIDACIÓN DE CUENTA:\\n- Valida SOLO números enteros (sin ceros a la izquierda)\\n- Ejemplo: 000224080048 se valida como 224080048\\n- Si ves una cuenta con ceros a la izquierda, elimínalos para comparar\\n\\n🔴 CAMPOS OBLIGATORIOS (deben coincidir SÍ o SÍ):\\n\\n1. CUENTA DESTINO: OBLIGATORIO. Si se ve completa, debe coincidir exactamente (sin ceros). Si está parcialmente oculta (***8611), los últimos 4 dígitos visibles DEBEN coincidir con el final de alguna cuenta autorizada.\\n\\n2. BANCO: OBLIGATORIO. Debe coincidir con alguna cuenta autorizada. \"Scotiabank\" = \"SCOTIABANK\" = \"Scotia\".\\n\\n3. MONTO: OBLIGATORIO. Debe ser >= ' + montoAbono + '\\n\\n4. FECHA: OBLIGATORIO. Debe estar entre ' + hace3Dias + ' y ' + fechaHoy + '\\n\\n5. ID DE TRANSFERENCIA: EXTRAER código/número de solicitud/referencia única (sin ceros a la izquierda) para registrar en la base de datos.\\n\\n🟢 CAMPOS FLEXIBLES (ayudan pero no invalidan si faltan):\\n\\n- NOMBRE/DESTINATARIO: Si coincide, suma confianza. Si no coincide o no es visible, NO invalida.\\n\\n- RUT: Si coincide, suma confianza. Si no coincide o no es visible, NO invalida.\\n\\n✅ VÁLIDO SI:\\n- Cuenta coincide (sin ceros a la izquierda) ✓\\n- Banco coincide ✓\\n- Monto >= mínimo ✓\\n- Fecha en rango ✓\\n\\n❌ INVÁLIDO SI FALLA CUALQUIERA DE:\\n- Cuenta NO coincide\\n- Banco NO coincide\\n- Monto < mínimo\\n- Fecha fuera de rango\\n\\nRESPONDE en JSON:\\n{\\n  \"valido\": true/false,\\n  \"confianza\": \"alta\"/\"media\"/\"baja\",\\n  \"razon\": \"explicación de qué campos obligatorios fallaron\",\\n  \"cuenta_valida\": true/false,\\n  \"banco_valido\": true/false,\\n  \"monto_suficiente\": true/false,\\n  \"fecha_valida\": true/false,\\n  \"cuenta_coincidente\": \"cuenta1\"/\"cuenta2\"/\"ninguna\",\\n  \"transfer_id\": \"número de solicitud/referencia sin ceros a la izquierda\",\\n  \"detalles\": {\\n    \"cuenta_detectada\": \"\",\\n    \"cuenta_sin_ceros\": \"cuenta sin ceros a la izquierda\",\\n    \"ultimos_4_digitos\": \"\",\\n    \"banco_detectado\": \"\",\\n    \"monto_detectado\": \"\",\\n    \"fecha_detectada\": \"\",\\n    \"destinatario_detectado\": \"\",\\n    \"rut_detectado\": \"\"\\n  }\\n}' }, { role: 'user', content: [{ type: 'text', text: 'Valida este comprobante. OBLIGATORIO: cuenta (sin ceros a la izquierda o últimos 4 dígitos), banco, monto >= ' + montoAbono + ', fecha entre ' + hace3Dias + ' y ' + fechaHoy + '. También EXTRAE el ID/número de solicitud de transferencia (sin ceros a la izquierda). El nombre y RUT son opcionales.' }, { type: 'image_url', image_url: { url: data.imageLink } }] }], max_tokens: 800 }); })() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        363984,
+        178768
+      ],
+      "id": "319f9c4c-653b-4f76-932e-5ff412836ed9",
+      "name": "GPT4 Vision Validate",
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.imageLink }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        363696,
+        178768
+      ],
+      "id": "7eaf0703-4b5c-45c7-8b02-b0810acabf54",
+      "name": "Download Payment Image"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.hasPendingPayment }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "payment-check-valid"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ValidarComprobante"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.paymentExpired }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "payment-check-expired"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PagoExpirado"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        363472,
+        178944
+      ],
+      "id": "e84f0f24-fd3c-4d66-8cca-58c5a74ba92e",
+      "name": "Payment Status Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===========================================\n// VALIDATE PAYMENT IMAGE - Check if pending payment exists\n// ===========================================\nconst input = $json;\nconst staticData = $getWorkflowStaticData('global');\nconst phoneNumber = input.phoneNumber;\nconst now = Date.now();\n\n// Initialize pending payments if not exists\nif (!staticData.pendingPayments) {\n  staticData.pendingPayments = {};\n}\n\n// Get business config from staticData\nconst businessConfig = staticData.businessConfig || {};\n\n// Check if there's a pending payment for this number\nconst pendingPayment = staticData.pendingPayments[phoneNumber];\n\nif (!pendingPayment) {\n  // No pending payment - this image is unrelated to payment\n  return [{\n    json: {\n      hasPendingPayment: false,\n      phoneNumber: phoneNumber,\n      businessPhone: input.businessPhone,\n      imageId: input.imageId || '',\n      imageLink: input.imageLink || '',\n      message: 'No hay un pago pendiente para validar.'\n    }\n  }];\n}\n\n// Check if payment expired (30 minutes timeout)\nconst thirtyMinutes = 30 * 60 * 1000;\nconst paymentTime = pendingPayment.createdAt || pendingPayment.timestamp || 0;\nif (now - paymentTime > thirtyMinutes) {\n  // Payment expired - delete and return error\n  delete staticData.pendingPayments[phoneNumber];\n  return [{\n    json: {\n      hasPendingPayment: false,\n      paymentExpired: true,\n      phoneNumber: phoneNumber,\n      businessPhone: input.businessPhone,\n      imageId: input.imageId || '',\n      message: 'El tiempo para enviar el comprobante ha expirado (30 minutos). Por favor, vuelve a seleccionar tu horario.'\n    }\n  }];\n}\n\n// Build pendingAppointment object from stored data\nconst pendingAppointment = {\n  id: pendingPayment.appointmentId,\n  nombre: pendingPayment.contactName,\n  telefono: pendingPayment.phoneNumber,\n  servicio: pendingPayment.servicio,\n  fecha: pendingPayment.selectedDay,\n  displayDate: pendingPayment.displayDate,\n  hora: pendingPayment.hora,\n  hora_fin: pendingPayment.hora_fin,\n  precio: pendingPayment.precio,\n  duracion_min: pendingPayment.duracion_min,\n  creado: new Date(pendingPayment.createdAt).toISOString()\n};\n\n// CONSTRUIR ARRAY DE CUENTAS DINÁMICAMENTE\nconst cuentasAutorizadas = [];\n\n// Agregar cuenta 1 si existe\nif (businessConfig.banco_nombre) {\n  cuentasAutorizadas.push({\n    id: 'cuenta1',\n    nombre: businessConfig.banco_nombre,\n    rut: businessConfig.banco_rut || '',\n    banco: businessConfig.banco_institucion || '',\n    tipoCuenta: businessConfig.banco_tipo_cuenta || 'Cuenta Corriente',\n    numeroCuenta: businessConfig.banco_numero || '',\n    email: businessConfig.banco_email || ''\n  });\n}\n\n// Agregar cuenta 2 si existe\nif (businessConfig.tiene_cuenta2 && businessConfig.banco2_nombre) {\n  cuentasAutorizadas.push({\n    id: 'cuenta2',\n    nombre: businessConfig.banco2_nombre,\n    rut: businessConfig.banco2_rut || '',\n    banco: businessConfig.banco2_institucion || '',\n    tipoCuenta: businessConfig.banco2_tipo_cuenta || 'Cuenta Corriente',\n    numeroCuenta: businessConfig.banco2_numero || '',\n    email: businessConfig.banco2_email || ''\n  });\n}\n\n// Agregar cuenta 3 si existe (futuro)\nif (businessConfig.banco3_nombre) {\n  cuentasAutorizadas.push({\n    id: 'cuenta3',\n    nombre: businessConfig.banco3_nombre,\n    rut: businessConfig.banco3_rut || '',\n    banco: businessConfig.banco3_institucion || '',\n    tipoCuenta: businessConfig.banco3_tipo_cuenta || 'Cuenta Corriente',\n    numeroCuenta: businessConfig.banco3_numero || '',\n    email: businessConfig.banco3_email || ''\n  });\n}\n\n// Si no hay cuentas configuradas, usar fallback\nif (cuentasAutorizadas.length === 0) {\n  cuentasAutorizadas.push({\n    id: 'cuenta1',\n    nombre: 'KELLYS TIRADO',\n    rut: '26.312.327-1',\n    banco: 'Banco Itaú',\n    tipoCuenta: 'Cuenta Corriente',\n    numeroCuenta: '0224080048',\n    email: 'KELLYSISABEL1504@GMAIL.COM'\n  });\n}\n\n// Construir texto de cuentas para el prompt de GPT\nlet cuentasTexto = '';\ncuentasAutorizadas.forEach((cuenta, index) => {\n  cuentasTexto += 'CUENTA ' + (index + 1) + ':\\n';\n  cuentasTexto += '- Nombre: ' + cuenta.nombre + '\\n';\n  cuentasTexto += '- RUT: ' + cuenta.rut + '\\n';\n  cuentasTexto += '- Banco: ' + cuenta.banco + '\\n';\n  cuentasTexto += '- Tipo: ' + cuenta.tipoCuenta + '\\n';\n  cuentasTexto += '- Número: ' + cuenta.numeroCuenta + '\\n';\n  if (index < cuentasAutorizadas.length - 1) cuentasTexto += '\\n';\n});\n\n// Pending payment exists and is valid - prepare for image validation\nreturn [{\n  json: {\n    hasPendingPayment: true,\n    phoneNumber: phoneNumber,\n    contactName: pendingPayment.contactName || input.contactName,\n    phoneNumberId: pendingPayment.phoneNumberId || input.phoneNumberId,\n    businessPhone: input.businessPhone,\n    imageId: input.imageId || '',\n    imageLink: input.imageLink || '',\n    imageMimeType: input.imageMimeType || 'image/jpeg',\n    pendingAppointment: pendingAppointment,\n    // Datos dinámicos de cuentas\n    cuentasAutorizadas: cuentasAutorizadas,\n    cuentasTexto: cuentasTexto,\n    numeroCuentas: cuentasAutorizadas.length,\n    montoAbono: businessConfig.pago_abono || '$20.000',\n    // Mantener compatibilidad\n    expectedBankDetails: {\n      cuentas: cuentasAutorizadas,\n      montoAbono: businessConfig.pago_abono || '$20.000'\n    },\n    paymentTimestamp: paymentTime,\n    serviceName: pendingPayment.servicio,\n    servicePrice: pendingPayment.precio,\n    appointmentDate: pendingPayment.displayDate || pendingPayment.selectedDay,\n    appointmentTime: pendingPayment.hora\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        363248,
+        178960
+      ],
+      "id": "ac9705dd-69b9-42a3-a130-a75b7fe7f626",
+      "name": "Validate Payment Image"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\n  \"callback_token\": \"{{ $('Combine Messages').first().json.callbackToken }}\",\n  \"conversation_id\": {{ $('Combine Messages').first().json.conversationId }},\n  \"channel_id\": {{ $('Combine Messages').first().json.channelId }},\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $('Combine Messages').first().json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"👍 Perfecto, tu cita se mantiene sin cambios.\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        363248,
+        178768
+      ],
+      "id": "1bdc0af4-3c45-4ac5-8eb0-e0f911103128",
+      "name": "Send Keep Message"
+    },
+    {
+      "parameters": {
+        "fromEmail": "Automatiza Tech <contacto@automatizatech.cl>",
+        "toEmail": "={{ $('Fetch Appointment Data').first().json.negocio_email || 'Kellysisabel1504@gmail.com' }}",
+        "bccEmail": "automatizacionesbotcore@gmail.com",
+        "subject": "=Cita Cancelada - {{ $('Fetch Appointment Data').first().json.nombre }} - {{ $('Fetch Appointment Data').first().json.servicio }}",
+        "text": "={{ 'Estimados Sres. ' + $('Fetch Appointment Data').first().json.negocio_nombre + ',\\n\\nDesde AutomatizaTech te informamos que un cliente ha CANCELADO su cita.\\n\\n📋 DETALLES DE LA CITA CANCELADA:\\n\\n👤 Cliente: ' + $('Fetch Appointment Data').first().json.nombre + '\\n📱 Teléfono: ' + $('Fetch Appointment Data').first().json.telefono + '\\n🛍️ Servicio: ' + $('Fetch Appointment Data').first().json.servicio + '\\n📅 Fecha: ' + $('Fetch Appointment Data').first().json.fecha + '\\n🕐 Horario: ' + $('Fetch Appointment Data').first().json.hora + ' - ' + $('Fetch Appointment Data').first().json.hora_fin + '\\n🎫 Código: ' + $('Fetch Appointment Data').first().json.id + '\\n\\n📆 Cancelado el: ' + $now.setZone(\"America/Santiago\").toFormat('dd-MM-yyyy HH:mm:ss') + ' (Hora Chile)\\n\\nEste horario ahora está disponible para otros clientes.\\n\\nSaludos,\\nEquipo AutomatizaTech' }}",
+        "html": "={{ '<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style>body{font-family:\\'Segoe UI\\',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.header{background-color:#0d9488;padding:30px;text-align:center;color:#ffffff}.header h1{margin:10px 0;font-size:24px;font-weight:600}.content{padding:40px 30px;color:#333333;line-height:1.6}.details{background-color:#f0fdfa;padding:20px;border-radius:6px;margin:20px 0;border-left:4px solid #0d9488}.details p{margin:8px 0;font-size:15px}.footer{background-color:#1f2937;padding:20px;text-align:center;color:#9ca3af;font-size:12px}.badge{display:inline-block;background-color:#0d9488;color:white;padding:5px 15px;border-radius:20px;font-size:14px;font-weight:600}</style></head><body><div class=\"container\"><div class=\"header\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td align=\"center\"><img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" width=\"200\" style=\"width:200px;max-width:100%;height:auto;display:block;border:0;\"></td></tr></table><h1 style=\"margin-top:20px;\">Cita Cancelada</h1></div><div class=\"content\"><p>Estimados Sres. ' + $('Fetch Appointment Data').first().json.negocio_nombre + '</p><p>Desde <strong>AutomatizaTech</strong> te informamos que un cliente ha <strong style=\"color:#0d9488;\">CANCELADO</strong> su cita.</p><div class=\"details\"><p style=\"font-size:18px;font-weight:600;color:#0d9488;margin-bottom:15px;\">📋 Detalles de la Cita Cancelada</p><p>👤 <strong>Cliente:</strong> ' + $('Fetch Appointment Data').first().json.nombre + '</p><p>📱 <strong>Teléfono:</strong> <a href=\"https://wa.me/' + $('Fetch Appointment Data').first().json.telefono + '\" style=\"color:#0d9488\">' + $('Fetch Appointment Data').first().json.telefono + '</a></p><p>🛍️ <strong>Servicio:</strong> ' + $('Fetch Appointment Data').first().json.servicio + '</p><p>📅 <strong>Fecha:</strong> ' + $('Fetch Appointment Data').first().json.fecha + '</p><p>🕐 <strong>Horario:</strong> ' + $('Fetch Appointment Data').first().json.hora + ' - ' + $('Fetch Appointment Data').first().json.hora_fin + '</p><p>🎫 <strong>Código:</strong> <code style=\"background:#99f6e4;padding:3px 8px;border-radius:4px;\">' + $('Fetch Appointment Data').first().json.id + '</code></p></div><p style=\"color:#059669;font-weight:600;\">✅ Este horario ahora está disponible para otros clientes.</p><p style=\"color:#6b7280;font-size:13px;\">📆 Cancelado el ' + $now.setZone(\"America/Santiago\").toFormat('dd-MM-yyyy') + ' a las ' + $now.setZone(\"America/Santiago\").toFormat('HH:mm:ss') + ' (Hora Chile)</p></div><div class=\"footer\"><p>&copy; 2025 Automatiza Tech. Todos los derechos reservados.</p><p>Notificación automática del sistema de reservas.</p></div></div></body></html>' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        364496,
+        178000
+      ],
+      "id": "55892aa5-e1b1-4631-8a3d-f45273e40148",
+      "name": "Send Email Cancellation",
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\n  \"callback_token\": \"{{ $('Combine Messages').first().json.callbackToken }}\",\n  \"conversation_id\": {{ $('Combine Messages').first().json.conversationId }},\n  \"channel_id\": {{ $('Combine Messages').first().json.channelId }},\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $('Validate Cancel Time').first().json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"✅ Tu cita fue cancelada.\\n\\nSi quieres agendar otra, escribe *agendar*.\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        364496,
+        177808
+      ],
+      "id": "9c34ef15-00df-4ffa-943c-1462fcc55c76",
+      "name": "Send Cancel Success"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1703053541,
+          "mode": "list",
+          "cachedResultName": "Citas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=1703053541"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "estado": "={{ $('Validate Cancel Time').first().json.newStatus }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "hora",
+              "displayName": "hora",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "hora_fin",
+              "displayName": "hora_fin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "servicio",
+              "displayName": "servicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phoneNumber",
+              "displayName": "phoneNumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phoneNumberId",
+              "displayName": "phoneNumberId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "appointmentId",
+              "displayName": "appointmentId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "displayDate",
+              "displayName": "displayDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "duracion_min",
+              "displayName": "duracion_min",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "negocio_nombre",
+              "displayName": "negocio_nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "negocio_direccion",
+              "displayName": "negocio_direccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "negocio_maps",
+              "displayName": "negocio_maps",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        364272,
+        177904
+      ],
+      "id": "217fd8bd-2e01-45cf-9e4f-d8434dcfd55b",
+      "name": "Update Appointment Status",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1703053541,
+          "mode": "list",
+          "cachedResultName": "Citas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=1703053541"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "id",
+              "lookupValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        363472,
+        178000
+      ],
+      "id": "f64b9d37-ed10-4f0c-979b-2b72cac9ac15",
+      "name": "Fetch Appointment Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Confirmación cancelación\nconst payload = $('Combine Messages').first().json;\nconst appointmentId = String(payload.textContent || '').replace('cancel_confirm_', '');\nreturn { json: { phoneNumber: payload.phoneNumber, phoneNumberId: payload.phoneNumberId, id: appointmentId, appointmentId, newStatus: 'cancelado' } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        363248,
+        178000
+      ],
+      "id": "e70e5c63-b820-4717-a9d8-94a7c796f89b",
+      "name": "Process Cancel Confirm"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.appointmentCount === 1 ? JSON.stringify({ callback_token: $('Combine Messages').first().json.callbackToken, conversation_id: $('Combine Messages').first().json.conversationId, channel_id: $('Combine Messages').first().json.channelId, \n  from: $('Combine Messages').first().json.businessPhone,\n  to: $json.phoneNumber,\n  type: 'interactive',\n  interactive: {\n    type: 'button',\n    body: { text: $json.message },\n    action: {\n      buttons: [\n        { type: 'reply', reply: { id: 'cancel_confirm_' + $json.appointmentId, title: '✅ Sí, cancelar' } },\n        { type: 'reply', reply: { id: 'cancel_keep', title: '❌ No, mantener' } }\n      ]\n    }\n  }\n}) : JSON.stringify({ callback_token: $('Combine Messages').first().json.callbackToken, conversation_id: $('Combine Messages').first().json.conversationId, channel_id: $('Combine Messages').first().json.channelId, \n  from: $('Combine Messages').first().json.businessPhone,\n  to: $json.phoneNumber,\n  type: 'interactive',\n  interactive: {\n    type: 'list',\n    body: { text: $json.message },\n    action: {\n      button: '📅 Ver mis citas',\n      sections: [{\n        title: 'Selecciona para cancelar',\n        rows: $json.listRows\n      }]\n    }\n  }\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        365168,
+        179536
+      ],
+      "id": "0f6d9423-cc09-4da1-9f23-4eaa972afcc9",
+      "name": "Send Cancel Confirmation"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar cancelación - filtrar y mostrar solo citas FUTURAS del usuario\nconst { phoneNumber, phoneNumberId } = $('Parse Actions').first().json;\nconst phoneClean = String(phoneNumber).replace('+', '').replace(/\\s/g, '');\n\n// Obtener fecha y hora actual en Chile (UTC-3)\nconst now = new Date();\nconst chileTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Santiago' }));\nconst hoy = chileTime.toISOString().split('T')[0]; // YYYY-MM-DD\nconst horaActual = chileTime.getHours().toString().padStart(2, '0') + ':' + chileTime.getMinutes().toString().padStart(2, '0'); // HH:MM\n\n// Filtrar citas: mismo teléfono, estado Confirmado, y fecha+hora > ahora\nconst appointments = $input.all().filter(item => {\n  const apt = item.json;\n  const aptPhone = String(apt.telefono).replace(/\\s/g, '');\n  const aptFecha = String(apt.fecha || '').trim();\n  const aptHora = String(apt.hora || '00:00').trim();\n  \n  // Comparar fecha+hora vs fecha+hora actual\n  const aptDateTime = aptFecha + ' ' + aptHora;\n  const nowDateTime = hoy + ' ' + horaActual;\n  \n  // Solo citas futuras (fecha+hora mayor que ahora)\n  const esFutura = aptDateTime > nowDateTime;\n  \n  return aptPhone === phoneClean && apt.estado === 'Confirmado' && apt.id && esFutura;\n});\n\nif (appointments.length === 0) {\n  return [{ json: { phoneNumber, phoneNumberId, hasAppointment: false, appointmentCount: 0, message: 'No encontré citas activas asociadas a tu número.' } }];\n}\n\n// Ordenar por fecha y hora ascendente\nappointments.sort((a, b) => {\n  const fechaA = a.json.fecha + ' ' + a.json.hora;\n  const fechaB = b.json.fecha + ' ' + b.json.hora;\n  return fechaA.localeCompare(fechaB);\n});\n\n// Construir lista de citas para el mensaje\nconst citasList = appointments.map((item, idx) => {\n  const apt = item.json;\n  return `${idx + 1}. 📅 ${apt.fecha} | 🕐 ${apt.hora}-${apt.hora_fin} | 🛍️ ${apt.servicio}`;\n}).join('\\n');\n\n// Construir rows para la lista interactiva (max 10)\nconst listRows = appointments.slice(0, 10).map(item => {\n  const apt = item.json;\n  return {\n    id: `cancel_confirm_${apt.id}`,\n    title: `${apt.fecha} ${apt.hora}`.slice(0, 24),\n    description: `${apt.servicio} (${apt.hora}-${apt.hora_fin})`.slice(0, 72)\n  };\n});\n\nconst message = appointments.length === 1 \n  ? `Encontré tu cita:\\n\\n📅 ${appointments[0].json.fecha}\\n🕐 ${appointments[0].json.hora} - ${appointments[0].json.hora_fin}\\n🛍️ ${appointments[0].json.servicio}\\n\\n¿Confirmas que deseas cancelarla?`\n  : `Encontré ${appointments.length} citas activas:\\n\\n${citasList}\\n\\nSelecciona la cita que deseas cancelar:`;\n\nreturn [{ \n  json: { \n    phoneNumber, \n    phoneNumberId, \n    hasAppointment: true, \n    appointmentCount: appointments.length,\n    appointmentId: appointments[0].json.id,\n    listRows,\n    message\n  } \n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        364944,
+        179536
+      ],
+      "id": "f31f1e16-10f8-45c3-9682-fbd0115bed04",
+      "name": "Process Cancel Search"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1703053541,
+          "mode": "list",
+          "cachedResultName": "Citas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=1703053541"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        364720,
+        179536
+      ],
+      "id": "a79fa01b-5496-4b3d-9899-36c033073919",
+      "name": "Search Appointments",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "Automatiza Tech <contacto@automatizatech.cl>",
+        "toEmail": "={{ $json.negocio_email || $('Prepare Confirmed Data').first().json.negocio_email || 'Kellysisabel1504@gmail.com' }}",
+        "bccEmail": "automatizacionesbotcore@gmail.com",
+        "subject": "=✅ Cita Confirmada - {{ $json.nombre || $('Prepare Confirmed Data').first().json.nombre }} - {{ $json.servicio || $('Prepare Confirmed Data').first().json.servicio }}",
+        "text": "={{ 'PAGO VALIDADO - Cita confirmada en Kells Capilar\\n\\n📋 DETALLES DE LA CITA:\\n\\n👤 Cliente: ' + ($json.nombre || $('Prepare Confirmed Data').first().json.nombre) + '\\n📱 Teléfono: ' + ($json.telefono || $('Prepare Confirmed Data').first().json.telefono) + '\\n🛍️ Servicio: ' + ($json.servicio || $('Prepare Confirmed Data').first().json.servicio) + '\\n📅 Fecha: ' + ($json.fecha || $('Prepare Confirmed Data').first().json.fecha) + '\\n🕐 Horario: ' + ($json.hora || $('Prepare Confirmed Data').first().json.hora) + ' - ' + ($json.hora_fin || $('Prepare Confirmed Data').first().json.hora_fin) + '\\n🎫 Código: ' + ($json.id || $('Prepare Confirmed Data').first().json.id) + '\\n\\n💳 PAGO: Validado automáticamente por IA\\n\\n� ADJUNTO: Comprobante de transferencia del cliente\\n\\n📆 Confirmado: ' + $now.setZone(\"America/Santiago\").toFormat('dd-MM-yyyy HH:mm:ss') + ' (Hora Chile)\\n\\nSaludos,\\nEquipo AutomatizaTech' }}",
+        "html": "={{ '<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style>body{font-family:\\'Segoe UI\\',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.header{background-color:#06d6a0;padding:30px;text-align:center;color:#ffffff}.header h1{margin:10px 0;font-size:24px;font-weight:600}.content{padding:40px 30px;color:#333333;line-height:1.6}.details{background-color:#f0fdf4;padding:20px;border-radius:6px;margin:20px 0;border-left:4px solid #06d6a0}.details p{margin:8px 0;font-size:15px}.footer{background-color:#1f2937;padding:20px;text-align:center;color:#9ca3af;font-size:12px}.badge{display:inline-block;background-color:#06d6a0;color:white;padding:5px 15px;border-radius:20px;font-size:14px;font-weight:600}.payment-badge{display:inline-block;background-color:#10b981;color:white;padding:8px 20px;border-radius:25px;font-size:16px;font-weight:700;margin:15px 0}.attachment-note{background-color:#fef3c7;padding:15px;border-radius:6px;margin:20px 0;border-left:4px solid #f59e0b}</style></head><body><div class=\"container\"><div class=\"header\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td align=\"center\"><img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" alt=\"Automatiza Tech\" width=\"200\" style=\"width:200px;max-width:100%;height:auto;display:block;border:0;\"></td></tr></table><h1 style=\"margin-top:20px;\">✅ Cita Confirmada - Pago Validado</h1></div><div class=\"content\"><p>¡Excelente! Se ha <strong style=\"color:#059669;\">CONFIRMADO</strong> una cita en <strong>Kells Capilar</strong>.</p><p class=\"payment-badge\">💳 Pago verificado por IA</p><div class=\"details\"><p style=\"font-size:18px;font-weight:600;color:#059669;margin-bottom:15px;\">📋 Detalles de la Cita</p><p>👤 <strong>Cliente:</strong> ' + ($json.nombre || $('Prepare Confirmed Data').first().json.nombre) + '</p><p>📱 <strong>Teléfono:</strong> <a href=\"https://wa.me/' + ($json.telefono || $('Prepare Confirmed Data').first().json.telefono) + '\" style=\"color:#06d6a0\">' + ($json.telefono || $('Prepare Confirmed Data').first().json.telefono) + '</a></p><p>🛍️ <strong>Servicio:</strong> ' + ($json.servicio || $('Prepare Confirmed Data').first().json.servicio) + '</p><p>📅 <strong>Fecha:</strong> ' + ($json.fecha || $('Prepare Confirmed Data').first().json.fecha) + '</p><p>🕐 <strong>Horario:</strong> ' + ($json.hora || $('Prepare Confirmed Data').first().json.hora) + ' - ' + ($json.hora_fin || $('Prepare Confirmed Data').first().json.hora_fin) + '</p><p>🎫 <strong>Código:</strong> <code style=\"background:#e5e7eb;padding:3px 8px;border-radius:4px;\">' + ($json.id || $('Prepare Confirmed Data').first().json.id) + '</code></p></div><div class=\"attachment-note\"><p style=\"margin:0;color:#92400e;\">📎 <strong>Adjunto:</strong> Comprobante de transferencia enviado por el cliente</p></div><p style=\"color:#6b7280;font-size:13px;\">📆 Confirmado el ' + $now.setZone(\"America/Santiago\").toFormat('dd-MM-yyyy') + ' a las ' + $now.setZone(\"America/Santiago\").toFormat('HH:mm:ss') + ' (Hora Chile)</p></div><div class=\"footer\"><p>&copy; 2025 Automatiza Tech. Todos los derechos reservados.</p><p>Notificación automática del sistema de reservas.</p></div></div></body></html>' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        365600,
+        178960
+      ],
+      "id": "688d2264-56d1-4d6e-b41e-63fa0ff1a1bf",
+      "name": "Send Email New Appointment",
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (function() { const data = $('Build Appointment').first().json; if (data.error) { return JSON.stringify({ callback_token: $('Combine Messages').first().json.callbackToken, conversation_id: $('Combine Messages').first().json.conversationId, channel_id: $('Combine Messages').first().json.channelId,  from: $('Combine Messages').first().json.businessPhone, to: data.phoneNumber, type: 'text', text: { body: data.errorMessage || 'Ocurrió un error. Por favor escribe *agendar* para comenzar de nuevo.' } }); } return JSON.stringify({ callback_token: $('Combine Messages').first().json.callbackToken, conversation_id: $('Combine Messages').first().json.conversationId, channel_id: $('Combine Messages').first().json.channelId,  from: $('Combine Messages').first().json.businessPhone, to: data.telefono, type: 'interactive', interactive: { type: 'button', body: { text: '⏳ *Reserva Pre-Confirmada* ' + data.nombre + '\\n\\n🛍️ Servicio: ' + data.servicio + ' (' + data.duracion_min + ' min)\\n📅 ' + data.displayDate + '\\n🕐 ' + data.hora + ' - ' + data.hora_fin + '\\n💰 Valor: ' + (data.precio || 'Consultar') + '\\n\\n🎫 Código: ' + data.id + '\\n\\n━━━━━━━━━━━━━━━━━━━━\\n\\n📋 *CONDICIONES DE AGENDAMIENTO:*\\n\\n' + data.pago_condiciones + '\\n\\n⚠️ ' + data.pago_reembolso + '\\n\\n' + data.pago_cambios + '\\n\\n━━━━━━━━━━━━━━━━━━━━\\n\\n¿Aceptas estas condiciones para continuar con tu reserva?' }, action: { buttons: [{ type: 'reply', reply: { id: 'terms_accept_' + data.id, title: '✅ Acepto' } }, { type: 'reply', reply: { id: 'terms_reject_' + data.id, title: '❌ No acepto' } }] } } }); })() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        364720,
+        178384
+      ],
+      "id": "7c828ea9-bb85-4931-bf35-910881ed594a",
+      "name": "Send Terms"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\n  \"callback_token\": \"{{ $('Combine Messages').first().json.callbackToken }}\",\n  \"conversation_id\": {{ $('Combine Messages').first().json.conversationId }},\n  \"channel_id\": {{ $('Combine Messages').first().json.channelId }},\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"{{ $json.message }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        363984,
+        178576
+      ],
+      "id": "11ff6b97-684d-4f42-915c-7fc4a7e04985",
+      "name": "Send Limit Message"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesar configuración de pago desde Google Sheets\nconst configRows = $input.all();\nconst config = {};\n\n// Convertir filas a objeto key-value\nconfigRows.forEach(item => {\n  const parametro = item.json.parametro;\n  const valor = item.json.valor;\n  if (parametro && valor !== undefined) {\n    config[parametro] = valor;\n  }\n});\n\n// Función para parsear cuenta bancaria - soporta 2 formatos:\n// Formato 1: Líneas simples (Nombre, RUT, Banco, Tipo, Número, Email)\n// Formato 2: Con prefijos (Nombre: X, Rut: Y, Banco: Z, etc.)\nfunction parseBankAccount(accountString) {\n  if (!accountString) return null;\n  const lines = accountString.split('\\n').map(l => l.trim()).filter(l => l);\n  if (lines.length < 5) return null;\n  \n  // Detectar si tiene formato con prefijos (contiene ':')\n  const hasLabels = lines.some(l => l.includes(':'));\n  \n  if (hasLabels) {\n    // Formato con prefijos: 'Nombre: LUIS MIGUEL...'\n    const data = {};\n    lines.forEach(line => {\n      const colonIndex = line.indexOf(':');\n      if (colonIndex > 0) {\n        const key = line.substring(0, colonIndex).toLowerCase().trim();\n        const value = line.substring(colonIndex + 1).trim();\n        data[key] = value;\n      }\n    });\n    return {\n      nombre: data.nombre || data.name || '',\n      rut: data.rut || '',\n      banco: data.banco || data.bank || '',\n      tipoCuenta: data.tipo || data['tipo cuenta'] || 'Cuenta Corriente',\n      numero: data['número cuenta'] || data.numero || data['número'] || data.cuenta || '',\n      email: data.correo || data.email || ''\n    };\n  } else {\n    // Formato simple: líneas en orden\n    return {\n      nombre: lines[0] || '',\n      rut: lines[1] || '',\n      banco: lines[2] || '',\n      tipoCuenta: lines[3] || '',\n      numero: lines[4] || '',\n      email: lines[5] || ''\n    };\n  }\n}\n\n// Parsear cuentas bancarias desde el formato multi-línea\nconst cuenta1 = parseBankAccount(config.negocio_cuenta_bancaria);\nconst cuenta2 = parseBankAccount(config.negocio_cuenta_bancaria2);\n\n// Datos bancarios con fallback hardcodeado\nconst banco1 = cuenta1 || {\n  nombre: 'KELLYS TIRADO',\n  rut: '26.312.327-1',\n  banco: 'Banco Itaú',\n  tipoCuenta: 'Cuenta Corriente',\n  numero: '0224080048',\n  email: 'KELLYSISABEL1504@GMAIL.COM'\n};\n\n// Guardar en staticData para uso posterior\nconst staticData = $getWorkflowStaticData('global');\nstaticData.businessConfig = {\n  nombre: config.negocio_nombre || 'Kells Capilar',\n  email: config.negocio_email || 'Kellysisabel1504@gmail.com',\n  direccion: config.negocio_direccion || '',\n  telefono: config.negocio_telefono || '',\n  // Datos bancarios cuenta 1\n  banco_nombre: banco1.nombre,\n  banco_rut: banco1.rut,\n  banco_institucion: banco1.banco,\n  banco_tipo_cuenta: banco1.tipoCuenta,\n  banco_numero: banco1.numero,\n  banco_email: banco1.email,\n  // Datos bancarios cuenta 2 (opcional)\n  banco2_nombre: cuenta2 ? cuenta2.nombre : '',\n  banco2_rut: cuenta2 ? cuenta2.rut : '',\n  banco2_institucion: cuenta2 ? cuenta2.banco : '',\n  banco2_tipo_cuenta: cuenta2 ? cuenta2.tipoCuenta : '',\n  banco2_numero: cuenta2 ? cuenta2.numero : '',\n  banco2_email: cuenta2 ? cuenta2.email : '',\n  tiene_cuenta2: cuenta2 !== null,\n  // Condiciones de pago\n  pago_abono: config.pago_abono,\n  pago_condiciones: config.condiciones_agendamiento,\n  pago_reembolso: config.condiciones_reembolso,\n  pago_cambios: config.condiciones_cambios\n};\n\n// Pasar datos al siguiente nodo\nconst payload = $('Combine Messages').first().json;\n\nreturn [{\n  json: {\n    ...payload,\n    config: staticData.businessConfig\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        364272,
+        178288
+      ],
+      "id": "bbec2315-6d48-435e-9148-182fbb4afdd8",
+      "name": "Process Payment Config"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "id",
+          "value": 1177271620
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        363984,
+        178288
+      ],
+      "id": "aa54ad52-0905-4291-b221-8a13ac78370e",
+      "name": "Read Payment Config",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.limitReached }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        363696,
+        178384
+      ],
+      "id": "ea6ec870-8fe1-4bf5-8e43-d13c89c3786c",
+      "name": "Limit OK?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verificar límite de citas (máximo 3 por teléfono)\nconst MAX_APPOINTMENTS = 3;\nconst existingAppointments = $input.all();\nconst appointmentCount = existingAppointments.filter(item => item.json.id).length;\n\nconst payload = $('Combine Messages').first().json;\nconst { phoneNumber, phoneNumberId, contactName } = payload;\n\nif (appointmentCount >= MAX_APPOINTMENTS) {\n  return [{\n    json: {\n      phoneNumber,\n      phoneNumberId,\n      contactName,\n      limitReached: true,\n      appointmentCount,\n      message: `⚠️ Has alcanzado el límite máximo de ${MAX_APPOINTMENTS} citas activas.\\n\\nPara agendar una nueva cita, primero debes cancelar alguna de tus citas existentes escribiendo *cancelar*.`\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    phoneNumber,\n    phoneNumberId,\n    contactName,\n    limitReached: false,\n    appointmentCount\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        363472,
+        178384
+      ],
+      "id": "e3f61a14-87bf-484b-a356-967eb2e61ab2",
+      "name": "Validate Appointment Limit"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1703053541,
+          "mode": "list",
+          "cachedResultName": "Citas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=1703053541"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "telefono",
+              "lookupValue": "={{ $('Combine Messages').first().json.phoneNumber.replace('+', '') }}"
+            },
+            {
+              "lookupColumn": "estado",
+              "lookupValue": "Confirmado"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        363248,
+        178384
+      ],
+      "id": "2b488e6a-6d48-4947-97ca-ca96060b3623",
+      "name": "Check User Appointments",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Confirmar hora elegida - Crear cita PENDIENTE DE PAGO\n// El usuario debe enviar comprobante de transferencia para confirmar\n\n// Obtener datos del nodo anterior (Process Payment Config)\nconst inputData = $input.first().json;\nconst config = inputData.config || {};\n\nconst payload = $('Combine Messages').first().json;\nconst { phoneNumber, phoneNumberId, contactName } = payload;\nconst buttonId = String(payload.textContent || '');\nconst parts = buttonId.replace('time_', '').split('_');\nconst selectedDay = parts[0];\nconst startHHMM = parts[1].slice(0,2) + ':' + parts[1].slice(2);\n\nconst staticData = $getWorkflowStaticData('global');\nconst selectedService = staticData.selectedServiceByPhone?.[phoneNumber];\n\nif (!selectedService) {\n  return [{ json: { phoneNumber, phoneNumberId, error: 'NO_SERVICE', errorMessage: 'Tu sesión expiró. Por favor escribe *agendar* para comenzar de nuevo.' } }];\n}\n\nconst dur = Number(selectedService.duracion_min || 30);\nfunction toMinutes(hhmm){ const [h,m]=hhmm.split(':').map(Number); return h*60+m; }\nfunction toHHMM(mins){ const h=Math.floor(mins/60); const m=mins%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; }\nconst endHHMM = toHHMM(toMinutes(startHHMM) + dur);\n\nconst appointmentId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);\nconst dateObj = new Date(selectedDay + 'T12:00:00');\nconst dayNames = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];\nconst monthNames = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];\nconst displayDate = `${dayNames[dateObj.getDay()]} ${dateObj.getDate()} de ${monthNames[dateObj.getMonth()]}`;\n\n// Guardar cita pendiente en staticData para validación posterior\nif (!staticData.pendingPayments) staticData.pendingPayments = {};\nstaticData.pendingPayments[phoneNumber] = {\n  appointmentId,\n  contactName,\n  phoneNumber,\n  phoneNumberId,\n  selectedDay,\n  displayDate,\n  hora: startHHMM,\n  hora_fin: endHHMM,\n  servicio: selectedService.nombre,\n  duracion_min: dur,\n  precio: selectedService.precio || '',\n  createdAt: Date.now(),\n  expiresAt: Date.now() + (30 * 60 * 1000) // Expira en 30 minutos\n};\n\n// Limpiar selección de servicio\ndelete staticData.selectedServiceByPhone[phoneNumber];\n\nreturn [{ json: { \n  id: appointmentId,\n  nombre: contactName,\n  telefono: phoneNumber,\n  fecha: selectedDay, \n  hora: startHHMM, \n  hora_fin: endHHMM, \n  servicio: selectedService.nombre,\n  precio: selectedService.precio || '',\n  estado: 'Pendiente Pago', \n  created_at: new Date().toISOString(),\n  displayDate,\n  duracion_min: dur,\n  phoneNumberId,\n  negocio_nombre: config.nombre || 'Nuestro negocio',\n  negocio_direccion: config.direccion || '',\n  negocio_maps: config.maps_url || '',\n  negocio_email: config.email || '',\n  // Datos bancarios desde configuración\n  banco_nombre: config.banco_nombre || '',\n  banco_rut: config.banco_rut || '',\n  banco_institucion: config.banco_institucion || '',\n  banco_tipo_cuenta: config.banco_tipo_cuenta || '',\n  banco_numero: config.banco_numero || '',\n  banco_email: config.banco_email || '',\n  // Condiciones de pago\n  pago_abono: config.pago_abono || '$20.000',\n  pago_condiciones: config.pago_condiciones || '',\n  pago_reembolso: config.pago_reembolso || '',\n  pago_cambios: config.pago_cambios || '',\n  awaitingPayment: true\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        364496,
+        178288
+      ],
+      "id": "0a18b60f-3ef6-4f29-b876-9abc03ab2bea",
+      "name": "Build Appointment"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\n  \"callback_token\": \"{{ $('Combine Messages').first().json.callbackToken }}\",\n  \"conversation_id\": {{ $('Combine Messages').first().json.conversationId }},\n  \"channel_id\": {{ $('Combine Messages').first().json.channelId }},\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"😔 Lo siento, no encontré horarios disponibles para el {{ $json.displayDate }}.\\n\\nPrueba seleccionando otro día escribiendo *agendar* para comenzar de nuevo.\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        364944,
+        177472
+      ],
+      "id": "2bec4fa9-4296-4761-8b6f-ea218b2d7a6c",
+      "name": "Send No Slots"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\n  \"callback_token\": \"{{ $('Combine Messages').first().json.callbackToken }}\",\n  \"conversation_id\": {{ $('Combine Messages').first().json.conversationId }},\n  \"channel_id\": {{ $('Combine Messages').first().json.channelId }},\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"header\": {\n      \"type\": \"text\",\n      \"text\": \"🕐 Horarios disponibles\"\n    },\n    \"body\": {\n      \"text\": \"📅 {{ $json.displayDate }}\\n🛍️ {{ $json.selectedService.nombre }} ({{ $json.serviceDuration }} min)\\n\\nSelecciona un horario disponible:\"\n    },\n    \"action\": {\n      \"button\": \"Ver horarios\",\n      \"sections\": [\n        {\n          \"title\": \"Disponibles\",\n          \"rows\": {{ JSON.stringify($json.listRows) }}\n        }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        364944,
+        177280
+      ],
+      "id": "378be2f2-58f4-4f1f-ac26-a3c4a39e79cf",
+      "name": "Send Available Times"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.hasSlots }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        364720,
+        177376
+      ],
+      "id": "26f0ed4f-b188-4024-b876-d12461056e39",
+      "name": "Has Slots?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calcular slots disponibles (duración + horario + bloqueos + solapes)\n// v6.1: Flexibilidad para servicios largos\n// - Los bloqueos de horario (almuerzo, descansos) solo impiden INICIAR en ese rango\n// - Los servicios pueden atravesar bloqueos de horario si inician antes\n// - Los servicios pueden extenderse más allá del horario de cierre\n// - ÚNICO BLOQUEANTE DURO: Citas existentes (no se pueden solapar)\nfunction toMinutes(hhmm) { const [h, m] = String(hhmm).split(':').map(Number); return h * 60 + m; }\nfunction toHHMM(mins) { const h = Math.floor(mins / 60); const m = mins % 60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; }\nfunction overlaps(aStart, aEnd, bStart, bEnd) { return aStart < bEnd && bStart < aEnd; }\n\nconst validationData = $('Validate Service Selection').first().json;\nconst { phoneNumber, phoneNumberId, selectedDay, selectedService } = validationData;\n\nif (!selectedService) {\n  return [{ json: { phoneNumber, phoneNumberId, selectedDay, listRows: [], slots: [], hasSlots: false, error: 'NO_SERVICE' } }];\n}\n\nconst configRows = $('Read Configuracion').all().map(i => i.json);\nconst config = configRows.reduce((acc, r) => { acc[r.parametro] = r.valor; return acc; }, {});\nconst horarioInicio = config.horario_inicio || '09:00';\nconst horarioFin = config.horario_fin || '18:00';\nconst bufferEntreCitas = Number(config.buffer_entre_citas || 0);\n\nconst openMin = toMinutes(horarioInicio);\nconst closeMin = toMinutes(horarioFin);\nconst serviceDuration = Number(selectedService.duracion_min || 30);\n\n// Intervalo de 30 min para mostrar más opciones de horarios\nconst intervaloSlots = 30;\n\nconst blockRows = $('Read Bloqueos').all().map(i => i.json);\n// Filtrar citas por fecha y estado en código (sin filtro en Google Sheets)\nconst allCitas = $('Read Citas del Día').all().map(i => i.json);\nconst existing = allCitas.filter(c => c.fecha === selectedDay && c.estado === 'Confirmado');\n\n// Bloqueos de horario: SOLO impiden que el servicio INICIE en ese rango\n// Los servicios largos PUEDEN atravesarlos si inician antes\nconst softBlocks = [];\n\nfor (const b of blockRows) {\n  const fecha = String(b.fecha || '').trim();\n  const recurrente = String(b.recurrente || 'no').trim().toLowerCase();\n  if (!b.hora_inicio || !b.hora_fin) continue;\n  let applies = false;\n  if (fecha === selectedDay) applies = true;\n  else if (fecha === '*' && recurrente === 'diario') applies = true;\n  else if (recurrente === 'anual' && fecha && fecha !== '*') { \n    const mmdd = selectedDay.slice(5); \n    applies = String(fecha).slice(5) === mmdd; \n  }\n  if (!applies) continue;\n  softBlocks.push({ start: toMinutes(b.hora_inicio), end: toMinutes(b.hora_fin) });\n}\n\n// CITAS EXISTENTES: ÚNICO BLOQUEANTE DURO - no se pueden solapar ni atravesar\nconst busy = [];\nfor (const a of existing) {\n  if (!a.hora || !a.hora_fin) continue;\n  const start = toMinutes(a.hora);\n  const end = toMinutes(a.hora_fin);\n  busy.push({ start: Math.max(openMin, start - bufferEntreCitas), end: Math.min(closeMin, end + bufferEntreCitas) });\n}\n\nconst slots = [];\nfor (let start = openMin; start < closeMin; start += intervaloSlots) {\n  const end = start + serviceDuration;\n  \n  // Bloqueos de horario: solo verificar que NO INICIE dentro del bloqueo\n  // Permite atravesar si inicia antes\n  if (softBlocks.some(r => start >= r.start && start < r.end)) continue;\n  \n  // CITAS EXISTENTES: Verificar traslape completo (ÚNICO BLOQUEANTE DURO)\n  if (busy.some(r => overlaps(start, end, r.start, r.end))) continue;\n  \n  slots.push({ startMin: start, endMin: end, start: toHHMM(start), end: toHHMM(end), btnId: `time_${selectedDay}_${toHHMM(start).replace(':','')}` });\n}\n\nconst dateObj = new Date(selectedDay + 'T12:00:00');\nconst dayNames = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];\nconst monthNames = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];\nconst displayDate = `${dayNames[dateObj.getDay()]} ${dateObj.getDate()} de ${monthNames[dateObj.getMonth()]}`;\n\n// Indicar si el servicio termina después del cierre\n// NOTA: description oculta temporalmente - para reactivar cambiar '' por desc\nconst listRows = slots.slice(0, 10).map(s => {\n  const terminaDespues = s.endMin > closeMin;\n  const desc = terminaDespues ? `Termina ${s.end} (ext.)` : `Termina ${s.end}`;\n  // Cambiar description: '' por description: desc para mostrar hora de término\n  return { id: s.btnId, title: `${s.start} (${serviceDuration} min)`, description: '' };\n});\n\nconst hasSlots = slots.length > 0;\n\n// Guardar config del negocio en staticData para usarla en confirmación\nconst staticData = $getWorkflowStaticData('global');\nstaticData.businessConfig = {\n  nombre: config.negocio_nombre || 'Nuestro negocio',\n  direccion: config.negocio_direccion || '',\n  maps_url: config.negocio_enlace_maps || '',\n  email: config.negocio_email || ''\n};\n\nreturn [{ json: { phoneNumber, phoneNumberId, selectedDay, displayDate, selectedService, serviceDuration, slots, listRows, hasSlots } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        364496,
+        177376
+      ],
+      "id": "0d7935f9-cea9-42ed-a7f7-ab6bf782f5b7",
+      "name": "Compute Availability"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1703053541,
+          "mode": "list",
+          "cachedResultName": "Citas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=1703053541"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        364272,
+        177376
+      ],
+      "id": "fb77921c-c53c-4dc9-947f-27af42722978",
+      "name": "Read Citas del Día",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1427452735,
+          "mode": "list",
+          "cachedResultName": "Bloqueos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=1427452735"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        363984,
+        177376
+      ],
+      "id": "e9801bf7-f075-490c-8ff8-4df18f43ce77",
+      "name": "Read Bloqueos",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2101861815,
+          "mode": "list",
+          "cachedResultName": "Configuracion",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=2101861815"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        363696,
+        177376
+      ],
+      "id": "c968c0f4-1fa1-47ef-ac5d-55bb283d66b5",
+      "name": "Read Configuracion",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.needsServiceFirst }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        363472,
+        177472
+      ],
+      "id": "d249e901-3084-4a23-bcec-f9903333f887",
+      "name": "Service Valid?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validar que hay servicio seleccionado antes de procesar día\nconst payload = $('Combine Messages').first().json;\nconst { phoneNumber, phoneNumberId, textContent } = payload;\nconst selectedDay = String(textContent || '').replace('day_', '');\n\nconst staticData = $getWorkflowStaticData('global');\nconst selectedService = staticData.selectedServiceByPhone?.[phoneNumber];\n\nif (!selectedService) {\n  // No hay servicio seleccionado - redirigir a selección de servicios\n  return [{ json: { phoneNumber, phoneNumberId, error: 'NO_SERVICE_SELECTED', needsServiceFirst: true } }];\n}\n\n// Validar que el servicio no expiró (más de 30 min)\nif (Date.now() - selectedService.selectedAt > 1800000) {\n  delete staticData.selectedServiceByPhone[phoneNumber];\n  return [{ json: { phoneNumber, phoneNumberId, error: 'SERVICE_EXPIRED', needsServiceFirst: true } }];\n}\n\nreturn [{ json: { ...payload, selectedDay, selectedService } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        363248,
+        177472
+      ],
+      "id": "22fe1074-47b1-4433-b13f-559431d85d33",
+      "name": "Validate Service Selection"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\n  \"callback_token\": \"{{ $('Combine Messages').first().json.callbackToken }}\",\n  \"conversation_id\": {{ $('Combine Messages').first().json.conversationId }},\n  \"channel_id\": {{ $('Combine Messages').first().json.channelId }},\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $json.phoneNumber }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"body\": {\n      \"text\": \"✨ {{ $json.selectedService.nombre }}\\n⏱️ {{ $json.selectedService.duracion_min }} min\\n\\nElige un día para tu cita:\"\n    },\n    \"action\": {\n      \"button\": \"📅 Elegir día\",\n      \"sections\": [\n        {\n          \"title\": \"Días disponibles\",\n          \"rows\": [\n            { \"id\": \"{{ $json.availableDays[0].btnId }}\", \"title\": \"{{ $json.availableDays[0].display }}\" },\n            { \"id\": \"{{ $json.availableDays[1].btnId }}\", \"title\": \"{{ $json.availableDays[1].display }}\" },\n            { \"id\": \"{{ $json.availableDays[2].btnId }}\", \"title\": \"{{ $json.availableDays[2].display }}\" },\n            { \"id\": \"{{ $json.availableDays[3].btnId }}\", \"title\": \"{{ $json.availableDays[3].display }}\" },\n            { \"id\": \"{{ $json.availableDays[4].btnId }}\", \"title\": \"{{ $json.availableDays[4].display }}\" },\n            { \"id\": \"{{ $json.availableDays[5].btnId }}\", \"title\": \"{{ $json.availableDays[5].display }}\" },\n            { \"id\": \"{{ $json.availableDays[6].btnId }}\", \"title\": \"{{ $json.availableDays[6].display }}\" }\n          ]\n        }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        363984,
+        177184
+      ],
+      "id": "5d9c59c7-ad28-46a4-8acd-14ee2524791b",
+      "name": "Send Day Buttons"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generar próximos 7 días hábiles con validación de servicio\nconst { phoneNumber, phoneNumberId, businessPhone, contactName, selectedService, error } = $json;\n\n// Si hubo error en selección de servicio, retornar para manejar\nif (error) {\n  return [{ json: { phoneNumber, phoneNumberId, businessPhone, error, errorMessage: $json.errorMessage } }];\n}\n\nconst diasHabiles = [1,2,3,4,5]; // Lun-Vie\nconst availableDays = [];\nlet date = new Date();\ndate.setDate(date.getDate() + 1); // Empezar desde mañana\n\nwhile (availableDays.length < 7) {\n  if (diasHabiles.includes(date.getDay())) {\n    const dateStr = date.toISOString().split('T')[0];\n    const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];\n    const display = `${dayNames[date.getDay()]} ${date.getDate()}/${date.getMonth()+1}`;\n    availableDays.push({ date: dateStr, display, btnId: `day_${dateStr}` });\n  }\n  date.setDate(date.getDate()+1);\n}\n\nreturn [{ json: { phoneNumber, phoneNumberId, businessPhone, contactName, availableDays, selectedService } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        363696,
+        177184
+      ],
+      "id": "db6f5d6d-63e1-4121-a023-1fdb5bee92cd",
+      "name": "Generate Days"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Guardar servicio seleccionado (duración) en staticData por teléfono\nconst payload = $('Combine Messages').first().json;\nconst selectedId = String(payload.textContent || '').replace('svc_', '');\nconst services = $input.all().map(i => i.json);\nconst svc = services.find(s => String(s.id) === String(selectedId));\n\nif (!svc) {\n  // Servicio no encontrado - enviar mensaje de error\n  return [{ json: { ...payload, error: 'SERVICE_NOT_FOUND', errorMessage: 'Lo siento, no encontré ese servicio. Por favor selecciona uno de la lista.' } }];\n}\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.selectedServiceByPhone) staticData.selectedServiceByPhone = {};\nstaticData.selectedServiceByPhone[payload.phoneNumber] = { \n  id: String(svc.id), \n  nombre: svc.nombre, \n  duracion_min: Number(svc.duracion_min || 30),\n  precio: svc.precio || '',\n  selectedAt: Date.now()\n};\n\nreturn [{ json: { ...payload, selectedService: staticData.selectedServiceByPhone[payload.phoneNumber] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        363472,
+        177184
+      ],
+      "id": "808e0cc8-69fc-4f38-a0d3-dc40e8605b59",
+      "name": "Save Selected Service"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Servicios",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        363248,
+        177184
+      ],
+      "id": "21372308-8b12-4a71-a215-d4f196e341e5",
+      "name": "Get Servicios",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\n  \"callback_token\": \"{{ $('Combine Messages').first().json.callbackToken }}\",\n  \"conversation_id\": {{ $('Combine Messages').first().json.conversationId }},\n  \"channel_id\": {{ $('Combine Messages').first().json.channelId }},\n  \"from\": \"{{ $('Combine Messages').first().json.businessPhone }}\",\n  \"to\": \"{{ $('Combine Messages').first().json.phoneNumber }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"header\": {\n      \"type\": \"text\",\n      \"text\": \"{{ $json.headerText }}\"\n    },\n    \"body\": {\n      \"text\": \"{{ $json.bodyText }}\"\n    },\n    \"action\": {\n      \"button\": \"Ver servicios\",\n      \"sections\": [\n        {\n          \"title\": \"Servicios disponibles\",\n          \"rows\": {{ JSON.stringify($json.listRows) }}\n        }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        365168,
+        177856
+      ],
+      "id": "143dc798-5f2c-4992-ad2c-566a6c141d67",
+      "name": "Send Services List"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Construir listas de servicios para WhatsApp (máx 10 por mensaje)\nconst rows = $input.all().map(i => i.json).filter(r => r.id && r.nombre && r.duracion_min);\nconst maxPerMessage = 10;\nconst totalServices = rows.length;\nconst totalMessages = Math.ceil(totalServices / maxPerMessage);\n\n// Dividir en chunks de 10\nconst chunks = [];\nfor (let i = 0; i < totalServices; i += maxPerMessage) {\n  chunks.push(rows.slice(i, i + maxPerMessage));\n}\n\n// Retornar un item por cada chunk\nreturn chunks.map((chunk, index) => {\n  const start = index * maxPerMessage + 1;\n  const end = Math.min((index + 1) * maxPerMessage, totalServices);\n  \n  const listRows = chunk.map(r => ({\n    id: `svc_${r.id}`,\n    title: String(r.nombre).slice(0, 24),\n    description: `${r.duracion_min} min - ${r.precio || 'Consultar'}`.slice(0, 72),\n  }));\n  \n  const headerText = totalMessages === 1 \n    ? '🛍️ Servicios' \n    : `🛍️ Servicios (${index + 1}/${totalMessages})`;\n  \n  const bodyText = index === 0\n    ? `Selecciona el servicio que deseas agendar (${totalServices} disponibles):`\n    : `Más servicios disponibles (${start}-${end} de ${totalServices}):`;\n  \n  return { json: { services: rows, listRows, headerText, bodyText, chunkIndex: index, totalChunks: totalMessages } };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        364944,
+        177856
+      ],
+      "id": "c23b75fa-6261-457f-89e5-03951bd0fca0",
+      "name": "Build Services List"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Servicios",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        364720,
+        177856
+      ],
+      "id": "bdd1ae19-8b74-4523-959b-c238b05d526c",
+      "name": "Read Servicios",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xWQj9WmGzqGKwQtb",
+          "name": "Google Sheets PROD"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.textContent }}",
+                    "rightValue": "svc_",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "id": "c71861c2-591d-4c3a-807f-366c6648383a"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Servicio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.textContent }}",
+                    "rightValue": "day_",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "id": "367ad62e-5f99-40ad-88bf-ca0e0f6ea900"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Día"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.textContent }}",
+                    "rightValue": "time_",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "id": "e9ddd79a-9be5-4a2c-bef4-2eb0a3ad0ee4"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Hora"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.textContent }}",
+                    "rightValue": "cancel_confirm_",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "id": "dd35aa3c-fca2-4611-84da-5770b1afe9d8"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ConfirmarCancel"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.textContent }}",
+                    "rightValue": "cancel_keep",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "7154cdbd-b41c-4579-8f34-be4c43b12828"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "MantenerCita"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.hasImage }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "img-payment-check-001"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ImagenComprobante"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.textContent }}",
+                    "rightValue": "terms_",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "id": "terms-response-check-001"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "RespuestaTerminos"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        363024,
+        178336
+      ],
+      "id": "f60f4c6b-40b8-47b7-9481-66e95d52e31f",
+      "name": "Tipo de Mensaje"
+    },
+    {
+      "parameters": {
+        "amount": 7
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        362800,
+        179152
+      ],
+      "id": "146004f1-01f5-4039-8f80-2c43a3452ce8",
+      "name": "Wait 7s",
+      "webhookId": "buffer-wait-resume"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ JSON.stringify({ phoneNumber: (() => { const msgs = $json.Mensaje || []; for (const m of msgs) { try { const p = JSON.parse(m); if (p.phoneNumber) return p.phoneNumber; } catch(e) {} } return ''; })() }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        362576,
+        178624
+      ],
+      "id": "b4a2d7fd-0067-4517-a315-41918f6fbabe",
+      "name": "Prepare Wait Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine Messages - Detectar acciones interactivas e imágenes con prioridad\nconst messages = $json.Mensaje || [];\n\n// Parsear todos los mensajes y filtrar solo los del buffer (que tienen phoneNumber)\nconst parsed = [];\nlet phoneNumber = '';\nlet contactName = '';\nlet phoneNumberId = '';\nlet businessPhone = '';\nlet isFromAudio = false;\nlet hasImage = false;\nlet imageId = '';\nlet imageLink = '';\nlet imageMimeType = '';\n\nfor (const m of messages) {\n  try {\n    const p = JSON.parse(m);\n    // Solo considerar mensajes del buffer (tienen phoneNumber y message)\n    if (p.phoneNumber && p.message !== undefined) {\n      parsed.push(p);\n      // Guardar datos del usuario del primer mensaje válido\n      if (!phoneNumber) {\n        phoneNumber = p.phoneNumber;\n        contactName = p.contactName || '';\n        phoneNumberId = p.phoneNumberId || '';\n        businessPhone = p.businessPhone || '';\n      }\n      // Si alguno fue de audio\n      if (p.isFromAudio) isFromAudio = true;\n      // Detectar imagen\n      if (p.hasImage || p.imageId) {\n        hasImage = true;\n        imageId = p.imageId || '';\n        imageLink = p.imageLink || '';\n        imageMimeType = p.imageMimeType || '';\n      }\n    }\n  } catch(e) {}\n}\n\n// Buscar si hay alguna acción interactiva (prioridad al ÚLTIMO mensaje con acción)\nconst actionPrefixes = ['svc_', 'day_', 'time_', 'cancel_confirm_', 'cancel_keep', 'terms_'];\nlet interactiveAction = null;\n\nfor (let i = parsed.length - 1; i >= 0; i--) {\n  const msg = parsed[i].message || '';\n  for (const prefix of actionPrefixes) {\n    if (msg.startsWith(prefix) || msg === prefix.replace('_', '')) {\n      interactiveAction = msg;\n      break;\n    }\n  }\n  if (interactiveAction) break;\n}\n\n// Si hay acción interactiva, usar SOLO esa acción\n// Si no hay, concatenar todos los mensajes para la IA\nconst textContent = interactiveAction || parsed.map(p => p.message).join(' ');\n\n// Extract portal callback fields from parsed messages\nlet callbackUrl = '';\nlet callbackToken = '';\nlet conversationId = 0;\nlet channelId = 0;\nfor (const p of parsed) {\n  if (p.callbackUrl) {\n    callbackUrl = p.callbackUrl;\n    callbackToken = p.callbackToken;\n    conversationId = p.conversationId;\n    channelId = p.channelId;\n    break;\n  }\n}\n\nreturn {\n  json: {\n    textContent,\n    phoneNumber,\n    contactName,\n    phoneNumberId,\n    businessPhone,\n    isFromAudio,\n    hasInteractiveAction: !!interactiveAction,\n    hasImage,\n    imageId,\n    imageLink,\n    imageMimeType,\n    callbackUrl,\n    callbackToken,\n    conversationId,\n    channelId\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        362800,
+        178432
+      ],
+      "id": "2df88557-bbfc-4432-8b6b-109e0391417e",
+      "name": "Combine Messages"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "={{ (() => { const msgs = $json.Mensaje || []; for (const m of msgs) { try { const p = JSON.parse(m); if (p.phoneNumber) return p.phoneNumber; } catch(e) {} } return ''; })() }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        362576,
+        178432
+      ],
+      "id": "a9eb2769-78fb-46a3-8b9d-245f00e42ef5",
+      "name": "Redis Delete",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ JSON.parse($json.Mensaje.filter(m => m.trim().startsWith('{')).slice(-1)[0]).sessionID }}",
+                    "rightValue": "={{ $('Redis Push').item.json.messageData ? JSON.parse($('Redis Push').item.json.messageData).sessionID : $('Extract Message Data').first().json.messageId }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Ignorar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ (() => { const msgs = $json.Mensaje || []; for (const m of msgs) { try { const p = JSON.parse(m); if (p.isFromAudio) return true; } catch(e) {} } return false; })() }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Procesar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ new Date(JSON.parse($json.Mensaje.filter(m => m.trim().startsWith('{')).slice(-1)[0]).date_time) }}",
+                    "rightValue": "={{ new Date(Date.now() - 7000) }}",
+                    "operator": {
+                      "type": "dateTime",
+                      "operation": "before"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Procesar"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Esperar"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        362352,
+        178496
+      ],
+      "id": "61224e5f-bda0-4e6a-b660-80bdd3d0e1b7",
+      "name": "Check Message Status"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "Mensaje",
+        "key": "={{ $json.phoneNumber || $input.first().json.phoneNumber || $('Extract Message Data').first().json.phoneNumber }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        362128,
+        179056
+      ],
+      "id": "91432dfa-40b1-47df-a456-e8e785ec5d4e",
+      "name": "Redis Get",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "push",
+        "list": "={{ $json.phoneNumber }}",
+        "messageData": "={{ JSON.stringify({ message: $json.textContent, sessionID: $json.messageId, date_time: new Date().toISOString(), phoneNumber: $json.phoneNumber, contactName: $json.contactName, phoneNumberId: $json.phoneNumberId, businessPhone: $json.businessPhone, isFromAudio: $json.isFromAudio || false, hasImage: $json.hasImage || false, imageId: $json.imageId || '', imageLink: $json.imageLink || '', imageMimeType: $json.imageMimeType || '', callbackUrl: $json.callbackUrl || '', callbackToken: $json.callbackToken || '', conversationId: $json.conversationId || 0, channelId: $json.channelId || 0 }) }}",
+        "tail": true
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        361904,
+        179056
+      ],
+      "id": "34c4f910-7b82-43f7-a350-30786c9e7894",
+      "name": "Redis Push",
+      "credentials": {
+        "redis": {
+          "id": "fgxjc2NeBOcUCA3v",
+          "name": "Redis32"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"phoneNumber\": \"{{ $('Extract Message Data').first().json.phoneNumber }}\",\n  \"businessPhone\": \"{{ $('Extract Message Data').first().json.businessPhone }}\",\n  \"messageId\": \"{{ $('Extract Message Data').first().json.messageId }}\",\n  \"messageType\": \"text\",\n  \"contactName\": \"{{ $('Extract Message Data').first().json.contactName }}\",\n  \"phoneNumberId\": \"{{ $('Extract Message Data').first().json.phoneNumberId }}\",\n  \"textContent\": {{ JSON.stringify($json.text || '') }},\n  \"audioId\": \"\",\n  \"isFromAudio\": true,\n  \"callbackUrl\": \"{{ $('Extract Message Data').first().json.callbackUrl }}\",\n  \"callbackToken\": \"{{ $('Extract Message Data').first().json.callbackToken }}\",\n  \"conversationId\": {{ $('Extract Message Data').first().json.conversationId }},\n  \"channelId\": {{ $('Extract Message Data').first().json.channelId }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        361680,
+        179120
+      ],
+      "id": "88682df9-cc44-44db-9ee9-f10703f2563e",
+      "name": "Audio to Text"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.3,
+      "position": [
+        361456,
+        179120
+      ],
+      "id": "77d0b621-cf7e-49d5-9071-65b324c43333",
+      "name": "Transcribe Audio (Whisper)",
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Extract Message Data').first().json.audioLink }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        361232,
+        179120
+      ],
+      "id": "5603cf7e-4689-4b71-907d-5343a3e161a9",
+      "name": "Download Audio",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cDHuTtbqeib255B5",
+          "name": "Header Auth WB YcloudDemo"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        361008,
+        179120
+      ],
+      "id": "663c53d6-6710-4108-9d64-8b077595ce22",
+      "name": "Get Audio URL"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.messageType }}",
+              "rightValue": "audio",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        360784,
+        179056
+      ],
+      "id": "60cd604e-497d-48a3-846a-2812c11fc8e5",
+      "name": "Is Audio?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Deduplicación + Verificación de Human Takeover\nconst messageId = $input.first().json.messageId;\nconst phoneNumber = $input.first().json.phoneNumber;\nconst staticData = $getWorkflowStaticData('global');\nconst now = Date.now();\n\n// Inicializar estructuras\nif (!staticData.processedIds) staticData.processedIds = {};\nif (!staticData.humanTakeover) staticData.humanTakeover = {};\n\n// Limpiar IDs antiguos (más de 1 hora)\nfor (const id in staticData.processedIds) {\n  if (now - staticData.processedIds[id] > 3600000) {\n    delete staticData.processedIds[id];\n  }\n}\n\n// Verificar duplicados\nif (staticData.processedIds[messageId]) return [];\nstaticData.processedIds[messageId] = now;\n\n// VERIFICAR SI EL CHAT ESTÁ TOMADO POR HUMANO\n// Si está tomado, el bot NO responde (silencio)\nif (staticData.humanTakeover[phoneNumber]?.active) {\n  // Chat tomado por humano - bot en silencio\n  return [];\n}\n\n// Chat libre - bot puede responder\nreturn [{ json: $input.first().json }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360560,
+        179056
+      ],
+      "id": "f4eb6569-e995-448e-893a-4ffebff09c9e",
+      "name": "Deduplication"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"phoneNumber\": \"{{ $json.body.contact.phone }}\",\n  \"businessPhone\": \"{{ $json.body.business_phone || '' }}\",\n  \"messageId\": \"{{ $json.body.message.id }}\",\n  \"messageType\": \"{{ $json.body.message.type || 'text' }}\",\n  \"contactName\": \"{{ $json.body.contact.name || $json.body.contact.phone }}\",\n  \"phoneNumberId\": \"\",\n  \"textContent\": {{ JSON.stringify($json.body.message.content || '') }},\n  \"audioId\": \"\",\n  \"audioLink\": \"{{ ($json.body.message.type === 'audio') ? ($json.body.message.media_url || '') : '' }}\",\n  \"imageId\": \"\",\n  \"imageLink\": \"{{ ($json.body.message.type === 'image') ? ($json.body.message.media_url || '') : '' }}\",\n  \"imageMimeType\": \"\",\n  \"hasImage\": {{ $json.body.message.type === 'image' }},\n  \"callbackUrl\": \"{{ $json.body.callback_url }}\",\n  \"callbackToken\": \"{{ $json.body.callback_token }}\",\n  \"conversationId\": {{ $json.body.conversation_id }},\n  \"channelId\": {{ $json.body.channel_id }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        360336,
+        179056
+      ],
+      "id": "9af7e5d0-7280-49bb-88a4-f01f25c9693c",
+      "name": "Extract Message Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.message?.content || $json.body.message?.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              },
+              "id": "has-message-portal"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        360112,
+        179056
+      ],
+      "id": "31f11b71-dbbb-41d5-ad85-aaa778679810",
+      "name": "Has Message?"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        359888,
+        176960
+      ],
+      "id": "a49eb3b9-a519-43ac-a633-c3035e61ea5a",
+      "name": "Respond Challenge"
+    },
+    {
+      "parameters": {
+        "path": "whatsapp-demo-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        359664,
+        176960
+      ],
+      "id": "7b7c6475-b27a-4b6b-9bb1-c27e2f127a70",
+      "name": "Verify Webhook (GET)",
+      "webhookId": "whatsapp-demo-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesar comandos del dueño: /tomar y /bot\n// También guarda los mensajes del dueño en la memoria para que el bot los recuerde\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.humanTakeover) staticData.humanTakeover = {};\nif (!staticData.humanMessages) staticData.humanMessages = {};\n\n// Extraer datos del mensaje del dueño (echo)\nconst echoData = $json.body.whatsappInboundMessage || $json.body;\nconst toPhone = echoData?.to || echoData?.customerProfile?.waId || '';\nconst messageText = String(echoData?.text?.body || '').trim();\nconst messageTextLower = messageText.toLowerCase();\n\nif (!toPhone) return [{ json: { action: 'none', reason: 'no_phone' } }];\n\n// Detectar comandos\nif (messageTextLower === '/tomar' || messageTextLower === '/humano') {\n  staticData.humanTakeover[toPhone] = { active: true, since: Date.now() };\n  return [{ json: { action: 'takeover', phone: toPhone, message: '🙋 Chat tomado por humano. El bot está en silencio para este cliente.' } }];\n}\n\nif (messageTextLower === '/bot' || messageTextLower === '/liberar') {\n  delete staticData.humanTakeover[toPhone];\n  return [{ json: { action: 'release', phone: toPhone, message: '🤖 Bot activado. El bot retomó el control de este chat.' } }];\n}\n\n// GUARDAR MENSAJE DEL DUEÑO para que el bot lo recuerde después\n// Este mensaje se agregará al historial de Redis\nif (messageText && !messageTextLower.startsWith('/')) {\n  // Guardar mensaje para sincronizar con Redis después\n  if (!staticData.humanMessages[toPhone]) staticData.humanMessages[toPhone] = [];\n  staticData.humanMessages[toPhone].push({\n    role: 'assistant', // El dueño actúa como el \"asistente\" desde la perspectiva del cliente\n    content: messageText,\n    timestamp: Date.now()\n  });\n  // Mantener solo últimos 20 mensajes del humano por cliente\n  if (staticData.humanMessages[toPhone].length > 20) {\n    staticData.humanMessages[toPhone] = staticData.humanMessages[toPhone].slice(-20);\n  }\n  return [{ json: { action: 'save_message', phone: toPhone, message: messageText, savedToMemory: true } }];\n}\n\nreturn [{ json: { action: 'none', reason: 'empty_or_command' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360112,
+        179248
+      ],
+      "id": "a2fe67b0-1a97-4ec5-a4f8-29faa86617d4",
+      "name": "Procesar Comando Dueño"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.event }}",
+                    "rightValue": "new_message",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "filter-inbound-portal"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "MensajeRecibido"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "whatsapp.smb.message.echoes",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "filter-echo"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DuenoResponde"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        359888,
+        179152
+      ],
+      "id": "303c5edb-ef61-4dc5-a497-c8273f88ba21",
+      "name": "Filter Event Type"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "KellsCapilar",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        359664,
+        179152
+      ],
+      "id": "653e4a85-ec42-4f4d-b5d7-0a09f48f2bd1",
+      "name": "WhatsApp Webhook",
+      "webhookId": "whatsapp-demo-webhook"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        359664,
+        176736
+      ],
+      "id": "0b132f05-b6c1-4228-b003-ba377e33190e",
+      "name": "📖 INSTRUCCIONES",
+      "notes": "# 🚀 WhatsApp Bot v7 - Portal OmniCliente (Google Sheets)\n\n## 📋 Características\n- ✅ Servicios con duración y precio parametrizable\n- ✅ Bloqueos de horarios (únicos, diarios, anuales)\n- ✅ **Buffer Redis v6**: Sistema atómico de cola con ciclo de re-lectura\n- ✅ Notas de voz: recibe audio → transcribe → responde con audio\n- ✅ Validación de servicio antes de seleccionar día\n- ✅ Cancelación de citas con confirmación\n- ✅ **v6.1**: Flexibilidad para servicios largos (atravesar almuerzo/cierre)\n- ✅ **v6.1**: Control manual humano/bot con comandos\n- ✅ **v6.1**: Memoria de 1 semana + guarda conversaciones del humano\n\n## 🧠 Memoria Extendida (NUEVO v6.1)\n\n**Duración del historial:** 1 semana (7 días)\n- El bot recuerda conversaciones de hasta 1 semana atrás\n- TTL configurado en Redis: 604800 segundos\n\n**Conversaciones del humano:**\n- Cuando el dueño responde a un cliente, esos mensajes se guardan\n- El bot tiene contexto de lo que el humano habló con el cliente\n- Esto permite continuidad: si el humano atendió ayer, el bot sabe qué se dijo\n\n## 🙋 Control Humano/Bot\n\nEl dueño puede tomar el control del chat en cualquier momento:\n\n**Comandos disponibles:**\n- `/tomar` o `/humano` → El dueño toma el chat, el bot se silencia\n- `/bot` o `/liberar` → El dueño devuelve el control al bot\n\n**Cómo funciona:**\n1. Cliente escribe → Bot responde normalmente\n2. Dueño escribe `/tomar` → Bot se silencia para ese cliente\n3. Dueño atiende manualmente (mensajes se guardan en memoria)\n4. Dueño escribe `/bot` → Bot retoma el control con contexto\n\n**Notas:**\n- El control es por cliente (número de teléfono)\n- Los mensajes del humano se guardan para dar contexto al bot\n- Si el dueño responde sin usar `/tomar`, el bot sigue activo pero guarda el mensaje\n\n## 🆕 Bloqueos Flexibles v6.1\n\n**Los bloqueos de horario (almuerzo, descansos):**\n- Solo impiden que un servicio INICIE en ese horario\n- Los servicios largos PUEDEN atravesarlos\n\n**Las citas existentes:**\n- ÚNICO BLOQUEANTE DURO - no se pueden solapar\n\n## ⚙️ CONFIGURACIÓN REDIS (REQUERIDO)\n\n**Antes de usar este workflow, debes:**\n1. Tener un servidor Redis disponible (Redis Cloud, local, o Docker)\n2. Crear credenciales Redis en n8n: Settings → Credentials → + → Redis\n3. Actualizar los 3 nodos Redis (Push, Get, Delete) con tus credenciales\n\n## 🔄 Sistema de Buffer v6 (Redis con Ciclo)\n\n**Flujo con CICLO** (atómico y robusto):\n```\nWebhook → Redis Push → Redis Get → Check Message Status\n                           ↑              ↓↓↓\n                           ├── Wait 7s ← Esperar\n                           │             Ignorar ──→ (fin)\n                           └────────── Procesar → Redis Delete → Concat → IA\n```\n\n**Resultado**: Múltiples mensajes rápidos → 1 respuesta ✅\n\n## 🆕 Cambios v7 — Integración Portal OmniCliente\n\n**Arquitectura Opción B**: El portal es el punto de entrada.\n\n```\nWhatsApp → YCloud → PORTAL → DB → N8N (este workflow)\n                                     ↓\nWhatsApp ← YCloud ← PORTAL ← callback ← N8N responde\n```\n\n### Qué cambió:\n- ✅ Entrada: El portal envía mensajes al webhook N8N (ya no YCloud directo)\n- ✅ Salida: Todos los mensajes van al callback del portal (ya no a api.ycloud.com)\n- ✅ Portal maneja: DB, bandeja unificada, toma de control humano, auditoría\n- ✅ Audio Upload: Sigue directo a YCloud (única excepción)\n- ✅ Contingencia: Si el portal cae, N8N puede reactivar webhook directo\n\n### Campos del portal en el pipeline:\n- `callbackUrl`: URL del callback del portal\n- `callbackToken`: Token HMAC para autenticar el callback\n- `conversationId`: ID de conversación en el portal\n- `channelId`: ID del canal en el portal\n\n### Control humano:\n- Ya NO se usa /tomar y /bot por WhatsApp\n- El ejecutivo toma control desde la Bandeja Unificada del portal\n- Cuando está en modo humano, el portal NO reenvía a N8N"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Can Cancel Check": {
+      "main": [
+        [
+          {
+            "node": "Update Appointment Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Cancel Denied",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Cancel Time": {
+      "main": [
+        [
+          {
+            "node": "Can Cancel Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Terms Response": {
+      "main": [
+        [
+          {
+            "node": "Send Terms Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Audio to WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Send Audio Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fix Audio MimeType": {
+      "main": [
+        [
+          {
+            "node": "Upload Audio to WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Audio (TTS)": {
+      "main": [
+        [
+          {
+            "node": "Fix Audio MimeType",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Escalation Message": {
+      "main": [
+        [
+          {
+            "node": "Send Email to Business",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "Send Text Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Servicios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search Appointments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate Audio (TTS)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Escalation Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Actions": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente IA",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente IA": {
+      "main": [
+        [
+          {
+            "node": "Parse Actions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o Mini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente IA",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Config": {
+      "main": [
+        [
+          {
+            "node": "Agente IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Bot Config": {
+      "main": [
+        [
+          {
+            "node": "Merge Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Chat Input": {
+      "main": [
+        [
+          {
+            "node": "Read Bot Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Confirmed Data": {
+      "main": [
+        [
+          {
+            "node": "Validate Transfer ID Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Confirmed Appointment": {
+      "main": [
+        [
+          {
+            "node": "Send Payment Confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validation Result": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get All Citas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Payment Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Citas": {
+      "main": [
+        [
+          {
+            "node": "Merge Citas with Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Citas with Validation": {
+      "main": [
+        [
+          {
+            "node": "Prepare Confirmed Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Transfer ID Error": {
+      "main": [
+        [
+          {
+            "node": "Send Duplicate Transfer ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Payment Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Confirmed Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Validation Result": {
+      "main": [
+        [
+          {
+            "node": "Validation Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT4 Vision Validate": {
+      "main": [
+        [
+          {
+            "node": "Process Validation Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Payment Image": {
+      "main": [
+        [
+          {
+            "node": "GPT4 Vision Validate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payment Status Check": {
+      "main": [
+        [
+          {
+            "node": "Download Payment Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Payment Expired",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Payment Image": {
+      "main": [
+        [
+          {
+            "node": "Payment Status Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Appointment Status": {
+      "main": [
+        [
+          {
+            "node": "Send Email Cancellation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Cancel Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Appointment Data": {
+      "main": [
+        [
+          {
+            "node": "Validate Cancel Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Cancel Confirm": {
+      "main": [
+        [
+          {
+            "node": "Fetch Appointment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Cancel Search": {
+      "main": [
+        [
+          {
+            "node": "Send Cancel Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Appointments": {
+      "main": [
+        [
+          {
+            "node": "Process Cancel Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Payment Confirmed": {
+      "main": [
+        [
+          {
+            "node": "Send Email New Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Payment Config": {
+      "main": [
+        [
+          {
+            "node": "Build Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Payment Config": {
+      "main": [
+        [
+          {
+            "node": "Process Payment Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit OK?": {
+      "main": [
+        [
+          {
+            "node": "Read Payment Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Limit Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Appointment Limit": {
+      "main": [
+        [
+          {
+            "node": "Limit OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check User Appointments": {
+      "main": [
+        [
+          {
+            "node": "Validate Appointment Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Appointment": {
+      "main": [
+        [
+          {
+            "node": "Send Terms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Slots?": {
+      "main": [
+        [
+          {
+            "node": "Send Available Times",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send No Slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Availability": {
+      "main": [
+        [
+          {
+            "node": "Has Slots?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Citas del Día": {
+      "main": [
+        [
+          {
+            "node": "Compute Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Bloqueos": {
+      "main": [
+        [
+          {
+            "node": "Read Citas del Día",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Configuracion": {
+      "main": [
+        [
+          {
+            "node": "Read Bloqueos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Service Valid?": {
+      "main": [
+        [
+          {
+            "node": "Read Servicios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Configuracion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Service Selection": {
+      "main": [
+        [
+          {
+            "node": "Service Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Days": {
+      "main": [
+        [
+          {
+            "node": "Send Day Buttons",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Selected Service": {
+      "main": [
+        [
+          {
+            "node": "Generate Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Servicios": {
+      "main": [
+        [
+          {
+            "node": "Save Selected Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Services List": {
+      "main": [
+        [
+          {
+            "node": "Send Services List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Servicios": {
+      "main": [
+        [
+          {
+            "node": "Build Services List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Get Servicios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate Service Selection",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check User Appointments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Cancel Confirm",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Keep Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate Payment Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Terms Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Chat Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Wait Data": {
+      "main": [
+        [
+          {
+            "node": "Wait 7s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Messages": {
+      "main": [
+        [
+          {
+            "node": "Tipo de Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Delete": {
+      "main": [
+        [
+          {
+            "node": "Combine Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 7s": {
+      "main": [
+        [
+          {
+            "node": "Redis Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Message Status": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Redis Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Redis Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Wait Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Get": {
+      "main": [
+        [
+          {
+            "node": "Check Message Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Push": {
+      "main": [
+        [
+          {
+            "node": "Redis Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio to Text": {
+      "main": [
+        [
+          {
+            "node": "Redis Push",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe Audio (Whisper)": {
+      "main": [
+        [
+          {
+            "node": "Audio to Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Audio": {
+      "main": [
+        [
+          {
+            "node": "Transcribe Audio (Whisper)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Audio URL": {
+      "main": [
+        [
+          {
+            "node": "Download Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Audio?": {
+      "main": [
+        [
+          {
+            "node": "Get Audio URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Redis Push",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplication": {
+      "main": [
+        [
+          {
+            "node": "Is Audio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Message Data": {
+      "main": [
+        [
+          {
+            "node": "Deduplication",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Message?": {
+      "main": [
+        [
+          {
+            "node": "Extract Message Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Webhook (GET)": {
+      "main": [
+        [
+          {
+            "node": "Respond Challenge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Event Type": {
+      "main": [
+        [
+          {
+            "node": "Has Message?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Procesar Comando Dueño",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filter Event Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "p7ISUf0J5GycHscc"
+  },
+  "versionId": "69b77234-912f-407a-a713-07c819541634",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fefc56565e860fc896f35943e8154e1638134eaf8454ea973f35266ab1b53147"
+  },
+  "id": "tlCivKmc2ZQF4FyV",
+  "tags": [
+    {
+      "updatedAt": "2026-01-07T00:49:29.893Z",
+      "createdAt": "2026-01-07T00:49:29.893Z",
+      "id": "0OdeFP8ZGjJMwQNC",
+      "name": "VoiceNotes"
+    },
+    {
+      "updatedAt": "2026-01-07T00:49:29.840Z",
+      "createdAt": "2026-01-07T00:49:29.840Z",
+      "id": "4N9MVAK8muCJIEYe",
+      "name": "Template"
+    },
+    {
+      "updatedAt": "2026-01-07T02:00:06.599Z",
+      "createdAt": "2026-01-07T02:00:06.599Z",
+      "id": "GG8mR5Iw5Kdy11sC",
+      "name": "v5"
+    },
+    {
+      "updatedAt": "2026-01-07T00:49:29.887Z",
+      "createdAt": "2026-01-07T00:49:29.887Z",
+      "id": "Nymx4zdlkPRv447n",
+      "name": "Demo"
+    },
+    {
+      "updatedAt": "2026-01-07T00:49:29.865Z",
+      "createdAt": "2026-01-07T00:49:29.865Z",
+      "id": "qKCUJ8CtKeEmfNUC",
+      "name": "WhatsApp"
+    }
+  ]
+}

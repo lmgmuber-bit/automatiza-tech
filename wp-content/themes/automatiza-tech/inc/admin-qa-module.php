@@ -559,11 +559,15 @@ add_action('wp_ajax_at_qa_update_status', function() {
     $old_status = $wpdb->get_var($wpdb->prepare("SELECT status FROM {$t['cases']} WHERE id = %d", $case_db_id));
 
     $user = wp_get_current_user();
-    $wpdb->update($t['cases'], [
+    $updated = $wpdb->update($t['cases'], [
         'status'    => $status,
         'tester'    => $user->display_name,
         'tested_at' => $status !== 'not_tested' ? current_time('mysql') : null,
     ], ['id' => $case_db_id]);
+
+    if ($updated === false) {
+        wp_send_json_error('Error al actualizar en BD: ' . $wpdb->last_error);
+    }
 
     // ─── Notificaciones por correo al cambiar estado ───
     if ($old_status !== $status && $status !== 'not_tested') {
@@ -644,7 +648,8 @@ add_action('wp_ajax_at_qa_update_status', function() {
                 );
             }
 
-            // ─── Verificar si el MÓDULO quedó 100% completado ───
+            // ─── Verificar si el MÓDULO quedó 100% probado ───
+            // Nota: se considera exitoso cuando ≥85% de los casos son PASS
             $module_id = $ctx->caso->module_id;
             $mod_total = $wpdb->get_var($wpdb->prepare(
                 "SELECT COUNT(*) FROM {$t['cases']} WHERE module_id = %d", $module_id
@@ -655,18 +660,41 @@ add_action('wp_ajax_at_qa_update_status', function() {
             $mod_passed = $wpdb->get_var($wpdb->prepare(
                 "SELECT COUNT(*) FROM {$t['cases']} WHERE module_id = %d AND status = 'pass'", $module_id
             ));
+            $mod_failed = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$t['cases']} WHERE module_id = %d AND status = 'fail'", $module_id
+            ));
+            $mod_blocked = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$t['cases']} WHERE module_id = %d AND status = 'blocked'", $module_id
+            ));
 
             if ($mod_total > 0 && $mod_tested == $mod_total) {
                 $mod_pct_pass = round(($mod_passed / $mod_total) * 100);
+                // Veredicto: ≥85% = exitoso
+                if ($mod_pct_pass == 100) {
+                    $mod_verdict = '✅ 100% Aprobado';
+                    $mod_verdict_class = 'badge-pass';
+                } elseif ($mod_pct_pass >= 85) {
+                    $mod_verdict = '✅ Aprobado con observaciones (' . $mod_pct_pass . '%)';
+                    $mod_verdict_class = 'badge-pass';
+                } else {
+                    $mod_verdict = '❌ No aprobado (' . $mod_pct_pass . '%)';
+                    $mod_verdict_class = 'badge-fail';
+                }
                 $mod_body = '
       <p>🎉 <strong>¡El módulo ha sido completamente probado!</strong></p>
       <div class="info-box">
         <p style="margin:0 0 8px;"><strong>📋 Proyecto:</strong> ' . esc_html($project_name) . '</p>
         <p style="margin:0 0 8px;"><strong>📦 Módulo:</strong> ' . esc_html($module_name) . '</p>
-        <p style="margin:0 0 8px;"><strong>✅ Casos aprobados:</strong> ' . $mod_passed . '/' . $mod_total . ' (' . $mod_pct_pass . '%)</p>
+        <p style="margin:0 0 8px;"><strong>📊 Veredicto:</strong> <span class="' . $mod_verdict_class . '">' . $mod_verdict . '</span></p>
+        <p style="margin:0 0 8px;"><strong>✅ Casos aprobados:</strong> ' . $mod_passed . '/' . $mod_total . ' (' . $mod_pct_pass . '%)</p>' .
+        ($mod_failed > 0 ? '
+        <p style="margin:0 0 8px;"><strong>❌ Fallidos:</strong> ' . $mod_failed . '</p>' : '') .
+        ($mod_blocked > 0 ? '
+        <p style="margin:0 0 8px;"><strong>⚠️ Bloqueados:</strong> ' . $mod_blocked . '</p>' : '') . '
         <p style="margin:0 0 8px;"><strong>👤 Completado por:</strong> ' . esc_html($user->display_name) . '</p>
         <p style="margin:0;"><strong>📅 Fecha:</strong> ' . date('d/m/Y H:i') . '</p>
       </div>
+      <p style="font-size:12px;color:#6b7280;margin:10px 0 0;"><em>Nota: Se considera exitoso cuando ≥85% de los casos son aprobados.</em></p>
       <div style="margin:15px 0;">
         <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">Progreso del módulo: <strong>' . $mod_passed . '/' . $mod_total . '</strong> aprobados (<strong>' . $mod_pct_pass . '%</strong>)</p>
         <div style="background:#e5e7eb;border-radius:6px;height:10px;overflow:hidden;">
@@ -681,7 +709,7 @@ add_action('wp_ajax_at_qa_update_status', function() {
                 $admin_email = get_option('admin_email');
                 at_qa_send_notification(
                     $admin_email,
-                    '🎉 Módulo Completado: ' . $module_name . ' — ' . $project_name,
+                    '🎉 Módulo 100% Probado: ' . $module_name . ' — ' . $mod_pct_pass . '% aprobado',
                     '🎉 Módulo 100% Probado',
                     $project_name . ' — ' . $module_name,
                     $mod_body
@@ -689,10 +717,29 @@ add_action('wp_ajax_at_qa_update_status', function() {
                 if ($ctx->tester && $ctx->tester->user_email && $ctx->tester->user_email !== $admin_email) {
                     at_qa_send_notification(
                         $ctx->tester->user_email,
-                        '🎉 Módulo Completado: ' . $module_name . ' — ' . $project_name,
+                        '🎉 Módulo 100% Probado: ' . $module_name . ' — ' . $mod_pct_pass . '% aprobado',
                         '🎉 Módulo 100% Probado',
                         $project_name . ' — ' . $module_name,
                         '<p>Hola <strong>' . esc_html($ctx->tester->display_name) . '</strong>,</p>' . $mod_body
+                    );
+                }
+
+                // Notificar al cliente sobre módulo completo (manual)
+                if ($ctx->client && !empty($ctx->client->email)) {
+                    $token_mod = md5($ctx->client->id . 'AUTOMATIZA_CRM_V2' . $ctx->client->email);
+                    $ficha_url_mod = home_url('/?crm_view=timeline&cid=' . $ctx->client->id . '&token=' . $token_mod);
+                    $client_mod_body = '<p>Hola <strong>' . esc_html($ctx->client->nombre) . '</strong>,</p>
+      <p>Le informamos que un módulo de pruebas de su proyecto ha sido completamente verificado:</p>' . $mod_body . '
+      <p>Puede ver el detalle completo en su ficha de cliente:</p>
+      <p style="text-align:center;margin-top:20px;">
+        <a class="cta" href="' . esc_url($ficha_url_mod) . '">📊 Ver Mi Proyecto</a>
+      </p>';
+                    at_qa_send_notification(
+                        $ctx->client->email,
+                        '🎉 Módulo 100% Probado: ' . esc_html($module_name) . ' — ' . $mod_pct_pass . '% aprobado',
+                        '🎉 Módulo 100% Probado',
+                        esc_html($project_name) . ' — ' . esc_html($module_name),
+                        $client_mod_body
                     );
                 }
             }
@@ -740,7 +787,7 @@ add_action('wp_ajax_at_qa_update_status', function() {
                 // Notificar al cliente
                 if ($ctx->client && !empty($ctx->client->email)) {
                     $token_func_proj = function($cid, $email) {
-                        return md5($cid . $email . wp_salt());
+                        return md5($cid . 'AUTOMATIZA_CRM_V2' . $email);
                     };
                     $ficha_url_proj = home_url('/?crm_view=timeline&cid=' . $ctx->client->id . '&token=' . $token_func_proj($ctx->client->id, $ctx->client->email));
                     $client_proj_body = '<p>Hola <strong>' . esc_html($ctx->client->nombre) . '</strong>,</p>
@@ -769,7 +816,7 @@ add_action('wp_ajax_at_qa_update_status', function() {
                 $ficha_url = '';
                 // Generar link de timeline público si existe el método
                 $token_func = function($cid, $email) {
-                    return md5($cid . $email . wp_salt());
+                    return md5($cid . 'AUTOMATIZA_CRM_V2' . $email);
                 };
                 $ficha_url = home_url('/?crm_view=timeline&cid=' . $ctx->client->id . '&token=' . $token_func($ctx->client->id, $ctx->client->email));
 
@@ -3149,3 +3196,457 @@ function at_qa_render_import_page() {
     </div>
     <?php
 }
+// ══════════════════════════════════════════════
+// AGENTE QA AUTOMATIZADO — API Key Auth
+// Permite peticiones desde Playwright/Node.js
+// sin requerir nonce de navegador
+// ══════════════════════════════════════════════
+define('AT_QA_AGENT_KEY', 'petsgo-qa-agent-2026');
+
+function at_qa_verify_agent() {
+    $key = $_POST['agent_key'] ?? $_SERVER['HTTP_X_QA_AGENT_KEY'] ?? '';
+    return $key === AT_QA_AGENT_KEY;
+}
+
+// Obtener detalle de caso (para agente)
+add_action('wp_ajax_nopriv_at_qa_agent_get_case', function() {
+    if (!at_qa_verify_agent()) wp_send_json_error('Unauthorized', 403);
+    global $wpdb;
+    $t = at_qa_table_names();
+    $cid = intval($_POST['case_db_id']);
+    $case = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$t['cases']} WHERE id = %d", $cid));
+    if (!$case) wp_send_json_error('Caso no encontrado');
+    $evidence = $wpdb->get_results($wpdb->prepare(
+        "SELECT e.*, u.display_name as user_name FROM {$t['evidence']} e LEFT JOIN {$wpdb->users} u ON e.uploaded_by = u.ID WHERE e.case_id = %d ORDER BY e.created_at DESC", $cid
+    ));
+    $comments = $wpdb->get_results($wpdb->prepare(
+        "SELECT c.*, u.display_name as user_name FROM {$t['comments']} c LEFT JOIN {$wpdb->users} u ON c.user_id = u.ID WHERE c.case_id = %d ORDER BY c.created_at ASC", $cid
+    ));
+    wp_send_json_success(['case' => $case, 'evidence' => $evidence, 'comments' => $comments]);
+});
+
+// Actualizar estado (para agente) — notifica SOLO cuando pasa a PASS
+add_action('wp_ajax_nopriv_at_qa_agent_update_status', function() {
+    if (!at_qa_verify_agent()) wp_send_json_error('Unauthorized', 403);
+    global $wpdb;
+    $t = at_qa_table_names();
+
+    $cid    = intval($_POST['case_db_id']);
+    $status = sanitize_text_field($_POST['status']);
+    $tester = sanitize_text_field($_POST['tester'] ?? 'Agente QA Automatizado — Playwright');
+    $valid  = ['not_tested','pass','fail','blocked','skipped'];
+    if (!in_array($status, $valid)) wp_send_json_error('Estado inválido');
+
+    // Obtener estado anterior
+    $old_status = $wpdb->get_var($wpdb->prepare(
+        "SELECT status FROM {$t['cases']} WHERE id = %d", $cid
+    ));
+
+    // Actualizar en BD
+    $updated = $wpdb->update($t['cases'], [
+        'status'    => $status,
+        'tester'    => $tester,
+        'tested_at' => current_time('mysql'),
+    ], ['id' => $cid]);
+
+    if ($updated === false) {
+        wp_send_json_error('Error al actualizar en BD: ' . $wpdb->last_error);
+    }
+
+    // ─── Notificaciones: solo cuando el estado CAMBIA a PASS ───
+    if ($old_status !== $status && $status === 'pass') {
+      try {
+        $ctx = at_qa_get_context($cid);
+        if ($ctx) {
+            $project_name = $ctx->project ? $ctx->project->name : 'N/A';
+            $module_name  = $ctx->caso->module_name;
+            $case_name    = $ctx->caso->title ?? $ctx->caso->case_id ?? 'Caso #' . $cid;
+            $client_name  = $ctx->client ? ($ctx->client->empresa ?: $ctx->client->nombre) : '';
+            $qa_url       = admin_url('admin.php?page=at-qa&view=suite&project=' . ($ctx->project ? $ctx->project->id : ''));
+
+            // Progreso global del proyecto
+            $total = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$t['cases']} c JOIN {$t['modules']} m ON c.module_id=m.id WHERE m.project_id=%d",
+                $ctx->project->id
+            ));
+            $passed = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$t['cases']} c JOIN {$t['modules']} m ON c.module_id=m.id WHERE m.project_id=%d AND c.status='pass'",
+                $ctx->project->id
+            ));
+            $pct = $total > 0 ? round(($passed / $total) * 100) : 0;
+
+            // Cuerpo del correo — estilo idéntico al manual
+            $body_content = '
+      <p>El <strong>🤖 Agente QA Automatizado (Playwright)</strong> ha verificado exitosamente un caso de prueba:</p>
+      <div class="info-box">
+        <p style="margin:0 0 8px;"><strong>📋 Proyecto:</strong> ' . esc_html($project_name) . '</p>
+        <p style="margin:0 0 8px;"><strong>📦 Módulo:</strong> ' . esc_html($module_name) . '</p>
+        <p style="margin:0 0 8px;"><strong>🔬 Caso:</strong> ' . esc_html($case_name) . '</p>
+        <p style="margin:0 0 8px;"><strong>📊 Resultado:</strong> <span class="badge-pass">✅ PASS</span></p>
+        <p style="margin:0 0 8px;"><strong>🤖 Ejecutado por:</strong> ' . esc_html($tester) . '</p>
+        <p style="margin:0;"><strong>📅 Fecha:</strong> ' . current_time('d/m/Y H:i') . '</p>
+      </div>';
+
+            $body_content .= '
+      <div style="margin:15px 0;">
+        <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">Progreso general: <strong>' . $passed . '/' . $total . '</strong> casos aprobados (<strong>' . $pct . '%</strong>)</p>
+        <div style="background:#e5e7eb;border-radius:6px;height:10px;overflow:hidden;">
+          <div style="background:linear-gradient(90deg,#0d9488,#14b8a6);width:' . $pct . '%;height:100%;border-radius:6px;"></div>
+        </div>
+      </div>';
+
+            // ─── Últimos 3 comentarios del caso ───
+            $last_comments = $wpdb->get_results($wpdb->prepare(
+                "SELECT c.comment, c.created_at, COALESCE(u.display_name, 'Agente QA') as user_name
+                 FROM {$t['comments']} c
+                 LEFT JOIN {$wpdb->users} u ON c.user_id = u.ID
+                 WHERE c.case_id = %d
+                 ORDER BY c.created_at DESC LIMIT 3", $cid
+            ));
+            if (!empty($last_comments)) {
+                $body_content .= '
+      <div style="margin:20px 0 10px;">
+        <p style="margin:0 0 10px;font-size:14px;font-weight:bold;color:#374151;">💬 Últimos comentarios</p>';
+                foreach (array_reverse($last_comments) as $cmt) {
+                    $cmt_date = date('d/m/Y H:i', strtotime($cmt->created_at));
+                    $body_content .= '
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin:8px 0;">
+          <p style="margin:0 0 4px;font-size:11px;color:#64748b;"><strong>' . esc_html($cmt->user_name) . '</strong> — ' . $cmt_date . '</p>
+          <p style="margin:0;font-size:13px;line-height:1.4;">' . nl2br(esc_html($cmt->comment)) . '</p>
+        </div>';
+                }
+                $body_content .= '
+      </div>';
+            }
+
+            // ─── Evidencias adjuntas del caso ───
+            $evidences = $wpdb->get_results($wpdb->prepare(
+                "SELECT e.file_url, e.file_name, e.file_type, e.file_size, e.description, e.created_at,
+                        COALESCE(u.display_name, 'Agente QA') as user_name
+                 FROM {$t['evidence']} e
+                 LEFT JOIN {$wpdb->users} u ON e.uploaded_by = u.ID
+                 WHERE e.case_id = %d
+                 ORDER BY e.created_at DESC", $cid
+            ));
+            if (!empty($evidences)) {
+                $body_content .= '
+      <div style="margin:20px 0 10px;">
+        <p style="margin:0 0 10px;font-size:14px;font-weight:bold;color:#374151;">📎 Evidencias adjuntas (' . count($evidences) . ')</p>';
+                foreach ($evidences as $ev) {
+                    $ev_size = $ev->file_size > 1048576
+                        ? round($ev->file_size / 1048576, 1) . ' MB'
+                        : round($ev->file_size / 1024, 1) . ' KB';
+                    $ev_date = date('d/m/Y H:i', strtotime($ev->created_at));
+                    $is_image = strpos($ev->file_type, 'image/') === 0;
+                    $type_icon = $is_image ? '🖼️' : (strpos($ev->file_type, 'video/') === 0 ? '🎬' : '📄');
+
+                    $body_content .= '
+        <div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;padding:12px;margin:8px 0;">';
+                    // Miniatura para imágenes
+                    if ($is_image) {
+                        $body_content .= '
+          <div style="margin-bottom:8px;text-align:center;">
+            <img src="' . esc_url($ev->file_url) . '" alt="' . esc_attr($ev->file_name) . '" style="max-width:100%;max-height:200px;border-radius:6px;border:1px solid #e2e8f0;">
+          </div>';
+                    }
+                    $body_content .= '
+          <p style="margin:0 0 4px;font-size:12px;color:#64748b;">' . $type_icon . ' <strong>' . esc_html($ev->file_name) . '</strong> (' . $ev_size . ') — ' . $ev_date . '</p>';
+                    if (!empty($ev->description)) {
+                        $body_content .= '
+          <p style="margin:0 0 4px;font-size:12px;color:#475569;">' . esc_html($ev->description) . '</p>';
+                    }
+                    $body_content .= '
+          <p style="margin:0;"><a href="' . esc_url($ev->file_url) . '" style="color:#0d9488;font-size:12px;font-weight:600;text-decoration:none;">📥 Ver / Descargar</a></p>
+        </div>';
+                }
+                $body_content .= '
+      </div>';
+            }
+
+            $body_content .= '<p style="text-align:center;margin-top:20px;">
+        <a class="cta" href="' . esc_url($qa_url) . '">🧪 Ver Suite de Pruebas</a>
+      </p>';
+
+            // 1) Correo al ADMIN principal
+            $admin_email = get_option('admin_email');
+            at_qa_send_notification(
+                $admin_email,
+                '🤖 Agente QA ✅: ' . $case_name . ' — PASS',
+                '🤖 Caso Aprobado por Agente QA',
+                $project_name . ' — ' . $module_name,
+                $body_content
+            );
+
+            // 2) Correo al TESTER asignado (si existe y es diferente al admin)
+            if ($ctx->tester && $ctx->tester->user_email && $ctx->tester->user_email !== $admin_email) {
+                at_qa_send_notification(
+                    $ctx->tester->user_email,
+                    '🤖 Agente QA ✅: ' . $case_name . ' — PASS',
+                    '🤖 Caso Aprobado por Agente QA',
+                    $project_name . ' — ' . $module_name,
+                    '<p>Hola <strong>' . esc_html($ctx->tester->display_name) . '</strong>,</p>' . $body_content
+                );
+            }
+
+            // 3) Correo al CLIENTE (si tiene email)
+            if ($ctx->client && !empty($ctx->client->email)) {
+                $token_func_agent = function($cid_val, $email) {
+                    return md5($cid_val . 'AUTOMATIZA_CRM_V2' . $email);
+                };
+                $ficha_url_agent = home_url('/?crm_view=timeline&cid=' . $ctx->client->id . '&token=' . $token_func_agent($ctx->client->id, $ctx->client->email));
+                $client_agent_body = '<p>Hola <strong>' . esc_html($ctx->client->nombre) . '</strong>,</p>
+      <p>Le informamos que se ha verificado exitosamente un caso de prueba en su proyecto:</p>
+      <div class="info-box">
+        <p style="margin:0 0 8px;"><strong>📋 Proyecto:</strong> ' . esc_html($project_name) . '</p>
+        <p style="margin:0 0 8px;"><strong>📦 Módulo:</strong> ' . esc_html($module_name) . '</p>
+        <p style="margin:0 0 8px;"><strong>🔬 Caso:</strong> ' . esc_html($case_name) . '</p>
+        <p style="margin:0;"><strong>📊 Resultado:</strong> <span class="badge-pass">✅ PASS</span></p>
+      </div>
+      <div style="margin:15px 0;">
+        <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">Progreso general: <strong>' . $passed . '/' . $total . '</strong> casos aprobados (<strong>' . $pct . '%</strong>)</p>
+        <div style="background:#e5e7eb;border-radius:6px;height:10px;overflow:hidden;">
+          <div style="background:linear-gradient(90deg,#0d9488,#14b8a6);width:' . $pct . '%;height:100%;border-radius:6px;"></div>
+        </div>
+      </div>
+      <p>Puede ver el estado completo de las pruebas en la pestaña <strong>🧪 QA</strong> dentro de su ficha de cliente.</p>
+      <p style="text-align:center;margin-top:20px;">
+        <a class="cta" href="' . esc_url($ficha_url_agent) . '">📊 Ver Mi Proyecto</a>
+      </p>';
+                at_qa_send_notification(
+                    $ctx->client->email,
+                    '📊 Actualización QA: ' . esc_html($project_name) . ' — ✅ PASS',
+                    '📊 Actualización de Pruebas QA',
+                    esc_html($client_name) . ' — Pruebas de calidad',
+                    $client_agent_body
+                );
+            }
+
+            // ─── Verificar si el MÓDULO quedó 100% probado ───
+            // Nota: se considera exitoso cuando ≥85% de los casos son PASS
+            $module_id = $ctx->caso->module_id;
+            $mod_total = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$t['cases']} WHERE module_id = %d", $module_id
+            ));
+            $mod_tested = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$t['cases']} WHERE module_id = %d AND status != 'not_tested'", $module_id
+            ));
+            $mod_passed = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$t['cases']} WHERE module_id = %d AND status = 'pass'", $module_id
+            ));
+            $mod_failed = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$t['cases']} WHERE module_id = %d AND status = 'fail'", $module_id
+            ));
+            $mod_blocked = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$t['cases']} WHERE module_id = %d AND status = 'blocked'", $module_id
+            ));
+
+            if ($mod_total > 0 && $mod_tested == $mod_total) {
+                $mod_pct_pass = round(($mod_passed / $mod_total) * 100);
+                // Veredicto: ≥85% = exitoso
+                if ($mod_pct_pass == 100) {
+                    $mod_verdict = '✅ 100% Aprobado';
+                    $mod_verdict_class = 'badge-pass';
+                } elseif ($mod_pct_pass >= 85) {
+                    $mod_verdict = '✅ Aprobado con observaciones (' . $mod_pct_pass . '%)';
+                    $mod_verdict_class = 'badge-pass';
+                } else {
+                    $mod_verdict = '❌ No aprobado (' . $mod_pct_pass . '%)';
+                    $mod_verdict_class = 'badge-fail';
+                }
+                $mod_body = '
+      <p>🎉 <strong>¡El módulo ha sido completamente probado!</strong></p>
+      <div class="info-box">
+        <p style="margin:0 0 8px;"><strong>📋 Proyecto:</strong> ' . esc_html($project_name) . '</p>
+        <p style="margin:0 0 8px;"><strong>📦 Módulo:</strong> ' . esc_html($module_name) . '</p>
+        <p style="margin:0 0 8px;"><strong>📊 Veredicto:</strong> <span class="' . $mod_verdict_class . '">' . $mod_verdict . '</span></p>
+        <p style="margin:0 0 8px;"><strong>✅ Casos aprobados:</strong> ' . $mod_passed . '/' . $mod_total . ' (' . $mod_pct_pass . '%)</p>' .
+        ($mod_failed > 0 ? '
+        <p style="margin:0 0 8px;"><strong>❌ Fallidos:</strong> ' . $mod_failed . '</p>' : '') .
+        ($mod_blocked > 0 ? '
+        <p style="margin:0 0 8px;"><strong>⚠️ Bloqueados:</strong> ' . $mod_blocked . '</p>' : '') . '
+        <p style="margin:0 0 8px;"><strong>🤖 Completado por:</strong> ' . esc_html($tester) . '</p>
+        <p style="margin:0;"><strong>📅 Fecha:</strong> ' . current_time('d/m/Y H:i') . '</p>
+      </div>
+      <p style="font-size:12px;color:#6b7280;margin:10px 0 0;"><em>Nota: Se considera exitoso cuando ≥85% de los casos son aprobados.</em></p>
+      <div style="margin:15px 0;">
+        <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">Progreso del módulo: <strong>' . $mod_passed . '/' . $mod_total . '</strong> aprobados (<strong>' . $mod_pct_pass . '%</strong>)</p>
+        <div style="background:#e5e7eb;border-radius:6px;height:10px;overflow:hidden;">
+          <div style="background:linear-gradient(90deg,#0d9488,#14b8a6);width:' . $mod_pct_pass . '%;height:100%;border-radius:6px;"></div>
+        </div>
+      </div>
+      <p style="text-align:center;margin-top:20px;">
+        <a class="cta" href="' . esc_url($qa_url . '&module=' . $module_id) . '">🧪 Ver Módulo Completo</a>
+      </p>';
+
+                at_qa_send_notification(
+                    $admin_email,
+                    '🎉 Módulo 100% Probado: ' . $module_name . ' — ' . $mod_pct_pass . '% aprobado',
+                    '🎉 Módulo 100% Probado',
+                    $project_name . ' — ' . $module_name,
+                    $mod_body
+                );
+                if ($ctx->tester && $ctx->tester->user_email && $ctx->tester->user_email !== $admin_email) {
+                    at_qa_send_notification(
+                        $ctx->tester->user_email,
+                        '🎉 Módulo 100% Probado: ' . $module_name . ' — ' . $mod_pct_pass . '% aprobado',
+                        '🎉 Módulo 100% Probado',
+                        $project_name . ' — ' . $module_name,
+                        '<p>Hola <strong>' . esc_html($ctx->tester->display_name) . '</strong>,</p>' . $mod_body
+                    );
+                }
+
+                // Notificar al cliente sobre módulo completo (agente)
+                if ($ctx->client && !empty($ctx->client->email)) {
+                    $token_mod_agent = md5($ctx->client->id . 'AUTOMATIZA_CRM_V2' . $ctx->client->email);
+                    $ficha_url_mod_agent = home_url('/?crm_view=timeline&cid=' . $ctx->client->id . '&token=' . $token_mod_agent);
+                    $client_mod_agent_body = '<p>Hola <strong>' . esc_html($ctx->client->nombre) . '</strong>,</p>
+      <p>Le informamos que un módulo de pruebas de su proyecto ha sido completamente verificado:</p>' . $mod_body . '
+      <p>Puede ver el detalle completo en su ficha de cliente:</p>
+      <p style="text-align:center;margin-top:20px;">
+        <a class="cta" href="' . esc_url($ficha_url_mod_agent) . '">📊 Ver Mi Proyecto</a>
+      </p>';
+                    at_qa_send_notification(
+                        $ctx->client->email,
+                        '🎉 Módulo 100% Probado: ' . esc_html($module_name) . ' — ' . $mod_pct_pass . '% aprobado',
+                        '🎉 Módulo 100% Probado',
+                        esc_html($project_name) . ' — ' . esc_html($module_name),
+                        $client_mod_agent_body
+                    );
+                }
+            }
+
+            // ─── Verificar si el PROYECTO quedó 100% completado ───
+            if ($pct === 100) {
+                $proj_fail = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$t['cases']} c JOIN {$t['modules']} m ON c.module_id=m.id WHERE m.project_id=%d AND c.status='fail'",
+                    $ctx->project->id
+                ));
+                $proj_blocked = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$t['cases']} c JOIN {$t['modules']} m ON c.module_id=m.id WHERE m.project_id=%d AND c.status='blocked'",
+                    $ctx->project->id
+                ));
+                $proj_body = '
+      <p>🏆 <strong>¡El proyecto ha alcanzado el 100% de pruebas aprobadas!</strong></p>
+      <div class="info-box">
+        <p style="margin:0 0 8px;"><strong>📋 Proyecto:</strong> ' . esc_html($project_name) . '</p>
+        <p style="margin:0 0 8px;"><strong>👤 Cliente:</strong> ' . esc_html($client_name) . '</p>
+        <p style="margin:0 0 8px;"><strong>✅ Total casos aprobados:</strong> ' . $passed . '/' . $total . '</p>
+        <p style="margin:0 0 8px;"><strong>❌ Fallidos:</strong> ' . $proj_fail . '</p>
+        <p style="margin:0 0 8px;"><strong>⚠️ Bloqueados:</strong> ' . $proj_blocked . '</p>
+        <p style="margin:0 0 8px;"><strong>🤖 Última actualización por:</strong> ' . esc_html($tester) . '</p>
+        <p style="margin:0;"><strong>📅 Fecha:</strong> ' . current_time('d/m/Y H:i') . '</p>
+      </div>
+      <div style="background:#ecfdf5;border:2px solid #10b981;padding:16px;border-radius:8px;text-align:center;margin:15px 0;">
+        <span style="font-size:36px;">🏆</span><br>
+        <strong style="font-size:18px;color:#065f46;">100% Aprobado</strong><br>
+        <p style="color:#047857;margin:8px 0 0;">Todas las pruebas han sido completadas exitosamente. El informe formal puede ser generado.</p>
+      </div>
+      <p style="text-align:center;margin-top:20px;">
+        <a class="cta" href="' . esc_url($qa_url) . '">📊 Generar Informe QA</a>
+      </p>';
+
+                at_qa_send_notification(
+                    $admin_email,
+                    '🏆 Proyecto 100% Completado: ' . $project_name,
+                    '🏆 Proyecto QA 100% Completado',
+                    $project_name . ' — Todas las pruebas aprobadas',
+                    $proj_body
+                );
+
+                // Notificar al cliente cuando el proyecto está 100% completado
+                if ($ctx->client && !empty($ctx->client->email)) {
+                    $token_func_proj = function($cid_val, $email) {
+                        return md5($cid_val . 'AUTOMATIZA_CRM_V2' . $email);
+                    };
+                    $ficha_url_proj = home_url('/?crm_view=timeline&cid=' . $ctx->client->id . '&token=' . $token_func_proj($ctx->client->id, $ctx->client->email));
+                    $client_proj_body = '<p>Hola <strong>' . esc_html($ctx->client->nombre) . '</strong>,</p>
+      <p>¡Excelentes noticias! Su proyecto <strong>' . esc_html($project_name) . '</strong> ha completado exitosamente todas las pruebas de calidad.</p>
+      <div style="background:#ecfdf5;border:2px solid #10b981;padding:16px;border-radius:8px;text-align:center;margin:15px 0;">
+        <span style="font-size:36px;">🏆</span><br>
+        <strong style="font-size:18px;color:#065f46;">100% Aprobado</strong><br>
+        <p style="color:#047857;margin:8px 0 0;">Todas las ' . $total . ' pruebas han sido completadas exitosamente.</p>
+      </div>
+      <p>En breve recibirá el informe formal de pruebas QA con todos los detalles.</p>
+      <p style="text-align:center;margin-top:20px;">
+        <a class="cta" href="' . esc_url($ficha_url_proj) . '">📊 Ver Mi Proyecto</a>
+      </p>';
+                    at_qa_send_notification(
+                        $ctx->client->email,
+                        '🏆 ¡Su proyecto ' . esc_html($project_name) . ' está 100% aprobado!',
+                        '🏆 Proyecto QA Completado',
+                        esc_html($client_name) . ' — Pruebas completadas',
+                        $client_proj_body
+                    );
+                }
+            }
+        }
+      } catch (\Throwable $e) {
+          error_log('[Agente QA] Error notificación PASS: ' . $e->getMessage());
+      }
+    }
+    // ─── Fin notificaciones agente ───
+
+    wp_send_json_success(['status' => $status, 'tester' => $tester]);
+});
+
+// Subir evidencia (para agente)
+add_action('wp_ajax_nopriv_at_qa_agent_upload_evidence', function() {
+    if (!at_qa_verify_agent()) wp_send_json_error('Unauthorized', 403);
+    if (empty($_FILES['evidence_file'])) wp_send_json_error('No se recibió archivo');
+    $cid         = intval($_POST['case_db_id']);
+    $description = sanitize_text_field($_POST['description'] ?? '');
+    $allowed = ['image/jpeg','image/png','image/gif','image/webp','video/mp4','video/webm','application/pdf'];
+    if (!in_array($_FILES['evidence_file']['type'], $allowed)) wp_send_json_error('Tipo no permitido');
+    if ($_FILES['evidence_file']['size'] > 10 * 1024 * 1024) wp_send_json_error('Archivo muy grande');
+    $upload_dir = wp_upload_dir();
+    $qa_dir = $upload_dir['basedir'] . '/' . AT_QA_EVIDENCE_DIR;
+    $qa_url = $upload_dir['baseurl'] . '/' . AT_QA_EVIDENCE_DIR;
+    wp_mkdir_p($qa_dir);
+    $ext  = pathinfo($_FILES['evidence_file']['name'], PATHINFO_EXTENSION);
+    $safe = 'qa-' . $cid . '-' . time() . '-' . wp_generate_password(6, false) . '.' . $ext;
+    if (!move_uploaded_file($_FILES['evidence_file']['tmp_name'], $qa_dir . '/' . $safe)) wp_send_json_error('Error al guardar');
+    global $wpdb;
+    $t = at_qa_table_names();
+    $wpdb->insert($t['evidence'], [
+        'case_id'     => $cid,
+        'file_url'    => $qa_url . '/' . $safe,
+        'file_name'   => sanitize_file_name($_FILES['evidence_file']['name']),
+        'file_type'   => $_FILES['evidence_file']['type'],
+        'file_size'   => $_FILES['evidence_file']['size'],
+        'uploaded_by' => 1,
+        'description' => $description,
+    ]);
+    wp_send_json_success(['url' => $qa_url . '/' . $safe]);
+});
+
+// Agregar comentario (para agente)
+add_action('wp_ajax_nopriv_at_qa_agent_add_comment', function() {
+    if (!at_qa_verify_agent()) wp_send_json_error('Unauthorized', 403);
+    global $wpdb;
+    $t = at_qa_table_names();
+    $cid     = intval($_POST['case_db_id']);
+    $comment = sanitize_textarea_field($_POST['comment']);
+    if (empty($comment)) wp_send_json_error('Comentario vacío');
+    $wpdb->insert($t['comments'], [
+        'case_id' => $cid,
+        'user_id' => 1,
+        'comment' => $comment,
+    ]);
+    wp_send_json_success(['id' => $wpdb->insert_id]);
+});
+
+// Buscar caso por case_id textual (ej: "AU-041")
+add_action('wp_ajax_nopriv_at_qa_agent_get_case_by_text_id', function() {
+    if (!at_qa_verify_agent()) wp_send_json_error('Unauthorized', 403);
+    global $wpdb;
+    $t = at_qa_table_names();
+    $case_id = sanitize_text_field($_POST['case_id']);
+    $case = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$t['cases']} WHERE case_id = %s", $case_id
+    ));
+    if (!$case) wp_send_json_error('Caso no encontrado: ' . $case_id);
+    $evidence = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM {$t['evidence']} WHERE case_id = %d ORDER BY created_at DESC", $case->id
+    ));
+    wp_send_json_success(['case' => $case, 'evidence' => $evidence]);
+});

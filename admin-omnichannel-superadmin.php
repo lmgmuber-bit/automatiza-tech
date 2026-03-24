@@ -499,14 +499,14 @@ $audit_data = $controller->get_audit_logs([
                         <div class="form-group">
                             <label>Plan</label>
                             <select name="plan_type">
-                                <option value="basic">Basic (2 canales, 3 agentes)</option>
-                                <option value="professional">Professional (5 canales, 10 agentes)</option>
-                                <option value="enterprise">Enterprise (ilimitado)</option>
+                                <option value="basic">Basic (1 canal, 3 agentes) — 1 mes gratis</option>
+                                <option value="professional">Professional (2 canales, 3 agentes) — 1 mes gratis</option>
+                                <option value="enterprise">Enterprise (ilimitado) — Sin trial</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>Máx. Canales</label>
-                            <input type="number" name="max_channels" value="2" min="1" max="20">
+                            <input type="number" name="max_channels" value="1" min="1" max="20">
                         </div>
                         <div class="form-group">
                             <label>Máx. Agentes</label>
@@ -516,9 +516,28 @@ $audit_data = $controller->get_audit_logs([
                     
                     <div style="margin-top:20px;">
                         <button type="submit" class="btn btn-primary">🚀 Crear Cliente</button>
-                        <span style="color:var(--text-muted);font-size:13px;margin-left:12px;">Se generará automáticamente un API Key y 14 días de trial</span>
+                        <span style="color:var(--text-muted);font-size:13px;margin-left:12px;">Se generará automáticamente un API Key. Planes Basic y Professional incluyen <strong>1 mes gratuito</strong> de evaluación. Enterprise inicia activo directamente.</span>
                     </div>
                 </form>
+                <script>
+                (function(){
+                    var planDefaults = {
+                        basic:        { channels: 1,  agents: 3  },
+                        professional: { channels: 2,  agents: 3  },
+                        enterprise:   { channels: 20, agents: 50 }
+                    };
+                    var sel = document.querySelector('select[name="plan_type"]');
+                    if(sel){
+                        sel.addEventListener('change', function(){
+                            var d = planDefaults[this.value];
+                            if(d){
+                                document.querySelector('input[name="max_channels"]').value = d.channels;
+                                document.querySelector('input[name="max_agents"]').value = d.agents;
+                            }
+                        });
+                    }
+                })();
+                </script>
             </div>
         </div>
 

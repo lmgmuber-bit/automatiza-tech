@@ -143,6 +143,18 @@ $segments = array_filter(explode('/', $path));
 $segments = array_values($segments);
 
 try {
+    // ---- HEALTH CHECK (para fallback N8N) ----
+    if (isset($segments[0]) && $segments[0] === 'health') {
+        send_json(['status' => 'ok', 'timestamp' => current_time('c')]);
+    }
+
+    // ---- N8N CALLBACK (respuesta del bot) ----
+    if (isset($segments[0]) && $segments[0] === 'webhook' &&
+        isset($segments[1]) && $segments[1] === 'n8n-callback' && $method === 'POST') {
+        $result = $controller->handle_n8n_callback($body);
+        send_json($result, isset($result['error']) ? 400 : 200);
+    }
+
     // ---- WEBHOOK (sin auth) ----
     if (isset($segments[0]) && $segments[0] === 'webhook' && $method === 'POST') {
         $channel_id = absint($segments[1] ?? 0);
@@ -1169,6 +1181,9 @@ try {
                 $pw['period_start'] = $client->period_start;
                 $pw['period_end'] = $client->period_end;
                 $pw['is_free'] = (bool) $client->is_free;
+                $pw['max_channels'] = (int) ($client->max_channels ?? 1);
+                $pw['max_agents'] = (int) ($client->max_agents ?? 3);
+                $pw['plan_type'] = $client->plan_type ?? 'basic';
                 send_json($pw);
             }
             break;

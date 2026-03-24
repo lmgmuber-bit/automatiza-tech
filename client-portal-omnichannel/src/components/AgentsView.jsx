@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Loader2, Users, UserCheck, ShieldCheck, Headphones, Pencil, Trash2, X, Search, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getAgentsPaginated, createAgent, updateAgent, deleteAgent, getIsAdmin, getIsAgent, isSupervisorOrAdmin, getAgentRole, getClients } from '../api';
+import { Plus, Loader2, Users, UserCheck, ShieldCheck, Headphones, Pencil, Trash2, X, Search, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { getAgentsPaginated, createAgent, updateAgent, deleteAgent, getIsAdmin, getIsAgent, isSupervisorOrAdmin, getAgentRole, getClients, getPeriodStatus } from '../api';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 import ResultModal from './ResultModal';
 
@@ -34,6 +34,8 @@ export default function AgentsView() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [resultModal, setResultModal] = useState(null);
+  const [maxAgents, setMaxAgents] = useState(null);
+  const [planType, setPlanType] = useState('');
 
   const isClientLogin = !getIsAdmin() && !getIsAgent();
   const canManage = getIsAdmin() || isClientLogin || isSupervisorOrAdmin();
@@ -51,6 +53,13 @@ export default function AgentsView() {
   useEffect(() => {
     if (getIsAdmin()) {
       getClients({ per_page: 100 }).then(data => setClientsList(data.data || [])).catch(() => {});
+    }
+    // Fetch plan limits for client/agent
+    if (!getIsAdmin()) {
+      getPeriodStatus().then(data => {
+        if (data && data.max_agents) setMaxAgents(data.max_agents);
+        if (data && data.plan_type) setPlanType(data.plan_type);
+      }).catch(() => {});
     }
   }, []);
 
@@ -143,6 +152,10 @@ export default function AgentsView() {
     setDeleting(false);
   }
 
+  // Check if agent limit is reached (only for non-admin)
+  const totalAgents = agentsMeta.total || agents.length;
+  const isAtLimit = !getIsAdmin() && maxAgents !== null && totalAgents >= maxAgents;
+
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
@@ -150,16 +163,42 @@ export default function AgentsView() {
           <div>
             <h1 className="text-lg sm:text-xl font-bold text-gray-900" style={{ fontFamily: 'Poppins, sans-serif' }}>👥 Agentes</h1>
             <p className="text-sm text-gray-500 mt-1">Gestiona los agentes que atienden las conversaciones</p>
+            {!getIsAdmin() && maxAgents !== null && (
+              <p className="text-xs text-gray-400 mt-1">
+                {totalAgents} de {maxAgents} agente{maxAgents > 1 ? 's' : ''} utilizado{totalAgents !== 1 ? 's' : ''} — Plan {planType.charAt(0).toUpperCase() + planType.slice(1)}
+              </p>
+            )}
           </div>
           {canManage && (
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 self-start"
-            >
-              <Plus size={16} /> Agregar Agente
-            </button>
+            isAtLimit ? (
+              <div className="self-start">
+                <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-sm font-medium cursor-not-allowed">
+                  <AlertTriangle size={16} /> Límite alcanzado
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 self-start"
+              >
+                <Plus size={16} /> Agregar Agente
+              </button>
+            )
           )}
         </div>
+
+        {/* Limit warning banner */}
+        {isAtLimit && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 flex items-start gap-3">
+            <AlertTriangle size={20} className="text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">Has alcanzado el límite de agentes de tu plan ({maxAgents})</p>
+              <p className="text-xs text-amber-600 mt-1">
+                Para agregar más agentes, actualiza tu plan a uno superior o elimina un agente existente.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Search */}
         <div className="relative w-full sm:w-64 mb-4">
@@ -214,7 +253,7 @@ export default function AgentsView() {
           ))}
         </div>
 
-        {showForm && (
+        {showForm && !isAtLimit && (
           <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6 animate-fadein">
             <h3 className="font-semibold mb-4">Nuevo Agente</h3>
             <form onSubmit={handleCreate}>

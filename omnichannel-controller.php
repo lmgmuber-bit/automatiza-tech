@@ -178,20 +178,34 @@ class OmnichannelController {
             return ['error' => 'La fecha de fin no puede ser anterior a la fecha de inicio.'];
         }
 
+        $plan_type = in_array($data['plan_type'] ?? '', ['basic','professional','enterprise']) ? $data['plan_type'] : 'basic';
+
+        // Plans basic & professional get 1 free month trial; enterprise starts active directly
+        $has_trial = in_array($plan_type, ['basic', 'professional'], true);
+        $trial_days = 30; // 1 month free evaluation period
+
+        // Default channel/agent limits per plan
+        $defaults = [
+            'basic'        => ['channels' => 1, 'agents' => 3],
+            'professional' => ['channels' => 2, 'agents' => 3],
+            'enterprise'   => ['channels' => 20, 'agents' => 50],
+        ];
+        $plan_defaults = $defaults[$plan_type] ?? $defaults['basic'];
+
         $insert_data = [
             'company_name' => sanitize_text_field($data['company_name']),
             'contact_name' => sanitize_text_field($data['contact_name']),
             'email'        => sanitize_email($data['email']),
             'phone'        => sanitize_text_field($data['phone'] ?? ''),
-            'plan_type'    => in_array($data['plan_type'] ?? '', ['basic','professional','enterprise']) ? $data['plan_type'] : 'basic',
-            'status'       => 'trial',
-            'max_channels' => absint($data['max_channels'] ?? 2),
-            'max_agents'   => absint($data['max_agents'] ?? 3),
+            'plan_type'    => $plan_type,
+            'status'       => $has_trial ? 'trial' : 'active',
+            'max_channels' => absint($data['max_channels'] ?? $plan_defaults['channels']),
+            'max_agents'   => absint($data['max_agents'] ?? $plan_defaults['agents']),
             'api_key'      => $api_key,
-            'trial_ends_at' => gmdate('Y-m-d H:i:s', strtotime('+14 days')),
+            'trial_ends_at' => $has_trial ? gmdate('Y-m-d H:i:s', strtotime("+{$trial_days} days")) : null,
             'is_free'      => $is_free,
             'period_start' => $period_start,
-            'period_end'   => $period_end,
+            'period_end'   => $has_trial && empty($period_end) ? gmdate('Y-m-d', strtotime("+{$trial_days} days")) : $period_end,
         ];
 
         $result = $this->wpdb->insert($this->prefix . 'clients', $insert_data);
@@ -732,9 +746,18 @@ class OmnichannelController {
             'delivery_status'     => 'delivered',
         ]);
 
+        $message_id = $this->wpdb->insert_id;
+
+        // Reenviar a N8N si la conversación está en modo bot
+        $conv_status = $conversation ? ($conversation->status ?? 'bot') : 'bot';
+        $intervention = $conversation ? ($conversation->intervention_mode ?? '') : '';
+        if ($conv_status === 'bot' && $intervention !== 'human') {
+            $this->forward_to_n8n($channel_id, $conversation_id, $message_data, $message_id);
+        }
+
         return [
             'conversation_id' => $conversation_id,
-            'message_id'      => $this->wpdb->insert_id,
+            'message_id'      => $message_id,
         ];
     }
 
@@ -2100,6 +2123,214 @@ class OmnichannelController {
         $result = $this->wpdb->delete($this->prefix . 'n8n_workflows', ['id' => $workflow_id]);
         $this->audit_log('delete', 'n8n_workflow', $workflow_id, "Workflow eliminado: {$old['workflow_name']}", $old, null, $old['client_id']);
         return $result !== false;
+    }
+
+    // =========================================================
+    // N8N FORWARDING & CALLBACK
+    // =========================================================
+
+    /**
+     * Reenvía un mensaje entrante al webhook de N8N (fire-and-forget).
+     * Solo se ejecuta si el bot_config del canal tiene n8n_webhook_url configurada.
+     */
+    private function forward_to_n8n($channel_id, $conversation_id, $message_data, $message_id) {
+        $bot_config = $this->get_bot_config($channel_id);
+        if (!$bot_config || empty($bot_config->n8n_webhook_url) || !$bot_config->is_active) return;
+
+        // Obtener teléfono del negocio desde el canal
+        $channel = $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT phone_number FROM {$this->prefix}channels WHERE id = %d", absint($channel_id)
+        ));
+
+        $secret = defined('OMNI_ADMIN_SECRET') ? OMNI_ADMIN_SECRET : 'omni_default_secret';
+        $callback_token = hash_hmac('sha256', $conversation_id . ':' . $channel_id, $secret);
+
+        $payload = [
+            'event'           => 'new_message',
+            'conversation_id' => $conversation_id,
+            'channel_id'      => $channel_id,
+            'business_phone'  => $channel ? ($channel->phone_number ?? '') : '',
+            'contact'         => [
+                'external_id' => $message_data['external_contact_id'] ?? '',
+                'name'        => $message_data['contact_name'] ?? '',
+                'phone'       => $message_data['contact_phone'] ?? '',
+            ],
+            'message'         => [
+                'id'        => $message_id,
+                'type'      => $message_data['type'] ?? 'text',
+                'content'   => $message_data['content'] ?? '',
+                'media_url' => $message_data['media_url'] ?? '',
+            ],
+            'callback_url'    => site_url('/api-omnichannel.php?route=webhook/n8n-callback'),
+            'callback_token'  => $callback_token,
+            'timestamp'       => current_time('c'),
+        ];
+
+        wp_remote_post($bot_config->n8n_webhook_url, [
+            'headers'  => ['Content-Type' => 'application/json'],
+            'body'     => wp_json_encode($payload),
+            'timeout'  => 5,
+            'blocking' => false,
+        ]);
+    }
+
+    /**
+     * Recibe la respuesta del bot de N8N y la entrega al contacto vía WhatsApp.
+     * N8N llama a esta función con el callback_token para autenticarse.
+     */
+    public function handle_n8n_callback($body) {
+        $conversation_id = absint($body['conversation_id'] ?? 0);
+        $channel_id      = absint($body['channel_id'] ?? 0);
+        $callback_token  = sanitize_text_field($body['callback_token'] ?? '');
+
+        if (!$conversation_id || !$channel_id || empty($callback_token)) {
+            return ['error' => 'Parámetros requeridos faltantes'];
+        }
+
+        // Verificar callback token (HMAC)
+        $secret = defined('OMNI_ADMIN_SECRET') ? OMNI_ADMIN_SECRET : 'omni_default_secret';
+        $expected = hash_hmac('sha256', $conversation_id . ':' . $channel_id, $secret);
+        if (!hash_equals($expected, $callback_token)) {
+            return ['error' => 'Token de callback inválido'];
+        }
+
+        // Verificar que la conversación existe
+        $conversation = $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT * FROM {$this->prefix}conversations WHERE id = %d AND channel_id = %d",
+            $conversation_id, $channel_id
+        ));
+        if (!$conversation) return ['error' => 'Conversación no encontrada'];
+
+        // Detectar si el payload es formato YCloud crudo (tiene 'type' + 'from' + 'to')
+        $is_raw_ycloud = isset($body['type']) && isset($body['from']) && isset($body['to']);
+
+        if ($is_raw_ycloud) {
+            return $this->handle_n8n_callback_raw($body, $conversation, $channel_id);
+        }
+
+        // MODO SIMPLE: solo 'content' + 'message_type'
+        $content   = sanitize_textarea_field($body['content'] ?? '');
+        $msg_type  = sanitize_text_field($body['message_type'] ?? 'text');
+        $media_url = esc_url_raw($body['media_url'] ?? '');
+
+        if (empty($content) && empty($media_url)) {
+            return ['error' => 'Contenido vacío'];
+        }
+
+        $local = $this->send_message($conversation_id, [
+            'sender_type'  => 'bot',
+            'sender_id'    => 'n8n',
+            'sender_name'  => 'Bot N8N',
+            'content'      => $content,
+            'message_type' => $msg_type,
+            'media_url'    => $media_url,
+        ]);
+        if (isset($local['error'])) return $local;
+
+        if ($conversation->channel_type === 'whatsapp' && !empty($conversation->contact_phone)) {
+            $ycloud = $this->send_ycloud_message($channel_id, $conversation->contact_phone, $content, $msg_type);
+            if (isset($ycloud['success'])) {
+                $this->wpdb->update($this->prefix . 'messages', [
+                    'ycloud_message_id'   => $ycloud['ycloud_id'] ?? '',
+                    'whatsapp_message_id' => $ycloud['wamid'] ?? '',
+                    'delivery_status'     => 'sent',
+                ], ['id' => $local['message_id']]);
+                $local['delivered'] = true;
+            } else {
+                $this->wpdb->update($this->prefix . 'messages', [
+                    'delivery_status' => 'failed',
+                    'error_message'   => $ycloud['error'] ?? 'Error desconocido',
+                ], ['id' => $local['message_id']]);
+                $local['delivery_error'] = $ycloud['error'] ?? 'Error desconocido';
+            }
+        }
+
+        return $local;
+    }
+
+    /**
+     * Procesa un callback de N8N con payload YCloud crudo.
+     * Extrae el texto para guardar en DB, luego reenvia el payload completo a YCloud.
+     */
+    private function handle_n8n_callback_raw($body, $conversation, $channel_id) {
+        $conversation_id = $conversation->id;
+        $ycloud_type = sanitize_text_field($body['type']);
+
+        // Extraer texto según tipo de mensaje YCloud
+        $content  = '';
+        $msg_type = 'text';
+        if ($ycloud_type === 'text') {
+            $content  = $body['text']['body'] ?? '';
+        } elseif ($ycloud_type === 'interactive') {
+            $content  = $body['interactive']['body']['text'] ?? '[interactive]';
+        } elseif ($ycloud_type === 'audio') {
+            $content  = '[audio]';
+            $msg_type = 'audio';
+        } elseif (in_array($ycloud_type, ['image', 'video', 'document'], true)) {
+            $content  = "[$ycloud_type]";
+            $msg_type = $ycloud_type;
+        }
+
+        // Guardar mensaje del bot en DB
+        $local = $this->send_message($conversation_id, [
+            'sender_type'  => 'bot',
+            'sender_id'    => 'n8n',
+            'sender_name'  => 'Bot N8N',
+            'content'      => sanitize_textarea_field($content),
+            'message_type' => $msg_type,
+        ]);
+        if (isset($local['error'])) return $local;
+
+        // Construir payload YCloud limpio (sin campos del portal)
+        $ycloud_payload = $body;
+        unset($ycloud_payload['callback_token'], $ycloud_payload['conversation_id'], $ycloud_payload['channel_id']);
+
+        // Obtener API key del canal
+        $channel = $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT ycloud_api_key FROM {$this->prefix}channels WHERE id = %d", $channel_id
+        ));
+        if (!$channel || empty($channel->ycloud_api_key)) {
+            return ['error' => 'Canal sin API key de YCloud'];
+        }
+
+        // Reenviar payload crudo a YCloud
+        $response = wp_remote_post('https://api.ycloud.com/v2/whatsapp/messages', [
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'X-API-Key'    => $channel->ycloud_api_key,
+            ],
+            'body'    => wp_json_encode($ycloud_payload),
+            'timeout' => 15,
+        ]);
+
+        if (is_wp_error($response)) {
+            $this->wpdb->update($this->prefix . 'messages', [
+                'delivery_status' => 'failed',
+                'error_message'   => $response->get_error_message(),
+            ], ['id' => $local['message_id']]);
+            $local['delivery_error'] = $response->get_error_message();
+            return $local;
+        }
+
+        $resp_code = wp_remote_retrieve_response_code($response);
+        $resp_body = json_decode(wp_remote_retrieve_body($response), true);
+
+        if ($resp_code >= 200 && $resp_code < 300) {
+            $this->wpdb->update($this->prefix . 'messages', [
+                'ycloud_message_id'   => $resp_body['id'] ?? '',
+                'whatsapp_message_id' => $resp_body['wabaMessageId'] ?? '',
+                'delivery_status'     => 'sent',
+            ], ['id' => $local['message_id']]);
+            $local['delivered'] = true;
+        } else {
+            $this->wpdb->update($this->prefix . 'messages', [
+                'delivery_status' => 'failed',
+                'error_message'   => $resp_body['message'] ?? "HTTP $resp_code",
+            ], ['id' => $local['message_id']]);
+            $local['delivery_error'] = $resp_body['message'] ?? "HTTP $resp_code";
+        }
+
+        return $local;
     }
 
     // =========================================================

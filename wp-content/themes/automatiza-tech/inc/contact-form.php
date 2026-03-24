@@ -808,7 +808,7 @@ class AutomatizaTechContactForm {
     /**
      * Mover contacto a tabla de clientes
      */
-    private function move_to_clients($contact_id, $plan_id = null) {
+    private function move_to_clients($contact_id, $plan_id = null, $is_free = false) {
         global $wpdb;
         
         // Obtener datos del contacto
@@ -852,6 +852,16 @@ class AutomatizaTechContactForm {
             }
             
             error_log("DEBUG: Total de planes procesados: " . count($plans_data));
+        }
+        
+        // Si es plan gratuito (promoción 1 mes gratis), aplicar 100% descuento
+        if ($is_free && !empty($plans_data)) {
+            foreach ($plans_data as &$plan_ref) {
+                $plan_ref->discount_percent = 100;
+            }
+            unset($plan_ref);
+            $contract_value = 0;
+            error_log("DEBUG: Plan GRATIS activado - 100% descuento aplicado");
         }
         
         // Usar el primer plan como principal (para compatibilidad)
@@ -1046,16 +1056,27 @@ class AutomatizaTechContactForm {
         $plans_html = '';
         if (is_array($plans_data) && !empty($plans_data)) {
             $total_clp = 0;
+            $total_clp_original = 0;
+            $all_free = true;
             $plans_list = '';
             
             foreach ($plans_data as $index => $plan) {
                 $plan_num = $index + 1;
-                $total_clp += floatval($plan->price_clp);
+                $plan_descuento = isset($plan->discount_percent) ? floatval($plan->discount_percent) : 0;
+                $plan_price_original = floatval($plan->price_clp);
+                $plan_price_final = $plan_descuento > 0 ? $plan_price_original * (1 - $plan_descuento / 100) : $plan_price_original;
+                $total_clp_original += $plan_price_original;
+                $total_clp += $plan_price_final;
+                if ($plan_descuento < 100) $all_free = false;
+                
+                $price_display = ($plan_descuento >= 100)
+                    ? "<span style='text-decoration:line-through;color:#999;'>$" . number_format($plan_price_original, 0, ',', '.') . " CLP</span> <span style='color:#10b981;font-weight:bold;'>GRATIS</span>"
+                    : "<span style='font-weight: bold;'>$" . number_format($plan_price_final, 0, ',', '.') . " CLP</span>";
                 
                 $plans_list .= "
                 <div style='background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 6px; border-left: 3px solid #06d6a0;'>
                     <p style='margin: 5px 0;'><strong style='color: #1e3a8a;'>Plan {$plan_num}:</strong> <span style='font-size: 1.1em;'>" . esc_html($plan->name) . "</span></p>
-                    <p style='margin: 5px 0;'><strong style='color: #06d6a0;'>Precio:</strong> <span style='font-weight: bold;'>$" . number_format($plan->price_clp, 0, ',', '.') . " CLP</span></p>
+                    <p style='margin: 5px 0;'><strong style='color: #06d6a0;'>Precio:</strong> {$price_display}</p>
                     " . (!empty($plan->description) ? "<p style='margin: 5px 0; color: #6c757d;'><em>" . esc_html($plan->description) . "</em></p>" : "") . "
                 </div>";
             }
@@ -1064,8 +1085,18 @@ class AutomatizaTechContactForm {
             <div class='info-box' style='border-left: 4px solid #06d6a0;'>
                 <h3 style='color: #06d6a0; margin-top: 0;'>💼 Planes Contratados</h3>
                 {$plans_list}
-                <div style='margin-top: 15px; padding: 12px; background: #e8f5f1; border-radius: 5px; text-align: center;'>
-                    <p style='margin: 5px 0; font-size: 1.2em;'><strong>TOTAL:</strong> <span style='color: #06d6a0; font-size: 1.3em; font-weight: bold;'>$" . number_format($total_clp, 0, ',', '.') . " CLP</span></p>
+                <div style='margin-top: 15px; padding: 12px; background: #e8f5f1; border-radius: 5px; text-align: center;'>";
+            
+            if ($all_free) {
+                $plans_html .= "
+                    <p style='margin: 5px 0; font-size: 1.2em;'><strong>🎁 PROMOCIÓN GRATIS:</strong> <span style='color: #10b981; font-size: 1.3em; font-weight: bold;'>$0 CLP</span></p>
+                    <p style='margin: 3px 0; font-size: 0.9em; color: #666;'>Valor regular: $" . number_format($total_clp_original, 0, ',', '.') . " CLP/mes — 1 mes de evaluación gratuita</p>";
+            } else {
+                $plans_html .= "
+                    <p style='margin: 5px 0; font-size: 1.2em;'><strong>TOTAL:</strong> <span style='color: #06d6a0; font-size: 1.3em; font-weight: bold;'>$" . number_format($total_clp, 0, ',', '.') . " CLP</span></p>";
+            }
+            
+            $plans_html .= "
                 </div>
                 <p style='margin-top: 10px; padding: 10px; background: #e3f2fd; border-radius: 5px; text-align: center;'>✉️ <strong>Se ha enviado la factura automáticamente al cliente</strong></p>
             </div>";
@@ -1350,11 +1381,18 @@ class AutomatizaTechContactForm {
         // Generar HTML de planes contratados
         if (is_array($plans_data) && !empty($plans_data)) {
             $total_clp = 0;
+            $total_clp_original = 0;
+            $all_free = true;
             $message .= "<div class='plan-highlight'>
                 <h3>" . (count($plans_data) > 1 ? 'Planes Contratados' : 'Plan Contratado') . "</h3>";
             
             foreach ($plans_data as $index => $plan) {
-                $total_clp += floatval($plan->price_clp);
+                $plan_descuento = isset($plan->discount_percent) ? floatval($plan->discount_percent) : 0;
+                $plan_price_original = floatval($plan->price_clp);
+                $plan_price_final = $plan_descuento > 0 ? $plan_price_original * (1 - $plan_descuento / 100) : $plan_price_original;
+                $total_clp_original += $plan_price_original;
+                $total_clp += $plan_price_final;
+                if ($plan_descuento < 100) $all_free = false;
                 
                 if (count($plans_data) > 1) {
                     $message .= "<div style='background: white; padding: 15px; margin: 10px 0; border-radius: 5px; border: 2px solid {$secondary_color};'>";
@@ -1362,7 +1400,11 @@ class AutomatizaTechContactForm {
                 }
                 
                 $message .= "<div class='plan-name'>" . esc_html($plan->name) . "</div>";
-                $message .= "<div class='plan-price'>$" . number_format($plan->price_clp, 0, ',', '.') . " CLP</div>";
+                if ($plan_descuento >= 100) {
+                    $message .= "<div class='plan-price'><span style='text-decoration:line-through;color:#999;'>$" . number_format($plan_price_original, 0, ',', '.') . " CLP</span> <span style='color:#10b981;font-weight:bold;'>GRATIS</span></div>";
+                } else {
+                    $message .= "<div class='plan-price'>$" . number_format($plan_price_final, 0, ',', '.') . " CLP</div>";
+                }
                 
                 if (!empty($plan->description)) {
                     $message .= "<p class='message-text' style='margin-top: 15px;'>" . esc_html($plan->description) . "</p>";
@@ -1373,7 +1415,12 @@ class AutomatizaTechContactForm {
                 }
             }
             
-            if (count($plans_data) > 1) {
+            if ($all_free) {
+                $message .= "<div style='margin-top: 20px; padding: 15px; background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 2px solid #10b981; border-radius: 8px; text-align: center;'>
+                    <div style='font-size: 1.2em; font-weight: bold; color: #065f46;'>🎁 PROMOCIÓN: 1 MES DE EVALUACIÓN GRATUITA</div>
+                    <div style='font-size: 0.9em; color: #047857; margin-top: 5px;'>Valor regular: $" . number_format($total_clp_original, 0, ',', '.') . " CLP/mes</div>
+                </div>";
+            } elseif (count($plans_data) > 1) {
                 $message .= "<div style='margin-top: 20px; padding: 15px; background: {$secondary_color}; color: white; border-radius: 8px; text-align: center;'>
                     <div style='font-size: 1.2em; font-weight: bold;'>TOTAL: $" . number_format($total_clp, 0, ',', '.') . " CLP</div>
                 </div>";
@@ -1520,13 +1567,16 @@ class AutomatizaTechContactForm {
         // Soportar tanto un solo plan como múltiples planes
         $plans_array = is_array($plans_data) ? $plans_data : array($plans_data);
         
-        // Calcular totales sumando todos los planes
+        // Calcular totales sumando todos los planes (con descuentos)
         $subtotal = 0;
         $plan_names = array();
         $first_plan_id = null;
         
         foreach ($plans_array as $plan) {
-            $subtotal += floatval($plan->price_clp);
+            $precio_original = floatval($plan->price_clp);
+            $descuento = isset($plan->discount_percent) ? floatval($plan->discount_percent) : 0;
+            $precio_final = $descuento > 0 ? $precio_original * (1 - $descuento / 100) : $precio_original;
+            $subtotal += $precio_final;
             $plan_names[] = $plan->name;
             if ($first_plan_id === null && isset($plan->id)) {
                 $first_plan_id = $plan->id;
@@ -2722,7 +2772,22 @@ class AutomatizaTechContactForm {
                     <span class='label'>TOTAL:</span>
                     <span class='amount'>$" . number_format($total, 0, ',', '.') . "</span>
                 </div>
-            </div>
+            </div>";
+            
+            // Nota especial si es 100% gratuito (promoción)
+            if ($total == 0 && $subtotal_original > 0) {
+                $html .= "
+            <div style='margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 2px solid #10b981; border-radius: 10px; text-align: center;'>
+                <p style='margin: 0; font-size: 1.1em; color: #065f46; font-weight: 600;'>
+                    🎁 <strong>PROMOCIÓN APLICADA: 1 MES DE EVALUACIÓN GRATUITA</strong>
+                </p>
+                <p style='margin: 5px 0 0; font-size: 0.9em; color: #047857;'>
+                    Este documento refleja un período de evaluación sin costo. El valor regular del servicio es $" . number_format($subtotal_original, 0, ',', '.') . " CLP/mes.
+                </p>
+            </div>";
+            }
+            
+            $html .= "
         </div>
         
         <!-- Código QR de Validación -->
@@ -3872,7 +3937,8 @@ class AutomatizaTechContactForm {
                         if ($new_status === 'contracted') {
                             // Soportar múltiples planes: "1,2,3" → mantener como string
                             $plan_id = isset($_GET['plan_id']) ? sanitize_text_field($_GET['plan_id']) : null;
-                            $result = $this->move_to_clients($contact_id, $plan_id);
+                            $is_free = isset($_GET['is_free']) && $_GET['is_free'] === '1';
+                            $result = $this->move_to_clients($contact_id, $plan_id, $is_free);
                             if ($result) {
                                 if ($plan_id) {
                                     echo '<div class="notice notice-success"><p>🎉 ¡Contacto movido a Clientes exitosamente! Se ha generado y enviado la factura al cliente por correo electrónico.</p></div>';
@@ -4808,6 +4874,20 @@ class AutomatizaTechContactForm {
                                 <div id="selected-count" style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 6px; text-align: center; font-weight: 600; color: #1976d2; display: none;">
                                     <span id="count-number">0</span> plan(es) seleccionado(s)
                                 </div>
+                                
+                                <!-- Checkbox Promoción Gratis (1 mes) -->
+                                <div id="free-plan-wrapper" style="margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 2px solid #10b981; border-radius: 12px;">
+                                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0;">
+                                        <input type="checkbox" id="is-free-checkbox" style="width: 20px; height: 20px; accent-color: #10b981; cursor: pointer;">
+                                        <span style="font-size: 1.05em; color: #065f46; font-weight: 600;">
+                                            🎁 Activar Promoción: <strong>1 MES GRATIS</strong> (100% descuento)
+                                        </span>
+                                    </label>
+                                    <p style="margin: 8px 0 0 30px; font-size: 0.88em; color: #047857; line-height: 1.4;">
+                                        Al marcar esta opción, la boleta/factura se generará con <strong>$0</strong> (100% descuento promocional).
+                                        El cliente tendrá acceso completo al plan durante 1 mes de evaluación gratuita.
+                                    </p>
+                                </div>
                             </div>
                             
                             <div id="plan-preview" style="display: none; background: linear-gradient(135deg, #f0f9ff, #e0f2fe); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 2px solid #06d6a0;">
@@ -4896,6 +4976,22 @@ class AutomatizaTechContactForm {
                 }
             });
             
+            // Listener para checkbox de plan gratis – actualiza el preview de precio
+            var freeCheckbox = document.getElementById('is-free-checkbox');
+            if (freeCheckbox) {
+                freeCheckbox.addEventListener('change', function() {
+                    var pricePreview = document.getElementById('plan-price-preview');
+                    if (!pricePreview) return;
+                    if (this.checked) {
+                        pricePreview.setAttribute('data-original-price', pricePreview.textContent);
+                        pricePreview.innerHTML = '<span style="color:#10b981;font-size:1.2em;">🎁 GRATIS</span> <span style="text-decoration:line-through;color:#999;font-size:0.85em;">' + pricePreview.textContent + '</span>';
+                    } else {
+                        var orig = pricePreview.getAttribute('data-original-price');
+                        if (orig) pricePreview.textContent = orig;
+                    }
+                });
+            }
+            
             // Guardar referencia al selector original para poder revertir
             window.originalSelectElement = selectElement;
         };
@@ -4938,9 +5034,10 @@ class AutomatizaTechContactForm {
                 statusCell.appendChild(processingIndicator);
             }
             
-            // Redirigir con el plan_id
+            // Redirigir con el plan_id y is_free flag
             setTimeout(function() {
-                window.location.href = '<?php echo admin_url('admin.php?page=automatiza-tech-contacts&action=update_status'); ?>&id=' + contactId + '&status=contracted&plan_id=' + planId + '&_wpnonce=<?php echo wp_create_nonce('update_status'); ?>';
+                var isFree = document.getElementById('is-free-checkbox') && document.getElementById('is-free-checkbox').checked ? '1' : '0';
+                window.location.href = '<?php echo admin_url('admin.php?page=automatiza-tech-contacts&action=update_status'); ?>&id=' + contactId + '&status=contracted&plan_id=' + planId + '&is_free=' + isFree + '&_wpnonce=<?php echo wp_create_nonce('update_status'); ?>';
             }, 1000);
         };
         

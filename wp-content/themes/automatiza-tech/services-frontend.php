@@ -317,6 +317,14 @@ function render_pricing_section() {
                     <div class="col-lg-4 col-md-6 mb-4 pricing-card-col">
                         <div class="pricing-card <?php echo $service->highlight ? 'featured' : ''; ?>">
                             
+                            <?php 
+                            $plan_name_lower = strtolower($service->name);
+                            $is_promo_plan = (strpos($plan_name_lower, 'basic') !== false || strpos($plan_name_lower, 'básico') !== false || strpos($plan_name_lower, 'profesional') !== false || strpos($plan_name_lower, 'professional') !== false);
+                            ?>
+                            <?php if ($is_promo_plan): ?>
+                                <div class="promo-badge">🎁 PROMOCIÓN: 1 MES GRATIS</div>
+                            <?php endif; ?>
+                            
                             <?php if ($service->highlight): ?>
                                 <div class="featured-badge">OFERTA ESPECIAL</div>
                             <?php endif; ?>
@@ -712,6 +720,29 @@ function render_pricing_section() {
             transform: translateX(-50%) scale(1.04);
             box-shadow: 0 6px 18px rgba(255, 98, 0, 0.7);
         }
+    }
+
+    .promo-badge {
+        position: absolute !important;
+        top: 12px !important;
+        right: -8px !important;
+        background: linear-gradient(135deg, #10b981, #059669) !important;
+        color: #ffffff !important;
+        padding: 6px 16px 6px 12px !important;
+        border-radius: 4px 0 0 4px !important;
+        font-size: 0.7rem !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        box-shadow: 0 3px 10px rgba(16, 185, 129, 0.4) !important;
+        z-index: 1001 !important;
+        white-space: nowrap !important;
+        animation: pulse-promo 2.5s ease-in-out infinite !important;
+    }
+
+    @keyframes pulse-promo {
+        0%, 100% { box-shadow: 0 3px 10px rgba(16, 185, 129, 0.4); }
+        50% { box-shadow: 0 5px 20px rgba(16, 185, 129, 0.7); }
     }
     
     .pricing-header {

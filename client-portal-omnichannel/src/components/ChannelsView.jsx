@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Loader2, Settings, Trash2, CheckCircle, XCircle } from 'lucide-react';
-import { getChannels, createChannel, updateChannel, getIsAdmin, getClients, getChannelTypes } from '../api';
+import { Plus, Loader2, Settings, Trash2, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { getChannels, createChannel, updateChannel, getIsAdmin, getClients, getChannelTypes, getPeriodStatus } from '../api';
 import ChannelBadge from './ChannelBadge';
 import ResultModal from './ResultModal';
 
@@ -13,10 +13,18 @@ export default function ChannelsView() {
   const [clientsList, setClientsList] = useState([]);
   const [channelTypesList, setChannelTypesList] = useState([]);
   const [resultModal, setResultModal] = useState(null);
+  const [maxChannels, setMaxChannels] = useState(null);
+  const [planType, setPlanType] = useState('');
 
   useEffect(() => {
     if (getIsAdmin()) {
       getClients({ per_page: 100 }).then(data => setClientsList(data.data || [])).catch(() => {});
+    } else {
+      // Fetch plan limits for client
+      getPeriodStatus().then(data => {
+        if (data && data.max_channels) setMaxChannels(data.max_channels);
+        if (data && data.plan_type) setPlanType(data.plan_type);
+      }).catch(() => {});
     }
     getChannelTypes().then(data => {
       const types = Array.isArray(data) ? data : [];
@@ -84,6 +92,10 @@ export default function ChannelsView() {
   const typeMap = {};
   channelTypesList.forEach(t => { typeMap[t.slug] = t; });
 
+  // Check if channel limit is reached (only for clients, not admin)
+  const activeChannels = channels.filter(ch => ch.is_active === '1').length;
+  const isAtLimit = !getIsAdmin() && maxChannels !== null && activeChannels >= maxChannels;
+
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
@@ -91,17 +103,43 @@ export default function ChannelsView() {
           <div>
             <h1 className="text-lg sm:text-xl font-bold text-gray-900" style={{ fontFamily: 'Poppins, sans-serif' }}>📡 Canales Conectados</h1>
             <p className="text-sm text-gray-500 mt-1">Configura tus canales de comunicación</p>
+            {!getIsAdmin() && maxChannels !== null && (
+              <p className="text-xs text-gray-400 mt-1">
+                {activeChannels} de {maxChannels} canal{maxChannels > 1 ? 'es' : ''} utilizado{activeChannels !== 1 ? 's' : ''} — Plan {planType.charAt(0).toUpperCase() + planType.slice(1)}
+              </p>
+            )}
           </div>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors self-start"
-          >
-            <Plus size={16} /> Agregar Canal
-          </button>
+          {isAtLimit ? (
+            <div className="self-start">
+              <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-sm font-medium cursor-not-allowed">
+                <AlertTriangle size={16} /> Límite alcanzado
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors self-start"
+            >
+              <Plus size={16} /> Agregar Canal
+            </button>
+          )}
         </div>
 
+        {/* Limit warning banner */}
+        {isAtLimit && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+            <AlertTriangle size={20} className="text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">Has alcanzado el límite de canales de tu plan ({maxChannels})</p>
+              <p className="text-xs text-amber-600 mt-1">
+                Para agregar más canales, actualiza tu plan a uno superior o elimina/desactiva un canal existente.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Create Form */}
-        {showForm && (
+        {showForm && !isAtLimit && (
           <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6 animate-fadein">
             <h3 className="font-semibold mb-4">Nuevo Canal</h3>
             <form onSubmit={handleCreate}>

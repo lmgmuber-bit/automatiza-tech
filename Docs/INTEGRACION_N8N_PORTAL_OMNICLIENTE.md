@@ -311,18 +311,34 @@ node transform-v6-to-v7.js
 1. Login como Admin → Canales → Nuevo Canal
 2. Tipo: WhatsApp
 3. Teléfono: número del negocio
-4. API Key YCloud: en credentials_json
+4. API Key YCloud: pegar en el campo "🔑 YCloud API Key" (se guarda directamente en la columna `ycloud_api_key` del canal)
 5. Guardar → se genera `webhook_secret`
 
 ### 7.2 Configurar YCloud Webhook
 En la consola de YCloud:
-- URL: `https://automatizatech.cl/api-omnichannel.php?route=webhook/ycloud?channel_id={ID}&secret={SECRET}`
+- URL: `https://automatizatech.cl/api-omnichannel.php?route=webhook/ycloud&channel_id={ID}&secret={SECRET}`
+  - `{ID}` = `channels.id` (ID numérico del canal creado en el portal, ej: `5`)
+  - `{SECRET}` = `channels.webhook_secret` (generado automáticamente al crear el canal en el portal)
 - Events: `whatsapp.inbound_message.received`
 
 ### 7.3 Configurar Bot N8N
 1. Admin → Bots → Seleccionar bot del canal
-2. En "Webhook N8N (opcional)": pegar la URL del webhook N8N
+2. En "Webhook N8N (opcional)": pegar la URL del webhook N8N (Production URL, ej: `https://n8n-n8n.kchiba.easypanel.host/webhook/whatsapp-omnicliente-webhook`)
 3. Activar bot
+4. **Importante**: el workflow en N8N debe estar **Publicado** (botón Publish) para que la Production URL responda. Si no está activo, devuelve 404.
+
+### 7.4 Verificar YCloud Webhooks
+En YCloud Console → Webhooks:
+- Solo debe haber **un webhook activo** apuntando al portal (los webhooks directos a N8N deben estar **Inactivos**)
+- El `channel_id` se puede pasar como query parameter: `?route=webhook/ycloud&channel_id=1&secret=xxx`
+- Evento requerido: `whatsapp.inbound_message.received`
+
+### 7.5 Bandeja en Tiempo Real (Polling)
+La Bandeja Unificada usa **auto-polling cada 5 segundos**:
+- Las conversaciones se actualizan automáticamente (nuevos mensajes, cambios de estado)
+- Los mensajes del chat activo se actualizan sin recargar la página
+- El polling es silencioso (sin spinners de carga)
+- Se actualiza el scroll automáticamente solo cuando hay mensajes nuevos
 
 ---
 

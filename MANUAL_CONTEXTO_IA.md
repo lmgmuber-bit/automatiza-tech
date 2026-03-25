@@ -1,6 +1,9 @@
 # Manual de Contexto para IA — Portal OmniCliente AutomatizaTech
 
-> **Propósito:** Este documento provee contexto completo para que cualquier asistente de IA pueda entender, mantener y extender el sistema OmniCliente sin ambigüedades.
+> **Versión:** 2.0  
+> **Última actualización:** 25 de marzo de 2026  
+> **Propósito:** Este documento provee contexto completo para que cualquier asistente de IA pueda entender, mantener y extender el sistema OmniCliente sin ambigüedades.  
+> **Complementa:** `CONTEXTO_COMPLETO.md` (documento maestro de todo el proyecto)
 
 ---
 
@@ -308,6 +311,110 @@ define('OMNI_ADMIN_TOKEN_SECRET', 'hmac_secret_here');
 - **JavaScript**: camelCase para funciones y variables, PascalCase para componentes
 - **CSS**: Clases Tailwind inline, CSS custom solo para layouts complejos (sidebar, inbox)
 - **Nombres de archivo**: PascalCase para componentes React, kebab-case para PHP
+
+---
+
+## 15. Sistema de Configuración de Prompts (PromptsView)
+
+### Componente
+`client-portal-omnichannel/src/components/PromptsView.jsx`
+
+Permite a Supervisores y Admins AT editar el prompt del bot por canal. Los datos se guardan en `wp_omnichannel_prompt_configs.prompt_data` como JSON.
+
+### Permisos
+- **Ver:** `isSupervisorOrAdmin()` — Supervisores y Admin AT
+- **Editar/Guardar:** Solo `getIsAdmin()` — Admin AT
+
+### 7 Secciones (PROMPT_SECTIONS array)
+| ID | Label | Nº de campos |
+|----|-------|--------------|
+| `negocio` | 🏢 Información del Negocio | 8 |
+| `asistente` | 🤖 Configuración del Asistente | 6 |
+| `mensajes` | 💬 Mensajes Predefinidos | 4 |
+| `servicios` | 📋 Servicios e Información | 6 |
+| `agenda` | 📅 Agenda y Reservas | 9 |
+| `pagos` | 💰 Pagos y Condiciones | 5 |
+| `reglas` | ⚠️ Reglas y Capacidades | 3 |
+
+### Campos especiales (JSON)
+- `catalogo_servicios_detallado`: JSON array `[{id, nombre, duracion_min, precio, descripcion}]`
+- `bloqueos_horario`: JSON array `[{fecha, hora_inicio, hora_fin, motivo, recurrente}]`
+
+### API calls
+```js
+// Listar configs del canal
+getPromptConfigs(channelId)  →  GET ?route=prompt-configs&channel_id={id}
+// Obtener una config
+getPromptConfig(id)          →  GET ?route=prompt-configs/{id}
+// Crear
+createPromptConfig(data)     →  POST ?route=prompt-configs
+// Actualizar
+updatePromptConfig(id, data) →  PUT ?route=prompt-configs/{id}
+// Eliminar
+deletePromptConfig(id)       →  DELETE ?route=prompt-configs/{id}
+```
+
+### Endpoint especial para N8N (con autenticación HMAC)
+```
+GET ?route=prompt-config/{channel_id}&token={HMAC}
+Token = hash_hmac('sha256', "prompt-config:{channel_id}", OMNI_ADMIN_SECRET)
+```
+
+---
+
+## 16. Integración N8N — Workflow v8
+
+### Archivo activo
+`N8N/TEMPLATES/kellscapilar/WhatsApp_Bot_v8_Portal_OmniCliente.json`
+
+### Arquitectura portal-first con fallback
+El workflow v8 añade un nodo `Fetch Portal Config` (Code node) inmediatamente antes del switch `Tipo de Mensaje`. Este nodo:
+
+1. Genera un token HMAC con `require('crypto')` y `$env.OMNI_ADMIN_SECRET`
+2. Llama `GET /api-omnichannel.php?route=prompt-config/{CHANNEL_ID}&token={token}`
+3. Parsea `prompt_data` y almacena en `staticData.portalConfig`:
+   - `config`: objeto `{clave: valor}` de todos los campos
+   - `configRows`: array `[{parametro, valor}]` para `Compute Availability`
+   - `servicios`: array de `catalogo_servicios_detallado`
+   - `bloqueos`: array de `bloqueos_horario`
+4. **Cache de 5 minutos** (evita llamar al portal en cada mensaje)
+5. En cualquier error → `staticData.portalConfig = null` → fallback silencioso a Google Sheets
+
+### Nodos modificados en v8
+| Nodo | Cambio |
+|------|--------|
+| `Merge Config` | Lee `staticData.portalConfig.config` si existe, sino GSheets |
+| `Compute Availability` | Lee `configRows` y `bloqueos` de portal si existe, sino `$('Read Configuracion')` y `$('Read Bloqueos')` |
+| `Build Services List` | Lee `servicios` de portal si existe, sino `$input.all()` GSheets |
+| `Save Selected Service` | Lee `servicios` de portal si existe, sino `$input.all()` GSheets |
+
+### Configuración requerida antes de importar en N8N
+1. En nodo `Fetch Portal Config` línea 10: `const CHANNEL_ID = {id_real_del_canal}`
+2. En N8N Settings → Environment Variables: `OMNI_ADMIN_SECRET = {mismo valor que wp-config.php}`
+
+---
+
+## 17. KellsCapilar — Datos del Cliente Activo
+
+| Campo | Valor |
+|-------|-------|
+| Negocio | Kellscapilar |
+| Asistente | Kells 👑 |
+| Config Portal | `channel_id` = 1 (confirmar en prod) |
+| Google Sheet | `1ww6qJe057_HUaPTWgxT9pU1cfp8-HqmLecZjmYGB6Ps` |
+| Horario | Lunes-Viernes 10:00-18:00 (operativo), 9:00-18:00 (bot/agenda) |
+| Moneda | CLP ($) |
+| Servicios | 21 en catálogo + bloqueo almuerzo 13:00-14:00 diario |
+| Abono reserva | $20.000 CLP (valida con GPT-4 Vision) |
+
+### Scripts de migración para KellsCapilar
+```bash
+# 1. Servicios + bloqueos + agenda
+update-kells-prompt-config.php  →  ejecutar en PROD, luego eliminar
+
+# 2. Personalidad del bot (27 campos)
+update-kells-bot-config.php     →  ejecutar en PROD, luego eliminar
+```
 - **Git**: Branch `prod-sync-*` para sincronización de producción
 - **Idioma UI**: Español (es-CL locale)
 - **Validación**: Caracteres prohibidos `< > { } " ; \` en inputs de texto

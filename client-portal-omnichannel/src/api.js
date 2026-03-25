@@ -166,10 +166,19 @@ export const getBotConfigs = () => request('bots');
 export const getBotConfig = (channelId) => request(`bots/${channelId}`);
 export const updateBotConfig = (configId, data) => request(`bots/${configId}`, 'PUT', data);
 
+// Prompt Configs
+export const getPromptConfigs = (channelId) =>
+  request(`prompts${channelId ? '?channel_id=' + channelId : ''}`);
+export const getPromptConfig = (id) => request(`prompts/${id}`);
+export const createPromptConfig = (data) => request('prompts', 'POST', data);
+export const updatePromptConfig = (id, data) => request(`prompts/${id}`, 'PUT', data);
+export const deletePromptConfig = (id) => request(`prompts/${id}`, 'DELETE');
+
 // Agentes
 export const getAgents = () => request('agents');
-export const getAgentsPaginated = ({ page = 1, per_page = 10, orderby = 'created_at', order = 'DESC', search = '' } = {}) =>
-  request(`agents?page=${page}&per_page=${per_page}&orderby=${orderby}&order=${order}&search=${encodeURIComponent(search)}`);
+export const getAgentsPaginated = ({ page = 1, per_page = 10, orderby = 'created_at', order = 'DESC', search = '', channel_id = '' } = {}) =>
+  request(`agents?page=${page}&per_page=${per_page}&orderby=${orderby}&order=${order}&search=${encodeURIComponent(search)}${channel_id ? '&channel_id=' + channel_id : ''}`);
+export const getAgentsByChannel = (channelId) => request(`agents?channel_id=${channelId}`);
 export const createAgent = (data) => request('agents', 'POST', data);
 export const updateAgent = (id, data) => request(`agents/${id}`, 'PUT', data);
 export const deleteAgent = (id, confirmApiKey) => request(`agents/${id}`, 'DELETE', { confirm_api_key: confirmApiKey });

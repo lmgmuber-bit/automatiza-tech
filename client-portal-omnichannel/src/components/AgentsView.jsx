@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Loader2, Users, UserCheck, ShieldCheck, Headphones, Pencil, Trash2, X, Search, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
-import { getAgentsPaginated, createAgent, updateAgent, deleteAgent, getIsAdmin, getIsAgent, isSupervisorOrAdmin, getAgentRole, getClients, getPeriodStatus } from '../api';
+import { getAgentsPaginated, createAgent, updateAgent, deleteAgent, getIsAdmin, getIsAgent, isSupervisorOrAdmin, getAgentRole, getClients, getPeriodStatus, getChannels } from '../api';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 import ResultModal from './ResultModal';
 
@@ -26,7 +26,7 @@ export default function AgentsView() {
   const [searchInput, setSearchInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', role: 'agent', max_concurrent_chats: 5, client_id: '', password: '' });
+  const [form, setForm] = useState({ name: '', email: '', role: 'agent', max_concurrent_chats: 5, client_id: '', password: '', channel_id: '', schedule_start: '', schedule_end: '', available_days: '1,2,3,4,5' });
   const [submitting, setSubmitting] = useState(false);
   const [clientsList, setClientsList] = useState([]);
   const [editingAgent, setEditingAgent] = useState(null);
@@ -36,6 +36,7 @@ export default function AgentsView() {
   const [resultModal, setResultModal] = useState(null);
   const [maxAgents, setMaxAgents] = useState(null);
   const [planType, setPlanType] = useState('');
+  const [channelsList, setChannelsList] = useState([]);
 
   const isClientLogin = !getIsAdmin() && !getIsAgent();
   const canManage = getIsAdmin() || isClientLogin || isSupervisorOrAdmin();
@@ -54,6 +55,8 @@ export default function AgentsView() {
     if (getIsAdmin()) {
       getClients({ per_page: 100 }).then(data => setClientsList(data.data || [])).catch(() => {});
     }
+    // Load channels
+    getChannels().then(chs => setChannelsList(Array.isArray(chs) ? chs : [])).catch(() => {});
     // Fetch plan limits for client/agent
     if (!getIsAdmin()) {
       getPeriodStatus().then(data => {
@@ -100,7 +103,7 @@ export default function AgentsView() {
         setResultModal({ type: 'error', title: 'Error', message: result.error });
       } else {
         setShowForm(false);
-        setForm({ name: '', email: '', role: 'agent', max_concurrent_chats: 5, client_id: '', password: '' });
+        setForm({ name: '', email: '', role: 'agent', max_concurrent_chats: 5, client_id: '', password: '', channel_id: '', schedule_start: '', schedule_end: '', available_days: '1,2,3,4,5' });
         loadAgents();
       }
     } catch (err) {
@@ -119,7 +122,11 @@ export default function AgentsView() {
       max_concurrent_chats: agent.max_concurrent_chats || 5,
       status: agent.status || 'active',
       department: agent.department || '',
+      channel_id: agent.channel_id || '',
       password: '',
+      schedule_start: agent.schedule_start || '',
+      schedule_end: agent.schedule_end || '',
+      available_days: agent.available_days || '1,2,3,4,5',
     });
   }
 
@@ -323,6 +330,53 @@ export default function AgentsView() {
                     minLength={6}
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Canal asociado <span className="text-gray-400">(opcional)</span></label>
+                  <select
+                    value={form.channel_id}
+                    onChange={e => setForm({ ...form, channel_id: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">— Todos los canales —</option>
+                    {channelsList.map(ch => (
+                      <option key={ch.id} value={ch.id}>{ch.channel_name} ({ch.channel_type})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Horario inicio</label>
+                  <input
+                    type="time" value={form.schedule_start}
+                    onChange={e => setForm({ ...form, schedule_start: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Horario fin</label>
+                  <input
+                    type="time" value={form.schedule_end}
+                    onChange={e => setForm({ ...form, schedule_end: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Días disponibles</label>
+                  <div className="flex flex-wrap gap-2">
+                    {[{v:'1',l:'Lun'},{v:'2',l:'Mar'},{v:'3',l:'Mié'},{v:'4',l:'Jue'},{v:'5',l:'Vie'},{v:'6',l:'Sáb'},{v:'7',l:'Dom'}].map(d => {
+                      const days = (form.available_days || '').split(',');
+                      const checked = days.includes(d.v);
+                      return (
+                        <label key={d.v} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border transition-colors ${checked ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}>
+                          <input type="checkbox" className="hidden" checked={checked} onChange={() => {
+                            const newDays = checked ? days.filter(x => x !== d.v) : [...days, d.v].sort();
+                            setForm({ ...form, available_days: newDays.filter(Boolean).join(',') });
+                          }} />
+                          {d.l}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
               <div className="flex gap-2 mt-4">
                 <button type="submit" disabled={submitting} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
@@ -395,9 +449,47 @@ export default function AgentsView() {
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Ej: Ventas" />
                         </div>
                         <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Canal asociado</label>
+                          <select value={editForm.channel_id} onChange={e => setEditForm({...editForm, channel_id: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                            <option value="">— Todos los canales —</option>
+                            {channelsList.map(ch => (
+                              <option key={ch.id} value={ch.id}>{ch.channel_name} ({ch.channel_type})</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
                           <label className="block text-xs font-medium text-gray-500 mb-1">Nueva contraseña (opcional)</label>
                           <input type="password" value={editForm.password} onChange={e => setEditForm({...editForm, password: e.target.value})}
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Dejar vacío para no cambiar" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Horario inicio</label>
+                          <input type="time" value={editForm.schedule_start || ''} onChange={e => setEditForm({...editForm, schedule_start: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Horario fin</label>
+                          <input type="time" value={editForm.schedule_end || ''} onChange={e => setEditForm({...editForm, schedule_end: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Días disponibles</label>
+                          <div className="flex flex-wrap gap-2">
+                            {[{v:'1',l:'Lun'},{v:'2',l:'Mar'},{v:'3',l:'Mié'},{v:'4',l:'Jue'},{v:'5',l:'Vie'},{v:'6',l:'Sáb'},{v:'7',l:'Dom'}].map(d => {
+                              const days = (editForm.available_days || '').split(',');
+                              const checked = days.includes(d.v);
+                              return (
+                                <label key={d.v} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border transition-colors ${checked ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}>
+                                  <input type="checkbox" className="hidden" checked={checked} onChange={() => {
+                                    const newDays = checked ? days.filter(x => x !== d.v) : [...days, d.v].sort();
+                                    setEditForm({...editForm, available_days: newDays.filter(Boolean).join(',')});
+                                  }} />
+                                  {d.l}
+                                </label>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -432,6 +524,12 @@ export default function AgentsView() {
                             </span>
                             {agent.department && (
                               <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-medium">{agent.department}</span>
+                            )}
+                            {agent.channel_name && (
+                              <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">📱 {agent.channel_name}</span>
+                            )}
+                            {(agent.schedule_start && agent.schedule_end) && (
+                              <span className="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded-full font-medium">🕐 {agent.schedule_start.slice(0,5)}-{agent.schedule_end.slice(0,5)}</span>
                             )}
                           </div>
                         </div>

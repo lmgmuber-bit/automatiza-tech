@@ -918,6 +918,10 @@ h1, h2, h3, h4, h5, h6 {
 @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 .pulse-dot { animation: pulse-dot 1.5s infinite; }
 
+/* Unread badge subtle bounce */
+@keyframes bounce-subtle { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+.animate-bounce-subtle { animation: bounce-subtle 2s ease-in-out infinite; }
+
 /* Utility for buttons */
 .btn-hover { transition: var(--transition); }
 .btn-hover:hover { transform: translateY(-2px); }

@@ -480,6 +480,8 @@ class OmnichannelController {
             'page_id'        => sanitize_text_field($data['page_id'] ?? ''),
             'bot_token'      => sanitize_text_field($data['bot_token'] ?? ''),
             'config_json'    => isset($data['config']) ? wp_json_encode($data['config']) : null,
+            'ycloud_api_key' => sanitize_text_field($data['ycloud_api_key'] ?? ''),
+            'provider'       => sanitize_text_field($data['provider'] ?? 'ycloud'),
         ];
 
         $result = $this->wpdb->insert($this->prefix . 'channels', $insert);
@@ -597,6 +599,139 @@ class OmnichannelController {
                 absint($client_id)
             )
         );
+    }
+
+    // =========================================================
+    // PROMPT CONFIGS (parametrización de prompts por canal)
+    // =========================================================
+
+    public function get_prompt_configs($channel_id = 0) {
+        if ($channel_id) {
+            return $this->wpdb->get_results($this->wpdb->prepare(
+                "SELECT pc.*, ch.channel_name, ch.channel_type
+                 FROM {$this->prefix}prompt_configs pc
+                 LEFT JOIN {$this->prefix}channels ch ON pc.channel_id = ch.id
+                 WHERE pc.channel_id = %d ORDER BY pc.updated_at DESC",
+                absint($channel_id)
+            ));
+        }
+        return $this->wpdb->get_results(
+            "SELECT pc.*, ch.channel_name, ch.channel_type
+             FROM {$this->prefix}prompt_configs pc
+             LEFT JOIN {$this->prefix}channels ch ON pc.channel_id = ch.id
+             ORDER BY pc.updated_at DESC"
+        );
+    }
+
+    public function get_prompt_config($id) {
+        return $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT pc.*, ch.channel_name, ch.channel_type
+             FROM {$this->prefix}prompt_configs pc
+             LEFT JOIN {$this->prefix}channels ch ON pc.channel_id = ch.id
+             WHERE pc.id = %d",
+            absint($id)
+        ));
+    }
+
+    /**
+     * Endpoint público para N8N: obtiene prompt config activo de un canal.
+     * Autenticado via HMAC token.
+     */
+    public function get_active_prompt_config_for_channel($channel_id) {
+        return $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT * FROM {$this->prefix}prompt_configs WHERE channel_id = %d AND is_active = 1 ORDER BY updated_at DESC LIMIT 1",
+            absint($channel_id)
+        ));
+    }
+
+    public function create_prompt_config($data) {
+        $channel_id = absint($data['channel_id'] ?? 0);
+        if (!$channel_id) return ['error' => 'channel_id requerido'];
+
+        // Validate channel exists
+        $channel = $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT id FROM {$this->prefix}channels WHERE id = %d", $channel_id
+        ));
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+
+        $prompt_data = $data['prompt_data'] ?? [];
+        if (is_string($prompt_data)) {
+            $decoded = json_decode($prompt_data, true);
+            $prompt_data = is_array($decoded) ? $decoded : [];
+        }
+
+        // Sanitize all values in prompt_data
+        $clean = [];
+        foreach ($prompt_data as $k => $v) {
+            $key = sanitize_key($k);
+            $clean[$key] = is_string($v) ? wp_kses_post($v) : $v;
+        }
+
+        $insert = [
+            'channel_id'  => $channel_id,
+            'config_name' => sanitize_text_field($data['config_name'] ?? 'Configuración Principal'),
+            'prompt_data' => wp_json_encode($clean, JSON_UNESCAPED_UNICODE),
+            'is_active'   => absint($data['is_active'] ?? 1),
+            'version'     => 1,
+            'created_by'  => sanitize_text_field($data['created_by'] ?? ''),
+            'updated_by'  => sanitize_text_field($data['created_by'] ?? ''),
+        ];
+
+        $this->wpdb->insert($this->prefix . 'prompt_configs', $insert);
+        $id = $this->wpdb->insert_id;
+        if (!$id) return ['error' => 'Error al crear configuración de prompt'];
+
+        $this->audit_log('create', 'prompt_config', $id, "Prompt config creado para canal {$channel_id}", null, $insert);
+        return ['id' => $id, 'success' => true];
+    }
+
+    public function update_prompt_config($id, $data) {
+        $id = absint($id);
+        $old = $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT * FROM {$this->prefix}prompt_configs WHERE id = %d", $id
+        ), ARRAY_A);
+        if (!$old) return ['error' => 'Configuración no encontrada'];
+
+        $update = [];
+
+        if (isset($data['config_name'])) {
+            $update['config_name'] = sanitize_text_field($data['config_name']);
+        }
+        if (isset($data['is_active'])) {
+            $update['is_active'] = absint($data['is_active']);
+        }
+        if (isset($data['prompt_data'])) {
+            $prompt_data = $data['prompt_data'];
+            if (is_string($prompt_data)) {
+                $decoded = json_decode($prompt_data, true);
+                $prompt_data = is_array($decoded) ? $decoded : [];
+            }
+            $clean = [];
+            foreach ($prompt_data as $k => $v) {
+                $key = sanitize_key($k);
+                $clean[$key] = is_string($v) ? wp_kses_post($v) : $v;
+            }
+            $update['prompt_data'] = wp_json_encode($clean, JSON_UNESCAPED_UNICODE);
+        }
+
+        $update['updated_by'] = sanitize_text_field($data['updated_by'] ?? '');
+        $update['version'] = absint($old['version']) + 1;
+
+        $result = $this->wpdb->update($this->prefix . 'prompt_configs', $update, ['id' => $id]);
+        $this->audit_log('update', 'prompt_config', $id, "Prompt config actualizado (v{$update['version']})", $old, $update);
+        return $result !== false ? ['success' => true, 'version' => $update['version']] : ['error' => 'Error al actualizar'];
+    }
+
+    public function delete_prompt_config($id) {
+        $id = absint($id);
+        $old = $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT * FROM {$this->prefix}prompt_configs WHERE id = %d", $id
+        ), ARRAY_A);
+        if (!$old) return ['error' => 'Configuración no encontrada'];
+
+        $result = $this->wpdb->delete($this->prefix . 'prompt_configs', ['id' => $id]);
+        $this->audit_log('delete', 'prompt_config', $id, "Prompt config eliminado", $old, null);
+        return $result !== false ? ['success' => true] : ['error' => 'Error al eliminar'];
     }
 
     // =========================================================
@@ -724,11 +859,21 @@ class OmnichannelController {
             $conversation_id = $this->wpdb->insert_id;
         } else {
             $conversation_id = $conversation->id;
-            $this->wpdb->update($this->prefix . 'conversations', [
+            $update_data = [
                 'last_message_at'      => current_time('mysql'),
                 'last_message_preview' => mb_substr(sanitize_text_field($message_data['content'] ?? ''), 0, 500),
                 'unread_count'         => ($conversation->unread_count ?? 0) + 1,
-            ], ['id' => $conversation_id]);
+            ];
+            // Update contact name/phone if originally empty
+            $contact_name = sanitize_text_field($message_data['contact_name'] ?? '');
+            if (!empty($contact_name) && empty($conversation->contact_name)) {
+                $update_data['contact_name'] = $contact_name;
+            }
+            $contact_phone = sanitize_text_field($message_data['contact_phone'] ?? '');
+            if (!empty($contact_phone) && empty($conversation->contact_phone)) {
+                $update_data['contact_phone'] = $contact_phone;
+            }
+            $this->wpdb->update($this->prefix . 'conversations', $update_data, ['id' => $conversation_id]);
         }
 
         // Guardar mensaje
@@ -843,10 +988,16 @@ class OmnichannelController {
 
         // Actualizar conversación
         $old_status = $conversation->status;
-        $this->wpdb->update($this->prefix . 'conversations', [
+        $update_conv = [
             'status'            => 'assigned',
             'assigned_agent_id' => $agent_id,
-        ], ['id' => $conversation_id]);
+        ];
+        // Set intervention_mode if column exists
+        $has_intervention = $this->wpdb->get_results("SHOW COLUMNS FROM {$this->prefix}conversations LIKE 'intervention_mode'");
+        if ($has_intervention) {
+            $update_conv['intervention_mode'] = 'human';
+        }
+        $this->wpdb->update($this->prefix . 'conversations', $update_conv, ['id' => $conversation_id]);
 
         // Incrementar chats activos del agente
         $this->wpdb->query($this->wpdb->prepare(
@@ -884,10 +1035,15 @@ class OmnichannelController {
             ['conversation_id' => $conversation_id, 'agent_id' => $agent_id, 'status' => 'active']
         );
 
-        $this->wpdb->update($this->prefix . 'conversations', [
+        $release_data = [
             'status'            => 'bot',
             'assigned_agent_id' => null,
-        ], ['id' => $conversation_id]);
+        ];
+        $has_intervention = $this->wpdb->get_results("SHOW COLUMNS FROM {$this->prefix}conversations LIKE 'intervention_mode'");
+        if ($has_intervention) {
+            $release_data['intervention_mode'] = '';
+        }
+        $this->wpdb->update($this->prefix . 'conversations', $release_data, ['id' => $conversation_id]);
 
         // Decrementar chats activos
         $this->wpdb->query($this->wpdb->prepare(
@@ -1040,6 +1196,11 @@ class OmnichannelController {
             'max_concurrent_chats' => absint($data['max_concurrent_chats'] ?? 5),
         ];
 
+        // Channel association (optional)
+        if (!empty($data['channel_id'])) {
+            $insert['channel_id'] = absint($data['channel_id']);
+        }
+
         // Skills (JSON array)
         if (!empty($data['skills'])) {
             $skills = is_array($data['skills']) ? $data['skills'] : json_decode($data['skills'], true);
@@ -1051,6 +1212,20 @@ class OmnichannelController {
         // Department
         if (!empty($data['department'])) {
             $insert['department'] = sanitize_text_field($data['department']);
+        }
+
+        // Schedule fields
+        if (isset($data['schedule_start'])) {
+            $insert['schedule_start'] = preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $data['schedule_start']) ? sanitize_text_field($data['schedule_start']) : null;
+        }
+        if (isset($data['schedule_end'])) {
+            $insert['schedule_end'] = preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $data['schedule_end']) ? sanitize_text_field($data['schedule_end']) : null;
+        }
+        if (isset($data['available_days'])) {
+            $days = sanitize_text_field($data['available_days']);
+            if (preg_match('/^[1-7](,[1-7])*$/', $days)) {
+                $insert['available_days'] = $days;
+            }
         }
 
         // Password hash
@@ -1076,8 +1251,16 @@ class OmnichannelController {
     public function get_agents($client_id, $params = [], $page = 1, $per_page = 0) {
         // If no pagination requested, return all (backward compat)
         if ($per_page <= 0) {
+            $sql = "SELECT a.*, ch.channel_name FROM {$this->prefix}agents a LEFT JOIN {$this->prefix}channels ch ON a.channel_id = ch.id WHERE a.client_id = %d";
+            $values = [absint($client_id)];
+            $channel_filter = absint($params['channel_id'] ?? 0);
+            if ($channel_filter > 0) {
+                $sql .= " AND a.channel_id = %d";
+                $values[] = $channel_filter;
+            }
+            $sql .= " ORDER BY a.role, a.name";
             return $this->wpdb->get_results(
-                $this->wpdb->prepare("SELECT * FROM {$this->prefix}agents WHERE client_id = %d ORDER BY role, name", absint($client_id))
+                $this->wpdb->prepare($sql, ...$values)
             );
         }
 
@@ -1086,13 +1269,20 @@ class OmnichannelController {
         $per_page = min(max(1, absint($per_page)), 100);
         $offset = ($page - 1) * $per_page;
 
-        $where = "WHERE client_id = %d";
+        $where = "WHERE a.client_id = %d";
         $values = [$client_id];
+
+        // Filter by channel
+        $channel_id = absint($params['channel_id'] ?? 0);
+        if ($channel_id > 0) {
+            $where .= " AND a.channel_id = %d";
+            $values[] = $channel_id;
+        }
 
         $search = trim($params['search'] ?? '');
         if ($search !== '') {
             $like = '%' . $this->wpdb->esc_like($search) . '%';
-            $where .= " AND (name LIKE %s OR email LIKE %s OR role LIKE %s OR department LIKE %s)";
+            $where .= " AND (a.name LIKE %s OR a.email LIKE %s OR a.role LIKE %s OR a.department LIKE %s)";
             $values[] = $like;
             $values[] = $like;
             $values[] = $like;
@@ -1104,12 +1294,12 @@ class OmnichannelController {
         $order = strtoupper($params['order'] ?? 'DESC') === 'ASC' ? 'ASC' : 'DESC';
 
         $total = (int) $this->wpdb->get_var(
-            $this->wpdb->prepare("SELECT COUNT(*) FROM {$this->prefix}agents {$where}", ...$values)
+            $this->wpdb->prepare("SELECT COUNT(*) FROM {$this->prefix}agents a LEFT JOIN {$this->prefix}channels ch ON a.channel_id = ch.id {$where}", ...$values)
         );
 
         $rows = $this->wpdb->get_results(
             $this->wpdb->prepare(
-                "SELECT * FROM {$this->prefix}agents {$where} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d",
+                "SELECT a.*, ch.channel_name FROM {$this->prefix}agents a LEFT JOIN {$this->prefix}channels ch ON a.channel_id = ch.id {$where} ORDER BY a.{$orderby} {$order} LIMIT %d OFFSET %d",
                 ...array_merge($values, [$per_page, $offset])
             )
         );
@@ -1709,7 +1899,7 @@ class OmnichannelController {
         ), ARRAY_A);
         if (!$old) return ['error' => 'Agente no encontrado'];
 
-        $allowed = ['name', 'email', 'role', 'status', 'avatar_url', 'max_concurrent_chats', 'department'];
+        $allowed = ['name', 'email', 'role', 'status', 'avatar_url', 'max_concurrent_chats', 'department', 'channel_id', 'schedule_start', 'schedule_end', 'available_days'];
         $update = [];
         foreach ($allowed as $field) {
             if (isset($data[$field])) {
@@ -1723,6 +1913,17 @@ class OmnichannelController {
             if (is_array($skills)) {
                 $update['skills'] = wp_json_encode(array_map('sanitize_text_field', $skills));
             }
+        }
+
+        // Validate schedule fields
+        if (isset($update['schedule_start']) && $update['schedule_start'] !== '' && !preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $update['schedule_start'])) {
+            unset($update['schedule_start']);
+        }
+        if (isset($update['schedule_end']) && $update['schedule_end'] !== '' && !preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $update['schedule_end'])) {
+            unset($update['schedule_end']);
+        }
+        if (isset($update['available_days']) && $update['available_days'] !== '' && !preg_match('/^[1-7](,[1-7])*$/', $update['available_days'])) {
+            unset($update['available_days']);
         }
 
         if (empty($update)) return ['error' => 'Nada que actualizar'];
@@ -1872,9 +2073,10 @@ class OmnichannelController {
         // If no pagination requested, return all (backward compat)
         if ($per_page <= 0) {
             return $this->wpdb->get_results(
-                "SELECT a.*, cl.company_name as client_name
+                "SELECT a.*, cl.company_name as client_name, ch.channel_name
                  FROM {$this->prefix}agents a
                  LEFT JOIN {$this->prefix}clients cl ON a.client_id = cl.id
+                 LEFT JOIN {$this->prefix}channels ch ON a.channel_id = ch.id
                  ORDER BY cl.company_name, a.role, a.name"
             );
         }
@@ -1901,14 +2103,15 @@ class OmnichannelController {
         $orderby = $allowed_cols[$params['orderby'] ?? ''] ?? 'a.created_at';
         $order = strtoupper($params['order'] ?? 'DESC') === 'ASC' ? 'ASC' : 'DESC';
 
-        $count_sql = "SELECT COUNT(*) FROM {$this->prefix}agents a LEFT JOIN {$this->prefix}clients cl ON a.client_id = cl.id {$where}";
+        $count_sql = "SELECT COUNT(*) FROM {$this->prefix}agents a LEFT JOIN {$this->prefix}clients cl ON a.client_id = cl.id LEFT JOIN {$this->prefix}channels ch ON a.channel_id = ch.id {$where}";
         $total = $values
             ? (int) $this->wpdb->get_var($this->wpdb->prepare($count_sql, ...$values))
             : (int) $this->wpdb->get_var($count_sql);
 
-        $data_sql = "SELECT a.*, cl.company_name as client_name
+        $data_sql = "SELECT a.*, cl.company_name as client_name, ch.channel_name
              FROM {$this->prefix}agents a
              LEFT JOIN {$this->prefix}clients cl ON a.client_id = cl.id
+             LEFT JOIN {$this->prefix}channels ch ON a.channel_id = ch.id
              {$where} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d";
         $rows = $values
             ? $this->wpdb->get_results($this->wpdb->prepare($data_sql, ...array_merge($values, [$per_page, $offset])))
@@ -2165,6 +2368,16 @@ class OmnichannelController {
             'callback_token'  => $callback_token,
             'timestamp'       => current_time('c'),
         ];
+
+        // Incluir prompt_config si existe para este canal
+        $prompt_config = $this->get_active_prompt_config_for_channel($channel_id);
+        if ($prompt_config && !empty($prompt_config->prompt_data)) {
+            $decoded = json_decode($prompt_config->prompt_data, true);
+            if (is_array($decoded)) {
+                $payload['prompt_config'] = $decoded;
+                $payload['prompt_config_version'] = (int) $prompt_config->version;
+            }
+        }
 
         wp_remote_post($bot_config->n8n_webhook_url, [
             'headers'  => ['Content-Type' => 'application/json'],

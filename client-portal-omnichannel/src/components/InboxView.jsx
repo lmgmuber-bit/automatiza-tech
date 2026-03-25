@@ -1,8 +1,32 @@
-import { useState, useEffect, useRef } from 'react';
-import { Search, Send, UserCheck, RotateCcw, Loader2, MessageSquare, ArrowLeft, Eye, EyeOff } from 'lucide-react';
-import { getConversations, getMessages, sendMessage, takeoverConversation, releaseConversation, getAgents, getIsAdmin, getIsAgent, isSupervisorOrAdmin } from '../api';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Search, Send, UserCheck, RotateCcw, Loader2, MessageSquare, ArrowLeft, Eye, EyeOff, ArrowRightLeft, ChevronDown } from 'lucide-react';
+import { getConversations, getMessages, sendMessage, takeoverConversation, releaseConversation, transferConversation, getAgents, getIsAdmin, getIsAgent, isSupervisorOrAdmin } from '../api';
 import ChannelBadge from './ChannelBadge';
 import ResultModal from './ResultModal';
+
+const POLL_INTERVAL = 5000; // 5 seconds
+
+// Request browser notification permission
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function showBrowserNotification(title, body, convId) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      const n = new Notification(title, {
+        body,
+        icon: './logo-automatiza-tech.png',
+        tag: `omni-msg-${convId}`,
+        renotify: true,
+      });
+      n.onclick = () => { window.focus(); n.close(); };
+      setTimeout(() => n.close(), 8000);
+    } catch { /* silent — SW required on some browsers */ }
+  }
+}
 
 export default function InboxView() {
   const [conversations, setConversations] = useState([]);
@@ -18,9 +42,32 @@ export default function InboxView() {
   const [scope, setScope] = useState('all'); // 'all' or 'mine' (for agents)
   const [mobileShowChat, setMobileShowChat] = useState(false);
   const [resultModal, setResultModal] = useState(null);
+  const [showAgentDropdown, setShowAgentDropdown] = useState(false);
   const messagesEndRef = useRef(null);
+  const selectedConvRef = useRef(null);
+  const prevConvsRef = useRef([]); // previous conversations snapshot for diff
+  const seenMsgIdsRef = useRef({}); // { convId: lastSeenMsgTimestamp }
   const isAgentMode = getIsAgent();
   const canSupervisor = isAgentMode && isSupervisorOrAdmin();
+
+  // Keep ref in sync for polling callbacks
+  selectedConvRef.current = selectedConv;
+
+  // Request notification permission on mount
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
+
+  // Close agent dropdown on outside click
+  useEffect(() => {
+    if (!showAgentDropdown) return;
+    const close = () => setShowAgentDropdown(false);
+    const timer = setTimeout(() => document.addEventListener('click', close), 0);
+    return () => { clearTimeout(timer); document.removeEventListener('click', close); };
+  }, [showAgentDropdown]);
+
+  // Close dropdown when switching conversations
+  useEffect(() => { setShowAgentDropdown(false); }, [selectedConv]);
 
   useEffect(() => {
     loadConversations();
@@ -31,9 +78,102 @@ export default function InboxView() {
     if (selectedConv) loadMessages(selectedConv.id);
   }, [selectedConv]);
 
+  // Mark current conversation messages as seen when we view them
+  useEffect(() => {
+    if (selectedConv && messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      seenMsgIdsRef.current[selectedConv.id] = lastMsg.created_at || lastMsg.id;
+    }
+  }, [selectedConv, messages]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Auto-polling: refresh conversations + active chat messages every 5s
+  useEffect(() => {
+    const interval = setInterval(() => {
+      pollConversations();
+      if (selectedConvRef.current) {
+        pollMessages(selectedConvRef.current.id);
+      }
+    }, POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [filters, scope]);
+
+  // Silent poll — no loading spinners
+  const pollConversations = useCallback(async () => {
+    try {
+      const params = { ...filters, search: searchTerm };
+      if (isAgentMode && scope === 'mine') params.scope = 'mine';
+      const data = await getConversations(params);
+      const newConvs = data.data || [];
+
+      // Detect new incoming messages for browser notifications
+      const prevMap = {};
+      prevConvsRef.current.forEach(c => { prevMap[c.id] = c; });
+
+      let totalUnread = 0;
+      newConvs.forEach(c => {
+        // Count unread: conversations with newer messages than last seen
+        const lastSeen = seenMsgIdsRef.current[c.id];
+        if (c.last_message_at && lastSeen && c.last_message_at > lastSeen) {
+          totalUnread++;
+        } else if (!lastSeen && c.unread_count > 0) {
+          totalUnread += 1;
+        }
+
+        const prev = prevMap[c.id];
+        if (!prev) return;
+        // New message detected: last_message_at changed and it's inbound
+        const hasNewMsg = c.last_message_at && prev.last_message_at && c.last_message_at > prev.last_message_at;
+        if (hasNewMsg && c.id !== selectedConvRef.current?.id) {
+          showBrowserNotification(
+            c.contact_name || c.contact_phone || 'Nuevo mensaje',
+            c.last_message_preview || 'Tienes un nuevo mensaje',
+            c.id
+          );
+        }
+      });
+
+      prevConvsRef.current = newConvs;
+      setConversations(newConvs);
+
+      // Emit unread count for sidebar badge
+      window.dispatchEvent(new CustomEvent('omniUnreadCount', { detail: totalUnread }));
+    } catch { /* silent */ }
+  }, [filters, searchTerm, scope, isAgentMode]);
+
+  const pollMessages = useCallback(async (convId) => {
+    try {
+      const data = await getMessages(convId);
+      setMessages(prev => {
+        const newMsgs = data.data || [];
+        // Only update + scroll if message count changed
+        if (newMsgs.length !== prev.length) {
+          // New message arrived while viewing this conv — play subtle feedback
+          if (newMsgs.length > prev.length && prev.length > 0) {
+            const latest = newMsgs[newMsgs.length - 1];
+            if (latest.direction === 'inbound') {
+              // Show notification even for active conv if tab is hidden
+              if (document.hidden) {
+                const conv = selectedConvRef.current;
+                showBrowserNotification(
+                  conv?.contact_name || conv?.contact_phone || 'Nuevo mensaje',
+                  latest.content || 'Tienes un nuevo mensaje',
+                  convId
+                );
+              }
+            }
+          }
+          return newMsgs;
+        }
+        // Or if last message id differs
+        if (newMsgs.length > 0 && prev.length > 0 && newMsgs[newMsgs.length - 1].id !== prev[prev.length - 1].id) return newMsgs;
+        return prev;
+      });
+    } catch { /* silent */ }
+  }, []);
 
   async function loadConversations() {
     setLoading(true);
@@ -41,7 +181,9 @@ export default function InboxView() {
       const params = { ...filters, search: searchTerm };
       if (isAgentMode && scope === 'mine') params.scope = 'mine';
       const data = await getConversations(params);
-      setConversations(data.data || []);
+      const convs = data.data || [];
+      setConversations(convs);
+      prevConvsRef.current = convs; // Initialize baseline for notification diff
     } catch (err) {
       console.error('Error loading conversations:', err);
     } finally {
@@ -90,25 +232,45 @@ export default function InboxView() {
     }
   }
 
-  async function handleTakeover() {
-    if (!selectedConv || agents.length === 0) return;
-    const agent = agents[0];
+  // Assign conversation to a specific agent (admin/supervisor only)
+  async function handleAssignToAgent(agentId) {
+    if (!selectedConv || !agentId) return;
     try {
-      await takeoverConversation(selectedConv.id, agent.id, 'Toma de control manual');
-      loadConversations();
-      loadMessages(selectedConv.id);
+      await takeoverConversation(selectedConv.id, agentId, 'Asignado por supervisor');
+      setShowAgentDropdown(false);
+      await loadConversations();
+      await loadMessages(selectedConv.id);
+      setResultModal({ type: 'success', title: 'Asignado', message: `Conversación asignada al agente.` });
     } catch (err) {
-      setResultModal({ type: 'error', title: 'Error', message: err.message });
+      setResultModal({ type: 'error', title: 'Error al asignar', message: err.message });
+    }
+  }
+
+  // Transfer to another agent (agent transferring their own conv)
+  async function handleTransfer(toAgentId) {
+    if (!selectedConv || !toAgentId) return;
+    const myAgent = agents.find(a => a.is_mine || a.id == selectedConv.assigned_agent_id) || agents[0];
+    if (!myAgent) return;
+    try {
+      await transferConversation(selectedConv.id, myAgent.id, toAgentId, 'Transferido por agente');
+      setShowAgentDropdown(false);
+      await loadConversations();
+      await loadMessages(selectedConv.id);
+      setResultModal({ type: 'success', title: 'Transferido', message: 'Conversación transferida.' });
+    } catch (err) {
+      setResultModal({ type: 'error', title: 'Error al transferir', message: err.message });
     }
   }
 
   async function handleRelease() {
     if (!selectedConv) return;
-    const agent = agents[0];
+    const agentId = selectedConv.assigned_agent_id || (agents[0]?.id);
+    if (!agentId) return;
     try {
-      await releaseConversation(selectedConv.id, agent.id);
-      loadConversations();
-      loadMessages(selectedConv.id);
+      await releaseConversation(selectedConv.id, agentId);
+      setShowAgentDropdown(false);
+      await loadConversations();
+      await loadMessages(selectedConv.id);
     } catch (err) {
       setResultModal({ type: 'error', title: 'Error', message: err.message });
     }
@@ -230,7 +392,7 @@ export default function InboxView() {
                     {(conv.contact_name || '?')[0].toUpperCase()}
                   </div>
                   {conv.unread_count > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-bounce-subtle">
                       {conv.unread_count > 9 ? '9+' : conv.unread_count}
                     </span>
                   )}
@@ -238,7 +400,7 @@ export default function InboxView() {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm text-gray-900 truncate">
+                    <span className={`font-medium text-sm truncate ${conv.unread_count > 0 ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-900 dark:text-slate-200'}`}>
                       {conv.contact_name || conv.contact_phone || 'Sin nombre'}
                     </span>
                     <span className="text-[10px] text-gray-400 shrink-0 ml-2">
@@ -269,7 +431,7 @@ export default function InboxView() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1 truncate">
+                  <p className={`text-xs mt-1 truncate ${conv.unread_count > 0 ? 'text-gray-700 dark:text-slate-300 font-medium' : 'text-gray-500'}`}>
                     {conv.last_message_preview || 'Sin mensajes'}
                   </p>
                 </div>
@@ -311,29 +473,130 @@ export default function InboxView() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 relative">
                 {selectedConv.is_readonly && (
                   <span className="flex items-center gap-1 px-2 py-1 bg-gray-200 text-gray-500 rounded-lg text-xs font-medium">
                     <Eye size={12} /> Solo lectura
                   </span>
                 )}
-                {!selectedConv.is_readonly && (selectedConv.status === 'bot' || selectedConv.status === 'open') ? (
-                  <button
-                    onClick={handleTakeover}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    <UserCheck size={14} />
-                    <span className="hidden sm:inline">Tomar Control</span>
-                  </button>
-                ) : !selectedConv.is_readonly && selectedConv.status === 'assigned' ? (
-                  <button
-                    onClick={handleRelease}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 transition-colors"
-                  >
-                    <RotateCcw size={14} />
-                    <span className="hidden sm:inline">Devolver al Bot</span>
-                  </button>
-                ) : null}
+                {!selectedConv.is_readonly && (() => {
+                  const isAdminOrSup = getIsAdmin() || canSupervisor;
+                  const isConvUnassigned = selectedConv.status === 'bot' || selectedConv.status === 'open';
+                  const isConvAssigned = selectedConv.status === 'assigned';
+                  const isMyConv = isAgentMode && selectedConv.is_mine;
+
+                  return (
+                    <>
+                      {/* Admin/Supervisor: Assign button (for unassigned convs) */}
+                      {isAdminOrSup && isConvUnassigned && (
+                        <div className="relative">
+                          <button
+                            onClick={() => setShowAgentDropdown(v => !v)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
+                          >
+                            <UserCheck size={14} />
+                            <span className="hidden sm:inline">Asignar Agente</span>
+                            <ChevronDown size={12} />
+                          </button>
+                          {showAgentDropdown && (
+                            <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-60 overflow-y-auto">
+                              <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase">Seleccionar agente</p>
+                              {agents.filter(a => a.status === 'active').map(a => (
+                                <button
+                                  key={a.id}
+                                  onClick={() => handleAssignToAgent(a.id)}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex items-center justify-between"
+                                >
+                                  <span>{a.name}</span>
+                                  <span className="text-[10px] text-gray-400">{a.active_chats}/{a.max_concurrent_chats}</span>
+                                </button>
+                              ))}
+                              {agents.filter(a => a.status === 'active').length === 0 && (
+                                <p className="px-3 py-2 text-xs text-gray-400">No hay agentes activos</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Admin/Supervisor: Reassign + Release (for assigned convs) */}
+                      {isAdminOrSup && isConvAssigned && (
+                        <>
+                          <div className="relative">
+                            <button
+                              onClick={() => setShowAgentDropdown(v => !v)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors"
+                            >
+                              <ArrowRightLeft size={14} />
+                              <span className="hidden sm:inline">Reasignar</span>
+                              <ChevronDown size={12} />
+                            </button>
+                            {showAgentDropdown && (
+                              <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-60 overflow-y-auto">
+                                <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase">Reasignar a</p>
+                                {agents.filter(a => a.status === 'active' && a.id != selectedConv.assigned_agent_id).map(a => (
+                                  <button
+                                    key={a.id}
+                                    onClick={() => handleAssignToAgent(a.id)}
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex items-center justify-between"
+                                  >
+                                    <span>{a.name}</span>
+                                    <span className="text-[10px] text-gray-400">{a.active_chats}/{a.max_concurrent_chats}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={handleRelease}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 transition-colors"
+                          >
+                            <RotateCcw size={14} />
+                            <span className="hidden sm:inline">Devolver al Bot</span>
+                          </button>
+                        </>
+                      )}
+
+                      {/* Agent (not supervisor): Transfer to colleague + Release (only if MY conv) */}
+                      {isAgentMode && !isAdminOrSup && isMyConv && isConvAssigned && (
+                        <>
+                          <div className="relative">
+                            <button
+                              onClick={() => setShowAgentDropdown(v => !v)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600 transition-colors"
+                            >
+                              <ArrowRightLeft size={14} />
+                              <span className="hidden sm:inline">Transferir</span>
+                              <ChevronDown size={12} />
+                            </button>
+                            {showAgentDropdown && (
+                              <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-60 overflow-y-auto">
+                                <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase">Transferir a</p>
+                                {agents.filter(a => a.status === 'active' && a.id != selectedConv.assigned_agent_id).map(a => (
+                                  <button
+                                    key={a.id}
+                                    onClick={() => handleTransfer(a.id)}
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex items-center justify-between"
+                                  >
+                                    <span>{a.name}</span>
+                                    <span className="text-[10px] text-gray-400">{a.active_chats}/{a.max_concurrent_chats}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={handleRelease}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 transition-colors"
+                          >
+                            <RotateCcw size={14} />
+                            <span className="hidden sm:inline">Devolver al Bot</span>
+                          </button>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
 

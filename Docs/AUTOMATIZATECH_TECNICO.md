@@ -1,8 +1,11 @@
-# AutomatizaTech — Documento Técnico Completo del Ecosistema
+# AutomatizaTech — Documento Técnico: Portal OmniCliente
 
-> **Versión:** 1.0  
-> **Última actualización:** 24 de marzo de 2026  
-> **Propósito:** Referencia técnica exhaustiva para desarrolladores, agentes IA o cualquier persona que necesite entender la arquitectura, componentes y funcionamiento interno de AutomatizaTech
+> **Versión:** 2.0  
+> **Última actualización:** 25 de marzo de 2026  
+> **Alcance:** Arquitectura técnica del **Portal OmniCliente** (SPA React + API PHP + N8N).  
+> **Plataforma principal WP/CRM:** Ver `DOCUMENTO_TECNICO_AUTOMATIZATECH.md`  
+> **Contexto completo del proyecto:** Ver `CONTEXTO_COMPLETO.md`  
+> **Propósito:** Referencia técnica exhaustiva para desarrolladores, agentes IA o cualquier persona que necesite entender la arquitectura del portal omnicanal
 
 ---
 

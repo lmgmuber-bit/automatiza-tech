@@ -1,5 +1,10 @@
 # 🚀 Portal Omnicanal - AutomatizaTech
 
+> **Última actualización:** 25 de marzo de 2026  
+> **Estado actual:** v1.1 en producción — Build `index-MEpVV2Od.js` (434KB)  
+> **Workflow N8N activo:** `WhatsApp_Bot_v8_Portal_OmniCliente.json` (92 nodos, portal-first + GSheets fallback)  
+> **Docs completas:** `CONTEXTO_COMPLETO.md` | Técnico: `Docs/AUTOMATIZATECH_TECNICO.md`
+
 ## Arquitectura del Sistema
 
 Sistema de bandeja unificada que consolida conversaciones de **WhatsApp**, **Instagram**, **Telegram** y **Messenger** en un solo portal, con configuración de bots por canal, auditoría completa y toma de control por ejecutivos.
@@ -11,31 +16,47 @@ Sistema de bandeja unificada que consolida conversaciones de **WhatsApp**, **Ins
 ### Backend (WordPress/PHP)
 | Archivo | Descripción |
 |---------|-------------|
-| `setup-omnichannel-db.php` | Crea las 8 tablas del sistema en MySQL |
-| `omnichannel-controller.php` | Clase principal con toda la lógica de negocio |
-| `api-omnichannel.php` | API REST con endpoints JSON para el portal |
+| `setup-omnichannel-db.php` | Crea las tablas del sistema en MySQL |
+| `omnichannel-controller.php` | Clase principal ~3150 líneas: CRUD, webhooks, N8N callbacks |
+| `api-omnichannel.php` | API REST ~1380 líneas: parsea rutas, auth, CORS |
 | `webhook-omnichannel.php` | Receptor de webhooks de WhatsApp, IG, Telegram, Messenger |
 | `admin-omnichannel-superadmin.php` | Panel Super Admin para AutomatizaTech |
 
 ### Frontend (React/Vite/Tailwind)
 | Directorio | Descripción |
 |------------|-------------|
-| `client-portal-omnichannel/src/` | Código fuente React |
-| `client-portal-omnichannel/dist/` | Build de producción |
+| `client-portal-omnichannel/src/` | Código fuente React (19 componentes) |
+| `client-portal-omnichannel/dist/` | Build temporal (copiar a portal-omnichannel/) |
+| `portal-omnichannel/` | Deploy directory en producción |
+
+### Componentes React principales
+| Componente | Función |
+|------------|---------|
+| `App.jsx` | Layout + auth state + routing por `currentView` |
+| `InboxView.jsx` | Bandeja unificada de conversaciones |
+| `PromptsView.jsx` | ⭐ Config de prompts IA (7 secciones, 40+ campos) |
+| `BotsView.jsx` | Config de bots por canal |
+| `ChannelsView.jsx` | CRUD de canales |
+| `AgentsView.jsx` | Gestión de agentes |
+| `DashboardView.jsx` | Stats y métricas |
+| `AuditView.jsx` | Log de auditoría |
 
 ---
 
-## 🗄️ Base de Datos (8 tablas)
+## 🗄️ Base de Datos (10+ tablas)
 
 ```
-wp_omnichannel_clients        → Clientes con acceso al portal
+wp_omnichannel_clients        → Clientes con acceso al portal (API Key hasheada SHA-256)
 wp_omnichannel_channels       → Canales configurados por cliente
 wp_omnichannel_conversations  → Conversaciones unificadas
 wp_omnichannel_messages       → Mensajes de todos los canales
-wp_omnichannel_bot_configs    → Configuración de bots por canal  
+wp_omnichannel_prompt_configs → ⭐ Configs de prompts IA por canal (prompt_data JSON)
 wp_omnichannel_audit_log      → Registro completo de auditoría
 wp_omnichannel_takeovers      → Toma de control por ejecutivos
 wp_omnichannel_agents         → Agentes/usuarios del portal
+wp_omnichannel_support_tickets    → Tickets internos de soporte
+wp_omnichannel_ticket_messages    → Mensajes en tickets (attachments JSON)
+wp_omnichannel_channel_types      → Tipos de canal disponibles
 ```
 
 ---

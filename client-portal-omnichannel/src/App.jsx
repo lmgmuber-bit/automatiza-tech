@@ -5,6 +5,7 @@ import LoginScreen from './components/LoginScreen';
 import InboxView from './components/InboxView';
 import ChannelsView from './components/ChannelsView';
 import BotsView from './components/BotsView';
+import BotConfigUnifiedView from './components/BotConfigUnifiedView';
 import AgentsView from './components/AgentsView';
 import AuditView from './components/AuditView';
 import ChannelTypesView from './components/ChannelTypesView';
@@ -12,6 +13,7 @@ import ClientsView from './components/ClientsView';
 import DashboardView from './components/DashboardView';
 import ProfileView from './components/ProfileView';
 import SupportView from './components/SupportView';
+import PromptsView from './components/PromptsView';
 import ExpiryWarningModal from './components/ExpiryWarningModal';
 import TicketNotificationModal from './components/TicketNotificationModal';
 
@@ -25,6 +27,7 @@ export default function App() {
   const [periodWarning, setPeriodWarning] = useState(null);
   const [agentDataVersion, setAgentDataVersion] = useState(0);
   const [openTicketCount, setOpenTicketCount] = useState(0);
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
 
   useEffect(() => {
     function handleResize() {
@@ -45,6 +48,15 @@ export default function App() {
     return () => window.removeEventListener('agentDataUpdated', handleAgentDataUpdated);
   }, []);
 
+  // Listen for unread message count from InboxView polling
+  useEffect(() => {
+    function handleUnread(e) {
+      setUnreadMsgCount(e.detail || 0);
+    }
+    window.addEventListener('omniUnreadCount', handleUnread);
+    return () => window.removeEventListener('omniUnreadCount', handleUnread);
+  }, []);
+
   // Fetch open ticket count for admin (poll every 60s)
   useEffect(() => {
     if (!getIsAdmin()) return;
@@ -59,6 +71,13 @@ export default function App() {
     const interval = setInterval(fetchCount, 60000);
     return () => { cancelled = true; clearInterval(interval); };
   }, [authenticated]);
+
+  // Update document title with unread count
+  useEffect(() => {
+    document.title = unreadMsgCount > 0
+      ? `(${unreadMsgCount}) OmniCliente - AutomatizaTech`
+      : 'OmniCliente - AutomatizaTech';
+  }, [unreadMsgCount]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -104,7 +123,7 @@ export default function App() {
     ? (isSupervisorOrAdmin()
       ? {
           inbox: <InboxView />,
-          bots: <BotsView />,
+          'bot-config': <BotConfigUnifiedView />,
           agents: <AgentsView />,
           audit: <AuditView />,
           profile: <ProfileView />,
@@ -120,7 +139,7 @@ export default function App() {
         inbox: <InboxView />,
         channels: <ChannelsView />,
         'channel-types': <ChannelTypesView />,
-        bots: <BotsView />,
+        'bot-config': <BotConfigUnifiedView />,
         agents: <AgentsView />,
         audit: <AuditView />,
         ...(getIsAdmin() ? {
@@ -150,6 +169,7 @@ export default function App() {
         onToggleDark={() => setDarkMode(d => !d)}
         agentDataVersion={agentDataVersion}
         openTicketCount={openTicketCount}
+        unreadMsgCount={unreadMsgCount}
       />
 
       <div className="main-content">

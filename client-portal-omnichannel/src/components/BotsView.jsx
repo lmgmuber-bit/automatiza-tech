@@ -81,9 +81,9 @@ export default function BotsView() {
             {configs.map(config => (
               <div key={config.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 {/* Header */}
-                <div className="px-5 py-4 flex items-center justify-between border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white ${
+                <div className="px-3 sm:px-5 py-3 sm:py-4 flex items-center justify-between gap-2 border-b border-gray-100">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white shrink-0 ${
                       config.channel_type === 'whatsapp' ? 'bg-green-500' :
                       config.channel_type === 'instagram' ? 'bg-pink-500' :
                       config.channel_type === 'telegram' ? 'bg-sky-500' :
@@ -91,11 +91,11 @@ export default function BotsView() {
                     }`}>
                       🤖
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-sm">{config.bot_name}</h3>
-                      <div className="flex items-center gap-2 mt-0.5">
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-sm truncate">{config.bot_name}</h3>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         <ChannelBadge type={config.channel_type} />
-                        <span className="text-xs text-gray-400">{config.channel_name}</span>
+                        <span className="text-xs text-gray-400 truncate max-w-[120px]">{config.channel_name}</span>
                         {getIsAdmin() && config.client_name && (
                           <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">{config.client_name}</span>
                         )}
@@ -107,7 +107,7 @@ export default function BotsView() {
                   </div>
                   <button
                     onClick={() => editingId === config.id ? setEditingId(null) : startEdit(config)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
                   >
                     <Settings size={14} />
                     {editingId === config.id ? 'Cerrar' : 'Configurar'}

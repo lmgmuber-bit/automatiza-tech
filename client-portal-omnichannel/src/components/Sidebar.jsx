@@ -5,7 +5,7 @@ const navItems = [
   { id: 'inbox', label: 'Bandeja Unificada', icon: MessageSquare },
   { id: 'channels', label: 'Canales', icon: Radio },
   { id: 'channel-types', label: 'Tipos de Canal', icon: Settings },
-  { id: 'bots', label: 'Configurar Bots', icon: Bot },
+  { id: 'bot-config', label: 'Config y Prompts Bot', icon: Bot },
   { id: 'agents', label: 'Agentes', icon: Users },
   { id: 'audit', label: 'Auditoría', icon: ClipboardList },
 ];
@@ -20,7 +20,7 @@ const agentNavItems = [
 // Supervisor/admin agents: all views except admin-only and channels (profile moved below badge)
 const supervisorNavItems = [
   { id: 'inbox', label: 'Bandeja Unificada', icon: MessageSquare },
-  { id: 'bots', label: 'Configurar Bots', icon: Bot },
+  { id: 'bot-config', label: 'Config y Prompts Bot', icon: Bot },
   { id: 'agents', label: 'Agentes', icon: Users },
   { id: 'audit', label: 'Auditoría', icon: ClipboardList },
   { id: 'support', label: 'Soporte', icon: LifeBuoy },
@@ -32,7 +32,7 @@ const adminNavItems = [
   { id: 'support', label: 'Soporte', icon: LifeBuoy },
 ];
 
-export default function Sidebar({ currentView, onNavigate, onLogout, isOpen, onClose, isMobile, darkMode, onToggleDark, agentDataVersion, openTicketCount }) {
+export default function Sidebar({ currentView, onNavigate, onLogout, isOpen, onClose, isMobile, darkMode, onToggleDark, agentDataVersion, openTicketCount, unreadMsgCount }) {
   const isAgentMode = getIsAgent();
   const agentData = isAgentMode ? getAgentData() : null;
   const activeNav = isAgentMode
@@ -105,6 +105,9 @@ export default function Sidebar({ currentView, onNavigate, onLogout, isOpen, onC
             >
               <Icon size={18} className="shrink-0" />
               <span className="flex-1 text-left">{item.label}</span>
+              {item.id === 'inbox' && unreadMsgCount > 0 && (
+                <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-red-500 text-white min-w-[20px] text-center animate-pulse">{unreadMsgCount > 99 ? '99+' : unreadMsgCount}</span>
+              )}
               {item.id === 'support' && openTicketCount > 0 && (
                 <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-red-500 text-white min-w-[20px] text-center">{openTicketCount}</span>
               )}

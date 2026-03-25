@@ -148,6 +148,60 @@ try {
         send_json(['status' => 'ok', 'timestamp' => current_time('c')]);
     }
 
+    // ---- PROMPT CONFIG para N8N (autenticado via HMAC) ----
+    if (isset($segments[0]) && $segments[0] === 'prompt-config' && isset($segments[1]) && $method === 'GET') {
+        $pc_channel_id = absint($segments[1]);
+        $pc_token = sanitize_text_field($_GET['token'] ?? '');
+        $pc_secret = defined('OMNI_ADMIN_SECRET') ? OMNI_ADMIN_SECRET : 'omni_default_secret';
+        $pc_expected = hash_hmac('sha256', 'prompt-config:' . $pc_channel_id, $pc_secret);
+        if (empty($pc_token) || !hash_equals($pc_expected, $pc_token)) {
+            send_json(['error' => 'Token inválido'], 403);
+        }
+        $pc = $controller->get_active_prompt_config_for_channel($pc_channel_id);
+        if (!$pc) send_json(['error' => 'No hay configuración activa para este canal'], 404);
+        $decoded = json_decode($pc->prompt_data, true);
+
+        // Include escalation agents with schedule data
+        $escalation_agents = [];
+        if (!empty($decoded['agentes_escalacion']) && is_array($decoded['agentes_escalacion'])) {
+            $agent_ids = array_filter(array_map(function($a) { return absint($a['agent_id'] ?? 0); }, $decoded['agentes_escalacion']));
+            if (!empty($agent_ids)) {
+                $placeholders = implode(',', array_fill(0, count($agent_ids), '%d'));
+                $agents_rows = $wpdb->get_results($wpdb->prepare(
+                    "SELECT id, name, department, status, schedule_start, schedule_end, available_days FROM {$wpdb->prefix}omnichannel_agents WHERE id IN ($placeholders)",
+                    ...$agent_ids
+                ));
+                $agents_map = [];
+                foreach ($agents_rows as $ar) { $agents_map[$ar->id] = $ar; }
+                foreach ($decoded['agentes_escalacion'] as $ea) {
+                    $aid = absint($ea['agent_id'] ?? 0);
+                    $ag = $agents_map[$aid] ?? null;
+                    $escalation_agents[] = [
+                        'agent_id'       => $aid,
+                        'area'           => $ea['area'] ?? '',
+                        'es_defecto'     => !empty($ea['es_defecto']),
+                        'name'           => $ag ? $ag->name : '',
+                        'department'     => $ag ? ($ag->department ?? '') : '',
+                        'status'         => $ag ? $ag->status : 'inactive',
+                        'schedule_start' => $ag ? ($ag->schedule_start ?? '') : '',
+                        'schedule_end'   => $ag ? ($ag->schedule_end ?? '') : '',
+                        'available_days' => $ag ? ($ag->available_days ?? '1,2,3,4,5') : '',
+                    ];
+                }
+            }
+        }
+
+        send_json([
+            'id'           => (int) $pc->id,
+            'channel_id'   => (int) $pc->channel_id,
+            'config_name'  => $pc->config_name,
+            'prompt_data'  => is_array($decoded) ? $decoded : [],
+            'escalation_agents' => $escalation_agents,
+            'version'      => (int) $pc->version,
+            'updated_at'   => $pc->updated_at,
+        ]);
+    }
+
     // ---- N8N CALLBACK (respuesta del bot) ----
     if (isset($segments[0]) && $segments[0] === 'webhook' &&
         isset($segments[1]) && $segments[1] === 'n8n-callback' && $method === 'POST') {
@@ -157,7 +211,11 @@ try {
 
     // ---- WEBHOOK (sin auth) ----
     if (isset($segments[0]) && $segments[0] === 'webhook' && $method === 'POST') {
+        // channel_id from route segment (webhook/{id}) or query param (?channel_id={id})
         $channel_id = absint($segments[1] ?? 0);
+        if (!$channel_id && isset($_GET['channel_id'])) {
+            $channel_id = absint($_GET['channel_id']);
+        }
         $provided_secret = sanitize_text_field($_GET['secret'] ?? '');
         
         if (!$channel_id || empty($provided_secret)) {
@@ -443,6 +501,10 @@ try {
                     $result = $controller->update_channel(absint($segments[2]), $body);
                     send_json(['success' => $result]);
                 }
+                if ($method === 'DELETE' && isset($segments[2])) {
+                    $result = $controller->delete_channel(absint($segments[2]));
+                    send_json(['success' => $result]);
+                }
                 break;
 
             // Admin: ver TODOS los bots de todos los clientes
@@ -457,6 +519,32 @@ try {
                 if ($method === 'PUT' && isset($segments[2])) {
                     $result = $controller->update_bot_config(absint($segments[2]), $body);
                     send_json(['success' => $result]);
+                }
+                break;
+
+            // Admin: prompt configs (CRUD completo)
+            case 'prompts':
+                if ($method === 'GET' && !isset($segments[2])) {
+                    $channel_filter = absint($_GET['channel_id'] ?? 0);
+                    send_json($controller->get_prompt_configs($channel_filter));
+                }
+                if ($method === 'GET' && isset($segments[2])) {
+                    $pc = $controller->get_prompt_config(absint($segments[2]));
+                    send_json($pc ?: ['error' => 'No encontrado'], $pc ? 200 : 404);
+                }
+                if ($method === 'POST') {
+                    $body['created_by'] = wp_get_current_user()->user_login ?? 'admin';
+                    $result = $controller->create_prompt_config($body);
+                    send_json($result, isset($result['error']) ? 400 : 201);
+                }
+                if ($method === 'PUT' && isset($segments[2])) {
+                    $body['updated_by'] = wp_get_current_user()->user_login ?? 'admin';
+                    $result = $controller->update_prompt_config(absint($segments[2]), $body);
+                    send_json($result, isset($result['error']) ? 400 : 200);
+                }
+                if ($method === 'DELETE' && isset($segments[2])) {
+                    $result = $controller->delete_prompt_config(absint($segments[2]));
+                    send_json($result, isset($result['error']) ? 400 : 200);
                 }
                 break;
 
@@ -481,7 +569,7 @@ try {
                     $result = $controller->create_agent($client_id, $body);
                     send_json($result, isset($result['error']) ? 400 : 201);
                 }
-                // PUT /admin/agents/{id} - update agent (password, skills, etc.)
+                // PUT /admin/agents/{id} - update agent (password, skills, fields)
                 if ($method === 'PUT' && isset($segments[2])) {
                     $agent_id = absint($segments[2]);
                     $results = [];
@@ -491,6 +579,8 @@ try {
                     if (isset($body['skills'])) {
                         $results[] = $controller->update_agent_skills($agent_id, $body['skills'], $body['department'] ?? null);
                     }
+                    // Also update standard fields (name, role, status, department, channel_id, etc.)
+                    $results[] = $controller->update_agent($agent_id, $body);
                     $errors = array_filter($results, fn($r) => isset($r['error']));
                     if ($errors) send_json(reset($errors), 400);
                     send_json(['success' => true]);
@@ -928,6 +1018,24 @@ try {
                 }
                 break;
 
+            // Agent: prompt configs (supervisor = read-only, admin of client cannot edit either — only AT admin)
+            case 'prompts':
+                if ($method === 'GET' && $is_supervisor) {
+                    $channel_filter = absint($_GET['channel_id'] ?? 0);
+                    send_json($controller->get_prompt_configs($channel_filter));
+                }
+                if ($method === 'GET' && isset($segments[2]) && $is_supervisor) {
+                    $pc = $controller->get_prompt_config(absint($segments[2]));
+                    send_json($pc ?: ['error' => 'No encontrado'], $pc ? 200 : 404);
+                }
+                if ($method !== 'GET') {
+                    send_json(['error' => 'Solo el administrador de AT puede gestionar prompts'], 403);
+                }
+                if (!$is_supervisor) {
+                    send_json(['error' => 'No tienes permisos para ver configuración de prompts'], 403);
+                }
+                break;
+
             // Agent: audit logs (supervisor only)
             case 'audit':
                 if ($method === 'GET' && $is_supervisor) {
@@ -1286,19 +1394,36 @@ try {
             }
             break;
 
+        // --- PROMPT CONFIGS (empresa: solo lectura) ---
+        case 'prompts':
+            if ($method === 'GET' && !isset($segments[1])) {
+                $channel_filter = absint($_GET['channel_id'] ?? 0);
+                send_json($controller->get_prompt_configs($channel_filter));
+            }
+            if ($method === 'GET' && isset($segments[1])) {
+                $pc = $controller->get_prompt_config(absint($segments[1]));
+                send_json($pc ?: ['error' => 'No encontrado'], $pc ? 200 : 404);
+            }
+            if ($method !== 'GET') {
+                send_json(['error' => 'Solo el administrador de AT puede gestionar prompts'], 403);
+            }
+            break;
+
         // --- AGENTES ---
         case 'agents':
             if ($method === 'GET') {
                 $page = absint($_GET['page'] ?? 0);
                 $per_page = min(absint($_GET['per_page'] ?? 0), 100);
+                $agent_params = [
+                    'search'     => sanitize_text_field($_GET['search'] ?? ''),
+                    'orderby'    => sanitize_text_field($_GET['orderby'] ?? 'created_at'),
+                    'order'      => sanitize_text_field($_GET['order'] ?? 'DESC'),
+                    'channel_id' => absint($_GET['channel_id'] ?? 0),
+                ];
                 if ($page > 0 && $per_page > 0) {
-                    send_json($controller->get_agents($client_id, [
-                        'search'  => sanitize_text_field($_GET['search'] ?? ''),
-                        'orderby' => sanitize_text_field($_GET['orderby'] ?? 'created_at'),
-                        'order'   => sanitize_text_field($_GET['order'] ?? 'DESC'),
-                    ], $page, $per_page));
+                    send_json($controller->get_agents($client_id, $agent_params, $page, $per_page));
                 } else {
-                    send_json($controller->get_agents($client_id));
+                    send_json($controller->get_agents($client_id, $agent_params));
                 }
             }
             if ($method === 'POST') {

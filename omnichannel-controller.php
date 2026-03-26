@@ -1019,7 +1019,91 @@ class OmnichannelController {
             $conversation->client_id
         );
 
+        // Send email notification to assigned agent
+        $this->notify_agent_assignment($conversation_id, $agent, $conversation, 'assigned');
+
         return ['success' => true, 'takeover_id' => $this->wpdb->insert_id];
+    }
+
+    /**
+     * Send email notification to agent when a chat is assigned/transferred to them.
+     * Includes last 5 messages as conversation summary.
+     */
+    private function notify_agent_assignment($conversation_id, $agent, $conversation, $type = 'assigned') {
+        if (empty($agent->email)) return;
+
+        // Get last 5 messages (excluding system messages)
+        $messages = $this->wpdb->get_results($this->wpdb->prepare(
+            "SELECT sender_type, sender_name, content, created_at 
+             FROM {$this->prefix}messages 
+             WHERE conversation_id = %d AND sender_type != 'system'
+             ORDER BY created_at DESC LIMIT 5",
+            $conversation_id
+        ));
+        $messages = array_reverse($messages); // chronological order
+
+        $contact_name = $conversation->contact_name ?: 'Cliente';
+        $contact_phone = $conversation->contact_phone ?: 'N/A';
+        $subject = $type === 'transferred'
+            ? "🔄 Chat transferido: {$contact_name} - {$contact_phone}"
+            : "🧑‍💼 Nuevo chat asignado: {$contact_name} - {$contact_phone}";
+
+        // Build message rows HTML
+        $chat_rows = '';
+        foreach ($messages as $msg) {
+            $time = date('H:i', strtotime($msg->created_at));
+            $is_customer = $msg->sender_type === 'customer';
+            $sender_label = $is_customer ? $contact_name : ($msg->sender_name ?: 'Bot');
+            $bg = $is_customer ? '#dcf8c6' : '#ffffff';
+            $align = $is_customer ? 'left' : 'right';
+            $border_color = $is_customer ? '#25D366' : '#4A90E2';
+            $content_escaped = esc_html(mb_substr($msg->content, 0, 300));
+            $chat_rows .= "
+            <tr><td style='padding:4px 0;'>
+                <div style='max-width:85%;float:{$align};background:{$bg};border-left:3px solid {$border_color};border-radius:8px;padding:8px 12px;margin:2px 0;'>
+                    <div style='font-size:11px;color:#666;margin-bottom:2px;'><strong>{$sender_label}</strong> · {$time}</div>
+                    <div style='font-size:13px;color:#333;'>{$content_escaped}</div>
+                </div>
+                <div style='clear:both;'></div>
+            </td></tr>";
+        }
+
+        if (empty($chat_rows)) {
+            $chat_rows = "<tr><td style='padding:12px;text-align:center;color:#999;font-size:13px;'>Sin mensajes previos</td></tr>";
+        }
+
+        $portal_url = 'https://automatizatech.cl/omnicliente/';
+        $action_label = $type === 'transferred' ? 'Te han transferido una conversación' : 'Se te ha asignado una nueva conversación';
+
+        $html = "
+        <div style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;max-width:520px;margin:0 auto;'>
+            <div style='background:#1e40af;color:#fff;padding:16px 20px;border-radius:12px 12px 0 0;'>
+                <h2 style='margin:0;font-size:16px;'>{$subject}</h2>
+            </div>
+            <div style='background:#f8fafc;padding:20px;border:1px solid #e2e8f0;'>
+                <p style='margin:0 0 12px;font-size:14px;color:#475569;'>{$action_label}. A continuación, un resumen de los últimos mensajes:</p>
+                <div style='background:#fff;border-radius:8px;padding:4px 0;'>
+                    <div style='padding:10px 12px;border-bottom:1px solid #e2e8f0;'>
+                        <strong style='font-size:13px;color:#334155;'>👤 {$contact_name}</strong>
+                        <span style='font-size:12px;color:#94a3b8;margin-left:8px;'>📱 {$contact_phone}</span>
+                    </div>
+                    <table width='100%' cellpadding='0' cellspacing='0' style='padding:8px 12px;'>
+                        {$chat_rows}
+                    </table>
+                </div>
+                <div style='margin-top:16px;text-align:center;'>
+                    <a href='{$portal_url}' style='display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:600;'>
+                        Abrir Portal OmniCliente
+                    </a>
+                </div>
+            </div>
+            <div style='background:#f1f5f9;padding:12px 20px;border-radius:0 0 12px 12px;border:1px solid #e2e8f0;border-top:0;text-align:center;'>
+                <p style='margin:0;font-size:11px;color:#94a3b8;'>AutomatizaTech · Notificación automática del Portal OmniCliente</p>
+            </div>
+        </div>";
+
+        $headers = ['Content-Type: text/html; charset=UTF-8'];
+        wp_mail($agent->email, $subject, $html, $headers);
     }
 
     /**
@@ -1131,6 +1215,9 @@ class OmnichannelController {
             ['agent_id' => $to_agent_id], 
             $conversation->client_id
         );
+
+        // Send email notification to receiving agent
+        $this->notify_agent_assignment($conversation_id, $to_agent, $conversation, 'transferred');
 
         return ['success' => true];
     }

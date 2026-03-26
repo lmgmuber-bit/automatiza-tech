@@ -124,7 +124,17 @@ export default function InboxView() {
         }
 
         const prev = prevMap[c.id];
-        if (!prev) return;
+        if (!prev) {
+          // New conversation appeared in this agent's list — likely a new assignment
+          if (isAgentMode && c.assigned_agent_id && c.status === 'assigned') {
+            showBrowserNotification(
+              '🧑‍💼 Chat asignado',
+              `${c.contact_name || c.contact_phone || 'Cliente'}: ${c.last_message_preview || 'Nueva conversación asignada'}`,
+              c.id
+            );
+          }
+          return;
+        }
         // New message detected: last_message_at changed and it's inbound
         const hasNewMsg = c.last_message_at && prev.last_message_at && c.last_message_at > prev.last_message_at;
         if (hasNewMsg && c.id !== selectedConvRef.current?.id) {

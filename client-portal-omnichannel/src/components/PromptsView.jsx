@@ -245,6 +245,8 @@ export default function PromptsView() {
   const [importModal, setImportModal] = useState(false);
   const [importTab, setImportTab] = useState('config'); // 'config' | 'csv'
   const [importSourceId, setImportSourceId] = useState('');
+  const [importDestChannelId, setImportDestChannelId] = useState('');
+  const [importConfigName, setImportConfigName] = useState('');
   const [importLoading, setImportLoading] = useState(false);
   const [csvFileName, setCsvFileName] = useState('');
   const [csvParsedData, setCsvParsedData] = useState(null);
@@ -442,31 +444,33 @@ export default function PromptsView() {
     setImportModal(true);
     setImportTab('config');
     setImportSourceId('');
+    setImportDestChannelId('');
+    setImportConfigName('');
     setCsvFileName('');
     setCsvParsedData(null);
   }
 
   async function handleImportFromConfig() {
-    if (!importSourceId) return;
+    if (!importSourceId || !importDestChannelId) return;
     setImportLoading(true);
     try {
       const source = await getPromptConfig(importSourceId);
       if (!source || source.error) throw new Error(source?.error || 'Config no encontrada');
       const pd = typeof source.prompt_data === 'string' ? JSON.parse(source.prompt_data) : (source.prompt_data || {});
-      // Enter create mode with pre-filled data from source
-      setSelectedId(null);
-      setCreating(true);
-      setEditMode(true);
-      setForm({
-        config_name: '',
-        channel_id: '',
+      const destChannel = channels.find(ch => String(ch.id) === String(importDestChannelId));
+      const configName = importConfigName.trim() || `${source.config_name} → ${destChannel?.channel_name || 'Canal #' + importDestChannelId}`;
+      // Create directly with destination channel
+      const payload = {
+        config_name: configName,
+        channel_id: parseInt(importDestChannelId),
         is_active: 1,
         prompt_data: { ...emptyPromptData(), ...pd },
-      });
-      setExpandedSections({ negocio: true, asistente: true, mensajes: true });
-      setMobilePanel('detail');
+      };
+      const res = await createPromptConfig(payload);
+      if (res.error) throw new Error(res.error);
       setImportModal(false);
-      setResultModal({ type: 'success', title: 'Importado', message: `Prompts importados desde "${source.config_name}". Selecciona el canal destino y guarda.` });
+      setResultModal({ type: 'success', title: 'Importado y Creado', message: `Configuración "${configName}" creada para ${destChannel?.channel_name || 'el canal destino'}. Puedes editarla cuando quieras.` });
+      await load();
     } catch (err) {
       setResultModal({ type: 'error', title: 'Error', message: err.message });
     } finally {
@@ -493,22 +497,29 @@ export default function PromptsView() {
     reader.readAsText(file, 'UTF-8');
   }
 
-  function handleImportFromCsv() {
-    if (!csvParsedData) return;
-    setSelectedId(null);
-    setCreating(true);
-    setEditMode(true);
-    setForm({
-      config_name: '',
-      channel_id: '',
-      is_active: 1,
-      prompt_data: { ...emptyPromptData(), ...csvParsedData },
-    });
-    setExpandedSections({ negocio: true, asistente: true, mensajes: true });
-    setMobilePanel('detail');
-    setImportModal(false);
-    const count = Object.keys(csvParsedData).filter(k => csvParsedData[k]).length;
-    setResultModal({ type: 'success', title: 'CSV Importado', message: `${count} campos importados desde "${csvFileName}". Selecciona el canal destino y guarda.` });
+  async function handleImportFromCsv() {
+    if (!csvParsedData || !importDestChannelId) return;
+    setImportLoading(true);
+    try {
+      const destChannel = channels.find(ch => String(ch.id) === String(importDestChannelId));
+      const configName = importConfigName.trim() || `CSV Import → ${destChannel?.channel_name || 'Canal #' + importDestChannelId}`;
+      const count = Object.keys(csvParsedData).filter(k => csvParsedData[k]).length;
+      const payload = {
+        config_name: configName,
+        channel_id: parseInt(importDestChannelId),
+        is_active: 1,
+        prompt_data: { ...emptyPromptData(), ...csvParsedData },
+      };
+      const res = await createPromptConfig(payload);
+      if (res.error) throw new Error(res.error);
+      setImportModal(false);
+      setResultModal({ type: 'success', title: 'CSV Importado', message: `${count} campos importados desde "${csvFileName}" y configuración "${configName}" creada.` });
+      await load();
+    } catch (err) {
+      setResultModal({ type: 'error', title: 'Error', message: err.message });
+    } finally {
+      setImportLoading(false);
+    }
   }
 
   if (loading) {
@@ -1018,7 +1029,7 @@ export default function PromptsView() {
               {importTab === 'config' ? (
                 <div className="space-y-4">
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Selecciona una configuración existente para copiar sus prompts a un nuevo canal.
+                    Copia los prompts de una configuración existente a un canal diferente.
                   </p>
                   <div>
                     <label className="block text-xs font-medium text-slate-500 mb-1.5">Configuración origen</label>
@@ -1027,7 +1038,7 @@ export default function PromptsView() {
                       onChange={e => setImportSourceId(e.target.value)}
                       className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                     >
-                      <option value="">— Seleccionar config —</option>
+                      <option value="">— Seleccionar config origen —</option>
                       {configs.map(cfg => (
                         <option key={cfg.id} value={cfg.id}>
                           {cfg.config_name} ({cfg.channel_name || `Canal #${cfg.channel_id}`})
@@ -1035,15 +1046,40 @@ export default function PromptsView() {
                       ))}
                     </select>
                   </div>
-                  {importSourceId && (
-                    <div className="text-xs text-slate-400 bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
-                      Se copiarán todos los campos del prompt (negocio, asistente, servicios, agenda, pagos, reglas).
-                      Luego podrás seleccionar el canal destino y modificar lo que necesites antes de guardar.
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1.5">Canal destino</label>
+                    <select
+                      value={importDestChannelId}
+                      onChange={e => setImportDestChannelId(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                    >
+                      <option value="">— Seleccionar canal destino —</option>
+                      {channels.map(ch => (
+                        <option key={ch.id} value={ch.id}>
+                          {ch.channel_name} ({ch.channel_type})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1.5">Nombre de la nueva configuración <span className="text-slate-400 font-normal">(opcional)</span></label>
+                    <input
+                      type="text"
+                      value={importConfigName}
+                      onChange={e => setImportConfigName(e.target.value)}
+                      placeholder="Se generará automáticamente si se deja vacío"
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                    />
+                  </div>
+                  {importSourceId && importDestChannelId && (
+                    <div className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg p-3 flex items-start gap-2">
+                      <span className="mt-0.5">✅</span>
+                      <span>Se copiarán todos los campos del prompt (negocio, asistente, servicios, agenda, pagos, reglas) al canal seleccionado. Podrás editarlos después.</span>
                     </div>
                   )}
                   <button
                     onClick={handleImportFromConfig}
-                    disabled={!importSourceId || importLoading}
+                    disabled={!importSourceId || !importDestChannelId || importLoading}
                     className="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {importLoading ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
@@ -1080,6 +1116,31 @@ export default function PromptsView() {
                       <p className="text-sm text-slate-400">Click para seleccionar archivo CSV</p>
                     )}
                   </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1.5">Canal destino</label>
+                    <select
+                      value={importDestChannelId}
+                      onChange={e => setImportDestChannelId(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                    >
+                      <option value="">— Seleccionar canal destino —</option>
+                      {channels.map(ch => (
+                        <option key={ch.id} value={ch.id}>
+                          {ch.channel_name} ({ch.channel_type})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1.5">Nombre de la configuración <span className="text-slate-400 font-normal">(opcional)</span></label>
+                    <input
+                      type="text"
+                      value={importConfigName}
+                      onChange={e => setImportConfigName(e.target.value)}
+                      placeholder="Se generará automáticamente si se deja vacío"
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                    />
+                  </div>
                   {csvParsedData && (
                     <div className="text-xs text-slate-400 bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 max-h-32 overflow-y-auto">
                       <p className="font-medium text-slate-500 dark:text-slate-300 mb-1">Campos detectados:</p>
@@ -1092,10 +1153,11 @@ export default function PromptsView() {
                   )}
                   <button
                     onClick={handleImportFromCsv}
-                    disabled={!csvParsedData}
+                    disabled={!csvParsedData || !importDestChannelId || importLoading}
                     className="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    <FileUp size={16} /> Importar desde CSV
+                    {importLoading ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
+                    Importar desde CSV
                   </button>
                 </div>
               )}

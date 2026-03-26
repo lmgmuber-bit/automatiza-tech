@@ -517,6 +517,38 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "portal-config-exists",
+              "leftValue": "={{ !!$getWorkflowStaticData('global').portalConfig }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        363360,
+        179440
+      ],
+      "id": "b1c2d3e4-f5a6-7890-bcde-fa1234567891",
+      "name": "Has Portal Config?"
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "={{ $('Combine Messages').first().json.callbackUrl }}",
         "sendBody": true,
@@ -2855,6 +2887,24 @@
     },
     "Prepare Chat Input": {
       "main": [
+        [
+          {
+            "node": "Has Portal Config?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Portal Config?": {
+      "main": [
+        [
+          {
+            "node": "Merge Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Read Bot Config",

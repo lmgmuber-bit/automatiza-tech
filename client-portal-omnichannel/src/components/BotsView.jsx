@@ -179,48 +179,6 @@ export default function BotsView() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">System Prompt (Instrucciones del bot)</label>
-                      <textarea
-                        value={editForm.system_prompt}
-                        onChange={e => setEditForm({ ...editForm, system_prompt: e.target.value })}
-                        rows={4}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                        placeholder="Eres un asistente virtual de [empresa]..."
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Mensaje de Bienvenida</label>
-                        <textarea
-                          value={editForm.welcome_message}
-                          onChange={e => setEditForm({ ...editForm, welcome_message: e.target.value })}
-                          rows={2}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Mensaje de Fallback</label>
-                        <textarea
-                          value={editForm.fallback_message}
-                          onChange={e => setEditForm({ ...editForm, fallback_message: e.target.value })}
-                          rows={2}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Palabras clave de escalamiento (JSON array)</label>
-                      <input
-                        type="text" value={editForm.escalation_keywords}
-                        onChange={e => setEditForm({ ...editForm, escalation_keywords: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                        placeholder='["hablar con humano","agente","ejecutivo"]'
-                      />
-                    </div>
-
-                    <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">Webhook N8N (opcional)</label>
                       <input
                         type="url" value={editForm.n8n_webhook_url}

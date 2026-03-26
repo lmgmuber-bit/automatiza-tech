@@ -16,6 +16,7 @@ import SupportView from './components/SupportView';
 import PromptsView from './components/PromptsView';
 import ExpiryWarningModal from './components/ExpiryWarningModal';
 import TicketNotificationModal from './components/TicketNotificationModal';
+import AssignedChatsModal from './components/AssignedChatsModal';
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(isAuthenticated());
@@ -207,6 +208,11 @@ export default function App() {
       {/* Admin: open ticket notification */}
       {getIsAdmin() && (
         <TicketNotificationModal onNavigateToSupport={() => handleNavigate('support')} />
+      )}
+
+      {/* Agent: assigned chats notification */}
+      {getIsAgent() && (
+        <AssignedChatsModal onNavigateToInbox={() => handleNavigate('inbox')} />
       )}
     </div>
   );

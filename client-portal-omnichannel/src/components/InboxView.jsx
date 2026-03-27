@@ -483,7 +483,7 @@ export default function InboxView() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0 relative">
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 relative flex-wrap justify-end">
                 {selectedConv.is_readonly && (
                   <span className="flex items-center gap-1 px-2 py-1 bg-gray-200 text-gray-500 rounded-lg text-xs font-medium">
                     <Eye size={12} /> Solo lectura
@@ -505,7 +505,7 @@ export default function InboxView() {
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
                           >
                             <UserCheck size={14} />
-                            <span className="hidden sm:inline">Asignar Agente</span>
+                            <span className="text-[10px] sm:text-xs">Asignar</span>
                             <ChevronDown size={12} />
                           </button>
                           {showAgentDropdown && (
@@ -531,14 +531,14 @@ export default function InboxView() {
 
                       {/* Admin/Supervisor: Reassign + Release (for assigned convs) */}
                       {isAdminOrSup && isConvAssigned && (
-                        <>
+                        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-2">
                           <div className="relative">
                             <button
                               onClick={() => setShowAgentDropdown(v => !v)}
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors"
                             >
                               <ArrowRightLeft size={14} />
-                              <span className="hidden sm:inline">Reasignar</span>
+                              <span className="text-[10px] sm:text-xs">Reasignar</span>
                               <ChevronDown size={12} />
                             </button>
                             {showAgentDropdown && (
@@ -562,21 +562,21 @@ export default function InboxView() {
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 transition-colors"
                           >
                             <RotateCcw size={14} />
-                            <span className="hidden sm:inline">Devolver al Bot</span>
+                            <span className="text-[10px] sm:text-xs">Devolver</span>
                           </button>
-                        </>
+                        </div>
                       )}
 
                       {/* Agent (not supervisor): Transfer to colleague + Release (only if MY conv) */}
                       {isAgentMode && !isAdminOrSup && isMyConv && isConvAssigned && (
-                        <>
+                        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-2">
                           <div className="relative">
                             <button
                               onClick={() => setShowAgentDropdown(v => !v)}
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600 transition-colors"
                             >
                               <ArrowRightLeft size={14} />
-                              <span className="hidden sm:inline">Transferir</span>
+                              <span className="text-[10px] sm:text-xs">Transferir</span>
                               <ChevronDown size={12} />
                             </button>
                             {showAgentDropdown && (
@@ -600,9 +600,9 @@ export default function InboxView() {
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 transition-colors"
                           >
                             <RotateCcw size={14} />
-                            <span className="hidden sm:inline">Devolver al Bot</span>
+                            <span className="text-[10px] sm:text-xs">Devolver</span>
                           </button>
-                        </>
+                        </div>
                       )}
                     </>
                   );
@@ -663,14 +663,14 @@ export default function InboxView() {
                   <Eye size={16} /> Conversación en modo solo lectura
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full">
                   <input
                     type="text"
                     value={newMessage}
                     onChange={e => setNewMessage(e.target.value)}
                     placeholder={selectedConv.status === 'assigned' ? 'Escribe un mensaje...' : 'Toma el control para enviar mensajes'}
                     disabled={selectedConv.status !== 'assigned'}
-                    className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                    className="flex-1 min-w-0 px-3 sm:px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                   />
                   <button
                     type="submit"

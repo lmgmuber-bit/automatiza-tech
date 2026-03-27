@@ -1,4 +1,4 @@
-import { MessageSquare, Radio, Bot, Users, ClipboardList, LogOut, X, Moon, Sun, Building2, BarChart3, Headphones, Settings, UserCircle, LifeBuoy } from 'lucide-react';
+import { MessageSquare, Radio, Bot, Users, ClipboardList, LogOut, X, Moon, Sun, Building2, BarChart3, Headphones, Settings, UserCircle, LifeBuoy, Sparkles } from 'lucide-react';
 import { getIsAdmin, getIsAgent, getAgentData, isSupervisorOrAdmin } from '../api';
 
 const navItems = [
@@ -29,6 +29,7 @@ const supervisorNavItems = [
 const adminNavItems = [
   { id: 'clients', label: 'Clientes', icon: Building2 },
   { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+  { id: 'ai-prompt', label: 'AI Prompt', icon: Sparkles },
   { id: 'support', label: 'Soporte', icon: LifeBuoy },
 ];
 

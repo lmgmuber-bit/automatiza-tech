@@ -17,6 +17,8 @@ import PromptsView from './components/PromptsView';
 import ExpiryWarningModal from './components/ExpiryWarningModal';
 import TicketNotificationModal from './components/TicketNotificationModal';
 import AssignedChatsModal from './components/AssignedChatsModal';
+import AiAssistantChat from './components/AiAssistantChat';
+import AiPromptView from './components/AiPromptView';
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(isAuthenticated());
@@ -146,6 +148,7 @@ export default function App() {
         ...(getIsAdmin() ? {
           clients: <ClientsView />,
           dashboard: <DashboardView />,
+          'ai-prompt': <AiPromptView />,
           support: <SupportView />,
         } : {
           support: <SupportView />,
@@ -214,6 +217,9 @@ export default function App() {
       {getIsAgent() && (
         <AssignedChatsModal onNavigateToInbox={() => handleNavigate('inbox')} />
       )}
+
+      {/* AI Assistant — chat for agents/clients, prompt editor for admin */}
+      <AiAssistantChat />
     </div>
   );
 }

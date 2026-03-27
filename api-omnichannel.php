@@ -457,7 +457,7 @@ try {
                 }
                 if ($method === 'POST' && isset($segments[2]) && ($segments[3] ?? '') === 'messages') {
                     $conv_id = absint($segments[2]);
-                    $result = $controller->send_message($conv_id, $body);
+                    $result = $controller->send_agent_message($conv_id, $body);
                     send_json($result, isset($result['error']) ? 400 : 201);
                 }
                 if ($method === 'POST' && isset($segments[2]) && ($segments[3] ?? '') === 'takeover') {
@@ -783,6 +783,41 @@ try {
                 }
                 break;
 
+            // Admin: AI Assistant Prompt management
+            case 'ai-assistant-prompt':
+                if ($method === 'GET') {
+                    send_json([
+                        'template' => $controller->get_ai_prompt_template(),
+                        'default'  => $controller->get_default_ai_prompt_template(),
+                        'placeholders' => ['{user_name}', '{user_role}', '{company_name}', '{client_id}', '{plan_type}'],
+                    ]);
+                }
+                if ($method === 'PUT') {
+                    $template = $body['template'] ?? '';
+                    if (empty(trim($template))) {
+                        send_json(['error' => 'El prompt no puede estar vacío'], 400);
+                    }
+                    $result = $controller->save_ai_prompt_template($template);
+                    send_json($result, isset($result['error']) ? 400 : 200);
+                }
+                break;
+
+            // Admin: AI Assistant Chat (global platform context)
+            case 'ai-assistant':
+                if ($method === 'POST') {
+                    $user_message = trim($body['message'] ?? '');
+                    if (empty($user_message)) {
+                        send_json(['error' => 'Mensaje vacío'], 400);
+                    }
+                    $history = is_array($body['history'] ?? null) ? $body['history'] : [];
+                    $current_user = wp_get_current_user();
+                    $admin_name = $current_user->display_name ?: 'Admin';
+                    $result = $controller->ai_admin_chat($admin_name, $user_message, $history);
+                    $code = isset($result['error']) ? ($result['code'] ?? 400) : 200;
+                    send_json($result, $code);
+                }
+                break;
+
             default:
                 send_json(['error' => 'Ruta admin no encontrada'], 404);
         }
@@ -915,7 +950,7 @@ try {
                             send_json(['error' => 'Solo puedes enviar mensajes en conversaciones asignadas a ti'], 403);
                         }
                     }
-                    $result = $controller->send_message($conv_id, $body);
+                    $result = $controller->send_agent_message($conv_id, $body);
                     send_json($result, isset($result['error']) ? 400 : 201);
                 }
                 if ($method === 'POST' && isset($segments[2]) && ($segments[3] ?? '') === 'takeover') {
@@ -1264,6 +1299,26 @@ try {
                 }
                 break;
 
+            // Agent: AI Assistant chat
+            case 'ai-assistant':
+                if ($method === 'POST') {
+                    $user_message = trim($body['message'] ?? '');
+                    if (empty($user_message)) {
+                        send_json(['error' => 'Mensaje vacío'], 400);
+                    }
+                    $history = is_array($body['history'] ?? null) ? $body['history'] : [];
+                    $result = $controller->ai_assistant_chat(
+                        $agent_client_id,
+                        $current_agent->role ?? 'agent',
+                        $current_agent->name ?? 'Agente',
+                        $user_message,
+                        $history
+                    );
+                    $code = isset($result['error']) ? ($result['code'] ?? 400) : 200;
+                    send_json($result, $code);
+                }
+                break;
+
             default:
                 send_json(['error' => 'Ruta de agente no encontrada'], 404);
         }
@@ -1318,7 +1373,7 @@ try {
             
             if ($method === 'POST' && isset($segments[1]) && ($segments[2] ?? '') === 'messages') {
                 $conv_id = absint($segments[1]);
-                $result = $controller->send_message($conv_id, $body);
+                $result = $controller->send_agent_message($conv_id, $body);
                 send_json($result, isset($result['error']) ? 400 : 201);
             }
 
@@ -1469,6 +1524,26 @@ try {
             }
             break;
 
+        // --- AI ASSISTANT (Professional/Enterprise) ---
+        case 'ai-assistant':
+            if ($method === 'POST') {
+                $user_message = trim($body['message'] ?? '');
+                if (empty($user_message)) {
+                    send_json(['error' => 'Mensaje vacío'], 400);
+                }
+                $history = is_array($body['history'] ?? null) ? $body['history'] : [];
+                $result = $controller->ai_assistant_chat(
+                    $client_id,
+                    'client',
+                    $client->contact_name ?? $client->company_name ?? 'Cliente',
+                    $user_message,
+                    $history
+                );
+                $code = isset($result['error']) ? ($result['code'] ?? 400) : 200;
+                send_json($result, $code);
+            }
+            break;
+
         default:
             send_json(['error' => 'Ruta no encontrada', 'available_routes' => [
                 'GET /conversations', 'GET /conversations/{id}/messages', 'POST /conversations/{id}/messages',
@@ -1476,7 +1551,7 @@ try {
                 'GET /channels', 'POST /channels', 'PUT /channels/{id}',
                 'GET /bots', 'PUT /bots/{id}',
                 'GET /agents', 'POST /agents',
-                'GET /audit',
+                'GET /audit', 'POST /ai-assistant',
             ]], 404);
     }
     

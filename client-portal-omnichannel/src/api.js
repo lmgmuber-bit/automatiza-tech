@@ -351,3 +351,13 @@ export async function submitPublicSupportTicket(data) {
   if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
   return result;
 }
+
+// ============================================================
+// AI ASSISTANT
+// ============================================================
+export const aiAssistantChat = (message, history = []) =>
+  request('ai-assistant', 'POST', { message, history });
+
+// Admin: AI prompt template management
+export const getAiPromptTemplate = () => request('ai-assistant-prompt');
+export const saveAiPromptTemplate = (template) => request('ai-assistant-prompt', 'PUT', { template });

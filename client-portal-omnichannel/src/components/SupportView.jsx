@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { LifeBuoy, Plus, Search, ChevronLeft, Send, Loader2, AlertCircle, CheckCircle, Clock, Filter, X, Paperclip, Image as ImageIcon } from 'lucide-react';
+import { LifeBuoy, Plus, Search, ChevronLeft, Send, Loader2, AlertCircle, CheckCircle, Clock, Filter, X, Paperclip, Image as ImageIcon, MessageCircle, Sparkles } from 'lucide-react';
 import { getTickets, createTicket, getTicket, addTicketMessage, updateTicketStatus, getIsAdmin, uploadTicketImages } from '../api';
 import ResultModal from './ResultModal';
 
@@ -57,6 +57,9 @@ export default function SupportView() {
   const [createError, setCreateError] = useState('');
   const [createImages, setCreateImages] = useState([]); // File[]
   const createFileRef = useRef(null);
+
+  // Omni intercept — ask user to try Omni before creating a ticket
+  const [showOmniPrompt, setShowOmniPrompt] = useState(false);
 
   // Message reply images
   const [msgImages, setMsgImages] = useState([]); // File[]
@@ -488,7 +491,7 @@ export default function SupportView() {
             </p>
           </div>
           <button
-            onClick={() => setShowCreate(true)}
+            onClick={() => setShowOmniPrompt(true)}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700"
           >
             <Plus size={16} /> Nuevo Ticket
@@ -532,6 +535,51 @@ export default function SupportView() {
           <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-slate-600 disabled:opacity-40">Anterior</button>
           <span className="text-xs text-gray-500">{page} / {totalPages}</span>
           <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-slate-600 disabled:opacity-40">Siguiente</button>
+        </div>
+      )}
+
+      {/* Omni intercept modal */}
+      {showOmniPrompt && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowOmniPrompt(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Header gradient */}
+            <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-fuchsia-500 px-6 py-5 text-center">
+              <div className="w-16 h-16 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                <Sparkles size={32} className="text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-white">¿Ya le preguntaste a Omni?</h3>
+              <p className="text-sm text-white/80 mt-1">Nuestro asistente IA puede resolver la mayoría de dudas</p>
+            </div>
+            {/* Body */}
+            <div className="px-6 py-5">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
+                <strong>Omni Asistente</strong> puede ayudarte con:
+              </p>
+              <ul className="text-sm text-gray-500 dark:text-gray-400 space-y-1.5 mb-5">
+                <li className="flex items-start gap-2"><CheckCircle size={14} className="text-green-500 mt-0.5 shrink-0" /> Dudas sobre cómo usar el portal</li>
+                <li className="flex items-start gap-2"><CheckCircle size={14} className="text-green-500 mt-0.5 shrink-0" /> Información de tu empresa y métricas</li>
+                <li className="flex items-start gap-2"><CheckCircle size={14} className="text-green-500 mt-0.5 shrink-0" /> Configuración de canales, bots y agentes</li>
+                <li className="flex items-start gap-2"><CheckCircle size={14} className="text-green-500 mt-0.5 shrink-0" /> Resolución de problemas comunes</li>
+              </ul>
+              <div className="flex flex-col gap-2.5">
+                <button
+                  onClick={() => { setShowOmniPrompt(false); window.dispatchEvent(new Event('openOmniAssistant')); }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl text-sm font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-md"
+                >
+                  <MessageCircle size={16} /> Preguntar a Omni primero
+                </button>
+                <button
+                  onClick={() => { setShowOmniPrompt(false); setShowCreate(true); }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+                >
+                  <Plus size={16} /> Ya pregunté, crear ticket
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center mt-3">
+                Si Omni no puede resolver tu caso, te indicará crear un ticket.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

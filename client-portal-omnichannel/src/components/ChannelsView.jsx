@@ -3,6 +3,7 @@ import { Plus, Loader2, Settings, Trash2, CheckCircle, XCircle, AlertTriangle, P
 import { getChannels, createChannel, updateChannel, deleteChannel, getIsAdmin, getClients, getChannelTypes, getPeriodStatus, API_BASE } from '../api';
 import ChannelBadge from './ChannelBadge';
 import ResultModal from './ResultModal';
+import { getChannelIcon } from './ChannelIcons';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 
 export default function ChannelsView() {
@@ -321,7 +322,7 @@ export default function ChannelsView() {
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold shrink-0"
                     style={{ backgroundColor: colorToHex(typeMap[ch.channel_type]?.color || 'gray-500') }}
                   >
-                    {typeMap[ch.channel_type]?.emoji || '📡'}
+                    {getChannelIcon(ch.channel_type, 24) || typeMap[ch.channel_type]?.emoji || '📡'}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-gray-900">{ch.channel_name}</h4>

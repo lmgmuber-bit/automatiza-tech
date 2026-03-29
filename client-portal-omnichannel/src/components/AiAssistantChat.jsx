@@ -57,73 +57,132 @@ function timeAgo(ts) {
   return `${days}d`;
 }
 
-// ─── Cute Animated Robot SVG ─────────────────────────────────
+// ─── Omni Robot SVG — Tech's green brother ──────────────────
 function RobotIcon({ size = 28, className = '', animate = true }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" className={className}>
-      {/* Glow behind head */}
-      <circle cx="40" cy="36" r="26" fill="currentColor" opacity="0.06">
-        {animate && <animate attributeName="r" values="26;28;26" dur="3s" repeatCount="indefinite" />}
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" className={className} style={{ overflow: 'visible' }}>
+      <defs>
+        <linearGradient id="omniHead" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#34d399" />
+          <stop offset="100%" stopColor="#059669" />
+        </linearGradient>
+        <linearGradient id="omniBody" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#064e3b" />
+          <stop offset="100%" stopColor="#022c22" />
+        </linearGradient>
+        <linearGradient id="omniVisor" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#022c22" />
+          <stop offset="100%" stopColor="#064e3b" />
+        </linearGradient>
+        <radialGradient id="omniEyeGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#a7f3d0" />
+          <stop offset="100%" stopColor="#6ee7b7" stopOpacity="0" />
+        </radialGradient>
+        <filter id="omniGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+
+      {/* Glow aura */}
+      <circle cx="40" cy="36" r="30" fill="#34d399" opacity="0.06">
+        {animate && <animate attributeName="r" values="30;33;30" dur="3s" repeatCount="indefinite" />}
       </circle>
-      {/* Antenna stem */}
-      <line x1="40" y1="8" x2="40" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.6">
-        {animate && <animate attributeName="y1" values="8;6;8" dur="2.5s" repeatCount="indefinite" />}
-      </line>
-      {/* Antenna ball */}
-      <circle cx="40" cy="7" r="3.5" fill="currentColor">
-        {animate && (
-          <>
-            <animate attributeName="r" values="3.5;4.5;3.5" dur="2.5s" repeatCount="indefinite" />
-            <animate attributeName="fill-opacity" values="1;0.5;1" dur="2.5s" repeatCount="indefinite" />
-          </>
-        )}
+
+      {/* Antenna */}
+      <rect x="38.5" y="6" width="3" height="12" rx="1.5" fill="#059669">
+        {animate && <animate attributeName="y" values="6;4;6" dur="2.5s" repeatCount="indefinite" />}
+      </rect>
+      <circle cx="40" cy="5" r="4" fill="#34d399">
+        {animate && <>
+          <animate attributeName="r" values="4;5;4" dur="2s" repeatCount="indefinite" />
+          <animate attributeName="fill-opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" />
+        </>}
       </circle>
-      {/* Head — rounded friendly */}
-      <rect x="16" y="18" width="48" height="34" rx="14" fill="currentColor" opacity="0.12" stroke="currentColor" strokeWidth="2" />
-      {/* Left ear */}
-      <rect x="8" y="28" width="7" height="14" rx="3.5" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="1.5">
-        {animate && <animate attributeName="opacity" values="0.2;0.4;0.2" dur="3s" repeatCount="indefinite" />}
-      </rect>
-      {/* Right ear */}
-      <rect x="65" y="28" width="7" height="14" rx="3.5" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="1.5">
-        {animate && <animate attributeName="opacity" values="0.2;0.4;0.2" dur="3s" repeatCount="indefinite" />}
-      </rect>
-      {/* Left eye — big & cute */}
-      <ellipse cx="30" cy="34" rx="6" ry="6.5" fill="currentColor">
-        {animate && <animate attributeName="ry" values="6.5;6;6.5" dur="3s" repeatCount="indefinite" />}
-      </ellipse>
-      {/* Left eye highlight */}
-      <circle cx="27.5" cy="31.5" r="2.5" fill="white" opacity="0.85" />
-      <circle cx="32" cy="33" r="1" fill="white" opacity="0.5" />
-      {/* Right eye — big & cute */}
-      <ellipse cx="50" cy="34" rx="6" ry="6.5" fill="currentColor">
-        {animate && <animate attributeName="ry" values="6.5;6;6.5" dur="3s" repeatCount="indefinite" />}
-      </ellipse>
-      {/* Right eye highlight */}
-      <circle cx="47.5" cy="31.5" r="2.5" fill="white" opacity="0.85" />
-      <circle cx="52" cy="33" r="1" fill="white" opacity="0.5" />
-      {/* Blushing cheeks */}
-      <ellipse cx="22" cy="40" rx="4" ry="2.5" fill="currentColor" opacity="0.1" />
-      <ellipse cx="58" cy="40" rx="4" ry="2.5" fill="currentColor" opacity="0.1" />
-      {/* Happy mouth */}
-      <path d="M 32 43 Q 40 50 48 43" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none">
-        {animate && <animate attributeName="d" values="M 32 43 Q 40 50 48 43;M 33 44 Q 40 48 47 44;M 32 43 Q 40 50 48 43" dur="4s" repeatCount="indefinite" />}
+      {/* Antenna glow ring */}
+      <circle cx="40" cy="5" r="7" fill="none" stroke="#6ee7b7" strokeWidth="0.8" opacity="0.3">
+        {animate && <animate attributeName="r" values="7;9;7" dur="2s" repeatCount="indefinite" />}
+      </circle>
+
+      {/* Head shell */}
+      <rect x="14" y="16" width="52" height="38" rx="16" fill="url(#omniHead)" />
+      {/* Head shine */}
+      <rect x="14" y="16" width="52" height="18" rx="16" fill="white" opacity="0.15" />
+
+      {/* Headphones — left */}
+      <ellipse cx="12" cy="34" rx="6" ry="9" fill="#064e3b" />
+      <ellipse cx="12" cy="34" rx="4" ry="7" fill="#0f5132" />
+      <circle cx="12" cy="34" r="2.5" fill="#34d399" opacity="0.4">
+        {animate && <animate attributeName="opacity" values="0.4;0.7;0.4" dur="2.5s" repeatCount="indefinite" />}
+      </circle>
+      {/* Headphones — right */}
+      <ellipse cx="68" cy="34" rx="6" ry="9" fill="#064e3b" />
+      <ellipse cx="68" cy="34" rx="4" ry="7" fill="#0f5132" />
+      <circle cx="68" cy="34" r="2.5" fill="#34d399" opacity="0.4">
+        {animate && <animate attributeName="opacity" values="0.4;0.7;0.4" dur="2.5s" repeatCount="indefinite" />}
+      </circle>
+
+      {/* Visor / face screen */}
+      <rect x="20" y="22" width="40" height="26" rx="10" fill="url(#omniVisor)" />
+      {/* Screen reflection */}
+      <rect x="22" y="24" width="18" height="5" rx="2.5" fill="white" opacity="0.05" />
+
+      {/* Eyes — LED style */}
+      <g filter="url(#omniGlow)">
+        {/* Left eye */}
+        <ellipse cx="32" cy="34" rx="6" ry="7" fill="#6ee7b7" opacity="0.9">
+          {animate && <animate attributeName="ry" values="7;1;7" dur="4s" begin="0s" repeatCount="indefinite" keyTimes="0;0.04;0.08;1" values="7;1;7;7" />}
+        </ellipse>
+        <ellipse cx="32" cy="34" rx="3.5" ry="4" fill="white" opacity="0.4" />
+        {/* Eye scan lines */}
+        <line x1="27" y1="33" x2="37" y2="33" stroke="#34d399" strokeWidth="0.4" opacity="0.3" />
+        <line x1="27" y1="35" x2="37" y2="35" stroke="#34d399" strokeWidth="0.4" opacity="0.3" />
+
+        {/* Right eye */}
+        <ellipse cx="48" cy="34" rx="6" ry="7" fill="#6ee7b7" opacity="0.9">
+          {animate && <animate attributeName="ry" values="7;1;7" dur="4s" begin="0s" repeatCount="indefinite" keyTimes="0;0.04;0.08;1" values="7;1;7;7" />}
+        </ellipse>
+        <ellipse cx="48" cy="34" rx="3.5" ry="4" fill="white" opacity="0.4" />
+        <line x1="43" y1="33" x2="53" y2="33" stroke="#34d399" strokeWidth="0.4" opacity="0.3" />
+        <line x1="43" y1="35" x2="53" y2="35" stroke="#34d399" strokeWidth="0.4" opacity="0.3" />
+      </g>
+
+      {/* Smile — LED glow */}
+      <path d="M 32 44 Q 40 50 48 44" stroke="#6ee7b7" strokeWidth="1.8" strokeLinecap="round" fill="none" filter="url(#omniGlow)">
+        {animate && <animate attributeName="d" values="M 32 44 Q 40 50 48 44;M 33 45 Q 40 48 47 45;M 32 44 Q 40 50 48 44" dur="4s" repeatCount="indefinite" />}
       </path>
+
       {/* Neck */}
-      <rect x="36" y="52" width="8" height="4" rx="2" fill="currentColor" opacity="0.2" />
-      {/* Body — rounded */}
-      <rect x="24" y="56" width="32" height="16" rx="6" fill="currentColor" opacity="0.1" stroke="currentColor" strokeWidth="1.5" />
-      {/* Body buttons */}
-      <circle cx="35" cy="64" r="2" fill="currentColor" opacity="0.25">
-        {animate && <animate attributeName="opacity" values="0.25;0.5;0.25" dur="2s" repeatCount="indefinite" />}
+      <rect x="35" y="54" width="10" height="5" rx="2" fill="#064e3b" />
+      <rect x="34" y="55.5" width="12" height="2" rx="1" fill="#0f5132" />
+
+      {/* Body */}
+      <rect x="22" y="58" width="36" height="18" rx="8" fill="url(#omniBody)" />
+      {/* Shoulder accent */}
+      <rect x="22" y="58" width="36" height="4" rx="2" fill="#34d399" opacity="0.3" />
+      {/* Body shine */}
+      <rect x="22" y="58" width="36" height="9" rx="8" fill="white" opacity="0.06" />
+
+      {/* Chest — "O" for Omni */}
+      <circle cx="40" cy="67" r="5" fill="none" stroke="#34d399" strokeWidth="1.2" opacity="0.6">
+        {animate && <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite" />}
       </circle>
-      <circle cx="45" cy="64" r="2" fill="currentColor" opacity="0.25">
-        {animate && <animate attributeName="opacity" values="0.25;0.5;0.25" dur="2s" begin="0.5s" repeatCount="indefinite" />}
+      <circle cx="40" cy="67" r="2.5" fill="#34d399" opacity="0.4">
+        {animate && <animate attributeName="r" values="2.5;3;2.5" dur="2s" repeatCount="indefinite" />}
       </circle>
-      {/* Heart on chest */}
-      <path d="M 40 60 C 38 58 35 58.5 35 61 C 35 63 40 66 40 66 C 40 66 45 63 45 61 C 45 58.5 42 58 40 60 Z" fill="currentColor" opacity="0.3">
-        {animate && <animate attributeName="opacity" values="0.3;0.5;0.3" dur="1.5s" repeatCount="indefinite" />}
-      </path>
+
+      {/* Arms */}
+      <rect x="6" y="60" width="14" height="7" rx="3.5" fill="#064e3b">
+        {animate && <animate attributeName="y" values="60;58;60" dur="3s" repeatCount="indefinite" />}
+      </rect>
+      <circle cx="7" cy="63.5" r="4" fill="#0f5132" />
+      <circle cx="7" cy="63.5" r="2" fill="#34d399" opacity="0.2" />
+
+      <rect x="60" y="60" width="14" height="7" rx="3.5" fill="#064e3b">
+        {animate && <animate attributeName="y" values="60;58;60" dur="3s" begin="0.5s" repeatCount="indefinite" />}
+      </rect>
+      <circle cx="73" cy="63.5" r="4" fill="#0f5132" />
+      <circle cx="73" cy="63.5" r="2" fill="#34d399" opacity="0.2" />
     </svg>
   );
 }
@@ -179,12 +238,12 @@ function FloatingButton({ onClick, hasChats, firstName }) {
       {/* Button */}
       <button
         onClick={onClick}
-        className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-fuchsia-500 text-white shadow-lg hover:shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center justify-center group"
+        className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 text-white shadow-lg hover:shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center justify-center group"
         title="Omni Asistente IA"
       >
         {/* Pulse rings */}
-        <span className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-400 to-fuchsia-400 animate-ping opacity-20" />
-        <span className="absolute inset-[-4px] rounded-full border-2 border-purple-300/30 animate-pulse" />
+        <span className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 animate-ping opacity-20" />
+        <span className="absolute inset-[-4px] rounded-full border-2 border-green-300/30 animate-pulse" />
         <RobotIcon size={32} className="relative z-10 drop-shadow-sm group-hover:scale-110 transition-transform" />
         {hasChats && (
           <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-green-400 border-2 border-white shadow-sm" />
@@ -215,7 +274,7 @@ function HistoryPanel({ chats, onSelect, onNew, onDelete, searchQuery, onSearchC
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
             placeholder="Buscar en historial..."
-            className="w-full pl-8 pr-3 py-2 text-xs rounded-lg border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="w-full pl-8 pr-3 py-2 text-xs rounded-lg border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400"
           />
         </div>
       </div>
@@ -224,7 +283,7 @@ function HistoryPanel({ chats, onSelect, onNew, onDelete, searchQuery, onSearchC
       <div className="px-3 pb-2 shrink-0">
         <button
           onClick={onNew}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-white bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 transition-all shadow-sm"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-white bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 transition-all shadow-sm"
         >
           <Plus className="w-3.5 h-3.5" />
           Nuevo chat
@@ -244,7 +303,7 @@ function HistoryPanel({ chats, onSelect, onNew, onDelete, searchQuery, onSearchC
           filtered.map(chat => (
             <div
               key={chat.id}
-              className="group flex items-start gap-2 px-2.5 py-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer transition-colors border border-transparent hover:border-indigo-200 dark:hover:border-indigo-800"
+              className="group flex items-start gap-2 px-2.5 py-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer transition-colors border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800"
               onClick={() => onSelect(chat.id)}
             >
               <div className="flex-1 min-w-0">
@@ -402,7 +461,7 @@ export default function AiAssistantChat() {
       style={{ animation: 'omniSlideUp 0.3s ease-out' }}>
 
       {/* Header */}
-      <div className="flex items-center gap-2.5 px-3 py-2.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500 text-white shrink-0">
+      <div className="flex items-center gap-2.5 px-3 py-2.5 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white shrink-0">
         {showHistory ? (
           <button onClick={() => setShowHistory(false)} className="p-1 rounded-lg hover:bg-white/20 transition-colors">
             <ChevronLeft className="w-5 h-5" />
@@ -414,7 +473,7 @@ export default function AiAssistantChat() {
         )}
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-sm leading-tight">{showHistory ? 'Historial' : 'Omni Asistente'}</h3>
-          <p className="text-[10px] text-indigo-100 leading-tight">{showHistory ? `${chats.length} conversaciones` : 'IA con datos de tu empresa'}</p>
+          <p className="text-[10px] text-emerald-100 leading-tight">{showHistory ? `${chats.length} conversaciones` : 'IA con datos de tu empresa'}</p>
         </div>
         {!showHistory && (
           <>
@@ -446,12 +505,12 @@ export default function AiAssistantChat() {
           <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 space-y-3 bg-gray-50 dark:bg-slate-900/50">
             {messages.length === 0 && !loading && (
               <div className="flex flex-col items-center justify-center h-full text-center px-2 sm:px-4 gap-3">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-indigo-50 via-purple-50 to-fuchsia-50 dark:from-indigo-900/30 dark:via-purple-900/30 dark:to-fuchsia-900/30 flex items-center justify-center shadow-inner">
-                  <RobotIcon size={52} className="text-indigo-500 dark:text-indigo-400" />
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 dark:from-emerald-900/30 dark:via-green-900/30 dark:to-teal-900/30 flex items-center justify-center shadow-inner">
+                  <RobotIcon size={52} className="text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
                   <p className="font-bold text-sm sm:text-base text-gray-800 dark:text-gray-100">{greeting}, {firstName}! 👋</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Soy tu <span className="font-semibold text-indigo-500">Omni Asistente</span>. Puedo ayudarte con conversaciones, agentes, canales, tickets y más.</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Soy tu <span className="font-semibold text-emerald-600">Omni Asistente</span>. Puedo ayudarte con conversaciones, agentes, canales, tickets y más.</p>
                 </div>
                 <div className="grid grid-cols-1 gap-1.5 w-full mt-1">
                   {[
@@ -463,7 +522,7 @@ export default function AiAssistantChat() {
                     <button
                       key={i}
                       onClick={() => { setInput(q); setTimeout(() => inputRef.current?.focus(), 50); }}
-                      className="text-left text-[11px] sm:text-xs px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                      className="text-left text-[11px] sm:text-xs px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
                     >
                       {q}
                     </button>
@@ -475,13 +534,13 @@ export default function AiAssistantChat() {
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} items-end gap-1.5`}>
                 {msg.role === 'assistant' && (
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:to-purple-900/40 flex items-center justify-center shrink-0 mb-0.5">
-                    <RobotIcon size={15} className="text-indigo-500 dark:text-indigo-400" animate={false} />
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-100 to-green-100 dark:from-emerald-900/40 dark:to-green-900/40 flex items-center justify-center shrink-0 mb-0.5">
+                    <RobotIcon size={15} className="text-emerald-600 dark:text-emerald-400" animate={false} />
                   </div>
                 )}
                 <div className={`max-w-[82%] sm:max-w-[80%] px-3 py-2 rounded-2xl text-[13px] leading-relaxed whitespace-pre-wrap ${
                   msg.role === 'user'
-                    ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-br-md shadow-sm'
+                    ? 'bg-gradient-to-br from-emerald-500 to-green-600 text-white rounded-br-md shadow-sm'
                     : 'bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-700 rounded-bl-md shadow-sm'
                 }`}>
                   {msg.content}
@@ -491,8 +550,8 @@ export default function AiAssistantChat() {
 
             {loading && (
               <div className="flex justify-start items-end gap-1.5">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:to-purple-900/40 flex items-center justify-center shrink-0 mb-0.5">
-                  <RobotIcon size={15} className="text-indigo-500 dark:text-indigo-400" animate={false} />
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-100 to-green-100 dark:from-emerald-900/40 dark:to-green-900/40 flex items-center justify-center shrink-0 mb-0.5">
+                  <RobotIcon size={15} className="text-emerald-600 dark:text-emerald-400" animate={false} />
                 </div>
                 <div className="px-4 py-3 rounded-2xl rounded-bl-md bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
                   <div className="flex items-center gap-2 text-gray-400">
@@ -521,7 +580,7 @@ export default function AiAssistantChat() {
                 onKeyDown={handleKeyDown}
                 placeholder={`Pregunta lo que necesites, ${firstName}...`}
                 rows={1}
-                className="flex-1 min-w-0 resize-none rounded-xl border border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent max-h-24"
+                className="flex-1 min-w-0 resize-none rounded-xl border border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent max-h-24"
                 style={{ lineHeight: '1.4' }}
                 onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 96) + 'px'; }}
                 disabled={loading}
@@ -529,7 +588,7 @@ export default function AiAssistantChat() {
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || loading}
-                className="shrink-0 w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:from-gray-300 disabled:to-gray-300 dark:disabled:from-slate-600 dark:disabled:to-slate-600 text-white flex items-center justify-center transition-all"
+                className="shrink-0 w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 disabled:from-gray-300 disabled:to-gray-300 dark:disabled:from-slate-600 dark:disabled:to-slate-600 text-white flex items-center justify-center transition-all"
               >
                 <Send className="w-4 h-4" />
               </button>

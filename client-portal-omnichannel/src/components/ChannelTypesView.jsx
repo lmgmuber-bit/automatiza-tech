@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Loader2, Pencil, Trash2, X, Save, GripVertical } from 'lucide-react';
 import { getChannelTypes, createChannelType, updateChannelType, deleteChannelType } from '../api';
 import ResultModal from './ResultModal';
+import { getChannelIcon } from './ChannelIcons';
 
 const COLOR_OPTIONS = [
   'green-500', 'pink-500', 'sky-500', 'blue-500', 'purple-500',
@@ -301,7 +302,7 @@ export default function ChannelTypesView() {
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl font-bold bg-${type.color || 'gray-500'}`}
                     style={{ backgroundColor: colorToHex(type.color) }}
                   >
-                    {type.emoji || '📡'}
+                    {getChannelIcon(type.slug, 24) || type.emoji || '📡'}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

@@ -1068,7 +1068,7 @@ class OmnichannelController {
             $is_customer = $msg->sender_type === 'customer';
             $sender_label = $is_customer ? $contact_name : ($msg->sender_name ?: 'Bot');
             $bg = $is_customer ? '#dcf8c6' : '#f8f9ff';
-            $border_color = $is_customer ? '#25D366' : '#667eea';
+            $border_color = $is_customer ? '#25D366' : '#0d9488';
             $content_escaped = esc_html(mb_substr($msg->content, 0, 300));
             $chat_rows .= "
                                             <tr>
@@ -1103,7 +1103,7 @@ class OmnichannelController {
                         <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                             <!-- Header -->
                             <tr>
-                                <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                                <td style="background: linear-gradient(135deg, #0d9488 0%, #14b8a6 50%, #06d6a0 100%); padding: 30px; text-align: center;">
                                     <img src="' . $logo_url . '" alt="AutomatizaTech" style="max-width: 150px; height: auto; display: block; margin: 0 auto 15px auto; background-color: rgba(255,255,255,0.1); padding: 8px; border-radius: 10px;">
                                     <h1 style="color: #ffffff; margin: 0; font-size: 24px;">' . $heading_text . '</h1>
                                     <p style="color: #f0f0f0; margin: 10px 0 0 0; font-size: 14px;">Portal OmniCliente &mdash; AutomatizaTech</p>
@@ -1118,12 +1118,12 @@ class OmnichannelController {
                                     </p>
 
                                     <!-- Contact info -->
-                                    <div style="background: #f8f9ff; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin-bottom: 20px;">
-                                        <h2 style="color: #667eea; margin: 0 0 15px 0; font-size: 18px;">👤 Información del Contacto</h2>
+                                    <div style="background: #f0fdfa; padding: 20px; border-radius: 8px; border-left: 4px solid #0d9488; margin-bottom: 20px;">
+                                        <h2 style="color: #0d9488; margin: 0 0 15px 0; font-size: 18px;">👤 Información del Contacto</h2>
                                         <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse: collapse;">
                                             <tr>
                                                 <td style="padding: 8px 0; border-bottom: 1px solid #e0e0e0; width: 120px;">
-                                                    <strong style="color: #667eea;">Nombre:</strong>
+                                                    <strong style="color: #0d9488;">Nombre:</strong>
                                                 </td>
                                                 <td style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
                                                     ' . esc_html($contact_name) . '
@@ -1131,15 +1131,15 @@ class OmnichannelController {
                                             </tr>
                                             <tr>
                                                 <td style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
-                                                    <strong style="color: #667eea;">Teléfono:</strong>
+                                                    <strong style="color: #0d9488;">Teléfono:</strong>
                                                 </td>
                                                 <td style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
-                                                    <a href="tel:' . esc_attr($contact_phone) . '" style="color: #667eea; text-decoration: none;">' . esc_html($contact_phone) . '</a>
+                                                    <a href="tel:' . esc_attr($contact_phone) . '" style="color: #0d9488; text-decoration: none;">' . esc_html($contact_phone) . '</a>
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
-                                                    <strong style="color: #667eea;">Canal:</strong>
+                                                    <strong style="color: #0d9488;">Canal:</strong>
                                                 </td>
                                                 <td style="padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
                                                     ' . esc_html($channel_name) . '
@@ -1147,7 +1147,7 @@ class OmnichannelController {
                                             </tr>
                                             <tr>
                                                 <td style="padding: 8px 0;">
-                                                    <strong style="color: #667eea;">Fecha:</strong>
+                                                    <strong style="color: #0d9488;">Fecha:</strong>
                                                 </td>
                                                 <td style="padding: 8px 0;">
                                                     ' . $now_formatted . '
@@ -1166,7 +1166,7 @@ class OmnichannelController {
 
                                     <!-- CTA Button -->
                                     <div style="text-align: center; margin-top: 25px;">
-                                        <a href="' . $portal_url . '" style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);">
+                                        <a href="' . $portal_url . '" style="display: inline-block; background: linear-gradient(135deg, #0d9488, #14b8a6); color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; box-shadow: 0 4px 10px rgba(13, 148, 136, 0.3);">
                                             📋 Abrir Portal OmniCliente
                                         </a>
                                     </div>
@@ -1176,11 +1176,11 @@ class OmnichannelController {
                             <!-- Footer -->
                             <tr>
                                 <td style="background: #f8f9ff; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
-                                    <p style="color: #667eea; margin: 0 0 8px 0; font-size: 13px; font-style: italic;">
+                                    <p style="color: #0d9488; margin: 0 0 8px 0; font-size: 13px; font-style: italic;">
                                         ✨ Bots inteligentes para negocios que no se detienen ✨
                                     </p>
                                     <p style="color: #666; margin: 0; font-size: 12px;">
-                                        🌐 <a href="https://automatizatech.cl" style="color: #667eea; text-decoration: none;">automatizatech.cl</a>
+                                        🌐 <a href="https://automatizatech.cl" style="color: #0d9488; text-decoration: none;">automatizatech.cl</a>
                                     </p>
                                     <p style="color: #999; margin: 5px 0 0 0; font-size: 11px;">
                                         Notificación automática del Portal OmniCliente &mdash; AutomatizaTech
@@ -1557,10 +1557,10 @@ class OmnichannelController {
 
         $body = "
         <div style='font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;'>
-            <div style='background: linear-gradient(135deg, #4F46E5, #7C3AED); padding: 28px 24px; text-align: center; border-radius: 12px 12px 0 0;'>
+            <div style='background: linear-gradient(135deg, #0d9488, #14b8a6, #06d6a0); padding: 28px 24px; text-align: center; border-radius: 12px 12px 0 0;'>
                 <img src='" . esc_url($logo_url) . "' alt='AutomatizaTech' style='height: 60px; width: auto; border-radius: 12px; margin-bottom: 12px;' />
                 <h1 style='color: #fff; margin: 0; font-size: 20px; font-weight: bold;'>AutomatizaTech</h1>
-                <p style='color: #c7d2fe; margin: 6px 0 0; font-size: 12px; letter-spacing: 0.5px;'>Portal Omnicanal de Clientes</p>
+                <p style='color: #a7f3d0; margin: 6px 0 0; font-size: 12px; letter-spacing: 0.5px;'>Portal Omnicanal de Clientes</p>
             </div>
             <div style='background: #ffffff; padding: 32px 24px; border: 1px solid #e2e8f0; border-top: none;'>
                 <h2 style='color: #1e293b; margin: 0 0 16px; font-size: 18px;'>¡Hola {$name}! 👋</h2>
@@ -1583,7 +1583,7 @@ class OmnichannelController {
                     </table>
                 </div>
                 <div style='text-align: center; margin: 0 0 24px;'>
-                    <a href='" . esc_url($login_url) . "' style='display: inline-block; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #ffffff; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;'>
+                    <a href='" . esc_url($login_url) . "' style='display: inline-block; background: linear-gradient(135deg, #0d9488, #14b8a6); color: #ffffff; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;'>
                         Acceder al Portal
                     </a>
                 </div>
@@ -1657,10 +1657,10 @@ class OmnichannelController {
 
         $body = "
         <div style='font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;'>
-            <div style='background: linear-gradient(135deg, #4F46E5, #7C3AED); padding: 28px 24px; text-align: center; border-radius: 12px 12px 0 0;'>
+            <div style='background: linear-gradient(135deg, #0d9488, #14b8a6, #06d6a0); padding: 28px 24px; text-align: center; border-radius: 12px 12px 0 0;'>
                 <img src='" . esc_url($logo_url) . "' alt='AutomatizaTech' style='height: 60px; width: auto; border-radius: 12px; margin-bottom: 12px;' />
                 <h1 style='color: #fff; margin: 0; font-size: 20px; font-weight: bold;'>AutomatizaTech</h1>
-                <p style='color: #c7d2fe; margin: 6px 0 0; font-size: 12px; letter-spacing: 0.5px;'>Portal Omnicanal de Clientes</p>
+                <p style='color: #a7f3d0; margin: 6px 0 0; font-size: 12px; letter-spacing: 0.5px;'>Portal Omnicanal de Clientes</p>
             </div>
             <div style='background: #ffffff; padding: 32px 24px; border: 1px solid #e2e8f0; border-top: none;'>
                 <h2 style='color: #1e293b; margin: 0 0 16px; font-size: 18px;'>Recuperar contraseña</h2>
@@ -1669,7 +1669,7 @@ class OmnichannelController {
                     para restablecer tu contraseña en el Portal Omnicanal.
                 </p>
                 <div style='text-align: center; margin: 0 0 24px;'>
-                    <a href='" . esc_url($reset_url) . "' style='display: inline-block; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #ffffff; text-decoration: none; padding: 14px 36px; border-radius: 8px; font-weight: 600; font-size: 14px;'>
+                    <a href='" . esc_url($reset_url) . "' style='display: inline-block; background: linear-gradient(135deg, #0d9488, #14b8a6); color: #ffffff; text-decoration: none; padding: 14px 36px; border-radius: 8px; font-weight: 600; font-size: 14px;'>
                         Restablecer Contraseña
                     </a>
                 </div>
@@ -3334,10 +3334,10 @@ class OmnichannelController {
 
         $body = "
         <div style='font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#f8fafc;'>
-            <div style='background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:28px 24px;text-align:center;border-radius:12px 12px 0 0;'>
+            <div style='background:linear-gradient(135deg,#0d9488,#14b8a6,#06d6a0);padding:28px 24px;text-align:center;border-radius:12px 12px 0 0;'>
                 <img src='" . esc_url($logo_url) . "' alt='AutomatizaTech' style='height:60px;width:auto;border-radius:12px;margin-bottom:12px;' />
                 <h1 style='color:#fff;margin:0;font-size:20px;font-weight:bold;'>AutomatizaTech</h1>
-                <p style='color:#c7d2fe;margin:6px 0 0;font-size:12px;letter-spacing:0.5px;'>Portal Omnicanal de Clientes</p>
+                <p style='color:#a7f3d0;margin:6px 0 0;font-size:12px;letter-spacing:0.5px;'>Portal Omnicanal de Clientes</p>
             </div>
             <div style='background:#fff;padding:28px 24px;border:1px solid #e2e8f0;border-top:none;'>
                 <p style='color:#334155;font-size:14px;margin:0 0 16px;'>Hola <strong>" . esc_html($client->contact_name) . "</strong>,</p>
@@ -3378,10 +3378,10 @@ class OmnichannelController {
 
         $body = "
         <div style='font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#f8fafc;'>
-            <div style='background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:28px 24px;text-align:center;border-radius:12px 12px 0 0;'>
+            <div style='background:linear-gradient(135deg,#0d9488,#14b8a6,#06d6a0);padding:28px 24px;text-align:center;border-radius:12px 12px 0 0;'>
                 <img src='" . esc_url($logo_url) . "' alt='AutomatizaTech' style='height:60px;width:auto;border-radius:12px;margin-bottom:12px;' />
                 <h1 style='color:#fff;margin:0;font-size:20px;font-weight:bold;'>AutomatizaTech</h1>
-                <p style='color:#c7d2fe;margin:6px 0 0;font-size:12px;letter-spacing:0.5px;'>Portal Omnicanal de Clientes</p>
+                <p style='color:#a7f3d0;margin:6px 0 0;font-size:12px;letter-spacing:0.5px;'>Portal Omnicanal de Clientes</p>
             </div>
             <div style='background:#fff;padding:24px;border:1px solid #e2e8f0;border-top:none;'>
                 <p style='color:#334155;font-size:14px;'>Hola <strong>" . esc_html($agent->name) . "</strong>,</p>
@@ -3826,10 +3826,10 @@ class OmnichannelController {
 
         $html = "<div style='font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#f8fafc;'>
             <!-- Branded header with logo -->
-            <div style='background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:28px 24px;border-radius:12px 12px 0 0;text-align:center;'>
+            <div style='background:linear-gradient(135deg,#0d9488,#14b8a6,#06d6a0);padding:28px 24px;border-radius:12px 12px 0 0;text-align:center;'>
                 <img src='" . esc_url($logo_url) . "' alt='AutomatizaTech' style='height:60px;width:auto;border-radius:12px;margin-bottom:12px;' />
                 <h1 style='color:#fff;margin:0;font-size:20px;font-weight:bold;'>AutomatizaTech</h1>
-                <p style='color:#c7d2fe;margin:6px 0 0;font-size:12px;letter-spacing:0.5px;'>Portal Omnicanal · Sistema de Soporte</p>
+                <p style='color:#a7f3d0;margin:6px 0 0;font-size:12px;letter-spacing:0.5px;'>Portal Omnicanal · Sistema de Soporte</p>
             </div>
             <!-- Heading -->
             <div style='background:#4338CA;padding:14px 24px;text-align:center;'>
@@ -3842,7 +3842,7 @@ class OmnichannelController {
                     {$body_msg}
                 </div>
                 <div style='text-align:center;margin:24px 0 8px;'>
-                    <a href='" . esc_url($portal_url) . "' style='display:inline-block;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#ffffff;text-decoration:none;padding:10px 28px;border-radius:8px;font-weight:600;font-size:13px;'>
+                    <a href='" . esc_url($portal_url) . "' style='display:inline-block;background:linear-gradient(135deg,#0d9488,#14b8a6);color:#ffffff;text-decoration:none;padding:10px 28px;border-radius:8px;font-weight:600;font-size:13px;'>
                         Ir al Portal de Soporte
                     </a>
                 </div>

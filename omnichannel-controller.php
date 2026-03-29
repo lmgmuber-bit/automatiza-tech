@@ -964,8 +964,9 @@ class OmnichannelController {
         if (!$agent) return ['error' => 'Agente no encontrado'];
 
         // Verificar que no tenga demasiados chats activos
-        if ($agent->active_chats >= $agent->max_concurrent_chats) {
-            return ['error' => "El agente ya tiene {$agent->max_concurrent_chats} chats activos"];
+        $max_chats = (int) $agent->max_concurrent_chats;
+        if ($max_chats > 0 && (int) $agent->active_chats >= $max_chats) {
+            return ['error' => "El agente ya tiene {$max_chats} chats activos"];
         }
 
         // Liberar takeover anterior si existe
@@ -1282,7 +1283,8 @@ class OmnichannelController {
         ));
         if (!$to_agent) return ['error' => 'Agente destino no encontrado'];
 
-        if ($to_agent->active_chats >= $to_agent->max_concurrent_chats) {
+        $max_chats = (int) $to_agent->max_concurrent_chats;
+        if ($max_chats > 0 && (int) $to_agent->active_chats >= $max_chats) {
             return ['error' => 'El agente destino tiene demasiados chats activos'];
         }
 

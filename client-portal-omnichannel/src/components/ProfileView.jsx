@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Camera, Lock, Save, Loader2, CheckCircle, AlertCircle, Eye, EyeOff, Mail } from 'lucide-react';
+import { User, Camera, Lock, Save, Loader2, CheckCircle, AlertCircle, Eye, EyeOff, Mail, X, ZoomIn } from 'lucide-react';
 import { getAgentProfile, updateAgentProfile, uploadAvatar, requestPasswordCode, changePasswordWithCode, getAgentData } from '../api';
 
 const roleLabels = { admin: 'Administrador', supervisor: 'Supervisor', agent: 'Agente' };
@@ -13,6 +13,7 @@ export default function ProfileView() {
 
   // Avatar
   const [uploading, setUploading] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
   const fileRef = useRef(null);
 
   // Password change flow
@@ -179,35 +180,41 @@ export default function ProfileView() {
         )}
 
         {/* Avatar + Info Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex flex-col sm:flex-row items-center gap-5">
-            {/* Avatar */}
-            <div className="relative group">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+          <div className="flex flex-col items-center gap-4 sm:gap-5">
+            {/* Avatar grande + cambiar foto */}
+            <div className="relative group cursor-pointer" onClick={() => setShowAvatarModal(true)}>
               {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.name} className="w-24 h-24 rounded-full object-cover border-4 border-indigo-100" />
+                <img src={profile.avatar_url} alt={profile.name} className="w-36 h-36 sm:w-44 sm:h-44 rounded-full object-cover border-4 border-indigo-100 shadow-lg transition-transform group-hover:scale-105" />
               ) : (
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-3xl font-bold border-4 border-indigo-100">
+                <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-5xl sm:text-6xl font-bold border-4 border-indigo-100 shadow-lg transition-transform group-hover:scale-105">
                   {profile.name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
               )}
+              <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center text-white">
+                  <ZoomIn size={24} />
+                  <span className="text-xs font-medium mt-1">Ver foto</span>
+                </div>
+              </div>
               <button
-                onClick={() => fileRef.current?.click()}
+                onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
                 disabled={uploading}
-                className="absolute bottom-0 right-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-indigo-700 transition-colors"
+                className="absolute bottom-1 right-1 w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-indigo-700 transition-colors border-2 border-white"
                 title="Cambiar foto"
               >
-                {uploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+                {uploading ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
               </button>
               <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleAvatarUpload} className="hidden" />
             </div>
 
             {/* Info */}
-            <div className="text-center sm:text-left flex-1">
+            <div className="text-center flex-1">
               <h2 className="text-xl font-bold text-gray-900">{profile.name}</h2>
-              <p className="text-sm text-gray-500 flex items-center gap-1 justify-center sm:justify-start mt-0.5">
+              <p className="text-sm text-gray-500 flex items-center gap-1 justify-center mt-0.5">
                 <Mail size={14} /> {profile.email}
               </p>
-              <div className="flex items-center gap-2 mt-2 justify-center sm:justify-start flex-wrap">
+              <div className="flex items-center gap-2 mt-2 justify-center flex-wrap">
                 <span className="text-xs bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full font-medium">
                   {roleLabels[profile.role] || profile.role}
                 </span>
@@ -220,9 +227,50 @@ export default function ProfileView() {
           </div>
         </div>
 
+        {/* Avatar Modal */}
+        {showAvatarModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowAvatarModal(false)}>
+            <div className="relative max-w-lg w-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+              {/* Close button */}
+              <button
+                onClick={() => setShowAvatarModal(false)}
+                className="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 z-10 w-9 h-9 sm:w-10 sm:h-10 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors text-gray-600"
+              >
+                <X size={18} />
+              </button>
+
+              {/* Full size photo */}
+              {profile.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={profile.name}
+                  className="w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80 rounded-2xl object-cover shadow-2xl border-4 border-white"
+                />
+              ) : (
+                <div className="w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-6xl sm:text-8xl font-bold shadow-2xl border-4 border-white">
+                  {profile.name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+              )}
+
+              {/* Name */}
+              <p className="mt-3 sm:mt-4 text-white text-base sm:text-lg font-semibold">{profile.name}</p>
+
+              {/* Change photo button */}
+              <button
+                onClick={() => { fileRef.current?.click(); setShowAvatarModal(false); }}
+                disabled={uploading}
+                className="mt-3 sm:mt-4 flex items-center gap-2 px-5 py-2 sm:px-6 sm:py-2.5 bg-indigo-600 text-white rounded-full text-sm sm:text-base font-medium shadow-lg hover:bg-indigo-700 active:bg-indigo-800 transition-colors"
+              >
+                {uploading ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
+                Cambiar foto de perfil
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Edit Profile Form */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><User size={18} /> Editar Información</h3>
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+          <h3 className="font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base"><User size={18} /> Editar Información</h3>
           <form onSubmit={handleSaveProfile}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -278,8 +326,8 @@ export default function ProfileView() {
         </div>
 
         {/* Change Password */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Lock size={18} /> Cambiar Contraseña</h3>
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+          <h3 className="font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base"><Lock size={18} /> Cambiar Contraseña</h3>
 
           {pwSuccess && (
             <div className="flex items-center gap-2 p-3 rounded-lg text-sm bg-green-50 text-green-700 border border-green-200 mb-4">
@@ -390,16 +438,16 @@ export default function ProfileView() {
         </div>
 
         {/* Stats */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-3">Estadísticas</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-700">{profile.active_chats || 0}</div>
-              <div className="text-xs text-blue-600">Chats activos</div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+          <h3 className="font-semibold text-gray-900 mb-3 text-sm sm:text-base">Estadísticas</h3>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="text-center p-2.5 sm:p-3 bg-blue-50 rounded-lg">
+              <div className="text-xl sm:text-2xl font-bold text-blue-700">{profile.active_chats || 0}</div>
+              <div className="text-[11px] sm:text-xs text-blue-600">Chats activos</div>
             </div>
-            <div className="text-center p-3 bg-indigo-50 rounded-lg">
-              <div className="text-2xl font-bold text-indigo-700">{profile.max_concurrent_chats || 5}</div>
-              <div className="text-xs text-indigo-600">Max. simultáneos</div>
+            <div className="text-center p-2.5 sm:p-3 bg-indigo-50 rounded-lg">
+              <div className="text-xl sm:text-2xl font-bold text-indigo-700">{profile.max_concurrent_chats || 5}</div>
+              <div className="text-[11px] sm:text-xs text-indigo-600">Max. simultáneos</div>
             </div>
           </div>
         </div>

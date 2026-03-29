@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Send, UserCheck, RotateCcw, Loader2, MessageSquare, ArrowLeft, Eye, EyeOff, ArrowRightLeft, ChevronDown } from 'lucide-react';
-import { getConversations, getMessages, sendMessage, takeoverConversation, releaseConversation, transferConversation, getAgents, getIsAdmin, getIsAgent, isSupervisorOrAdmin } from '../api';
+import { getConversations, getMessages, sendMessage, takeoverConversation, releaseConversation, transferConversation, getAgents, getIsAdmin, getIsAgent, isSupervisorOrAdmin, getAgentData } from '../api';
 import ChannelBadge from './ChannelBadge';
 import ResultModal from './ResultModal';
 
@@ -216,10 +216,20 @@ export default function InboxView() {
   async function loadAgents() {
     try {
       const data = await getAgents();
-      setAgents(Array.isArray(data) ? data : []);
+      // Handle both raw array and paginated {data: [...]} responses
+      const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+      console.log('[InboxView] loadAgents:', list.length, 'agents loaded', list.map(a => `${a.id}:${a.name}:${a.role}:${a.status}`));
+      setAgents(list);
+      return list;
     } catch (err) {
       console.error('Error loading agents:', err);
+      return [];
     }
+  }
+
+  async function openAgentDropdown() {
+    await loadAgents();
+    setShowAgentDropdown(true);
   }
 
   async function handleSend(e) {
@@ -259,10 +269,11 @@ export default function InboxView() {
   // Transfer to another agent (agent transferring their own conv)
   async function handleTransfer(toAgentId) {
     if (!selectedConv || !toAgentId) return;
-    const myAgent = agents.find(a => a.is_mine || a.id == selectedConv.assigned_agent_id) || agents[0];
-    if (!myAgent) return;
+    const agentData = getAgentData();
+    const myAgentId = agentData?.id || selectedConv.assigned_agent_id;
+    if (!myAgentId) return;
     try {
-      await transferConversation(selectedConv.id, myAgent.id, toAgentId, 'Transferido por agente');
+      await transferConversation(selectedConv.id, myAgentId, toAgentId, 'Transferido por agente');
       setShowAgentDropdown(false);
       await loadConversations();
       await loadMessages(selectedConv.id);
@@ -492,7 +503,7 @@ export default function InboxView() {
                 {!selectedConv.is_readonly && (() => {
                   const isAdminOrSup = getIsAdmin() || canSupervisor;
                   const isConvUnassigned = selectedConv.status === 'bot' || selectedConv.status === 'open';
-                  const isConvAssigned = selectedConv.status === 'assigned';
+                  const isConvAssigned = selectedConv.status === 'assigned' || selectedConv.status === 'active';
                   const isMyConv = isAgentMode && selectedConv.is_mine;
 
                   return (
@@ -501,7 +512,7 @@ export default function InboxView() {
                       {isAdminOrSup && isConvUnassigned && (
                         <div className="relative">
                           <button
-                            onClick={() => setShowAgentDropdown(v => !v)}
+                            onClick={() => showAgentDropdown ? setShowAgentDropdown(false) : openAgentDropdown()}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
                           >
                             <UserCheck size={14} />
@@ -511,7 +522,7 @@ export default function InboxView() {
                           {showAgentDropdown && (
                             <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-60 overflow-y-auto">
                               <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase">Seleccionar agente</p>
-                              {agents.filter(a => a.status === 'active').map(a => (
+                              {agents.map(a => (
                                 <button
                                   key={a.id}
                                   onClick={() => handleAssignToAgent(a.id)}
@@ -521,7 +532,7 @@ export default function InboxView() {
                                   <span className="text-[10px] text-gray-400">{a.active_chats}/{a.max_concurrent_chats}</span>
                                 </button>
                               ))}
-                              {agents.filter(a => a.status === 'active').length === 0 && (
+                              {agents.length === 0 && (
                                 <p className="px-3 py-2 text-xs text-gray-400">No hay agentes activos</p>
                               )}
                             </div>
@@ -534,7 +545,7 @@ export default function InboxView() {
                         <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-2">
                           <div className="relative">
                             <button
-                              onClick={() => setShowAgentDropdown(v => !v)}
+                            onClick={() => showAgentDropdown ? setShowAgentDropdown(false) : openAgentDropdown()}
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors"
                             >
                               <ArrowRightLeft size={14} />
@@ -542,18 +553,24 @@ export default function InboxView() {
                               <ChevronDown size={12} />
                             </button>
                             {showAgentDropdown && (
-                              <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-60 overflow-y-auto">
+                              <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
                                 <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase">Reasignar a</p>
-                                {agents.filter(a => a.status === 'active' && a.id != selectedConv.assigned_agent_id).map(a => (
+                                {agents.filter(a => String(a.id) !== String(selectedConv.assigned_agent_id)).map(a => (
                                   <button
                                     key={a.id}
                                     onClick={() => handleAssignToAgent(a.id)}
                                     className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex items-center justify-between"
                                   >
-                                    <span>{a.name}</span>
+                                    <span className="flex items-center gap-1.5">
+                                      <span>{a.name}</span>
+                                      <span className={`text-[9px] px-1 py-0.5 rounded font-medium ${a.role === 'supervisor' || a.role === 'admin' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>{a.role === 'admin' ? 'Admin' : a.role === 'supervisor' ? 'Sup' : 'Agente'}</span>
+                                    </span>
                                     <span className="text-[10px] text-gray-400">{a.active_chats}/{a.max_concurrent_chats}</span>
                                   </button>
                                 ))}
+                                {agents.filter(a => String(a.id) !== String(selectedConv.assigned_agent_id)).length === 0 && (
+                                  <p className="px-3 py-2 text-xs text-gray-400">No hay agentes disponibles</p>
+                                )}
                               </div>
                             )}
                           </div>
@@ -567,12 +584,12 @@ export default function InboxView() {
                         </div>
                       )}
 
-                      {/* Agent (not supervisor): Transfer to colleague + Release (only if MY conv) */}
+                      {/* Agent (not supervisor): Transfer to colleague/supervisor + Release (only if MY conv) */}
                       {isAgentMode && !isAdminOrSup && isMyConv && isConvAssigned && (
                         <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-2">
                           <div className="relative">
                             <button
-                              onClick={() => setShowAgentDropdown(v => !v)}
+                            onClick={() => showAgentDropdown ? setShowAgentDropdown(false) : openAgentDropdown()}
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600 transition-colors"
                             >
                               <ArrowRightLeft size={14} />
@@ -580,18 +597,57 @@ export default function InboxView() {
                               <ChevronDown size={12} />
                             </button>
                             {showAgentDropdown && (
-                              <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-60 overflow-y-auto">
+                              <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
                                 <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase">Transferir a</p>
-                                {agents.filter(a => a.status === 'active' && a.id != selectedConv.assigned_agent_id).map(a => (
-                                  <button
-                                    key={a.id}
-                                    onClick={() => handleTransfer(a.id)}
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex items-center justify-between"
-                                  >
-                                    <span>{a.name}</span>
-                                    <span className="text-[10px] text-gray-400">{a.active_chats}/{a.max_concurrent_chats}</span>
-                                  </button>
-                                ))}
+                                {(() => {
+                                  const myId = String(selectedConv.assigned_agent_id || '');
+                                  const transferable = agents.filter(a => String(a.id) !== myId);
+                                  if (transferable.length === 0) {
+                                    return <p className="px-3 py-2 text-xs text-gray-400">No hay agentes o supervisores disponibles</p>;
+                                  }
+                                  const supervisors = transferable.filter(a => a.role === 'supervisor' || a.role === 'admin');
+                                  const regularAgents = transferable.filter(a => a.role !== 'supervisor' && a.role !== 'admin');
+                                  return (
+                                    <>
+                                      {supervisors.length > 0 && (
+                                        <>
+                                          <p className="px-3 pt-1.5 pb-0.5 text-[9px] font-bold text-purple-500 uppercase tracking-wide">Supervisores</p>
+                                          {supervisors.map(a => (
+                                            <button
+                                              key={a.id}
+                                              onClick={() => handleTransfer(a.id)}
+                                              className="w-full text-left px-3 py-2 text-sm hover:bg-purple-50 flex items-center justify-between"
+                                            >
+                                              <span className="flex items-center gap-1.5">
+                                                <span>{a.name}</span>
+                                                <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded font-medium">{a.role === 'admin' ? 'Admin' : 'Sup'}</span>
+                                              </span>
+                                              <span className="text-[10px] text-gray-400">{a.department || ''}</span>
+                                            </button>
+                                          ))}
+                                        </>
+                                      )}
+                                      {regularAgents.length > 0 && (
+                                        <>
+                                          <p className="px-3 pt-1.5 pb-0.5 text-[9px] font-bold text-blue-500 uppercase tracking-wide">Agentes</p>
+                                          {regularAgents.map(a => (
+                                            <button
+                                              key={a.id}
+                                              onClick={() => handleTransfer(a.id)}
+                                              className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex items-center justify-between"
+                                            >
+                                              <span className="flex items-center gap-1.5">
+                                                <span>{a.name}</span>
+                                                {a.department && <span className="text-[9px] bg-gray-100 text-gray-500 px-1 py-0.5 rounded">{a.department}</span>}
+                                              </span>
+                                              <span className="text-[10px] text-gray-400">{a.active_chats}/{a.max_concurrent_chats}</span>
+                                            </button>
+                                          ))}
+                                        </>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                               </div>
                             )}
                           </div>

@@ -91,9 +91,9 @@ async function request(route, method = 'GET', body = null) {
   // Agent uses agent/ prefix routes
   // Admin uses admin/ prefix routes
   let effectiveRoute = routePath;
-  if (isAgent && !routePath.startsWith('agent')) {
+  if (isAgent && !routePath.startsWith('agent/')) {
     effectiveRoute = `agent/${routePath}`;
-  } else if (isAdmin && !routePath.startsWith('admin')) {
+  } else if (isAdmin && !routePath.startsWith('admin/')) {
     effectiveRoute = `admin/${routePath}`;
   }
   const url = `${API_BASE}?route=${encodeURIComponent(effectiveRoute)}${routeQs ? '&' + routeQs : ''}`;

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Loader2, Save, Bot, Settings } from 'lucide-react';
-import { getBotConfigs, updateBotConfig, getIsAdmin } from '../api';
+import { getBotConfigs, updateBotConfig, getIsAdmin, getIsAgent } from '../api';
 import ChannelBadge from './ChannelBadge';
 import ResultModal from './ResultModal';
 
 export default function BotsView() {
+  const canEdit = getIsAdmin() || !getIsAgent(); // Solo admin AT o cliente (API key) pueden editar
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
@@ -105,6 +106,7 @@ export default function BotsView() {
                       </div>
                     </div>
                   </div>
+                  {canEdit && (
                   <button
                     onClick={() => editingId === config.id ? setEditingId(null) : startEdit(config)}
                     className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
@@ -112,6 +114,7 @@ export default function BotsView() {
                     <Settings size={14} />
                     {editingId === config.id ? 'Cerrar' : 'Configurar'}
                   </button>
+                  )}
                 </div>
 
                 {/* Quick Info */}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Loader2, Save, Plus, Trash2, FileText, ChevronDown, ChevronUp, ChevronLeft, Eye, Pencil, Power, AlertTriangle, Upload, X, Copy, FileUp, ToggleLeft, ToggleRight, UserPlus, Phone, Mail, Building2 } from 'lucide-react';
-import { getPromptConfigs, getPromptConfig, createPromptConfig, updatePromptConfig, deletePromptConfig, getChannels, getIsAdmin, isSupervisorOrAdmin, getAgentsByChannel, getAgents } from '../api';
+import { getPromptConfigs, getPromptConfig, createPromptConfig, updatePromptConfig, deletePromptConfig, getChannels, getIsAdmin, getIsAgent, isSupervisorOrAdmin, getAgentsByChannel, getAgents } from '../api';
 import ResultModal from './ResultModal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 
@@ -227,7 +227,8 @@ function parseCsvToPromptData(csvText) {
 
 export default function PromptsView() {
   const isAdmin = getIsAdmin();
-  const canEdit = isAdmin; // Solo AT admin puede editar
+  const isAgent = getIsAgent();
+  const canEdit = isAdmin || !isAgent; // Admin AT o cliente (API key) pueden editar
   const canView = isAdmin || isSupervisorOrAdmin(); // Supervisor puede ver
 
   const [configs, setConfigs] = useState([]);

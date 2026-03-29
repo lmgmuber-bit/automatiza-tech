@@ -1553,11 +1553,14 @@ class OmnichannelController {
 
         $subject = "🎉 Bienvenido al equipo — AutomatizaTech Portal Omnicanal";
 
+        $logo_url = get_site_url() . '/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
+
         $body = "
-        <div style='font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 0;'>
-            <div style='background: linear-gradient(135deg, #6366f1, #4f46e5); padding: 30px 24px; text-align: center; border-radius: 8px 8px 0 0;'>
-                <h1 style='color: #fff; margin: 0; font-size: 22px;'>🤖 AutomatizaTech</h1>
-                <p style='color: #c7d2fe; margin: 8px 0 0; font-size: 13px;'>Portal Omnicanal de Clientes</p>
+        <div style='font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;'>
+            <div style='background: linear-gradient(135deg, #4F46E5, #7C3AED); padding: 28px 24px; text-align: center; border-radius: 12px 12px 0 0;'>
+                <img src='" . esc_url($logo_url) . "' alt='AutomatizaTech' style='height: 60px; width: auto; border-radius: 12px; margin-bottom: 12px;' />
+                <h1 style='color: #fff; margin: 0; font-size: 20px; font-weight: bold;'>AutomatizaTech</h1>
+                <p style='color: #c7d2fe; margin: 6px 0 0; font-size: 12px; letter-spacing: 0.5px;'>Portal Omnicanal de Clientes</p>
             </div>
             <div style='background: #ffffff; padding: 32px 24px; border: 1px solid #e2e8f0; border-top: none;'>
                 <h2 style='color: #1e293b; margin: 0 0 16px; font-size: 18px;'>¡Hola {$name}! 👋</h2>
@@ -1591,10 +1594,10 @@ class OmnichannelController {
                     </p>
                 </div>
             </div>
-            <div style='padding: 16px 24px; text-align: center; border-radius: 0 0 8px 8px;'>
-                <p style='margin: 0; font-size: 11px; color: #94a3b8;'>
-                    Este correo fue enviado por AutomatizaTech · Portal Omnicanal
-                </p>
+            <div style='padding: 16px 24px; text-align: center; background: #f1f5f9; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;'>
+                <p style='margin: 0 0 4px; font-size: 11px; color: #64748b; font-weight: 600;'>AutomatizaTech</p>
+                <p style='margin: 0 0 4px; font-size: 10px; color: #94a3b8;'>Automatización Inteligente para tu Negocio</p>
+                <p style='margin: 0; font-size: 10px; color: #94a3b8;'>soporte@automatizatech.cl · automatizatech.cl</p>
             </div>
         </div>";
 
@@ -1650,11 +1653,14 @@ class OmnichannelController {
 
         $subject = "🔑 Recuperar contraseña — AutomatizaTech Portal";
 
+        $logo_url = get_site_url() . '/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
+
         $body = "
-        <div style='font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 0;'>
-            <div style='background: linear-gradient(135deg, #6366f1, #4f46e5); padding: 30px 24px; text-align: center; border-radius: 8px 8px 0 0;'>
-                <h1 style='color: #fff; margin: 0; font-size: 22px;'>🤖 AutomatizaTech</h1>
-                <p style='color: #c7d2fe; margin: 8px 0 0; font-size: 13px;'>Portal Omnicanal de Clientes</p>
+        <div style='font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;'>
+            <div style='background: linear-gradient(135deg, #4F46E5, #7C3AED); padding: 28px 24px; text-align: center; border-radius: 12px 12px 0 0;'>
+                <img src='" . esc_url($logo_url) . "' alt='AutomatizaTech' style='height: 60px; width: auto; border-radius: 12px; margin-bottom: 12px;' />
+                <h1 style='color: #fff; margin: 0; font-size: 20px; font-weight: bold;'>AutomatizaTech</h1>
+                <p style='color: #c7d2fe; margin: 6px 0 0; font-size: 12px; letter-spacing: 0.5px;'>Portal Omnicanal de Clientes</p>
             </div>
             <div style='background: #ffffff; padding: 32px 24px; border: 1px solid #e2e8f0; border-top: none;'>
                 <h2 style='color: #1e293b; margin: 0 0 16px; font-size: 18px;'>Recuperar contraseña</h2>
@@ -1678,10 +1684,10 @@ class OmnichannelController {
                     </p>
                 </div>
             </div>
-            <div style='padding: 16px 24px; text-align: center; border-radius: 0 0 8px 8px;'>
-                <p style='margin: 0; font-size: 11px; color: #94a3b8;'>
-                    Este correo fue enviado por AutomatizaTech · Portal Omnicanal
-                </p>
+            <div style='padding: 16px 24px; text-align: center; background: #f1f5f9; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;'>
+                <p style='margin: 0 0 4px; font-size: 11px; color: #64748b; font-weight: 600;'>AutomatizaTech</p>
+                <p style='margin: 0 0 4px; font-size: 10px; color: #94a3b8;'>Automatización Inteligente para tu Negocio</p>
+                <p style='margin: 0; font-size: 10px; color: #94a3b8;'>soporte@automatizatech.cl · automatizatech.cl</p>
             </div>
         </div>";
 
@@ -3324,11 +3330,14 @@ class OmnichannelController {
                 <p style='margin:8px 0 0;color:#a16207;font-size:13px;'>Fecha de vencimiento: <strong>" . date('d/m/Y', strtotime($client->period_end)) . "</strong></p>
                </div>";
 
+        $logo_url = get_site_url() . '/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
+
         $body = "
         <div style='font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#f8fafc;'>
-            <div style='background:linear-gradient(135deg,#1e40af,#1e3a8a);padding:24px;text-align:center;border-radius:8px 8px 0 0;'>
-                <h1 style='color:#fff;margin:0;font-size:20px;'>🤖 AutomatizaTech</h1>
-                <p style='color:#93c5fd;margin:6px 0 0;font-size:12px;'>Portal Omnicanal de Clientes</p>
+            <div style='background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:28px 24px;text-align:center;border-radius:12px 12px 0 0;'>
+                <img src='" . esc_url($logo_url) . "' alt='AutomatizaTech' style='height:60px;width:auto;border-radius:12px;margin-bottom:12px;' />
+                <h1 style='color:#fff;margin:0;font-size:20px;font-weight:bold;'>AutomatizaTech</h1>
+                <p style='color:#c7d2fe;margin:6px 0 0;font-size:12px;letter-spacing:0.5px;'>Portal Omnicanal de Clientes</p>
             </div>
             <div style='background:#fff;padding:28px 24px;border:1px solid #e2e8f0;border-top:none;'>
                 <p style='color:#334155;font-size:14px;margin:0 0 16px;'>Hola <strong>" . esc_html($client->contact_name) . "</strong>,</p>
@@ -3339,8 +3348,10 @@ class OmnichannelController {
                     <tr><td style='padding:6px 0;'>📅 Vencimiento:</td><td style='font-weight:600;color:" . ($is_expired ? '#dc2626' : '#d97706') . ";'>" . date('d/m/Y', strtotime($client->period_end)) . "</td></tr>
                 </table>
             </div>
-            <div style='padding:12px 24px;text-align:center;border-radius:0 0 8px 8px;'>
-                <p style='margin:0;font-size:11px;color:#94a3b8;'>AutomatizaTech · Portal Omnicanal</p>
+            <div style='padding:16px 24px;text-align:center;background:#f1f5f9;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;'>
+                <p style='margin:0 0 4px;font-size:11px;color:#64748b;font-weight:600;'>AutomatizaTech</p>
+                <p style='margin:0 0 4px;font-size:10px;color:#94a3b8;'>Automatización Inteligente para tu Negocio</p>
+                <p style='margin:0;font-size:10px;color:#94a3b8;'>soporte@automatizatech.cl · automatizatech.cl</p>
             </div>
         </div>";
 
@@ -3363,16 +3374,24 @@ class OmnichannelController {
             ? "Tu acceso al portal ha sido suspendido porque el período de servicio de <strong>" . esc_html($client->company_name) . "</strong> ha expirado."
             : "El servicio de <strong>" . esc_html($client->company_name) . "</strong> vence en <strong>{$days} día" . ($days !== 1 ? 's' : '') . "</strong> (" . date('d/m/Y', strtotime($client->period_end)) . "). Contacta a tu administrador.";
 
+        $logo_url = get_site_url() . '/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
+
         $body = "
-        <div style='font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;'>
-            <div style='background:linear-gradient(135deg,#6366f1,#4f46e5);padding:20px;text-align:center;border-radius:8px 8px 0 0;'>
-                <h1 style='color:#fff;margin:0;font-size:18px;'>🤖 AutomatizaTech</h1>
+        <div style='font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#f8fafc;'>
+            <div style='background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:28px 24px;text-align:center;border-radius:12px 12px 0 0;'>
+                <img src='" . esc_url($logo_url) . "' alt='AutomatizaTech' style='height:60px;width:auto;border-radius:12px;margin-bottom:12px;' />
+                <h1 style='color:#fff;margin:0;font-size:20px;font-weight:bold;'>AutomatizaTech</h1>
+                <p style='color:#c7d2fe;margin:6px 0 0;font-size:12px;letter-spacing:0.5px;'>Portal Omnicanal de Clientes</p>
             </div>
             <div style='background:#fff;padding:24px;border:1px solid #e2e8f0;border-top:none;'>
                 <p style='color:#334155;font-size:14px;'>Hola <strong>" . esc_html($agent->name) . "</strong>,</p>
                 <p style='color:#475569;font-size:14px;line-height:1.6;'>{$msg}</p>
             </div>
-            <div style='padding:12px;text-align:center;'><p style='font-size:11px;color:#94a3b8;'>AutomatizaTech · Portal Omnicanal</p></div>
+            <div style='padding:16px 24px;text-align:center;background:#f1f5f9;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;'>
+                <p style='margin:0 0 4px;font-size:11px;color:#64748b;font-weight:600;'>AutomatizaTech</p>
+                <p style='margin:0 0 4px;font-size:10px;color:#94a3b8;'>Automatización Inteligente para tu Negocio</p>
+                <p style='margin:0;font-size:10px;color:#94a3b8;'>soporte@automatizatech.cl · automatizatech.cl</p>
+            </div>
         </div>";
 
         $headers = self::email_headers();

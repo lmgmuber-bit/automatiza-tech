@@ -1196,14 +1196,27 @@ try {
                     ], ['id' => $agent_id]);
                     // Send code via email
                     $subject = 'Código de verificación — OmniCliente';
-                    $message = '<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;">'
-                        . '<h2 style="color:#4F46E5;">Código de verificación</h2>'
-                        . '<p>Hola <strong>' . esc_html($current_agent->name) . '</strong>,</p>'
-                        . '<p>Tu código de verificación para cambiar la contraseña es:</p>'
-                        . '<div style="text-align:center;margin:20px 0;">'
-                        . '<span style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#1E40AF;background:#EEF2FF;padding:12px 24px;border-radius:8px;">' . $code . '</span>'
+                    $logo_url = get_site_url() . '/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
+                    $message = '<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#f8fafc;">'
+                        . '<div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:28px 24px;border-radius:12px 12px 0 0;text-align:center;">'
+                        . '<img src="' . esc_url($logo_url) . '" alt="AutomatizaTech" style="height:60px;width:auto;border-radius:12px;margin-bottom:12px;" />'
+                        . '<h1 style="color:#fff;margin:0;font-size:20px;font-weight:bold;">AutomatizaTech</h1>'
+                        . '<p style="color:#c7d2fe;margin:6px 0 0;font-size:12px;letter-spacing:0.5px;">Portal Omnicanal de Clientes</p>'
                         . '</div>'
-                        . '<p style="color:#6B7280;font-size:13px;">Este código expira en <strong>5 minutos</strong>. Si no solicitaste este cambio, ignora este mensaje.</p>'
+                        . '<div style="background:#ffffff;padding:28px 24px;border:1px solid #e2e8f0;border-top:none;">'
+                        . '<h2 style="color:#1e293b;margin:0 0 16px;font-size:18px;">Código de verificación</h2>'
+                        . '<p style="color:#475569;font-size:14px;line-height:1.6;margin:0 0 8px;">Hola <strong>' . esc_html($current_agent->name) . '</strong>,</p>'
+                        . '<p style="color:#475569;font-size:14px;line-height:1.6;margin:0 0 20px;">Tu código de verificación para cambiar la contraseña es:</p>'
+                        . '<div style="text-align:center;margin:0 0 20px;">'
+                        . '<span style="display:inline-block;font-size:36px;font-weight:bold;letter-spacing:10px;color:#1E40AF;background:#EEF2FF;padding:16px 32px;border-radius:12px;border:2px solid #c7d2fe;">' . $code . '</span>'
+                        . '</div>'
+                        . '<p style="color:#94a3b8;font-size:13px;line-height:1.5;">Este código expira en <strong>5 minutos</strong>. Si no solicitaste este cambio, ignora este mensaje.</p>'
+                        . '</div>'
+                        . '<div style="padding:16px 24px;text-align:center;background:#f1f5f9;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;">'
+                        . '<p style="margin:0 0 4px;font-size:11px;color:#64748b;font-weight:600;">AutomatizaTech</p>'
+                        . '<p style="margin:0 0 4px;font-size:10px;color:#94a3b8;">Automatización Inteligente para tu Negocio</p>'
+                        . '<p style="margin:0;font-size:10px;color:#94a3b8;">soporte@automatizatech.cl · automatizatech.cl</p>'
+                        . '</div>'
                         . '</div>';
                     $headers = OmnichannelController::email_headers();
                     wp_mail($current_agent->email, $subject, $message, $headers);

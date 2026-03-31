@@ -5,6 +5,16 @@ import { aiAssistantChat, getIsAdmin, getIsAgent, getAgentData } from '../api';
 const STORAGE_KEY = 'omni_ai_chats';
 const MAX_CHATS = 30;
 
+// Simple markdown-to-text cleaner: strips **, ##, ### but keeps structure
+function cleanMarkdown(text) {
+  if (!text) return text;
+  return text
+    .replace(/^#{1,3}\s+/gm, '')       // Remove ### headers
+    .replace(/\*\*([^*]+)\*\*/g, '$1')  // Remove **bold**
+    .replace(/\*([^*]+)\*/g, '$1')      // Remove *italic*
+    .replace(/`([^`]+)`/g, '$1');       // Remove `code`
+}
+
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
@@ -546,7 +556,7 @@ export default function AiAssistantChat({ currentView }) {
                     ? 'bg-gradient-to-br from-emerald-500 to-green-600 text-white rounded-br-md shadow-sm'
                     : 'bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-700 rounded-bl-md shadow-sm'
                 }`}>
-                  {msg.content}
+                  {msg.role === 'assistant' ? cleanMarkdown(msg.content) : msg.content}
                 </div>
               </div>
             ))}

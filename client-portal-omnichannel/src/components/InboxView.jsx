@@ -96,8 +96,12 @@ export default function InboxView() {
   useEffect(() => {
     const interval = setInterval(() => {
       pollConversationsRef.current?.();
-      if (selectedConvRef.current) {
-        pollMessagesRef.current?.(selectedConvRef.current.id);
+      const conv = selectedConvRef.current;
+      if (conv) {
+        console.log('[poll] fetching messages for conv', conv.id, conv.contact_name);
+        pollMessagesRef.current?.(conv.id);
+      } else {
+        console.log('[poll] no selectedConv, skipping pollMessages');
       }
     }, POLL_INTERVAL);
     return () => clearInterval(interval);
@@ -160,13 +164,17 @@ export default function InboxView() {
     try {
       const data = await getMessages(convId);
       const newMsgs = data.data || [];
-      setMessages(prev => {
-        // Build fingerprint: count + last message id
-        const newFp = newMsgs.length + ':' + (newMsgs.length > 0 ? newMsgs[newMsgs.length - 1].id : '');
-        const prevFp = prev.length + ':' + (prev.length > 0 ? prev[prev.length - 1].id : '');
-        if (newFp === prevFp) return prev; // No change — skip re-render
+      if (!newMsgs.length) return;
 
-        // New message arrived — show notification if tab hidden
+      setMessages(prev => {
+        const prevLastId = prev.length > 0 ? prev[prev.length - 1].id : null;
+        const newLastId = newMsgs[newMsgs.length - 1].id;
+        console.log('[pollMessages]', { convId, prevCount: prev.length, newCount: newMsgs.length, prevLastId, newLastId });
+
+        // Same count + same last id = no changes
+        if (newMsgs.length === prev.length && newLastId === prevLastId) return prev;
+
+        // New message — notify if tab hidden
         if (newMsgs.length > prev.length && prev.length > 0) {
           const latest = newMsgs[newMsgs.length - 1];
           if (latest.direction === 'inbound' && document.hidden) {
@@ -181,7 +189,7 @@ export default function InboxView() {
         return newMsgs;
       });
     } catch (err) {
-      console.warn('[pollMessages] error:', err);
+      console.error('[pollMessages] ERROR:', err);
     }
   }, []);
 

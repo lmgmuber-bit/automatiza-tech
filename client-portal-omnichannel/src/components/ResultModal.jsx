@@ -46,7 +46,7 @@ export default function ResultModal({ type = 'success', title, message, detail, 
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={type !== 'confirm' ? onClose : undefined}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
       <div
-        className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-fadein"
+        className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-hidden animate-fadein flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Icon header */}
@@ -55,7 +55,7 @@ export default function ResultModal({ type = 'success', title, message, detail, 
         </div>
 
         {/* Content */}
-        <div className="px-6 py-5 text-center">
+        <div className="px-6 py-5 text-center overflow-y-auto flex-1">
           {title && <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{title}</h3>}
           {message && <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 whitespace-pre-line">{message}</p>}
 

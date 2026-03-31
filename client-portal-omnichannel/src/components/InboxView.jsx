@@ -47,6 +47,8 @@ export default function InboxView() {
   const selectedConvRef = useRef(null);
   const prevConvsRef = useRef([]); // previous conversations snapshot for diff
   const seenMsgIdsRef = useRef({}); // { convId: lastSeenMsgTimestamp }
+  const pollConversationsRef = useRef(null);
+  const pollMessagesRef = useRef(null);
   const isAgentMode = getIsAgent();
   const canSupervisor = isAgentMode && isSupervisorOrAdmin();
 
@@ -93,13 +95,13 @@ export default function InboxView() {
   // Auto-polling: refresh conversations + active chat messages every 5s
   useEffect(() => {
     const interval = setInterval(() => {
-      pollConversations();
+      pollConversationsRef.current?.();
       if (selectedConvRef.current) {
-        pollMessages(selectedConvRef.current.id);
+        pollMessagesRef.current?.(selectedConvRef.current.id);
       }
     }, POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, [filters, scope]);
+  }, []);
 
   // Silent poll — no loading spinners
   const pollConversations = useCallback(async () => {
@@ -184,6 +186,10 @@ export default function InboxView() {
       });
     } catch { /* silent */ }
   }, []);
+
+  // Keep polling refs updated so setInterval always uses latest callbacks
+  pollConversationsRef.current = pollConversations;
+  pollMessagesRef.current = pollMessages;
 
   async function loadConversations() {
     setLoading(true);

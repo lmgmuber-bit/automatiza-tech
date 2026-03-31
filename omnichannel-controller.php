@@ -3946,15 +3946,17 @@ class OmnichannelController {
      * Build data context from DB for the AI assistant (strict client_id filtering)
      */
     private function ai_build_context($client_id, $client) {
+        // Suppress DB error output to avoid HTML in JSON responses
+        $this->wpdb->suppress_errors(true);
         $ctx = [];
 
         // --- Channels ---
         $channels = $this->wpdb->get_results($this->wpdb->prepare(
-            "SELECT id, name, channel_type, is_active FROM {$this->prefix}channels WHERE client_id = %d ORDER BY channel_type",
+            "SELECT id, channel_name, channel_type, is_active FROM {$this->prefix}channels WHERE client_id = %d ORDER BY channel_type",
             $client_id
         ));
         $ctx['channels'] = array_map(function($ch) {
-            return "{$ch->name} ({$ch->channel_type}" . ($ch->is_active ? ', activo' : ', inactivo') . ")";
+            return "{$ch->channel_name} ({$ch->channel_type}" . ($ch->is_active ? ', activo' : ', inactivo') . ")";
         }, $channels);
         $ctx['channel_count'] = count($channels);
         $ctx['active_channel_count'] = count(array_filter($channels, fn($c) => $c->is_active));
@@ -3987,8 +3989,8 @@ class OmnichannelController {
         // --- Recent conversations (last 50) with resolution info ---
         $recent_convs = $this->wpdb->get_results($this->wpdb->prepare(
             "SELECT c.id, c.contact_name, c.contact_phone, c.status, c.priority,
-                    c.assigned_agent_id, c.last_message_at, c.created_at, c.escalation_reason,
-                    ch.name as channel_name, ch.channel_type,
+                    c.assigned_agent_id, c.last_message_at, c.created_at,
+                    ch.channel_name, ch.channel_type,
                     a.name as agent_name
              FROM {$this->prefix}conversations c
              LEFT JOIN {$this->prefix}channels ch ON c.channel_id = ch.id
@@ -4004,7 +4006,6 @@ class OmnichannelController {
             if ($c->agent_name) $line .= ", agente: {$c->agent_name}";
             if ($c->channel_name) $line .= ", canal: {$c->channel_name} ({$c->channel_type})";
             if ($c->priority && $c->priority !== 'normal') $line .= ", prioridad: {$c->priority}";
-            if ($c->escalation_reason) $line .= ", razón escalamiento: {$c->escalation_reason}";
             $line .= ", último msg: {$c->last_message_at}";
             return $line;
         }, $recent_convs);
@@ -4049,27 +4050,27 @@ class OmnichannelController {
 
         // --- Takeover/transfer history (last 30) ---
         $takeovers = $this->wpdb->get_results($this->wpdb->prepare(
-            "SELECT t.action, t.reason, t.created_at,
-                    a1.name as agent_name, a2.name as target_agent_name,
+            "SELECT t.status as takeover_status, t.reason, t.taken_at,
+                    t.agent_name, a2.name as target_agent_name,
                     c.contact_name
              FROM {$this->prefix}takeovers t
              INNER JOIN {$this->prefix}conversations conv ON t.conversation_id = conv.id
-             LEFT JOIN {$this->prefix}agents a1 ON t.agent_id = a1.id
-             LEFT JOIN {$this->prefix}agents a2 ON t.target_agent_id = a2.id
+             LEFT JOIN {$this->prefix}agents a2 ON t.transferred_to_agent_id = a2.id
              LEFT JOIN {$this->prefix}conversations c ON t.conversation_id = c.id
              WHERE conv.client_id = %d
-             ORDER BY t.created_at DESC LIMIT 30",
+             ORDER BY t.taken_at DESC LIMIT 30",
             $client_id
         ));
         $ctx['takeovers'] = array_map(function($t) {
-            $line = "{$t->action}: {$t->agent_name}";
+            $line = "{$t->takeover_status}: {$t->agent_name}";
             if ($t->target_agent_name) $line .= " → {$t->target_agent_name}";
             $line .= " (contacto: {$t->contact_name}";
             if ($t->reason) $line .= ", razón: {$t->reason}";
-            $line .= ", {$t->created_at})";
+            $line .= ", {$t->taken_at})";
             return $line;
         }, $takeovers);
 
+        $this->wpdb->suppress_errors(false);
         return $ctx;
     }
 

@@ -225,7 +225,7 @@ function FloatingButton({ onClick, hasChats, firstName, avoidBottom }) {
   const tooltip = useRotatingTooltip(firstName);
 
   return (
-    <div className={`fixed right-4 sm:right-5 z-[45] flex items-end gap-2 transition-all duration-300 ${avoidBottom ? 'bottom-24 sm:bottom-24' : 'bottom-4 sm:bottom-5'}`}>
+    <div className={`fixed right-4 sm:right-5 z-[55] flex items-end gap-2 transition-all duration-300 ${avoidBottom ? 'bottom-28 sm:bottom-28' : 'bottom-4 sm:bottom-5'}`}>
       {/* Tooltip bubble */}
       <div className={`max-w-[200px] sm:max-w-[220px] px-3 py-2 rounded-xl rounded-br-sm bg-white dark:bg-slate-800 shadow-lg border border-gray-200 dark:border-slate-700 transition-all duration-500 ${
         tooltip.visible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-2 scale-95 pointer-events-none'

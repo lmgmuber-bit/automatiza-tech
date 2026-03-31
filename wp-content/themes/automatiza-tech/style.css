@@ -264,6 +264,235 @@ h3 { font-size: 1.5rem; }
     font-size: 1.2em;
 }
 
+/* ── Hero con banner Gemini ───────────────────────────── */
+.hero-with-banner {
+    padding: 0;
+    background: none;
+    min-height: 340px;
+    display: flex;
+    align-items: stretch;
+}
+
+/* Ocultar el grid SVG en modo banner */
+.hero-with-banner::before { display: none; }
+
+/* Imagen de fondo que llena todo el section */
+.hero-with-banner .hero-banner-img {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+.hero-with-banner .hero-banner-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: left center;
+    display: block;
+}
+
+/* Overlay: tapa el texto propio de la imagen en la zona derecha */
+.hero-with-banner .hero-banner-img::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to right,
+        transparent 18%,
+        rgba(10,22,40,0.40) 38%,
+        rgba(10,22,40,0.78) 55%,
+        rgba(10,22,40,0.90) 72%,
+        rgba(10,22,40,0.92) 100%
+    );
+}
+
+/* Container en modo banner: flex alineado abajo */
+.hero-with-banner > .container {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: flex-end;
+    width: 100%;
+    padding-top: 3.5rem;
+    padding-bottom: 1.5rem;
+}
+
+/* Contenido: un poco más a la derecha */
+.hero-with-banner .hero-content {
+    margin-left: 34%;
+    width: 62%;
+    text-align: left;
+}
+
+.hero-with-banner .hero-title {
+    font-size: 3rem;
+    text-shadow: 0 2px 16px rgba(0,0,0,0.7);
+}
+
+.hero-with-banner .hero-subtitle {
+    text-shadow: 0 1px 8px rgba(0,0,0,0.6);
+}
+
+.hero-with-banner .hero-tagline {
+    text-shadow: 0 1px 8px rgba(0,0,0,0.6);
+}
+
+.hero-with-banner .hero-cta {
+    justify-content: flex-start;
+}
+
+/* ─── Hero Mobile Animated Background ─────────────────────────────────── */
+
+/* Por defecto (desktop): ocultar fondo mobile */
+.hero-mobile-bg {
+    display: none;
+}
+
+/* Por defecto (desktop): mostrar imagen */
+.hero-desktop-only {
+    display: block;
+}
+
+/* ─── Mobile: ocultar imagen, mostrar fondo animado ──────────────────── */
+@media (max-width: 768px) {
+
+    /* Ocultar imagen landscape (pixelada) */
+    .hero-desktop-only {
+        display: none !important;
+    }
+
+    /* Ocultar imagen landscape de forma forzada */
+    .hero-desktop-only,
+    .hero-desktop-only img {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+    }
+
+    /* Mostrar fondo animado */
+    .hero-mobile-bg {
+        display: block;
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        overflow: hidden;
+        background: linear-gradient(160deg, #071424 0%, #0a1f38 55%, #062a2a 100%);
+    }
+
+    /* Hero section sin overflow en mobile */
+    .hero-with-banner {
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* Canvas ocupa todo */
+    #heroMobileCanvas {
+        position: absolute;
+        inset: 0;
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    /* Robot recortado en portrait — solo la mitad izquierda de la imagen */
+    .hero-mobile-robot {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        top: 0;
+        width: 260px;
+        height: 255px;
+        overflow: hidden;
+        z-index: 2;
+        opacity: 0;
+        animation: hmRobotIn 0.9s ease-out 0.3s forwards;
+    }
+    .hero-mobile-robot img {
+        width: 830px;         /* más grande = texto "Plataforma" empuja a derecha, fuera del clip de 260px */
+        max-width: unset;
+        height: auto;
+        margin-left: -35px;   /* centra el robot (robot ocupa ~35% de la imagen) */
+        margin-top: -8px;
+        display: block;
+        object-fit: unset;
+    }
+
+    /* Glow debajo del robot */
+    .hero-mobile-glow {
+        position: absolute;
+        bottom: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 200px;
+        height: 60px;
+        background: radial-gradient(ellipse, rgba(6,214,160,0.35) 0%, transparent 70%);
+        animation: hmGlowPulse 2.8s ease-in-out infinite;
+    }
+
+    /* Partículas CSS decorativas (complementan el canvas) */
+    .hm-particle {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(6,214,160,0.55);
+        animation: hmFloat linear infinite;
+        z-index: 1;
+    }
+    .hm-p1 { width:6px;  height:6px;  left:8%;   bottom:20%; animation-duration:6s;  animation-delay:0s;   }
+    .hm-p2 { width:4px;  height:4px;  left:18%;  bottom:45%; animation-duration:8s;  animation-delay:1.2s; }
+    .hm-p3 { width:5px;  height:5px;  left:82%;  bottom:30%; animation-duration:7s;  animation-delay:0.6s; }
+    .hm-p4 { width:3px;  height:3px;  left:72%;  bottom:60%; animation-duration:9s;  animation-delay:2s;   }
+    .hm-p5 { width:7px;  height:7px;  left:55%;  bottom:15%; animation-duration:5s;  animation-delay:0.4s; background:rgba(30,58,138,0.7); }
+    .hm-p6 { width:4px;  height:4px;  left:35%;  bottom:55%; animation-duration:10s; animation-delay:3s;   }
+
+    /* Container sobre el fondo animado */
+    .hero-with-banner {
+        min-height: 480px;
+    }
+    .hero-with-banner > .container {
+        padding-top: 0;
+        padding-bottom: 2rem;
+        align-items: flex-end;
+    }
+    .hero-with-banner .hero-content {
+        margin-left: 0;
+        width: 100%;
+        text-align: center;
+        padding-top: 172px;   /* espacio para el robot encima */
+        opacity: 0;
+        animation: hmContentIn 0.8s ease-out 0.7s forwards;
+    }
+    .hero-with-banner .hero-cta {
+        justify-content: center;
+    }
+    .hero-with-banner .hero-title {
+        font-size: 2rem;
+        text-shadow: 0 2px 20px rgba(0,0,0,0.9);
+    }
+    .hero-with-banner .hero-subtitle {
+        text-shadow: 0 1px 12px rgba(0,0,0,0.8);
+        font-size: 1.05rem;
+    }
+    .hero-with-banner .hero-tagline {
+        text-shadow: 0 1px 12px rgba(0,0,0,0.8);
+    }
+}
+
+/* ─── Keyframes mobile hero ─────────────────────────────────────────── */
+@keyframes hmRobotIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-18px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes hmContentIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes hmGlowPulse {
+    0%,100% { opacity: 0.5; transform: translateX(-50%) scaleX(1); }
+    50%      { opacity: 0.9; transform: translateX(-50%) scaleX(1.2); }
+}
+@keyframes hmFloat {
+    0%   { transform: translateY(0)    opacity(1); }
+    100% { transform: translateY(-80px); opacity(0); }
+}
+
 /* Features Section */
 .features-section {
     padding: 5rem 0;
@@ -1364,122 +1593,113 @@ img {
     z-index: 10;
 }
 
-/* Demo Robot Animation */
+/* Demo Robot Animation — spring bounce */
 .demo-robot {
-    animation: demoPeek 10s ease-in-out infinite;
+    animation: demoPeek 11s cubic-bezier(0.34,1.56,0.64,1) infinite;
 }
 
 @keyframes demoPeek {
-    0%, 20% {
-        opacity: 0;
-        transform: translateX(-50%) translateY(30px) scale(0.8);
-    }
-    25%, 35% {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0px) scale(1);
-    }
-    40%, 100% {
-        opacity: 0;
-        transform: translateX(-50%) translateY(30px) scale(0.8);
-    }
+    0%, 18%  { opacity:0; transform:translateX(-50%) translateY(40px) scale(0.65); filter:blur(2px); }
+    24%      { opacity:1; transform:translateX(-50%) translateY(-8px) scale(1.10); filter:blur(0); }
+    28%      { opacity:1; transform:translateX(-50%) translateY(3px) scale(0.96); }
+    32%, 40% { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+    47%, 100%{ opacity:0; transform:translateX(-50%) translateY(40px) scale(0.65); filter:blur(2px); }
 }
 
-/* WhatsApp Robot Animation (offset timing) */
+/* WhatsApp Robot Animation (offset timing) — spring bounce */
 .whatsapp-robot {
-    animation: whatsappPeek 10s ease-in-out infinite;
-    animation-delay: 5s;
+    animation: whatsappPeek 11s cubic-bezier(0.34,1.56,0.64,1) infinite;
+    animation-delay: 5.5s;
 }
 
 @keyframes whatsappPeek {
-    0%, 20% {
-        opacity: 0;
-        transform: translateX(-50%) translateY(30px) scale(0.8);
-    }
-    25%, 35% {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0px) scale(1);
-    }
-    40%, 100% {
-        opacity: 0;
-        transform: translateX(-50%) translateY(30px) scale(0.8);
-    }
+    0%, 18%  { opacity:0; transform:translateX(-50%) translateY(40px) scale(0.65); filter:blur(2px); }
+    24%      { opacity:1; transform:translateX(-50%) translateY(-8px) scale(1.10); filter:blur(0); }
+    28%      { opacity:1; transform:translateX(-50%) translateY(3px) scale(0.96); }
+    32%, 40% { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+    47%, 100%{ opacity:0; transform:translateX(-50%) translateY(40px) scale(0.65); filter:blur(2px); }
 }
 
 /* Robot styling for hero buttons */
 .robot-peek-btn .robot-bot {
-    font-size: 1.5rem;
-    margin-bottom: 8px;
+    font-size: 1.6rem;
+    margin-bottom: 6px;
     text-align: center;
-    animation: heroRobotWave 2.5s ease-in-out infinite;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+    animation: heroRobotWave 2.2s cubic-bezier(0.445,0.05,0.55,0.95) infinite;
+    filter: drop-shadow(0 4px 10px rgba(6,214,160,0.5));
+    transform-origin: bottom center;
 }
 
 @keyframes heroRobotWave {
-    0%, 100% {
-        transform: rotate(0deg);
-    }
-    25% {
-        transform: rotate(-12deg);
-    }
-    75% {
-        transform: rotate(12deg);
-    }
+    0%, 100% { transform: rotate(0deg) translateY(0); }
+    20%      { transform: rotate(-14deg) translateY(-2px); }
+    40%      { transform: rotate(10deg) translateY(-1px); }
+    60%      { transform: rotate(-6deg) translateY(0); }
+    80%      { transform: rotate(4deg) translateY(0); }
 }
 
-/* Chat bubble for hero buttons */
+/* Chat bubble para botones del hero — gradiente teal */
 .robot-peek-btn .chat-bubble {
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-    color: white;
-    padding: 8px 14px;
-    border-radius: 18px;
+    background: linear-gradient(135deg, #06d6a0 0%, #17b7b1 60%, #0ea5e9 100%);
+    color: #0a1628;
+    font-weight: 700;
+    padding: 8px 16px;
+    border-radius: 20px;
     position: relative;
-    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
-    min-width: 110px;
+    box-shadow:
+        0 6px 20px rgba(6,214,160,0.45),
+        0 2px 8px rgba(0,0,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.3);
+    min-width: 120px;
     text-align: center;
-    animation: heroBubbleFloat 2s ease-in-out infinite;
+    animation: heroBubbleFloat 2.4s ease-in-out infinite;
+    backdrop-filter: blur(4px);
 }
 
 @keyframes heroBubbleFloat {
-    0%, 100% {
-        transform: translateY(0px);
-    }
-    50% {
-        transform: translateY(-4px);
-    }
+    0%, 100% { transform: translateY(0px) scale(1); box-shadow: 0 6px 20px rgba(6,214,160,0.45), 0 2px 8px rgba(0,0,0,0.2); }
+    50%      { transform: translateY(-5px) scale(1.02); box-shadow: 0 10px 28px rgba(6,214,160,0.6), 0 4px 12px rgba(0,0,0,0.15); }
 }
 
 .robot-peek-btn .chat-text {
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: 0.82rem;
+    font-weight: 700;
     white-space: nowrap;
     display: block;
+    letter-spacing: 0.2px;
 }
 
 .robot-peek-btn .bubble-tail {
     position: absolute;
-    bottom: -6px;
+    bottom: -7px;
     left: 50%;
     transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-top: 6px solid #ff6b6b;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 7px solid #06d6a0;
+    filter: drop-shadow(0 2px 3px rgba(6,214,160,0.4));
 }
 
-/* Hover effects for hero buttons */
+/* Hover — aparece al instante con micro-bounce */
 .btn-robot-container:hover .robot-peek-btn {
     opacity: 1 !important;
-    transform: translateX(-50%) translateY(0px) scale(1) !important;
-    animation: none;
+    animation: heroBtnHoverPop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards !important;
+}
+
+@keyframes heroBtnHoverPop {
+    0%   { opacity:0; transform:translateX(-50%) translateY(20px) scale(0.8); }
+    60%  { opacity:1; transform:translateX(-50%) translateY(-4px) scale(1.06); }
+    100% { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
 }
 
 .btn-robot-container:hover .robot-peek-btn .chat-bubble {
-    animation-duration: 1s;
+    animation-duration: 1.2s;
 }
 
 .btn-robot-container:hover .robot-peek-btn .robot-bot {
-    animation-duration: 1.5s;
+    animation-duration: 1.6s;
 }
 
 /* Responsive adjustments for hero robots */

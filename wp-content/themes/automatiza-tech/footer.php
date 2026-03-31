@@ -186,175 +186,321 @@
 </script>
 <?php endif; ?>
 
-<!-- Demo Modal -->
-<div id="demo-modal" class="demo-modal">
-    <div class="demo-modal-content">
-        <span class="close-demo-modal">&times;</span>
-        <div class="demo-modal-header">
-            <h3>Agendar Demo</h3>
-            <p>Selecciona una fecha y hora para tu reunión</p>
+<!-- =============================================
+     MODAL PROMOCIONAL — Imagen Planes
+     Se muestra una vez por sesión al cargar el home
+============================================= -->
+<div id="promo-modal" style="
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:99999;
+    background:rgba(5,15,35,0.88);
+    backdrop-filter:blur(6px);
+    align-items:center;
+    justify-content:center;
+    animation:promoFadeIn 0.35s ease;
+">
+    <div style="
+        position:relative;
+        width:min(820px,95vw);
+        border-radius:18px;
+        overflow:hidden;
+        box-shadow:0 0 60px rgba(6,214,160,0.3),0 30px 80px rgba(0,0,0,0.7);
+        border:1px solid rgba(6,214,160,0.25);
+        background:#0a1628;
+    ">
+        <!-- Botón cerrar — z-index 999 para estar siempre por encima del badge -->
+        <button onclick="closePromoModal()" style="
+            position:absolute;top:8px;right:8px;
+            background:rgba(10,22,40,0.9);color:#fff;
+            border:2px solid #fff;border-radius:50%;
+            width:38px;height:38px;font-size:18px;font-weight:900;cursor:pointer;
+            z-index:999;display:flex;align-items:center;justify-content:center;
+            transition:background 0.2s,transform 0.15s;
+            box-shadow:0 2px 10px rgba(0,0,0,0.8);
+            line-height:1;flex-shrink:0;
+        " onmouseover="this.style.background='#06d6a0';this.style.borderColor='#06d6a0';this.style.transform='scale(1.1)'"
+           onmouseout="this.style.background='rgba(10,22,40,0.9)';this.style.borderColor='#fff';this.style.transform='scale(1)'"
+           aria-label="Cerrar">&#x2715;</button>
+
+        <!-- Badge superior -->
+        <div style="
+            position:absolute;top:14px;left:50%;transform:translateX(-50%);
+            background:linear-gradient(135deg,#ff6b35,#ff4500);
+            color:#fff;font-size:12px;font-weight:800;
+            padding:5px 18px;border-radius:50px;letter-spacing:1px;
+            z-index:10;box-shadow:0 4px 14px rgba(255,107,53,0.5);white-space:nowrap;
+        ">🎁 PROMOCIÓN ESPECIAL — 1 MES GRATIS</div>
+
+        <!-- Imagen única: planes -->
+        <div style="position:relative;cursor:pointer;" onclick="openAgendaModal()">
+            <img src="<?php echo home_url(); ?>/promo-assets/gemini-04-planes3.png"
+                 alt="Planes AutomatizaTech — Básico $99, Profesional $199, Enterprise $399"
+                 style="width:100%;max-height:480px;object-fit:cover;display:block;">
+            <!-- Overlay hover -->
+            <div class="promo-img-overlay" style="
+                position:absolute;inset:0;
+                background:rgba(6,214,160,0.08);
+                display:flex;align-items:flex-end;justify-content:center;
+                padding-bottom:24px;opacity:0;transition:opacity 0.3s;
+            ">
+                <span style="
+                    background:linear-gradient(135deg,#06d6a0,#10b981);
+                    color:#0a1628;font-size:16px;font-weight:800;
+                    padding:12px 36px;border-radius:50px;
+                    box-shadow:0 4px 20px rgba(6,214,160,0.5);
+                ">📅 Agendar Demo Gratuita →</span>
+            </div>
         </div>
-        <div class="demo-modal-body">
-            <form id="demo-modal-form">
-                <div class="form-group">
-                    <input type="text" name="name" placeholder="Tu Nombre" required minlength="2" maxlength="30">
-                </div>
-                <div class="form-group">
-                    <input type="email" name="email" placeholder="Tu Correo" required maxlength="50">
-                </div>
-                <div class="form-group">
-                    <label>País:</label>
-                    <select name="country_code" class="form-control">
-                        <optgroup label="América del Sur">
-                            <option value="+54">🇦🇷 Argentina (+54)</option>
-                            <option value="+591">🇧🇴 Bolivia (+591)</option>
-                            <option value="+55">🇧🇷 Brasil (+55)</option>
-                            <option value="+56" selected>🇨🇱 Chile (+56)</option>
-                            <option value="+57">🇨🇴 Colombia (+57)</option>
-                            <option value="+593">🇪🇨 Ecuador (+593)</option>
-                            <option value="+595">🇵🇾 Paraguay (+595)</option>
-                            <option value="+51">🇵🇪 Perú (+51)</option>
-                            <option value="+598">🇺🇾 Uruguay (+598)</option>
-                            <option value="+58">🇻🇪 Venezuela (+58)</option>
-                        </optgroup>
-                        <optgroup label="América Central">
-                            <option value="+506">🇨🇷 Costa Rica (+506)</option>
-                            <option value="+503">🇸🇻 El Salvador (+503)</option>
-                            <option value="+502">🇬🇹 Guatemala (+502)</option>
-                            <option value="+504">🇭🇳 Honduras (+504)</option>
-                            <option value="+52">🇲🇽 México (+52)</option>
-                            <option value="+505">🇳🇮 Nicaragua (+505)</option>
-                            <option value="+507">🇵🇦 Panamá (+507)</option>
-                        </optgroup>
-                        <optgroup label="Caribe">
-                            <option value="+53">🇨🇺 Cuba (+53)</option>
-                            <option value="+1809">🇩🇴 Rep. Dominicana (+1809)</option>
-                            <option value="+1787">🇵🇷 Puerto Rico (+1787)</option>
-                        </optgroup>
-                        <optgroup label="Otros">
-                            <option value="+1">🇺🇸 USA/Canadá (+1)</option>
-                            <option value="+34">🇪🇸 España (+34)</option>
-                            <option value="+351">🇵🇹 Portugal (+351)</option>
-                            <option value="+44">🇬🇧 Reino Unido (+44)</option>
-                            <option value="+33">🇫🇷 Francia (+33)</option>
-                        </optgroup>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Teléfono:</label>
-                    <input type="tel" name="phone" placeholder="912345678" required minlength="8" maxlength="15">
-                </div>
-                
-                <div class="form-group">
-                    <label>Fecha deseada:</label>
-                    <input type="date" name="date" required min="<?php echo date('Y-m-d'); ?>">
-                </div>
-                
-                <div class="form-group">
-                    <label>Hora:</label>
-                    <select name="time" required disabled>
-                        <option value="">Selecciona una fecha primero</option>
-                    </select>
-                </div>
 
-                <div class="error-msg" style="display:none; color: #dc3545; margin-bottom: 10px; text-align: center;"></div>
-                <div class="success-msg" style="display:none; color: #06d6a0; margin-bottom: 10px; text-align: center;"></div>
+        <!-- Footer -->
+        <div style="
+            padding:14px 28px;
+            display:flex;align-items:center;justify-content:space-between;
+            background:linear-gradient(135deg,rgba(6,214,160,0.07),rgba(10,22,40,1));
+            border-top:1px solid rgba(6,214,160,0.15);
+        ">
+            <span style="color:rgba(255,255,255,0.5);font-size:12px;">
+                Solo por tiempo limitado • automatizatech.cl
+            </span>
+            <button onclick="openAgendaModal()" style="
+                background:linear-gradient(135deg,#06d6a0,#10b981);
+                color:#0a1628;font-weight:800;font-size:14px;
+                border:none;border-radius:50px;padding:10px 28px;
+                cursor:pointer;box-shadow:0 4px 18px rgba(6,214,160,0.4);
+                transition:transform 0.2s,box-shadow 0.2s;letter-spacing:0.3px;
+            " onmouseover="this.style.transform='scale(1.04)'"
+               onmouseout="this.style.transform='scale(1)'">
+                📅 Agendar Demo Gratis
+            </button>
+        </div>
+    </div>
+</div>
 
-                <button type="submit" class="submit-demo-modal-btn btn btn-primary w-100">Agendar Reunión</button>
+<!-- =============================================
+     MODAL AGENDAMIENTO (se abre desde promo-modal)
+============================================= -->
+<div id="agenda-modal" style="
+    display:none;
+    position:fixed;inset:0;
+    z-index:100000;
+    background:rgba(5,15,35,0.92);
+    backdrop-filter:blur(8px);
+    align-items:center;justify-content:center;
+    animation:promoFadeIn 0.3s ease;
+">
+    <div style="
+        position:relative;
+        width:min(480px,95vw);
+        border-radius:18px;
+        background:linear-gradient(160deg,#0d2044,#0a1628);
+        border:1px solid rgba(6,214,160,0.3);
+        box-shadow:0 0 50px rgba(6,214,160,0.2),0 30px 70px rgba(0,0,0,0.8);
+        overflow:hidden;
+    ">
+        <!-- Header -->
+        <div style="
+            background:linear-gradient(135deg,#06d6a0,#10b981);
+            padding:22px 28px 18px;
+            display:flex;align-items:center;gap:14px;
+        ">
+            <span style="font-size:32px;">📅</span>
+            <div>
+                <h3 style="margin:0;color:#0a1628;font-size:18px;font-weight:800;">Agendar Demo Gratuita</h3>
+                <p style="margin:0;color:rgba(10,22,40,0.75);font-size:13px;">Selecciona fecha y hora para tu reunión</p>
+            </div>
+            <button onclick="closeAgendaModal()" style="
+                margin-left:auto;background:rgba(10,22,40,0.2);color:#0a1628;
+                border:none;border-radius:50%;width:34px;height:34px;
+                font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+            ">&times;</button>
+        </div>
+
+        <!-- Formulario -->
+        <div style="padding:20px 22px;box-sizing:border-box;width:100%;overflow:hidden;">
+            <form id="agenda-modal-form" onsubmit="submitAgendaForm(event)" style="width:100%;box-sizing:border-box;">
+                <div style="margin-bottom:14px;">
+                    <input type="text" name="name" placeholder="Tu nombre completo" required minlength="2" maxlength="60"
+                           style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid rgba(6,214,160,0.3);background:rgba(255,255,255,0.05);color:#fff;font-size:14px;box-sizing:border-box;outline:none;"
+                           onfocus="this.style.borderColor='#06d6a0'" onblur="this.style.borderColor='rgba(6,214,160,0.3)'">
+                </div>
+                <div style="margin-bottom:14px;">
+                    <input type="email" name="email" placeholder="Tu correo electrónico" required maxlength="80"
+                           style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid rgba(6,214,160,0.3);background:rgba(255,255,255,0.05);color:#fff;font-size:14px;box-sizing:border-box;outline:none;"
+                           onfocus="this.style.borderColor='#06d6a0'" onblur="this.style.borderColor='rgba(6,214,160,0.3)'">
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:14px;width:100%;box-sizing:border-box;overflow:hidden;">
+                    <select name="country_code" style="flex:0 0 auto;width:135px;min-width:0;padding:11px 8px;border-radius:8px;border:1px solid rgba(6,214,160,0.3);background:#0d2044;color:#fff;font-size:13px;outline:none;box-sizing:border-box;">
+                        <option value="+56" selected>🇨🇱 Chile (+56)</option>
+                        <option value="+54">🇦🇷 Argentina (+54)</option>
+                        <option value="+57">🇨🇴 Colombia (+57)</option>
+                        <option value="+52">🇲🇽 México (+52)</option>
+                        <option value="+51">🇵🇪 Perú (+51)</option>
+                        <option value="+593">🇪🇨 Ecuador (+593)</option>
+                        <option value="+598">🇺🇾 Uruguay (+598)</option>
+                        <option value="+58">🇻🇪 Venezuela (+58)</option>
+                        <option value="+1">🇺🇸 USA/CA (+1)</option>
+                        <option value="+34">🇪🇸 España (+34)</option>
+                    </select>
+                    <input type="tel" name="phone" placeholder="912345678" required minlength="8" maxlength="15"
+                           style="flex:1 1 0;min-width:0;padding:11px 12px;border-radius:8px;border:1px solid rgba(6,214,160,0.3);background:rgba(255,255,255,0.05);color:#fff;font-size:14px;box-sizing:border-box;outline:none;width:100%;"
+                           onfocus="this.style.borderColor='#06d6a0'" onblur="this.style.borderColor='rgba(6,214,160,0.3)'">
+                </div>
+                <div style="display:flex;gap:10px;margin-bottom:20px;">
+                    <div style="flex:1;">
+                        <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:5px;">Fecha deseada</label>
+                        <input type="date" name="date" required min="<?php echo date('Y-m-d'); ?>"
+                               style="width:100%;padding:11px 12px;border-radius:8px;border:1px solid rgba(6,214,160,0.3);background:rgba(255,255,255,0.05);color:#fff;font-size:13px;box-sizing:border-box;outline:none;color-scheme:dark;"
+                               onfocus="this.style.borderColor='#06d6a0'" onblur="this.style.borderColor='rgba(6,214,160,0.3)'">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:5px;">Hora preferida</label>
+                        <select name="time" required style="width:100%;padding:11px 12px;border-radius:8px;border:1px solid rgba(6,214,160,0.3);background:#0d2044;color:#fff;font-size:13px;outline:none;box-sizing:border-box;">
+                            <option value="" disabled selected>-- Selecciona hora --</option>
+                            <option value="09:00">09:00 AM</option>
+                            <option value="10:00">10:00 AM</option>
+                            <option value="11:00">11:00 AM</option>
+                            <option value="12:00">12:00 PM</option>
+                            <option value="14:00">02:00 PM</option>
+                            <option value="15:00">03:00 PM</option>
+                            <option value="16:00">04:00 PM</option>
+                            <option value="17:00">05:00 PM</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="agenda-msg" style="display:none;text-align:center;padding:8px;border-radius:8px;margin-bottom:12px;font-size:13px;"></div>
+                <button type="submit" id="agenda-submit-btn" style="
+                    width:100%;padding:13px;
+                    background:linear-gradient(135deg,#06d6a0,#10b981);
+                    color:#0a1628;font-weight:800;font-size:15px;
+                    border:none;border-radius:10px;cursor:pointer;
+                    transition:opacity 0.2s;letter-spacing:0.3px;
+                ">Confirmar Agendamiento →</button>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Validación de teléfono para el modal de demo (misma lógica que formulario de contacto) -->
+<style>
+@keyframes promoFadeIn { from{opacity:0;transform:scale(0.96)} to{opacity:1;transform:scale(1)} }
+.promo-img-overlay:hover, div:hover > .promo-img-overlay { opacity:1 !important; }
+</style>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var modalPhoneInput = document.querySelector('#demo-modal-form input[name="phone"]');
-    var modalCountrySelect = document.querySelector('#demo-modal-form select[name="country_code"]');
-    
-    if (modalPhoneInput && modalCountrySelect) {
-        // Bloquear letras, solo permitir números
-        modalPhoneInput.addEventListener('keypress', function(e) {
-            var char = String.fromCharCode(e.which);
-            // Chile: primer dígito debe ser 9
-            if (modalCountrySelect.value === '+56' && this.value.length === 0 && char !== '9') {
-                e.preventDefault();
-                return;
-            }
-            // Solo números
-            if (!/[0-9]/.test(char)) {
-                e.preventDefault();
-            }
-        });
-        
-        // Limpiar al pegar
-        modalPhoneInput.addEventListener('paste', function(e) {
-            var self = this;
-            setTimeout(function() {
-                var cleanValue = self.value.replace(/[^0-9]/g, '');
-                if (modalCountrySelect.value === '+56' && cleanValue.length > 0 && cleanValue[0] !== '9') {
-                    self.value = '';
-                    return;
-                }
-                self.value = cleanValue;
-            }, 0);
-        });
-        
-        // Validación en tiempo real
-        modalPhoneInput.addEventListener('input', function() {
-            var cleanValue = this.value.replace(/[^0-9]/g, '');
-            if (modalCountrySelect.value === '+56' && cleanValue.length > 0 && cleanValue[0] !== '9') {
-                this.value = '';
-                return;
-            }
-            this.value = cleanValue;
-        });
-        
-        // Función para ajustar límites del teléfono según país
-        function updateModalPhoneLimits() {
-            if (modalCountrySelect.value === '+56') {
-                // Chile: exactamente 9 dígitos
-                modalPhoneInput.setAttribute('minlength', '9');
-                modalPhoneInput.setAttribute('maxlength', '9');
-                modalPhoneInput.setAttribute('placeholder', '912345678');
-            } else {
-                // Otros países: 8-15 dígitos
-                modalPhoneInput.setAttribute('minlength', '8');
-                modalPhoneInput.setAttribute('maxlength', '15');
-                modalPhoneInput.setAttribute('placeholder', 'Número de teléfono');
-            }
+(function(){
+    var isHome = <?php echo (is_front_page() || is_home()) ? 'true' : 'false'; ?>;
+
+    // ── Funciones globales — siempre disponibles (botón hero, promo-modal, etc.) ──
+    window.closePromoModal = function(){
+        var m = document.getElementById('promo-modal');
+        if (m){ m.style.opacity='0'; setTimeout(function(){ m.style.display='none'; m.style.opacity=''; },300); }
+        // sessionStorage eliminado — ahora usa contador localStorage (máx 25)
+    };
+
+    window.openAgendaModal = function(){
+        closePromoModal();
+        setTimeout(function(){
+            var a = document.getElementById('agenda-modal');
+            if (a) a.style.display = 'flex';
+        }, 350);
+    };
+
+    window.closeAgendaModal = function(){
+        var a = document.getElementById('agenda-modal');
+        if (a){ a.style.opacity='0'; setTimeout(function(){ a.style.display='none'; a.style.opacity=''; },300); }
+    };
+
+    window.submitAgendaForm = function(e){
+        e.preventDefault();
+        var btn  = document.getElementById('agenda-submit-btn');
+        var msg  = document.getElementById('agenda-msg');
+        var form = document.getElementById('agenda-modal-form');
+        btn.disabled = true;
+        btn.textContent = 'Enviando...';
+
+        function showMsg(ok, text){
+            msg.style.display  = 'block';
+            msg.style.background = ok ? 'rgba(6,214,160,0.12)' : 'rgba(255,100,100,0.1)';
+            msg.style.color      = ok ? '#06d6a0' : '#ff6b6b';
+            msg.style.border     = ok ? '1px solid rgba(6,214,160,0.3)' : '1px solid rgba(255,100,100,0.2)';
+            msg.textContent      = text;
         }
-        
-        // Aplicar límites al cargar
-        updateModalPhoneLimits();
-        
-        // Al cambiar país, limpiar si no cumple y actualizar límites
-        modalCountrySelect.addEventListener('change', function() {
-            var phone = modalPhoneInput.value;
-            if (this.value === '+56' && phone.length > 0 && phone[0] !== '9') {
-                modalPhoneInput.value = '';
+
+        // Usar el handler simple de contact_form (no requiere RUT)
+        var data  = new FormData(form);
+        var date  = data.get('date')  || '';
+        var time  = data.get('time')  || '';
+        var cc    = data.get('country_code') || '+56';
+        var phone = data.get('phone') || '';
+
+        data.append('action',   'contact_form');
+        data.append('nonce',    '<?php echo wp_create_nonce("automatiza_tech_nonce"); ?>');
+        data.append('company',  'Demo — Modal Promocional');
+        data.append('message',  'Solicitud de demo gratuita desde modal promo. Fecha: ' + date + ' Hora: ' + time);
+        data.set('phone', cc + phone);
+
+        fetch('<?php echo admin_url("admin-ajax.php"); ?>', { method:'POST', body:data })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+            if(res.success){
+                showMsg(true, '✅ ' + (res.data || '¡Solicitud enviada! Te contactaremos en menos de 24 horas.'));
+                form.reset();
+                setTimeout(closeAgendaModal, 3500);
+            } else {
+                showMsg(false, '❌ ' + (res.data || 'Error al enviar. Intenta de nuevo.'));
+                btn.disabled = false;
+                btn.textContent = 'Confirmar Agendamiento →';
             }
-            updateModalPhoneLimits();
+        })
+        .catch(function(err){
+            showMsg(false, '❌ Error de conexión. Por favor intenta de nuevo.');
+            btn.disabled = false;
+            btn.textContent = 'Confirmar Agendamiento →';
         });
+    };
+
+    // Cerrar con ESC (siempre activo)
+    document.addEventListener('keydown', function(e){
+        if(e.key==='Escape'){ closePromoModal(); closeAgendaModal(); }
+    });
+    // Cerrar al click fuera (siempre activo)
+    var pm = document.getElementById('promo-modal');
+    var am = document.getElementById('agenda-modal');
+    if (pm) pm.addEventListener('click', function(e){ if(e.target===this) closePromoModal(); });
+    if (am) am.addEventListener('click', function(e){ if(e.target===this) closeAgendaModal(); });
+
+    // Mostrar promo-modal en home hasta un máximo de 25 veces (contador en localStorage)
+    if (isHome) {
+        var PROMO_MAX  = 25;
+        var promoCount = parseInt(localStorage.getItem('at_promo_count') || '0', 10);
+        if (promoCount < PROMO_MAX) {
+            setTimeout(function(){
+                var m = document.getElementById('promo-modal');
+                if (m) {
+                    m.style.display = 'flex';
+                    localStorage.setItem('at_promo_count', promoCount + 1);
+                }
+            }, 2000);
+        }
     }
-});
+})();
 </script>
+
 
 <?php wp_footer(); ?>
 
 <!-- Performance monitoring script -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Detectar #AgendarDemo en la URL y abrir el modal de demo
+    // Detectar #AgendarDemo en la URL y scrollear al formulario
     if (window.location.hash === '#AgendarDemo' || window.location.hash === '#agendardemo') {
-        var demoModal = document.getElementById('demo-modal');
-        if (demoModal) {
-            demoModal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-            // Limpiar el hash de la URL sin recargar
-            if (history.replaceState) {
-                history.replaceState(null, null, window.location.pathname + window.location.search);
-            }
+        var contactSection = document.getElementById('contact');
+        if (contactSection) {
+            setTimeout(function(){ contactSection.scrollIntoView({behavior:'smooth'}); }, 400);
+        }
+        if (history.replaceState) {
+            history.replaceState(null, null, window.location.pathname + window.location.search);
         }
     }
 

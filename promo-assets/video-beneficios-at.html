@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280, height=720">
+<title>AutomatizaTech — Beneficios y Planes</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+
+  body {
+    width: 1280px;
+    height: 720px;
+    overflow: hidden;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    background: #0a1628;
+  }
+
+  /* ===== START OVERLAY ===== */
+  .start-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(10,22,40,0.96);
+    z-index: 9999;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    transition: opacity 0.8s;
+  }
+  .start-overlay.hidden { opacity: 0; pointer-events: none; }
+  .overlay-logo { width: 80px; margin-bottom: 24px; }
+  .overlay-title { color: #fff; font-size: 28px; font-weight: 800; margin-bottom: 6px; }
+  .overlay-title span { color: #06d6a0; }
+  .overlay-sub { color: rgba(255,255,255,0.5); font-size: 15px; margin-bottom: 32px; }
+  .btn-play {
+    background: linear-gradient(135deg, #06d6a0, #10b981);
+    color: #0a1628; border: none;
+    padding: 22px 56px; border-radius: 14px;
+    font-size: 24px; font-weight: 800;
+    cursor: pointer; letter-spacing: 1px;
+    box-shadow: 0 8px 40px rgba(6,214,160,0.4);
+    transition: transform 0.2s;
+  }
+  .btn-play:hover { transform: scale(1.05); }
+  .btn-export {
+    background: linear-gradient(135deg, #ff6b35, #ff4500);
+    color: #fff; border: none;
+    padding: 15px 42px; border-radius: 13px;
+    font-size: 18px; font-weight: 800;
+    cursor: pointer; letter-spacing: 1px;
+    margin-top: 14px;
+    box-shadow: 0 8px 30px rgba(255,107,53,0.35);
+    transition: transform 0.2s;
+  }
+  .btn-export:hover { transform: scale(1.05); }
+  .btn-export:disabled { opacity: 0.5; cursor: not-allowed; }
+  .overlay-hint { color: rgba(255,255,255,0.35); font-size: 13px; margin-top: 14px; }
+
+  /* ===== REC BADGE ===== */
+  .rec-badge {
+    position: fixed; top: 18px; right: 18px;
+    background: rgba(255,60,60,0.92);
+    color: #fff; font-size: 13px; font-weight: 700;
+    padding: 6px 14px; border-radius: 20px;
+    z-index: 9998; display: none;
+    align-items: center; gap: 6px;
+  }
+  .rec-dot { width: 8px; height: 8px; background: #fff; border-radius: 50%; animation: blinkRec 1s infinite; }
+  @keyframes blinkRec { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* ===== NARRATOR BAR (TOP) ===== */
+  .narrator-bar {
+    position: fixed; top: 0; left: 0; width: 100%;
+    z-index: 100; display: flex; justify-content: center;
+    padding: 24px 80px 0;
+    pointer-events: none;
+  }
+  .narrator-text {
+    background: rgba(10,22,40,0.88);
+    border: 1px solid rgba(6,214,160,0.3);
+    color: #fff; font-size: 18px; font-weight: 600;
+    padding: 12px 28px; border-radius: 10px;
+    backdrop-filter: blur(8px);
+    max-width: 900px; text-align: center;
+    opacity: 0; transition: opacity 0.4s;
+    line-height: 1.5;
+  }
+  .narrator-text.visible { opacity: 1; }
+  .narrator-text .accent { color: #06d6a0; }
+
+  /* ===== PROGRESS + COUNTER ===== */
+  .progress-bar {
+    position: fixed; bottom: 0; left: 0;
+    height: 4px; background: #06d6a0;
+    width: 0%; transition: width 0.5s linear;
+    z-index: 200;
+  }
+  .scene-counter {
+    position: fixed; bottom: 14px; right: 18px;
+    color: rgba(255,255,255,0.45); font-size: 13px;
+    font-weight: 600; z-index: 200;
+  }
+  .speaker-icon {
+    position: fixed; top: 18px; right: 58px;
+    width: 32px; z-index: 200;
+  }
+  .speaker-icon .bar { fill: #06d6a0; animation: barPulse 0.6s infinite alternate; }
+  .speaker-icon .bar:nth-child(2) { animation-delay: 0.1s; }
+  .speaker-icon .bar:nth-child(3) { animation-delay: 0.2s; }
+  .speaker-icon .bar:nth-child(4) { animation-delay: 0.3s; }
+  @keyframes barPulse { from{opacity:0.3} to{opacity:1} }
+
+  /* ===== SCENES ===== */
+  .scene {
+    width: 1280px; height: 720px;
+    position: absolute; top: 0; left: 0;
+    opacity: 0; transition: opacity 1.6s ease-in-out;
+    overflow: hidden;
+  }
+  .scene.active { opacity: 1; }
+  .scene.exit   { opacity: 0; }
+
+  /* Fallback gradient when image missing — va PRIMERO (detrás) */
+  .scene-bg-fallback {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+  }
+  /* Scene image background — encima del fallback */
+  .scene-bg {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: center;
+    z-index: 1;
+  }
+  /* Dark overlay for text readability */
+  .scene-overlay {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(10,22,40,0.35);
+    z-index: 2;
+  }
+  .scene-overlay.heavy { background: rgba(10,22,40,0.60); }
+
+  /* ===== SCENE CONTENT ===== */
+  .scene-content {
+    position: relative; z-index: 3;
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    justify-content: center;
+  }
+
+  /* ===== SCENE 1 — HERO ===== */
+  .hero-right {
+    position: absolute; right: 80px; top: 50%;
+    transform: translateY(-50%);
+    text-align: right; max-width: 560px;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(6,214,160,0.18);
+    border: 1px solid #06d6a0;
+    color: #06d6a0; font-size: 13px; font-weight: 700;
+    padding: 6px 18px; border-radius: 20px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    margin-bottom: 16px;
+    opacity: 0; transition: opacity 0.8s 0.3s;
+  }
+  .hero-title {
+    font-size: 56px; font-weight: 900; color: #fff;
+    line-height: 1.05; margin-bottom: 14px;
+    opacity: 0; transform: translateY(20px);
+    transition: opacity 0.8s 0.5s, transform 0.8s 0.5s;
+  }
+  .hero-title .teal { color: #06d6a0; }
+  .hero-sub {
+    font-size: 22px; color: rgba(255,255,255,0.8);
+    margin-bottom: 24px;
+    opacity: 0; transition: opacity 0.8s 0.9s;
+  }
+  .hero-channels {
+    display: flex; justify-content: flex-end; gap: 12px;
+    opacity: 0; transition: opacity 0.8s 1.3s;
+  }
+  .hero-ch-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .scene.active .hero-badge { opacity: 1; }
+  .scene.active .hero-title { opacity: 1; transform: translateY(0); }
+  .scene.active .hero-sub { opacity: 1; }
+  .scene.active .hero-channels { opacity: 1; }
+
+  /* ===== SCENE 2 — CANALES ===== */
+  .canales-bottom {
+    position: absolute; bottom: 60px; left: 50%;
+    transform: translateX(-50%); text-align: center;
+    opacity: 0; transition: opacity 0.8s 0.8s;
+  }
+  .canales-tagline {
+    font-size: 38px; font-weight: 900; color: #fff;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.8);
+  }
+  .canales-tagline .teal { color: #06d6a0; }
+  .canales-promo-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, #ff6b35, #ff4500);
+    color: #fff; font-size: 20px; font-weight: 800;
+    padding: 12px 32px; border-radius: 50px;
+    margin-top: 14px;
+    box-shadow: 0 4px 20px rgba(255,107,53,0.5);
+  }
+  .scene.active .canales-bottom { opacity: 1; }
+
+  /* ===== SCENE 3 — PROMO 1 MES ===== */
+  .promo-right {
+    position: absolute; right: 80px; top: 50%;
+    transform: translateY(-50%);
+    text-align: right; max-width: 520px;
+    opacity: 0; transition: opacity 0.8s 0.5s;
+  }
+  .promo-especial {
+    font-size: 16px; font-weight: 700; color: #06d6a0;
+    letter-spacing: 3px; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .promo-1mes {
+    font-size: 110px; font-weight: 900; color: #fff;
+    line-height: 0.9; text-shadow: 0 0 40px rgba(255,255,255,0.3);
+  }
+  .promo-gratis {
+    font-size: 40px; font-weight: 900;
+    background: linear-gradient(90deg, #ff6b35, #ff4500);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 16px;
+  }
+  .promo-detail {
+    font-size: 18px; color: rgba(255,255,255,0.75);
+    line-height: 1.5; margin-bottom: 20px;
+  }
+  .promo-cta {
+    display: inline-block;
+    background: linear-gradient(135deg, #06d6a0, #10b981);
+    color: #0a1628; font-size: 20px; font-weight: 800;
+    padding: 14px 36px; border-radius: 50px;
+    box-shadow: 0 4px 20px rgba(6,214,160,0.4);
+  }
+  .scene.active .promo-right { opacity: 1; }
+
+  /* ===== SCENE 4 — BENEFICIOS ===== */
+  .benefits-wrap {
+    padding: 80px 80px 60px;
+    display: flex; flex-direction: column;
+    align-items: center;
+  }
+  .benefits-title {
+    font-size: 36px; font-weight: 900; color: #fff;
+    margin-bottom: 8px; text-align: center;
+    opacity: 0; transform: translateY(-16px);
+    transition: opacity 0.7s 0.3s, transform 0.7s 0.3s;
+  }
+  .benefits-title span { color: #06d6a0; }
+  .benefits-sub {
+    font-size: 16px; color: rgba(255,255,255,0.5);
+    margin-bottom: 32px; text-align: center;
+    opacity: 0; transition: opacity 0.7s 0.7s;
+  }
+  .benefits-grid {
+    display: grid; grid-template-columns: repeat(4,1fr);
+    gap: 16px; width: 100%;
+  }
+  .benefit-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(6,214,160,0.2);
+    border-radius: 16px; padding: 20px 16px;
+    text-align: center;
+    opacity: 0; transform: translateY(20px);
+    transition: opacity 0.5s, transform 0.5s;
+  }
+  .benefit-icon { font-size: 32px; margin-bottom: 10px; }
+  .benefit-name { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .benefit-desc { font-size: 12px; color: rgba(255,255,255,0.55); line-height: 1.4; }
+  .scene.active .benefits-title { opacity: 1; transform: translateY(0); }
+  .scene.active .benefits-sub { opacity: 1; }
+  .scene.active .benefit-card { opacity: 1; transform: translateY(0); }
+  .scene.active .benefit-card:nth-child(1) { transition-delay: 0.8s; }
+  .scene.active .benefit-card:nth-child(2) { transition-delay: 1.0s; }
+  .scene.active .benefit-card:nth-child(3) { transition-delay: 1.2s; }
+  .scene.active .benefit-card:nth-child(4) { transition-delay: 1.4s; }
+  .scene.active .benefit-card:nth-child(5) { transition-delay: 1.6s; }
+  .scene.active .benefit-card:nth-child(6) { transition-delay: 1.8s; }
+  .scene.active .benefit-card:nth-child(7) { transition-delay: 2.0s; }
+  .scene.active .benefit-card:nth-child(8) { transition-delay: 2.2s; }
+
+  /* ===== SCENE 5 — PLANES 3 ===== */
+  .planes-bottom-bar {
+    position: absolute; bottom: 30px; left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    opacity: 0; transition: opacity 0.8s 1.0s;
+  }
+  .planes-url {
+    font-size: 22px; font-weight: 700;
+    color: rgba(255,255,255,0.6);
+  }
+  .planes-url span { color: #06d6a0; }
+  .scene.active .planes-bottom-bar { opacity: 1; }
+
+  /* ===== SCENE 6 — CTA FINAL ===== */
+  .cta-wrap {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    height: 100%; padding: 60px;
+    text-align: center;
+  }
+  .cta-at-logo { width: 90px; margin-bottom: 20px; opacity: 0; transition: opacity 0.8s 0.3s; }
+  .cta-headline {
+    font-size: 54px; font-weight: 900; color: #fff;
+    line-height: 1.1; margin-bottom: 12px;
+    opacity: 0; transform: scale(0.9);
+    transition: opacity 0.8s 0.6s, transform 0.8s 0.6s;
+  }
+  .cta-headline .teal { color: #06d6a0; }
+  .cta-headline .orange { color: #ff6b35; }
+  .cta-sub {
+    font-size: 22px; color: rgba(255,255,255,0.7);
+    margin-bottom: 28px;
+    opacity: 0; transition: opacity 0.8s 1.1s;
+  }
+  .cta-plans-row {
+    display: flex; gap: 16px; margin-bottom: 28px;
+    opacity: 0; transition: opacity 0.8s 1.4s;
+  }
+  .cta-plan-pill {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff; font-size: 16px; font-weight: 700;
+    padding: 10px 24px; border-radius: 50px;
+  }
+  .cta-plan-pill.highlight {
+    background: rgba(6,214,160,0.15);
+    border-color: #06d6a0; color: #06d6a0;
+  }
+  .cta-btn {
+    background: linear-gradient(135deg, #06d6a0, #10b981);
+    color: #0a1628; font-size: 24px; font-weight: 900;
+    padding: 18px 52px; border-radius: 50px;
+    box-shadow: 0 8px 30px rgba(6,214,160,0.5);
+    margin-bottom: 18px;
+    opacity: 0; transform: translateY(16px);
+    transition: opacity 0.8s 1.7s, transform 0.8s 1.7s;
+  }
+  .cta-url {
+    font-size: 18px; color: rgba(255,255,255,0.4);
+    opacity: 0; transition: opacity 0.8s 2.1s;
+  }
+  .scene.active .cta-at-logo { opacity: 1; }
+  .scene.active .cta-headline { opacity: 1; transform: scale(1); }
+  .scene.active .cta-sub { opacity: 1; }
+  .scene.active .cta-plans-row { opacity: 1; }
+  .scene.active .cta-btn { opacity: 1; transform: translateY(0); }
+  .scene.active .cta-url { opacity: 1; }
+
+  /* Particles */
+  .particle {
+    position: fixed; width: 3px; height: 3px;
+    background: #06d6a0; border-radius: 50%; opacity: 0.4;
+    animation: float 8s infinite ease-in-out;
+  }
+  .p1{left:5%;top:20%;animation-delay:0s}
+  .p2{left:15%;top:70%;animation-delay:1.5s}
+  .p3{left:85%;top:30%;animation-delay:3s}
+  .p4{left:95%;top:75%;animation-delay:0.8s}
+  .p5{left:50%;top:10%;animation-delay:2s}
+  .p6{left:30%;top:85%;animation-delay:4s}
+  @keyframes float {
+    0%,100%{transform:translateY(0) scale(1);opacity:0.4}
+    50%{transform:translateY(-20px) scale(1.5);opacity:0.8}
+  }
+</style>
+</head>
+<body>
+
+<!-- Start overlay -->
+<div class="start-overlay" id="startOverlay">
+  <svg class="overlay-logo" viewBox="0 0 129.69 107.84" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="og1" cx="65.24" cy="78.93" r="51.13" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4abc9b"/><stop offset="1" stop-color="#17b7b1"/></radialGradient>
+      <linearGradient id="og2" x1="29.46" y1="70.89" x2="119.54" y2="70.89" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4abc9b"/><stop offset="1" stop-color="#17b7b1"/></linearGradient>
+    </defs>
+    <path fill="url(#og1)" d="M73.31,71.47c36.88-23.36,45.62-51.35,45.62-51.35l6.15,2.33-4.39-16.42-12.09,11.79,5.67,1.51c-18.48,43.37-65.13,58.74-65.13,58.74,0,0-15.18,7.84-30.94,4.35-14.57-3.23-4.33-20.78-4.33-20.78,0,0-15.99,19.08.85,27.27,0,0,14.23,4.73,33.69-4.16,19.2-8.77,24.46-12.92,24.46-12.92l.44-.35Z"/>
+    <path fill="#063f76" d="M21.16,54.41c0-25.03,20.29-45.31,45.31-45.31,16.91,0,31.65,9.26,39.44,22.99.09.16.17.32.25.48,1.45-2.39,2.84-4.9,4.16-7.53C100.85,10.93,84.75,1.63,66.47,1.63,37.32,1.63,13.69,25.26,13.69,54.41c0,9.53,2.61,18.93,7.03,26.65,2-.03,4.88.09,8.56-.47-4.97-7.27-8.12-16.71-8.12-26.18Z"/>
+    <path fill="url(#og2)" d="M115.18,33.94c-1.61,2.66-3.19,5.82-5.07,8.28,0,0,.21.47.21.47,1.12,3.93,1.74,8.08,1.74,12.37,0,25.02-20.29,45.31-45.31,45.31-10.76,0-20.04-3.29-27.81-9.56-3.16,1.15-7.26,1.16-9.48,1.87,9.48,9.11,23.1,15.15,37.3,15.15,29.15,0,52.78-23.62,52.78-52.77,0-7.1-1.81-14.94-4.36-21.12Z"/>
+    <path fill="#063f76" d="M44.2,89.42c6.47,4.26,14.22,6.74,22.55,6.74,22.7,0,41.1-18.4,41.1-41.1,0-3.16-.37-6.23-1.05-9.19-23.31,29.36-53.67,40.58-62.61,43.55Z"/>
+    <path fill="#063f76" d="M103.81,37.67c-6.3-14.61-20.4-23.86-37.32-23.86-22.7,0-41.1,18.4-41.1,41.1,0,10.56,3.98,20.18,10.52,27.46,11.72-2.71,44.69-12.78,67.9-44.7Z"/>
+    <path fill="#fff" d="M55.9,36.3h-5.16l-14.58,32.58h7.67l9.7-21.7,4.19,9.28-5.51-.07-2.72,6.42h11.02l2.58,6.07h4.47l2.65-1.74-14.3-30.84ZM66.63,66.64h-2.08l-2.6-5.79h-9.48l.98-2.21h7.54s-7.54-16.63-7.54-16.63l-10.88,24.63h-3.21l12.59-28.19h2.82l12.77,27.56-.92.63Z"/>
+    <polygon fill="#fff" points="80.87 59.24 78.68 60.61 78.68 43.25 67.16 43.25 67.16 36.62 96.4 36.62 96.4 43.04 85.44 43.04 85.44 55.67 83.22 57.27 83.22 40.94 94.53 40.94 94.53 38.66 69.22 38.66 69.22 41.03 80.66 41.03 80.87 59.24"/>
+  </svg>
+  <div class="overlay-title"><span>Automatiza</span>Tech — Beneficios y Planes</div>
+  <div class="overlay-sub">Video promocional con narrador · 6 escenas</div>
+  <button class="btn-play" onclick="startVideo()">▶ REPRODUCIR CON NARRADOR</button>
+  <button class="btn-export" id="exportBtn" onclick="startRecordAndExport()">⏺ GRABAR Y EXPORTAR MP4</button>
+  <div class="overlay-hint">Para MP4: permite compartir esta pestaña cuando Chrome lo solicite</div>
+</div>
+<div class="rec-badge" id="recBadge"><div class="rec-dot"></div> GRABANDO...</div>
+
+<div class="progress-bar" id="progressBar"></div>
+<div class="scene-counter" id="sceneCounter"></div>
+<svg class="speaker-icon" id="speakerIcon" viewBox="0 0 40 40" style="display:none;">
+  <rect class="bar" x="4" y="16" width="4" height="8" rx="2"/>
+  <rect class="bar" x="12" y="10" width="4" height="20" rx="2"/>
+  <rect class="bar" x="20" y="14" width="4" height="12" rx="2"/>
+  <rect class="bar" x="28" y="8" width="4" height="24" rx="2"/>
+</svg>
+
+<!-- NARRATOR SUBTITLE -->
+<div class="narrator-bar">
+  <div class="narrator-text" id="narratorText"></div>
+</div>
+
+<!-- Particles -->
+<div class="particle p1"></div>
+<div class="particle p2"></div>
+<div class="particle p3"></div>
+<div class="particle p4"></div>
+<div class="particle p5"></div>
+<div class="particle p6"></div>
+
+<!-- ===================================================
+     ESCENA 1 — HERO (gemini-01-hero.jpg)
+==================================================== -->
+<div class="scene" id="scene1">
+  <!-- Imagen Gemini → guarda como promo-assets/gemini-01-hero.jpg -->
+  <img class="scene-bg" src="gemini-05-hero.png"
+       onerror="this.style.display='none'"
+       alt="hero">
+  <div class="scene-bg-fallback" style="background:linear-gradient(160deg,#0a1628 0%,#1e3a8a 40%,#063f76 70%,#06d6a0 100%)"></div>
+  <div class="scene-overlay"></div>
+  <div class="scene-content">
+    <div class="hero-right">
+      <div class="hero-badge">Plataforma N°1 en Chile</div>
+      <div class="hero-title">Plataforma<br><span class="teal">Omnicanal</span><br>con IA</div>
+      <div class="hero-sub">Conecta WhatsApp, Instagram, Telegram y más</div>
+      <div class="hero-channels">
+        <!-- WhatsApp -->
+        <div class="hero-ch-icon" style="background:#25D366">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </div>
+        <!-- Instagram -->
+        <div class="hero-ch-icon" style="background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+        </div>
+        <!-- Telegram -->
+        <div class="hero-ch-icon" style="background:#229ED9">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.96 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+        </div>
+        <!-- Messenger -->
+        <div class="hero-ch-icon" style="background:#0084FF">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.652V24l4.088-2.242c1.092.3 2.246.464 3.443.464 6.627 0 12-4.975 12-11.111C24 4.974 18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8l3.131 3.259L19.752 8l-6.561 6.963z"/></svg>
+        </div>
+        <!-- Email -->
+        <div class="hero-ch-icon" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3)">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================
+     ESCENA 2 — CANALES (gemini-02-canales.jpg)
+==================================================== -->
+<div class="scene" id="scene2">
+  <img class="scene-bg" src="gemini-03-canales.png"
+       onerror="this.style.display='none'" alt="canales">
+  <div class="scene-bg-fallback" style="background:radial-gradient(ellipse at center,#1e3a8a 0%,#0a1628 70%)"></div>
+  <div class="scene-overlay"></div>
+  <div class="scene-content">
+    <div class="canales-bottom">
+      <div class="canales-tagline">Todos tus canales,<br><span class="teal">una sola plataforma</span></div>
+      <div class="canales-promo-pill">🎁 PRIMER MES GRATIS</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================
+     ESCENA 3 — PROMO 1 MES GRATIS (gemini-03-promo.jpg)
+==================================================== -->
+<div class="scene" id="scene3">
+  <img class="scene-bg" src="gemini-02-promo.png"
+       onerror="this.style.display='none'" alt="promo">
+  <div class="scene-bg-fallback" style="background:linear-gradient(135deg,#0a1628 0%,#1e3a8a 40%,#063f76 100%)"></div>
+  <div class="scene-overlay"></div>
+  <div class="scene-content">
+    <div class="promo-right">
+      <div class="promo-especial">PROMOCIÓN ESPECIAL</div>
+      <div class="promo-1mes">1 MES</div>
+      <div class="promo-gratis">COMPLETAMENTE GRATIS</div>
+      <div class="promo-detail">
+        En planes <strong>Básico ($99/mes)</strong><br>
+        y <strong>Profesional ($199/mes)</strong>
+      </div>
+      <div class="promo-cta">COMENZAR AHORA →</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================
+     ESCENA 4 — BENEFICIOS (HTML puro, sin imagen)
+==================================================== -->
+<div class="scene" id="scene4">
+  <div class="scene-bg-fallback" style="background:linear-gradient(160deg,#0a1628 0%,#1e3a8a 50%,#063f76 100%)"></div>
+  <div style="position:absolute;top:0;left:0;width:100%;height:100%;background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);background-size:60px 60px;z-index:1;"></div>
+  <div class="scene-content">
+    <div class="benefits-wrap">
+      <div class="benefits-title">¿Por qué elegir <span>AutomatizaTech</span>?</div>
+      <div class="benefits-sub">Todo lo que tu negocio necesita para crecer en un solo lugar</div>
+      <div class="benefits-grid">
+        <div class="benefit-card">
+          <div class="benefit-icon">🤖</div>
+          <div class="benefit-name">IA 24/7</div>
+          <div class="benefit-desc">Respuestas automáticas inteligentes sin intervención humana</div>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">💬</div>
+          <div class="benefit-name">Multicanal Unificado</div>
+          <div class="benefit-desc">WhatsApp, Instagram, Telegram, Messenger y Email en un panel</div>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">👥</div>
+          <div class="benefit-name">Multi-Agente</div>
+          <div class="benefit-desc">Equipos colaborativos atendiendo en simultáneo sin conflictos</div>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">📊</div>
+          <div class="benefit-name">Analytics en Tiempo Real</div>
+          <div class="benefit-desc">Métricas de conversaciones, tiempos y satisfacción del cliente</div>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">🔗</div>
+          <div class="benefit-name">Integración CRM</div>
+          <div class="benefit-desc">Conecta con tus sistemas actuales: CRM, ERP, ecommerce</div>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">⚡</div>
+          <div class="benefit-name">Automatización de Flujos</div>
+          <div class="benefit-desc">Workflows personalizados que responden y califican leads solos</div>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">🔒</div>
+          <div class="benefit-name">Seguridad Empresarial</div>
+          <div class="benefit-desc">Encriptación end-to-end y cumplimiento de normativas de datos</div>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">🚀</div>
+          <div class="benefit-name">Escalabilidad</div>
+          <div class="benefit-desc">Crece sin límites: desde 1 agente hasta cientos, sin migrar</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================
+     ESCENA 5 — PLANES 3 (gemini-04-planes3.png)
+==================================================== -->
+<div class="scene" id="scene5">
+  <img class="scene-bg" src="gemini-04-planes3.png"
+       onerror="this.style.display='none'" alt="planes">
+  <div class="scene-bg-fallback" style="background:linear-gradient(160deg,#0a1628 0%,#1e3a8a 60%,#063f76 100%)"></div>
+  <div class="scene-overlay"></div>
+  <div class="scene-content">
+    <div class="planes-bottom-bar">
+      <div class="planes-url">Visita <span>automatizatech.cl</span> y elige tu plan hoy</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================
+     ESCENA 6 — CTA FINAL
+==================================================== -->
+<div class="scene" id="scene6">
+  <div class="scene-bg-fallback" style="background:radial-gradient(ellipse at 30% 50%,#1e3a8a 0%,#0a1628 65%)"></div>
+  <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at center,rgba(6,214,160,0.08) 0%,transparent 65%);z-index:1;"></div>
+  <div class="scene-content">
+    <div class="cta-wrap">
+      <!-- AT Logo SVG -->
+      <svg class="cta-at-logo" viewBox="0 0 129.69 107.84" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="cg1" cx="65.24" cy="78.93" r="51.13" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4abc9b"/><stop offset="1" stop-color="#17b7b1"/></radialGradient>
+          <linearGradient id="cg2" x1="29.46" y1="70.89" x2="119.54" y2="70.89" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4abc9b"/><stop offset="1" stop-color="#17b7b1"/></linearGradient>
+        </defs>
+        <path fill="url(#cg1)" d="M73.31,71.47c36.88-23.36,45.62-51.35,45.62-51.35l6.15,2.33-4.39-16.42-12.09,11.79,5.67,1.51c-18.48,43.37-65.13,58.74-65.13,58.74,0,0-15.18,7.84-30.94,4.35-14.57-3.23-4.33-20.78-4.33-20.78,0,0-15.99,19.08.85,27.27,0,0,14.23,4.73,33.69-4.16,19.2-8.77,24.46-12.92,24.46-12.92l.44-.35Z"/>
+        <path fill="#063f76" d="M21.16,54.41c0-25.03,20.29-45.31,45.31-45.31,16.91,0,31.65,9.26,39.44,22.99.09.16.17.32.25.48,1.45-2.39,2.84-4.9,4.16-7.53C100.85,10.93,84.75,1.63,66.47,1.63,37.32,1.63,13.69,25.26,13.69,54.41c0,9.53,2.61,18.93,7.03,26.65,2-.03,4.88.09,8.56-.47-4.97-7.27-8.12-16.71-8.12-26.18Z"/>
+        <path fill="url(#cg2)" d="M115.18,33.94c-1.61,2.66-3.19,5.82-5.07,8.28,0,0,.21.47.21.47,1.12,3.93,1.74,8.08,1.74,12.37,0,25.02-20.29,45.31-45.31,45.31-10.76,0-20.04-3.29-27.81-9.56-3.16,1.15-7.26,1.16-9.48,1.87,9.48,9.11,23.1,15.15,37.3,15.15,29.15,0,52.78-23.62,52.78-52.77,0-7.1-1.81-14.94-4.36-21.12Z"/>
+        <path fill="#063f76" d="M44.2,89.42c6.47,4.26,14.22,6.74,22.55,6.74,22.7,0,41.1-18.4,41.1-41.1,0-3.16-.37-6.23-1.05-9.19-23.31,29.36-53.67,40.58-62.61,43.55Z"/>
+        <path fill="#063f76" d="M103.81,37.67c-6.3-14.61-20.4-23.86-37.32-23.86-22.7,0-41.1,18.4-41.1,41.1,0,10.56,3.98,20.18,10.52,27.46,11.72-2.71,44.69-12.78,67.9-44.7Z"/>
+        <path fill="#fff" d="M55.9,36.3h-5.16l-14.58,32.58h7.67l9.7-21.7,4.19,9.28-5.51-.07-2.72,6.42h11.02l2.58,6.07h4.47l2.65-1.74-14.3-30.84ZM66.63,66.64h-2.08l-2.6-5.79h-9.48l.98-2.21h7.54s-7.54-16.63-7.54-16.63l-10.88,24.63h-3.21l12.59-28.19h2.82l12.77,27.56-.92.63Z"/>
+        <polygon fill="#fff" points="80.87 59.24 78.68 60.61 78.68 43.25 67.16 43.25 67.16 36.62 96.4 36.62 96.4 43.04 85.44 43.04 85.44 55.67 83.22 57.27 83.22 40.94 94.53 40.94 94.53 38.66 69.22 38.66 69.22 41.03 80.66 41.03 80.87 59.24"/>
+      </svg>
+      <div class="cta-headline"><span class="teal">Automatiza</span>Tech<br>transforma tu <span class="orange">negocio hoy</span></div>
+      <div class="cta-sub">Plataforma omnicanal con IA · Desde $99/mes</div>
+      <div class="cta-plans-row">
+        <div class="cta-plan-pill">Básico $99 🎁 1 mes gratis</div>
+        <div class="cta-plan-pill highlight">⭐ Profesional $199 🎁 1 mes gratis</div>
+        <div class="cta-plan-pill">Enterprise $399</div>
+      </div>
+      <div class="cta-btn">COMENZAR GRATIS →</div>
+      <div class="cta-url">automatizatech.cl</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================
+// SCENES CONFIG
+// ============================================
+const SCENES = [
+  {
+    id: 'scene1',
+    duration: 18000,
+    narrations: [
+      {
+        delay: 1000,
+        text: 'Bienvenidos a <span class="accent">AutomatizaTech</span>, la plataforma omnicanal con inteligencia artificial.',
+        voice: 'Bienvenidos a AutomatizaTech, la plataforma omnicanal con inteligencia artificial.',
+        animateEls: []
+      },
+      {
+        delay: 8000,
+        text: 'Conecta <span class="accent">WhatsApp, Instagram, Telegram, Messenger y Email</span> desde un solo lugar.',
+        voice: 'Conecta WhatsApp, Instagram, Telegram, Messenger y Email, desde un solo lugar.',
+        animateEls: []
+      }
+    ]
+  },
+  {
+    id: 'scene2',
+    duration: 16000,
+    narrations: [
+      {
+        delay: 1000,
+        text: 'Centraliza <span class="accent">todos tus canales de comunicación</span> en una única plataforma inteligente.',
+        voice: 'Centraliza todos tus canales de comunicación en una única plataforma inteligente.',
+        animateEls: []
+      },
+      {
+        delay: 9000,
+        text: 'Sin perder ningún mensaje. <span class="accent">Sin perder ningún cliente.</span>',
+        voice: 'Sin perder ningún mensaje. Sin perder ningún cliente.',
+        animateEls: []
+      }
+    ]
+  },
+  {
+    id: 'scene3',
+    duration: 20000,
+    narrations: [
+      {
+        delay: 1000,
+        text: '¡Tenemos una <span class="accent">promoción especial</span> para que puedas probarlo sin riesgo!',
+        voice: '¡Tenemos una promoción especial para que puedas probarlo sin riesgo!',
+        animateEls: []
+      },
+      {
+        delay: 8000,
+        text: '<span class="accent">Un mes completamente gratis</span> en los planes Básico y Profesional.',
+        voice: 'Un mes completamente gratis en los planes Básico y Profesional.',
+        animateEls: []
+      },
+      {
+        delay: 14000,
+        text: 'Sin tarjeta de crédito. Sin compromisos. <span class="accent">Solo resultados.</span>',
+        voice: 'Sin tarjeta de crédito. Sin compromisos. Solo resultados.',
+        animateEls: []
+      }
+    ]
+  },
+  {
+    id: 'scene4',
+    duration: 28000,
+    narrations: [
+      {
+        delay: 1000,
+        text: '¿Por qué elegir <span class="accent">AutomatizaTech</span>? Porque incluye todo lo que tu negocio necesita.',
+        voice: '¿Por qué elegir AutomatizaTech? Porque incluye todo lo que tu negocio necesita.',
+        animateEls: []
+      },
+      {
+        delay: 8000,
+        text: '<span class="accent">Inteligencia artificial activa 24 horas al día</span>, los 7 días de la semana.',
+        voice: 'Inteligencia artificial activa 24 horas al día, los 7 días de la semana.',
+        animateEls: []
+      },
+      {
+        delay: 15000,
+        text: '<span class="accent">Analytics en tiempo real</span>, integración con tu CRM y automatización de flujos de venta.',
+        voice: 'Analytics en tiempo real, integración con tu CRM y automatización de flujos de venta.',
+        animateEls: []
+      },
+      {
+        delay: 22000,
+        text: 'Seguridad empresarial y <span class="accent">escalabilidad total</span> para crecer sin límites.',
+        voice: 'Seguridad empresarial y escalabilidad total para crecer sin límites.',
+        animateEls: []
+      }
+    ]
+  },
+  {
+    id: 'scene5',
+    duration: 22000,
+    narrations: [
+      {
+        delay: 1000,
+        text: 'Elige el plan que mejor se adapte a tu empresa.',
+        voice: 'Elige el plan que mejor se adapte a tu empresa.',
+        animateEls: []
+      },
+      {
+        delay: 7000,
+        text: 'Plan <span class="accent">Básico a $99</span> y Profesional a <span class="accent">$199</span>, ambos con el primer mes completamente gratis.',
+        voice: 'Plan Básico a noventa y nueve dólares y Profesional a ciento noventa y nueve, ambos con el primer mes completamente gratis.',
+        animateEls: []
+      },
+      {
+        delay: 16000,
+        text: 'Y para grandes empresas, el plan <span class="accent">Enterprise</span> con capacidad ilimitada y gerente dedicado.',
+        voice: 'Y para grandes empresas, el plan Enterprise con capacidad ilimitada y gerente dedicado.',
+        animateEls: []
+      }
+    ]
+  },
+  {
+    id: 'scene6',
+    duration: 20000,
+    narrations: [
+      {
+        delay: 1500,
+        text: '<span class="accent">AutomatizaTech</span> transforma la manera en que tu negocio se comunica.',
+        voice: 'AutomatizaTech transforma la manera en que tu negocio se comunica.',
+        animateEls: []
+      },
+      {
+        delay: 8000,
+        text: 'Comienza hoy con <span class="accent">un mes completamente gratis</span>. Sin riesgos.',
+        voice: 'Comienza hoy con un mes completamente gratis. Sin riesgos.',
+        animateEls: []
+      },
+      {
+        delay: 14000,
+        text: 'Visita <span class="accent">automatizatech.cl</span> y empieza ahora mismo.',
+        voice: 'Visita automatizatech punto c l y empieza ahora mismo.',
+        animateEls: []
+      }
+    ]
+  }
+];
+
+let currentScene = -1;
+let synth = window.speechSynthesis;
+let selectedVoice = null;
+let totalDuration = SCENES.reduce((s, sc) => s + sc.duration, 0);
+let startTime = 0;
+let progressTimer = null;
+
+// Voces: priorizar neutral/latinoamérica
+function loadVoices() {
+  const voices = synth.getVoices();
+  const priorities = [
+    v => v.name.includes('Sabina') && v.lang.startsWith('es'),
+    v => v.name.includes('Dalia')  && v.lang.startsWith('es'),
+    v => v.name.includes('Jorge')  && v.lang.startsWith('es'),
+    v => v.name.includes('Raul')   && v.lang.startsWith('es'),
+    v => v.lang === 'es-US',
+    v => v.lang === 'es-419',
+    v => v.lang === 'es-MX',
+    v => v.lang === 'es-ES',
+    v => v.lang.startsWith('es'),
+    v => v.name.toLowerCase().includes('spanish'),
+  ];
+  for (const check of priorities) {
+    const found = voices.find(check);
+    if (found) { selectedVoice = found; break; }
+  }
+  if (!selectedVoice && voices.length > 0) selectedVoice = voices[0];
+}
+if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
+loadVoices();
+
+function speak(text) {
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'es-US';
+  u.rate = 1.15;
+  u.pitch = 0.95;
+  u.volume = 1.0;
+  if (selectedVoice) u.voice = selectedVoice;
+  synth.speak(u);
+}
+
+function showNarration(html) {
+  const el = document.getElementById('narratorText');
+  el.innerHTML = html;
+  el.classList.add('visible');
+}
+function hideNarration() {
+  document.getElementById('narratorText').classList.remove('visible');
+}
+
+function updateProgress() {
+  const elapsed = Date.now() - startTime;
+  const pct = Math.min(100, (elapsed / totalDuration) * 100);
+  document.getElementById('progressBar').style.width = pct + '%';
+  if (pct < 100) requestAnimationFrame(updateProgress);
+}
+
+function playScene(index) {
+  if (index >= SCENES.length) {
+    hideNarration();
+    synth.cancel();
+    document.getElementById('sceneCounter').textContent = '✓ FIN';
+    return;
+  }
+
+  // Hide previous
+  if (currentScene >= 0) {
+    const prev = document.getElementById(SCENES[currentScene].id);
+    prev.classList.remove('active');
+    prev.classList.add('exit');
+    setTimeout(() => prev.classList.remove('exit'), 2000);
+  }
+  currentScene = index;
+  const scene = SCENES[index];
+  document.getElementById('sceneCounter').textContent = `${index + 1} / ${SCENES.length}`;
+
+  const sceneEl = document.getElementById(scene.id);
+  sceneEl.classList.add('active');
+
+  scene.narrations.forEach(n => {
+    setTimeout(() => {
+      if (n.animateEls) n.animateEls.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('animate');
+      });
+      showNarration(n.text);
+      speak(n.voice);
+    }, n.delay);
+  });
+
+  setTimeout(() => {
+    hideNarration();
+    setTimeout(() => playScene(index + 1), 1000);
+  }, scene.duration);
+}
+
+function startVideo() {
+  document.getElementById('startOverlay').classList.add('hidden');
+  document.getElementById('speakerIcon').style.display = 'block';
+  startTime = Date.now();
+  updateProgress();
+  setTimeout(() => playScene(0), 500);
+}
+
+// ============================================
+// GRABADOR MP4
+// ============================================
+async function startRecordAndExport() {
+  const btn = document.getElementById('exportBtn');
+  const badge = document.getElementById('recBadge');
+  btn.disabled = true;
+  btn.textContent = '⏳ Solicitando permiso...';
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: { width: 1280, height: 720, frameRate: 30 },
+      audio: true,
+      preferCurrentTab: true
+    });
+    const mimeTypes = [
+      'video/mp4;codecs=avc1,mp4a.40.2',
+      'video/mp4',
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm'
+    ];
+    const mimeType = mimeTypes.find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
+    const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+    const chunks = [];
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      badge.style.display = 'none';
+      const blob = new Blob(chunks, { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `video-beneficios-automatizatech.${ext}`;
+      a.click(); URL.revokeObjectURL(url);
+      btn.disabled = false;
+      btn.textContent = '⏺ GRABAR Y EXPORTAR MP4';
+    };
+    const totalMs = totalDuration + 3000;
+    recorder.start(500);
+    badge.style.display = 'flex';
+    btn.textContent = `⏺ Grabando (${Math.round(totalMs/1000)}s)...`;
+    document.getElementById('startOverlay').classList.add('hidden');
+    document.getElementById('speakerIcon').style.display = 'block';
+    startTime = Date.now();
+    updateProgress();
+    setTimeout(() => playScene(0), 500);
+    setTimeout(() => recorder.stop(), totalMs);
+  } catch(err) {
+    btn.disabled = false;
+    btn.textContent = '⏺ GRABAR Y EXPORTAR MP4';
+    if (err.name !== 'NotAllowedError') alert('Error: ' + err.message);
+  }
+}
+</script>
+</body>
+</html>

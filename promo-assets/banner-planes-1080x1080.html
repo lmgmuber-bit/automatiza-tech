@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080, height=1080">
+<title>Banner Planes - AutomatizaTech</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+
+  body {
+    width: 1080px;
+    height: 1080px;
+    overflow: hidden;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+  }
+
+  .banner {
+    width: 1080px;
+    height: 1080px;
+    background: linear-gradient(160deg, #1e3a8a 0%, #1e40af 25%, #1d4ed8 45%, #3b82f6 70%, #06d6a0 100%);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .grid-pattern {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 45px 45px;
+    z-index: 0;
+  }
+
+  .glow-1 {
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 350px; height: 350px;
+    background: radial-gradient(circle, rgba(6, 214, 160, 0.2) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .glow-2 {
+    position: absolute;
+    bottom: -100px; left: -60px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(30, 64, 175, 0.3) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  /* Header */
+  .header {
+    padding: 40px 50px 0;
+    z-index: 2;
+    text-align: center;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+
+  .logo-row svg {
+    width: 44px;
+    height: 36px;
+  }
+
+  .logo-text {
+    font-size: 26px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+  }
+  .logo-text .accent { color: #06d6a0; }
+
+  .promo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #ff6b35, #ff4500);
+    color: #ffffff;
+    padding: 10px 28px;
+    border-radius: 30px;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 25px rgba(255, 107, 53, 0.5);
+    margin-bottom: 18px;
+  }
+
+  .headline {
+    color: #ffffff;
+    font-size: 36px;
+    font-weight: 900;
+    line-height: 1.15;
+    margin-bottom: 8px;
+  }
+
+  .headline .highlight {
+    background: linear-gradient(135deg, #06d6a0, #10b981);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subheadline {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  /* Plans section */
+  .plans-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    padding: 25px 35px;
+    z-index: 2;
+  }
+
+  .plan-card {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 28px 22px;
+    width: 310px;
+    text-align: center;
+    position: relative;
+  }
+
+  .plan-card.featured {
+    background: rgba(6, 214, 160, 0.1);
+    border: 1px solid rgba(6, 214, 160, 0.35);
+    transform: scale(1.05);
+  }
+
+  .plan-card.enterprise {
+    background: rgba(147, 130, 220, 0.08);
+    border: 1px solid rgba(147, 130, 220, 0.25);
+  }
+
+  .popular-badge {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #06d6a0, #10b981);
+    color: #1e3a8a;
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  .plan-name {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    margin-top: 6px;
+  }
+
+  .plan-card:nth-child(1) .plan-name { color: rgba(255, 255, 255, 0.6); }
+  .plan-card:nth-child(2) .plan-name { color: #06d6a0; }
+  .plan-card:nth-child(3) .plan-name { color: #c59cff; }
+
+  .plan-price {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 3px;
+    margin-bottom: 3px;
+  }
+
+  .plan-price .currency { font-size: 20px; font-weight: 700; }
+  .plan-price .amount { font-size: 46px; font-weight: 900; color: #ffffff; line-height: 1; }
+  .plan-price .period { font-size: 14px; color: rgba(255, 255, 255, 0.5); font-weight: 500; }
+
+  .plan-card:nth-child(1) .plan-price .currency { color: rgba(255, 255, 255, 0.5); }
+  .plan-card:nth-child(2) .plan-price .currency { color: #06d6a0; }
+  .plan-card:nth-child(3) .plan-price .currency { color: #c59cff; }
+
+  .free-tag {
+    background: linear-gradient(135deg, #ff6b35, #ff4500);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    display: inline-block;
+    margin: 8px 0 14px;
+    box-shadow: 0 3px 12px rgba(255, 107, 53, 0.35);
+  }
+
+  .enterprise-label {
+    color: rgba(255,255,255,0.4);
+    font-size: 12px;
+    font-weight: 600;
+    margin: 8px 0 14px;
+    font-style: italic;
+  }
+
+  .plan-features {
+    list-style: none;
+    text-align: left;
+    padding: 0 5px;
+  }
+
+  .plan-features li {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 12.5px;
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .plan-features li .check {
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .plan-card:nth-child(1) .plan-features .check { color: rgba(255, 255, 255, 0.4); }
+  .plan-card:nth-child(2) .plan-features .check { color: #06d6a0; }
+  .plan-card:nth-child(3) .plan-features .check { color: #c59cff; }
+
+  /* Footer */
+  .footer {
+    padding: 0 50px 40px;
+    text-align: center;
+    z-index: 2;
+  }
+
+  .footer-channels {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+
+  .ch-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ch-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .footer-url {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+<div class="banner">
+  <div class="grid-pattern"></div>
+  <div class="glow-1"></div>
+  <div class="glow-2"></div>
+
+  <div class="header">
+    <div class="logo-row">
+      <!-- AT Logo -->
+      <svg viewBox="0 0 129.69 107.84" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="lg1" cx="65.24" cy="78.93" r="51.13" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#4abc9b"/><stop offset="1" stop-color="#17b7b1"/>
+          </radialGradient>
+          <linearGradient id="lg2" x1="29.46" y1="70.89" x2="119.54" y2="70.89" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#4abc9b"/><stop offset="1" stop-color="#17b7b1"/>
+          </linearGradient>
+        </defs>
+        <circle fill="#17b7b1" cx="112.82" cy="1.48" r="1.48"/>
+        <circle fill="#159fa9" cx="128.21" cy="13.04" r="1.48"/>
+        <circle fill="#159fa9" cx="121.13" cy="2.65" r="1.78"/>
+        <circle fill="#159fa9" cx="125.87" cy="6.74" r="1.78"/>
+        <circle fill="#17b7b1" cx="102.93" cy="2.8" r="2.16"/>
+        <path fill="url(#lg1)" d="M73.31,71.47c36.88-23.36,45.62-51.35,45.62-51.35l6.15,2.33-4.39-16.42-12.09,11.79,5.67,1.51c-18.48,43.37-65.13,58.74-65.13,58.74,0,0-15.18,7.84-30.94,4.35-14.57-3.23-4.33-20.78-4.33-20.78,0,0-15.99,19.08.85,27.27,0,0,14.23,4.73,33.69-4.16,19.2-8.77,24.46-12.92,24.46-12.92l.44-.35Z"/>
+        <path fill="#063f76" d="M21.16,54.41c0-25.03,20.29-45.31,45.31-45.31,16.91,0,31.65,9.26,39.44,22.99.09.16.17.32.25.48,1.45-2.39,2.84-4.9,4.16-7.53C100.85,10.93,84.75,1.63,66.47,1.63,37.32,1.63,13.69,25.26,13.69,54.41c0,9.53,2.61,18.93,7.03,26.65,2-.03,4.88.09,8.56-.47-4.97-7.27-8.12-16.71-8.12-26.18Z"/>
+        <path fill="url(#lg2)" d="M115.18,33.94c-1.61,2.66-3.19,5.82-5.07,8.28,0,0,.21.47.21.47,1.12,3.93,1.74,8.08,1.74,12.37,0,25.02-20.29,45.31-45.31,45.31-10.76,0-20.04-3.29-27.81-9.56-3.16,1.15-7.26,1.16-9.48,1.87,9.48,9.11,23.1,15.15,37.3,15.15,29.15,0,52.78-23.62,52.78-52.77,0-7.1-1.81-14.94-4.36-21.12Z"/>
+        <path fill="#063f76" d="M44.2,89.42c6.47,4.26,14.22,6.74,22.55,6.74,22.7,0,41.1-18.4,41.1-41.1,0-3.16-.37-6.23-1.05-9.19-23.31,29.36-53.67,40.58-62.61,43.55Z"/>
+        <path fill="#063f76" d="M103.81,37.67c-6.3-14.61-20.4-23.86-37.32-23.86-22.7,0-41.1,18.4-41.1,41.1,0,10.56,3.98,20.18,10.52,27.46,11.72-2.71,44.69-12.78,67.9-44.7Z"/>
+        <path fill="#fff" d="M55.9,36.3h-5.16l-14.58,32.58h7.67l9.7-21.7,4.19,9.28-5.51-.07-2.72,6.42h11.02l2.58,6.07h4.47l2.65-1.74-14.3-30.84ZM66.63,66.64h-2.08l-2.6-5.79h-9.48l.98-2.21h7.54s-7.54-16.63-7.54-16.63l-10.88,24.63h-3.21l12.59-28.19h2.82l12.77,27.56-.92.63Z"/>
+        <polygon fill="#fff" points="80.87 59.24 78.68 60.61 78.68 43.25 67.16 43.25 67.16 36.62 96.4 36.62 96.4 43.04 85.44 43.04 85.44 55.67 83.22 57.27 83.22 40.94 94.53 40.94 94.53 38.66 69.22 38.66 69.22 41.03 80.66 41.03 80.87 59.24"/>
+        <circle fill="#4abc9b" cx="9.3" cy="56.8" r="1.19"/>
+        <circle fill="#4abc9b" cx="6.55" cy="61.1" r="1.19"/>
+        <circle fill="#4abc9b" cx="4.18" cy="65.4" r="1.19"/>
+        <circle fill="#4abc9b" cx="2.37" cy="69.71" r="1.19"/>
+        <circle fill="#4abc9b" cx="1.19" cy="74.69" r="1.19"/>
+      </svg>
+      <div class="logo-text"><span class="accent">Automatiza</span>Tech</div>
+    </div>
+    <div class="promo-badge">🎁 1 MES GRATIS — PLANES BÁSICO Y PROFESIONAL</div>
+    <h1 class="headline">
+      Elige tu Plan de<br><span class="highlight">Atención Omnicanal</span>
+    </h1>
+    <p class="subheadline">Potenciado con Inteligencia Artificial</p>
+  </div>
+
+  <div class="plans-container">
+    <!-- Plan Básico -->
+    <div class="plan-card">
+      <div class="plan-name">Básico</div>
+      <div class="plan-price">
+        <span class="currency">$</span>
+        <span class="amount">99</span>
+        <span class="period">/mes</span>
+      </div>
+      <div class="free-tag">🎁 1 MES GRATIS</div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span> 1,000 conversaciones/mes</li>
+        <li><span class="check">✓</span> 1-2 canales</li>
+        <li><span class="check">✓</span> 2-5 agentes</li>
+        <li><span class="check">✓</span> IA básica</li>
+        <li><span class="check">✓</span> Soporte email</li>
+      </ul>
+    </div>
+
+    <!-- Plan Profesional -->
+    <div class="plan-card featured">
+      <div class="popular-badge">⭐ MÁS POPULAR</div>
+      <div class="plan-name">Profesional</div>
+      <div class="plan-price">
+        <span class="currency">$</span>
+        <span class="amount">199</span>
+        <span class="period">/mes</span>
+      </div>
+      <div class="free-tag">🎁 1 MES GRATIS</div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span> 5,000 conversaciones/mes</li>
+        <li><span class="check">✓</span> 2 canales simultáneos</li>
+        <li><span class="check">✓</span> 5 agentes activos</li>
+        <li><span class="check">✓</span> IA avanzada</li>
+        <li><span class="check">✓</span> Dashboard & Analytics</li>
+        <li><span class="check">✓</span> Soporte prioritario</li>
+      </ul>
+    </div>
+
+    <!-- Plan Enterprise — SIN descuento -->
+    <div class="plan-card enterprise">
+      <div class="plan-name">Enterprise</div>
+      <div class="plan-price">
+        <span class="currency">$</span>
+        <span class="amount">399</span>
+        <span class="period">/mes</span>
+      </div>
+      <div class="enterprise-label">Contactar para cotización</div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span> Conversaciones ilimitadas</li>
+        <li><span class="check">✓</span> 5 canales simultáneos</li>
+        <li><span class="check">✓</span> 10 agentes por canal</li>
+        <li><span class="check">✓</span> IA premium + custom</li>
+        <li><span class="check">✓</span> Gerente dedicado</li>
+        <li><span class="check">✓</span> Soporte 24/7</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-channels">
+      <!-- WhatsApp -->
+      <div class="ch-icon"><svg viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
+      <!-- Instagram -->
+      <div class="ch-icon"><svg viewBox="0 0 24 24" fill="#E4405F"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></div>
+      <!-- Telegram -->
+      <div class="ch-icon"><svg viewBox="0 0 24 24" fill="#229ED9"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0h-.056zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></div>
+      <!-- Messenger -->
+      <div class="ch-icon"><svg viewBox="0 0 24 24" fill="#0084FF"><path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.654V24l4.088-2.242c1.092.3 2.246.464 3.443.464 6.627 0 12-4.975 12-11.111C24 4.974 18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8.2l3.131 3.259L19.752 8.2l-6.561 6.763z"/></svg></div>
+      <!-- Email -->
+      <div class="ch-icon"><svg viewBox="0 0 24 24" fill="#ffffff"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div>
+    </div>
+    <div class="footer-url">automatizatech.cl</div>
+  </div>
+</div>
+</body>
+</html>

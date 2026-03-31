@@ -219,7 +219,7 @@ export default function App() {
       )}
 
       {/* AI Assistant — chat for agents/clients, prompt editor for admin */}
-      <AiAssistantChat />
+      <AiAssistantChat currentView={currentView} />
     </div>
   );
 }

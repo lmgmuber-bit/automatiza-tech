@@ -221,11 +221,11 @@ function useRotatingTooltip(firstName) {
 }
 
 // ─── Floating Robot Button with tooltip ──────────────────────
-function FloatingButton({ onClick, hasChats, firstName }) {
+function FloatingButton({ onClick, hasChats, firstName, avoidBottom }) {
   const tooltip = useRotatingTooltip(firstName);
 
   return (
-    <div className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-50 flex items-end gap-2">
+    <div className={`fixed right-4 sm:right-5 z-50 flex items-end gap-2 transition-all duration-300 ${avoidBottom ? 'bottom-20 sm:bottom-24' : 'bottom-4 sm:bottom-5'}`}>
       {/* Tooltip bubble */}
       <div className={`max-w-[200px] sm:max-w-[220px] px-3 py-2 rounded-xl rounded-br-sm bg-white dark:bg-slate-800 shadow-lg border border-gray-200 dark:border-slate-700 transition-all duration-500 ${
         tooltip.visible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-2 scale-95 pointer-events-none'
@@ -330,7 +330,7 @@ function HistoryPanel({ chats, onSelect, onNew, onDelete, searchQuery, onSearchC
 }
 
 // ─── Main Export ─────────────────────────────────────────────
-export default function AiAssistantChat() {
+export default function AiAssistantChat({ currentView }) {
   const [isOpen, setIsOpen] = useState(false);
   const [chats, setChats] = useState(loadChats);
   const [activeChatId, setActiveChatId] = useState(null);
@@ -453,7 +453,7 @@ export default function AiAssistantChat() {
   }, []);
 
   if (!isOpen) {
-    return <FloatingButton onClick={handleOpen} hasChats={chats.length > 0} firstName={firstName} />;
+    return <FloatingButton onClick={handleOpen} hasChats={chats.length > 0} firstName={firstName} avoidBottom={currentView === 'inbox'} />;
   }
 
   return (

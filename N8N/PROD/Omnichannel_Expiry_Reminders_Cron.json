@@ -22,17 +22,32 @@
     },
     {
       "parameters": {
-        "method": "POST",
+        "method": "GET",
         "url": "https://automatizatech.cl/api-omnichannel.php?route=cron/expiry-reminders&secret=omni_cron_2026_s3cur3",
+        "authentication": "none",
         "options": {
-          "timeout": 30000
+          "timeout": 30000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": true,
+              "maxRedirects": 3
+            }
+          },
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
+      "typeVersion": 4.2,
       "position": [-220, 60],
       "id": "b2c3d4e5-http-expiry-check",
-      "name": "Trigger Expiry Reminders"
+      "name": "Trigger Expiry Reminders",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {

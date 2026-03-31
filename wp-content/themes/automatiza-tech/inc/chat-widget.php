@@ -182,7 +182,63 @@ function automatiza_tech_render_chat_widget() {
     <div id="automatiza-chat-toggle-container">
         <div class="chat-robot-peek">
             <div class="chat-robot-content-wrapper">
-                <div class="chat-robot-avatar">🤖</div>
+                <!-- SVG robot TECH — más realista que un emoji -->
+                <div class="chat-robot-avatar">
+                    <svg width="52" height="62" viewBox="0 0 52 62" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <filter id="techGlow" x="-40%" y="-40%" width="180%" height="180%">
+                                <feGaussianBlur stdDeviation="2.5" result="blur"/>
+                                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                            <radialGradient id="eyeL" cx="40%" cy="35%" r="65%">
+                                <stop offset="0%" stop-color="#b2fff4"/>
+                                <stop offset="100%" stop-color="#06d6a0"/>
+                            </radialGradient>
+                            <linearGradient id="bodyG" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#1e3a8a"/>
+                                <stop offset="100%" stop-color="#0a1628"/>
+                            </linearGradient>
+                            <linearGradient id="headG" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#243e8f"/>
+                                <stop offset="100%" stop-color="#0d2044"/>
+                            </linearGradient>
+                        </defs>
+
+                        <!-- Antena stem -->
+                        <line x1="26" y1="1" x2="26" y2="9" stroke="#06d6a0" stroke-width="2" stroke-linecap="round"/>
+                        <!-- Antena ball con glow -->
+                        <circle cx="26" cy="1" r="3.5" fill="#06d6a0" filter="url(#techGlow)"/>
+
+                        <!-- Cabeza -->
+                        <rect x="5" y="9" width="42" height="30" rx="13" fill="url(#headG)" stroke="#06d6a0" stroke-width="1.5"/>
+                        <!-- Visor oscuro -->
+                        <rect x="9" y="13" width="34" height="22" rx="8" fill="#040e20"/>
+
+                        <!-- Ojo izquierdo -->
+                        <circle cx="19" cy="24" r="5.5" fill="url(#eyeL)" filter="url(#techGlow)"/>
+                        <circle cx="19" cy="24" r="3.2" fill="#c8fff8"/>
+                        <!-- Ojo derecho -->
+                        <circle cx="33" cy="24" r="5.5" fill="url(#eyeL)" filter="url(#techGlow)"/>
+                        <circle cx="33" cy="24" r="3.2" fill="#c8fff8"/>
+
+                        <!-- Sonrisa LED -->
+                        <path d="M 15 31 Q 26 38 37 31" stroke="#06d6a0" stroke-width="1.8" fill="none" stroke-linecap="round" filter="url(#techGlow)"/>
+
+                        <!-- Cuello -->
+                        <rect x="21" y="39" width="10" height="5" rx="2.5" fill="#0d2044"/>
+
+                        <!-- Cuerpo -->
+                        <rect x="7" y="44" width="38" height="16" rx="7" fill="url(#bodyG)" stroke="#06d6a0" stroke-width="1.2"/>
+
+                        <!-- Líneas de acento en el cuerpo -->
+                        <line x1="10" y1="48" x2="20" y2="48" stroke="#06d6a0" stroke-width="0.9" opacity="0.55"/>
+                        <line x1="32" y1="48" x2="42" y2="48" stroke="#06d6a0" stroke-width="0.9" opacity="0.55"/>
+
+                        <!-- Badge AT -->
+                        <circle cx="26" cy="53" r="5.5" fill="#1e3a8a" stroke="#06d6a0" stroke-width="1.3"/>
+                        <text x="26" y="56.5" text-anchor="middle" fill="#06d6a0" font-size="6" font-weight="900" font-family="Arial,sans-serif" letter-spacing="0">AT</text>
+                    </svg>
+                </div>
                 <div class="chat-robot-bubble">
                     <span class="chat-robot-text" id="chatRobotMessage">¡Hola! ¿Te ayudo?</span>
                     <div class="chat-bubble-tail"></div>

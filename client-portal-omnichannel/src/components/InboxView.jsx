@@ -237,12 +237,19 @@ export default function InboxView() {
     if (!newMessage.trim() || !selectedConv) return;
     setSending(true);
     try {
-      await sendMessage(selectedConv.id, {
+      const agentData = getIsAgent() ? getAgentData() : null;
+      const result = await sendMessage(selectedConv.id, {
         content: newMessage,
         sender_type: 'agent',
         message_type: 'text',
+        agent_id: agentData?.id || '',
+        agent_name: agentData?.name || '',
       });
       setNewMessage('');
+      // Check for YCloud delivery failure
+      if (result?.ycloud && result.ycloud.error) {
+        setResultModal({ type: 'error', title: 'Mensaje guardado pero no enviado', message: `El mensaje se guardó pero no se pudo enviar al cliente: ${result.ycloud.error}` });
+      }
       await loadMessages(selectedConv.id);
       loadConversations();
     } catch (err) {
@@ -700,8 +707,9 @@ export default function InboxView() {
                       <p className="text-[10px] text-gray-400 mt-1 text-right">
                         {new Date(msg.created_at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
                         {msg.delivery_status && msg.direction === 'outbound' && (
-                          <span className="ml-1">
-                            {msg.delivery_status === 'read' ? '✓✓' : msg.delivery_status === 'delivered' ? '✓✓' : '✓'}
+                          <span className={`ml-1 ${msg.delivery_status === 'failed' ? 'text-red-500' : ''}`}>
+                            {msg.delivery_status === 'failed' ? '✕ No enviado' :
+                             msg.delivery_status === 'read' || msg.delivery_status === 'delivered' ? '✓✓' : '✓'}
                           </span>
                         )}
                       </p>

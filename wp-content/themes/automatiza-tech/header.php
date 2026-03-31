@@ -625,29 +625,8 @@
             function qs(sel){ return document.querySelector(sel); }
             function ensureLayer(){ var l = qs('.christmas-layer'); if(!l){ l = document.createElement('div'); l.className='christmas-layer'; document.body.appendChild(l); } return l; }
             function ensureStars(){ /* Estrellas deshabilitadas */ }
-            // Modal Informativo
-            function ensureModal(){
-                if(qs('.newyear-modal-overlay')) return;
-                var shown = parseInt(localStorage.getItem('botWhatsappModalShown') || '0', 10);
-                if (shown >= 10) return; // límite de 10 veces por navegador
-                localStorage.setItem('botWhatsappModalShown', String(shown + 1));
-                var overlay = document.createElement('div');
-                overlay.className = 'newyear-modal-overlay';
-                overlay.innerHTML = ""
-                    + "<div class='newyear-modal' role='dialog' aria-modal='true' aria-labelledby='newyear-title'>"
-                    +   "<button class='newyear-modal-close' aria-label='Cerrar'>✖</button>"
-                    +   "<img src='<?php echo get_template_directory_uri(); ?>/assets/images/ModalBotWhatsapp.png' alt='AutomatizaTech Bot WhatsApp' class='newyear-modal-image'>"
-                    + "</div>";
-                document.body.appendChild(overlay);
-                function dismiss(){ overlay.remove(); }
-                var closeBtn = overlay.querySelector('.newyear-modal-close');
-                closeBtn.addEventListener('click', dismiss);
-                overlay.addEventListener('click', function(e){ if(e.target === overlay) dismiss(); });
-                // Accesibilidad: cerrar con ESC
-                document.addEventListener('keydown', function onKey(e){ if(e.key === 'Escape'){ dismiss(); document.removeEventListener('keydown', onKey); } });
-                // Llevar el foco al botón cerrar para lectores de pantalla/teclado
-                try { closeBtn.focus(); } catch(_) {}
-            }
+            // Modal desactivado — reemplazado por promo-modal en footer.php
+            function ensureModal(){ /* no-op: usa promo-modal */ }
             function populate(layer){ /* Emojis flotantes deshabilitados - renos y santa ahora están en las luces */ }
 
             // Modal de Año Nuevo

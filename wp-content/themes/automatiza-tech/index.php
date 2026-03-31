@@ -9,7 +9,32 @@ get_header(); ?>
 
 <main class="main-content">
     <!-- Hero Section -->
-    <section class="hero-section">
+    <section class="hero-section hero-with-banner">
+
+        <!-- Imagen de fondo DESKTOP (robot izquierda, espacio derecho para el contenido) -->
+        <div class="hero-banner-img hero-desktop-only">
+            <img src="<?php echo esc_url(home_url('/promo-assets/gemini-05-hero.png')); ?>"
+                 alt="AutomatizaTech — Plataforma Omnicanal con IA"
+                 loading="eager" fetchpriority="high" />
+        </div>
+
+        <!-- Fondo animado MOBILE (reemplaza la imagen pixelada) -->
+        <div class="hero-mobile-bg" aria-hidden="true">
+            <canvas id="heroMobileCanvas"></canvas>
+            <div class="hero-mobile-robot">
+                <img src="<?php echo esc_url(home_url('/promo-assets/gemini-05-hero.png')); ?>"
+                     alt="" loading="eager" />
+                <div class="hero-mobile-glow"></div>
+            </div>
+            <!-- Partículas flotantes CSS -->
+            <div class="hm-particle hm-p1"></div>
+            <div class="hm-particle hm-p2"></div>
+            <div class="hm-particle hm-p3"></div>
+            <div class="hm-particle hm-p4"></div>
+            <div class="hm-particle hm-p5"></div>
+            <div class="hm-particle hm-p6"></div>
+        </div>
+
         <div class="container">
             <div class="hero-content fade-in-up">
                 <h1 class="hero-title">
@@ -31,9 +56,9 @@ get_header(); ?>
                                 <div class="bubble-tail"></div>
                             </div>
                         </div>
-                        <a href="#contact" class="btn btn-secondary demo-btn">Solicita tu Demo</a>
+                        <a href="#" class="btn btn-secondary demo-btn" onclick="event.preventDefault(); openAgendaModal();">Solicita tu Demo</a>
                     </div>
-                    
+
                     <!-- WhatsApp Button with Robot -->
                     <div class="btn-robot-container">
                         <div class="robot-peek-btn whatsapp-robot">
@@ -328,6 +353,123 @@ window.addEventListener('beforeunload', () => {
         clearInterval(messageInterval);
     }
 });
+
+/* =====================================================
+   HERO MOBILE — Canvas de partículas animadas
+   Solo se activa en pantallas <= 768px
+   ===================================================== */
+(function() {
+    function isMobile() { return window.innerWidth <= 768; }
+    if (!isMobile()) return;
+
+    const canvas  = document.getElementById('heroMobileCanvas');
+    if (!canvas) return;
+    const ctx     = canvas.getContext('2d');
+    let W, H, particles = [], animFrame;
+
+    function resize() {
+        const bg = canvas.parentElement;
+        W = canvas.width  = bg.offsetWidth  || window.innerWidth;
+        H = canvas.height = bg.offsetHeight || 420;
+    }
+
+    // Crear partículas
+    function createParticles() {
+        particles = [];
+        const count = Math.floor(W / 14);
+        for (let i = 0; i < count; i++) {
+            particles.push({
+                x:    Math.random() * W,
+                y:    Math.random() * H,
+                r:    Math.random() * 2.2 + 0.6,
+                dx:   (Math.random() - 0.5) * 0.45,
+                dy:   -Math.random() * 0.6 - 0.2,
+                a:    Math.random() * 0.7 + 0.15,
+                hue:  Math.random() > 0.6 ? 170 : 215  // teal o azul
+            });
+        }
+    }
+
+    // Dibujar líneas entre partículas cercanas
+    function drawConnections() {
+        for (let i = 0; i < particles.length; i++) {
+            for (let j = i + 1; j < particles.length; j++) {
+                const dx  = particles[i].x - particles[j].x;
+                const dy  = particles[i].y - particles[j].y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < 80) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(6,214,160,${0.12 * (1 - dist/80)})`;
+                    ctx.lineWidth = 0.6;
+                    ctx.moveTo(particles[i].x, particles[i].y);
+                    ctx.lineTo(particles[j].x, particles[j].y);
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+
+    function drawGrid() {
+        ctx.strokeStyle = 'rgba(6,214,160,0.045)';
+        ctx.lineWidth   = 0.5;
+        const step = 38;
+        for (let x = 0; x < W; x += step) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+        }
+        for (let y = 0; y < H; y += step) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+        }
+    }
+
+    function tick() {
+        ctx.clearRect(0, 0, W, H);
+
+        // Fondo gradiente (canvas)
+        const grad = ctx.createLinearGradient(0, 0, W, H);
+        grad.addColorStop(0,   '#071424');
+        grad.addColorStop(0.5, '#0a1f38');
+        grad.addColorStop(1,   '#062a2a');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        drawGrid();
+        drawConnections();
+
+        // Partículas
+        particles.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${p.hue},90%,65%,${p.a})`;
+            ctx.fill();
+
+            p.x += p.dx;
+            p.y += p.dy;
+            if (p.y < -4)  { p.y = H + 4; p.x = Math.random() * W; }
+            if (p.x < -4)  { p.x = W + 4; }
+            if (p.x > W+4) { p.x = -4; }
+        });
+
+        animFrame = requestAnimationFrame(tick);
+    }
+
+    function init() {
+        resize();
+        createParticles();
+        tick();
+    }
+
+    window.addEventListener('resize', () => {
+        if (!isMobile()) { cancelAnimationFrame(animFrame); return; }
+        resize();
+        createParticles();
+    });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
 </script>
 
 <?php get_footer(); ?>

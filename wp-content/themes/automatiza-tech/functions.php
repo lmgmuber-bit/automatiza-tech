@@ -220,54 +220,220 @@ add_action('wp_enqueue_scripts', 'automatiza_tech_override_jquery', 0);
 
 /**
  * Manejar formulario de contacto
+ *
+ * LOCAL  → guarda en BD, retorna éxito (sin SMTP disponible)
+ * PROD   → guarda en BD + envía email, retorna éxito solo si el mail se envió
  */
 function handle_contact_form() {
     // Verificar nonce
     if (!wp_verify_nonce($_POST['nonce'], 'automatiza_tech_nonce')) {
-        wp_die('Error de seguridad');
+        wp_send_json_error('Error de seguridad');
+        return;
     }
-    
+
     // Sanitizar datos
-    $name = sanitize_text_field($_POST['name']);
-    $email = sanitize_email($_POST['email']);
-    $company = sanitize_text_field($_POST['company']);
-    $phone = sanitize_text_field($_POST['phone']);
-    $message = sanitize_textarea_field($_POST['message']);
-    
+    $name    = sanitize_text_field($_POST['name']        ?? '');
+    $email   = sanitize_email($_POST['email']            ?? '');
+    $company = sanitize_text_field($_POST['company']     ?? '');
+    $phone   = sanitize_text_field($_POST['phone']       ?? '');
+    $message = sanitize_textarea_field($_POST['message'] ?? '');
+
     // Validar email
     if (!is_email($email)) {
         wp_send_json_error('Email no válido');
+        return;
     }
-    
-    // Configurar email
-    $to = get_option('admin_email');
-    $subject = 'Nuevo contacto desde Automatiza Tech - ' . $name;
-    $body = "
-    Nuevo mensaje de contacto:
 
-    Nombre: $name
-    Email: $email
-    Empresa: $company
-    Teléfono: $phone
+    // Detectar entorno: local = localhost / 127.0.0.1 / .local / wp_get_environment_type()
+    $env  = function_exists('wp_get_environment_type') ? wp_get_environment_type() : 'production';
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    $is_local = in_array($env, array('local', 'development'))
+             || $host === 'localhost'
+             || strpos($host, '127.0.0.1') !== false
+             || substr($host, -6) === '.local';
 
-    Mensaje:
-    $message
-    ";    $headers = array(
+    // Guardar siempre en BD (no se pierde ningún lead)
+    wp_insert_post(array(
+        'post_type'   => 'at_demo_request',
+        'post_title'  => $name . ' — ' . $email,
+        'post_status' => 'private',
+        'meta_input'  => array(
+            '_at_name'    => $name,
+            '_at_email'   => $email,
+            '_at_company' => $company,
+            '_at_phone'   => $phone,
+            '_at_message' => $message,
+            '_at_date'    => current_time('mysql'),
+            '_at_env'     => $is_local ? 'local' : 'production',
+            '_at_source'  => 'contact_form',
+        ),
+    ));
+
+    // Extraer fecha y hora del mensaje si vienen del modal de agendamiento
+    $fecha_demo = '';
+    $hora_demo  = '';
+    if ( preg_match('/Fecha:\s*([^\s]+)/', $message, $mf) ) $fecha_demo = $mf[1];
+    if ( preg_match('/Hora:\s*(.+)$/',    $message, $mh) ) $hora_demo  = trim($mh[1]);
+
+    $fecha_hora_row = '';
+    if ( $fecha_demo || $hora_demo ) {
+        $fecha_hora_row = '
+            <tr>
+                <td style="padding:8px 0;border-bottom:1px solid #e0e8f0;">
+                    <strong style="color:#1e3a8a;">📅 Demo agendada:</strong>
+                </td>
+                <td style="padding:8px 0;border-bottom:1px solid #e0e8f0;">
+                    <span style="background:#06d6a0;color:#0a1628;font-weight:700;padding:3px 10px;border-radius:20px;font-size:13px;">'
+                    . esc_html($fecha_demo) . ' — ' . esc_html($hora_demo) .
+                    '</span>
+                </td>
+            </tr>';
+    }
+
+    // Preparar email con plantilla HTML branded AT
+    $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+    $to         = 'automatizatech.bots@gmail.com';
+    $subject    = '🗓️ Nueva solicitud de demo — ' . $name;
+    $body       = '
+    <!DOCTYPE html>
+    <html lang="es">
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+    <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Arial,sans-serif;background:#f0f4ff;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4ff;padding:24px;">
+        <tr><td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(30,58,138,0.12);">
+
+            <!-- Header AT -->
+            <tr>
+                <td style="background:linear-gradient(135deg,#1e3a8a 0%,#0d2d45 60%,#062a2a 100%);padding:32px 30px;text-align:center;">
+                    <h1 style="color:#ffffff;margin:0;font-size:22px;letter-spacing:0.5px;">🗓️ Nueva Solicitud de Demo</h1>
+                    <p style="color:#06d6a0;margin:8px 0 0 0;font-size:14px;font-weight:600;">AutomatizaTech · Plataforma Omnicanal con IA</p>
+                </td>
+            </tr>
+
+            <!-- Body -->
+            <tr>
+                <td style="padding:30px;">
+
+                    <!-- Info del contacto -->
+                    <div style="background:#f4f7ff;padding:20px;border-radius:8px;border-left:4px solid #1e3a8a;margin-bottom:20px;">
+                        <h2 style="color:#1e3a8a;margin:0 0 14px 0;font-size:16px;">👤 Datos del prospecto</h2>
+                        <table width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;">
+                            <tr>
+                                <td style="padding:8px 0;border-bottom:1px solid #e0e8f0;width:32%;">
+                                    <strong style="color:#1e3a8a;">Nombre:</strong>
+                                </td>
+                                <td style="padding:8px 0;border-bottom:1px solid #e0e8f0;">' . esc_html($name) . '</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 0;border-bottom:1px solid #e0e8f0;">
+                                    <strong style="color:#1e3a8a;">Email:</strong>
+                                </td>
+                                <td style="padding:8px 0;border-bottom:1px solid #e0e8f0;">
+                                    <a href="mailto:' . esc_attr($email) . '" style="color:#1e3a8a;text-decoration:none;">' . esc_html($email) . '</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 0;border-bottom:1px solid #e0e8f0;">
+                                    <strong style="color:#1e3a8a;">Teléfono:</strong>
+                                </td>
+                                <td style="padding:8px 0;border-bottom:1px solid #e0e8f0;">
+                                    ' . ( empty($phone) ? '<em style="color:#999;">No especificado</em>' : '<a href="tel:' . esc_attr($phone) . '" style="color:#1e3a8a;text-decoration:none;">' . esc_html($phone) . '</a>' ) . '
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 0;border-bottom:1px solid #e0e8f0;">
+                                    <strong style="color:#1e3a8a;">Empresa:</strong>
+                                </td>
+                                <td style="padding:8px 0;border-bottom:1px solid #e0e8f0;">
+                                    ' . ( empty($company) ? '<em style="color:#999;">No especificada</em>' : esc_html($company) ) . '
+                                </td>
+                            </tr>
+                            ' . $fecha_hora_row . '
+                            <tr>
+                                <td style="padding:8px 0;">
+                                    <strong style="color:#1e3a8a;">Recibido:</strong>
+                                </td>
+                                <td style="padding:8px 0;">' . current_time('d/m/Y H:i:s') . '</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Mensaje -->
+                    <div style="background:#f0fff8;padding:18px;border-radius:8px;border-left:4px solid #06d6a0;margin-bottom:24px;">
+                        <h3 style="color:#06b084;margin:0 0 8px 0;font-size:15px;">📝 Notas:</h3>
+                        <p style="color:#333;margin:0;line-height:1.6;white-space:pre-wrap;">' . esc_html($message) . '</p>
+                    </div>
+
+                    <!-- CTA al admin -->
+                    <div style="text-align:center;margin-top:10px;">
+                        <a href="' . admin_url('edit.php?post_type=at_demo_request') . '"
+                           style="display:inline-block;background:linear-gradient(135deg,#1e3a8a,#06d6a0);color:#fff;padding:13px 32px;text-decoration:none;border-radius:30px;font-weight:700;font-size:14px;box-shadow:0 4px 14px rgba(6,214,160,0.35);">
+                            📋 Ver solicitud en el Panel
+                        </a>
+                    </div>
+
+                </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+                <td style="background:#f4f7ff;padding:18px 30px;text-align:center;border-top:1px solid #e0e8f0;">
+                    <p style="color:#555;margin:0;font-size:12px;">
+                        🌐 Enviado desde: <a href="' . home_url() . '" style="color:#1e3a8a;text-decoration:none;">' . home_url() . '</a>
+                    </p>
+                    <p style="color:#999;margin:6px 0 0 0;font-size:11px;">
+                        Mensaje automático del sistema de agendamiento — AutomatizaTech
+                    </p>
+                </td>
+            </tr>
+
+        </table>
+        </td></tr>
+    </table>
+    </body></html>';
+
+    $headers = array(
         'Content-Type: text/html; charset=UTF-8',
-        'From: ' . $name . ' <' . $email . '>'
+        'From: Automatiza Tech <' . $from_email . '>',
+        'Reply-To: ' . $name . ' <' . $email . '>',
     );
-    
-    // Enviar email
-    $sent = wp_mail($to, $subject, $body, $headers);
-    
-    if ($sent) {
-        wp_send_json_success('Mensaje enviado correctamente');
+
+    if ($is_local) {
+        // LOCAL: no depende del email — ya quedó guardado en BD
+        wp_mail($to, $subject, $body, $headers); // intento silencioso
+        wp_send_json_success('¡Solicitud recibida! Te contactaremos en menos de 24 horas.');
     } else {
-        wp_send_json_error('Error al enviar el mensaje');
+        // PROD: el éxito depende de que el email se envíe
+        $sent = wp_mail($to, $subject, $body, $headers);
+        if ($sent) {
+            wp_send_json_success('¡Solicitud recibida! Te contactaremos en menos de 24 horas.');
+        } else {
+            wp_send_json_error('Error al enviar el mensaje. Por favor intenta de nuevo.');
+        }
     }
 }
 add_action('wp_ajax_contact_form', 'handle_contact_form');
 add_action('wp_ajax_nopriv_contact_form', 'handle_contact_form');
+
+/**
+ * Registrar CPT at_demo_request para guardar solicitudes del formulario
+ */
+function at_register_demo_request_cpt() {
+    register_post_type('at_demo_request', array(
+        'labels'       => array(
+            'name'          => 'Solicitudes Demo',
+            'singular_name' => 'Solicitud Demo',
+        ),
+        'public'       => false,
+        'show_ui'      => true,
+        'show_in_menu' => true,
+        'supports'     => array('title', 'custom-fields'),
+        'menu_icon'    => 'dashicons-calendar-alt',
+        'capability_type' => 'post',
+    ));
+}
+add_action('init', 'at_register_demo_request_cpt');
 
 /**
  * Customizer options

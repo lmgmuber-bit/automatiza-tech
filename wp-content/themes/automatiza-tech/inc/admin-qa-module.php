@@ -481,7 +481,18 @@ add_action('wp_ajax_at_qa_save_project', function() {
 
     if (empty($name)) wp_send_json_error('Nombre requerido');
 
-    $slug = sanitize_title($name);
+    // Generar slug único — si ya existe, agregar sufijo numérico
+    $base_slug = sanitize_title($name);
+    $slug = $base_slug;
+    $suffix = 2;
+    while (true) {
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$t['projects']} WHERE slug = %s AND id != %d",
+            $slug, $id
+        ));
+        if (!$existing) break;
+        $slug = $base_slug . '-' . $suffix++;
+    }
 
     $data = [
         'name'             => $name,
@@ -506,9 +517,15 @@ add_action('wp_ajax_at_qa_save_project', function() {
     }
 
     if ($id) {
-        $wpdb->update($t['projects'], $data, ['id' => $id]);
+        $result = $wpdb->update($t['projects'], $data, ['id' => $id]);
+        if ($result === false) {
+            wp_send_json_error('Error BD al actualizar: ' . $wpdb->last_error);
+        }
     } else {
-        $wpdb->insert($t['projects'], $data);
+        $result = $wpdb->insert($t['projects'], $data);
+        if ($result === false) {
+            wp_send_json_error('Error BD al insertar: ' . $wpdb->last_error);
+        }
         $id = $wpdb->insert_id;
     }
 
@@ -1846,6 +1863,16 @@ function at_qa_render_projects_page() {
         const NONCE = '<?php echo $nonce; ?>';
         const AJAX  = '<?php echo admin_url("admin-ajax.php"); ?>';
 
+        /* Parseo seguro: ignora warnings/notices de PHP antes del JSON */
+        function safeJson(r){
+            return r.text().then(function(t){
+                const start=t.indexOf('{'), end=t.lastIndexOf('}');
+                if(start===-1||end===-1) return {success:false,data:'Respuesta inválida del servidor'};
+                try{ return JSON.parse(t.substring(start,end+1)); }
+                catch(e){ return {success:false,data:'Respuesta inválida del servidor'}; }
+            });
+        }
+
         function toast(msg, type) {
             const t = document.getElementById('atQaToast');
             t.textContent = msg; t.className = 'at-qa-toast show ' + (type||'');
@@ -1899,11 +1926,15 @@ function at_qa_render_projects_page() {
 
             fetch(AJAX, {method:'POST', body:fd}).then(r=>safeJson(r)).then(res => {
                 if (res.success) {
-                    toast('Proyecto guardado', 'success');
+                    toast('Proyecto guardado ✅', 'success');
                     setTimeout(() => location.reload(), 600);
                 } else {
-                    toast(res.data||'Error', 'error');
+                    toast(res.data||'Error al guardar proyecto', 'error');
+                    console.error('[QA Save]', res);
                 }
+            }).catch(err => {
+                toast('Error de conexión: ' + err.message, 'error');
+                console.error('[QA Save] catch:', err);
             });
         };
 
@@ -1914,9 +1945,9 @@ function at_qa_render_projects_page() {
             fd.append('nonce', NONCE);
             fd.append('project_id', pid);
             fetch(AJAX, {method:'POST', body:fd}).then(r=>safeJson(r)).then(res => {
-                if (res.success) { toast('Proyecto eliminado', 'success'); setTimeout(()=>location.reload(), 600); }
-                else toast('Error', 'error');
-            });
+                if (res.success) { toast('Proyecto eliminado ✅', 'success'); setTimeout(()=>location.reload(), 600); }
+                else toast(res.data||'Error al eliminar', 'error');
+            }).catch(err => { toast('Error: ' + err.message, 'error'); });
         };
 
         // Generar informe QA
@@ -1932,7 +1963,7 @@ function at_qa_render_projects_page() {
                     toast('✅ Informe generado: ' + res.data.verdict + ' — ' + res.data.pass_rate + '%', 'success');
                     window.open(res.data.url, '_blank');
                 } else toast(res.data || 'Error', 'error');
-            });
+            }).catch(err => { toast('Error: ' + err.message, 'error'); });
         };
 
         // Cerrar modales con ESC / click fuera

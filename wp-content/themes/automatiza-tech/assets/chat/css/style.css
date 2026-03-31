@@ -1,10 +1,10 @@
 /* Chat Widget Container */
 #automatiza-ai-chat-widget {
     position: fixed;
-    bottom: 80px;
+    bottom: 20px;
     right: 20px;
     width: 350px;
-    height: 500px;
+    height: calc(100vh - 90px);
     background-color: #ffffff;
     border-radius: 12px;
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
@@ -27,13 +27,19 @@
 
 /* Chat Header */
 .chat-header {
-    background-color: #06d6a0; /* Tech Green */
+    background: linear-gradient(135deg, #06d6a0 0%, #17b7b1 55%, #0ea5e9 100%);
     color: #ffffff;
     padding: 15px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-weight: 600;
+    font-weight: 700;
+    box-shadow: 0 3px 12px rgba(6,214,160,0.35);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.chat-close-btn {
+    color: #ffffff !important;
 }
 
 .chat-close-btn {
@@ -161,70 +167,69 @@
     justify-content: center;
 }
 
-/* Robot Animation - Orbiting */
+/* Robot — aparece y desaparece sobre el botón */
 .chat-robot-peek {
     position: absolute;
-    width: 240px;
-    height: 240px;
-    top: 50%;
+    bottom: calc(100% + 8px);
     left: 50%;
-    margin-top: -120px;
-    margin-left: -120px;
-    animation: orbitRobot 12s linear infinite;
+    transform: translateX(-50%);
     pointer-events: none;
     display: flex;
     justify-content: center;
-    align-items: flex-start; /* Start at top */
+    align-items: center;
+    animation: robotFadeInOut 7s ease-in-out infinite;
+}
+
+@keyframes robotFadeInOut {
+    0%, 8%   { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.82); }
+    20%, 68% { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1);    }
+    82%,100% { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.82); }
 }
 
 .chat-robot-content-wrapper {
     display: flex;
     flex-direction: column;
     align-items: center;
-    animation: counterRotate 12s linear infinite; /* Keep upright */
 }
 
 .chat-robot-avatar {
-    font-size: 36px; /* Larger size */
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin-bottom: 8px;
-    animation: heroRobotWave 2.5s ease-in-out infinite; /* Wave animation */
+    filter: drop-shadow(0 4px 12px rgba(6,214,160,0.5));
+    animation: heroRobotWave 2.8s cubic-bezier(0.445,0.05,0.55,0.95) infinite;
+    transform-origin: bottom center;
+}
+.chat-robot-avatar svg {
+    display: block;
 }
 
 .chat-robot-bubble {
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); /* Hero gradient */
-    padding: 8px 14px;
-    border-radius: 18px;
-    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+    background: linear-gradient(135deg, #ff6b35 0%, #ff9500 100%);
+    padding: 8px 16px;
+    border-radius: 20px;
+    box-shadow:
+        0 6px 20px rgba(255,107,53,0.55),
+        inset 0 1px 0 rgba(255,255,255,0.2);
     position: relative;
     font-size: 13px;
-    color: white;
-    font-weight: 600;
+    color: #fff;
+    font-weight: 700;
     white-space: nowrap;
-    opacity: 0;
-    animation: fadeInOut 4s ease-in-out infinite, heroBubbleFloat 2s ease-in-out infinite; /* Combined animations */
+    animation: heroBubbleFloat 2.4s ease-in-out infinite;
 }
 
 .chat-bubble-tail {
     position: absolute;
-    top: -6px;
+    top: -7px;
     left: 50%;
     transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-bottom: 6px solid #ff6b6b; /* Match gradient start */
-}
-
-@keyframes orbitRobot {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-@keyframes counterRotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(-360deg); }
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 7px solid #ff6b35;
 }
 
 @keyframes fadeInOut {
@@ -314,17 +319,21 @@
     width: auto;
     height: auto;
     padding: 14px 28px;
-    background: #06d6a0; /* Tech Green */
-    color: white;
+    background: linear-gradient(135deg, #06d6a0 0%, #17b7b1 55%, #0ea5e9 100%);
+    color: #ffffff;
+    font-weight: 700;
     border: none;
-    border-radius: 50px; /* Pill shape */
-    box-shadow: 0 4px 15px rgba(6, 214, 160, 0.4);
+    border-radius: 50px;
+    box-shadow:
+        0 4px 18px rgba(6,214,160,0.5),
+        0 2px 8px rgba(0,0,0,0.15),
+        inset 0 1px 0 rgba(255,255,255,0.25);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
     position: relative;
     font-family: inherit;
 }
@@ -343,19 +352,23 @@
     right: -5px;
     bottom: -5px;
     border-radius: 50px;
-    border: 2px solid rgba(6, 214, 160, 0.5);
-    animation: pulseRing 2s infinite;
+    border: 2px solid rgba(6,214,160,0.6);
+    animation: pulseRing 2s ease-out infinite;
     z-index: -1;
 }
 
 @keyframes pulseRing {
-    0% { transform: scale(0.95); opacity: 1; }
-    100% { transform: scale(1.1); opacity: 0; }
+    0%   { transform: scale(0.95); opacity: 1; }
+    100% { transform: scale(1.15); opacity: 0; }
 }
 
 #automatiza-ai-chat-toggle:hover {
-    transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(6, 214, 160, 0.6);
+    transform: scale(1.06) translateY(-1px);
+    box-shadow:
+        0 8px 28px rgba(6,214,160,0.65),
+        0 3px 10px rgba(0,0,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.3);
+    background: linear-gradient(135deg, #10e6ac 0%, #1dd6cc 50%, #38bdf8 100%);
 }
 
 /* Demo Modal Styles */
@@ -511,5 +524,13 @@
     #automatiza-chat-toggle-container {
         bottom: 20px !important;
         right: 20px !important;
+    }
+}
+
+/* Notebooks — mismo cálculo dinámico */
+@media (max-height: 900px) and (min-width: 769px) {
+    #automatiza-ai-chat-widget {
+        bottom: 20px;
+        height: calc(100vh - 90px);
     }
 }

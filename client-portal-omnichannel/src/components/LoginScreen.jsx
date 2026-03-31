@@ -189,8 +189,8 @@ export default function LoginScreen({ onLogin }) {
       clearTimeout(interactTimeoutRef.current);
     }
     function onFocusOut() {
-      // Show robot again after 3s of no interaction
-      interactTimeoutRef.current = setTimeout(() => setUserInteracting(false), 3000);
+      // Show robot again after 8s of no interaction (long enough to not flash back mid-typing)
+      interactTimeoutRef.current = setTimeout(() => setUserInteracting(false), 8000);
     }
     card.addEventListener('focusin', onFocusIn);
     card.addEventListener('focusout', onFocusOut);

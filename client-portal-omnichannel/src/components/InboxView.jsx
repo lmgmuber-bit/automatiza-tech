@@ -99,7 +99,7 @@ export default function InboxView() {
       }
     }, POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, [filters, scope, pollConversations, pollMessages]);
+  }, [filters, scope]);
 
   // Silent poll — no loading spinners
   const pollConversations = useCallback(async () => {

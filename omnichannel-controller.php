@@ -2964,7 +2964,7 @@ class OmnichannelController {
     public function send_agent_message($conversation_id, $data) {
         $conversation_id = absint($conversation_id);
         $conv = $this->wpdb->get_row($this->wpdb->prepare(
-            "SELECT c.*, ch.id as ch_id FROM {$this->prefix}conversations c 
+            "SELECT c.*, ch.id as ch_id, ch.channel_type as ch_type FROM {$this->prefix}conversations c 
              JOIN {$this->prefix}channels ch ON c.channel_id = ch.id
              WHERE c.id = %d", $conversation_id
         ));
@@ -2982,8 +2982,11 @@ class OmnichannelController {
             'message_type' => 'text',
         ]);
 
+        // Determine effective channel type (from channel or conversation)
+        $ch_type = $conv->ch_type ?: ($conv->channel_type ?? '');
+
         // If WhatsApp channel, send via YCloud
-        if ($conv->channel_type === 'whatsapp' && $conv->contact_phone) {
+        if ($ch_type === 'whatsapp' && $conv->contact_phone) {
             $ycloud_result = $this->send_ycloud_message($conv->ch_id, $conv->contact_phone, $content);
             if (isset($ycloud_result['success'])) {
                 $this->wpdb->update($this->prefix . 'messages', [
@@ -2998,6 +3001,10 @@ class OmnichannelController {
                 ], ['id' => $local['message_id']]);
             }
             $local['ycloud'] = $ycloud_result;
+        } elseif ($ch_type === 'whatsapp' && empty($conv->contact_phone)) {
+            $local['ycloud'] = ['error' => 'No hay teléfono de contacto en esta conversación'];
+        } elseif ($ch_type !== 'whatsapp') {
+            $local['delivery_note'] = "Canal tipo '{$ch_type}' — mensaje guardado localmente (envío directo no soportado aún para este canal)";
         }
 
         return $local;

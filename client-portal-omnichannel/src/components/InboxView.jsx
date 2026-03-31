@@ -159,32 +159,30 @@ export default function InboxView() {
   const pollMessages = useCallback(async (convId) => {
     try {
       const data = await getMessages(convId);
+      const newMsgs = data.data || [];
       setMessages(prev => {
-        const newMsgs = data.data || [];
-        // Only update + scroll if message count changed
-        if (newMsgs.length !== prev.length) {
-          // New message arrived while viewing this conv — play subtle feedback
-          if (newMsgs.length > prev.length && prev.length > 0) {
-            const latest = newMsgs[newMsgs.length - 1];
-            if (latest.direction === 'inbound') {
-              // Show notification even for active conv if tab is hidden
-              if (document.hidden) {
-                const conv = selectedConvRef.current;
-                showBrowserNotification(
-                  conv?.contact_name || conv?.contact_phone || 'Nuevo mensaje',
-                  latest.content || 'Tienes un nuevo mensaje',
-                  convId
-                );
-              }
-            }
+        // Build fingerprint: count + last message id
+        const newFp = newMsgs.length + ':' + (newMsgs.length > 0 ? newMsgs[newMsgs.length - 1].id : '');
+        const prevFp = prev.length + ':' + (prev.length > 0 ? prev[prev.length - 1].id : '');
+        if (newFp === prevFp) return prev; // No change — skip re-render
+
+        // New message arrived — show notification if tab hidden
+        if (newMsgs.length > prev.length && prev.length > 0) {
+          const latest = newMsgs[newMsgs.length - 1];
+          if (latest.direction === 'inbound' && document.hidden) {
+            const conv = selectedConvRef.current;
+            showBrowserNotification(
+              conv?.contact_name || conv?.contact_phone || 'Nuevo mensaje',
+              latest.content || 'Tienes un nuevo mensaje',
+              convId
+            );
           }
-          return newMsgs;
         }
-        // Or if last message id differs
-        if (newMsgs.length > 0 && prev.length > 0 && newMsgs[newMsgs.length - 1].id !== prev[prev.length - 1].id) return newMsgs;
-        return prev;
+        return newMsgs;
       });
-    } catch { /* silent */ }
+    } catch (err) {
+      console.warn('[pollMessages] error:', err);
+    }
   }, []);
 
   // Keep polling refs updated so setInterval always uses latest callbacks

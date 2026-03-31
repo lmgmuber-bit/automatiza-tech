@@ -121,7 +121,9 @@ async function request(route, method = 'GET', body = null) {
   if (body && method !== 'GET') {
     options.body = JSON.stringify(body);
   }
-  const res = await fetch(url, options);
+  // Cache-busting for GET requests (bypass LiteSpeed/CDN cache)
+  const cacheBustUrl = method === 'GET' ? `${url}&_t=${Date.now()}` : url;
+  const res = await fetch(cacheBustUrl, options);
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.error || `HTTP ${res.status}`);

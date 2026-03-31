@@ -96,12 +96,8 @@ export default function InboxView() {
   useEffect(() => {
     const interval = setInterval(() => {
       pollConversationsRef.current?.();
-      const conv = selectedConvRef.current;
-      if (conv) {
-        console.log('[poll] fetching messages for conv', conv.id, conv.contact_name);
-        pollMessagesRef.current?.(conv.id);
-      } else {
-        console.log('[poll] no selectedConv, skipping pollMessages');
+      if (selectedConvRef.current) {
+        pollMessagesRef.current?.(selectedConvRef.current.id);
       }
     }, POLL_INTERVAL);
     return () => clearInterval(interval);
@@ -169,7 +165,6 @@ export default function InboxView() {
       setMessages(prev => {
         const prevLastId = prev.length > 0 ? prev[prev.length - 1].id : null;
         const newLastId = newMsgs[newMsgs.length - 1].id;
-        console.log('[pollMessages]', { convId, prevCount: prev.length, newCount: newMsgs.length, prevLastId, newLastId });
 
         // Same count + same last id = no changes
         if (newMsgs.length === prev.length && newLastId === prevLastId) return prev;
@@ -188,9 +183,7 @@ export default function InboxView() {
         }
         return newMsgs;
       });
-    } catch (err) {
-      console.error('[pollMessages] ERROR:', err);
-    }
+    } catch { /* silent */ }
   }, []);
 
   // Keep polling refs updated so setInterval always uses latest callbacks

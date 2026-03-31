@@ -1058,7 +1058,7 @@ try {
 
             // Agent: prompt configs (supervisor = read-only, admin of client cannot edit either — only AT admin)
             case 'prompts':
-                if ($method === 'GET' && $is_supervisor) {
+                if ($method === 'GET' && !isset($segments[2]) && $is_supervisor) {
                     $channel_filter = absint($_GET['channel_id'] ?? 0);
                     send_json($controller->get_prompt_configs($channel_filter));
                 }

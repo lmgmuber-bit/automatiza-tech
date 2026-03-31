@@ -807,8 +807,14 @@ class OmnichannelController {
             $conversation_id
         ));
 
+        // Fetch the latest N messages (DESC) then re-order ASC for display
         $messages = $this->wpdb->get_results($this->wpdb->prepare(
-            "SELECT * FROM {$this->prefix}messages WHERE conversation_id = %d ORDER BY created_at ASC LIMIT %d OFFSET %d",
+            "SELECT * FROM (
+                SELECT * FROM {$this->prefix}messages
+                WHERE conversation_id = %d
+                ORDER BY created_at DESC
+                LIMIT %d OFFSET %d
+            ) sub ORDER BY created_at ASC",
             $conversation_id, $per_page, $offset
         ));
 

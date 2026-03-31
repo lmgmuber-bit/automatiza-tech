@@ -102,6 +102,7 @@ async function request(route, method = 'GET', body = null) {
     headers: {
       'Content-Type': 'application/json',
     },
+    cache: 'no-store',
     credentials: isAdmin ? 'include' : 'same-origin',
   };
   if (isAgent) {

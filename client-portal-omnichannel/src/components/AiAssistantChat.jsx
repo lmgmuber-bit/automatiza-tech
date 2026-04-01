@@ -527,7 +527,7 @@ export default function AiAssistantChat({ currentView }) {
                 </div>
                 <div className="grid grid-cols-1 gap-1.5 w-full mt-1">
                   {[
-                    '¿Cuántas conversaciones abiertas tengo?',
+                    '¿Cuántas conversaciones abiertas/asignadas tengo?',
                     '¿Cuál es mi tasa de resolución?',
                     'Resumen de actividad de agentes',
                     '¿Qué tickets están pendientes?',

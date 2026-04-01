@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { setApiKey, isAuthenticated, clearAuth, getIsAdmin, getIsAgent, isSupervisorOrAdmin, getOpenTicketCount } from './api';
 import Sidebar from './components/Sidebar';
 import LoginScreen from './components/LoginScreen';
@@ -89,6 +89,44 @@ export default function App() {
     localStorage.setItem('omni_theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
+  // === Inactivity timeout (30 min) ===
+  const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 minutes
+  const lastActivityRef = useRef(Date.now());
+  const [showInactivityModal, setShowInactivityModal] = useState(false);
+
+  useEffect(() => {
+    if (!authenticated) return;
+    function resetActivity() {
+      lastActivityRef.current = Date.now();
+      localStorage.setItem('omni_last_activity', String(Date.now()));
+    }
+    // Restore from storage (covers page reloads)
+    const stored = parseInt(localStorage.getItem('omni_last_activity') || '0', 10);
+    if (stored > 0) lastActivityRef.current = stored;
+    else resetActivity();
+
+    const events = ['mousedown', 'keydown', 'touchstart', 'scroll', 'mousemove'];
+    events.forEach(e => window.addEventListener(e, resetActivity, { passive: true }));
+
+    const checker = setInterval(() => {
+      if (Date.now() - lastActivityRef.current >= INACTIVITY_LIMIT) {
+        setShowInactivityModal(true);
+        clearInterval(checker);
+      }
+    }, 60000); // check every 60s
+
+    return () => {
+      events.forEach(e => window.removeEventListener(e, resetActivity));
+      clearInterval(checker);
+    };
+  }, [authenticated]);
+
+  function handleInactivityLogout() {
+    setShowInactivityModal(false);
+    localStorage.removeItem('omni_last_activity');
+    handleLogout();
+  }
+
   function handleLogin(key) {
     setApiKey(key);
     setAuthenticated(true);
@@ -107,6 +145,7 @@ export default function App() {
     setTimeout(() => {
       clearAuth();
       localStorage.removeItem('omni_period_warning');
+      localStorage.removeItem('omni_last_activity');
       setAuthenticated(false);
       setPeriodWarning(null);
       setLoggingOut(false);
@@ -220,6 +259,30 @@ export default function App() {
 
       {/* AI Assistant — chat for agents/clients, prompt editor for admin */}
       <AiAssistantChat currentView={currentView} />
+
+      {/* Inactivity timeout modal */}
+      {showInactivityModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 sm:p-8 max-w-sm mx-4 text-center">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600 dark:text-amber-400">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Sesión expirada</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+              Tu sesión se cerró por inactividad de más de 30 minutos. Por seguridad, debes iniciar sesión nuevamente.
+            </p>
+            <button
+              onClick={handleInactivityLogout}
+              className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors text-sm"
+            >
+              Iniciar sesión
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3880,7 +3880,7 @@ class OmnichannelController {
      * AI Assistant: builds context from DB and calls OpenAI
      * ALL queries are filtered by $client_id for strict data isolation
      */
-    public function ai_assistant_chat($client_id, $user_role, $user_name, $user_message, $history = []) {
+    public function ai_assistant_chat($client_id, $user_role, $user_name, $user_message, $history = [], $agent_id = 0) {
         $client_id = absint($client_id);
 
         // 1. Get client info
@@ -3898,7 +3898,7 @@ class OmnichannelController {
         }
 
         // 3. Gather context data (all filtered by client_id)
-        $context = $this->ai_build_context($client_id, $client);
+        $context = $this->ai_build_context($client_id, $client, absint($agent_id));
 
         // 4. Build system prompt
         $system_prompt = $this->ai_build_system_prompt($client, $context, $user_role, $user_name);
@@ -3945,7 +3945,7 @@ class OmnichannelController {
     /**
      * Build data context from DB for the AI assistant (strict client_id filtering)
      */
-    private function ai_build_context($client_id, $client) {
+    private function ai_build_context($client_id, $client, $agent_id = 0) {
         // Suppress DB error output to avoid HTML in JSON responses
         $this->wpdb->suppress_errors(true);
         $ctx = [];
@@ -4070,6 +4070,31 @@ class OmnichannelController {
             return $line;
         }, $takeovers);
 
+        // --- Per-agent conversations (when agent_id is provided) ---
+        if ($agent_id > 0) {
+            $my_convs = $this->wpdb->get_results($this->wpdb->prepare(
+                "SELECT c.id, c.contact_name, c.contact_phone, c.status, c.priority,
+                        c.last_message_at, ch.channel_name, ch.channel_type
+                 FROM {$this->prefix}conversations c
+                 LEFT JOIN {$this->prefix}channels ch ON c.channel_id = ch.id
+                 WHERE c.client_id = %d AND c.assigned_agent_id = %d AND c.status IN ('assigned','open')
+                 ORDER BY c.last_message_at DESC LIMIT 30",
+                $client_id, $agent_id
+            ));
+            $ctx['my_conversations'] = [
+                'total' => count($my_convs),
+                'list'  => array_map(function($c) {
+                    $line = "#{$c->id} {$c->contact_name}";
+                    if ($c->contact_phone) $line .= " ({$c->contact_phone})";
+                    $line .= " — estado: {$c->status}";
+                    if ($c->channel_name) $line .= ", canal: {$c->channel_name} ({$c->channel_type})";
+                    if ($c->priority && $c->priority !== 'normal') $line .= ", prioridad: {$c->priority}";
+                    $line .= ", último msg: {$c->last_message_at}";
+                    return $line;
+                }, $my_convs),
+            ];
+        }
+
         $this->wpdb->suppress_errors(false);
         return $ctx;
     }
@@ -4189,12 +4214,25 @@ INSTRUCCIONES ESPECIALES:
         $prompt .= implode("\n", $ctx['agents']) . "\n\n";
 
         $prompt .= "=== ESTADÍSTICAS DE CONVERSACIONES ===\n";
-        $prompt .= "Total: {$conv->total} | Abiertas: {$conv->open_count} | En agente: {$conv->agent_count} | En bot: {$conv->bot_count} | Resueltas: {$conv->resolved_count} | Cerradas: {$conv->closed_count}\n";
+        $prompt .= "Total: {$conv->total} | Abiertas (sin asignar): {$conv->open_count} | Asignadas a agente: {$conv->assigned_count} | En bot: {$conv->bot_count} | Cerradas: {$conv->closed_count} | Archivadas: {$conv->archived_count}\n";
         if ($conv->total > 0) {
-            $resolution_rate = round((($conv->resolved_count + $conv->closed_count) / $conv->total) * 100, 1);
+            $resolution_rate = round((($conv->archived_count + $conv->closed_count) / $conv->total) * 100, 1);
             $prompt .= "Tasa de resolución: {$resolution_rate}%\n";
         }
         $prompt .= "\n";
+
+        // Per-agent stats (when user is an agent)
+        if (!empty($ctx['my_conversations'])) {
+            $my = $ctx['my_conversations'];
+            $prompt .= "=== MIS CONVERSACIONES (asignadas a {$user_name}) ===\n";
+            $prompt .= "Total asignadas a mí: {$my['total']}\n";
+            if (!empty($my['list'])) {
+                foreach ($my['list'] as $mc) {
+                    $prompt .= $mc . "\n";
+                }
+            }
+            $prompt .= "\n";
+        }
 
         $prompt .= "=== MENSAJES (últimos 30 días) ===\n";
         $prompt .= "Total: {$msgs->total_msgs} | De contactos: {$msgs->contact_msgs} | De agentes: {$msgs->agent_msgs} | Del bot: {$msgs->bot_msgs}\n\n";

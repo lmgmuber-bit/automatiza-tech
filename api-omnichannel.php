@@ -1328,7 +1328,8 @@ try {
                         $current_agent->role ?? 'agent',
                         $current_agent->name ?? 'Agente',
                         $user_message,
-                        $history
+                        $history,
+                        $current_agent->id ?? 0
                     );
                     $code = isset($result['error']) ? ($result['code'] ?? 400) : 200;
                     send_json($result, $code);

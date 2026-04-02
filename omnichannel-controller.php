@@ -4081,17 +4081,38 @@ class OmnichannelController {
                  ORDER BY c.last_message_at DESC LIMIT 30",
                 $client_id, $agent_id
             ));
+            $conv_details = [];
+            foreach ($my_convs as $c) {
+                $line = "#{$c->id} {$c->contact_name}";
+                if ($c->contact_phone) $line .= " ({$c->contact_phone})";
+                $line .= " — estado: {$c->status}";
+                if ($c->channel_name) $line .= ", canal: {$c->channel_name} ({$c->channel_type})";
+                if ($c->priority && $c->priority !== 'normal') $line .= ", prioridad: {$c->priority}";
+                $line .= ", último msg: {$c->last_message_at}";
+
+                // Fetch last 20 messages for this conversation
+                $msgs = $this->wpdb->get_results($this->wpdb->prepare(
+                    "SELECT * FROM (
+                        SELECT sender_type, sender_name, content, created_at
+                        FROM {$this->prefix}messages
+                        WHERE conversation_id = %d
+                        ORDER BY created_at DESC LIMIT 20
+                    ) sub ORDER BY created_at ASC",
+                    $c->id
+                ));
+                $msg_lines = [];
+                foreach ($msgs as $m) {
+                    $who = $m->sender_type === 'contact' ? ($c->contact_name ?: 'Cliente') : ($m->sender_name ?: ucfirst($m->sender_type));
+                    $msg_lines[] = "[{$m->created_at}] {$who}: {$m->content}";
+                }
+                $conv_details[] = [
+                    'header' => $line,
+                    'messages' => $msg_lines,
+                ];
+            }
             $ctx['my_conversations'] = [
                 'total' => count($my_convs),
-                'list'  => array_map(function($c) {
-                    $line = "#{$c->id} {$c->contact_name}";
-                    if ($c->contact_phone) $line .= " ({$c->contact_phone})";
-                    $line .= " — estado: {$c->status}";
-                    if ($c->channel_name) $line .= ", canal: {$c->channel_name} ({$c->channel_type})";
-                    if ($c->priority && $c->priority !== 'normal') $line .= ", prioridad: {$c->priority}";
-                    $line .= ", último msg: {$c->last_message_at}";
-                    return $line;
-                }, $my_convs),
+                'details' => $conv_details,
             ];
         }
 
@@ -4225,13 +4246,21 @@ INSTRUCCIONES ESPECIALES:
         if (!empty($ctx['my_conversations'])) {
             $my = $ctx['my_conversations'];
             $prompt .= "=== MIS CONVERSACIONES ABIERTAS/ACTIVAS (de {$user_name}) ===\n";
-            $prompt .= "Conversaciones abiertas (activas) de este agente: {$my['total']}\n";
-            if (!empty($my['list'])) {
-                foreach ($my['list'] as $mc) {
-                    $prompt .= $mc . "\n";
+            $prompt .= "Conversaciones abiertas (activas) de este agente: {$my['total']}\n\n";
+            if (!empty($my['details'])) {
+                foreach ($my['details'] as $detail) {
+                    $prompt .= "--- {$detail['header']} ---\n";
+                    if (!empty($detail['messages'])) {
+                        $prompt .= "Últimos mensajes:\n";
+                        foreach ($detail['messages'] as $ml) {
+                            $prompt .= "  {$ml}\n";
+                        }
+                    } else {
+                        $prompt .= "(Sin mensajes)\n";
+                    }
+                    $prompt .= "\n";
                 }
             }
-            $prompt .= "\n";
         }
 
         $prompt .= "=== MENSAJES (últimos 30 días) ===\n";

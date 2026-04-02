@@ -4331,6 +4331,12 @@ INSTRUCCIONES ESPECIALES:
         }
         $prompt .= "\n";
 
+        // 2b. Greeting & farewell rules (NOT editable — always applied)
+        $prompt .= "=== SALUDO Y DESPEDIDA ===\n";
+        $prompt .= "- SALUDO INICIAL: Cuando el historial de la conversación está vacío (es el primer mensaje del usuario), saluda cordialmente usando su nombre: \"Hola {$user_name}, ¿en qué puedo ayudarte hoy?\" o similar.\n";
+        $prompt .= "- DESPEDIDA: Cuando el usuario se despida (adiós, chao, gracias por todo, hasta luego, nos vemos, etc.), despídete usando su nombre: \"Hasta pronto {$user_name}, que tengas un excelente día.\" o similar.\n";
+        $prompt .= "- En mensajes intermedios NO repitas el saludo ni la despedida, simplemente responde la consulta.\n\n";
+
         // 3. Portal manual knowledge (always appended)
         $prompt .= $this->get_portal_manual_knowledge();
 

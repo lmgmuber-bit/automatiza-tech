@@ -991,7 +991,7 @@ try {
                             $conv_id, $agent_client_id
                         ));
                         if ($assigned !== $agent_id) {
-                            send_json(['error' => 'Solo puedes exportar conversaciones asignadas a ti'], 403);
+                            send_json(['error' => 'Acceso denegado: solo puedes exportar el historial de conversaciones que tienes asignadas. Esta conversación pertenece a otro agente.'], 403);
                         }
                     } else {
                         // Supervisor: only conversations of their company
@@ -1000,7 +1000,7 @@ try {
                             $conv_id
                         ));
                         if ($conv_client !== $agent_client_id) {
-                            send_json(['error' => 'No tienes acceso a esta conversación'], 403);
+                            send_json(['error' => 'Acceso denegado: no tienes permisos para acceder a conversaciones de otra empresa.'], 403);
                         }
                     }
                     $result = $controller->export_conversation_history($conv_id);
@@ -1456,7 +1456,7 @@ try {
                     $conv_id
                 ));
                 if ($conv_client !== $client_id) {
-                    send_json(['error' => 'No tienes acceso a esta conversación'], 403);
+                    send_json(['error' => 'Acceso denegado: no tienes permisos para acceder a conversaciones de otra empresa.'], 403);
                 }
                 $result = $controller->export_conversation_history($conv_id);
                 send_json($result, isset($result['error']) ? 404 : 200);

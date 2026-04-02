@@ -468,6 +468,12 @@ try {
                     $result = $controller->takeover_conversation($conv_id, absint($body['agent_id'] ?? 0), sanitize_text_field($body['reason'] ?? ''));
                     send_json($result, isset($result['error']) ? 400 : 200);
                 }
+                // Admin: export any conversation history (no restrictions)
+                if ($method === 'GET' && isset($segments[2]) && ($segments[3] ?? '') === 'export-history') {
+                    $conv_id = absint($segments[2]);
+                    $result = $controller->export_conversation_history($conv_id);
+                    send_json($result, isset($result['error']) ? 404 : 200);
+                }
                 break;
 
             // Admin: CRUD de tipos de canal
@@ -978,6 +984,25 @@ try {
                 // Export full conversation history as plain text
                 if ($method === 'GET' && isset($segments[2]) && ($segments[3] ?? '') === 'export-history') {
                     $conv_id = absint($segments[2]);
+                    // Regular agents: only their own assigned conversations
+                    if (!$is_supervisor) {
+                        $assigned = (int) $wpdb->get_var($wpdb->prepare(
+                            "SELECT assigned_agent_id FROM {$wpdb->prefix}omnichannel_conversations WHERE id = %d AND client_id = %d",
+                            $conv_id, $agent_client_id
+                        ));
+                        if ($assigned !== $agent_id) {
+                            send_json(['error' => 'Solo puedes exportar conversaciones asignadas a ti'], 403);
+                        }
+                    } else {
+                        // Supervisor: only conversations of their company
+                        $conv_client = (int) $wpdb->get_var($wpdb->prepare(
+                            "SELECT client_id FROM {$wpdb->prefix}omnichannel_conversations WHERE id = %d",
+                            $conv_id
+                        ));
+                        if ($conv_client !== $agent_client_id) {
+                            send_json(['error' => 'No tienes acceso a esta conversación'], 403);
+                        }
+                    }
                     $result = $controller->export_conversation_history($conv_id);
                     send_json($result, isset($result['error']) ? 404 : 200);
                 }
@@ -1423,9 +1448,16 @@ try {
                 send_json($result, isset($result['error']) ? 400 : 200);
             }
 
-            // Export full conversation history as plain text
+            // Export full conversation history as plain text (client-admin: only their company)
             if ($method === 'GET' && isset($segments[1]) && ($segments[2] ?? '') === 'export-history') {
                 $conv_id = absint($segments[1]);
+                $conv_client = (int) $wpdb->get_var($wpdb->prepare(
+                    "SELECT client_id FROM {$wpdb->prefix}omnichannel_conversations WHERE id = %d",
+                    $conv_id
+                ));
+                if ($conv_client !== $client_id) {
+                    send_json(['error' => 'No tienes acceso a esta conversación'], 403);
+                }
                 $result = $controller->export_conversation_history($conv_id);
                 send_json($result, isset($result['error']) ? 404 : 200);
             }

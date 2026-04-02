@@ -4164,22 +4164,43 @@ class OmnichannelController {
             return $line;
         }, $takeovers);
 
-        // --- Per-agent conversations (when agent_id is provided) ---
-        if ($agent_id > 0) {
-            $my_convs = $this->wpdb->get_results($this->wpdb->prepare(
+        // --- Conversations with message content ---
+        // Supervisors/clients: all active company conversations with messages
+        // Agents: only their own assigned conversations with messages
+        if ($is_supervisor_or_above) {
+            $detail_convs = $this->wpdb->get_results($this->wpdb->prepare(
                 "SELECT c.id, c.contact_name, c.contact_phone, c.status, c.priority,
-                        c.last_message_at, ch.channel_name, ch.channel_type
+                        c.last_message_at, ch.channel_name, ch.channel_type,
+                        a.name as agent_name
+                 FROM {$this->prefix}conversations c
+                 LEFT JOIN {$this->prefix}channels ch ON c.channel_id = ch.id
+                 LEFT JOIN {$this->prefix}agents a ON c.assigned_agent_id = a.id
+                 WHERE c.client_id = %d AND c.status IN ('assigned','open')
+                 ORDER BY c.last_message_at DESC LIMIT 30",
+                $client_id
+            ));
+        } elseif ($agent_id > 0) {
+            $detail_convs = $this->wpdb->get_results($this->wpdb->prepare(
+                "SELECT c.id, c.contact_name, c.contact_phone, c.status, c.priority,
+                        c.last_message_at, ch.channel_name, ch.channel_type,
+                        NULL as agent_name
                  FROM {$this->prefix}conversations c
                  LEFT JOIN {$this->prefix}channels ch ON c.channel_id = ch.id
                  WHERE c.client_id = %d AND c.assigned_agent_id = %d AND c.status IN ('assigned','open')
                  ORDER BY c.last_message_at DESC LIMIT 30",
                 $client_id, $agent_id
             ));
+        } else {
+            $detail_convs = [];
+        }
+
+        if (!empty($detail_convs)) {
             $conv_details = [];
-            foreach ($my_convs as $c) {
+            foreach ($detail_convs as $c) {
                 $line = "#{$c->id} {$c->contact_name}";
                 if ($c->contact_phone) $line .= " ({$c->contact_phone})";
                 $line .= " — estado: {$c->status}";
+                if (!empty($c->agent_name)) $line .= ", agente: {$c->agent_name}";
                 if ($c->channel_name) $line .= ", canal: {$c->channel_name} ({$c->channel_type})";
                 if ($c->priority && $c->priority !== 'normal') $line .= ", prioridad: {$c->priority}";
                 $line .= ", último msg: {$c->last_message_at}";
@@ -4205,7 +4226,7 @@ class OmnichannelController {
                 ];
             }
             $ctx['my_conversations'] = [
-                'total' => count($my_convs),
+                'total' => count($detail_convs),
                 'details' => $conv_details,
             ];
         }
@@ -4361,11 +4382,17 @@ INSTRUCCIONES ESPECIALES:
         }
         $prompt .= "\n";
 
-        // Per-agent stats (when user is an agent)
+        // Conversations with message detail
         if (!empty($ctx['my_conversations'])) {
             $my = $ctx['my_conversations'];
-            $prompt .= "=== MIS CONVERSACIONES ABIERTAS/ACTIVAS (de {$user_name}) ===\n";
-            $prompt .= "Conversaciones abiertas (activas) de este agente: {$my['total']}\n\n";
+            $is_sup = in_array($user_role, ['supervisor', 'admin', 'client'], true);
+            if ($is_sup) {
+                $prompt .= "=== CONVERSACIONES ACTIVAS DE LA EMPRESA (con mensajes) ===\n";
+                $prompt .= "Total conversaciones activas: {$my['total']}\n\n";
+            } else {
+                $prompt .= "=== MIS CONVERSACIONES ABIERTAS/ACTIVAS (de {$user_name}) ===\n";
+                $prompt .= "Conversaciones abiertas (activas) de este agente: {$my['total']}\n\n";
+            }
             if (!empty($my['details'])) {
                 foreach ($my['details'] as $detail) {
                     $prompt .= "--- {$detail['header']} ---\n";

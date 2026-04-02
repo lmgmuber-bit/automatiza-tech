@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Send, UserCheck, RotateCcw, Loader2, MessageSquare, ArrowLeft, Eye, EyeOff, ArrowRightLeft, ChevronDown } from 'lucide-react';
-import { getConversations, getMessages, sendMessage, takeoverConversation, releaseConversation, transferConversation, getAgents, getIsAdmin, getIsAgent, isSupervisorOrAdmin, getAgentData } from '../api';
+import { Search, Send, UserCheck, RotateCcw, Loader2, MessageSquare, ArrowLeft, Eye, EyeOff, ArrowRightLeft, ChevronDown, Download } from 'lucide-react';
+import { getConversations, getMessages, sendMessage, takeoverConversation, releaseConversation, transferConversation, getAgents, getIsAdmin, getIsAgent, isSupervisorOrAdmin, getAgentData, exportConversationHistory } from '../api';
 import ChannelBadge from './ChannelBadge';
 import ResultModal from './ResultModal';
 
@@ -43,6 +43,7 @@ export default function InboxView() {
   const [mobileShowChat, setMobileShowChat] = useState(false);
   const [resultModal, setResultModal] = useState(null);
   const [showAgentDropdown, setShowAgentDropdown] = useState(false);
+  const [exportingHistory, setExportingHistory] = useState(false);
   const messagesEndRef = useRef(null);
   const selectedConvRef = useRef(null);
   const prevConvsRef = useRef([]); // previous conversations snapshot for diff
@@ -318,6 +319,28 @@ export default function InboxView() {
     setMobileShowChat(true);
   }
 
+  async function handleExportHistory() {
+    if (!selectedConv || exportingHistory) return;
+    setExportingHistory(true);
+    try {
+      const result = await exportConversationHistory(selectedConv.id);
+      if (result.error) throw new Error(result.error);
+      const blob = new Blob([result.content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = result.filename || `historial-conv-${selectedConv.id}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setResultModal({ type: 'error', title: 'Error al exportar', message: err.message });
+    } finally {
+      setExportingHistory(false);
+    }
+  }
+
   function handleMobileBack() {
     setMobileShowChat(false);
     setSelectedConv(null);
@@ -511,6 +534,17 @@ export default function InboxView() {
               </div>
 
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 relative flex-wrap justify-end">
+                {/* Export conversation history */}
+                <button
+                  onClick={handleExportHistory}
+                  disabled={exportingHistory}
+                  className="flex items-center gap-1 px-2 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+                  title="Descargar historial completo"
+                >
+                  {exportingHistory ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                  <span className="hidden sm:inline text-[10px]">Historial</span>
+                </button>
+
                 {selectedConv.is_readonly && (
                   <span className="flex items-center gap-1 px-2 py-1 bg-gray-200 text-gray-500 rounded-lg text-xs font-medium">
                     <Eye size={12} /> Solo lectura

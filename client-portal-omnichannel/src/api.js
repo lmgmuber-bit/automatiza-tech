@@ -140,6 +140,9 @@ export const getConversations = (params = {}) => {
 export const getMessages = (convId, page = 1) =>
   request(`conversations/${convId}/messages?page=${page}`);
 
+export const exportConversationHistory = (convId) =>
+  request(`conversations/${convId}/export-history`);
+
 export const sendMessage = (convId, data) =>
   request(`conversations/${convId}/messages`, 'POST', data);
 

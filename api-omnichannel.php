@@ -975,6 +975,12 @@ try {
                     );
                     send_json($result, isset($result['error']) ? 400 : 200);
                 }
+                // Export full conversation history as plain text
+                if ($method === 'GET' && isset($segments[2]) && ($segments[3] ?? '') === 'export-history') {
+                    $conv_id = absint($segments[2]);
+                    $result = $controller->export_conversation_history($conv_id);
+                    send_json($result, isset($result['error']) ? 404 : 200);
+                }
                 break;
 
             // Agent: agents of same company
@@ -1415,6 +1421,13 @@ try {
                     sanitize_text_field($body['notes'] ?? '')
                 );
                 send_json($result, isset($result['error']) ? 400 : 200);
+            }
+
+            // Export full conversation history as plain text
+            if ($method === 'GET' && isset($segments[1]) && ($segments[2] ?? '') === 'export-history') {
+                $conv_id = absint($segments[1]);
+                $result = $controller->export_conversation_history($conv_id);
+                send_json($result, isset($result['error']) ? 404 : 200);
             }
             break;
 

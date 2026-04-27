@@ -101,6 +101,8 @@ desktop.ini
 # Node modules (si usas npm/node)
 node_modules/
 package-lock.json
+.vite/
+client-portal-omnichannel/.vite/
 
 # Composer (si usas composer)
 vendor/

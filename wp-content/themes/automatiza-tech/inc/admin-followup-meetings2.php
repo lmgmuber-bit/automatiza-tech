@@ -24,6 +24,7 @@ function automatiza_tech_followup_create_table() {
         id mediumint(9) NOT NULL AUTO_INCREMENT,
         client_name varchar(100) NOT NULL,
         client_email varchar(100) NOT NULL,
+        invitees_emails text DEFAULT NULL,
         company_name varchar(150) DEFAULT '',
         phone varchar(30) DEFAULT '',
         meeting_date date NOT NULL,
@@ -50,14 +51,87 @@ function automatiza_tech_followup_create_table() {
 }
 add_action('after_switch_theme', 'automatiza_tech_followup_create_table');
 
+/**
+ * Asegurar nuevas columnas en instalaciones existentes
+ */
+function automatiza_tech_followup_ensure_columns() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
+
+    $has_invitees = $wpdb->get_var("SHOW COLUMNS FROM $table_name LIKE 'invitees_emails'");
+    if (!$has_invitees) {
+        $wpdb->query("ALTER TABLE $table_name ADD COLUMN invitees_emails text DEFAULT NULL AFTER client_email");
+    }
+}
+
 // Ejecutar creación de tabla si no existe
 add_action('init', function() {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
     if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
         automatiza_tech_followup_create_table();
+    } else {
+        automatiza_tech_followup_ensure_columns();
     }
 });
+
+/**
+ * Sanitizar y validar lista de emails de invitados
+ *
+ * @param string $raw_input
+ * @return array{valid: string[], invalid: string[]}
+ */
+function automatiza_tech_parse_invitees_emails($raw_input) {
+    $raw = (string) $raw_input;
+    if ($raw === '') {
+        return array('valid' => array(), 'invalid' => array());
+    }
+
+    $parts = preg_split('/[\s,;\n\r\t]+/', $raw);
+    $valid = array();
+    $invalid = array();
+
+    foreach ($parts as $part) {
+        $trimmed = trim((string) $part);
+        if ($trimmed === '') {
+            continue;
+        }
+
+        $email = sanitize_email($trimmed);
+        if ($email !== '' && is_email($email)) {
+            $valid[] = strtolower($email);
+        } else {
+            $invalid[] = $trimmed;
+        }
+    }
+
+    return array(
+        'valid' => array_values(array_unique($valid)),
+        'invalid' => array_values(array_unique($invalid)),
+    );
+}
+
+/**
+ * Obtener destinatarios finales (cliente + invitados válidos, sin duplicados)
+ *
+ * @param object $meeting
+ * @return string[]
+ */
+function automatiza_tech_get_followup_recipients($meeting) {
+    $recipients = array();
+
+    $client_email = sanitize_email((string) ($meeting->client_email ?? ''));
+    if ($client_email !== '' && is_email($client_email)) {
+        $recipients[] = strtolower($client_email);
+    }
+
+    $parsed = automatiza_tech_parse_invitees_emails((string) ($meeting->invitees_emails ?? ''));
+    if (!empty($parsed['valid'])) {
+        $recipients = array_merge($recipients, $parsed['valid']);
+    }
+
+    return array_values(array_unique($recipients));
+}
 
 /**
  * Verificar disponibilidad de un horario
@@ -184,6 +258,7 @@ function automatiza_tech_followup_page() {
         elseif (isset($_POST['client_name'])) {
             $client_name = sanitize_text_field($_POST['client_name']);
             $client_email = sanitize_email($_POST['client_email']);
+            $invitees_input = sanitize_textarea_field($_POST['invitees_emails'] ?? '');
             $company_name = sanitize_text_field($_POST['company_name']);
             $phone = sanitize_text_field($_POST['phone']);
             $meeting_date = sanitize_text_field($_POST['meeting_date']);
@@ -194,6 +269,9 @@ function automatiza_tech_followup_page() {
             $send_email = isset($_POST['send_email']) && $_POST['send_email'] === '1';
             $create_calendar_event = isset($_POST['create_calendar_event']) && $_POST['create_calendar_event'] === '1';
             $meeting_id_edit = isset($_POST['meeting_id']) && !empty($_POST['meeting_id']) ? intval($_POST['meeting_id']) : null;
+            $invitees_parsed = automatiza_tech_parse_invitees_emails($invitees_input);
+            $invitees_valid = $invitees_parsed['valid'];
+            $invitees_invalid = $invitees_parsed['invalid'];
             
             // Validaciones básicas
             if (empty($client_name) || empty($client_email) || empty($meeting_date) || empty($meeting_time)) {
@@ -212,6 +290,7 @@ function automatiza_tech_followup_page() {
                     $data = array(
                         'client_name' => $client_name,
                         'client_email' => $client_email,
+                        'invitees_emails' => !empty($invitees_valid) ? implode(',', $invitees_valid) : null,
                         'company_name' => $company_name,
                         'phone' => $phone,
                         'meeting_date' => $meeting_date,
@@ -266,8 +345,16 @@ function automatiza_tech_followup_page() {
                                 $calendar_msg = ' ⚠️ No se pudo crear el evento en calendario.';
                             }
                         }
+
+                        $invitees_msg = '';
+                        if (!empty($invitees_valid)) {
+                            $invitees_msg = ' 👥 Invitados notificados: <strong>' . count($invitees_valid) . '</strong>.';
+                        }
+                        if (!empty($invitees_invalid)) {
+                            $invitees_msg .= ' ⚠️ Correos inválidos omitidos: ' . esc_html(implode(', ', $invitees_invalid)) . '.';
+                        }
                         
-                        $message = '<div class="notice notice-success is-dismissible"><p>✅ Reunión ' . $action_msg . ' y correo enviado correctamente a <strong>' . esc_html($client_email) . '</strong>.' . $calendar_msg . '</p></div>';
+                        $message = '<div class="notice notice-success is-dismissible"><p>✅ Reunión ' . $action_msg . ' y correo enviado correctamente a <strong>' . esc_html($client_email) . '</strong>.' . $invitees_msg . $calendar_msg . '</p></div>';
                     } else {
                         $message = '<div class="notice notice-warning is-dismissible"><p>⚠️ Reunión ' . $action_msg . ' pero hubo un error al enviar el correo. Revise la configuración SMTP.</p></div>';
                     }
@@ -284,7 +371,16 @@ function automatiza_tech_followup_page() {
                             $calendar_msg = ' ⚠️ No se pudo crear el evento en calendario: ' . esc_html($n8n_result['message'] ?? 'Error desconocido');
                         }
                     }
-                    $message = '<div class="notice notice-success is-dismissible"><p>✅ Reunión ' . $action_msg . ' correctamente. No se envió correo (opción desmarcada).' . $calendar_msg . '</p></div>';
+
+                    $invitees_saved_msg = '';
+                    if (!empty($invitees_valid)) {
+                        $invitees_saved_msg = ' 👥 Invitados guardados: <strong>' . count($invitees_valid) . '</strong>.';
+                    }
+                    if (!empty($invitees_invalid)) {
+                        $invitees_saved_msg .= ' ⚠️ Correos inválidos omitidos: ' . esc_html(implode(', ', $invitees_invalid)) . '.';
+                    }
+
+                    $message = '<div class="notice notice-success is-dismissible"><p>✅ Reunión ' . $action_msg . ' correctamente. No se envió correo (opción desmarcada).' . $invitees_saved_msg . $calendar_msg . '</p></div>';
                 }
                 } // Cierre del else de disponibilidad
             }
@@ -435,6 +531,14 @@ function automatiza_tech_followup_page() {
                                         <input type="email" name="client_email" id="client_email" class="regular-text" required
                                             value="<?php echo esc_attr($edit_meeting->client_email ?? ''); ?>"
                                             placeholder="cliente@empresa.com">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th><label for="invitees_emails">👥 Invitados (emails)</label></th>
+                                    <td>
+                                        <textarea name="invitees_emails" id="invitees_emails" class="large-text" rows="2"
+                                            placeholder="persona1@empresa.com, persona2@empresa.com"><?php echo esc_textarea($edit_meeting->invitees_emails ?? ''); ?></textarea>
+                                        <p class="description">Opcional. Separa múltiples correos con coma, punto y coma o saltos de línea. Recibirán la misma invitación y enlace Meet.</p>
                                     </td>
                                 </tr>
                                 <tr>
@@ -776,6 +880,15 @@ function automatiza_tech_followup_page() {
                                         <td>
                                             <strong><?php echo esc_html($m->client_name); ?></strong><br>
                                             <small style="color:#666;"><?php echo esc_html($m->client_email); ?></small>
+                                            <?php
+                                            $invitees_count = 0;
+                                            if (!empty($m->invitees_emails)) {
+                                                $invitees_count = count(array_filter(array_map('trim', explode(',', (string) $m->invitees_emails))));
+                                            }
+                                            ?>
+                                            <?php if ($invitees_count > 0): ?>
+                                                <br><small style="color:#0f766e;">👥 +<?php echo intval($invitees_count); ?> invitados</small>
+                                            <?php endif; ?>
                                         </td>
                                         <td><?php echo esc_html($m->company_name ?: '-'); ?></td>
                                         <td>
@@ -1387,8 +1500,13 @@ function automatiza_tech_send_followup_email($meeting_id) {
     );
     
     $subject = '📅 ' . $meeting->meeting_subject . ' - ' . $formatted_date;
-    
-    return wp_mail($meeting->client_email, $subject, $html, $headers);
+
+    $recipients = automatiza_tech_get_followup_recipients($meeting);
+    if (empty($recipients)) {
+        return false;
+    }
+
+    return wp_mail($recipients, $subject, $html, $headers);
 }
 
 /**
@@ -1503,10 +1621,13 @@ function automatiza_tech_create_followup_calendar_event($meeting_id) {
     $n8n_webhook_url = 'https://n8n-n8n.kchiba.easypanel.host/webhook/followup-meeting';
     
     // Preparar datos para enviar a N8N
+    $invitees_parsed = automatiza_tech_parse_invitees_emails((string) ($meeting->invitees_emails ?? ''));
     $payload = array(
         'meeting_id' => $meeting_id,
         'client_name' => $meeting->client_name,
         'client_email' => $meeting->client_email,
+        'invitees_emails' => !empty($invitees_parsed['valid']) ? implode(',', $invitees_parsed['valid']) : '',
+        'invitees_list' => $invitees_parsed['valid'],
         'company_name' => $meeting->company_name,
         'phone' => $meeting->phone,
         'meeting_date' => $meeting->meeting_date,
@@ -2993,13 +3114,19 @@ function automatiza_tech_send_followup_reschedule_email($meeting_id, $new_date, 
     );
     
     $email_subject = '🔄 Reunión Reagendada - ' . $formatted_date . ' a las ' . $formatted_time . ' hrs';
-    
-    $sent = wp_mail($meeting->client_email, $email_subject, $html, $headers);
-    
+
+    $recipients = automatiza_tech_get_followup_recipients($meeting);
+    if (empty($recipients)) {
+        error_log("No hay destinatarios válidos para email de reagendamiento en meeting #{$meeting_id}");
+        return false;
+    }
+
+    $sent = wp_mail($recipients, $email_subject, $html, $headers);
+
     if ($sent) {
-        error_log("Email de reagendamiento enviado a {$meeting->client_email} para meeting #{$meeting_id}");
+        error_log("Email de reagendamiento enviado a " . implode(', ', $recipients) . " para meeting #{$meeting_id}");
     } else {
-        error_log("Error al enviar email de reagendamiento a {$meeting->client_email}");
+        error_log("Error al enviar email de reagendamiento a " . implode(', ', $recipients));
     }
     
     return $sent;

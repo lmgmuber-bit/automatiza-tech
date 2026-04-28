@@ -337,49 +337,110 @@ function automatiza_tech_send_demo_copy_added_notification($primary_email, $prim
 
     $site_title = get_bloginfo('name');
     $logo_url = 'https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
-    $name = $primary_name !== '' ? $primary_name : 'Cliente';
-    $invitees_text = esc_html(automatiza_tech_format_invitees_for_humans($invitees, $invitees_names_by_email));
-    $date_time_text = '';
+    $website_url = home_url('/');
+    $whatsapp_url = 'https://wa.me/56927002984';
+    $contact_email = 'contacto@automatizatech.cl';
+    $contact_phone = '+56 9 2700 2984';
 
-    if ($scheduled_date !== '' || $scheduled_time !== '') {
-        $parts = array();
-        if ($scheduled_date !== '') {
-            $parts[] = date('d/m/Y', strtotime($scheduled_date));
+    $recipient_name = $primary_name !== '' ? $primary_name : 'Cliente';
+
+    $invitees_lines = array();
+    foreach ($invitees as $invitee_email) {
+        $normalized_email = strtolower(sanitize_email($invitee_email));
+        if ($normalized_email === '' || !is_email($normalized_email)) {
+            continue;
         }
-        if ($scheduled_time !== '') {
-            $parts[] = substr($scheduled_time, 0, 5) . ' hrs';
+
+        $display_name = trim((string) ($invitees_names_by_email[$normalized_email] ?? ''));
+        if ($display_name !== '') {
+            $invitees_lines[] = $display_name . ' <' . $normalized_email . '>';
+        } else {
+            $invitees_lines[] = $normalized_email;
         }
-        $date_time_text = '<p style="font-size:14px;color:#334155;margin:0 0 10px 0;"><strong>Fecha/Hora:</strong> ' . esc_html(implode(' - ', $parts)) . '</p>';
     }
 
-    $subject = '👥 Copias agregadas a tu demo | ' . $site_title;
+    if (empty($invitees_lines)) {
+        $invitees_lines[] = automatiza_tech_format_invitees_for_humans($invitees, $invitees_names_by_email);
+    }
+
+    $invitees_list_html = '';
+    foreach ($invitees_lines as $line) {
+        $invitees_list_html .= '<li style="margin:0 0 8px 0; color:#334155;">' . esc_html($line) . '</li>';
+    }
+
+    $scheduled_date_text = '';
+    if ($scheduled_date !== '') {
+        $date_ts = strtotime($scheduled_date);
+        if ($date_ts !== false) {
+            $scheduled_date_text = date('d/m/Y', $date_ts);
+        }
+    }
+
+    $scheduled_time_text = '';
+    if ($scheduled_time !== '') {
+        $scheduled_time_text = substr($scheduled_time, 0, 5) . ' hrs';
+    }
+
+    $date_time_details = '';
+    if ($scheduled_date_text !== '' || $scheduled_time_text !== '') {
+        $date_time_details = '
+            <div style="background:linear-gradient(135deg,#f0fdfa,#ccfbf1); border:1px solid #99f6e4; border-radius:10px; padding:14px 16px; margin:18px 0 0 0;">
+                <p style="margin:0 0 6px 0; font-size:14px; color:#0f766e;"><strong>📅 Fecha:</strong> ' . esc_html($scheduled_date_text !== '' ? $scheduled_date_text : 'Por confirmar') . '</p>
+                <p style="margin:0; font-size:14px; color:#0f766e;"><strong>🕐 Hora:</strong> ' . esc_html($scheduled_time_text !== '' ? $scheduled_time_text : 'Por confirmar') . '</p>
+            </div>';
+    }
+
+    $subject = '👥 Actualización de tu demo: se agregaron participantes | ' . $site_title;
     $html = '
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-    <body style="font-family: Arial, sans-serif; background:#f0f4ff; margin:0; padding:20px; color:#1e293b;">
-        <div style="max-width:600px; margin:0 auto; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 8px 25px rgba(30,58,138,0.12);">
-            <div style="background:linear-gradient(135deg,#1e3a8a,#0d2044); padding:26px 22px; text-align:center;">
-                <img src="' . esc_url($logo_url) . '" alt="' . esc_attr($site_title) . '" style="max-height:56px; width:auto; margin-bottom:10px;">
-                <h1 style="margin:0; color:#fff; font-size:21px;">Copias agregadas</h1>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; background-color:#f0fdfa; margin:0; padding:0; color:#333;">
+    <div style="max-width:600px; margin:20px auto; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 10px 40px rgba(13,148,136,0.15);">
+        <div style="background:linear-gradient(135deg,#0d9488,#14b8a6,#2dd4bf); padding:40px 20px; text-align:center;">
+            <img src="' . esc_url($logo_url) . '" alt="' . esc_attr($site_title) . '" style="max-height:60px; width:auto; margin-bottom:12px; filter:brightness(0) invert(1);">
+            <h1 style="margin:0; color:#ffffff; font-size:24px; letter-spacing:0.5px;">Actualización de tu Demo</h1>
+            <p style="margin:10px 0 0 0; color:rgba(255,255,255,0.92); font-size:14px;">Se agregaron nuevos participantes a tu reunión</p>
+        </div>
+
+        <div style="padding:32px 30px;">
+            <p style="font-size:16px; margin:0 0 14px 0; color:#0f766e;">Hola <strong>' . esc_html($recipient_name) . '</strong>,</p>
+            <p style="font-size:15px; margin:0 0 16px 0; color:#334155;">Confirmamos que se agregaron los siguientes correos en copia para tu demo:</p>
+
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #14b8a6; border-radius:10px; padding:16px;">
+                <ul style="margin:0; padding-left:18px; font-size:14px;">
+                    ' . $invitees_list_html . '
+                </ul>
             </div>
-            <div style="padding:24px;">
-                <p style="font-size:15px; margin:0 0 12px 0;">Hola <strong>' . esc_html($name) . '</strong>,</p>
-                <p style="font-size:15px; margin:0 0 16px 0;">Se agregaron los siguientes correos en copia para tu demo:</p>
-                <div style="background:#f8fafc; border-left:4px solid #06d6a0; border-radius:8px; padding:14px 16px; margin:0 0 16px 0; font-size:14px;">
-                    ' . $invitees_text . '
-                </div>
-                ' . $date_time_text . '
-                <p style="font-size:13px; color:#64748b; margin:0;">Este aviso es informativo y no requiere acción de tu parte.</p>
+
+            ' . $date_time_details . '
+
+            <div style="margin:20px 0 0 0; background:#fffbeb; border-left:4px solid #f59e0b; border-radius:8px; padding:12px 14px;">
+                <p style="margin:0; font-size:13px; color:#92400e;">Este aviso es informativo. Si necesitas cambiar participantes o reagendar, escríbenos por WhatsApp.</p>
+            </div>
+
+            <div style="text-align:center; margin:26px 0 6px 0;">
+                <a href="' . esc_url($whatsapp_url) . '" style="display:inline-block; background:linear-gradient(135deg,#25D366,#20bd5a); color:#ffffff; text-decoration:none; padding:12px 28px; border-radius:999px; font-size:14px; font-weight:700;">💬 Contactar por WhatsApp</a>
             </div>
         </div>
-    </body>
-    </html>';
+
+        <div style="background:#f8fafc; border-top:1px solid #e2e8f0; padding:20px; text-align:center;">
+            <p style="margin:0 0 8px 0; font-size:12px; color:#64748b;">' . esc_html($site_title) . ' · ' . esc_html($contact_phone) . '</p>
+            <p style="margin:0 0 8px 0; font-size:12px;"><a href="mailto:' . esc_attr($contact_email) . '" style="color:#0d9488; text-decoration:none;">' . esc_html($contact_email) . '</a></p>
+            <p style="margin:0; font-size:12px;"><a href="' . esc_url($website_url) . '" style="color:#0d9488; text-decoration:none;">' . esc_html($website_url) . '</a></p>
+        </div>
+    </div>
+</body>
+</html>';
 
     $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
     $headers = array(
         'Content-Type: text/html; charset=UTF-8',
         'From: Automatiza Tech <' . $from_email . '>',
+        'Reply-To: ' . $contact_email,
     );
 
     return wp_mail($to, $subject, $html, $headers);

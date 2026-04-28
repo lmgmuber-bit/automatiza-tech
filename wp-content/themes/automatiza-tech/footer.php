@@ -356,18 +356,8 @@
                     </div>
                     <div style="flex:1;">
                         <label style="color:rgba(255,255,255,0.6);font-size:12px;display:block;margin-bottom:5px;">Hora preferida</label>
-                        <select name="time" required style="width:100%;padding:11px 12px;border-radius:8px;border:1px solid rgba(6,214,160,0.3);background:#0d2044;color:#fff;font-size:13px;outline:none;box-sizing:border-box;">
-                            <option value="" disabled selected>-- Selecciona hora --</option>
-                            <option value="09:00">09:00 AM</option>
-                            <option value="10:00">10:00 AM</option>
-                            <option value="11:00">11:00 AM</option>
-                            <option value="12:00">12:00 PM</option>
-                            <option value="13:00">01:00 PM</option>
-                            <option value="14:00">02:00 PM</option>
-                            <option value="15:00">03:00 PM</option>
-                            <option value="16:00">04:00 PM</option>
-                            <option value="17:00">05:00 PM</option>
-                            <option value="18:00">06:00 PM</option>
+                        <select name="time" required disabled style="width:100%;padding:11px 12px;border-radius:8px;border:1px solid rgba(6,214,160,0.3);background:#0d2044;color:#fff;font-size:13px;outline:none;box-sizing:border-box;">
+                            <option value="" selected>-- Selecciona fecha primero --</option>
                         </select>
                     </div>
                 </div>
@@ -404,22 +394,159 @@
         closePromoModal();
         setTimeout(function(){
             var a = document.getElementById('agenda-modal');
-            if (a) a.style.display = 'flex';
+            if (a) {
+                a.style.display = 'flex';
+                if (agendaDateInput && agendaDateInput.value) {
+                    loadAgendaAvailability(agendaDateInput.value);
+                } else {
+                    resetAgendaTimeSelect('-- Selecciona fecha primero --', true);
+                }
+            }
         }, 350);
     };
 
     window.closeAgendaModal = function(){
         var a = document.getElementById('agenda-modal');
+        agendaIsSubmitting = false;
         if (a){ a.style.opacity='0'; setTimeout(function(){ a.style.display='none'; a.style.opacity=''; },300); }
     };
 
+    var agendaForm = document.getElementById('agenda-modal-form');
+    var agendaDateInput = agendaForm ? agendaForm.querySelector('input[name="date"]') : null;
+    var agendaTimeSelect = agendaForm ? agendaForm.querySelector('select[name="time"]') : null;
+    var agendaAvailabilityUrl = '<?php echo esc_url(rest_url("automatiza-tech/v1/check-availability")); ?>';
+    var agendaIsSubmitting = false;
+
+    function resetAgendaTimeSelect(placeholder, disabled){
+        if (!agendaTimeSelect) return;
+        agendaTimeSelect.innerHTML = '';
+        var opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = placeholder || '-- Selecciona hora --';
+        opt.selected = true;
+        agendaTimeSelect.appendChild(opt);
+        agendaTimeSelect.disabled = !!disabled;
+    }
+
+    function toMinutes(hhmm){
+        var parts = (hhmm || '').split(':');
+        if (parts.length < 2) return null;
+        var hh = parseInt(parts[0], 10);
+        var mm = parseInt(parts[1], 10);
+        if (isNaN(hh) || isNaN(mm)) return null;
+        return (hh * 60) + mm;
+    }
+
+    function loadAgendaAvailability(dateVal){
+        if (!agendaTimeSelect) return;
+        if (!dateVal) {
+            resetAgendaTimeSelect('-- Selecciona fecha primero --', true);
+            return;
+        }
+
+        resetAgendaTimeSelect('Verificando disponibilidad...', true);
+
+        fetch(agendaAvailabilityUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date: dateVal })
+        })
+        .then(function(resp){
+            if (!resp.ok) {
+                return resp.json().catch(function(){ return {}; }).then(function(payload){
+                    throw new Error(payload.message || 'Error de disponibilidad');
+                });
+            }
+            return resp.json();
+        })
+        .then(function(data){
+            if (!data || data.isFullDay) {
+                resetAgendaTimeSelect('Día completo / Sin cupos', true);
+                return;
+            }
+
+            var workingHours = data.workingHours || {};
+            var start = (workingHours.start || '').toString();
+            var end = (workingHours.end || '').toString();
+            var startHour = parseInt(start.split(':')[0], 10);
+            var endHour = parseInt(end.split(':')[0], 10);
+
+            if (isNaN(startHour) || isNaN(endHour) || endHour <= startHour) {
+                resetAgendaTimeSelect('No hay horarios disponibles', true);
+                return;
+            }
+
+            var busySlots = Array.isArray(data.busySlots) ? data.busySlots : [];
+            var now = new Date();
+            var yyyy = now.getFullYear();
+            var mm = String(now.getMonth() + 1).padStart(2, '0');
+            var dd = String(now.getDate()).padStart(2, '0');
+            var todayStr = yyyy + '-' + mm + '-' + dd;
+            var nowMinutes = (now.getHours() * 60) + now.getMinutes();
+
+            agendaTimeSelect.innerHTML = '';
+            var first = document.createElement('option');
+            first.value = '';
+            first.textContent = '-- Selecciona hora --';
+            first.selected = true;
+            agendaTimeSelect.appendChild(first);
+
+            var availableCount = 0;
+
+            for (var h = startHour; h < endHour; h++) {
+                var hh = String(h).padStart(2, '0');
+                var slot = hh + ':00';
+
+                if (dateVal === todayStr) {
+                    var slotMinutes = toMinutes(slot);
+                    if (slotMinutes !== null && slotMinutes <= nowMinutes) {
+                        continue;
+                    }
+                }
+
+                if (busySlots.indexOf(slot) !== -1) {
+                    continue;
+                }
+
+                var option = document.createElement('option');
+                option.value = slot;
+                option.textContent = slot;
+                agendaTimeSelect.appendChild(option);
+                availableCount++;
+            }
+
+            if (availableCount === 0) {
+                resetAgendaTimeSelect('Sin horarios disponibles hoy', true);
+                return;
+            }
+
+            agendaTimeSelect.disabled = false;
+        })
+        .catch(function(){
+            resetAgendaTimeSelect('Error al verificar disponibilidad', true);
+        });
+    }
+
+    if (agendaDateInput) {
+        agendaDateInput.addEventListener('change', function(){
+            loadAgendaAvailability(this.value);
+        });
+    }
+
     window.submitAgendaForm = function(e){
         e.preventDefault();
+        if (agendaIsSubmitting) {
+            return;
+        }
+
         var btn  = document.getElementById('agenda-submit-btn');
         var msg  = document.getElementById('agenda-msg');
         var form = document.getElementById('agenda-modal-form');
+        agendaIsSubmitting = true;
         btn.disabled = true;
         btn.textContent = 'Enviando...';
+        btn.style.opacity = '0.65';
+        btn.style.cursor = 'not-allowed';
 
         function showMsg(ok, text){
             msg.style.display  = 'block';
@@ -429,18 +556,172 @@
             msg.textContent      = text;
         }
 
-        // Usar el handler simple de contact_form (no requiere RUT)
         var data  = new FormData(form);
         var date  = data.get('date')  || '';
         var time  = data.get('time')  || '';
         var cc    = data.get('country_code') || '+56';
         var phone = data.get('phone') || '';
+        var name  = data.get('name') || '';
+        var email = data.get('email') || '';
+        var phoneDigits = String(phone || '').replace(/\D+/g, '');
 
+        function unlockAgendaButton(){
+            agendaIsSubmitting = false;
+            btn.disabled = false;
+            btn.textContent = 'Confirmar Agendamiento →';
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        }
+
+        function getAgendaSessionId(){
+            try {
+                var sessionKey = 'automatiza_chat_session_id';
+                var sid = localStorage.getItem(sessionKey);
+                if (!sid) {
+                    sid = 'session-' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem(sessionKey, sid);
+                }
+                return sid;
+            } catch (_e) {
+                return 'session-' + Math.random().toString(36).substr(2, 9);
+            }
+        }
+
+        function sendCorporateDemoNotification(){
+            var notifyData = new FormData();
+            notifyData.append('action', 'send_corporate_demo_notification');
+            notifyData.append('nonce', '<?php echo wp_create_nonce("automatiza_tech_nonce"); ?>');
+            notifyData.append('name', String(name || '').trim());
+            notifyData.append('email', String(email || '').trim());
+            notifyData.append('phone', String(cc || '+56') + String(phoneDigits || ''));
+            notifyData.append('company', 'Demo — Modal Promocional');
+            notifyData.append('date', String(date || '').trim());
+            notifyData.append('time', String(time || '').trim());
+
+            return fetch('<?php echo admin_url("admin-ajax.php"); ?>', {
+                method: 'POST',
+                body: notifyData
+            })
+            .then(function(resp){
+                if (!resp.ok) {
+                    throw new Error('No se pudo contactar el servicio de notificación corporativa');
+                }
+                return resp.json();
+            })
+            .then(function(result){
+                if (!result || !result.success) {
+                    throw new Error((result && result.data) ? result.data : 'Error al enviar notificación corporativa');
+                }
+                return result;
+            });
+        }
+
+        var canUseChatFlow =
+            typeof AutomatizaAIChat !== 'undefined' &&
+            !!AutomatizaAIChat &&
+            !!AutomatizaAIChat.apiUrl &&
+            !!AutomatizaAIChat.webhookUrl;
+
+        if (canUseChatFlow) {
+            btn.textContent = 'Verificando disponibilidad...';
+
+            fetch(AutomatizaAIChat.apiUrl + 'check-limit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email })
+            })
+            .then(function(resp){
+                if (!resp.ok) {
+                    throw new Error('No se pudo verificar límite de agendamientos');
+                }
+                return resp.json();
+            })
+            .then(function(limitResponse){
+                if (!limitResponse.allowed) {
+                    throw new Error(limitResponse.message || 'Límite de agendamientos alcanzado');
+                }
+
+                btn.textContent = 'Agendando...';
+
+                var payload = {
+                    action: 'saveLead',
+                    sessionId: getAgendaSessionId(),
+                    leadData: {
+                        name: String(name || '').trim(),
+                        email: String(email || '').trim(),
+                        phone: String(cc || '+56') + String(phoneDigits || ''),
+                        scheduled_date: String(date || '').trim(),
+                        scheduled_time: String(time || '').trim()
+                    }
+                };
+
+                return fetch(AutomatizaAIChat.webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            })
+            .then(function(resp){
+                if (!resp.ok) {
+                    throw new Error('Error al conectar con el servidor de agendamiento');
+                }
+                return resp.text();
+            })
+            .then(function(responseRaw){
+                var successMessage = '¡Cita agendada! Revisa tu correo con el enlace de la demo.';
+                var responseText = String(responseRaw || '');
+                try {
+                    var parsed = JSON.parse(responseRaw);
+                    responseText = parsed.text || parsed.output || parsed.message || responseText;
+                    successMessage = responseText || successMessage;
+                } catch (_e) {}
+
+                var normalizedResponse = String(responseText || '').toLowerCase();
+                if (
+                    normalizedResponse.indexOf('ocupad') !== -1 ||
+                    normalizedResponse.indexOf('no disponible') !== -1 ||
+                    normalizedResponse.indexOf('slot_taken') !== -1
+                ) {
+                    throw new Error('El horario seleccionado ya no está disponible. Elige otro horario.');
+                }
+
+                if (
+                    normalizedResponse.indexOf('error') !== -1 ||
+                    normalizedResponse.indexOf('failed') !== -1 ||
+                    normalizedResponse.indexOf('inválid') !== -1 ||
+                    normalizedResponse.indexOf('invalid') !== -1
+                ) {
+                    throw new Error(responseText || 'Error al agendar la cita.');
+                }
+
+                return sendCorporateDemoNotification()
+                    .catch(function(notificationError){
+                        console.warn('No se pudo enviar notificación corporativa:', notificationError);
+                    })
+                    .then(function(){
+                        return successMessage;
+                    });
+            })
+            .then(function(successMessage){
+                showMsg(true, '✅ ' + successMessage);
+                form.reset();
+                resetAgendaTimeSelect('-- Selecciona fecha primero --', true);
+                setTimeout(closeAgendaModal, 3500);
+            })
+            .catch(function(err){
+                showMsg(false, '❌ ' + (err && err.message ? err.message : 'Error al agendar la cita.'));
+                unlockAgendaButton();
+            });
+
+            return;
+        }
+
+        // Fallback: handler simple de contacto (si no está disponible el flujo de chatbot/N8N)
         data.append('action',   'contact_form');
         data.append('nonce',    '<?php echo wp_create_nonce("automatiza_tech_nonce"); ?>');
         data.append('company',  'Demo — Modal Promocional');
         data.append('message',  'Solicitud de demo gratuita desde modal promo. Fecha: ' + date + ' Hora: ' + time);
-        data.set('phone', cc + phone);
+        data.set('phone', cc + phoneDigits);
 
         fetch('<?php echo admin_url("admin-ajax.php"); ?>', { method:'POST', body:data })
         .then(function(r){ return r.json(); })
@@ -448,17 +729,16 @@
             if(res.success){
                 showMsg(true, '✅ ' + (res.data || '¡Solicitud enviada! Te contactaremos en menos de 24 horas.'));
                 form.reset();
+                resetAgendaTimeSelect('-- Selecciona fecha primero --', true);
                 setTimeout(closeAgendaModal, 3500);
             } else {
                 showMsg(false, '❌ ' + (res.data || 'Error al enviar. Intenta de nuevo.'));
-                btn.disabled = false;
-                btn.textContent = 'Confirmar Agendamiento →';
+                unlockAgendaButton();
             }
         })
-        .catch(function(err){
+        .catch(function(){
             showMsg(false, '❌ Error de conexión. Por favor intenta de nuevo.');
-            btn.disabled = false;
-            btn.textContent = 'Confirmar Agendamiento →';
+            unlockAgendaButton();
         });
     };
 

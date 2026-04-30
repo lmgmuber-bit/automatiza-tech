@@ -126,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proposal_id'])) {
 $edit_proposal = null;
 if (isset($_GET['edit_id'])) {
     $edit_id = intval($_GET['edit_id']);
-    $edit_proposal = $wpdb->get_row("SELECT * FROM $table_name WHERE id = $edit_id");
+    $edit_proposal = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $edit_id));
 }
 
 // --- LISTAR ÚLTIMAS PROPUESTAS ---

@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('AT_QA_VERSION', '1.2.0');
+define('AT_QA_VERSION', '1.3.0');
 define('AT_QA_EVIDENCE_DIR', 'qa-evidencias');
 
 // ──────────────────────────────────────────────
@@ -223,6 +223,12 @@ function at_qa_setup_tables() {
     $col_exists = $wpdb->get_var("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$t['comments']}' AND COLUMN_NAME = 'updated_at'");
     if (!$col_exists) {
         $wpdb->query("ALTER TABLE {$t['comments']} ADD COLUMN updated_at DATETIME DEFAULT NULL AFTER created_at");
+    }
+
+    // Migración: agregar columna is_internal a proyectos si no existe
+    $col_internal = $wpdb->get_var("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$t['projects']}' AND COLUMN_NAME = 'is_internal'");
+    if (!$col_internal) {
+        $wpdb->query("ALTER TABLE {$t['projects']} ADD COLUMN is_internal TINYINT(1) NOT NULL DEFAULT 0 AFTER client_id");
     }
 
     // Limpiar tablas antiguas si existen (migración desde versión PetsGO-only)
@@ -471,7 +477,9 @@ add_action('wp_ajax_at_qa_save_project', function() {
 
     $id          = intval($_POST['id'] ?? 0);
     $name        = sanitize_text_field($_POST['name'] ?? '');
-    $client_id   = intval($_POST['client_id'] ?? 0);
+    $raw_client  = sanitize_text_field($_POST['client_id'] ?? '0');
+    $is_internal = ($raw_client === 'internal') ? 1 : 0;
+    $client_id   = $is_internal ? 0 : intval($raw_client);
     $description = sanitize_textarea_field($_POST['description'] ?? '');
     $qa_status   = sanitize_text_field($_POST['qa_status'] ?? 'pending');
     $version     = sanitize_text_field($_POST['version'] ?? '1.0');
@@ -497,7 +505,8 @@ add_action('wp_ajax_at_qa_save_project', function() {
     $data = [
         'name'             => $name,
         'slug'             => $slug,
-        'client_id'        => $client_id ?: null,
+        'client_id'        => ($is_internal || !$client_id) ? null : $client_id,
+        'is_internal'      => $is_internal,
         'description'      => $description,
         'qa_status'        => $qa_status,
         'version'          => $version,
@@ -1365,7 +1374,15 @@ add_action('wp_ajax_at_qa_generate_report', function() {
 
     // Datos del cliente
     $client = null;
-    if ($project->client_id) {
+    if (!empty($project->is_internal)) {
+        // Proyecto interno AT — se representa como cliente ficticio
+        $client = (object) [
+            'nombre'   => 'Automatiza Tech',
+            'empresa'  => 'Proyecto Interno',
+            'email'    => 'contacto@automatizatech.cl',
+            'telefono' => '+56 9 2700 2984',
+        ];
+    } elseif ($project->client_id) {
         $client = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}crm_clientes WHERE id=%d", $project->client_id));
     }
 
@@ -1466,6 +1483,9 @@ add_action('wp_ajax_at_qa_generate_report', function() {
             <p><?php echo esc_html($client->empresa); ?></p>
             <p>📧 <?php echo esc_html($client->email); ?></p>
             <p>📱 <?php echo esc_html($client->telefono); ?></p>
+            <?php elseif (!empty($project->is_internal)): ?>
+            <p><strong>Automatiza Tech</strong></p>
+            <p>Proyecto Interno</p>
             <?php else: ?>
             <p><em>Sin cliente vinculado</em></p>
             <?php endif; ?>
@@ -1564,6 +1584,429 @@ add_action('wp_ajax_at_qa_generate_report', function() {
         'verdict' => $verdict,
         'pass_rate' => $pass_rate,
         'filename' => $filename,
+    ]);
+});
+
+// ──────────────────────────────────────────────
+// 8b. GENERAR INFORME DE ERRORES QA (.md)
+// ──────────────────────────────────────────────
+add_action('wp_ajax_at_qa_generate_error_report', function() {
+    if (!current_user_can('manage_options')) wp_send_json_error('Sin permisos');
+    check_ajax_referer('at_qa_nonce', 'nonce');
+    global $wpdb;
+    $t = at_qa_table_names();
+    $project_id = intval($_POST['project_id'] ?? 0);
+    $project = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$t['projects']} WHERE id=%d", $project_id));
+    if (!$project) wp_send_json_error('Proyecto no encontrado');
+
+    $modules = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM {$t['modules']} WHERE project_id=%d ORDER BY sort_order", $project_id
+    ));
+
+    $global_stats = ['total' => 0, 'pass' => 0, 'fail' => 0, 'blocked' => 0, 'skipped' => 0, 'not_tested' => 0];
+    $error_sections = [];
+
+    foreach ($modules as $m) {
+        $all_cases = $wpdb->get_results($wpdb->prepare(
+            "SELECT status FROM {$t['cases']} WHERE module_id=%d", $m->id
+        ));
+        foreach ($all_cases as $row) {
+            $global_stats[$row->status]++;
+            $global_stats['total']++;
+        }
+
+        $failed_cases = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$t['cases']} WHERE module_id=%d AND status IN ('fail','blocked') ORDER BY sort_order",
+            $m->id
+        ));
+        if (empty($failed_cases)) continue;
+
+        $tester_name = $m->assigned_tester ? (get_userdata($m->assigned_tester)->display_name ?? 'No asignado') : 'No asignado';
+        $cases_detail = [];
+        foreach ($failed_cases as $c) {
+            $comments = $wpdb->get_results($wpdb->prepare(
+                "SELECT cm.comment, cm.created_at, u.display_name
+                 FROM {$t['comments']} cm
+                 LEFT JOIN {$wpdb->users} u ON u.ID = cm.user_id
+                 WHERE cm.case_id = %d ORDER BY cm.created_at",
+                $c->id
+            ));
+            $evidences = $wpdb->get_results($wpdb->prepare(
+                "SELECT file_name, file_url, description FROM {$t['evidence']} WHERE case_id=%d ORDER BY created_at",
+                $c->id
+            ));
+            $cases_detail[] = ['case' => $c, 'comments' => $comments, 'evidences' => $evidences];
+        }
+        $error_sections[] = ['module' => $m, 'tester' => $tester_name, 'cases' => $cases_detail];
+    }
+
+    $pass_rate    = $global_stats['total'] > 0 ? round(($global_stats['pass'] / $global_stats['total']) * 100, 1) : 0;
+    $total_errors = $global_stats['fail'] + $global_stats['blocked'];
+    $tz           = new DateTimeZone('America/Santiago');
+    $date_now     = wp_date('d/m/Y H:i', null, $tz);
+
+    // ── Helpers de análisis ────────────────────
+    // Determina nivel de severidad en base a prioridad + estado
+    $get_severity = function(string $priority, string $status): string {
+        if ($status === 'blocked') return '🔴 CRÍTICO';
+        return match (strtolower($priority)) {
+            'alta'  => '🔴 ALTO',
+            'media' => '🟡 MEDIO',
+            default => '🟢 BAJO',
+        };
+    };
+
+    // Genera un análisis de impacto orientado al dev a partir del título, módulo y comentarios
+    $get_impact_analysis = function(object $c, string $module_title, array $comments): string {
+        $title_lower = strtolower($c->title);
+        $notes       = implode(' ', array_column($comments, 'comment'));
+        $notes_lower = strtolower($notes);
+
+        if ($c->status === 'blocked') {
+            return 'Este caso quedó **bloqueado** durante la ejecución, lo que impidió completar la prueba. '
+                 . 'Es necesario resolver el bloqueo antes de poder validar el comportamiento esperado. '
+                 . 'Revisar dependencias o condiciones previas del entorno.';
+        }
+
+        // Patrones comunes para generar análisis contextual
+        $patterns = [
+            ['keywords' => ['login','autenticac','session','token','acceso'],
+             'impact'   => 'Afecta directamente el flujo de autenticación. Un fallo aquí bloquea el acceso de usuarios al sistema completo.'],
+            ['keywords' => ['registro','signup','crear cuenta','nuevo usuario'],
+             'impact'   => 'El proceso de onboarding de usuarios está comprometido. Usuarios nuevos no pueden completar el registro correctamente.'],
+            ['keywords' => ['pago','checkout','carrito','orden','pedido','compra'],
+             'impact'   => 'Fallo crítico en el flujo de conversión. Impacta directamente en transacciones y revenue del negocio.'],
+            ['keywords' => ['correo','email','notificac','notificación'],
+             'impact'   => 'Las notificaciones automáticas no están funcionando. Usuarios no reciben comunicaciones del sistema.'],
+            ['keywords' => ['permiso','rol','admin','acceso','autorización'],
+             'impact'   => 'Problema de control de acceso. Puede exponer funciones restringidas o denegar acceso legítimo.'],
+            ['keywords' => ['responsive','móvil','mobile','pantalla','dispositivo'],
+             'impact'   => 'La interfaz no se adapta correctamente en dispositivos móviles. Afecta la experiencia del usuario en pantallas pequeñas.'],
+            ['keywords' => ['upload','subir','imagen','archivo','adjunto'],
+             'impact'   => 'La carga de archivos o imágenes falla. Funcionalidades que dependen de media adjunta no operan correctamente.'],
+            ['keywords' => ['búsqueda','buscar','filtro','filtrar','resultado'],
+             'impact'   => 'El sistema de búsqueda o filtros devuelve resultados incorrectos o no responde. Dificulta la navegación y localización de contenido.'],
+            ['keywords' => ['formulario','form','campo','validación','input'],
+             'impact'   => 'El formulario no valida correctamente los datos ingresados. Puede permitir datos incorrectos o bloquear datos válidos.'],
+            ['keywords' => ['base de datos','query','sql','dato','registro'],
+             'impact'   => 'Posible inconsistencia en la capa de datos. Revisar queries, migraciones o integridad referencial.'],
+        ];
+
+        foreach ($patterns as $pattern) {
+            foreach ($pattern['keywords'] as $kw) {
+                if (strpos($title_lower, $kw) !== false || strpos($notes_lower, $kw) !== false) {
+                    return $pattern['impact'];
+                }
+            }
+        }
+
+        return 'El comportamiento observado no coincide con el esperado para el módulo **' . $module_title . '**. '
+             . 'Se requiere revisión del flujo completo del caso de uso y su implementación.';
+    };
+
+    // Extrae el resultado actual (lo que realmente pasó) de los comentarios del tester
+    $get_actual_result = function(array $comments): string {
+        foreach ($comments as $cm) {
+            $text  = trim($cm->comment);
+            $lower = strtolower($text);
+            // Buscar comentarios que describan lo que pasó
+            if (strpos($lower, 'resultado') !== false
+                || strpos($lower, 'error') !== false
+                || strpos($lower, 'falla') !== false
+                || strpos($lower, 'muestra') !== false
+                || strpos($lower, 'aparece') !== false
+                || strpos($lower, 'ocurre') !== false
+                || strpos($lower, 'sucede') !== false
+                || strpos($lower, 'observ') !== false
+                || strpos($lower, 'se ve') !== false
+                || strpos($lower, 'no funciona') !== false
+                || strpos($lower, 'no carga') !== false
+                || strpos($lower, 'no responde') !== false) {
+                return $text;
+            }
+        }
+        // Si no hay comentario descriptivo, usar el primero disponible
+        return !empty($comments) ? trim($comments[0]->comment) : '';
+    };
+
+    // ── Construir Markdown ──────────────────────
+    $L = [];
+
+    // Encabezado del documento
+    $verdict_text = $pass_rate >= 95 ? '✅ APROBADO' : ($pass_rate >= 70 ? '⚠️ APROBADO CON OBSERVACIONES' : '❌ RECHAZADO');
+    $L[] = '# Reporte de Defectos QA — ' . $project->name;
+    $L[] = '';
+    $L[] = '> **Documento dirigido a:** Equipo de Desarrollo';
+    $L[] = '> **Elaborado por:** Área QA — Automatiza Tech';
+    $L[] = '> **Fecha:** ' . $date_now . ' (hora Chile)';
+    $L[] = '> **Versión evaluada:** ' . ($project->version ?: '1.0');
+    $L[] = '> **Veredicto:** ' . $verdict_text;
+    $L[] = '';
+    $L[] = '---';
+    $L[] = '';
+
+    // Introducción narrativa
+    $L[] = '## Introducción';
+    $L[] = '';
+    if ($total_errors === 0) {
+        $L[] = 'Se completó el ciclo de pruebas funcionales sobre el proyecto **' . $project->name . '** '
+             . 'con un total de **' . $global_stats['total'] . ' casos de uso** evaluados. '
+             . 'El resultado es satisfactorio: **todos los casos pasaron correctamente**, alcanzando un pass rate del **' . $pass_rate . '%**. '
+             . 'No se registraron defectos ni bloqueos durante la ejecución.';
+    } else {
+        $alta_count = 0;
+        foreach ($error_sections as $sec) {
+            foreach ($sec['cases'] as $item) {
+                if (strtolower($item['case']->priority) === 'alta' || $item['case']->status === 'blocked') $alta_count++;
+            }
+        }
+        $L[] = 'Se completó el ciclo de pruebas funcionales sobre el proyecto **' . $project->name . '** '
+             . 'evaluando un total de **' . $global_stats['total'] . ' casos de uso**. '
+             . 'El equipo de QA identificó **' . $total_errors . ' defecto(s)** que requieren atención por parte del equipo de desarrollo '
+             . 'antes de poder aprobar el pase a producción.';
+        $L[] = '';
+        if ($alta_count > 0) {
+            $L[] = '> ⚠️ **Atención:** Se detectaron **' . $alta_count . ' defecto(s) de prioridad Alta o bloqueantes** que impiden el funcionamiento correcto de flujos críticos del sistema.';
+        }
+    }
+    $L[] = '';
+    $L[] = '---';
+    $L[] = '';
+
+    // Resumen estadístico
+    $L[] = '## Resumen de Ejecución';
+    $L[] = '';
+    $L[] = '| Métrica | Resultado |';
+    $L[] = '|---------|-----------|';
+    $L[] = '| Casos ejecutados | ' . ($global_stats['total'] - $global_stats['not_tested']) . ' / ' . $global_stats['total'] . ' |';
+    $L[] = '| ✅ Pasaron | ' . $global_stats['pass'] . ' |';
+    $L[] = '| ❌ Fallaron | ' . $global_stats['fail'] . ' |';
+    $L[] = '| ⚠️ Bloqueados | ' . $global_stats['blocked'] . ' |';
+    $L[] = '| ⏭️ Omitidos | ' . $global_stats['skipped'] . ' |';
+    $L[] = '| 🔘 Sin ejecutar | ' . $global_stats['not_tested'] . ' |';
+    $L[] = '| **Pass Rate** | **' . $pass_rate . '%** |';
+    $L[] = '| **Defectos a resolver** | **' . $total_errors . '** |';
+    $L[] = '';
+
+    // Índice de errores si los hay
+    if ($total_errors > 0) {
+        $L[] = '---';
+        $L[] = '';
+        $L[] = '## Índice de Defectos';
+        $L[] = '';
+        $L[] = '| # | ID Caso | Módulo | Descripción | Severidad | Estado |';
+        $L[] = '|---|---------|--------|-------------|-----------|--------|';
+        $idx = 0;
+        foreach ($error_sections as $section) {
+            foreach ($section['cases'] as $item) {
+                $idx++;
+                $c = $item['case'];
+                $sev = $get_severity($c->priority ?: 'Media', $c->status);
+                $st  = $c->status === 'fail' ? '❌ FAIL' : '⚠️ BLOQUEADO';
+                $L[] = '| ' . $idx . ' | `' . $c->case_id . '` | ' . $section['module']->title . ' | ' . $c->title . ' | ' . $sev . ' | ' . $st . ' |';
+            }
+        }
+        $L[] = '';
+        $L[] = '---';
+        $L[] = '';
+        $L[] = '## Detalle de Defectos';
+        $L[] = '';
+        $L[] = '_Cada defecto incluye descripción del problema, pasos para reproducirlo, resultado observado, impacto y recomendación de corrección._';
+        $L[] = '';
+
+        $error_num = 0;
+        foreach ($error_sections as $section) {
+            $m             = $section['module'];
+            $fail_count    = count(array_filter($section['cases'], fn($x) => $x['case']->status === 'fail'));
+            $blocked_count = count(array_filter($section['cases'], fn($x) => $x['case']->status === 'blocked'));
+
+            $L[] = '---';
+            $L[] = '';
+            $L[] = '### Módulo: ' . $m->title;
+            $tester_disp = ($section['tester'] && $section['tester'] !== 'No asignado') ? $section['tester'] : 'QA Automatiza Tech';
+            $L[] = '_Tester: ' . $tester_disp . ' · ' . ($fail_count ? '❌ ' . $fail_count . ' fallo(s) ' : '') . ($blocked_count ? '⚠️ ' . $blocked_count . ' bloqueado(s)' : '') . '_';
+            $L[] = '';
+
+            foreach ($section['cases'] as $item) {
+                $error_num++;
+                $c              = $item['case'];
+                $severity       = $get_severity($c->priority ?: 'Media', $c->status);
+                $status_label   = $c->status === 'fail' ? '❌ FAIL' : '⚠️ BLOQUEADO';
+                $actual_result  = $get_actual_result($item['comments']);
+                $impact         = $get_impact_analysis($c, $m->title, $item['comments']);
+                $tester_name    = $c->tester ?: $section['tester'];
+
+                $L[] = '#### DEF-' . str_pad($error_num, 3, '0', STR_PAD_LEFT) . ' · ' . $status_label . ' · `' . $c->case_id . '` — ' . $c->title;
+                $L[] = '';
+
+                // Ficha técnica
+                $L[] = '| Atributo | Valor |';
+                $L[] = '|----------|-------|';
+                $L[] = '| **Severidad** | ' . $severity . ' |';
+                $L[] = '| **Prioridad** | ' . ($c->priority ?: 'Media') . ' |';
+                $L[] = '| **Estado** | ' . $status_label . ' |';
+                $L[] = '| **Tester** | ' . $tester_name . ' |';
+                if ($c->tested_at) {
+                    $L[] = '| **Fecha de prueba** | ' . wp_date('d/m/Y H:i', strtotime($c->tested_at), $tz) . ' |';
+                }
+                if ($c->bug_id) {
+                    $L[] = '| **Bug ID / Ticket** | `' . $c->bug_id . '` |';
+                }
+                $L[] = '';
+
+                // Descripción del defecto
+                $L[] = '**🔍 Descripción del defecto**';
+                $L[] = '';
+                if ($actual_result) {
+                    $L[] = $actual_result;
+                } else {
+                    $L[] = 'El caso de prueba **' . $c->title . '** no superó la validación durante la ejecución de QA. '
+                         . 'El comportamiento del sistema no coincidió con el resultado esperado para este flujo.';
+                }
+                $L[] = '';
+
+                // Precondición
+                if ($c->precondition) {
+                    $L[] = '**📋 Precondición / Entorno de prueba**';
+                    $L[] = '';
+                    $L[] = '> ' . str_replace("\n", "\n> ", trim($c->precondition));
+                    $L[] = '';
+                }
+
+                // Pasos para reproducir
+                if ($c->steps) {
+                    $L[] = '**🔁 Pasos para reproducir**';
+                    $L[] = '';
+                    $step_lines = array_values(array_filter(array_map('trim', explode("\n", $c->steps))));
+                    foreach ($step_lines as $idx_s => $step) {
+                        $L[] = ($idx_s + 1) . '. ' . $step;
+                    }
+                    $L[] = '';
+                }
+
+                // Resultado esperado vs obtenido
+                $L[] = '**✅ Resultado esperado**';
+                $L[] = '';
+                $expected = $c->expected_result ?: 'El sistema debería ejecutar el flujo sin errores y confirmar la operación al usuario.';
+                $L[] = '> ' . str_replace("\n", "\n> ", trim($expected));
+                $L[] = '';
+
+                $L[] = '**❌ Resultado obtenido**';
+                $L[] = '';
+                if ($actual_result) {
+                    $L[] = '> ' . str_replace("\n", "\n> ", $actual_result);
+                } else {
+                    $L[] = '> El sistema no respondió conforme a lo esperado. Ver comentarios del tester para mayor detalle.';
+                }
+                $L[] = '';
+
+                // Impacto y análisis QA
+                $L[] = '**⚡ Análisis de impacto**';
+                $L[] = '';
+                $L[] = $impact;
+                $L[] = '';
+
+                // Observaciones del tester (todos los comentarios)
+                if (!empty($item['comments'])) {
+                    $L[] = '**💬 Observaciones del tester**';
+                    $L[] = '';
+                    foreach ($item['comments'] as $cm) {
+                        $cm_date = wp_date('d/m/Y H:i', strtotime($cm->created_at), $tz);
+                        $author  = $cm->display_name ?: 'QA';
+                        $L[] = '> **' . $author . '** — ' . $cm_date . ':';
+                        $L[] = '> ' . str_replace("\n", "\n> ", trim($cm->comment));
+                        $L[] = '';
+                    }
+                }
+
+                // Recomendación para el dev
+                $L[] = '**🛠️ Recomendación para el desarrollador**';
+                $L[] = '';
+                if ($c->status === 'blocked') {
+                    $L[] = 'Verificar las condiciones previas y dependencias que impiden ejecutar este caso. '
+                         . 'Revisar si existe algún error de configuración, dato faltante o dependencia de otro módulo no resuelta. '
+                         . 'Una vez desbloqueado, el caso deberá ser re-ejecutado por QA.';
+                } else {
+                    $title_lower_rec = strtolower($c->title);
+                    if (strpos($title_lower_rec, 'validac') !== false || strpos($title_lower_rec, 'formulario') !== false || strpos($title_lower_rec, 'campo') !== false) {
+                        $L[] = 'Revisar la lógica de validación del formulario o campo involucrado. '
+                             . 'Asegurarse de que los mensajes de error sean claros, que se valide tanto en frontend como backend, '
+                             . 'y que los casos límite (campos vacíos, formatos inválidos) estén cubiertos.';
+                    } elseif (strpos($title_lower_rec, 'pago') !== false || strpos($title_lower_rec, 'checkout') !== false || strpos($title_lower_rec, 'orden') !== false) {
+                        $L[] = 'Revisar el flujo de pago completo: integración con pasarela, manejo de errores de transacción, '
+                             . 'estados de la orden y rollback en caso de fallo. Verificar logs de la pasarela de pago.';
+                    } elseif (strpos($title_lower_rec, 'login') !== false || strpos($title_lower_rec, 'sesión') !== false || strpos($title_lower_rec, 'autenticac') !== false) {
+                        $L[] = 'Revisar el flujo de autenticación: generación y validación de tokens, manejo de sesiones, '
+                             . 'respuestas de error claras al usuario y comportamiento con credenciales inválidas.';
+                    } else {
+                        $L[] = 'Reproducir el caso siguiendo los pasos indicados y revisar la consola del navegador y los logs del servidor '
+                             . 'para identificar el punto exacto del fallo. Corregir, realizar prueba unitaria y marcar para re-testing en QA.';
+                    }
+                }
+                $L[] = '';
+
+                // Evidencias
+                if (!empty($item['evidences'])) {
+                    $L[] = '**📎 Evidencias adjuntas**';
+                    $L[] = '';
+                    foreach ($item['evidences'] as $ev) {
+                        $desc = $ev->description ? ' — _' . $ev->description . '_' : '';
+                        $L[] = '- [' . $ev->file_name . '](' . esc_url($ev->file_url) . ')' . $desc;
+                    }
+                    $L[] = '';
+                }
+
+                $L[] = '';
+            }
+        }
+
+        // Sección de próximos pasos
+        $L[] = '---';
+        $L[] = '';
+        $L[] = '## Próximos Pasos';
+        $L[] = '';
+        $L[] = '1. El equipo de desarrollo revisa cada defecto listado en este reporte.';
+        $L[] = '2. Se asigna responsable y estimación de corrección por cada ítem.';
+        $L[] = '3. Una vez corregido, el desarrollador notifica a QA para **re-testing**.';
+        $L[] = '4. QA valida la corrección ejecutando nuevamente el caso de prueba.';
+        $L[] = '5. Si el caso pasa, se cierra el defecto. Si falla, se documenta el regreso.';
+        $L[] = '6. El pase a producción queda condicionado a la resolución de todos los defectos de severidad **Alta** y **Crítica**.';
+        $L[] = '';
+    }
+
+    $L[] = '---';
+    $L[] = '';
+    $L[] = '## Firma del Área QA';
+    $L[] = '';
+    $L[] = '| | |';
+    $L[] = '|-|-|';
+    $L[] = '| **Elaborado por** | Área QA — Automatiza Tech |';
+    $L[] = '| **Fecha** | ' . $date_now . ' |';
+    $L[] = '| **Proyecto** | ' . $project->name . ' |';
+    $L[] = '| **Versión** | ' . ($project->version ?: '1.0') . ' |';
+    $L[] = '| **Pass Rate** | ' . $pass_rate . '% |';
+    $L[] = '| **Veredicto** | ' . $verdict_text . ' |';
+    $L[] = '';
+    $L[] = '---';
+    $L[] = '';
+    $L[] = '_Reporte generado por el módulo QA de **[Automatiza Tech](https://automatizatech.cl)**._';
+    $L[] = '_Para consultas: contacto@automatizatech.cl_';
+
+    $md_content = implode("\n", $L);
+
+    $upload_dir  = wp_upload_dir();
+    $reports_dir = $upload_dir['basedir'] . '/qa-reports';
+    if (!is_dir($reports_dir)) wp_mkdir_p($reports_dir);
+
+    $filename = 'QA-Errores-' . sanitize_file_name($project->name) . '-' . date('Y-m-d') . '.md';
+    // BOM UTF-8 garantiza que cualquier editor/navegador interprete bien el encoding
+    file_put_contents($reports_dir . '/' . $filename, "\xEF\xBB\xBF" . $md_content);
+
+    wp_send_json_success([
+        'url'          => $upload_dir['baseurl'] . '/qa-reports/' . $filename,
+        'filename'     => $filename,
+        'total_errors' => $total_errors,
+        'pass_rate'    => $pass_rate,
     ]);
 });
 
@@ -1716,7 +2159,9 @@ function at_qa_render_projects_page() {
         <?php foreach ($projects as $p):
             $rate = $p->total > 0 ? round(($p->passed / $p->total) * 100, 1) : 0;
             $client_name = '';
-            if ($p->client_id) {
+            if (!empty($p->is_internal)) {
+                $client_name = '🏠 Automatiza Tech';
+            } elseif ($p->client_id) {
                 foreach ($clients as $cl) {
                     if ($cl->id == $p->client_id) { $client_name = $cl->empresa ?: $cl->nombre; break; }
                 }
@@ -1769,7 +2214,8 @@ function at_qa_render_projects_page() {
                 <div style="display:flex; gap:6px; flex-wrap:wrap;">
                     <a href="<?php echo admin_url('admin.php?page=at-qa&view=suite&project=' . $p->id); ?>" class="qa-btn qa-btn-sm qa-btn-primary">📋 Ver Casos</a>
                     <?php if (current_user_can('manage_options')): ?>
-                    <button class="qa-btn qa-btn-sm" onclick="atQaGenerateReport(<?php echo $p->id; ?>)" title="Generar informe">📄 Informe</button>
+                    <button class="qa-btn qa-btn-sm" onclick="atQaGenerateReport(<?php echo $p->id; ?>)" title="Generar informe HTML">📄 Informe</button>
+                    <button class="qa-btn qa-btn-sm" onclick="atQaGenerateErrorReport(<?php echo $p->id; ?>)" title="Informe de errores en .md" style="color:#991b1b;">📋 Errores .md</button>
                     <button class="qa-btn qa-btn-sm" onclick='atQaOpenProjectModal(<?php echo json_encode($p); ?>)'>✏️</button>
                     <button class="qa-btn qa-btn-sm qa-btn-danger" onclick="atQaDeleteProject(<?php echo $p->id; ?>)">🗑️</button>
                     <?php endif; ?>
@@ -1800,6 +2246,7 @@ function at_qa_render_projects_page() {
                         <label>Cliente vinculado</label>
                         <select id="projClient">
                             <option value="0">— Sin vincular —</option>
+                            <option value="internal" style="color:#0d9488; font-weight:600;">🏠 Proyecto Interno AT</option>
                             <?php foreach ($clients as $cl): ?>
                             <option value="<?php echo $cl->id; ?>"><?php echo esc_html(($cl->empresa ? $cl->empresa . ' — ' : '') . $cl->nombre); ?></option>
                             <?php endforeach; ?>
@@ -1883,7 +2330,7 @@ function at_qa_render_projects_page() {
             document.getElementById('projModalTitle').textContent = data ? 'Editar Proyecto QA' : 'Nuevo Proyecto QA';
             document.getElementById('projId').value       = data ? data.id : 0;
             document.getElementById('projName').value     = data ? data.name : '';
-            document.getElementById('projClient').value   = data ? (data.client_id || 0) : 0;
+            document.getElementById('projClient').value   = data ? (data.is_internal ? 'internal' : (data.client_id || 0)) : 0;
             document.getElementById('projStatus').value   = data ? data.qa_status : 'pending';
             document.getElementById('projVersion').value  = data ? data.version : '1.0';
             document.getElementById('projEnv').value      = data ? (data.environment || '') : '';
@@ -1962,6 +2409,30 @@ function at_qa_render_projects_page() {
                 if (res.success) {
                     toast('✅ Informe generado: ' + res.data.verdict + ' — ' + res.data.pass_rate + '%', 'success');
                     window.open(res.data.url, '_blank');
+                } else toast(res.data || 'Error', 'error');
+            }).catch(err => { toast('Error: ' + err.message, 'error'); });
+        };
+
+        // Generar informe de errores (.md)
+        window.atQaGenerateErrorReport = function(pid) {
+            if (!confirm('¿Generar informe de errores (.md) de este proyecto?')) return;
+            const fd = new FormData();
+            fd.append('action', 'at_qa_generate_error_report');
+            fd.append('nonce', NONCE);
+            fd.append('project_id', pid);
+            toast('Generando informe de errores...', '');
+            fetch(AJAX, {method:'POST', body:fd}).then(r=>safeJson(r)).then(res => {
+                if (res.success) {
+                    const msg = res.data.total_errors === 0
+                        ? '✅ Sin errores — ' + res.data.pass_rate + '% Pass Rate'
+                        : '📋 Informe listo: ' + res.data.total_errors + ' error(es) — ' + res.data.pass_rate + '% Pass Rate';
+                    toast(msg, 'success');
+                    const a = document.createElement('a');
+                    a.href = res.data.url;
+                    a.download = res.data.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                 } else toast(res.data || 'Error', 'error');
             }).catch(err => { toast('Error: ' + err.message, 'error'); });
         };
@@ -2292,6 +2763,7 @@ function at_qa_render_suite_page() {
             <button class="qa-btn" onclick="document.getElementById('modalGlosario').classList.add('active')" style="background:rgba(255,255,255,.15); color:#fff; border-color:rgba(255,255,255,.3);" title="Glosario de términos técnicos">📚 Glosario</button>
             <?php if (current_user_can('manage_options')): ?>
             <button class="qa-btn" onclick="atQaGenerateReport(<?php echo $project_id; ?>)" style="background:rgba(255,255,255,.15); color:#fff; border-color:rgba(255,255,255,.3);">📄 Generar Informe</button>
+            <button class="qa-btn" onclick="atQaGenerateErrorReport(<?php echo $project_id; ?>)" style="background:rgba(220,38,38,.25); color:#fca5a5; border-color:rgba(220,38,38,.4);" title="Descargar informe detallado de errores en formato .md">📋 Errores .md</button>
             <?php endif; ?>
             <a href="<?php echo admin_url('admin.php?page=at-qa'); ?>" class="qa-btn">&larr; Proyectos</a>
         </div>
@@ -3054,6 +3526,34 @@ function at_qa_render_suite_page() {
                 if(res.success){
                     toast('Informe generado','success');
                     if(res.data.url) window.open(res.data.url,'_blank');
+                } else {
+                    toast(res.data||'Error generando informe','danger');
+                }
+            });
+        };
+
+        /* Generar informe de errores .md */
+        window.atQaGenerateErrorReport = function(pid){
+            if(!confirm('¿Generar informe de errores (.md) del proyecto?')) return;
+            const fd=new FormData();
+            fd.append('action','at_qa_generate_error_report');
+            fd.append('nonce',N);
+            fd.append('project_id',pid);
+            toast('Generando informe de errores...','');
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
+                if(res.success){
+                    const msg = res.data.total_errors===0
+                        ? '✅ Sin errores — '+res.data.pass_rate+'% Pass Rate'
+                        : '📋 '+res.data.total_errors+' error(es) — '+res.data.pass_rate+'% Pass Rate';
+                    toast(msg,'success');
+                    if(res.data.url){
+                        const a=document.createElement('a');
+                        a.href=res.data.url;
+                        a.download=res.data.filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    }
                 } else {
                     toast(res.data||'Error generando informe','danger');
                 }

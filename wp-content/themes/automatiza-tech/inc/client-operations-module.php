@@ -406,6 +406,7 @@ class AutomatizaTech_Client_Operations {
                 <button type="button" class="cfm-tab" data-tab="billing">💰 Facturación</button>
                 <button type="button" class="cfm-tab" data-tab="branding">🎨 Identidad</button>
                 <button type="button" class="cfm-tab" data-tab="tracking">📊 Seguimiento</button>
+                <button type="button" class="cfm-tab" data-tab="contracts">📜 Contratos</button>
             </div>
             
             <form id="client-full-form" class="cfm-form">
@@ -775,6 +776,15 @@ class AutomatizaTech_Client_Operations {
                         <div class="cfm-section">
                             <p>📋 El módulo de seguimiento no está disponible.</p>
                         </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Tab: Contratos -->
+                <div class="cfm-tab-content" id="tab-contracts">
+                    <?php if (function_exists('at_render_client_contracts_widget')): ?>
+                        <?php at_render_client_contracts_widget($client); ?>
+                    <?php else: ?>
+                        <div class="cfm-section"><p>📜 Módulo de contratos no instalado.</p></div>
                     <?php endif; ?>
                 </div>
                 

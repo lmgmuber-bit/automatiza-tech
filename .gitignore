@@ -150,3 +150,7 @@ wp-content/themes/twentytwenty*/
 
 # Artefacto de migración dentro de akismet
 wp-content/plugins/akismet/all-in-one-wp-migration/
+
+# Claude Code worktrees (local)
+.claude/worktrees/
+

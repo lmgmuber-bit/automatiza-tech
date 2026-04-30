@@ -1346,6 +1346,18 @@ require_once get_template_directory() . '/inc/admin-n8n-errors.php';
 require_once get_template_directory() . '/inc/admin-qa-module.php';
 
 /**
+ * Módulo de Contratos con Doble Firma (AT + Cliente)
+ * - Admin page: Contactos > Contratos
+ * - Widget en ficha del cliente (pestaña "📜 Contratos")
+ */
+if (file_exists(ABSPATH . 'contracts/admin-contracts.php')) {
+    require_once ABSPATH . 'contracts/admin-contracts.php';
+}
+if (file_exists(ABSPATH . 'contracts/client-contracts-widget.php')) {
+    require_once ABSPATH . 'contracts/client-contracts-widget.php';
+}
+
+/**
  * Encolar scripts específicos para el área de administración.
  */
 function automatiza_tech_admin_scripts($hook) {

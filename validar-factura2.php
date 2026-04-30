@@ -4,71 +4,65 @@
  * URL: /validar-factura
  */
 
-error_log('=== INICIO VALIDACION FACTURA ===');
-error_log('URL completa: ' . $_SERVER['REQUEST_URI']);
-error_log('Parámetros GET: ' . print_r($_GET, true));
-
 // Cargar WordPress
 define('WP_USE_THEMES', false);
 require('wp-load.php');
+
+require_once __DIR__ . '/at-rate-limit.php';
+require_once __DIR__ . '/at-path-safe.php';
+
+// Rate limit: 30 hits/min por IP (anti scraping y enumeracion)
+if ( ! at_rate_limit_check( 'validar_factura2', 30, 60 ) ) {
+    at_rate_limit_reject( 60 );
+}
 
 global $wpdb;
 
 // Obtener ID de la factura desde la URL
 $invoice_id = isset($_GET['id']) ? sanitize_text_field($_GET['id']) : '';
-error_log('ID de factura recibido: ' . $invoice_id);
 
 if (empty($invoice_id)) {
-    error_log('ERROR: ID de factura vacío');
     wp_die('❌ Error: No se proporcionó un número de factura válido.', 'Error de Validación', ['response' => 400]);
 }
 
 // Buscar la factura en la base de datos
 $invoices_table = $wpdb->prefix . 'automatiza_tech_invoices';
-error_log('Tabla de facturas: ' . $invoices_table);
-error_log('Buscando factura: ' . $invoice_id);
 
 $invoice = $wpdb->get_row($wpdb->prepare(
     "SELECT * FROM {$invoices_table} WHERE invoice_number = %s AND status = 'active'",
     $invoice_id
 ));
 
-error_log('Factura encontrada: ' . ($invoice ? 'SÍ' : 'NO'));
-if ($invoice) {
-    error_log('Datos de factura: ID=' . $invoice->id . ', Cliente=' . $invoice->client_id . ', Monto=' . $invoice->total);
-}
-
 if (!$invoice) {
-    error_log('ERROR: Factura no encontrada en BD: ' . $invoice_id);
     wp_die('❌ Error: Factura no encontrada o inválida.', 'Factura No Encontrada', ['response' => 404]);
 }
 
 // Determinar la acción (validar o descargar)
 $action = isset($_GET['action']) ? sanitize_text_field($_GET['action']) : 'validate';
-error_log('Acción solicitada: ' . $action);
 
 if ($action === 'download') {
-    error_log('Iniciando descarga de factura...');
     // DESCARGAR FACTURA EN PDF (mismo método que el panel admin)
-    
-    // Construir ruta del archivo PDF
-    $upload_dir = wp_upload_dir();
+
+    // Construir ruta del archivo PDF (con verificacion anti path-traversal)
+    $upload_dir   = wp_upload_dir();
     $invoices_dir = $upload_dir['basedir'] . '/automatiza-tech-invoices/';
-    
-    // Buscar el archivo PDF
-    $pdf_files = glob($invoices_dir . $invoice->invoice_number . '*.pdf');
-    
-    if (empty($pdf_files)) {
-        wp_die('❌ Archivo PDF no encontrado para esta factura. Contacta al administrador.', 'Error', ['response' => 404]);
+    $safe_prefix  = at_safe_basename( $invoice->invoice_number );
+    $pdf_files    = glob( $invoices_dir . $safe_prefix . '*.pdf' );
+
+    if ( empty( $pdf_files ) ) {
+        wp_die( '❌ Archivo PDF no encontrado para esta factura. Contacta al administrador.', 'Error', [ 'response' => 404 ] );
     }
-    
-    $pdf_file = $pdf_files[0];
-    
+
+    $pdf_file = at_path_inside( $pdf_files[0], $invoices_dir );
+    if ( $pdf_file === false ) {
+        wp_die( '❌ Ruta de archivo invalida.', 'Error', [ 'response' => 403 ] );
+    }
+
     // Verificar que el archivo existe y es legible
-    if (!file_exists($pdf_file) || !is_readable($pdf_file)) {
-        wp_die('❌ No se puede acceder al archivo PDF. Contacta al administrador.', 'Error', ['response' => 500]);
+    if ( ! file_exists( $pdf_file ) || ! is_readable( $pdf_file ) ) {
+        wp_die( '❌ No se puede acceder al archivo PDF. Contacta al administrador.', 'Error', [ 'response' => 500 ] );
     }
-    
+
     // Actualizar contador de descargas
     $wpdb->update(
         $invoices_table,

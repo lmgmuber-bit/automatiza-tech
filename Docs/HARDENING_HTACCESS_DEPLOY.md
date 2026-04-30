@@ -39,8 +39,12 @@ RewriteRule (^|/)debug\.log$ - [F,L]
 RewriteRule \.(bak|backup|old|orig|sql|sql\.gz|env)$ - [F,L]
 RewriteRule \.php(2|3|_old)$ - [F,L]
 
+# 4b) Bloquear carpetas de backup/respaldo a nivel URL
+RewriteRule ^(tema-backup|RespaldoDocs|RespaldoTest|archivos-eliminados-backup|archive)/ - [F,L]
+RewriteRule ^\.claude/ - [F,L]
+
 # 5) Bloquear acceso directo a wp-config y similares
-<FilesMatch "^(wp-config(-.*)?\.php|\.htaccess|\.htpasswd|debug\.log|debug2\.log)$">
+<FilesMatch "^(wp-config(-.*)?\.php|wp-config-secrets\.php|\.htaccess|\.htpasswd|debug\.log|debug2\.log)$">
     Require all denied
 </FilesMatch>
 </IfModule>
@@ -54,6 +58,13 @@ RewriteRule \.php(2|3|_old)$ - [F,L]
     # Habilitar cuando 100% del sitio sea HTTPS:
     # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
 </IfModule>
+
+# 7) Negar ejecucion de PHP en directorios de uploads (defense-in-depth)
+<Directory "wp-content/uploads">
+    <FilesMatch "\.(php|phtml|phar|php3|php4|php5|php7|php8|pl|py|jsp|asp|sh|cgi)$">
+        Require all denied
+    </FilesMatch>
+</Directory>
 # END AT_HARDENING
 ```
 

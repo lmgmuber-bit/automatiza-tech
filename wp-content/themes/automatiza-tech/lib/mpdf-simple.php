@@ -56,10 +56,21 @@ class Mpdf {
         ];
         
         $wkhtmltopdf = null;
+        // Solo usar rutas hardcodeadas + escapeshellarg. Nunca interpolar input.
+        // En Windows: probar paths absolutos. En POSIX: usar `command -v` con escape estricto.
         foreach ($wkhtmltopdf_paths as $path) {
-            if (file_exists($path) || shell_exec("which $path 2>/dev/null")) {
+            if (file_exists($path)) {
                 $wkhtmltopdf = $path;
                 break;
+            }
+            // En POSIX, si el path no es absoluto, intentar resolver via `command -v`.
+            // $path proviene de un array literal en este archivo, no de input externo.
+            if (PHP_OS_FAMILY !== 'Windows' && !preg_match('#^[/\\\\]#', $path)) {
+                $resolved = @shell_exec('command -v ' . escapeshellarg($path) . ' 2>/dev/null');
+                if (!empty($resolved)) {
+                    $wkhtmltopdf = trim($resolved);
+                    break;
+                }
             }
         }
         

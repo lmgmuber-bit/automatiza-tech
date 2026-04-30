@@ -47,7 +47,9 @@ wp-content/backups-dup-lite/
 dup-installer/
 
 # Uploads - Archivos binarios (PDFs, imágenes, QR, audio) no van en git
-wp-content/uploads/
+# pero SI versionamos .htaccess de hardening (deny PHP execution).
+wp-content/uploads/*
+!wp-content/uploads/.htaccess
 
 # Plugins de terceros (instalables desde WordPress.org)
 wp-content/plugins/duplicator/
@@ -67,6 +69,8 @@ wp-config-local.php
 wp-config-*.php
 .htaccess
 .htaccess.bk
+# Excepcion: si versionamos .htaccess en uploads/ para hardening
+!wp-content/uploads/.htaccess
 
 # Logs
 *.log

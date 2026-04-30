@@ -8,6 +8,14 @@
 define('WP_USE_THEMES', false);
 require('wp-load.php');
 
+require_once __DIR__ . '/at-rate-limit.php';
+require_once __DIR__ . '/at-path-safe.php';
+
+// Rate limit: 30 hits/min por IP (anti scraping)
+if ( ! at_rate_limit_check( 'validar_boleta', 30, 60 ) ) {
+    at_rate_limit_reject( 60 );
+}
+
 global $wpdb;
 
 // Obtener ID (numero de boleta) desde la URL
@@ -21,7 +29,8 @@ if (empty($receipt_id)) {
 $table_name = $wpdb->prefix . 'automatiza_tech_receipts';
 
 // Verificar si existe la tabla
-if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) );
+if ( $table_exists !== $table_name ) {
     wp_die('❌ Error: Sistema de boletas no inicializado.', 'Error', ['response' => 500]);
 }
 
@@ -39,21 +48,21 @@ $action = isset($_GET['action']) ? sanitize_text_field($_GET['action']) : 'valid
 
 if ($action === 'download') {
     // DESCARGAR BOLETA EN PDF
-    
-    // Ruta del archivo PDF
-    // En BD guardamos ruta absoluta en pdf_path, pero verificamos.
-    $pdf_file = $receipt->pdf_path;
-    
-    // Si no es ruta absoluta o no existe, intentar reconstruir
-    if (!file_exists($pdf_file)) {
-        $upload_dir = wp_upload_dir();
-        $receipts_dir = $upload_dir['basedir'] . '/automatiza-tech-receipts/';
-        $pdf_file = $receipts_dir . $receipt->receipt_number . '.pdf';
+
+    // Ruta del archivo PDF: validar que este dentro de uploads (anti path-traversal)
+    $upload_dir   = wp_upload_dir();
+    $receipts_dir = $upload_dir['basedir'] . '/automatiza-tech-receipts/';
+
+    // Si pdf_path en BD esta corrupto o apunta fuera, reconstruir desde basename seguro.
+    $candidate = (string) ( $receipt->pdf_path ?? '' );
+    $pdf_file  = $candidate !== '' ? at_path_inside( $candidate, $receipts_dir ) : false;
+    if ( $pdf_file === false ) {
+        $safe = at_safe_basename( $receipt->receipt_number ) . '.pdf';
+        $pdf_file = at_path_inside( $receipts_dir . $safe, $receipts_dir );
     }
-    
-    // Verificar que el archivo existe y es legible
-    if (!file_exists($pdf_file) || !is_readable($pdf_file)) {
-        wp_die('❌ No se puede acceder al archivo PDF. Contacta al administrador.', 'Error', ['response' => 500]);
+
+    if ( $pdf_file === false || ! file_exists( $pdf_file ) || ! is_readable( $pdf_file ) ) {
+        wp_die( '❌ No se puede acceder al archivo PDF. Contacta al administrador.', 'Error', [ 'response' => 500 ] );
     }
     
     // Actualizar fecha validacion

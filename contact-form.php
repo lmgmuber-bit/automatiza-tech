@@ -136,9 +136,8 @@ class AutomatizaTechContactForm {
             ob_clean();
         }
         
-        // Log para depuración
-        error_log('=== CONTACT FORM SUBMISSION ===');
-        error_log('POST data: ' . print_r($_POST, true));
+        // Log para depuracion (sin PII: solo metadata)
+        error_log('[contact-form] submission method=' . ($_SERVER['REQUEST_METHOD'] ?? '?') . ' ip=' . ($_SERVER['REMOTE_ADDR'] ?? '?'));
         
         // Verificar que sea una petición POST
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -148,7 +147,7 @@ class AutomatizaTechContactForm {
         
         // Verificar nonce para seguridad
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'automatiza_ajax_nonce')) {
-            error_log('Nonce verification failed. Expected: automatiza_ajax_nonce, Received: ' . ($_POST['nonce'] ?? 'none'));
+            error_log('[contact-form] nonce verification failed');
             wp_send_json_error('Error de seguridad');
             wp_die();
         }

@@ -249,7 +249,10 @@ try {
     // ---- CRON: Expiry reminders (called by N8N, secured with secret) ----
     if (isset($segments[0]) && $segments[0] === 'cron' && isset($segments[1]) && $segments[1] === 'expiry-reminders') {
         $provided_secret = sanitize_text_field($_GET['secret'] ?? ($body['secret'] ?? ''));
-        $cron_secret = defined('OMNICHANNEL_CRON_SECRET') ? OMNICHANNEL_CRON_SECRET : 'omni_cron_2026_s3cur3';
+        if (!defined('OMNICHANNEL_CRON_SECRET') || !OMNICHANNEL_CRON_SECRET) {
+            send_json(['error' => 'Cron secret no configurado'], 500);
+        }
+        $cron_secret = OMNICHANNEL_CRON_SECRET;
 
         if (empty($provided_secret) || !hash_equals($cron_secret, $provided_secret)) {
             send_json(['error' => 'No autorizado'], 403);

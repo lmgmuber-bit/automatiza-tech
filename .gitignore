@@ -107,40 +107,11 @@ client-portal-omnichannel/.vite/
 # Composer (si usas composer)
 vendor/
 
-# Scripts temporales de desarrollo y utilidades raíz
-test-*.php
-debug-*.php
-check-*.php
-check_*.php
-clean-*.php
-fix-*.php
-verify*.php
-init-*.php
-install-*.php
-setup-*.php
-full-diagnosis.php
-add-*.php
-run-*.php
-mark-*.php
-reset-*.php
-revert-*.php
-flush-*.php
-purge-*.php
-migrate-*.php
-convert-*.php
-create_*.php
-diagnostico-*.php
-
-# Archivos sueltos en raíz (scripts PROD one-off)
-contact-form.php
-invoice-handlers.php
-openai-controller.php
-reporte-consumo-ai.php
-validar-boleta.php
-validar-factura2.php
-admin-ai-dashboard.php
-admin-approve-proposal.php
-gestion-ai.php
+# NOTA DE SEGURIDAD (hardening 2026-04-30):
+# Los scripts PHP de aplicación y mantenimiento ya NO se ignoran. Deben estar
+# versionados para que los fixes de seguridad viajen por git y para auditoría.
+# La protección contra acceso público se hace por .htaccess (bloque AT_HARDENING)
+# y por checks de capability dentro de cada archivo, no por gitignore.
 
 # Archivos PDF/binarios en wp-content raíz
 wp-content/*.pdf
@@ -154,3 +125,9 @@ wp-content/plugins/akismet/all-in-one-wp-migration/
 # Claude Code worktrees (local)
 .claude/worktrees/
 
+# Carpetas de respaldo / archivado (pendientes de eliminar del webroot en hardening F1)
+archivos-eliminados-backup/
+RespaldoDocs/
+RespaldoTest/
+tema-backup/
+archive/

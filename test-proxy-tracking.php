@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Prueba del sistema de tracking
  * Hace una llamada real a OpenAI y registra el consumo

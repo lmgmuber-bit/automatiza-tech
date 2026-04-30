@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para crear tablas de la Bóveda de Credenciales
  * Ejecutar una sola vez: https://automatizatech.cl/setup-credentials-vault.php

@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Diagnóstico temporal del flujo YCloud → Portal → N8N
  * ELIMINAR DESPUÉS DE USAR

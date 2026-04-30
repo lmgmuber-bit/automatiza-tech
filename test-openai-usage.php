@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Consulta DIRECTA del consumo OpenAI - API v1/organization/usage
  * NOTA: Esta API requiere una API Key de Administrador de la organización

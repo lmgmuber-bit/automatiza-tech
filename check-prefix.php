@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 require_once 'wp-load.php';
 global $wpdb;
 echo "Prefijo de tablas en DEV: " . $wpdb->prefix . PHP_EOL;

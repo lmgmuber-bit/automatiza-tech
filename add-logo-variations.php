@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Agregar campos de variaciones de logo a la tabla de clientes
  */

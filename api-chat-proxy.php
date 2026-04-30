@@ -18,6 +18,7 @@ error_reporting(E_ERROR | E_PARSE);
 
 require_once('wp-load.php');
 require_once('openai-controller.php');
+require_once __DIR__ . '/at-cors.php';
 
 // Descartar TODO el output que haya generado WordPress al cargar
 ob_end_clean();
@@ -25,15 +26,11 @@ ob_end_clean();
 // Ahora sí, enviar headers limpios
 header('Content-Type: application/json; charset=utf-8');
 header('X-Proxy-Version: 2.1');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
 
-// Manejar preflight CORS
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
+at_cors_apply([
+    'methods' => 'POST, OPTIONS',
+    'headers' => 'Content-Type',
+]);
 
 // Recibir datos
 $input = json_decode(file_get_contents('php://input'), true);

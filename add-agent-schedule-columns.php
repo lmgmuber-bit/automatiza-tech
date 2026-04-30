@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Migration: Add schedule columns to wp_omnichannel_agents
  * Columns: schedule_start (TIME), schedule_end (TIME), available_days (VARCHAR - comma-separated day numbers)

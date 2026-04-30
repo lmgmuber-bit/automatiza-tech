@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script de Setup para Producción — Proxy OpenAI + Tracking
  * 

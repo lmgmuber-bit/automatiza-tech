@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para verificar y crear las tablas necesarias para MAXTECH
  * Ejecutar en PROD

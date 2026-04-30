@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para agregar campos operativos a la tabla de clientes
  * Ejecutar una sola vez: https://automatizatech.cl/setup-client-operational-fields.php

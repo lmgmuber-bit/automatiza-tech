@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Add password_reset_code and password_reset_expires columns to omnichannel_agents table.
  * Run once via browser: /automatiza-tech/setup-agent-password-reset.php

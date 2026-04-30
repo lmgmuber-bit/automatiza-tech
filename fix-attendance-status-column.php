@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para agregar columna attendance_status a la tabla de leads
  * Ejecutar en PROD para arreglar el problema de actualización de estado

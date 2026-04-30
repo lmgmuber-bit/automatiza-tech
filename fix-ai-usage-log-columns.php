@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para actualizar la tabla ai_usage_log con las columnas correctas
  * Ejecutar en PROD después de setup-maxtech-tables.php

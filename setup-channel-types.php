@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Migración: Crear tabla wp_omnichannel_channel_types
  * Mantenedor de tipos de canales (solo admin)

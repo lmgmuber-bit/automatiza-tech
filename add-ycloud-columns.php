@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Agrega columnas YCloud a la tabla omnichannel_channels.
  * Ejecutar UNA VEZ en PROD: https://tudominio.cl/add-ycloud-columns.php

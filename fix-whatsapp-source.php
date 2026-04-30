@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para corregir el source de registros que vienen de WhatsApp pero tienen 'web'
  * 

@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 $date = '2026-01-16';
 echo "Date: $date\n";
 echo "Day of week: " . strtolower(date('l', strtotime($date))) . "\n";

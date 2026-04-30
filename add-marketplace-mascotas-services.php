@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para agregar los servicios del Marketplace de Mascotas
  * Basado en la propuesta enviada al cliente

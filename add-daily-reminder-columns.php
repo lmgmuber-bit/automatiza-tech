@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para agregar columnas de recordatorios diarios 8PM y 8AM
  * Para la tabla de SEGUIMIENTOS (followup_meetings)

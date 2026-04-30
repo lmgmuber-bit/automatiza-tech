@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Debug script para verificar el endpoint de recordatorios 24h
  * Acceder via: https://automatizatech.cl/debug-reminders-24h-api.php

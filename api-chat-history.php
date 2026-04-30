@@ -8,20 +8,16 @@
  * - DELETE /api-chat-history.php?action=clear&session_id=XXX - Limpiar historial
  */
 
-// Headers CORS para permitir llamadas desde n8n
-header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-
-// Manejar preflight OPTIONS
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-// Cargar WordPress
+// Cargar WordPress (necesario para WP_ENVIRONMENT_TYPE en at-cors)
 require_once('wp-load.php');
+require_once __DIR__ . '/at-cors.php';
+
+// Headers
+header('Content-Type: application/json; charset=utf-8');
+at_cors_apply([
+    'methods' => 'GET, POST, DELETE, OPTIONS',
+    'headers' => 'Content-Type, Authorization',
+]);
 
 global $wpdb;
 $table_name = $wpdb->prefix . 'chat_history';

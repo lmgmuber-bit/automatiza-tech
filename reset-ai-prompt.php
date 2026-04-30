@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * One-time script: Reset AI prompt to use the updated default template
  * Run once, then delete this file.

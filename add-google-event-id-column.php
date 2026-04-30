@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para agregar columna google_event_id a las tablas de seguimientos y demos
  * Ejecutar UNA vez: https://automatizatech.cl/add-google-event-id-column.php

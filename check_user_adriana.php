@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 require_once('wp-load.php');
 $user = get_user_by('email', 'Adriana.perez@automatizatech.cl');
 if ($user) {

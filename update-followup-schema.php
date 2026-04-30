@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para actualizar el esquema de la tabla de reuniones de seguimiento
  * Agrega los campos: confirmed_at, whatsapp_sent

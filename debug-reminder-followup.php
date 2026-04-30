@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Debug: Verificar por qué no se devuelven seguimientos para recordatorios
  */

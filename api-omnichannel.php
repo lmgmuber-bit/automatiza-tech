@@ -20,28 +20,12 @@ require_once __DIR__ . '/omnichannel-controller.php';
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
-// CORS para el portal React
-$allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    'http://localhost:5176',
-    'http://localhost:3000',
-    'http://localhost',
-    rtrim(get_site_url(), '/'),
-];
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (in_array($origin, $allowed_origins, true)) {
-    header("Access-Control-Allow-Origin: $origin");
-} 
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Key, X-Admin-Token, X-Agent-Token');
-header('Access-Control-Max-Age: 86400');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
+// CORS centralizado (whitelist por ambiente)
+require_once __DIR__ . '/at-cors.php';
+at_cors_apply([
+    'methods' => 'GET, POST, PUT, DELETE, OPTIONS',
+    'headers' => 'Content-Type, Authorization, X-API-Key, X-Admin-Token, X-Agent-Token',
+]);
 
 $controller = new OmnichannelController();
 

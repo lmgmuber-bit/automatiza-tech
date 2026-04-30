@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Migration: Add channel_id column to agents table
  * Allows agents to be associated with specific channels

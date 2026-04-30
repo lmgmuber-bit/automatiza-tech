@@ -131,3 +131,7 @@ RespaldoDocs/
 RespaldoTest/
 tema-backup/
 archive/
+
+# Secretos por servidor (NUNCA versionar)
+wp-config-secrets.php
+

@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * update-kells-bot-config.php
  * Populates ALL bot-personality / business fields for KellsCapilar

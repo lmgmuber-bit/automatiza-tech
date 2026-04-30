@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Setup Google Drive para MAXTECH
  * Ejecutar una vez para crear la estructura necesaria

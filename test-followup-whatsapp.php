@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * DIAGNÓSTICO: Test del webhook Followup_WhatsApp_Send en N8N
  * 

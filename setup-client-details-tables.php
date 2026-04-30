@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para crear las tablas de seguimiento de clientes
  * Ejecutar una sola vez: /setup-client-details-tables.php

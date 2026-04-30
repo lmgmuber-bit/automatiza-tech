@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Migration: Add attachments column to ticket_messages table
  * Run once: /automatiza-tech/setup-ticket-attachments.php

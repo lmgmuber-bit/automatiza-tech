@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Setup de Base de Datos para Errores N8N - ARGOS
  * 

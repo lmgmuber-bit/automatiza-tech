@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Debug script para verificar recordatorios
  * Acceder via: https://automatizatech.cl/debug-reminders-prod.php

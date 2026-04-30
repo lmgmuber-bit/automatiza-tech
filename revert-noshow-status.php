@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para revertir el estado "No Asistió" de una cita
  * Esto permite volver a marcarla desde la grilla para que envíe el correo

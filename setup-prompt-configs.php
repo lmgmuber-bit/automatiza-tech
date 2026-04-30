@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Migración: Crear tabla wp_omnichannel_prompt_configs
  * Almacena la configuración parametrizada de prompts del bot por canal.

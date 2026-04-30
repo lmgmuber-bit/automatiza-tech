@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Diagnóstico y creación directa de la tabla wp_omnichannel_clients
  */

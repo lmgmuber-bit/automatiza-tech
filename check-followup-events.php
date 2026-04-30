@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 require_once __DIR__ . '/wp-load.php';
 global $wpdb;
 $rows = $wpdb->get_results("SELECT id, client_name, company, meeting_date, meeting_time, status, google_event_id, meet_link FROM {$wpdb->prefix}automatiza_followup_meetings ORDER BY id DESC LIMIT 10");

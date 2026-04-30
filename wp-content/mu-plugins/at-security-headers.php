@@ -24,6 +24,10 @@ if (!function_exists('at_security_send_headers')) {
         header('Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=()');
         header('X-XSS-Protection: 0');
 
+        // Quitar fingerprinting de PHP/servidor.
+        header_remove('X-Powered-By');
+        @ini_set('expose_php', '0');
+
         $env = defined('WP_ENVIRONMENT_TYPE') ? WP_ENVIRONMENT_TYPE : 'production';
 
         // HSTS: solo en produccion HTTPS. 6 meses con includeSubDomains.

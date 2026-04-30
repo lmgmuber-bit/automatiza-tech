@@ -1459,12 +1459,12 @@ class AutomatizaTech_CRM_AI {
                     'fecha_contacto' => current_time('mysql')
                 ]);
                 $cliente_id = $wpdb->insert_id;
-                $cliente = $wpdb->get_row("SELECT * FROM {$this->tabla_clientes} WHERE id = $cliente_id", ARRAY_A);
+                $cliente = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->tabla_clientes} WHERE id = %d", $cliente_id), ARRAY_A);
             } else {
                 $cliente_id = $cliente['id'];
             }
         } else {
-            $cliente = $wpdb->get_row("SELECT * FROM {$this->tabla_clientes} WHERE id = $cliente_id", ARRAY_A);
+            $cliente = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->tabla_clientes} WHERE id = %d", $cliente_id), ARRAY_A);
             $ai_id = $cliente['ai_identifier'] ?? '';
         }
 
@@ -1502,7 +1502,7 @@ class AutomatizaTech_CRM_AI {
                     $wpdb->update($this->tabla_clientes, $datos_update, ['id' => $cliente_id]);
                     
                     // Recargar datos
-                    $cliente = $wpdb->get_row("SELECT * FROM {$this->tabla_clientes} WHERE id = $cliente_id", ARRAY_A);
+                    $cliente = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->tabla_clientes} WHERE id = %d", $cliente_id), ARRAY_A);
                 }
 
                 // Identidad corporativa: manejo de archivos y campos
@@ -1640,7 +1640,7 @@ class AutomatizaTech_CRM_AI {
                     }
                     
                     // Recargar siempre los datos del cliente desde la BD
-                    $cliente = $wpdb->get_row("SELECT * FROM {$this->tabla_clientes} WHERE id = $cliente_id", ARRAY_A);
+                    $cliente = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->tabla_clientes} WHERE id = %d", $cliente_id), ARRAY_A);
                 }
 
                 // Obtener datos de identidad para mostrar en el formulario, ya sea antes o después de guardar.

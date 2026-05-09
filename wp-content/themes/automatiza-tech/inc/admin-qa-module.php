@@ -1646,8 +1646,14 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
     }
     if (!$to_email) wp_send_json_error('No hay email destino. Pasa to_email o vincula cliente al proyecto.');
 
-    // BCC interno
-    $bcc = defined('OMNICHANNEL_ADMIN_BCC') ? OMNICHANNEL_ADMIN_BCC : get_option('admin_email');
+    // BCC interno — mismo patrón que receipts-module y admin-proposals
+    $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+
+    // Construir adjunto igual que receipts-module.php
+    $attachments = [];
+    if (file_exists($pdf_path)) {
+        $attachments[] = $pdf_path;
+    }
 
     // Stats para el cuerpo del email
     $modules = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$t['modules']} WHERE project_id=%d", $project_id));
@@ -1736,13 +1742,20 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
 
     $headers = [
         'Content-Type: text/html; charset=UTF-8',
-        'From: AutomatizaTech <contacto@automatizatech.cl>',
-        'Reply-To: contacto@automatizatech.cl',
+        'From: AutomatizaTech <' . $from_email . '>',
+        'Bcc: lgonzalez@automatizatech.cl',
+        'Bcc: automatizacionesbotcore@gmail.com',
     ];
-    if ($bcc) $headers[] = 'Bcc: ' . $bcc;
 
-    $sent = wp_mail($to_email, $subject, $html_body, $headers, [$pdf_path]);
-    if (!$sent) wp_send_json_error('Error enviando correo (revisa SMTP)');
+    $sent = wp_mail($to_email, $subject, $html_body, $headers, $attachments);
+    if (!$sent) {
+        // Capturar error real de PHPMailer para diagnóstico
+        global $phpmailer;
+        $detail = (isset($phpmailer) && isset($phpmailer->ErrorInfo) && $phpmailer->ErrorInfo)
+            ? $phpmailer->ErrorInfo
+            : 'Sin detalle — revisa el error_log del servidor';
+        wp_send_json_error('Error enviando correo: ' . $detail);
+    }
 
     @$wpdb->query($wpdb->prepare(
         "UPDATE {$t['projects']} SET last_report_sent_at = %s WHERE id = %d",
@@ -1751,7 +1764,7 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
 
     wp_send_json_success([
         'to'      => $to_email,
-        'bcc'     => $bcc,
+        'bcc'     => 'lgonzalez@automatizatech.cl',
         'subject' => $subject,
     ]);
 });

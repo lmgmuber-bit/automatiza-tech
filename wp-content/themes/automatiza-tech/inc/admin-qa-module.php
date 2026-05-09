@@ -1775,44 +1775,15 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
 <?php
     $html_body = ob_get_clean();
 
-    // Patrón idéntico a proposals (que funciona con PDF + BCC + gmail)
-    $headers = array('Content-Type: text/html; charset=UTF-8');
-    $headers[] = 'From: Automatiza Tech <' . $from_email . '>';
-    $headers[] = 'Reply-To: ' . $from_email;
-    $headers[] = 'Bcc: lgonzalez@automatizatech.cl';
+    // Patrón MÍNIMO idéntico a receipts-module.php (que funciona con PDF)
+    $headers = array(
+        'Content-Type: text/html; charset=UTF-8',
+        'From: AutomatizaTech <' . $from_email . '>'
+    );
 
-    // AltBody en texto plano → evita penalización SpamAssassin MIME_HTML_ONLY
-    $plain_name   = $client_name ?: 'estimado/a cliente';
-    $plain_verdict = $verdict . ' - ' . $pass_rate . '% de casos aprobados';
-    $at_qa_altbody = implode("\n", [
-        "Informe de Pruebas QA: {$project->name}",
-        str_repeat('-', 50),
-        "Hola {$plain_name},",
-        "",
-        "Adjuntamos el Informe Final de Pruebas QA de tu proyecto {$project->name}.",
-        "",
-        "RESULTADO: {$plain_verdict}",
-        "Total: {$g['total']} | Pass: {$g['pass']} | Fail: {$g['fail']} | Bloqueados: {$g['blocked']}",
-        "",
-        "Ver portal: " . $ficha_url,
-        ($pdf_download_url ? "Descargar PDF: " . $pdf_download_url : ""),
-        "",
-        "AutomatizaTech SpA | contacto@automatizatech.cl | +56 9 2700 2984",
-    ]);
-
-    // Hook puntual para inyectar AltBody en el próximo wp_mail (reset automático)
-    $altbody_hook = function($pm) use ($at_qa_altbody, &$altbody_hook) {
-        if (empty($pm->AltBody)) {
-            $pm->AltBody = $at_qa_altbody;
-        }
-        remove_action('phpmailer_init', $altbody_hook, 20);
-    };
-    add_action('phpmailer_init', $altbody_hook, 20);
-
-    // Enviar con PDF adjunto al cliente (mismo patrón que receipts-module.php)
+    // Enviar al cliente con PDF adjunto (mismo patrón que receipts/proposals)
     $sent = wp_mail($to_email, $subject, $html_body, $headers, $attachments);
     if (!$sent) {
-        remove_action('phpmailer_init', $altbody_hook, 20); // limpiar si no se ejecutó
         global $phpmailer;
         $detail = (isset($phpmailer) && isset($phpmailer->ErrorInfo) && $phpmailer->ErrorInfo)
             ? $phpmailer->ErrorInfo
@@ -1820,6 +1791,16 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
         error_log('[QA-EMAIL-FAIL] To:' . $to_email . ' | Subject:' . $subject . ' | Error:' . $detail);
         wp_send_json_error('Error enviando correo: ' . $detail);
     }
+
+    // Copia interna para AT (segundo wp_mail separado, sin adjunto, no bloquea respuesta)
+    $admin_headers = array(
+        'Content-Type: text/html; charset=UTF-8',
+        'From: AutomatizaTech <' . $from_email . '>'
+    );
+    $admin_body = '<p>Informe QA enviado a <strong>' . esc_html($to_email) . '</strong> '
+        . 'para el proyecto <strong>' . esc_html($project->name) . '</strong> '
+        . '(' . $pass_rate . ' por ciento de aprobación).</p>';
+    @wp_mail('lgonzalez@automatizatech.cl', '[QA Copia] ' . $project->name, $admin_body, $admin_headers);
 
     @$wpdb->query($wpdb->prepare(
         "UPDATE {$t['projects']} SET last_report_sent_at = %s WHERE id = %d",

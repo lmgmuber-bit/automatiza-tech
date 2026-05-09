@@ -1677,6 +1677,13 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
         $ficha_url = home_url('/?crm_view=timeline&cid=' . $cli->id . '&token=' . $client_token);
     }
 
+    // URL de descarga directa del PDF (siempre incluida en el cuerpo)
+    $pdf_download_url = '';
+    if ($pdf_filename) {
+        $upload_dir = wp_upload_dir();
+        $pdf_download_url = $upload_dir['baseurl'] . '/qa-reports/' . $pdf_filename;
+    }
+
     ob_start(); ?>
 <!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8"><title><?php echo $subject; ?></title></head>
@@ -1724,7 +1731,10 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
             no dudes en responder a este correo.
           </p>
           <div style="text-align:center;margin:24px 0;">
-            <a href="<?php echo esc_url($ficha_url); ?>" style="background:#0d9488;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;display:inline-block;">Ver evidencias en mi portal →</a>
+            <a href="<?php echo esc_url($ficha_url); ?>" style="background:#0d9488;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;display:inline-block;margin:6px;">Ver evidencias en mi portal →</a>
+            <?php if ($pdf_download_url): ?>
+            <a href="<?php echo esc_url($pdf_download_url); ?>" style="background:#1e40af;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;display:inline-block;margin:6px;">Descargar informe PDF ↓</a>
+            <?php endif; ?>
           </div>
         </td></tr>
         <tr><td style="background:#f8fafc;padding:20px 40px;text-align:center;font-size:11px;color:#888;border-top:1px solid #e5e7eb;">
@@ -1740,21 +1750,35 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
 <?php
     $html_body = ob_get_clean();
 
+    // Hostinger bloquea PDF adjunto + BCC externo (gmail) = spam.
+    // Con adjunto solo BCC a dominios @automatizatech.cl
     $headers = [
         'Content-Type: text/html; charset=UTF-8',
         'From: AutomatizaTech <' . $from_email . '>',
         'Bcc: lgonzalez@automatizatech.cl',
-        'Bcc: automatizacionesbotcore@gmail.com',
     ];
 
     $sent = wp_mail($to_email, $subject, $html_body, $headers, $attachments);
     if (!$sent) {
-        // Capturar error real de PHPMailer para diagnóstico
-        global $phpmailer;
-        $detail = (isset($phpmailer) && isset($phpmailer->ErrorInfo) && $phpmailer->ErrorInfo)
-            ? $phpmailer->ErrorInfo
-            : 'Sin detalle — revisa el error_log del servidor';
-        wp_send_json_error('Error enviando correo: ' . $detail);
+        // Fallback: intentar sin adjunto (por si el PDF es el problema)
+        $sent = wp_mail($to_email, $subject, $html_body, $headers, []);
+        if (!$sent) {
+            global $phpmailer;
+            $detail = (isset($phpmailer) && isset($phpmailer->ErrorInfo) && $phpmailer->ErrorInfo)
+                ? $phpmailer->ErrorInfo
+                : 'Sin detalle — revisa el error_log del servidor';
+            wp_send_json_error('Error enviando correo: ' . $detail);
+        }
+        // Correo enviado pero sin adjunto — informar al admin
+        @$wpdb->query($wpdb->prepare(
+            "UPDATE {$t['projects']} SET last_report_sent_at = %s WHERE id = %d",
+            current_time('mysql'), $project_id
+        ));
+        wp_send_json_success([
+            'to'      => $to_email,
+            'subject' => $subject,
+            'warning' => 'Correo enviado sin PDF adjunto (el adjunto fue bloqueado por SMTP). El cliente puede descargar el informe desde el portal.',
+        ]);
     }
 
     @$wpdb->query($wpdb->prepare(

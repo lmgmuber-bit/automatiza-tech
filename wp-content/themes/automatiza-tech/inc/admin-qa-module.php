@@ -150,6 +150,9 @@ function at_qa_setup_tables() {
         assigned_testers TEXT COMMENT 'IDs de usuarios separados por coma',
         started_at DATETIME DEFAULT NULL,
         finished_at DATETIME DEFAULT NULL,
+        last_report_at DATETIME DEFAULT NULL,
+        last_report_pdf VARCHAR(255) DEFAULT NULL,
+        last_report_sent_at DATETIME DEFAULT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE INDEX idx_slug (slug),
@@ -1567,23 +1570,189 @@ add_action('wp_ajax_at_qa_generate_report', function() {
     $reports_dir = $upload_dir['basedir'] . '/qa-reports';
     if (!is_dir($reports_dir)) wp_mkdir_p($reports_dir);
 
-    $filename = 'QA-Report-' . sanitize_file_name($project->name) . '-' . date('Y-m-d') . '.html';
+    // Versionado: timestamp evita sobrescritura cuando hay varias versiones el mismo día
+    $stamp = date('Y-m-d_His');
+    $base_name = 'QA-Report-' . sanitize_file_name($project->name) . '-' . $stamp;
+
+    $filename = $base_name . '.html';
     $filepath = $reports_dir . '/' . $filename;
     file_put_contents($filepath, $html);
-
     $file_url = $upload_dir['baseurl'] . '/qa-reports/' . $filename;
 
-    // Marcar proyecto como finalizado
-    $wpdb->update($t['projects'], [
-        'qa_status' => $pass_rate >= 95 ? 'passed' : ($pass_rate >= 70 ? 'passed' : 'failed'),
+    // Generar PDF con FPDF (mismo motor que cotizaciones/contratos)
+    $pdf_url = '';
+    $pdf_filename = '';
+    try {
+        require_once get_template_directory() . '/lib/qa-report-pdf-fpdf.php';
+        $pdf = new QAReportPDF($project, $client, $all_cases, $global_stats, $verdict, $pass_rate, date('d-m-Y'));
+        $pdf->build();
+        $pdf_filename = $base_name . '.pdf';
+        $pdf_path = $reports_dir . '/' . $pdf_filename;
+        $pdf->Output('F', $pdf_path);
+        $pdf_url = $upload_dir['baseurl'] . '/qa-reports/' . $pdf_filename;
+    } catch (\Throwable $e) {
+        error_log('[QA] Error generando PDF: ' . $e->getMessage());
+    }
+
+    // Marcar proyecto como finalizado y registrar última versión
+    $update_data = [
+        'qa_status'   => $pass_rate >= 70 ? 'passed' : 'failed',
         'finished_at' => current_time('mysql'),
-    ], ['id' => $project_id]);
+    ];
+    // Campos opcionales (si la columna existe, se actualiza; ignorar errores silenciosos)
+    @$wpdb->update($t['projects'], $update_data, ['id' => $project_id]);
+    @$wpdb->query($wpdb->prepare(
+        "UPDATE {$t['projects']} SET last_report_at = %s, last_report_pdf = %s WHERE id = %d",
+        current_time('mysql'), $pdf_filename, $project_id
+    ));
 
     wp_send_json_success([
-        'url' => $file_url,
-        'verdict' => $verdict,
-        'pass_rate' => $pass_rate,
-        'filename' => $filename,
+        'url'          => $file_url,
+        'pdf_url'      => $pdf_url,
+        'pdf_filename' => $pdf_filename,
+        'verdict'      => $verdict,
+        'pass_rate'    => $pass_rate,
+        'filename'     => $filename,
+    ]);
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// Enviar informe QA por correo al cliente (con PDF adjunto + BCC admin)
+// ─────────────────────────────────────────────────────────────────────
+add_action('wp_ajax_at_qa_send_report_email', function() {
+    if (!current_user_can('manage_options')) wp_send_json_error('Sin permisos');
+    check_ajax_referer('at_qa_nonce', 'nonce');
+    global $wpdb;
+    $t = at_qa_table_names();
+    $project_id   = intval($_POST['project_id'] ?? 0);
+    $pdf_filename = sanitize_file_name($_POST['pdf_filename'] ?? '');
+    $to_override  = sanitize_email($_POST['to_email'] ?? '');
+    $custom_msg   = wp_kses_post($_POST['custom_message'] ?? '');
+
+    $project = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$t['projects']} WHERE id=%d", $project_id));
+    if (!$project) wp_send_json_error('Proyecto no encontrado');
+    if (!$pdf_filename) wp_send_json_error('Falta PDF — genera el informe primero');
+
+    $upload_dir = wp_upload_dir();
+    $pdf_path = $upload_dir['basedir'] . '/qa-reports/' . $pdf_filename;
+    if (!file_exists($pdf_path)) wp_send_json_error('PDF no encontrado en servidor');
+
+    // Resolver destinatario
+    $to_email = $to_override;
+    $client_name = '';
+    if (!$to_email && $project->client_id) {
+        $cli = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}crm_clientes WHERE id=%d", $project->client_id));
+        if ($cli) { $to_email = $cli->email; $client_name = $cli->nombre; }
+    }
+    if (!$to_email) wp_send_json_error('No hay email destino. Pasa to_email o vincula cliente al proyecto.');
+
+    // BCC interno
+    $bcc = defined('OMNICHANNEL_ADMIN_BCC') ? OMNICHANNEL_ADMIN_BCC : get_option('admin_email');
+
+    // Stats para el cuerpo del email
+    $modules = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$t['modules']} WHERE project_id=%d", $project_id));
+    $g = ['total'=>0,'pass'=>0,'fail'=>0,'blocked'=>0,'skipped'=>0,'not_tested'=>0];
+    foreach ($modules as $m) {
+        $cases = $wpdb->get_results($wpdb->prepare("SELECT status FROM {$t['cases']} WHERE module_id=%d", $m->id));
+        foreach ($cases as $c) { $g[$c->status]++; $g['total']++; }
+    }
+    $pass_rate = $g['total'] > 0 ? round(($g['pass']/$g['total'])*100, 1) : 0;
+    $verdict = $pass_rate >= 95 ? 'APROBADO' : ($pass_rate >= 70 ? 'APROBADO CON OBSERVACIONES' : 'RECHAZADO');
+    $verdict_color = $pass_rate >= 95 ? '#10b981' : ($pass_rate >= 70 ? '#eab308' : '#ef4444');
+
+    $logo_url = get_template_directory_uri() . '/assets/images/logo-automatiza-tech.png';
+    $project_name = esc_html($project->name);
+    $subject = 'Informe QA - ' . $project->name . ' (' . $pass_rate . '% Pass)';
+
+    // URL personalizada de la ficha del cliente con token de acceso
+    $ficha_url = home_url('/');
+    if (!empty($project->client_id) && !empty($cli)) {
+        $client_token = md5($cli->id . 'AUTOMATIZA_CRM_V2' . $cli->email);
+        $ficha_url = home_url('/?crm_view=timeline&cid=' . $cli->id . '&token=' . $client_token);
+    }
+
+    ob_start(); ?>
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><title><?php echo $subject; ?></title></head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:'Segoe UI',Tahoma,sans-serif;color:#333;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;padding:30px 0;">
+    <tr><td align="center">
+      <table width="620" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);">
+        <tr><td style="background:linear-gradient(135deg,#0d9488,#14b8a6,#2dd4bf);padding:30px 40px;text-align:center;color:#fff;">
+          <img src="<?php echo esc_url($logo_url); ?>" alt="AutomatizaTech" style="max-height:50px;margin-bottom:10px;">
+          <h1 style="margin:0;font-size:22px;letter-spacing:1px;">Informe de Pruebas QA</h1>
+          <p style="margin:6px 0 0;opacity:.9;font-size:13px;"><?php echo $project_name; ?></p>
+        </td></tr>
+        <tr><td style="padding:30px 40px;">
+          <p style="margin:0 0 12px;font-size:15px;">Hola <strong><?php echo esc_html($client_name ?: 'estimado/a cliente'); ?></strong>,</p>
+          <p style="margin:0 0 18px;font-size:14px;line-height:1.6;">
+            Adjuntamos el <strong>Informe Final de Pruebas QA</strong> correspondiente a tu proyecto
+            <strong><?php echo $project_name; ?></strong>. Este documento detalla el resultado de cada caso de prueba
+            ejecutado por nuestro equipo de calidad.
+          </p>
+          <?php if ($custom_msg): ?>
+          <div style="background:#f0fdfa;border-left:4px solid #0d9488;padding:12px 16px;margin:16px 0;border-radius:4px;font-size:13.5px;">
+            <?php echo $custom_msg; ?>
+          </div>
+          <?php endif; ?>
+          <div style="background:<?php echo $verdict_color; ?>;color:#fff;text-align:center;padding:18px;border-radius:8px;margin:20px 0;">
+            <div style="font-size:13px;opacity:.9;letter-spacing:1px;">RESULTADO</div>
+            <div style="font-size:22px;font-weight:700;margin-top:4px;"><?php echo $verdict; ?></div>
+            <div style="font-size:18px;margin-top:6px;"><?php echo $pass_rate; ?>% Pass Rate</div>
+          </div>
+          <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse;font-size:13px;margin:16px 0;">
+            <tr style="background:#f0fdfa;color:#0d9488;font-weight:600;text-align:center;">
+              <td style="border-radius:6px 0 0 6px;">Total</td><td>Pass</td><td>Fail</td><td>Bloq.</td><td>Omit.</td><td style="border-radius:0 6px 6px 0;">Sin probar</td>
+            </tr>
+            <tr style="text-align:center;font-size:18px;font-weight:700;">
+              <td style="color:#0d9488;"><?php echo $g['total']; ?></td>
+              <td style="color:#065f46;"><?php echo $g['pass']; ?></td>
+              <td style="color:#991b1b;"><?php echo $g['fail']; ?></td>
+              <td style="color:#92400e;"><?php echo $g['blocked']; ?></td>
+              <td style="color:#5b21b6;"><?php echo $g['skipped']; ?></td>
+              <td style="color:#6b7280;"><?php echo $g['not_tested']; ?></td>
+            </tr>
+          </table>
+          <p style="margin:16px 0;font-size:13.5px;line-height:1.6;color:#555;">
+            Encontrarás el detalle completo en el PDF adjunto. Si tienes dudas o comentarios sobre los resultados,
+            no dudes en responder a este correo.
+          </p>
+          <div style="text-align:center;margin:24px 0;">
+            <a href="<?php echo esc_url($ficha_url); ?>" style="background:#0d9488;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;display:inline-block;">Ver evidencias en mi portal →</a>
+          </div>
+        </td></tr>
+        <tr><td style="background:#f8fafc;padding:20px 40px;text-align:center;font-size:11px;color:#888;border-top:1px solid #e5e7eb;">
+          <p style="margin:0 0 4px;"><strong>AutomatizaTech SpA</strong> · RUT 78.363.717-0</p>
+          <p style="margin:0 0 4px;">📧 contacto@automatizatech.cl · 📱 +56 9 2700 2984</p>
+          <p style="margin:0 0 4px;">📍 Santa Beatriz 170, Of. 903 (9P), Providencia, Santiago</p>
+          <p style="margin:8px 0 0;color:#aaa;">© <?php echo date('Y'); ?> AutomatizaTech. Todos los derechos reservados.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>
+<?php
+    $html_body = ob_get_clean();
+
+    $headers = [
+        'Content-Type: text/html; charset=UTF-8',
+        'From: AutomatizaTech <contacto@automatizatech.cl>',
+        'Reply-To: contacto@automatizatech.cl',
+    ];
+    if ($bcc) $headers[] = 'Bcc: ' . $bcc;
+
+    $sent = wp_mail($to_email, $subject, $html_body, $headers, [$pdf_path]);
+    if (!$sent) wp_send_json_error('Error enviando correo (revisa SMTP)');
+
+    @$wpdb->query($wpdb->prepare(
+        "UPDATE {$t['projects']} SET last_report_sent_at = %s WHERE id = %d",
+        current_time('mysql'), $project_id
+    ));
+
+    wp_send_json_success([
+        'to'      => $to_email,
+        'bcc'     => $bcc,
+        'subject' => $subject,
     ]);
 });
 
@@ -2214,7 +2383,8 @@ function at_qa_render_projects_page() {
                 <div style="display:flex; gap:6px; flex-wrap:wrap;">
                     <a href="<?php echo admin_url('admin.php?page=at-qa&view=suite&project=' . $p->id); ?>" class="qa-btn qa-btn-sm qa-btn-primary">📋 Ver Casos</a>
                     <?php if (current_user_can('manage_options')): ?>
-                    <button class="qa-btn qa-btn-sm" onclick="atQaGenerateReport(<?php echo $p->id; ?>)" title="Generar informe HTML">📄 Informe</button>
+                    <button class="qa-btn qa-btn-sm" onclick="atQaGenerateReport(<?php echo $p->id; ?>)" title="Generar informe HTML + PDF">📄 Informe</button>
+                    <button class="qa-btn qa-btn-sm" onclick="atQaSendReportEmail(<?php echo $p->id; ?>)" title="Enviar último informe por correo al cliente" style="color:#0d9488;">📧 Enviar al cliente</button>
                     <button class="qa-btn qa-btn-sm" onclick="atQaGenerateErrorReport(<?php echo $p->id; ?>)" title="Informe de errores en .md" style="color:#991b1b;">📋 Errores .md</button>
                     <button class="qa-btn qa-btn-sm" onclick='atQaOpenProjectModal(<?php echo json_encode($p); ?>)'>✏️</button>
                     <button class="qa-btn qa-btn-sm qa-btn-danger" onclick="atQaDeleteProject(<?php echo $p->id; ?>)">🗑️</button>
@@ -2397,9 +2567,12 @@ function at_qa_render_projects_page() {
             }).catch(err => { toast('Error: ' + err.message, 'error'); });
         };
 
-        // Generar informe QA
+        // Cache: último PDF generado por proyecto (para enviarlo sin regenerar)
+        window.atQaLastPdf = window.atQaLastPdf || {};
+
+        // Generar informe QA (HTML + PDF)
         window.atQaGenerateReport = function(pid) {
-            if (!confirm('¿Generar informe QA de este proyecto?')) return;
+            if (!confirm('¿Generar informe QA (HTML + PDF) de este proyecto?')) return;
             const fd = new FormData();
             fd.append('action', 'at_qa_generate_report');
             fd.append('nonce', NONCE);
@@ -2408,8 +2581,35 @@ function at_qa_render_projects_page() {
             fetch(AJAX, {method:'POST', body:fd}).then(r=>safeJson(r)).then(res => {
                 if (res.success) {
                     toast('✅ Informe generado: ' + res.data.verdict + ' — ' + res.data.pass_rate + '%', 'success');
+                    window.atQaLastPdf[pid] = res.data.pdf_filename || '';
                     window.open(res.data.url, '_blank');
+                    if (res.data.pdf_url) window.open(res.data.pdf_url, '_blank');
                 } else toast(res.data || 'Error', 'error');
+            }).catch(err => { toast('Error: ' + err.message, 'error'); });
+        };
+
+        // Enviar el último informe PDF por correo al cliente (BCC admin)
+        window.atQaSendReportEmail = function(pid) {
+            let pdfFile = window.atQaLastPdf[pid];
+            if (!pdfFile) {
+                if (!confirm('No hay informe generado en esta sesión. ¿Generar primero el informe y luego enviarlo?')) return;
+                return atQaGenerateReport(pid);
+            }
+            const toEmail = prompt('Email del destinatario (deja vacío para usar el del cliente vinculado):', '');
+            if (toEmail === null) return;
+            const customMsg = prompt('Mensaje adicional (opcional, se mostrará en el correo):', '') || '';
+            if (!confirm('¿Enviar el informe QA por correo?\n\nDestino: ' + (toEmail || 'cliente del proyecto') + '\nPDF: ' + pdfFile)) return;
+            const fd = new FormData();
+            fd.append('action', 'at_qa_send_report_email');
+            fd.append('nonce', NONCE);
+            fd.append('project_id', pid);
+            fd.append('pdf_filename', pdfFile);
+            if (toEmail) fd.append('to_email', toEmail);
+            if (customMsg) fd.append('custom_message', customMsg);
+            toast('Enviando correo...', '');
+            fetch(AJAX, {method:'POST', body:fd}).then(r=>safeJson(r)).then(res => {
+                if (res.success) toast('📧 Correo enviado a ' + res.data.to, 'success');
+                else toast(res.data || 'Error enviando correo', 'error');
             }).catch(err => { toast('Error: ' + err.message, 'error'); });
         };
 
@@ -2763,6 +2963,7 @@ function at_qa_render_suite_page() {
             <button class="qa-btn" onclick="document.getElementById('modalGlosario').classList.add('active')" style="background:rgba(255,255,255,.15); color:#fff; border-color:rgba(255,255,255,.3);" title="Glosario de términos técnicos">📚 Glosario</button>
             <?php if (current_user_can('manage_options')): ?>
             <button class="qa-btn" onclick="atQaGenerateReport(<?php echo $project_id; ?>)" style="background:rgba(255,255,255,.15); color:#fff; border-color:rgba(255,255,255,.3);">📄 Generar Informe</button>
+            <button class="qa-btn" onclick="atQaSendReportEmail(<?php echo $project_id; ?>)" style="background:rgba(255,255,255,.15); color:#fff; border-color:rgba(255,255,255,.3);">📧 Enviar al cliente</button>
             <button class="qa-btn" onclick="atQaGenerateErrorReport(<?php echo $project_id; ?>)" style="background:rgba(220,38,38,.25); color:#fca5a5; border-color:rgba(220,38,38,.4);" title="Descargar informe detallado de errores en formato .md">📋 Errores .md</button>
             <?php endif; ?>
             <a href="<?php echo admin_url('admin.php?page=at-qa'); ?>" class="qa-btn">&larr; Proyectos</a>
@@ -3515,9 +3716,10 @@ function at_qa_render_suite_page() {
             });
         };
 
-        /* Generar informe QA */
+        /* Generar informe QA (HTML + PDF) */
+        window.atQaLastPdf = window.atQaLastPdf || {};
         window.atQaGenerateReport = function(pid){
-            if(!confirm('¿Generar informe formal del proyecto?')) return;
+            if(!confirm('¿Generar informe formal (HTML + PDF) del proyecto?')) return;
             const fd=new FormData();
             fd.append('action','at_qa_generate_report');
             fd.append('nonce',N);
@@ -3525,11 +3727,38 @@ function at_qa_render_suite_page() {
             fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
                 if(res.success){
                     toast('Informe generado','success');
+                    window.atQaLastPdf[pid] = res.data.pdf_filename || '';
                     if(res.data.url) window.open(res.data.url,'_blank');
+                    if(res.data.pdf_url) window.open(res.data.pdf_url,'_blank');
                 } else {
                     toast(res.data||'Error generando informe','danger');
                 }
             });
+        };
+
+        /* Enviar el último informe QA por correo al cliente (BCC admin) */
+        window.atQaSendReportEmail = function(pid){
+            let pdfFile = window.atQaLastPdf[pid];
+            if(!pdfFile){
+                if(!confirm('No hay informe generado en esta sesión. ¿Generarlo ahora?')) return;
+                return atQaGenerateReport(pid);
+            }
+            const toEmail = prompt('Email destinatario (vacío = email del cliente vinculado):','');
+            if(toEmail===null) return;
+            const customMsg = prompt('Mensaje adicional (opcional):','') || '';
+            if(!confirm('¿Enviar el informe por correo?\n\nDestino: '+(toEmail||'cliente del proyecto')+'\nPDF: '+pdfFile)) return;
+            const fd=new FormData();
+            fd.append('action','at_qa_send_report_email');
+            fd.append('nonce',N);
+            fd.append('project_id',pid);
+            fd.append('pdf_filename',pdfFile);
+            if(toEmail) fd.append('to_email',toEmail);
+            if(customMsg) fd.append('custom_message',customMsg);
+            toast('Enviando correo...','');
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
+                if(res.success) toast('📧 Correo enviado a '+res.data.to,'success');
+                else toast(res.data||'Error enviando correo','danger');
+            }).catch(err=>{ toast('Error: '+err.message,'danger'); });
         };
 
         /* Generar informe de errores .md */

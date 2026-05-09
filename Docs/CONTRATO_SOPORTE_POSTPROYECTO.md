@@ -62,6 +62,30 @@ Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar
 
 ---
 
+## CLÁUSULA TERCERA BIS — Garantía post-entrega del Proyecto 🛡️
+
+3A.1. **Período de garantía:** EL PROVEEDOR otorga al CLIENTE una **garantía de {{garantia_meses}} meses (1 año)** contados desde la fecha de entrega formal del Proyecto (Anexo A), período durante el cual toda **corrección, ajuste o arreglo** derivado directa o indirectamente de un error, omisión o defecto **atribuible al desarrollo original** realizado por EL PROVEEDOR será resuelto **sin costo adicional alguno** para EL CLIENTE, con independencia de si el CLIENTE ha contratado un plan de soporte.
+
+3A.2. **¿Qué cubre la garantía?** Se consideran cubiertos sin costo adicional:
+- a) Corrección de errores ("bugs") funcionales o lógicos en el código desarrollado.
+- b) Ajustes de comportamiento que no correspondan a lo especificado en la propuesta aceptada.
+- c) Fallas en integraciones entregadas que no dependan de cambios en APIs o servicios de terceros.
+- d) Inconsistencias visuales o de rendimiento en las interfaces entregadas.
+- e) Cualquier arreglo, corrección o mejora **directamente vinculada** al alcance del Proyecto original.
+
+3A.3. **¿Qué NO cubre la garantía (sí tiene costo adicional)?**
+- a) **Nuevas funcionalidades**, módulos o pantallas no contempladas en la propuesta original.
+- b) **Cambios de alcance** o requerimientos nuevos solicitados por el CLIENTE tras la entrega.
+- c) Funcionalidades **aisladas o independientes** del desarrollo original que constituyan un trabajo nuevo.
+- d) Ajustes por cambios en plataformas o APIs de terceros (OpenAI, Meta, Google, etc.) ajenos al control de EL PROVEEDOR.
+- e) Correcciones de errores causados por modificaciones al Proyecto realizadas por el CLIENTE o terceros sin autorización.
+
+3A.4. **Procedimiento:** El CLIENTE reportará los defectos cubiertos a través del canal oficial (Portal OmniCliente o correo electrónico). EL PROVEEDOR analizará la solicitud y comunicará dentro de **5 días hábiles** si corresponde a garantía (sin costo) o a un servicio fuera de alcance (con cotización), indicando el fundamento técnico de su decisión.
+
+3A.5. **Cláusula de confianza:** EL PROVEEDOR y EL CLIENTE acuerdan resolver de buena fe cualquier disputa sobre si un arreglo está o no cubierto por garantía, privilegiando la relación comercial de largo plazo sobre la facturación puntual. En caso de duda razonable, EL PROVEEDOR atenderá la solicitud como garantía.
+
+---
+
 ## CLÁUSULA CUARTA — Vigencia y renovación
 
 4.1. El presente Contrato tendrá una vigencia inicial de **{{vigencia_meses}} meses** contados desde el **{{fecha_inicio_soporte}}**.

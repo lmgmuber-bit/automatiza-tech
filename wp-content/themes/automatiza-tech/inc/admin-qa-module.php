@@ -1640,13 +1640,18 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
     // Resolver destinatario
     $to_email = $to_override;
     $client_name = '';
+    $cli = null; // inicializar para evitar undefined variable en PHP 8
     if (!$to_email && $project->client_id) {
         $cli = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}crm_clientes WHERE id=%d", $project->client_id));
         if ($cli) { $to_email = $cli->email; $client_name = $cli->nombre; }
     }
+    // Si se pasó to_override pero no hay $cli, intentar cargar el cliente de igual forma
+    if ($cli === null && $project->client_id) {
+        $cli = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}crm_clientes WHERE id=%d", $project->client_id));
+        if ($cli && empty($client_name)) $client_name = $cli->nombre;
+    }
     if (!$to_email) wp_send_json_error('No hay email destino. Pasa to_email o vincula cliente al proyecto.');
 
-    // BCC interno — mismo patrón que receipts-module y admin-proposals
     $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
 
     // Construir adjunto igual que receipts-module.php
@@ -1750,36 +1755,29 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
 <?php
     $html_body = ob_get_clean();
 
-    // Hostinger bloquea PDF adjunto + BCC externo (gmail) = spam.
-    // Con adjunto solo BCC a dominios @automatizatech.cl
+    // Headers idénticos a receipts-module.php (patrón que sí funciona con PDF adjunto)
     $headers = [
         'Content-Type: text/html; charset=UTF-8',
         'From: AutomatizaTech <' . $from_email . '>',
-        'Bcc: lgonzalez@automatizatech.cl',
     ];
 
     $sent = wp_mail($to_email, $subject, $html_body, $headers, $attachments);
     if (!$sent) {
-        // Fallback: intentar sin adjunto (por si el PDF es el problema)
-        $sent = wp_mail($to_email, $subject, $html_body, $headers, []);
-        if (!$sent) {
-            global $phpmailer;
-            $detail = (isset($phpmailer) && isset($phpmailer->ErrorInfo) && $phpmailer->ErrorInfo)
-                ? $phpmailer->ErrorInfo
-                : 'Sin detalle — revisa el error_log del servidor';
-            wp_send_json_error('Error enviando correo: ' . $detail);
-        }
-        // Correo enviado pero sin adjunto — informar al admin
-        @$wpdb->query($wpdb->prepare(
-            "UPDATE {$t['projects']} SET last_report_sent_at = %s WHERE id = %d",
-            current_time('mysql'), $project_id
-        ));
-        wp_send_json_success([
-            'to'      => $to_email,
-            'subject' => $subject,
-            'warning' => 'Correo enviado sin PDF adjunto (el adjunto fue bloqueado por SMTP). El cliente puede descargar el informe desde el portal.',
-        ]);
+        global $phpmailer;
+        $detail = (isset($phpmailer) && isset($phpmailer->ErrorInfo) && $phpmailer->ErrorInfo)
+            ? $phpmailer->ErrorInfo
+            : 'Sin detalle — revisa el error_log del servidor';
+        wp_send_json_error('Error enviando correo: ' . $detail);
     }
+
+    // Copia interna al admin (envío separado, sin adjunto para no saturar SMTP)
+    $admin_bcc_email = 'lgonzalez@automatizatech.cl';
+    $admin_headers = [
+        'Content-Type: text/html; charset=UTF-8',
+        'From: AutomatizaTech <' . $from_email . '>',
+    ];
+    $admin_subject = '[COPIA ADMIN] ' . $subject;
+    @wp_mail($admin_bcc_email, $admin_subject, $html_body, $admin_headers, []);
 
     @$wpdb->query($wpdb->prepare(
         "UPDATE {$t['projects']} SET last_report_sent_at = %s WHERE id = %d",
@@ -1788,7 +1786,6 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
 
     wp_send_json_success([
         'to'      => $to_email,
-        'bcc'     => 'lgonzalez@automatizatech.cl',
         'subject' => $subject,
     ]);
 });

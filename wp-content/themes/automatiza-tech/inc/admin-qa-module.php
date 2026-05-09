@@ -137,17 +137,17 @@ function at_qa_setup_tables() {
 
     // Proyectos QA (uno por cliente/proyecto)
     dbDelta("CREATE TABLE {$t['projects']} (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        client_id INT UNSIGNED DEFAULT NULL COMMENT 'FK a wp_crm_clientes',
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        client_id INT UNSIGNED DEFAULT NULL,
         name VARCHAR(255) NOT NULL,
         slug VARCHAR(100) NOT NULL,
         description TEXT,
         qa_status ENUM('pending','in_progress','passed','failed','on_hold') DEFAULT 'pending',
         version VARCHAR(50) DEFAULT '1.0',
         environment VARCHAR(100) DEFAULT '',
-        md_base_path VARCHAR(500) DEFAULT '' COMMENT 'Ruta a los archivos MD del QA',
+        md_base_path VARCHAR(500) DEFAULT '',
         total_cases INT UNSIGNED DEFAULT 0,
-        assigned_testers TEXT COMMENT 'IDs de usuarios separados por coma',
+        assigned_testers TEXT,
         started_at DATETIME DEFAULT NULL,
         finished_at DATETIME DEFAULT NULL,
         last_report_at DATETIME DEFAULT NULL,
@@ -155,29 +155,31 @@ function at_qa_setup_tables() {
         last_report_sent_at DATETIME DEFAULT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE INDEX idx_slug (slug),
-        INDEX idx_client (client_id),
-        INDEX idx_status (qa_status)
+        PRIMARY KEY (id),
+        UNIQUE KEY idx_slug (slug),
+        KEY idx_client (client_id),
+        KEY idx_status (qa_status)
     ) $charset;");
 
     // Módulos / Suites
     dbDelta("CREATE TABLE {$t['modules']} (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
         project_id INT UNSIGNED NOT NULL,
         code VARCHAR(20) NOT NULL,
         title VARCHAR(255) NOT NULL,
         description TEXT,
         total_cases INT UNSIGNED DEFAULT 0,
         md_file VARCHAR(255) DEFAULT '',
-        assigned_tester INT UNSIGNED DEFAULT NULL COMMENT 'User ID del tester asignado',
+        assigned_tester INT UNSIGNED DEFAULT NULL,
         sort_order INT UNSIGNED DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_project (project_id)
+        PRIMARY KEY (id),
+        KEY idx_project (project_id)
     ) $charset;");
 
     // Casos de prueba
     dbDelta("CREATE TABLE {$t['cases']} (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
         module_id INT UNSIGNED NOT NULL,
         case_id VARCHAR(20) NOT NULL,
         section VARCHAR(255) DEFAULT '',
@@ -193,13 +195,14 @@ function at_qa_setup_tables() {
         sort_order INT UNSIGNED DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_module (module_id),
-        INDEX idx_status (status)
+        PRIMARY KEY (id),
+        KEY idx_module (module_id),
+        KEY idx_status (status)
     ) $charset;");
 
     // Evidencias
     dbDelta("CREATE TABLE {$t['evidence']} (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
         case_id INT UNSIGNED NOT NULL,
         file_url VARCHAR(500) NOT NULL,
         file_name VARCHAR(255) NOT NULL,
@@ -208,18 +211,20 @@ function at_qa_setup_tables() {
         uploaded_by INT UNSIGNED NOT NULL,
         description VARCHAR(500) DEFAULT '',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_case (case_id)
+        PRIMARY KEY (id),
+        KEY idx_case (case_id)
     ) $charset;");
 
     // Comentarios
     dbDelta("CREATE TABLE {$t['comments']} (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
         case_id INT UNSIGNED NOT NULL,
         user_id INT UNSIGNED NOT NULL,
         comment TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT NULL,
-        INDEX idx_case (case_id)
+        PRIMARY KEY (id),
+        KEY idx_case (case_id)
     ) $charset;");
 
     // Migración: agregar columna updated_at si no existe

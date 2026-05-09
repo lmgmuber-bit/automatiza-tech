@@ -1743,10 +1743,10 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
           </div>
         </td></tr>
         <tr><td style="background:#f8fafc;padding:20px 40px;text-align:center;font-size:11px;color:#888;border-top:1px solid #e5e7eb;">
-          <p style="margin:0 0 4px;"><strong>AutomatizaTech SpA</strong> · RUT 78.363.717-0</p>
-          <p style="margin:0 0 4px;">📧 contacto@automatizatech.cl · 📱 +56 9 2700 2984</p>
-          <p style="margin:0 0 4px;">📍 Santa Beatriz 170, Of. 903 (9P), Providencia, Santiago</p>
-          <p style="margin:8px 0 0;color:#aaa;">© <?php echo date('Y'); ?> AutomatizaTech. Todos los derechos reservados.</p>
+          <p style="margin:0 0 4px;"><strong>AutomatizaTech SpA</strong> &middot; RUT 78.363.717-0</p>
+          <p style="margin:0 0 4px;">contacto@automatizatech.cl &middot; +56 9 2700 2984</p>
+          <p style="margin:0 0 4px;">Santa Beatriz 170, Of. 903 (9P), Providencia, Santiago</p>
+          <p style="margin:8px 0 0;color:#aaa;">&copy; <?php echo date('Y'); ?> AutomatizaTech. Todos los derechos reservados.</p>
         </td></tr>
       </table>
     </td></tr>
@@ -1755,29 +1755,32 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
 <?php
     $html_body = ob_get_clean();
 
-    // Headers idénticos a receipts-module.php (patrón que sí funciona con PDF adjunto)
-    $headers = [
-        'Content-Type: text/html; charset=UTF-8',
-        'From: AutomatizaTech <' . $from_email . '>',
-    ];
+    // Patrón idéntico a proposals (que funciona con PDF + BCC + gmail)
+    $headers = array('Content-Type: text/html; charset=UTF-8');
+    $headers[] = 'From: Automatiza Tech <' . $from_email . '>';
+    $headers[] = 'Reply-To: ' . $from_email;
+    $headers[] = 'Bcc: lgonzalez@automatizatech.cl';
 
-    $sent = wp_mail($to_email, $subject, $html_body, $headers, $attachments);
-    if (!$sent) {
+    // Intentar primero sin adjunto (para aislar si el PDF es el problema)
+    $sent = wp_mail($to_email, $subject, $html_body, $headers);
+    if ($sent) {
+        // Email sin adjunto funcionó — ahora intentar con adjunto en un segundo envío interno
+        if (!empty($attachments)) {
+            $admin_headers_pdf = array('Content-Type: text/html; charset=UTF-8');
+            $admin_headers_pdf[] = 'From: Automatiza Tech <' . $from_email . '>';
+            $admin_simple_body = '<p>Informe QA generado para <strong>' . esc_html($project->name) . '</strong>.</p>'
+                . '<p>PDF adjunto para registro interno.</p>';
+            @wp_mail('lgonzalez@automatizatech.cl', '[PDF QA] ' . $project->name, $admin_simple_body, $admin_headers_pdf, $attachments);
+        }
+    } else {
+        // Si falla sin adjunto → el problema es el HTML o SMTP en general
         global $phpmailer;
         $detail = (isset($phpmailer) && isset($phpmailer->ErrorInfo) && $phpmailer->ErrorInfo)
             ? $phpmailer->ErrorInfo
-            : 'Sin detalle — revisa el error_log del servidor';
+            : 'Sin detalle — revisa error_log del servidor';
+        error_log('[QA-EMAIL-FAIL] To:' . $to_email . ' | Subject:' . $subject . ' | Error:' . $detail);
         wp_send_json_error('Error enviando correo: ' . $detail);
     }
-
-    // Copia interna al admin (envío separado, sin adjunto para no saturar SMTP)
-    $admin_bcc_email = 'lgonzalez@automatizatech.cl';
-    $admin_headers = [
-        'Content-Type: text/html; charset=UTF-8',
-        'From: AutomatizaTech <' . $from_email . '>',
-    ];
-    $admin_subject = '[COPIA ADMIN] ' . $subject;
-    @wp_mail($admin_bcc_email, $admin_subject, $html_body, $admin_headers, []);
 
     @$wpdb->query($wpdb->prepare(
         "UPDATE {$t['projects']} SET last_report_sent_at = %s WHERE id = %d",

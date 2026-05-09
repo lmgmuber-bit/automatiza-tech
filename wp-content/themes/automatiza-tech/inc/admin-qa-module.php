@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('AT_QA_VERSION', '1.3.0');
+define('AT_QA_VERSION', '1.3.1');
 define('AT_QA_EVIDENCE_DIR', 'qa-evidencias');
 
 // ──────────────────────────────────────────────
@@ -232,6 +232,20 @@ function at_qa_setup_tables() {
     $col_internal = $wpdb->get_var("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$t['projects']}' AND COLUMN_NAME = 'is_internal'");
     if (!$col_internal) {
         $wpdb->query("ALTER TABLE {$t['projects']} ADD COLUMN is_internal TINYINT(1) NOT NULL DEFAULT 0 AFTER client_id");
+    }
+
+    // Migración v1.3.1: agregar columnas de informe si no existen
+    $report_cols = [
+        'last_report_at'      => "ALTER TABLE {$t['projects']} ADD COLUMN last_report_at DATETIME DEFAULT NULL AFTER finished_at",
+        'last_report_pdf'     => "ALTER TABLE {$t['projects']} ADD COLUMN last_report_pdf VARCHAR(255) DEFAULT NULL AFTER last_report_at",
+        'last_report_sent_at' => "ALTER TABLE {$t['projects']} ADD COLUMN last_report_sent_at DATETIME DEFAULT NULL AFTER last_report_pdf",
+    ];
+    foreach ($report_cols as $col_name => $alter_sql) {
+        $exists = $wpdb->get_var("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$t['projects']}' AND COLUMN_NAME = '{$col_name}'");
+        if (!$exists) {
+            $wpdb->query($alter_sql);
+            error_log("[AT QA] Migración: columna '{$col_name}' creada en {$t['projects']}");
+        }
     }
 
     // Limpiar tablas antiguas si existen (migración desde versión PetsGO-only)
@@ -1673,7 +1687,8 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
 
     $logo_url = get_template_directory_uri() . '/assets/images/logo-automatiza-tech.png';
     $project_name = esc_html($project->name);
-    $subject = 'Informe QA - ' . $project->name . ' (' . $pass_rate . '% Pass)';
+    // Asunto sin "%" para evitar filtros anti-spam (SpamAssassin penaliza % en subjects)
+    $subject = 'Informe de Pruebas QA: ' . $project->name;
 
     // URL personalizada de la ficha del cliente con token de acceso
     $ficha_url = home_url('/');
@@ -1761,19 +1776,38 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
     $headers[] = 'Reply-To: ' . $from_email;
     $headers[] = 'Bcc: lgonzalez@automatizatech.cl';
 
-    // Intentar primero sin adjunto (para aislar si el PDF es el problema)
-    $sent = wp_mail($to_email, $subject, $html_body, $headers);
-    if ($sent) {
-        // Email sin adjunto funcionó — ahora intentar con adjunto en un segundo envío interno
-        if (!empty($attachments)) {
-            $admin_headers_pdf = array('Content-Type: text/html; charset=UTF-8');
-            $admin_headers_pdf[] = 'From: Automatiza Tech <' . $from_email . '>';
-            $admin_simple_body = '<p>Informe QA generado para <strong>' . esc_html($project->name) . '</strong>.</p>'
-                . '<p>PDF adjunto para registro interno.</p>';
-            @wp_mail('lgonzalez@automatizatech.cl', '[PDF QA] ' . $project->name, $admin_simple_body, $admin_headers_pdf, $attachments);
+    // AltBody en texto plano → evita penalización SpamAssassin MIME_HTML_ONLY
+    $plain_name   = $client_name ?: 'estimado/a cliente';
+    $plain_verdict = $verdict . ' - ' . $pass_rate . '% de casos aprobados';
+    $at_qa_altbody = implode("\n", [
+        "Informe de Pruebas QA: {$project->name}",
+        str_repeat('-', 50),
+        "Hola {$plain_name},",
+        "",
+        "Adjuntamos el Informe Final de Pruebas QA de tu proyecto {$project->name}.",
+        "",
+        "RESULTADO: {$plain_verdict}",
+        "Total: {$g['total']} | Pass: {$g['pass']} | Fail: {$g['fail']} | Bloqueados: {$g['blocked']}",
+        "",
+        "Ver portal: " . $ficha_url,
+        ($pdf_download_url ? "Descargar PDF: " . $pdf_download_url : ""),
+        "",
+        "AutomatizaTech SpA | contacto@automatizatech.cl | +56 9 2700 2984",
+    ]);
+
+    // Hook puntual para inyectar AltBody en el próximo wp_mail (reset automático)
+    $altbody_hook = function($pm) use ($at_qa_altbody, &$altbody_hook) {
+        if (empty($pm->AltBody)) {
+            $pm->AltBody = $at_qa_altbody;
         }
-    } else {
-        // Si falla sin adjunto → el problema es el HTML o SMTP en general
+        remove_action('phpmailer_init', $altbody_hook, 20);
+    };
+    add_action('phpmailer_init', $altbody_hook, 20);
+
+    // Enviar con PDF adjunto al cliente (mismo patrón que receipts-module.php)
+    $sent = wp_mail($to_email, $subject, $html_body, $headers, $attachments);
+    if (!$sent) {
+        remove_action('phpmailer_init', $altbody_hook, 20); // limpiar si no se ejecutó
         global $phpmailer;
         $detail = (isset($phpmailer) && isset($phpmailer->ErrorInfo) && $phpmailer->ErrorInfo)
             ? $phpmailer->ErrorInfo

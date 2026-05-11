@@ -111,15 +111,61 @@ function at_render_client_contracts_widget($client) {
                         <label>Razón social cliente
                             <input type="text" name="razon_social_cliente" required value="<?php echo esc_attr($client->company_name ?? $client->name ?? ''); ?>" style="width:100%">
                         </label>
-                        <label>RUT cliente
-                            <input type="text" name="rut_cliente" required placeholder="76.123.456-7" style="width:100%">
-                        </label>
+                        <!-- Tipo ID + Número cliente -->
+                        <div>
+                            <label style="margin-bottom:5px;display:block">
+                                <span style="font-size:12px;color:#374151">Tipo documento cliente</span>
+                                <select name="tipo_id_cliente" id="at-tipo-id-cliente" style="width:100%;margin-top:4px;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px" onchange="atSwitchIdType('cliente')">
+                                    <option value="RUT">🇨🇱 RUT (Chile / Residente)</option>
+                                    <option value="DNI">🌍 DNI (Extranjero)</option>
+                                    <option value="Pasaporte">🛂 Pasaporte</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span id="at-label-id-cliente" style="font-size:12px;color:#374151">RUT cliente</span>
+                                <input type="text" name="rut_cliente" id="at-rut-cliente" data-tipo="RUT" required placeholder="76.123.456-7" style="width:100%;margin-top:4px;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px" oninput="atOnIdInput(this,'cliente')">
+                                <small id="at-rut-cliente-error" style="color:#dc2626;font-size:11px;margin-top:2px;display:none"></small>
+                            </label>
+                        </div>
                         <label>Representante (nombre)
                             <input type="text" name="representante_cliente_nombre" required value="<?php echo esc_attr($client->name ?? ''); ?>" style="width:100%">
                         </label>
-                        <label>RUT representante
-                            <input type="text" name="representante_cliente_rut" required style="width:100%">
-                        </label>
+                        <!-- Tipo ID + Número representante + Nacionalidad -->
+                        <div>
+                            <label style="margin-bottom:5px;display:block">
+                                <span style="font-size:12px;color:#374151">Tipo documento representante</span>
+                                <select name="tipo_id_representante" id="at-tipo-id-rep" style="width:100%;margin-top:4px;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px" onchange="atSwitchIdType('rep')">
+                                    <option value="RUT">🇨🇱 RUT (Chile / Residente)</option>
+                                    <option value="DNI">🌍 DNI (Extranjero)</option>
+                                    <option value="Pasaporte">🛂 Pasaporte</option>
+                                </select>
+                            </label>
+                            <label style="margin-bottom:5px;display:block">
+                                <span id="at-label-id-rep" style="font-size:12px;color:#374151">RUT representante</span>
+                                <input type="text" name="representante_cliente_rut" id="at-rut-rep" data-tipo="RUT" required placeholder="12.345.678-9" style="width:100%;margin-top:4px;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px" oninput="atOnIdInput(this,'rep')">
+                                <small id="at-rut-rep-error" style="color:#dc2626;font-size:11px;margin-top:2px;display:none"></small>
+                            </label>
+                            <label>
+                                <span style="font-size:12px;color:#374151">Nacionalidad representante</span>
+                                <select name="nacionalidad_representante" id="at-nac-rep" style="width:100%;margin-top:4px;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px">
+                                    <option value="Chilena">🇨🇱 Chilena</option>
+                                    <option value="Argentina">🇦🇷 Argentina</option>
+                                    <option value="Peruana">🇵🇪 Peruana</option>
+                                    <option value="Colombiana">🇨🇴 Colombiana</option>
+                                    <option value="Venezolana">🇻🇪 Venezolana</option>
+                                    <option value="Boliviana">🇧🇴 Boliviana</option>
+                                    <option value="Ecuatoriana">🇪🇨 Ecuatoriana</option>
+                                    <option value="Brasileña">🇧🇷 Brasileña</option>
+                                    <option value="Mexicana">🇲🇽 Mexicana</option>
+                                    <option value="Española">🇪🇸 Española</option>
+                                    <option value="Estadounidense">🇺🇸 Estadounidense</option>
+                                    <option value="Italiana">🇮🇹 Italiana</option>
+                                    <option value="Francesa">🇫🇷 Francesa</option>
+                                    <option value="Alemana">🇩🇪 Alemana</option>
+                                    <option value="Otra">🌍 Otra</option>
+                                </select>
+                            </label>
+                        </div>
                         <label style="grid-column:1/-1">Domicilio cliente
                             <input type="text" name="domicilio_cliente" required style="width:100%">
                         </label>
@@ -283,6 +329,72 @@ function at_render_client_contracts_widget($client) {
         });
     }
 
+    /* ── RUT / DNI / Pasaporte helpers ── */
+    function atValidateRutChile(rut) {
+        rut = String(rut).replace(/\./g,'').replace(/-/g,'').trim().toUpperCase();
+        if (rut.length < 2) return false;
+        const body = rut.slice(0,-1);
+        const dv   = rut.slice(-1);
+        if (!/^\d+$/.test(body)) return false;
+        let sum = 0, mul = 2;
+        for (let i = body.length - 1; i >= 0; i--) {
+            sum += parseInt(body[i]) * mul;
+            mul = mul === 7 ? 2 : mul + 1;
+        }
+        const rem = sum % 11;
+        const expected = rem === 0 ? '0' : rem === 1 ? 'K' : String(11 - rem);
+        return dv === expected;
+    }
+    function atFormatRutChile(val) {
+        val = val.replace(/\./g,'').replace(/-/g,'').replace(/[^0-9kK]/gi,'').toUpperCase();
+        if (val.length < 2) return val;
+        const dv   = val.slice(-1);
+        let body   = val.slice(0,-1);
+        body = body.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+        return body + '-' + dv;
+    }
+    function atSwitchIdType(side) {
+        const isCliente = side === 'cliente';
+        const selectEl  = document.getElementById(isCliente ? 'at-tipo-id-cliente' : 'at-tipo-id-rep');
+        const inputEl   = document.getElementById(isCliente ? 'at-rut-cliente'      : 'at-rut-rep');
+        const labelEl   = document.getElementById(isCliente ? 'at-label-id-cliente' : 'at-label-id-rep');
+        const errorEl   = document.getElementById(isCliente ? 'at-rut-cliente-error': 'at-rut-rep-error');
+        if (!selectEl || !inputEl) return;
+        const tipo = selectEl.value;
+        const labels = { cliente: { RUT:'RUT cliente', DNI:'DNI cliente', Pasaporte:'Pasaporte cliente' },
+                         rep:     { RUT:'RUT representante', DNI:'DNI representante', Pasaporte:'Pasaporte representante' } };
+        const placeholders = { RUT:'12.345.678-9', DNI:'Ej: 87654321', Pasaporte:'Ej: AB123456' };
+        if (labelEl) labelEl.textContent = labels[side][tipo] || labels[side]['RUT'];
+        inputEl.placeholder = placeholders[tipo] || '';
+        inputEl.setAttribute('data-tipo', tipo);
+        inputEl.value = '';
+        inputEl.style.borderColor = '#d1d5db';
+        if (errorEl) errorEl.style.display = 'none';
+    }
+    function atOnIdInput(input, side) {
+        const tipo    = input.getAttribute('data-tipo') || 'RUT';
+        const isCliente = side === 'cliente';
+        const errorEl = document.getElementById(isCliente ? 'at-rut-cliente-error' : 'at-rut-rep-error');
+        if (tipo === 'RUT') {
+            const raw = input.value;
+            input.value = atFormatRutChile(raw);
+            const valid = atValidateRutChile(input.value);
+            if (errorEl) {
+                if (input.value.replace(/[^0-9kK]/gi,'').length >= 7 && !valid) {
+                    errorEl.textContent = '⚠️ RUT inválido — verifica el dígito verificador.';
+                    errorEl.style.display = 'block';
+                    input.style.borderColor = '#dc2626';
+                } else {
+                    errorEl.style.display = 'none';
+                    input.style.borderColor = (valid && input.value.length > 4) ? '#16a34a' : '#d1d5db';
+                }
+            }
+        } else {
+            if (errorEl) errorEl.style.display = 'none';
+            input.style.borderColor = '#d1d5db';
+        }
+    }
+
     // Presets por plan de soporte
     const AT_PLAN_PRESETS = {
         'garantia': { horas: 0, monto: 0,    desc: '🎁 Solo cubre bugs y errores del requerimiento inicial · nueva funcionalidad = nuevo desarrollo con costo · solo se cobra IVA', valorHora: 45000 },
@@ -351,6 +463,23 @@ function at_render_client_contracts_widget($client) {
     });
     async function atSubmitContract(e){
         e.preventDefault();
+        // Validar RUT si el tipo es RUT
+        const rutCli = document.getElementById('at-rut-cliente');
+        const rutRep = document.getElementById('at-rut-rep');
+        if (rutCli && rutCli.getAttribute('data-tipo') === 'RUT' && !atValidateRutChile(rutCli.value)) {
+            document.getElementById('at-rut-cliente-error').textContent = '⚠️ RUT inválido — verifica el dígito verificador.';
+            document.getElementById('at-rut-cliente-error').style.display = 'block';
+            rutCli.style.borderColor = '#dc2626';
+            rutCli.focus();
+            return;
+        }
+        if (rutRep && rutRep.getAttribute('data-tipo') === 'RUT' && !atValidateRutChile(rutRep.value)) {
+            document.getElementById('at-rut-rep-error').textContent = '⚠️ RUT inválido — verifica el dígito verificador.';
+            document.getElementById('at-rut-rep-error').style.display = 'block';
+            rutRep.style.borderColor = '#dc2626';
+            rutRep.focus();
+            return;
+        }
         const form = e.target;
         const fd = new FormData(form);
         fd.append('action','at_create_contract_widget');
@@ -425,8 +554,11 @@ add_action('wp_ajax_at_create_contract_widget', function(){
     $ph = array(
         'razon_social_cliente'         => sanitize_text_field($_POST['razon_social_cliente'] ?? ''),
         'rut_cliente'                  => sanitize_text_field($_POST['rut_cliente'] ?? ''),
+        'id_tipo_cliente'              => sanitize_text_field($_POST['tipo_id_cliente'] ?? 'RUT'),
         'representante_cliente_nombre' => sanitize_text_field($_POST['representante_cliente_nombre'] ?? ''),
         'representante_cliente_rut'    => sanitize_text_field($_POST['representante_cliente_rut'] ?? ''),
+        'id_tipo_representante'        => sanitize_text_field($_POST['tipo_id_representante'] ?? 'RUT'),
+        'nacionalidad_representante'   => sanitize_text_field($_POST['nacionalidad_representante'] ?? 'Chilena'),
         'domicilio_cliente'            => sanitize_text_field($_POST['domicilio_cliente'] ?? ''),
         'email_cliente'                => sanitize_email($_POST['email_cliente'] ?? ''),
         'telefono_cliente'             => sanitize_text_field($_POST['telefono_cliente'] ?? ''),

@@ -15,7 +15,7 @@ En **{{ciudad_firma}}**, a **{{fecha_firma_larga}}**, comparecen:
 **AutomatizaTech SpA** (en adelante "**EL PROVEEDOR**" o "**AT**"), RUT **{{rut_at}}**, representada legalmente por **{{representante_at_nombre}}**, RUT **{{representante_at_rut}}**, con domicilio en **{{domicilio_at}}**, correo electrónico **{{email_at}}**.
 
 **Y POR LA OTRA:**
-**{{razon_social_cliente}}** (en adelante "**EL CLIENTE**"), RUT **{{rut_cliente}}**, representada legalmente por **{{representante_cliente_nombre}}**, RUT **{{representante_cliente_rut}}**, con domicilio en **{{domicilio_cliente}}**, correo electrónico **{{email_cliente}}**, teléfono **{{telefono_cliente}}**.
+**{{razon_social_cliente}}** (en adelante "**EL CLIENTE**"), {{id_tipo_cliente}} **{{rut_cliente}}**, representada legalmente por **{{representante_cliente_nombre}}**, {{id_tipo_representante}} **{{representante_cliente_rut}}**, de nacionalidad **{{nacionalidad_representante}}**, con domicilio en **{{domicilio_cliente}}**, correo electrónico **{{email_cliente}}**, teléfono **{{telefono_cliente}}**.
 
 Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar el siguiente contrato (en adelante el "**Contrato**"), que se regirá por las cláusulas siguientes y, en lo no previsto en ellas, por la legislación chilena vigente.
 

@@ -1240,7 +1240,8 @@ class AutomatizaTech_Client_Operations {
                 },
                 success: function(response) {
                     if (response.success) {
-                        overlay.innerHTML = response.data;
+                        // jQuery .html() ejecuta los <script> del response (innerHTML no lo hace)
+                        jQuery(overlay).html(response.data);
                         initClientFullModalTabs();
                     } else {
                         alert('Error: ' + (response.data || 'No se pudo cargar la información'));

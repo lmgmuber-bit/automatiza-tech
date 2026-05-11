@@ -104,7 +104,7 @@ function at_render_client_contracts_widget($client) {
                     <h2 style="margin:0">📜 Nuevo contrato de soporte</h2>
                     <button type="button" onclick="atCloseNewContract()" style="background:none;border:0;font-size:24px;cursor:pointer">&times;</button>
                 </div>
-                <form id="at-new-contract-form" onsubmit="atSubmitContract(event)">
+                <form id="at-new-contract-form" method="post" onsubmit="atSubmitContract(event)">
                     <input type="hidden" name="client_id" value="<?php echo $client_id; ?>">
 
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">

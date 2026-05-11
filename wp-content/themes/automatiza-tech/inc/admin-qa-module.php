@@ -1801,7 +1801,12 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
     $admin_body = '<p>Informe QA enviado a <strong>' . esc_html($to_email) . '</strong> '
         . 'para el proyecto <strong>' . esc_html($project->name) . '</strong> '
         . '(' . $pass_rate . ' por ciento de aprobación).</p>';
-    @wp_mail('lgonzalez@automatizatech.cl', '[QA Copia] ' . $project->name, $admin_body, $admin_headers);
+    @wp_mail(
+        ['lgonzalez@automatizatech.cl', 'Lmgm.0303@gmail.com'],
+        '[QA Copia] ' . $project->name,
+        $admin_body,
+        $admin_headers
+    );
 
     @$wpdb->query($wpdb->prepare(
         "UPDATE {$t['projects']} SET last_report_sent_at = %s WHERE id = %d",

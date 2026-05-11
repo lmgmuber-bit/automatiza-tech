@@ -174,15 +174,22 @@ function at_render_client_contracts_widget($client) {
                             <?php endif; ?>
                         </div>
                         <label>Plan de soporte
-                            <select name="nombre_plan_soporte" style="width:100%">
-                                <option>Básico</option><option selected>Estándar</option><option>Premium</option>
+                            <select name="nombre_plan_soporte" id="at-plan-soporte" style="width:100%" onchange="atApplyPlanPreset(this.value)">
+                                <option value="Básico">📦 Básico</option>
+                                <option value="Estándar" selected>⭐ Estándar</option>
+                                <option value="Premium">🚀 Premium</option>
                             </select>
+                            <small id="at-plan-desc" style="margin-top:4px;color:#6b7280;display:block;font-size:11px">
+                                Bugs + ajustes menores · SLA 24h · reunión mensual
+                            </small>
                         </label>
                         <label>Horas evolutivas/mes
-                            <input type="number" name="horas_evolutivas_mes" min="0" value="4" style="width:100%">
+                            <input type="number" name="horas_evolutivas_mes" id="at-horas-evolutivas" min="0" value="4" style="width:100%">
+                            <small style="color:#6b7280;font-size:11px">Horas de desarrollo mensual incluidas en el plan</small>
                         </label>
                         <label>Monto mensual (CLP)
-                            <input type="number" name="monthly_amount" min="0" step="1000" required style="width:100%">
+                            <input type="number" name="monthly_amount" id="at-monthly-amount" min="0" step="1000" required style="width:100%">
+                            <small id="at-plan-price-hint" style="color:#059669;font-size:11px;display:none"></small>
                         </label>
                         <label>Inicio vigencia
                             <input type="date" name="starts_at" required value="<?php echo date('Y-m-d'); ?>" style="width:100%">
@@ -262,7 +269,30 @@ function at_render_client_contracts_widget($client) {
         });
     }
 
-    // Actualizar resumen de servicios seleccionados
+    // Presets por plan de soporte
+    const AT_PLAN_PRESETS = {
+        'Básico':    { horas: 2,  desc: 'Corrección de bugs críticos · SLA 48-72h · sin evolutivos incluidos',       valorHora: 45000 },
+        'Estándar':  { horas: 4,  desc: 'Bugs + ajustes menores · SLA 24h · reunión mensual',                         valorHora: 45000 },
+        'Premium':   { horas: 8,  desc: 'Bugs + evolutivos + nuevas funciones · SLA < 4h · reunión semanal · soporte prioritario', valorHora: 40000 },
+    };
+    function atApplyPlanPreset(plan) {
+        const p = AT_PLAN_PRESETS[plan];
+        if (!p) return;
+        const horasEl = document.getElementById('at-horas-evolutivas');
+        const descEl  = document.getElementById('at-plan-desc');
+        const hintEl  = document.getElementById('at-plan-price-hint');
+        if (horasEl) horasEl.value = p.horas;
+        if (descEl)  descEl.textContent = p.desc;
+        if (hintEl) {
+            hintEl.textContent = '💡 Valor hora fuera de alcance: $' + p.valorHora.toLocaleString('es-CL') + ' CLP + IVA';
+            hintEl.style.display = 'block';
+        }
+    }
+    // Aplicar preset inicial al cargar
+    document.addEventListener('DOMContentLoaded', function(){
+        var sel = document.getElementById('at-plan-soporte');
+        if (sel) atApplyPlanPreset(sel.value);
+    });
     document.addEventListener('change', function(e){
         if (e.target && e.target.name === 'servicios_ids[]') {
             const checked = document.querySelectorAll('input[name="servicios_ids[]"]:checked');
@@ -325,6 +355,11 @@ add_action('wp_ajax_at_create_contract_widget', function(){
     $ends     = date('Y-m-d', strtotime($starts . ' +' . $vig_m . ' months'));
     $expires  = max(1, intval($_POST['expires_in_days'] ?? 14));
 
+    $plan_nombre = sanitize_text_field($_POST['nombre_plan_soporte'] ?? 'Estándar');
+    // Mapeo server-side de valor_hora por plan (refleja los presets del JS)
+    $plan_valor_hora_map = array('Básico' => '45.000', 'Estándar' => '45.000', 'Premium' => '40.000');
+    $valor_hora_plan = $plan_valor_hora_map[$plan_nombre] ?? '45.000';
+
     $ph = array(
         'razon_social_cliente'         => sanitize_text_field($_POST['razon_social_cliente'] ?? ''),
         'rut_cliente'                  => sanitize_text_field($_POST['rut_cliente'] ?? ''),
@@ -334,8 +369,9 @@ add_action('wp_ajax_at_create_contract_widget', function(){
         'email_cliente'                => sanitize_email($_POST['email_cliente'] ?? ''),
         'telefono_cliente'             => sanitize_text_field($_POST['telefono_cliente'] ?? ''),
         'nombre_proyecto'              => sanitize_text_field($_POST['nombre_proyecto'] ?? ''),
-        'nombre_plan_soporte'          => sanitize_text_field($_POST['nombre_plan_soporte'] ?? 'Estándar'),
+        'nombre_plan_soporte'          => $plan_nombre,
         'horas_evolutivas_mes'         => intval($_POST['horas_evolutivas_mes'] ?? 4),
+        'valor_hora'                   => $valor_hora_plan,
         'vigencia_meses'               => $vig_m,
         'monto_mensual'                => number_format($monthly, 0, ',', '.'),
         'fecha_aceptacion'             => date('d-m-Y'),

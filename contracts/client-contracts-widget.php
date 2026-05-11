@@ -104,7 +104,9 @@ function at_render_client_contracts_widget($client) {
                     <h2 style="margin:0">📜 Nuevo contrato de soporte</h2>
                     <button type="button" onclick="atCloseNewContract()" style="background:none;border:0;font-size:24px;cursor:pointer">&times;</button>
                 </div>
-                <form id="at-new-contract-form" method="post" onsubmit="atSubmitContract(event)">
+                <form id="at-new-contract-form" method="post" action="<?php echo esc_url(admin_url('admin-ajax.php')); ?>" onsubmit="if(typeof atSubmitContract==='function'){return atSubmitContract(event);}">
+                    <input type="hidden" name="action" value="at_create_contract_widget">
+                    <input type="hidden" name="nonce" value="<?php echo wp_create_nonce('at_contract_widget_' . $client_id); ?>">
                     <input type="hidden" name="client_id" value="<?php echo $client_id; ?>">
 
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -482,8 +484,8 @@ function at_render_client_contracts_widget($client) {
         }
         const form = e.target;
         const fd = new FormData(form);
-        fd.append('action','at_create_contract_widget');
-        fd.append('nonce', document.querySelector('.at-contracts-widget').dataset.nonce);
+        // action y nonce ya vienen en hidden inputs del form; solo aseguramos
+        if (!fd.get('action')) fd.append('action','at_create_contract_widget');
         const btn = form.querySelector('button[type=submit]');
         btn.disabled=true; btn.textContent='Generando...';
         try{

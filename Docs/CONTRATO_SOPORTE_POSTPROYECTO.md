@@ -64,7 +64,9 @@ Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar
 
 ## CLÁUSULA TERCERA BIS — Garantía post-entrega del Proyecto 🛡️
 
-3A.1. **Período de garantía:** EL PROVEEDOR otorga al CLIENTE una **garantía de {{garantia_meses}} meses (1 año)** contados desde la fecha de entrega formal del Proyecto (Anexo A), período durante el cual toda **corrección, ajuste o arreglo** derivado directa o indirectamente de un error, omisión o defecto **atribuible al desarrollo original** realizado por EL PROVEEDOR será resuelto **sin costo adicional alguno** para EL CLIENTE, con independencia de si el CLIENTE ha contratado un plan de soporte.
+3A.1. **Período de garantía:** EL PROVEEDOR otorga al CLIENTE una **garantía de {{garantia_meses}} mes(es)** contados desde la fecha de entrega formal del Proyecto (Anexo A), período durante el cual toda **corrección, ajuste o arreglo** derivado directa o indirectamente de un error, omisión o defecto **atribuible al desarrollo original** realizado por EL PROVEEDOR será resuelto **sin costo de honorarios adicional** para EL CLIENTE. **Únicamente será cobrado el IVA** cuando la emisión de una boleta o factura sea exigible por normativa tributaria chilena. Esta garantía opera con independencia de si el CLIENTE ha contratado un plan de soporte mensual.
+
+> ⚠️ **Límite absoluto de la garantía:** La garantía cubre **exclusivamente bugs, errores funcionales y comportamientos no conformes al requerimiento original acordado**. Cualquier solicitud de **nueva funcionalidad, nuevo módulo, nueva pantalla o cambio de alcance** que no esté expresamente contemplado en la propuesta original N° {{propuesta_id}} constituye un **nuevo desarrollo** y será cotizado y cobrado de forma separada, sin excepción.
 
 3A.2. **¿Qué cubre la garantía?** Se consideran cubiertos sin costo adicional:
 - a) Corrección de errores ("bugs") funcionales o lógicos en el código desarrollado.
@@ -73,8 +75,8 @@ Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar
 - d) Inconsistencias visuales o de rendimiento en las interfaces entregadas.
 - e) Cualquier arreglo, corrección o mejora **directamente vinculada** al alcance del Proyecto original.
 
-3A.3. **¿Qué NO cubre la garantía (sí tiene costo adicional)?**
-- a) **Nuevas funcionalidades**, módulos o pantallas no contempladas en la propuesta original.
+3A.3. **¿Qué NO cubre la garantía (es un nuevo desarrollo con costo adicional)?** 🛡️
+- a) **Nuevas funcionalidades**, módulos o pantallas no contempladas en la propuesta original. **Toda nueva funcionalidad es un nuevo desarrollo y tiene costo adicional, independiente del período de garantía vigente.**
 - b) **Cambios de alcance** o requerimientos nuevos solicitados por el CLIENTE tras la entrega.
 - c) Funcionalidades **aisladas o independientes** del desarrollo original que constituyan un trabajo nuevo.
 - d) Ajustes por cambios en plataformas o APIs de terceros (OpenAI, Meta, Google, etc.) ajenos al control de EL PROVEEDOR.
@@ -104,7 +106,9 @@ Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar
 
 ## CLÁUSULA QUINTA — Precio y forma de pago
 
-5.1. EL CLIENTE pagará a EL PROVEEDOR la suma mensual de **${{monto_mensual}} ({{monto_mensual_palabras}} pesos chilenos)**, más el Impuesto al Valor Agregado correspondiente.
+5.1. EL CLIENTE pagará a EL PROVEEDOR la suma mensual de **${{monto_mensual}} CLP**, más el Impuesto al Valor Agregado (IVA) correspondiente. En el caso del **Plan de Garantía post-entrega**, el monto base de honorarios es **$0 (cero pesos)** y únicamente se emitirá boleta o factura por el IVA cuando la normativa tributaria chilena lo exija.
+
+5.1bis. **Nueva funcionalidad = nuevo presupuesto:** Toda solicitud que implique agregar funcionalidades, módulos, pantallas o integraciones no contempladas en la propuesta original N° {{propuesta_id}} constituye un **nuevo proyecto de desarrollo**, sujeto a cotización y aprobación expresa por escrito, con independencia del plan contratado y del período de garantía vigente.
 
 5.2. La facturación se emitirá los primeros 5 días hábiles de cada mes, con vencimiento a **{{dias_pago}} días corridos** desde su emisión.
 

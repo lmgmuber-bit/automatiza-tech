@@ -175,7 +175,7 @@ function at_render_client_contracts_widget($client) {
                         </div>
                         <label>Plan de soporte
                             <select name="nombre_plan_soporte" id="at-plan-soporte" style="width:100%" onchange="atApplyPlanPreset(this.value)">
-                                <option value="Garantía (Gratis — 1 año)">🎁 Garantía (Gratis — 1 año)</option>
+                                <option value="garantia">🎁 Período de Garantía (gratis — solo IVA)</option>
                                 <option value="Básico">📦 Básico</option>
                                 <option value="Estándar" selected>⭐ Estándar</option>
                                 <option value="Premium">🚀 Premium</option>
@@ -184,6 +184,19 @@ function at_render_client_contracts_widget($client) {
                                 Bugs + ajustes menores · SLA 24h · reunión mensual
                             </small>
                         </label>
+
+                        <!-- Meses de garantía (solo visible si plan=garantia) -->
+                        <label id="at-garantia-meses-wrap" style="display:none">Duración garantía (meses)
+                            <select name="garantia_meses" id="at-garantia-meses" style="width:100%">
+                                <?php for ($m = 1; $m <= 12; $m++): ?>
+                                    <option value="<?php echo $m; ?>" <?php echo $m === 12 ? 'selected' : ''; ?>>
+                                        <?php echo $m; ?> mes<?php echo $m > 1 ? 'es' : ''; ?>
+                                    </option>
+                                <?php endfor; ?>
+                            </select>
+                            <small style="color:#059669;font-size:11px">Cubre solo bugs y errores del requerimiento inicial</small>
+                        </label>
+
                         <label>Horas evolutivas/mes
                             <input type="number" name="horas_evolutivas_mes" id="at-horas-evolutivas" min="0" value="4" style="width:100%">
                             <small style="color:#6b7280;font-size:11px">Horas de desarrollo mensual incluidas en el plan</small>
@@ -195,8 +208,8 @@ function at_render_client_contracts_widget($client) {
                         <label>Inicio vigencia
                             <input type="date" name="starts_at" required value="<?php echo date('Y-m-d'); ?>" style="width:100%">
                         </label>
-                        <label>Vigencia (meses)
-                            <input type="number" name="vigencia_meses" min="1" value="12" style="width:100%">
+                        <label id="at-vigencia-wrap">Vigencia (meses)
+                            <input type="number" name="vigencia_meses" id="at-vigencia-meses" min="1" value="12" style="width:100%">
                         </label>
                         <label>Expira link en (días)
                             <input type="number" name="expires_in_days" min="1" value="14" style="width:100%">
@@ -272,30 +285,50 @@ function at_render_client_contracts_widget($client) {
 
     // Presets por plan de soporte
     const AT_PLAN_PRESETS = {
-        'Garantía (Gratis — 1 año)': { horas: 0,  monto: 0,    desc: '🎁 Incluido en garantía post-entrega · cubre bugs y ajustes · sin costo por 12 meses', valorHora: 45000 },
-        'Básico':    { horas: 2,  monto: null, desc: 'Corrección de bugs críticos · SLA 48-72h · sin evolutivos incluidos',       valorHora: 45000 },
-        'Estándar':  { horas: 4,  monto: null, desc: 'Bugs + ajustes menores · SLA 24h · reunión mensual',                         valorHora: 45000 },
-        'Premium':   { horas: 8,  monto: null, desc: 'Bugs + evolutivos + nuevas funciones · SLA < 4h · reunión semanal · soporte prioritario', valorHora: 40000 },
+        'garantia': { horas: 0, monto: 0,    desc: '🎁 Solo cubre bugs y errores del requerimiento inicial · nueva funcionalidad = nuevo desarrollo con costo · solo se cobra IVA', valorHora: 45000 },
+        'Básico':   { horas: 2, monto: null, desc: 'Corrección de bugs críticos · SLA 48-72h · nueva funcionalidad = cotización aparte',       valorHora: 45000 },
+        'Estándar': { horas: 4, monto: null, desc: 'Bugs + ajustes menores · SLA 24h · reunión mensual · nueva funcionalidad = cotización aparte', valorHora: 45000 },
+        'Premium':  { horas: 8, monto: null, desc: 'Bugs + evolutivos menores · SLA <4h · reunión semanal · nueva funcionalidad = cotización aparte', valorHora: 40000 },
     };
     function atApplyPlanPreset(plan) {
         const p = AT_PLAN_PRESETS[plan];
         if (!p) return;
-        const horasEl   = document.getElementById('at-horas-evolutivas');
-        const montoEl   = document.getElementById('at-monthly-amount');
-        const descEl    = document.getElementById('at-plan-desc');
-        const hintEl    = document.getElementById('at-plan-price-hint');
-        const montoWrap = document.getElementById('at-monto-wrap');
+        const horasEl      = document.getElementById('at-horas-evolutivas');
+        const montoEl      = document.getElementById('at-monthly-amount');
+        const descEl       = document.getElementById('at-plan-desc');
+        const hintEl       = document.getElementById('at-plan-price-hint');
+        const garantiaWrap = document.getElementById('at-garantia-meses-wrap');
+        const vigenciaWrap = document.getElementById('at-vigencia-wrap');
+        const garantiaSel  = document.getElementById('at-garantia-meses');
+        const vigenciaEl   = document.getElementById('at-vigencia-meses');
+
         if (horasEl) horasEl.value = p.horas;
         if (descEl)  descEl.textContent = p.desc;
-        // Plan garantía: monto = 0 y campo bloqueado
-        if (plan === 'Garantía (Gratis — 1 año)') {
-            if (montoEl)   { montoEl.value = 0; montoEl.readOnly = true; montoEl.style.background='#f0fdf4'; montoEl.required = false; }
-            if (hintEl)    { hintEl.textContent = '🎁 Este plan es gratuito durante el período de garantía (12 meses)'; hintEl.style.color='#059669'; hintEl.style.display='block'; }
+
+        if (plan === 'garantia') {
+            // Garantía: monto $0, bloquear campo, mostrar selector de meses garantía
+            if (montoEl)      { montoEl.value = 0; montoEl.readOnly = true; montoEl.style.background='#f0fdf4'; montoEl.required = false; }
+            if (garantiaWrap) garantiaWrap.style.display = 'block';
+            if (vigenciaWrap) vigenciaWrap.style.display = 'none';
+            if (hintEl)       { hintEl.textContent = '🎁 $0 CLP base · solo se cobra IVA si aplica · nueva funcionalidad es un nuevo desarrollo con costo adicional'; hintEl.style.color='#059669'; hintEl.style.display='block'; }
+            // Sincronizar vigencia con meses de garantía seleccionados
+            if (garantiaSel && vigenciaEl) vigenciaEl.value = garantiaSel.value;
         } else {
-            if (montoEl)   { montoEl.readOnly = false; montoEl.style.background=''; montoEl.required = true; }
-            if (hintEl)    { hintEl.textContent = '💡 Valor hora fuera de alcance: $' + p.valorHora.toLocaleString('es-CL') + ' CLP + IVA'; hintEl.style.color='#6b7280'; hintEl.style.display='block'; }
+            if (montoEl)      { montoEl.readOnly = false; montoEl.style.background=''; montoEl.required = true; }
+            if (garantiaWrap) garantiaWrap.style.display = 'none';
+            if (vigenciaWrap) vigenciaWrap.style.display = 'block';
+            if (hintEl)       { hintEl.textContent = '💡 Valor hora fuera de alcance: $' + p.valorHora.toLocaleString('es-CL') + ' CLP + IVA · nueva funcionalidad = cotización aparte'; hintEl.style.color='#6b7280'; hintEl.style.display='block'; }
         }
     }
+    // Sincronizar selector garantia_meses con vigencia_meses
+    document.addEventListener('change', function(e){
+        if (e.target && e.target.id === 'at-garantia-meses') {
+            const vigEl = document.getElementById('at-vigencia-meses');
+            if (vigEl) vigEl.value = e.target.value;
+            const hintEl = document.getElementById('at-plan-price-hint');
+            if (hintEl) hintEl.textContent = '🎁 $0 CLP base · Garantía por ' + e.target.value + ' mes(es) · solo se cobra IVA si aplica';
+        }
+    });
     // Aplicar preset inicial al cargar
     document.addEventListener('DOMContentLoaded', function(){
         var sel = document.getElementById('at-plan-soporte');
@@ -363,17 +396,31 @@ add_action('wp_ajax_at_create_contract_widget', function(){
     $ends     = date('Y-m-d', strtotime($starts . ' +' . $vig_m . ' months'));
     $expires  = max(1, intval($_POST['expires_in_days'] ?? 14));
 
-    $plan_nombre = sanitize_text_field($_POST['nombre_plan_soporte'] ?? 'Estándar');
+    $plan_nombre_raw = sanitize_text_field($_POST['nombre_plan_soporte'] ?? 'Estándar');
+    $garantia_meses  = max(1, min(12, intval($_POST['garantia_meses'] ?? 12)));
+
+    // Construir nombre legible del plan garantía con los meses seleccionados
+    if ($plan_nombre_raw === 'garantia') {
+        $plan_nombre = 'Garantía post-entrega (' . $garantia_meses . ' mes' . ($garantia_meses > 1 ? 'es' : '') . ')';
+    } else {
+        $plan_nombre = $plan_nombre_raw;
+    }
+
     // Mapeo server-side de valor_hora por plan (refleja los presets del JS)
     $plan_valor_hora_map = array(
-        'Garantía (Gratis — 1 año)' => '45.000',
+        'garantia'  => '45.000',
         'Básico'    => '45.000',
         'Estándar'  => '45.000',
         'Premium'   => '40.000',
     );
-    $valor_hora_plan = $plan_valor_hora_map[$plan_nombre] ?? '45.000';
+    $valor_hora_plan = $plan_valor_hora_map[$plan_nombre_raw] ?? '45.000';
     // Plan garantía siempre monto 0
-    if ($plan_nombre === 'Garantía (Gratis — 1 año)') $monthly = 0;
+    if ($plan_nombre_raw === 'garantia') {
+        $monthly = 0;
+        // La vigencia es igual a los meses de garantía
+        $vig_m = $garantia_meses;
+        $ends  = date('Y-m-d', strtotime($starts . ' +' . $vig_m . ' months'));
+    }
 
     $ph = array(
         'razon_social_cliente'         => sanitize_text_field($_POST['razon_social_cliente'] ?? ''),
@@ -385,6 +432,7 @@ add_action('wp_ajax_at_create_contract_widget', function(){
         'telefono_cliente'             => sanitize_text_field($_POST['telefono_cliente'] ?? ''),
         'nombre_proyecto'              => sanitize_text_field($_POST['nombre_proyecto'] ?? ''),
         'nombre_plan_soporte'          => $plan_nombre,
+        'garantia_meses'               => (string)$garantia_meses,
         'horas_evolutivas_mes'         => intval($_POST['horas_evolutivas_mes'] ?? 4),
         'valor_hora'                   => $valor_hora_plan,
         'vigencia_meses'               => $vig_m,

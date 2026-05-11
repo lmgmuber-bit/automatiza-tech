@@ -3319,8 +3319,7 @@ function at_qa_render_suite_page() {
 
         function toast(m,t){
             const e=document.getElementById('atQaToast');
-            const icon = (t==='success') ? '✅ ' : (t==='error') ? '❌ ' : 'ℹ️ ';
-            e.innerHTML = '<div style="font-size:28px;margin-bottom:6px;">' + ((t==='success')?'✅':'❌') + '</div>' + m;
+            e.innerHTML = '<div style="font-size:28px;margin-bottom:6px;">' + ((t==='success')?'✅':((t==='error'||t==='danger')?'❌':'⏳')) + '</div>' + m;
             e.className='at-qa-toast show '+(t||'');
             setTimeout(()=>e.className='at-qa-toast',3500);
         }

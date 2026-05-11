@@ -4848,13 +4848,13 @@ class AutomatizaTech_CRM_AI {
                     <!-- Pestañas de navegación -->
                     <div class="timeline-tabs">
                         <button class="tl-tab active" data-tab="todos" onclick="switchTimelineTab('todos')">📋 Todos <span class="tl-tab-count"><?php echo $tab_counts['todos']; ?></span></button>
+                        <?php if (!empty($qa_projects_pub)): ?>
+                        <button class="tl-tab" data-tab="qa" onclick="switchTimelineTab('qa')">🧪 QA <span class="tl-tab-count"><?php echo count($qa_projects_pub); ?></span></button>
+                        <?php endif; ?>
                         <button class="tl-tab" data-tab="reuniones" onclick="switchTimelineTab('reuniones')">🤝 Reuniones <span class="tl-tab-count"><?php echo $tab_counts['reuniones']; ?></span></button>
                         <button class="tl-tab" data-tab="notas" onclick="switchTimelineTab('notas')">📝 Notas <span class="tl-tab-count"><?php echo $tab_counts['notas']; ?></span></button>
                         <button class="tl-tab" data-tab="pagos" onclick="switchTimelineTab('pagos')">💰 Pagos <span class="tl-tab-count"><?php echo $tab_counts['pagos']; ?></span></button>
                         <button class="tl-tab" data-tab="sistema" onclick="switchTimelineTab('sistema')">⚙️ Sistema <span class="tl-tab-count"><?php echo $tab_counts['sistema']; ?></span></button>
-                        <?php if (!empty($qa_projects_pub)): ?>
-                        <button class="tl-tab" data-tab="qa" onclick="switchTimelineTab('qa')">🧪 QA <span class="tl-tab-count"><?php echo count($qa_projects_pub); ?></span></button>
-                        <?php endif; ?>
                     </div>
 
                     <!-- Pestaña: Todos -->

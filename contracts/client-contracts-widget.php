@@ -23,6 +23,13 @@ function at_render_client_contracts_widget($client) {
     $contracts = ContractService::list_by_client($client_id);
     $nonce     = wp_create_nonce('at_contract_widget_' . $client_id);
 
+    // Cargar servicios activos para el selector
+    global $wpdb;
+    $services_table = $wpdb->prefix . 'automatiza_services';
+    $all_services = $wpdb->get_results(
+        "SELECT id, name, category, price_clp, price_usd FROM {$services_table} WHERE status = 'active' ORDER BY category, name ASC"
+    );
+
     $st_map = array(
         'draft'      => ['📝','Borrador',         '#9ca3af'],
         'at_pending' => ['⏳','Pendiente firma AT','#f59e0b'],
@@ -58,7 +65,7 @@ function at_render_client_contracts_widget($client) {
                 <tbody>
                 <?php foreach ($contracts as $c):
                     $st = $st_map[$c->status] ?? ['❓', $c->status, '#999'];
-                    $detail = admin_url('edit.php?post_type=contactos&page=at-contracts&id=' . $c->id);
+                    $detail = admin_url('admin.php?page=at-contracts&id=' . $c->id);
                     $monto = $c->monthly_amount ? '$ ' . number_format((float)$c->monthly_amount,0,',','.') : '—';
                 ?>
                     <tr>
@@ -125,6 +132,47 @@ function at_render_client_contracts_widget($client) {
                         <label style="grid-column:1/-1">Nombre del proyecto
                             <input type="text" name="nombre_proyecto" required style="width:100%">
                         </label>
+
+                        <!-- Servicios contratados -->
+                        <div style="grid-column:1/-1">
+                            <label style="font-weight:600;color:#1e3a8a;font-size:13px;margin-bottom:6px;display:block">
+                                📦 Servicios contratados <small style="font-weight:400;color:#6b7280">(selecciona uno o más)</small>
+                            </label>
+                            <?php if (!empty($all_services)): ?>
+                                <?php
+                                // Agrupar por categoría
+                                $by_cat = array();
+                                foreach ($all_services as $svc) {
+                                    $by_cat[$svc->category][] = $svc;
+                                }
+                                ?>
+                                <div class="at-services-grid">
+                                <?php foreach ($by_cat as $cat => $svcs): ?>
+                                    <div class="at-services-category">
+                                        <div class="at-services-cat-label"><?php echo esc_html(ucfirst($cat)); ?></div>
+                                        <?php foreach ($svcs as $svc): ?>
+                                        <label class="at-service-checkbox-label">
+                                            <input type="checkbox" name="servicios_ids[]" value="<?php echo intval($svc->id); ?>"
+                                                   data-name="<?php echo esc_attr($svc->name); ?>"
+                                                   data-price-clp="<?php echo intval($svc->price_clp); ?>">
+                                            <span class="at-svc-name"><?php echo esc_html($svc->name); ?></span>
+                                            <?php if ($svc->price_clp > 0): ?>
+                                                <span class="at-svc-price">$<?php echo number_format((float)$svc->price_clp, 0, ',', '.'); ?> CLP</span>
+                                            <?php endif; ?>
+                                        </label>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                                </div>
+                                <div id="at-services-summary" style="display:none;margin-top:8px;padding:8px 10px;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;font-size:12px;color:#166534">
+                                    ✅ <strong id="at-services-count">0</strong> servicio(s) seleccionado(s)
+                                </div>
+                            <?php else: ?>
+                                <div style="padding:10px;background:#fef9c3;border:1px solid #fde047;border-radius:6px;font-size:12px;color:#854d0e">
+                                    ⚠️ No hay servicios activos. <a href="<?php echo admin_url('admin.php?page=automatiza-services'); ?>" target="_blank">Agregar servicios</a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
                         <label>Plan de soporte
                             <select name="nombre_plan_soporte" style="width:100%">
                                 <option>Básico</option><option selected>Estándar</option><option>Premium</option>
@@ -163,6 +211,46 @@ function at_render_client_contracts_widget($client) {
     <style>
         .at-contracts-widget label{font-size:12px;color:#374151;display:block}
         .at-contracts-widget input,.at-contracts-widget select{margin-top:4px;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px}
+
+        /* Servicios grid */
+        .at-services-grid {
+            display:grid;
+            grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+            gap:10px;
+            margin-top:6px;
+            max-height:200px;
+            overflow-y:auto;
+            padding:10px;
+            background:#f9fafb;
+            border:1px solid #e5e7eb;
+            border-radius:6px;
+        }
+        .at-services-category {}
+        .at-services-cat-label {
+            font-size:10px;font-weight:700;text-transform:uppercase;
+            color:#6b7280;letter-spacing:.06em;margin-bottom:4px;
+        }
+        .at-service-checkbox-label {
+            display:flex !important;
+            align-items:flex-start;
+            gap:6px;
+            padding:5px 6px;
+            border-radius:4px;
+            cursor:pointer;
+            transition:background .15s;
+            margin-bottom:3px;
+            font-size:12px !important;
+            color:#374151 !important;
+        }
+        .at-service-checkbox-label:hover { background:#f0f9ff; }
+        .at-service-checkbox-label input[type=checkbox] {
+            margin-top:2px; flex-shrink:0; width:14px; height:14px;
+        }
+        .at-svc-name { flex:1; line-height:1.3; }
+        .at-svc-price { color:#059669; font-weight:600; white-space:nowrap; font-size:11px; }
+        .at-service-checkbox-label:has(input:checked) {
+            background:#eff6ff; border:1px solid #93c5fd;
+        }
     </style>
 
     <script>
@@ -173,6 +261,23 @@ function at_render_client_contracts_widget($client) {
             const old=btn.textContent; btn.textContent='✅ Copiado'; setTimeout(()=>btn.textContent=old,1800);
         });
     }
+
+    // Actualizar resumen de servicios seleccionados
+    document.addEventListener('change', function(e){
+        if (e.target && e.target.name === 'servicios_ids[]') {
+            const checked = document.querySelectorAll('input[name="servicios_ids[]"]:checked');
+            const summary = document.getElementById('at-services-summary');
+            const count   = document.getElementById('at-services-count');
+            if (summary && count) {
+                if (checked.length > 0) {
+                    count.textContent = checked.length;
+                    summary.style.display = 'block';
+                } else {
+                    summary.style.display = 'none';
+                }
+            }
+        }
+    });
     async function atSubmitContract(e){
         e.preventDefault();
         const form = e.target;
@@ -237,6 +342,30 @@ add_action('wp_ajax_at_create_contract_widget', function(){
         'fecha_entrega'                => date('d-m-Y'),
         'fecha_pago_final'             => date('d-m-Y'),
     );
+
+    // Resolver servicios seleccionados
+    $servicios_ids = array_map('intval', (array)($_POST['servicios_ids'] ?? array()));
+    $servicios_ids = array_filter($servicios_ids); // quitar 0s
+    if (!empty($servicios_ids)) {
+        global $wpdb;
+        $st = $wpdb->prefix . 'automatiza_services';
+        $placeholders_in = implode(',', array_fill(0, count($servicios_ids), '%d'));
+        $services_rows = $wpdb->get_results(
+            $wpdb->prepare("SELECT name, price_clp FROM {$st} WHERE id IN ({$placeholders_in})", ...$servicios_ids)
+        );
+        if (!empty($services_rows)) {
+            $lines = array();
+            foreach ($services_rows as $sr) {
+                $price = $sr->price_clp > 0 ? ' — $' . number_format((float)$sr->price_clp, 0, ',', '.') . ' CLP' : '';
+                $lines[] = '• ' . $sr->name . $price;
+            }
+            $ph['servicios_contratados'] = implode("\n", $lines);
+            $ph['servicios_contratados_lista'] = implode(', ', array_column($services_rows, 'name'));
+        }
+    } else {
+        $ph['servicios_contratados'] = '';
+        $ph['servicios_contratados_lista'] = '';
+    }
 
     try {
         $contract = ContractService::create_contract(array(

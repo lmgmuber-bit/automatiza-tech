@@ -1793,19 +1793,13 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
         wp_send_json_error('Error enviando correo: ' . $detail);
     }
 
-    // Copia interna para AT (segundo wp_mail separado, sin adjunto, no bloquea respuesta)
-    $admin_headers = array(
-        'Content-Type: text/html; charset=UTF-8',
-        'From: AutomatizaTech <' . $from_email . '>'
-    );
-    $admin_body = '<p>Informe QA enviado a <strong>' . esc_html($to_email) . '</strong> '
-        . 'para el proyecto <strong>' . esc_html($project->name) . '</strong> '
-        . '(' . $pass_rate . ' por ciento de aprobación).</p>';
+    // Copia interna para AT — mismo HTML + PDF adjunto que recibe el cliente
     @wp_mail(
         ['lgonzalez@automatizatech.cl', 'Lmgm.0303@gmail.com'],
-        '[QA Copia] ' . $project->name,
-        $admin_body,
-        $admin_headers
+        '[QA Copia] ' . $subject,
+        $html_body,
+        $headers,
+        $attachments
     );
 
     @$wpdb->query($wpdb->prepare(

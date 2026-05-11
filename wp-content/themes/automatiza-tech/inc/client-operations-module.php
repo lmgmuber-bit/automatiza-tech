@@ -892,6 +892,8 @@ class AutomatizaTech_Client_Operations {
             border-bottom: 3px solid #d63384;
             background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
             border-radius: 16px 16px 0 0;
+            flex-shrink: 0;
+            gap: 10px;
         }
         
         .cfm-header h2 {
@@ -940,8 +942,14 @@ class AutomatizaTech_Client_Operations {
             background: #f1f5f9;
             padding: 0;
             overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
             border-bottom: 1px solid #e2e8f0;
+            flex-shrink: 0;
+            scroll-behavior: smooth;
         }
+        /* Indicador de scroll en tabs */
+        .cfm-tabs::-webkit-scrollbar { height: 3px; }
+        .cfm-tabs::-webkit-scrollbar-thumb { background: #d63384; border-radius: 3px; }
         
         .cfm-tab {
             padding: 12px 20px;
@@ -1093,6 +1101,7 @@ class AutomatizaTech_Client_Operations {
             border-top: 2px solid #e2e8f0;
             background: #f8fafc;
             border-radius: 0 0 16px 16px;
+            flex-shrink: 0;
         }
         
         .cfm-btn {
@@ -1128,37 +1137,78 @@ class AutomatizaTech_Client_Operations {
         /* Responsive */
         @media (max-width: 768px) {
             .client-full-modal-overlay {
-                padding: 10px;
+                padding: 8px;
+                align-items: flex-start;
+            }
+
+            .client-full-modal {
+                margin: 0 auto;
+                max-height: calc(100vh - 16px);
+                border-radius: 12px;
             }
             
             .cfm-header {
-                padding: 15px;
+                padding: 14px 15px;
+                border-radius: 12px 12px 0 0;
             }
             
             .cfm-header h2 {
-                font-size: 18px;
+                font-size: 16px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: calc(100% - 60px);
+            }
+
+            .cfm-header-info {
+                gap: 8px;
+                min-width: 0;
+            }
+
+            .cfm-status {
+                font-size: 11px;
+                padding: 3px 8px;
+                white-space: nowrap;
             }
             
             .cfm-tabs {
                 overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
             }
             
             .cfm-tab {
-                padding: 10px 15px;
+                padding: 10px 12px;
                 font-size: 12px;
             }
-            
-            .cfm-section {
+
+            .cfm-tab-content {
                 padding: 15px;
             }
             
+            .cfm-section {
+                padding: 14px;
+            }
+
             .cfm-footer {
-                flex-direction: column;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 14px 15px;
             }
             
             .cfm-btn {
-                width: 100%;
+                flex: 1;
+                min-width: 120px;
+                padding: 10px 16px;
+                font-size: 13px;
             }
+        }
+
+        @media (max-width: 480px) {
+            .cfm-header h2 { font-size: 14px; }
+            .cfm-tab { padding: 8px 10px; font-size: 11px; }
+            .cfm-footer { flex-direction: column; }
+            .cfm-btn { width: 100%; }
         }
         </style>
         <?php

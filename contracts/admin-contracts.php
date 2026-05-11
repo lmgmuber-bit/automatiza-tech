@@ -19,9 +19,9 @@ class AT_Contracts_Admin {
     public static function register_menu() {
         // Submenú dentro de Contactos (mismo padre que clientes/leads)
         add_submenu_page(
-            'edit.php?post_type=contactos',
+            'automatiza-tech-contacts',
             'Contratos AutomatizaTech',
-            'Contratos',
+            '📜 Contratos',
             'manage_options',
             'at-contracts',
             array(__CLASS__, 'render_page')
@@ -37,7 +37,7 @@ class AT_Contracts_Admin {
 
         $action = sanitize_text_field($_POST['do'] ?? $_GET['do'] ?? '');
         $id     = intval($_POST['id'] ?? $_GET['id'] ?? 0);
-        $back   = admin_url('edit.php?post_type=contactos&page=at-contracts' . ($id ? '&id=' . $id : ''));
+        $back   = admin_url('admin.php?page=at-contracts' . ($id ? '&id=' . $id : ''));
 
         if (!$id || !$action) wp_safe_redirect($back); // exit silently
 
@@ -47,7 +47,7 @@ class AT_Contracts_Admin {
         switch ($action) {
             case 'delete':
                 $wpdb->delete($table, array('id' => $id));
-                wp_safe_redirect(admin_url('edit.php?post_type=contactos&page=at-contracts&msg=deleted'));
+                wp_safe_redirect(admin_url('admin.php?page=at-contracts&msg=deleted'));
                 exit;
 
             case 'resend_at':
@@ -183,7 +183,7 @@ class AT_Contracts_Admin {
         foreach ($rows as $r) {
             $st = $r->status;
             $info = $stat_map[$st] ?? ['❓', $st, '#999'];
-            $detail = admin_url('edit.php?post_type=contactos&page=at-contracts&id=' . $r->id);
+            $detail = admin_url('admin.php?page=at-contracts&id=' . $r->id);
             $cli_name = $r->signer_name ?: $r->client_name_lookup ?: '—';
             $cli_email = $r->signer_email ?: $r->client_email_lookup ?: '—';
             $monto = $r->monthly_amount ? '$ ' . number_format((float)$r->monthly_amount, 0, ',', '.') : '—';
@@ -209,7 +209,7 @@ class AT_Contracts_Admin {
         $c = ContractService::get_by_id($id);
         if (!$c) { echo '<div class="notice notice-error"><p>Contrato no encontrado.</p></div>'; return; }
 
-        $back = admin_url('edit.php?post_type=contactos&page=at-contracts');
+        $back = admin_url('admin.php?page=at-contracts');
         $at_url     = home_url('/contracts/at-sign-contract.php?token=' . $c->at_review_token);
         $client_url = home_url('/contracts/sign-contract.php?token=' . $c->sign_token);
 

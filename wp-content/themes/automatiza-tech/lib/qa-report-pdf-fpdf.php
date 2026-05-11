@@ -21,6 +21,39 @@ if (!function_exists('qa_utf8_to_latin1')) {
     function qa_utf8_to_latin1($t) {
         if ($t === null || $t === '') return '';
         $t = (string) $t;
+        // Reemplazar caracteres Unicode sin equivalente Latin-1 antes de convertir.
+        // FPDF usa ISO-8859-1; caracteres fuera del rango como em/en-dash, smart-quotes,
+        // comillas tipográficas, etc. se convierten en "?" si no se sustituyen antes.
+        $replacements = [
+            // Dashes
+            "\xE2\x80\x94" => '-',   // em dash  —
+            "\xE2\x80\x93" => '-',   // en dash  –
+            "\xE2\x80\x90" => '-',   // hyphen   ‐
+            "\xE2\x80\x91" => '-',   // non-breaking hyphen ‑
+            "\xE2\x80\x92" => '-',   // figure dash ‒
+            // Quotes
+            "\xE2\x80\x9C" => '"',   // left double "
+            "\xE2\x80\x9D" => '"',   // right double "
+            "\xE2\x80\x98" => "'",   // left single '
+            "\xE2\x80\x99" => "'",   // right single '
+            "\xE2\x80\xB9" => '<',   // ‹
+            "\xE2\x80\xBA" => '>',   // ›
+            // Ellipsis
+            "\xE2\x80\xA6" => '...',  // …
+            // Spaces
+            "\xC2\xA0"     => ' ',   // non-breaking space
+            "\xE2\x80\x8B" => '',    // zero-width space
+            // Symbols
+            "\xE2\x80\xA2" => '*',   // bullet •
+            "\xE2\x80\xA3" => '>',   // triangular bullet ‣
+            "\xE2\x86\x92" => '->',  // arrow →
+            "\xE2\x86\x90" => '<-',  // arrow ←
+            "\xE2\x9C\x93" => '[OK]', // checkmark ✓
+            "\xE2\x9C\x97" => '[X]',  // cross ✗
+            "\xC3\x97"     => 'x',   // multiplication sign ×
+            "\xC2\xB7"     => '.',   // middle dot ·
+        ];
+        $t = str_replace(array_keys($replacements), array_values($replacements), $t);
         if (function_exists('mb_convert_encoding')) return mb_convert_encoding($t, 'ISO-8859-1', 'UTF-8');
         if (function_exists('utf8_decode')) return @utf8_decode($t);
         return $t;
@@ -319,14 +352,13 @@ class QAReportPDF extends FPDF {
     }
 
     private function renderCasesTable($cases) {
-        // Headers
+        // Bug ID columna eliminada — ancho redistribuido a "Caso" (+18 → 100)
         $cols = [
-            ['ID',         18],
-            ['Caso',       82],
-            ['Prioridad',  20],
-            ['Estado',     22],
-            ['Bug ID',     18],
-            ['Tester',     20],
+            ['ID',        18],
+            ['Caso',     100],
+            ['Prioridad', 20],
+            ['Estado',    22],
+            ['Tester',    20],
         ];
 
         $this->SetFillColor(248, 250, 252);
@@ -342,18 +374,16 @@ class QAReportPDF extends FPDF {
         $this->SetTextColor(...$this->text_col);
 
         $st_map = [
-            'pass'       => ['PASS',     [6, 95, 70]],
-            'fail'       => ['FAIL',     [153, 27, 27]],
-            'blocked'    => ['BLOQ.',    [146, 64, 14]],
-            'skipped'    => ['OMIT.',    [91, 33, 182]],
+            'pass'       => ['PASS',       [6, 95, 70]],
+            'fail'       => ['FAIL',       [153, 27, 27]],
+            'blocked'    => ['BLOQ.',      [146, 64, 14]],
+            'skipped'    => ['OMIT.',      [91, 33, 182]],
             'not_tested' => ['Sin probar', [156, 163, 175]],
         ];
 
         foreach ($cases as $c) {
-            // Salto de página
             if ($this->GetY() > 268) {
                 $this->AddPage();
-                // Repetir cabecera
                 $this->SetFillColor(248, 250, 252);
                 $this->SetFont('Arial', 'B', 7.5);
                 $this->SetTextColor(...$this->gray);
@@ -363,14 +393,14 @@ class QAReportPDF extends FPDF {
                 $this->SetTextColor(...$this->text_col);
             }
 
-            // Truncar título largo
+            // Truncar título largo (ahora caben ~96 chars en 100 mm)
             $title = $c->title;
-            if (mb_strlen($title) > 78) $title = mb_substr($title, 0, 75) . '...';
+            if (mb_strlen($title) > 95) $title = mb_substr($title, 0, 92) . '...';
 
-            $this->Cell(18, 5, qa_utf8_to_latin1($c->case_id), 'B', 0, 'L');
+            $this->Cell(18,  5, qa_utf8_to_latin1($c->case_id), 'B', 0, 'L');
             $this->SetFont('Arial', '', 8);
-            $this->Cell(82, 5, qa_utf8_to_latin1($title), 'B', 0, 'L');
-            $this->Cell(20, 5, qa_utf8_to_latin1(ucfirst($c->priority)), 'B', 0, 'L');
+            $this->Cell(100, 5, qa_utf8_to_latin1($title), 'B', 0, 'L');
+            $this->Cell(20,  5, qa_utf8_to_latin1(ucfirst($c->priority)), 'B', 0, 'L');
 
             $st_info = $st_map[$c->status] ?? [$c->status, $this->text_col];
             $this->SetTextColor(...$st_info[1]);
@@ -379,7 +409,6 @@ class QAReportPDF extends FPDF {
 
             $this->SetTextColor(...$this->text_col);
             $this->SetFont('Arial', '', 8);
-            $this->Cell(18, 5, qa_utf8_to_latin1($c->bug_id ?: '—'), 'B', 0, 'L');
             $this->Cell(20, 5, qa_utf8_to_latin1($c->tester ?: '—'), 'B', 0, 'L');
             $this->Ln();
         }

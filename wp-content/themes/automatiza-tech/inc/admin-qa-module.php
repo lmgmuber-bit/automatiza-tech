@@ -1690,7 +1690,8 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
     $verdict = $pass_rate >= 95 ? 'APROBADO' : ($pass_rate >= 70 ? 'APROBADO CON OBSERVACIONES' : 'RECHAZADO');
     $verdict_color = $pass_rate >= 95 ? '#10b981' : ($pass_rate >= 70 ? '#eab308' : '#ef4444');
 
-    $logo_url = get_template_directory_uri() . '/assets/images/logo-automatiza-tech.png';
+    // Logo: URL absoluta pública (evita que clientes de correo bloqueen URLs relativas)
+    $logo_url = 'https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
     $project_name = esc_html($project->name);
     // Asunto sin "%" para evitar filtros anti-spam (SpamAssassin penaliza % en subjects)
     $subject = 'Informe de Pruebas QA: ' . $project->name;

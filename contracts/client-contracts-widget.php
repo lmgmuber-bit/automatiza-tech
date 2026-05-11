@@ -175,6 +175,7 @@ function at_render_client_contracts_widget($client) {
                         </div>
                         <label>Plan de soporte
                             <select name="nombre_plan_soporte" id="at-plan-soporte" style="width:100%" onchange="atApplyPlanPreset(this.value)">
+                                <option value="Garantía (Gratis — 1 año)">🎁 Garantía (Gratis — 1 año)</option>
                                 <option value="Básico">📦 Básico</option>
                                 <option value="Estándar" selected>⭐ Estándar</option>
                                 <option value="Premium">🚀 Premium</option>
@@ -271,21 +272,28 @@ function at_render_client_contracts_widget($client) {
 
     // Presets por plan de soporte
     const AT_PLAN_PRESETS = {
-        'Básico':    { horas: 2,  desc: 'Corrección de bugs críticos · SLA 48-72h · sin evolutivos incluidos',       valorHora: 45000 },
-        'Estándar':  { horas: 4,  desc: 'Bugs + ajustes menores · SLA 24h · reunión mensual',                         valorHora: 45000 },
-        'Premium':   { horas: 8,  desc: 'Bugs + evolutivos + nuevas funciones · SLA < 4h · reunión semanal · soporte prioritario', valorHora: 40000 },
+        'Garantía (Gratis — 1 año)': { horas: 0,  monto: 0,    desc: '🎁 Incluido en garantía post-entrega · cubre bugs y ajustes · sin costo por 12 meses', valorHora: 45000 },
+        'Básico':    { horas: 2,  monto: null, desc: 'Corrección de bugs críticos · SLA 48-72h · sin evolutivos incluidos',       valorHora: 45000 },
+        'Estándar':  { horas: 4,  monto: null, desc: 'Bugs + ajustes menores · SLA 24h · reunión mensual',                         valorHora: 45000 },
+        'Premium':   { horas: 8,  monto: null, desc: 'Bugs + evolutivos + nuevas funciones · SLA < 4h · reunión semanal · soporte prioritario', valorHora: 40000 },
     };
     function atApplyPlanPreset(plan) {
         const p = AT_PLAN_PRESETS[plan];
         if (!p) return;
-        const horasEl = document.getElementById('at-horas-evolutivas');
-        const descEl  = document.getElementById('at-plan-desc');
-        const hintEl  = document.getElementById('at-plan-price-hint');
+        const horasEl   = document.getElementById('at-horas-evolutivas');
+        const montoEl   = document.getElementById('at-monthly-amount');
+        const descEl    = document.getElementById('at-plan-desc');
+        const hintEl    = document.getElementById('at-plan-price-hint');
+        const montoWrap = document.getElementById('at-monto-wrap');
         if (horasEl) horasEl.value = p.horas;
         if (descEl)  descEl.textContent = p.desc;
-        if (hintEl) {
-            hintEl.textContent = '💡 Valor hora fuera de alcance: $' + p.valorHora.toLocaleString('es-CL') + ' CLP + IVA';
-            hintEl.style.display = 'block';
+        // Plan garantía: monto = 0 y campo bloqueado
+        if (plan === 'Garantía (Gratis — 1 año)') {
+            if (montoEl)   { montoEl.value = 0; montoEl.readOnly = true; montoEl.style.background='#f0fdf4'; montoEl.required = false; }
+            if (hintEl)    { hintEl.textContent = '🎁 Este plan es gratuito durante el período de garantía (12 meses)'; hintEl.style.color='#059669'; hintEl.style.display='block'; }
+        } else {
+            if (montoEl)   { montoEl.readOnly = false; montoEl.style.background=''; montoEl.required = true; }
+            if (hintEl)    { hintEl.textContent = '💡 Valor hora fuera de alcance: $' + p.valorHora.toLocaleString('es-CL') + ' CLP + IVA'; hintEl.style.color='#6b7280'; hintEl.style.display='block'; }
         }
     }
     // Aplicar preset inicial al cargar
@@ -357,8 +365,15 @@ add_action('wp_ajax_at_create_contract_widget', function(){
 
     $plan_nombre = sanitize_text_field($_POST['nombre_plan_soporte'] ?? 'Estándar');
     // Mapeo server-side de valor_hora por plan (refleja los presets del JS)
-    $plan_valor_hora_map = array('Básico' => '45.000', 'Estándar' => '45.000', 'Premium' => '40.000');
+    $plan_valor_hora_map = array(
+        'Garantía (Gratis — 1 año)' => '45.000',
+        'Básico'    => '45.000',
+        'Estándar'  => '45.000',
+        'Premium'   => '40.000',
+    );
     $valor_hora_plan = $plan_valor_hora_map[$plan_nombre] ?? '45.000';
+    // Plan garantía siempre monto 0
+    if ($plan_nombre === 'Garantía (Gratis — 1 año)') $monthly = 0;
 
     $ph = array(
         'razon_social_cliente'         => sanitize_text_field($_POST['razon_social_cliente'] ?? ''),

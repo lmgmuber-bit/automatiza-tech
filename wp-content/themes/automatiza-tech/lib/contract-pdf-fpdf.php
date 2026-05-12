@@ -54,7 +54,7 @@ class ContractPDFFPDF extends FPDF {
         $this->ph         = (array) $placeholders;
         $this->body       = (string) $body_md;
         $this->signatures = is_array($signatures) ? $signatures : array();
-        $this->SetMargins(20, 25, 20);
+        $this->SetMargins(20, 33, 20);
         $this->SetAutoPageBreak(true, 25);
         $this->AliasNbPages();
         $this->SetTitle(utf8_to_latin1('Contrato ' . ($this->ph['contract_number'] ?? '')));
@@ -65,23 +65,25 @@ class ContractPDFFPDF extends FPDF {
     public function Header() {
         $logo = get_template_directory() . '/assets/images/logo-automatiza-tech.png';
         if (file_exists($logo)) {
-            $this->Image($logo, 20, 8, 30);
+            // 22mm wide ≈ 22mm tall for square logo → fits cleanly above separator line at y=28
+            $this->Image($logo, 20, 6, 22);
         } else {
-            $this->SetFont('Arial', 'B', 14);
+            $this->SetFont('Arial', 'B', 13);
             $this->SetTextColor(...$this->primary);
-            $this->SetXY(20, 12);
-            $this->Cell(60, 8, utf8_to_latin1('AutomatizaTech'), 0, 0, 'L');
+            $this->SetXY(20, 10);
+            $this->Cell(50, 6, utf8_to_latin1('AutomatizaTech'), 0, 0, 'L');
         }
+        // Right-side info — \xc2\xba is UTF-8 for º so mb_convert_encoding handles it correctly
         $this->SetFont('Arial', '', 8);
         $this->SetTextColor(...$this->gray);
-        $this->SetXY(120, 10);
-        $this->Cell(70, 4, utf8_to_latin1('Contrato N' . chr(186) . ' ' . ($this->ph['contract_number'] ?? '')), 0, 2, 'R');
-        $this->Cell(70, 4, utf8_to_latin1('Emitido: ' . date('d-m-Y')), 0, 2, 'R');
-        $this->Cell(70, 4, utf8_to_latin1('AutomatizaTech SpA'), 0, 2, 'R');
+        $this->SetXY(110, 8);
+        $this->Cell(80, 4.5, utf8_to_latin1("Contrato N\xc2\xba " . ($this->ph['contract_number'] ?? '')), 0, 2, 'R');
+        $this->Cell(80, 4.5, utf8_to_latin1('Emitido: ' . date('d-m-Y')), 0, 2, 'R');
+        $this->Cell(80, 4.5, utf8_to_latin1('AutomatizaTech SpA'), 0, 2, 'R');
         $this->SetDrawColor(...$this->primary);
         $this->SetLineWidth(0.5);
-        $this->Line(20, 26, 190, 26);
-        $this->SetY(30);
+        $this->Line(20, 29, 190, 29);
+        $this->SetY(33);
     }
 
     public function Footer() {

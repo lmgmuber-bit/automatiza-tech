@@ -181,9 +181,30 @@ class ContractPDFFPDF extends FPDF {
             }
             if (preg_match('/^>\s?(.*)$/', $line, $m)) {
                 $this->SetFillColor(...$this->light_bg);
-                $this->SetFont('Arial', 'I', 9);
                 $this->SetTextColor(...$this->gray);
-                $this->MultiCell(0, 5, utf8_to_latin1($this->stripInline($m[1])), 0, 'L', true);
+                $this->Ln(1);
+                // Draw filled background rect before writing inline bold text
+                if (strpos($m[1], '**') !== false) {
+                    // Render with inline bold, italic font for non-bold parts
+                    $text = $this->stripNonBoldInline($m[1]);
+                    $parts = preg_split('/(\*\*[^*\n]+\*\*)/', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+                    // Estimate lines to draw background (use MultiCell height trick)
+                    $this->SetFont('Arial', 'I', 9);
+                    $startY = $this->GetY();
+                    foreach ($parts as $part) {
+                        if (preg_match('/^\*\*([^*\n]+)\*\*$/', $part, $bm)) {
+                            $this->SetFont('Arial', 'BI', 9);
+                            $this->Write(5, utf8_to_latin1($bm[1]));
+                            $this->SetFont('Arial', 'I', 9);
+                        } elseif ($part !== '') {
+                            $this->Write(5, utf8_to_latin1($part));
+                        }
+                    }
+                    $this->Ln(5);
+                } else {
+                    $this->SetFont('Arial', 'I', 9);
+                    $this->MultiCell(0, 5, utf8_to_latin1($this->stripInline($m[1])), 0, 'L', true);
+                }
                 $this->Ln(1);
                 $this->SetTextColor(...$this->text_col);
                 continue;
@@ -219,14 +240,21 @@ class ContractPDFFPDF extends FPDF {
             // Reset table state when leaving a table
             unset($table_header_done, $table_is_header);
             if (preg_match('/^\s*[-*]\s+(.*)$/', $line, $m)) {
+                $indent = 5;
                 $this->SetFont('Arial', '', 9);
-                $this->Cell(5, 5, utf8_to_latin1('-'), 0, 0);
-                $this->MultiCell(0, 5, utf8_to_latin1($this->stripInline($m[1])), 0, 'L');
+                $this->Cell($indent, 5, utf8_to_latin1('-'), 0, 0);
+                if (strpos($m[1], '**') !== false) {
+                    $savedLM = $this->lMargin;
+                    $this->SetLeftMargin($savedLM + $indent);
+                    $this->renderInlineBold($m[1]);
+                    $this->SetLeftMargin($savedLM);
+                } else {
+                    $this->MultiCell(0, 5, utf8_to_latin1($this->stripInline($m[1])), 0, 'L');
+                }
                 continue;
             }
             if (trim($line) === '') { $this->Ln(2); continue; }
-            $this->SetFont('Arial', '', 9);
-            $this->MultiCell(0, 5, utf8_to_latin1($this->stripInline($line)), 0, 'J');
+            $this->renderInlineBold($line);
         }
     }
 
@@ -302,6 +330,42 @@ class ContractPDFFPDF extends FPDF {
         $this->SetXY($startX, $startY + $rowH);
         $this->SetTextColor(...$this->text_col);
         $this->SetFillColor(...$this->light_bg);
+    }
+
+    /**
+     * Renders a text line with inline **bold** support using Write().
+     * Non-bold lines fall back to MultiCell (justified). Bold lines use
+     * Write() alternating SetFont B / '' so bold segments appear correctly.
+     * List items should pre-adjust lMargin before calling so wrapped lines indent properly.
+     */
+    private function renderInlineBold($rawText, $fontSize = 9, $lineH = 5) {
+        if (strpos($rawText, '**') === false) {
+            $this->SetFont('Arial', '', $fontSize);
+            $this->MultiCell(0, $lineH, utf8_to_latin1($this->stripInline($rawText)), 0, 'J');
+            return;
+        }
+        // Strip everything except ** bold markers (italic *, code, links)
+        $text  = $this->stripNonBoldInline($rawText);
+        $parts = preg_split('/(\*\*[^*\n]+\*\*)/', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+        $this->SetFont('Arial', '', $fontSize);
+        foreach ($parts as $part) {
+            if (preg_match('/^\*\*([^*\n]+)\*\*$/', $part, $m)) {
+                $this->SetFont('Arial', 'B', $fontSize);
+                $this->Write($lineH, utf8_to_latin1($m[1]));
+                $this->SetFont('Arial', '', $fontSize);
+            } elseif ($part !== '') {
+                $this->Write($lineH, utf8_to_latin1($part));
+            }
+        }
+        $this->Ln($lineH);
+    }
+
+    /** Strip italic, code and link markers but leave **bold** intact. */
+    private function stripNonBoldInline($s) {
+        $s = preg_replace('/(?<!\*)\*(?!\*)([^*\n]+)\*(?!\*)/s', '$1', $s);
+        $s = preg_replace('/`([^`]+)`/', '$1', $s);
+        $s = preg_replace('/\[([^\]]+)\]\([^)]+\)/', '$1', $s);
+        return $s;
     }
 
     private function stripInline($s) {

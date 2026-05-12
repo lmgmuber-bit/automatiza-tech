@@ -245,6 +245,7 @@ class ContractService {
         $ph['representante_cliente_rut']    = $data['signer_rut'];
         $ph['email_cliente']                = $data['signer_email'];
         $ph['fecha_firma_larga']            = self::fecha_larga(date('Y-m-d'));
+        $ph['fecha_firma_cliente']          = self::fecha_larga(date('Y-m-d')); // Vigencia inicia desde esta fecha
 
         // Guardar TODOS los datos del cliente + signed_at ANTES de render_pdf.
         // render_pdf lee la BD para saber si incluir firma del cliente (if $c->signed_at).

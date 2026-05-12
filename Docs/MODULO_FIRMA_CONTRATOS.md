@@ -31,7 +31,8 @@ Sistema completo para generar, revisar, firmar y archivar contratos digitales co
 │     → PDF FINAL regenerado con AMBAS firmas + audit trail                    │
 │     → Email al cliente con PDF firmado adjunto                               │
 │     → Email interno a AT con copia                                           │
-│     → PDF queda disponible en ficha del cliente                              │
+│     → PDF queda disponible en el portal/sitio web de AutomatizaTech         │
+│       (backoffice WP, NO en el Portal OmniCliente)                          │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -192,9 +193,11 @@ Campos clave:
 
 ---
 
-## 🔌 Integración con la ficha del cliente
+## 🔌 Integración con el backoffice de AutomatizaTech
 
-Para mostrar contratos en la ficha:
+> ⚠️ **Importante:** Los contratos firmados se visualizan desde el **portal/sitio web de AutomatizaTech** (backoffice WordPress), **NO desde el Portal OmniCliente**. El Portal OmniCliente es la herramienta de gestión de conversaciones de los clientes B2B; los contratos son un proceso interno de AT con sus clientes.
+
+Para mostrar contratos en el backoffice WP:
 
 ```php
 $contracts = ContractService::list_by_client($client_id);
@@ -205,7 +208,7 @@ foreach ($contracts as $c) {
 }
 ```
 
-En el portal React se puede consumir vía un endpoint `api-contracts.php?client_id=X` (siguiendo el patrón de `api-omnichannel.php`).
+El PDF firmado es accesible directamente vía la URL almacenada en `signed_pdf_url` (ruta en `/wp-content/uploads/automatiza-tech-contracts/`), gestionada desde el backoffice WP de AT.
 
 ---
 

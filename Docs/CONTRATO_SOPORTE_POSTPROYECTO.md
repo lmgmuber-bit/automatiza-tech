@@ -90,7 +90,7 @@ Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar
 
 ## CLÁUSULA CUARTA — Vigencia y renovación
 
-4.1. El presente Contrato tendrá una vigencia inicial de **{{vigencia_meses}} meses** contados desde el **{{fecha_inicio_soporte}}**.
+4.1. El presente Contrato tendrá una vigencia inicial de **{{vigencia_meses}} meses** contados desde el **{{fecha_firma_cliente}}** (fecha de firma del CLIENTE).
 
 4.2. Vencido dicho plazo, el Contrato se entenderá **renovado tácita y automáticamente** por períodos iguales y sucesivos, salvo aviso por escrito de cualquiera de las partes con al menos **30 días corridos** de anticipación a la fecha de término.
 
@@ -343,7 +343,7 @@ Ninguna parte será responsable del incumplimiento causado por fuerza mayor o ca
 
 19.3. El registro digital de la firma será almacenado por EL PROVEEDOR de forma íntegra y podrá ser exhibido como medio de prueba conforme al art. 5 de la Ley 19.799.
 
-19.4. Una vez firmado, el documento PDF resultante se enviará por correo electrónico a ambas partes y quedará disponible permanentemente en la ficha del CLIENTE dentro del Portal OmniCliente.
+19.4. Una vez firmado, el documento PDF resultante se enviará por correo electrónico a ambas partes y quedará disponible permanentemente en el portal/sitio web de AutomatizaTech (automatizatech.cl), accesible desde el backoffice de administración, no desde el Portal OmniCliente.
 
 ---
 

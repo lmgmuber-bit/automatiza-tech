@@ -5179,6 +5179,66 @@ class AutomatizaTech_CRM_AI {
                     </div><!-- /tl-content-qa -->
                     <?php endif; ?>
                     
+                    <?php
+                    // ─── CONTRATOS FIRMADOS ───
+                    $contracts_table = $wpdb->prefix . 'automatiza_contracts';
+                    if ($wpdb->get_var("SHOW TABLES LIKE '{$contracts_table}'") === $contracts_table) {
+                        $signed_contracts = $wpdb->get_results($wpdb->prepare(
+                            "SELECT id, contract_number, type, signed_at, signed_pdf_url, monthly_amount, currency FROM {$contracts_table} WHERE client_id = %d AND status = 'signed' ORDER BY signed_at DESC",
+                            $cliente_id
+                        ), ARRAY_A);
+                    ?>
+                    <h2>📄 Tus Contratos</h2>
+                    <?php if (empty($signed_contracts)): ?>
+                        <p style="color:#888; font-style:italic; padding:8px 0;">No tienes contratos firmados registrados por el momento.</p>
+                    <?php else: ?>
+                        <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:24px;">
+                            <?php
+                            $type_labels = [
+                                'soporte'   => 'Contrato de Soporte Post-Proyecto',
+                                'servicios' => 'Contrato de Servicios',
+                                'sla'       => 'Acuerdo de Nivel de Servicio (SLA)',
+                                'nda'       => 'Acuerdo de Confidencialidad (NDA)',
+                                'handover'  => 'Acta de Entrega y Cierre',
+                            ];
+                            foreach ($signed_contracts as $c):
+                                $label = $type_labels[$c['type']] ?? ucfirst($c['type']);
+                                $signed_date = !empty($c['signed_at']) ? date('d/m/Y', strtotime($c['signed_at'])) : '—';
+                            ?>
+                            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-left:5px solid #22c55e; border-radius:10px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                                <div>
+                                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+                                        <span style="font-size:18px;">📜</span>
+                                        <strong style="color:#166534; font-size:15px;"><?php echo esc_html($label); ?></strong>
+                                        <span style="background:#22c55e; color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; white-space:nowrap;">✅ FIRMADO</span>
+                                    </div>
+                                    <div style="font-size:12px; color:#6b7280;">
+                                        N° <?php echo esc_html($c['contract_number']); ?>
+                                        <?php if (!empty($c['signed_at'])): ?>
+                                            &nbsp;·&nbsp; Firmado el <?php echo esc_html($signed_date); ?>
+                                        <?php endif; ?>
+                                        <?php if (!empty($c['monthly_amount']) && $c['monthly_amount'] > 0): ?>
+                                            &nbsp;·&nbsp; $<?php echo number_format((float)$c['monthly_amount'], 0, ',', '.'); ?> <?php echo esc_html($c['currency']); ?>/mes
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <?php if (!empty($c['signed_pdf_url'])): ?>
+                                <a href="<?php echo esc_url($c['signed_pdf_url']); ?>"
+                                   download
+                                   target="_blank"
+                                   style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg,#16a34a,#22c55e); color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600; font-size:13px; box-shadow:0 2px 8px rgba(34,197,94,0.3); white-space:nowrap;"
+                                   onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                                    ⬇️ Descargar PDF
+                                </a>
+                                <?php else: ?>
+                                    <span style="font-size:12px; color:#9ca3af; font-style:italic; white-space:nowrap;">PDF en proceso…</span>
+                                <?php endif; ?>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                    <?php } ?>
+
                     <div class="footer">
                         &copy; <?php echo date('Y'); ?> AutomatizaTech. Todos los derechos reservados.
                     </div>

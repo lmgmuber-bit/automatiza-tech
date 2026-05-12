@@ -323,7 +323,17 @@ function at_render_client_contracts_widget($client) {
     </style>
 
     <script>
-    function atOpenNewContract(cid){ document.getElementById('at-new-contract-modal').style.display='flex'; }
+    function atOpenNewContract(cid){
+        const modal = document.getElementById('at-new-contract-modal');
+        // El modal puede estar anidado dentro de otro <form> (la ficha del cliente).
+        // HTML no permite forms anidados — el browser ignora el form interno y
+        // envía el form externo en su lugar. Movemos el modal a <body> para
+        // que el form del contrato sea independiente.
+        if (modal && modal.parentNode !== document.body) {
+            document.body.appendChild(modal);
+        }
+        if (modal) modal.style.display = 'flex';
+    }
     function atCloseNewContract(){ document.getElementById('at-new-contract-modal').style.display='none'; }
     function atCopyLink(url,btn){
         navigator.clipboard.writeText(url).then(()=>{

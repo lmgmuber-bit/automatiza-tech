@@ -181,17 +181,25 @@ class ContractPDFFPDF extends FPDF {
                 $this->Ln(1);
                 continue;
             }
-            if (preg_match('/^\|[-:\s|]+\|$/', $line)) continue;
-            if (preg_match('/^\|(.+)\|$/', $line, $m)) {
-                $cells = array_map('trim', explode('|', $m[1]));
-                $this->SetFont('Arial', '', 9);
-                $w = 170 / max(1, count($cells));
-                foreach ($cells as $c) {
-                    $this->Cell($w, 5, utf8_to_latin1($this->stripInline($c)), 1, 0, 'L');
-                }
-                $this->Ln();
+            if (preg_match('/^\|[-:\s|]+\|$/', $line)) {
+                // Guardar si la siguiente fila es header (la fila anterior era encabezado)
+                $table_is_header = true;
                 continue;
             }
+            if (preg_match('/^\|(.+)\|$/', $line, $m)) {
+                $cells = array_map('trim', explode('|', $m[1]));
+                $bold = !empty($table_is_header) ? false : false;
+                // Detectar si esta fila es la primera (encabezado)
+                if (!isset($table_header_done)) {
+                    $bold = true;
+                    $table_header_done = true;
+                }
+                $this->renderTableRow($cells, 170, $bold);
+                $table_is_header = false;
+                continue;
+            }
+            // Reset table state when leaving a table
+            unset($table_header_done, $table_is_header);
             if (preg_match('/^\s*[-*]\s+(.*)$/', $line, $m)) {
                 $this->SetFont('Arial', '', 9);
                 $this->Cell(5, 5, utf8_to_latin1('-'), 0, 0);
@@ -202,6 +210,80 @@ class ContractPDFFPDF extends FPDF {
             $this->SetFont('Arial', '', 9);
             $this->MultiCell(0, 5, utf8_to_latin1($this->stripInline($line)), 0, 'J');
         }
+    }
+
+    /**
+     * Renderiza una fila de tabla con celdas que soportan texto multilínea (word-wrap).
+     * FPDF Cell() no hace wrap — este método calcula la altura máxima de fila y
+     * dibuja cada celda manualmente con Rect + Cell por línea.
+     */
+    private function renderTableRow(array $cells, $totalW, $isHeader = false) {
+        $n      = max(1, count($cells));
+        $colW   = $totalW / $n;
+        $padX   = 2;
+        $padY   = 1.5;
+        $lineH  = 4.5;
+        $style  = $isHeader ? 'B' : '';
+        $this->SetFont('Arial', $style, 8.5);
+
+        // Calcular líneas de texto necesarias por celda
+        $allLines = array();
+        foreach ($cells as $idx => $text) {
+            $text   = utf8_to_latin1($this->stripInline($text));
+            $maxTxt = $colW - $padX * 2;
+            $words  = preg_split('/\s+/', trim($text));
+            $lines  = array();
+            $curr   = '';
+            foreach ($words as $word) {
+                if ($word === '') continue;
+                $test = $curr !== '' ? $curr . ' ' . $word : $word;
+                if ($this->GetStringWidth($test) <= $maxTxt) {
+                    $curr = $test;
+                } else {
+                    if ($curr !== '') $lines[] = $curr;
+                    // Si la palabra sola es mayor que el ancho, truncar
+                    while ($this->GetStringWidth($word) > $maxTxt && strlen($word) > 1) {
+                        $word = substr($word, 0, -1);
+                    }
+                    $curr = $word;
+                }
+            }
+            if ($curr !== '') $lines[] = $curr;
+            if (empty($lines)) $lines[] = '';
+            $allLines[$idx] = $lines;
+        }
+
+        $maxL   = max(array_map('count', $allLines));
+        $rowH   = $maxL * $lineH + $padY * 2;
+
+        // Salto de página preventivo
+        if ($this->GetY() + $rowH > ($this->h - $this->bMargin - 2)) {
+            $this->AddPage();
+        }
+
+        $startY = $this->GetY();
+        $startX = $this->lMargin;
+        $fillBg = $isHeader ? $this->primary : array(255, 255, 255);
+
+        for ($i = 0; $i < $n; $i++) {
+            $cx = $startX + $i * $colW;
+            // Fondo
+            $this->SetFillColor(...$fillBg);
+            $this->Rect($cx, $startY, $colW, $rowH, $isHeader ? 'DF' : 'D');
+            // Texto
+            if ($isHeader) {
+                $this->SetTextColor(255, 255, 255);
+            } else {
+                $this->SetTextColor(...$this->text_col);
+            }
+            foreach ($allLines[$i] as $li => $ln) {
+                $this->SetXY($cx + $padX, $startY + $padY + $li * $lineH);
+                $this->Cell($colW - $padX * 2, $lineH, $ln, 0, 0, 'L');
+            }
+        }
+        $this->SetXY($startX, $startY + $rowH);
+        $this->SetTextColor(...$this->text_col);
+        $this->SetFillColor(...$this->light_bg);
     }
 
     private function stripInline($s) {

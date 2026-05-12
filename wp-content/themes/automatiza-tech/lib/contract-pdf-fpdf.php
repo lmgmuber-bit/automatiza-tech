@@ -16,20 +16,32 @@ require_once get_template_directory() . '/lib/fpdf.php';
 if (!function_exists('utf8_to_latin1')) {
     function utf8_to_latin1($t) {
         if (empty($t)) return $t;
-        // Reemplazar caracteres comunes fuera de ISO-8859-1 antes de convertir
+        // Map specific multi-byte chars to readable ASCII equivalents before encoding
         $search  = array("\xe2\x80\x94", "\xe2\x80\x93", "\xe2\x80\xa6", "\xc2\xad",
                          "\xe2\x80\x9c", "\xe2\x80\x9d", "\xe2\x80\x98", "\xe2\x80\x99",
                          "\xe2\x80\xa2", "\xe2\x86\x92", "\xe2\x86\x90", "\xe2\x89\xa4",
-                         "\xe2\x89\xa5", "\xe2\x89\xa0", "\xc3\x97",     "\xc3\xb7");
-        $replace = array('--',          '-',             '...',          '-',
+                         "\xe2\x89\xa5", "\xe2\x89\xa0", "\xc3\x97",     "\xc3\xb7",
+                         "\xc2\xba",     "\xc2\xaa");
+        $replace = array('--',          '-',             '...',          '',
                          '"',           '"',             "'",            "'",
                          '-',           '>',             '<',            '<=',
-                         '>=',          '!=',            'x',            '/');
+                         '>=',          '!=',            'x',            '/',
+                         "\xba",        "\xaa");
         $t = str_replace($search, $replace, $t);
-        // Strip 4-byte UTF-8 sequences (emojis, supplementary chars) that can't be in ISO-8859-1
-        $t = preg_replace('/[\xF0-\xF7][\x80-\xBF]{3}/', '', $t);
-        // Strip remaining 3-byte sequences outside ISO-8859-1 (e.g. ⚠ U+26A0 = \xE2\x9A\xA0)
-        $t = preg_replace('/[\xE2-\xEF][\x80-\xBF]{2}/', '', $t);
+        // iconv //IGNORE silently drops any char that can't map to ISO-8859-1 (emojis, etc.)
+        // This avoids the '?' substitution that mb_convert_encoding uses for unmappable chars
+        if (function_exists('iconv')) {
+            $r = @iconv('UTF-8', 'ISO-8859-1//IGNORE', $t);
+            if ($r !== false) return $r;
+        }
+        // Fallback: drop unmappable chars via mb_substitute_character
+        if (function_exists('mb_substitute_character') && function_exists('mb_convert_encoding')) {
+            $prev = mb_substitute_character();
+            mb_substitute_character('none');
+            $r = mb_convert_encoding($t, 'ISO-8859-1', 'UTF-8');
+            mb_substitute_character($prev);
+            return $r;
+        }
         if (function_exists('mb_convert_encoding')) return mb_convert_encoding($t, 'ISO-8859-1', 'UTF-8');
         if (function_exists('utf8_decode')) return @utf8_decode($t);
         return $t;

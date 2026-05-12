@@ -246,8 +246,13 @@ class ContractService {
         $ph['email_cliente']                = $data['signer_email'];
         $ph['fecha_firma_larga']            = self::fecha_larga(date('Y-m-d'));
 
+        // Guardar TODOS los datos del cliente + signed_at ANTES de render_pdf.
+        // render_pdf lee la BD para saber si incluir firma del cliente (if $c->signed_at).
+        // Si signed_at no está grabado al momento de rendir, el bloque de firma queda vacío.
         $wpdb->update(self::table(), array(
             'placeholders'        => wp_json_encode($ph, JSON_UNESCAPED_UNICODE),
+            'status'              => 'signed',
+            'signed_at'           => $now,
             'signer_name'         => $data['signer_name'],
             'signer_rut'          => $data['signer_rut'],
             'signer_email'        => $data['signer_email'],
@@ -257,13 +262,11 @@ class ContractService {
             'signature_image_url' => self::path_to_url($img),
         ), array('id'=>$c->id));
 
-        // Re-render PDF FINAL con ambas firmas
+        // Re-render PDF FINAL con ambas firmas (ahora signed_at ya está en BD)
         $signed_path = self::render_pdf($c->id, true);
         $signed_hash = hash_file('sha256', $signed_path);
 
         $wpdb->update(self::table(), array(
-            'status'              => 'signed',
-            'signed_at'           => $now,
             'signed_pdf_url'      => self::path_to_url($signed_path),
             'signed_document_hash'=> $signed_hash,
         ), array('id'=>$c->id));

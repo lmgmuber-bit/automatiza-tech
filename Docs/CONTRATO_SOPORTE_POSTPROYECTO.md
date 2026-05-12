@@ -44,7 +44,7 @@ Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar
 
 3.1. **Sí incluye:**
 - a) Corrección de errores ("**bugs**") atribuibles directamente al desarrollo entregado por EL PROVEEDOR.
-- b) Atención y resolución de incidentes a través del Portal OmniCliente, WhatsApp y/o correo electrónico.
+- b) Atención y resolución de incidentes a través del Portal OmniCliente y/o correo electrónico contacto@automatizatech.cl.
 - c) Monitoreo básico de disponibilidad (uptime).
 - d) Aplicación de actualizaciones menores de seguridad sobre los componentes desarrollados por EL PROVEEDOR.
 - e) Hasta **{{horas_evolutivas_mes}}** horas mensuales de mantención evolutiva (mejoras menores).
@@ -136,7 +136,7 @@ Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar
 | **Media (S3)** | Funcionalidad menor con bajo impacto / con workaround | {{sla_s3_respuesta}} | {{sla_s3_resolucion}} |
 | **Baja (S4)** | Consultas, mejoras menores, dudas de uso | {{sla_s4_respuesta}} | {{sla_s4_resolucion}} |
 
-6.2. **Horario de atención:** lunes a viernes hábiles, **{{hora_inicio_soporte}} a {{hora_fin_soporte}}** (hora de Chile continental). Para S1, atención 24/7 a través de **{{canal_24x7}}**.
+6.2. **Horario de atención:** lunes a viernes hábiles, **{{hora_inicio_soporte}} a {{hora_fin_soporte}}** (hora de Chile continental). Para S1, atención 24/7 a través de **correo electrónico contacto@automatizatech.cl**.
 
 6.3. Los tiempos se computan desde el ingreso formal del ticket en el Portal OmniCliente o canal oficial.
 
@@ -156,7 +156,7 @@ Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar
 
 7.1. Canal oficial: **Portal OmniCliente** (URL: **{{url_portal}}**), credenciales personales y nominativas entregadas por EL PROVEEDOR.
 
-7.2. Canales secundarios: WhatsApp **{{whatsapp_soporte}}** y correo **{{email_soporte}}**. Toda comunicación por estos canales se trasladará al Portal para trazabilidad.
+7.2. Canal secundario: correo electrónico **contacto@automatizatech.cl**. Toda comunicación por este canal se trasladará al Portal para trazabilidad.
 
 7.3. EL CLIENTE designa como contraparte técnica autorizada a **{{contraparte_tecnica_nombre}}** ({{contraparte_tecnica_email}}).
 

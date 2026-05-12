@@ -16,10 +16,16 @@ require_once get_template_directory() . '/lib/fpdf.php';
 if (!function_exists('utf8_to_latin1')) {
     function utf8_to_latin1($t) {
         if (empty($t)) return $t;
-        // Reemplazar caracteres fuera de ISO-8859-1 (Windows-1252) con equivalentes ASCII
-        $from = ['—',  '–',  '…',  "\u{00AD}", '"',  '"',  "\u{201C}", "\u{201D}", ''',  ''',  "\u{2018}", "\u{2019}", '•', '→', '←', '↑', '↓', '≤', '≥', '≠', '×', '÷'];
-        $to   = ['--', '-',  '...', '-',         '"',  '"',  '"',        '"',        "'",  "'",  "'",        "'",        '-', '>', '<', '^', 'v', '<=', '>=', '!=', 'x', '/'];
-        $t = str_replace($from, $to, $t);
+        // Reemplazar caracteres comunes fuera de ISO-8859-1 antes de convertir
+        $search  = array("\xe2\x80\x94", "\xe2\x80\x93", "\xe2\x80\xa6", "\xc2\xad",
+                         "\xe2\x80\x9c", "\xe2\x80\x9d", "\xe2\x80\x98", "\xe2\x80\x99",
+                         "\xe2\x80\xa2", "\xe2\x86\x92", "\xe2\x86\x90", "\xe2\x89\xa4",
+                         "\xe2\x89\xa5", "\xe2\x89\xa0", "\xc3\x97",     "\xc3\xb7");
+        $replace = array('--',          '-',             '...',          '-',
+                         '"',           '"',             "'",            "'",
+                         '-',           '>',             '<',            '<=',
+                         '>=',          '!=',            'x',            '/');
+        $t = str_replace($search, $replace, $t);
         if (function_exists('mb_convert_encoding')) return mb_convert_encoding($t, 'ISO-8859-1', 'UTF-8');
         if (function_exists('utf8_decode')) return @utf8_decode($t);
         return $t;

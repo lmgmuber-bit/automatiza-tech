@@ -590,19 +590,20 @@ add_action('wp_ajax_at_create_contract_widget', function(){
 
     // Resolver servicios seleccionados
     $servicios_ids = array_map('intval', (array)($_POST['servicios_ids'] ?? array()));
-    $servicios_ids = array_filter($servicios_ids); // quitar 0s
+    $servicios_ids = array_values(array_filter($servicios_ids)); // quitar 0s y re-indexar
     if (!empty($servicios_ids)) {
         global $wpdb;
         $st = $wpdb->prefix . 'automatiza_services';
-        $placeholders_in = implode(',', array_fill(0, count($servicios_ids), '%d'));
+        // Usar IDs ya saneados como intval — seguro contra SQL injection
+        $in_clause = implode(',', $servicios_ids);
         $services_rows = $wpdb->get_results(
-            $wpdb->prepare("SELECT name, price_clp FROM {$st} WHERE id IN ({$placeholders_in})", ...$servicios_ids)
+            "SELECT name, price_clp FROM {$st} WHERE id IN ({$in_clause}) ORDER BY category, name ASC"
         );
         if (!empty($services_rows)) {
             $lines = array();
             foreach ($services_rows as $sr) {
-                $price = $sr->price_clp > 0 ? ' — $' . number_format((float)$sr->price_clp, 0, ',', '.') . ' CLP' : '';
-                $lines[] = '• ' . $sr->name . $price;
+                $price = (float)$sr->price_clp > 0 ? ' - $' . number_format((float)$sr->price_clp, 0, ',', '.') . ' CLP' : '';
+                $lines[] = '* ' . $sr->name . $price;
             }
             $ph['servicios_contratados'] = implode("\n", $lines);
             $ph['servicios_contratados_lista'] = implode(', ', array_column($services_rows, 'name'));

@@ -221,4 +221,58 @@ En el portal React se puede consumir vía un endpoint `api-contracts.php?client_
 
 ---
 
-_Versión 1.0 — 2026-04-29. Validar plantilla legal con asesoría antes de producción._
+## 🐛 Bugs conocidos / corregidos
+
+### ❌ PDF final enviado al cliente solo contenía firma de AT (corregido `001c6ae`)
+
+**Síntoma:** El cliente recibía un correo con asunto "Contrato firmado", pero el PDF adjunto era el preliminar (solo firma AT, bloque del cliente vacío).
+
+**Causa raíz:** `render_pdf()` lee la BD para decidir si incluir el bloque de firma del cliente (`if ($c->signed_at)`). En la implementación original, `signed_at` se grababa en un segundo `UPDATE` **después** de llamar `render_pdf()`, por lo que el PDF se generaba con `signed_at = null` → bloque de firma del cliente omitido.
+
+**Fix en `contracts/contract-service.php` — `sign_as_client()`:**
+```php
+// ANTES (incorrecto):
+$wpdb->update(table, ['signer_name'=>...], ['id'=>$c->id]);          // signed_at NO grabado
+$signed_path = self::render_pdf($c->id, true);                       // lee BD: signed_at = null → sin firma cliente
+$wpdb->update(table, ['status'=>'signed', 'signed_at'=>$now], ...); // demasiado tarde
+
+// DESPUÉS (correcto):
+$wpdb->update(table, ['status'=>'signed', 'signed_at'=>$now, 'signer_name'=>..., ...], ...); // TODO antes
+$signed_path = self::render_pdf($c->id, true);   // lee BD: signed_at presente → incluye firma cliente
+$wpdb->update(table, ['signed_pdf_url'=>..., 'signed_document_hash'=>...], ...); // solo URL + hash
+```
+
+---
+
+### ❌ Fecha "01-01-1970" en ficha de contratos (corregido `9020ae3` / `42491b8`)
+
+**Causa:** `list_by_client()` no incluía `created_at` en el SELECT. Posterior fix adicional: `strtotime('0000-00-00 00:00:00')` retorna `false` y `date('d-m-Y', false)` produce `01-01-1970`.
+
+**Fix:** `created_at` añadido al SELECT + validación `$ts > 0` en el widget.
+
+---
+
+### ❌ Caracteres especiales (`?`) en títulos PDF (corregido commits `3581f33`–`78edd15`)
+
+**Causa:** `mb_convert_encoding()` reemplaza caracteres no-ISO-8859-1 con `?`. Con 8 archivos definiendo `utf8_to_latin1()` bajo `if(!function_exists)`, el primero en cargarse (versión rota) ganaba.
+
+**Fix:** Función movida dentro de la clase como `private static function enc()` (no puede ser sobreescrita por archivos externos). 37 llamadas actualizadas.
+
+---
+
+## 📋 Historial de cambios
+
+| Fecha | Commit | Cambio |
+|---|---|---|
+| 2026-05-11 | `001c6ae` | **Fix crítico:** `signed_at` grabado antes de `render_pdf()` — PDF final incluye firma del cliente |
+| 2026-05-11 | `42491b8` | Guard `strtotime > 0` para fecha en widget (evita `01-01-1970` con `0000-00-00`) |
+| 2026-05-11 | `9020ae3` | `created_at` añadido al SELECT de `list_by_client()` |
+| 2026-05-11 | `e18ef54` | Canal contacto corregido: solo `contacto@automatizatech.cl` (eliminado WhatsApp) |
+| 2026-05-11 | `78edd15` | Negrita inline en PDF: `renderInlineBold()` con font switching |
+| 2026-05-11 | `8418df8` | Encabezado PDF: logo 22mm, celda derecha 80mm, `º` con bytes UTF-8 |
+| 2026-05-11 | `0f27546` | Encoding: `self::enc()` privado con `iconv //IGNORE`, 37 llamadas migradas |
+| 2026-05-11 | `3581f33` | Fix inicial encoding con `iconv` en lugar de `mb_convert_encoding` |
+
+---
+
+_Versión 2.0 — 2026-05-11. Validar plantilla legal con asesoría antes de producción._

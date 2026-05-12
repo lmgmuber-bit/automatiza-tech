@@ -78,7 +78,7 @@ function at_render_client_contracts_widget($client) {
                             &nbsp;·&nbsp;
                             <span title="Cliente"><?php echo $c->signed_at ? '✔️' : '⏳'; ?> Cliente</span>
                         </td>
-                        <td><?php echo esc_html(date('d-m-Y', strtotime($c->created_at))); ?></td>
+                        <td><?php echo esc_html(!empty($c->created_at) ? date('d-m-Y', strtotime($c->created_at)) : '—'); ?></td>
                         <td>
                             <?php if ($c->signed_pdf_url): ?>
                                 <a href="<?php echo esc_url($c->signed_pdf_url); ?>" target="_blank" class="button button-small button-primary">✔️ Final</a>

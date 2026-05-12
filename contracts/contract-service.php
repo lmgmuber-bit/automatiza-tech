@@ -54,8 +54,8 @@ class ContractService {
             'representante_at_cargo'  => 'Administrador y Representante Legal',
             'domicilio_at'            => 'Santa Beatriz 170, Of. 903 (9P), Providencia, Región Metropolitana, Chile',
             'email_at'                => 'contacto@automatizatech.cl',
-            'whatsapp_soporte'        => '+56 9 0000 0000',
-            'email_soporte'           => 'soporte@automatizatech.cl',
+            'whatsapp_soporte'        => '',
+            'email_soporte'           => 'contacto@automatizatech.cl',
             'url_portal'              => home_url('/portal-omnichannel/'),
             'ciudad_firma'            => 'Santiago',
             'ciudad_jurisdiccion'     => 'Santiago',
@@ -294,7 +294,7 @@ class ContractService {
     public static function list_by_client($client_id) {
         global $wpdb;
         return $wpdb->get_results($wpdb->prepare(
-            "SELECT id, contract_number, type, status, signed_at, sent_at, monthly_amount, currency, signed_pdf_url, pdf_url
+            "SELECT id, contract_number, type, status, signed_at, sent_at, monthly_amount, currency, signed_pdf_url, pdf_url, created_at
              FROM " . self::table() . " WHERE client_id=%d ORDER BY id DESC", $client_id));
     }
 

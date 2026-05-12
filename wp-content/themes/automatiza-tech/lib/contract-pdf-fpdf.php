@@ -13,28 +13,31 @@ if (!function_exists('get_template_directory')) die('WordPress required');
 
 require_once get_template_directory() . '/lib/fpdf.php';
 
-if (!function_exists('utf8_to_latin1')) {
-    function utf8_to_latin1($t) {
+
+class ContractPDFFPDF extends FPDF {
+
+    /**
+     * Private encoding helper — isolated from other PDF classes that may define
+     * a global self::enc() with the old (broken) implementation.
+     * Uses iconv //IGNORE to DROP unmappable chars instead of replacing with '?'.
+     */
+    private static function enc($t) {
         if (empty($t)) return $t;
-        // Map specific multi-byte chars to readable ASCII equivalents before encoding
         $search  = array("\xe2\x80\x94", "\xe2\x80\x93", "\xe2\x80\xa6", "\xc2\xad",
                          "\xe2\x80\x9c", "\xe2\x80\x9d", "\xe2\x80\x98", "\xe2\x80\x99",
                          "\xe2\x80\xa2", "\xe2\x86\x92", "\xe2\x86\x90", "\xe2\x89\xa4",
                          "\xe2\x89\xa5", "\xe2\x89\xa0", "\xc3\x97",     "\xc3\xb7",
                          "\xc2\xba",     "\xc2\xaa");
-        $replace = array('--',          '-',             '...',          '',
-                         '"',           '"',             "'",            "'",
-                         '-',           '>',             '<',            '<=',
-                         '>=',          '!=',            'x',            '/',
-                         "\xba",        "\xaa");
+        $replace = array('--',           '-',             '...',          '',
+                         '"',            '"',             "'",            "'",
+                         '-',            '>',             '<',            '<=',
+                         '>=',           '!=',            'x',            '/',
+                         "\xba",         "\xaa");
         $t = str_replace($search, $replace, $t);
-        // iconv //IGNORE silently drops any char that can't map to ISO-8859-1 (emojis, etc.)
-        // This avoids the '?' substitution that mb_convert_encoding uses for unmappable chars
         if (function_exists('iconv')) {
             $r = @iconv('UTF-8', 'ISO-8859-1//IGNORE', $t);
             if ($r !== false) return $r;
         }
-        // Fallback: drop unmappable chars via mb_substitute_character
         if (function_exists('mb_substitute_character') && function_exists('mb_convert_encoding')) {
             $prev = mb_substitute_character();
             mb_substitute_character('none');
@@ -46,9 +49,7 @@ if (!function_exists('utf8_to_latin1')) {
         if (function_exists('utf8_decode')) return @utf8_decode($t);
         return $t;
     }
-}
 
-class ContractPDFFPDF extends FPDF {
 
     private $ph;
     private $body;
@@ -69,7 +70,7 @@ class ContractPDFFPDF extends FPDF {
         $this->SetMargins(20, 33, 20);
         $this->SetAutoPageBreak(true, 25);
         $this->AliasNbPages();
-        $this->SetTitle(utf8_to_latin1('Contrato ' . ($this->ph['contract_number'] ?? '')));
+        $this->SetTitle(self::enc('Contrato ' . ($this->ph['contract_number'] ?? '')));
         $this->SetAuthor('AutomatizaTech SpA');
         $this->SetCreator('AutomatizaTech - Contracts Module');
     }
@@ -83,15 +84,15 @@ class ContractPDFFPDF extends FPDF {
             $this->SetFont('Arial', 'B', 13);
             $this->SetTextColor(...$this->primary);
             $this->SetXY(20, 10);
-            $this->Cell(50, 6, utf8_to_latin1('AutomatizaTech'), 0, 0, 'L');
+            $this->Cell(50, 6, self::enc('AutomatizaTech'), 0, 0, 'L');
         }
         // Right-side info — \xc2\xba is UTF-8 for º so mb_convert_encoding handles it correctly
         $this->SetFont('Arial', '', 8);
         $this->SetTextColor(...$this->gray);
         $this->SetXY(110, 8);
-        $this->Cell(80, 4.5, utf8_to_latin1("Contrato N\xc2\xba " . ($this->ph['contract_number'] ?? '')), 0, 2, 'R');
-        $this->Cell(80, 4.5, utf8_to_latin1('Emitido: ' . date('d-m-Y')), 0, 2, 'R');
-        $this->Cell(80, 4.5, utf8_to_latin1('AutomatizaTech SpA'), 0, 2, 'R');
+        $this->Cell(80, 4.5, self::enc("Contrato N\xc2\xba " . ($this->ph['contract_number'] ?? '')), 0, 2, 'R');
+        $this->Cell(80, 4.5, self::enc('Emitido: ' . date('d-m-Y')), 0, 2, 'R');
+        $this->Cell(80, 4.5, self::enc('AutomatizaTech SpA'), 0, 2, 'R');
         $this->SetDrawColor(...$this->primary);
         $this->SetLineWidth(0.5);
         $this->Line(20, 29, 190, 29);
@@ -107,8 +108,8 @@ class ContractPDFFPDF extends FPDF {
         $this->SetTextColor(...$this->gray);
         $hash = $this->ph['document_hash'] ?? '';
         $h = $hash ? substr($hash, 0, 16) . '...' : '---';
-        $this->Cell(0, 4, utf8_to_latin1('Hash SHA-256: ' . $h . '  ·  Ley 19.799 de Firma Electrónica'), 0, 1, 'L');
-        $this->Cell(0, 4, utf8_to_latin1('Pág. ' . $this->PageNo() . ' de {nb}  ·  contacto@automatizatech.cl  ·  www.automatizatech.cl'), 0, 0, 'L');
+        $this->Cell(0, 4, self::enc('Hash SHA-256: ' . $h . '  ·  Ley 19.799 de Firma Electrónica'), 0, 1, 'L');
+        $this->Cell(0, 4, self::enc('Pág. ' . $this->PageNo() . ' de {nb}  ·  contacto@automatizatech.cl  ·  www.automatizatech.cl'), 0, 0, 'L');
     }
 
     public function build() {
@@ -124,12 +125,12 @@ class ContractPDFFPDF extends FPDF {
         $this->SetFont('Arial', 'B', 13);
         $this->SetTextColor(...$this->primary);
         $title = $this->ph['contract_title'] ?? 'CONTRATO DE PRESTACIÓN DE SERVICIOS Y SOPORTE TÉCNICO';
-        $this->MultiCell(0, 7, utf8_to_latin1($title), 0, 'C');
+        $this->MultiCell(0, 7, self::enc($title), 0, 'C');
         $this->Ln(2);
         $this->SetFont('Arial', '', 9);
         $this->SetTextColor(...$this->gray);
         $sub = ($this->ph['nombre_proyecto'] ?? '') . '  ·  ' . ($this->ph['razon_social_cliente'] ?? '');
-        $this->Cell(0, 5, utf8_to_latin1($sub), 0, 1, 'C');
+        $this->Cell(0, 5, self::enc($sub), 0, 1, 'C');
         $this->Ln(4);
     }
 
@@ -150,7 +151,7 @@ class ContractPDFFPDF extends FPDF {
         $this->SetFillColor(...$bg);
         $this->SetTextColor(...$fg);
         $this->SetFont('Arial', 'B', 9);
-        $this->Cell(0, 7, utf8_to_latin1($label), 0, 1, 'C', true);
+        $this->Cell(0, 7, self::enc($label), 0, 1, 'C', true);
         $this->Ln(3);
         $this->SetTextColor(...$this->text_col);
     }
@@ -194,16 +195,16 @@ class ContractPDFFPDF extends FPDF {
                     foreach ($parts as $part) {
                         if (preg_match('/^\*\*([^*\n]+)\*\*$/', $part, $bm)) {
                             $this->SetFont('Arial', 'BI', 9);
-                            $this->Write(5, utf8_to_latin1($bm[1]));
+                            $this->Write(5, self::enc($bm[1]));
                             $this->SetFont('Arial', 'I', 9);
                         } elseif ($part !== '') {
-                            $this->Write(5, utf8_to_latin1($part));
+                            $this->Write(5, self::enc($part));
                         }
                     }
                     $this->Ln(5);
                 } else {
                     $this->SetFont('Arial', 'I', 9);
-                    $this->MultiCell(0, 5, utf8_to_latin1($this->stripInline($m[1])), 0, 'L', true);
+                    $this->MultiCell(0, 5, self::enc($this->stripInline($m[1])), 0, 'L', true);
                 }
                 $this->Ln(1);
                 $this->SetTextColor(...$this->text_col);
@@ -215,7 +216,7 @@ class ContractPDFFPDF extends FPDF {
                 $this->Ln(2);
                 $this->SetFont('Arial', 'B', $sizes[$level] ?? 10);
                 $this->SetTextColor(...($level <= 2 ? $this->primary : $this->text_col));
-                $this->MultiCell(0, 6, utf8_to_latin1($this->stripInline($m[2])), 0, 'L');
+                $this->MultiCell(0, 6, self::enc($this->stripInline($m[2])), 0, 'L');
                 $this->SetTextColor(...$this->text_col);
                 $this->Ln(1);
                 continue;
@@ -242,14 +243,14 @@ class ContractPDFFPDF extends FPDF {
             if (preg_match('/^\s*[-*]\s+(.*)$/', $line, $m)) {
                 $indent = 5;
                 $this->SetFont('Arial', '', 9);
-                $this->Cell($indent, 5, utf8_to_latin1('-'), 0, 0);
+                $this->Cell($indent, 5, self::enc('-'), 0, 0);
                 if (strpos($m[1], '**') !== false) {
                     $savedLM = $this->lMargin;
                     $this->SetLeftMargin($savedLM + $indent);
                     $this->renderInlineBold($m[1]);
                     $this->SetLeftMargin($savedLM);
                 } else {
-                    $this->MultiCell(0, 5, utf8_to_latin1($this->stripInline($m[1])), 0, 'L');
+                    $this->MultiCell(0, 5, self::enc($this->stripInline($m[1])), 0, 'L');
                 }
                 continue;
             }
@@ -275,7 +276,7 @@ class ContractPDFFPDF extends FPDF {
         // Calcular líneas de texto necesarias por celda
         $allLines = array();
         foreach ($cells as $idx => $text) {
-            $text   = utf8_to_latin1($this->stripInline($text));
+            $text   = self::enc($this->stripInline($text));
             $maxTxt = $colW - $padX * 2;
             $words  = preg_split('/\s+/', trim($text));
             $lines  = array();
@@ -341,7 +342,7 @@ class ContractPDFFPDF extends FPDF {
     private function renderInlineBold($rawText, $fontSize = 9, $lineH = 5) {
         if (strpos($rawText, '**') === false) {
             $this->SetFont('Arial', '', $fontSize);
-            $this->MultiCell(0, $lineH, utf8_to_latin1($this->stripInline($rawText)), 0, 'J');
+            $this->MultiCell(0, $lineH, self::enc($this->stripInline($rawText)), 0, 'J');
             return;
         }
         // Strip everything except ** bold markers (italic *, code, links)
@@ -351,10 +352,10 @@ class ContractPDFFPDF extends FPDF {
         foreach ($parts as $part) {
             if (preg_match('/^\*\*([^*\n]+)\*\*$/', $part, $m)) {
                 $this->SetFont('Arial', 'B', $fontSize);
-                $this->Write($lineH, utf8_to_latin1($m[1]));
+                $this->Write($lineH, self::enc($m[1]));
                 $this->SetFont('Arial', '', $fontSize);
             } elseif ($part !== '') {
-                $this->Write($lineH, utf8_to_latin1($part));
+                $this->Write($lineH, self::enc($part));
             }
         }
         $this->Ln($lineH);
@@ -392,7 +393,7 @@ class ContractPDFFPDF extends FPDF {
 
         $this->SetFont('Arial', 'B', 11);
         $this->SetTextColor(...$this->primary);
-        $this->Cell(0, 7, utf8_to_latin1('FIRMAS'), 0, 1, 'L');
+        $this->Cell(0, 7, self::enc('FIRMAS'), 0, 1, 'L');
         $this->SetTextColor(...$this->text_col);
         $this->Ln(2);
 
@@ -419,40 +420,40 @@ class ContractPDFFPDF extends FPDF {
         $this->SetY($y0 + $box_h + 1);
         $this->SetFont('Arial', '', 8);
         $this->SetTextColor(...$this->gray);
-        $this->Cell($col_w, 4, utf8_to_latin1('POR EL PROVEEDOR'), 0, 0, 'C');
+        $this->Cell($col_w, 4, self::enc('POR EL PROVEEDOR'), 0, 0, 'C');
         $this->Cell(10, 4, '', 0, 0);
-        $this->Cell($col_w, 4, utf8_to_latin1('POR EL CLIENTE'), 0, 1, 'C');
+        $this->Cell($col_w, 4, self::enc('POR EL CLIENTE'), 0, 1, 'C');
 
         $this->SetFont('Arial', 'B', 9);
         $this->SetTextColor(...$this->text_col);
         $at_name = $at_sig['signer_name'] ?? ($this->ph['representante_at_nombre'] ?? '');
         $cl_name = $cl_sig['signer_name'] ?? ($this->ph['representante_cliente_nombre'] ?? '');
-        $this->Cell($col_w, 5, utf8_to_latin1($at_name), 0, 0, 'C');
+        $this->Cell($col_w, 5, self::enc($at_name), 0, 0, 'C');
         $this->Cell(10, 5, '', 0, 0);
-        $this->Cell($col_w, 5, utf8_to_latin1($cl_name), 0, 1, 'C');
+        $this->Cell($col_w, 5, self::enc($cl_name), 0, 1, 'C');
 
         $this->SetFont('Arial', '', 8);
         $this->SetTextColor(...$this->gray);
         $at_rut = $at_sig['signer_rut'] ?? ($this->ph['representante_at_rut'] ?? '');
         $cl_rut = $cl_sig['signer_rut'] ?? ($this->ph['representante_cliente_rut'] ?? '');
-        $this->Cell($col_w, 4, utf8_to_latin1('RUT: ' . $at_rut), 0, 0, 'C');
+        $this->Cell($col_w, 4, self::enc('RUT: ' . $at_rut), 0, 0, 'C');
         $this->Cell(10, 4, '', 0, 0);
-        $this->Cell($col_w, 4, utf8_to_latin1('RUT: ' . $cl_rut), 0, 1, 'C');
+        $this->Cell($col_w, 4, self::enc('RUT: ' . $cl_rut), 0, 1, 'C');
 
-        $this->Cell($col_w, 4, utf8_to_latin1('AutomatizaTech SpA'), 0, 0, 'C');
+        $this->Cell($col_w, 4, self::enc('AutomatizaTech SpA'), 0, 0, 'C');
         $this->Cell(10, 4, '', 0, 0);
-        $this->Cell($col_w, 4, utf8_to_latin1($this->ph['razon_social_cliente'] ?? ''), 0, 1, 'C');
+        $this->Cell($col_w, 4, self::enc($this->ph['razon_social_cliente'] ?? ''), 0, 1, 'C');
 
         if ($at_sig && !empty($at_sig['signed_at'])) {
-            $this->Cell($col_w, 4, utf8_to_latin1('Firmado: ' . $at_sig['signed_at']), 0, 0, 'C');
+            $this->Cell($col_w, 4, self::enc('Firmado: ' . $at_sig['signed_at']), 0, 0, 'C');
         } else {
             $this->Cell($col_w, 4, '', 0, 0);
         }
         $this->Cell(10, 4, '', 0, 0);
         if ($cl_sig && !empty($cl_sig['signed_at'])) {
-            $this->Cell($col_w, 4, utf8_to_latin1('Firmado: ' . $cl_sig['signed_at']), 0, 1, 'C');
+            $this->Cell($col_w, 4, self::enc('Firmado: ' . $cl_sig['signed_at']), 0, 1, 'C');
         } else {
-            $this->Cell($col_w, 4, utf8_to_latin1('Pendiente de firma'), 0, 1, 'C');
+            $this->Cell($col_w, 4, self::enc('Pendiente de firma'), 0, 1, 'C');
         }
 
         $this->SetTextColor(...$this->text_col);
@@ -468,7 +469,7 @@ class ContractPDFFPDF extends FPDF {
 
         $this->SetFont('Arial', 'B', 9);
         $this->SetTextColor(...$this->primary);
-        $this->Cell(0, 6, utf8_to_latin1('REGISTRO DE FIRMA ELECTRÓNICA SIMPLE (Ley 19.799)'), 0, 1, 'L');
+        $this->Cell(0, 6, self::enc('REGISTRO DE FIRMA ELECTRÓNICA SIMPLE (Ley 19.799)'), 0, 1, 'L');
         $this->SetTextColor(...$this->text_col);
 
         if ($at) $this->renderAuditTable('PROVEEDOR (AutomatizaTech)', $at);
@@ -479,7 +480,7 @@ class ContractPDFFPDF extends FPDF {
         $this->Ln(2);
         $this->SetFont('Arial', 'B', 8);
         $this->SetTextColor(...$this->secondary);
-        $this->Cell(0, 5, utf8_to_latin1($title), 0, 1, 'L');
+        $this->Cell(0, 5, self::enc($title), 0, 1, 'L');
         $this->SetTextColor(...$this->text_col);
 
         $rows = array(
@@ -495,8 +496,8 @@ class ContractPDFFPDF extends FPDF {
         $this->SetFillColor(...$this->light_bg);
         foreach ($rows as $k => $v) {
             if ($v === '' || $v === null) continue;
-            $this->Cell(40, 5, utf8_to_latin1($k), 1, 0, 'L', true);
-            $this->Cell(0,  5, utf8_to_latin1((string) $v), 1, 1, 'L');
+            $this->Cell(40, 5, self::enc($k), 1, 0, 'L', true);
+            $this->Cell(0,  5, self::enc((string) $v), 1, 1, 'L');
         }
     }
 }

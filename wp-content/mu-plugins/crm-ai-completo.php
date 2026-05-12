@@ -5181,11 +5181,25 @@ class AutomatizaTech_CRM_AI {
                     
                     <?php
                     // ─── CONTRATOS FIRMADOS ───
+                    // Los contratos se guardan con el ID de wp_automatiza_tech_clients,
+                    // pero el portal usa el ID de wp_crm_clientes. Cruzamos por email.
                     $contracts_table = $wpdb->prefix . 'automatiza_contracts';
                     if ($wpdb->get_var("SHOW TABLES LIKE '{$contracts_table}'") === $contracts_table) {
+                        $at_clients_table = $wpdb->prefix . 'automatiza_tech_clients';
+                        $at_client_id = null;
+                        if (!empty($cliente->email)) {
+                            $at_client_id = $wpdb->get_var($wpdb->prepare(
+                                "SELECT id FROM {$at_clients_table} WHERE email = %s LIMIT 1",
+                                $cliente->email
+                            ));
+                        }
+                        // Fallback: intentar también con el ID directo por si las tablas son la misma
+                        if (!$at_client_id) {
+                            $at_client_id = $cliente_id;
+                        }
                         $signed_contracts = $wpdb->get_results($wpdb->prepare(
                             "SELECT id, contract_number, type, signed_at, signed_pdf_url, monthly_amount, currency FROM {$contracts_table} WHERE client_id = %d AND status = 'signed' ORDER BY signed_at DESC",
-                            $cliente_id
+                            $at_client_id
                         ), ARRAY_A);
                     ?>
                     <h2>📄 Tus Contratos</h2>

@@ -35,7 +35,6 @@ $sql = "CREATE TABLE {$table} (
     viewed_at DATETIME NULL,
     signed_at DATETIME NULL,
     expires_at DATETIME NULL,
-    -- Firma AT (representante AutomatizaTech)
     at_signer_user_id BIGINT UNSIGNED NULL,
     at_signer_name VARCHAR(160) NULL,
     at_signer_rut VARCHAR(20) NULL,
@@ -44,7 +43,6 @@ $sql = "CREATE TABLE {$table} (
     at_signed_at DATETIME NULL,
     at_signature_method ENUM('canvas','image_upload') NULL,
     at_signature_image_url VARCHAR(500) NULL,
-    -- Firma cliente
     signer_name VARCHAR(160) NULL,
     signer_rut VARCHAR(20) NULL,
     signer_email VARCHAR(160) NULL,

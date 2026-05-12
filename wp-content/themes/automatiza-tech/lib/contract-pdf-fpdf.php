@@ -26,6 +26,10 @@ if (!function_exists('utf8_to_latin1')) {
                          '-',           '>',             '<',            '<=',
                          '>=',          '!=',            'x',            '/');
         $t = str_replace($search, $replace, $t);
+        // Strip 4-byte UTF-8 sequences (emojis, supplementary chars) that can't be in ISO-8859-1
+        $t = preg_replace('/[\xF0-\xF7][\x80-\xBF]{3}/', '', $t);
+        // Strip remaining 3-byte sequences outside ISO-8859-1 (e.g. ⚠ U+26A0 = \xE2\x9A\xA0)
+        $t = preg_replace('/[\xE2-\xEF][\x80-\xBF]{2}/', '', $t);
         if (function_exists('mb_convert_encoding')) return mb_convert_encoding($t, 'ISO-8859-1', 'UTF-8');
         if (function_exists('utf8_decode')) return @utf8_decode($t);
         return $t;

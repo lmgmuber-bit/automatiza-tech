@@ -98,7 +98,7 @@ function at_render_client_contracts_widget($client) {
         <?php endif; ?>
 
         <!-- Modal: Nuevo contrato -->
-        <div id="at-new-contract-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;align-items:center;justify-content:center">
+        <div id="at-new-contract-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100002;align-items:center;justify-content:center">
             <div style="background:#fff;width:560px;max-width:95vw;max-height:90vh;overflow:auto;border-radius:10px;padding:24px;box-shadow:0 25px 60px rgba(0,0,0,.3)">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
                     <h2 style="margin:0">📜 Nuevo contrato de soporte</h2>
@@ -278,6 +278,10 @@ function at_render_client_contracts_widget($client) {
     </div>
 
     <style>
+        /* Estilos scoped al modal del contrato (funciona aunque el modal se mueva a <body>) */
+        #at-new-contract-modal label{font-size:12px;color:#374151;display:block}
+        #at-new-contract-modal input,#at-new-contract-modal select{margin-top:4px;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px}
+        /* Mantener también la clase original por retrocompatibilidad */
         .at-contracts-widget label{font-size:12px;color:#374151;display:block}
         .at-contracts-widget input,.at-contracts-widget select{margin-top:4px;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px}
 

@@ -104,7 +104,7 @@ function at_render_client_contracts_widget($client) {
                     <h2 style="margin:0">📜 Nuevo contrato de soporte</h2>
                     <button type="button" onclick="atCloseNewContract()" style="background:none;border:0;font-size:24px;cursor:pointer">&times;</button>
                 </div>
-                <form id="at-new-contract-form" method="post" action="<?php echo esc_url(admin_url('admin-ajax.php')); ?>" onsubmit="if(typeof atSubmitContract==='function'){return atSubmitContract(event);}">
+                <div id="at-new-contract-form">
                     <input type="hidden" name="action" value="at_create_contract_widget">
                     <input type="hidden" name="nonce" value="<?php echo wp_create_nonce('at_contract_widget_' . $client_id); ?>">
                     <input type="hidden" name="client_id" value="<?php echo $client_id; ?>">
@@ -270,9 +270,9 @@ function at_render_client_contracts_widget($client) {
 
                     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
                         <button type="button" class="button" onclick="atCloseNewContract()">Cancelar</button>
-                        <button type="submit" class="button button-primary">📜 Generar contrato</button>
+                        <button type="button" class="button button-primary" onclick="atSubmitContract(event)">📜 Generar contrato</button>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
@@ -329,13 +329,6 @@ function at_render_client_contracts_widget($client) {
     <script>
     function atOpenNewContract(cid){
         const modal = document.getElementById('at-new-contract-modal');
-        // El modal puede estar anidado dentro de otro <form> (la ficha del cliente).
-        // HTML no permite forms anidados — el browser ignora el form interno y
-        // envía el form externo en su lugar. Movemos el modal a <body> para
-        // que el form del contrato sea independiente.
-        if (modal && modal.parentNode !== document.body) {
-            document.body.appendChild(modal);
-        }
         if (modal) modal.style.display = 'flex';
     }
     function atCloseNewContract(){ document.getElementById('at-new-contract-modal').style.display='none'; }
@@ -478,7 +471,7 @@ function at_render_client_contracts_widget($client) {
         }
     });
     async function atSubmitContract(e){
-        e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
         // Validar RUT si el tipo es RUT
         const rutCli = document.getElementById('at-rut-cliente');
         const rutRep = document.getElementById('at-rut-rep');
@@ -496,12 +489,17 @@ function at_render_client_contracts_widget($client) {
             rutRep.focus();
             return;
         }
-        const form = e.target;
-        const fd = new FormData(form);
-        // action y nonce ya vienen en hidden inputs del form; solo aseguramos
+        // Recolectar campos desde el div-contenedor (no es un <form>)
+        const container = document.getElementById('at-new-contract-form');
+        const fd = new FormData();
+        container.querySelectorAll('input,select,textarea').forEach(function(el){
+            if (!el.name) return;
+            if ((el.type === 'checkbox' || el.type === 'radio') && !el.checked) return;
+            fd.append(el.name, el.value);
+        });
         if (!fd.get('action')) fd.append('action','at_create_contract_widget');
-        const btn = form.querySelector('button[type=submit]');
-        btn.disabled=true; btn.textContent='Generando...';
+        const btn = container.querySelector('button.button-primary');
+        if (btn) { btn.disabled=true; btn.textContent='Generando...'; }
         try{
             const r = await fetch(ajaxurl, { method:'POST', body: fd });
             const j = await r.json();
@@ -510,11 +508,11 @@ function at_render_client_contracts_widget($client) {
                 location.reload();
             } else {
                 alert('❌ Error: '+(j.data?.message || 'desconocido'));
-                btn.disabled=false; btn.textContent='📜 Generar contrato';
+                if (btn) { btn.disabled=false; btn.textContent='📜 Generar contrato'; }
             }
         }catch(err){
             alert('❌ Error de red: '+err.message);
-            btn.disabled=false; btn.textContent='📜 Generar contrato';
+            if (btn) { btn.disabled=false; btn.textContent='📜 Generar contrato'; }
         }
     }
     </script>

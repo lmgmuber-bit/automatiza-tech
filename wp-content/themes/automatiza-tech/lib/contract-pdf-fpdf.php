@@ -16,6 +16,10 @@ require_once get_template_directory() . '/lib/fpdf.php';
 if (!function_exists('utf8_to_latin1')) {
     function utf8_to_latin1($t) {
         if (empty($t)) return $t;
+        // Reemplazar caracteres fuera de ISO-8859-1 (Windows-1252) con equivalentes ASCII
+        $from = ['—',  '–',  '…',  "\u{00AD}", '"',  '"',  "\u{201C}", "\u{201D}", ''',  ''',  "\u{2018}", "\u{2019}", '•', '→', '←', '↑', '↓', '≤', '≥', '≠', '×', '÷'];
+        $to   = ['--', '-',  '...', '-',         '"',  '"',  '"',        '"',        "'",  "'",  "'",        "'",        '-', '>', '<', '^', 'v', '<=', '>=', '!=', 'x', '/'];
+        $t = str_replace($from, $to, $t);
         if (function_exists('mb_convert_encoding')) return mb_convert_encoding($t, 'ISO-8859-1', 'UTF-8');
         if (function_exists('utf8_decode')) return @utf8_decode($t);
         return $t;
@@ -51,7 +55,7 @@ class ContractPDFFPDF extends FPDF {
     public function Header() {
         $logo = get_template_directory() . '/assets/images/logo-automatiza-tech.png';
         if (file_exists($logo)) {
-            $this->Image($logo, 20, 10, 35);
+            $this->Image($logo, 20, 8, 30);
         } else {
             $this->SetFont('Arial', 'B', 14);
             $this->SetTextColor(...$this->primary);
@@ -60,14 +64,14 @@ class ContractPDFFPDF extends FPDF {
         }
         $this->SetFont('Arial', '', 8);
         $this->SetTextColor(...$this->gray);
-        $this->SetXY(120, 12);
-        $this->Cell(70, 4, utf8_to_latin1('Contrato Nº ' . ($this->ph['contract_number'] ?? '')), 0, 2, 'R');
+        $this->SetXY(120, 10);
+        $this->Cell(70, 4, utf8_to_latin1('Contrato N' . chr(186) . ' ' . ($this->ph['contract_number'] ?? '')), 0, 2, 'R');
         $this->Cell(70, 4, utf8_to_latin1('Emitido: ' . date('d-m-Y')), 0, 2, 'R');
         $this->Cell(70, 4, utf8_to_latin1('AutomatizaTech SpA'), 0, 2, 'R');
         $this->SetDrawColor(...$this->primary);
         $this->SetLineWidth(0.5);
-        $this->Line(20, 24, 190, 24);
-        $this->Ln(8);
+        $this->Line(20, 26, 190, 26);
+        $this->SetY(30);
     }
 
     public function Footer() {

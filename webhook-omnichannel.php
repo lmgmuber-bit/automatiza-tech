@@ -39,7 +39,7 @@ require_once __DIR__ . '/at-rate-limit.php';
 
 // Rate limit: max 60 hits/min por IP+canal (los webhooks legitimos no superan esto en uso normal)
 if ( ! at_rate_limit_check( 'webhook_omni_' . $channel_id, 60, 60 ) ) {
-    at_rate_limit_reject( 30 );
+    at_rate_limit_reject( 30, 'webhook_omni' );
 }
 
 global $wpdb;

@@ -75,6 +75,10 @@ function authenticate_admin() {
             return;
         }
     }
+    // C4: log admin auth failures for security monitoring
+    if ( function_exists( 'at_secmon_log_event' ) ) {
+        at_secmon_log_event( 'api_auth_failed', [ 'endpoint' => $_SERVER['REQUEST_URI'] ?? '' ] );
+    }
     send_json(['error' => 'Acceso denegado. Requiere permisos de administrador.'], 403);
 }
 
@@ -135,7 +139,7 @@ try {
     if (isset($segments[0]) && $segments[0] === 'health') {
         // Rate limit: 60 checks/min per IP (N8N polls at most every few seconds)
         if ( ! at_rate_limit_check( 'omni_health', 60, 60 ) ) {
-            at_rate_limit_reject( 60 );
+            at_rate_limit_reject( 60, 'omni_health' );
         }
         send_json(['status' => 'ok', 'timestamp' => current_time('c')]);
     }
@@ -346,7 +350,7 @@ try {
         if (($segments[1] ?? '') === 'login' && $method === 'POST') {
             // Rate limit: 5 intentos/hora por IP → anti brute-force
             if ( ! at_rate_limit_check( 'omni_admin_login', 5, 3600 ) ) {
-                at_rate_limit_reject( 3600 );
+                at_rate_limit_reject( 3600, 'omni_admin_login' );
             }
             $username = sanitize_text_field($body['username'] ?? '');
             $password = $body['password'] ?? '';
@@ -847,7 +851,7 @@ try {
         if (($segments[1] ?? '') === 'login' && $method === 'POST') {
             // Rate limit: 5 intentos/hora por IP → anti brute-force
             if ( ! at_rate_limit_check( 'omni_agent_login', 5, 3600 ) ) {
-                at_rate_limit_reject( 3600 );
+                at_rate_limit_reject( 3600, 'omni_agent_login' );
             }
             $email = sanitize_email($body['email'] ?? '');
             $password = $body['password'] ?? '';

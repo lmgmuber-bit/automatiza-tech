@@ -72,6 +72,10 @@ if ($action === 'download') {
             wp_die( '❌ Acceso denegado: token de descarga inválido o expirado.', 'Error', ['response' => 403] );
         }
     } elseif ( ! hash_equals( (string) $receipt->download_token, $submitted_token_r ) ) {
+        // C4: log IDOR/token-invalid attempts
+        if ( function_exists( 'at_secmon_log_event' ) ) {
+            at_secmon_log_event( 'download_token_invalid', [ 'type' => 'receipt', 'id' => $receipt->receipt_number ] );
+        }
         wp_die( '❌ Acceso denegado: token de descarga inválido.', 'Error', ['response' => 403] );
     }
 

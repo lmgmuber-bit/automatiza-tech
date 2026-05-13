@@ -235,12 +235,24 @@ class ContractService {
     public static function sign_as_client($token, $data) {
         global $wpdb;
         $c = self::get_by_token($token);
-        if (!$c) return new WP_Error('not_found','Contrato no encontrado');
+        if (!$c) {
+            // C4: log invalid/unknown contract token attempts
+            if ( function_exists( 'at_secmon_log_event' ) ) {
+                at_secmon_log_event( 'contract_token_invalid', [ 'token_prefix' => substr( $token, 0, 8 ) ] );
+            }
+            return new WP_Error('not_found','Contrato no encontrado');
+        }
         if ($c->status === 'signed') return new WP_Error('already_signed','Ya firmado');
         if (!in_array($c->status, array('sent','viewed','at_signed'))) {
             return new WP_Error('bad_status','El contrato no está disponible para firma del cliente');
         }
-        if ($c->expires_at && strtotime($c->expires_at) < time()) return new WP_Error('expired','Link expirado');
+        if ($c->expires_at && strtotime($c->expires_at) < time()) {
+            // C4: log expired token attempts
+            if ( function_exists( 'at_secmon_log_event' ) ) {
+                at_secmon_log_event( 'contract_token_invalid', [ 'reason' => 'expired', 'contract' => $c->contract_number ?? $c->id ] );
+            }
+            return new WP_Error('expired','Link expirado');
+        }
 
         foreach (array('signer_name','signer_rut','signer_email','method') as $r) {
             if (empty($data[$r])) return new WP_Error('missing_'.$r, "Falta: $r");

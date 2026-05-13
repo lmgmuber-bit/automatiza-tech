@@ -65,7 +65,15 @@ if ( ! function_exists( 'at_rate_limit_check' ) ) {
 }
 
 if ( ! function_exists( 'at_rate_limit_reject' ) ) {
-    function at_rate_limit_reject( $retry_after = 60 ) {
+    /**
+     * @param int    $retry_after  Segundos para Retry-After header.
+     * @param string $bucket       Nombre del bucket (para logging de seguridad).
+     */
+    function at_rate_limit_reject( $retry_after = 60, $bucket = '' ) {
+        // C4: log rate-limit rejections for security monitoring
+        if ( function_exists( 'at_secmon_log_event' ) ) {
+            at_secmon_log_event( 'rate_limit_reject', [ 'bucket' => $bucket ] );
+        }
         if ( ! headers_sent() ) {
             http_response_code( 429 );
             header( 'Retry-After: ' . (int) $retry_after );

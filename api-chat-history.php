@@ -38,7 +38,7 @@ $wpdb->query("CREATE TABLE IF NOT EXISTS $table_name (
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 // Rate limit por acción: save=100/min, get=30/min, clear=10/min (anti abuso)
-$rl_max = match($action) { 'save' => 100, 'clear' => 10, default => 30 };
+$rl_max = $action === 'save' ? 100 : ($action === 'clear' ? 10 : 30);
 if ( ! at_rate_limit_check( 'chat_history_' . $action, $rl_max, 60 ) ) {
     at_rate_limit_reject( 60 );
 }

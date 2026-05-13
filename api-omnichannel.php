@@ -17,6 +17,7 @@ ob_end_clean();
 
 require_once __DIR__ . '/omnichannel-controller.php';
 require_once __DIR__ . '/at-rate-limit.php';
+require_once __DIR__ . '/at-mime-check.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -65,12 +66,11 @@ function authenticate_admin() {
     if (is_user_logged_in() && current_user_can('manage_options')) {
         return;
     }
-    // 2. Token auth (mobile / external)
-    $token = $_SERVER['HTTP_X_ADMIN_TOKEN'] ?? '';
+    // 2. Token auth: header (legacy) or HttpOnly cookie (preferred)
+    $token = $_SERVER['HTTP_X_ADMIN_TOKEN'] ?? ($_COOKIE['at_admin_token'] ?? '');
     if (!empty($token)) {
         $valid = validate_admin_token($token);
         if ($valid) {
-            // Set WP current user so audit_log picks up user info
             wp_set_current_user($valid);
             return;
         }
@@ -292,10 +292,12 @@ try {
         $count = min(count($files['name']), 5);
         for ($i = 0; $i < $count; $i++) {
             if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
-            if (!in_array($files['type'][$i], $allowed_types, true)) continue;
+            // Verificar MIME real via magic bytes (no Content-Type del cliente)
+            $real_mime = at_verify_upload_mime( $files['tmp_name'][$i], $allowed_types );
+            if ( ! $real_mime ) continue;
             if ($files['size'][$i] > $max_size) continue;
 
-            $single = ['name' => $files['name'][$i], 'type' => $files['type'][$i], 'tmp_name' => $files['tmp_name'][$i], 'error' => $files['error'][$i], 'size' => $files['size'][$i]];
+            $single = ['name' => $files['name'][$i], 'type' => $real_mime, 'tmp_name' => $files['tmp_name'][$i], 'error' => $files['error'][$i], 'size' => $files['size'][$i]];
             $upload = wp_handle_upload($single, ['test_form' => false]);
             if (!isset($upload['error'])) {
                 $urls[] = $upload['url'];
@@ -309,8 +311,8 @@ try {
     if (isset($segments[0]) && $segments[0] === 'admin') {
         // Ruta especial: verificar sesión admin (no requiere auth previa)
         if (($segments[1] ?? '') === 'session-check' && $method === 'GET') {
-            // Check token auth
-            $token = $_SERVER['HTTP_X_ADMIN_TOKEN'] ?? '';
+            // Check token: header (legacy) o cookie HttpOnly (preferido)
+            $token = $_SERVER['HTTP_X_ADMIN_TOKEN'] ?? ($_COOKIE['at_admin_token'] ?? '');
             if (!empty($token)) {
                 $user_id = validate_admin_token($token);
                 if ($user_id) {
@@ -365,7 +367,18 @@ try {
             }
             
             $token = generate_admin_token($user->ID);
-            
+
+            // Establecer cookie HttpOnly+Secure (evita acceso desde JavaScript/localStorage)
+            $cookie_opts = [
+                'expires'  => time() + 7 * 24 * 3600,
+                'path'     => '/',
+                'domain'   => '',
+                'secure'   => is_ssl(),
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ];
+            setcookie( 'at_admin_token', $token, $cookie_opts );
+
             send_json([
                 'success' => true,
                 'token'   => $token,
@@ -838,6 +851,18 @@ try {
                 send_json(['error' => 'Email y contraseña requeridos'], 400);
             }
             $result = $controller->authenticate_agent($email, $password);
+            // Si el login fue exitoso, establecer cookie HttpOnly para el token
+            if ( empty($result['error']) && ! empty($result['token']) ) {
+                $cookie_opts = [
+                    'expires'  => time() + 7 * 24 * 3600,
+                    'path'     => '/',
+                    'domain'   => '',
+                    'secure'   => is_ssl(),
+                    'httponly' => true,
+                    'samesite' => 'Lax',
+                ];
+                setcookie( 'at_agent_token', $result['token'], $cookie_opts );
+            }
             send_json($result, isset($result['error']) ? 401 : 200);
         }
 
@@ -874,9 +899,9 @@ try {
             send_json($result, isset($result['error']) ? 400 : 200);
         }
 
-        // Session check: validate existing token
+        // Session check: validate existing token (header or cookie)
         if (($segments[1] ?? '') === 'session-check' && $method === 'GET') {
-            $token = $_SERVER['HTTP_X_AGENT_TOKEN'] ?? '';
+            $token = $_SERVER['HTTP_X_AGENT_TOKEN'] ?? ($_COOKIE['at_agent_token'] ?? '');
             if (!empty($token)) {
                 $agent = $controller->validate_agent_token($token);
                 if ($agent) {
@@ -909,8 +934,8 @@ try {
             send_json(['authenticated' => false], 200);
         }
 
-        // All other agent routes require valid token
-        $token = $_SERVER['HTTP_X_AGENT_TOKEN'] ?? '';
+        // All other agent routes require valid token (header or cookie)
+        $token = $_SERVER['HTTP_X_AGENT_TOKEN'] ?? ($_COOKIE['at_agent_token'] ?? '');
         $current_agent = $controller->validate_agent_token($token);
         if (!$current_agent) {
             send_json(['error' => 'Token de agente inválido o expirado'], 401);
@@ -1158,16 +1183,19 @@ try {
                     if (empty($_FILES['avatar'])) send_json(['error' => 'No se envió imagen'], 400);
                     $file = $_FILES['avatar'];
                     $allowed_types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-                    if (!in_array($file['type'], $allowed_types, true)) {
+                    // Verificar MIME real via magic bytes (no Content-Type del cliente)
+                    $real_mime = at_verify_upload_mime( $file['tmp_name'], $allowed_types );
+                    if ( ! $real_mime ) {
                         send_json(['error' => 'Tipo de archivo no permitido. Use JPG, PNG, WebP o GIF'], 400);
                     }
                     if ($file['size'] > 2 * 1024 * 1024) {
                         send_json(['error' => 'La imagen no debe superar 2MB'], 400);
                     }
-                    // Use WordPress upload
+                    // Use WordPress upload (pasar MIME verificado, no el declarado por el cliente)
                     require_once(ABSPATH . 'wp-admin/includes/file.php');
                     require_once(ABSPATH . 'wp-admin/includes/image.php');
                     require_once(ABSPATH . 'wp-admin/includes/media.php');
+                    $file['type'] = $real_mime;
                     $upload = wp_handle_upload($file, ['test_form' => false]);
                     if (isset($upload['error'])) {
                         send_json(['error' => $upload['error']], 400);
@@ -1196,9 +1224,11 @@ try {
                     $count = min(count($files['name']), 5);
                     for ($i = 0; $i < $count; $i++) {
                         if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
-                        if (!in_array($files['type'][$i], $allowed_types, true)) continue;
+                        // Verificar MIME real via magic bytes (ticket-images agent)
+                        $real_mime = at_verify_upload_mime( $files['tmp_name'][$i], $allowed_types );
+                        if ( ! $real_mime ) continue;
                         if ($files['size'][$i] > $max_size) continue;
-                        $single = ['name' => $files['name'][$i], 'type' => $files['type'][$i], 'tmp_name' => $files['tmp_name'][$i], 'error' => $files['error'][$i], 'size' => $files['size'][$i]];
+                        $single = ['name' => $files['name'][$i], 'type' => $real_mime, 'tmp_name' => $files['tmp_name'][$i], 'error' => $files['error'][$i], 'size' => $files['size'][$i]];
                         $upload = wp_handle_upload($single, ['test_form' => false]);
                         if (!isset($upload['error'])) {
                             $urls[] = $upload['url'];

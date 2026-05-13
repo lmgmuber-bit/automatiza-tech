@@ -14,6 +14,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once ABSPATH . 'at-mime-check.php';
+
 define('AT_QA_VERSION', '1.3.1');
 define('AT_QA_EVIDENCE_DIR', 'qa-evidencias');
 
@@ -1024,7 +1026,8 @@ add_action('wp_ajax_at_qa_upload_evidence', function() {
     if (empty($_FILES['evidence_file'])) wp_send_json_error('No se recibió archivo');
 
     $allowed = ['image/jpeg','image/png','image/gif','image/webp','video/mp4','video/webm','application/pdf'];
-    if (!in_array($_FILES['evidence_file']['type'], $allowed)) {
+    $real_mime = at_verify_upload_mime( $_FILES['evidence_file']['tmp_name'], $allowed );
+    if ( ! $real_mime ) {
         wp_send_json_error('Tipo no permitido. Usa: JPG, PNG, GIF, WEBP, MP4, WEBM, PDF');
     }
     if ($_FILES['evidence_file']['size'] > 10 * 1024 * 1024) {
@@ -1036,7 +1039,8 @@ add_action('wp_ajax_at_qa_upload_evidence', function() {
     $qa_url = $upload_dir['baseurl'] . '/' . AT_QA_EVIDENCE_DIR;
     wp_mkdir_p($qa_dir);
 
-    $ext  = pathinfo($_FILES['evidence_file']['name'], PATHINFO_EXTENSION);
+    // Extensión derivada del MIME verificado (nunca del nombre original del archivo)
+    $ext  = at_mime_canonical_ext( $real_mime );
     $safe = 'qa-' . $case_db_id . '-' . time() . '-' . wp_generate_password(6, false) . '.' . $ext;
 
     if (!move_uploaded_file($_FILES['evidence_file']['tmp_name'], $qa_dir . '/' . $safe)) {
@@ -1049,7 +1053,7 @@ add_action('wp_ajax_at_qa_upload_evidence', function() {
         'case_id'     => $case_db_id,
         'file_url'    => $qa_url . '/' . $safe,
         'file_name'   => sanitize_file_name($_FILES['evidence_file']['name']),
-        'file_type'   => $_FILES['evidence_file']['type'],
+        'file_type'   => $real_mime,
         'file_size'   => $_FILES['evidence_file']['size'],
         'uploaded_by' => get_current_user_id(),
         'description' => $description,
@@ -1059,7 +1063,7 @@ add_action('wp_ajax_at_qa_upload_evidence', function() {
     $user = wp_get_current_user();
     $orig_name = $_FILES['evidence_file']['name'];
     $file_size_fmt = size_format($_FILES['evidence_file']['size']);
-    $file_type = $_FILES['evidence_file']['type'];
+    $file_type = $real_mime;
     $evidence_url = $qa_url . '/' . $safe;
 
     // ─── Notificación por correo: nueva evidencia ───
@@ -4412,13 +4416,15 @@ add_action('wp_ajax_nopriv_at_qa_agent_upload_evidence', function() {
     $cid         = intval($_POST['case_db_id']);
     $description = sanitize_text_field($_POST['description'] ?? '');
     $allowed = ['image/jpeg','image/png','image/gif','image/webp','video/mp4','video/webm','application/pdf'];
-    if (!in_array($_FILES['evidence_file']['type'], $allowed)) wp_send_json_error('Tipo no permitido');
+    $real_mime = at_verify_upload_mime( $_FILES['evidence_file']['tmp_name'], $allowed );
+    if ( ! $real_mime ) wp_send_json_error('Tipo no permitido');
     if ($_FILES['evidence_file']['size'] > 10 * 1024 * 1024) wp_send_json_error('Archivo muy grande');
     $upload_dir = wp_upload_dir();
     $qa_dir = $upload_dir['basedir'] . '/' . AT_QA_EVIDENCE_DIR;
     $qa_url = $upload_dir['baseurl'] . '/' . AT_QA_EVIDENCE_DIR;
     wp_mkdir_p($qa_dir);
-    $ext  = pathinfo($_FILES['evidence_file']['name'], PATHINFO_EXTENSION);
+    // Extensión derivada del MIME verificado (no del nombre original del archivo)
+    $ext  = at_mime_canonical_ext( $real_mime );
     $safe = 'qa-' . $cid . '-' . time() . '-' . wp_generate_password(6, false) . '.' . $ext;
     if (!move_uploaded_file($_FILES['evidence_file']['tmp_name'], $qa_dir . '/' . $safe)) wp_send_json_error('Error al guardar');
     global $wpdb;
@@ -4427,7 +4433,7 @@ add_action('wp_ajax_nopriv_at_qa_agent_upload_evidence', function() {
         'case_id'     => $cid,
         'file_url'    => $qa_url . '/' . $safe,
         'file_name'   => sanitize_file_name($_FILES['evidence_file']['name']),
-        'file_type'   => $_FILES['evidence_file']['type'],
+        'file_type'   => $real_mime,
         'file_size'   => $_FILES['evidence_file']['size'],
         'uploaded_by' => 1,
         'description' => $description,

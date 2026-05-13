@@ -11,6 +11,7 @@
 // Cargar WordPress (necesario para CORS env-aware)
 require_once('wp-load.php');
 require_once __DIR__ . '/at-cors.php';
+require_once __DIR__ . '/at-rate-limit.php';
 
 // Headers
 header('Content-Type: application/json; charset=utf-8');
@@ -18,6 +19,11 @@ at_cors_apply([
     'methods' => 'GET, POST, OPTIONS',
     'headers' => 'Content-Type, Authorization',
 ]);
+
+// Rate limit: 30 peticiones/min por IP (anti enumeración de prompts)
+if ( ! at_rate_limit_check( 'get_prompt', 30, 60 ) ) {
+    at_rate_limit_reject( 60 );
+}
 
 // Obtener el ID de la propuesta (puede venir como 'id', 'proposal_id', o 'unique_id')
 $unique_id = '';

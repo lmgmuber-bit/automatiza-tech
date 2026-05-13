@@ -7,6 +7,8 @@ RewriteEngine On
 RewriteRule ^xmlrpc\.php$ - [F,L]
 
 # 2) Bloquear scripts de mantenimiento / debug en raiz
+# Excepciones: validar-factura.php y validar-boleta.php son endpoints publicos legitimos
+RewriteRule ^(validar-factura2?|validar-boleta)\.php$ - [L]
 RewriteRule ^(debug|check|setup|fix|test|add|update|reset|revert|mark|purge|flush|reporte|validar|migrate|gen)-.*\.php$ - [F,L]
 RewriteRule ^check_.*\.php$ - [F,L]
 RewriteRule ^_.*\.php$ - [F,L]

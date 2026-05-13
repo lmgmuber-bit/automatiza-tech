@@ -19,6 +19,7 @@ error_reporting(E_ERROR | E_PARSE);
 require_once('wp-load.php');
 require_once('openai-controller.php');
 require_once __DIR__ . '/at-cors.php';
+require_once __DIR__ . '/at-rate-limit.php';
 
 // Descartar TODO el output que haya generado WordPress al cargar
 ob_end_clean();
@@ -31,6 +32,11 @@ at_cors_apply([
     'methods' => 'POST, OPTIONS',
     'headers' => 'Content-Type',
 ]);
+
+// Rate limit: 30 peticiones/min por IP para anti-abuso / costos OpenAI
+if ( ! at_rate_limit_check( 'chat_proxy_ip', 30, 60 ) ) {
+    at_rate_limit_reject( 60 );
+}
 
 // Recibir datos
 $input = json_decode(file_get_contents('php://input'), true);
@@ -45,6 +51,11 @@ $messages = isset($input['messages']) ? $input['messages'] : [];
 $model = isset($input['model']) ? $input['model'] : 'gpt-4o';
 $userId = isset($input['user_id']) ? intval($input['user_id']) : 1; 
 $clientIdentifier = isset($input['client_identifier']) ? sanitize_text_field($input['client_identifier']) : null;
+
+// Rate limit secundario: 200 peticiones/hora por client_identifier (control de costos por cliente)
+if ( $clientIdentifier && ! at_rate_limit_check( 'chat_proxy_id', 200, 3600, $clientIdentifier ) ) {
+    at_rate_limit_reject( 3600 );
+}
 
 if (empty($messages)) {
     http_response_code(400);

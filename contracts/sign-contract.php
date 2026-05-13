@@ -7,6 +7,14 @@
 
 require_once dirname(__DIR__) . '/wp-load.php';
 require_once __DIR__ . '/contract-service.php';
+require_once dirname(__DIR__) . '/at-rate-limit.php';
+
+// Rate limit: 10 intentos/hora por IP (anti brute-force sobre tokens de 64hex)
+if ( ! at_rate_limit_check( 'sign_contract_token', 10, 3600 ) ) {
+    status_header( 429 );
+    echo 'Demasiados intentos. Por favor espera antes de volver a intentarlo.';
+    exit;
+}
 
 $token = isset($_GET['token']) ? sanitize_text_field($_GET['token']) : '';
 $c = ContractService::get_by_token($token);

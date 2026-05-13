@@ -11,6 +11,7 @@
 // Cargar WordPress (necesario para WP_ENVIRONMENT_TYPE en at-cors)
 require_once('wp-load.php');
 require_once __DIR__ . '/at-cors.php';
+require_once __DIR__ . '/at-rate-limit.php';
 
 // Headers
 header('Content-Type: application/json; charset=utf-8');
@@ -35,6 +36,12 @@ $wpdb->query("CREATE TABLE IF NOT EXISTS $table_name (
 
 // Obtener acción
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
+
+// Rate limit por acción: save=100/min, get=30/min, clear=10/min (anti abuso)
+$rl_max = match($action) { 'save' => 100, 'clear' => 10, default => 30 };
+if ( ! at_rate_limit_check( 'chat_history_' . $action, $rl_max, 60 ) ) {
+    at_rate_limit_reject( 60 );
+}
 
 // Obtener datos del body JSON si es POST
 $json_input = file_get_contents('php://input');

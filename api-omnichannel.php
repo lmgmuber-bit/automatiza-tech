@@ -16,6 +16,7 @@ require_once __DIR__ . '/wp-load.php';
 ob_end_clean();
 
 require_once __DIR__ . '/omnichannel-controller.php';
+require_once __DIR__ . '/at-rate-limit.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -337,6 +338,10 @@ try {
 
         // Ruta: login admin con usuario/contraseña → retorna token
         if (($segments[1] ?? '') === 'login' && $method === 'POST') {
+            // Rate limit: 5 intentos/hora por IP → anti brute-force
+            if ( ! at_rate_limit_check( 'omni_admin_login', 5, 3600 ) ) {
+                at_rate_limit_reject( 3600 );
+            }
             $username = sanitize_text_field($body['username'] ?? '');
             $password = $body['password'] ?? '';
             
@@ -823,6 +828,10 @@ try {
     if (isset($segments[0]) && $segments[0] === 'agent') {
         // Login: no requiere auth previa
         if (($segments[1] ?? '') === 'login' && $method === 'POST') {
+            // Rate limit: 5 intentos/hora por IP → anti brute-force
+            if ( ! at_rate_limit_check( 'omni_agent_login', 5, 3600 ) ) {
+                at_rate_limit_reject( 3600 );
+            }
             $email = sanitize_email($body['email'] ?? '');
             $password = $body['password'] ?? '';
             if (empty($email) || empty($password)) {

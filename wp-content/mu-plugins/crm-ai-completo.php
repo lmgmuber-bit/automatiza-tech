@@ -4674,6 +4674,107 @@ class AutomatizaTech_CRM_AI {
                         <?php endif; ?>
                     </div>
                     
+                    <?php
+                    // ─── CONTRATOS (todos los estados) ───
+                    // Los contratos se guardan con el ID de wp_automatiza_tech_clients,
+                    // pero el portal usa el ID de wp_crm_clientes. Cruzamos por email.
+                    $contracts_table = $wpdb->prefix . 'automatiza_contracts';
+                    if ($wpdb->get_var("SHOW TABLES LIKE '{$contracts_table}'") === $contracts_table) {
+                        $at_clients_table = $wpdb->prefix . 'automatiza_tech_clients';
+                        $at_client_id = null;
+                        if (!empty($cliente->email)) {
+                            $at_client_id = $wpdb->get_var($wpdb->prepare(
+                                "SELECT id FROM {$at_clients_table} WHERE email = %s LIMIT 1",
+                                $cliente->email
+                            ));
+                        }
+                        if (!$at_client_id) { $at_client_id = $cliente_id; }
+                        $all_contracts = $wpdb->get_results($wpdb->prepare(
+                            "SELECT id, contract_number, type, status, signed_at, sent_at, created_at,
+                                    signed_pdf_url, pdf_url, sign_token, monthly_amount, currency
+                             FROM {$contracts_table}
+                             WHERE client_id = %d
+                             ORDER BY created_at DESC",
+                            $at_client_id
+                        ), ARRAY_A);
+                    ?>
+                    <h2>📄 Tus Contratos</h2>
+                    <?php if (empty($all_contracts)): ?>
+                        <p style="color:#888; font-style:italic; padding:8px 0;">No tienes contratos registrados por el momento.</p>
+                    <?php else: ?>
+                        <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:24px;">
+                            <?php
+                            $type_labels = [
+                                'soporte'   => 'Contrato de Soporte Post-Proyecto',
+                                'servicios' => 'Contrato de Servicios',
+                                'sla'       => 'Acuerdo de Nivel de Servicio (SLA)',
+                                'nda'       => 'Acuerdo de Confidencialidad (NDA)',
+                                'handover'  => 'Acta de Entrega y Cierre',
+                            ];
+                            foreach ($all_contracts as $c):
+                                $label      = $type_labels[$c['type']] ?? ucfirst($c['type']);
+                                $status     = $c['status'];
+                                $is_signed  = $status === 'signed';
+                                $needs_sign = in_array($status, ['sent', 'viewed']);
+                                $in_prep    = in_array($status, ['at_pending', 'at_signed']);
+
+                                if ($is_signed) {
+                                    $bg = '#f0fdf4'; $border = '#bbf7d0'; $accent = '#22c55e';
+                                    $badge_bg = '#22c55e'; $badge_text = '✅ FIRMADO';
+                                    $date_label = 'Firmado el';
+                                    $date_val   = !empty($c['signed_at']) ? date('d/m/Y', strtotime($c['signed_at'])) : '—';
+                                } elseif ($needs_sign) {
+                                    $bg = '#fffbeb'; $border = '#fde68a'; $accent = '#f59e0b';
+                                    $badge_bg = '#f59e0b'; $badge_text = '✍️ PENDIENTE TU FIRMA';
+                                    $date_label = 'Enviado el';
+                                    $date_val   = !empty($c['sent_at']) ? date('d/m/Y', strtotime($c['sent_at'])) : '—';
+                                } else {
+                                    $bg = '#f8fafc'; $border = '#e2e8f0'; $accent = '#94a3b8';
+                                    $badge_bg = '#94a3b8'; $badge_text = '🔄 EN PREPARACIÓN';
+                                    $date_label = 'Creado el';
+                                    $date_val   = !empty($c['created_at']) ? date('d/m/Y', strtotime($c['created_at'])) : '—';
+                                }
+                            ?>
+                            <div style="background:<?php echo $bg; ?>; border:1px solid <?php echo $border; ?>; border-left:5px solid <?php echo $accent; ?>; border-radius:10px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                                <div>
+                                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+                                        <span style="font-size:18px;">📜</span>
+                                        <strong style="color:#1e293b; font-size:15px;"><?php echo esc_html($label); ?></strong>
+                                        <span style="background:<?php echo $badge_bg; ?>; color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; white-space:nowrap;"><?php echo $badge_text; ?></span>
+                                    </div>
+                                    <div style="font-size:12px; color:#6b7280;">
+                                        N° <?php echo esc_html($c['contract_number']); ?>
+                                        &nbsp;·&nbsp; <?php echo esc_html($date_label); ?> <?php echo esc_html($date_val); ?>
+                                        <?php if (!empty($c['monthly_amount']) && $c['monthly_amount'] > 0): ?>
+                                            &nbsp;·&nbsp; $<?php echo number_format((float)$c['monthly_amount'], 0, ',', '.'); ?> <?php echo esc_html($c['currency']); ?>/mes
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <?php if ($is_signed && !empty($c['signed_pdf_url'])): ?>
+                                    <a href="<?php echo esc_url($c['signed_pdf_url']); ?>"
+                                       download target="_blank"
+                                       style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(34,197,94,.3);white-space:nowrap;"
+                                       onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                                        ⬇️ Descargar PDF
+                                    </a>
+                                <?php elseif ($is_signed): ?>
+                                    <span style="font-size:12px;color:#9ca3af;font-style:italic;white-space:nowrap;">PDF en proceso…</span>
+                                <?php elseif ($needs_sign && !empty($c['sign_token'])): ?>
+                                    <a href="<?php echo esc_url(home_url('/contracts/sign-contract.php?token=' . urlencode($c['sign_token']))); ?>"
+                                       target="_blank"
+                                       style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(245,158,11,.3);white-space:nowrap;"
+                                       onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                                        ✍️ Firmar ahora
+                                    </a>
+                                <?php elseif ($in_prep): ?>
+                                    <span style="font-size:12px;color:#9ca3af;font-style:italic;white-space:nowrap;">Aguarda, estamos preparando el contrato…</span>
+                                <?php endif; ?>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                    <?php } ?>
+
                     <h2>🚀 Tus Proyectos</h2>
                     <?php if (empty($proyectos)): ?>
                         <p>No hay proyectos activos por el momento.</p>
@@ -5179,107 +5280,6 @@ class AutomatizaTech_CRM_AI {
                     </div><!-- /tl-content-qa -->
                     <?php endif; ?>
                     
-                    <?php
-                    // ─── CONTRATOS (todos los estados) ───
-                    // Los contratos se guardan con el ID de wp_automatiza_tech_clients,
-                    // pero el portal usa el ID de wp_crm_clientes. Cruzamos por email.
-                    $contracts_table = $wpdb->prefix . 'automatiza_contracts';
-                    if ($wpdb->get_var("SHOW TABLES LIKE '{$contracts_table}'") === $contracts_table) {
-                        $at_clients_table = $wpdb->prefix . 'automatiza_tech_clients';
-                        $at_client_id = null;
-                        if (!empty($cliente->email)) {
-                            $at_client_id = $wpdb->get_var($wpdb->prepare(
-                                "SELECT id FROM {$at_clients_table} WHERE email = %s LIMIT 1",
-                                $cliente->email
-                            ));
-                        }
-                        if (!$at_client_id) { $at_client_id = $cliente_id; }
-                        $all_contracts = $wpdb->get_results($wpdb->prepare(
-                            "SELECT id, contract_number, type, status, signed_at, sent_at, created_at,
-                                    signed_pdf_url, pdf_url, sign_token, monthly_amount, currency
-                             FROM {$contracts_table}
-                             WHERE client_id = %d
-                             ORDER BY created_at DESC",
-                            $at_client_id
-                        ), ARRAY_A);
-                    ?>
-                    <h2>📄 Tus Contratos</h2>
-                    <?php if (empty($all_contracts)): ?>
-                        <p style="color:#888; font-style:italic; padding:8px 0;">No tienes contratos registrados por el momento.</p>
-                    <?php else: ?>
-                        <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:24px;">
-                            <?php
-                            $type_labels = [
-                                'soporte'   => 'Contrato de Soporte Post-Proyecto',
-                                'servicios' => 'Contrato de Servicios',
-                                'sla'       => 'Acuerdo de Nivel de Servicio (SLA)',
-                                'nda'       => 'Acuerdo de Confidencialidad (NDA)',
-                                'handover'  => 'Acta de Entrega y Cierre',
-                            ];
-                            foreach ($all_contracts as $c):
-                                $label      = $type_labels[$c['type']] ?? ucfirst($c['type']);
-                                $status     = $c['status'];
-                                $is_signed  = $status === 'signed';
-                                $needs_sign = in_array($status, ['sent', 'viewed']);
-                                $in_prep    = in_array($status, ['at_pending', 'at_signed']);
-
-                                if ($is_signed) {
-                                    $bg = '#f0fdf4'; $border = '#bbf7d0'; $accent = '#22c55e';
-                                    $badge_bg = '#22c55e'; $badge_text = '✅ FIRMADO';
-                                    $date_label = 'Firmado el';
-                                    $date_val   = !empty($c['signed_at']) ? date('d/m/Y', strtotime($c['signed_at'])) : '—';
-                                } elseif ($needs_sign) {
-                                    $bg = '#fffbeb'; $border = '#fde68a'; $accent = '#f59e0b';
-                                    $badge_bg = '#f59e0b'; $badge_text = '✍️ PENDIENTE TU FIRMA';
-                                    $date_label = 'Enviado el';
-                                    $date_val   = !empty($c['sent_at']) ? date('d/m/Y', strtotime($c['sent_at'])) : '—';
-                                } else {
-                                    $bg = '#f8fafc'; $border = '#e2e8f0'; $accent = '#94a3b8';
-                                    $badge_bg = '#94a3b8'; $badge_text = '🔄 EN PREPARACIÓN';
-                                    $date_label = 'Creado el';
-                                    $date_val   = !empty($c['created_at']) ? date('d/m/Y', strtotime($c['created_at'])) : '—';
-                                }
-                            ?>
-                            <div style="background:<?php echo $bg; ?>; border:1px solid <?php echo $border; ?>; border-left:5px solid <?php echo $accent; ?>; border-radius:10px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-                                <div>
-                                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
-                                        <span style="font-size:18px;">📜</span>
-                                        <strong style="color:#1e293b; font-size:15px;"><?php echo esc_html($label); ?></strong>
-                                        <span style="background:<?php echo $badge_bg; ?>; color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; white-space:nowrap;"><?php echo $badge_text; ?></span>
-                                    </div>
-                                    <div style="font-size:12px; color:#6b7280;">
-                                        N° <?php echo esc_html($c['contract_number']); ?>
-                                        &nbsp;·&nbsp; <?php echo esc_html($date_label); ?> <?php echo esc_html($date_val); ?>
-                                        <?php if (!empty($c['monthly_amount']) && $c['monthly_amount'] > 0): ?>
-                                            &nbsp;·&nbsp; $<?php echo number_format((float)$c['monthly_amount'], 0, ',', '.'); ?> <?php echo esc_html($c['currency']); ?>/mes
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                                <?php if ($is_signed && !empty($c['signed_pdf_url'])): ?>
-                                    <a href="<?php echo esc_url($c['signed_pdf_url']); ?>"
-                                       download target="_blank"
-                                       style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(34,197,94,.3);white-space:nowrap;"
-                                       onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-                                        ⬇️ Descargar PDF
-                                    </a>
-                                <?php elseif ($is_signed): ?>
-                                    <span style="font-size:12px;color:#9ca3af;font-style:italic;white-space:nowrap;">PDF en proceso…</span>
-                                <?php elseif ($needs_sign && !empty($c['sign_token'])): ?>
-                                    <a href="<?php echo esc_url(home_url('/contracts/sign-contract.php?token=' . urlencode($c['sign_token']))); ?>"
-                                       target="_blank"
-                                       style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(245,158,11,.3);white-space:nowrap;"
-                                       onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-                                        ✍️ Firmar ahora
-                                    </a>
-                                <?php elseif ($in_prep): ?>
-                                    <span style="font-size:12px;color:#9ca3af;font-style:italic;white-space:nowrap;">Aguarda, estamos preparando el contrato…</span>
-                                <?php endif; ?>
-                            </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                    <?php } ?>
-
                     <div class="footer">
                         &copy; <?php echo date('Y'); ?> AutomatizaTech. Todos los derechos reservados.
                     </div>

@@ -710,9 +710,10 @@ class AutomatizaTechReceipts {
                     'total' => $total_con_iva,
                     'pdf_path' => $pdf_path,
                     'status' => 'active',
+                    'download_token' => bin2hex( random_bytes( 24 ) ),
                     'created_at' => current_time('mysql')
                 ),
-                array('%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f', '%f', '%s', '%s', '%s')
+                array('%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f', '%f', '%s', '%s', '%s', '%s')
             );
             
             if ($result === false) {

@@ -43,11 +43,37 @@ if (!$receipt) {
     wp_die('❌ Error: Boleta no encontrada o inválida.', 'Boleta No Encontrada', ['response' => 404]);
 }
 
+// ---- A2.1 IDOR fix: lazy download_token migration ----
+$col_exists_r = $wpdb->get_var( "SHOW COLUMNS FROM `{$table_name}` LIKE 'download_token'" );
+if ( ! $col_exists_r ) {
+    $wpdb->query( "ALTER TABLE `{$table_name}` ADD COLUMN `download_token` VARCHAR(64) DEFAULT NULL" );
+    $wpdb->query( "ALTER TABLE `{$table_name}` ADD INDEX `idx_receipt_dl_token` (`download_token`)" );
+}
+if ( empty( $receipt->download_token ) ) {
+    $new_token_r = bin2hex( random_bytes( 24 ) );
+    $wpdb->update( $table_name, ['download_token' => $new_token_r], ['id' => $receipt->id], ['%s'], ['%d'] );
+    $receipt->download_token = $new_token_r;
+}
+// ---- end A2.1 ----
+
 // Determinar la acción (validar o descargar)
 $action = isset($_GET['action']) ? sanitize_text_field($_GET['action']) : 'validate';
 
 if ($action === 'download') {
     // DESCARGAR BOLETA EN PDF
+
+    // A2.1: Verificar download_token para evitar IDOR
+    $submitted_token_r = isset($_GET['token']) ? sanitize_text_field($_GET['token']) : '';
+    $legacy_until_r    = defined('AT_INVOICE_LEGACY_UNTIL') ? strtotime( AT_INVOICE_LEGACY_UNTIL ) : strtotime('+30 days');
+    if ( empty($submitted_token_r) ) {
+        if ( time() < $legacy_until_r ) {
+            error_log( '[AT-SECURITY] Legacy tokenless download: receipt=' . $receipt->receipt_number . ' IP=' . $_SERVER['REMOTE_ADDR'] );
+        } else {
+            wp_die( '❌ Acceso denegado: token de descarga inválido o expirado.', 'Error', ['response' => 403] );
+        }
+    } elseif ( ! hash_equals( (string) $receipt->download_token, $submitted_token_r ) ) {
+        wp_die( '❌ Acceso denegado: token de descarga inválido.', 'Error', ['response' => 403] );
+    }
 
     // Ruta del archivo PDF: validar que este dentro de uploads (anti path-traversal)
     $upload_dir   = wp_upload_dir();
@@ -174,7 +200,7 @@ if ($action === 'download') {
                 </ul>
             </div>
             
-            <a href="?id=<?php echo urlencode($receipt_id); ?>&action=download" class="btn">
+            <a href="?id=<?php echo urlencode($receipt_id); ?>&token=<?php echo urlencode($receipt->download_token); ?>&action=download" class="btn">
                 📥 Descargar Boleta PDF
             </a>
             

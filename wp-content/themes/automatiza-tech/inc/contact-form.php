@@ -1630,6 +1630,7 @@ class AutomatizaTechContactForm {
                     'subtotal' => $subtotal,
                     'iva' => $iva,
                     'total' => $total,
+                    'download_token' => bin2hex( random_bytes( 24 ) ),
                     'created_at' => current_time('mysql')
                 ]
             );

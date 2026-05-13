@@ -25,11 +25,25 @@ class ContractService {
         $up = wp_upload_dir();
         $dir = trailingslashit($up['basedir']) . 'automatiza-tech-contracts';
         if (!file_exists($dir)) wp_mkdir_p($dir);
-        if (!file_exists($dir . '/.htaccess')) @file_put_contents($dir . '/.htaccess', "Options -Indexes\n");
+        // A2.3: block direct file access (overwrite to ensure updated rule is applied)
+        @file_put_contents($dir . '/.htaccess', "Order deny,allow\nDeny from all\nOptions -Indexes\n");
         return $dir;
     }
     public static function storage_url() {
         $up = wp_upload_dir(); return trailingslashit($up['baseurl']) . 'automatiza-tech-contracts';
+    }
+
+    /**
+     * A2.3: Generate a secure AJAX download URL for a contract PDF.
+     * For admin/logged-in users, pass $nonce = wp_create_nonce('at_dl_contract_'.$c->id).
+     * For public sign pages, pass $token = $c->sign_token (or $c->at_review_token).
+     */
+    public static function secure_pdf_url( $c, $signed = false, $token = '', $nonce = '' ) {
+        $url = admin_url('admin-ajax.php') . '?action=at_download_contract&contract_id=' . intval($c->id);
+        if ($signed) $url .= '&signed=1';
+        if ($token)  $url .= '&token='    . urlencode($token);
+        if ($nonce)  $url .= '&_wpnonce=' . urlencode($nonce);
+        return $url;
     }
 
     /* ---------- Template ---------- */
@@ -404,3 +418,87 @@ class ContractService {
         return str_replace($up['baseurl'], $up['basedir'], $url);
     }
 }
+
+/* ==========================================================
+ * A2.3: AJAX handler — serve contract PDFs through WordPress
+ * auth layer instead of direct uploads URL
+ * ========================================================== */
+function at_download_contract_ajax_handler() {
+    if (!defined('ABSPATH')) exit;
+    require_once ABSPATH . 'at-path-safe.php';
+
+    global $wpdb;
+    $contract_id = intval( $_GET['contract_id'] ?? 0 );
+    $signed      = ! empty( $_GET['signed'] );
+    $token       = sanitize_text_field( $_GET['token']     ?? '' );
+    $nonce       = sanitize_text_field( $_GET['_wpnonce']  ?? '' );
+
+    if ( ! $contract_id ) {
+        wp_die( 'Contrato no especificado.', 'Error', ['response' => 400] );
+    }
+
+    $authorized = false;
+
+    // 1. Logged-in user with valid nonce
+    if ( is_user_logged_in() && $nonce && wp_verify_nonce( $nonce, 'at_dl_contract_' . $contract_id ) ) {
+        if ( current_user_can( 'manage_options' ) ) {
+            $authorized = true; // Admin sees all contracts
+        } else {
+            // Regular WP client: must own the contract
+            $clients_table = $wpdb->prefix . 'automatiza_tech_clients';
+            $client = $wpdb->get_row( $wpdb->prepare(
+                "SELECT id FROM {$clients_table} WHERE wp_user_id = %d",
+                get_current_user_id()
+            ) );
+            if ( $client ) {
+                $c_check = ContractService::get_by_id( $contract_id );
+                if ( $c_check && (int) $c_check->client_id === (int) $client->id ) {
+                    $authorized = true;
+                }
+            }
+        }
+    }
+
+    // 2. Token-based access (public sign page / AT review page — no WP login required)
+    if ( ! $authorized && $token ) {
+        $c_tok = ContractService::get_by_token( $token );
+        if ( $c_tok && (int) $c_tok->id === $contract_id ) {
+            $authorized = true;
+        }
+        if ( ! $authorized ) {
+            $c_tok = ContractService::get_by_at_token( $token );
+            if ( $c_tok && (int) $c_tok->id === $contract_id ) {
+                $authorized = true;
+            }
+        }
+    }
+
+    if ( ! $authorized ) {
+        wp_die( '❌ Acceso denegado.', 'Error', ['response' => 403] );
+    }
+
+    $c = ContractService::get_by_id( $contract_id );
+    if ( ! $c ) {
+        wp_die( 'Contrato no encontrado.', 'Error', ['response' => 404] );
+    }
+
+    $up   = wp_upload_dir();
+    $dir  = rtrim( $up['basedir'], '/' ) . '/automatiza-tech-contracts';
+    $file = $c->contract_number . ( $signed ? '-FIRMADO' : '' ) . '.pdf';
+    $path = at_path_inside( $dir . '/' . $file, $dir );
+
+    if ( ! $path || ! file_exists( $path ) || ! is_readable( $path ) ) {
+        wp_die( 'PDF no encontrado.', 'Error', ['response' => 404] );
+    }
+
+    header( 'Content-Type: application/pdf' );
+    header( 'Content-Disposition: inline; filename="' . basename( $path ) . '"' );
+    header( 'Content-Length: ' . filesize( $path ) );
+    header( 'Cache-Control: private, no-cache' );
+    header( 'X-Frame-Options: SAMEORIGIN' );
+    if ( ob_get_level() ) ob_end_clean();
+    readfile( $path );
+    exit;
+}
+add_action( 'wp_ajax_at_download_contract',        'at_download_contract_ajax_handler' );
+add_action( 'wp_ajax_nopriv_at_download_contract', 'at_download_contract_ajax_handler' );

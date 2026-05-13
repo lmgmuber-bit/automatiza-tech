@@ -196,8 +196,9 @@ class AT_Contracts_Admin {
                     <td>" . esc_html(date('d-m-Y H:i', strtotime($r->created_at))) . "</td>
                     <td>
                       <a href='{$detail}' class='button button-small'>Ver</a>";
-            if ($r->pdf_url) echo " <a href='" . esc_url($r->pdf_url) . "' target='_blank' class='button button-small'>📄 PDF</a>";
-            if ($r->signed_pdf_url) echo " <a href='" . esc_url($r->signed_pdf_url) . "' target='_blank' class='button button-small button-primary'>✔️ Final</a>";
+            $dl_nonce = wp_create_nonce( 'at_dl_contract_' . $r->id );
+            if ($r->pdf_url) echo " <a href='" . esc_url( ContractService::secure_pdf_url($r, false, '', $dl_nonce) ) . "' target='_blank' class='button button-small'>📄 PDF</a>";
+            if ($r->signed_pdf_url) echo " <a href='" . esc_url( ContractService::secure_pdf_url($r, true, '', $dl_nonce) ) . "' target='_blank' class='button button-small button-primary'>✔️ Final</a>";
             echo "  </td>
                   </tr>";
         }
@@ -277,10 +278,12 @@ class AT_Contracts_Admin {
         echo '<div class="at-card"><h3>Acciones</h3>';
 
         if ($c->pdf_url) {
-            echo "<p><a href='" . esc_url($c->pdf_url) . "' target='_blank' class='button'>📄 Ver PDF preliminar</a></p>";
+            $det_nonce = wp_create_nonce( 'at_dl_contract_' . $c->id );
+            echo "<p><a href='" . esc_url( ContractService::secure_pdf_url($c, false, '', $det_nonce) ) . "' target='_blank' class='button'>📄 Ver PDF preliminar</a></p>";
         }
         if ($c->signed_pdf_url) {
-            echo "<p><a href='" . esc_url($c->signed_pdf_url) . "' target='_blank' class='button button-primary'>✔️ Descargar PDF FINAL firmado</a></p>";
+            $det_nonce_s = $det_nonce ?? wp_create_nonce( 'at_dl_contract_' . $c->id );
+            echo "<p><a href='" . esc_url( ContractService::secure_pdf_url($c, true, '', $det_nonce_s) ) . "' target='_blank' class='button button-primary'>✔️ Descargar PDF FINAL firmado</a></p>";
         }
 
         echo '<h4 style="margin-top:16px">🔗 Links de firma</h4>';

@@ -58,7 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
 
 $ph = json_decode($c->placeholders, true) ?: array();
-$pdf_url = $c->signed_pdf_url ?: $c->pdf_url;
+// A2.3: use AJAX handler with at_review_token (logged-in AT user, token fallback for iframe)
+$pdf_url = ContractService::secure_pdf_url( $c, false, $token );
 
 ?><!DOCTYPE html>
 <html lang="es">

@@ -52,8 +52,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 $ph = json_decode($c->placeholders, true) ?: array();
-$pdf_url = $c->signed_pdf_url ?: $c->pdf_url;
-$is_signed = $c->status === 'signed';
+// A2.3: serve PDF via protected AJAX handler using sign_token (no direct uploads URL)
+$pdf_url    = ContractService::secure_pdf_url( $c, false, $token );
+$signed_url = ContractService::secure_pdf_url( $c, true,  $token );
+$is_signed  = $c->status === 'signed';
 $logo = home_url('/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png');
 
 ?><!DOCTYPE html>
@@ -110,7 +112,7 @@ hr{border:0;border-top:1px solid #e5e9f0;margin:14px 0}
       <h2 style="color:var(--ok);margin:0 0 6px 0">¡Contrato firmado correctamente!</h2>
       <p>Hemos enviado una copia del contrato firmado a <strong><?= esc_html($c->signer_email) ?></strong>.</p>
       <p class="muted">También quedará disponible en tu ficha del Portal AutomatizaTech.</p>
-      <p style="margin-top:24px"><a href="<?= esc_url($pdf_url) ?>" target="_blank"><button>⬇️ Descargar contrato firmado (PDF)</button></a></p>
+      <p style="margin-top:24px"><a href="<?= esc_url($signed_url) ?>" target="_blank"><button>⬇️ Descargar contrato firmado (PDF)</button></a></p>
     </div>
   <?php else: ?>
     <div class="grid">

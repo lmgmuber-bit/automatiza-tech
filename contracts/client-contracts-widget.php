@@ -83,10 +83,12 @@ function at_render_client_contracts_widget($client) {
                             echo esc_html(($ts_c && $ts_c > 0) ? date('d-m-Y', $ts_c) : '—');
                         ?></td>
                         <td>
-                            <?php if ($c->signed_pdf_url): ?>
-                                <a href="<?php echo esc_url($c->signed_pdf_url); ?>" target="_blank" class="button button-small button-primary">✔️ Final</a>
+                            <?php
+                            $w_nonce = wp_create_nonce( 'at_dl_contract_' . $c->id );
+                            if ($c->signed_pdf_url): ?>
+                                <a href="<?php echo esc_url( ContractService::secure_pdf_url($c, true, '', $w_nonce) ); ?>" target="_blank" class="button button-small button-primary">✔️ Final</a>
                             <?php elseif ($c->pdf_url): ?>
-                                <a href="<?php echo esc_url($c->pdf_url); ?>" target="_blank" class="button button-small">📄 PDF</a>
+                                <a href="<?php echo esc_url( ContractService::secure_pdf_url($c, false, '', $w_nonce) ); ?>" target="_blank" class="button button-small">📄 PDF</a>
                             <?php endif; ?>
                             <a href="<?php echo esc_url($detail); ?>" class="button button-small">Ver</a>
                             <?php if (in_array($c->status, ['at_signed','sent','viewed'])): ?>

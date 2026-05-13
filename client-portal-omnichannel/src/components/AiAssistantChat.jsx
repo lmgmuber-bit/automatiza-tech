@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { X, Send, Loader2, Trash2, Plus, Search, Clock, ChevronLeft, MessageCircle } from 'lucide-react';
-import { aiAssistantChat, getIsAdmin, getIsAgent, getAgentData } from '../api';
+import { aiAssistantChat, getIsAdmin, getIsAgent, getAgentData, getAiChatHistory, saveAiChatHistory, deleteAiChatHistory } from '../api';
 
-const STORAGE_KEY = 'omni_ai_chats';
+const LEGACY_STORAGE_KEY = 'omni_ai_chats'; // kept only for one-time migration
 const MAX_CHATS = 30;
 
 // Simple markdown-to-text cleaner: strips **, ##, ### but keeps structure
@@ -19,17 +19,12 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
-function loadChats() {
+/** Reads chats from old localStorage key (one-time migration). */
+function loadLegacyChats() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch { return []; }
-}
-
-function saveChats(chats) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(chats.slice(0, MAX_CHATS)));
-  } catch {}
 }
 
 function getUserName() {
@@ -342,7 +337,8 @@ function HistoryPanel({ chats, onSelect, onNew, onDelete, searchQuery, onSearchC
 // ─── Main Export ─────────────────────────────────────────────
 export default function AiAssistantChat({ currentView }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [chats, setChats] = useState(loadChats);
+  const [chats, setChats] = useState([]);
+  const [chatsLoaded, setChatsLoaded] = useState(false);
   const [activeChatId, setActiveChatId] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -359,7 +355,32 @@ export default function AiAssistantChat({ currentView }) {
     return () => window.removeEventListener('openOmniAssistant', handler);
   }, []);
 
-  const fullName = useMemo(getUserName, []);
+  // Load chats from backend on mount; migrate legacy localStorage once
+  useEffect(() => {
+    getAiChatHistory()
+      .then(data => {
+        const serverChats = data?.chats || [];
+        if (serverChats.length === 0) {
+          // One-time migration: move old localStorage chats to backend
+          const legacy = loadLegacyChats();
+          if (legacy.length > 0) {
+            const limited = legacy.slice(0, MAX_CHATS);
+            setChats(limited);
+            Promise.all(limited.map(c => saveAiChatHistory(c).catch(() => {})));
+            localStorage.removeItem(LEGACY_STORAGE_KEY);
+            return;
+          }
+        }
+        setChats(serverChats);
+      })
+      .catch(() => {
+        // Fallback to legacy if backend unreachable
+        setChats(loadLegacyChats());
+      })
+      .finally(() => setChatsLoaded(true));
+  }, []);
+
+
   const firstName = useMemo(() => getFirstName(fullName), [fullName]);
 
   const activeChat = chats.find(c => c.id === activeChatId);
@@ -373,17 +394,20 @@ export default function AiAssistantChat({ currentView }) {
     if (isOpen && !showHistory) setTimeout(() => inputRef.current?.focus(), 200);
   }, [isOpen, showHistory, activeChatId]);
 
-  const updateChats = useCallback((fn) => {
+  const updateChats = useCallback((fn, chatIdToSave) => {
     setChats(prev => {
       const next = fn(prev);
-      saveChats(next);
+      if (chatIdToSave) {
+        const chatToSave = next.find(c => c.id === chatIdToSave);
+        if (chatToSave) saveAiChatHistory(chatToSave).catch(() => {});
+      }
       return next;
     });
   }, []);
 
   function startNewChat() {
     const newChat = { id: generateId(), messages: [], createdAt: Date.now(), updatedAt: Date.now() };
-    updateChats(prev => [newChat, ...prev]);
+    updateChats(prev => [newChat, ...prev], newChat.id);
     setActiveChatId(newChat.id);
     setShowHistory(false);
     setError(null);
@@ -398,6 +422,7 @@ export default function AiAssistantChat({ currentView }) {
 
   function deleteChat(id) {
     updateChats(prev => prev.filter(c => c.id !== id));
+    deleteAiChatHistory(id).catch(() => {});
     if (activeChatId === id) setActiveChatId(null);
   }
 
@@ -417,7 +442,7 @@ export default function AiAssistantChat({ currentView }) {
     let chatId = activeChatId;
     if (!chatId) {
       const newChat = { id: generateId(), messages: [], createdAt: Date.now(), updatedAt: Date.now() };
-      updateChats(prev => [newChat, ...prev]);
+      updateChats(prev => [newChat, ...prev], newChat.id);
       chatId = newChat.id;
       setActiveChatId(chatId);
     }
@@ -428,7 +453,7 @@ export default function AiAssistantChat({ currentView }) {
     const userMsg = { role: 'user', content: text };
     updateChats(prev => prev.map(c =>
       c.id === chatId ? { ...c, messages: [...c.messages, userMsg], updatedAt: Date.now() } : c
-    ));
+    ), chatId);
 
     setLoading(true);
     try {
@@ -441,7 +466,7 @@ export default function AiAssistantChat({ currentView }) {
         const assistantMsg = { role: 'assistant', content: data.reply };
         updateChats(prev => prev.map(c =>
           c.id === chatId ? { ...c, messages: [...c.messages, assistantMsg], updatedAt: Date.now() } : c
-        ));
+        ), chatId);
       }
     } catch (err) {
       setError(err.message || 'Error al comunicarse con el asistente');

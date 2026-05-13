@@ -113,6 +113,8 @@ export default function LoginScreen({ onLogin }) {
     const token = params.get('reset_token');
     const email = params.get('email');
     if (token && email) {
+      // Clean URL BEFORE dispatching the request to avoid token leaking in server logs
+      window.history.replaceState({}, '', window.location.pathname);
       setResetToken(token);
       setResetEmail(email);
       setLoading(true);
@@ -138,8 +140,6 @@ export default function LoginScreen({ onLogin }) {
           setError('Error de conexión');
           setLoading(false);
         });
-      // Clean URL to remove token
-      window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
 

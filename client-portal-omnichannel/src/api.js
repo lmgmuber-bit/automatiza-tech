@@ -367,3 +367,16 @@ export const aiAssistantChat = (message, history = []) =>
 // Admin: AI prompt template management
 export const getAiPromptTemplate = () => request('ai-assistant-prompt');
 export const saveAiPromptTemplate = (template) => request('ai-assistant-prompt', 'PUT', { template });
+
+// ============================================================
+// AI CHAT HISTORY (backend persistence — replaces localStorage)
+// ============================================================
+/** Returns { chats: [{id, messages, createdAt, updatedAt}] } */
+export const getAiChatHistory = () => request('ai-chat-history');
+
+/** Upsert a single chat. { id, messages } */
+export const saveAiChatHistory = (chat) =>
+  request('ai-chat-history', 'POST', { id: chat.id, messages: chat.messages });
+
+/** Delete a chat by id */
+export const deleteAiChatHistory = (id) => request(`ai-chat-history/${id}`, 'DELETE');

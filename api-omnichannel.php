@@ -879,6 +879,61 @@ try {
                 }
                 break;
 
+            // Admin: AI Chat History (backend persistence for Omni Assistant)
+            case 'ai-chat-history':
+                $adm_key     = 'admin:' . get_current_user_id();
+                $adm_chat_id = sanitize_text_field($segments[2] ?? '');
+                if ($method === 'GET') {
+                    $rows = $wpdb->get_results(
+                        $wpdb->prepare(
+                            "SELECT id, messages, created_at, updated_at FROM {$wpdb->prefix}omnichannel_ai_chats WHERE agent_key = %s ORDER BY updated_at DESC LIMIT 30",
+                            $adm_key
+                        )
+                    );
+                    $chats = array_map(function($r) {
+                        $r->messages  = json_decode($r->messages, true) ?: [];
+                        $r->createdAt = (int) (strtotime($r->created_at) * 1000);
+                        $r->updatedAt = (int) (strtotime($r->updated_at) * 1000);
+                        return $r;
+                    }, $rows ?: []);
+                    send_json(['chats' => $chats]);
+                }
+                if ($method === 'POST') {
+                    $chat_id = sanitize_text_field($body['id'] ?? '');
+                    $messages = is_array($body['messages'] ?? null) ? $body['messages'] : [];
+                    if (empty($chat_id)) send_json(['error' => 'id requerido'], 400);
+                    $existing_key = $wpdb->get_var($wpdb->prepare(
+                        "SELECT agent_key FROM {$wpdb->prefix}omnichannel_ai_chats WHERE id = %s", $chat_id
+                    ));
+                    if ($existing_key && $existing_key !== $adm_key) send_json(['error' => 'Forbidden'], 403);
+                    $now = current_time('mysql');
+                    if ($existing_key) {
+                        $wpdb->update($wpdb->prefix . 'omnichannel_ai_chats', [
+                            'messages'   => wp_json_encode($messages, JSON_UNESCAPED_UNICODE),
+                            'updated_at' => $now,
+                        ], ['id' => $chat_id]);
+                    } else {
+                        $wpdb->insert($wpdb->prefix . 'omnichannel_ai_chats', [
+                            'id'         => $chat_id,
+                            'agent_key'  => $adm_key,
+                            'messages'   => wp_json_encode($messages, JSON_UNESCAPED_UNICODE),
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ]);
+                    }
+                    send_json(['saved' => true]);
+                }
+                if ($method === 'DELETE' && !empty($adm_chat_id)) {
+                    $existing_key = $wpdb->get_var($wpdb->prepare(
+                        "SELECT agent_key FROM {$wpdb->prefix}omnichannel_ai_chats WHERE id = %s", $adm_chat_id
+                    ));
+                    if (!$existing_key) send_json(['error' => 'Chat no encontrado'], 404);
+                    if ($existing_key !== $adm_key) send_json(['error' => 'Forbidden'], 403);
+                    $wpdb->delete($wpdb->prefix . 'omnichannel_ai_chats', ['id' => $adm_chat_id]);
+                    send_json(['deleted' => true]);
+                }
+                break;
+
             default:
                 send_json(['error' => 'Ruta admin no encontrada'], 404);
         }
@@ -1412,6 +1467,61 @@ try {
                     );
                     $code = isset($result['error']) ? ($result['code'] ?? 400) : 200;
                     send_json($result, $code);
+                }
+                break;
+
+            // Agent: AI Chat History (backend persistence for Omni Assistant)
+            case 'ai-chat-history':
+                $ai_key      = 'agent:' . $agent_id;
+                $ai_chat_seg = sanitize_text_field($segments[2] ?? '');
+                if ($method === 'GET') {
+                    $rows = $wpdb->get_results(
+                        $wpdb->prepare(
+                            "SELECT id, messages, created_at, updated_at FROM {$wpdb->prefix}omnichannel_ai_chats WHERE agent_key = %s ORDER BY updated_at DESC LIMIT 30",
+                            $ai_key
+                        )
+                    );
+                    $chats = array_map(function($r) {
+                        $r->messages  = json_decode($r->messages, true) ?: [];
+                        $r->createdAt = (int) (strtotime($r->created_at) * 1000);
+                        $r->updatedAt = (int) (strtotime($r->updated_at) * 1000);
+                        return $r;
+                    }, $rows ?: []);
+                    send_json(['chats' => $chats]);
+                }
+                if ($method === 'POST') {
+                    $chat_id = sanitize_text_field($body['id'] ?? '');
+                    $messages = is_array($body['messages'] ?? null) ? $body['messages'] : [];
+                    if (empty($chat_id)) send_json(['error' => 'id requerido'], 400);
+                    $existing_key = $wpdb->get_var($wpdb->prepare(
+                        "SELECT agent_key FROM {$wpdb->prefix}omnichannel_ai_chats WHERE id = %s", $chat_id
+                    ));
+                    if ($existing_key && $existing_key !== $ai_key) send_json(['error' => 'Forbidden'], 403);
+                    $now = current_time('mysql');
+                    if ($existing_key) {
+                        $wpdb->update($wpdb->prefix . 'omnichannel_ai_chats', [
+                            'messages'   => wp_json_encode($messages, JSON_UNESCAPED_UNICODE),
+                            'updated_at' => $now,
+                        ], ['id' => $chat_id]);
+                    } else {
+                        $wpdb->insert($wpdb->prefix . 'omnichannel_ai_chats', [
+                            'id'         => $chat_id,
+                            'agent_key'  => $ai_key,
+                            'messages'   => wp_json_encode($messages, JSON_UNESCAPED_UNICODE),
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ]);
+                    }
+                    send_json(['saved' => true]);
+                }
+                if ($method === 'DELETE' && !empty($ai_chat_seg)) {
+                    $existing_key = $wpdb->get_var($wpdb->prepare(
+                        "SELECT agent_key FROM {$wpdb->prefix}omnichannel_ai_chats WHERE id = %s", $ai_chat_seg
+                    ));
+                    if (!$existing_key) send_json(['error' => 'Chat no encontrado'], 404);
+                    if ($existing_key !== $ai_key) send_json(['error' => 'Forbidden'], 403);
+                    $wpdb->delete($wpdb->prefix . 'omnichannel_ai_chats', ['id' => $ai_chat_seg]);
+                    send_json(['deleted' => true]);
                 }
                 break;
 

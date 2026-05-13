@@ -29,6 +29,9 @@ export default function ChannelsView() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Webhook secret reveal per channel (A5.2)
+  const [revealedSecrets, setRevealedSecrets] = useState({});
+
   const isAdmin = getIsAdmin();
 
   useEffect(() => {
@@ -339,16 +342,25 @@ export default function ChannelsView() {
                       <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-100">
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <span className="text-[10px] font-semibold text-blue-700">URL Webhook YCloud</span>
-                          <button
-                            onClick={() => copyToClipboard(`${window.location.origin}${API_BASE}?route=webhook/ycloud&channel_id=${ch.id}&secret=${ch.webhook_secret}`)}
-                            className="flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 font-medium"
-                            title="Copiar URL completa"
-                          >
-                            <Copy size={11} /> Copiar URL
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setRevealedSecrets(p => ({ ...p, [ch.id]: !p[ch.id] }))}
+                              className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-700"
+                              title={revealedSecrets[ch.id] ? 'Ocultar secret' : 'Revelar secret'}
+                            >
+                              {revealedSecrets[ch.id] ? <EyeOff size={11} /> : <Eye size={11} />}
+                            </button>
+                            <button
+                              onClick={() => copyToClipboard(`${window.location.origin}${API_BASE}?route=webhook/ycloud&channel_id=${ch.id}&secret=${ch.webhook_secret}`)}
+                              className="flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 font-medium"
+                              title="Copiar URL completa"
+                            >
+                              <Copy size={11} /> Copiar URL
+                            </button>
+                          </div>
                         </div>
                         <code className="text-[10px] text-blue-800 font-mono break-all leading-relaxed">
-                          {window.location.origin}{API_BASE}?route=webhook/ycloud&amp;channel_id={ch.id}&amp;secret={ch.webhook_secret}
+                          {window.location.origin}{API_BASE}?route=webhook/ycloud&amp;channel_id={ch.id}&amp;secret={revealedSecrets[ch.id] ? ch.webhook_secret : '••••••••'}
                         </code>
                       </div>
                     )}
@@ -511,18 +523,28 @@ export default function ChannelsView() {
                   <p className="text-[11px] text-gray-400 mt-1">ID del número en Meta — YCloud Console → tu canal</p>
                 </div>
 
-                {/* Webhook Secret (read-only) */}
+                {/* Webhook Secret (read-only, A5.2 — masked by default) */}
                 {editChannel.webhook_secret && (
                   <div className="sm:col-span-2">
                     <label className="block text-sm font-medium text-gray-600 mb-1">URL Webhook para YCloud</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="text"
-                        value={`${window.location.origin}${API_BASE}?route=webhook/ycloud&channel_id=${editChannel.id}&secret=${editChannel.webhook_secret}`}
+                        value={revealedSecrets['edit']
+                          ? `${window.location.origin}${API_BASE}?route=webhook/ycloud&channel_id=${editChannel.id}&secret=${editChannel.webhook_secret}`
+                          : `${window.location.origin}${API_BASE}?route=webhook/ycloud&channel_id=${editChannel.id}&secret=••••••••`}
                         readOnly
                         title="Copia esta URL y pégala en YCloud Console como endpoint del webhook."
                         className="w-full px-3 py-2 border border-blue-100 rounded-lg text-xs bg-blue-50 font-mono text-blue-800"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setRevealedSecrets(p => ({ ...p, edit: !p.edit }))}
+                        className="px-3 py-2 text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg bg-gray-50"
+                        title={revealedSecrets.edit ? 'Ocultar secret' : 'Revelar secret'}
+                      >
+                        {revealedSecrets.edit ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
                       <button
                         type="button"
                         onClick={() => copyToClipboard(`${window.location.origin}${API_BASE}?route=webhook/ycloud&channel_id=${editChannel.id}&secret=${editChannel.webhook_secret}`)}

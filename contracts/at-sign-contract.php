@@ -1,7 +1,7 @@
 <?php
 /**
  * Página INTERNA de revisión y firma del contrato por el representante AutomatizaTech.
- * Requiere usuario WP autenticado con capability 'edit_posts'.
+ * Requiere usuario WP autenticado con capability 'manage_options' (solo administradores).
  *
  * URL: /contracts/at-sign-contract.php?token=AT_REVIEW_TOKEN
  *
@@ -14,7 +14,8 @@
 require_once dirname(__DIR__) . '/wp-load.php';
 require_once __DIR__ . '/contract-service.php';
 
-if (!is_user_logged_in() || !current_user_can('edit_posts')) {
+// B3: Only administrators (manage_options) may sign contracts as AT
+if (!is_user_logged_in() || !current_user_can('manage_options')) {
     auth_redirect();
     exit;
 }

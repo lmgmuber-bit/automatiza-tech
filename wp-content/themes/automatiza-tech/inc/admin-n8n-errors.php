@@ -134,17 +134,22 @@ function automatiza_get_n8n_errors($request) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_n8n_errors';
     
-    $limit = intval($request->get_param('limit') ?? 50);
+    $limit = max( 1, min( 500, intval( $request->get_param('limit') ?? 50 ) ) );
     $status = sanitize_text_field($request->get_param('status') ?? '');
-    
-    $where = "1=1";
+
+    $where_parts  = ['1=1'];
+    $where_params = [];
     if ($status) {
-        $where .= $wpdb->prepare(" AND status = %s", $status);
+        $where_parts[]  = 'status = %s';
+        $where_params[] = $status;
     }
-    
-    $errors = $wpdb->get_results(
-        "SELECT * FROM $table_name WHERE $where ORDER BY created_at DESC LIMIT $limit"
-    );
+    $where_sql = implode( ' AND ', $where_parts );
+
+    $query = empty($where_params)
+        ? $wpdb->prepare( "SELECT * FROM {$table_name} WHERE {$where_sql} ORDER BY created_at DESC LIMIT %d", $limit )
+        : $wpdb->prepare( "SELECT * FROM {$table_name} WHERE {$where_sql} ORDER BY created_at DESC LIMIT %d", array_merge( $where_params, [$limit] ) );
+
+    $errors = $wpdb->get_results( $query );
     
     return new WP_REST_Response($errors, 200);
 }

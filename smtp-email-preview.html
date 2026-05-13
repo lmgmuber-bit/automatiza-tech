@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Preview — Correo Informe QA</title>
+<style>
+  body { margin: 0; padding: 20px; background: #e5e7eb; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  .browser-bar {
+    max-width: 700px; margin: 0 auto 0; background: #374151; border-radius: 10px 10px 0 0;
+    padding: 10px 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .addr-bar {
+    flex:1; background:#1f2937; border-radius:4px; padding:4px 12px;
+    color:#9ca3af; font-size:12px; font-family: monospace;
+  }
+  .label {
+    font-size: 11px; color: #6b7280; text-align: center; padding: 6px;
+    background: #f9fafb; border: 1px solid #e5e7eb; border-bottom: none;
+    max-width: 700px; margin: 0 auto;
+  }
+  .label span { font-weight: 600; color: #374151; }
+</style>
+</head>
+<body>
+
+<!-- Browser chrome simulado -->
+<div class="browser-bar">
+  <div class="dot" style="background:#ef4444;"></div>
+  <div class="dot" style="background:#f59e0b;"></div>
+  <div class="dot" style="background:#10b981;"></div>
+  <div class="addr-bar">📧 Informe de Pruebas QA: Petsgo MarketPlace — contacto@automatizatech.cl</div>
+</div>
+
+<!-- Cabecera tipo cliente de correo -->
+<div class="label">
+  <strong>De:</strong> AutomatizaTech &lt;contacto@automatizatech.cl&gt; &nbsp;|&nbsp;
+  <strong>Para:</strong> Alexiandra Andrade &lt;cliente@empresa.cl&gt; &nbsp;|&nbsp;
+  <strong>Adjunto:</strong> 📎 QA-Report-Petsgo-MarketPlace-2026-05-11.pdf
+</div>
+
+<!-- ───────── EMAIL BODY ───────── -->
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:'Segoe UI',Tahoma,sans-serif;color:#333;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;padding:30px 0;">
+    <tr><td align="center">
+      <table width="620" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);">
+
+        <!-- HEADER -->
+        <tr><td style="background:linear-gradient(135deg,#0d9488,#14b8a6,#2dd4bf);padding:30px 40px;text-align:center;color:#fff;">
+          <!-- Logo como bloque de texto para preview (sin imagen externa) -->
+          <div style="display:inline-block;background:rgba(255,255,255,0.15);border-radius:8px;padding:8px 20px;margin-bottom:12px;">
+            <span style="font-size:20px;font-weight:800;letter-spacing:2px;color:#fff;">Automatiza<span style="color:#ccfbf1;">Tech</span></span>
+          </div>
+          <h1 style="margin:0;font-size:22px;letter-spacing:1px;font-weight:700;">Informe de Pruebas QA</h1>
+          <p style="margin:6px 0 0;opacity:.9;font-size:13px;">Petsgo MarketPlace</p>
+        </td></tr>
+
+        <!-- BODY -->
+        <tr><td style="padding:30px 40px;">
+          <p style="margin:0 0 12px;font-size:15px;">Hola <strong>Alexiandra Andrade</strong>,</p>
+          <p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#444;">
+            Adjuntamos el <strong>Informe Final de Pruebas QA</strong> correspondiente a tu proyecto
+            <strong>Petsgo MarketPlace</strong>. Este documento detalla el resultado de cada caso de prueba
+            ejecutado por nuestro equipo de calidad.
+          </p>
+
+          <!-- Mensaje personalizado opcional -->
+          <div style="background:#f0fdfa;border-left:4px solid #0d9488;padding:12px 16px;margin:16px 0;border-radius:4px;font-size:13.5px;color:#134e4a;">
+            ✔ Se corrigieron todos los bloqueadores antes del cierre de sprint. Los 4 casos con observaciones quedan registrados para la siguiente versión.
+          </div>
+
+          <!-- Badge resultado: APROBADO CON OBSERVACIONES (amarillo) -->
+          <div style="background:#eab308;color:#fff;text-align:center;padding:18px;border-radius:8px;margin:20px 0;">
+            <div style="font-size:12px;opacity:.85;letter-spacing:2px;text-transform:uppercase;">Resultado</div>
+            <div style="font-size:24px;font-weight:800;margin-top:6px;letter-spacing:.5px;">APROBADO CON OBSERVACIONES</div>
+            <div style="font-size:18px;margin-top:6px;opacity:.95;">93.4% Pass Rate</div>
+          </div>
+
+          <!-- Tabla de estadísticas -->
+          <table width="100%" cellpadding="10" cellspacing="0" style="border-collapse:collapse;font-size:13px;margin:16px 0;border-radius:8px;overflow:hidden;">
+            <tr style="background:#f0fdfa;">
+              <td style="text-align:center;font-weight:700;color:#0d9488;border-bottom:2px solid #ccfbf1;">Total</td>
+              <td style="text-align:center;font-weight:700;color:#065f46;border-bottom:2px solid #ccfbf1;">Pass</td>
+              <td style="text-align:center;font-weight:700;color:#991b1b;border-bottom:2px solid #ccfbf1;">Fail</td>
+              <td style="text-align:center;font-weight:700;color:#92400e;border-bottom:2px solid #ccfbf1;">Bloq.</td>
+              <td style="text-align:center;font-weight:700;color:#5b21b6;border-bottom:2px solid #ccfbf1;">Omit.</td>
+              <td style="text-align:center;font-weight:700;color:#6b7280;border-bottom:2px solid #ccfbf1;">Sin probar</td>
+            </tr>
+            <tr>
+              <td style="text-align:center;font-size:26px;font-weight:800;color:#0d9488;padding:14px 10px;">544</td>
+              <td style="text-align:center;font-size:26px;font-weight:800;color:#065f46;">508</td>
+              <td style="text-align:center;font-size:26px;font-weight:800;color:#991b1b;">1</td>
+              <td style="text-align:center;font-size:26px;font-weight:800;color:#92400e;">4</td>
+              <td style="text-align:center;font-size:26px;font-weight:800;color:#5b21b6;">5</td>
+              <td style="text-align:center;font-size:26px;font-weight:800;color:#6b7280;">26</td>
+            </tr>
+          </table>
+
+          <p style="margin:16px 0;font-size:13.5px;line-height:1.7;color:#555;">
+            Encontrarás el detalle completo en el <strong>PDF adjunto</strong>. Si tienes dudas o comentarios
+            sobre los resultados, no dudes en responder a este correo.
+          </p>
+
+          <!-- Botones CTA -->
+          <div style="text-align:center;margin:28px 0 8px;">
+            <a href="#" style="background:#0d9488;color:#fff;text-decoration:none;padding:13px 28px;border-radius:8px;font-weight:700;display:inline-block;margin:6px;font-size:14px;letter-spacing:.3px;">
+              Ver evidencias en mi portal →
+            </a>
+            <a href="#" style="background:#1e40af;color:#fff;text-decoration:none;padding:13px 28px;border-radius:8px;font-weight:700;display:inline-block;margin:6px;font-size:14px;letter-spacing:.3px;">
+              Descargar informe PDF ↓
+            </a>
+          </div>
+        </td></tr>
+
+        <!-- FOOTER -->
+        <tr><td style="background:#f8fafc;padding:22px 40px;text-align:center;font-size:11px;color:#888;border-top:1px solid #e5e7eb;">
+          <p style="margin:0 0 4px;"><strong style="color:#555;">AutomatizaTech SpA</strong> &middot; RUT 78.363.717-0</p>
+          <p style="margin:0 0 4px;">contacto@automatizatech.cl &middot; +56 9 2700 2984</p>
+          <p style="margin:0 0 4px;">Santa Beatriz 170, Of. 903 (9P), Providencia, Santiago</p>
+          <p style="margin:10px 0 0;color:#bbb;">&copy; 2026 AutomatizaTech. Todos los derechos reservados.</p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body></html>
+
+<div style="max-width:700px;margin:16px auto 0;text-align:center;font-size:11px;color:#9ca3af;">
+  Preview generado — no es un email real &nbsp;|&nbsp; Eliminar este archivo cuando ya no se necesite
+</div>
+
+</body>
+</html>

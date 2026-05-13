@@ -1051,17 +1051,17 @@ class AutomatizaTech_CRM_AI {
                         <tr>
                             <td>
                                 <strong><?php echo esc_html(str_replace(['cliente_', 'demo_', '_'], ['', '', ' '], $c['client_identifier'])); ?></strong>
-                                <br><small style="color:#999;"><?php echo $c['client_identifier']; ?></small>
+                                <br><small style="color:#999;"><?php echo esc_html($c['client_identifier']); ?></small>
                             </td>
                             <td>
-                                <span style="background:<?php echo $bg_color; ?>; color:white; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:600;">
-                                    <?php echo $tipo_label; ?>
+                                <span style="background:<?php echo esc_attr($bg_color); ?>; color:white; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:600;">
+                                    <?php echo esc_html($tipo_label); ?>
                                 </span>
                             </td>
-                            <td><?php echo $c['requests']; ?></td>
-                            <td><?php echo number_format($c['tokens']); ?></td>
-                            <td>$<?php echo number_format($c['costo'], 4); ?></td>
-                            <td style="color:#46b450;font-weight:bold;">$<?php echo number_format($c['costo'] * 1.3, 2); ?></td>
+                            <td><?php echo intval($c['requests']); ?></td>
+                            <td><?php echo number_format(floatval($c['tokens'])); ?></td>
+                            <td>$<?php echo number_format(floatval($c['costo']), 4); ?></td>
+                            <td style="color:#46b450;font-weight:bold;">$<?php echo number_format(floatval($c['costo']) * 1.3, 2); ?></td>
                             <td>
                                 <a href="?page=automatiza-crm-ficha&ai_id=<?php echo urlencode($c['client_identifier']); ?>" class="button button-small">Ver Ficha</a>
                                 <a href="?page=automatiza-crm&cliente=<?php echo urlencode($c['client_identifier']); ?>&mes=<?php echo $mes; ?>&anio=<?php echo $anio; ?>" class="button button-small">Filtrar</a>
@@ -1076,7 +1076,7 @@ class AutomatizaTech_CRM_AI {
         <script>
         document.addEventListener('DOMContentLoaded', function() {
             
-            var modo = '<?php echo $modo; ?>';
+            var modo = '<?php echo esc_js($modo); ?>';
             
             if (modo === 'comparar') {
                 // ===== GRÁFICO COMPARATIVO BARRAS =====

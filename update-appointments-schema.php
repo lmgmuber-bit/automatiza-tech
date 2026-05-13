@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para actualizar el esquema de la tabla de citas
  * Ejecutar una sola vez visitando: http://localhost/automatiza-tech/update-appointments-schema.php

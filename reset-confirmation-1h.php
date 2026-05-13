@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para resetear confirmación de 1h para pruebas
  * Ejecutar: https://automatizatech.cl/reset-confirmation-1h.php

@@ -8,6 +8,13 @@
 define('WP_USE_THEMES', false);
 require('wp-load.php');
 
+require_once __DIR__ . '/at-rate-limit.php';
+
+// Rate limit: 30 hits/min por IP (anti scraping y enumeracion de invoice_number)
+if ( ! at_rate_limit_check( 'validar_factura', 30, 60 ) ) {
+    at_rate_limit_reject( 60 );
+}
+
 global $wpdb;
 
 // Obtener ID de la factura desde la URL
@@ -50,22 +57,27 @@ $action = isset($_GET['action']) ? sanitize_text_field($_GET['action']) : 'valid
 if ($action === 'download') {
     // DESCARGAR FACTURA EN PDF
     
-    // Construir ruta del archivo PDF
-    $upload_dir = wp_upload_dir();
+    // Construir ruta del archivo PDF (con verificacion anti path-traversal)
+    require_once __DIR__ . '/at-path-safe.php';
+    $upload_dir   = wp_upload_dir();
     $invoices_dir = $upload_dir['basedir'] . '/automatiza-tech-invoices/';
-    
-    // Buscar el archivo PDF
-    $pdf_files = glob($invoices_dir . $invoice->invoice_number . '*.pdf');
-    
-    if (empty($pdf_files)) {
-        wp_die('❌ Archivo PDF no encontrado para esta factura. Contacta al administrador.', 'Error', ['response' => 404]);
+
+    // El invoice_number viene de BD pero defendemos en profundidad: solo basename estricto.
+    $safe_prefix = at_safe_basename( $invoice->invoice_number );
+    $pdf_files   = glob( $invoices_dir . $safe_prefix . '*.pdf' );
+
+    if ( empty( $pdf_files ) ) {
+        wp_die( '❌ Archivo PDF no encontrado para esta factura. Contacta al administrador.', 'Error', [ 'response' => 404 ] );
     }
-    
-    $pdf_file = $pdf_files[0];
-    
+
+    $pdf_file = at_path_inside( $pdf_files[0], $invoices_dir );
+    if ( $pdf_file === false ) {
+        wp_die( '❌ Ruta de archivo invalida.', 'Error', [ 'response' => 403 ] );
+    }
+
     // Verificar que el archivo existe y es legible
-    if (!file_exists($pdf_file) || !is_readable($pdf_file)) {
-        wp_die('❌ No se puede acceder al archivo PDF. Contacta al administrador.', 'Error', ['response' => 500]);
+    if ( ! file_exists( $pdf_file ) || ! is_readable( $pdf_file ) ) {
+        wp_die( '❌ No se puede acceder al archivo PDF. Contacta al administrador.', 'Error', [ 'response' => 500 ] );
     }
     
     // Actualizar contador de descargas

@@ -1,5 +1,9 @@
 # Manual de Contexto para IA — Portal OmniCliente AutomatizaTech
 
+> ⚠️ **DOCUMENTO HISTÓRICO (v2.0, Mar 2026)** — Puede contener datos desactualizados.
+> La fuente única de verdad actual es **[`Docs/MASTER/00_INDEX.md`](./Docs/MASTER/00_INDEX.md)**.
+> Discrepancias conocidas: no documenta hardening Phase 0, módulo contratos, ni 9 helpers `at-*.php`.
+
 > **Versión:** 2.0  
 > **Última actualización:** 25 de marzo de 2026  
 > **Propósito:** Este documento provee contexto completo para que cualquier asistente de IA pueda entender, mantener y extender el sistema OmniCliente sin ambigüedades.  

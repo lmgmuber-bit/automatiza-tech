@@ -20,28 +20,12 @@ require_once __DIR__ . '/omnichannel-controller.php';
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
-// CORS para el portal React
-$allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    'http://localhost:5176',
-    'http://localhost:3000',
-    'http://localhost',
-    rtrim(get_site_url(), '/'),
-];
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (in_array($origin, $allowed_origins, true)) {
-    header("Access-Control-Allow-Origin: $origin");
-} 
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Key, X-Admin-Token, X-Agent-Token');
-header('Access-Control-Max-Age: 86400');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
+// CORS centralizado (whitelist por ambiente)
+require_once __DIR__ . '/at-cors.php';
+at_cors_apply([
+    'methods' => 'GET, POST, PUT, DELETE, OPTIONS',
+    'headers' => 'Content-Type, Authorization, X-API-Key, X-Admin-Token, X-Agent-Token',
+]);
 
 $controller = new OmnichannelController();
 
@@ -249,7 +233,10 @@ try {
     // ---- CRON: Expiry reminders (called by N8N, secured with secret) ----
     if (isset($segments[0]) && $segments[0] === 'cron' && isset($segments[1]) && $segments[1] === 'expiry-reminders') {
         $provided_secret = sanitize_text_field($_GET['secret'] ?? ($body['secret'] ?? ''));
-        $cron_secret = defined('OMNICHANNEL_CRON_SECRET') ? OMNICHANNEL_CRON_SECRET : 'omni_cron_2026_s3cur3';
+        if (!defined('OMNICHANNEL_CRON_SECRET') || !OMNICHANNEL_CRON_SECRET) {
+            send_json(['error' => 'Cron secret no configurado'], 500);
+        }
+        $cron_secret = OMNICHANNEL_CRON_SECRET;
 
         if (empty($provided_secret) || !hash_equals($cron_secret, $provided_secret)) {
             send_json(['error' => 'No autorizado'], 403);

@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para agregar campo de descuento a la tabla de servicios
  * Ejecutar una vez: http://localhost/automatiza-tech/add-discount-field.php

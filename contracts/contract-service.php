@@ -52,10 +52,10 @@ class ContractService {
             'representante_at_nombre' => 'Luis Miguel González Morales',
             'representante_at_rut'    => '26.191.807-2',
             'representante_at_cargo'  => 'Administrador y Representante Legal',
-            'domicilio_at'            => 'Comuna de Cerrillos, Región Metropolitana de Santiago, Chile',
+            'domicilio_at'            => 'Santa Beatriz 170, Of. 903 (9P), Providencia, Región Metropolitana, Chile',
             'email_at'                => 'contacto@automatizatech.cl',
-            'whatsapp_soporte'        => '+56 9 0000 0000',
-            'email_soporte'           => 'soporte@automatizatech.cl',
+            'whatsapp_soporte'        => '',
+            'email_soporte'           => 'contacto@automatizatech.cl',
             'url_portal'              => home_url('/portal-omnichannel/'),
             'ciudad_firma'            => 'Santiago',
             'ciudad_jurisdiccion'     => 'Santiago',
@@ -64,7 +64,7 @@ class ContractService {
             'sla_s3_respuesta'=>'1 día hábil','sla_s3_resolucion'=>'5 días hábiles',
             'sla_s4_respuesta'=>'2 días hábiles','sla_s4_resolucion'=>'mejor esfuerzo',
             'credito_sla'=>'5','dias_pago'=>'15','meses_topes'=>'3',
-            'dias_handover'=>'10','horas_handover'=>'4',
+            'dias_handover'=>'10','horas_handover'=>'4','garantia_meses'=>'12',
             'hora_inicio_soporte'=>'09:00','hora_fin_soporte'=>'18:00',
             'canal_24x7'=>'WhatsApp soporte','frecuencia_reuniones'=>'mensual',
             'backups_incluidos'=>'Diarios, retención 7 días',
@@ -245,9 +245,15 @@ class ContractService {
         $ph['representante_cliente_rut']    = $data['signer_rut'];
         $ph['email_cliente']                = $data['signer_email'];
         $ph['fecha_firma_larga']            = self::fecha_larga(date('Y-m-d'));
+        $ph['fecha_firma_cliente']          = self::fecha_larga(date('Y-m-d')); // Vigencia inicia desde esta fecha
 
+        // Guardar TODOS los datos del cliente + signed_at ANTES de render_pdf.
+        // render_pdf lee la BD para saber si incluir firma del cliente (if $c->signed_at).
+        // Si signed_at no está grabado al momento de rendir, el bloque de firma queda vacío.
         $wpdb->update(self::table(), array(
             'placeholders'        => wp_json_encode($ph, JSON_UNESCAPED_UNICODE),
+            'status'              => 'signed',
+            'signed_at'           => $now,
             'signer_name'         => $data['signer_name'],
             'signer_rut'          => $data['signer_rut'],
             'signer_email'        => $data['signer_email'],
@@ -257,13 +263,11 @@ class ContractService {
             'signature_image_url' => self::path_to_url($img),
         ), array('id'=>$c->id));
 
-        // Re-render PDF FINAL con ambas firmas
+        // Re-render PDF FINAL con ambas firmas (ahora signed_at ya está en BD)
         $signed_path = self::render_pdf($c->id, true);
         $signed_hash = hash_file('sha256', $signed_path);
 
         $wpdb->update(self::table(), array(
-            'status'              => 'signed',
-            'signed_at'           => $now,
             'signed_pdf_url'      => self::path_to_url($signed_path),
             'signed_document_hash'=> $signed_hash,
         ), array('id'=>$c->id));
@@ -294,7 +298,7 @@ class ContractService {
     public static function list_by_client($client_id) {
         global $wpdb;
         return $wpdb->get_results($wpdb->prepare(
-            "SELECT id, contract_number, type, status, signed_at, sent_at, monthly_amount, currency, signed_pdf_url, pdf_url
+            "SELECT id, contract_number, type, status, signed_at, sent_at, monthly_amount, currency, signed_pdf_url, pdf_url, created_at
              FROM " . self::table() . " WHERE client_id=%d ORDER BY id DESC", $client_id));
     }
 

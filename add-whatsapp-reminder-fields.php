@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para agregar campos de recordatorios por WhatsApp separados de los de correo
  * 

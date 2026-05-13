@@ -1,7 +1,11 @@
 # AutomatizaTech — Documento Técnico: Portal OmniCliente
 
+> ⚠️ **DOCUMENTO HISTÓRICO (v2.0, Mar 2026)** — Puede contener datos desactualizados.
+> La fuente única de verdad actual es **[`Docs/MASTER/`](./MASTER/00_INDEX.md)**.
+> Discrepancias conocidas: rama activa real es `security/hardening-phase-0`, build Portal en `omnicliente/`, no documenta 9 helpers `at-*.php` ni módulo contratos.
+
 > **Versión:** 2.0  
-> **Última actualización:** 25 de marzo de 2026  
+> **Última actualización:** 25 de marzo de 2026
 > **Alcance:** Arquitectura técnica del **Portal OmniCliente** (SPA React + API PHP + N8N).  
 > **Plataforma principal WP/CRM:** Ver `DOCUMENTO_TECNICO_AUTOMATIZATECH.md`  
 > **Contexto completo del proyecto:** Ver `CONTEXTO_COMPLETO.md`  

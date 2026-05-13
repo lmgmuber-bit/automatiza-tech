@@ -1,9 +1,22 @@
 # AutomatizaTech — Contexto Completo del Proyecto
 
+> ⚠️ **DOCUMENTO HISTÓRICO (v2.0, Mar 2026)** — Puede contener información desactualizada.
+> La fuente única de verdad actual es **[`Docs/MASTER/`](./Docs/MASTER/00_INDEX.md)**.
+> Úsalo como contexto complementario; para código nuevo referencia MASTER.
+
 > **Versión:** 2.0  
 > **Última actualización:** 25 de marzo de 2026  
 > **Propósito:** Documento maestro de contexto para cualquier IA, desarrollador o equipo que tome este proyecto. Contiene TODO lo necesario para continuar sin perder contexto.  
-> **Rama activa:** `prod-sync-2025-06-26` | **Commit referencia:** `b1c05b9`
+> **Rama doc:** `prod-sync-2025-06-26` | **Commit referencia:** `b1c05b9` | **Rama actual real:** `security/hardening-phase-0`
+
+### ⚡ Diferencias clave respecto al estado real (Mayo 2026)
+| Campo | Este documento dice | Estado real |
+|-------|---------------------|-------------|
+| Rama activa | `prod-sync-2025-06-26` | `security/hardening-phase-0` |
+| Build Portal | `portal-omnichannel/` | `omnicliente/` |
+| Helpers seguridad | No mencionados | 9 archivos `at-*.php` + 3 mu-plugins |
+| Módulo contratos | No mencionado | `contracts/` con doble firma SHA-256 |
+| N8N workflows | ~40 | ~63 (38 PROD + 14 TEMPLATES + 11 raíz) |
 
 ---
 

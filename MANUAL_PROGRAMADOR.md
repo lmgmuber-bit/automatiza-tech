@@ -1,5 +1,9 @@
 # Manual del Programador — Portal OmniCliente AutomatizaTech
 
+> ⚠️ **DOCUMENTO HISTÓRICO (v1.0, Mar 2026)** — Puede contener datos desactualizados.
+> La fuente única de verdad actual es **[`Docs/MASTER/05_API_BACKEND_PHP.md`](./MASTER/05_API_BACKEND_PHP.md)** y **[`06_PORTAL_OMNICLIENTE_FRONTEND.md`](./MASTER/06_PORTAL_OMNICLIENTE_FRONTEND.md)**.
+> Discrepancias conocidas: no documenta 9 helpers `at-*.php`, módulo contratos, ni hardening Phase 0. Vite listado como 6.4 (real: 6.3.5). Build Portal en `omnicliente/` (no `portal-omnichannel/`).
+
 > **Versión:** 1.0  
 > **Última actualización:** 17 de Marzo de 2026  
 > **Dirigido a:** Desarrolladores encargados de mantener y extender el sistema

@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Purgar caché de LiteSpeed/Hostinger
  * Ejecutar: https://automatizatech.cl/purge-cache.php

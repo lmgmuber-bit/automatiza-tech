@@ -23,7 +23,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "https://automatizatech.cl/api-omnichannel.php?route=cron/expiry-reminders&secret=omni_cron_2026_s3cur3",
+        "url": "https://automatizatech.cl/api-omnichannel.php?route=cron/expiry-reminders&secret={{OMNICHANNEL_CRON_SECRET}}",
         "authentication": "none",
         "options": {
           "timeout": 30000,

@@ -1,7 +1,12 @@
 # 🚀 AutomatizaTech — Punto de Entrada Principal
 
-> **Última actualización:** 25 de marzo de 2026  
-> **¿Eres IA o desarrollador nuevo?** Lee primero **`CONTEXTO_COMPLETO.md`** — tiene todo el contexto en un solo documento.
+> **Última actualización:** 25 de marzo de 2026 (índice). Branch activa: `security/hardening-phase-0`.
+> **¿Eres IA o desarrollador nuevo?** → Lee primero **[`Docs/MASTER/00_INDEX.md`](./Docs/MASTER/00_INDEX.md)** (documentación maestra actualizada post-auditoría).
+> Los docs listados abajo son la base histórica; para contexto rápido usa también **`CONTEXTO_COMPLETO.md`**.
+
+---
+
+> ⚠️ **NOTA DE ACTUALIZACIÓN** — La rama activa actual es `security/hardening-phase-0` (no `prod-sync-2025-06-26`). El build del Portal ahora vive en `omnicliente/` (no `portal-omnichannel/`). Ver detalles en [`Docs/MASTER/`](./Docs/MASTER/).
 
 ---
 
@@ -86,7 +91,8 @@
 | Producción | `https://automatizatech.cl` |
 | Portal React build | `automatizatech.cl/portal-omnichannel/` |
 | N8N | `https://n8n-n8n.kchiba.easypanel.host` |
-| Rama Git activa | `prod-sync-2025-06-26` |
+| Rama Git activa | `security/hardening-phase-0` (Mayo 2026) |
+| Portal build path | `omnicliente/` (antes era `portal-omnichannel/`) |
 | Deploy | Manual (SFTP a Hostinger) |
 | Base de datos PROD | `u402745362_automatizatech` |
 

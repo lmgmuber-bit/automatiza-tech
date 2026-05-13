@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * qa-report-generator.php
  * Genera un reporte .md consolidado de errores QA por proyecto.

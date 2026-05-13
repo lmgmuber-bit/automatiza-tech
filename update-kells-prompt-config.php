@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Update KellsCapilar prompt config: add services catalog, schedule blocks
  * and scheduling definitions (from Excel sheets).

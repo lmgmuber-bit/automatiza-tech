@@ -8,20 +8,16 @@
  * para que n8n pueda cargarlo dinámicamente en el Agente IA
  */
 
-// Headers CORS para permitir llamadas desde n8n
-header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-
-// Manejar preflight OPTIONS
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-// Cargar WordPress
+// Cargar WordPress (necesario para CORS env-aware)
 require_once('wp-load.php');
+require_once __DIR__ . '/at-cors.php';
+
+// Headers
+header('Content-Type: application/json; charset=utf-8');
+at_cors_apply([
+    'methods' => 'GET, POST, OPTIONS',
+    'headers' => 'Content-Type, Authorization',
+]);
 
 // Obtener el ID de la propuesta (puede venir como 'id', 'proposal_id', o 'unique_id')
 $unique_id = '';

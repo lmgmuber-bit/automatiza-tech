@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Agregar campo phone a la tabla propuestas
  * Ejecutar una sola vez

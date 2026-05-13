@@ -15,7 +15,7 @@ En **{{ciudad_firma}}**, a **{{fecha_firma_larga}}**, comparecen:
 **AutomatizaTech SpA** (en adelante "**EL PROVEEDOR**" o "**AT**"), RUT **{{rut_at}}**, representada legalmente por **{{representante_at_nombre}}**, RUT **{{representante_at_rut}}**, con domicilio en **{{domicilio_at}}**, correo electrónico **{{email_at}}**.
 
 **Y POR LA OTRA:**
-**{{razon_social_cliente}}** (en adelante "**EL CLIENTE**"), RUT **{{rut_cliente}}**, representada legalmente por **{{representante_cliente_nombre}}**, RUT **{{representante_cliente_rut}}**, con domicilio en **{{domicilio_cliente}}**, correo electrónico **{{email_cliente}}**, teléfono **{{telefono_cliente}}**.
+**{{razon_social_cliente}}** (en adelante "**EL CLIENTE**"), {{id_tipo_cliente}} **{{rut_cliente}}**, representada legalmente por **{{representante_cliente_nombre}}**, {{id_tipo_representante}} **{{representante_cliente_rut}}**, de nacionalidad **{{nacionalidad_representante}}**, con domicilio en **{{domicilio_cliente}}**, correo electrónico **{{email_cliente}}**, teléfono **{{telefono_cliente}}**.
 
 Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar el siguiente contrato (en adelante el "**Contrato**"), que se regirá por las cláusulas siguientes y, en lo no previsto en ellas, por la legislación chilena vigente.
 
@@ -44,7 +44,7 @@ Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar
 
 3.1. **Sí incluye:**
 - a) Corrección de errores ("**bugs**") atribuibles directamente al desarrollo entregado por EL PROVEEDOR.
-- b) Atención y resolución de incidentes a través del Portal OmniCliente, WhatsApp y/o correo electrónico.
+- b) Atención y resolución de incidentes a través del Portal OmniCliente y/o correo electrónico contacto@automatizatech.cl.
 - c) Monitoreo básico de disponibilidad (uptime).
 - d) Aplicación de actualizaciones menores de seguridad sobre los componentes desarrollados por EL PROVEEDOR.
 - e) Hasta **{{horas_evolutivas_mes}}** horas mensuales de mantención evolutiva (mejoras menores).
@@ -62,9 +62,35 @@ Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar
 
 ---
 
+## CLÁUSULA TERCERA BIS — Garantía post-entrega del Proyecto 🛡️
+
+3A.1. **Período de garantía:** EL PROVEEDOR otorga al CLIENTE una **garantía de {{garantia_meses}} mes(es)** contados desde la fecha de entrega formal del Proyecto (Anexo A), período durante el cual toda **corrección, ajuste o arreglo** derivado directa o indirectamente de un error, omisión o defecto **atribuible al desarrollo original** realizado por EL PROVEEDOR será resuelto **sin costo de honorarios adicional** para EL CLIENTE. **Únicamente será cobrado el IVA** cuando la emisión de una boleta o factura sea exigible por normativa tributaria chilena. Esta garantía opera con independencia de si el CLIENTE ha contratado un plan de soporte mensual.
+
+> ⚠️ **Límite absoluto de la garantía:** La garantía cubre **exclusivamente bugs, errores funcionales y comportamientos no conformes al requerimiento original acordado**. Cualquier solicitud de **nueva funcionalidad, nuevo módulo, nueva pantalla o cambio de alcance** que no esté expresamente contemplado en la propuesta original N° {{propuesta_id}} constituye un **nuevo desarrollo** y será cotizado y cobrado de forma separada, sin excepción.
+
+3A.2. **¿Qué cubre la garantía?** Se consideran cubiertos sin costo adicional:
+- a) Corrección de errores ("bugs") funcionales o lógicos en el código desarrollado.
+- b) Ajustes de comportamiento que no correspondan a lo especificado en la propuesta aceptada.
+- c) Fallas en integraciones entregadas que no dependan de cambios en APIs o servicios de terceros.
+- d) Inconsistencias visuales o de rendimiento en las interfaces entregadas.
+- e) Cualquier arreglo, corrección o mejora **directamente vinculada** al alcance del Proyecto original.
+
+3A.3. **¿Qué NO cubre la garantía (es un nuevo desarrollo con costo adicional)?** 🛡️
+- a) **Nuevas funcionalidades**, módulos o pantallas no contempladas en la propuesta original. **Toda nueva funcionalidad es un nuevo desarrollo y tiene costo adicional, independiente del período de garantía vigente.**
+- b) **Cambios de alcance** o requerimientos nuevos solicitados por el CLIENTE tras la entrega.
+- c) Funcionalidades **aisladas o independientes** del desarrollo original que constituyan un trabajo nuevo.
+- d) Ajustes por cambios en plataformas o APIs de terceros (OpenAI, Meta, Google, etc.) ajenos al control de EL PROVEEDOR.
+- e) Correcciones de errores causados por modificaciones al Proyecto realizadas por el CLIENTE o terceros sin autorización.
+
+3A.4. **Procedimiento:** El CLIENTE reportará los defectos cubiertos a través del canal oficial (Portal OmniCliente o correo electrónico). EL PROVEEDOR analizará la solicitud y comunicará dentro de **5 días hábiles** si corresponde a garantía (sin costo) o a un servicio fuera de alcance (con cotización), indicando el fundamento técnico de su decisión.
+
+3A.5. **Cláusula de confianza:** EL PROVEEDOR y EL CLIENTE acuerdan resolver de buena fe cualquier disputa sobre si un arreglo está o no cubierto por garantía, privilegiando la relación comercial de largo plazo sobre la facturación puntual. En caso de duda razonable, EL PROVEEDOR atenderá la solicitud como garantía.
+
+---
+
 ## CLÁUSULA CUARTA — Vigencia y renovación
 
-4.1. El presente Contrato tendrá una vigencia inicial de **{{vigencia_meses}} meses** contados desde el **{{fecha_inicio_soporte}}**.
+4.1. El presente Contrato tendrá una vigencia inicial de **{{vigencia_meses}} meses** contados desde el **{{fecha_firma_cliente}}** (fecha de firma del CLIENTE).
 
 4.2. Vencido dicho plazo, el Contrato se entenderá **renovado tácita y automáticamente** por períodos iguales y sucesivos, salvo aviso por escrito de cualquiera de las partes con al menos **30 días corridos** de anticipación a la fecha de término.
 
@@ -80,7 +106,9 @@ Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar
 
 ## CLÁUSULA QUINTA — Precio y forma de pago
 
-5.1. EL CLIENTE pagará a EL PROVEEDOR la suma mensual de **${{monto_mensual}} ({{monto_mensual_palabras}} pesos chilenos)**, más el Impuesto al Valor Agregado correspondiente.
+5.1. EL CLIENTE pagará a EL PROVEEDOR la suma mensual de **${{monto_mensual}} CLP**, más el Impuesto al Valor Agregado (IVA) correspondiente. En el caso del **Plan de Garantía post-entrega**, el monto base de honorarios es **$0 (cero pesos)** y únicamente se emitirá boleta o factura por el IVA cuando la normativa tributaria chilena lo exija.
+
+5.1bis. **Nueva funcionalidad = nuevo presupuesto:** Toda solicitud que implique agregar funcionalidades, módulos, pantallas o integraciones no contempladas en la propuesta original N° {{propuesta_id}} constituye un **nuevo proyecto de desarrollo**, sujeto a cotización y aprobación expresa por escrito, con independencia del plan contratado y del período de garantía vigente.
 
 5.2. La facturación se emitirá los primeros 5 días hábiles de cada mes, con vencimiento a **{{dias_pago}} días corridos** desde su emisión.
 
@@ -108,7 +136,7 @@ Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar
 | **Media (S3)** | Funcionalidad menor con bajo impacto / con workaround | {{sla_s3_respuesta}} | {{sla_s3_resolucion}} |
 | **Baja (S4)** | Consultas, mejoras menores, dudas de uso | {{sla_s4_respuesta}} | {{sla_s4_resolucion}} |
 
-6.2. **Horario de atención:** lunes a viernes hábiles, **{{hora_inicio_soporte}} a {{hora_fin_soporte}}** (hora de Chile continental). Para S1, atención 24/7 a través de **{{canal_24x7}}**.
+6.2. **Horario de atención:** lunes a viernes hábiles, **{{hora_inicio_soporte}} a {{hora_fin_soporte}}** (hora de Chile continental). Para S1, atención 24/7 a través de **correo electrónico contacto@automatizatech.cl**.
 
 6.3. Los tiempos se computan desde el ingreso formal del ticket en el Portal OmniCliente o canal oficial.
 
@@ -128,7 +156,7 @@ Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar
 
 7.1. Canal oficial: **Portal OmniCliente** (URL: **{{url_portal}}**), credenciales personales y nominativas entregadas por EL PROVEEDOR.
 
-7.2. Canales secundarios: WhatsApp **{{whatsapp_soporte}}** y correo **{{email_soporte}}**. Toda comunicación por estos canales se trasladará al Portal para trazabilidad.
+7.2. Canal secundario: correo electrónico **contacto@automatizatech.cl**. Toda comunicación por este canal se trasladará al Portal para trazabilidad.
 
 7.3. EL CLIENTE designa como contraparte técnica autorizada a **{{contraparte_tecnica_nombre}}** ({{contraparte_tecnica_email}}).
 
@@ -315,7 +343,7 @@ Ninguna parte será responsable del incumplimiento causado por fuerza mayor o ca
 
 19.3. El registro digital de la firma será almacenado por EL PROVEEDOR de forma íntegra y podrá ser exhibido como medio de prueba conforme al art. 5 de la Ley 19.799.
 
-19.4. Una vez firmado, el documento PDF resultante se enviará por correo electrónico a ambas partes y quedará disponible permanentemente en la ficha del CLIENTE dentro del Portal OmniCliente.
+19.4. Una vez firmado, el documento PDF resultante se enviará por correo electrónico a ambas partes y quedará disponible permanentemente en el portal/sitio web de AutomatizaTech (automatizatech.cl), accesible desde el backoffice de administración, no desde el Portal OmniCliente.
 
 ---
 

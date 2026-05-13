@@ -133,6 +133,10 @@ $segments = array_values($segments);
 try {
     // ---- HEALTH CHECK (para fallback N8N) ----
     if (isset($segments[0]) && $segments[0] === 'health') {
+        // Rate limit: 60 checks/min per IP (N8N polls at most every few seconds)
+        if ( ! at_rate_limit_check( 'omni_health', 60, 60 ) ) {
+            at_rate_limit_reject( 60 );
+        }
         send_json(['status' => 'ok', 'timestamp' => current_time('c')]);
     }
 

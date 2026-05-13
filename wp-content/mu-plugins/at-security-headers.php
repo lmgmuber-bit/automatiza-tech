@@ -36,9 +36,9 @@ if (!function_exists('at_security_send_headers')) {
             header('Strict-Transport-Security: max-age=15552000; includeSubDomains');
         }
 
-        // CSP en Report-Only para no romper widgets (Gamma, N8N, OpenAI iframe).
-        // Una vez auditados los recursos externos, mover a Content-Security-Policy.
-        // Para activarla mas adelante basta con cambiar el header name.
+        // CSP en enforcement. Las directivas permiten unsafe-inline/unsafe-eval para
+        // compatibilidad con widgets y código inline existente. Suficiente para bloquear
+        // XSS externo sin romper funcionalidad. Revisar en Phase 2 para eliminar unsafe-*.
         $csp = "default-src 'self' https: data: blob:; "
              . "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; "
              . "style-src  'self' 'unsafe-inline' https:; "
@@ -49,7 +49,7 @@ if (!function_exists('at_security_send_headers')) {
              . "object-src 'none'; "
              . "base-uri   'self'; "
              . "form-action 'self' https:;";
-        header('Content-Security-Policy-Report-Only: ' . $csp);
+        header('Content-Security-Policy: ' . $csp);
     }
     // Prioridad temprana para asegurar el envio antes que cualquier output.
     add_action('send_headers', 'at_security_send_headers', 1);

@@ -4728,6 +4728,11 @@ class AutomatizaTech_CRM_AI {
                                     $badge_bg = '#f59e0b'; $badge_text = '✍️ PENDIENTE TU FIRMA';
                                     $date_label = 'Enviado el';
                                     $date_val   = !empty($c['sent_at']) ? date('d/m/Y', strtotime($c['sent_at'])) : '—';
+                                } elseif ($status === 'at_signed') {
+                                    $bg = '#eff6ff'; $border = '#bfdbfe'; $accent = '#3b82f6';
+                                    $badge_bg = '#3b82f6'; $badge_text = '📋 LISTO PARA REVISAR';
+                                    $date_label = 'Creado el';
+                                    $date_val   = !empty($c['created_at']) ? date('d/m/Y', strtotime($c['created_at'])) : '—';
                                 } else {
                                     $bg = '#f8fafc'; $border = '#e2e8f0'; $accent = '#94a3b8';
                                     $badge_bg = '#94a3b8'; $badge_text = '🔄 EN PREPARACIÓN';
@@ -4767,7 +4772,16 @@ class AutomatizaTech_CRM_AI {
                                         ✍️ Firmar ahora
                                     </a>
                                 <?php elseif ($in_prep): ?>
-                                    <span style="font-size:12px;color:#9ca3af;font-style:italic;white-space:nowrap;">Aguarda, estamos preparando el contrato…</span>
+                                    <?php if ($status === 'at_signed' && !empty($c['pdf_url'])): ?>
+                                        <a href="<?php echo esc_url($c['pdf_url']); ?>"
+                                           target="_blank"
+                                           style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(59,130,246,.3);white-space:nowrap;"
+                                           onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                                            👁️ Ver contrato
+                                        </a>
+                                    <?php else: ?>
+                                        <span style="font-size:12px;color:#9ca3af;font-style:italic;white-space:nowrap;">Aguarda, estamos preparando el contrato…</span>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </div>
                             <?php endforeach; ?>

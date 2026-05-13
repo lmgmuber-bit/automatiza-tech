@@ -336,7 +336,7 @@ class ContractService {
     private static function save_signature_image($c, $data, $who = 'client') {
         $dir = self::storage_dir() . '/signatures';
         if (!file_exists($dir)) wp_mkdir_p($dir);
-        $base = $dir . '/sig-' . $who . '-' . $c->id . '-' . time();
+        $base = $dir . '/sig-' . $who . '-' . bin2hex(random_bytes(12));
 
         if (!empty($data['signature_dataurl'])) {
             if (!preg_match('#^data:image/(png|jpeg|jpg);base64,(.+)$#', $data['signature_dataurl'], $m)) {

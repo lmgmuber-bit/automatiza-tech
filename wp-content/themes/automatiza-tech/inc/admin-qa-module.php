@@ -1041,7 +1041,7 @@ add_action('wp_ajax_at_qa_upload_evidence', function() {
 
     // Extensión derivada del MIME verificado (nunca del nombre original del archivo)
     $ext  = at_mime_canonical_ext( $real_mime );
-    $safe = 'qa-' . $case_db_id . '-' . time() . '-' . wp_generate_password(6, false) . '.' . $ext;
+    $safe = 'qa-' . bin2hex(random_bytes(16)) . '.' . $ext;
 
     if (!move_uploaded_file($_FILES['evidence_file']['tmp_name'], $qa_dir . '/' . $safe)) {
         wp_send_json_error('Error al guardar archivo');
@@ -4425,7 +4425,7 @@ add_action('wp_ajax_nopriv_at_qa_agent_upload_evidence', function() {
     wp_mkdir_p($qa_dir);
     // Extensión derivada del MIME verificado (no del nombre original del archivo)
     $ext  = at_mime_canonical_ext( $real_mime );
-    $safe = 'qa-' . $cid . '-' . time() . '-' . wp_generate_password(6, false) . '.' . $ext;
+    $safe = 'qa-' . bin2hex(random_bytes(16)) . '.' . $ext;
     if (!move_uploaded_file($_FILES['evidence_file']['tmp_name'], $qa_dir . '/' . $safe)) wp_send_json_error('Error al guardar');
     global $wpdb;
     $t = at_qa_table_names();

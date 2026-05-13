@@ -36,6 +36,47 @@ if ( ! function_exists( 'at_path_inside' ) ) {
     }
 }
 
+if ( ! function_exists( 'at_serve_protected_pdf' ) ) {
+    /**
+     * Sirve un archivo PDF al navegador tras validar que la ruta es segura.
+     * — E2: helper unificado para evitar duplicación de lógica de file-serving —
+     *
+     * @param string $path       Ruta candidata al archivo (puede ser absoluta o relativa).
+     * @param string $dir        Directorio base permitido (anti path-traversal).
+     * @param string $filename   Nombre para Content-Disposition (vacío = basename de $path).
+     * @param bool   $inline     true = 'inline' (vista en navegador), false = 'attachment' (descarga).
+     * @param bool   $no_cache   true = envía Cache-Control: private, no-cache.
+     */
+    function at_serve_protected_pdf(
+        string $path,
+        string $dir,
+        string $filename = '',
+        bool   $inline    = false,
+        bool   $no_cache  = true
+    ): void {
+        $safe_path = at_path_inside( $path, $dir );
+        if ( ! $safe_path || ! file_exists( $safe_path ) || ! is_readable( $safe_path ) ) {
+            status_header( 404 );
+            exit( 'Archivo no encontrado.' );
+        }
+        if ( ob_get_level() ) {
+            ob_end_clean();
+        }
+        $fname       = $filename ?: basename( $safe_path );
+        $disposition = $inline ? 'inline' : 'attachment';
+        header( 'Content-Type: application/pdf' );
+        header( 'Content-Disposition: ' . $disposition . '; filename="' . addslashes( $fname ) . '"' );
+        header( 'Content-Length: ' . filesize( $safe_path ) );
+        if ( $no_cache ) {
+            header( 'Cache-Control: private, no-cache, no-store, must-revalidate' );
+            header( 'Pragma: no-cache' );
+        }
+        header( 'X-Frame-Options: SAMEORIGIN' );
+        readfile( $safe_path );
+        exit;
+    }
+}
+
 if ( ! function_exists( 'at_safe_basename' ) ) {
     /**
      * Devuelve un basename estricto: solo [A-Za-z0-9._-]; sin separadores ni nulos.

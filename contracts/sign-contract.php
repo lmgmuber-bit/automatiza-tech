@@ -47,7 +47,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     } else {
         $r = ContractService::sign_as_client($token, $data);
         if (is_wp_error($r)) { $flash = $r->get_error_message(); $flash_type = 'error'; }
-        else { $c = $r; $flash = '¡Contrato firmado correctamente! Recibirás una copia en tu correo.'; $flash_type = 'ok'; }
+        else {
+            $c = $r;
+            // E4: token rotated on signing — use the new token from the returned contract for download links
+            $token = $c->sign_token;
+            $flash = '¡Contrato firmado correctamente! Recibirás una copia en tu correo.';
+            $flash_type = 'ok';
+        }
     }
 }
 

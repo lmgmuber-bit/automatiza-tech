@@ -36,6 +36,67 @@ $method = $_SERVER['REQUEST_METHOD'];
 $path = isset($_GET['route']) ? sanitize_text_field($_GET['route']) : '';
 $body = json_decode(file_get_contents('php://input'), true) ?: [];
 
+/* ─── E3: helper compartido para upload de imágenes (evita 3 bloques idénticos) ─── */
+if ( ! function_exists( 'at_omni_process_image_uploads' ) ) {
+    /**
+     * Valida y sube un conjunto de imágenes vía `$_FILES[$key]`.
+     * Usa `at_verify_upload_mime()` (magic bytes) + `wp_handle_upload()`.
+     *
+     * @param string $files_key   Clave en $_FILES (ej. 'images', 'avatar').
+     * @param array  $allowed     MIMEs permitidos.
+     * @param int    $max_size    Tamaño máximo en bytes por archivo.
+     * @param int    $max_count   Máximo de archivos a procesar.
+     * @return array              Array de URLs subidas.
+     */
+    function at_omni_process_image_uploads( string $files_key, array $allowed, int $max_size, int $max_count = 5 ): array {
+        if ( empty( $_FILES[ $files_key ] ) ) {
+            return [];
+        }
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+
+        $files = $_FILES[ $files_key ];
+        // Normalizar al formato multi-archivo
+        if ( ! is_array( $files['name'] ) ) {
+            $files = [
+                'name'     => [ $files['name'] ],
+                'type'     => [ $files['type'] ],
+                'tmp_name' => [ $files['tmp_name'] ],
+                'error'    => [ $files['error'] ],
+                'size'     => [ $files['size'] ],
+            ];
+        }
+
+        $count = min( count( $files['name'] ), $max_count );
+        $urls  = [];
+        for ( $i = 0; $i < $count; $i++ ) {
+            if ( $files['error'][ $i ] !== UPLOAD_ERR_OK ) {
+                continue;
+            }
+            $real_mime = at_verify_upload_mime( $files['tmp_name'][ $i ], $allowed );
+            if ( ! $real_mime ) {
+                continue;
+            }
+            if ( $files['size'][ $i ] > $max_size ) {
+                continue;
+            }
+            $single = [
+                'name'     => $files['name'][ $i ],
+                'type'     => $real_mime,  // MIME verificado, nunca el declarado por el cliente
+                'tmp_name' => $files['tmp_name'][ $i ],
+                'error'    => $files['error'][ $i ],
+                'size'     => $files['size'][ $i ],
+            ];
+            $upload = wp_handle_upload( $single, [ 'test_form' => false ] );
+            if ( ! isset( $upload['error'] ) ) {
+                $urls[] = $upload['url'];
+            }
+        }
+        return $urls;
+    }
+}
+
 // ============================
 // AUTENTICACIÓN
 // ============================
@@ -283,35 +344,13 @@ try {
     // ---- PUBLIC: Upload ticket images (no auth, rate limited by max 5 files) ----
     if (isset($segments[0]) && $segments[0] === 'public' && isset($segments[1]) && $segments[1] === 'upload-images' && $method === 'POST') {
         if (empty($_FILES['images'])) send_json(['error' => 'No se enviaron imágenes'], 400);
-        require_once(ABSPATH . 'wp-admin/includes/file.php');
-        require_once(ABSPATH . 'wp-admin/includes/image.php');
-        require_once(ABSPATH . 'wp-admin/includes/media.php');
-
-        $allowed_types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-        $max_size = 3 * 1024 * 1024; // 3MB per file
-        $urls = [];
-        $files = $_FILES['images'];
-
-        // Normalize to array format
-        if (!is_array($files['name'])) {
-            $files = ['name' => [$files['name']], 'type' => [$files['type']], 'tmp_name' => [$files['tmp_name']], 'error' => [$files['error']], 'size' => [$files['size']]];
-        }
-
-        $count = min(count($files['name']), 5);
-        for ($i = 0; $i < $count; $i++) {
-            if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
-            // Verificar MIME real via magic bytes (no Content-Type del cliente)
-            $real_mime = at_verify_upload_mime( $files['tmp_name'][$i], $allowed_types );
-            if ( ! $real_mime ) continue;
-            if ($files['size'][$i] > $max_size) continue;
-
-            $single = ['name' => $files['name'][$i], 'type' => $real_mime, 'tmp_name' => $files['tmp_name'][$i], 'error' => $files['error'][$i], 'size' => $files['size'][$i]];
-            $upload = wp_handle_upload($single, ['test_form' => false]);
-            if (!isset($upload['error'])) {
-                $urls[] = $upload['url'];
-            }
-        }
-
+        // E3: usar helper centralizado de upload
+        $urls = at_omni_process_image_uploads(
+            'images',
+            ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+            3 * 1024 * 1024,
+            5
+        );
         send_json(['urls' => $urls]);
     }
 
@@ -1189,26 +1228,17 @@ try {
             case 'avatar':
                 if ($method === 'POST') {
                     if (empty($_FILES['avatar'])) send_json(['error' => 'No se envió imagen'], 400);
-                    $file = $_FILES['avatar'];
-                    $allowed_types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-                    // Verificar MIME real via magic bytes (no Content-Type del cliente)
-                    $real_mime = at_verify_upload_mime( $file['tmp_name'], $allowed_types );
-                    if ( ! $real_mime ) {
-                        send_json(['error' => 'Tipo de archivo no permitido. Use JPG, PNG, WebP o GIF'], 400);
+                    // E3: usar helper centralizado (single-file: max_count=1)
+                    $avatar_urls = at_omni_process_image_uploads(
+                        'avatar',
+                        ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+                        2 * 1024 * 1024,
+                        1
+                    );
+                    if (empty($avatar_urls)) {
+                        send_json(['error' => 'Tipo de archivo no permitido, supera 2MB, o error al subir.'], 400);
                     }
-                    if ($file['size'] > 2 * 1024 * 1024) {
-                        send_json(['error' => 'La imagen no debe superar 2MB'], 400);
-                    }
-                    // Use WordPress upload (pasar MIME verificado, no el declarado por el cliente)
-                    require_once(ABSPATH . 'wp-admin/includes/file.php');
-                    require_once(ABSPATH . 'wp-admin/includes/image.php');
-                    require_once(ABSPATH . 'wp-admin/includes/media.php');
-                    $file['type'] = $real_mime;
-                    $upload = wp_handle_upload($file, ['test_form' => false]);
-                    if (isset($upload['error'])) {
-                        send_json(['error' => $upload['error']], 400);
-                    }
-                    $avatar_url = $upload['url'];
+                    $avatar_url = $avatar_urls[0];
                     $wpdb->update($wpdb->prefix . 'omnichannel_agents', ['avatar_url' => esc_url_raw($avatar_url)], ['id' => $agent_id]);
                     $controller->audit_log('update', 'agent', $agent_id, "Avatar actualizado", null, ['avatar_url' => $avatar_url], $agent_client_id);
                     send_json(['avatar_url' => $avatar_url]);
@@ -1219,29 +1249,13 @@ try {
             case 'ticket-images':
                 if ($method === 'POST') {
                     if (empty($_FILES['images'])) send_json(['error' => 'No se enviaron imágenes'], 400);
-                    require_once(ABSPATH . 'wp-admin/includes/file.php');
-                    require_once(ABSPATH . 'wp-admin/includes/image.php');
-                    require_once(ABSPATH . 'wp-admin/includes/media.php');
-                    $allowed_types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-                    $max_size = 3 * 1024 * 1024;
-                    $urls = [];
-                    $files = $_FILES['images'];
-                    if (!is_array($files['name'])) {
-                        $files = ['name' => [$files['name']], 'type' => [$files['type']], 'tmp_name' => [$files['tmp_name']], 'error' => [$files['error']], 'size' => [$files['size']]];
-                    }
-                    $count = min(count($files['name']), 5);
-                    for ($i = 0; $i < $count; $i++) {
-                        if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
-                        // Verificar MIME real via magic bytes (ticket-images agent)
-                        $real_mime = at_verify_upload_mime( $files['tmp_name'][$i], $allowed_types );
-                        if ( ! $real_mime ) continue;
-                        if ($files['size'][$i] > $max_size) continue;
-                        $single = ['name' => $files['name'][$i], 'type' => $real_mime, 'tmp_name' => $files['tmp_name'][$i], 'error' => $files['error'][$i], 'size' => $files['size'][$i]];
-                        $upload = wp_handle_upload($single, ['test_form' => false]);
-                        if (!isset($upload['error'])) {
-                            $urls[] = $upload['url'];
-                        }
-                    }
+                    // E3: usar helper centralizado
+                    $urls = at_omni_process_image_uploads(
+                        'images',
+                        ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+                        3 * 1024 * 1024,
+                        5
+                    );
                     send_json(['urls' => $urls]);
                 }
                 break;

@@ -9,84 +9,71 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once get_template_directory() . '/../../at-path-safe.php';
+require_once get_template_directory() . '/lib/at-auth-middleware.php';
+
 /**
- * Handler AJAX para descargar facturas (solo usuarios autenticados)
+ * Handler AJAX para descargar facturas (solo administradores).
+ * Registrado en wp_ajax_download_invoice (usuarios autenticados).
  */
 function automatiza_download_invoice() {
     global $wpdb;
-    
-    // Verificar que el usuario esté autenticado
-    if (!is_user_logged_in()) {
-        wp_die('Debes iniciar sesión para descargar facturas', 'Error de autenticación', array('response' => 403));
+
+    // E1: requiere usuario autenticado con manage_options
+    if ( ! is_user_logged_in() ) {
+        wp_die( 'Debes iniciar sesión para descargar facturas', 'Error de autenticación', [ 'response' => 403 ] );
     }
-    
-    // Obtener número de factura
-    $invoice_number = isset($_GET['invoice_number']) ? sanitize_text_field($_GET['invoice_number']) : '';
-    
-    if (empty($invoice_number)) {
-        wp_die('Número de factura no especificado', 'Error', array('response' => 400));
+
+    // Obtener número de factura y sanitizar estrictamente (E2: anti path-traversal)
+    $invoice_number = isset( $_GET['invoice_number'] ) ? sanitize_text_field( $_GET['invoice_number'] ) : '';
+    if ( empty( $invoice_number ) ) {
+        wp_die( 'Número de factura no especificado', 'Error', [ 'response' => 400 ] );
     }
-    
+    // Aplicar at_safe_basename para evitar traversal en el glob() posterior
+    $safe_invoice_number = at_safe_basename( $invoice_number );
+
     // Buscar factura en la base de datos
     $invoices_table = $wpdb->prefix . 'automatiza_tech_invoices';
-    $invoice = $wpdb->get_row($wpdb->prepare(
+    $invoice = $wpdb->get_row( $wpdb->prepare(
         "SELECT * FROM {$invoices_table} WHERE invoice_number = %s AND status = 'active'",
-        $invoice_number
-    ));
-    
-    if (!$invoice) {
-        wp_die('Factura no encontrada', 'Error', array('response' => 404));
+        $safe_invoice_number
+    ) );
+
+    if ( ! $invoice ) {
+        wp_die( 'Factura no encontrada', 'Error', [ 'response' => 404 ] );
     }
-    
+
+    // E1: verificar que el usuario puede acceder a esta factura
+    if ( ! at_require_own_invoice( $invoice ) ) {
+        wp_die( 'No tienes permiso para descargar esta factura.', 'Acceso denegado', [ 'response' => 403 ] );
+    }
+
     // Construir ruta del archivo PDF
-    $upload_dir = wp_upload_dir();
+    $upload_dir   = wp_upload_dir();
     $invoices_dir = $upload_dir['basedir'] . '/automatiza-tech-invoices/';
-    
-    // Buscar el archivo PDF
-    $pdf_files = glob($invoices_dir . $invoice_number . '*.pdf');
-    
-    if (empty($pdf_files)) {
-        wp_die('Archivo PDF no encontrado para esta factura', 'Error', array('response' => 404));
+
+    // E2: buscar PDF usando basename seguro + at_path_inside para anti path-traversal
+    $pdf_files = glob( $invoices_dir . $safe_invoice_number . '*.pdf' );
+
+    if ( empty( $pdf_files ) ) {
+        wp_die( 'Archivo PDF no encontrado para esta factura', 'Error', [ 'response' => 404 ] );
     }
-    
-    $pdf_file = $pdf_files[0];
-    
-    // Verificar que el archivo existe y es legible
-    if (!file_exists($pdf_file) || !is_readable($pdf_file)) {
-        wp_die('No se puede acceder al archivo PDF', 'Error', array('response' => 500));
-    }
-    
+
     // Incrementar contador de descargas
     $wpdb->update(
         $invoices_table,
-        array('download_count' => $invoice->download_count + 1),
-        array('id' => $invoice->id),
-        array('%d'),
-        array('%d')
+        [ 'download_count' => $invoice->download_count + 1 ],
+        [ 'id' => $invoice->id ],
+        [ '%d' ],
+        [ '%d' ]
     );
-    
-    // Registrar en log (opcional)
-    error_log("Descarga de factura: {$invoice_number} por usuario " . get_current_user_id());
-    
-    // Limpiar cualquier salida anterior
-    if (ob_get_level()) {
-        ob_end_clean();
-    }
-    
-    // Enviar headers para descarga
-    header('Content-Type: application/pdf');
-    header('Content-Disposition: attachment; filename="' . basename($pdf_file) . '"');
-    header('Content-Length: ' . filesize($pdf_file));
-    header('Cache-Control: private, max-age=0, must-revalidate');
-    header('Pragma: public');
-    
-    // Enviar el archivo
-    readfile($pdf_file);
-    exit;
+
+    // E2: servir con helper seguro (valida path inside del directorio, streams el PDF)
+    at_serve_protected_pdf( $pdf_files[0], $invoices_dir );
 }
 
 // Registrar handler para usuarios autenticados (admin y otros roles)
-add_action('wp_ajax_download_invoice', 'automatiza_download_invoice');
+add_action( 'wp_ajax_download_invoice', 'automatiza_download_invoice' );
 
 
 /**

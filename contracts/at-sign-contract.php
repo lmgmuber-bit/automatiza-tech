@@ -48,7 +48,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         $r = ContractService::sign_as_at($c->id, $data);
         if (is_wp_error($r)) { $flash = $r->get_error_message(); $flash_type = 'error'; }
-        else { $flash = 'Firmaste el contrato. Ya puedes enviarlo al cliente.'; $flash_type = 'ok'; $c = $r; }
+        else {
+            $flash = 'Firmaste el contrato. Ya puedes enviarlo al cliente.';
+            $flash_type = 'ok';
+            $c = $r;
+            // E4: at_review_token rotated — refresh local $token so PDF iframe still works
+            $token = $c->at_review_token;
+        }
     } elseif ($_POST['action'] === 'send') {
         $email = sanitize_email($_POST['client_email'] ?? '');
         $name  = sanitize_text_field($_POST['client_name'] ?? '');

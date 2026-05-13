@@ -183,6 +183,8 @@ class ContractService {
             'at_signed_at'           => $now,
             'at_signature_method'    => $data['method'],
             'at_signature_image_url' => self::path_to_url($img),
+            // E4: rotate at_review_token so the old review URL can't be reused
+            'at_review_token'        => bin2hex( random_bytes(32) ),
         ), array('id' => $c->id));
 
         // Re-render PDF con firma AT (cliente pendiente)
@@ -287,6 +289,8 @@ class ContractService {
             'signer_user_agent'   => $ua,
             'signature_method'    => $data['method'],
             'signature_image_url' => self::path_to_url($img),
+            // E4: rotate sign_token so the old sign URL can't be reused after signing
+            'sign_token'          => bin2hex( random_bytes(32) ),
         ), array('id'=>$c->id));
 
         // Re-render PDF FINAL con ambas firmas (ahora signed_at ya está en BD)

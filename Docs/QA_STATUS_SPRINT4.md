@@ -30,11 +30,7 @@
 | Check | Resultado | Notas |
 |-------|-----------|-------|
 | `setup-omnichannel-ai-chats.php` bloqueado sin login | ✅ 403 | .htaccess correcto |
-| Tabla `wp_omnichannel_ai_chats` creada | ⏳ PENDIENTE | Requiere ejecutar con sesión admin WP logueada |
-
-**Para completar (Codex):** Abrir en navegador logueado como admin WP:
-`http://localhost/automatiza-tech/setup-omnichannel-ai-chats.php`
-Resultado esperado: `✅ Tabla wp_omnichannel_ai_chats creada/verificada correctamente.`
+| Tabla `wp_omnichannel_ai_chats` creada | ✅ Creada directo via MySQL (2026-05-18) | Columnas: id, agent_key, messages, created_at, updated_at |
 
 ---
 
@@ -142,7 +138,7 @@ Resultado esperado: `✅ Tabla wp_omnichannel_ai_chats creada/verificada correct
 ```
 [x] BUG CORREGIDO: invoice-handlers.php usa ABSPATH . 'at-path-safe.php'
 [x] WP levanta sin errores (200 en home y wp-login)
-[ ] PASO 0: setup-omnichannel-ai-chats.php → tabla creada (requiere navegador admin)
+[x] PASO 0: tabla wp_omnichannel_ai_chats creada via MySQL directo (2026-05-18)
 [ ] A5.2: webhook secret enmascarado (requiere navegador)
 [ ] A5.3: reset token limpiado de URL (requiere navegador)
 [ ] A5.4: chat IA persiste tras cerrar browser (requiere navegador)
@@ -168,7 +164,7 @@ Resultado esperado: `✅ Tabla wp_omnichannel_ai_chats creada/verificada correct
 | Categoría | Pasaron | Pendientes (browser) | Bugs |
 |-----------|---------|----------------------|------|
 | Bug fix WP 500 | ✅ 1 | — | 1 corregido |
-| PASO 0 (migración BD) | — | 1 | — |
+| PASO 0 (migración BD) | ✅ 1 | — | — |
 | ÁREA 1 (Portal React) | — | 8 | — |
 | ÁREA 2 (Contratos) | — | 9 | — |
 | ÁREA 3 (IDOR) | ✅ 5 | — | — |
@@ -176,7 +172,7 @@ Resultado esperado: `✅ Tabla wp_omnichannel_ai_chats creada/verificada correct
 | ÁREA 5 (.htaccess) | ✅ 12 | — | — |
 | ÁREA 6 (Upload) | — | 6 | — |
 | ÁREA 7 (Rate limit) | ✅ 1 | — | — |
-| **TOTAL** | **21 ✅** | **24 🖥️** | **1 corregido** |
+| **TOTAL** | **22 ✅** | **23 🖥️** | **1 corregido** |
 
 ---
 

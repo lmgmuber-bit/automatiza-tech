@@ -139,3 +139,9 @@ archive/
 # Secretos por servidor (NUNCA versionar)
 wp-config-secrets.php
 
+# QA Tests — credenciales locales (NUNCA versionar)
+tests/qa-security/.env.test
+tests/qa-security/playwright-report/
+tests/qa-security/test-results/
+tests/qa-security/node_modules/
+

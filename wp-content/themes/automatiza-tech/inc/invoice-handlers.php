@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once get_template_directory() . '/../../at-path-safe.php';
+require_once ABSPATH . 'at-path-safe.php';
 require_once get_template_directory() . '/lib/at-auth-middleware.php';
 
 /**

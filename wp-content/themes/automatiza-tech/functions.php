@@ -1329,6 +1329,11 @@ require_once get_template_directory() . '/inc/admin-leads-manager.php';
 require_once get_template_directory() . '/inc/admin-proposals.php';
 
 /**
+ * Incluir endpoint REST de prompts de propuestas (skill at-proposal-refiner)
+ */
+require_once get_template_directory() . '/inc/rest-proposals.php';
+
+/**
  * Incluir panel de reuniones de seguimiento
  */
 require_once get_template_directory() . '/inc/admin-followup-meetings.php';

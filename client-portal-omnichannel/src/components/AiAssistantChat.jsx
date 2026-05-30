@@ -381,7 +381,7 @@ export default function AiAssistantChat({ currentView }) {
   }, []);
 
 
-  const firstName = useMemo(() => getFirstName(fullName), [fullName]);
+  const firstName = useMemo(() => getFirstName(getUserName()), []);
 
   const activeChat = chats.find(c => c.id === activeChatId);
   const messages = activeChat?.messages || [];

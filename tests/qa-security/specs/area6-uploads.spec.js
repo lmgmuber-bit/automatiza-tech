@@ -45,7 +45,8 @@ function createTempFile(name, content, sizeBytes) {
 
 async function loginAsAgent(page) {
   await page.goto(CFG.portalUrl);
-  await page.getByRole('button', { name: 'Agente' }).click();
+  // exact:true — sin esto "Agente" también matchea "Entrar como Agente" (strict mode violation)
+  await page.getByRole('button', { name: 'Agente', exact: true }).click();
   await page.getByPlaceholder('tu@email.com').fill(CFG.agentEmail);
   await page.getByPlaceholder('Tu contraseña...').fill(CFG.agentPass);
   await page.getByRole('button', { name: 'Entrar como Agente' }).click();
@@ -74,7 +75,7 @@ async function testArea6(browser) {
   // Buscar input file de avatar
   const fileInput = page.locator('input[type="file"]').first();
   const hasInput  = await fileInput.isVisible({ timeout: 5_000 }).catch(() => false)
-    || await fileInput.isAttached().catch(() => false);
+    || (await fileInput.count().catch(() => 0)) > 0;
 
   if (!hasInput) {
     console.log('  ⚠️  input[type="file"] no encontrado en perfil — verificar ruta manualmente');

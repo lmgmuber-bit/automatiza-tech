@@ -30,26 +30,100 @@ function assert(cond, msg) {
   else       { console.error(`  ❌ FALLO: ${msg}`); process.exitCode = 1; }
 }
 
+async function getTokenViaHttp(url, body) {
+  const http = require('http');
+  return new Promise((resolve, reject) => {
+    const bodyStr = JSON.stringify(body);
+    const req = http.request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(bodyStr) },
+    }, res => {
+      let data = '';
+      res.on('data', d => data += d);
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch { reject(new Error('JSON parse error: ' + data.substring(0, 200))); }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(10000, () => { req.destroy(); reject(new Error('HTTP timeout')); });
+    req.write(bodyStr);
+    req.end();
+  });
+}
+
 async function loginAsAdmin(page) {
-  await page.goto(CFG.portalUrl);
-  await page.getByRole('button', { name: 'Admin' }).click();
-  await page.getByPlaceholder('Tu usuario de WordPress...').fill(CFG.wpAdminUser);
-  await page.getByPlaceholder('Tu contraseña...').fill(CFG.wpAdminPass);
-  await page.getByRole('button', { name: 'Entrar como Admin' }).click();
-  await page.waitForURL(/omnicliente/, { timeout: 15_000 });
-  await page.waitForLoadState('networkidle');
+  const apiBase = 'http://localhost/automatiza-tech/api-omnichannel.php';
+  const tokenData = await getTokenViaHttp(`${apiBase}?route=admin/login`, {
+    username: CFG.wpAdminUser, password: CFG.wpAdminPass,
+  });
+  if (!tokenData.token) throw new Error('Admin login failed: ' + JSON.stringify(tokenData));
+  console.log(`  [login] token obtained via Node HTTP: ${tokenData.token.substring(0, 20)}...`);
+
+  // First load: no auth, no API calls from browser
+  await page.goto(CFG.portalUrl, { waitUntil: 'domcontentloaded', timeout: 20_000 });
+  console.log('  [login] portal loaded');
+
+  // Inject auth flags: isAuthenticated()=true without any browser API call
+  await page.evaluate(({ token, user }) => {
+    localStorage.setItem('omni_admin_token', token);
+    localStorage.setItem('omni_admin_user', user);
+    localStorage.setItem('omni_is_admin', 'true');
+  }, { token: tokenData.token, user: tokenData.user || CFG.wpAdminUser });
+
+  // Reload: dashboard renders immediately (no session-check API call)
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 20_000 });
+  await page.waitForTimeout(1_000);
   console.log('  → Admin logueado');
 }
 
 async function loginAsAgent(page) {
-  await page.goto(CFG.portalUrl);
-  await page.getByRole('button', { name: 'Agente' }).click();
-  await page.getByPlaceholder('tu@email.com').fill(CFG.agentEmail);
-  await page.getByPlaceholder('Tu contraseña...').fill(CFG.agentPass);
-  await page.getByRole('button', { name: 'Entrar como Agente' }).click();
-  await page.waitForURL(/omnicliente/, { timeout: 15_000 });
-  await page.waitForLoadState('networkidle');
+  const apiBase = 'http://localhost/automatiza-tech/api-omnichannel.php';
+  const tokenData = await getTokenViaHttp(`${apiBase}?route=agent/login`, {
+    email: CFG.agentEmail, password: CFG.agentPass,
+  });
+  if (!tokenData.token) throw new Error('Agent login failed: ' + JSON.stringify(tokenData));
+  console.log(`  [login] agent token obtained: ${tokenData.token.substring(0, 20)}...`);
+
+  await page.goto(CFG.portalUrl, { waitUntil: 'domcontentloaded', timeout: 20_000 });
+  await page.evaluate(({ token, agent }) => {
+    localStorage.setItem('omni_agent_token', token);
+    localStorage.setItem('omni_is_agent', 'true');
+    if (agent) localStorage.setItem('omni_agent_data', JSON.stringify(agent));
+  }, { token: tokenData.token, agent: tokenData.agent || null });
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 20_000 });
+  await page.waitForTimeout(1_000);
   console.log('  → Agente logueado');
+}
+
+// ── mock helper ──────────────────────────────────────────────────────────────
+const MOCK_CHANNEL = {
+  id: 999, name: 'Canal QA Test', active: true,
+  webhook_secret: 'supersecret_qa_12345', channel_type: 'whatsapp',
+  channel_type_id: 1, phone_number: '+56900000000', client_id: 1,
+};
+
+async function mockApiRoutes(page) {
+  // Intercept ALL api-omnichannel calls so none hang the browser.
+  // NOTE: el frontend prefija las rutas con admin/ o agent/ y las URL-encodea
+  // (route=admin%2Fchannels). Por eso decodificamos y extraemos el param `route`
+  // antes de comparar — si no, el mock nunca matchea y la lista sale vacía.
+  await page.route('**/api-omnichannel.php**', async route => {
+    const url = decodeURIComponent(route.request().url());
+    const method = route.request().method();
+    const m = url.match(/[?&]route=([^&]+)/);
+    const routeParam = m ? m[1] : ''; // ej: "admin/channels", "agent/channels", "channels"
+
+    // Solo interceptamos la LISTA de canales para inyectar un canal con webhook_secret.
+    // El resto pasa al backend real local (está arriba), así la app monta sin crashear:
+    // devolver respuestas genéricas {ok:true} a TODO hacía white-screen en el build nuevo
+    // porque varios componentes esperan arrays y hacían .map sobre un objeto.
+    if (/(^|\/)channels$/.test(routeParam) && method === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([MOCK_CHANNEL]) });
+    } else {
+      await route.continue();
+    }
+  });
 }
 
 // ── A5.2 — Webhook secret masking ────────────────────────────────────────────
@@ -61,19 +135,20 @@ async function testA52(browser) {
   const ctx  = await browser.newContext();
   const page = await ctx.newPage();
 
+  // Mock API calls BEFORE loading the page (prevents browser fetch hangs)
+  await mockApiRoutes(page);
   await loginAsAdmin(page);
 
-  // Navegar a Canales
-  const canalBtn = page.getByRole('link', { name: /canal/i })
-    .or(page.getByRole('button', { name: /canal/i }))
-    .or(page.locator('a[href*="canal"], a[href*="channel"]'));
+  // Navegar a Canales — sidebar renders <button> with text "Canales"
+  await page.locator('button').filter({ hasText: /^Canales$/ }).first()
+    .click({ timeout: 8_000 }).catch(() =>
+      page.locator('button:has-text("Canales")').first().click({ timeout: 5_000 }).catch(() => {})
+    );
+  await page.waitForTimeout(2_000);
 
-  await canalBtn.first().click({ timeout: 8_000 }).catch(async () => {
-    // Intentar nav directa si no hay link
-    await page.goto(CFG.portalUrl + '#canales');
-    await page.goto(CFG.portalUrl + '#channels');
-  });
-  await page.waitForLoadState('networkidle');
+  await page.screenshot({ path: '/tmp/area1-a52-canales.png' });
+  console.log('  📸 /tmp/area1-a52-canales.png');
+  console.log('  → En sección Canales Conectados');
 
   // Buscar texto enmascarado ••••••••
   const maskedEl = page.locator('text=••••••••').first();
@@ -81,22 +156,23 @@ async function testA52(browser) {
   assert(hasMasked, 'Secret aparece enmascarado (••••••••)');
 
   if (hasMasked) {
-    // Clic en botón ojo (Eye) para revelar
-    const eyeBtn = page.locator('[aria-label*="ojo" i], [aria-label*="eye" i], [title*="ojo" i], [title*="eye" i], button:has(svg)')
-      .first();
-    await eyeBtn.click({ timeout: 5_000 }).catch(() => {});
-    await page.waitForTimeout(500);
+    // Botón ojo identificado por su title (NO usar .last() de svg: ese es el botón Copiar).
+    // El ojo alterna title="Revelar secret" ↔ "Ocultar secret".
+    const revealBtn = page.locator('button[title="Revelar secret"]').first();
+    await revealBtn.click({ timeout: 5_000 }).catch(() => {});
+    await page.waitForTimeout(600);
     const stillMasked = await maskedEl.isVisible({ timeout: 2_000 }).catch(() => true);
     assert(!stillMasked, 'Clic en ojo revela el secret (desaparece ••••••••)');
 
     // Volver a ocultar
-    await eyeBtn.click({ timeout: 5_000 }).catch(() => {});
-    await page.waitForTimeout(500);
+    const hideBtn = page.locator('button[title="Ocultar secret"]').first();
+    await hideBtn.click({ timeout: 5_000 }).catch(() => {});
+    await page.waitForTimeout(600);
     const maskedAgain = await maskedEl.isVisible({ timeout: 2_000 }).catch(() => false);
     assert(maskedAgain, 'Segundo clic en ojo vuelve a ocultar (••••••••)');
 
-    // Botón Copiar — verificar que copia URL real (con secret)
-    const copyBtn = page.locator('button:has-text("Copiar"), button[aria-label*="copiar" i]').first();
+    // Copiar URL con secret real
+    const copyBtn = page.locator('button:has-text("Copiar"), button[title*="Copiar" i]').first();
     const hasCopy = await copyBtn.isVisible({ timeout: 3_000 }).catch(() => false);
     if (hasCopy) {
       await ctx.grantPermissions(['clipboard-read', 'clipboard-write']);
@@ -104,8 +180,8 @@ async function testA52(browser) {
       await page.waitForTimeout(400);
       const clipboard = await page.evaluate(() => navigator.clipboard.readText()).catch(() => '');
       assert(!clipboard.includes('••••••••'), 'URL copiada contiene secret real (no ••••••••)');
-      assert(clipboard.includes('secret=') || clipboard.includes('&') || clipboard.length > 10,
-        'URL copiada parece válida');
+      assert(clipboard.includes('supersecret_qa_12345') || clipboard.includes('secret='),
+        'URL copiada incluye el secret correcto');
     } else {
       console.log('  ⚠️  Botón Copiar no visible — verificar manualmente');
     }
@@ -152,6 +228,7 @@ async function testA54(browser) {
   const ctx1 = await browser.newContext();
   const page1 = await ctx1.newPage();
 
+  await mockApiRoutes(page1);
   await loginAsAgent(page1);
 
   // Abrir chat flotante IA
@@ -195,8 +272,10 @@ async function testA54(browser) {
   const ctx2 = await browser.newContext({ storageState });
   const page2 = await ctx2.newPage();
 
+  // Mock API calls in new context too
+  await mockApiRoutes(page2);
   await page2.goto(CFG.portalUrl);
-  await page2.waitForLoadState('networkidle');
+  await page2.waitForLoadState('domcontentloaded'); // don't wait for networkidle (API calls mocked)
 
   // Abrir historial de chats
   const histBtn = page2.locator('[aria-label*="historial" i], button:has-text("historial"), .chat-history').first();
@@ -220,7 +299,7 @@ async function testA54(browser) {
 // ── main ──────────────────────────────────────────────────────────────────────
 
 (async () => {
-  const browser = await chromium.launch({ headless: false, slowMo: 150 });
+  const browser = await chromium.launch({ headless: true });
 
   try {
     await testA52(browser);

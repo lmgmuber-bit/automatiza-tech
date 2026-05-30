@@ -354,6 +354,22 @@ export default function InboxView() {
            (c.contact_email || '').toLowerCase().includes(term);
   });
 
+  // Filtros de canal con color de marca por plataforma
+  const CHANNEL_FILTERS = [
+    { key: '', label: 'Todos', dot: '', active: 'bg-blue-600 text-white shadow-sm' },
+    { key: 'whatsapp', label: 'WhatsApp', dot: '#25D366', active: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-300' },
+    { key: 'instagram', label: 'Instagram', dot: '#E4405F', active: 'bg-pink-50 text-pink-700 ring-1 ring-pink-400/40 dark:bg-pink-500/10 dark:text-pink-300' },
+    { key: 'telegram', label: 'Telegram', dot: '#0088cc', active: 'bg-sky-50 text-sky-700 ring-1 ring-sky-400/40 dark:bg-sky-500/10 dark:text-sky-300' },
+    { key: 'messenger', label: 'Messenger', dot: '#0084FF', active: 'bg-blue-50 text-blue-700 ring-1 ring-blue-400/40 dark:bg-blue-500/10 dark:text-blue-300' },
+  ];
+  const STATUS_FILTERS = [
+    { key: '', label: 'Todos' },
+    { key: 'bot', label: 'Bot' },
+    { key: 'assigned', label: 'Asignados' },
+    { key: 'open', label: 'Abiertos' },
+    { key: 'closed', label: 'Cerrados' },
+  ];
+
   return (
     <div className="flex h-full overflow-hidden">
       {/* Conversations List */}
@@ -371,33 +387,44 @@ export default function InboxView() {
               className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div className="flex gap-1 flex-wrap">
-            {['', 'whatsapp', 'instagram', 'telegram', 'messenger'].map(ch => (
-              <button
-                key={ch}
-                onClick={() => setFilters(f => ({ ...f, channel_type: ch }))}
-                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                  filters.channel_type === ch
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                }`}
-              >
-                {ch ? ch.charAt(0).toUpperCase() + ch.slice(1) : 'Todos'}
-              </button>
-            ))}
+          <div className="flex gap-1.5 flex-wrap">
+            {CHANNEL_FILTERS.map(ch => {
+              const isActive = filters.channel_type === ch.key;
+              return (
+                <button
+                  key={ch.key}
+                  onClick={() => setFilters(f => ({ ...f, channel_type: ch.key }))}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-200 ${
+                    isActive
+                      ? ch.active
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-slate-700/60 dark:text-slate-400 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {ch.dot && (
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={ch.key === 'instagram'
+                        ? { backgroundImage: 'linear-gradient(45deg,#f09433,#dc2743,#bc1888)' }
+                        : { backgroundColor: ch.dot }}
+                    />
+                  )}
+                  {ch.label}
+                </button>
+              );
+            })}
           </div>
-          <div className="flex gap-1 flex-wrap">
-            {['', 'bot', 'assigned', 'open', 'closed'].map(st => (
+          <div className="flex gap-1.5 flex-wrap">
+            {STATUS_FILTERS.map(st => (
               <button
-                key={st}
-                onClick={() => setFilters(f => ({ ...f, status: st }))}
-                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                  filters.status === st
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                key={st.key}
+                onClick={() => setFilters(f => ({ ...f, status: st.key }))}
+                className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-200 ${
+                  filters.status === st.key
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-slate-700/60 dark:text-slate-400 dark:hover:bg-slate-700'
                 }`}
               >
-                {st || 'Todos'}
+                {st.label}
               </button>
             ))}
           </div>
@@ -443,12 +470,17 @@ export default function InboxView() {
                 className={`chat-item ${selectedConv?.id === conv.id ? 'active' : ''}`}
               >
                 <div className="relative shrink-0">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold ${
-                    conv.channel_type === 'whatsapp' ? 'bg-green-500' :
-                    conv.channel_type === 'instagram' ? 'bg-pink-500' :
-                    conv.channel_type === 'telegram' ? 'bg-sky-500' :
-                    'bg-blue-500'
-                  }`}>
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm ring-2 ring-white dark:ring-slate-800 ${
+                      conv.channel_type === 'whatsapp' ? 'bg-green-500' :
+                      conv.channel_type === 'instagram' ? '' :
+                      conv.channel_type === 'telegram' ? 'bg-sky-500' :
+                      'bg-blue-500'
+                    }`}
+                    style={conv.channel_type === 'instagram'
+                      ? { backgroundImage: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)' }
+                      : undefined}
+                  >
                     {(conv.contact_name || '?')[0].toUpperCase()}
                   </div>
                   {conv.unread_count > 0 && (

@@ -996,7 +996,7 @@ class AutomatizaTech_Client_Details {
         
         // Intentar con pdftotext si está disponible
         if (function_exists('shell_exec')) {
-            $output = @shell_exec("pdftotext -layout -nopgbrk \"$pdf_path\" - 2>/dev/null");
+            $output = @shell_exec('pdftotext -layout -nopgbrk ' . escapeshellarg($pdf_path) . ' - 2>/dev/null');
             if (!empty($output)) {
                 return "[PDF] " . substr(trim($output), 0, 2000) . (strlen($output) > 2000 ? '...' : '');
             }

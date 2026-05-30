@@ -139,6 +139,11 @@ archive/
 # Secretos por servidor (NUNCA versionar)
 wp-config-secrets.php
 
+# Portal OmniCliente — variables de entorno (usar .env.example como plantilla)
+client-portal-omnichannel/.env
+client-portal-omnichannel/.env.local
+client-portal-omnichannel/.env.production
+
 # QA Tests — credenciales locales (NUNCA versionar)
 tests/qa-security/.env.test
 tests/qa-security/playwright-report/

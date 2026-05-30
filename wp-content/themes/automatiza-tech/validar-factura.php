@@ -4,10 +4,6 @@
  * URL: /validar-factura
  */
 
-error_log('=== INICIO VALIDACION FACTURA ===');
-error_log('URL completa: ' . $_SERVER['REQUEST_URI']);
-error_log('Parámetros GET: ' . print_r($_GET, true));
-
 // Cargar WordPress
 define('WP_USE_THEMES', false);
 require('wp-load.php');

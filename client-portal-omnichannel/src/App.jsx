@@ -19,6 +19,7 @@ import TicketNotificationModal from './components/TicketNotificationModal';
 import AssignedChatsModal from './components/AssignedChatsModal';
 import AiAssistantChat from './components/AiAssistantChat';
 import AiPromptView from './components/AiPromptView';
+import MarketingIgView from './components/MarketingIgView';
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(isAuthenticated());
@@ -187,6 +188,7 @@ export default function App() {
         ...(getIsAdmin() ? {
           clients: <ClientsView />,
           dashboard: <DashboardView />,
+          'marketing-ig': <MarketingIgView />,
           'ai-prompt': <AiPromptView />,
           support: <SupportView />,
         } : {

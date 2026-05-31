@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Loader2, Pencil, Trash2, X, Save, GripVertical } from 'lucide-react';
+import { Plus, Loader2, Pencil, Trash2, X, Save, GripVertical, Settings } from 'lucide-react';
 import { getChannelTypes, createChannelType, updateChannelType, deleteChannelType } from '../api';
 import ResultModal from './ResultModal';
 import { getChannelIcon } from './ChannelIcons';
@@ -131,8 +131,8 @@ export default function ChannelTypesView() {
 
   function renderForm(isEdit) {
     return (
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-6 mb-6 animate-fadein">
-        <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm ring-1 ring-gray-100 dark:ring-slate-700/60 p-6 mb-6 animate-fadein">
+        <h3 className="font-semibold mb-4 text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>
           {isEdit ? `Editar: ${form.label}` : 'Nuevo Tipo de Canal'}
         </h3>
         {error && <div className="text-red-600 dark:text-red-400 text-sm mb-3 bg-red-50 dark:bg-red-900/20 p-2 rounded">{error}</div>}
@@ -257,17 +257,22 @@ export default function ChannelTypesView() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-4 sm:p-6">
+    <div className="h-full overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
       <div className="max-w-4xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>🔧 Tipos de Canal</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Administra los tipos de canal disponibles en el sistema</p>
+          <div className="flex items-center gap-3">
+            <span className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-violet-50 text-violet-600 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20 shrink-0">
+              <Settings size={22} />
+            </span>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>Tipos de Canal</h1>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Administra los tipos de canal disponibles en el sistema</p>
+            </div>
           </div>
           {!showForm && !editingId && (
             <button
               onClick={startCreate}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors self-start"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow-sm text-sm font-medium hover:bg-blue-700 transition-colors self-start"
             >
               <Plus size={16} /> Nuevo Tipo
             </button>
@@ -279,13 +284,16 @@ export default function ChannelTypesView() {
 
         {/* List */}
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-gray-400">
+          <div className="flex items-center justify-center py-20 text-gray-400 dark:text-slate-500">
             <Loader2 className="animate-spin mr-2" size={20} /> Cargando tipos de canal...
           </div>
         ) : types.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
-            <p className="text-lg">No hay tipos de canal</p>
-            <p className="text-sm mt-1">Crea el primero para comenzar</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <span className="w-16 h-16 rounded-2xl flex items-center justify-center ring-1 bg-violet-50 text-violet-500 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20 mb-4">
+              <Settings size={30} />
+            </span>
+            <p className="text-sm font-medium text-gray-600 dark:text-slate-300">No hay tipos de canal</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Crea el primero para comenzar</p>
           </div>
         ) : (
           <div className="grid gap-3">
@@ -298,41 +306,43 @@ export default function ChannelTypesView() {
               }
 
               return (
-                <div key={type.id} className={`bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 ${type.is_active === '0' ? 'opacity-50' : ''}`}>
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl font-bold bg-${type.color || 'gray-500'}`}
+                <div key={type.id} className={`bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-5 shadow-sm ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-md transition-shadow flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 ${type.is_active === '0' ? 'opacity-60' : ''}`}>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl font-bold shrink-0 shadow-sm bg-${type.color || 'gray-500'}`}
                     style={{ backgroundColor: colorToHex(type.color) }}
                   >
                     {getChannelIcon(type.slug, 24) || type.emoji || '📡'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-gray-900 dark:text-white">{type.label}</h4>
-                      <span className="text-[10px] bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded font-mono">{type.slug}</span>
-                      {type.is_active === '0' && (
-                        <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-medium">Inactivo</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-semibold text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{type.label}</h4>
+                      <span className="text-[10px] bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded-md font-mono">{type.slug}</span>
+                      {type.is_active === '0' ? (
+                        <span className="text-[10px] bg-gray-100 text-gray-500 ring-1 ring-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:ring-slate-600 px-1.5 py-0.5 rounded-full font-semibold">Inactivo</span>
+                      ) : (
+                        <span className="text-[10px] bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20 px-1.5 py-0.5 rounded-full font-semibold">Activo</span>
                       )}
                     </div>
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       {fields.length > 0 ? fields.map((f, i) => (
-                        <span key={i} className="text-[10px] bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded">
+                        <span key={i} className="text-[10px] bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-500/20 px-1.5 py-0.5 rounded-full font-medium">
                           {f.label} ({f.key})
                         </span>
                       )) : (
-                        <span className="text-[10px] text-gray-400 italic">Sin campos adicionales</span>
+                        <span className="text-[10px] text-gray-400 dark:text-slate-500 italic">Sin campos adicionales</span>
                       )}
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-1">Orden: {type.sort_order}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-1">Orden: {type.sort_order}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => startEdit(type)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-500/20 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors"
                     >
                       <Pencil size={13} /> Editar
                     </button>
                     <button
                       onClick={() => requestDelete(type)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-1 ring-rose-200 dark:ring-rose-500/20 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"
                     >
                       <Trash2 size={13} /> Eliminar
                     </button>

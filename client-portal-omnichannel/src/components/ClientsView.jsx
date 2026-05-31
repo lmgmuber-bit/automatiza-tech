@@ -4,16 +4,16 @@ import { getClients, createClient, updateClient, deleteClient, getImportableWpUs
 import ResultModal from './ResultModal';
 
 const planColors = {
-  basic: 'bg-gray-100 text-gray-700',
-  professional: 'bg-blue-100 text-blue-700',
-  enterprise: 'bg-purple-100 text-purple-700',
+  basic: 'bg-gray-100 text-gray-600 ring-1 ring-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:ring-slate-600',
+  professional: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20',
+  enterprise: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20',
 };
 
 const statusColors = {
-  trial: 'bg-yellow-100 text-yellow-700',
-  active: 'bg-green-100 text-green-700',
-  suspended: 'bg-red-100 text-red-700',
-  cancelled: 'bg-gray-100 text-gray-500',
+  trial: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20',
+  active: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20',
+  suspended: 'bg-rose-50 text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20',
+  cancelled: 'bg-gray-100 text-gray-500 ring-1 ring-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:ring-slate-600',
 };
 
 export default function ClientsView() {
@@ -215,22 +215,27 @@ export default function ClientsView() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-4 sm:p-6">
+    <div className="h-full overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900" style={{ fontFamily: 'Poppins, sans-serif' }}>🏢 Gestión de Clientes</h1>
-            <p className="text-sm text-gray-500 mt-1">Administra los clientes de AutomatizaTech</p>
+          <div className="flex items-center gap-3">
+            <span className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-sky-50 text-sky-600 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20 shrink-0">
+              <Building2 size={22} />
+            </span>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>Gestión de Clientes</h1>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Administra los clientes de AutomatizaTech</p>
+            </div>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <button onClick={() => { setShowImportCrm(true); loadCrmProspects(); }} className="flex items-center gap-2 px-3 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600">
+            <button onClick={() => { setShowImportCrm(true); loadCrmProspects(); }} className="flex items-center gap-2 px-3 py-2 bg-emerald-500 text-white rounded-lg shadow-sm text-sm font-medium hover:bg-emerald-600 transition-colors">
               <Download size={16} /> Importar Prospectos
             </button>
-            <button onClick={() => { setShowImport(true); loadWpUsers(); }} className="flex items-center gap-2 px-3 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600">
+            <button onClick={() => { setShowImport(true); loadWpUsers(); }} className="flex items-center gap-2 px-3 py-2 bg-amber-500 text-white rounded-lg shadow-sm text-sm font-medium hover:bg-amber-600 transition-colors">
               <Download size={16} /> Importar WP
             </button>
-            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg shadow-sm text-sm font-medium hover:bg-blue-700 transition-colors">
               <Plus size={16} /> Nuevo Cliente
             </button>
           </div>
@@ -245,13 +250,13 @@ export default function ClientsView() {
               onChange={e => setSearchTerm(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && loadClients()}
               placeholder="Buscar por nombre, email..."
-              className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div className="flex gap-1 flex-wrap">
+          <div className="flex gap-1.5 flex-wrap">
             {['', 'trial', 'active', 'suspended'].map(s => (
               <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
-                className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${statusFilter === s ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                className={`px-3.5 py-2 rounded-full text-xs font-medium transition-colors capitalize ${statusFilter === s ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-gray-500 ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700'}`}>
                 {s || 'Todos'}
               </button>
             ))}
@@ -260,44 +265,47 @@ export default function ClientsView() {
 
         {/* Client Cards */}
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-gray-400">
+          <div className="flex items-center justify-center py-20 text-gray-400 dark:text-slate-500">
             <Loader2 className="animate-spin mr-2" size={20} /> Cargando clientes...
           </div>
         ) : clients.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
-            <Building2 size={48} className="mx-auto mb-3 opacity-30" />
-            <p>No hay clientes registrados</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <span className="w-16 h-16 rounded-2xl flex items-center justify-center ring-1 bg-sky-50 text-sky-500 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20 mb-4">
+              <Building2 size={30} />
+            </span>
+            <p className="text-sm font-medium text-gray-600 dark:text-slate-300">No hay clientes registrados</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Crea o importa tu primer cliente para comenzar</p>
           </div>
         ) : (
           <div className="grid gap-3">
             {clients.map(c => (
-              <div key={c.id} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
+              <div key={c.id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-5 shadow-sm ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-md transition-shadow flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-400 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shrink-0 shadow-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   {(c.company_name || '?')[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-sm text-gray-900">{c.company_name}</h4>
-                  <p className="text-xs text-gray-500">{c.contact_name} · {c.email}</p>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${statusColors[c.status] || ''}`}>{c.status}</span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${planColors[c.plan_type] || ''}`}>{c.plan_type}</span>
+                  <h4 className="font-semibold text-sm text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{c.company_name}</h4>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{c.contact_name} · {c.email}</p>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${statusColors[c.status] || ''}`}>{c.status}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${planColors[c.plan_type] || ''}`}>{c.plan_type}</span>
                     {c.is_free === '1' ? (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700">🆓 Free</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20">🆓 Free</span>
                     ) : c.period_end ? (() => {
                       const days = Math.ceil((new Date(c.period_end + 'T23:59:59') - new Date()) / 86400000);
-                      if (days <= 0) return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">⛔ Expirado</span>;
-                      if (days <= 10) return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">⏳ {days}d restantes</span>;
-                      return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">📅 {new Date(c.period_end + 'T12:00:00').toLocaleDateString('es')}</span>;
+                      if (days <= 0) return <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20">⛔ Expirado</span>;
+                      if (days <= 10) return <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20">⏳ {days}d restantes</span>;
+                      return <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20">📅 {new Date(c.period_end + 'T12:00:00').toLocaleDateString('es')}</span>;
                     })() : (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500" title="Sin fechas de período">⚠️ Sin período</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500 ring-1 ring-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:ring-slate-600" title="Sin fechas de período">⚠️ Sin período</span>
                     )}
-                    <span className="text-[10px] text-gray-400">📡 {c.active_channels || 0} canales · 💬 {c.total_conversations || 0} conv · 👤 {c.active_agents || 0} agentes</span>
+                    <span className="text-[10px] text-gray-400 dark:text-slate-500">📡 {c.active_channels || 0} canales · 💬 {c.total_conversations || 0} conv · 👤 {c.active_agents || 0} agentes</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => handleViewDetail(c.id)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500" title="Ver detalle"><Eye size={16} /></button>
-                  <button onClick={() => setShowEdit({ ...c })} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500" title="Editar"><Edit3 size={16} /></button>
-                  <button onClick={() => handleDelete(c.id, c.company_name)} className="p-2 rounded-lg hover:bg-red-50 text-red-400" title="Eliminar"><Trash2 size={16} /></button>
+                  <button onClick={() => handleViewDetail(c.id)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 transition-colors" title="Ver detalle"><Eye size={16} /></button>
+                  <button onClick={() => setShowEdit({ ...c })} className="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 text-gray-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors" title="Editar"><Edit3 size={16} /></button>
+                  <button onClick={() => handleDelete(c.id, c.company_name)} className="p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 transition-colors" title="Eliminar"><Trash2 size={16} /></button>
                 </div>
               </div>
             ))}
@@ -308,12 +316,12 @@ export default function ClientsView() {
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-2 mt-6">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30">
+              className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-30 transition-colors">
               <ChevronLeft size={16} />
             </button>
-            <span className="text-sm text-gray-500">Página {page} de {totalPages}</span>
+            <span className="text-sm text-gray-500 dark:text-slate-400">Página {page} de {totalPages}</span>
             <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30">
+              className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-30 transition-colors">
               <ChevronRight size={16} />
             </button>
           </div>

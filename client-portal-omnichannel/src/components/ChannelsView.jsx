@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Loader2, Settings, Trash2, CheckCircle, XCircle, AlertTriangle, Pencil, Copy, Eye, EyeOff, X } from 'lucide-react';
+import { Plus, Loader2, Settings, Trash2, CheckCircle, XCircle, AlertTriangle, Pencil, Copy, Eye, EyeOff, X, Radio } from 'lucide-react';
 import { getChannels, createChannel, updateChannel, deleteChannel, getIsAdmin, getClients, getChannelTypes, getPeriodStatus, API_BASE } from '../api';
 import ChannelBadge from './ChannelBadge';
 import ResultModal from './ResultModal';
@@ -164,17 +164,22 @@ export default function ChannelsView() {
   const isAtLimit = !isAdmin && maxChannels !== null && activeChannels >= maxChannels;
 
   return (
-    <div className="h-full overflow-y-auto p-4 sm:p-6">
+    <div className="h-full overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
       <div className="max-w-4xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900" style={{ fontFamily: 'Poppins, sans-serif' }}>📡 Canales Conectados</h1>
-            <p className="text-sm text-gray-500 mt-1">Configura tus canales de comunicación</p>
-            {!isAdmin && maxChannels !== null && (
-              <p className="text-xs text-gray-400 mt-1">
-                {activeChannels} de {maxChannels} canal{maxChannels > 1 ? 'es' : ''} utilizado{activeChannels !== 1 ? 's' : ''} — Plan {planType.charAt(0).toUpperCase() + planType.slice(1)}
-              </p>
-            )}
+          <div className="flex items-center gap-3">
+            <span className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-sky-50 text-sky-600 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20 shrink-0">
+              <Radio size={22} />
+            </span>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>Canales Conectados</h1>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Configura tus canales de comunicación</p>
+              {!isAdmin && maxChannels !== null && (
+                <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+                  {activeChannels} de {maxChannels} canal{maxChannels > 1 ? 'es' : ''} utilizado{activeChannels !== 1 ? 's' : ''} — Plan {planType.charAt(0).toUpperCase() + planType.slice(1)}
+                </p>
+              )}
+            </div>
           </div>
           {isAtLimit ? (
             <div className="self-start">
@@ -185,7 +190,7 @@ export default function ChannelsView() {
           ) : (
             <button
               onClick={() => { setShowForm(!showForm); setShowApiKey(false); }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors self-start"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow-sm text-sm font-medium hover:bg-blue-700 transition-colors self-start"
             >
               <Plus size={16} /> Agregar Canal
             </button>
@@ -207,8 +212,8 @@ export default function ChannelsView() {
 
         {/* Create Form */}
         {showForm && !isAtLimit && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6 animate-fadein">
-            <h3 className="font-semibold mb-4">Nuevo Canal</h3>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm ring-1 ring-gray-100 dark:ring-slate-700/60 p-6 mb-6 animate-fadein">
+            <h3 className="font-semibold mb-4 text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>Nuevo Canal</h3>
             <form onSubmit={handleCreate}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {isAdmin && (
@@ -309,73 +314,81 @@ export default function ChannelsView() {
 
         {/* Channel Cards */}
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-gray-400">
+          <div className="flex items-center justify-center py-20 text-gray-400 dark:text-slate-500">
             <Loader2 className="animate-spin mr-2" size={20} /> Cargando canales...
           </div>
         ) : channels.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
-            <p className="text-lg">No tienes canales configurados</p>
-            <p className="text-sm mt-1">Agrega tu primer canal para comenzar</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <span className="w-16 h-16 rounded-2xl flex items-center justify-center ring-1 bg-sky-50 text-sky-500 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20 mb-4">
+              <Radio size={30} />
+            </span>
+            <p className="text-sm font-medium text-gray-600 dark:text-slate-300">No tienes canales configurados</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Agrega tu primer canal para comenzar</p>
           </div>
         ) : (
           <div className="grid gap-4">
             {channels.map(ch => (
-              <div key={ch.id} className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+              <div key={ch.id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-5 shadow-sm ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-md transition-shadow">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold shrink-0"
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold shrink-0 shadow-sm"
                     style={{ backgroundColor: colorToHex(typeMap[ch.channel_type]?.color || 'gray-500') }}
                   >
                     {getChannelIcon(ch.channel_type, 24) || typeMap[ch.channel_type]?.emoji || '📡'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-gray-900">{ch.channel_name}</h4>
+                    <h4 className="font-semibold text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{ch.channel_name}</h4>
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       <ChannelBadge type={ch.channel_type} />
                       {isAdmin && ch.client_name && (
-                        <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">{ch.client_name}</span>
+                        <span className="text-[10px] bg-violet-50 text-violet-700 ring-1 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20 px-1.5 py-0.5 rounded-full font-semibold">{ch.client_name}</span>
                       )}
-                      {ch.phone_number && <span className="text-xs text-gray-500">{ch.phone_number}</span>}
-                      {ch.page_id && <span className="text-xs text-gray-500">ID: {ch.page_id}</span>}
+                      {ch.is_active === '1' ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20 px-1.5 py-0.5 rounded-full font-semibold"><CheckCircle size={11} /> Activo</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-gray-100 text-gray-500 ring-1 ring-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:ring-slate-600 px-1.5 py-0.5 rounded-full font-semibold"><XCircle size={11} /> Inactivo</span>
+                      )}
+                      {ch.phone_number && <span className="text-xs text-gray-500 dark:text-slate-400">{ch.phone_number}</span>}
+                      {ch.page_id && <span className="text-xs text-gray-500 dark:text-slate-400">ID: {ch.page_id}</span>}
                     </div>
                     {/* Webhook URL para YCloud - visible para admin */}
                     {isAdmin && ch.webhook_secret && (
-                      <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-100">
+                      <div className="mt-2.5 p-2.5 bg-gray-50 dark:bg-slate-900/40 rounded-lg ring-1 ring-gray-100 dark:ring-slate-700/60">
                         <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="text-[10px] font-semibold text-blue-700">URL Webhook YCloud</span>
-                          <div className="flex items-center gap-1">
+                          <span className="text-[10px] font-semibold text-gray-600 dark:text-slate-300">URL Webhook YCloud</span>
+                          <div className="flex items-center gap-2">
                             <button
                               onClick={() => setRevealedSecrets(p => ({ ...p, [ch.id]: !p[ch.id] }))}
-                              className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-700"
+                              className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 transition-colors"
                               title={revealedSecrets[ch.id] ? 'Ocultar secret' : 'Revelar secret'}
                             >
                               {revealedSecrets[ch.id] ? <EyeOff size={11} /> : <Eye size={11} />}
                             </button>
                             <button
                               onClick={() => copyToClipboard(`${window.location.origin}${API_BASE}?route=webhook/ycloud&channel_id=${ch.id}&secret=${ch.webhook_secret}`)}
-                              className="flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 font-medium"
+                              className="flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors"
                               title="Copiar URL completa"
                             >
                               <Copy size={11} /> Copiar URL
                             </button>
                           </div>
                         </div>
-                        <code className="text-[10px] text-blue-800 font-mono break-all leading-relaxed">
+                        <code className="text-[10px] text-gray-600 dark:text-slate-400 font-mono break-all leading-relaxed">
                           {window.location.origin}{API_BASE}?route=webhook/ycloud&amp;channel_id={ch.id}&amp;secret={revealedSecrets[ch.id] ? ch.webhook_secret : '••••••••'}
                         </code>
                       </div>
                     )}
                     {/* Show API Key status for admin */}
                     {isAdmin && (
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className="text-[10px] text-gray-400">API Key:</span>
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <span className="text-[10px] text-gray-400 dark:text-slate-500">API Key:</span>
                         {ch.ycloud_api_key ? (
-                          <span className="text-[10px] text-green-600 font-medium">✓ Configurada</span>
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">✓ Configurada</span>
                         ) : (
-                          <span className="text-[10px] text-red-500 font-medium">✗ No configurada</span>
+                          <span className="text-[10px] text-rose-500 dark:text-rose-400 font-medium">✗ No configurada</span>
                         )}
                       </div>
                     )}
-                    <p className="text-[11px] text-gray-400 mt-1">
+                    <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-1">
                       Última sincronización: {ch.last_synced_at || 'Nunca'}
                     </p>
                   </div>
@@ -383,10 +396,10 @@ export default function ChannelsView() {
                     {/* Toggle active */}
                     <button
                       onClick={() => toggleActive(ch)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                         ch.is_active === '1'
-                          ? 'bg-green-50 text-green-700 hover:bg-green-100'
-                          : 'bg-red-50 text-red-700 hover:bg-red-100'
+                          ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20 dark:hover:bg-emerald-500/20'
+                          : 'bg-rose-50 text-rose-700 ring-1 ring-rose-200 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20 dark:hover:bg-rose-500/20'
                       }`}
                     >
                       {ch.is_active === '1' ? <><CheckCircle size={14} /> Activo</> : <><XCircle size={14} /> Inactivo</>}
@@ -395,7 +408,7 @@ export default function ChannelsView() {
                     {isAdmin && (
                       <button
                         onClick={() => openEdit(ch)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20 dark:hover:bg-blue-500/20 transition-colors"
                         title="Editar canal"
                       >
                         <Pencil size={14} /> Editar
@@ -405,7 +418,7 @@ export default function ChannelsView() {
                     {isAdmin && (
                       <button
                         onClick={() => setDeleteTarget(ch)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 ring-1 ring-rose-200 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20 dark:hover:bg-rose-500/20 transition-colors"
                         title="Eliminar canal"
                       >
                         <Trash2 size={14} />

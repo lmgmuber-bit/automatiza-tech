@@ -260,13 +260,13 @@ export default function PromptPreviewPanel() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Selector bar */}
-      <div className="shrink-0 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-3">
+      <div className="shrink-0 px-4 py-3 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700/60 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-          <Eye size={16} className="text-slate-400 shrink-0" />
+          <span className="w-8 h-8 rounded-lg flex items-center justify-center bg-sky-50 text-sky-600 ring-1 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20 shrink-0"><Eye size={16} /></span>
           <select
             value={selectedId}
             onChange={e => handleSelect(e.target.value)}
-            className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+            className="flex-1 px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
           >
             <option value="">— Seleccionar configuración —</option>
             {configs.map(cfg => (
@@ -277,19 +277,23 @@ export default function PromptPreviewPanel() {
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] text-slate-400">{wordCount} palabras · {charCount} caracteres</span>
+          <span className="text-[11px] text-gray-400 dark:text-slate-500 px-2 py-1 rounded-md bg-white dark:bg-slate-700/60 ring-1 ring-gray-100 dark:ring-slate-700">{wordCount} palabras · {charCount} caracteres</span>
           <button
             onClick={handleCopy}
             disabled={!promptData}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-500 disabled:opacity-40 transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 ring-1 ring-gray-200 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-40 transition-colors"
           >
-            {copied ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
+            {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
             {copied ? 'Copiado' : 'Copiar'}
           </button>
           <button
             onClick={() => setShowRaw(!showRaw)}
             disabled={!promptData}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-500 disabled:opacity-40 transition-colors"
+            className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg ring-1 disabled:opacity-40 transition-colors ${
+              showRaw
+                ? 'bg-violet-50 text-violet-600 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20'
+                : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 ring-gray-200 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600'
+            }`}
           >
             <FileText size={13} />
             {showRaw ? 'Formateado' : 'JSON Raw'}
@@ -300,26 +304,28 @@ export default function PromptPreviewPanel() {
       {/* Preview content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
         {!promptData ? (
-          <div className="flex items-center justify-center h-full text-slate-400">
+          <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <Eye size={48} className="mx-auto mb-3 opacity-30" />
-              <p className="text-sm">Selecciona una configuración para ver la vista previa del prompt</p>
-              <p className="text-xs mt-1">El prompt final es la concatenación de todas las secciones activas</p>
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-sky-50 text-sky-500 ring-1 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20">
+                <Eye size={30} />
+              </div>
+              <p className="text-sm font-medium text-gray-600 dark:text-slate-300" style={{ fontFamily: 'Poppins, sans-serif' }}>Selecciona una configuración para ver la vista previa del prompt</p>
+              <p className="text-xs mt-1 text-gray-400 dark:text-slate-500">El prompt final es la concatenación de todas las secciones activas</p>
             </div>
           </div>
         ) : showRaw ? (
-          <pre className="text-xs font-mono bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 whitespace-pre-wrap break-words text-slate-700 dark:text-slate-300 leading-relaxed">
+          <pre className="text-xs font-mono bg-slate-50 dark:bg-slate-900 ring-1 ring-gray-100 dark:ring-slate-700/60 rounded-2xl p-4 whitespace-pre-wrap break-words text-slate-700 dark:text-slate-300 leading-relaxed shadow-sm">
             {JSON.stringify(promptData, null, 2)}
           </pre>
         ) : (
           <div className="max-w-3xl mx-auto">
-            <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-900 dark:to-blue-900/10 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 bg-white/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+            <div className="bg-white dark:bg-slate-800 ring-1 ring-gray-100 dark:ring-slate-700/60 rounded-2xl overflow-hidden shadow-sm">
+              <div className="px-4 py-3 bg-gradient-to-r from-blue-50/60 to-violet-50/40 dark:from-blue-500/5 dark:to-violet-500/5 border-b border-gray-100 dark:border-slate-700/60 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-[10px] font-bold">AI</div>
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200">System Prompt Final</span>
+                  <div className="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center text-white text-[10px] font-bold shadow-sm ring-1 ring-blue-400/30">AI</div>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200" style={{ fontFamily: 'Poppins, sans-serif' }}>System Prompt Final</span>
                 </div>
-                <span className="text-[10px] text-slate-400 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700">
+                <span className="text-[10px] font-medium text-violet-600 dark:text-violet-300 px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-500/10 ring-1 ring-violet-200 dark:ring-violet-500/20">
                   v{configs.find(c => String(c.id) === String(selectedId))?.version || '?'}
                 </span>
               </div>

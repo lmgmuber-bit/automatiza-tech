@@ -16,16 +16,21 @@ export default function BotConfigUnifiedView() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Tabs */}
-      <div className="shrink-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-        <div className="px-4 pt-3">
-          <h1 className="text-base sm:text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
-            🤖 <span>Configuración y Prompts del Bot</span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-0.5 mb-2 hidden sm:block">
-            Configura el comportamiento, prompts y vista previa del bot
-          </p>
+      <div className="shrink-0 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700/60">
+        <div className="px-4 pt-4">
+          <div className="flex items-center gap-3 mb-1">
+            <span className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-violet-50 text-violet-600 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20 shrink-0">
+              <Bot size={22} />
+            </span>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>Configuración y Prompts del Bot</h1>
+              <p className="text-sm text-gray-500 dark:text-slate-400 hidden sm:block">
+                Configura el comportamiento, prompts y vista previa del bot
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="flex overflow-x-auto">
+        <div className="flex gap-1 px-3 pt-2 overflow-x-auto">
           {TABS.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -33,10 +38,10 @@ export default function BotConfigUnifiedView() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-t-lg border-b-2 transition-colors ${
                   isActive
-                    ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-500/10'
-                    : 'text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300'
+                    ? 'text-violet-600 dark:text-violet-300 border-violet-500 dark:border-violet-400 bg-violet-50/60 dark:bg-violet-500/10'
+                    : 'text-gray-500 dark:text-slate-400 border-transparent hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/40'
                 }`}
               >
                 <Icon size={16} />

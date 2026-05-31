@@ -535,10 +535,12 @@ export default function PromptsView() {
   const renderDetail = () => {
     if (!selectedId && !creating) {
       return (
-        <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-500">
+        <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <FileText size={48} className="mx-auto mb-3 opacity-50" />
-            <p>Selecciona una configuración o crea una nueva</p>
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-blue-50 text-blue-500 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20">
+              <FileText size={30} />
+            </div>
+            <p className="text-gray-600 dark:text-slate-300 font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>Selecciona una configuración o crea una nueva</p>
           </div>
         </div>
       );
@@ -549,7 +551,7 @@ export default function PromptsView() {
     return (
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
+        <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-800/95 backdrop-blur border-b border-gray-100 dark:border-slate-700/60 px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             {!editMode && (
               <button
@@ -568,27 +570,31 @@ export default function PromptsView() {
                 onChange={e => setForm(f => ({ ...f, config_name: e.target.value }))}
                 className="w-full text-lg font-semibold bg-transparent border-b-2 border-blue-400 focus:border-blue-600 outline-none px-1 py-0.5 text-slate-800 dark:text-white"
                 placeholder="Nombre de la configuración"
+                style={{ fontFamily: 'Poppins, sans-serif' }}
               />
             ) : (
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-white truncate">{form.config_name}</h2>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-white truncate" style={{ fontFamily: 'Poppins, sans-serif' }}>{form.config_name}</h2>
             )}
             {selectedCfg && (
-              <p className="text-xs text-slate-400 mt-0.5">
-                v{selectedCfg.version} · Canal: {selectedCfg.channel_name || `#${selectedCfg.channel_id}`}
-                {selectedCfg.updated_at && ` · ${new Date(selectedCfg.updated_at).toLocaleDateString('es-CL')}`}
-              </p>
+              <div className="flex items-center flex-wrap gap-1.5 mt-1">
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-600 ring-1 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20">v{selectedCfg.version}</span>
+                <span className="text-[11px] text-gray-400 dark:text-slate-500">
+                  Canal: {selectedCfg.channel_name || `#${selectedCfg.channel_id}`}
+                  {selectedCfg.updated_at && ` · ${new Date(selectedCfg.updated_at).toLocaleDateString('es-CL')}`}
+                </span>
+              </div>
             )}
           </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {canEdit && !editMode && (
               <>
-                <button onClick={startEdit} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1">
+                <button onClick={startEdit} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-sm flex items-center gap-1 transition-colors">
                   <Pencil size={13} /> Editar
                 </button>
                 <button
                   onClick={() => setDeleteModal({ id: selectedId, name: form.config_name })}
-                  className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 flex items-center gap-1"
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg bg-rose-50 text-rose-600 ring-1 ring-rose-200 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20 dark:hover:bg-rose-500/20 flex items-center gap-1 transition-colors"
                 >
                   <Trash2 size={13} /> Eliminar
                 </button>
@@ -598,14 +604,14 @@ export default function PromptsView() {
               <>
                 <button
                   onClick={() => { setEditMode(false); if (creating) { setCreating(false); setMobilePanel('list'); } }}
-                  className="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300"
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="px-4 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1"
+                  className="px-4 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm disabled:opacity-50 flex items-center gap-1 transition-colors"
                 >
                   {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                   {creating ? 'Crear' : 'Guardar'}
@@ -617,13 +623,13 @@ export default function PromptsView() {
 
         {/* Meta fields */}
         {editMode && (
-          <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 flex flex-wrap gap-4">
+          <div className="px-4 py-3 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700/60 flex flex-wrap gap-4">
             <div className="flex-1 min-w-[200px]">
-              <label className="block text-xs font-medium text-slate-500 mb-1">Canal</label>
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Canal</label>
               <select
                 value={form.channel_id}
                 onChange={e => { const v = e.target.value; setForm(f => ({ ...f, channel_id: v })); if (v) loadAvailableAgents(v); else setAvailableAgents([]); }}
-                className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
               >
                 <option value="">— Seleccionar canal —</option>
                 {channels.map(ch => (
@@ -632,7 +638,7 @@ export default function PromptsView() {
               </select>
             </div>
             <div className="flex items-end gap-2">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <label className="flex items-center gap-2 text-sm cursor-pointer px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 bg-white dark:bg-slate-700">
                 <input
                   type="checkbox"
                   checked={!!form.is_active}
@@ -655,23 +661,23 @@ export default function PromptsView() {
             const isAlwaysOn = ALWAYS_ON_SECTIONS.includes(section.id);
 
             return (
-              <div key={section.id} className={`border rounded-xl overflow-hidden transition-opacity ${enabled ? 'border-slate-200 dark:border-slate-700' : 'border-slate-200/60 dark:border-slate-700/40 opacity-60'}`}>
-                <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/60">
+              <div key={section.id} className={`rounded-2xl ring-1 overflow-hidden transition-all ${enabled ? 'bg-white dark:bg-slate-800 ring-gray-100 dark:ring-slate-700/60 shadow-sm hover:ring-gray-200 dark:hover:ring-slate-600' : 'bg-gray-50/60 dark:bg-slate-800/40 ring-gray-100/70 dark:ring-slate-700/40 opacity-60'}`}>
+                <div className="flex items-center justify-between px-4 py-3 bg-gray-50/70 dark:bg-slate-800/60">
                   <button
                     onClick={() => enabled && toggleSection(section.id)}
                     className={`flex-1 flex items-center gap-2 text-left ${enabled ? 'hover:opacity-80' : 'cursor-default'}`}
                     disabled={!enabled}
                   >
-                    <span className={`font-medium text-sm ${enabled ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'}`}>{section.label}</span>
+                    <span className={`font-semibold text-sm ${enabled ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'}`} style={{ fontFamily: 'Poppins, sans-serif' }}>{section.label}</span>
                   </button>
                   <div className="flex items-center gap-2 shrink-0">
                     {!enabled && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-400 font-medium">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 ring-1 ring-slate-200 dark:ring-slate-600 font-medium">
                         Deshabilitada
                       </span>
                     )}
                     {enabled && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-medium">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-500/20 font-medium">
                         {section.id === 'escalacion' ? `${filledCount}/${section.fields.length} · ${agentCount} agente${agentCount !== 1 ? 's' : ''}` : `${filledCount}/${section.fields.length}`}
                       </span>
                     )}
@@ -706,7 +712,7 @@ export default function PromptsView() {
                     {/* Regular fields */}
                     {section.fields.map(field => (
                       <div key={field.key}>
-                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{field.label}</label>
+                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>{field.label}</label>
                         {editMode ? (
                           field.type === 'textarea' ? (
                             <textarea
@@ -714,7 +720,7 @@ export default function PromptsView() {
                               onChange={e => updateField(field.key, e.target.value)}
                               placeholder={field.placeholder}
                               rows={4}
-                              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-y"
+                              className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none resize-y"
                             />
                           ) : (
                             <input
@@ -722,7 +728,7 @@ export default function PromptsView() {
                               value={form.prompt_data[field.key] || ''}
                               onChange={e => updateField(field.key, e.target.value)}
                               placeholder={field.placeholder}
-                              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                              className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
                             />
                           )
                         ) : (
@@ -758,7 +764,7 @@ export default function PromptsView() {
                             ) : (
                               <div className="flex items-center gap-2">
                                 <select
-                                  className="flex-1 px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                                  className="flex-1 px-2.5 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                                   value=""
                                   onChange={e => { if (e.target.value) addAgente(e.target.value); }}
                                 >
@@ -823,7 +829,7 @@ export default function PromptsView() {
                                             value={agente.area || ''}
                                             onChange={e => updateAgente(idx, 'area', e.target.value)}
                                             placeholder="Área de escalación (ej: Ventas, Soporte...)"
-                                            className="flex-1 px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                                            className="flex-1 px-2.5 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
                                           />
                                         </div>
                                         <label className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 cursor-pointer whitespace-nowrap shrink-0">
@@ -891,26 +897,29 @@ export default function PromptsView() {
   return (
     <div className="h-full flex flex-col">
       {/* Top bar */}
-      <div className="shrink-0 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between gap-3 bg-white dark:bg-slate-800">
-        <div className="min-w-0">
-          <h1 className="text-base sm:text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <FileText size={20} className="shrink-0" /> <span className="truncate">Configuración de Prompts</span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">
-            Parametriza el comportamiento del bot para cada canal
-          </p>
+      <div className="shrink-0 border-b border-gray-100 dark:border-slate-700/60 px-4 py-3 flex items-center justify-between gap-3 bg-white dark:bg-slate-800">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-blue-50 text-blue-600 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20 shrink-0">
+            <FileText size={22} />
+          </span>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 dark:text-white truncate" style={{ fontFamily: 'Poppins, sans-serif' }}>Configuración de Prompts</h1>
+            <p className="text-sm text-gray-500 dark:text-slate-400 hidden sm:block">
+              Parametriza el comportamiento del bot para cada canal
+            </p>
+          </div>
         </div>
         {canEdit && (
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={openImportModal}
-              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-600 flex items-center gap-1.5 shadow-sm"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg bg-amber-50 text-amber-600 ring-1 ring-amber-200 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20 dark:hover:bg-amber-500/20 flex items-center gap-1.5 shadow-sm transition-colors"
             >
               <Upload size={16} /> <span className="hidden sm:inline">Importar</span>
             </button>
             <button
               onClick={startCreate}
-              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1.5 shadow-sm"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1.5 shadow-sm transition-colors"
             >
               <Plus size={16} /> <span className="hidden sm:inline">Nueva Config</span><span className="sm:hidden">Nueva</span>
             </button>
@@ -922,36 +931,42 @@ export default function PromptsView() {
         {/* Sidebar list - hidden on mobile when detail panel is active */}
         <div className={`${mobilePanel === 'detail' ? 'hidden md:flex md:flex-col' : 'flex flex-col'} w-full md:w-72 md:shrink-0 border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 overflow-y-auto custom-scrollbar`}>
           {configs.length === 0 ? (
-            <div className="p-6 text-center text-slate-400">
-              <FileText size={32} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No hay configuraciones</p>
-              {canEdit && <p className="text-xs mt-1">Crea una nueva con el botón +</p>}
+            <div className="p-6 text-center">
+              <div className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center bg-blue-50 text-blue-500 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20">
+                <FileText size={26} />
+              </div>
+              <p className="text-sm font-medium text-gray-600 dark:text-slate-300" style={{ fontFamily: 'Poppins, sans-serif' }}>No hay configuraciones</p>
+              {canEdit && <p className="text-xs mt-1 text-gray-400 dark:text-slate-500">Crea una nueva con el botón +</p>}
             </div>
           ) : (
-            <div className="py-1">
+            <div className="p-2 space-y-1.5">
               {configs.map(cfg => {
                 const isSelected = String(cfg.id) === String(selectedId);
                 return (
                   <button
                     key={cfg.id}
                     onClick={() => selectConfig(cfg)}
-                    className={`w-full text-left px-4 py-3 border-b border-slate-100 dark:border-slate-700/50 transition-colors ${
+                    className={`w-full text-left px-3 py-2.5 rounded-xl ring-1 transition-all ${
                       isSelected
-                        ? 'bg-blue-50 dark:bg-blue-500/10 border-l-2 border-l-blue-500'
-                        : 'hover:bg-white dark:hover:bg-slate-700/30'
+                        ? 'bg-white dark:bg-slate-800 ring-blue-300 dark:ring-blue-500/40 shadow-sm'
+                        : 'bg-transparent ring-transparent hover:bg-white dark:hover:bg-slate-700/40 hover:ring-gray-100 dark:hover:ring-slate-700'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className={`text-sm font-medium truncate ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-200'}`}>
                         {cfg.config_name}
                       </span>
                       {cfg.is_active ? (
-                        <span className="shrink-0 w-2 h-2 rounded-full bg-emerald-500" title="Activo" />
+                        <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20" title="Activo">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Activo
+                        </span>
                       ) : (
-                        <span className="shrink-0 w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600" title="Inactivo" />
+                        <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400 ring-1 ring-slate-200 dark:bg-slate-700 dark:text-slate-400 dark:ring-slate-600" title="Inactivo">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-500" /> Inactivo
+                        </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                    <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-1 truncate">
                       {cfg.channel_name || `Canal #${cfg.channel_id}`} · v{cfg.version}
                     </p>
                   </button>
@@ -992,9 +1007,9 @@ export default function PromptsView() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
-                <Upload size={20} /> Importar Prompts
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700/60">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <span className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20"><Upload size={16} /></span> Importar Prompts
               </h3>
               <button onClick={() => setImportModal(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400">
                 <X size={18} />
@@ -1037,7 +1052,7 @@ export default function PromptsView() {
                     <select
                       value={importSourceId}
                       onChange={e => setImportSourceId(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                      className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                     >
                       <option value="">— Seleccionar config origen —</option>
                       {configs.map(cfg => (
@@ -1052,7 +1067,7 @@ export default function PromptsView() {
                     <select
                       value={importDestChannelId}
                       onChange={e => setImportDestChannelId(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                      className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                     >
                       <option value="">— Seleccionar canal destino —</option>
                       {channels.map(ch => (
@@ -1069,7 +1084,7 @@ export default function PromptsView() {
                       value={importConfigName}
                       onChange={e => setImportConfigName(e.target.value)}
                       placeholder="Se generará automáticamente si se deja vacío"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                      className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
                   {importSourceId && importDestChannelId && (
@@ -1122,7 +1137,7 @@ export default function PromptsView() {
                     <select
                       value={importDestChannelId}
                       onChange={e => setImportDestChannelId(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                      className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                     >
                       <option value="">— Seleccionar canal destino —</option>
                       {channels.map(ch => (
@@ -1139,7 +1154,7 @@ export default function PromptsView() {
                       value={importConfigName}
                       onChange={e => setImportConfigName(e.target.value)}
                       placeholder="Se generará automáticamente si se deja vacío"
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                      className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
                   {csvParsedData && (

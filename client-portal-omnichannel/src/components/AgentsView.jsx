@@ -168,7 +168,7 @@ export default function AgentsView() {
       <div className="max-w-4xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
-            <span className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-sky-50 text-sky-600 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20 shrink-0">
+            <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shrink-0">
               <Users size={22} />
             </span>
             <div>
@@ -191,7 +191,7 @@ export default function AgentsView() {
             ) : (
               <button
                 onClick={() => setShowForm(!showForm)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 self-start"
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl text-sm font-medium shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 self-start"
               >
                 <Plus size={16} /> Agregar Agente
               </button>
@@ -252,8 +252,8 @@ export default function AgentsView() {
                 }));
                 setPage(1);
               }}
-              className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                sort.orderby === col.key ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                sort.orderby === col.key ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
               }`}
             >
               {col.label}
@@ -412,7 +412,7 @@ export default function AgentsView() {
               const RoleIcon = roleIcons[agent.role] || Headphones;
               const isEditing = editingAgent === agent.id;
               return (
-                <div key={agent.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                <div key={agent.id} className="bg-white dark:bg-slate-800 rounded-2xl ring-1 ring-gray-100 dark:ring-slate-700/60 p-4 shadow-md hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
                   {isEditing ? (
                     <form onSubmit={handleUpdate} className="space-y-3">
                       <div className="flex items-center justify-between mb-2">
@@ -507,7 +507,7 @@ export default function AgentsView() {
                   ) : (
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                       <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center text-white font-bold text-lg shrink-0 shadow-md" style={{ fontFamily: 'Poppins, sans-serif' }}>
                           {agent.name ? agent.name[0].toUpperCase() : '?'}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -517,13 +517,13 @@ export default function AgentsView() {
                             {getIsAdmin() && agent.client_name && (
                               <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">{agent.client_name}</span>
                             )}
-                            <span className="flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                            <span className="flex items-center gap-1 text-[10px] font-semibold bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/20 px-2 py-0.5 rounded-full">
                               <RoleIcon size={12} /> {roleLabels[agent.role]}
                             </span>
-                            <span className={`text-xs px-2 py-0.5 rounded ${
-                              agent.status === 'active' ? 'bg-green-100 text-green-700' :
-                              agent.status === 'away' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-gray-100 text-gray-500'
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ring-1 ${
+                              agent.status === 'active' ? 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20' :
+                              agent.status === 'away' ? 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20' :
+                              'bg-gray-100 text-gray-500 ring-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:ring-slate-600'
                             }`}>
                               {agent.status === 'active' ? '🟢 Activo' : agent.status === 'away' ? '🟡 Ausente' : '⚫ Inactivo'}
                             </span>
@@ -541,8 +541,8 @@ export default function AgentsView() {
                       </div>
                       <div className="flex items-center gap-4 sm:gap-6 ml-auto">
                         <div className="text-center">
-                          <div className="text-xl sm:text-2xl font-bold text-gray-900">{agent.active_chats || 0}</div>
-                          <div className="text-[10px] text-gray-400">/ {agent.max_concurrent_chats} chats</div>
+                          <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>{agent.active_chats || 0}</div>
+                          <div className="text-[10px] text-gray-400 dark:text-slate-500">/ {agent.max_concurrent_chats} chats</div>
                         </div>
                         <div className="text-xs text-gray-400 hidden sm:block">
                           {agent.last_active_at ? `Activo: ${new Date(agent.last_active_at).toLocaleString('es')}` : 'Sin actividad'}
@@ -596,10 +596,10 @@ export default function AgentsView() {
                       <button
                         key={pageNum}
                         onClick={() => setPage(pageNum)}
-                        className={`w-7 h-7 rounded-lg text-xs font-medium ${
+                        className={`w-7 h-7 rounded-lg text-xs font-bold ${
                           pageNum === page
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                            ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md'
+                            : 'bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600'
                         }`}
                       >
                         {pageNum}

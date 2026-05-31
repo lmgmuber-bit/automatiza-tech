@@ -60,7 +60,7 @@ export default function AuditView() {
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
-            <span className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-blue-50 text-blue-600 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20 shrink-0">
+            <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-400 to-indigo-600 text-white shadow-md shrink-0">
               <ClipboardList size={22} />
             </span>
             <div>
@@ -109,8 +109,8 @@ export default function AuditView() {
                 }));
                 setPage(1);
               }}
-              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                sort.orderby === col.key ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                sort.orderby === col.key ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
               }`}
             >
               {col.label}
@@ -130,7 +130,7 @@ export default function AuditView() {
             </div>
           </div>
         ) : (
-          <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-sm ring-1 ring-gray-100 dark:ring-slate-700/60 p-3 sm:p-4">
+          <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-md ring-1 ring-gray-100 dark:ring-slate-700/60 p-3 sm:p-4">
             {loading && (
               <div className="absolute inset-0 bg-white/60 dark:bg-slate-800/60 flex items-center justify-center z-10 rounded-2xl">
                 <Loader2 size={20} className="animate-spin text-blue-500" />
@@ -141,17 +141,17 @@ export default function AuditView() {
               {logs.map(log => {
                 const isExpanded = expandedId === log.id;
                 return (
-                  <div key={log.id} className="overflow-hidden animate-fadein rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700/40 transition-colors">
+                  <div key={log.id} className="overflow-hidden animate-fadein rounded-xl hover:bg-blue-50/40 dark:hover:bg-slate-700/40 transition-colors">
                     <div className="px-3 sm:px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                       {/* Icon */}
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 bg-gray-50 dark:bg-slate-700/50 ring-1 ring-gray-100 dark:ring-slate-700">
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0 bg-gradient-to-br from-slate-100 to-blue-100 dark:from-slate-700 dark:to-slate-700/50 ring-1 ring-gray-100 dark:ring-slate-700 shadow-sm">
                         {entityIcons[log.entity_type] || '📌'}
                       </div>
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold capitalize ${actionColors[log.action] || actionFallback}`}>
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold capitalize ${actionColors[log.action] || actionFallback}`}>
                             {log.action}
                           </span>
                           <span className="text-xs text-gray-400 dark:text-slate-500">
@@ -242,9 +242,9 @@ export default function AuditView() {
                       <button
                         key={pageNum}
                         onClick={() => setPage(pageNum)}
-                        className={`w-7 h-7 rounded-lg text-xs font-medium ${
+                        className={`w-7 h-7 rounded-lg text-xs font-bold ${
                           pageNum === page
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md'
                             : 'bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600'
                         }`}
                       >

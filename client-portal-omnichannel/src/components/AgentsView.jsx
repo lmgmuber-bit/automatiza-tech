@@ -164,17 +164,22 @@ export default function AgentsView() {
   const isAtLimit = !getIsAdmin() && maxAgents !== null && totalAgents >= maxAgents;
 
   return (
-    <div className="h-full overflow-y-auto p-4 sm:p-6">
+    <div className="h-full overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
       <div className="max-w-4xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900" style={{ fontFamily: 'Poppins, sans-serif' }}>👥 Agentes</h1>
-            <p className="text-sm text-gray-500 mt-1">Gestiona los agentes que atienden las conversaciones</p>
-            {!getIsAdmin() && maxAgents !== null && (
-              <p className="text-xs text-gray-400 mt-1">
-                {totalAgents} de {maxAgents} agente{maxAgents > 1 ? 's' : ''} utilizado{totalAgents !== 1 ? 's' : ''} — Plan {planType.charAt(0).toUpperCase() + planType.slice(1)}
-              </p>
-            )}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3">
+            <span className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-sky-50 text-sky-600 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20 shrink-0">
+              <Users size={22} />
+            </span>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>Agentes</h1>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Gestiona los agentes que atienden las conversaciones</p>
+              {!getIsAdmin() && maxAgents !== null && (
+                <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+                  {totalAgents} de {maxAgents} agente{maxAgents > 1 ? 's' : ''} utilizado{totalAgents !== 1 ? 's' : ''} — Plan {planType.charAt(0).toUpperCase() + planType.slice(1)}
+                </p>
+              )}
+            </div>
           </div>
           {canManage && (
             isAtLimit ? (

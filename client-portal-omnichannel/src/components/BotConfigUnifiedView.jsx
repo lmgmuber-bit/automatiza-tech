@@ -19,7 +19,7 @@ export default function BotConfigUnifiedView() {
       <div className="shrink-0 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700/60">
         <div className="px-4 pt-4">
           <div className="flex items-center gap-3 mb-1">
-            <span className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-violet-50 text-violet-600 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20 shrink-0">
+            <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-md shrink-0">
               <Bot size={22} />
             </span>
             <div>
@@ -38,9 +38,9 @@ export default function BotConfigUnifiedView() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-t-lg border-b-2 transition-colors ${
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold whitespace-nowrap rounded-t-xl border-b-2 transition-all duration-300 ${
                   isActive
-                    ? 'text-violet-600 dark:text-violet-300 border-violet-500 dark:border-violet-400 bg-violet-50/60 dark:bg-violet-500/10'
+                    ? 'text-white border-transparent bg-gradient-to-br from-violet-400 to-purple-600 shadow-md'
                     : 'text-gray-500 dark:text-slate-400 border-transparent hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/40'
                 }`}
               >

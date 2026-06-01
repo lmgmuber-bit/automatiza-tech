@@ -262,7 +262,7 @@ export default function PromptPreviewPanel() {
       {/* Selector bar */}
       <div className="shrink-0 px-4 py-3 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700/60 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-          <span className="w-8 h-8 rounded-lg flex items-center justify-center bg-sky-50 text-sky-600 ring-1 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20 shrink-0"><Eye size={16} /></span>
+          <span className="w-9 h-9 rounded-2xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shrink-0"><Eye size={16} /></span>
           <select
             value={selectedId}
             onChange={e => handleSelect(e.target.value)}
@@ -289,10 +289,10 @@ export default function PromptPreviewPanel() {
           <button
             onClick={() => setShowRaw(!showRaw)}
             disabled={!promptData}
-            className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg ring-1 disabled:opacity-40 transition-colors ${
+            className={`flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg disabled:opacity-40 transition-all duration-300 ${
               showRaw
-                ? 'bg-violet-50 text-violet-600 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20'
-                : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 ring-gray-200 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600'
+                ? 'bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-md'
+                : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 ring-1 ring-gray-200 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600'
             }`}
           >
             <FileText size={13} />
@@ -319,13 +319,13 @@ export default function PromptPreviewPanel() {
           </pre>
         ) : (
           <div className="max-w-3xl mx-auto">
-            <div className="bg-white dark:bg-slate-800 ring-1 ring-gray-100 dark:ring-slate-700/60 rounded-2xl overflow-hidden shadow-sm">
-              <div className="px-4 py-3 bg-gradient-to-r from-blue-50/60 to-violet-50/40 dark:from-blue-500/5 dark:to-violet-500/5 border-b border-gray-100 dark:border-slate-700/60 flex items-center justify-between">
+            <div className="bg-white dark:bg-slate-800 ring-1 ring-gray-100 dark:ring-slate-700/60 rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
+              <div className="px-4 py-3 bg-gradient-to-r from-blue-500 to-violet-600 text-white border-b border-blue-400/20 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center text-white text-[10px] font-bold shadow-sm ring-1 ring-blue-400/30">AI</div>
-                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200" style={{ fontFamily: 'Poppins, sans-serif' }}>System Prompt Final</span>
+                  <div className="w-7 h-7 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center text-white text-[10px] font-bold shadow-sm ring-1 ring-white/25">AI</div>
+                  <span className="text-sm font-bold" style={{ fontFamily: 'Poppins, sans-serif' }}>System Prompt Final</span>
                 </div>
-                <span className="text-[10px] font-medium text-violet-600 dark:text-violet-300 px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-500/10 ring-1 ring-violet-200 dark:ring-violet-500/20">
+                <span className="text-[10px] font-semibold text-white px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-sm ring-1 ring-white/25">
                   v{configs.find(c => String(c.id) === String(selectedId))?.version || '?'}
                 </span>
               </div>

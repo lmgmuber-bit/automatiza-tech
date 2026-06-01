@@ -589,7 +589,7 @@ export default function PromptsView() {
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {canEdit && !editMode && (
               <>
-                <button onClick={startEdit} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-sm flex items-center gap-1 transition-colors">
+                <button onClick={startEdit} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 flex items-center gap-1 transition-all duration-300">
                   <Pencil size={13} /> Editar
                 </button>
                 <button
@@ -611,7 +611,7 @@ export default function PromptsView() {
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="px-4 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm disabled:opacity-50 flex items-center gap-1 transition-colors"
+                  className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 flex items-center gap-1 transition-all duration-300"
                 >
                   {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                   {creating ? 'Crear' : 'Guardar'}
@@ -661,7 +661,7 @@ export default function PromptsView() {
             const isAlwaysOn = ALWAYS_ON_SECTIONS.includes(section.id);
 
             return (
-              <div key={section.id} className={`rounded-2xl ring-1 overflow-hidden transition-all ${enabled ? 'bg-white dark:bg-slate-800 ring-gray-100 dark:ring-slate-700/60 shadow-sm hover:ring-gray-200 dark:hover:ring-slate-600' : 'bg-gray-50/60 dark:bg-slate-800/40 ring-gray-100/70 dark:ring-slate-700/40 opacity-60'}`}>
+              <div key={section.id} className={`rounded-2xl ring-1 overflow-hidden transition-all duration-300 ${enabled ? 'bg-white dark:bg-slate-800 ring-gray-100 dark:ring-slate-700/60 shadow-md hover:shadow-xl hover:ring-gray-200 dark:hover:ring-slate-600' : 'bg-gray-50/60 dark:bg-slate-800/40 ring-gray-100/70 dark:ring-slate-700/40 opacity-60'}`}>
                 <div className="flex items-center justify-between px-4 py-3 bg-gray-50/70 dark:bg-slate-800/60">
                   <button
                     onClick={() => enabled && toggleSection(section.id)}
@@ -899,7 +899,7 @@ export default function PromptsView() {
       {/* Top bar */}
       <div className="shrink-0 border-b border-gray-100 dark:border-slate-700/60 px-4 py-3 flex items-center justify-between gap-3 bg-white dark:bg-slate-800">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-blue-50 text-blue-600 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20 shrink-0">
+          <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-400 to-indigo-600 text-white shadow-md shrink-0">
             <FileText size={22} />
           </span>
           <div className="min-w-0">
@@ -913,13 +913,13 @@ export default function PromptsView() {
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={openImportModal}
-              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg bg-amber-50 text-amber-600 ring-1 ring-amber-200 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20 dark:hover:bg-amber-500/20 flex items-center gap-1.5 shadow-sm transition-colors"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center gap-1.5 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
             >
               <Upload size={16} /> <span className="hidden sm:inline">Importar</span>
             </button>
             <button
               onClick={startCreate}
-              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1.5 shadow-sm transition-colors"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center gap-1.5 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
             >
               <Plus size={16} /> <span className="hidden sm:inline">Nueva Config</span><span className="sm:hidden">Nueva</span>
             </button>
@@ -946,9 +946,9 @@ export default function PromptsView() {
                   <button
                     key={cfg.id}
                     onClick={() => selectConfig(cfg)}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl ring-1 transition-all ${
+                    className={`relative w-full text-left pl-4 pr-3 py-2.5 rounded-xl ring-1 transition-all duration-300 overflow-hidden ${
                       isSelected
-                        ? 'bg-white dark:bg-slate-800 ring-blue-300 dark:ring-blue-500/40 shadow-sm'
+                        ? 'bg-white dark:bg-slate-800 ring-blue-300 dark:ring-blue-500/40 shadow-md hover:shadow-lg before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-gradient-to-b before:from-blue-500 before:to-indigo-600'
                         : 'bg-transparent ring-transparent hover:bg-white dark:hover:bg-slate-700/40 hover:ring-gray-100 dark:hover:ring-slate-700'
                     }`}
                   >
@@ -1009,7 +1009,7 @@ export default function PromptsView() {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700/60">
               <h3 className="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                <span className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20"><Upload size={16} /></span> Importar Prompts
+                <span className="w-9 h-9 rounded-2xl flex items-center justify-center bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md"><Upload size={16} /></span> Importar Prompts
               </h3>
               <button onClick={() => setImportModal(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400">
                 <X size={18} />
@@ -1020,9 +1020,9 @@ export default function PromptsView() {
             <div className="flex border-b border-slate-200 dark:border-slate-700">
               <button
                 onClick={() => setImportTab('config')}
-                className={`flex-1 px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                className={`flex-1 px-4 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-all duration-300 ${
                   importTab === 'config'
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50 dark:bg-blue-500/10 dark:text-blue-400'
+                    ? 'text-white bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md'
                     : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
                 }`}
               >
@@ -1030,9 +1030,9 @@ export default function PromptsView() {
               </button>
               <button
                 onClick={() => setImportTab('csv')}
-                className={`flex-1 px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                className={`flex-1 px-4 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-all duration-300 ${
                   importTab === 'csv'
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50 dark:bg-blue-500/10 dark:text-blue-400'
+                    ? 'text-white bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md'
                     : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
                 }`}
               >
@@ -1096,7 +1096,7 @@ export default function PromptsView() {
                   <button
                     onClick={handleImportFromConfig}
                     disabled={!importSourceId || !importDestChannelId || importLoading}
-                    className="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full px-4 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-300"
                   >
                     {importLoading ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
                     Importar Configuración
@@ -1170,7 +1170,7 @@ export default function PromptsView() {
                   <button
                     onClick={handleImportFromCsv}
                     disabled={!csvParsedData || !importDestChannelId || importLoading}
-                    className="w-full px-4 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full px-4 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-300"
                   >
                     {importLoading ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
                     Importar desde CSV

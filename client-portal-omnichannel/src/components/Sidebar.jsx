@@ -34,6 +34,22 @@ const adminNavItems = [
   { id: 'support', label: 'Soporte', icon: LifeBuoy },
 ];
 
+// Color de marca por módulo — chip de icono gradiente (estilo Marketing IG / Clientes)
+const ITEM_GRAD = {
+  inbox: 'from-blue-400 to-indigo-600',
+  channels: 'from-emerald-400 to-teal-600',
+  'channel-types': 'from-violet-400 to-purple-600',
+  'bot-config': 'from-sky-400 to-blue-600',
+  agents: 'from-amber-400 to-orange-500',
+  audit: 'from-rose-400 to-pink-600',
+  support: 'from-cyan-400 to-sky-600',
+  clients: 'from-emerald-400 to-green-600',
+  dashboard: 'from-blue-500 to-indigo-600',
+  'marketing-ig': 'from-pink-500 to-rose-600',
+  'ai-prompt': 'from-fuchsia-400 to-purple-600',
+  profile: 'from-indigo-400 to-violet-600',
+};
+
 export default function Sidebar({ currentView, onNavigate, onLogout, isOpen, onClose, isMobile, darkMode, onToggleDark, agentDataVersion, openTicketCount, unreadMsgCount }) {
   const isAgentMode = getIsAgent();
   const agentData = isAgentMode ? getAgentData() : null;
@@ -105,7 +121,9 @@ export default function Sidebar({ currentView, onNavigate, onLogout, isOpen, onC
               onClick={() => onNavigate(item.id)}
               className={active ? 'active' : ''}
             >
-              <Icon size={18} className="shrink-0" />
+              <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br ${ITEM_GRAD[item.id] || 'from-slate-400 to-slate-600'} text-white shadow-sm`}>
+                <Icon size={16} />
+              </span>
               <span className="flex-1 text-left">{item.label}</span>
               {item.id === 'inbox' && unreadMsgCount > 0 && (
                 <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-red-500 text-white min-w-[20px] text-center animate-pulse">{unreadMsgCount > 99 ? '99+' : unreadMsgCount}</span>
@@ -130,7 +148,9 @@ export default function Sidebar({ currentView, onNavigate, onLogout, isOpen, onC
                   onClick={() => onNavigate(item.id)}
                   className={active ? 'active' : ''}
                 >
-                  <Icon size={18} className="shrink-0" />
+                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br ${ITEM_GRAD[item.id] || 'from-slate-400 to-slate-600'} text-white shadow-sm`}>
+                <Icon size={16} />
+              </span>
                   <span className="flex-1 text-left">{item.label}</span>
                   {item.id === 'support' && openTicketCount > 0 && (
                     <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-red-500 text-white min-w-[20px] text-center">{openTicketCount}</span>

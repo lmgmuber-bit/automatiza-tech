@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Camera, Lock, Save, Loader2, CheckCircle, AlertCircle, Eye, EyeOff, Mail, X, ZoomIn } from 'lucide-react';
+import { User, Camera, Lock, Save, Loader2, CheckCircle, AlertCircle, Eye, EyeOff, Mail, X, ZoomIn, MessageSquare, Layers } from 'lucide-react';
 import { getAgentProfile, updateAgentProfile, uploadAvatar, requestPasswordCode, changePasswordWithCode, getAgentData } from '../api';
 
 const roleLabels = { admin: 'Administrador', supervisor: 'Supervisor', agent: 'Agente' };
@@ -168,7 +168,7 @@ export default function ProfileView() {
     <div className="h-full overflow-y-auto p-4 sm:p-6">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-sky-50 text-sky-600 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20 shrink-0">
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shrink-0">
             <User size={22} />
           </div>
           <div>
@@ -185,14 +185,14 @@ export default function ProfileView() {
         )}
 
         {/* Avatar + Info Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 shadow-sm ring-1 ring-gray-100 dark:ring-slate-700/60">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 shadow-md ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-xl transition-all duration-300">
           <div className="flex flex-col items-center gap-4 sm:gap-5">
             {/* Avatar grande + cambiar foto */}
             <div className="relative group cursor-pointer" onClick={() => setShowAvatarModal(true)}>
               {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.name} className="w-36 h-36 sm:w-44 sm:h-44 rounded-full object-cover ring-4 ring-sky-100 dark:ring-sky-500/20 shadow-lg transition-transform group-hover:scale-105" />
+                <img src={profile.avatar_url} alt={profile.name} className="w-36 h-36 sm:w-44 sm:h-44 rounded-full object-cover ring-4 ring-white dark:ring-slate-700 shadow-xl transition-transform group-hover:scale-105" />
               ) : (
-                <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-gradient-to-br from-sky-400 via-indigo-500 to-violet-600 flex items-center justify-center text-white text-5xl sm:text-6xl font-bold ring-4 ring-sky-100 dark:ring-sky-500/20 shadow-lg transition-transform group-hover:scale-105" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-gradient-to-br from-sky-400 via-indigo-500 to-violet-600 flex items-center justify-center text-white text-5xl sm:text-6xl font-bold ring-4 ring-white dark:ring-slate-700 shadow-xl transition-transform group-hover:scale-105" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   {profile.name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
               )}
@@ -205,7 +205,7 @@ export default function ProfileView() {
               <button
                 onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
                 disabled={uploading}
-                className="absolute bottom-1 right-1 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors ring-2 ring-white dark:ring-slate-800"
+                className="absolute bottom-1 right-1 w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-full flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-300 ring-2 ring-white dark:ring-slate-800"
                 title="Cambiar foto"
               >
                 {uploading ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
@@ -264,7 +264,7 @@ export default function ProfileView() {
               <button
                 onClick={() => { fileRef.current?.click(); setShowAvatarModal(false); }}
                 disabled={uploading}
-                className="mt-3 sm:mt-4 flex items-center gap-2 px-5 py-2 sm:px-6 sm:py-2.5 bg-blue-600 text-white rounded-full text-sm sm:text-base font-medium shadow-lg hover:bg-blue-700 active:bg-blue-800 transition-colors"
+                className="mt-3 sm:mt-4 flex items-center gap-2 px-5 py-2 sm:px-6 sm:py-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-full text-sm sm:text-base font-medium shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 {uploading ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
                 Cambiar foto de perfil
@@ -274,9 +274,9 @@ export default function ProfileView() {
         )}
 
         {/* Edit Profile Form */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 shadow-sm ring-1 ring-gray-100 dark:ring-slate-700/60">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 shadow-md ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-xl transition-all duration-300">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base" style={{ fontFamily: 'Poppins, sans-serif' }}>
-            <span className="w-7 h-7 rounded-lg flex items-center justify-center ring-1 bg-sky-50 text-sky-600 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20"><User size={15} /></span>
+            <span className="w-7 h-7 rounded-xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md"><User size={15} /></span>
             Editar Información
           </h3>
           <form onSubmit={handleSaveProfile}>
@@ -325,7 +325,7 @@ export default function ProfileView() {
             <button
               type="submit"
               disabled={saving}
-              className="mt-4 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm disabled:opacity-50"
+              className="mt-4 flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all duration-300 shadow-md disabled:opacity-50"
               style={{ fontFamily: 'Poppins, sans-serif' }}
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
@@ -335,9 +335,9 @@ export default function ProfileView() {
         </div>
 
         {/* Change Password */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 shadow-sm ring-1 ring-gray-100 dark:ring-slate-700/60">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 shadow-md ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-xl transition-all duration-300">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base" style={{ fontFamily: 'Poppins, sans-serif' }}>
-            <span className="w-7 h-7 rounded-lg flex items-center justify-center ring-1 bg-amber-50 text-amber-600 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20"><Lock size={15} /></span>
+            <span className="w-7 h-7 rounded-xl flex items-center justify-center bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md"><Lock size={15} /></span>
             Cambiar Contraseña
           </h3>
 
@@ -378,7 +378,7 @@ export default function ProfileView() {
               </div>
               {pwError && <p className="text-rose-500 text-xs">{pwError}</p>}
               <div className="flex gap-2">
-                <button onClick={handleRequestCode} disabled={pwLoading} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm disabled:opacity-50" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <button onClick={handleRequestCode} disabled={pwLoading} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all duration-300 shadow-md disabled:opacity-50" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   {pwLoading ? <Loader2 size={14} className="animate-spin" /> : 'Verificar'}
                 </button>
                 <button onClick={resetPasswordFlow} className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-600">Cancelar</button>
@@ -418,7 +418,7 @@ export default function ProfileView() {
               </div>
               {pwError && <p className="text-rose-500 text-xs">{pwError}</p>}
               <div className="flex gap-2">
-                <button onClick={handleNewPasswordNext} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <button onClick={handleNewPasswordNext} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all duration-300 shadow-md" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   Continuar
                 </button>
                 <button onClick={resetPasswordFlow} className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-600">Cancelar</button>
@@ -441,7 +441,7 @@ export default function ProfileView() {
               />
               {pwError && <p className="text-rose-500 text-xs">{pwError}</p>}
               <div className="flex gap-2">
-                <button onClick={handleVerifyCode} disabled={pwLoading || verifyCode.length !== 6} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm disabled:opacity-50" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <button onClick={handleVerifyCode} disabled={pwLoading || verifyCode.length !== 6} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all duration-300 shadow-md disabled:opacity-50" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   {pwLoading ? <Loader2 size={14} className="animate-spin" /> : 'Confirmar'}
                 </button>
                 <button onClick={resetPasswordFlow} className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-600">Cancelar</button>
@@ -451,14 +451,16 @@ export default function ProfileView() {
         </div>
 
         {/* Stats */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 shadow-sm ring-1 ring-gray-100 dark:ring-slate-700/60">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-6 shadow-md ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-xl transition-all duration-300">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm sm:text-base" style={{ fontFamily: 'Poppins, sans-serif' }}>Estadísticas</h3>
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="text-center p-3 sm:p-4 rounded-xl ring-1 bg-sky-50 ring-sky-200 dark:bg-sky-500/10 dark:ring-sky-500/20">
+            <div className="relative overflow-hidden text-center p-3 sm:p-4 rounded-2xl ring-1 bg-sky-50 ring-sky-200 dark:bg-sky-500/10 dark:ring-sky-500/20 shadow-md">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-2xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md"><MessageSquare size={18} /></div>
               <div className="text-xl sm:text-2xl font-bold text-sky-700 dark:text-sky-300" style={{ fontFamily: 'Poppins, sans-serif' }}>{profile.active_chats || 0}</div>
               <div className="text-[11px] sm:text-xs text-sky-600 dark:text-sky-400">Chats activos</div>
             </div>
-            <div className="text-center p-3 sm:p-4 rounded-xl ring-1 bg-violet-50 ring-violet-200 dark:bg-violet-500/10 dark:ring-violet-500/20">
+            <div className="relative overflow-hidden text-center p-3 sm:p-4 rounded-2xl ring-1 bg-violet-50 ring-violet-200 dark:bg-violet-500/10 dark:ring-violet-500/20 shadow-md">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-md"><Layers size={18} /></div>
               <div className="text-xl sm:text-2xl font-bold text-violet-700 dark:text-violet-300" style={{ fontFamily: 'Poppins, sans-serif' }}>{profile.max_concurrent_chats || 5}</div>
               <div className="text-[11px] sm:text-xs text-violet-600 dark:text-violet-400">Max. simultáneos</div>
             </div>

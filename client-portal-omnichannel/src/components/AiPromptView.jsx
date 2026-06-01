@@ -57,7 +57,7 @@ export default function AiPromptView() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-violet-50 text-violet-600 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20 shrink-0">
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-md shrink-0">
             <Sparkles size={22} />
           </div>
           <div>
@@ -77,7 +77,7 @@ export default function AiPromptView() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 shadow-sm transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-br from-blue-500 to-indigo-600 hover:shadow-lg disabled:opacity-60 shadow-md transition-all duration-300"
             style={{ fontFamily: 'Poppins, sans-serif' }}
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -101,9 +101,9 @@ export default function AiPromptView() {
       )}
 
       {/* Info panel */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-5 shadow-sm ring-1 ring-gray-100 dark:ring-slate-700/60 shrink-0">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-5 shadow-md ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-xl transition-all duration-300 shrink-0">
         <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center ring-1 bg-sky-50 text-sky-600 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20 shrink-0">
+          <div className="w-9 h-9 rounded-2xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shrink-0">
             <Info className="w-4 h-4" />
           </div>
           <div>
@@ -121,7 +121,7 @@ export default function AiPromptView() {
       </div>
 
       {/* Editor */}
-      <div className="flex-1 min-h-0 bg-white dark:bg-slate-800 rounded-2xl p-1.5 shadow-sm ring-1 ring-gray-100 dark:ring-slate-700/60">
+      <div className="flex-1 min-h-0 bg-white dark:bg-slate-800 rounded-2xl p-1.5 shadow-md ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-xl transition-all duration-300">
         <textarea
           value={template}
           onChange={e => { setTemplate(e.target.value); setSaved(false); }}

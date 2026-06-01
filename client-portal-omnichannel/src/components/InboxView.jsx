@@ -356,7 +356,7 @@ export default function InboxView() {
 
   // Filtros de canal con color de marca por plataforma
   const CHANNEL_FILTERS = [
-    { key: '', label: 'Todos', dot: '', active: 'bg-blue-600 text-white shadow-sm' },
+    { key: '', label: 'Todos', dot: '', active: 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md' },
     { key: 'whatsapp', label: 'WhatsApp', dot: '#25D366', active: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-300' },
     { key: 'instagram', label: 'Instagram', dot: '#E4405F', active: 'bg-pink-50 text-pink-700 ring-1 ring-pink-400/40 dark:bg-pink-500/10 dark:text-pink-300' },
     { key: 'telegram', label: 'Telegram', dot: '#0088cc', active: 'bg-sky-50 text-sky-700 ring-1 ring-sky-400/40 dark:bg-sky-500/10 dark:text-sky-300' },
@@ -420,7 +420,7 @@ export default function InboxView() {
                 onClick={() => setFilters(f => ({ ...f, status: st.key }))}
                 className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-200 ${
                   filters.status === st.key
-                    ? 'bg-blue-600 text-white shadow-sm'
+                    ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md'
                     : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-slate-700/60 dark:text-slate-400 dark:hover:bg-slate-700'
                 }`}
               >
@@ -471,7 +471,7 @@ export default function InboxView() {
               >
                 <div className="relative shrink-0">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm ring-2 ring-white dark:ring-slate-800 ${
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md ring-2 ring-white dark:ring-slate-800 ${
                       conv.channel_type === 'whatsapp' ? 'bg-green-500' :
                       conv.channel_type === 'instagram' ? '' :
                       conv.channel_type === 'telegram' ? 'bg-sky-500' :

@@ -374,6 +374,16 @@ export default function InboxView() {
     <div className="flex h-full overflow-hidden">
       {/* Conversations List */}
       <div className={`inbox-panel ${mobileShowChat ? 'mobile-hidden' : ''} flex flex-col`}>
+        {/* Hero de color */}
+        <div className="px-3 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center shrink-0">
+            <MessageSquare size={18} />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold leading-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Bandeja Unificada</h2>
+            <p className="text-[11px] text-white/70 leading-tight">{filteredConvs.length} conversación{filteredConvs.length === 1 ? '' : 'es'}</p>
+          </div>
+        </div>
         {/* Search & Filters */}
         <div className="inbox-header space-y-2">
           <div className="relative">

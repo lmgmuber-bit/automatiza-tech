@@ -261,7 +261,7 @@ export default function ChannelTypesView() {
       <div className="max-w-4xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
-            <span className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-violet-50 text-violet-600 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20 shrink-0">
+            <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-md shrink-0">
               <Settings size={22} />
             </span>
             <div>
@@ -272,7 +272,7 @@ export default function ChannelTypesView() {
           {!showForm && !editingId && (
             <button
               onClick={startCreate}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow-sm text-sm font-medium hover:bg-blue-700 transition-colors self-start"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl shadow-md text-sm font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 self-start"
             >
               <Plus size={16} /> Nuevo Tipo
             </button>
@@ -289,7 +289,7 @@ export default function ChannelTypesView() {
           </div>
         ) : types.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <span className="w-16 h-16 rounded-2xl flex items-center justify-center ring-1 bg-violet-50 text-violet-500 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20 mb-4">
+            <span className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-md mb-4">
               <Settings size={30} />
             </span>
             <p className="text-sm font-medium text-gray-600 dark:text-slate-300">No hay tipos de canal</p>
@@ -306,8 +306,8 @@ export default function ChannelTypesView() {
               }
 
               return (
-                <div key={type.id} className={`bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-5 shadow-sm ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-md transition-shadow flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 ${type.is_active === '0' ? 'opacity-60' : ''}`}>
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl font-bold shrink-0 shadow-sm bg-${type.color || 'gray-500'}`}
+                <div className={`bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-5 shadow-md ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 ${type.is_active === '0' ? 'opacity-60' : ''}`} key={type.id}>
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white text-xl font-bold shrink-0 shadow-md ring-1 ring-white/20 bg-${type.color || 'gray-500'}`}
                     style={{ backgroundColor: colorToHex(type.color) }}
                   >
                     {getChannelIcon(type.slug, 24) || type.emoji || '📡'}

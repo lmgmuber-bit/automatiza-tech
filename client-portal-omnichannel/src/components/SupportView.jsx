@@ -188,7 +188,7 @@ export default function SupportView() {
           </div>
         ) : tickets.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-gray-400 dark:text-slate-500">
-            <div className="w-14 h-14 rounded-full flex items-center justify-center ring-1 bg-sky-50 text-sky-500 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20 mb-3">
+            <div className="w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md mb-3">
               <LifeBuoy size={26} />
             </div>
             <p className="text-sm font-medium text-gray-500 dark:text-slate-400">No hay tickets</p>
@@ -203,7 +203,7 @@ export default function SupportView() {
                 <button
                   key={t.id}
                   onClick={() => openTicket(t.id)}
-                  className={`w-full text-left px-4 py-3 transition-colors ${isActive ? 'bg-sky-50 dark:bg-sky-500/10 border-l-2 border-sky-500' : 'hover:bg-gray-50 dark:hover:bg-slate-800/50 border-l-2 border-transparent'}`}
+                  className={`w-full text-left px-4 py-3 transition-all duration-200 ${isActive ? 'bg-gradient-to-r from-sky-50 to-blue-50/40 dark:from-sky-500/10 dark:to-blue-500/5 border-l-2 border-sky-500 shadow-sm' : 'hover:bg-blue-50/40 dark:hover:bg-slate-700/40 border-l-2 border-transparent'}`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-mono text-gray-400 dark:text-slate-500">{t.ticket_number}</span>
@@ -291,7 +291,7 @@ export default function SupportView() {
             const imgs = msg.attachments ? (typeof msg.attachments === 'string' ? JSON.parse(msg.attachments) : msg.attachments) : [];
             return (
               <div key={msg.id} className={`flex ${isAdminMsg ? 'justify-start' : 'justify-end'}`}>
-                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm ${isAdminMsg ? 'bg-white dark:bg-slate-700 text-gray-800 dark:text-slate-200 ring-1 ring-gray-100 dark:ring-slate-600' : 'bg-blue-600 text-white'}`}>
+                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm shadow-md ${isAdminMsg ? 'bg-white dark:bg-slate-700 text-gray-800 dark:text-slate-200 ring-1 ring-gray-100 dark:ring-slate-600' : 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white'}`}>
                   <p className={`text-[10px] font-semibold mb-1 ${isAdminMsg ? 'text-gray-500 dark:text-slate-400' : 'text-blue-100'}`}>
                     {msg.sender_name || (isAdminMsg ? 'Soporte' : 'Tú')}
                   </p>
@@ -351,7 +351,7 @@ export default function SupportView() {
               <button
                 type="submit"
                 disabled={(!newMessage.trim() && msgImages.length === 0) || sendingMsg}
-                className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+                className="px-3 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg shadow-md transition-all duration-300 disabled:opacity-50 flex items-center gap-1.5"
               >
                 {sendingMsg ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               </button>
@@ -371,7 +371,7 @@ export default function SupportView() {
         {/* Top header */}
         <div className="p-4 border-b border-gray-100 dark:border-slate-700/60 bg-white dark:bg-slate-800">
           <div className="flex items-center gap-3 mb-1">
-            <span className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-sky-50 text-sky-600 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20 shrink-0">
+            <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shrink-0">
               <LifeBuoy size={22} />
             </span>
             <div>
@@ -492,7 +492,7 @@ export default function SupportView() {
       <div className="p-4 border-b border-gray-100 dark:border-slate-700/60 bg-white dark:bg-slate-800">
         <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <span className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-sky-50 text-sky-600 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20 shrink-0">
+            <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shrink-0">
               <LifeBuoy size={22} />
             </span>
             <div>
@@ -504,7 +504,7 @@ export default function SupportView() {
           </div>
           <button
             onClick={() => setShowOmniPrompt(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg hover:-translate-y-0.5 shadow-md transition-all duration-300"
             style={{ fontFamily: 'Poppins, sans-serif' }}
           >
             <Plus size={16} /> Nuevo Ticket
@@ -602,7 +602,7 @@ export default function SupportView() {
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl ring-1 ring-gray-100 dark:ring-slate-700/60 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b border-gray-100 dark:border-slate-700/60 flex items-center justify-between">
               <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                <span className="w-8 h-8 rounded-lg flex items-center justify-center ring-1 bg-sky-50 text-sky-600 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20"><Plus size={16} /></span>
+                <span className="w-8 h-8 rounded-xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md"><Plus size={16} /></span>
                 Nuevo Ticket
               </h3>
               <button onClick={() => setShowCreate(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-slate-300"><X size={18} /></button>
@@ -689,7 +689,7 @@ export default function SupportView() {
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => { setShowCreate(false); setCreateImages([]); }} className="px-4 py-2 text-sm bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600">Cancelar</button>
-                <button type="submit" disabled={creating} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow-sm disabled:opacity-50 flex items-center gap-1.5" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <button type="submit" disabled={creating} className="px-4 py-2 text-sm bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl font-semibold hover:shadow-lg hover:-translate-y-0.5 shadow-md transition-all duration-300 disabled:opacity-50 flex items-center gap-1.5" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   {creating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Crear Ticket
                 </button>
               </div>

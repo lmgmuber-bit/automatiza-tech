@@ -168,7 +168,7 @@ export default function ChannelsView() {
       <div className="max-w-4xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
-            <span className="w-11 h-11 rounded-xl flex items-center justify-center ring-1 bg-sky-50 text-sky-600 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20 shrink-0">
+            <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shrink-0">
               <Radio size={22} />
             </span>
             <div>
@@ -190,7 +190,7 @@ export default function ChannelsView() {
           ) : (
             <button
               onClick={() => { setShowForm(!showForm); setShowApiKey(false); }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow-sm text-sm font-medium hover:bg-blue-700 transition-colors self-start"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl shadow-md text-sm font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 self-start"
             >
               <Plus size={16} /> Agregar Canal
             </button>
@@ -319,7 +319,7 @@ export default function ChannelsView() {
           </div>
         ) : channels.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <span className="w-16 h-16 rounded-2xl flex items-center justify-center ring-1 bg-sky-50 text-sky-500 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20 mb-4">
+            <span className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md mb-4">
               <Radio size={30} />
             </span>
             <p className="text-sm font-medium text-gray-600 dark:text-slate-300">No tienes canales configurados</p>
@@ -328,9 +328,9 @@ export default function ChannelsView() {
         ) : (
           <div className="grid gap-4">
             {channels.map(ch => (
-              <div key={ch.id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-5 shadow-sm ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-md transition-shadow">
+              <div key={ch.id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-5 shadow-md ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold shrink-0 shadow-sm"
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-lg font-bold shrink-0 shadow-md ring-1 ring-white/20"
                     style={{ backgroundColor: colorToHex(typeMap[ch.channel_type]?.color || 'gray-500') }}
                   >
                     {getChannelIcon(ch.channel_type, 24) || typeMap[ch.channel_type]?.emoji || '📡'}

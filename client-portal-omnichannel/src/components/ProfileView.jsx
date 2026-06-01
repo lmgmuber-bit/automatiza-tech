@@ -167,13 +167,19 @@ export default function ProfileView() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6">
       <div className="max-w-2xl mx-auto space-y-6">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shrink-0">
-            <User size={22} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>Mi Perfil</h1>
-            <p className="text-sm text-gray-500 dark:text-slate-400">Gestiona tu información personal y contraseña</p>
+        <div className="relative overflow-hidden rounded-2xl px-6 py-5 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #6366f1, #8b5cf6)' }}>
+          <div className="absolute -top-10 -right-6 w-44 h-44 rounded-full blur-3xl bg-white/20" />
+          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+          <div className="relative flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+                <User size={26} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Mi Perfil</h1>
+                <p className="text-sm text-white/75">Gestiona tu información personal y contraseña</p>
+              </div>
+            </div>
           </div>
         </div>
 

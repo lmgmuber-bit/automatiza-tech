@@ -55,34 +55,38 @@ export default function AiPromptView() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden p-4 sm:p-6 gap-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-md shrink-0">
-            <Sparkles size={22} />
+      <div className="relative overflow-hidden rounded-2xl px-6 py-5 mb-1 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #d946ef, #9333ea)' }}>
+        <div className="absolute -top-10 -right-6 w-44 h-44 rounded-full blur-3xl bg-white/20" />
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+              <Sparkles size={26} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>System Prompt — Omni Asistente IA</h1>
+              <p className="text-sm text-white/75">Configura las instrucciones del asistente. Solo visible para Super Admin.</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>System Prompt — Omni Asistente IA</h1>
-            <p className="text-sm text-gray-500 dark:text-slate-400">Configura las instrucciones del asistente. Solo visible para Super Admin.</p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReset}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm transition-colors"
+              style={{ fontFamily: 'Poppins, sans-serif' }}
+            >
+              <RotateCcw className="w-4 h-4" />
+              Restaurar default
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm disabled:opacity-60 transition-all duration-300"
+              style={{ fontFamily: 'Poppins, sans-serif' }}
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {saving ? 'Guardando...' : 'Guardar Prompt'}
+            </button>
           </div>
-        </div>
-        <div className="sm:ml-auto flex items-center gap-2">
-          <button
-            onClick={handleReset}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 ring-1 ring-gray-200 dark:ring-slate-600 transition-colors"
-            style={{ fontFamily: 'Poppins, sans-serif' }}
-          >
-            <RotateCcw className="w-4 h-4" />
-            Restaurar default
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-br from-blue-500 to-indigo-600 hover:shadow-lg disabled:opacity-60 shadow-md transition-all duration-300"
-            style={{ fontFamily: 'Poppins, sans-serif' }}
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {saving ? 'Guardando...' : 'Guardar Prompt'}
-          </button>
         </div>
       </div>
 

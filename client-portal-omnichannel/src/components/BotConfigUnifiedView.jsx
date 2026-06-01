@@ -18,15 +18,19 @@ export default function BotConfigUnifiedView() {
       {/* Tabs */}
       <div className="shrink-0 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700/60">
         <div className="px-4 pt-4">
-          <div className="flex items-center gap-3 mb-1">
-            <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-md shrink-0">
-              <Bot size={22} />
-            </span>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>Configuración y Prompts del Bot</h1>
-              <p className="text-sm text-gray-500 dark:text-slate-400 hidden sm:block">
-                Configura el comportamiento, prompts y vista previa del bot
-              </p>
+          <div className="relative overflow-hidden rounded-2xl px-6 py-5 mb-1 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #0ea5e9, #2563eb)' }}>
+            <div className="absolute -top-10 -right-6 w-44 h-44 rounded-full blur-3xl bg-white/20" />
+            <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+            <div className="relative flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+                  <Bot size={26} />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Configuración y Prompts del Bot</h1>
+                  <p className="text-sm text-white/75">Configura el comportamiento, prompts y vista previa del bot</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

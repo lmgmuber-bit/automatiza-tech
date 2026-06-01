@@ -259,24 +259,28 @@ export default function ChannelTypesView() {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
       <div className="max-w-4xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-          <div className="flex items-center gap-3">
-            <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-md shrink-0">
-              <Settings size={22} />
-            </span>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>Tipos de Canal</h1>
-              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Administra los tipos de canal disponibles en el sistema</p>
+        <div className="relative overflow-hidden rounded-2xl px-6 py-5 mb-5 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #8b5cf6, #7c3aed)' }}>
+          <div className="absolute -top-10 -right-6 w-44 h-44 rounded-full blur-3xl bg-white/20" />
+          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+          <div className="relative flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+                <Settings size={26} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Tipos de Canal</h1>
+                <p className="text-sm text-white/75">Administra los tipos de canal disponibles en el sistema</p>
+              </div>
             </div>
+            {!showForm && !editingId && (
+              <button
+                onClick={startCreate}
+                className="flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm rounded-lg shadow-sm text-sm font-semibold transition-all duration-300 self-start"
+              >
+                <Plus size={16} /> Nuevo Tipo
+              </button>
+            )}
           </div>
-          {!showForm && !editingId && (
-            <button
-              onClick={startCreate}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl shadow-md text-sm font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 self-start"
-            >
-              <Plus size={16} /> Nuevo Tipo
-            </button>
-          )}
         </div>
 
         {/* Create Form */}

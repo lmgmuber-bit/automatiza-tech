@@ -215,32 +215,38 @@ export default function ClientsView() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+    <div className="flex-1 h-full overflow-y-auto bg-gray-50 dark:bg-slate-900">
+      {/* HERO FULL-BLEED */}
+      <div className="relative overflow-hidden px-6 py-6 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #10b981, #16a34a)' }}>
+        <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full blur-3xl bg-white/20" />
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shrink-0">
-              <Building2 size={22} />
-            </span>
+            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+              <Building2 size={26} />
+            </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>Gestión de Clientes</h1>
-              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Administra los clientes de AutomatizaTech</p>
+              <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Gestión de Clientes</h1>
+              <p className="text-sm text-white/75">Administra los clientes de AutomatizaTech</p>
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <button onClick={() => { setShowImportCrm(true); loadCrmProspects(); }} className="flex items-center gap-2 px-3 py-2 bg-gradient-to-br from-emerald-400 to-teal-600 text-white rounded-xl shadow-md text-sm font-medium hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
+            <button onClick={() => { setShowImportCrm(true); loadCrmProspects(); }} className="flex items-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm rounded-lg shadow-sm text-sm font-medium transition-all duration-300">
               <Download size={16} /> Importar Prospectos
             </button>
-            <button onClick={() => { setShowImport(true); loadWpUsers(); }} className="flex items-center gap-2 px-3 py-2 bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-xl shadow-md text-sm font-medium hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
+            <button onClick={() => { setShowImport(true); loadWpUsers(); }} className="flex items-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm rounded-lg shadow-sm text-sm font-medium transition-all duration-300">
               <Download size={16} /> Importar WP
             </button>
-            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-3 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl shadow-md text-sm font-medium hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
+            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm rounded-lg shadow-sm text-sm font-semibold transition-all duration-300">
               <Plus size={16} /> Nuevo Cliente
             </button>
           </div>
         </div>
+      </div>
 
+      {/* CONTENIDO */}
+      <div className="p-4 sm:p-6">
+      <div className="max-w-6xl mx-auto">
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="relative flex-1">
@@ -618,6 +624,7 @@ export default function ClientsView() {
             cancelText="Cancelar"
           />
         )}
+      </div>
       </div>
     </div>
   );

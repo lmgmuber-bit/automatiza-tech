@@ -164,12 +164,12 @@ export default function ChannelsView() {
   const isAtLimit = !isAdmin && maxChannels !== null && activeChannels >= maxChannels;
 
   return (
-    <div className="h-full overflow-y-auto p-4 sm:p-6 bg-gray-50 dark:bg-slate-900">
-      <div className="max-w-4xl mx-auto">
-        <div className="relative overflow-hidden rounded-2xl px-6 py-5 mb-5 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #10b981, #0d9488)' }}>
-          <div className="absolute -top-10 -right-6 w-44 h-44 rounded-full blur-3xl bg-white/20" />
-          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
-          <div className="relative flex flex-wrap items-center justify-between gap-3">
+    <div className="flex-1 h-full overflow-y-auto bg-gray-50 dark:bg-slate-900">
+      {/* HERO FULL-BLEED */}
+      <div className="relative overflow-hidden px-6 py-6 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #10b981, #0d9488)' }}>
+        <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full blur-3xl bg-white/20" />
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
                 <Radio size={26} />
@@ -199,8 +199,11 @@ export default function ChannelsView() {
               </button>
             )}
           </div>
-        </div>
+      </div>
 
+      {/* CONTENIDO */}
+      <div className="p-4 sm:p-6">
+      <div className="max-w-4xl mx-auto">
         {/* Limit warning banner */}
         {isAtLimit && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-start gap-3">
@@ -434,6 +437,7 @@ export default function ChannelsView() {
             ))}
           </div>
         )}
+      </div>
       </div>
 
       {/* Edit Channel Modal */}

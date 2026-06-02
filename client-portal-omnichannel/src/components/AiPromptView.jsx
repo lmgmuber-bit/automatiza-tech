@@ -53,10 +53,10 @@ export default function AiPromptView() {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden p-4 sm:p-6 gap-4">
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl px-6 py-5 mb-1 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #d946ef, #9333ea)' }}>
-        <div className="absolute -top-10 -right-6 w-44 h-44 rounded-full blur-3xl bg-white/20" />
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* HERO FULL-BLEED */}
+      <div className="relative overflow-hidden px-6 py-6 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #d946ef, #9333ea)' }}>
+        <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full blur-3xl bg-white/20" />
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
         <div className="relative flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -90,6 +90,8 @@ export default function AiPromptView() {
         </div>
       </div>
 
+      {/* CONTENIDO */}
+      <div className="flex-1 min-h-0 flex flex-col p-4 sm:p-6 gap-4">
       {/* Success / Error */}
       {saved && (
         <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 ring-1 ring-emerald-200 dark:ring-emerald-500/20 rounded-xl px-4 py-2.5 text-sm">
@@ -133,6 +135,7 @@ export default function AiPromptView() {
           placeholder="Escribe las instrucciones del system prompt aquí..."
           spellCheck={false}
         />
+      </div>
       </div>
     </div>
   );

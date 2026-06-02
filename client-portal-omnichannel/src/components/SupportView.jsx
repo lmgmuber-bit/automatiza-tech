@@ -368,26 +368,27 @@ export default function SupportView() {
   if (isAdmin) {
     return (
       <div className="h-full flex flex-col overflow-hidden">
-        {/* Top header */}
-        <div className="p-4 border-b border-gray-100 dark:border-slate-700/60 bg-white dark:bg-slate-800">
-          <div className="relative overflow-hidden rounded-2xl px-6 py-5 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #06b6d4, #0284c7)' }}>
-            <div className="absolute -top-10 -right-6 w-44 h-44 rounded-full blur-3xl bg-white/20" />
-            <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
-            <div className="relative flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
-                  <LifeBuoy size={26} />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Soporte — Administración</h1>
-                  <p className="text-sm text-white/75">{total} ticket{total !== 1 ? 's' : ''}</p>
-                </div>
+        {/* HERO FULL-BLEED */}
+        <div className="relative overflow-hidden px-6 py-6 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #06b6d4, #0284c7)' }}>
+          <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full blur-3xl bg-white/20" />
+          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+          <div className="relative flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+                <LifeBuoy size={26} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Soporte — Administración</h1>
+                <p className="text-sm text-white/75">{total} ticket{total !== 1 ? 's' : ''}</p>
               </div>
             </div>
           </div>
+        </div>
 
+        {/* Filters bar */}
+        <div className="p-4 border-b border-gray-100 dark:border-slate-700/60 bg-white dark:bg-slate-800">
           {/* Filters row */}
-          <div className="flex gap-2 flex-wrap mt-3 items-center">
+          <div className="flex gap-2 flex-wrap items-center">
             <form onSubmit={handleSearch} className="flex-1 min-w-[180px] relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
@@ -494,33 +495,34 @@ export default function SupportView() {
   // Agent list view
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100 dark:border-slate-700/60 bg-white dark:bg-slate-800">
-        <div className="relative overflow-hidden rounded-2xl px-6 py-5 mb-3 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #06b6d4, #0284c7)' }}>
-          <div className="absolute -top-10 -right-6 w-44 h-44 rounded-full blur-3xl bg-white/20" />
-          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
-          <div className="relative flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
-                <LifeBuoy size={26} />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Soporte</h1>
-                <p className="text-sm text-white/75">
-                  {total} ticket{total !== 1 ? 's' : ''} {statusFilter && `(${statusConfig[statusFilter]?.label || statusFilter})`}
-                </p>
-              </div>
+      {/* HERO FULL-BLEED */}
+      <div className="relative overflow-hidden px-6 py-6 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #06b6d4, #0284c7)' }}>
+        <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full blur-3xl bg-white/20" />
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+              <LifeBuoy size={26} />
             </div>
-            <button
-              onClick={() => setShowOmniPrompt(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm rounded-lg text-sm font-semibold transition-all duration-300"
-              style={{ fontFamily: 'Poppins, sans-serif' }}
-            >
-              <Plus size={16} /> Nuevo Ticket
-            </button>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Soporte</h1>
+              <p className="text-sm text-white/75">
+                {total} ticket{total !== 1 ? 's' : ''} {statusFilter && `(${statusConfig[statusFilter]?.label || statusFilter})`}
+              </p>
+            </div>
           </div>
+          <button
+            onClick={() => setShowOmniPrompt(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm rounded-lg text-sm font-semibold transition-all duration-300"
+            style={{ fontFamily: 'Poppins, sans-serif' }}
+          >
+            <Plus size={16} /> Nuevo Ticket
+          </button>
         </div>
+      </div>
 
+      {/* Filters bar */}
+      <div className="p-4 border-b border-gray-100 dark:border-slate-700/60 bg-white dark:bg-slate-800">
         {/* Filters */}
         <div className="flex gap-2 flex-wrap">
           <form onSubmit={handleSearch} className="flex-1 min-w-[200px] relative">

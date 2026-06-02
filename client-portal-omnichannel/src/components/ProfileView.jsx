@@ -165,24 +165,27 @@ export default function ProfileView() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-4 sm:p-6">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="relative overflow-hidden rounded-2xl px-6 py-5 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #6366f1, #8b5cf6)' }}>
-          <div className="absolute -top-10 -right-6 w-44 h-44 rounded-full blur-3xl bg-white/20" />
-          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
-          <div className="relative flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
-                <User size={26} />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Mi Perfil</h1>
-                <p className="text-sm text-white/75">Gestiona tu información personal y contraseña</p>
-              </div>
+    <div className="h-full overflow-y-auto bg-gray-50 dark:bg-slate-900">
+      {/* HERO FULL-BLEED */}
+      <div className="relative overflow-hidden px-6 py-6 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #6366f1, #8b5cf6)' }}>
+        <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full blur-3xl bg-white/20" />
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+              <User size={26} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Mi Perfil</h1>
+              <p className="text-sm text-white/75">Gestiona tu información personal y contraseña</p>
             </div>
           </div>
         </div>
+      </div>
 
+      {/* CONTENIDO */}
+      <div className="p-4 sm:p-6">
+      <div className="max-w-2xl mx-auto space-y-6">
         {message && (
           <div className={`flex items-center gap-2 p-3 rounded-xl text-sm ring-1 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20' : 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20'}`}>
             {message.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
@@ -472,6 +475,7 @@ export default function ProfileView() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

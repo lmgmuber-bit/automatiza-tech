@@ -98,7 +98,7 @@ export default function BotsView() {
                         <ChannelBadge type={config.channel_type} />
                         <span className="text-xs text-gray-400 truncate max-w-[120px]">{config.channel_name}</span>
                         {getIsAdmin() && config.client_name && (
-                          <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">{config.client_name}</span>
+                          <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">{config.client_name}</span>
                         )}
                         <span className={`text-xs px-1.5 py-0.5 rounded ${config.is_active === '1' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {config.is_active === '1' ? '✅ Activo' : '❌ Inactivo'}
@@ -140,16 +140,16 @@ export default function BotsView() {
                   <div className="p-4 sm:p-5 space-y-4 animate-fadein">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Nombre del Bot</label>
-                        <input
+                        <label htmlFor="botsview-fld1" className="block text-xs font-medium text-gray-500 mb-1">Nombre del Bot</label>
+                        <input id="botsview-fld1"
                           type="text" value={editForm.bot_name}
                           onChange={e => setEditForm({ ...editForm, bot_name: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Modelo AI</label>
-                        <select
+                        <label htmlFor="botsview-fld2" className="block text-xs font-medium text-gray-500 mb-1">Modelo AI</label>
+                        <select id="botsview-fld2"
                           value={editForm.ai_model}
                           onChange={e => setEditForm({ ...editForm, ai_model: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
@@ -160,8 +160,8 @@ export default function BotsView() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Max Tokens Respuesta</label>
-                        <input
+                        <label htmlFor="botsview-fld3" className="block text-xs font-medium text-gray-500 mb-1">Max Tokens Respuesta</label>
+                        <input id="botsview-fld3"
                           type="number" value={editForm.max_response_tokens}
                           onChange={e => setEditForm({ ...editForm, max_response_tokens: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
@@ -169,8 +169,8 @@ export default function BotsView() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Temperatura ({editForm.temperature})</label>
-                        <input
+                        <label htmlFor="botsview-fld4" className="block text-xs font-medium text-gray-500 mb-1">Temperatura ({editForm.temperature})</label>
+                        <input id="botsview-fld4"
                           type="range" min="0" max="1" step="0.05" value={editForm.temperature}
                           onChange={e => setEditForm({ ...editForm, temperature: e.target.value })}
                           className="w-full mt-2"
@@ -182,8 +182,8 @@ export default function BotsView() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Webhook N8N (opcional)</label>
-                      <input
+                      <label htmlFor="botsview-fld5" className="block text-xs font-medium text-gray-500 mb-1">Webhook N8N (opcional)</label>
+                      <input id="botsview-fld5"
                         type="url" value={editForm.n8n_webhook_url}
                         onChange={e => setEditForm({ ...editForm, n8n_webhook_url: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
@@ -193,8 +193,8 @@ export default function BotsView() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="flex items-center gap-2">
-                          <input
+                        <label htmlFor="botsview-fld6" className="flex items-center gap-2">
+                          <input id="botsview-fld6"
                             type="checkbox" checked={editForm.auto_reply_outside_hours === '1'}
                             onChange={e => setEditForm({ ...editForm, auto_reply_outside_hours: e.target.checked ? '1' : '0' })}
                             className="rounded"
@@ -203,8 +203,8 @@ export default function BotsView() {
                         </label>
                       </div>
                       <div>
-                        <label className="flex items-center gap-2">
-                          <input
+                        <label htmlFor="botsview-fld7" className="flex items-center gap-2">
+                          <input id="botsview-fld7"
                             type="checkbox" checked={editForm.is_active === '1'}
                             onChange={e => setEditForm({ ...editForm, is_active: e.target.checked ? '1' : '0' })}
                             className="rounded"

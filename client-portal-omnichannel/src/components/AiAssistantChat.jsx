@@ -136,7 +136,7 @@ function RobotIcon({ size = 28, className = '', animate = true }) {
       <g filter="url(#omniGlow)">
         {/* Left eye */}
         <ellipse cx="32" cy="34" rx="6" ry="7" fill="#6ee7b7" opacity="0.9">
-          {animate && <animate attributeName="ry" values="7;1;7" dur="4s" begin="0s" repeatCount="indefinite" keyTimes="0;0.04;0.08;1" values="7;1;7;7" />}
+          {animate && <animate attributeName="ry" dur="4s" begin="0s" repeatCount="indefinite" keyTimes="0;0.04;0.08;1" values="7;1;7;7" />}
         </ellipse>
         <ellipse cx="32" cy="34" rx="3.5" ry="4" fill="white" opacity="0.4" />
         {/* Eye scan lines */}
@@ -145,7 +145,7 @@ function RobotIcon({ size = 28, className = '', animate = true }) {
 
         {/* Right eye */}
         <ellipse cx="48" cy="34" rx="6" ry="7" fill="#6ee7b7" opacity="0.9">
-          {animate && <animate attributeName="ry" values="7;1;7" dur="4s" begin="0s" repeatCount="indefinite" keyTimes="0;0.04;0.08;1" values="7;1;7;7" />}
+          {animate && <animate attributeName="ry" dur="4s" begin="0s" repeatCount="indefinite" keyTimes="0;0.04;0.08;1" values="7;1;7;7" />}
         </ellipse>
         <ellipse cx="48" cy="34" rx="3.5" ry="4" fill="white" opacity="0.4" />
         <line x1="43" y1="33" x2="53" y2="33" stroke="#34d399" strokeWidth="0.4" opacity="0.3" />
@@ -274,7 +274,7 @@ function HistoryPanel({ chats, onSelect, onNew, onDelete, searchQuery, onSearchC
       <div className="px-3 pt-3 pb-2 shrink-0">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-          <input
+          <input aria-label="Buscar"
             type="text"
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
@@ -611,7 +611,7 @@ export default function AiAssistantChat({ currentView }) {
           {/* Input */}
           <div className="shrink-0 px-3 py-2 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
             <div className="flex items-end gap-2">
-              <textarea
+              <textarea aria-label="Escribe un mensaje"
                 ref={inputRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}

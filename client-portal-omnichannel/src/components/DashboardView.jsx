@@ -6,10 +6,10 @@ import { Users, MessageSquare, Bot, Radio, TrendingUp, AlertCircle, ChevronLeft,
 const BOLD = {
   sky:     { grad: 'from-sky-400 to-blue-600',     glow: 'bg-sky-400/30' },
   emerald: { grad: 'from-emerald-400 to-teal-600', glow: 'bg-emerald-400/30' },
-  violet:  { grad: 'from-violet-400 to-purple-600', glow: 'bg-violet-400/30' },
+  violet:  { grad: 'from-blue-400 to-blue-600', glow: 'bg-blue-400/30' },
   amber:   { grad: 'from-amber-400 to-orange-500',  glow: 'bg-amber-400/30' },
   rose:    { grad: 'from-rose-400 to-pink-600',     glow: 'bg-rose-400/30' },
-  blue:    { grad: 'from-blue-400 to-indigo-600',   glow: 'bg-blue-400/30' },
+  blue:    { grad: 'from-blue-400 to-blue-600',   glow: 'bg-blue-400/30' },
 };
 
 const HERO_GRADIENT = 'linear-gradient(120deg, #0b1220 0%, #1e3a8a 45%, #0e7490 100%)';
@@ -87,7 +87,7 @@ export default function DashboardView() {
         <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-sm ring-1 ring-white/20 text-[11px] font-semibold mb-3">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 ring-1 ring-white/20 text-[11px] font-semibold mb-3">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Sistema operativo
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Centro de Control</h1>
@@ -99,7 +99,7 @@ export default function DashboardView() {
               <p className="text-[11px] uppercase tracking-wider text-white/60 mt-1">Conversaciones</p>
             </div>
             <div className="w-px h-12 bg-white/15" />
-            <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm ring-1 ring-white/20 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-2xl bg-white/10 ring-1 ring-white/20 flex items-center justify-center">
               <Activity size={26} className="text-emerald-300" />
             </div>
           </div>
@@ -130,14 +130,14 @@ export default function DashboardView() {
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md ring-1 ring-gray-100 dark:ring-slate-700/60 p-5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
             <h2 className="flex items-center gap-2.5 text-lg font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>
-              <span className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md">
+              <span className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md">
                 <ClipboardList size={18} />
               </span>
               Auditoría reciente
             </h2>
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-              <input
+              <input aria-label="Buscar"
                 type="text"
                 value={auditSearchInput}
                 onChange={e => setAuditSearchInput(e.target.value)}
@@ -248,7 +248,7 @@ export default function DashboardView() {
                       onClick={() => setAuditPage(pageNum)}
                       className={`w-7 h-7 rounded-lg text-xs font-bold ${
                         pageNum === auditPage
-                          ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md'
+                          ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md'
                           : 'bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600'
                       }`}
                     >
@@ -272,14 +272,14 @@ export default function DashboardView() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md ring-1 ring-gray-100 dark:ring-slate-700/60 p-5">
               <h2 className="flex items-center gap-2.5 text-lg font-bold text-gray-900 dark:text-white mb-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                <span className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-md">
+                <span className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-md">
                   <Radio size={18} />
                 </span>
                 Mensajes por canal
               </h2>
               <div className="space-y-1">
                 {stats.messages_by_channel.map(ch => (
-                  <div key={ch.channel_type} className="flex items-center justify-between py-2 px-2 -mx-2 rounded-lg hover:bg-violet-50/50 dark:hover:bg-slate-700/40 transition-colors">
+                  <div key={ch.channel_type} className="flex items-center justify-between py-2 px-2 -mx-2 rounded-lg hover:bg-blue-50/50 dark:hover:bg-slate-700/40 transition-colors">
                     <span className="text-sm text-gray-600 dark:text-slate-300 capitalize">{ch.channel_type}</span>
                     <span className="text-base font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{Number(ch.total).toLocaleString()}</span>
                   </div>

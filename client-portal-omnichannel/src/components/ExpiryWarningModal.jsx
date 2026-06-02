@@ -8,7 +8,7 @@ export default function ExpiryWarningModal({ warning, onClose }) {
   const periodEnd = warning.period_end;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div role="dialog" aria-modal="true" aria-label="Aviso de vencimiento del servicio" className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in">
         {/* Header */}
         <div className={`px-6 py-4 ${isExpired ? 'bg-gradient-to-r from-red-500 to-red-600' : 'bg-gradient-to-r from-amber-400 to-orange-500'}`}>

@@ -564,7 +564,7 @@ export default function PromptsView() {
             )}
           <div className="flex-1 min-w-0">
             {editMode ? (
-              <input
+              <input aria-label="Nombre de la configuración"
                 type="text"
                 value={form.config_name}
                 onChange={e => setForm(f => ({ ...f, config_name: e.target.value }))}
@@ -577,7 +577,7 @@ export default function PromptsView() {
             )}
             {selectedCfg && (
               <div className="flex items-center flex-wrap gap-1.5 mt-1">
-                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-600 ring-1 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20">v{selectedCfg.version}</span>
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20">v{selectedCfg.version}</span>
                 <span className="text-[11px] text-gray-400 dark:text-slate-500">
                   Canal: {selectedCfg.channel_name || `#${selectedCfg.channel_id}`}
                   {selectedCfg.updated_at && ` · ${new Date(selectedCfg.updated_at).toLocaleDateString('es-CL')}`}
@@ -589,7 +589,7 @@ export default function PromptsView() {
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {canEdit && !editMode && (
               <>
-                <button onClick={startEdit} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 flex items-center gap-1 transition-all duration-300">
+                <button onClick={startEdit} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 flex items-center gap-1 transition-all duration-300">
                   <Pencil size={13} /> Editar
                 </button>
                 <button
@@ -625,8 +625,8 @@ export default function PromptsView() {
         {editMode && (
           <div className="px-4 py-3 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700/60 flex flex-wrap gap-4">
             <div className="flex-1 min-w-[200px]">
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Canal</label>
-              <select
+              <label htmlFor="promptsview-fld1" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Canal</label>
+              <select id="promptsview-fld1"
                 value={form.channel_id}
                 onChange={e => { const v = e.target.value; setForm(f => ({ ...f, channel_id: v })); if (v) loadAvailableAgents(v); else setAvailableAgents([]); }}
                 className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -638,8 +638,8 @@ export default function PromptsView() {
               </select>
             </div>
             <div className="flex items-end gap-2">
-              <label className="flex items-center gap-2 text-sm cursor-pointer px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 bg-white dark:bg-slate-700">
-                <input
+              <label htmlFor="promptsview-fld2" className="flex items-center gap-2 text-sm cursor-pointer px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 bg-white dark:bg-slate-700">
+                <input id="promptsview-fld2"
                   type="checkbox"
                   checked={!!form.is_active}
                   onChange={e => setForm(f => ({ ...f, is_active: e.target.checked ? 1 : 0 }))}
@@ -712,10 +712,10 @@ export default function PromptsView() {
                     {/* Regular fields */}
                     {section.fields.map(field => (
                       <div key={field.key}>
-                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>{field.label}</label>
+                        <label htmlFor="promptsview-fld3" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>{field.label}</label>
                         {editMode ? (
                           field.type === 'textarea' ? (
-                            <textarea
+                            <textarea id="promptsview-fld3"
                               value={form.prompt_data[field.key] || ''}
                               onChange={e => updateField(field.key, e.target.value)}
                               placeholder={field.placeholder}
@@ -723,7 +723,7 @@ export default function PromptsView() {
                               className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none resize-y"
                             />
                           ) : (
-                            <input
+                            <input aria-label="Valor del campo"
                               type="text"
                               value={form.prompt_data[field.key] || ''}
                               onChange={e => updateField(field.key, e.target.value)}
@@ -743,7 +743,7 @@ export default function PromptsView() {
                     {section.id === 'escalacion' && (
                       <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
                         <div className="flex items-center justify-between mb-3">
-                          <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
+                          <label htmlFor="promptsview-fld4" className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
                             <UserPlus size={14} /> Agentes para Escalación
                           </label>
                         </div>
@@ -763,7 +763,7 @@ export default function PromptsView() {
                               </div>
                             ) : (
                               <div className="flex items-center gap-2">
-                                <select
+                                <select id="promptsview-fld4"
                                   className="flex-1 px-2.5 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                                   value=""
                                   onChange={e => { if (e.target.value) addAgente(e.target.value); }}
@@ -824,7 +824,7 @@ export default function PromptsView() {
                                       <div className="flex items-center gap-3">
                                         <div className="flex items-center gap-2 flex-1">
                                           <Building2 size={14} className="text-slate-400 shrink-0" />
-                                          <input
+                                          <input aria-label="Empresa"
                                             type="text"
                                             value={agente.area || ''}
                                             onChange={e => updateAgente(idx, 'area', e.target.value)}
@@ -832,8 +832,8 @@ export default function PromptsView() {
                                             className="flex-1 px-2.5 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
                                           />
                                         </div>
-                                        <label className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 cursor-pointer whitespace-nowrap shrink-0">
-                                          <input
+                                        <label htmlFor="promptsview-fld5" className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 cursor-pointer whitespace-nowrap shrink-0">
+                                          <input id="promptsview-fld5"
                                             type="checkbox"
                                             checked={!!agente.es_defecto}
                                             onChange={e => updateAgente(idx, 'es_defecto', e.target.checked)}
@@ -899,7 +899,7 @@ export default function PromptsView() {
       {/* Top bar */}
       <div className="shrink-0 border-b border-gray-100 dark:border-slate-700/60 px-4 py-3 flex items-center justify-between gap-3 bg-white dark:bg-slate-800">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-400 to-indigo-600 text-white shadow-md shrink-0">
+          <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-md shrink-0">
             <FileText size={22} />
           </span>
           <div className="min-w-0">
@@ -919,7 +919,7 @@ export default function PromptsView() {
             </button>
             <button
               onClick={startCreate}
-              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center gap-1.5 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center gap-1.5 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
             >
               <Plus size={16} /> <span className="hidden sm:inline">Nueva Config</span><span className="sm:hidden">Nueva</span>
             </button>
@@ -948,7 +948,7 @@ export default function PromptsView() {
                     onClick={() => selectConfig(cfg)}
                     className={`relative w-full text-left pl-4 pr-3 py-2.5 rounded-xl ring-1 transition-all duration-300 overflow-hidden ${
                       isSelected
-                        ? 'bg-white dark:bg-slate-800 ring-blue-300 dark:ring-blue-500/40 shadow-md hover:shadow-lg before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-gradient-to-b before:from-blue-500 before:to-indigo-600'
+                        ? 'bg-white dark:bg-slate-800 ring-blue-300 dark:ring-blue-500/40 shadow-md hover:shadow-lg before:absolute before:inset-y-0 before:left-0 before:w-1.5 before:bg-gradient-to-b before:from-blue-500 before:to-blue-600'
                         : 'bg-transparent ring-transparent hover:bg-white dark:hover:bg-slate-700/40 hover:ring-gray-100 dark:hover:ring-slate-700'
                     }`}
                   >
@@ -1004,7 +1004,7 @@ export default function PromptsView() {
 
       {/* Import modal */}
       {importModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div role="dialog" aria-modal="true" aria-label="Editor de prompt" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700/60">
@@ -1022,7 +1022,7 @@ export default function PromptsView() {
                 onClick={() => setImportTab('config')}
                 className={`flex-1 px-4 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-all duration-300 ${
                   importTab === 'config'
-                    ? 'text-white bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md'
+                    ? 'text-white bg-gradient-to-br from-blue-500 to-blue-600 shadow-md'
                     : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
                 }`}
               >
@@ -1032,7 +1032,7 @@ export default function PromptsView() {
                 onClick={() => setImportTab('csv')}
                 className={`flex-1 px-4 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-all duration-300 ${
                   importTab === 'csv'
-                    ? 'text-white bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md'
+                    ? 'text-white bg-gradient-to-br from-blue-500 to-blue-600 shadow-md'
                     : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
                 }`}
               >
@@ -1048,8 +1048,8 @@ export default function PromptsView() {
                     Copia los prompts de una configuración existente a un canal diferente.
                   </p>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1.5">Configuración origen</label>
-                    <select
+                    <label htmlFor="promptsview-fld6" className="block text-xs font-medium text-slate-500 mb-1.5">Configuración origen</label>
+                    <select id="promptsview-fld6"
                       value={importSourceId}
                       onChange={e => setImportSourceId(e.target.value)}
                       className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -1063,8 +1063,8 @@ export default function PromptsView() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1.5">Canal destino</label>
-                    <select
+                    <label htmlFor="promptsview-fld7" className="block text-xs font-medium text-slate-500 mb-1.5">Canal destino</label>
+                    <select id="promptsview-fld7"
                       value={importDestChannelId}
                       onChange={e => setImportDestChannelId(e.target.value)}
                       className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -1078,8 +1078,8 @@ export default function PromptsView() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1.5">Nombre de la nueva configuración <span className="text-slate-400 font-normal">(opcional)</span></label>
-                    <input
+                    <label htmlFor="promptsview-fld8" className="block text-xs font-medium text-slate-500 mb-1.5">Nombre de la nueva configuración <span className="text-slate-400 font-normal">(opcional)</span></label>
+                    <input id="promptsview-fld8"
                       type="text"
                       value={importConfigName}
                       onChange={e => setImportConfigName(e.target.value)}
@@ -1096,7 +1096,7 @@ export default function PromptsView() {
                   <button
                     onClick={handleImportFromConfig}
                     disabled={!importSourceId || !importDestChannelId || importLoading}
-                    className="w-full px-4 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-300"
+                    className="w-full px-4 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-300"
                   >
                     {importLoading ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
                     Importar Configuración
@@ -1111,7 +1111,7 @@ export default function PromptsView() {
                     onClick={() => csvInputRef.current?.click()}
                     className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 dark:hover:bg-blue-500/5 transition-colors"
                   >
-                    <input
+                    <input aria-label="Subir archivo"
                       ref={csvInputRef}
                       type="file"
                       accept=".csv,.txt"
@@ -1133,8 +1133,8 @@ export default function PromptsView() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1.5">Canal destino</label>
-                    <select
+                    <label htmlFor="promptsview-fld9" className="block text-xs font-medium text-slate-500 mb-1.5">Canal destino</label>
+                    <select id="promptsview-fld9"
                       value={importDestChannelId}
                       onChange={e => setImportDestChannelId(e.target.value)}
                       className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -1148,8 +1148,8 @@ export default function PromptsView() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1.5">Nombre de la configuración <span className="text-slate-400 font-normal">(opcional)</span></label>
-                    <input
+                    <label htmlFor="promptsview-fld10" className="block text-xs font-medium text-slate-500 mb-1.5">Nombre de la configuración <span className="text-slate-400 font-normal">(opcional)</span></label>
+                    <input id="promptsview-fld10"
                       type="text"
                       value={importConfigName}
                       onChange={e => setImportConfigName(e.target.value)}
@@ -1170,7 +1170,7 @@ export default function PromptsView() {
                   <button
                     onClick={handleImportFromCsv}
                     disabled={!csvParsedData || !importDestChannelId || importLoading}
-                    className="w-full px-4 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-300"
+                    className="w-full px-4 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-300"
                   >
                     {importLoading ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
                     Importar desde CSV

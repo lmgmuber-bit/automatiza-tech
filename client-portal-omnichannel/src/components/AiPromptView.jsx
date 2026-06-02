@@ -60,7 +60,7 @@ export default function AiPromptView() {
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
         <div className="relative flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
               <Sparkles size={26} />
             </div>
             <div>
@@ -71,7 +71,7 @@ export default function AiPromptView() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleReset}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm transition-colors"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white transition-colors"
               style={{ fontFamily: 'Poppins, sans-serif' }}
             >
               <RotateCcw className="w-4 h-4" />
@@ -80,7 +80,7 @@ export default function AiPromptView() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm disabled:opacity-60 transition-all duration-300"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white disabled:opacity-60 transition-all duration-300"
               style={{ fontFamily: 'Poppins, sans-serif' }}
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -128,7 +128,7 @@ export default function AiPromptView() {
 
       {/* Editor */}
       <div className="flex-1 min-h-0 bg-white dark:bg-slate-800 rounded-2xl p-1.5 shadow-md ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-xl transition-all duration-300">
-        <textarea
+        <textarea aria-label="Editor de prompt"
           value={template}
           onChange={e => { setTemplate(e.target.value); setSaved(false); }}
           className="w-full h-full resize-none rounded-xl ring-1 ring-gray-200 dark:ring-slate-700 bg-gray-50/60 dark:bg-slate-900 px-4 py-3 text-[13px] font-mono text-gray-800 dark:text-slate-200 leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500"

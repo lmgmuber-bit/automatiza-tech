@@ -139,8 +139,8 @@ export default function ChannelTypesView() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Slug (ID único) *</label>
-            <input
+            <label htmlFor="channeltypesview-fld1" className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Slug (ID único) *</label>
+            <input id="channeltypesview-fld1"
               type="text"
               value={form.slug}
               onChange={e => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '') })}
@@ -152,8 +152,8 @@ export default function ChannelTypesView() {
             {isEdit && <p className="text-[10px] text-gray-400 mt-1">El slug no se puede cambiar</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Nombre *</label>
-            <input
+            <label htmlFor="channeltypesview-fld2" className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Nombre *</label>
+            <input id="channeltypesview-fld2"
               type="text"
               value={form.label}
               onChange={e => setForm({ ...form, label: e.target.value })}
@@ -163,8 +163,8 @@ export default function ChannelTypesView() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Emoji</label>
-            <input
+            <label htmlFor="channeltypesview-fld3" className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Emoji</label>
+            <input id="channeltypesview-fld3"
               type="text"
               value={form.emoji}
               onChange={e => setForm({ ...form, emoji: e.target.value })}
@@ -174,8 +174,8 @@ export default function ChannelTypesView() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Color</label>
-            <select
+            <label htmlFor="channeltypesview-fld4" className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Color</label>
+            <select id="channeltypesview-fld4"
               value={form.color}
               onChange={e => setForm({ ...form, color: e.target.value })}
               className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
@@ -186,8 +186,8 @@ export default function ChannelTypesView() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Orden</label>
-            <input
+            <label htmlFor="channeltypesview-fld5" className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Orden</label>
+            <input id="channeltypesview-fld5"
               type="number"
               value={form.sort_order}
               onChange={e => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })}
@@ -200,7 +200,7 @@ export default function ChannelTypesView() {
         {/* Dynamic Fields */}
         <div className="mt-5">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Campos del formulario de canal</label>
+            <label htmlFor="channeltypesview-fld6" className="text-sm font-medium text-gray-600 dark:text-gray-300">Campos del formulario de canal</label>
             <button type="button" onClick={addField} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1">
               <Plus size={12} /> Agregar campo
             </button>
@@ -212,7 +212,7 @@ export default function ChannelTypesView() {
             {form.fields.map((field, i) => (
               <div key={i} className="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-gray-50 dark:bg-slate-700/50 p-2 rounded-lg">
                 <GripVertical size={14} className="text-gray-400 shrink-0" />
-                <input
+                <input id="channeltypesview-fld6"
                   type="text"
                   value={field.key}
                   onChange={e => updateField(i, 'key', e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
@@ -220,7 +220,7 @@ export default function ChannelTypesView() {
                   className="flex-1 px-2 py-1.5 border border-gray-200 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   required
                 />
-                <input
+                <input aria-label="Etiqueta del campo"
                   type="text"
                   value={field.label}
                   onChange={e => updateField(i, 'label', e.target.value)}
@@ -228,7 +228,7 @@ export default function ChannelTypesView() {
                   className="flex-1 px-2 py-1.5 border border-gray-200 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   required
                 />
-                <input
+                <input aria-label="Texto de ayuda del campo"
                   type="text"
                   value={field.placeholder}
                   onChange={e => updateField(i, 'placeholder', e.target.value)}
@@ -259,12 +259,12 @@ export default function ChannelTypesView() {
   return (
     <div className="flex-1 h-full overflow-y-auto bg-gray-50 dark:bg-slate-900">
       {/* HERO FULL-BLEED */}
-      <div className="relative overflow-hidden px-6 py-6 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #8b5cf6, #7c3aed)' }}>
+      <div className="relative overflow-hidden px-6 py-6 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #3b82f6, #1d4ed8)' }}>
         <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full blur-3xl bg-white/20" />
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
         <div className="relative flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
                 <Settings size={26} />
               </div>
               <div>
@@ -275,7 +275,7 @@ export default function ChannelTypesView() {
             {!showForm && !editingId && (
               <button
                 onClick={startCreate}
-                className="flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm rounded-lg shadow-sm text-sm font-semibold transition-all duration-300 self-start"
+                className="flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white rounded-lg shadow-sm text-sm font-semibold transition-all duration-300 self-start"
               >
                 <Plus size={16} /> Nuevo Tipo
               </button>
@@ -296,7 +296,7 @@ export default function ChannelTypesView() {
           </div>
         ) : types.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <span className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-md mb-4">
+            <span className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-md mb-4">
               <Settings size={30} />
             </span>
             <p className="text-sm font-medium text-gray-600 dark:text-slate-300">No hay tipos de canal</p>

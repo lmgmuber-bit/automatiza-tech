@@ -171,7 +171,7 @@ export default function ChannelsView() {
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
         <div className="relative flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
                 <Radio size={26} />
               </div>
               <div>
@@ -186,14 +186,14 @@ export default function ChannelsView() {
             </div>
             {isAtLimit ? (
               <div className="self-start">
-                <div className="flex items-center gap-2 px-4 py-2 bg-white/15 ring-1 ring-white/25 text-white rounded-lg text-sm font-medium backdrop-blur-sm cursor-not-allowed">
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/15 ring-1 ring-white/25 text-white rounded-lg text-sm font-medium cursor-not-allowed">
                   <AlertTriangle size={16} /> Límite alcanzado
                 </div>
               </div>
             ) : (
               <button
                 onClick={() => { setShowForm(!showForm); setShowApiKey(false); }}
-                className="flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm rounded-lg shadow-sm text-sm font-semibold transition-all duration-300 self-start"
+                className="flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white rounded-lg shadow-sm text-sm font-semibold transition-all duration-300 self-start"
               >
                 <Plus size={16} /> Agregar Canal
               </button>
@@ -225,8 +225,8 @@ export default function ChannelsView() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {isAdmin && (
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Cliente *</label>
-                    <select
+                    <label htmlFor="channelsview-fld1" className="block text-sm font-medium text-gray-600 mb-1">Cliente *</label>
+                    <select id="channelsview-fld1"
                       value={form.client_id}
                       onChange={e => setForm({ ...form, client_id: e.target.value })}
                       title="Selecciona a qué cliente pertenece este canal. Cada canal queda asociado a un cliente específico."
@@ -242,8 +242,8 @@ export default function ChannelsView() {
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Tipo de Canal</label>
-                  <select
+                  <label htmlFor="channelsview-fld2" className="block text-sm font-medium text-gray-600 mb-1">Tipo de Canal</label>
+                  <select id="channelsview-fld2"
                     value={form.channel_type}
                     onChange={e => setForm({ ...form, channel_type: e.target.value, channel_name: '' })}
                     title="Plataforma de mensajería: WhatsApp (YCloud), Facebook Messenger, Instagram, etc."
@@ -256,8 +256,8 @@ export default function ChannelsView() {
                   <p className="text-[11px] text-gray-400 mt-1">Plataforma de mensajería a conectar</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Nombre del Canal</label>
-                  <input
+                  <label htmlFor="channelsview-fld3" className="block text-sm font-medium text-gray-600 mb-1">Nombre del Canal</label>
+                  <input id="channelsview-fld3"
                     type="text"
                     value={form.channel_name}
                     onChange={e => setForm({ ...form, channel_name: e.target.value })}
@@ -270,8 +270,8 @@ export default function ChannelsView() {
                 </div>
                 {(channelFields[form.channel_type] || []).map(field => (
                   <div key={field.key}>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">{field.label}</label>
-                    <input
+                    <label htmlFor="channelsview-fld4" className="block text-sm font-medium text-gray-600 mb-1">{field.label}</label>
+                    <input id="channelsview-fld4"
                       type="text"
                       value={form[field.key] || ''}
                       onChange={e => setForm({ ...form, [field.key]: e.target.value })}
@@ -285,9 +285,9 @@ export default function ChannelsView() {
                 {/* YCloud API Key field - shown for whatsapp type or always for admin */}
                 {(form.channel_type === 'whatsapp' || isAdmin) && (
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-600 mb-1">🔑 YCloud API Key</label>
+                    <label htmlFor="channelsview-fld5" className="block text-sm font-medium text-gray-600 mb-1">🔑 YCloud API Key</label>
                     <div className="relative">
-                      <input
+                      <input id="channelsview-fld5"
                         type={showApiKey ? 'text' : 'password'}
                         value={form.ycloud_api_key || ''}
                         onChange={e => setForm({ ...form, ycloud_api_key: e.target.value })}
@@ -347,7 +347,7 @@ export default function ChannelsView() {
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       <ChannelBadge type={ch.channel_type} />
                       {isAdmin && ch.client_name && (
-                        <span className="text-[10px] bg-violet-50 text-violet-700 ring-1 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20 px-1.5 py-0.5 rounded-full font-semibold">{ch.client_name}</span>
+                        <span className="text-[10px] bg-blue-50 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20 px-1.5 py-0.5 rounded-full font-semibold">{ch.client_name}</span>
                       )}
                       {ch.is_active === '1' ? (
                         <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20 px-1.5 py-0.5 rounded-full font-semibold"><CheckCircle size={11} /> Activo</span>
@@ -442,7 +442,7 @@ export default function ChannelsView() {
 
       {/* Edit Channel Modal */}
       {editChannel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditChannel(null)}>
+        <div role="dialog" aria-modal="true" aria-label="Editar canal" className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditChannel(null)}>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 animate-fadein max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <button onClick={() => setEditChannel(null)} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
@@ -454,8 +454,8 @@ export default function ChannelsView() {
             <form onSubmit={handleEdit}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Nombre del Canal</label>
-                  <input
+                  <label htmlFor="channelsview-fld6" className="block text-sm font-medium text-gray-600 mb-1">Nombre del Canal</label>
+                  <input id="channelsview-fld6"
                     type="text"
                     value={editForm.channel_name}
                     onChange={e => setEditForm({ ...editForm, channel_name: e.target.value })}
@@ -467,8 +467,8 @@ export default function ChannelsView() {
                   <p className="text-[11px] text-gray-400 mt-1">Nombre interno visible solo para agentes y admins</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Teléfono</label>
-                  <input
+                  <label htmlFor="channelsview-fld7" className="block text-sm font-medium text-gray-600 mb-1">Teléfono</label>
+                  <input id="channelsview-fld7"
                     type="text"
                     value={editForm.phone_number}
                     onChange={e => setEditForm({ ...editForm, phone_number: e.target.value })}
@@ -479,11 +479,11 @@ export default function ChannelsView() {
                   <p className="text-[11px] text-gray-400 mt-1">Número con código de país, ej: +56912345678</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                  <label htmlFor="channelsview-fld8" className="block text-sm font-medium text-gray-600 mb-1">
                     Page ID
                     <span className="ml-1 text-[10px] text-gray-400 font-normal">(solo Messenger/Instagram)</span>
                   </label>
-                  <input
+                  <input id="channelsview-fld8"
                     type="text"
                     value={editForm.page_id}
                     onChange={e => setEditForm({ ...editForm, page_id: e.target.value })}
@@ -499,9 +499,9 @@ export default function ChannelsView() {
                   <h4 className="text-sm font-semibold text-gray-700 mb-3">🔑 Configuración YCloud</h4>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-600 mb-1">API Key</label>
+                  <label htmlFor="channelsview-fld9" className="block text-sm font-medium text-gray-600 mb-1">API Key</label>
                   <div className="relative">
-                    <input
+                    <input id="channelsview-fld9"
                       type={showEditApiKey ? 'text' : 'password'}
                       value={editForm.ycloud_api_key}
                       onChange={e => setEditForm({ ...editForm, ycloud_api_key: e.target.value })}
@@ -520,8 +520,8 @@ export default function ChannelsView() {
                   <p className="text-[11px] text-gray-400 mt-1">YCloud Console → Settings → API Keys</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">WABA ID</label>
-                  <input
+                  <label htmlFor="channelsview-fld10" className="block text-sm font-medium text-gray-600 mb-1">WABA ID</label>
+                  <input id="channelsview-fld10"
                     type="text"
                     value={editForm.ycloud_waba_id}
                     onChange={e => setEditForm({ ...editForm, ycloud_waba_id: e.target.value })}
@@ -532,8 +532,8 @@ export default function ChannelsView() {
                   <p className="text-[11px] text-gray-400 mt-1">WhatsApp Business Account ID — YCloud Console → tu canal</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Phone Number ID</label>
-                  <input
+                  <label htmlFor="channelsview-fld11" className="block text-sm font-medium text-gray-600 mb-1">Phone Number ID</label>
+                  <input id="channelsview-fld11"
                     type="text"
                     value={editForm.ycloud_phone_id}
                     onChange={e => setEditForm({ ...editForm, ycloud_phone_id: e.target.value })}
@@ -547,9 +547,9 @@ export default function ChannelsView() {
                 {/* Webhook Secret (read-only, A5.2 — masked by default) */}
                 {editChannel.webhook_secret && (
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-600 mb-1">URL Webhook para YCloud</label>
+                    <label htmlFor="channelsview-fld12" className="block text-sm font-medium text-gray-600 mb-1">URL Webhook para YCloud</label>
                     <div className="flex items-center gap-2">
-                      <input
+                      <input id="channelsview-fld12"
                         type="text"
                         value={revealedSecrets['edit']
                           ? `${window.location.origin}${API_BASE}?route=webhook/ycloud&channel_id=${editChannel.id}&secret=${editChannel.webhook_secret}`

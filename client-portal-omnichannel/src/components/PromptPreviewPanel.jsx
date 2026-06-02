@@ -263,7 +263,7 @@ export default function PromptPreviewPanel() {
       <div className="shrink-0 px-4 py-3 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700/60 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 flex-1 min-w-[200px]">
           <span className="w-9 h-9 rounded-2xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-md shrink-0"><Eye size={16} /></span>
-          <select
+          <select aria-label="Seleccionar configuración"
             value={selectedId}
             onChange={e => handleSelect(e.target.value)}
             className="flex-1 px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -291,7 +291,7 @@ export default function PromptPreviewPanel() {
             disabled={!promptData}
             className={`flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg disabled:opacity-40 transition-all duration-300 ${
               showRaw
-                ? 'bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-md'
+                ? 'bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-md'
                 : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 ring-1 ring-gray-200 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600'
             }`}
           >
@@ -320,12 +320,12 @@ export default function PromptPreviewPanel() {
         ) : (
           <div className="max-w-3xl mx-auto">
             <div className="bg-white dark:bg-slate-800 ring-1 ring-gray-100 dark:ring-slate-700/60 rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
-              <div className="px-4 py-3 bg-gradient-to-r from-blue-500 to-violet-600 text-white border-b border-blue-400/20 flex items-center justify-between">
+              <div className="px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white border-b border-blue-400/20 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center text-white text-[10px] font-bold shadow-sm ring-1 ring-white/25">AI</div>
+                  <div className="w-7 h-7 rounded-xl bg-white/15 flex items-center justify-center text-white text-[10px] font-bold shadow-sm ring-1 ring-white/25">AI</div>
                   <span className="text-sm font-bold" style={{ fontFamily: 'Poppins, sans-serif' }}>System Prompt Final</span>
                 </div>
-                <span className="text-[10px] font-semibold text-white px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-sm ring-1 ring-white/25">
+                <span className="text-[10px] font-semibold text-white px-2.5 py-0.5 rounded-full bg-white/15 ring-1 ring-white/25">
                   v{configs.find(c => String(c.id) === String(selectedId))?.version || '?'}
                 </span>
               </div>

@@ -27,7 +27,7 @@ const KPIS = [
 
 const FUNNEL = [
   { label: 'Impresiones', value: 48200, color: '#0ea5e9' },
-  { label: 'DMs', value: 327, color: '#8b5cf6' },
+  { label: 'DMs', value: 327, color: '#3b82f6' },
   { label: 'Leads', value: 64, color: '#f59e0b' },
   { label: 'Demos', value: 18, color: '#10b981' },
   { label: 'Clientes', value: 6, color: '#06d6a0' },
@@ -50,7 +50,7 @@ const RECENT_POSTS = [
 
 const TINTS = {
   sky:     { bg: 'bg-sky-50 dark:bg-sky-500/10', text: 'text-sky-600 dark:text-sky-300', ring: 'ring-sky-200 dark:ring-sky-500/20' },
-  violet:  { bg: 'bg-violet-50 dark:bg-violet-500/10', text: 'text-violet-600 dark:text-violet-300', ring: 'ring-violet-200 dark:ring-violet-500/20' },
+  violet:  { bg: 'bg-blue-50 dark:bg-blue-500/10', text: 'text-blue-600 dark:text-blue-300', ring: 'ring-blue-200 dark:ring-blue-500/20' },
   amber:   { bg: 'bg-amber-50 dark:bg-amber-500/10', text: 'text-amber-600 dark:text-amber-300', ring: 'ring-amber-200 dark:ring-amber-500/20' },
   emerald: { bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-300', ring: 'ring-emerald-200 dark:ring-emerald-500/20' },
 };
@@ -78,7 +78,7 @@ export default function MarketingIgView() {
         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.5), transparent 45%)' }} />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center ring-1 ring-white/30">
+            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center ring-1 ring-white/30">
               <Instagram size={26} />
             </div>
             <div>
@@ -87,7 +87,7 @@ export default function MarketingIgView() {
             </div>
           </div>
           {/* Selector de periodo */}
-          <div className="flex gap-1 p-1 rounded-full bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
+          <div className="flex gap-1 p-1 rounded-full bg-white/15 ring-1 ring-white/20">
             {PERIODS.map(p => (
               <button
                 key={p.key}
@@ -221,7 +221,7 @@ export default function MarketingIgView() {
                     p.score >= 7 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
                     : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
                   }`}>{p.score}</span>
-                  <span className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: p.branch === 'A' ? '#0ea5e9' : '#8b5cf6' }}>{p.branch}</span>
+                  <span className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: p.branch === 'A' ? '#0ea5e9' : '#3b82f6' }}>{p.branch}</span>
                 </div>
               );
             })}

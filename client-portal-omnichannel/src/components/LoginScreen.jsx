@@ -51,7 +51,11 @@ export default function LoginScreen({ onLogin }) {
   const supportFileRef = useRef(null);
 
   // Dark mode toggle
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('omni_theme') === 'dark');
+  const [darkMode, setDarkMode] = useState(() => {
+    const stored = localStorage.getItem('omni_theme');
+    if (stored) return stored === 'dark';
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+  });
   function toggleDark() {
     const next = !darkMode;
     setDarkMode(next);
@@ -492,10 +496,12 @@ export default function LoginScreen({ onLogin }) {
       {/* Theme toggle */}
       <button
         onClick={toggleDark}
-        className="fixed top-4 right-4 z-50 p-2.5 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all shadow-lg"
+        className="fixed top-4 right-4 z-50 p-2.5 rounded-xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all shadow-lg"
         title={darkMode ? 'Modo Claro' : 'Modo Oscuro'}
+        aria-label={darkMode ? 'Activar modo claro' : 'Activar modo oscuro'}
+        aria-pressed={darkMode}
       >
-        {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+        {darkMode ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
       </button>
 
       {/* Content */}
@@ -525,7 +531,7 @@ export default function LoginScreen({ onLogin }) {
               onClick={() => switchMode('agent')}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
                 loginMode === 'agent'
-                  ? 'login-tab-active bg-white text-indigo-700 shadow-sm'
+                  ? 'login-tab-active bg-white text-blue-700 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -556,16 +562,17 @@ export default function LoginScreen({ onLogin }) {
           </div>
           )}
 
-          {error && <div className="login-error">{error}</div>}
+          {error && <div className="login-error" role="alert">{error}</div>}
 
           {/* Client Form */}
           {loginMode === 'client' && !resetMode && (
             <form onSubmit={handleClientSubmit} ref={formRef}>
               <div className="mb-5">
-                <label className="block text-sm font-medium text-gray-600 mb-1.5">API Key de tu empresa</label>
+                <label htmlFor="login-apikey" className="block text-sm font-medium text-gray-600 mb-1.5">API Key de tu empresa</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">🔑</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" aria-hidden="true">🔑</span>
                   <input
+                    id="login-apikey"
                     type="password"
                     value={apiKey}
                     onChange={e => setApiKey(e.target.value)}
@@ -593,14 +600,14 @@ export default function LoginScreen({ onLogin }) {
                 )}
               </button>
 
-              <p className="text-center text-xs text-gray-400 mt-4">
+              <p className="text-center text-xs text-gray-500 mt-4">
                 Obtén tu API Key contactando al administrador de{' '}
                 <span className="text-[var(--color-secondary)] font-medium">AutomatizaTech</span>
               </p>
               <button
                 type="button"
                 onClick={() => { setShowSupport(true); setSupportSent(false); setSupportError(''); setSupportForm({ name: '', email: '', user_type: 'client', description: '' }); setSupportImages([]); }}
-                className="w-full text-center text-xs text-gray-400 hover:text-indigo-500 mt-2 transition-colors flex items-center justify-center gap-1"
+                className="w-full text-center text-xs text-gray-500 hover:text-blue-500 mt-2 transition-colors flex items-center justify-center gap-1"
               >
                 <LifeBuoy size={12} /> ¿Problemas para iniciar sesión?
               </button>
@@ -611,10 +618,11 @@ export default function LoginScreen({ onLogin }) {
           {loginMode === 'admin' && !resetMode && (
             <form onSubmit={handleAdminSubmit}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-600 mb-1.5">Usuario WordPress</label>
+                <label htmlFor="login-admin-user" className="block text-sm font-medium text-gray-600 mb-1.5">Usuario WordPress</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">👤</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" aria-hidden="true">👤</span>
                   <input
+                    id="login-admin-user"
                     type="text"
                     value={adminUser}
                     onChange={e => setAdminUser(e.target.value)}
@@ -627,10 +635,11 @@ export default function LoginScreen({ onLogin }) {
               </div>
 
               <div className="mb-5">
-                <label className="block text-sm font-medium text-gray-600 mb-1.5">Contraseña</label>
+                <label htmlFor="login-admin-pass" className="block text-sm font-medium text-gray-600 mb-1.5">Contraseña</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">🔒</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" aria-hidden="true">🔒</span>
                   <input
+                    id="login-admin-pass"
                     type="password"
                     value={adminPass}
                     onChange={e => setAdminPass(e.target.value)}
@@ -660,13 +669,13 @@ export default function LoginScreen({ onLogin }) {
                 )}
               </button>
 
-              <p className="text-center text-xs text-gray-400 mt-4">
+              <p className="text-center text-xs text-gray-500 mt-4">
                 Usa las credenciales de tu cuenta de WordPress admin
               </p>
               <button
                 type="button"
                 onClick={() => { setShowSupport(true); setSupportSent(false); setSupportError(''); setSupportForm({ name: '', email: '', user_type: 'admin', description: '' }); setSupportImages([]); }}
-                className="w-full text-center text-xs text-gray-400 hover:text-indigo-500 mt-2 transition-colors flex items-center justify-center gap-1"
+                className="w-full text-center text-xs text-gray-500 hover:text-blue-500 mt-2 transition-colors flex items-center justify-center gap-1"
               >
                 <LifeBuoy size={12} /> ¿Problemas para iniciar sesión?
               </button>
@@ -677,15 +686,16 @@ export default function LoginScreen({ onLogin }) {
           {loginMode === 'agent' && !forgotMode && !resetMode && (
             <form onSubmit={handleAgentSubmit}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-600 mb-1.5">Email del agente</label>
+                <label htmlFor="login-agent-email" className="block text-sm font-medium text-gray-600 mb-1.5">Email del agente</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">📧</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" aria-hidden="true">📧</span>
                   <input
+                    id="login-agent-email"
                     type="email"
                     value={agentEmail}
                     onChange={e => setAgentEmail(e.target.value)}
                     placeholder="tu@email.com"
-                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-indigo-800/10 focus:border-indigo-600 transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-800/10 focus:border-blue-600 transition-all"
                     autoFocus
                     autoComplete="email"
                   />
@@ -693,15 +703,16 @@ export default function LoginScreen({ onLogin }) {
               </div>
 
               <div className="mb-5">
-                <label className="block text-sm font-medium text-gray-600 mb-1.5">Contraseña</label>
+                <label htmlFor="login-agent-pass" className="block text-sm font-medium text-gray-600 mb-1.5">Contraseña</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">🔒</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" aria-hidden="true">🔒</span>
                   <input
+                    id="login-agent-pass"
                     type="password"
                     value={agentPass}
                     onChange={e => setAgentPass(e.target.value)}
                     placeholder="Tu contraseña..."
-                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-indigo-800/10 focus:border-indigo-600 transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-800/10 focus:border-blue-600 transition-all"
                     autoComplete="current-password"
                   />
                 </div>
@@ -711,7 +722,7 @@ export default function LoginScreen({ onLogin }) {
                 type="submit"
                 disabled={loading || !agentEmail.trim() || !agentPass}
                 className="w-full py-3 rounded-[14px] font-semibold text-white transition-all btn-hover disabled:opacity-50 disabled:transform-none"
-                style={{ background: loading ? '#94a3b8' : 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
+                style={{ background: loading ? '#94a3b8' : 'linear-gradient(135deg, #2563eb, #1e40af)' }}
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -726,21 +737,21 @@ export default function LoginScreen({ onLogin }) {
                 )}
               </button>
 
-              <p className="text-center text-xs text-gray-400 mt-4">
+              <p className="text-center text-xs text-gray-500 mt-4">
                 Tu administrador debe haberte creado una cuenta con contraseña
               </p>
 
               <button
                 type="button"
                 onClick={() => { setForgotMode(true); setForgotEmail(agentEmail); setError(''); setSpeechText('📧 Ingresa tu email para recuperar tu contraseña'); }}
-                className="w-full text-center text-xs text-indigo-500 hover:text-indigo-700 mt-3 font-medium transition-colors"
+                className="w-full text-center text-xs text-blue-500 hover:text-blue-700 mt-3 font-medium transition-colors"
               >
                 ¿Olvidaste tu contraseña?
               </button>
               <button
                 type="button"
                 onClick={() => { setShowSupport(true); setSupportSent(false); setSupportError(''); setSupportForm({ name: '', email: agentEmail || '', user_type: 'agent', description: '' }); setSupportImages([]); }}
-                className="w-full text-center text-xs text-gray-400 hover:text-indigo-500 mt-2 transition-colors flex items-center justify-center gap-1"
+                className="w-full text-center text-xs text-gray-500 hover:text-blue-500 mt-2 transition-colors flex items-center justify-center gap-1"
               >
                 <LifeBuoy size={12} /> ¿Problemas para iniciar sesión?
               </button>
@@ -759,15 +770,16 @@ export default function LoginScreen({ onLogin }) {
               </button>
               <form onSubmit={handleForgotSubmit}>
                 <div className="mb-5">
-                  <label className="block text-sm font-medium text-gray-600 mb-1.5">Email del agente</label>
+                  <label htmlFor="login-forgot-email" className="block text-sm font-medium text-gray-600 mb-1.5">Email del agente</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">📧</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" aria-hidden="true">📧</span>
                     <input
+                      id="login-forgot-email"
                       type="email"
                       value={forgotEmail}
                       onChange={e => setForgotEmail(e.target.value)}
                       placeholder="tu@email.com"
-                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-indigo-800/10 focus:border-indigo-600 transition-all"
+                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-800/10 focus:border-blue-600 transition-all"
                       autoFocus
                       autoComplete="email"
                     />
@@ -777,7 +789,7 @@ export default function LoginScreen({ onLogin }) {
                   type="submit"
                   disabled={loading || !forgotEmail.trim()}
                   className="w-full py-3 rounded-[14px] font-semibold text-white transition-all btn-hover disabled:opacity-50"
-                  style={{ background: loading ? '#94a3b8' : 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
+                  style={{ background: loading ? '#94a3b8' : 'linear-gradient(135deg, #2563eb, #1e40af)' }}
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -807,7 +819,7 @@ export default function LoginScreen({ onLogin }) {
               <button
                 type="button"
                 onClick={() => { setForgotMode(false); setForgotSent(false); setSpeechText('🎧 Ingresa tu email y contraseña de agente'); }}
-                className="text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
               >
                 ← Volver al login
               </button>
@@ -818,42 +830,45 @@ export default function LoginScreen({ onLogin }) {
           {resetMode && !resetSuccess && (
             <div>
               <div className="text-center mb-5">
-                <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mx-auto mb-3">
-                  <Key size={24} className="text-indigo-600" />
+                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-3">
+                  <Key size={24} className="text-blue-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-800">Nueva contraseña</h3>
                 <p className="text-xs text-gray-500 mt-1">Hola {resetAgentName}, ingresa tu nueva contraseña</p>
               </div>
               <form onSubmit={handleResetSubmit}>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-600 mb-1.5">Nueva contraseña</label>
+                  <label htmlFor="login-reset-newpass" className="block text-sm font-medium text-gray-600 mb-1.5">Nueva contraseña</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">🔒</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" aria-hidden="true">🔒</span>
                     <input
+                      id="login-reset-newpass"
                       type="password"
                       value={resetNewPass}
                       onChange={e => setResetNewPass(e.target.value)}
                       placeholder="Mín. 8 chars, mayúscula, número, especial"
-                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-indigo-800/10 focus:border-indigo-600 transition-all"
+                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-800/10 focus:border-blue-600 transition-all"
                       autoFocus
                       autoComplete="new-password"
                       minLength={8}
+                      aria-describedby="login-reset-newpass-hint"
                     />
                   </div>
-                  <p className="mt-1.5 text-[10px] text-gray-400">
+                  <p id="login-reset-newpass-hint" className="mt-1.5 text-[10px] text-gray-400">
                     Mín. 8 caracteres · 1 mayúscula · 1 número · 1 especial (!@#$%^&*_+-~,.?) · Prohibidos: {PROHIBITED_LIST}
                   </p>
                 </div>
                 <div className="mb-5">
-                  <label className="block text-sm font-medium text-gray-600 mb-1.5">Confirmar contraseña</label>
+                  <label htmlFor="login-reset-confirmpass" className="block text-sm font-medium text-gray-600 mb-1.5">Confirmar contraseña</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">🔒</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" aria-hidden="true">🔒</span>
                     <input
+                      id="login-reset-confirmpass"
                       type="password"
                       value={resetConfirmPass}
                       onChange={e => setResetConfirmPass(e.target.value)}
                       placeholder="Repite la contraseña"
-                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-indigo-800/10 focus:border-indigo-600 transition-all"
+                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-800/10 focus:border-blue-600 transition-all"
                       autoComplete="new-password"
                       minLength={8}
                     />
@@ -863,7 +878,7 @@ export default function LoginScreen({ onLogin }) {
                   type="submit"
                   disabled={loading || resetNewPass.length < 8 || resetNewPass !== resetConfirmPass}
                   className="w-full py-3 rounded-[14px] font-semibold text-white transition-all btn-hover disabled:opacity-50"
-                  style={{ background: loading ? '#94a3b8' : 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
+                  style={{ background: loading ? '#94a3b8' : 'linear-gradient(135deg, #2563eb, #1e40af)' }}
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -891,7 +906,7 @@ export default function LoginScreen({ onLogin }) {
                 type="button"
                 onClick={() => { setResetMode(false); setResetSuccess(false); setLoginMode('agent'); setSpeechText('🎧 Ingresa tu email y nueva contraseña'); }}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-[12px] font-semibold text-white text-sm transition-all"
-                style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
+                style={{ background: 'linear-gradient(135deg, #2563eb, #1e40af)' }}
               >
                 <Headphones size={16} /> Iniciar sesión
               </button>
@@ -912,6 +927,7 @@ export default function LoginScreen({ onLogin }) {
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm shadow-lg"
                 style={{ background: ch.color }}
+                aria-hidden="true"
               >
                 {ch.icon}
               </div>
@@ -929,10 +945,10 @@ export default function LoginScreen({ onLogin }) {
       {/* Support form modal */}
       {showSupport && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4" onClick={() => setShowSupport(false)}>
-          <div className="support-modal-card bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="support-modal-card bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="support-modal-title">
             <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2"><LifeBuoy size={18} className="text-indigo-600" /> Solicitud de Soporte</h3>
-              <button onClick={() => setShowSupport(false)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-500"><X size={18} /></button>
+              <h3 id="support-modal-title" className="font-semibold text-gray-900 flex items-center gap-2"><LifeBuoy size={18} className="text-blue-600" aria-hidden="true" /> Solicitud de Soporte</h3>
+              <button onClick={() => setShowSupport(false)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-500" aria-label="Cerrar solicitud de soporte"><X size={18} aria-hidden="true" /></button>
             </div>
 
             {supportSent ? (
@@ -941,42 +957,45 @@ export default function LoginScreen({ onLogin }) {
                   <CheckCircle size={28} className="text-green-600" />
                 </div>
                 <h4 className="text-lg font-semibold text-gray-900 mb-1">¡Solicitud enviada!</h4>
-                {supportTicketNum && <p className="text-sm text-gray-500 mb-1">Número de ticket: <strong className="text-indigo-600">{supportTicketNum}</strong></p>}
+                {supportTicketNum && <p className="text-sm text-gray-500 mb-1">Número de ticket: <strong className="text-blue-600">{supportTicketNum}</strong></p>}
                 <p className="text-sm text-gray-500 mb-4">Nuestro equipo revisará tu caso y te contactará por email.</p>
-                <button onClick={() => setShowSupport(false)} className="px-5 py-2 text-sm font-semibold text-white rounded-xl" style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}>Cerrar</button>
+                <button onClick={() => setShowSupport(false)} className="px-5 py-2 text-sm font-semibold text-white rounded-xl" style={{ background: 'linear-gradient(135deg, #2563eb, #1e40af)' }}>Cerrar</button>
               </div>
             ) : (
               <form onSubmit={handleSupportSubmit} className="p-5 space-y-3.5">
                 {supportError && (
-                  <div className="flex items-center gap-2 p-2.5 rounded-lg text-sm bg-red-50 text-red-700 border border-red-200">
-                    <span>⚠️</span> {supportError}
+                  <div className="flex items-center gap-2 p-2.5 rounded-lg text-sm bg-red-50 text-red-700 border border-red-200" role="alert">
+                    <span aria-hidden="true">⚠️</span> {supportError}
                   </div>
                 )}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Nombre completo *</label>
+                  <label htmlFor="support-name" className="block text-xs font-medium text-gray-600 mb-1">Nombre completo *</label>
                   <input
+                    id="support-name"
                     type="text"
                     value={supportForm.name}
                     onChange={e => setSupportForm(f => ({ ...f, name: e.target.value }))}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Tu nombre"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Email *</label>
+                  <label htmlFor="support-email" className="block text-xs font-medium text-gray-600 mb-1">Email *</label>
                   <input
+                    id="support-email"
                     type="email"
                     value={supportForm.email}
                     onChange={e => setSupportForm(f => ({ ...f, email: e.target.value }))}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="tu@email.com"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de usuario</label>
+                  <label htmlFor="support-usertype" className="block text-xs font-medium text-gray-600 mb-1">Tipo de usuario</label>
                   <select
+                    id="support-usertype"
                     value={supportForm.user_type}
                     onChange={e => setSupportForm(f => ({ ...f, user_type: e.target.value }))}
                     className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 text-gray-900"
@@ -987,25 +1006,26 @@ export default function LoginScreen({ onLogin }) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Describe el problema *</label>
+                  <label htmlFor="support-description" className="block text-xs font-medium text-gray-600 mb-1">Describe el problema *</label>
                   <textarea
+                    id="support-description"
                     value={supportForm.description}
                     onChange={e => setSupportForm(f => ({ ...f, description: e.target.value }))}
                     rows={3}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                     placeholder="¿Qué problema tienes al iniciar sesión?"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Capturas de error (máx. 5)</label>
-                  <input ref={supportFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={e => {
+                  <label htmlFor="loginscreen-fld1" className="block text-xs font-medium text-gray-600 mb-1">Capturas de error (máx. 5)</label>
+                  <input id="loginscreen-fld1" ref={supportFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={e => {
                     const files = Array.from(e.target.files || []);
                     setSupportImages(prev => [...prev, ...files].slice(0, 5));
                     e.target.value = '';
                   }} />
                   <button type="button" onClick={() => supportFileRef.current?.click()} disabled={supportImages.length >= 5}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm border-2 border-dashed border-gray-200 rounded-xl text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors disabled:opacity-30">
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm border-2 border-dashed border-gray-200 rounded-xl text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors disabled:opacity-30">
                     <ImageIcon size={16} /> {supportImages.length === 0 ? 'Agregar capturas' : `${supportImages.length}/5 imágenes`}
                   </button>
                   {supportImages.length > 0 && (
@@ -1021,7 +1041,7 @@ export default function LoginScreen({ onLogin }) {
                 </div>
                 <div className="flex justify-end gap-2 pt-1">
                   <button type="button" onClick={() => setShowSupport(false)} className="px-4 py-2 text-sm bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200">Cancelar</button>
-                  <button type="submit" disabled={supportSending} className="px-4 py-2 text-sm text-white rounded-xl font-semibold disabled:opacity-50 flex items-center gap-1.5" style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}>
+                  <button type="submit" disabled={supportSending} className="px-4 py-2 text-sm text-white rounded-xl font-semibold disabled:opacity-50 flex items-center gap-1.5" style={{ background: 'linear-gradient(135deg, #2563eb, #1e40af)' }}>
                     {supportSending ? <Loader2 size={14} className="animate-spin" /> : <LifeBuoy size={14} />} Enviar Solicitud
                   </button>
                 </div>

@@ -21,7 +21,7 @@ export default function BotConfigUnifiedView() {
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
         <div className="relative flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
               <Bot size={26} />
             </div>
             <div>
@@ -44,7 +44,7 @@ export default function BotConfigUnifiedView() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold whitespace-nowrap rounded-t-xl border-b-2 transition-all duration-300 ${
                   isActive
-                    ? 'text-white border-transparent bg-gradient-to-br from-violet-400 to-purple-600 shadow-md'
+                    ? 'text-white border-transparent bg-gradient-to-br from-blue-400 to-blue-600 shadow-md'
                     : 'text-gray-500 dark:text-slate-400 border-transparent hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/40'
                 }`}
               >

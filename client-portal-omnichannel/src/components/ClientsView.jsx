@@ -6,7 +6,7 @@ import ResultModal from './ResultModal';
 const planColors = {
   basic: 'bg-gray-100 text-gray-600 ring-1 ring-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:ring-slate-600',
   professional: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20',
-  enterprise: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20',
+  enterprise: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20',
 };
 
 const statusColors = {
@@ -222,7 +222,7 @@ export default function ClientsView() {
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
         <div className="relative flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
               <Building2 size={26} />
             </div>
             <div>
@@ -231,13 +231,13 @@ export default function ClientsView() {
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <button onClick={() => { setShowImportCrm(true); loadCrmProspects(); }} className="flex items-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm rounded-lg shadow-sm text-sm font-medium transition-all duration-300">
+            <button onClick={() => { setShowImportCrm(true); loadCrmProspects(); }} className="flex items-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white rounded-lg shadow-sm text-sm font-medium transition-all duration-300">
               <Download size={16} /> Importar Prospectos
             </button>
-            <button onClick={() => { setShowImport(true); loadWpUsers(); }} className="flex items-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm rounded-lg shadow-sm text-sm font-medium transition-all duration-300">
+            <button onClick={() => { setShowImport(true); loadWpUsers(); }} className="flex items-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white rounded-lg shadow-sm text-sm font-medium transition-all duration-300">
               <Download size={16} /> Importar WP
             </button>
-            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm rounded-lg shadow-sm text-sm font-semibold transition-all duration-300">
+            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white rounded-lg shadow-sm text-sm font-semibold transition-all duration-300">
               <Plus size={16} /> Nuevo Cliente
             </button>
           </div>
@@ -251,7 +251,7 @@ export default function ClientsView() {
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-            <input
+            <input aria-label="Buscar"
               type="text" value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && loadClients()}
@@ -262,7 +262,7 @@ export default function ClientsView() {
           <div className="flex gap-1.5 flex-wrap">
             {['', 'trial', 'active', 'suspended'].map(s => (
               <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
-                className={`px-3.5 py-2 rounded-full text-xs font-medium transition-all capitalize ${statusFilter === s ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md' : 'bg-white text-gray-500 ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700'}`}>
+                className={`px-3.5 py-2 rounded-full text-xs font-medium transition-all capitalize ${statusFilter === s ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md' : 'bg-white text-gray-500 ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700'}`}>
                 {s || 'Todos'}
               </button>
             ))}
@@ -343,8 +343,8 @@ export default function ClientsView() {
                 <FormField label="Email" type="email" value={form.email} onChange={v => setForm({...form, email: v})} required />
                 <FormField label="Teléfono" value={form.phone} onChange={v => setForm({...form, phone: v})} />
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Plan</label>
-                  <select value={form.plan_type} onChange={e => setForm({...form, plan_type: e.target.value})}
+                  <label htmlFor="clientsview-fld1" className="block text-xs font-medium text-gray-500 mb-1">Plan</label>
+                  <select id="clientsview-fld1" value={form.plan_type} onChange={e => setForm({...form, plan_type: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
                     <option value="basic">Basic</option>
                     <option value="professional">Professional</option>
@@ -362,8 +362,8 @@ export default function ClientsView() {
                   <FormField label="Fecha inicio" type="date" value={form.period_start} onChange={v => setForm({...form, period_start: v})} max={form.period_end || undefined} />
                   <FormField label="Fecha fin" type="date" value={form.period_end} onChange={v => setForm({...form, period_end: v})} min={form.period_start || undefined} error={form.period_start && form.period_end && form.period_end < form.period_start ? 'No puede ser anterior a la fecha inicio' : ''} />
                 </div>
-                <label className="flex items-center gap-2 mt-3 cursor-pointer">
-                  <input type="checkbox" checked={form.is_free} onChange={e => setForm({...form, is_free: e.target.checked})} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                <label htmlFor="clientsview-fld2" className="flex items-center gap-2 mt-3 cursor-pointer">
+                  <input id="clientsview-fld2" type="checkbox" checked={form.is_free} onChange={e => setForm({...form, is_free: e.target.checked})} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                   <span className="text-xs text-gray-600 dark:text-gray-300">Período gratuito (free) — sin vencimiento</span>
                 </label>
               </div>
@@ -387,8 +387,8 @@ export default function ClientsView() {
                 <FormField label="Email" value={showEdit.email || ''} onChange={v => setShowEdit({...showEdit, email: v})} />
                 <FormField label="Teléfono" value={showEdit.phone || ''} onChange={v => setShowEdit({...showEdit, phone: v})} />
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Plan</label>
-                  <select value={showEdit.plan_type || 'basic'} onChange={e => setShowEdit({...showEdit, plan_type: e.target.value})}
+                  <label htmlFor="clientsview-fld3" className="block text-xs font-medium text-gray-500 mb-1">Plan</label>
+                  <select id="clientsview-fld3" value={showEdit.plan_type || 'basic'} onChange={e => setShowEdit({...showEdit, plan_type: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
                     <option value="basic">Basic</option>
                     <option value="professional">Professional</option>
@@ -396,8 +396,8 @@ export default function ClientsView() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
-                  <select value={showEdit.status || 'trial'} onChange={e => setShowEdit({...showEdit, status: e.target.value})}
+                  <label htmlFor="clientsview-fld4" className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
+                  <select id="clientsview-fld4" value={showEdit.status || 'trial'} onChange={e => setShowEdit({...showEdit, status: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
                     <option value="trial">Trial</option>
                     <option value="active">Active</option>
@@ -422,14 +422,14 @@ export default function ClientsView() {
                   <FormField label="Fecha inicio" type="date" value={showEdit.period_start || ''} onChange={v => setShowEdit({...showEdit, period_start: v})} max={showEdit.period_end || undefined} />
                   <FormField label="Fecha fin" type="date" value={showEdit.period_end || ''} onChange={v => setShowEdit({...showEdit, period_end: v})} min={showEdit.period_start || undefined} error={showEdit.period_start && showEdit.period_end && showEdit.period_end < showEdit.period_start ? 'No puede ser anterior a la fecha inicio' : ''} />
                 </div>
-                <label className="flex items-center gap-2 mt-3 cursor-pointer">
-                  <input type="checkbox" checked={!!showEdit.is_free || showEdit.is_free === '1'} onChange={e => setShowEdit({...showEdit, is_free: e.target.checked ? '1' : '0'})} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                <label htmlFor="clientsview-fld5" className="flex items-center gap-2 mt-3 cursor-pointer">
+                  <input id="clientsview-fld5" type="checkbox" checked={!!showEdit.is_free || showEdit.is_free === '1'} onChange={e => setShowEdit({...showEdit, is_free: e.target.checked ? '1' : '0'})} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                   <span className="text-xs text-gray-600 dark:text-gray-300">Período gratuito (free) — sin vencimiento</span>
                 </label>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Notas internas</label>
-                <textarea value={showEdit.notes || ''} onChange={e => setShowEdit({...showEdit, notes: e.target.value})} rows={3}
+                <label htmlFor="clientsview-fld6" className="block text-xs font-medium text-gray-500 mb-1">Notas internas</label>
+                <textarea id="clientsview-fld6" value={showEdit.notes || ''} onChange={e => setShowEdit({...showEdit, notes: e.target.value})} rows={3}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex gap-2 pt-2">
@@ -498,7 +498,7 @@ export default function ClientsView() {
             <div className="space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                <input
+                <input aria-label="Buscar"
                   type="text" value={wpSearch}
                   onChange={e => setWpSearch(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && loadWpUsers()}
@@ -545,7 +545,7 @@ export default function ClientsView() {
             <div className="space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                <input
+                <input aria-label="Buscar"
                   type="text" value={crmSearch}
                   onChange={e => setCrmSearch(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && loadCrmProspects()}
@@ -567,7 +567,7 @@ export default function ClientsView() {
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 ${
                         p.tipo === 'cliente' ? 'bg-gradient-to-br from-green-400 to-emerald-600' :
                         p.tipo === 'cerrado' ? 'bg-gradient-to-br from-gray-400 to-gray-600' :
-                        'bg-gradient-to-br from-blue-400 to-indigo-600'
+                        'bg-gradient-to-br from-blue-400 to-blue-600'
                       }`}>
                         {(p.nombre || '?')[0].toUpperCase()}
                       </div>
@@ -582,7 +582,7 @@ export default function ClientsView() {
                             p.tipo === 'cerrado' ? 'bg-gray-100 text-gray-500' :
                             'bg-blue-100 text-blue-700'
                           }`}>{p.tipo}</span>
-                          {p.origen && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">{p.origen}</span>}
+                          {p.origen && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">{p.origen}</span>}
                         </div>
                       </div>
                       <button
@@ -634,7 +634,7 @@ export default function ClientsView() {
 
 function Modal({ title, onClose, children, wide }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div role="dialog" aria-modal="true" aria-label="Datos del cliente" className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div className={`relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} max-h-[90vh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700">
@@ -650,8 +650,8 @@ function Modal({ title, onClose, children, wide }) {
 function FormField({ label, value, onChange, type = 'text', required, placeholder, min, max, error }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
-      <input
+      <label htmlFor="clientsview-fld7" className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+      <input id="clientsview-fld7"
         type={type} value={value} onChange={e => onChange(e.target.value)}
         required={required} placeholder={placeholder} min={min} max={max}
         className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 ${error ? 'border-red-400 bg-red-50 dark:bg-red-900/10' : 'border-gray-200'}`}

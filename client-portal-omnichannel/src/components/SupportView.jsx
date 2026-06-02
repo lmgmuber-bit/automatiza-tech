@@ -291,7 +291,7 @@ export default function SupportView() {
             const imgs = msg.attachments ? (typeof msg.attachments === 'string' ? JSON.parse(msg.attachments) : msg.attachments) : [];
             return (
               <div key={msg.id} className={`flex ${isAdminMsg ? 'justify-start' : 'justify-end'}`}>
-                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm shadow-md ${isAdminMsg ? 'bg-white dark:bg-slate-700 text-gray-800 dark:text-slate-200 ring-1 ring-gray-100 dark:ring-slate-600' : 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white'}`}>
+                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm shadow-md ${isAdminMsg ? 'bg-white dark:bg-slate-700 text-gray-800 dark:text-slate-200 ring-1 ring-gray-100 dark:ring-slate-600' : 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'}`}>
                   <p className={`text-[10px] font-semibold mb-1 ${isAdminMsg ? 'text-gray-500 dark:text-slate-400' : 'text-blue-100'}`}>
                     {msg.sender_name || (isAdminMsg ? 'Soporte' : 'Tú')}
                   </p>
@@ -333,7 +333,7 @@ export default function SupportView() {
               </div>
             )}
             <form onSubmit={handleSendMessage} className="p-3 flex gap-2 items-center">
-              <input ref={msgFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={e => {
+              <input aria-label="Escribe un mensaje" ref={msgFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={e => {
                 const files = Array.from(e.target.files || []);
                 setMsgImages(prev => [...prev, ...files].slice(0, 5));
                 e.target.value = '';
@@ -341,7 +341,7 @@ export default function SupportView() {
               <button type="button" onClick={() => msgFileRef.current?.click()} disabled={msgImages.length >= 5} className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-30" title="Adjuntar imágenes (máx. 5)">
                 <Paperclip size={18} />
               </button>
-              <input
+              <input aria-label="Adjuntar archivo"
                 type="text"
                 value={newMessage}
                 onChange={e => setNewMessage(e.target.value)}
@@ -351,7 +351,7 @@ export default function SupportView() {
               <button
                 type="submit"
                 disabled={(!newMessage.trim() && msgImages.length === 0) || sendingMsg}
-                className="px-3 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg shadow-md transition-all duration-300 disabled:opacity-50 flex items-center gap-1.5"
+                className="px-3 py-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg shadow-md transition-all duration-300 disabled:opacity-50 flex items-center gap-1.5"
               >
                 {sendingMsg ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               </button>
@@ -374,7 +374,7 @@ export default function SupportView() {
           <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
           <div className="relative flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
                 <LifeBuoy size={26} />
               </div>
               <div>
@@ -391,7 +391,7 @@ export default function SupportView() {
           <div className="flex gap-2 flex-wrap items-center">
             <form onSubmit={handleSearch} className="flex-1 min-w-[180px] relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
+              <input aria-label="Buscar"
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -399,7 +399,7 @@ export default function SupportView() {
                 className="w-full pl-9 pr-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </form>
-            <select
+            <select aria-label="Filtrar por estado"
               value={statusFilter}
               onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
               className="px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -412,7 +412,7 @@ export default function SupportView() {
             </select>
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-gray-400 dark:text-slate-500">Mostrar:</span>
-              <select
+              <select aria-label="Resultados por página"
                 value={perPage}
                 onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
                 className="px-2 py-1.5 rounded-lg text-xs ring-1 ring-gray-200 dark:ring-slate-700 bg-white dark:bg-slate-900 text-gray-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -501,7 +501,7 @@ export default function SupportView() {
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
         <div className="relative flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
               <LifeBuoy size={26} />
             </div>
             <div>
@@ -513,7 +513,7 @@ export default function SupportView() {
           </div>
           <button
             onClick={() => setShowOmniPrompt(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white backdrop-blur-sm rounded-lg text-sm font-semibold transition-all duration-300"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white rounded-lg text-sm font-semibold transition-all duration-300"
             style={{ fontFamily: 'Poppins, sans-serif' }}
           >
             <Plus size={16} /> Nuevo Ticket
@@ -527,7 +527,7 @@ export default function SupportView() {
         <div className="flex gap-2 flex-wrap">
           <form onSubmit={handleSearch} className="flex-1 min-w-[200px] relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
+            <input aria-label="Buscar"
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -535,7 +535,7 @@ export default function SupportView() {
               className="w-full pl-9 pr-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </form>
-          <select
+          <select aria-label="Filtrar por estado"
             value={statusFilter}
             onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
             className="px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -565,11 +565,11 @@ export default function SupportView() {
 
       {/* Omni intercept modal */}
       {showOmniPrompt && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowOmniPrompt(false)}>
+        <div role="dialog" aria-modal="true" aria-label="Prompt del asistente" className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowOmniPrompt(false)}>
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden" onClick={e => e.stopPropagation()}>
             {/* Header gradient */}
-            <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-fuchsia-500 px-6 py-5 text-center">
-              <div className="w-16 h-16 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+            <div className="bg-gradient-to-br from-blue-500 via-blue-500 to-fuchsia-500 px-6 py-5 text-center">
+              <div className="w-16 h-16 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center">
                 <Sparkles size={32} className="text-white" />
               </div>
               <h3 className="text-lg font-bold text-white">¿Ya le preguntaste a Omni?</h3>
@@ -589,7 +589,7 @@ export default function SupportView() {
               <div className="flex flex-col gap-2.5">
                 <button
                   onClick={() => { setShowOmniPrompt(false); window.dispatchEvent(new Event('openOmniAssistant')); }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl text-sm font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-md"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl text-sm font-semibold hover:from-blue-600 hover:to-blue-700 transition-all shadow-md"
                 >
                   <MessageCircle size={16} /> Preguntar a Omni primero
                 </button>
@@ -610,7 +610,7 @@ export default function SupportView() {
 
       {/* Create ticket modal */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCreate(false)}>
+        <div role="dialog" aria-modal="true" aria-label="Crear solicitud de soporte" className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCreate(false)}>
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl ring-1 ring-gray-100 dark:ring-slate-700/60 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b border-gray-100 dark:border-slate-700/60 flex items-center justify-between">
               <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
@@ -626,8 +626,8 @@ export default function SupportView() {
                 </div>
               )}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Asunto *</label>
-                <input
+                <label htmlFor="supportview-fld1" className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Asunto *</label>
+                <input id="supportview-fld1"
                   type="text"
                   value={createForm.subject}
                   onChange={e => setCreateForm(f => ({ ...f, subject: e.target.value }))}
@@ -637,8 +637,8 @@ export default function SupportView() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Descripción *</label>
-                <textarea
+                <label htmlFor="supportview-fld2" className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Descripción *</label>
+                <textarea id="supportview-fld2"
                   value={createForm.description}
                   onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))}
                   rows={4}
@@ -649,8 +649,8 @@ export default function SupportView() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Categoría</label>
-                  <select
+                  <label htmlFor="supportview-fld3" className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Categoría</label>
+                  <select id="supportview-fld3"
                     value={createForm.category}
                     onChange={e => setCreateForm(f => ({ ...f, category: e.target.value }))}
                     className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -663,8 +663,8 @@ export default function SupportView() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Prioridad</label>
-                  <select
+                  <label htmlFor="supportview-fld4" className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Prioridad</label>
+                  <select id="supportview-fld4"
                     value={createForm.priority}
                     onChange={e => setCreateForm(f => ({ ...f, priority: e.target.value }))}
                     className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -678,8 +678,8 @@ export default function SupportView() {
               </div>
               {/* Image attachments */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Capturas / Imágenes (máx. 5)</label>
-                <input ref={createFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={e => {
+                <label htmlFor="supportview-fld5" className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Capturas / Imágenes (máx. 5)</label>
+                <input id="supportview-fld5" ref={createFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={e => {
                   const files = Array.from(e.target.files || []);
                   setCreateImages(prev => [...prev, ...files].slice(0, 5));
                   e.target.value = '';
@@ -701,7 +701,7 @@ export default function SupportView() {
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => { setShowCreate(false); setCreateImages([]); }} className="px-4 py-2 text-sm bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600">Cancelar</button>
-                <button type="submit" disabled={creating} className="px-4 py-2 text-sm bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl font-semibold hover:shadow-lg hover:-translate-y-0.5 shadow-md transition-all duration-300 disabled:opacity-50 flex items-center gap-1.5" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <button type="submit" disabled={creating} className="px-4 py-2 text-sm bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg hover:-translate-y-0.5 shadow-md transition-all duration-300 disabled:opacity-50 flex items-center gap-1.5" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   {creating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Crear Ticket
                 </button>
               </div>

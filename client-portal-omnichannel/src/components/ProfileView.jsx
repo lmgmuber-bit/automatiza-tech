@@ -167,12 +167,12 @@ export default function ProfileView() {
   return (
     <div className="h-full overflow-y-auto bg-gray-50 dark:bg-slate-900">
       {/* HERO FULL-BLEED */}
-      <div className="relative overflow-hidden px-6 py-6 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #6366f1, #8b5cf6)' }}>
+      <div className="relative overflow-hidden px-6 py-6 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #2563eb, #3b82f6)' }}>
         <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full blur-3xl bg-white/20" />
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
         <div className="relative flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
               <User size={26} />
             </div>
             <div>
@@ -201,7 +201,7 @@ export default function ProfileView() {
               {profile.avatar_url ? (
                 <img src={profile.avatar_url} alt={profile.name} className="w-36 h-36 sm:w-44 sm:h-44 rounded-full object-cover ring-4 ring-white dark:ring-slate-700 shadow-xl transition-transform group-hover:scale-105" />
               ) : (
-                <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-gradient-to-br from-sky-400 via-indigo-500 to-violet-600 flex items-center justify-center text-white text-5xl sm:text-6xl font-bold ring-4 ring-white dark:ring-slate-700 shadow-xl transition-transform group-hover:scale-105" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-gradient-to-br from-sky-400 via-blue-500 to-blue-600 flex items-center justify-center text-white text-5xl sm:text-6xl font-bold ring-4 ring-white dark:ring-slate-700 shadow-xl transition-transform group-hover:scale-105" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   {profile.name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
               )}
@@ -214,12 +214,12 @@ export default function ProfileView() {
               <button
                 onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
                 disabled={uploading}
-                className="absolute bottom-1 right-1 w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-full flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-300 ring-2 ring-white dark:ring-slate-800"
+                className="absolute bottom-1 right-1 w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-300 ring-2 ring-white dark:ring-slate-800"
                 title="Cambiar foto"
               >
                 {uploading ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
               </button>
-              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleAvatarUpload} className="hidden" />
+              <input aria-label="Subir foto de perfil" ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleAvatarUpload} className="hidden" />
             </div>
 
             {/* Info */}
@@ -229,7 +229,7 @@ export default function ProfileView() {
                 <Mail size={14} /> {profile.email}
               </p>
               <div className="flex items-center gap-2 mt-3 justify-center flex-wrap">
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full ring-1 bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20">
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full ring-1 bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20">
                   {roleLabels[profile.role] || profile.role}
                 </span>
                 {profile.department && (
@@ -243,7 +243,7 @@ export default function ProfileView() {
 
         {/* Avatar Modal */}
         {showAvatarModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowAvatarModal(false)}>
+          <div role="dialog" aria-modal="true" aria-label="Cambiar avatar" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowAvatarModal(false)}>
             <div className="relative max-w-lg w-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
               {/* Close button */}
               <button
@@ -261,7 +261,7 @@ export default function ProfileView() {
                   className="w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80 rounded-2xl object-cover shadow-2xl border-4 border-white"
                 />
               ) : (
-                <div className="w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80 rounded-2xl bg-gradient-to-br from-sky-400 via-indigo-500 to-violet-600 flex items-center justify-center text-white text-6xl sm:text-8xl font-bold shadow-2xl border-4 border-white" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <div className="w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80 rounded-2xl bg-gradient-to-br from-sky-400 via-blue-500 to-blue-600 flex items-center justify-center text-white text-6xl sm:text-8xl font-bold shadow-2xl border-4 border-white" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   {profile.name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
               )}
@@ -273,7 +273,7 @@ export default function ProfileView() {
               <button
                 onClick={() => { fileRef.current?.click(); setShowAvatarModal(false); }}
                 disabled={uploading}
-                className="mt-3 sm:mt-4 flex items-center gap-2 px-5 py-2 sm:px-6 sm:py-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-full text-sm sm:text-base font-medium shadow-lg hover:shadow-xl transition-all duration-300"
+                className="mt-3 sm:mt-4 flex items-center gap-2 px-5 py-2 sm:px-6 sm:py-2.5 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full text-sm sm:text-base font-medium shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 {uploading ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
                 Cambiar foto de perfil
@@ -291,8 +291,8 @@ export default function ProfileView() {
           <form onSubmit={handleSaveProfile}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Nombre completo</label>
-                <input
+                <label htmlFor="profileview-fld1" className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Nombre completo</label>
+                <input id="profileview-fld1"
                   type="text"
                   value={editForm.name}
                   onChange={e => setEditForm({ ...editForm, name: e.target.value })}
@@ -301,8 +301,8 @@ export default function ProfileView() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Email <span className="text-gray-400 dark:text-slate-500 font-normal">(no editable)</span></label>
-                <input
+                <label htmlFor="profileview-fld2" className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Email <span className="text-gray-400 dark:text-slate-500 font-normal">(no editable)</span></label>
+                <input id="profileview-fld2"
                   type="email"
                   value={profile.email}
                   readOnly
@@ -311,8 +311,8 @@ export default function ProfileView() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Departamento</label>
-                <input
+                <label htmlFor="profileview-fld3" className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Departamento</label>
+                <input id="profileview-fld3"
                   type="text"
                   value={editForm.department}
                   onChange={e => setEditForm({ ...editForm, department: e.target.value })}
@@ -321,8 +321,8 @@ export default function ProfileView() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Rol</label>
-                <input
+                <label htmlFor="profileview-fld4" className="block text-xs font-medium text-gray-600 dark:text-slate-300 mb-1" style={{ fontFamily: 'Poppins, sans-serif' }}>Rol</label>
+                <input id="profileview-fld4"
                   type="text"
                   value={roleLabels[profile.role] || profile.role}
                   readOnly
@@ -334,7 +334,7 @@ export default function ProfileView() {
             <button
               type="submit"
               disabled={saving}
-              className="mt-4 flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all duration-300 shadow-md disabled:opacity-50"
+              className="mt-4 flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all duration-300 shadow-md disabled:opacity-50"
               style={{ fontFamily: 'Poppins, sans-serif' }}
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
@@ -373,7 +373,7 @@ export default function ProfileView() {
             <div className="space-y-3">
               <p className="text-sm text-gray-600 dark:text-slate-300 font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>Paso 1 de 3 — Contraseña actual</p>
               <div className="relative">
-                <input
+                <input aria-label="Contraseña actual"
                   type={showOld ? 'text' : 'password'}
                   value={oldPassword}
                   onChange={e => setOldPassword(e.target.value)}
@@ -387,7 +387,7 @@ export default function ProfileView() {
               </div>
               {pwError && <p className="text-rose-500 text-xs">{pwError}</p>}
               <div className="flex gap-2">
-                <button onClick={handleRequestCode} disabled={pwLoading} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all duration-300 shadow-md disabled:opacity-50" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <button onClick={handleRequestCode} disabled={pwLoading} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all duration-300 shadow-md disabled:opacity-50" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   {pwLoading ? <Loader2 size={14} className="animate-spin" /> : 'Verificar'}
                 </button>
                 <button onClick={resetPasswordFlow} className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-600">Cancelar</button>
@@ -399,7 +399,7 @@ export default function ProfileView() {
             <div className="space-y-3">
               <p className="text-sm text-gray-600 dark:text-slate-300 font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>Paso 2 de 3 — Nueva contraseña</p>
               <div className="relative">
-                <input
+                <input aria-label="Nueva contraseña"
                   type={showNew ? 'text' : 'password'}
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
@@ -411,7 +411,7 @@ export default function ProfileView() {
                   {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              <input
+              <input aria-label="Confirmar nueva contraseña"
                 type="password"
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
@@ -427,7 +427,7 @@ export default function ProfileView() {
               </div>
               {pwError && <p className="text-rose-500 text-xs">{pwError}</p>}
               <div className="flex gap-2">
-                <button onClick={handleNewPasswordNext} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all duration-300 shadow-md" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <button onClick={handleNewPasswordNext} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all duration-300 shadow-md" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   Continuar
                 </button>
                 <button onClick={resetPasswordFlow} className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-600">Cancelar</button>
@@ -439,7 +439,7 @@ export default function ProfileView() {
             <div className="space-y-3">
               <p className="text-sm text-gray-600 dark:text-slate-300 font-medium" style={{ fontFamily: 'Poppins, sans-serif' }}>Paso 3 de 3 — Código de verificación</p>
               <p className="text-xs text-gray-500 dark:text-slate-400">Hemos enviado un código de 6 dígitos a <strong>{profile.email}</strong>. Expira en 5 minutos.</p>
-              <input
+              <input aria-label="Código de verificación"
                 type="text"
                 value={verifyCode}
                 onChange={e => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
@@ -450,7 +450,7 @@ export default function ProfileView() {
               />
               {pwError && <p className="text-rose-500 text-xs">{pwError}</p>}
               <div className="flex gap-2">
-                <button onClick={handleVerifyCode} disabled={pwLoading || verifyCode.length !== 6} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all duration-300 shadow-md disabled:opacity-50" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                <button onClick={handleVerifyCode} disabled={pwLoading || verifyCode.length !== 6} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all duration-300 shadow-md disabled:opacity-50" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   {pwLoading ? <Loader2 size={14} className="animate-spin" /> : 'Confirmar'}
                 </button>
                 <button onClick={resetPasswordFlow} className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-600">Cancelar</button>
@@ -468,10 +468,10 @@ export default function ProfileView() {
               <div className="text-xl sm:text-2xl font-bold text-sky-700 dark:text-sky-300" style={{ fontFamily: 'Poppins, sans-serif' }}>{profile.active_chats || 0}</div>
               <div className="text-[11px] sm:text-xs text-sky-600 dark:text-sky-400">Chats activos</div>
             </div>
-            <div className="relative overflow-hidden text-center p-3 sm:p-4 rounded-2xl ring-1 bg-violet-50 ring-violet-200 dark:bg-violet-500/10 dark:ring-violet-500/20 shadow-md">
-              <div className="w-10 h-10 mx-auto mb-2 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-md"><Layers size={18} /></div>
-              <div className="text-xl sm:text-2xl font-bold text-violet-700 dark:text-violet-300" style={{ fontFamily: 'Poppins, sans-serif' }}>{profile.max_concurrent_chats || 5}</div>
-              <div className="text-[11px] sm:text-xs text-violet-600 dark:text-violet-400">Max. simultáneos</div>
+            <div className="relative overflow-hidden text-center p-3 sm:p-4 rounded-2xl ring-1 bg-blue-50 ring-blue-200 dark:bg-blue-500/10 dark:ring-blue-500/20 shadow-md">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-md"><Layers size={18} /></div>
+              <div className="text-xl sm:text-2xl font-bold text-blue-700 dark:text-blue-300" style={{ fontFamily: 'Poppins, sans-serif' }}>{profile.max_concurrent_chats || 5}</div>
+              <div className="text-[11px] sm:text-xs text-blue-600 dark:text-blue-400">Max. simultáneos</div>
             </div>
           </div>
         </div>

@@ -41,7 +41,7 @@ export default function AuditView() {
     update:   'bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20',
     delete:   'bg-rose-50 text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20',
     login:    'bg-sky-50 text-sky-700 ring-1 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20',
-    takeover: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20',
+    takeover: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20',
     release:  'bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20',
     transfer: 'bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-300 dark:ring-cyan-500/20',
   };
@@ -63,7 +63,7 @@ export default function AuditView() {
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
         <div className="relative flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
               <ClipboardList size={26} />
             </div>
             <div>
@@ -80,7 +80,7 @@ export default function AuditView() {
         {/* Search */}
         <div className="relative w-full sm:w-64 mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-          <input
+          <input aria-label="Buscar"
             type="text"
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
@@ -93,7 +93,7 @@ export default function AuditView() {
         {/* Per-page & sort controls */}
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <span className="text-xs text-gray-400 dark:text-slate-500">Mostrar:</span>
-          <select
+          <select aria-label="Resultados por página"
             value={perPage}
             onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
             className="px-2.5 py-1.5 rounded-full text-xs border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-600 dark:text-slate-300 focus:ring-2 focus:ring-blue-500"
@@ -117,7 +117,7 @@ export default function AuditView() {
                 setPage(1);
               }}
               className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                sort.orderby === col.key ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                sort.orderby === col.key ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
               }`}
             >
               {col.label}
@@ -251,7 +251,7 @@ export default function AuditView() {
                         onClick={() => setPage(pageNum)}
                         className={`w-7 h-7 rounded-lg text-xs font-bold ${
                           pageNum === page
-                            ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md'
+                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md'
                             : 'bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600'
                         }`}
                       >

@@ -6,6 +6,17 @@ export default defineConfig({
   base: './',
   build: {
     outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-dom') || id.includes('/react/') || id.includes('scheduler')) return 'react-vendor';
+            if (id.includes('lucide-react')) return 'icons';
+            return 'vendor';
+          }
+        },
+      },
+    },
   },
   server: {
     port: 5173,

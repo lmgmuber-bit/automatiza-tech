@@ -356,7 +356,7 @@ export default function InboxView() {
 
   // Filtros de canal con color de marca por plataforma
   const CHANNEL_FILTERS = [
-    { key: '', label: 'Todos', dot: '', active: 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md' },
+    { key: '', label: 'Todos', dot: '', active: 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md' },
     { key: 'whatsapp', label: 'WhatsApp', dot: '#25D366', active: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-300' },
     { key: 'instagram', label: 'Instagram', dot: '#E4405F', active: 'bg-pink-50 text-pink-700 ring-1 ring-pink-400/40 dark:bg-pink-500/10 dark:text-pink-300' },
     { key: 'telegram', label: 'Telegram', dot: '#0088cc', active: 'bg-sky-50 text-sky-700 ring-1 ring-sky-400/40 dark:bg-sky-500/10 dark:text-sky-300' },
@@ -375,8 +375,8 @@ export default function InboxView() {
       {/* Conversations List */}
       <div className={`inbox-panel ${mobileShowChat ? 'mobile-hidden' : ''} flex flex-col`}>
         {/* Hero de color */}
-        <div className="px-3 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white flex items-center gap-2.5">
-          <span className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center shrink-0">
+        <div className="px-3 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center shrink-0">
             <MessageSquare size={18} />
           </span>
           <div className="min-w-0">
@@ -388,7 +388,7 @@ export default function InboxView() {
         <div className="inbox-header space-y-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-            <input
+            <input aria-label="Buscar conversaciones..."
               type="text"
               placeholder="Buscar conversaciones..."
               value={searchTerm}
@@ -430,7 +430,7 @@ export default function InboxView() {
                 onClick={() => setFilters(f => ({ ...f, status: st.key }))}
                 className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-200 ${
                   filters.status === st.key
-                    ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md'
+                    ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md'
                     : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-slate-700/60 dark:text-slate-400 dark:hover:bg-slate-700'
                 }`}
               >
@@ -444,7 +444,7 @@ export default function InboxView() {
               <button
                 onClick={() => setScope('all')}
                 className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                  scope === 'all' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  scope === 'all' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                 }`}
               >
                 <Eye size={12} /> Todas
@@ -452,7 +452,7 @@ export default function InboxView() {
               <button
                 onClick={() => setScope('mine')}
                 className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                  scope === 'mine' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  scope === 'mine' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                 }`}
               >
                 <MessageSquare size={12} /> Mis chats
@@ -513,7 +513,7 @@ export default function InboxView() {
                     <ChannelBadge type={conv.channel_type} size="xs" />
                     <StatusBadge status={conv.status} />
                     {getIsAdmin() && conv.client_name && (
-                      <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium truncate max-w-[120px]">
+                      <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium truncate max-w-[120px]">
                         {conv.client_name}
                       </span>
                     )}
@@ -638,7 +638,7 @@ export default function InboxView() {
                           <div className="relative">
                             <button
                             onClick={() => showAgentDropdown ? setShowAgentDropdown(false) : openAgentDropdown()}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors"
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
                             >
                               <ArrowRightLeft size={14} />
                               <span className="text-[10px] sm:text-xs">Reasignar</span>
@@ -655,7 +655,7 @@ export default function InboxView() {
                                   >
                                     <span className="flex items-center gap-1.5">
                                       <span>{a.name}</span>
-                                      <span className={`text-[9px] px-1 py-0.5 rounded font-medium ${a.role === 'supervisor' || a.role === 'admin' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>{a.role === 'admin' ? 'Admin' : a.role === 'supervisor' ? 'Sup' : 'Agente'}</span>
+                                      <span className={`text-[9px] px-1 py-0.5 rounded font-medium ${a.role === 'supervisor' || a.role === 'admin' ? 'bg-blue-100 text-blue-600' : 'bg-blue-100 text-blue-600'}`}>{a.role === 'admin' ? 'Admin' : a.role === 'supervisor' ? 'Sup' : 'Agente'}</span>
                                     </span>
                                     <span className="text-[10px] text-gray-400">{a.active_chats}/{a.max_concurrent_chats}</span>
                                   </button>
@@ -682,7 +682,7 @@ export default function InboxView() {
                           <div className="relative">
                             <button
                             onClick={() => showAgentDropdown ? setShowAgentDropdown(false) : openAgentDropdown()}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600 transition-colors"
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600 transition-colors"
                             >
                               <ArrowRightLeft size={14} />
                               <span className="text-[10px] sm:text-xs">Transferir</span>
@@ -703,16 +703,16 @@ export default function InboxView() {
                                     <>
                                       {supervisors.length > 0 && (
                                         <>
-                                          <p className="px-3 pt-1.5 pb-0.5 text-[9px] font-bold text-purple-500 uppercase tracking-wide">Supervisores</p>
+                                          <p className="px-3 pt-1.5 pb-0.5 text-[9px] font-bold text-blue-500 uppercase tracking-wide">Supervisores</p>
                                           {supervisors.map(a => (
                                             <button
                                               key={a.id}
                                               onClick={() => handleTransfer(a.id)}
-                                              className="w-full text-left px-3 py-2 text-sm hover:bg-purple-50 flex items-center justify-between"
+                                              className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex items-center justify-between"
                                             >
                                               <span className="flex items-center gap-1.5">
                                                 <span>{a.name}</span>
-                                                <span className="text-[9px] bg-purple-100 text-purple-600 px-1 py-0.5 rounded font-medium">{a.role === 'admin' ? 'Admin' : 'Sup'}</span>
+                                                <span className="text-[9px] bg-blue-100 text-blue-600 px-1 py-0.5 rounded font-medium">{a.role === 'admin' ? 'Admin' : 'Sup'}</span>
                                               </span>
                                               <span className="text-[10px] text-gray-400">{a.department || ''}</span>
                                             </button>
@@ -813,7 +813,7 @@ export default function InboxView() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2 w-full">
-                  <input
+                  <input aria-label="Escribir mensaje"
                     type="text"
                     value={newMessage}
                     onChange={e => setNewMessage(e.target.value)}
@@ -853,7 +853,7 @@ export default function InboxView() {
 
 function StatusBadge({ status }) {
   const styles = {
-    bot: 'bg-purple-100 text-purple-700',
+    bot: 'bg-blue-100 text-blue-700',
     assigned: 'bg-blue-100 text-blue-700',
     open: 'bg-green-100 text-green-700',
     closed: 'bg-gray-100 text-gray-500',

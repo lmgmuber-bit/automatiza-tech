@@ -43,7 +43,7 @@ export default function ResultModal({ type = 'success', title, message, detail, 
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={type !== 'confirm' ? onClose : undefined}>
+    <div role="dialog" aria-modal="true" aria-label="Mensaje" className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={type !== 'confirm' ? onClose : undefined}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
       <div
         className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-hidden animate-fadein flex flex-col"

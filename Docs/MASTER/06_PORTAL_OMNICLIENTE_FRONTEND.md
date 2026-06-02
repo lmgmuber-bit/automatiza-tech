@@ -6,6 +6,20 @@
 
 ---
 
+## 🟢 Estado UI (2026-06-01) — Rediseño visual EN PROD
+
+El portal corre un **rediseño visual completo** (estilo audaz): cada sección tiene un **hero full-bleed de color** (banda edge-to-edge, color por módulo) + **sidebar con chips de icono gradiente** por módulo. Vista nueva **Marketing IG** (`MarketingIgView.jsx`, datos mock). Dashboard con hero "Centro de Control".
+
+- **Rama:** `feat/inbox-premium-ui` (pusheada a origin; PR sin mergear).
+- **Solo cambios visuales** — cero cambios de lógica/datos/bindings.
+- **Patrón hero por sección:** banda `px-6 py-6 text-white` con `linear-gradient(120deg,...)` del color del módulo, glow blob + patrón de puntos; contenido debajo en wrapper con padding. Referencia: `MarketingIgView.jsx` / `DashboardView.jsx`.
+- **Colores por módulo:** Bandeja=azul, Canales=esmeralda-teal, Tipos=violeta, ConfigBot=celeste, Agentes=ámbar, Auditoría=rosa, Clientes=verde, Dashboard=azul, MarketingIG=rosa, AIPrompt=fucsia, Soporte=cian, Perfil=índigo.
+- 🔴 **Deploy:** `npm run build` → sync `dist/`→`omnicliente/` → FTP a `public_html/omnicliente/` (borrar bundle viejo; hash cambia cada build). Dev requiere proxy en `vite.config.js`.
+- 🔴 **Regla de oro PROD:** antes de subir PHP del theme/inc, subir SIEMPRE los helpers `at-*.php` (raíz) + `lib/at-auth-middleware.php`, o el sitio da fatal `Failed opening required at-path-safe.php`.
+- **Doc completo:** vault `10-Projects/Portal-OmniCliente-Redseno.md`.
+
+---
+
 ## 🎯 Propósito
 
 SPA que provee:

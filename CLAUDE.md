@@ -13,6 +13,11 @@ Antes de trabajar, crea una rama nueva. Usa y manten actualizados `CLAUDE.md`, `
 - Claude debe revisar este archivo antes de modificar el proyecto.
 <!-- AI-MEMORY-WORKFLOW:END -->
 
+## Punteros de proyecto (estado vivo)
+
+- **Portal OmniCliente — rediseño visual EN PROD (2026-06-01):** ver `Docs/MASTER/06_PORTAL_OMNICLIENTE_FRONTEND.md` y vault `10-Projects/Portal-OmniCliente-Redseno.md`. Rama `feat/inbox-premium-ui` (PR sin mergear). 🔴 Deploy: subir helpers `at-*.php` + `lib/at-auth-middleware.php` ANTES que el resto, o fatal `at-path-safe.php`.
+- **Instagram CM AT (automatizar IG con Higgsfield):** plan en vault `10-Projects/Instagram-CM-AT.md` + adaptación `2026-05-29-Adaptacion-Master-Fusion-a-Plan-IG-CM.md` + config canal `Config-Canal-Instagram-Omnichannel.md`. Estado: pendiente config del usuario (upgrade Higgsfield + conectar canal IG en Meta).
+
 
 
 

@@ -42,14 +42,18 @@ if ($mode === 'mock') {
     ]);
     $ig_channel_id = (int) $wpdb->insert_id;
     $captured = [];
+    $profile_calls = 0;
 
-    add_filter('pre_http_request', function ($pre, $args, $url) use (&$captured) {
+    add_filter('pre_http_request', function ($pre, $args, $url) use (&$captured, &$profile_calls) {
         $captured['url']    = $url;
         $captured['method'] = $args['method'] ?? 'GET';
         $captured['auth']   = $args['headers']['Authorization'] ?? '';
         $captured['body']   = isset($args['body']) ? json_decode($args['body'], true) : null;
         if (strpos($url, '/messages') !== false) {
             return ['response' => ['code' => 200], 'body' => wp_json_encode(['recipient_id' => '123', 'message_id' => 'mid.abc'])];
+        }
+        if (strpos($url, 'graph.instagram.com') !== false) {
+            $profile_calls++;
         }
         return ['response' => ['code' => 200], 'body' => wp_json_encode(['name' => 'Ada Lovelace', 'username' => 'ada.codes', 'profile_pic' => 'https://x/pic.jpg', 'id' => '123'])];
     }, 10, 3);
@@ -76,6 +80,35 @@ if ($mode === 'mock') {
     check("name: only name", $ref->invoke($controller, ['name' => 'Ada', 'username' => ''], '999') === 'Ada');
     check("name: only user", $ref->invoke($controller, ['name' => '', 'username' => 'ada'], '999') === '@ada');
     check("name: fallback",  $ref->invoke($controller, null, '1234567890') === 'Usuario Instagram 567890');
+
+    // --- receive_message enriches IG contact name + avatar ---
+    $profile_calls = 0; // reset counter: only count calls made inside receive_message
+    $recv = $controller->receive_message($ig_channel_id, [
+        'external_contact_id' => '777',
+        'contact_name'        => '',
+        'content'             => 'hola',
+        'type'                => 'text',
+    ]);
+    $conv = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$p}conversations WHERE id = %d", (int) $recv['conversation_id']
+    ));
+    check("recv: name enriched",   $conv->contact_name === 'Ada Lovelace (@ada.codes)');
+    check("recv: avatar enriched", $conv->contact_avatar_url === 'https://x/pic.jpg');
+    check("recv: profile called once", $profile_calls === 1);
+    // Second inbound from same contact must NOT trigger another profile lookup (guard)
+    $controller->receive_message($ig_channel_id, [
+        'external_contact_id' => '777',
+        'contact_name'        => '',
+        'content'             => 'otra vez',
+        'type'                => 'text',
+    ]);
+    check("recv: guard prevents 2nd profile call", $profile_calls === 1);
+    $conv2 = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$p}conversations WHERE id = %d", (int) $recv['conversation_id']
+    ));
+    check("recv: name unchanged on 2nd msg", $conv2->contact_name === 'Ada Lovelace (@ada.codes)');
+    $wpdb->query($wpdb->prepare("DELETE FROM {$p}messages WHERE conversation_id = %d", (int) $recv['conversation_id']));
+    $wpdb->query($wpdb->prepare("DELETE FROM {$p}conversations WHERE id = %d", (int) $recv['conversation_id']));
 
     $wpdb->query($wpdb->prepare("DELETE FROM {$p}channels WHERE id = %d", $ig_channel_id));
 

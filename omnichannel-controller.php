@@ -910,6 +910,19 @@ class OmnichannelController {
             $channel_id, $external_contact_id
         ));
 
+        // Instagram: el webhook no trae nombre, solo el IGSID. Enriquecer una sola
+        // vez (al crear la conversación o si sigue sin nombre) para no llamar a la
+        // Graph API en cada mensaje entrante.
+        if ($channel->channel_type === 'instagram'
+            && empty($message_data['contact_name'])
+            && (!$conversation || empty($conversation->contact_name))) {
+            $profile = $this->get_instagram_profile($channel, $external_contact_id);
+            $message_data['contact_name'] = $this->ig_display_name($profile, $external_contact_id);
+            if ($profile && !empty($profile['profile_pic']) && empty($message_data['contact_avatar_url'])) {
+                $message_data['contact_avatar_url'] = $profile['profile_pic'];
+            }
+        }
+
         if (!$conversation) {
             $this->wpdb->insert($this->prefix . 'conversations', [
                 'client_id'           => $channel->client_id,
@@ -941,6 +954,10 @@ class OmnichannelController {
             $contact_phone = sanitize_text_field($message_data['contact_phone'] ?? '');
             if (!empty($contact_phone) && empty($conversation->contact_phone)) {
                 $update_data['contact_phone'] = $contact_phone;
+            }
+            $contact_avatar_url = esc_url_raw($message_data['contact_avatar_url'] ?? '');
+            if (!empty($contact_avatar_url) && empty($conversation->contact_avatar_url)) {
+                $update_data['contact_avatar_url'] = $contact_avatar_url;
             }
             $this->wpdb->update($this->prefix . 'conversations', $update_data, ['id' => $conversation_id]);
         }

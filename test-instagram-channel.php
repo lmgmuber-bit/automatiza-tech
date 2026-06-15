@@ -110,6 +110,21 @@ if ($mode === 'mock') {
     $wpdb->query($wpdb->prepare("DELETE FROM {$p}messages WHERE conversation_id = %d", (int) $recv['conversation_id']));
     $wpdb->query($wpdb->prepare("DELETE FROM {$p}conversations WHERE id = %d", (int) $recv['conversation_id']));
 
+    // --- send_agent_message delivers over Instagram (status -> sent) ---
+    $recv2 = $controller->receive_message($ig_channel_id, [
+        'external_contact_id' => '888', 'contact_name' => '', 'content' => 'hi', 'type' => 'text',
+    ]);
+    $cid2 = (int) $recv2['conversation_id'];
+    $am = $controller->send_agent_message($cid2, ['content' => 'Respuesta del agente', 'agent_name' => 'Luis']);
+    check("agent: instagram success", !empty($am['instagram']['success']));
+    $outmsg = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$p}messages WHERE conversation_id = %d AND direction = 'outbound' ORDER BY id DESC LIMIT 1", $cid2
+    ));
+    check("agent: msg delivery_status sent", $outmsg && $outmsg->delivery_status === 'sent');
+    check("agent: no 'Solo guardado' note", empty($am['delivery_note']));
+    $wpdb->query($wpdb->prepare("DELETE FROM {$p}messages WHERE conversation_id = %d", $cid2));
+    $wpdb->query($wpdb->prepare("DELETE FROM {$p}conversations WHERE id = %d", $cid2));
+
     $wpdb->query($wpdb->prepare("DELETE FROM {$p}channels WHERE id = %d", $ig_channel_id));
 
     echo PHP_EOL . "Resumen: {$pass} pass, {$fail} fail" . PHP_EOL;

@@ -3194,6 +3194,22 @@ class OmnichannelController {
             $local['ycloud'] = $ycloud_result;
         } elseif ($ch_type === 'whatsapp' && empty($conv->contact_phone)) {
             $local['ycloud'] = ['error' => 'No hay teléfono de contacto en esta conversación'];
+        } elseif ($ch_type === 'instagram' && !empty($conv->external_contact_id)) {
+            $ig = $this->send_instagram_message($conv->ch_id, $conv->external_contact_id, $content);
+            if (!empty($ig['success'])) {
+                $this->wpdb->update($this->prefix . 'messages', [
+                    'external_message_id' => $ig['message_id'] ?? '',
+                    'delivery_status'     => 'sent',
+                ], ['id' => $local['message_id']]);
+            } else {
+                $this->wpdb->update($this->prefix . 'messages', [
+                    'delivery_status' => 'failed',
+                    'error_message'   => $ig['error'] ?? 'Error desconocido',
+                ], ['id' => $local['message_id']]);
+            }
+            $local['instagram'] = $ig;
+        } elseif ($ch_type === 'instagram') {
+            $local['instagram'] = ['error' => 'No hay IGSID de contacto en esta conversación'];
         } elseif ($ch_type !== 'whatsapp') {
             $local['delivery_note'] = "Canal tipo '{$ch_type}' — mensaje guardado localmente (envío directo no soportado aún para este canal)";
         }

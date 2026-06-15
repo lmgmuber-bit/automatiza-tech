@@ -18,6 +18,10 @@ class OmnichannelController {
     private $actor_name  = null;
     private $actor_role  = null;
 
+    // Instagram Messaging API (Instagram Login flow)
+    const IG_GRAPH_VERSION = 'v23.0';
+    const IG_GRAPH_BASE    = 'https://graph.instagram.com';
+
     public function __construct() {
         global $wpdb;
         $this->wpdb = $wpdb;
@@ -2970,6 +2974,111 @@ class OmnichannelController {
         }
 
         return ['error' => $resp_body['message'] ?? "HTTP $resp_code"];
+    }
+
+    // =========================================================
+    // INSTAGRAM MESSAGING (Instagram Login flow, graph.instagram.com)
+    // =========================================================
+
+    /**
+     * Low-level Graph API request for Instagram. Centralizes base URL,
+     * version, bearer auth and error parsing. Returns:
+     *   ['success'=>true, 'data'=>array]            on 2xx
+     *   ['error'=>string, 'code'=>int, 'fb_error'=>array|null] otherwise
+     */
+    private function ig_api_request($method, $channel, $path, $body = null) {
+        if (empty($channel->bot_token)) {
+            return ['error' => 'Canal sin token de Instagram configurado'];
+        }
+        $url = self::IG_GRAPH_BASE . '/' . self::IG_GRAPH_VERSION . '/' . ltrim($path, '/');
+        $args = [
+            'method'  => $method,
+            'headers' => [
+                'Authorization' => 'Bearer ' . $channel->bot_token,
+            ],
+            'timeout' => 15,
+        ];
+        if ($body !== null) {
+            $args['headers']['Content-Type'] = 'application/json';
+            $args['body'] = wp_json_encode($body);
+        }
+        $resp = wp_remote_request($url, $args);
+        if (is_wp_error($resp)) {
+            return ['error' => $resp->get_error_message()];
+        }
+        $code = (int) wp_remote_retrieve_response_code($resp);
+        $json = json_decode(wp_remote_retrieve_body($resp), true);
+        if ($code >= 200 && $code < 300) {
+            return ['success' => true, 'data' => is_array($json) ? $json : []];
+        }
+        return [
+            'error'    => $json['error']['message'] ?? "HTTP {$code}",
+            'code'     => $code,
+            'fb_error' => $json['error'] ?? null,
+        ];
+    }
+
+    /**
+     * Send a text DM to an Instagram user (IGSID = recipient).
+     * Returns ['success'=>true,'message_id'=>..,'recipient_id'=>..] or ['error'=>..].
+     */
+    public function send_instagram_message($channel_id, $recipient_igsid, $content) {
+        $channel = $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT * FROM {$this->prefix}channels WHERE id = %d", absint($channel_id)
+        ));
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+        if (empty($recipient_igsid)) return ['error' => 'Falta IGSID del destinatario'];
+        if ($content === '' || $content === null) return ['error' => 'Contenido vacío'];
+
+        $body = [
+            'recipient' => ['id' => (string) $recipient_igsid],
+            'message'   => ['text' => $content],
+        ];
+        $res = $this->ig_api_request('POST', $channel, 'me/messages', $body);
+        if (!empty($res['success'])) {
+            return [
+                'success'      => true,
+                'message_id'   => $res['data']['message_id']   ?? '',
+                'recipient_id' => $res['data']['recipient_id'] ?? '',
+            ];
+        }
+        return ['error' => $res['error'] ?? 'Error desconocido al enviar a Instagram'];
+    }
+
+    /**
+     * Look up an Instagram user's profile from their IGSID.
+     * Returns ['name'=>..,'username'=>..,'profile_pic'=>..] or null on failure.
+     */
+    public function get_instagram_profile($channel, $igsid) {
+        if (empty($channel) || empty($channel->bot_token) || empty($igsid)) return null;
+        $res = $this->ig_api_request('GET', $channel, rawurlencode($igsid) . '?fields=name,username,profile_pic');
+        if (empty($res['success'])) {
+            if (function_exists('error_log')) {
+                error_log('[at-ig] profile lookup failed igsid=' . $igsid . ' err=' . ($res['error'] ?? '?'));
+            }
+            return null;
+        }
+        $d = $res['data'];
+        return [
+            'name'        => sanitize_text_field($d['name'] ?? ''),
+            'username'    => sanitize_text_field($d['username'] ?? ''),
+            'profile_pic' => esc_url_raw($d['profile_pic'] ?? ''),
+        ];
+    }
+
+    /**
+     * Compose a never-empty display name from an IG profile.
+     * "Name (@user)" / "Name" / "@user" / "Usuario Instagram <last6 IGSID>".
+     */
+    private function ig_display_name($profile, $igsid) {
+        if (is_array($profile)) {
+            $name = $profile['name'] ?? '';
+            $user = $profile['username'] ?? '';
+            if ($name !== '' && $user !== '') return $name . ' (@' . $user . ')';
+            if ($name !== '') return $name;
+            if ($user !== '') return '@' . $user;
+        }
+        return 'Usuario Instagram ' . substr((string) $igsid, -6);
     }
 
     // =========================================================

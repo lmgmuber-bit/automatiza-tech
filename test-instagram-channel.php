@@ -121,9 +121,33 @@ if ($mode === 'mock') {
         "SELECT * FROM {$p}messages WHERE conversation_id = %d AND direction = 'outbound' ORDER BY id DESC LIMIT 1", $cid2
     ));
     check("agent: msg delivery_status sent", $outmsg && $outmsg->delivery_status === 'sent');
+    check("agent: external_message_id stored", $outmsg && $outmsg->external_message_id === 'mid.abc');
     check("agent: no 'Solo guardado' note", empty($am['delivery_note']));
     $wpdb->query($wpdb->prepare("DELETE FROM {$p}messages WHERE conversation_id = %d", $cid2));
     $wpdb->query($wpdb->prepare("DELETE FROM {$p}conversations WHERE id = %d", $cid2));
+
+    // --- handle_n8n_callback delivers bot reply over Instagram ---
+    $recv3 = $controller->receive_message($ig_channel_id, [
+        'external_contact_id' => '999', 'contact_name' => '', 'content' => 'q', 'type' => 'text',
+    ]);
+    $cid3 = (int) $recv3['conversation_id'];
+    $secret = defined('OMNI_ADMIN_SECRET') ? OMNI_ADMIN_SECRET : 'omni_default_secret';
+    $token  = hash_hmac('sha256', $cid3 . ':' . $ig_channel_id, $secret);
+    $cb = $controller->handle_n8n_callback([
+        'conversation_id' => $cid3,
+        'channel_id'      => $ig_channel_id,
+        'callback_token'  => $token,
+        'content'         => 'Respuesta del bot',
+        'message_type'    => 'text',
+    ]);
+    check("n8n: delivered over IG", !empty($cb['delivered']));
+    $outmsg3 = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$p}messages WHERE conversation_id = %d AND direction = 'outbound' ORDER BY id DESC LIMIT 1", $cid3
+    ));
+    check("n8n: msg delivery_status sent", $outmsg3 && $outmsg3->delivery_status === 'sent');
+    check("n8n: external_message_id stored", $outmsg3 && $outmsg3->external_message_id === 'mid.abc');
+    $wpdb->query($wpdb->prepare("DELETE FROM {$p}messages WHERE conversation_id = %d", $cid3));
+    $wpdb->query($wpdb->prepare("DELETE FROM {$p}conversations WHERE id = %d", $cid3));
 
     $wpdb->query($wpdb->prepare("DELETE FROM {$p}channels WHERE id = %d", $ig_channel_id));
 

@@ -2756,6 +2756,15 @@ class OmnichannelController {
                 ], ['id' => $local['message_id']]);
                 $local['delivery_error'] = $ycloud['error'] ?? 'Error desconocido';
             }
+        } elseif ($conversation->channel_type === 'instagram' && !empty($conversation->external_contact_id)) {
+            $ig = $this->send_instagram_message($channel_id, $conversation->external_contact_id, $content);
+            $this->apply_ig_delivery($local['message_id'], $ig);
+            $local['instagram'] = $ig;
+            if (!empty($ig['success'])) {
+                $local['delivered'] = true;
+            } else {
+                $local['delivery_error'] = $ig['error'] ?? 'Error desconocido';
+            }
         }
 
         return $local;
@@ -3063,6 +3072,24 @@ class OmnichannelController {
     }
 
     /**
+     * Apply an Instagram send result to a stored message row:
+     * 'sent' (+external_message_id) on success, 'failed' (+error_message) otherwise.
+     */
+    private function apply_ig_delivery($message_id, $ig) {
+        if (!empty($ig['success'])) {
+            $this->wpdb->update($this->prefix . 'messages', [
+                'external_message_id' => $ig['message_id'] ?? '',
+                'delivery_status'     => 'sent',
+            ], ['id' => $message_id]);
+        } else {
+            $this->wpdb->update($this->prefix . 'messages', [
+                'delivery_status' => 'failed',
+                'error_message'   => $ig['error'] ?? 'Error desconocido',
+            ], ['id' => $message_id]);
+        }
+    }
+
+    /**
      * Look up an Instagram user's profile from their IGSID.
      * Returns ['name'=>..,'username'=>..,'profile_pic'=>..] or null on failure.
      */
@@ -3196,17 +3223,7 @@ class OmnichannelController {
             $local['ycloud'] = ['error' => 'No hay teléfono de contacto en esta conversación'];
         } elseif ($ch_type === 'instagram' && !empty($conv->external_contact_id)) {
             $ig = $this->send_instagram_message($conv->ch_id, $conv->external_contact_id, $content);
-            if (!empty($ig['success'])) {
-                $this->wpdb->update($this->prefix . 'messages', [
-                    'external_message_id' => $ig['message_id'] ?? '',
-                    'delivery_status'     => 'sent',
-                ], ['id' => $local['message_id']]);
-            } else {
-                $this->wpdb->update($this->prefix . 'messages', [
-                    'delivery_status' => 'failed',
-                    'error_message'   => $ig['error'] ?? 'Error desconocido',
-                ], ['id' => $local['message_id']]);
-            }
+            $this->apply_ig_delivery($local['message_id'], $ig);
             $local['instagram'] = $ig;
         } elseif ($ch_type === 'instagram') {
             $local['instagram'] = ['error' => 'No hay IGSID de contacto en esta conversación'];

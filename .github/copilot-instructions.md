@@ -8,6 +8,28 @@ Antes de sugerir cambios, usa y manten actualizados `CLAUDE.md`, `AGENTS.md`, `D
 Boveda maestra: `C:\Users\luis_\Documents\Codex\AI-Memory-Vault`
 <!-- AI-MEMORY-WORKFLOW:END -->
 
+<!-- AT-PIPELINE:START -->
+## Automatizatech — Pipeline de Propuestas (Skills disponibles)
+
+Este repositorio tiene skills de propuestas en `.github/skills/`. Usarlas cuando el usuario trabaje en ventas o propuestas a clientes.
+
+### at-gamma-proposal → `.github/skills/at-gamma-proposal/SKILL.md`
+Triggers: "generar propuesta gamma", "nueva propuesta cliente"
+Genera: Gamma prompt (8 slides) + chatbot system prompt + prompt de diseño visual
+
+### at-proposal-refiner → `.github/skills/at-proposal-refiner/SKILL.md`
+Triggers: "refinar propuesta", "mejorar prompt gamma"
+Flujo: historial + Gamma → API → evalúa → refina → prompt de diseño
+
+### API del pipeline
+```
+GET/POST https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/prompts
+X-AT-Secret: <secret>  (wp-config.php del servidor)
+```
+
+Referencia: `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\automatizatech-pipeline.md`
+<!-- AT-PIPELINE:END -->
+
 
 
 

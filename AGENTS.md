@@ -14,7 +14,30 @@ Antes de trabajar, crea una rama nueva. Usa y manten actualizados `CLAUDE.md`, `
 - No guardar secretos, tokens, passwords, credenciales ni datos sensibles.
 <!-- AI-MEMORY-WORKFLOW:END -->
 
+<!-- AT-PIPELINE:START -->
+## Automatizatech — Pipeline de Propuestas
 
+Este proyecto tiene dos skills de ventas. Invocarlas cuando el usuario trabaje con propuestas a clientes.
 
+### Skill 1 — at-gamma-proposal
+**Cuándo:** datos de reunión con prospecto nuevo.
+**Triggers:** "generar propuesta gamma", "nueva propuesta cliente", "propuesta gamma"
+**Genera:** Gamma prompt (8 slides) + chatbot system prompt + prompt de diseño visual
+**Instrucciones:** `.github/skills/at-gamma-proposal/SKILL.md` (Copilot) o `C:\Users\luis_\.codex\skills\at-gamma-proposal\SKILL.md` (Codex)
 
+### Skill 2 — at-proposal-refiner
+**Cuándo:** propuesta ya guardada en el sistema (tiene edit_id).
+**Triggers:** "refinar propuesta", "mejorar prompt gamma", "actualizar prompts"
+**Flujo:** historial llamada + Gamma → GET API → evalúa → refina → POST → Output 3 diseño
+**Instrucciones:** `.github/skills/at-proposal-refiner/SKILL.md` (Copilot) o `C:\Users\luis_\.codex\skills\at-proposal-refiner\SKILL.md` (Codex)
+
+### API del pipeline
+```
+GET/POST https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/prompts
+Header: X-AT-Secret: <secret>  (wp-config.php del servidor — no exponer)
+```
+
+### Referencia completa
+`C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\automatizatech-pipeline.md`
+<!-- AT-PIPELINE:END -->
 

@@ -3225,6 +3225,9 @@ class OmnichannelController {
             $ig = $this->send_instagram_message($conv->ch_id, $conv->external_contact_id, $content);
             $this->apply_ig_delivery($local['message_id'], $ig);
             $local['instagram'] = $ig;
+            if (empty($ig['success'])) {
+                $local['delivery_error'] = $ig['error'] ?? 'Error desconocido';
+            }
         } elseif ($ch_type === 'instagram') {
             $local['instagram'] = ['error' => 'No hay IGSID de contacto en esta conversación'];
         } elseif ($ch_type !== 'whatsapp') {

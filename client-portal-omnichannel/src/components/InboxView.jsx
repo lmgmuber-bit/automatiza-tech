@@ -256,6 +256,10 @@ export default function InboxView() {
       if (result?.ycloud && result.ycloud.error) {
         setResultModal({ type: 'error', title: 'Mensaje guardado pero no enviado', message: `El mensaje se guardó pero no se pudo enviar al cliente: ${result.ycloud.error}` });
       }
+      // Check for Instagram delivery failure
+      if (result?.instagram && result.instagram.error) {
+        setResultModal({ type: 'error', title: 'Mensaje guardado pero no enviado', message: `El mensaje se guardó pero no se pudo enviar al cliente: ${result.instagram.error}` });
+      }
       // Check for delivery note (non-whatsapp channels)
       if (result?.delivery_note) {
         setResultModal({ type: 'warning', title: 'Solo guardado', message: result.delivery_note });

@@ -34,6 +34,15 @@ export default function ChannelsView() {
 
   const isAdmin = getIsAdmin();
 
+  // Canales Meta (IG/Messenger) usan webhook-omnichannel.php + token en bot_token.
+  // YCloud (WhatsApp) usa api-omnichannel.php?route=webhook/ycloud + ycloud_api_key.
+  const META_TYPES = ['instagram', 'messenger'];
+  const WEBHOOK_PHP = API_BASE.replace('api-omnichannel.php', 'webhook-omnichannel.php');
+  const buildWebhookUrl = (channelType, id, secret) =>
+    META_TYPES.includes(channelType)
+      ? `${window.location.origin}${WEBHOOK_PHP}?channel_id=${id}&secret=${secret}`
+      : `${window.location.origin}${API_BASE}?route=webhook/ycloud&channel_id=${id}&secret=${secret}`;
+
   useEffect(() => {
     if (isAdmin) {
       getClients({ per_page: 100 }).then(data => setClientsList(data.data || [])).catch(() => {});
@@ -282,8 +291,28 @@ export default function ChannelsView() {
                     {field.hint && <p className="text-[11px] text-gray-400 mt-1">{field.hint}</p>}
                   </div>
                 ))}
-                {/* YCloud API Key field - shown for whatsapp type or always for admin */}
-                {(form.channel_type === 'whatsapp' || isAdmin) && (
+                {/* Token de Instagram (Meta) — se guarda en bot_token */}
+                {META_TYPES.includes(form.channel_type) && (
+                  <div className="sm:col-span-2">
+                    <label htmlFor="channelsview-igtok" className="block text-sm font-medium text-gray-600 mb-1">🔑 Token de Instagram</label>
+                    <div className="relative">
+                      <input id="channelsview-igtok"
+                        type={showApiKey ? 'text' : 'password'}
+                        value={form.bot_token || ''}
+                        onChange={e => setForm({ ...form, bot_token: e.target.value })}
+                        placeholder="Token de la API de Instagram (graph.instagram.com)"
+                        title="Token de acceso de Instagram (Instagram Login). Se usa para DMs y publicar. Se guarda en bot_token, NO es la API Key de YCloud."
+                        className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 font-mono"
+                      />
+                      <button type="button" onClick={() => setShowApiKey(!showApiKey)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-1">Token de Instagram (graph.instagram.com) — se guarda en bot_token, distinto de la API Key de YCloud</p>
+                  </div>
+                )}
+                {/* YCloud API Key field - whatsapp/admin, NO para canales Meta */}
+                {!META_TYPES.includes(form.channel_type) && (form.channel_type === 'whatsapp' || isAdmin) && (
                   <div className="sm:col-span-2">
                     <label htmlFor="channelsview-fld5" className="block text-sm font-medium text-gray-600 mb-1">🔑 YCloud API Key</label>
                     <div className="relative">
@@ -361,7 +390,7 @@ export default function ChannelsView() {
                     {isAdmin && ch.webhook_secret && (
                       <div className="mt-2.5 p-2.5 bg-gray-50 dark:bg-slate-900/40 rounded-lg ring-1 ring-gray-100 dark:ring-slate-700/60">
                         <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="text-[10px] font-semibold text-gray-600 dark:text-slate-300">URL Webhook YCloud</span>
+                          <span className="text-[10px] font-semibold text-gray-600 dark:text-slate-300">{META_TYPES.includes(ch.channel_type) ? 'URL Webhook (Meta/IG)' : 'URL Webhook YCloud'}</span>
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => setRevealedSecrets(p => ({ ...p, [ch.id]: !p[ch.id] }))}
@@ -371,7 +400,7 @@ export default function ChannelsView() {
                               {revealedSecrets[ch.id] ? <EyeOff size={11} /> : <Eye size={11} />}
                             </button>
                             <button
-                              onClick={() => copyToClipboard(`${window.location.origin}${API_BASE}?route=webhook/ycloud&channel_id=${ch.id}&secret=${ch.webhook_secret}`)}
+                              onClick={() => copyToClipboard(buildWebhookUrl(ch.channel_type, ch.id, ch.webhook_secret))}
                               className="flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors"
                               title="Copiar URL completa"
                             >
@@ -380,18 +409,20 @@ export default function ChannelsView() {
                           </div>
                         </div>
                         <code className="text-[10px] text-gray-600 dark:text-slate-400 font-mono break-all leading-relaxed">
-                          {window.location.origin}{API_BASE}?route=webhook/ycloud&amp;channel_id={ch.id}&amp;secret={revealedSecrets[ch.id] ? ch.webhook_secret : '••••••••'}
+                          {buildWebhookUrl(ch.channel_type, ch.id, revealedSecrets[ch.id] ? ch.webhook_secret : '••••••••')}
                         </code>
                       </div>
                     )}
-                    {/* Show API Key status for admin */}
+                    {/* Show token/API Key status for admin */}
                     {isAdmin && (
                       <div className="flex items-center gap-1.5 mt-1.5">
-                        <span className="text-[10px] text-gray-400 dark:text-slate-500">API Key:</span>
-                        {ch.ycloud_api_key ? (
-                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">✓ Configurada</span>
+                        <span className="text-[10px] text-gray-400 dark:text-slate-500">
+                          {META_TYPES.includes(ch.channel_type) ? 'Token IG:' : 'API Key:'}
+                        </span>
+                        {(META_TYPES.includes(ch.channel_type) ? ch.bot_token : ch.ycloud_api_key) ? (
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">✓ Configurado</span>
                         ) : (
-                          <span className="text-[10px] text-rose-500 dark:text-rose-400 font-medium">✗ No configurada</span>
+                          <span className="text-[10px] text-rose-500 dark:text-rose-400 font-medium">✗ No configurado</span>
                         )}
                       </div>
                     )}
@@ -466,6 +497,7 @@ export default function ChannelsView() {
                   />
                   <p className="text-[11px] text-gray-400 mt-1">Nombre interno visible solo para agentes y admins</p>
                 </div>
+                {!META_TYPES.includes(editChannel.channel_type) && (
                 <div>
                   <label htmlFor="channelsview-fld7" className="block text-sm font-medium text-gray-600 mb-1">Teléfono</label>
                   <input id="channelsview-fld7"
@@ -478,6 +510,7 @@ export default function ChannelsView() {
                   />
                   <p className="text-[11px] text-gray-400 mt-1">Número con código de país, ej: +56912345678</p>
                 </div>
+                )}
                 <div>
                   <label htmlFor="channelsview-fld8" className="block text-sm font-medium text-gray-600 mb-1">
                     Page ID
@@ -494,7 +527,28 @@ export default function ChannelsView() {
                   <p className="text-[11px] text-gray-400 mt-1">Solo para Facebook Messenger/Instagram — déjalo vacío en WhatsApp</p>
                 </div>
 
-                {/* YCloud fields */}
+                {/* Token de Instagram (Meta) — se guarda en bot_token */}
+                {META_TYPES.includes(editChannel.channel_type) && (
+                  <div className="sm:col-span-2 border-t border-gray-100 pt-4 mt-1">
+                    <label htmlFor="channelsview-igtok-edit" className="block text-sm font-medium text-gray-600 mb-1">🔑 Token de Instagram</label>
+                    <div className="relative">
+                      <input id="channelsview-igtok-edit"
+                        type={showEditApiKey ? 'text' : 'password'}
+                        value={editForm.bot_token || ''}
+                        onChange={e => setEditForm({ ...editForm, bot_token: e.target.value })}
+                        placeholder="Token de la API de Instagram (graph.instagram.com)"
+                        title="Token de acceso de Instagram (Instagram Login). Se guarda en bot_token. NO es la API Key de YCloud."
+                        className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 font-mono"
+                      />
+                      <button type="button" onClick={() => setShowEditApiKey(!showEditApiKey)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        {showEditApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-1">Token de Instagram — se guarda en bot_token (distinto de la API Key de YCloud)</p>
+                  </div>
+                )}
+                {/* YCloud fields — solo para canales no-Meta */}
+                {!META_TYPES.includes(editChannel.channel_type) && (<>
                 <div className="sm:col-span-2 border-t border-gray-100 pt-4 mt-1">
                   <h4 className="text-sm font-semibold text-gray-700 mb-3">🔑 Configuración YCloud</h4>
                 </div>
@@ -543,19 +597,18 @@ export default function ChannelsView() {
                   />
                   <p className="text-[11px] text-gray-400 mt-1">ID del número en Meta — YCloud Console → tu canal</p>
                 </div>
+                </>)}
 
                 {/* Webhook Secret (read-only, A5.2 — masked by default) */}
                 {editChannel.webhook_secret && (
                   <div className="sm:col-span-2">
-                    <label htmlFor="channelsview-fld12" className="block text-sm font-medium text-gray-600 mb-1">URL Webhook para YCloud</label>
+                    <label htmlFor="channelsview-fld12" className="block text-sm font-medium text-gray-600 mb-1">{META_TYPES.includes(editChannel.channel_type) ? 'URL Webhook (Meta/Instagram)' : 'URL Webhook para YCloud'}</label>
                     <div className="flex items-center gap-2">
                       <input id="channelsview-fld12"
                         type="text"
-                        value={revealedSecrets['edit']
-                          ? `${window.location.origin}${API_BASE}?route=webhook/ycloud&channel_id=${editChannel.id}&secret=${editChannel.webhook_secret}`
-                          : `${window.location.origin}${API_BASE}?route=webhook/ycloud&channel_id=${editChannel.id}&secret=••••••••`}
+                        value={buildWebhookUrl(editChannel.channel_type, editChannel.id, revealedSecrets['edit'] ? editChannel.webhook_secret : '••••••••')}
                         readOnly
-                        title="Copia esta URL y pégala en YCloud Console como endpoint del webhook."
+                        title={META_TYPES.includes(editChannel.channel_type) ? 'Copia esta URL y pégala en Meta Developers → tu app → Webhooks de Instagram como Callback URL. El secret es el Verify Token.' : 'Copia esta URL y pégala en YCloud Console como endpoint del webhook.'}
                         className="w-full px-3 py-2 border border-blue-100 rounded-lg text-xs bg-blue-50 font-mono text-blue-800"
                       />
                       <button
@@ -568,14 +621,14 @@ export default function ChannelsView() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => copyToClipboard(`${window.location.origin}${API_BASE}?route=webhook/ycloud&channel_id=${editChannel.id}&secret=${editChannel.webhook_secret}`)}
+                        onClick={() => copyToClipboard(buildWebhookUrl(editChannel.channel_type, editChannel.id, editChannel.webhook_secret))}
                         className="px-3 py-2 text-blue-500 hover:text-blue-700 border border-blue-200 rounded-lg bg-blue-50"
                         title="Copiar URL completa"
                       >
                         <Copy size={16} />
                       </button>
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-1">Pégala en YCloud Console → Webhooks → Agregar punto final — Evento: <code className="bg-gray-100 px-1 rounded">whatsapp.inbound_message.received</code></p>
+                    <p className="text-[11px] text-gray-400 mt-1">{META_TYPES.includes(editChannel.channel_type) ? 'Pégala en Meta → tu app → Webhooks de Instagram como Callback URL (el secret es el verify token).' : <>Pégala en YCloud Console → Webhooks → Agregar punto final — Evento: <code className="bg-gray-100 px-1 rounded">whatsapp.inbound_message.received</code></>}</p>
                   </div>
                 )}
               </div>

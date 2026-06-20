@@ -116,6 +116,14 @@ if (!$normalized) {
 
 $result = $controller->receive_message($channel_id, $normalized);
 
+if (!isset($result['error'])) {
+    $wpdb->update(
+        $wpdb->prefix . 'omnichannel_channels',
+        ['last_synced_at' => current_time('mysql')],
+        ['id' => $channel_id]
+    );
+}
+
 http_response_code(isset($result['error']) ? 400 : 200);
 echo wp_json_encode($result);
 

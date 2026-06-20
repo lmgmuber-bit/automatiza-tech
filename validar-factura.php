@@ -8,6 +8,13 @@
 define('WP_USE_THEMES', false);
 require('wp-load.php');
 
+require_once __DIR__ . '/at-rate-limit.php';
+
+// Rate limit: 30 hits/min por IP (anti scraping y enumeracion de invoice_number)
+if ( ! at_rate_limit_check( 'validar_factura', 30, 60 ) ) {
+    at_rate_limit_reject( 60 );
+}
+
 global $wpdb;
 
 // Obtener ID de la factura desde la URL
@@ -36,6 +43,22 @@ if (!$invoice) {
     wp_die('❌ Error: Factura no encontrada o inválida.', 'Factura No Encontrada', ['response' => 404]);
 }
 
+// ---- A2.1 IDOR fix: lazy download_token migration ----
+// Ensure column exists (safe for MySQL 5.7+ and MariaDB)
+$col_exists = $wpdb->get_var( "SHOW COLUMNS FROM `{$invoices_table}` LIKE 'download_token'" );
+if ( ! $col_exists ) {
+    $wpdb->query( "ALTER TABLE `{$invoices_table}` ADD COLUMN `download_token` VARCHAR(64) DEFAULT NULL" );
+    $wpdb->query( "ALTER TABLE `{$invoices_table}` ADD INDEX `idx_invoice_dl_token` (`download_token`)" );
+}
+
+// Lazy-generate token for existing invoices that have none
+if ( empty( $invoice->download_token ) ) {
+    $new_token = bin2hex( random_bytes( 24 ) );
+    $wpdb->update( $invoices_table, ['download_token' => $new_token], ['id' => $invoice->id], ['%s'], ['%d'] );
+    $invoice->download_token = $new_token;
+}
+// ---- end A2.1 ----
+
 // Rellenar datos faltantes si es necesario
 if (empty($invoice->client_name) && !empty($invoice->client_name_joined)) {
     $invoice->client_name = $invoice->client_name_joined;
@@ -49,23 +72,46 @@ $action = isset($_GET['action']) ? sanitize_text_field($_GET['action']) : 'valid
 
 if ($action === 'download') {
     // DESCARGAR FACTURA EN PDF
-    
-    // Construir ruta del archivo PDF
-    $upload_dir = wp_upload_dir();
-    $invoices_dir = $upload_dir['basedir'] . '/automatiza-tech-invoices/';
-    
-    // Buscar el archivo PDF
-    $pdf_files = glob($invoices_dir . $invoice->invoice_number . '*.pdf');
-    
-    if (empty($pdf_files)) {
-        wp_die('❌ Archivo PDF no encontrado para esta factura. Contacta al administrador.', 'Error', ['response' => 404]);
+
+    // A2.1: Verificar download_token para evitar enumeración IDOR
+    $submitted_token = isset($_GET['token']) ? sanitize_text_field($_GET['token']) : '';
+    // Retrocompat: hasta AT_INVOICE_LEGACY_UNTIL se acepta descarga sin token (sólo con ?id=)
+    $legacy_until = defined('AT_INVOICE_LEGACY_UNTIL') ? strtotime( AT_INVOICE_LEGACY_UNTIL ) : strtotime('+30 days');
+    if ( empty($submitted_token) ) {
+        if ( time() < $legacy_until ) {
+            // Período de gracia: log y continuar
+            error_log( '[AT-SECURITY] Legacy tokenless download: invoice=' . $invoice->invoice_number . ' IP=' . $_SERVER['REMOTE_ADDR'] );
+        } else {
+            wp_die( '❌ Acceso denegado: token de descarga inválido o expirado.', 'Error', ['response' => 403] );
+        }
+    } elseif ( ! hash_equals( (string) $invoice->download_token, $submitted_token ) ) {
+        // C4: log IDOR/token-invalid attempts
+        if ( function_exists( 'at_secmon_log_event' ) ) {
+            at_secmon_log_event( 'download_token_invalid', [ 'type' => 'invoice', 'id' => $invoice->invoice_number ] );
+        }
+        wp_die( '❌ Acceso denegado: token de descarga inválido.', 'Error', ['response' => 403] );
     }
     
-    $pdf_file = $pdf_files[0];
-    
+    require_once __DIR__ . '/at-path-safe.php';
+    $upload_dir   = wp_upload_dir();
+    $invoices_dir = $upload_dir['basedir'] . '/automatiza-tech-invoices/';
+
+    // El invoice_number viene de BD pero defendemos en profundidad: solo basename estricto.
+    $safe_prefix = at_safe_basename( $invoice->invoice_number );
+    $pdf_files   = glob( $invoices_dir . $safe_prefix . '*.pdf' );
+
+    if ( empty( $pdf_files ) ) {
+        wp_die( '❌ Archivo PDF no encontrado para esta factura. Contacta al administrador.', 'Error', [ 'response' => 404 ] );
+    }
+
+    $pdf_file = at_path_inside( $pdf_files[0], $invoices_dir );
+    if ( $pdf_file === false ) {
+        wp_die( '❌ Ruta de archivo invalida.', 'Error', [ 'response' => 403 ] );
+    }
+
     // Verificar que el archivo existe y es legible
-    if (!file_exists($pdf_file) || !is_readable($pdf_file)) {
-        wp_die('❌ No se puede acceder al archivo PDF. Contacta al administrador.', 'Error', ['response' => 500]);
+    if ( ! file_exists( $pdf_file ) || ! is_readable( $pdf_file ) ) {
+        wp_die( '❌ No se puede acceder al archivo PDF. Contacta al administrador.', 'Error', [ 'response' => 500 ] );
     }
     
     // Actualizar contador de descargas
@@ -259,7 +305,7 @@ if ($action === 'download') {
                     </div>
                 </div>
                 
-                <a href="?id=<?php echo urlencode($invoice->invoice_number); ?>&action=download" class="download-btn">
+                <a href="?id=<?php echo urlencode($invoice->invoice_number); ?>&token=<?php echo urlencode($invoice->download_token); ?>&action=download" class="download-btn">
                     💾 Descargar Factura Completa
                 </a>
             </div>

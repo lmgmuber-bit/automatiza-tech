@@ -1,5 +1,9 @@
 # AutomatizaTech — Documento Técnico Completo
 
+> ⚠️ **DOCUMENTO HISTÓRICO (Feb 2026, rama `prod-sync-2025-06-26`)** — Puede contener datos desactualizados.
+> La fuente única de verdad actual es **[`Docs/MASTER/`](./MASTER/00_INDEX.md)**.
+> Discrepancias: rama obsoleta, ~40 workflows (real: ~63), sin contratos, sin hardening Phase 0.
+
 > **Propósito:** Este documento sirve como contexto técnico integral para cualquier IA, desarrollador o equipo que necesite entender la arquitectura, código y funcionamiento de AutomatizaTech.  
 > **Última actualización:** 28 de Febrero 2026 — Rama `prod-sync-2025-06-26` (commit `b1c05b9`)  
 > **IMPORTANTE:** Este documento debe actualizarse cada vez que se suba un cambio a PROD.

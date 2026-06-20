@@ -445,7 +445,7 @@ class Google_Drive_Integration {
     private function extract_pdf($path) {
         // Intentar con pdftotext
         if (function_exists('shell_exec')) {
-            $output = @shell_exec("pdftotext -layout -nopgbrk \"$path\" - 2>/dev/null");
+            $output = @shell_exec('pdftotext -layout -nopgbrk ' . escapeshellarg($path) . ' - 2>/dev/null');
             if (!empty($output)) {
                 return "[PDF] " . substr(trim($output), 0, 4000) . (strlen($output) > 4000 ? '...' : '');
             }

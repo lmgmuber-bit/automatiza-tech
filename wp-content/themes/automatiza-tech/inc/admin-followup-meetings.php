@@ -24,6 +24,8 @@ function automatiza_tech_followup_create_table() {
         id mediumint(9) NOT NULL AUTO_INCREMENT,
         client_name varchar(100) NOT NULL,
         client_email varchar(100) NOT NULL,
+        invitees_emails text DEFAULT NULL,
+        invitees_names text DEFAULT NULL,
         company_name varchar(150) DEFAULT '',
         phone varchar(30) DEFAULT '',
         meeting_date date NOT NULL,
@@ -67,6 +69,8 @@ add_action('init', function() {
     
     // Migración: asegurar que todas las columnas necesarias existan
     $required_columns = [
+        'invitees_emails'     => "ADD COLUMN invitees_emails text DEFAULT NULL AFTER client_email",
+        'invitees_names'      => "ADD COLUMN invitees_names text DEFAULT NULL AFTER invitees_emails",
         'whatsapp_sent'       => "ADD COLUMN whatsapp_sent tinyint(1) DEFAULT 0 AFTER email_sent",
         'google_event_id'     => "ADD COLUMN google_event_id varchar(255) DEFAULT '' AFTER updated_at",
         'recordatorio_8pm'    => "ADD COLUMN recordatorio_8pm tinyint(1) DEFAULT 0 AFTER reminder_1h_sent",
@@ -82,6 +86,170 @@ add_action('init', function() {
         }
     }
 });
+
+/**
+ * Parsear lista de copias y nombres opcionales.
+ *
+ * Formato soportado:
+ * correo1,correo2 / nombre1,nombre2
+ */
+function automatiza_tech_parse_invitees_emails($raw_invitees) {
+    $raw = trim((string) $raw_invitees);
+    if ($raw === '') {
+        return array(
+            'valid' => array(),
+            'invalid' => array(),
+            'names' => array(),
+            'names_by_email' => array(),
+        );
+    }
+
+    $emails_part = $raw;
+    $names_part = '';
+    if (strpos($raw, '/') !== false) {
+        $split = explode('/', $raw, 2);
+        $emails_part = trim($split[0]);
+        $names_part = trim($split[1]);
+    }
+
+    $parts = preg_split('/[\s,;]+/', $emails_part, -1, PREG_SPLIT_NO_EMPTY);
+    $name_parts = array();
+    if ($names_part !== '') {
+        $name_parts = preg_split('/\s*[;,]\s*|\r\n|\r|\n/', $names_part, -1, PREG_SPLIT_NO_EMPTY);
+        $name_parts = array_map('trim', $name_parts);
+    }
+
+    $valid = array();
+    $invalid = array();
+    $names_by_email = array();
+
+    foreach ($parts as $index => $part) {
+        $email = sanitize_email(trim($part));
+        $display_name = isset($name_parts[$index]) ? sanitize_text_field($name_parts[$index]) : '';
+
+        if ($email !== '' && is_email($email)) {
+            $email_key = strtolower($email);
+            if (!in_array($email_key, $valid, true)) {
+                $valid[] = $email_key;
+            }
+            if ($display_name !== '' && !isset($names_by_email[$email_key])) {
+                $names_by_email[$email_key] = $display_name;
+            }
+        } else {
+            $invalid[] = trim($part);
+        }
+    }
+
+    $ordered_names = array();
+    foreach ($valid as $email_key) {
+        $ordered_names[] = isset($names_by_email[$email_key]) ? $names_by_email[$email_key] : '';
+    }
+
+    return array(
+        'valid' => array_values(array_unique($valid)),
+        'invalid' => array_values(array_unique($invalid)),
+        'names' => $ordered_names,
+        'names_by_email' => $names_by_email,
+    );
+}
+
+/**
+ * Obtener perfiles de destinatarios de seguimiento con nombre y correo.
+ */
+function automatiza_tech_get_followup_recipient_profiles($meeting) {
+    $profiles = array();
+
+    if (!empty($meeting->client_email)) {
+        $client_email = sanitize_email($meeting->client_email);
+        if ($client_email !== '' && is_email($client_email)) {
+            $profiles[strtolower($client_email)] = array(
+                'email' => strtolower($client_email),
+                'name' => !empty($meeting->client_name) ? sanitize_text_field($meeting->client_name) : 'Cliente',
+            );
+        }
+    }
+
+    $invitees = automatiza_tech_parse_invitees_emails($meeting->invitees_emails ?? '');
+    $invitee_names = $invitees['names'] ?? array();
+    foreach ($invitees['valid'] as $index => $invitee_email) {
+        $name = isset($invitee_names[$index]) ? sanitize_text_field($invitee_names[$index]) : '';
+        $profiles[$invitee_email] = array(
+            'email' => $invitee_email,
+            'name' => $name !== '' ? $name : 'Participante',
+        );
+    }
+
+    return array_values($profiles);
+}
+
+/**
+ * Obtener destinatarios de seguimiento: titular + invitados.
+ */
+function automatiza_tech_get_followup_recipients($meeting) {
+    $profiles = automatiza_tech_get_followup_recipient_profiles($meeting);
+    return array_values(array_unique(array_map(function($profile) {
+        return $profile['email'];
+    }, $profiles)));
+}
+
+/**
+ * Avisar al titular cuando se agregan nuevos correos en copia.
+ */
+function automatiza_tech_notify_followup_copy_added($meeting, $added_invitees, $invitees_names_by_email = array()) {
+    if (empty($meeting) || empty($meeting->client_email) || empty($added_invitees)) {
+        return false;
+    }
+
+    $to = sanitize_email($meeting->client_email);
+    if ($to === '' || !is_email($to)) {
+        return false;
+    }
+
+    $site_title = get_bloginfo('name');
+    $logo_url = 'https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
+    $name = !empty($meeting->client_name) ? $meeting->client_name : 'Cliente';
+    $meeting_subject = !empty($meeting->meeting_subject) ? $meeting->meeting_subject : 'Reunión de Seguimiento';
+    $date_text = !empty($meeting->meeting_date) ? date('d/m/Y', strtotime($meeting->meeting_date)) : '';
+    $time_text = !empty($meeting->meeting_time) ? substr($meeting->meeting_time, 0, 5) . ' hrs' : '';
+
+    $subject = '👥 Copias agregadas a tu reunión de seguimiento | ' . $site_title;
+    $added_lines = array();
+    foreach ($added_invitees as $added_email) {
+        $name = trim((string) ($invitees_names_by_email[strtolower($added_email)] ?? ''));
+        $added_lines[] = $name !== '' ? ($name . ' <' . strtolower($added_email) . '>') : strtolower($added_email);
+    }
+    $html = '
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family: Arial, sans-serif; background:#f0f4ff; margin:0; padding:20px; color:#1e293b;">
+    <div style="max-width:600px; margin:0 auto; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 8px 25px rgba(13,148,136,0.15);">
+        <div style="background:linear-gradient(135deg,#0d9488,#14b8a6); padding:26px 22px; text-align:center;">
+            <img src="' . esc_url($logo_url) . '" alt="' . esc_attr($site_title) . '" style="max-height:56px; width:auto; margin-bottom:10px;">
+            <h1 style="margin:0; color:#fff; font-size:21px;">Copias agregadas</h1>
+        </div>
+        <div style="padding:24px;">
+            <p style="font-size:15px; margin:0 0 12px 0;">Hola <strong>' . esc_html($name) . '</strong>,</p>
+            <p style="font-size:15px; margin:0 0 14px 0;">Se agregaron nuevos correos en copia para tu reunión:</p>
+            <div style="background:#f8fafc; border-left:4px solid #06d6a0; border-radius:8px; padding:14px 16px; margin:0 0 14px 0; font-size:14px;">
+                ' . esc_html(implode(', ', $added_lines)) . '
+            </div>
+            <p style="font-size:14px; color:#334155; margin:0 0 8px 0;"><strong>Asunto:</strong> ' . esc_html($meeting_subject) . '</p>
+            <p style="font-size:14px; color:#334155; margin:0 0 8px 0;"><strong>Fecha:</strong> ' . esc_html($date_text) . '</p>
+            <p style="font-size:14px; color:#334155; margin:0 0 12px 0;"><strong>Hora:</strong> ' . esc_html($time_text) . '</p>
+            <p style="font-size:13px; color:#64748b; margin:0;">Este aviso es informativo y no requiere acción de tu parte.</p>
+        </div>
+    </div>
+</body>
+</html>';
+
+    $headers = array(
+        'Content-Type: text/html; charset=UTF-8',
+        'From: ' . $site_title . ' <noreply@automatizatech.cl>',
+    );
+
+    return wp_mail($to, $subject, $html, $headers);
+}
 
 /**
  * Verificar disponibilidad de un horario
@@ -208,6 +376,11 @@ function automatiza_tech_followup_page() {
         elseif (isset($_POST['client_name'])) {
             $client_name = sanitize_text_field($_POST['client_name']);
             $client_email = sanitize_email($_POST['client_email']);
+            $invitees_input = sanitize_textarea_field($_POST['invitees_emails'] ?? '');
+            $invitees_parsed = automatiza_tech_parse_invitees_emails($invitees_input);
+            $invitees_valid = $invitees_parsed['valid'];
+            $invitees_names = $invitees_parsed['names'] ?? array();
+            $invitees_names_by_email = $invitees_parsed['names_by_email'] ?? array();
             $company_name = sanitize_text_field($_POST['company_name']);
             $phone = sanitize_text_field($_POST['phone']);
             $meeting_date = sanitize_text_field($_POST['meeting_date']);
@@ -225,6 +398,8 @@ function automatiza_tech_followup_page() {
                 $message = '<div class="notice notice-error is-dismissible"><p>❌ Por favor completa todos los campos obligatorios.</p></div>';
             } elseif (!is_email($client_email)) {
                 $message = '<div class="notice notice-error is-dismissible"><p>❌ El correo electrónico no es válido.</p></div>';
+            } elseif (!empty($invitees_parsed['invalid'])) {
+                $message = '<div class="notice notice-error is-dismissible"><p>❌ Correos en copia inválidos: ' . esc_html(implode(', ', $invitees_parsed['invalid'])) . '</p></div>';
             } else {
                 // Validar disponibilidad (verificar ambas tablas: leads y followup)
                 $availability_check = automatiza_tech_check_slot_availability($meeting_date, $meeting_time, $meeting_id_edit);
@@ -237,6 +412,8 @@ function automatiza_tech_followup_page() {
                     $data = array(
                         'client_name' => $client_name,
                         'client_email' => $client_email,
+                        'invitees_emails' => !empty($invitees_valid) ? implode(',', $invitees_valid) : null,
+                        'invitees_names' => !empty($invitees_names) ? implode(',', $invitees_names) : null,
                         'company_name' => $company_name,
                         'phone' => $phone,
                         'meeting_date' => $meeting_date,
@@ -266,6 +443,34 @@ function automatiza_tech_followup_page() {
                         $meeting_id = $wpdb->insert_id;
                         $action_msg = 'programada';
                     }
+
+                // Notificar al titular cuando se agregan nuevas copias
+                $previous_invitees = array();
+                if (!empty($old_meeting) && isset($old_meeting->invitees_emails)) {
+                    $previous_invitees = automatiza_tech_parse_invitees_emails((string) $old_meeting->invitees_emails)['valid'];
+                }
+
+                $added_invitees = array_values(array_diff($invitees_valid, $previous_invitees));
+                if (!empty($added_invitees) && $meeting_id) {
+                    $meeting_for_notice = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $meeting_id));
+                    automatiza_tech_notify_followup_copy_added($meeting_for_notice, $added_invitees, $invitees_names_by_email);
+
+                    // Si no se solicitó envío general, al menos invitar por correo a los nuevos agregados.
+                    if (!$send_email) {
+                        $target_profiles = array();
+                        foreach ($added_invitees as $added_email) {
+                            $target_profiles[] = array(
+                                'email' => strtolower($added_email),
+                                'name' => !empty($invitees_names_by_email[strtolower($added_email)])
+                                    ? $invitees_names_by_email[strtolower($added_email)]
+                                    : 'Participante',
+                            );
+                        }
+                        if (!empty($target_profiles)) {
+                            automatiza_tech_send_followup_email($meeting_id, $target_profiles);
+                        }
+                    }
+                }
                 
                 // Variables de estado de notificaciones
                 $n8n_result = null;
@@ -545,6 +750,20 @@ function automatiza_tech_followup_page() {
                                         <input type="email" name="client_email" id="client_email" class="regular-text" required
                                             value="<?php echo esc_attr($edit_meeting->client_email ?? ''); ?>"
                                             placeholder="cliente@empresa.com">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th><label for="invitees_emails">📨 Correos en copia</label></th>
+                                    <td>
+                                        <textarea name="invitees_emails" id="invitees_emails" class="regular-text" rows="2"
+                                            placeholder="correo1@empresa.com,correo2@empresa.com / Nombre1,Nombre2"><?php
+                                                $invitees_value = $edit_meeting->invitees_emails ?? '';
+                                                if (!empty($edit_meeting->invitees_names)) {
+                                                    $invitees_value .= ' / ' . $edit_meeting->invitees_names;
+                                                }
+                                                echo esc_textarea($invitees_value);
+                                            ?></textarea>
+                                        <p class="description">Opcional. Formato recomendado: correo1,correo2 / nombre1,nombre2</p>
                                     </td>
                                 </tr>
                                 <tr>
@@ -1210,7 +1429,7 @@ function automatiza_tech_followup_page() {
  * Enviar correo de invitación para reunión de seguimiento
  * Usa template corporativo con color turquesa
  */
-function automatiza_tech_send_followup_email($meeting_id) {
+function automatiza_tech_send_followup_email($meeting_id, $target_profiles = null) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
     
@@ -1468,7 +1687,7 @@ function automatiza_tech_send_followup_email($meeting_id) {
             <p>Tu próximo paso hacia la automatización</p>
         </div>
         <div class="content">
-            <p class="greeting">Hola <strong>' . esc_html($meeting->client_name) . '</strong>,</p>
+            <p class="greeting">Hola <strong>{{RECIPIENT_NAME}}</strong>,</p>
             
             <p>¡Excelente! Hemos programado nuestra reunión de seguimiento para continuar afinando los detalles de tu proyecto de automatización' . ($meeting->company_name ? ' con <strong>' . esc_html($meeting->company_name) . '</strong>' : '') . '.</p>
             
@@ -1559,8 +1778,35 @@ function automatiza_tech_send_followup_email($meeting_id) {
     );
     
     $subject = '📅 ' . $meeting->meeting_subject . ' - ' . $formatted_date;
-    
-    return wp_mail($meeting->client_email, $subject, $html, $headers);
+
+    $recipient_profiles = is_array($target_profiles) && !empty($target_profiles)
+        ? $target_profiles
+        : automatiza_tech_get_followup_recipient_profiles($meeting);
+
+    if (empty($recipient_profiles)) {
+        error_log("Followup #{$meeting_id}: sin destinatarios válidos para envío de invitación.");
+        return false;
+    }
+
+    $sent_any = false;
+    foreach ($recipient_profiles as $profile) {
+        $recipient_email = sanitize_email($profile['email'] ?? '');
+        if ($recipient_email === '' || !is_email($recipient_email)) {
+            continue;
+        }
+
+        $recipient_name = sanitize_text_field($profile['name'] ?? '');
+        if ($recipient_name === '') {
+            $recipient_name = 'Participante';
+        }
+
+        $personalized_html = str_replace('{{RECIPIENT_NAME}}', esc_html($recipient_name), $html);
+        if (wp_mail($recipient_email, $subject, $personalized_html, $headers)) {
+            $sent_any = true;
+        }
+    }
+
+    return $sent_any;
 }
 
 /**
@@ -3381,7 +3627,7 @@ function automatiza_tech_send_followup_reschedule_email($meeting_id, $new_date, 
         
         <div style="padding: 35px;">
             <p style="font-size: 16px; margin-bottom: 20px;">
-                Hola <strong>' . esc_html($client_name) . '</strong>,
+                Hola <strong>{{RECIPIENT_NAME}}</strong>,
             </p>
             
             <p style="font-size: 15px; margin-bottom: 25px;">
@@ -3438,16 +3684,40 @@ function automatiza_tech_send_followup_reschedule_email($meeting_id, $new_date, 
     );
     
     $email_subject = '🔄 Reunión Reagendada - ' . $formatted_date . ' a las ' . $formatted_time . ' hrs';
-    
-    $sent = wp_mail($meeting->client_email, $email_subject, $html, $headers);
-    
-    if ($sent) {
-        error_log("Email de reagendamiento enviado a {$meeting->client_email} para meeting #{$meeting_id}");
-    } else {
-        error_log("Error al enviar email de reagendamiento a {$meeting->client_email}");
+
+    $recipient_profiles = automatiza_tech_get_followup_recipient_profiles($meeting);
+    if (empty($recipient_profiles)) {
+        error_log("Followup #{$meeting_id}: sin destinatarios válidos para email de reagendamiento.");
+        return false;
+    }
+
+    $sent_any = false;
+    $sent_to = array();
+    foreach ($recipient_profiles as $profile) {
+        $recipient_email = sanitize_email($profile['email'] ?? '');
+        if ($recipient_email === '' || !is_email($recipient_email)) {
+            continue;
+        }
+
+        $recipient_name = sanitize_text_field($profile['name'] ?? '');
+        if ($recipient_name === '') {
+            $recipient_name = 'Participante';
+        }
+
+        $personalized_html = str_replace('{{RECIPIENT_NAME}}', esc_html($recipient_name), $html);
+        if (wp_mail($recipient_email, $email_subject, $personalized_html, $headers)) {
+            $sent_any = true;
+            $sent_to[] = $recipient_email;
+        }
     }
     
-    return $sent;
+    if ($sent_any) {
+        error_log('Email de reagendamiento enviado a ' . implode(', ', $sent_to) . " para meeting #{$meeting_id}");
+    } else {
+        error_log('Error al enviar email de reagendamiento para meeting #' . $meeting_id);
+    }
+    
+    return $sent_any;
 }
 
 /**

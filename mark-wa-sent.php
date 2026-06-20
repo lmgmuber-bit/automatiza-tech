@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script rápido para marcar recordatorios WhatsApp como enviados
  * Uso: https://automatizatech.cl/mark-wa-sent.php?id=71&type=24h

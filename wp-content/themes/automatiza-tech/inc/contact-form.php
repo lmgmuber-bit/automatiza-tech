@@ -146,9 +146,8 @@ class AutomatizaTechContactForm {
             ob_clean();
         }
         
-        // Log para depuración
-        error_log('=== CONTACT FORM SUBMISSION ===');
-        error_log('POST data: ' . print_r($_POST, true));
+        // Log para depuracion (sin PII: solo metadata)
+        error_log('[contact-form] submission method=' . ($_SERVER['REQUEST_METHOD'] ?? '?') . ' ip=' . ($_SERVER['REMOTE_ADDR'] ?? '?'));
         
         // Verificar que sea una petición POST
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -158,7 +157,7 @@ class AutomatizaTechContactForm {
         
         // Verificar nonce para seguridad
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'automatiza_ajax_nonce')) {
-            error_log('Nonce verification failed. Expected: automatiza_ajax_nonce, Received: ' . ($_POST['nonce'] ?? 'none'));
+            error_log('[contact-form] nonce verification failed');
             wp_send_json_error('Error de seguridad');
             wp_die();
         }
@@ -1631,6 +1630,7 @@ class AutomatizaTechContactForm {
                     'subtotal' => $subtotal,
                     'iva' => $iva,
                     'total' => $total,
+                    'download_token' => bin2hex( random_bytes( 24 ) ),
                     'created_at' => current_time('mysql')
                 ]
             );
@@ -5996,27 +5996,28 @@ class AutomatizaTechContactForm {
                 </div>
             </div>
             
-            <table class="wp-list-table widefat fixed striped" id="clients-table">
+            <div class="clients-table-wrapper">
+            <table class="wp-list-table widefat striped" id="clients-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Nombre</th>
-                        <th>Email</th>
-                        <th>Empresa</th>
-                        <th>Teléfono</th>
-                        <th>Valor Contrato</th>
-                        <th>Tipo Proyecto</th>
-                        <th style="width: 120px;">Estado</th>
-                        <th style="width: 130px;">Fecha Contrato</th>
-                        <th style="text-align: center; width: 70px;">🔄 Toggle</th>
-                        <th style="text-align: center; width: 80px;">📋 Ficha</th>
+                        <th class="col-id">ID</th>
+                        <th class="col-nombre">Nombre</th>
+                        <th class="col-email">Email</th>
+                        <th class="col-empresa">Empresa</th>
+                        <th class="col-telefono">Teléfono</th>
+                        <th class="col-valor">Valor Contrato</th>
+                        <th class="col-tipo">Tipo Proyecto</th>
+                        <th class="col-estado">Estado</th>
+                        <th class="col-fecha">Fecha Contrato</th>
+                        <th class="col-toggle" style="text-align: center;">🔄 Toggle</th>
+                        <th class="col-ficha" style="text-align: center;">📋 Ficha</th>
                         <?php if (current_user_can('administrator')): ?>
-                        <th style="text-align: center; width: 70px;">✏️ Editar</th>
+                        <th class="col-editar" style="text-align: center;">✏️ Editar</th>
                         <?php else: ?>
-                        <th style="text-align: center; width: 70px;">🚫 Editar</th>
+                        <th class="col-editar" style="text-align: center;">🚫 Editar</th>
                         <?php endif; ?>
-                        <th style="text-align: center; width: 240px;">📄 Factura</th>
-                        <th style="text-align: center; width: 70px;">🗑️ Eliminar</th>
+                        <th class="col-factura" style="text-align: center;">📄 Factura</th>
+                        <th class="col-eliminar" style="text-align: center;">🗑️ Eliminar</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -6046,7 +6047,7 @@ class AutomatizaTechContactForm {
                                     <?php endif; ?>
                                 </td>
                                 <td><?php echo esc_html($client->project_type ?: 'No especificado'); ?></td>
-                                <td style="width: 120px; min-width: 120px;">
+                                <td class="col-estado">
                                     <select onchange="updateClientStatus(<?php echo $client->id; ?>, this.value)" 
                                             class="client-status-selector" 
                                             data-original-value="<?php echo esc_attr($client->contract_status); ?>"
@@ -6057,7 +6058,7 @@ class AutomatizaTechContactForm {
                                         <option value="cancelled" <?php selected($client->contract_status, 'cancelled'); ?>>❌ Cancelado</option>
                                     </select>
                                 </td>
-                                <td style="width: 130px; min-width: 130px; white-space: nowrap;">
+                                <td class="col-fecha">
                                     <small><?php echo date('d/m/Y H:i', strtotime($client->contracted_at)); ?></small>
                                 </td>
                                 
@@ -6175,6 +6176,7 @@ class AutomatizaTechContactForm {
                     <?php endif; ?>
                 </tbody>
             </table>
+            </div><!-- /.clients-table-wrapper -->
         </div>
         
         <style>
@@ -6233,125 +6235,119 @@ class AutomatizaTechContactForm {
             color: #666 !important;
         }
         
-        /* ==================== ESTILOS RESPONSIVOS CLIENTES CONTRATADOS ==================== */
-        
-        /* Tablet (1024px y menos) */
-        @media screen and (max-width: 1024px) {
-            #clients-table th:nth-child(4),
-            #clients-table td:nth-child(4),
-            #clients-table th:nth-child(7),
-            #clients-table td:nth-child(7) {
-                display: none; /* Ocultar Empresa y Tipo Proyecto */
-            }
+        /* ==================== TABLA CLIENTES — LAYOUT Y RESPONSIVE ==================== */
+
+        /* Wrapper scrollable siempre */
+        .clients-table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 6px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         }
-        
-        /* Mobile (767px y menos) */
+
+        /* La tabla NO usa fixed — se adapta al contenido */
+        #clients-table {
+            table-layout: auto !important;
+            width: 100%;
+            min-width: 1100px;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        /* Cabeceras y celdas sin word-wrap */
+        #clients-table th,
+        #clients-table td {
+            white-space: nowrap;
+            padding: 10px 10px;
+            vertical-align: middle;
+        }
+
+        /* Anchos mínimos por columna */
+        #clients-table .col-id       { width: 45px;  min-width: 45px; }
+        #clients-table .col-nombre   { min-width: 130px; }
+        #clients-table .col-email    { min-width: 180px; }
+        #clients-table .col-empresa  { min-width: 110px; }
+        #clients-table .col-telefono { min-width: 110px; }
+        #clients-table .col-valor    { min-width: 110px; }
+        #clients-table .col-tipo     { min-width: 130px; }
+        #clients-table .col-estado   { min-width: 130px; }
+        #clients-table .col-fecha    { min-width: 130px; }
+        #clients-table .col-toggle   { width: 65px;  min-width: 65px;  text-align: center; }
+        #clients-table .col-ficha    { width: 90px;  min-width: 90px;  text-align: center; }
+        #clients-table .col-editar   { width: 65px;  min-width: 65px;  text-align: center; }
+        #clients-table .col-factura  { min-width: 220px; text-align: center; }
+        #clients-table .col-eliminar { width: 65px;  min-width: 65px;  text-align: center; }
+
+        /* Select de estado más legible */
+        .client-status-selector {
+            width: 120px;
+            font-size: 12px;
+            padding: 3px 4px;
+            border-radius: 4px;
+        }
+
+        /* ==================== RESPONSIVE CLIENTES ==================== */
+
+        /* Tablet ancho (1200px–1024px): ocultar tipo de proyecto */
+        @media screen and (max-width: 1200px) {
+            #clients-table .col-tipo,
+            #clients-table th.col-tipo  { display: none; }
+        }
+
+        /* Tablet (1024px y menos): ocultar empresa y tipo */
+        @media screen and (max-width: 1024px) {
+            #clients-table .col-empresa,
+            #clients-table th.col-empresa,
+            #clients-table .col-tipo,
+            #clients-table th.col-tipo  { display: none; }
+        }
+
+        /* Móvil (767px y menos) */
         @media screen and (max-width: 767px) {
-            .wrap h1 {
-                font-size: 20px;
-            }
-            
-            /* Notice y info box */
-            .notice.notice-info {
-                padding: 10px;
-            }
-            .notice.notice-info p {
-                display: flex;
-                flex-direction: column;
-                gap: 5px;
-            }
-            .notice.notice-info span {
-                margin-left: 0 !important;
-            }
-            
-            /* Barra de navegación */
-            .tablenav.top {
-                flex-direction: column;
-                gap: 10px;
-            }
+            .wrap h1 { font-size: 20px; }
+
+            .notice.notice-info { padding: 10px; }
+            .notice.notice-info p { display: flex; flex-direction: column; gap: 5px; }
+            .notice.notice-info span { margin-left: 0 !important; }
+
+            .tablenav.top { flex-direction: column; gap: 10px; }
             .tablenav .alignleft,
-            .tablenav .alignright {
-                width: 100%;
-                text-align: center;
-            }
-            .tablenav .button {
-                width: 100%;
-                min-height: 44px;
-            }
-            
-            /* Campo de búsqueda */
-            .search-box {
-                padding: 12px;
-            }
-            .search-box > div {
-                flex-direction: column !important;
-                align-items: stretch !important;
-            }
-            .search-box input[type="text"] {
-                width: 100% !important;
-                min-height: 44px;
-                font-size: 16px !important;
-            }
-            .search-box .button {
-                width: 100%;
-                min-height: 44px;
-                margin-top: 10px;
-            }
-            
-            /* Tabla - Scroll horizontal */
-            .wp-list-table.widefat {
-                display: block;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
+            .tablenav .alignright { width: 100%; text-align: center; }
+            .tablenav .button { width: 100%; min-height: 44px; }
+
+            .search-box { padding: 12px; }
+            .search-box > div { flex-direction: column !important; align-items: stretch !important; }
+            .search-box input[type="text"] { width: 100% !important; min-height: 44px; font-size: 16px !important; }
+            .search-box .button { width: 100%; min-height: 44px; margin-top: 10px; }
+
             #clients-table {
-                min-width: 900px;
-                font-size: 13px;
+                min-width: 820px;
+                font-size: 12px;
             }
             #clients-table th,
-            #clients-table td {
-                padding: 10px 8px;
-            }
-            /* Ocultar más columnas en móvil */
-            #clients-table th:nth-child(1),
-            #clients-table td:nth-child(1),
-            #clients-table th:nth-child(4),
-            #clients-table td:nth-child(4),
-            #clients-table th:nth-child(5),
-            #clients-table td:nth-child(5),
-            #clients-table th:nth-child(7),
-            #clients-table td:nth-child(7) {
-                display: none;
-            }
-            
-            /* Botones de acción más compactos */
+            #clients-table td { padding: 8px 6px; }
+
+            /* En móvil ocultar también teléfono y valor */
+            #clients-table .col-telefono,
+            #clients-table th.col-telefono,
+            #clients-table .col-valor,
+            #clients-table th.col-valor { display: none; }
+
             .toggle-status-btn,
             .view-client-btn,
             .edit-client-btn,
-            .delete-client-btn {
-                padding: 6px 10px !important;
-                font-size: 14px !important;
-            }
-            
-            /* Status selector */
-            .client-status-selector {
-                min-height: 36px;
-                font-size: 11px !important;
-            }
+            .delete-client-btn { padding: 6px 10px !important; font-size: 14px !important; }
+            .client-status-selector { min-height: 36px; font-size: 11px !important; width: 100px; }
         }
-        
-        /* Móviles pequeños (480px y menos) */
+
+        /* Móviles pequeños */
         @media screen and (max-width: 480px) {
-            #clients-table {
-                min-width: 700px;
-            }
+            #clients-table { min-width: 700px; font-size: 11px; }
             .view-invoice-btn,
-            .download-invoice-btn {
-                padding: 4px 8px !important;
-                font-size: 11px !important;
-            }
+            .download-invoice-btn { padding: 4px 8px !important; font-size: 11px !important; }
         }
-        
+
         /* Touch-friendly */
         @media (hover: none) and (pointer: coarse) {
             .toggle-status-btn,
@@ -6359,13 +6355,8 @@ class AutomatizaTechContactForm {
             .edit-client-btn,
             .delete-client-btn,
             .view-invoice-btn,
-            .download-invoice-btn {
-                min-height: 44px;
-                min-width: 44px;
-            }
-            .client-status-selector {
-                min-height: 44px;
-            }
+            .download-invoice-btn { min-height: 44px; min-width: 44px; }
+            .client-status-selector { min-height: 44px; }
         }
         </style>
         

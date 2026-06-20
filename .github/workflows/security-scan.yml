@@ -1,0 +1,178 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main, develop, "security/**"]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: "0 9 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  gitleaks:
+    name: Detect secrets (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  php-syntax:
+    name: PHP syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+          tools: none
+          coverage: none
+
+      - name: Lint PHP files
+        run: |
+          set -e
+          FAIL=0
+          FILES=$(find . \
+            -path "./wp-content/plugins/*" -prune -o \
+            -path "./vendor/*" -prune -o \
+            -path "./node_modules/*" -prune -o \
+            -path "./.claude/*" -prune -o \
+            -path "./archive/*" -prune -o \
+            -path "./RespaldoDocs/*" -prune -o \
+            -path "./RespaldoTest/*" -prune -o \
+            -path "./tema-backup/*" -prune -o \
+            -path "./archivos-eliminados-backup/*" -prune -o \
+            -name "*.php" -print)
+          for f in $FILES; do
+            if ! php -l "$f" >/dev/null 2>&1; then
+              echo "::error file=$f::Syntax error"
+              php -l "$f" || true
+              FAIL=1
+            fi
+          done
+          exit $FAIL
+
+  security-patterns:
+    name: Detect risky patterns (regression)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Hardening regression checks
+        run: |
+          set -e
+          FAIL=0
+
+          echo "==> Posibles secretos hardcodeados (sk-, AKIA, etc.)"
+          if grep -rEn --include="*.php" --include="*.js" --include="*.json" \
+              --exclude-dir=wp-content/plugins \
+              --exclude-dir=node_modules \
+              --exclude-dir=vendor \
+              --exclude-dir=.claude \
+              --exclude-dir=archive \
+              "(sk-[A-Za-z0-9_-]{20,}|sk_live_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})" .; then
+            echo "::error::Posibles secretos hardcodeados detectados"
+            FAIL=1
+          fi
+
+          echo "==> Scripts publicos sin guard"
+          for prefix in debug check setup fix test add update reset revert mark purge flush validar reporte migrate; do
+            for f in ${prefix}-*.php; do
+              [ -f "$f" ] || continue
+              if ! head -n 5 "$f" | grep -q "at-maintenance-guard"; then
+                echo "::warning file=$f::Falta require_once at-maintenance-guard.php"
+              fi
+            done
+          done
+
+          echo "==> CORS wildcard '*'"
+          if grep -rEn --include="*.php" \
+              --exclude-dir=wp-content/plugins \
+              --exclude-dir=node_modules \
+              --exclude-dir=.claude \
+              "Access-Control-Allow-Origin:\s*\*" .; then
+            echo "::error::CORS wildcard '*' detectado. Usar at_cors_apply()."
+            FAIL=1
+          fi
+
+          echo "==> error_log con print_r de superglobales"
+          if grep -rEn --include="*.php" \
+              --exclude-dir=wp-content/plugins \
+              --exclude-dir=node_modules \
+              --exclude-dir=.claude \
+              --exclude-dir=archive \
+              'error_log\s*\(\s*[^)]*print_r\s*\(\s*\$_(POST|GET|REQUEST|COOKIE)' .; then
+            echo "::error::error_log con print_r(\$_POST/\$_GET) detectado"
+            FAIL=1
+          fi
+
+          echo "==> SQL concatenado sin prepare() (regresion)"
+          if grep -rEn --include="*.php" \
+              --exclude-dir=wp-content/plugins \
+              --exclude-dir=node_modules \
+              --exclude-dir=.claude \
+              --exclude-dir=archive \
+              '\$wpdb->(query|get_var|get_row|get_results|get_col)\s*\(\s*["'"'"'][^"'"'"')]*\$' .; then
+            echo "::warning::Posible SQL no preparado detectado. Verificar uso de \$wpdb->prepare()."
+          fi
+
+          echo "==> include/require con variable de superglobal (RCE)"
+          if grep -rEn --include="*.php" \
+              --exclude-dir=wp-content/plugins \
+              --exclude-dir=node_modules \
+              --exclude-dir=.claude \
+              "(include|require)(_once)?\s*\(\s*\\\$_(GET|POST|REQUEST|COOKIE|SERVER)" .; then
+            echo "::error::include/require con superglobal detectado — RCE potencial"
+            FAIL=1
+          fi
+
+          echo "==> glob() con input de usuario sin at_safe_basename (regresion E2)"
+          if grep -rEn --include="*.php" \
+              --exclude-dir=wp-content/plugins \
+              --exclude-dir=node_modules \
+              --exclude-dir=.claude \
+              'glob\s*\([^)]*\$_(GET|POST|REQUEST|COOKIE)' .; then
+            echo "::error::glob() con superglobal sin sanitizar — path traversal potencial. Usar at_safe_basename() primero."
+            FAIL=1
+          fi
+
+          exit $FAIL
+
+  phpcs-security:
+    name: PHPCS WordPress security sniffs (advisory)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+          tools: composer
+          coverage: none
+
+      - name: Install PHPCS + WordPress Coding Standards
+        run: |
+          composer global require --no-interaction --no-progress \
+            squizlabs/php_codesniffer:"^3" \
+            wp-coding-standards/wpcs:"^3" \
+            dealerdirect/phpcodesniffer-composer-installer:"^1"
+          echo "$(composer global config bin-dir 2>/dev/null)" >> "$GITHUB_PATH"
+
+      - name: Run security sniffs
+        run: |
+          phpcs --version
+          phpcs -i
+          # Advisory: genera reporte pero no falla el build (hasta calibrar baseline)
+          phpcs --standard=phpcs.xml.dist --report=summary . 2>&1 || true
+          echo "::notice::PHPCS advisory completado. Ver output para detalles."
+          exit 0

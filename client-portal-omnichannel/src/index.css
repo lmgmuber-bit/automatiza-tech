@@ -102,7 +102,7 @@
 [data-theme="dark"] .login-card input:focus,
 [data-theme="dark"] .login-card select:focus,
 [data-theme="dark"] .login-card textarea:focus {
-  border-color: #6366f1 !important;
+  border-color: #2563eb !important;
 }
 /* Tabs bar */
 [data-theme="dark"] .login-card .login-tabs {
@@ -123,7 +123,7 @@
   color: #e5e7eb !important;
 }
 /* Reset form heading */
-[data-theme="dark"] .login-card .bg-indigo-100 {
+[data-theme="dark"] .login-card .bg-blue-100 {
   background: #312e81;
 }
 /* Error message */
@@ -363,7 +363,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 .robot-orbit.robot-show {
   opacity: 1; transform: scale(1);
-  pointer-events: auto;
+  pointer-events: none; /* decorative mascot — never block the form underneath */
 }
 .robot-orbit.robot-hide {
   opacity: 0; transform: scale(0.6);
@@ -578,7 +578,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 .sidebar-header .logo {
   width: 40px; height: 40px; border-radius: 12px;
-  background: linear-gradient(135deg, var(--color-primary-light), #8b5cf6);
+  background: linear-gradient(135deg, var(--color-primary-light), #3b82f6);
   display: flex; align-items: center; justify-content: center;
   color: white; font-weight: 700; font-size: 0.875rem; flex-shrink: 0;
 }
@@ -693,8 +693,7 @@ h1, h2, h3, h4, h5, h6 {
   background: #334155;
 }
 [data-theme="dark"] .chat-item.active {
-  background: rgba(59,130,246,0.15);
-  border-left-color: #3b82f6;
+  background: rgba(59,130,246,0.18);
 }
 
 [data-theme="dark"] .chat-window-panel {
@@ -860,7 +859,7 @@ h1, h2, h3, h4, h5, h6 {
   transition: var(--transition);
 }
 .chat-item:hover { background: var(--color-gray-50); }
-.chat-item.active { background: #eff6ff; border-left: 3px solid var(--color-primary-light); }
+.chat-item.active { background: #dbeafe; }
 
 /* Chat Window */
 .chat-window-panel {
@@ -1078,3 +1077,40 @@ h1, h2, h3, h4, h5, h6 {
 .btn-hover { transition: var(--transition); }
 .btn-hover:hover { transform: translateY(-2px); }
 .btn-hover:active { transform: translateY(0); }
+
+/* =============================================
+   GLOBAL KEYBOARD FOCUS (a11y)
+   Visible focus ring for keyboard users only.
+   Mouse clicks don't trigger :focus-visible, so this
+   stays invisible during pointer interaction.
+   ============================================= */
+:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+[data-theme="dark"] :focus-visible {
+  outline-color: #93c5fd;
+}
+/* Don't double-up the ring on inputs that already render their own focus ring */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+/* =============================================
+   REDUCED MOTION (a11y)
+   Respect users who ask the OS to minimize motion:
+   collapse animations/transitions to near-instant.
+   ============================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -15,17 +15,26 @@ export default function BotConfigUnifiedView() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Tabs */}
-      <div className="shrink-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-        <div className="px-4 pt-3">
-          <h1 className="text-base sm:text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2" style={{ fontFamily: 'Poppins, sans-serif' }}>
-            🤖 <span>Configuración y Prompts del Bot</span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-0.5 mb-2 hidden sm:block">
-            Configura el comportamiento, prompts y vista previa del bot
-          </p>
+      {/* HERO FULL-BLEED */}
+      <div className="relative overflow-hidden px-6 py-6 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #0ea5e9, #2563eb)' }}>
+        <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full blur-3xl bg-white/20" />
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
+              <Bot size={26} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Configuración y Prompts del Bot</h1>
+              <p className="text-sm text-white/75">Configura el comportamiento, prompts y vista previa del bot</p>
+            </div>
+          </div>
         </div>
-        <div className="flex overflow-x-auto">
+      </div>
+
+      {/* Tabs */}
+      <div className="shrink-0 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700/60">
+        <div className="flex gap-1 px-3 pt-2 overflow-x-auto">
           {TABS.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -33,10 +42,10 @@ export default function BotConfigUnifiedView() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold whitespace-nowrap rounded-t-xl border-b-2 transition-all duration-300 ${
                   isActive
-                    ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-500/10'
-                    : 'text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300'
+                    ? 'text-white border-transparent bg-gradient-to-br from-blue-400 to-blue-600 shadow-md'
+                    : 'text-gray-500 dark:text-slate-400 border-transparent hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/40'
                 }`}
               >
                 <Icon size={16} />

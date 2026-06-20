@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<ruleset name="AT-Security">
+    <description>AutomatizaTech — security-focused PHPCS sniffs (CI advisory)</description>
+
+    <!-- Scope: only project PHP files -->
+    <file>.</file>
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/wp-content/plugins/*</exclude-pattern>
+    <exclude-pattern>*/wp-content/themes/*/node_modules/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+    <exclude-pattern>*/archive/*</exclude-pattern>
+    <exclude-pattern>*/RespaldoDocs/*</exclude-pattern>
+    <exclude-pattern>*/RespaldoTest/*</exclude-pattern>
+    <exclude-pattern>*/tema-backup/*</exclude-pattern>
+    <exclude-pattern>*/archivos-eliminados-backup/*</exclude-pattern>
+    <exclude-pattern>*/dist/*</exclude-pattern>
+    <exclude-pattern>*/wp-includes/*</exclude-pattern>
+    <exclude-pattern>*/wp-admin/*</exclude-pattern>
+    <!-- React source: handled by ESLint, not PHPCS -->
+    <exclude-pattern>*/client-portal-omnichannel/src/*</exclude-pattern>
+
+    <!-- PHP target version -->
+    <config name="testVersion" value="8.1-"/>
+
+    <!-- ── Security sniffs only ─────────────────────────────────── -->
+
+    <!-- SQL injection: require $wpdb->prepare() -->
+    <rule ref="WordPress.DB.PreparedSQL"/>
+    <rule ref="WordPress.DB.PreparedSQLPlaceholders"/>
+
+    <!-- XSS: require esc_html/esc_attr/etc on output -->
+    <rule ref="WordPress.Security.EscapeOutput"/>
+
+    <!-- CSRF: require nonce verification in $_POST handlers -->
+    <rule ref="WordPress.Security.NonceVerification"/>
+
+    <!-- Input validation: require sanitize_* before use -->
+    <rule ref="WordPress.Security.ValidatedSanitizedInput"/>
+</ruleset>

@@ -164,36 +164,48 @@ export default function AgentsView() {
   const isAtLimit = !getIsAdmin() && maxAgents !== null && totalAgents >= maxAgents;
 
   return (
-    <div className="h-full overflow-y-auto p-4 sm:p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900" style={{ fontFamily: 'Poppins, sans-serif' }}>👥 Agentes</h1>
-            <p className="text-sm text-gray-500 mt-1">Gestiona los agentes que atienden las conversaciones</p>
-            {!getIsAdmin() && maxAgents !== null && (
-              <p className="text-xs text-gray-400 mt-1">
-                {totalAgents} de {maxAgents} agente{maxAgents > 1 ? 's' : ''} utilizado{totalAgents !== 1 ? 's' : ''} — Plan {planType.charAt(0).toUpperCase() + planType.slice(1)}
-              </p>
+    <div className="flex-1 h-full overflow-y-auto bg-gray-50 dark:bg-slate-900">
+      {/* HERO FULL-BLEED */}
+      <div className="relative overflow-hidden px-6 py-6 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #f59e0b, #f97316)' }}>
+        <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full blur-3xl bg-white/20" />
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
+                <Users size={26} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Agentes</h1>
+                <p className="text-sm text-white/75">Gestiona los agentes que atienden las conversaciones</p>
+                {!getIsAdmin() && maxAgents !== null && (
+                  <p className="text-xs text-white/60 mt-1">
+                    {totalAgents} de {maxAgents} agente{maxAgents > 1 ? 's' : ''} utilizado{totalAgents !== 1 ? 's' : ''} — Plan {planType.charAt(0).toUpperCase() + planType.slice(1)}
+                  </p>
+                )}
+              </div>
+            </div>
+            {canManage && (
+              isAtLimit ? (
+                <div className="self-start">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-white/15 ring-1 ring-white/25 text-white rounded-lg text-sm font-medium cursor-not-allowed">
+                    <AlertTriangle size={16} /> Límite alcanzado
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowForm(!showForm)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white rounded-lg shadow-sm text-sm font-medium transition-all duration-300 self-start"
+                >
+                  <Plus size={16} /> Agregar Agente
+                </button>
+              )
             )}
           </div>
-          {canManage && (
-            isAtLimit ? (
-              <div className="self-start">
-                <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-sm font-medium cursor-not-allowed">
-                  <AlertTriangle size={16} /> Límite alcanzado
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowForm(!showForm)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 self-start"
-              >
-                <Plus size={16} /> Agregar Agente
-              </button>
-            )
-          )}
-        </div>
+      </div>
 
+      {/* CONTENIDO */}
+      <div className="p-4 sm:p-6">
+      <div className="max-w-4xl mx-auto">
         {/* Limit warning banner */}
         {isAtLimit && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 flex items-start gap-3">
@@ -210,7 +222,7 @@ export default function AgentsView() {
         {/* Search */}
         <div className="relative w-full sm:w-64 mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-          <input
+          <input aria-label="Buscar"
             type="text"
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
@@ -223,7 +235,7 @@ export default function AgentsView() {
         {/* Per-page & sort controls */}
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <span className="text-xs text-gray-400">Mostrar:</span>
-          <select
+          <select aria-label="Resultados por página"
             value={perPage}
             onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
             className="px-2 py-1 rounded text-xs border border-gray-200 bg-white text-gray-600 focus:ring-2 focus:ring-blue-500"
@@ -247,8 +259,8 @@ export default function AgentsView() {
                 }));
                 setPage(1);
               }}
-              className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                sort.orderby === col.key ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                sort.orderby === col.key ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
               }`}
             >
               {col.label}
@@ -267,8 +279,8 @@ export default function AgentsView() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {getIsAdmin() && (
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Cliente *</label>
-                    <select
+                    <label htmlFor="agentsview-fld1" className="block text-xs font-medium text-gray-500 mb-1">Cliente *</label>
+                    <select id="agentsview-fld1"
                       value={form.client_id}
                       onChange={e => setForm({ ...form, client_id: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
@@ -282,8 +294,8 @@ export default function AgentsView() {
                   </div>
                 )}
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Nombre completo</label>
-                  <input
+                  <label htmlFor="agentsview-fld2" className="block text-xs font-medium text-gray-500 mb-1">Nombre completo</label>
+                  <input id="agentsview-fld2"
                     type="text" value={form.name}
                     onChange={e => setForm({ ...form, name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
@@ -291,8 +303,8 @@ export default function AgentsView() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
-                  <input
+                  <label htmlFor="agentsview-fld3" className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                  <input id="agentsview-fld3"
                     type="email" value={form.email}
                     onChange={e => setForm({ ...form, email: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
@@ -300,8 +312,8 @@ export default function AgentsView() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Rol</label>
-                  <select
+                  <label htmlFor="agentsview-fld4" className="block text-xs font-medium text-gray-500 mb-1">Rol</label>
+                  <select id="agentsview-fld4"
                     value={form.role}
                     onChange={e => setForm({ ...form, role: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
@@ -312,8 +324,8 @@ export default function AgentsView() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Max. chats simultáneos</label>
-                  <input
+                  <label htmlFor="agentsview-fld5" className="block text-xs font-medium text-gray-500 mb-1">Max. chats simultáneos</label>
+                  <input id="agentsview-fld5"
                     type="number" value={form.max_concurrent_chats}
                     onChange={e => setForm({ ...form, max_concurrent_chats: parseInt(e.target.value) || 5 })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
@@ -321,8 +333,8 @@ export default function AgentsView() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Contraseña (min. 6 caracteres)</label>
-                  <input
+                  <label htmlFor="agentsview-fld6" className="block text-xs font-medium text-gray-500 mb-1">Contraseña (min. 6 caracteres)</label>
+                  <input id="agentsview-fld6"
                     type="password" value={form.password}
                     onChange={e => setForm({ ...form, password: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
@@ -331,8 +343,8 @@ export default function AgentsView() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Canal asociado <span className="text-gray-400">(opcional)</span></label>
-                  <select
+                  <label htmlFor="agentsview-fld7" className="block text-xs font-medium text-gray-500 mb-1">Canal asociado <span className="text-gray-400">(opcional)</span></label>
+                  <select id="agentsview-fld7"
                     value={form.channel_id}
                     onChange={e => setForm({ ...form, channel_id: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
@@ -344,16 +356,16 @@ export default function AgentsView() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Horario inicio</label>
-                  <input
+                  <label htmlFor="agentsview-fld8" className="block text-xs font-medium text-gray-500 mb-1">Horario inicio</label>
+                  <input id="agentsview-fld8"
                     type="time" value={form.schedule_start}
                     onChange={e => setForm({ ...form, schedule_start: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Horario fin</label>
-                  <input
+                  <label htmlFor="agentsview-fld9" className="block text-xs font-medium text-gray-500 mb-1">Horario fin</label>
+                  <input id="agentsview-fld9"
                     type="time" value={form.schedule_end}
                     onChange={e => setForm({ ...form, schedule_end: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
@@ -366,8 +378,8 @@ export default function AgentsView() {
                       const days = (form.available_days || '').split(',');
                       const checked = days.includes(d.v);
                       return (
-                        <label key={d.v} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border transition-colors ${checked ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}>
-                          <input type="checkbox" className="hidden" checked={checked} onChange={() => {
+                        <label htmlFor="agentsview-fld10" key={d.v} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border transition-colors ${checked ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}>
+                          <input id="agentsview-fld10" type="checkbox" className="hidden" checked={checked} onChange={() => {
                             const newDays = checked ? days.filter(x => x !== d.v) : [...days, d.v].sort();
                             setForm({ ...form, available_days: newDays.filter(Boolean).join(',') });
                           }} />
@@ -407,7 +419,7 @@ export default function AgentsView() {
               const RoleIcon = roleIcons[agent.role] || Headphones;
               const isEditing = editingAgent === agent.id;
               return (
-                <div key={agent.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                <div key={agent.id} className="bg-white dark:bg-slate-800 rounded-2xl ring-1 ring-gray-100 dark:ring-slate-700/60 p-4 shadow-md hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
                   {isEditing ? (
                     <form onSubmit={handleUpdate} className="space-y-3">
                       <div className="flex items-center justify-between mb-2">
@@ -416,18 +428,18 @@ export default function AgentsView() {
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Nombre</label>
-                          <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})}
+                          <label htmlFor="agentsview-fld11" className="block text-xs font-medium text-gray-500 mb-1">Nombre</label>
+                          <input id="agentsview-fld11" type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})}
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" required />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Email <span className="text-gray-400">(no editable)</span></label>
-                          <input type="email" value={editForm.email} readOnly disabled
+                          <label htmlFor="agentsview-fld12" className="block text-xs font-medium text-gray-500 mb-1">Email <span className="text-gray-400">(no editable)</span></label>
+                          <input id="agentsview-fld12" type="email" value={editForm.email} readOnly disabled
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 opacity-60 cursor-not-allowed" />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Rol</label>
-                          <select value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})}
+                          <label htmlFor="agentsview-fld13" className="block text-xs font-medium text-gray-500 mb-1">Rol</label>
+                          <select id="agentsview-fld13" value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})}
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
                             {availableRoles.map(r => (
                               <option key={r.value} value={r.value}>{r.label}</option>
@@ -435,8 +447,8 @@ export default function AgentsView() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
-                          <select value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})}
+                          <label htmlFor="agentsview-fld14" className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
+                          <select id="agentsview-fld14" value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})}
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
                             <option value="active">Activo</option>
                             <option value="away">Ausente</option>
@@ -444,13 +456,13 @@ export default function AgentsView() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Departamento</label>
-                          <input type="text" value={editForm.department} onChange={e => setEditForm({...editForm, department: e.target.value})}
+                          <label htmlFor="agentsview-fld15" className="block text-xs font-medium text-gray-500 mb-1">Departamento</label>
+                          <input id="agentsview-fld15" type="text" value={editForm.department} onChange={e => setEditForm({...editForm, department: e.target.value})}
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Ej: Ventas" />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Canal asociado</label>
-                          <select value={editForm.channel_id} onChange={e => setEditForm({...editForm, channel_id: e.target.value})}
+                          <label htmlFor="agentsview-fld16" className="block text-xs font-medium text-gray-500 mb-1">Canal asociado</label>
+                          <select id="agentsview-fld16" value={editForm.channel_id} onChange={e => setEditForm({...editForm, channel_id: e.target.value})}
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
                             <option value="">— Todos los canales —</option>
                             {channelsList.map(ch => (
@@ -459,18 +471,18 @@ export default function AgentsView() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Nueva contraseña (opcional)</label>
-                          <input type="password" value={editForm.password} onChange={e => setEditForm({...editForm, password: e.target.value})}
+                          <label htmlFor="agentsview-fld17" className="block text-xs font-medium text-gray-500 mb-1">Nueva contraseña (opcional)</label>
+                          <input id="agentsview-fld17" type="password" value={editForm.password} onChange={e => setEditForm({...editForm, password: e.target.value})}
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Dejar vacío para no cambiar" />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Horario inicio</label>
-                          <input type="time" value={editForm.schedule_start || ''} onChange={e => setEditForm({...editForm, schedule_start: e.target.value})}
+                          <label htmlFor="agentsview-fld18" className="block text-xs font-medium text-gray-500 mb-1">Horario inicio</label>
+                          <input id="agentsview-fld18" type="time" value={editForm.schedule_start || ''} onChange={e => setEditForm({...editForm, schedule_start: e.target.value})}
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Horario fin</label>
-                          <input type="time" value={editForm.schedule_end || ''} onChange={e => setEditForm({...editForm, schedule_end: e.target.value})}
+                          <label htmlFor="agentsview-fld19" className="block text-xs font-medium text-gray-500 mb-1">Horario fin</label>
+                          <input id="agentsview-fld19" type="time" value={editForm.schedule_end || ''} onChange={e => setEditForm({...editForm, schedule_end: e.target.value})}
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
                         </div>
                         <div className="sm:col-span-2">
@@ -480,8 +492,8 @@ export default function AgentsView() {
                               const days = (editForm.available_days || '').split(',');
                               const checked = days.includes(d.v);
                               return (
-                                <label key={d.v} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border transition-colors ${checked ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}>
-                                  <input type="checkbox" className="hidden" checked={checked} onChange={() => {
+                                <label htmlFor="agentsview-fld20" key={d.v} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border transition-colors ${checked ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}>
+                                  <input id="agentsview-fld20" type="checkbox" className="hidden" checked={checked} onChange={() => {
                                     const newDays = checked ? days.filter(x => x !== d.v) : [...days, d.v].sort();
                                     setEditForm({...editForm, available_days: newDays.filter(Boolean).join(',')});
                                   }} />
@@ -502,7 +514,7 @@ export default function AgentsView() {
                   ) : (
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                       <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-lg shrink-0 shadow-md" style={{ fontFamily: 'Poppins, sans-serif' }}>
                           {agent.name ? agent.name[0].toUpperCase() : '?'}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -510,20 +522,20 @@ export default function AgentsView() {
                           <p className="text-xs text-gray-500 truncate">{agent.email}</p>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
                             {getIsAdmin() && agent.client_name && (
-                              <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">{agent.client_name}</span>
+                              <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">{agent.client_name}</span>
                             )}
-                            <span className="flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                            <span className="flex items-center gap-1 text-[10px] font-semibold bg-blue-50 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20 px-2 py-0.5 rounded-full">
                               <RoleIcon size={12} /> {roleLabels[agent.role]}
                             </span>
-                            <span className={`text-xs px-2 py-0.5 rounded ${
-                              agent.status === 'active' ? 'bg-green-100 text-green-700' :
-                              agent.status === 'away' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-gray-100 text-gray-500'
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ring-1 ${
+                              agent.status === 'active' ? 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20' :
+                              agent.status === 'away' ? 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20' :
+                              'bg-gray-100 text-gray-500 ring-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:ring-slate-600'
                             }`}>
                               {agent.status === 'active' ? '🟢 Activo' : agent.status === 'away' ? '🟡 Ausente' : '⚫ Inactivo'}
                             </span>
                             {agent.department && (
-                              <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-medium">{agent.department}</span>
+                              <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">{agent.department}</span>
                             )}
                             {agent.channel_name && (
                               <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">📱 {agent.channel_name}</span>
@@ -536,8 +548,8 @@ export default function AgentsView() {
                       </div>
                       <div className="flex items-center gap-4 sm:gap-6 ml-auto">
                         <div className="text-center">
-                          <div className="text-xl sm:text-2xl font-bold text-gray-900">{agent.active_chats || 0}</div>
-                          <div className="text-[10px] text-gray-400">/ {agent.max_concurrent_chats} chats</div>
+                          <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>{agent.active_chats || 0}</div>
+                          <div className="text-[10px] text-gray-400 dark:text-slate-500">/ {agent.max_concurrent_chats} chats</div>
                         </div>
                         <div className="text-xs text-gray-400 hidden sm:block">
                           {agent.last_active_at ? `Activo: ${new Date(agent.last_active_at).toLocaleString('es')}` : 'Sin actividad'}
@@ -591,10 +603,10 @@ export default function AgentsView() {
                       <button
                         key={pageNum}
                         onClick={() => setPage(pageNum)}
-                        className={`w-7 h-7 rounded-lg text-xs font-medium ${
+                        className={`w-7 h-7 rounded-lg text-xs font-bold ${
                           pageNum === page
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md'
+                            : 'bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-600'
                         }`}
                       >
                         {pageNum}
@@ -626,6 +638,7 @@ export default function AgentsView() {
         />
 
         {resultModal && <ResultModal {...resultModal} onClose={() => setResultModal(null)} />}
+      </div>
       </div>
     </div>
   );

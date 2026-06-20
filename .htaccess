@@ -1,0 +1,103 @@
+# BEGIN AT_HARDENING — Bloqueo de superficie sensible (Phase 1)
+# Si renombras o mueves alguno de estos scripts, ajusta tambien aqui.
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# 1) Bloquear xmlrpc.php (no se usa Jetpack/pingback)
+RewriteRule ^xmlrpc\.php$ - [F,L]
+
+# 2) Bloquear scripts de mantenimiento / debug en raiz
+# Excepciones: validar-factura.php y validar-boleta.php son endpoints publicos legitimos
+RewriteRule ^(validar-factura2?|validar-boleta)\.php$ - [L]
+RewriteRule ^(debug|check|setup|fix|test|add|update|reset|revert|mark|purge|flush|reporte|validar|migrate|gen)-.*\.php$ - [F,L]
+RewriteRule ^check_.*\.php$ - [F,L]
+RewriteRule ^_.*\.php$ - [F,L]
+RewriteRule ^get-migration-token\.php$ - [F,L]
+RewriteRule ^qa-report-generator\.php$ - [F,L]
+
+# 3) Bloquear logs accesibles via web
+RewriteRule \.log$ - [F,L]
+RewriteRule (^|/)debug\.log$ - [F,L]
+
+# 4) Bloquear backups y archivos sensibles dejados en repo
+RewriteRule \.(bak|backup|old|orig|sql|sql\.gz|env)$ - [F,L]
+RewriteRule \.php(2|3|_old)$ - [F,L]
+# 4b) Bloquear carpetas de backup/respaldo a nivel URL
+RewriteRule ^(tema-backup|RespaldoDocs|RespaldoTest|archivos-eliminados-backup|archive)/ - [F,L]
+RewriteRule ^\.claude/ - [F,L]
+
+# 5) Bloquear acceso directo a wp-config y similares
+<FilesMatch "^(wp-config(-.*)?\.php|wp-config-secrets\.php|\.htaccess|\.htpasswd|debug\.log|debug2\.log)$">
+    Require all denied
+</FilesMatch>
+</IfModule>
+
+# 6) Headers de seguridad basicos
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    # HSTS solo cuando ya estes seguro de HTTPS en todo el sitio (descomentar en prod):
+    # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+</IfModule>
+# END AT_HARDENING
+
+# BEGIN LSCACHE
+## LITESPEED WP CACHE PLUGIN - Do not edit the contents of this block! ##
+<IfModule mod_rewrite.c>
+RewriteEngine on
+RewriteRule litespeed/debug/.*\.log$ - [F,L]
+RewriteRule \.litespeed_conf\.dat - [F,L]
+</IfModule>
+<IfModule LiteSpeed>
+CacheLookup on
+RewriteRule .* - [E=Cache-Control:no-autoflush]
+
+### marker ASYNC start ###
+RewriteCond %{REQUEST_URI} /wp-admin/admin-ajax\.php
+RewriteCond %{QUERY_STRING} action=async_litespeed
+RewriteRule .* - [E=noabort:1]
+### marker ASYNC end ###
+
+### marker MOBILE start ###
+RewriteCond %{HTTP_USER_AGENT} Mobile|Android|Silk/|Kindle|BlackBerry|Opera\ Mini|Opera\ Mobi [NC]
+RewriteRule .* - [E=Cache-Control:vary=%{ENV:LSCACHE_VARY_VALUE}+ismobile]
+### marker MOBILE end ###
+
+### marker DROPQS start ###
+CacheKeyModify -qs:fbclid
+CacheKeyModify -qs:gclid
+CacheKeyModify -qs:utm*
+CacheKeyModify -qs:_ga
+### marker DROPQS end ###
+
+</IfModule>
+## LITESPEED WP CACHE PLUGIN - Do not edit the contents of this block! ##
+# END LSCACHE
+# BEGIN NON_LSCACHE
+## LITESPEED WP CACHE PLUGIN - Do not edit the contents of this block! ##
+## LITESPEED WP CACHE PLUGIN - Do not edit the contents of this block! ##
+# END NON_LSCACHE
+# BEGIN WordPress
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteBase /automatiza-tech/
+RewriteRule ^index\.php$ - [L]
+RewriteRule ^api-omnichannel\.php$ - [L]
+RewriteRule ^omnichannel-controller\.php$ - [L]
+RewriteRule ^webhook-omnichannel\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /automatiza-tech/index.php [L]
+</IfModule>
+# END WordPress
+# BEGIN LiteSpeed
+# Las directivas (líneas) entre «BEGIN LiteSpeed» y «END LiteSpeed» son
+# generadas dinámicamente y solo deberían ser modificadas mediante filtros de WordPress.
+# Cualquier cambio en las directivas que hay entre esos marcadores serán sobrescritas.
+<IfModule Litespeed>
+	SetEnv noabort 1
+</IfModule>
+# END LiteSpeed

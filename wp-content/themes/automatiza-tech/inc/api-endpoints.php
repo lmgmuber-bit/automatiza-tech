@@ -113,6 +113,268 @@ function automatiza_tech_normalize_phone($phone) {
 }
 
 /**
+ * Parsear correos para reminders.
+ *
+ * Formato soportado:
+ * correo1,correo2 / nombre1,nombre2
+ */
+function automatiza_tech_parse_reminder_emails($raw_emails) {
+    $raw = trim((string) $raw_emails);
+    if ($raw === '') {
+        return array();
+    }
+
+    if (strpos($raw, '/') !== false) {
+        $split = explode('/', $raw, 2);
+        $raw = trim($split[0]);
+    }
+
+    $parts = preg_split('/[\s,;]+/', $raw, -1, PREG_SPLIT_NO_EMPTY);
+    $valid = array();
+
+    foreach ($parts as $part) {
+        $email = sanitize_email(trim($part));
+        if ($email !== '' && is_email($email)) {
+            $valid[] = strtolower($email);
+        }
+    }
+
+    return array_values(array_unique($valid));
+}
+
+/**
+ * Obtener destinatarios consolidados para recordatorios de leads.
+ */
+function automatiza_tech_get_lead_reminder_recipients($lead) {
+    $recipients = array();
+
+    if (isset($lead->email)) {
+        $recipients = array_merge($recipients, automatiza_tech_parse_reminder_emails($lead->email));
+    }
+
+    $optional_fields = array('invitees_emails', 'copied_emails', 'cc_email', 'secondary_email', 'email_copy');
+    foreach ($optional_fields as $field) {
+        if (isset($lead->{$field}) && !empty($lead->{$field})) {
+            $recipients = array_merge($recipients, automatiza_tech_parse_reminder_emails($lead->{$field}));
+        }
+    }
+
+    return array_values(array_unique($recipients));
+}
+
+/**
+ * Obtener perfiles de destinatarios para reminders de leads.
+ */
+function automatiza_tech_get_lead_reminder_recipient_profiles($lead) {
+    $profiles = array();
+
+    if (isset($lead->email) && !empty($lead->email)) {
+        $main_email = sanitize_email($lead->email);
+        if ($main_email !== '' && is_email($main_email)) {
+            $profiles[strtolower($main_email)] = array(
+                'email' => strtolower($main_email),
+                'name' => !empty($lead->name) ? sanitize_text_field($lead->name) : 'Cliente',
+            );
+        }
+    }
+
+    $invitees = automatiza_tech_parse_reminder_emails($lead->invitees_emails ?? '');
+    $invitee_names = array();
+    if (!empty($lead->invitees_names)) {
+        $invitee_names = preg_split('/\s*[;,]\s*|\r\n|\r|\n/', (string) $lead->invitees_names, -1, PREG_SPLIT_NO_EMPTY);
+        $invitee_names = array_map('trim', $invitee_names);
+    }
+
+    foreach ($invitees as $index => $invitee_email) {
+        $name = isset($invitee_names[$index]) ? sanitize_text_field($invitee_names[$index]) : 'Participante';
+        $profiles[$invitee_email] = array(
+            'email' => $invitee_email,
+            'name' => $name !== '' ? $name : 'Participante',
+        );
+    }
+
+    $optional_fields = array('copied_emails', 'cc_email', 'secondary_email', 'email_copy');
+    foreach ($optional_fields as $field) {
+        if (isset($lead->{$field}) && !empty($lead->{$field})) {
+            foreach (automatiza_tech_parse_reminder_emails($lead->{$field}) as $extra_email) {
+                if (!isset($profiles[$extra_email])) {
+                    $profiles[$extra_email] = array(
+                        'email' => $extra_email,
+                        'name' => 'Participante',
+                    );
+                }
+            }
+        }
+    }
+
+    return array_values($profiles);
+}
+
+/**
+ * Parsear copias con soporte de nombres para almacenamiento.
+ */
+function automatiza_tech_parse_copy_input_with_names($raw_input) {
+    $raw = trim((string) $raw_input);
+    if ($raw === '') {
+        return array(
+            'valid' => array(),
+            'invalid' => array(),
+            'names' => array(),
+            'names_by_email' => array(),
+        );
+    }
+
+    $emails_part = $raw;
+    $names_part = '';
+    if (strpos($raw, '/') !== false) {
+        $split = explode('/', $raw, 2);
+        $emails_part = trim($split[0]);
+        $names_part = trim($split[1]);
+    }
+
+    $parts = preg_split('/[\s,;]+/', $emails_part, -1, PREG_SPLIT_NO_EMPTY);
+    $name_parts = array();
+    if ($names_part !== '') {
+        $name_parts = preg_split('/\s*[;,]\s*|\r\n|\r|\n/', $names_part, -1, PREG_SPLIT_NO_EMPTY);
+        $name_parts = array_map('trim', $name_parts);
+    }
+
+    $valid = array();
+    $invalid = array();
+    $names_by_email = array();
+
+    foreach ($parts as $index => $part) {
+        $candidate = trim($part);
+        $email = sanitize_email($candidate);
+        $display_name = isset($name_parts[$index]) ? sanitize_text_field($name_parts[$index]) : '';
+
+        if ($email !== '' && is_email($email)) {
+            $email_key = strtolower($email);
+            if (!in_array($email_key, $valid, true)) {
+                $valid[] = $email_key;
+            }
+            if ($display_name !== '' && !isset($names_by_email[$email_key])) {
+                $names_by_email[$email_key] = $display_name;
+            }
+        } else {
+            $invalid[] = $candidate;
+        }
+    }
+
+    $ordered_names = array();
+    foreach ($valid as $email_key) {
+        $ordered_names[] = isset($names_by_email[$email_key]) ? $names_by_email[$email_key] : '';
+    }
+
+    return array(
+        'valid' => array_values(array_unique($valid)),
+        'invalid' => array_values(array_unique($invalid)),
+        'names' => $ordered_names,
+        'names_by_email' => $names_by_email,
+    );
+}
+
+/**
+ * Obtener destinatarios consolidados para recordatorios de seguimiento.
+ */
+function automatiza_tech_get_followup_reminder_recipients($meeting) {
+    $recipients = array();
+
+    if (isset($meeting->email)) {
+        $recipients = array_merge($recipients, automatiza_tech_parse_reminder_emails($meeting->email));
+    }
+
+    if (isset($meeting->invitees_emails) && !empty($meeting->invitees_emails)) {
+        $recipients = array_merge($recipients, automatiza_tech_parse_reminder_emails($meeting->invitees_emails));
+    }
+
+    return array_values(array_unique($recipients));
+}
+
+/**
+ * Obtener perfiles de destinatarios para reminders de seguimiento.
+ */
+function automatiza_tech_get_followup_reminder_recipient_profiles($meeting) {
+    $profiles = array();
+
+    if (isset($meeting->email) && !empty($meeting->email)) {
+        $main_email = sanitize_email($meeting->email);
+        if ($main_email !== '' && is_email($main_email)) {
+            $profiles[strtolower($main_email)] = array(
+                'email' => strtolower($main_email),
+                'name' => !empty($meeting->name) ? sanitize_text_field($meeting->name) : 'Cliente',
+            );
+        }
+    }
+
+    $invitees = automatiza_tech_parse_reminder_emails($meeting->invitees_emails ?? '');
+    $invitee_names = array();
+    if (!empty($meeting->invitees_names)) {
+        $invitee_names = preg_split('/\s*[;,]\s*|\r\n|\r|\n/', (string) $meeting->invitees_names, -1, PREG_SPLIT_NO_EMPTY);
+        $invitee_names = array_map('trim', $invitee_names);
+    }
+
+    foreach ($invitees as $index => $invitee_email) {
+        $name = isset($invitee_names[$index]) ? sanitize_text_field($invitee_names[$index]) : 'Participante';
+        $profiles[$invitee_email] = array(
+            'email' => $invitee_email,
+            'name' => $name !== '' ? $name : 'Participante',
+        );
+    }
+
+    return array_values($profiles);
+}
+
+/**
+ * Adjuntar metadatos de destinatarios a payload de reminder.
+ */
+function automatiza_tech_attach_recipient_metadata(&$entity, $type = 'lead') {
+    $profiles = ($type === 'followup')
+        ? automatiza_tech_get_followup_reminder_recipient_profiles($entity)
+        : automatiza_tech_get_lead_reminder_recipient_profiles($entity);
+
+    $emails = array_values(array_unique(array_map(function($profile) {
+        return strtolower($profile['email']);
+    }, $profiles)));
+
+    $entity->recipient_profiles = $profiles;
+    $entity->reminder_recipients = $emails;
+    $entity->recipient_count = count($emails);
+
+    if (!empty($emails)) {
+        $entity->email = implode(',', $emails);
+    }
+}
+
+/**
+ * Adjuntar solo titular como destinatario (uso específico para flujos WhatsApp).
+ */
+function automatiza_tech_attach_primary_recipient_metadata(&$entity) {
+    $primary_email = isset($entity->email) ? sanitize_email((string) $entity->email) : '';
+    $primary_name = isset($entity->name) ? sanitize_text_field((string) $entity->name) : 'Cliente';
+
+    $profiles = array();
+    $emails = array();
+
+    if ($primary_email !== '' && is_email($primary_email)) {
+        $primary_email = strtolower($primary_email);
+        $profiles[] = array(
+            'email' => $primary_email,
+            'name' => $primary_name !== '' ? $primary_name : 'Cliente',
+        );
+        $emails[] = $primary_email;
+    }
+
+    $entity->recipient_profiles = $profiles;
+    $entity->reminder_recipients = $emails;
+    $entity->recipient_count = count($emails);
+
+    if (!empty($emails)) {
+        $entity->email = $emails[0];
+    }
+}
+
+/**
  * Eliminar evento de Google Calendar vía N8N webhook
  * 
  * @param string $event_id ID del evento de Google Calendar
@@ -328,6 +590,9 @@ function automatiza_tech_create_leads_table() {
         created_at datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
         name tinytext NOT NULL,
         email varchar(100) NOT NULL,
+        invitees_emails text DEFAULT NULL,
+        invitees_names text DEFAULT NULL,
+        copied_emails text DEFAULT NULL,
         phone varchar(20) NOT NULL,
         session_id varchar(100) DEFAULT '' NOT NULL,
         scheduled_date date DEFAULT NULL,
@@ -387,6 +652,22 @@ add_action('init', function() {
         if (empty($column_exists)) {
             $wpdb->query("ALTER TABLE $table_name ADD COLUMN confirmed_attendance1h tinyint(1) DEFAULT 0");
         }
+
+        // Agregar campos para destinatarios en copia si no existen
+        $column_exists = $wpdb->get_results("SHOW COLUMNS FROM $table_name LIKE 'invitees_emails'");
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN invitees_emails text DEFAULT NULL AFTER email");
+        }
+
+        $column_exists = $wpdb->get_results("SHOW COLUMNS FROM $table_name LIKE 'invitees_names'");
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN invitees_names text DEFAULT NULL AFTER invitees_emails");
+        }
+
+        $column_exists = $wpdb->get_results("SHOW COLUMNS FROM $table_name LIKE 'copied_emails'");
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN copied_emails text DEFAULT NULL AFTER invitees_names");
+        }
         
         // Populate missing tokens for existing leads
         $leads_without_token = $wpdb->get_results("SELECT id FROM $table_name WHERE token = ''");
@@ -402,6 +683,29 @@ add_action('init', function() {
         }
         
         update_option('automatiza_leads_table_created_v6', true);
+    }
+
+    // Migración v7: asegurar columnas de copias en tabla leads
+    if (!get_option('automatiza_leads_table_created_v7_copy_fields')) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'automatiza_leads';
+
+        $column_exists = $wpdb->get_results("SHOW COLUMNS FROM $table_name LIKE 'invitees_emails'");
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN invitees_emails text DEFAULT NULL AFTER email");
+        }
+
+        $column_exists = $wpdb->get_results("SHOW COLUMNS FROM $table_name LIKE 'invitees_names'");
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN invitees_names text DEFAULT NULL AFTER invitees_emails");
+        }
+
+        $column_exists = $wpdb->get_results("SHOW COLUMNS FROM $table_name LIKE 'copied_emails'");
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE $table_name ADD COLUMN copied_emails text DEFAULT NULL AFTER invitees_names");
+        }
+
+        update_option('automatiza_leads_table_created_v7_copy_fields', true);
     }
 });
 
@@ -429,6 +733,10 @@ function automatiza_tech_save_lead($request) {
     
     $session_id = isset($params['session_id']) ? sanitize_text_field($params['session_id']) : '';
     $source = isset($params['source']) ? sanitize_text_field($params['source']) : 'web';
+    $invitees_input = isset($params['invitees_emails']) ? sanitize_text_field($params['invitees_emails']) : '';
+    $invitees_parsed = automatiza_tech_parse_copy_input_with_names($invitees_input);
+    $invitees_valid = $invitees_parsed['valid'];
+    $invitees_names = $invitees_parsed['names'] ?? array();
     
     // Auto-detectar source como 'whatsapp' si:
     // 1. session_id contiene "whatsapp" (flujo antiguo)
@@ -510,6 +818,9 @@ function automatiza_tech_save_lead($request) {
         'created_at' => current_time('mysql'),
         'name' => $name,
         'email' => $email,
+        'invitees_emails' => !empty($invitees_valid) ? implode(',', $invitees_valid) : null,
+        'invitees_names' => !empty($invitees_names) ? implode(',', $invitees_names) : null,
+        'copied_emails' => !empty($invitees_valid) ? implode(',', $invitees_valid) : null,
         'phone' => $phone,
         'session_id' => $session_id,
         'meet_link' => $meet_link,
@@ -800,6 +1111,8 @@ function automatiza_tech_get_leads_for_reminders($request) {
             if (!isset($lead->meet_link)) {
                 $lead->meet_link = '';
             }
+
+            automatiza_tech_attach_recipient_metadata($lead, 'lead');
         }
     }
 
@@ -1544,7 +1857,7 @@ function automatiza_tech_get_leads_reminder_8pm($request) {
     // Buscar seguimientos con citas mañana que no hayan recibido el recordatorio 8PM por email
     $meetings = $wpdb->get_results($wpdb->prepare(
         "SELECT id, client_name as name, client_email as email, company_name, phone, 
-                meeting_date, meeting_time, meet_link, meeting_subject, status,
+            meeting_date, meeting_time, meet_link, meeting_subject, status, invitees_emails, invitees_names,
                 recordatorio_8pm, recordatorio_8am, recordatorio_8pm_wa, recordatorio_8am_wa
          FROM $table_name 
          WHERE meeting_date = %s 
@@ -1562,6 +1875,7 @@ function automatiza_tech_get_leads_reminder_8pm($request) {
             if (!isset($meeting->meet_link) || empty($meeting->meet_link)) {
                 $meeting->meet_link = '';
             }
+            automatiza_tech_attach_recipient_metadata($meeting, 'followup');
         }
     }
 
@@ -1588,7 +1902,7 @@ function automatiza_tech_get_leads_reminder_8am($request) {
     // Solo citas a partir de las 09:00 para dar tiempo
     $meetings = $wpdb->get_results($wpdb->prepare(
         "SELECT id, client_name as name, client_email as email, company_name, phone, 
-                meeting_date, meeting_time, meet_link, meeting_subject, status,
+            meeting_date, meeting_time, meet_link, meeting_subject, status, invitees_emails, invitees_names,
                 recordatorio_8pm, recordatorio_8am, recordatorio_8pm_wa, recordatorio_8am_wa
          FROM $table_name 
          WHERE meeting_date = %s 
@@ -1607,6 +1921,7 @@ function automatiza_tech_get_leads_reminder_8am($request) {
             if (!isset($meeting->meet_link) || empty($meeting->meet_link)) {
                 $meeting->meet_link = '';
             }
+            automatiza_tech_attach_recipient_metadata($meeting, 'followup');
         }
     }
 
@@ -1639,7 +1954,7 @@ function automatiza_tech_get_leads_reminder_8pm_wa($request) {
     // Buscar seguimientos con citas mañana que no hayan recibido el recordatorio 8PM por WhatsApp
     $meetings = $wpdb->get_results($wpdb->prepare(
         "SELECT id, client_name as name, client_email as email, company_name, phone, 
-                meeting_date, meeting_time, meet_link, meeting_subject, status,
+            meeting_date, meeting_time, meet_link, meeting_subject, status, invitees_emails, invitees_names,
                 recordatorio_8pm, recordatorio_8am, recordatorio_8pm_wa, recordatorio_8am_wa
          FROM $table_name 
          WHERE meeting_date = %s 
@@ -1657,6 +1972,8 @@ function automatiza_tech_get_leads_reminder_8pm_wa($request) {
             if (!isset($meeting->meet_link) || empty($meeting->meet_link)) {
                 $meeting->meet_link = '';
             }
+            // WhatsApp solo al titular (no incluir copias).
+            automatiza_tech_attach_primary_recipient_metadata($meeting);
         }
     }
 
@@ -1689,7 +2006,7 @@ function automatiza_tech_get_leads_reminder_8am_wa($request) {
     // Solo citas a partir de las 09:00 para dar tiempo
     $meetings = $wpdb->get_results($wpdb->prepare(
         "SELECT id, client_name as name, client_email as email, company_name, phone, 
-                meeting_date, meeting_time, meet_link, meeting_subject, status,
+            meeting_date, meeting_time, meet_link, meeting_subject, status, invitees_emails, invitees_names,
                 recordatorio_8pm, recordatorio_8am, recordatorio_8pm_wa, recordatorio_8am_wa
          FROM $table_name 
          WHERE meeting_date = %s 
@@ -1708,6 +2025,8 @@ function automatiza_tech_get_leads_reminder_8am_wa($request) {
             if (!isset($meeting->meet_link) || empty($meeting->meet_link)) {
                 $meeting->meet_link = '';
             }
+            // WhatsApp solo al titular (no incluir copias).
+            automatiza_tech_attach_primary_recipient_metadata($meeting);
         }
     }
 

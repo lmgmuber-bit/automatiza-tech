@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para agregar campo phone a tabla propuestas
  * Ejecutar en: https://automatizatech.cl/add-phone-propuestas-prod.php

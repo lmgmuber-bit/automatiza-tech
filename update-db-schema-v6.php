@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para agregar columnas de confirmación por tipo de recordatorio
  * Ejecutar una vez en producción

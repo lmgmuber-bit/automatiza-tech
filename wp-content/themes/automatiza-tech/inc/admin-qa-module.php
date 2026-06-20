@@ -14,7 +14,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('AT_QA_VERSION', '1.2.0');
+require_once ABSPATH . 'at-mime-check.php';
+
+define('AT_QA_VERSION', '1.3.1');
 define('AT_QA_EVIDENCE_DIR', 'qa-evidencias');
 
 // ──────────────────────────────────────────────
@@ -137,44 +139,49 @@ function at_qa_setup_tables() {
 
     // Proyectos QA (uno por cliente/proyecto)
     dbDelta("CREATE TABLE {$t['projects']} (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        client_id INT UNSIGNED DEFAULT NULL COMMENT 'FK a wp_crm_clientes',
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        client_id INT UNSIGNED DEFAULT NULL,
         name VARCHAR(255) NOT NULL,
         slug VARCHAR(100) NOT NULL,
         description TEXT,
         qa_status ENUM('pending','in_progress','passed','failed','on_hold') DEFAULT 'pending',
         version VARCHAR(50) DEFAULT '1.0',
         environment VARCHAR(100) DEFAULT '',
-        md_base_path VARCHAR(500) DEFAULT '' COMMENT 'Ruta a los archivos MD del QA',
+        md_base_path VARCHAR(500) DEFAULT '',
         total_cases INT UNSIGNED DEFAULT 0,
-        assigned_testers TEXT COMMENT 'IDs de usuarios separados por coma',
+        assigned_testers TEXT,
         started_at DATETIME DEFAULT NULL,
         finished_at DATETIME DEFAULT NULL,
+        last_report_at DATETIME DEFAULT NULL,
+        last_report_pdf VARCHAR(255) DEFAULT NULL,
+        last_report_sent_at DATETIME DEFAULT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE INDEX idx_slug (slug),
-        INDEX idx_client (client_id),
-        INDEX idx_status (qa_status)
+        PRIMARY KEY (id),
+        UNIQUE KEY idx_slug (slug),
+        KEY idx_client (client_id),
+        KEY idx_status (qa_status)
     ) $charset;");
 
     // Módulos / Suites
     dbDelta("CREATE TABLE {$t['modules']} (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
         project_id INT UNSIGNED NOT NULL,
         code VARCHAR(20) NOT NULL,
         title VARCHAR(255) NOT NULL,
         description TEXT,
         total_cases INT UNSIGNED DEFAULT 0,
         md_file VARCHAR(255) DEFAULT '',
-        assigned_tester INT UNSIGNED DEFAULT NULL COMMENT 'User ID del tester asignado',
+        assigned_tester INT UNSIGNED DEFAULT NULL,
         sort_order INT UNSIGNED DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_project (project_id)
+        PRIMARY KEY (id),
+        KEY idx_project (project_id)
     ) $charset;");
 
     // Casos de prueba
     dbDelta("CREATE TABLE {$t['cases']} (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
         module_id INT UNSIGNED NOT NULL,
         case_id VARCHAR(20) NOT NULL,
         section VARCHAR(255) DEFAULT '',
@@ -190,13 +197,14 @@ function at_qa_setup_tables() {
         sort_order INT UNSIGNED DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_module (module_id),
-        INDEX idx_status (status)
+        PRIMARY KEY (id),
+        KEY idx_module (module_id),
+        KEY idx_status (status)
     ) $charset;");
 
     // Evidencias
     dbDelta("CREATE TABLE {$t['evidence']} (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
         case_id INT UNSIGNED NOT NULL,
         file_url VARCHAR(500) NOT NULL,
         file_name VARCHAR(255) NOT NULL,
@@ -205,24 +213,46 @@ function at_qa_setup_tables() {
         uploaded_by INT UNSIGNED NOT NULL,
         description VARCHAR(500) DEFAULT '',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_case (case_id)
+        PRIMARY KEY (id),
+        KEY idx_case (case_id)
     ) $charset;");
 
     // Comentarios
     dbDelta("CREATE TABLE {$t['comments']} (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
         case_id INT UNSIGNED NOT NULL,
         user_id INT UNSIGNED NOT NULL,
         comment TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT NULL,
-        INDEX idx_case (case_id)
+        PRIMARY KEY (id),
+        KEY idx_case (case_id)
     ) $charset;");
 
     // Migración: agregar columna updated_at si no existe
     $col_exists = $wpdb->get_var("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$t['comments']}' AND COLUMN_NAME = 'updated_at'");
     if (!$col_exists) {
         $wpdb->query("ALTER TABLE {$t['comments']} ADD COLUMN updated_at DATETIME DEFAULT NULL AFTER created_at");
+    }
+
+    // Migración: agregar columna is_internal a proyectos si no existe
+    $col_internal = $wpdb->get_var("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$t['projects']}' AND COLUMN_NAME = 'is_internal'");
+    if (!$col_internal) {
+        $wpdb->query("ALTER TABLE {$t['projects']} ADD COLUMN is_internal TINYINT(1) NOT NULL DEFAULT 0 AFTER client_id");
+    }
+
+    // Migración v1.3.1: agregar columnas de informe si no existen
+    $report_cols = [
+        'last_report_at'      => "ALTER TABLE {$t['projects']} ADD COLUMN last_report_at DATETIME DEFAULT NULL AFTER finished_at",
+        'last_report_pdf'     => "ALTER TABLE {$t['projects']} ADD COLUMN last_report_pdf VARCHAR(255) DEFAULT NULL AFTER last_report_at",
+        'last_report_sent_at' => "ALTER TABLE {$t['projects']} ADD COLUMN last_report_sent_at DATETIME DEFAULT NULL AFTER last_report_pdf",
+    ];
+    foreach ($report_cols as $col_name => $alter_sql) {
+        $exists = $wpdb->get_var("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$t['projects']}' AND COLUMN_NAME = '{$col_name}'");
+        if (!$exists) {
+            $wpdb->query($alter_sql);
+            error_log("[AT QA] Migración: columna '{$col_name}' creada en {$t['projects']}");
+        }
     }
 
     // Limpiar tablas antiguas si existen (migración desde versión PetsGO-only)
@@ -471,7 +501,9 @@ add_action('wp_ajax_at_qa_save_project', function() {
 
     $id          = intval($_POST['id'] ?? 0);
     $name        = sanitize_text_field($_POST['name'] ?? '');
-    $client_id   = intval($_POST['client_id'] ?? 0);
+    $raw_client  = sanitize_text_field($_POST['client_id'] ?? '0');
+    $is_internal = ($raw_client === 'internal') ? 1 : 0;
+    $client_id   = $is_internal ? 0 : intval($raw_client);
     $description = sanitize_textarea_field($_POST['description'] ?? '');
     $qa_status   = sanitize_text_field($_POST['qa_status'] ?? 'pending');
     $version     = sanitize_text_field($_POST['version'] ?? '1.0');
@@ -497,7 +529,8 @@ add_action('wp_ajax_at_qa_save_project', function() {
     $data = [
         'name'             => $name,
         'slug'             => $slug,
-        'client_id'        => $client_id ?: null,
+        'client_id'        => ($is_internal || !$client_id) ? null : $client_id,
+        'is_internal'      => $is_internal,
         'description'      => $description,
         'qa_status'        => $qa_status,
         'version'          => $version,
@@ -993,7 +1026,8 @@ add_action('wp_ajax_at_qa_upload_evidence', function() {
     if (empty($_FILES['evidence_file'])) wp_send_json_error('No se recibió archivo');
 
     $allowed = ['image/jpeg','image/png','image/gif','image/webp','video/mp4','video/webm','application/pdf'];
-    if (!in_array($_FILES['evidence_file']['type'], $allowed)) {
+    $real_mime = at_verify_upload_mime( $_FILES['evidence_file']['tmp_name'], $allowed );
+    if ( ! $real_mime ) {
         wp_send_json_error('Tipo no permitido. Usa: JPG, PNG, GIF, WEBP, MP4, WEBM, PDF');
     }
     if ($_FILES['evidence_file']['size'] > 10 * 1024 * 1024) {
@@ -1005,8 +1039,9 @@ add_action('wp_ajax_at_qa_upload_evidence', function() {
     $qa_url = $upload_dir['baseurl'] . '/' . AT_QA_EVIDENCE_DIR;
     wp_mkdir_p($qa_dir);
 
-    $ext  = pathinfo($_FILES['evidence_file']['name'], PATHINFO_EXTENSION);
-    $safe = 'qa-' . $case_db_id . '-' . time() . '-' . wp_generate_password(6, false) . '.' . $ext;
+    // Extensión derivada del MIME verificado (nunca del nombre original del archivo)
+    $ext  = at_mime_canonical_ext( $real_mime );
+    $safe = 'qa-' . bin2hex(random_bytes(16)) . '.' . $ext;
 
     if (!move_uploaded_file($_FILES['evidence_file']['tmp_name'], $qa_dir . '/' . $safe)) {
         wp_send_json_error('Error al guardar archivo');
@@ -1018,7 +1053,7 @@ add_action('wp_ajax_at_qa_upload_evidence', function() {
         'case_id'     => $case_db_id,
         'file_url'    => $qa_url . '/' . $safe,
         'file_name'   => sanitize_file_name($_FILES['evidence_file']['name']),
-        'file_type'   => $_FILES['evidence_file']['type'],
+        'file_type'   => $real_mime,
         'file_size'   => $_FILES['evidence_file']['size'],
         'uploaded_by' => get_current_user_id(),
         'description' => $description,
@@ -1028,7 +1063,7 @@ add_action('wp_ajax_at_qa_upload_evidence', function() {
     $user = wp_get_current_user();
     $orig_name = $_FILES['evidence_file']['name'];
     $file_size_fmt = size_format($_FILES['evidence_file']['size']);
-    $file_type = $_FILES['evidence_file']['type'];
+    $file_type = $real_mime;
     $evidence_url = $qa_url . '/' . $safe;
 
     // ─── Notificación por correo: nueva evidencia ───
@@ -1365,7 +1400,15 @@ add_action('wp_ajax_at_qa_generate_report', function() {
 
     // Datos del cliente
     $client = null;
-    if ($project->client_id) {
+    if (!empty($project->is_internal)) {
+        // Proyecto interno AT — se representa como cliente ficticio
+        $client = (object) [
+            'nombre'   => 'Automatiza Tech',
+            'empresa'  => 'Proyecto Interno',
+            'email'    => 'contacto@automatizatech.cl',
+            'telefono' => '+56 9 2700 2984',
+        ];
+    } elseif ($project->client_id) {
         $client = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}crm_clientes WHERE id=%d", $project->client_id));
     }
 
@@ -1466,6 +1509,9 @@ add_action('wp_ajax_at_qa_generate_report', function() {
             <p><?php echo esc_html($client->empresa); ?></p>
             <p>📧 <?php echo esc_html($client->email); ?></p>
             <p>📱 <?php echo esc_html($client->telefono); ?></p>
+            <?php elseif (!empty($project->is_internal)): ?>
+            <p><strong>Automatiza Tech</strong></p>
+            <p>Proyecto Interno</p>
             <?php else: ?>
             <p><em>Sin cliente vinculado</em></p>
             <?php endif; ?>
@@ -1547,23 +1593,650 @@ add_action('wp_ajax_at_qa_generate_report', function() {
     $reports_dir = $upload_dir['basedir'] . '/qa-reports';
     if (!is_dir($reports_dir)) wp_mkdir_p($reports_dir);
 
-    $filename = 'QA-Report-' . sanitize_file_name($project->name) . '-' . date('Y-m-d') . '.html';
+    // Versionado: timestamp evita sobrescritura cuando hay varias versiones el mismo día
+    $stamp = date('Y-m-d_His');
+    $base_name = 'QA-Report-' . sanitize_file_name($project->name) . '-' . $stamp;
+
+    $filename = $base_name . '.html';
     $filepath = $reports_dir . '/' . $filename;
     file_put_contents($filepath, $html);
-
     $file_url = $upload_dir['baseurl'] . '/qa-reports/' . $filename;
 
-    // Marcar proyecto como finalizado
-    $wpdb->update($t['projects'], [
-        'qa_status' => $pass_rate >= 95 ? 'passed' : ($pass_rate >= 70 ? 'passed' : 'failed'),
+    // Generar PDF con FPDF (mismo motor que cotizaciones/contratos)
+    $pdf_url = '';
+    $pdf_filename = '';
+    try {
+        require_once get_template_directory() . '/lib/qa-report-pdf-fpdf.php';
+        $pdf = new QAReportPDF($project, $client, $all_cases, $global_stats, $verdict, $pass_rate, date('d-m-Y'));
+        $pdf->build();
+        $pdf_filename = $base_name . '.pdf';
+        $pdf_path = $reports_dir . '/' . $pdf_filename;
+        $pdf->Output('F', $pdf_path);
+        $pdf_url = $upload_dir['baseurl'] . '/qa-reports/' . $pdf_filename;
+    } catch (\Throwable $e) {
+        error_log('[QA] Error generando PDF: ' . $e->getMessage());
+    }
+
+    // Marcar proyecto como finalizado y registrar última versión
+    $update_data = [
+        'qa_status'   => $pass_rate >= 70 ? 'passed' : 'failed',
         'finished_at' => current_time('mysql'),
-    ], ['id' => $project_id]);
+    ];
+    // Campos opcionales (si la columna existe, se actualiza; ignorar errores silenciosos)
+    @$wpdb->update($t['projects'], $update_data, ['id' => $project_id]);
+    @$wpdb->query($wpdb->prepare(
+        "UPDATE {$t['projects']} SET last_report_at = %s, last_report_pdf = %s WHERE id = %d",
+        current_time('mysql'), $pdf_filename, $project_id
+    ));
 
     wp_send_json_success([
-        'url' => $file_url,
-        'verdict' => $verdict,
-        'pass_rate' => $pass_rate,
-        'filename' => $filename,
+        'url'          => $file_url,
+        'pdf_url'      => $pdf_url,
+        'pdf_filename' => $pdf_filename,
+        'verdict'      => $verdict,
+        'pass_rate'    => $pass_rate,
+        'filename'     => $filename,
+    ]);
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// Enviar informe QA por correo al cliente (con PDF adjunto + BCC admin)
+// ─────────────────────────────────────────────────────────────────────
+add_action('wp_ajax_at_qa_send_report_email', function() {
+    if (!current_user_can('manage_options')) wp_send_json_error('Sin permisos');
+    check_ajax_referer('at_qa_nonce', 'nonce');
+    global $wpdb;
+    $t = at_qa_table_names();
+    $project_id   = intval($_POST['project_id'] ?? 0);
+    $pdf_filename = sanitize_file_name($_POST['pdf_filename'] ?? '');
+    $to_override  = sanitize_email($_POST['to_email'] ?? '');
+    $custom_msg   = wp_kses_post($_POST['custom_message'] ?? '');
+
+    $project = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$t['projects']} WHERE id=%d", $project_id));
+    if (!$project) wp_send_json_error('Proyecto no encontrado');
+    if (!$pdf_filename) wp_send_json_error('Falta PDF — genera el informe primero');
+
+    $upload_dir = wp_upload_dir();
+    $pdf_path = $upload_dir['basedir'] . '/qa-reports/' . $pdf_filename;
+    if (!file_exists($pdf_path)) wp_send_json_error('PDF no encontrado en servidor');
+
+    // Resolver destinatario
+    $to_email = $to_override;
+    $client_name = '';
+    $cli = null; // inicializar para evitar undefined variable en PHP 8
+    if (!$to_email && $project->client_id) {
+        $cli = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}crm_clientes WHERE id=%d", $project->client_id));
+        if ($cli) { $to_email = $cli->email; $client_name = $cli->nombre; }
+    }
+    // Si se pasó to_override pero no hay $cli, intentar cargar el cliente de igual forma
+    if ($cli === null && $project->client_id) {
+        $cli = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}crm_clientes WHERE id=%d", $project->client_id));
+        if ($cli && empty($client_name)) $client_name = $cli->nombre;
+    }
+    if (!$to_email) wp_send_json_error('No hay email destino. Pasa to_email o vincula cliente al proyecto.');
+
+    $from_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+
+    // Construir adjunto igual que receipts-module.php
+    $attachments = [];
+    if (file_exists($pdf_path)) {
+        $attachments[] = $pdf_path;
+    }
+
+    // Stats para el cuerpo del email
+    $modules = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$t['modules']} WHERE project_id=%d", $project_id));
+    $g = ['total'=>0,'pass'=>0,'fail'=>0,'blocked'=>0,'skipped'=>0,'not_tested'=>0];
+    foreach ($modules as $m) {
+        $cases = $wpdb->get_results($wpdb->prepare("SELECT status FROM {$t['cases']} WHERE module_id=%d", $m->id));
+        foreach ($cases as $c) { $g[$c->status]++; $g['total']++; }
+    }
+    $pass_rate = $g['total'] > 0 ? round(($g['pass']/$g['total'])*100, 1) : 0;
+    $verdict = $pass_rate >= 95 ? 'APROBADO' : ($pass_rate >= 70 ? 'APROBADO CON OBSERVACIONES' : 'RECHAZADO');
+    $verdict_color = $pass_rate >= 95 ? '#10b981' : ($pass_rate >= 70 ? '#eab308' : '#ef4444');
+
+    // Logo: URL absoluta pública (evita que clientes de correo bloqueen URLs relativas)
+    $logo_url = 'https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
+    $project_name = esc_html($project->name);
+    // Asunto sin "%" para evitar filtros anti-spam (SpamAssassin penaliza % en subjects)
+    $subject = 'Informe de Pruebas QA: ' . $project->name;
+
+    // URL personalizada de la ficha del cliente con token de acceso
+    $ficha_url = home_url('/');
+    if (!empty($project->client_id) && !empty($cli)) {
+        $client_token = md5($cli->id . 'AUTOMATIZA_CRM_V2' . $cli->email);
+        $ficha_url = home_url('/?crm_view=timeline&cid=' . $cli->id . '&token=' . $client_token);
+    }
+
+    // URL de descarga directa del PDF (siempre incluida en el cuerpo)
+    $pdf_download_url = '';
+    if ($pdf_filename) {
+        $upload_dir = wp_upload_dir();
+        $pdf_download_url = $upload_dir['baseurl'] . '/qa-reports/' . $pdf_filename;
+    }
+
+    ob_start(); ?>
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><title><?php echo $subject; ?></title></head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:'Segoe UI',Tahoma,sans-serif;color:#333;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;padding:30px 0;">
+    <tr><td align="center">
+      <table width="620" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);">
+        <tr><td style="background:linear-gradient(135deg,#0d9488,#14b8a6,#2dd4bf);padding:30px 40px;text-align:center;color:#fff;">
+          <img src="<?php echo esc_url($logo_url); ?>" alt="AutomatizaTech" style="max-height:50px;margin-bottom:10px;">
+          <h1 style="margin:0;font-size:22px;letter-spacing:1px;">Informe de Pruebas QA</h1>
+          <p style="margin:6px 0 0;opacity:.9;font-size:13px;"><?php echo $project_name; ?></p>
+        </td></tr>
+        <tr><td style="padding:30px 40px;">
+          <p style="margin:0 0 12px;font-size:15px;">Hola <strong><?php echo esc_html($client_name ?: 'estimado/a cliente'); ?></strong>,</p>
+          <p style="margin:0 0 18px;font-size:14px;line-height:1.6;">
+            Adjuntamos el <strong>Informe Final de Pruebas QA</strong> correspondiente a tu proyecto
+            <strong><?php echo $project_name; ?></strong>. Este documento detalla el resultado de cada caso de prueba
+            ejecutado por nuestro equipo de calidad.
+          </p>
+          <?php if ($custom_msg): ?>
+          <div style="background:#f0fdfa;border-left:4px solid #0d9488;padding:12px 16px;margin:16px 0;border-radius:4px;font-size:13.5px;">
+            <?php echo $custom_msg; ?>
+          </div>
+          <?php endif; ?>
+          <div style="background:<?php echo $verdict_color; ?>;color:#fff;text-align:center;padding:18px;border-radius:8px;margin:20px 0;">
+            <div style="font-size:13px;opacity:.9;letter-spacing:1px;">RESULTADO</div>
+            <div style="font-size:22px;font-weight:700;margin-top:4px;"><?php echo $verdict; ?></div>
+            <div style="font-size:18px;margin-top:6px;"><?php echo $pass_rate; ?>% Pass Rate</div>
+          </div>
+          <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse;font-size:13px;margin:16px 0;">
+            <tr style="background:#f0fdfa;color:#0d9488;font-weight:600;text-align:center;">
+              <td style="border-radius:6px 0 0 6px;">Total</td><td>Pass</td><td>Fail</td><td>Bloq.</td><td>Omit.</td><td style="border-radius:0 6px 6px 0;">Sin probar</td>
+            </tr>
+            <tr style="text-align:center;font-size:18px;font-weight:700;">
+              <td style="color:#0d9488;"><?php echo $g['total']; ?></td>
+              <td style="color:#065f46;"><?php echo $g['pass']; ?></td>
+              <td style="color:#991b1b;"><?php echo $g['fail']; ?></td>
+              <td style="color:#92400e;"><?php echo $g['blocked']; ?></td>
+              <td style="color:#5b21b6;"><?php echo $g['skipped']; ?></td>
+              <td style="color:#6b7280;"><?php echo $g['not_tested']; ?></td>
+            </tr>
+          </table>
+          <p style="margin:16px 0;font-size:13.5px;line-height:1.6;color:#555;">
+            Encontrarás el detalle completo en el PDF adjunto. Si tienes dudas o comentarios sobre los resultados,
+            no dudes en responder a este correo.
+          </p>
+          <div style="text-align:center;margin:24px 0;">
+            <a href="<?php echo esc_url($ficha_url); ?>" style="background:#0d9488;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;display:inline-block;margin:6px;">Ver evidencias en mi portal →</a>
+            <?php if ($pdf_download_url): ?>
+            <a href="<?php echo esc_url($pdf_download_url); ?>" style="background:#1e40af;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;display:inline-block;margin:6px;">Descargar informe PDF ↓</a>
+            <?php endif; ?>
+          </div>
+        </td></tr>
+        <tr><td style="background:#f8fafc;padding:20px 40px;text-align:center;font-size:11px;color:#888;border-top:1px solid #e5e7eb;">
+          <p style="margin:0 0 4px;"><strong>AutomatizaTech SpA</strong> &middot; RUT 78.363.717-0</p>
+          <p style="margin:0 0 4px;">contacto@automatizatech.cl &middot; +56 9 2700 2984</p>
+          <p style="margin:0 0 4px;">Santa Beatriz 170, Of. 903 (9P), Providencia, Santiago</p>
+          <p style="margin:8px 0 0;color:#aaa;">&copy; <?php echo date('Y'); ?> AutomatizaTech. Todos los derechos reservados.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>
+<?php
+    $html_body = ob_get_clean();
+
+    // Patrón MÍNIMO idéntico a receipts-module.php (que funciona con PDF)
+    $headers = array(
+        'Content-Type: text/html; charset=UTF-8',
+        'From: AutomatizaTech <' . $from_email . '>'
+    );
+
+    // Enviar al cliente con PDF adjunto (mismo patrón que receipts/proposals)
+    $sent = wp_mail($to_email, $subject, $html_body, $headers, $attachments);
+    if (!$sent) {
+        global $phpmailer;
+        $detail = (isset($phpmailer) && isset($phpmailer->ErrorInfo) && $phpmailer->ErrorInfo)
+            ? $phpmailer->ErrorInfo
+            : 'Sin detalle — revisa error_log del servidor';
+        error_log('[QA-EMAIL-FAIL] To:' . $to_email . ' | Subject:' . $subject . ' | Error:' . $detail);
+        wp_send_json_error('Error enviando correo: ' . $detail);
+    }
+
+    // Copia interna para AT — mismo HTML + PDF adjunto que recibe el cliente
+    @wp_mail(
+        ['lgonzalez@automatizatech.cl', 'Lmgm.0303@gmail.com'],
+        '[QA Copia] ' . $subject,
+        $html_body,
+        $headers,
+        $attachments
+    );
+
+    @$wpdb->query($wpdb->prepare(
+        "UPDATE {$t['projects']} SET last_report_sent_at = %s WHERE id = %d",
+        current_time('mysql'), $project_id
+    ));
+
+    wp_send_json_success([
+        'to'      => $to_email,
+        'subject' => $subject,
+    ]);
+});
+
+// ──────────────────────────────────────────────
+// 8b. GENERAR INFORME DE ERRORES QA (.md)
+// ──────────────────────────────────────────────
+add_action('wp_ajax_at_qa_generate_error_report', function() {
+    if (!current_user_can('manage_options')) wp_send_json_error('Sin permisos');
+    check_ajax_referer('at_qa_nonce', 'nonce');
+    global $wpdb;
+    $t = at_qa_table_names();
+    $project_id = intval($_POST['project_id'] ?? 0);
+    $project = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$t['projects']} WHERE id=%d", $project_id));
+    if (!$project) wp_send_json_error('Proyecto no encontrado');
+
+    $modules = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM {$t['modules']} WHERE project_id=%d ORDER BY sort_order", $project_id
+    ));
+
+    $global_stats = ['total' => 0, 'pass' => 0, 'fail' => 0, 'blocked' => 0, 'skipped' => 0, 'not_tested' => 0];
+    $error_sections = [];
+
+    foreach ($modules as $m) {
+        $all_cases = $wpdb->get_results($wpdb->prepare(
+            "SELECT status FROM {$t['cases']} WHERE module_id=%d", $m->id
+        ));
+        foreach ($all_cases as $row) {
+            $global_stats[$row->status]++;
+            $global_stats['total']++;
+        }
+
+        $failed_cases = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$t['cases']} WHERE module_id=%d AND status IN ('fail','blocked') ORDER BY sort_order",
+            $m->id
+        ));
+        if (empty($failed_cases)) continue;
+
+        $tester_name = $m->assigned_tester ? (get_userdata($m->assigned_tester)->display_name ?? 'No asignado') : 'No asignado';
+        $cases_detail = [];
+        foreach ($failed_cases as $c) {
+            $comments = $wpdb->get_results($wpdb->prepare(
+                "SELECT cm.comment, cm.created_at, u.display_name
+                 FROM {$t['comments']} cm
+                 LEFT JOIN {$wpdb->users} u ON u.ID = cm.user_id
+                 WHERE cm.case_id = %d ORDER BY cm.created_at",
+                $c->id
+            ));
+            $evidences = $wpdb->get_results($wpdb->prepare(
+                "SELECT file_name, file_url, description FROM {$t['evidence']} WHERE case_id=%d ORDER BY created_at",
+                $c->id
+            ));
+            $cases_detail[] = ['case' => $c, 'comments' => $comments, 'evidences' => $evidences];
+        }
+        $error_sections[] = ['module' => $m, 'tester' => $tester_name, 'cases' => $cases_detail];
+    }
+
+    $pass_rate    = $global_stats['total'] > 0 ? round(($global_stats['pass'] / $global_stats['total']) * 100, 1) : 0;
+    $total_errors = $global_stats['fail'] + $global_stats['blocked'];
+    $tz           = new DateTimeZone('America/Santiago');
+    $date_now     = wp_date('d/m/Y H:i', null, $tz);
+
+    // ── Helpers de análisis ────────────────────
+    // Determina nivel de severidad en base a prioridad + estado
+    $get_severity = function(string $priority, string $status): string {
+        if ($status === 'blocked') return '🔴 CRÍTICO';
+        return match (strtolower($priority)) {
+            'alta'  => '🔴 ALTO',
+            'media' => '🟡 MEDIO',
+            default => '🟢 BAJO',
+        };
+    };
+
+    // Genera un análisis de impacto orientado al dev a partir del título, módulo y comentarios
+    $get_impact_analysis = function(object $c, string $module_title, array $comments): string {
+        $title_lower = strtolower($c->title);
+        $notes       = implode(' ', array_column($comments, 'comment'));
+        $notes_lower = strtolower($notes);
+
+        if ($c->status === 'blocked') {
+            return 'Este caso quedó **bloqueado** durante la ejecución, lo que impidió completar la prueba. '
+                 . 'Es necesario resolver el bloqueo antes de poder validar el comportamiento esperado. '
+                 . 'Revisar dependencias o condiciones previas del entorno.';
+        }
+
+        // Patrones comunes para generar análisis contextual
+        $patterns = [
+            ['keywords' => ['login','autenticac','session','token','acceso'],
+             'impact'   => 'Afecta directamente el flujo de autenticación. Un fallo aquí bloquea el acceso de usuarios al sistema completo.'],
+            ['keywords' => ['registro','signup','crear cuenta','nuevo usuario'],
+             'impact'   => 'El proceso de onboarding de usuarios está comprometido. Usuarios nuevos no pueden completar el registro correctamente.'],
+            ['keywords' => ['pago','checkout','carrito','orden','pedido','compra'],
+             'impact'   => 'Fallo crítico en el flujo de conversión. Impacta directamente en transacciones y revenue del negocio.'],
+            ['keywords' => ['correo','email','notificac','notificación'],
+             'impact'   => 'Las notificaciones automáticas no están funcionando. Usuarios no reciben comunicaciones del sistema.'],
+            ['keywords' => ['permiso','rol','admin','acceso','autorización'],
+             'impact'   => 'Problema de control de acceso. Puede exponer funciones restringidas o denegar acceso legítimo.'],
+            ['keywords' => ['responsive','móvil','mobile','pantalla','dispositivo'],
+             'impact'   => 'La interfaz no se adapta correctamente en dispositivos móviles. Afecta la experiencia del usuario en pantallas pequeñas.'],
+            ['keywords' => ['upload','subir','imagen','archivo','adjunto'],
+             'impact'   => 'La carga de archivos o imágenes falla. Funcionalidades que dependen de media adjunta no operan correctamente.'],
+            ['keywords' => ['búsqueda','buscar','filtro','filtrar','resultado'],
+             'impact'   => 'El sistema de búsqueda o filtros devuelve resultados incorrectos o no responde. Dificulta la navegación y localización de contenido.'],
+            ['keywords' => ['formulario','form','campo','validación','input'],
+             'impact'   => 'El formulario no valida correctamente los datos ingresados. Puede permitir datos incorrectos o bloquear datos válidos.'],
+            ['keywords' => ['base de datos','query','sql','dato','registro'],
+             'impact'   => 'Posible inconsistencia en la capa de datos. Revisar queries, migraciones o integridad referencial.'],
+        ];
+
+        foreach ($patterns as $pattern) {
+            foreach ($pattern['keywords'] as $kw) {
+                if (strpos($title_lower, $kw) !== false || strpos($notes_lower, $kw) !== false) {
+                    return $pattern['impact'];
+                }
+            }
+        }
+
+        return 'El comportamiento observado no coincide con el esperado para el módulo **' . $module_title . '**. '
+             . 'Se requiere revisión del flujo completo del caso de uso y su implementación.';
+    };
+
+    // Extrae el resultado actual (lo que realmente pasó) de los comentarios del tester
+    $get_actual_result = function(array $comments): string {
+        foreach ($comments as $cm) {
+            $text  = trim($cm->comment);
+            $lower = strtolower($text);
+            // Buscar comentarios que describan lo que pasó
+            if (strpos($lower, 'resultado') !== false
+                || strpos($lower, 'error') !== false
+                || strpos($lower, 'falla') !== false
+                || strpos($lower, 'muestra') !== false
+                || strpos($lower, 'aparece') !== false
+                || strpos($lower, 'ocurre') !== false
+                || strpos($lower, 'sucede') !== false
+                || strpos($lower, 'observ') !== false
+                || strpos($lower, 'se ve') !== false
+                || strpos($lower, 'no funciona') !== false
+                || strpos($lower, 'no carga') !== false
+                || strpos($lower, 'no responde') !== false) {
+                return $text;
+            }
+        }
+        // Si no hay comentario descriptivo, usar el primero disponible
+        return !empty($comments) ? trim($comments[0]->comment) : '';
+    };
+
+    // ── Construir Markdown ──────────────────────
+    $L = [];
+
+    // Encabezado del documento
+    $verdict_text = $pass_rate >= 95 ? '✅ APROBADO' : ($pass_rate >= 70 ? '⚠️ APROBADO CON OBSERVACIONES' : '❌ RECHAZADO');
+    $L[] = '# Reporte de Defectos QA — ' . $project->name;
+    $L[] = '';
+    $L[] = '> **Documento dirigido a:** Equipo de Desarrollo';
+    $L[] = '> **Elaborado por:** Área QA — Automatiza Tech';
+    $L[] = '> **Fecha:** ' . $date_now . ' (hora Chile)';
+    $L[] = '> **Versión evaluada:** ' . ($project->version ?: '1.0');
+    $L[] = '> **Veredicto:** ' . $verdict_text;
+    $L[] = '';
+    $L[] = '---';
+    $L[] = '';
+
+    // Introducción narrativa
+    $L[] = '## Introducción';
+    $L[] = '';
+    if ($total_errors === 0) {
+        $L[] = 'Se completó el ciclo de pruebas funcionales sobre el proyecto **' . $project->name . '** '
+             . 'con un total de **' . $global_stats['total'] . ' casos de uso** evaluados. '
+             . 'El resultado es satisfactorio: **todos los casos pasaron correctamente**, alcanzando un pass rate del **' . $pass_rate . '%**. '
+             . 'No se registraron defectos ni bloqueos durante la ejecución.';
+    } else {
+        $alta_count = 0;
+        foreach ($error_sections as $sec) {
+            foreach ($sec['cases'] as $item) {
+                if (strtolower($item['case']->priority) === 'alta' || $item['case']->status === 'blocked') $alta_count++;
+            }
+        }
+        $L[] = 'Se completó el ciclo de pruebas funcionales sobre el proyecto **' . $project->name . '** '
+             . 'evaluando un total de **' . $global_stats['total'] . ' casos de uso**. '
+             . 'El equipo de QA identificó **' . $total_errors . ' defecto(s)** que requieren atención por parte del equipo de desarrollo '
+             . 'antes de poder aprobar el pase a producción.';
+        $L[] = '';
+        if ($alta_count > 0) {
+            $L[] = '> ⚠️ **Atención:** Se detectaron **' . $alta_count . ' defecto(s) de prioridad Alta o bloqueantes** que impiden el funcionamiento correcto de flujos críticos del sistema.';
+        }
+    }
+    $L[] = '';
+    $L[] = '---';
+    $L[] = '';
+
+    // Resumen estadístico
+    $L[] = '## Resumen de Ejecución';
+    $L[] = '';
+    $L[] = '| Métrica | Resultado |';
+    $L[] = '|---------|-----------|';
+    $L[] = '| Casos ejecutados | ' . ($global_stats['total'] - $global_stats['not_tested']) . ' / ' . $global_stats['total'] . ' |';
+    $L[] = '| ✅ Pasaron | ' . $global_stats['pass'] . ' |';
+    $L[] = '| ❌ Fallaron | ' . $global_stats['fail'] . ' |';
+    $L[] = '| ⚠️ Bloqueados | ' . $global_stats['blocked'] . ' |';
+    $L[] = '| ⏭️ Omitidos | ' . $global_stats['skipped'] . ' |';
+    $L[] = '| 🔘 Sin ejecutar | ' . $global_stats['not_tested'] . ' |';
+    $L[] = '| **Pass Rate** | **' . $pass_rate . '%** |';
+    $L[] = '| **Defectos a resolver** | **' . $total_errors . '** |';
+    $L[] = '';
+
+    // Índice de errores si los hay
+    if ($total_errors > 0) {
+        $L[] = '---';
+        $L[] = '';
+        $L[] = '## Índice de Defectos';
+        $L[] = '';
+        $L[] = '| # | ID Caso | Módulo | Descripción | Severidad | Estado |';
+        $L[] = '|---|---------|--------|-------------|-----------|--------|';
+        $idx = 0;
+        foreach ($error_sections as $section) {
+            foreach ($section['cases'] as $item) {
+                $idx++;
+                $c = $item['case'];
+                $sev = $get_severity($c->priority ?: 'Media', $c->status);
+                $st  = $c->status === 'fail' ? '❌ FAIL' : '⚠️ BLOQUEADO';
+                $L[] = '| ' . $idx . ' | `' . $c->case_id . '` | ' . $section['module']->title . ' | ' . $c->title . ' | ' . $sev . ' | ' . $st . ' |';
+            }
+        }
+        $L[] = '';
+        $L[] = '---';
+        $L[] = '';
+        $L[] = '## Detalle de Defectos';
+        $L[] = '';
+        $L[] = '_Cada defecto incluye descripción del problema, pasos para reproducirlo, resultado observado, impacto y recomendación de corrección._';
+        $L[] = '';
+
+        $error_num = 0;
+        foreach ($error_sections as $section) {
+            $m             = $section['module'];
+            $fail_count    = count(array_filter($section['cases'], fn($x) => $x['case']->status === 'fail'));
+            $blocked_count = count(array_filter($section['cases'], fn($x) => $x['case']->status === 'blocked'));
+
+            $L[] = '---';
+            $L[] = '';
+            $L[] = '### Módulo: ' . $m->title;
+            $tester_disp = ($section['tester'] && $section['tester'] !== 'No asignado') ? $section['tester'] : 'QA Automatiza Tech';
+            $L[] = '_Tester: ' . $tester_disp . ' · ' . ($fail_count ? '❌ ' . $fail_count . ' fallo(s) ' : '') . ($blocked_count ? '⚠️ ' . $blocked_count . ' bloqueado(s)' : '') . '_';
+            $L[] = '';
+
+            foreach ($section['cases'] as $item) {
+                $error_num++;
+                $c              = $item['case'];
+                $severity       = $get_severity($c->priority ?: 'Media', $c->status);
+                $status_label   = $c->status === 'fail' ? '❌ FAIL' : '⚠️ BLOQUEADO';
+                $actual_result  = $get_actual_result($item['comments']);
+                $impact         = $get_impact_analysis($c, $m->title, $item['comments']);
+                $tester_name    = $c->tester ?: $section['tester'];
+
+                $L[] = '#### DEF-' . str_pad($error_num, 3, '0', STR_PAD_LEFT) . ' · ' . $status_label . ' · `' . $c->case_id . '` — ' . $c->title;
+                $L[] = '';
+
+                // Ficha técnica
+                $L[] = '| Atributo | Valor |';
+                $L[] = '|----------|-------|';
+                $L[] = '| **Severidad** | ' . $severity . ' |';
+                $L[] = '| **Prioridad** | ' . ($c->priority ?: 'Media') . ' |';
+                $L[] = '| **Estado** | ' . $status_label . ' |';
+                $L[] = '| **Tester** | ' . $tester_name . ' |';
+                if ($c->tested_at) {
+                    $L[] = '| **Fecha de prueba** | ' . wp_date('d/m/Y H:i', strtotime($c->tested_at), $tz) . ' |';
+                }
+                if ($c->bug_id) {
+                    $L[] = '| **Bug ID / Ticket** | `' . $c->bug_id . '` |';
+                }
+                $L[] = '';
+
+                // Descripción del defecto
+                $L[] = '**🔍 Descripción del defecto**';
+                $L[] = '';
+                if ($actual_result) {
+                    $L[] = $actual_result;
+                } else {
+                    $L[] = 'El caso de prueba **' . $c->title . '** no superó la validación durante la ejecución de QA. '
+                         . 'El comportamiento del sistema no coincidió con el resultado esperado para este flujo.';
+                }
+                $L[] = '';
+
+                // Precondición
+                if ($c->precondition) {
+                    $L[] = '**📋 Precondición / Entorno de prueba**';
+                    $L[] = '';
+                    $L[] = '> ' . str_replace("\n", "\n> ", trim($c->precondition));
+                    $L[] = '';
+                }
+
+                // Pasos para reproducir
+                if ($c->steps) {
+                    $L[] = '**🔁 Pasos para reproducir**';
+                    $L[] = '';
+                    $step_lines = array_values(array_filter(array_map('trim', explode("\n", $c->steps))));
+                    foreach ($step_lines as $idx_s => $step) {
+                        $L[] = ($idx_s + 1) . '. ' . $step;
+                    }
+                    $L[] = '';
+                }
+
+                // Resultado esperado vs obtenido
+                $L[] = '**✅ Resultado esperado**';
+                $L[] = '';
+                $expected = $c->expected_result ?: 'El sistema debería ejecutar el flujo sin errores y confirmar la operación al usuario.';
+                $L[] = '> ' . str_replace("\n", "\n> ", trim($expected));
+                $L[] = '';
+
+                $L[] = '**❌ Resultado obtenido**';
+                $L[] = '';
+                if ($actual_result) {
+                    $L[] = '> ' . str_replace("\n", "\n> ", $actual_result);
+                } else {
+                    $L[] = '> El sistema no respondió conforme a lo esperado. Ver comentarios del tester para mayor detalle.';
+                }
+                $L[] = '';
+
+                // Impacto y análisis QA
+                $L[] = '**⚡ Análisis de impacto**';
+                $L[] = '';
+                $L[] = $impact;
+                $L[] = '';
+
+                // Observaciones del tester (todos los comentarios)
+                if (!empty($item['comments'])) {
+                    $L[] = '**💬 Observaciones del tester**';
+                    $L[] = '';
+                    foreach ($item['comments'] as $cm) {
+                        $cm_date = wp_date('d/m/Y H:i', strtotime($cm->created_at), $tz);
+                        $author  = $cm->display_name ?: 'QA';
+                        $L[] = '> **' . $author . '** — ' . $cm_date . ':';
+                        $L[] = '> ' . str_replace("\n", "\n> ", trim($cm->comment));
+                        $L[] = '';
+                    }
+                }
+
+                // Recomendación para el dev
+                $L[] = '**🛠️ Recomendación para el desarrollador**';
+                $L[] = '';
+                if ($c->status === 'blocked') {
+                    $L[] = 'Verificar las condiciones previas y dependencias que impiden ejecutar este caso. '
+                         . 'Revisar si existe algún error de configuración, dato faltante o dependencia de otro módulo no resuelta. '
+                         . 'Una vez desbloqueado, el caso deberá ser re-ejecutado por QA.';
+                } else {
+                    $title_lower_rec = strtolower($c->title);
+                    if (strpos($title_lower_rec, 'validac') !== false || strpos($title_lower_rec, 'formulario') !== false || strpos($title_lower_rec, 'campo') !== false) {
+                        $L[] = 'Revisar la lógica de validación del formulario o campo involucrado. '
+                             . 'Asegurarse de que los mensajes de error sean claros, que se valide tanto en frontend como backend, '
+                             . 'y que los casos límite (campos vacíos, formatos inválidos) estén cubiertos.';
+                    } elseif (strpos($title_lower_rec, 'pago') !== false || strpos($title_lower_rec, 'checkout') !== false || strpos($title_lower_rec, 'orden') !== false) {
+                        $L[] = 'Revisar el flujo de pago completo: integración con pasarela, manejo de errores de transacción, '
+                             . 'estados de la orden y rollback en caso de fallo. Verificar logs de la pasarela de pago.';
+                    } elseif (strpos($title_lower_rec, 'login') !== false || strpos($title_lower_rec, 'sesión') !== false || strpos($title_lower_rec, 'autenticac') !== false) {
+                        $L[] = 'Revisar el flujo de autenticación: generación y validación de tokens, manejo de sesiones, '
+                             . 'respuestas de error claras al usuario y comportamiento con credenciales inválidas.';
+                    } else {
+                        $L[] = 'Reproducir el caso siguiendo los pasos indicados y revisar la consola del navegador y los logs del servidor '
+                             . 'para identificar el punto exacto del fallo. Corregir, realizar prueba unitaria y marcar para re-testing en QA.';
+                    }
+                }
+                $L[] = '';
+
+                // Evidencias
+                if (!empty($item['evidences'])) {
+                    $L[] = '**📎 Evidencias adjuntas**';
+                    $L[] = '';
+                    foreach ($item['evidences'] as $ev) {
+                        $desc = $ev->description ? ' — _' . $ev->description . '_' : '';
+                        $L[] = '- [' . $ev->file_name . '](' . esc_url($ev->file_url) . ')' . $desc;
+                    }
+                    $L[] = '';
+                }
+
+                $L[] = '';
+            }
+        }
+
+        // Sección de próximos pasos
+        $L[] = '---';
+        $L[] = '';
+        $L[] = '## Próximos Pasos';
+        $L[] = '';
+        $L[] = '1. El equipo de desarrollo revisa cada defecto listado en este reporte.';
+        $L[] = '2. Se asigna responsable y estimación de corrección por cada ítem.';
+        $L[] = '3. Una vez corregido, el desarrollador notifica a QA para **re-testing**.';
+        $L[] = '4. QA valida la corrección ejecutando nuevamente el caso de prueba.';
+        $L[] = '5. Si el caso pasa, se cierra el defecto. Si falla, se documenta el regreso.';
+        $L[] = '6. El pase a producción queda condicionado a la resolución de todos los defectos de severidad **Alta** y **Crítica**.';
+        $L[] = '';
+    }
+
+    $L[] = '---';
+    $L[] = '';
+    $L[] = '## Firma del Área QA';
+    $L[] = '';
+    $L[] = '| | |';
+    $L[] = '|-|-|';
+    $L[] = '| **Elaborado por** | Área QA — Automatiza Tech |';
+    $L[] = '| **Fecha** | ' . $date_now . ' |';
+    $L[] = '| **Proyecto** | ' . $project->name . ' |';
+    $L[] = '| **Versión** | ' . ($project->version ?: '1.0') . ' |';
+    $L[] = '| **Pass Rate** | ' . $pass_rate . '% |';
+    $L[] = '| **Veredicto** | ' . $verdict_text . ' |';
+    $L[] = '';
+    $L[] = '---';
+    $L[] = '';
+    $L[] = '_Reporte generado por el módulo QA de **[Automatiza Tech](https://automatizatech.cl)**._';
+    $L[] = '_Para consultas: contacto@automatizatech.cl_';
+
+    $md_content = implode("\n", $L);
+
+    $upload_dir  = wp_upload_dir();
+    $reports_dir = $upload_dir['basedir'] . '/qa-reports';
+    if (!is_dir($reports_dir)) wp_mkdir_p($reports_dir);
+
+    $filename = 'QA-Errores-' . sanitize_file_name($project->name) . '-' . date('Y-m-d') . '.md';
+    // BOM UTF-8 garantiza que cualquier editor/navegador interprete bien el encoding
+    file_put_contents($reports_dir . '/' . $filename, "\xEF\xBB\xBF" . $md_content);
+
+    wp_send_json_success([
+        'url'          => $upload_dir['baseurl'] . '/qa-reports/' . $filename,
+        'filename'     => $filename,
+        'total_errors' => $total_errors,
+        'pass_rate'    => $pass_rate,
     ]);
 });
 
@@ -1716,7 +2389,9 @@ function at_qa_render_projects_page() {
         <?php foreach ($projects as $p):
             $rate = $p->total > 0 ? round(($p->passed / $p->total) * 100, 1) : 0;
             $client_name = '';
-            if ($p->client_id) {
+            if (!empty($p->is_internal)) {
+                $client_name = '🏠 Automatiza Tech';
+            } elseif ($p->client_id) {
                 foreach ($clients as $cl) {
                     if ($cl->id == $p->client_id) { $client_name = $cl->empresa ?: $cl->nombre; break; }
                 }
@@ -1769,7 +2444,9 @@ function at_qa_render_projects_page() {
                 <div style="display:flex; gap:6px; flex-wrap:wrap;">
                     <a href="<?php echo admin_url('admin.php?page=at-qa&view=suite&project=' . $p->id); ?>" class="qa-btn qa-btn-sm qa-btn-primary">📋 Ver Casos</a>
                     <?php if (current_user_can('manage_options')): ?>
-                    <button class="qa-btn qa-btn-sm" onclick="atQaGenerateReport(<?php echo $p->id; ?>)" title="Generar informe">📄 Informe</button>
+                    <button class="qa-btn qa-btn-sm" onclick="atQaGenerateReport(<?php echo $p->id; ?>)" title="Generar informe HTML + PDF">📄 Informe</button>
+                    <button class="qa-btn qa-btn-sm" onclick="atQaSendReportEmail(<?php echo $p->id; ?>)" title="Enviar último informe por correo al cliente" style="color:#0d9488;">📧 Enviar al cliente</button>
+                    <button class="qa-btn qa-btn-sm" onclick="atQaGenerateErrorReport(<?php echo $p->id; ?>)" title="Informe de errores en .md" style="color:#991b1b;">📋 Errores .md</button>
                     <button class="qa-btn qa-btn-sm" onclick='atQaOpenProjectModal(<?php echo json_encode($p); ?>)'>✏️</button>
                     <button class="qa-btn qa-btn-sm qa-btn-danger" onclick="atQaDeleteProject(<?php echo $p->id; ?>)">🗑️</button>
                     <?php endif; ?>
@@ -1800,6 +2477,7 @@ function at_qa_render_projects_page() {
                         <label>Cliente vinculado</label>
                         <select id="projClient">
                             <option value="0">— Sin vincular —</option>
+                            <option value="internal" style="color:#0d9488; font-weight:600;">🏠 Proyecto Interno AT</option>
                             <?php foreach ($clients as $cl): ?>
                             <option value="<?php echo $cl->id; ?>"><?php echo esc_html(($cl->empresa ? $cl->empresa . ' — ' : '') . $cl->nombre); ?></option>
                             <?php endforeach; ?>
@@ -1883,7 +2561,7 @@ function at_qa_render_projects_page() {
             document.getElementById('projModalTitle').textContent = data ? 'Editar Proyecto QA' : 'Nuevo Proyecto QA';
             document.getElementById('projId').value       = data ? data.id : 0;
             document.getElementById('projName').value     = data ? data.name : '';
-            document.getElementById('projClient').value   = data ? (data.client_id || 0) : 0;
+            document.getElementById('projClient').value   = data ? (data.is_internal ? 'internal' : (data.client_id || 0)) : 0;
             document.getElementById('projStatus').value   = data ? data.qa_status : 'pending';
             document.getElementById('projVersion').value  = data ? data.version : '1.0';
             document.getElementById('projEnv').value      = data ? (data.environment || '') : '';
@@ -1950,9 +2628,12 @@ function at_qa_render_projects_page() {
             }).catch(err => { toast('Error: ' + err.message, 'error'); });
         };
 
-        // Generar informe QA
+        // Cache: último PDF generado por proyecto (para enviarlo sin regenerar)
+        window.atQaLastPdf = window.atQaLastPdf || {};
+
+        // Generar informe QA (HTML + PDF)
         window.atQaGenerateReport = function(pid) {
-            if (!confirm('¿Generar informe QA de este proyecto?')) return;
+            if (!confirm('¿Generar informe QA (HTML + PDF) de este proyecto?')) return;
             const fd = new FormData();
             fd.append('action', 'at_qa_generate_report');
             fd.append('nonce', NONCE);
@@ -1961,7 +2642,58 @@ function at_qa_render_projects_page() {
             fetch(AJAX, {method:'POST', body:fd}).then(r=>safeJson(r)).then(res => {
                 if (res.success) {
                     toast('✅ Informe generado: ' + res.data.verdict + ' — ' + res.data.pass_rate + '%', 'success');
+                    window.atQaLastPdf[pid] = res.data.pdf_filename || '';
                     window.open(res.data.url, '_blank');
+                    if (res.data.pdf_url) window.open(res.data.pdf_url, '_blank');
+                } else toast(res.data || 'Error', 'error');
+            }).catch(err => { toast('Error: ' + err.message, 'error'); });
+        };
+
+        // Enviar el último informe PDF por correo al cliente (BCC admin)
+        window.atQaSendReportEmail = function(pid) {
+            let pdfFile = window.atQaLastPdf[pid];
+            if (!pdfFile) {
+                if (!confirm('No hay informe generado en esta sesión. ¿Generar primero el informe y luego enviarlo?')) return;
+                return atQaGenerateReport(pid);
+            }
+            const toEmail = prompt('Email del destinatario (deja vacío para usar el del cliente vinculado):', '');
+            if (toEmail === null) return;
+            const customMsg = prompt('Mensaje adicional (opcional, se mostrará en el correo):', '') || '';
+            if (!confirm('¿Enviar el informe QA por correo?\n\nDestino: ' + (toEmail || 'cliente del proyecto') + '\nPDF: ' + pdfFile)) return;
+            const fd = new FormData();
+            fd.append('action', 'at_qa_send_report_email');
+            fd.append('nonce', NONCE);
+            fd.append('project_id', pid);
+            fd.append('pdf_filename', pdfFile);
+            if (toEmail) fd.append('to_email', toEmail);
+            if (customMsg) fd.append('custom_message', customMsg);
+            toast('Enviando correo...', '');
+            fetch(AJAX, {method:'POST', body:fd}).then(r=>safeJson(r)).then(res => {
+                if (res.success) toast('📧 Correo enviado a ' + res.data.to, 'success');
+                else toast(res.data || 'Error enviando correo', 'error');
+            }).catch(err => { toast('Error: ' + err.message, 'error'); });
+        };
+
+        // Generar informe de errores (.md)
+        window.atQaGenerateErrorReport = function(pid) {
+            if (!confirm('¿Generar informe de errores (.md) de este proyecto?')) return;
+            const fd = new FormData();
+            fd.append('action', 'at_qa_generate_error_report');
+            fd.append('nonce', NONCE);
+            fd.append('project_id', pid);
+            toast('Generando informe de errores...', '');
+            fetch(AJAX, {method:'POST', body:fd}).then(r=>safeJson(r)).then(res => {
+                if (res.success) {
+                    const msg = res.data.total_errors === 0
+                        ? '✅ Sin errores — ' + res.data.pass_rate + '% Pass Rate'
+                        : '📋 Informe listo: ' + res.data.total_errors + ' error(es) — ' + res.data.pass_rate + '% Pass Rate';
+                    toast(msg, 'success');
+                    const a = document.createElement('a');
+                    a.href = res.data.url;
+                    a.download = res.data.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                 } else toast(res.data || 'Error', 'error');
             }).catch(err => { toast('Error: ' + err.message, 'error'); });
         };
@@ -2292,6 +3024,8 @@ function at_qa_render_suite_page() {
             <button class="qa-btn" onclick="document.getElementById('modalGlosario').classList.add('active')" style="background:rgba(255,255,255,.15); color:#fff; border-color:rgba(255,255,255,.3);" title="Glosario de términos técnicos">📚 Glosario</button>
             <?php if (current_user_can('manage_options')): ?>
             <button class="qa-btn" onclick="atQaGenerateReport(<?php echo $project_id; ?>)" style="background:rgba(255,255,255,.15); color:#fff; border-color:rgba(255,255,255,.3);">📄 Generar Informe</button>
+            <button class="qa-btn" onclick="atQaSendReportEmail(<?php echo $project_id; ?>)" style="background:rgba(255,255,255,.15); color:#fff; border-color:rgba(255,255,255,.3);">📧 Enviar al cliente</button>
+            <button class="qa-btn" onclick="atQaGenerateErrorReport(<?php echo $project_id; ?>)" style="background:rgba(220,38,38,.25); color:#fca5a5; border-color:rgba(220,38,38,.4);" title="Descargar informe detallado de errores en formato .md">📋 Errores .md</button>
             <?php endif; ?>
             <a href="<?php echo admin_url('admin.php?page=at-qa'); ?>" class="qa-btn">&larr; Proyectos</a>
         </div>
@@ -2589,8 +3323,7 @@ function at_qa_render_suite_page() {
 
         function toast(m,t){
             const e=document.getElementById('atQaToast');
-            const icon = (t==='success') ? '✅ ' : (t==='error') ? '❌ ' : 'ℹ️ ';
-            e.innerHTML = '<div style="font-size:28px;margin-bottom:6px;">' + ((t==='success')?'✅':'❌') + '</div>' + m;
+            e.innerHTML = '<div style="font-size:28px;margin-bottom:6px;">' + ((t==='success')?'✅':((t==='error'||t==='danger')?'❌':'⏳')) + '</div>' + m;
             e.className='at-qa-toast show '+(t||'');
             setTimeout(()=>e.className='at-qa-toast',3500);
         }
@@ -3043,9 +3776,10 @@ function at_qa_render_suite_page() {
             });
         };
 
-        /* Generar informe QA */
+        /* Generar informe QA (HTML + PDF) */
+        window.atQaLastPdf = window.atQaLastPdf || {};
         window.atQaGenerateReport = function(pid){
-            if(!confirm('¿Generar informe formal del proyecto?')) return;
+            if(!confirm('¿Generar informe formal (HTML + PDF) del proyecto?')) return;
             const fd=new FormData();
             fd.append('action','at_qa_generate_report');
             fd.append('nonce',N);
@@ -3053,7 +3787,62 @@ function at_qa_render_suite_page() {
             fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
                 if(res.success){
                     toast('Informe generado','success');
+                    window.atQaLastPdf[pid] = res.data.pdf_filename || '';
                     if(res.data.url) window.open(res.data.url,'_blank');
+                    if(res.data.pdf_url) window.open(res.data.pdf_url,'_blank');
+                } else {
+                    toast(res.data||'Error generando informe','danger');
+                }
+            });
+        };
+
+        /* Enviar el último informe QA por correo al cliente (BCC admin) */
+        window.atQaSendReportEmail = function(pid){
+            let pdfFile = window.atQaLastPdf[pid];
+            if(!pdfFile){
+                if(!confirm('No hay informe generado en esta sesión. ¿Generarlo ahora?')) return;
+                return atQaGenerateReport(pid);
+            }
+            const toEmail = prompt('Email destinatario (vacío = email del cliente vinculado):','');
+            if(toEmail===null) return;
+            const customMsg = prompt('Mensaje adicional (opcional):','') || '';
+            if(!confirm('¿Enviar el informe por correo?\n\nDestino: '+(toEmail||'cliente del proyecto')+'\nPDF: '+pdfFile)) return;
+            const fd=new FormData();
+            fd.append('action','at_qa_send_report_email');
+            fd.append('nonce',N);
+            fd.append('project_id',pid);
+            fd.append('pdf_filename',pdfFile);
+            if(toEmail) fd.append('to_email',toEmail);
+            if(customMsg) fd.append('custom_message',customMsg);
+            toast('Enviando correo...','');
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
+                if(res.success) toast('📧 Correo enviado a '+res.data.to,'success');
+                else toast(res.data||'Error enviando correo','danger');
+            }).catch(err=>{ toast('Error: '+err.message,'danger'); });
+        };
+
+        /* Generar informe de errores .md */
+        window.atQaGenerateErrorReport = function(pid){
+            if(!confirm('¿Generar informe de errores (.md) del proyecto?')) return;
+            const fd=new FormData();
+            fd.append('action','at_qa_generate_error_report');
+            fd.append('nonce',N);
+            fd.append('project_id',pid);
+            toast('Generando informe de errores...','');
+            fetch(A,{method:'POST',body:fd}).then(r=>safeJson(r)).then(res=>{
+                if(res.success){
+                    const msg = res.data.total_errors===0
+                        ? '✅ Sin errores — '+res.data.pass_rate+'% Pass Rate'
+                        : '📋 '+res.data.total_errors+' error(es) — '+res.data.pass_rate+'% Pass Rate';
+                    toast(msg,'success');
+                    if(res.data.url){
+                        const a=document.createElement('a');
+                        a.href=res.data.url;
+                        a.download=res.data.filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    }
                 } else {
                     toast(res.data||'Error generando informe','danger');
                 }
@@ -3627,14 +4416,16 @@ add_action('wp_ajax_nopriv_at_qa_agent_upload_evidence', function() {
     $cid         = intval($_POST['case_db_id']);
     $description = sanitize_text_field($_POST['description'] ?? '');
     $allowed = ['image/jpeg','image/png','image/gif','image/webp','video/mp4','video/webm','application/pdf'];
-    if (!in_array($_FILES['evidence_file']['type'], $allowed)) wp_send_json_error('Tipo no permitido');
+    $real_mime = at_verify_upload_mime( $_FILES['evidence_file']['tmp_name'], $allowed );
+    if ( ! $real_mime ) wp_send_json_error('Tipo no permitido');
     if ($_FILES['evidence_file']['size'] > 10 * 1024 * 1024) wp_send_json_error('Archivo muy grande');
     $upload_dir = wp_upload_dir();
     $qa_dir = $upload_dir['basedir'] . '/' . AT_QA_EVIDENCE_DIR;
     $qa_url = $upload_dir['baseurl'] . '/' . AT_QA_EVIDENCE_DIR;
     wp_mkdir_p($qa_dir);
-    $ext  = pathinfo($_FILES['evidence_file']['name'], PATHINFO_EXTENSION);
-    $safe = 'qa-' . $cid . '-' . time() . '-' . wp_generate_password(6, false) . '.' . $ext;
+    // Extensión derivada del MIME verificado (no del nombre original del archivo)
+    $ext  = at_mime_canonical_ext( $real_mime );
+    $safe = 'qa-' . bin2hex(random_bytes(16)) . '.' . $ext;
     if (!move_uploaded_file($_FILES['evidence_file']['tmp_name'], $qa_dir . '/' . $safe)) wp_send_json_error('Error al guardar');
     global $wpdb;
     $t = at_qa_table_names();
@@ -3642,7 +4433,7 @@ add_action('wp_ajax_nopriv_at_qa_agent_upload_evidence', function() {
         'case_id'     => $cid,
         'file_url'    => $qa_url . '/' . $safe,
         'file_name'   => sanitize_file_name($_FILES['evidence_file']['name']),
-        'file_type'   => $_FILES['evidence_file']['type'],
+        'file_type'   => $real_mime,
         'file_size'   => $_FILES['evidence_file']['size'],
         'uploaded_by' => 1,
         'description' => $description,

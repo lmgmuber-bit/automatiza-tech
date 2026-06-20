@@ -138,7 +138,7 @@ function automatiza_tech_proposals_page() {
         $wpdb->update($table_name, $update_data, ['id' => $id]);
 
         // Obtener datos actualizados para el email
-        $proposal = $wpdb->get_row("SELECT * FROM $table_name WHERE id = $id");
+        $proposal = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $id));
         
         // --- ENVIAR EMAIL (solo si el checkbox está marcado) ---
         if (!$send_email) {
@@ -281,7 +281,7 @@ function automatiza_tech_proposals_page() {
     $edit_proposal = null;
     if (isset($_GET['edit_id'])) {
         $edit_id = intval($_GET['edit_id']);
-        $edit_proposal = $wpdb->get_row("SELECT * FROM $table_name WHERE id = $edit_id");
+        $edit_proposal = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $edit_id));
     }
 
     // --- LISTAR ÚLTIMAS PROPUESTAS ---

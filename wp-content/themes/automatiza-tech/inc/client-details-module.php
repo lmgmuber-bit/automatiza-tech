@@ -12,6 +12,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once ABSPATH . 'at-mime-check.php';
+
 class AutomatizaTech_Client_Details {
     
     private $propuestas_details_table;
@@ -713,7 +715,7 @@ class AutomatizaTech_Client_Details {
             wp_mkdir_p($target_dir);
         }
         
-        // Tipos permitidos
+        // Tipos permitidos — verificados contra magic bytes reales (finfo_file), no el Content-Type del cliente
         $allowed_types = array(
             'application/pdf',
             'application/msword',
@@ -721,8 +723,8 @@ class AutomatizaTech_Client_Details {
             'application/vnd.ms-powerpoint',
             'application/vnd.openxmlformats-officedocument.presentationml.presentation',
             'text/plain',
-            'text/markdown',
             'text/csv',
+            'text/markdown',
             'image/jpeg',
             'image/png',
             'image/gif',
@@ -731,13 +733,14 @@ class AutomatizaTech_Client_Details {
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         );
         
-        if (!in_array($file['type'], $allowed_types)) {
+        $real_mime = at_verify_upload_mime( $file['tmp_name'], $allowed_types );
+        if ( ! $real_mime ) {
             return false;
         }
         
-        // Generar nombre único
-        $filename = sanitize_file_name($file['name']);
-        $filename = time() . '_' . $filename;
+        // Generar nombre único — extensión derivada del MIME verificado, no del nombre original
+        $ext      = at_mime_canonical_ext( $real_mime ) ?: 'bin';
+        $filename = time() . '_' . wp_generate_password(8, false) . '.' . $ext;
         $target_path = $target_dir . '/' . $filename;
         
         if (move_uploaded_file($file['tmp_name'], $target_path)) {
@@ -993,7 +996,7 @@ class AutomatizaTech_Client_Details {
         
         // Intentar con pdftotext si está disponible
         if (function_exists('shell_exec')) {
-            $output = @shell_exec("pdftotext -layout -nopgbrk \"$pdf_path\" - 2>/dev/null");
+            $output = @shell_exec('pdftotext -layout -nopgbrk ' . escapeshellarg($pdf_path) . ' - 2>/dev/null');
             if (!empty($output)) {
                 return "[PDF] " . substr(trim($output), 0, 2000) . (strlen($output) > 2000 ? '...' : '');
             }

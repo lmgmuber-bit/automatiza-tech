@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para actualizar el número de WhatsApp en la base de datos
  * Ejecutar una sola vez y luego eliminar

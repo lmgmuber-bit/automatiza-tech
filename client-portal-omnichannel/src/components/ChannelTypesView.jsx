@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Loader2, Pencil, Trash2, X, Save, GripVertical } from 'lucide-react';
+import { Plus, Loader2, Pencil, Trash2, X, Save, GripVertical, Settings } from 'lucide-react';
 import { getChannelTypes, createChannelType, updateChannelType, deleteChannelType } from '../api';
 import ResultModal from './ResultModal';
 import { getChannelIcon } from './ChannelIcons';
@@ -131,16 +131,16 @@ export default function ChannelTypesView() {
 
   function renderForm(isEdit) {
     return (
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-6 mb-6 animate-fadein">
-        <h3 className="font-semibold mb-4 text-gray-900 dark:text-white">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm ring-1 ring-gray-100 dark:ring-slate-700/60 p-6 mb-6 animate-fadein">
+        <h3 className="font-semibold mb-4 text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>
           {isEdit ? `Editar: ${form.label}` : 'Nuevo Tipo de Canal'}
         </h3>
         {error && <div className="text-red-600 dark:text-red-400 text-sm mb-3 bg-red-50 dark:bg-red-900/20 p-2 rounded">{error}</div>}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Slug (ID único) *</label>
-            <input
+            <label htmlFor="channeltypesview-fld1" className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Slug (ID único) *</label>
+            <input id="channeltypesview-fld1"
               type="text"
               value={form.slug}
               onChange={e => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '') })}
@@ -152,8 +152,8 @@ export default function ChannelTypesView() {
             {isEdit && <p className="text-[10px] text-gray-400 mt-1">El slug no se puede cambiar</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Nombre *</label>
-            <input
+            <label htmlFor="channeltypesview-fld2" className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Nombre *</label>
+            <input id="channeltypesview-fld2"
               type="text"
               value={form.label}
               onChange={e => setForm({ ...form, label: e.target.value })}
@@ -163,8 +163,8 @@ export default function ChannelTypesView() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Emoji</label>
-            <input
+            <label htmlFor="channeltypesview-fld3" className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Emoji</label>
+            <input id="channeltypesview-fld3"
               type="text"
               value={form.emoji}
               onChange={e => setForm({ ...form, emoji: e.target.value })}
@@ -174,8 +174,8 @@ export default function ChannelTypesView() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Color</label>
-            <select
+            <label htmlFor="channeltypesview-fld4" className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Color</label>
+            <select id="channeltypesview-fld4"
               value={form.color}
               onChange={e => setForm({ ...form, color: e.target.value })}
               className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
@@ -186,8 +186,8 @@ export default function ChannelTypesView() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Orden</label>
-            <input
+            <label htmlFor="channeltypesview-fld5" className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Orden</label>
+            <input id="channeltypesview-fld5"
               type="number"
               value={form.sort_order}
               onChange={e => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })}
@@ -200,7 +200,7 @@ export default function ChannelTypesView() {
         {/* Dynamic Fields */}
         <div className="mt-5">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Campos del formulario de canal</label>
+            <label htmlFor="channeltypesview-fld6" className="text-sm font-medium text-gray-600 dark:text-gray-300">Campos del formulario de canal</label>
             <button type="button" onClick={addField} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1">
               <Plus size={12} /> Agregar campo
             </button>
@@ -212,7 +212,7 @@ export default function ChannelTypesView() {
             {form.fields.map((field, i) => (
               <div key={i} className="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-gray-50 dark:bg-slate-700/50 p-2 rounded-lg">
                 <GripVertical size={14} className="text-gray-400 shrink-0" />
-                <input
+                <input id="channeltypesview-fld6"
                   type="text"
                   value={field.key}
                   onChange={e => updateField(i, 'key', e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
@@ -220,7 +220,7 @@ export default function ChannelTypesView() {
                   className="flex-1 px-2 py-1.5 border border-gray-200 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   required
                 />
-                <input
+                <input aria-label="Etiqueta del campo"
                   type="text"
                   value={field.label}
                   onChange={e => updateField(i, 'label', e.target.value)}
@@ -228,7 +228,7 @@ export default function ChannelTypesView() {
                   className="flex-1 px-2 py-1.5 border border-gray-200 dark:border-slate-600 rounded text-xs bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   required
                 />
-                <input
+                <input aria-label="Texto de ayuda del campo"
                   type="text"
                   value={field.placeholder}
                   onChange={e => updateField(i, 'placeholder', e.target.value)}
@@ -257,35 +257,50 @@ export default function ChannelTypesView() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-4 sm:p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>🔧 Tipos de Canal</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Administra los tipos de canal disponibles en el sistema</p>
+    <div className="flex-1 h-full overflow-y-auto bg-gray-50 dark:bg-slate-900">
+      {/* HERO FULL-BLEED */}
+      <div className="relative overflow-hidden px-6 py-6 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #3b82f6, #1d4ed8)' }}>
+        <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full blur-3xl bg-white/20" />
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
+                <Settings size={26} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Tipos de Canal</h1>
+                <p className="text-sm text-white/75">Administra los tipos de canal disponibles en el sistema</p>
+              </div>
+            </div>
+            {!showForm && !editingId && (
+              <button
+                onClick={startCreate}
+                className="flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white rounded-lg shadow-sm text-sm font-semibold transition-all duration-300 self-start"
+              >
+                <Plus size={16} /> Nuevo Tipo
+              </button>
+            )}
           </div>
-          {!showForm && !editingId && (
-            <button
-              onClick={startCreate}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors self-start"
-            >
-              <Plus size={16} /> Nuevo Tipo
-            </button>
-          )}
-        </div>
+      </div>
 
+      {/* CONTENIDO */}
+      <div className="p-4 sm:p-6">
+      <div className="max-w-4xl mx-auto">
         {/* Create Form */}
         {showForm && renderForm(false)}
 
         {/* List */}
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-gray-400">
+          <div className="flex items-center justify-center py-20 text-gray-400 dark:text-slate-500">
             <Loader2 className="animate-spin mr-2" size={20} /> Cargando tipos de canal...
           </div>
         ) : types.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
-            <p className="text-lg">No hay tipos de canal</p>
-            <p className="text-sm mt-1">Crea el primero para comenzar</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <span className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-md mb-4">
+              <Settings size={30} />
+            </span>
+            <p className="text-sm font-medium text-gray-600 dark:text-slate-300">No hay tipos de canal</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Crea el primero para comenzar</p>
           </div>
         ) : (
           <div className="grid gap-3">
@@ -298,41 +313,43 @@ export default function ChannelTypesView() {
               }
 
               return (
-                <div key={type.id} className={`bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 ${type.is_active === '0' ? 'opacity-50' : ''}`}>
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl font-bold bg-${type.color || 'gray-500'}`}
+                <div className={`bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-5 shadow-md ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 ${type.is_active === '0' ? 'opacity-60' : ''}`} key={type.id}>
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white text-xl font-bold shrink-0 shadow-md ring-1 ring-white/20 bg-${type.color || 'gray-500'}`}
                     style={{ backgroundColor: colorToHex(type.color) }}
                   >
                     {getChannelIcon(type.slug, 24) || type.emoji || '📡'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-gray-900 dark:text-white">{type.label}</h4>
-                      <span className="text-[10px] bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded font-mono">{type.slug}</span>
-                      {type.is_active === '0' && (
-                        <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-medium">Inactivo</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-semibold text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{type.label}</h4>
+                      <span className="text-[10px] bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded-md font-mono">{type.slug}</span>
+                      {type.is_active === '0' ? (
+                        <span className="text-[10px] bg-gray-100 text-gray-500 ring-1 ring-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:ring-slate-600 px-1.5 py-0.5 rounded-full font-semibold">Inactivo</span>
+                      ) : (
+                        <span className="text-[10px] bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20 px-1.5 py-0.5 rounded-full font-semibold">Activo</span>
                       )}
                     </div>
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       {fields.length > 0 ? fields.map((f, i) => (
-                        <span key={i} className="text-[10px] bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded">
+                        <span key={i} className="text-[10px] bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-500/20 px-1.5 py-0.5 rounded-full font-medium">
                           {f.label} ({f.key})
                         </span>
                       )) : (
-                        <span className="text-[10px] text-gray-400 italic">Sin campos adicionales</span>
+                        <span className="text-[10px] text-gray-400 dark:text-slate-500 italic">Sin campos adicionales</span>
                       )}
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-1">Orden: {type.sort_order}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-1">Orden: {type.sort_order}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => startEdit(type)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-500/20 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors"
                     >
                       <Pencil size={13} /> Editar
                     </button>
                     <button
                       onClick={() => requestDelete(type)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-1 ring-rose-200 dark:ring-rose-500/20 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"
                     >
                       <Trash2 size={13} /> Eliminar
                     </button>
@@ -342,6 +359,7 @@ export default function ChannelTypesView() {
             })}
           </div>
         )}
+      </div>
       </div>
 
       {resultModal && <ResultModal {...resultModal} onClose={() => setResultModal(null)} />}

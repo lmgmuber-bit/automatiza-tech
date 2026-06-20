@@ -1051,17 +1051,17 @@ class AutomatizaTech_CRM_AI {
                         <tr>
                             <td>
                                 <strong><?php echo esc_html(str_replace(['cliente_', 'demo_', '_'], ['', '', ' '], $c['client_identifier'])); ?></strong>
-                                <br><small style="color:#999;"><?php echo $c['client_identifier']; ?></small>
+                                <br><small style="color:#999;"><?php echo esc_html($c['client_identifier']); ?></small>
                             </td>
                             <td>
-                                <span style="background:<?php echo $bg_color; ?>; color:white; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:600;">
-                                    <?php echo $tipo_label; ?>
+                                <span style="background:<?php echo esc_attr($bg_color); ?>; color:white; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:600;">
+                                    <?php echo esc_html($tipo_label); ?>
                                 </span>
                             </td>
-                            <td><?php echo $c['requests']; ?></td>
-                            <td><?php echo number_format($c['tokens']); ?></td>
-                            <td>$<?php echo number_format($c['costo'], 4); ?></td>
-                            <td style="color:#46b450;font-weight:bold;">$<?php echo number_format($c['costo'] * 1.3, 2); ?></td>
+                            <td><?php echo intval($c['requests']); ?></td>
+                            <td><?php echo number_format(floatval($c['tokens'])); ?></td>
+                            <td>$<?php echo number_format(floatval($c['costo']), 4); ?></td>
+                            <td style="color:#46b450;font-weight:bold;">$<?php echo number_format(floatval($c['costo']) * 1.3, 2); ?></td>
                             <td>
                                 <a href="?page=automatiza-crm-ficha&ai_id=<?php echo urlencode($c['client_identifier']); ?>" class="button button-small">Ver Ficha</a>
                                 <a href="?page=automatiza-crm&cliente=<?php echo urlencode($c['client_identifier']); ?>&mes=<?php echo $mes; ?>&anio=<?php echo $anio; ?>" class="button button-small">Filtrar</a>
@@ -1076,7 +1076,7 @@ class AutomatizaTech_CRM_AI {
         <script>
         document.addEventListener('DOMContentLoaded', function() {
             
-            var modo = '<?php echo $modo; ?>';
+            var modo = '<?php echo esc_js($modo); ?>';
             
             if (modo === 'comparar') {
                 // ===== GRÁFICO COMPARATIVO BARRAS =====
@@ -1459,12 +1459,12 @@ class AutomatizaTech_CRM_AI {
                     'fecha_contacto' => current_time('mysql')
                 ]);
                 $cliente_id = $wpdb->insert_id;
-                $cliente = $wpdb->get_row("SELECT * FROM {$this->tabla_clientes} WHERE id = $cliente_id", ARRAY_A);
+                $cliente = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->tabla_clientes} WHERE id = %d", $cliente_id), ARRAY_A);
             } else {
                 $cliente_id = $cliente['id'];
             }
         } else {
-            $cliente = $wpdb->get_row("SELECT * FROM {$this->tabla_clientes} WHERE id = $cliente_id", ARRAY_A);
+            $cliente = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->tabla_clientes} WHERE id = %d", $cliente_id), ARRAY_A);
             $ai_id = $cliente['ai_identifier'] ?? '';
         }
 
@@ -1502,7 +1502,7 @@ class AutomatizaTech_CRM_AI {
                     $wpdb->update($this->tabla_clientes, $datos_update, ['id' => $cliente_id]);
                     
                     // Recargar datos
-                    $cliente = $wpdb->get_row("SELECT * FROM {$this->tabla_clientes} WHERE id = $cliente_id", ARRAY_A);
+                    $cliente = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->tabla_clientes} WHERE id = %d", $cliente_id), ARRAY_A);
                 }
 
                 // Identidad corporativa: manejo de archivos y campos
@@ -1640,7 +1640,7 @@ class AutomatizaTech_CRM_AI {
                     }
                     
                     // Recargar siempre los datos del cliente desde la BD
-                    $cliente = $wpdb->get_row("SELECT * FROM {$this->tabla_clientes} WHERE id = $cliente_id", ARRAY_A);
+                    $cliente = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->tabla_clientes} WHERE id = %d", $cliente_id), ARRAY_A);
                 }
 
                 // Obtener datos de identidad para mostrar en el formulario, ya sea antes o después de guardar.
@@ -4674,6 +4674,121 @@ class AutomatizaTech_CRM_AI {
                         <?php endif; ?>
                     </div>
                     
+                    <?php
+                    // ─── CONTRATOS (todos los estados) ───
+                    // Los contratos se guardan con el ID de wp_automatiza_tech_clients,
+                    // pero el portal usa el ID de wp_crm_clientes. Cruzamos por email.
+                    $contracts_table = $wpdb->prefix . 'automatiza_contracts';
+                    if ($wpdb->get_var("SHOW TABLES LIKE '{$contracts_table}'") === $contracts_table) {
+                        $at_clients_table = $wpdb->prefix . 'automatiza_tech_clients';
+                        $at_client_id = null;
+                        if (!empty($cliente->email)) {
+                            $at_client_id = $wpdb->get_var($wpdb->prepare(
+                                "SELECT id FROM {$at_clients_table} WHERE email = %s LIMIT 1",
+                                $cliente->email
+                            ));
+                        }
+                        if (!$at_client_id) { $at_client_id = $cliente_id; }
+                        $all_contracts = $wpdb->get_results($wpdb->prepare(
+                            "SELECT id, contract_number, type, status, signed_at, sent_at, created_at,
+                                    signed_pdf_url, pdf_url, sign_token, monthly_amount, currency
+                             FROM {$contracts_table}
+                             WHERE client_id = %d
+                             ORDER BY created_at DESC",
+                            $at_client_id
+                        ), ARRAY_A);
+                    ?>
+                    <h2>📄 Tus Contratos</h2>
+                    <?php if (empty($all_contracts)): ?>
+                        <p style="color:#888; font-style:italic; padding:8px 0;">No tienes contratos registrados por el momento.</p>
+                    <?php else: ?>
+                        <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:24px;">
+                            <?php
+                            $type_labels = [
+                                'soporte'   => 'Contrato de Soporte Post-Proyecto',
+                                'servicios' => 'Contrato de Servicios',
+                                'sla'       => 'Acuerdo de Nivel de Servicio (SLA)',
+                                'nda'       => 'Acuerdo de Confidencialidad (NDA)',
+                                'handover'  => 'Acta de Entrega y Cierre',
+                            ];
+                            foreach ($all_contracts as $c):
+                                $label      = $type_labels[$c['type']] ?? ucfirst($c['type']);
+                                $status     = $c['status'];
+                                $is_signed  = $status === 'signed';
+                                $needs_sign = in_array($status, ['sent', 'viewed']);
+                                $in_prep    = in_array($status, ['at_pending', 'at_signed']);
+
+                                if ($is_signed) {
+                                    $bg = '#f0fdf4'; $border = '#bbf7d0'; $accent = '#22c55e';
+                                    $badge_bg = '#22c55e'; $badge_text = '✅ FIRMADO';
+                                    $date_label = 'Firmado el';
+                                    $date_val   = !empty($c['signed_at']) ? date('d/m/Y', strtotime($c['signed_at'])) : '—';
+                                } elseif ($needs_sign) {
+                                    $bg = '#fffbeb'; $border = '#fde68a'; $accent = '#f59e0b';
+                                    $badge_bg = '#f59e0b'; $badge_text = '✍️ PENDIENTE TU FIRMA';
+                                    $date_label = 'Enviado el';
+                                    $date_val   = !empty($c['sent_at']) ? date('d/m/Y', strtotime($c['sent_at'])) : '—';
+                                } elseif ($status === 'at_signed') {
+                                    $bg = '#eff6ff'; $border = '#bfdbfe'; $accent = '#3b82f6';
+                                    $badge_bg = '#3b82f6'; $badge_text = '📋 LISTO PARA REVISAR';
+                                    $date_label = 'Creado el';
+                                    $date_val   = !empty($c['created_at']) ? date('d/m/Y', strtotime($c['created_at'])) : '—';
+                                } else {
+                                    $bg = '#f8fafc'; $border = '#e2e8f0'; $accent = '#94a3b8';
+                                    $badge_bg = '#94a3b8'; $badge_text = '🔄 EN PREPARACIÓN';
+                                    $date_label = 'Creado el';
+                                    $date_val   = !empty($c['created_at']) ? date('d/m/Y', strtotime($c['created_at'])) : '—';
+                                }
+                            ?>
+                            <div style="background:<?php echo $bg; ?>; border:1px solid <?php echo $border; ?>; border-left:5px solid <?php echo $accent; ?>; border-radius:10px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                                <div>
+                                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+                                        <span style="font-size:18px;">📜</span>
+                                        <strong style="color:#1e293b; font-size:15px;"><?php echo esc_html($label); ?></strong>
+                                        <span style="background:<?php echo $badge_bg; ?>; color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; white-space:nowrap;"><?php echo $badge_text; ?></span>
+                                    </div>
+                                    <div style="font-size:12px; color:#6b7280;">
+                                        N° <?php echo esc_html($c['contract_number']); ?>
+                                        &nbsp;·&nbsp; <?php echo esc_html($date_label); ?> <?php echo esc_html($date_val); ?>
+                                        <?php if (!empty($c['monthly_amount']) && $c['monthly_amount'] > 0): ?>
+                                            &nbsp;·&nbsp; $<?php echo number_format((float)$c['monthly_amount'], 0, ',', '.'); ?> <?php echo esc_html($c['currency']); ?>/mes
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <?php if ($is_signed && !empty($c['signed_pdf_url'])): ?>
+                                    <a href="<?php echo esc_url($c['signed_pdf_url']); ?>"
+                                       download target="_blank"
+                                       style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(34,197,94,.3);white-space:nowrap;"
+                                       onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                                        ⬇️ Descargar PDF
+                                    </a>
+                                <?php elseif ($is_signed): ?>
+                                    <span style="font-size:12px;color:#9ca3af;font-style:italic;white-space:nowrap;">PDF en proceso…</span>
+                                <?php elseif ($needs_sign && !empty($c['sign_token'])): ?>
+                                    <a href="<?php echo esc_url(home_url('/contracts/sign-contract.php?token=' . urlencode($c['sign_token']))); ?>"
+                                       target="_blank"
+                                       style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(245,158,11,.3);white-space:nowrap;"
+                                       onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                                        ✍️ Firmar ahora
+                                    </a>
+                                <?php elseif ($in_prep): ?>
+                                    <?php if ($status === 'at_signed' && !empty($c['pdf_url'])): ?>
+                                        <a href="<?php echo esc_url($c['pdf_url']); ?>"
+                                           target="_blank"
+                                           style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(59,130,246,.3);white-space:nowrap;"
+                                           onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                                            👁️ Ver contrato
+                                        </a>
+                                    <?php else: ?>
+                                        <span style="font-size:12px;color:#9ca3af;font-style:italic;white-space:nowrap;">Aguarda, estamos preparando el contrato…</span>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                    <?php } ?>
+
                     <h2>🚀 Tus Proyectos</h2>
                     <?php if (empty($proyectos)): ?>
                         <p>No hay proyectos activos por el momento.</p>
@@ -4848,13 +4963,13 @@ class AutomatizaTech_CRM_AI {
                     <!-- Pestañas de navegación -->
                     <div class="timeline-tabs">
                         <button class="tl-tab active" data-tab="todos" onclick="switchTimelineTab('todos')">📋 Todos <span class="tl-tab-count"><?php echo $tab_counts['todos']; ?></span></button>
+                        <?php if (!empty($qa_projects_pub)): ?>
+                        <button class="tl-tab" data-tab="qa" onclick="switchTimelineTab('qa')">🧪 QA <span class="tl-tab-count"><?php echo count($qa_projects_pub); ?></span></button>
+                        <?php endif; ?>
                         <button class="tl-tab" data-tab="reuniones" onclick="switchTimelineTab('reuniones')">🤝 Reuniones <span class="tl-tab-count"><?php echo $tab_counts['reuniones']; ?></span></button>
                         <button class="tl-tab" data-tab="notas" onclick="switchTimelineTab('notas')">📝 Notas <span class="tl-tab-count"><?php echo $tab_counts['notas']; ?></span></button>
                         <button class="tl-tab" data-tab="pagos" onclick="switchTimelineTab('pagos')">💰 Pagos <span class="tl-tab-count"><?php echo $tab_counts['pagos']; ?></span></button>
                         <button class="tl-tab" data-tab="sistema" onclick="switchTimelineTab('sistema')">⚙️ Sistema <span class="tl-tab-count"><?php echo $tab_counts['sistema']; ?></span></button>
-                        <?php if (!empty($qa_projects_pub)): ?>
-                        <button class="tl-tab" data-tab="qa" onclick="switchTimelineTab('qa')">🧪 QA <span class="tl-tab-count"><?php echo count($qa_projects_pub); ?></span></button>
-                        <?php endif; ?>
                     </div>
 
                     <!-- Pestaña: Todos -->

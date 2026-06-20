@@ -4,16 +4,16 @@ import { getClients, createClient, updateClient, deleteClient, getImportableWpUs
 import ResultModal from './ResultModal';
 
 const planColors = {
-  basic: 'bg-gray-100 text-gray-700',
-  professional: 'bg-blue-100 text-blue-700',
-  enterprise: 'bg-purple-100 text-purple-700',
+  basic: 'bg-gray-100 text-gray-600 ring-1 ring-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:ring-slate-600',
+  professional: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20',
+  enterprise: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20',
 };
 
 const statusColors = {
-  trial: 'bg-yellow-100 text-yellow-700',
-  active: 'bg-green-100 text-green-700',
-  suspended: 'bg-red-100 text-red-700',
-  cancelled: 'bg-gray-100 text-gray-500',
+  trial: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20',
+  active: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20',
+  suspended: 'bg-rose-50 text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20',
+  cancelled: 'bg-gray-100 text-gray-500 ring-1 ring-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:ring-slate-600',
 };
 
 export default function ClientsView() {
@@ -215,43 +215,54 @@ export default function ClientsView() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-4 sm:p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900" style={{ fontFamily: 'Poppins, sans-serif' }}>🏢 Gestión de Clientes</h1>
-            <p className="text-sm text-gray-500 mt-1">Administra los clientes de AutomatizaTech</p>
+    <div className="flex-1 h-full overflow-y-auto bg-gray-50 dark:bg-slate-900">
+      {/* HERO FULL-BLEED */}
+      <div className="relative overflow-hidden px-6 py-6 text-white shadow-lg" style={{ backgroundImage: 'linear-gradient(120deg, #10b981, #16a34a)' }}>
+        <div className="absolute -top-12 -right-8 w-52 h-52 rounded-full blur-3xl bg-white/20" />
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center">
+              <Building2 size={26} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>Gestión de Clientes</h1>
+              <p className="text-sm text-white/75">Administra los clientes de AutomatizaTech</p>
+            </div>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <button onClick={() => { setShowImportCrm(true); loadCrmProspects(); }} className="flex items-center gap-2 px-3 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600">
+            <button onClick={() => { setShowImportCrm(true); loadCrmProspects(); }} className="flex items-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white rounded-lg shadow-sm text-sm font-medium transition-all duration-300">
               <Download size={16} /> Importar Prospectos
             </button>
-            <button onClick={() => { setShowImport(true); loadWpUsers(); }} className="flex items-center gap-2 px-3 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600">
+            <button onClick={() => { setShowImport(true); loadWpUsers(); }} className="flex items-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white rounded-lg shadow-sm text-sm font-medium transition-all duration-300">
               <Download size={16} /> Importar WP
             </button>
-            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+            <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 ring-1 ring-white/25 text-white rounded-lg shadow-sm text-sm font-semibold transition-all duration-300">
               <Plus size={16} /> Nuevo Cliente
             </button>
           </div>
         </div>
+      </div>
 
+      {/* CONTENIDO */}
+      <div className="p-4 sm:p-6">
+      <div className="max-w-6xl mx-auto">
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-            <input
+            <input aria-label="Buscar"
               type="text" value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && loadClients()}
               placeholder="Buscar por nombre, email..."
-              className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div className="flex gap-1 flex-wrap">
+          <div className="flex gap-1.5 flex-wrap">
             {['', 'trial', 'active', 'suspended'].map(s => (
               <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
-                className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${statusFilter === s ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                className={`px-3.5 py-2 rounded-full text-xs font-medium transition-all capitalize ${statusFilter === s ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md' : 'bg-white text-gray-500 ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700'}`}>
                 {s || 'Todos'}
               </button>
             ))}
@@ -260,44 +271,47 @@ export default function ClientsView() {
 
         {/* Client Cards */}
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-gray-400">
+          <div className="flex items-center justify-center py-20 text-gray-400 dark:text-slate-500">
             <Loader2 className="animate-spin mr-2" size={20} /> Cargando clientes...
           </div>
         ) : clients.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
-            <Building2 size={48} className="mx-auto mb-3 opacity-30" />
-            <p>No hay clientes registrados</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <span className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-lg mb-4">
+              <Building2 size={30} />
+            </span>
+            <p className="text-sm font-medium text-gray-600 dark:text-slate-300">No hay clientes registrados</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Crea o importa tu primer cliente para comenzar</p>
           </div>
         ) : (
           <div className="grid gap-3">
             {clients.map(c => (
-              <div key={c.id} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
+              <div key={c.id} className="group bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-5 shadow-md ring-1 ring-gray-100 dark:ring-slate-700/60 hover:shadow-xl hover:-translate-y-0.5 hover:bg-blue-50/40 dark:hover:bg-slate-700/40 transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white font-bold text-lg shrink-0 shadow-md group-hover:scale-105 transition-transform duration-300" style={{ fontFamily: 'Poppins, sans-serif' }}>
                   {(c.company_name || '?')[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-sm text-gray-900">{c.company_name}</h4>
-                  <p className="text-xs text-gray-500">{c.contact_name} · {c.email}</p>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${statusColors[c.status] || ''}`}>{c.status}</span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${planColors[c.plan_type] || ''}`}>{c.plan_type}</span>
+                  <h4 className="font-semibold text-sm text-gray-900 dark:text-white" style={{ fontFamily: 'Poppins, sans-serif' }}>{c.company_name}</h4>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{c.contact_name} · {c.email}</p>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${statusColors[c.status] || ''}`}>{c.status}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${planColors[c.plan_type] || ''}`}>{c.plan_type}</span>
                     {c.is_free === '1' ? (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700">🆓 Free</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20">🆓 Free</span>
                     ) : c.period_end ? (() => {
                       const days = Math.ceil((new Date(c.period_end + 'T23:59:59') - new Date()) / 86400000);
-                      if (days <= 0) return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">⛔ Expirado</span>;
-                      if (days <= 10) return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">⏳ {days}d restantes</span>;
-                      return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">📅 {new Date(c.period_end + 'T12:00:00').toLocaleDateString('es')}</span>;
+                      if (days <= 0) return <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20">⛔ Expirado</span>;
+                      if (days <= 10) return <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20">⏳ {days}d restantes</span>;
+                      return <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20">📅 {new Date(c.period_end + 'T12:00:00').toLocaleDateString('es')}</span>;
                     })() : (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500" title="Sin fechas de período">⚠️ Sin período</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500 ring-1 ring-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:ring-slate-600" title="Sin fechas de período">⚠️ Sin período</span>
                     )}
-                    <span className="text-[10px] text-gray-400">📡 {c.active_channels || 0} canales · 💬 {c.total_conversations || 0} conv · 👤 {c.active_agents || 0} agentes</span>
+                    <span className="text-[10px] text-gray-400 dark:text-slate-500">📡 {c.active_channels || 0} canales · 💬 {c.total_conversations || 0} conv · 👤 {c.active_agents || 0} agentes</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => handleViewDetail(c.id)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500" title="Ver detalle"><Eye size={16} /></button>
-                  <button onClick={() => setShowEdit({ ...c })} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500" title="Editar"><Edit3 size={16} /></button>
-                  <button onClick={() => handleDelete(c.id, c.company_name)} className="p-2 rounded-lg hover:bg-red-50 text-red-400" title="Eliminar"><Trash2 size={16} /></button>
+                  <button onClick={() => handleViewDetail(c.id)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 transition-colors" title="Ver detalle"><Eye size={16} /></button>
+                  <button onClick={() => setShowEdit({ ...c })} className="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 text-gray-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors" title="Editar"><Edit3 size={16} /></button>
+                  <button onClick={() => handleDelete(c.id, c.company_name)} className="p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 transition-colors" title="Eliminar"><Trash2 size={16} /></button>
                 </div>
               </div>
             ))}
@@ -308,12 +322,12 @@ export default function ClientsView() {
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-2 mt-6">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30">
+              className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-30 transition-colors">
               <ChevronLeft size={16} />
             </button>
-            <span className="text-sm text-gray-500">Página {page} de {totalPages}</span>
+            <span className="text-sm text-gray-500 dark:text-slate-400">Página {page} de {totalPages}</span>
             <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30">
+              className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-30 transition-colors">
               <ChevronRight size={16} />
             </button>
           </div>
@@ -329,8 +343,8 @@ export default function ClientsView() {
                 <FormField label="Email" type="email" value={form.email} onChange={v => setForm({...form, email: v})} required />
                 <FormField label="Teléfono" value={form.phone} onChange={v => setForm({...form, phone: v})} />
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Plan</label>
-                  <select value={form.plan_type} onChange={e => setForm({...form, plan_type: e.target.value})}
+                  <label htmlFor="clientsview-fld1" className="block text-xs font-medium text-gray-500 mb-1">Plan</label>
+                  <select id="clientsview-fld1" value={form.plan_type} onChange={e => setForm({...form, plan_type: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
                     <option value="basic">Basic</option>
                     <option value="professional">Professional</option>
@@ -348,8 +362,8 @@ export default function ClientsView() {
                   <FormField label="Fecha inicio" type="date" value={form.period_start} onChange={v => setForm({...form, period_start: v})} max={form.period_end || undefined} />
                   <FormField label="Fecha fin" type="date" value={form.period_end} onChange={v => setForm({...form, period_end: v})} min={form.period_start || undefined} error={form.period_start && form.period_end && form.period_end < form.period_start ? 'No puede ser anterior a la fecha inicio' : ''} />
                 </div>
-                <label className="flex items-center gap-2 mt-3 cursor-pointer">
-                  <input type="checkbox" checked={form.is_free} onChange={e => setForm({...form, is_free: e.target.checked})} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                <label htmlFor="clientsview-fld2" className="flex items-center gap-2 mt-3 cursor-pointer">
+                  <input id="clientsview-fld2" type="checkbox" checked={form.is_free} onChange={e => setForm({...form, is_free: e.target.checked})} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                   <span className="text-xs text-gray-600 dark:text-gray-300">Período gratuito (free) — sin vencimiento</span>
                 </label>
               </div>
@@ -373,8 +387,8 @@ export default function ClientsView() {
                 <FormField label="Email" value={showEdit.email || ''} onChange={v => setShowEdit({...showEdit, email: v})} />
                 <FormField label="Teléfono" value={showEdit.phone || ''} onChange={v => setShowEdit({...showEdit, phone: v})} />
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Plan</label>
-                  <select value={showEdit.plan_type || 'basic'} onChange={e => setShowEdit({...showEdit, plan_type: e.target.value})}
+                  <label htmlFor="clientsview-fld3" className="block text-xs font-medium text-gray-500 mb-1">Plan</label>
+                  <select id="clientsview-fld3" value={showEdit.plan_type || 'basic'} onChange={e => setShowEdit({...showEdit, plan_type: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
                     <option value="basic">Basic</option>
                     <option value="professional">Professional</option>
@@ -382,8 +396,8 @@ export default function ClientsView() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
-                  <select value={showEdit.status || 'trial'} onChange={e => setShowEdit({...showEdit, status: e.target.value})}
+                  <label htmlFor="clientsview-fld4" className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
+                  <select id="clientsview-fld4" value={showEdit.status || 'trial'} onChange={e => setShowEdit({...showEdit, status: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
                     <option value="trial">Trial</option>
                     <option value="active">Active</option>
@@ -408,14 +422,14 @@ export default function ClientsView() {
                   <FormField label="Fecha inicio" type="date" value={showEdit.period_start || ''} onChange={v => setShowEdit({...showEdit, period_start: v})} max={showEdit.period_end || undefined} />
                   <FormField label="Fecha fin" type="date" value={showEdit.period_end || ''} onChange={v => setShowEdit({...showEdit, period_end: v})} min={showEdit.period_start || undefined} error={showEdit.period_start && showEdit.period_end && showEdit.period_end < showEdit.period_start ? 'No puede ser anterior a la fecha inicio' : ''} />
                 </div>
-                <label className="flex items-center gap-2 mt-3 cursor-pointer">
-                  <input type="checkbox" checked={!!showEdit.is_free || showEdit.is_free === '1'} onChange={e => setShowEdit({...showEdit, is_free: e.target.checked ? '1' : '0'})} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                <label htmlFor="clientsview-fld5" className="flex items-center gap-2 mt-3 cursor-pointer">
+                  <input id="clientsview-fld5" type="checkbox" checked={!!showEdit.is_free || showEdit.is_free === '1'} onChange={e => setShowEdit({...showEdit, is_free: e.target.checked ? '1' : '0'})} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                   <span className="text-xs text-gray-600 dark:text-gray-300">Período gratuito (free) — sin vencimiento</span>
                 </label>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Notas internas</label>
-                <textarea value={showEdit.notes || ''} onChange={e => setShowEdit({...showEdit, notes: e.target.value})} rows={3}
+                <label htmlFor="clientsview-fld6" className="block text-xs font-medium text-gray-500 mb-1">Notas internas</label>
+                <textarea id="clientsview-fld6" value={showEdit.notes || ''} onChange={e => setShowEdit({...showEdit, notes: e.target.value})} rows={3}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex gap-2 pt-2">
@@ -484,7 +498,7 @@ export default function ClientsView() {
             <div className="space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                <input
+                <input aria-label="Buscar"
                   type="text" value={wpSearch}
                   onChange={e => setWpSearch(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && loadWpUsers()}
@@ -531,7 +545,7 @@ export default function ClientsView() {
             <div className="space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                <input
+                <input aria-label="Buscar"
                   type="text" value={crmSearch}
                   onChange={e => setCrmSearch(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && loadCrmProspects()}
@@ -553,7 +567,7 @@ export default function ClientsView() {
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 ${
                         p.tipo === 'cliente' ? 'bg-gradient-to-br from-green-400 to-emerald-600' :
                         p.tipo === 'cerrado' ? 'bg-gradient-to-br from-gray-400 to-gray-600' :
-                        'bg-gradient-to-br from-blue-400 to-indigo-600'
+                        'bg-gradient-to-br from-blue-400 to-blue-600'
                       }`}>
                         {(p.nombre || '?')[0].toUpperCase()}
                       </div>
@@ -568,7 +582,7 @@ export default function ClientsView() {
                             p.tipo === 'cerrado' ? 'bg-gray-100 text-gray-500' :
                             'bg-blue-100 text-blue-700'
                           }`}>{p.tipo}</span>
-                          {p.origen && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">{p.origen}</span>}
+                          {p.origen && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">{p.origen}</span>}
                         </div>
                       </div>
                       <button
@@ -611,6 +625,7 @@ export default function ClientsView() {
           />
         )}
       </div>
+      </div>
     </div>
   );
 }
@@ -619,7 +634,7 @@ export default function ClientsView() {
 
 function Modal({ title, onClose, children, wide }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div role="dialog" aria-modal="true" aria-label="Datos del cliente" className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div className={`relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} max-h-[90vh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700">
@@ -635,8 +650,8 @@ function Modal({ title, onClose, children, wide }) {
 function FormField({ label, value, onChange, type = 'text', required, placeholder, min, max, error }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
-      <input
+      <label htmlFor="clientsview-fld7" className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+      <input id="clientsview-fld7"
         type={type} value={value} onChange={e => onChange(e.target.value)}
         required={required} placeholder={placeholder} min={min} max={max}
         className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 ${error ? 'border-red-400 bg-red-50 dark:bg-red-900/10' : 'border-gray-200'}`}

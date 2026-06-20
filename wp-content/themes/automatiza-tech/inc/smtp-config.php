@@ -62,8 +62,23 @@ function automatiza_tech_smtp_config($phpmailer) {
         return; // No continuar sin credenciales
     }
     
-    // Reply-To
-    $phpmailer->addReplyTo(SMTP_USER, 'Automatiza Tech');
+    // Reply-To seguro: evita romper todo el envío si la dirección configurada es inválida.
+    $reply_to_email = defined('SMTP_REPLY_TO') ? constant('SMTP_REPLY_TO') : SMTP_USER;
+    $reply_to_email = sanitize_email($reply_to_email);
+
+    if (!is_email($reply_to_email)) {
+        $reply_to_email = sanitize_email($phpmailer->From);
+    }
+
+    if (is_email($reply_to_email)) {
+        try {
+            $phpmailer->addReplyTo($reply_to_email, 'Automatiza Tech');
+        } catch (Throwable $e) {
+            if (WP_DEBUG && WP_DEBUG_LOG) {
+                error_log('SMTP WARNING: Reply-To inválido, se omite. ' . $e->getMessage());
+            }
+        }
+    }
     
     // Configuración adicional
     $phpmailer->CharSet = 'UTF-8';

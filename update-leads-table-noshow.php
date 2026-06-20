@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Script para agregar columna no_show_email_sent a la tabla de citas
  * Ejecutar una sola vez: https://automatizatech.cl/update-leads-table-noshow.php

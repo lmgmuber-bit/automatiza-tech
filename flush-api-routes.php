@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/at-maintenance-guard.php';
+
 /**
  * Flush REST API routes - Ejecutar una vez y eliminar
  */

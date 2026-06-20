@@ -776,6 +776,90 @@ function automatiza_tech_reminders_page() {
 /**
  * AJAX Handler para envío manual
  */
+function automatiza_tech_parse_manual_reminder_emails($raw_emails) {
+    $raw = trim((string) $raw_emails);
+    if ($raw === '') {
+        return array();
+    }
+
+    $parts = preg_split('/[\s,;]+/', $raw, -1, PREG_SPLIT_NO_EMPTY);
+    $valid = array();
+
+    foreach ($parts as $part) {
+        $email = sanitize_email(trim($part));
+        if ($email !== '' && is_email($email)) {
+            $valid[] = strtolower($email);
+        }
+    }
+
+    return array_values(array_unique($valid));
+}
+
+function automatiza_tech_get_manual_reminder_recipients($lead) {
+    $recipients = array();
+
+    if (!empty($lead->email)) {
+        $recipients = array_merge($recipients, automatiza_tech_parse_manual_reminder_emails($lead->email));
+    }
+
+    $optional_fields = array('invitees_emails', 'copied_emails', 'cc_email', 'secondary_email', 'email_copy');
+    foreach ($optional_fields as $field) {
+        if (isset($lead->{$field}) && !empty($lead->{$field})) {
+            $recipients = array_merge($recipients, automatiza_tech_parse_manual_reminder_emails($lead->{$field}));
+        }
+    }
+
+    return array_values(array_unique($recipients));
+}
+
+/**
+ * Obtener perfiles para recordatorios manuales (correo + nombre).
+ */
+function automatiza_tech_get_manual_reminder_recipient_profiles($lead) {
+    $profiles = array();
+
+    if (!empty($lead->email)) {
+        $main_email = sanitize_email($lead->email);
+        if ($main_email !== '' && is_email($main_email)) {
+            $profiles[strtolower($main_email)] = array(
+                'email' => strtolower($main_email),
+                'name' => !empty($lead->name) ? sanitize_text_field($lead->name) : 'Cliente',
+            );
+        }
+    }
+
+    $invitees = automatiza_tech_parse_manual_reminder_emails($lead->invitees_emails ?? '');
+    $invitee_names = array();
+    if (!empty($lead->invitees_names)) {
+        $invitee_names = preg_split('/\s*[;,]\s*|\r\n|\r|\n/', (string) $lead->invitees_names, -1, PREG_SPLIT_NO_EMPTY);
+        $invitee_names = array_map('trim', $invitee_names);
+    }
+
+    foreach ($invitees as $index => $invitee_email) {
+        $name = isset($invitee_names[$index]) ? sanitize_text_field($invitee_names[$index]) : 'Participante';
+        $profiles[$invitee_email] = array(
+            'email' => $invitee_email,
+            'name' => $name !== '' ? $name : 'Participante',
+        );
+    }
+
+    $optional_fields = array('copied_emails', 'cc_email', 'secondary_email', 'email_copy');
+    foreach ($optional_fields as $field) {
+        if (isset($lead->{$field}) && !empty($lead->{$field})) {
+            foreach (automatiza_tech_parse_manual_reminder_emails($lead->{$field}) as $extra_email) {
+                if (!isset($profiles[$extra_email])) {
+                    $profiles[$extra_email] = array(
+                        'email' => $extra_email,
+                        'name' => 'Participante',
+                    );
+                }
+            }
+        }
+    }
+
+    return array_values($profiles);
+}
+
 function automatiza_tech_send_manual_reminder() {
     check_ajax_referer('manual_reminder_nonce', 'nonce');
     
@@ -854,7 +938,7 @@ function automatiza_tech_send_manual_reminder() {
                 <h1>Recordatorio de Reunión</h1>
             </div>
             <div class="content">
-                <p>Hola <strong>' . esc_html($lead->name) . '</strong>,</p>
+                <p>Hola <strong>{{RECIPIENT_NAME}}</strong>,</p>
                 <p>Esperamos que estés teniendo un excelente día.</p>
                 <p>Te escribimos para recordarte tu cita agendada ' . $context_msg . '.</p>
                 <p>Para ayudarnos a organizar mejor nuestra agenda, te agradecemos confirmar tu asistencia haciendo clic en uno de los siguientes botones:</p>
@@ -881,7 +965,28 @@ function automatiza_tech_send_manual_reminder() {
         'Content-Type: text/html; charset=UTF-8',
         'From: Automatiza Tech <' . $from_email . '>'
     );
-    $sent = wp_mail($lead->email, $subject, $html, $headers);
+    $recipient_profiles = automatiza_tech_get_manual_reminder_recipient_profiles($lead);
+    if (empty($recipient_profiles)) {
+        wp_send_json_error('No hay destinatarios válidos para este recordatorio');
+    }
+
+    $sent = false;
+    foreach ($recipient_profiles as $profile) {
+        $recipient_email = sanitize_email($profile['email'] ?? '');
+        if ($recipient_email === '' || !is_email($recipient_email)) {
+            continue;
+        }
+
+        $recipient_name = sanitize_text_field($profile['name'] ?? '');
+        if ($recipient_name === '') {
+            $recipient_name = 'Participante';
+        }
+
+        $personalized_html = str_replace('{{RECIPIENT_NAME}}', esc_html($recipient_name), $html);
+        if (wp_mail($recipient_email, $subject, $personalized_html, $headers)) {
+            $sent = true;
+        }
+    }
     
     if ($sent) {
         // Actualizar estado en DB

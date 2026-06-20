@@ -2201,7 +2201,7 @@ class ARIA_Agente {
         
         // Método 1: Usar pdftotext si está disponible (Linux)
         if (function_exists('shell_exec')) {
-            $output = shell_exec("pdftotext -layout -nopgbrk \"$pdf_path\" - 2>/dev/null");
+            $output = shell_exec('pdftotext -layout -nopgbrk ' . escapeshellarg($pdf_path) . ' - 2>/dev/null');
             if (!empty($output)) {
                 return "[Contenido PDF] " . substr(trim($output), 0, 3000) . (strlen($output) > 3000 ? '...' : '');
             }

@@ -17,6 +17,10 @@ function automatiza_tech_leads_manager_page() {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_leads';
     $logs_table_name = $wpdb->prefix . 'automatiza_leads_logs';
+    $lead_columns = $wpdb->get_col("SHOW COLUMNS FROM $table_name", 0);
+    $has_invitees_emails = in_array('invitees_emails', $lead_columns, true);
+    $has_invitees_names = in_array('invitees_names', $lead_columns, true);
+    $has_copied_emails = in_array('copied_emails', $lead_columns, true);
 
     // Handle Actions
     $action = isset($_GET['action']) ? $_GET['action'] : 'list';
@@ -74,6 +78,12 @@ function automatiza_tech_leads_manager_page() {
         
         $new_date = sanitize_text_field($_POST['scheduled_date']);
         $new_time = sanitize_text_field($_POST['scheduled_time']);
+        $invitees_input = sanitize_textarea_field($_POST['invitees_emails'] ?? '');
+        $invitees_parsed = automatiza_tech_parse_lead_emails_with_invalid($invitees_input);
+        $invitees_valid = $invitees_parsed['valid'];
+        $invitees_invalid = $invitees_parsed['invalid'];
+        $invitees_names = $invitees_parsed['names'] ?? array();
+        $invitees_names_by_email = $invitees_parsed['names_by_email'] ?? array();
         
         // Detectar si cambió fecha u hora
         $date_changed = ($original_lead->scheduled_date !== $new_date);
@@ -82,7 +92,9 @@ function automatiza_tech_leads_manager_page() {
         // === VALIDACIONES SI CAMBIÓ FECHA U HORA ===
         $validation_error = null;
         
-        if ($date_changed || $time_changed) {
+        if (!empty($invitees_invalid)) {
+            $validation_error = 'Correos en copia inválidos: ' . implode(', ', $invitees_invalid);
+        } elseif ($date_changed || $time_changed) {
             $validation_error = automatiza_tech_validate_appointment_datetime($new_date, $new_time, $id);
         }
         
@@ -93,6 +105,7 @@ function automatiza_tech_leads_manager_page() {
                 'id' => $id,
                 'name' => sanitize_text_field($_POST['name']),
                 'email' => sanitize_email($_POST['email']),
+                'invitees_emails' => $invitees_input,
                 'phone' => sanitize_text_field($_POST['phone']),
                 'scheduled_date' => $new_date,
                 'scheduled_time' => $new_time,
@@ -115,6 +128,19 @@ function automatiza_tech_leads_manager_page() {
                 'scheduled_time' => $new_time,
                 'confirmed_attendance' => $new_confirmed_attendance
             );
+
+            if ($has_invitees_emails) {
+                $data['invitees_emails'] = !empty($invitees_valid) ? implode(',', $invitees_valid) : null;
+            }
+            if ($has_invitees_names) {
+                $data['invitees_names'] = !empty($invitees_names) ? implode(',', $invitees_names) : null;
+            }
+            if ($has_copied_emails) {
+                $data['copied_emails'] = !empty($invitees_valid) ? implode(',', $invitees_valid) : null;
+            }
+
+            $previous_invitees = automatiza_tech_parse_lead_emails($original_lead->invitees_emails ?? '');
+            $added_invitees = array_values(array_diff($invitees_valid, $previous_invitees));
             
             // Detectar si cambió a "No Asistió" (confirmed_attendance = 0) y antes no estaba en ese estado
             $changed_to_noshow = ($new_confirmed_attendance === 0 && $original_lead->confirmed_attendance != '0');
@@ -150,6 +176,13 @@ function automatiza_tech_leads_manager_page() {
                 } else {
                     $messages[] = '⚠️ <strong>No se pudo enviar el email de reprogramación.</strong>';
                 }
+            }
+
+            if (!empty($added_invitees)) {
+                $updated_lead = (object) array_merge((array) $original_lead, $data);
+                automatiza_tech_notify_lead_copy_added($updated_lead, $added_invitees, $invitees_names_by_email);
+                automatiza_tech_send_lead_participant_invitations($updated_lead, $added_invitees, $invitees_names_by_email);
+                $messages[] = '👥 <strong>Se notificó al titular y se envió invitación a nuevos participantes.</strong>';
             }
             
             // Enviar WhatsApp si se marcó el checkbox
@@ -201,6 +234,10 @@ function automatiza_tech_leads_manager_page() {
             return;
         }
         $is_cancelled = ($lead->status === 'cancelled');
+        $invitees_field_value = $lead->invitees_emails ?? '';
+        if (!empty($lead->invitees_names)) {
+            $invitees_field_value .= ' / ' . $lead->invitees_names;
+        }
         ?>
         <div class="wrap">
             <h1>Editar Cita #<?php echo $lead->id; ?> <?php if ($is_cancelled): ?><span style="color:#d63638;">(Cancelada)</span><?php endif; ?></h1>
@@ -234,6 +271,13 @@ function automatiza_tech_leads_manager_page() {
                     <tr>
                         <th><label for="email">Email</label></th>
                         <td><input type="email" name="email" id="email" value="<?php echo esc_attr($lead->email); ?>" class="regular-text" required></td>
+                    </tr>
+                    <tr>
+                        <th><label for="invitees_emails">Correos en copia</label></th>
+                        <td>
+                            <textarea name="invitees_emails" id="invitees_emails" class="regular-text" rows="2" placeholder="correo1@empresa.com,correo2@empresa.com / Nombre1,Nombre2"><?php echo esc_textarea($invitees_field_value); ?></textarea>
+                            <p class="description">Opcional. Formato recomendado: correo1,correo2 / nombre1,nombre2</p>
+                        </td>
                     </tr>
                     <tr>
                         <th><label for="phone">Teléfono</label></th>
@@ -894,13 +938,248 @@ function automatiza_tech_mark_attendance() {
 }
 
 /**
+ * Parsear lista de copias para leads.
+ *
+ * Formato soportado:
+ * correo1,correo2 / nombre1,nombre2
+ */
+function automatiza_tech_parse_lead_emails_with_invalid($raw_emails) {
+    $raw = trim((string) $raw_emails);
+    if ($raw === '') {
+        return array(
+            'valid' => array(),
+            'invalid' => array(),
+            'names' => array(),
+            'names_by_email' => array(),
+        );
+    }
+
+    $emails_part = $raw;
+    $names_part = '';
+    if (strpos($raw, '/') !== false) {
+        $split = explode('/', $raw, 2);
+        $emails_part = trim($split[0]);
+        $names_part = trim($split[1]);
+    }
+
+    $parts = preg_split('/[\s,;]+/', $emails_part, -1, PREG_SPLIT_NO_EMPTY);
+    $name_parts = array();
+    if ($names_part !== '') {
+        $name_parts = preg_split('/\s*[;,]\s*|\r\n|\r|\n/', $names_part, -1, PREG_SPLIT_NO_EMPTY);
+        $name_parts = array_map('trim', $name_parts);
+    }
+
+    $valid = array();
+    $invalid = array();
+    $names_by_email = array();
+
+    foreach ($parts as $index => $part) {
+        $candidate = trim($part);
+        $email = sanitize_email($candidate);
+        $display_name = isset($name_parts[$index]) ? sanitize_text_field($name_parts[$index]) : '';
+
+        if ($email !== '' && is_email($email)) {
+            $email_key = strtolower($email);
+            if (!in_array($email_key, $valid, true)) {
+                $valid[] = $email_key;
+            }
+            if ($display_name !== '' && !isset($names_by_email[$email_key])) {
+                $names_by_email[$email_key] = $display_name;
+            }
+        } else {
+            $invalid[] = $candidate;
+        }
+    }
+
+    $ordered_names = array();
+    foreach ($valid as $email_key) {
+        $ordered_names[] = isset($names_by_email[$email_key]) ? $names_by_email[$email_key] : '';
+    }
+
+    return array(
+        'valid' => array_values(array_unique($valid)),
+        'invalid' => array_values(array_unique($invalid)),
+        'names' => $ordered_names,
+        'names_by_email' => $names_by_email,
+    );
+}
+
+/**
+ * Parsear lista de correos separados por coma, punto y coma o espacios.
+ */
+function automatiza_tech_parse_lead_emails($raw_emails) {
+    $parsed = automatiza_tech_parse_lead_emails_with_invalid($raw_emails);
+    return $parsed['valid'];
+}
+
+/**
+ * Obtener mapa de nombres por correo para invitados del lead.
+ */
+function automatiza_tech_get_lead_invitee_name_map($lead) {
+    $map = array();
+    $invitee_emails = automatiza_tech_parse_lead_emails($lead->invitees_emails ?? '');
+
+    $names_raw = isset($lead->invitees_names) ? (string) $lead->invitees_names : '';
+    if ($names_raw !== '') {
+        $name_parts = preg_split('/\s*[;,]\s*|\r\n|\r|\n/', $names_raw, -1, PREG_SPLIT_NO_EMPTY);
+        $name_parts = array_map('trim', $name_parts);
+
+        foreach ($invitee_emails as $index => $invitee_email) {
+            $name = isset($name_parts[$index]) ? sanitize_text_field($name_parts[$index]) : '';
+            if ($name !== '') {
+                $map[$invitee_email] = $name;
+            }
+        }
+    }
+
+    return $map;
+}
+
+/**
+ * Obtener perfiles de destinatarios del lead (correo + nombre).
+ */
+function automatiza_tech_get_lead_recipient_profiles($lead) {
+    $profiles = array();
+
+    if (!empty($lead->email)) {
+        $owner_email = sanitize_email($lead->email);
+        if ($owner_email !== '' && is_email($owner_email)) {
+            $profiles[strtolower($owner_email)] = array(
+                'email' => strtolower($owner_email),
+                'name' => !empty($lead->name) ? sanitize_text_field($lead->name) : 'Cliente',
+            );
+        }
+    }
+
+    $name_map = automatiza_tech_get_lead_invitee_name_map($lead);
+    $invitees = automatiza_tech_parse_lead_emails($lead->invitees_emails ?? '');
+    foreach ($invitees as $invitee_email) {
+        $profiles[$invitee_email] = array(
+            'email' => $invitee_email,
+            'name' => !empty($name_map[$invitee_email]) ? $name_map[$invitee_email] : 'Participante',
+        );
+    }
+
+    $optional_fields = array('copied_emails', 'cc_email', 'secondary_email', 'email_copy');
+    foreach ($optional_fields as $field) {
+        if (isset($lead->{$field}) && !empty($lead->{$field})) {
+            foreach (automatiza_tech_parse_lead_emails($lead->{$field}) as $extra_email) {
+                if (!isset($profiles[$extra_email])) {
+                    $profiles[$extra_email] = array(
+                        'email' => $extra_email,
+                        'name' => 'Participante',
+                    );
+                }
+            }
+        }
+    }
+
+    return array_values($profiles);
+}
+
+/**
+ * Obtener destinatarios para correos de leads (titular + copias opcionales).
+ */
+function automatiza_tech_get_lead_email_recipients($lead) {
+    $profiles = automatiza_tech_get_lead_recipient_profiles($lead);
+    return array_values(array_unique(array_map(function($profile) {
+        return $profile['email'];
+    }, $profiles)));
+}
+
+/**
+ * Avisar al titular del lead que se agregaron nuevos participantes en copia.
+ */
+function automatiza_tech_notify_lead_copy_added($lead, $added_invitees, $invitees_names_by_email = array()) {
+    $to = sanitize_email($lead->email ?? '');
+    if ($to === '' || !is_email($to) || empty($added_invitees)) {
+        return false;
+    }
+
+    $site_title = get_bloginfo('name');
+    $subject = '👥 Se agregaron participantes a tu demo | ' . $site_title;
+
+    $items = array();
+    foreach ($added_invitees as $added_email) {
+        $email_key = strtolower((string) $added_email);
+        $name = trim((string) ($invitees_names_by_email[$email_key] ?? ''));
+        $items[] = $name !== '' ? ($name . ' <' . $email_key . '>') : $email_key;
+    }
+
+    $html = '
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8fafc;border-radius:10px;">
+        <h2 style="color:#1e3a8a;margin-top:0;">Participantes agregados</h2>
+        <p>Hola <strong>' . esc_html($lead->name ?? 'Cliente') . '</strong>, se agregaron nuevos participantes en copia para tu demo:</p>
+        <p style="background:#fff;border-left:4px solid #06d6a0;padding:12px 14px;border-radius:6px;">' . esc_html(implode(', ', $items)) . '</p>
+    </div>';
+
+    $headers = array(
+        'Content-Type: text/html; charset=UTF-8',
+        'From: ' . $site_title . ' <noreply@automatizatech.cl>',
+    );
+
+    return wp_mail($to, $subject, $html, $headers);
+}
+
+/**
+ * Enviar invitación por correo a participantes recién agregados.
+ */
+function automatiza_tech_send_lead_participant_invitations($lead, $invitees, $invitees_names_by_email = array()) {
+    if (empty($invitees)) {
+        return false;
+    }
+
+    $site_title = get_bloginfo('name');
+    $headers = array(
+        'Content-Type: text/html; charset=UTF-8',
+        'From: Automatiza Tech <contacto@automatizatech.cl>',
+    );
+
+    $date_text = !empty($lead->scheduled_date) ? date('d/m/Y', strtotime($lead->scheduled_date)) : 'Por confirmar';
+    $time_text = !empty($lead->scheduled_time) ? substr($lead->scheduled_time, 0, 5) . ' hrs' : 'Por confirmar';
+    $owner_name = !empty($lead->name) ? $lead->name : 'Cliente';
+
+    $sent_any = false;
+    foreach ($invitees as $invitee_email) {
+        $to = sanitize_email($invitee_email);
+        if ($to === '' || !is_email($to)) {
+            continue;
+        }
+
+        $recipient_name = trim((string) ($invitees_names_by_email[strtolower($to)] ?? ''));
+        if ($recipient_name === '') {
+            $recipient_name = 'Participante';
+        }
+
+        $subject = '📅 Invitación a demo | ' . $site_title;
+        $html = '
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8fafc;border-radius:10px;">
+            <h2 style="color:#1e3a8a;margin-top:0;">Invitación a demo</h2>
+            <p>Hola <strong>' . esc_html($recipient_name) . '</strong>,</p>
+            <p>Fuiste agregado como participante de una demo con Automatiza Tech.</p>
+            <p><strong>Titular:</strong> ' . esc_html($owner_name) . '</p>
+            <p><strong>Fecha:</strong> ' . esc_html($date_text) . '</p>
+            <p><strong>Hora:</strong> ' . esc_html($time_text) . '</p>
+        </div>';
+
+        if (wp_mail($to, $subject, $html, $headers)) {
+            $sent_any = true;
+        }
+    }
+
+    return $sent_any;
+}
+
+/**
  * Enviar correo corporativo cuando no asistió
  */
 function automatiza_tech_send_no_show_email($lead) {
-    $to = $lead->email;
+    $recipient_profiles = automatiza_tech_get_lead_recipient_profiles($lead);
+    if (empty($recipient_profiles)) {
+        return false;
+    }
     $subject = '😔 Lamentamos no haberte visto - Te invitamos a reagendar | Automatiza Tech';
-    
-    $name = $lead->name;
+
     $scheduled_date = date('d/m/Y', strtotime($lead->scheduled_date));
     $scheduled_time = substr($lead->scheduled_time, 0, 5);
     
@@ -922,7 +1201,7 @@ function automatiza_tech_send_no_show_email($lead) {
             <p style="margin: 10px 0 0 0; opacity: 0.9;">Esperábamos poder conversar contigo</p>
         </div>
         
-        <p>Hola <strong>' . esc_html($name) . '</strong>,</p>
+        <p>Hola <strong>{{RECIPIENT_NAME}}</strong>,</p>
         
         <p>Notamos que no pudiste asistir a nuestra reunión programada para el <strong>' . $scheduled_date . '</strong> a las <strong>' . $scheduled_time . ' hrs</strong>.</p>
         
@@ -993,7 +1272,25 @@ function automatiza_tech_send_no_show_email($lead) {
         'Bcc: automatizacionesbotcore@gmail.com'
     );
     
-    return wp_mail($to, $subject, $body, $headers);
+    $sent_any = false;
+    foreach ($recipient_profiles as $profile) {
+        $recipient_email = sanitize_email($profile['email'] ?? '');
+        if ($recipient_email === '' || !is_email($recipient_email)) {
+            continue;
+        }
+
+        $recipient_name = sanitize_text_field($profile['name'] ?? '');
+        if ($recipient_name === '') {
+            $recipient_name = 'Participante';
+        }
+
+        $personalized_body = str_replace('{{RECIPIENT_NAME}}', esc_html($recipient_name), $body);
+        if (wp_mail($recipient_email, $subject, $personalized_body, $headers)) {
+            $sent_any = true;
+        }
+    }
+
+    return $sent_any;
 }
 
 /**
@@ -1079,10 +1376,12 @@ function automatiza_tech_validate_appointment_datetime($date, $time, $exclude_id
  * Enviar correo cuando se reprograma una cita desde el admin
  */
 function automatiza_tech_send_reschedule_email($lead, $original_lead) {
-    $to = $lead->email;
+    $recipient_profiles = automatiza_tech_get_lead_recipient_profiles($lead);
+    if (empty($recipient_profiles)) {
+        return false;
+    }
     $subject = '📅 Tu cita ha sido reprogramada | Automatiza Tech';
-    
-    $name = esc_html($lead->name);
+
     $new_date = date('d/m/Y', strtotime($lead->scheduled_date));
     $new_time = substr($lead->scheduled_time, 0, 5);
     $old_date = date('d/m/Y', strtotime($original_lead->scheduled_date));
@@ -1110,7 +1409,7 @@ function automatiza_tech_send_reschedule_email($lead, $original_lead) {
             <p style="margin: 10px 0 0 0; opacity: 0.9;">Tu reunión ha sido actualizada</p>
         </div>
         
-        <p>Hola <strong>' . $name . '</strong>,</p>
+        <p>Hola <strong>{{RECIPIENT_NAME}}</strong>,</p>
         
         <p>Te informamos que tu cita ha sido <strong>reprogramada</strong>. A continuación los nuevos detalles:</p>
         
@@ -1188,7 +1487,25 @@ function automatiza_tech_send_reschedule_email($lead, $original_lead) {
         'Bcc: automatizacionesbotcore@gmail.com'
     );
     
-    return wp_mail($to, $subject, $body, $headers);
+    $sent_any = false;
+    foreach ($recipient_profiles as $profile) {
+        $recipient_email = sanitize_email($profile['email'] ?? '');
+        if ($recipient_email === '' || !is_email($recipient_email)) {
+            continue;
+        }
+
+        $recipient_name = sanitize_text_field($profile['name'] ?? '');
+        if ($recipient_name === '') {
+            $recipient_name = 'Participante';
+        }
+
+        $personalized_body = str_replace('{{RECIPIENT_NAME}}', esc_html($recipient_name), $body);
+        if (wp_mail($recipient_email, $subject, $personalized_body, $headers)) {
+            $sent_any = true;
+        }
+    }
+
+    return $sent_any;
 }
 
 // ==================== NUEVAS ACCIONES Y MEJORAS ==================== //

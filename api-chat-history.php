@@ -8,20 +8,17 @@
  * - DELETE /api-chat-history.php?action=clear&session_id=XXX - Limpiar historial
  */
 
-// Headers CORS para permitir llamadas desde n8n
-header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-
-// Manejar preflight OPTIONS
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-// Cargar WordPress
+// Cargar WordPress (necesario para WP_ENVIRONMENT_TYPE en at-cors)
 require_once('wp-load.php');
+require_once __DIR__ . '/at-cors.php';
+require_once __DIR__ . '/at-rate-limit.php';
+
+// Headers
+header('Content-Type: application/json; charset=utf-8');
+at_cors_apply([
+    'methods' => 'GET, POST, DELETE, OPTIONS',
+    'headers' => 'Content-Type, Authorization',
+]);
 
 global $wpdb;
 $table_name = $wpdb->prefix . 'chat_history';
@@ -39,6 +36,12 @@ $wpdb->query("CREATE TABLE IF NOT EXISTS $table_name (
 
 // Obtener acción
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
+
+// Rate limit por acción: save=100/min, get=30/min, clear=10/min (anti abuso)
+$rl_max = $action === 'save' ? 100 : ($action === 'clear' ? 10 : 30);
+if ( ! at_rate_limit_check( 'chat_history_' . $action, $rl_max, 60 ) ) {
+    at_rate_limit_reject( 60 );
+}
 
 // Obtener datos del body JSON si es POST
 $json_input = file_get_contents('php://input');

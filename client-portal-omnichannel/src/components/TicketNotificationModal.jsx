@@ -25,7 +25,7 @@ export default function TicketNotificationModal({ onNavigateToSupport }) {
   if (!show || count === 0) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShow(false)}>
+    <div role="dialog" aria-modal="true" aria-label="Notificación de ticket" className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShow(false)}>
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full animate-in zoom-in" onClick={e => e.stopPropagation()}>
         <div className="p-5 text-center">
           <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
@@ -44,7 +44,7 @@ export default function TicketNotificationModal({ onNavigateToSupport }) {
             </button>
             <button
               onClick={() => { setShow(false); onNavigateToSupport?.(); }}
-              className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 flex items-center gap-1.5"
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 flex items-center gap-1.5"
             >
               <LifeBuoy size={14} /> Ver Tickets
             </button>

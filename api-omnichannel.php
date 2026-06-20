@@ -16,32 +16,18 @@ require_once __DIR__ . '/wp-load.php';
 ob_end_clean();
 
 require_once __DIR__ . '/omnichannel-controller.php';
+require_once __DIR__ . '/at-rate-limit.php';
+require_once __DIR__ . '/at-mime-check.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
-// CORS para el portal React
-$allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    'http://localhost:5176',
-    'http://localhost:3000',
-    'http://localhost',
-    rtrim(get_site_url(), '/'),
-];
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (in_array($origin, $allowed_origins, true)) {
-    header("Access-Control-Allow-Origin: $origin");
-} 
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Key, X-Admin-Token, X-Agent-Token');
-header('Access-Control-Max-Age: 86400');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
+// CORS centralizado (whitelist por ambiente)
+require_once __DIR__ . '/at-cors.php';
+at_cors_apply([
+    'methods' => 'GET, POST, PUT, DELETE, OPTIONS',
+    'headers' => 'Content-Type, Authorization, X-API-Key, X-Admin-Token, X-Agent-Token',
+]);
 
 $controller = new OmnichannelController();
 
@@ -49,6 +35,67 @@ $controller = new OmnichannelController();
 $method = $_SERVER['REQUEST_METHOD'];
 $path = isset($_GET['route']) ? sanitize_text_field($_GET['route']) : '';
 $body = json_decode(file_get_contents('php://input'), true) ?: [];
+
+/* ─── E3: helper compartido para upload de imágenes (evita 3 bloques idénticos) ─── */
+if ( ! function_exists( 'at_omni_process_image_uploads' ) ) {
+    /**
+     * Valida y sube un conjunto de imágenes vía `$_FILES[$key]`.
+     * Usa `at_verify_upload_mime()` (magic bytes) + `wp_handle_upload()`.
+     *
+     * @param string $files_key   Clave en $_FILES (ej. 'images', 'avatar').
+     * @param array  $allowed     MIMEs permitidos.
+     * @param int    $max_size    Tamaño máximo en bytes por archivo.
+     * @param int    $max_count   Máximo de archivos a procesar.
+     * @return array              Array de URLs subidas.
+     */
+    function at_omni_process_image_uploads( string $files_key, array $allowed, int $max_size, int $max_count = 5 ): array {
+        if ( empty( $_FILES[ $files_key ] ) ) {
+            return [];
+        }
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+
+        $files = $_FILES[ $files_key ];
+        // Normalizar al formato multi-archivo
+        if ( ! is_array( $files['name'] ) ) {
+            $files = [
+                'name'     => [ $files['name'] ],
+                'type'     => [ $files['type'] ],
+                'tmp_name' => [ $files['tmp_name'] ],
+                'error'    => [ $files['error'] ],
+                'size'     => [ $files['size'] ],
+            ];
+        }
+
+        $count = min( count( $files['name'] ), $max_count );
+        $urls  = [];
+        for ( $i = 0; $i < $count; $i++ ) {
+            if ( $files['error'][ $i ] !== UPLOAD_ERR_OK ) {
+                continue;
+            }
+            $real_mime = at_verify_upload_mime( $files['tmp_name'][ $i ], $allowed );
+            if ( ! $real_mime ) {
+                continue;
+            }
+            if ( $files['size'][ $i ] > $max_size ) {
+                continue;
+            }
+            $single = [
+                'name'     => $files['name'][ $i ],
+                'type'     => $real_mime,  // MIME verificado, nunca el declarado por el cliente
+                'tmp_name' => $files['tmp_name'][ $i ],
+                'error'    => $files['error'][ $i ],
+                'size'     => $files['size'][ $i ],
+            ];
+            $upload = wp_handle_upload( $single, [ 'test_form' => false ] );
+            if ( ! isset( $upload['error'] ) ) {
+                $urls[] = $upload['url'];
+            }
+        }
+        return $urls;
+    }
+}
 
 // ============================
 // AUTENTICACIÓN
@@ -80,15 +127,18 @@ function authenticate_admin() {
     if (is_user_logged_in() && current_user_can('manage_options')) {
         return;
     }
-    // 2. Token auth (mobile / external)
-    $token = $_SERVER['HTTP_X_ADMIN_TOKEN'] ?? '';
+    // 2. Token auth: header (legacy) or HttpOnly cookie (preferred)
+    $token = $_SERVER['HTTP_X_ADMIN_TOKEN'] ?? ($_COOKIE['at_admin_token'] ?? '');
     if (!empty($token)) {
         $valid = validate_admin_token($token);
         if ($valid) {
-            // Set WP current user so audit_log picks up user info
             wp_set_current_user($valid);
             return;
         }
+    }
+    // C4: log admin auth failures for security monitoring
+    if ( function_exists( 'at_secmon_log_event' ) ) {
+        at_secmon_log_event( 'api_auth_failed', [ 'endpoint' => $_SERVER['REQUEST_URI'] ?? '' ] );
     }
     send_json(['error' => 'Acceso denegado. Requiere permisos de administrador.'], 403);
 }
@@ -148,6 +198,10 @@ $segments = array_values($segments);
 try {
     // ---- HEALTH CHECK (para fallback N8N) ----
     if (isset($segments[0]) && $segments[0] === 'health') {
+        // Rate limit: 60 checks/min per IP (N8N polls at most every few seconds)
+        if ( ! at_rate_limit_check( 'omni_health', 60, 60 ) ) {
+            at_rate_limit_reject( 60, 'omni_health' );
+        }
         send_json(['status' => 'ok', 'timestamp' => current_time('c')]);
     }
 
@@ -249,7 +303,10 @@ try {
     // ---- CRON: Expiry reminders (called by N8N, secured with secret) ----
     if (isset($segments[0]) && $segments[0] === 'cron' && isset($segments[1]) && $segments[1] === 'expiry-reminders') {
         $provided_secret = sanitize_text_field($_GET['secret'] ?? ($body['secret'] ?? ''));
-        $cron_secret = defined('OMNICHANNEL_CRON_SECRET') ? OMNICHANNEL_CRON_SECRET : 'omni_cron_2026_s3cur3';
+        if (!defined('OMNICHANNEL_CRON_SECRET') || !OMNICHANNEL_CRON_SECRET) {
+            send_json(['error' => 'Cron secret no configurado'], 500);
+        }
+        $cron_secret = OMNICHANNEL_CRON_SECRET;
 
         if (empty($provided_secret) || !hash_equals($cron_secret, $provided_secret)) {
             send_json(['error' => 'No autorizado'], 403);
@@ -287,33 +344,13 @@ try {
     // ---- PUBLIC: Upload ticket images (no auth, rate limited by max 5 files) ----
     if (isset($segments[0]) && $segments[0] === 'public' && isset($segments[1]) && $segments[1] === 'upload-images' && $method === 'POST') {
         if (empty($_FILES['images'])) send_json(['error' => 'No se enviaron imágenes'], 400);
-        require_once(ABSPATH . 'wp-admin/includes/file.php');
-        require_once(ABSPATH . 'wp-admin/includes/image.php');
-        require_once(ABSPATH . 'wp-admin/includes/media.php');
-
-        $allowed_types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-        $max_size = 3 * 1024 * 1024; // 3MB per file
-        $urls = [];
-        $files = $_FILES['images'];
-
-        // Normalize to array format
-        if (!is_array($files['name'])) {
-            $files = ['name' => [$files['name']], 'type' => [$files['type']], 'tmp_name' => [$files['tmp_name']], 'error' => [$files['error']], 'size' => [$files['size']]];
-        }
-
-        $count = min(count($files['name']), 5);
-        for ($i = 0; $i < $count; $i++) {
-            if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
-            if (!in_array($files['type'][$i], $allowed_types, true)) continue;
-            if ($files['size'][$i] > $max_size) continue;
-
-            $single = ['name' => $files['name'][$i], 'type' => $files['type'][$i], 'tmp_name' => $files['tmp_name'][$i], 'error' => $files['error'][$i], 'size' => $files['size'][$i]];
-            $upload = wp_handle_upload($single, ['test_form' => false]);
-            if (!isset($upload['error'])) {
-                $urls[] = $upload['url'];
-            }
-        }
-
+        // E3: usar helper centralizado de upload
+        $urls = at_omni_process_image_uploads(
+            'images',
+            ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+            3 * 1024 * 1024,
+            5
+        );
         send_json(['urls' => $urls]);
     }
 
@@ -321,8 +358,8 @@ try {
     if (isset($segments[0]) && $segments[0] === 'admin') {
         // Ruta especial: verificar sesión admin (no requiere auth previa)
         if (($segments[1] ?? '') === 'session-check' && $method === 'GET') {
-            // Check token auth
-            $token = $_SERVER['HTTP_X_ADMIN_TOKEN'] ?? '';
+            // Check token: header (legacy) o cookie HttpOnly (preferido)
+            $token = $_SERVER['HTTP_X_ADMIN_TOKEN'] ?? ($_COOKIE['at_admin_token'] ?? '');
             if (!empty($token)) {
                 $user_id = validate_admin_token($token);
                 if ($user_id) {
@@ -350,6 +387,10 @@ try {
 
         // Ruta: login admin con usuario/contraseña → retorna token
         if (($segments[1] ?? '') === 'login' && $method === 'POST') {
+            // Rate limit: 5 intentos/hora por IP → anti brute-force
+            if ( ! at_rate_limit_check( 'omni_admin_login', 5, 3600 ) ) {
+                at_rate_limit_reject( 3600, 'omni_admin_login' );
+            }
             $username = sanitize_text_field($body['username'] ?? '');
             $password = $body['password'] ?? '';
             
@@ -373,7 +414,18 @@ try {
             }
             
             $token = generate_admin_token($user->ID);
-            
+
+            // Establecer cookie HttpOnly+Secure (evita acceso desde JavaScript/localStorage)
+            $cookie_opts = [
+                'expires'  => time() + 7 * 24 * 3600,
+                'path'     => '/',
+                'domain'   => '',
+                'secure'   => is_ssl(),
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ];
+            setcookie( 'at_admin_token', $token, $cookie_opts );
+
             send_json([
                 'success' => true,
                 'token'   => $token,
@@ -827,6 +879,61 @@ try {
                 }
                 break;
 
+            // Admin: AI Chat History (backend persistence for Omni Assistant)
+            case 'ai-chat-history':
+                $adm_key     = 'admin:' . get_current_user_id();
+                $adm_chat_id = sanitize_text_field($segments[2] ?? '');
+                if ($method === 'GET') {
+                    $rows = $wpdb->get_results(
+                        $wpdb->prepare(
+                            "SELECT id, messages, created_at, updated_at FROM {$wpdb->prefix}omnichannel_ai_chats WHERE agent_key = %s ORDER BY updated_at DESC LIMIT 30",
+                            $adm_key
+                        )
+                    );
+                    $chats = array_map(function($r) {
+                        $r->messages  = json_decode($r->messages, true) ?: [];
+                        $r->createdAt = (int) (strtotime($r->created_at) * 1000);
+                        $r->updatedAt = (int) (strtotime($r->updated_at) * 1000);
+                        return $r;
+                    }, $rows ?: []);
+                    send_json(['chats' => $chats]);
+                }
+                if ($method === 'POST') {
+                    $chat_id = sanitize_text_field($body['id'] ?? '');
+                    $messages = is_array($body['messages'] ?? null) ? $body['messages'] : [];
+                    if (empty($chat_id)) send_json(['error' => 'id requerido'], 400);
+                    $existing_key = $wpdb->get_var($wpdb->prepare(
+                        "SELECT agent_key FROM {$wpdb->prefix}omnichannel_ai_chats WHERE id = %s", $chat_id
+                    ));
+                    if ($existing_key && $existing_key !== $adm_key) send_json(['error' => 'Forbidden'], 403);
+                    $now = current_time('mysql');
+                    if ($existing_key) {
+                        $wpdb->update($wpdb->prefix . 'omnichannel_ai_chats', [
+                            'messages'   => wp_json_encode($messages, JSON_UNESCAPED_UNICODE),
+                            'updated_at' => $now,
+                        ], ['id' => $chat_id]);
+                    } else {
+                        $wpdb->insert($wpdb->prefix . 'omnichannel_ai_chats', [
+                            'id'         => $chat_id,
+                            'agent_key'  => $adm_key,
+                            'messages'   => wp_json_encode($messages, JSON_UNESCAPED_UNICODE),
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ]);
+                    }
+                    send_json(['saved' => true]);
+                }
+                if ($method === 'DELETE' && !empty($adm_chat_id)) {
+                    $existing_key = $wpdb->get_var($wpdb->prepare(
+                        "SELECT agent_key FROM {$wpdb->prefix}omnichannel_ai_chats WHERE id = %s", $adm_chat_id
+                    ));
+                    if (!$existing_key) send_json(['error' => 'Chat no encontrado'], 404);
+                    if ($existing_key !== $adm_key) send_json(['error' => 'Forbidden'], 403);
+                    $wpdb->delete($wpdb->prefix . 'omnichannel_ai_chats', ['id' => $adm_chat_id]);
+                    send_json(['deleted' => true]);
+                }
+                break;
+
             default:
                 send_json(['error' => 'Ruta admin no encontrada'], 404);
         }
@@ -836,12 +943,28 @@ try {
     if (isset($segments[0]) && $segments[0] === 'agent') {
         // Login: no requiere auth previa
         if (($segments[1] ?? '') === 'login' && $method === 'POST') {
+            // Rate limit: 5 intentos/hora por IP → anti brute-force
+            if ( ! at_rate_limit_check( 'omni_agent_login', 5, 3600 ) ) {
+                at_rate_limit_reject( 3600, 'omni_agent_login' );
+            }
             $email = sanitize_email($body['email'] ?? '');
             $password = $body['password'] ?? '';
             if (empty($email) || empty($password)) {
                 send_json(['error' => 'Email y contraseña requeridos'], 400);
             }
             $result = $controller->authenticate_agent($email, $password);
+            // Si el login fue exitoso, establecer cookie HttpOnly para el token
+            if ( empty($result['error']) && ! empty($result['token']) ) {
+                $cookie_opts = [
+                    'expires'  => time() + 7 * 24 * 3600,
+                    'path'     => '/',
+                    'domain'   => '',
+                    'secure'   => is_ssl(),
+                    'httponly' => true,
+                    'samesite' => 'Lax',
+                ];
+                setcookie( 'at_agent_token', $result['token'], $cookie_opts );
+            }
             send_json($result, isset($result['error']) ? 401 : 200);
         }
 
@@ -878,9 +1001,9 @@ try {
             send_json($result, isset($result['error']) ? 400 : 200);
         }
 
-        // Session check: validate existing token
+        // Session check: validate existing token (header or cookie)
         if (($segments[1] ?? '') === 'session-check' && $method === 'GET') {
-            $token = $_SERVER['HTTP_X_AGENT_TOKEN'] ?? '';
+            $token = $_SERVER['HTTP_X_AGENT_TOKEN'] ?? ($_COOKIE['at_agent_token'] ?? '');
             if (!empty($token)) {
                 $agent = $controller->validate_agent_token($token);
                 if ($agent) {
@@ -913,8 +1036,8 @@ try {
             send_json(['authenticated' => false], 200);
         }
 
-        // All other agent routes require valid token
-        $token = $_SERVER['HTTP_X_AGENT_TOKEN'] ?? '';
+        // All other agent routes require valid token (header or cookie)
+        $token = $_SERVER['HTTP_X_AGENT_TOKEN'] ?? ($_COOKIE['at_agent_token'] ?? '');
         $current_agent = $controller->validate_agent_token($token);
         if (!$current_agent) {
             send_json(['error' => 'Token de agente inválido o expirado'], 401);
@@ -1160,23 +1283,17 @@ try {
             case 'avatar':
                 if ($method === 'POST') {
                     if (empty($_FILES['avatar'])) send_json(['error' => 'No se envió imagen'], 400);
-                    $file = $_FILES['avatar'];
-                    $allowed_types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-                    if (!in_array($file['type'], $allowed_types, true)) {
-                        send_json(['error' => 'Tipo de archivo no permitido. Use JPG, PNG, WebP o GIF'], 400);
+                    // E3: usar helper centralizado (single-file: max_count=1)
+                    $avatar_urls = at_omni_process_image_uploads(
+                        'avatar',
+                        ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+                        2 * 1024 * 1024,
+                        1
+                    );
+                    if (empty($avatar_urls)) {
+                        send_json(['error' => 'Tipo de archivo no permitido, supera 2MB, o error al subir.'], 400);
                     }
-                    if ($file['size'] > 2 * 1024 * 1024) {
-                        send_json(['error' => 'La imagen no debe superar 2MB'], 400);
-                    }
-                    // Use WordPress upload
-                    require_once(ABSPATH . 'wp-admin/includes/file.php');
-                    require_once(ABSPATH . 'wp-admin/includes/image.php');
-                    require_once(ABSPATH . 'wp-admin/includes/media.php');
-                    $upload = wp_handle_upload($file, ['test_form' => false]);
-                    if (isset($upload['error'])) {
-                        send_json(['error' => $upload['error']], 400);
-                    }
-                    $avatar_url = $upload['url'];
+                    $avatar_url = $avatar_urls[0];
                     $wpdb->update($wpdb->prefix . 'omnichannel_agents', ['avatar_url' => esc_url_raw($avatar_url)], ['id' => $agent_id]);
                     $controller->audit_log('update', 'agent', $agent_id, "Avatar actualizado", null, ['avatar_url' => $avatar_url], $agent_client_id);
                     send_json(['avatar_url' => $avatar_url]);
@@ -1187,27 +1304,13 @@ try {
             case 'ticket-images':
                 if ($method === 'POST') {
                     if (empty($_FILES['images'])) send_json(['error' => 'No se enviaron imágenes'], 400);
-                    require_once(ABSPATH . 'wp-admin/includes/file.php');
-                    require_once(ABSPATH . 'wp-admin/includes/image.php');
-                    require_once(ABSPATH . 'wp-admin/includes/media.php');
-                    $allowed_types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-                    $max_size = 3 * 1024 * 1024;
-                    $urls = [];
-                    $files = $_FILES['images'];
-                    if (!is_array($files['name'])) {
-                        $files = ['name' => [$files['name']], 'type' => [$files['type']], 'tmp_name' => [$files['tmp_name']], 'error' => [$files['error']], 'size' => [$files['size']]];
-                    }
-                    $count = min(count($files['name']), 5);
-                    for ($i = 0; $i < $count; $i++) {
-                        if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
-                        if (!in_array($files['type'][$i], $allowed_types, true)) continue;
-                        if ($files['size'][$i] > $max_size) continue;
-                        $single = ['name' => $files['name'][$i], 'type' => $files['type'][$i], 'tmp_name' => $files['tmp_name'][$i], 'error' => $files['error'][$i], 'size' => $files['size'][$i]];
-                        $upload = wp_handle_upload($single, ['test_form' => false]);
-                        if (!isset($upload['error'])) {
-                            $urls[] = $upload['url'];
-                        }
-                    }
+                    // E3: usar helper centralizado
+                    $urls = at_omni_process_image_uploads(
+                        'images',
+                        ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+                        3 * 1024 * 1024,
+                        5
+                    );
                     send_json(['urls' => $urls]);
                 }
                 break;
@@ -1364,6 +1467,61 @@ try {
                     );
                     $code = isset($result['error']) ? ($result['code'] ?? 400) : 200;
                     send_json($result, $code);
+                }
+                break;
+
+            // Agent: AI Chat History (backend persistence for Omni Assistant)
+            case 'ai-chat-history':
+                $ai_key      = 'agent:' . $agent_id;
+                $ai_chat_seg = sanitize_text_field($segments[2] ?? '');
+                if ($method === 'GET') {
+                    $rows = $wpdb->get_results(
+                        $wpdb->prepare(
+                            "SELECT id, messages, created_at, updated_at FROM {$wpdb->prefix}omnichannel_ai_chats WHERE agent_key = %s ORDER BY updated_at DESC LIMIT 30",
+                            $ai_key
+                        )
+                    );
+                    $chats = array_map(function($r) {
+                        $r->messages  = json_decode($r->messages, true) ?: [];
+                        $r->createdAt = (int) (strtotime($r->created_at) * 1000);
+                        $r->updatedAt = (int) (strtotime($r->updated_at) * 1000);
+                        return $r;
+                    }, $rows ?: []);
+                    send_json(['chats' => $chats]);
+                }
+                if ($method === 'POST') {
+                    $chat_id = sanitize_text_field($body['id'] ?? '');
+                    $messages = is_array($body['messages'] ?? null) ? $body['messages'] : [];
+                    if (empty($chat_id)) send_json(['error' => 'id requerido'], 400);
+                    $existing_key = $wpdb->get_var($wpdb->prepare(
+                        "SELECT agent_key FROM {$wpdb->prefix}omnichannel_ai_chats WHERE id = %s", $chat_id
+                    ));
+                    if ($existing_key && $existing_key !== $ai_key) send_json(['error' => 'Forbidden'], 403);
+                    $now = current_time('mysql');
+                    if ($existing_key) {
+                        $wpdb->update($wpdb->prefix . 'omnichannel_ai_chats', [
+                            'messages'   => wp_json_encode($messages, JSON_UNESCAPED_UNICODE),
+                            'updated_at' => $now,
+                        ], ['id' => $chat_id]);
+                    } else {
+                        $wpdb->insert($wpdb->prefix . 'omnichannel_ai_chats', [
+                            'id'         => $chat_id,
+                            'agent_key'  => $ai_key,
+                            'messages'   => wp_json_encode($messages, JSON_UNESCAPED_UNICODE),
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ]);
+                    }
+                    send_json(['saved' => true]);
+                }
+                if ($method === 'DELETE' && !empty($ai_chat_seg)) {
+                    $existing_key = $wpdb->get_var($wpdb->prepare(
+                        "SELECT agent_key FROM {$wpdb->prefix}omnichannel_ai_chats WHERE id = %s", $ai_chat_seg
+                    ));
+                    if (!$existing_key) send_json(['error' => 'Chat no encontrado'], 404);
+                    if ($existing_key !== $ai_key) send_json(['error' => 'Forbidden'], 403);
+                    $wpdb->delete($wpdb->prefix . 'omnichannel_ai_chats', ['id' => $ai_chat_seg]);
+                    send_json(['deleted' => true]);
                 }
                 break;
 

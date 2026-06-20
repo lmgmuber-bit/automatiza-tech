@@ -1,31 +1,40 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import { Loader2 } from 'lucide-react';
 import { setApiKey, isAuthenticated, clearAuth, getIsAdmin, getIsAgent, isSupervisorOrAdmin, getOpenTicketCount } from './api';
 import Sidebar from './components/Sidebar';
 import LoginScreen from './components/LoginScreen';
-import InboxView from './components/InboxView';
-import ChannelsView from './components/ChannelsView';
-import BotsView from './components/BotsView';
-import BotConfigUnifiedView from './components/BotConfigUnifiedView';
-import AgentsView from './components/AgentsView';
-import AuditView from './components/AuditView';
-import ChannelTypesView from './components/ChannelTypesView';
-import ClientsView from './components/ClientsView';
-import DashboardView from './components/DashboardView';
-import ProfileView from './components/ProfileView';
-import SupportView from './components/SupportView';
-import PromptsView from './components/PromptsView';
+// Always-mounted overlays (small / needed immediately) stay in the main bundle
 import ExpiryWarningModal from './components/ExpiryWarningModal';
 import TicketNotificationModal from './components/TicketNotificationModal';
 import AssignedChatsModal from './components/AssignedChatsModal';
 import AiAssistantChat from './components/AiAssistantChat';
-import AiPromptView from './components/AiPromptView';
+
+// Route-like views are shown one at a time -> code-split each into its own chunk
+const InboxView = lazy(() => import('./components/InboxView'));
+const ChannelsView = lazy(() => import('./components/ChannelsView'));
+const BotsView = lazy(() => import('./components/BotsView'));
+const BotConfigUnifiedView = lazy(() => import('./components/BotConfigUnifiedView'));
+const AgentsView = lazy(() => import('./components/AgentsView'));
+const AuditView = lazy(() => import('./components/AuditView'));
+const ChannelTypesView = lazy(() => import('./components/ChannelTypesView'));
+const ClientsView = lazy(() => import('./components/ClientsView'));
+const DashboardView = lazy(() => import('./components/DashboardView'));
+const ProfileView = lazy(() => import('./components/ProfileView'));
+const SupportView = lazy(() => import('./components/SupportView'));
+const PromptsView = lazy(() => import('./components/PromptsView'));
+const AiPromptView = lazy(() => import('./components/AiPromptView'));
+const MarketingIgView = lazy(() => import('./components/MarketingIgView'));
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(isAuthenticated());
   const [currentView, setCurrentView] = useState(() => getIsAdmin() ? 'clients' : 'inbox');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('omni_theme') === 'dark');
+  const [darkMode, setDarkMode] = useState(() => {
+    const stored = localStorage.getItem('omni_theme');
+    if (stored) return stored === 'dark';
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+  });
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [periodWarning, setPeriodWarning] = useState(null);
   const [agentDataVersion, setAgentDataVersion] = useState(0);
@@ -187,6 +196,7 @@ export default function App() {
         ...(getIsAdmin() ? {
           clients: <ClientsView />,
           dashboard: <DashboardView />,
+          'marketing-ig': <MarketingIgView />,
           'ai-prompt': <AiPromptView />,
           support: <SupportView />,
         } : {
@@ -230,14 +240,21 @@ export default function App() {
               </svg>
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-[10px]">AT</div>
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-[10px]">AT</div>
               <span className="font-semibold text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>AutomatizaTech</span>
             </div>
           </div>
         )}
 
         <div className={`flex-1 flex flex-col overflow-hidden ${isMobile ? 'pt-12' : ''}`}>
-          {views[currentView] || views.inbox}
+          <Suspense fallback={
+            <div className="flex-1 flex items-center justify-center" role="status" aria-live="polite">
+              <Loader2 size={28} className="animate-spin text-blue-600" aria-hidden="true" />
+              <span className="sr-only">Cargando vista…</span>
+            </div>
+          }>
+            {views[currentView] || views.inbox}
+          </Suspense>
         </div>
       </div>
 

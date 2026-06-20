@@ -34,16 +34,47 @@ if (!$channel_id || empty($secret)) {
 }
 
 // Verificar webhook secret
+require_once __DIR__ . '/at-webhook-verify.php';
+require_once __DIR__ . '/at-rate-limit.php';
+
+// Rate limit: max 60 hits/min por IP+canal (los webhooks legitimos no superan esto en uso normal)
+if ( ! at_rate_limit_check( 'webhook_omni_' . $channel_id, 60, 60 ) ) {
+    at_rate_limit_reject( 30, 'webhook_omni' );
+}
+
 global $wpdb;
 $channel = $wpdb->get_row($wpdb->prepare(
     "SELECT * FROM {$wpdb->prefix}omnichannel_channels WHERE id = %d AND is_active = 1",
     $channel_id
 ));
 
-if (!$channel || !hash_equals($channel->webhook_secret, $secret)) {
+if ( ! $channel ) {
     http_response_code(403);
     echo wp_json_encode(['error' => 'No autorizado']);
     exit;
+}
+
+// 1) Preferir HMAC en header (X-AT-Signature + X-AT-Timestamp).
+// 2) Si el header no existe, caer al modo legacy con ?secret= via constant-time compare.
+//    El modo legacy sera removido tras migrar todos los proveedores.
+$raw_body  = file_get_contents( 'php://input' );
+$hmac_ok   = at_webhook_verify_hmac( $raw_body, $channel->webhook_secret );
+
+if ( $hmac_ok === false ) {
+    http_response_code( 403 );
+    echo wp_json_encode( [ 'error' => 'Firma invalida' ] );
+    exit;
+}
+if ( $hmac_ok === null ) {
+    // Legacy fallback: secret en query string.
+    if ( ! hash_equals( (string) $channel->webhook_secret, (string) $secret ) ) {
+        http_response_code( 403 );
+        echo wp_json_encode( [ 'error' => 'No autorizado' ] );
+        exit;
+    }
+    if ( function_exists( 'error_log' ) ) {
+        error_log( '[at-webhook] legacy ?secret= en uso para channel_id=' . $channel_id . ' - migrar a HMAC' );
+    }
 }
 
 // GET = verificación del webhook (WhatsApp/Meta)
@@ -66,7 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 // POST = mensaje entrante
-$raw_body = file_get_contents('php://input');
 $payload = json_decode($raw_body, true);
 
 if (empty($payload)) {
@@ -85,6 +115,14 @@ if (!$normalized) {
 }
 
 $result = $controller->receive_message($channel_id, $normalized);
+
+if (!isset($result['error'])) {
+    $wpdb->update(
+        $wpdb->prefix . 'omnichannel_channels',
+        ['last_synced_at' => current_time('mysql')],
+        ['id' => $channel_id]
+    );
+}
 
 http_response_code(isset($result['error']) ? 400 : 200);
 echo wp_json_encode($result);

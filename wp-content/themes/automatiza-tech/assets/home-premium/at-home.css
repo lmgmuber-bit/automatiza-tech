@@ -1,0 +1,80 @@
+/* AutomatizaTech — Home Premium
+ * Ported from Claude Design project "Rediseño AT" / AutomatizaTech Home.dc.html
+ * Base styles extracted verbatim from the design + runtime additions below.
+ */
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Manrope',system-ui,sans-serif;background:#05080d;color:var(--text);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+:root[data-theme="light"] body{background:#e4e9f1}
+#at-bg3d{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(1100px 800px at 72% 12%,#0b1830,#05080d 76%)}
+:root[data-theme="light"] #at-bg3d{background:radial-gradient(1100px 800px at 72% 12%,#dfeaf2,#eef2f7 72%)}
+#at-bg3d canvas{width:100%;height:100%;display:block}
+#at-root{position:relative;z-index:1}
+a{text-decoration:none;color:inherit}
+::selection{background:rgba(45,212,191,.25);color:#fff}
+[data-motion="off"] *{animation:none!important;transition:none!important}
+@keyframes atDriftA{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@keyframes atDriftB{0%,100%{transform:translateY(0)}50%{transform:translateY(10px)}}
+@keyframes atDriftC{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes atRing{0%{transform:scale(.75);opacity:.5}100%{transform:scale(2.1);opacity:0}}
+@keyframes atDash{to{stroke-dashoffset:-260}}
+@keyframes atGlow{0%,100%{opacity:.35}50%{opacity:.7}}
+@keyframes atSpin{to{transform:rotate(360deg)}}
+@keyframes atBlink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes atBar{0%{transform:scaleY(.25)}100%{transform:scaleY(1)}}
+@keyframes atSettle{0%{transform:translate(var(--cx),var(--cy)) rotate(var(--cr));opacity:.35;filter:blur(.4px)}48%{transform:none;opacity:1;filter:none}82%{transform:none;opacity:1}100%{transform:translate(var(--cx),var(--cy)) rotate(var(--cr));opacity:.35}}
+@keyframes atOrderIn{0%,42%{opacity:0;transform:translateX(8px)}55%,86%{opacity:1;transform:none}100%{opacity:0;transform:translateX(8px)}}
+@keyframes atFlowPulse{0%,40%{opacity:.15}55%{opacity:1}100%{opacity:.15}}
+
+:root{
+  --bg:rgba(8,12,21,.74);--bg-alt:rgba(6,10,18,.70);--surface:#0b131f;--surface-2:#0a111c;--surface-3:#11202f;--cta-bg:#0a1422;
+  --text:#f4f7fb;--text-2:#9bacc1;--text-3:#94a6ba;--text-faint:#74879c;
+  --accent-2:#5eead4;--label:#5fb8ad;--accent-text:#bfe9e1;
+  --ov1:rgba(255,255,255,.02);--ov2:rgba(255,255,255,.05);--bd1:rgba(255,255,255,.07);--bd2:rgba(255,255,255,.095);--bd3:rgba(255,255,255,.16);
+  --grid:rgba(255,255,255,.022);--menu-bg:rgba(7,11,19,.97);--nav-bg:rgba(7,11,19,.82);--nav-sh:0 12px 40px -24px rgba(0,0,0,.6);
+}
+:root[data-theme="light"]{
+  --bg:#eef1f7;--bg-alt:#e4e9f1;--surface:#ffffff;--surface-2:#f5f8fc;--surface-3:#eef3f9;--cta-bg:#e7f2f1;
+  --text:#0e1c30;--text-2:#46586d;--text-3:#5a6c81;--text-faint:#6f8094;
+  --accent-2:#0d9488;--label:#0e8276;--accent-text:#0c7d70;
+  --ov1:rgba(15,30,55,.03);--ov2:rgba(15,30,55,.05);--bd1:rgba(15,30,55,.09);--bd2:rgba(15,30,55,.13);--bd3:rgba(15,30,55,.2);
+  --grid:rgba(15,30,55,.045);--menu-bg:rgba(255,255,255,.98);--nav-bg:rgba(255,255,255,.86);--nav-sh:0 12px 40px -26px rgba(15,30,55,.4);
+}
+body{transition:background .4s ease,color .4s ease}
+#at-nav[data-scrolled]{background:var(--nav-bg);border-bottom-color:var(--bd2);box-shadow:var(--nav-sh)}
+input::placeholder{color:var(--text-faint)}
+
+/* ===== runtime additions (replace Claude Design template constructs) ===== */
+:root{--flow-cols:1fr auto 1fr;--flow-conn:block}
+@media(max-width:760px){:root{--flow-cols:1fr;--flow-conn:none}}
+
+sc-if{display:contents}
+/* FOUC defaults before JS applyScIf() runs (dark theme + desktop default) */
+sc-if[data-when="isMobile"],
+sc-if[data-when="isLight"],
+sc-if[data-when="menuOpen"],
+sc-if[data-when="modalOpen"],
+sc-if[data-when="chatOpen"],
+sc-if[data-when="scheduled"]{display:none}
+@media(max-width:919px){
+  sc-if[data-when="isDesktop"]{display:none}
+  sc-if[data-when="isMobile"]{display:contents}
+}
+
+/* case-study image placeholders (replace editor-only <image-slot>) */
+.at-slot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;width:100%;height:180px;color:var(--text-faint);background:linear-gradient(135deg,var(--surface-2),var(--surface-3));border-bottom:1px solid var(--bd1)}
+.at-slot svg{opacity:.5}
+.at-slot span{font-size:12px;font-weight:600;letter-spacing:.01em;max-width:82%;text-align:center;line-height:1.4}
+[data-hover]{cursor:pointer}
+
+/* ===== accesibilidad: anillo de foco para teclado =====
+ * Los inputs traen outline:none inline; restaurado con focus-visible (WCAG). */
+#at-root :focus-visible{outline:2px solid var(--accent-2);outline-offset:2px;border-radius:6px}
+#at-root input:focus-visible,#at-root select:focus-visible,#at-root textarea:focus-visible{outline:2px solid var(--accent-2)!important;outline-offset:1px}
+/* el ratón no muestra el anillo, solo teclado */
+#at-root :focus:not(:focus-visible){outline:none}
+
+/* ===== selector de horarios reales (at-agenda.js) ===== */
+.at-slot-btn{font-family:'JetBrains Mono';font-size:12.5px;font-weight:500;color:var(--text-2);background:var(--surface-2);border:1px solid var(--bd2);border-radius:9px;padding:8px 12px;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
+.at-slot-btn:hover{border-color:rgba(45,212,191,.45);color:var(--text)}
+.at-slot-btn.is-active{background:#2dd4bf;border-color:#2dd4bf;color:#061018;font-weight:600}

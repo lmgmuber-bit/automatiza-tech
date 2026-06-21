@@ -839,10 +839,15 @@ function automatiza_tech_save_lead($request) {
         return new WP_Error('db_error', 'Error al guardar en base de datos', array('status' => 500));
     }
 
+    $lead_id = (int) $wpdb->insert_id;
+    if (function_exists('automatiza_tech_home_premium_store_lead_attribution')) {
+        automatiza_tech_home_premium_store_lead_attribution($lead_id, $params);
+    }
+
     return array(
         'success' => true,
         'message' => 'Lead guardado correctamente',
-        'lead_id' => $wpdb->insert_id
+        'lead_id' => $lead_id
     );
 }
 

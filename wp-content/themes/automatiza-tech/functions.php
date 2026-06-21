@@ -1314,6 +1314,12 @@ require_once get_template_directory() . '/inc/chat-widget.php';
 require_once get_template_directory() . '/inc/api-endpoints.php';
 
 /**
+ * Home premium AT: SEO tecnico + atribucion de marketing por lead_id.
+ * El agendamiento usa el pipeline canonico REST /leads.
+ */
+require_once get_template_directory() . '/inc/home-premium-backend.php';
+
+/**
  * Incluir panel de recordatorios manuales
  */
 require_once get_template_directory() . '/inc/admin-reminders.php';

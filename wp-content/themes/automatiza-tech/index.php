@@ -44,7 +44,7 @@ get_header(); ?>
                     <?php echo esc_html(get_theme_mod('hero_subtitle', 'Conectamos tus ventas, web y CRM.')); ?>
                 </p>
                 <p class="hero-tagline">
-                    <?php echo esc_html(get_theme_mod('hero_tagline', 'Bots inteligentes para negocios que no se detienen.')); ?>
+                    <?php echo esc_html(get_theme_mod('hero_tagline', 'Automatización y tecnología digital premium para hacer crecer tu negocio.')); ?>
                 </p>
                 <div class="hero-cta">
                     <!-- Demo Button with Robot -->

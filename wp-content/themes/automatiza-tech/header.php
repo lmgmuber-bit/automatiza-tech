@@ -7,8 +7,8 @@
 
     <!-- SEO Meta Tags -->
     <?php if (is_front_page()): ?>
-    <meta name="description" content="Automatiza Tech - Conectamos tus ventas, web y CRM. Bots inteligentes para negocios que no se detienen.">
-    <meta name="keywords" content="automatización, chatbots, CRM, ventas, WhatsApp, Instagram, atención al cliente, bots inteligentes">
+    <meta name="description" content="AutomatizaTech - Automatización y tecnología digital premium para negocios: asistentes inteligentes, automatización, sitios web premium, apps y sistemas a medida.">
+    <meta name="keywords" content="automatización, tecnología digital, asistentes inteligentes, sitios web premium, aplicaciones web, apps móviles, sistemas a medida, CRM, WhatsApp, Instagram">
     <meta name="author" content="Automatiza Tech">
     <?php endif; ?>
 

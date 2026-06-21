@@ -4,7 +4,7 @@
                 <!-- Company Info -->
                 <div class="footer-section">
                     <h3>Automatiza Tech</h3>
-                    <p>Conectamos tus ventas, web y CRM con bots inteligentes para negocios que no se detienen.</p>
+                    <p>Automatización y tecnología digital premium para hacer crecer tu negocio: asistentes inteligentes, automatización, sitios premium, apps y sistemas a medida.</p>
                     <div class="social-links">
                         <a href="https://www.facebook.com/automatizatech.cl" target="_blank" rel="noopener" title="Facebook">
                             <i class="fab fa-facebook"></i>
@@ -25,7 +25,7 @@
                 <div class="footer-section">
                     <h3>Servicios</h3>
                     <ul>
-                        <li><a href="#beneficios">Chatbots Inteligentes</a></li>
+                        <li><a href="#beneficios">Asistentes Inteligentes</a></li>
                         <li><a href="#integraciones">Integración WhatsApp</a></li>
                         <li><a href="#integraciones">Automatización Instagram</a></li>
                         <li><a href="#integraciones">CRM Integration</a></li>
@@ -62,7 +62,7 @@
                         </li>
                         <li>
                             <i class="fas fa-clock"></i>
-                            Atención 24/7 con nuestros bots
+                            Atención 24/7 con asistentes inteligentes
                         </li>
                         <li>
                             <i class="fas fa-map-marker-alt"></i>
@@ -143,7 +143,7 @@
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     "name": "Automatiza Tech",
-    "description": "Conectamos tus ventas, web y CRM. Bots inteligentes para negocios que no se detienen.",
+    "description": "Automatización y tecnología digital premium para negocios: asistentes inteligentes, automatización, sitios web premium, apps y sistemas a medida.",
     "url": "<?php echo esc_url(home_url()); ?>",
     "telephone": "<?php echo esc_attr(get_theme_mod('whatsapp_number', '+56 9 2700 2984')); ?>",
     "email": "contacto@automatizatech.cl",
@@ -160,8 +160,8 @@
                 "@type": "Offer",
                 "itemOffered": {
                     "@type": "Service",
-                    "name": "Chatbots Inteligentes",
-                    "description": "Automatización de atención al cliente 24/7"
+                    "name": "Asistentes Inteligentes",
+                    "description": "Atención y ventas automatizadas 24/7 en WhatsApp, Instagram y web"
                 }
             },
             {

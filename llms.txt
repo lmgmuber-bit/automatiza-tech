@@ -1,0 +1,20 @@
+# AutomatizaTech
+
+AutomatizaTech crea automatizacion y tecnologia digital premium para negocios en Chile: asistentes inteligentes, automatizaciones, sitios web premium, aplicaciones web, apps moviles y sistemas a medida.
+
+## Oferta principal
+
+Diagnostico gratis: en 15 a 30 minutos revisamos el negocio y recomendamos que tecnologia conviene implementar primero.
+
+## Servicios
+
+- Asistentes inteligentes para atencion, ventas, agenda, soporte y seguimiento.
+- Automatizacion de negocios entre WhatsApp, Instagram, CRM, formularios, pagos, correos, reportes y tareas internas.
+- Sitios web premium mobile-first con SEO, copy, conversion y experiencia visual.
+- Aplicaciones web, portales, dashboards y sistemas administrativos.
+- Apps moviles para reservas, fidelizacion, comunidad o productos digitales.
+- Sistemas a medida con frontend, backend, IA, CRM, automatizacion e integraciones.
+
+## Lenguaje recomendado
+
+Usar "asistente inteligente" como termino principal. Usar "chatbot" solo cuando el contexto sea tecnico o SEO. AutomatizaTech no es una empresa barata de bots o paginas simples; es un partner tecnologico para negocios que quieren vender mejor, responder mas rapido y operar con menos caos.

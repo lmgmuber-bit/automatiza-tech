@@ -910,14 +910,23 @@ class OmnichannelController {
             $channel_id, $external_contact_id
         ));
 
-        // Instagram: el webhook no trae nombre, solo el IGSID. Enriquecer una sola
-        // vez (al crear la conversación o si sigue sin nombre) para no llamar a la
-        // Graph API en cada mensaje entrante.
+        // Instagram: el webhook no trae nombre, solo el IGSID. Enriquecer al crear
+        // la conversación, si sigue sin nombre, o si el guardado todavía es el
+        // placeholder sintético ("Usuario Instagram …"). Así el nombre real se
+        // auto-cura en el próximo mensaje cuando la Graph API ya responda, en vez
+        // de quedar pegado para siempre. Si la API solo devuelve el placeholder,
+        // no pisamos un nombre real existente.
         if ($channel->channel_type === 'instagram'
             && empty($message_data['contact_name'])
-            && (!$conversation || empty($conversation->contact_name))) {
-            $profile = $this->get_instagram_profile($channel, $external_contact_id);
-            $message_data['contact_name'] = $this->ig_display_name($profile, $external_contact_id);
+            && (!$conversation
+                || empty($conversation->contact_name)
+                || $this->is_placeholder_contact_name($conversation->contact_name))) {
+            $profile  = $this->get_instagram_profile($channel, $external_contact_id);
+            $resolved = $this->ig_display_name($profile, $external_contact_id);
+            $got_real = !$this->is_placeholder_contact_name($resolved);
+            if ($got_real || !$conversation || empty($conversation->contact_name)) {
+                $message_data['contact_name'] = $resolved;
+            }
             if ($profile && !empty($profile['profile_pic']) && empty($message_data['contact_avatar_url'])) {
                 $message_data['contact_avatar_url'] = $profile['profile_pic'];
             }
@@ -946,9 +955,13 @@ class OmnichannelController {
                 'last_message_preview' => mb_substr(sanitize_text_field($message_data['content'] ?? ''), 0, 500),
                 'unread_count'         => ($conversation->unread_count ?? 0) + 1,
             ];
-            // Update contact name/phone if originally empty
+            // Update contact name if originally empty, o si lo guardado es el
+            // placeholder sintético y ahora tenemos un nombre real.
             $contact_name = sanitize_text_field($message_data['contact_name'] ?? '');
-            if (!empty($contact_name) && empty($conversation->contact_name)) {
+            if (!empty($contact_name)
+                && (empty($conversation->contact_name)
+                    || ($this->is_placeholder_contact_name($conversation->contact_name)
+                        && !$this->is_placeholder_contact_name($contact_name)))) {
                 $update_data['contact_name'] = $contact_name;
             }
             $contact_phone = sanitize_text_field($message_data['contact_phone'] ?? '');
@@ -3098,14 +3111,29 @@ class OmnichannelController {
         $res = $this->ig_api_request('GET', $channel, rawurlencode($igsid) . '?fields=name,username,profile_pic');
         if (empty($res['success'])) {
             if (function_exists('error_log')) {
-                error_log('[at-ig] profile lookup failed igsid=' . $igsid . ' err=' . ($res['error'] ?? '?'));
+                error_log('[at-ig] profile lookup failed igsid=' . $igsid
+                    . ' err=' . ($res['error'] ?? '?') . ' code=' . ($res['code'] ?? '?'));
             }
-            return null;
+            // Algunos tokens/cuentas rechazan 'username' o 'profile_pic' (#100
+            // nonexisting field / sin permiso) y tumban toda la petición.
+            // Reintentar solo con 'name', el campo más disponible, antes de rendirse.
+            $res = $this->ig_api_request('GET', $channel, rawurlencode($igsid) . '?fields=name');
+            if (empty($res['success'])) {
+                if (function_exists('error_log')) {
+                    error_log('[at-ig] profile retry (name-only) failed igsid=' . $igsid
+                        . ' err=' . ($res['error'] ?? '?') . ' code=' . ($res['code'] ?? '?'));
+                }
+                return null;
+            }
         }
-        $d = $res['data'];
+        $d    = $res['data'];
+        $name = sanitize_text_field($d['name'] ?? '');
+        $user = sanitize_text_field($d['username'] ?? '');
+        // Sin nombre ni usuario no hay nada útil: dejar que el caller use el placeholder.
+        if ($name === '' && $user === '') return null;
         return [
-            'name'        => sanitize_text_field($d['name'] ?? ''),
-            'username'    => sanitize_text_field($d['username'] ?? ''),
+            'name'        => $name,
+            'username'    => $user,
             'profile_pic' => esc_url_raw($d['profile_pic'] ?? ''),
         ];
     }
@@ -3123,6 +3151,17 @@ class OmnichannelController {
             if ($user !== '') return '@' . $user;
         }
         return 'Usuario Instagram ' . substr((string) $igsid, -6);
+    }
+
+    /**
+     * True si el nombre es un placeholder sintético generado por nosotros
+     * ("Usuario Instagram/WhatsApp/Messenger <id>") o está vacío. Sirve para
+     * reintentar el enriquecimiento hasta tener un nombre real.
+     */
+    private function is_placeholder_contact_name($name) {
+        $name = trim((string) $name);
+        if ($name === '') return true;
+        return (bool) preg_match('/^Usuario\s+(Instagram|WhatsApp|Messenger)\s+\S+$/u', $name);
     }
 
     // =========================================================

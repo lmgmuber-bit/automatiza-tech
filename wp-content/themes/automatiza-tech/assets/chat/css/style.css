@@ -534,3 +534,155 @@
         height: calc(100vh - 90px);
     }
 }
+
+/* =====================================================================
+   REDISEÑO TECH REAL — identidad Home Premium (dark-teal)
+   ===================================================================== */
+/* Avatar real (peek) */
+.chat-robot-avatar--tech {
+    width: 58px; height: 58px; border-radius: 50%; overflow: hidden; margin-bottom: 8px;
+    border: 2px solid rgba(45,212,191,0.6); background: #0a1422;
+    box-shadow: 0 12px 32px -10px rgba(45,212,191,0.6), inset 0 0 18px rgba(45,212,191,0.12);
+}
+.chat-robot-avatar--tech img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Bubble del peek → dark/teal */
+.chat-robot-bubble {
+    background: rgba(8,12,21,0.96) !important;
+    border: 1px solid rgba(45,212,191,0.3);
+    box-shadow: 0 10px 28px -12px rgba(0,0,0,0.8) !important;
+    color: #f4f7fb !important;
+}
+.chat-robot-text { color: #f4f7fb !important; }
+.chat-bubble-tail { border-bottom-color: rgba(8,12,21,0.96) !important; }
+
+/* Toggle (pill flotante "Pregúntale a Tech") → dark + teal (modo oscuro/legacy) */
+:root:not([data-theme="light"]) #automatiza-ai-chat-toggle {
+    background: rgba(11,19,31,0.95) !important;
+    border: 1px solid rgba(45,212,191,0.45) !important;
+    color: #f4f7fb !important;
+    box-shadow: 0 18px 44px -16px rgba(45,212,191,0.55) !important;
+    backdrop-filter: blur(12px);
+}
+#automatiza-ai-chat-toggle svg { color: #2dd4bf !important; stroke: #2dd4bf !important; }
+.toggle-text { color: #f4f7fb !important; font-family: 'Space Grotesk', system-ui, sans-serif; }
+#automatiza-ai-chat-toggle::after { border-color: rgba(45,212,191,0.4) !important; }
+
+/* Panel del chat → dark teal */
+#automatiza-ai-chat-widget { border: 1px solid rgba(45,212,191,0.2) !important; }
+.chat-header {
+    background: linear-gradient(120deg, #0b1830 0%, #0a1422 100%) !important;
+    border-bottom: 1px solid rgba(45,212,191,0.2);
+    display: flex; align-items: center; gap: 10px;
+}
+.chat-header-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(45,212,191,0.5); flex: none; }
+.chat-title { font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600; }
+.chat-header-sub { font-size: 11px; color: #34d399; font-weight: 500; letter-spacing: 0.02em; }
+
+/* Input + enviar → teal */
+#chat-send-btn { background-color: #2dd4bf !important; color: #061018 !important; }
+#chat-send-btn:hover { background-color: #14b8a6 !important; }
+.chat-input-area input:focus { border-color: #2dd4bf !important; box-shadow: 0 0 0 3px rgba(45,212,191,0.12) !important; }
+
+/* ===== Modo CLARO (toggle del home premium) — el chat coincide con el tema ===== */
+[data-theme="light"] #automatiza-chat-toggle-container #automatiza-ai-chat-toggle {
+    background: rgba(255,255,255,0.96) !important;
+    border: 1px solid rgba(13,148,136,0.4) !important;
+    color: #0e1c30 !important;
+    box-shadow: 0 18px 44px -16px rgba(13,148,136,0.4) !important;
+}
+[data-theme="light"] #automatiza-ai-chat-toggle svg { color: #0d9488 !important; stroke: #0d9488 !important; }
+[data-theme="light"] .toggle-text { color: #0e1c30 !important; }
+[data-theme="light"] .chat-robot-bubble { background: #ffffff !important; color: #0e1c30 !important; border: 1px solid rgba(13,148,136,0.3); }
+[data-theme="light"] .chat-robot-text { color: #0e1c30 !important; }
+[data-theme="light"] .chat-bubble-tail { border-bottom-color: #ffffff !important; }
+[data-theme="light"] .chat-robot-avatar--tech { background: #eef3f9; }
+[data-theme="light"] .chat-header { background: linear-gradient(120deg, #e7f2f1 0%, #ffffff 100%) !important; border-bottom: 1px solid rgba(13,148,136,0.2); }
+[data-theme="light"] .chat-title { color: #0e1c30 !important; }
+[data-theme="light"] #automatiza-ai-chat-widget { border-color: rgba(13,148,136,0.25) !important; }
+[data-theme="light"] .chat-messages, [data-theme="light"] .chat-input-area { background: #ffffff !important; }
+[data-theme="light"] #chat-send-btn { background-color: #0d9488 !important; color: #ffffff !important; }
+
+/* ===== Panel del chat: tematizado completo (coincide con el modo) ===== */
+/* OSCURO / legacy → cuerpo del panel oscuro */
+:root:not([data-theme="light"]) #automatiza-ai-chat-widget { background-color: #0b131f !important; }
+:root:not([data-theme="light"]) .chat-messages { background-color: #0a111c !important; }
+:root:not([data-theme="light"]) .message.bot,
+:root:not([data-theme="light"]) .message.loading { background-color: #11202f !important; color: #e8eef5 !important; }
+:root:not([data-theme="light"]) .message.user { background-color: #2dd4bf !important; color: #061018 !important; }
+:root:not([data-theme="light"]) .chat-input-area { background-color: #0b131f !important; border-top: 1px solid rgba(255,255,255,0.08) !important; }
+:root:not([data-theme="light"]) #chat-input { background-color: #0a111c !important; border-color: rgba(255,255,255,0.12) !important; color: #f4f7fb !important; }
+:root:not([data-theme="light"]) .chat-message-avatar { background-color: #0a1422 !important; border-color: rgba(45,212,191,0.35) !important; }
+/* (en oscuro el título y la X son blancos por defecto → visibles sobre el header oscuro) */
+
+/* CLARO → título + X visibles (eran blancos) */
+[data-theme="light"] .chat-header .chat-title { color: #0e1c30 !important; }
+[data-theme="light"] .chat-header .chat-header-sub { color: #0d9488 !important; }
+[data-theme="light"] .chat-close-btn { color: #46586d !important; }
+[data-theme="light"] .message.user { background-color: #0d9488 !important; color: #ffffff !important; }
+
+/* ===== Home Premium: posición/z-index del widget real para no tapar el CTA inferior ===== */
+body.at-home-premium #automatiza-chat-toggle-container {
+    right: 22px !important;
+    bottom: 22px !important;
+    z-index: 80 !important;
+}
+body.at-home-premium #automatiza-ai-chat-widget {
+    right: 22px !important;
+    bottom: 88px !important;
+    z-index: 90 !important;
+}
+
+/* ===== Formulario "Agendar Demo" dentro del chat — coincide con el tema ===== */
+/* Layout base del <select> (el de Hora no trae estilos inline) */
+.chat-form select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+
+/* OSCURO */
+:root:not([data-theme="light"]) .chat-form {
+    background: #0f1c2b !important;
+    border-color: rgba(255,255,255,0.10) !important;
+    box-shadow: 0 12px 28px -18px rgba(0,0,0,0.85) !important;
+}
+:root:not([data-theme="light"]) .chat-form h4 { color: #f4f7fb !important; }
+:root:not([data-theme="light"]) .chat-form label { color: #aebccd !important; }
+:root:not([data-theme="light"]) .chat-form input,
+:root:not([data-theme="light"]) .chat-form select {
+    background-color: #0a111c !important;
+    border: 1px solid rgba(255,255,255,0.14) !important;
+    color: #f4f7fb !important;
+    color-scheme: dark; /* icono nativo de date/time en oscuro */
+}
+:root:not([data-theme="light"]) .chat-form input::placeholder { color: #6b7c91 !important; }
+:root:not([data-theme="light"]) .chat-form input:focus,
+:root:not([data-theme="light"]) .chat-form select:focus { border-color: #2dd4bf !important; outline: none; }
+:root:not([data-theme="light"]) .chat-form option,
+:root:not([data-theme="light"]) .chat-form optgroup {
+    background-color: #0a111c !important;
+    color: #f4f7fb !important;
+}
+:root:not([data-theme="light"]) .chat-form button { background: #2dd4bf !important; color: #061018 !important; }
+:root:not([data-theme="light"]) .chat-form button:hover { background: #25b3a3 !important; }
+:root:not([data-theme="light"]) .chat-form button:disabled { background: #2a3a4d !important; color: #5d6b7d !important; }
+
+/* CLARO (mantiene superficie clara, alinea el acento al teal del home) */
+[data-theme="light"] .chat-form { background: #ffffff !important; border-color: #e3e9f0 !important; }
+[data-theme="light"] .chat-form h4 { color: #0e1c30 !important; }
+[data-theme="light"] .chat-form label { color: #46586d !important; }
+[data-theme="light"] .chat-form input,
+[data-theme="light"] .chat-form select {
+    background-color: #ffffff !important;
+    border: 1px solid #d4dce6 !important;
+    color: #0e1c30 !important;
+    color-scheme: light;
+}
+[data-theme="light"] .chat-form input:focus,
+[data-theme="light"] .chat-form select:focus { border-color: #0d9488 !important; outline: none; }
+[data-theme="light"] .chat-form button { background: #0d9488 !important; color: #ffffff !important; }
+[data-theme="light"] .chat-form button:hover { background: #0b7c72 !important; }

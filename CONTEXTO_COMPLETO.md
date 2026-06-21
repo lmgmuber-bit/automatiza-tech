@@ -97,6 +97,7 @@ El `.gitignore` excluye: `wp-admin/`, `wp-includes/`, core WP, uploads, `wp-conf
 | PDFs | FPDF 1.86 | Facturas, cotizaciones, boletas |
 | Gráficos | Chart.js (CDN) | Dashboard |
 | SMTP | PHPMailer | smtp.hostinger.com:587 TLS |
+> **Regla operativa PHP:** este proyecto corre y se valida en **PHP 8.x**. Local recomendado: `C:\wamp64\bin\php\php8.3.14\php.exe`; produccion: PHP 8.2+. No usar PHP 7.4 para cargar WordPress ni para validar bootstrap del proyecto: cualquier fallo 7.4 es falso positivo porque el codigo actual usa sintaxis PHP 8, por ejemplo `match` en modulos existentes.
 
 ### Portal OmniCliente (SPA sobre WP)
 | Componente | Tecnología | Versión |

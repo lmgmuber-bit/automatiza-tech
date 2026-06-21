@@ -1114,3 +1114,146 @@ textarea:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+/* ===== Tech avatar (login) — identidad Home Premium ===== */
+.tech-avatar { position: relative; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; }
+.tech-avatar-frame {
+  position: relative; width: 118px; height: 118px; border-radius: 50%; overflow: hidden; z-index: 2;
+  border: 2px solid rgba(45, 212, 191, 0.55);
+  box-shadow: 0 18px 54px -16px rgba(45, 212, 191, 0.55), inset 0 0 26px rgba(45, 212, 191, 0.14);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  background: radial-gradient(circle at 50% 36%, #15324a, #0a1422 78%);
+}
+.tech-avatar-frame img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; display: block; }
+.tech-ring { position: absolute; width: 118px; height: 118px; border-radius: 50%; border: 1px solid rgba(45, 212, 191, 0.35); z-index: 1; }
+.tech-ring-a { animation: tavRing 3.4s ease-out infinite; }
+.tech-ring-b { animation: tavRing 3.4s ease-out infinite 1.7s; }
+.tech-ring-dashed { position: absolute; width: 138px; height: 138px; border-radius: 50%; border: 1px dashed rgba(45, 212, 191, 0.28); z-index: 1; animation: tavSpin 22s linear infinite; }
+.tech-status-dot {
+  position: absolute; bottom: 16px; right: 24px; width: 14px; height: 14px; border-radius: 50%;
+  background: #34d399; border: 2px solid #0a1422; box-shadow: 0 0 10px rgba(52, 211, 153, 0.85); z-index: 3;
+  animation: tavBlink 1.7s ease-in-out infinite;
+}
+@keyframes tavRing { 0% { transform: scale(0.78); opacity: 0.55; } 100% { transform: scale(1.5); opacity: 0; } }
+@keyframes tavSpin { to { transform: rotate(360deg); } }
+@keyframes tavBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.tech-thinking .tech-avatar-frame { border-color: rgba(94, 234, 212, 0.85); box-shadow: 0 18px 54px -14px rgba(94, 234, 212, 0.7), inset 0 0 26px rgba(94, 234, 212, 0.2); }
+.tech-thinking .tech-ring-dashed { animation-duration: 6s; }
+.tech-celebrating .tech-avatar-frame { border-color: #34d399; box-shadow: 0 20px 60px -12px rgba(52, 211, 153, 0.75), inset 0 0 30px rgba(52, 211, 153, 0.25); }
+.tech-celebrating .tech-ring { border-color: rgba(52, 211, 153, 0.5); }
+@media (prefers-reduced-motion: reduce) {
+  .tech-ring, .tech-ring-dashed, .tech-status-dot { animation: none; }
+  .tech-ring { opacity: 0.22; }
+}
+
+/* Avatar-cara "Tech" flotando en la esquina superior derecha del card:
+   siempre visible, nunca tapa los inputs (a diferencia del robot que orbitaba). */
+.robot-orbit { top: -48px; left: auto; right: 6px; }
+.robot-orbit-mover {
+  right: 0; left: auto;
+  flex-direction: row; align-items: center; gap: 8px;
+  animation: tav-float 5.5s ease-in-out infinite !important;
+}
+.robot-thinking .robot-orbit-mover,
+.robot-celebrating .robot-orbit-mover { animation: tav-float 3.5s ease-in-out infinite !important; }
+@keyframes tav-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+/* tamaño para esquina (Tech visible completo) */
+.tech-avatar { width: 134px; height: 134px; }
+.tech-avatar-frame, .tech-ring { width: 110px; height: 110px; }
+.tech-ring-dashed { width: 128px; height: 128px; }
+.tech-status-dot { bottom: 12px; right: 16px; width: 13px; height: 13px; }
+.robot-orbit .robot-glow { display: none; }
+.robot-speech-bubble { margin-bottom: 0; max-width: 168px; order: -1; }
+.robot-speech-bubble::after { display: none; }
+@media (max-width: 640px) {
+  .robot-orbit { top: -28px; right: 12px; }
+  .tech-avatar { width: 88px; height: 88px; }
+  .tech-avatar-frame, .tech-ring { width: 72px; height: 72px; }
+  .tech-ring-dashed { width: 86px; height: 86px; }
+  .robot-speech-bubble { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .robot-orbit-mover { animation: none !important; }
+}
+
+/* =====================================================================
+   LOGIN OVERHAUL — identidad Home Premium (dark-teal). SOLO modo oscuro;
+   el modo claro (toggle) conserva el login original.
+   ===================================================================== */
+.login-content-wrapper { position: relative; z-index: 1; }
+
+[data-theme="dark"] .login-page {
+  background: radial-gradient(1100px 800px at 72% 12%, #0b1830, #05080d 76%) !important;
+  font-family: 'Manrope', system-ui, sans-serif;
+}
+[data-theme="dark"] .login-page::before {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(600px 420px at 78% 18%, rgba(45,212,191,0.10), transparent 70%);
+}
+[data-theme="dark"] .login-page .login-card {
+  background: rgba(11, 19, 31, 0.92) !important;
+  border: 1px solid rgba(45, 212, 191, 0.18) !important;
+  box-shadow: 0 40px 100px -30px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.04) !important;
+  backdrop-filter: blur(16px);
+}
+[data-theme="dark"] .login-page .login-card h1 {
+  font-family: 'Space Grotesk', sans-serif !important; letter-spacing: -0.02em;
+  color: #f4f7fb !important;
+}
+[data-theme="dark"] .login-page .login-card h1 span { color: #2dd4bf !important; }
+[data-theme="dark"] .login-page .login-card-header p,
+[data-theme="dark"] .login-page .login-card p { color: #9bacc1 !important; }
+[data-theme="dark"] .login-page .login-card label { color: #9bacc1 !important; }
+
+[data-theme="dark"] .login-page .login-card input,
+[data-theme="dark"] .login-page .login-card select,
+[data-theme="dark"] .login-page .login-card textarea {
+  background: #0a111c !important; border-color: rgba(255,255,255,0.10) !important; color: #f4f7fb !important;
+}
+[data-theme="dark"] .login-page .login-card input::placeholder,
+[data-theme="dark"] .login-page .login-card textarea::placeholder { color: #74879c !important; }
+[data-theme="dark"] .login-page .login-card input:focus,
+[data-theme="dark"] .login-page .login-card select:focus,
+[data-theme="dark"] .login-page .login-card textarea:focus {
+  border-color: #2dd4bf !important; box-shadow: 0 0 0 4px rgba(45,212,191,0.12) !important;
+}
+
+[data-theme="dark"] .login-page .login-tabs { background: #0a111c !important; border: 1px solid rgba(255,255,255,0.06); }
+[data-theme="dark"] .login-page .login-tab-active { background: #11202f !important; }
+[data-theme="dark"] .login-page .login-card .text-blue-700,
+[data-theme="dark"] .login-page .login-card .text-green-700 { color: #2dd4bf !important; }
+
+[data-theme="dark"] .login-page .login-card button[type="submit"] {
+  background: linear-gradient(135deg, #2dd4bf, #14b8a6) !important;
+  color: #061018 !important;
+  box-shadow: 0 12px 30px -16px rgba(45,212,191,0.7) !important;
+}
+[data-theme="dark"] .login-page .login-card button[type="submit"] svg { color: #061018 !important; }
+
+[data-theme="dark"] .login-page .login-card .text-gray-400,
+[data-theme="dark"] .login-page .login-card .text-gray-500,
+[data-theme="dark"] .login-page .login-card .text-gray-600 { color: #74879c !important; }
+[data-theme="dark"] .login-page .login-card .text-gray-800,
+[data-theme="dark"] .login-page .login-card .text-gray-900 { color: #f4f7fb !important; }
+[data-theme="dark"] .login-page .login-card .text-blue-500,
+[data-theme="dark"] .login-page .login-card .text-blue-600,
+[data-theme="dark"] .login-page .login-card .text-\[var\(--color-secondary\)\] { color: #2dd4bf !important; }
+[data-theme="dark"] .login-page .login-card .hover\:text-blue-500:hover,
+[data-theme="dark"] .login-page .login-card .hover\:text-blue-700:hover { color: #5eead4 !important; }
+
+[data-theme="dark"] .login-page .login-card .bg-blue-100,
+[data-theme="dark"] .login-page .login-card .bg-green-100 { background: rgba(45,212,191,0.12) !important; }
+[data-theme="dark"] .login-page .login-card .text-blue-600,
+[data-theme="dark"] .login-page .login-card .text-green-600 { color: #2dd4bf !important; }
+
+[data-theme="dark"] .login-page .login-branding { color: #74879c !important; }
+[data-theme="dark"] .login-page .login-branding span { color: #2dd4bf !important; }
+[data-theme="dark"] .login-page .login-particles div { background: rgba(45,212,191,0.10) !important; filter: blur(8px); }
+
+[data-theme="dark"] .login-page .robot-speech-bubble {
+  background: rgba(8,12,21,0.92) !important; color: #f4f7fb !important;
+  border: 1px solid rgba(45,212,191,0.22);
+}

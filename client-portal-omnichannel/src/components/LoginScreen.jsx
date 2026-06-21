@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Loader2, Shield, Key, Headphones, ArrowLeft, Mail, CheckCircle, LifeBuoy, X, Paperclip, Image as ImageIcon, Moon, Sun } from 'lucide-react';
 import { API_BASE, uploadPublicImages, submitPublicSupportTicket } from '../api';
-import AnimatedRobot from './AnimatedRobot';
+import TechAvatar from './TechAvatar';
 
 export default function LoginScreen({ onLogin }) {
   const [loginMode, setLoginMode] = useState('agent'); // 'agent' | 'admin' | 'client'
@@ -64,6 +64,14 @@ export default function LoginScreen({ onLogin }) {
     root.classList.toggle('dark', next);
     localStorage.setItem('omni_theme', next ? 'dark' : 'light');
   }
+
+  // Aplica el tema al montar para que el overhaul dark-teal / modo claro
+  // respondan al toggle desde el primer render (no quedarse forzado en dark).
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    root.classList.toggle('dark', darkMode);
+  }, []);
 
   // Check for existing admin or agent token
   useEffect(() => {
@@ -510,7 +518,7 @@ export default function LoginScreen({ onLogin }) {
         <div className={`robot-orbit ${robotVisible && !userInteracting ? 'robot-show' : 'robot-hide'} ${robotState === 'waving' ? 'robot-waving' : robotState === 'thinking' ? 'robot-thinking' : 'robot-celebrating'}`}>
           <div className="robot-orbit-mover">
             <div className="robot-speech-bubble">{speechText}</div>
-            <AnimatedRobot state={robotState} />
+            <TechAvatar state={robotState} />
             <div className="robot-glow" />
           </div>
         </div>

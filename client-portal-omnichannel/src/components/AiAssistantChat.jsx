@@ -64,6 +64,22 @@ function timeAgo(ts) {
 
 // ─── Omni Robot SVG — Tech's green brother ──────────────────
 function RobotIcon({ size = 28, className = '', animate = true }) {
+  const _b = import.meta.env.BASE_URL || '/';
+  return (
+    <img
+      src={`${_b}tech-avatar.png`}
+      alt="Tech"
+      width={size}
+      height={size}
+      draggable="false"
+      className={className}
+      style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(45,212,191,0.55)', display: 'inline-block', verticalAlign: 'middle' }}
+    />
+  );
+}
+
+// Robot SVG anterior (sin uso; reemplazado por el Tech real).
+function _OldRobotIcon({ size = 28, className = '', animate = true }) {
   return (
     <svg width={size} height={size} viewBox="0 0 80 80" fill="none" className={className} style={{ overflow: 'visible' }}>
       <defs>
@@ -243,15 +259,16 @@ function FloatingButton({ onClick, hasChats, firstName }) {
       {/* Button */}
       <button
         onClick={onClick}
-        className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 text-white shadow-lg hover:shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center justify-center group"
-        title="Omni Asistente IA"
+        className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#0a1422] text-white shadow-lg hover:shadow-2xl hover:scale-110 active:scale-95 transition-all flex items-center justify-center group"
+        style={{ boxShadow: '0 14px 40px -14px rgba(45,212,191,0.55)' }}
+        title="Tech — Asistente IA"
       >
-        {/* Pulse rings */}
-        <span className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 animate-ping opacity-20" />
-        <span className="absolute inset-[-4px] rounded-full border-2 border-green-300/30 animate-pulse" />
-        <RobotIcon size={32} className="relative z-10 drop-shadow-sm group-hover:scale-110 transition-transform" />
+        {/* Pulse rings (teal) */}
+        <span className="absolute inset-0 rounded-full bg-teal-400 animate-ping opacity-20" />
+        <span className="absolute inset-[-4px] rounded-full border-2 border-teal-300/30 animate-pulse" />
+        <RobotIcon size={56} className="relative z-10 sm:!w-[60px] sm:!h-[60px] group-hover:scale-105 transition-transform" />
         {hasChats && (
-          <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-green-400 border-2 border-white shadow-sm" />
+          <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-teal-400 border-2 border-[#0a1422] shadow-sm" />
         )}
       </button>
     </div>

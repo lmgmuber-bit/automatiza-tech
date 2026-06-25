@@ -150,3 +150,8 @@ tests/qa-security/playwright-report/
 tests/qa-security/test-results/
 tests/qa-security/node_modules/
 
+
+# graphify cache (graph.json se commitea, cache no)
+graphify-out/cache/
+graphify-out/2*/
+

@@ -161,6 +161,11 @@ function emptyPromptData() {
 
 const EMPTY_AGENT = { agent_id: '', area: '', es_defecto: false };
 
+// Import de demos: workflow n8n que lee el Google Sheet de una demo registrada
+// (valida contra el registro "Demos"; solo sheets de demos activas son legibles)
+const DEMO_IMPORT_URL = 'https://n8n-n8n.kchiba.easypanel.host/webhook/import-demo-config';
+const DEMO_IMPORT_TOKEN = 'AT2026import';
+
 /** Parse CSV with parametro;valor format (semicolon separator, quoted multiline values) */
 function parseCsvToPromptData(csvText) {
   const validKeys = new Set(getAllKeys());
@@ -252,6 +257,8 @@ export default function PromptsView() {
   const [csvFileName, setCsvFileName] = useState('');
   const [csvParsedData, setCsvParsedData] = useState(null);
   const csvInputRef = useRef(null);
+  const [demoList, setDemoList] = useState(null); // null = aún no cargada
+  const [demoSheetId, setDemoSheetId] = useState('');
   const [availableAgents, setAvailableAgents] = useState([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
 
@@ -471,6 +478,44 @@ export default function PromptsView() {
       if (res.error) throw new Error(res.error);
       setImportModal(false);
       setResultModal({ type: 'success', title: 'Importado y Creado', message: `Configuración "${configName}" creada para ${destChannel?.channel_name || 'el canal destino'}. Puedes editarla cuando quieras.` });
+      await load();
+    } catch (err) {
+      setResultModal({ type: 'error', title: 'Error', message: err.message });
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
+  async function loadDemoList() {
+    try {
+      const r = await fetch(`${DEMO_IMPORT_URL}?t=${DEMO_IMPORT_TOKEN}&action=list`);
+      const data = await r.json();
+      setDemoList(Array.isArray(data.demos) ? data.demos : []);
+    } catch {
+      setDemoList([]);
+    }
+  }
+
+  async function handleImportFromDemo() {
+    if (!demoSheetId || !importDestChannelId) return;
+    setImportLoading(true);
+    try {
+      const r = await fetch(`${DEMO_IMPORT_URL}?t=${DEMO_IMPORT_TOKEN}&action=import&sheet_id=${encodeURIComponent(demoSheetId)}`);
+      if (!r.ok) throw new Error('No se pudo leer el Sheet de la demo');
+      const data = await r.json();
+      if (!data.ok || !data.prompt_data) throw new Error(data.error || 'Respuesta inválida del importador');
+      const destChannel = channels.find(ch => String(ch.id) === String(importDestChannelId));
+      const configName = importConfigName.trim() || `${data.nombre} → ${destChannel?.channel_name || 'Canal #' + importDestChannelId}`;
+      const payload = {
+        config_name: configName,
+        channel_id: parseInt(importDestChannelId),
+        is_active: 1,
+        prompt_data: { ...emptyPromptData(), ...data.prompt_data },
+      };
+      const res = await createPromptConfig(payload);
+      if (res.error) throw new Error(res.error);
+      setImportModal(false);
+      setResultModal({ type: 'success', title: 'Demo Importada', message: `Configuración "${configName}" creada desde el Sheet de la demo ${data.nombre}. Revisa los campos y ajusta lo que necesites.` });
       await load();
     } catch (err) {
       setResultModal({ type: 'error', title: 'Error', message: err.message });
@@ -1038,6 +1083,16 @@ export default function PromptsView() {
               >
                 <FileUp size={15} /> Desde CSV
               </button>
+              <button
+                onClick={() => { setImportTab('demo'); if (demoList === null) loadDemoList(); }}
+                className={`flex-1 px-4 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-all duration-300 ${
+                  importTab === 'demo'
+                    ? 'text-white bg-gradient-to-br from-blue-500 to-blue-600 shadow-md'
+                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                }`}
+              >
+                <FileText size={15} /> Desde Demo
+              </button>
             </div>
 
             {/* Tab content */}
@@ -1100,6 +1155,66 @@ export default function PromptsView() {
                   >
                     {importLoading ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
                     Importar Configuración
+                  </button>
+                </div>
+              ) : importTab === 'demo' ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Crea la configuración de un cliente real desde el Google Sheet de una demo: prompts, catálogo de servicios, agenda, bloqueos y pagos.
+                  </p>
+                  <div>
+                    <label htmlFor="promptsview-demo-src" className="block text-xs font-medium text-slate-500 mb-1.5">Demo origen</label>
+                    <select id="promptsview-demo-src"
+                      value={demoSheetId}
+                      onChange={e => setDemoSheetId(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                      <option value="">{demoList === null ? 'Cargando demos…' : demoList.length === 0 ? 'No hay demos disponibles' : '— Seleccionar demo —'}</option>
+                      {(demoList || []).map(d => (
+                        <option key={d.sheet_id} value={d.sheet_id}>
+                          {d.emoji} {d.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="promptsview-demo-dest" className="block text-xs font-medium text-slate-500 mb-1.5">Canal destino (cliente real)</label>
+                    <select id="promptsview-demo-dest"
+                      value={importDestChannelId}
+                      onChange={e => setImportDestChannelId(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                      <option value="">— Seleccionar canal destino —</option>
+                      {channels.map(ch => (
+                        <option key={ch.id} value={ch.id}>
+                          {ch.channel_name} ({ch.channel_type})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="promptsview-demo-name" className="block text-xs font-medium text-slate-500 mb-1.5">Nombre de la nueva configuración <span className="text-slate-400 font-normal">(opcional)</span></label>
+                    <input id="promptsview-demo-name"
+                      type="text"
+                      value={importConfigName}
+                      onChange={e => setImportConfigName(e.target.value)}
+                      placeholder="Se generará automáticamente si se deja vacío"
+                      className="w-full px-3 py-2 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-slate-700 border-0 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                  {demoSheetId && importDestChannelId && (
+                    <div className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg p-3 flex items-start gap-2">
+                      <span className="mt-0.5">✅</span>
+                      <span>Se leerán del Sheet: prompts del asistente, servicios (convertidos a JSON), horarios, bloqueos y condiciones de pago. El número de WhatsApp lo define el canal destino. Podrás editar todo antes de que el bot lo use.</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={handleImportFromDemo}
+                    disabled={!demoSheetId || !importDestChannelId || importLoading}
+                    className="w-full px-4 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-300"
+                  >
+                    {importLoading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+                    Importar desde Demo
                   </button>
                 </div>
               ) : (

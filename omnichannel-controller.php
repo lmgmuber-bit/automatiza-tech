@@ -2858,11 +2858,13 @@ class OmnichannelController {
             ], ['id' => $local['message_id']]);
             $local['delivered'] = true;
         } else {
+            $raw_body = wp_remote_retrieve_body($response);
+            $detail = $resp_body['message'] ?? ($raw_body !== '' ? $raw_body : "HTTP $resp_code");
             $this->wpdb->update($this->prefix . 'messages', [
                 'delivery_status' => 'failed',
-                'error_message'   => $resp_body['message'] ?? "HTTP $resp_code",
+                'error_message'   => substr($detail, 0, 500),
             ], ['id' => $local['message_id']]);
-            $local['delivery_error'] = $resp_body['message'] ?? "HTTP $resp_code";
+            $local['delivery_error'] = substr($detail, 0, 500);
         }
 
         return $local;

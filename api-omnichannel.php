@@ -520,6 +520,21 @@ try {
                     $result = $controller->takeover_conversation($conv_id, absint($body['agent_id'] ?? 0), sanitize_text_field($body['reason'] ?? ''));
                     send_json($result, isset($result['error']) ? 400 : 200);
                 }
+                if ($method === 'POST' && isset($segments[2]) && ($segments[3] ?? '') === 'release') {
+                    $conv_id = absint($segments[2]);
+                    $result = $controller->release_conversation($conv_id, absint($body['agent_id'] ?? 0));
+                    send_json($result, isset($result['error']) ? 400 : 200);
+                }
+                if ($method === 'POST' && isset($segments[2]) && ($segments[3] ?? '') === 'transfer') {
+                    $conv_id = absint($segments[2]);
+                    $result = $controller->transfer_conversation(
+                        $conv_id,
+                        absint($body['from_agent_id'] ?? 0),
+                        absint($body['to_agent_id'] ?? 0),
+                        sanitize_text_field($body['notes'] ?? '')
+                    );
+                    send_json($result, isset($result['error']) ? 400 : 200);
+                }
                 // Admin: export any conversation history (no restrictions)
                 if ($method === 'GET' && isset($segments[2]) && ($segments[3] ?? '') === 'export-history') {
                     $conv_id = absint($segments[2]);

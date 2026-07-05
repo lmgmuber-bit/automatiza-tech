@@ -85,6 +85,32 @@ export function isAuthenticated() {
   return !!apiKey || isAdmin || isAgent;
 }
 
+// El backend guarda created_at/last_message_at como "Y-m-d H:i:s" en UTC
+// (current_time('mysql', 1)) sin sufijo de zona — forzar parseo UTC y
+// mostrar siempre en hora de Chile, sin depender de la zona del navegador.
+const CHILE_TZ = 'America/Santiago';
+
+function toUtcDate(dateStr) {
+  if (!dateStr) return null;
+  const iso = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
+  return new Date(iso.endsWith('Z') ? iso : `${iso}Z`);
+}
+
+export function formatChileTime(dateStr, opts = { hour: '2-digit', minute: '2-digit' }) {
+  const d = toUtcDate(dateStr);
+  return d ? d.toLocaleTimeString('es-CL', { ...opts, timeZone: CHILE_TZ }) : '';
+}
+
+export function formatChileDateTime(dateStr, opts = {}) {
+  const d = toUtcDate(dateStr);
+  return d ? d.toLocaleString('es-CL', { ...opts, timeZone: CHILE_TZ }) : '';
+}
+
+export function formatChileDate(dateStr, opts = { day: '2-digit', month: 'short', year: 'numeric' }) {
+  const d = toUtcDate(dateStr);
+  return d ? d.toLocaleDateString('es-CL', { ...opts, timeZone: CHILE_TZ }) : '';
+}
+
 async function request(route, method = 'GET', body = null) {
   // Separate route path from query params so PHP sees them in $_GET
   const [routePath, routeQs] = route.split('?');
@@ -204,6 +230,11 @@ export const getClients = (params = {}) => {
   const qs = new URLSearchParams(params).toString();
   return request(`clients${qs ? '?' + qs : ''}`);
 };
+
+// Consumo de tokens IA — admin ve todo por defecto; client_id null/undefined = sin
+// filtrar, client_id 0 = solo AT (plataforma/demos internos), client_id>0 = un cliente.
+export const getUsageStats = ({ client_id, days = 30 } = {}) =>
+  request(`usage-stats?days=${days}${client_id !== null && client_id !== undefined ? `&client_id=${client_id}` : ''}`);
 export const getClient = (id) => request(`clients/${id}`);
 export const createClient = (data) => request('clients', 'POST', data);
 export const updateClient = (id, data) => request(`clients/${id}`, 'PUT', data);

@@ -943,7 +943,7 @@ class OmnichannelController {
                 'contact_avatar_url'  => esc_url_raw($message_data['contact_avatar_url'] ?? ''),
                 'channel_type'        => $channel->channel_type,
                 'status'              => 'bot',
-                'last_message_at'     => current_time('mysql'),
+                'last_message_at'     => current_time('mysql', 1),
                 'last_message_preview' => mb_substr(sanitize_text_field($message_data['content'] ?? ''), 0, 500),
                 'unread_count'        => 1,
             ]);
@@ -951,7 +951,7 @@ class OmnichannelController {
         } else {
             $conversation_id = $conversation->id;
             $update_data = [
-                'last_message_at'      => current_time('mysql'),
+                'last_message_at'      => current_time('mysql', 1),
                 'last_message_preview' => mb_substr(sanitize_text_field($message_data['content'] ?? ''), 0, 500),
                 'unread_count'         => ($conversation->unread_count ?? 0) + 1,
             ];
@@ -988,6 +988,7 @@ class OmnichannelController {
             'media_url'           => esc_url_raw($message_data['media_url'] ?? ''),
             'external_message_id' => sanitize_text_field($message_data['external_message_id'] ?? ''),
             'delivery_status'     => 'delivered',
+            'created_at'          => current_time('mysql', 1),
         ]);
 
         $message_id = $this->wpdb->insert_id;
@@ -1028,13 +1029,14 @@ class OmnichannelController {
             'content'         => sanitize_textarea_field($data['content'] ?? ''),
             'media_url'       => esc_url_raw($data['media_url'] ?? ''),
             'delivery_status' => 'pending',
+            'created_at'      => current_time('mysql', 1),
         ]);
 
         $message_id = $this->wpdb->insert_id;
 
         // Actualizar preview de conversación
         $this->wpdb->update($this->prefix . 'conversations', [
-            'last_message_at'      => current_time('mysql'),
+            'last_message_at'      => current_time('mysql', 1),
             'last_message_preview' => mb_substr(sanitize_text_field($data['content'] ?? ''), 0, 500),
         ], ['id' => $conversation_id]);
 
@@ -4193,6 +4195,20 @@ class OmnichannelController {
         $reply = $result['choices'][0]['message']['content'] ?? '';
         $usage = $result['usage'] ?? [];
 
+        // Registrar consumo en la tabla de uso IA (módulo Finanzas/Consumo)
+        if (function_exists('at_omni_log_ai_usage')) {
+            at_omni_log_ai_usage([
+                'client_id'         => $client_id,
+                'channel_id'        => 0,
+                'bot_name'          => 'Asistente IA (portal)',
+                'source'            => 'assistant',
+                'model'             => 'gpt-4o-mini',
+                'prompt_tokens'     => $usage['prompt_tokens'] ?? 0,
+                'completion_tokens' => $usage['completion_tokens'] ?? 0,
+                'total_tokens'      => $usage['total_tokens'] ?? 0,
+            ]);
+        }
+
         return [
             'success' => true,
             'reply'   => $reply,
@@ -4720,6 +4736,20 @@ INSTRUCCIONES ESPECIALES:
 
         $reply = $result['choices'][0]['message']['content'] ?? '';
         $usage = $result['usage'] ?? [];
+
+        // Registrar consumo del asistente admin (client_id 0 = plataforma AT)
+        if (function_exists('at_omni_log_ai_usage')) {
+            at_omni_log_ai_usage([
+                'client_id'         => 0,
+                'channel_id'        => 0,
+                'bot_name'          => 'Asistente IA (admin)',
+                'source'            => 'assistant',
+                'model'             => 'gpt-4o-mini',
+                'prompt_tokens'     => $usage['prompt_tokens'] ?? 0,
+                'completion_tokens' => $usage['completion_tokens'] ?? 0,
+                'total_tokens'      => $usage['total_tokens'] ?? 0,
+            ]);
+        }
 
         return [
             'success' => true,

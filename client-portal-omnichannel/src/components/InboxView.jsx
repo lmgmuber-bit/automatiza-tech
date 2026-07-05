@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Send, UserCheck, RotateCcw, Loader2, MessageSquare, ArrowLeft, Eye, EyeOff, ArrowRightLeft, ChevronDown, Download } from 'lucide-react';
-import { getConversations, getMessages, sendMessage, takeoverConversation, releaseConversation, transferConversation, getAgents, getIsAdmin, getIsAgent, isSupervisorOrAdmin, getAgentData, exportConversationHistory } from '../api';
+import { getConversations, getMessages, sendMessage, takeoverConversation, releaseConversation, transferConversation, getAgents, getIsAdmin, getIsAgent, isSupervisorOrAdmin, getAgentData, exportConversationHistory, formatChileTime } from '../api';
 import ChannelBadge from './ChannelBadge';
 import ResultModal from './ResultModal';
 
@@ -510,7 +510,7 @@ export default function InboxView() {
                       {conv.contact_name || conv.contact_phone || 'Sin nombre'}
                     </span>
                     <span className="text-[10px] text-gray-400 shrink-0 ml-2">
-                      {conv.last_message_at ? new Date(conv.last_message_at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) : ''}
+                      {formatChileTime(conv.last_message_at)}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
@@ -794,7 +794,7 @@ export default function InboxView() {
                       )}
                       <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                       <p className="text-[10px] text-gray-400 mt-1 text-right">
-                        {new Date(msg.created_at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
+                        {formatChileTime(msg.created_at)}
                         {msg.delivery_status && msg.direction === 'outbound' && (
                           <span className={`ml-1 ${msg.delivery_status === 'failed' ? 'text-red-500' : ''}`}>
                             {msg.delivery_status === 'failed' ? '✕ No enviado' :

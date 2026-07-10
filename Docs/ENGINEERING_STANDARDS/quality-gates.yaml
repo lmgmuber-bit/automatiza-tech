@@ -1,0 +1,65 @@
+version: 1
+updated_at: "2026-07-10"
+owner: "Luis Miguel"
+standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+
+common:
+  required:
+    - context_read
+    - ticket_or_scope_defined
+    - owner_identified
+    - git_state_checked
+    - no_secrets
+    - diff_reviewed
+    - acceptance_checked
+    - result_reported
+
+gates:
+  C0:
+    plan: optional
+    review: self_review
+    tests:
+      - targeted_verification
+    rollback: not_required_if_trivially_reversible
+    human_gate: false
+  C1:
+    plan: concise
+    review: self_review_or_peer_by_project_rule
+    tests:
+      - affected_behavior
+      - applicable_lint_or_build
+    rollback: describe_if_behavior_changes
+    human_gate: false
+  C2:
+    plan: required
+    review: independent_recommended
+    tests:
+      - unit_or_integration
+      - relevant_regression
+      - error_and_edge_cases
+    rollback: required_when_state_or_contract_changes
+    docs: architecture_or_operational_changes_required
+    human_gate: conditional
+  C3:
+    plan: required_and_approved
+    review: independent_required
+    tests:
+      - positive_and_negative_paths
+      - security_and_permission_checks
+      - migration_or_production_validation_plan
+      - rollback_validation
+    rollback: required
+    observability: required
+    docs: required
+    human_gate: true
+
+closure:
+  required:
+    - acceptance_criteria_status
+    - tests_and_evidence
+    - residual_risks
+    - documentation_status
+    - memory_status
+    - graphify_status
+    - git_status
+    - next_action_and_owner

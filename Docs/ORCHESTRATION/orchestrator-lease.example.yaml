@@ -1,0 +1,41 @@
+version: 1
+lease_id: AT-LEASE-0001
+handoff_id: AT-HANDOFF-0001
+state: ACTIVE
+
+holder: "claude | codex"
+granted_by: "Luis Miguel | previous_holder"
+reason: "primary | token_exhaustion | context_exhaustion | explicit_handoff | forced_takeover"
+claimed_at: "2026-07-10T12:00:00-04:00"
+expires_at: "2026-07-10T16:00:00-04:00"
+last_renewed_at: "2026-07-10T12:00:00-04:00"
+
+handoff:
+  from: "claude | codex | none"
+  to: "claude | codex"
+  accepted: false
+  active_tickets: []
+  pending_decisions: []
+  locked_files: []
+  branches: []
+  base_commits: {}
+  last_verified_state: "<summary>"
+  known_risks: []
+  next_action: "<single concrete next action>"
+
+rules:
+  - "Solo un lease no expirado puede estar ACTIVE."
+  - "El nuevo holder debe aceptar antes de delegar o repriorizar."
+  - "El holder anterior no retoma automaticamente."
+  - "Luis puede forzar takeover y debe quedar registrado."
+  - "Expirar un lease no autoriza push, deploy ni acciones externas."
+  - "El lease define quien orquesta; no fija permanentemente quien ejecuta cada ticket."
+  - "El orquestador activo o Luis puede reasignar una tarea bloqueada por tokens, rate limit o indisponibilidad."
+  - "Solo un owner puede editar el alcance de un ticket a la vez."
+
+allowed_states:
+  - UNCLAIMED
+  - ACTIVE
+  - HANDOFF_PENDING
+  - RELEASED
+  - EXPIRED

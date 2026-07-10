@@ -1,0 +1,52 @@
+[
+  {
+    "id": "AT-INT-EJ-001",
+    "titulo": "Ejemplo: aprobar tablero y subir a prod",
+    "asignadoA": "Luis",
+    "tipo": "ops",
+    "estado": "progress",
+    "prioridad": "P1",
+    "ultima": "2026-07-10",
+    "notas": "Ejemplo anonimizado. Probar drag, edicion, dark mode, logos, tabs."
+  },
+  {
+    "id": "AT-INT-EJ-002",
+    "titulo": "Ejemplo: configurar provider en opencode.json",
+    "asignadoA": "OpenCode Go",
+    "tipo": "dev",
+    "estado": "todo",
+    "prioridad": "P1",
+    "ultima": "2026-07-10",
+    "notas": "Ejemplo anonimizado. Agregar entrada de provider con API key (NO versionar la key)."
+  },
+  {
+    "id": "AT-INT-EJ-003",
+    "titulo": "Ejemplo: prompt maestro orquestador",
+    "asignadoA": "Claude",
+    "tipo": "design",
+    "estado": "done",
+    "prioridad": "P1",
+    "ultima": "2026-07-09",
+    "notas": "Ejemplo anonimizado. Jerarquia multi-agente, delegacion, evaluacion."
+  },
+  {
+    "id": "AT-INT-EJ-004",
+    "titulo": "Ejemplo: handoff orquestador suplente",
+    "asignadoA": "Codex",
+    "tipo": "design",
+    "estado": "done",
+    "prioridad": "P2",
+    "ultima": "2026-07-09",
+    "notas": "Ejemplo anonimizado. Texto de handoff para cuando el orquestador principal se queda sin tokens."
+  },
+  {
+    "id": "AT-INT-EJ-005",
+    "titulo": "Ejemplo: ledger multi-agente para visibilidad",
+    "asignadoA": "OpenCode Go",
+    "tipo": "dev",
+    "estado": "backlog",
+    "prioridad": "P2",
+    "ultima": "2026-07-10",
+    "notas": "Ejemplo anonimizado. Ledger de eventos/decisiones (reemplaza agent-log.md)."
+  }
+]

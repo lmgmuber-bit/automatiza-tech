@@ -1,0 +1,71 @@
+# Tablero Ágil AutomatizaTech v8
+
+## Resultado
+
+El tablero muestra clientes del Método AT y tareas internas. La fuente operativa
+es `api-tablero.php` sobre las tablas WordPress creadas por
+`setup-at-board.php`. Los datos conservados en localStorage son solo una caché
+de lectura: sin conexión autenticada no se permite editar ni mover tarjetas.
+
+## Arquitectura
+
+Local WAMP o `/tablero/` en PROD
+  -> GET/POST `/api-tablero.php`
+  -> token en headers `Authorization` y `X-AT-Board-Token`
+  -> WordPress/MySQL
+
+El header `X-AT-Board-Token` es la alternativa compatible con Hostinger cuando
+Apache/PHP-CGI no reenvía `Authorization`. El token nunca debe viajar en la URL.
+Se guarda en sessionStorage y se elimina al cerrar la sesión del navegador.
+
+## Archivos
+
+- `../api-tablero.php`: GET/POST, CORS, autenticación y validación.
+- `../setup-at-board.php`: instalación idempotente de tablas y datos iniciales.
+- `index.html`: interfaz v8 y caché local de solo lectura.
+- `.htaccess.example`: Basic Auth, no-cache y CSP compatible con la API AT.
+- `tests/test_tablero_v8.py`: prueba Playwright de sync, edición, drag y offline.
+- `CONTEXTO_TABLERO.md`: handoff técnico.
+
+## Instalación en PROD
+
+1. Respaldar base y archivos.
+2. Subir `api-tablero.php` y `setup-at-board.php` a la raíz WordPress.
+3. Ejecutar `setup-at-board.php` con una sesión administradora.
+4. Definir `AT_BOARD_TOKEN` una sola vez en `wp-config-secrets.php`.
+5. Eliminar `setup-at-board.php` del hosting.
+6. Copiar `.htaccess.example` como `.htaccess`, ajustar `AuthUserFile` y mantener
+   `.htpasswd-tablero` fuera de `public_html`.
+7. Subir `tablero/index.html`, logos y ejemplos anonimizados.
+8. Probar conexión, Sync, edición y drag desde local y PROD.
+
+No desplegar ni reemplazar secretos sin autorización de Luis.
+
+## Seguridad
+
+- CORS restringido a AT, localhost y 127.0.0.1.
+- Bearer + header alternativo, comparación `hash_equals`.
+- Token fuera de query strings, Git y localStorage persistente.
+- CSP permite conectar solo a self y dominios AT.
+- `.htpasswd` fuera de `public_html` y Basic Auth obligatorio.
+- Inputs limitados; errores SQL se registran en servidor y no se exponen.
+- `setup-at-board.php` se elimina tras instalar.
+
+## Pruebas
+
+Con WAMP activo:
+
+    uv run --with playwright python tablero/tests/test_tablero_v8.py
+
+La prueba usa Chrome headless e intercepta la API: valida headers sin token en
+URL, GET, POST completo, drag persistente y bloqueo de edición offline.
+
+También se validan manualmente preflight OPTIONS, GET/POST autenticados y el
+rechazo de `?token=`.
+
+## Limitación conocida
+
+Las tablas `wp_omnichannel_at_board` y `wp_omnichannel_at_internas` son la
+fuente operativa de esta versión. Integrar directamente clientes canónicos,
+GitHub Issues y el lease multiagente sigue siendo evolución posterior y debe
+evitar crear fuentes paralelas.

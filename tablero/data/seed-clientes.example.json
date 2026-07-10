@@ -1,0 +1,41 @@
+[
+  {
+    "id": "AT-CLI-EJ-001",
+    "nombre": "Cliente Ejemplo Spa",
+    "contacto": "Persona Contacto",
+    "rubro": "Rubro demo",
+    "servicios": ["Chatbot IA WhatsApp", "Portal OmniCliente"],
+    "paso": 6,
+    "prioridad": "P3",
+    "estado": "done",
+    "estadoLabel": "Soporte activo",
+    "ultima": "2026-01-12",
+    "notas": "Ejemplo anonimizado. Reemplazar por datos reales en data/seed-clientes.json (no versionado)."
+  },
+  {
+    "id": "AT-CLI-EJ-002",
+    "nombre": "Cliente Ejemplo Fotografia",
+    "contacto": "Persona Contacto",
+    "rubro": "Audiovisual",
+    "servicios": ["Sitio web premium", "Backend WP headless"],
+    "paso": 3,
+    "prioridad": "P1",
+    "estado": "wait",
+    "estadoLabel": "Esperando cliente",
+    "ultima": "2026-01-10",
+    "notas": "Ejemplo anonimizado. Propuesta por fases definida. Esperando aprobacion cliente."
+  },
+  {
+    "id": "AT-CLI-EJ-003",
+    "nombre": "Cliente Ejemplo Retail",
+    "contacto": "Persona Contacto",
+    "rubro": "Accesorios moviles",
+    "servicios": ["Sitio Web", "Chatbot IA"],
+    "paso": 3,
+    "prioridad": "P2",
+    "estado": "progress",
+    "estadoLabel": "Propuesta enviada",
+    "ultima": "2026-01-04",
+    "notas": "Ejemplo anonimizado. Propuesta enviada, pendiente revision con cliente."
+  }
+]

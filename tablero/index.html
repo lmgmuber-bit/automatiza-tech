@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="es-CL" class="">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>Tablero Ágil — AutomatizaTech v7.1</title>
+<meta name="description" content="Tablero visual de clientes (Método AT 6 pasos) + tareas internas del equipo multi-agente.">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="X-Frame-Options" content="DENY">
+<meta http-equiv="Referrer-Policy" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; style-src 'self' https://cdn.tailwindcss.com https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self' https://automatizatech.cl https://www.automatizatech.cl; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231A3A6B'/%3E%3Ctext x='32' y='44' font-family='Arial Black,sans-serif' font-size='34' font-weight='900' fill='%2300C9B1' text-anchor='middle'%3EAT%3C/text%3E%3C/svg%3E">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          'at-teal': '#00C9B1',
+          'at-teal-dark': '#00A892',
+          'at-navy': '#1A3A6B',
+          'at-navy-light': '#2A4F8C',
+          'at-cream': '#F5F7FA',
+          'at-gray': '#64748B',
+        },
+        fontFamily: {
+          sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+          mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        }
+      }
+    }
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg-mesh: radial-gradient(at 0% 0%, rgba(0,201,177,.08) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(26,58,107,.06) 0px, transparent 50%); }
+  .dark { --bg-mesh: radial-gradient(at 0% 0%, rgba(0,201,177,.10) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(26,58,107,.20) 0px, transparent 50%); }
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background-image: var(--bg-mesh); background-attachment: fixed; }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+  .card-shadow { box-shadow: 0 1px 2px rgba(26,58,107,.06), 0 1px 3px rgba(26,58,107,.04); transition: all .2s cubic-bezier(.4,0,.2,1); }
+  .card-shadow:hover { box-shadow: 0 8px 24px rgba(26,58,107,.10), 0 2px 6px rgba(26,58,107,.06); transform: translateY(-3px); }
+  .col-scroll::-webkit-scrollbar { width: 6px; }
+  .col-scroll::-webkit-scrollbar-track { background: transparent; }
+  .col-scroll::-webkit-scrollbar-thumb { background: rgba(0,201,177,.4); border-radius: 3px; }
+  .col-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,201,177,.7); }
+  .priority-P0 { border-left: 3px solid #DC2626; }
+  .priority-P1 { border-left: 3px solid #F59E0B; }
+  .priority-P2 { border-left: 3px solid #00C9B1; }
+  .priority-P3 { border-left: 3px solid #94A3B8; }
+  .status-done { background: #DCFCE7; color: #166534; }
+  .status-progress { background: #FEF3C7; color: #92400E; }
+  .status-wait { background: #FEE2E2; color: #991B1B; }
+  .status-blocked { background: #FECACA; color: #7F1D1D; }
+  .status-backlog { background: #E2E8F0; color: #475569; }
+  .status-todo { background: #DBEAFE; color: #1E40AF; }
+  .status-review { background: #E0E7FF; color: #3730A3; }
+  .dark .status-done { background: rgba(22,101,52,.25); color: #86EFAC; }
+  .dark .status-progress { background: rgba(146,64,14,.25); color: #FDE68A; }
+  .dark .status-wait { background: rgba(153,27,27,.25); color: #FCA5A5; }
+  .dark .status-blocked { background: rgba(127,29,29,.30); color: #FECACA; }
+  .dark .status-backlog { background: rgba(71,85,105,.30); color: #CBD5E1; }
+  .dark .status-todo { background: rgba(30,64,175,.25); color: #93C5FD; }
+  .dark .status-review { background: rgba(55,48,163,.25); color: #C7D2FE; }
+  .badge-stale { background: #FED7AA; color: #9A3412; }
+  .badge-stalled { background: #FEE2E2; color: #991B1B; animation: pulse 2.4s ease-in-out infinite; }
+  .dark .badge-stale { background: rgba(154,52,18,.30); color: #FDBA74; }
+  .dark .badge-stalled { background: rgba(153,27,27,.35); color: #FCA5A5; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+  .stat-num { background: linear-gradient(135deg, #00C9B1 0%, #1A3A6B 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .dark .stat-num { background: linear-gradient(135deg, #00C9B1 0%, #60A5FA 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .stat-card { position: relative; overflow: hidden; }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #00C9B1, #1A3A6B); opacity: .8; }
+  .card[draggable="true"] { cursor: grab; }
+  .card.dragging { opacity: .4; cursor: grabbing; transform: rotate(1.5deg) scale(1.03); }
+  .col-body.drop-over { background: rgba(0,201,177,.12); outline: 2px dashed #00C9B1; outline-offset: -4px; border-radius: 12px; }
+  .col-body.col-scroll { transition: background .15s, outline .15s; }
+  .toast { animation: toastIn .2s cubic-bezier(.4,0,.2,1); }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(12px) translateX(-50%); } to { opacity: 1; transform: translateY(0) translateX(-50%); } }
+  .tab-btn { transition: all .2s cubic-bezier(.4,0,.2,1); }
+  .tab-btn.active { background: #1A3A6B; color: white; box-shadow: 0 4px 12px rgba(26,58,107,.25); }
+  .dark .tab-btn.active { background: #00C9B1; color: #1A3A6B; box-shadow: 0 4px 12px rgba(0,201,177,.30); }
+  .chip-asig { transition: all .15s; }
+  .chip-asig.active { background: #1A3A6B; color: white; border-color: #1A3A6B; }
+  .dark .chip-asig.active { background: #00C9B1; color: #1A3A6B; border-color: #00C9B1; }
+  .avatar-Luis { background: #1A3A6B; color: white; }
+  .avatar-OpenCodeGo { background: #00C9B1; color: #1A3A6B; }
+  .avatar-Claude { background: #7C3AED; color: white; }
+  .avatar-Codex { background: #2563EB; color: white; }
+  .reveal { animation: revealUp .4s cubic-bezier(.4,0,.2,1) both; }
+  @keyframes revealUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .empty-state { border: 2px dashed rgba(148,163,184,.3); border-radius: 12px; }
+  .col-header-bar { position: relative; overflow: hidden; }
+  .col-header-bar::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.3), transparent); }
+  .btn-info { background: rgba(255,255,255,.30); transition: all .15s; }
+  .btn-info:hover { background: rgba(255,255,255,.55); transform: scale(1.12); }
+  .timeline-item { position: relative; padding-left: 1.5rem; padding-bottom: .75rem; }
+  .timeline-item:not(:last-child)::before { content: ''; position: absolute; left: .35rem; top: 1.1rem; bottom: 0; width: 2px; background: rgba(0,201,177,.3); }
+  .timeline-dot { position: absolute; left: 0; top: .25rem; width: .75rem; height: .75rem; border-radius: 50%; background: #00C9B1; border: 2px solid white; box-shadow: 0 0 0 1px #00C9B1; }
+  .metric-bar-track { background: rgba(148,163,184,.20); border-radius: 999px; overflow: hidden; height: 10px; }
+  .metric-bar-fill { height: 100%; border-radius: 999px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+  .donut { border-radius: 50%; transition: background .4s; }
+  .legend-dot { width: .7rem; height: .7rem; border-radius: 50%; display: inline-block; }
+  @media (prefers-reduced-motion: reduce) { .card-shadow, .col-body, .badge-stalled, .reveal, .metric-bar-fill, .donut { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body class="min-h-screen bg-at-cream dark:bg-slate-950 transition-colors duration-300">
+
+<header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 transition-colors">
+  <div class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="h-10 sm:h-11 w-10 sm:w-11 flex items-center justify-center rounded-xl bg-transparent dark:bg-at-navy dark:shadow-md dark:ring-1 dark:ring-at-navy/20 shrink-0">
+          <img src="./logo-at-light.svg" alt="AutomatizaTech" class="h-8 sm:h-9 w-auto dark:hidden" onerror="this.style.display='none'; this.parentElement.querySelector('.mono').style.display='inline';">
+          <img src="./logo-at.svg" alt="AutomatizaTech" class="hidden h-8 sm:h-9 w-auto dark:block" onerror="this.style.display='none'; this.parentElement.querySelector('.mono').style.display='inline';">
+          <span class="mono font-extrabold text-at-navy dark:text-at-teal text-lg" style="display:none;">AT</span>
+        </div>
+        <div class="self-center">
+          <h1 class="text-base sm:text-lg font-extrabold text-at-navy dark:text-white leading-tight tracking-tight">Tablero Ágil</h1>
+          <p class="text-[11px] text-at-gray font-medium hidden sm:block">AutomatizaTech · entregas + tareas internas</p>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
+        <input id="busqueda" type="search" placeholder="Filtrar…" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-at-teal focus:ring-2 focus:ring-at-teal/20 dark:text-white w-full sm:w-44 transition">
+        <select id="ddModo" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white cursor-pointer focus:outline-none focus:border-at-teal transition">
+          <option value="on">Drag: Activado</option>
+          <option value="off">Drag: Off</option>
+        </select>
+        <button id="btnExport" title="Descarga estado actual en JSON" class="px-3 py-2 rounded-lg bg-at-teal text-white text-sm font-semibold hover:bg-at-teal-dark transition shadow-sm">⇩ JSON</button>
+        <button id="btnUsuarios" title="Gestionar quién puede ver el tablero (.htpasswd)" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm hover:border-at-teal dark:text-white transition">👤 Acceso</button>
+        <button id="btnToken" title="Token API para sincronizar con PROD" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm hover:border-at-teal dark:text-white transition">🔑 <span id="tokenEstado" class="font-mono text-[10px]">sin token</span></button>
+        <button id="btnSync" title="Sincronizar desde PROD ahora" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm hover:border-at-teal dark:text-white transition">🔄 Sync</button>
+        <button id="btnTema" title="Cambiar tema claro/oscuro" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-lg leading-none dark:text-white transition" aria-label="Cambiar tema">🌙</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 pt-5">
+  <div class="flex gap-2 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm w-fit">
+    <button data-tab="clientes" class="tab-btn active px-4 py-2 rounded-lg text-sm font-bold transition">📋 Clientes · Método AT</button>
+    <button data-tab="internas" class="tab-btn px-4 py-2 rounded-lg text-sm font-bold text-at-gray dark:text-slate-400 transition">⚙️ Internas · Equipo</button>
+    <button data-tab="metricas" class="tab-btn px-4 py-2 rounded-lg text-sm font-bold text-at-gray dark:text-slate-400 transition">📊 Métricas</button>
+  </div>
+</nav>
+
+<section id="vista-clientes" class="tab-pane">
+  <div class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">Clientes</p><p class="text-2xl font-extrabold stat-num font-mono" id="statClientes">0</p></div>
+      <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">P1 Abiertos</p><p class="text-2xl font-extrabold stat-num font-mono" id="statP1">0</p></div>
+      <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">En Progreso</p><p class="text-2xl font-extrabold stat-num font-mono" id="statProgreso">0</p></div>
+      <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">Esperando</p><p class="text-2xl font-extrabold stat-num font-mono" id="statEspera">0</p></div>
+      <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">Olvidadas · 180d+</p><p class="text-2xl font-extrabold stat-num font-mono" id="statStalled">0</p></div>
+      <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">Bloqueados</p><p class="text-2xl font-extrabold stat-num font-mono" id="statBloqueados">0</p></div>
+      <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">Soporte activo</p><p class="text-2xl font-extrabold stat-num font-mono" id="statSoporte">0</p></div>
+    </div>
+  </div>
+
+  <div class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 pb-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 card-shadow">
+      <div class="flex items-center gap-3 mb-3">
+        <div>
+          <h2 class="text-sm font-bold text-at-navy dark:text-white">El Método AutomatizaTech · 6 Pasos · Entregas al cliente</h2>
+          <p class="text-xs text-at-gray mt-0.5">Arrastra las tarjetas entre columnas. Click para editar.</p>
+        </div>
+      </div>
+      <ol class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs sm:text-sm" role="list">
+        <li class="bg-at-cream dark:bg-slate-800 rounded-lg p-3 border border-slate-100 dark:border-slate-700"><span class="block font-extrabold text-at-navy dark:text-at-teal text-base font-mono">01</span><span class="block font-bold text-at-navy dark:text-white mt-0.5">Diagnóstico</span><span class="block text-at-gray mt-1 text-[11px] leading-snug">Detectamos dónde pierdes tiempo y ventas.</span></li>
+        <li class="bg-at-cream dark:bg-slate-800 rounded-lg p-3 border border-slate-100 dark:border-slate-700"><span class="block font-extrabold text-at-navy dark:text-at-teal text-base font-mono">02</span><span class="block font-bold text-at-navy dark:text-white mt-0.5">Priorización</span><span class="block text-at-gray mt-1 text-[11px] leading-snug">Definimos qué implementar primero para impacto rápido.</span></li>
+        <li class="bg-at-cream dark:bg-slate-800 rounded-lg p-3 border border-slate-100 dark:border-slate-700"><span class="block font-extrabold text-at-navy dark:text-at-teal text-base font-mono">03</span><span class="block font-bold text-at-navy dark:text-white mt-0.5">Propuesta por fases</span><span class="block text-at-gray mt-1 text-[11px] leading-snug">Plan claro por etapas, sin sorpresas ni inversión a ciegas.</span></li>
+        <li class="bg-at-cream dark:bg-slate-800 rounded-lg p-3 border border-slate-100 dark:border-slate-700"><span class="block font-extrabold text-at-navy dark:text-at-teal text-base font-mono">04</span><span class="block font-bold text-at-navy dark:text-white mt-0.5">Diseño y desarrollo</span><span class="block text-at-gray mt-1 text-[11px] leading-snug">Construimos con diseño premium y tecnología sólida.</span></li>
+        <li class="bg-at-cream dark:bg-slate-800 rounded-lg p-3 border border-slate-100 dark:border-slate-700"><span class="block font-extrabold text-at-navy dark:text-at-teal text-base font-mono">05</span><span class="block font-bold text-at-navy dark:text-white mt-0.5">Implementación</span><span class="block text-at-gray mt-1 text-[11px] leading-snug">Lo dejamos funcionando y conectado a tu operación real.</span></li>
+        <li class="bg-at-cream dark:bg-slate-800 rounded-lg p-3 border border-slate-100 dark:border-slate-700"><span class="block font-extrabold text-at-navy dark:text-at-teal text-base font-mono">06</span><span class="block font-bold text-at-navy dark:text-white mt-0.5">Soporte y mejora</span><span class="block text-at-gray mt-1 text-[11px] leading-snug">No desaparecemos. Medimos, ajustamos y optimizamos contigo.</span></li>
+      </ol>
+    </div>
+  </div>
+
+  <main class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4" id="kanbanClientes"></div>
+  </main>
+</section>
+
+<section id="vista-internas" class="tab-pane hidden">
+  <div class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">Tareas</p><p class="text-2xl font-extrabold stat-num font-mono" id="statIntTotal">0</p></div>
+      <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">Por hacer</p><p class="text-2xl font-extrabold stat-num font-mono" id="statIntTodo">0</p></div>
+      <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">En progreso</p><p class="text-2xl font-extrabold stat-num font-mono" id="statIntProgress">0</p></div>
+      <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">En revisión</p><p class="text-2xl font-extrabold stat-num font-mono" id="statIntReview">0</p></div>
+      <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">Hechas</p><p class="text-2xl font-extrabold stat-num font-mono" id="statIntDone">0</p></div>
+      <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">En espera</p><p class="text-2xl font-extrabold stat-num font-mono" id="statIntWait">0</p></div>
+    </div>
+  </div>
+
+  <div class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 pb-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-4 card-shadow">
+      <div class="flex flex-wrap items-center gap-2">
+        <p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold mr-1">Asignado a:</p>
+        <button data-asig="" class="chip-asig active text-xs px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white font-semibold transition">Todos</button>
+        <button data-asig="Luis" class="chip-asig text-xs px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white font-semibold transition flex items-center gap-1.5"><span class="avatar-Luis w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold">LG</span>Luis</button>
+        <button data-asig="OpenCode Go" class="chip-asig text-xs px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white font-semibold transition flex items-center gap-1.5"><span class="avatar-OpenCodeGo w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold">OG</span>OpenCode Go</button>
+        <button data-asig="Claude" class="chip-asig text-xs px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white font-semibold transition flex items-center gap-1.5"><span class="avatar-Claude w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold">CL</span>Claude</button>
+        <button data-asig="Codex" class="chip-asig text-xs px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white font-semibold transition flex items-center gap-1.5"><span class="avatar-Codex w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold">CX</span>Codex</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4" id="kanbanInternas"></div>
+  </main>
+</section>
+
+<!-- ============ VISTA MÉTRICAS ============ -->
+<section id="vista-metricas" class="tab-pane hidden">
+  <div class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <!-- KPIs generales -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="metricKPIs"></div>
+
+    <!-- Distribución por etapa (Método AT) -->
+    <div class="bg-white dark:bg-slate-900 rounded-xl p-5 card-shadow border border-slate-100 dark:border-slate-800">
+      <h2 class="text-sm font-bold text-at-navy dark:text-white mb-4">Clientes por etapa del Método AT</h2>
+      <div class="space-y-2.5" id="metricEtapas"></div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Donut estados clientes -->
+      <div class="bg-white dark:bg-slate-900 rounded-xl p-5 card-shadow border border-slate-100 dark:border-slate-800">
+        <h2 class="text-sm font-bold text-at-navy dark:text-white mb-4">Clientes por estado</h2>
+        <div class="flex flex-col sm:flex-row items-center gap-6">
+          <div id="donutEstados" class="donut w-40 h-40 shrink-0" style="background: conic-gradient(#94A3B8 0% 100%);"></div>
+          <div class="space-y-2 flex-1 w-full" id="donutEstadosLegend"></div>
+        </div>
+      </div>
+
+      <!-- Distribución tareas internas por asignatario -->
+      <div class="bg-white dark:bg-slate-900 rounded-xl p-5 card-shadow border border-slate-100 dark:border-slate-800">
+        <h2 class="text-sm font-bold text-at-navy dark:text-white mb-4">Tareas internas por asignatario</h2>
+        <div class="space-y-2.5" id="metricAsignatarios"></div>
+      </div>
+    </div>
+
+    <!-- Throughput tareas internas -->
+    <div class="bg-white dark:bg-slate-900 rounded-xl p-5 card-shadow border border-slate-100 dark:border-slate-800">
+      <h2 class="text-sm font-bold text-at-navy dark:text-white mb-4">Throughput tareas internas (por estado)</h2>
+      <div class="space-y-2.5" id="metricThroughput"></div>
+    </div>
+
+    <!-- Prioridades -->
+    <div class="bg-white dark:bg-slate-900 rounded-xl p-5 card-shadow border border-slate-100 dark:border-slate-800">
+      <h2 class="text-sm font-bold text-at-navy dark:text-white mb-4">Prioridades abiertas (P0-P3)</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="metricPrioridades"></div>
+    </div>
+
+    <p class="text-[11px] text-at-gray text-center pb-4">Métricas calculadas en vivo desde los datos del tablero. Sin tracking externo. v7.2.</p>
+  </div>
+</section>
+
+<footer class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 pb-6 text-center text-xs text-at-gray dark:text-slate-500 flex flex-col items-center gap-3">
+  <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-transparent dark:bg-at-navy dark:shadow-md dark:ring-1 dark:ring-at-navy/20">
+    <img src="./logo-at-light.svg" alt="AutomatizaTech" class="h-8 w-auto dark:hidden" onerror="this.style.display='none'; this.parentElement.querySelector('.mono').style.display='inline';">
+    <img src="./logo-at.svg" alt="AutomatizaTech" class="hidden h-8 w-auto dark:block" onerror="this.style.display='none'; this.parentElement.querySelector('.mono').style.display='inline';">
+    <span class="mono font-extrabold text-at-navy dark:text-at-teal text-sm" style="display:none;">AT</span>
+  </div>
+  <p class="font-medium">Tablero interno v7.2 · Método AutomatizaTech + tareas equipo multi-agente · automatizatech.cl</p>
+</footer>
+
+<div id="modalCli" class="hidden fixed inset-0 z-20 bg-at-navy/40 backdrop-blur-sm items-center justify-center p-4">
+  <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 card-shadow max-h-[90vh] overflow-y-auto dark:text-white border border-slate-100 dark:border-slate-800">
+    <div class="flex items-start justify-between mb-4 gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-9 w-9 flex items-center justify-center rounded-lg bg-transparent dark:bg-at-navy dark:shadow-sm shrink-0">
+          <img src="./logo-at-light.svg" alt="AT" class="h-7 w-auto dark:hidden" onerror="this.style.display='none'; this.parentElement.querySelector('.mono').style.display='inline';">
+          <img src="./logo-at.svg" alt="AT" class="hidden h-7 w-auto dark:block" onerror="this.style.display='none'; this.parentElement.querySelector('.mono').style.display='inline';">
+          <span class="mono font-extrabold text-at-navy dark:text-at-teal text-xs" style="display:none;">AT</span>
+        </div>
+        <div class="min-w-0">
+          <h2 id="modalCliTitle" class="text-lg font-extrabold text-at-navy dark:text-white truncate"></h2>
+          <p id="modalCliTicket" class="text-xs text-at-gray font-mono mt-0.5"></p>
+        </div>
+      </div>
+      <button data-close="modalCli" aria-label="Cerrar" class="text-at-gray hover:text-at-navy dark:hover:text-white text-2xl leading-none shrink-0 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">×</button>
+    </div>
+    <div id="modalCliBody" class="space-y-3 text-sm"></div>
+  </div>
+</div>
+
+<div id="modalInt" class="hidden fixed inset-0 z-20 bg-at-navy/40 backdrop-blur-sm items-center justify-center p-4">
+  <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 card-shadow max-h-[90vh] overflow-y-auto dark:text-white border border-slate-100 dark:border-slate-800">
+    <div class="flex items-start justify-between mb-4 gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-9 w-9 flex items-center justify-center rounded-lg bg-transparent dark:bg-at-navy dark:shadow-sm shrink-0">
+          <img src="./logo-at-light.svg" alt="AT" class="h-7 w-auto dark:hidden" onerror="this.style.display='none'; this.parentElement.querySelector('.mono').style.display='inline';">
+          <img src="./logo-at.svg" alt="AT" class="hidden h-7 w-auto dark:block" onerror="this.style.display='none'; this.parentElement.querySelector('.mono').style.display='inline';">
+          <span class="mono font-extrabold text-at-navy dark:text-at-teal text-xs" style="display:none;">AT</span>
+        </div>
+        <div class="min-w-0">
+          <h2 id="modalIntTitle" class="text-lg font-extrabold text-at-navy dark:text-white truncate"></h2>
+          <p id="modalIntTicket" class="text-xs text-at-gray font-mono mt-0.5"></p>
+        </div>
+      </div>
+      <button data-close="modalInt" aria-label="Cerrar" class="text-at-gray hover:text-at-navy dark:hover:text-white text-2xl leading-none shrink-0 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">×</button>
+    </div>
+    <div id="modalIntBody" class="space-y-3 text-sm"></div>
+  </div>
+</div>
+
+<!-- MODAL INFO ETAPA -->
+<div id="modalInfo" class="hidden fixed inset-0 z-20 bg-at-navy/40 backdrop-blur-sm items-center justify-center p-4">
+  <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 card-shadow max-h-[90vh] overflow-y-auto dark:text-white border border-slate-100 dark:border-slate-800">
+    <div class="flex items-start justify-between mb-4 gap-3">
+      <div class="min-w-0">
+        <p id="modalInfoStep" class="text-[10px] text-at-gray font-mono font-semibold"></p>
+        <h2 id="modalInfoTitle" class="text-lg font-extrabold text-at-navy dark:text-white"></h2>
+      </div>
+      <button data-close="modalInfo" aria-label="Cerrar" class="text-at-gray hover:text-at-navy dark:hover:text-white text-2xl leading-none shrink-0 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">×</button>
+    </div>
+    <div id="modalInfoBody" class="space-y-3 text-sm"></div>
+  </div>
+</div>
+
+<!-- MODAL USUARIOS / ACCESO -->
+<div id="modalUsuarios" class="hidden fixed inset-0 z-20 bg-at-navy/40 backdrop-blur-sm items-center justify-center p-4">
+  <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 card-shadow max-h-[90vh] overflow-y-auto dark:text-white border border-slate-100 dark:border-slate-800">
+    <div class="flex items-start justify-between mb-4 gap-3">
+      <div class="min-w-0">
+        <h2 class="text-lg font-extrabold text-at-navy dark:text-white">👤 Gestión de acceso</h2>
+        <p class="text-xs text-at-gray font-mono mt-0.5">Usuarios que pueden ver el tablero (auth Apache .htpasswd)</p>
+      </div>
+      <button data-close="modalUsuarios" aria-label="Cerrar" class="text-at-gray hover:text-at-navy dark:hover:text-white text-2xl leading-none shrink-0 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">×</button>
+    </div>
+    <div id="modalUsuariosBody" class="space-y-4 text-sm"></div>
+  </div>
+</div>
+
+<!-- MODAL TOKEN API -->
+<div id="modalToken" class="hidden fixed inset-0 z-20 bg-at-navy/40 backdrop-blur-sm items-center justify-center p-4">
+  <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 card-shadow max-h-[90vh] overflow-y-auto dark:text-white border border-slate-100 dark:border-slate-800">
+    <div class="flex items-start justify-between mb-4 gap-3">
+      <div class="min-w-0">
+        <h2 class="text-lg font-extrabold text-at-navy dark:text-white">🔑 Token API</h2>
+        <p class="text-xs text-at-gray font-mono mt-0.5">Sincroniza local ↔ PROD</p>
+      </div>
+      <button data-close="modalToken" aria-label="Cerrar" class="text-at-gray hover:text-at-navy dark:hover:text-white text-2xl leading-none shrink-0 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">×</button>
+    </div>
+    <div class="space-y-3 text-sm">
+      <div class="bg-at-cream dark:bg-slate-800 rounded-lg p-3 border border-slate-100 dark:border-slate-700 text-xs">
+        <p class="font-semibold text-at-navy dark:text-white mb-1">¿De dónde saco el token?</p>
+        <p class="text-at-gray">1. Ejecutá <code class="font-mono">setup-at-board.php</code> en PROD (te lo genera).</p>
+        <p class="text-at-gray">2. O generá uno aleatorio largo y ponlo en <code class="font-mono">wp-config-secrets.php</code> de PROD como <code class="font-mono">define('AT_BOARD_TOKEN', '...');</code></p>
+        <p class="text-at-gray mt-1">El token se conserva solo durante esta sesión del navegador. Nunca se envía en la URL ni se sube a git.</p>
+      </div>
+      <div>
+        <label class="text-at-gray uppercase tracking-wider text-[10px] font-semibold block mb-1">Token</label>
+        <input id="inputToken" type="password" placeholder="AT_TOKEN_xxx..." class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white font-mono focus:outline-none focus:border-at-teal">
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button id="btnGuardarToken" class="px-4 py-2 rounded-lg bg-at-teal text-white text-sm font-semibold hover:bg-at-teal-dark transition shadow-sm">💾 Guardar</button>
+        <button id="btnProbarToken" class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm dark:text-white hover:border-at-teal transition">🔌 Probar conexión</button>
+        <button id="btnBorrarToken" class="px-4 py-2 rounded-lg border border-rose-300 text-rose-600 text-sm hover:bg-rose-50 dark:hover:bg-rose-900/20 transition">🗑 Borrar</button>
+      </div>
+      <div id="tokenTestResult" class="text-xs"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-30 bg-at-navy text-white px-4 py-2.5 rounded-xl shadow-xl text-sm font-semibold toast"></div>
+
+<script>
+// ==========================================================================
+// Tablero Ágil AutomatizaTech — v8
+//
+// Datos: la API de PROD es la fuente operativa. localStorage conserva solo
+// la última respuesta como caché de lectura. Sin API se usan ejemplos
+// anonimizados y se bloquean edición y drag para evitar una segunda verdad.
+//
+// Seguridad: todas las interpolaciones en el DOM se escapan con esc()
+// (texto) o escAttr() (atributos data-* y title). Ver AT-TAB-002.
+// ==========================================================================
+
+const SEED_EJEMPLO_CLIENTES = [
+  { id: "AT-CLI-EJ-001", nombre: "Cliente Ejemplo Spa", contacto: "Persona Contacto", rubro: "Rubro demo",
+    servicios: ["Chatbot IA WhatsApp", "Portal OmniCliente"], paso: 6, prioridad: "P3",
+    estado: "done", estadoLabel: "Soporte activo", ultima: "2026-01-12",
+    notas: "Ejemplo anonimizado. Conecta la API para trabajar con datos reales." },
+  { id: "AT-CLI-EJ-002", nombre: "Cliente Ejemplo Fotografia", contacto: "Persona Contacto", rubro: "Audiovisual",
+    servicios: ["Sitio web premium", "Backend WP headless"], paso: 3, prioridad: "P1",
+    estado: "wait", estadoLabel: "Esperando cliente", ultima: "2026-01-10",
+    notas: "Ejemplo anonimizado. Propuesta por fases definida. Esperando aprobacion cliente." },
+  { id: "AT-CLI-EJ-003", nombre: "Cliente Ejemplo Retail", contacto: "Persona Contacto", rubro: "Accesorios moviles",
+    servicios: ["Sitio Web", "Chatbot IA"], paso: 3, prioridad: "P2",
+    estado: "progress", estadoLabel: "Propuesta enviada", ultima: "2026-01-04",
+    notas: "Ejemplo anonimizado. Propuesta enviada, pendiente revision con cliente." }
+];
+
+const SEED_EJEMPLO_INTERNAS = [
+  { id: "AT-INT-EJ-001", titulo: "Ejemplo: aprobar tablero y subir a prod", asignadoA: "Luis", tipo: "ops",
+    estado: "progress", prioridad: "P1", ultima: "2026-07-10",
+    notas: "Ejemplo anonimizado. Probar drag, edicion, dark mode, logos, tabs." },
+  { id: "AT-INT-EJ-002", titulo: "Ejemplo: configurar provider en opencode.json", asignadoA: "OpenCode Go", tipo: "dev",
+    estado: "todo", prioridad: "P1", ultima: "2026-07-10",
+    notas: "Ejemplo anonimizado. Agregar entrada de provider con API key (NO versionar la key)." },
+  { id: "AT-INT-EJ-003", titulo: "Ejemplo: prompt maestro orquestador", asignadoA: "Claude", tipo: "design",
+    estado: "done", prioridad: "P1", ultima: "2026-07-09",
+    notas: "Ejemplo anonimizado. Jerarquia multi-agente, delegacion, evaluacion." },
+  { id: "AT-INT-EJ-004", titulo: "Ejemplo: handoff orquestador suplente", asignadoA: "Codex", tipo: "design",
+    estado: "done", prioridad: "P2", ultima: "2026-07-09",
+    notas: "Ejemplo anonimizado. Texto de handoff para cuando el orquestador principal se queda sin tokens." },
+  { id: "AT-INT-EJ-005", titulo: "Ejemplo: ledger multi-agente para visibilidad", asignadoA: "OpenCode Go", tipo: "dev",
+    estado: "backlog", prioridad: "P2", ultima: "2026-07-10",
+    notas: "Ejemplo anonimizado. Ledger de eventos/decisiones (reemplaza agent-log.md)." }
+];
+
+const STALE_DAYS_ORPHAN = 180;
+const STALE_DAYS_SLOW   = 60;
+const STORAGE_KEY_CLI = "tableroAT.v8.clientes";
+const STORAGE_KEY_INT = "tableroAT.v8.internas";
+const STORAGE_KEY_AUDIT = "tableroAT.v8.audit";
+const STORAGE_KEY_USERS = "tableroAT.v8.users";
+const STORAGE_KEY_TOKEN = "tableroAT.v8.token";
+const THEME_KEY        = "tableroAT.v8.theme";
+
+const ES_PROD = /^(www\.)?automatizatech\.cl$/i.test(location.hostname);
+const API_URL = ES_PROD ? "/api-tablero.php" : "https://automatizatech.cl/api-tablero.php";
+let API_TOKEN = "";
+let API_STATE = "local";
+function cargarToken() {
+  try {
+    API_TOKEN = sessionStorage.getItem(STORAGE_KEY_TOKEN) || "";
+    localStorage.removeItem(STORAGE_KEY_TOKEN);
+  } catch(e) {}
+}
+function guardarToken(t) {
+  API_TOKEN = t;
+  API_STATE = "local";
+  try {
+    if (t) sessionStorage.setItem(STORAGE_KEY_TOKEN, t);
+    else sessionStorage.removeItem(STORAGE_KEY_TOKEN);
+    localStorage.removeItem(STORAGE_KEY_TOKEN);
+  } catch(e) {}
+}
+function apiHeaders(conJson = false) {
+  const h = {};
+  if (conJson) h["Content-Type"] = "application/json";
+  if (API_TOKEN) {
+    h["Authorization"] = "Bearer " + API_TOKEN;
+    h["X-AT-Board-Token"] = API_TOKEN;
+  }
+  return h;
+}
+function escrituraRemotaDisponible() { return API_STATE === "remote" && !!API_TOKEN; }
+
+const INFO_ETAPAS_CLI = {
+  1: { que: "Revisamos tu negocio y detectamos dónde estás perdiendo tiempo y ventas.", quePasa: "Entrevista inicial, auditoría de procesos, mapeo de cuellos de botella.", salida: "Informe de oportunidades priorizadas.", ejemplo: "Cliente llega con WhatsApp caótico -> auditamos y detectamos 4h/día perdidas en respuestas manuales." },
+  2: { que: "Definimos qué conviene implementar primero para tener impacto rápido.", quePasa: "Filtro por ROI/esfuerzo, alineación con presupuesto y objetivos.", salida: "Roadmap de implementación por fases.", ejemplo: "3 oportunidades detectadas -> priorizamos chatbot antes que portal porque ROI en 30 días." },
+  3: { que: "Un plan claro, por etapas, sin sorpresas ni inversiones a ciegas.", quePasa: "Propuesta económica detallada (50/50), cronograma, alcance por fase.", salida: "Propuesta Gamma + contrato.", ejemplo: "Propuesta $4.400.000 CLP en 3 fases, espera aprobación cliente." },
+  4: { que: "Construimos con diseño premium y tecnología sólida, pensada para crecer.", quePasa: "UI/UX, frontend, backend, integraciones. Sprints con avances revisables.", salida: "Entorno staging + avances revisables.", ejemplo: "Desarrollo del Portal OmniCliente + chatbot v8 con conexión API." },
+  5: { que: "Lo dejamos funcionando y conectado a tu operación real, sin fricción.", quePasa: "Migración, capacitación, go-live, verificación en producción.", salida: "Producto en producción + handover.", ejemplo: "Subir comercial-spa-final.mp4 a Meta Ads Manager, habilitar schedules n8n." },
+  6: { que: "No desaparecemos. Medimos, ajustamos y seguimos optimizando contigo.", quePasa: "Monitoreo, evolutivos, soporte, revisión periódica de métricas.", salida: "SLA + backlog de mejoras continuas.", ejemplo: "KellsCapilar en soporte activo, monitorizando consumo IA." }
+};
+const INFO_ETAPAS_INT = {
+  1: { que: "Tareas identificadas pero sin arrancar.", quePasa: "Sin asignatario activo o esperando priorización.", salida: "Idea -> backlog cuando se detecta el trabajo.", ejemplo: "v9 con BD real omnichannel: está acá hasta que Luis apruebe Opción A/B." },
+  2: { que: "Tareas asignadas y priorizadas, listas para ejecutar.", quePasa: "El asignatario las toma cuando libera capacidad.", salida: "Tarea ejecutándose -> pasa a En progreso.", ejemplo: "Configurar provider opencode-go: asignada a OpenCode Go, lista para arrancar." },
+  3: { que: "Tareas siendo ejecutadas ahora.", quePasa: "WIP limit sugerido: 2-3 por persona para evitar context-switching.", salida: "Entrega -> pasa a En revisión.", ejemplo: "Aprobar tablero v7.2: Luis lo está probando ahora." },
+  4: { que: "Tareas entregadas esperando validación.", quePasa: "Un reviewer (otro agente o Luis) valida con la Definition of Done.", salida: "Aprobada -> Hecho. Rechazada -> vuelve a En progreso.", ejemplo: "Convenciones de código AT: OpenCode Go entregó, Claude revisando." },
+  5: { que: "Tareas cerradas con evidencia aceptada.", quePasa: "Quedan visibles para auditoría y métricas.", salida: "Historial completo + evidencia archivada.", ejemplo: "Prompt maestro Claude Orquestador v1.0: entregado y aceptado." },
+  6: { que: "Tareas pausadas por dependencia externa o bloqueadas.", quePasa: "Requieren acción externa (cliente, API key, aprobación) para desbloquear.", salida: "Desbloqueo -> vuelve a Por hacer o En progreso.", ejemplo: "Umbría Studio: esperando fotos + Meta Business del cliente hace 30 días." }
+};
+
+const PASOS_NOMBRES = { 1:"Diagnóstico", 2:"Priorización", 3:"Propuesta por fases", 4:"Diseño y desarrollo", 5:"Implementación", 6:"Soporte y mejora continua" };
+const COLORES_COL_CLI = { 1:"bg-at-navy", 2:"bg-at-navy-light", 3:"bg-at-teal-dark", 4:"bg-at-teal", 5:"bg-at-navy", 6:"bg-at-navy-light" };
+const COLS_INT = {
+  1: { titulo: "Backlog", color: "bg-slate-500" },
+  2: { titulo: "Por hacer", color: "bg-at-navy" },
+  3: { titulo: "En progreso", color: "bg-at-teal-dark" },
+  4: { titulo: "En revisión", color: "bg-at-teal" },
+  5: { titulo: "Hecho", color: "bg-emerald-600" },
+  6: { titulo: "En espera / Bloqueado", color: "bg-rose-500" }
+};
+const ESTADO_TO_COL_INT = { backlog:1, todo:2, progress:3, review:4, done:5, wait:6, blocked:6 };
+const COL_TO_ESTADO_INT = { 1:"backlog", 2:"todo", 3:"progress", 4:"review", 5:"done", 6:"wait" };
+const ESTADO_INT_LABEL = { backlog:"En backlog", todo:"Por hacer", progress:"En progreso", review:"En revisión", done:"Hecho", wait:"Esperando", blocked:"Bloqueado" };
+const ASIG_AVATARS = {
+  "Luis": { cls: "avatar-Luis", initials: "LG" },
+  "OpenCode Go": { cls: "avatar-OpenCodeGo", initials: "OG" },
+  "Claude": { cls: "avatar-Claude", initials: "CL" },
+  "Codex": { cls: "avatar-Codex", initials: "CX" }
+};
+
+let CLIENTES = SEED_EJEMPLO_CLIENTES.map(c => ({...c}));
+let INTERNAS = SEED_EJEMPLO_INTERNAS.map(c => ({...c}));
+let AUDIT = {};
+let USUARIOS = [];
+let currentTab = "clientes";
+let filtroAsig = "";
+let bootDone = false;
+
+function cargarDatos(key, fallback) {
+  try { const raw = localStorage.getItem(key); if (raw) return JSON.parse(raw); } catch(e) {}
+  return fallback.map(c => ({...c}));
+}
+function persistirCli() { try { localStorage.setItem(STORAGE_KEY_CLI, JSON.stringify(CLIENTES)); } catch(e) {} }
+function persistirInt() { try { localStorage.setItem(STORAGE_KEY_INT, JSON.stringify(INTERNAS)); } catch(e) {} }
+function persistirAudit() { try { localStorage.setItem(STORAGE_KEY_AUDIT, JSON.stringify(AUDIT)); } catch(e) {} }
+function persistirUsers() { try { localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(USUARIOS)); } catch(e) {} }
+function cargarAudit() { try { const raw = localStorage.getItem(STORAGE_KEY_AUDIT); if (raw) AUDIT = JSON.parse(raw); } catch(e) {} AUDIT = AUDIT || {}; }
+function cargarUsers() { try { const raw = localStorage.getItem(STORAGE_KEY_USERS); if (raw) USUARIOS = JSON.parse(raw); } catch(e) {} USUARIOS = USUARIOS || []; }
+function auditar(id, accion, detalle) {
+  if (!id) return;
+  if (!AUDIT[id]) AUDIT[id] = [];
+  AUDIT[id].push({ ts: new Date().toISOString(), accion: String(accion), detalle: String(detalle || "") });
+  if (AUDIT[id].length > 200) AUDIT[id] = AUDIT[id].slice(-200);
+  persistirAudit();
+}
+function auditTimeline(id) {
+  const items = AUDIT[id] || [];
+  if (!items.length) return '<p class="text-xs text-at-gray italic">Sin movimientos registrados aún.</p>';
+  return items.slice().reverse().map(it => `
+    <div class="timeline-item">
+      <span class="timeline-dot"></span>
+      <p class="text-[11px] text-at-gray font-mono">${esc(it.ts.replace("T"," ").slice(0,16))}</p>
+      <p class="text-sm font-semibold text-at-navy dark:text-white">${esc(it.accion)}</p>
+      ${it.detalle ? `<p class="text-xs text-at-gray mt-0.5">${esc(it.detalle)}</p>` : ''}
+    </div>`).join("");
+}
+async function sha1Hash(pass) {
+  const enc = new TextEncoder().encode(pass);
+  const buf = await crypto.subtle.digest("SHA-1", enc);
+  const bytes = new Uint8Array(buf);
+  let bin = "";
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return "{SHA}" + btoa(bin);
+}
+function hoy() { return new Date().toISOString().slice(0,10); }
+function diasDesde(fecha) {
+  const f = new Date(fecha + "T00:00:00");
+  if (isNaN(f)) return 9999;
+  return Math.floor((Date.now() - f.getTime()) / 86400000);
+}
+function estadoClass(s) {
+  return { done:"status-done", progress:"status-progress", wait:"status-wait", blocked:"status-blocked", backlog:"status-backlog", todo:"status-todo", review:"status-review" }[s] || "status-progress";
+}
+function prioridadLabel(p) {
+  return { P0:"P0 · Crítico", P1:"P1 · Bloquea", P2:"P2 · Mejora", P3:"P3 · Cleanup" }[p] || p;
+}
+function staleInfo(c) {
+  if (c.estado === "done") return null;
+  const d = diasDesde(c.ultima);
+  if (c.estado === "wait" && d >= STALE_DAYS_ORPHAN)
+    return { cls: "badge-stalled", txt: `Olvidada ${d}d`, title: `Sin respuesta cliente hace ${d} días (umbral ${STALE_DAYS_ORPHAN}d)` };
+  if (d >= STALE_DAYS_SLOW)
+    return { cls: "badge-stale", txt: `Stalled ${d}d`, title: `Sin actualización hace ${d} días` };
+  return null;
+}
+function esc(s) { return String(s).replace(/[<>&]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])); }
+function escAttr(s) { return String(s).replace(/[<>&"']/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;","\"":"&quot;","'":"&#39;"}[c])); }
+function safeId(s) { return String(s).replace(/[^A-Za-z0-9_-]/g, ""); }
+
+// ============== CARGA DESDE API PROD (con fallback a seeds locales) ==============
+async function cargarDatosRemotos() {
+  if (!API_TOKEN) return { ok: false, razon: "sin-token" };
+  try {
+    const r = await fetch(API_URL, { method: "GET", headers: apiHeaders(false), cache: "no-store" });
+    if (!r.ok) return { ok: false, razon: "http-" + r.status };
+    const j = await r.json();
+    if (!j || !j.ok || !j.data) return { ok: false, razon: "json-invalido" };
+    return { ok: true, clientes: j.data.clientes || [], internas: j.data.internas || [] };
+  } catch (e) {
+    return { ok: false, razon: "fetch-error: " + (e.message || e) };
+  }
+}
+async function syncDesdeAPI() {
+  const res = await cargarDatosRemotos();
+  if (res.ok) {
+    API_STATE = "remote";
+    CLIENTES = res.clientes.map(c => ({...c, id: c.at_id || c.id}));
+    INTERNAS = res.internas.map(t => ({...t, id: t.at_id || t.id}));
+    persistirCli(); persistirInt();
+    actualizarTokenEstado();
+    toast("☁ Sync OK desde API");
+    return true;
+  }
+  API_STATE = "local";
+  actualizarTokenEstado();
+  if (res.razon === "sin-token") toast("Sin token API — caché local de solo lectura");
+  else if (res.razon === "http-401") toast("Token invalido — revisa Config");
+  else toast("API no disponible — modo local");
+  return false;
+}
+async function postEditAPI(tipo, dato) {
+  if (!API_TOKEN) return { ok: false, razon: "sin-token" };
+  try {
+    const body = JSON.stringify(Object.assign({ tipo: tipo }, dato));
+    const r = await fetch(API_URL, { method: "POST", headers: apiHeaders(true), body: body, cache: "no-store" });
+    if (!r.ok) return { ok: false, razon: "http-" + r.status };
+    const j = await r.json();
+    return { ok: !!j.ok, razon: j.error || "" };
+  } catch (e) {
+    return { ok: false, razon: "fetch-error: " + (e.message || e) };
+  }
+}
+async function cargarSeeds() {
+  const tieneLScli = (() => { try { return !!localStorage.getItem(STORAGE_KEY_CLI); } catch(e) { return false; } })();
+  const tieneLSint = (() => { try { return !!localStorage.getItem(STORAGE_KEY_INT); } catch(e) { return false; } })();
+  const apiOK = await syncDesdeAPI();
+  if (apiOK) return;
+  if (!tieneLScli || !tieneLSint) {
+    const resultados = await Promise.allSettled([
+      fetch('./data/seed-clientes.example.json', { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+      fetch('./data/seed-internas.example.json', { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    ]);
+    if (resultados[0].status === 'fulfilled' && !tieneLScli) CLIENTES = resultados[0].value.map(c => ({...c}));
+    if (resultados[1].status === 'fulfilled' && !tieneLSint) INTERNAS = resultados[1].value.map(c => ({...c}));
+    persistirCli(); persistirInt();
+  }
+}
+
+// ============== CARDS CLIENTES ==============
+function cardCli(c, idx) {
+  const dragAttr = escrituraRemotaDisponible() && document.getElementById("ddModo").value === "on" ? 'draggable="true"' : '';
+  const stale = staleInfo(c);
+  const delay = Math.min(idx * 30, 300);
+  const nombreBusq = escAttr((c.nombre+' '+c.contacto+' '+c.rubro).toLowerCase());
+  return `
+    <article class="card reveal priority-${escAttr(c.prioridad)} bg-white dark:bg-slate-900 rounded-xl p-3 card-shadow cursor-pointer dark:text-white border border-slate-100 dark:border-slate-800" ${dragAttr} data-id="${escAttr(c.id)}" data-tipo="cli" data-nombre="${nombreBusq}" style="animation-delay:${Number(delay)}ms">
+      <div class="flex items-start justify-between gap-2 mb-2">
+        <div class="min-w-0">
+          <p class="font-bold text-sm text-at-navy dark:text-white truncate">${esc(c.nombre)}</p>
+          <p class="text-xs text-at-gray truncate">${esc(c.contacto)} · ${esc(c.rubro)}</p>
+        </div>
+        <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-at-gray shrink-0">${esc(c.id)}</span>
+      </div>
+      <div class="flex flex-wrap gap-1 mb-2">
+        ${c.servicios.map(s => `<span class="text-[10px] px-2 py-0.5 rounded-full bg-at-cream dark:bg-slate-800 text-at-navy dark:text-at-teal border border-slate-200 dark:border-slate-700 font-medium">${esc(s)}</span>`).join("")}
+      </div>
+      <div class="flex items-center justify-between text-[11px] gap-1 flex-wrap">
+        <span class="px-2 py-0.5 rounded-full font-semibold ${estadoClass(c.estado)}">${esc(c.estadoLabel)}</span>
+        ${stale ? `<span class="px-2 py-0.5 rounded-full font-semibold ${escAttr(stale.cls)}" title="${escAttr(stale.title)}">${esc(stale.txt)}</span>` : ''}
+        <span class="text-at-gray ml-auto font-mono font-semibold" title="${escAttr(prioridadLabel(c.prioridad))}">${esc(c.prioridad)}</span>
+      </div>
+      <div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[10px] text-at-gray text-center font-mono">↑ ${esc(c.ultima)}</div>
+    </article>`;
+}
+
+function renderClientes() {
+  const busq = document.getElementById("busqueda").value.toLowerCase().trim();
+  const kanban = document.getElementById("kanbanClientes");
+  kanban.innerHTML = "";
+  for (let i=1; i<=6; i++) {
+    const col = document.createElement("div");
+    col.className = "bg-white dark:bg-slate-900 rounded-xl card-shadow overflow-hidden border border-slate-100 dark:border-slate-800 flex flex-col";
+    col.innerHTML = `
+      <div class="col-header-bar ${COLORES_COL_CLI[i]} px-3 py-2.5">
+        <div class="flex items-center gap-2">
+          <button class="btn-info w-7 h-7 shrink-0 rounded-full text-white text-sm font-bold flex items-center justify-center border border-white/50" data-info="cli" data-paso="${i}" title="Qué es esta etapa" aria-label="Info etapa">i</button>
+          <div class="min-w-0 flex-1">
+            <p class="text-[10px] text-white/60 font-mono font-semibold">${String(i).padStart(2,'0')}</p>
+            <h3 class="text-sm font-bold text-white truncate">${esc(PASOS_NOMBRES[i])}</h3>
+          </div>
+          <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full text-white font-mono font-bold shrink-0" data-colcli="${i}">0</span>
+        </div>
+      </div>
+      <div class="col-body col-scroll flex-1 max-h-[70vh] overflow-y-auto p-2 space-y-2" data-colbody-cli="${i}"></div>`;
+    kanban.appendChild(col);
+  }
+  for (let i=1; i<=6; i++) {
+    const body = kanban.querySelector(`[data-colbody-cli="${i}"]`);
+    const counter = kanban.querySelector(`[data-colcli="${i}"]`);
+    const items = CLIENTES.filter(c => {
+      if (c.paso !== i) return false;
+      if (busq && !c.nombre.toLowerCase().includes(busq) && !c.contacto.toLowerCase().includes(busq) && !c.rubro.toLowerCase().includes(busq)) return false;
+      return true;
+    });
+    items.sort((a, b) => (staleInfo(a)?.cls === "badge-stalled" ? 1 : 0) - (staleInfo(b)?.cls === "badge-stalled" ? 1 : 0));
+    let html = "";
+    const firstForgotten = items.findIndex(c => staleInfo(c)?.cls === "badge-stalled");
+    items.forEach((c, idx) => {
+      if (idx === firstForgotten && idx > 0) {
+        html += `<div class="flex items-center gap-2 my-1.5 px-1"><span class="text-[9px] text-at-gray uppercase tracking-wider font-bold whitespace-nowrap">▾ Backlog · 180d+</span><div class="flex-1 border-t border-dashed border-slate-300 dark:border-slate-700"></div></div>`;
+      }
+      html += cardCli(c, idx);
+    });
+    body.innerHTML = html || `<div class="empty-state py-6 text-center"><p class="text-xs text-at-gray italic">Sin tickets</p></div>`;
+    counter.textContent = items.length;
+  }
+
+  let p1=0, progreso=0, espera=0, stalled=0, bloqueados=0, soporte=0;
+  CLIENTES.forEach(c => {
+    if (c.prioridad === "P1") p1++;
+    if (c.estado === "progress") progreso++;
+    if (c.estado === "wait") espera++;
+    if (c.estado === "blocked") bloqueados++;
+    if (c.estado === "done") soporte++;
+    if (staleInfo(c) && staleInfo(c).cls === "badge-stalled") stalled++;
+  });
+  document.getElementById("statClientes").textContent = CLIENTES.length;
+  document.getElementById("statP1").textContent = p1;
+  document.getElementById("statProgreso").textContent = progreso;
+  document.getElementById("statEspera").textContent = espera;
+  document.getElementById("statStalled").textContent = stalled;
+  document.getElementById("statBloqueados").textContent = bloqueados;
+  document.getElementById("statSoporte").textContent = soporte;
+
+  bindCards("cli");
+  bindDropTargets("cli");
+}
+
+// ============== CARDS INTERNAS ==============
+function cardInt(t, idx) {
+  const dragAttr = escrituraRemotaDisponible() && document.getElementById("ddModo").value === "on" ? 'draggable="true"' : '';
+  const av = ASIG_AVATARS[t.asignadoA] || { cls: "avatar-Luis", initials: "??" };
+  const stale = staleInfo(t);
+  const delay = Math.min(idx * 30, 300);
+  const nombreBusq = escAttr((t.titulo+' '+t.asignadoA+' '+t.tipo).toLowerCase());
+  return `
+    <article class="card reveal priority-${escAttr(t.prioridad)} bg-white dark:bg-slate-900 rounded-xl p-3 card-shadow cursor-pointer dark:text-white border border-slate-100 dark:border-slate-800" ${dragAttr} data-id="${escAttr(t.id)}" data-tipo="int" data-nombre="${nombreBusq}" style="animation-delay:${Number(delay)}ms">
+      <div class="flex items-start justify-between gap-2 mb-2">
+        <div class="min-w-0 flex-1">
+          <p class="font-bold text-sm text-at-navy dark:text-white leading-snug">${esc(t.titulo)}</p>
+          <div class="flex items-center gap-1.5 mt-1">
+            <span class="${escAttr(av.cls)} w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0">${esc(av.initials)}</span>
+            <span class="text-xs text-at-gray truncate font-medium">${esc(t.asignadoA)}</span>
+          </div>
+        </div>
+        <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-at-gray shrink-0">${esc(t.id.replace("AT-INT-",""))}</span>
+      </div>
+      <div class="flex items-center justify-between text-[11px] gap-1 flex-wrap mb-1">
+        <span class="px-2 py-0.5 rounded-full font-semibold ${estadoClass(t.estado)}">${esc(ESTADO_INT_LABEL[t.estado] || t.estado)}</span>
+        <span class="text-[10px] px-2 py-0.5 rounded-full bg-at-cream dark:bg-slate-800 text-at-gray capitalize font-medium border border-slate-200 dark:border-slate-700">${esc(t.tipo)}</span>
+      </div>
+      <div class="flex items-center justify-between text-[11px] gap-1 flex-wrap">
+        ${stale ? `<span class="px-2 py-0.5 rounded-full font-semibold ${escAttr(stale.cls)}" title="${escAttr(stale.title)}">${esc(stale.txt)}</span>` : '<span></span>'}
+        <span class="text-at-gray ml-auto font-mono font-semibold" title="${escAttr(prioridadLabel(t.prioridad))}">${esc(t.prioridad)}</span>
+      </div>
+      <div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[10px] text-at-gray text-center font-mono">↑ ${esc(t.ultima)}</div>
+    </article>`;
+}
+
+function renderInternas() {
+  const busq = document.getElementById("busqueda").value.toLowerCase().trim();
+  const kanban = document.getElementById("kanbanInternas");
+  kanban.innerHTML = "";
+  for (let i=1; i<=6; i++) {
+    const col = document.createElement("div");
+    col.className = "bg-white dark:bg-slate-900 rounded-xl card-shadow overflow-hidden border border-slate-100 dark:border-slate-800 flex flex-col";
+    col.innerHTML = `
+      <div class="col-header-bar ${COLS_INT[i].color} px-3 py-2.5">
+        <div class="flex items-center gap-2">
+          <button class="btn-info w-7 h-7 shrink-0 rounded-full text-white text-sm font-bold flex items-center justify-center border border-white/50" data-info="int" data-paso="${i}" title="Qué es esta columna" aria-label="Info columna">i</button>
+          <div class="min-w-0 flex-1">
+            <p class="text-[10px] text-white/60 font-mono font-semibold">${String(i).padStart(2,'0')}</p>
+            <h3 class="text-sm font-bold text-white truncate">${esc(COLS_INT[i].titulo)}</h3>
+          </div>
+          <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full text-white font-mono font-bold shrink-0" data-colint="${i}">0</span>
+        </div>
+      </div>
+      <div class="col-body col-scroll flex-1 max-h-[70vh] overflow-y-auto p-2 space-y-2" data-colbody-int="${i}"></div>`;
+    kanban.appendChild(col);
+  }
+  for (let i=1; i<=6; i++) {
+    const body = kanban.querySelector(`[data-colbody-int="${i}"]`);
+    const counter = kanban.querySelector(`[data-colint="${i}"]`);
+    const items = INTERNAS.filter(t => {
+      if (ESTADO_TO_COL_INT[t.estado] !== i) return false;
+      if (filtroAsig && t.asignadoA !== filtroAsig) return false;
+      if (busq && !t.titulo.toLowerCase().includes(busq) && !t.asignadoA.toLowerCase().includes(busq) && !t.tipo.toLowerCase().includes(busq)) return false;
+      return true;
+    });
+    items.sort((a, b) => (staleInfo(a)?.cls === "badge-stalled" ? 1 : 0) - (staleInfo(b)?.cls === "badge-stalled" ? 1 : 0));
+    let html = "";
+    const firstForgotten = items.findIndex(t => staleInfo(t)?.cls === "badge-stalled");
+    items.forEach((t, idx) => {
+      if (idx === firstForgotten && idx > 0) {
+        html += `<div class="flex items-center gap-2 my-1.5 px-1"><span class="text-[9px] text-at-gray uppercase tracking-wider font-bold whitespace-nowrap">▾ Backlog · 180d+</span><div class="flex-1 border-t border-dashed border-slate-300 dark:border-slate-700"></div></div>`;
+      }
+      html += cardInt(t, idx);
+    });
+    body.innerHTML = html || `<div class="empty-state py-6 text-center"><p class="text-xs text-at-gray italic">Sin tareas</p></div>`;
+    counter.textContent = items.length;
+  }
+
+  let todo=0, progress=0, review=0, done=0, wait=0;
+  INTERNAS.forEach(t => {
+    if (t.estado === "todo") todo++;
+    if (t.estado === "progress") progress++;
+    if (t.estado === "review") review++;
+    if (t.estado === "done") done++;
+    if (t.estado === "wait" || t.estado === "blocked") wait++;
+  });
+  document.getElementById("statIntTotal").textContent = INTERNAS.length;
+  document.getElementById("statIntTodo").textContent = todo;
+  document.getElementById("statIntProgress").textContent = progress;
+  document.getElementById("statIntReview").textContent = review;
+  document.getElementById("statIntDone").textContent = done;
+  document.getElementById("statIntWait").textContent = wait;
+
+  bindCards("int");
+  bindDropTargets("int");
+}
+
+// ============== DRAG & DROP ==============
+let _dragId = null, _dragTipo = null;
+function bindCards(tipo) {
+  document.querySelectorAll(`.card[data-tipo="${tipo}"]`).forEach(el => {
+    el.addEventListener("click", () => {
+      if (el.dataset.justDropped === "1") { el.dataset.justDropped = ""; return; }
+      if (tipo === "cli") abrirModalCli(el.dataset.id);
+      else abrirModalInt(el.dataset.id);
+    });
+    if (el.getAttribute("draggable") === "true") {
+      el.addEventListener("dragstart", (e) => {
+        _dragId = el.dataset.id; _dragTipo = el.dataset.tipo;
+        el.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", el.dataset.id);
+      });
+      el.addEventListener("dragend", () => {
+        el.classList.remove("dragging");
+        document.querySelectorAll(".col-body").forEach(b => b.classList.remove("drop-over"));
+        _dragId = null; _dragTipo = null;
+      });
+    }
+  });
+}
+function bindDropTargets(tipo) {
+  const selector = tipo === "cli" ? "[data-colbody-cli]" : "[data-colbody-int]";
+  document.querySelectorAll(selector).forEach(body => {
+    body.addEventListener("dragover", (e) => {
+      if (document.getElementById("ddModo").value !== "on") return;
+      if (_dragTipo !== tipo) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      body.classList.add("drop-over");
+    });
+    body.addEventListener("dragleave", (e) => { if (!body.contains(e.relatedTarget)) body.classList.remove("drop-over"); });
+    body.addEventListener("drop", async (e) => {
+      if (document.getElementById("ddModo").value !== "on") return;
+      if (_dragTipo !== tipo) return;
+      if (!escrituraRemotaDisponible()) {
+        toast("Modo solo lectura — conecta la API antes de mover tarjetas");
+        return;
+      }
+      e.preventDefault();
+      body.classList.remove("drop-over");
+      const id = e.dataTransfer.getData("text/plain") || _dragId;
+      if (!id) return;
+      const sid = safeId(id);
+      if (tipo === "cli") {
+        const nuevoPaso = parseInt(body.dataset.colbodyCli, 10);
+        const cli = CLIENTES.find(c => c.id === id);
+        if (!cli || cli.paso === nuevoPaso) return;
+        const pasoAnt = cli.paso;
+        const candidato = {...cli, paso: nuevoPaso, ultima: hoy()};
+        const guardado = await postEditAPI("cli", {
+          at_id: candidato.id, nombre: candidato.nombre, contacto: candidato.contacto,
+          rubro: candidato.rubro, servicios: candidato.servicios, paso: candidato.paso,
+          prioridad: candidato.prioridad, estado: candidato.estado,
+          estadoLabel: candidato.estadoLabel, ultima: candidato.ultima, notas: candidato.notas
+        });
+        if (!guardado.ok) { toast("No se movió: " + guardado.razon); return; }
+        Object.assign(cli, candidato);
+        const draggedEl = document.querySelector(`.card[data-id="${CSS.escape(id)}"]`); if (draggedEl) draggedEl.dataset.justDropped = "1";
+        auditar(cli.id, "Movimiento", `Paso ${pasoAnt} (${PASOS_NOMBRES[pasoAnt]}) → Paso ${nuevoPaso} (${PASOS_NOMBRES[nuevoPaso]})`);
+        persistirCli(); renderClientes();
+        toast(`↗ ${cli.nombre} → ${String(nuevoPaso).padStart(2,'0')} ${PASOS_NOMBRES[nuevoPaso]}`);
+      } else {
+        const nuevaCol = parseInt(body.dataset.colbodyInt, 10);
+        const nuevoEstado = COL_TO_ESTADO_INT[nuevaCol];
+        const t = INTERNAS.find(x => x.id === id);
+        if (!t || t.estado === nuevoEstado) return;
+        const estAnt = t.estado;
+        const candidato = {...t, estado: nuevoEstado, ultima: hoy()};
+        const guardado = await postEditAPI("int", {
+          at_id: candidato.id, titulo: candidato.titulo, asignadoA: candidato.asignadoA,
+          tipo_tarea: candidato.tipo, estado: candidato.estado,
+          prioridad: candidato.prioridad, ultima: candidato.ultima, notas: candidato.notas
+        });
+        if (!guardado.ok) { toast("No se movió: " + guardado.razon); return; }
+        Object.assign(t, candidato);
+        const draggedEl = document.querySelector(`.card[data-id="${CSS.escape(id)}"]`); if (draggedEl) draggedEl.dataset.justDropped = "1";
+        auditar(t.id, "Movimiento", `${ESTADO_INT_LABEL[estAnt] || estAnt} → ${ESTADO_INT_LABEL[nuevoEstado] || nuevoEstado} (${COLS_INT[nuevaCol].titulo})`);
+        persistirInt(); renderInternas();
+        toast(`↗ ${t.titulo.slice(0,30)} → ${COLS_INT[nuevaCol].titulo}`);
+      }
+    });
+  });
+}
+
+// ============== MODAL CLIENTE ==============
+function abrirModalCli(id) {
+  const c = CLIENTES.find(x => x.id === id); if (!c) return;
+  const stale = staleInfo(c);
+  document.getElementById("modalCliTitle").textContent = c.nombre;
+  document.getElementById("modalCliTicket").textContent = `${c.id} · ${prioridadLabel(c.prioridad)} · actualizada ${c.ultima}`;
+  const d = diasDesde(c.ultima);
+  const estadoOpts = [
+    {v:"progress", l:"En progreso"}, {v:"wait", l:"Esperando cliente"},
+    {v:"blocked", l:"Bloqueado"}, {v:"done", l:"Soporte activo"}
+  ].map(o => `<option value="${escAttr(o.v)}" ${o.v===c.estado?"selected":""}>${esc(o.l)}</option>`).join("");
+  const prioOpts = ["P0","P1","P2","P3"].map(p => `<option value="${escAttr(p)}" ${p===c.prioridad?"selected":""}>${esc(prioridadLabel(p))}</option>`).join("");
+  const pasoOpts = [1,2,3,4,5,6].map(p => `<option value="${p}" ${p===c.paso?"selected":""}>${String(p).padStart(2,'0')} · ${esc(PASOS_NOMBRES[p])}</option>`).join("");
+  document.getElementById("modalCliBody").innerHTML = `
+    <div class="grid grid-cols-2 gap-3 text-xs">
+      <div><p class="text-at-gray uppercase tracking-wider text-[10px] font-semibold">Contacto</p><p class="font-semibold text-at-navy dark:text-white">${esc(c.contacto)}</p></div>
+      <div><p class="text-at-gray uppercase tracking-wider text-[10px] font-semibold">Rubro</p><p class="font-semibold text-at-navy dark:text-white">${esc(c.rubro)}</p></div>
+    </div>
+    <div><p class="text-at-gray uppercase tracking-wider text-[10px] font-semibold mb-1">Servicios</p><div class="flex flex-wrap gap-1">${c.servicios.map(s => `<span class="text-xs px-2 py-0.5 rounded-full bg-at-cream dark:bg-slate-800 text-at-navy dark:text-at-teal border border-slate-200 dark:border-slate-700 font-medium">${esc(s)}</span>`).join("")}</div></div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div><label class="text-at-gray uppercase tracking-wider text-[10px] font-semibold block mb-1">Paso</label><select id="edCliPaso" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:border-at-teal">${pasoOpts}</select></div>
+      <div><label class="text-at-gray uppercase tracking-wider text-[10px] font-semibold block mb-1">Estado</label><select id="edCliEstado" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:border-at-teal">${estadoOpts}</select></div>
+      <div><label class="text-at-gray uppercase tracking-wider text-[10px] font-semibold block mb-1">Prioridad</label><select id="edCliPrio" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:border-at-teal">${prioOpts}</select></div>
+    </div>
+    <div><label class="text-at-gray uppercase tracking-wider text-[10px] font-semibold block mb-1">Estado visible (label corto)</label><input id="edCliLabel" type="text" value="${escAttr(c.estadoLabel)}" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:border-at-teal" placeholder="ej. Propuesta enviada"></div>
+    <div><label class="text-at-gray uppercase tracking-wider text-[10px] font-semibold block mb-1">Notas</label><textarea id="edCliNotas" rows="4" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:border-at-teal resize-none">${esc(c.notas)}</textarea></div>
+    ${stale ? `<p class="text-xs ${escAttr(stale.cls)} px-2 py-1 rounded-full inline-block font-semibold">${esc(stale.txt)} — ${esc(stale.title)}. Al guardar se resetea el reloj.</p>` : ''}
+    <div class="text-[11px] text-at-gray border-t border-slate-100 dark:border-slate-800 pt-2 font-mono">Días desde última: <strong>${d}</strong> · ID: ${esc(c.id)}</div>
+    <div class="border-t border-slate-100 dark:border-slate-800 pt-3">
+      <p class="text-at-gray uppercase tracking-wider text-[10px] font-semibold mb-2">🕒 Timeline de movimientos</p>
+      <div class="max-h-48 overflow-y-auto pr-1">${auditTimeline(c.id)}</div>
+    </div>
+    <div class="flex flex-wrap gap-2 pt-1">
+      <button id="btnGuardarCli" class="px-4 py-2 rounded-lg bg-at-teal text-white text-sm font-semibold hover:bg-at-teal-dark transition shadow-sm">💾 Guardar</button>
+      <button data-close="modalCli" class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm dark:text-white hover:border-at-teal transition">Cancelar</button>
+    </div>`;
+  document.getElementById("btnGuardarCli").addEventListener("click", () => guardarCli(c.id));
+  const m = document.getElementById("modalCli"); m.classList.remove("hidden"); m.classList.add("flex");
+}
+async function guardarCli(id) {
+  const c = CLIENTES.find(x => x.id === id); if (!c) return;
+  if (!escrituraRemotaDisponible()) { toast("Modo solo lectura — conecta la API antes de editar"); return; }
+  const cambios = [];
+  const np = parseInt(document.getElementById("edCliPaso").value, 10);
+  const ne = document.getElementById("edCliEstado").value;
+  const npr = document.getElementById("edCliPrio").value;
+  const nl = document.getElementById("edCliLabel").value.trim();
+  const nn = document.getElementById("edCliNotas").value.trim();
+  if (c.paso !== np) cambios.push(`Paso ${c.paso}→${np}`);
+  if (c.estado !== ne) cambios.push(`Estado ${c.estado}→${ne}`);
+  if (c.prioridad !== npr) cambios.push(`Prioridad ${c.prioridad}→${npr}`);
+  if (c.estadoLabel !== nl) cambios.push("Label actualizado");
+  if (c.notas !== nn) cambios.push("Notas editadas");
+  const candidato = {...c, paso: np, estado: ne, prioridad: npr, estadoLabel: nl || c.estadoLabel, notas: nn, ultima: hoy()};
+  const guardado = await postEditAPI("cli", {
+    at_id: candidato.id, nombre: candidato.nombre, contacto: candidato.contacto,
+    rubro: candidato.rubro, servicios: candidato.servicios, paso: candidato.paso,
+    prioridad: candidato.prioridad, estado: candidato.estado,
+    estadoLabel: candidato.estadoLabel, ultima: candidato.ultima, notas: candidato.notas
+  });
+  if (!guardado.ok) { toast("No se guardó: " + guardado.razon); return; }
+  Object.assign(c, candidato);
+  if (cambios.length) auditar(c.id, "Edición modal", cambios.join(" · "));
+  persistirCli(); renderClientes(); cerrarModal("modalCli");
+  toast(`💾 ${c.nombre} actualizado`);
+}
+
+// ============== MODAL INTERNA ==============
+function abrirModalInt(id) {
+  const t = INTERNAS.find(x => x.id === id); if (!t) return;
+  const stale = staleInfo(t);
+  document.getElementById("modalIntTitle").textContent = t.titulo;
+  document.getElementById("modalIntTicket").textContent = `${t.id} · ${prioridadLabel(t.prioridad)} · actualizada ${t.ultima}`;
+  const d = diasDesde(t.ultima);
+  const av = ASIG_AVATARS[t.asignadoA] || { cls: "avatar-Luis", initials: "??" };
+  const asigOpts = Object.keys(ASIG_AVATARS).map(a => `<option value="${escAttr(a)}" ${a===t.asignadoA?"selected":""}>${esc(a)}</option>`).join("");
+  const estadoOpts = [
+    {v:"backlog", l:"En backlog"}, {v:"todo", l:"Por hacer"}, {v:"progress", l:"En progreso"},
+    {v:"review", l:"En revisión"}, {v:"done", l:"Hecho"}, {v:"wait", l:"Esperando"}, {v:"blocked", l:"Bloqueado"}
+  ].map(o => `<option value="${escAttr(o.v)}" ${o.v===t.estado?"selected":""}>${esc(o.l)}</option>`).join("");
+  const prioOpts = ["P0","P1","P2","P3"].map(p => `<option value="${escAttr(p)}" ${p===t.prioridad?"selected":""}>${esc(prioridadLabel(p))}</option>`).join("");
+  const tipoOpts = ["dev","design","ops","research","docs"].map(tp => `<option value="${escAttr(tp)}" ${tp===t.tipo?"selected":""}>${esc(tp)}</option>`).join("");
+  document.getElementById("modalIntBody").innerHTML = `
+    <div class="flex items-center gap-2 mb-2">
+      <span class="${escAttr(av.cls)} w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold">${esc(av.initials)}</span>
+      <span class="text-sm font-semibold text-at-navy dark:text-white">${esc(t.asignadoA)}</span>
+    </div>
+    <div><label class="text-at-gray uppercase tracking-wider text-[10px] font-semibold block mb-1">Título</label><input id="edIntTitulo" type="text" value="${escAttr(t.titulo)}" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:border-at-teal"></div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div><label class="text-at-gray uppercase tracking-wider text-[10px] font-semibold block mb-1">Asignado a</label><select id="edIntAsig" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:border-at-teal">${asigOpts}</select></div>
+      <div><label class="text-at-gray uppercase tracking-wider text-[10px] font-semibold block mb-1">Tipo</label><select id="edIntTipo" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:border-at-teal capitalize">${tipoOpts}</select></div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div><label class="text-at-gray uppercase tracking-wider text-[10px] font-semibold block mb-1">Estado</label><select id="edIntEstado" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:border-at-teal">${estadoOpts}</select></div>
+      <div><label class="text-at-gray uppercase tracking-wider text-[10px] font-semibold block mb-1">Prioridad</label><select id="edIntPrio" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:border-at-teal">${prioOpts}</select></div>
+    </div>
+    <div><label class="text-at-gray uppercase tracking-wider text-[10px] font-semibold block mb-1">Notas</label><textarea id="edIntNotas" rows="4" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:border-at-teal resize-none">${esc(t.notas)}</textarea></div>
+    ${stale ? `<p class="text-xs ${escAttr(stale.cls)} px-2 py-1 rounded-full inline-block font-semibold">${esc(stale.txt)} — ${esc(stale.title)}. Al guardar se resetea el reloj.</p>` : ''}
+    <div class="text-[11px] text-at-gray border-t border-slate-100 dark:border-slate-800 pt-2 font-mono">Días desde última: <strong>${d}</strong> · ID: ${esc(t.id)}</div>
+    <div class="border-t border-slate-100 dark:border-slate-800 pt-3">
+      <p class="text-at-gray uppercase tracking-wider text-[10px] font-semibold mb-2">🕒 Timeline de movimientos</p>
+      <div class="max-h-48 overflow-y-auto pr-1">${auditTimeline(t.id)}</div>
+    </div>
+    <div class="flex flex-wrap gap-2 pt-1">
+      <button id="btnGuardarInt" class="px-4 py-2 rounded-lg bg-at-teal text-white text-sm font-semibold hover:bg-at-teal-dark transition shadow-sm">💾 Guardar</button>
+      <button data-close="modalInt" class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm dark:text-white hover:border-at-teal transition">Cancelar</button>
+    </div>`;
+  document.getElementById("btnGuardarInt").addEventListener("click", () => guardarInt(t.id));
+  const m = document.getElementById("modalInt"); m.classList.remove("hidden"); m.classList.add("flex");
+}
+async function guardarInt(id) {
+  const t = INTERNAS.find(x => x.id === id); if (!t) return;
+  if (!escrituraRemotaDisponible()) { toast("Modo solo lectura — conecta la API antes de editar"); return; }
+  const cambios = [];
+  const nt = document.getElementById("edIntTitulo").value.trim();
+  const na = document.getElementById("edIntAsig").value;
+  const ntp = document.getElementById("edIntTipo").value;
+  const ne = document.getElementById("edIntEstado").value;
+  const npr = document.getElementById("edIntPrio").value;
+  const nn = document.getElementById("edIntNotas").value.trim();
+  if (t.titulo !== nt) cambios.push("Título editado");
+  if (t.asignadoA !== na) cambios.push(`Asignatario ${t.asignadoA}→${na}`);
+  if (t.tipo !== ntp) cambios.push(`Tipo ${t.tipo}→${ntp}`);
+  if (t.estado !== ne) cambios.push(`Estado ${t.estado}→${ne}`);
+  if (t.prioridad !== npr) cambios.push(`Prioridad ${t.prioridad}→${npr}`);
+  if (t.notas !== nn) cambios.push("Notas editadas");
+  const candidato = {...t, titulo: nt || t.titulo, asignadoA: na, tipo: ntp, estado: ne, prioridad: npr, notas: nn, ultima: hoy()};
+  const guardado = await postEditAPI("int", {
+    at_id: candidato.id, titulo: candidato.titulo, asignadoA: candidato.asignadoA,
+    tipo_tarea: candidato.tipo, estado: candidato.estado,
+    prioridad: candidato.prioridad, ultima: candidato.ultima, notas: candidato.notas
+  });
+  if (!guardado.ok) { toast("No se guardó: " + guardado.razon); return; }
+  Object.assign(t, candidato);
+  if (cambios.length) auditar(t.id, "Edición modal", cambios.join(" · "));
+  persistirInt(); renderInternas(); cerrarModal("modalInt");
+  toast(`💾 ${t.titulo.slice(0,30)} actualizada`);
+}
+
+function cerrarModal(id) {
+  const m = document.getElementById(id);
+  m.classList.add("hidden"); m.classList.remove("flex");
+}
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.remove("hidden");
+  clearTimeout(t._tm);
+  t._tm = setTimeout(() => t.classList.add("hidden"), 3200);
+}
+function exportarJSON() {
+  const data = { clientes: CLIENTES, internas: INTERNAS, audit: AUDIT, exportadoEn: new Date().toISOString(), version: "v8" };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "tablero-at-export.json";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast("⇩ JSON descargado (clientes + internas + auditoría)");
+}
+function aplicarTema(t) {
+  document.documentElement.classList.toggle("dark", t === "dark");
+  document.getElementById("btnTema").textContent = t === "dark" ? "☀️" : "🌙";
+  try { localStorage.setItem(THEME_KEY, t); } catch(e) {}
+}
+function initTema() {
+  let t;
+  try { t = localStorage.getItem(THEME_KEY); } catch(e) {}
+  if (!t) t = "light";
+  aplicarTema(t);
+}
+
+function cambiarTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll(".tab-btn").forEach(b => {
+    const active = b.dataset.tab === tab;
+    b.classList.toggle("active", active);
+    if (active) { b.classList.remove("text-at-gray", "dark:text-slate-400"); }
+    else { b.classList.add("text-at-gray", "dark:text-slate-400"); }
+  });
+  document.getElementById("vista-clientes").classList.toggle("hidden", tab !== "clientes");
+  document.getElementById("vista-internas").classList.toggle("hidden", tab !== "internas");
+  document.getElementById("vista-metricas").classList.toggle("hidden", tab !== "metricas");
+  document.getElementById("busqueda").value = "";
+  if (tab === "metricas") renderMetricas();
+  else { renderClientes(); renderInternas(); }
+}
+
+// ============== MODAL INFO ETAPA ==============
+function abrirModalInfo(tipo, paso) {
+  const info = tipo === "cli" ? INFO_ETAPAS_CLI[paso] : INFO_ETAPAS_INT[paso];
+  const titulo = tipo === "cli" ? PASOS_NOMBRES[paso] : COLS_INT[paso].titulo;
+  document.getElementById("modalInfoStep").textContent = (tipo === "cli" ? "Método AT · Paso " : "Internas · Columna ") + String(paso).padStart(2,"0");
+  document.getElementById("modalInfoTitle").textContent = titulo;
+  document.getElementById("modalInfoBody").innerHTML = `
+    <div class="bg-at-cream dark:bg-slate-800 rounded-lg p-3 border border-slate-100 dark:border-slate-700">
+      <p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold mb-1">Qué es</p>
+      <p class="text-sm font-semibold text-at-navy dark:text-white">${esc(info.que)}</p>
+    </div>
+    <div>
+      <p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold mb-1">Qué pasa acá</p>
+      <p class="text-sm text-at-navy dark:text-white">${esc(info.quePasa)}</p>
+    </div>
+    <div>
+      <p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold mb-1">Salida esperada</p>
+      <p class="text-sm text-at-navy dark:text-white">${esc(info.salida)}</p>
+    </div>
+    <div class="bg-at-teal/10 dark:bg-at-teal/15 rounded-lg p-3 border border-at-teal/20">
+      <p class="text-[10px] text-at-teal-dark dark:text-at-teal uppercase tracking-wider font-semibold mb-1">Ejemplo real</p>
+      <p class="text-sm text-at-navy dark:text-white italic">${esc(info.ejemplo)}</p>
+    </div>`;
+  const m = document.getElementById("modalInfo"); m.classList.remove("hidden"); m.classList.add("flex");
+}
+
+// ============== MODAL USUARIOS / ACCESO ==============
+function abrirModalUsuarios() {
+  renderUsuarios();
+  const m = document.getElementById("modalUsuarios"); m.classList.remove("hidden"); m.classList.add("flex");
+}
+function renderUsuarios() {
+  const lista = USUARIOS.length ? USUARIOS.map((u, i) => `
+    <div class="flex items-center justify-between gap-2 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+      <div class="min-w-0">
+        <p class="font-semibold text-at-navy dark:text-white truncate">${esc(u.user)}</p>
+        <p class="text-[10px] text-at-gray font-mono">Agregado ${esc((u.added||"").slice(0,10))} · hash {SHA}</p>
+      </div>
+      <button data-deluser="${i}" class="text-xs px-2.5 py-1.5 rounded-lg border border-rose-300 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition font-semibold shrink-0">Quitar</button>
+    </div>`).join("") : '<p class="text-xs text-at-gray italic">Sin usuarios además de los que ya están en el .htpasswd del server.</p>';
+  document.getElementById("modalUsuariosBody").innerHTML = `
+    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-200">
+      <p class="font-semibold mb-1">⚠️ Cómo funciona el acceso</p>
+      <p>El tablero se protege con <strong>.htaccess + .htpasswd</strong> (auth de Apache). Acá gestionás los usuarios del .htpasswd. Al agregar uno, se genera el hash <code>{SHA}</code> en este navegador (la password <strong>no se envía a ningún lado</strong>). Después descargás el .htpasswd y lo subís por FTP a <code>/home/uNNNNNNNN/.htpasswd-tablero</code> (fuera de public_html).</p>
+    </div>
+    <div>
+      <p class="text-at-gray uppercase tracking-wider text-[10px] font-semibold mb-2">Usuarios actuales (${USUARIOS.length})</p>
+      <div class="space-y-2">${lista}</div>
+    </div>
+    <div class="border-t border-slate-100 dark:border-slate-800 pt-4">
+      <p class="text-at-gray uppercase tracking-wider text-[10px] font-semibold mb-2">Agregar nuevo usuario</p>
+      <div class="space-y-2">
+        <input id="newUser" type="text" placeholder="usuario (ej. kellys)" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:border-at-teal">
+        <input id="newPass" type="password" placeholder="password" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:border-at-teal">
+        <button id="btnAddUser" class="px-4 py-2 rounded-lg bg-at-teal text-white text-sm font-semibold hover:bg-at-teal-dark transition shadow-sm">＋ Agregar</button>
+      </div>
+    </div>
+    <div class="border-t border-slate-100 dark:border-slate-800 pt-4 flex flex-wrap gap-2">
+      <button id="btnDescargarHtpasswd" class="px-4 py-2 rounded-lg bg-at-navy text-white text-sm font-semibold hover:bg-at-navy-light transition shadow-sm">⇩ Descargar .htpasswd</button>
+      <button data-close="modalUsuarios" class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm dark:text-white hover:border-at-teal transition">Cerrar</button>
+    </div>`;
+  document.getElementById("btnAddUser").addEventListener("click", agregarUsuario);
+  document.getElementById("btnDescargarHtpasswd").addEventListener("click", descargarHtpasswd);
+  document.querySelectorAll("[data-deluser]").forEach(b => b.addEventListener("click", () => quitarUsuario(parseInt(b.dataset.deluser, 10))));
+}
+async function agregarUsuario() {
+  const u = document.getElementById("newUser").value.trim();
+  const p = document.getElementById("newPass").value;
+  if (!u || !p) { toast("Falta usuario o password"); return; }
+  if (!/^[A-Za-z0-9_.-]+$/.test(u)) { toast("Usuario: solo letras, números, _ . -"); return; }
+  if (USUARIOS.some(x => x.user === u)) { toast("Ese usuario ya existe"); return; }
+  if (!crypto || !crypto.subtle) { toast("crypto.subtle no disponible (usá HTTPS o localhost)"); return; }
+  try {
+    const hash = await sha1Hash(p);
+    USUARIOS.push({ user: u, hash: hash, added: new Date().toISOString() });
+    persistirUsers();
+    auditar("sistema", "Usuario agregado", `Usuario "${u}" añadido al .htpasswd gestionado`);
+    renderUsuarios();
+    toast(`👤 Usuario ${u} agregado`);
+    document.getElementById("newUser").value = "";
+    document.getElementById("newPass").value = "";
+  } catch(e) { toast("Error generando hash: " + e.message); }
+}
+function quitarUsuario(i) {
+  const u = USUARIOS[i]; if (!u) return;
+  if (!confirm(`Quitar a "${u.user}"? Hay que volver a descargar y subir el .htpasswd.`)) return;
+  USUARIOS.splice(i, 1);
+  persistirUsers();
+  auditar("sistema", "Usuario quitado", `Usuario "${u.user}" removido del .htpasswd gestionado`);
+  renderUsuarios();
+  toast(`👤 ${u.user} quitado`);
+}
+function descargarHtpasswd() {
+  if (!USUARIOS.length) { toast("Sin usuarios para descargar"); return; }
+  const content = USUARIOS.map(u => `${u.user}:${u.hash}`).join("\n") + "\n";
+  const blob = new Blob([content], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = ".htpasswd-tablero";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast("⇩ .htpasswd descargado — subir por FTP fuera de public_html");
+}
+
+// ============== TOKEN API / SYNC ==============
+function actualizarTokenEstado() {
+  const el = document.getElementById("tokenEstado");
+  if (el) el.textContent = API_STATE === "remote" ? "sync" : (API_TOKEN ? "sin conexión" : "sin token");
+}
+function abrirModalToken() {
+  document.getElementById("inputToken").value = API_TOKEN;
+  document.getElementById("tokenTestResult").innerHTML = "";
+  const m = document.getElementById("modalToken"); m.classList.remove("hidden"); m.classList.add("flex");
+}
+async function probarToken() {
+  const r = document.getElementById("tokenTestResult");
+  r.innerHTML = '<p class="text-at-gray">Probando...</p>';
+  const res = await cargarDatosRemotos();
+  if (res.ok) {
+    API_STATE = "remote";
+    actualizarTokenEstado();
+    r.innerHTML = '<p class="text-emerald-600 font-semibold">✓ Conexión OK. ' + res.clientes.length + ' clientes, ' + res.internas.length + ' tareas en PROD.</p>';
+  } else {
+    API_STATE = "local";
+    actualizarTokenEstado();
+    r.innerHTML = '<p class="text-rose-600 font-semibold">✗ Falló: ' + esc(res.razon) + '</p>';
+  }
+}
+
+// ============== MÉTRICAS ==============
+const ESTADO_COLOR_CLI = { done:"#16a34a", progress:"#f59e0b", wait:"#dc2626", blocked:"#7f1d1d" };
+const ESTADO_LABEL_CLI = { done:"Soporte activo", progress:"En progreso", wait:"Esperando", blocked:"Bloqueado" };
+function renderMetricas() {
+  const total = CLIENTES.length;
+  const totalInt = INTERNAS.length;
+  const olvidadas = CLIENTES.filter(c => staleInfo(c)?.cls === "badge-stalled").length;
+  const stalled = CLIENTES.filter(c => staleInfo(c)?.cls === "badge-stale").length;
+  const hechas = INTERNAS.filter(t => t.estado === "done").length;
+  const enProgreso = INTERNAS.filter(t => t.estado === "progress").length;
+  const tasaCierre = totalInt ? Math.round(hechas / totalInt * 100) : 0;
+
+  document.getElementById("metricKPIs").innerHTML = `
+    <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">Clientes totales</p><p class="text-2xl font-extrabold stat-num font-mono">${total}</p></div>
+    <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">Tareas internas</p><p class="text-2xl font-extrabold stat-num font-mono">${totalInt}</p></div>
+    <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">Olvidadas 180d+</p><p class="text-2xl font-extrabold stat-num font-mono">${olvidadas}</p></div>
+    <div class="stat-card bg-white dark:bg-slate-900 rounded-xl p-4 card-shadow"><p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">% cierre internas</p><p class="text-2xl font-extrabold stat-num font-mono">${tasaCierre}%</p></div>`;
+
+  const maxEtapa = Math.max(1, ...[1,2,3,4,5,6].map(i => CLIENTES.filter(c => c.paso === i).length));
+  document.getElementById("metricEtapas").innerHTML = [1,2,3,4,5,6].map(i => {
+    const n = CLIENTES.filter(c => c.paso === i).length;
+    const pct = Math.round(n / maxEtapa * 100);
+    return `<div>
+      <div class="flex justify-between text-xs mb-1"><span class="font-semibold text-at-navy dark:text-white">${String(i).padStart(2,'0')} · ${esc(PASOS_NOMBRES[i])}</span><span class="font-mono text-at-gray">${n}</span></div>
+      <div class="metric-bar-track"><div class="metric-bar-fill" style="width:${pct}%; background: linear-gradient(90deg, #00C9B1, #1A3A6B);"></div></div>
+    </div>`;
+  }).join("");
+
+  const estados = ["done","progress","wait","blocked"];
+  const counts = estados.map(e => CLIENTES.filter(c => c.estado === e).length);
+  const totalC = total || 1;
+  let acc = 0;
+  const stops = estados.map((e, i) => {
+    const start = acc; acc += counts[i] / totalC * 100;
+    return `${ESTADO_COLOR_CLI[e]} ${start}% ${acc}%`;
+  }).join(", ");
+  document.getElementById("donutEstados").style.background = `conic-gradient(${stops || "#94A3B8 0% 100%"})`;
+  document.getElementById("donutEstadosLegend").innerHTML = estados.map((e, i) => `
+    <div class="flex items-center justify-between text-xs">
+      <div class="flex items-center gap-2"><span class="legend-dot" style="background:${ESTADO_COLOR_CLI[e]}"></span><span class="text-at-navy dark:text-white font-medium">${esc(ESTADO_LABEL_CLI[e])}</span></div>
+      <span class="font-mono text-at-gray font-bold">${counts[i]}</span>
+    </div>`).join("");
+
+  const asigKeys = Object.keys(ASIG_AVATARS);
+  const maxAsig = Math.max(1, ...asigKeys.map(a => INTERNAS.filter(t => t.asignadoA === a).length));
+  document.getElementById("metricAsignatarios").innerHTML = asigKeys.map(a => {
+    const n = INTERNAS.filter(t => t.asignadoA === a).length;
+    const pct = Math.round(n / maxAsig * 100);
+    const av = ASIG_AVATARS[a];
+    return `<div>
+      <div class="flex justify-between text-xs mb-1"><div class="flex items-center gap-1.5"><span class="${escAttr(av.cls)} w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold">${esc(av.initials)}</span><span class="font-semibold text-at-navy dark:text-white">${esc(a)}</span></div><span class="font-mono text-at-gray">${n}</span></div>
+      <div class="metric-bar-track"><div class="metric-bar-fill" style="width:${pct}%; background:#00C9B1;"></div></div>
+    </div>`;
+  }).join("");
+
+  const estadosInt = ["backlog","todo","progress","review","done","wait","blocked"];
+  const maxTh = Math.max(1, ...estadosInt.map(e => INTERNAS.filter(t => t.estado === e).length));
+  document.getElementById("metricThroughput").innerHTML = estadosInt.map(e => {
+    const n = INTERNAS.filter(t => t.estado === e).length;
+    const pct = Math.round(n / maxTh * 100);
+    return `<div>
+      <div class="flex justify-between text-xs mb-1"><span class="font-semibold text-at-navy dark:text-white">${esc(ESTADO_INT_LABEL[e] || e)}</span><span class="font-mono text-at-gray">${n}</span></div>
+      <div class="metric-bar-track"><div class="metric-bar-fill" style="width:${pct}%; background:#1A3A6B;"></div></div>
+    </div>`;
+  }).join("");
+
+  const prios = ["P0","P1","P2","P3"];
+  const prioColors = ["#dc2626","#f59e0b","#00C9B1","#94a3b8"];
+  document.getElementById("metricPrioridades").innerHTML = prios.map((p, i) => {
+    const n = [...CLIENTES, ...INTERNAS].filter(x => x.prioridad === p && (x.estado !== "done")).length;
+    return `<div class="rounded-lg p-3 border-l-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700" style="border-left-color:${prioColors[i]}">
+      <p class="text-[10px] text-at-gray uppercase tracking-wider font-semibold">${esc(prioridadLabel(p))}</p>
+      <p class="text-2xl font-extrabold font-mono" style="color:${prioColors[i]}">${n}</p>
+      <p class="text-[10px] text-at-gray">abiertas (no done)</p>
+    </div>`;
+  }).join("");
+}
+
+// ============== EVENT LISTENERS ==============
+document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => cerrarModal(b.dataset.close)));
+document.getElementById("modalCli").addEventListener("click", (e) => { if (e.target.id === "modalCli") cerrarModal("modalCli"); });
+document.getElementById("modalInt").addEventListener("click", (e) => { if (e.target.id === "modalInt") cerrarModal("modalInt"); });
+document.getElementById("modalInfo").addEventListener("click", (e) => { if (e.target.id === "modalInfo") cerrarModal("modalInfo"); });
+document.getElementById("modalUsuarios").addEventListener("click", (e) => { if (e.target.id === "modalUsuarios") cerrarModal("modalUsuarios"); });
+document.getElementById("modalToken").addEventListener("click", (e) => { if (e.target.id === "modalToken") cerrarModal("modalToken"); });
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-info]");
+  if (b) abrirModalInfo(b.dataset.info, parseInt(b.dataset.paso, 10));
+});
+document.getElementById("busqueda").addEventListener("input", () => { if (currentTab !== "metricas") { renderClientes(); renderInternas(); } });
+document.getElementById("ddModo").addEventListener("change", () => { if (currentTab !== "metricas") { renderClientes(); renderInternas(); } });
+document.getElementById("btnExport").addEventListener("click", exportarJSON);
+document.getElementById("btnUsuarios").addEventListener("click", abrirModalUsuarios);
+document.getElementById("btnToken").addEventListener("click", abrirModalToken);
+document.getElementById("btnGuardarToken").addEventListener("click", () => {
+  const t = document.getElementById("inputToken").value.trim();
+  if (!t) { toast("Token vacío"); return; }
+  guardarToken(t);
+  actualizarTokenEstado();
+  toast("🔑 Token guardado para esta sesión; prueba la conexión");
+  cerrarModal("modalToken");
+});
+document.getElementById("btnProbarToken").addEventListener("click", () => {
+  const t = document.getElementById("inputToken").value.trim();
+  if (t && t !== API_TOKEN) guardarToken(t);
+  actualizarTokenEstado();
+  probarToken();
+});
+document.getElementById("btnBorrarToken").addEventListener("click", () => {
+  if (!confirm("¿Borrar token? El tablero pasa a caché local de solo lectura.")) return;
+  guardarToken("");
+  actualizarTokenEstado();
+  document.getElementById("inputToken").value = "";
+  document.getElementById("tokenTestResult").innerHTML = '<p class="text-at-gray">Token borrado. Caché local de solo lectura.</p>';
+  toast("Token borrado — solo lectura");
+});
+document.getElementById("btnSync").addEventListener("click", async () => {
+  toast("🔄 Sincronizando...");
+  const ok = await syncDesdeAPI();
+  if (ok) { renderClientes(); renderInternas(); if (currentTab === "metricas") renderMetricas(); }
+});
+document.getElementById("btnTema").addEventListener("click", () => {
+  aplicarTema(document.documentElement.classList.contains("dark") ? "light" : "dark");
+});
+document.querySelectorAll(".tab-btn").forEach(b => b.addEventListener("click", () => cambiarTab(b.dataset.tab)));
+document.querySelectorAll(".chip-asig").forEach(c => c.addEventListener("click", () => {
+  document.querySelectorAll(".chip-asig").forEach(x => x.classList.remove("active"));
+  c.classList.add("active");
+  filtroAsig = c.dataset.asig;
+  renderInternas();
+}));
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { cerrarModal("modalCli"); cerrarModal("modalInt"); cerrarModal("modalInfo"); cerrarModal("modalUsuarios"); cerrarModal("modalToken"); }
+});
+
+initTema();
+cargarToken();
+actualizarTokenEstado();
+(async () => {
+  cargarAudit();
+  cargarUsers();
+  CLIENTES = cargarDatos(STORAGE_KEY_CLI, SEED_EJEMPLO_CLIENTES);
+  INTERNAS = cargarDatos(STORAGE_KEY_INT, SEED_EJEMPLO_INTERNAS);
+  await cargarSeeds();
+  renderClientes();
+  renderInternas();
+  bootDone = true;
+})();
+</script>
+</body>
+</html>

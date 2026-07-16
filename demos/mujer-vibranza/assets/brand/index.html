@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Mujer Vibranza — Identidad corporativa</title>
+<style>
+  @font-face { font-family:"Cormorant"; src:url("../fonts/Cormorant-600.woff2") format("woff2"); font-weight:600; font-style:normal; }
+  @font-face { font-family:"CormorantIt"; src:url("../fonts/CormorantGaramond-italic.woff2") format("woff2"); font-weight:600; font-style:italic; }
+  @font-face { font-family:"Outfit"; src:url("../fonts/Outfit-normal.woff2") format("woff2"); font-weight:400 500; }
+  @font-face { font-family:"Outfit"; src:url("../fonts/Outfit-600.woff2") format("woff2"); font-weight:600; }
+  :root{--green:#176B5D;--turq:#2BB7A3;--fucsia:#D6307F;--cream:#F3EEE1;--night:#0E231F;--ink:#182320;--muted:#5D6B64;}
+  *{box-sizing:border-box;margin:0;}
+  body{font-family:Outfit,sans-serif;background:var(--cream);color:var(--ink);padding:48px;}
+  h1{font-family:Cormorant,serif;font-size:44px;font-weight:600;margin-bottom:4px;}
+  h2{font-family:Outfit;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:44px 0 16px;border-top:1px solid rgba(24,35,32,.15);padding-top:12px;}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:8px;}
+  .row{display:flex;gap:28px;flex-wrap:wrap;align-items:center;}
+  .card{background:#fff;border:1px solid rgba(24,35,32,.1);border-radius:10px;padding:22px;display:flex;align-items:center;justify-content:center;}
+  .card.dark{background:var(--night);}
+  .lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:8px;text-align:center;}
+  .item{display:flex;flex-direction:column;align-items:center;}
+  /* Logotipo compuesto en HTML (mismo par tipográfico del sitio) */
+  .lock{display:flex;align-items:center;gap:14px;}
+  .lock .mark{width:56px;height:56px;}
+  .wm{line-height:.92;}
+  .wm .m{font-family:Outfit;font-weight:500;font-size:19px;letter-spacing:.12em;color:var(--green);display:block;}
+  .wm .v{font-family:CormorantIt,serif;font-style:italic;font-weight:600;font-size:34px;color:var(--fucsia);display:block;}
+  .lock.on-dark .m{color:var(--cream);} .lock.on-dark .v{color:#fff;}
+  .sw{width:110px;height:88px;border-radius:8px;display:flex;align-items:flex-end;padding:8px;color:#fff;font-size:10px;font-weight:600;letter-spacing:.06em;}
+  .sizes{display:flex;align-items:flex-end;gap:22px;}
+</style>
+</head>
+<body>
+  <h1>Mujer <em style="font-family:CormorantIt;color:var(--fucsia)">Vibranza</em></h1>
+  <p class="sub">Identidad corporativa · Masoterapeuta Clarisa · Maipú, Santiago</p>
+
+  <h2>Isotipo — huella · hoja · vibración</h2>
+  <div class="row">
+    <div class="item">
+      <div class="card"><img src="isotipo.svg" width="120" height="120" alt="Isotipo"></div>
+      <span class="lbl">Principal</span>
+    </div>
+    <div class="item">
+      <div class="card dark"><img src="isotipo-blanco.svg" width="120" height="120" alt="Isotipo blanco"></div>
+      <span class="lbl">Sobre oscuro</span>
+    </div>
+    <div class="item">
+      <div class="card"><img src="isotipo-mono.svg" width="120" height="120" alt="Isotipo mono"></div>
+      <span class="lbl">1 tinta</span>
+    </div>
+  </div>
+
+  <h2>Logotipo horizontal</h2>
+  <div class="row">
+    <div class="item">
+      <div class="card"><div class="lock"><img class="mark" src="isotipo.svg" alt=""><span class="wm"><span class="m">MUJER</span><span class="v">Vibranza</span></span></div></div>
+      <span class="lbl">Principal</span>
+    </div>
+    <div class="item">
+      <div class="card dark"><div class="lock on-dark"><img class="mark" src="isotipo-blanco.svg" alt=""><span class="wm"><span class="m">MUJER</span><span class="v">Vibranza</span></span></div></div>
+      <span class="lbl">Sobre oscuro</span>
+    </div>
+  </div>
+
+  <h2>Prueba de reducción (legibilidad)</h2>
+  <div class="row sizes">
+    <div class="item"><img src="isotipo.svg" width="64" height="64" alt=""><span class="lbl">64px</span></div>
+    <div class="item"><img src="isotipo.svg" width="32" height="32" alt=""><span class="lbl">32px</span></div>
+    <div class="item"><img src="isotipo.svg" width="16" height="16" alt=""><span class="lbl">16px favicon</span></div>
+  </div>
+
+  <h2>Paleta</h2>
+  <div class="row">
+    <div class="sw" style="background:#176B5D">VERDE PROFUNDO<br>#176B5D</div>
+    <div class="sw" style="background:#2BB7A3">TURQUESA<br>#2BB7A3</div>
+    <div class="sw" style="background:#D6307F">FUCSIA<br>#D6307F</div>
+    <div class="sw" style="background:#0E231F">VERDE NOCHE<br>#0E231F</div>
+    <div class="sw" style="background:#F3EEE1;color:#182320">CREMA<br>#F3EEE1</div>
+  </div>
+
+  <h2>Tipografía</h2>
+  <div class="row">
+    <div>
+      <div style="font-family:Cormorant,serif;font-size:40px;font-weight:600;">Cormorant Garamond</div>
+      <div class="lbl" style="text-align:left">Titulares · nombre de marca (itálica)</div>
+    </div>
+    <div>
+      <div style="font-family:Outfit;font-size:30px;font-weight:600;">Outfit</div>
+      <div class="lbl" style="text-align:left">Textos · datos · interfaz</div>
+    </div>
+  </div>
+</body>
+</html>

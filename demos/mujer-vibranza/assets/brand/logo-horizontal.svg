@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 100" role="img" aria-label="Mujer Vibranza">
+  <title>Mujer Vibranza — logo horizontal</title>
+  <!-- Isotipo -->
+  <g transform="translate(6 6) scale(0.88)">
+    <path d="M50 9 C 73 30, 73 61, 50 91 C 27 61, 27 30, 50 9 Z"
+          fill="none" stroke="#176B5D" stroke-width="3.4" stroke-linejoin="round"/>
+    <path d="M50 87 C 43.5 73, 56.5 62, 50 50 C 43.5 38, 56.5 27, 50 13"
+          fill="none" stroke="#D6307F" stroke-width="2.8" stroke-linecap="round"/>
+  </g>
+  <!-- Logotipo: "Mujer" sans + "Vibranza" serif itálica (mismo par tipográfico del sitio) -->
+  <text x="112" y="47" font-family="Outfit, 'Segoe UI', sans-serif" font-size="26" font-weight="500"
+        letter-spacing="1.2" fill="#176B5D">MUJER</text>
+  <text x="112" y="82" font-family="Cormorant, 'Cormorant Garamond', Georgia, serif" font-size="42"
+        font-style="italic" font-weight="600" fill="#D6307F">Vibranza</text>
+  <!-- Bajada -->
+  <text x="300" y="82" font-family="Outfit, 'Segoe UI', sans-serif" font-size="9.5" font-weight="500"
+        letter-spacing="2.6" fill="#5D6B64">MASOTERAPIA</text>
+</svg>

@@ -460,7 +460,12 @@
       window.matchMedia &&
       (window.matchMedia("(max-width: 759px)").matches ||
         window.matchMedia("(pointer: coarse)").matches);
-    if (lenisInstance && isNarrow && window.ScrollTrigger) {
+    // Lección definitiva (v4 y de nuevo aquí): ni ScrollTrigger ni
+    // IntersectionObserver dispararon de forma confiable bajo Lenis en este
+    // sitio. El evento scroll nativo + getBoundingClientRect funciona con
+    // scroll táctil, rueda y programático por igual.
+    if (isNarrow) {
+      var thumbRows = [];
       document.querySelectorAll(".svc-row").forEach(function (row) {
         var src = row.getAttribute("data-img");
         var vidSrc = row.getAttribute("data-video");
@@ -488,38 +493,63 @@
         }
         fig.appendChild(media);
         link.appendChild(fig);
-        ScrollTrigger.create({
-          trigger: row,
-          start: "top 78%",
-          once: true,
-          onEnter: function () {
-            fig.classList.add("reveal");
-            if (vidSrc) {
-              var p = media.play();
-              if (p && p.catch) p.catch(function () {});
+        thumbRows.push({
+          row: row,
+          fig: fig,
+          video: vidSrc ? media : null,
+          revealed: false
+        });
+      });
+
+      var checkRows = function () {
+        var vh = window.innerHeight;
+        thumbRows.forEach(function (t) {
+          var rect = t.row.getBoundingClientRect();
+          if (!t.revealed) {
+            if (rect.top < vh * 0.82 && rect.bottom > 0) {
+              t.revealed = true;
+              t.fig.classList.add("reveal");
+              if (t.video) {
+                var p = t.video.play();
+                if (p && p.catch) p.catch(function () {});
+              }
             }
+            return;
+          }
+          // Ahorro de batería: reproducir solo con la fila en pantalla.
+          if (!t.video) return;
+          var onScreen = rect.bottom > 0 && rect.top < vh;
+          if (onScreen && t.video.paused) {
+            var pp = t.video.play();
+            if (pp && pp.catch) pp.catch(function () {});
+          } else if (!onScreen && !t.video.paused) {
+            t.video.pause();
           }
         });
-        // Ahorro de batería: reproducir solo cuando la fila está en pantalla
-        // (entra por arriba O por abajo), pausar al salir por cualquier lado.
-        if (vidSrc) {
-          var safePlay = function () {
-            if (!fig.classList.contains("reveal")) return;
-            var p = media.play();
-            if (p && p.catch) p.catch(function () {});
-          };
-          ScrollTrigger.create({
-            trigger: row,
-            start: "top bottom",
-            end: "bottom top",
-            onEnter: safePlay,
-            onEnterBack: safePlay,
-            onLeave: function () { media.pause(); },
-            onLeaveBack: function () { media.pause(); }
-          });
-        }
-      });
-      ScrollTrigger.refresh();
+      };
+
+      // Causa raíz del bug en teléfonos: el scroll táctil es nativo y Lenis
+      // no lo trackea (solo emite eventos del scroll que él anima), así que
+      // nada "avisaba" del scroll. Cinturón y tirantes, sin depender de rAF:
+      // listener de scroll directo + intervalo de seguridad (7 gBCR cada
+      // 400ms es despreciable y funciona aunque los eventos no disparen).
+      var lastCheck = 0;
+      var onScrollCheck = function () {
+        var now = Date.now();
+        if (now - lastCheck < 90) return;
+        lastCheck = now;
+        checkRows();
+      };
+      window.addEventListener("scroll", onScrollCheck, { passive: true });
+      window.addEventListener("resize", onScrollCheck, { passive: true });
+      var safetyNet = setInterval(function () {
+        checkRows();
+        // Cuando todo está revelado y no queda video que pausar, se apaga.
+        var pending = thumbRows.some(function (t) { return !t.revealed || t.video; });
+        if (!pending) clearInterval(safetyNet);
+      }, 400);
+      // Filas ya visibles al cargar (el intro bloquea el scroll mientras).
+      checkRows();
     }
   }
 })();

@@ -2,8 +2,8 @@
   <title>Mujer Vibranza — isotipo a una tinta</title>
   <desc>Versión de 1 tinta para sellos, bordado, grabado o fax. Usa currentColor.</desc>
   <g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round" color="#176B5D">
-    <path d="M50 8 C 74 31, 74 61, 50 92 C 26 61, 26 31, 50 8 Z" stroke-width="3.2"/>
-    <path d="M50 21 C 66.5 37, 66.5 59, 50 79 C 33.5 59, 33.5 37, 50 21 Z" stroke-width="2.6"/>
-    <path d="M50 34 C 59 43, 59 56, 50 67 C 41 56, 41 43, 50 34 Z" stroke-width="2.6"/>
+    <path d="M 38 40 C 36 30 40 18 50 15 C 60 18 64 30 62 40 C 67 45 76 49 78 57 C 79 62 75 65 70 63" stroke-width="3.2"/>
+    <path d="M 28 46 C 20 54 18 66 24 76 C 30 88 40 92 50 92 C 60 92 70 88 76 76 C 82 66 80 54 72 46" stroke-width="3.2"/>
+    <circle cx="52" cy="63" r="9" stroke-width="2.6"/>
   </g>
 </svg>

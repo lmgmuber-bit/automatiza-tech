@@ -12,7 +12,7 @@
   <meta property="og:image" content="https://automatizatech.cl/demos/mujer-vibranza/assets/img/editorial-hero.webp" />
   <meta property="og:url" content="https://automatizatech.cl/demos/mujer-vibranza/" />
   <link rel="icon" type="image/svg+xml" href="assets/brand/isotipo.svg" />
-  <link rel="stylesheet" href="assets/css/studio.css?v=3" />
+  <link rel="stylesheet" href="assets/css/studio.css?v=4" />
   <script>document.documentElement.classList.add("js");</script>
 </head>
 <body>
@@ -27,12 +27,12 @@
   <symbol id="i-arrow-up-right" viewBox="0 0 256 256"><path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z"/></symbol>
   <symbol id="i-arrow-down" viewBox="0 0 256 256"><path d="M205.66,149.66l-72,72a8,8,0,0,1-11.32,0l-72-72a8,8,0,0,1,11.32-11.32L120,196.69V40a8,8,0,0,1,16,0V196.69l58.34-58.35a8,8,0,0,1,11.32,11.32Z"/></symbol>
   <symbol id="i-pin" viewBox="0 0 256 256"><path d="M128,64a40,40,0,1,0,40,40A40,40,0,0,0,128,64Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,128Zm0-112a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Zm0,206c-16.53-13-72-60.75-72-118a72,72,0,0,1,144,0C200,161.23,144.53,209,128,222Z"/></symbol>
-  <!-- Isotipo de marca: huella · hoja · vibración (núcleo fucsia = su ambo) -->
+  <!-- Isotipo de marca: silueta de mujer + vibración en su espalda -->
   <symbol id="i-iso" viewBox="0 0 100 100">
     <g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round">
-      <path d="M50 8 C 74 31, 74 61, 50 92 C 26 61, 26 31, 50 8 Z" stroke-width="3.2"/>
-      <path d="M50 21 C 66.5 37, 66.5 59, 50 79 C 33.5 59, 33.5 37, 50 21 Z" stroke-width="2.6" opacity="0.62"/>
-      <path d="M50 34 C 59 43, 59 56, 50 67 C 41 56, 41 43, 50 34 Z" stroke-width="2.6" stroke="#D6307F"/>
+      <path d="M 38 40 C 36 30 40 18 50 15 C 60 18 64 30 62 40 C 67 45 76 49 78 57 C 79 62 75 65 70 63" stroke-width="3.2"/>
+      <path d="M 28 46 C 20 54 18 66 24 76 C 30 88 40 92 50 92 C 60 92 70 88 76 76 C 82 66 80 54 72 46" stroke-width="3.2"/>
+      <circle cx="52" cy="63" r="9" stroke-width="2.6" stroke="#D6307F"/>
     </g>
   </symbol>
 </svg>
@@ -42,13 +42,13 @@
   <div class="pre-stage">
     <svg class="pre-iso" id="preIso" viewBox="0 0 100 100" aria-hidden="true">
       <g fill="none" stroke-linejoin="round" stroke-linecap="round">
-        <!-- Ondas que se propagan (vibración) -->
-        <path class="pre-ripple" d="M50 8 C 74 31, 74 61, 50 92 C 26 61, 26 31, 50 8 Z" stroke="#2BB7A3" stroke-width="2"/>
-        <path class="pre-ripple" d="M50 8 C 74 31, 74 61, 50 92 C 26 61, 26 31, 50 8 Z" stroke="#D6307F" stroke-width="2"/>
-        <!-- Isotipo -->
-        <path class="pre-draw" id="isoOuter" d="M50 8 C 74 31, 74 61, 50 92 C 26 61, 26 31, 50 8 Z" stroke="#F3EEE1" stroke-width="3.2"/>
-        <path class="pre-draw" id="isoMid" d="M50 21 C 66.5 37, 66.5 59, 50 79 C 33.5 59, 33.5 37, 50 21 Z" stroke="#F3EEE1" stroke-width="2.6" opacity="0.62"/>
-        <path class="pre-draw" id="isoCore" d="M50 34 C 59 43, 59 56, 50 67 C 41 56, 41 43, 50 34 Z" stroke="#D6307F" stroke-width="2.6"/>
+        <!-- Ondas que se propagan desde su espalda (vibración) -->
+        <circle class="pre-ripple" cx="52" cy="63" r="9" stroke="#2BB7A3" stroke-width="2"/>
+        <circle class="pre-ripple" cx="52" cy="63" r="9" stroke="#D6307F" stroke-width="2"/>
+        <!-- Isotipo: cabeza+cabello, hombros+espalda, anillo de vibración -->
+        <path class="pre-draw" id="isoOuter" d="M 28 46 C 20 54 18 66 24 76 C 30 88 40 92 50 92 C 60 92 70 88 76 76 C 82 66 80 54 72 46" stroke="#F3EEE1" stroke-width="3.2"/>
+        <path class="pre-draw" id="isoMid" d="M 38 40 C 36 30 40 18 50 15 C 60 18 64 30 62 40 C 67 45 76 49 78 57 C 79 62 75 65 70 63" stroke="#F3EEE1" stroke-width="3.2"/>
+        <circle class="pre-draw" id="isoCore" cx="52" cy="63" r="9" stroke="#D6307F" stroke-width="2.6"/>
       </g>
     </svg>
     <div class="pre-wm" id="preWm">
@@ -321,6 +321,6 @@
 <script src="assets/vendor/lenis.min.js" defer></script>
 <script src="assets/vendor/gsap.min.js" defer></script>
 <script src="assets/vendor/ScrollTrigger.min.js" defer></script>
-<script src="assets/js/studio.js?v=3" defer></script>
+<script src="assets/js/studio.js?v=4" defer></script>
 </body>
 </html>

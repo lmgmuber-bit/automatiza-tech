@@ -839,6 +839,9 @@ em { font-style: italic; }
 .ftr-links a { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; color: var(--muted-dark); transition: color 0.3s ease; }
 .ftr-links a:hover { color: var(--cream); }
 .ftr-note { margin: 1.6rem 0 0; font-size: 0.8rem; color: var(--muted-dark); }
+.ftr-credit { margin: 0.5rem 0 0; font-size: 0.8rem; color: var(--muted-dark); }
+.ftr-credit a { color: var(--turq); transition: color 0.3s ease; }
+.ftr-credit a:hover { color: var(--cream); }
 
 /* ============================================================
    REVEAL (estado inicial cuando hay JS y GSAP)

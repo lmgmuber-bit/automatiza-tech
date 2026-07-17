@@ -7,10 +7,10 @@
     </g>
     <g fill="none" stroke-width="3">
       <circle cx="53.5" cy="50.8" r="7.9" stroke="#2BB7A3"/>
-      <circle cx="53.5" cy="68.3" r="5.5" stroke="#D6307F"/>
+      <circle cx="53.5" cy="68.3" r="5.5" stroke="#E4649F"/>
     </g>
   </g>
   <text x="112" y="47" font-family="Outfit, 'Segoe UI', sans-serif" font-size="26" font-weight="500" letter-spacing="1.2" fill="#176B5D">MUJER</text>
-  <text x="112" y="82" font-family="Cormorant, 'Cormorant Garamond', Georgia, serif" font-size="42" font-style="italic" font-weight="600" fill="#D6307F">Vibranza</text>
+  <text x="112" y="82" font-family="Cormorant, 'Cormorant Garamond', Georgia, serif" font-size="42" font-style="italic" font-weight="600" fill="#E4649F">Vibranza</text>
   <text x="300" y="82" font-family="Outfit, 'Segoe UI', sans-serif" font-size="9.5" font-weight="500" letter-spacing="2.6" fill="#5D6B64">MASOTERAPIA</text>
 </svg>

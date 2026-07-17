@@ -23,8 +23,8 @@
   --muted-dark: rgba(243, 238, 225, 0.62);
   --turq: #2bb7a3;
   --turq-deep: #176b5d;
-  --fucsia: #d6307f;
-  --fucsia-soft: #e98bb6;
+  --fucsia: #e4649f;
+  --fucsia-soft: #efa1c4;
   --line: rgba(24, 35, 32, 0.16);
   --line-light: rgba(243, 238, 225, 0.22);
   --ease: cubic-bezier(0.62, 0.05, 0.01, 0.99);
@@ -51,7 +51,7 @@ a { color: inherit; text-decoration: none; }
 
 h1, h2, h3 { margin: 0; font-weight: 500; }
 
-::selection { background: var(--fucsia); color: #fff; }
+::selection { background: var(--fucsia); color: var(--ink); }
 
 :focus-visible { outline: 2px solid var(--fucsia); outline-offset: 4px; }
 

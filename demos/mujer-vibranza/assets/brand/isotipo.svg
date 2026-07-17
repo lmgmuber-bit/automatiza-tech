@@ -1,14 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Mujer Vibranza">
   <title>Mujer Vibranza — isotipo</title>
-  <desc>Silueta de mujer de espaldas, cabello al viento, con anillos de vibración sobre su espalda (el toque que sana).</desc>
-  <g fill="none" stroke-linejoin="round" stroke-linecap="round">
-    <!-- Cabeza y cabello: un solo trazo fluido -->
-    <path d="M 38 40 C 36 30 40 18 50 15 C 60 18 64 30 62 40 C 67 45 76 49 78 57 C 79 62 75 65 70 63"
-          stroke="#176B5D" stroke-width="3.2"/>
-    <!-- Hombros y espalda: silueta abierta -->
-    <path d="M 28 46 C 20 54 18 66 24 76 C 30 88 40 92 50 92 C 60 92 70 88 76 76 C 82 66 80 54 72 46"
-          stroke="#176B5D" stroke-width="3.2"/>
-    <!-- Vibración: anillo que expande desde su espalda -->
-    <circle cx="52" cy="63" r="9" stroke="#D6307F" stroke-width="2.6"/>
+  <desc>Silueta sólida de mujer de espaldas, cabello al viento, con anillos de vibración sobre su espalda.</desc>
+  <g fill="#176B5D">
+    <circle cx="45" cy="21" r="12"/>
+    <path d="M 53 12 C 65 14 73 22 71 32 C 70 38 64 40 59 36 C 61 30 59 21 53 12 Z"/>
+    <path d="M 24 44 C 14 50 12 64 18 76 C 26 90 40 94 50 94 C 60 94 74 90 82 76 C 88 64 86 50 76 44 C 68 40 60 38 50 38 C 40 38 32 40 24 44 Z"/>
+  </g>
+  <g fill="none" stroke-width="2.6">
+    <circle cx="50" cy="64" r="15" stroke="#2BB7A3"/>
+    <circle cx="50" cy="64" r="7" stroke="#D6307F"/>
   </g>
 </svg>

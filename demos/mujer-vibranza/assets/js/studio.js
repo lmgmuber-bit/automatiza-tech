@@ -119,41 +119,48 @@
       // Contador corre en paralelo a todo
       .to(counter, {
         v: 100,
-        duration: 2.5,
+        duration: 2.6,
         ease: "power1.inOut",
         onUpdate: function () {
           if (countEl) countEl.textContent = Math.round(counter.v);
         }
       }, 0)
-      // 1. La hoja se dibuja sola
-      .to("#isoOuter", { strokeDashoffset: 0, duration: 1.15, ease: "power2.inOut" }, 0.15)
-      // 2. La vibración se propaga hacia adentro
-      .to("#isoMid", { strokeDashoffset: 0, duration: 0.85 }, 0.75)
-      // 3. El núcleo late en fucsia
-      .to("#isoCore", { strokeDashoffset: 0, duration: 0.7 }, 1.25)
-      .to("#isoCore", { scale: 1.14, transformOrigin: "50% 50%", duration: 0.28, yoyo: true, repeat: 1, ease: "power2.out" }, 1.85)
-      // 4. Ondas que salen del núcleo: Vibranza hecha movimiento
+      // 1. El cuerpo se dibuja y se solidifica
+      .to("#isoOuter", { strokeDashoffset: 0, duration: 0.95, ease: "power2.inOut" }, 0.15)
+      .to("#isoOuter", { fillOpacity: 1, duration: 0.3, ease: "power1.out" }, 0.95)
+      // 2. La cabeza aparece
+      .to("#isoHead", { strokeDashoffset: 0, duration: 0.4, ease: "power2.inOut" }, 0.95)
+      .to("#isoHead", { fillOpacity: 1, duration: 0.25, ease: "power1.out" }, 1.25)
+      // 3. El cabello fluye desde la cabeza
+      .to("#isoMid", { strokeDashoffset: 0, duration: 0.45, ease: "power2.inOut" }, 1.15)
+      .to("#isoMid", { fillOpacity: 1, duration: 0.25, ease: "power1.out" }, 1.5)
+      // 4. El anillo turquesa se dibuja
+      .to("#isoRing", { strokeDashoffset: 0, duration: 0.45, ease: "power2.inOut" }, 1.55)
+      // 5. El núcleo late en fucsia
+      .to("#isoCore", { strokeDashoffset: 0, duration: 0.4, ease: "power2.inOut" }, 1.85)
+      .to("#isoCore", { scale: 1.18, transformOrigin: "50% 50%", duration: 0.26, yoyo: true, repeat: 1, ease: "power2.out" }, 2.2)
+      // 6. Ondas que salen del núcleo: Vibranza hecha movimiento
       .fromTo(
         ripples,
         { scale: 1, opacity: 0.5, transformOrigin: "50% 50%" },
         {
-          scale: 1.8,
+          scale: 1.7,
           opacity: 0,
           transformOrigin: "50% 50%",
-          duration: 1.5,
-          stagger: 0.3,
+          duration: 1.4,
+          stagger: 0.28,
           ease: "power2.out"
         },
-        1.9
+        2.3
       )
-      .to(".pre-iso", { scale: 1, duration: 0.9, ease: "power3.out" }, 1.85)
-      // 5. La marca entra con máscara
-      .to(".pre-wm .pre-m", { yPercent: 0, duration: 0.7, ease: "power4.out" }, 2.05)
-      .to(".pre-wm .pre-v", { yPercent: 0, duration: 0.8, ease: "power4.out" }, 2.18)
-      // 6. Salida: el logo respira hacia el sitio y la cortina sube
-      .to(".pre-stage", { scale: 1.06, opacity: 0, duration: 0.6, ease: "power2.in" }, 2.65)
-      .to(".pre-count", { opacity: 0, duration: 0.35 }, 2.65)
-      .to(preloader, { yPercent: -100, duration: 0.95, ease: "power4.inOut" }, 2.95)
+      .to(".pre-iso", { scale: 1, duration: 0.9, ease: "power3.out" }, 2.2)
+      // 7. La marca entra con máscara
+      .to(".pre-wm .pre-m", { yPercent: 0, duration: 0.7, ease: "power4.out" }, 2.5)
+      .to(".pre-wm .pre-v", { yPercent: 0, duration: 0.8, ease: "power4.out" }, 2.63)
+      // 8. Salida: el logo respira hacia el sitio y la cortina sube
+      .to(".pre-stage", { scale: 1.06, opacity: 0, duration: 0.6, ease: "power2.in" }, 3.55)
+      .to(".pre-count", { opacity: 0, duration: 0.35 }, 3.55)
+      .to(preloader, { yPercent: -100, duration: 0.95, ease: "power4.inOut" }, 3.85)
       .set(preloader, { display: "none" });
   } else {
     startSite();

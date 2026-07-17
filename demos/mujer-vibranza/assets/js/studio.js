@@ -79,20 +79,8 @@
     setupScroll();
   }
 
-  // El intro se muestra una vez por sesión: impresiona al que llega,
-  // no estorba al que vuelve (tráfico de Instagram = poca paciencia).
-  var introSeen = false;
-  try {
-    introSeen = sessionStorage.getItem("mv_intro") === "1";
-  } catch (e) {}
-
-  if (preloader && introSeen) {
-    preloader.style.display = "none";
-    startSite();
-  } else if (preloader) {
-    try {
-      sessionStorage.setItem("mv_intro", "1");
-    } catch (e) {}
+  // El intro se muestra en cada carga (decisión de la clienta 2026-07-17).
+  if (preloader) {
     var counter = { v: 0 };
     var countEl = document.getElementById("preCount");
     var draws = gsap.utils.toArray(".pre-draw");

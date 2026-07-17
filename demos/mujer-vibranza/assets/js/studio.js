@@ -125,14 +125,11 @@
           if (countEl) countEl.textContent = Math.round(counter.v);
         }
       }, 0)
-      // 1. El cuerpo se dibuja y se solidifica
-      .to("#isoOuter", { strokeDashoffset: 0, duration: 0.95, ease: "power2.inOut" }, 0.15)
-      .to("#isoOuter", { fillOpacity: 1, duration: 0.3, ease: "power1.out" }, 0.95)
-      // 2. La cabeza aparece
-      .to("#isoHead", { strokeDashoffset: 0, duration: 0.4, ease: "power2.inOut" }, 0.95)
-      .to("#isoHead", { fillOpacity: 1, duration: 0.25, ease: "power1.out" }, 1.25)
-      // 3. El cabello fluye desde la cabeza
-      .to("#isoMid", { strokeDashoffset: 0, duration: 0.45, ease: "power2.inOut" }, 1.15)
+      // 1. El cuerpo (con el rostro de perfil) se dibuja y se solidifica
+      .to("#isoOuter", { strokeDashoffset: 0, duration: 1.05, ease: "power2.inOut" }, 0.15)
+      .to("#isoOuter", { fillOpacity: 1, duration: 0.3, ease: "power1.out" }, 1.05)
+      // 2. La melena fluye con sus mechones
+      .to("#isoMid", { strokeDashoffset: 0, duration: 0.55, ease: "power2.inOut" }, 1.1)
       .to("#isoMid", { fillOpacity: 1, duration: 0.25, ease: "power1.out" }, 1.5)
       // 4. El anillo turquesa se dibuja
       .to("#isoRing", { strokeDashoffset: 0, duration: 0.45, ease: "power2.inOut" }, 1.55)

@@ -1,0 +1,208 @@
+ticket_id: AT-CUMPLECLICK-011
+parent_ticket: null
+title: "CumpleClick: sitio web de clientes (landing de conversión)"
+origin: direct_luis
+portfolio: AT
+priority: P1
+status: DONE_LOCAL_AWAITING_BUSINESS_CONFIG
+created_at: "2026-07-27"
+created_by: claude
+execution_log:
+  - date: "2026-08-01"
+    by: codex
+    what: >
+      Luis reasignó a Codex la corrección del frontend público, dejando la conexión real de
+      WhatsApp para el último gate. Se corrigió overflow en 375/390/768/1440 px, semántica del
+      H1, accesibilidad completa del modal, foco visible de FAQ, coherencia de galería por plan,
+      cuota de 200 fotos, temática a medida +$25.000, comuna y consentimiento en el formulario,
+      bloque de privacidad/cobertura/condiciones y la deprecación THREE.Clock. Los descuentos de
+      lanzamiento del 50% se conservaron por aprobación explícita de Luis. QA Chrome local sin
+      errores; WhatsApp sigue deliberadamente con [WHATSAPP_NUMBER]. Sin deploy/commit/push/merge.
+  - date: "2026-07-27"
+    by: opencode
+    what: >
+      Entregable A construido en CumpleBooth/sitio/: hero, cómo funciona, vitrina de 6 mundos,
+      precios, CTA final + footer. 3D globo-lente diferido (import() + idle) con fallback
+      estático y auto-degradado bajo 30fps. Lenis + GSAP solo transform/opacity. 0 créditos
+      Higgsfield/BudgetPixel gastados. QA puppeteer verde: 375px (hero+CTA ~1.2s, CTA sobre el
+      fold), reduced-motion sin Lenis/3D, sin WebGL con fallback, desktop 60fps, 0 errores
+      consola. Detenido en human gate: Luis revisa en
+      http://localhost/automatiza-tech/CumpleBooth/sitio/ antes de entregable B
+      (diferenciadores + FAQ). [WHATSAPP_NUMBER] placeholder pendiente de número real.
+  - date: "2026-07-27 (tarde)"
+    by: opencode
+    what: >
+      Entregable B construido: diferenciadores, invitaciones digitales (servicio actual),
+      FAQ con teaser fase 2, y sección "Míralo en acción" con video Frozen opt-in
+      (usa video-frozen-juegos-web.mp4, la versión web que Claude generó en AT-009).
+      Carrera real OpenCode/Claude sobre sitio/js y sitio/css resuelta por fusión:
+      implementaciones Claude conservadas, duplicados OpenCode eliminados. Más efectos
+      3D de transición (pedido Luis): data-depth rotationX, parallax de salida del hero,
+      tilt en vitrina, carrusel auto móvil que cede al toque. QA final verde: secciones
+      visibles, modal funcional, reduced-motion limpio, 0 errores. Sigue human gate:
+      revisión de Luis + número WhatsApp + decisión URL.
+
+objective: >
+  Construir la landing pública de CumpleClick: la página que ve un padre o madre que TODAVÍA NO
+  contrató, decidiendo si reserva. Hoy no existe — el handoff se escribió el 2026-07-21 y nunca se
+  ejecutó, así que no hay dónde mandar a un prospecto salvo WhatsApp directo. Es la pieza que
+  convierte, por eso va antes que las mejoras del kiosco (AT-CUMPLECLICK-010).
+
+priority_rationale: >
+  P1 sobre el kiosco: el kiosco mejora la experiencia de quien YA contrató; la landing es lo que
+  trae clientes nuevos. Con producción recién desplegada y 4 demos por temática listas para
+  mostrar, no tener sitio es el cuello de botella comercial.
+
+context_required_before_starting:
+  vault_project_note: "10-Projects/CumpleClick.md"
+  handoff: "CumpleBooth/docs/OPENCODE-HANDOFF-SITIO-CLIENTES.md"
+  brand_source_of_truth: "CumpleBooth/design/MANUAL-DE-MARCA.md + design/tokens.css"
+  mandatory_skills:
+    - "design-taste-frontend (Design Read obligatorio en el reporte)"
+    - "frontend-motion-toolkit (Motion read obligatorio en el reporte)"
+
+ownership:
+  planner: claude
+  executor: opencode
+  reviewer: claude
+  final_approver: "Luis Miguel"
+  current_owner: codex
+  takeover_allowed: true
+  urgency: normal
+
+routing:
+  complexity: C1
+  risk: low
+  uncertainty: low
+  reversibility: high
+  selected_profile: standard_executor
+  rationale: >
+    Entregable nuevo y aislado en su propia carpeta. No toca el kiosco, el admin, la BD ni el
+    deploy. El riesgo es de marca y de conversión (copy genérico, precios mal escritos, CTA que no
+    funciona), no técnico.
+
+decisions_2026_07_27:
+  - who: "Luis Miguel"
+    what: "Autorizadas GSAP y Lenis para el sitio."
+    context: >
+      El handoff original (2026-07-21) prohibía toda librería de motion y exigía CSS puro +
+      IntersectionObserver. Luis pidió permitir animación más ambiciosa. El handoff §3 y §5 ya
+      quedaron actualizados; la versión anterior no aplica.
+  - who: "Luis Miguel"
+    what: "El sitio va antes que las animaciones del kiosco (AT-CUMPLECLICK-010)."
+  - who: "Luis Miguel"
+    what: "3D autorizado en el sitio (Three.js, ya instalada) con transiciones."
+    context: >
+      Revierte la prohibición de three que Claude había puesto por peso. Condiciones en el handoff
+      §3.1: carga diferida con import(), fallback estático sin WebGL o con reduced-motion, el hero
+      y el CTA visibles aunque el 3D falle, y medición de fps en móvil en el reporte.
+  - who: "Luis Miguel"
+    what: "Higgsfield autorizado si hace falta — pero el saldo es de 11.17 cr (2026-07-27)."
+    context: >
+      Alcanza para ~5 imágenes O 1 video. Regla en el handoff §5.1: preflight get_cost obligatorio,
+      autorización de Luis por cada generación, tope de 6 cr antes de parar y preguntar, nunca
+      música, nunca el logo. Recomendación: construir con los assets existentes y no generar nada.
+
+deliverables:
+  - id: A
+    name: "Landing de una página: hero, cómo funciona, temáticas, precios, CTA final"
+    path: "CumpleBooth/sitio/ (carpeta nueva)"
+    credits: 0
+    blocking: true
+    human_gate: true
+  - id: B
+    name: "Secciones opcionales: diferenciadores y FAQ"
+    blocking: false
+
+human_gates:
+  - after: A
+    reason: "Luis revisa el sitio corriendo en local antes de decidir en qué URL vive."
+
+scope:
+  allowed_files:
+    - "CumpleBooth/sitio/**"
+    - "CumpleBooth/package.json"
+    - "CumpleBooth/docs/OPENCODE-HANDOFF-SITIO-CLIENTES.md"
+    - "Docs/ORCHESTRATION/AT-CUMPLECLICK-011.yaml"
+  read_only_reference:
+    - "CumpleBooth/design/tokens.css"
+    - "CumpleBooth/design/MANUAL-DE-MARCA.md"
+    - "CumpleBooth/public/themes/**  (copiar/referenciar assets, NUNCA modificar)"
+    - "CumpleBooth/public/brand/**"
+    - "CumpleBooth/design/video/reels/**"
+  forbidden_files:
+    - "CumpleBooth/src/**"
+    - "CumpleBooth/dist/**"
+    - "CumpleBooth/public/admin/**"
+    - "CumpleBooth/public/*.php"
+    - "CumpleBooth/public/data/**"
+    - "CumpleBooth/config/**"
+    - "wp-content/**"
+  allowed_new_dependencies:
+    - "gsap (timelines y ScrollTrigger)"
+    - "lenis (scroll suave)"
+  already_available:
+    - "three (ya en package.json, la usa el kiosco) — 3D autorizado por Luis 2026-07-27"
+  forbidden_new_dependencies:
+    - "@barba/core (es una sola página, no hay rutas)"
+    - "tailwind / shadcn / librerías de componentes (la marca ya está en tokens.css)"
+
+safety:
+  allow_push: false
+  allow_merge: false
+  allow_deploy: false
+  allow_external_generation: true
+  no_global_installs: true
+  credit_budget:
+    provider: higgsfield
+    balance_at_ticket_creation: 11.17
+    plan: basic
+    cost_preflight_required: true
+    per_generation_approval_required: true
+    stop_and_ask_above_credits: 6
+    music_generation_forbidden: true
+    logo_generation_forbidden: true
+    franchise_names_forbidden_in_prompts: true
+    note: "Saldo muy bajo. Lo esperado es construir con los assets existentes y no gastar nada."
+  note: >
+    La URL final del sitio (si reemplaza la raíz de automatizatech.cl/cumpleclick/ y el kiosco pasa
+    a un subpath, o si vive en otra ruta) la decide Luis. OpenCode entrega funcionando en local.
+
+brand_constraints:
+  tokens_source: "design/tokens.css — no reinventar colores a mano"
+  required_font: "Baloo 2 (self-hosted vía @fontsource/baloo-2, nunca por CDN)"
+  palette_proportion: "70% crema / 20% violeta-fucsia / 8% amarillo / 2% oro"
+  logo_from_svg_only: true
+  precios_oficiales: "Mágico $69.990 · Premium $99.990 · Temática a medida +$25.000"
+  cta_unico: "Agenda la fecha por WhatsApp — número real lo confirma Luis, usar placeholder visible mientras tanto, NUNCA inventar un número"
+  technical_jargon_forbidden: ["IA", "software", "app", "sistema"]
+  real_children_faces_forbidden: true
+
+hard_constraints:
+  mobile_first: "Probar en 375px ANTES que en desktop: ahí decide el cliente"
+  no_scroll_hijacking: "Lenis suaviza, no secuestra. Rueda, teclado y barra siguen funcionando"
+  reduced_motion: "prefers-reduced-motion: reduce desactiva Lenis y parallax"
+  animatable_properties_only: ["transform", "opacity"]
+  cta_never_blocked: "Ninguna animación puede tapar, mover ni retrasar el CTA de WhatsApp"
+  no_cdn: "Todo self-hosted, igual que el resto del proyecto"
+  no_new_ai_assets: "Reusar los assets ya generados; no gastar créditos Higgsfield/BudgetPixel"
+
+acceptance:
+  criteria:
+    - "El sitio corre en local y se ve completo en 375px y en desktop."
+    - "Usa tokens.css y Baloo 2 real; ninguna sección cayó en colores o tipografía inventados."
+    - "Precios y CTA exactos según brand_constraints; ningún número de WhatsApp inventado."
+    - "Design Read y Motion read declarados en el reporte."
+    - "Lenis no rompe el scroll nativo; probado con prefers-reduced-motion."
+    - "Medición de cuánto tarda en verse hero y CTA en móvil, pegada en el reporte."
+    - "El 3D carga diferido y la página funciona completa sin él (sin WebGL o con reduced-motion)."
+    - "Medición de fps del 3D en móvil pegada en el reporte; bajo 30fps se simplifica o se saca."
+    - "Si se gastaron créditos: costo por generación y saldo final reportados."
+  rollback_plan: >
+    Todo vive en CumpleBooth/sitio/. Borrar esa carpeta revierte el ticket completo sin tocar el
+    kiosco, el admin ni producción.
+
+next_action: >
+  No queda implementación local sin guardar. Luis debe confirmar número oficial de WhatsApp,
+  URL final y autorización de deploy; esos datos no se inventan. Rama versionada:
+  codex/cumpleclick-site-frontend-fixes. Ver handoff canónico 2026-08-02.

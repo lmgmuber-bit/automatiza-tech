@@ -1,0 +1,99 @@
+ticket_id: AT-CUMPLECLICK-001
+title: "CumpleClick frontend dinamico, seguridad y BD independiente"
+origin: direct_luis
+portfolio: AT
+priority: P1
+status: DONE_LOCAL_AWAITING_DEPLOY
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C3
+
+objective: "Separar CumpleClick operacionalmente con frontend dinamico, PHP 8+, persistencia MySQL propia y controles de seguridad/privacidad verificables."
+owner: codex
+reviewer: opencode_go
+active_orchestrator: codex
+
+ownership:
+  current_owner: codex
+  previous_owners: []
+  takeover_allowed: true
+  takeover_count: 0
+  takeover_reason: null
+  urgency: normal
+  resolution_status: pending
+  reassignment_authorized_by: "Luis Miguel"
+  handoff_ref: "CumpleBooth/docs/CUMPLECLICK-HANDOFF-CODEX.md"
+  handoff_quality: COMPLETE
+
+scope:
+  allowed_files:
+    - "CumpleBooth/**"
+    - "Docs/ORCHESTRATION/AT-CUMPLECLICK-001.yaml"
+  forbidden_files:
+    - "wp-content/**"
+    - "tablero/**"
+    - "api-tablero.php"
+    - "setup-at-board.php"
+  locked_files:
+    - "CumpleBooth/**"
+  branch: "codex/cumpleclick-secure-db-frontend"
+  base_commit: "57a3a9d3a4a535f0a2c711c25c9bfa0017ab5923"
+  depends_on: []
+
+routing:
+  complexity: C3
+  risk: high
+  uncertainty: medium
+  reversibility: moderate
+  selected_profile: critical_pipeline
+  selected_model: "Codex GPT-5 + subagente OpenCode Go"
+  rationale: "Incluye autenticacion, datos y fotos de menores, migracion de persistencia y cambios de seguridad HTTP."
+  independent_review: true
+  human_gate: true
+
+acceptance:
+  criteria:
+    - "API publica compatible y frame persistente por tema/fiesta."
+    - "BD CumpleClick separada, migracion reversible y secretos fuera del webroot."
+    - "Fotos privadas, acceso por token, retencion 30 dias y cuota 200 fotos/1 GB."
+    - "Flujo Chrome completo con camara, QR, Preview y Diploma sin errores de consola."
+  tests:
+    - "PHP lint y pruebas en 8.2, 8.3 y 8.4."
+    - "Build frontend y pruebas de geometria/frame."
+    - "Pruebas positivas y negativas de auth, PIN, uploads, API, migracion y rollback."
+    - "QA E2E visual en Chrome real."
+  evidence_required:
+    - "Logs sanitizados de pruebas."
+    - "Capturas de Preview y Diploma."
+    - "Diff revisado y manifest FTP exacto."
+  rollback_plan: "Conmutar storage_mode a json usando snapshot validado; conservar BD, backups y JSON durante estabilizacion."
+
+safety:
+  allow_push: false
+  allow_merge: false
+  allow_deploy: false
+  allow_secrets: false
+  allow_external_messages: false
+
+result:
+  summary: "Frontend dinamico con camara fisica priorizada, foto cuadrada alineada al marco decorativo, personaje centrado sobre la pista y marca de agua oficial AT en Preview/Diploma; backend PHP/MySQL seguro con fichas de tematica, inventario y 78 prompts privados editables; migracion, build y QA completados."
+  evidence_refs:
+    - "CumpleBooth/docs/CUMPLECLICK-HANDOFF-CODEX.md"
+    - "CumpleBooth/tests/backend/run.php"
+    - "CumpleBooth/tests/backend/http-smoke.mjs"
+    - "CumpleBooth/tests/frontend/frameGeometry.test.mjs"
+    - "C:/Users/luis_/.codex/visualizations/2026/07/13/019f5d5b-69ff-7cd1-aa89-7f7bc0c25755/cumpleclick-qa/post-change/screenshots/02-preview.png"
+    - "C:/Users/luis_/.codex/visualizations/2026/07/13/019f5d5b-69ff-7cd1-aa89-7f7bc0c25755/cumpleclick-qa/post-change/screenshots/03-diploma.png"
+    - "C:/Users/luis_/.codex/visualizations/2026/07/13/019f5d5b-69ff-7cd1-aa89-7f7bc0c25755/cumpleclick-front-fix/camera-integrated.png"
+    - "C:/Users/luis_/.codex/visualizations/2026/07/13/019f5d5b-69ff-7cd1-aa89-7f7bc0c25755/cumpleclick-front-fix/preview-square.png"
+    - "C:/Users/luis_/.codex/visualizations/2026/07/13/019f5d5b-69ff-7cd1-aa89-7f7bc0c25755/cumpleclick-front-fix/admin-theme-detail.png"
+    - "C:/Users/luis_/.codex/visualizations/2026/07/13/019f5d5b-69ff-7cd1-aa89-7f7bc0c25755/cumpleclick-front-fix/diploma-final.png"
+    - "C:/Users/luis_/.codex/visualizations/2026/07/13/019f5d5b-69ff-7cd1-aa89-7f7bc0c25755/cumpleclick-alignment-fix/preview-aligned-v1.png"
+    - "C:/Users/luis_/.codex/visualizations/2026/07/13/019f5d5b-69ff-7cd1-aa89-7f7bc0c25755/cumpleclick-watermark/preview-watermark-final-stable.png"
+    - "C:/Users/luis_/.codex/visualizations/2026/07/13/019f5d5b-69ff-7cd1-aa89-7f7bc0c25755/cumpleclick-watermark/diploma-watermark-final.png"
+  residual_risks:
+    - "La seleccion automatica elegia una camara virtual negra; ahora prioriza Integrated Camera y el feed fisico fue verificado. Revalidar igualmente el hardware de la tablet final."
+    - "PHP 8.4 local tiene una ruta Xdebug E:/ obsoleta; lint/tests pasan con exit 0."
+    - "PROD/Hostinger y cron de retencion no fueron desplegados ni probados."
+  next_action: "Código local cerrado y versionado; Luis autoriza por separado merge y deploy FTP/Hostinger. Ver handoff 2026-08-02."

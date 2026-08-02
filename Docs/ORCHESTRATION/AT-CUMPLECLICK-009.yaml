@@ -1,0 +1,123 @@
+ticket_id: AT-CUMPLECLICK-009
+parent_ticket: null
+title: "CumpleClick: video exclusivo temática Reino de Hielo (Frozen), foco en los juegos de Olaf"
+origin: direct_luis
+portfolio: AT
+priority: P2
+status: DONE_LOCAL_ASSET_PACKAGE
+created_at: "2026-07-26"
+created_by: claude
+
+objective: >
+  Video corto (30-45s) mostrando EN VIVO el gameplay de la temática Reino de Hielo (slug interno
+  `hielo`, franquicia Frozen), con foco en Olaf porque es el único personaje con 3 juegos
+  encadenados (armar-muneco → fichas → copos); el resto de personajes de esta temática tiene 2
+  (fichas → copos). Distinto del video explicativo genérico ya aprobado: este es 100% gameplay de
+  una sola temática, ángulo de venta "mira todo lo que se puede jugar, no solo la foto".
+
+context_required_before_starting:
+  vault_project_note: "10-Projects/CumpleClick.md"
+  handoff: "CumpleBooth/docs/OPENCODE-HANDOFF-VIDEO-FROZEN-JUEGOS.md"
+  brand_source_of_truth: "CumpleBooth/design/MANUAL-DE-MARCA.md"
+  note: >
+    El handoff tiene una sección técnica crítica (§2) sobre una limitación de Chrome/CDP
+    screencast descubierta la sesión anterior grabando la ruleta — léela antes de escribir código,
+    trae ya la solución recomendada (gdigrab) y el plan B probado.
+
+ownership:
+  planner: claude
+  executor: opencode
+  reviewer: claude
+  final_approver: "Luis Miguel"
+  current_owner: opencode
+  takeover_allowed: true
+  urgency: normal
+
+routing:
+  complexity: C1
+  risk: medium
+  uncertainty: medium
+  reversibility: high
+  selected_profile: standard_executor
+  rationale: >
+    Trabajo de marketing contenido en design/, no toca producto ni BD (la fiesta demo ya existe).
+    El riesgo es técnico (capturar gameplay real puede fallar por la limitación de CDP screencast
+    ya documentada) y de tiempo (la ruleta es aleatoria, hay que reintentar hasta que caiga Olaf),
+    no de marca ni de datos.
+
+deliverables:
+  - id: A
+    name: "Video gameplay Reino de Hielo / Olaf (3 juegos)"
+    path: "CumpleBooth/design/video-frozen/video-frozen-juegos.mp4"
+    size: "1080x1920"
+    credits: 0
+    blocking: true
+  - id: B
+    name: "Versión horizontal (opcional si alcanza el tiempo)"
+    path: "CumpleBooth/design/video-frozen/video-frozen-juegos-16x9.mp4"
+    size: "1920x1080"
+    credits: 0
+    blocking: false
+
+scope:
+  allowed_files:
+    - "CumpleBooth/design/video-frozen/**"
+    - "CumpleBooth/scripts/record-frozen-gameplay.mjs"
+    - "CumpleBooth/scripts/build-frozen-video.mjs"
+    - "CumpleBooth/docs/OPENCODE-HANDOFF-VIDEO-FROZEN-JUEGOS.md"
+    - "Docs/ORCHESTRATION/AT-CUMPLECLICK-009.yaml"
+  forbidden_files:
+    - "CumpleBooth/src/**"
+    - "CumpleBooth/public/**"
+    - "CumpleBooth/dist/**"
+    - "wp-content/**"
+    - "tablero/**"
+    - "api-tablero.php"
+  allowed_new_dependencies:
+    - "puppeteer-core (ya autorizada en el proyecto)"
+  pre_existing_fixtures:
+    - "Fiesta demo `demo-hielo` (tema hielo/Frozen) ya creada vía scripts/seed-demo-theme-parties.php --apply. No borrar ni recrear."
+
+safety:
+  allow_external_generation: false
+  allow_push: false
+  allow_merge: false
+  allow_deploy: false
+  allow_secrets: false
+  no_global_installs: true
+
+brand_constraints:
+  logo_must_be_composited_from_svg: true
+  logo_must_never_be_ai_generated: true
+  reuse_existing_logo_asset: "CumpleBooth/design/logo/logo-icon-wordmark.png"
+  franchise_names_forbidden_in_generation_prompts: true
+  real_children_faces_forbidden: true
+  required_font: "Baloo 2 (node_modules/@fontsource/baloo-2)"
+
+known_technical_risk:
+  summary: >
+    CDP Page.startScreencast no capturó frames a ritmo real durante una animación CSS (ruleta) en
+    la sesión anterior, pese a que el JS avanzaba a velocidad normal (verificado con
+    getComputedStyle). Dos intentos de arreglo no funcionaron. Riesgo de que el mismo problema
+    aparezca grabando gameplay (arrastre, fichas, copos).
+  recommended_fix: "Grabar con ffmpeg -f gdigrab (captura de escritorio de Windows) en vez de CDP screencast — sortea el pipeline interno de Chrome."
+  fallback: "Pantallazos estáticos + zoompan, mismo método ya aprobado por Luis en el video explicativo genérico."
+  validation_required: "Probar gdigrab con el juego copos (5s) y confirmar con ffprobe que la duración capturada es ~5s antes de comprometerse a grabar todo el guion así."
+
+acceptance:
+  criteria:
+    - "El video muestra gameplay REAL (no simulado/dibujado) de armar-muneco, fichas y copos con Olaf."
+    - "Si se usó el plan B (estáticos), está declarado explícitamente en el reporte y por qué."
+    - "El logo es el asset real recortado, no regenerado."
+    - "Video final h264/yuv420p/faststart, se ve completo sin cortes de texto."
+  tests:
+    - "ffprobe del video final pegado literal en el reporte."
+    - "Revisión visual de Claude antes de considerar el ticket cerrado."
+  rollback_plan: >
+    Todo el entregable vive en CumpleBooth/design/video-frozen/. Borrar esa carpeta revierte el
+    ticket completo sin tocar el producto ni la fiesta demo.
+
+next_action: >
+  Video vertical, versión web, poster, clips y voces están generados en
+  CumpleBooth/design/video-frozen y la versión web se usa en sitio/. No quedan cambios Git
+  pendientes; publicación requiere autorización de Luis.

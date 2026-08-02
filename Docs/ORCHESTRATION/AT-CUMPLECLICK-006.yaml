@@ -1,0 +1,119 @@
+ticket_id: AT-CUMPLECLICK-006
+title: "CumpleClick: 15 invitaciones dinámicas y primer lote de 5 videos"
+origin: direct_luis
+portfolio: AT
+priority: P1
+status: ROADMAP_PARTIAL_PAUSED_NO_LOCAL_CHANGES
+
+objective: "Implementar un módulo de invitaciones reutilizables con 15 fondos temáticos sin texto, datos dinámicos por fiesta y una primera tanda de cinco videos de plantilla."
+
+required_invitation_fields:
+  - birthday_person_name
+  - event_date
+  - event_time
+  - address
+optional_invitation_fields:
+  - age
+  - venue_name
+  - rsvp
+  - message
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C3
+
+ownership:
+  planner: codex
+  executor: opencode_go
+  reviewer: codex
+  final_approver: "Luis Miguel"
+  current_owner: opencode_go
+  previous_owner: codex
+  takeover_allowed: true
+  handoff_ref: "CumpleBooth/docs/OPENCODEGO-INVITACIONES-EXECUTOR.md"
+  handoff_quality: COMPLETE
+
+scope:
+  allowed_files:
+    - "CumpleBooth/**"
+    - "Docs/ORCHESTRATION/AT-CUMPLECLICK-006.yaml"
+    - "Docs/ORCHESTRATION/current-handoff.yaml"
+  forbidden_files:
+    - "wp-content/**"
+    - "tablero/**"
+    - "api-tablero.php"
+    - "setup-at-board.php"
+  locked_files:
+    - "CumpleBooth/**"
+  branch: "codex/cumpleclick-secure-db-frontend"
+  base_commit: "57a3a9d3a4a535f0a2c711c25c9bfa0017ab5923"
+
+routing:
+  complexity: C3
+  risk: high
+  uncertainty: medium
+  reversibility: moderate
+  selected_profile: critical_pipeline
+  planner_model: "Codex GPT-5"
+  executor_model: "OpenCode Go - strongest available coding model selected by Luis"
+  rationale: "Combina arquitectura, datos de menores, administración, archivos externos, consumo de créditos y publicación."
+  independent_review: true
+  human_gate: true
+
+catalog:
+  image_themes:
+    - carreras
+    - mickey
+    - hielo
+    - cachorros
+    - heroes
+    - princesas
+    - dinos
+    - sirenas
+    - juguetes
+    - tropical
+    - arcade
+    - bloques
+    - criaturas
+    - guerreros
+    - familia-canina
+  video_batch_1:
+    - familia-canina
+  reference_pilot: carreras
+  execution_strategy: sequential_full_theme
+  current_child_ticket: AT-CUMPLECLICK-007
+  backlog_candidates:
+    - fashion
+
+safety:
+  allow_external_generation: false
+  allow_external_generation_after_human_gate: true
+  allow_push: false
+  allow_merge: false
+  allow_deploy: false
+  allow_secrets: false
+  prompt_camouflage_required: true
+  max_batch_images_before_review: 3
+  video_cost_margin_percent: 20
+
+acceptance:
+  criteria:
+    - "Quince temáticas con imagen base 9:16 aprobada, sin texto ni logos generados."
+    - "Cinco temáticas nuevas con video estable y fallback a imagen."
+    - "Datos de invitación dinámicos, exactos y reutilizables sin regenerar arte."
+    - "Nombre, fecha, hora y dirección son obligatorios para publicar, compartir o exportar una tarjeta."
+    - "Admin con biblioteca, ficha, prompts privados, versiones, metadata y editor por fiesta."
+    - "Responsive verificado en tablets de 7 a 10 pulgadas, con prioridad 10 pulgadas."
+    - "Ningún nombre de franquicia/personaje aparece en prompts enviados a proveedores."
+    - "Migración, seguridad, pruebas, rollback, documentación y manifest FTP completos."
+  tests:
+    - "PHP 8.2/8.3/8.4, migraciones up/down, CRUD y concurrencia."
+    - "Auth/CSRF/XSS/SQLi/path traversal/MIME/tokens/prompts privados."
+    - "Render visual, textos largos, video/fallback y QA Chrome real."
+    - "Regresión completa del kiosco Carreras."
+  rollback_plan: "Feature flag desactiva el módulo; conservar última plantilla aprobada y migraciones reversibles con backup."
+
+next_action: >
+  Sin cambios locales pendientes. El módulo reutilizable, prompts, slots y los mundos ejecutados
+  están versionados; completar hasta 15 temáticas es roadmap futuro y requiere una nueva orden,
+  gates visuales y presupuesto. Ver HANDOFF-OTRA-PC-2026-08-02.md.

@@ -1,0 +1,121 @@
+{
+  "theme": "familia-canina",
+  "publicName": "Aventura Perruna",
+  "visualVersion": 1,
+  "status": "approved",
+  "approvedBy": "Luis Miguel",
+  "approvedAt": "2026-07-17",
+  "providerPromptCamouflageRequired": true,
+  "assets": {
+    "invitationMaster": {
+      "path": "invitation/invitation-base-v1.png",
+      "width": 1080,
+      "height": 1920,
+      "sha256": "58d3b542cc7c8c3137c9e5b24628979953e89970fe2420d0edbf5908e81315b3",
+      "role": "generic_blank_invitation_master",
+      "charactersVisible": 4
+    },
+    "rouletteBackground": {
+      "path": "roulette/roulette-background-v1.png",
+      "width": 1080,
+      "height": 1920,
+      "sha256": "bce55c085ce35d4d45f122931d0ea0337b760dee64bbed7df90d686bfc82d80f",
+      "role": "roulette_background_with_blank_wheel_area",
+      "charactersVisible": 2
+    },
+    "photoSessionTransition": {
+      "path": "transicion-sesion-fotos.mp4",
+      "poster": "transicion-alfombra-base-v1.png",
+      "width": 720,
+      "height": 1280,
+      "durationSeconds": 8.041667,
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "sha256": "85e7874839b2aa13c39625fe73432fa38b34f99b547801a73f3c4d045f191cfd",
+      "role": "photo_session_transition_before_selected_character_greeting",
+      "charactersVisible": 2,
+      "providerCostCredits": 12
+    },
+    "introBanner": {
+      "path": "fondo-banner.jpg",
+      "width": 1080,
+      "height": 1920,
+      "sha256": "01cc6729236df65a94b6d2f10f043029b534935df9add7a2ead372c2c769e157",
+      "role": "dynamic_intro_background_without_baked_text"
+    },
+    "photoBoothRoom": {
+      "path": "fondo-sala.jpg",
+      "width": 1080,
+      "height": 1920,
+      "sha256": "d44f8331059cc7cadaee01764d217c5a429eb0d706a493285999bf417e9d3c63",
+      "role": "photo_composition_background_with_square_frame",
+      "frameBox": {"x": 0.25, "y": 0.17, "w": 0.5, "h": 0.28125}
+    },
+    "groupWatermark": {
+      "path": "grupo-personajes.png",
+      "width": 1800,
+      "height": 1100,
+      "sha256": "1d9aed8ced8db6124d8925bf388bf467092efecf26964b7d408b420ea2708a22",
+      "role": "six_character_transparent_diploma_watermark"
+    },
+    "music": {
+      "path": "musica-fondo.mp3",
+      "durationSeconds": 32,
+      "sha256": "0348111a3c79603ea5ee86d72109c28c1b181b0f0a48bea04c1a700cc9ccc4cf",
+      "role": "original_instrumental_background_loop"
+    },
+    "cutouts": {
+      "azulita-cut.png": "b1f8b511c51fd8d2aadfade7bd61a84f6ff59a5add396c2ef7e0d3becf9635e5",
+      "chispa-cut.png": "f7c1f9c267b6d204120cf0444de71dbea49b45e100ce878f1cca5d4e3899f8ce",
+      "papa-marino-cut.png": "dda0bb6369db68a53f68fa3d2e3757368852843b570f86f83a67aa19efdd895a",
+      "mama-coral-cut.png": "1646ad23a42e597637d34446cae48ff2c4cf3357b03b5ad74ae92443e85aae21",
+      "muffin-cut.png": "61ac73e6b8c9f2e191b7e190cfe25d7920c5808351f0ae93f726909c761ed407",
+      "chloe-cut.png": "cb17690e033e29726386589fb921578d8731580aeb734db6efbe6bab6f26f421"
+    },
+    "runnerAtlases": {
+      "azulita-run-atlas.png": "52152084678fa3043aed4088c0621ea0b7343b6523a97923bacb6195e38f8641",
+      "chispa-run-atlas.png": "d13977f9e70b72a11b69aed99575e96288ba52ebfbd31e19d71706c8ff181879",
+      "papa-marino-run-atlas.png": "7f2ba7f2d01501530f901682d7a47364c71bab16314f303edb39528a64ca298a",
+      "mama-coral-run-atlas.png": "3bc52e3ce8324d2c094fad046d0735d6c5a8cd3f9826dff7e45ca3949096eb40",
+      "muffin-run-atlas.png": "58ca448722b70496943d003d6e0504c40273113a774fe8baf4c99bf5a603ff5c",
+      "chloe-run-atlas.png": "c2052096e5d49067f4ae1cb3b94bbf37bf5ed54e8d1a6db8c6aff7e8865e3892"
+    }
+  },
+  "styleLock": {
+    "medium": "premium photorealistic 3D collectible-toy rendering",
+    "geometry": "smooth rounded child-friendly forms with clean edges",
+    "surface": "soft matte-to-satin finish with subtle ambient occlusion",
+    "lighting": "bright warm cinematic daylight with soft contact shadows",
+    "palette": [
+      "saturated sky blue",
+      "deep navy blue",
+      "warm orange",
+      "coral orange",
+      "cream",
+      "pastel pink",
+      "sunny yellow",
+      "soft green"
+    ],
+    "environment": "premium pastel playground birthday party",
+    "camera": "vertical 9:16, eye-level to slightly low, 35mm feel",
+    "forbidden": [
+      "flat 2D",
+      "thick outlines",
+      "sticker look",
+      "cheap plastic",
+      "low-poly",
+      "gray or teal protagonist",
+      "official names",
+      "logos",
+      "watermarks"
+    ]
+  },
+  "compositionLock": {
+    "invitation": "four-member family below a large blank cream sign; parents behind two sisters; cake centered",
+    "roulette": "two sisters below a large blank sign used as the wheel safe area",
+    "blankPanelMustRemainEmpty": true,
+    "applicationRendersDynamicEventData": true,
+    "wheelResults": 6,
+    "selectedCharacterPersistsToPhotoAndDiploma": true
+  }
+}

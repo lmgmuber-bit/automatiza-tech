@@ -1,0 +1,140 @@
+ticket_id: AT-CUMPLECLICK-010
+parent_ticket: null
+title: "CumpleClick: frontend WOW — animaciones, 3D y profundidad en el kiosco"
+origin: direct_luis
+portfolio: AT
+priority: P2
+status: DONE_LOCAL_AWAITING_DEPLOY
+created_at: "2026-07-27"
+created_by: claude
+
+objective: >
+  Elevar la capa visual del kiosco para que se sienta premium y mágico para un niño de 5-10 años,
+  usando animación real (GSAP/Motion) y profundidad 3D (Three.js, ya instalada), sin alterar la
+  lógica del flujo ni degradar el rendimiento en la tablet del cliente.
+
+context_required_before_starting:
+  vault_project_note: "10-Projects/CumpleClick.md"
+  handoff: "CumpleBooth/docs/OPENCODE-HANDOFF-FRONTEND-WOW.md"
+  brand_source_of_truth: "CumpleBooth/design/MANUAL-DE-MARCA.md"
+  mandatory_skills:
+    - "frontend-motion-toolkit (elección de librería + Motion read obligatorio)"
+    - "design-taste-frontend (criterio visual + Design Read obligatorio)"
+
+ownership:
+  planner: claude
+  executor: opencode
+  reviewer: claude
+  final_approver: "Luis Miguel"
+  current_owner: opencode
+  takeover_allowed: true
+  urgency: normal
+
+routing:
+  complexity: C1
+  risk: medium
+  uncertainty: medium
+  reversibility: high
+  selected_profile: standard_executor
+  rationale: >
+    Solo capa visual, pero sobre la app que YA está en producción con clientes reales. El riesgo
+    no es de datos sino de regresión: una animación que bloquee el flujo o que tironee en una
+    tablet modesta arruina la experiencia en una fiesta real, delante del cliente.
+
+deliverables:
+  - id: A
+    name: "Ruleta con profundidad 3D y física de desaceleración"
+    path: "CumpleBooth/src/App.jsx (Spinner) + src/index.css"
+    human_gate: true
+    blocking: true
+  - id: B
+    name: "Intro/portada con entrada escalonada y parallax"
+    path: "CumpleBooth/src/App.jsx (Intro)"
+  - id: C
+    name: "Preview de foto con aterrizaje, confeti y marco diferido"
+    path: "CumpleBooth/src/App.jsx (Preview)"
+  - id: D
+    name: "Transición de salida de la revelación"
+    path: "CumpleBooth/src/App.jsx (Revelacion)"
+  - id: E
+    name: "Prioridad media: invitados, juegos, diploma"
+    path: "CumpleBooth/src/App.jsx"
+    blocking: false
+
+human_gates:
+  - after: A
+    reason: "Luis aprueba el estilo de la ruleta antes de replicar el lenguaje visual en las demás pantallas."
+
+scope:
+  allowed_files:
+    - "CumpleBooth/src/**"
+    - "CumpleBooth/package.json"
+    - "CumpleBooth/docs/OPENCODE-HANDOFF-FRONTEND-WOW.md"
+    - "Docs/ORCHESTRATION/AT-CUMPLECLICK-010.yaml"
+  forbidden_files:
+    - "CumpleBooth/public/lib.php"
+    - "CumpleBooth/public/*.php"
+    - "CumpleBooth/database/**"
+    - "CumpleBooth/config/**"
+    - "wp-content/**"
+    - "tablero/**"
+  forbidden_changes:
+    - "Lógica de flujo (src/themeFlow.js, orden de pantallas, gamesFor/gameFor)"
+    - "Captura de cámara (.screen.capture): un frame perdido es una foto perdida"
+    - "Watchdogs de seguridad existentes (setTimeout que garantizan avance del flujo)"
+  allowed_new_dependencies:
+    - "gsap (timelines y secuencias)"
+    - "motion (animación de componentes React, importar desde motion/react)"
+  forbidden_new_dependencies:
+    - "lenis (no hay scroll en un kiosco fullscreen)"
+    - "@barba/core (no hay navegación entre páginas)"
+    - "animejs (se solapa con Motion en React)"
+    - "librerías de componentes UI (shadcn/Skiper/21st.dev): el UI es propio"
+
+safety:
+  allow_push: false
+  allow_merge: false
+  allow_deploy: false
+  no_global_installs: true
+
+hard_constraints:
+  target_fps: 60
+  target_device: "tablet de gama media, uso continuo durante una fiesta"
+  animatable_properties_only: ["transform", "opacity"]
+  forbidden_animated_properties: ["width", "height", "top", "left", "margin"]
+  reduced_motion: "Respetar prefers-reduced-motion vía la constante REDUCE_MOTION ya existente en App.jsx"
+  max_added_latency_per_guest_ms: 400
+  three_js_note: "El bundle ya pesa 734kB por three; escenas nuevas van con import() dinámico"
+  touch_not_hover: "Los estados :hover no existen en tablet; diseñar para :active y toque"
+
+acceptance:
+  criteria:
+    - "npm test sigue en 36/36 verde."
+    - "php scripts/check-dist-parity.php en verde y tests/backend/run.php 83 checks."
+    - "Flujo completo de una temática recorrido en navegador sin caídas bajo 60fps (medido en DevTools Performance)."
+    - "Probado con prefers-reduced-motion: reduce activado."
+    - "Probado en viewport 768x1024, no solo desktop."
+    - "Ninguna animación bloquea o retrasa el avance del flujo."
+    - "Design Read y Motion read declarados en el reporte."
+  tests:
+    - "npm test"
+    - "php scripts/check-dist-parity.php"
+    - "php tests/backend/run.php"
+    - "Medición de fps por pantalla tocada, pegada en el reporte."
+  rollback_plan: >
+    Todo el cambio vive en src/. Revertir la rama restaura la versión actual, que ya está
+    desplegada y funcionando en producción.
+
+next_action: >
+  Implementación local cerrada y versionada en
+  codex/cumpleclick-site-frontend-fixes. No queda código por ejecutar en este ticket.
+  Luis conserva el gate de deploy/merge. Ver
+  CumpleBooth/docs/HANDOFF-OTRA-PC-2026-08-02.md.
+
+closure_2026_08_02:
+  by: codex
+  result: >
+    Las seis temáticas tienen misión Full concierto3d y escenario propio; la ruleta,
+    profundidad, juegos, récords, transiciones y fallbacks están integrados. Carreras
+    incorpora videoEstrella con AAC y ducking de música. Frontend 81/81, build y paridad
+    public-dist verdes. Sin deploy ni merge.

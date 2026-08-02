@@ -1,0 +1,44 @@
+<svg viewBox="0 0 640 160" width="640" height="160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CumpleClick">
+  <!-- Lockup horizontal OFICIAL "El globo dulce" (design/MANUAL-DE-MARCA.md). -->
+  <defs>
+    <radialGradient id="cch-body" cx="34%" cy="26%" r="88%">
+      <stop offset="0%" stop-color="#B9A0F7"/>
+      <stop offset="34%" stop-color="#8B5CF6"/>
+      <stop offset="72%" stop-color="#C0409E"/>
+      <stop offset="100%" stop-color="#D6307F"/>
+    </radialGradient>
+    <linearGradient id="cch-ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="55%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#E8A317"/>
+    </linearGradient>
+    <radialGradient id="cch-lens" cx="38%" cy="32%" r="85%">
+      <stop offset="0%" stop-color="#D8CCFB"/>
+      <stop offset="60%" stop-color="#A88BE8"/>
+      <stop offset="100%" stop-color="#8256C9"/>
+    </radialGradient>
+    <linearGradient id="cch-string" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F5C542"/>
+      <stop offset="100%" stop-color="#D99A14"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(80,80) scale(0.62)">
+    <circle r="112" fill="url(#cch-body)"/>
+    <ellipse cx="-46" cy="-66" rx="46" ry="30" fill="#FFFFFF" opacity="0.38" transform="rotate(-24 -46 -66)"/>
+    <g transform="translate(-28,-8)">
+      <circle r="58" fill="url(#cch-ring)"/>
+      <circle r="41" fill="url(#cch-lens)"/>
+      <ellipse cx="-12" cy="-14" rx="16" ry="10" fill="#FFFFFF" opacity="0.5" transform="rotate(-22 -12 -14)"/>
+      <circle r="57" fill="none" stroke="#FFF3C4" stroke-width="1.8" opacity="0.7"/>
+    </g>
+    <g transform="translate(86,-72) rotate(-40)">
+      <path d="M0 -7 Q7 0 0 7 L15 5 Q18 0 15 -5 Z" fill="#C2186B"/>
+      <rect x="13" y="-6" width="8" height="12" rx="3" fill="url(#cch-string)"/>
+    </g>
+    <path d="M101 -85 C 107 -90, 114 -89, 118 -83 C 126 -64, 110 -44, 116 -20 C 122 4, 104 26, 114 50"
+          fill="none" stroke="url(#cch-string)" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <text x="176" y="102" font-family="'Baloo 2', 'Segoe UI', sans-serif" font-weight="800" font-size="72" fill="#4C2882">Cumple<tspan fill="#D6307F">Click</tspan></text>
+</svg>

@@ -1,0 +1,7 @@
+Pon aquí los 2 videos con estos nombres EXACTOS:
+
+  saludo.mp4      <- personajes saludando (5-15s, con audio)
+  despedida.mp4   <- personajes despidiéndose (5-10s, con audio)
+
+Formato sugerido: MP4 H.264, vertical 1080x1920 (9:16).
+Si un video falta, la app NO se rompe: muestra una tarjeta animada y sigue.

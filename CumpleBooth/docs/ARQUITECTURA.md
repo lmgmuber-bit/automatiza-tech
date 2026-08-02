@@ -1,0 +1,132 @@
+# CumpleClick — arquitectura vigente
+
+CumpleClick by AutomatizaTech es una SPA de kiosco más un backend PHP 8+ sin
+framework. Producción usa `/cumpleclick/`; `CumpleBooth` permanece como nombre
+técnico. WordPress/AutomatizaTech y CumpleClick no comparten BD ni credenciales.
+
+## Límites de despliegue
+
+```text
+public_html/cumpleclick/        artefacto dist/: HTML, JS, CSS, PHP y assets
+<directorio privado>/config.php CUMPLECLICK_CONFIG_FILE; secretos y hashes
+<directorio privado>/photos/    PNG compuestos, nunca servidos directamente
+<directorio privado>/state/     índices JSON solo para rollback temporal
+<directorio privado>/backups/   snapshots de import/cutover
+<app privado>/scripts|database  CLI y migraciones; nunca dentro del webroot
+```
+
+Vite copia `public/` a `dist/`. `scripts/check-dist-parity.php` impide publicar
+PHP o `.htaccess` obsoletos. HTTPS se fuerza en el vhost/proxy con host canónico;
+la app nunca construye redirects o URLs desde `HTTP_HOST`.
+
+## Persistencia
+
+`themes.json` y los assets temáticos son catálogo versionado. El estado mutable
+vive en MySQL/InnoDB/utf8mb4:
+
+- `cc_parties`: slug inmutable, tema, fecha, actividad, override `frame_box_json`,
+  hash de PIN y marcas de retención.
+- `cc_guests`: invitados ordenados por fiesta.
+- `cc_photos`: token opaco, storage key privada, tamaño, dimensiones y SHA-256.
+- `cc_rate_limits`: buckets HMAC; nunca almacena IP en claro.
+- `cc_theme_prompts`: prompts privados editables por temática + asset visual;
+  la clave de asset se valida contra la whitelist versionada y nunca llega a la API.
+- `cc_leads`: solicitudes comerciales del sitio público con referencia opaca,
+  consentimiento versionado y huellas HMAC de IP/user-agent; no comparte tablas
+  ni credenciales con WordPress.
+- `cc_schema_migrations`: versiones aplicadas.
+
+`storage_mode=db|json` permite rollback temporal, sin doble escritura. La
+importación JSON es idempotente, valida slugs/temas/invitados/frame/PIN, crea
+backups privados fechados y aplica el reemplazo dentro de una transacción.
+
+## Contratos HTTP
+
+- `GET api.php?p=<slug>` conserva `ok`, `party` y `theme`; `party.frameBox`
+  siempre llega resuelto (override de fiesta o default de tema). Nunca devuelve
+  PIN, hash, pepper, franquicia interna o secretos.
+- `POST upload.php` recibe `{image, name, party}`. Acepta data URL PNG estricta,
+  máximo 8 MiB y 4096×4096, fiesta activa, 30/10 min y cuota atómica de 200
+  fotos o 1 GiB. Devuelve `{ok:true,url}`.
+- `GET ver.php?t=<token-128-bit>` muestra/descarga la foto desde storage privado.
+  Los enlaces legacy `?p=&f=` siguen en modo solo lectura.
+- `GET/POST galeria.php?p=<slug>` usa PIN, sesión corta, CSRF y límite 5/min.
+- `POST sitio/api/contacto.php` recibe JSON del formulario comercial, exige
+  consentimiento, valida tamaño/tipos/campos, aplica honeypot y rate limit
+  persistente 5/10 min y devuelve una referencia pública `CC-...`; no envía ni
+  expone IDs incrementales.
+- `admin/` usa `password_verify`, CSRF, sesión regenerada, cookie HttpOnly +
+  SameSite Strict, 2 h de inactividad/12 h absolutas y logout POST.
+
+La vista de temáticas conserva sus cards y añade una ficha privada con inventario,
+miniaturas, peso/dimensiones y prompts asociados. Solo permite editar prompts de
+slots JPG/PNG conocidos; rechaza path traversal, textos de más de 20.000 bytes y
+nombres internos de franquicia/personaje. `scripts/import-theme-prompts.php` migra
+los 78 prompts asociados desde Markdown, con dry-run por defecto.
+
+## Frontend
+
+La geometría `x/y/w/h` es normalizada al canvas 1080×1920 y exige ancho/alto
+mínimos 0.05. El admin calibra visualmente y persiste en BD; el kiosco consume
+exactamente la API, nunca `localStorage` para frames. El compositor centra un
+recorte cuadrado con inset dentro del marco decorativo ya presente en el fondo y
+coloca el personaje sorteado, escalado, en el centro de la pista inferior. No
+dibuja un segundo borde sobre la imagen base. La cámara se considera lista solo al
+recibir metadatos/fotogramas y ofrece selector cuando existen varios dispositivos.
+Baloo 2 (600/700/800) está autoalojada en WOFF2 y se espera con `document.fonts`
+antes de dibujar. Intro y QR conservan el lockup CumpleClick; Preview y Diploma
+dibujan únicamente el SVG oficial AT como marca de agua inferior izquierda, al
+42 % de opacidad, sin cápsula ni texto recreado.
+
+Si el upload falla, el PNG local se conserva, se muestra un mensaje sanitizado
+y se permite reintentar; jamás se genera un QR con texto falso.
+
+El sitio comercial vive aislado en `sitio/`. Su formulario persiste en la misma
+BD privada de CumpleClick mediante la migración `006_public_leads`; WhatsApp es
+un canal comercial complementario y su número real continúa pendiente de
+configuración, no una dependencia para registrar solicitudes.
+
+## Seguridad y ciclo de vida
+
+La configuración externa es obligatoria para admin/uploads. PDO usa prepared
+statements nativos y errores fail-closed. PIN =
+`password_hash(HMAC(PIN, pepper))`; duplicar limpia PIN. `Permissions-Policy`
+efectiva: `camera=(self), microphone=(), geolocation=()`.
+
+`scripts/retention.php` es dry-run por defecto. A los 30 días desde la fecha de
+fiesta —o creación si falta— desactiva y anonimiza la fiesta, borra invitados y
+PIN, marca metadata de fotos y elimina archivos, reintentando un unlink fallido.
+
+## Estudio manual de producción de temáticas (2026-07-26)
+
+El catálogo versionado continúa en `public/data/themes.json`; los archivos
+públicos viven en `public/themes/<slug>/` y los prompts privados en
+`cc_theme_prompts`/`cc_theme_prompt_history`. El admin construye una allowlist a
+partir del contrato del tema: fondos, personajes, recortes, juegos, experiencia
+inmersiva, videos de bienvenida/revelación/despedida, Marketing y audio.
+
+Los slots pueden usar subcarpetas seguras, pero nunca rutas libres. Una carga por
+card renombra al destino versionado y valida contenido real. Los videos requieren
+MP4 H.264, dimensiones 360×640–2160×3840, ffprobe disponible y duración máxima
+por slot (10 s para saludos, 15 s para experiencias/Marketing). El flujo aplica
+CSRF, sesión admin y rate limit persistente 30 subidas/10 minutos.
+
+`franquicia` es metadata estrictamente administrativa y no forma parte del
+payload de `api.php`. Los nombres visibles de temas/personajes sí se publican.
+
+Los juegos aceptados son `copos`, `armar-muneco`, `fichas`, `ritmo`, `escudo`
+y `mundo3d`.
+`ritmo` publica 3–5 carriles; `escudo` puede publicar una imagen de fondo pero
+nunca `cols/filas`; `copos` permite hasta ocho emojis temáticos. Todos mantienen
+botón de omitir, objetivos táctiles de al menos 56 px, reduced-motion y una sola
+ruta de salida protegida con `doneRef`.
+
+`mundo3d` es una misión premium de tres carriles implementada por
+`src/ThemeWorld3D.jsx`. Cada temática terminada declara `fullGame` en el
+catálogo, pero `cb_build_theme_payload()` solo lo publica cuando
+`party.service_plan=full`; una fiesta Booth no recibe esa configuración. El
+frontend la añade como último bonus, conserva el personaje exacto de la ruleta
+mediante su `*-cut.png` y dispone renderer, geometrías, materiales y texturas al
+salir. Los seis mundos activos son `turbo-track`, `puppy-park`,
+`tropical-wave`, `ice-bridge`, `neon-stage` y `hero-city`. `?fx3d=0`, WebGL no
+disponible o reduced-motion activan una salida segura sin bloquear el flujo.

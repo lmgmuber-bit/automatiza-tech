@@ -1,0 +1,67 @@
+ticket_id: AT-CUMPLECLICK-012
+parent_ticket: AT-CUMPLECLICK-011
+title: "CumpleClick: formulario público persistente en BD"
+origin: direct_luis
+priority: P1
+status: DONE_LOCAL_AWAITING_DEPLOY
+created_at: "2026-08-01"
+created_by: codex
+objective: >
+  Convertir el formulario del sitio público en un flujo funcional que valide y registre
+  solicitudes comerciales en la BD independiente de CumpleClick, dejando la conexión oficial
+  de WhatsApp para el último gate.
+ownership:
+  planner: codex
+  executor: codex
+  reviewer: codex
+  final_approver: "Luis Miguel"
+  current_owner: codex
+routing:
+  complexity: C2
+  risk: medium
+  uncertainty: low
+  reversibility: high
+scope:
+  changed_files:
+    - "CumpleBooth/sitio/index.html"
+    - "CumpleBooth/sitio/css/styles.css"
+    - "CumpleBooth/sitio/js/main.js"
+    - "CumpleBooth/sitio/api/contacto.php"
+    - "CumpleBooth/public/lib.php"
+    - "CumpleBooth/public/lib.leads.php"
+    - "CumpleBooth/database/migrations/006_public_leads.php"
+    - "CumpleBooth/database/migrations/006_public_leads.down.php"
+    - "CumpleBooth/tests/backend/run.php"
+    - "CumpleBooth/tests/backend/leads.php"
+safety:
+  storage: "BD CumpleClick; no WordPress"
+  prepared_statements: true
+  raw_ip_storage: false
+  rate_limit: "5 solicitudes por 10 minutos; bloqueo 15 minutos"
+  honeypot: true
+  body_limit_bytes: 16384
+  allow_deploy: false
+  allow_commit: false
+  allow_push: false
+execution_log:
+  - date: "2026-08-01"
+    by: codex
+    what: >
+      Creada migración 006 y tabla cc_leads compatible con MySQL/SQLite. Endpoint POST JSON con
+      validación, honeypot, rate limit persistente, respuesta no-cache, referencias opacas y
+      errores sanitizados. El frontend registra por fetch y muestra referencia. Migración aplicada
+      a MySQL local. Pruebas aisladas 11/11 en PHP 8.0.30, 8.2.26, 8.3.14 y 8.4.0; lint de seis
+      archivos en las cuatro versiones. Smoke HTTP real: 201 válido, 422 inválido, 405 GET;
+      confirmación visual en Chrome 834x1194 sin overflow ni consola. Registros y rate limits de QA
+      eliminados al terminar. En el cierre 2026-08-02 la aserción histórica del mundo 3D se alineó
+      con concierto3d y la suite general quedó verde. Sin WhatsApp, deploy ni merge.
+next_action: >
+  Código, migración, endpoint, frontend y pruebas quedan versionados. No hay cambios locales por
+  guardar. Para PROD, Luis autoriza deploy y define número oficial de WhatsApp y URL final; el
+  registro en cc_leads ya funciona de forma independiente.
+
+closure_2026_08_02:
+  by: codex
+  result: >
+    Formulario persistente cerrado en local. El cierre general, comandos de recuperación y gates
+    están en CumpleBooth/docs/HANDOFF-OTRA-PC-2026-08-02.md. Sin deploy ni merge.

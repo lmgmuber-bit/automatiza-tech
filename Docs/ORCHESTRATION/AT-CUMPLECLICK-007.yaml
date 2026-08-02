@@ -1,0 +1,330 @@
+ticket_id: AT-CUMPLECLICK-007
+parent_ticket: AT-CUMPLECLICK-006
+title: "CumpleClick Tema 02: Aventura Perruna completa"
+origin: direct_luis
+portfolio: AT
+priority: P1
+status: DONE_LOCAL_AWAITING_DEPLOY
+
+objective: "Implementar una familia canina azul/naranja original como segunda temática vertical completa, desde invitación dinámica hasta foto, QR y diploma."
+
+business_flow:
+  phase_1:
+    name: invitation_delivery
+    steps:
+      - generic_image_without_event_data
+      - generic_video_without_event_data_for_dynamic_application_overlay
+      - independent_invitation_form_with_real_data
+      - compile_private_prompt_and_resolve_all_placeholders
+      - personalized_image_generated_from_generic_image
+      - personalized_video_generated_from_approved_personalized_image
+      - admin_approves_outputs_and_publishes_opaque_download_link
+      - admin_manually_shares_only_download_link
+  phase_2:
+    name: photobooth_experience
+    steps:
+      - freeze_visual_manifest_from_approved_generic_invitation
+      - derive_every_photobooth_asset_from_same_master_and_manifest
+      - intro_guests_welcome_wheel_camera_photo_qr_diploma
+  optional_feature:
+    name: party_gallery
+    condition: service_plan_full_and_admin_enabled_with_pin
+
+service_plans:
+  - booth
+  - full
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C3
+
+ownership:
+  planner: codex
+  executor: opencode_go
+  reviewer: codex
+  final_approver: "Luis Miguel"
+  current_owner: opencode_go
+  previous_owners:
+    - opencode_go
+    - claude
+  takeover_allowed: true
+  takeover_count: 2
+  takeover_reason: "LUIS_REASSIGNMENT: Gate A fue corregido por Claude y aprobado por Codex. Luis reasigna Gate B/C a OpenCode con DeepSeek para ejecutar la producción visual secuencial usando el contrato detallado y gates humanos."
+  urgency: normal
+  resolution_status: resolved
+  reassignment_authorized_by: "Luis Miguel"
+  handoff_ref: "CumpleBooth/docs/OPENCODE-DEEPSEEK-GATE-B-C-FAMILIA-CANINA.md"
+  handoff_quality: COMPLETE
+
+gate_a_review:
+  reviewed_by: codex
+  reviewed_at: "2026-07-17"
+  result: APPROVED
+  verified:
+    - "Backend 72/72 en PHP 8.0.30, 8.2.26, 8.3.14 y 8.4.0."
+    - "Lint 35 archivos y smoke require de 7 entrypoints en las cuatro versiones."
+    - "Frontend 5/5."
+    - "HTTP real 28/28 sin skips, con cleanup garantizado y cero filas remanentes."
+    - "Paridad public->dist: 53 archivos, exit 0."
+    - "git diff --check: exit 0."
+    - "Página pública verificada en navegador real, multimedia renderizada y consola limpia."
+  restrictions:
+    - "Gate B requiere autorización expresa de Luis antes de consumir créditos."
+    - "Sin deploy, commit, push o merge."
+
+scope:
+  allowed_files:
+    - "CumpleBooth/**"
+    - "Docs/ORCHESTRATION/AT-CUMPLECLICK-006.yaml"
+    - "Docs/ORCHESTRATION/AT-CUMPLECLICK-007.yaml"
+    - "Docs/ORCHESTRATION/current-handoff.yaml"
+  forbidden_files:
+    - "wp-content/**"
+    - "tablero/**"
+    - "api-tablero.php"
+    - "setup-at-board.php"
+  locked_files:
+    - "CumpleBooth/**"
+  branch: "codex/cumpleclick-secure-db-frontend"
+  base_commit: "57a3a9d3a4a535f0a2c711c25c9bfa0017ab5923"
+
+routing:
+  complexity: C3
+  risk: high
+  uncertainty: medium
+  reversibility: moderate
+  selected_profile: critical_pipeline
+  planner_model: "Codex GPT-5"
+  executor_model: "OpenCode + DeepSeek V4 Flash, seleccionado por Luis para ejecución visual controlada"
+  rationale: "Incluye nueva infraestructura reutilizable, datos de invitación, assets externos, cámara/fotos de menores y consumo de créditos."
+  independent_review: true
+  human_gate: true
+
+theme:
+  sequence: 2
+  slug: familia-canina
+  public_name: "Aventura Perruna"
+  prompt_camouflage_required: true
+  characters:
+    - azulita
+    - chispa
+    - papa-marino
+    - mama-coral
+    - manchita
+    - nube
+
+required_invitation_fields:
+  - birthday_person_name
+  - event_date
+  - event_time
+  - address
+
+invitation_contract:
+  independent_from_party: true
+  party_id_nullable: true
+  image_states:
+    - generic_theme_image
+    - personalized_invitation_image
+  video_states:
+    - generic_theme_video_without_event_data
+    - personalized_invitation_video_with_exact_event_data
+  dynamic_overlay_contract:
+    generic_image_and_video_keep_panel_blank: true
+    application_renders_validated_event_data_over_generic_assets: true
+    generated_personalized_outputs_bake_exact_event_data: true
+  required_prompt_placeholders:
+    - "[NOMBRE_DEL_CUMPLEAÑERO]"
+    - "[FECHA_Y_HORA]"
+    - "[DIRECCIÓN]"
+  unresolved_placeholder_policy: reject
+  delivery: opaque_revocable_download_link_only
+  automatic_send_or_attachment: false
+
+visual_lineage:
+  canonical_master: approved_generic_invitation_image
+  personalized_invitation_is_instance_not_master: true
+  manifest_version: 1
+  manifest_locks:
+    - color_palette
+    - character_bible_and_proportions
+    - materials_and_3d_treatment
+    - lighting_and_atmosphere
+    - decorative_motifs
+    - typography_and_contrast
+  required_for_all_photobooth_assets: true
+  drift_policy: reject_as_visual_drift
+  master_update_policy: create_new_version_without_silent_party_migration
+
+photobooth_reuse:
+  action: new_party_from_theme
+  creates_new_party_slug_and_kiosk_link: true
+  reuses_theme_assets_and_layout: true
+  resets:
+    - guests
+    - photos
+    - gallery_enabled
+    - gallery_pin
+    - invitation_outputs
+    - invitation_download_token
+
+safety:
+  allow_external_generation: true
+  allow_external_generation_after_human_gate: true
+  allow_push: false
+  allow_merge: false
+  allow_deploy: false
+  allow_secrets: false
+  max_images_before_review: 1
+  max_videos_before_review: 1
+  video_cost_margin_percent: 20
+  next_theme_forbidden_until_acceptance: true
+
+gate_b_assignment:
+  assigned_by: "Luis Miguel"
+  assigned_at: "2026-07-17"
+  executor: opencode_go
+  model: "DeepSeek V4 Flash"
+  provider: higgsfield
+  preflight_authorized: true
+  generation_authorized: true
+  credit_authorization_by: "Luis Miguel"
+  credit_authorization_at: "2026-07-17"
+  credit_scope: "Generación secuencial en Higgsfield de imágenes aprobadas y posterior movimiento/video; una llamada por asset, con costo/saldo informado y QA antes del siguiente."
+  cost_preflight_still_required: true
+  first_asset_only: "invitation/invitation-base-v1.png"
+  max_generations_before_review: 1
+  stop_after_candidate: true
+
+approved_visual_v1:
+  approved_by: "Luis Miguel"
+  approved_at: "2026-07-17"
+  invitation_master: "CumpleBooth/public/themes/familia-canina/invitation/invitation-base-v1.png"
+  invitation_master_sha256: "58d3b542cc7c8c3137c9e5b24628979953e89970fe2420d0edbf5908e81315b3"
+  roulette_background: "CumpleBooth/public/themes/familia-canina/roulette/roulette-background-v1.png"
+  roulette_background_sha256: "bce55c085ce35d4d45f122931d0ea0337b760dee64bbed7df90d686bfc82d80f"
+  visual_manifest: "CumpleBooth/public/themes/familia-canina/visual-manifest.v1.json"
+  continuation_handoff: "CumpleBooth/docs/OPENCODE-CONTINUE-FAMILIA-CANINA-VISUAL-V1.md"
+
+character_production_v1:
+  authorized_by: "Luis Miguel"
+  authorized_at: "2026-07-17"
+  generic_motion_reported_generated: true
+  generic_motion_artifact_verified_in_public: false
+  generic_motion_visual_review:
+    reviewed_by: codex
+    result: APPROVED_WITH_REQUIRED_SILENT_REMUX
+    verified:
+      - "Cartel vacío en frames inicial, medio y final."
+      - "Cuatro figuras conservadas."
+      - "Movimiento suave y composición estable."
+    required_before_promotion: "Eliminar el stream AAC inesperado sin recodificar H.264."
+  shared_stage_required: true
+  shared_stage_path: "CumpleBooth/public/themes/familia-canina/character-stage-v1.png"
+  characters:
+    - azulita
+    - chispa
+    - papa-marino
+    - mama-coral
+    - manchita
+    - nube
+  image_batch_limit_before_review: 2
+  video_batch_limit_before_review: 1
+  exact_audio_line: "¡Ahora nos tomaremos una foto!"
+  dynamic_overlay_lines:
+    - "¡{NOMBRE_DEL_INVITADO}!"
+    - "Prepárate para la foto con:"
+    - "{PERSONAJE_ELEGIDO}"
+  final_video_streams:
+    - h264_video
+    - aac_audio
+  handoff: "CumpleBooth/docs/OPENCODE-CONTINUE-FAMILIA-CANINA-PERSONAJES-V1.md"
+
+character_portrait_correction_v2:
+  reviewed_by: codex
+  reviewed_at: "2026-07-17"
+  result: REJECTED
+  root_cause: "El prompt v1 preservó el cartel y la mesa de invitación, redujo demasiado el personaje y no bloqueó con precisión la identidad facial del máster aprobado. OpenCode siguió razonablemente el contrato recibido."
+  rejected_assets:
+    - "CumpleBooth/public/themes/familia-canina/azulita.jpg"
+    - "CumpleBooth/public/themes/familia-canina/chispa.jpg"
+    - "CumpleBooth/public/themes/familia-canina/character-stage-v1.png"
+  required_resolution: "1080x1920"
+  required_character_frame_height_percent: "68-74"
+  next_background: "CumpleBooth/public/themes/familia-canina/portrait-stage-v2.png"
+  next_candidate_only: "azulita-v2.jpg"
+  handoff: "CumpleBooth/docs/OPENCODE-CORRECCION-PERSONAJES-V2.md"
+
+roulette_contract:
+  required: true
+  same_functional_pattern_as_existing_racing_theme: true
+  provider_payload_must_not_reference_existing_franchise: true
+  characters:
+    - id: azulita
+      wheel_required: true
+      portrait_required: true
+      transparent_cutout_required: true
+      greeting_video_required: true
+      photo_composite_required: true
+      diploma_background_required: true
+    - id: chispa
+      wheel_required: true
+      portrait_required: true
+      transparent_cutout_required: true
+      greeting_video_required: true
+      photo_composite_required: true
+      diploma_background_required: true
+    - id: papa-marino
+      wheel_required: true
+      portrait_required: true
+      transparent_cutout_required: true
+      greeting_video_required: true
+      photo_composite_required: true
+      diploma_background_required: true
+    - id: mama-coral
+      wheel_required: true
+      portrait_required: true
+      transparent_cutout_required: true
+      greeting_video_required: true
+      photo_composite_required: true
+      diploma_background_required: true
+    - id: manchita
+      wheel_required: true
+      portrait_required: true
+      transparent_cutout_required: true
+      greeting_video_required: true
+      photo_composite_required: true
+      diploma_background_required: true
+    - id: nube
+      wheel_required: true
+      portrait_required: true
+      transparent_cutout_required: true
+      greeting_video_required: true
+      photo_composite_required: true
+      diploma_background_required: true
+
+acceptance:
+  criteria:
+    - "La invitación funciona independientemente del kiosco y puede asociarse opcionalmente a una fiesta."
+    - "Existen una imagen genérica sin datos y una segunda imagen personalizada con nombre, fecha/hora y dirección exactos."
+    - "Existen dos videos distinguibles: uno genérico con panel vacío para overlay dinámico de la aplicación y otro personalizado derivado de la imagen con los datos reales."
+    - "El admin puede compilar/copiar el prompt, subir/aprobar outputs y compartir solo un enlace opaco y revocable de descarga."
+    - "La invitación genérica aprobada es el máster visual obligatorio del Photo Booth; ningún asset temático se diseña de forma independiente."
+    - "Todos los assets derivados declaran visual_version y respetan paleta, personajes, materiales, iluminación y decoración del manifiesto."
+    - "Tema completo con banner, sala, grupo, seis personajes, recortes, música autorizada y fallbacks."
+    - "Invitación, bienvenida y seis saludos en video aprobados; si saldo o gate bloquean una generación, el ticket permanece incompleto."
+    - "Flujo intro a diploma completo, cámara física y foto alineada."
+    - "Responsive aprobado en tablet física de 10 pulgadas."
+    - "Carreras continúa funcionando sin regresiones."
+    - "Galería desacoplada del PIN y disponible solo en plan full con activación administrativa explícita."
+    - "Ningún término reservado aparece en prompts enviados a proveedores."
+    - "Nueva fiesta desde la temática crea un slug/enlace propio sin copiar PIN, galería, invitados, fotos ni invitaciones."
+  tests:
+    - "PHP 8.2/8.3/8.4, migraciones, auth, CSRF, validaciones y rollback."
+    - "Build, pruebas frontend, geometría, imagen/video fallback y consola."
+    - "QA Chrome real y tablet 10 pulgadas de invitación a diploma."
+  rollback_plan: "Desactivar tema e invitaciones por feature flag; volver a última plantilla aprobada y conservar Carreras sin cambios de contrato."
+
+next_action: >
+  Tema Familia Canina completado e integrado en local: seis personajes, recortes, puzzles,
+  saludos, fondos, ruleta, invitación, photoSession, despedida, Full y atlas. No quedan cambios
+  por guardar; deploy/merge requieren autorización de Luis.

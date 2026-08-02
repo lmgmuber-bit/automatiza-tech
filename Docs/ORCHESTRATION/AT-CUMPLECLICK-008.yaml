@@ -1,0 +1,193 @@
+ticket_id: AT-CUMPLECLICK-008
+parent_ticket: null
+title: "CumpleClick: material explicativo del servicio (infografías, carrusel y video)"
+origin: direct_luis
+portfolio: AT
+priority: P2
+status: DONE_LOCAL_ASSET_PACKAGE
+created_at: "2026-07-25"
+created_by: claude
+
+blocker_resolved_2026-07-25:
+  who: claude
+  what: >
+    Las 3 galerías demo bloqueaban §3.3 del handoff (gallery_enabled=true pero sin PIN real →
+    404 igual; 2-4 invitados nada más). Corregido: demo/demo-tropical/demo-carreras tienen ahora
+    10 invitados y PIN real 2026. Sigue pendiente sembrar 2-3 fotos por fiesta antes de capturar
+    screen-10-galeria-* — instrucciones exactas en el handoff §3.2-3.3.
+  handoff_updated: true
+
+objective: >
+  Producir el paquete que explica QUÉ ES CumpleClick a un cliente potencial, usando pantallazos
+  reales del kiosco y el logo real: infografías, carrusel de Instagram y un video explicativo de
+  45-60s. Distinto de los reels ya publicados: los reels son hook de 10-14s, esto es el material
+  de conversión para quien ya se interesó y pregunta cómo funciona.
+
+context_required_before_starting:
+  vault_project_note: "10-Projects/CumpleClick.md"
+  handoff: "CumpleBooth/docs/OPENCODE-HANDOFF-EXPLICATIVO-CUMPLECLICK.md"
+  brand_source_of_truth: "CumpleBooth/design/MANUAL-DE-MARCA.md"
+  graph: "graphify-out/graph.json"
+  note: >
+    El handoff es autosuficiente para la tarea, pero la nota del vault es obligatoria para
+    entender el producto y sus reglas duras (camuflaje, prompts en BD, créditos, privacidad).
+
+ownership:
+  planner: claude
+  executor: opencode
+  reviewer: claude
+  final_approver: "Luis Miguel"
+  current_owner: opencode
+  takeover_allowed: true
+  urgency: normal
+
+routing:
+  complexity: C1
+  risk: low
+  uncertainty: low
+  reversibility: high
+  selected_profile: standard_executor
+  rationale: >
+    Trabajo de marketing contenido en design/. No toca el producto, la BD ni el deploy.
+    El riesgo real es de marca (logo mal usado, precio equivocado, prompt de generación con
+    nombre de franquicia sin querer) no técnico. Por eso los gates son de contenido, no de código.
+
+deliverables:
+  - id: A
+    name: "Pantallazos reales del flujo del kiosco"
+    path: "CumpleBooth/design/screens/"
+    count: 14
+    credits: 0
+    blocking: true
+  - id: B
+    name: "Infografía ¿Cómo funciona? (4 pasos)"
+    path: "CumpleBooth/design/explicativo/info-01-como-funciona.png"
+    size: "1080x1350"
+    credits: 0
+    human_gate: true
+  - id: C
+    name: "Infografía Qué se lleva cada invitado"
+    path: "CumpleBooth/design/explicativo/info-02-que-se-lleva.png"
+    credits: 0
+  - id: D
+    name: "Infografía Planes y precios"
+    path: "CumpleBooth/design/explicativo/info-03-planes.png"
+    credits: 0
+    must_be_html: true
+    draft_until_confirmed: true
+  - id: E
+    name: "Carrusel IG Qué es CumpleClick (6 láminas)"
+    path: "CumpleBooth/design/explicativo/carrusel-0X.png"
+    credits: 0
+  - id: F
+    name: "Video explicativo 45-60s vertical"
+    path: "CumpleBooth/design/explicativo/video-explicativo.mp4"
+    size: "1080x1920"
+    credits: 0
+  - id: G
+    name: "Video explicativo horizontal (WhatsApp/web)"
+    path: "CumpleBooth/design/explicativo/video-explicativo-16x9.mp4"
+    size: "1920x1080"
+    credits: 0
+
+optional_ai_generation:
+  authorized: pending_luis
+  provider: higgsfield
+  model: nano_banana_pro
+  unit_cost_credits: 2
+  scope: "6 imágenes de apoyo (§7 del handoff) + prueba de infografía A/B/C (§9)"
+  max_credits: 20
+  stop_and_ask_above_credits: 20
+  cost_preflight_required: true
+  music_generation_forbidden: true
+  note: >
+    Si OpenCode no tiene acceso a Higgsfield, entrega igual A-G (que son 0 créditos) y deja la
+    generación IA para Claude o Luis. El acceso NO bloquea el ticket.
+
+human_gates:
+  - after: B
+    reason: "Luis aprueba el estilo visual antes de replicarlo en 8 piezas más."
+  - after: "prueba §9"
+    reason: "Luis elige entre infografía por IA, híbrida o HTML puro."
+  - before: "cualquier gasto de créditos"
+    reason: "Autorización explícita de Luis, como en 006/007."
+
+scope:
+  allowed_files:
+    - "CumpleBooth/design/**"
+    - "CumpleBooth/scripts/capture-screens.mjs"
+    - "CumpleBooth/docs/OPENCODE-HANDOFF-EXPLICATIVO-CUMPLECLICK.md"
+    - "Docs/ORCHESTRATION/AT-CUMPLECLICK-008.yaml"
+  temporarily_modifiable_must_restore:
+    - "CumpleBooth/public/data/parties.json"
+    - "CumpleBooth/dist/data/parties.json"
+  forbidden_files:
+    - "CumpleBooth/src/**"
+    - "CumpleBooth/public/**"
+    - "CumpleBooth/dist/**"
+    - "wp-content/**"
+    - "tablero/**"
+    - "api-tablero.php"
+  allowed_new_dependencies:
+    - "puppeteer-core (devDependency, usa el Chrome ya instalado)"
+
+safety:
+  allow_external_generation: false
+  allow_external_generation_after_human_gate: true
+  allow_push: false
+  allow_merge: false
+  allow_deploy: false
+  allow_secrets: false
+  no_global_installs: true
+
+brand_constraints:
+  logo_must_be_composited_from_svg: true
+  logo_must_never_be_ai_generated: true
+  # CORREGIDO 2026-07-25 por Luis: el nombre genérico/camuflado es SOLO para los
+  # prompts de generación (Higgsfield/Gemini, para no chocar con el filtro).
+  # El producto y el marketing público SÍ usan el nombre real de la franquicia
+  # (Bluey, Stitch) — es lo que el papá busca y el niño reconoce.
+  franchise_names_forbidden_in_public_pieces: false
+  franchise_names_forbidden_in_generation_prompts: true
+  real_children_faces_forbidden: true
+  required_font: "Baloo 2 (node_modules/@fontsource/baloo-2)"
+  palette_proportion: "70% crema / 20% violeta-fucsia / 8% amarillo / 2% oro"
+  technical_jargon_forbidden_in_copy: ["IA", "software", "app", "sistema"]
+
+open_questions_for_luis:
+  - "¿Qué diferencia exactamente el plan Premium del Mágico? (la tabla de la pieza D es
+     reconstrucción de Claude y puede estar incompleta)"
+  - "¿El CTA al pie va a WhatsApp o a automatizatech.cl?"
+  - "¿La versión 16:9 lleva música? (si sí, la genera Luis, no se gastan créditos)"
+
+acceptance:
+  criteria:
+    - "Los 14 pantallazos son del kiosco real corriendo; ninguno es un mockup dibujado."
+    - "Toda pieza usa la Baloo 2 real; ninguna cayó en Arial o system-ui."
+    - "El logo aparece compuesto desde el SVG, nunca redibujado ni generado."
+    - "El nombre real de la franquicia puede aparecer en piezas públicas; solo los prompts de
+       generación (§7/§9) usan descripción camuflada. Ninguna pieza muestra cara de niño real."
+    - "Los dos videos son h264/yuv420p/faststart y se ven completos sin texto cortado."
+    - "parties.json quedó restaurado y check-dist-parity.php sale en verde."
+    - "design/explicativo/README.md documenta cada archivo y cómo regenerarlo."
+    - "Las piezas con datos sin confirmar están marcadas como borrador."
+  tests:
+    - "ffprobe de F y G pegado literal en el reporte."
+    - "php scripts/check-dist-parity.php exit 0."
+    - "Revisión visual pieza por pieza antes de entregar."
+  rollback_plan: >
+    Todo el entregable vive en CumpleBooth/design/. Borrar la carpeta explicativo/ y screens/
+    revierte el ticket completo sin tocar el producto.
+
+execution_log_20260725_opencode: >
+  BudgetPixel no autorizado → §7 y §9 no ejecutados. Ejecutado: 33 pantallazos (3 temas completos
+  + flow frames mostrando personajes principales), infografías B/C/D (D marcada borrador por
+  precios sin confirmar), carrusel E (6 láminas), video F (52s 1080x1920 h264/yuv420p).
+  Video G (16:9) pendiente. Storage_mode restaurado a db, parties.json original restaurado.
+  Cierre en vault: 50-Daily-Logs/2026-07-25.md.
+  Archivos en CumpleBooth/design/screens/ + design/explicativo/.
+
+next_action: >
+  El paquete local de infografías, carrusel y videos vertical/16:9 está generado y versionado en
+  CumpleBooth/design/explicativo. No hay cambios Git pendientes; publicación/uso comercial es un
+  gate posterior de Luis.

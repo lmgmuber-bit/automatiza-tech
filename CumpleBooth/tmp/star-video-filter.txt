@@ -1,0 +1,9 @@
+[0:v]zoompan=z='min(zoom+0.00042,1.065)':x='iw/2-(iw/zoom/2)+8*sin(on/18)':y='ih/2-(ih/zoom/2)-on/18':d=150:s=720x1280:fps=30,format=yuv420p[bg];
+[bg]drawbox=x=70:y='mod(t*245+40,1320)-40':w=9:h=22:color=0xFFD12A@0.88:t=fill,drawbox=x=160:y='mod(t*185+510,1320)-40':w=12:h=18:color=0xE8000D@0.90:t=fill,drawbox=x=265:y='mod(t*220+180,1320)-40':w=8:h=25:color=0xFFFFFF@0.82:t=fill,drawbox=x=375:y='mod(t*165+760,1320)-40':w=13:h=20:color=0xE8000D@0.84:t=fill,drawbox=x=485:y='mod(t*255+360,1320)-40':w=9:h=24:color=0xFFD12A@0.90:t=fill,drawbox=x=600:y='mod(t*195+910,1320)-40':w=12:h=18:color=0xFFFFFF@0.80:t=fill,drawbox=x=670:y='mod(t*230+100,1320)-40':w=8:h=22:color=0xE8000D@0.86:t=fill[party];
+[1:v]crop=675:394:43:861,scale=540:-1,format=rgba,fade=t=in:st=0:d=0.22:alpha=1,rotate='0.012*sin(2*PI*t/1.35)':fillcolor=none:ow=rotw(iw):oh=roth(ih)[car];
+[car]split=2[shadowSrc][carFront];
+[shadowSrc]colorchannelmixer=rr=0:gg=0:bb=0:aa=0.48,gblur=sigma=16[shadow];
+[party][shadow]overlay=x='(W-w)/2+170*(1-min(t/1.15,1))+16+14*sin(2*PI*t/2.4)':y='825-65*min(t/1.15,1)+25+10*sin(2*PI*t/1.35)'[withShadow];
+[withShadow][carFront]overlay=x='(W-w)/2+170*(1-min(t/1.15,1))+14*sin(2*PI*t/2.4)':y='825-65*min(t/1.15,1)+10*sin(2*PI*t/1.35)'[scene];
+color=c=0xFFD54F@0.30:s=720x1280:r=30:d=5,format=rgba,fade=t=in:st=0.10:d=0.18:alpha=1,fade=t=out:st=0.42:d=0.35:alpha=1[flash];
+[scene][flash]overlay=0:0:enable='between(t,0.10,0.77)',scale=720:1280:in_range=full:out_range=tv,format=yuv420p[outv]

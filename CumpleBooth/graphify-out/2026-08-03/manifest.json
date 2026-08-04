@@ -1,0 +1,4027 @@
+{
+  ".claude/launch.json": {
+    "mtime": 1783812873.6540666,
+    "ast_hash": "855b684234d3e760cd6d7cc736a25b32",
+    "semantic_hash": ""
+  },
+  "config/cumpleclick.example.php": {
+    "mtime": 1784170099.9804032,
+    "ast_hash": "f60111611af44c8ce34c72718c7bc5d9",
+    "semantic_hash": ""
+  },
+  "database/migrations/001_initial.down.php": {
+    "mtime": 1783991883.5700886,
+    "ast_hash": "bf25d429943196b0ea3b6274c761b08d",
+    "semantic_hash": ""
+  },
+  "database/migrations/001_initial.php": {
+    "mtime": 1783983692.0850036,
+    "ast_hash": "e76746b9bcfde125f563a31ed082f1f3",
+    "semantic_hash": ""
+  },
+  "database/migrations/002_theme_prompts.down.php": {
+    "mtime": 1783993477.6980608,
+    "ast_hash": "bcecfc9adef117718ec2a4238fea10ac",
+    "semantic_hash": ""
+  },
+  "database/migrations/002_theme_prompts.php": {
+    "mtime": 1783993466.8689404,
+    "ast_hash": "f70cd04ebb349f95145afc312f0d47ed",
+    "semantic_hash": ""
+  },
+  "database/migrations/003_invitations_and_plan.php": {
+    "mtime": 1784216786.4657695,
+    "ast_hash": "2ed734e4947e160122cd08bf98a0d3ac",
+    "semantic_hash": ""
+  },
+  "database/migrations/004_gate_a_corrections.down.php": {
+    "mtime": 1784239406.6500175,
+    "ast_hash": "46af11282b9057fe87264f5fa35f2d7b",
+    "semantic_hash": ""
+  },
+  "database/migrations/004_gate_a_corrections.php": {
+    "mtime": 1784239385.3632157,
+    "ast_hash": "9f18f495976625efce70cf1f99322e72",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1785164719.1478066,
+    "ast_hash": "4031403f892510fee230e108c6c2620b",
+    "semantic_hash": ""
+  },
+  "public/admin/_style.css.php": {
+    "mtime": 1785081149.4982588,
+    "ast_hash": "4a33170bb16c93e9c09a2b52f2e3c4b8",
+    "semantic_hash": ""
+  },
+  "public/admin/config.php": {
+    "mtime": 1783980949.546751,
+    "ast_hash": "26a996eced29ed31627647fc9942fd73",
+    "semantic_hash": ""
+  },
+  "public/admin/invitations.php": {
+    "mtime": 1784257923.60991,
+    "ast_hash": "eeaa4a6a742ee69ea0c758f14a3ce2c6",
+    "semantic_hash": ""
+  },
+  "public/api.php": {
+    "mtime": 1783982118.1139588,
+    "ast_hash": "82de7bd1f2aa35d5797aa620b6be1ce5",
+    "semantic_hash": ""
+  },
+  "public/data/parties.json": {
+    "mtime": 1784993514.550165,
+    "ast_hash": "8570e4251cb56850c28c142ea9ccf422",
+    "semantic_hash": ""
+  },
+  "public/data/themes.json": {
+    "mtime": 1785645700.0217981,
+    "ast_hash": "0d6921064cead1243c479124311e11eb",
+    "semantic_hash": ""
+  },
+  "public/descargar-invitacion.php": {
+    "mtime": 1784256901.2664514,
+    "ast_hash": "b9fffecbde16c82524fc4a42a9e78aaf",
+    "semantic_hash": ""
+  },
+  "public/galeria.php": {
+    "mtime": 1784473067.9749289,
+    "ast_hash": "8b89b2c4595da7a8dc71af99a73bb9e9",
+    "semantic_hash": ""
+  },
+  "public/lib.invitations.php": {
+    "mtime": 1784257323.4068313,
+    "ast_hash": "f43c274029a089fae1e1bb0eff0870cd",
+    "semantic_hash": ""
+  },
+  "public/lib.php": {
+    "mtime": 1785645709.2326603,
+    "ast_hash": "c060d0e1c621ea1d0210f47e38bde903",
+    "semantic_hash": ""
+  },
+  "public/upload.php": {
+    "mtime": 1784171057.7056563,
+    "ast_hash": "d44642da2d902a077b2f564f17e41f54",
+    "semantic_hash": ""
+  },
+  "public/ver.php": {
+    "mtime": 1784949500.6749778,
+    "ast_hash": "eec1970f28287617f6a379ecc974f3fb",
+    "semantic_hash": ""
+  },
+  "scripts/_cli.php": {
+    "mtime": 1783991891.5876505,
+    "ast_hash": "cfdac4e6c0425d00de646170e5a2572c",
+    "semantic_hash": ""
+  },
+  "scripts/bootstrap.php": {
+    "mtime": 1783983167.131332,
+    "ast_hash": "8f198fb99edd15a46ee871efc309546a",
+    "semantic_hash": ""
+  },
+  "scripts/check-dist-parity.php": {
+    "mtime": 1783983805.9642053,
+    "ast_hash": "3a2598e4a593c08a0bfafeae5efa44c9",
+    "semantic_hash": ""
+  },
+  "scripts/export-db-to-json.php": {
+    "mtime": 1783991900.2621226,
+    "ast_hash": "7755d61194a11caf6b509d3cc521446b",
+    "semantic_hash": ""
+  },
+  "scripts/import-json-to-db.php": {
+    "mtime": 1783983645.0274386,
+    "ast_hash": "28b71eaea0ced763f56ec4135d3f98de",
+    "semantic_hash": ""
+  },
+  "scripts/import-theme-prompts.php": {
+    "mtime": 1783993682.641409,
+    "ast_hash": "9a154618af469137b4419a3c9d9f1041",
+    "semantic_hash": ""
+  },
+  "scripts/migrate.php": {
+    "mtime": 1783983745.0551248,
+    "ast_hash": "5ebd849dc08c65c698fc41cb4736ea59",
+    "semantic_hash": ""
+  },
+  "scripts/parity-check.php": {
+    "mtime": 1783985646.203641,
+    "ast_hash": "fa6979f61d91536e83701072dcaae9d7",
+    "semantic_hash": ""
+  },
+  "scripts/retention.php": {
+    "mtime": 1783983234.1101525,
+    "ast_hash": "e9c79b232317fd36c4094c41fbda471a",
+    "semantic_hash": ""
+  },
+  "scripts/rollback.php": {
+    "mtime": 1783983652.7924578,
+    "ast_hash": "df95b61c9790b08e07d5af6a6069e789",
+    "semantic_hash": ""
+  },
+  "src/App.jsx": {
+    "mtime": 1785780593.553133,
+    "ast_hash": "022e9b1e3e9f0ddb9b5eec63699ed094",
+    "semantic_hash": ""
+  },
+  "src/ToyTrack3D.jsx": {
+    "mtime": 1784042591.4099567,
+    "ast_hash": "58671ea08d0b31b0ce0d887cc5f73697",
+    "semantic_hash": ""
+  },
+  "src/fonts.js": {
+    "mtime": 1783981585.092395,
+    "ast_hash": "affed6584d89da464359e6c835367c0c",
+    "semantic_hash": ""
+  },
+  "src/frameGeometry.js": {
+    "mtime": 1785249174.4840174,
+    "ast_hash": "00b77e8e215aa49371fb2320b50c2b4b",
+    "semantic_hash": ""
+  },
+  "src/main.jsx": {
+    "mtime": 1783981723.5963135,
+    "ast_hash": "7e6975acdc2add191e1f93852da68c32",
+    "semantic_hash": ""
+  },
+  "tests/backend/cleanup-http-smoke.php": {
+    "mtime": 1784258419.2756996,
+    "ast_hash": "5d522b80ef4e0d63d446f3243324300c",
+    "semantic_hash": ""
+  },
+  "tests/backend/http-smoke.mjs": {
+    "mtime": 1784264150.5744638,
+    "ast_hash": "63909d619b7c4a62cfbbdbb6cec4451e",
+    "semantic_hash": ""
+  },
+  "tests/backend/lint.php": {
+    "mtime": 1785602312.502988,
+    "ast_hash": "f90cd2ab2517bda54f6a48a52cc0e780",
+    "semantic_hash": ""
+  },
+  "tests/backend/run.php": {
+    "mtime": 1785645855.3593717,
+    "ast_hash": "aece210cfce2a2ec8e319a505edf270a",
+    "semantic_hash": ""
+  },
+  "tests/frontend/frameGeometry.test.mjs": {
+    "mtime": 1785249197.635201,
+    "ast_hash": "f83ddd2a2ec814092c3c32c5a44724be",
+    "semantic_hash": ""
+  },
+  "vite.config.js": {
+    "mtime": 1784528748.250539,
+    "ast_hash": "84ad81d4c8274ed5b4b05da16a61c9a3",
+    "semantic_hash": ""
+  },
+  ".github/copilot-instructions.md": {
+    "mtime": 1783984843.3457565,
+    "ast_hash": "17608540870581ecf3917c08160824b0",
+    "semantic_hash": ""
+  },
+  "AGENTS.md": {
+    "mtime": 1784952704.731032,
+    "ast_hash": "a1db5c41b575f59f171bb0bc72b9a4eb",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1785769819.8658655,
+    "ast_hash": "c6d06fc33ed4b54db403649f8cbd18be",
+    "semantic_hash": ""
+  },
+  "OPENCODE.md": {
+    "mtime": 1783984832.0053985,
+    "ast_hash": "71ce2d0375d76731513ce8396a27e1f5",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1785635916.0510418,
+    "ast_hash": "0503a93d558e3d8e36936298b6c6bf91",
+    "semantic_hash": ""
+  },
+  "database/README.md": {
+    "mtime": 1783994396.7627375,
+    "ast_hash": "06928284a4d870f2bbb141af1e819b0a",
+    "semantic_hash": ""
+  },
+  "docs/AGENTS.md": {
+    "mtime": 1783984837.496044,
+    "ast_hash": "f47d1df9504fe9af69f10cc24ecc9aea",
+    "semantic_hash": ""
+  },
+  "docs/ARQUITECTURA.md": {
+    "mtime": 1785635883.3695114,
+    "ast_hash": "0fe98dbb64bd4bfeb0cf9d8f96f2c7a3",
+    "semantic_hash": ""
+  },
+  "docs/CLAUDE-GATE-A-TAKEOVER.md": {
+    "mtime": 1784220396.1037555,
+    "ast_hash": "5d6249debae95e7f3f3ceaf68a78b4e4",
+    "semantic_hash": ""
+  },
+  "docs/CUMPLECLICK-HANDOFF-CODEX.md": {
+    "mtime": 1785602051.2552633,
+    "ast_hash": "90415f0697828cf71482222a712212a0",
+    "semantic_hash": ""
+  },
+  "docs/DEPLOY.md": {
+    "mtime": 1783994385.7394276,
+    "ast_hash": "d92f4e6280ab5a59ee5818a4d176e659",
+    "semantic_hash": ""
+  },
+  "docs/FASE-INVITACIONES-DINAMICAS.md": {
+    "mtime": 1784163361.5829234,
+    "ast_hash": "60de2bd2e87b78d97e9a35ebc5eae9f5",
+    "semantic_hash": ""
+  },
+  "docs/FASE1.md": {
+    "mtime": 1785635898.851734,
+    "ast_hash": "8ba89688ff4aaffcaa1c8f90774b0c4c",
+    "semantic_hash": ""
+  },
+  "docs/FASE2-3D.md": {
+    "mtime": 1785423331.560227,
+    "ast_hash": "a84a5a7c592eadd3ebcbf4e0b8bf19de",
+    "semantic_hash": ""
+  },
+  "docs/FTP-MANIFEST.md": {
+    "mtime": 1785628751.9276807,
+    "ast_hash": "c4f6c1faa7d5a1cec79eb56138634f23",
+    "semantic_hash": ""
+  },
+  "docs/OPENCODE-PROMPT-2026-07-14.md": {
+    "mtime": 1784066789.4497614,
+    "ast_hash": "c5131e704f551f0e097d8610b3b9bdb0",
+    "semantic_hash": ""
+  },
+  "docs/OPENCODEGO-INVITACIONES-EXECUTOR.md": {
+    "mtime": 1784164002.3330705,
+    "ast_hash": "9391a41304e4d012030955ed337f55a2",
+    "semantic_hash": ""
+  },
+  "docs/OPENCODEGO-TEMA-02-FAMILIA-CANINA.md": {
+    "mtime": 1784297301.3258283,
+    "ast_hash": "59e23fe7200f41bb6bf1d796cb09df6b",
+    "semantic_hash": ""
+  },
+  "docs/PROMPTS-TEMATICAS.md": {
+    "mtime": 1783995991.6558492,
+    "ast_hash": "40a12cd2b0db2ba43bb67c61864c52bc",
+    "semantic_hash": ""
+  },
+  "index.html": {
+    "mtime": 1783980480.724516,
+    "ast_hash": "578edd62186146a080a2a4993a15217d",
+    "semantic_hash": ""
+  },
+  "public/audio/AUDIO_OPCIONAL.txt": {
+    "mtime": 1785208054.7916377,
+    "ast_hash": "55a37f34a1bda7c0bcd3e0928b8b8ced",
+    "semantic_hash": ""
+  },
+  "public/images/IMAGENES_REQUERIDAS.md": {
+    "mtime": 1783984868.4959574,
+    "ast_hash": "0110aeaca023adf9d0b28c90e7ac3a96",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/_NOTA.txt": {
+    "mtime": 1783814568.177076,
+    "ast_hash": "3c386a88bc6d89f0b76e0339c79b0674",
+    "semantic_hash": ""
+  },
+  "public/videos/PON_AQUI_LOS_VIDEOS.txt": {
+    "mtime": 1782158922.0340235,
+    "ast_hash": "42b88b01748e7afd9485b25df3b737fe",
+    "semantic_hash": ""
+  },
+  "public/brand/at-logo.svg": {
+    "mtime": 1772251683.0,
+    "ast_hash": "06c50cf5ce782f36646db6c00b064140",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/cruz-cut.png": {
+    "mtime": 1783856263.3063743,
+    "ast_hash": "9ad253639a260847fe6af166163e1d17",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/cruz-pista.jpg": {
+    "mtime": 1784083445.126065,
+    "ast_hash": "8df5a7849b44939a16e048adfaff6260",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/cruz.jpg": {
+    "mtime": 1784079029.4710667,
+    "ast_hash": "7c448cd3243282b5e21ee838a66ff946",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/el-rey-cut.png": {
+    "mtime": 1783856288.816452,
+    "ast_hash": "99a69b6e1d576835e3aeb8db2410fe70",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/el-rey-pista.jpg": {
+    "mtime": 1784083434.586491,
+    "ast_hash": "95fea9e7b3e06942a7a81cd148913ee3",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/el-rey.jpg": {
+    "mtime": 1784079033.2511766,
+    "ast_hash": "552230aa7f20b288b0a0d6bbe664863c",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/fondo-banner.jpg": {
+    "mtime": 1784127401.648951,
+    "ast_hash": "932702b70a155f8939fc2cb96501cb37",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/fondo-sala.jpg": {
+    "mtime": 1783809148.075583,
+    "ast_hash": "13880b351cbcf67014e9ed102bae6ec3",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/grupo-personajes.png": {
+    "mtime": 1784117486.492776,
+    "ast_hash": "d7047dd43d7a7f798af1d447e1ae2481",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/luigi-cut.png": {
+    "mtime": 1783856318.5935183,
+    "ast_hash": "971f59ac5601d613afb3f0a08d54f8c8",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/luigi-pista.jpg": {
+    "mtime": 1784083468.8988414,
+    "ast_hash": "281ebd544e11c9b63a44c28bc93b6699",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/luigi.jpg": {
+    "mtime": 1784079024.7377157,
+    "ast_hash": "009e5f5634e178659f83b79a151d0908",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/mate-cut.png": {
+    "mtime": 1784089201.523939,
+    "ast_hash": "1212c5585b0664b12dd9f7c8a1997cbe",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/mate-pista.jpg": {
+    "mtime": 1784083457.6929746,
+    "ast_hash": "821cbf49ebabfce20f95149e4778ae86",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/mate.jpg": {
+    "mtime": 1784069651.4001794,
+    "ast_hash": "3457f2390fbcd9d9a1d62abf2a5e146c",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/rayo-mcqueen-cut.png": {
+    "mtime": 1784089195.2192214,
+    "ast_hash": "19ddf7e9aacd1a1c98feaa72124839eb",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/rayo-mcqueen-pista.jpg": {
+    "mtime": 1784082390.0673945,
+    "ast_hash": "d05bc7b53c2c1544bbe69c91082d8782",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/rayo-mcqueen.jpg": {
+    "mtime": 1784079019.965553,
+    "ast_hash": "7c1b7d79ba7248e594dbc1a4258e5f50",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/sally-cut.png": {
+    "mtime": 1783856239.0776331,
+    "ast_hash": "be3e864c8ba924dfaf27934f77bf9f16",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/sally-pista.jpg": {
+    "mtime": 1784083426.7595112,
+    "ast_hash": "60b5f6ddd694b472dadade8e8ab4451d",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/sally.jpg": {
+    "mtime": 1784079015.1033678,
+    "ast_hash": "d414bb040cb4d00334d17592a1a88658",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/musica-fondo.mp3": {
+    "mtime": 1783806942.5603123,
+    "ast_hash": "a7042948fbb33fb3666a5c12e27df8b1",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/saludo-cruz.mp4": {
+    "mtime": 1784084004.0001688,
+    "ast_hash": "38c691b3e88c5c31e1e8c98e972fe2a8",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/saludo-el-rey.mp4": {
+    "mtime": 1784084050.3404155,
+    "ast_hash": "c98b707fb4b506a201463801c1585eb2",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/saludo-luigi.mp4": {
+    "mtime": 1784083981.2019773,
+    "ast_hash": "3424515a564ddc3e9f014e3c6588d048",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/saludo-mate.mp4": {
+    "mtime": 1784084140.7788823,
+    "ast_hash": "77456113b3230d39083ae87faab76e48",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/saludo-rayo-mcqueen-v3.mp4": {
+    "mtime": 1784082516.1794739,
+    "ast_hash": "bca2a5d4505fb5aa86728c8f5b524d39",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/saludo-rayo-mcqueen-v4.mp4": {
+    "mtime": 1784082950.0994468,
+    "ast_hash": "303d65c30e1330afa53f8e955a6ae1b3",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/saludo-rayo-mcqueen.mp4": {
+    "mtime": 1784084332.1450057,
+    "ast_hash": "f06c34aeb43c4bacacf3c7ba1dfdd3a7",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/saludo-sally.mp4": {
+    "mtime": 1784084119.9605668,
+    "ast_hash": "0ab7f90787bec77ca4bdfc347b7a5796",
+    "semantic_hash": ""
+  },
+  "public/welcome-car.mp4": {
+    "mtime": 1784055061.21312,
+    "ast_hash": "0b022cb57f9bcec841dc21bd3eac98ed",
+    "semantic_hash": ""
+  },
+  "public/invitacion.php": {
+    "mtime": 1784222275.2991173,
+    "ast_hash": "4b34ddcc2a55a7df8611d275cd30479d",
+    "semantic_hash": ""
+  },
+  "tests/backend/seed-invitation-smoke.php": {
+    "mtime": 1784263791.70768,
+    "ast_hash": "5566eec6306423527e3c9c80e348a15f",
+    "semantic_hash": ""
+  },
+  "qa-evidence/gate-a/invitation-page.png": {
+    "mtime": 1784263132.0908644,
+    "ast_hash": "7a7f84251b61f3c4902b98d01852dee3",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/visual-manifest.v1.json": {
+    "mtime": 1785351240.5096774,
+    "ast_hash": "afae7cfb65cda02b067b77ae143695a3",
+    "semantic_hash": ""
+  },
+  "scripts/build-familia-canina-assets.py": {
+    "mtime": 1784319415.3581793,
+    "ast_hash": "d61701681f1e6f107943039caf345cd7",
+    "semantic_hash": ""
+  },
+  "scripts/remove-familia-canina-backgrounds.py": {
+    "mtime": 1784319048.9970717,
+    "ast_hash": "da5609f6d3584dc94b082a90c3498a69",
+    "semantic_hash": ""
+  },
+  "scripts/seed-demo-familia-canina.php": {
+    "mtime": 1784413018.117115,
+    "ast_hash": "d1f66e95bf7ba70124d1a52774e3e4e3",
+    "semantic_hash": ""
+  },
+  "src/themeFlow.js": {
+    "mtime": 1785645717.5499234,
+    "ast_hash": "a54db477ae7a418fd028504b4df5ce6c",
+    "semantic_hash": ""
+  },
+  "tests/frontend/themeFlow.test.mjs": {
+    "mtime": 1785645845.9898021,
+    "ast_hash": "5160cfac92e0acf3bce24382c349ee7c",
+    "semantic_hash": ""
+  },
+  "design/MANUAL-DE-MARCA.md": {
+    "mtime": 1784401538.1256542,
+    "ast_hash": "d64947ced4f5b3d4cb18afb1631bcee4",
+    "semantic_hash": ""
+  },
+  "docs/BRAND-FILOSOFIA-CUMPLECLICK.md": {
+    "mtime": 1784397178.7691436,
+    "ast_hash": "d96d9791fec85937622baf885b9cebab",
+    "semantic_hash": ""
+  },
+  "docs/OPENCODE-CONTINUE-FAMILIA-CANINA-PERSONAJES-V1.md": {
+    "mtime": 1784300013.3261335,
+    "ast_hash": "d49e579b1afff0d3334c7af5a7320603",
+    "semantic_hash": ""
+  },
+  "docs/OPENCODE-CONTINUE-FAMILIA-CANINA-VISUAL-V1.md": {
+    "mtime": 1784297168.5317712,
+    "ast_hash": "f33807ce8b1626581f3ca730584a2845",
+    "semantic_hash": ""
+  },
+  "docs/OPENCODE-CORRECCION-PERSONAJES-V2.md": {
+    "mtime": 1784301100.3480544,
+    "ast_hash": "44bd7504da445768b623ee4fa37740d1",
+    "semantic_hash": ""
+  },
+  "docs/OPENCODE-DEEPSEEK-GATE-B-C-FAMILIA-CANINA.md": {
+    "mtime": 1784297290.8717053,
+    "ast_hash": "ef55e0fe84f64d3b78b42a0120877f2e",
+    "semantic_hash": ""
+  },
+  "design/logo/cumpleclick-globo-lockup.svg": {
+    "mtime": 1784401599.8421025,
+    "ast_hash": "5751e337ea3843f25f4f4a7fcc242812",
+    "semantic_hash": ""
+  },
+  "design/logo/cumpleclick-globo-mark.svg": {
+    "mtime": 1784400025.5398636,
+    "ast_hash": "98cf4cbe2a75c054a37b191b14f734ad",
+    "semantic_hash": ""
+  },
+  "design/logo/cumpleclick-logo-master-render.png": {
+    "mtime": 1784399574.5991576,
+    "ast_hash": "7aac48d0bc1570b828c8ef8de8a55410",
+    "semantic_hash": ""
+  },
+  "design/renders/alt-caramelo.png": {
+    "mtime": 1784399574.7440872,
+    "ast_hash": "b5c091f7273fe8fb4bcc2312a949c5c2",
+    "semantic_hash": ""
+  },
+  "design/renders/alt-globo-vidrio.png": {
+    "mtime": 1784399575.0968127,
+    "ast_hash": "cbca437f625ad74d653fa7c50b5507ea",
+    "semantic_hash": ""
+  },
+  "design/renders/alt-medalla-oro.png": {
+    "mtime": 1784399574.9036155,
+    "ast_hash": "e0ae8dcd506cf8387dcbf2970b622e5c",
+    "semantic_hash": ""
+  },
+  "public/brand/concept-esmalte-candy.png": {
+    "mtime": 1784398273.8285253,
+    "ast_hash": "b5c091f7273fe8fb4bcc2312a949c5c2",
+    "semantic_hash": ""
+  },
+  "public/brand/concept-globo-candy.png": {
+    "mtime": 1784398352.5197752,
+    "ast_hash": "7aac48d0bc1570b828c8ef8de8a55410",
+    "semantic_hash": ""
+  },
+  "public/brand/concept-globo-lente.png": {
+    "mtime": 1784397621.0849257,
+    "ast_hash": "cbca437f625ad74d653fa7c50b5507ea",
+    "semantic_hash": ""
+  },
+  "public/brand/concept-oro-tinta.png": {
+    "mtime": 1784397616.576314,
+    "ast_hash": "e0ae8dcd506cf8387dcbf2970b622e5c",
+    "semantic_hash": ""
+  },
+  "public/brand/cumpleclick-lockup.svg": {
+    "mtime": 1784472950.214099,
+    "ast_hash": "e8454ead44a233849bb97d5ddf68e486",
+    "semantic_hash": ""
+  },
+  "public/brand/cumpleclick-mark-premium.svg": {
+    "mtime": 1784397238.0349877,
+    "ast_hash": "2f94d29090f7436df0f800190a4656fd",
+    "semantic_hash": ""
+  },
+  "public/brand/cumpleclick-mark.svg": {
+    "mtime": 1784472934.5642538,
+    "ast_hash": "87eec19c718248e006730c040e0546bc",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/azulita-cut.png": {
+    "mtime": 1784474408.5495296,
+    "ast_hash": "6c7b4cc571cf012259c847b64c5a9731",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/azulita.jpg": {
+    "mtime": 1784302013.2069669,
+    "ast_hash": "6ffa4d5e20320f935755412601afd465",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/chispa-cut.png": {
+    "mtime": 1784319271.774467,
+    "ast_hash": "dc056d483ee141c95fb563af4506218b",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/chispa.jpg": {
+    "mtime": 1784302215.3712618,
+    "ast_hash": "2f03e156daf36da422f6d9b797d323c6",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/chloe-cut.png": {
+    "mtime": 1784319303.3146966,
+    "ast_hash": "55759127fd7716b7bd95d3812ff69851",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/chloe.jpg": {
+    "mtime": 1784304924.679045,
+    "ast_hash": "ea5fdd279e09fe0eb54f29c60ca0b473",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/fondo-banner.jpg": {
+    "mtime": 1784319451.4335487,
+    "ast_hash": "fa6f9b3282fb3adf809ecab695fece00",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/fondo-sala.jpg": {
+    "mtime": 1784319451.9381642,
+    "ast_hash": "cf4f30b69c8738f32bb4cd0e0d9564f0",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/grupo-personajes.png": {
+    "mtime": 1784319454.247826,
+    "ast_hash": "699b0f3ef71a307285b416e50ca96fff",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/invitation/invitation-base-v1.png": {
+    "mtime": 1784296983.2489433,
+    "ast_hash": "c242cd5e2b562f80144d7b6a2f8800fc",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/invitation/invitation-thumb-v1.webp": {
+    "mtime": 1784299189.9428654,
+    "ast_hash": "1a8e4c895d6f8e94f85c5ac4e350885c",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/mama-coral-cut.png": {
+    "mtime": 1784319284.8659544,
+    "ast_hash": "1f7b8c9c1a2c191ca38b4dda61106989",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/mama-coral.jpg": {
+    "mtime": 1784303897.5414238,
+    "ast_hash": "d81bf1ee2f142317115c0966797fe20c",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/muffin-cut.png": {
+    "mtime": 1784319292.551487,
+    "ast_hash": "6d1a16a6a201ee22d6c362d497453c55",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/muffin.jpg": {
+    "mtime": 1784304924.110902,
+    "ast_hash": "af0fe7699f502d06100b276effea38c6",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/papa-marino-cut.png": {
+    "mtime": 1784319278.549771,
+    "ast_hash": "3f447d39b1e8ef3f6014a57388cf1e4e",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/papa-marino.jpg": {
+    "mtime": 1784303895.5576038,
+    "ast_hash": "cb6c0251bfa1a77482f8dc8949463647",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/portrait-stage-v2.png": {
+    "mtime": 1784301664.630621,
+    "ast_hash": "21de590b130e6d4df9eaf8558aa56b48",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/roulette/roulette-background-v1.png": {
+    "mtime": 1784516651.3200784,
+    "ast_hash": "7f2545e6c261099855fa980cfac66f86",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/transicion-alfombra-base-v1.png": {
+    "mtime": 1784307631.903864,
+    "ast_hash": "85d883e895e1ee900db51429c04ba131",
+    "semantic_hash": ""
+  },
+  "qa-evidence/cars-frame-after-reset-intro.png": {
+    "mtime": 1784305756.9449453,
+    "ast_hash": "968330c185d441780be6f3b316e66aae",
+    "semantic_hash": ""
+  },
+  "qa-evidence/cars-frame-after-reset-preview.png": {
+    "mtime": 1784306101.5175655,
+    "ast_hash": "d7ca824267ac8fbdb615d1ee08afcd9f",
+    "semantic_hash": ""
+  },
+  "qa-evidence/cars-frame-after-reset-tablet-800x1280.png": {
+    "mtime": 1784306262.8616717,
+    "ast_hash": "18d9d6800dd7934e906e9700f4f8c510",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-alfombra-candidate-v1/frame-00.jpg": {
+    "mtime": 1784310676.0398526,
+    "ast_hash": "beb39d1b84f050cbc5ab016d9a420893",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-alfombra-candidate-v1/frame-25-at.jpg": {
+    "mtime": 1784312518.8094282,
+    "ast_hash": "c8a1395cb49e92a5715d1edbdb217b0e",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-alfombra-candidate-v1/frame-25.jpg": {
+    "mtime": 1784310678.954289,
+    "ast_hash": "9b03e00566f1ffc18c8b545cd9417877",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-alfombra-candidate-v1/frame-55.jpg": {
+    "mtime": 1784310681.2942204,
+    "ast_hash": "265a88e42baec8d19650be2e8ccfad18",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-alfombra-candidate-v1/frame-78.jpg": {
+    "mtime": 1784310684.8949876,
+    "ast_hash": "f5a16b83700aac38b388728c80fb41f2",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/01-intro-800x1280.png": {
+    "mtime": 1784402482.591313,
+    "ast_hash": "0bb8d614328f8d98c4b980323a59da55",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/02-invitados.png": {
+    "mtime": 1784402912.6471624,
+    "ast_hash": "87f699dc29d9a4f5acb3fdb350f33412",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/03-bienvenida-video.png": {
+    "mtime": 1784402916.9422846,
+    "ast_hash": "9d19d085a79b908a41819c4de72afba4",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/04-ruleta.png": {
+    "mtime": 1784403080.813318,
+    "ast_hash": "e8894f7202b2b73c0b9ad319d1a074a4",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/05-alfombra.png": {
+    "mtime": 1784403087.7623389,
+    "ast_hash": "66a27ad3e126d397ceecdb41150782b8",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/06-camara-simulada.png": {
+    "mtime": 1784404521.7886472,
+    "ast_hash": "479e57488547c075fd47a6cece8cb790",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/07-preview-compuesta.png": {
+    "mtime": 1784404739.0865002,
+    "ast_hash": "6905f102ab186951adff9917b70f4a5c",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/08-despues-guardar.png": {
+    "mtime": 1784405311.0867488,
+    "ast_hash": "9fad9fe47736cebb1b2cdb13139ea587",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/08-qr-subida-ok.png": {
+    "mtime": 1784407482.1812437,
+    "ast_hash": "df3bbda93ecf47ca8ac89eec5b1ffc0d",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/09-diploma.png": {
+    "mtime": 1784407622.2761621,
+    "ast_hash": "273189f71d0f9031515303317bf13dc3",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/invitation/invitation-base-motion-v1.mp4": {
+    "mtime": 1784300317.6816406,
+    "ast_hash": "f2ae17b5421d056e9556d6792940bde4",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/musica-fondo.mp3": {
+    "mtime": 1784486307.2205608,
+    "ast_hash": "c1e2b2391c6480f4c20308f16ba76158",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/saludo-azulita.mp4": {
+    "mtime": 1784305427.5138426,
+    "ast_hash": "4645bb66a68a972196482dec823c74d7",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/saludo-chispa.mp4": {
+    "mtime": 1784305736.7176545,
+    "ast_hash": "8544aa118fe06ca89f0ea54de0f09b99",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/saludo-chloe.mp4": {
+    "mtime": 1784306950.9359176,
+    "ast_hash": "4a53bcd71b46b8902974c08ab72ab15e",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/saludo-mama-coral.mp4": {
+    "mtime": 1784306619.0204115,
+    "ast_hash": "d0fe543a15f7f437f64ad627e8584ab6",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/saludo-manchita.mp4": {
+    "mtime": 1784306950.9359176,
+    "ast_hash": "4a53bcd71b46b8902974c08ab72ab15e",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/saludo-muffin.mp4": {
+    "mtime": 1784306966.1004944,
+    "ast_hash": "6d2178d31271893c9e581fee83e187af",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/saludo-nube.mp4": {
+    "mtime": 1784306966.1004944,
+    "ast_hash": "6d2178d31271893c9e581fee83e187af",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/saludo-papa-marino.mp4": {
+    "mtime": 1784306213.4508827,
+    "ast_hash": "cc04a056c87be96ad25304633f3c7988",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/transicion-sesion-fotos.mp4": {
+    "mtime": 1784312474.547154,
+    "ast_hash": "e4a5a8a2cdb6feddb25c690d786af406",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/welcome-familia-canina.mp4": {
+    "mtime": 1784300317.6816406,
+    "ast_hash": "f2ae17b5421d056e9556d6792940bde4",
+    "semantic_hash": ""
+  },
+  "design/README.md": {
+    "mtime": 1784431077.8679888,
+    "ast_hash": "96d8d05fdd99ced8b30e1cf929195de1",
+    "semantic_hash": ""
+  },
+  "design/social/ESPECIFICACIONES.md": {
+    "mtime": 1784413662.8213015,
+    "ast_hash": "d85959a0e70f464db32866fc7b0f6680",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/10-intro-nombres-reales.png": {
+    "mtime": 1784414389.3408208,
+    "ast_hash": "59a8c9a832d9fd26e69539be1a5718c4",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/11-invitados-10.png": {
+    "mtime": 1784414817.527177,
+    "ast_hash": "abdf1ed20a24a2435f761b98e845c597",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/12-ruleta-nombres-reales.png": {
+    "mtime": 1784416728.7212434,
+    "ast_hash": "1d2c01297c14b26ebe803fbd4d6f2677",
+    "semantic_hash": ""
+  },
+  "design/video/README.md": {
+    "mtime": 1784422158.395041,
+    "ast_hash": "12364a711843cc9315e0947a0a81fdbf",
+    "semantic_hash": ""
+  },
+  "docs/CODEX-INTEGRACION-MARCA.md": {
+    "mtime": 1784474630.1878564,
+    "ast_hash": "95e0c36ff25bff43f262e1ac3e318625",
+    "semantic_hash": ""
+  },
+  "design/video/frame-endcard.png": {
+    "mtime": 1784418579.051893,
+    "ast_hash": "4c9225fe7baf4e037cde92b6bb8eceba",
+    "semantic_hash": ""
+  },
+  "design/video/frame-flash-magico.png": {
+    "mtime": 1784418776.3679752,
+    "ast_hash": "6cffc0498880a8a816d0003f0e12c575",
+    "semantic_hash": ""
+  },
+  "design/video/frame-sala-kiosco-alt-horizontal.png": {
+    "mtime": 1784418581.4264133,
+    "ast_hash": "dee7b29723b2ae21154031b678a93d79",
+    "semantic_hash": ""
+  },
+  "design/video/frame-sala-kiosco.png": {
+    "mtime": 1784422073.085719,
+    "ast_hash": "ee77a3a374b22e9adac5bb30332955c0",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/13-intro-centrado-505x862.png": {
+    "mtime": 1784424261.8702111,
+    "ast_hash": "9923c3bb46e13b5dfdf739fa1e15c6db",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/14-intro-centrado-800x1280.png": {
+    "mtime": 1784424457.214313,
+    "ast_hash": "420b8c40de4395761aad9ef6513d6d88",
+    "semantic_hash": ""
+  },
+  "qa-evidence/familia-canina-final/15-carreras-sin-regresion.png": {
+    "mtime": 1784424654.7504764,
+    "ast_hash": "5fb7abfb5d17a3dc51a6472f0af4a6cf",
+    "semantic_hash": ""
+  },
+  "design/video/clip-01-kiosco-alt-horizontal.mp4": {
+    "mtime": 1784418997.941369,
+    "ast_hash": "52ca28e8e7e6aa24d8bd0bfdcb31889a",
+    "semantic_hash": ""
+  },
+  "design/video/clip-01-kiosco.mp4": {
+    "mtime": 1784422271.7574217,
+    "ast_hash": "9b5cb8f87d5ed5c39b2b903c26c686f5",
+    "semantic_hash": ""
+  },
+  "design/video/clip-02-flash.mp4": {
+    "mtime": 1784419104.6388113,
+    "ast_hash": "4a54f64dd9825a906af91463624a160c",
+    "semantic_hash": ""
+  },
+  "design/video/clip-03-endcard.mp4": {
+    "mtime": 1784419160.817175,
+    "ast_hash": "4ed445d982be92d3f2cfe6edf34abdb6",
+    "semantic_hash": ""
+  },
+  "_voces.json": {
+    "mtime": 1785071358.4188778,
+    "ast_hash": "dc437c6935202d165e7f9069f4de5406",
+    "semantic_hash": ""
+  },
+  "database/migrations/005_theme_prompt_history.down.php": {
+    "mtime": 1784606186.3831053,
+    "ast_hash": "78c49a9a33819fd186bc1dcc823386c5",
+    "semantic_hash": ""
+  },
+  "database/migrations/005_theme_prompt_history.php": {
+    "mtime": 1784606177.6966188,
+    "ast_hash": "f6c67aa0bfb248a0b169bfe558007289",
+    "semantic_hash": ""
+  },
+  "scripts/backfill-muffin-chloe-prompts.php": {
+    "mtime": 1784608519.2193663,
+    "ast_hash": "62596f3339e4ae23330226d5cd1ff2c4",
+    "semantic_hash": ""
+  },
+  "scripts/backfill-theme-production-prompts.php": {
+    "mtime": 1785086952.300828,
+    "ast_hash": "0d2b7b4297cca55788c99f43a0dea96b",
+    "semantic_hash": ""
+  },
+  "scripts/build-explicativo.mjs": {
+    "mtime": 1785106332.3888361,
+    "ast_hash": "44cee06123ada0488e66c3d9b7b964f7",
+    "semantic_hash": ""
+  },
+  "scripts/build-video.ps1": {
+    "mtime": 1784982214.4471421,
+    "ast_hash": "d339bca0394a6a9312a02e3836d767ff",
+    "semantic_hash": ""
+  },
+  "scripts/capture-chars.mjs": {
+    "mtime": 1784995248.1616518,
+    "ast_hash": "253a0980f38b8354d7a00377a1d0ddea",
+    "semantic_hash": ""
+  },
+  "scripts/capture-diploma.mjs": {
+    "mtime": 1784956323.7476597,
+    "ast_hash": "bbf497de7cf433bcfb33649b31f16025",
+    "semantic_hash": ""
+  },
+  "scripts/capture-full.mjs": {
+    "mtime": 1784958277.3277736,
+    "ast_hash": "0faac405410ea0684bb4d8b1ef335968",
+    "semantic_hash": ""
+  },
+  "scripts/capture-ruleta.mjs": {
+    "mtime": 1785090615.266395,
+    "ast_hash": "7a5b36f60141aeac2ce83313702c646b",
+    "semantic_hash": ""
+  },
+  "scripts/capture-screens.mjs": {
+    "mtime": 1784955239.2102976,
+    "ast_hash": "fdb1be1948b8fc418fd6ba57ccac955d",
+    "semantic_hash": ""
+  },
+  "scripts/configure-kpop-heroes.mjs": {
+    "mtime": 1785081798.129032,
+    "ast_hash": "91dd3ac9a196d289bb0bea1de60edb5a",
+    "semantic_hash": ""
+  },
+  "scripts/fix-green-screen.mjs": {
+    "mtime": 1785080888.1637678,
+    "ast_hash": "6c92074d715a1136d862f3cec64286a5",
+    "semantic_hash": ""
+  },
+  "scripts/render-all-infografias.mjs": {
+    "mtime": 1784958835.696892,
+    "ast_hash": "04e05bb72c7067791378db9f07cecb50",
+    "semantic_hash": ""
+  },
+  "scripts/render-infografia-b.mjs": {
+    "mtime": 1784956703.3403475,
+    "ast_hash": "01752c608d0868bc93ab136d1935b86f",
+    "semantic_hash": ""
+  },
+  "scripts/render-overlays.mjs": {
+    "mtime": 1785106912.9635472,
+    "ast_hash": "cf9aa2b8ebf777b4aad87377a0f44b54",
+    "semantic_hash": ""
+  },
+  "scripts/render-video.mjs": {
+    "mtime": 1784959367.3126478,
+    "ast_hash": "3c360738b0fb72c8ceb8cf2db949301a",
+    "semantic_hash": ""
+  },
+  "scripts/seed-demo-theme-parties.php": {
+    "mtime": 1785359934.099415,
+    "ast_hash": "dbeebc9ef423f2afa957fa5bac26bb6b",
+    "semantic_hash": ""
+  },
+  "design/ESTRATEGIA-VIDEO-MARKETING.md": {
+    "mtime": 1784431070.3367684,
+    "ast_hash": "6ff4356821ee51385d7fd72d8408d7a4",
+    "semantic_hash": ""
+  },
+  "design/explicativo/README.md": {
+    "mtime": 1785099200.8807473,
+    "ast_hash": "f341730a4fa0cf0b372b8dabf2e487cc",
+    "semantic_hash": ""
+  },
+  "design/explicativo/galeria-revision.html": {
+    "mtime": 1784993085.2629466,
+    "ast_hash": "5841add8f60e4cd349deb7947c8aa8d0",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t01-16x9.html": {
+    "mtime": 1785106939.8855374,
+    "ast_hash": "77fa7b980195e403ed74b85af8d675bd",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t01.html": {
+    "mtime": 1785106920.9557202,
+    "ast_hash": "eb1e77d8f68577f115b9500b627e06ff",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t02-16x9.html": {
+    "mtime": 1785106941.7234218,
+    "ast_hash": "dba3928154968512ae21937cbf153310",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t02.html": {
+    "mtime": 1785106922.8256598,
+    "ast_hash": "4d487b875e9491abdaf8ce7d046735a2",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t03-16x9.html": {
+    "mtime": 1785106943.15028,
+    "ast_hash": "194132be00f0d2e737647f023bce8f21",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t03.html": {
+    "mtime": 1785106924.6930947,
+    "ast_hash": "cf7f89364b8de4f304123fd2fd35356c",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t04-16x9.html": {
+    "mtime": 1785106944.54653,
+    "ast_hash": "7259396b8c5bf9e4822a815d0e5fbdb1",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t04.html": {
+    "mtime": 1785106926.5410938,
+    "ast_hash": "a6fa0a152e5a0153fb70affc162c9e26",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t05-16x9.html": {
+    "mtime": 1785106945.9625943,
+    "ast_hash": "9c61fcb76cfa058b0812a5e0bb1acaa4",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t05.html": {
+    "mtime": 1785106927.8880925,
+    "ast_hash": "e784f8bd3208194463d8ddde21c91484",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t06-16x9.html": {
+    "mtime": 1785106947.3072033,
+    "ast_hash": "b3ab86c2503571c03361495e4396e099",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t06.html": {
+    "mtime": 1785106929.3474655,
+    "ast_hash": "be795a30487996b17843b767a9aeb511",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t07-16x9.html": {
+    "mtime": 1785106948.7440617,
+    "ast_hash": "00cb7972227044efb0242caca07397d2",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t07.html": {
+    "mtime": 1785106930.6580422,
+    "ast_hash": "832293e1aaf32140c943b00b0329914e",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t08-16x9.html": {
+    "mtime": 1785106950.0636866,
+    "ast_hash": "4712b9baf78748cee1f33c73fb33e815",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t08.html": {
+    "mtime": 1785106932.1445477,
+    "ast_hash": "61d88e346e1a8266f4a5868af14af8f9",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t09-16x9.html": {
+    "mtime": 1785106951.504234,
+    "ast_hash": "ea2cc9bb97ecb6546ede5dc87e4d703f",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t09.html": {
+    "mtime": 1785106933.6153882,
+    "ast_hash": "44bd270113494def4f8168a6d753732c",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t10-16x9.html": {
+    "mtime": 1785106953.2195084,
+    "ast_hash": "e521257423b94ee9cc65fa3993e5f68f",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t10.html": {
+    "mtime": 1785106934.926113,
+    "ast_hash": "15a576e70786b48907e563f3f283818c",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t11-16x9.html": {
+    "mtime": 1785106955.0409544,
+    "ast_hash": "63190abe49625ec877c5c29bff999e14",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t11.html": {
+    "mtime": 1785106936.477788,
+    "ast_hash": "0d444a87115e16320c163844d12d9be5",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t12-16x9.html": {
+    "mtime": 1785106957.330114,
+    "ast_hash": "ffd95f5b546451c2039de21ad809d62a",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t12.html": {
+    "mtime": 1785106938.05485,
+    "ast_hash": "33da9588ec0b64d7ebaff6b43dad683f",
+    "semantic_hash": ""
+  },
+  "design/explicativo/src/carrusel-01.html": {
+    "mtime": 1784958790.542097,
+    "ast_hash": "5ef91fae0be36eee1302ad64f106f7b0",
+    "semantic_hash": ""
+  },
+  "design/explicativo/src/carrusel-02.html": {
+    "mtime": 1784958796.431983,
+    "ast_hash": "9420c87b9fb68dec598f5e8ef943fa36",
+    "semantic_hash": ""
+  },
+  "design/explicativo/src/carrusel-03.html": {
+    "mtime": 1784958804.6553874,
+    "ast_hash": "c82d1e58d6482ef8cd38a45755918ed4",
+    "semantic_hash": ""
+  },
+  "design/explicativo/src/carrusel-04.html": {
+    "mtime": 1784958805.4606104,
+    "ast_hash": "ba23fa95ebf8ee02589b56ec0737ef9a",
+    "semantic_hash": ""
+  },
+  "design/explicativo/src/carrusel-05.html": {
+    "mtime": 1784958805.8034942,
+    "ast_hash": "e07897e9e84770945c691116144b05e5",
+    "semantic_hash": ""
+  },
+  "design/explicativo/src/carrusel-06.html": {
+    "mtime": 1784958808.9004588,
+    "ast_hash": "d9b5c62f5831200d6cdb9571f8ba938c",
+    "semantic_hash": ""
+  },
+  "design/explicativo/src/info-01.html": {
+    "mtime": 1784956625.926588,
+    "ast_hash": "083c8423ccd585fd96741cb1fac6adbf",
+    "semantic_hash": ""
+  },
+  "design/explicativo/src/info-02.html": {
+    "mtime": 1784958753.8630788,
+    "ast_hash": "364f5ac14208d0d92bbecd4c9762c066",
+    "semantic_hash": ""
+  },
+  "design/explicativo/src/info-03.html": {
+    "mtime": 1784958765.8883069,
+    "ast_hash": "d2d06baa611ae159577c120ae593872a",
+    "semantic_hash": ""
+  },
+  "design/explicativo/src/overlay.html": {
+    "mtime": 1784959313.5232382,
+    "ast_hash": "7824c42499d49f67fadb1e5ac6d8e6a4",
+    "semantic_hash": ""
+  },
+  "design/video/campania-fase1/README.md": {
+    "mtime": 1784481458.0448294,
+    "ast_hash": "7cd6ae2fa07a6061f84974009a523520",
+    "semantic_hash": ""
+  },
+  "design/video/reels/README.md": {
+    "mtime": 1784484510.1772745,
+    "ast_hash": "62a2fd50f21c26c42f37867e81b8d712",
+    "semantic_hash": ""
+  },
+  "docs/CODEX-TEMATICAS-KPOP-Y-VENGADORES.md": {
+    "mtime": 1785098306.4827962,
+    "ast_hash": "98170a7251d2af8ba9af254df8183c52",
+    "semantic_hash": ""
+  },
+  "docs/OPENCODE-CONTINUE-LILOSTITCH-ADMIN-MODAL.md": {
+    "mtime": 1784608247.4869647,
+    "ast_hash": "c7d34f800415f718e84ecbc49ba67708",
+    "semantic_hash": ""
+  },
+  "docs/OPENCODE-HANDOFF-EXPLICATIVO-CUMPLECLICK.md": {
+    "mtime": 1784956463.8336391,
+    "ast_hash": "e202799d5f220c812103b81ac2e6ddec",
+    "semantic_hash": ""
+  },
+  "docs/OPENCODE-HANDOFF-SITIO-CLIENTES.md": {
+    "mtime": 1785635932.872741,
+    "ast_hash": "afe09ff92b55da054d21e54d5e553458",
+    "semantic_hash": ""
+  },
+  "docs/OPENCODE-HANDOFF-STITCH-Y-MODAL.md": {
+    "mtime": 1784948575.5248783,
+    "ast_hash": "34cbea6141c0842c2fe97bd7bdd51ddf",
+    "semantic_hash": ""
+  },
+  "docs/STITCH-PLAN-GENERACION.md": {
+    "mtime": 1784609019.183549,
+    "ast_hash": "e119f79e65472d4dbdbb7fd0c209da31",
+    "semantic_hash": ""
+  },
+  "design/explicativo/carrusel-01.png": {
+    "mtime": 1785101712.2629888,
+    "ast_hash": "e70bcda49d5194f98ace00e05d627b90",
+    "semantic_hash": ""
+  },
+  "design/explicativo/carrusel-02.png": {
+    "mtime": 1785101715.6586754,
+    "ast_hash": "bc7a7263659ff8c31c39278cc6f6023a",
+    "semantic_hash": ""
+  },
+  "design/explicativo/carrusel-03.png": {
+    "mtime": 1785101719.30696,
+    "ast_hash": "5c0fe55d33beab7a58d2f22dbd8c74a1",
+    "semantic_hash": ""
+  },
+  "design/explicativo/carrusel-04.png": {
+    "mtime": 1785101723.0736442,
+    "ast_hash": "7b1cb5fbe60eeaa9d3078e1906ad33dd",
+    "semantic_hash": ""
+  },
+  "design/explicativo/carrusel-05.png": {
+    "mtime": 1785101726.6526265,
+    "ast_hash": "c17859b0890e18a0e90d028939968c34",
+    "semantic_hash": ""
+  },
+  "design/explicativo/carrusel-06.png": {
+    "mtime": 1785101729.8867762,
+    "ast_hash": "e218c8d4e28cea18656c680f9fd3dd2f",
+    "semantic_hash": ""
+  },
+  "design/explicativo/ia/IMG-01-kiosco-fiesta.png": {
+    "mtime": 1784990641.598829,
+    "ast_hash": "5ee234ebd936afad356426a89c73d3cf",
+    "semantic_hash": ""
+  },
+  "design/explicativo/ia/IMG-02-manos-tablet.png": {
+    "mtime": 1784990639.9769864,
+    "ast_hash": "3d583ceb665e9069cc1fc0f811be7c74",
+    "semantic_hash": ""
+  },
+  "design/explicativo/ia/IMG-03-celular-mama.png": {
+    "mtime": 1784990636.277613,
+    "ast_hash": "c252a1d4a9768370746ffb20b840f0ef",
+    "semantic_hash": ""
+  },
+  "design/explicativo/ia/IMG-04-diploma-manos.png": {
+    "mtime": 1784990646.930777,
+    "ast_hash": "f7f74160b29bf3006c17467999e64b50",
+    "semantic_hash": ""
+  },
+  "design/explicativo/ia/IMG-05-textura-confeti.png": {
+    "mtime": 1784990708.1570444,
+    "ast_hash": "625de5024230f0179a4e1673a9d6a38f",
+    "semantic_hash": ""
+  },
+  "design/explicativo/ia/IMG-06-mesa-dulce.png": {
+    "mtime": 1784990726.79116,
+    "ast_hash": "902c4a0bad62c37a33562d0d194c33e8",
+    "semantic_hash": ""
+  },
+  "design/explicativo/ia/IMG-07-nino-posando.png": {
+    "mtime": 1784995144.3520207,
+    "ast_hash": "f737874dd01b71218589f0f09e315f5f",
+    "semantic_hash": ""
+  },
+  "design/explicativo/ia/IMG-08-nino-camara-limpio.png": {
+    "mtime": 1785079652.050872,
+    "ast_hash": "55c93ec26008411f7067172c5b7668c5",
+    "semantic_hash": ""
+  },
+  "design/explicativo/ia/IMG-08-nino-camara.png": {
+    "mtime": 1785079581.9816208,
+    "ast_hash": "73ce213085de9f6e452087bf0afb19d0",
+    "semantic_hash": ""
+  },
+  "design/explicativo/ia/TEST-A-infografia-completa.png": {
+    "mtime": 1784990454.4547572,
+    "ast_hash": "79a6158531c20f4aa554fb200191bef6",
+    "semantic_hash": ""
+  },
+  "design/explicativo/ia/TEST-B-fondo.png": {
+    "mtime": 1784990469.2543924,
+    "ast_hash": "40da0b4349440f284af67a4101039ead",
+    "semantic_hash": ""
+  },
+  "design/explicativo/ia/TEST-C-portada-carrusel.png": {
+    "mtime": 1784990537.34565,
+    "ast_hash": "f1437ac6dc437a846931a502a7e212cd",
+    "semantic_hash": ""
+  },
+  "design/explicativo/info-01-como-funciona.png": {
+    "mtime": 1785101698.7107227,
+    "ast_hash": "5bd01dd47500e1d0d00752f90f6c660d",
+    "semantic_hash": ""
+  },
+  "design/explicativo/info-02-que-se-lleva.png": {
+    "mtime": 1785101702.8123016,
+    "ast_hash": "5e6cc695ce93b83a27e90e0c73335201",
+    "semantic_hash": ""
+  },
+  "design/explicativo/info-03-planes.png": {
+    "mtime": 1785101706.3752933,
+    "ast_hash": "8ae6e5a1bf1d22c441dbb75376df0731",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t01-16x9.png": {
+    "mtime": 1785106941.7224236,
+    "ast_hash": "5560cb93f143a5f03849ffecd2d00835",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t01.png": {
+    "mtime": 1785106922.8236625,
+    "ast_hash": "6c9d229e5521b3e65f3ddbfcdfdb45c2",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t02-16x9.png": {
+    "mtime": 1785106943.1482823,
+    "ast_hash": "d8cb12fa8e00129b65a59e24ac546f60",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t02.png": {
+    "mtime": 1785106924.6920967,
+    "ast_hash": "23a238711115786926b72fba10c52c6d",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t03-16x9.png": {
+    "mtime": 1785106944.5455308,
+    "ast_hash": "d874a049f0506b317d76a836079faa91",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t03.png": {
+    "mtime": 1785106926.5385547,
+    "ast_hash": "9a57b9ac7e27d3e9373c0445a9547ec3",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t04-16x9.png": {
+    "mtime": 1785106945.961594,
+    "ast_hash": "a8ed81908817ce0044f494972d848206",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t04.png": {
+    "mtime": 1785106927.887584,
+    "ast_hash": "75dd749891d31946a928a96ce5ec60d6",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t05-16x9.png": {
+    "mtime": 1785106947.3062048,
+    "ast_hash": "b18021b93845cde570ff24582c2c6803",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t05.png": {
+    "mtime": 1785106929.3464663,
+    "ast_hash": "8fcce075de1faf975f955d6fe5682ab0",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t06-16x9.png": {
+    "mtime": 1785106948.7430625,
+    "ast_hash": "d73598e6579361f9353d34ff5ba5268d",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t06.png": {
+    "mtime": 1785106930.6526897,
+    "ast_hash": "652971fb9ed3a0d9fd883a9e1e6d0564",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t07-16x9.png": {
+    "mtime": 1785106950.0625594,
+    "ast_hash": "8c6fe3d636fd43f3cd031ccc33f558df",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t07.png": {
+    "mtime": 1785106932.1434731,
+    "ast_hash": "2b5eadc1046556bc157a4674d5d1148c",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t08-16x9.png": {
+    "mtime": 1785106951.502943,
+    "ast_hash": "7fa5bfb8ee2c29db56c94ada7545e088",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t08.png": {
+    "mtime": 1785106933.614002,
+    "ast_hash": "ab4cf6398e3dc28fb0b28f9d797fb7df",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t09-16x9.png": {
+    "mtime": 1785106953.2180314,
+    "ast_hash": "d9e21eddbe03fe4b13dc55335b32d05c",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t09.png": {
+    "mtime": 1785106934.9250755,
+    "ast_hash": "771ea57d4a107afdf5191bdecec9ee74",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t10-16x9.png": {
+    "mtime": 1785106955.0399542,
+    "ast_hash": "7639d270a7aef853fe0b60a174ee5822",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t10.png": {
+    "mtime": 1785106936.4757888,
+    "ast_hash": "b247c011982d1566cf2b05067cd1e527",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t11-16x9.png": {
+    "mtime": 1785106957.3291152,
+    "ast_hash": "95dacb2724fec9fb79d8cdae888b6c39",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t11.png": {
+    "mtime": 1785106938.0538495,
+    "ast_hash": "caf3d103a852abd5f649e6b0f61e5859",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t12-16x9.png": {
+    "mtime": 1785106958.764866,
+    "ast_hash": "acc4139b8feabba5016e9e7c27880454",
+    "semantic_hash": ""
+  },
+  "design/explicativo/overlays/t12.png": {
+    "mtime": 1785106939.8715453,
+    "ast_hash": "a2d5a22aefa0a728488f3949d5ebefae",
+    "semantic_hash": ""
+  },
+  "design/explicativo/prueba-infografia/V-A-ia-completa.png": {
+    "mtime": 1784990454.4547572,
+    "ast_hash": "79a6158531c20f4aa554fb200191bef6",
+    "semantic_hash": ""
+  },
+  "design/explicativo/prueba-infografia/V-B-fondo-ia.png": {
+    "mtime": 1784990469.2543924,
+    "ast_hash": "40da0b4349440f284af67a4101039ead",
+    "semantic_hash": ""
+  },
+  "design/explicativo/prueba-infografia/V-C-html-puro.png": {
+    "mtime": 1784958866.3217292,
+    "ast_hash": "804ad966c128c1762158b3724f1ddec1",
+    "semantic_hash": ""
+  },
+  "design/renders/alienazul-v1-koala-rechazado.jpg": {
+    "mtime": 1784697571.441572,
+    "ast_hash": "75c3533e4bf91ca8b4de70126b3b5fc9",
+    "semantic_hash": ""
+  },
+  "design/renders/alienrosa-v1-koala-rechazado.jpg": {
+    "mtime": 1784697571.6245375,
+    "ast_hash": "200e1a9a0cb250df7db82d1262d4f7ee",
+    "semantic_hash": ""
+  },
+  "design/renders/artist-teaser-tropical-v1-azul-inconsistente.jpg": {
+    "mtime": 1784702531.28257,
+    "ast_hash": "bde7accd9329afee4620de9f0084bf4d",
+    "semantic_hash": ""
+  },
+  "design/renders/artist-teaser-v1-blueybingo-orejas.jpg": {
+    "mtime": 1784575019.5695376,
+    "ast_hash": "663fd68d277793c2d77c913e5dcf4332",
+    "semantic_hash": ""
+  },
+  "design/renders/azulita-cut-v1-sin-brazo.png": {
+    "mtime": 1784474235.5648017,
+    "ast_hash": "ae86b0db26b0eca3fef55171b5421620",
+    "semantic_hash": ""
+  },
+  "design/renders/hielo-anna-v1-pequena-rechazada.png": {
+    "mtime": 1784997469.0674942,
+    "ast_hash": "9cf0c8ad61b7389dce1635bbd41647d2",
+    "semantic_hash": ""
+  },
+  "design/renders/hielo-bruni-v1-pequeno-rechazado.png": {
+    "mtime": 1784997534.884874,
+    "ast_hash": "39e2678edb30ebb10ac7884f889bfad4",
+    "semantic_hash": ""
+  },
+  "design/renders/hielo-olaf-v1-sombrero-rechazado.png": {
+    "mtime": 1784997468.965653,
+    "ast_hash": "625e28e8deb74d135cbdf89fbbea9c90",
+    "semantic_hash": ""
+  },
+  "design/renders/roulette-background-familia-canina-v1-anterior.png": {
+    "mtime": 1784516651.2469354,
+    "ast_hash": "5a8ad462bb06902d7b8039e1c2eaa7c7",
+    "semantic_hash": ""
+  },
+  "design/screens/_con-verde/carreras-screen-04-personaje.png": {
+    "mtime": 1784995365.4697444,
+    "ast_hash": "0a6fd090eea02bfe8e56104c559571ed",
+    "semantic_hash": ""
+  },
+  "design/screens/_con-verde/carreras-screen-06-preview.png": {
+    "mtime": 1784995373.6707468,
+    "ast_hash": "9238992356da71a4fd2a4280ef98cd9c",
+    "semantic_hash": ""
+  },
+  "design/screens/_con-verde/screen-03-ruleta-VACIA.png": {
+    "mtime": 1785088383.5188565,
+    "ast_hash": "5c557565b6c53a25b94d0141c9a8f588",
+    "semantic_hash": ""
+  },
+  "design/screens/_con-verde/screen-04-personaje.png": {
+    "mtime": 1784995432.169104,
+    "ast_hash": "30da5367a8a5474d230a6c7b5dd6cf43",
+    "semantic_hash": ""
+  },
+  "design/screens/_con-verde/screen-05t-captura.png": {
+    "mtime": 1784955921.319852,
+    "ast_hash": "0393e5d4efde7cba4d91a89c76434100",
+    "semantic_hash": ""
+  },
+  "design/screens/_con-verde/screen-06-preview.png": {
+    "mtime": 1784995440.6646972,
+    "ast_hash": "6bfc3014c5efa07b5519bb8e618a67af",
+    "semantic_hash": ""
+  },
+  "design/screens/_con-verde/screen-06t-preview.png": {
+    "mtime": 1784955927.8721924,
+    "ast_hash": "c267c20478c50f01df61e48029613797",
+    "semantic_hash": ""
+  },
+  "design/screens/_con-verde/tropical-screen-04-personaje.png": {
+    "mtime": 1784995322.8476472,
+    "ast_hash": "a655cd10afd94b095e989888a614bbbd",
+    "semantic_hash": ""
+  },
+  "design/screens/_con-verde/tropical-screen-06-preview.png": {
+    "mtime": 1784995330.7301416,
+    "ast_hash": "0a9931e5617e44761aa18df8e779438b",
+    "semantic_hash": ""
+  },
+  "design/screens/carreras-screen-01-intro.png": {
+    "mtime": 1784957688.9585516,
+    "ast_hash": "1b0717b906e64baa4e82013837d0b7ee",
+    "semantic_hash": ""
+  },
+  "design/screens/carreras-screen-02-invitados.png": {
+    "mtime": 1784957692.787444,
+    "ast_hash": "cca4fa71998003109a56fe35960fb81d",
+    "semantic_hash": ""
+  },
+  "design/screens/carreras-screen-03-ruleta.png": {
+    "mtime": 1785090668.098257,
+    "ast_hash": "1e5a0c6f1775321d70d9826bccf7086e",
+    "semantic_hash": ""
+  },
+  "design/screens/carreras-screen-04-personaje.png": {
+    "mtime": 1785080949.3417127,
+    "ast_hash": "034e2e62b4bd2449cf88be2ffa82f1cc",
+    "semantic_hash": ""
+  },
+  "design/screens/carreras-screen-05-captura.png": {
+    "mtime": 1784995144.3520207,
+    "ast_hash": "f737874dd01b71218589f0f09e315f5f",
+    "semantic_hash": ""
+  },
+  "design/screens/carreras-screen-06-preview.png": {
+    "mtime": 1785101304.223054,
+    "ast_hash": "d0e24593f899abc8f4d38d28ff8dc974",
+    "semantic_hash": ""
+  },
+  "design/screens/carreras-screen-07-qr.png": {
+    "mtime": 1784995379.9519682,
+    "ast_hash": "879d017b6a74781b78985c7bf69064fe",
+    "semantic_hash": ""
+  },
+  "design/screens/carreras-screen-08-diploma.png": {
+    "mtime": 1784995386.0900247,
+    "ast_hash": "51a28549dd524e62dde566bc06263317",
+    "semantic_hash": ""
+  },
+  "design/screens/carreras-screen-09-diploma-qr.png": {
+    "mtime": 1784995387.3435621,
+    "ast_hash": "51a28549dd524e62dde566bc06263317",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-01-intro.png": {
+    "mtime": 1784958438.3148308,
+    "ast_hash": "9bb16e4e51b2df1536683795866a35dc",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-02-invitados.png": {
+    "mtime": 1784958441.392222,
+    "ast_hash": "422e31ace0f605930fd446fa2dea3982",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-03a-spinner-start.png": {
+    "mtime": 1784958452.6732414,
+    "ast_hash": "6752ee7d081299b425b78ee5f8bbdc16",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-03b-spinner-mid.png": {
+    "mtime": 1784958456.3106458,
+    "ast_hash": "637c12d50d31bd4c94a19e44e37eba91",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-03c-spinner-end.png": {
+    "mtime": 1784958460.469063,
+    "ast_hash": "365465dc1ce6a19de835dbfc834902eb",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-04-character.png": {
+    "mtime": 1784958464.3465624,
+    "ast_hash": "fb9bd54b31349e65f6f657e0196f722e",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-05-camera.png": {
+    "mtime": 1784958466.1510568,
+    "ast_hash": "3079402689a884feacbc66a6b8bfea88",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-06-preview.png": {
+    "mtime": 1784958473.9020188,
+    "ast_hash": "45d4b3ed939dfac908e1ff496b444afa",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-07-qr.png": {
+    "mtime": 1784958480.299611,
+    "ast_hash": "ae660c7f790ad2f537600e8663d5c77d",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-08-diploma.png": {
+    "mtime": 1784958487.108601,
+    "ast_hash": "143ea8e0ca2bcba7c4ccd5d756286ced",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-carreras-01-intro.png": {
+    "mtime": 1784957861.2933855,
+    "ast_hash": "058ef73b91b5817d6db88862d22fa0c0",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-carreras-02-invitados.png": {
+    "mtime": 1784957864.9435208,
+    "ast_hash": "d81365694eee9d26da30276f1e3de7c6",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-carreras-03a-spinner-start.png": {
+    "mtime": 1784957875.2478352,
+    "ast_hash": "a734358649f125428b0dc5087cff60d9",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-carreras-03b-spinner-mid.png": {
+    "mtime": 1784957878.4385133,
+    "ast_hash": "7eeddaac67c9cd6dae284a9cbced783c",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-carreras-03c-spinner-end.png": {
+    "mtime": 1784957882.0366788,
+    "ast_hash": "f23776357c8be1dfd4bcc2f7eff4c134",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-carreras-04-character.png": {
+    "mtime": 1784957886.2599697,
+    "ast_hash": "4370ebd546a43d3d493bb2869847819e",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-carreras-05-camera.png": {
+    "mtime": 1784957889.0320222,
+    "ast_hash": "b3b2d969b8db22cd2deea4478114a525",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-carreras-06-preview.png": {
+    "mtime": 1784957896.9878263,
+    "ast_hash": "af1469297c83fa417631370d449fd477",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-carreras-07-qr.png": {
+    "mtime": 1784957903.4412658,
+    "ast_hash": "59256de19757b96e1da9c26832ad97cb",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-carreras-08-diploma.png": {
+    "mtime": 1784957910.0999234,
+    "ast_hash": "1b82c6194c413e216c593e9959d2b2a7",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-tropical-01-intro.png": {
+    "mtime": 1784958491.2870786,
+    "ast_hash": "7d278086f4344206a55edd770c9eed92",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-tropical-02-invitados.png": {
+    "mtime": 1784958493.9194264,
+    "ast_hash": "da191e14676c90e0d00e919a64119e77",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-tropical-03a-spinner-start.png": {
+    "mtime": 1784958503.8223722,
+    "ast_hash": "b705e8ca057f090b9468e3b4da7f9e6b",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-tropical-03b-spinner-mid.png": {
+    "mtime": 1784958507.5975077,
+    "ast_hash": "7340431ff6b9827b8d0a9a9323358192",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-tropical-03c-spinner-end.png": {
+    "mtime": 1784958511.583386,
+    "ast_hash": "f92ca3f6e7a1b25058e75d507df7adc4",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-tropical-04-character.png": {
+    "mtime": 1784958515.271628,
+    "ast_hash": "581806841b9765146033e6ccd34bbe34",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-tropical-05-camera.png": {
+    "mtime": 1784958517.0195289,
+    "ast_hash": "1134df38a4ea57b6bd6e7faf88154b53",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-tropical-06-preview.png": {
+    "mtime": 1784958524.7793565,
+    "ast_hash": "2dca9aee2c3eb19c33bf8d60428de4e3",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-tropical-07-qr.png": {
+    "mtime": 1784958531.2862744,
+    "ast_hash": "a105411fdde7193f184779f2483af465",
+    "semantic_hash": ""
+  },
+  "design/screens/flow/demo-tropical-08-diploma.png": {
+    "mtime": 1784958537.8279016,
+    "ast_hash": "b741a4d4a4dc590968bff4bea5e7c868",
+    "semantic_hash": ""
+  },
+  "design/screens/screen-01-intro.png": {
+    "mtime": 1784958309.261873,
+    "ast_hash": "10f521f6ed1f2d8279dac9e81b61ee29",
+    "semantic_hash": ""
+  },
+  "design/screens/screen-01t-intro.png": {
+    "mtime": 1784955889.7355192,
+    "ast_hash": "c84d65d3a1f1d2dfb3ab9f4b236176c5",
+    "semantic_hash": ""
+  },
+  "design/screens/screen-02-invitados.png": {
+    "mtime": 1784958313.1885438,
+    "ast_hash": "edb813d716372717ff2b2d45fced695f",
+    "semantic_hash": ""
+  },
+  "design/screens/screen-03-ruleta.png": {
+    "mtime": 1785090641.5283904,
+    "ast_hash": "0e13d443923b9464bf28568b78df939f",
+    "semantic_hash": ""
+  },
+  "design/screens/screen-03t-ruleta.png": {
+    "mtime": 1784955904.779989,
+    "ast_hash": "9ef1f68aeb78ab9917101bc91bbcdf82",
+    "semantic_hash": ""
+  },
+  "design/screens/screen-04-personaje.png": {
+    "mtime": 1785081045.8319108,
+    "ast_hash": "b3736efc29387baf5004c35c16e7673a",
+    "semantic_hash": ""
+  },
+  "design/screens/screen-05-captura.png": {
+    "mtime": 1784995144.3520207,
+    "ast_hash": "f737874dd01b71218589f0f09e315f5f",
+    "semantic_hash": ""
+  },
+  "design/screens/screen-05t-captura.png": {
+    "mtime": 1785081068.4870803,
+    "ast_hash": "b020fd4366e55f8daaee975ecabb0df8",
+    "semantic_hash": ""
+  },
+  "design/screens/screen-06-preview.png": {
+    "mtime": 1785101659.2830455,
+    "ast_hash": "bd2e7612d7fcfe2df6e34a8dd1f09b2a",
+    "semantic_hash": ""
+  },
+  "design/screens/screen-06t-preview.png": {
+    "mtime": 1785081101.8527153,
+    "ast_hash": "3aa8a292f5af139a54c65f47ea3f1215",
+    "semantic_hash": ""
+  },
+  "design/screens/screen-07-qr.png": {
+    "mtime": 1784995447.0690136,
+    "ast_hash": "33c7b6caccd9118e00db21ed91f79753",
+    "semantic_hash": ""
+  },
+  "design/screens/screen-08-diploma.png": {
+    "mtime": 1784995453.4088595,
+    "ast_hash": "2218a53eca297747712690d4a73d62cc",
+    "semantic_hash": ""
+  },
+  "design/screens/screen-09-diploma-qr.png": {
+    "mtime": 1784995454.8080487,
+    "ast_hash": "2218a53eca297747712690d4a73d62cc",
+    "semantic_hash": ""
+  },
+  "design/screens/screen-10-galeria.png": {
+    "mtime": 1784958540.7851639,
+    "ast_hash": "183023d02e0bef29c18fd6ab25d08e8a",
+    "semantic_hash": ""
+  },
+  "design/screens/screen-11-admin.png": {
+    "mtime": 1784958546.4341407,
+    "ast_hash": "133afd96fefe37e5d25dbada1b8a135b",
+    "semantic_hash": ""
+  },
+  "design/screens/tropical-screen-01-intro.png": {
+    "mtime": 1784958378.775911,
+    "ast_hash": "34c430ade4b03a2276c76204157fcacd",
+    "semantic_hash": ""
+  },
+  "design/screens/tropical-screen-02-invitados.png": {
+    "mtime": 1784958382.0465207,
+    "ast_hash": "ce5c5ddb5e2bcae960515c851c06a418",
+    "semantic_hash": ""
+  },
+  "design/screens/tropical-screen-03-ruleta.png": {
+    "mtime": 1785090654.712025,
+    "ast_hash": "557d6aa68d39233036902d88e308ca89",
+    "semantic_hash": ""
+  },
+  "design/screens/tropical-screen-04-personaje.png": {
+    "mtime": 1785081179.8880486,
+    "ast_hash": "b020fd4366e55f8daaee975ecabb0df8",
+    "semantic_hash": ""
+  },
+  "design/screens/tropical-screen-05-captura.png": {
+    "mtime": 1784995144.3520207,
+    "ast_hash": "f737874dd01b71218589f0f09e315f5f",
+    "semantic_hash": ""
+  },
+  "design/screens/tropical-screen-06-preview.png": {
+    "mtime": 1785101379.3548596,
+    "ast_hash": "2df28970db79cd553009fe9ac57ac36d",
+    "semantic_hash": ""
+  },
+  "design/screens/tropical-screen-07-qr.png": {
+    "mtime": 1784995337.0700414,
+    "ast_hash": "aaabf929cb51645616685dfcce31571b",
+    "semantic_hash": ""
+  },
+  "design/screens/tropical-screen-08-diploma.png": {
+    "mtime": 1784995343.1882982,
+    "ast_hash": "af83dae619893c0472e9fcfe91b4d3ee",
+    "semantic_hash": ""
+  },
+  "design/screens/tropical-screen-09-diploma-qr.png": {
+    "mtime": 1784995344.540765,
+    "ast_hash": "af83dae619893c0472e9fcfe91b4d3ee",
+    "semantic_hash": ""
+  },
+  "design/video/campania-fase1/v1-frame-fiesta-detenida.png": {
+    "mtime": 1784481198.5337353,
+    "ast_hash": "4cc67c3d0ac094046b6b7649b7198c67",
+    "semantic_hash": ""
+  },
+  "design/video/campania-fase1/v4-frame-fechas.png": {
+    "mtime": 1784481139.1681511,
+    "ast_hash": "c187fc4f6ee7d3252de9bd279701700d",
+    "semantic_hash": ""
+  },
+  "hielo-bruni-v2.png": {
+    "mtime": 1784997487.4313688,
+    "ast_hash": "691cd68b5cfc79150f29138ec85370b5",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/artist-teaser.jpg": {
+    "mtime": 1784575020.7401788,
+    "ast_hash": "b7cdadfb57fb587e730afc65c77cc78b",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/anna-cut.png": {
+    "mtime": 1784997847.3145587,
+    "ast_hash": "20f7b9a887bff0753a237e66ede1a1f1",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/anna.jpg": {
+    "mtime": 1784997454.2254314,
+    "ast_hash": "554ddfbf2722a49275d95af4b440fe3c",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/bruni-cut.png": {
+    "mtime": 1784997850.901723,
+    "ast_hash": "406c46f453c55c5f8bc2b331dea2f713",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/bruni.jpg": {
+    "mtime": 1784997534.7693179,
+    "ast_hash": "1e58ab9090038cbc4cd6915d90ce1b27",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/elsa-cut.png": {
+    "mtime": 1784997855.4817924,
+    "ast_hash": "d1dbc6004865690ff3fb9c76d6b8c0a0",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/elsa.jpg": {
+    "mtime": 1784997453.9040856,
+    "ast_hash": "db68571ba78d890bb16857075a4580f4",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/fondo-banner.jpg": {
+    "mtime": 1784997033.7698667,
+    "ast_hash": "57942f81a5f2541b39d045c886ae4f8f",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/fondo-juego-nieve.jpg": {
+    "mtime": 1785022168.9383354,
+    "ast_hash": "688656a8f648612e44f9e9a41e8a22f0",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/fondo-sala.jpg": {
+    "mtime": 1784997034.092778,
+    "ast_hash": "cf1c7d2ec12b9f36c60ce2a21bee6e2e",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/kristoff-cut.png": {
+    "mtime": 1784997859.174532,
+    "ast_hash": "cc3c5639fa7a3b4285787bfd0c0dc74d",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/kristoff.jpg": {
+    "mtime": 1784997454.5870907,
+    "ast_hash": "18e23fa6e2d845b51384f38f429e0eb5",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/olaf-cut.png": {
+    "mtime": 1784997862.8927026,
+    "ast_hash": "a258491f259eb8fcd4382d74a1a495ce",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/olaf.jpg": {
+    "mtime": 1784997454.8641038,
+    "ast_hash": "a67018a35e515889e62f13f60f6f135b",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/puzzle-anna.jpg": {
+    "mtime": 1785033952.1519182,
+    "ast_hash": "509ab67f6eb152d9af8e0ac18a9c66e7",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/puzzle-bruni.jpg": {
+    "mtime": 1785034066.5315354,
+    "ast_hash": "ce5e9ea9fd2fddec8e0a574b0ac9bccd",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/puzzle-elsa.jpg": {
+    "mtime": 1785034065.6335778,
+    "ast_hash": "41b51a0d4511f56be4f91508a2abef5d",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/puzzle-kristoff.jpg": {
+    "mtime": 1785034065.9051597,
+    "ast_hash": "bfe0f5f72b63262d9e8cbbbac8885bb0",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/puzzle-olaf.jpg": {
+    "mtime": 1785015269.147664,
+    "ast_hash": "8d6852ac4e220e737e6748a10e349ebe",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/puzzle-sven.jpg": {
+    "mtime": 1785034066.1947658,
+    "ast_hash": "8d7d39700d4fcb9c964fe747979adc8c",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/sven-cut.png": {
+    "mtime": 1784997866.195798,
+    "ast_hash": "fcdc689725df77c5a2398f7fdcdde2cf",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/sven.jpg": {
+    "mtime": 1784997455.2604344,
+    "ast_hash": "62c4fad6a4fcb0c7cb88793a1f96944b",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/alienazul-cut.png": {
+    "mtime": 1784697581.8653152,
+    "ast_hash": "6a11331b3a01c43606a65ff091f206b6",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/alienazul.jpg": {
+    "mtime": 1784697580.081835,
+    "ast_hash": "33d520e6c93a6ea4ebd7e556c6b38e53",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/alienrosa-cut.png": {
+    "mtime": 1784697586.271219,
+    "ast_hash": "d32c6118a5b4cf7e397625fd59493bc1",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/alienrosa.jpg": {
+    "mtime": 1784697582.9743555,
+    "ast_hash": "cb01292643d93e0f69383437886cb9aa",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/artist-teaser.jpg": {
+    "mtime": 1784702532.479379,
+    "ast_hash": "d9839066eb519b604efde13303ebd90f",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/fondo-banner.jpg": {
+    "mtime": 1784684064.4583764,
+    "ast_hash": "f0461dd01be2add599884ed5fd83781a",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/fondo-sala.jpg": {
+    "mtime": 1784684065.9518075,
+    "ast_hash": "fc44b35edbad013f860e2b89b03f72f3",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/hawaiana-cut.png": {
+    "mtime": 1784684031.3939192,
+    "ast_hash": "39f4cd7a33c97ca00e3a84d670c16995",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/hawaiana.jpg": {
+    "mtime": 1784684024.0366712,
+    "ast_hash": "4d4da6d02a859fcf83b4974132c5a5b1",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/loro-cut.png": {
+    "mtime": 1784684053.5648518,
+    "ast_hash": "f2aecf366cd79f255687eb959e35c00d",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/loro.jpg": {
+    "mtime": 1784684047.4992566,
+    "ast_hash": "dd902daef0075458ae198bba93fca0c1",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/surfista-cut.png": {
+    "mtime": 1784684061.893183,
+    "ast_hash": "0a7166c8d8e0144ef6298a710e505797",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/surfista.jpg": {
+    "mtime": 1784684056.697091,
+    "ast_hash": "be600496e02575886e9bff1ac42c3f53",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/tortugamar-cut.png": {
+    "mtime": 1784684043.323873,
+    "ast_hash": "79b72a9b63595db86da10ea2fe008d67",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/tortugamar.jpg": {
+    "mtime": 1784684034.5889409,
+    "ast_hash": "4e6556940ec1b9998b807076dd3d4a0b",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/transicion-alfombra-base-v1.png": {
+    "mtime": 1784701143.29042,
+    "ast_hash": "1dc9d04a762370edee390a5d121c659a",
+    "semantic_hash": ""
+  },
+  "tmp/imagegen/azulita-chroma-v2.png": {
+    "mtime": 1784434912.960905,
+    "ast_hash": "685534ee967c85b79b51bf9a5e0e2f90",
+    "semantic_hash": ""
+  },
+  "tmp/imagegen/azulita-cut-v2.png": {
+    "mtime": 1784435928.416205,
+    "ast_hash": "51628ed561839ad7c9697491d52b6a2b",
+    "semantic_hash": ""
+  },
+  "design/explicativo/video-explicativo-16x9.mp4": {
+    "mtime": 1785107441.1961477,
+    "ast_hash": "56bdce07644f92cf1a07faf29f1855d1",
+    "semantic_hash": ""
+  },
+  "design/explicativo/video-explicativo.mp4": {
+    "mtime": 1785107437.312277,
+    "ast_hash": "45b3f8e8abdf06915514b5b956163b39",
+    "semantic_hash": ""
+  },
+  "design/renders/hielo-saludos-raw/anna-lipsync-raw.mp4": {
+    "mtime": 1785073416.6967273,
+    "ast_hash": "1c32ede2628bbb279446c629f2d6b789",
+    "semantic_hash": ""
+  },
+  "design/renders/hielo-saludos-raw/anna-raw.mp4": {
+    "mtime": 1785000435.8158352,
+    "ast_hash": "4740bc763e79c0765a80ff4f1b1c0cb7",
+    "semantic_hash": ""
+  },
+  "design/renders/hielo-saludos-raw/bruni-lipsync-raw.mp4": {
+    "mtime": 1785075731.4508448,
+    "ast_hash": "f7c8bea32bfebe293238b571161d4de3",
+    "semantic_hash": ""
+  },
+  "design/renders/hielo-saludos-raw/bruni-raw.mp4": {
+    "mtime": 1785000435.8408225,
+    "ast_hash": "6c46a718ade1b9baf90f3d9637768026",
+    "semantic_hash": ""
+  },
+  "design/renders/hielo-saludos-raw/despedida-raw.mp4": {
+    "mtime": 1785071641.6697052,
+    "ast_hash": "507dfb6dbd57ed2bbfe9198ace898eb3",
+    "semantic_hash": ""
+  },
+  "design/renders/hielo-saludos-raw/elsa-raw.mp4": {
+    "mtime": 1785000435.8718157,
+    "ast_hash": "921487a54e909adfab766bbd2a66bd1c",
+    "semantic_hash": ""
+  },
+  "design/renders/hielo-saludos-raw/kristoff-lipsync-raw.mp4": {
+    "mtime": 1785075730.416506,
+    "ast_hash": "6f307f3c7307720d2fe0c37aea8b0d3d",
+    "semantic_hash": ""
+  },
+  "design/renders/hielo-saludos-raw/kristoff-raw.mp4": {
+    "mtime": 1785000435.9193063,
+    "ast_hash": "27313c1bec226fea9cd38f09f22b2785",
+    "semantic_hash": ""
+  },
+  "design/renders/hielo-saludos-raw/olaf-raw.mp4": {
+    "mtime": 1785000435.952287,
+    "ast_hash": "8c312f626a30ed2b08a381704fc9cdbd",
+    "semantic_hash": ""
+  },
+  "design/renders/hielo-saludos-raw/revelacion-raw.mp4": {
+    "mtime": 1785073058.945289,
+    "ast_hash": "5d7bdee6ea0aeb72c62fbcb9930d0557",
+    "semantic_hash": ""
+  },
+  "design/renders/hielo-saludos-raw/sven-lipsync-raw.mp4": {
+    "mtime": 1785076770.4853208,
+    "ast_hash": "8832840a3ba45025641d9e15535125e8",
+    "semantic_hash": ""
+  },
+  "design/renders/hielo-saludos-raw/sven-raw.mp4": {
+    "mtime": 1785000435.9827895,
+    "ast_hash": "89d4ce863d471f006eababde175b0949",
+    "semantic_hash": ""
+  },
+  "design/renders/musica-fondo-familia-canina-anterior.mp3": {
+    "mtime": 1784486306.958169,
+    "ast_hash": "f74bd30b0da05e42ba6f89fe000456c8",
+    "semantic_hash": ""
+  },
+  "design/video/campania-fase1/v1-clip-fiesta-detenida.mp4": {
+    "mtime": 1784481337.6942122,
+    "ast_hash": "e2dd388e2eeb13330856123740cbd899",
+    "semantic_hash": ""
+  },
+  "design/video/campania-fase1/v3a-clip-sala-carreras.mp4": {
+    "mtime": 1784481408.729709,
+    "ast_hash": "77cac3453b518f3d410ec5e7fef930ec",
+    "semantic_hash": ""
+  },
+  "design/video/campania-fase1/v3b-clip-sala-bluey.mp4": {
+    "mtime": 1784481429.471914,
+    "ast_hash": "7ef2c786d5fadbc4203d9a65c88cb9c5",
+    "semantic_hash": ""
+  },
+  "design/video/campania-fase1/v4-clip-fechas.mp4": {
+    "mtime": 1784481304.8762605,
+    "ast_hash": "a3862a46969392a3fd0fb861c45a2f64",
+    "semantic_hash": ""
+  },
+  "design/video/reels/reel-00-presentacion.mp4": {
+    "mtime": 1784552724.2324,
+    "ast_hash": "72e62399ad3f64e2559e6989db5677b8",
+    "semantic_hash": ""
+  },
+  "design/video/reels/reel-01-hook.mp4": {
+    "mtime": 1784552724.2544196,
+    "ast_hash": "07935a4b6a4458194acac2aeec861189",
+    "semantic_hash": ""
+  },
+  "design/video/reels/reel-02-demo.mp4": {
+    "mtime": 1784573978.7653146,
+    "ast_hash": "fe8d6aa5384c18677b66216f6f9311dc",
+    "semantic_hash": ""
+  },
+  "design/video/reels/reel-03-tematicas.mp4": {
+    "mtime": 1784552724.292837,
+    "ast_hash": "00ce4795ff4ebe4b500aae03af597475",
+    "semantic_hash": ""
+  },
+  "design/video/reels/reel-04-fechas.mp4": {
+    "mtime": 1784552724.3077612,
+    "ast_hash": "b72b3b09f3d0441aa98fa981f610e2cf",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/artist-teaser.mp4": {
+    "mtime": 1784574925.1629596,
+    "ast_hash": "d43a5e759ed801b0f13ae889ccecffe8",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/despedida-hielo.mp4": {
+    "mtime": 1785071670.2212782,
+    "ast_hash": "467a0b6499f242dd1c8938bf134acaf3",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/intro-inmersiva.mp4": {
+    "mtime": 1785016282.3506935,
+    "ast_hash": "8417ef477cedb342008c03bad9698b8e",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitacion-juego-anna.mp3": {
+    "mtime": 1785037679.0302608,
+    "ast_hash": "2f3ead17e68a3e93ef4bb2cdc14d4adf",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitacion-juego-bruni.mp3": {
+    "mtime": 1785037688.1552248,
+    "ast_hash": "bd60c68dd6f8a52f773799b6b4d5f98a",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitacion-juego-elsa.mp3": {
+    "mtime": 1785037677.4647408,
+    "ast_hash": "0f94b98c9966d92df95091177ec65257",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitacion-juego-kristoff.mp3": {
+    "mtime": 1785037683.5269895,
+    "ast_hash": "d4a222e6786d3b75063c19b20484a170",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitacion-juego-olaf.mp3": {
+    "mtime": 1785037681.2439075,
+    "ast_hash": "697d9bb94a52201e3f4f9ff7e2ec7a45",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitacion-juego-sven.mp3": {
+    "mtime": 1785037685.9260333,
+    "ast_hash": "09494b394b2234055a9672cd4bb27be1",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/musica-fondo.mp3": {
+    "mtime": 1785077007.9087756,
+    "ast_hash": "6426dbfb2367fb378d6b513d59471f1b",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/musica-juego.mp3": {
+    "mtime": 1785077029.469562,
+    "ast_hash": "7c33dcc2f7ae79a4fc65d94a507d2ba8",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/revelacion.mp4": {
+    "mtime": 1785558278.9194534,
+    "ast_hash": "54d13dc6c440646f2d4f1eda77b611f9",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/saludo-anna.mp4": {
+    "mtime": 1785073545.0251508,
+    "ast_hash": "1cb76eb35b45f66805621c522223f7ce",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/saludo-bruni.mp4": {
+    "mtime": 1785075857.5522978,
+    "ast_hash": "b9a57018ff9984d45c99b809f0001d21",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/saludo-elsa.mp4": {
+    "mtime": 1785071661.9074452,
+    "ast_hash": "e36e2221b925944c7ef0a5c38e5a734d",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/saludo-kristoff.mp4": {
+    "mtime": 1785075843.326294,
+    "ast_hash": "093ccd9607a05aef6452aee37a7f55cd",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/saludo-olaf.mp4": {
+    "mtime": 1785000435.5324428,
+    "ast_hash": "7f89f2d782b2f7c5ee3bc2e813f9bff0",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/saludo-sven.mp4": {
+    "mtime": 1785076807.5114424,
+    "ast_hash": "3b89f15e750f283c489f5ee5739d264f",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/welcome-hielo.mp4": {
+    "mtime": 1785016282.2608035,
+    "ast_hash": "8417ef477cedb342008c03bad9698b8e",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/artist-teaser.mp4": {
+    "mtime": 1784948480.237517,
+    "ast_hash": "958547770422a9b696e0658163393cb1",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/saludo-alienazul.mp4": {
+    "mtime": 1784948123.9288146,
+    "ast_hash": "ffbc68d3fe72853756c460c59416fb5a",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/saludo-alienrosa.mp4": {
+    "mtime": 1784948124.53939,
+    "ast_hash": "b4515e5577d90eea64264fa3a7df5bae",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/saludo-hawaiana.mp4": {
+    "mtime": 1784948125.3431897,
+    "ast_hash": "481544f50eafd77eb04b73179e99a7e3",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/saludo-loro.mp4": {
+    "mtime": 1784948126.9529252,
+    "ast_hash": "a25a8668661747d29f204e3015d8d276",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/saludo-surfista.mp4": {
+    "mtime": 1784948127.6555147,
+    "ast_hash": "5c090739728aa72743989e826b794c0c",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/saludo-tortugamar.mp4": {
+    "mtime": 1784948126.1201885,
+    "ast_hash": "8c5d5db412944b1d63bf3f1dbc292c21",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/transicion-sesion-fotos.mp4": {
+    "mtime": 1784701141.181514,
+    "ast_hash": "e6f1572ac11a4f9f16c874871307041d",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/welcome-tropical.mp4": {
+    "mtime": 1784955678.8837543,
+    "ast_hash": "1a4a73d5de8a987721428098b3ff4e5d",
+    "semantic_hash": ""
+  },
+  "scripts/build-frozen-video.mjs": {
+    "mtime": 1785149417.3520436,
+    "ast_hash": "0604b55b5371671734463746ee073a1a",
+    "semantic_hash": ""
+  },
+  "scripts/debug-invitados.mjs": {
+    "mtime": 1785109163.379368,
+    "ast_hash": "db4cdec044001ff5929da051edb4a277",
+    "semantic_hash": ""
+  },
+  "scripts/debug-spin.mjs": {
+    "mtime": 1785109736.9271102,
+    "ast_hash": "36aaf580db53b8f3debf6960f6dc45dd",
+    "semantic_hash": ""
+  },
+  "scripts/make-puzzle-crops.mjs": {
+    "mtime": 1785165311.9248388,
+    "ast_hash": "862a220d26d15e159a3185d3f86631cd",
+    "semantic_hash": ""
+  },
+  "scripts/mix-audio-explicativo.mjs": {
+    "mtime": 1785099034.3593936,
+    "ast_hash": "53798ec94604f8928fb78b3c79291a7f",
+    "semantic_hash": ""
+  },
+  "scripts/process-kpop-heroes-assets.py": {
+    "mtime": 1785104633.6618035,
+    "ast_hash": "67ef57eb16b4bfc4601bd97bc566769f",
+    "semantic_hash": ""
+  },
+  "scripts/record-frozen-gameplay.mjs": {
+    "mtime": 1785148331.1375065,
+    "ast_hash": "943deb07e358f9cb75c714bbb9ab61f3",
+    "semantic_hash": ""
+  },
+  "scripts/record-marketing-clips.mjs": {
+    "mtime": 1785101604.0140965,
+    "ast_hash": "f9e0b3b618417599b85c312c92526168",
+    "semantic_hash": ""
+  },
+  "scripts/seed-demos-prod.php": {
+    "mtime": 1785206681.7911825,
+    "ast_hash": "1dd9ee0b6a641f306c77a0b7fa8d1d63",
+    "semantic_hash": ""
+  },
+  "scripts/test-gdigrab.mjs": {
+    "mtime": 1785109257.039212,
+    "ast_hash": "3acbc783243ccdce0797f63aa7e722af",
+    "semantic_hash": ""
+  },
+  "scripts/verify-kpop-heroes.py": {
+    "mtime": 1785104735.9293919,
+    "ast_hash": "2e54f53978076184f788bb1cb0b0419a",
+    "semantic_hash": ""
+  },
+  "sitio/js/globo3d.js": {
+    "mtime": 1785589601.739289,
+    "ast_hash": "c940f720a1ad4591347a3bf3b97b10e7",
+    "semantic_hash": ""
+  },
+  "sitio/js/main.js": {
+    "mtime": 1785598479.41517,
+    "ast_hash": "8b6ad7bff63dd82501c21db80f88d7e9",
+    "semantic_hash": ""
+  },
+  "docs/OPENCODE-HANDOFF-FRONTEND-WOW.md": {
+    "mtime": 1785126110.0790334,
+    "ast_hash": "55886b6d162775caf29ae1b038804b9d",
+    "semantic_hash": ""
+  },
+  "docs/OPENCODE-HANDOFF-VIDEO-FROZEN-JUEGOS.md": {
+    "mtime": 1785108313.836999,
+    "ast_hash": "f711956795804bd79c7ac6a979957da6",
+    "semantic_hash": ""
+  },
+  "docs/OPENCODE-KPOP-HEROES-IMAGES-EXECUTOR.md": {
+    "mtime": 1785100206.559625,
+    "ast_hash": "a91edc859f2a6843f1514ffe60923429",
+    "semantic_hash": ""
+  },
+  "sitio/index.html": {
+    "mtime": 1785600769.0569086,
+    "ast_hash": "627781b4a616f146b1995c7e032bc6dc",
+    "semantic_hash": ""
+  },
+  "design/explicativo/ia/IMG-09-nina-camara.png": {
+    "mtime": 1785099758.056522,
+    "ast_hash": "01a0c39d364c0744ed71161a4d2dc236",
+    "semantic_hash": ""
+  },
+  "design/explicativo/ia/IMG-10-nino2-camara.png": {
+    "mtime": 1785100002.437674,
+    "ast_hash": "79f7e5cd8c1996ee838f5a3c5e414d7f",
+    "semantic_hash": ""
+  },
+  "design/logo/logo-icon-wordmark.png": {
+    "mtime": 1785106286.8397412,
+    "ast_hash": "1acd27b7a831a6b4375dd49a86e34fe7",
+    "semantic_hash": ""
+  },
+  "design/logo/logo-transparent.png": {
+    "mtime": 1785106214.2773027,
+    "ast_hash": "5aad9448450d075713c34d6a9c416a78",
+    "semantic_hash": ""
+  },
+  "design/logo/test-crop.png": {
+    "mtime": 1785106268.9701567,
+    "ast_hash": "147d4c1f9798d0d655e22d9b99c0f235",
+    "semantic_hash": ""
+  },
+  "design/renders/heroes-images-raw/arana.png": {
+    "mtime": 1785100979.368796,
+    "ast_hash": "41255ed80ff9959ef20fc332248b10fe",
+    "semantic_hash": ""
+  },
+  "design/renders/heroes-images-raw/capitan.png": {
+    "mtime": 1785100976.636778,
+    "ast_hash": "0b8c0408c87412afd1beb845711ebb15",
+    "semantic_hash": ""
+  },
+  "design/renders/heroes-images-raw/fondo-banner-empty.png": {
+    "mtime": 1785103992.6405215,
+    "ast_hash": "a0e15e3515c107f36fdfe4e267822228",
+    "semantic_hash": ""
+  },
+  "design/renders/heroes-images-raw/fondo-banner.png": {
+    "mtime": 1785100883.2348032,
+    "ast_hash": "c92f770c6a5642179227b07a522ec66f",
+    "semantic_hash": ""
+  },
+  "design/renders/heroes-images-raw/fondo-juego-ciudad.png": {
+    "mtime": 1785100889.567773,
+    "ast_hash": "1944cc425780d9440c07794708a97379",
+    "semantic_hash": ""
+  },
+  "design/renders/heroes-images-raw/fondo-sala.png": {
+    "mtime": 1785100886.6334028,
+    "ast_hash": "8b5dd667d16017f6f140fb146c6f7a7c",
+    "semantic_hash": ""
+  },
+  "design/renders/heroes-images-raw/gigante.png": {
+    "mtime": 1785102040.1431644,
+    "ast_hash": "2e182256b7e87f5749ba92bc3408e719",
+    "semantic_hash": ""
+  },
+  "design/renders/heroes-images-raw/hierro.png": {
+    "mtime": 1785102043.1735244,
+    "ast_hash": "41cc99a7f8ca194df6022e27e8d7dadc",
+    "semantic_hash": ""
+  },
+  "design/renders/heroes-images-raw/pantera-v2.png": {
+    "mtime": 1785103251.543223,
+    "ast_hash": "36936843c3b7146b0655dd367c6b52f0",
+    "semantic_hash": ""
+  },
+  "design/renders/heroes-images-raw/pantera.png": {
+    "mtime": 1785102341.913947,
+    "ast_hash": "498e73e7238dae72a63b1604eec7b5c1",
+    "semantic_hash": ""
+  },
+  "design/renders/heroes-images-raw/trueno.png": {
+    "mtime": 1785102215.203559,
+    "ast_hash": "a15212ae76c02e9464c0f5dec32431d6",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-images-raw/derpy.png": {
+    "mtime": 1785100805.390483,
+    "ast_hash": "c897fa5f798557af5993bfa1cb77404c",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-images-raw/fondo-banner.png": {
+    "mtime": 1785100511.388494,
+    "ast_hash": "428082117d35550e3e8efce72ff376ea",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-images-raw/fondo-juego-escenario.png": {
+    "mtime": 1785100586.162448,
+    "ast_hash": "1e1d608c12658bb7b73d0b3262900cff",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-images-raw/fondo-sala.png": {
+    "mtime": 1785100583.0340989,
+    "ast_hash": "f5a0f74c712026e278bc231106dd8e7d",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-images-raw/luna.png": {
+    "mtime": 1785100799.7193248,
+    "ast_hash": "ff374ccb86be2c6493bde6a9a371c496",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-images-raw/mira-v2.png": {
+    "mtime": 1785102704.0594409,
+    "ast_hash": "d6f4c183d891d710b7837cd17df19e43",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-images-raw/mira.png": {
+    "mtime": 1785100718.5026948,
+    "ast_hash": "21dca07dd8ff9daed4e7ec7a7162791a",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-images-raw/rumi-v2.png": {
+    "mtime": 1785102535.302845,
+    "ast_hash": "aebae779a895b3ebc7e6d05f936f7c01",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-images-raw/rumi.png": {
+    "mtime": 1785100636.306414,
+    "ast_hash": "d5a2e7ade1a07b2596f060d6fc402647",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-images-raw/sussie.png": {
+    "mtime": 1785100806.94435,
+    "ast_hash": "cde7c342e3d9018caca6dc6d56beb7c6",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-images-raw/zoey-v2.png": {
+    "mtime": 1785102863.4711852,
+    "ast_hash": "c4ff5403116be8746bae43710f2a6aca",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-images-raw/zoey.png": {
+    "mtime": 1785100721.876323,
+    "ast_hash": "375d10481a0c79084691c237fa0c4a8f",
+    "semantic_hash": ""
+  },
+  "design/video/frame-sala-kiosco-con-foto.png": {
+    "mtime": 1785106314.391737,
+    "ast_hash": "5381203e5268a5a471293593e195b6af",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/puzzle-cruz.jpg": {
+    "mtime": 1785165327.6004834,
+    "ast_hash": "ba53cc8118da4779c98e6628b9b9b612",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/puzzle-el-rey.jpg": {
+    "mtime": 1785165328.135773,
+    "ast_hash": "31c8d1b1b9896cba378a8caf6d66e709",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/puzzle-luigi.jpg": {
+    "mtime": 1785165328.5929499,
+    "ast_hash": "855aaf7b479f38b49b3394b5a083b376",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/puzzle-mate.jpg": {
+    "mtime": 1785165326.6723833,
+    "ast_hash": "9922c1643b3374417ae5f7e2c4c0e08c",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/puzzle-rayo-mcqueen.jpg": {
+    "mtime": 1785165326.274153,
+    "ast_hash": "fdd36635f63b0b7d2e1facc9d8c77572",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/puzzle-sally.jpg": {
+    "mtime": 1785165327.1112704,
+    "ast_hash": "5b75b9ccdf3bf2623fd7477514e26861",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/puzzle-azulita.jpg": {
+    "mtime": 1785165403.5887322,
+    "ast_hash": "a0387bfed8ae0ae12085809311de009d",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/puzzle-chispa.jpg": {
+    "mtime": 1785165404.2042277,
+    "ast_hash": "f8b49bcd043d0be58f3e5c4088ad33d5",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/puzzle-chloe.jpg": {
+    "mtime": 1785165406.0225244,
+    "ast_hash": "6066d019ef7e27191da74c817db7f17d",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/puzzle-mama-coral.jpg": {
+    "mtime": 1785165405.1013713,
+    "ast_hash": "f4e02ce6ba1c396705834835a2045b24",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/puzzle-muffin.jpg": {
+    "mtime": 1785165405.6376774,
+    "ast_hash": "76eb2a98af3628c6b76c19cfbf4337be",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/puzzle-papa-marino.jpg": {
+    "mtime": 1785165404.604071,
+    "ast_hash": "658719e031294370f4adf0c1e3b8782a",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/arana.jpg": {
+    "mtime": 1785104658.0825577,
+    "ast_hash": "da9fe8bdf8b9f06a7f206a80cfaf3012",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/capitan.jpg": {
+    "mtime": 1785104657.541281,
+    "ast_hash": "94cf8c9d8329f215702b68610ac4bf37",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/fondo-banner-empty.jpg": {
+    "mtime": 1785104656.2633843,
+    "ast_hash": "a589236c09863274aeb6f87eefc79035",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/fondo-juego-ciudad.jpg": {
+    "mtime": 1785104657.1215007,
+    "ast_hash": "331cf8b00f70687a906ef1dbc0db3d74",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/fondo-sala.jpg": {
+    "mtime": 1785104656.7142582,
+    "ast_hash": "ffd8c4b41a0d83f2e7ddc02a5891fed4",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/gigante.jpg": {
+    "mtime": 1785104658.5005326,
+    "ast_hash": "6782528e706a62a1f55d0189201d749d",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/hierro.jpg": {
+    "mtime": 1785104658.9407537,
+    "ast_hash": "03dcd194a711de480e582c5ef7c93afb",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/pantera.jpg": {
+    "mtime": 1785104659.790486,
+    "ast_hash": "2e1e6f5f9bb8abcf26c0d46658e716a0",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/puzzle-arana.jpg": {
+    "mtime": 1785104659.9889948,
+    "ast_hash": "9ff666be3fe94a55741ad397261c5f04",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/puzzle-capitan.jpg": {
+    "mtime": 1785104659.8917553,
+    "ast_hash": "95047dd88f2a1d9f88c953e8c7b2d208",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/puzzle-gigante.jpg": {
+    "mtime": 1785104660.0845325,
+    "ast_hash": "6515585e377255c693477dae03494f2d",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/puzzle-hierro.jpg": {
+    "mtime": 1785104660.1788733,
+    "ast_hash": "ff8b6683a571a000454d873dee81d7ad",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/puzzle-pantera.jpg": {
+    "mtime": 1785104660.45089,
+    "ast_hash": "9524f7972bcd83d1491ed28e1362c4af",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/puzzle-trueno.jpg": {
+    "mtime": 1785104660.3030813,
+    "ast_hash": "58874544f15f014d43c700dc19d46a98",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/trueno.jpg": {
+    "mtime": 1785104659.4174964,
+    "ast_hash": "12808f89f53fa67c1fcb5261ca4464a3",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/derpy.jpg": {
+    "mtime": 1785190346.3535717,
+    "ast_hash": "e2561fbe234b65c45b59e65ef476d9b5",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/fondo-banner.jpg": {
+    "mtime": 1785190420.154116,
+    "ast_hash": "020828cb2f187922e1dc04fce584a6f6",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/fondo-juego-escenario.jpg": {
+    "mtime": 1785104652.7456648,
+    "ast_hash": "4af70a0d3f51a6ba2042b3d6219b6048",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/fondo-sala.jpg": {
+    "mtime": 1785104652.4291983,
+    "ast_hash": "57749749d13095e96d87acda5b23e711",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/luna.jpg": {
+    "mtime": 1785190345.7507453,
+    "ast_hash": "aefcea020edd32176ca8778fbbb5026f",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/mira.jpg": {
+    "mtime": 1785190344.5701036,
+    "ast_hash": "90cba3740534af748712502441bf7234",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/puzzle-derpy.jpg": {
+    "mtime": 1785190361.1024208,
+    "ast_hash": "5ead13575881c3854e297b300a6f0ff3",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/puzzle-luna.jpg": {
+    "mtime": 1785190360.3188667,
+    "ast_hash": "5fabe9c65f705699b77ba5b415adca21",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/puzzle-mira.jpg": {
+    "mtime": 1785190359.3002286,
+    "ast_hash": "4f32b3cd5f16adf2aab560d8161675a8",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/puzzle-rumi.jpg": {
+    "mtime": 1785190358.9358613,
+    "ast_hash": "0d1b8dad1a95cd5ca862101cd594ef03",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/puzzle-sussie.jpg": {
+    "mtime": 1785190361.5998778,
+    "ast_hash": "97ea25c8c8a182264426d2ede13c1da2",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/puzzle-zoey.jpg": {
+    "mtime": 1785190359.7838433,
+    "ast_hash": "51841fd9f5488c6af2067bf61a50f2fb",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/rumi.jpg": {
+    "mtime": 1785190344.0512874,
+    "ast_hash": "d7c503002f1f958ae2a6595859d35b93",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/sussie.jpg": {
+    "mtime": 1785190347.705134,
+    "ast_hash": "c0feec77f98c77fba9887f9a8722630c",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/zoey.jpg": {
+    "mtime": 1785190345.0030477,
+    "ast_hash": "4bd8ba3c6c7583ff6ed9d349d66196b3",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/puzzle-alienazul.jpg": {
+    "mtime": 1785165400.4159324,
+    "ast_hash": "dc6835e941042f73446482d0b0d3b4fc",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/puzzle-alienrosa.jpg": {
+    "mtime": 1785165400.7987912,
+    "ast_hash": "0f5bd29c0c8d2831c984d2813f13e421",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/puzzle-hawaiana.jpg": {
+    "mtime": 1785165401.2461238,
+    "ast_hash": "7f09705344b12179101cf3b79cebbb5c",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/puzzle-loro.jpg": {
+    "mtime": 1785165402.3347049,
+    "ast_hash": "226e7a19f3322126471c82c9e05fc313",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/puzzle-surfista.jpg": {
+    "mtime": 1785165402.7750382,
+    "ast_hash": "a001fa257e42121d397e3ee90c0a12ee",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/puzzle-tortugamar.jpg": {
+    "mtime": 1785165401.7299383,
+    "ast_hash": "2021b174ccb80a05d075b0ad53730263",
+    "semantic_hash": ""
+  },
+  "sitio/assets/cumpleclick-lockup.svg": {
+    "mtime": 1784472950.214099,
+    "ast_hash": "e8454ead44a233849bb97d5ddf68e486",
+    "semantic_hash": ""
+  },
+  "sitio/assets/cumpleclick-mark.svg": {
+    "mtime": 1784472934.5642538,
+    "ast_hash": "87eec19c718248e006730c040e0546bc",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/globo-render.webp": {
+    "mtime": 1785164903.9073515,
+    "ast_hash": "9c88ab8be072ef639741e73d24b6c07a",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/kiosco-en-fiesta.webp": {
+    "mtime": 1785164906.2384813,
+    "ast_hash": "dd4e1e17b6cdca169eaa683a971705d3",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/logo-wordmark.webp": {
+    "mtime": 1785164904.3706813,
+    "ast_hash": "4ed9a41b2ab054b438beaf22d870ce0c",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/mundo-carreras.webp": {
+    "mtime": 1785179744.8823328,
+    "ast_hash": "cf0b55f85092aa51a4de81db4ad07ab4",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/mundo-heroes.webp": {
+    "mtime": 1785164902.6720238,
+    "ast_hash": "b93797b8a214384b88542a8f4996f797",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/mundo-hielo.webp": {
+    "mtime": 1785164901.2812316,
+    "ast_hash": "03a94019dfe7ba22f75061376bd3839b",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/mundo-kpop.webp": {
+    "mtime": 1785164903.5932105,
+    "ast_hash": "b14a84e5d0a120a8ed8a8f3de6a4446b",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/mundo-perruna.webp": {
+    "mtime": 1785179744.3465533,
+    "ast_hash": "8e3042e18859cf84b874502d27e0fe45",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/mundo-tropical.webp": {
+    "mtime": 1785164902.0735364,
+    "ast_hash": "87ea00cd77981792eb76323e3dd14c67",
+    "semantic_hash": ""
+  },
+  "tmp/sussie-preview.jpg": {
+    "mtime": 1785101275.9346814,
+    "ast_hash": "fafb71d29b7e1f3ba5530cd554fc077d",
+    "semantic_hash": ""
+  },
+  "design/explicativo/_sin-audio/video-explicativo-16x9.mp4": {
+    "mtime": 1785099169.6194718,
+    "ast_hash": "d9641a147ba4bc7fb21b5d2cbf15ed53",
+    "semantic_hash": ""
+  },
+  "design/explicativo/_sin-audio/video-explicativo.mp4": {
+    "mtime": 1785099169.446546,
+    "ast_hash": "77715784a9f9b7456517086624224e4a",
+    "semantic_hash": ""
+  },
+  "design/explicativo/audio-master.mp3": {
+    "mtime": 1785099065.8238697,
+    "ast_hash": "447fb1496c3ed46e8e8c5c73ec689572",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/clip-00a-intro.mp4": {
+    "mtime": 1785161043.5482109,
+    "ast_hash": "e3d312694cfc44d62c682d7858b29420",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/clip-00b-inmersivo.mp4": {
+    "mtime": 1785161061.6735926,
+    "ast_hash": "d3c23b9bcd7a9d35e668f4b55c35139e",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/clip-00c-ruleta.mp4": {
+    "mtime": 1785161224.3903632,
+    "ast_hash": "9da5d505490d4cba869742689bd03da4",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/clip-00d-saludo.mp4": {
+    "mtime": 1785161233.494962,
+    "ast_hash": "3d0469174490648a17fb590e1b55a4ff",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/clip-01-armar-muneco.mp4": {
+    "mtime": 1785161244.7797143,
+    "ast_hash": "b1e0837eb940af28e144b401bea9e4b6",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/clip-02-fichas.mp4": {
+    "mtime": 1785161259.7599342,
+    "ast_hash": "fe47523df6236d65d05de39dd2163235",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/clip-03-copos.mp4": {
+    "mtime": 1785161287.7986567,
+    "ast_hash": "faf060929f224d774c51165de4c76a69",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/clip-04-resultado.mp4": {
+    "mtime": 1785161306.6754549,
+    "ast_hash": "7cfb34d82e5734dd5fcac38a543b7761",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/clip-05-cierre.mp4": {
+    "mtime": 1785161326.3545663,
+    "ast_hash": "4d28e1b723bf1324dd0c38e68e992d93",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/clip-o1-oferta.mp4": {
+    "mtime": 1785161249.075141,
+    "ast_hash": "f78f636a8002ffce9e40e3f880ef756e",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/clip-o2-oferta.mp4": {
+    "mtime": 1785161264.044619,
+    "ast_hash": "517d13f44d99774afe495061299ced6c",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/video-frozen-juegos.mp4": {
+    "mtime": 1785161659.7518575,
+    "ast_hash": "3511119bc77caa1fbd2545304abbd639",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/voz/n0a-portada.mp3": {
+    "mtime": 1785148620.797567,
+    "ast_hash": "f524d440e83e622014429f218c3134cb",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/voz/n0b-inmersivo.mp3": {
+    "mtime": 1785148622.451141,
+    "ast_hash": "14a56ac0f8de54185d9426c00a53fd3c",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/voz/n0c-ruleta.mp3": {
+    "mtime": 1785148624.6150851,
+    "ast_hash": "6fdf3dd78b995f6d124c4cb3c5994c0c",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/voz/n0d-saludo.mp3": {
+    "mtime": 1785148626.1508508,
+    "ast_hash": "aa0e8a42c9071913e839c8a8b843c480",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/voz/n1-intro.mp3": {
+    "mtime": 1785130736.676237,
+    "ast_hash": "8bc4ddfed265efb54ad5fc48d493b846",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/voz/n2-muneco.mp3": {
+    "mtime": 1785130738.508644,
+    "ast_hash": "129734f1feccbec9bd03f8141c6d9b89",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/voz/n3-oferta.mp3": {
+    "mtime": 1785130740.2204561,
+    "ast_hash": "6117480beb61ab0f32fa2015743ccab1",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/voz/n4-fichas.mp3": {
+    "mtime": 1785130741.9862416,
+    "ast_hash": "92a9437fdf17372c8c835c77b54af791",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/voz/n5-copos.mp3": {
+    "mtime": 1785130744.0669932,
+    "ast_hash": "9eced8bf902778515bbdda1b41b926f3",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/voz/n6-foto.mp3": {
+    "mtime": 1785130745.9173415,
+    "ast_hash": "5887ba1a79e0072fba39f656d260ed1f",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/voz/n7-diploma.mp3": {
+    "mtime": 1785130748.3855977,
+    "ast_hash": "4f5337d18a0935d66bfac18772d2ab65",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/voz/n8-cierre.mp3": {
+    "mtime": 1785130750.2606494,
+    "ast_hash": "e023a4158c044fd813707c5b32afdba1",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/voz/n9-despedida.mp3": {
+    "mtime": 1785131764.4229598,
+    "ast_hash": "e0d186c35a0f022e4682d1df3e07dc25",
+    "semantic_hash": ""
+  },
+  "design/video/ruleta-girando-bluey.mp4": {
+    "mtime": 1785101637.0469203,
+    "ast_hash": "3b9df6355e8cc1b2077076c988135d07",
+    "semantic_hash": ""
+  },
+  "sitio/assets/video/kiosco-demo.mp4": {
+    "mtime": 1785165086.164867,
+    "ast_hash": "66b6579a5add55b163f5a712b712c032",
+    "semantic_hash": ""
+  },
+  "scripts/export-party-sql.php": {
+    "mtime": 1785206736.9779284,
+    "ast_hash": "8b87e2b8d54c5d8409e58c6ce0530cb5",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-saludos-raw/voz-rumi.html": {
+    "mtime": 1785179831.4001193,
+    "ast_hash": "9d8b50265eb8bb734876af95ff11b05b",
+    "semantic_hash": ""
+  },
+  "qa-evidence/kpop-photosession-2026-07-28/QA-REPORT.md": {
+    "mtime": 1785296126.1657455,
+    "ast_hash": "24f68fbe0da7acd9b04a6ab74cca370a",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-images-raw/entrada-escenario-mid-frame.jpg": {
+    "mtime": 1785284753.8899708,
+    "ast_hash": "ec164769496207716589d1dff9de0d0f",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-images-raw/entrada-escenario-teaser-candidate.png": {
+    "mtime": 1785284154.3793678,
+    "ast_hash": "c5985db4dc1ae6130727702894aa8342",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-old-doll-style/derpy.jpg": {
+    "mtime": 1785190340.1900563,
+    "ast_hash": "58998019446e85d8b30ea4433165a99b",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-old-doll-style/fondo-banner.jpg": {
+    "mtime": 1785190340.4739597,
+    "ast_hash": "ab84bf659d7d18a21bd2b197db31253b",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-old-doll-style/luna.jpg": {
+    "mtime": 1785190339.8945968,
+    "ast_hash": "6a9e965ab2f760dda8dc95390df361e4",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-old-doll-style/mira.jpg": {
+    "mtime": 1785190339.5383427,
+    "ast_hash": "651f8ea732cc2b2dcb95ddfddd2d7345",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-old-doll-style/rumi.jpg": {
+    "mtime": 1785190339.4088955,
+    "ast_hash": "c4bea1d30ef4f7910653689a5c3c132b",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-old-doll-style/sussie.jpg": {
+    "mtime": 1785190340.309017,
+    "ast_hash": "bd28d9bfe7d31ec1596b9582ab81fb3f",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-old-doll-style/zoey.jpg": {
+    "mtime": 1785190339.6613383,
+    "ast_hash": "6c83280ae81f4e370b9398d4d9ed5038",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/video-frozen-juegos-poster.jpg": {
+    "mtime": 1785169099.7195694,
+    "ast_hash": "3a18a6a6325deb585de819ccecbedc86",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/derpy-cut.png": {
+    "mtime": 1785207108.5336177,
+    "ast_hash": "f2f13407c3fea8a29e41747ab684647e",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/entrada-escenario-poster.jpg": {
+    "mtime": 1785284601.9814413,
+    "ast_hash": "3a0ea567191a9d17a915e95986ddb4ef",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/escenario-teaser.jpg": {
+    "mtime": 1785284645.1521044,
+    "ast_hash": "51468ba72c90be759b22b9543160f443",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/luna-cut.png": {
+    "mtime": 1785207108.4693,
+    "ast_hash": "b55a57d3c765b44da78e4c8be305674f",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/mira-cut.png": {
+    "mtime": 1785207108.3379838,
+    "ast_hash": "720562e9f6434ca66297cebb77754841",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/rumi-cut.png": {
+    "mtime": 1785207108.2327793,
+    "ast_hash": "8ae7696f6192a09a953924ca9c6f176b",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/sussie-cut.png": {
+    "mtime": 1785207108.6068912,
+    "ast_hash": "b70351170e31b919525623b0cdff1bde",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/zoey-cut.png": {
+    "mtime": 1785207108.399101,
+    "ast_hash": "4249a783b05f00e5516d0651cf0fa4fc",
+    "semantic_hash": ""
+  },
+  "qa-evidence/kpop-photosession-2026-07-28/screenshots/01-inicio.png": {
+    "mtime": 1785295157.1905293,
+    "ast_hash": "7a9460c1c007033847a4268361cecf33",
+    "semantic_hash": ""
+  },
+  "qa-evidence/kpop-photosession-2026-07-28/screenshots/02-invitados.png": {
+    "mtime": 1785295257.4077322,
+    "ast_hash": "06cb355b4c551e937cc7139003a3d407",
+    "semantic_hash": ""
+  },
+  "qa-evidence/kpop-photosession-2026-07-28/screenshots/03-ruleta.png": {
+    "mtime": 1785295391.629623,
+    "ast_hash": "cd40f2cd989a663e0ba1b6d0fb5e395d",
+    "semantic_hash": ""
+  },
+  "qa-evidence/kpop-photosession-2026-07-28/screenshots/04-ruleta-lista.png": {
+    "mtime": 1785295428.9065132,
+    "ast_hash": "9b2e936093ed8fe37c408fbd22b79a0b",
+    "semantic_hash": ""
+  },
+  "qa-evidence/kpop-photosession-2026-07-28/screenshots/05-post-ruleta.png": {
+    "mtime": 1785295475.3185277,
+    "ast_hash": "910e3675e02056c645365c7b1d2d4107",
+    "semantic_hash": ""
+  },
+  "qa-evidence/kpop-photosession-2026-07-28/screenshots/06-derpy-saludo.png": {
+    "mtime": 1785295533.604433,
+    "ast_hash": "da2e879fde8d682e11450b45d8937ad3",
+    "semantic_hash": ""
+  },
+  "qa-evidence/kpop-photosession-2026-07-28/screenshots/07-segunda-ruleta.png": {
+    "mtime": 1785295686.6345658,
+    "ast_hash": "5e3f1a786265c15a718013bf4f75c4ae",
+    "semantic_hash": ""
+  },
+  "qa-evidence/kpop-photosession-2026-07-28/screenshots/08-entrada-escenario.png": {
+    "mtime": 1785295779.4321437,
+    "ast_hash": "0f81c4b3c835c88c8543afd9f4c9b94e",
+    "semantic_hash": ""
+  },
+  "qa-evidence/kpop-photosession-2026-07-28/screenshots/09-tablet-8in-768x1024.png": {
+    "mtime": 1785295851.9724376,
+    "ast_hash": "ce53fcb33aaed50400810831a43e65c8",
+    "semantic_hash": ""
+  },
+  "qa-evidence/kpop-photosession-2026-07-28/screenshots/10-tablet-10in-1280x800.png": {
+    "mtime": 1785295858.3862734,
+    "ast_hash": "359b571350bd882dbc3ba1faad3b2b28",
+    "semantic_hash": ""
+  },
+  "qa-evidence/kpop-photosession-2026-07-28/screenshots/11-tablet-10in-portrait-800x1280.png": {
+    "mtime": 1785295956.0571449,
+    "ast_hash": "40424401cd5abeca32da232b5e4ce654",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-publico-2026-07-28/screenshots/01-inicio-desktop.png": {
+    "mtime": 1785296665.2673051,
+    "ast_hash": "3da3b8058f7922fa35ec18fb1580eff6",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-publico-2026-07-28/screenshots/02-ejemplo-tematica.png": {
+    "mtime": 1785296740.149711,
+    "ast_hash": "de4349c5ad57be2cce8121a03789eac9",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-publico-2026-07-28/screenshots/03-modal-video.png": {
+    "mtime": 1785296743.3530293,
+    "ast_hash": "f0c60c548ec5e814dcd33c7782d03ee6",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-publico-2026-07-28/screenshots/03a-poster-completo.png": {
+    "mtime": 1785296837.5969827,
+    "ast_hash": "101170b8880c6fb1bd261cf34ad84746",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-publico-2026-07-28/screenshots/04-modal-abierto.png": {
+    "mtime": 1785296841.1255252,
+    "ast_hash": "45b779dd5816280693e5417657f3cf89",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-publico-2026-07-28/screenshots/05-tablet-10in-portrait.png": {
+    "mtime": 1785296924.8963914,
+    "ast_hash": "c3318cc0660edda924e50596c11546a1",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-publico-2026-07-28/screenshots/06-mobile-inicio.png": {
+    "mtime": 1785296928.150552,
+    "ast_hash": "ceec3566a94bd6310b63aae0d30e8ddd",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-publico-2026-07-28/screenshots/07-mobile-inicio-limpio.png": {
+    "mtime": 1785297065.9687538,
+    "ast_hash": "cafc5a1f6bef786394f08b78ef13cab3",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/frozen-poster.webp": {
+    "mtime": 1785168424.8801622,
+    "ast_hash": "80548d17d3738ae041a07e83ad91eaf0",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-cierre-raw/despedida-raw.mp4": {
+    "mtime": 1785188504.7223725,
+    "ast_hash": "99c01bde5b72d5e13439a2abaf4fcc4d",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-cierre-raw/revelacion-raw.mp4": {
+    "mtime": 1785188396.0497978,
+    "ast_hash": "00fde615c73e0d10e7f882da39d715c5",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-cierre-raw/welcome-raw.mp4": {
+    "mtime": 1785188394.673109,
+    "ast_hash": "cefc365be03694092219291fa0508e0c",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-images-raw/entrada-escenario-source.mp4": {
+    "mtime": 1785284455.735633,
+    "ast_hash": "3aca0df45e236368c16e81105a0aae47",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-saludos-raw/derpy-lipsync.mp4": {
+    "mtime": 1785186473.2018409,
+    "ast_hash": "872aba1891b58f8abff2d9eb614bd832",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-saludos-raw/luna-lipsync.mp4": {
+    "mtime": 1785186472.2172153,
+    "ast_hash": "f7e3693e4f5264cc822b1ae388cc08b6",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-saludos-raw/mira-lipsync.mp4": {
+    "mtime": 1785186470.067788,
+    "ast_hash": "a647a3584ac852a6c4718f1df4d9129b",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-saludos-raw/rumi-lipsync.mp4": {
+    "mtime": 1785180235.7469835,
+    "ast_hash": "a050cb5f5c9c5d20c52c4369094ba975",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-saludos-raw/sussie-lipsync.mp4": {
+    "mtime": 1785186503.8756025,
+    "ast_hash": "fd61cd5d30f513530de52b8e3f518d34",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-saludos-raw/voz-derpy.mp3": {
+    "mtime": 1785181200.7288866,
+    "ast_hash": "70c882b9195830ed4ee99457cddff14f",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-saludos-raw/voz-luna.mp3": {
+    "mtime": 1785181198.9932082,
+    "ast_hash": "a376231001a2e17f7c9448d3ecbb76da",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-saludos-raw/voz-mira.mp3": {
+    "mtime": 1785181189.2921748,
+    "ast_hash": "e843a1613ac0e470d1ea1e637b9555f2",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-saludos-raw/voz-rumi.mp3": {
+    "mtime": 1785171337.4841344,
+    "ast_hash": "8cf6e97b8f2dccc3250aae024a71690e",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-saludos-raw/voz-sussie.mp3": {
+    "mtime": 1785185693.604389,
+    "ast_hash": "54a18335334c1bd5e95ae284e131d223",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-saludos-raw/voz-zoey.mp3": {
+    "mtime": 1785181197.0711334,
+    "ast_hash": "741c4e6989b385972d04e752c6e7dd7d",
+    "semantic_hash": ""
+  },
+  "design/renders/kpop-saludos-raw/zoey-lipsync.mp4": {
+    "mtime": 1785186470.944965,
+    "ast_hash": "785ae211580c7079afb22232c5fe1be9",
+    "semantic_hash": ""
+  },
+  "design/video-frozen/video-frozen-juegos-web.mp4": {
+    "mtime": 1785169037.664371,
+    "ast_hash": "c3ae2b5a148303f6dfc4c996ec5e0ddd",
+    "semantic_hash": ""
+  },
+  "public/audio/error.mp3": {
+    "mtime": 1785208047.6222188,
+    "ast_hash": "5ac4bb99dd1b61b12a5067bb58f9d869",
+    "semantic_hash": ""
+  },
+  "public/audio/nota.mp3": {
+    "mtime": 1785192769.953845,
+    "ast_hash": "5509cc315a1979b796361b1561a54855",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/despedida-kpop.mp4": {
+    "mtime": 1785190915.4450417,
+    "ast_hash": "e4d32e3b5144fc50e97061a6cd2f3300",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/entrada-escenario.mp4": {
+    "mtime": 1785284549.773918,
+    "ast_hash": "4bc11e010ca5cb4eb32a5ffe3be318f0",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/invitacion-juego-derpy.mp3": {
+    "mtime": 1785192205.764881,
+    "ast_hash": "0c2d31f02b7af44e7695f6419b066369",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/invitacion-juego-luna.mp3": {
+    "mtime": 1785192203.4568372,
+    "ast_hash": "bb9e7e377f04a2cdef0d77fa6181e62b",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/invitacion-juego-mira.mp3": {
+    "mtime": 1785192197.914617,
+    "ast_hash": "f7015e88b0a962eebed2ea5ade6d09a1",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/invitacion-juego-rumi.mp3": {
+    "mtime": 1785192195.013619,
+    "ast_hash": "20e90523f8e2627baabace9cfddafdb6",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/invitacion-juego-sussie.mp3": {
+    "mtime": 1785192209.4975624,
+    "ast_hash": "275673d3ca4131fcf4bbb695786a58f4",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/invitacion-juego-zoey.mp3": {
+    "mtime": 1785192200.1308296,
+    "ast_hash": "2442d3263e979724fc7f963b142af408",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/musica-fondo.mp3": {
+    "mtime": 1785192670.1978667,
+    "ast_hash": "9d36b5d98acf62c023345e9d9b49c8d3",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/revelacion-kpop.mp4": {
+    "mtime": 1785557801.971866,
+    "ast_hash": "f6c16b77d407e6ac765b9f13e83941be",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/saludo-derpy.mp4": {
+    "mtime": 1785191178.1488473,
+    "ast_hash": "ded506f842bb63866727cd6cb55b1b82",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/saludo-luna.mp4": {
+    "mtime": 1785191176.8629353,
+    "ast_hash": "096f54594ea701cc4b0437e92e65e785",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/saludo-mira.mp4": {
+    "mtime": 1785191175.3691895,
+    "ast_hash": "edc08c76eb689f0dd17e60a9c0b386cc",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/saludo-rumi.mp4": {
+    "mtime": 1785191174.7537127,
+    "ast_hash": "dcd73211688778a0d36d0778cc672f01",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/saludo-sussie.mp4": {
+    "mtime": 1785191179.3232281,
+    "ast_hash": "fa4df6eaa4e1e212cd6c1bfa6fc0e724",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/saludo-zoey.mp4": {
+    "mtime": 1785191176.011963,
+    "ast_hash": "c2a763339584617ca06a2ea0d7a946d7",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/welcome-kpop.mp4": {
+    "mtime": 1785190914.4413066,
+    "ast_hash": "52a8eb34e88c1fc36547860c810b610e",
+    "semantic_hash": ""
+  },
+  "sitio/assets/video/frozen-juegos.mp4": {
+    "mtime": 1785169037.664371,
+    "ast_hash": "c3ae2b5a148303f6dfc4c996ec5e0ddd",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-publico-2026-07-28/QA-REPORT.md": {
+    "mtime": 1785299055.8467493,
+    "ast_hash": "bc9ce94c2fb793ab7baf0c17324c3795",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-publico-2026-07-28/screenshots/08-ejemplo-reino-hielo.png": {
+    "mtime": 1785297790.9216237,
+    "ast_hash": "8b1a54ef065eb9982e56a6208907bec2",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-publico-2026-07-29-mundos-final.png": {
+    "mtime": 1785298392.181182,
+    "ast_hash": "ddd2f21737190576fdd0679e38a7b83c",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-publico-2026-07-29-mundos.png": {
+    "mtime": 1785298240.732318,
+    "ast_hash": "0ecd430c2796a84b8d94120b05d77534",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/mundo-capitan.jpg": {
+    "mtime": 1785104657.541281,
+    "ast_hash": "94cf8c9d8329f215702b68610ac4bf37",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/mundo-kpop-real.jpg": {
+    "mtime": 1785190420.154116,
+    "ast_hash": "020828cb2f187922e1dc04fce584a6f6",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-publico-2026-07-29-contacto-config-pendiente.png": {
+    "mtime": 1785298960.3305545,
+    "ast_hash": "db4110bb4ef793f71a50db13d19275f7",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-publico-2026-07-29-contacto-movil.png": {
+    "mtime": 1785298951.3415785,
+    "ast_hash": "18e4c851a6dbabbeadae8462449f3b8e",
+    "semantic_hash": ""
+  },
+  "database/migrations/006_public_leads.down.php": {
+    "mtime": 1785598025.3214164,
+    "ast_hash": "5759987c907f5762c6fc8ddc87bf2022",
+    "semantic_hash": ""
+  },
+  "database/migrations/006_public_leads.php": {
+    "mtime": 1785597994.174679,
+    "ast_hash": "b6667fe8d4d4410006acab5e203109a2",
+    "semantic_hash": ""
+  },
+  "public/lib.leads.php": {
+    "mtime": 1785601830.1777556,
+    "ast_hash": "98643754af1183148b31acb7de8f3bf5",
+    "semantic_hash": ""
+  },
+  "sitio/api/contacto.php": {
+    "mtime": 1785598945.8902977,
+    "ast_hash": "b2071afd46a0d3a7b633e69d6a06cbcc",
+    "semantic_hash": ""
+  },
+  "src/StageConcert3D.jsx": {
+    "mtime": 1785615829.7238674,
+    "ast_hash": "6a18877866f6fdaf02ffca6098818d41",
+    "semantic_hash": ""
+  },
+  "src/ThemeWorld3D.jsx": {
+    "mtime": 1785347219.3163047,
+    "ast_hash": "82ca38c0f9c36539e4db455844b065e6",
+    "semantic_hash": ""
+  },
+  "src/gameAudio.js": {
+    "mtime": 1785610746.2676363,
+    "ast_hash": "4cf23fe302f2c6eaf1fb05b69fa2ebab",
+    "semantic_hash": ""
+  },
+  "src/records.js": {
+    "mtime": 1785615582.589589,
+    "ast_hash": "92597cfe719c63e670246f05bfe396a9",
+    "semantic_hash": ""
+  },
+  "tests/backend/leads.php": {
+    "mtime": 1785599451.6096442,
+    "ast_hash": "e5bb1a1424bdb6ec5cb1c9ca982f2135",
+    "semantic_hash": ""
+  },
+  "tests/frontend/records.test.mjs": {
+    "mtime": 1785615887.7714562,
+    "ast_hash": "dcce36fa8307b28fb9de46428e72eac4",
+    "semantic_hash": ""
+  },
+  "docs/CODEX-HANDOFF-VIDEO-JUEGO-ESTRELLA.md": {
+    "mtime": 1785678510.3396573,
+    "ast_hash": "c2e81a5d8370d25cc14d5a103a689ded",
+    "semantic_hash": ""
+  },
+  "docs/PROMPTS-RUNNER-MULTIVISTA.md": {
+    "mtime": 1785422778.957966,
+    "ast_hash": "e744afaa08936dfe01ecdfe57b15fe41",
+    "semantic_hash": ""
+  },
+  "docs/TEMATICA-COMPLETA.md": {
+    "mtime": 1785678748.6076481,
+    "ast_hash": "4af037ba271392fad675550a20921958",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/REPORT.md": {
+    "mtime": 1785601527.0283332,
+    "ast_hash": "8d3866d9f04f6047123e7971e30a5381",
+    "semantic_hash": ""
+  },
+  "tmp/star-video-filter.txt": {
+    "mtime": 1785637357.1290388,
+    "ast_hash": "3cff40563a8c78f7db844315a64c3876",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/fondo-juego-circuito.jpg": {
+    "mtime": 1785596264.0251353,
+    "ast_hash": "8fc76a1e37aebcbfafa89928ebe81a00",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/game3d/cruz-run-atlas.png": {
+    "mtime": 1785363085.4111886,
+    "ast_hash": "4c0fc00d4d525f5f19ed14db226875ff",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/game3d/el-rey-run-atlas.png": {
+    "mtime": 1785362962.5858188,
+    "ast_hash": "22b9a1dedee2e795b899ca67566e0dcd",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/game3d/luigi-run-atlas.png": {
+    "mtime": 1785362833.5732646,
+    "ast_hash": "01cd9e3ceb4d603c80854c82bdee1df8",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/game3d/mate-run-atlas.png": {
+    "mtime": 1785363194.5637057,
+    "ast_hash": "ddd8a13cacc308efd1257ef933eb5954",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/game3d/rayo-mcqueen-run-atlas.png": {
+    "mtime": 1785361670.272882,
+    "ast_hash": "8e18409d5265c4aea485d0ec63f321af",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/game3d/sally-run-atlas.png": {
+    "mtime": 1785363607.630491,
+    "ast_hash": "250f054990a04bab490ed804ef4cfc40",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/roulette/roulette-background-v1.png": {
+    "mtime": 1785557117.7628655,
+    "ast_hash": "3124822e3bb80198cb6bae73daed448a",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/fondo-juego-patio.jpg": {
+    "mtime": 1785596302.7210162,
+    "ast_hash": "4a44104f220a264c41163e1fc4752cba",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/game3d/azulita-run-atlas.png": {
+    "mtime": 1785346758.403758,
+    "ast_hash": "efd817507103f3d1c89f4c26129affab",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/game3d/chispa-run-atlas.png": {
+    "mtime": 1785346880.5760045,
+    "ast_hash": "915f329caff3953bc9f9fb54c6c8ea4c",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/game3d/chloe-run-atlas.png": {
+    "mtime": 1785346882.8450353,
+    "ast_hash": "86afa431bb58a213f7c0f0e5306ae6e0",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/game3d/mama-coral-run-atlas.png": {
+    "mtime": 1785346882.052102,
+    "ast_hash": "63dd5bd8d79d435297b22da6c07d777e",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/game3d/muffin-run-atlas.png": {
+    "mtime": 1785346883.3139744,
+    "ast_hash": "29e40ece8461f0a6d688dff85a1d7edb",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/game3d/papa-marino-run-atlas.png": {
+    "mtime": 1785346880.3692317,
+    "ast_hash": "447b4fef3a6cae28af2078963d65a20c",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/arana-cut.png": {
+    "mtime": 1785560661.9519126,
+    "ast_hash": "0ef6ef08a3a1aa29ccab92cf56adc8b5",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/capitan-cut.png": {
+    "mtime": 1785560655.1226025,
+    "ast_hash": "4bb51c189f5e4d37698a644cac163ef8",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/fondo-banner.jpg": {
+    "mtime": 1785563126.9755194,
+    "ast_hash": "3b4d3d61bb2cd54a34f722e47c1956fa",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/gigante-cut.png": {
+    "mtime": 1785560663.5606701,
+    "ast_hash": "f75172a6dfd3b89935e8560f232a8525",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/hierro-cut.png": {
+    "mtime": 1785560658.1944003,
+    "ast_hash": "2c934087e7253cd59c64c564a4d39889",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/pantera-cut.png": {
+    "mtime": 1785560670.4494221,
+    "ast_hash": "533fd3c00bfcb159f755b407fada075d",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/roulette/roulette-background-v1.png": {
+    "mtime": 1785563127.3391368,
+    "ast_hash": "6ec63f2b10eb38afd74a52e479fa5da0",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/trueno-cut.png": {
+    "mtime": 1785560667.0191224,
+    "ast_hash": "c5c68bed008db48dc46285cc71c0f45f",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/roulette/roulette-background-v1.png": {
+    "mtime": 1785557119.1132047,
+    "ast_hash": "b5083d41fc230929ea3dc4bdaf0e23b1",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/game3d/derpy-run-atlas.png": {
+    "mtime": 1785363502.936462,
+    "ast_hash": "eec9a9a8da6b5175139d52332c365b7d",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/game3d/luna-run-atlas.png": {
+    "mtime": 1785362018.4365284,
+    "ast_hash": "3331af9780c635f69f3f77b8c006571a",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/game3d/mira-run-atlas.png": {
+    "mtime": 1785363196.737926,
+    "ast_hash": "a571f1cd6f23ee7690fa8a0b77aa960a",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/game3d/rumi-run-atlas.png": {
+    "mtime": 1785363043.6233916,
+    "ast_hash": "c0f8143d0a576a1fb97329a63ffd0c27",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/game3d/sussie-run-atlas.png": {
+    "mtime": 1785363667.950796,
+    "ast_hash": "96c77b63023255212f0409477f49028e",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/game3d/zoey-run-atlas.png": {
+    "mtime": 1785363293.027581,
+    "ast_hash": "aa1d6df8a54bf7951ebd88524cfe510b",
+    "semantic_hash": ""
+  },
+  "public/themes/kpop/roulette/roulette-background-v1.png": {
+    "mtime": 1785556543.9966998,
+    "ast_hash": "e328e6b1f942715ad58a34e2d7c9dd3d",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/fondo-juego-playa.jpg": {
+    "mtime": 1785596282.8753808,
+    "ast_hash": "f072482a24d3add1e54a66c466316bda",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/game3d/alienrosa-run-atlas.png": {
+    "mtime": 1785363317.8700118,
+    "ast_hash": "95d64e32935b0ae2c7bab54b262dad83",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/game3d/loro-run-atlas.png": {
+    "mtime": 1785363511.8096337,
+    "ast_hash": "ac461398d926591c65551a0d5c7b1698",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/game3d/surfista-run-atlas.png": {
+    "mtime": 1785363550.3861737,
+    "ast_hash": "b9543731e064217c73a6862825d802fd",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/game3d/tortugamar-run-atlas.png": {
+    "mtime": 1785363010.7844014,
+    "ast_hash": "429bd8359311a4620254f6deafcc7aa4",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/roulette/roulette-background-v1.png": {
+    "mtime": 1785557118.3430607,
+    "ast_hash": "911bb48b85f4dc12ed2d490927e498ed",
+    "semantic_hash": ""
+  },
+  "qa-evidence/full-3d/01-intro-full-3d-800x1280.png": {
+    "mtime": 1785338747.1162865,
+    "ast_hash": "d7779cb90135e37ecba5326e5ebf7bda",
+    "semantic_hash": ""
+  },
+  "qa-evidence/full-3d/02-playing-full-3d-800x1280.png": {
+    "mtime": 1785338752.0917184,
+    "ast_hash": "43e611843df8bff53e75b5fabbed9ceb",
+    "semantic_hash": ""
+  },
+  "qa-evidence/full-3d/03-playing-full-3d-1280x800.png": {
+    "mtime": 1785338761.0068321,
+    "ast_hash": "b578e9b865ad1b32dcc4a700da616bea",
+    "semantic_hash": ""
+  },
+  "qa-evidence/full-3d/04-running-center.png": {
+    "mtime": 1785342070.4230046,
+    "ast_hash": "66e36f4b4ad9c877f19ec1980f2cda6f",
+    "semantic_hash": ""
+  },
+  "qa-evidence/full-3d/05-running-turn-right.png": {
+    "mtime": 1785342077.961301,
+    "ast_hash": "0fa6622e93a25620b21f6f94b39951b6",
+    "semantic_hash": ""
+  },
+  "qa-evidence/full-3d/06-running-right-lane.png": {
+    "mtime": 1785342086.2687063,
+    "ast_hash": "b3764daba18b353ac6e4186bd33ec622",
+    "semantic_hash": ""
+  },
+  "qa-evidence/full-3d/99-timeout.png": {
+    "mtime": 1785338640.926752,
+    "ast_hash": "a6f8be6a19d303fa59a45521675857ac",
+    "semantic_hash": ""
+  },
+  "qa-evidence/full-3d/kpop-intro.png": {
+    "mtime": 1785424875.640226,
+    "ast_hash": "0bd13428c4bc0d562158e32b5eca00ad",
+    "semantic_hash": ""
+  },
+  "qa-evidence/full-3d/kpop-running.png": {
+    "mtime": 1785425368.0477073,
+    "ast_hash": "b72fe1cfdf35babb9998a5a2952abf75",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/after-mobile-form.png": {
+    "mtime": 1785591531.3320708,
+    "ast_hash": "d7f35033ea5c20d609278e27ed25e126",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/after-mobile-hero.png": {
+    "mtime": 1785591528.3478098,
+    "ast_hash": "6a6023b242cff839642fb9944e818786",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/after-mobile-pricing.png": {
+    "mtime": 1785591529.948112,
+    "ast_hash": "2df27335d5f73ce9823ade9af87009b5",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/desktop-action.png": {
+    "mtime": 1785567099.9818754,
+    "ast_hash": "8ed55d13892e5b8c969c96e37ca001a2",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/desktop-benefits.png": {
+    "mtime": 1785567509.8893802,
+    "ast_hash": "4b17b323e9e8dfbb71a5484838e9d21c",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/desktop-carousel.png": {
+    "mtime": 1785566777.1564162,
+    "ast_hash": "80c4d63320092b6a1b7d9d7539408c88",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/desktop-demo-playing.png": {
+    "mtime": 1785567304.5650494,
+    "ast_hash": "28b182453ea7c1267357d470d57880a1",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/desktop-demo.png": {
+    "mtime": 1785566961.2882514,
+    "ast_hash": "ef8680ef64467660b3920163ca1de838",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/desktop-events-form.png": {
+    "mtime": 1785567584.289229,
+    "ast_hash": "37175dd0b3a6c6f45781c7572560b0f8",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/desktop-faq.png": {
+    "mtime": 1785567846.3358464,
+    "ast_hash": "762b937389d5ec1e2022386b469e95da",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/desktop-form.png": {
+    "mtime": 1785567668.7323878,
+    "ast_hash": "b1b536074d4674552349159bc1d5a8fc",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/desktop-full.png": {
+    "mtime": 1785566033.70418,
+    "ast_hash": "1c80d51f6264b10b2b5c3e6c0f6f8775",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/desktop-hero.png": {
+    "mtime": 1785566323.3121326,
+    "ast_hash": "e80b21b9899d214a148e7d7b2ce5ae4c",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/desktop-pricing.png": {
+    "mtime": 1785567430.0656984,
+    "ast_hash": "f2e701e5afc05ea21d78e1428edeb4ba",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/desktop-steps.png": {
+    "mtime": 1785566526.279359,
+    "ast_hash": "90d8dc0b6ec07f835c3f92e46fabccf7",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/desktop-themes.png": {
+    "mtime": 1785566606.9586434,
+    "ast_hash": "6c67e62a1511871e54c4e352126338fd",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/mobile-carousel.png": {
+    "mtime": 1785568139.9462929,
+    "ast_hash": "dd0e21b1f6920cd9bc833d60befbd5f2",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/mobile-hero.png": {
+    "mtime": 1785567997.9411497,
+    "ast_hash": "6fb07082d53da0d132355b6b15aa475c",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/mobile-pricing.png": {
+    "mtime": 1785568589.858997,
+    "ast_hash": "e17dc777fcf3868cd0cd7f929a6f4081",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/mobile-worlds.png": {
+    "mtime": 1785568390.273071,
+    "ast_hash": "f77c2dc0e169a2f6e5a7e142e2b5710e",
+    "semantic_hash": ""
+  },
+  "qa-evidence/sitio-frontend-audit/screenshots/tablet-hero.png": {
+    "mtime": 1785568765.2866313,
+    "ast_hash": "6c59df381178a8b87f0a57b75509dcc2",
+    "semantic_hash": ""
+  },
+  "tmp/imagegen/kpop-atlases/sussie-source.png": {
+    "mtime": 1785361580.6571429,
+    "ast_hash": "098a6799111087e28b0ee7a164a73ca1",
+    "semantic_hash": ""
+  },
+  "tmp/rayo-mcqueen-estrella-local-preview.jpg": {
+    "mtime": 1785637537.7780552,
+    "ast_hash": "d6b5f9c9c31ed3edeb7c5cf36181d734",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/despedida-carreras.mp4": {
+    "mtime": 1785555048.2375085,
+    "ast_hash": "833df13504ba6ba1e3eb5884c4fae9fd",
+    "semantic_hash": ""
+  },
+  "public/themes/familia-canina/despedida-familia-canina.mp4": {
+    "mtime": 1785551042.5862145,
+    "ast_hash": "bced571994b0e0ed8cc845c22d3d9a2b",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/musica-fondo.mp3": {
+    "mtime": 1785560167.727041,
+    "ast_hash": "8ddd2c326a2ddbd2237ca105698efbf9",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/revelacion-heroes.mp4": {
+    "mtime": 1785558501.862327,
+    "ast_hash": "24b9eae47cd5f3ad2b1c1586f9c1d766",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/despedida-tropical.mp4": {
+    "mtime": 1785555005.3936265,
+    "ast_hash": "03c2be8f0b232007d89f2b2c32fd72f2",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/musica-fondo.mp3": {
+    "mtime": 1785560167.827392,
+    "ast_hash": "ed4a08e0e312b06dc1839d017b6d5a51",
+    "semantic_hash": ""
+  },
+  "public/themes/tropical/revelacion-tropical.mp4": {
+    "mtime": 1785558010.452929,
+    "ast_hash": "73259d427faf6ee6a9d72f46ce67585f",
+    "semantic_hash": ""
+  },
+  "tmp/rayo-mcqueen-estrella-local-candidate-v3.mp4": {
+    "mtime": 1785637484.866902,
+    "ast_hash": "bcb6955084b252b76d993f9756cafe50",
+    "semantic_hash": ""
+  },
+  "src/spinnerWinner.js": {
+    "mtime": 1785780625.9907746,
+    "ast_hash": "073a0ddf2c549efedd049bf5e9982ea2",
+    "semantic_hash": ""
+  },
+  "tests/frontend/spinnerWinner.test.mjs": {
+    "mtime": 1785780477.7987962,
+    "ast_hash": "f47427e821f023d4dc16eff55ae3654c",
+    "semantic_hash": ""
+  },
+  "tmp/frames-racing-star-wan/end.jpg": {
+    "mtime": 1785644944.6797414,
+    "ast_hash": "bb227c8680414df5ce1e02b9c66d20e9",
+    "semantic_hash": ""
+  },
+  "tmp/frames-racing-star-wan/mid.jpg": {
+    "mtime": 1785644944.5845249,
+    "ast_hash": "2fd45b1edce30069c2b39fbb7efcaff6",
+    "semantic_hash": ""
+  },
+  "tmp/frames-racing-star-wan/start.jpg": {
+    "mtime": 1785644944.061047,
+    "ast_hash": "61a45f6f4b4bfbedd480a5880fb85c34",
+    "semantic_hash": ""
+  },
+  "tmp/qa-video-estrella-carreras.png": {
+    "mtime": 1785655158.4016218,
+    "ast_hash": "aefb0a04f57f35ca51eb8f396a39e3a4",
+    "semantic_hash": ""
+  },
+  "public/themes/carreras/rayo-mcqueen-estrella.mp4": {
+    "mtime": 1785645199.6945772,
+    "ast_hash": "9e19224da558cd0ab3eafe7ca37e6fc1",
+    "semantic_hash": ""
+  },
+  "tmp/racing-star-wan-candidate-9bbc09ac.mp4": {
+    "mtime": 1785644797.6339164,
+    "ast_hash": "a6840c2aa05b95beddc4224a70668e07",
+    "semantic_hash": ""
+  }
+}

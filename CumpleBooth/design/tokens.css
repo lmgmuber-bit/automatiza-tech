@@ -1,0 +1,27 @@
+/* CumpleClick — tokens de identidad corporativa v1.0 ("El globo dulce")
+   Fuente de verdad de colores/tipografía de marca. Importar o copiar en
+   cualquier superficie web de CumpleClick (landing, kiosco, diplomas). */
+:root {
+  /* Paleta principal */
+  --cc-violeta: #8B5CF6;        /* Violeta Globo — primario */
+  --cc-tinta: #4C2882;          /* Tinta Violeta — wordmark "Cumple", titulares */
+  --cc-fucsia: #D6307F;         /* Fucsia Click — CTAs, precio, "Click" */
+  --cc-amarillo: #FBBF24;       /* Amarillo Lente — highlights */
+  --cc-crema: #FFF8EC;          /* Fondo por defecto */
+
+  /* Soporte */
+  --cc-lila: #A78BFA;           /* Confeti, hovers, fondos suaves */
+  --cc-fucsia-oscuro: #C2186B;  /* Sombras de fucsia, boquilla */
+  --cc-oro: #E8A317;            /* Oro Hilo — solo detalles finos */
+  --cc-oro-claro: #F5C542;
+  --cc-oro-oscuro: #D99A14;
+
+  /* Degradés de marca */
+  --cc-grad-globo: radial-gradient(circle at 34% 26%, #B9A0F7 0%, #8B5CF6 34%, #C0409E 72%, #D6307F 100%);
+  --cc-grad-oro: linear-gradient(180deg, #F5C542 0%, #D99A14 100%);
+  --cc-grad-lente: radial-gradient(circle at 38% 32%, #D8CCFB 0%, #A88BE8 60%, #8256C9 100%);
+
+  /* Tipografía */
+  --cc-font-display: 'Baloo 2', 'Segoe UI', system-ui, sans-serif; /* 800 titulares/wordmark */
+  --cc-font-body: 'Baloo 2', system-ui, sans-serif;                /* 600 UI, system-ui textos largos */
+}

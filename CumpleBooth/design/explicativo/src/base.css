@@ -1,0 +1,44 @@
+@font-face {
+  font-family: "Baloo 2";
+  font-weight: 800;
+  font-display: block;
+  src: url("file:///C:/wamp64/www/automatiza-tech/CumpleBooth/node_modules/@fontsource/baloo-2/files/baloo-2-latin-800-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Baloo 2";
+  font-weight: 600;
+  font-display: block;
+  src: url("file:///C:/wamp64/www/automatiza-tech/CumpleBooth/node_modules/@fontsource/baloo-2/files/baloo-2-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Baloo 2";
+  font-weight: 400;
+  font-display: block;
+  src: url("file:///C:/wamp64/www/automatiza-tech/CumpleBooth/node_modules/@fontsource/baloo-2/files/baloo-2-latin-400-normal.woff2") format("woff2");
+}
+
+:root {
+  --violeta: #8B5CF6;
+  --tinta: #4C2882;
+  --fucsia: #D6307F;
+  --amarillo: #FBBF24;
+  --oro: #E8A317;
+  --crema: #FFF8EC;
+  --lila: #A78BFA;
+  --nudo: #C2186B;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 1080px;
+  height: 1350px;
+  background: var(--crema);
+  font-family: "Baloo 2", system-ui;
+  color: var(--tinta);
+  overflow: hidden;
+}

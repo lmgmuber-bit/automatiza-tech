@@ -1,0 +1,8 @@
+Opcional (suma efecto, no obligatorio):
+
+  captura.mp3    <- sonido de obturador al tomar la foto
+  confetti.mp3   <- sonido festivo al guardar
+  nota.mp3       <- tintineo al atrapar un copo correcto en el juego (todas las temáticas)
+  error.mp3      <- buzz corto al tocar una "trampa" (💣) en el juego de copos
+
+Si faltan, la app funciona igual (sin sonido en esos momentos).

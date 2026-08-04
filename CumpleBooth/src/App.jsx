@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import { ensureCanvasFonts } from './fonts.js'
+import { applyThemeColors } from './themeVars.js'
 import {
   getSquarePhotoGeometry,
   getTrackCharacterGeometry,
@@ -87,18 +88,13 @@ function getBrandLogo() {
 }
 
 // Aplica los colores de la temática como variables CSS globales.
+// Los 9 tokens de color los vuelca applyThemeColors() (src/themeVars.js), que
+// comparte con el Álbum Recuerdo; acá quedan solo los fondos que son propios
+// del kiosco.
 function applyThemeVars(colors) {
   if (!colors) return
   const root = document.documentElement.style
-  root.setProperty('--pink', colors.accent)
-  root.setProperty('--pink-soft', colors.accentSoft)
-  root.setProperty('--yellow', colors.yellow)
-  root.setProperty('--ink', colors.ink)
-  root.setProperty('--bg-light1', colors.bgLight1)
-  root.setProperty('--bg-light2', colors.bgLight2)
-  root.setProperty('--dark1', colors.dark1)
-  root.setProperty('--dark2', colors.dark2)
-  root.setProperty('--dark3', colors.dark3)
+  applyThemeColors(colors)
   if (THEME_SLUG) {
     // Absoluta a propósito: una URL relativa dentro de una custom property se
     // resuelve contra la hoja de estilos donde se usa var() (dist/assets/*.css

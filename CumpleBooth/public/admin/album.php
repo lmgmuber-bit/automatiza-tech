@@ -161,8 +161,9 @@ $party = $publicSlug !== '' ? cb_load_party_raw($publicSlug) : null;
 
 $errors = [];
 $okMessage = null;
-/** Token en claro recién emitido: se muestra una sola vez y nunca se persiste. */
+/** Tokens en claro recién emitidos: se muestran una sola vez y no se persisten. */
 $freshToken = null;
+$freshViewToken = null;
 
 if ($party === null) {
     $errors[] = 'El evento no existe o el identificador público no es válido.';
@@ -342,6 +343,29 @@ if ($album !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'
                     cb_album_reorder($albumId, $ids);
                     $okMessage = 'Orden guardado.';
                 }
+            } elseif ($action === 'publicar') {
+                $aprobados = count(cb_album_list_media($albumId, ['approved']));
+                if ($aprobados === 0) {
+                    $errors[] = 'Aprueba al menos un recuerdo antes de publicar el álbum.';
+                } else {
+                    cb_album_update($albumId, [
+                        'status' => 'published',
+                        'published_at' => gmdate('Y-m-d H:i:s'),
+                        'intake_enabled' => 0,
+                    ]);
+                    cb_album_revoke_tokens($albumId, 'intake');
+                    // El enlace de lectura se emite en el momento de publicar y
+                    // se muestra una sola vez, igual que el de aportes.
+                    $freshViewToken = cb_album_issue_token($albumId, 'view', null, 'admin');
+                    $okMessage = 'Álbum publicado. Guarda el enlace: no se vuelve a mostrar.';
+                }
+            } elseif ($action === 'despublicar') {
+                cb_album_update($albumId, ['status' => 'closed']);
+                cb_album_revoke_tokens($albumId, 'view');
+                $okMessage = 'Álbum despublicado. El enlace que habías compartido dejó de funcionar.';
+            } elseif ($action === 'nuevo-enlace-revista') {
+                $freshViewToken = cb_album_issue_token($albumId, 'view', null, 'admin');
+                $okMessage = 'Enlace de la revista regenerado. El anterior quedó revocado.';
             } elseif ($action === 'subir-organizador') {
                 $result = cb_album_store_admin_uploads($albumId, $partyId, $publicSlug, $_FILES['archivos'] ?? null);
                 if ($result['saved'] > 0) {
@@ -413,6 +437,12 @@ if ($album !== null && !empty($album['intake_closes_at'])) {
 
 $selfUrl = 'album.php?party=' . rawurlencode($publicSlug);
 $sourceLabels = ['booth' => 'Cabina', 'guest' => 'Invitado', 'organizer' => 'Tuyo'];
+$estadoLabels = [
+    'draft' => 'borrador',
+    'collecting' => 'recibiendo aportes',
+    'closed' => 'recepción cerrada, sin publicar',
+    'published' => 'publicado',
+];
 $stateLabels = ['pending' => 'Por revisar', 'approved' => 'Aprobado', 'hidden' => 'Oculto', 'removed' => 'Eliminado'];
 
 // Filtros de curaduría. Solo "todos" permite reordenar: mover con un filtro
@@ -784,13 +814,58 @@ if ($album !== null && $stats !== null) {
           </div>
         </form>
 
+        <?php if ($freshViewToken !== null): ?>
+          <?php $viewUrl = cb_album_view_url($freshViewToken); ?>
+          <div class="album-token-card">
+            <h3><?= admin_icon('check') ?> Enlace de la revista</h3>
+            <p class="muted">
+              Este es el enlace que compartes con las familias. Se muestra <strong>una sola vez</strong>.
+              <?php if (!empty($album['require_pin'])): ?>
+                Además del enlace necesitarán el PIN de galería de esta fiesta.
+              <?php else: ?>
+                <strong>Cualquiera con el enlace puede ver el álbum</strong>, sin PIN.
+              <?php endif; ?>
+            </p>
+            <div class="party-url">
+              <input type="text" readonly value="<?= h($viewUrl) ?>">
+              <button type="button" class="btn btn-icon" data-copy="<?= h($viewUrl) ?>" title="Copiar enlace">
+                <?= admin_icon('copy') ?>
+              </button>
+              <a class="btn btn-icon" href="<?= h($viewUrl) ?>" target="_blank" rel="noopener" title="Abrir la revista">
+                <?= admin_icon('external') ?>
+              </a>
+            </div>
+          </div>
+        <?php endif; ?>
+
         <p class="muted">
-          Estado actual: <strong><?= h((string) $album['status']) ?></strong>.
+          Estado actual: <strong><?= h($estadoLabels[(string) $album['status']] ?? $album['status']) ?></strong>.
           El material se conserva <strong><?= (int) $album['retention_days'] ?> días</strong> desde la fecha del evento;
           después la retención lo elimina junto con el resto de la fiesta.
         </p>
 
         <div class="party-actions">
+          <?php if ((string) $album['status'] === 'published'): ?>
+            <form method="post" action="<?= h($selfUrl) ?>" class="inline-form"
+                  data-confirm="Regenerar el enlace deja inservible el que ya compartiste. ¿Continuar?">
+              <?= admin_csrf_field() ?>
+              <input type="hidden" name="action" value="nuevo-enlace-revista">
+              <button type="submit" class="btn btn-ghost"><?= admin_icon('refresh') ?> Regenerar enlace de la revista</button>
+            </form>
+            <form method="post" action="<?= h($selfUrl) ?>" class="inline-form"
+                  data-confirm="El enlace que compartiste dejará de funcionar de inmediato. ¿Despublicar el álbum?">
+              <?= admin_csrf_field() ?>
+              <input type="hidden" name="action" value="despublicar">
+              <button type="submit" class="btn btn-danger">Despublicar</button>
+            </form>
+          <?php else: ?>
+            <form method="post" action="<?= h($selfUrl) ?>" class="inline-form"
+                  data-confirm="Publicar cierra la recepción de aportes y genera el enlace de la revista. ¿Continuar?">
+              <?= admin_csrf_field() ?>
+              <input type="hidden" name="action" value="publicar">
+              <button type="submit" class="btn btn-cta"><?= admin_icon('gallery') ?> Publicar el álbum</button>
+            </form>
+          <?php endif; ?>
           <?php if ((string) $album['status'] === 'closed'): ?>
             <form method="post" action="album.php?party=<?= rawurlencode($publicSlug) ?>" class="inline-form">
               <?= admin_csrf_field() ?>

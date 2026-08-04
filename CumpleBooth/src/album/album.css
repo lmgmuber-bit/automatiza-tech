@@ -1,0 +1,314 @@
+/* Álbum Recuerdo — revista pública.
+
+   Ningún color de temática se escribe acá. Los valores de :root son solo el
+   respaldo mientras la API no respondió; applyThemeColors() los reemplaza con
+   los de themes.json apenas llegan los datos.
+
+   Las páginas usan container queries (cqw/cqh) y no vw/vh: el tamaño que manda
+   es el de la página de la revista, no el del viewport. Con vw, una página en
+   un pliego de escritorio y la misma página sola en un celular tendrían
+   tipografías completamente distintas. */
+
+@import '@fontsource/baloo-2/latin-600.css';
+@import '@fontsource/baloo-2/latin-700.css';
+@import '@fontsource/baloo-2/latin-800.css';
+
+:root {
+  --pink: #7C3AED;
+  --pink-soft: #EDE4FB;
+  --yellow: #FBBF24;
+  --ink: #2b1a12;
+  --bg-light1: #FFF8EC;
+  --bg-light2: #F6EFFF;
+  --dark1: #3b1d5e;
+  --dark2: #26123f;
+  --dark3: #8B5CF6;
+  --paper: #fffdf8;
+  --radius: 18px;
+  --font: 'Baloo 2', 'Segoe UI Rounded', 'Segoe UI', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body, #album { height: 100%; margin: 0; }
+
+body {
+  font-family: var(--font);
+  color: #fff;
+  background: linear-gradient(165deg, var(--dark1) 0%, var(--dark2) 55%, var(--dark3) 150%);
+  background-attachment: fixed;
+  overflow-x: hidden;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; border-radius: 10px; }
+
+/* ── Pantallas de estado (cargando, error, PIN) ───────────────────────────── */
+
+.album-shell {
+  min-height: 100dvh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 20px; padding: 24px 18px;
+  text-align: center;
+}
+.album-card {
+  width: min(460px, 100%);
+  padding: 26px 22px;
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.10);
+  border: 1px solid rgba(255,255,255,.18);
+}
+.album-headline { margin: 0 0 10px; font-size: clamp(1.4rem, 5vw, 1.9rem); font-weight: 800; }
+.album-lede { margin: 0; opacity: .92; line-height: 1.5; }
+
+.album-pin-form { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
+.album-pin {
+  width: 100%; min-height: 58px;
+  border: 2px solid rgba(255,255,255,.35); border-radius: 14px;
+  background: rgba(0,0,0,.25); color: #fff;
+  font-family: inherit; font-size: 1.6rem; letter-spacing: .55em;
+  text-align: center; text-indent: .55em;
+}
+.album-error {
+  margin: 0; padding: 9px 12px; border-radius: 10px;
+  background: rgba(220,38,38,.32); font-weight: 600; font-size: .92rem;
+}
+.album-cta {
+  min-height: 54px; border: none; border-radius: 999px;
+  background: var(--pink); color: #fff;
+  font-family: inherit; font-size: 1.04rem; font-weight: 800; cursor: pointer;
+}
+.album-cta:disabled { opacity: .45; cursor: not-allowed; }
+
+.album-brand {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 0; font-weight: 800; opacity: .8;
+}
+
+/* ── Revista ──────────────────────────────────────────────────────────────── */
+
+.album-root { min-height: 100dvh; display: flex; flex-direction: column; }
+
+.flipbook-stage {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; padding: 18px 14px calc(14px + env(safe-area-inset-bottom));
+  min-height: 0;
+}
+
+/* El pliego es 3:2 (dos páginas 3:4 lado a lado). Se acota por ancho y por
+   alto a la vez para que nunca se salga de pantalla en horizontal. */
+.flipbook {
+  position: relative;
+  width: min(96vw, calc((100dvh - 150px) * 1.5), 1180px);
+  aspect-ratio: 3 / 2;
+  perspective: 2400px;
+  user-select: none;
+}
+.flipbook-stage.is-single .flipbook {
+  width: min(94vw, calc((100dvh - 150px) * 0.75), 560px);
+  aspect-ratio: 3 / 4;
+}
+
+.flipbook__half { position: absolute; top: 0; bottom: 0; width: 50%; }
+.flipbook__half--left { left: 0; }
+.flipbook__half--right { right: 0; }
+.flipbook__half--only { left: 0; width: 100%; }
+
+.flipbook__spine {
+  position: absolute; top: 0; bottom: 0; left: 50%;
+  width: 14px; transform: translateX(-50%);
+  background: linear-gradient(90deg, rgba(0,0,0,.32), rgba(0,0,0,.08) 45%, rgba(0,0,0,.32));
+  z-index: 6; pointer-events: none;
+}
+
+.flip-page {
+  position: absolute; inset: 0;
+  background: var(--paper);
+  overflow: hidden;
+  backface-visibility: hidden;
+  box-shadow: 0 14px 40px rgba(0,0,0,.34);
+}
+.flip-page.is-blank { background: rgba(255,255,255,.06); box-shadow: none; }
+.flip-page--left { border-radius: var(--radius) 0 0 var(--radius); }
+.flip-page--right { border-radius: 0 var(--radius) var(--radius) 0; }
+.flip-page--only { border-radius: var(--radius); }
+
+/* Sombra del lomo sobre la página quieta: sin esto el pliego se ve plano. */
+.flip-shade { position: absolute; top: 0; bottom: 0; width: 42px; pointer-events: none; z-index: 3; }
+.flip-shade--left { right: 0; background: linear-gradient(90deg, transparent, rgba(0,0,0,.20)); }
+.flip-shade--right { left: 0; background: linear-gradient(270deg, transparent, rgba(0,0,0,.20)); }
+.flip-shade--only { display: none; }
+
+.flipbook__flying {
+  position: absolute; top: 0; bottom: 0;
+  width: 50%;
+  transform-style: preserve-3d;
+  z-index: 8;
+}
+.flipbook__flying--fwd {
+  left: 50%; transform-origin: left center;
+  animation: flip-fwd 820ms cubic-bezier(.42,0,.28,1) forwards;
+}
+.flipbook__flying--back {
+  left: 0; transform-origin: right center;
+  animation: flip-back 820ms cubic-bezier(.42,0,.28,1) forwards;
+}
+.flipbook-stage.is-single .flipbook__flying { width: 100%; }
+.flipbook-stage.is-single .flipbook__flying--fwd { left: 0; }
+
+@keyframes flip-fwd { from { transform: rotateY(0deg); } to { transform: rotateY(-180deg); } }
+@keyframes flip-back { from { transform: rotateY(0deg); } to { transform: rotateY(-180deg); } }
+
+.flip-page--front { transform: rotateY(0deg); }
+.flip-page--back { transform: rotateY(180deg); }
+
+.flip-curl {
+  position: absolute; inset: 0; opacity: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(0,0,0,.45), transparent 60%);
+}
+.flip-curl--back { background: linear-gradient(270deg, rgba(0,0,0,.45), transparent 60%); }
+
+/* ── Controles ────────────────────────────────────────────────────────────── */
+
+.flipbook-controls {
+  display: flex; align-items: center; justify-content: center;
+  flex-wrap: wrap; gap: 10px;
+}
+.flipbook-controls--scroll { padding: 16px 14px calc(20px + env(safe-area-inset-bottom)); }
+
+.flip-btn {
+  min-width: 56px; min-height: 56px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255,255,255,.22); border-radius: 999px;
+  background: rgba(255,255,255,.12); color: #fff;
+  font-family: inherit; font-size: .95rem; font-weight: 700; cursor: pointer;
+}
+.flip-btn:disabled { opacity: .35; cursor: not-allowed; }
+.flip-btn--wide { padding: 0 20px; }
+
+.flip-indicator { margin: 0 6px; font-weight: 700; opacity: .9; min-width: 74px; text-align: center; }
+.flip-indicator span { color: var(--yellow); font-size: 1.15rem; }
+
+.album-tools { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+/* ── Páginas ──────────────────────────────────────────────────────────────── */
+
+.mag {
+  position: absolute; inset: 0;
+  container-type: size;
+  container-name: mag;
+  display: flex; flex-direction: column;
+  padding: 7cqw;
+  gap: 3cqh;
+  color: var(--ink);
+  background: var(--paper);
+}
+.mag--blank { background: transparent; }
+
+.mag__folio {
+  position: absolute; bottom: 2.6cqh; left: 0; right: 0;
+  text-align: center;
+  font-size: 3cqw; font-weight: 700; letter-spacing: .18em;
+  color: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+.mag__frame {
+  flex: 1; min-height: 0;
+  border-radius: 3cqw; overflow: hidden;
+  background: color-mix(in srgb, var(--pink-soft) 70%, #fff);
+  box-shadow: inset 0 0 0 0.9cqw #fff, 0 1.4cqw 3cqw rgba(0,0,0,.14);
+}
+.mag__photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.mag__credit {
+  margin: 0; text-align: center;
+  font-size: 3.2cqw; font-weight: 700;
+  color: color-mix(in srgb, var(--ink) 62%, transparent);
+}
+
+/* Portada y cierre: arte a sangre con velo para que el texto se lea siempre. */
+.mag--cover, .mag--closing {
+  background-size: cover; background-position: center;
+  color: #fff; justify-content: space-between;
+  padding: 8cqw 7cqw;
+}
+.mag__veil {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--dark1) 62%, transparent) 0%,
+    color-mix(in srgb, var(--dark1) 22%, transparent) 38%,
+    color-mix(in srgb, var(--dark1) 82%, transparent) 100%);
+}
+.mag--cover > *:not(.mag__veil), .mag--closing > *:not(.mag__veil) { position: relative; z-index: 2; }
+
+.mag__cover-top, .mag__cover-bottom {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 2cqw;
+  font-size: 3cqw; letter-spacing: .16em; text-transform: uppercase; font-weight: 700;
+}
+.mag__cover-bottom { border-top: 1px solid rgba(255,255,255,.34); padding-top: 2.4cqh; }
+.mag__eyebrow { color: var(--yellow); }
+
+.mag__cover-main { margin-bottom: 4cqh; }
+.mag__title {
+  margin: 0;
+  font-size: 11cqw; line-height: 1.02; font-weight: 800;
+  text-shadow: 0 0.6cqw 2.4cqw rgba(0,0,0,.45);
+}
+.mag__title--closing { font-size: 9cqw; }
+.mag__subtitle { margin: 2.4cqh 0 0; font-size: 4.2cqw; opacity: .94; }
+.mag__brand { font-weight: 800; letter-spacing: .12em; }
+
+.mag--duo { gap: 3cqh; }
+.mag--duo .mag__frame { flex: 1; }
+
+.mag__grid {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 2.6cqw;
+}
+.mag--mosaic .mag__frame { flex: none; height: 100%; }
+
+.mag--note { gap: 2.6cqh; }
+.mag__frame--note { flex: 1.6; }
+.mag__note {
+  margin: 0; flex: 1; min-height: 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 1.6cqh;
+  padding: 3cqw 4cqw;
+  border-left: 1cqw solid var(--pink);
+  background: color-mix(in srgb, var(--pink-soft) 55%, #fff);
+  border-radius: 0 2.4cqw 2.4cqw 0;
+}
+.mag__note-text { margin: 0; font-size: 4.4cqw; line-height: 1.35; font-weight: 600; }
+.mag__note-text--video { text-align: center; font-size: 3.6cqw; }
+.mag__note-by { font-size: 3.4cqw; font-weight: 800; color: var(--pink); }
+
+.mag__frame--video { background: #111; }
+.mag__video { width: 100%; height: 100%; object-fit: contain; display: block; background: #111; }
+
+.mag--closing { justify-content: center; text-align: center; }
+.mag__closing-body { display: flex; flex-direction: column; align-items: center; gap: 2.4cqh; }
+.mag__closing-note { margin: 0; font-size: 3.8cqw; opacity: .92; }
+
+/* ── Respaldo sin volteo: mismos diseños, en columna ──────────────────────── */
+
+.album-scroll {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 22px; padding: 22px 14px;
+}
+.album-scroll__page {
+  position: relative;
+  width: min(94vw, 560px);
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 14px 40px rgba(0,0,0,.34);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flipbook__flying { animation-duration: 0.01ms !important; }
+}

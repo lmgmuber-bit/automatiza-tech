@@ -448,6 +448,127 @@ function cb_album_store_file(string $tmpPath, string $storageKey, bool $isUpload
     return $path;
 }
 
+/**
+ * Guarda los archivos que sube el organizador desde el admin.
+ *
+ * Aplica exactamente la misma validación por bytes que el aporte de invitado
+ * —el admin no es una puerta de atrás para meter cualquier cosa al storage—,
+ * pero el material nace aprobado: lo está subiendo el dueño del evento, no un
+ * tercero desconocido.
+ *
+ * Devuelve ['saved'=>int, 'errors'=>string[]] con mensajes ya legibles.
+ */
+function cb_album_store_admin_uploads(int $albumId, int $partyId, string $partySlug, $files): array
+{
+    $saved = 0;
+    $errors = [];
+    if (!is_array($files) || !isset($files['name'])) {
+        return ['saved' => 0, 'errors' => []];
+    }
+
+    $names = (array) $files['name'];
+    $total = count($names);
+    $messages = [
+        'empty' => 'llegó vacío',
+        'format' => 'no es una foto ni un video en un formato aceptado',
+        'image_too_big' => 'la foto pesa demasiado',
+        'image_dimensions' => 'la foto es demasiado grande',
+        'video_too_big' => 'el video pesa demasiado',
+        'video_too_long' => 'el video dura más de lo permitido',
+        'video_dimensions' => 'el video tiene una resolución demasiado alta',
+    ];
+
+    for ($i = 0; $i < $total; $i++) {
+        $original = (string) ($names[$i] ?? '');
+        $label = $original !== '' ? '"' . basename($original) . '"' : 'un archivo';
+        $error = (int) ($files['error'][$i] ?? UPLOAD_ERR_NO_FILE);
+        if ($error === UPLOAD_ERR_NO_FILE) {
+            continue;
+        }
+        if ($error !== UPLOAD_ERR_OK) {
+            $errors[] = $error === UPLOAD_ERR_INI_SIZE || $error === UPLOAD_ERR_FORM_SIZE
+                ? "$label supera el tamaño máximo que acepta el servidor."
+                : "$label no se pudo subir.";
+            continue;
+        }
+
+        $tmpPath = (string) ($files['tmp_name'][$i] ?? '');
+        if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+            $errors[] = "$label no se pudo leer.";
+            continue;
+        }
+        $byteSize = (int) ($files['size'][$i] ?? 0);
+
+        // El organizador siempre puede subir videos, aunque la recepción de
+        // invitados los tenga apagados: ese interruptor es para el QR.
+        $validation = cb_album_validate_upload($tmpPath, $byteSize, true);
+        if (!$validation['ok']) {
+            $errors[] = "$label " . ($messages[$validation['error']] ?? 'no se pudo aceptar') . '.';
+            @unlink($tmpPath);
+            continue;
+        }
+        $media = $validation['media'];
+
+        $sha256 = hash_file('sha256', $tmpPath);
+        if ($sha256 === false) {
+            $errors[] = "$label no se pudo leer.";
+            @unlink($tmpPath);
+            continue;
+        }
+        if (cb_album_media_exists($albumId, $sha256)) {
+            $errors[] = "$label ya estaba en el álbum.";
+            @unlink($tmpPath);
+            continue;
+        }
+
+        try {
+            $storageKey = cb_album_storage_key($partySlug, $media['ext']);
+        } catch (Throwable $e) {
+            $errors[] = "$label no se pudo guardar.";
+            @unlink($tmpPath);
+            continue;
+        }
+        $storedPath = cb_album_store_file($tmpPath, $storageKey, true);
+        if ($storedPath === null) {
+            $errors[] = "$label no se pudo guardar.";
+            @unlink($tmpPath);
+            continue;
+        }
+
+        $thumbKey = $media['kind'] === 'image'
+            ? cb_album_make_thumbnail($storedPath, $partySlug, $media['ext'])
+            : null;
+
+        $result = cb_album_record_media($albumId, $partyId, [
+            'source' => 'organizer',
+            'media_kind' => $media['kind'],
+            'access_token' => cb_opaque_token(16),
+            'storage_key' => $storageKey,
+            'thumb_storage_key' => $thumbKey,
+            'original_name' => mb_substr(basename($original), 0, 200),
+            'mime' => $media['mime'],
+            'byte_size' => $byteSize,
+            'width' => (int) $media['width'],
+            'height' => (int) $media['height'],
+            'duration_seconds' => $media['kind'] === 'video' ? round((float) ($media['duration'] ?? 0), 2) : null,
+            'sha256' => $sha256,
+            'moderation_status' => 'approved',
+        ]);
+
+        if ($result !== 'ok') {
+            @unlink($storedPath);
+            if ($thumbKey !== null) { @unlink((string) cb_album_media_path($thumbKey)); }
+            $errors[] = $result === 'quota'
+                ? "$label no entra: el álbum llegó a su límite."
+                : "$label no se pudo registrar.";
+            continue;
+        }
+        $saved++;
+    }
+
+    return ['saved' => $saved, 'errors' => $errors];
+}
+
 /** Resuelve material del álbum por su token opaco. Null ante cualquier duda. */
 function cb_album_find_media_by_token(string $token): ?array
 {

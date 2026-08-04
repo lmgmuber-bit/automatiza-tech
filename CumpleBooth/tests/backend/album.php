@@ -418,6 +418,86 @@ album_check(cb_album_clean_contributor_text("linea1\nlinea2", 80) === 'linea1 li
 album_check(mb_strlen((string) cb_album_clean_contributor_text(str_repeat('a', 500), 80)) === 80, 'el texto se recorta al máximo');
 album_check(cb_album_clean_contributor_text('¡Qué linda fiesta! 🎉', 280) === '¡Qué linda fiesta! 🎉', 'los emojis sobreviven');
 
+// ── Fase C: subida del organizador ──────────────────────────────────────────
+// Se simula la forma de $_FILES con varios archivos. is_uploaded_file() solo
+// acepta archivos de una petición real, así que se prueba lo que sí se puede
+// verificar fuera de HTTP: el filtrado previo y los mensajes.
+$orgA = $mkImage('jpg', 800, 600);
+$orgErrores = cb_album_store_admin_uploads($albumId, $partyId, 'demo', [
+    'name' => ['roto.jpg'],
+    'error' => [UPLOAD_ERR_INI_SIZE],
+    'tmp_name' => [''],
+    'size' => [0],
+]);
+album_check($orgErrores['saved'] === 0, 'un archivo que superó el límite del servidor no se guarda');
+album_check(
+    count($orgErrores['errors']) === 1 && strpos($orgErrores['errors'][0], 'roto.jpg') !== false,
+    'el error nombra el archivo para que el organizador sepa cuál falló'
+);
+$orgVacio = cb_album_store_admin_uploads($albumId, $partyId, 'demo', [
+    'name' => [''], 'error' => [UPLOAD_ERR_NO_FILE], 'tmp_name' => [''], 'size' => [0],
+]);
+album_check($orgVacio['saved'] === 0 && $orgVacio['errors'] === [], 'un campo de archivo vacío se ignora en silencio');
+album_check(cb_album_store_admin_uploads($albumId, $partyId, 'demo', null)['saved'] === 0, 'sin $_FILES no revienta');
+
+// ── Fase C: portada ─────────────────────────────────────────────────────────
+cb_album_update($albumId, ['cover_media_id' => $boothId]);
+album_check((int) cb_album_find_by_id($albumId)['cover_media_id'] === $boothId, 'la portada se guarda');
+// Al ocultar la portada, el admin la suelta; se replica esa regla acá para que
+// quede cubierta aunque el controlador cambie de forma.
+cb_album_set_moderation($albumId, $boothId, 'hidden', 'test');
+cb_album_update($albumId, ['cover_media_id' => null]);
+album_check(cb_album_find_by_id($albumId)['cover_media_id'] === null, 'la portada se puede soltar');
+cb_album_set_moderation($albumId, $boothId, 'approved', 'test');
+
+// ── Fase C: orden completo ──────────────────────────────────────────────────
+$todos = array_map(static fn(array $r): int => (int) $r['id'], cb_album_list_media($albumId));
+album_check(count($todos) >= 3, 'hay material suficiente para probar el orden');
+$invertido = array_reverse($todos);
+cb_album_reorder($albumId, $invertido);
+$despues = array_map(static fn(array $r): int => (int) $r['id'], cb_album_list_media($albumId));
+album_check($despues === $invertido, 'reordenar aplica exactamente la lista recibida');
+
+// Intercambio de dos vecinos, que es lo que hacen las flechas del admin.
+$orden = $despues;
+[$orden[0], $orden[1]] = [$orden[1], $orden[0]];
+cb_album_reorder($albumId, $orden);
+album_check(
+    array_map(static fn(array $r): int => (int) $r['id'], cb_album_list_media($albumId)) === $orden,
+    'intercambiar dos vecinos deja el resto quieto'
+);
+
+// Un id de otro álbum dentro de la lista no debe arrastrar material ajeno.
+$otraFiesta = ['parties' => ['demo' => cb_load_parties()['parties']['demo'], 'otra' => [
+    'nombre' => 'Otra', 'tema' => 'carreras', 'fecha' => '2026-09-01', 'activa' => true,
+    'invitados' => [], 'creada' => gmdate('Y-m-d H:i:s'),
+]]];
+cb_save_parties($otraFiesta);
+$otroPartyId = cb_party_db_id('otra');
+$otroAlbum = cb_album_ensure($otroPartyId);
+$otroAlbumId = (int) $otroAlbum['id'];
+album_check($otroAlbumId !== $albumId, 'la otra fiesta tiene su propio álbum');
+cb_album_record_media($otroAlbumId, $otroPartyId, [
+    'source' => 'organizer', 'media_kind' => 'image',
+    'access_token' => cb_opaque_token(16),
+    'storage_key' => cb_album_storage_key('otra', 'jpg'),
+    'byte_size' => 1000, 'width' => 10, 'height' => 10,
+    'sha256' => hash('sha256', 'ajeno'), 'moderation_status' => 'approved',
+]);
+$ajeno = cb_album_list_media($otroAlbumId);
+album_check(count($ajeno) === 1, 'el otro álbum tiene su propio material');
+$ajenoId = (int) $ajeno[0]['id'];
+$ordenAntes = cb_album_list_media($otroAlbumId);
+cb_album_reorder($albumId, [$ajenoId]);
+album_check(cb_album_list_media($otroAlbumId) === $ordenAntes, 'reordenar un álbum no toca el material de otro');
+album_check(cb_album_find_media($albumId, $ajenoId) === null, 'no se puede alcanzar material de otro álbum por id');
+album_check(!cb_album_set_moderation($albumId, $ajenoId, 'removed'), 'no se puede moderar material de otro álbum');
+album_check(cb_album_find_media($otroAlbumId, $ajenoId)['moderation_status'] === 'approved', 'el material ajeno quedó intacto');
+
+// La cuota es por álbum, no global.
+album_check(cb_album_usage($otroAlbumId)['count'] === 1, 'la cuota del otro álbum cuenta solo lo suyo');
+album_check(cb_album_stats($albumId)['by_source']['organizer'] === 0, 'las estadísticas no mezclan álbumes');
+
 // ── URLs públicas ───────────────────────────────────────────────────────────
 $sample = str_repeat('a', 32);
 album_check(cb_album_intake_url($sample) === 'https://example.test/cumpleclick/subir.php?t=' . $sample, 'URL de carga bien formada');

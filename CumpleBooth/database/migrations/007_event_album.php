@@ -95,6 +95,10 @@ return static function (PDO $pdo): void {
     // Las fotos de cabina NO se copian: `photo_id` referencia cc_photos y el
     // álbum solo aporta orden, aprobación y portada. `storage_key` se usa
     // exclusivamente para lo que sube un invitado o el organizador.
+    //
+    // `access_token` es NULL en las filas de cabina a propósito: esas se sirven
+    // por ver.php con el token que ya tiene cc_photos, y emitir un segundo
+    // token para el mismo archivo solo agregaría otra puerta que vigilar.
     $pdo->exec("CREATE TABLE IF NOT EXISTS cc_event_media (
         id $id,
         album_id $fk NOT NULL,
@@ -102,6 +106,7 @@ return static function (PDO $pdo): void {
         source $mediaSource,
         media_kind $mediaKind,
         photo_id $fk NULL,
+        access_token VARCHAR(64) NULL UNIQUE,
         storage_key VARCHAR(255) NULL UNIQUE,
         thumb_storage_key VARCHAR(255) NULL,
         poster_storage_key VARCHAR(255) NULL,

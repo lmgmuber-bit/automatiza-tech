@@ -282,6 +282,142 @@ album_check(strpos(cb_theme_css_vars('carreras'), '--pink:#e8000d') !== false, '
 album_check(cb_theme_css_vars('tema-inexistente') === '', 'un tema desconocido no emite CSS');
 album_check(strpos(cb_theme_css_vars('hielo'), 'javascript') === false, 'solo se emiten valores hexadecimales');
 
+// ── Fase B: olfateo de archivos ─────────────────────────────────────────────
+// Nada se acepta por su extensión ni por el Content-Type que declaró el
+// navegador: solo por los bytes reales.
+$limits = cb_album_limits();
+$mkImage = static function (string $format, int $w = 40, int $h = 30) use ($tmp): string {
+    $path = $tmp . '/img-' . bin2hex(random_bytes(4)) . '.' . $format;
+    $im = imagecreatetruecolor($w, $h);
+    imagefilledrectangle($im, 0, 0, $w, $h, imagecolorallocate($im, 200, 30, 90));
+    if ($format === 'jpg') { imagejpeg($im, $path, 90); }
+    elseif ($format === 'png') { imagepng($im, $path); }
+    else { imagewebp($im, $path); }
+    imagedestroy($im);
+    return $path;
+};
+
+$jpg = $mkImage('jpg');
+$png = $mkImage('png');
+$webp = $mkImage('webp');
+album_check((cb_album_sniff_upload($jpg)['ext'] ?? '') === 'jpg', 'un JPEG se reconoce por sus bytes');
+album_check((cb_album_sniff_upload($png)['ext'] ?? '') === 'png', 'un PNG se reconoce por sus bytes');
+album_check((cb_album_sniff_upload($webp)['ext'] ?? '') === 'webp', 'un WEBP se reconoce por sus bytes');
+album_check((cb_album_sniff_upload($jpg)['kind'] ?? '') === 'image', 'una imagen se clasifica como image');
+
+// El vector clásico: PHP disfrazado de foto.
+$evil = $tmp . '/evil.jpg';
+file_put_contents($evil, "<?php echo 'pwned'; ?>\n" . str_repeat('A', 500));
+album_check(cb_album_sniff_upload($evil) === null, 'un PHP renombrado a .jpg se rechaza');
+$evilPrefixed = $tmp . '/evil2.jpg';
+// GIF real por delante y PHP detrás: getimagesize lo ve como GIF, que no está
+// en la lista blanca, así que igual cae.
+file_put_contents($evilPrefixed, "GIF89a" . str_repeat("\x00", 40) . "<?php echo 1; ?>");
+album_check(cb_album_sniff_upload($evilPrefixed) === null, 'un GIF con PHP pegado atrás se rechaza (GIF no está en la lista blanca)');
+album_check(cb_album_sniff_upload($tmp . '/no-existe.jpg') === null, 'un archivo inexistente se rechaza');
+file_put_contents($tmp . '/vacio.jpg', '');
+album_check(cb_album_sniff_upload($tmp . '/vacio.jpg') === null, 'un archivo vacío se rechaza');
+
+// El MP4 mínimo de más arriba sigue en $fake.
+$sniffVideo = cb_album_sniff_upload($fake);
+album_check(($sniffVideo['kind'] ?? '') === 'video' && ($sniffVideo['ext'] ?? '') === 'mp4', 'un MP4 se reconoce como video');
+album_check(abs(($sniffVideo['duration'] ?? 0) - 12.0) < 0.01, 'el olfateo trae la duración del video');
+
+// ── Fase B: validación contra los límites ───────────────────────────────────
+$imageBytes = filesize($jpg);
+$ok = cb_album_validate_upload($jpg, $imageBytes, false);
+album_check($ok['ok'] === true, 'una foto dentro de los límites pasa');
+album_check(cb_album_validate_upload($jpg, 0, false)['error'] === 'empty', 'un archivo de 0 bytes se rechaza');
+album_check(cb_album_validate_upload($evil, 500, false)['error'] === 'format', 'un formato desconocido se rechaza');
+album_check(
+    cb_album_validate_upload($jpg, $limits['image_max_bytes'] + 1, false)['error'] === 'image_too_big',
+    'una foto sobre el peso máximo se rechaza'
+);
+
+// Con videos deshabilitados, un MP4 válido igual se rechaza.
+album_check(
+    cb_album_validate_upload($fake, 1000, false)['error'] === 'videos_disabled',
+    'si el evento no acepta videos, un MP4 válido se rechaza'
+);
+album_check(cb_album_validate_upload($fake, 1000, true)['ok'] === true, 'con videos habilitados el MP4 pasa');
+album_check(
+    cb_album_validate_upload($fake, $limits['video_max_bytes'] + 1, true)['error'] === 'video_too_big',
+    'un video sobre el peso máximo se rechaza'
+);
+
+// Video más largo que el tope: se arma uno de 60 s con el mismo generador.
+$mvhdLargo = "\x00\x00\x00\x00" . str_repeat("\x00", 8) . pack('N', 1000) . pack('N', 60000) . str_repeat("\x00", 80);
+$mvhd2 = pack('N', 8 + strlen($mvhdLargo)) . 'mvhd' . $mvhdLargo;
+$moovPayload2 = $mvhd2 . $trak;
+$moov2 = pack('N', 8 + strlen($moovPayload2)) . 'moov' . $moovPayload2;
+$largo = $tmp . '/largo.mp4';
+file_put_contents($largo, $ftyp . $moov2);
+album_check(
+    cb_album_validate_upload($largo, 1000, true)['error'] === 'video_too_long',
+    'un video más largo que el tope se rechaza'
+);
+
+// Video con resolución sobre el límite: 3840 de ancho.
+$tkhd4kBody = "\x00\x00\x00\x00" . str_repeat("\x00", 72) . pack('N', 3840 << 16) . pack('N', 2160 << 16);
+$tkhd4k = pack('N', 8 + strlen($tkhd4kBody)) . 'tkhd' . $tkhd4kBody;
+$trak4k = pack('N', 8 + strlen($tkhd4k)) . 'trak' . $tkhd4k;
+$moovPayload4k = $mvhd . $trak4k;
+$moov4k = pack('N', 8 + strlen($moovPayload4k)) . 'moov' . $moovPayload4k;
+$cuatroK = $tmp . '/4k.mp4';
+file_put_contents($cuatroK, $ftyp . $moov4k);
+album_check(
+    cb_album_validate_upload($cuatroK, 1000, true)['error'] === 'video_dimensions',
+    'un video con resolución sobre el límite se rechaza'
+);
+
+// ── Fase B: miniaturas ──────────────────────────────────────────────────────
+$grande = $mkImage('jpg', 2000, 1200);
+$grandeKey = cb_album_storage_key('demo', 'jpg');
+album_check(cb_album_store_file($grande, $grandeKey, false) !== null, 'el archivo se mueve al storage privado');
+$grandePath = cb_album_media_path($grandeKey);
+album_check(is_file((string) $grandePath), 'el archivo quedó en su ruta definitiva');
+album_check(!is_file($grande), 'el temporal ya no existe tras moverlo');
+
+$thumbKey = cb_album_make_thumbnail((string) $grandePath, 'demo', 'jpg');
+album_check($thumbKey !== null, 'se genera la miniatura');
+$thumbPath = cb_album_media_path((string) $thumbKey);
+$thumbSize = getimagesize((string) $thumbPath);
+album_check($thumbSize[0] === 640, 'la miniatura se limita al lado mayor configurado');
+album_check($thumbSize[1] === 384, 'la miniatura conserva la proporción');
+album_check(filesize((string) $thumbPath) < filesize((string) $grandePath), 'la miniatura pesa menos que el original');
+album_check(cb_album_make_thumbnail($evil, 'demo', 'jpg') === null, 'un archivo ilegible no produce miniatura ni revienta');
+
+// ── Fase B: token de acceso al material ─────────────────────────────────────
+$guestToken = cb_opaque_token(16);
+$conToken = [
+    'source' => 'guest', 'media_kind' => 'image',
+    'access_token' => $guestToken,
+    'storage_key' => $grandeKey, 'thumb_storage_key' => $thumbKey,
+    'original_name' => 'grande.jpg', 'mime' => 'image/jpeg', 'byte_size' => 900000,
+    'width' => 2000, 'height' => 1200, 'sha256' => hash_file('sha256', (string) $grandePath),
+    'consent_version' => cb_album_consent_version(),
+];
+album_check(cb_album_record_media($albumId, $partyId, $conToken) === 'ok', 'se registra material con token de acceso');
+$found = cb_album_find_media_by_token($guestToken);
+album_check($found !== null && $found['storage_key'] === $grandeKey, 'el material se encuentra por su token');
+album_check($found['album_status'] === cb_album_find_by_id($albumId)['status'], 'la búsqueda trae el estado del álbum para poder cerrar el acceso');
+album_check($found['moderation_status'] === 'pending', 'el material nuevo sigue naciendo pendiente');
+album_check(cb_album_find_media_by_token(str_repeat('e', 32)) === null, 'un token de material inexistente no resuelve');
+album_check(cb_album_find_media_by_token('corto') === null, 'un token mal formado no resuelve');
+
+// Las fotos de cabina no reciben token propio: se sirven por ver.php.
+$boothRow = cb_album_find_media($albumId, $boothId);
+album_check($boothRow['access_token'] === null, 'la foto de cabina no recibe un segundo token');
+
+// ── Fase B: texto del invitado ──────────────────────────────────────────────
+album_check(cb_album_clean_contributor_text(null, 80) === null, 'un nombre ausente queda nulo');
+album_check(cb_album_clean_contributor_text('   ', 80) === null, 'un nombre en blanco queda nulo');
+album_check(cb_album_clean_contributor_text('  Tía  Rosa  ', 80) === 'Tía Rosa', 'se normalizan los espacios sin tocar acentos');
+album_check(cb_album_clean_contributor_text("Ana\x00\x07Luz", 80) === 'Ana Luz', 'se quitan los caracteres de control');
+album_check(cb_album_clean_contributor_text("linea1\nlinea2", 80) === 'linea1 linea2', 'los saltos de línea se aplanan');
+album_check(mb_strlen((string) cb_album_clean_contributor_text(str_repeat('a', 500), 80)) === 80, 'el texto se recorta al máximo');
+album_check(cb_album_clean_contributor_text('¡Qué linda fiesta! 🎉', 280) === '¡Qué linda fiesta! 🎉', 'los emojis sobreviven');
+
 // ── URLs públicas ───────────────────────────────────────────────────────────
 $sample = str_repeat('a', 32);
 album_check(cb_album_intake_url($sample) === 'https://example.test/cumpleclick/subir.php?t=' . $sample, 'URL de carga bien formada');

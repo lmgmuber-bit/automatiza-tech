@@ -34,7 +34,11 @@ function cb_album_limits(): array
         'album_max_files' => 400,
         'album_max_bytes' => 3 * 1024 * 1024 * 1024,
         'thumb_max_side' => 640,
-        'intake_rate_limit' => 20,      // envíos
+        // El límite cuenta ARCHIVOS, no envíos: la página sube uno por
+        // petición para poder mostrar progreso real y reintentar el que falle
+        // sin perder los ya subidos. 30/10 min es el mismo techo que usa
+        // upload.php para las fotos de cabina.
+        'intake_rate_limit' => 30,
         'intake_rate_window' => 600,    // en 10 minutos
         'intake_rate_block' => 900,     // bloqueo de 15 minutos
         'default_open_days' => 7,       // días de recepción tras la fiesta
@@ -248,6 +252,241 @@ function cb_album_inspect_video(string $path): ?array
         'height' => (int) $fallback['height'],
         'source' => 'mp4-atoms',
     ];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Validación y almacenamiento de aportes
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Identifica el tipo real de un archivo mirando sus bytes, no su extensión ni
+ * el Content-Type que mandó el navegador.
+ *
+ * Devuelve ['kind'=>'image'|'video', 'ext'=>..., 'mime'=>..., 'width', 'height']
+ * o null si no es un formato aceptado. Todo lo que no reconozca se rechaza:
+ * la lista es blanca, nunca negra.
+ */
+function cb_album_sniff_upload(string $path): ?array
+{
+    $info = @getimagesize($path);
+    if (is_array($info)) {
+        $type = $info[2] ?? null;
+        $byType = [
+            IMAGETYPE_JPEG => ['jpg', 'image/jpeg'],
+            IMAGETYPE_PNG => ['png', 'image/png'],
+            IMAGETYPE_WEBP => ['webp', 'image/webp'],
+        ];
+        if (!isset($byType[$type])) {
+            return null;
+        }
+        [$ext, $mime] = $byType[$type];
+        return [
+            'kind' => 'image',
+            'ext' => $ext,
+            'mime' => $mime,
+            'width' => (int) ($info[0] ?? 0),
+            'height' => (int) ($info[1] ?? 0),
+        ];
+    }
+
+    // No es imagen: única otra posibilidad aceptada es MP4.
+    if (!cb_sniff_mp4($path)) {
+        return null;
+    }
+    $probe = cb_album_inspect_video($path);
+    if ($probe === null) {
+        return null;
+    }
+    return [
+        'kind' => 'video',
+        'ext' => 'mp4',
+        'mime' => 'video/mp4',
+        'width' => (int) $probe['width'],
+        'height' => (int) $probe['height'],
+        'duration' => (float) $probe['duration'],
+    ];
+}
+
+/**
+ * Valida un archivo ya subido a disco temporal contra los límites del álbum.
+ * Devuelve ['ok'=>true, 'media'=>[...]] o ['ok'=>false, 'error'=>'clave'].
+ *
+ * Las claves de error son estables y se traducen a mensajes en la página; no
+ * se filtra al invitado ninguna ruta ni detalle interno.
+ */
+function cb_album_validate_upload(string $tmpPath, int $byteSize, bool $videosAllowed): array
+{
+    $limits = cb_album_limits();
+    if ($byteSize <= 0) {
+        return ['ok' => false, 'error' => 'empty'];
+    }
+
+    $sniff = cb_album_sniff_upload($tmpPath);
+    if ($sniff === null) {
+        return ['ok' => false, 'error' => 'format'];
+    }
+
+    if ($sniff['kind'] === 'image') {
+        if ($byteSize > $limits['image_max_bytes']) {
+            return ['ok' => false, 'error' => 'image_too_big'];
+        }
+        if ($sniff['width'] < 1 || $sniff['height'] < 1) {
+            return ['ok' => false, 'error' => 'format'];
+        }
+        if ($sniff['width'] > $limits['image_max_dimension'] || $sniff['height'] > $limits['image_max_dimension']) {
+            return ['ok' => false, 'error' => 'image_dimensions'];
+        }
+    } else {
+        if (!$videosAllowed) {
+            return ['ok' => false, 'error' => 'videos_disabled'];
+        }
+        if ($byteSize > $limits['video_max_bytes']) {
+            return ['ok' => false, 'error' => 'video_too_big'];
+        }
+        if (($sniff['duration'] ?? 0.0) > $limits['video_max_seconds']) {
+            return ['ok' => false, 'error' => 'video_too_long'];
+        }
+        $longest = max($sniff['width'], $sniff['height']);
+        // 0x0 significa que no se pudo leer tkhd; se acepta porque la duración
+        // sí se validó y el peso ya acota el daño, pero no se inventa un tamaño.
+        if ($longest > $limits['video_max_dimension']) {
+            return ['ok' => false, 'error' => 'video_dimensions'];
+        }
+    }
+
+    return ['ok' => true, 'media' => $sniff];
+}
+
+/**
+ * Genera una miniatura JPEG con GD. Devuelve la storage key de la miniatura o
+ * null si GD no puede con este archivo — la ausencia de miniatura degrada la
+ * revista, no la rompe, así que nunca aborta la subida.
+ */
+function cb_album_make_thumbnail(string $sourcePath, string $partySlug, string $ext): ?string
+{
+    if (!function_exists('imagecreatetruecolor')) {
+        return null;
+    }
+    $loaders = ['jpg' => 'imagecreatefromjpeg', 'png' => 'imagecreatefrompng', 'webp' => 'imagecreatefromwebp'];
+    $loader = $loaders[$ext] ?? null;
+    if ($loader === null || !function_exists($loader)) {
+        return null;
+    }
+    $src = @$loader($sourcePath);
+    if (!$src) {
+        return null;
+    }
+    $srcW = imagesx($src);
+    $srcH = imagesy($src);
+    if ($srcW < 1 || $srcH < 1) {
+        imagedestroy($src);
+        return null;
+    }
+    $max = (int) cb_album_limits()['thumb_max_side'];
+    $scale = min(1.0, $max / max($srcW, $srcH));
+    $dstW = max(1, (int) round($srcW * $scale));
+    $dstH = max(1, (int) round($srcH * $scale));
+
+    $dst = imagecreatetruecolor($dstW, $dstH);
+    // La miniatura se guarda en JPEG, que no tiene alfa: se rellena de blanco
+    // para que un PNG transparente no salga con el fondo en negro.
+    $white = imagecolorallocate($dst, 255, 255, 255);
+    imagefilledrectangle($dst, 0, 0, $dstW, $dstH, $white);
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, $dstW, $dstH, $srcW, $srcH);
+    imagedestroy($src);
+
+    $key = cb_album_storage_key($partySlug, 'jpg');
+    $path = cb_album_media_path($key);
+    if ($path === null) {
+        imagedestroy($dst);
+        return null;
+    }
+    if (!cb_album_prepare_dir($path)) {
+        imagedestroy($dst);
+        return null;
+    }
+    $ok = @imagejpeg($dst, $path, 80);
+    imagedestroy($dst);
+    if (!$ok) {
+        @unlink($path);
+        return null;
+    }
+    @chmod($path, 0660);
+    return $key;
+}
+
+/** Crea el directorio de un archivo de álbum si falta. */
+function cb_album_prepare_dir(string $absolutePath): bool
+{
+    $dir = dirname($absolutePath);
+    if (is_dir($dir)) {
+        return true;
+    }
+    return mkdir($dir, 0770, true) || is_dir($dir);
+}
+
+/**
+ * Mueve un archivo subido al storage privado del álbum de forma atómica.
+ * Devuelve la ruta absoluta o null si algo falló (y en ese caso no deja
+ * archivos a medias).
+ */
+function cb_album_store_file(string $tmpPath, string $storageKey, bool $isUploadedFile): ?string
+{
+    $path = cb_album_media_path($storageKey);
+    if ($path === null || !cb_album_prepare_dir($path)) {
+        return null;
+    }
+    // Se escribe con nombre temporal y se renombra: si el proceso muere a mitad
+    // no queda un archivo incompleto ocupando la storage key definitiva.
+    $staging = $path . '.tmp.' . bin2hex(random_bytes(4));
+    $moved = $isUploadedFile ? @move_uploaded_file($tmpPath, $staging) : @rename($tmpPath, $staging);
+    if (!$moved || !@rename($staging, $path)) {
+        @unlink($staging);
+        return null;
+    }
+    @chmod($path, 0660);
+    return $path;
+}
+
+/** Resuelve material del álbum por su token opaco. Null ante cualquier duda. */
+function cb_album_find_media_by_token(string $token): ?array
+{
+    if (!preg_match('/^[a-f0-9]{32}$/', $token)) {
+        return null;
+    }
+    $stmt = cb_album_require_db()->prepare(
+        'SELECT m.*, a.status AS album_status, p.public_slug
+         FROM cc_event_media m
+         JOIN cc_event_albums a ON a.id = m.album_id
+         JOIN cc_parties p ON p.id = m.party_id
+         WHERE m.access_token=?'
+    );
+    $stmt->execute([$token]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+/**
+ * Normaliza el nombre y el mensaje que escribe el invitado. Ambos son
+ * opcionales; lo que llegue se recorta y se limpia de caracteres de control.
+ */
+function cb_album_clean_contributor_text(?string $raw, int $maxLength): ?string
+{
+    if ($raw === null) {
+        return null;
+    }
+    $value = trim($raw);
+    if ($value === '') {
+        return null;
+    }
+    // Quita controles (incluidos saltos de línea en el nombre) sin tocar
+    // acentos ni emojis, que sí son legítimos en un mensaje de cumpleaños.
+    $value = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $value);
+    $value = trim(preg_replace('/\s+/u', ' ', (string) $value));
+    if ($value === '') {
+        return null;
+    }
+    return mb_substr($value, 0, $maxLength);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -544,10 +783,10 @@ function cb_album_record_media(int $albumId, int $partyId, array $media): string
 
         $stmt = $pdo->prepare(
             'INSERT INTO cc_event_media
-             (album_id,party_id,source,media_kind,photo_id,storage_key,thumb_storage_key,poster_storage_key,
+             (album_id,party_id,source,media_kind,photo_id,access_token,storage_key,thumb_storage_key,poster_storage_key,
               original_name,mime,byte_size,width,height,duration_seconds,sha256,
               contributor_name,contributor_message,moderation_status,sort_order,consent_version,uploader_hmac,created_at)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
         );
         $stmt->execute([
             $albumId,
@@ -555,6 +794,7 @@ function cb_album_record_media(int $albumId, int $partyId, array $media): string
             $media['source'],
             $media['media_kind'],
             $media['photo_id'] ?? null,
+            $media['access_token'] ?? null,
             $media['storage_key'] ?? null,
             $media['thumb_storage_key'] ?? null,
             $media['poster_storage_key'] ?? null,

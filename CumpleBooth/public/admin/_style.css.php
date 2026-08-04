@@ -552,3 +552,51 @@ main { display: flex; flex-direction: column; gap: 20px; }
   .modal-prev { left: 4px; }
   .modal-next { right: 4px; }
 }
+
+/* ==========================================================================
+   Álbum Recuerdo (admin/album.php)
+   Solo clases nuevas: la vista reutiliza .wrap, .topbar, .card, .kpis,
+   .party-url, .party-actions y los botones ya definidos arriba.
+   ========================================================================== */
+
+.album-context {
+  margin: 0; margin-left: auto;
+  font-family: var(--font-display); font-size: 1.02rem; color: var(--text);
+}
+.album-back { margin-left: 12px; }
+
+.album-token-card { border-color: var(--success); background: var(--success-soft); }
+.album-token-card h2 { display: flex; align-items: center; gap: 8px; }
+
+/* Formulario en columna: etiqueta arriba, control abajo, sin rejilla. */
+.stack-form { display: flex; flex-direction: column; gap: 8px; }
+.stack-form > label:not(.check-row) {
+  font-size: .82rem; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .04em; margin-top: 8px;
+}
+.stack-form input[type="text"],
+.stack-form input[type="date"],
+.stack-form textarea {
+  width: 100%; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--card-bg);
+  font-family: var(--font-body); font-size: .95rem; color: var(--text);
+}
+.stack-form textarea { resize: vertical; }
+.stack-form .party-actions { margin-top: 14px; }
+
+/* Casilla + texto que puede ocupar varias líneas sin desalinear el cuadrito. */
+.check-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: .95rem; line-height: 1.45; cursor: pointer;
+}
+.check-row input[type="checkbox"] { margin-top: 3px; flex: 0 0 auto; width: 18px; height: 18px; }
+.check-row .warn-inline { color: #c2410c; font-style: normal; font-weight: 600; }
+
+.plain-list { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.plain-list li { font-size: .92rem; color: var(--text-muted); }
+.plain-list strong { color: var(--text); }
+
+@media (max-width: 640px) {
+  .album-context { margin-left: 0; width: 100%; }
+  .album-back { margin-left: 0; }
+}

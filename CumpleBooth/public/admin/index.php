@@ -1149,6 +1149,7 @@ if ($formValues === null && $action === 'editar') {
                 <a class="btn btn-ghost" href="<?= h($galeriaUrl) ?>" target="_blank" rel="noopener"><?= admin_icon('gallery') ?> Galería</a>
               <?php endif; ?>
               <a class="btn btn-ghost" href="<?= h($invitationsUrl) ?>"><?= admin_icon('duplicate') ?> Invitaciones</a>
+              <a class="btn btn-ghost" href="album.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('gallery') ?> Álbum Recuerdo</a>
               <form method="post" action="index.php" class="inline-form">
                 <?= admin_csrf_field() ?>
                 <input type="hidden" name="action" value="duplicar">

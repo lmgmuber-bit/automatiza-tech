@@ -2191,8 +2191,50 @@ function cb_process_theme_uploads(
     return ['saved' => $saved, 'rejected' => $rejected];
 }
 
+/**
+ * Emite los tokens visuales de una temática como variables CSS, para que las
+ * páginas PHP (carga de invitado, cartel QR) usen exactamente la misma paleta
+ * que el kiosco en vez de una copia a mano.
+ *
+ * La fuente es siempre themes.json: si un tema no define un token, se cae al
+ * default de :root en styles.css, nunca a un color inventado aquí.
+ */
+function cb_theme_css_vars(string $themeSlug): string
+{
+    static $map = [
+        'accent' => '--pink',
+        'accentSoft' => '--pink-soft',
+        'yellow' => '--yellow',
+        'ink' => '--ink',
+        'bgLight1' => '--bg-light1',
+        'bgLight2' => '--bg-light2',
+        'dark1' => '--dark1',
+        'dark2' => '--dark2',
+        'dark3' => '--dark3',
+    ];
+
+    $themes = cb_load_themes();
+    $colors = $themes['themes'][$themeSlug]['colors'] ?? null;
+    if (!is_array($colors)) {
+        return '';
+    }
+    $out = [];
+    foreach ($map as $key => $cssVar) {
+        $value = (string) ($colors[$key] ?? '');
+        // Solo hexadecimal: estos valores terminan dentro de un bloque <style>,
+        // así que cualquier otra cosa se descarta en vez de escaparse.
+        if (preg_match('/^#[0-9a-fA-F]{3,8}$/', $value)) {
+            $out[] = $cssVar . ':' . $value;
+        }
+    }
+    return $out ? implode(';', $out) . ';' : '';
+}
+
 // Módulo de invitaciones (depende de cb_config, cb_pdo, etc.).
 require __DIR__ . '/lib.invitations.php';
 
 // Solicitudes comerciales de la landing pública.
 require __DIR__ . '/lib.leads.php';
+
+// Álbum Recuerdo: álbum por evento, aportes de invitados y curaduría.
+require __DIR__ . '/lib.album.php';

@@ -21,25 +21,53 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
-## Delta local AUD-2026-08-03 - MP4 optimizados (no desplegado)
+## Delta local — sesión 2026-08-04 (Rayo/Carreras/Hielo, no desplegado)
 
-Los nueve archivos se validaron localmente: H.264, AAC, yuv420p, 720x1280,
-~5 s y `+faststart`. Subir solo con autorizacion FTP de Luis. No cambiar
-`index.html` ni assets para este delta de multimedia.
+Reemplaza y completa el delta parcial "AUD-2026-08-03" de abajo (ese lo dejó
+Codex a mitad de auditoría; esta tabla es el cierre real, con el hash de
+`assets/` de este build y el pase de artista nuevo de Hielo que faltaba ahí).
+Verificado local: `npm test` 83/83, `npm run build` limpio,
+`check-dist-parity.php` exit 0 (282 archivos). No probado en PROD.
+
+**⚠️ Antes de subir, corre `ls dist/assets/` — el hash de abajo es el de ESTE
+build y cambia en el próximo.**
 
 | Ruta local exacta | Destino PROD relativo | Clase |
 |---|---|---|
-| `CumpleBooth/dist/themes/carreras/revelacion-carreras.mp4` | `/public_html/cumpleclick/themes/carreras/revelacion-carreras.mp4` | OBLIGATORIO - optimizado + voz Alice |
-| `CumpleBooth/dist/themes/carreras/despedida-carreras.mp4` | `/public_html/cumpleclick/themes/carreras/despedida-carreras.mp4` | OBLIGATORIO |
-| `CumpleBooth/dist/themes/familia-canina/revelacion-familia-canina.mp4` | `/public_html/cumpleclick/themes/familia-canina/revelacion-familia-canina.mp4` | OBLIGATORIO - optimizado + voz Alice |
-| `CumpleBooth/dist/themes/familia-canina/despedida-familia-canina.mp4` | `/public_html/cumpleclick/themes/familia-canina/despedida-familia-canina.mp4` | OBLIGATORIO |
-| `CumpleBooth/dist/themes/tropical/revelacion-tropical.mp4` | `/public_html/cumpleclick/themes/tropical/revelacion-tropical.mp4` | OBLIGATORIO |
-| `CumpleBooth/dist/themes/hielo/despedida-hielo.mp4` | `/public_html/cumpleclick/themes/hielo/despedida-hielo.mp4` | OBLIGATORIO |
-| `CumpleBooth/dist/themes/kpop/revelacion-kpop.mp4` | `/public_html/cumpleclick/themes/kpop/revelacion-kpop.mp4` | OBLIGATORIO |
-| `CumpleBooth/dist/themes/kpop/despedida-kpop.mp4` | `/public_html/cumpleclick/themes/kpop/despedida-kpop.mp4` | OBLIGATORIO - optimizado + voz Alice |
-| `CumpleBooth/dist/themes/heroes/revelacion-heroes.mp4` | `/public_html/cumpleclick/themes/heroes/revelacion-heroes.mp4` | OPCIONAL - Heroes sigue bloqueado; no subir este archivo aislado. |
+| `CumpleBooth/dist/assets/index-CsML1zLD.js` | `/public_html/cumpleclick/assets/index-CsML1zLD.js` | OBLIGATORIO — subir antes que `index.html` |
+| `CumpleBooth/dist/assets/index-Bj9ob-eC.css` | `/public_html/cumpleclick/assets/index-Bj9ob-eC.css` | OBLIGATORIO |
+| `CumpleBooth/dist/data/themes.json` | `/public_html/cumpleclick/data/themes.json` | OBLIGATORIO — fondos propios de ritmo/copos/pantalla LED en Carreras, `photoSession` nuevo de Hielo |
+| `CumpleBooth/dist/themes/carreras/fondo-pantalla-circuito.jpg` | `/public_html/cumpleclick/themes/carreras/fondo-pantalla-circuito.jpg` | OBLIGATORIO — pantalla LED del Show 3D, las 6 personajes |
+| `CumpleBooth/dist/themes/carreras/fondo-juego-ritmo.jpg` | `/public_html/cumpleclick/themes/carreras/fondo-juego-ritmo.jpg` | OBLIGATORIO |
+| `CumpleBooth/dist/themes/carreras/fondo-juego-boxes.jpg` | `/public_html/cumpleclick/themes/carreras/fondo-juego-boxes.jpg` | OBLIGATORIO |
+| `CumpleBooth/dist/themes/carreras/revelacion-carreras.mp4` | `/public_html/cumpleclick/themes/carreras/revelacion-carreras.mp4` | OBLIGATORIO — "Cargando tu foto", ambiente (sin voz Alice todavía) |
+| `CumpleBooth/dist/themes/carreras/despedida-carreras.mp4` | `/public_html/cumpleclick/themes/carreras/despedida-carreras.mp4` | OBLIGATORIO — optimizado + voz Alice (Codex) |
+| `CumpleBooth/dist/themes/familia-canina/revelacion-familia-canina.mp4` | `/public_html/cumpleclick/themes/familia-canina/revelacion-familia-canina.mp4` | OBLIGATORIO — "Cargando tu foto", ambiente (sin voz Alice todavía) |
+| `CumpleBooth/dist/themes/familia-canina/despedida-familia-canina.mp4` | `/public_html/cumpleclick/themes/familia-canina/despedida-familia-canina.mp4` | OBLIGATORIO — optimizado + voz Alice (Codex) |
+| `CumpleBooth/dist/themes/tropical/revelacion-tropical.mp4` | `/public_html/cumpleclick/themes/tropical/revelacion-tropical.mp4` | OBLIGATORIO — optimizado (Codex) |
+| `CumpleBooth/dist/themes/tropical/despedida-tropical.mp4` | `/public_html/cumpleclick/themes/tropical/despedida-tropical.mp4` | OBLIGATORIO — optimizado (Codex) |
+| `CumpleBooth/dist/themes/hielo/revelacion.mp4` | `/public_html/cumpleclick/themes/hielo/revelacion.mp4` | OBLIGATORIO — optimizado (Codex) |
+| `CumpleBooth/dist/themes/hielo/despedida-hielo.mp4` | `/public_html/cumpleclick/themes/hielo/despedida-hielo.mp4` | OBLIGATORIO — optimizado + voz Alice (Codex) |
+| `CumpleBooth/dist/themes/hielo/entrada-palacio-hielo.mp4` | `/public_html/cumpleclick/themes/hielo/entrada-palacio-hielo.mp4` | OBLIGATORIO — nuevo: pase de artista Elsa+Anna (video completo + teaser bajo la ruleta, mismo archivo para ambos) |
+| `CumpleBooth/dist/themes/hielo/entrada-palacio-hielo-poster.jpg` | `/public_html/cumpleclick/themes/hielo/entrada-palacio-hielo-poster.jpg` | OBLIGATORIO — poster/teaser del pase de artista |
+| `CumpleBooth/dist/themes/kpop/despedida-kpop.mp4` | `/public_html/cumpleclick/themes/kpop/despedida-kpop.mp4` | OBLIGATORIO — optimizado + voz Alice (Codex) |
+| `CumpleBooth/dist/themes/heroes/revelacion-heroes.mp4` | `/public_html/cumpleclick/themes/heroes/revelacion-heroes.mp4` | OPCIONAL — Héroes sigue bloqueado (sin `despedida-heroes.mp4`, sin `saludo-*.mp4`); no ofrecer el tema aunque subas este archivo suelto |
+| `CumpleBooth/dist/index.html` | `/public_html/cumpleclick/index.html` | OBLIGATORIO — subir último |
 
-No subir backups temporales, WAV de auditoria, scripts de prueba ni `despedida-heroes.mp4` inexistente.
+No subir: `CumpleBooth/_assets-produccion/` (material de producción, no es
+del kiosco), `CumpleBooth/NUL;` (artefacto de shell, basura), backups
+temporales, WAV de auditoría de Codex ni `despedida-heroes.mp4` (no existe).
+
+**Pendiente, no bloqueante:** `revelacion-carreras.mp4` y
+`revelacion-familia-canina.mp4` llevan ambiente generado, no la voz Alice
+diciendo "Cargando tu foto" — el texto en pantalla ya lo cubre, pero queda
+por debajo del estándar de Hielo/K-Pop/Tropical. Ver
+`docs/CODEX-HANDOFF-VOZ-Y-VIDEOS-TEMATICAS.md`.
+
+## Delta local AUD-2026-08-03 - MP4 optimizados (superado, ver arriba)
+
+Borrador parcial que dejó Codex a mitad de la auditoría de audio — la tabla
+de arriba ya lo incluye completo. Se conserva solo como rastro histórico.
 ## Delta AT-CUMPLECLICK-012 — misión WOW 3D Full (2026-07-29)
 
 Estado: **solo local, no desplegado**. Este delta no incorpora multimedia

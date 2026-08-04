@@ -21,6 +21,84 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## Delta local — Álbum Recuerdo (rama `feat/album-recuerdo`, no desplegado)
+
+Este delta **incluye y reemplaza** al de Rayo/Carreras/Hielo de abajo: se
+construyó encima de él, así que subiendo esta tabla va todo junto.
+
+Verificado local: `npm test` 96/96, `tests/backend/album.php` 157 checks en PHP
+8.0–8.4, `npm run build` limpio, `check-dist-parity.php` exit 0 (289 archivos).
+**No probado en PROD.**
+
+### ⚠️ Los bundles cambiaron de nombre
+
+El build ahora tiene tres entradas (kiosco, álbum, cartel), así que el bundle
+del kiosco pasó de `index-*.js` a **`main-*.js`**. Después de subir hay que
+**borrar los `assets/index-*.js` y `assets/index-*.css` viejos** del servidor:
+ya no los pide nadie y confunden en la próxima entrega.
+
+**Antes de subir corre `ls dist/assets/` — los hashes de abajo son los de ESTE
+build y cambian en el próximo.**
+
+### 1. Base de datos (primero, antes de los archivos)
+
+```bash
+php scripts/migrate.php
+```
+
+Aplica la migración `007_event_album` (tres tablas nuevas: `cc_event_albums`,
+`cc_event_album_tokens`, `cc_event_media`). Es aditiva: no altera ninguna tabla
+existente. Si algo sale mal, `007_event_album.down.php` las borra y deja el
+esquema exactamente como estaba.
+
+### 2. Archivos
+
+| Ruta local exacta | Destino PROD relativo | Clase |
+|---|---|---|
+| `CumpleBooth/dist/lib.php` | `/public_html/cumpleclick/lib.php` | OBLIGATORIO — **subir primero**: los demás PHP lo requieren |
+| `CumpleBooth/dist/lib.album.php` | `/public_html/cumpleclick/lib.album.php` | OBLIGATORIO — antes que el resto de PHP nuevos |
+| `CumpleBooth/dist/subir.php` | `/public_html/cumpleclick/subir.php` | OBLIGATORIO — página de carga del invitado |
+| `CumpleBooth/dist/_album-intake.css.php` | `/public_html/cumpleclick/_album-intake.css.php` | OBLIGATORIO — estilos de `subir.php` |
+| `CumpleBooth/dist/album-intake.php` | `/public_html/cumpleclick/album-intake.php` | OBLIGATORIO — endpoint de carga |
+| `CumpleBooth/dist/album-api.php` | `/public_html/cumpleclick/album-api.php` | OBLIGATORIO — datos de la revista y del cartel |
+| `CumpleBooth/dist/ver-media.php` | `/public_html/cumpleclick/ver-media.php` | OBLIGATORIO — sirve el material aportado |
+| `CumpleBooth/dist/admin/album.php` | `/public_html/cumpleclick/admin/album.php` | OBLIGATORIO — admin del álbum |
+| `CumpleBooth/dist/admin/_style.css.php` | `/public_html/cumpleclick/admin/_style.css.php` | OBLIGATORIO — estilos de curaduría |
+| `CumpleBooth/dist/admin/index.php` | `/public_html/cumpleclick/admin/index.php` | OBLIGATORIO — agrega el enlace "Álbum Recuerdo" por fiesta |
+| `CumpleBooth/dist/assets/main-C-n-yZAV.js` | `/public_html/cumpleclick/assets/main-C-n-yZAV.js` | OBLIGATORIO — kiosco, **antes** que `index.html` |
+| `CumpleBooth/dist/assets/main-Bj9ob-eC.css` | `/public_html/cumpleclick/assets/main-Bj9ob-eC.css` | OBLIGATORIO — kiosco |
+| `CumpleBooth/dist/assets/themeVars-BR9-zmCZ.js` | `/public_html/cumpleclick/assets/themeVars-BR9-zmCZ.js` | OBLIGATORIO — compartido por las tres entradas |
+| `CumpleBooth/dist/assets/three.module-Y-ql4QRg.js` | `/public_html/cumpleclick/assets/three.module-Y-ql4QRg.js` | OBLIGATORIO — kiosco (no cambió, pero verifica que esté) |
+| `CumpleBooth/dist/assets/album-DgeQpXAO.js` | `/public_html/cumpleclick/assets/album-DgeQpXAO.js` | OBLIGATORIO — revista |
+| `CumpleBooth/dist/assets/album-xlAm6Rb1.css` | `/public_html/cumpleclick/assets/album-xlAm6Rb1.css` | OBLIGATORIO — revista |
+| `CumpleBooth/dist/assets/cartel-D9nSGMpQ.js` | `/public_html/cumpleclick/assets/cartel-D9nSGMpQ.js` | OBLIGATORIO — cartel QR |
+| `CumpleBooth/dist/assets/cartel-V-FnTnZT.css` | `/public_html/cumpleclick/assets/cartel-V-FnTnZT.css` | OBLIGATORIO — cartel QR |
+| `CumpleBooth/dist/assets/browser-BeMEBtOm.js` | `/public_html/cumpleclick/assets/browser-BeMEBtOm.js` | OBLIGATORIO — librería de QR del cartel |
+| `CumpleBooth/dist/album.html` | `/public_html/cumpleclick/album.html` | OBLIGATORIO — **después** de sus assets |
+| `CumpleBooth/dist/cartel-qr.html` | `/public_html/cumpleclick/cartel-qr.html` | OBLIGATORIO — **después** de sus assets |
+| `CumpleBooth/dist/index.html` | `/public_html/cumpleclick/index.html` | OBLIGATORIO — **el último de todos** |
+
+Más los archivos del delta de Rayo/Carreras/Hielo de la sección siguiente
+(`data/themes.json`, los fondos de Carreras, los videos y el pase de artista de
+Hielo), que tampoco están en PROD.
+
+### 3. Después de subir
+
+- Borrar `assets/index-*.js` y `assets/index-*.css` del servidor (bundles viejos).
+- `admin/album.php?party=<slug>` debe abrir y pedir contraseña.
+- `subir.php` sin token debe dar **400** con la página de enlace inválido.
+- `album.html` sin token debe mostrar el mensaje de enlace no disponible.
+- `ver-media.php?t=<32 hex inventado>` debe dar **404**.
+- Verificar que la carpeta `photo_dir` tenga permiso de escritura: ahí se crea
+  `album/<slug>/AAAA/MM/`.
+
+### 4. Lo que NO se sube
+
+`src/`, `tests/`, `node_modules/`, `database/`, `scripts/`, `config/`, el
+archivo de configuración real, fotos, backups ni `_assets-produccion/`.
+
+---
+
 ## Delta local — sesión 2026-08-04 (Rayo/Carreras/Hielo, no desplegado)
 
 Reemplaza y completa el delta parcial "AUD-2026-08-03" de abajo (ese lo dejó

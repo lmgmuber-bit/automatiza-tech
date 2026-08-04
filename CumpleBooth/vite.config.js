@@ -15,6 +15,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         album: resolve(__dirname, 'album.html'),
+        cartel: resolve(__dirname, 'cartel-qr.html'),
       },
     },
   },

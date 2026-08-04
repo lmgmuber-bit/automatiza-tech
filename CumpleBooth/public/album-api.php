@@ -33,14 +33,43 @@ if (!preg_match('/^[a-f0-9]{32}$/', $token)) {
     cb_album_api_fail(400, 'bad_link');
 }
 
+// El cartel imprimible se pide con el token de APORTE, no con el de lectura:
+// es el mismo QR que van a escanear los invitados. Solo devuelve lo necesario
+// para imprimirlo (nombre, temática, mensaje); nunca material del álbum.
+$signMode = !empty($_GET['cartel']);
+
 try {
-    $resolved = cb_album_resolve_token($token, 'view');
+    $resolved = cb_album_resolve_token($token, $signMode ? 'intake' : 'view');
 } catch (Throwable $e) {
     error_log('CumpleClick album-api: ' . $e->getMessage());
     cb_album_api_fail(503, 'unavailable');
 }
 if ($resolved === null) {
     cb_album_api_fail(404, 'bad_link');
+}
+
+if ($signMode) {
+    $signAlbum = $resolved['album'];
+    $signParty = cb_load_party_raw($resolved['party_slug']);
+    if ($signParty === null) {
+        cb_album_api_fail(404, 'bad_link');
+    }
+    $signMessage = trim((string) ($signAlbum['intake_message'] ?? ''));
+    if ($signMessage === '') {
+        $signMessage = '¡Comparte tus mejores fotos'
+            . (!empty($signAlbum['intake_videos']) ? ' y videos' : '')
+            . ' de esta celebración!';
+    }
+    echo json_encode([
+        'ok' => true,
+        'eventName' => (string) ($signParty['nombre'] ?? ''),
+        'date' => (string) ($signParty['fecha'] ?? ''),
+        'message' => $signMessage,
+        'uploadUrl' => cb_album_intake_url($token),
+        'theme' => cb_album_api_theme((string) ($signParty['tema'] ?? '')),
+        'open' => cb_album_intake_open($signAlbum, $signParty),
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 $album = $resolved['album'];

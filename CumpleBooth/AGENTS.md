@@ -40,6 +40,12 @@ continue instead of starting blind.
 
 - Read `docs/CUMPLECLICK-HANDOFF-CODEX.md`, `docs/ARQUITECTURA.md` and
   `docs/FASE1.md` before changes.
+- Álbum Recuerdo (branch `feat/album-recuerdo`, 2026-08-04): design and
+  decisions in `docs/ALBUM-RECUERDO-PROPUESTA.md`, manual validation steps in
+  `docs/ALBUM-RECUERDO-PRUEBAS.md`. Vocabulary is deliberately generic
+  (`event_album`, `event_media`, `contributor_*`) so weddings/baby showers can
+  reuse it; do not tie it back to birthdays. Booth photos are referenced, never
+  copied.
 - Public identity/path: CumpleClick by AutomatizaTech, `/cumpleclick/`;
   technical project name remains CumpleBooth.
 - PHP 8.0+ (baseline 8.2), MySQL/InnoDB/utf8mb4 and an independent database.

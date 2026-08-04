@@ -34,6 +34,12 @@ vive en MySQL/InnoDB/utf8mb4:
 - `cc_leads`: solicitudes comerciales del sitio público con referencia opaca,
   consentimiento versionado y huellas HMAC de IP/user-agent; no comparte tablas
   ni credenciales con WordPress.
+- `cc_event_albums`, `cc_event_album_tokens`, `cc_event_media`: Álbum Recuerdo
+  por evento. Nomenclatura genérica a propósito, para servir después a bodas,
+  baby shower o corporativos sin renombrar. Los tokens se guardan solo como
+  SHA-256 y son revocables sin perder el histórico. Las fotos de cabina **no se
+  copian**: `cc_event_media.photo_id` referencia `cc_photos` y el álbum solo
+  aporta orden, aprobación y portada.
 - `cc_schema_migrations`: versiones aplicadas.
 
 `storage_mode=db|json` permite rollback temporal, sin doble escritura. La
@@ -55,8 +61,21 @@ backups privados fechados y aplica el reemplazo dentro de una transacción.
   consentimiento, valida tamaño/tipos/campos, aplica honeypot y rate limit
   persistente 5/10 min y devuelve una referencia pública `CC-...`; no envía ni
   expone IDs incrementales.
+- `GET subir.php?t=<token-128-bit>` es la página de carga del invitado y
+  `POST album-intake.php` recibe **un archivo por petición**. Valida por bytes
+  (lista blanca JPEG/PNG/WEBP/MP4), exige consentimiento versionado, aplica
+  30 archivos/10 min y deduplica por SHA-256. El nombre en disco lo genera el
+  servidor; el del invitado nunca construye rutas.
+- `GET ver-media.php?t=<token>&v=full|thumb|poster` sirve material aportado.
+  Cierra por defecto: sin sesión de admin solo entrega material `approved` de
+  un álbum `published`.
+- `GET/POST album-api.php` entrega el álbum publicado por token de lectura, y
+  con `?cartel=1` los datos del cartel por token de aporte. El PIN reutiliza el
+  de galería y la sesión `cc_gallery`.
 - `admin/` usa `password_verify`, CSRF, sesión regenerada, cookie HttpOnly +
   SameSite Strict, 2 h de inactividad/12 h absolutas y logout POST.
+  `admin/album.php` concentra recepción, QR, curaduría y publicación; cada
+  acción es un POST con CSRF, sin enlaces GET que muten estado.
 
 La vista de temáticas conserva sus cards y añade una ficha privada con inventario,
 miniaturas, peso/dimensiones y prompts asociados. Solo permite editar prompts de
@@ -65,6 +84,18 @@ nombres internos de franquicia/personaje. `scripts/import-theme-prompts.php` mig
 los 78 prompts asociados desde Markdown, con dry-run por defecto.
 
 ## Frontend
+
+El build tiene **tres entradas** (`vite.config.js`): `index.html` (kiosco),
+`album.html` (revista del Álbum Recuerdo) y `cartel-qr.html` (cartel QR
+imprimible). Están separadas a propósito: la tablet no descarga el código del
+álbum y quien abre el álbum desde su celular no descarga `three.js`. Los 9
+tokens de color de la temática los comparte `src/themeVars.js`, y
+`cb_theme_css_vars()` emite los mismos para las páginas PHP.
+
+**Al desplegar:** los bundles se llaman `main-*`, `album-*` y `cartel-*`. Los
+`index-*.js` de builds anteriores quedan huérfanos y hay que borrarlos del
+servidor.
+
 
 La geometría `x/y/w/h` es normalizada al canvas 1080×1920 y exige ancho/alto
 mínimos 0.05. El admin calibra visualmente y persiste en BD; el kiosco consume

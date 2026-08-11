@@ -24,6 +24,8 @@ function cb_config(?string $key = null)
             'photo_dir' => $root . '/storage/photos',
             'state_dir' => $root . '/storage/state',
             'invitation_dir' => $root . '/storage/invitations',
+            'event_profile_dir' => $root . '/storage/event-profiles',
+            'event_profile_enabled' => false,
             'parties_json_path' => __DIR__ . '/data/parties.json',
             'retention_days' => 30,
             'session_idle_seconds' => 7200,
@@ -57,6 +59,8 @@ function cb_config(?string $key = null)
             'CC_PUBLIC_BASE_URL' => 'public_base_url',
             'CC_PHOTO_DIR' => 'photo_dir', 'CC_STATE_DIR' => 'state_dir',
             'CC_INVITATION_DIR' => 'invitation_dir',
+            'CC_EVENT_PROFILE_DIR' => 'event_profile_dir',
+            'CC_EVENT_PROFILE_ENABLED' => 'event_profile_enabled',
             'CC_PARTIES_JSON_PATH' => 'parties_json_path',
             'CC_RETENTION_DAYS' => 'retention_days',
             'CC_FFPROBE_PATH' => 'ffprobe_path',
@@ -1877,10 +1881,13 @@ function cb_inspect_video(string $path): ?array
         return null;
     }
     $videoStream = null;
+    $hasAudio = false;
     foreach ((array) ($data['streams'] ?? []) as $stream) {
-        if (($stream['codec_type'] ?? '') === 'video') {
+        $codecType = (string) ($stream['codec_type'] ?? '');
+        if ($codecType === 'video' && $videoStream === null) {
             $videoStream = $stream;
-            break;
+        } elseif ($codecType === 'audio') {
+            $hasAudio = true;
         }
     }
     if ($videoStream === null) {
@@ -1891,6 +1898,7 @@ function cb_inspect_video(string $path): ?array
         'codec' => (string) ($videoStream['codec_name'] ?? ''),
         'width' => (int) ($videoStream['width'] ?? 0),
         'height' => (int) ($videoStream['height'] ?? 0),
+        'has_audio' => $hasAudio,
     ];
 }
 
@@ -2238,3 +2246,6 @@ require __DIR__ . '/lib.leads.php';
 
 // Álbum Recuerdo: álbum por evento, aportes de invitados y curaduría.
 require __DIR__ . '/lib.album.php';
+
+// Perfil del protagonista: datos y media opcionales por evento.
+require __DIR__ . '/lib.event-profiles.php';

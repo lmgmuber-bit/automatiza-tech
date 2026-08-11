@@ -19,3 +19,15 @@ rollback/retention.
 nothing from that closure may be described as live. The previous line here said
 "PROD has not been deployed", which was wrong and is kept noted so the error is
 not reintroduced. Never claim something is in PROD without evidence.
+
+**Invitación: portada/música/narración de Alice + multi-tema (2026-08-11,
+local, sin deploy).** Ver `docs/INVITACION-MUSICA-Y-NARRACION-ALICE.md`
+(canónico para esto). Portada "sobre que se abre" + música de fondo + pie con
+logo/link/favicon: hechos por Claude, genéricos por tema. Multi-tema
+(`$playlistOrdersByTheme`, hielo con 7 videos y nombre dinámico): hecho por
+Codex, ver `docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md`. Falta SOLO la
+narración de audio real (ElevenLabs, voice_id `Xb7hH8MSUJpSbSDYk0k2`) para
+ambos temas — código ya resiliente sin ella. Gotcha de entorno local:
+`event_profile_enabled` debe ir en `true` (default `false`) o la ficha del
+cumpleañero nunca aparece; usar `config/cumpleclick.local.php` (gitignored)
+en vez de env vars para no reiniciar el servidor de pruebas.

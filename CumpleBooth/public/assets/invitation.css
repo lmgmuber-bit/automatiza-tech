@@ -1,0 +1,1308 @@
+@font-face {
+  font-family: "Baloo 2";
+  src: url("../admin/fonts/baloo2-600.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Baloo 2";
+  src: url("../admin/fonts/baloo2-800.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+}
+
+/* ============================================================
+   Invitación inmersiva. La página completa se tematiza con las
+   variables que ya publica cb_theme_css_vars(): esta hoja no
+   conoce ninguna temática por nombre.
+   ============================================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+/* Botón de silenciar música — MISMO estilo que .mute-btn del kiosco
+   (src/styles.css) a propósito: un invitado que ya jugó en el kiosco
+   reconoce el mismo control acá. */
+.mute-btn {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 999;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, .75);
+  backdrop-filter: blur(8px);
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .15s;
+}
+
+.mute-btn:active {
+  transform: scale(.92);
+}
+
+.mute-btn[hidden] {
+  display: none;
+}
+
+/* Respaldo cuando el navegador bloquea una rueda/scroll sin activación.
+   Un toque aquí sí autoriza audio; al iniciar, invitation.js lo vuelve a ocultar. */
+.inv-audio-activate {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 1000;
+  max-width: calc(100vw - 36px);
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, .8);
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--inv-accent, #7c3aed), var(--inv-highlight, #fbbf24));
+  color: #fff;
+  font: 800 16px/1.1 "Baloo 2", system-ui, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .26);
+}
+
+.inv-audio-activate:active {
+  transform: scale(.97);
+}
+
+.inv-audio-activate[hidden] {
+  display: none;
+}
+
+/* La invitación parte detrás de esta portada para conseguir un gesto real de
+   audio. No aparece si JavaScript está desactivado. */
+.inv-entry-gate {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  place-items: center;
+  padding: 24px;
+  background: linear-gradient(160deg, rgba(9, 7, 20, .82), rgba(28, 13, 55, .72));
+  backdrop-filter: blur(8px);
+}
+
+html.inv-entry-gate-active,
+body.inv-entry-gate-active {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body.inv-entry-gate-active .inv-entry-gate {
+  display: grid;
+}
+
+.inv-entry-gate-card {
+  width: min(100%, 340px);
+  padding: 28px 22px;
+  border: 1px solid rgba(255, 255, 255, .6);
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--inv-deep, #180d30) 86%, #000);
+  color: #fff;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .4);
+}
+
+/* ---------- Sobre animado de la portada ----------
+   Toda la tarjeta es el botón: tocar en cualquier parte cuenta como el gesto
+   que desbloquea audio (mejor blanco táctil en mobile que un botón chico). El
+   sobre es CSS puro — sin imagen, sin librería — porque es una sola
+   micro-animación de apertura, no vale la pena una dependencia para esto. */
+.inv-envelope-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  padding: 6px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #fff;
+  font: 800 18px/1.1 "Baloo 2", system-ui, sans-serif;
+}
+
+.inv-envelope-btn:active .inv-envelope {
+  transform: scale(.97);
+}
+
+.inv-envelope {
+  position: relative;
+  width: min(72vw, 220px);
+  aspect-ratio: 3 / 2;
+  perspective: 700px;
+  transition: transform .15s;
+}
+
+.inv-envelope-letter,
+.inv-envelope-body,
+.inv-envelope-pocket,
+.inv-envelope-flap {
+  position: absolute;
+  inset: 0;
+}
+
+/* La carta: empieza casi escondida detrás del sobre y sube+asoma al abrir. */
+.inv-envelope-letter {
+  top: 6%;
+  bottom: 10%;
+  left: 8%;
+  right: 8%;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10%;
+  padding: 14% 12%;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--inv-highlight, #fbbf24) 18%, #fff);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .22);
+  transform: translateY(6%) scale(.92);
+  transition: transform .55s cubic-bezier(.2, .8, .2, 1);
+}
+
+.inv-envelope-letter-line {
+  height: 10%;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--inv-accent, #7c3aed) 55%, transparent);
+}
+
+.inv-envelope-letter-line--short {
+  width: 60%;
+}
+
+/* Cuerpo del sobre (rectángulo de fondo) y el bolsillo triangular de abajo,
+   que se queda quieto — solo la solapa de arriba se mueve. */
+.inv-envelope-body {
+  z-index: 2;
+  border-radius: 14px;
+  background: linear-gradient(160deg, var(--inv-accent, #7c3aed), color-mix(in srgb, var(--inv-accent, #7c3aed) 70%, #000));
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .3);
+}
+
+.inv-envelope-pocket {
+  z-index: 3;
+  clip-path: polygon(0 100%, 50% 42%, 100% 100%);
+  background: color-mix(in srgb, var(--inv-accent, #7c3aed) 82%, #000);
+}
+
+/* La solapa: un triángulo que gira hacia atrás sobre su borde superior, como
+   tapa de sobre real. Cerrada tapa la carta (z-index más alto que la carta);
+   al abrir gira y queda "detrás" visualmente por la perspectiva. */
+.inv-envelope-flap {
+  z-index: 4;
+  clip-path: polygon(0 0, 100% 0, 50% 62%);
+  background: color-mix(in srgb, var(--inv-highlight, #fbbf24) 65%, var(--inv-accent, #7c3aed));
+  transform-origin: top center;
+  transition: transform .5s cubic-bezier(.3, .7, .3, 1);
+  backface-visibility: hidden;
+}
+
+/* Abierto: la solapa gira hacia arriba/atrás y la carta sube y asoma por
+   encima del sobre. Se activa agregando .is-opening (invitation.js), con un
+   pequeño desfase para que se vea "la solapa abre y RECIÉN ahí sale la carta". */
+.inv-envelope.is-opening .inv-envelope-flap {
+  transform: rotateX(-150deg);
+  z-index: 1;
+}
+
+.inv-envelope.is-opening .inv-envelope-letter {
+  transition-delay: .12s;
+  transform: translateY(-62%) scale(1.04);
+  z-index: 5;
+}
+
+.inv-entry-gate-title {
+  font-size: 22px;
+}
+
+.inv-entry-gate-hint {
+  font-size: 15px;
+  font-weight: 600;
+  opacity: .82;
+}
+
+/* Toda la tarjeta se desvanece cuando ya se abrió, antes de ocultarse. */
+.inv-entry-gate-card.is-leaving {
+  transition: opacity .35s ease, transform .35s ease;
+  opacity: 0;
+  transform: scale(.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inv-envelope-letter,
+  .inv-envelope-flap,
+  .inv-entry-gate-card.is-leaving {
+    transition: none !important;
+  }
+}
+
+.inv-body {
+  --inv-accent: var(--pink, #7c3aed);
+  --inv-highlight: var(--yellow, #fbbf24);
+  --inv-dark-1: var(--dark1, #24103f);
+  --inv-dark-2: var(--dark2, #10081f);
+  --inv-light-1: var(--bg-light1, #fdf6ff);
+  --inv-light-2: var(--bg-light2, #eef6ff);
+  --inv-ink: var(--ink, #1f172a);
+  /* Igual que en la ficha del protagonista: base neutra teñida por el tema,
+     porque algunas paletas traen sus "dark" en color saturado. */
+  --inv-deep: color-mix(in srgb, var(--inv-dark-2) 58%, #0a0912);
+  --inv-deep-raise: color-mix(in srgb, var(--inv-dark-1) 42%, #0f0e1a);
+  margin: 0;
+  background: var(--inv-deep);
+  color: var(--inv-ink);
+  font-family: "Baloo 2", "Segoe UI Rounded", system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+.inv {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+}
+
+/* ---------- Hero ---------- */
+
+.inv-hero {
+  position: relative;
+}
+
+/* El hero de inmersión mide varias pantallas y su escenario queda pegado:
+   ese recorrido extra es el que consume el video cuadro a cuadro, así que
+   el invitado "avanza" dentro de la escena antes de llegar a la ficha.
+   La clase solo se aplica cuando existe el video de entrada. */
+.inv-hero--dive {
+  height: 320svh;
+}
+
+.inv-hero--dive .inv-hero-stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  min-height: 0;
+}
+
+/* Los textos se apartan a medida que se entra: el nombre sube y se disuelve,
+   dejando la escena limpia justo antes de la invitación. */
+.inv-hero--dive .inv-hero-copy,
+.inv-hero--dive .inv-scroll-hint {
+  transition: opacity 200ms linear;
+  will-change: opacity, transform;
+}
+
+/* `--dive-clear` va de 0 a 1 con el scroll (lo escribe invitation.js). El
+   desenfoque y el velo se abren con él: al entrar, la escena se revela
+   nítida en vez de quedar como un borrón oscuro. */
+.inv-hero--dive {
+  --dive-clear: 0;
+}
+
+.inv-hero--dive .inv-hero-media {
+  filter:
+    blur(calc(var(--inv-hero-blur, 1px) * (1 - var(--dive-clear))))
+    saturate(calc(1.02 + var(--dive-clear) * .18))
+    brightness(calc(var(--inv-hero-brightness, .94) + var(--dive-clear) * .3));
+  transform: scale(calc(1.08 + var(--dive-clear) * .1));
+}
+
+.inv-hero--dive .inv-hero-stage::after {
+  /* Antes iba de 1 a .22: al cargar, antes de que el invitado toque el
+     scroll, el velo tapaba casi toda la imagen del poster ("la imagen de la
+     invitación" que pidió Luis) y se veía como un borrón sin forma. Ahora
+     arranca en .5 —suficiente para que el nombre siga siendo legible sobre
+     un fondo claro— y se sigue abriendo igual con el scroll. */
+  opacity: calc(.5 - var(--dive-clear) * .3);
+}
+
+/* ---------------------------------------------------------------------
+   "Momento" de video en scroll — un segundo tramo con el mismo efecto de
+   inmersión del hero (desenfoque que se abre, velo que se despeja, zoom que
+   se asienta), pero más corto y sin nombre/fecha: solo una leyenda breve.
+   Se usa para revivir un instante puntual (p. ej. Rayo cruzando la meta) en
+   medio de los capítulos, con video real controlado por el dedo. --------- */
+
+.inv-moment {
+  position: relative;
+}
+
+.inv-moment--dive {
+  /* Más corto que el hero (320svh): acá es un instante, no la apertura de
+     toda la invitación. */
+  height: 220svh;
+  --dive-clear: 0;
+}
+
+.inv-moment-stage {
+  position: relative;
+  height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* El hero posiciona su video a través de `.inv-hero-bg`; acá no hay ese
+   contenedor de por medio, así que el video se posiciona directo. */
+.inv-moment-stage > .inv-hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+.inv-moment--dive .inv-moment-stage {
+  position: sticky;
+  top: 0;
+}
+
+.inv-moment--dive .inv-hero-media {
+  filter:
+    blur(calc(var(--inv-hero-blur, 2px) * (1 - var(--dive-clear))))
+    saturate(calc(1.02 + var(--dive-clear) * .18))
+    brightness(calc(var(--inv-hero-brightness, .78) + var(--dive-clear) * .3));
+  transform: scale(calc(1.08 + var(--dive-clear) * .1));
+}
+
+.inv-moment-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg,
+    rgba(0, 0, 0, .38) 0%,
+    rgba(0, 0, 0, 0) 32%,
+    rgba(0, 0, 0, 0) 60%,
+    rgba(0, 0, 0, .82) 100%);
+}
+
+.inv-moment--dive .inv-moment-stage::after {
+  opacity: calc(.5 - var(--dive-clear) * .3);
+}
+
+.inv-moment-caption {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: max(48px, calc(32px + env(safe-area-inset-bottom)));
+  z-index: 2;
+  margin: 0;
+  text-align: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: clamp(1.1rem, 5.5vw, 1.7rem);
+  text-shadow: 0 4px 20px rgba(0, 0, 0, .6), 0 1px 3px rgba(0, 0, 0, .8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inv-moment--dive {
+    height: 100svh;
+  }
+}
+
+.inv-hero-stage {
+  position: relative;
+  display: grid;
+  min-height: 100svh;
+  align-content: center;
+  justify-items: center;
+  padding:
+    max(56px, calc(32px + env(safe-area-inset-top))) 20px
+    max(96px, calc(72px + env(safe-area-inset-bottom)));
+  isolation: isolate;
+  overflow: hidden;
+  text-align: center;
+}
+
+.inv-hero-bg {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* El fondo temático es atmósfera, no ilustración: desenfocado y desaturado
+   deja de competir con el nombre. La pieza que sí se ve nítida es la
+   invitación misma, más abajo. */
+.inv-hero-media {
+  width: 100%;
+  height: 100%;
+  /* Suficiente desenfoque para que ningún personaje del fondo sea el foco,
+     pero no tanto como para perder la temática: el hero debe seguir
+     leyéndose como "esta es la fiesta de K-Pop", no como un degradado.
+     El brillo lo fija el preset, porque `hielo` y `carreras` son fondos
+     claros donde el texto blanco se perdía. */
+  filter: blur(var(--inv-hero-blur, 1px)) saturate(1.12) brightness(var(--inv-hero-brightness, .94));
+  object-fit: cover;
+  transform: scale(1.08);
+}
+
+/* El desenfoque escala con el viewport, pero se mantiene bajo: la escena debe
+   leerse nítida como una portada, no como un fondo desvanecido tipo marca de
+   agua. Solo lo justo para que el texto encima no compita con el detalle. */
+@media (min-width: 720px) {
+  .inv-hero-media {
+    --inv-hero-blur: 2px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .inv-hero-media {
+    --inv-hero-blur: 3px;
+  }
+}
+
+/* El video "auto" (Rayo cruzando la meta) es el contenido, no un fondo
+   decorativo: el blur/dim de arriba está pensado para fotos estáticas y
+   dejaba a Rayo casi invisible detrás del nombre. Aquí se ve nítido. */
+.inv-hero-media[data-inv-autoplay-once] {
+  filter: saturate(1.12) brightness(.96);
+  transform: scale(1.02);
+}
+
+.inv-hero-stage::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  /* El velo se concentra donde va el texto y se abre arriba, para que el
+     fondo temático respire; abajo cierra sólido para empalmar con la
+     siguiente sección sin costura. */
+  background:
+    radial-gradient(96% 52% at 50% 60%,
+      color-mix(in srgb, var(--inv-deep) calc(60% + var(--inv-hero-dim, .38) * 55%), transparent),
+      transparent 78%),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--inv-deep) calc(var(--inv-hero-dim, .38) * 62%), transparent),
+      color-mix(in srgb, var(--inv-deep) calc(var(--inv-hero-dim, .38) * 54%), transparent) 42%,
+      color-mix(in srgb, var(--inv-deep) 76%, transparent) 84%,
+      var(--inv-deep) 100%);
+  content: "";
+}
+
+.inv-hero-copy {
+  position: relative;
+  z-index: 1;
+  /* 22rem alcanzaba de sobra para el overline corto de antes; la frase
+     completa del kicker necesita más ancho para no quedar en 3 líneas
+     apretadas. */
+  max-width: 27rem;
+  color: #fff;
+}
+
+.inv-kicker {
+  /* Antes era un overline corto ("Estás invitado a celebrar") en mayúsculas
+     con tracking ancho. Ahora es una frase completa ("Tenemos el agrado de
+     invitarte a celebrar el cumpleaños de:") — en mayúsculas con ese tracking
+     se volvía un bloque de 3 líneas difícil de leer, así que baja a caja
+     normal y tracking casi nulo, como una oración de verdad. */
+  margin: 0 0 10px;
+  max-width: 26rem;
+  color: color-mix(in srgb, var(--inv-title, var(--inv-highlight)) 46%, white);
+  font-size: clamp(.82rem, 3.6vw, .98rem);
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: .01em;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .8), 0 1px 3px rgba(0, 0, 0, .9);
+  text-transform: none;
+}
+
+.inv-name {
+  margin: 0;
+  font-size: clamp(2.6rem, 15vw, 4.6rem);
+  font-weight: 800;
+  line-height: .95;
+  overflow-wrap: anywhere;
+  text-shadow: 0 8px 40px rgba(0, 0, 0, .75), 0 2px 8px rgba(0, 0, 0, .85);
+  text-wrap: balance;
+}
+
+.inv-hero-when {
+  margin: 16px auto 0;
+  padding: 9px 18px;
+  border: 1px solid color-mix(in srgb, var(--inv-highlight) 55%, transparent);
+  border-radius: 999px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--inv-accent) 88%, black) 0%,
+    color-mix(in srgb, var(--inv-accent) 62%, var(--inv-deep-raise)) 100%);
+  /* Texto amarillo sobre píldora roja: es el par de color de la marca (auto
+     rojo + rayo amarillo) y resalta mucho más que el blanco plano de antes. */
+  color: var(--inv-highlight);
+  font-size: .96rem;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .55);
+  backdrop-filter: blur(8px);
+}
+
+.inv-scroll-hint {
+  position: absolute;
+  bottom: max(24px, calc(14px + env(safe-area-inset-bottom)));
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 20px;
+  /* Vive fuera del velo radial, así que lleva su propia superficie: sobre
+     fondos claros se volvía ilegible. */
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--inv-deep) 72%, transparent);
+  color: #fff;
+  font-size: .8rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-decoration: none;
+  backdrop-filter: blur(8px);
+}
+
+.inv-scroll-arrow {
+  width: 12px;
+  height: 12px;
+  border-right: 2.5px solid currentColor;
+  border-bottom: 2.5px solid currentColor;
+  transform: rotate(45deg);
+  animation: inv-nudge 1.9s ease-in-out infinite;
+}
+
+@keyframes inv-nudge {
+  0%, 100% { transform: rotate(45deg) translate(0, 0); opacity: .65; }
+  50% { transform: rotate(45deg) translate(3px, 3px); opacity: 1; }
+}
+
+/* Solo la comparación "auto" la usa: marca el instante en que el video de
+   entrada terminó y ya se puede seguir bajando. Antes de eso la pista está
+   quieta a propósito, para no competir con el video mientras corre. */
+.inv-scroll-hint--ready {
+  animation: inv-hint-pop 480ms cubic-bezier(.34, 1.56, .64, 1);
+  box-shadow: 0 0 0 2px var(--inv-highlight, #fbbf24);
+}
+
+/* Video intro locks navigation until the clip has completed. */
+html.inv-scroll-locked,
+body.inv-scroll-locked {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body.inv-scroll-locked {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+}
+
+.inv-scroll-hint--waiting {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+@keyframes inv-hint-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inv-scroll-hint--ready {
+    animation: none;
+  }
+}
+
+/* ---------- Secciones sobre fondo profundo ---------- */
+
+.inv-art-section,
+.inv-facts,
+.inv-message,
+.inv-save,
+.inv-finale {
+  width: min(100%, 560px);
+  margin: 0 auto;
+  padding: 34px 20px;
+}
+
+.inv-art-frame {
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--inv-highlight) 26%, transparent);
+  border-radius: 26px;
+  background: var(--inv-deep-raise);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, .5);
+  overflow: hidden;
+}
+
+.inv-art,
+.inv-art-video {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ---------- Plantilla + datos ----------
+   La imagen base se genera una sola vez por temática, con un panel vacío. El
+   nombre y la fecha se componen aquí en HTML sobre ese panel, con coordenadas
+   normalizadas que vienen del preset. Cambiar de fiesta no exige regenerar
+   nada. Las unidades son porcentajes del propio marco, así que la
+   superposición se mantiene alineada en cualquier ancho. */
+.inv-art-frame--template {
+  position: relative;
+}
+
+.inv-plate {
+  position: absolute;
+  top: var(--plate-y);
+  left: var(--plate-x);
+  display: flex;
+  width: var(--plate-w);
+  height: var(--plate-h);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2% 4%;
+  color: var(--plate-tone);
+  text-align: center;
+  /* cqw, no vw: el lienzo es el marco de la invitación, no la ventana. */
+  container-type: inline-size;
+}
+
+/* Placa sobre la foto grupal: antes usaba solo --plate-tone (un color oscuro
+   por tema, pensado para legibilidad, pero plano). Ahora el nombre y el kicker
+   usan el rojo vivo de la temática y fecha/lugar quedan en placas rojo+amarillo
+   —el mismo par que ya lleva la píldora del hero— así resalta de verdad sobre
+   la foto en vez de perderse. */
+.inv-plate-kicker {
+  /* Mismo motivo que .inv-kicker: frase completa, no un overline de 2-3
+     palabras. Mayúsculas + tracking ancho la volvían ilegible en la placa,
+     que ya es angosta de por sí. */
+  margin: 0;
+  font-size: clamp(.4rem, 3.4cqw, .82rem);
+  font-weight: 700;
+  letter-spacing: .01em;
+  line-height: 1.22;
+  color: var(--inv-accent, var(--plate-tone));
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+  text-transform: none;
+}
+
+.inv-plate-name {
+  margin: .18em 0 0;
+  font-size: clamp(1.1rem, 17cqw, 4rem);
+  font-weight: 800;
+  line-height: .96;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  color: var(--inv-accent, var(--plate-tone));
+  text-shadow: 0 2px 0 rgba(255, 255, 255, .3), 0 4px 16px color-mix(in srgb, var(--inv-highlight) 55%, transparent);
+}
+
+.inv-plate-when,
+.inv-plate-where {
+  display: inline-flex;
+  align-items: center;
+  gap: .3em;
+  margin: .32em .2em 0;
+  padding: .22em .7em;
+  border-radius: 999px;
+  background: var(--inv-accent, var(--plate-tone));
+  color: var(--inv-highlight, #fff);
+  font-size: clamp(.46rem, 4.4cqw, 1.1rem);
+  font-weight: 800;
+  line-height: 1.3;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .45);
+}
+
+.inv-art-caption {
+  padding: 12px 16px;
+  color: rgba(255, 255, 255, .6);
+  font-size: .78rem;
+  text-align: center;
+}
+
+.inv-art-video {
+  background: #000;
+}
+
+.inv-facts {
+  display: grid;
+  gap: 12px;
+}
+
+.inv-fact {
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-left: 4px solid var(--inv-accent);
+  border-radius: 8px 20px 20px 8px;
+  background: color-mix(in srgb, var(--inv-deep-raise) 92%, transparent);
+  color: #fff;
+}
+
+.inv-fact[data-fact="donde"] {
+  border-left-color: var(--inv-highlight);
+}
+
+.inv-fact-label {
+  margin: 0 0 4px;
+  color: rgba(255, 255, 255, .74);
+  font-size: .74rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.inv-fact-value {
+  margin: 0;
+  font-size: 1.22rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.inv-fact-extra {
+  margin: 4px 0 0;
+  color: color-mix(in srgb, var(--inv-highlight) 76%, white);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.inv-message blockquote {
+  position: relative;
+  margin: 0;
+  padding: 26px 22px 22px;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--inv-deep-raise) 84%, transparent);
+  color: #fff;
+  font-size: 1.1rem;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.inv-message blockquote::before {
+  display: block;
+  margin-bottom: 6px;
+  color: color-mix(in srgb, var(--inv-highlight) 80%, white);
+  content: "\201C";
+  font-size: 2.6rem;
+  line-height: .6;
+}
+
+.inv-save {
+  text-align: center;
+}
+
+.inv-save-label {
+  margin: 0 0 14px;
+  color: rgba(255, 255, 255, .78);
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.inv-save-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.inv-button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  /* Todos los botones llevan icono, así que la separación va acá y no solo
+     en el de WhatsApp. */
+  gap: 9px;
+  padding: 13px 24px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--inv-accent);
+  color: #fff;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.inv-button-ghost {
+  border-color: rgba(255, 255, 255, .32);
+  background: transparent;
+}
+
+/* Verde de WhatsApp: es el color por el que la gente reconoce la acción.
+   Contraste con blanco = 4,6:1, sobre el umbral AA. */
+.inv-button-wa {
+  background: #1fa855;
+}
+
+/* Los iconos son SVG inline y heredan el color del botón, así el mismo
+   glifo sirve en el botón verde de WhatsApp y en los fantasma. */
+.inv-wa-glyph,
+.inv-glyph {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+}
+
+.inv-button[disabled] {
+  cursor: progress;
+  opacity: .6;
+}
+
+.inv-share-status:empty {
+  display: none;
+}
+
+.inv-share-status {
+  margin: 14px auto 0;
+  max-width: 24rem;
+  color: rgba(255, 255, 255, .84);
+  font-size: .88rem;
+  line-height: 1.4;
+}
+
+.inv-button:focus-visible,
+.inv-scroll-hint:focus-visible {
+  outline: 3px solid var(--inv-highlight);
+  outline-offset: 4px;
+}
+
+/* ---------- Cierre: acceso al protagonista ---------- */
+
+.inv-finale {
+  display: grid;
+  justify-items: center;
+  padding-top: 44px;
+  padding-bottom: 52px;
+  text-align: center;
+}
+
+.inv-finale-title {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(1.7rem, 8vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+.inv-finale-lede {
+  margin: 12px auto 22px;
+  max-width: 26rem;
+  color: rgba(255, 255, 255, .84);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.inv-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 22px 20px max(24px, calc(14px + env(safe-area-inset-bottom)));
+  color: rgba(255, 255, 255, .55);
+  font-size: .82rem;
+  text-align: center;
+}
+
+.inv-footer-logo {
+  height: 26px;
+  width: auto;
+  opacity: .85;
+}
+
+.inv-footer-credit {
+  margin: 0;
+}
+
+.inv-footer-credit a {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ---------- Aparición al hacer scroll ---------- */
+
+/* Aditiva a propósito: el contenido es visible por defecto y el JS solo
+   añade la animación. Si el script no carga, la invitación se lee igual. */
+.inv-js .inv-reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 620ms ease, transform 620ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.inv-js .inv-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (min-width: 720px) {
+  .inv-art-section,
+  .inv-facts,
+  .inv-message,
+  .inv-save,
+  .inv-finale {
+    width: min(100%, 680px);
+    padding-right: 28px;
+    padding-left: 28px;
+  }
+
+  .inv-facts {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  }
+
+  .inv-hero-copy {
+    max-width: 34rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inv-scroll-arrow {
+    animation: none;
+  }
+
+  .inv-js .inv-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  /* El loop de fondo lo pausa invitation.js: `animation-play-state` no afecta
+     a la reproducción de un <video>. */
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@media (forced-colors: active) {
+  .inv-fact,
+  .inv-button,
+  .inv-art-frame {
+    border: 2px solid ButtonText;
+  }
+
+  .inv-hero-media {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Mapa y acciones dentro de las tarjetas de datos
+   --------------------------------------------------------------------- */
+
+.inv-map {
+  position: relative;
+  margin: 14px 0 12px;
+  border-radius: 14px;
+  /* El iframe trae su propio fondo blanco: sin recorte se ven las esquinas
+     cuadradas asomando por debajo del radio de la tarjeta. */
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  background: rgba(255, 255, 255, .08);
+}
+
+.inv-map iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.inv-fact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.inv-chip {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border: 1px solid rgba(255, 255, 255, .28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .07);
+  color: #fff;
+  font-size: .86rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.inv-chip .inv-glyph {
+  width: 16px;
+  height: 16px;
+}
+
+/* El atributo `hidden` solo vale `display: none` por la hoja del navegador,
+   que pierde contra cualquier selector de clase. Dar `display: inline-flex` a
+   un botón que a veces va oculto lo hacía aparecer siempre: pasó con
+   "Compartir imagen", que debe salir solo si el navegador puede compartir
+   archivos. Esta regla cierra la familia completa de ese bug. */
+[hidden] {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------------------
+   Capítulos ilustrados en scroll (versión 2, comparación con el hero de
+   video). Es la misma idea que Voyarelle (higgsfield.app): capas de imagen
+   fija que se funden entre sí a medida que se hace scroll, en vez de un
+   video continuo. Cada capa es una imagen real ya aprobada del kiosco —
+   nada se genera para esto — así que no hereda el riesgo de moderación de
+   un modelo de video.
+   --------------------------------------------------------------------- */
+
+.inv-chapters {
+  position: relative;
+  /* 90svh por unidad de recorrido (no por slot): una imagen vale 1 unidad,
+     un video puede valer más — necesita ese ancho extra de scroll para que
+     el dedo lo recorra cuadro a cuadro en vez de solo cruzarlo de golpe. */
+  height: calc(var(--inv-chapters-units, var(--inv-chapters-count, 3)) * 90svh);
+}
+
+.inv-chapters-stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.inv-chapters-media {
+  position: absolute;
+  inset: 0;
+}
+
+.inv-chapters-layer {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  /* La opacidad y el `transform` los fija JS en cada frame de scroll. La
+     transición corta solo amortigua el paso entre frames de rAF; NO se
+     transiciona `transform`, porque competiría con el control por scroll y
+     dejaría el zoom siempre un paso atrás del dedo. */
+  transition: opacity 80ms linear;
+  will-change: opacity, transform;
+  /* Punto de fuga bajo: el zoom se siente como avanzar por la pista, no
+     como acercarse al techo. */
+  transform-origin: 50% 62%;
+}
+
+.inv-chapters-layer:first-child {
+  opacity: 1;
+}
+
+.inv-chapters-layer img,
+.inv-chapters-layer video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(.8) saturate(1.05);
+}
+
+/* El slot de video no necesita el mismo apagado que las fotos: el momento
+   en que Rayo cruza la meta es el punto más alto del recorrido. */
+.inv-chapters-layer--video video {
+  /* Encima le pega el mismo velo oscuro que a las fotos (para que se lea el
+     texto): sin este empujón extra de brillo, Rayo se veía casi apagado. */
+  filter: brightness(1.18) saturate(1.12);
+}
+
+/* Los "conectores" son el paso intermedio, no el momento fuerte: un poco
+   más apagados para que las escenas principales se sientan como las
+   protagonistas del recorrido. */
+.inv-chapters-layer--connector img {
+  filter: brightness(.7) saturate(.92);
+}
+
+.inv-chapters-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg,
+    rgba(0, 0, 0, .35) 0%,
+    rgba(0, 0, 0, 0) 30%,
+    rgba(0, 0, 0, 0) 62%,
+    rgba(0, 0, 0, .78) 100%);
+}
+
+.inv-chapters-copy {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: max(76px, calc(52px + env(safe-area-inset-bottom)));
+  z-index: 2;
+  height: 2.6em;
+  text-align: center;
+}
+
+.inv-chapters-caption {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  transition: opacity 200ms linear;
+  color: #fff;
+  font-weight: 800;
+  font-size: clamp(1.05rem, 5vw, 1.5rem);
+  text-shadow: 0 4px 20px rgba(0, 0, 0, .6), 0 1px 3px rgba(0, 0, 0, .8);
+}
+
+.inv-chapters-caption.is-active {
+  opacity: 1;
+}
+
+.inv-chapters-progress {
+  position: absolute;
+  top: max(20px, env(safe-area-inset-top));
+  left: 24px;
+  right: 24px;
+  z-index: 2;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .25);
+  overflow: hidden;
+}
+
+.inv-chapters-progress span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  transform: scaleX(0);
+  background: #fff;
+  border-radius: inherit;
+}
+
+.inv-chapters-dots {
+  position: absolute;
+  top: max(34px, calc(env(safe-area-inset-top) + 14px));
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.inv-chapters-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .4);
+  transition: background 160ms linear, transform 160ms linear;
+}
+
+.inv-chapters-dot.is-active {
+  background: #fff;
+  transform: scale(1.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inv-chapters {
+    height: 100svh;
+  }
+
+  .inv-chapters-layer {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Lista de reproducción de videos reales (versión "todo video" sin scroll).
+   A diferencia de los capítulos, acá no hay fundido entre capas: es un
+   único <video> que va cambiando de fuente. --------------------------- */
+
+.inv-playlist {
+  position: relative;
+  height: 100svh;
+}
+
+.inv-playlist-stage {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+.inv-playlist-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.inv-playlist-progress {
+  position: absolute;
+  top: max(20px, env(safe-area-inset-top));
+  left: 24px;
+  right: 24px;
+  z-index: 2;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .25);
+  overflow: hidden;
+}
+
+.inv-playlist-progress span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  transform: scaleX(0);
+  background: #fff;
+  border-radius: inherit;
+  transition: transform 300ms ease;
+}
+
+.inv-playlist-caption {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: max(76px, calc(52px + env(safe-area-inset-bottom)));
+  z-index: 2;
+  margin: 0;
+  text-align: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: clamp(1.05rem, 5vw, 1.5rem);
+  text-shadow: 0 4px 20px rgba(0, 0, 0, .6), 0 1px 3px rgba(0, 0, 0, .8);
+}
+
+.inv-playlist-caption:empty {
+  display: none;
+}
+
+/* El hint reutiliza exactamente el mismo componente del hero (misma pastilla,
+   misma flecha que rebota), pero acá vive dentro de una pista de scroll o de
+   una lista de reproducción, no del grid centrado del hero: necesita su
+   propio centrado horizontal. Empieza invisible y solo se revela al llegar
+   al último capítulo o al último clip ("¡Te esperamos!"). */
+.inv-chapters-stage .inv-scroll-hint,
+.inv-playlist-stage .inv-scroll-hint {
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 260ms ease;
+}
+
+.inv-chapters-stage .inv-scroll-hint.is-visible,
+.inv-playlist-stage .inv-scroll-hint.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}

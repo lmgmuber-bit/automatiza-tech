@@ -382,7 +382,7 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             if (!isset($themes[$tslug]) || !is_array($themes[$tslug])) {
                 $_SESSION['upload_flash'] = ['tema' => $tslug, 'saved' => [], 'rejected' => [['name' => '(temática)', 'reason' => 'temática inválida']]];
             } else {
-                $rate = cb_rate_limit('admin-theme-upload:' . $tslug, cb_client_ip(), 30, 600, 600);
+                $rate = cb_rate_limit('admin-theme-upload:' . $tslug, cb_request_identity(), 30, 600, 600);
                 if (!$rate['allowed']) {
                     $res = ['saved' => [], 'rejected' => [['name' => '(subida)', 'reason' => 'demasiadas subidas; reintenta en ' . (int) $rate['retry_after'] . ' segundos']]];
                 } else {
@@ -1117,6 +1117,14 @@ if ($formValues === null && $action === 'editar') {
           $invitationsUrl = 'invitations.php?party=' . rawurlencode($publicSlug);
           $photoUsage = cb_photo_usage((string) $publicSlug);
           $quotaRatio = max($photoUsage['count'] / 200, $photoUsage['bytes'] / 1073741824);
+          $eventProfile = null;
+          $eventProfileAvailable = cb_storage_mode() === 'db' && function_exists('cb_event_profile_get');
+          if ($eventProfileAvailable) {
+              try {
+                  $profilePartyId = cb_party_db_id((string) $publicSlug);
+                  $eventProfile = $profilePartyId !== null ? cb_event_profile_get($profilePartyId, true) : null;
+              } catch (Throwable $e) { error_log('CumpleClick admin profile status: ' . $e->getMessage()); }
+          }
           ?>
           <article class="card party-card" style="--chip-accent: <?= h($temaColor) ?>">
             <div class="party-main">
@@ -1128,6 +1136,12 @@ if ($formValues === null && $action === 'editar') {
                 </span>
                 <span class="badge badge-off"><?= h($servicePlan) ?></span>
                 <?php if ($galleryEnabled): ?><span class="badge badge-ok">Galería</span><?php endif; ?>
+                <?php
+                $eventProfileEnabled = !empty($eventProfile['is_enabled']);
+                $eventProfilePeople = is_array($eventProfile['featured_people'] ?? null) ? count($eventProfile['featured_people']) : 0;
+                ?>
+                <?php if ($eventProfileEnabled && $eventProfilePeople > 0): ?><span class="badge badge-ok">Perfil: <?= (int) $eventProfilePeople ?> protagonista<?= $eventProfilePeople === 1 ? '' : 's' ?></span>
+                <?php elseif ($eventProfile !== null): ?><span class="badge badge-off">Perfil desactivado</span><?php endif; ?>
               </div>
               <div class="muted small"><?= h($p['birthday_person_name'] ?: '—') ?> · <?= h($p['fecha'] ?: '—') ?> · <?= count($p['invitados'] ?? []) ?> invitados · <?= (int) $photoUsage['count'] ?>/200 fotos · slug: <?= h($publicSlug) ?></div>
               <?php if ($quotaRatio >= 0.8): ?><div class="badge badge-off">Atención: galería al <?= (int) floor($quotaRatio * 100) ?>% de cuota</div><?php endif; ?>
@@ -1150,6 +1164,9 @@ if ($formValues === null && $action === 'editar') {
               <?php endif; ?>
               <a class="btn btn-ghost" href="<?= h($invitationsUrl) ?>"><?= admin_icon('duplicate') ?> Invitaciones</a>
               <a class="btn btn-ghost" href="album.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('gallery') ?> Álbum Recuerdo</a>
+              <?php if ($eventProfileAvailable): ?>
+                <a class="btn btn-ghost" href="event-profile.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('party') ?> Perfil del protagonista</a>
+              <?php endif; ?>
               <form method="post" action="index.php" class="inline-form">
                 <?= admin_csrf_field() ?>
                 <input type="hidden" name="action" value="duplicar">

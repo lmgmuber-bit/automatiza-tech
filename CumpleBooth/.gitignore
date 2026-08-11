@@ -3,6 +3,7 @@ dist
 .DS_Store
 *.local
 config/cumpleclick-config.php
+config/cumpleclick.local.php
 storage/
 backups/
 qa-output/

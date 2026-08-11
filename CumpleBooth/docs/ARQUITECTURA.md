@@ -40,6 +40,13 @@ vive en MySQL/InnoDB/utf8mb4:
   SHA-256 y son revocables sin perder el histórico. Las fotos de cabina **no se
   copian**: `cc_event_media.photo_id` referencia `cc_photos` y el álbum solo
   aporta orden, aprobación y portada.
+- `cc_event_profiles`, `cc_event_profile_sections`, `cc_featured_people`,
+  `cc_event_profile_fields`, `cc_event_profile_media` y
+  `cc_event_profile_generations`: Perfil del protagonista opcional por fiesta.
+  Admite varias personas, campos/secciones ordenables, consentimiento público e
+  IA por separado y cotizaciones aprobables sin invocar al proveedor. El
+  catálogo visual/textual vive en `event-profile-presets.json`, con cinco temas
+  infantiles activos y fallback para temas futuros.
 - `cc_schema_migrations`: versiones aplicadas.
 
 `storage_mode=db|json` permite rollback temporal, sin doble escritura. La
@@ -82,6 +89,15 @@ miniaturas, peso/dimensiones y prompts asociados. Solo permite editar prompts de
 slots JPG/PNG conocidos; rechaza path traversal, textos de más de 20.000 bytes y
 nombres internos de franquicia/personaje. `scripts/import-theme-prompts.php` migra
 los 78 prompts asociados desde Markdown, con dry-run por defecto.
+
+- `GET invitacion.php?i=<token>` incorpora el perfil solo cuando el feature flag,
+  el perfil y el contenido público están activos; sin ellos conserva exactamente
+  el contrato anterior. `GET event-profile-media.php?t=<token>&mt=<token>` exige
+  una invitación publicada, vigente y del mismo evento antes de servir foto,
+  poster o video desde storage privado.
+- `admin/event-profile.php?party=<slug>` administra textos, varias personas,
+  orden, visibilidad, consentimientos y el borrador/cotización del intro. Todas
+  las mutaciones usan sesión admin, CSRF, rate limit y ownership de la fiesta.
 
 ## Frontend
 
@@ -127,6 +143,9 @@ efectiva: `camera=(self), microphone=(), geolocation=()`.
 `scripts/retention.php` es dry-run por defecto. A los 30 días desde la fecha de
 fiesta —o creación si falta— desactiva y anonimiza la fiesta, borra invitados y
 PIN, marca metadata de fotos y elimina archivos, reintentando un unlink fallido.
+La misma retención elimina por cascada datos del perfil y después borra sus
+archivos privados; el script sigue siendo dry-run salvo `--apply` explícito.
+
 
 ## Estudio manual de producción de temáticas (2026-07-26)
 

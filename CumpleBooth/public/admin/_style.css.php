@@ -681,3 +681,76 @@ main { display: flex; flex-direction: column; gap: 20px; }
 .tile-order .btn[disabled] { opacity: .35; cursor: not-allowed; }
 
 .reorder-form { margin-top: 14px; }
+
+/* Perfil del protagonista */
+.event-profile-admin { max-width:1040px; }
+.profile-page-head,.profile-card-head,.profile-person-head,.profile-fields-head { display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap; }
+.profile-page-head h1 { margin:0;color:var(--text);font:700 clamp(1.7rem,4vw,2.5rem)/1.1 var(--font-display); }
+.profile-page-head p { margin:.35rem 0 0; }
+.profile-eyebrow { color:var(--cta);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:.78rem; }
+.profile-page-actions { display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap; }
+.profile-page-actions .btn { min-height:42px; }
+/* Estado de publicación: el admin debe saber de un vistazo qué ve el invitado. */
+.profile-status { display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:14px;background:#fff;font-weight:800;font-size:.9rem; }
+.profile-status-dot { flex:0 0 auto;width:11px;height:11px;border-radius:50%;background:var(--muted); }
+.profile-status[data-state=live] { border-color:var(--success);background:#f0fdf4;color:#166534; }
+.profile-status[data-state=live] .profile-status-dot { background:var(--success); }
+.profile-status[data-state=off] { border-color:var(--border);color:var(--muted); }
+.profile-status[data-state=incomplete] { border-color:#f59e0b;background:#fffbeb;color:#92400e; }
+.profile-status[data-state=incomplete] .profile-status-dot { background:#f59e0b; }
+.profile-stack,.profile-people,.profile-fields { display:flex;flex-direction:column;gap:18px; }
+.profile-grid { display:grid;gap:14px; }
+.profile-grid--2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.profile-grid--3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.profile-grid-span { grid-column:1/-1; }
+.profile-switch { display:flex;align-items:center;gap:10px;font-weight:800;cursor:pointer; }
+.profile-switch input { position:absolute;opacity:0; }
+.profile-switch span { width:50px;height:28px;padding:3px;border-radius:999px;background:#d1d5db;transition:.2s; }
+.profile-switch span::after { content:'';display:block;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 7px rgba(0,0,0,.2);transition:.2s; }
+.profile-switch input:focus-visible + span { outline:3px solid color-mix(in srgb,var(--cta) 45%,transparent);outline-offset:3px; }
+.profile-switch input:checked + span { background:var(--success); }
+.profile-switch input:checked + span::after { transform:translateX(22px); }
+.profile-sort-list { display:flex;flex-direction:column;gap:10px; }
+.profile-sort-row { display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px;border:1px solid var(--border);border-radius:14px;background:#faf7ff; }
+.profile-sort-row input[type=text],.profile-field-row input,.profile-field-row select,.profile-field-row textarea,.profile-video-card input[type=number] { width:100%;min-height:44px;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;font:inherit;color:var(--text);background:#fff; }
+.profile-person { padding:20px;border:2px solid var(--border);border-radius:18px;background:linear-gradient(145deg,#fff,#fcfaff); }
+.profile-person h3,.profile-person h4,.profile-quote h3 { margin:0;color:var(--text); }
+.profile-consents { display:grid;gap:8px;margin:16px 0;padding:14px;border-radius:14px;background:#f8f4ff; }
+.profile-ai-consent { color:#7c2d12; }
+.profile-fields-head { align-items:baseline;margin:18px 0 10px; }
+.profile-fields-head h4 { margin:0; }
+.profile-fields-head p { margin:0; }
+/* Los datos se agrupan por bloque publicable en vez de ser una lista plana. */
+.profile-field-group { padding:12px;border:1px solid var(--border);border-radius:16px;background:#fbf9ff; }
+.profile-field-group-head { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px; }
+.profile-field-group-head h5 { margin:0;color:var(--text);font:800 1rem/1.2 var(--font-display); }
+.profile-field-rows { display:flex;flex-direction:column;gap:10px; }
+.profile-group-empty { margin:0;padding:10px 12px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);font-size:.86rem; }
+.profile-field-row { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,.9fr) auto auto;gap:10px;align-items:end;padding:10px;border:1px solid var(--border);border-radius:14px;background:#fff; }
+.profile-field-cell { display:grid;gap:4px;min-width:0; }
+.profile-field-cell > span { color:var(--muted);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em; }
+.profile-field-visible { align-self:center;white-space:nowrap; }
+.profile-order-actions { display:flex;gap:6px;align-items:center; }
+.profile-order-actions .btn-icon { flex:0 0 44px; }
+.profile-person-index { color:var(--muted);font-size:.82rem;font-weight:700; }
+.privacy-card { display:grid;grid-template-columns:auto 1fr;gap:16px;border:2px solid #f59e0b;background:#fffbeb; }
+.privacy-card h2 { margin:0; }.privacy-card p { margin:.4rem 0 .8rem; }
+.privacy-icon { display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--warn-soft);color:var(--warn); }
+/* La barra flota sobre el formulario, así que el contenedor reserva su alto:
+   antes tapaba de forma permanente la primera fila de campos. `scroll-padding`
+   evita además que el campo enfocado con teclado quede debajo de la barra. */
+.profile-stack { padding-bottom:84px; }
+html:has(.profile-savebar) { scroll-padding-bottom:110px; }
+.profile-savebar { position:sticky;bottom:10px;z-index:4;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:-84px;padding:13px 16px;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.97);box-shadow:var(--shadow-hover);backdrop-filter:blur(6px); }
+.profile-upload-form,.profile-approval-form { display:grid;gap:12px; }
+.profile-photo-card h2,.profile-video-card h2 { display:flex;align-items:center;gap:8px; }
+.profile-quote { margin-top:20px;padding:18px;border:1px solid var(--border);border-radius:16px;background:#faf7ff; }
+.profile-quote-meta { display:flex;gap:16px;flex-wrap:wrap;margin:10px 0; }
+.profile-quote pre { max-height:320px;overflow:auto;white-space:pre-wrap;padding:14px;border-radius:12px;background:#211938;color:#fff;font-size:.78rem; }
+/* `1fr` respeta el min-content del hijo: el select de tipo de evento, con
+   opciones largas, inflaba la columna y hacía scrollear la página entera en
+   horizontal. `minmax(0,1fr)` deja que el contenido se encoja. */
+@media(max-width:760px){.profile-grid--2,.profile-grid--3{grid-template-columns:minmax(0,1fr)}.profile-field-row,.profile-sort-row{grid-template-columns:minmax(0,1fr)}.profile-field-row{align-items:stretch}.profile-order-actions{justify-content:flex-end}.privacy-card{grid-template-columns:1fr}.profile-savebar{bottom:4px}.event-profile-admin .btn{white-space:normal}.profile-page-actions{justify-content:flex-start;width:100%}.profile-status{width:100%}}
+.event-profile-admin .field,.event-profile-admin .field select,.event-profile-admin .field input,.event-profile-admin .field textarea { max-width:100%;min-width:0; }
+.event-profile-admin select { text-overflow:ellipsis; }
+@media(prefers-reduced-motion:reduce){.profile-switch span,.profile-switch span::after{transition:none}}

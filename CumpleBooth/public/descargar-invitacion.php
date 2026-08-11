@@ -15,7 +15,7 @@ function cb_invitation_deny(): void
     exit;
 }
 
-$requestedType = isset($_GET['type']) && in_array((string) $_GET['type'], ['image', 'video'], true) ? (string) $_GET['type'] : null;
+$requestedType = isset($_GET['type']) && in_array((string) $_GET['type'], ['image', 'video', 'narracion_inicio'], true) ? (string) $_GET['type'] : null;
 
 // Endpoint público sin auth: rate limit persistente por IP antes de cualquier
 // otra cosa, para frenar bursts de enumeración/abuso de descarga.
@@ -28,13 +28,12 @@ if (!$dlLimit['allowed']) {
     exit;
 }
 
-if (!preg_match('/^[a-f0-9]{32}$/', $token)) {
+if (!cb_invitation_public_token_is_valid($token)) {
     cb_invitation_deny();
 }
 
 try {
-    $hash = cb_hash_token($token);
-    $invitation = cb_load_invitation_by_token_hash($hash);
+    $invitation = cb_load_invitation_by_public_token($token);
     if (!$invitation) {
         cb_invitation_deny();
     }
@@ -48,7 +47,7 @@ try {
     // Buscar output aprobado según tipo solicitado o por defecto imagen > video
     $outputs = cb_load_invitation_outputs((int) $invitation['id']);
     $selected = null;
-    $priority = ['personalized_image' => 1, 'personalized_video' => 2];
+    $priority = ['personalized_image' => 1, 'personalized_video' => 2, 'personalized_narration_intro' => 3];
     foreach ($outputs as $output) {
         if ((string) $output['status'] !== 'approved') {
             continue;
@@ -58,6 +57,9 @@ try {
             continue;
         }
         if ($requestedType === 'video' && $outputType !== 'personalized_video') {
+            continue;
+        }
+        if ($requestedType === 'narracion_inicio' && $outputType !== 'personalized_narration_intro') {
             continue;
         }
         if ($selected === null || ($priority[$outputType] ?? 99) < ($priority[(string) $selected['output_type']] ?? 99)) {
@@ -86,8 +88,11 @@ try {
     // Incrementar contador de descargas de forma no bloqueante
     cb_increment_invitation_download((int) $invitation['id']);
 
+    // La narración va dentro de un <audio> de la propia página: si se fuerza
+    // "attachment" algunos navegadores intentan descargar en vez de reproducir.
+    $disposition = $selected['output_type'] === 'personalized_narration_intro' ? 'inline' : 'attachment';
     header('Content-Type: ' . $mime);
-    header('Content-Disposition: attachment; filename="' . $fileName . '"');
+    header('Content-Disposition: ' . $disposition . '; filename="' . $fileName . '"');
     header('Content-Length: ' . filesize($filePath));
     header('Cache-Control: private, no-store');
     header('X-Robots-Tag: noindex, nofollow');

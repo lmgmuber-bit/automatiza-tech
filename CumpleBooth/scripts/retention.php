@@ -16,20 +16,40 @@ if (cb_storage_mode() === 'db') {
     $partyRows = $parties->fetchAll();
     $partyIds = array_map('intval', array_column($partyRows, 'id'));
     $photoRows = [];
+    $profileMediaRows = [];
+    $profileSchemaReady = false;
     if ($partyIds) {
         $marks = implode(',', array_fill(0, count($partyIds), '?'));
         // Incluye filas ya marcadas para reintentar un unlink fallido anterior.
         $photos = $pdo->prepare("SELECT id,storage_key,deleted_at FROM cc_photos WHERE party_id IN ($marks)");
         $photos->execute($partyIds);
         $photoRows = $photos->fetchAll();
+        try {
+            $profileMedia = $pdo->prepare(
+                "SELECT m.id,m.storage_key,m.deleted_at FROM cc_event_profile_media m
+                 JOIN cc_event_profiles ep ON ep.id=m.profile_id WHERE ep.party_id IN ($marks)"
+            );
+            $profileMedia->execute($partyIds);
+            $profileMediaRows = $profileMedia->fetchAll();
+            $profileSchemaReady = true;
+        } catch (PDOException $e) {
+            if (!preg_match('/no such table|doesn.t exist|base table or view not found/i', $e->getMessage())) {
+                throw $e;
+            }
+        }
     }
-    fwrite(STDOUT, 'Fiestas vencidas: ' . count($partyRows) . '; fotos privadas: ' . count($photoRows) . "\n");
+    fwrite(STDOUT, 'Fiestas vencidas: ' . count($partyRows) . '; fotos privadas: ' . count($photoRows)
+        . '; archivos de perfil: ' . count($profileMediaRows) . "\n");
     if (!$apply) { exit(0); }
 
     $pdo->beginTransaction();
     try {
         $markPhoto = $pdo->prepare('UPDATE cc_photos SET deleted_at=COALESCE(deleted_at,?) WHERE id=?');
         foreach ($photoRows as $photo) { $markPhoto->execute([$now, (int) $photo['id']]); }
+        if ($profileSchemaReady && $partyIds) {
+            $dropProfiles = $pdo->prepare("DELETE FROM cc_event_profiles WHERE party_id IN ($marks)");
+            $dropProfiles->execute($partyIds);
+        }
         $dropGuests = $pdo->prepare('DELETE FROM cc_guests WHERE party_id=?');
         $anon = $pdo->prepare("UPDATE cc_parties SET name='Fiesta archivada',active=0,gallery_pin_hash=NULL,gallery_pin_hmac=NULL,anonymized_at=?,updated_at=? WHERE id=?");
         foreach ($partyRows as $party) {
@@ -44,6 +64,10 @@ if (cb_storage_mode() === 'db') {
     $unlinkFailures = 0;
     foreach ($photoRows as $photo) {
         $path = cb_photo_absolute_path((string) $photo['storage_key']);
+        if ($path && is_file($path) && !@unlink($path)) { $unlinkFailures++; }
+    }
+    foreach ($profileMediaRows as $media) {
+        $path = cb_event_profile_media_path((string) $media['storage_key']);
         if ($path && is_file($path) && !@unlink($path)) { $unlinkFailures++; }
     }
     if ($unlinkFailures > 0) {

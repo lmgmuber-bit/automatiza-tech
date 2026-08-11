@@ -56,7 +56,11 @@ function cb_invitation_can_publish(array $invitation, array $approvedOutputs): b
 
 function cb_invitation_approved_outputs(int $invitationId, ?string $type = null): array
 {
-    $allowed = ['personalized_image', 'personalized_video'];
+    // La narración de Alice del INICIO es dinámica (lleva el nombre/fecha del
+    // cumpleañero) y se aprueba invitación por invitación, igual que la
+    // imagen/video. El resto del audio (despedida, cápsulas del modo video)
+    // es texto fijo por tema y vive como archivo estático — no pasa por acá.
+    $allowed = ['personalized_image', 'personalized_video', 'personalized_narration_intro'];
     $outputs = cb_load_invitation_outputs($invitationId);
     return array_values(array_filter($outputs, static function (array $o) use ($type, $allowed): bool {
         if ((string) ($o['status'] ?? '') !== 'approved') {
@@ -259,7 +263,7 @@ function cb_save_invitation_output(int $invitationId, array $data): array
     }
     $pdo = cb_pdo();
     $assetKey = (string) ($data['asset_key'] ?? '');
-    $outputType = in_array((string) ($data['output_type'] ?? ''), ['personalized_image', 'personalized_video'], true) ? (string) $data['output_type'] : 'personalized_image';
+    $outputType = in_array((string) ($data['output_type'] ?? ''), ['personalized_image', 'personalized_video', 'personalized_narration_intro'], true) ? (string) $data['output_type'] : 'personalized_image';
     $fileStorageKey = (string) ($data['file_storage_key'] ?? '');
     $status = in_array((string) ($data['status'] ?? ''), ['pending', 'approved', 'rejected'], true) ? (string) $data['status'] : 'pending';
     $visualSource = is_array($data['visual_source_json'] ?? null) ? json_encode($data['visual_source_json']) : (string) ($data['visual_source_json'] ?? '');
@@ -657,5 +661,78 @@ function cb_validate_invitation_upload(array $file, string $outputType): array
         return ['ok' => true, 'mime' => 'video/mp4', 'byte_size' => $size, 'duration' => $meta['duration']];
     }
 
+    if ($outputType === 'personalized_narration_intro') {
+        // La narración de inicio es una frase corta (nombre + fecha + lugar):
+        // 5 MB de sobra para un MP3 de pocos segundos, nunca debería acercarse.
+        $narrationMax = 5 * 1024 * 1024;
+        if ($size <= 0 || $size > $narrationMax) {
+            return ['ok' => false, 'error' => 'El audio supera el tamaño máximo (' . number_format($narrationMax / 1048576, 1) . ' MB).'];
+        }
+        $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+        if ($ext !== 'mp3') {
+            return ['ok' => false, 'error' => 'Extensión de audio no permitida (solo .mp3).'];
+        }
+        // Firma de bytes mínima: ID3v2 al inicio, o el sync word de un frame
+        // MPEG audio (11 bits en 1). Descarta basura obvia sin exigir ffprobe.
+        $head = @file_get_contents($tmpPath, false, null, 0, 4);
+        $looksLikeMp3 = $head !== false && (
+            substr($head, 0, 3) === 'ID3'
+            || (strlen($head) >= 2 && (ord($head[0]) === 0xFF) && ((ord($head[1]) & 0xE0) === 0xE0))
+        );
+        if (!$looksLikeMp3) {
+            return ['ok' => false, 'error' => 'No parece un archivo MP3 válido.'];
+        }
+        return ['ok' => true, 'mime' => 'audio/mpeg', 'byte_size' => $size];
+    }
+
     return ['ok' => false, 'error' => 'Tipo de output no válido.'];
+}
+/** Acepta el token aleatorio legado (32 hex) o un alias firmado (48 hex). */
+function cb_invitation_public_token_is_valid(string $token): bool
+{
+    return preg_match('/^(?:[a-f0-9]{32}|[a-f0-9]{48})$/', $token) === 1;
+}
+
+/**
+ * Alias público reconstruible desde el ID, sin guardar el token en texto plano.
+ * Mantiene 128 bits de firma HMAC y no reemplaza ni revoca el enlace aleatorio.
+ */
+function cb_invitation_share_token(int $invitationId): string
+{
+    if ($invitationId < 1) {
+        throw new InvalidArgumentException('ID de invitación inválido.');
+    }
+    $idHex = str_pad(dechex($invitationId), 16, '0', STR_PAD_LEFT);
+    if (strlen($idHex) !== 16 || $idHex[0] > '7') {
+        throw new InvalidArgumentException('ID de invitación fuera de rango.');
+    }
+    return $idHex . substr(cb_hmac($idHex, 'invitation-share-token-v1'), 0, 32);
+}
+
+function cb_invitation_id_from_share_token(string $token): ?int
+{
+    if (preg_match('/^[0-7][a-f0-9]{47}$/', $token) !== 1) {
+        return null;
+    }
+    $idHex = substr($token, 0, 16);
+    $providedMac = substr($token, 16);
+    $expectedMac = substr(cb_hmac($idHex, 'invitation-share-token-v1'), 0, 32);
+    if (!hash_equals($expectedMac, $providedMac)) {
+        return null;
+    }
+    $id = hexdec($idHex);
+    return is_int($id) && $id > 0 ? $id : null;
+}
+
+/** Resuelve enlaces históricos y aliases firmados sin degradar compatibilidad. */
+function cb_load_invitation_by_public_token(string $token): ?array
+{
+    if (cb_storage_mode() !== 'db' || !cb_invitation_public_token_is_valid($token)) {
+        return null;
+    }
+    if (strlen($token) === 32) {
+        return cb_load_invitation_by_token_hash(cb_hash_token($token));
+    }
+    $invitationId = cb_invitation_id_from_share_token($token);
+    return $invitationId !== null ? cb_load_invitation_by_id($invitationId) : null;
 }

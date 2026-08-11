@@ -132,6 +132,7 @@ function admin_mime_to_ext(string $mime): string
         'image/png' => 'png',
         'image/webp' => 'webp',
         'video/mp4' => 'mp4',
+        'audio/mpeg' => 'mp3',
         default => 'bin',
     };
 }
@@ -438,10 +439,18 @@ if ($partyId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
             $errors[] = 'No se pudo revocar la invitación.';
-        } elseif ($action === 'subir_output_image' || $action === 'subir_output_video') {
+        } elseif ($action === 'subir_output_image' || $action === 'subir_output_video' || $action === 'subir_output_narracion') {
             $id = filter_input(INPUT_POST, 'invitation_id', FILTER_VALIDATE_INT);
-            $outputType = $action === 'subir_output_image' ? 'personalized_image' : 'personalized_video';
-            $assetKey = $outputType === 'personalized_image' ? 'personalized-image' : 'personalized-video';
+            $outputType = match ($action) {
+                'subir_output_image' => 'personalized_image',
+                'subir_output_video' => 'personalized_video',
+                default => 'personalized_narration_intro',
+            };
+            $assetKey = match ($outputType) {
+                'personalized_image' => 'personalized-image',
+                'personalized_video' => 'personalized-video',
+                default => 'personalized-narration-intro',
+            };
             $file = $_FILES['archivo'] ?? null;
             $uploadLimit = cb_rate_limit('invitation-upload:' . $publicSlug, cb_request_identity(), 20, 600, 600);
             if (!$uploadLimit['allowed']) {
@@ -916,7 +925,7 @@ if (!empty($_SESSION['cc_invitation_token'])) {
                       ?>
                         <div class="output-row">
                           <div class="output-meta">
-                            <?= $oType === 'personalized_video' ? admin_icon('video') : admin_icon('image') ?>
+                            <?= $oType === 'personalized_narration_intro' ? '🔊' : ($oType === 'personalized_video' ? admin_icon('video') : admin_icon('image')) ?>
                             <code><?= h($o['asset_key']) ?></code> · <?= h($oType) ?> · <span class="status-badge <?= h(admin_status_class($oStatus)) ?>"><?= h(admin_status_label($oStatus)) ?></span>
                             · <?= admin_format_bytes((int) ($o['file_byte_size'] ?? 0)) ?>
                             · <?= h($o['file_mime'] ?: '—') ?>
@@ -975,6 +984,16 @@ if (!empty($_SESSION['cc_invitation_token'])) {
                     <p class="small muted">MP4 · máx. <?= number_format(cb_theme_upload_max_bytes() / 1048576, 1) ?> MB</p>
                     <input type="file" name="archivo" accept=".mp4" required>
                     <button type="submit" class="btn btn-primary btn-sm"><?= admin_icon('plus') ?> Subir video</button>
+                  </form>
+
+                  <form method="post" action="<?= h($invitationsUrl) ?>#inv-<?= (int) $inv['id'] ?>" enctype="multipart/form-data" class="upload-output-form">
+                    <?= admin_csrf_field() ?>
+                    <input type="hidden" name="action" value="subir_output_narracion">
+                    <input type="hidden" name="invitation_id" value="<?= (int) $inv['id'] ?>">
+                    <h4><?= admin_icon('video') ?> Subir narración de inicio (voz Alice, opcional)</h4>
+                    <p class="small muted">MP3 · máx. 5 MB · generar con ElevenLabs, voice_id <code>Xb7hH8MSUJpSbSDYk0k2</code>, modelo <code>eleven_multilingual_v2</code>, texto: "Tenemos el agrado de invitarte a celebrar el cumpleaños de <?= h($inv['birthday_person_name'] ?: '[NOMBRE]') ?>. Es el <?= h($inv['event_date'] ?: '[FECHA]') ?><?= !empty($inv['event_time']) ? ' a las ' . h((string) $inv['event_time']) : '' ?>." — ver docs/INVITACION-MUSICA-Y-NARRACION-ALICE.md</p>
+                    <input type="file" name="archivo" accept=".mp3" required>
+                    <button type="submit" class="btn btn-primary btn-sm"><?= admin_icon('plus') ?> Subir narración</button>
                   </form>
                   <?php endif; ?>
                 </div>

@@ -373,7 +373,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "package_dependencies_qrcode",
-      "community": 189,
+      "community": 186,
       "community_name": "DiplomaScreen",
       "norm_label": "qrcode"
     },
@@ -384,7 +384,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "qrcode",
-      "community": 189,
+      "community": 186,
       "community_name": "DiplomaScreen",
       "norm_label": "qrcode"
     },
@@ -902,7 +902,7 @@
       "_origin": "ast",
       "id": "public_album_api",
       "community": 163,
-      "community_name": "cb_load_themes",
+      "community_name": "cb_state_path",
       "norm_label": "album-api.php"
     },
     {
@@ -913,7 +913,7 @@
       "_origin": "ast",
       "id": "public_album_api_cb_album_api_fail",
       "community": 163,
-      "community_name": "cb_load_themes",
+      "community_name": "cb_state_path",
       "norm_label": "cb_album_api_fail()"
     },
     {
@@ -924,7 +924,7 @@
       "_origin": "ast",
       "id": "public_album_api_cb_album_api_theme",
       "community": 163,
-      "community_name": "cb_load_themes",
+      "community_name": "cb_state_path",
       "norm_label": "cb_album_api_theme()"
     },
     {
@@ -1902,8 +1902,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "public_lib_invitations_cb_invitation_storage_key",
-      "community": 139,
-      "community_name": "cb_save_parties",
+      "community": 137,
+      "community_name": "cb_valid_public_slug",
       "norm_label": "cb_invitation_storage_key()"
     },
     {
@@ -2244,7 +2244,7 @@
       "_origin": "ast",
       "id": "public_lib_invitations_cb_invitation_share_token",
       "community": 51,
-      "community_name": "cb_hmac",
+      "community_name": "cb_save_parties",
       "norm_label": "cb_invitation_share_token()"
     },
     {
@@ -2277,7 +2277,7 @@
       "_origin": "ast",
       "id": "public_lib_leads",
       "community": 51,
-      "community_name": "cb_hmac",
+      "community_name": "cb_save_parties",
       "norm_label": "lib.leads.php"
     },
     {
@@ -2288,7 +2288,7 @@
       "_origin": "ast",
       "id": "public_lib_leads_cb_lead_text",
       "community": 51,
-      "community_name": "cb_hmac",
+      "community_name": "cb_save_parties",
       "norm_label": "cb_lead_text()"
     },
     {
@@ -2299,7 +2299,7 @@
       "_origin": "ast",
       "id": "public_lib_leads_cb_validate_lead_input",
       "community": 51,
-      "community_name": "cb_hmac",
+      "community_name": "cb_save_parties",
       "norm_label": "cb_validate_lead_input()"
     },
     {
@@ -2310,7 +2310,7 @@
       "_origin": "ast",
       "id": "public_lib_leads_cb_create_lead",
       "community": 51,
-      "community_name": "cb_hmac",
+      "community_name": "cb_save_parties",
       "norm_label": "cb_create_lead()"
     },
     {
@@ -2365,7 +2365,7 @@
       "_origin": "ast",
       "id": "public_lib_cb_hmac",
       "community": 51,
-      "community_name": "cb_hmac",
+      "community_name": "cb_save_parties",
       "norm_label": "cb_hmac()"
     },
     {
@@ -2397,8 +2397,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "public_lib_php_pdo",
-      "community": 191,
-      "community_name": "cb_theme_prompts_pdo",
+      "community": 138,
+      "community_name": "lib.php",
       "norm_label": "pdo"
     },
     {
@@ -2409,7 +2409,7 @@
       "_origin": "ast",
       "id": "public_lib_cb_data_dir",
       "community": 163,
-      "community_name": "cb_load_themes",
+      "community_name": "cb_state_path",
       "norm_label": "cb_data_dir()"
     },
     {
@@ -2420,7 +2420,7 @@
       "_origin": "ast",
       "id": "public_lib_cb_themes_path",
       "community": 163,
-      "community_name": "cb_load_themes",
+      "community_name": "cb_state_path",
       "norm_label": "cb_themes_path()"
     },
     {
@@ -2430,8 +2430,8 @@
       "source_location": "L161",
       "_origin": "ast",
       "id": "public_lib_cb_parties_path",
-      "community": 139,
-      "community_name": "cb_save_parties",
+      "community": 138,
+      "community_name": "lib.php",
       "norm_label": "cb_parties_path()"
     },
     {
@@ -2441,8 +2441,8 @@
       "source_location": "L170",
       "_origin": "ast",
       "id": "public_lib_cb_themes_dir",
-      "community": 138,
-      "community_name": "lib.php",
+      "community": 139,
+      "community_name": "cb_load_parties",
       "norm_label": "cb_themes_dir()"
     },
     {
@@ -2463,8 +2463,8 @@
       "source_location": "L190",
       "_origin": "ast",
       "id": "public_lib_cb_valid_slug",
-      "community": 191,
-      "community_name": "cb_theme_prompts_pdo",
+      "community": 138,
+      "community_name": "lib.php",
       "norm_label": "cb_valid_slug()"
     },
     {
@@ -2485,8 +2485,8 @@
       "source_location": "L217",
       "_origin": "ast",
       "id": "public_lib_cb_valid_public_slug",
-      "community": 139,
-      "community_name": "cb_save_parties",
+      "community": 137,
+      "community_name": "cb_valid_public_slug",
       "norm_label": "cb_valid_public_slug()"
     },
     {
@@ -2541,7 +2541,7 @@
       "_origin": "ast",
       "id": "public_lib_cb_theme_public_name",
       "community": 163,
-      "community_name": "cb_load_themes",
+      "community_name": "cb_state_path",
       "norm_label": "cb_theme_public_name()"
     },
     {
@@ -2562,7 +2562,7 @@
       "source_location": "L322",
       "_origin": "ast",
       "id": "public_lib_cb_load_json_file",
-      "community": 167,
+      "community": 163,
       "community_name": "cb_state_path",
       "norm_label": "cb_load_json_file()"
     },
@@ -2573,7 +2573,7 @@
       "source_location": "L346",
       "_origin": "ast",
       "id": "public_lib_cb_save_json_file",
-      "community": 139,
+      "community": 51,
       "community_name": "cb_save_parties",
       "norm_label": "cb_save_json_file()"
     },
@@ -2585,7 +2585,7 @@
       "_origin": "ast",
       "id": "public_lib_cb_load_themes",
       "community": 163,
-      "community_name": "cb_load_themes",
+      "community_name": "cb_state_path",
       "norm_label": "cb_load_themes()"
     },
     {
@@ -2596,7 +2596,7 @@
       "_origin": "ast",
       "id": "public_lib_cb_load_parties",
       "community": 139,
-      "community_name": "cb_save_parties",
+      "community_name": "cb_load_parties",
       "norm_label": "cb_load_parties()"
     },
     {
@@ -2606,7 +2606,7 @@
       "source_location": "L457",
       "_origin": "ast",
       "id": "public_lib_cb_save_parties",
-      "community": 139,
+      "community": 51,
       "community_name": "cb_save_parties",
       "norm_label": "cb_save_parties()"
     },
@@ -2617,8 +2617,8 @@
       "source_location": "L586",
       "_origin": "ast",
       "id": "public_lib_cb_sanitize_theme_game",
-      "community": 138,
-      "community_name": "lib.php",
+      "community": 139,
+      "community_name": "cb_load_parties",
       "norm_label": "cb_sanitize_theme_game()"
     },
     {
@@ -2628,8 +2628,8 @@
       "source_location": "L680",
       "_origin": "ast",
       "id": "public_lib_cb_game_kinds",
-      "community": 138,
-      "community_name": "lib.php",
+      "community": 139,
+      "community_name": "cb_load_parties",
       "norm_label": "cb_game_kinds()"
     },
     {
@@ -2639,8 +2639,8 @@
       "source_location": "L690",
       "_origin": "ast",
       "id": "public_lib_cb_theme_available_game_kinds",
-      "community": 138,
-      "community_name": "lib.php",
+      "community": 139,
+      "community_name": "cb_load_parties",
       "norm_label": "cb_theme_available_game_kinds()"
     },
     {
@@ -2650,8 +2650,8 @@
       "source_location": "L723",
       "_origin": "ast",
       "id": "public_lib_cb_sanitize_party_games",
-      "community": 138,
-      "community_name": "lib.php",
+      "community": 139,
+      "community_name": "cb_load_parties",
       "norm_label": "cb_sanitize_party_games()"
     },
     {
@@ -2661,8 +2661,8 @@
       "source_location": "L738",
       "_origin": "ast",
       "id": "public_lib_cb_build_theme_payload",
-      "community": 138,
-      "community_name": "lib.php",
+      "community": 139,
+      "community_name": "cb_load_parties",
       "norm_label": "cb_build_theme_payload()"
     },
     {
@@ -2673,7 +2673,7 @@
       "_origin": "ast",
       "id": "public_lib_cb_resolve_party",
       "community": 139,
-      "community_name": "cb_save_parties",
+      "community_name": "cb_load_parties",
       "norm_label": "cb_resolve_party()"
     },
     {
@@ -2684,7 +2684,7 @@
       "_origin": "ast",
       "id": "public_lib_cb_load_party_raw",
       "community": 139,
-      "community_name": "cb_save_parties",
+      "community_name": "cb_load_parties",
       "norm_label": "cb_load_party_raw()"
     },
     {
@@ -2694,8 +2694,8 @@
       "source_location": "L1013",
       "_origin": "ast",
       "id": "public_lib_cb_party_db_id",
-      "community": 139,
-      "community_name": "cb_save_parties",
+      "community": 0,
+      "community_name": "lib.invitations.php",
       "norm_label": "cb_party_db_id()"
     },
     {
@@ -2706,7 +2706,7 @@
       "_origin": "ast",
       "id": "public_lib_cb_valid_galeria_pin",
       "community": 51,
-      "community_name": "cb_hmac",
+      "community_name": "cb_save_parties",
       "norm_label": "cb_valid_galeria_pin()"
     },
     {
@@ -2717,7 +2717,7 @@
       "_origin": "ast",
       "id": "public_lib_cb_normalize_frame_box",
       "community": 139,
-      "community_name": "cb_save_parties",
+      "community_name": "cb_load_parties",
       "norm_label": "cb_normalize_frame_box()"
     },
     {
@@ -2728,7 +2728,7 @@
       "_origin": "ast",
       "id": "public_lib_cb_verify_party_pin",
       "community": 51,
-      "community_name": "cb_hmac",
+      "community_name": "cb_save_parties",
       "norm_label": "cb_verify_party_pin()"
     },
     {
@@ -2738,7 +2738,7 @@
       "source_location": "L1066",
       "_origin": "ast",
       "id": "public_lib_cb_state_path",
-      "community": 167,
+      "community": 163,
       "community_name": "cb_state_path",
       "norm_label": "cb_state_path()"
     },
@@ -2749,8 +2749,8 @@
       "source_location": "L1075",
       "_origin": "ast",
       "id": "public_lib_cb_mutate_json_state",
-      "community": 167,
-      "community_name": "cb_state_path",
+      "community": 138,
+      "community_name": "lib.php",
       "norm_label": "cb_mutate_json_state()"
     },
     {
@@ -2760,8 +2760,8 @@
       "source_location": "L1109",
       "_origin": "ast",
       "id": "public_lib_cb_rate_limit",
-      "community": 167,
-      "community_name": "cb_state_path",
+      "community": 138,
+      "community_name": "lib.php",
       "norm_label": "cb_rate_limit()"
     },
     {
@@ -2804,7 +2804,7 @@
       "source_location": "L1202",
       "_origin": "ast",
       "id": "public_lib_cb_photo_usage",
-      "community": 167,
+      "community": 163,
       "community_name": "cb_state_path",
       "norm_label": "cb_photo_usage()"
     },
@@ -2815,8 +2815,8 @@
       "source_location": "L1223",
       "_origin": "ast",
       "id": "public_lib_cb_record_photo_with_quota",
-      "community": 167,
-      "community_name": "cb_state_path",
+      "community": 0,
+      "community_name": "lib.invitations.php",
       "norm_label": "cb_record_photo_with_quota()"
     },
     {
@@ -2826,8 +2826,8 @@
       "source_location": "L1264",
       "_origin": "ast",
       "id": "public_lib_cb_record_photo",
-      "community": 167,
-      "community_name": "cb_state_path",
+      "community": 0,
+      "community_name": "lib.invitations.php",
       "norm_label": "cb_record_photo()"
     },
     {
@@ -2837,7 +2837,7 @@
       "source_location": "L1269",
       "_origin": "ast",
       "id": "public_lib_cb_find_photo_by_token",
-      "community": 167,
+      "community": 163,
       "community_name": "cb_state_path",
       "norm_label": "cb_find_photo_by_token()"
     },
@@ -2848,7 +2848,7 @@
       "source_location": "L1289",
       "_origin": "ast",
       "id": "public_lib_cb_list_party_photos",
-      "community": 167,
+      "community": 163,
       "community_name": "cb_state_path",
       "norm_label": "cb_list_party_photos()"
     },
@@ -2969,8 +2969,8 @@
       "source_location": "L1589",
       "_origin": "ast",
       "id": "public_lib_cb_theme_prompts_pdo",
-      "community": 191,
-      "community_name": "cb_theme_prompts_pdo",
+      "community": 138,
+      "community_name": "lib.php",
       "norm_label": "cb_theme_prompts_pdo()"
     },
     {
@@ -2980,8 +2980,8 @@
       "source_location": "L1610",
       "_origin": "ast",
       "id": "public_lib_cb_load_theme_prompts",
-      "community": 191,
-      "community_name": "cb_theme_prompts_pdo",
+      "community": 138,
+      "community_name": "lib.php",
       "norm_label": "cb_load_theme_prompts()"
     },
     {
@@ -2991,8 +2991,8 @@
       "source_location": "L1633",
       "_origin": "ast",
       "id": "public_lib_cb_save_theme_prompt",
-      "community": 191,
-      "community_name": "cb_theme_prompts_pdo",
+      "community": 138,
+      "community_name": "lib.php",
       "norm_label": "cb_save_theme_prompt()"
     },
     {
@@ -3002,8 +3002,8 @@
       "source_location": "L1679",
       "_origin": "ast",
       "id": "public_lib_cb_load_theme_prompt_history",
-      "community": 191,
-      "community_name": "cb_theme_prompts_pdo",
+      "community": 138,
+      "community_name": "lib.php",
       "norm_label": "cb_load_theme_prompt_history()"
     },
     {
@@ -3013,8 +3013,8 @@
       "source_location": "L1699",
       "_origin": "ast",
       "id": "public_lib_cb_theme_asset_inventory",
-      "community": 191,
-      "community_name": "cb_theme_prompts_pdo",
+      "community": 138,
+      "community_name": "lib.php",
       "norm_label": "cb_theme_asset_inventory()"
     },
     {
@@ -3113,7 +3113,7 @@
       "_origin": "ast",
       "id": "public_lib_cb_theme_css_vars",
       "community": 163,
-      "community_name": "cb_load_themes",
+      "community_name": "cb_state_path",
       "norm_label": "cb_theme_css_vars()"
     },
     {
@@ -3124,7 +3124,7 @@
       "_origin": "ast",
       "id": "public_subir",
       "community": 163,
-      "community_name": "cb_load_themes",
+      "community_name": "cb_state_path",
       "norm_label": "subir.php"
     },
     {
@@ -3135,7 +3135,7 @@
       "_origin": "ast",
       "id": "public_subir_cb_intake_page_message",
       "community": 163,
-      "community_name": "cb_load_themes",
+      "community_name": "cb_state_path",
       "norm_label": "cb_intake_page_message()"
     },
     {
@@ -4707,8 +4707,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "scripts_normalize_event_profile_video_audio",
-      "community": 182,
-      "community_name": "audio",
+      "community": 186,
+      "community_name": "DiplomaScreen",
       "norm_label": "audio"
     },
     {
@@ -5576,8 +5576,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_seed_demos_prod",
-      "community": 186,
-      "community_name": "cc_tema_terminado",
+      "community": 139,
+      "community_name": "cb_load_parties",
       "norm_label": "seed-demos-prod.php"
     },
     {
@@ -5587,8 +5587,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "scripts_seed_demos_prod_cc_tema_terminado",
-      "community": 186,
-      "community_name": "cc_tema_terminado",
+      "community": 139,
+      "community_name": "cb_load_parties",
       "norm_label": "cc_tema_terminado()"
     },
     {
@@ -5598,8 +5598,8 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "scripts_seed_demos_prod_cc_build_demos",
-      "community": 186,
-      "community_name": "cc_tema_terminado",
+      "community": 139,
+      "community_name": "cb_load_parties",
       "norm_label": "cc_build_demos()"
     },
     {
@@ -5994,8 +5994,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "src_app_theme_flow",
-      "community": 182,
-      "community_name": "audio",
+      "community": 4,
+      "community_name": "App.jsx",
       "norm_label": "theme_flow"
     },
     {
@@ -6126,8 +6126,8 @@
       "source_location": "L297",
       "_origin": "ast",
       "id": "src_app_preloadcharpng",
-      "community": 182,
-      "community_name": "audio",
+      "community": 4,
+      "community_name": "App.jsx",
       "norm_label": "preloadcharpng()"
     },
     {
@@ -6148,8 +6148,8 @@
       "source_location": "L326",
       "_origin": "ast",
       "id": "src_app_loadinvitados",
-      "community": 182,
-      "community_name": "audio",
+      "community": 4,
+      "community_name": "App.jsx",
       "norm_label": "loadinvitados()"
     },
     {
@@ -6159,8 +6159,8 @@
       "source_location": "L336",
       "_origin": "ast",
       "id": "src_app_saveinvitados",
-      "community": 182,
-      "community_name": "audio",
+      "community": 4,
+      "community_name": "App.jsx",
       "norm_label": "saveinvitados()"
     },
     {
@@ -6225,8 +6225,8 @@
       "source_location": "L458",
       "_origin": "ast",
       "id": "src_app_boothapp",
-      "community": 182,
-      "community_name": "audio",
+      "community": 4,
+      "community_name": "App.jsx",
       "norm_label": "boothapp()"
     },
     {
@@ -6302,8 +6302,8 @@
       "source_location": "L1272",
       "_origin": "ast",
       "id": "src_app_intro",
-      "community": 182,
-      "community_name": "audio",
+      "community": 186,
+      "community_name": "DiplomaScreen",
       "norm_label": "intro()"
     },
     {
@@ -6346,8 +6346,8 @@
       "source_location": "L1418",
       "_origin": "ast",
       "id": "src_app_carreras_cut_con_aire",
-      "community": 182,
-      "community_name": "audio",
+      "community": 4,
+      "community_name": "App.jsx",
       "norm_label": "carreras_cut_con_aire"
     },
     {
@@ -6357,8 +6357,8 @@
       "source_location": "L1429",
       "_origin": "ast",
       "id": "src_app_juego",
-      "community": 182,
-      "community_name": "audio",
+      "community": 4,
+      "community_name": "App.jsx",
       "norm_label": "juego()"
     },
     {
@@ -6423,8 +6423,8 @@
       "source_location": "L1960",
       "_origin": "ast",
       "id": "src_app_construirchartritmo",
-      "community": 149,
-      "community_name": "guardarRecord",
+      "community": 146,
+      "community_name": "StageConcert3D.jsx",
       "norm_label": "construirchartritmo()"
     },
     {
@@ -6434,8 +6434,8 @@
       "source_location": "L1984",
       "_origin": "ast",
       "id": "src_app_juegoritmo",
-      "community": 149,
-      "community_name": "guardarRecord",
+      "community": 146,
+      "community_name": "StageConcert3D.jsx",
       "norm_label": "juegoritmo()"
     },
     {
@@ -6489,8 +6489,8 @@
       "source_location": "L2843",
       "_origin": "ast",
       "id": "src_app_roundedsquarepath",
-      "community": 4,
-      "community_name": "App.jsx",
+      "community": 16,
+      "community_name": "composeImage",
       "norm_label": "roundedsquarepath()"
     },
     {
@@ -6500,8 +6500,8 @@
       "source_location": "L2858",
       "_origin": "ast",
       "id": "src_app_composeimage",
-      "community": 4,
-      "community_name": "App.jsx",
+      "community": 16,
+      "community_name": "composeImage",
       "norm_label": "composeimage()"
     },
     {
@@ -6511,8 +6511,8 @@
       "source_location": "L3021",
       "_origin": "ast",
       "id": "src_app_drawcharacternameplate",
-      "community": 4,
-      "community_name": "App.jsx",
+      "community": 16,
+      "community_name": "composeImage",
       "norm_label": "drawcharacternameplate()"
     },
     {
@@ -6522,8 +6522,8 @@
       "source_location": "L3078",
       "_origin": "ast",
       "id": "src_app_drawthemeribbon",
-      "community": 4,
-      "community_name": "App.jsx",
+      "community": 16,
+      "community_name": "composeImage",
       "norm_label": "drawthemeribbon()"
     },
     {
@@ -6566,7 +6566,7 @@
       "source_location": "L3288",
       "_origin": "ast",
       "id": "src_app_uploadphoto",
-      "community": 189,
+      "community": 186,
       "community_name": "DiplomaScreen",
       "norm_label": "uploadphoto()"
     },
@@ -6577,7 +6577,7 @@
       "source_location": "L3304",
       "_origin": "ast",
       "id": "src_app_uploaderrormessage",
-      "community": 189,
+      "community": 186,
       "community_name": "DiplomaScreen",
       "norm_label": "uploaderrormessage()"
     },
@@ -6588,7 +6588,7 @@
       "source_location": "L3323",
       "_origin": "ast",
       "id": "src_app_qrscreen",
-      "community": 189,
+      "community": 186,
       "community_name": "DiplomaScreen",
       "norm_label": "qrscreen()"
     },
@@ -6599,8 +6599,8 @@
       "source_location": "L3410",
       "_origin": "ast",
       "id": "src_app_cssvar",
-      "community": 4,
-      "community_name": "App.jsx",
+      "community": 16,
+      "community_name": "composeImage",
       "norm_label": "cssvar()"
     },
     {
@@ -6676,7 +6676,7 @@
       "source_location": "L3676",
       "_origin": "ast",
       "id": "src_app_diplomascreen",
-      "community": 189,
+      "community": 186,
       "community_name": "DiplomaScreen",
       "norm_label": "diplomascreen()"
     },
@@ -7237,8 +7237,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_cartel_qr_main",
-      "community": 46,
-      "community_name": "album/main.jsx",
+      "community": 182,
+      "community_name": "applyThemeColors",
       "norm_label": "cartel-qr/main.jsx"
     },
     {
@@ -7248,8 +7248,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_cartel_qr_main_gettoken",
-      "community": 46,
-      "community_name": "album/main.jsx",
+      "community": 182,
+      "community_name": "applyThemeColors",
       "norm_label": "gettoken()"
     },
     {
@@ -7259,8 +7259,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_cartel_qr_main_formatdate",
-      "community": 46,
-      "community_name": "album/main.jsx",
+      "community": 182,
+      "community_name": "applyThemeColors",
       "norm_label": "formatdate()"
     },
     {
@@ -7270,8 +7270,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "src_cartel_qr_main_sign",
-      "community": 46,
-      "community_name": "album/main.jsx",
+      "community": 182,
+      "community_name": "applyThemeColors",
       "norm_label": "sign()"
     },
     {
@@ -7281,8 +7281,8 @@
       "source_location": "L102",
       "_origin": "ast",
       "id": "src_cartel_qr_main_app",
-      "community": 46,
-      "community_name": "album/main.jsx",
+      "community": 182,
+      "community_name": "applyThemeColors",
       "norm_label": "app()"
     },
     {
@@ -7337,7 +7337,7 @@
       "_origin": "ast",
       "id": "src_framegeometry",
       "community": 16,
-      "community_name": "frameGeometry.js",
+      "community_name": "composeImage",
       "norm_label": "framegeometry.js"
     },
     {
@@ -7348,7 +7348,7 @@
       "_origin": "ast",
       "id": "src_framegeometry_default_frame_box",
       "community": 16,
-      "community_name": "frameGeometry.js",
+      "community_name": "composeImage",
       "norm_label": "default_frame_box"
     },
     {
@@ -7359,7 +7359,7 @@
       "_origin": "ast",
       "id": "src_framegeometry_frame_photo_inset_ratio",
       "community": 16,
-      "community_name": "frameGeometry.js",
+      "community_name": "composeImage",
       "norm_label": "frame_photo_inset_ratio"
     },
     {
@@ -7370,7 +7370,7 @@
       "_origin": "ast",
       "id": "src_framegeometry_isvalidframebox",
       "community": 16,
-      "community_name": "frameGeometry.js",
+      "community_name": "composeImage",
       "norm_label": "isvalidframebox()"
     },
     {
@@ -7381,7 +7381,7 @@
       "_origin": "ast",
       "id": "src_framegeometry_normalizeframebox",
       "community": 16,
-      "community_name": "frameGeometry.js",
+      "community_name": "composeImage",
       "norm_label": "normalizeframebox()"
     },
     {
@@ -7392,7 +7392,7 @@
       "_origin": "ast",
       "id": "src_framegeometry_getsquareframegeometry",
       "community": 16,
-      "community_name": "frameGeometry.js",
+      "community_name": "composeImage",
       "norm_label": "getsquareframegeometry()"
     },
     {
@@ -7403,7 +7403,7 @@
       "_origin": "ast",
       "id": "src_framegeometry_getsquarephotogeometry",
       "community": 16,
-      "community_name": "frameGeometry.js",
+      "community_name": "composeImage",
       "norm_label": "getsquarephotogeometry()"
     },
     {
@@ -7414,7 +7414,7 @@
       "_origin": "ast",
       "id": "src_framegeometry_gettrackcharactergeometry",
       "community": 16,
-      "community_name": "frameGeometry.js",
+      "community_name": "composeImage",
       "norm_label": "gettrackcharactergeometry()"
     },
     {
@@ -7677,8 +7677,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_themevars",
-      "community": 46,
-      "community_name": "album/main.jsx",
+      "community": 182,
+      "community_name": "applyThemeColors",
       "norm_label": "themevars.js"
     },
     {
@@ -7688,8 +7688,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_themevars_theme_color_vars",
-      "community": 46,
-      "community_name": "album/main.jsx",
+      "community": 182,
+      "community_name": "applyThemeColors",
       "norm_label": "theme_color_vars"
     },
     {
@@ -7699,8 +7699,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_themevars_applythemecolors",
-      "community": 46,
-      "community_name": "album/main.jsx",
+      "community": 182,
+      "community_name": "applyThemeColors",
       "norm_label": "applythemecolors()"
     },
     {
@@ -7710,8 +7710,8 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "src_themevars_cssurl",
-      "community": 46,
-      "community_name": "album/main.jsx",
+      "community": 182,
+      "community_name": "applyThemeColors",
       "norm_label": "cssurl()"
     },
     {
@@ -7898,7 +7898,7 @@
       "_origin": "ast",
       "id": "tests_backend_seed_invitation_smoke",
       "community": 137,
-      "community_name": "seed_attach_outputs",
+      "community_name": "cb_valid_public_slug",
       "norm_label": "seed-invitation-smoke.php"
     },
     {
@@ -7909,7 +7909,7 @@
       "_origin": "ast",
       "id": "tests_backend_seed_invitation_smoke_seed_fail",
       "community": 137,
-      "community_name": "seed_attach_outputs",
+      "community_name": "cb_valid_public_slug",
       "norm_label": "seed_fail()"
     },
     {
@@ -7920,7 +7920,7 @@
       "_origin": "ast",
       "id": "tests_backend_seed_invitation_smoke_seed_attach_outputs",
       "community": 137,
-      "community_name": "seed_attach_outputs",
+      "community_name": "cb_valid_public_slug",
       "norm_label": "seed_attach_outputs()"
     },
     {
@@ -7931,7 +7931,7 @@
       "_origin": "ast",
       "id": "tests_backend_seed_invitation_smoke_seed_base_data",
       "community": 137,
-      "community_name": "seed_attach_outputs",
+      "community_name": "cb_valid_public_slug",
       "norm_label": "seed_base_data()"
     },
     {
@@ -8052,7 +8052,7 @@
       "_origin": "ast",
       "id": "tests_frontend_framegeometry_test",
       "community": 16,
-      "community_name": "frameGeometry.js",
+      "community_name": "composeImage",
       "norm_label": "framegeometry.test.mjs"
     },
     {
@@ -9940,7 +9940,7 @@
       "label": "Motivo t\u00e9cnico",
       "file_type": "document",
       "source_file": "docs/CODEX-HANDOFF-AUDIO-SCROLL-2026-08-11.md",
-      "source_location": "L29",
+      "source_location": "L28",
       "_origin": "ast",
       "id": "docs_codex_handoff_audio_scroll_2026_08_11_motivo_t\u00e9cnico",
       "community": 190,
@@ -9951,7 +9951,7 @@
       "label": "Archivos modificados",
       "file_type": "document",
       "source_file": "docs/CODEX-HANDOFF-AUDIO-SCROLL-2026-08-11.md",
-      "source_location": "L40",
+      "source_location": "L39",
       "_origin": "ast",
       "id": "docs_codex_handoff_audio_scroll_2026_08_11_archivos_modificados",
       "community": 190,
@@ -9962,7 +9962,7 @@
       "label": "Evidencia local con Chromium",
       "file_type": "document",
       "source_file": "docs/CODEX-HANDOFF-AUDIO-SCROLL-2026-08-11.md",
-      "source_location": "L51",
+      "source_location": "L50",
       "_origin": "ast",
       "id": "docs_codex_handoff_audio_scroll_2026_08_11_evidencia_local_con_chromium",
       "community": 190,
@@ -9973,12 +9973,133 @@
       "label": "Integraci\u00f3n solicitada a Claude",
       "file_type": "document",
       "source_file": "docs/CODEX-HANDOFF-AUDIO-SCROLL-2026-08-11.md",
-      "source_location": "L58",
+      "source_location": "L57",
       "_origin": "ast",
       "id": "docs_codex_handoff_audio_scroll_2026_08_11_integraci\u00f3n_solicitada_a_claude",
       "community": 190,
       "community_name": "Handoff Codex \u2192 Claude \u2014 portada y audio de invitaci\u00f3n",
       "norm_label": "integracion solicitada a claude"
+    },
+    {
+      "label": "CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11",
+      "community": 167,
+      "community_name": "Handoff de cierre \u2014 Invitaciones Hielo y Carreras (2026-08-11)",
+      "norm_label": "codex-handoff-cierre-invitaciones-hielo-carreras-2026-08-11.md"
+    },
+    {
+      "label": "Handoff de cierre \u2014 Invitaciones Hielo y Carreras (2026-08-11)",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_handoff_de_cierre_invitaciones_hielo_y_carreras_2026_08_11",
+      "community": 167,
+      "community_name": "Handoff de cierre \u2014 Invitaciones Hielo y Carreras (2026-08-11)",
+      "norm_label": "handoff de cierre \u2014 invitaciones hielo y carreras (2026-08-11)"
+    },
+    {
+      "label": "Estado y l\u00edmites",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_estado_y_l\u00edmites",
+      "community": 167,
+      "community_name": "Handoff de cierre \u2014 Invitaciones Hielo y Carreras (2026-08-11)",
+      "norm_label": "estado y limites"
+    },
+    {
+      "label": "Entregado en la invitaci\u00f3n",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L13",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_entregado_en_la_invitaci\u00f3n",
+      "community": 167,
+      "community_name": "Handoff de cierre \u2014 Invitaciones Hielo y Carreras (2026-08-11)",
+      "norm_label": "entregado en la invitacion"
+    },
+    {
+      "label": "Hielo: candidatos de video para evaluaci\u00f3n",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L15",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_hielo_candidatos_de_video_para_evaluaci\u00f3n",
+      "community": 167,
+      "community_name": "Handoff de cierre \u2014 Invitaciones Hielo y Carreras (2026-08-11)",
+      "norm_label": "hielo: candidatos de video para evaluacion"
+    },
+    {
+      "label": "Audio de cierre: regla global",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L31",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_audio_de_cierre_regla_global",
+      "community": 167,
+      "community_name": "Handoff de cierre \u2014 Invitaciones Hielo y Carreras (2026-08-11)",
+      "norm_label": "audio de cierre: regla global"
+    },
+    {
+      "label": "Perfil p\u00fablico \u201cConoce a\u2026\u201d",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L42",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_perfil_p\u00fablico_conoce_a",
+      "community": 167,
+      "community_name": "Handoff de cierre \u2014 Invitaciones Hielo y Carreras (2026-08-11)",
+      "norm_label": "perfil publico \u201cconoce a...\u201d"
+    },
+    {
+      "label": "Higgsfield / Seedance 2.5",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L66",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_higgsfield_seedance_2_5",
+      "community": 167,
+      "community_name": "Handoff de cierre \u2014 Invitaciones Hielo y Carreras (2026-08-11)",
+      "norm_label": "higgsfield / seedance 2.5"
+    },
+    {
+      "label": "Validaciones realizadas",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L77",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_validaciones_realizadas",
+      "community": 167,
+      "community_name": "Handoff de cierre \u2014 Invitaciones Hielo y Carreras (2026-08-11)",
+      "norm_label": "validaciones realizadas"
+    },
+    {
+      "label": "Revisi\u00f3n solicitada antes de versionar",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L89",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_revisi\u00f3n_solicitada_antes_de_versionar",
+      "community": 167,
+      "community_name": "Handoff de cierre \u2014 Invitaciones Hielo y Carreras (2026-08-11)",
+      "norm_label": "revision solicitada antes de versionar"
+    },
+    {
+      "label": "Versionado y FTP",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L103",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_versionado_y_ftp",
+      "community": 167,
+      "community_name": "Handoff de cierre \u2014 Invitaciones Hielo y Carreras (2026-08-11)",
+      "norm_label": "versionado y ftp"
     },
     {
       "label": "CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
@@ -10056,6 +10177,105 @@
       "community": 188,
       "community_name": "Handoff Codex \u2192 Claude \u2014 invitaci\u00f3n Reino de Hielo",
       "norm_label": "limites y entrega"
+    },
+    {
+      "label": "Actualizaci\u00f3n \u2014 saludos inmersivos + Alice (2026-08-11)",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L87",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_invitacion_hielo_2026_08_11_actualizaci\u00f3n_saludos_inmersivos_alice_2026_08_11",
+      "community": 188,
+      "community_name": "Handoff Codex \u2192 Claude \u2014 invitaci\u00f3n Reino de Hielo",
+      "norm_label": "actualizacion \u2014 saludos inmersivos + alice (2026-08-11)"
+    },
+    {
+      "label": "Prueba aislada",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L124",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_invitacion_hielo_2026_08_11_prueba_aislada",
+      "community": 188,
+      "community_name": "Handoff Codex \u2192 Claude \u2014 invitaci\u00f3n Reino de Hielo",
+      "norm_label": "prueba aislada"
+    },
+    {
+      "label": "Validaci\u00f3n posterior",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L139",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_invitacion_hielo_2026_08_11_validaci\u00f3n_posterior",
+      "community": 188,
+      "community_name": "Handoff Codex \u2192 Claude \u2014 invitaci\u00f3n Reino de Hielo",
+      "norm_label": "validacion posterior"
+    },
+    {
+      "label": "FTP si Luis aprueba un deploy futuro",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L147",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_invitacion_hielo_2026_08_11_ftp_si_luis_aprueba_un_deploy_futuro",
+      "community": 188,
+      "community_name": "Handoff Codex \u2192 Claude \u2014 invitaci\u00f3n Reino de Hielo",
+      "norm_label": "ftp si luis aprueba un deploy futuro"
+    },
+    {
+      "label": "Guion fijo de Alice",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L162",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_invitacion_hielo_2026_08_11_guion_fijo_de_alice",
+      "community": 188,
+      "community_name": "Handoff Codex \u2192 Claude \u2014 invitaci\u00f3n Reino de Hielo",
+      "norm_label": "guion fijo de alice"
+    },
+    {
+      "label": "Correcci\u00f3n de rutas de candidatos",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L171",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_invitacion_hielo_2026_08_11_correcci\u00f3n_de_rutas_de_candidatos",
+      "community": 188,
+      "community_name": "Handoff Codex \u2192 Claude \u2014 invitaci\u00f3n Reino de Hielo",
+      "norm_label": "correccion de rutas de candidatos"
+    },
+    {
+      "label": "Actualizaci\u00f3n \u2014 apertura celeste y variante scroll (2026-08-11)",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L178",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_invitacion_hielo_2026_08_11_actualizaci\u00f3n_apertura_celeste_y_variante_scroll_2026_08_11",
+      "community": 188,
+      "community_name": "Handoff Codex \u2192 Claude \u2014 invitaci\u00f3n Reino de Hielo",
+      "norm_label": "actualizacion \u2014 apertura celeste y variante scroll (2026-08-11)"
+    },
+    {
+      "label": "Actualizaci\u00f3n \u2014 marco de invitaci\u00f3n y sobre (2026-08-11)",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L210",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_invitacion_hielo_2026_08_11_actualizaci\u00f3n_marco_de_invitaci\u00f3n_y_sobre_2026_08_11",
+      "community": 188,
+      "community_name": "Handoff Codex \u2192 Claude \u2014 invitaci\u00f3n Reino de Hielo",
+      "norm_label": "actualizacion \u2014 marco de invitacion y sobre (2026-08-11)"
+    },
+    {
+      "label": "Ajuste v3: CTA, ambiente celeste y protagonistas",
+      "file_type": "document",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L234",
+      "_origin": "ast",
+      "id": "docs_codex_handoff_invitacion_hielo_2026_08_11_ajuste_v3_cta_ambiente_celeste_y_protagonistas",
+      "community": 188,
+      "community_name": "Handoff Codex \u2192 Claude \u2014 invitaci\u00f3n Reino de Hielo",
+      "norm_label": "ajuste v3: cta, ambiente celeste y protagonistas"
     },
     {
       "label": "CODEX-HANDOFF-INVITACION-VIDEO-CARRERAS-2026-08-10.md",
@@ -12588,26 +12808,59 @@
       "norm_label": "3. capitulos del modo video, tema `carreras` (uno por tema, sirve para todas sus invitaciones)"
     },
     {
-      "label": "C\u00f3mo replicar a las dem\u00e1s tem\u00e1ticas (familia-canina, tropical, hielo, kpop)",
+      "label": "Portada \"sobre que se abre\" (2026-08-11, Claude)",
       "file_type": "document",
       "source_file": "docs/INVITACION-MUSICA-Y-NARRACION-ALICE.md",
       "source_location": "L122",
       "_origin": "ast",
-      "id": "docs_invitacion_musica_y_narracion_alice_c\u00f3mo_replicar_a_las_dem\u00e1s_tem\u00e1ticas_familia_canina_tropical_hielo_kpop",
+      "id": "docs_invitacion_musica_y_narracion_alice_portada_sobre_que_se_abre_2026_08_11_claude",
       "community": 183,
       "community_name": "Invitaci\u00f3n: m\u00fasica de fondo + narraci\u00f3n de Alice",
-      "norm_label": "como replicar a las demas tematicas (familia-canina, tropical, hielo, kpop)"
+      "norm_label": "portada \"sobre que se abre\" (2026-08-11, claude)"
     },
     {
-      "label": "Validaci\u00f3n pendiente (la hace Claude cuando los archivos existan)",
+      "label": "Pie de p\u00e1gina: logo + link a AutomatizaTech + favicon (2026-08-11, Claude)",
       "file_type": "document",
       "source_file": "docs/INVITACION-MUSICA-Y-NARRACION-ALICE.md",
       "source_location": "L137",
       "_origin": "ast",
-      "id": "docs_invitacion_musica_y_narracion_alice_validaci\u00f3n_pendiente_la_hace_claude_cuando_los_archivos_existan",
+      "id": "docs_invitacion_musica_y_narracion_alice_pie_de_p\u00e1gina_logo_link_a_automatizatech_favicon_2026_08_11_claude",
       "community": 183,
       "community_name": "Invitaci\u00f3n: m\u00fasica de fondo + narraci\u00f3n de Alice",
-      "norm_label": "validacion pendiente (la hace claude cuando los archivos existan)"
+      "norm_label": "pie de pagina: logo + link a automatizatech + favicon (2026-08-11, claude)"
+    },
+    {
+      "label": "Gotcha de entorno local: `event_profile_enabled` (2026-08-11)",
+      "file_type": "document",
+      "source_file": "docs/INVITACION-MUSICA-Y-NARRACION-ALICE.md",
+      "source_location": "L144",
+      "_origin": "ast",
+      "id": "docs_invitacion_musica_y_narracion_alice_gotcha_de_entorno_local_event_profile_enabled_2026_08_11",
+      "community": 183,
+      "community_name": "Invitaci\u00f3n: m\u00fasica de fondo + narraci\u00f3n de Alice",
+      "norm_label": "gotcha de entorno local: `event_profile_enabled` (2026-08-11)"
+    },
+    {
+      "label": "C\u00f3mo replicar a las dem\u00e1s tem\u00e1ticas",
+      "file_type": "document",
+      "source_file": "docs/INVITACION-MUSICA-Y-NARRACION-ALICE.md",
+      "source_location": "L171",
+      "_origin": "ast",
+      "id": "docs_invitacion_musica_y_narracion_alice_c\u00f3mo_replicar_a_las_dem\u00e1s_tem\u00e1ticas",
+      "community": 183,
+      "community_name": "Invitaci\u00f3n: m\u00fasica de fondo + narraci\u00f3n de Alice",
+      "norm_label": "como replicar a las demas tematicas"
+    },
+    {
+      "label": "Validaci\u00f3n (2026-08-11, verificado por Claude sobre el estado combinado: sobre + pie de p\u00e1gina + mapa multi-tema de Codex)",
+      "file_type": "document",
+      "source_file": "docs/INVITACION-MUSICA-Y-NARRACION-ALICE.md",
+      "source_location": "L212",
+      "_origin": "ast",
+      "id": "docs_invitacion_musica_y_narracion_alice_validaci\u00f3n_2026_08_11_verificado_por_claude_sobre_el_estado_combinado_sobre_pie_de_p\u00e1gina_mapa_multi_tema_de_codex",
+      "community": 183,
+      "community_name": "Invitaci\u00f3n: m\u00fasica de fondo + narraci\u00f3n de Alice",
+      "norm_label": "validacion (2026-08-11, verificado por claude sobre el estado combinado: sobre + pie de pagina + mapa multi-tema de codex)"
     },
     {
       "label": "OPENCODE-CONTINUE-FAMILIA-CANINA-PERSONAJES-V1.md",
@@ -34372,7 +34625,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/CODEX-HANDOFF-AUDIO-SCROLL-2026-08-11.md",
-      "source_location": "L40",
+      "source_location": "L39",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_codex_handoff_audio_scroll_2026_08_11_handoff_codex_claude_portada_y_audio_de_invitaci\u00f3n",
@@ -34394,7 +34647,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/CODEX-HANDOFF-AUDIO-SCROLL-2026-08-11.md",
-      "source_location": "L51",
+      "source_location": "L50",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_codex_handoff_audio_scroll_2026_08_11_handoff_codex_claude_portada_y_audio_de_invitaci\u00f3n",
@@ -34405,7 +34658,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/CODEX-HANDOFF-AUDIO-SCROLL-2026-08-11.md",
-      "source_location": "L58",
+      "source_location": "L57",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_codex_handoff_audio_scroll_2026_08_11_handoff_codex_claude_portada_y_audio_de_invitaci\u00f3n",
@@ -34416,11 +34669,121 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/CODEX-HANDOFF-AUDIO-SCROLL-2026-08-11.md",
-      "source_location": "L29",
+      "source_location": "L28",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_codex_handoff_audio_scroll_2026_08_11_handoff_codex_claude_portada_y_audio_de_invitaci\u00f3n",
       "target": "docs_codex_handoff_audio_scroll_2026_08_11_motivo_t\u00e9cnico",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11",
+      "target": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_handoff_de_cierre_invitaciones_hielo_y_carreras_2026_08_11",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_handoff_de_cierre_invitaciones_hielo_y_carreras_2026_08_11",
+      "target": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_entregado_en_la_invitaci\u00f3n",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_handoff_de_cierre_invitaciones_hielo_y_carreras_2026_08_11",
+      "target": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_estado_y_l\u00edmites",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L66",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_handoff_de_cierre_invitaciones_hielo_y_carreras_2026_08_11",
+      "target": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_higgsfield_seedance_2_5",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L89",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_handoff_de_cierre_invitaciones_hielo_y_carreras_2026_08_11",
+      "target": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_revisi\u00f3n_solicitada_antes_de_versionar",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L77",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_handoff_de_cierre_invitaciones_hielo_y_carreras_2026_08_11",
+      "target": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_validaciones_realizadas",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L103",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_handoff_de_cierre_invitaciones_hielo_y_carreras_2026_08_11",
+      "target": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_versionado_y_ftp",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L31",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_entregado_en_la_invitaci\u00f3n",
+      "target": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_audio_de_cierre_regla_global",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_entregado_en_la_invitaci\u00f3n",
+      "target": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_hielo_candidatos_de_video_para_evaluaci\u00f3n",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md",
+      "source_location": "L42",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_entregado_en_la_invitaci\u00f3n",
+      "target": "docs_codex_handoff_cierre_invitaciones_hielo_carreras_2026_08_11_perfil_p\u00fablico_conoce_a",
       "confidence_score": 1.0
     },
     {
@@ -34432,6 +34795,50 @@
       "_origin": "ast",
       "source": "docs_codex_handoff_invitacion_hielo_2026_08_11",
       "target": "docs_codex_handoff_invitacion_hielo_2026_08_11_handoff_codex_claude_invitaci\u00f3n_reino_de_hielo",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L178",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_invitacion_hielo_2026_08_11_handoff_codex_claude_invitaci\u00f3n_reino_de_hielo",
+      "target": "docs_codex_handoff_invitacion_hielo_2026_08_11_actualizaci\u00f3n_apertura_celeste_y_variante_scroll_2026_08_11",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L210",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_invitacion_hielo_2026_08_11_handoff_codex_claude_invitaci\u00f3n_reino_de_hielo",
+      "target": "docs_codex_handoff_invitacion_hielo_2026_08_11_actualizaci\u00f3n_marco_de_invitaci\u00f3n_y_sobre_2026_08_11",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L87",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_invitacion_hielo_2026_08_11_handoff_codex_claude_invitaci\u00f3n_reino_de_hielo",
+      "target": "docs_codex_handoff_invitacion_hielo_2026_08_11_actualizaci\u00f3n_saludos_inmersivos_alice_2026_08_11",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L234",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_invitacion_hielo_2026_08_11_handoff_codex_claude_invitaci\u00f3n_reino_de_hielo",
+      "target": "docs_codex_handoff_invitacion_hielo_2026_08_11_ajuste_v3_cta_ambiente_celeste_y_protagonistas",
       "confidence_score": 1.0
     },
     {
@@ -34487,6 +34894,61 @@
       "_origin": "ast",
       "source": "docs_codex_handoff_invitacion_hielo_2026_08_11_handoff_codex_claude_invitaci\u00f3n_reino_de_hielo",
       "target": "docs_codex_handoff_invitacion_hielo_2026_08_11_validaciones_realizadas",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L171",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_invitacion_hielo_2026_08_11_actualizaci\u00f3n_saludos_inmersivos_alice_2026_08_11",
+      "target": "docs_codex_handoff_invitacion_hielo_2026_08_11_correcci\u00f3n_de_rutas_de_candidatos",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L147",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_invitacion_hielo_2026_08_11_actualizaci\u00f3n_saludos_inmersivos_alice_2026_08_11",
+      "target": "docs_codex_handoff_invitacion_hielo_2026_08_11_ftp_si_luis_aprueba_un_deploy_futuro",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L162",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_invitacion_hielo_2026_08_11_actualizaci\u00f3n_saludos_inmersivos_alice_2026_08_11",
+      "target": "docs_codex_handoff_invitacion_hielo_2026_08_11_guion_fijo_de_alice",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L124",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_invitacion_hielo_2026_08_11_actualizaci\u00f3n_saludos_inmersivos_alice_2026_08_11",
+      "target": "docs_codex_handoff_invitacion_hielo_2026_08_11_prueba_aislada",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md",
+      "source_location": "L139",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_codex_handoff_invitacion_hielo_2026_08_11_actualizaci\u00f3n_saludos_inmersivos_alice_2026_08_11",
+      "target": "docs_codex_handoff_invitacion_hielo_2026_08_11_validaci\u00f3n_posterior",
       "confidence_score": 1.0
     },
     {
@@ -36792,11 +37254,44 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/INVITACION-MUSICA-Y-NARRACION-ALICE.md",
+      "source_location": "L171",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_invitacion_musica_y_narracion_alice_invitaci\u00f3n_m\u00fasica_de_fondo_narraci\u00f3n_de_alice",
+      "target": "docs_invitacion_musica_y_narracion_alice_c\u00f3mo_replicar_a_las_dem\u00e1s_tem\u00e1ticas",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/INVITACION-MUSICA-Y-NARRACION-ALICE.md",
+      "source_location": "L144",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_invitacion_musica_y_narracion_alice_invitaci\u00f3n_m\u00fasica_de_fondo_narraci\u00f3n_de_alice",
+      "target": "docs_invitacion_musica_y_narracion_alice_gotcha_de_entorno_local_event_profile_enabled_2026_08_11",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/INVITACION-MUSICA-Y-NARRACION-ALICE.md",
+      "source_location": "L137",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_invitacion_musica_y_narracion_alice_invitaci\u00f3n_m\u00fasica_de_fondo_narraci\u00f3n_de_alice",
+      "target": "docs_invitacion_musica_y_narracion_alice_pie_de_p\u00e1gina_logo_link_a_automatizatech_favicon_2026_08_11_claude",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/INVITACION-MUSICA-Y-NARRACION-ALICE.md",
       "source_location": "L122",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_invitacion_musica_y_narracion_alice_invitaci\u00f3n_m\u00fasica_de_fondo_narraci\u00f3n_de_alice",
-      "target": "docs_invitacion_musica_y_narracion_alice_c\u00f3mo_replicar_a_las_dem\u00e1s_tem\u00e1ticas_familia_canina_tropical_hielo_kpop",
+      "target": "docs_invitacion_musica_y_narracion_alice_portada_sobre_que_se_abre_2026_08_11_claude",
       "confidence_score": 1.0
     },
     {
@@ -36825,11 +37320,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/INVITACION-MUSICA-Y-NARRACION-ALICE.md",
-      "source_location": "L137",
+      "source_location": "L212",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_invitacion_musica_y_narracion_alice_invitaci\u00f3n_m\u00fasica_de_fondo_narraci\u00f3n_de_alice",
-      "target": "docs_invitacion_musica_y_narracion_alice_validaci\u00f3n_pendiente_la_hace_claude_cuando_los_archivos_existan",
+      "target": "docs_invitacion_musica_y_narracion_alice_validaci\u00f3n_2026_08_11_verificado_por_claude_sobre_el_estado_combinado_sobre_pie_de_p\u00e1gina_mapa_multi_tema_de_codex",
       "confidence_score": 1.0
     },
     {
@@ -41850,5 +42345,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "8e4daec3e0b0473fec175ba3df0a70788904632c"
+  "built_at_commit": "5d6d5942715c2632b8d4f1d11b5837bc9eb81d30"
 }

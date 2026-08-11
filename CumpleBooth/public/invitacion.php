@@ -71,8 +71,11 @@ if (preg_match('/^[a-z0-9-]+$/', $themeSlug) && is_file(__DIR__ . '/themes/' . $
 // invitación, así que es UN solo archivo compartido (no por tema, no por
 // invitación) en vez de pedir que se genere una y otra vez.
 $narrationOutroUrl = '';
-if (is_file(__DIR__ . '/assets/audio/narracion-final.mp3')) {
-    $narrationOutroUrl = 'assets/audio/narracion-final.mp3';
+$narrationOutroPath = __DIR__ . '/assets/audio/narracion-final.mp3';
+if (is_file($narrationOutroPath)) {
+    // El archivo compartido conserva su nombre, así que la versión evita que
+    // una invitación ya abierta conserve en caché una despedida anterior.
+    $narrationOutroUrl = 'assets/audio/narracion-final.mp3?v=' . rawurlencode((string) filemtime($narrationOutroPath));
 }
 
 $themeData = is_array($themesData['themes'][$themeSlug] ?? null) ? $themesData['themes'][$themeSlug] : [];
@@ -353,6 +356,20 @@ $playlistOrdersByTheme = [
     ],
 ];
 
+// Revision aislada de los saludos nuevos de Hielo. Solo se usa con
+// el modo capitulos=candidatos, conserva intactos los MP4 vigentes y termina
+// con la despedida ya aprobada para probar el recorrido completo.
+$playlistCandidateOrdersByTheme = [
+    'hielo' => [
+        'invitation/candidates/saludo-elsa-v2.mp4' => 'La magia de ' . $hieloCelebrant . ' se enciende',
+        'invitation/candidates/saludo-anna-v3.mp4' => 'La celebración de ' . $hieloCelebrant . ' ya está lista',
+        'invitation/candidates/saludo-olaf-v2.mp4' => 'Una sorpresa nevada viene en camino',
+        'invitation/candidates/saludo-kristoff-v2.mp4' => 'Todos llegan para celebrar a ' . $hieloCelebrant,
+        'invitation/candidates/saludo-sven-v3.mp4' => 'La aventura de ' . $hieloCelebrant . ' está por comenzar',
+        'invitation/candidates/saludo-bruni-v3.mp4' => 'El reino completo celebra a ' . $hieloCelebrant,
+        'despedida-hielo.mp4' => '¡Te esperamos!',
+    ],
+];
 // Candidatos de entrada: solo se activan al pedir `?hero=auto`, por lo que
 // ningún asset aprobado se reemplaza ni cambia el comportamiento por defecto.
 // Carreras conserva su candidato aprobado para comparar; Hielo podrá sumar el
@@ -362,6 +379,12 @@ $heroAutoCandidatesByTheme = [
     'hielo' => 'invitation/candidate-hielo-auto.mp4',
 ];
 
+// Candidatos scroll: cada tema puede exponer una versión con keyframe por
+// cuadro, separada del video auto para que el dedo avance sin saltos.
+$heroScrollCandidatesByTheme = [
+    'carreras' => 'invitation/candidate-wan27-scroll.mp4',
+    'hielo' => 'invitation/candidate-hielo-scroll.mp4',
+];
 // Comparación de candidatos detrás de `?hero=`. La versión aprobada de cada
 // tema sigue siendo el comportamiento por defecto, byte a byte.
 // - hero=scroll → candidato con avance controlado por scroll (Carreras).
@@ -370,10 +393,12 @@ $heroAutoCandidatesByTheme = [
 $heroPlayMode = (string) ($_GET['hero'] ?? '');
 $heroAutoUrl = '';
 if ($heroPlayMode !== '' && preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
-    if ($heroPlayMode === 'scroll' && $themeSlug === 'carreras') {
-        $candidatePath = __DIR__ . '/themes/' . $themeSlug . '/invitation/candidate-wan27-scroll.mp4';
-        if (is_file($candidatePath)) {
-            $heroScrubUrl = 'themes/' . rawurlencode($themeSlug) . '/invitation/candidate-wan27-scroll.mp4';
+    if ($heroPlayMode === 'scroll') {
+        $candidateRelative = $heroScrollCandidatesByTheme[$themeSlug] ?? '';
+        $candidatePath = $candidateRelative !== '' ? __DIR__ . '/themes/' . $themeSlug . '/' . $candidateRelative : '';
+        if ($candidatePath !== '' && is_file($candidatePath)) {
+            $candidateUrlPath = implode('/', array_map('rawurlencode', explode('/', $candidateRelative)));
+            $heroScrubUrl = 'themes/' . rawurlencode($themeSlug) . '/' . $candidateUrlPath;
             $heroVideoUrl = '';
         }
     } elseif ($heroPlayMode === 'auto') {
@@ -397,8 +422,11 @@ $hasStoryAheadOfPlate = false;
 if (preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
     if ($chapterQueryModeEarly === '1') {
         $hasStoryAheadOfPlate = is_dir(__DIR__ . '/themes/' . $themeSlug . '/invitation/chapters');
-    } elseif ($chapterQueryModeEarly === 'auto') {
-        foreach ($playlistOrdersByTheme[$themeSlug] ?? [] as $fileName => $_caption) {
+    } elseif ($chapterQueryModeEarly === 'auto' || $chapterQueryModeEarly === 'candidatos') {
+        $playlistEarly = $chapterQueryModeEarly === 'candidatos'
+            ? ($playlistCandidateOrdersByTheme[$themeSlug] ?? [])
+            : ($playlistOrdersByTheme[$themeSlug] ?? []);
+        foreach ($playlistEarly as $fileName => $_caption) {
             if (is_file(__DIR__ . '/themes/' . $themeSlug . '/' . $fileName)) {
                 $hasStoryAheadOfPlate = true;
                 break;
@@ -606,7 +634,7 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
 <meta name="robots" content="noindex, nofollow">
 <title>Invitación de <?= $esc($birthdayName !== '' ? $birthdayName : 'cumpleaños') ?> · CumpleClick</title>
 <link rel="icon" type="image/svg+xml" href="brand/cumpleclick-mark.svg">
-<link rel="stylesheet" href="assets/invitation.css?v=3">
+<link rel="stylesheet" href="assets/invitation.css?v=6">
 <?php if ($eventProfile !== null): ?><link rel="stylesheet" href="assets/event-profile.css?v=2"><?php endif; ?>
 </head>
 <body class="inv-body" data-theme="<?= $esc($themeSlug) ?>" style="<?= $esc($invitationThemeStyle) ?>">
@@ -703,7 +731,7 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
       </span>
       <?php else: ?>
       <a class="inv-scroll-hint" href="#inv-detalles">
-        <span>Entra a la fiesta</span>
+        <span>Ver invitación</span>
         <span class="inv-scroll-arrow" aria-hidden="true"></span>
       </a>
       <?php endif; ?>
@@ -800,11 +828,13 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
                 ];
             }
         }
-    } elseif ($chapterQueryMode === 'auto' && preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
+    } elseif (($chapterQueryMode === 'auto' || $chapterQueryMode === 'candidatos') && preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
         // Videos existentes y aprobados del kiosco. El mapa quedó declarado
         // arriba porque también decide, antes de renderizar el hero, si la
         // historia tiene contenido al cual continuar.
-        $playlistOrder = $playlistOrdersByTheme[$themeSlug] ?? [];
+        $playlistOrder = $chapterQueryMode === 'candidatos'
+            ? ($playlistCandidateOrdersByTheme[$themeSlug] ?? [])
+            : ($playlistOrdersByTheme[$themeSlug] ?? []);
         // Narración de Alice del modo video: texto fijo por tema (no depende
         // de la invitación), UNA vez por capítulo. El último capítulo
         // ("¡Te esperamos!") reutiliza el mismo audio de despedida global en
@@ -816,16 +846,21 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
             if (!is_file($filePath)) {
                 continue;
             }
-            $narrationKey = pathinfo($fileName, PATHINFO_FILENAME);
+            $narrationBaseName = pathinfo($fileName, PATHINFO_FILENAME);
+            $narrationKey = preg_replace('/-v[0-9]+$/', '', $narrationBaseName);
             $narrationPath = __DIR__ . '/themes/' . $themeSlug . '/narracion-video/' . $narrationKey . '.mp3';
             $narrationUrl = '';
-            if (is_file($narrationPath)) {
-                $narrationUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . rawurlencode($narrationKey) . '.mp3';
-            } elseif ($fileName === $lastPlaylistKey && $narrationOutroUrl !== '') {
+            // Regla global: el último capítulo de CUALQUIER temática siempre
+            // usa la misma despedida aprobada. Incluso si en el futuro existe
+            // un MP3 por tema, la despedida compartida sigue teniendo prioridad.
+            if ($fileName === $lastPlaylistKey && $narrationOutroUrl !== '') {
                 $narrationUrl = $narrationOutroUrl;
+            } elseif (is_file($narrationPath)) {
+                $narrationUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . rawurlencode($narrationKey) . '.mp3';
             }
+            $encodedFilePath = implode('/', array_map('rawurlencode', explode('/', $fileName)));
             $playlistSlots[] = [
-                'url' => 'themes/' . rawurlencode($themeSlug) . '/' . rawurlencode($fileName),
+                'url' => 'themes/' . rawurlencode($themeSlug) . '/' . $encodedFilePath,
                 'caption' => $caption,
                 'narration' => $narrationUrl,
             ];
@@ -880,7 +915,7 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
       <?php // Solo aparece en el último slot ("¡Te esperamos!"); invitation.js
             // le agrega `is-visible` según cuál esté activo. ?>
       <a class="inv-scroll-hint" href="#inv-detalles" data-chapters-hint>
-        <span>Entra a la fiesta</span>
+        <span>Ver invitación</span>
         <span class="inv-scroll-arrow" aria-hidden="true"></span>
       </a>
     </div>
@@ -901,7 +936,7 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
       <p class="inv-playlist-caption" data-playlist-caption></p>
       <?php // Aparece al entrar al último clip ("¡Te esperamos!"). ?>
       <a class="inv-scroll-hint" href="#inv-detalles" data-playlist-hint>
-        <span>Entra a la fiesta</span>
+        <span>Ver invitación</span>
         <span class="inv-scroll-arrow" aria-hidden="true"></span>
       </a>
     </div>
@@ -919,16 +954,30 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
         <?php // Luis pidió el texto largo SOLO para el kicker del hero (el de
               // arriba, "inicio"); este de la placa se queda en la versión
               // corta ya corregida (ver inv-kicker más arriba para el otro). ?>
+        <?php if ($themeSlug === 'hielo'): ?>
+        <div class="inv-plate-snow" aria-hidden="true"><span>❄</span><span>✦</span><span>❄</span></div>
+        <p class="inv-plate-kicker">Una celebración mágica para:</p>
+        <p class="inv-plate-name"><?= $esc($birthdayName) ?></p>
+        <div class="inv-plate-details">
+          <?php if ($dateParts['long'] !== ''): ?>
+          <p class="inv-plate-chip inv-plate-chip--date"><span aria-hidden="true">📅</span><span><?= $esc($dateParts['long']) ?></span></p>
+          <?php endif; ?>
+          <?php if ($eventTime !== ''): ?>
+          <p class="inv-plate-chip"><span aria-hidden="true">🕓</span><span><?= $esc($eventTime) ?> horas</span></p>
+          <?php endif; ?>
+          <?php if ($address !== ''): ?>
+          <p class="inv-plate-chip inv-plate-chip--place"><span aria-hidden="true">📍</span><span><?= $esc($address) ?></span></p>
+          <?php endif; ?>
+        </div>
+        <?php else: ?>
         <p class="inv-plate-kicker">Te invitamos al cumpleaños de:</p>
         <p class="inv-plate-name"><?= $esc($birthdayName) ?></p>
         <?php if ($dateParts['long'] !== '' || $eventTime !== ''): ?>
         <p class="inv-plate-when"><?= $esc($dateParts['long']) ?><?= $dateParts['long'] !== '' && $eventTime !== '' ? ' · ' : '' ?><?= $esc($eventTime) ?></p>
         <?php endif; ?>
-        <?php // Aquí, sobre la foto grupal con todos los personajes, es "la
-              // invitación como tal": la dirección va en esta misma placa, no
-              // arriba en el hero. ?>
         <?php if ($address !== ''): ?>
         <p class="inv-plate-where">📍 <?= $esc($address) ?></p>
+        <?php endif; ?>
         <?php endif; ?>
       </div>
       <figcaption class="inv-art-caption">Invitación de <?= $esc($birthdayName) ?></figcaption>

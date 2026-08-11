@@ -20,8 +20,7 @@ Ese único toque/clic:
 3. En scroll habilita el recorrido.
 4. En video inicia el clip y mantiene el scroll bloqueado hasta su evento
    `ended`; recién entonces aparece “Desliza para seguir”.
-5. Prepara la despedida global para que al final diga: “¡Te esperamos con
-   muchas ganas! Toca aquí para entrar a la fiesta.”
+5. La despedida global de cualquier temática dice: “Toca aquí para ver la invitación a la fiesta.”
 
 No guardar en este documento el token de prueba que compartió Luis. Úsalo solo
 si él lo vuelve a entregar en el chat.

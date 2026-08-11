@@ -68,7 +68,7 @@ Generar y colocar estos 3 archivos:
 
 ### 1. Despedida global (una sola vez, sirve para siempre)
 
-- Texto: `"¡Te esperamos con muchas ganas! Toca aquí para entrar a la fiesta."`
+- Texto: `"Toca aquí para ver la invitación a la fiesta."`
 - Destino: `CumpleBooth/public/assets/audio/narracion-final.mp3`
 - Crear la carpeta `public/assets/audio/` si no existe.
 

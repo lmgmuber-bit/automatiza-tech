@@ -33,7 +33,7 @@ invitación y conoce al cumpleañero".
    (720×1270, 5s), re-encodeado a 540×960 `-g 1` sin audio. Muestra al auto
    avanzando por una pista bordeada de globos y **llegando a la meta a
    cuadros justo en el último frame** — encadena perfecto con la sección
-   siguiente (CTA "Entra a la fiesta"). Luis lo vio y dijo "me gustó, sí
+   siguiente (CTA "Ver invitación"). Luis lo vio y dijo "me gustó, sí
    dejemos ese".
 
    Comando usado:

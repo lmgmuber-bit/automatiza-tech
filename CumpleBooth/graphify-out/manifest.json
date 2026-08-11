@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1786189221.040977,
-    "ast_hash": "388055564be02d3667ed53c16554aa08",
+    "mtime": 1786444811.1278028,
+    "ast_hash": "99458a3e0fdf6773a9ca9b621e04b493",
     "semantic_hash": ""
   },
   "OPENCODE.md": {
@@ -455,8 +455,8 @@
     "semantic_hash": ""
   },
   "public/invitacion.php": {
-    "mtime": 1786427144.8118956,
-    "ast_hash": "abbd3592cf7895c2e92910c74757703d",
+    "mtime": 1786458046.908338,
+    "ast_hash": "92ff4a91c7bf656c80df5c37ad79c0d5",
     "semantic_hash": ""
   },
   "tests/backend/seed-invitation-smoke.php": {
@@ -4675,13 +4675,13 @@
     "semantic_hash": ""
   },
   "docs/CODEX-HANDOFF-INVITACION-VIDEO-CARRERAS-2026-08-10.md": {
-    "mtime": 1786387109.3971925,
-    "ast_hash": "a96d2a485c6808384ab5c6ead928f292",
+    "mtime": 1786457690.081895,
+    "ast_hash": "a9a8d8f39f0bd385b01f39ab83b8d69f",
     "semantic_hash": ""
   },
   "docs/INVITACION-MUSICA-Y-NARRACION-ALICE.md": {
-    "mtime": 1786422236.2525637,
-    "ast_hash": "ac1cc398ab076a239c71c9f222ad8b7c",
+    "mtime": 1786457106.8767836,
+    "ast_hash": "d079b0efe602817f53dcc46606973b94",
     "semantic_hash": ""
   },
   "public/themes/carreras/invitation/chapters/conn-01.jpg": {
@@ -4765,8 +4765,8 @@
     "semantic_hash": ""
   },
   "public/assets/audio/narracion-final.mp3": {
-    "mtime": 1786420018.210241,
-    "ast_hash": "d5c7383768ddf06b5e86e17d9740576e",
+    "mtime": 1786457135.9363015,
+    "ast_hash": "1af95c66c0788bd320f4d0d6adab066f",
     "semantic_hash": ""
   },
   "public/themes/carreras/invitation/candidate-wan27-auto.mp4": {
@@ -4820,18 +4820,103 @@
     "semantic_hash": ""
   },
   "docs/CODEX-HANDOFF-AUDIO-SCROLL-2026-08-11.md": {
-    "mtime": 1786424347.8890977,
-    "ast_hash": "6075bca31aa1f03e00109c61cb9999cc",
+    "mtime": 1786457729.0774107,
+    "ast_hash": "9364c266ae9d3e886f0fbe69e5e758c4",
     "semantic_hash": ""
   },
   "docs/CODEX-HANDOFF-INVITACION-HIELO-2026-08-11.md": {
-    "mtime": 1786427217.5624871,
-    "ast_hash": "4498340de1eb53cc6ac48c4fcfd1fccb",
+    "mtime": 1786457461.5159245,
+    "ast_hash": "7a15fdb93a82e6bba7b294a8574008b0",
     "semantic_hash": ""
   },
   "public/themes/hielo/invitation/candidate-hielo-auto.mp4": {
     "mtime": 1786427038.41304,
     "ast_hash": "99f83670fcbed43a74857a237502fda8",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitation/candidates/saludo-anna-v2.mp4": {
+    "mtime": 1786446534.271043,
+    "ast_hash": "5573bd6604cd482d176811296d573507",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitation/candidates/saludo-bruni-v2.mp4": {
+    "mtime": 1786446557.742804,
+    "ast_hash": "513a69908c8b97a1f02e488514b4e705",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitation/candidates/saludo-elsa-v2.mp4": {
+    "mtime": 1786446529.584334,
+    "ast_hash": "51fa64c03c5e6f3449cae97aafb581ff",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitation/candidates/saludo-kristoff-v2.mp4": {
+    "mtime": 1786446546.5816593,
+    "ast_hash": "df31c3b41c94769073e7007974382fd1",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitation/candidates/saludo-olaf-v2.mp4": {
+    "mtime": 1786446540.3713207,
+    "ast_hash": "d5fbd0ac1eda5afd32cefcae8cb5b621",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitation/candidates/saludo-sven-v2.mp4": {
+    "mtime": 1786446552.252143,
+    "ast_hash": "620df0ee4945d5cd1719b4d3b92fff51",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/narracion-video/saludo-anna.mp3": {
+    "mtime": 1786446458.2023203,
+    "ast_hash": "d84ef4593644f41f022ead8da92acc18",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/narracion-video/saludo-bruni.mp3": {
+    "mtime": 1786446463.9200983,
+    "ast_hash": "0c3cb5b516931f6c200c03f0b9b765ce",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/narracion-video/saludo-elsa.mp3": {
+    "mtime": 1786446456.7775023,
+    "ast_hash": "d13e698f35a224c89ae279a0f14a345a",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/narracion-video/saludo-kristoff.mp3": {
+    "mtime": 1786446461.0356498,
+    "ast_hash": "162c39a3d702648e42f623cfd4f3e22d",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/narracion-video/saludo-olaf.mp3": {
+    "mtime": 1786446459.6227384,
+    "ast_hash": "653b8e9b397f6117e26817f4d944d5ec",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/narracion-video/saludo-sven.mp3": {
+    "mtime": 1786446462.3939998,
+    "ast_hash": "2317d9b565e917e1e42c4e46c974f9c9",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitation/candidate-hielo-scroll.mp4": {
+    "mtime": 1786451866.817948,
+    "ast_hash": "bc60abdd5bf9b338565bb4dd56467699",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitation/candidates/saludo-anna-v3.mp4": {
+    "mtime": 1786457424.1056745,
+    "ast_hash": "85b6e68f1b07873e1af0c08c7bf29909",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitation/candidates/saludo-bruni-v3.mp4": {
+    "mtime": 1786457436.053121,
+    "ast_hash": "e221a21bcffa587967e6ecdc20ee1b63",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/invitation/candidates/saludo-sven-v3.mp4": {
+    "mtime": 1786457429.3696957,
+    "ast_hash": "3e9858601027b86be9e9aee8a1189b3f",
+    "semantic_hash": ""
+  },
+  "docs/CODEX-HANDOFF-CIERRE-INVITACIONES-HIELO-CARRERAS-2026-08-11.md": {
+    "mtime": 1786459084.3781826,
+    "ast_hash": "e89e95746a66d6e6b4c7c5cb5bc7a877",
     "semantic_hash": ""
   }
 }

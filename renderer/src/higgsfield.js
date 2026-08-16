@@ -55,17 +55,27 @@ async function generateProposalImages(imageBriefs, credentials) {
   const briefs = Array.isArray(imageBriefs) ? imageBriefs : [];
   const results = await Promise.all(
     briefs.map(async (brief) => {
+      const slide = brief && brief.slide;
+      const prompt = brief && brief.prompt;
+      if (!slide || !prompt) {
+        // Malformed entry (null/undefined, or missing slide/prompt): never
+        // let it reach generateImageUrl or throw — degrade to a resolved
+        // null result when we at least have a slide id, otherwise skip it.
+        return { slide, url: null };
+      }
       try {
-        const url = await generateImageUrl(brief.prompt, credentials);
-        return { slide: brief.slide, url };
+        const url = await generateImageUrl(prompt, credentials);
+        return { slide, url };
       } catch (err) {
-        return { slide: brief.slide, url: null, error: err.message };
+        return { slide, url: null, error: err.message };
       }
     })
   );
   const bySlide = {};
   for (const result of results) {
-    bySlide[result.slide] = result.url;
+    if (result.slide) {
+      bySlide[result.slide] = result.url;
+    }
   }
   return bySlide;
 }

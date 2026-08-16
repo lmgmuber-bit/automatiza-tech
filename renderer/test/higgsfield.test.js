@@ -86,3 +86,21 @@ test('resolves multiple briefs independently, keyed by slide', async () => {
     global.fetch = originalFetch;
   }
 });
+
+test('never throws when the briefs array contains malformed entries', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = makeFakeFetch();
+  try {
+    const result = await generateProposalImages(
+      [null, undefined, { slide: 'cover' }, { prompt: 'no slide here' }],
+      { keyId: 'id', keySecret: 'secret' }
+    );
+    // Entries with a slide but no usable prompt resolve to null for that slide.
+    assert.equal(result.cover, null);
+    // Entries with no slide identifier at all (null/undefined/no .slide) are
+    // skipped rather than crashing the whole batch.
+    assert.deepEqual(Object.keys(result), ['cover']);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

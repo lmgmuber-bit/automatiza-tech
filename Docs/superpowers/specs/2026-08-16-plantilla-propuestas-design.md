@@ -102,8 +102,10 @@ Se actualiza el HTML del correo: en vez de "copia este prompt y pégalo en Gamma
 - Exportación a `.pptx` editable nativo.
 - Reemplazar OpenAI o budgetpixel/higgsfield por alternativas 100% self-hosted.
 
-## Preguntas abiertas / supuestos a validar en el plan de implementación
+## Preguntas abiertas — RESUELTAS (2026-08-16)
 
-- Confirmar credenciales/plan disponible en budgetpixel o higgsfield para 5 generaciones de imagen por propuesta (costo por propuesta, límites de cuenta).
-- Confirmar acceso de Luis a Easypanel para desplegar el nuevo contenedor `propuesta-renderer` (o si lo despliega Claude/Codex con las credenciales ya usadas para n8n).
-- Definir dominio/ruta pública final para `/p/{unique_id}` (subdominio propio en el VPS vs. proxy bajo `automatizatech.cl`).
+- **Imágenes:** Higgsfield, vía su API REST (no MCP) en `cloud.higgsfield.ai`. API key (`KEY_ID`+`KEY_SECRET`) ya generada por Luis y guardada en su archivo de credenciales fuera del repo.
+- **Deploy del contenedor:** lo hace Claude, vía el panel de Easypanel (`https://kchiba.easypanel.host`, acceso confirmado por Luis en sesión). El servicio nuevo `propuesta-renderer` se crea dentro del proyecto `n8n` existente, junto a `reel-media-worker` (mismo patrón: microservicio ayudante de un workflow n8n).
+- **Dominio:** `propuestas.automatizatech.cl` → registro DNS tipo A en Hostinger apuntando a `72.61.132.193` (IP pública del VPS de Easypanel, confirmada por resolución DNS de `kchiba.easypanel.host`). Pendiente que Luis agregue el registro en hPanel; Easypanel conecta el dominio al servicio y emite el certificado SSL en cuanto el DNS resuelva.
+
+Sin bloqueos de infraestructura pendientes para pasar al plan de implementación.

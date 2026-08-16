@@ -1,12 +1,8 @@
 <?php
-// Navigate up to parent repo where wp-load.php and at-maintenance-guard.php live
-$parent_dir = dirname(__DIR__, 2);
-require_once $parent_dir . '/at-maintenance-guard.php';
-require_once $parent_dir . '/wp-load.php';
+require_once __DIR__ . '/at-maintenance-guard.php';
+require_once 'wp-load.php';
 
-// Allow CLI execution for testing
-$is_cli = php_sapi_name() === 'cli' || defined('WP_CLI');
-if (!$is_cli && !current_user_can('manage_options')) {
+if (!current_user_can('manage_options')) {
     wp_die('No tienes permisos para ejecutar este script.');
 }
 

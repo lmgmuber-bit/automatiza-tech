@@ -61,6 +61,15 @@ if ( ! $view_url && ! $pdf_url ) {
 global $wpdb;
 $table_name = $wpdb->prefix . 'automatiza_propuestas';
 
+$exists = $wpdb->get_var(
+    $wpdb->prepare( "SELECT id FROM {$table_name} WHERE unique_link_id = %s", $unique_id )
+);
+
+if ( ! $exists ) {
+    echo json_encode( [ 'error' => 'unique_id no encontrado' ] );
+    exit;
+}
+
 $update = [];
 if ( $view_url ) {
     $update['gamma_iframe_url'] = $view_url;

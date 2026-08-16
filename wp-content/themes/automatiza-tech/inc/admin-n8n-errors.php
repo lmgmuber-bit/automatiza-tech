@@ -274,11 +274,129 @@ function automatiza_search_similar_errors($request) {
     ), 200);
 }
 
+/**
+ * Errores pendientes de reparar por el Mecánico (máx 3 intentos)
+ */
+function automatiza_get_n8n_errors_pending_fix($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_n8n_errors';
+
+    $errors = $wpdb->get_results(
+        "SELECT id, workflow_name, workflow_id, error_node, error_message, error_stack,
+                severity, fix_attempts, fix_history, created_at
+         FROM {$table_name}
+         WHERE status = 'new'
+           AND fix_status = 'pendiente'
+           AND fix_attempts < 3
+         ORDER BY created_at ASC
+         LIMIT 10"
+    );
+
+    return new WP_REST_Response($errors, 200);
+}
+
+/**
+ * El Mecánico reporta el resultado de un intento de reparación
+ */
+function automatiza_report_fix_attempt($request) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_n8n_errors';
+
+    $params = $request->get_json_params();
+
+    if (empty($params['error_id'])) {
+        return new WP_Error('missing_data', 'Falta error_id', array('status' => 400));
+    }
+
+    $error_id = intval($params['error_id']);
+    $resultado = sanitize_text_field($params['resultado'] ?? '');
+    $diagnostico = sanitize_textarea_field($params['diagnostico'] ?? '');
+    $accion = sanitize_textarea_field($params['accion'] ?? '');
+
+    if (!in_array($resultado, array('resuelto', 'fallido'), true)) {
+        return new WP_Error('invalid_resultado', "resultado debe ser 'resuelto' o 'fallido'", array('status' => 400));
+    }
+
+    $row = $wpdb->get_row($wpdb->prepare("SELECT fix_attempts, fix_history FROM {$table_name} WHERE id = %d", $error_id));
+    if (!$row) {
+        return new WP_Error('not_found', 'Error no encontrado', array('status' => 404));
+    }
+
+    $historial = array();
+    if (!empty($row->fix_history)) {
+        $decoded = json_decode($row->fix_history, true);
+        if (is_array($decoded)) $historial = $decoded;
+    }
+
+    $intento_numero = intval($row->fix_attempts) + 1;
+    $historial[] = array(
+        'intento' => $intento_numero,
+        'fecha' => current_time('mysql'),
+        'diagnostico' => $diagnostico,
+        'accion' => $accion,
+        'resultado' => $resultado,
+    );
+
+    $forzar_intervencion = !empty($params['requiere_intervencion_inmediata']);
+    $nuevo_status = 'pendiente';
+    if ($resultado === 'resuelto') {
+        $nuevo_status = 'resuelto';
+    } elseif ($forzar_intervencion || $intento_numero >= 3) {
+        $nuevo_status = 'requiere_intervencion';
+    }
+
+    $data = array(
+        'fix_attempts' => $intento_numero,
+        'fix_status' => $nuevo_status,
+        'fix_history' => wp_json_encode($historial),
+        'last_fix_attempt_at' => current_time('mysql'),
+    );
+    $formats = array('%d', '%s', '%s', '%s');
+
+    if ($nuevo_status === 'resuelto') {
+        $data['status'] = 'resolved';
+        $data['resolved_at'] = current_time('mysql');
+        $data['resolution_notes'] = $accion;
+        $formats[] = '%s';
+        $formats[] = '%s';
+        $formats[] = '%s';
+    }
+
+    $result = $wpdb->update($table_name, $data, array('id' => $error_id), $formats, array('%d'));
+
+    if ($result === false) {
+        return new WP_Error('db_error', 'Error al actualizar en base de datos', array('status' => 500));
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'error_id' => $error_id,
+        'fix_status' => $nuevo_status,
+        'fix_attempts' => $intento_numero,
+        'historial' => $historial,
+    ), 200);
+}
+
 // Registrar endpoint de búsqueda de errores similares
 add_action('rest_api_init', function() {
     register_rest_route('automatiza/v1', '/n8n-errors/search', array(
         'methods' => 'GET',
         'callback' => 'automatiza_search_similar_errors',
+        'permission_callback' => 'automatiza_verify_n8n_api_key',
+    ));
+});
+
+// Registrar endpoints del Mecánico (reparación automática)
+add_action('rest_api_init', function() {
+    register_rest_route('automatiza/v1', '/n8n-errors/pending-fix', array(
+        'methods' => 'GET',
+        'callback' => 'automatiza_get_n8n_errors_pending_fix',
+        'permission_callback' => 'automatiza_verify_n8n_api_key',
+    ));
+
+    register_rest_route('automatiza/v1', '/n8n-errors/fix-attempt', array(
+        'methods' => 'POST',
+        'callback' => 'automatiza_report_fix_attempt',
         'permission_callback' => 'automatiza_verify_n8n_api_key',
     ));
 });
@@ -1006,7 +1124,20 @@ ${escapeHtml(error.error_stack)}
                 </div>
                 `;
             }
-            
+
+            if (error.fix_status && error.fix_status !== 'pendiente') {
+                const fixLabel = error.fix_status === 'resuelto' ? '✅ Reparado por el Mecánico' : '⚠️ Requiere tu intervención';
+                html += `
+                <div class="detail-section">
+                    <h4>🔧 Estado del Mecánico</h4>
+                    <div class="detail-box" style="background: #f0fdf4; border-left: 4px solid #16a34a;">
+                        <strong>${escapeHtml(fixLabel)}</strong><br>
+                        <strong>Intentos:</strong> ${error.fix_attempts || 0} de 3
+                    </div>
+                </div>
+                `;
+            }
+
             if (error.status === 'resolved') {
                 html += `
                 <div class="detail-section">

@@ -1,5 +1,9 @@
 const path = require('node:path');
 const express = require('express');
+const { validatePayload } = require('./schema');
+const { generateProposalImages } = require('./higgsfield');
+const { renderProposalHtml } = require('./template');
+const { renderToFiles } = require('./render');
 
 function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
   const app = express();
@@ -11,6 +15,29 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
+  });
+
+  app.post('/render', async (req, res) => {
+    const { valid, errors } = validatePayload(req.body);
+    if (!valid) {
+      return res.status(400).json({ error: 'invalid payload', details: errors });
+    }
+
+    const data = req.body;
+    const images = await generateProposalImages(data.image_briefs, higgsfieldCredentials);
+    const html = renderProposalHtml(data, images);
+    const outputDir = path.join(publicDir, data.unique_id);
+
+    try {
+      await renderToFiles(html, outputDir);
+    } catch (err) {
+      return res.status(502).json({ error: 'render failed', details: err.message });
+    }
+
+    res.json({
+      view_url: `${baseUrl}/p/${data.unique_id}/index.html`,
+      pdf_url: `${baseUrl}/p/${data.unique_id}/presentation.pdf`,
+    });
   });
 
   return app;

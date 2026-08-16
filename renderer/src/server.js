@@ -24,11 +24,16 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
     }
 
     const data = req.body;
-    const images = await generateProposalImages(data.image_briefs, higgsfieldCredentials);
-    const html = renderProposalHtml(data, images);
     const outputDir = path.join(publicDir, data.unique_id);
 
+    // Image generation (Higgsfield), HTML templating, and the Playwright
+    // render must all be covered by the same guard: any of the three can
+    // fail and none of them may crash the process or hang the request.
+    let images;
+    let html;
     try {
+      images = await generateProposalImages(data.image_briefs, higgsfieldCredentials);
+      html = renderProposalHtml(data, images);
       await renderToFiles(html, outputDir);
     } catch (err) {
       return res.status(502).json({ error: 'render failed', details: err.message });

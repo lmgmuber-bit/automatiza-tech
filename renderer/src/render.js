@@ -20,7 +20,16 @@ async function renderToFiles(html, outputDir) {
   });
   try {
     const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
-    await page.goto(`file://${htmlPath}`, { waitUntil: 'networkidle' });
+    // 'networkidle' waits for zero in-flight connections for 500ms — with
+    // real Higgsfield-hosted background images (6 external fetches per
+    // proposal), any single slow/stalled connection blows the default 30s
+    // timeout and kills the whole render (observed in production: the
+    // Playwright call hung, then the container itself became unreachable).
+    // 'load' fires once every referenced image has finished loading or
+    // failed, which is what a PDF/screenshot render actually needs — plus
+    // an explicit timeout so a genuinely hung request fails fast and
+    // predictably instead of blocking the request indefinitely.
+    await page.goto(`file://${htmlPath}`, { waitUntil: 'load', timeout: 45000 });
     await page.pdf({
       path: pdfPath,
       width: '1920px',

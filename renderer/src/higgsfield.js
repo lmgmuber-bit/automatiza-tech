@@ -67,6 +67,11 @@ async function generateProposalImages(imageBriefs, credentials) {
         const url = await generateImageUrl(prompt, credentials);
         return { slide, url };
       } catch (err) {
+        // Deliberately never rethrown (contract: this function never
+        // throws), but the failure must be visible somewhere or a broken
+        // Higgsfield credential/quota degrades every proposal to
+        // no-images with zero diagnostic trail. Log it.
+        console.error(`higgsfield image generation failed for slide "${slide}": ${err.message}`);
         return { slide, url: null, error: err.message };
       }
     })

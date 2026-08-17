@@ -2,10 +2,16 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { generateProposalImages } = require('../src/higgsfield');
 
-function makeFakeFetch({ submitOk = true, finalStatus = 'completed', imageUrl = 'https://cdn.example.com/img.jpg' } = {}) {
+function makeFakeFetch({
+  submitOk = true,
+  finalStatus = 'completed',
+  imageUrl = 'https://cdn.example.com/img.jpg',
+  submitStatus = 500,
+  submitBody = '',
+} = {}) {
   return async (url) => {
     if (String(url).endsWith('/soul/standard')) {
-      if (!submitOk) return { ok: false, status: 500 };
+      if (!submitOk) return { ok: false, status: submitStatus, text: async () => submitBody };
       return {
         ok: true,
         json: async () => ({
@@ -47,6 +53,31 @@ test('resolves to null (not a thrown error) when the submit call fails', async (
     assert.equal(result.cover, null);
   } finally {
     global.fetch = originalFetch;
+  }
+});
+
+test('surfaces the response body in the captured error when submit is rejected (e.g. 403 permission errors)', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = makeFakeFetch({
+    submitOk: false,
+    submitStatus: 403,
+    submitBody: '{"message":"plan does not include API access"}',
+  });
+  const errors = [];
+  const originalConsoleError = console.error;
+  console.error = (msg) => errors.push(msg);
+  try {
+    const result = await generateProposalImages(
+      [{ slide: 'cover', prompt: 'foto' }],
+      { keyId: 'id', keySecret: 'secret' }
+    );
+    assert.equal(result.cover, null);
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /403/);
+    assert.match(errors[0], /plan does not include API access/);
+  } finally {
+    global.fetch = originalFetch;
+    console.error = originalConsoleError;
   }
 });
 

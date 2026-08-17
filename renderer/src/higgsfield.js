@@ -16,7 +16,8 @@ async function submitImageRequest(prompt, { keyId, keySecret, fetchImpl = fetch 
     body: JSON.stringify({ prompt, aspect_ratio: '16:9', resolution: '720p' }),
   });
   if (!response.ok) {
-    throw new Error(`higgsfield submit failed: ${response.status}`);
+    const body = await response.text().catch(() => '');
+    throw new Error(`higgsfield submit failed: ${response.status} ${body}`.trim());
   }
   return response.json();
 }
@@ -29,7 +30,8 @@ async function pollUntilComplete(
   while (Date.now() < deadline) {
     const response = await fetchImpl(statusUrl, { headers: { Authorization: authHeader(keyId, keySecret) } });
     if (!response.ok) {
-      throw new Error(`higgsfield status check failed: ${response.status}`);
+      const body = await response.text().catch(() => '');
+      throw new Error(`higgsfield status check failed: ${response.status} ${body}`.trim());
     }
     const data = await response.json();
     if (data.status === 'completed') return data;

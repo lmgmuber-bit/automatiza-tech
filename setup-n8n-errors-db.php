@@ -173,7 +173,7 @@ foreach ($columnas_argos_mecanico as $col => $alter_sql) {
 <body>
     <div class="container">
         <h1>🛡️ ARGOS - Setup Base de Datos</h1>
-        <p class="subtitle">Sistema de Monitoreo de Errores N8N</p>
+        <p class="subtitle">Sistema de Monitoreo de Errores N8N — script v2-fallback-columnas (2026-08-16)</p>
         
         <?php if ($table_exists): ?>
             <div class="status success">

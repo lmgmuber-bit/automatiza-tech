@@ -36,6 +36,7 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
       html = renderProposalHtml(data, images);
       await renderToFiles(html, outputDir);
     } catch (err) {
+      console.error('POST /render failed:', err.stack || err.message);
       return res.status(502).json({ error: 'render failed', details: err.message });
     }
 

@@ -1,5 +1,5 @@
 version: 2
-updated_at: "2026-08-17"
+updated_at: "2026-08-18"
 lease_id: AT-LEASE-20260713-CODEX
 handoff_id: AT-HANDOFF-20260713-CLAUDE-CODEX
 state: ACTIVE
@@ -163,7 +163,11 @@ branch_notice:
     branch: "fix/form-agenda-calendario-whatsapp"
     base_branch: "fix/api-save-proposal-duplicate-code"
     base_commit: "dbfce36"
-    state: UNCOMMITTED_WORKING_TREE
+    state: COMMITTED
+    commits:
+      - "542fb6c docs(orchestration): aviso de rama"
+      - "dd75963 feat(home-premium): calendario, prefijo WhatsApp, layout 2 columnas y contraste"
+    pushed: false
     authorized_by: "Luis Miguel"
     what: >
       Modal de agendamiento: calendario con validacion desde hoy hasta hoy + 90 dias, y
@@ -175,9 +179,10 @@ branch_notice:
       - "wp-content/themes/automatiza-tech/assets/home-premium/body.html"
       - "wp-content/themes/automatiza-tech/assets/landing-*/body.html (7 archivos)"
     warning: >
-      Los cambios NO estan commiteados: viven en el working tree de esa rama. Si otro
-      agente cambia de rama, hace pull, reset o stash sobre este repo, se pierden. Si
-      necesitas tocar cualquiera de esos archivos, coordina con Luis primero.
+      Ya commiteado en la rama (no pusheado). El commit dd75963 incluye ademas trabajo
+      previo sin commitear de at-home.js, at-home.css, body.html y preview.html, y es el
+      primer commit de las 7 carpetas assets/landing-*/. Si necesitas tocar cualquiera de
+      esos archivos, coordina con Luis primero. Sigue sin trackear assets/legal/.
 
 active:
   - id: AT-CUMPLECLICK-012
@@ -237,11 +242,11 @@ human_gates:
 
 known_risks:
   - >
-    RAMA PARALELA 2026-08-17: Claude tiene trabajo SIN COMMITEAR en la rama
-    fix/form-agenda-calendario-whatsapp sobre el modal de agendamiento (ver branch_notice
-    y AT-INT-FORM-001). Ademas, at-home.js, at-home.css y body.html ya traian cambios sin
-    commitear de antes, y las 7 carpetas assets/landing-*/ estan sin trackear. Cualquier
-    pull, reset, checkout o stash sobre este repo los borra. Respaldar antes.
+    RAMA PARALELA 2026-08-17/18: la rama fix/form-agenda-calendario-whatsapp tiene el
+    modal de agendamiento rehecho (ver branch_notice y AT-INT-FORM-001). YA ESTA
+    COMMITEADO en dd75963, pero NO pusheado: vive solo en este disco. El commit absorbio
+    trabajo previo sin commitear de at-home.js, at-home.css, body.html y preview.html.
+    assets/legal/ sigue SIN TRACKEAR y un reset --hard o un clean lo borra.
   - "MIGRACION DE PC (2026-08-03): la rama local va 1 commit atras de origin y el working tree tiene 2938 archivos que no estan en el remoto, en su mayoria material que el .gitignore del remoto excluye a proposito (design/renders/, design/screens/, qa-evidence/, tmp/) mas media/reels. Antes de cualquier pull/reset, respaldar; el current-handoff.yaml local es mas nuevo que el remoto."
   - "El documento canonico HANDOFF-OTRA-PC-2026-08-02.md NO esta en el working tree local. Leerlo desde origin antes de ejecutar cualquier ticket de CumpleClick."
   - "CumpleBooth/CLAUDE.md afirma 'PROD has not been deployed' y es incorrecto: PROD esta desplegado desde el 2026-07-27. Corregir ese archivo."

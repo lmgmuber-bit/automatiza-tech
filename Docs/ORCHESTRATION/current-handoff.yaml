@@ -1,17 +1,70 @@
 version: 2
-updated_at: "2026-07-10"
-lease_id: AT-LEASE-20260710-CLAUDE
-handoff_id: AT-HANDOFF-20260710-CODEX-CLAUDE
+updated_at: "2026-08-17"
+lease_id: AT-LEASE-20260713-CODEX
+handoff_id: AT-HANDOFF-20260713-CLAUDE-CODEX
 state: ACTIVE
 
-holder: claude
-previous_holder: codex
-previous_lease_id: AT-LEASE-20260710-CODEX
+holder: codex
+previous_holder: claude
+previous_lease_id: AT-LEASE-20260710-CLAUDE
 target_holder: null
 granted_by: "Luis Miguel"
-reason: "Luis instruyo a Claude asumir el rol de orquestador principal (2026-07-10). Handoff AT-HANDOFF-20260710-CODEX-CLAUDE aceptado. El ownership de AT-TAB-ARCH-001 (tablero/**) permanece en Codex; Claude orquesta y no edita ese alcance."
-base_commit: "3539c2e034a1aed015f3e7ba901e7110f29b3bee"
-branch: "codex/finish-tablero-v8"
+reason: "Luis ordeno a Codex tomar el mando de orquestacion el 2026-07-13 porque Claude estaba agotando su cuota semanal. Lease reconfirmado por Luis el 2026-08-03 durante la normalizacion del tablero: Codex sigue siendo el orquestador porque el cierre canonico del 2026-08-02 y el ticket 012 son suyos."
+base_commit: "9914bc4"
+branch: "codex/cumpleclick-site-frontend-fixes"
+
+# ---------------------------------------------------------------------------
+# FUENTES CANONICAS - leer en este orden antes de ejecutar cualquier cosa
+# ---------------------------------------------------------------------------
+canonical_sources:
+  cumpleclick:
+    doc: "CumpleBooth/docs/HANDOFF-OTRA-PC-2026-08-02.md"
+    status: NOT_IN_LOCAL_WORKTREE
+    recover_with: "git show origin/codex/cumpleclick-site-frontend-fixes:CumpleBooth/docs/HANDOFF-OTRA-PC-2026-08-02.md"
+    note: >
+      Es el punto de entrada que reemplaza los estados historicos dispersos. Si un handoff
+      anterior lo contradice, prevalece este. NO esta en el working tree de la maquina nueva
+      porque la rama local va 1 commit atras de origin; se lee desde el commit remoto.
+  vault: "AI-Memory-Vault/10-Projects/CumpleClick.md"
+  orquestacion: "Docs/ORCHESTRATION/README.md"
+
+# ---------------------------------------------------------------------------
+# NORMALIZACION 2026-08-03 - por que cambio este archivo
+# ---------------------------------------------------------------------------
+normalization:
+  performed_by: claude
+  authorized_by: "Luis Miguel"
+  date: "2026-08-03"
+  trigger: "Migracion a PC nueva + tablero desactualizado desde el 2026-07-17."
+  method: "Contraste de tablero contra HANDOFF-OTRA-PC-2026-08-02.md, vault CumpleClick.md, los YAML de ticket y el filesystem real."
+  findings:
+    - "Los tickets 008, 009, 010 y 011 figuraban READY_FOR_EXECUTION y los cuatro ya estaban ejecutados. Un agente que leyera el tablero como fuente unica habria rehecho las cuatro cosas."
+    - "El ticket 012 existia en disco y en origin desde el 2026-08-01 y no aparecia en el tablero."
+    - "El current-handoff.yaml local (2026-07-17) es MAS NUEVO que el commiteado en origin (2026-07-10): las ediciones del 17-07 nunca se commitearon y solo viven en el working tree. Un pull sin cuidado las borra."
+    - "La rama local va 1 commit atras de origin/codex/cumpleclick-site-frontend-fixes (falta 9914bc4, el cierre del 2026-08-02)."
+
+# ---------------------------------------------------------------------------
+# ESTADO TECNICO VERIFICADO (del cierre canonico 2026-08-02)
+# ---------------------------------------------------------------------------
+verified_state:
+  gates:
+    frontend: "81/81"
+    backend: "125/125 en PHP 8.0.30, 8.2.26, 8.3.14 y 8.4.0"
+    lint: "49 archivos + 8 entrypoints en las cuatro versiones de PHP"
+    smoke_http: "28/28 contra WAMP/MySQL, con limpieza posterior"
+    paridad_public_dist: "283 archivos"
+  arquitectura: "React 18 + Vite 6 (src/ es fuente, dist/ se genera). PHP 8.0+ baseline 8.2, PDO. MySQL/MariaDB independiente de WordPress. Migraciones 001 a 006."
+  mundos_con_full: ["carreras", "familia-canina", "tropical", "hielo", "kpop", "heroes"]
+  tematicas_comerciales_completas: ["carreras", "familia-canina", "tropical", "hielo", "kpop"]
+  heroes: "Tiene catalogo, retratos, recortes, fondos, musica, juegos y Full. NO se marca como comercial completa hasta producir sus seis saludos y la despedida. Es produccion audiovisual futura, no trabajo Git sin guardar. BLOQUEADO A PROPOSITO: Luis dijo 'vamos por los videos cuando yo te diga'."
+  prod:
+    desplegado: true
+    fecha: "2026-07-27"
+    url: "https://automatizatech.cl/cumpleclick/"
+    advertencia: >
+      PROD corre la version del 2026-07-27. El cierre del 2026-08-02 NO se desplego ni se
+      mergeo. No afirmar que lo del cierre esta en PROD. Ojo: CumpleBooth/CLAUDE.md dice
+      "PROD has not been deployed" y eso es INCORRECTO y quedo pendiente de corregir.
 
 completed:
   - id: AT-ORCH-001
@@ -22,53 +75,192 @@ completed:
     owner: codex
     status: DONE
     summary: "Metodo AT, flujo de cliente, catalogo de servicios, casos de uso y prompt maestro final para Claude documentados y sincronizados con el vault."
-
-active:
+  - id: AT-INT-RESP-001
+    owner: codex
+    status: DONE
+    summary: "Responsive de Finanzas AT y Contratos corregido, validado, subido por FTP y aprobado por Luis; locks liberados."
   - id: AT-TAB-ARCH-001
     owner: codex
     previous_owner: opencode
-    status: READY_FOR_DEPLOY
-    takeover_allowed: true
-    takeover_trigger: LUIS_REASSIGNMENT
-    takeover_reason: "OpenCode quedo sin capacidad y la sincronizacion v8 continua fallando con fetch-error; Luis solicito a Codex verificar y terminar."
-    handoff_quality: RECONSTRUCTED_HANDOFF
+    status: DONE
+    summary: "Tablero v8 aceptado operacionalmente por Luis el 2026-07-13; tarjeta cerrada y locks liberados. API 8.2.1 verificada en PROD."
+  - id: AT-TAB-ATTACH-001
+    owner: codex
+    status: DONE
+    summary: "Busqueda por ID y adjuntos opcionales de imagen verificados en PROD (API v8.3); tarea cerrada. Basic Auth queda como hardening separado."
+
+  - id: AT-CUMPLECLICK-006
+    owner: codex
+    status: DONE
+    closed_at: "2026-08-03"
+    closed_by: claude
+    summary: "Invitaciones dinamicas. Gate A cerrado: datos obligatorios al publicar, token opaco y revocable, outputs aprobados, ownership, uploads inspeccionados y descarga sin IDs internos."
+    evidence: "HANDOFF-OTRA-PC-2026-08-02.md seccion 4; migracion 001-006 incluye la correccion Gate A."
+
+  - id: AT-CUMPLECLICK-007
+    owner: codex
+    previous_executor: claude
+    status: DONE
+    closed_at: "2026-08-03"
+    closed_by: claude
+    summary: "Tematica familia-canina completa: 6 personajes, cortes, saludos con voz aprobada y pase de artista E2E."
+    evidence: "public/themes/familia-canina/ con 39 archivos; vault CumpleClick.md tabla seccion 3; cumple tabla A de TEMATICA-COMPLETA.md."
+    nota: >
+      El tablero lo mantuvo 17 dias en THEME_COMPLETE_AWAITING_FORMAL_REVIEW. La revision formal
+      quedo superada por el cierre canonico del 2026-08-02, que lista familia-canina entre las
+      tematicas que cumplen la tabla multimedia A.
+
+  - id: AT-CUMPLECLICK-008
+    owner: opencode
+    reviewer: claude
+    status: DONE
+    closed_at: "2026-08-03"
+    closed_by: claude
+    summary: "Material explicativo de CumpleClick: pantallazos del kiosco, infografias, carrusel IG y video explicativo."
+    evidence: "CumpleBooth/design/explicativo/ existe y esta poblado; vault CumpleClick.md seccion 3 lo marca hecho."
+
+  - id: AT-CUMPLECLICK-009
+    owner: opencode
+    reviewer: claude
+    status: DONE
+    closed_at: "2026-08-03"
+    closed_by: claude
+    summary: "Video exclusivo tematica Reino de Hielo, foco en los juegos encadenados de Olaf."
+    evidence: "CumpleBooth/design/video-frozen/ existe; fiesta demo demo-hielo operativa con PIN real."
+
+  - id: AT-CUMPLECLICK-010
+    owner: opencode
+    reviewer: claude
+    status: DONE
+    closed_at: "2026-08-03"
+    closed_by: claude
+    summary: "Frontend WOW: animaciones y profundidad 3D en el kiosco. La mision Full paso de runner de carriles a 'El Show 3D' (juego de ritmo de concierto) en las 6 tematicas."
+    evidence: >
+      src/StageConcert3D.jsx + SHOW_STYLES con un escenario por tematica
+      (neon-arena / ice-gala / beach-luau / podium-night / backyard-fiesta / rooftop-city).
+      Atlas multivista Carreras/Bluey/K-Pop 6/6, Tropical 4/6. Gate por party.service_plan==='full'.
+    nota: "Sigue siendo exclusivo del plan Full; el backend oculta theme.fullGame a fiestas con plan Booth."
+
+  - id: AT-CUMPLECLICK-011
+    owner: codex
+    status: DONE
+    closed_at: "2026-08-03"
+    closed_by: claude
+    summary: "Sitio comercial de clientes construido y responsive, con precios/descuentos aprobados."
+    evidence: "CumpleBooth/sitio/ con index.html, css, js, assets, fonts, vendor y api/. Local: http://localhost/automatiza-tech/CumpleBooth/sitio/"
+    nota: "El registro del formulario se separo al ticket 012, que es el que sigue abierto."
+
+# ---------------------------------------------------------------------------
+# AVISO DE RAMA 2026-08-17 - leer antes de tocar el tema de la home/landings
+# El lease de orquestacion NO cambia: sigue siendo de Codex. Esto es solo el
+# registro de una rama de trabajo paralela abierta por Claude a pedido de Luis.
+# ---------------------------------------------------------------------------
+branch_notice:
+  - agent: claude
+    date: "2026-08-17"
+    ticket: AT-INT-FORM-001
+    ticket_ref: "Docs/ORCHESTRATION/AT-INT-FORM-001.yaml"
+    branch: "fix/form-agenda-calendario-whatsapp"
+    base_branch: "fix/api-save-proposal-duplicate-code"
+    base_commit: "dbfce36"
+    state: UNCOMMITTED_WORKING_TREE
+    authorized_by: "Luis Miguel"
+    what: >
+      Modal de agendamiento: calendario con validacion desde hoy hasta hoy + 90 dias, y
+      select de prefijo de pais en WhatsApp como lo tenia el formulario de demo anterior.
+    touches:
+      - "wp-content/themes/automatiza-tech/assets/home-premium/at-agenda.js"
+      - "wp-content/themes/automatiza-tech/assets/home-premium/at-home.js"
+      - "wp-content/themes/automatiza-tech/assets/home-premium/at-home.css"
+      - "wp-content/themes/automatiza-tech/assets/home-premium/body.html"
+      - "wp-content/themes/automatiza-tech/assets/landing-*/body.html (7 archivos)"
+    warning: >
+      Los cambios NO estan commiteados: viven en el working tree de esa rama. Si otro
+      agente cambia de rama, hace pull, reset o stash sobre este repo, se pierden. Si
+      necesitas tocar cualquiera de esos archivos, coordina con Luis primero.
+
+active:
+  - id: AT-CUMPLECLICK-012
+    parent: AT-CUMPLECLICK-011
+    status: WAITING_HUMAN_GATE
+    priority: P1
+    created_at: "2026-08-01"
+    created_by: codex
+    planner: codex
+    executor: codex
+    reviewer: codex
+    final_approver: "Luis Miguel"
+    ticket_ref: "Docs/ORCHESTRATION/AT-CUMPLECLICK-012.yaml"
+    routing:
+      complexity: C2
+      risk: medium
+      uncertainty: low
+      reversibility: high
+    summary: >
+      Formulario publico del sitio persistiendo en la BD independiente de CumpleClick.
+      Migracion 006 y tabla cc_leads listas (MySQL/SQLite). Endpoint POST JSON con validacion,
+      honeypot, rate limit persistente (5 por 10 min, bloqueo 15 min), referencias opacas,
+      errores sanitizados e IP en HMAC. Pruebas aisladas 11/11 en las cuatro versiones de PHP;
+      smoke HTTP 201/422/405 verificado.
     locked_files:
-      - "tablero/**"
-      - "api-tablero.php"
-      - "setup-at-board.php"
-    verified_progress:
-      - "Tablero movido desde Temp al repositorio como v7.1."
-      - "Seeds reales reemplazados por ejemplos anonimizados."
-      - "agent-log.md reemplazado conceptualmente por ledger de eventos/decisiones."
-      - "Escape de atributos data-* agregado."
-      - ".htpasswd indicado fuera de public_html y headers de hardening agregados."
-      - "CSP y Content-Security-Policy corregidos para permitir exclusivamente la API AT."
-      - "Auth compatible con Hostinger mediante X-AT-Board-Token; query token eliminado."
-      - "Doble carga de wp-config-secrets.php eliminada; JSON ya no se contamina con warnings duplicados."
-      - "Setup dbDelta y ejecución CLI corregidos; WAMP inicializado con 6 clientes y 14 internas."
-      - "GET, POST cliente/interna, preflight, mapeo camelCase y rechazo de query token verificados."
-      - "Playwright validó edición, drag persistente, POST completo y modo offline de solo lectura sin errores JS."
-      - "reset-pass-luis.php eliminado para retirar una credencial temporal del webroot."
-    pending:
-      - "Obtener autorizacion explicita de Luis antes de desplegar."
-      - "Respaldar y subir api-tablero.php, tablero/index.html y .htaccess corregido a PROD."
-      - "Ejecutar smoke test local-PROD y PROD-PROD con token real sin exponerlo."
-      - "Eliminar setup-at-board.php del hosting tras confirmar instalacion."
-      - "Marcar DONE y liberar locks solo despues de la evidencia productiva."
+      - "CumpleBooth/sitio/**"
+      - "CumpleBooth/public/lib.leads.php"
+      - "CumpleBooth/database/migrations/006_public_leads*.php"
+    next_action: >
+      Luis prueba una solicitud real en local. Despues entrega el numero oficial de WhatsApp
+      para combinar registro en BD + apertura del chat, y define la URL final de PROD.
+    safety:
+      allow_deploy: false
+      allow_commit: false
+      allow_push: false
+
+# ---------------------------------------------------------------------------
+# BLOQUEADORES QUE SOLO PUEDE RESOLVER LUIS (cierre canonico, seccion 7)
+# No inventarlos ni asumir un valor por defecto.
+# ---------------------------------------------------------------------------
+human_gates:
+  - id: HG-WHATSAPP
+    what: "Numero oficial de WhatsApp del sitio comercial. Hoy el codigo lleva el placeholder [WHATSAPP_NUMBER]."
+    blocks: [AT-CUMPLECLICK-012]
+  - id: HG-URL
+    what: "URL final del sitio comercial respecto del kiosco."
+    blocks: [AT-CUMPLECLICK-012]
+  - id: HG-DEPLOY
+    what: "Aprobacion y ejecucion del deploy/FTP del cierre 2026-08-02. Regla 14: el deploy a PROD lo hace Luis a mano."
+    blocks: []
+  - id: HG-HEROES
+    what: "Autorizacion para producir los seis saludos y la despedida de Heroes. Luis: 'vamos por los videos cuando yo te diga'."
+    blocks: []
+  - id: HG-LICENCIAS
+    what: "Revision de licencias de musica/propiedad intelectual antes de vender cada mundo."
+    blocks: []
 
 known_risks:
+  - >
+    RAMA PARALELA 2026-08-17: Claude tiene trabajo SIN COMMITEAR en la rama
+    fix/form-agenda-calendario-whatsapp sobre el modal de agendamiento (ver branch_notice
+    y AT-INT-FORM-001). Ademas, at-home.js, at-home.css y body.html ya traian cambios sin
+    commitear de antes, y las 7 carpetas assets/landing-*/ estan sin trackear. Cualquier
+    pull, reset, checkout o stash sobre este repo los borra. Respaldar antes.
+  - "MIGRACION DE PC (2026-08-03): la rama local va 1 commit atras de origin y el working tree tiene 2938 archivos que no estan en el remoto, en su mayoria material que el .gitignore del remoto excluye a proposito (design/renders/, design/screens/, qa-evidence/, tmp/) mas media/reels. Antes de cualquier pull/reset, respaldar; el current-handoff.yaml local es mas nuevo que el remoto."
+  - "El documento canonico HANDOFF-OTRA-PC-2026-08-02.md NO esta en el working tree local. Leerlo desde origin antes de ejecutar cualquier ticket de CumpleClick."
+  - "CumpleBooth/CLAUDE.md afirma 'PROD has not been deployed' y es incorrecto: PROD esta desplegado desde el 2026-07-27. Corregir ese archivo."
+  - "PROD corre la version del 2026-07-27, NO el cierre del 2026-08-02. Nunca afirmar que algo esta en PROD sin evidencia."
+  - "Camuflaje: el nombre camuflado es SOLO para los prompts de generacion. El producto y el marketing publico usan el nombre real (Bluey, Stitch, Rayo McQueen). Confundir esto ya causo dos bugs reales."
+  - "Una tematica a medias no rompe el kiosco (todo tiene fallback), asi que el bache pasa desapercibido hasta que un invitado se topa con el personaje que no lo saluda. Validado por tests/frontend/themeFlow.test.mjs sobre la lista COMPLETAS."
+  - "El PHP CLI del PATH es 7.4 y el proyecto exige 8.0+. admin/invitations.php usa match() y revienta el lint desde la terminal: es un falso positivo conocido, no 'arreglarlo'. Usar C:\\wamp64\\bin\\php\\php8.3.14\\php.exe."
   - "No existe comunicacion directa entre chats externos; Luis o el ledger son el puente."
-  - "El worktree contiene numerosos cambios locales ajenos y no debe commitearse en bloque."
-  - "PROD aun ejecuta los archivos anteriores y no tiene autorizacion de deploy."
-  - "Las tablas v8 son fuente operativa transitoria; clientes canonicos, GitHub Issues y lease siguen como evolucion."
   - "El token real nunca debe aparecer en logs, URL, Git, capturas ni reportes."
+  - "Basic Auth de /tablero/ sigue desactivado porque .htaccess quedo como .htaccess.off; reactivar solo tras confirmar la ruta real de .htpasswd-tablero en Hostinger."
 
 acceptance_required_from_claude:
   - "Leer AGENTS.md y Docs/ORCHESTRATION/README.md."
   - "Leer Docs/ORCHESTRATION/CLAUDE_ORCHESTRATOR_PROMPT_FINAL.md y Docs/METODO_AT/README.md."
-  - "Aceptar explicitamente AT-HANDOFF-20260710-CODEX-CLAUDE antes de repriorizar o delegar."
-  - "Respetar el owner actual de tablero/**, pero aceptar que Luis puede reasignarlo a Claude o Codex si necesita continuidad inmediata."
-  - "Si toma tablero/**, registrar el takeover, verificar el diff existente y continuar desde el checkpoint sin rehacer trabajo terminado."
-  - "Revisar el diff y las pruebas de OpenCode antes de autorizar commit, push o deploy."
+  - "Para cualquier trabajo de CumpleClick, leer primero HANDOFF-OTRA-PC-2026-08-02.md desde origin."
+  - "Respetar el lease de Codex; Luis puede reasignarlo cuando quiera."
+  - "Revisar el diff y las pruebas antes de autorizar commit, push o deploy."
 
-next_action: "Esperar autorizacion explicita de Luis para deploy controlado y smoke test productivo; hasta entonces AT-TAB-ARCH-001 permanece READY_FOR_DEPLOY con locks activos."
+next_action: >
+  Luis prueba el formulario del sitio en local y define numero de WhatsApp y URL final
+  (AT-CUMPLECLICK-012). En paralelo queda pendiente reconciliar la rama local con origin
+  sin perder las ediciones no commiteadas del working tree.

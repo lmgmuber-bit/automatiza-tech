@@ -1,0 +1,156 @@
+ticket_id: AT-INT-FORM-001
+title: "Modal de agendamiento: calendario con validacion desde hoy + select de prefijo WhatsApp"
+origin: direct_luis
+portfolio: AT
+priority: P2
+status: WAITING_HUMAN_GATE
+created_at: "2026-08-17"
+created_by: claude
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C1
+
+objective: >
+  El modal "Agenda tu diagnostico gratis" de la home premium y de las 7 landings debe
+  tener el calendario de fecha validado desde hoy en adelante, y el campo de WhatsApp
+  debe recuperar el select de prefijo de pais que tenia el formulario de demo anterior
+  (footer.php), enviando el telefono a n8n en el mismo formato internacional.
+
+owner: claude
+reviewer: none
+active_orchestrator: codex
+
+ownership:
+  current_owner: claude
+  previous_owners: []
+  takeover_allowed: true
+  takeover_count: 0
+  takeover_reason: null
+  urgency: normal
+  resolution_status: pending
+  reassignment_authorized_by: null
+  handoff_ref: null
+  handoff_quality: COMPLETE
+
+scope:
+  branch: "fix/form-agenda-calendario-whatsapp"
+  base_commit: "dbfce36"
+  base_branch: "fix/api-save-proposal-duplicate-code"
+  allowed_files:
+    - "wp-content/themes/automatiza-tech/assets/home-premium/at-agenda.js"
+    - "wp-content/themes/automatiza-tech/assets/home-premium/at-home.js"
+    - "wp-content/themes/automatiza-tech/assets/home-premium/at-home.css"
+    - "wp-content/themes/automatiza-tech/assets/home-premium/body.html"
+    - "wp-content/themes/automatiza-tech/assets/landing-*/body.html"
+  locked_files:
+    - "wp-content/themes/automatiza-tech/assets/home-premium/at-agenda.js"
+    - "wp-content/themes/automatiza-tech/assets/home-premium/at-home.js"
+    - "wp-content/themes/automatiza-tech/assets/home-premium/at-home.css"
+    - "wp-content/themes/automatiza-tech/assets/home-premium/body.html"
+    - "wp-content/themes/automatiza-tech/assets/landing-apps-moviles/body.html"
+    - "wp-content/themes/automatiza-tech/assets/landing-apps-web/body.html"
+    - "wp-content/themes/automatiza-tech/assets/landing-asistentes-ia/body.html"
+    - "wp-content/themes/automatiza-tech/assets/landing-automatizacion/body.html"
+    - "wp-content/themes/automatiza-tech/assets/landing-portal-omnicliente/body.html"
+    - "wp-content/themes/automatiza-tech/assets/landing-sistemas-medida/body.html"
+    - "wp-content/themes/automatiza-tech/assets/landing-sitios-premium/body.html"
+  forbidden_files:
+    - "wp-content/themes/automatiza-tech/footer.php"
+  depends_on: []
+
+routing:
+  complexity: C1
+  risk: low
+  uncertainty: low
+  reversibility: easy
+  selected_profile: standard_executor
+  selected_model: claude-opus-5
+  rationale: "Cambio acotado de frontend en archivos estaticos, sin backend ni migraciones, reversible por archivo."
+  independent_review: false
+  human_gate: true
+
+diagnostico:
+  whatsapp: >
+    El campo era un input suelto (placeholder "+56 9 1234 5678"), sin select de prefijo.
+    El telefono viajaba a n8n tal cual lo escribiera el usuario, sin normalizar.
+  fecha: >
+    at-agenda.js si aplicaba min = hoy, pero el input type=date quedaba con
+    color-scheme normal sobre fondo oscuro: el icono del picker y el popup nativo
+    salian claros sobre el modal oscuro (el formulario viejo de footer.php si traia
+    color-scheme:dark). Ademas no habia max, ni validacion en el submit, ni rechazo
+    de fechas pasadas escritas a mano.
+
+cambios:
+  - "body.html x8: select name=country_code con los mismos 10 paises de footer.php (Chile +56 por defecto) + input de telefono nacional; WhatsApp y Correo pasan a filas propias."
+  - "body.html x8: el input de fecha recibe class=at-date y autocomplete=off."
+  - "at-home.css: color-scheme atado al tema para .at-cc y .at-date (el popup nativo sigue el toggle claro/oscuro); media query <=430px que le cede ancho del select al numero."
+  - "at-agenda.js: helpers ymd/maxStr/outOfRange, ventana MAX_DAYS=90, min/max recalculados en cada interaccion (la pestana puede cruzar medianoche), showPicker() al hacer clic en cualquier parte del campo, y rechazo explicito de fecha pasada / fuera de ventana / invalida en renderSlots."
+  - "at-home.js: helpers buildPhone() y todayISO(); submitDemo valida fecha >= hoy y arma phone = prefijo + digitos antes de enviar a n8n."
+
+acceptance:
+  criteria:
+    - "El select de prefijo existe con 10 paises y Chile (+56) preseleccionado."
+    - "El telefono llega a n8n en formato internacional, igual que el formulario de demo anterior."
+    - "El calendario nativo es legible en tema oscuro y claro, y solo permite de hoy hasta hoy + 90 dias."
+    - "Una fecha pasada nunca puede enviarse, ni escribiendola a mano."
+    - "Sin desbordes horizontales en 1280px ni en 375px."
+  tests:
+    - "Verificacion en navegador sobre arne local que renderiza body.html igual que la plantilla PHP (arne fuera del repo, ya eliminado)."
+    - "buildPhone() evaluado contra el at-home.js servido, 7 casos."
+    - "node --check sobre at-home.js y at-agenda.js."
+  evidence_required:
+    - "Resultados registrados en result.evidence_refs de este ticket."
+  rollback_plan: "Revertir por archivo; no hay backend, migraciones ni estado persistido."
+
+safety:
+  allow_push: false
+  allow_merge: false
+  allow_deploy: false
+  allow_secrets: false
+  allow_external_messages: false
+
+entrega_ftp:
+  nota: >
+    Subir primero JS/CSS y despues los HTML. JS nuevo con markup viejo es inofensivo;
+    markup nuevo con JS viejo enviaria el telefono sin prefijo.
+  destino_base: "wp-content/themes/automatiza-tech/"
+  orden:
+    - { archivo: "assets/home-premium/at-home.js", clase: OBLIGATORIO }
+    - { archivo: "assets/home-premium/at-agenda.js", clase: OBLIGATORIO }
+    - { archivo: "assets/home-premium/at-home.css", clase: OBLIGATORIO }
+    - { archivo: "assets/home-premium/body.html", clase: OBLIGATORIO }
+    - { archivo: "assets/landing-*/body.html (7 archivos)", clase: "OBLIGATORIO solo si esas landings estan publicadas" }
+  no_subir: "Ninguno. El arne de QA se creo en C:\\wamp64\\www\\at-qa\\, fuera del repo, y ya fue eliminado."
+
+result:
+  summary: >
+    Cambios aplicados y verificados en local, SIN commit. Quedan en el working tree de
+    la rama fix/form-agenda-calendario-whatsapp esperando el visto bueno de Luis.
+  evidence_refs:
+    - "Fecha pasada: mensaje 'Solo puedes agendar desde hoy en adelante' + rangeUnderflow=true (submit bloqueado)."
+    - "Fuera de ventana: mensaje 'Solo agendamos hasta 90 dias hacia adelante' + rangeOverflow=true."
+    - "Fecha valida: 9 horarios renderizados, checkValidity()=true."
+    - "Payload real a n8n: phone '+56912345678' desde '9 1234 5678' con prefijo +56."
+    - "buildPhone: +54/'11 2345-6789' -> +541123456789; +593/'98 765 4321' -> +593987654321; +56/'+56 9 1234 5678' -> +56912345678 (no duplica); +1/'(305) 555-0134' -> +13055550134; vacio -> ''."
+    - "color-scheme: dark en tema oscuro y light tras el toggle, en .at-date y .at-cc."
+    - "Layout 1280px: select 142 + numero 249, overflow 0. Layout 375px: select 116 + numero 166, overflow 0."
+    - "Spot-check en landing-asistentes-ia: mismo comportamiento (min/max, 10 prefijos, 9 horarios)."
+    - "Sin errores de consola."
+  residual_risks:
+    - >
+      at-home.js, at-home.css y body.html YA tenian cambios sin commitear antes de esta
+      tarea (preseleccion de modo del modal, foco a11y, privacy_accepted/marketing_optin,
+      secciones Planes y Quienes somos). Comitear o subir por FTP esos archivos arrastra
+      tambien ese trabajo previo. Los hunks de este ticket son ~30 lineas en at-home.js,
+      ~25 en body.html y ~11 en at-home.css.
+    - >
+      Las 7 carpetas assets/landing-*/ estan SIN TRACKEAR en Git (nunca se commitearon).
+      Un commit de este ticket que las incluya seria su primer commit, con todo su contenido.
+    - >
+      showPicker() abre el calendario en cada clic sobre el campo. Es lo pedido, pero
+      cambia el habito de tipear la fecha por segmentos. Se puede acotar a "solo cuando
+      el campo esta vacio" si Luis lo prefiere.
+  next_action: >
+    Luis decide si se comitea todo junto en esta rama o si se separan solo los hunks del
+    formulario. Sin merge ni deploy sin su autorizacion.

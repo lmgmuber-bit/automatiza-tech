@@ -1,5 +1,5 @@
 ticket_id: AT-INT-FORM-001
-title: "Modal de agendamiento: calendario con validacion desde hoy + select de prefijo WhatsApp"
+title: "Modal de agendamiento: calendario validado, prefijo WhatsApp, layout en 2 columnas y contraste"
 origin: direct_luis
 portfolio: AT
 priority: P2
@@ -81,6 +81,59 @@ diagnostico:
     color-scheme:dark). Ademas no habia max, ni validacion en el submit, ni rechazo
     de fechas pasadas escritas a mano.
 
+cambios_ronda_3_visual:
+  pedido: "Luis: antes de commitear, revisar que otro tema visual se puede corregir."
+  metodo: >
+    Auditoria de contraste WCAG AA en navegador sobre el modal, en tema oscuro y claro,
+    componiendo el alfa contra el fondo opaco real. Se desactivaron todas las transiciones
+    CSS durante la medicion.
+  falsos_positivos_descartados:
+    - >
+      "Demo en vivo" marcaba 2.17. Artefacto: el pane del navegador estaba oculto y no
+      generaba frames, asi que las transiciones CSS quedaban congeladas en su color inicial
+      (el del tema anterior). Con las transiciones desactivadas el fallo desaparece.
+    - >
+      Boton cerrar (X) marcaba 2.49. Artefacto de la funcion de contraste, que no componia
+      el canal alfa y comparaba el icono contra blanco en vez del fondo real del boton.
+  corregido:
+    - >
+      Panel de exito: regresion de la ronda 2. Con el modal a 760px el bloque
+      "Solicitud recibida" quedaba con el parrafo capado a 320px flotando en 758px de ancho.
+      Ahora max-width 440px centrado.
+    - >
+      Mensaje de error/exito ilegible en tema claro: setFormMessage tenia los colores
+      hardcodeados con pasteles del modo oscuro. Rosa #f7b4b4 sobre blanco daba 1.73, o sea
+      el mensaje que explica el fallo de envio era practicamente invisible. Los colores se
+      movieron a at-home.css por tema; en claro el error queda en 5.75 (#b91c1c).
+    - >
+      Enlace "Politica de Privacidad" a 1.86 en tema claro: usaba #2dd4bf hardcodeado, sin
+      seguir el tema. Pasa a var(--accent-text), token que ya existia en la paleta: 5.02 en
+      claro y sigue turquesa en oscuro. Es el enlace legal obligatorio del formulario.
+    - >
+      Token global --text-faint del tema claro: #6f8094 daba 4.05 sobre blanco (minimo 4.5).
+      Pasa a #647385 (4.85 sobre blanco, 4.55 sobre --surface-2). Autorizado por Luis tras
+      presentarle el alcance: 141 usos en los 8 body.html.
+  resultado: "Modal con 0 fallos de contraste en tema oscuro y claro (antes: 0 en oscuro, 9 en claro)."
+
+cambios_ronda_2_layout:
+  pedido: "Luis: formulario mas ancho aprovechando el modal, no tan largo, responsivo en web y mobile."
+  problema: "Con el modal de 460px el formulario era una sola columna de 11 filas y obligaba a scrollear dentro del modal."
+  aplicado:
+    - "body.html x8: el modal pasa de width:min(460px,100%) a min(760px,100%)."
+    - "body.html x8: el form deja el flex-column inline y toma class=at-form (grilla); toggle, boton y leyenda marcados con at-f-full."
+    - "at-home.css: .at-form en grilla de 2 columnas con gap 12px/14px, una sola columna bajo 700px, y el mensaje de error de setFormMessage ocupando el ancho completo."
+  detalle_tecnico: >
+    Las columnas usan minmax(0,1fr) y no 1fr. Con 1fr el min-content del select de
+    intereses (opcion mas larga: "Asistente inteligente / chatbot") ensanchaba su track:
+    en desktop dejaba las columnas desparejas (300 vs 353) y en mobile forzaba el track a
+    324px dentro de un contenedor de 289px, provocando scroll horizontal dentro del form.
+  resultado:
+    - "Desktop 1280x800: modal 760x560, columnas 350/350, SIN scroll vertical (antes scrolleaba)."
+    - "Desktop 1280x600: 8px de scroll, despreciable."
+    - "Tablet 768: 2 columnas parejas 326.5/326.5, sin scroll ni desborde."
+    - "Mobile 375: 1 columna de 289px, cero desborde horizontal en form, modal y body."
+    - "Filas finales: toggle / NOMBRE+WHATSAPP / CORREO+INTERES / FECHA+HORA / 2 checkboxes / boton / leyenda."
+
 cambios:
   - "body.html x8: select name=country_code con los mismos 10 paises de footer.php (Chile +56 por defecto) + input de telefono nacional; WhatsApp y Correo pasan a filas propias."
   - "body.html x8: el input de fecha recibe class=at-date y autocomplete=off."
@@ -128,6 +181,13 @@ result:
     Cambios aplicados y verificados en local, SIN commit. Quedan en el working tree de
     la rama fix/form-agenda-calendario-whatsapp esperando el visto bueno de Luis.
   evidence_refs:
+    - "Contraste modal tras las correcciones: 0 fallos en tema oscuro y 0 en tema claro."
+    - "Etiquetas de campo en claro: 4.05 -> 4.85. Mensaje de error: 1.73 -> 5.75. Enlace legal: 1.86 -> 5.02."
+    - "Panel de exito: 440px centrado dentro del modal de 760px."
+    - "Layout desktop 1280x800: modal 760x560, columnas 350/350, scrollY=0, overflowX=0."
+    - "Layout tablet 768: columnas 326.5/326.5, scrollY=0, overflowX=0."
+    - "Layout mobile 375: 1 columna de 289px, overflowX=0 en form, modal y body; 9 horarios."
+    - "Landing portal-omnicliente reverificada tras el cambio de layout: identico al home."
     - "Fecha pasada: mensaje 'Solo puedes agendar desde hoy en adelante' + rangeUnderflow=true (submit bloqueado)."
     - "Fuera de ventana: mensaje 'Solo agendamos hasta 90 dias hacia adelante' + rangeOverflow=true."
     - "Fecha valida: 9 horarios renderizados, checkValidity()=true."
@@ -138,6 +198,13 @@ result:
     - "Spot-check en landing-asistentes-ia: mismo comportamiento (min/max, 10 prefijos, 9 horarios)."
     - "Sin errores de consola."
   residual_risks:
+    - >
+      HALLAZGO FUERA DE ALCANCE: auditada la home completa en tema claro, existen ~22 grupos
+      de contraste bajo ANTERIORES a este ticket y fuera del modal: el turquesa de marca
+      #2dd4bf sobre fondos claros (nav "Tech" 1.53, "GRATIS" 1.44, titular de 54px 1.63),
+      texto blanco sobre fondos claros en la seccion del problema (1.25), el verde WhatsApp
+      #25d366 (1.53) y varios badges #34d399 (1.82-1.92). No se tocaron: son decisiones de
+      marca que afectan secciones enteras del sitio y merecen rama y criterio propios.
     - >
       at-home.js, at-home.css y body.html YA tenian cambios sin commitear antes de esta
       tarea (preseleccion de modo del modal, foco a11y, privacy_accepted/marketing_optin,

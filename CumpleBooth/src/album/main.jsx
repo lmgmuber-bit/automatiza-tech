@@ -105,6 +105,65 @@ function Scroller({ pages }) {
   )
 }
 
+/**
+ * Aviso "gira tu celular". Solo aparece en un celular de verdad y de pie:
+ * orientación vertical + ancho típico de teléfono + puntero táctil (así una
+ * ventana angosta de escritorio no lo dispara). Es una sugerencia, nunca un
+ * bloqueo: se cierra solo al girar a horizontal, y si la persona prefiere
+ * seguir de pie la revista funciona igual en modo una página.
+ *
+ * El patrón de escucha es el mismo de FlipBook.jsx (media query + resize +
+ * orientationchange): en pruebas el `change` del media query no siempre
+ * llega solo, y de qué lado falle esto define si el aviso se queda pegado.
+ */
+function RotateHint() {
+  const matchesHint = () => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false
+    return window.matchMedia('(orientation: portrait) and (max-width: 640px) and (pointer: coarse)').matches
+  }
+  const [visible, setVisible] = useState(() => matchesHint())
+  const [dismissed, setDismissed] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined
+    const query = window.matchMedia('(orientation: portrait) and (max-width: 640px) and (pointer: coarse)')
+    const sync = () => setVisible(query.matches)
+    query.addEventListener('change', sync)
+    window.addEventListener('resize', sync)
+    window.addEventListener('orientationchange', sync)
+    sync()
+    return () => {
+      query.removeEventListener('change', sync)
+      window.removeEventListener('resize', sync)
+      window.removeEventListener('orientationchange', sync)
+    }
+  }, [])
+
+  if (dismissed || !visible) return null
+
+  return (
+    <div className="rotate-hint" role="status">
+      <span className="rotate-hint__icon" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="8" y="3.5" width="8" height="15" rx="1.8" />
+          <line x1="10.8" y1="16.2" x2="13.2" y2="16.2" />
+          <path d="M18.6 6.4a7.2 7.2 0 0 1 2 4.4" />
+          <path d="M21 8.2v2.7h-2.7" />
+        </svg>
+      </span>
+      <p className="rotate-hint__text">Gira tu celular para una mejor experiencia</p>
+      <button
+        type="button"
+        className="rotate-hint__close"
+        aria-label="Cerrar aviso"
+        onClick={() => setDismissed(true)}
+      >
+        ×
+      </button>
+    </div>
+  )
+}
+
 function Album({ data }) {
   const pages = useMemo(() => buildPages(data), [data])
   const [flip, setFlip] = useState(() => supportsFlip())
@@ -154,6 +213,7 @@ function Album({ data }) {
 
   return (
     <div className="album-root">
+      <RotateHint />
       <FlipBook
         pages={pages}
         renderPage={(page, index) => <AlbumPage page={page} index={index} base={BASE} />}

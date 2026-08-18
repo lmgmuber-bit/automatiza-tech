@@ -6,3 +6,16 @@ config/cumpleclick-config.php
 storage/
 backups/
 qa-output/
+qa-evidence/
+tmp/
+_voces.json
+hielo-bruni-v2.png
+NUL;
+
+# Fuentes multimedia intermedias/regenerables; los finales aprobados sí se versionan.
+design/renders/
+design/screens/
+design/explicativo/fakecam/
+design/explicativo/ia/
+design/explicativo/prueba-infografia/
+design/explicativo/_sin-audio/

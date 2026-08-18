@@ -1023,7 +1023,7 @@
             {
               "kind": "escudo",
               "label": "¡Atrapa el coco!",
-              "image": "fondo-sala.jpg",
+              "image": "fondo-juego-playa.jpg",
               "seconds": 15
             },
             {
@@ -1242,7 +1242,7 @@
             {
               "kind": "escudo",
               "label": "¡Keepy Uppy!",
-              "image": "fondo-sala.jpg",
+              "image": "fondo-juego-patio.jpg",
               "seconds": 15
             },
             {

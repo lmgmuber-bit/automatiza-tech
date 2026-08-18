@@ -135,6 +135,35 @@ body {
   color: color-mix(in srgb, var(--ink) 65%, transparent);
 }
 
+/* En pantalla chica la hoja se achica pero los mm no: sin este ajuste el QR
+   de 108mm desborda un teléfono de 360px. Se escala todo al ancho real de la
+   hoja y esta conserva la proporción carta/A4. Solo afecta la vista en
+   pantalla; la impresión sigue por @media print. */
+@media screen and (max-width: 790px) {
+  body { padding: 12px 8px 28px; gap: 12px; }
+  .sign {
+    min-height: 141vw; /* proporción A4 respecto al ancho disponible */
+    gap: 4.5mm;
+    padding-bottom: 7mm;
+  }
+  .sign__head { padding: 9mm 7mm 7mm; }
+  .sign__eyebrow { font-size: 2.6mm; margin-bottom: 2mm; }
+  .sign__title { font-size: 8mm; }
+  .sign__date { font-size: 3.2mm; margin-top: 2mm; }
+  .sign__message { font-size: 4.4mm; padding: 0 7mm; }
+  .sign__qr {
+    width: min(108mm, 72vw); height: auto; aspect-ratio: 1;
+    padding: 2.5mm; border-width: 0.8mm; border-radius: 4mm;
+  }
+  .sign__qr-error { font-size: 3mm; }
+  .sign__how { font-size: 3.4mm; padding: 0 6mm; }
+  .sign__url { padding: 2.5mm 5mm; gap: 1mm; }
+  .sign__url-label { font-size: 2.8mm; }
+  .sign__url-value { font-size: 3mm; }
+  .sign__closed { font-size: 3mm; margin: 0 7mm; padding: 2.5mm 4mm; }
+  .sign__foot { font-size: 3.2mm; gap: 1.5mm; }
+}
+
 @page { size: A4 portrait; margin: 0; }
 
 @media print {

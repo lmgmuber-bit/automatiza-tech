@@ -48,6 +48,13 @@ continue instead of starting blind.
   copied.
 - Public identity/path: CumpleClick by AutomatizaTech, `/cumpleclick/`;
   technical project name remains CumpleBooth.
+- Marketing video ads (main ad + 4 per-theme videos, 2026-08-05) are **not**
+  part of this repo — they live in a Claude Code session's temp scratchpad, not
+  committed and not deployed. If Luis asks to continue/adjust them, read
+  `docs/OPENCODE-HANDOFF-VIDEOS-PROMOCIONALES-2026-08-05.md` first — it has the
+  exact paths, scripts, timestamps and rules (ElevenLabs key handling, copyright
+  risk already accepted for WhatsApp-only distribution) needed to continue
+  without redoing work or re-litigating decisions already made with Luis.
 - PHP 8.0+ (baseline 8.2), MySQL/InnoDB/utf8mb4 and an independent database.
 - `public/` and `src/` are source; `dist/` is generated once after integration.
 - Never version or deploy real config, passwords, HMAC keys, backups or photos.

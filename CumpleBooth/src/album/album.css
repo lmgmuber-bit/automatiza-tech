@@ -26,6 +26,9 @@
   --paper: #fffdf8;
   --radius: 18px;
   --font: 'Baloo 2', 'Segoe UI Rounded', 'Segoe UI', system-ui, sans-serif;
+  /* Alto que se le reserva al entorno (controles + aire) al calcular el tamaño
+     del libro. Los breakpoints de pantalla baja lo achican. */
+  --book-chrome: 150px;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -104,13 +107,13 @@ body {
    alto a la vez para que nunca se salga de pantalla en horizontal. */
 .flipbook {
   position: relative;
-  width: min(96vw, calc((100dvh - 150px) * 1.5), 1180px);
+  width: min(96vw, calc((100dvh - var(--book-chrome)) * 1.5), 1180px);
   aspect-ratio: 3 / 2;
   perspective: 2400px;
   user-select: none;
 }
 .flipbook-stage.is-single .flipbook {
-  width: min(94vw, calc((100dvh - 150px) * 0.75), 560px);
+  width: min(94vw, calc((100dvh - var(--book-chrome)) * 0.75), 560px);
   aspect-ratio: 3 / 4;
 }
 
@@ -307,6 +310,91 @@ body {
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: 0 14px 40px rgba(0,0,0,.34);
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────────
+   El cambio de una/dos páginas lo decide FlipBook.jsx por JS (820px); acá va
+   todo lo demás: densidad del escenario, tamaño de controles y el alto que se
+   le reserva al entorno (--book-chrome). Las páginas no necesitan breakpoints
+   propios porque ya se miden en cqw/cqh del contenedor. */
+
+/* Teléfonos y tabletas angostas: menos aire alrededor del libro. */
+@media (max-width: 820px) {
+  :root { --book-chrome: 128px; }
+  .flipbook-stage { gap: 10px; padding: 10px 8px calc(10px + env(safe-area-inset-bottom)); }
+  .flipbook-controls { gap: 8px; }
+  .flip-indicator { min-width: 62px; margin: 0 2px; }
+  .flip-btn--wide { padding: 0 14px; }
+}
+
+/* Teléfono en horizontal (o cualquier ventana muy baja): el alto manda, así
+   que los controles se compactan y el libro gana ese espacio. Los botones no
+   bajan de 44px para seguir siendo tocables. */
+@media (orientation: landscape) and (max-height: 540px) {
+  :root { --book-chrome: 76px; }
+  .flipbook-stage { gap: 8px; padding: 6px 10px calc(6px + env(safe-area-inset-bottom)); }
+  .flipbook-controls { gap: 8px; }
+  .flip-btn { min-width: 44px; min-height: 44px; }
+  .flip-btn--wide { padding: 0 12px; font-size: .82rem; }
+  .flip-indicator { min-width: 56px; font-size: .88rem; }
+  .flip-indicator span { font-size: 1rem; }
+  .album-scroll { padding: 12px 10px; }
+}
+
+/* Pantallas grandes: el tope de 1180px del libro ya gobierna; solo se da un
+   poco más de aire al escenario. */
+@media (min-width: 1400px) and (min-height: 800px) {
+  .flipbook-stage { gap: 20px; }
+}
+
+/* ── Aviso "gira tu celular" ────────────────────────────────────────────────
+   Solo lo monta RotateHint (main.jsx) en celular-portrait real: media query
+   de orientación + ancho de teléfono + puntero táctil. Es una sugerencia, no
+   un bloqueo: la píldora deja pasar los toques salvo en su botón de cerrar. */
+
+.rotate-hint {
+  position: fixed;
+  top: calc(10px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex; align-items: center; gap: 10px;
+  width: max-content;
+  max-width: min(94vw, 460px);
+  padding: 8px 9px 8px 14px;
+  border-radius: 999px;
+  background: rgba(24, 12, 44, .86);
+  border: 1px solid rgba(255,255,255,.24);
+  box-shadow: 0 10px 26px rgba(0,0,0,.38);
+  color: #fff;
+  pointer-events: none; /* la revista se sigue usando detrás del aviso */
+}
+.rotate-hint__icon { flex: none; display: inline-flex; color: var(--yellow); }
+.rotate-hint__text {
+  flex: 1; min-width: 0;
+  margin: 0;
+  font-size: .85rem; font-weight: 700; line-height: 1.25; text-align: left;
+}
+.rotate-hint__close {
+  pointer-events: auto;
+  flex: none;
+  width: 34px; height: 34px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255,255,255,.28); border-radius: 999px;
+  background: rgba(255,255,255,.10); color: #fff;
+  font-family: inherit; font-size: 1.05rem; font-weight: 700; line-height: 1;
+  cursor: pointer;
+}
+
+/* El teléfono del ícono oscila entre vertical y horizontal: el gesto que se
+   pide, explicado sin palabras. Con movimiento reducido queda quieto. */
+@media (prefers-reduced-motion: no-preference) {
+  .rotate-hint__icon svg { animation: rotate-hint-sway 2.8s ease-in-out infinite; }
+  @keyframes rotate-hint-sway {
+    0%, 22% { transform: rotate(0deg); }
+    55%, 78% { transform: rotate(90deg); }
+    100% { transform: rotate(0deg); }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

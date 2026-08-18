@@ -129,6 +129,10 @@ function cb_create_invitation(array $data): array
     $message = trim((string) ($data['message'] ?? ''));
     $language = in_array((string) ($data['language'] ?? ''), ['es', 'en', 'pt'], true) ? (string) $data['language'] : 'es';
     $channel = in_array((string) ($data['channel'] ?? ''), ['whatsapp', 'email', 'print'], true) ? (string) $data['channel'] : 'whatsapp';
+    // Elige la narración de cierre de Alice ("cumpleañero" vs "cumpleañera").
+    // NULL/vacío = sin especificar, cae al audio neutro (ver invitacion.php).
+    $genderRaw = (string) ($data['birthday_person_gender'] ?? '');
+    $gender = in_array($genderRaw, ['m', 'f'], true) ? $genderRaw : null;
     $status = 'draft';
     $createdBy = (string) ($data['created_by'] ?? '');
     $promptTemplate = trim((string) ($data['prompt_template'] ?? ''));
@@ -158,8 +162,8 @@ function cb_create_invitation(array $data): array
         return ['ok' => false, 'error' => 'No se pudo generar un token de invitación único.'];
     }
 
-    $stmt = $pdo->prepare('INSERT INTO cc_invitations (public_token_hash, party_id, theme_slug, admin_label, birthday_person_name, event_date, event_time, address, message, language, channel, status, prompt_template, created_at, updated_at, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
-    $stmt->execute([$tokenHash, $partyId, $themeSlug, $adminLabel, $birthdayPersonName, $eventDate, $eventTime, $address, $message, $language, $channel, $status, $promptTemplate, $now, $now, $createdBy]);
+    $stmt = $pdo->prepare('INSERT INTO cc_invitations (public_token_hash, party_id, theme_slug, admin_label, birthday_person_name, birthday_person_gender, event_date, event_time, address, message, language, channel, status, prompt_template, created_at, updated_at, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+    $stmt->execute([$tokenHash, $partyId, $themeSlug, $adminLabel, $birthdayPersonName, $gender, $eventDate, $eventTime, $address, $message, $language, $channel, $status, $promptTemplate, $now, $now, $createdBy]);
     return ['ok' => true, 'id' => (int) $pdo->lastInsertId(), 'token' => $token];
 }
 
@@ -454,7 +458,7 @@ function cb_update_invitation(int $id, array $data, string $by): bool
     if (cb_storage_mode() !== 'db') {
         return false;
     }
-    $allowed = ['birthday_person_name', 'event_date', 'event_time', 'address', 'message', 'admin_label', 'language', 'channel', 'prompt_template'];
+    $allowed = ['birthday_person_name', 'birthday_person_gender', 'event_date', 'event_time', 'address', 'message', 'admin_label', 'language', 'channel', 'prompt_template'];
     $fields = [];
     $params = [];
     foreach ($allowed as $key) {

@@ -67,15 +67,44 @@ $musicUrl = '';
 if (preg_match('/^[a-z0-9-]+$/', $themeSlug) && is_file(__DIR__ . '/themes/' . $themeSlug . '/musica-fondo.mp3')) {
     $musicUrl = 'themes/' . rawurlencode($themeSlug) . '/musica-fondo.mp3';
 }
-// Narración de despedida: texto fijo, igual para cualquier temática o
-// invitación, así que es UN solo archivo compartido (no por tema, no por
-// invitación) en vez de pedir que se genere una y otra vez.
+// Narración de despedida: texto fijo, igual para cualquier temática, así que
+// son archivos compartidos (no por tema, no por invitación) en vez de pedir
+// que se generen una y otra vez. Tres variantes: neutra (sin género elegido,
+// compatible con invitaciones creadas antes de este campo), niño y niña —
+// "cumpleañero"/"cumpleañera" en vez de un texto genérico que no calzaba con
+// el botón "Conoce al cumpleañero/a" (pedido de Luis 2026-08-12).
+$narrationOutroFile = 'narracion-final.mp3';
+$birthdayGender = (string) ($invitation['birthday_person_gender'] ?? '');
+if ($birthdayGender === 'm') {
+    $narrationOutroFile = 'narracion-final-nino.mp3';
+} elseif ($birthdayGender === 'f') {
+    $narrationOutroFile = 'narracion-final-nina.mp3';
+}
 $narrationOutroUrl = '';
-$narrationOutroPath = __DIR__ . '/assets/audio/narracion-final.mp3';
+$narrationOutroPath = __DIR__ . '/assets/audio/' . $narrationOutroFile;
+if (!is_file($narrationOutroPath)) {
+    // Variante de género aún no generada: cae a la neutra en vez de quedar mudo.
+    $narrationOutroFile = 'narracion-final.mp3';
+    $narrationOutroPath = __DIR__ . '/assets/audio/narracion-final.mp3';
+}
 if (is_file($narrationOutroPath)) {
     // El archivo compartido conserva su nombre, así que la versión evita que
     // una invitación ya abierta conserve en caché una despedida anterior.
-    $narrationOutroUrl = 'assets/audio/narracion-final.mp3?v=' . rawurlencode((string) filemtime($narrationOutroPath));
+    $narrationOutroUrl = 'assets/audio/' . rawurlencode($narrationOutroFile) . '?v=' . rawurlencode((string) filemtime($narrationOutroPath));
+}
+
+// Cierre del RECORRIDO de personajes (modo Automática): es un momento
+// distinto al de arriba, aunque compartían el mismo audio por error (Luis
+// 2026-08-12: "se pisan" no era esto, pero el texto de "conoce al
+// cumpleañero/a" quedaba sonando ANTES de que el botón exista en pantalla,
+// justo al terminar el último video de personaje — el CTA real recién
+// aparece más abajo, en la sección "Guarda y comparte"). Este audio invita a
+// seguir bajando; el de arriba (`$narrationOutroUrl`) queda solo para esa
+// sección final, disparado por `data-inv-narration-outro-trigger`.
+$narrationPlaylistEndUrl = '';
+$narrationPlaylistEndPath = __DIR__ . '/assets/audio/narracion-playlist-final.mp3';
+if (is_file($narrationPlaylistEndPath)) {
+    $narrationPlaylistEndUrl = 'assets/audio/narracion-playlist-final.mp3?v=' . rawurlencode((string) filemtime($narrationPlaylistEndPath));
 }
 
 $themeData = is_array($themesData['themes'][$themeSlug] ?? null) ? $themesData['themes'][$themeSlug] : [];
@@ -264,6 +293,25 @@ $imageUrl = cb_invitation_download_url($token, 'image');
 $videoUrl = $hasVideo ? cb_invitation_download_url($token, 'video') : null;
 
 $esc = static fn(string $v): string => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
+
+// Intro cinematográfico opcional por temática. La convención evita amarrar la
+// invitación a una lista fija: cualquier tema presente o futuro puede activarlo
+// agregando el mismo par de archivos dentro de su carpeta `invitation/`.
+// Si el MP4 no existe, el flujo del sobre permanece exactamente como antes.
+$themeIntroUrl = '';
+$themeIntroPosterUrl = '';
+if (preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
+    $themeIntroRelative = 'invitation/intro-invitacion-wow-v1.mp4';
+    $themeIntroPath = __DIR__ . '/themes/' . $themeSlug . '/' . $themeIntroRelative;
+    if (is_file($themeIntroPath)) {
+        $themeIntroUrl = 'themes/' . rawurlencode($themeSlug) . '/' . $themeIntroRelative . '?v=' . rawurlencode((string) filemtime($themeIntroPath));
+        $themeIntroPosterRelative = 'invitation/intro-invitacion-wow-v1-poster.jpg';
+        $themeIntroPosterPath = __DIR__ . '/themes/' . $themeSlug . '/' . $themeIntroPosterRelative;
+        if (is_file($themeIntroPosterPath)) {
+            $themeIntroPosterUrl = 'themes/' . rawurlencode($themeSlug) . '/' . $themeIntroPosterRelative . '?v=' . rawurlencode((string) filemtime($themeIntroPosterPath));
+        }
+    }
+}
 
 // Fecha legible sin depender del locale del servidor, que en Hostinger y en
 // Windows no coinciden y dejaban la fecha en inglés o en formato ISO.
@@ -634,7 +682,7 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
 <meta name="robots" content="noindex, nofollow">
 <title>Invitación de <?= $esc($birthdayName !== '' ? $birthdayName : 'cumpleaños') ?> · CumpleClick</title>
 <link rel="icon" type="image/svg+xml" href="brand/cumpleclick-mark.svg">
-<link rel="stylesheet" href="assets/invitation.css?v=6">
+<link rel="stylesheet" href="assets/invitation.css?v=7">
 <?php if ($eventProfile !== null): ?><link rel="stylesheet" href="assets/event-profile.css?v=2"><?php endif; ?>
 </head>
 <body class="inv-body" data-theme="<?= $esc($themeSlug) ?>" style="<?= $esc($invitationThemeStyle) ?>">
@@ -680,6 +728,16 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
     </button>
   </div>
 </section>
+
+<?php if ($themeIntroUrl !== ''): ?>
+<section class='inv-theme-intro' data-inv-theme-intro role='dialog' aria-modal='true' aria-label='Intro de la invitación' aria-hidden='true' hidden>
+  <video class='inv-theme-intro-media' data-inv-theme-intro-video src='<?= $esc($themeIntroUrl) ?>'<?php if ($themeIntroPosterUrl !== ''): ?> poster='<?= $esc($themeIntroPosterUrl) ?>'<?php endif; ?> playsinline preload='metadata'></video>
+  <div class='inv-theme-intro-shade' aria-hidden='true'></div>
+  <img class='inv-theme-intro-brand' src='brand/cumpleclick-lockup.svg' alt='CumpleClick' width='150' height='38'>
+  <button class='inv-theme-intro-skip' type='button' data-inv-theme-intro-skip>Omitir intro</button>
+  <div class='inv-theme-intro-progress' aria-hidden='true'><span data-inv-theme-intro-progress></span></div>
+</section>
+<?php endif; ?>
 
 <main class="inv">
 
@@ -851,10 +909,12 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
             $narrationPath = __DIR__ . '/themes/' . $themeSlug . '/narracion-video/' . $narrationKey . '.mp3';
             $narrationUrl = '';
             // Regla global: el último capítulo de CUALQUIER temática siempre
-            // usa la misma despedida aprobada. Incluso si en el futuro existe
-            // un MP3 por tema, la despedida compartida sigue teniendo prioridad.
-            if ($fileName === $lastPlaylistKey && $narrationOutroUrl !== '') {
-                $narrationUrl = $narrationOutroUrl;
+            // usa el mismo audio de cierre del recorrido (invita a seguir
+            // bajando). NO es el mismo audio que la sección final "Guarda y
+            // comparte" — esa suena aparte, cuando el invitado realmente
+            // llega ahí con el scroll (ver `$narrationOutroUrl` más arriba).
+            if ($fileName === $lastPlaylistKey && $narrationPlaylistEndUrl !== '') {
+                $narrationUrl = $narrationPlaylistEndUrl;
             } elseif (is_file($narrationPath)) {
                 $narrationUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . rawurlencode($narrationKey) . '.mp3';
             }
@@ -1269,6 +1329,6 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
   </footer>
 </main>
 
-<script src="assets/invitation.js?v=3" defer></script>
+<script src="assets/invitation.js?v=<?= $esc((string) filemtime(__DIR__ . '/assets/invitation.js')) ?>" defer></script>
 <?php if ($eventProfile !== null): ?><script src="assets/event-profile.js?v=2" defer></script><?php endif; ?>
 </body></html>

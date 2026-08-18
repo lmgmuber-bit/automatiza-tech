@@ -9,6 +9,8 @@ vertical tematizado que termina en el acceso al Perfil del protagonista.
 
 | Sección | Qué muestra | Condición |
 |---|---|---|
+| `.inv-entry-gate` | Sobre que obtiene el gesto real del invitado | siempre |
+| `.inv-theme-intro` | Video vertical temático, logo real, progreso y `Omitir intro` | si existe `invitation/intro-invitacion-wow-v1.mp4` en el tema |
 | `.inv-hero` | Fondo temático + nombre + fecha larga en español | siempre |
 | `.inv-art-section` | La invitación aprobada, nítida y enmarcada | siempre |
 | `.inv-facts` | Cuándo y Dónde en tarjetas separadas | si hay fecha, hora o dirección |
@@ -19,6 +21,12 @@ vertical tematizado que termina en el acceso al Perfil del protagonista.
 Sin perfil no se renderiza `.inv-finale` y no se cargan `event-profile.css` ni
 `event-profile.js`: la invitación queda exactamente como estaba en costo y en
 comportamiento.
+
+El intro temático es parametrizable por convención de archivos, no por nombres
+como Carreras o Hielo. Se genera desde cero, pero toma la paleta, atmósfera y
+lenguaje visual del fondo vigente. Al terminar, omitir o fallar la reproducción,
+el overlay se retira y continúa el mismo recorrido. El video no modifica el hero,
+los capítulos, el Show 3D ni la lógica de juegos del tema.
 
 ## Decisiones que conviene no revertir sin leer esto
 

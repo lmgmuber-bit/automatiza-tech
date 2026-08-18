@@ -11,17 +11,47 @@ las demás temáticas.
    con el primer toque/scroll/tecla (los navegadores bloquean autoplay con
    sonido), en loop, volumen `0.15` — mismo valor que usa el kiosco
    (`src/App.jsx`, constante `MUSIC_VOL`).
-2. **Botón de silenciar**: mismo componente visual que el kiosco (`.mute-btn`,
-   círculo flotante abajo-izquierda, 🎵/🔇). Aparece recién cuando la música
-   arranca (antes queda oculto).
+2. **Botón de silenciar música**: mismo componente visual que el kiosco
+   (`.mute-btn`, círculo flotante abajo-izquierda, 🎵/🔇). Aparece recién
+   cuando la música arranca (antes queda oculto). Este control modifica
+   exclusivamente `data-inv-music`: **nunca pausa, silencia ni corta la
+   narración de Alice**.
 3. **Narración de Alice**, en tres categorías con vida útil distinta:
    - **Inicio** (`personalized_narration_intro`): dinámica, lleva el nombre,
      fecha y hora DE ESA invitación → se aprueba por invitación, igual que la
      imagen personalizada, vía el panel admin (`admin/invitations.php`,
      formulario "Subir narración de inicio").
-   - **Despedida** (`narracion-final.mp3`): texto fijo, igual para cualquier
-     invitación o temática → **un solo archivo compartido**, no se genera
-     nunca más de una vez. Va en `public/assets/audio/narracion-final.mp3`.
+   - **Despedida** (`narracion-final*.mp3`): texto fijo (no depende del
+     nombre/fecha), igual para cualquier temática → **tres archivos
+     compartidos**, no por invitación ni por tema. Elegido por
+     `cc_invitations.birthday_person_gender` (columna agregada en la
+     migración `009_invitation_gender`, editable en `admin/invitations.php`
+     al crear o editar una invitación — corrección 2026-08-12: el texto
+     anterior decía "toca aquí para ver la invitación", pensado para un link
+     compartido, y no calzaba con la pantalla real de cierre, que ya muestra
+     los botones de compartir y el CTA "Conoce al cumpleañero/a"):
+     - `m` → `public/assets/audio/narracion-final-nino.mp3` ("...para
+       conocer **al cumpleañero**.")
+     - `f` → `public/assets/audio/narracion-final-nina.mp3` ("...para
+       conocer **a la cumpleañera**.")
+     - sin especificar (NULL, o invitaciones creadas antes de este campo) →
+       cae a `public/assets/audio/narracion-final.mp3`, texto neutro ("...para
+       conocer más del cumpleaños."). También es el respaldo si la variante
+       de género no existe físicamente en disco.
+     - Suena SOLO cuando el invitado llega de verdad a la sección "Guarda y
+       comparte tu invitación" (`data-inv-narration-outro-trigger`, dispara
+       vía IntersectionObserver). No es lo mismo que el cierre del recorrido
+       de personajes de abajo, aunque compartían el mismo audio hasta el
+       2026-08-12 — el CTA "Conoce al cumpleañero/a" no existe todavía en
+       pantalla en ese punto, así que decir "toca el botón" ahí no calzaba.
+   - **Cierre del recorrido de personajes** (`narracion-playlist-final.mp3`):
+     archivo aparte, único y compartido para toda invitación/temática, texto
+     fijo "Toca aquí para ver la invitación a la fiesta." Es la narración del
+     ÚLTIMO capítulo de la playlist automática (slot "¡Te esperamos!" en
+     `$playlistOrdersByTheme`/`$playlistCandidateOrdersByTheme`) — invita a
+     seguir bajando hacia la ficha/sección final, que todavía no está en
+     pantalla en ese momento. En Scroll (sin playlist automática) este audio
+     no se usa.
    - **Capítulos del modo video** (`narracion-video/<clip>.mp3`): texto fijo
      por TEMA (no depende del invitado) → un archivo por capítulo, se genera
      una vez por temática y sirve para todas sus invitaciones. Va en
@@ -41,6 +71,22 @@ las demás temáticas.
    simplemente no suena — el resto de la invitación (música, video, scroll)
    sigue funcionando igual. Mismo patrón que la narración de personajes del
    kiosco (`src/App.jsx`).
+
+## Regla transversal para todas las temáticas
+
+- El mismo contrato de audio aplica a Carreras, Familia Canina, Tropical,
+  Reino de Hielo, K-Pop y cualquier temática futura, tanto en modo Scroll como
+  en modo Automático.
+- Al terminar, omitir o fallar el intro temático, la invitación debe iniciar la
+  música ambiental, mostrar el botón de música e iniciar Alice si existe una
+  narración aprobada para esa invitación.
+- El botón 🎵/🔇 controla **solo la música ambiental**. Alice conserva su
+  reproducción y volumen de voz aunque el invitado silencie la música.
+- La narración personalizada se asocia por invitación; no se debe reutilizar
+  una voz con nombre, fecha u hora de otro evento. Si falta, el flujo degrada
+  sin romperse, pero el QA editorial debe marcar la narración como pendiente.
+- Antes de publicar una temática o invitación nueva, probar este contrato en
+  Scroll y Automático, incluyendo el camino `Omitir intro`.
 
 Archivos tocados: `public/invitacion.php`, `public/assets/invitation.js`,
 `public/assets/invitation.css`, `public/lib.invitations.php` (nuevo
@@ -114,7 +160,7 @@ Carpeta: `CumpleBooth/public/themes/carreras/narracion-video/`
 | `saludo-luigi.mp3` | "Luigi no se queda atrás." |
 | `saludo-el-rey.mp3` | "El Rey tampoco se lo pierde." |
 | `rayo-mcqueen-estrella.mp3` | "Rayo se prepara para la carrera." |
-| `saludo-rayo-mcqueen-v3.mp3` | "¡Y Rayo McQueen cruza la meta!" |
+| `saludo-rayo-mcqueen.mp3` | "¡Y Rayo McQueen cruza la meta!" (el video del capítulo se llama `saludo-rayo-mcqueen-v3.mp4`, pero el mp3 debe llamarse SIN el sufijo `-v3`: `invitacion.php` le quita el sufijo de versión al video para buscar su narración, así que el archivo de audio nunca debe llevarlo — 2026-08-12, corregido: estaba guardado como `saludo-rayo-mcqueen-v3.mp3` y por eso el capítulo quedaba mudo) |
 
 (El último capítulo, "¡Te esperamos!", reutiliza el mp3 de despedida global
 del punto 1 — no generar uno aparte para ese.)
@@ -218,9 +264,10 @@ footer, playlist) ya funciona para hielo sin tocar código de nuevo.
 4. `npm run build` + `scripts/check-dist-parity.php`: OK, 330 archivos
    (+1 sobre el conteo anterior por `candidate-hielo-auto.mp4`).
 5. En navegador (Vicente/carreras, local): sobre se abre, música arranca
-   (volumen 0.15, botón mute visible), footer con logo+link+favicon cargan
+   (volumen 0.04 mientras habla Alice y botón mute visible), footer con logo+link+favicon cargan
    200, sección "¿Quieres conocer a Vicente?" visible tras el fix de
    `event_profile_enabled`.
-6. Narración de Alice (intro/outro/video por capítulo) sigue **sin audio
-   real** — pendiente que alguien (Codex, con autorización de créditos)
-   genere los MP3 vía ElevenLabs directo, ver tarea inmediata arriba.
+6. La narración de inicio de Alice para Vicente usa un MP3 aprobado ya
+   existente, asociado solo en SQLite local ignorado. Tras el intro temático,
+   música, Alice y mute pasan QA en Carreras Scroll y Automático. Los audios
+   de capítulos o despedida que aún falten siguen el inventario anterior.

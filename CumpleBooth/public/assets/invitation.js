@@ -16,12 +16,20 @@
   const soundActivation = document.querySelector('[data-inv-audio-activate]');
   const entryGate = document.querySelector('[data-inv-entry-gate]');
   const entryOpenButton = document.querySelector('[data-inv-entry-open]');
+  const themeIntro = document.querySelector('[data-inv-theme-intro]');
+  const themeIntroVideo = document.querySelector('[data-inv-theme-intro-video]');
+  const themeIntroSkip = document.querySelector('[data-inv-theme-intro-skip]');
+  const themeIntroProgress = document.querySelector('[data-inv-theme-intro-progress]');
   let musicStarted = false;
   let musicStartPending = false;
+  let musicPrimePromise = Promise.resolve(false);
   let introNarrationTriggered = false;
   let introNarrationPending = false;
   let startAutoHero = null;
   let outroPrimed = false;
+  let introNarrationPrimed = false;
+  let introNarrationPrimePending = false;
+  let introNarrationPrimePromise = Promise.resolve(false);
   let duckDepth = 0; // cuántas voces piden música baja a la vez (evita que una termine y suba encima de otra)
 
   const applyMusicVolume = () => {
@@ -84,6 +92,10 @@
   };
 
   const startIntroNarration = () => {
+    if (!(narrationIntro instanceof HTMLAudioElement) || !narrationIntro.getAttribute('src')) {
+      introNarrationTriggered = true;
+      return;
+    }
     if (introNarrationTriggered || introNarrationPending) return;
     introNarrationPending = true;
     duckWhile(narrationIntro).then((started) => {
@@ -96,6 +108,100 @@
         setSoundActivation(true);
       }
     });
+  };
+
+  // Auto-scroll a la siguiente sección: al terminar de hablar Alice, la
+  // página avanza sola hasta el final del hero (el invitado no tiene que
+  // tocar nada para seguir — pedido de Luis 2026-08-12). Vale para Scroll y
+  // Automática, en las dos invitaciones y en las dos temáticas (la lógica no
+  // distingue tema). En Automática el video de entrada y la narración de
+  // Alice corren en paralelo y no siempre terminan al mismo tiempo: si el
+  // avance dispara apenas termina el video pero Alice todavía dice "Tenemos
+  // el agrado de invitarte...", el scroll cae en la siguiente sección y esa
+  // sección arranca SU narración encima de la de Alice (reporte de Luis
+  // 2026-08-12: "se pisan"). `maybeAutoAdvance` exige las dos condiciones —
+  // narración terminada Y scroll ya no bloqueado por el video — sin importar
+  // cuál de las dos termine primero; `markReady` más abajo llama a esta misma
+  // función cuando el video termina. Solo avanza una vez.
+  let autoAdvanced = false;
+  let introNarrationEnded = false;
+  const autoAdvanceToNextSection = () => {
+    if (autoAdvanced || reducedMotion.matches) return;
+    autoAdvanced = true;
+    // Apunta al elemento real que sigue al hero (capítulos, playlist de
+    // personajes o detalles, según exista), no a un número calculado a
+    // partir del alto del hero: si el layout todavía no está 100% asentado
+    // en ese instante (poster/video con carga tardía), el cálculo por altura
+    // puede quedar corto y no alcanza a disparar el IntersectionObserver que
+    // arranca la playlist de personajes (`runPlaylist`), dejando al
+    // invitado sin videos y sin haber avanzado — reporte de Luis 2026-08-12.
+    const heroSection = document.querySelector('.inv-hero');
+    const nextSection = heroSection ? heroSection.nextElementSibling : null;
+    const target = nextSection
+      ? nextSection.getBoundingClientRect().top + window.scrollY
+      : (heroSection ? heroSection.getBoundingClientRect().bottom + window.scrollY : window.scrollY + window.innerHeight);
+    window.scrollTo({ top: target, behavior: 'smooth' });
+  };
+  const maybeAutoAdvance = () => {
+    if (!introNarrationEnded) return;
+    if (document.body.classList.contains('inv-scroll-locked')) return;
+    autoAdvanceToNextSection();
+  };
+  if (narrationIntro instanceof HTMLAudioElement) {
+    narrationIntro.addEventListener('ended', () => {
+      introNarrationEnded = true;
+      maybeAutoAdvance();
+    }, { once: true });
+  }
+
+  // El intro temático dura 15 segundos. Si esperamos a que termine para llamar
+  // `play()` sobre Alice, Chrome/iOS ya no lo consideran parte del toque del
+  // sobre. Se desbloquea la pista en silencio dentro del gesto y se reinicia;
+  // al entrar al hero puede reproducirse con voz aunque el cierre sea `ended`.
+  const primeIntroNarration = () => {
+    if (introNarrationPrimed || introNarrationPrimePending
+      || !(narrationIntro instanceof HTMLAudioElement) || !narrationIntro.getAttribute('src')) {
+      return introNarrationPrimePromise;
+    }
+    introNarrationPrimePending = true;
+    const originalVolume = narrationIntro.volume;
+    narrationIntro.volume = 0;
+    narrationIntro.currentTime = 0;
+    const reset = () => {
+      narrationIntro.pause();
+      narrationIntro.currentTime = 0;
+      narrationIntro.volume = originalVolume;
+    };
+    const attempt = narrationIntro.play();
+    if (attempt && typeof attempt.then === 'function') {
+      introNarrationPrimePromise = attempt.then(() => {
+        reset();
+        introNarrationPrimed = true;
+        introNarrationPrimePending = false;
+        return true;
+      }).catch(() => {
+        reset();
+        introNarrationPrimePending = false;
+        return false;
+      });
+    } else {
+      reset();
+      introNarrationPrimed = true;
+      introNarrationPrimePending = false;
+      introNarrationPrimePromise = Promise.resolve(true);
+    }
+    return introNarrationPrimePromise;
+  };
+
+  // Si el intro termina justo mientras el navegador aún resuelve el play()
+  // silencioso, espera su reset antes de iniciar Alice. De otro modo ese reset
+  // tardío puede pausar la narración real, especialmente en el hero automático.
+  const startIntroNarrationAfterPrime = () => {
+    if (!introNarrationPrimePending) {
+      startIntroNarration();
+      return;
+    }
+    introNarrationPrimePromise.then(() => startIntroNarration());
   };
 
   // Gestos que Chrome/Safari SÍ cuentan como interacción real para permitir
@@ -117,7 +223,7 @@
       if (introNarrationTriggered || !narrationIntro) {
         stopListening();
       } else {
-        startIntroNarration();
+        startIntroNarrationAfterPrime();
       }
       return;
     }
@@ -153,7 +259,54 @@
     // de si la música pudo arrancar o no — pero sí debe sonar una sola vez:
     // pointerdown y touchstart pueden llegar los dos por el mismo toque
     // antes de que el play() de la música resuelva.
-    startIntroNarration();
+    startIntroNarrationAfterPrime();
+  };
+
+  // Mantiene la música corriendo a volumen cero durante el intro temático. El
+  // navegador la autoriza porque este `play()` ocurre en el click del sobre;
+  // recién al abrir el hero se aplica el volumen normal y se revela el mute.
+  const primeMusicForThemeIntro = () => {
+    if (!(musicEl instanceof HTMLAudioElement) || !musicEl.getAttribute('src')
+      || musicStarted || musicStartPending) return musicPrimePromise;
+    musicStartPending = true;
+    musicEl.volume = 0;
+    const attempt = musicEl.play();
+    const onPrimed = () => {
+      musicStarted = true;
+      musicStartPending = false;
+      setSoundActivation(false);
+      return true;
+    };
+    if (attempt && typeof attempt.then === 'function') {
+      musicPrimePromise = attempt.then(onPrimed).catch(() => {
+        musicStartPending = false;
+        setSoundActivation(true);
+        return false;
+      });
+    } else {
+      musicPrimePromise = Promise.resolve(onPrimed());
+    }
+    return musicPrimePromise;
+  };
+
+  const startInvitationAudioAfterThemeIntro = () => {
+    if (typeof startAutoHero === 'function') startAutoHero();
+    primeOutro();
+    const activateAudio = () => {
+      if (musicStarted) {
+        applyMusicVolume();
+        if (muteBtn) muteBtn.hidden = false;
+        setSoundActivation(false);
+        startIntroNarrationAfterPrime();
+        return;
+      }
+      startMusic();
+    };
+    if (musicStartPending) {
+      musicPrimePromise.then(activateAudio);
+      return;
+    }
+    activateAudio();
   };
 
   if ((musicEl || narrationIntro || autoHero) && !entryGate) {
@@ -168,6 +321,72 @@
     const envelope = entryOpenButton.querySelector('.inv-envelope');
     const card = entryOpenButton.closest('.inv-entry-gate-card');
     let opened = false;
+
+    const finishGate = () => {
+      entryGate.hidden = true;
+      document.documentElement.classList.remove('inv-entry-gate-active');
+      document.body.classList.remove('inv-entry-gate-active');
+    };
+
+    let themeIntroFinished = false;
+    const finishThemeIntro = () => {
+      if (themeIntroFinished) return;
+      themeIntroFinished = true;
+      if (themeIntroVideo instanceof HTMLVideoElement) themeIntroVideo.pause();
+      if (themeIntro) {
+        themeIntro.classList.add('is-leaving');
+        themeIntro.setAttribute('aria-hidden', 'true');
+      }
+      document.documentElement.classList.remove('inv-theme-intro-active');
+      document.body.classList.remove('inv-theme-intro-active');
+      window.setTimeout(() => {
+        if (themeIntro) themeIntro.hidden = true;
+      }, reducedMotion.matches ? 0 : 320);
+      startInvitationAudioAfterThemeIntro();
+    };
+
+    const openThemeIntro = () => {
+      if (!themeIntro || !(themeIntroVideo instanceof HTMLVideoElement)) return false;
+      finishGate();
+      themeIntroFinished = false;
+      themeIntro.classList.remove('is-leaving');
+      themeIntro.hidden = false;
+      themeIntro.setAttribute('aria-hidden', 'false');
+      document.documentElement.classList.add('inv-theme-intro-active');
+      document.body.classList.add('inv-theme-intro-active');
+      themeIntroVideo.currentTime = 0;
+      themeIntroVideo.muted = false;
+      themeIntroVideo.volume = 1;
+      primeMusicForThemeIntro();
+      primeIntroNarration();
+      primeOutro();
+
+      if (reducedMotion.matches) {
+        finishThemeIntro();
+        return true;
+      }
+
+      const playAttempt = themeIntroVideo.play();
+      if (playAttempt && typeof playAttempt.catch === 'function') {
+        playAttempt.catch(() => finishThemeIntro());
+      }
+      window.requestAnimationFrame(() => themeIntroSkip?.focus());
+      return true;
+    };
+
+    themeIntroSkip?.addEventListener('click', finishThemeIntro);
+    themeIntroVideo?.addEventListener('ended', finishThemeIntro);
+    themeIntroVideo?.addEventListener('error', finishThemeIntro);
+    themeIntroVideo?.addEventListener('timeupdate', () => {
+      if (!themeIntroProgress || !(themeIntroVideo instanceof HTMLVideoElement)) return;
+      const duration = Number.isFinite(themeIntroVideo.duration) ? themeIntroVideo.duration : 0;
+      const ratio = duration > 0 ? Math.min(1, Math.max(0, themeIntroVideo.currentTime / duration)) : 0;
+      themeIntroProgress.style.transform = `scaleX(${ratio})`;
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && themeIntro && !themeIntro.hidden) finishThemeIntro();
+    });
+
     entryOpenButton.addEventListener('click', () => {
       if (opened) return;
       opened = true;
@@ -175,13 +394,16 @@
       // quedar dentro del mismo gesto de click para que el navegador lo
       // cuente como iniciado por el usuario. La animación del sobre corre
       // en paralelo, no antes.
-      startMusic();
       entryOpenButton.disabled = true;
 
+      // El video se inicia dentro del mismo gesto del sobre para conservar su
+      // audio en iOS/Chrome. Al terminar u omitirlo recién arranca la música y
+      // narración de la invitación, evitando dos pistas sonando a la vez.
+      if (openThemeIntro()) return;
+      startMusic();
+
       const finish = () => {
-        entryGate.hidden = true;
-        document.documentElement.classList.remove('inv-entry-gate-active');
-        document.body.classList.remove('inv-entry-gate-active');
+        finishGate();
       };
 
       if (reducedMotion.matches || !envelope) {
@@ -352,6 +574,12 @@
         hint.classList.add('inv-scroll-hint--ready');
         hint.removeAttribute('aria-hidden');
       }
+      // El video de entrada terminó. Si Alice ya había terminado de hablar
+      // mientras el scroll seguía bloqueado, acá recién se dispara el avance
+      // automático; si Alice todavía no termina, maybeAutoAdvance no hace
+      // nada y es el propio 'ended' de la narración el que lo dispara más
+      // tarde — nunca antes de que las dos cosas hayan terminado.
+      maybeAutoAdvance();
     };
     if (reducedMotion.matches) {
       autoHero.pause();

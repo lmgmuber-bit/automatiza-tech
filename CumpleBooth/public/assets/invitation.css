@@ -105,6 +105,127 @@ body.inv-entry-gate-active .inv-entry-gate {
   display: grid;
 }
 
+/* Intro cinematográfico por temática. El video ocupa el viewport completo y
+   la interfaz queda deliberadamente mínima: marca real, progreso y salida. */
+.inv-theme-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  overflow: hidden;
+  background: #050509;
+  opacity: 1;
+  transition: opacity 320ms ease;
+}
+
+.inv-theme-intro[hidden] {
+  display: none;
+}
+
+.inv-theme-intro.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+html.inv-theme-intro-active,
+body.inv-theme-intro-active {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.inv-theme-intro-media,
+.inv-theme-intro-shade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.inv-theme-intro-media {
+  object-fit: cover;
+  background: #050509;
+}
+
+.inv-theme-intro-shade {
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .28) 0%, transparent 24%, transparent 72%, rgba(0, 0, 0, .22) 100%);
+}
+
+.inv-theme-intro-brand {
+  position: absolute;
+  top: max(18px, calc(10px + env(safe-area-inset-top)));
+  left: max(16px, calc(10px + env(safe-area-inset-left)));
+  z-index: 2;
+  width: clamp(86px, 24vw, 118px);
+  height: auto;
+  opacity: .58;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, .3));
+}
+
+.inv-theme-intro-skip {
+  position: absolute;
+  top: max(18px, calc(10px + env(safe-area-inset-top)));
+  right: max(16px, calc(10px + env(safe-area-inset-right)));
+  z-index: 3;
+  min-height: 44px;
+  padding: 9px 15px;
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 999px;
+  background: rgba(14, 13, 21, .48);
+  color: #fff;
+  font: 800 15px/1 'Baloo 2', system-ui, sans-serif;
+  letter-spacing: .01em;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .2);
+  backdrop-filter: blur(12px) saturate(1.1);
+}
+
+.inv-theme-intro-skip:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+
+.inv-theme-intro-skip:active {
+  transform: scale(.96);
+}
+
+.inv-theme-intro-progress {
+  position: absolute;
+  right: max(18px, calc(12px + env(safe-area-inset-right)));
+  bottom: max(18px, calc(12px + env(safe-area-inset-bottom)));
+  left: max(18px, calc(12px + env(safe-area-inset-left)));
+  z-index: 2;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .3);
+}
+
+.inv-theme-intro-progress span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: #fff;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.inv-body[data-theme='hielo'] .inv-theme-intro-progress span {
+  background: #dff8ff;
+  box-shadow: 0 0 12px rgba(143, 223, 255, .9);
+}
+
+.inv-body[data-theme='carreras'] .inv-theme-intro-progress span {
+  background: #ffd34f;
+  box-shadow: 0 0 12px rgba(255, 178, 28, .85);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inv-theme-intro {
+    transition: none;
+  }
+}
+
 .inv-entry-gate-card {
   width: min(100%, 340px);
   padding: 28px 22px;

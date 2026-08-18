@@ -263,6 +263,7 @@ if ($partyId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($action === 'crear_invitacion') {
             $birthdayPersonName = trim((string) ($_POST['birthday_person_name'] ?? ''));
+            $birthdayPersonGender = in_array((string) ($_POST['birthday_person_gender'] ?? ''), ['m', 'f'], true) ? (string) $_POST['birthday_person_gender'] : '';
             $eventDate = trim((string) ($_POST['event_date'] ?? ''));
             $eventTime = trim((string) ($_POST['event_time'] ?? ''));
             $address = trim((string) ($_POST['address'] ?? ''));
@@ -292,6 +293,7 @@ if ($partyId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     'theme_slug' => (string) ($party['theme_slug'] ?? ''),
                     'admin_label' => (string) ($party['admin_label'] ?? ''),
                     'birthday_person_name' => $birthdayPersonName,
+                    'birthday_person_gender' => $birthdayPersonGender,
                     'event_date' => $eventDate,
                     'event_time' => $eventTime,
                     'address' => $address,
@@ -315,6 +317,7 @@ if ($partyId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $update = [
                     'birthday_person_name' => trim((string) ($_POST['birthday_person_name'] ?? '')),
+                    'birthday_person_gender' => in_array((string) ($_POST['birthday_person_gender'] ?? ''), ['m', 'f'], true) ? (string) $_POST['birthday_person_gender'] : '',
                     'event_date' => trim((string) ($_POST['event_date'] ?? '')),
                     'event_time' => trim((string) ($_POST['event_time'] ?? '')),
                     'address' => trim((string) ($_POST['address'] ?? '')),
@@ -739,6 +742,14 @@ if (!empty($_SESSION['cc_invitation_token'])) {
             <label for="i-name">Nombre del cumpleañero/a</label>
             <input type="text" id="i-name" name="birthday_person_name" maxlength="120" placeholder="Ej. Martina">
 
+            <label for="i-gender">Cumpleañero o cumpleañera</label>
+            <select id="i-gender" name="birthday_person_gender">
+              <option value="">Sin especificar</option>
+              <option value="m">Niño (cumpleañero)</option>
+              <option value="f">Niña (cumpleañera)</option>
+            </select>
+            <p class="small muted">Elige la narración de cierre de Alice ("toca el botón para conocer al cumpleañero/a"). Sin especificar usa un audio neutro.</p>
+
             <label for="i-date">Fecha del evento</label>
             <input type="date" id="i-date" name="event_date" value="<?= h($party['event_date'] ?? '') ?>">
 
@@ -1007,6 +1018,13 @@ if (!empty($_SESSION['cc_invitation_token'])) {
 
                     <label>Nombre del cumpleañero/a</label>
                     <input type="text" name="birthday_person_name" value="<?= h($inv['birthday_person_name']) ?>" required maxlength="120">
+
+                    <label>Cumpleañero o cumpleañera</label>
+                    <select name="birthday_person_gender">
+                      <option value="" <?= ($inv['birthday_person_gender'] ?? '') === '' ? 'selected' : '' ?>>Sin especificar</option>
+                      <option value="m" <?= ($inv['birthday_person_gender'] ?? '') === 'm' ? 'selected' : '' ?>>Niño (cumpleañero)</option>
+                      <option value="f" <?= ($inv['birthday_person_gender'] ?? '') === 'f' ? 'selected' : '' ?>>Niña (cumpleañera)</option>
+                    </select>
 
                     <label>Fecha del evento</label>
                     <input type="date" name="event_date" value="<?= h($inv['event_date']) ?>">

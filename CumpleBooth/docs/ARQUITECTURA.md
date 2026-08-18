@@ -90,11 +90,16 @@ slots JPG/PNG conocidos; rechaza path traversal, textos de más de 20.000 bytes 
 nombres internos de franquicia/personaje. `scripts/import-theme-prompts.php` migra
 los 78 prompts asociados desde Markdown, con dry-run por defecto.
 
-- `GET invitacion.php?i=<token>` incorpora el perfil solo cuando el feature flag,
+- `GET invitacion.php?t=<token>` incorpora el perfil solo cuando el feature flag,
   el perfil y el contenido público están activos; sin ellos conserva exactamente
   el contrato anterior. `GET event-profile-media.php?t=<token>&mt=<token>` exige
   una invitación publicada, vigente y del mismo evento antes de servir foto,
   poster o video desde storage privado.
+- El intro cinematográfico de la invitación se activa por convención, no por
+  condicionales de tema: `public/themes/<slug>/invitation/intro-invitacion-wow-v1.mp4`
+  y su póster opcional. Así las cinco temáticas actuales y las futuras pueden
+  incorporarlo sin cambiar PHP o JavaScript. Si falta el MP4, el sobre conserva
+  su flujo anterior; si existe, reproduce con audio y permite `Omitir intro`.
 - `admin/event-profile.php?party=<slug>` administra textos, varias personas,
   orden, visibilidad, consentimientos y el borrador/cotización del intro. Todas
   las mutaciones usan sesión admin, CSRF, rate limit y ownership de la fiesta.

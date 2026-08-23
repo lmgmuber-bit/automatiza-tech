@@ -17,6 +17,13 @@ function cb_invitation_deny(): void
 
 $requestedType = isset($_GET['type']) && in_array((string) $_GET['type'], ['image', 'video', 'narracion_inicio'], true) ? (string) $_GET['type'] : null;
 
+// Vista previa para la tarjeta de WhatsApp y redes. Mismo archivo y mismo
+// control de token; cambia solo cómo se entrega: los rastreadores no renderizan
+// algo marcado `attachment` ni guardan lo que va `no-store`. Se limita a la
+// imagen: el video y la narración siguen igual que siempre.
+$isSocialPreview = $requestedType === 'image'
+    && isset($_GET['preview']) && (string) $_GET['preview'] === '1';
+
 // Endpoint público sin auth: rate limit persistente por IP antes de cualquier
 // otra cosa, para frenar bursts de enumeración/abuso de descarga.
 $dlLimit = cb_rate_limit('invitation-download', cb_request_identity(), 60, 600, 600);
@@ -85,16 +92,24 @@ try {
     // Nombre neutro a propósito: nunca exponer el ID interno de la invitación.
     $fileName = 'invitacion-cumpleclick.' . pathinfo($filePath, PATHINFO_EXTENSION);
 
-    // Incrementar contador de descargas de forma no bloqueante
-    cb_increment_invitation_download((int) $invitation['id']);
+    // Incrementar contador de descargas de forma no bloqueante. El rastreador
+    // que arma la tarjeta no descargó nada: contarlo inflaría la métrica que
+    // Luis usa para saber cuántas familias guardaron su invitación.
+    if (!$isSocialPreview) {
+        cb_increment_invitation_download((int) $invitation['id']);
+    }
 
     // La narración va dentro de un <audio> de la propia página: si se fuerza
     // "attachment" algunos navegadores intentan descargar en vez de reproducir.
-    $disposition = $selected['output_type'] === 'personalized_narration_intro' ? 'inline' : 'attachment';
+    // La vista previa social necesita lo mismo, más una caché pública corta:
+    // WhatsApp descarta la imagen si viene como adjunto o marcada no-store.
+    $disposition = ($selected['output_type'] === 'personalized_narration_intro' || $isSocialPreview)
+        ? 'inline'
+        : 'attachment';
     header('Content-Type: ' . $mime);
     header('Content-Disposition: ' . $disposition . '; filename="' . $fileName . '"');
     header('Content-Length: ' . filesize($filePath));
-    header('Cache-Control: private, no-store');
+    header('Cache-Control: ' . ($isSocialPreview ? 'public, max-age=86400' : 'private, no-store'));
     header('X-Robots-Tag: noindex, nofollow');
     readfile($filePath);
     exit;

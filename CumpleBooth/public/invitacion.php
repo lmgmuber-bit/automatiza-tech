@@ -382,6 +382,9 @@ if (preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
 // fiesta y no herede la historia ni los personajes de otra. El nombre de la
 // cumpleañera sigue siendo dinámico y vive en HTML, nunca en estos assets.
 $hieloCelebrant = $birthdayName !== '' ? $birthdayName : 'nuestra cumpleañera';
+// Neutro a propósito: los temas nuevos sirven a niños y niñas y la invitación
+// no siempre trae el género cargado. "quien cumple años" no obliga a elegir.
+$celebrante = $birthdayName !== '' ? $birthdayName : 'quien cumple años';
 $playlistOrdersByTheme = [
     'carreras' => [
         'saludo-mate.mp4' => 'Mate llega primero',
@@ -393,14 +396,53 @@ $playlistOrdersByTheme = [
         'saludo-rayo-mcqueen-v3.mp4' => 'Rayo cruza la meta',
         'despedida-carreras.mp4' => '¡Te esperamos!',
     ],
+    // 2026-08-23: Luis aprobó promover las tomas de Higgsfield a definitivas.
+    // Antes esta lista apuntaba a los saludos originales de la raíz del tema
+    // (saludo-elsa.mp4 y compañía) y las nuevas vivían aisladas detrás de
+    // `?capitulos=candidatos` + firma QA. Los archivos antiguos siguen en su
+    // sitio y $playlistCandidateOrdersByTheme sigue existiendo, así que volver
+    // atrás es cambiar estas seis rutas y nada más.
     'hielo' => [
-        'saludo-elsa.mp4' => 'La magia de ' . $hieloCelebrant . ' se enciende',
-        'saludo-anna.mp4' => 'La celebración de ' . $hieloCelebrant . ' ya está lista',
-        'saludo-olaf.mp4' => 'Una sorpresa nevada viene en camino',
-        'saludo-kristoff.mp4' => 'Todos llegan para celebrar a ' . $hieloCelebrant,
-        'saludo-sven.mp4' => 'La aventura de ' . $hieloCelebrant . ' está por comenzar',
-        'saludo-bruni.mp4' => 'El reino completo celebra a ' . $hieloCelebrant,
+        'invitation/candidates/saludo-elsa-v2.mp4' => 'La magia de ' . $hieloCelebrant . ' se enciende',
+        'invitation/candidates/saludo-anna-v3.mp4' => 'La celebración de ' . $hieloCelebrant . ' ya está lista',
+        'invitation/candidates/saludo-olaf-v2.mp4' => 'Una sorpresa nevada viene en camino',
+        'invitation/candidates/saludo-kristoff-v2.mp4' => 'Todos llegan para celebrar a ' . $hieloCelebrant,
+        'invitation/candidates/saludo-sven-v3.mp4' => 'La aventura de ' . $hieloCelebrant . ' está por comenzar',
+        'invitation/candidates/saludo-bruni-v3.mp4' => 'El reino completo celebra a ' . $hieloCelebrant,
         'despedida-hielo.mp4' => '¡Te esperamos!',
+    ],
+    // 2026-08-23: los tres temas restantes entran con la misma regla que Hielo.
+    // Los MP4 ya estaban en la raíz de cada tema desde el kiosco; acá solo se
+    // define el orden y el texto de cada capítulo. Un archivo que falte se
+    // omite solo (is_file), así que la lista no se rompe si algo no está.
+    'kpop' => [
+        'saludo-rumi.mp4' => 'Rumi abre el escenario',
+        'saludo-mira.mp4' => 'Mira toma el micrófono',
+        'saludo-zoey.mp4' => 'Zoey suma su voz',
+        'saludo-luna.mp4' => 'Luna enciende las luces',
+        'saludo-sussie.mp4' => 'Sussie llega con la coreografía',
+        'saludo-derpy.mp4' => 'El escenario espera a ' . $celebrante,
+        'despedida-kpop.mp4' => '¡Te esperamos!',
+    ],
+    'tropical' => [
+        'saludo-hawaiana.mp4' => 'La isla se prepara para ' . $celebrante,
+        'saludo-surfista.mp4' => 'El surfista ya viene en camino',
+        'saludo-loro.mp4' => 'El loro reparte la noticia',
+        'saludo-tortugamar.mp4' => 'La tortuga llega sin apuro',
+        'saludo-alienrosa.mp4' => 'Una visita inesperada aterriza',
+        'saludo-alienazul.mp4' => 'Toda la playa celebra a ' . $celebrante,
+        'despedida-tropical.mp4' => '¡Te esperamos!',
+    ],
+    'familia-canina' => [
+        'saludo-muffin.mp4' => 'Muffin da la primera señal',
+        'saludo-chloe.mp4' => 'Chloe se suma al plan',
+        'saludo-chispa.mp4' => 'Chispa no se queda quieta',
+        'saludo-manchita.mp4' => 'Manchita llega corriendo',
+        'saludo-azulita.mp4' => 'Azulita trae la sorpresa',
+        'saludo-nube.mp4' => 'Nube prepara todo para ' . $celebrante,
+        'saludo-mama-coral.mp4' => 'Mamá Coral ordena la casa',
+        'saludo-papa-marino.mp4' => 'Papá Marino enciende la música',
+        'despedida-familia-canina.mp4' => '¡Te esperamos!',
     ],
 ];
 
@@ -433,12 +475,52 @@ $heroScrollCandidatesByTheme = [
     'carreras' => 'invitation/candidate-wan27-scroll.mp4',
     'hielo' => 'invitation/candidate-hielo-scroll.mp4',
 ];
-// Comparación de candidatos detrás de `?hero=`. La versión aprobada de cada
-// tema sigue siendo el comportamiento por defecto, byte a byte.
-// - hero=scroll → candidato con avance controlado por scroll (Carreras).
-// - hero=auto   → candidato de entrada que se reproduce una sola vez; al
-//   terminar, la pista se resalta para que el invitado continúe bajando.
-$heroPlayMode = (string) ($_GET['hero'] ?? '');
+// GATE DE PLAN. Regla comercial canónica:
+// docs/CAMPANA-INVITACIONES-BASICO-FULL-2026-08-11.md
+//   service_plan=booth → Plan Básico → Scroll     (hero=scroll, capitulos=1)
+//   service_plan=full  → Plan Full   → Automática (hero=auto,   capitulos=auto)
+//
+// `hero` y `capitulos` ya NO son parámetros públicos: antes, cualquiera con un
+// enlace de Básico podía escribir hero=auto y llevarse el Full. Ahora la
+// variante sale del plan de la fiesta y los parámetros solo se respetan con la
+// firma `qa` que emite el admin en sus botones de vista previa.
+$servicePlan = cb_invitation_service_plan(
+    isset($invitation['party_id']) && $invitation['party_id'] !== null ? (int) $invitation['party_id'] : null
+);
+$requestedHero     = (string) ($_GET['hero'] ?? '');
+$requestedChapters = (string) ($_GET['capitulos'] ?? '');
+$isPreview = $requestedHero !== ''
+    && cb_invitation_preview_ok(
+        (int) $invitation['id'],
+        $requestedHero,
+        $requestedChapters,
+        (string) ($_GET['qa'] ?? '')
+    );
+if ($isPreview) {
+    $planHero     = $requestedHero;
+    $planChapters = $requestedChapters;
+} elseif ($servicePlan === 'full') {
+    $planHero     = 'auto';
+    $planChapters = 'auto';
+} else {
+    $planHero = 'scroll';
+    // El Básico avanza por capítulos: imágenes fijas en invitation/chapters/.
+    // Carreras las tiene (9 archivos) y esa lógica está aprobada, no se toca.
+    // Hielo no tiene esa carpeta, y sin ella el recorrido saltaba directo a la
+    // lámina, sin personajes. Cuando el tema no trae capítulos, el Básico usa
+    // la playlist de videos; lo que lo sigue separando del Full es el hero, que
+    // el invitado tiene que avanzar con el dedo en vez de reproducirse solo.
+    $tieneCapitulos = preg_match('/^[a-z0-9-]+$/', $themeSlug) === 1
+        && is_dir(__DIR__ . '/themes/' . $themeSlug . '/invitation/chapters');
+    $planChapters = $tieneCapitulos ? '1' : 'auto';
+}
+
+// Comparación de candidatos detrás del modo resuelto. La versión aprobada de
+// cada tema sigue siendo el fallback, byte a byte, si el candidato no existe.
+// - scroll → candidato con avance controlado por scroll.
+// - auto   → candidato de entrada que se reproduce una sola vez; al terminar,
+//   la pista se resalta para que el invitado continúe bajando.
+$heroPlayMode = $planHero;
 $heroAutoUrl = '';
 if ($heroPlayMode !== '' && preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
     if ($heroPlayMode === 'scroll') {
@@ -460,12 +542,23 @@ if ($heroPlayMode !== '' && preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
     }
 }
 
+// Temas sin candidato dedicado (kpop, tropical, familia-canina) resuelven con
+// los dos heroes por defecto del tema: invitation-scroll-v1.mp4 avanza con el
+// dedo e invitation-motion-v1.mp4 se reproduce solo. Si los dos existen hay que
+// elegir según el plan; si no, gana siempre el scroll y el Full se ve idéntico
+// al Básico. Carreras e Hielo no pasan por acá: sus candidatos ya decidieron.
+if ($heroPlayMode === 'auto' && $heroAutoUrl === '' && $heroVideoUrl !== '') {
+    $heroScrubUrl = '';
+} elseif ($heroPlayMode === 'scroll' && $heroScrubUrl !== '') {
+    $heroVideoUrl = '';
+}
+
 // El hero necesita saber esto ANTES de imprimirse: si hay capítulos o lista
 // de reproducción después, su botón de abajo no puede ser un salto directo
 // a la plantilla (`#inv-detalles`) — eso se saltaría todo el recorrido con
 // los personajes. Se calcula temprano, liviano (solo existencia de
 // carpeta/archivo), sin repetir toda la carga de capítulos acá.
-$chapterQueryModeEarly = (string) ($_GET['capitulos'] ?? '');
+$chapterQueryModeEarly = $planChapters;
 $hasStoryAheadOfPlate = false;
 if (preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
     if ($chapterQueryModeEarly === '1') {
@@ -681,6 +774,33 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Invitación de <?= $esc($birthdayName !== '' ? $birthdayName : 'cumpleaños') ?> · CumpleClick</title>
+<?php
+// Tarjeta al compartir por WhatsApp y redes. A propósito NO lleva la dirección:
+// la vista previa se muestra en cada grupo donde se reenvíe el enlace y Meta la
+// cachea en sus servidores, así que la casa y la hora exacta de la fiesta
+// quedarían visibles sin que nadie abra la invitación. Dentro de la página sí
+// va, que para eso hay que tener el enlace.
+$ogNombre = $birthdayName !== '' ? $birthdayName : 'Cumpleaños';
+$ogTitulo = $ogNombre . ' te invita a su cumpleaños';
+$ogMeses = [1 => 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
+            'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+$ogDesc = 'Toca para ver la invitación.';
+if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $eventDate, $m)) {
+    $ogDesc = (int) $m[3] . ' de ' . ($ogMeses[(int) $m[2]] ?? '');
+    if (preg_match('/^(\d{2}):(\d{2})/', $eventTime, $h)) {
+        $ogDesc .= ' · ' . $h[1] . ':' . $h[2] . ' hrs';
+    }
+}
+$ogUrl = cb_invitation_pretty_url($token, $birthdayName);
+$ogImagen = cb_invitation_download_url($token, 'image') . '&preview=1';
+?>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CumpleClick">
+<meta property="og:title" content="<?= $esc($ogTitulo) ?>">
+<meta property="og:description" content="<?= $esc($ogDesc) ?>">
+<meta property="og:image" content="<?= $esc($ogImagen) ?>">
+<meta property="og:url" content="<?= $esc($ogUrl) ?>">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="brand/cumpleclick-mark.svg">
 <link rel="stylesheet" href="assets/invitation.css?v=7">
 <?php if ($eventProfile !== null): ?><link rel="stylesheet" href="assets/event-profile.css?v=2"><?php endif; ?>
@@ -818,7 +938,7 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
     // vez de solo cruzarlo de golpe.
     $chapterSlots = [];
     $playlistSlots = [];
-    $chapterQueryMode = (string) ($_GET['capitulos'] ?? '');
+    $chapterQueryMode = $planChapters;
     if ($chapterQueryMode === '1' && preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
         $chaptersDir = __DIR__ . '/themes/' . $themeSlug . '/invitation/chapters';
         if (is_dir($chaptersDir)) {

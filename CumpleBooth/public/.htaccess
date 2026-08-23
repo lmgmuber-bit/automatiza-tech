@@ -6,6 +6,21 @@
   RewriteRule ^fotos/ - [F,L,NC]
   RewriteRule ^admin/config\.php$ - [F,L,NC]
   RewriteRule ^index\.html$ - [L]
+  # URL bonita de invitación: /<nombre>-<token> -> invitacion.php?t=<token>
+  #
+  # Un solo segmento a propósito. La primera versión era /i/<nombre>/<token> y
+  # rompía la página entera: invitacion.php enlaza sus assets con rutas
+  # relativas, así que desde dos niveles más abajo el CSS y los videos caían en
+  # el catch-all del SPA y volvían como index.html con status 200 — la
+  # invitación se veía sin estilos y sin videos, y sin ningún error. A la misma
+  # altura que invitacion.php, todo lo relativo sigue resolviendo igual.
+  #
+  # El nombre es decorativo y no se valida: quien autoriza es el token, que
+  # conserva sus 128 bits. QSA es obligatorio, si no se pierden hero/capitulos/qa
+  # y los botones de vista previa del admin dejan de funcionar.
+  # Los enlaces antiguos con invitacion.php?t= siguen sirviendo igual.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^[a-z0-9-]{1,40}-([a-f0-9]{32}|[a-f0-9]{48})$ invitacion.php?t=$1 [L,QSA]
   # Un asset con hash que ya no existe debe dar 404, NO index.html: servir HTML
   # con status 200 donde el navegador espera JS/CSS deja la tablet corriendo una
   # versión vieja en silencio en vez de fallar visiblemente.

@@ -828,6 +828,30 @@ if (!empty($_SESSION['cc_invitation_token'])) {
               $showToken = $tokenFlash !== null && (int) $tokenFlash['id'] === (int) $inv['id'];
               $publicUrl = $showToken ? cb_invitation_public_url($tokenFlash['token']) : '';
               $downloadUrl = $showToken ? cb_invitation_download_url($tokenFlash['token']) : '';
+              // Enlace reconstruible desde el ID: sirve aunque el token en claro
+              // se haya perdido, sin revocar el aleatorio ni guardarlo en texto.
+              $shareUrl = '';
+              $shareUrlLarga = '';
+              $previewBasico = '';
+              $previewFull = '';
+              try {
+                  $shareToken = cb_invitation_share_token((int) $inv['id']);
+                  // Bonita para compartir; larga como respaldo por si el hosting
+                  // pierde la regla de reescritura del .htaccess.
+                  $shareUrl = cb_invitation_pretty_url($shareToken, (string) ($inv['birthday_person_name'] ?? ''));
+                  $shareUrlLarga = cb_invitation_public_url($shareToken);
+                  // La bonita no trae query string: acá el separador es '?'.
+                  $previewBasico = $shareUrl . '?hero=scroll&capitulos=1&qa='
+                      . cb_invitation_preview_mac((int) $inv['id'], 'scroll', '1');
+                  $previewFull = $shareUrl . '?hero=auto&capitulos=auto&qa='
+                      . cb_invitation_preview_mac((int) $inv['id'], 'auto', 'auto');
+              } catch (Throwable $e) {
+                  $shareUrl = '';
+                  $shareUrlLarga = '';
+              }
+              $planFiesta = cb_invitation_service_plan(
+                  isset($inv['party_id']) && $inv['party_id'] !== null ? (int) $inv['party_id'] : null
+              );
               ?>
               <article class="invite-card" id="inv-<?= (int) $inv['id'] ?>">
                 <div class="invite-card-header">
@@ -862,8 +886,32 @@ if (!empty($_SESSION['cc_invitation_token'])) {
                     <a class="btn btn-ghost btn-sm" href="<?= h($downloadUrl) ?>"><?= admin_icon('download') ?> Descargar</a>
                   </div>
                 </div>
-                <?php elseif (!$showToken): ?>
-                  <p class="small muted">El token en claro ya no está disponible. Regenera el enlace para copiarlo.</p>
+                <?php endif; ?>
+
+                <?php if ($shareUrl !== ''): ?>
+                <div class="token-row">
+                  <input id="share-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($shareUrl) ?>">
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('share-url-<?= (int) $inv['id'] ?>').value)"><?= admin_icon('copy') ?> Copiar enlace</button>
+                </div>
+                <p class="small muted">
+                  Enlace de respaldo, por si el hosting pierde la regla de URL bonita:<br>
+                  <code><?= h($shareUrlLarga) ?></code>
+                </p>
+                <p class="small muted">
+                  El de arriba es el que le mandas al cliente. Se puede recuperar siempre,
+                  aunque hayas perdido el que salió al crear la invitación.
+                  Entrega la versión
+                  <strong><?= $planFiesta === 'full' ? 'Automática (Plan Full)' : 'Scroll (Plan Básico)' ?></strong>,
+                  según el plan de la fiesta. Para cambiarla, cambia el plan en Editar fiesta.
+                </p>
+                <div class="token-row">
+                  <a class="btn btn-ghost btn-sm" href="<?= h($previewBasico) ?>" target="_blank" rel="noopener"><?= admin_icon('external') ?> Ver Básico (scroll)</a>
+                  <a class="btn btn-ghost btn-sm" href="<?= h($previewFull) ?>" target="_blank" rel="noopener"><?= admin_icon('external') ?> Ver Full (automática)</a>
+                </div>
+                <p class="small muted">
+                  Vista previa solo para ti: sirve para comparar los dos planes. No mandes
+                  estos dos enlaces al cliente, llevan la variante forzada.
+                </p>
                 <?php endif; ?>
 
                 <div class="invite-actions">

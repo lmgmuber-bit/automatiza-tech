@@ -698,6 +698,90 @@ function cb_invitation_public_token_is_valid(string $token): bool
 }
 
 /**
+ * Slug decorativo para la URL bonita: solo cosmético, nunca autoriza nada.
+ * Si viene vacío o queda sin caracteres válidos, devuelve 'invitacion'.
+ */
+function cb_invitation_name_slug(string $name): string
+{
+    $slug = $name;
+    $from = ['á','à','ä','â','é','è','ë','ê','í','ì','ï','î','ó','ò','ö','ô','ú','ù','ü','û','ñ','ç',
+             'Á','À','Ä','Â','É','È','Ë','Ê','Í','Ì','Ï','Î','Ó','Ò','Ö','Ô','Ú','Ù','Ü','Û','Ñ','Ç'];
+    $to   = ['a','a','a','a','e','e','e','e','i','i','i','i','o','o','o','o','u','u','u','u','n','c',
+             'a','a','a','a','e','e','e','e','i','i','i','i','o','o','o','o','u','u','u','u','n','c'];
+    $slug = str_replace($from, $to, $slug);
+    $slug = strtolower($slug);
+    $slug = preg_replace('/[^a-z0-9]+/', '-', $slug) ?? '';
+    $slug = trim($slug, '-');
+    if ($slug === '') {
+        return 'invitacion';
+    }
+    return substr($slug, 0, 40);
+}
+
+/**
+ * URL pública "bonita": /<nombre>-<token>, un solo segmento.
+ *
+ * El segmento único NO es capricho: invitacion.php enlaza CSS, JS y videos con
+ * rutas relativas, así que cualquier formato más profundo (/i/nombre/token) los
+ * manda al catch-all del SPA y la invitación se ve sin estilos ni videos.
+ *
+ * Depende de la regla de reescritura del .htaccess. Si esa regla no está, esta
+ * URL da 404 y hay que usar cb_invitation_public_url(). El token es el mismo y
+ * conserva sus 128 bits: el nombre es adorno, no credencial.
+ */
+function cb_invitation_pretty_url(string $token, string $name): string
+{
+    return cb_public_base_url() . '/' . cb_invitation_name_slug($name) . '-' . rawurlencode($token);
+}
+
+/**
+ * Plan contratado de la fiesta dueña de una invitación.
+ *
+ * Regla comercial canónica (docs/CAMPANA-INVITACIONES-BASICO-FULL-2026-08-11.md):
+ *   booth = Plan Básico → invitación Scroll
+ *   full  = Plan Full   → invitación Automática
+ *
+ * Falla cerrado a 'booth': ante cualquier duda se entrega lo contratado en el
+ * plan menor, nunca de más.
+ */
+function cb_invitation_service_plan(?int $partyId): string
+{
+    if ($partyId === null || $partyId < 1 || cb_storage_mode() !== 'db') {
+        return 'booth';
+    }
+    try {
+        $stmt = cb_pdo()->prepare('SELECT service_plan FROM cc_parties WHERE id = ?');
+        $stmt->execute([$partyId]);
+        $plan = (string) $stmt->fetchColumn();
+    } catch (Throwable $e) {
+        return 'booth';
+    }
+    return in_array($plan, ['booth', 'full'], true) ? $plan : 'booth';
+}
+
+/**
+ * Firma de vista previa para el admin.
+ *
+ * Los parámetros `hero` y `capitulos` dejaron de ser públicos: sin esta firma,
+ * el enlace de un invitado entrega siempre la variante de su plan y editar la
+ * URL no la cambia. La firma NO caduca a propósito — lo que protege no es un
+ * secreto, sino que el plan no se pueda subir a mano desde la barra del
+ * navegador; quien reciba un enlace de vista previa ve esa variante y ya.
+ */
+function cb_invitation_preview_mac(int $invitationId, string $hero, string $chapters): string
+{
+    return substr(cb_hmac($invitationId . '|' . $hero . '|' . $chapters, 'invitation-preview-v1'), 0, 24);
+}
+
+function cb_invitation_preview_ok(int $invitationId, string $hero, string $chapters, string $mac): bool
+{
+    if ($mac === '') {
+        return false;
+    }
+    return hash_equals(cb_invitation_preview_mac($invitationId, $hero, $chapters), $mac);
+}
+
+/**
  * Alias público reconstruible desde el ID, sin guardar el token en texto plano.
  * Mantiene 128 bits de firma HMAC y no reemplaza ni revoca el enlace aleatorio.
  */

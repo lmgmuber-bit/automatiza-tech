@@ -41,17 +41,80 @@ publicar una campaña pagada.
   esos recursos aprobados.
 - Operador presente, según la definición comercial vigente.
 
-## Advertencia antes de vender la separación por plan
+## Gate por plan — IMPLEMENTADO 2026-08-21
 
-La asignación Básico/Scroll y Full/Automática es desde hoy la regla comercial y
-de producto. El código de invitación todavía selecciona los modos mediante los
-parámetros de evaluación `hero` y `capitulos`; no existe aún un gate definitivo
-que derive la variante desde `service_plan`. Antes de un lanzamiento comercial
-masivo debe implementarse y probarse ese gate para que el enlace público no sea
-la fuente de autorización.
+La asignación Básico/Scroll y Full/Automática ya no depende del enlace. El gate
+vive en `public/invitacion.php`, justo antes de resolver el hero:
 
-Hasta entonces, los parámetros son herramientas de QA, no parte de la oferta ni
-deben aparecer en copies, capturas o tutoriales públicos.
+- `cb_invitation_service_plan($invitation['party_id'])` lee `service_plan` de
+  `cc_parties` y **falla cerrado a `booth`**: ante cualquier error de base o
+  fiesta sin resolver se entrega el plan menor, nunca de más.
+- `booth` → `hero=scroll`, `capitulos=1`. `full` → `hero=auto`, `capitulos=auto`.
+- `hero` y `capitulos` dejaron de leerse de `$_GET` en los tres puntos donde se
+  usaban. Solo se respetan acompañados de la firma `qa`
+  (`cb_invitation_preview_mac`, HMAC de `id|hero|capitulos`), que emite el admin.
+
+Probado el 2026-08-21 contra manipulación de URL: una invitación `booth` con
+`&hero=auto&capitulos=auto` sigue entregando scroll, con firma inválida también,
+y solo cambia con la firma correcta. Una `full` no se puede degradar a scroll sin
+firma. Los capítulos siguen la misma regla: la playlist de videos solo aparece en
+`full`.
+
+En `public/admin/invitations.php` cada invitación muestra ahora el enlace
+reconstruible (`cb_invitation_share_token`, sirve aunque se haya perdido el token
+en claro), qué versión entrega según el plan, y dos botones de vista previa
+**Ver Básico** y **Ver Full** para comparar. Esos dos llevan la firma `qa`: son
+para uso interno, no se le mandan al cliente.
+
+La firma de vista previa no caduca a propósito. Lo que protege no es un secreto
+sino que el plan no se suba a mano desde la barra del navegador; quien reciba un
+enlace de vista previa ve esa variante y nada más.
+
+Los parámetros siguen sin aparecer en copies, capturas ni tutoriales públicos.
+
+### Qué ve cada plan, por tema (2026-08-23)
+
+El Básico avanza por **capítulos**: imágenes fijas en `themes/<tema>/invitation/chapters/`.
+Solo Carreras las tiene (9 archivos: `scene-01..05`, `conn-01..04`). Hielo no, y sin
+esa carpeta el recorrido saltaba directo a la lámina de la invitación, sin
+personajes.
+
+Luis decidió el 2026-08-23 que el Básico de un tema sin capítulos use la playlist
+de videos. Lo que separa los planes en ese caso es el **hero**: en Básico el
+invitado lo avanza con el dedo y recién después la historia corre sola; en Full
+arranca solo desde el principio. Carreras no cambia: tiene capítulos y su lógica
+aprobada se respeta tal cual.
+
+| Tema | Básico (`booth`) | Full (`full`) |
+|---|---|---|
+| Carreras | hero scroll + 9 capítulos | hero auto + playlist de videos |
+| Hielo | hero scroll + playlist de videos | hero auto + playlist de videos |
+| kpop | hero scroll + 6 saludos | hero auto + los mismos 6 |
+| tropical | hero scroll + 6 saludos | hero auto + los mismos 6 |
+| familia-canina | hero scroll + 8 saludos | hero auto + los mismos 8 |
+
+Los tres temas nuevos entraron el 2026-08-23. Sus saludos ya existían en la raíz
+del tema desde el kiosco; lo que faltaba era el orden en `$playlistOrdersByTheme`,
+el intro con el logo corregido y un hero scroll.
+
+El hero scroll de esos tres se derivó del `invitation-motion-v1.mp4` de cada tema
+con ffmpeg (540×960, 30 fps, un keyframe por cuadro, sin audio), replicando el
+spec del de Carreras. No se generó contenido nuevo ni se gastaron créditos de IA.
+
+Cuidado con un detalle que costó encontrar: cuando un tema no tiene candidatos
+`candidate-*-scroll/auto`, quedan activos sus dos heroes por defecto a la vez y
+gana el scroll, así que el Full se veía idéntico al Básico. `invitacion.php`
+ahora limpia el que no corresponde según el plan.
+
+### Saludos de Hielo promovidos (2026-08-23)
+
+Luis aprobó pasar las tomas de Higgsfield a definitivas. `$playlistOrdersByTheme['hielo']`
+apunta ahora a `invitation/candidates/`: `saludo-elsa-v2`, `saludo-anna-v3`,
+`saludo-olaf-v2`, `saludo-kristoff-v2`, `saludo-sven-v3`, `saludo-bruni-v3`, más
+`despedida-hielo.mp4`.
+
+Los saludos originales siguen en la raíz del tema y `$playlistCandidateOrdersByTheme`
+sigue existiendo, así que revertir es cambiar esas seis rutas y nada más.
 
 ## Posicionamiento
 

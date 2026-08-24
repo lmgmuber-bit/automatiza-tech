@@ -18,7 +18,7 @@
  */
 
 // ---------------------------------------------------------------- CONFIGURA
-$TOKEN = 'deploy-cumpleclick-AT-19ago-7734gzvka49h7d2yq01xurmfojbip835subida-perfil-cumpleanero-2026';
+$TOKEN = 'CAMBIA-ESTO-ANTES-DE-SUBIR';
 // ---------------------------------------------------------------------------
 
 header('X-Robots-Tag: noindex, nofollow');
@@ -46,7 +46,7 @@ $accion = (string) ($_POST['accion'] ?? '');
 // que el contenido esté mal; aceptando ambos se evita el falso positivo.
 $OBLIGATORIOS = [
     'lib.php'                                => [96207, 93956],
-    'lib.album.php'                          => [45811, 44669],
+    'lib.album.php'                          => [46807, 45636],
     'lib.event-profiles.php'                 => [49876, 48912],
     'lib.invitations.php'                    => [35567, 34741],
     'invitacion.php'                         => [85417, 83963],
@@ -55,7 +55,7 @@ $OBLIGATORIOS = [
     'admin/_style.css.php'                   => [40531, 39775],
     'admin/event-profile.php'                => [51905, 51238],
     'admin/invitations.php'                  => [67540, 66385],
-    'admin/index.php'                        => [76823, 75408],
+    'admin/index.php'                        => [77224, 75804],
     'assets/invitation.css'                  => 41378,
     'assets/invitation.js'                   => 44626,
     'assets/event-profile.css'               => 18503,
@@ -101,13 +101,17 @@ $OBLIGATORIOS = [
     // scroll (derivado del motion) y el intro con el logo corregido.
     'themes/kpop/invitation/invitation-scroll-v1.mp4'            => 3084576,
     'themes/kpop/invitation/intro-invitacion-wow-v1.mp4'         => 4339642,
-    'themes/kpop/invitation/intro-invitacion-wow-v1-poster.jpg'  => 22612,
+    // Los tres posters aceptan dos tamaños: el local y el que quedó en PROD.
+    // Son la misma imagen — SSIM 0,998 contra un control de 0,372 entre dos
+    // posters distintos — recodificada con otra calidad y con un bloque EXIF.
+    // Se verificó descargándolos, no suponiendo.
+    'themes/kpop/invitation/intro-invitacion-wow-v1-poster.jpg'  => [22612, 26200],
     'themes/tropical/invitation/invitation-scroll-v1.mp4'           => 4133716,
     'themes/tropical/invitation/intro-invitacion-wow-v1.mp4'        => 5131839,
-    'themes/tropical/invitation/intro-invitacion-wow-v1-poster.jpg' => 70516,
+    'themes/tropical/invitation/intro-invitacion-wow-v1-poster.jpg' => [70516, 83152],
     'themes/familia-canina/invitation/invitation-scroll-v1.mp4'           => 3100319,
     'themes/familia-canina/invitation/intro-invitacion-wow-v1.mp4'        => 3472693,
-    'themes/familia-canina/invitation/intro-invitacion-wow-v1-poster.jpg' => 30461,
+    'themes/familia-canina/invitation/intro-invitacion-wow-v1-poster.jpg' => [30461, 35108],
 ];
 
 $OPCIONALES = [
@@ -226,8 +230,12 @@ echo '</table></div>';
 $intrusos = [];
 foreach ($NO_DEBERIAN as $rel) { if (file_exists($base . '/' . $rel)) { $intrusos[] = $rel; } }
 if ($intrusos) {
-    echo '<div class="card"><h2>Sobra</h2><p class="warn">Esto es del módulo de Álbum, '
-       . 'que todavía no está terminado. Bórralo de PROD:</p><ul>';
+    echo '<div class="card"><h2>Módulo de Álbum presente</h2><p class="mut">Estos archivos '
+       . 'del Álbum están en PROD y su módulo todavía no está terminado. Desde el '
+       . '2026-08-23 ya no molestan: el botón "Álbum Recuerdo" del backoffice solo '
+       . 'aparece si la tabla <code>cc_event_albums</code> existe, y la migración 007 no '
+       . 'está aplicada. Borrarlos es opcional; reaparecerán solos cuando el módulo '
+       . 'esté listo y se corra su migración.</p><ul>';
     foreach ($intrusos as $i) { echo '<li><code>' . h($i) . '</code></li>'; }
     echo '</ul></div>';
 }

@@ -21,6 +21,35 @@
  * confirmar, así que se dejaron conservadores y centralizados para que
  * ajustarlos sea una línea y no una cacería por el código.
  */
+/**
+ * ¿El módulo de Álbum está realmente utilizable?
+ *
+ * Los archivos del álbum pueden estar subidos aunque la migración 007 no se haya
+ * aplicado — pasó exactamente eso en PROD el 2026-08-23. En ese estado el botón
+ * "Álbum Recuerdo" del backoffice llevaba a una página que reventaba al primer
+ * SELECT. Preguntar por la tabla es la única señal honesta: que el PHP exista no
+ * significa que el módulo funcione.
+ *
+ * El resultado se cachea por request: se llama una vez por fiesta al pintar la
+ * lista y no tiene sentido consultar la base en cada vuelta del bucle.
+ */
+function cb_album_feature_ready(): bool
+{
+    static $ready = null;
+    if ($ready !== null) {
+        return $ready;
+    }
+    if (cb_storage_mode() !== 'db') {
+        return $ready = false;
+    }
+    try {
+        cb_pdo()->query('SELECT 1 FROM cc_event_albums LIMIT 1');
+        return $ready = true;
+    } catch (Throwable $e) {
+        return $ready = false;
+    }
+}
+
 function cb_album_limits(): array
 {
     return [

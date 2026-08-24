@@ -15,7 +15,7 @@
  */
 
 // ---------------------------------------------------------------- CONFIGURA
-$TOKEN = 'deploy-cumpleclick-AT-19ago-7734gzvka49h7d2yq01xurmfojbip835subida-perfil-cumpleanero-2026';
+$TOKEN = 'CAMBIA-ESTO-ANTES-DE-SUBIR';
 
 // Déjalo vacío para autodetectar. Si no encuentra las migraciones, pon aquí la
 // ruta absoluta de la carpeta database/migrations de tu directorio privado.

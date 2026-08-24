@@ -188,7 +188,7 @@ if (!$loggedIn) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CumpleBooth Admin · Ingresar</title>
+<title>CumpleClick Admin · Ingresar</title>
 <style>
 <?php require __DIR__ . '/_style.css.php'; ?>
 </style>
@@ -197,7 +197,7 @@ if (!$loggedIn) {
   <main class="login-card">
     <div class="login-logo">
       <span class="logo-mark"><?= admin_icon('party') ?></span>
-      CumpleBooth <span>Admin</span>
+      CumpleClick <span>Admin</span>
     </div>
     <?php if ($loginError !== ''): ?>
       <p class="alert alert-error"><?= admin_icon('warn') ?> <?= h($loginError) ?></p>
@@ -579,7 +579,7 @@ if (!empty($_SESSION['cc_invitation_token'])) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CumpleBooth Admin · Invitaciones</title>
+<title>CumpleClick Admin · Invitaciones</title>
 <style>
 <?php require __DIR__ . '/_style.css.php'; ?>
 .invite-wrap { max-width: 1180px; }
@@ -685,7 +685,7 @@ if (!empty($_SESSION['cc_invitation_token'])) {
   <header class="topbar">
     <div class="logo">
       <span class="logo-mark"><?= admin_icon('party') ?></span>
-      CumpleBooth <span>Admin</span>
+      CumpleClick <span>Admin</span>
     </div>
     <form method="post" action="invitations.php?party=<?= rawurlencode($publicSlug) ?>" class="inline-form logout-btn">
       <?= admin_csrf_field() ?><input type="hidden" name="action" value="logout">

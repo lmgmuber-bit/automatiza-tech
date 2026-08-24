@@ -1,22 +1,25 @@
 <?php
 /**
- * _at-seed-demos.php — crea las dos fiestas demo comerciales DESDE EL NAVEGADOR.
- * Para hostings sin SSH. Equivalente web de scripts/seed-demos-carreras-hielo.php.
+ * _at-seed-temas.php — crea fiestas e invitaciones de prueba para kpop,
+ * tropical y familia-canina, DESDE EL NAVEGADOR. Para hostings sin SSH.
  *
- * Crea Carreras/Vicente e Hielo/Isidora con "Conoce al cumpleañero" completo y
- * una invitación publicada cada una, y muestra los 6 enlaces.
- *
- * SEGURO PARA PROD: carga primero las fiestas existentes y hace merge.
- * (storage/event-profile-demo/seed.php NO lo es: pasa solo las demo a
- * cb_save_parties(), que BORRA toda fiesta ausente del array.)
+ * Hermano de _at-seed-demos.php, que hace lo mismo para Carreras e Hielo.
+ * Misma lógica segura:
+ *   - Carga primero las fiestas existentes y hace merge. No borra nada.
+ *   - Mira paso por paso qué le falta a cada demo (fiesta, ficha, invitación),
+ *     así una corrida interrumpida se completa al reintentar en vez de
+ *     saltarse la demo por tener la fiesta ya creada.
+ *   - No crea una segunda invitación si la fiesta ya tiene una.
  *
  * USO
- *   1. Edita $TOKEN aquí abajo y pon una clave larga tuya.
- *   2. Sube el archivo a /public_html/cumpleclick/_at-seed-demos.php
- *   3. Ábrelo, revisa el resumen (no escribe nada) y luego crea.
- *   4. COPIA LOS ENLACES. El token público de cada invitación se muestra una
- *      sola vez: la base guarda solo su hash.
- *   5. BÓRRALO con el botón rojo, o por FTP si falla.
+ *   1. Edita $TOKEN y pon una clave larga tuya.
+ *   2. Sube a /public_html/cumpleclick/_at-seed-temas.php y ábrelo.
+ *   3. Revisa el resumen (no escribe nada) y confirma.
+ *   4. COPIA LOS ENLACES. El token público se muestra una sola vez.
+ *   5. BÓRRALO con el botón rojo.
+ *
+ * Los capítulos van a salir MUDOS: la narración de Alice de estos tres temas
+ * es la tarea que quedó con Codex. El resto ya debería verse completo.
  */
 
 // ---------------------------------------------------------------- CONFIGURA
@@ -40,10 +43,10 @@ $accion = (string) ($_POST['accion'] ?? '');
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>CumpleClick · demos</title>
+<title>CumpleClick · temas de prueba</title>
 <style>
  body{font:15px/1.55 system-ui,Segoe UI,sans-serif;background:#0f1720;color:#e6edf3;margin:0;padding:28px}
- .wrap{max-width:880px;margin:0 auto}
+ .wrap{max-width:900px;margin:0 auto}
  h1{font-size:20px;margin:0 0 4px} h2{font-size:16px;margin:0 0 10px}
  .sub{color:#8fa3b8;margin:0 0 22px}
  .card{background:#16212c;border:1px solid #24323f;border-radius:10px;padding:18px;margin:0 0 16px}
@@ -59,36 +62,29 @@ $accion = (string) ($_POST['accion'] ?? '');
  .enlace{margin:0 0 6px} .enlace b{display:inline-block;min-width:118px;color:#8fa3b8;font-weight:600}
  ul{margin:6px 0 0;padding-left:20px}
 </style></head><body><div class="wrap">
-<h1>CumpleClick · fiestas demo Carreras e Hielo</h1>
+<h1>CumpleClick · fiestas de prueba para kpop, tropical y familia-canina</h1>
 <p class="sub">Bórrame del servidor apenas termines.</p>
 <?php
 
 if (strlen($TOKEN) < 20 || $TOKEN === 'CAMBIA-ESTO-ANTES-DE-SUBIR') {
     echo '<div class="card"><p class="bad">Este script está desactivado.</p>'
        . '<p class="mut">Edita <code>$TOKEN</code> arriba del archivo y pon una clave '
-       . 'tuya de 20 caracteres o más. Después vuelve a subirlo.</p></div>'
-       . '</div></body></html>';
+       . 'tuya de 20 caracteres o más.</p></div></div></body></html>';
     exit;
 }
-
 if (!$tokenOk) {
     if ($enviado !== '') { echo '<div class="card"><p class="bad">Token incorrecto.</p></div>'; }
-    echo '<div class="card"><form method="post">'
-       . '<label class="mut">Token</label><br>'
+    echo '<div class="card"><form method="post"><label class="mut">Token</label><br>'
        . '<input type="password" name="t" autocomplete="off" autofocus><br>'
-       . '<button type="submit">Entrar</button></form></div>'
-       . '</div></body></html>';
+       . '<button type="submit">Entrar</button></form></div></div></body></html>';
     exit;
 }
-
 if ($accion === 'autodestruir') {
     $borrado = @unlink(__FILE__);
-    echo '<div class="card">';
-    echo $borrado
-        ? '<p class="ok">Archivo borrado del servidor. Ya no existe esta URL.</p>'
-        : '<p class="bad">No se pudo borrar solo (permisos). Bórralo por FTP: '
-          . '<code>' . h(basename(__FILE__)) . '</code></p>';
-    echo '</div></div></body></html>';
+    echo '<div class="card">' . ($borrado
+        ? '<p class="ok">Archivo borrado del servidor.</p>'
+        : '<p class="bad">No se pudo borrar solo (permisos). Bórralo por FTP: <code>'
+          . h(basename(__FILE__)) . '</code></p>') . '</div></div></body></html>';
     exit;
 }
 
@@ -97,59 +93,79 @@ $libCandidatos = [__DIR__ . '/lib.php', dirname(__DIR__, 2) . '/public/lib.php']
 $lib = null;
 foreach ($libCandidatos as $c) { if (is_file($c)) { $lib = $c; break; } }
 if ($lib === null) {
-    echo '<div class="card"><p class="bad">No encuentro <code>lib.php</code>.</p>'
-       . '<p class="mut">Este archivo tiene que quedar en la misma carpeta que '
-       . '<code>lib.php</code> (la raíz de <code>/cumpleclick/</code>).</p></div>'
+    echo '<div class="card"><p class="bad">No encuentro <code>lib.php</code>. Este archivo '
+       . 'tiene que quedar en la raíz de <code>/cumpleclick/</code>.</p></div>'
        . '</div></body></html>';
     exit;
 }
 require $lib;
 
-$themesDir = is_dir(__DIR__ . '/themes')
-    ? __DIR__ . '/themes'
-    : dirname(__DIR__, 2) . '/public/themes';
+$themesDir = is_dir(__DIR__ . '/themes') ? __DIR__ . '/themes' : dirname(__DIR__, 2) . '/public/themes';
 
+// Una fiesta por tema. El plan es full, pero desde el admin puedes verlas en
+// Básico con el botón "Ver Básico (scroll)" sin tocar la base.
 $demos = [
-    'demo-carreras-vicente' => [
-        'theme'       => 'carreras',
-        'admin_label' => 'DEMO comercial - Carreras',
-        'name'        => 'Vicente',
-        'gender'      => 'm',
-        'title'       => 'Conoce a Vicente',
-        'cta'         => 'Conoce al cumpleañero',
+    'demo-kpop-martina' => [
+        'theme'       => 'kpop',
+        'admin_label' => 'PRUEBA - Guerreras K-Pop',
+        'name'        => 'Martina',
+        'gender'      => 'f',
+        'title'       => 'Conoce a Martina',
+        'cta'         => 'Conoce a la cumpleañera',
         'style'       => 'epico',
-        'phrase'      => 'La carrera está por comenzar',
-        'intro_text'  => 'Le encantan los autos, la velocidad y celebrar con toda su gente.',
+        'phrase'      => 'El escenario está por encenderse',
+        'intro_text'  => 'Le encanta cantar, bailar y armar coreografías con sus amigas.',
         'fields'      => [
-            ['favorites', 'color',    'Colores favoritos', 'Rojo y dorado',                   'text'],
-            ['favorites', 'music',    'Música favorita',   'Canciones para bailar',           'text'],
-            ['favorites', 'hobby',    'Le encanta',        'Armar pistas y dibujar',          'text'],
-            ['sizes',     'shirt',    'Talla de polera',   '8',                               'size'],
-            ['sizes',     'pants',    'Talla de pantalón', '8',                               'size'],
-            ['sizes',     'shoe',     'Calzado',           '31',                              'size'],
-            ['gifts',     'wishlist', 'Ideas de regalo',   'Autos a escala y kits creativos', 'text'],
-            ['custom',    'snack',    'Snack favorito',    'Fruta y galletas',                'text'],
+            ['favorites', 'color',    'Colores favoritos', 'Fucsia y morado',              'text'],
+            ['favorites', 'music',    'Música favorita',   'K-Pop, obvio',                 'text'],
+            ['favorites', 'hobby',    'Le encanta',        'Aprender coreografías',        'text'],
+            ['sizes',     'shirt',    'Talla de polera',   '10',                           'size'],
+            ['sizes',     'pants',    'Talla de pantalón', '10',                           'size'],
+            ['sizes',     'shoe',     'Calzado',           '33',                           'size'],
+            ['gifts',     'wishlist', 'Ideas de regalo',   'Micrófono de juguete y stickers', 'text'],
+            ['custom',    'snack',    'Snack favorito',    'Palomitas y jugo',             'text'],
         ],
     ],
-    'demo-hielo-isidora' => [
-        'theme'       => 'hielo',
-        'admin_label' => 'DEMO comercial - Reino de Hielo',
-        'name'        => 'Isidora',
+    'demo-tropical-benjamin' => [
+        'theme'       => 'tropical',
+        'admin_label' => 'PRUEBA - Tropical',
+        'name'        => 'Benjamín',
+        'gender'      => 'm',
+        'title'       => 'Conoce a Benjamín',
+        'cta'         => 'Conoce al cumpleañero',
+        'style'       => 'magico',
+        'phrase'      => 'La isla está por despertar',
+        'intro_text'  => 'Le encanta el mar, la arena y los animales de la playa.',
+        'fields'      => [
+            ['favorites', 'color',    'Colores favoritos', 'Turquesa y naranjo',           'text'],
+            ['favorites', 'music',    'Música favorita',   'Canciones de verano',          'text'],
+            ['favorites', 'hobby',    'Le encanta',        'Buscar conchitas y nadar',     'text'],
+            ['sizes',     'shirt',    'Talla de polera',   '8',                            'size'],
+            ['sizes',     'pants',    'Talla de pantalón', '8',                            'size'],
+            ['sizes',     'shoe',     'Calzado',           '31',                           'size'],
+            ['gifts',     'wishlist', 'Ideas de regalo',   'Juegos de playa y libros del mar', 'text'],
+            ['custom',    'snack',    'Snack favorito',    'Fruta y helado',               'text'],
+        ],
+    ],
+    'demo-familia-canina-emilia' => [
+        'theme'       => 'familia-canina',
+        'admin_label' => 'PRUEBA - Familia Canina',
+        'name'        => 'Emilia',
         'gender'      => 'f',
-        'title'       => 'Conoce a Isidora',
+        'title'       => 'Conoce a Emilia',
         'cta'         => 'Conoce a la cumpleañera',
         'style'       => 'magico',
-        'phrase'      => 'La magia está por comenzar',
-        'intro_text'  => 'Le encanta la nieve, cantar y compartir con sus personas favoritas.',
+        'phrase'      => 'La casa está lista para celebrar',
+        'intro_text'  => 'Le encantan los perritos, las historias y jugar con toda la familia.',
         'fields'      => [
-            ['favorites', 'color',    'Colores favoritos', 'Celeste y plateado',                'text'],
-            ['favorites', 'music',    'Música favorita',   'Canciones para cantar',             'text'],
-            ['favorites', 'hobby',    'Le encanta',        'Patinar y crear historias',         'text'],
-            ['sizes',     'shirt',    'Talla de polera',   '8',                                 'size'],
-            ['sizes',     'pants',    'Talla de pantalón', '8',                                 'size'],
-            ['sizes',     'shoe',     'Calzado',           '30',                                'size'],
-            ['gifts',     'wishlist', 'Ideas de regalo',   'Cuentos ilustrados y manualidades', 'text'],
-            ['custom',    'snack',    'Snack favorito',    'Helado y frutillas',                'text'],
+            ['favorites', 'color',    'Colores favoritos', 'Celeste y amarillo',           'text'],
+            ['favorites', 'music',    'Música favorita',   'Canciones para bailar',        'text'],
+            ['favorites', 'hobby',    'Le encanta',        'Dibujar y cuidar a su mascota', 'text'],
+            ['sizes',     'shirt',    'Talla de polera',   '6',                            'size'],
+            ['sizes',     'pants',    'Talla de pantalón', '6',                            'size'],
+            ['sizes',     'shoe',     'Calzado',           '29',                           'size'],
+            ['gifts',     'wishlist', 'Ideas de regalo',   'Peluches y cuentos ilustrados', 'text'],
+            ['custom',    'snack',    'Snack favorito',    'Galletas y leche',             'text'],
         ],
     ],
 ];
@@ -175,45 +191,65 @@ foreach ($demos as $d) {
     $fondo = $themesDir . '/' . $d['theme'] . '/fondo-banner.jpg';
     if (!is_file($fondo)) { $problemas[] = 'Falta la imagen del tema: ' . $fondo; }
 }
-$perfilOn = false;
-try { $perfilOn = cb_event_profile_feature_enabled(); } catch (Throwable $e) {}
-
-// La migración 008 tiene que estar aplicada o esto revienta a medio camino,
-// dejando la fiesta creada pero sin ficha ni invitación.
 try {
     cb_pdo()->query('SELECT 1 FROM cc_event_profiles LIMIT 1');
 } catch (Throwable $e) {
     $problemas[] = 'Falta la tabla cc_event_profiles: corre primero _at-migrar.php '
                  . '(migraciones 008 y 009).';
 }
+$perfilOn = false;
+try { $perfilOn = cb_event_profile_feature_enabled(); } catch (Throwable $e) {}
 
-// Qué le falta a cada demo. Se mira paso por paso, no "existe la fiesta o no":
-// una corrida interrumpida deja la fiesta hecha y el resto a medias.
+// Aviso, no bloqueo: sin el hero scroll la invitación abre igual, pero el Plan
+// Básico se reproduce solo y no se puede evaluar la diferencia entre planes.
+$sinHero = [];
+foreach ($demos as $d) {
+    if (!is_file($themesDir . '/' . $d['theme'] . '/invitation/invitation-scroll-v1.mp4')) {
+        $sinHero[] = $d['theme'];
+    }
+}
+
 $pendiente = [];
 $completas = [];
+$aMedias = [];
 foreach ($demos as $slug => $d) {
     $falta = [];
-    $partyId = null;
     if (!isset($parties[$slug])) {
         $falta = ['fiesta', 'ficha', 'invitación'];
     } else {
-        try {
-            $partyId = cb_party_db_id($slug);
-        } catch (Throwable $e) {
-            $partyId = null;
-        }
+        try { $partyId = cb_party_db_id($slug); } catch (Throwable $e) { $partyId = null; }
         if ($partyId === null) {
             $falta[] = 'fiesta';
         } elseif (!$problemas) {
             try {
                 if (cb_event_profile_find_row($partyId) === null) { $falta[] = 'ficha'; }
-                if (!cb_list_invitations($partyId)) { $falta[] = 'invitación'; }
+                // No basta con que exista la fila de invitación: crearla y
+                // publicarla son dos pasos, y entre medio se copia la imagen
+                // aprobada. Si eso falla, queda una invitación en borrador que
+                // no sirve para nada. Preguntar solo "¿hay invitación?" daba la
+                // demo por lista con un borrador roto adentro.
+                $invs = cb_list_invitations($partyId);
+                $publicadas = 0;
+                foreach ($invs as $i) {
+                    if ((string) ($i['status'] ?? '') === 'published') { $publicadas++; }
+                }
+                if ($publicadas === 0) {
+                    $falta[] = 'invitación';
+                    // Con un borrador dando vueltas no se crea otra encima: se
+                    // avisa, para no dejar dos invitaciones de la misma fiesta.
+                    if ($invs) { $aMedias[$slug] = count($invs); }
+                }
             } catch (Throwable $e) {
                 $falta[] = 'no se pudo consultar: ' . $e->getMessage();
             }
         }
     }
     if ($falta) { $pendiente[$slug] = $falta; } else { $completas[] = $slug; }
+}
+foreach ($aMedias as $slug => $n) {
+    $problemas[] = $slug . ' tiene ' . $n . ' invitación(es) sin publicar, de un intento '
+                 . 'anterior que no terminó. Bórrala desde el admin de invitaciones y '
+                 . 'vuelve a correr esto, o quedarían dos invitaciones para la misma fiesta.';
 }
 
 echo '<div class="card"><h2>Estado</h2>';
@@ -235,9 +271,17 @@ if ($pendiente) {
 }
 if (!$perfilOn) {
     echo '<p class="warn">Aviso: <code>event_profile_enabled</code> está en <code>false</code>. '
-       . 'Las fiestas y las invitaciones se crean igual, pero el botón "Conoce a…" '
-       . 'no aparecerá hasta que lo pongas en <code>true</code> en la configuración privada.</p>';
+       . 'Las fiestas y las invitaciones se crean igual, pero el botón "Conoce a…" no '
+       . 'aparecerá hasta que lo pongas en <code>true</code>.</p>';
 }
+if ($sinHero) {
+    echo '<p class="warn">Aviso: estos temas no tienen <code>invitation-scroll-v1.mp4</code>: <code>'
+       . implode('</code>, <code>', array_map('h', $sinHero)) . '</code>. '
+       . 'La invitación abre igual, pero el Plan Básico se reproducirá solo en vez de '
+       . 'avanzar con el dedo, así que no vas a poder comparar los dos planes.</p>';
+}
+echo '<p class="mut">Recuerda: los capítulos de estos tres temas salen <strong>mudos</strong>. '
+   . 'La narración de Alice es la tarea que quedó pendiente con Codex.</p>';
 if ($problemas) {
     echo '<p class="bad">Problemas que hay que resolver antes:</p><ul>';
     foreach ($problemas as $p) { echo '<li class="bad">' . h($p) . '</li>'; }
@@ -256,12 +300,12 @@ if ($accion !== 'crear') {
         echo '<div class="card"><p class="ok">No hay nada que crear.</p></div>';
     } else {
         echo '<div class="card"><p>Todavía no se ha escrito nada. Al confirmar se crea, '
-           . 'para cada demo: la fiesta, la ficha "Conoce al cumpleañero" con 8 datos, '
+           . 'para cada tema: la fiesta, la ficha "Conoce al cumpleañero" con 8 datos, '
            . 'y una invitación publicada.</p>'
            . '<p class="warn">Los enlaces se muestran una sola vez. Cópialos.</p>'
            . '<form method="post"><input type="hidden" name="t" value="' . h($enviado) . '">'
            . '<input type="hidden" name="accion" value="crear">'
-           . '<button type="submit">Crear las demos</button></form></div>';
+           . '<button type="submit">Crear las 3 fiestas de prueba</button></form></div>';
     }
     echo '<div class="card"><form method="post">'
        . '<input type="hidden" name="t" value="' . h($enviado) . '">'
@@ -303,8 +347,6 @@ try {
         $partyId = cb_party_db_id($slug);
         if ($partyId === null) { throw new RuntimeException("No se resolvió la fiesta $slug."); }
 
-        // La ficha se reescribe siempre: es data de demo nuestra, y así una
-        // corrida interrumpida se completa sola al reintentar.
         cb_event_profile_save($partyId, [
             'enabled'       => true,
             'privacy_ack'   => true,
@@ -314,7 +356,7 @@ try {
             'intro_style'   => $d['style'],
             'intro_phrase'  => $d['phrase'],
             'section_order' => ['favorites', 'sizes', 'gifts', 'custom'],
-        ], 'seed-demo-comercial');
+        ], 'seed-temas-prueba');
 
         $fields = [];
         foreach ($d['fields'] as $row) {
@@ -336,14 +378,12 @@ try {
             'photo_public_consent' => false,
             'photo_ai_consent'     => false,
             'fields'               => $fields,
-        ]], 'seed-demo-comercial');
+        ]], 'seed-temas-prueba');
         $log[] = $slug . ': ficha del cumpleañero creada (8 datos).';
 
-        // La invitación NO se rehace: crearía un token nuevo y dejaría dos.
         if (!in_array('invitación', $pendiente[$slug], true)) {
-            $log[] = $slug . ': ya tenía invitación, no se crea otra. El enlace no se '
-                   . 'puede volver a mostrar; si lo perdiste, regenera el token desde '
-                   . 'el admin de invitaciones.';
+            $log[] = $slug . ': ya tenía invitación, no se crea otra. El enlace se puede '
+                   . 'recuperar desde el admin de invitaciones.';
             continue;
         }
 
@@ -357,13 +397,12 @@ try {
             'event_time'             => '16:00',
             'address'                => 'Salón de celebraciones CumpleClick',
             'message'                => 'Te esperamos para compartir una tarde inolvidable.',
-            'created_by'             => 'seed-demo-comercial',
+            'created_by'             => 'seed-temas-prueba',
         ]);
         if (empty($inv['ok'])) {
             throw new RuntimeException('Invitación ' . $slug . ': ' . (string) ($inv['error'] ?? '?'));
         }
 
-        // Imagen aprobada: se reutiliza el fondo del tema, ya presente en PROD.
         $src = $themesDir . '/' . $d['theme'] . '/fondo-banner.jpg';
         $key = cb_invitation_storage_key($slug, 'demo-invitacion', 1, 'jpg');
         $dst = cb_invitation_file_path($key);
@@ -387,19 +426,24 @@ try {
             'height'             => is_array($info) ? (int) $info[1] : 0,
         ]);
         if (empty($out['ok'])) { throw new RuntimeException('No se registró la imagen aprobada.'); }
-        if (empty(cb_publish_invitation((int) $inv['id'], 'seed-demo-comercial')['ok'])) {
+        if (empty(cb_publish_invitation((int) $inv['id'], 'seed-temas-prueba')['ok'])) {
             throw new RuntimeException('No se publicó la invitación.');
         }
         $log[] = $slug . ': invitación publicada.';
 
+        $bonita = function_exists('cb_invitation_pretty_url')
+            ? cb_invitation_pretty_url((string) $inv['token'], $d['name'])
+            : '';
         $base = cb_invitation_public_url((string) $inv['token']);
         $sep  = (strpos($base, '?') === false) ? '?' : '&';
         $salida[] = [
-            'tema'   => $d['theme'],
-            'fiesta' => $slug,
-            'admin'  => cb_public_base_url() . '/admin/event-profile.php?party=' . rawurlencode($slug),
-            'basico' => $base . $sep . 'hero=scroll&capitulos=1',
-            'full'   => $base . $sep . 'hero=auto&capitulos=auto',
+            'tema'    => $d['theme'],
+            'fiesta'  => $slug,
+            'admin'   => cb_public_base_url() . '/admin/invitations.php?party=' . rawurlencode($slug),
+            'bonita'  => $bonita,
+            'larga'   => $base,
+            'basico'  => $base . $sep . 'hero=scroll&capitulos=1',
+            'full'    => $base . $sep . 'hero=auto&capitulos=auto',
         ];
     }
 } catch (Throwable $e) {
@@ -409,8 +453,8 @@ try {
 echo '<div class="card"><h2>Resultado</h2><pre>' . h(implode("\n", $log)) . '</pre>';
 if ($fatal !== null) {
     echo '<p class="bad">Se detuvo: ' . h($fatal) . '</p>'
-       . '<p class="mut">Lo que aparece arriba sí quedó hecho. Corrige la causa y '
-       . 'vuelve a abrir este script: las demos ya creadas no se duplican.</p>';
+       . '<p class="mut">Lo que aparece arriba sí quedó hecho. Corrige la causa y vuelve '
+       . 'a abrir este script: retoma solo lo que falta.</p>';
 } else {
     echo '<p class="ok">Listo.</p>';
 }
@@ -418,15 +462,19 @@ echo '</div>';
 
 if ($salida) {
     echo '<div class="card"><h2>Enlaces</h2>'
-       . '<p class="warn">Cópialos ahora. El token no se puede recuperar después: '
-       . 'la base guarda solo su hash.</p>';
+       . '<p class="warn">Cópialos ahora. El token no se puede recuperar después.</p>';
     foreach ($salida as $s) {
         echo '<p style="margin:16px 0 6px"><strong>' . h(strtoupper($s['tema'])) . '</strong></p>';
-        echo '<p class="enlace"><b>Admin ficha</b> <code>' . h($s['admin'])  . '</code></p>';
-        echo '<p class="enlace"><b>Plan Básico</b> <code>' . h($s['basico']) . '</code></p>';
-        echo '<p class="enlace"><b>Plan Full</b> <code>'   . h($s['full'])   . '</code></p>';
+        if ($s['bonita'] !== '') {
+            echo '<p class="enlace"><b>Para el cliente</b> <code>' . h($s['bonita']) . '</code></p>';
+        }
+        echo '<p class="enlace"><b>Respaldo</b> <code>'    . h($s['larga'])  . '</code></p>';
+        echo '<p class="enlace"><b>Admin</b> <code>'       . h($s['admin'])  . '</code></p>';
     }
-    echo '</div>';
+    echo '<p class="mut">Para comparar los dos planes usa los botones '
+       . '<strong>Ver Básico</strong> y <strong>Ver Full</strong> del admin de invitaciones: '
+       . 'llevan la firma que hace falta. Pegar <code>&amp;hero=</code> a mano ya no sirve, '
+       . 'el enlace del cliente entrega siempre lo que dice su plan.</p></div>';
 }
 
 echo '<div class="card"><p class="mut">¿Ya copiaste los enlaces? Entonces borra este archivo.</p>'

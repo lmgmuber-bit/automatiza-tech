@@ -7,3 +7,6 @@ config/cumpleclick.local.php
 storage/
 backups/
 qa-output/
+
+# Respaldos operativos del .htaccess de PROD: se guardan en disco, no en el repo.
+scripts/web/*_BACKUP

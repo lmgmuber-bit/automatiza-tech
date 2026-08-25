@@ -749,8 +749,10 @@ vinculante y el nombre elegido es otro, pero conviene saber que estaba.
 
 ### Lo que sigue abierto
 
-- **La pantalla de predicción de la 4.8.** Agrega una tabla y una pantalla que
-  no estaban en el alcance original. Necesita tu visto bueno antes de la Fase 3.
+- **Nada de la 4.8.** Luis aprobó la pantalla de predicción el 2026-08-25 y la
+  asignó a Codex; el encargo está en
+  `CODEX-HANDOFF-PREDICCION-BABY-SHOWER-2026-08-25.md`. Codex tiene mandato de
+  proponer algo mejor si lo ve, explicando el porqué, y Luis decide.
 - **Los honoríficos de la sección 7** son propuestas mías. Si alguno no te suena,
   cámbialo: es un texto por temática.
 - **El nombre personalizado en el panel del Safari.** Es la única pieza que no

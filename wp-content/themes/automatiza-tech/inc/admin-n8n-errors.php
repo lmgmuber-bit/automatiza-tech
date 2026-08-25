@@ -67,15 +67,23 @@ add_action('rest_api_init', 'automatiza_register_n8n_errors_api');
  * Verificar API Key
  */
 function automatiza_verify_n8n_api_key($request) {
-    $api_key = $request->get_header('X-API-Key');
-    $stored_key = get_option('automatiza_n8n_api_key', 'argos-automatiza-2024-secret');
-    
-    // En desarrollo, permitir sin key
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        return true;
+    $api_key    = (string) $request->get_header('X-API-Key');
+    $stored_key = (string) get_option('automatiza_n8n_api_key', '');
+
+    // Antes habia aqui un bypass: "if (defined('WP_DEBUG') && WP_DEBUG) return true;".
+    // WP_DEBUG estaba encendido en PRODUCCION, asi que TODOS los endpoints de ARGOS
+    // quedaban abiertos: el listado de errores (50 filas, 180KB, con stack traces y
+    // rutas internas) era publico y cualquiera podia inyectar registros falsos.
+    // La autenticacion nunca puede depender de un flag de depuracion.
+
+    // El fallback anterior era get_option(..., 'argos-automatiza-2024-secret'): si la
+    // opcion se borraba, la API aceptaba una clave publicada en el repositorio.
+    // Ahora falla cerrado: sin clave configurada, no entra nadie.
+    if ($stored_key === '' || $api_key === '') {
+        return false;
     }
-    
-    return $api_key === $stored_key;
+
+    return hash_equals($stored_key, $api_key);
 }
 
 /**

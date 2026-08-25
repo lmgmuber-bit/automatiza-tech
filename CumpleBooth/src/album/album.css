@@ -26,6 +26,14 @@
   --paper: #fffdf8;
   --radius: 18px;
   --font: 'Baloo 2', 'Segoe UI Rounded', 'Segoe UI', system-ui, sans-serif;
+  /* Voz del invitado. La redonda de la marca es la voz de CumpleClick: sirve
+     para títulos, botones y folios. Pero el mensaje que escribió un invitado no
+     es interfaz, es lo que esa persona quiso decirle al cumpleañero, y puesto en
+     la misma fuente que los botones se lee como un cartel más. Una serif lo
+     devuelve al registro de recuerdo: dedicatoria, no UI. Todas las de la lista
+     vienen con el sistema, así que no agrega ni un byte de descarga. */
+  --font-note: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua',
+    Georgia, 'Times New Roman', serif;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -275,6 +283,7 @@ body {
 .mag--note { gap: 2.6cqh; }
 .mag__frame--note { flex: 1.6; }
 .mag__note {
+  position: relative;
   margin: 0; flex: 1; min-height: 0;
   display: flex; flex-direction: column; justify-content: center; gap: 1.6cqh;
   padding: 3cqw 4cqw;
@@ -282,9 +291,30 @@ body {
   background: color-mix(in srgb, var(--pink-soft) 55%, #fff);
   border-radius: 0 2.4cqw 2.4cqw 0;
 }
-.mag__note-text { margin: 0; font-size: 4.4cqw; line-height: 1.35; font-weight: 600; }
+/* Comilla de apertura, del tamaño de la caja y casi transparente: marca que
+   esto es una cita sin robarle lectura al texto. El `/ ''` es el texto
+   alternativo de la regla content: deja la comilla como puro adorno y evita que
+   un lector de pantalla la anuncie antes del mensaje. */
+.mag__note::before {
+  content: '\201C' / '';
+  position: absolute; top: -1.2cqh; left: 2cqw;
+  font-family: var(--font-note);
+  font-size: 16cqw; line-height: 1;
+  color: var(--pink); opacity: .16;
+  pointer-events: none;
+}
+/* La serif pide una línea más aireada y menos peso que la redonda: a 600 se
+   empasta, y su altura de x menor necesita el aire para no apretarse. */
+.mag__note-text {
+  margin: 0;
+  font-family: var(--font-note);
+  font-size: 4.2cqw; line-height: 1.5; font-weight: 400;
+}
 .mag__note-text--video { text-align: center; font-size: 3.6cqw; }
-.mag__note-by { font-size: 3.4cqw; font-weight: 800; color: var(--pink); }
+.mag__note-by {
+  font-size: 3.2cqw; font-weight: 800; color: var(--pink);
+  letter-spacing: .04em;
+}
 
 .mag__frame--video { background: #111; }
 .mag__video { width: 100%; height: 100%; object-fit: contain; display: block; background: #111; }

@@ -243,9 +243,15 @@ function ClosingPage({ page, base }) {
           {page.eventName ? `a la fiesta de ${page.eventName}!` : 'a la fiesta!'}
         </h2>
         <p className="mag__closing-note">
-          {page.count === 1
-            ? 'Un recuerdo guardado para siempre.'
-            : `${page.count} recuerdos guardados para siempre.`}
+          {/* Con cero recuerdos, contar en número quedaba en "0 recuerdos
+              guardados para siempre". Pasa si el organizador publica el álbum
+              antes de aprobar nada: el invitado abre el enlace y lo primero que
+              lee es un cero. */}
+          {page.count === 0
+            ? 'Los recuerdos de esta fiesta están por llegar.'
+            : page.count === 1
+              ? 'Un recuerdo guardado para siempre.'
+              : `${page.count} recuerdos guardados para siempre.`}
         </p>
         <span className="mag__brand">CumpleClick</span>
       </div>

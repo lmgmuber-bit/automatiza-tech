@@ -384,17 +384,33 @@ temática infantil completa.
 
 ---
 
-## 7. Las cuatro temáticas
+## 7. Las seis temáticas
 
-Dos de varón y dos de niña, todas de baby shower.
+Cuatro las propongo yo y **dos vienen de las referencias que mandó la clienta**
+(sección 10). Con eso el catálogo estándar de baby shower queda en seis.
+
+| Temática | Para | Origen |
+|---|---|---|
+| Pequeño Navegante | varón | propuesta |
+| Osito Aviador | varón | propuesta |
+| Oh Baby | varón | **clienta** |
+| Jardín de Invernadero | niña | propuesta |
+| Encaje de Estrellas | niña | propuesta |
+| Safari de Animalitos | cualquiera | **clienta** |
+
+El Safari queda como **neutra a propósito**: su paleta de salvia, crema y
+mostaza se vende igual para varón que para niña, y tener una que sirva siempre
+es útil comercialmente. El campo `publico` de `themes.json` ya existe para
+declararlo (hoy Reino de Hielo dice `"publico": "niña"`).
 
 **La regla que se impusieron:** si les quitas el color y las dejas en blanco y
-negro, un cliente tiene que seguir distinguiéndolas. Por eso cada una tiene su
-propio material y su propia textura, y el lado varón o niña se lee por el
-conjunto, no por el tono. Celeste contra rosado, y lo demás igual, serían dos
-temáticas disfrazadas de cuatro.
+negro, un cliente tiene que seguir distinguiéndolas. Con seis eso se pone más
+difícil que con cuatro, y hubo que resolver un choque real: ver la 7.7.
 
-Ninguna usa personajes con derechos de autor.
+**Sobre los derechos:** las referencias de la clienta son inspiración de
+dirección visual, no material para copiar. Los animalitos del safari y la
+escenografía de "Oh Baby" pertenecen a quien los hizo. Nosotros producimos
+ilustración propia en ese registro. Nada de personajes de franquicia.
 
 ### 7.1 Pequeño Navegante — `pequeno-navegante` · varón
 
@@ -459,12 +475,19 @@ Textura que la identifica: **línea botánica y vidrio con marco.**
 
 Honorífico del recuerdito: **Jardineros de la Primera Semilla**.
 
-### 7.4 Luna de Encaje — `luna-encaje` · niña
+### 7.4 Encaje de Estrellas — `encaje-estrellas` · niña
 
-La pieza del bebé de noche: un móvil colgando sobre la cuna, luna y estrellas
-bordadas, encaje calado. Es la única oscura de las cuatro.
+La pieza del bebé de noche: un móvil colgando sobre la cuna, estrellas bordadas
+y encaje calado. Es la única oscura de las seis.
 
-Textura que la identifica: **encaje calado sobre fondo de noche.**
+**Cambió respecto de la versión anterior de este plan.** Se llamaba "Luna de
+Encaje" y tenía luna creciente. La referencia de la clienta, Oh Baby, trae luna,
+nubes y noche azul, así que las dos quedaban pisándose. Esta se queda con lo que
+Oh Baby no tiene: **el textil**. Sin luna, con el encaje y el bordado como
+protagonistas, y en ciruela en vez de azul.
+
+Silueta que la identifica: **calado de encaje y estrella bordada.** Es la única
+textil.
 
 | Token | Valor |
 |---|---|
@@ -474,27 +497,97 @@ Textura que la identifica: **encaje calado sobre fondo de noche.**
 | ink | `#2b2436` |
 | bgLight1 | `#f4eef2` |
 | bgLight2 | `#ece7f2` |
-| dark1 | `#2e2a4d` |
-| dark2 | `#1b1830` |
+| dark1 | `#3e2a4d` |
+| dark2 | `#241830` |
 | dark3 | `#d8b26a` |
 
-Honorífico del recuerdito: **Guardianes del Primer Sueño**.
+Honorífico del recuerdito: **Bordador de Estrellas**.
 
-### 7.5 Comprobación de que se distinguen
+### 7.5 Oh Baby — `oh-baby` · varón · **referencia de la clienta**
 
-| | Material | Textura | Temperatura | Claro u oscuro |
+La escenografía de la Propuesta A. Arco retroiluminado color marfil, luna
+creciente con estrellas colgando, nubes de neón, un globo aerostático, ositos de
+peluche grandes, hortensias y rosas blancas, velas, un cajón con la palabra BABY
+y cortina plisada de fondo. Azul polvo sobre marfil, con la luz dorada y cálida
+que tiene la referencia.
+
+Silueta que la identifica: **luna, nubes y globo, recortados y con luz propia.**
+Es la única nocturna y la única que brilla.
+
+| Token | Valor |
+|---|---|
+| accent | `#7fa6d1` |
+| accentSoft | `#e3edf7` |
+| yellow | `#d9b779` |
+| ink | `#2b3a4d` |
+| bgLight1 | `#f6f2ea` |
+| bgLight2 | `#e8f0f8` |
+| dark1 | `#3d5675` |
+| dark2 | `#24334a` |
+| dark3 | `#d9b779` |
+
+Honorífico del recuerdito: **Guardián del Primer Sueño**.
+
+### 7.6 Safari de Animalitos — `safari-animalitos` · cualquiera · **referencia de la clienta**
+
+La Propuesta B. Panel circular con animalitos ilustrados en acuarela — león,
+jirafa, cebra, tigre —, guirnalda de globos en salvia, crema y arena, cubos BABY
+con letras doradas, hojas tropicales y alfombra de yute. Diurna y al aire libre.
+
+Silueta que la identifica: **animalitos ilustrados sobre panel circular.** Es la
+única con dibujo.
+
+| Token | Valor |
+|---|---|
+| accent | `#8aa87a` |
+| accentSoft | `#e8efe2` |
+| yellow | `#dcb85c` |
+| ink | `#33402c` |
+| bgLight1 | `#f4efe2` |
+| bgLight2 | `#eaf0e4` |
+| dark1 | `#5a7350` |
+| dark2 | `#33422e` |
+| dark3 | `#dcb85c` |
+
+Honorífico del recuerdito: **Explorador de la Primera Aventura**.
+
+*Nota de costo:* los animalitos pueden vivir dentro del `fondo-sala.jpg` o salir
+como recortes para la cabina. **Recomiendo dentro del fondo**, que es lo que hace
+la referencia y no agrega piezas a la Tabla B.
+
+### 7.7 Comprobación de que se distinguen
+
+| | Silueta | Material | Luz | Registro |
 |---|---|---|---|---|
-| Pequeño Navegante | papel y cuerda | rayas y recorte | fría | claro |
-| Osito Aviador | cuero y lona | cuadrícula y costura | cálida | claro |
-| Jardín de Invernadero | vidrio y greda | línea botánica | fría vegetal | claro |
-| Luna de Encaje | tela y encaje | calado | fría nocturna | **oscuro** |
+| Pequeño Navegante | barquito y ola recortada | papel kraft y cuerda | diurna, fría | marinero |
+| Osito Aviador | avioneta y plano de vuelo | cuero y lona cosida | diurna, cálida | vintage |
+| Oh Baby | luna, nubes, globo | globo brillante y tela plisada | **nocturna, con luz propia** | elegante |
+| Jardín de Invernadero | panel de vidrio y hoja | greda y botánica a línea | diurna, vegetal | botánico |
+| Encaje de Estrellas | calado y estrella bordada | tela y encaje | **nocturna, sin brillo** | íntimo |
+| Safari de Animalitos | animalito dibujado | panel impreso y globo mate | diurna, natural | tierno |
 
-Ninguna comparte material ni textura con otra, y la cuarta se separa además por
-ser la única oscura.
+Ninguna comparte silueta con otra. Los dos pares que estuvieron más cerca y cómo
+se resolvieron:
 
-**Una observación honesta:** Pequeño Navegante y Jardín de Invernadero funcionan
-para cualquier bebé, no sólo para el lado al que los asigné. Si en algún momento
-quieres venderlos sin etiqueta de sexo, se puede hacer sin tocar el diseño.
+**Oh Baby contra Encaje de Estrellas.** Las dos son nocturnas y las dos tenían
+luna. Se resolvió sacándole la luna a la segunda y dejándola como la temática
+textil: una brilla, la otra no; una es azul y dorada, la otra ciruela y rosa.
+
+**Safari contra Jardín de Invernadero.** Las dos son verdes. Se distinguen
+porque una es ilustración y la otra es botánica realista, y porque el acento de
+Jardín es terracota contra el mostaza del Safari. **Es el par más cercano de los
+seis**; si en la producción se ven parecidas, lo primero que movería es empujar
+Jardín más hacia la terracota.
+
+**El juego, por temática.** El motor `copos` deja caer objetos, así que cada
+temática cambia sólo qué cae: barquitos de papel en Navegante, hélices en Osito
+Aviador, estrellitas en Oh Baby, hojas de eucalipto en Jardín, estrellas
+bordadas en Encaje, y hojas de selva en Safari. Seis sets de imágenes, cero
+código nuevo.
+
+**Sobre el costo de pasar de cuatro a seis.** Cada temática son 8 o 9 piezas
+(Tabla B), así que el catálogo completo son unas 50. Por eso las fases 5 y 6
+entregan de a dos, y no las seis de una.
 
 ---
 
@@ -532,11 +625,12 @@ en invitación, kiosco, recuerdito y álbum.
 *Verificable:* recorrer un baby shower completo sin encontrar la palabra
 "cumpleaños" ni "diploma" en ninguna parte.
 
-**Fase 5 — Una temática de varón y una de niña, completas.** Propongo Pequeño
-Navegante y Luna de Encaje, que son las dos más distintas entre sí.
+**Fase 5 — Las dos de la clienta, completas.** **Oh Baby** y **Safari de
+Animalitos**, que son las que ya tienen referencia visual y cliente esperando.
 *Verificable:* invitación, cabina, juego, recuerdito y álbum en las dos.
 
-**Fase 6 — Las otras dos.** Osito Aviador y Jardín de Invernadero.
+**Fase 6 — Las otras cuatro**, de a dos: Pequeño Navegante y Encaje de
+Estrellas primero, después Osito Aviador y Jardín de Invernadero.
 
 **Después, si conviene:** el juego de adivinar, que es el único que necesita un
 motor nuevo.
@@ -570,27 +664,62 @@ vinculante y el nombre elegido es otro, pero conviene saber que estaba.
   que sí lo cuesta.
 - **Los honoríficos de la sección 7** son propuestas mías. Si alguno no te suena,
   cámbialo: es un texto por temática.
+- **El nombre personalizado en el panel del Safari.** Es la única pieza que no
+  escala por temática sino por fiesta. Hay que decidir si se cobra aparte.
 - **Si el puzzle sirve para cualquier temática** o depende de los personajes. Se
   resuelve en la Fase 0, mirando el kiosco andando.
 
 ---
 
-## 10. Pendiente: propuestas visuales de la clienta
+## 10. Propuestas visuales de la clienta — recibidas
 
-Luis va a mandar **dos propuestas visuales de una clienta real**. Entran en la
-Fase 4 y no bloquean nada anterior.
+Luis mandó dos referencias el 2026-08-25. Las dos entran al catálogo como
+temáticas 7.5 y 7.6.
 
-Cuando lleguen, hay que sacarles:
+### Propuesta A — "Oh Baby" → temática `oh-baby`
 
-- Paleta real, y si choca con alguna de las cuatro de la sección 7.
-- Materiales y texturas, que es lo que de verdad define la temática.
-- Si corresponden a varón, a niña, o a ninguno de los dos.
-- Si reemplazan una de las cuatro propuestas o se suman como quinta y sexta.
-- Tipografía, si la traen.
+**Qué trae.** Arco retroiluminado marfil con "Oh Baby" en letra manuscrita,
+guirnalda de globos en azul polvo, blanco y crema, luna creciente con estrellas
+colgando, nubes de neón, globo aerostático, dos ositos de peluche grandes,
+hortensias y rosas blancas, velas, cajón con la palabra BABY, cortina plisada.
+Todo bañado en luz dorada cálida.
 
-### Propuesta A — (pendiente)
+**Paleta que le saqué.** Azul polvo `#7fa6d1`, marfil `#f6f2ea`, dorado cálido
+`#d9b779`, azul profundo `#24334a`.
 
-### Propuesta B — (pendiente)
+**Lo que define la temática.** La luz. Es la única de las seis que es nocturna y
+que tiene elementos que brillan por sí mismos. Eso hay que conservarlo en el
+héroe de la invitación y en el fondo de sala.
+
+**Advertencia para la clienta.** La referencia está marcada *"Modificado por
+IA"*: es una escenografía generada, no una fiesta real. Sirve perfecto como
+dirección visual, pero conviene decírselo si espera que el montaje físico se vea
+idéntico. Las nubes de neón y ese volumen de flor fresca tienen un costo que la
+imagen no muestra.
+
+### Propuesta B — Safari "Lorenzo" → temática `safari-animalitos`
+
+**Qué trae.** Panel circular con animalitos ilustrados en acuarela sobre degradé
+verde, guirnalda de globos en salvia, crema, arena y confeti, cubos blancos con
+BABY en dorado, cilindros con más animalitos, hojas tropicales, esferas de
+follaje, alfombra de yute. Al aire libre, a plena luz.
+
+**Paleta que le saqué.** Salvia `#8aa87a`, crema `#f4efe2`, mostaza suave
+`#dcb85c`, verde profundo `#33422e`.
+
+**Lo que define la temática.** La ilustración. Es la única de las seis con
+dibujo, y eso la vuelve la más barata de producir.
+
+**Sobre los derechos.** Los animalitos de esa imagen son de quien los ilustró.
+Producimos los nuestros en el mismo registro — acuarela suave, animal sentado de
+frente, mejillas rosadas — sin copiar los de la referencia.
+
+### Lo que queda por confirmar con la clienta
+
+- **El nombre del bebé en el panel circular**, como el "Lorenzo" de la
+  referencia. Eso lo vuelve un asset **por fiesta** y no por temática, y hay que
+  cotizarlo aparte. Es la única pieza del plan que no escala.
+- Si las dos referencias son para dos fiestas distintas o para elegir una.
 
 ---
 

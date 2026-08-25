@@ -53,7 +53,13 @@ export function buildPages(data) {
       pages.push({ layout: 'video', items: [item] })
       continue
     }
-    if (item.message || item.author) {
+    // Solo el MENSAJE hace una pagina de nota. Antes bastaba con el autor, y
+    // como el formulario del invitado pide el nombre pero deja el mensaje
+    // opcional, la mayoria de las fotos caia aca: se armaba una cita con la
+    // comilla de apertura, la firma abajo y un hueco enorme en el medio donde
+    // no habia nada escrito. Sin mensaje la foto sigue el flujo normal y el
+    // nombre aparece como credito al pie, que es lo que corresponde.
+    if (item.message) {
       flush()
       pages.push({ layout: 'note', items: [item] })
       continue

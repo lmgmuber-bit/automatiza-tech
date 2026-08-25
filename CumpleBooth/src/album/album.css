@@ -12,6 +12,8 @@
 @import '@fontsource/baloo-2/latin-600.css';
 @import '@fontsource/baloo-2/latin-700.css';
 @import '@fontsource/baloo-2/latin-800.css';
+@import '@fontsource/caveat/latin-500.css';
+
 
 :root {
   --pink: #7C3AED;
@@ -23,17 +25,18 @@
   --dark1: #3b1d5e;
   --dark2: #26123f;
   --dark3: #8B5CF6;
-  --paper: #fffdf8;
+  /* El papel NO es un color fijo. Se deriva de bgLight1, que sí cambia con la
+     temática, así que cada tema imprime su revista en su propio tono sin que
+     applyThemeColors() tenga que conocer un token nuevo. */
+  --paper: color-mix(in srgb, var(--bg-light1) 44%, #fff);
   --radius: 18px;
   --font: 'Baloo 2', 'Segoe UI Rounded', 'Segoe UI', system-ui, sans-serif;
   /* Voz del invitado. La redonda de la marca es la voz de CumpleClick: sirve
      para títulos, botones y folios. Pero el mensaje que escribió un invitado no
      es interfaz, es lo que esa persona quiso decirle al cumpleañero, y puesto en
-     la misma fuente que los botones se lee como un cartel más. Una serif lo
-     devuelve al registro de recuerdo: dedicatoria, no UI. Todas las de la lista
-     vienen con el sistema, así que no agrega ni un byte de descarga. */
-  --font-note: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua',
-    Georgia, 'Times New Roman', serif;
+     la misma fuente que los botones se lee como un cartel más. Una manuscrita lo
+     devuelve a lo que es: algo escrito a mano para el cumpleañero. */
+  --font-note: 'Caveat', 'Segoe Script', 'Bradley Hand', cursive;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -218,40 +221,101 @@ body {
 
 /* ── Páginas ──────────────────────────────────────────────────────────────── */
 
+/* El papel sale de la temática. Era una crema fija (#fffdf8), así que el álbum
+   de Reino de Hielo y el de Carreras eran exactamente la misma hoja blanca: la
+   temática vivía sólo dentro de las fotos y el resto de la revista no se
+   enteraba. Ahora cada tema tiñe su papel a partir de su propio bgLight1. */
 .mag {
   position: absolute; inset: 0;
   container-type: size;
   container-name: mag;
   display: flex; flex-direction: column;
-  padding: 7cqw;
+  padding: 7cqw 7cqw 9cqh;
   gap: 3cqh;
   color: var(--ink);
-  background: var(--paper);
+  overflow: hidden;
+  background-color: var(--paper);
+  /* Confeti impreso: dos tramas de puntos en los colores del tema, muy bajas.
+     Es lo que separa "hoja en blanco con una foto pegada" de "papel de
+     fiesta". No es un asset, son dos gradientes: cero bytes de descarga. */
+  background-image:
+    radial-gradient(circle at 50% 50%,
+      color-mix(in srgb, var(--pink) 15%, transparent) 0 11%, transparent 12%),
+    radial-gradient(circle at 50% 50%,
+      color-mix(in srgb, var(--yellow) 24%, transparent) 0 9%, transparent 10%),
+    radial-gradient(130% 80% at 50% -14%,
+      color-mix(in srgb, var(--pink-soft) 62%, transparent), transparent 62%);
+  background-size: 6.4cqw 6.4cqw, 9.7cqw 9.7cqw, 100% 100%;
+  background-position: 0 0, 3.1cqw 4.3cqw, 0 0;
 }
 .mag--blank { background: transparent; }
 
-.mag__folio {
-  position: absolute; bottom: 2.6cqh; left: 0; right: 0;
-  text-align: center;
-  font-size: 3cqw; font-weight: 700; letter-spacing: .18em;
-  color: color-mix(in srgb, var(--ink) 45%, transparent);
+/* Canto de color: la franja superior que en una revista impresa marca la
+   sección, más un filete finito alrededor de la hoja. Es la señal más barata
+   de que esta página pertenece a ESTA temática y no a otra. */
+.mag::after {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0.9cqh 0 var(--pink),
+    inset 0 0 0 0.32cqw color-mix(in srgb, var(--pink) 22%, transparent);
 }
+.mag--cover::after, .mag--closing::after, .mag--bleed::after,
+.mag--blank::after { box-shadow: none; }
 
+.mag__folio {
+  position: absolute; bottom: 3cqh; left: 0; right: 0;
+  text-align: center;
+  font-size: 2.8cqw; font-weight: 800; letter-spacing: .2em;
+  color: color-mix(in srgb, var(--ink) 42%, transparent);
+}
+.mag__folio--light { color: rgba(255,255,255,.74); z-index: 3; }
+
+/* Passe-partout. El borde blanco tiene que ser `border` y no un box-shadow
+   inset: el inset se pinta debajo del contenido, así que la foto lo tapaba
+   entero y el marco no se veía nunca. Afuera va un aro fino del color del
+   tema, y la sombra se tiñe con la tinta del tema porque una sombra negra
+   sobre papel de color se ve sucia. */
 .mag__frame {
+  position: relative;
   flex: 1; min-height: 0;
-  border-radius: 3cqw; overflow: hidden;
+  border: 0.9cqw solid #fff;
+  border-radius: 2.4cqw;
+  overflow: hidden;
   background: color-mix(in srgb, var(--pink-soft) 70%, #fff);
-  box-shadow: inset 0 0 0 0.9cqw #fff, 0 1.4cqw 3cqw rgba(0,0,0,.14);
+  box-shadow:
+    0 0 0 0.3cqw color-mix(in srgb, var(--pink) 34%, transparent),
+    0 1.6cqw 3.2cqw color-mix(in srgb, var(--ink) 20%, transparent);
 }
 .mag__photo { width: 100%; height: 100%; object-fit: cover; display: block; }
 
+/* Inclinación de álbum de recortes. Alterna con la paridad del folio: si
+   todas cayeran para el mismo lado se leería como un error de maquetación. */
+.mag__frame--tilt { transform: rotate(-1.1deg); }
+.mag.is-alt .mag__frame--tilt { transform: rotate(1deg); }
+
 .mag__credit {
   margin: 0; text-align: center;
-  font-size: 3.2cqw; font-weight: 700;
-  color: color-mix(in srgb, var(--ink) 62%, transparent);
+  font-size: 3cqw; font-weight: 800;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--pink) 74%, var(--ink));
+}
+.mag__credit--light {
+  position: absolute; left: 7cqw; right: 7cqw; bottom: 7.5cqh;
+  z-index: 3; color: #fff;
+  text-shadow: 0 0.3cqw 1.4cqw rgba(0,0,0,.5);
 }
 
-/* Portada y cierre: arte a sangre con velo para que el texto se lea siempre. */
+.mag__rule {
+  display: block; width: 24cqw; height: 1cqh;
+  border-radius: 999px; background: var(--yellow);
+}
+
+/* Portada y cierre: arte a sangre con velo para que el texto se lea siempre.
+   El velo usa dark1 arriba y dark2 abajo, los dos de la temática, en vez de
+   un solo tono repetido: da profundidad y hace que la portada de cada tema se
+   distinga de lejos. */
 .mag--cover, .mag--closing {
   background-size: cover; background-position: center;
   color: #fff; justify-content: space-between;
@@ -260,9 +324,10 @@ body {
 .mag__veil {
   position: absolute; inset: 0;
   background: linear-gradient(180deg,
-    color-mix(in srgb, var(--dark1) 62%, transparent) 0%,
-    color-mix(in srgb, var(--dark1) 22%, transparent) 38%,
-    color-mix(in srgb, var(--dark1) 82%, transparent) 100%);
+    color-mix(in srgb, var(--dark1) 68%, transparent) 0%,
+    color-mix(in srgb, var(--dark2) 8%, transparent) 34%,
+    color-mix(in srgb, var(--dark2) 8%, transparent) 56%,
+    color-mix(in srgb, var(--dark2) 84%, transparent) 100%);
 }
 .mag--cover > *:not(.mag__veil), .mag--closing > *:not(.mag__veil) { position: relative; z-index: 2; }
 
@@ -270,6 +335,7 @@ body {
   display: flex; justify-content: space-between; align-items: baseline; gap: 2cqw;
   font-size: 3cqw; letter-spacing: .16em; text-transform: uppercase; font-weight: 700;
 }
+.mag__cover-top { border-bottom: 1px solid rgba(255,255,255,.28); padding-bottom: 2cqh; }
 .mag__cover-bottom { border-top: 1px solid rgba(255,255,255,.34); padding-top: 2.4cqh; }
 .mag__eyebrow { color: var(--yellow); }
 
@@ -277,63 +343,182 @@ body {
 .mag__title {
   margin: 0;
   font-size: 11cqw; line-height: 1.02; font-weight: 800;
-  text-shadow: 0 0.6cqw 2.4cqw rgba(0,0,0,.45);
+  text-shadow: 0 0.6cqw 2.4cqw rgba(0,0,0,.5);
 }
 .mag__title--closing { font-size: 9cqw; }
+.mag__cover-main .mag__rule { margin: 3cqh 0 0; }
 .mag__subtitle { margin: 2.4cqh 0 0; font-size: 4.2cqw; opacity: .94; }
 .mag__brand { font-weight: 800; letter-spacing: .12em; }
 
-.mag--duo { gap: 3cqh; }
-.mag--duo .mag__frame { flex: 1; }
+/* Foto sola a sangre: la hoja entera es la foto y el crédito va sobre un
+   degradado. Alterna con la versión montada para que dos fotos solas
+   seguidas no se lean como la misma página repetida. */
+.mag--bleed { padding: 0; }
+.mag--bleed .mag__photo { position: absolute; inset: 0; }
+.mag__scrim {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 38%;
+  background: linear-gradient(180deg,
+    transparent,
+    color-mix(in srgb, var(--dark2) 86%, transparent));
+}
 
+/* Dos fotos: una grande y una chica montada encima corrida hacia un lado, no
+   dos rectángulos iguales apilados. El lado cambia con la paridad. */
+.mag--duo { gap: 0; }
+.mag--duo .mag__frame { flex: 1; }
+.mag--duo .mag__frame:first-child { flex: 1.7; }
+.mag--duo .mag__frame:last-child {
+  margin: -4.5cqh -1cqw 0 15cqw;
+  transform: rotate(1.7deg);
+  z-index: 2;
+}
+.mag.is-alt.mag--duo .mag__frame:first-child { transform: rotate(1deg); }
+.mag.is-alt.mag--duo .mag__frame:last-child {
+  margin: -4.5cqh 15cqw 0 -1cqw;
+  transform: rotate(-1.7deg);
+}
+
+/* Mosaico: cuatro celdas, cuatro fotos, pero la grilla no es simétrica y dos
+   celdas se corren en vertical. Sigue siendo una foto por celda. */
 .mag__grid {
   flex: 1; min-height: 0;
-  display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 2.6cqw;
+  display: grid;
+  grid-template-columns: 1.28fr 1fr;
+  grid-template-rows: 1.12fr 1fr;
+  gap: 2.8cqw;
 }
-.mag--mosaic .mag__frame { flex: none; height: 100%; }
+.mag--mosaic .mag__frame { flex: none; height: 100%; min-height: 0; }
+.mag--mosaic .mag__frame:nth-child(2) { transform: translateY(2.2cqh) rotate(1.2deg); }
+.mag--mosaic .mag__frame:nth-child(3) { transform: translateY(-2.2cqh) rotate(-1.2deg); }
 
-.mag--note { gap: 2.6cqh; }
-.mag__frame--note { flex: 1.6; }
+/* ── Dedicatoria ──────────────────────────────────────────────────────────── */
+
+.mag--note { gap: 3.4cqh; }
+.mag__frame--note { flex: 1.9; }
+
+/* Tarjeta pegada con cinta. La cinta es el único adorno que se permite acá y
+   está en el amarillo de la temática: fija la tarjeta al papel y da la
+   sensación de objeto pegado, no de caja de interfaz. */
 .mag__note {
   position: relative;
   margin: 0; flex: 1; min-height: 0;
-  display: flex; flex-direction: column; justify-content: center; gap: 1.6cqh;
-  padding: 3cqw 4cqw;
-  border-left: 1cqw solid var(--pink);
-  background: color-mix(in srgb, var(--pink-soft) 55%, #fff);
-  border-radius: 0 2.4cqw 2.4cqw 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 2cqh;
+  padding: 5cqw 4.6cqw 4cqw;
+  border-radius: 2.4cqw;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--pink-soft) 94%, #fff),
+    color-mix(in srgb, var(--pink-soft) 52%, #fff));
+  box-shadow:
+    0 0 0 0.28cqw color-mix(in srgb, var(--pink) 24%, transparent),
+    0 1.2cqw 2.8cqw color-mix(in srgb, var(--ink) 16%, transparent);
+  transform: rotate(0.7deg);
 }
-/* Comilla de apertura, del tamaño de la caja y casi transparente: marca que
-   esto es una cita sin robarle lectura al texto. El `/ ''` es el texto
-   alternativo de la regla content: deja la comilla como puro adorno y evita que
-   un lector de pantalla la anuncie antes del mensaje. */
-.mag__note::before {
-  content: '\201C' / '';
-  position: absolute; top: -1.2cqh; left: 2cqw;
-  font-family: var(--font-note);
-  font-size: 16cqw; line-height: 1;
-  color: var(--pink); opacity: .16;
-  pointer-events: none;
+.mag.is-alt .mag__note { transform: rotate(-0.7deg); }
+
+.mag__tape {
+  position: absolute; top: -1.7cqh; left: 50%;
+  width: 24cqw; height: 3.6cqh;
+  transform: translateX(-50%) rotate(-2.4deg);
+  border-radius: 0.4cqw;
+  background: repeating-linear-gradient(135deg,
+    color-mix(in srgb, var(--yellow) 88%, transparent) 0 1.5cqw,
+    color-mix(in srgb, var(--yellow) 52%, transparent) 1.5cqw 3cqw);
+  box-shadow: 0 0.4cqw 1.1cqw color-mix(in srgb, var(--ink) 20%, transparent);
 }
-/* La serif pide una línea más aireada y menos peso que la redonda: a 600 se
-   empasta, y su altura de x menor necesita el aire para no apretarse. */
+
+/* Voz del invitado. Antes era una serif de sistema (Palatino), que devolvía
+   el mensaje al registro editorial pero seguía leyéndose como texto compuesto
+   por nosotros. Lo que un invitado le escribe al cumpleañero es una
+   dedicatoria a mano, así que va en manuscrita. Caveat es legible en tamaño
+   chico, que es donde las manuscritas suelen fallar. */
 .mag__note-text {
   margin: 0;
   font-family: var(--font-note);
-  font-size: 4.2cqw; line-height: 1.5; font-weight: 400;
+  font-size: 6.6cqw; line-height: 1.34; font-weight: 500;
+  color: color-mix(in srgb, var(--ink) 92%, #000);
 }
-.mag__note-text--video { text-align: center; font-size: 3.6cqw; }
-.mag__note-by {
-  font-size: 3.2cqw; font-weight: 800; color: var(--pink);
-  letter-spacing: .04em;
+.mag__note-text--video {
+  text-align: center; font-size: 5cqw;
 }
 
-.mag__frame--video { background: #111; }
-.mag__video { width: 100%; height: 100%; object-fit: contain; display: block; background: #111; }
+/* Firma. No lleva raya larga adelante: el guión es un elemento, no un
+   carácter, así toma el color del tema y no se lo lee un lector de pantalla. */
+.mag__note-by {
+  display: flex; align-items: center; gap: 2.2cqw;
+  font-family: var(--font);
+  font-size: 3cqw; font-weight: 800;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--pink);
+}
+.mag__note-dash {
+  flex: none; width: 6.5cqw; height: 0.45cqh;
+  border-radius: 999px; background: currentColor;
+}
+
+/* ── Video ────────────────────────────────────────────────────────────────── */
+
+.mag--video { padding-top: 9cqh; }
+.mag__badge {
+  position: absolute; top: 3.4cqh; left: 7cqw; z-index: 4;
+  padding: 1cqh 2.8cqw; border-radius: 999px;
+  background: var(--pink); color: #fff;
+  font-size: 2.6cqw; font-weight: 800; letter-spacing: .16em; text-transform: uppercase;
+}
+.mag__frame--video { background: #0d1116; }
+.mag__video { width: 100%; height: 100%; object-fit: contain; display: block; background: #0d1116; }
 
 .mag--closing { justify-content: center; text-align: center; }
-.mag__closing-body { display: flex; flex-direction: column; align-items: center; gap: 2.4cqh; }
+.mag__closing-body { display: flex; flex-direction: column; align-items: center; gap: 2.6cqh; }
 .mag__closing-note { margin: 0; font-size: 3.8cqw; opacity: .92; }
+
+/* ── Entrada de página ────────────────────────────────────────────────────── */
+
+/* Sólo las páginas quietas del pliego y las de la lista. La hoja que está
+   volando durante el pase se monta y desmonta en cada giro: animarle el
+   contenido sería un parpadeo en medio del movimiento, no una entrada.
+
+   Los marcos y la tarjeta animan sólo opacidad porque ya llevan un `rotate`
+   propio; un keyframe con transform se lo pisaría y quedarían derechos. El
+   acercamiento va en la foto, que no tiene transform y está dentro de un
+   contenedor con overflow oculto. */
+@media (prefers-reduced-motion: no-preference) {
+  .flipbook__half .mag__frame,
+  .flipbook__half .mag__note,
+  .album-scroll__page .mag__frame,
+  .album-scroll__page .mag__note {
+    animation: mag-in 520ms ease both;
+  }
+  .flipbook__half .mag__photo,
+  .album-scroll__page .mag__photo {
+    animation: mag-zoom-in 760ms cubic-bezier(.16,1,.3,1) both;
+  }
+  .flipbook__half .mag__note-text,
+  .flipbook__half .mag__note-by,
+  .flipbook__half .mag__cover-main > *,
+  .flipbook__half .mag__closing-body > *,
+  .album-scroll__page .mag__note-text,
+  .album-scroll__page .mag__note-by {
+    animation: mag-rise 620ms cubic-bezier(.16,1,.3,1) both;
+  }
+  .flipbook__half .mag__tape { animation: mag-tape 520ms cubic-bezier(.16,1,.3,1) 140ms both; }
+
+  .mag__grid .mag__frame:nth-child(2) { animation-delay: 70ms; }
+  .mag__grid .mag__frame:nth-child(3) { animation-delay: 140ms; }
+  .mag__grid .mag__frame:nth-child(4) { animation-delay: 210ms; }
+  .mag--duo .mag__frame:last-child { animation-delay: 110ms; }
+  .mag__note-text { animation-delay: 130ms; }
+  .mag__note-by { animation-delay: 230ms; }
+  .mag__cover-main > *:nth-child(2) { animation-delay: 120ms; }
+  .mag__cover-main > *:nth-child(3) { animation-delay: 210ms; }
+  .mag__closing-body > *:nth-child(2) { animation-delay: 110ms; }
+  .mag__closing-body > *:nth-child(3) { animation-delay: 200ms; }
+  .mag__closing-body > *:nth-child(4) { animation-delay: 290ms; }
+}
+
+@keyframes mag-in { from { opacity: 0; } }
+@keyframes mag-zoom-in { from { opacity: 0; transform: scale(1.07); } }
+@keyframes mag-rise { from { opacity: 0; transform: translateY(2.4cqh); } }
+@keyframes mag-tape { from { opacity: 0; transform: translateX(-50%) rotate(-2.4deg) scaleX(.55); } }
 
 /* ── Respaldo sin volteo: mismos diseños, en columna ──────────────────────── */
 

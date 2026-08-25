@@ -113,17 +113,22 @@ $temaDir   = $themesDir . '/' . $TEMA;
  * salga con variedad real: páginas de nota, mosaicos y fotos a sangre. Los que
  * no traen mensaje se agrupan en mosaico, que es justo lo que hace buildPages().
  *
+ * Los mensajes son neutros en género y toman el nombre de $NOMBRE. Estaban
+ * escritos para una niña llamada Isidora ("reina del hielo", "prima"), así que
+ * al correr el script con otro tema y otro protagonista la revista salía
+ * felicitando a alguien que no era.
+ *
  * `cut` es el recorte del personaje que se usa SOLO si hay que componer la foto
  * con GD. Si existe la carpeta de fotos reales, se ignora.
  */
 $INVITADOS = [
-    ['cut' => 'elsa',     'autor' => 'La tía Carolina', 'mensaje' => 'Isidora, que tu cumpleaños sea tan lindo como tú. Gracias por invitarnos, lo pasamos increíble bailando contigo toda la tarde.'],
+    ['cut' => 'elsa',     'autor' => 'La tía Carolina', 'mensaje' => 'Que tu cumpleaños sea tan lindo como tú, ' . $NOMBRE . '. Gracias por invitarnos, lo pasamos increíble toda la tarde.'],
     ['cut' => 'anna',     'autor' => 'Matías',          'mensaje' => null],
-    ['cut' => 'olaf',     'autor' => 'Fernanda',        'mensaje' => null],
-    ['cut' => 'sven',     'autor' => 'Los primos',      'mensaje' => null],
+    ['cut' => 'olaf',     'autor' => 'Fernanda',        'mensaje' => 'Se te caía el gorro de tanto correr y no te importaba nada. Así te queremos.'],
+    ['cut' => 'sven',     'autor' => 'Los primos',      'mensaje' => 'Prometimos no comernos toda la torta y no lo cumplimos. Perdón.'],
     ['cut' => 'bruni',    'autor' => 'Josefa',          'mensaje' => null],
-    ['cut' => 'kristoff', 'autor' => 'El tío Rodrigo',  'mensaje' => 'Nunca había visto a alguien soplar las velas con tanta energía. ¡Feliz cumpleaños, reina del hielo!'],
-    ['cut' => 'elsa',     'autor' => 'Abuela Rosa',     'mensaje' => 'Mi niña querida, que cumplas muchos más. Te quiero con todo el corazón.'],
+    ['cut' => 'kristoff', 'autor' => 'El tío Rodrigo',  'mensaje' => 'Nunca había visto a alguien soplar las velas con tanta energía. ¡Feliz cumpleaños!'],
+    ['cut' => 'elsa',     'autor' => 'Abuela Rosa',     'mensaje' => 'Te quiero con todo el corazón, ' . $NOMBRE . '. Que cumplas muchos más.'],
     ['cut' => 'anna',     'autor' => 'Camila',          'mensaje' => null],
     ['cut' => 'olaf',     'autor' => 'Vicente',         'mensaje' => null],
 ];
@@ -142,6 +147,37 @@ if (is_dir($fotosDir)) {
         foreach (glob($fotosDir . '/*.' . $ext) ?: [] as $f) { $FOTOS_REALES[] = $f; }
     }
     sort($FOTOS_REALES, SORT_NATURAL);
+}
+
+/**
+ * Consigue el póster del video: el primer cuadro que ve el invitado antes de
+ * apretar play. Sin él la página del video es un rectángulo negro.
+ *
+ * Primero busca un JPEG hermano (`_video-demo.jpg`). Ese es el camino
+ * confiable: en hosting compartido casi nunca hay ffmpeg y muchas veces
+ * exec() viene deshabilitado, así que depender del binario significaba no
+ * tener póster justo en producción, que es donde importa. Recién si no está
+ * el archivo intenta extraerlo con ffmpeg, y si tampoco se puede devuelve
+ * null sin quejarse: el video igual queda cargado.
+ */
+function cita_poster_de_video(string $videoPath, string $videoOriginal): ?string
+{
+    $hermano = preg_replace('/\.mp4$/i', '.jpg', $videoOriginal);
+    if (is_string($hermano) && $hermano !== $videoOriginal && is_file($hermano)) {
+        $copia = tempnam(sys_get_temp_dir(), 'ccpos') . '.jpg';
+        if (copy($hermano, $copia)) { return $copia; }
+        @unlink($copia);
+    }
+
+    if (!function_exists('exec')) { return null; }
+    $destino = tempnam(sys_get_temp_dir(), 'ccpos') . '.jpg';
+    $cmd = 'ffmpeg -y -loglevel error -ss 1.2 -i ' . escapeshellarg($videoPath)
+         . ' -frames:v 1 -q:v 3 ' . escapeshellarg($destino) . ' 2>&1';
+    $salida = []; $codigo = 1;
+    @exec($cmd, $salida, $codigo);
+    if ($codigo === 0 && is_file($destino) && filesize($destino) > 0) { return $destino; }
+    @unlink($destino);
+    return null;
 }
 
 /**
@@ -207,16 +243,27 @@ if (!function_exists('cb_album_ensure')) {
 try { cb_pdo()->query('SELECT 1 FROM cc_event_profiles LIMIT 1'); }
 catch (Throwable $e) { $problemas[] = 'Falta la tabla cc_event_profiles: corre _at-migrar.php (008 y 009).'; }
 
-if (!function_exists('imagecreatetruecolor')) {
-    $problemas[] = 'La extensión GD no está disponible: sin ella no se pueden componer las fotos.';
-}
+// La guía del tema (fondo de sala + recortes) sólo hace falta cuando hay que
+// componer las fotos con GD. Con la carpeta `_fotos-demo` completa no se usa
+// nada de eso, y exigirla igual dejaba el script inservible en cualquier tema
+// que no fuera hielo: pedía los recortes de elsa, anna y olaf para armar una
+// fiesta de Carreras con fotos propias.
 $fondoSala = $temaDir . '/fondo-sala.jpg';
-if (!is_file($fondoSala)) { $problemas[] = 'Falta ' . $fondoSala; }
-$cutsFaltantes = [];
-foreach ($INVITADOS as $inv) {
-    if (!is_file($temaDir . '/' . $inv['cut'] . '-cut.png')) { $cutsFaltantes[] = $inv['cut']; }
+$hayFotosReales = count($FOTOS_REALES) >= count($INVITADOS);
+if (!$hayFotosReales) {
+    if (!function_exists('imagecreatetruecolor')) {
+        $problemas[] = 'La extensión GD no está disponible: sin ella no se pueden componer las fotos.';
+    }
+    if (!is_file($fondoSala)) { $problemas[] = 'Falta ' . $fondoSala; }
+    $cutsFaltantes = [];
+    foreach ($INVITADOS as $inv) {
+        if (!is_file($temaDir . '/' . $inv['cut'] . '-cut.png')) { $cutsFaltantes[] = $inv['cut']; }
+    }
+    if ($cutsFaltantes) {
+        $problemas[] = 'Faltan recortes del tema: ' . implode(', ', array_unique($cutsFaltantes))
+                     . '. O deja ' . count($INVITADOS) . ' fotos en la carpeta _fotos-demo y no hacen falta.';
+    }
 }
-if ($cutsFaltantes) { $problemas[] = 'Faltan recortes del tema: ' . implode(', ', array_unique($cutsFaltantes)); }
 
 try {
     $existente = cb_load_parties();
@@ -231,8 +278,17 @@ echo '<div class="paso"><b>1 · Fiesta</b><code>' . h($SLUG) . '</code> — ' . 
 echo '<div class="paso"><b>2 · Ficha del cumpleañero</b>8 datos: gustos, tallas e ideas de regalo</div>';
 echo '<div class="paso"><b>3 · Invitación</b>publicada, con su enlace bonito</div>';
 echo '<div class="paso"><b>4 · Álbum</b>con su QR de carga y su enlace de revista</div>';
-echo '<div class="paso"><b>5 · Fotos</b>' . count($INVITADOS) . ' recreadas con GD desde la guía del tema '
-   . '(fondo de sala + recorte del personaje), 3 con mensaje de invitado</div>';
+$conMensaje = count(array_filter($INVITADOS, static fn ($i) => !empty($i['mensaje'])));
+echo '<div class="paso"><b>5 · Fotos</b>' . count($INVITADOS) . ' '
+   . ($hayFotosReales
+        ? 'tomadas de la carpeta <code>_fotos-demo</code>'
+        : 'recreadas con GD desde la guía del tema (fondo de sala + recorte del personaje)')
+   . ', ' . $conMensaje . ' con mensaje de invitado</div>';
+echo '<div class="paso"><b>5b · Video</b>'
+   . (is_file(__DIR__ . '/_video-demo.mp4')
+        ? 'se agrega <code>_video-demo.mp4</code> como página de video'
+        : 'sin <code>_video-demo.mp4</code>: el álbum queda sin página de video')
+   . '</div>';
 echo '<div class="paso"><b>6 · Curaduría</b>todas aprobadas, la primera marcada como portada</div>';
 echo '<div class="paso"><b>7 · Revista</b>álbum publicado y listo para abrir</div>';
 echo '<p class="mut">storage_mode: <code>' . h($modo) . '</code> · fiestas que se preservan: <strong>'
@@ -438,6 +494,57 @@ try {
     }
     $log[] = '5 · ' . $creadas . ' fotos compuestas y cargadas'
            . ($duplicadas ? ' (' . $duplicadas . ' ya estaban)' : '') . '.';
+
+    // 5b · El video de la fiesta, si lo hay. El álbum acepta video y la revista
+    //      le arma su propia página, pero sin un video en la demo esa página no
+    //      se ve nunca. Deja un `_video-demo.mp4` junto a este archivo.
+    $videoDemo = null;
+    foreach (['_video-demo.mp4', '_fotos-demo/_video-demo.mp4'] as $cand) {
+        if (is_file(__DIR__ . '/' . $cand)) { $videoDemo = __DIR__ . '/' . $cand; break; }
+    }
+    if ($videoDemo === null) {
+        $log[] = '5b · Sin video de demo (es opcional): no se agregó página de video.';
+    } else {
+        $tmpV = tempnam(sys_get_temp_dir(), 'ccvid') . '.mp4';
+        if (!copy($videoDemo, $tmpV)) { throw new RuntimeException('No se copió el video de demo.'); }
+        $shaV = hash_file('sha256', $tmpV);
+        if (cb_album_media_exists($albumId, $shaV)) {
+            @unlink($tmpV);
+            $log[] = '5b · El video ya estaba cargado.';
+        } else {
+            $keyV = cb_album_storage_key($SLUG, 'mp4');
+            $guardadoV = cb_album_store_file($tmpV, $keyV, false);
+            if ($guardadoV === null) { throw new RuntimeException('No se guardó el video.'); }
+
+            // El póster es opcional a propósito: en hosting compartido puede no
+            // haber ffmpeg ni exec(). Sin póster el invitado ve el rectángulo del
+            // reproductor en vez del primer cuadro, que es feo pero no rompe nada.
+            $keyPoster = null; $anchoV = 0; $altoV = 0;
+            $poster = cita_poster_de_video($guardadoV, $videoDemo);
+            if ($poster !== null) {
+                $dimV = getimagesize($poster);
+                if (is_array($dimV)) { $anchoV = (int) $dimV[0]; $altoV = (int) $dimV[1]; }
+                $keyPoster = cb_album_storage_key($SLUG, 'jpg');
+                if (cb_album_store_file($poster, $keyPoster, false) === null) { $keyPoster = null; }
+            }
+
+            $resV = cb_album_record_media($albumId, $partyId, [
+                'access_token' => cb_opaque_token(16),
+                'source' => 'guest', 'media_kind' => 'video',
+                'storage_key' => $keyV, 'poster_storage_key' => $keyPoster,
+                'original_name' => 'las-velitas.mp4',
+                'mime' => 'video/mp4',
+                'byte_size' => filesize($guardadoV), 'sha256' => $shaV,
+                'width' => $anchoV, 'height' => $altoV,
+                'contributor_name' => 'La mamá de ' . $NOMBRE,
+                'contributor_message' => 'El momento de las velitas, grabado desde la otra punta de la mesa.',
+                'moderation_status' => 'pending',
+                'consent_version' => cb_album_consent_version(),
+            ]);
+            if ($resV !== 'ok') { throw new RuntimeException('El video devolvió: ' . $resV); }
+            $log[] = '5b · Video cargado' . ($keyPoster ? ' con póster.' : ' (sin póster: deja un _video-demo.jpg al lado del mp4).');
+        }
+    }
 
     // 6 · Curaduría: aprobar todo y marcar portada
     $medios = cb_album_list_media($albumId);

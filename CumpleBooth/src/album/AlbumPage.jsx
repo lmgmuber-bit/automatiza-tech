@@ -305,7 +305,7 @@ function ClosingPage({ page, base }) {
               ? 'Un recuerdo guardado para siempre.'
               : `${page.count} recuerdos guardados para siempre.`}
         </p>
-        <Colofon marca={page.marca} />
+        <Colofon marca={page.marca} base={base} />
       </div>
     </Page>
   )
@@ -323,8 +323,24 @@ function ClosingPage({ page, base }) {
  * pointerdown de la mitad, y sin esto tocar un enlace empezaría a dar vuelta la
  * hoja en vez de abrirlo.
  */
-function Colofon({ marca }) {
-  if (!marca) return <span className="mag__brand">CumpleClick</span>
+function Colofon({ marca, base }) {
+  const logo = (
+    <img
+      className="mag__colofon-logo"
+      src={base + 'brand/cumpleclick-mark.svg'}
+      alt=""
+      draggable="false"
+    />
+  )
+
+  if (!marca) {
+    return (
+      <div className="mag__colofon">
+        <span className="mag__brand">CumpleClick</span>
+        {logo}
+      </div>
+    )
+  }
 
   const datos = [
     { valor: marca.web, url: marca.web_url },
@@ -337,6 +353,7 @@ function Colofon({ marca }) {
       <span className="mag__rule mag__rule--colofon" aria-hidden="true" />
       {marca.invitacion && <p className="mag__colofon-invita">{marca.invitacion}</p>}
       <span className="mag__brand">{marca.nombre || 'CumpleClick'}</span>
+      {logo}
       {marca.lema && <p className="mag__colofon-lema">{marca.lema}</p>}
       {datos.length > 0 && (
         <ul className="mag__colofon-datos">

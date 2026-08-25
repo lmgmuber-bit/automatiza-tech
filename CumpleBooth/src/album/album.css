@@ -264,6 +264,25 @@ body {
 .mag--cover::after, .mag--closing::after, .mag--bleed::after,
 .mag--blank::after { box-shadow: none; }
 
+/* Marca de agua. Va abajo a la derecha porque el folio ocupa el centro, y
+   discreta a proposito: esta pagina es el recuerdo de una familia, no un
+   aviso. La sombra existe para las paginas a sangre, donde el logo cae sobre
+   la foto y sin ella se pierde contra un fondo claro. */
+.mag::before {
+  content: '';
+  position: absolute; right: 4.5cqw; bottom: 2.6cqh;
+  width: 10.5cqw; aspect-ratio: 1;
+  background: var(--marca-logo) center / contain no-repeat;
+  opacity: .34;
+  filter: drop-shadow(0 0.2cqw 0.5cqw rgba(0,0,0,.28));
+  pointer-events: none;
+  z-index: 4;
+}
+/* La portada es arte a sangre y el cierre ya lleva el logo grande y centrado:
+   en las dos la marca de agua sobraria. */
+.mag--cover::before, .mag--closing::before, .mag--blank::before { content: none; }
+.mag--bleed::before { opacity: .42; }
+
 .mag__folio {
   position: absolute; bottom: 3cqh; left: 0; right: 0;
   text-align: center;
@@ -478,6 +497,13 @@ body {
 .mag__colofon-invita {
   margin: 0; font-size: 3.4cqw; font-weight: 700;
   color: var(--yellow);
+}
+/* El logo del cierre va debajo del nombre y centrado. Sin opacidad rebajada:
+   aca si es la firma de quien hizo el album, no una marca de agua. */
+.mag__colofon-logo {
+  display: block; width: 21cqw; height: auto;
+  margin: 0.4cqh auto 0.6cqh;
+  filter: drop-shadow(0 0.3cqw 1cqw rgba(0,0,0,.4));
 }
 .mag__colofon-lema { margin: 0; font-size: 2.9cqw; opacity: .82; }
 .mag__colofon-datos {

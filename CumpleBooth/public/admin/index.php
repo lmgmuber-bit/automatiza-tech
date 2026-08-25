@@ -598,10 +598,13 @@ if ($formValues === null && $action === 'editar') {
         <div class="kpi-text"><strong><?= (int) $kpiListas ?>/<?= count($themes) ?></strong><span>temáticas listas</span></div>
       </div>
     </div>
-    <form method="post" action="index.php" class="inline-form logout-btn">
-      <?= admin_csrf_field() ?><input type="hidden" name="action" value="logout">
-      <button class="btn btn-ghost" type="submit"><?= admin_icon('logout') ?> Salir</button>
-    </form>
+    <div class="inline-form logout-btn">
+      <a class="btn btn-ghost" href="marca.php">Datos de la marca</a>
+      <form method="post" action="index.php" class="inline-form">
+        <?= admin_csrf_field() ?><input type="hidden" name="action" value="logout">
+        <button class="btn btn-ghost" type="submit"><?= admin_icon('logout') ?> Salir</button>
+      </form>
+    </div>
   </header>
 
   <nav class="tabs">

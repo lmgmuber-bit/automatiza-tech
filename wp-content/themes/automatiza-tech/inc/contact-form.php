@@ -1643,7 +1643,18 @@ class AutomatizaTechContactForm {
          */
         public function send_email_to_new_contacts_n8n() {
             // Token seguro definido en el sistema (ajusta según tu config)
-            $expected_token = 'n8n_test_token';
+            $expected_token = defined('AT_N8N_CONTACTS_TOKEN') && AT_N8N_CONTACTS_TOKEN !== ''
+                ? (string) AT_N8N_CONTACTS_TOKEN
+                : (string) get_option('at_n8n_contacts_token', '');
+
+            // Sin token configurado se rechaza. Antes el valor estaba escrito aqui
+            // como un literal de prueba, y ademas quedo expuesto publicamente en el listado
+            // de errores de ARGOS. Este endpoint dispara un envio masivo de correos a
+            // todos los contactos "nuevos": no puede tener un token por defecto.
+            if ($expected_token === '') {
+                wp_send_json_error('Endpoint no configurado');
+                wp_die();
+            }
             
             $received_token = '';
 
@@ -1671,17 +1682,13 @@ class AutomatizaTechContactForm {
                 $received_token = $_SERVER['HTTP_X_N8N_TOKEN'];
             }
 
-            // Debug log mejorado
-            error_log('=== N8N DEBUG START ===');
-            error_log('Token final detectado: "' . $received_token . '"');
-            error_log('Request Method: ' . ($_SERVER['REQUEST_METHOD'] ?? 'Unknown'));
-            error_log('Content Type: ' . ($_SERVER['CONTENT_TYPE'] ?? 'Not set'));
-            error_log('Query String: ' . ($_SERVER['QUERY_STRING'] ?? 'Empty'));
-            error_log('Body Size: ' . strlen(file_get_contents('php://input')));
-            error_log('=== N8N DEBUG END ===');
+            // Se eliminaron los error_log de depuracion: escribian el token recibido
+            // en claro en debug.log, dejando credenciales en disco.
 
-            if (trim($received_token) !== $expected_token) {
-                wp_send_json_error('Token inválido. Recibido: "' . $received_token . '"');
+            if (!hash_equals($expected_token, trim((string) $received_token))) {
+                // Antes se devolvia el token recibido dentro del mensaje de error,
+                // convirtiendo el endpoint en un espejo para quien probara claves.
+                wp_send_json_error('Token invalido');
                 wp_die();
             }
 

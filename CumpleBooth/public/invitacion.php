@@ -802,8 +802,20 @@ $ogImagen = cb_invitation_download_url($token, 'image') . '&preview=1';
 <meta property="og:url" content="<?= $esc($ogUrl) ?>">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="brand/cumpleclick-mark.svg">
-<link rel="stylesheet" href="assets/invitation.css?v=7">
-<?php if ($eventProfile !== null): ?><link rel="stylesheet" href="assets/event-profile.css?v=2"><?php endif; ?>
+<?php
+// El número de versión de estas dos hojas se mantenía a mano, y olvidarlo es
+// silencioso: el servidor queda con el CSS nuevo y el invitado que ya abrió la
+// invitación sigue viendo el viejo, sin ningún error. Pasó al subir el ajuste
+// de los botones a 44 px. Ahora sale de la fecha de modificación del archivo:
+// cambia solo cuando el archivo cambia, y nunca hay que acordarse.
+$cssVer = static function (string $rel): string {
+    $ruta = __DIR__ . '/' . $rel;
+    $sello = is_file($ruta) ? (string) filemtime($ruta) : '0';
+    return $rel . '?v=' . substr(md5($sello), 0, 8);
+};
+?>
+<link rel="stylesheet" href="<?= $esc($cssVer('assets/invitation.css')) ?>">
+<?php if ($eventProfile !== null): ?><link rel="stylesheet" href="<?= $esc($cssVer('assets/event-profile.css')) ?>"><?php endif; ?>
 </head>
 <body class="inv-body" data-theme="<?= $esc($themeSlug) ?>" style="<?= $esc($invitationThemeStyle) ?>">
 

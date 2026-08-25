@@ -1145,10 +1145,14 @@ body.inv-scroll-locked {
 
 .inv-chip {
   display: inline-flex;
-  min-height: 40px;
+  /* 44px es el mínimo de blanco de toque: por debajo, el dedo falla y hay que
+     reintentar. Medido en 375px de ancho, estos chips daban 40 y 42 px de alto,
+     y son justo los que aprieta el invitado desde el celular — agendar la
+     fiesta, abrir el mapa. El ancho ya pasaba de sobra; el alto no. */
+  min-height: 44px;
   align-items: center;
   gap: 7px;
-  padding: 9px 15px;
+  padding: 11px 15px;
   border: 1px solid rgba(255, 255, 255, .28);
   border-radius: 999px;
   background: rgba(255, 255, 255, .07);

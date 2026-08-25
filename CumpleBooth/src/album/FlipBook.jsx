@@ -35,14 +35,19 @@ export default function FlipBook({ pages, renderPage, onClose, footer }) {
   const singlePageRef = useRef(singlePage)
 
   // En pantallas angostas el pliego de dos páginas no cabe: se pasa de a una.
+  // Pero angosto no es lo mismo que chico: un celular acostado mide 812x375 y
+  // entraba acá por el ancho, cuando lo que le falta es alto y horizontal le
+  // sobra. Quedaba una revista de estampilla con la pantalla vacía a los lados.
+  // Por eso se exige además orientación vertical: acostado va el pliego, que es
+  // justo lo que aprovecha el espacio que sí hay.
   function matchesSingle() {
     if (typeof window === 'undefined' || !window.matchMedia) return false
-    return window.matchMedia('(max-width: 820px)').matches
+    return window.matchMedia('(max-width: 820px) and (orientation: portrait)').matches
   }
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return undefined
-    const query = window.matchMedia('(max-width: 820px)')
+    const query = window.matchMedia('(max-width: 820px) and (orientation: portrait)')
     // Se escucha el cambio del media query Y el resize: en pruebas el evento
     // `change` no llegó a dispararse al redimensionar y el pliego se quedó
     // pegado en modo de una página. De qué lado se equivoque esto define el

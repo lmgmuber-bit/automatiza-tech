@@ -109,16 +109,28 @@ body {
 }
 
 /* El pliego es 3:2 (dos páginas 3:4 lado a lado). Se acota por ancho y por
-   alto a la vez para que nunca se salga de pantalla en horizontal. */
+   alto a la vez para que nunca se salga de pantalla en horizontal.
+
+   Los 150px que se le restan al alto son el espacio de la cabecera y la barra
+   de controles. Estaban fijos, y en un celular acostado —375px de alto— se
+   comían el 40% de la pantalla: la revista quedaba de 169x225, un 12% del
+   viewport, con el resto en fondo vacío. Ahora la reserva es proporcional en
+   pantallas bajas, que es donde molesta; en escritorio sigue dando 150px. */
+/* 30dvh es la barra de controles (56px) más el aire del escenario, medido en
+   una pantalla de 375px de alto. Debajo de 500px de viewport la reserva se
+   vuelve proporcional; encima, `min()` devuelve los 150px de siempre, así que
+   escritorio y celular vertical no cambian en nada. */
+:root { --chrome: min(150px, 30dvh); }
+
 .flipbook {
   position: relative;
-  width: min(96vw, calc((100dvh - 150px) * 1.5), 1180px);
+  width: min(96vw, calc((100dvh - var(--chrome)) * 1.5), 1180px);
   aspect-ratio: 3 / 2;
   perspective: 2400px;
   user-select: none;
 }
 .flipbook-stage.is-single .flipbook {
-  width: min(94vw, calc((100dvh - 150px) * 0.75), 560px);
+  width: min(94vw, calc((100dvh - var(--chrome)) * 0.75), 560px);
   aspect-ratio: 3 / 4;
 }
 

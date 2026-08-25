@@ -109,10 +109,12 @@ $themesDir = is_dir(__DIR__ . '/themes') ? __DIR__ . '/themes' : dirname(__DIR__
 $temaDir   = $themesDir . '/' . $TEMA;
 
 /**
- * Los invitados de la fiesta. Cada uno con su personaje, su mensaje y su
- * encuadre, para que la revista salga con variedad real: páginas de nota,
- * mosaicos y fotos a sangre. Los que no traen mensaje se agrupan en mosaico,
- * que es justo lo que hace buildPages().
+ * Los invitados de la fiesta. Cada uno con su mensaje, para que la revista
+ * salga con variedad real: páginas de nota, mosaicos y fotos a sangre. Los que
+ * no traen mensaje se agrupan en mosaico, que es justo lo que hace buildPages().
+ *
+ * `cut` es el recorte del personaje que se usa SOLO si hay que componer la foto
+ * con GD. Si existe la carpeta de fotos reales, se ignora.
  */
 $INVITADOS = [
     ['cut' => 'elsa',     'autor' => 'La tía Carolina', 'mensaje' => 'Isidora, que tu cumpleaños sea tan lindo como tú. Gracias por invitarnos, lo pasamos increíble bailando contigo toda la tarde.'],
@@ -125,6 +127,22 @@ $INVITADOS = [
     ['cut' => 'anna',     'autor' => 'Camila',          'mensaje' => null],
     ['cut' => 'olaf',     'autor' => 'Vicente',         'mensaje' => null],
 ];
+
+/**
+ * Fotos reales, si las hay. Deja una carpeta `_fotos-demo` junto a este archivo
+ * con jpg o png ordenados por nombre y se usan en vez de las compuestas con GD.
+ * Sirve para dos cosas: fotos generadas para una demo comercial, y las fotos de
+ * una fiesta de verdad cuando quieras mostrarle a un cliente su propio álbum.
+ * Se toman en orden alfabético y se emparejan con la lista de arriba.
+ */
+$fotosDir = __DIR__ . '/_fotos-demo';
+$FOTOS_REALES = [];
+if (is_dir($fotosDir)) {
+    foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
+        foreach (glob($fotosDir . '/*.' . $ext) ?: [] as $f) { $FOTOS_REALES[] = $f; }
+    }
+    sort($FOTOS_REALES, SORT_NATURAL);
+}
 
 /**
  * Compone una "foto de la fiesta" como la arma la cabina: el fondo de sala del
@@ -353,10 +371,16 @@ try {
     // 4 · Álbum + tokens
     $album = cb_album_ensure($partyId);
     $albumId = (int) $album['id'];
+    // intake_enabled va explícito: cb_album_intake_open() lo exige y sin él
+    // subir.php devuelve 403. La primera versión de este script no lo activaba y
+    // la página de carga del invitado quedaba inalcanzable en la demo — con el
+    // álbum en 'collecting' y el token válido, que es lo que despista.
     cb_album_update($albumId, [
-        'title'    => 'El cumpleaños de ' . $NOMBRE,
-        'subtitle' => 'Todo lo que pasó esa tarde',
-        'status'   => 'collecting',
+        'title'          => 'El cumpleaños de ' . $NOMBRE,
+        'subtitle'       => 'Todo lo que pasó esa tarde',
+        'status'         => 'collecting',
+        'intake_enabled' => 1,
+        'intake_videos'  => 1,
     ]);
     $tokenCarga  = cb_album_issue_token($albumId, 'intake', null, 'seed-cita-completa');
     $tokenRevista = cb_album_issue_token($albumId, 'view', null, 'seed-cita-completa');
@@ -365,23 +389,42 @@ try {
     // 5 · Fotos recreadas con la guía del tema
     $creadas = 0; $duplicadas = 0;
     foreach ($INVITADOS as $n => $invitado) {
-        $cutPath = $temaDir . '/' . $invitado['cut'] . '-cut.png';
-        $tmp = componer_foto($fondoSala, $cutPath, 1080, 1350, $n);
-        if ($tmp === null) { throw new RuntimeException('No se pudo componer la foto ' . ($n + 1)); }
+        // Foto real si la hay; si no, se compone con GD desde la guía del tema.
+        // La copia es a propósito: cb_album_store_file mueve el archivo, y sin
+        // copiar se llevaría el original de la carpeta _fotos-demo.
+        $ext = 'jpg';
+        if (isset($FOTOS_REALES[$n])) {
+            $origen = $FOTOS_REALES[$n];
+            $ext = strtolower(pathinfo($origen, PATHINFO_EXTENSION));
+            if ($ext === 'jpeg') { $ext = 'jpg'; }
+            $tmp = tempnam(sys_get_temp_dir(), 'ccreal') . '.' . $ext;
+            if (!copy($origen, $tmp)) { throw new RuntimeException('No se copió ' . basename($origen)); }
+        } else {
+            $cutPath = $temaDir . '/' . $invitado['cut'] . '-cut.png';
+            $tmp = componer_foto($fondoSala, $cutPath, 1080, 1350, $n);
+            if ($tmp === null) { throw new RuntimeException('No se pudo componer la foto ' . ($n + 1)); }
+        }
 
         $sha = hash_file('sha256', $tmp);
         if (cb_album_media_exists($albumId, $sha)) { $duplicadas++; @unlink($tmp); continue; }
 
-        $key = cb_album_storage_key($SLUG, 'jpg');
+        $key = cb_album_storage_key($SLUG, $ext);
         $guardado = cb_album_store_file($tmp, $key, false);
         if ($guardado === null) { throw new RuntimeException('No se guardó la foto ' . ($n + 1)); }
-        $thumb = cb_album_make_thumbnail($guardado, $SLUG, 'jpg');
+        $thumb = cb_album_make_thumbnail($guardado, $SLUG, $ext);
         $dim = getimagesize($guardado);
 
         $res = cb_album_record_media($albumId, $partyId, [
+            // El access_token NO es opcional aunque la firma lo acepte nulo:
+            // album-api.php sirve cada foto por ver-media.php?t=<access_token> y
+            // salta con un `continue` silencioso las que no lo traen. Sin esto
+            // el admin muestra las 9 aprobadas y el invitado abre una revista
+            // vacía, sin un solo error en ninguna parte.
+            'access_token' => cb_opaque_token(16),
             'source' => 'guest', 'media_kind' => 'image',
             'storage_key' => $key, 'thumb_storage_key' => $thumb,
-            'original_name' => 'recuerdo-' . ($n + 1) . '.jpg', 'mime' => 'image/jpeg',
+            'original_name' => 'recuerdo-' . ($n + 1) . '.' . $ext,
+            'mime' => ['jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'][$ext] ?? 'image/jpeg',
             'byte_size' => filesize($guardado), 'sha256' => $sha,
             'width' => is_array($dim) ? (int) $dim[0] : 0,
             'height' => is_array($dim) ? (int) $dim[1] : 0,
@@ -447,7 +490,12 @@ if ($enlaces) {
     }
     echo '<p class="mut">Ábrelos en ese orden y vas a recorrer lo mismo que vive un cliente: '
        . 'recibe la invitación, conoce al cumpleañero, escanea el QR en la fiesta, sube su foto, '
-       . 'tú la apruebas, y al final todos abren la revista.</p></div>';
+       . 'tú la apruebas, y al final todos abren la revista.</p>'
+       . '<p class="warn">Ojo con el enlace de <strong>cargar fotos</strong>: el álbum queda '
+       . '<strong>publicado</strong>, y publicar cierra la recepción, así que va a devolver 403. '
+       . 'Es el comportamiento correcto — durante la fiesta se recibe, después se publica. '
+       . 'Para probar la carga como invitado, entra al admin del álbum y vuelve a abrir la '
+       . 'recepción; el mismo QR sigue sirviendo.</p></div>';
 }
 
 echo '<div class="card"><p class="mut">¿Ya copiaste los enlaces? Entonces borra este archivo.</p>'

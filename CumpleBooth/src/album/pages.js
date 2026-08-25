@@ -75,6 +75,9 @@ export function buildPages(data) {
     themeName: data.theme?.name || '',
     image: data.theme?.assets?.grupo || data.theme?.assets?.banner || null,
     count: media.length,
+    // Contacto de CumpleClick al cierre. Puede venir nulo: la ultima pagina
+    // tiene que seguir funcionando sin el.
+    marca: data.marca || null,
   })
 
   // El pliego de escritorio muestra dos páginas: con un total impar la última

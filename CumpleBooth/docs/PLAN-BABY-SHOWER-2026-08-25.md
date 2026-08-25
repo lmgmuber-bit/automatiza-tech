@@ -38,6 +38,11 @@ producto y se reutiliza.
 `copos` (atrapar cosas que caen), y cambiarle los copos por chupetes es un
 cambio de imágenes, no de código. Detalle en la 4.5.
 
+**De dónde sale la sorpresa.** Antes de la foto cada invitado apuesta a quién se
+va a parecer, cuánto va a pesar y cuándo va a nacer. Esa apuesta le sale impresa
+en el recuerdito, aparece escrita sobre su foto en la revelación, y al final de
+la fiesta los papás abren un tablero con todas juntas. Detalle en la 4.8.
+
 **Lo que ya está hecho y apagado.** `cc_parties.event_type` está desde la
 migración 008 con default `child_birthday`, y `baby_shower` ya figura declarado
 en `event-profile-presets.json`. Falta **una** migración, la 010.
@@ -135,7 +140,20 @@ no rompa nada).
    `cb_album_issue_token()`. Es diez líneas más de esquema y evita forzar una
    relación que no existe.
 
-**El `.down.php`** borra la columna y las dos tablas.
+4. Tabla `cc_predictions` — las apuestas de los invitados (ver la 4.8).
+
+| Columna | Tipo | Para qué |
+|---|---|---|
+| `id` | PK | |
+| `invitation_id` | FK | De qué evento |
+| `guest_name` | VARCHAR(80) | Quién apostó |
+| `parecido` | ENUM `mama` \| `papa` \| `ambos` | |
+| `peso` | ENUM `menos3` \| `entre` \| `mas35` | |
+| `fecha` | ENUM `antes` \| `justo` \| `despues` | |
+| `puntaje_juego` | INT NULL | El del "Atrapa los chupetes" |
+| `created_at` | DATETIME | |
+
+**El `.down.php`** borra la columna y las tres tablas.
 
 ### 4.2 La lista de regalos
 
@@ -282,6 +300,64 @@ es `baby_shower`, todo va incluido y `service_plan` se ignora.
 para las infantiles, y evita el estado sin sentido de un baby shower "plan booth"
 contra uno "plan full". El campo queda en la tabla, simplemente no decide nada en
 esta modalidad.
+
+### 4.8 El recorrido de la cabina, y de dónde sale la sorpresa
+
+Una cabina que sólo saca una foto no sorprende a nadie. En las fiestas
+infantiles el momento fuerte es la **revelación**: el niño se ve dentro de la
+escena con su personaje. Baby shower necesita su propio momento fuerte, y no
+puede ser el mismo porque no hay personajes.
+
+**La propuesta: la predicción.** Antes de la foto, cada invitado apuesta. Esa
+apuesta lo acompaña el resto del recorrido, sale impresa en su recuerdito, y al
+final de la fiesta los papás se llevan todas juntas.
+
+Recorrido completo:
+
+| # | Pantalla | Qué pasa | Estado |
+|---|---|---|---|
+| 1 | Intro | El video inmersivo del tema | ya existe |
+| 2 | **Tu predicción** | Tres preguntas de un toque, más el nombre | **nueva** |
+| 3 | Juego | "¡Atrapa los chupetes!" con su puntaje | motor `copos`, sólo imágenes |
+| 4 | Foto | Fondo de sala del tema y marco | ya existe |
+| 5 | **La revelación** | La foto aparece dentro de la escenografía, con la predicción escrita encima y el puntaje | reusa la pantalla `revelacion` |
+| 6 | Recuerdito | Honorífico + predicción + puntaje | mecanismo del diploma |
+| 7 | QR | Se lleva foto y recuerdito | ya existe |
+
+Las tres preguntas, con botones grandes y respuesta de un toque, porque la gente
+está de pie con un vaso en la mano:
+
+- **¿A quién se va a parecer?** → a la mamá · al papá · a los dos
+- **¿Cuánto va a pesar?** → menos de 3 kilos · entre 3 y 3½ · más de 3½
+- **¿Cuándo va a nacer?** → antes de la fecha · justo ese día · después
+
+Ninguna pide escribir. Nombre del invitado y listo.
+
+**Por qué esto sorprende y una foto sola no.** Tres razones concretas:
+
+1. **El recuerdito deja de ser genérico.** No dice sólo "Guardián del Primer
+   Sueño": dice tu apuesta y tu puntaje. Es tuyo, no del evento.
+2. **La revelación tiene contenido.** La foto entrando a la escenografía con tu
+   predicción escrita encima es un momento, no una previsualización.
+3. **Los papás se llevan algo colectivo.** Al final de la fiesta abren un enlace
+   con **el tablero de predicciones**: quién dijo qué. Eso se guarda, se imprime,
+   y cuando el bebé nace se sabe quién acertó. Ninguna cabina de la competencia
+   entrega eso.
+
+**Qué cuesta.** Una pantalla nueva, una tabla (`cc_predictions`: invitación,
+nombre, tres respuestas, puntaje, fecha) y una página de tablero para los papás,
+que reutiliza el mismo mecanismo de token de la 4.3. La revelación y el
+recuerdito ya existen; hay que darles contenido, no construirlos.
+
+**Y el otro momento fuerte no está en la cabina, está en el álbum.** El álbum ya
+acepta que el invitado deje un **mensaje escrito** junto a su foto, y desde el
+rediseño del 2026-08-25 esos mensajes salen como dedicatoria manuscrita sobre
+tarjeta con cinta. Para baby shower el pie que se le pone al invitado cambia de
+"déjale un mensaje" a **"escríbele algo para cuando cumpla 18"**. Es un cambio
+de texto, cuesta cero, y convierte el álbum en una cápsula del tiempo.
+
+**Esto necesita tu visto bueno**, porque agrega una tabla y una pantalla que no
+estaban en el alcance original.
 
 ## 5. Plan de frontend
 
@@ -614,11 +690,17 @@ condicional, el enlace de los papás, los límites de abuso y los estados de la
 "alguien se te adelantó" en vez de un error. **Al terminar esta fase la modalidad
 ya se puede vender**, sobre una temática que ya existe.
 
-**Fase 3 — La cabina, el juego y el recuerdito.** El recorrido sin las pantallas
-de personaje, "¡Atrapa los chupetes!" como reskin de `copos`, y el honorífico por
-temática.
-*Verificable:* sacarse una foto en el kiosco, jugar, recibir el QR y abrir el
-recuerdito en el teléfono.
+**Fase 3 — La cabina que sorprende.** El recorrido de la 4.8 completo: la
+pantalla de predicción, "¡Atrapa los chupetes!" como reskin de `copos`, la
+revelación con la predicción escrita encima, y el recuerdito con honorífico,
+apuesta y puntaje.
+*Verificable:* recorrer el kiosco de punta a punta, recibir el QR, abrir el
+recuerdito en el teléfono y ver ahí tu propia apuesta.
+
+**Fase 3b — El tablero de predicciones.** La página que abren los papás con
+todas las apuestas juntas.
+*Verificable:* tres personas pasando por la cabina y las tres apareciendo en el
+tablero.
 
 **Fase 4 — Vocabulario.** El diccionario de la 4.4 y el reemplazo de las cadenas
 en invitación, kiosco, recuerdito y álbum.
@@ -657,11 +739,18 @@ Sobre el punto 6, un dato que apareció revisando el código: el preset de
 `baby_shower` ya trae `"Conoce al bebé"` como sugerencia de título. No es
 vinculante y el nombre elegido es otro, pero conviene saber que estaba.
 
+**Aprobado además el 2026-08-25:**
+
+- **Los juegos.** Van "¡Atrapa los chupetes!" (reskin de `copos`, sin código
+  nuevo) y "Arma el ajuar" (el puzzle con una imagen del tema). El de adivinar,
+  que necesitaría un motor nuevo, queda fuera del primer entregable.
+- **Las dos primeras temáticas a producir:** **Oh Baby** y **Safari de
+  Animalitos**.
+
 ### Lo que sigue abierto
 
-- **Cuál de los tres juegos entra primero.** Mi recomendación es el reskin de
-  `copos`, porque no cuesta código. El de adivinar es el más vistoso y el único
-  que sí lo cuesta.
+- **La pantalla de predicción de la 4.8.** Agrega una tabla y una pantalla que
+  no estaban en el alcance original. Necesita tu visto bueno antes de la Fase 3.
 - **Los honoríficos de la sección 7** son propuestas mías. Si alguno no te suena,
   cámbialo: es un texto por temática.
 - **El nombre personalizado en el panel del Safari.** Es la única pieza que no

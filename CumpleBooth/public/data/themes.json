@@ -1699,10 +1699,10 @@
       ],
       "personajes": [],
       "frameBox": {
-        "x": 0.2296,
-        "y": 0.4304,
-        "w": 0.6167,
-        "h": 0.3469
+        "x": 0.2334,
+        "y": 0.4399,
+        "w": 0.5833,
+        "h": 0.3281
       },
       "musicaHint": "Selva tranquila",
       "transition": "none"

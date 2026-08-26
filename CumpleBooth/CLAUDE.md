@@ -69,11 +69,23 @@ personajes de las temáticas infantiles: no hay personajes a quienes hacer
 saludar. La invitación se sostiene sola con el bloque que cierra
 `assets/invitation.css` ("la espera"): la foto respira, `.inv-sparks` —doce `<span>`
 que existían en el HTML sin una sola regla de CSS— se convierte en estrellas o
-luciérnagas según el tema, y la cuenta regresiva pone el número grande y solo.
-Todo cuelga de `[data-theme]` y respeta `prefers-reduced-motion`.
+luciérnagas según el tema, y hay **dos** contadores. Todo cuelga de
+`[data-theme]` y respeta `prefers-reduced-motion`.
+
+Los dos contadores importan y no son un capricho de diseño: el primero decía
+"faltan 39 días para conocer a Valentina", que es falso — en 39 días es el
+baby shower, no el nacimiento. Ahora el de la izquierda cuenta los días hasta
+la fiesta (lo que sí se sabe) y el de la derecha ocupa el mismo lugar donde
+iría un número y muestra `¿?`, porque esa cifra no la sabe nadie. El signo va
+del mismo tamaño y con la misma tipografía que el número: ahí no es un adorno,
+es el dato, y achicarlo lo convertiría en una nota al pie.
 
 El recorrido con videos **está cableado pero los MP4 no existen**: rutas,
-orden y texto de cada capítulo en `docs/VIDEOS-INVITACION-BABY-SHOWER.md`.
+arco, prompts y verificación en `docs/VIDEOS-INVITACION-BABY-SHOWER.md`.
+Los capítulos NO cuentan la sala preparándose —eso es la decoración— sino la
+espera, lo que significa traer un hijo al mundo y el nacimiento que se está
+esperando. El arco es el mismo en las dos temáticas porque lo que se cuenta
+es del bebé; el decorado es lo único que cambia.
 El hero ya lee `invitation/invitation-scroll-v1.mp4` y `-motion-v1.mp4` de
 cualquier tema sin lista blanca, y cada capítulo pasa por `is_file()`, así
 que los clips entran de a uno sin tocar código. No llevan logo AT —son la

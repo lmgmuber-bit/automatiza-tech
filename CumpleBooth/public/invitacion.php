@@ -366,12 +366,18 @@ $dateParts = $eventDate !== '' ? $formatEventDate($eventDate) : ['long' => '', '
 // un martes en Santiago el servidor ya cree que es miércoles y el conteo
 // saldría corrido un día entero — el mismo error que se corrigió en el
 // tablero de predicciones.
-// `$cuentaNumero` y `$cuentaTexto` arman el bloque del hero, donde el
-// número va grande y solo; `$cuentaRegresiva` es la misma idea en una
-// línea corrida, para la lámina dentro del marco, que no tiene espacio
-// para un numeral grande sin invadir el paspartú.
+// El bloque del hero son DOS contadores. `$cuentaNumero`/`$cuentaTexto`
+// cuentan lo que sí se sabe —los días hasta el baby shower— y son el dato
+// que el invitado necesita. `$incognitaTexto` es el otro: ocupa el mismo
+// lugar donde iría un número y no lleva ninguno, porque cuántos días
+// faltan para conocer al bebé no lo sabe nadie. Ahí el signo no es
+// adorno, es el dato.
+//
+// `$cuentaRegresiva` es la versión de una línea para la lámina dentro del
+// marco, que no tiene espacio para dos numerales sin invadir el paspartú.
 $cuentaNumero = '';
 $cuentaTexto = '';
+$incognitaTexto = '';
 $cuentaRegresiva = '';
 if ($esBabyShower && preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $eventDate)) {
     try {
@@ -382,18 +388,19 @@ if ($esBabyShower && preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $eventDate)) {
         $aQuien = $birthdayName !== '' ? 'a ' . $birthdayName : 'al bebé';
         if ($faltan > 0) {
             $cuentaNumero = (string) $faltan;
-            // Entre signos porque es una pregunta de verdad: nadie sabe todavía
-            // a quién se va a parecer. Es el mismo gancho que la apuesta de la
-            // cabina, puesto en la invitación.
-            $cuentaTexto = '¿' . ($faltan === 1 ? 'día para conocer ' : 'días para conocer ')
-                . $aQuien . '?';
-            // Dentro del marco NO va "para conocer a Lucas": el nombre está
-            // en la línea de arriba, así que repetirlo solo agrega una segunda
-            // línea que se desborda por el borde de madera.
+            $cuentaTexto = $faltan === 1 ? 'día para el baby shower' : 'días para el baby shower';
+            // Dentro del marco NO se repite el nombre: está en la línea de
+            // arriba, y repetirlo agrega una segunda línea que se desborda
+            // por el borde de madera.
             $cuentaRegresiva = $faltan === 1 ? 'Falta 1 día' : 'Faltan ' . $faltan . ' días';
         } elseif ($faltan === 0) {
-            $cuentaTexto = '¡Es hoy!';
+            $cuentaTexto = '¡El baby shower es hoy!';
             $cuentaRegresiva = '¡Es hoy!';
+        }
+        // El segundo contador va siempre que la fecha no haya pasado, con
+        // número o sin él: la pregunta sigue abierta igual.
+        if ($faltan >= 0) {
+            $incognitaTexto = 'días para conocer ' . $aQuien;
         }
         // Fecha pasada: no se muestra nada. Un "faltan -12 días" en la
         // invitación que la familia guarda de recuerdo es peor que el vacío.
@@ -464,31 +471,36 @@ $celebrante = $birthdayName !== '' ? $birthdayName : 'quien cumple años';
 // respaldo es "quien cumple años", y en un baby shower nadie los cumple.
 $bebe = $birthdayName !== '' ? $birthdayName : 'el bebé';
 $playlistOrdersByTheme = [
-    // Baby shower: el recorrido NO son personajes saludando, porque no hay
-    // personajes. Es la sala preparándose — que es de lo que trata un baby
-    // shower. Los archivos todavía no existen; cada capítulo pasa por
-    // is_file(), así que esto queda inerte hasta que el primero llegue y no
-    // hay que tocar código para estrenarlos.
+    /* Baby shower: el recorrido NO son personajes saludando, porque no hay
+       personajes a quienes hacer saludar.
+
+       La primera versión contaba la sala preparándose —los globos, la cuna,
+       las hojas— y Luis lo corrigió: eso es la decoración, no lo que importa.
+       Un baby shower trata de la espera, de lo que significa traer un hijo al
+       mundo y del nacimiento que se está esperando. Los capítulos cuentan eso.
+
+       El arco es el mismo en las dos temáticas a propósito: lo que se cuenta
+       es del bebé, no del decorado, y el decorado es lo único que cambia. Por
+       eso los textos se repiten y los archivos no.
+
+       Los MP4 todavía no existen. Cada capítulo pasa por is_file(), así que
+       esto queda inerte hasta que llegue el primero, y después van entrando
+       de a uno sin tocar código. */
     'baby-nube' => [
-        'invitation/capitulo-1-la-noticia.mp4' => 'Una noticia que cambia todo',
-        'invitation/capitulo-2-la-cuna.mp4' => 'La cuna ya espera a ' . $bebe,
-        'invitation/capitulo-3-las-nubes.mp4' => 'La sala se llena de nubes',
-        'invitation/capitulo-4-la-luna.mp4' => 'La luna se asoma a mirar',
-        'invitation/capitulo-5-el-osito.mp4' => 'El osito guarda el primer lugar',
-        'despedida-baby-nube.mp4' => '¡Te esperamos!',
+        'invitation/capitulo-1-la-espera.mp4' => 'Hay esperas que se sienten distintas',
+        'invitation/capitulo-2-antes-de-nacer.mp4' => 'Todo empieza mucho antes de nacer',
+        'invitation/capitulo-3-manos-que-esperan.mp4' => 'Manos que ya aprendieron a esperar',
+        'invitation/capitulo-4-su-nombre.mp4' => 'El nombre de ' . $bebe . ' ya se dice en voz alta',
+        'invitation/capitulo-5-el-mundo-se-acomoda.mp4' => 'El mundo se acomoda para recibirte',
+        'despedida-baby-nube.mp4' => 'Ven a esperar con nosotros',
     ],
     'baby-safari' => [
-        'invitation/capitulo-1-la-noticia.mp4' => 'Una noticia que cambia todo',
-        'invitation/capitulo-2-la-manada.mp4' => 'La manada se prepara',
-        'invitation/capitulo-3-la-selva.mp4' => 'La selva se viste de fiesta',
-        // Este capítulo era "el rincón de las fotos", con el marco vacío en
-        // cuadro. Se cambió a propósito: un lienzo en blanco dentro del plano
-        // es justo lo que hace que el generativo estampe texto inventado
-        // —ya pasó con "Subby Shower"— y la instrucción "sin texto" no lo
-        // evita. La regla es sacar la superficie escribible del prompt.
-        'invitation/capitulo-4-los-globos.mp4' => 'Los globos ya están puestos',
-        'invitation/capitulo-5-el-leon.mp4' => 'El león cuida la entrada de ' . $bebe,
-        'despedida-baby-safari.mp4' => '¡Te esperamos!',
+        'invitation/capitulo-1-la-espera.mp4' => 'Hay esperas que se sienten distintas',
+        'invitation/capitulo-2-antes-de-nacer.mp4' => 'Todo empieza mucho antes de nacer',
+        'invitation/capitulo-3-manos-que-esperan.mp4' => 'Manos que ya aprendieron a esperar',
+        'invitation/capitulo-4-su-nombre.mp4' => 'El nombre de ' . $bebe . ' ya se dice en voz alta',
+        'invitation/capitulo-5-el-mundo-se-acomoda.mp4' => 'El mundo se acomoda para recibirte',
+        'despedida-baby-safari.mp4' => 'Ven a esperar con nosotros',
     ],
     'carreras' => [
         'saludo-mate.mp4' => 'Mate llega primero',
@@ -1017,13 +1029,26 @@ $cssVer = static function (string $rel): string {
           <?= $esc($dateParts['long']) ?><?= $dateParts['long'] !== '' && $eventTime !== '' ? ' · ' : '' ?><?= $esc($eventTime) ?>
         </p>
         <?php endif; ?>
-        <?php if ($cuentaTexto !== ''): ?>
-        <p class="inv-hero-countdown">
-          <?php if ($cuentaNumero !== ''): ?>
-          <span class="inv-hero-countdown-num"><?= $esc($cuentaNumero) ?></span>
+        <?php if ($cuentaTexto !== '' || $incognitaTexto !== ''): ?>
+        <div class="inv-hero-countdown">
+          <?php if ($cuentaTexto !== ''): ?>
+          <p class="inv-hero-count">
+            <?php if ($cuentaNumero !== ''): ?>
+            <span class="inv-hero-count-num"><?= $esc($cuentaNumero) ?></span>
+            <?php endif; ?>
+            <span class="inv-hero-count-label"><?= $esc($cuentaTexto) ?></span>
+          </p>
           <?php endif; ?>
-          <span class="inv-hero-countdown-label"><?= $esc($cuentaTexto) ?></span>
-        </p>
+          <?php if ($incognitaTexto !== ''): ?>
+          <?php // El "¿?" ocupa el lugar del número a propósito: esa cifra no
+                // existe. aria-label lo dice con palabras, porque un lector de
+                // pantalla leyendo dos signos sueltos no comunica nada. ?>
+          <p class="inv-hero-count inv-hero-count--incognita">
+            <span class="inv-hero-count-num" aria-label="No se sabe cuántos">¿?</span>
+            <span class="inv-hero-count-label"><?= $esc($incognitaTexto) ?></span>
+          </p>
+          <?php endif; ?>
+        </div>
         <?php endif; ?>
       </div>
 

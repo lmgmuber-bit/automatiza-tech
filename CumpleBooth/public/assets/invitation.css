@@ -1696,26 +1696,25 @@ body.inv-scroll-locked {
   animation-duration: calc(26s + var(--i) * 1.9s), calc(7.5s + var(--i) * .8s);
 }
 
-/* ---------- 3. La cuenta regresiva ----------
-   No es una segunda píldora: compitiendo con la de la fecha, las dos pierden.
+/* ---------- 3. Los dos contadores ----------
+   Al principio esto era una sola línea: "FALTAN 39 DÍAS PARA CONOCER A
+   VALENTINA". Decía una mentira. En 39 días es el baby shower, no el
+   nacimiento; cuántos faltan para conocerla no lo sabe nadie, y es
+   exactamente de lo que trata la fiesta.
 
-   La primera versión era una sola línea en mayúsculas, y en 375px "FALTAN 39
-   DÍAS PARA CONOCER A VALENTINA" ocupaba el ancho completo de borde a borde:
-   se leía como un cintillo que grita, justo lo contrario de la idea.
-
-   Ahora el número va solo y grande —es el único dato que la familia vuelve a
-   mirar cada vez que abre el enlace— y la frase queda chica debajo. Grande no
-   es lo mismo que ruidoso: el peso es liviano y el color es el suave del tema,
-   no el de acento. */
+   Así que son dos, uno al lado del otro. El de la izquierda cuenta lo que sí
+   se sabe y el invitado necesita. El de la derecha ocupa el mismo lugar donde
+   iría un número y muestra "¿?", con el mismo tamaño y la misma tipografía:
+   ahí el signo no es un adorno, es el dato. Ponerlo más chico o más tenue lo
+   convertiría en una nota al pie, y es la mitad más importante del bloque. */
 .inv-hero-countdown {
   position: relative;
   display: flex;
-  max-width: 20rem;
-  flex-direction: column;
-  align-items: center;
+  max-width: 23rem;
+  align-items: flex-start;
+  justify-content: center;
   margin: 20px auto 0;
   padding-top: 16px;
-  gap: .1em;
 }
 
 .inv-hero-countdown::before {
@@ -1732,9 +1731,27 @@ body.inv-scroll-locked {
   content: "";
 }
 
-.inv-hero-countdown-num {
+.inv-hero-count {
+  display: flex;
+  max-width: 10rem;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  padding: 0 clamp(9px, 3.4vw, 18px);
+  gap: .12em;
+}
+
+/* El filete separa los dos contadores sin encerrarlos en cajas. Va en el
+   segundo y no como elemento propio para que, si algún día uno de los dos no
+   se muestra, no quede una línea suelta en el aire. */
+.inv-hero-count + .inv-hero-count {
+  border-left: 1px solid color-mix(in srgb, var(--inv-highlight) 32%, transparent);
+}
+
+.inv-hero-count-num {
   color: color-mix(in srgb, var(--inv-title, var(--inv-highlight)) 82%, white);
-  font-size: clamp(2.1rem, 11vw, 3.1rem);
+  font-size: clamp(2rem, 10.5vw, 3rem);
   font-weight: 300;
   line-height: 1;
   /* Las cifras tabulares evitan que el bloque se corra de ancho cuando el
@@ -1744,28 +1761,31 @@ body.inv-scroll-locked {
   text-shadow: 0 6px 26px rgba(0, 0, 0, .7), 0 1px 4px rgba(0, 0, 0, .85);
 }
 
-.inv-hero-countdown-label {
+/* Los signos abren y cierran con el mismo peso liviano del número, pero el
+   par "¿?" es más angosto que dos dígitos y se veía flotando: un poco de
+   tracking lo devuelve al mismo ancho óptico. */
+.inv-hero-count--incognita .inv-hero-count-num {
+  letter-spacing: .04em;
+}
+
+.inv-hero-count-label {
   color: color-mix(in srgb, var(--inv-title, var(--inv-highlight)) 62%, white);
-  font-size: clamp(.66rem, 2.9vw, .8rem);
+  font-size: clamp(.6rem, 2.6vw, .74rem);
   font-weight: 600;
-  letter-spacing: .09em;
-  line-height: 1.35;
+  letter-spacing: .07em;
+  line-height: 1.3;
   text-shadow: 0 2px 12px rgba(0, 0, 0, .8), 0 1px 3px rgba(0, 0, 0, .9);
   text-transform: uppercase;
   text-wrap: balance;
 }
 
-/* "¡Es hoy!" llega sin número: sin esto quedaría como una nota al pie del
-   día más importante. */
-.inv-hero-countdown-num + .inv-hero-countdown-label,
-.inv-hero-countdown-label:only-child {
-  margin: 0;
-}
-
-.inv-hero-countdown-label:only-child {
-  color: color-mix(in srgb, var(--inv-title, var(--inv-highlight)) 85%, white);
-  font-size: clamp(1.1rem, 5.4vw, 1.5rem);
-  letter-spacing: .04em;
+/* El día del baby shower el contador de la izquierda llega sin número
+   ("¡El baby shower es hoy!"). Sin esto quedaría como una nota al pie del día
+   más importante. */
+.inv-hero-count-label:only-child {
+  color: color-mix(in srgb, var(--inv-title, var(--inv-highlight)) 88%, white);
+  font-size: clamp(.86rem, 4vw, 1.1rem);
+  letter-spacing: .03em;
 }
 
 /* ---------- 4. La lámina, escrita dentro del marco ----------

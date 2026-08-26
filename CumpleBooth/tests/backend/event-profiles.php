@@ -28,7 +28,8 @@ require $root . '/public/lib.php';
 foreach ([
     '001_initial', '002_theme_prompts', '003_invitations_and_plan',
     '004_gate_a_corrections', '005_theme_prompt_history', '006_public_leads',
-    '007_event_album', '008_event_profiles',
+    '007_event_album', '008_event_profiles', '009_invitation_gender',
+    '010_baby_shower_predictions',
 ] as $version) {
     $migration = require $root . '/database/migrations/' . $version . '.php';
     $migration(cb_pdo());

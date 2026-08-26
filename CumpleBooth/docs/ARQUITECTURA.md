@@ -140,6 +140,32 @@ configuración, no una dependencia para registrar solicitudes.
 
 ## Seguridad y ciclo de vida
 
+### Modalidad baby shower y predicciones
+
+`event_type` conserva `child_birthday` como default compatible y activa la rama
+`baby_shower` sólo cuando el evento lo declara. La cabina sigue resolviendo el
+evento por `public_slug`; para baby shower omite ruleta, videos de personaje y
+Show 3D, y encadena predicción, juego corto, guardado, foto, revelación, QR y
+recuerdito. El router histórico de cumpleaños no cambia.
+
+`POST prediction-api.php` vuelve a resolver la fiesta activa y guarda la apuesta
+en `cc_predictions.party_id`; no acepta ids internos desde el cliente. Esta
+propiedad por evento es deliberada porque una fiesta puede tener varias
+invitaciones. Los enlaces del tablero siguen siendo invitation-owned: un token
+opaco de `cc_invitation_tokens` resuelve invitación → evento y
+`GET predicciones.php?t=<token>` reúne todas las apuestas de la fiesta. La
+decisión completa está en
+`docs/DECISION-PREDICCIONES-POR-EVENTO-2026-08-25.md`.
+
+El guardado usa una clave aleatoria por recorrido y conserva sólo su hash con
+unicidad por evento, por lo que doble toque y reintento de red son idempotentes.
+Cuando cambia la modalidad de una fiesta, sus invitaciones vinculadas se
+sincronizan; una invitación sin fiesta conserva su modalidad independiente.
+
+La lista futura de regalos queda preparada en `cc_gift_items`, sin interfaz ni
+mutaciones públicas en esta fase. Sus datos y sus tokens pertenecen a la
+invitación.
+
 La configuración externa es obligatoria para admin/uploads. PDO usa prepared
 statements nativos y errores fail-closed. PIN =
 `password_hash(HMAC(PIN, pepper))`; duplicar limpia PIN. `Permissions-Policy`

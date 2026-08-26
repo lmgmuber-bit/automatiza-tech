@@ -224,6 +224,7 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             $tema = (string) ($_POST['tema'] ?? '');
             $fecha = trim((string) ($_POST['fecha'] ?? ''));
             $activa = isset($_POST['activa']);
+            $eventType = (string) ($_POST['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
             $servicePlan = in_array((string) ($_POST['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $_POST['service_plan'] : 'booth';
             $galleryEnabled = isset($_POST['gallery_enabled']);
             // Juegos habilitados para esta fiesta. `juegos_definidos` distingue
@@ -292,6 +293,7 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                     'admin_label'          => $adminLabel,
                     'birthday_person_name' => $birthdayPersonName,
                     'nombre'               => $birthdayPersonName,
+                    'event_type'           => $eventType,
                     'theme_slug'           => $tema,
                     'tema'                 => $tema,
                     'public_slug'          => $publicSlug,
@@ -324,6 +326,7 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 'public_slug' => $publicSlug,
                 'admin_label' => $adminLabel,
                 'birthday_person_name' => $birthdayPersonName,
+                'event_type' => $eventType,
                 'tema' => $tema,
                 'fecha' => $fecha,
                 'activa' => $activa,
@@ -539,6 +542,7 @@ if ($formValues === null && $action === 'editar') {
             'public_slug' => $editSlug,
             'admin_label' => $p['admin_label'] ?? '',
             'birthday_person_name' => $p['birthday_person_name'] ?? '',
+            'event_type' => (string) ($p['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday',
             'tema' => $p['tema'] ?? '',
             'fecha' => $p['fecha'] ?? '',
             'activa' => !empty($p['activa']),
@@ -559,6 +563,7 @@ if ($formValues === null && $action === 'editar') {
         'public_slug' => '',
         'admin_label' => '',
         'birthday_person_name' => '',
+        'event_type' => 'child_birthday',
         'tema' => array_key_first($themes) ?? '',
         'fecha' => '',
         'activa' => true,
@@ -647,6 +652,15 @@ if ($formValues === null && $action === 'editar') {
           <div class="field">
             <label for="f-birthday-name">Nombre del cumpleañero/a</label>
             <input type="text" id="f-birthday-name" name="birthday_person_name" required maxlength="60" value="<?= h($formValues['birthday_person_name']) ?>" placeholder="Ej. Valentina">
+          </div>
+
+          <div class="field">
+            <label for="f-event-type">Modalidad del evento</label>
+            <select id="f-event-type" name="event_type" required>
+              <option value="child_birthday" <?= ($formValues['event_type'] ?? 'child_birthday') === 'child_birthday' ? 'selected' : '' ?>>Cumpleaños infantil</option>
+              <option value="baby_shower" <?= ($formValues['event_type'] ?? '') === 'baby_shower' ? 'selected' : '' ?>>Baby shower</option>
+            </select>
+            <small>La modalidad controla el recorrido y el vocabulario. Los eventos actuales permanecen como cumpleaños infantil.</small>
           </div>
 
           <?php if ($isEdit): ?>

@@ -127,6 +127,7 @@ function cb_create_invitation(array $data): array
     $eventTime = trim((string) ($data['event_time'] ?? ''));
     $address = trim((string) ($data['address'] ?? ''));
     $message = trim((string) ($data['message'] ?? ''));
+    $eventType = (string) ($data['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
     $language = in_array((string) ($data['language'] ?? ''), ['es', 'en', 'pt'], true) ? (string) $data['language'] : 'es';
     $channel = in_array((string) ($data['channel'] ?? ''), ['whatsapp', 'email', 'print'], true) ? (string) $data['channel'] : 'whatsapp';
     // Elige la narración de cierre de Alice ("cumpleañero" vs "cumpleañera").
@@ -162,8 +163,8 @@ function cb_create_invitation(array $data): array
         return ['ok' => false, 'error' => 'No se pudo generar un token de invitación único.'];
     }
 
-    $stmt = $pdo->prepare('INSERT INTO cc_invitations (public_token_hash, party_id, theme_slug, admin_label, birthday_person_name, birthday_person_gender, event_date, event_time, address, message, language, channel, status, prompt_template, created_at, updated_at, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
-    $stmt->execute([$tokenHash, $partyId, $themeSlug, $adminLabel, $birthdayPersonName, $gender, $eventDate, $eventTime, $address, $message, $language, $channel, $status, $promptTemplate, $now, $now, $createdBy]);
+    $stmt = $pdo->prepare('INSERT INTO cc_invitations (public_token_hash, party_id, theme_slug, admin_label, birthday_person_name, birthday_person_gender, event_type, event_date, event_time, address, message, language, channel, status, prompt_template, created_at, updated_at, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+    $stmt->execute([$tokenHash, $partyId, $themeSlug, $adminLabel, $birthdayPersonName, $gender, $eventType, $eventDate, $eventTime, $address, $message, $language, $channel, $status, $promptTemplate, $now, $now, $createdBy]);
     return ['ok' => true, 'id' => (int) $pdo->lastInsertId(), 'token' => $token];
 }
 
@@ -579,7 +580,7 @@ function cb_duplicate_invitation(int $id, ?int $targetPartyId, string $by): arra
         return ['ok' => false, 'error' => 'Fiesta destino inválida.'];
     }
     $pdo = cb_pdo();
-    $stmt = $pdo->prepare('SELECT public_slug, theme_slug FROM cc_parties WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT public_slug, theme_slug, event_type FROM cc_parties WHERE id = ?');
     $stmt->execute([$partyId]);
     $party = $stmt->fetch();
     if (!$party) {
@@ -589,6 +590,7 @@ function cb_duplicate_invitation(int $id, ?int $targetPartyId, string $by): arra
     return cb_create_invitation([
         'party_id' => $partyId,
         'theme_slug' => (string) ($party['theme_slug'] ?? $source['theme_slug'] ?? ''),
+        'event_type' => (string) ($party['event_type'] ?? $source['event_type'] ?? 'child_birthday'),
         'admin_label' => $label !== '' ? $label . ' (copia)' : '',
         'birthday_person_name' => trim((string) ($source['birthday_person_name'] ?? '')) . ' (copia)',
         'event_date' => (string) ($source['event_date'] ?? ''),

@@ -1194,3 +1194,26 @@ de asumir que es un descuido.
   herramienta integrada (Carreras 6, K-Pop 6, Tropical 4), siempre con prompts
   camuflados. Los bloqueos de seguridad quedaron en fallback. No hubo deploy,
   commit, push ni merge.
+
+## AT-CUMPLECLICK — Predicción Baby Shower (cierre local 2026-08-25)
+
+- Rama/worktree aislados: `codex/baby-shower-predicciones` en
+  `.worktrees/codex-baby-shower-predicciones`; base
+  `ed60fdb80be45c3a5e0f0e47d418a7a7308782db`.
+- Migración 010 completa: modalidad en invitaciones, tablas futuras de regalos y
+  tokens por invitación, y predicciones por evento. El default
+  `child_birthday` conserva el comportamiento existente.
+- Decisión aprobada: `cc_predictions` usa `party_id`; el kiosco sólo conoce el
+  slug del evento y un evento puede tener varias invitaciones. El token privado
+  de los papás sigue partiendo de una invitación y resuelve su evento.
+- Flujo baby shower: apuesta → Atrapa los chupetes → persistencia confirmada →
+  foto → revelación con respuestas/puntaje → QR → recuerdito. Los cumpleaños
+  mantienen su router. Baby shower no recibe Show 3D.
+- Admin: selección de modalidad y emisión/revocación del tablero privado. Tokens
+  opacos hasheados, rate limit público, estados vacío/revocado y retención de
+  predicciones antes de anonimizar.
+- El guardado es idempotente mediante hash único por recorrido/evento y el cambio
+  de modalidad sincroniza las invitaciones vinculadas sin afectar las huérfanas.
+- Detalle, evidencia y continuación:
+  `docs/CODEX-HANDOFF-RESULTADO-PREDICCION-BABY-SHOWER-2026-08-25.md`.
+- Estado: local, sin commit, push, merge, deploy ni migración en producción.

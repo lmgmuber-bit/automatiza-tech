@@ -28,6 +28,14 @@ $promptHistoryMigration = require dirname(__DIR__, 2) . '/database/migrations/00
 $promptHistoryMigration(cb_pdo());
 $leadMigration = require dirname(__DIR__, 2) . '/database/migrations/006_public_leads.php';
 $leadMigration(cb_pdo());
+$albumMigration = require dirname(__DIR__, 2) . '/database/migrations/007_event_album.php';
+$albumMigration(cb_pdo());
+$profileMigration = require dirname(__DIR__, 2) . '/database/migrations/008_event_profiles.php';
+$profileMigration(cb_pdo());
+$genderMigration = require dirname(__DIR__, 2) . '/database/migrations/009_invitation_gender.php';
+$genderMigration(cb_pdo());
+$babyShowerMigration = require dirname(__DIR__, 2) . '/database/migrations/010_baby_shower_predictions.php';
+$babyShowerMigration(cb_pdo());
 check(cb_storage_mode() === 'db', 'modo DB');
 check(cb_valid_slug('fiesta-1', 2, 40) && !cb_valid_slug('../x', 2, 40), 'slugs estrictos');
 check(cb_normalize_frame_box(['x'=>.2,'y'=>.2,'w'=>.4,'h'=>.4]) !== null, 'frame válido');

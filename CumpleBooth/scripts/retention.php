@@ -11,13 +11,14 @@ if (cb_storage_mode() === 'db') {
     $pdo = cb_pdo();
     // substr es portable entre SQLite y MySQL para los valores ISO almacenados.
     $eligibleSql = "anonymized_at IS NULL AND substr(COALESCE(NULLIF(event_date,''),created_at),1,10) <= ?";
-    $parties = $pdo->prepare("SELECT id,slug FROM cc_parties WHERE $eligibleSql");
+    $parties = $pdo->prepare("SELECT id,public_slug FROM cc_parties WHERE $eligibleSql");
     $parties->execute([$cutoffDate]);
     $partyRows = $parties->fetchAll();
     $partyIds = array_map('intval', array_column($partyRows, 'id'));
     $photoRows = [];
     $profileMediaRows = [];
     $profileSchemaReady = false;
+    $predictionSchemaReady = false;
     if ($partyIds) {
         $marks = implode(',', array_fill(0, count($partyIds), '?'));
         // Incluye filas ya marcadas para reintentar un unlink fallido anterior.
@@ -37,6 +38,15 @@ if (cb_storage_mode() === 'db') {
                 throw $e;
             }
         }
+        try {
+            $predictionProbe = $pdo->query('SELECT 1 FROM cc_predictions LIMIT 1');
+            $predictionProbe->fetch();
+            $predictionSchemaReady = true;
+        } catch (PDOException $e) {
+            if (!preg_match('/no such table|doesn.t exist|base table or view not found/i', $e->getMessage())) {
+                throw $e;
+            }
+        }
     }
     fwrite(STDOUT, 'Fiestas vencidas: ' . count($partyRows) . '; fotos privadas: ' . count($photoRows)
         . '; archivos de perfil: ' . count($profileMediaRows) . "\n");
@@ -50,8 +60,12 @@ if (cb_storage_mode() === 'db') {
             $dropProfiles = $pdo->prepare("DELETE FROM cc_event_profiles WHERE party_id IN ($marks)");
             $dropProfiles->execute($partyIds);
         }
+        if ($predictionSchemaReady && $partyIds) {
+            $dropPredictions = $pdo->prepare("DELETE FROM cc_predictions WHERE party_id IN ($marks)");
+            $dropPredictions->execute($partyIds);
+        }
         $dropGuests = $pdo->prepare('DELETE FROM cc_guests WHERE party_id=?');
-        $anon = $pdo->prepare("UPDATE cc_parties SET name='Fiesta archivada',active=0,gallery_pin_hash=NULL,gallery_pin_hmac=NULL,anonymized_at=?,updated_at=? WHERE id=?");
+        $anon = $pdo->prepare("UPDATE cc_parties SET birthday_person_name='Evento archivado',active=0,gallery_pin_hash=NULL,gallery_pin_hmac=NULL,anonymized_at=?,updated_at=? WHERE id=?");
         foreach ($partyRows as $party) {
             $dropGuests->execute([(int) $party['id']]);
             $anon->execute([$now, $now, (int) $party['id']]);

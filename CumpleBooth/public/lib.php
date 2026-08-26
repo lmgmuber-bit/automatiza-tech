@@ -380,7 +380,7 @@ function cb_load_parties()
 {
     if (cb_storage_mode() === 'db') {
         $pdo = cb_pdo();
-        $rows = $pdo->query('SELECT id, public_slug, admin_label, birthday_person_name, theme_slug, event_date, active, frame_box_json, gallery_pin_hash, gallery_pin_hmac, service_plan, gallery_enabled, created_at, updated_at, anonymized_at FROM cc_parties ORDER BY created_at DESC, id DESC')->fetchAll();
+        $rows = $pdo->query('SELECT id, public_slug, admin_label, birthday_person_name, event_type, theme_slug, event_date, active, frame_box_json, gallery_pin_hash, gallery_pin_hmac, service_plan, gallery_enabled, created_at, updated_at, anonymized_at FROM cc_parties ORDER BY created_at DESC, id DESC')->fetchAll();
         $guestStmt = $pdo->prepare('SELECT name, gender FROM cc_guests WHERE party_id = ? ORDER BY sort_order, id');
         $parties = [];
         foreach ($rows as $row) {
@@ -393,11 +393,13 @@ function cb_load_parties()
             $publicSlug = (string) $row['public_slug'];
             $galleryEnabled = (bool) ($row['gallery_enabled'] ?? 0);
             $servicePlan = in_array((string) ($row['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $row['service_plan'] : 'booth';
+            $eventType = (string) ($row['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
             $parties[$publicSlug] = [
                 'public_slug' => $publicSlug,
                 'admin_label' => (string) ($row['admin_label'] ?? ''),
                 'birthday_person_name' => (string) ($row['birthday_person_name'] ?? ''),
                 'nombre' => (string) ($row['birthday_person_name'] ?? ''),
+                'event_type' => $eventType,
                 'tema' => (string) $row['theme_slug'],
                 'theme_slug' => (string) $row['theme_slug'],
                 'fecha' => (string) ($row['event_date'] ?? ''), 'activa' => (bool) $row['active'],
@@ -427,11 +429,13 @@ function cb_load_parties()
         $themeSlug = (string) ($party['theme_slug'] ?? $party['tema'] ?? '');
         $servicePlan = in_array((string) ($party['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $party['service_plan'] : 'booth';
         $galleryEnabled = (bool) ($party['gallery_enabled'] ?? 0);
+        $eventType = (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
         $normalized[$publicSlug] = [
             'public_slug' => $publicSlug,
             'admin_label' => (string) ($party['admin_label'] ?? ''),
             'birthday_person_name' => $birthdayName,
             'nombre' => $birthdayName,
+            'event_type' => $eventType,
             'tema' => $themeSlug,
             'theme_slug' => $themeSlug,
             'fecha' => (string) ($party['fecha'] ?? ''),
@@ -486,10 +490,12 @@ function cb_save_parties(array $data): bool
             $themeSlug = (string) ($party['theme_slug'] ?? $party['tema'] ?? '');
             $servicePlan = in_array((string) ($party['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $party['service_plan'] : 'booth';
             $galleryEnabled = (bool) ($party['gallery_enabled'] ?? 0);
+            $eventType = (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
             $toSave[$publicSlug] = [
                 'public_slug' => $publicSlug,
                 'admin_label' => (string) ($party['admin_label'] ?? ''),
                 'birthday_person_name' => $birthdayName,
+                'event_type' => $eventType,
                 'theme_slug' => $themeSlug,
                 'fecha' => (string) ($party['fecha'] ?? ''),
                 'activa' => (bool) ($party['activa'] ?? false),
@@ -514,8 +520,9 @@ function cb_save_parties(array $data): bool
         foreach ($existing as $row) {
             $existingMap[(string) $row['public_slug']] = (int) $row['id'];
         }
-        $upsert = $pdo->prepare('UPDATE cc_parties SET admin_label=?, birthday_person_name=?, theme_slug=?, event_date=?, active=?, frame_box_json=?, gallery_pin_hash=?, gallery_pin_hmac=?, service_plan=?, gallery_enabled=?, updated_at=?, anonymized_at=? WHERE public_slug=?');
-        $insert = $pdo->prepare('INSERT INTO cc_parties (public_slug,admin_label,birthday_person_name,theme_slug,event_date,active,frame_box_json,gallery_pin_hash,gallery_pin_hmac,service_plan,gallery_enabled,created_at,updated_at,anonymized_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $upsert = $pdo->prepare('UPDATE cc_parties SET admin_label=?, birthday_person_name=?, event_type=?, theme_slug=?, event_date=?, active=?, frame_box_json=?, gallery_pin_hash=?, gallery_pin_hmac=?, service_plan=?, gallery_enabled=?, updated_at=?, anonymized_at=? WHERE public_slug=?');
+        $insert = $pdo->prepare('INSERT INTO cc_parties (public_slug,admin_label,birthday_person_name,event_type,theme_slug,event_date,active,frame_box_json,gallery_pin_hash,gallery_pin_hmac,service_plan,gallery_enabled,created_at,updated_at,anonymized_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $syncInvitationEventType = $pdo->prepare('UPDATE cc_invitations SET event_type=?, updated_at=? WHERE party_id=?');
         $deleteGuests = $pdo->prepare('DELETE FROM cc_guests WHERE party_id=?');
         $insertGuest = $pdo->prepare('INSERT INTO cc_guests (party_id,name,gender,sort_order,created_at) VALUES (?,?,?,?,?)');
         $seen = [];
@@ -530,9 +537,11 @@ function cb_save_parties(array $data): bool
             $now = gmdate('Y-m-d H:i:s');
             $frameJson = is_array($party['frameBox'] ?? null) ? json_encode($party['frameBox']) : null;
             $servicePlan = in_array((string) ($party['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $party['service_plan'] : 'booth';
+            $eventType = (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
             $values = [
                 (string) ($party['admin_label'] ?? ''),
                 (string) ($party['birthday_person_name'] ?? $party['nombre'] ?? ''),
+                $eventType,
                 (string) ($party['theme_slug'] ?? $party['tema'] ?? ''),
                 ($party['fecha'] ?? '') ?: null,
                 !empty($party['activa']) ? 1 : 0,
@@ -549,9 +558,12 @@ function cb_save_parties(array $data): bool
                 $id = $existingMap[$publicSlug];
             } else {
                 $created = (string) ($party['creada'] ?? $now);
-                $insert->execute([$publicSlug, $values[0], $values[1], $values[2], $values[3], $values[4], $values[5], $values[6], $values[7], $values[8], $values[9], $created, $now, $values[11]]);
+                $insert->execute([$publicSlug, $values[0], $values[1], $values[2], $values[3], $values[4], $values[5], $values[6], $values[7], $values[8], $values[9], $values[10], $created, $now, $values[12]]);
                 $id = (int) $pdo->lastInsertId();
             }
+            // La fiesta es la fuente para sus invitaciones vinculadas. Las
+            // invitaciones sin party_id conservan su modalidad independiente.
+            $syncInvitationEventType->execute([$eventType, $now, $id]);
             $deleteGuests->execute([$id]);
             foreach (array_values($party['invitados'] ?? []) as $order => $guest) {
                 if (is_array($guest) && trim((string) ($guest['name'] ?? '')) !== '') {
@@ -974,6 +986,7 @@ function cb_resolve_party(string $slugRaw): array
         'public_slug'      => $slug,
         'slug'             => $slug,
         'nombre'           => (string) ($party['nombre'] ?? ''),
+        'event_type'       => (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday',
         'invitados'        => $invitados,
         'frameBox'         => $frameBox,
         'musica'           => !isset($party['musica']) || !empty($party['musica']),
@@ -984,11 +997,14 @@ function cb_resolve_party(string $slugRaw): array
     // Juegos habilitados para ESTA fiesta (los marca Luis en el admin según el
     // plan contratado. La misión 3D del Full se agrega por separado y nunca
     // depende de esta selección manual.
+    $effectivePlan = $partyPayload['event_type'] === 'baby_shower'
+        ? 'booth'
+        : (string) ($partyPayload['service_plan'] ?? 'booth');
     $themePayload = cb_build_theme_payload(
         $themeSlug,
         $themeData,
         cb_sanitize_party_games($party['juegos'] ?? null),
-        (string) ($partyPayload['service_plan'] ?? 'booth')
+        $effectivePlan
     );
 
     return ['ok' => true, 'party' => $partyPayload, 'theme' => $themePayload];
@@ -2249,3 +2265,6 @@ require __DIR__ . '/lib.album.php';
 
 // Perfil del protagonista: datos y media opcionales por evento.
 require __DIR__ . '/lib.event-profiles.php';
+
+// Predicciones por evento y tokens privados de baby shower.
+require __DIR__ . '/lib.predictions.php';

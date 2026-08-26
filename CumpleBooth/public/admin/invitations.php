@@ -292,6 +292,7 @@ if ($partyId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     'party_id' => $partyId,
                     'theme_slug' => (string) ($party['theme_slug'] ?? ''),
                     'admin_label' => (string) ($party['admin_label'] ?? ''),
+                    'event_type' => (string) ($party['event_type'] ?? 'child_birthday'),
                     'birthday_person_name' => $birthdayPersonName,
                     'birthday_person_gender' => $birthdayPersonGender,
                     'event_date' => $eventDate,
@@ -542,6 +543,31 @@ if ($partyId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $errors[] = 'No se pudo guardar el prompt.';
                 }
             }
+        } elseif ($action === 'emitir_tablero_predicciones') {
+            $id = filter_input(INPUT_POST, 'invitation_id', FILTER_VALIDATE_INT);
+            $owned = $id !== false && $id !== null ? cb_invitation_owned_by_party((int) $id, $partyId) : null;
+            if ($owned === null || (string) ($owned['event_type'] ?? '') !== 'baby_shower') {
+                $errors[] = 'Invitación de baby shower inválida.';
+            } else {
+                try {
+                    $token = cb_invitation_issue_role_token((int) $id, 'parents', null, $by);
+                    $_SESSION['cc_predictions_token'] = ['id' => (int) $id, 'token' => $token];
+                    header('Location: ' . $invitationsUrl . '&ok=tablero_emitido#inv-' . (int) $id);
+                    exit;
+                } catch (Throwable $e) {
+                    error_log('CumpleClick emitir tablero: ' . $e->getMessage());
+                    $errors[] = 'No se pudo emitir el enlace privado del tablero.';
+                }
+            }
+        } elseif ($action === 'revocar_tablero_predicciones') {
+            $id = filter_input(INPUT_POST, 'invitation_id', FILTER_VALIDATE_INT);
+            $owned = $id !== false && $id !== null ? cb_invitation_owned_by_party((int) $id, $partyId) : null;
+            if ($owned !== null && (string) ($owned['event_type'] ?? '') === 'baby_shower') {
+                cb_invitation_revoke_role_tokens((int) $id, 'parents');
+                header('Location: ' . $invitationsUrl . '&ok=tablero_revocado#inv-' . (int) $id);
+                exit;
+            }
+            $errors[] = 'No se pudo revocar el enlace privado del tablero.';
         }
     }
 }
@@ -558,6 +584,8 @@ $okMessages = [
     'publicada' => 'Invitación publicada.',
     'revocada' => 'Invitación revocada.',
     'prompt_guardado' => 'Prompt guardado.',
+    'tablero_emitido' => 'Enlace privado del tablero generado. Cópialo ahora.',
+    'tablero_revocado' => 'Enlace privado del tablero revocado.',
 ];
 if (isset($_GET['ok'], $okMessages[$_GET['ok']])) {
     $okMessage = $okMessages[$_GET['ok']];
@@ -572,6 +600,14 @@ if (!empty($_SESSION['cc_invitation_token'])) {
         $tokenFlash = $flash;
     }
     unset($_SESSION['cc_invitation_token']);
+}
+$predictionsTokenFlash = null;
+if (!empty($_SESSION['cc_predictions_token'])) {
+    $flash = $_SESSION['cc_predictions_token'];
+    if (is_array($flash) && isset($flash['id'], $flash['token'])) {
+        $predictionsTokenFlash = $flash;
+    }
+    unset($_SESSION['cc_predictions_token']);
 }
 ?>
 <!DOCTYPE html>
@@ -828,6 +864,9 @@ if (!empty($_SESSION['cc_invitation_token'])) {
               $showToken = $tokenFlash !== null && (int) $tokenFlash['id'] === (int) $inv['id'];
               $publicUrl = $showToken ? cb_invitation_public_url($tokenFlash['token']) : '';
               $downloadUrl = $showToken ? cb_invitation_download_url($tokenFlash['token']) : '';
+              $isBabyShower = (string) ($inv['event_type'] ?? '') === 'baby_shower';
+              $showPredictionsToken = $predictionsTokenFlash !== null && (int) $predictionsTokenFlash['id'] === (int) $inv['id'];
+              $predictionsUrl = $showPredictionsToken ? cb_prediction_board_url((string) $predictionsTokenFlash['token']) : '';
               // Enlace reconstruible desde el ID: sirve aunque el token en claro
               // se haya perdido, sin revocar el aleatorio ni guardarlo en texto.
               $shareUrl = '';
@@ -912,6 +951,35 @@ if (!empty($_SESSION['cc_invitation_token'])) {
                   Vista previa solo para ti: sirve para comparar los dos planes. No mandes
                   estos dos enlaces al cliente, llevan la variante forzada.
                 </p>
+                <?php endif; ?>
+
+                <?php if ($isBabyShower): ?>
+                <section class="token-flash" aria-label="Tablero privado de predicciones">
+                  <label>Tablero de predicciones para los papás</label>
+                  <p class="small muted">Este enlace muestra juntas todas las apuestas del evento, aunque existan varias invitaciones. El token se guarda sólo como hash.</p>
+                  <?php if ($showPredictionsToken && $predictionsUrl !== ''): ?>
+                    <div class="token-row">
+                      <input id="predictions-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($predictionsUrl) ?>">
+                      <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('predictions-url-<?= (int) $inv['id'] ?>').value)"><?= admin_icon('copy') ?> Copiar</button>
+                      <a class="btn btn-ghost btn-sm" href="<?= h($predictionsUrl) ?>" target="_blank" rel="noopener noreferrer"><?= admin_icon('external') ?> Abrir</a>
+                    </div>
+                    <p class="small muted">Guárdalo ahora: por seguridad no se puede reconstruir después. Emitir otro revoca el anterior.</p>
+                  <?php endif; ?>
+                  <div class="invite-actions">
+                    <form method="post" action="<?= h($invitationsUrl) ?>#inv-<?= (int) $inv['id'] ?>" class="inline-form">
+                      <?= admin_csrf_field() ?>
+                      <input type="hidden" name="action" value="emitir_tablero_predicciones">
+                      <input type="hidden" name="invitation_id" value="<?= (int) $inv['id'] ?>">
+                      <button type="submit" class="btn btn-primary btn-sm"><?= admin_icon('external') ?> Generar enlace privado</button>
+                    </form>
+                    <form method="post" action="<?= h($invitationsUrl) ?>#inv-<?= (int) $inv['id'] ?>" class="inline-form" data-confirm="¿Revocar el enlace actual del tablero?">
+                      <?= admin_csrf_field() ?>
+                      <input type="hidden" name="action" value="revocar_tablero_predicciones">
+                      <input type="hidden" name="invitation_id" value="<?= (int) $inv['id'] ?>">
+                      <button type="submit" class="btn btn-ghost btn-sm">Revocar enlace</button>
+                    </form>
+                  </div>
+                </section>
                 <?php endif; ?>
 
                 <div class="invite-actions">

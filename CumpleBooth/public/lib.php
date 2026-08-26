@@ -2207,6 +2207,38 @@ function cb_process_theme_uploads(
  * La fuente es siempre themes.json: si un tema no define un token, se cae al
  * default de :root en styles.css, nunca a un color inventado aquí.
  */
+/**
+ * Lockup de CumpleClick: el isotipo con el nombre al lado, para las paginas PHP.
+ *
+ * El nombre NO puede venir del SVG. `brand/cumpleclick-lockup.svg` dibuja la
+ * palabra con un <text> en Baloo 2, y un SVG cargado dentro de un <img> se
+ * renderiza en un documento aislado: no ve las @font-face de la pagina, solo
+ * las fuentes instaladas en el sistema. Baloo 2 no viene con Windows ni con
+ * iOS. Medido en el navegador, la misma palabra ocupa 403 px en Baloo 2,
+ * 437 px en Segoe UI y 496 px en Helvetica: el nombre de la marca cambiaba de
+ * forma segun el aparato del invitado. Compuesta en HTML usa la Baloo 2 que la
+ * pagina ya trae self-hosted.
+ *
+ * Es la version PHP de src/brand/Lockup.jsx (album y cartel QR); las clases y
+ * las proporciones son las mismas para que las dos se vean identicas.
+ *
+ * @param string $tono  'marca' sobre fondos claros, 'claro' sobre oscuros.
+ *                      El manual pide el isotipo tal cual sobre fondo oscuro y
+ *                      prohibe recuadrarlo en una caja blanca.
+ * @param string $extra Clase adicional de quien lo usa, para el tamano.
+ */
+function cb_lockup_html(string $tono = 'marca', string $extra = ''): string
+{
+    $tono = $tono === 'claro' ? 'claro' : 'marca';
+    $clases = trim('cc-lockup cc-lockup--' . $tono . ' ' . $extra);
+    return '<span class="' . htmlspecialchars($clases, ENT_QUOTES, 'UTF-8') . '">'
+         . '<img class="cc-lockup__mark" src="brand/cumpleclick-mark.svg" alt="CumpleClick" '
+         . 'width="400" height="400" draggable="false">'
+         . '<span class="cc-lockup__nombre" aria-hidden="true">'
+         . 'Cumple<span class="cc-lockup__click">Click</span></span>'
+         . '</span>';
+}
+
 function cb_theme_css_vars(string $themeSlug): string
 {
     static $map = [

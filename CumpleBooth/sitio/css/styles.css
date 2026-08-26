@@ -146,6 +146,54 @@ p { margin: 0 0 1rem; }
   .btn--xl { font-size: 1.05rem; padding: 0.9em 1.3em; white-space: normal; }
 }
 
+/* ---------- Lockup de CumpleClick ----------
+   Espejo de src/brand/lockup.css (album y cartel QR) y de cb_lockup_html() en
+   public/lib.php (invitacion). Mismas clases, mismo markup, mismas
+   proporciones; no se comparte archivo porque este sitio es HTML plano sin
+   build y aquellos viven dentro del bundle de Vite o los sirve PHP.
+
+   El nombre va en HTML y no dentro del SVG. `cumpleclick-lockup.svg` lo dibuja
+   con un <text> en Baloo 2, y un SVG cargado en un <img> se renderiza aislado:
+   no ve las @font-face de la pagina, solo las fuentes del sistema. Baloo 2 no
+   viene con Windows ni con iOS, asi que el nombre de la marca salia en Segoe
+   UI o en Helvetica segun el visitante — 403 px, 437 px o 496 px de ancho para
+   la misma palabra.
+
+   Proporciones del archivo oficial (viewBox 640x160): globo 1.93em, aire
+   0.37em, palabra 5.59em. Todo cuelga del font-size. */
+
+.cc-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.37em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.cc-lockup__mark {
+  width: 1.93em;
+  height: 1.93em;
+  display: block;
+  flex: none;
+}
+
+.cc-lockup__nombre {
+  font-family: var(--cc-font-display);
+  font-weight: 800;
+  font-size: 1em;
+  letter-spacing: 0;
+  text-transform: none;
+  transform: translateY(0.04em);
+}
+
+/* Cabecera y pie van sobre crema, que es donde el manual quiere el logo a
+   color. Si alguna vez alguno pasa a fondo oscuro, cambiar la clase a
+   `cc-lockup--claro` (el manual prohibe recuadrarlo en una caja blanca). */
+.cc-lockup--marca .cc-lockup__nombre { color: var(--cc-tinta, #4C2882); }
+.cc-lockup--marca .cc-lockup__click { color: var(--cc-fucsia, #D6307F); }
+.cc-lockup--claro .cc-lockup__nombre,
+.cc-lockup--claro .cc-lockup__click { color: #fff; }
+
 /* ---------- Header ---------- */
 .topbar {
   position: sticky;
@@ -162,7 +210,8 @@ p { margin: 0 0 1rem; }
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(76, 40, 130, 0.08);
 }
-.topbar__brand img { height: 36px; width: auto; }
+/* 36 px de alto los da el globo: 36 / 1.93 = 18.65px de font-size. */
+.topbar__logo { font-size: 18.65px; }
 
 /* ---------- Hero ---------- */
 .hero {
@@ -483,7 +532,8 @@ p { margin: 0 0 1rem; }
   border-top: 1px solid rgba(76, 40, 130, 0.1);
   font-size: 0.95rem;
 }
-.footer__logo { height: 30px; width: auto; margin: 0 auto 12px; }
+/* 30 px de alto: 30 / 1.93 = 15.54px. */
+.footer__logo { font-size: 15.54px; margin: 0 auto 12px; }
 .footer p { margin: 0 0 6px; opacity: 0.8; }
 .footer__cfg { font-size: 0.85rem; opacity: 0.6; }
 .footer__cfg code {

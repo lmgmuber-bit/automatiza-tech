@@ -140,13 +140,64 @@ $INVITADOS = [
  * una fiesta de verdad cuando quieras mostrarle a un cliente su propio álbum.
  * Se toman en orden alfabético y se emparejan con la lista de arriba.
  */
-$fotosDir = __DIR__ . '/_fotos-demo';
-$FOTOS_REALES = [];
-if (is_dir($fotosDir)) {
-    foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
-        foreach (glob($fotosDir . '/*.' . $ext) ?: [] as $f) { $FOTOS_REALES[] = $f; }
+/**
+ * Devuelve las fotos de una carpeta, UNA por nombre base.
+ *
+ * Lo de "una por nombre" no es un detalle: si la carpeta trae foto-01.jpg y
+ * foto-01.png (pasa al subir por FTP el original y su versión liviana), la
+ * versión anterior de esto los tomaba a los dos y el álbum salía con la mitad
+ * de las fotos repetidas. Se prefiere jpg porque pesa mucho menos: los PNG de
+ * las demos son de 5 MB contra 250 KB del jpg, y el invitado los abre desde el
+ * celular con datos.
+ */
+function cita_fotos_de(string $dir): array
+{
+    $prioridad = ['jpg' => 1, 'jpeg' => 2, 'webp' => 3, 'png' => 4];
+    $porNombre = [];
+    foreach (array_keys($prioridad) as $ext) {
+        foreach (glob($dir . '/*.' . $ext) ?: [] as $f) {
+            $base = strtolower(pathinfo($f, PATHINFO_FILENAME));
+            $peso = $prioridad[strtolower(pathinfo($f, PATHINFO_EXTENSION))] ?? 9;
+            if (!isset($porNombre[$base]) || $peso < $porNombre[$base]['peso']) {
+                $porNombre[$base] = ['ruta' => $f, 'peso' => $peso];
+            }
+        }
     }
-    sort($FOTOS_REALES, SORT_NATURAL);
+    $rutas = array_map(static fn ($x) => $x['ruta'], $porNombre);
+    sort($rutas, SORT_NATURAL);
+    return $rutas;
+}
+
+/**
+ * Dónde están las fotos. Se buscan en varios lugares porque por FTP es natural
+ * subirlas dentro de una subcarpeta con el nombre de la temática, y la versión
+ * anterior sólo miraba la raíz de `_fotos-demo`: encontraba cero, no avisaba
+ * nada, y armaba el álbum con las fotos compuestas por GD. El resultado era un
+ * álbum que parecía correcto y no tenía ninguna de las fotos subidas.
+ */
+$fotosBase = __DIR__ . '/_fotos-demo';
+$FOTOS_REALES = [];
+$FOTOS_DIR = null;
+if (is_dir($fotosBase)) {
+    $candidatas = [
+        $fotosBase . '/fotos-demo-' . $TEMA,
+        $fotosBase . '/' . $TEMA,
+        $fotosBase,
+    ];
+    // Y si hay una sola subcarpeta, esa: cubre el caso de haberla nombrado de
+    // cualquier otra forma.
+    $subs = array_filter(glob($fotosBase . '/*') ?: [], 'is_dir');
+    if (count($subs) === 1) { $candidatas[] = reset($subs); }
+
+    foreach ($candidatas as $dir) {
+        if (!is_dir($dir)) { continue; }
+        $encontradas = cita_fotos_de($dir);
+        if ($encontradas !== []) {
+            $FOTOS_REALES = $encontradas;
+            $FOTOS_DIR = $dir;
+            break;
+        }
+    }
 }
 
 /**
@@ -281,13 +332,31 @@ echo '<div class="paso"><b>4 · Álbum</b>con su QR de carga y su enlace de revi
 $conMensaje = count(array_filter($INVITADOS, static fn ($i) => !empty($i['mensaje'])));
 echo '<div class="paso"><b>5 · Fotos</b>' . count($INVITADOS) . ' '
    . ($hayFotosReales
-        ? 'tomadas de la carpeta <code>_fotos-demo</code>'
+        ? 'tomadas de <code>' . h(str_replace(__DIR__ . '/', '', (string) $FOTOS_DIR)) . '</code>'
         : 'recreadas con GD desde la guía del tema (fondo de sala + recorte del personaje)')
    . ', ' . $conMensaje . ' con mensaje de invitado</div>';
+// Aviso fuerte: subir las fotos y que el script no las vea es el error que ya
+// paso una vez, y el album sale igual de "correcto" sin ellas.
+if (!$hayFotosReales && is_dir($fotosBase)) {
+    echo '<div class="paso" style="border-color:#b3202b"><b style="color:#ff6b6b">Ojo</b>'
+       . 'Existe <code>_fotos-demo</code> pero no encontré ' . count($INVITADOS) . ' fotos utilizables ahí '
+       . 'ni en sus subcarpetas. Se van a usar las compuestas con GD, no las tuyas. '
+       . 'Revisa que sean .jpg y que estén en <code>_fotos-demo/fotos-demo-' . h($TEMA) . '/</code> '
+       . 'o directamente en <code>_fotos-demo/</code>.</div>';
+}
+// El resumen tiene que mirar en los mismos lugares que el paso 5b, o dice que
+// no hay video y despues lo carga igual.
+$videoPrevio = null;
+if (is_file(__DIR__ . '/_video-demo.mp4')) { $videoPrevio = '_video-demo.mp4'; }
+elseif ($FOTOS_DIR !== null) {
+    $mp4Previo = glob($FOTOS_DIR . '/*.mp4') ?: [];
+    sort($mp4Previo, SORT_NATURAL);
+    if ($mp4Previo !== []) { $videoPrevio = str_replace(__DIR__ . '/', '', $mp4Previo[0]); }
+}
 echo '<div class="paso"><b>5b · Video</b>'
-   . (is_file(__DIR__ . '/_video-demo.mp4')
-        ? 'se agrega <code>_video-demo.mp4</code> como página de video'
-        : 'sin <code>_video-demo.mp4</code>: el álbum queda sin página de video')
+   . ($videoPrevio !== null
+        ? 'se agrega <code>' . h($videoPrevio) . '</code> como página de video'
+        : 'sin video: el álbum queda sin página de video')
    . '</div>';
 echo '<div class="paso"><b>6 · Curaduría</b>todas aprobadas, la primera marcada como portada</div>';
 echo '<div class="paso"><b>7 · Revista</b>álbum publicado y listo para abrir</div>';
@@ -498,9 +567,17 @@ try {
     // 5b · El video de la fiesta, si lo hay. El álbum acepta video y la revista
     //      le arma su propia página, pero sin un video en la demo esa página no
     //      se ve nunca. Deja un `_video-demo.mp4` junto a este archivo.
+    // El video se busca junto al script y también dentro de la carpeta de fotos
+    // que se haya usado, con cualquier nombre: subirlo al lado de sus fotos es
+    // lo natural y obligar a renombrarlo a `_video-demo.mp4` era una trampa.
     $videoDemo = null;
     foreach (['_video-demo.mp4', '_fotos-demo/_video-demo.mp4'] as $cand) {
         if (is_file(__DIR__ . '/' . $cand)) { $videoDemo = __DIR__ . '/' . $cand; break; }
+    }
+    if ($videoDemo === null && $FOTOS_DIR !== null) {
+        $mp4 = glob($FOTOS_DIR . '/*.mp4') ?: [];
+        sort($mp4, SORT_NATURAL);
+        if ($mp4 !== []) { $videoDemo = $mp4[0]; }
     }
     if ($videoDemo === null) {
         $log[] = '5b · Sin video de demo (es opcional): no se agregó página de video.';

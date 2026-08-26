@@ -41,10 +41,35 @@ temática de baby shower COMPLETA está al final de `docs/TEMATICA-COMPLETA.md`
 no tiene ninguno.
 
 Temáticas `baby-nube` y `baby-safari`: fondos 9:16 propios, `frameBox`
-calibrado contra el marco de cada `fondo-sala.jpg`. **Les falta
-`musica-fondo.mp3`**, así que la cabina va muda; queda registrado como `todo`
-en `tests/frontend/themeFlow.test.mjs`. Ninguna de las dos debería ofrecerse a
-un cliente hasta que suene.
+calibrado contra el marco de cada `fondo-sala.jpg`, y `musica-fondo.mp3` +
+`musica-juego.mp3` ya presentes (loopeadas sin costura; el fundido final de
+cada pista se cruza sobre el principio, si no se oía un bajón cada 90 s). El
+test `tests/frontend/themeFlow.test.mjs` verifica los cuatro archivos contra
+disco. La nota anterior de esta sección decía que faltaba la música: quedó
+corregida el 2026-08-26 y se deja escrito para no reintroducir el dato viejo.
+
+**La invitación pública de baby shower (2026-08-26, local, sin deploy).**
+`public/invitacion.php` estaba escrita entera para cumpleaños. Ahora resuelve
+el vocabulario UNA vez, junto a los demás datos (`$esBabyShower`,
+`$eventoNombre`, `$eventoDeQuien`, `$eventoTitulo`, `$eventoArchivo`) y lo
+consumen el hero, la lámina, el calendario, el `.ics`, la tarjeta de WhatsApp
+y el `<title>`. `event_type` viene con `child_birthday` por defecto, así que
+las invitaciones infantiles no cambian nada.
+
+Las dos temáticas de baby shower están registradas en
+`public/data/event-profile-presets.json` con `base_image: fondo-sala.jpg` y un
+`text_area` que **es** el `frameBox` calibrado: los datos de la fiesta quedan
+escritos dentro del marco decorativo que la foto ya trae, el mismo que en el
+kiosco encuadra la foto del invitado. Sin ese preset caen a `theme_fallback`,
+que no define `base_image`, y la página muestra dos veces el mismo banner —
+una degradación silenciosa, por eso hay un test que la bloquea.
+
+No tienen ni van a tener video, así que no imitan el recorrido de personajes
+de las temáticas infantiles. En su lugar, `assets/invitation.css` cierra con
+un bloque propio ("la espera"): la foto respira, `.inv-sparks` —doce `<span>`
+que existían en el HTML sin una sola regla de CSS— se convierte en estrellas o
+luciérnagas según el tema, y la cuenta regresiva pone el número grande y solo.
+Todo cuelga de `[data-theme]` y respeta `prefers-reduced-motion`.
 
 La migración `010_baby_shower_predictions.php` **no está aplicada en
 producción**. Crea tres tablas y una columna; es aditiva e idempotente, pero

@@ -318,6 +318,52 @@
                 "h": 0.24,
                 "tone": "#3d0b52"
             }
+        },
+        "baby-nube": {
+            "status": "active",
+            "background": "fondo-banner.jpg",
+            "base_image": "fondo-sala.jpg",
+            "layout": "storybook-kids-v1",
+            "intro_style": "mágico",
+            "surface": {
+                "scrim": 0.74,
+                "blur": 14,
+                "saturate": 0.75,
+                "title": "#dce9f5",
+                "surface_mix": 90,
+                "hero_dim": 0.42
+            },
+            "scene": "soft night nursery of pale blue and cream balloons, a crescent moon prop, gentle candlelight and drifting clouds",
+            "text_area": {
+                "x": 0.3217,
+                "y": 0.2184,
+                "w": 0.5926,
+                "h": 0.3333,
+                "tone": "#24384D"
+            }
+        },
+        "baby-safari": {
+            "status": "active",
+            "background": "fondo-banner.jpg",
+            "base_image": "fondo-sala.jpg",
+            "layout": "storybook-kids-v1",
+            "intro_style": "mágico",
+            "surface": {
+                "scrim": 0.72,
+                "blur": 13,
+                "saturate": 0.8,
+                "title": "#eaf0e0",
+                "surface_mix": 89,
+                "hero_dim": 0.4
+            },
+            "scene": "warm sage-green safari corner with plush animals, monstera leaves, cream roses and dappled afternoon light",
+            "text_area": {
+                "x": 0.1685,
+                "y": 0.1451,
+                "w": 0.6611,
+                "h": 0.3719,
+                "tone": "#33402A"
+            }
         }
     },
     "theme_fallback": {

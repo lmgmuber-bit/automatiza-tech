@@ -448,6 +448,11 @@ test('las cadenas K-Pop y Héroes mantienen ritmo/escudo como primer juego', () 
    ──────────────────────────────────────────────────────────────────────── */
 const { readFileSync, existsSync, statSync } = await import('node:fs')
 const TEMAS = JSON.parse(readFileSync(new URL('../../public/data/themes.json', import.meta.url), 'utf8')).themes
+// Presets de la invitación pública: de acá sale qué imagen hace de lámina
+// y en qué coordenadas se escriben los datos encima.
+const PRESETS_INVITACION = JSON.parse(
+  readFileSync(new URL('../../public/data/event-profile-presets.json', import.meta.url), 'utf8')
+)
 
 // Estas seis son las temáticas COMPLETAS. Todas cierran la cadena con la
 // misma misión Full: 'concierto3d' (El Show, ver src/StageConcert3D.jsx).
@@ -664,5 +669,36 @@ for (const [slug, tema] of BABY_SHOWER) {
     const ruta = new URL(`../../public/themes/${slug}/musica-fondo.mp3`, import.meta.url)
     assert.ok(existsSync(ruta), `${slug}: falta musica-fondo.mp3`)
     assert.ok(statSync(ruta).size > 200000, `${slug}: musica-fondo.mp3 pesa sospechosamente poco`)
+  })
+
+  // La invitación pública de esta temática. Sin una entrada propia en
+  // event-profile-presets.json, el preset cae a `theme_fallback`, que no
+  // define `base_image`: la página mostraba DOS VECES el mismo fondo —una de
+  // hero y otra de "lámina"— en vez de los datos escritos dentro del marco.
+  // Es una degradación silenciosa: no rompe nada, solo se ve pobre, así que
+  // sin este test volvería sin que nadie se diera cuenta.
+  test(`${slug}: la invitación tiene lámina propia, dentro del marco`, () => {
+    const preset = PRESETS_INVITACION.themes?.[slug]
+    assert.ok(preset, `${slug}: no está en event-profile-presets.json`)
+
+    const base = String(preset.base_image ?? '')
+    assert.ok(base, `${slug}: el preset no declara base_image`)
+    const ruta = new URL(`../../public/themes/${slug}/${base}`, import.meta.url)
+    assert.ok(existsSync(ruta), `${slug}: base_image apunta a ${base}, que no existe`)
+
+    // El texto va escrito dentro del marco decorativo que la foto ya trae, y
+    // ese marco es el mismo que el kiosco usa para encuadrar la foto del
+    // invitado. Si los dos números se separan, la invitación deja de calzar
+    // con el marco sin que ningún otro test se entere.
+    const area = preset.text_area
+    assert.ok(area, `${slug}: el preset no declara text_area`)
+    for (const k of ['x', 'y', 'w', 'h']) {
+      assert.equal(
+        area[k],
+        tema.frameBox[k],
+        `${slug}: text_area.${k} no coincide con el frameBox calibrado`
+      )
+    }
+    assert.match(String(area.tone ?? ''), /^#[0-9a-fA-F]{6}$/, `${slug}: text_area.tone inválido`)
   })
 }

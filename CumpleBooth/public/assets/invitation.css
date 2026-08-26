@@ -1591,3 +1591,327 @@ body.inv-scroll-locked {
   z-index: 0;
   background: #bfeeff;
 }
+
+/* ==========================================================================
+   BABY SHOWER — "la espera"
+   ==========================================================================
+   Las temáticas infantiles se apoyan en video: los personajes llegan, hablan,
+   cruzan la meta. Las dos de baby shower no tienen —ni van a tener— ese
+   material, y copiar el mismo formato con una foto fija habría dado una
+   versión pobre de la misma idea.
+
+   Así que el registro es otro a propósito. Un baby shower no es una fiesta más
+   chica: es una espera. Una pieza a la que todavía le falta llegar. Todo lo de
+   abajo persigue eso — una fotografía que respira, aire con algo flotando
+   dentro, y un solo número que importa: cuántos días faltan.
+
+   Nada de esto pide un asset nuevo; es la misma foto del kiosco. Y todo cuelga
+   de [data-theme], así que las invitaciones infantiles no cambian un píxel.
+   ========================================================================== */
+
+/* ---------- 1. La fotografía respira ----------
+   26 segundos de ida y otros 26 de vuelta. Es deliberadamente más lento que
+   cualquier "Ken Burns" que se note: el invitado no debería ver que la imagen
+   se mueve, solo que la pantalla no está muerta. */
+@keyframes inv-baby-respira {
+  from { transform: scale(1.06); }
+  to   { transform: scale(1.14); }
+}
+
+.inv-body[data-theme="baby-nube"] .inv-hero-media,
+.inv-body[data-theme="baby-safari"] .inv-hero-media {
+  animation: inv-baby-respira 26s ease-in-out infinite alternate;
+}
+
+/* ---------- 2. El aire tiene algo adentro ----------
+   `.inv-sparks` ya existía en el HTML de todas las temáticas —doce <span> con
+   `--i` de 1 a 12— pero no tenía una sola regla de CSS: se imprimía invisible.
+   Acá recibe cuerpo, y solo en baby shower, para no mover unas invitaciones
+   infantiles que ya están aprobadas.
+
+   El `--i` escalona sin escribir doce reglas. Repartir la posición con una
+   sola multiplicación deja una grilla regular que el ojo detecta al toque, así
+   que los múltiplos de 3 y de 4 salen corridos y con otro tamaño. */
+.inv-body[data-theme="baby-nube"] .inv-sparks,
+.inv-body[data-theme="baby-safari"] .inv-sparks {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.inv-body[data-theme="baby-nube"] .inv-spark,
+.inv-body[data-theme="baby-safari"] .inv-spark {
+  position: absolute;
+  bottom: -12%;
+  left: calc(var(--i) * 8.1% - 3%);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  opacity: 0;
+  animation:
+    inv-baby-sube calc(20s + var(--i) * 1.6s) linear infinite,
+    inv-baby-vaiven calc(6s + var(--i) * .7s) ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -2.7s), calc(var(--i) * -.9s);
+}
+
+/* Rompe la grilla: sin esto los doce suben en columnas parejas. */
+.inv-body[data-theme="baby-nube"] .inv-spark:nth-child(3n),
+.inv-body[data-theme="baby-safari"] .inv-spark:nth-child(3n) {
+  left: calc(var(--i) * 8.1% + 4.5%);
+  width: 4px;
+  height: 4px;
+}
+
+.inv-body[data-theme="baby-nube"] .inv-spark:nth-child(4n),
+.inv-body[data-theme="baby-safari"] .inv-spark:nth-child(4n) {
+  left: calc(var(--i) * 8.1% - 6.5%);
+  width: 10px;
+  height: 10px;
+}
+
+@keyframes inv-baby-sube {
+  0%   { opacity: 0; transform: translateY(0); }
+  12%  { opacity: 1; }
+  82%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-118vh); }
+}
+
+@keyframes inv-baby-vaiven {
+  from { margin-left: -14px; }
+  to   { margin-left: 14px; }
+}
+
+/* Nubes: luz fría, como polvo de estrellas sobre la cuna. */
+.inv-body[data-theme="baby-nube"] .inv-spark {
+  background: radial-gradient(circle at 40% 35%, #fff, #dce9f5 55%, rgba(143, 190, 221, 0) 78%);
+  box-shadow: 0 0 12px 2px rgba(220, 233, 245, .55);
+}
+
+/* Safari: luciérnagas de tarde. Luz cálida y todavía más lentas. */
+.inv-body[data-theme="baby-safari"] .inv-spark {
+  background: radial-gradient(circle at 40% 35%, #fff8e6, #d9b36b 52%, rgba(217, 179, 107, 0) 78%);
+  box-shadow: 0 0 14px 3px rgba(217, 179, 107, .42);
+  animation-duration: calc(26s + var(--i) * 1.9s), calc(7.5s + var(--i) * .8s);
+}
+
+/* ---------- 3. La cuenta regresiva ----------
+   No es una segunda píldora: compitiendo con la de la fecha, las dos pierden.
+
+   La primera versión era una sola línea en mayúsculas, y en 375px "FALTAN 39
+   DÍAS PARA CONOCER A VALENTINA" ocupaba el ancho completo de borde a borde:
+   se leía como un cintillo que grita, justo lo contrario de la idea.
+
+   Ahora el número va solo y grande —es el único dato que la familia vuelve a
+   mirar cada vez que abre el enlace— y la frase queda chica debajo. Grande no
+   es lo mismo que ruidoso: el peso es liviano y el color es el suave del tema,
+   no el de acento. */
+.inv-hero-countdown {
+  position: relative;
+  display: flex;
+  max-width: 20rem;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px auto 0;
+  padding-top: 16px;
+  gap: .1em;
+}
+
+.inv-hero-countdown::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 46px;
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg,
+    transparent,
+    color-mix(in srgb, var(--inv-highlight) 75%, transparent),
+    transparent);
+  content: "";
+}
+
+.inv-hero-countdown-num {
+  color: color-mix(in srgb, var(--inv-title, var(--inv-highlight)) 82%, white);
+  font-size: clamp(2.1rem, 11vw, 3.1rem);
+  font-weight: 300;
+  line-height: 1;
+  /* Las cifras tabulares evitan que el bloque se corra de ancho cuando el
+     contador baja de 30 a 29 y el "3" es más ancho que el "2". */
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em;
+  text-shadow: 0 6px 26px rgba(0, 0, 0, .7), 0 1px 4px rgba(0, 0, 0, .85);
+}
+
+.inv-hero-countdown-label {
+  color: color-mix(in srgb, var(--inv-title, var(--inv-highlight)) 62%, white);
+  font-size: clamp(.66rem, 2.9vw, .8rem);
+  font-weight: 600;
+  letter-spacing: .09em;
+  line-height: 1.35;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .8), 0 1px 3px rgba(0, 0, 0, .9);
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+/* "¡Es hoy!" llega sin número: sin esto quedaría como una nota al pie del
+   día más importante. */
+.inv-hero-countdown-num + .inv-hero-countdown-label,
+.inv-hero-countdown-label:only-child {
+  margin: 0;
+}
+
+.inv-hero-countdown-label:only-child {
+  color: color-mix(in srgb, var(--inv-title, var(--inv-highlight)) 85%, white);
+  font-size: clamp(1.1rem, 5.4vw, 1.5rem);
+  letter-spacing: .04em;
+}
+
+/* ---------- 4. La lámina, escrita dentro del marco ----------
+   `fondo-sala.jpg` trae un marco decorativo REAL colgado en la pared, con el
+   lienzo en blanco — el mismo que en la fiesta encuadra la foto del invitado.
+   Las coordenadas salen del `frameBox` ya calibrado contra ese marco, así que
+   los datos caen exactamente adentro.
+
+   Por eso esta lámina NO pinta una tarjeta encima, como sí hace Hielo: taparía
+   justo el marco que la hace bonita. Va tinta sobre el lienzo y nada más. */
+.inv-body[data-theme="baby-nube"] .inv-plate,
+.inv-body[data-theme="baby-safari"] .inv-plate {
+  box-sizing: border-box;
+  justify-content: center;
+  gap: clamp(2px, 1.1cqw, 9px);
+  padding: clamp(4px, 3cqw, 20px) clamp(6px, 4cqw, 26px);
+}
+
+/* Filete + rombo, sin un solo glifo tipográfico. Un carácter decorativo suelto
+   (❦, ✦, ◆) se ve como un cuadrado vacío en varias fuentes de Android — ya
+   pasó con los iconos de las secciones del perfil. Con bordes no puede pasar. */
+.inv-body[data-theme="baby-nube"] .inv-plate-orn,
+.inv-body[data-theme="baby-safari"] .inv-plate-orn {
+  display: flex;
+  width: min(62%, 15em);
+  align-items: center;
+  justify-content: center;
+  gap: .7em;
+  margin-bottom: clamp(2px, 1.4cqw, 10px);
+}
+
+.inv-body[data-theme="baby-nube"] .inv-plate-orn span:nth-child(odd),
+.inv-body[data-theme="baby-safari"] .inv-plate-orn span:nth-child(odd) {
+  height: 1px;
+  flex: 1;
+  background: currentcolor;
+  opacity: .46;
+}
+
+.inv-body[data-theme="baby-nube"] .inv-plate-orn span:nth-child(2),
+.inv-body[data-theme="baby-safari"] .inv-plate-orn span:nth-child(2) {
+  width: clamp(4px, 1.5cqw, 9px);
+  height: clamp(4px, 1.5cqw, 9px);
+  flex: 0 0 auto;
+  transform: rotate(45deg);
+  background: currentcolor;
+  opacity: .6;
+}
+
+.inv-body[data-theme="baby-nube"] .inv-plate-kicker,
+.inv-body[data-theme="baby-safari"] .inv-plate-kicker {
+  color: color-mix(in srgb, var(--plate-tone) 78%, white);
+  /* Mínimo .6rem, no .5: el marco ocupa ~59% del ancho de la foto, así que
+     el cqw es chico y el clamp cae siempre al piso. Con .5rem el kicker
+     medía 8px reales en un teléfono. */
+  font-size: clamp(.6rem, 3.8cqw, .95rem);
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-shadow: none;
+  text-transform: none;
+}
+
+.inv-body[data-theme="baby-nube"] .inv-plate-name,
+.inv-body[data-theme="baby-safari"] .inv-plate-name {
+  margin: .04em 0 0;
+  color: var(--plate-tone);
+  font-size: clamp(1.6rem, 20cqw, 4.6rem);
+  line-height: .94;
+  /* El lienzo del marco es blanco liso: una sombra dura acá se ve sucia.
+     Basta un realce mínimo para despegar la letra del papel. */
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .7);
+}
+
+.inv-body[data-theme="baby-nube"] .inv-plate-details,
+.inv-body[data-theme="baby-safari"] .inv-plate-details {
+  display: grid;
+  width: 100%;
+  margin-top: clamp(3px, 1.6cqw, 12px);
+  gap: clamp(2px, .9cqw, 6px);
+  justify-items: center;
+}
+
+/* Sin píldora rellena: sobre un lienzo de papel, un chip de color se ve
+   pegoteado. Renglón limpio, como escrito a mano en el paspartú. */
+.inv-body[data-theme="baby-nube"] .inv-plate-chip,
+.inv-body[data-theme="baby-safari"] .inv-plate-chip {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: center;
+  gap: .45em;
+  margin: 0;
+  color: color-mix(in srgb, var(--plate-tone) 88%, white);
+  font-size: clamp(.6rem, 3.7cqw, .92rem);
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  text-shadow: none;
+}
+
+/* Los emoji de fecha/hora/lugar son los mismos que usa Hielo, y ahí funcionan
+   porque la lámina es una tarjeta de color. Sobre un lienzo de papel se ven
+   como calcomanías pegadas. En gris quedan como sellitos de tinta, que es lo
+   que corresponde acá — y sigue siendo el mismo carácter, así que ningún
+   Android se queda sin él. */
+.inv-body[data-theme="baby-nube"] .inv-plate-chip > span:first-child,
+.inv-body[data-theme="baby-safari"] .inv-plate-chip > span:first-child {
+  flex: 0 0 auto;
+  font-size: .9em;
+  filter: grayscale(1);
+  opacity: .62;
+}
+
+.inv-body[data-theme="baby-nube"] .inv-plate-chip > span:last-child,
+.inv-body[data-theme="baby-safari"] .inv-plate-chip > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* La cuenta regresiva otra vez, ahora dentro del marco. Es la línea que la
+   familia va a mirar cada vez que abra el enlace. */
+.inv-body[data-theme="baby-nube"] .inv-plate-countdown,
+.inv-body[data-theme="baby-safari"] .inv-plate-countdown {
+  margin: clamp(4px, 2cqw, 14px) 0 0;
+  color: color-mix(in srgb, var(--plate-tone) 62%, white);
+  /* Medía 6,7px. Sobraban 87px de aire arriba y abajo del bloque, así que
+     el piso sube hasta donde se lee de verdad. */
+  font-size: clamp(.56rem, 3.1cqw, .78rem);
+  font-weight: 700;
+  letter-spacing: .08em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+/* ---------- 5. Sin movimiento ----------
+   Todo lo de arriba es atmósfera: apagarlo no le quita información a nadie. */
+@media (prefers-reduced-motion: reduce) {
+  .inv-body[data-theme="baby-nube"] .inv-hero-media,
+  .inv-body[data-theme="baby-safari"] .inv-hero-media,
+  .inv-body[data-theme="baby-nube"] .inv-spark,
+  .inv-body[data-theme="baby-safari"] .inv-spark {
+    animation: none;
+  }
+
+  .inv-body[data-theme="baby-nube"] .inv-spark,
+  .inv-body[data-theme="baby-safari"] .inv-spark {
+    opacity: .5;
+  }
+}

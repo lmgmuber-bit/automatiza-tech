@@ -287,3 +287,33 @@ porque sirve igual en las dos.
 
 **Al pedir música nueva, exigir siempre loop sin fundido en los extremos.** Es
 lo que más se olvida y lo único que no se nota hasta que suena en bucle.
+
+## La invitación pública
+
+Una temática de baby shower no está completa hasta que su **invitación** se ve
+como corresponde. No es lo mismo que la cabina, y se rompe de forma silenciosa.
+
+Hace falta una entrada propia en `public/data/event-profile-presets.json`
+dentro de `themes`, con dos claves:
+
+- `base_image: "fondo-sala.jpg"` — la lámina de la invitación. Es la misma foto
+  del kiosco, así que no se genera nada nuevo.
+- `text_area` — **exactamente los cuatro números del `frameBox`**, más un
+  `tone` con la tinta. Los datos de la fiesta se escriben así dentro del marco
+  decorativo que la foto ya trae: el mismo marco que en la fiesta encuadra la
+  foto del invitado.
+
+Sin esa entrada el preset cae a `theme_fallback`, que no define `base_image`, y
+la invitación muestra **dos veces el mismo `fondo-banner.jpg`** — una de hero y
+otra de "lámina". No rompe nada, solo se ve pobre, que es justamente por qué
+hay un test (`la invitación tiene lámina propia, dentro del marco`) que exige
+que los dos números sigan siendo el mismo.
+
+Lo que **no** hace falta: video. Las temáticas infantiles apoyan la invitación
+en el recorrido de personajes, y un baby shower no tiene personajes. En vez de
+imitar ese formato con una foto fija —que da una versión pobre de la misma
+idea— la invitación de baby shower usa el bloque "la espera" que cierra
+`public/assets/invitation.css`: la fotografía respira, `.inv-sparks` se
+convierte en estrellas o luciérnagas según el tema, y la cuenta regresiva pone
+el número grande y solo. Todo cuelga de `[data-theme]`, así que agregar una
+temática de baby shower nueva pide sumar su slug a esos selectores.

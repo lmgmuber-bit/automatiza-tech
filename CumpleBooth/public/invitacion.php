@@ -123,6 +123,27 @@ $eventTime = (string) ($invitation['event_time'] ?? '');
 $address = (string) ($invitation['address'] ?? '');
 $message = (string) ($invitation['message'] ?? '');
 
+// Como se nombra el evento en todo lo que lee el invitado. Un baby shower
+// no es "el cumpleaños de Valentina": Valentina todavía no nace. Se
+// resuelve acá, una sola vez, porque lo consumen el hero, la plantilla, el
+// calendario, el .ics, la tarjeta de WhatsApp y el <title>; repetir el
+// ternario en cada punto es exactamente como se quedan sin cambiar los que
+// nadie recuerda. Las invitaciones de cumpleaños no se mueven: `event_type`
+// viene con 'child_birthday' por defecto.
+$esBabyShower = (string) ($invitation['event_type'] ?? 'child_birthday') === 'baby_shower';
+$eventoNombre = $esBabyShower ? 'baby shower' : 'cumpleaños';
+// El artículo va incluido: en español "al baby shower" y "a la fiesta" no
+// se componen con una preposición suelta, y separarlos ya produjo un
+// "en al baby shower" en el kiosco.
+$eventoDeQuien = $birthdayName !== ''
+    ? 'al ' . $eventoNombre . ' de ' . $birthdayName
+    : ($esBabyShower ? 'a nuestro baby shower' : 'a nuestra fiesta');
+$eventoTitulo = ($esBabyShower ? 'Baby shower de ' : 'Cumpleaños de ')
+    . ($birthdayName !== '' ? $birthdayName : 'la fiesta');
+$eventoSinNombre = $esBabyShower ? 'Nuestro baby shower' : 'Nuestra fiesta';
+$eventoArchivo = ($esBabyShower ? 'baby-shower-' : 'cumpleanos-')
+    . ($birthdayName !== '' ? $birthdayName : 'cumpleclick');
+
 // El perfil es estrictamente opcional. El helper ya entrega solo contenido
 // visible de un perfil activo asociado al mismo evento de esta invitacion.
 $eventProfile = null;
@@ -336,9 +357,59 @@ $formatEventDate = static function (string $isoDate): array {
     ];
 };
 $dateParts = $eventDate !== '' ? $formatEventDate($eventDate) : ['long' => '', 'day' => '', 'month' => ''];
-$heroKicker = $themeSlug === 'hielo'
-    ? 'El Reino de Hielo te invita a celebrar a:'
-    : 'Tenemos el agrado de invitarte a celebrar el cumpleaños de:';
+
+// Cuenta regresiva, solo para baby shower. Un baby shower ES una espera:
+// "faltan 39 días para conocer a Valentina" es lo primero que el invitado
+// busca, y es un dato que ninguna invitación de cumpleaños necesita.
+//
+// La zona horaria va explícita. PROD corre en UTC, así que a las 21:00 de
+// un martes en Santiago el servidor ya cree que es miércoles y el conteo
+// saldría corrido un día entero — el mismo error que se corrigió en el
+// tablero de predicciones.
+// `$cuentaNumero` y `$cuentaTexto` arman el bloque del hero, donde el
+// número va grande y solo; `$cuentaRegresiva` es la misma idea en una
+// línea corrida, para la lámina dentro del marco, que no tiene espacio
+// para un numeral grande sin invadir el paspartú.
+$cuentaNumero = '';
+$cuentaTexto = '';
+$cuentaRegresiva = '';
+if ($esBabyShower && preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $eventDate)) {
+    try {
+        $zonaChile = new DateTimeZone('America/Santiago');
+        $hoy = new DateTimeImmutable('today', $zonaChile);
+        $dia = new DateTimeImmutable($eventDate, $zonaChile);
+        $faltan = (int) $hoy->diff($dia)->format('%r%a');
+        $aQuien = $birthdayName !== '' ? 'a ' . $birthdayName : 'al bebé';
+        if ($faltan > 0) {
+            $cuentaNumero = (string) $faltan;
+            $cuentaTexto = ($faltan === 1 ? 'día para conocer ' : 'días para conocer ') . $aQuien;
+            // Dentro del marco NO va "para conocer a Lucas": el nombre está
+            // en la línea de arriba, así que repetirlo solo agrega una segunda
+            // línea que se desborda por el borde de madera.
+            $cuentaRegresiva = $faltan === 1 ? 'Falta 1 día' : 'Faltan ' . $faltan . ' días';
+        } elseif ($faltan === 0) {
+            $cuentaTexto = '¡Es hoy!';
+            $cuentaRegresiva = '¡Es hoy!';
+        }
+        // Fecha pasada: no se muestra nada. Un "faltan -12 días" en la
+        // invitación que la familia guarda de recuerdo es peor que el vacío.
+    } catch (Throwable $e) {
+        error_log('CumpleClick cuenta regresiva: ' . $e->getMessage());
+    }
+}
+// Cada temática puede traer su propia entrada. Las dos de baby shower
+// hablan de recibir al bebé, no de celebrar un cumpleaños que aún no pasa.
+if ($themeSlug === 'hielo') {
+    $heroKicker = 'El Reino de Hielo te invita a celebrar a:';
+} elseif ($themeSlug === 'baby-nube') {
+    $heroKicker = 'Entre nubes y estrellas, te esperamos para recibir a:';
+} elseif ($themeSlug === 'baby-safari') {
+    $heroKicker = 'La manada se prepara para recibir a:';
+} elseif ($esBabyShower) {
+    $heroKicker = 'Tenemos el agrado de invitarte al baby shower de:';
+} else {
+    $heroKicker = 'Tenemos el agrado de invitarte a celebrar el cumpleaños de:';
+}
 
 // Fondo en movimiento opcional por temática (contrato §5.1: 720x1280, sin
 // audio, loopeable). Si no existe, el hero cae al fondo estático del tema.
@@ -593,9 +664,7 @@ $shareKindLabel = $hasVideo ? 'video' : 'imagen';
 $shareFileUrl = $hasVideo ? (string) $videoUrl : $imageUrl;
 
 $shareMessageParts = [];
-$shareMessageParts[] = $birthdayName !== ''
-    ? '¡Estás invitado al cumpleaños de ' . $birthdayName . '!'
-    : '¡Estás invitado a nuestra fiesta!';
+$shareMessageParts[] = '¡Estás invitado ' . $eventoDeQuien . '!';
 if ($dateParts['long'] !== '') {
     $shareMessageParts[] = $eventTime !== ''
         ? 'Es el ' . $dateParts['long'] . ' a las ' . $eventTime . '.'
@@ -717,7 +786,7 @@ if ($eventDate !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $eventDate)) {
     }
     if ($calendarEnd !== '') {
         $googleCalendarUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE'
-            . '&text=' . rawurlencode('Cumpleaños de ' . ($birthdayName !== '' ? $birthdayName : 'la fiesta'))
+            . '&text=' . rawurlencode($eventoTitulo)
             . '&dates=' . $calendarStart . '/' . $calendarEnd
             . ($address !== '' ? '&location=' . rawurlencode($address) : '')
             . '&details=' . rawurlencode($shareUrl !== '' ? 'Invitación: ' . $shareUrl : '');
@@ -773,15 +842,22 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>Invitación de <?= $esc($birthdayName !== '' ? $birthdayName : 'cumpleaños') ?> · CumpleClick</title>
+<title>Invitación de <?= $esc($birthdayName !== '' ? $birthdayName : $eventoNombre) ?> · CumpleClick</title>
 <?php
 // Tarjeta al compartir por WhatsApp y redes. A propósito NO lleva la dirección:
 // la vista previa se muestra en cada grupo donde se reenvíe el enlace y Meta la
 // cachea en sus servidores, así que la casa y la hora exacta de la fiesta
 // quedarían visibles sin que nadie abra la invitación. Dentro de la página sí
 // va, que para eso hay que tener el enlace.
-$ogNombre = $birthdayName !== '' ? $birthdayName : 'Cumpleaños';
-$ogTitulo = $ogNombre . ' te invita a su cumpleaños';
+$ogNombre = $birthdayName !== ''
+    ? $birthdayName
+    : ($esBabyShower ? 'Baby shower' : 'Cumpleaños');
+// El bebé no invita a su propio baby shower: invitan los papás.
+$ogTitulo = $esBabyShower
+    ? ($birthdayName !== ''
+        ? 'Te invitamos al baby shower de ' . $birthdayName
+        : 'Te invitamos a nuestro baby shower')
+    : $ogNombre . ' te invita a su cumpleaños';
 $ogMeses = [1 => 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
             'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 $ogDesc = 'Toca para ver la invitación.';
@@ -902,10 +978,18 @@ $cssVer = static function (string $rel): string {
 
       <div class="inv-hero-copy">
         <p class="inv-kicker"><?= $esc($heroKicker) ?></p>
-        <h1 class="inv-name"><?= $esc($birthdayName !== '' ? $birthdayName : 'Nuestra fiesta') ?></h1>
+        <h1 class="inv-name"><?= $esc($birthdayName !== '' ? $birthdayName : $eventoSinNombre) ?></h1>
         <?php if ($dateParts['long'] !== '' || $eventTime !== ''): ?>
         <p class="inv-hero-when">
           <?= $esc($dateParts['long']) ?><?= $dateParts['long'] !== '' && $eventTime !== '' ? ' · ' : '' ?><?= $esc($eventTime) ?>
+        </p>
+        <?php endif; ?>
+        <?php if ($cuentaTexto !== ''): ?>
+        <p class="inv-hero-countdown">
+          <?php if ($cuentaNumero !== ''): ?>
+          <span class="inv-hero-countdown-num"><?= $esc($cuentaNumero) ?></span>
+          <?php endif; ?>
+          <span class="inv-hero-countdown-label"><?= $esc($cuentaTexto) ?></span>
         </p>
         <?php endif; ?>
       </div>
@@ -1072,7 +1156,7 @@ $cssVer = static function (string $rel): string {
         // la meta + el cierre grupal, todo en la MISMA sección de scroll. El
         // video es un slot más (más ancho que los demás), no una sección
         // aparte. El acceso a la invitación solo aparece en el último slot. ?>
-  <section class="inv-chapters" data-chapters style="--inv-chapters-count:<?= count($chapterSlots) ?>;--inv-chapters-units:<?= $chapterUnits ?>" aria-label="El recorrido hasta la fiesta">
+  <section class="inv-chapters" data-chapters style="--inv-chapters-count:<?= count($chapterSlots) ?>;--inv-chapters-units:<?= $chapterUnits ?>" aria-label="<?= $esc('El recorrido hasta ' . ($esBabyShower ? 'el baby shower' : 'la fiesta')) ?>">
     <div class="inv-chapters-stage">
       <div class="inv-chapters-media" aria-hidden="true">
         <?php foreach ($chapterSlots as $i => $chapter): ?>
@@ -1161,8 +1245,28 @@ $cssVer = static function (string $rel): string {
           <p class="inv-plate-chip inv-plate-chip--place"><span aria-hidden="true">📍</span><span><?= $esc($address) ?></span></p>
           <?php endif; ?>
         </div>
+        <?php elseif ($esBabyShower): ?>
+        <?php // Misma riqueza que la lámina de Hielo, con el vocabulario y
+              // los adornos de la espera en vez de los del cumpleaños. ?>
+        <div class="inv-plate-orn" aria-hidden="true"><span></span><span></span><span></span></div>
+        <p class="inv-plate-kicker">Un baby shower para recibir a:</p>
+        <p class="inv-plate-name"><?= $esc($birthdayName) ?></p>
+        <div class="inv-plate-details">
+          <?php if ($dateParts['long'] !== ''): ?>
+          <p class="inv-plate-chip inv-plate-chip--date"><span aria-hidden="true">📅</span><span><?= $esc($dateParts['long']) ?></span></p>
+          <?php endif; ?>
+          <?php if ($eventTime !== ''): ?>
+          <p class="inv-plate-chip"><span aria-hidden="true">🕓</span><span><?= $esc($eventTime) ?> horas</span></p>
+          <?php endif; ?>
+          <?php if ($address !== ''): ?>
+          <p class="inv-plate-chip inv-plate-chip--place"><span aria-hidden="true">📍</span><span><?= $esc($address) ?></span></p>
+          <?php endif; ?>
+        </div>
+        <?php if ($cuentaRegresiva !== ''): ?>
+        <p class="inv-plate-countdown"><?= $esc($cuentaRegresiva) ?></p>
+        <?php endif; ?>
         <?php else: ?>
-        <p class="inv-plate-kicker">Te invitamos al cumpleaños de:</p>
+        <p class="inv-plate-kicker"><?= $esc('Te invitamos al ' . $eventoNombre . ' de:') ?></p>
         <p class="inv-plate-name"><?= $esc($birthdayName) ?></p>
         <?php if ($dateParts['long'] !== '' || $eventTime !== ''): ?>
         <p class="inv-plate-when"><?= $esc($dateParts['long']) ?><?= $dateParts['long'] !== '' && $eventTime !== '' ? ' · ' : '' ?><?= $esc($eventTime) ?></p>
@@ -1192,10 +1296,10 @@ $cssVer = static function (string $rel): string {
       data-inv-calendar
       data-cal-start="<?= $esc($calendarStart) ?>"
       data-cal-end="<?= $esc($calendarEnd) ?>"
-      data-cal-title="<?= $esc('Cumpleaños de ' . ($birthdayName !== '' ? $birthdayName : 'la fiesta')) ?>"
+      data-cal-title="<?= $esc($eventoTitulo) ?>"
       data-cal-location="<?= $esc($address) ?>"
       data-cal-url="<?= $esc($shareUrl) ?>"
-      data-cal-filename="<?= $esc('cumpleanos-' . ($birthdayName !== '' ? $birthdayName : 'cumpleclick')) ?>"
+      data-cal-filename="<?= $esc($eventoArchivo) ?>"
       <?php endif; ?>>
       <p class="inv-fact-label"><?= $dateParts['long'] !== '' ? 'Cuándo' : 'Hora' ?></p>
       <p class="inv-fact-value"><?= $esc($dateParts['long'] !== '' ? $dateParts['long'] : $eventTime) ?></p>
@@ -1303,7 +1407,7 @@ $cssVer = static function (string $rel): string {
 
   <?php if ($eventProfile !== null): ?>
   <section class="inv-finale inv-reveal" id="inv-protagonista">
-    <p class="inv-kicker">Antes de la fiesta</p>
+    <p class="inv-kicker"><?= $esc($esBabyShower ? 'Antes del baby shower' : 'Antes de la fiesta') ?></p>
     <h2 class="inv-finale-title">¿Quieres conocer a <?= $esc($finaleNames) ?>?</h2>
     <p class="inv-finale-lede">Gustos, tallas e ideas para regalar, contados por la familia.</p>
 

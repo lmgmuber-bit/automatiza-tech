@@ -952,17 +952,36 @@ function composePredictionImage(bgImg, photoImg, prediction, score) {
   ctx.stroke()
   if (THEME_LABEL) drawThemeRibbon(ctx, geometry.cx, geometry.top, geometry.side, W)
 
+  /* La ficha de la apuesta.
+   *
+   * Va MAS ABAJO que antes (0.69 -> 0.742, unos 100 px en un lienzo de 1920):
+   * arriba tapaba el borde inferior del marco y parte de la foto, que es
+   * justamente lo que el invitado quiere ver.
+   *
+   * Y va como marca de agua, no como tarjeta: antes era blanco al 91% con
+   * sombra, o sea un sticker pegado encima de la decoracion que el cliente
+   * pago. Ahora es un cristal translucido con filo claro; la escena se ve por
+   * detras y el texto sigue leyendose porque la tinta es oscura y llena.
+   *
+   * El limite inferior no es libre: la marca de agua de CumpleClick arranca en
+   * 0.927 (ver drawBrandWatermark), asi que el panel cierra en 0.925 para no
+   * pisarla.
+   *
+   * Esto vale para TODAS las tematicas de baby shower: la funcion es una sola y
+   * lee CONFIG.frameBox, no tiene nada escrito por tema.
+   */
   const labels = predictionLabels(prediction)
   const panelX = W * 0.075
-  const panelY = H * 0.69
+  const panelY = H * 0.742
   const panelW = W * 0.85
-  const panelH = H * 0.22
+  const panelH = H * 0.183
   ctx.save()
-  ctx.fillStyle = 'rgba(255,255,255,.91)'
-  ctx.shadowColor = 'rgba(24,12,47,.28)'
-  ctx.shadowBlur = W * 0.035
+  ctx.fillStyle = 'rgba(255,255,255,.66)'
   roundRectPath(ctx, panelX, panelY, panelW, panelH, W * 0.045)
   ctx.fill()
+  ctx.lineWidth = Math.max(2, W * 0.0035)
+  ctx.strokeStyle = 'rgba(255,255,255,.72)'
+  ctx.stroke()
   ctx.restore()
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'

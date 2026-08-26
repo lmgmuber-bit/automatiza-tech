@@ -195,3 +195,71 @@ se puede mostrar a medio hacer sin que se vea rota.
 | K-Pop | ✅ | — |
 | **Héroes** | ⚠️ | los 6 `saludo-*.mp4` y `despedida-heroes.mp4` (bloqueado a propósito hasta que Luis lo pida) |
 | Mickey, Cachorros, Princesas, Dinos, Sirenas, Juguetes | ❌ | todo — cero assets |
+
+---
+
+# Baby shower: qué es una temática completa (2026-08-26)
+
+La tabla A de arriba **no aplica**. Está escrita para cumpleaños infantiles y
+exige seis personajes con su cadena de juegos, ruleta, puzzles y videos de
+saludo. Un baby shower no tiene nada de eso, y pedírselo dejaría a las dos
+temáticas marcadas como "a medias" para siempre por algo que no van a tener
+nunca.
+
+El recorrido real de la cabina en modalidad `baby_shower` es:
+
+> intro → apuesta → juego → sellado → foto → revelado → QR → recuerdito
+
+Sin lista de invitados, sin ruleta y sin personajes. La rama se activa sola con
+`cc_parties.event_type = 'baby_shower'`.
+
+## Tabla A-BS — OBLIGATORIO
+
+| # | Archivo | Cant. | Para qué |
+|---|---|---|---|
+| 1 | `fondo-banner.jpg` | 1 | Pantalla de bienvenida. **9:16**, 1080×1920 |
+| 2 | `fondo-sala.jpg` | 1 | Fondo de la foto final. 9:16, y **tiene que traer un marco decorativo vacío**: `frameBox` apunta adentro de ese marco |
+| 3 | `musica-fondo.mp3` | 1 | Música en loop de todo el kiosco |
+
+Nada más. No van personajes, ni `roulette/`, ni puzzles, ni saludos.
+
+### Y en `public/data/themes.json`
+
+- `modalidad: "baby_shower"` — es lo que separa estas temáticas de las otras,
+  tanto para el código como para los tests.
+- `nombre`, `publico`, `diploma` (el texto del recuerdito)
+- `colors` — los mismos 9 tokens
+- `confetti` — 6 colores
+- `frameBox` — **calibrado contra el marco de su propio `fondo-sala.jpg`**, no
+  heredado de otra temática. Ver abajo.
+- `personajes: []` — vacío, y el test lo exige: si trae personajes es que
+  alguien copió una temática infantil sin limpiarla.
+
+## Cómo se calibra el frameBox
+
+`frameBox` no es un valor a ojo: marca el recuadro **dentro del marco
+decorativo pintado en `fondo-sala.jpg`** (ver `src/frameGeometry.js`). Si el
+fondo no tiene marco, no hay nada que calibrar y la foto del invitado queda
+flotando sobre la decoración.
+
+El método que funcionó: una página de un solo uso que carga el fondo y le
+dibuja encima el rectángulo que devuelve `getSquarePhotoGeometry()` con los
+valores candidatos. Se ajusta y se vuelve a mirar; dos iteraciones alcanzan.
+Conviene dejar un ~3% de aire respecto del borde interior, porque un recorte
+que pisa la moldura delata el montaje.
+
+## Lo que NO hace falta
+
+- `grupo-personajes.png`: el cierre del Álbum Recuerdo cae al `fondo-banner.jpg`
+  cuando no está, y para un baby shower ese fondo es justamente la foto que
+  corresponde. Generar un "grupo" sin personajes no aporta nada.
+- `despedida-<slug>.mp4`: cae al genérico `videos/despedida.mp4`.
+- `musica-juego.mp3`: si falta, el juego suena con la música de fondo.
+
+## Estado al 2026-08-26
+
+`baby-nube` (Bebé en las Nubes) y `baby-safari` (Bebé Safari) cumplen todo
+menos el punto 3: **les falta `musica-fondo.mp3`**, así que hoy la cabina va
+muda. Está registrado como `todo` en `tests/frontend/themeFlow.test.mjs`, no
+como comentario suelto. Higgsfield no sirve para esto —solo genera voz— y
+hacerlo en otro proveedor cuesta créditos que Luis tiene que autorizar.

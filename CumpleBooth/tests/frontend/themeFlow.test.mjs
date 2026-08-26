@@ -610,3 +610,60 @@ for (const [slug, { estrella }] of Object.entries(HOMOLOGADAS)) {
     }
   })
 }
+
+/* ── Temáticas de baby shower (2026-08-26) ─────────────────────────────────
+   No entran en HOMOLOGADAS y no es un olvido: esa tabla exige seis personajes
+   con su cadena de juegos, ruleta, puzzles y videos de saludo, y un baby
+   shower no tiene nada de eso. Su recorrido es intro → apuesta → juego →
+   sellado → foto → revelado → QR → recuerdito, sin ruleta ni personajes.
+
+   Lo que sí necesitan está acá, y se verifica contra disco igual que la tabla
+   A: si alguien agrega una temática de baby shower a medias, el test lo dice
+   en vez de descubrirlo el invitado en la fiesta.
+   ──────────────────────────────────────────────────────────────────────── */
+const BABY_SHOWER = Object.entries(TEMAS).filter(([, t]) => t.modalidad === 'baby_shower')
+
+test('hay al menos una temática de baby shower registrada', () => {
+  assert.ok(BABY_SHOWER.length > 0, 'ninguna temática declara modalidad baby_shower')
+})
+
+for (const [slug, tema] of BABY_SHOWER) {
+  test(`${slug}: paleta, confetti y frameBox completos`, () => {
+    const COLORES = ['accent', 'accentSoft', 'yellow', 'ink', 'bgLight1', 'bgLight2', 'dark1', 'dark2', 'dark3']
+    for (const c of COLORES) {
+      assert.match(String(tema.colors?.[c] ?? ''), /^#[0-9a-fA-F]{3,8}$/, `${slug}: falta o es inválido colors.${c}`)
+    }
+    assert.equal(tema.confetti?.length, 6, `${slug}: el confetti son 6 colores`)
+
+    const f = tema.frameBox
+    assert.ok(f, `${slug}: sin frameBox`)
+    for (const k of ['x', 'y', 'w', 'h']) {
+      assert.equal(typeof f[k], 'number', `${slug}: frameBox.${k} no es número`)
+    }
+    assert.ok(f.x + f.w <= 1 && f.y + f.h <= 1, `${slug}: el frameBox se sale del lienzo`)
+    assert.ok(f.w >= 0.05 && f.h >= 0.05, `${slug}: frameBox demasiado chico`)
+  })
+
+  test(`${slug}: no declara personajes, porque el recorrido no los usa`, () => {
+    assert.deepEqual(tema.personajes ?? [], [], `${slug}: un baby shower no tiene personajes ni ruleta`)
+  })
+
+  test(`${slug}: están el fondo de bienvenida y el de la foto, los dos en 9:16`, () => {
+    for (const archivo of ['fondo-banner.jpg', 'fondo-sala.jpg']) {
+      const ruta = new URL(`../../public/themes/${slug}/${archivo}`, import.meta.url)
+      assert.ok(existsSync(ruta), `${slug}: falta ${archivo}`)
+      assert.ok(statSync(ruta).size > 20000, `${slug}: ${archivo} pesa sospechosamente poco`)
+    }
+  })
+
+  // PENDIENTE, a propósito y no escondido: el kiosco suena en loop toda la
+  // fiesta con themes/<slug>/musica-fondo.mp3 y las dos temáticas de baby
+  // shower todavía no lo tienen, así que hoy la cabina va muda. No se puede
+  // generar con Higgsfield —solo hace voz— y hacerlo en otro proveedor cuesta
+  // créditos que Luis tiene que autorizar. Cuando el archivo exista, sacar el
+  // `todo` y este test pasa a exigirlo.
+  test(`${slug}: música de fondo del kiosco`, { todo: 'falta musica-fondo.mp3, pendiente de autorización' }, () => {
+    const ruta = new URL(`../../public/themes/${slug}/musica-fondo.mp3`, import.meta.url)
+    assert.ok(existsSync(ruta), `${slug}: falta musica-fondo.mp3`)
+  })
+}

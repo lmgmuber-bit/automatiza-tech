@@ -3937,9 +3937,21 @@ function composeRecuerdito(invitado = '', prediction = null, score = 0, backgrou
   ctx.fillStyle = accent
   ctx.font = `800 ${Math.round(W * 0.052)}px 'Baloo 2', system-ui, sans-serif`
   ctx.fillText(`${Number.isFinite(score) ? score : 0} puntos`, W / 2, H * 0.82)
+  // El recuerdito es lo que el invitado se lleva y muestra. "Una prediccion
+  // para Valentina" describia el papel; lo que corresponde es agradecerle,
+  // igual que hace el diploma de las fiestas infantiles.
+  // Encoge hasta caber, como ya hace el diploma. "Gracias por venir al baby
+  // shower de Valentina" entra justo; con "Maria Jose Fernanda" se salia de la
+  // tarjeta, y en el canvas no hay wrap que lo salve.
   ctx.fillStyle = ink
-  ctx.font = `600 ${Math.round(W * 0.033)}px 'Baloo 2', system-ui, sans-serif`
-  ctx.fillText(`Una predicción para ${CONFIG.nombre}`, W / 2, H * 0.875)
+  const cierre = `Gracias por venir ${eventoFraseA()}`
+  let fsCierre = Math.round(W * 0.033)
+  ctx.font = `600 ${fsCierre}px 'Baloo 2', system-ui, sans-serif`
+  while (ctx.measureText(cierre).width > W * 0.8 && fsCierre > 14) {
+    fsCierre -= 1
+    ctx.font = `600 ${fsCierre}px 'Baloo 2', system-ui, sans-serif`
+  }
+  ctx.fillText(cierre, W / 2, H * 0.875)
   drawBrandWatermark(ctx, W, H)
   return canvas.toDataURL('image/png')
 }

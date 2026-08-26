@@ -31,3 +31,21 @@ ambos temas — código ya resiliente sin ella. Gotcha de entorno local:
 `event_profile_enabled` debe ir en `true` (default `false`) o la ficha del
 cumpleañero nunca aparece; usar `config/cumpleclick.local.php` (gitignored)
 en vez de env vars para no reiniciar el servidor de pruebas.
+
+**Baby shower (2026-08-26, local, sin deploy).** Modalidad nueva: predicciones
+en la cabina + tablero privado de los papás. Backend y decisión de arquitectura
+en `docs/DECISION-PREDICCIONES-POR-EVENTO-2026-08-25.md` (las predicciones son
+del evento por `party_id`, no de la invitación). El estándar de qué es una
+temática de baby shower COMPLETA está al final de `docs/TEMATICA-COMPLETA.md`
+— la tabla A original no aplica, porque exige seis personajes y un baby shower
+no tiene ninguno.
+
+Temáticas `baby-nube` y `baby-safari`: fondos 9:16 propios, `frameBox`
+calibrado contra el marco de cada `fondo-sala.jpg`. **Les falta
+`musica-fondo.mp3`**, así que la cabina va muda; queda registrado como `todo`
+en `tests/frontend/themeFlow.test.mjs`. Ninguna de las dos debería ofrecerse a
+un cliente hasta que suene.
+
+La migración `010_baby_shower_predictions.php` **no está aplicada en
+producción**. Crea tres tablas y una columna; es aditiva e idempotente, pero
+requiere autorización explícita de Luis.

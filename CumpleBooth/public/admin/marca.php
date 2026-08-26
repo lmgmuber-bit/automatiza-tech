@@ -159,10 +159,12 @@ $logo = '../brand/cumpleclick-mark.svg';
 <title>CumpleClick Admin · Datos de la marca</title>
 <style>
 <?php require __DIR__ . '/_style.css.php'; ?>
+/* Solo lo que el sistema del admin no cubre. Los campos usan la clase .field
+   de _style.css.php, que es la que estiliza label, input y ayuda en todo el
+   panel: la primera version invento su propia clase y los inputs quedaron con
+   el borde gris del navegador, distintos al resto del admin. */
 .marca-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-.marca-campo { display: flex; flex-direction: column; gap: 6px; }
-.marca-campo label { font-weight: 700; font-size: .92rem; }
-.marca-campo .ayuda { font-size: .82rem; opacity: .72; }
+.marca-grid .field small { color: var(--text-muted); }
 .marca-previa { display: flex; flex-direction: column; align-items: center; gap: 10px;
   padding: 26px 18px; border-radius: 14px; background: #17324d; color: #fff; text-align: center; }
 .marca-previa .invita { font-weight: 700; color: #ffd34e; margin: 0; }
@@ -225,23 +227,28 @@ $logo = '../brand/cumpleclick-mark.svg';
       <h2>Editar</h2>
       <div class="marca-grid">
         <?php foreach ($CAMPOS as $clave => $def): ?>
-          <div class="marca-campo">
+          <div class="field">
             <label for="c-<?= h($clave) ?>"><?= h($def['etiqueta']) ?></label>
+            <?php /* type="text" incluso en los enlaces: `type="url"` no entra en
+                     el selector de _style.css.php y ademas bloquea el envio del
+                     lado del navegador con un mensaje generico. La validacion
+                     que importa es la del servidor, que exige http o https. */ ?>
             <input
-              type="<?= !empty($def['url']) ? 'url' : 'text' ?>"
+              type="text"
               id="c-<?= h($clave) ?>"
               name="<?= h($clave) ?>"
               value="<?= h($valores[$clave]) ?>"
               maxlength="<?= (int) $def['max'] ?>"
-              autocomplete="off">
-            <span class="ayuda"><?= h($def['ayuda']) ?></span>
+              autocomplete="off"
+              <?= !empty($def['url']) ? 'inputmode="url" placeholder="https://"' : '' ?>>
+            <small><?= h($def['ayuda']) ?></small>
           </div>
         <?php endforeach; ?>
       </div>
       <p style="margin-top:18px">
         <button type="submit" class="btn btn-cta">Guardar</button>
       </p>
-      <p class="ayuda" style="margin:6px 0 0">
+      <p class="muted" style="margin:6px 0 0">
         Deja vacío lo que todavía no tengas: esa línea simplemente no se muestra
         en la revista.
       </p>

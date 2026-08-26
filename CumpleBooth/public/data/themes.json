@@ -1664,10 +1664,10 @@
       ],
       "personajes": [],
       "frameBox": {
-        "x": 0.3315,
-        "y": 0.3948,
-        "w": 0.3407,
-        "h": 0.1995
+        "x": 0.3217,
+        "y": 0.2184,
+        "w": 0.5926,
+        "h": 0.3333
       },
       "musicaHint": "Cuna suave",
       "transition": "none"
@@ -1699,10 +1699,10 @@
       ],
       "personajes": [],
       "frameBox": {
-        "x": 0.3315,
-        "y": 0.3948,
-        "w": 0.3407,
-        "h": 0.1995
+        "x": 0.2296,
+        "y": 0.4304,
+        "w": 0.6167,
+        "h": 0.3469
       },
       "musicaHint": "Selva tranquila",
       "transition": "none"

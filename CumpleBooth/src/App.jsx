@@ -1642,7 +1642,11 @@ function Intro({ onStart }) {
       <CumpleClickBrand className="intro-brand" inverse />
       <div className="intro-content">
         <h1 className="intro-title">
-          ¡Bienvenidos a la<br />fiesta de<br />{CONFIG.nombre}!
+          {/* Un baby shower no es "la fiesta de Valentina": Valentina todavia
+              no nacio. La bienvenida cambia de forma segun la modalidad. */}
+          {esBabyShower()
+            ? <>¡Bienvenidos al<br />baby shower de<br />{CONFIG.nombre}!</>
+            : <>¡Bienvenidos a la<br />fiesta de<br />{CONFIG.nombre}!</>}
         </h1>
         <div className="intro-party-decoration" aria-hidden="true">
           <div className="intro-party-flags">
@@ -1669,6 +1673,28 @@ function Intro({ onStart }) {
     </section>
   )
 }
+
+/**
+ * Como se nombra el evento en los textos que ve el invitado.
+ *
+ * "la fiesta de Valentina" no sirve para un baby shower: Valentina todavia no
+ * nacio. Se resuelve una vez y no en cada pantalla porque lo usan tanto los
+ * componentes como las funciones que pintan el recuerdito en canvas, que no
+ * reciben props.
+ */
+// Funciones y no constantes: CONFIG se llena con la respuesta de api.php, y a
+// la hora en que el modulo se evalua todavia vale null. Resueltas al importar,
+// el kiosco entero moria con "Cannot read properties of null".
+const esBabyShower = () => CONFIG?.eventType === 'baby_shower'
+// Dos variantes porque el articulo cambia con la preposicion: "por venir AL
+// baby shower" pero "EN EL baby shower". Con una sola quedaba "en al baby
+// shower de Valentina" impreso en el recuerdito que el invitado se lleva.
+const eventoFraseA = () => (esBabyShower()
+  ? `al baby shower de ${CONFIG.nombre}`
+  : `a la fiesta de ${CONFIG.nombre}`)
+const eventoFraseEn = () => (esBabyShower()
+  ? `el baby shower de ${CONFIG.nombre}`
+  : `la fiesta de ${CONFIG.nombre}`)
 
 function CumpleClickBrand({ className = '', inverse = false }) {
   return (
@@ -1730,8 +1756,8 @@ function VideoScreen({ src, onDone, skipLabel, finale }) {
           <div className="big-emoji">{finale ? '👋✨' : '🏎️🎈'}</div>
           <h2>
             {finale
-              ? `¡Gracias por venir a la fiesta de ${CONFIG.nombre}!`
-              : `¡Hola! Bienvenido a la fiesta de ${CONFIG.nombre}`}
+              ? `¡Gracias por venir ${eventoFraseA()}!`
+              : `¡Hola! Bienvenido ${eventoFraseA()}`}
           </h2>
         </div>
       )}
@@ -3346,8 +3372,10 @@ function composeImage(bgImg, photoImg, invitado = '', charImg = null, charName =
   ctx.fillStyle = cssVar('--yellow', '#ffb800')
   ctx.fillText(line1, textCx, line1Y)
 
-  // Línea 2: "por venir a la fiesta de {CONFIG.nombre}" — mismo estilo (letra + color) que línea 1.
-  const line2 = `por venir a la fiesta de ${CONFIG.nombre}`
+  // Línea 2: "por venir al baby shower de X" o "a la fiesta de X" segun la
+  // modalidad. Es el texto que el invitado se lleva impreso o en el celular,
+  // asi que decirle "fiesta" a un baby shower se nota.
+  const line2 = `por venir ${eventoFraseA()}`
   let fs2 = Math.round(W * 0.036)
   ctx.font = `800 ${fs2}px 'Baloo 2', system-ui, sans-serif`
   while (ctx.measureText(line2).width > maxW2 && fs2 > (textBeside ? 10 : 12)) {
@@ -4062,7 +4090,7 @@ function composeDiploma(invitado = '', winnerImage = null) {
   // "en la fiesta de {nombre} · {fecha si está}"
   const fecha = formatFecha(CONFIG && CONFIG.fecha)
   const fiestaLine = CONFIG
-    ? `en la fiesta de ${CONFIG.nombre}${fecha ? ' · ' + fecha : ''}`
+    ? `en ${eventoFraseEn()}${fecha ? ' · ' + fecha : ''}`
     : ''
   if (fiestaLine) {
     let fsFiesta = Math.round(W * 0.043)

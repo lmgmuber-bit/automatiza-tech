@@ -1636,6 +1636,76 @@
         "h": 0.24
       },
       "musicaHint": "Pop coreano energético / girl group"
+    },
+    "baby-nube": {
+      "nombre": "Bebé en las Nubes",
+      "franquicia": null,
+      "publico": "nino",
+      "modalidad": "baby_shower",
+      "diploma": "Invitado de honor de Bebé en las Nubes",
+      "colors": {
+        "accent": "#4A80B4",
+        "accentSoft": "#E3EEF7",
+        "yellow": "#E8C98A",
+        "ink": "#24384D",
+        "bgLight1": "#F4F8FC",
+        "bgLight2": "#DCE9F5",
+        "dark1": "#2C4A66",
+        "dark2": "#1E3345",
+        "dark3": "#8FBEDD"
+      },
+      "confetti": [
+        "#8FBEDD",
+        "#FFFFFF",
+        "#E8C98A",
+        "#DCE9F5",
+        "#4A80B4",
+        "#F7EFE2"
+      ],
+      "personajes": [],
+      "frameBox": {
+        "x": 0.3315,
+        "y": 0.3948,
+        "w": 0.3407,
+        "h": 0.1995
+      },
+      "musicaHint": "Cuna suave",
+      "transition": "none"
+    },
+    "baby-safari": {
+      "nombre": "Bebé Safari",
+      "franquicia": null,
+      "publico": "mixto",
+      "modalidad": "baby_shower",
+      "diploma": "Explorador de Bebé Safari",
+      "colors": {
+        "accent": "#7A9455",
+        "accentSoft": "#EAF0E0",
+        "yellow": "#D9B36B",
+        "ink": "#33402A",
+        "bgLight1": "#F6F4EC",
+        "bgLight2": "#E3E9D6",
+        "dark1": "#3E5233",
+        "dark2": "#2B3A24",
+        "dark3": "#A7BE84"
+      },
+      "confetti": [
+        "#A7BE84",
+        "#F6F4EC",
+        "#D9B36B",
+        "#E3E9D6",
+        "#7A9455",
+        "#C9B79A"
+      ],
+      "personajes": [],
+      "frameBox": {
+        "x": 0.3315,
+        "y": 0.3948,
+        "w": 0.3407,
+        "h": 0.1995
+      },
+      "musicaHint": "Selva tranquila",
+      "transition": "none"
     }
   }
 }

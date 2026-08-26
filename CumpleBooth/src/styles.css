@@ -2231,10 +2231,19 @@ body {
   position: fixed;
   inset: 0;
   z-index: -2;
+  /* El velo va en los tonos del tema y no en un morado fijo. Con el valor
+     anterior —negro violaceo al 74%— un fondo pastel como el de Bebe en las
+     Nubes quedaba irreconocible: se pagaba una decoracion y no se veia. Ahora
+     oscurece lo justo para que el panel blanco se despegue y deja leer la
+     escena en los bordes, que es lo que el invitado reconoce de su propia
+     fiesta. */
   background:
-    radial-gradient(120% 80% at 50% 38%, transparent 30%, rgba(24, 12, 38, .58) 100%),
-    linear-gradient(180deg, rgba(24, 12, 38, .52), rgba(24, 12, 38, .74));
-  backdrop-filter: blur(2px);
+    radial-gradient(125% 85% at 50% 40%, transparent 34%,
+      color-mix(in srgb, var(--dark2) 52%, transparent) 100%),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--dark1) 26%, transparent),
+      color-mix(in srgb, var(--dark2) 54%, transparent));
+  backdrop-filter: blur(1.5px);
 }
 
 /* Papel picado. Catorce motas, cada una con su ritmo, subiendo muy lento.

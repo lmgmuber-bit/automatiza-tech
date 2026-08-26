@@ -13,6 +13,7 @@
 // listado de fotos con margen blanco.
 
 import React, { useEffect, useRef, useState } from 'react'
+import Lockup from '../brand/Lockup.jsx'
 
 export default function AlbumPage({ page, index, base }) {
   if (!page) return null
@@ -324,22 +325,17 @@ function ClosingPage({ page, base }) {
  * hoja en vez de abrirlo.
  */
 function Colofon({ marca, base }) {
-  const logo = (
-    <img
-      className="mag__colofon-logo"
-      src={base + 'brand/cumpleclick-mark.svg'}
-      alt=""
-      draggable="false"
-    />
-  )
+  // El nombre viaja dentro del lockup, asi que el lockup solo sirve mientras la
+  // marca se siga llamando CumpleClick. Si alguien cambia `nombre` en el admin
+  // —una marca blanca, por ejemplo— el logo diria una cosa y el dueno del
+  // album seria otro, asi que en ese caso gana el texto.
+  const nombre = (marca?.nombre || 'CumpleClick').trim()
+  const marcaBloque = nombre.toLowerCase() === 'cumpleclick'
+    ? <Lockup base={base} tono="claro" className="mag__colofon-marca" />
+    : <span className="mag__brand">{nombre}</span>
 
   if (!marca) {
-    return (
-      <div className="mag__colofon">
-        <span className="mag__brand">CumpleClick</span>
-        {logo}
-      </div>
-    )
+    return <div className="mag__colofon">{marcaBloque}</div>
   }
 
   const datos = [
@@ -352,8 +348,7 @@ function Colofon({ marca, base }) {
     <div className="mag__colofon">
       <span className="mag__rule mag__rule--colofon" aria-hidden="true" />
       {marca.invitacion && <p className="mag__colofon-invita">{marca.invitacion}</p>}
-      <span className="mag__brand">{marca.nombre || 'CumpleClick'}</span>
-      {logo}
+      {marcaBloque}
       {marca.lema && <p className="mag__colofon-lema">{marca.lema}</p>}
       {datos.length > 0 && (
         <ul className="mag__colofon-datos">

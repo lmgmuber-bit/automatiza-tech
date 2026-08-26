@@ -166,11 +166,11 @@ body {
   color: color-mix(in srgb, var(--ink) 70%, transparent);
 }
 
-/* El lockup oficial: isotipo y palabra "CumpleClick" en una sola pieza, en vez
-   de un icono al lado de un <span> con la tipografia del cartel. */
-.sign__logo {
-  width: 54mm; height: auto; display: block;
-}
+/* El lockup: isotipo oficial y la palabra "CumpleClick" en Baloo 2. El
+   font-size manda sobre el conjunto (ver lockup.css); 7.4mm de palabra deja el
+   globo en 14mm y el bloque en unos 58mm de ancho, holgado sobre los 210 de la
+   hoja. */
+.sign__logo { font-size: 7.4mm; }
 
 .sign__foot-lema {
   margin: -1mm 0 0;

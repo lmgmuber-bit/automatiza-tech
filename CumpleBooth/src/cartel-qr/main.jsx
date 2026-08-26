@@ -12,6 +12,7 @@ import { createRoot } from 'react-dom/client'
 import QRCode from 'qrcode'
 import { applyThemeColors } from '../themeVars.js'
 import './cartel.css'
+import Lockup from '../brand/Lockup.jsx'
 
 const BASE = new URL('./', document.baseURI).href
 
@@ -69,10 +70,9 @@ function Dato({ tipo, valor, url }) {
  * un pie a medias.
  */
 function Pie({ marca }) {
-  const logo = (
-    <img className="sign__logo" src={`${BASE}brand/cumpleclick-lockup.svg`}
-      alt="CumpleClick" width="640" height="160" />
-  )
+  // Tono de marca: el cartel se imprime sobre papel blanco, que es donde el
+  // manual quiere el logo a color.
+  const logo = <Lockup base={BASE} tono="marca" className="sign__logo" />
 
   if (!marca) {
     return <footer className="sign__foot">{logo}</footer>

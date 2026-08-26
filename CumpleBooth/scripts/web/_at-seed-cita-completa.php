@@ -29,7 +29,7 @@ $TOKEN = 'CAMBIA-ESTO-ANTES-DE-SUBIR';
 $TEMA   = 'hielo';
 $NOMBRE = 'Isidora';
 $GENERO = 'f';               // 'f' o 'm' — elige la narración de cierre
-$SLUG   = 'cita-completa-isidora';
+$SLUG   = 'demo-hielo-v2';
 // ---------------------------------------------------------------------------
 
 header('X-Robots-Tag: noindex, nofollow');
@@ -335,14 +335,26 @@ echo '<div class="paso"><b>5 · Fotos</b>' . count($INVITADOS) . ' '
         ? 'tomadas de <code>' . h(str_replace(__DIR__ . '/', '', (string) $FOTOS_DIR)) . '</code>'
         : 'recreadas con GD desde la guía del tema (fondo de sala + recorte del personaje)')
    . ', ' . $conMensaje . ' con mensaje de invitado</div>';
-// Aviso fuerte: subir las fotos y que el script no las vea es el error que ya
-// paso una vez, y el album sale igual de "correcto" sin ellas.
-if (!$hayFotosReales && is_dir($fotosBase)) {
-    echo '<div class="paso" style="border-color:#b3202b"><b style="color:#ff6b6b">Ojo</b>'
-       . 'Existe <code>_fotos-demo</code> pero no encontré ' . count($INVITADOS) . ' fotos utilizables ahí '
-       . 'ni en sus subcarpetas. Se van a usar las compuestas con GD, no las tuyas. '
-       . 'Revisa que sean .jpg y que estén en <code>_fotos-demo/fotos-demo-' . h($TEMA) . '/</code> '
-       . 'o directamente en <code>_fotos-demo/</code>.</div>';
+// Aviso fuerte con la lista de donde se busco. Subir las fotos y que el script
+// no las vea es el error que ya costo dos vueltas, y el album sale igual de
+// "correcto" sin ellas. Decir "no las encontre" sin decir donde busque obliga a
+// adivinar; esta lista se copia de lo que hace _at-migrar.php con las
+// migraciones, que justamente por eso se resolvio a la primera.
+if (!$hayFotosReales) {
+    $buscado = [$fotosBase . '/fotos-demo-' . $TEMA, $fotosBase . '/' . $TEMA, $fotosBase];
+    $lineas = [];
+    foreach ($buscado as $dir) {
+        $lineas[] = ($dir === $fotosBase ? 'directamente en ' : '') . $dir
+                  . (is_dir($dir) ? '   [la carpeta existe, pero sin fotos .jpg utilizables]' : '   [no existe]');
+    }
+    echo '<div class="paso" style="border-color:#b3202b;display:block"><b style="color:#ff6b6b">No encontré tus fotos</b>'
+       . '<p class="mut" style="margin:8px 0">Si confirmas ahora, el álbum se va a armar con las '
+       . count($INVITADOS) . ' fotos compuestas por GD, no con las tuyas. Busqué en:</p>'
+       . '<pre>' . h(implode("
+", $lineas)) . '</pre>'
+       . '<p class="mut" style="margin:8px 0 0">Sube ' . count($INVITADOS) . ' archivos <code>.jpg</code> '
+       . 'a cualquiera de esas rutas y vuelve a abrir esta página. El video puede ir '
+       . 'junto a ellas con cualquier nombre <code>.mp4</code>.</p></div>';
 }
 // El resumen tiene que mirar en los mismos lugares que el paso 5b, o dice que
 // no hay video y despues lo carga igual.

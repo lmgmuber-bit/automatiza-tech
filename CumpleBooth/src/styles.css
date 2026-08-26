@@ -2495,50 +2495,267 @@ body {
   .ficha.is-selected .ficha__sello { transform: scale(1); opacity: 1; }
 }
 
+/* Texto solo para lectores de pantalla. El resumen de la apuesta se dibuja
+   como boleto —con la informacion partida en etiqueta y valor— y esa forma no
+   se lee bien en voz alta; esta linea la dice de corrido. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SELLANDO — la espera mientras se guarda la apuesta
+
+   Es un POST: puede tardar 200 ms o tres segundos, y el diseño tiene que
+   verse bien en los dos extremos. La version anterior era un aro que latia y
+   tres puntitos, o sea la pantalla decia "espera" y nada mas.
+
+   Ahora se le muestra al invitado LO QUE acaba de apostar, en forma de boleto
+   con su nombre. Si la red se demora, mira sus tres respuestas; si vuelve al
+   instante, el boleto ya estaba dibujado y no alcanza a verse un parpadeo. El
+   lacre cae una sola vez y se queda: es la unica animacion con final.
+   ══════════════════════════════════════════════════════════════════════════ */
 .prediction-saving {
   overflow: hidden;
-  padding: 24px;
+  padding: 4cqh 5cqw;
   color: #fff;
-  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--pink) 80%, #fff), var(--dark1) 62%, var(--dark3));
+  background:
+    radial-gradient(circle at 50% 32%, color-mix(in srgb, var(--pink) 82%, #fff), var(--dark1) 58%, var(--dark3));
 }
-.prediction-saving__orb {
+/* Aura quieta en vez de aro que late: el latido competia con el lacre, que es
+   lo unico que aca merece movimiento. */
+.prediction-saving__aura {
   position: absolute;
-  width: min(72vw, 540px);
+  width: min(78cqw, 560px);
   aspect-ratio: 1;
-  border: 2px solid rgba(255,255,255,.36);
   border-radius: 50%;
-  box-shadow: 0 0 0 38px rgba(255,255,255,.06), 0 0 0 82px rgba(255,255,255,.035);
-  animation: predictionOrb 3s ease-in-out infinite;
+  background: radial-gradient(circle, rgba(255, 255, 255, .1), transparent 62%);
+  box-shadow: 0 0 0 6cqw rgba(255, 255, 255, .045);
 }
-.prediction-saving__panel { position: relative; z-index: 1; width: min(600px, 100%); padding: 34px; text-align: center; }
+.prediction-saving__panel {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 92cqw);
+  padding: 3cqh 2cqw;
+  text-align: center;
+}
 .prediction-saving__panel .prediction-eyebrow { color: var(--yellow); }
-.prediction-saving__panel p:not(.prediction-eyebrow) { font-size: clamp(1rem, 3.2vw, 1.25rem); line-height: 1.45; }
-.prediction-saving__dots { display: flex; justify-content: center; gap: 9px; margin-top: 25px; }
-.prediction-saving__dots i { width: 12px; height: 12px; border-radius: 50%; background: #fff; animation: predictionDot 1s ease-in-out infinite; }
-.prediction-saving__dots i:nth-child(2) { animation-delay: .14s; }.prediction-saving__dots i:nth-child(3) { animation-delay: .28s; }
-@keyframes predictionOrb { 50% { transform: scale(1.07) rotate(8deg); opacity: .72; } }
-@keyframes predictionDot { 50% { transform: translateY(-9px); opacity: .5; } }
+.prediction-saving__panel p:not(.prediction-eyebrow) {
+  font-size: clamp(1rem, 3cqw, 1.22rem);
+  line-height: 1.45;
+}
 
+/* ── El boleto ─────────────────────────────────────────────────────────── */
+.boleto {
+  position: relative;
+  margin: 3cqh auto 0;
+  padding: 3cqh 5cqw 4cqh;
+  width: min(420px, 82cqw);
+  border-radius: 2.4cqw;
+  color: var(--ink, #2d2340);
+  background: linear-gradient(158deg, #fffdf7, #fff4fa);
+  box-shadow: 0 2.4cqh 5cqh rgba(0, 0, 0, .34);
+  text-align: left;
+  animation: boletoEntra .5s cubic-bezier(.2, .9, .3, 1) backwards;
+}
+/* Muesca de talonario a los costados: el boleto se ve arrancado. */
+.boleto::before,
+.boleto::after {
+  content: "";
+  position: absolute;
+  top: 6.2cqh;
+  width: 2.4cqw;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--dark1);
+}
+.boleto::before { left: -1.2cqw; }
+.boleto::after { right: -1.2cqw; }
+
+.boleto__nombre {
+  margin: 0 0 1.6cqh;
+  padding-bottom: 1.6cqh;
+  border-bottom: 2px dashed color-mix(in srgb, var(--ink, #2d2340) 22%, transparent);
+  font-size: clamp(1.2rem, 4cqw, 1.7rem) !important;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.boleto__lineas { margin: 0; padding: 0; list-style: none; }
+.boleto__lineas li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2cqw;
+  padding: .9cqh 0;
+  font-size: clamp(.86rem, 2.3cqw, 1rem);
+}
+.boleto__lineas span { color: color-mix(in srgb, var(--ink, #2d2340) 55%, #fff); font-weight: 700; }
+.boleto__lineas b { font-weight: 800; text-align: right; }
+
+/* El lacre. Cae, rebota una vez y se queda: la apuesta quedo sellada y la
+   pantalla lo dice sin escribirlo. */
+.boleto__lacre {
+  position: absolute;
+  right: -2.2cqw;
+  bottom: -2.2cqw;
+  width: 11cqw;
+  min-width: 62px;
+  aspect-ratio: 1;
+  border-radius: 46% 54% 52% 48% / 50% 46% 54% 50%;
+  background: radial-gradient(circle at 38% 32%,
+    color-mix(in srgb, var(--pink) 82%, #fff),
+    color-mix(in srgb, var(--pink) 88%, var(--dark1, #2d2340)));
+  box-shadow:
+    0 1cqh 2.4cqh rgba(0, 0, 0, .34),
+    inset 0 -.5cqw 1cqw color-mix(in srgb, var(--dark1, #2d2340) 45%, transparent),
+    inset 0 .4cqw .8cqw rgba(255, 255, 255, .38);
+  animation: lacreCae .62s cubic-bezier(.2, 1.5, .35, 1) .34s backwards;
+}
+/* Sin marca adentro el lacre se leia como un boton azul. Un corazon hundido
+   —hueco arriba, luz abajo, al reves que el relieve de la cera— lo convierte
+   en un sello estampado. */
+.boleto__lacre::after {
+  /* Caracter literal y no el escape CSS ¶5: al pasar por el bundler el
+     escape se comia un digito y salia "¶5" en pantalla. */
+  content: "♥";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: color-mix(in srgb, var(--dark1, #2d2340) 40%, transparent);
+  font-size: 4.6cqw;
+  line-height: 1;
+  text-shadow: 0 .16cqw 0 rgba(255, 255, 255, .4);
+}
+@keyframes boletoEntra {
+  from { opacity: 0; transform: translateY(2.4cqh) rotate(-1.5deg); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes lacreCae {
+  0%   { opacity: 0; transform: scale(2.4) translateY(-3cqh); }
+  60%  { opacity: 1; transform: scale(.92); }
+  100% { opacity: 1; transform: none; }
+}
+
+.prediction-saving__dots { display: flex; justify-content: center; gap: 1cqw; margin-top: 3cqh; }
+.prediction-saving__dots i {
+  width: 1.5cqw; min-width: 10px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .85);
+  animation: predictionDot 1s ease-in-out infinite;
+}
+.prediction-saving__dots i:nth-child(2) { animation-delay: .14s; }
+.prediction-saving__dots i:nth-child(3) { animation-delay: .28s; }
+@keyframes predictionDot { 50% { transform: translateY(-.9cqh); opacity: .45; } }
+
+/* El error no lleva boleto ni lacre: sellar algo que no se guardo seria
+   mentirle al invitado. */
+.prediction-saving__panel.is-error .cta { margin-top: 3cqh; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   REVELADO — el momento de mayor pago del recorrido
+
+   El invitado lleva un minuto esperando verse. Antes la foto compuesta
+   simplemente aparecia. Ahora entra girando desde el canto, como una foto que
+   alguien da vuelta sobre la mesa, y un destello la recorre UNA vez al
+   asentarse. Una sola vez: en bucle se convierte en un banner publicitario.
+   ══════════════════════════════════════════════════════════════════════════ */
 .prediction-reveal {
   justify-content: flex-start;
-  gap: 14px;
-  padding: clamp(16px, 3vw, 28px);
+  gap: 2cqh;
+  padding: 3cqh 3cqw;
   overflow-y: auto;
   color: #fff;
-  background: linear-gradient(155deg, var(--dark1), var(--dark3));
+  background:
+    radial-gradient(90% 60% at 50% 22%, color-mix(in srgb, var(--pink) 30%, transparent), transparent 70%),
+    linear-gradient(155deg, var(--dark1), var(--dark3));
 }
 .prediction-reveal__headline { z-index: 2; text-align: center; }
 .prediction-reveal__headline .prediction-eyebrow { color: var(--yellow); }
-.prediction-reveal > img {
+
+.revelado {
+  position: relative;
   z-index: 2;
   width: min(100%, 410px);
-  max-height: calc(100vh - 250px);
-  object-fit: contain;
-  border-radius: 22px;
-  box-shadow: 0 20px 55px rgba(0,0,0,.42);
+  perspective: 1400px;
 }
-.prediction-reveal__actions { z-index: 3; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-.prediction-reveal__actions .cta { min-height: 48px; }
+.revelado img {
+  display: block;
+  width: 100%;
+  max-height: 58cqh;
+  object-fit: contain;
+  border-radius: 2.4cqw;
+  box-shadow: 0 2.6cqh 6cqh rgba(0, 0, 0, .46);
+  animation: revelaGiro .78s cubic-bezier(.2, .85, .25, 1) backwards;
+}
+@keyframes revelaGiro {
+  from { opacity: 0; transform: rotateY(-78deg) scale(.88); }
+  to   { opacity: 1; transform: none; }
+}
+/* Destello: una banda diagonal que cruza el retrato al terminar el giro. */
+.revelado__brillo {
+  position: absolute;
+  inset: 0;
+  border-radius: 2.4cqw;
+  pointer-events: none;
+  overflow: hidden;
+}
+.revelado__brillo::after {
+  content: "";
+  position: absolute;
+  top: -60%;
+  left: -140%;
+  width: 60%;
+  height: 220%;
+  transform: rotate(18deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .5), transparent);
+  animation: revelaBrillo .9s ease-out .74s 1 backwards;
+}
+@keyframes revelaBrillo {
+  from { left: -140%; opacity: 0; }
+  25%  { opacity: 1; }
+  to   { left: 190%; opacity: 0; }
+}
+
+/* Espera: un marco vacio del tamano final, para que la foto no empuje el
+   layout al llegar. */
+.revelado__espera {
+  display: grid;
+  place-items: center;
+  gap: 2cqh;
+  aspect-ratio: 3 / 4;
+  border-radius: 2.4cqw;
+  background: rgba(255, 255, 255, .06);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .16);
+  text-align: center;
+}
+.revelado__marco {
+  width: 12cqw; min-width: 44px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, .28);
+  border-top-color: #fff;
+  animation: revelaGira 1s linear infinite;
+}
+@keyframes revelaGira { to { transform: rotate(360deg); } }
+
+.prediction-reveal__actions {
+  z-index: 3;
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 1.4cqw;
+}
+.prediction-reveal__actions .cta { min-height: 52px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .boleto, .boleto__lacre, .revelado img { animation: none !important; }
+  .revelado__brillo { display: none; }
+  .prediction-saving__dots i { animation: none; opacity: .8; }
+}
 
 @media (max-width: 560px) {
   .prediction-panel { padding: 3.4cqh 4.4cqw; }

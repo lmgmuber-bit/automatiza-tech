@@ -879,11 +879,13 @@ function PredictionSave({ prediction, score, onDone }) {
     return () => { alive = false; controller.abort() }
   }, [attempt, onDone, prediction, score])
 
+  const etiquetas = predictionLabels(prediction)
+
   return (
     <section className="screen prediction-saving">
-      <div className="prediction-saving__orb" aria-hidden="true" />
+      <div className="prediction-saving__aura" aria-hidden="true" />
       {error ? (
-        <div className="prediction-saving__panel" role="alert">
+        <div className="prediction-saving__panel is-error" role="alert">
           <p className="prediction-eyebrow">Tu apuesta sigue aquí</p>
           <h1>No se pudo guardar todavía</h1>
           <p>{error}</p>
@@ -892,8 +894,24 @@ function PredictionSave({ prediction, score, onDone }) {
       ) : (
         <div className="prediction-saving__panel">
           <p className="prediction-eyebrow">Predicción lista</p>
-          <h1>Guardando tu apuesta…</h1>
-          <p>{predictionSummary(prediction)}</p>
+          <h1>Sellando tu apuesta…</h1>
+
+          {/* La espera es un POST y puede durar 200 ms o tres segundos. En vez
+              de un spinner que no dice nada, se le muestra al invitado LO QUE
+              acaba de apostar: si la red se demora, mira sus tres respuestas
+              en vez de mirar puntitos. Y si vuelve al instante, la tarjeta ya
+              estaba ahi y no alcanza a verse un parpadeo. */}
+          <div className="boleto" aria-hidden="true">
+            <p className="boleto__nombre">{prediction.guest_name}</p>
+            <ul className="boleto__lineas">
+              <li><span>Se parecerá</span><b>{etiquetas.parecido}</b></li>
+              <li><span>Pesará</span><b>{etiquetas.peso}</b></li>
+              <li><span>Llegará</span><b>{etiquetas.fecha}</b></li>
+            </ul>
+            <span className="boleto__lacre" />
+          </div>
+
+          <p className="sr-only">{predictionSummary(prediction)}</p>
           <div className="prediction-saving__dots" aria-label="Guardando"><i /><i /><i /></div>
         </div>
       )}
@@ -998,14 +1016,32 @@ function PredictionReveal({ photo, bgRef, prediction, score, onRetry, onDone }) 
   }
 
   return (
-    <section className="screen prediction-reveal">
+    <section className={composed ? 'screen prediction-reveal is-listo' : 'screen prediction-reveal'}>
       <div className="prediction-reveal__headline">
         <p className="prediction-eyebrow">Así imaginas el gran día</p>
         <h1>¡Predicción revelada!</h1>
       </div>
-      {composed ? <img src={composed} alt={`Predicción de ${prediction.guest_name}`} /> : (
-        <div className="loading">{failed ? 'No pudimos preparar la imagen.' : 'Revelando tu predicción…'}</div>
-      )}
+
+      {/* La foto compuesta llegaba y aparecia, sin mas. Es el momento de mayor
+          pago del recorrido —el invitado lleva un minuto esperando verse— y se
+          resolvia como cargar una imagen. Ahora entra girando desde el canto,
+          como una foto que alguien da vuelta sobre la mesa, y un destello la
+          recorre una sola vez al asentarse. Una vez: repetirlo lo convierte en
+          un banner publicitario. */}
+      <div className="revelado">
+        {composed ? (
+          <>
+            <img src={composed} alt={`Predicción de ${prediction.guest_name}`} />
+            <span className="revelado__brillo" aria-hidden="true" />
+          </>
+        ) : (
+          <div className="revelado__espera">
+            <span className="revelado__marco" aria-hidden="true" />
+            <p>{failed ? 'No pudimos preparar la imagen.' : 'Revelando tu predicción…'}</p>
+          </div>
+        )}
+      </div>
+
       <div className="prediction-reveal__actions">
         <button className="cta ghost" onClick={onRetry}>Repetir foto</button>
         <button className="cta" disabled={!composed} onClick={saveAndContinue}>Guardar y ver mi QR</button>

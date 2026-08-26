@@ -656,14 +656,13 @@ for (const [slug, tema] of BABY_SHOWER) {
     }
   })
 
-  // PENDIENTE, a propósito y no escondido: el kiosco suena en loop toda la
-  // fiesta con themes/<slug>/musica-fondo.mp3 y las dos temáticas de baby
-  // shower todavía no lo tienen, así que hoy la cabina va muda. No se puede
-  // generar con Higgsfield —solo hace voz— y hacerlo en otro proveedor cuesta
-  // créditos que Luis tiene que autorizar. Cuando el archivo exista, sacar el
-  // `todo` y este test pasa a exigirlo.
-  test(`${slug}: música de fondo del kiosco`, { todo: 'falta musica-fondo.mp3, pendiente de autorización' }, () => {
+  // El kiosco suena en loop toda la fiesta con themes/<slug>/musica-fondo.mp3.
+  // Ojo con el falso positivo: si el archivo no está, el servidor devuelve el
+  // index.html con 200 y nada avisa — por eso se comprueba contra disco y no
+  // por HTTP. El peso mínimo descarta un archivo truncado.
+  test(`${slug}: música de fondo del kiosco`, () => {
     const ruta = new URL(`../../public/themes/${slug}/musica-fondo.mp3`, import.meta.url)
     assert.ok(existsSync(ruta), `${slug}: falta musica-fondo.mp3`)
+    assert.ok(statSync(ruta).size > 200000, `${slug}: musica-fondo.mp3 pesa sospechosamente poco`)
   })
 }

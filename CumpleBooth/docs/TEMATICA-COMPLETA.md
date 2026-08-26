@@ -218,7 +218,7 @@ Sin lista de invitados, sin ruleta y sin personajes. La rama se activa sola con
 | # | Archivo | Cant. | Para qué |
 |---|---|---|---|
 | 1 | `fondo-banner.jpg` | 1 | Pantalla de bienvenida. **9:16**, 1080×1920 |
-| 2 | `fondo-sala.jpg` | 1 | Fondo de la foto final. 9:16, y **tiene que traer un marco decorativo vacío**: `frameBox` apunta adentro de ese marco |
+| 2 | `fondo-sala.jpg` | 1 | Fondo de la foto final. 9:16, y **tiene que traer un marco decorativo vacío y despejado**: `frameBox` apunta adentro de ese marco |
 | 3 | `musica-fondo.mp3` | 1 | Música en loop de todo el kiosco |
 
 Nada más. No van personajes, ni `roulette/`, ni puzzles, ni saludos.
@@ -245,8 +245,24 @@ flotando sobre la decoración.
 El método que funcionó: una página de un solo uso que carga el fondo y le
 dibuja encima el rectángulo que devuelve `getSquarePhotoGeometry()` con los
 valores candidatos. Se ajusta y se vuelve a mirar; dos iteraciones alcanzan.
-Conviene dejar un ~3% de aire respecto del borde interior, porque un recorte
+Conviene dejar un ~10% de aire respecto del borde interior, porque un recorte
 que pisa la moldura delata el montaje.
+
+**Pero el overlay no alcanza: la prueba que vale es la foto ya compuesta.** En
+Safari el recuadro se veía bien en el overlay y recién con la foto encima se
+notó que quedaba al filo del riel.
+
+## El marco tiene que estar DESPEJADO
+
+Aprendido rehaciendo Safari dos veces. Si un peluche, una planta o un globo se
+cruzan por delante del marco en la foto de fondo, la foto del invitado los tapa
+—se dibuja encima— y el cliente ve su decoración mutilada. En el primer intento
+el león se sentaba delante del marco y la foto le comía la melena.
+
+Al pedir el fondo hay que decirlo explícito: *nada se cruza por delante del
+marco ni toca sus bordes; los peluches van a los lados y por debajo, fuera de
+su contorno*. El montaje que mejor resultó fue el marco colgado alto en la
+pared, con los animales abajo: ahí es imposible que se pisen.
 
 ## Lo que NO hace falta
 
@@ -258,8 +274,16 @@ que pisa la moldura delata el montaje.
 
 ## Estado al 2026-08-26
 
-`baby-nube` (Bebé en las Nubes) y `baby-safari` (Bebé Safari) cumplen todo
-menos el punto 3: **les falta `musica-fondo.mp3`**, así que hoy la cabina va
-muda. Está registrado como `todo` en `tests/frontend/themeFlow.test.mjs`, no
-como comentario suelto. Higgsfield no sirve para esto —solo genera voz— y
-hacerlo en otro proveedor cuesta créditos que Luis tiene que autorizar.
+`baby-nube` (Bebé en las Nubes) y `baby-safari` (Bebé Safari) **cumplen la
+tabla A-BS completa**, música incluida. Las pistas las generó Luis con Gemini a
+partir de los prompts acordados; llegaron con fundido de salida en los últimos
+~2 s, que en loop se oye como un bajón cada 90 segundos, así que se les cortó
+la cola y se les hizo un cruce de 2 s envolviendo el final sobre el principio.
+Medido antes y después: la diferencia de nivel entre el primer y el último
+segundo pasó de ~20 dB a menos de 3,5 dB.
+
+Las dos llevan además `musica-juego.mp3`, que es la misma pista para ambas
+porque sirve igual en las dos.
+
+**Al pedir música nueva, exigir siempre loop sin fundido en los extremos.** Es
+lo que más se olvida y lo único que no se nota hasta que suena en bucle.

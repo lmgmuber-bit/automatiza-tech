@@ -382,7 +382,11 @@ if ($esBabyShower && preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $eventDate)) {
         $aQuien = $birthdayName !== '' ? 'a ' . $birthdayName : 'al bebé';
         if ($faltan > 0) {
             $cuentaNumero = (string) $faltan;
-            $cuentaTexto = ($faltan === 1 ? 'día para conocer ' : 'días para conocer ') . $aQuien;
+            // Entre signos porque es una pregunta de verdad: nadie sabe todavía
+            // a quién se va a parecer. Es el mismo gancho que la apuesta de la
+            // cabina, puesto en la invitación.
+            $cuentaTexto = '¿' . ($faltan === 1 ? 'día para conocer ' : 'días para conocer ')
+                . $aQuien . '?';
             // Dentro del marco NO va "para conocer a Lucas": el nombre está
             // en la línea de arriba, así que repetirlo solo agrega una segunda
             // línea que se desborda por el borde de madera.
@@ -456,7 +460,36 @@ $hieloCelebrant = $birthdayName !== '' ? $birthdayName : 'nuestra cumpleañera';
 // Neutro a propósito: los temas nuevos sirven a niños y niñas y la invitación
 // no siempre trae el género cargado. "quien cumple años" no obliga a elegir.
 $celebrante = $birthdayName !== '' ? $birthdayName : 'quien cumple años';
+// Nombre del bebé para los capítulos. `$celebrante` no sirve acá: su
+// respaldo es "quien cumple años", y en un baby shower nadie los cumple.
+$bebe = $birthdayName !== '' ? $birthdayName : 'el bebé';
 $playlistOrdersByTheme = [
+    // Baby shower: el recorrido NO son personajes saludando, porque no hay
+    // personajes. Es la sala preparándose — que es de lo que trata un baby
+    // shower. Los archivos todavía no existen; cada capítulo pasa por
+    // is_file(), así que esto queda inerte hasta que el primero llegue y no
+    // hay que tocar código para estrenarlos.
+    'baby-nube' => [
+        'invitation/capitulo-1-la-noticia.mp4' => 'Una noticia que cambia todo',
+        'invitation/capitulo-2-la-cuna.mp4' => 'La cuna ya espera a ' . $bebe,
+        'invitation/capitulo-3-las-nubes.mp4' => 'La sala se llena de nubes',
+        'invitation/capitulo-4-la-luna.mp4' => 'La luna se asoma a mirar',
+        'invitation/capitulo-5-el-osito.mp4' => 'El osito guarda el primer lugar',
+        'despedida-baby-nube.mp4' => '¡Te esperamos!',
+    ],
+    'baby-safari' => [
+        'invitation/capitulo-1-la-noticia.mp4' => 'Una noticia que cambia todo',
+        'invitation/capitulo-2-la-manada.mp4' => 'La manada se prepara',
+        'invitation/capitulo-3-la-selva.mp4' => 'La selva se viste de fiesta',
+        // Este capítulo era "el rincón de las fotos", con el marco vacío en
+        // cuadro. Se cambió a propósito: un lienzo en blanco dentro del plano
+        // es justo lo que hace que el generativo estampe texto inventado
+        // —ya pasó con "Subby Shower"— y la instrucción "sin texto" no lo
+        // evita. La regla es sacar la superficie escribible del prompt.
+        'invitation/capitulo-4-los-globos.mp4' => 'Los globos ya están puestos',
+        'invitation/capitulo-5-el-leon.mp4' => 'El león cuida la entrada de ' . $bebe,
+        'despedida-baby-safari.mp4' => '¡Te esperamos!',
+    ],
     'carreras' => [
         'saludo-mate.mp4' => 'Mate llega primero',
         'saludo-sally.mp4' => 'Sally viene en camino',

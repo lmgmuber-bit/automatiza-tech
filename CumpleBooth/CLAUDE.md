@@ -64,12 +64,21 @@ kiosco encuadra la foto del invitado. Sin ese preset caen a `theme_fallback`,
 que no define `base_image`, y la página muestra dos veces el mismo banner —
 una degradación silenciosa, por eso hay un test que la bloquea.
 
-No tienen ni van a tener video, así que no imitan el recorrido de personajes
-de las temáticas infantiles. En su lugar, `assets/invitation.css` cierra con
-un bloque propio ("la espera"): la foto respira, `.inv-sparks` —doce `<span>`
+Hoy no tienen video, y aunque lo tengan no van a imitar el recorrido de
+personajes de las temáticas infantiles: no hay personajes a quienes hacer
+saludar. La invitación se sostiene sola con el bloque que cierra
+`assets/invitation.css` ("la espera"): la foto respira, `.inv-sparks` —doce `<span>`
 que existían en el HTML sin una sola regla de CSS— se convierte en estrellas o
 luciérnagas según el tema, y la cuenta regresiva pone el número grande y solo.
 Todo cuelga de `[data-theme]` y respeta `prefers-reduced-motion`.
+
+El recorrido con videos **está cableado pero los MP4 no existen**: rutas,
+orden y texto de cada capítulo en `docs/VIDEOS-INVITACION-BABY-SHOWER.md`.
+El hero ya lee `invitation/invitation-scroll-v1.mp4` y `-motion-v1.mp4` de
+cualquier tema sin lista blanca, y cada capítulo pasa por `is_file()`, así
+que los clips entran de a uno sin tocar código. No llevan logo AT —son la
+invitación de un cliente, no una pieza de AT— ni superficies escribibles en
+cuadro, que es lo que hace que el generativo estampe texto inventado.
 
 La migración `010_baby_shower_predictions.php` **no está aplicada en
 producción**. Crea tres tablas y una columna; es aditiva e idempotente, pero

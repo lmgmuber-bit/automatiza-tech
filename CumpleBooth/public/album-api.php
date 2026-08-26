@@ -28,6 +28,39 @@ function cb_album_api_fail(int $status, string $error, array $extra = []): void
     exit;
 }
 
+/**
+ * Datos de contacto de CumpleClick para el pie de la revista y del cartel QR.
+ *
+ * Viven en data/marca.json y no en el codigo del frontend a proposito: el
+ * hosting no tiene build, asi que si estuvieran compilados dentro del bundle
+ * habria que rehacer el build y volver a subir assets cada vez que cambie un
+ * telefono. Asi se edita un JSON por FTP (o desde admin/marca.php) y el cambio
+ * se ve al recargar.
+ *
+ * Solo se publican campos no vacios. Si el archivo no existe o esta roto se
+ * devuelve null y quien llama cae a su cierre de siempre: ni la revista ni el
+ * cartel se rompen por un JSON mal editado.
+ */
+function cb_album_marca(): ?array
+{
+    $path = __DIR__ . '/data/marca.json';
+    if (!is_file($path)) {
+        return null;
+    }
+    $crudo = json_decode((string) @file_get_contents($path), true);
+    if (!is_array($crudo)) {
+        return null;
+    }
+    $campos = ['nombre', 'lema', 'invitacion', 'web', 'web_url',
+               'instagram', 'instagram_url', 'whatsapp', 'whatsapp_url'];
+    $limpio = [];
+    foreach ($campos as $campo) {
+        $valor = isset($crudo[$campo]) ? trim((string) $crudo[$campo]) : '';
+        if ($valor !== '') { $limpio[$campo] = $valor; }
+    }
+    return $limpio === [] ? null : $limpio;
+}
+
 $token = (string) ($_REQUEST['t'] ?? '');
 if (!preg_match('/^[a-f0-9]{32}$/', $token)) {
     cb_album_api_fail(400, 'bad_link');
@@ -68,6 +101,10 @@ if ($signMode) {
         'uploadUrl' => cb_album_intake_url($token),
         'theme' => cb_album_api_theme((string) ($signParty['tema'] ?? '')),
         'open' => cb_album_intake_open($signAlbum, $signParty),
+        // El cartel se imprime y queda sobre la mesa toda la fiesta: es el
+        // lugar donde mas gente ve la marca. Lleva el mismo pie que el cierre
+        // de la revista, de la misma fuente.
+        'marca' => cb_album_marca(),
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -181,29 +218,7 @@ foreach (cb_album_list_media((int) $album['id'], ['approved']) as $row) {
 
 $eventName = (string) ($party['nombre'] ?? '');
 
-// Datos de la marca para el cierre de la revista. Viven en data/marca.json y no
-// en el codigo del frontend a proposito: el hosting no tiene build, asi que si
-// estuvieran compilados dentro del bundle habria que rehacer el build y volver
-// a subir assets cada vez que cambie un telefono. Asi se edita un JSON por FTP
-// y el cambio se ve al recargar.
-//
-// Solo se publican campos no vacios. Si el archivo no existe o esta roto, el
-// album sigue funcionando y la ultima pagina cae al cierre de siempre.
-$marca = null;
-$marcaPath = __DIR__ . '/data/marca.json';
-if (is_file($marcaPath)) {
-    $crudo = json_decode((string) @file_get_contents($marcaPath), true);
-    if (is_array($crudo)) {
-        $campos = ['nombre', 'lema', 'invitacion', 'web', 'web_url',
-                   'instagram', 'instagram_url', 'whatsapp', 'whatsapp_url'];
-        $limpio = [];
-        foreach ($campos as $campo) {
-            $valor = isset($crudo[$campo]) ? trim((string) $crudo[$campo]) : '';
-            if ($valor !== '') { $limpio[$campo] = $valor; }
-        }
-        if ($limpio !== []) { $marca = $limpio; }
-    }
-}
+$marca = cb_album_marca();
 
 echo json_encode([
     'ok' => true,

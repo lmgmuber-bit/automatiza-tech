@@ -48,14 +48,24 @@ body {
 }
 .sign__hint { margin: 0; font-size: .88rem; opacity: .75; }
 
-/* La hoja. 210 mm de ancho para que en pantalla se vea igual que impresa. */
+/* La hoja. 210 mm de ancho para que en pantalla se vea igual que impresa.
+
+   PRESUPUESTO VERTICAL — el cartel tiene que caber en UNA hoja A4 (297 mm) o
+   la impresora escupe una segunda pagina con el pie solo. Al imprimir no
+   cuenta `.sign__closed` (es `no-print`), asi que la suma que importa es:
+
+     head 62 + msg 9 + qr 94 + how 9 + url 22 + pie 48
+     + 5 gaps de 8 + 10 de padding = 294 mm
+
+   Quedan 3 mm de aire. Si agregas un bloque nuevo, saca el alto de otro: no
+   basta con que se vea bien en pantalla, donde la pagina simplemente crece. */
 .sign {
   width: min(210mm, 100%);
   min-height: 297mm;
   background: #fff;
   display: flex; flex-direction: column; align-items: center;
-  gap: 9mm;
-  padding: 0 0 14mm;
+  gap: 8mm;
+  padding: 0 0 10mm;
   box-shadow: 0 12px 40px rgba(0,0,0,.24);
   overflow: hidden;
 }
@@ -90,8 +100,11 @@ body {
   color: var(--ink);
 }
 
+/* 94 mm de lado. Se achico desde 108 mm para hacerle sitio al pie de marca;
+   impreso siguen siendo casi 10 cm, muy por encima de lo que cualquier camara
+   de telefono necesita para leerlo desde el otro lado de la mesa. */
 .sign__qr {
-  width: 108mm; height: 108mm;
+  width: 94mm; height: 94mm;
   display: grid; place-items: center;
   padding: 5mm;
   border: 1.2mm solid var(--pink);
@@ -128,11 +141,60 @@ body {
   font-size: 4.2mm; font-weight: 700; text-align: center;
 }
 
+/* Pie de marca. `margin-top: auto` lo empuja al borde inferior de la hoja aunque
+   el mensaje del organizador sea corto: en papel un pie flotando a media pagina
+   se lee como un error de maquetacion. */
 .sign__foot {
   margin-top: auto;
-  display: flex; align-items: center; gap: 2.5mm;
-  font-size: 5mm; font-weight: 800;
-  color: color-mix(in srgb, var(--ink) 65%, transparent);
+  width: 100%;
+  padding: 0 14mm;
+  display: flex; flex-direction: column; align-items: center; gap: 2.5mm;
+  text-align: center;
+}
+
+.sign__foot-rule {
+  width: 44mm; height: .7mm;
+  margin-bottom: 3mm;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+    transparent, var(--pink), transparent);
+}
+
+.sign__foot-invita {
+  margin: 0;
+  font-size: 4.6mm; font-weight: 700;
+  color: color-mix(in srgb, var(--ink) 70%, transparent);
+}
+
+/* El lockup oficial: isotipo y palabra "CumpleClick" en una sola pieza, en vez
+   de un icono al lado de un <span> con la tipografia del cartel. */
+.sign__logo {
+  width: 54mm; height: auto; display: block;
+}
+
+.sign__foot-lema {
+  margin: -1mm 0 0;
+  font-size: 4.2mm; font-weight: 600;
+  color: color-mix(in srgb, var(--ink) 62%, transparent);
+}
+
+.sign__datos {
+  margin: 1.5mm 0 0; padding: 0; list-style: none;
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 2mm 6mm;
+}
+.sign__dato { display: flex; align-items: center; gap: 1.6mm; }
+.sign__dato a {
+  display: flex; align-items: center; gap: 1.6mm;
+  color: inherit; text-decoration: none;
+}
+.sign__dato span {
+  font-size: 4.3mm; font-weight: 700;
+  color: color-mix(in srgb, var(--ink) 80%, transparent);
+}
+.sign__dato svg {
+  width: 4.6mm; height: 4.6mm; flex: none;
+  color: var(--pink);
 }
 
 @page { size: A4 portrait; margin: 0; }
@@ -149,4 +211,7 @@ body {
     print-color-adjust: exact;
   }
   .sign__head { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sign__foot, .sign__logo, .sign__foot-rule {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
 }

@@ -1642,7 +1642,8 @@ class AutomatizaTechContactForm {
          * Activación por token seguro
          */
         public function send_email_to_new_contacts_n8n() {
-            // Token seguro definido en el sistema (ajusta según tu config)
+            // Token desde wp-config-secrets.php (AT_N8N_CONTACTS_TOKEN) o desde la
+            // opcion at_n8n_contacts_token. Nunca hardcodeado, nunca en la query string.
             $expected_token = defined('AT_N8N_CONTACTS_TOKEN') && AT_N8N_CONTACTS_TOKEN !== ''
                 ? (string) AT_N8N_CONTACTS_TOKEN
                 : (string) get_option('at_n8n_contacts_token', '');

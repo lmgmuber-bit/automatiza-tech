@@ -2193,100 +2193,307 @@ body {
 }
 
 /* ---------- BABY SHOWER · PREDICCIÓN ---------- */
+/* ══════════════════════════════════════════════════════════════════════════
+   LA APUESTA — pantalla de predicción de la cabina (baby shower)
+
+   Qué es en la vida real: una tablet sobre un pedestal, en un salón, con gente
+   esperando detrás. El invitado llega de pie, decide en veinte segundos y pasa
+   a la foto. Eso manda todo lo de abajo.
+
+   La versión anterior era un formulario blanco flotando sobre el fondo, con
+   media pantalla vacía debajo. Funcionaba, pero se leía como un trámite: la
+   misma tarjeta blanca con pills que tiene cualquier encuesta. En una fiesta
+   eso es una oportunidad perdida, porque esta pantalla es el único momento en
+   que el invitado le habla al bebé.
+
+   La dirección es "puesto de apuestas de kermesse": guirnalda arriba, fichas
+   de cartón que se levantan y se sellan al elegir, papel picado flotando muy
+   lento al fondo. Nada de eso es adorno suelto — la guirnalda ES el progreso,
+   el sello ES la confirmación, y las fichas son grandes porque se leen de pie.
+
+   Todo va en cqw/cqh sobre el lienzo 9:16, nunca en vw: la tablet se usa
+   apaisada en algunas fiestas y con vw el lienzo se desarma.
+   ══════════════════════════════════════════════════════════════════════════ */
+
 .prediction-screen {
-  display: block;
+  display: grid;
+  place-items: center;
   overflow-y: auto;
-  padding: clamp(18px, 4vw, 40px);
+  padding: 4cqh 4cqw;
   background-position: center;
   background-size: cover;
   isolation: isolate;
 }
+
+/* Velo cálido, no gris. El fondo del tema se ve pero no compite: se oscurece
+   arriba y abajo y se deja respirar el centro, que es donde va el panel. */
 .prediction-veil {
   position: fixed;
   inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(120% 80% at 50% 38%, transparent 30%, rgba(24, 12, 38, .58) 100%),
+    linear-gradient(180deg, rgba(24, 12, 38, .52), rgba(24, 12, 38, .74));
+  backdrop-filter: blur(2px);
+}
+
+/* Papel picado. Catorce motas, cada una con su ritmo, subiendo muy lento.
+   Es la única animación de fondo y va a 24s: más rápido distrae al que está
+   leyendo las preguntas, que es exactamente lo que no queremos. */
+.prediction-motas {
+  position: fixed;
+  inset: 0;
   z-index: -1;
-  background: linear-gradient(180deg, rgba(26, 15, 43, .34), rgba(26, 15, 43, .7));
-  backdrop-filter: blur(3px);
+  pointer-events: none;
+  overflow: hidden;
 }
+.prediction-motas i {
+  position: absolute;
+  bottom: -6cqh;
+  left: calc(var(--i) * 7.3cqw + 2cqw);
+  width: 1.5cqw;
+  height: 1.5cqw;
+  border-radius: 40%;
+  opacity: 0;
+  background: var(--yellow, #ffd166);
+  animation: predMota 24s linear infinite;
+  animation-delay: calc(var(--i) * -1.9s);
+}
+.prediction-motas i:nth-child(3n)   { background: var(--pink, #ff7ab6); width: 1.1cqw; height: 1.1cqw; }
+.prediction-motas i:nth-child(3n+1) { background: #fff; border-radius: 50%; }
+@keyframes predMota {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+  12%  { opacity: .62; }
+  88%  { opacity: .38; }
+  100% { transform: translateY(-112cqh) rotate(280deg); opacity: 0; }
+}
+
+/* ── El panel ────────────────────────────────────────────────────────────
+   Sin sombra dramática ni borde blanco: es una hoja de papel apoyada, no una
+   tarjeta flotando en el vacío. La entrada escalonada de sus hijos es el único
+   momento coreografiado de la pantalla. */
 .prediction-panel {
-  width: min(760px, 100%);
-  margin: 0 auto;
-  padding: clamp(24px, 5vw, 48px);
-  border: 1px solid rgba(255,255,255,.75);
-  border-radius: clamp(24px, 5vw, 42px);
+  position: relative;
+  width: min(92cqw, 760px);
+  padding: 5cqh 5cqw 4cqh;
+  border-radius: 3.5cqw;
   color: var(--ink, #2d2340);
-  background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(255,248,252,.89));
-  box-shadow: 0 28px 80px rgba(20, 10, 37, .32);
+  background:
+    linear-gradient(158deg, #fffdf8 0%, #fff6fb 55%, #fdf3ff 100%);
+  box-shadow:
+    0 2cqh 6cqh rgba(20, 10, 37, .34),
+    inset 0 0 0 1px rgba(255, 255, 255, .8);
 }
+/* Sombra de pliegue en el borde superior: el papel se ve apoyado y no pegado. */
+.prediction-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1.2cqh;
+  border-radius: 3.5cqw 3.5cqw 0 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .06), transparent);
+}
+
+.prediction-panel > * {
+  animation: predEntra .55s cubic-bezier(.2, .9, .3, 1) backwards;
+}
+.prediction-panel > .prediction-eyebrow { animation-delay: .05s; }
+.prediction-panel > h1                  { animation-delay: .12s; }
+.prediction-panel > .prediction-lead    { animation-delay: .19s; }
+.prediction-panel > .prediction-name    { animation-delay: .26s; }
+.prediction-panel > .prediction-question { animation-delay: calc(.26s + var(--orden) * .08s); }
+.prediction-panel > .prediction-submit  { animation-delay: .58s; }
+@keyframes predEntra {
+  from { opacity: 0; transform: translateY(1.6cqh); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Guirnalda de progreso ───────────────────────────────────────────────
+   Tres banderines colgando del borde del panel. Se encienden al responder.
+   Dice "te falta uno" sin escribirlo y sin una barra de porcentaje, que en una
+   fiesta infantil no pinta nada. */
+.prediction-guirnalda {
+  position: absolute;
+  top: -1.1cqh;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2.2cqw;
+  animation: none;
+}
+.prediction-guirnalda span {
+  width: 3.4cqw;
+  height: 4.2cqw;
+  background: color-mix(in srgb, var(--ink, #2d2340) 16%, transparent);
+  clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
+  transition: background .35s ease, transform .35s cubic-bezier(.2, 1.6, .4, 1);
+}
+.prediction-guirnalda span.is-on {
+  background: var(--pink);
+  transform: translateY(.5cqh) scale(1.08);
+}
+
 .prediction-eyebrow {
-  margin: 0 0 6px;
+  margin: 1.2cqh 0 .4cqh;
   color: var(--pink);
-  font-size: clamp(.72rem, 2vw, .9rem);
+  font-size: clamp(.72rem, 2cqw, .92rem);
   font-weight: 800;
-  letter-spacing: .15em;
+  letter-spacing: .18em;
   text-transform: uppercase;
 }
 .prediction-panel > h1,
 .prediction-saving__panel h1,
 .prediction-reveal__headline h1 {
   margin: 0;
-  font-size: clamp(2rem, 7vw, 4.4rem);
-  line-height: .96;
+  font-size: clamp(2rem, 7.6cqw, 4.4rem);
+  line-height: .94;
   letter-spacing: -.035em;
 }
 .prediction-lead {
-  max-width: 610px;
-  margin: 14px 0 24px;
-  color: color-mix(in srgb, var(--ink, #2d2340) 72%, #fff);
-  font-size: clamp(.96rem, 2.8vw, 1.18rem);
-  line-height: 1.45;
+  max-width: 46ch;
+  margin: 1.4cqh 0 2.6cqh;
+  color: color-mix(in srgb, var(--ink, #2d2340) 68%, #fff);
+  font-size: clamp(.95rem, 2.6cqw, 1.14rem);
+  line-height: 1.42;
 }
-.prediction-name { display: grid; gap: 8px; margin-bottom: 26px; font-weight: 800; }
+
+/* ── Nombre ──────────────────────────────────────────────────────────────
+   58px de alto mínimo porque se toca con el dedo, no con un mouse. */
+.prediction-name { display: grid; gap: .8cqh; margin-bottom: 3cqh; font-weight: 800; }
 .prediction-name input {
   min-height: 58px;
   width: 100%;
-  padding: 12px 16px;
-  border: 2px solid color-mix(in srgb, var(--pink) 25%, #ddd);
-  border-radius: 18px;
+  padding: 1.2cqh 1.8cqw;
+  border: 2px solid color-mix(in srgb, var(--pink) 22%, #e3dfe9);
+  border-radius: 2cqw;
   background: #fff;
   color: var(--ink, #2d2340);
-  font: 700 clamp(1.05rem, 3vw, 1.3rem) 'Baloo 2', system-ui, sans-serif;
+  font: 700 clamp(1.05rem, 3cqw, 1.3rem) 'Baloo 2', system-ui, sans-serif;
   outline: none;
+  transition: border-color .18s ease, box-shadow .18s ease;
 }
-.prediction-name input:focus { border-color: var(--pink); box-shadow: 0 0 0 5px color-mix(in srgb, var(--pink) 15%, transparent); }
-.prediction-question { margin: 0 0 22px; padding: 0; border: 0; }
-.prediction-question legend { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: clamp(1rem, 3vw, 1.24rem); font-weight: 800; }
-.prediction-question legend span {
+.prediction-name input:focus {
+  border-color: var(--pink);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--pink) 16%, transparent);
+}
+
+/* ── Preguntas ───────────────────────────────────────────────────────────
+   El número va en un banderín, no en un círculo: mismo idioma que la
+   guirnalda de arriba. */
+.prediction-question { margin: 0 0 2.6cqh; padding: 0; border: 0; }
+.prediction-question legend {
+  display: flex;
+  align-items: center;
+  gap: 1.4cqw;
+  margin-bottom: 1.2cqh;
+  font-size: clamp(1rem, 3cqw, 1.28rem);
+  font-weight: 800;
+}
+.prediction-flag {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 3.6cqw;
+  min-width: 30px;
+  aspect-ratio: 1 / 1.24;
+  padding-bottom: .4cqh;
   background: var(--pink);
   color: #fff;
-  font-size: .75rem;
+  font-size: clamp(.62rem, 1.6cqw, .78rem);
+  letter-spacing: .04em;
+  clip-path: polygon(0 0, 100% 0, 100% 66%, 50% 100%, 0 66%);
 }
-.prediction-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.prediction-options button {
-  min-height: 56px;
-  padding: 10px 12px;
-  border: 2px solid color-mix(in srgb, var(--pink) 18%, #e3dfe9);
-  border-radius: 17px;
+
+/* ── Las fichas ──────────────────────────────────────────────────────────
+   Cada opción es una ficha de cartón. Valor grande arriba —se reconoce de pie
+   y a un metro— y el texto completo abajo en chico, que es el que evita
+   cualquier duda de cerca. Sin el valor grande, "Entre 3 y 3,5 kg" obliga a
+   agacharse a leer, y con cola detrás eso se nota. */
+.prediction-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.6cqw;
+}
+.ficha {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: .3cqh;
+  min-height: 88px;
+  padding: 1.4cqh 1cqw;
+  border: 2px solid color-mix(in srgb, var(--pink) 16%, #e3dfe9);
+  border-radius: 2.2cqw;
   background: #fff;
   color: var(--ink, #2d2340);
-  font: 800 clamp(.9rem, 2.5vw, 1.05rem) 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  text-align: center;
   cursor: pointer;
-  transition: transform .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
+  overflow: hidden;
+  transition:
+    transform .22s cubic-bezier(.2, 1.4, .4, 1),
+    border-color .2s ease,
+    box-shadow .22s ease;
 }
-.prediction-options button:active { transform: scale(.97); }
-.prediction-options button.is-selected {
+.ficha__valor {
+  display: block;
+  font-size: clamp(1.15rem, 3.4cqw, 1.6rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -.02em;
+}
+.ficha__label {
+  display: block;
+  font-size: clamp(.66rem, 1.7cqw, .8rem);
+  font-weight: 700;
+  line-height: 1.15;
+  color: color-mix(in srgb, var(--ink, #2d2340) 55%, #fff);
+  transition: color .2s ease;
+}
+.ficha:active { transform: scale(.96); }
+
+/* El sello. Un disco del color del tema que crece desde el centro y tiñe la
+   ficha entera: la confirmación se ve, no hay que buscarla. */
+.ficha__sello {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  /* Mezclar el acento con negro puro lo mandaba a azul marino en temas frios:
+     la ficha elegida se veia apagada justo en el momento de celebrar. Con la
+     tinta del tema en vez de negro, y en menor proporcion, conserva el color
+     de la fiesta y sigue dando contraste de sobra al texto blanco. */
+  background: radial-gradient(circle at 50% 34%,
+    color-mix(in srgb, var(--pink) 88%, #fff),
+    color-mix(in srgb, var(--pink) 82%, var(--dark1, #2d2340)));
+  transform: scale(0);
+  opacity: 0;
+  transition: transform .34s cubic-bezier(.2, 1.3, .35, 1), opacity .2s ease;
+}
+.ficha.is-selected {
   border-color: var(--pink);
-  background: var(--pink);
   color: #fff;
-  box-shadow: 0 10px 25px color-mix(in srgb, var(--pink) 28%, transparent);
+  transform: translateY(-.6cqh);
+  box-shadow: 0 1.6cqh 3cqh color-mix(in srgb, var(--pink) 34%, transparent);
 }
-.prediction-error { margin: 6px 0 14px; color: #a91d48; font-weight: 800; }
-.prediction-submit { width: 100%; min-height: 58px; }
+.ficha.is-selected .ficha__sello { transform: scale(1); opacity: 1; }
+.ficha.is-selected .ficha__label { color: rgba(255, 255, 255, .82); }
+
+.prediction-error {
+  margin: .6cqh 0 1.6cqh;
+  color: #a91d48;
+  font-weight: 800;
+}
+.prediction-submit { width: 100%; min-height: 62px; }
+
+/* Nadie marea a un invitado que solo quiere dejar su apuesta. */
+@media (prefers-reduced-motion: reduce) {
+  .prediction-motas { display: none; }
+  .prediction-panel > *,
+  .ficha,
+  .ficha__sello,
+  .prediction-guirnalda span { animation: none !important; transition: none !important; }
+  .ficha.is-selected { transform: none; }
+  .ficha.is-selected .ficha__sello { transform: scale(1); opacity: 1; }
+}
 
 .prediction-saving {
   overflow: hidden;
@@ -2334,9 +2541,12 @@ body {
 .prediction-reveal__actions .cta { min-height: 48px; }
 
 @media (max-width: 560px) {
-  .prediction-panel { padding: 22px 16px; }
-  .prediction-options { grid-template-columns: 1fr; }
-  .prediction-options button { min-height: 50px; }
+  .prediction-panel { padding: 3.4cqh 4.4cqw; }
+  /* Se mantienen las tres columnas: el valor corto de la ficha cabe donde el
+     label completo no cabia, y apilar nueve fichas obligaba a hacer scroll
+     para ver la tercera pregunta. */
+  .prediction-options { gap: 1.2cqw; }
+  .ficha { min-height: 76px; padding: 1cqh .7cqw; }
   .prediction-reveal__actions { width: 100%; }
   .prediction-reveal__actions .cta { flex: 1 1 140px; padding-inline: 12px; }
 }

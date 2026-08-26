@@ -768,32 +768,60 @@ function PredictionScreen({ onDone }) {
     })
   }
 
-  const question = (key, title, kicker) => (
-    <fieldset className="prediction-question">
-      <legend><span>{kicker}</span>{title}</legend>
+  // Las tres preguntas se muestran juntas y no una por pantalla: en una fiesta
+  // hay cola detras del pedestal y cada pantalla extra son dos toques mas y
+  // varios segundos por invitado. Lo que si cambia es como se ven: fichas
+  // grandes que se reconocen de pie y a un metro.
+  const question = (key, title, kicker, orden) => (
+    <fieldset className="prediction-question" style={{ '--orden': orden }}>
+      <legend>
+        <span className="prediction-flag">{kicker}</span>
+        {title}
+      </legend>
       <div className="prediction-options">
-        {PREDICTION_OPTIONS[key].map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            className={value[key] === option.value ? 'is-selected' : ''}
-            aria-pressed={value[key] === option.value}
-            onClick={() => choose(key, option.value)}
-          >
-            {option.label}
-          </button>
-        ))}
+        {PREDICTION_OPTIONS[key].map((option) => {
+          const elegida = value[key] === option.value
+          return (
+            <button
+              key={option.value}
+              type="button"
+              className={elegida ? 'ficha is-selected' : 'ficha'}
+              aria-pressed={elegida}
+              onClick={() => choose(key, option.value)}
+            >
+              <b className="ficha__valor">{option.short || option.label}</b>
+              <small className="ficha__label">{option.label}</small>
+              <span className="ficha__sello" aria-hidden="true" />
+            </button>
+          )
+        })}
       </div>
     </fieldset>
   )
 
+  // Guirnalda de progreso. Tres banderines que se encienden al responder: en un
+  // baby shower dice "te faltan dos" mucho mejor que una barra de porcentaje,
+  // y ademas es el unico idioma visual que la cabina ya tiene.
+  const respondidas = ['parecido', 'peso', 'fecha'].filter((key) => value[key]).length
+
   return (
     <section className="screen prediction-screen" style={{ backgroundImage: `url(${CONFIG.images.fondo})` }}>
       <div className="prediction-veil" />
+      <div className="prediction-motas" aria-hidden="true">
+        {Array.from({ length: 14 }, (unused, i) => <i key={i} style={{ '--i': i }} />)}
+      </div>
+
       <form className="prediction-panel" onSubmit={submit}>
+        <div className="prediction-guirnalda" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <span key={i} className={i < respondidas ? 'is-on' : ''} style={{ '--i': i }} />
+          ))}
+        </div>
+
         <p className="prediction-eyebrow">Una apuesta para recordar</p>
         <h1>¿Cómo imaginas al bebé?</h1>
-        <p className="prediction-lead">Elige con un toque. Tu predicción aparecerá en la foto y en el tablero privado de los papás.</p>
+        <p className="prediction-lead">Tres toques y listo. Tu apuesta va en tu foto y queda en el tablero de los papás.</p>
+
         <label className="prediction-name">
           <span>Tu nombre</span>
           <input
@@ -804,13 +832,15 @@ function PredictionScreen({ onDone }) {
             placeholder="Ej. Camila"
           />
         </label>
-        {question('parecido', '¿A quién se parecerá?', '01')}
-        {question('peso', '¿Cuánto pesará?', '02')}
-        {question('fecha', '¿Cuándo llegará?', '03')}
+
+        {question('parecido', '¿A quién se parecerá?', '01', 1)}
+        {question('peso', '¿Cuánto pesará?', '02', 2)}
+        {question('fecha', '¿Cuándo llegará?', '03', 3)}
+
         {touched && !validPrediction(value) && (
-          <p className="prediction-error" role="alert">Completa tu nombre y las tres respuestas para continuar.</p>
+          <p className="prediction-error" role="alert">Falta tu nombre o alguna respuesta.</p>
         )}
-        <button className="cta prediction-submit" type="submit">Guardar mi predicción</button>
+        <button className="cta prediction-submit" type="submit">Sellar mi apuesta</button>
       </form>
     </section>
   )

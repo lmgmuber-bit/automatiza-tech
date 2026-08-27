@@ -80,6 +80,19 @@ iría un número y muestra `¿?`, porque esa cifra no la sabe nadie. El signo va
 del mismo tamaño y con la misma tipografía que el número: ahí no es un adorno,
 es el dato, y achicarlo lo convertiría en una nota al pie.
 
+**El nombre y el sexo del bebé son opcionales, las cuatro combinaciones.** Un
+baby shower puede no saber el nombre, el sexo, los dos o ninguno — hay familias
+que hacen la fiesta justamente para revelar uno. No hizo falta columna nueva:
+los dos ya se expresan vacíos. Sí hizo falta sacar `birthday_person_name` de
+`cb_invitation_mandatory_missing()` cuando es baby shower, porque era obligatorio
+y esas invitaciones no se podían publicar; fecha, hora y dirección siguen
+siéndolo, que son datos de la fiesta y no del bebé. El `<h1>` cae a "Nuestra
+bebé"/"Nuestro bebé", el segundo contador a "conocer al bebé", y el capítulo 4
+del recorrido cambia de "El nombre de X ya se dice en voz alta" a "Todavía no
+tiene nombre, y ya tiene quien lo espere" — el video es el mismo, cambia solo la
+narración, y para eso `$playlistOrdersByTheme` acepta un array
+`['caption','narracion']` además del texto suelto de siempre.
+
 El recorrido con videos **está cableado pero los MP4 no existen**: rutas,
 arco, prompts y verificación en `docs/VIDEOS-INVITACION-BABY-SHOWER.md`.
 Los capítulos NO cuentan la sala preparándose —eso es la decoración— sino la

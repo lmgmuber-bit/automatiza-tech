@@ -138,9 +138,41 @@ $eventoNombre = $esBabyShower ? 'baby shower' : 'cumpleaños';
 $eventoDeQuien = $birthdayName !== ''
     ? 'al ' . $eventoNombre . ' de ' . $birthdayName
     : ($esBabyShower ? 'a nuestro baby shower' : 'a nuestra fiesta');
-$eventoTitulo = ($esBabyShower ? 'Baby shower de ' : 'Cumpleaños de ')
-    . ($birthdayName !== '' ? $birthdayName : 'la fiesta');
-$eventoSinNombre = $esBabyShower ? 'Nuestro baby shower' : 'Nuestra fiesta';
+// Sin nombre esto decía "Baby shower de la fiesta".
+$eventoTitulo = $birthdayName !== ''
+    ? ($esBabyShower ? 'Baby shower de ' : 'Cumpleaños de ') . $birthdayName
+    : ($esBabyShower ? 'Baby shower' : 'Nuestra fiesta');
+
+/* Los dos datos que un baby shower puede no tener todavía: el nombre y el
+   sexo. Las cuatro combinaciones son corrientes —hay familias que hacen la
+   fiesta justamente para revelar uno de los dos— así que hay que servirlas
+   a las cuatro y no tratar las incompletas como un formulario a medio
+   llenar:
+
+     nombre + sexo  ->  "Valentina"      · "conocer a Valentina"
+     solo sexo      ->  "Nuestra bebé"   · "conocer a nuestra bebé"
+     solo nombre    ->  "Valentina"      · "conocer a Valentina"
+     ninguno        ->  "Nuestro bebé"   · "conocer al bebé"
+
+   No hace falta ninguna columna nueva: los dos ya se expresan vacíos. */
+$hayNombreBebe = $birthdayName !== '';
+$sexoBebe = in_array($birthdayGender, ['m', 'f'], true) ? $birthdayGender : '';
+// Cómo se le dice cuando todavía no tiene nombre.
+$bebeGenerico = $sexoBebe === 'f' ? 'nuestra bebé' : 'nuestro bebé';
+// Lo que va grande en el hero y en la lámina.
+$bebeTitulo = $hayNombreBebe
+    ? $birthdayName
+    // Solo la primera letra: MB_CASE_TITLE capitaliza cada palabra y dejaba
+    // "Nuestra Bebé", que se lee como un nombre propio.
+    : ($esBabyShower
+        ? mb_strtoupper(mb_substr($bebeGenerico, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($bebeGenerico, 1, null, 'UTF-8')
+        : '');
+// "conocer __": el complemento entero, con preposición, porque "conocer a
+// el bebé" y "conocer la" no se componen pegando partes sueltas.
+$conocerAlBebe = $hayNombreBebe
+    ? 'a ' . $birthdayName
+    : ($sexoBebe !== '' ? 'a ' . $bebeGenerico : 'al bebé');
+$eventoSinNombre = $esBabyShower ? $bebeTitulo : 'Nuestra fiesta';
 $eventoArchivo = ($esBabyShower ? 'baby-shower-' : 'cumpleanos-')
     . ($birthdayName !== '' ? $birthdayName : 'cumpleclick');
 
@@ -385,7 +417,6 @@ if ($esBabyShower && preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $eventDate)) {
         $hoy = new DateTimeImmutable('today', $zonaChile);
         $dia = new DateTimeImmutable($eventDate, $zonaChile);
         $faltan = (int) $hoy->diff($dia)->format('%r%a');
-        $aQuien = $birthdayName !== '' ? 'a ' . $birthdayName : 'al bebé';
         if ($faltan > 0) {
             $cuentaNumero = (string) $faltan;
             $cuentaTexto = $faltan === 1 ? 'día para el baby shower' : 'días para el baby shower';
@@ -400,7 +431,7 @@ if ($esBabyShower && preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $eventDate)) {
         // El segundo contador va siempre que la fecha no haya pasado, con
         // número o sin él: la pregunta sigue abierta igual.
         if ($faltan >= 0) {
-            $incognitaTexto = 'días para conocer ' . $aQuien;
+            $incognitaTexto = 'días para conocer ' . $conocerAlBebe;
         }
         // Fecha pasada: no se muestra nada. Un "faltan -12 días" en la
         // invitación que la familia guarda de recuerdo es peor que el vacío.
@@ -469,7 +500,19 @@ $hieloCelebrant = $birthdayName !== '' ? $birthdayName : 'nuestra cumpleañera';
 $celebrante = $birthdayName !== '' ? $birthdayName : 'quien cumple años';
 // Nombre del bebé para los capítulos. `$celebrante` no sirve acá: su
 // respaldo es "quien cumple años", y en un baby shower nadie los cumple.
-$bebe = $birthdayName !== '' ? $birthdayName : 'el bebé';
+/* El capítulo del nombre tiene dos versiones y el video es el MISMO en las
+   dos —un gorrito de lana— porque lo que cambia es lo que dice Alice, no lo
+   que se ve. Que no haya nombre no es un hueco que disimular: es la otra
+   mitad de la misma idea, y se dice en voz alta. */
+$capituloNombre = $hayNombreBebe
+    ? [
+        'caption' => 'El nombre de ' . $birthdayName . ' ya se dice en voz alta',
+        'narracion' => 'capitulo-4-su-nombre',
+    ]
+    : [
+        'caption' => 'Todavía no tiene nombre, y ya tiene quien lo espere',
+        'narracion' => 'capitulo-4-sin-nombre',
+    ];
 $playlistOrdersByTheme = [
     /* Baby shower: el recorrido NO son personajes saludando, porque no hay
        personajes a quienes hacer saludar.
@@ -490,7 +533,7 @@ $playlistOrdersByTheme = [
         'invitation/capitulo-1-la-espera.mp4' => 'Hay esperas que se sienten distintas',
         'invitation/capitulo-2-antes-de-nacer.mp4' => 'Todo empieza mucho antes de nacer',
         'invitation/capitulo-3-manos-que-esperan.mp4' => 'Manos que ya aprendieron a esperar',
-        'invitation/capitulo-4-su-nombre.mp4' => 'El nombre de ' . $bebe . ' ya se dice en voz alta',
+        'invitation/capitulo-4-su-nombre.mp4' => $capituloNombre,
         'invitation/capitulo-5-el-mundo-se-acomoda.mp4' => 'El mundo se acomoda para recibirte',
         'despedida-baby-nube.mp4' => 'Ven a esperar con nosotros',
     ],
@@ -498,7 +541,7 @@ $playlistOrdersByTheme = [
         'invitation/capitulo-1-la-espera.mp4' => 'Hay esperas que se sienten distintas',
         'invitation/capitulo-2-antes-de-nacer.mp4' => 'Todo empieza mucho antes de nacer',
         'invitation/capitulo-3-manos-que-esperan.mp4' => 'Manos que ya aprendieron a esperar',
-        'invitation/capitulo-4-su-nombre.mp4' => 'El nombre de ' . $bebe . ' ya se dice en voz alta',
+        'invitation/capitulo-4-su-nombre.mp4' => $capituloNombre,
         'invitation/capitulo-5-el-mundo-se-acomoda.mp4' => 'El mundo se acomoda para recibirte',
         'despedida-baby-safari.mp4' => 'Ven a esperar con nosotros',
     ],
@@ -1173,12 +1216,19 @@ $cssVer = static function (string $rel): string {
         // vez de pedir una grabación aparte, porque dice lo mismo.
         $playlistKeys = array_keys($playlistOrder);
         $lastPlaylistKey = end($playlistKeys);
-        foreach ($playlistOrder as $fileName => $caption) {
+        foreach ($playlistOrder as $fileName => $slot) {
             $filePath = __DIR__ . '/themes/' . $themeSlug . '/' . $fileName;
             if (!is_file($filePath)) {
                 continue;
             }
-            $narrationBaseName = pathinfo($fileName, PATHINFO_FILENAME);
+            // Normalmente el valor es el texto del capítulo y la narración se
+            // deduce del nombre del clip. Puede venir como array cuando un mismo
+            // video necesita más de una narración — el capítulo del nombre usa el
+            // mismo gorrito diga lo que diga Alice.
+            $caption = is_array($slot) ? (string) ($slot['caption'] ?? '') : (string) $slot;
+            $narrationBaseName = is_array($slot) && !empty($slot['narracion'])
+                ? (string) $slot['narracion']
+                : pathinfo($fileName, PATHINFO_FILENAME);
             $narrationKey = preg_replace('/-v[0-9]+$/', '', $narrationBaseName);
             $narrationPath = __DIR__ . '/themes/' . $themeSlug . '/narracion-video/' . $narrationKey . '.mp3';
             $narrationUrl = '';
@@ -1308,7 +1358,7 @@ $cssVer = static function (string $rel): string {
               // los adornos de la espera en vez de los del cumpleaños. ?>
         <div class="inv-plate-orn" aria-hidden="true"><span></span><span></span><span></span></div>
         <p class="inv-plate-kicker">Un baby shower para recibir a:</p>
-        <p class="inv-plate-name"><?= $esc($birthdayName) ?></p>
+        <p class="inv-plate-name"><?= $esc($bebeTitulo) ?></p>
         <div class="inv-plate-details">
           <?php if ($dateParts['long'] !== ''): ?>
           <p class="inv-plate-chip inv-plate-chip--date"><span aria-hidden="true">📅</span><span><?= $esc($dateParts['long']) ?></span></p>

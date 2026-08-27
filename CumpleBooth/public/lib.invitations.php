@@ -31,8 +31,19 @@ function cb_invitation_file_path(string $storageKey): ?string
 /** Devuelve los campos obligatorios que faltan o están vacíos. */
 function cb_invitation_mandatory_missing(array $invitation): array
 {
+    $esBabyShower = (string) ($invitation['event_type'] ?? 'child_birthday') === 'baby_shower';
     $missing = [];
-    foreach (['birthday_person_name' => 'nombre del cumpleañero', 'event_date' => 'fecha', 'event_time' => 'hora', 'address' => 'dirección'] as $field => $label) {
+    // En un baby shower el nombre puede no existir todavía, y es un caso
+    // corriente, no un formulario a medio llenar: muchas familias hacen la
+    // fiesta antes de decidirlo, o lo guardan para el nacimiento. Exigirlo
+    // dejaba esas invitaciones sin poder publicarse. La fecha, la hora y la
+    // dirección sí siguen siendo obligatorias — eso se sabe siempre, porque
+    // es el dato de la fiesta y no del bebé.
+    $campos = ['event_date' => 'fecha', 'event_time' => 'hora', 'address' => 'dirección'];
+    if (!$esBabyShower) {
+        $campos = ['birthday_person_name' => 'nombre del cumpleañero'] + $campos;
+    }
+    foreach ($campos as $field => $label) {
         $value = trim((string) ($invitation[$field] ?? ''));
         if ($value === '' || $value === '0000-00-00') {
             $missing[] = $label;

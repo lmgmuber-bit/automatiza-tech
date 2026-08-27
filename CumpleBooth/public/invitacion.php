@@ -422,8 +422,13 @@ $extensionDe = static function (array $outputs): string {
 // y mayúscula funciona en Windows y macOS, pero se rompe al mandarlo por
 // FTP, al montarlo en un disco viejo o al reenviarlo desde algunos
 // teléfonos. Es el mismo criterio que ya usa el botón de compartir.
-$baseDescarga = ($esBabyShower ? 'baby-shower-' : 'cumpleanos-')
-    . cb_invitation_name_slug($birthdayName !== '' ? $birthdayName : 'cumpleclick');
+// Sin nombre queda "baby-shower.jpg" a secas. Tiene que decir exactamente lo
+// mismo que el `Content-Disposition` del servidor: cuando los dos no coinciden
+// gana el del servidor y este no se usa nunca.
+$prefijoDescarga = $esBabyShower ? 'baby-shower-' : 'cumpleanos-';
+$baseDescarga = $birthdayName !== ''
+    ? $prefijoDescarga . cb_invitation_name_slug($birthdayName)
+    : rtrim($prefijoDescarga, '-');
 $imagenDescarga = $baseDescarga . '.' . ($extensionDe($imageOutputs) ?: 'jpg');
 $videoDescarga = '';
 if ($hasVideo) {

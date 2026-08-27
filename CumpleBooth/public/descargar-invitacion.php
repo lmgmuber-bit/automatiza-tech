@@ -104,8 +104,13 @@ try {
     $prefijo = (string) ($invitation['event_type'] ?? '') === 'baby_shower'
         ? 'baby-shower-'
         : 'cumpleanos-';
-    $fileName = $prefijo . cb_invitation_name_slug($quien !== '' ? $quien : 'cumpleclick')
-        . '.' . pathinfo($filePath, PATHINFO_EXTENSION);
+    // Sin nombre, un baby shower baja como "baby-shower.jpg" a secas: el
+    // respaldo "cumpleclick" pondría la marca donde va el nombre del bebé, y
+    // en baby shower ese campo está vacío a propósito, no por error.
+    $base = $quien !== ''
+        ? $prefijo . cb_invitation_name_slug($quien)
+        : rtrim($prefijo, '-');
+    $fileName = $base . '.' . pathinfo($filePath, PATHINFO_EXTENSION);
 
     // Incrementar contador de descargas de forma no bloqueante. El rastreador
     // que arma la tarjeta no descargó nada: contarlo inflaría la métrica que

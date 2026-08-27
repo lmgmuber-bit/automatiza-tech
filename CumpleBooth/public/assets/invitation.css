@@ -1263,6 +1263,29 @@ body.inv-scroll-locked {
     rgba(0, 0, 0, .78) 100%);
 }
 
+/* El despeje del último capítulo.
+
+   La pastilla "Ver invitación" solo aparece en el último clip, y ahí se
+   montaba sobre el texto del capítulo por unos pocos píxeles. Las dos
+   medidas salen de acá para que no vuelvan a separarse: cambiar la altura
+   de la pastilla corre el texto solo.
+
+   Sube solo cuando la pastilla está visible. En los capítulos anteriores no
+   hay nada abajo con qué chocar, y moverlo siempre cambiaría el encuadre de
+   Hielo y Carreras, que ya está aprobado. Sin `:has()` la página queda como
+   está hoy en producción. */
+.inv-chapters-stage,
+.inv-playlist-stage {
+  --inv-hint-bottom: max(24px, calc(14px + env(safe-area-inset-bottom)));
+  --inv-hint-alto: 60px; /* medido en el navegador, no estimado */
+  --inv-caption-despeje: calc(var(--inv-hint-bottom) + var(--inv-hint-alto) + 14px);
+}
+
+.inv-chapters-stage:has(.inv-scroll-hint.is-visible) .inv-chapters-copy,
+.inv-playlist-stage:has(.inv-scroll-hint.is-visible) .inv-playlist-caption {
+  bottom: var(--inv-caption-despeje);
+}
+
 .inv-chapters-copy {
   position: absolute;
   left: 24px;
@@ -1418,6 +1441,9 @@ body.inv-scroll-locked {
    al último capítulo o al último clip ("¡Te esperamos!"). */
 .inv-chapters-stage .inv-scroll-hint,
 .inv-playlist-stage .inv-scroll-hint {
+  /* La misma medida que despeja el texto del capítulo, para que no se
+     separen nunca. El hero conserva su literal: ahí no hay stage. */
+  bottom: var(--inv-hint-bottom);
   left: 50%;
   transform: translateX(-50%);
   z-index: 3;

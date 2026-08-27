@@ -612,9 +612,9 @@ $playlistOrdersByTheme = [
        es del bebé, no del decorado, y el decorado es lo único que cambia. Por
        eso los textos se repiten y los archivos no.
 
-       Los MP4 todavía no existen. Cada capítulo pasa por is_file(), así que
-       esto queda inerte hasta que llegue el primero, y después van entrando
-       de a uno sin tocar código. */
+       Los cinco capítulos y la despedida ya existen en las dos temáticas
+       (2026-08-27). Cada uno sigue pasando por is_file(), así que si falta
+       alguno se omite solo y el recorrido no se rompe. */
     'baby-nube' => [
         'invitation/capitulo-1-la-espera.mp4' => 'Hay esperas que se sienten distintas',
         'invitation/capitulo-2-antes-de-nacer.mp4' => 'Todo empieza mucho antes de nacer',

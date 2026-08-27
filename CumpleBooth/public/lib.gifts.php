@@ -298,6 +298,17 @@ function cb_gift_move(int $invitationId, int $giftId, string $direccion): array
 }
 
 /**
+ * La URL privada de esta pantalla, hermana de cb_prediction_board_url().
+ *
+ * El token es el mismo: un solo token 'parents' abre las dos pantallas, y
+ * revocarlo cierra las dos. Sale de la configuración, nunca de HTTP_HOST.
+ */
+function cb_gift_board_url(string $token): string
+{
+    return cb_public_base_url() . '/regalos-papas.php?t=' . rawurlencode($token);
+}
+
+/**
  * Cambia el modo de la lista. Solo los papás.
  *
  * No borra nada al cambiar: lo que ya está anotado sigue anotado. Si vuelven

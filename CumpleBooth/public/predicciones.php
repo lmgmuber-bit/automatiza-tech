@@ -181,6 +181,16 @@ $isoUtc = static function ($value): string {
     .hero p { margin: 0; max-width: 54ch; font-size: clamp(1rem, 2.4vw, 1.18rem); line-height: 1.45; opacity: .93; }
 
     /* ── Barra de acciones ─────────────────────────────────────────────── */
+    /* El puente entre las dos pantallas de los papás. El mismo token abre
+       las dos, así que basta llegar a una para llegar a la otra. */
+    .otra-pantalla { display:flex; justify-content:center; gap:8px; margin:0 0 20px; flex-wrap:wrap; }
+    .otra-pantalla a, .otra-pantalla span {
+      font: 600 .86rem/1 var(--fuente); padding:9px 15px; border-radius:999px;
+      text-decoration:none; border:1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+    }
+    .otra-pantalla span { background:var(--pink-soft); color:var(--dark1); border-color:transparent; }
+    .otra-pantalla a { color:var(--tenue); background:transparent; }
+    .otra-pantalla a:hover { color:var(--dark1); border-color:var(--dark3); }
     .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 18px; }
     .cuenta { font-weight: 800; font-size: 1.06rem; }
     .cuenta b { color: var(--pink); font-size: 1.35rem; }
@@ -285,7 +295,7 @@ $isoUtc = static function ($value): string {
     /* En papel: sin fondos pesados, sin inclinaciones y sin el botón. */
     @media print {
       body { background: #fff; }
-      body::before, .imprimir { display: none; }
+      body::before, .imprimir, .otra-pantalla { display: none; }
       main { width: 100%; padding: 0; }
       .hero { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .boleta { box-shadow: none; transform: none !important; }
@@ -311,6 +321,13 @@ $isoUtc = static function ($value): string {
     <h1>Las predicciones de <?= $escape($eventName) ?></h1>
     <p>Cada boleta guarda una apuesta hecha en la cabina. Imprímanlas o revísenlas juntos cuando llegue el gran día.</p>
   </header>
+
+  <?php // El mismo token abre la lista de regalos. Sin este enlace los papás
+        // no tenían cómo enterarse de que esa pantalla existía. ?>
+  <nav class="otra-pantalla" aria-label="Pantallas de los papás">
+    <span aria-current="page">Las predicciones</span>
+    <a href="<?= $escape(cb_gift_board_url($token)) ?>">Ver la lista de regalos</a>
+  </nav>
 
   <div class="toolbar">
     <span class="cuenta"><b><?= count($predictions) ?></b> <?= count($predictions) === 1 ? 'apuesta' : 'apuestas' ?></span>

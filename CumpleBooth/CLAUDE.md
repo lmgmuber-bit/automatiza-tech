@@ -138,6 +138,39 @@ clips de hero y NO se instalaron: son atmósfera genérica y el `fondo-banner.jp
 es la decoración real que la familia va a tener. Quedan fuera del repo, en el
 scratchpad, por si Luis prefiere movimiento.
 
-La migración `010_baby_shower_predictions.php` **no está aplicada en
-producción**. Crea tres tablas y una columna; es aditiva e idempotente, pero
-requiere autorización explícita de Luis.
+**Las dos pantallas de los papás, alcanzables (2026-08-27).** El mismo token
+`parents` abre el tablero de predicciones y la lista de regalos, pero el admin
+entregaba sólo la primera URL y a `regalos-papas.php` no la enlazaba nada: era
+accesible únicamente adivinando la dirección, así que la lista de regalos
+estaba inservible sin que nada fallara. Ahora el admin entrega las dos URLs al
+emitir el token y cada pantalla enlaza a la otra, así que perder un enlace no
+cuesta nada y revocar sigue cerrando las dos a la vez.
+`tests/frontend/parentsAccess.test.mjs` bloquea la regresión — se verificó que
+se pone en rojo al quitar el enlace.
+
+**El solape del último capítulo (2026-08-27).** La pastilla "Ver invitación"
+empieza en `bottom:24px` y mide 61px medidos en el navegador; el texto del
+capítulo terminaba en 76px, o sea 9px montados, justo en el último clip que es
+cuando la pastilla aparece. Ya pasaba así en producción con Hielo y Carreras.
+El texto sube **sólo** mientras la pastilla está visible (`:has()`), no
+siempre: en los capítulos anteriores no hay nada abajo con qué chocar y moverlo
+cambiaría un encuadre ya aprobado. Sin `:has()` la página queda como está hoy
+en producción. Las dos medidas salen de `--inv-hint-bottom` /
+`--inv-hint-alto`. Medido en las dos variantes: 9px de solape → 13px de aire.
+
+**Revisión local (2026-08-27).** `scripts/seed-revision-local.php` publica una
+invitación por temática —las ocho— con lámina compuesta sobre el
+`fondo-banner.jpg` real, y para los baby shower siembra además regalos,
+predicciones y el token de los papás. Aborta si `public_base_url` no es
+localhost. Es idempotente salvo los tokens, que se reemiten. Ojo:
+`carreras/fondo-banner.jpg` **es un PNG** con nombre `.jpg` — el navegador lo
+olfatea y no se nota, GD no, por eso el script despacha por contenido.
+
+**Héroes no tiene recorrido.** No figura en `$playlistOrdersByTheme` y en disco
+sólo tiene `revelacion-heroes.mp4`: ni saludos ni despedida. Su invitación se
+muestra sin capítulos. Es anterior a este trabajo y sigue abierto.
+
+Las migraciones `010_baby_shower_predictions.php` y `011_gift_mode.php` **no
+están aplicadas en producción**. Sí lo están en local desde el 2026-08-27
+(junto con la 008 y la 009, que también faltaban ahí). Son aditivas e
+idempotentes, pero producción requiere autorización explícita de Luis.

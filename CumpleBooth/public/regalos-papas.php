@@ -138,6 +138,16 @@ $avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', '
     }
     .hoja { max-width:44rem; margin:0 auto; }
     .marca { display:flex; align-items:center; justify-content:center; gap:.5em; margin-bottom:22px; }
+    /* El puente entre las dos pantallas de los papás. El mismo token abre
+       las dos, así que basta llegar a una para llegar a la otra. */
+    .otra-pantalla { display:flex; justify-content:center; gap:8px; margin:0 0 20px; flex-wrap:wrap; }
+    .otra-pantalla a, .otra-pantalla span {
+      font: 600 .86rem/1 var(--fuente); padding:9px 15px; border-radius:999px;
+      text-decoration:none; border:1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+    }
+    .otra-pantalla span { background:var(--pink-soft); color:var(--dark1); border-color:transparent; }
+    .otra-pantalla a { color:var(--tenue); background:transparent; }
+    .otra-pantalla a:hover { color:var(--dark1); border-color:var(--dark3); }
     .marca img { width:2em; height:2em; }
     .marca b { color:var(--dark1); font-size:1.05rem; font-weight:800; }
     .marca b i { color:var(--pink); font-style:normal; }
@@ -209,6 +219,12 @@ $avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', '
     <p class="lede">Puede haber sido revocado o haber expirado. Escríbenos y te enviamos uno nuevo.</p>
   </div>
 <?php else: ?>
+
+  <?php // El mismo token abre el tablero de predicciones. ?>
+  <nav class="otra-pantalla" aria-label="Pantallas de los papás">
+    <a href="<?= $esc(cb_prediction_board_url($token)) ?>">Ver las predicciones</a>
+    <span aria-current="page"><?= $esAbierto ? 'Los regalos' : 'La lista de regalos' ?></span>
+  </nav>
 
   <?php // En modo abierto no hay lista, así que llamarla así confunde. ?>
   <h1><?= $esAbierto ? 'Los regalos' : 'La lista de regalos' ?><?= $nombreBebe !== '' ? ' de ' . $esc($nombreBebe) : '' ?></h1>

@@ -867,6 +867,11 @@ if (!empty($_SESSION['cc_predictions_token'])) {
               $isBabyShower = (string) ($inv['event_type'] ?? '') === 'baby_shower';
               $showPredictionsToken = $predictionsTokenFlash !== null && (int) $predictionsTokenFlash['id'] === (int) $inv['id'];
               $predictionsUrl = $showPredictionsToken ? cb_prediction_board_url((string) $predictionsTokenFlash['token']) : '';
+              // El mismo token abre las dos pantallas de los papás. Antes solo se
+              // entregaba la de predicciones y la de regalos no la encontraba nadie.
+              $giftsUrl = $showPredictionsToken && function_exists('cb_gift_board_url')
+                  ? cb_gift_board_url((string) $predictionsTokenFlash['token'])
+                  : '';
               // Enlace reconstruible desde el ID: sirve aunque el token en claro
               // se haya perdido, sin revocar el aleatorio ni guardarlo en texto.
               $shareUrl = '';
@@ -954,29 +959,38 @@ if (!empty($_SESSION['cc_predictions_token'])) {
                 <?php endif; ?>
 
                 <?php if ($isBabyShower): ?>
-                <section class="token-flash" aria-label="Tablero privado de predicciones">
-                  <label>Tablero de predicciones para los papás</label>
-                  <p class="small muted">Este enlace muestra juntas todas las apuestas del evento, aunque existan varias invitaciones. El token se guarda sólo como hash.</p>
+                <section class="token-flash" aria-label="Pantallas privadas de los papás">
+                  <label>Las dos pantallas privadas de los papás</label>
+                  <p class="small muted">Un solo token abre las dos: el tablero con todas las apuestas del evento —aunque existan varias invitaciones— y la lista de regalos, donde ellos cargan lo que necesitan y son los únicos que ven quién tomó cada cosa. El token se guarda sólo como hash, y revocarlo cierra las dos.</p>
                   <?php if ($showPredictionsToken && $predictionsUrl !== ''): ?>
+                    <p class="small"><strong>1. Tablero de predicciones</strong></p>
                     <div class="token-row">
                       <input id="predictions-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($predictionsUrl) ?>">
                       <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('predictions-url-<?= (int) $inv['id'] ?>').value)"><?= admin_icon('copy') ?> Copiar</button>
                       <a class="btn btn-ghost btn-sm" href="<?= h($predictionsUrl) ?>" target="_blank" rel="noopener noreferrer"><?= admin_icon('external') ?> Abrir</a>
                     </div>
-                    <p class="small muted">Guárdalo ahora: por seguridad no se puede reconstruir después. Emitir otro revoca el anterior.</p>
+                    <?php if ($giftsUrl !== ''): ?>
+                    <p class="small"><strong>2. Lista de regalos</strong></p>
+                    <div class="token-row">
+                      <input id="gifts-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($giftsUrl) ?>">
+                      <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('gifts-url-<?= (int) $inv['id'] ?>').value)"><?= admin_icon('copy') ?> Copiar</button>
+                      <a class="btn btn-ghost btn-sm" href="<?= h($giftsUrl) ?>" target="_blank" rel="noopener noreferrer"><?= admin_icon('external') ?> Abrir</a>
+                    </div>
+                    <?php endif; ?>
+                    <p class="small muted">Guárdalos ahora: por seguridad no se pueden reconstruir después. Emitir otro revoca el anterior. Igual, cada pantalla enlaza a la otra, así que con uno solo se llega a las dos.</p>
                   <?php endif; ?>
                   <div class="invite-actions">
                     <form method="post" action="<?= h($invitationsUrl) ?>#inv-<?= (int) $inv['id'] ?>" class="inline-form">
                       <?= admin_csrf_field() ?>
                       <input type="hidden" name="action" value="emitir_tablero_predicciones">
                       <input type="hidden" name="invitation_id" value="<?= (int) $inv['id'] ?>">
-                      <button type="submit" class="btn btn-primary btn-sm"><?= admin_icon('external') ?> Generar enlace privado</button>
+                      <button type="submit" class="btn btn-primary btn-sm"><?= admin_icon('external') ?> Generar enlaces privados</button>
                     </form>
-                    <form method="post" action="<?= h($invitationsUrl) ?>#inv-<?= (int) $inv['id'] ?>" class="inline-form" data-confirm="¿Revocar el enlace actual del tablero?">
+                    <form method="post" action="<?= h($invitationsUrl) ?>#inv-<?= (int) $inv['id'] ?>" class="inline-form" data-confirm="¿Revocar el acceso actual de los papás? Se cierran las dos pantallas.">
                       <?= admin_csrf_field() ?>
                       <input type="hidden" name="action" value="revocar_tablero_predicciones">
                       <input type="hidden" name="invitation_id" value="<?= (int) $inv['id'] ?>">
-                      <button type="submit" class="btn btn-ghost btn-sm">Revocar enlace</button>
+                      <button type="submit" class="btn btn-ghost btn-sm">Revocar acceso</button>
                     </form>
                   </div>
                 </section>

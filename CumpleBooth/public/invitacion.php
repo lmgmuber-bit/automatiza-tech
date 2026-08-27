@@ -45,6 +45,11 @@ if (!empty($invitation['expires_at']) && strtotime((string) $invitation['expires
     cb_invitation_page_error(410, 'Este enlace de invitación ya expiró.');
 }
 
+// Se resuelve acá arriba, apenas cargada la invitación, porque de esto
+// dependen ya la narración y el vocabulario. `event_type` trae
+// 'child_birthday' por defecto, así que un cumpleaños no cambia nada.
+$esBabyShower = (string) ($invitation['event_type'] ?? 'child_birthday') === 'baby_shower';
+
 $imageOutputs = cb_invitation_approved_outputs((int) $invitation['id'], 'personalized_image');
 if (!$imageOutputs) {
     // Publicada sin imagen aprobada no debería ocurrir (cb_publish_invitation lo exige),
@@ -75,7 +80,14 @@ if (preg_match('/^[a-z0-9-]+$/', $themeSlug) && is_file(__DIR__ . '/themes/' . $
 // el botón "Conoce al cumpleañero/a" (pedido de Luis 2026-08-12).
 $narrationOutroFile = 'narracion-final.mp3';
 $birthdayGender = (string) ($invitation['birthday_person_gender'] ?? '');
-if ($birthdayGender === 'm') {
+if ($esBabyShower) {
+    // Las tres variantes de arriba dicen "cumpleañero", "cumpleañera" y
+    // "del cumpleaños": las tres sonaban tal cual en un baby shower. El
+    // baby shower tiene la suya, y el género no la parte en dos porque el
+    // texto habla de la invitación, no del bebé — que además puede no
+    // tener sexo conocido todavía.
+    $narrationOutroFile = 'narracion-final-baby-shower.mp3';
+} elseif ($birthdayGender === 'm') {
     $narrationOutroFile = 'narracion-final-nino.mp3';
 } elseif ($birthdayGender === 'f') {
     $narrationOutroFile = 'narracion-final-nina.mp3';
@@ -102,9 +114,20 @@ if (is_file($narrationOutroPath)) {
 // seguir bajando; el de arriba (`$narrationOutroUrl`) queda solo para esa
 // sección final, disparado por `data-inv-narration-outro-trigger`.
 $narrationPlaylistEndUrl = '';
-$narrationPlaylistEndPath = __DIR__ . '/assets/audio/narracion-playlist-final.mp3';
+// Igual que arriba: el archivo compartido dice "la invitación a la fiesta".
+$narrationPlaylistEndFile = $esBabyShower
+    ? 'narracion-playlist-final-baby-shower.mp3'
+    : 'narracion-playlist-final.mp3';
+$narrationPlaylistEndPath = __DIR__ . '/assets/audio/' . $narrationPlaylistEndFile;
+if (!is_file($narrationPlaylistEndPath)) {
+    // Variante todavía no generada: mejor el texto de cumpleaños que el
+    // silencio, y el respaldo desaparece solo en cuanto exista el archivo.
+    $narrationPlaylistEndFile = 'narracion-playlist-final.mp3';
+    $narrationPlaylistEndPath = __DIR__ . '/assets/audio/narracion-playlist-final.mp3';
+}
 if (is_file($narrationPlaylistEndPath)) {
-    $narrationPlaylistEndUrl = 'assets/audio/narracion-playlist-final.mp3?v=' . rawurlencode((string) filemtime($narrationPlaylistEndPath));
+    $narrationPlaylistEndUrl = 'assets/audio/' . rawurlencode($narrationPlaylistEndFile)
+        . '?v=' . rawurlencode((string) filemtime($narrationPlaylistEndPath));
 }
 
 $themeData = is_array($themesData['themes'][$themeSlug] ?? null) ? $themesData['themes'][$themeSlug] : [];
@@ -130,7 +153,6 @@ $message = (string) ($invitation['message'] ?? '');
 // ternario en cada punto es exactamente como se quedan sin cambiar los que
 // nadie recuerda. Las invitaciones de cumpleaños no se mueven: `event_type`
 // viene con 'child_birthday' por defecto.
-$esBabyShower = (string) ($invitation['event_type'] ?? 'child_birthday') === 'baby_shower';
 $eventoNombre = $esBabyShower ? 'baby shower' : 'cumpleaños';
 // El artículo va incluido: en español "al baby shower" y "a la fiesta" no
 // se componen con una preposición suelta, y separarlos ya produjo un
@@ -552,7 +574,7 @@ $playlistOrdersByTheme = [
     'baby-nube' => [
         'invitation/capitulo-1-la-espera.mp4' => 'Hay esperas que se sienten distintas',
         'invitation/capitulo-2-antes-de-nacer.mp4' => 'Todo empieza mucho antes de nacer',
-        'invitation/capitulo-3-manos-que-esperan.mp4' => 'Manos que ya aprendieron a esperar',
+        'invitation/capitulo-3-alguien-te-espera.mp4' => 'Alguien ya te está esperando',
         'invitation/capitulo-4-su-nombre.mp4' => $capituloNombre,
         'invitation/capitulo-5-el-mundo-se-acomoda.mp4' => 'El mundo se acomoda para recibirte',
         'despedida-baby-nube.mp4' => 'Ven a esperar con nosotros',
@@ -560,7 +582,7 @@ $playlistOrdersByTheme = [
     'baby-safari' => [
         'invitation/capitulo-1-la-espera.mp4' => 'Hay esperas que se sienten distintas',
         'invitation/capitulo-2-antes-de-nacer.mp4' => 'Todo empieza mucho antes de nacer',
-        'invitation/capitulo-3-manos-que-esperan.mp4' => 'Manos que ya aprendieron a esperar',
+        'invitation/capitulo-3-alguien-te-espera.mp4' => 'Alguien ya te está esperando',
         'invitation/capitulo-4-su-nombre.mp4' => $capituloNombre,
         'invitation/capitulo-5-el-mundo-se-acomoda.mp4' => 'El mundo se acomoda para recibirte',
         'despedida-baby-safari.mp4' => 'Ven a esperar con nosotros',
@@ -1257,7 +1279,16 @@ $cssVer = static function (string $rel): string {
             // bajando). NO es el mismo audio que la sección final "Guarda y
             // comparte" — esa suena aparte, cuando el invitado realmente
             // llega ahí con el scroll (ver `$narrationOutroUrl` más arriba).
-            if ($fileName === $lastPlaylistKey && $narrationPlaylistEndUrl !== '') {
+            // El último capítulo de un cumpleaños siempre usa el audio de
+            // cierre compartido. En baby shower NO: su último capítulo es
+            // "Ven a dejarle tu primer recuerdo", que es el remate de todo
+            // el recorrido, y taparlo con una locución genérica dejaba muda
+            // justo la línea que sostiene la pieza. Si su MP3 propio existe,
+            // manda; si no, cae al compartido como cualquier otro.
+            $usaCierreCompartido = $fileName === $lastPlaylistKey
+                && $narrationPlaylistEndUrl !== ''
+                && !($esBabyShower && is_file($narrationPath));
+            if ($usaCierreCompartido) {
                 $narrationUrl = $narrationPlaylistEndUrl;
             } elseif (is_file($narrationPath)) {
                 $narrationUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . rawurlencode($narrationKey) . '.mp3';

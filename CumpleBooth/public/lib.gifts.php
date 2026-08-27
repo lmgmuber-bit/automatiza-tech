@@ -224,3 +224,57 @@ function cb_gift_set_hidden(int $invitationId, int $giftId, bool $hidden): array
     ]);
     return $stmt->rowCount() > 0 ? ['ok' => true] : ['ok' => false, 'error' => 'no_se_puede_ocultar'];
 }
+
+/**
+ * Cambia la condición de un regalo. Solo los papás.
+ *
+ * Es el campo que más valor agrega de toda la lista: "Coche" no le sirve a
+ * nadie, "Coche, liviano, que quepa en el auto" sí.
+ */
+function cb_gift_update_notes(int $invitationId, int $giftId, string $notes): array
+{
+    $pdo = cb_gift_require_db();
+    $limpio = cb_gift_clean_text($notes, 400);
+    $stmt = $pdo->prepare(
+        'UPDATE cc_gift_items SET notes = ?, updated_at = ? WHERE id = ? AND invitation_id = ?'
+    );
+    $stmt->execute([$limpio !== '' ? $limpio : null, gmdate('Y-m-d H:i:s'), $giftId, $invitationId]);
+    return $stmt->rowCount() > 0 ? ['ok' => true] : ['ok' => false, 'error' => 'no_encontrado'];
+}
+
+/**
+ * Sube o baja un regalo intercambiando su posición con el vecino.
+ *
+ * Intercambiar en vez de renumerar toda la lista deja el orden estable cuando
+ * dos papás la editan a la vez desde el mismo enlace.
+ */
+function cb_gift_move(int $invitationId, int $giftId, string $direccion): array
+{
+    $pdo = cb_gift_require_db();
+    $comparador = $direccion === 'arriba' ? '<' : '>';
+    $orden = $direccion === 'arriba' ? 'DESC' : 'ASC';
+
+    $actual = $pdo->prepare('SELECT id, position FROM cc_gift_items WHERE id = ? AND invitation_id = ?');
+    $actual->execute([$giftId, $invitationId]);
+    $fila = $actual->fetch(PDO::FETCH_ASSOC);
+    if (!$fila) {
+        return ['ok' => false, 'error' => 'no_encontrado'];
+    }
+
+    $vecino = $pdo->prepare(
+        "SELECT id, position FROM cc_gift_items
+          WHERE invitation_id = ? AND (position $comparador ? OR (position = ? AND id $comparador ?))
+       ORDER BY position $orden, id $orden LIMIT 1"
+    );
+    $vecino->execute([$invitationId, (int) $fila['position'], (int) $fila['position'], $giftId]);
+    $otro = $vecino->fetch(PDO::FETCH_ASSOC);
+    if (!$otro) {
+        return ['ok' => false, 'error' => 'ya_es_el_extremo'];
+    }
+
+    $ahora = gmdate('Y-m-d H:i:s');
+    $set = $pdo->prepare('UPDATE cc_gift_items SET position = ?, updated_at = ? WHERE id = ?');
+    $set->execute([(int) $otro['position'], $ahora, (int) $fila['id']]);
+    $set->execute([(int) $fila['position'], $ahora, (int) $otro['id']]);
+    return ['ok' => true];
+}

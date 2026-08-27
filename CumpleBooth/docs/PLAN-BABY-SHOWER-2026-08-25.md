@@ -728,12 +728,27 @@ Luis tomó las recomendaciones. Quedan así:
 
 | # | Decisión | Resuelto |
 |---|---|---|
-| 1 | Nombre de quien toma un regalo | **Visible para todos.** Hace que la lista se sienta viva, y en un baby shower no repetir el regalo importa más que la sorpresa |
+| 1 | Nombre de quien toma un regalo | ~~Visible para todos~~ → **CORREGIDO el 2026-08-26: solo lo ven los papás y el admin.** Ver abajo |
 | 2 | Lo que agrega un invitado | **Entra directo**, sin aprobación. Los papás igual pueden ocultarlo |
 | 3 | Las condiciones de los papás | **Por regalo**, en el campo `notes`. "Coche" no le sirve a nadie; "Coche, liviano, que quepa en el auto" sí |
 | 4 | Borrar un regalo ya tomado | **No se puede.** Sólo se pueden ocultar los que siguen disponibles |
 | 5 | Qué es un plan en baby shower | **Uno solo**, con todo incluido. Ver la 4.7 |
 | 6 | Nombre de la sección de regalos | **"Para cuando llegue"** |
+
+**Corrección del punto 1 — 2026-08-26.** El invitado ve que un regalo está
+tomado, nunca por quién; los papás y el admin sí ven el nombre. `claimed_name`
+se guarda igual, así que el esquema no cambió.
+
+El motivo no es privacidad genérica: **no hay cuentas**, así que `claimed_name`
+es texto libre que el invitado escribe. Publicarlo lo vuelve un dato imposible
+de verificar pero socialmente creído — cualquiera puede tomar el regalo caro
+escribiendo el nombre de otro. Y como el enlace es público, la lista de nombres
+convierte la invitación en una lista de invitados que cualquiera con la URL
+puede leer, con quién viene y cuánto gastó. Que nadie repita el regalo, que era
+el motivo de la decisión original, se cumple igual con "ya lo tomaron".
+
+Lo que se pierde —la sensación de lista viva— se recupera con un contador y no
+con nombres: *"4 de 12 ya tienen quien los lleve"*.
 
 Sobre el punto 6, un dato que apareció revisando el código: el preset de
 `baby_shower` ya trae `"Conoce al bebé"` como sugerencia de título. No es

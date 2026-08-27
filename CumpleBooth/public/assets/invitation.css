@@ -1935,3 +1935,239 @@ body.inv-scroll-locked {
     opacity: .5;
   }
 }
+
+/* ---------- 6. "Para cuando llegue" — la lista de regalos ----------
+   El resto de la invitación es contemplativa: se mira. Esta sección es la
+   única donde el invitado hace algo, así que tiene que verse accionable sin
+   romper el tono — tarjetas de papel, no filas de tabla, y un solo botón por
+   tarjeta.
+
+   Lo tomado no desaparece ni se tacha: se atenúa y se va al final (el orden lo
+   decide el servidor). Que siga visible es parte del punto — se ve que la
+   lista está viva sin decir quién tomó qué. */
+.inv-gifts {
+  padding: 0 20px;
+  margin: 0 auto;
+  max-width: 34rem;
+  text-align: center;
+}
+
+.inv-gifts-title {
+  margin: 6px 0 0;
+  color: #fff;
+  font-size: clamp(1.3rem, 6vw, 1.8rem);
+  font-weight: 800;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.inv-gifts-lede {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, .74);
+  font-size: .95rem;
+  line-height: 1.45;
+}
+
+/* El pulso de la lista, sin nombres: cuántos ya tienen dueño. Es lo que
+   reemplaza al "Ya lo lleva Camila" que se descartó. */
+.inv-gifts-count {
+  margin: 14px 0 0;
+  color: color-mix(in srgb, var(--inv-highlight) 78%, white);
+  font-size: .74rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.inv-gifts-list {
+  display: grid;
+  margin: 18px 0 0;
+  padding: 0;
+  gap: 10px;
+  list-style: none;
+}
+
+.inv-gift {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--inv-highlight) 24%, transparent);
+  border-radius: 16px;
+  background: var(--inv-deep-raise);
+  text-align: left;
+  transition: opacity .25s ease, border-color .25s ease;
+}
+
+.inv-gift-texto {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.inv-gift-title {
+  margin: 0;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+/* La condición de los papás. "Coche" no le sirve a nadie; "Coche, liviano, que
+   quepa en el auto" sí — por eso la nota tiene el mismo peso visual que un
+   subtítulo y no el de una letra chica escondida. */
+.inv-gift-notes {
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, .62);
+  font-size: .82rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.inv-gift-btn {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--inv-accent);
+  color: #fff;
+  font: inherit;
+  font-size: .85rem;
+  font-weight: 800;
+  line-height: 1.1;
+  cursor: pointer;
+  transition: transform .16s ease, opacity .16s ease;
+}
+
+.inv-gift-btn:hover { transform: translateY(-1px); }
+.inv-gift-btn:disabled,
+.inv-gift-btn.is-esperando { opacity: .55; cursor: progress; transform: none; }
+
+.inv-gift-btn--soltar {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, .3);
+  color: rgba(255, 255, 255, .8);
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+/* Tomado por otra persona. Nunca dice por quién. */
+.inv-gift--tomado {
+  border-color: rgba(255, 255, 255, .1);
+  opacity: .5;
+}
+
+.inv-gift-estado {
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, .7);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+
+/* Lo que tomó este navegador. Se despega del resto —vuelve a opacidad plena y
+   toma el color del tema— porque para el invitado es lo único suyo en toda la
+   página. */
+.inv-gift--mio {
+  border-color: color-mix(in srgb, var(--inv-highlight) 60%, transparent);
+  opacity: 1;
+}
+
+.inv-gift--mio .inv-gift-texto { flex: 1 1 100%; }
+
+.inv-gift-estado--mio {
+  color: color-mix(in srgb, var(--inv-highlight) 85%, white);
+}
+
+.inv-gifts-status {
+  margin: 14px 0 0;
+  min-height: 1.2em;
+  color: rgba(255, 255, 255, .78);
+  font-size: .85rem;
+}
+
+.inv-gifts-status.is-error {
+  color: color-mix(in srgb, var(--inv-highlight) 70%, #ffd9d9);
+}
+
+.inv-gifts-otro {
+  margin: 6px auto 0;
+  padding: 11px 20px;
+  border: 1px solid rgba(255, 255, 255, .26);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, .88);
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* El costo de no tener cuentas, dicho en pantalla. Esconderlo sería peor: el
+   invitado que borra sus datos descubriría solo que ya no puede soltar nada. */
+.inv-gifts-nota {
+  margin: 14px auto 0;
+  max-width: 26rem;
+  color: rgba(255, 255, 255, .45);
+  font-size: .72rem;
+  line-height: 1.45;
+}
+
+@media (min-width: 560px) {
+  .inv-gift { padding: 16px 20px; }
+  .inv-gift--mio { flex-wrap: nowrap; }
+}
+
+/* Nombre e ítem nuevo, en línea. Los dos nacen ocultos y los muestra el JS:
+   sin JS no hay reserva posible, así que un campo que no hace nada sería
+   peor que su ausencia. */
+.inv-gifts-yo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px 10px;
+  margin: 18px 0 4px;
+}
+
+.inv-gifts-yo label {
+  color: rgba(255, 255, 255, .7);
+  font-size: .84rem;
+  font-weight: 600;
+}
+
+.inv-gifts-yo input,
+.inv-gifts-nuevo input {
+  min-width: 0;
+  flex: 0 1 12rem;
+  padding: 9px 14px;
+  border: 1px solid rgba(255, 255, 255, .26);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .22);
+  color: #fff;
+  font: inherit;
+  font-size: .9rem;
+}
+
+.inv-gifts-yo input::placeholder,
+.inv-gifts-nuevo input::placeholder { color: rgba(255, 255, 255, .38); }
+
+.inv-gifts-yo input:focus-visible,
+.inv-gifts-nuevo input:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--inv-highlight) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.inv-gifts-yo-nota {
+  flex: 1 0 100%;
+  color: rgba(255, 255, 255, .42);
+  font-size: .72rem;
+}
+
+.inv-gifts-nuevo {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0 0;
+}

@@ -173,6 +173,26 @@ $conocerAlBebe = $hayNombreBebe
     ? 'a ' . $birthdayName
     : ($sexoBebe !== '' ? 'a ' . $bebeGenerico : 'al bebé');
 $eventoSinNombre = $esBabyShower ? $bebeTitulo : 'Nuestra fiesta';
+
+/* La lista de regalos. Solo baby shower: en un cumpleaños infantil las
+   ideas de regalo viven dentro de la ficha del protagonista y no se
+   reservan. Falla cerrado — si la tabla no existe todavía (la migración
+   010 no está aplicada en producción) la sección simplemente no aparece,
+   en vez de tumbar la invitación entera. */
+$regalos = ['items' => [], 'total' => 0, 'tomados' => 0];
+if ($esBabyShower && function_exists('cb_gift_list_public')) {
+    try {
+        $regalos = cb_gift_list_public((int) $invitation['id']);
+    } catch (Throwable $e) {
+        error_log('CumpleClick lista de regalos: ' . $e->getMessage());
+    }
+}
+// El gancho nombra el problema del invitado, no la sección. Con el nombre
+// del bebé cuando existe; sin él sigue funcionando, que es el caso de las
+// familias que todavía no lo eligieron.
+$regalosGancho = $hayNombreBebe
+    ? '¿No sabes qué regalarle a ' . $birthdayName . '?'
+    : '¿No sabes qué regalarle?';
 $eventoArchivo = ($esBabyShower ? 'baby-shower-' : 'cumpleanos-')
     . ($birthdayName !== '' ? $birthdayName : 'cumpleclick');
 
@@ -1463,6 +1483,64 @@ $cssVer = static function (string $rel): string {
   <?php if ($message !== ''): ?>
   <section class="inv-message inv-reveal">
     <blockquote><?= nl2br($esc($message)) ?></blockquote>
+  </section>
+  <?php endif; ?>
+
+  <?php if ($esBabyShower && $regalos['total'] > 0): ?>
+  <?php // "Para cuando llegue" — el nombre lo decidió Luis el 2026-08-25.
+        // Se renderiza entero en el servidor: sin JS se ve igual, solo que
+        // no se puede reservar, y eso es mejor que una sección vacía. ?>
+  <section class="inv-gifts inv-reveal" data-inv-gifts data-inv-token="<?= $esc($token) ?>">
+    <p class="inv-kicker">Para cuando llegue</p>
+    <h2 class="inv-gifts-title"><?= $esc($regalosGancho) ?></h2>
+    <p class="inv-gifts-lede">Elige uno y márcalo. Así nadie lleva lo mismo.</p>
+    <p class="inv-gifts-count" data-gifts-count>
+      <?= $esc($regalos['tomados'] . ' de ' . $regalos['total'] . ' ya tienen quien los lleve') ?>
+    </p>
+
+    <?php // El nombre va en un campo a la vista y no en un window.prompt: el
+          // resto de la invitación está cuidado al píxel y un cuadro del
+          // navegador encima rompe el tono justo en el único momento en que
+          // el invitado hace algo. Sin JS queda oculto, porque sin JS no hay
+          // reserva posible. ?>
+    <div class="inv-gifts-yo" data-gifts-yo hidden>
+      <label for="inv-gifts-nombre">Te anotamos como</label>
+      <input id="inv-gifts-nombre" type="text" maxlength="80" autocomplete="name"
+             placeholder="Tu nombre" data-gifts-nombre>
+      <span class="inv-gifts-yo-nota">Solo lo ven los papás.</span>
+    </div>
+
+    <ul class="inv-gifts-list" data-gifts-list>
+      <?php foreach ($regalos['items'] as $regalo): ?>
+      <li class="inv-gift<?= $regalo['tomado'] ? ' inv-gift--tomado' : '' ?>" data-gift-id="<?= (int) $regalo['id'] ?>">
+        <div class="inv-gift-texto">
+          <p class="inv-gift-title"><?= $esc($regalo['title']) ?></p>
+          <?php if ($regalo['notes'] !== ''): ?>
+          <p class="inv-gift-notes"><?= $esc($regalo['notes']) ?></p>
+          <?php endif; ?>
+        </div>
+        <?php // Nunca sale de acá quién lo tomó: ver lib.gifts.php. ?>
+        <?php if ($regalo['tomado']): ?>
+        <span class="inv-gift-estado">Ya lo tomaron</span>
+        <?php else: ?>
+        <button class="inv-gift-btn" type="button" data-gift-claim>Yo lo regalo</button>
+        <?php endif; ?>
+      </li>
+      <?php endforeach; ?>
+    </ul>
+
+    <p class="inv-gifts-status" data-gifts-status role="status" aria-live="polite"></p>
+
+    <button class="inv-gifts-otro" type="button" data-gift-add hidden>Voy a regalar otra cosa</button>
+    <div class="inv-gifts-nuevo" data-gifts-nuevo hidden>
+      <input type="text" maxlength="120" placeholder="¿Qué vas a regalar?" data-gifts-nuevo-titulo>
+      <button class="inv-gift-btn" type="button" data-gifts-nuevo-ok>Agregarlo</button>
+    </div>
+    <?php // El costo de no tener cuentas se dice, no se esconde. ?>
+    <p class="inv-gifts-nota" data-gifts-nota hidden>
+      Lo que marques queda guardado en este navegador. Si borras sus datos vas a
+      poder seguir llevándolo, pero ya no soltarlo por tu cuenta.
+    </p>
   </section>
   <?php endif; ?>
 

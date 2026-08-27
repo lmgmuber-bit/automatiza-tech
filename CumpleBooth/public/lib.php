@@ -2268,3 +2268,6 @@ require __DIR__ . '/lib.event-profiles.php';
 
 // Predicciones por evento y tokens privados de baby shower.
 require __DIR__ . '/lib.predictions.php';
+
+// Lista de regalos con reserva.
+require __DIR__ . '/lib.gifts.php';

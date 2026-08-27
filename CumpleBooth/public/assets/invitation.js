@@ -1053,3 +1053,238 @@
     revealables.forEach((element) => element.classList.add('is-visible'));
   }, 2500);
 })();
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Lista de regalos — "Para cuando llegue"
+
+   La sección ya viene renderizada del servidor: esto solo la vuelve
+   interactiva. Sin JS la lista se ve completa y se lee bien, solo que no se
+   puede reservar — mejor que una sección vacía esperando a que cargue algo.
+
+   No hay cuentas. La identidad del invitado es un token que emite el servidor
+   en la primera reserva y que guardamos acá. Es lo que le permite soltar lo
+   suyo, y lo que hace que "Lo llevas tú" sea distinto de "Ya lo tomaron" sin
+   que nadie más sepa quién es quién.
+   ────────────────────────────────────────────────────────────────────────── */
+(() => {
+  const seccion = document.querySelector('[data-inv-gifts]');
+  if (!seccion) return;
+
+  const invitacion = seccion.getAttribute('data-inv-token') || '';
+  const lista = seccion.querySelector('[data-gifts-list]');
+  const contador = seccion.querySelector('[data-gifts-count]');
+  const estado = seccion.querySelector('[data-gifts-status]');
+  const botonOtro = seccion.querySelector('[data-gift-add]');
+  const nota = seccion.querySelector('[data-gifts-nota]');
+  const cajaYo = seccion.querySelector('[data-gifts-yo]');
+  const campoNombre = seccion.querySelector('[data-gifts-nombre]');
+  const cajaNuevo = seccion.querySelector('[data-gifts-nuevo]');
+  const campoNuevo = seccion.querySelector('[data-gifts-nuevo-titulo]');
+  const okNuevo = seccion.querySelector('[data-gifts-nuevo-ok]');
+  if (!lista) return;
+
+  // El almacenamiento puede tirar excepción (modo privado, cookies
+  // bloqueadas). Que falle no puede dejar la sección inutilizable: sin token
+  // igual se puede reservar, solo que después no se podrá soltar.
+  const LLAVE = 'cc-regalos-' + invitacion;
+  const leerToken = () => {
+    try { return window.localStorage.getItem(LLAVE) || ''; } catch (e) { return ''; }
+  };
+  const guardarToken = (valor) => {
+    try { window.localStorage.setItem(LLAVE, valor); } catch (e) { /* sin persistencia */ }
+  };
+  const leerNombre = () => {
+    try { return window.localStorage.getItem('cc-regalos-nombre') || ''; } catch (e) { return ''; }
+  };
+  const guardarNombre = (valor) => {
+    try { window.localStorage.setItem('cc-regalos-nombre', valor); } catch (e) { /* nada */ }
+  };
+
+  botonOtro.hidden = false;
+  nota.hidden = false;
+  cajaYo.hidden = false;
+  campoNombre.value = leerNombre();
+  campoNombre.addEventListener('change', () => guardarNombre(campoNombre.value.trim()));
+
+  const decir = (texto, esError) => {
+    estado.textContent = texto;
+    estado.classList.toggle('is-error', !!esError);
+  };
+
+  const MENSAJES = {
+    ya_tomado: 'Alguien lo tomó recién. Elige otro.',
+    limite_alcanzado: 'Ya marcaste tres regalos. Suelta uno si quieres cambiarlo.',
+    no_es_tuyo: 'Ese regalo no lo tomaste tú.',
+    nombre_requerido: 'Nos falta tu nombre para anotarlo.',
+    titulo_requerido: 'Escribe qué vas a regalar.',
+    rate_limited: 'Demasiados intentos seguidos. Espera un momento.',
+    no_encontrada: 'Esta invitación ya no está disponible.',
+    servicio_no_disponible: 'No pudimos guardar el cambio. Inténtalo de nuevo.',
+  };
+
+  /** Vuelve a dibujar la lista con lo que devolvió el servidor. */
+  const pintar = (datos) => {
+    if (!datos || !Array.isArray(datos.items)) return;
+    lista.textContent = '';
+    datos.items.forEach((regalo) => {
+      const li = document.createElement('li');
+      li.className = 'inv-gift' + (regalo.tomado ? ' inv-gift--tomado' : '') + (regalo.mio ? ' inv-gift--mio' : '');
+      li.setAttribute('data-gift-id', String(regalo.id));
+
+      const texto = document.createElement('div');
+      texto.className = 'inv-gift-texto';
+      const titulo = document.createElement('p');
+      titulo.className = 'inv-gift-title';
+      titulo.textContent = regalo.title;
+      texto.appendChild(titulo);
+      if (regalo.notes) {
+        const notas = document.createElement('p');
+        notas.className = 'inv-gift-notes';
+        notas.textContent = regalo.notes;
+        texto.appendChild(notas);
+      }
+      li.appendChild(texto);
+
+      if (regalo.mio) {
+        // Solo quien lo tomó ve esto, y solo en su propio navegador.
+        const suelta = document.createElement('button');
+        suelta.className = 'inv-gift-btn inv-gift-btn--soltar';
+        suelta.type = 'button';
+        suelta.setAttribute('data-gift-release', '');
+        suelta.textContent = 'Ya no puedo llevarlo';
+        const marca = document.createElement('span');
+        marca.className = 'inv-gift-estado inv-gift-estado--mio';
+        marca.textContent = 'Lo llevas tú';
+        li.appendChild(marca);
+        li.appendChild(suelta);
+      } else if (regalo.tomado) {
+        const marca = document.createElement('span');
+        marca.className = 'inv-gift-estado';
+        marca.textContent = 'Ya lo tomaron';
+        li.appendChild(marca);
+      } else {
+        const boton = document.createElement('button');
+        boton.className = 'inv-gift-btn';
+        boton.type = 'button';
+        boton.setAttribute('data-gift-claim', '');
+        boton.textContent = 'Yo lo regalo';
+        li.appendChild(boton);
+      }
+      lista.appendChild(li);
+    });
+    if (contador) {
+      contador.textContent = datos.tomados + ' de ' + datos.total + ' ya tienen quien los lleve';
+    }
+  };
+
+  const pedir = async (cuerpo) => {
+    const respuesta = await fetch('gift-api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ t: invitacion, visitante: leerToken() }, cuerpo)),
+    });
+    let datos = null;
+    try { datos = await respuesta.json(); } catch (e) { datos = null; }
+    return datos || { ok: false, error: 'servicio_no_disponible' };
+  };
+
+  const bloquear = (boton, bloqueado) => {
+    if (!boton) return;
+    boton.disabled = bloqueado;
+    boton.classList.toggle('is-esperando', bloqueado);
+  };
+
+  /** Devuelve el nombre escrito, o vacío tras llevar el foco al campo. */
+  const pedirNombre = () => {
+    const nombre = campoNombre.value.trim();
+    if (!nombre) {
+      decir('Escribe tu nombre para anotarte.', true);
+      campoNombre.focus();
+      return '';
+    }
+    guardarNombre(nombre);
+    return nombre;
+  };
+
+  lista.addEventListener('click', async (evento) => {
+    const reservar = evento.target.closest('[data-gift-claim]');
+    const soltar = evento.target.closest('[data-gift-release]');
+    if (!reservar && !soltar) return;
+
+    const item = evento.target.closest('[data-gift-id]');
+    if (!item) return;
+    const id = parseInt(item.getAttribute('data-gift-id'), 10);
+
+    if (soltar) {
+      bloquear(soltar, true);
+      decir('Soltando…');
+      const datos = await pedir({ accion: 'soltar', id });
+      bloquear(soltar, false);
+      pintar(datos.lista);
+      decir(datos.ok ? 'Listo, quedó disponible otra vez.' : (MENSAJES[datos.error] || MENSAJES.servicio_no_disponible), !datos.ok);
+      return;
+    }
+
+    // El nombre sale del campo de arriba. Si está vacío no se abre ningún
+    // cuadro del navegador: se lleva el foco al campo y se dice por qué.
+    const nombre = pedirNombre();
+    if (!nombre) return;
+
+    bloquear(reservar, true);
+    decir('Guardando…');
+    const datos = await pedir({ accion: 'reservar', id, nombre });
+    bloquear(reservar, false);
+    if (datos.visitante) guardarToken(datos.visitante);
+    pintar(datos.lista);
+    decir(
+      datos.ok ? '¡Anotado! Ya nadie más va a llevarlo.' : (MENSAJES[datos.error] || MENSAJES.servicio_no_disponible),
+      !datos.ok
+    );
+  });
+
+  botonOtro.addEventListener('click', () => {
+    cajaNuevo.hidden = false;
+    botonOtro.hidden = true;
+    campoNuevo.focus();
+  });
+
+  campoNuevo.addEventListener('keydown', (evento) => {
+    if (evento.key === 'Enter') { evento.preventDefault(); okNuevo.click(); }
+  });
+
+  okNuevo.addEventListener('click', async () => {
+    const titulo = campoNuevo.value.trim();
+    if (!titulo) { campoNuevo.focus(); return; }
+    const nombre = pedirNombre();
+    if (!nombre) return;
+    bloquear(okNuevo, true);
+    decir('Agregando…');
+    const agregado = await pedir({ accion: 'agregar', titulo });
+    if (!agregado.ok) {
+      bloquear(okNuevo, false);
+      decir(MENSAJES[agregado.error] || MENSAJES.servicio_no_disponible, true);
+      return;
+    }
+    // Se agrega y se toma en el mismo gesto: quien lo escribió es quien lo lleva.
+    const tomado = await pedir({ accion: 'reservar', id: agregado.id, nombre });
+    bloquear(okNuevo, false);
+    campoNuevo.value = '';
+    cajaNuevo.hidden = true;
+    botonOtro.hidden = false;
+    if (tomado.visitante) guardarToken(tomado.visitante);
+    pintar(tomado.lista || agregado.lista);
+    decir(
+      tomado.ok ? '¡Anotado! Ya nadie más va a llevarlo.' : (MENSAJES[tomado.error] || 'Lo agregamos, pero no pudimos marcarlo.'),
+      !tomado.ok
+    );
+  });
+
+  // Primera pasada: si este navegador ya reservó algo, hay que marcarlo
+  // como suyo. El HTML del servidor no lo sabe — no puede, porque el
+  // token vive solo acá — así que la marca la pone el cliente.
+  if (leerToken()) {
+    pedir({ accion: 'listar' }).then((datos) => {
+      if (datos && datos.lista) pintar(datos.lista);
+    });
+  }
+})();

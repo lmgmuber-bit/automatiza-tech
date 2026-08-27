@@ -1160,7 +1160,9 @@
       } else if (regalo.tomado) {
         const marca = document.createElement('span');
         marca.className = 'inv-gift-estado';
-        marca.textContent = 'Ya lo tomaron';
+        // El texto depende del modo y lo pone el servidor en la sección: sin
+        // lista nadie "tomó" nada, alguien va a llevarlo.
+        marca.textContent = seccion.getAttribute('data-gifts-tomado') || 'Ya lo tomaron';
         li.appendChild(marca);
       } else {
         const boton = document.createElement('button');
@@ -1173,8 +1175,15 @@
       lista.appendChild(li);
     });
     if (contador) {
-      contador.textContent = datos.tomados + ' de ' + datos.total + ' ya tienen quien los lleve';
+      // En modo abierto no hay un total contra el cual medir: se cuenta lo
+      // anotado. El modo lo pone el servidor en el propio elemento.
+      contador.textContent = contador.getAttribute('data-gifts-modo') === 'open'
+        ? (datos.total === 1 ? '1 cosa anotada' : datos.total + ' cosas anotadas')
+        : datos.tomados + ' de ' + datos.total + ' ya tienen quien los lleve';
     }
+    // El aviso de lista vacía deja de tener sentido apenas hay algo anotado.
+    const vacio = seccion.querySelector('.inv-gifts-vacio');
+    if (vacio) vacio.hidden = datos.items.length > 0;
   };
 
   const pedir = async (cuerpo) => {

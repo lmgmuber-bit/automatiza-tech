@@ -55,6 +55,9 @@ if (!$invalido && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         } elseif ($accion === 'arriba' || $accion === 'abajo') {
             $r = cb_gift_move($invitationId, $id, $accion);
             $aviso = !empty($r['ok']) ? 'ordenado' : 'extremo';
+        } elseif ($accion === 'modo') {
+            $r = cb_gift_set_mode($invitationId, (string) ($_POST['modo'] ?? 'list'));
+            $aviso = !empty($r['ok']) ? 'modo' : 'error';
         } elseif ($accion === 'ocultar' || $accion === 'mostrar') {
             $r = cb_gift_set_hidden($invitationId, $id, $accion === 'ocultar');
             // Un regalo ya tomado no se puede ocultar: alguien se comprometió
@@ -72,6 +75,12 @@ if (!$invalido && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
 $nombreBebe = trim((string) ($acceso['birthday_person_name'] ?? ''));
 $themeVars = !$invalido ? cb_theme_css_vars((string) ($acceso['theme_slug'] ?? '')) : '';
+$modo = 'list';
+if (!$invalido) {
+    $inv = cb_load_invitation_by_id((int) $acceso['invitation_id']);
+    $modo = cb_gift_mode($inv ?: []);
+}
+$esAbierto = $modo === 'open';
 $regalos = $invalido ? [] : cb_gift_list_for_parents((int) $acceso['invitation_id']);
 $disponibles = 0;
 foreach ($regalos as $g) {
@@ -82,6 +91,7 @@ foreach ($regalos as $g) {
 
 $AVISOS = [
     'agregado' => 'Listo, ya está en la lista.',
+    'modo' => 'Cambiaste cómo funcionan los regalos.',
     'guardado' => 'Guardado.',
     'ordenado' => 'Cambiaste el orden.',
     'extremo' => 'Ese ya está en la punta.',
@@ -99,7 +109,7 @@ $avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', '
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive">
-  <title><?= $invalido ? 'Enlace no disponible' : 'Lista de regalos' ?> · CumpleClick</title>
+  <title><?= $invalido ? 'Enlace no disponible' : ($esAbierto ? 'Los regalos' : 'Lista de regalos') ?> · CumpleClick</title>
   <link rel="icon" href="brand/cumpleclick-mark.svg" type="image/svg+xml">
   <style>
     /* Baloo 2 local, nunca CDN: si no, la tipografía de la marca cambia de
@@ -176,6 +186,14 @@ $avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', '
 
     .vacio { padding:28px 18px; border-radius:18px; background:var(--papel); text-align:center; color:var(--tenue); }
     .pie { margin:28px 0 0; color:var(--tenue); font-size:.78rem; text-align:center; }
+
+    .modos { display:grid; gap:10px; }
+    @media (min-width:600px) { .modos { grid-template-columns:1fr 1fr; } }
+    .modo { margin:0; padding:12px 14px; border:1px solid color-mix(in srgb, var(--dark1) 14%, transparent);
+            border-radius:14px; background:#fff; }
+    .modo.activo { border-color:var(--pink); background:color-mix(in srgb, var(--pink) 9%, #fff); }
+    .modo b { display:block; color:var(--dark1); font-size:.92rem; }
+    .modo span { display:block; margin:3px 0 8px; color:var(--tenue); font-size:.8rem; line-height:1.35; }
   </style>
 </head>
 <body>
@@ -192,16 +210,47 @@ $avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', '
   </div>
 <?php else: ?>
 
-  <h1>La lista de regalos<?= $nombreBebe !== '' ? ' de ' . $esc($nombreBebe) : '' ?></h1>
-  <p class="lede">Agrega lo que necesitan. Los invitados van a ir eligiendo de acá, y cada uno queda
-    marcado para que nadie lleve lo mismo.</p>
+  <?php // En modo abierto no hay lista, así que llamarla así confunde. ?>
+  <h1><?= $esAbierto ? 'Los regalos' : 'La lista de regalos' ?><?= $nombreBebe !== '' ? ' de ' . $esc($nombreBebe) : '' ?></h1>
+  <p class="lede"><?= $esAbierto
+    ? 'No hay lista: cada invitado anota lo que va a llevar y todos lo ven, para que nadie repita. Acá miras lo que van anotando.'
+    : 'Agrega lo que necesitan. Los invitados van a ir eligiendo de acá, y cada uno queda marcado para que nadie lleve lo mismo.'
+  ?></p>
+
+  <?php // El interruptor va arriba de todo porque cambia el sentido de lo que
+        // viene abajo: en modo abierto los papás no cargan nada, miran. ?>
+  <section class="caja">
+    <h2>Cómo funcionan los regalos</h2>
+    <div class="modos">
+      <?php foreach ([
+          ['list', 'Con lista', 'Ustedes anotan lo que necesitan y los invitados eligen de ahí.'],
+          ['open', 'Sin lista', 'Cada invitado anota lo que va a llevar. Nadie pide nada.'],
+      ] as [$valor, $rotulo, $explica]): ?>
+      <form method="post" class="modo<?= $modo === $valor ? ' activo' : '' ?>">
+        <input type="hidden" name="t" value="<?= $esc($token) ?>">
+        <input type="hidden" name="accion" value="modo">
+        <input type="hidden" name="modo" value="<?= $valor ?>">
+        <b><?= $rotulo ?><?= $modo === $valor ? ' · activo' : '' ?></b>
+        <span><?= $explica ?></span>
+        <?php if ($modo !== $valor): ?>
+        <button class="mini" type="submit">Usar este</button>
+        <?php endif; ?>
+      </form>
+      <?php endforeach; ?>
+    </div>
+    <p class="agrego" style="margin-top:10px">Cambiar de modo no borra nada de lo ya anotado.</p>
+  </section>
 
   <?php if ($avisoTexto !== ''): ?>
   <p class="aviso<?= $avisoMalo ? ' malo' : '' ?>" role="status"><?= $esc($avisoTexto) ?></p>
   <?php endif; ?>
 
   <section class="caja">
-    <h2>Agregar un regalo</h2>
+    <h2><?= $esAbierto ? 'Agregar algo de todos modos' : 'Agregar un regalo' ?></h2>
+    <?php if ($esAbierto): ?>
+    <p class="agrego" style="margin:-6px 0 12px">Sin lista los invitados anotan solos, pero si quieren
+      dejar una idea puesta, pueden.</p>
+    <?php endif; ?>
     <form method="post" class="par">
       <input type="hidden" name="t" value="<?= $esc($token) ?>">
       <input type="hidden" name="accion" value="agregar">
@@ -220,13 +269,19 @@ $avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', '
   </section>
 
   <h2 style="margin:30px 0 12px;color:var(--dark1);font-size:1.05rem;font-weight:800">
+    <?php if ($esAbierto): ?>
+    <?= count($regalos) ?> anotado<?= count($regalos) === 1 ? '' : 's' ?> por los invitados
+    <?php else: ?>
     <?= count($regalos) ?> en la lista · <?= $disponibles ?> sin dueño todavía
+    <?php endif; ?>
   </h2>
 
   <?php if (!$regalos): ?>
   <div class="vacio">
-    Todavía no hay nada. Agrega el primero acá arriba — sin al menos un regalo, la sección
-    no aparece en la invitación.
+    <?= $esAbierto
+      ? 'Todavía no anotó nadie. La sección ya aparece en la invitación, invitando a anotar.'
+      : 'Todavía no hay nada. Agrega el primero acá arriba — sin al menos un regalo, la sección no aparece en la invitación.'
+    ?>
   </div>
   <?php else: ?>
   <ul>

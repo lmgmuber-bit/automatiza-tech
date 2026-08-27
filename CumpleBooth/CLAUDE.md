@@ -115,6 +115,18 @@ libre — publicarlo lo vuelve un dato imposible de verificar pero socialmente
 creído, y el enlace es público. La reserva usa escritura condicional, no
 leer-y-después-escribir.
 
+**Dos modos, por invitación** (`gift_mode`, migración 011, default `list`):
+`list` es el de siempre —los papás cargan y los invitados eligen— y `open` no
+tiene lista: cada invitado anota lo que va a llevar y todos lo ven. Pedir una
+lista se le hace incómodo a muchas familias, pero igual quieren que nadie
+repita. Los dos modos usan la misma tabla y el mismo mecanismo de reserva; lo
+que cambia es quién escribe y cómo se presenta, por eso es una columna y no un
+esquema aparte. En `open` la sección aparece **aunque esté vacía** —vacía es el
+estado normal al principio— y el badge dice "Ya lo llevan" en vez de "Ya lo
+tomaron", porque nadie tomó nada de ninguna lista. Sin la columna todo cae a
+`list`, que es el comportamiento anterior. El interruptor está arriba de todo en
+`regalos-papas.php`; cambiar de modo no borra nada.
+
 **El recorrido y la voz (2026-08-27).** Los 12 capítulos existen (seedance1_5,
 8s, 720x1280, sin audio) y los 16 MP3 de Alice también. Ningún clip tiene
 personas y ninguna narración pronuncia el nombre del bebé — el nombre es

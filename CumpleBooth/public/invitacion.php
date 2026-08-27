@@ -209,12 +209,26 @@ if ($esBabyShower && function_exists('cb_gift_list_public')) {
         error_log('CumpleClick lista de regalos: ' . $e->getMessage());
     }
 }
-// El gancho nombra el problema del invitado, no la sección. Con el nombre
-// del bebé cuando existe; sin él sigue funcionando, que es el caso de las
-// familias que todavía no lo eligieron.
-$regalosGancho = $hayNombreBebe
-    ? '¿No sabes qué regalarle a ' . $birthdayName . '?'
-    : '¿No sabes qué regalarle?';
+$modoRegalos = function_exists('cb_gift_mode') ? cb_gift_mode($invitation) : 'list';
+$aQuienRegalo = $hayNombreBebe ? ' a ' . $birthdayName : '';
+// El gancho nombra el problema del invitado, no la sección. Y ese problema
+// es otro en cada modo: con lista es "no sé qué regalar"; sin lista es "ya
+// sé lo que llevo, ¿dónde lo anoto para que nadie repita?".
+if ($modoRegalos === 'open') {
+    $regalosGancho = '¿Vas a llevarle algo' . $aQuienRegalo . '?';
+    $regalosBajada = 'Anótalo acá y los demás lo van a ver. Así nadie lleva lo mismo.';
+    $regalosBoton = 'Anotar lo que voy a llevar';
+    $regalosVacio = 'Todavía no anotó nadie. Puedes ser el primero.';
+    // "Ya lo tomaron" no aplica sin lista: nadie tomó nada de ningún lado,
+    // alguien va a llevarlo.
+    $regalosTomado = 'Ya lo llevan';
+} else {
+    $regalosGancho = '¿No sabes qué regalarle' . $aQuienRegalo . '?';
+    $regalosBajada = 'Elige uno y márcalo. Así nadie lleva lo mismo.';
+    $regalosBoton = 'Voy a regalar otra cosa';
+    $regalosVacio = '';
+    $regalosTomado = 'Ya lo tomaron';
+}
 $eventoArchivo = ($esBabyShower ? 'baby-shower-' : 'cumpleanos-')
     . ($birthdayName !== '' ? $birthdayName : 'cumpleclick');
 
@@ -1517,16 +1531,27 @@ $cssVer = static function (string $rel): string {
   </section>
   <?php endif; ?>
 
-  <?php if ($esBabyShower && $regalos['total'] > 0): ?>
+  <?php // En modo abierto la sección aparece aunque no haya nada: la lista
+        // vacía ES el estado normal al principio y hay que invitar a anotar.
+        // En modo lista, vacía significa que los papás no cargaron nada, y
+        // mostrar una sección hueca sería peor que no mostrarla. ?>
+  <?php if ($esBabyShower && ($regalos['total'] > 0 || $modoRegalos === 'open')): ?>
   <?php // "Para cuando llegue" — el nombre lo decidió Luis el 2026-08-25.
         // Se renderiza entero en el servidor: sin JS se ve igual, solo que
         // no se puede reservar, y eso es mejor que una sección vacía. ?>
-  <section class="inv-gifts inv-reveal" data-inv-gifts data-inv-token="<?= $esc($token) ?>">
+  <section class="inv-gifts inv-reveal" data-inv-gifts data-inv-token="<?= $esc($token) ?>"
+           data-gifts-tomado="<?= $esc($regalosTomado) ?>">
     <p class="inv-kicker">Para cuando llegue</p>
     <h2 class="inv-gifts-title"><?= $esc($regalosGancho) ?></h2>
-    <p class="inv-gifts-lede">Elige uno y márcalo. Así nadie lleva lo mismo.</p>
-    <p class="inv-gifts-count" data-gifts-count>
+    <p class="inv-gifts-lede"><?= $esc($regalosBajada) ?></p>
+    <?php // El pulso de la lista, sin nombres. En modo abierto no hay un total
+          // contra el cual medir, así que se cuenta lo anotado y ya. ?>
+    <p class="inv-gifts-count" data-gifts-count data-gifts-modo="<?= $esc($modoRegalos) ?>">
+      <?php if ($modoRegalos === 'open'): ?>
+      <?= $esc($regalos['total'] === 1 ? '1 cosa anotada' : $regalos['total'] . ' cosas anotadas') ?>
+      <?php else: ?>
       <?= $esc($regalos['tomados'] . ' de ' . $regalos['total'] . ' ya tienen quien los lleve') ?>
+      <?php endif; ?>
     </p>
 
     <?php // El nombre va en un campo a la vista y no en un window.prompt: el
@@ -1552,7 +1577,7 @@ $cssVer = static function (string $rel): string {
         </div>
         <?php // Nunca sale de acá quién lo tomó: ver lib.gifts.php. ?>
         <?php if ($regalo['tomado']): ?>
-        <span class="inv-gift-estado">Ya lo tomaron</span>
+        <span class="inv-gift-estado"><?= $esc($regalosTomado) ?></span>
         <?php else: ?>
         <button class="inv-gift-btn" type="button" data-gift-claim>Yo lo regalo</button>
         <?php endif; ?>
@@ -1562,7 +1587,11 @@ $cssVer = static function (string $rel): string {
 
     <p class="inv-gifts-status" data-gifts-status role="status" aria-live="polite"></p>
 
-    <button class="inv-gifts-otro" type="button" data-gift-add hidden>Voy a regalar otra cosa</button>
+    <?php if ($modoRegalos === 'open' && !$regalos['items']): ?>
+    <p class="inv-gifts-vacio"><?= $esc($regalosVacio) ?></p>
+    <?php endif; ?>
+
+    <button class="inv-gifts-otro" type="button" data-gift-add hidden><?= $esc($regalosBoton) ?></button>
     <div class="inv-gifts-nuevo" data-gifts-nuevo hidden>
       <input type="text" maxlength="120" placeholder="¿Qué vas a regalar?" data-gifts-nuevo-titulo>
       <button class="inv-gift-btn" type="button" data-gifts-nuevo-ok>Agregarlo</button>

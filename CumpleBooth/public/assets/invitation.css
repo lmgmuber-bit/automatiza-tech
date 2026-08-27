@@ -2171,3 +2171,17 @@ body.inv-scroll-locked {
   gap: 8px;
   margin: 10px 0 0;
 }
+
+/* Modo abierto con la lista todavía vacía. No es un error ni un estado a
+   esconder: al principio siempre está vacía, y el aviso es justamente la
+   invitación a anotar. */
+.inv-gifts-vacio {
+  margin: 18px auto 0;
+  max-width: 24rem;
+  padding: 16px 18px;
+  border: 1px dashed color-mix(in srgb, var(--inv-highlight) 32%, transparent);
+  border-radius: 16px;
+  color: rgba(255, 255, 255, .62);
+  font-size: .9rem;
+  line-height: 1.4;
+}

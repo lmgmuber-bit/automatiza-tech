@@ -26,6 +26,24 @@ const CB_GIFT_TOMADO     = 'taken';
 /** Cuántos regalos puede reservar un mismo navegador en una invitación. */
 const CB_GIFT_MAX_POR_INVITADO = 3;
 
+/**
+ * Las dos formas de resolver los regalos, y las dos son legítimas.
+ *
+ *   'list' — los papás cargan lo que necesitan y cada invitado elige de ahí.
+ *   'open' — no hay lista: cada invitado anota lo que va a llevar y todos ven
+ *            lo anotado. Para las familias a las que pedir una lista se les
+ *            hace incómodo, que son muchas.
+ *
+ * Los dos usan la misma tabla y el mismo mecanismo de reserva; lo que cambia
+ * es quién escribe y cómo se presenta. Cualquier valor desconocido —incluida
+ * una base sin la migración 011— cae a 'list', que es lo que ya existía.
+ */
+function cb_gift_mode($invitation): string
+{
+    $modo = is_array($invitation) ? (string) ($invitation['gift_mode'] ?? '') : (string) $invitation;
+    return $modo === 'open' ? 'open' : 'list';
+}
+
 function cb_gift_require_db(): PDO
 {
     if (cb_storage_mode() !== 'db') {
@@ -277,4 +295,27 @@ function cb_gift_move(int $invitationId, int $giftId, string $direccion): array
     $set->execute([(int) $otro['position'], $ahora, (int) $fila['id']]);
     $set->execute([(int) $fila['position'], $ahora, (int) $otro['id']]);
     return ['ok' => true];
+}
+
+/**
+ * Cambia el modo de la lista. Solo los papás.
+ *
+ * No borra nada al cambiar: lo que ya está anotado sigue anotado. Si vuelven
+ * a 'list' con cosas que agregaron los invitados, esas quedan en la lista como
+ * cualquier otra — y por eso `added_by` sigue distinguiendo quién las escribió.
+ */
+function cb_gift_set_mode(int $invitationId, string $modo): array
+{
+    $pdo = cb_gift_require_db();
+    $modo = $modo === 'open' ? 'open' : 'list';
+    $stmt = $pdo->prepare('UPDATE cc_invitations SET gift_mode = ?, updated_at = ? WHERE id = ?');
+    try {
+        $stmt->execute([$modo, gmdate('Y-m-d H:i:s'), $invitationId]);
+    } catch (Throwable $e) {
+        // Base sin la migración 011: el modo simplemente no se puede cambiar y
+        // todo sigue funcionando en 'list', que es el comportamiento anterior.
+        error_log('CumpleClick gift_mode: ' . $e->getMessage());
+        return ['ok' => false, 'error' => 'sin_columna'];
+    }
+    return ['ok' => true, 'modo' => $modo];
 }

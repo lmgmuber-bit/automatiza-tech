@@ -401,6 +401,36 @@ if ($eventProfile !== null) {
 $imageUrl = cb_invitation_download_url($token, 'image');
 $videoUrl = $hasVideo ? cb_invitation_download_url($token, 'video') : null;
 
+/* Nombre con el que se guarda al tocar "Descargar".
+
+   Iba en un `<a download>` SIN valor, confiando en que el navegador leyera
+   el `Content-Disposition` del endpoint. Cuando eso no pasa —gestores de
+   descarga, WebViews, navegadores embebidos de WhatsApp e Instagram— el
+   respaldo es el último tramo de la URL, y acá ese tramo es
+   `descargar-invitacion.php`. El archivo aterriza con extensión .php y el
+   sistema no sabe abrirlo, aunque los bytes sean un JPEG perfecto.
+
+   Con un nombre explícito deja de depender de una cabecera: la extensión
+   sale del archivo real, no de una constante que se puede desincronizar
+   del día que una invitación se guarde en PNG o el video en otro formato. */
+$extensionDe = static function (array $outputs): string {
+    $clave = (string) ($outputs[0]['file_storage_key'] ?? '');
+    $ext = strtolower(pathinfo($clave, PATHINFO_EXTENSION));
+    return preg_match('/^[a-z0-9]{2,5}$/', $ext) === 1 ? $ext : '';
+};
+// El nombre pasa por el slug que ya existe: "cumpleanos-Tomás.jpg" con tilde
+// y mayúscula funciona en Windows y macOS, pero se rompe al mandarlo por
+// FTP, al montarlo en un disco viejo o al reenviarlo desde algunos
+// teléfonos. Es el mismo criterio que ya usa el botón de compartir.
+$baseDescarga = ($esBabyShower ? 'baby-shower-' : 'cumpleanos-')
+    . cb_invitation_name_slug($birthdayName !== '' ? $birthdayName : 'cumpleclick');
+$imagenDescarga = $baseDescarga . '.' . ($extensionDe($imageOutputs) ?: 'jpg');
+$videoDescarga = '';
+if ($hasVideo) {
+    $videoOutputs = cb_invitation_approved_outputs((int) $invitation['id'], 'personalized_video');
+    $videoDescarga = $baseDescarga . '.' . ($extensionDe($videoOutputs) ?: 'mp4');
+}
+
 $esc = static fn(string $v): string => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
 
 // Intro cinematográfico opcional por temática. La convención evita amarrar la
@@ -1634,14 +1664,14 @@ $cssVer = static function (string $rel): string {
         Compartir <?= $esc($shareKindLabel) ?>
       </button>
 
-      <a class="inv-button inv-button-ghost" href="<?= $esc($imageUrl) ?>" download>
+      <a class="inv-button inv-button-ghost" href="<?= $esc($imageUrl) ?>" download="<?= $esc($imagenDescarga) ?>">
         <?php // Imagen con flecha de descarga: dice qué se baja, no solo que
               // se baja algo. ?>
         <svg class="inv-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 13V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7"/><circle cx="9" cy="9" r="1.6"/><path d="M4 15.5l4-3.5 3.5 3"/><path d="M18 15v6M15.2 18.4L18 21.2l2.8-2.8"/></svg>
         Descargar imagen
       </a>
       <?php if ($hasVideo): ?>
-      <a class="inv-button inv-button-ghost" href="<?= $esc((string) $videoUrl) ?>" download>
+      <a class="inv-button inv-button-ghost" href="<?= $esc((string) $videoUrl) ?>" download="<?= $esc($videoDescarga) ?>">
         <svg class="inv-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 12V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h9"/><path d="M15 9.5l6-3.5v12l-6-3.5"/><path d="M18 15v6M15.2 18.4L18 21.2l2.8-2.8"/></svg>
         Descargar video
       </a>

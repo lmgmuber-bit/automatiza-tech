@@ -89,8 +89,23 @@ try {
     }
 
     $mime = (string) ($selected['file_mime'] ?: 'application/octet-stream');
-    // Nombre neutro a propósito: nunca exponer el ID interno de la invitación.
-    $fileName = 'invitacion-cumpleclick.' . pathinfo($filePath, PATHINFO_EXTENSION);
+    /* El nombre con el que se guarda.
+
+       Cuando esta cabecera trae `filename`, MANDA sobre el atributo
+       `download` del enlace: poner un nombre lindo en el HTML y dejar acá
+       otro distinto significa que gana este y el del HTML no se usa nunca.
+       Los dos tienen que decir lo mismo.
+
+       Sigue sin exponer nada interno —el nombre del cumpleañero o del bebé
+       está en toda la página— y pasa por el mismo slug que el resto: sin
+       tildes, sin ñ y en minúscula, que es lo que sobrevive a un FTP y a
+       reenviarlo desde un teléfono. */
+    $quien = trim((string) ($invitation['birthday_person_name'] ?? ''));
+    $prefijo = (string) ($invitation['event_type'] ?? '') === 'baby_shower'
+        ? 'baby-shower-'
+        : 'cumpleanos-';
+    $fileName = $prefijo . cb_invitation_name_slug($quien !== '' ? $quien : 'cumpleclick')
+        . '.' . pathinfo($filePath, PATHINFO_EXTENSION);
 
     // Incrementar contador de descargas de forma no bloqueante. El rastreador
     // que arma la tarjeta no descargó nada: contarlo inflaría la métrica que

@@ -105,6 +105,27 @@ que los clips entran de a uno sin tocar código. No llevan logo AT —son la
 invitación de un cliente, no una pieza de AT— ni superficies escribibles en
 cuadro, que es lo que hace que el generativo estampe texto inventado.
 
+**La lista de regalos con reserva (2026-08-27).** "Para cuando llegue" —el
+nombre lo decidió Luis— vive en `lib.gifts.php`, `gift-api.php`, la sección de
+`invitacion.php` y `regalos-papas.php`. **El invitado ve que un regalo está
+tomado, nunca por quién**; el nombre solo lo ven los papás y el admin. Esto
+CORRIGE la decisión 1 del plan del 2026-08-25 y el porqué está escrito ahí y en
+la cabecera de `lib.gifts.php`: no hay cuentas, así que `claimed_name` es texto
+libre — publicarlo lo vuelve un dato imposible de verificar pero socialmente
+creído, y el enlace es público. La reserva usa escritura condicional, no
+leer-y-después-escribir.
+
+**El recorrido y la voz (2026-08-27).** Los 12 capítulos existen (seedance1_5,
+8s, 720x1280, sin audio) y los 16 MP3 de Alice también. Ningún clip tiene
+personas y ninguna narración pronuncia el nombre del bebé — el nombre es
+dinámico y vive en el HTML. Los prompts y el arco, en
+`docs/VIDEOS-INVITACION-BABY-SHOWER.md`.
+
+**El hero sigue siendo la foto que respira, a propósito.** Se generaron cuatro
+clips de hero y NO se instalaron: son atmósfera genérica y el `fondo-banner.jpg`
+es la decoración real que la familia va a tener. Quedan fuera del repo, en el
+scratchpad, por si Luis prefiere movimiento.
+
 La migración `010_baby_shower_predictions.php` **no está aplicada en
 producción**. Crea tres tablas y una columna; es aditiva e idempotente, pero
 requiere autorización explícita de Luis.

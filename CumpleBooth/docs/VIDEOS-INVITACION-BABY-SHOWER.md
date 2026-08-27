@@ -1,6 +1,14 @@
 # Videos de la invitación de baby shower
 
-Estado al 2026-08-26: **el código está listo y los archivos no existen.** La
+Estado al 2026-08-27: **hecho.** Los 12 capítulos y los 16 MP3 de Alice están
+en el repo y verificados en el navegador. Lo que sigue abajo es cómo se
+hicieron y cómo verificar los que se agreguen después.
+
+El hero **no** se instaló a propósito: se generaron cuatro clips y quedaron
+fuera porque son atmósfera genérica, y `fondo-banner.jpg` —que respira con el
+bloque "la espera" del CSS— es la decoración real que la familia va a tener.
+
+Estado anterior (2026-08-26): **el código está listo y los archivos no existen.** La
 invitación funciona sin ellos; cuando cada MP4 aparezca en su ruta, entra solo.
 No hay que tocar PHP, CSS ni la base.
 

@@ -93,8 +93,8 @@ tiene nombre, y ya tiene quien lo espere" — el video es el mismo, cambia solo 
 narración, y para eso `$playlistOrdersByTheme` acepta un array
 `['caption','narracion']` además del texto suelto de siempre.
 
-El recorrido con videos **está cableado pero los MP4 no existen**: rutas,
-arco, prompts y verificación en `docs/VIDEOS-INVITACION-BABY-SHOWER.md`.
+El recorrido con videos: rutas, arco, prompts y verificación en
+`docs/VIDEOS-INVITACION-BABY-SHOWER.md`. Los MP4 ya existen — ver más abajo.
 Los capítulos NO cuentan la sala preparándose —eso es la decoración— sino la
 espera, lo que significa traer un hijo al mundo y el nacimiento que se está
 esperando. El arco es el mismo en las dos temáticas porque lo que se cuenta

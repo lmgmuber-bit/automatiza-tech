@@ -38,10 +38,15 @@ respira a plano en movimiento, y aparece un recorrido que hoy no está.
 |---|---|
 | 1 | Hay esperas que se sienten distintas |
 | 2 | Todo empieza mucho antes de nacer |
-| 3 | Manos que ya aprendieron a esperar |
+| 3 | Alguien ya te está esperando |
 | 4 | El nombre de *(nombre)* ya se dice en voz alta |
 | 5 | El mundo se acomoda para recibirte |
 | 6 | Ven a esperar con nosotros |
+
+Ningún clip tiene personas. Una versión anterior de este documento proponía
+manos tejiendo y una mano sobre un vientre de embarazada; Luis la descartó y
+pidió que la espera se contara con los objetos de cada temática. Se deja
+escrito para que nadie la reintroduzca.
 
 El nombre del bebé es dinámico y vive en HTML: **nunca** se quema en el video,
 o el clip sirve para una sola fiesta. El capítulo 4 lo dice en el texto; la
@@ -74,7 +79,7 @@ Los mismos seis nombres en las dos temáticas:
 ```
 invitation/capitulo-1-la-espera.mp4
 invitation/capitulo-2-antes-de-nacer.mp4
-invitation/capitulo-3-manos-que-esperan.mp4
+invitation/capitulo-3-alguien-te-espera.mp4
 invitation/capitulo-4-su-nombre.mp4
 invitation/capitulo-5-el-mundo-se-acomoda.mp4
 despedida-baby-nube.mp4   ·   despedida-baby-safari.mp4
@@ -99,28 +104,52 @@ instrucción. Lo que sí funcionó fue **sacar la superficie del prompt**.
 Estilo compartido, para que los seis clips de una temática parezcan del mismo
 día y de la misma cámara:
 
-> Cinematic live-action, shallow depth of field, very slow deliberate camera
-> move, soft natural window light, warm film grain, tender and quiet mood,
-> 9:16 vertical. No faces in frame, no text, no signage, no lettering, no
-> logos, no watermarks.
+Modelo `seedance1_5`, 8 s, 720p, 9:16, `generate_audio: false`. 9,6 créditos por
+clip. Estilo compartido, para que los seis de una temática parezcan del mismo día
+y de la misma cámara:
 
-Las manos sí pueden aparecer — son la mitad de la ternura y no identifican a
-nadie. Caras no, para que el clip sirva a cualquier familia.
+> Cinematic live-action, vertical 9:16, shallow depth of field, warm film grain,
+> tender quiet mood. [la escena]. [el movimiento de cámara]. No people, no hands,
+> no faces, no text, no signage, no lettering, no logos, no watermarks.
 
-### El arco, plano por plano
+### Lo que se generó, plano por plano
 
-1. **La espera** — una mecedora vacía que se mueve apenas, polvo flotando en un
-   rayo de luz. Cámara: quieta; lo único que se mueve es la luz.
-2. **Antes de nacer** — dos manos tejiendo una mantita diminuta. Cámara:
-   acercamiento lentísimo a las agujas.
-3. **Manos que esperan** — una mano apoyada sobre un vientre de embarazada, en
-   contraluz suave, encuadre de la cintura para abajo. Cámara: quieta.
-4. **Su nombre** — un gorrito de lana recién tejido sostenido en dos manos, que
-   lo giran despacio. El nombre lo dice el texto del capítulo; la imagen no
-   necesita mostrarlo, y mostrarlo obligaría a un clip por fiesta.
-5. **El mundo se acomoda** — la habitación completa a la hora dorada, todo en
-   su lugar, la cortina respirando. Cámara: paneo lentísimo.
-6. **Despedida** — el rincón de la fiesta con la luz baja de la tarde.
+| # | `baby-nube` | `baby-safari` |
+|---|---|---|
+| 1 | Cuna vacía en penumbra azul; una lámpara se enciende despacio y la llena de luz. Cámara quieta | Sala vacía al atardecer, luz moteada cruzando entre monsteras, polvo flotando. Cámara quieta |
+| 2 | Móvil de nubes girando lentísimo, visto desde abajo como lo vería el bebé | Los peluches formados en sus pedestales, la luz corriéndose sobre ellos. Paneo lateral |
+| 3 | El osito crema solo, tres velas encendidas, su sombra moviéndose. Acercamiento lentísimo | El león echado en primer plano, la tarde encendiéndole la melena. Acercamiento lentísimo |
+| 4 | Gorrito de lana celeste sobre una manta doblada | Gorrito verde salvia sobre una manta, junto a una rosa pálida |
+| 5 | La luna encendida y los globos azules, la sala a media luz. Paneo | Paneo por el rincón: globos, hojas, animales, todo en su lugar |
+| 6 | El rincón completo en penumbra con las velas prendidas | Los globos sobre la alfombra, a ras de suelo, sin pared en cuadro |
+
+**La despedida de Safari se hizo dos veces.** La primera estampó letras
+inventadas en un banner del fondo, a pesar de decir "no text, no signage, no
+lettering" en el mismo prompt — el mismo fallo de *"Subby Shower"*. La toma
+buena es la que **sacó la pared del encuadre**: cámara a ras de suelo mirando
+los globos sobre la alfombra. Confirma la regla de arriba: no se gana repitiendo
+la instrucción, se gana quitándole la superficie.
+
+Los otros once se revisaron cuadro a cuadro y están limpios.
+
+### La voz
+
+16 MP3 con Alice (`voice_id Xb7hH8MSUJpSbSDYk0k2`, `eleven_multilingual_v2`),
+por ElevenLabs directo. Los textos **no pronuncian el nombre del bebé**: si lo
+dijeran, cada MP3 serviría para una sola fiesta en vez de para toda la temática.
+El capítulo del nombre tiene dos versiones —`capitulo-4-su-nombre.mp3` y
+`capitulo-4-sin-nombre.mp3`— y ninguna lo dice; el nombre lo pone el HTML.
+
+Tres frases son idénticas en las dos temáticas porque son la tesis de la pieza:
+la 1, la del nombre y la 6. Las otras hablan desde el mundo de cada una.
+
+Van en `themes/<slug>/narracion-video/<nombre-del-clip>.mp3`. Además:
+
+- `assets/audio/narracion-final-baby-shower.mp3` — reemplaza al de cumpleaños en
+  "Guarda y comparte".
+- `assets/audio/narracion-playlist-final-baby-shower.mp3` — el respaldo del
+  cierre del recorrido, que en baby shower solo suena si el capítulo 6 no tiene
+  su propio MP3.
 
 ### Lo que cambia entre las dos
 

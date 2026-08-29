@@ -29,17 +29,30 @@ $pdo = cb_pdo();
 $now = gmdate('Y-m-d H:i:s');
 $fecha = date('Y-m-d', strtotime('+39 days'));
 
-/** Las ocho temáticas, con quién celebra y de qué tipo es el evento. */
-$temas = [
-    // slug           nombre       sexo  tipo              etiqueta
-    ['baby-nube',     'Valentina', 'f',  'baby_shower',    'Baby shower — Nube'],
-    ['baby-safari',   '',          '',   'baby_shower',    'Baby shower — Safari (sin nombre ni sexo)'],
-    ['hielo',         'Isidora',   'f',  'child_birthday', 'Cumpleanos — Hielo'],
-    ['carreras',      'Mateo',     'm',  'child_birthday', 'Cumpleanos — Carreras'],
-    ['kpop',          'Antonia',   'f',  'child_birthday', 'Cumpleanos — K-Pop'],
-    ['heroes',        'Vicente',   'm',  'child_birthday', 'Cumpleanos — Heroes'],
-    ['familia-canina', 'Emilia',   'f',  'child_birthday', 'Cumpleanos — Familia Canina'],
-    ['tropical',      'Joaquin',   'm',  'child_birthday', 'Cumpleanos — Tropical'],
+/**
+ * Los casos a revisar. Cada uno es una fiesta propia, con su slug.
+ *
+ * Los baby shower llevan MÁS de un caso por temática y no es capricho: el
+ * nombre y el sexo del bebé son opcionales por separado, así que la copia
+ * cambia en cuatro combinaciones y hay que poder verlas. Con nombre, el nombre
+ * se come todo y nunca se lee el género; recién sin nombre aparecen "Nuestra
+ * bebé" y "Nuestro bebé". Montar sólo el caso con nombre deja la forma femenina
+ * sin revisar, que fue justamente lo que pasó la primera vez.
+ */
+$casos = [
+    // slug de la fiesta        tema           nombre       sexo  tipo             etiqueta
+    ['rev-baby-nube',           'baby-nube',   'Valentina', 'f',  'baby_shower',   'Baby shower — Nube · niña CON nombre'],
+    ['rev-baby-nube-nina',      'baby-nube',   '',          'f',  'baby_shower',   'Baby shower — Nube · niña SIN nombre ("Nuestra bebe")'],
+    ['rev-baby-safari',         'baby-safari', 'Emilia',    'f',  'baby_shower',   'Baby shower — Safari · niña CON nombre'],
+    ['rev-baby-safari-nina',    'baby-safari', '',          'f',  'baby_shower',   'Baby shower — Safari · niña SIN nombre ("Nuestra bebe")'],
+    ['rev-baby-safari-neutro',  'baby-safari', '',          '',   'baby_shower',   'Baby shower — Safari · sin nombre NI sexo ("Nuestro bebe")'],
+    ['rev-baby-nube-nino',      'baby-nube',   'Tomas',     'm',  'baby_shower',   'Baby shower — Nube · nino CON nombre'],
+    ['rev-hielo',          'hielo',          'Isidora', 'f', 'child_birthday', 'Cumpleanos — Hielo'],
+    ['rev-carreras',       'carreras',       'Mateo',   'm', 'child_birthday', 'Cumpleanos — Carreras'],
+    ['rev-kpop',           'kpop',           'Antonia', 'f', 'child_birthday', 'Cumpleanos — K-Pop'],
+    ['rev-heroes',         'heroes',         'Vicente', 'm', 'child_birthday', 'Cumpleanos — Heroes'],
+    ['rev-familia-canina', 'familia-canina', 'Emilia',  'f', 'child_birthday', 'Cumpleanos — Familia Canina'],
+    ['rev-tropical',       'tropical',       'Joaquin', 'm', 'child_birthday', 'Cumpleanos — Tropical'],
 ];
 
 /** Compone una lámina 1080x1920 sobre el banner real del tema. */
@@ -99,9 +112,7 @@ function seed_lamina(string $tema, string $quien, string $fecha, string $destino
 
 $resultado = [];
 
-foreach ($temas as [$tema, $quien, $sexo, $tipo, $etiqueta]) {
-    $slug = 'rev-' . $tema;
-
+foreach ($casos as [$slug, $tema, $quien, $sexo, $tipo, $etiqueta]) {
     // Fiesta
     $stmt = $pdo->prepare('SELECT * FROM cc_parties WHERE public_slug = ?');
     $stmt->execute([$slug]);

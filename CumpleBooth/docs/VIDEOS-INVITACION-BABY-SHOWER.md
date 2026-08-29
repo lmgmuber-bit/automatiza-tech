@@ -147,9 +147,40 @@ Van en `themes/<slug>/narracion-video/<nombre-del-clip>.mp3`. Además:
 
 - `assets/audio/narracion-final-baby-shower.mp3` — reemplaza al de cumpleaños en
   "Guarda y comparte".
-- `assets/audio/narracion-playlist-final-baby-shower.mp3` — el respaldo del
-  cierre del recorrido, que en baby shower solo suena si el capítulo 6 no tiene
-  su propio MP3.
+- `assets/audio/narracion-playlist-final-baby-shower-{nina,nino,neutro}.mp3` —
+  el respaldo del cierre del recorrido, que en baby shower solo suena si el
+  capítulo 6 no tiene su propio MP3.
+
+### El cierre lleva género (2026-08-28)
+
+Pedido de Luis: que Alice diga que **sus papás y seres queridos esperan al bebé
+con ansias**. Esa frase le habla al INVITADO sobre el bebé, y ahí el pronombre
+lleva género, así que el capítulo 6 pasó de un MP3 a tres por temática:
+
+| versión | texto |
+|---|---|
+| `nina` | Sus papás y todos sus seres queridos **la** esperamos con ansias. |
+| `nino` | Sus papás y todos sus seres queridos **lo** esperamos con ansias. |
+| `neutro` | Sus papás y todos sus seres queridos esperamos con ansias **su llegada**. |
+
+La neutra reordena la frase en vez de inventar una forma que nadie usa al
+hablar; es la que suena cuando el sexo no está revelado, que es el caso de las
+familias que hacen la fiesta justamente para revelarlo.
+
+**El video sigue siendo uno solo por temática**: cambia la voz, no la imagen.
+Con MP4 por sexo harían falta seis clips en vez de dos.
+
+`$sufijoSexoBebe` se resuelve una vez en `invitacion.php`, junto al sexo, porque
+lo usan dos cosas distintas —el capítulo 6 de cada temática y el respaldo
+compartido— y calculado en cada lugar podrían separarse.
+`tests/frontend/babyShowerVoice.test.mjs` verifica los nueve MP3 contra disco,
+que sean MP3 de verdad y que la selección siga saliendo del sexo.
+
+Los tres archivos anteriores —`despedida-baby-nube.mp3`,
+`despedida-baby-safari.mp3` y `narracion-playlist-final-baby-shower.mp3`—
+quedaron con el texto viejo y se borraron; siguen en el historial de git.
+**`narracion-final-baby-shower.mp3` NO se tocó**: ese suena en "Guarda y
+comparte" y le habla al invitado sobre guardar el enlace, no sobre el bebé.
 
 ### Lo que cambia entre las dos
 

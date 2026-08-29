@@ -80,6 +80,12 @@ if (preg_match('/^[a-z0-9-]+$/', $themeSlug) && is_file(__DIR__ . '/themes/' . $
 // el botón "Conoce al cumpleañero/a" (pedido de Luis 2026-08-12).
 $narrationOutroFile = 'narracion-final.mp3';
 $birthdayGender = (string) ($invitation['birthday_person_gender'] ?? '');
+// El cierre del recorrido de baby shower le habla al invitado SOBRE el bebé,
+// y ahí el pronombre lleva género: "la esperamos" / "lo esperamos". Sin sexo
+// revelado —caso corriente— la versión neutra reordena la frase y no necesita
+// ninguno de los dos. Se resuelve acá, una vez, porque el mismo sufijo lo usan
+// el capítulo 6 de cada temática y el respaldo compartido del recorrido.
+$sufijoSexoBebe = $birthdayGender === 'f' ? 'nina' : ($birthdayGender === 'm' ? 'nino' : 'neutro');
 if ($esBabyShower) {
     // Las tres variantes de arriba dicen "cumpleañero", "cumpleañera" y
     // "del cumpleaños": las tres sonaban tal cual en un baby shower. El
@@ -116,7 +122,7 @@ if (is_file($narrationOutroPath)) {
 $narrationPlaylistEndUrl = '';
 // Igual que arriba: el archivo compartido dice "la invitación a la fiesta".
 $narrationPlaylistEndFile = $esBabyShower
-    ? 'narracion-playlist-final-baby-shower.mp3'
+    ? 'narracion-playlist-final-baby-shower-' . $sufijoSexoBebe . '.mp3'
     : 'narracion-playlist-final.mp3';
 $narrationPlaylistEndPath = __DIR__ . '/assets/audio/' . $narrationPlaylistEndFile;
 if (!is_file($narrationPlaylistEndPath)) {
@@ -626,7 +632,11 @@ $playlistOrdersByTheme = [
         'invitation/capitulo-3-alguien-te-espera.mp4' => 'Alguien ya te está esperando',
         'invitation/capitulo-4-su-nombre.mp4' => $capituloNombre,
         'invitation/capitulo-5-el-mundo-se-acomoda.mp4' => 'El mundo se acomoda para recibirte',
-        'despedida-baby-nube.mp4' => 'Ven a esperar con nosotros',
+        // La narración lleva género y el video no: un solo clip, tres voces.
+        'despedida-baby-nube.mp4' => [
+            'caption' => 'Ven a esperar con nosotros',
+            'narracion' => 'despedida-baby-nube-' . $sufijoSexoBebe,
+        ],
     ],
     'baby-safari' => [
         'invitation/capitulo-1-la-espera.mp4' => 'Hay esperas que se sienten distintas',
@@ -634,7 +644,11 @@ $playlistOrdersByTheme = [
         'invitation/capitulo-3-alguien-te-espera.mp4' => 'Alguien ya te está esperando',
         'invitation/capitulo-4-su-nombre.mp4' => $capituloNombre,
         'invitation/capitulo-5-el-mundo-se-acomoda.mp4' => 'El mundo se acomoda para recibirte',
-        'despedida-baby-safari.mp4' => 'Ven a esperar con nosotros',
+        // La narración lleva género y el video no: un solo clip, tres voces.
+        'despedida-baby-safari.mp4' => [
+            'caption' => 'Ven a esperar con nosotros',
+            'narracion' => 'despedida-baby-safari-' . $sufijoSexoBebe,
+        ],
     ],
     'carreras' => [
         'saludo-mate.mp4' => 'Mate llega primero',

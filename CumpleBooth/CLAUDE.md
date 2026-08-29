@@ -127,8 +127,22 @@ tomaron", porque nadie tomó nada de ninguna lista. Sin la columna todo cae a
 `list`, que es el comportamiento anterior. El interruptor está arriba de todo en
 `regalos-papas.php`; cambiar de modo no borra nada.
 
+**El cierre del recorrido lleva género (2026-08-28).** Luis pidió que Alice
+diga que sus papás y seres queridos esperan al bebé con ansias. Esa frase le
+habla al INVITADO sobre el bebé, así que el pronombre lleva género y el
+capítulo 6 pasó de un MP3 a tres por temática: `nina` ("la esperamos"), `nino`
+("lo esperamos") y `neutro`, que reordena la frase a "esperamos con ansias su
+llegada" para no necesitar ninguno de los dos — es el caso de las familias que
+hacen la fiesta justamente para revelar el sexo. **El video sigue siendo uno
+solo por temática**: cambia la voz, no la imagen. `$sufijoSexoBebe` se resuelve
+una vez y lo usan el capítulo 6 y el respaldo compartido.
+`tests/frontend/babyShowerVoice.test.mjs` lo bloquea (verificado en rojo).
+Los tres MP3 con el texto viejo se borraron; siguen en el historial de git.
+`narracion-final-baby-shower.mp3` no se tocó: ese le habla al invitado sobre
+guardar el enlace, no sobre el bebé.
+
 **El recorrido y la voz (2026-08-27).** Los 12 capítulos existen (seedance1_5,
-8s, 720x1280, sin audio) y los 16 MP3 de Alice también. Ningún clip tiene
+8s, 720x1280, sin audio) y los MP3 de Alice también. Ningún clip tiene
 personas y ninguna narración pronuncia el nombre del bebé — el nombre es
 dinámico y vive en el HTML. Los prompts y el arco, en
 `docs/VIDEOS-INVITACION-BABY-SHOWER.md`.

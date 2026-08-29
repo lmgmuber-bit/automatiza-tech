@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { resolveThemeFlow } from '../../src/themeFlow.js'
+import { getSquarePhotoGeometry } from '../../src/frameGeometry.js'
 
 test('un tema con alfombra reproduce video antes del saludo y luego abre cámara', () => {
   const flow = resolveThemeFlow({
@@ -686,19 +687,43 @@ for (const [slug, tema] of BABY_SHOWER) {
     const ruta = new URL(`../../public/themes/${slug}/${base}`, import.meta.url)
     assert.ok(existsSync(ruta), `${slug}: base_image apunta a ${base}, que no existe`)
 
-    // El texto va escrito dentro del marco decorativo que la foto ya trae, y
-    // ese marco es el mismo que el kiosco usa para encuadrar la foto del
-    // invitado. Si los dos números se separan, la invitación deja de calzar
-    // con el marco sin que ningún otro test se entere.
+    // El texto de la invitación y la foto del kiosco apuntan al MISMO marco
+    // pintado en `fondo-sala.jpg`, así que tienen que quedar centrados en el
+    // mismo punto. No son el mismo rectángulo —y este test llegó a exigir que
+    // lo fueran, que es falso—: `text_area` es la zona de texto tal cual, y
+    // `frameBox` es el ancla desde donde el kiosco calcula la foto (cuadrado
+    // inscrito, menos un 8,5% por lado) y la línea del agradecimiento. Pedir
+    // que fueran iguales obligaba a descalibrar uno para arreglar el otro.
+    //
+    // Lo que sí es invariante es el centro: si alguien recalibra un lado y el
+    // otro no, los centros se separan y la invitación deja de calzar con el
+    // marco. El cuadrado se calcula con la función del propio producto, no con
+    // una copia de la fórmula.
     const area = preset.text_area
     assert.ok(area, `${slug}: el preset no declara text_area`)
     for (const k of ['x', 'y', 'w', 'h']) {
-      assert.equal(
-        area[k],
-        tema.frameBox[k],
-        `${slug}: text_area.${k} no coincide con el frameBox calibrado`
-      )
+      assert.equal(typeof area[k], 'number', `${slug}: text_area.${k} no es número`)
     }
+    // En píxeles reales y no sobre un lienzo 1x1: el cuadrado sale de
+    // `min(ancho, alto)` en PÍXELES, así que en un lienzo cuadrado daría un
+    // recorte distinto al del kiosco, que siempre es 9:16.
+    const [LIENZO_W, LIENZO_H] = [1080, 1920]
+    const foto = getSquarePhotoGeometry(tema.frameBox, LIENZO_W, LIENZO_H)
+    const centro = {
+      x: (foto.photoLeft + foto.photoSide / 2) / LIENZO_W,
+      y: (foto.photoTop + foto.photoSide / 2) / LIENZO_H,
+    }
+    const TOLERANCIA = 0.02  // 2% del lienzo: ~22 px de ancho, ~38 px de alto
+    assert.ok(
+      Math.abs(area.x + area.w / 2 - centro.x) <= TOLERANCIA,
+      `${slug}: el texto de la invitación y la foto del kiosco no comparten centro horizontal `
+        + `(${(area.x + area.w / 2).toFixed(4)} contra ${centro.x.toFixed(4)})`
+    )
+    assert.ok(
+      Math.abs(area.y + area.h / 2 - centro.y) <= TOLERANCIA,
+      `${slug}: el texto de la invitación y la foto del kiosco no comparten centro vertical `
+        + `(${(area.y + area.h / 2).toFixed(4)} contra ${centro.y.toFixed(4)})`
+    )
     assert.match(String(area.tone ?? ''), /^#[0-9a-fA-F]{6}$/, `${slug}: text_area.tone inválido`)
   })
 }

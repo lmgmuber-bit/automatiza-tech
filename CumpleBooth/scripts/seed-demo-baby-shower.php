@@ -17,6 +17,7 @@
  * la cabina de verdad.
  */
 require __DIR__ . '/_cli.php';
+require __DIR__ . '/lib-woff.php';
 
 $base = (string) cb_config('public_base_url');
 if (stripos($base, 'localhost') === false && stripos($base, '127.0.0.1') === false) {
@@ -150,32 +151,29 @@ function demo_componer(string $temaSlug, string $retrato, string $invitado, stri
     imagecopy($cuad, $foto, 0, 0, (int) (($fw - $lado) / 2), (int) (($fh - $lado) / 2), $lado, $lado);
     imagedestroy($foto);
 
-    $px = (int) round($fb['x'] * 1080);
-    $py = (int) round($fb['y'] * 1920);
-    $pw = (int) round($fb['w'] * 1080);
-    $ph = (int) round($fb['h'] * 1920);
+    // La MISMA geometría que `getSquarePhotoGeometry()` en src/frameGeometry.js:
+    // `frameBox` es el marco decorativo pintado en el fondo; adentro va un
+    // cuadrado centrado, y ese cuadrado se mete FRAME_PHOTO_INSET_RATIO (8,5%)
+    // por lado para no taparle el borde. Calcularlo distinto acá haría que el
+    // demo mostrara la cara en un lugar donde el kiosco no la pone.
+    $ox = $fb['x'] * 1080;
+    $oy = $fb['y'] * 1920;
+    $ow = $fb['w'] * 1080;
+    $oh = $fb['h'] * 1920;
+    $ladoMarco = min($ow, $oh);
+    $inset = $ladoMarco * 0.085;
+    $ladoFoto = max(1.0, $ladoMarco - $inset * 2);
+    $px = (int) round($ox + ($ow - $ladoMarco) / 2 + $inset);
+    $py = (int) round($oy + ($oh - $ladoMarco) / 2 + $inset);
+    $pw = $ph = (int) round($ladoFoto);
     imagecopyresampled($lienzo, $cuad, $px, $py, 0, 0, $pw, $ph, $lado, $lado);
     imagedestroy($cuad);
 
-    // El agradecimiento, con velo para que se lea sobre cualquier fondo.
-    for ($y = 1560; $y < 1920; $y++) {
-        $a = (int) round(96 - (1920 - $y) / 360 * 96);
-        imagefilledrectangle($lienzo, 0, $y, 1080, $y, imagecolorallocatealpha($lienzo, 0, 0, 0, 127 - $a));
-    }
-    $blanco = imagecolorallocate($lienzo, 255, 255, 255);
-    // Sin tildes: la fuente de mapa de bits de GD no las dibuja. En el kiosco
-    // real esto lo hace canvas con Baloo 2 y sale con acentos.
-    $lineas = [
-        'Gracias ' . demo_sin_tildes($invitado),
-        'por venir al baby shower de ' . demo_sin_tildes($bebe),
-    ];
-    $y = 1690;
-    foreach ($lineas as $i => $linea) {
-        $fuente = $i === 0 ? 5 : 4;
-        $ancho = imagefontwidth($fuente) * strlen($linea);
-        imagestring($lienzo, $fuente, (int) ((1080 - $ancho) / 2), $y, $linea, $blanco);
-        $y += 46;
-    }
+    // El agradecimiento, con la tipografía, los colores y la posición del
+    // kiosco (`composePhoto()` en src/App.jsx). Es el texto que el invitado se
+    // lleva impreso, así que un demo que lo dibuja distinto no está mostrando
+    // el producto.
+    demo_texto_kiosco($lienzo, 1080, 1920, $fb, $tema['colors'], $invitado, $bebe);
 
     demo_marca_de_agua($lienzo, 1080, 1920);
 
@@ -254,9 +252,124 @@ function imagecopymerge_alpha($dst, $src, int $x, int $y, int $w, int $h, int $p
     imagedestroy($tmp);
 }
 
-function demo_sin_tildes(string $s): string
+
+/**
+ * El agradecimiento, dibujado como lo dibuja el kiosco.
+ *
+ * `composePhoto()` (src/App.jsx) lo compone en canvas: dos líneas centradas
+ * debajo del marco, en Baloo 2 800, relleno `--yellow` y contorno `--dark2` de
+ * la temática, con sombra suave. Acá se replica lo mismo con GD.
+ *
+ * Antes esto salía con `imagestring()`, la fuente de mapa de bits que GD trae
+ * adentro: tipografía de terminal, un solo tamaño y sin tildes —"Emilia Nunez",
+ * "Muchas gracias" en gris de sistema—. Como es el texto que el invitado se
+ * lleva impreso, un demo que lo dibuja así no está mostrando el producto.
+ *
+ * Las medidas se copian de composePhoto(). Si el kiosco las cambia, esto queda
+ * desalineado y hay que venir a actualizarlo.
+ */
+function demo_texto_kiosco($lienzo, int $W, int $H, array $fb, array $colores, string $invitado, string $bebe): void
 {
-    return strtr($s, ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u','ñ'=>'n','Á'=>'A','É'=>'E','Í'=>'I','Ó'=>'O','Ú'=>'U','Ñ'=>'N','ü'=>'u']);
+    $ttf = cc_baloo_ttf('800');
+    if ($ttf === null) {
+        throw new RuntimeException(
+            'Falta @fontsource/baloo-2 en node_modules; corre `npm install` antes del seed. '
+            . 'Sin la fuente real el texto saldría en la de mapa de bits de GD, sin tildes.'
+        );
+    }
+    // canvas usa textBaseline 'middle'; imagettftext() posiciona por la línea
+    // base alfabética. La diferencia es (ascender + descender) / 2 del propio
+    // archivo de fuente, no una constante inventada.
+    $medioEm = cc_sfnt_metricas($ttf)['medioEm'];
+
+    $lineas = [
+        ['texto' => 'Muchas gracias ' . $invitado,        'fs' => (int) round($W * 0.046), 'max' => $W * 0.86, 'min' => 14],
+        ['texto' => 'por venir al baby shower de ' . $bebe, 'fs' => (int) round($W * 0.036), 'max' => $W * 0.88, 'min' => 12],
+    ];
+    // Encoge de a 2 hasta caber, igual que el kiosco: los nombres largos no
+    // desbordan, se achican.
+    foreach ($lineas as $i => $l) {
+        while ($l['fs'] > $l['min'] && demo_ancho_texto($ttf, $l['fs'], $l['texto']) > $l['max']) {
+            $l['fs'] -= 2;
+        }
+        $lineas[$i] = $l;
+    }
+    // El texto arranca debajo del marco COMPLETO, no debajo de la foto.
+    $lineas[0]['y'] = $fb['y'] * $H + $fb['h'] * $H + $H * 0.018;
+    $lineas[1]['y'] = $lineas[0]['y'] + $lineas[0]['fs'] * 1.35;
+
+    $relleno = demo_color_hex($lienzo, $colores['yellow']);
+    $borde = demo_color_hex($lienzo, $colores['dark2']);
+
+    foreach ($lineas as $i => $l) {
+        $grosor = max($i === 0 ? 3.0 : 2.0, $l['fs'] * 0.09);
+        $x = demo_x_centrado($ttf, $l['fs'], $l['texto'], $W);
+        $y = (int) round($l['y'] + $medioEm * $l['fs']);
+
+        // Sombra (canvas: negro 50%, blur 10, offsetY 3). GD no tiene sombra ni
+        // un desenfoque decente sobre alfa, así que se acumulan copias muy
+        // transparentes en anillos: a esta escala el resultado es el mismo halo
+        // y no hace falta una capa aparte.
+        foreach ([3, 6, 9] as $radio) {
+            for ($a = 0; $a < 8; $a++) {
+                $ang = $a * M_PI / 4;
+                imagettftext(
+                    $lienzo, $l['fs'], 0,
+                    (int) round($x + cos($ang) * $radio),
+                    (int) round($y + 3 + sin($ang) * $radio),
+                    imagecolorallocatealpha($lienzo, 0, 0, 0, 112), $ttf, $l['texto']
+                );
+            }
+        }
+
+        // Contorno: canvas dibuja lineWidth/2 hacia afuera de la silueta, así
+        // que se repite el texto en un anillo de ese radio y el relleno tapa
+        // la mitad de adentro.
+        $r = $grosor / 2;
+        for ($a = 0; $a < 16; $a++) {
+            $ang = $a * M_PI / 8;
+            imagettftext(
+                $lienzo, $l['fs'], 0,
+                (int) round($x + cos($ang) * $r),
+                (int) round($y + sin($ang) * $r),
+                $borde, $ttf, $l['texto']
+            );
+        }
+        imagettftext($lienzo, $l['fs'], 0, $x, $y, $relleno, $ttf, $l['texto']);
+    }
+}
+
+/** Ancho en px que ocupa el texto, para el encogido y el centrado. */
+function demo_ancho_texto(string $ttf, int $fs, string $texto): float
+{
+    $b = imagettfbbox($fs, 0, $ttf, $texto);
+    return (float) ($b[2] - $b[0]);
+}
+
+/**
+ * X para que el texto quede centrado.
+ *
+ * `imagettftext()` recibe el origen de la línea base, no el borde del dibujo:
+ * el primer glifo puede tener un margen izquierdo propio. `bbox[0]` es ese
+ * margen y hay que descontarlo, o el texto queda unos píxeles corrido.
+ */
+function demo_x_centrado(string $ttf, int $fs, string $texto, int $W): int
+{
+    $b = imagettfbbox($fs, 0, $ttf, $texto);
+    return (int) round(($W - ($b[2] - $b[0])) / 2 - $b[0]);
+}
+
+/** '#C4708C' -> color asignado en la imagen. */
+function demo_color_hex($img, string $hex): int
+{
+    $h = ltrim(trim($hex), '#');
+    if (strlen($h) === 3) {
+        $h = $h[0] . $h[0] . $h[1] . $h[1] . $h[2] . $h[2];
+    }
+    if (!preg_match('/^[0-9a-fA-F]{6}$/', $h)) {
+        throw new RuntimeException("Color inválido en themes.json: $hex");
+    }
+    return imagecolorallocate($img, (int) hexdec(substr($h, 0, 2)), (int) hexdec(substr($h, 2, 2)), (int) hexdec(substr($h, 4, 2)));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

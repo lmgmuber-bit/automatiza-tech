@@ -15,7 +15,7 @@ otro producto puesta al lado.
 | Bloque CSS de la invitación | Hecho — `[data-theme="baby-rosas"]`, chispas de pétalos |
 | `fondo-banner.jpg` | Hecho — 1080×1920, generado |
 | `fondo-sala.jpg` | Hecho — 1080×1920, marco grande vacío |
-| `frameBox` calibrado | Hecho — **552×552 px**, verificado con foto compuesta |
+| `frameBox` calibrado | Hecho — **foto de 555×555 px**, recalibrado el 2026-08-29 (ver abajo) |
 | Registro en `themes.json` y presets | Hecho, y los dos valores comprobados iguales |
 | `musica-fondo.mp3` y `musica-juego.mp3` | Hechas — propias, loopeadas sin costura |
 | Recorrido de 6 videos | Hecho — 5 capítulos + despedida |
@@ -137,11 +137,43 @@ interior. **Y el overlay no alcanza: la prueba que vale es la foto ya
 compuesta.** En Safari el recuadro se veía bien en el overlay y recién con una
 foto encima se notó que quedaba al filo del riel.
 
-El mismo valor va en dos lugares y tienen que coincidir: `frameBox` en
-`themes.json` y `text_area` en `event-profile-presets.json`. Sin la entrada en
-presets la temática cae a `theme_fallback`, que no define `base_image`, y la
-página muestra dos veces el mismo banner — una degradación silenciosa que ya
-tiene test.
+### Recalibrado el 2026-08-29 — y por qué el primer valor estaba mal
+
+El valor original (`{x:0.2454, y:0.2078, w:0.5111, h:0.2875}`) se midió contra el
+compositor del demo, que estiraba la foto sobre todo el `frameBox`. **El kiosco no
+hace eso**: inscribe un cuadrado y lo mete un 8,5% por lado
+(`FRAME_PHOTO_INSET_RATIO`, `src/frameGeometry.js`). Así que la herramienta de
+calibración validaba un número que el producto nunca iba a usar: con la geometría
+real la foto quedaba chica y descentrada en el paspartú, y la línea del
+agradecimiento —que el kiosco ancla en `frameBox.y + frameBox.h + 1,8% del alto`—
+caía encima de la moldura de abajo.
+
+Lección, que es la misma de antes en otra forma: **calibrar contra la función del
+producto, no contra una copia**. Ahora el demo llama a la misma geometría.
+
+Valor nuevo: `{x:0.1789, y:0.0907, w:0.6192, h:0.5265}`. Sale de dos medidas del
+propio fondo —la apertura del marco está en x 240..815 e y 274..1085— y de dos
+condiciones: que la foto quede centrada en esa apertura con ~10 px de aire a los
+lados, y que el `frameBox` cierre abajo en y≈1185 para que el texto caiga bajo el
+marco (queda en y=1220). Da una foto de 555×555 en 250,402.
+
+### `frameBox` y `text_area` NO son el mismo rectángulo
+
+Este documento decía que "el mismo valor va en dos lugares y tienen que
+coincidir", y era falso. Coincidían por copia:
+
+- `text_area` (`event-profile-presets.json`) ubica el **texto de la invitación**
+  sobre `fondo-sala.jpg`. Es la zona de texto tal cual.
+- `frameBox` (`themes.json`) es el **ancla del kiosco**: de ahí salen el cuadrado
+  de la foto (menos el inset) y la línea del agradecimiento.
+
+Exigir que fueran iguales obligaba a descalibrar uno para arreglar el otro, y un
+test lo exigía. Lo que sí es invariante, y lo que el test verifica ahora, es que
+los dos queden **centrados en el mismo punto**: apuntan al mismo marco pintado.
+
+Lo que sigue valiendo: sin la entrada en presets la temática cae a
+`theme_fallback`, que no define `base_image`, y la página muestra dos veces el
+mismo banner — una degradación silenciosa que ya tiene test.
 
 Entrada de presets, tal como quedó:
 

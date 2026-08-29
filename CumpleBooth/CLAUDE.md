@@ -252,3 +252,43 @@ para llegar a 10. Las fotos llevan la marca de agua real de CumpleClick con la
 misma geometría del kiosco (`drawBrandWatermark`: W*0.085, abajo a la izquierda,
 alfa 0.42); el isotipo es SVG y GD no lee SVG, así que se pasa un PNG
 rasterizado del MISMO archivo por `CC_DEMO_LOGO` — no se recrea el logo.
+
+**La fuente real en el compositor del demo (2026-08-29).** El agradecimiento que
+sale impreso en la foto se dibujaba con `imagestring()`, la fuente de mapa de
+bits que GD trae adentro: tipografía de terminal, un solo tamaño y sin tildes
+("Emilia Nunez"). Ahora se dibuja con Baloo 2, la misma del kiosco.
+
+FreeType no lee WOFF y `@fontsource/baloo-2` no distribuye TTF, así que
+`scripts/lib-woff.php` reconstruye el sfnt desde el `.woff` (WOFF 1.0 es el mismo
+sfnt con cada tabla en zlib; se usa el `.woff` y no el `.woff2` porque WOFF2
+además transforma `glyf`/`loca` y deshacer eso es un decodificador entero). El
+TTF derivado se cachea en `storage/fuentes/` — no se versiona un binario de
+fuente, y así no puede quedar desincronizado del que usa el kiosco.
+
+`tests/backend/fuente-baloo.php` (39 checks) cuida la degradación silenciosa de
+verdad: una conversión mal hecha puede dar un archivo que FreeType ACEPTA y que
+igual dibuja cuadraditos `.notdef`, sin devolver error. Por eso rasteriza y
+compara píxeles, con control positivo incluido (un carácter fuera del subset
+`latin` TIENE que salir como `.notdef`, o la comparación ya no prueba nada).
+
+**El demo ahora usa la geometría del kiosco, no una propia.** `demo_componer()`
+estiraba la foto sobre todo el `frameBox`; el kiosco inscribe un cuadrado y lo
+mete un 8,5% por lado (`FRAME_PHOTO_INSET_RATIO` en `src/frameGeometry.js`) para
+no taparle el borde pintado al marco. El demo mostraba la cara donde el kiosco
+no la pone, y encima tapaba defectos del fondo que en la fiesta sí se ven.
+
+**`frameBox` de baby-rosas, recalibrado.** Estaba medido contra el compositor del
+demo —que no aplicaba el inset—, así que validaba un número equivocado: con la
+geometría real la foto quedaba chica y descentrada en el paspartú, y la línea del
+agradecimiento caía ENCIMA de la moldura de abajo. Nuevo valor
+`{x:0.1789, y:0.0907, w:0.6192, h:0.5265}`, elegido para que las dos cosas que se
+ven queden bien: la foto (555px) centrada en la apertura del marco —medida en
+240..815 x, 274..1085 y— y la línea del texto en y=1220, justo bajo el marco.
+
+Ojo con lo que `frameBox` NO es: no es el rectángulo del marco ni es lo mismo que
+`text_area` de `event-profile-presets.json`. `text_area` ubica el texto de la
+invitación sobre `fondo-sala.jpg`; `frameBox` es el ancla desde donde el kiosco
+calcula la foto y la línea del agradecimiento. Coincidían por copia, y un test
+llegó a exigir que fueran iguales, lo que obligaba a descalibrar uno para
+arreglar el otro. Lo que sí es invariante —y lo que el test verifica ahora— es
+que los dos queden centrados en el mismo punto.

@@ -1734,10 +1734,10 @@
             ],
             "personajes": [],
             "frameBox": {
-                "x": 0.2454,
-                "y": 0.2078,
-                "w": 0.5111,
-                "h": 0.2875
+                "x": 0.1789,
+                "y": 0.0907,
+                "w": 0.6192,
+                "h": 0.5265
             },
             "musicaHint": "Cuna con cuerdas suaves",
             "transition": "none"

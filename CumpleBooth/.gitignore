@@ -10,3 +10,16 @@ qa-output/
 
 # Respaldos operativos del .htaccess de PROD: se guardan en disco, no en el repo.
 scripts/web/*_BACKUP
+
+# Los .htaccess de CumpleClick SI se versionan.
+#
+# El .gitignore de la raiz ignora todo `.htaccess` porque ahi vive un WordPress
+# y el suyo es config del servidor. Los de CumpleClick no: llevan el fallback
+# del SPA, la URL bonita de invitacion, las reglas que hacen que un archivo que
+# falta devuelva 404 en vez de 200, y la pagina de error de marca. Son parte del
+# producto y tienen que viajar con el.
+#
+# `public/.htaccess` ya estaba versionado (se agrego a la fuerza en su momento);
+# esto lo deja escrito para que no dependa de acordarse.
+!public/.htaccess
+!sitio/.htaccess

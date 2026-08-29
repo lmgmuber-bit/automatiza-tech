@@ -36,6 +36,47 @@ datos reales de un cliente:
 - **`robots.txt`.** Pre-producción va con `Disallow: /` o compite con PROD en
   Google y publica fiestas de prueba.
 
+### Como se reparte cumpleclick.com
+
+Decision de Luis (2026-08-29): la cara principal del dominio es el SITIO, no el
+kiosco.
+
+    public_html/            <- contenido de sitio/     la landing publica
+    public_html/app/        <- contenido de dist/      kiosco, invitaciones,
+                                                       album y admin
+
+Con eso `public_base_url` es `https://cumpleclick.com/app`, y las invitaciones
+salen como `cumpleclick.com/app/<nombre>-<token>`. Es el precio de que el sitio
+mande en la raiz; si algun dia se prefiere el enlace corto, se invierte el
+reparto y el sitio pasa a una subcarpeta.
+
+Nada de esto es un cambio de codigo: Vite compila con `base: './'` y ningun
+.htaccess usa `RewriteBase`.
+
+### La pagina 404 de marca
+
+`sitio/404.html` es la 404 (y la 403) de TODO el dominio. Va sin una sola
+peticion externa —isotipo incrustado, estilos adentro— porque una pagina de
+error que a su vez falla al cargar sus assets es peor que la de Apache, y se
+muestra justo cuando algo ya anda mal. La unica dependencia es Baloo 2 desde
+`/fonts/`, que cae a la del sistema sin romper nada.
+
+Quien la activa es `sitio/.htaccess`, no el del kiosco, y el motivo importa:
+`ErrorDocument` resuelve la ruta desde el DocumentRoot del dominio, no desde la
+carpeta del .htaccess. Escrita en la raiz, `/404.html` vale para la raiz Y para
+`app/`, que la HEREDA sin tener que saber en que carpeta lo montaron.
+
+Verificado contra Apache, no solo leido: pedir un `.php`, un medio de tematica
+o un asset inexistentes dentro de `app/` devuelve **404 con la pagina de
+CumpleClick**, y `fotos/`, `admin/config.php` y `data/themes.json` devuelven
+**403 con la misma pagina**. El status se conserva en los dos casos.
+
+En pre-produccion el kiosco vive dentro de OTRO dominio, asi que hereda la
+pagina de error de ese dominio. Si se quiere la de CumpleClick tambien ahi:
+copiar `404.html` a `/cumpleclick/` y agregar `ErrorDocument 404
+/cumpleclick/404.html` al .htaccess de esa carpeta.
+
+
 ### Sobre el cambio de dominio
 
 La aplicación es agnóstica de la ruta a propósito: Vite compila con `base: './'`

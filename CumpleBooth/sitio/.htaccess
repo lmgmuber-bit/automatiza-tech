@@ -1,0 +1,49 @@
+# Raíz del dominio: acá vive el sitio de presentación (la cara pública).
+#
+# Este archivo va en el DocumentRoot del dominio, o sea `public_html/`. El
+# kiosco, el admin y el álbum viven en una subcarpeta y traen su PROPIO
+# .htaccess con el fallback del SPA; lo que se escribe acá lo HEREDAN, salvo lo
+# que ellos repitan.
+#
+# Esa herencia es justamente el motivo de que ErrorDocument esté acá y no en el
+# .htaccess del kiosco: `ErrorDocument` resuelve la ruta desde el DocumentRoot
+# del dominio, no desde la carpeta del .htaccess. Escrito acá, `/404.html`
+# apunta al archivo de al lado y vale para todo el dominio —raíz y subcarpetas—
+# sin que ningún archivo versionado tenga que saber en qué carpeta lo montaron.
+
+ErrorDocument 404 /404.html
+
+# 403 también: `fotos/` y `admin/config.php` responden 403 a propósito, y la
+# página de Apache ahí se ve como un sitio roto. El texto sirve para los dos
+# casos porque no promete que el recurso exista.
+ErrorDocument 403 /404.html
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  # El sitio no usa cámara ni micrófono; el kiosco sí, y lo declara en el suyo.
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+
+  # index.html se revalida siempre: sin esto, cambiar el precio o el copy no se
+  # ve hasta que al visitante se le vence la caché heurística.
+  <FilesMatch "^(index|404)\.html$">
+    Header always set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+  # Lo que lleva nombre estable pero cambia poco: un día.
+  <FilesMatch "\.(css|js)$">
+    Header always set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+  # Imágenes, video y tipografías: no cambian sin cambiar de nombre.
+  <FilesMatch "\.(webp|jpe?g|png|svg|mp4|woff2?)$">
+    Header always set Cache-Control "public, max-age=2592000"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # El formulario de contacto es el único PHP del sitio. Cualquier otro .php
+  # pedido acá arriba no existe, y debe decirlo: sin esta regla Apache entrega
+  # la 404 igual, pero se deja explícito para que quede al lado del resto.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule \.php$ - [R=404,L]
+</IfModule>

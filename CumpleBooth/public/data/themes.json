@@ -1,1711 +1,1746 @@
 {
-  "_doc": "Temáticas del servicio. Cada una necesita en themes/<slug>/: fondo-banner.jpg, fondo-sala.jpg, musica-fondo.mp3 y los 6 <personaje.img>. Opcional Fase1: <personaje.png> (recorte transparente para la foto-con-personaje) y saludo-<base>.mp4. Las imágenes NUNCA llevan texto. Los nombres reales son visibles en admin/kiosco; los prompts generativos se guardan aparte y siempre usan camuflaje por rasgos físicos.",
-  "themes": {
-    "carreras": {
-      "nombre": "Carreras Veloces",
-      "franquicia": "Cars",
-      "publico": "niño",
-      "diploma": "Piloto Oficial del Equipo",
-      "colors": {
-        "accent": "#e8000d",
-        "accentSoft": "#ffe9d9",
-        "yellow": "#ffb800",
-        "ink": "#2b1a12",
-        "bgLight1": "#fff3d6",
-        "bgLight2": "#ffe0cc",
-        "dark1": "#b30009",
-        "dark2": "#7a0008",
-        "dark3": "#e8a200"
-      },
-      "confetti": [
-        "#e8000d",
-        "#ffb800",
-        "#1a1a1a",
-        "#c0c0c0",
-        "#ffffff",
-        "#ffd166"
-      ],
-      "personajes": [
-        {
-          "emoji": "⚡",
-          "name": "Rayo McQueen",
-          "img": "rayo-mcqueen.jpg",
-          "game": [
-            {
-              "kind": "ritmo",
-              "label": "¡Acelera por tu carril!",
-              "image": "fondo-juego-ritmo.jpg",
-              "lanes": 4,
-              "seconds": 15
+    "_doc": "Temáticas del servicio. Cada una necesita en themes/<slug>/: fondo-banner.jpg, fondo-sala.jpg, musica-fondo.mp3 y los 6 <personaje.img>. Opcional Fase1: <personaje.png> (recorte transparente para la foto-con-personaje) y saludo-<base>.mp4. Las imágenes NUNCA llevan texto. Los nombres reales son visibles en admin/kiosco; los prompts generativos se guardan aparte y siempre usan camuflaje por rasgos físicos.",
+    "themes": {
+        "carreras": {
+            "nombre": "Carreras Veloces",
+            "franquicia": "Cars",
+            "publico": "niño",
+            "diploma": "Piloto Oficial del Equipo",
+            "colors": {
+                "accent": "#e8000d",
+                "accentSoft": "#ffe9d9",
+                "yellow": "#ffb800",
+                "ink": "#2b1a12",
+                "bgLight1": "#fff3d6",
+                "bgLight2": "#ffe0cc",
+                "dark1": "#b30009",
+                "dark2": "#7a0008",
+                "dark3": "#e8a200"
             },
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-rayo-mcqueen.jpg",
-              "cols": 3,
-              "filas": 3
+            "confetti": [
+                "#e8000d",
+                "#ffb800",
+                "#1a1a1a",
+                "#c0c0c0",
+                "#ffffff",
+                "#ffd166"
+            ],
+            "personajes": [
+                {
+                    "emoji": "⚡",
+                    "name": "Rayo McQueen",
+                    "img": "rayo-mcqueen.jpg",
+                    "game": [
+                        {
+                            "kind": "ritmo",
+                            "label": "¡Acelera por tu carril!",
+                            "image": "fondo-juego-ritmo.jpg",
+                            "lanes": 4,
+                            "seconds": 15
+                        },
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-rayo-mcqueen.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las banderas!",
+                            "image": "fondo-juego-boxes.jpg",
+                            "emojis": [
+                                "🏁",
+                                "⚡",
+                                "🏆",
+                                "🔧"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🔧",
+                    "name": "Mate",
+                    "img": "mate.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-mate.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las banderas!",
+                            "image": "fondo-juego-boxes.jpg",
+                            "emojis": [
+                                "🏁",
+                                "⚡",
+                                "🏆",
+                                "🔧"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "💙",
+                    "name": "Sally",
+                    "img": "sally.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-sally.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las banderas!",
+                            "image": "fondo-juego-boxes.jpg",
+                            "emojis": [
+                                "🏁",
+                                "⚡",
+                                "🏆",
+                                "🔧"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🏁",
+                    "name": "Cruz",
+                    "img": "cruz.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-cruz.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las banderas!",
+                            "image": "fondo-juego-boxes.jpg",
+                            "emojis": [
+                                "🏁",
+                                "⚡",
+                                "🏆",
+                                "🔧"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "👑",
+                    "name": "El Rey",
+                    "img": "el-rey.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-el-rey.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las banderas!",
+                            "image": "fondo-juego-boxes.jpg",
+                            "emojis": [
+                                "🏁",
+                                "⚡",
+                                "🏆",
+                                "🔧"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🍕",
+                    "name": "Luigi",
+                    "img": "luigi.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-luigi.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las banderas!",
+                            "image": "fondo-juego-boxes.jpg",
+                            "emojis": [
+                                "🏁",
+                                "⚡",
+                                "🏆",
+                                "🔧"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                }
+            ],
+            "fullGame": {
+                "kind": "concierto3d",
+                "stage": "podium-night",
+                "label": "¡El Show del Circuito 3D!",
+                "seconds": 24,
+                "image": "fondo-juego-circuito.jpg"
             },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las banderas!",
-              "image": "fondo-juego-boxes.jpg",
-              "emojis": [
-                "🏁",
-                "⚡",
-                "🏆",
-                "🔧"
-              ],
-              "seconds": 15
-            }
-          ]
+            "videoEstrella": "rayo-mcqueen-estrella.mp4",
+            "videos": {
+                "despedida": "despedida-carreras.mp4",
+                "revelacion": "revelacion-carreras.mp4"
+            },
+            "frameBox": {
+                "x": 0.333,
+                "y": 0.285,
+                "w": 0.343,
+                "h": 0.279
+            },
+            "musicaHint": "Real Gone – Sheryl Crow"
         },
-        {
-          "emoji": "🔧",
-          "name": "Mate",
-          "img": "mate.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-mate.jpg",
-              "cols": 3,
-              "filas": 3
+        "mickey": {
+            "nombre": "Casa de Mickey",
+            "franquicia": "Casa de Mickey Mouse",
+            "publico": "mixto",
+            "diploma": "Miembro de la Casa Club",
+            "colors": {
+                "accent": "#ff5d8f",
+                "accentSoft": "#f7d9e3",
+                "yellow": "#ffd166",
+                "ink": "#4a2c3a",
+                "bgLight1": "#f3d9e6",
+                "bgLight2": "#e7d6ef",
+                "dark1": "#8e2f52",
+                "dark2": "#5c1e36",
+                "dark3": "#ffd166"
             },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las banderas!",
-              "image": "fondo-juego-boxes.jpg",
-              "emojis": [
-                "🏁",
-                "⚡",
-                "🏆",
-                "🔧"
-              ],
-              "seconds": 15
-            }
-          ]
+            "confetti": [
+                "#ff5d8f",
+                "#ffd166",
+                "#06d6a0",
+                "#4cc9f0",
+                "#b388eb",
+                "#ffffff"
+            ],
+            "personajes": [
+                {
+                    "emoji": "⭐",
+                    "name": "Mickey",
+                    "img": "mickey.jpg"
+                },
+                {
+                    "emoji": "🎀",
+                    "name": "Minnie",
+                    "img": "minnie.jpg"
+                },
+                {
+                    "emoji": "🎈",
+                    "name": "Donald",
+                    "img": "donald.jpg"
+                },
+                {
+                    "emoji": "🎉",
+                    "name": "Goofy",
+                    "img": "goofy.jpg"
+                },
+                {
+                    "emoji": "🌸",
+                    "name": "Daisy",
+                    "img": "daisy.jpg"
+                },
+                {
+                    "emoji": "🦴",
+                    "name": "Pluto",
+                    "img": "pluto.jpg"
+                }
+            ],
+            "frameBox": {
+                "x": 0.32,
+                "y": 0.3,
+                "w": 0.36,
+                "h": 0.28
+            },
+            "musicaHint": "Qué bien (Disney Jr.)"
         },
-        {
-          "emoji": "💙",
-          "name": "Sally",
-          "img": "sally.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-sally.jpg",
-              "cols": 3,
-              "filas": 3
+        "hielo": {
+            "nombre": "Reino de Hielo",
+            "franquicia": "Frozen",
+            "publico": "niña",
+            "diploma": "Guardián del Reino de Hielo",
+            "colors": {
+                "accent": "#29b6f6",
+                "accentSoft": "#e1f5fe",
+                "yellow": "#b3e5fc",
+                "ink": "#0d2b3d",
+                "bgLight1": "#e3f2fd",
+                "bgLight2": "#bbdefb",
+                "dark1": "#0d3a5c",
+                "dark2": "#124a73",
+                "dark3": "#81d4fa"
             },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las banderas!",
-              "image": "fondo-juego-boxes.jpg",
-              "emojis": [
-                "🏁",
-                "⚡",
-                "🏆",
-                "🔧"
-              ],
-              "seconds": 15
+            "confetti": [
+                "#29b6f6",
+                "#81d4fa",
+                "#ffffff",
+                "#b388eb",
+                "#e1f5fe",
+                "#90caf9"
+            ],
+            "personajes": [
+                {
+                    "emoji": "❄️",
+                    "name": "Elsa",
+                    "img": "elsa.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-elsa.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los copos!",
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🧡",
+                    "name": "Anna",
+                    "img": "anna.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-anna.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los copos!",
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "⛄",
+                    "name": "Olaf",
+                    "img": "olaf.jpg",
+                    "game": [
+                        {
+                            "kind": "armar-muneco",
+                            "label": "¡Ármame!",
+                            "image": "fondo-juego-nieve.jpg"
+                        },
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-olaf.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los copos!",
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🛷",
+                    "name": "Kristoff",
+                    "img": "kristoff.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-kristoff.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los copos!",
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🦌",
+                    "name": "Sven",
+                    "img": "sven.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-sven.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los copos!",
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🔥",
+                    "name": "Bruni",
+                    "img": "bruni.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-bruni.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los copos!",
+                            "seconds": 15
+                        }
+                    ]
+                }
+            ],
+            "fullGame": {
+                "kind": "concierto3d",
+                "stage": "ice-gala",
+                "label": "¡El Show de Hielo 3D!",
+                "seconds": 24,
+                "image": "fondo-juego-nieve.jpg"
+            },
+            "frameBox": {
+                "x": 0.3315,
+                "y": 0.3948,
+                "w": 0.3407,
+                "h": 0.1995
+            },
+            "musicaHint": "Libre Soy",
+            "game": {
+                "kind": "copos",
+                "seconds": 15,
+                "label": "¡Atrapa los copos!"
+            },
+            "videos": {
+                "welcome": "welcome-hielo.mp4",
+                "revelacion": "revelacion.mp4",
+                "despedida": "despedida-hielo.mp4"
+            },
+            "transition": "none",
+            "photoSession": {
+                "video": "entrada-palacio-hielo.mp4",
+                "poster": "entrada-palacio-hielo-poster.jpg",
+                "characters": [
+                    "Elsa",
+                    "Anna"
+                ],
+                "teaser": "entrada-palacio-hielo-poster.jpg",
+                "teaserVideo": "entrada-palacio-hielo.mp4",
+                "teaserLabel": "Las hermanas del hielo"
             }
-          ]
         },
-        {
-          "emoji": "🏁",
-          "name": "Cruz",
-          "img": "cruz.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-cruz.jpg",
-              "cols": 3,
-              "filas": 3
+        "cachorros": {
+            "nombre": "Patrulla de Cachorros",
+            "franquicia": "Patrulla Canina",
+            "publico": "mixto",
+            "diploma": "Cachorro de Rescate",
+            "colors": {
+                "accent": "#1976d2",
+                "accentSoft": "#e3f2fd",
+                "yellow": "#ffc107",
+                "ink": "#102a43",
+                "bgLight1": "#e3f2fd",
+                "bgLight2": "#fff8e1",
+                "dark1": "#0d47a1",
+                "dark2": "#1565c0",
+                "dark3": "#ffc107"
             },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las banderas!",
-              "image": "fondo-juego-boxes.jpg",
-              "emojis": [
-                "🏁",
-                "⚡",
-                "🏆",
-                "🔧"
-              ],
-              "seconds": 15
-            }
-          ]
+            "confetti": [
+                "#1976d2",
+                "#ffc107",
+                "#e53935",
+                "#43a047",
+                "#ffffff",
+                "#ff9800"
+            ],
+            "personajes": [
+                {
+                    "emoji": "🚓",
+                    "name": "Chase",
+                    "img": "chase.jpg"
+                },
+                {
+                    "emoji": "🚒",
+                    "name": "Marshall",
+                    "img": "marshall.jpg"
+                },
+                {
+                    "emoji": "🚁",
+                    "name": "Skye",
+                    "img": "skye.jpg"
+                },
+                {
+                    "emoji": "🚜",
+                    "name": "Rubble",
+                    "img": "rubble.jpg"
+                },
+                {
+                    "emoji": "♻️",
+                    "name": "Rocky",
+                    "img": "rocky.jpg"
+                },
+                {
+                    "emoji": "🌊",
+                    "name": "Zuma",
+                    "img": "zuma.jpg"
+                }
+            ],
+            "frameBox": {
+                "x": 0.32,
+                "y": 0.3,
+                "w": 0.36,
+                "h": 0.28
+            },
+            "musicaHint": "PAW Patrol Theme"
         },
-        {
-          "emoji": "👑",
-          "name": "El Rey",
-          "img": "el-rey.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-el-rey.jpg",
-              "cols": 3,
-              "filas": 3
+        "heroes": {
+            "nombre": "Súper Héroes",
+            "franquicia": "Marvel / Avengers",
+            "publico": "niño",
+            "diploma": "Súper Héroe Oficial",
+            "colors": {
+                "accent": "#e53935",
+                "accentSoft": "#ffebee",
+                "yellow": "#ffca28",
+                "ink": "#1a1a2e",
+                "bgLight1": "#ffebee",
+                "bgLight2": "#e3f2fd",
+                "dark1": "#7f1d1d",
+                "dark2": "#0d2b5c",
+                "dark3": "#ffca28"
             },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las banderas!",
-              "image": "fondo-juego-boxes.jpg",
-              "emojis": [
-                "🏁",
-                "⚡",
-                "🏆",
-                "🔧"
-              ],
-              "seconds": 15
+            "confetti": [
+                "#e53935",
+                "#1e88e5",
+                "#ffca28",
+                "#43a047",
+                "#ffffff",
+                "#7b1fa2"
+            ],
+            "personajes": [
+                {
+                    "emoji": "🕷️",
+                    "name": "Spider-Man",
+                    "img": "arana.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-arana.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los rayos!",
+                            "emojis": [
+                                "⚡",
+                                "🔨",
+                                "💥",
+                                "✨"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "💪",
+                    "name": "Hulk",
+                    "img": "gigante.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-gigante.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los rayos!",
+                            "emojis": [
+                                "⚡",
+                                "🔨",
+                                "💥",
+                                "✨"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🤖",
+                    "name": "Iron Man",
+                    "img": "hierro.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-hierro.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los rayos!",
+                            "emojis": [
+                                "⚡",
+                                "🔨",
+                                "💥",
+                                "✨"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🛡️",
+                    "name": "Capitán América",
+                    "img": "capitan.jpg",
+                    "game": [
+                        {
+                            "kind": "escudo",
+                            "label": "¡Activa el escudo!",
+                            "image": "fondo-juego-ciudad.jpg",
+                            "seconds": 15
+                        },
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-capitan.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los rayos!",
+                            "emojis": [
+                                "⚡",
+                                "🔨",
+                                "💥",
+                                "✨"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "⚡",
+                    "name": "Thor",
+                    "img": "trueno.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-trueno.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los rayos!",
+                            "emojis": [
+                                "⚡",
+                                "🔨",
+                                "💥",
+                                "✨"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🐆",
+                    "name": "Pantera Negra",
+                    "img": "pantera.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-pantera.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los rayos!",
+                            "emojis": [
+                                "⚡",
+                                "🔨",
+                                "💥",
+                                "✨"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                }
+            ],
+            "fullGame": {
+                "kind": "concierto3d",
+                "stage": "rooftop-city",
+                "label": "¡El Show de Héroes 3D!",
+                "seconds": 24,
+                "image": "fondo-juego-ciudad.jpg"
+            },
+            "frameBox": {
+                "x": 0.32,
+                "y": 0.3,
+                "w": 0.36,
+                "h": 0.28
+            },
+            "musicaHint": "Spidey Theme / Avengers",
+            "transition": "none",
+            "photoSession": {
+                "video": "comic-cobra-vida.mp4",
+                "poster": "comic-cobra-vida-poster.jpg",
+                "characters": [
+                    "Spider-Man",
+                    "Iron Man",
+                    "Capitán América"
+                ],
+                "teaser": "comic-teaser.jpg",
+                "teaserLabel": "Los héroes del cómic"
+            },
+            "videos": {
+                "welcome": "welcome-heroes.mp4",
+                "revelacion": "revelacion-heroes.mp4",
+                "despedida": "despedida-heroes.mp4"
             }
-          ]
         },
-        {
-          "emoji": "🍕",
-          "name": "Luigi",
-          "img": "luigi.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-luigi.jpg",
-              "cols": 3,
-              "filas": 3
+        "princesas": {
+            "nombre": "Princesas",
+            "franquicia": "Princesas Disney",
+            "publico": "niña",
+            "diploma": "Princesa del Reino",
+            "colors": {
+                "accent": "#ab47bc",
+                "accentSoft": "#f3e5f5",
+                "yellow": "#f8bbd9",
+                "ink": "#3e1046",
+                "bgLight1": "#f3e5f5",
+                "bgLight2": "#fce4ec",
+                "dark1": "#6a1b9a",
+                "dark2": "#4a148c",
+                "dark3": "#f8bbd9"
             },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las banderas!",
-              "image": "fondo-juego-boxes.jpg",
-              "emojis": [
-                "🏁",
-                "⚡",
-                "🏆",
-                "🔧"
-              ],
-              "seconds": 15
+            "confetti": [
+                "#ab47bc",
+                "#f8bbd9",
+                "#ffd700",
+                "#ffffff",
+                "#ce93d8",
+                "#f48fb1"
+            ],
+            "personajes": [
+                {
+                    "emoji": "👠",
+                    "name": "Cenicienta",
+                    "img": "cenicienta.jpg"
+                },
+                {
+                    "emoji": "🌹",
+                    "name": "Bella",
+                    "img": "bella.jpg"
+                },
+                {
+                    "emoji": "🧜‍♀️",
+                    "name": "Ariel",
+                    "img": "ariel.jpg"
+                },
+                {
+                    "emoji": "🌞",
+                    "name": "Rapunzel",
+                    "img": "rapunzel.jpg"
+                },
+                {
+                    "emoji": "🐸",
+                    "name": "Tiana",
+                    "img": "tiana.jpg"
+                },
+                {
+                    "emoji": "🌸",
+                    "name": "Aurora",
+                    "img": "aurora.jpg"
+                }
+            ],
+            "frameBox": {
+                "x": 0.32,
+                "y": 0.3,
+                "w": 0.36,
+                "h": 0.28
+            },
+            "musicaHint": "Un Mundo Ideal / medley princesas"
+        },
+        "dinos": {
+            "nombre": "Dinosaurios",
+            "franquicia": "",
+            "publico": "mixto",
+            "diploma": "Explorador de Dinosaurios",
+            "colors": {
+                "accent": "#43a047",
+                "accentSoft": "#e8f5e9",
+                "yellow": "#ff9800",
+                "ink": "#1b3a1e",
+                "bgLight1": "#e8f5e9",
+                "bgLight2": "#fff3e0",
+                "dark1": "#1b5e20",
+                "dark2": "#33691e",
+                "dark3": "#ff9800"
+            },
+            "confetti": [
+                "#43a047",
+                "#ff9800",
+                "#8d6e63",
+                "#fdd835",
+                "#ffffff",
+                "#66bb6a"
+            ],
+            "personajes": [
+                {
+                    "emoji": "🦖",
+                    "name": "T-Rex",
+                    "img": "trex.jpg"
+                },
+                {
+                    "emoji": "🦕",
+                    "name": "Triceratops",
+                    "img": "triceratops.jpg"
+                },
+                {
+                    "emoji": "🏃",
+                    "name": "Velociraptor",
+                    "img": "velociraptor.jpg"
+                },
+                {
+                    "emoji": "🛡️",
+                    "name": "Estegosaurio",
+                    "img": "estegosaurio.jpg"
+                },
+                {
+                    "emoji": "🌳",
+                    "name": "Cuello Largo",
+                    "img": "cuellolargo.jpg"
+                },
+                {
+                    "emoji": "🪽",
+                    "name": "Pterodáctilo",
+                    "img": "pterodactilo.jpg"
+                }
+            ],
+            "frameBox": {
+                "x": 0.32,
+                "y": 0.3,
+                "w": 0.36,
+                "h": 0.28
+            },
+            "musicaHint": "canción dinos infantil"
+        },
+        "sirenas": {
+            "nombre": "Bajo el Mar",
+            "franquicia": "La Sirenita",
+            "publico": "niña",
+            "diploma": "Guardián del Océano",
+            "colors": {
+                "accent": "#0288d1",
+                "accentSoft": "#e0f7fa",
+                "yellow": "#4dd0e1",
+                "ink": "#043245",
+                "bgLight1": "#e0f7fa",
+                "bgLight2": "#b2ebf2",
+                "dark1": "#01579b",
+                "dark2": "#006064",
+                "dark3": "#4dd0e1"
+            },
+            "confetti": [
+                "#0288d1",
+                "#4dd0e1",
+                "#80deea",
+                "#f48fb1",
+                "#ffffff",
+                "#ffd54f"
+            ],
+            "personajes": [
+                {
+                    "emoji": "🧜‍♀️",
+                    "name": "Sirenita",
+                    "img": "sirenita.jpg"
+                },
+                {
+                    "emoji": "🐡",
+                    "name": "Pez Globo",
+                    "img": "pezglobo.jpg"
+                },
+                {
+                    "emoji": "🐬",
+                    "name": "Delfín",
+                    "img": "delfin.jpg"
+                },
+                {
+                    "emoji": "🐢",
+                    "name": "Tortuga",
+                    "img": "tortuga.jpg"
+                },
+                {
+                    "emoji": "🌊",
+                    "name": "Caballito",
+                    "img": "caballito.jpg"
+                },
+                {
+                    "emoji": "🐙",
+                    "name": "Pulpo",
+                    "img": "pulpo.jpg"
+                }
+            ],
+            "frameBox": {
+                "x": 0.32,
+                "y": 0.3,
+                "w": 0.36,
+                "h": 0.28
+            },
+            "musicaHint": "Bajo el Mar"
+        },
+        "juguetes": {
+            "nombre": "Historia de Juguetes",
+            "franquicia": "Toy Story",
+            "publico": "mixto",
+            "diploma": "Juguete Favorito",
+            "colors": {
+                "accent": "#1565c0",
+                "accentSoft": "#e3f2fd",
+                "yellow": "#fdd835",
+                "ink": "#1a2340",
+                "bgLight1": "#e3f2fd",
+                "bgLight2": "#fffde7",
+                "dark1": "#0d47a1",
+                "dark2": "#283593",
+                "dark3": "#fdd835"
+            },
+            "confetti": [
+                "#1565c0",
+                "#fdd835",
+                "#e53935",
+                "#43a047",
+                "#ffffff",
+                "#ff7043"
+            ],
+            "personajes": [
+                {
+                    "emoji": "🤠",
+                    "name": "Vaquero",
+                    "img": "vaquero.jpg"
+                },
+                {
+                    "emoji": "🚀",
+                    "name": "Guardián Espacial",
+                    "img": "espacial.jpg"
+                },
+                {
+                    "emoji": "🐄",
+                    "name": "Vaquerita",
+                    "img": "vaquerita.jpg"
+                },
+                {
+                    "emoji": "🦖",
+                    "name": "Dino de Juguete",
+                    "img": "dinojuguete.jpg"
+                },
+                {
+                    "emoji": "🐕",
+                    "name": "Perro Resorte",
+                    "img": "resorte.jpg"
+                },
+                {
+                    "emoji": "👽",
+                    "name": "Marcianito",
+                    "img": "marcianito.jpg"
+                }
+            ],
+            "frameBox": {
+                "x": 0.32,
+                "y": 0.3,
+                "w": 0.36,
+                "h": 0.28
+            },
+            "musicaHint": "Yo Soy Tu Amigo Fiel"
+        },
+        "tropical": {
+            "nombre": "Aventura Tropical",
+            "franquicia": "Lilo & Stitch",
+            "publico": "mixto",
+            "diploma": "Aventurero Tropical",
+            "colors": {
+                "accent": "#3f51b5",
+                "accentSoft": "#e8eaf6",
+                "yellow": "#ff7043",
+                "ink": "#1a1f4b",
+                "bgLight1": "#e8eaf6",
+                "bgLight2": "#fbe9e7",
+                "dark1": "#283593",
+                "dark2": "#1a237e",
+                "dark3": "#ff7043"
+            },
+            "confetti": [
+                "#3f51b5",
+                "#ff7043",
+                "#4dd0e1",
+                "#f48fb1",
+                "#ffffff",
+                "#ffd54f"
+            ],
+            "personajes": [
+                {
+                    "emoji": "💙",
+                    "name": "Stitch",
+                    "img": "alienazul.jpg",
+                    "game": [
+                        {
+                            "kind": "escudo",
+                            "label": "¡Atrapa el coco!",
+                            "image": "fondo-sala.jpg",
+                            "seconds": 15
+                        },
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-alienazul.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las flores!",
+                            "emojis": [
+                                "🌺",
+                                "🥥",
+                                "🌊",
+                                "🍍"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "💗",
+                    "name": "Angel",
+                    "img": "alienrosa.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-alienrosa.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las flores!",
+                            "emojis": [
+                                "🌺",
+                                "🥥",
+                                "🌊",
+                                "🍍"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🌺",
+                    "name": "Lilo",
+                    "img": "hawaiana.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-hawaiana.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las flores!",
+                            "emojis": [
+                                "🌺",
+                                "🥥",
+                                "🌊",
+                                "🍍"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🐢",
+                    "name": "Honu",
+                    "img": "tortugamar.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-tortugamar.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las flores!",
+                            "emojis": [
+                                "🌺",
+                                "🥥",
+                                "🌊",
+                                "🍍"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🦜",
+                    "name": "Kiko",
+                    "img": "loro.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-loro.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las flores!",
+                            "emojis": [
+                                "🌺",
+                                "🥥",
+                                "🌊",
+                                "🍍"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🌴",
+                    "name": "David",
+                    "img": "surfista.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-surfista.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las flores!",
+                            "emojis": [
+                                "🌺",
+                                "🥥",
+                                "🌊",
+                                "🍍"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                }
+            ],
+            "fullGame": {
+                "kind": "concierto3d",
+                "stage": "beach-luau",
+                "label": "¡El Show de la Playa 3D!",
+                "seconds": 24,
+                "image": "fondo-juego-playa.jpg"
+            },
+            "frameBox": {
+                "x": 0.32,
+                "y": 0.3,
+                "w": 0.36,
+                "h": 0.28
+            },
+            "musicaHint": "Hawaiian Roller Coaster Ride",
+            "photoSession": {
+                "video": "transicion-sesion-fotos.mp4",
+                "poster": "transicion-alfombra-base-v1.png",
+                "characters": [
+                    "Stitch",
+                    "Lilo"
+                ],
+                "teaser": "artist-teaser.jpg",
+                "teaserVideo": "artist-teaser.mp4",
+                "teaserLabel": "Los amigos de la isla"
+            },
+            "videos": {
+                "welcome": "welcome-tropical.mp4",
+                "revelacion": "revelacion-tropical.mp4",
+                "despedida": "despedida-tropical.mp4"
             }
-          ]
+        },
+        "familia-canina": {
+            "nombre": "Bluey",
+            "franquicia": "Bluey",
+            "publico": "mixto",
+            "diploma": "Amigo Oficial de Bluey y su Familia",
+            "visualVersion": 1,
+            "visualSource": {
+                "kind": "invitation_generic",
+                "version": 1,
+                "asset": "invitation/invitation-base-v1.png"
+            },
+            "colors": {
+                "accent": "#1689d8",
+                "accentSoft": "#dff4ff",
+                "yellow": "#ffd34e",
+                "ink": "#17324d",
+                "bgLight1": "#ecf9ff",
+                "bgLight2": "#fff0d7",
+                "dark1": "#0e5f9f",
+                "dark2": "#123a64",
+                "dark3": "#f28b39"
+            },
+            "confetti": [
+                "#1689d8",
+                "#75cfff",
+                "#f28b39",
+                "#ffd34e",
+                "#ffffff",
+                "#17324d"
+            ],
+            "personajes": [
+                {
+                    "emoji": "💙",
+                    "name": "Bluey",
+                    "img": "azulita.jpg",
+                    "game": [
+                        {
+                            "kind": "escudo",
+                            "label": "¡Keepy Uppy!",
+                            "image": "fondo-sala.jpg",
+                            "seconds": 15
+                        },
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-azulita.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los globos!",
+                            "emojis": [
+                                "🎈",
+                                "🐾",
+                                "🦴",
+                                "⭐"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🧡",
+                    "name": "Bingo",
+                    "img": "chispa.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-chispa.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los globos!",
+                            "emojis": [
+                                "🎈",
+                                "🐾",
+                                "🦴",
+                                "⭐"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🎸",
+                    "name": "Bandit",
+                    "img": "papa-marino.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-papa-marino.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los globos!",
+                            "emojis": [
+                                "🎈",
+                                "🐾",
+                                "🦴",
+                                "⭐"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🌺",
+                    "name": "Chilli",
+                    "img": "mama-coral.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-mama-coral.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los globos!",
+                            "emojis": [
+                                "🎈",
+                                "🐾",
+                                "🦴",
+                                "⭐"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🐾",
+                    "name": "Muffin",
+                    "img": "muffin.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-muffin.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los globos!",
+                            "emojis": [
+                                "🎈",
+                                "🐾",
+                                "🦴",
+                                "⭐"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "☁️",
+                    "name": "Chloe",
+                    "img": "chloe.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-chloe.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa los globos!",
+                            "emojis": [
+                                "🎈",
+                                "🐾",
+                                "🦴",
+                                "⭐"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                }
+            ],
+            "fullGame": {
+                "kind": "concierto3d",
+                "stage": "backyard-fiesta",
+                "label": "¡El Show del Patio 3D!",
+                "seconds": 24,
+                "image": "fondo-juego-patio.jpg"
+            },
+            "photoSession": {
+                "video": "transicion-sesion-fotos.mp4",
+                "poster": "transicion-alfombra-base-v1.png",
+                "characters": [
+                    "Bluey",
+                    "Bingo"
+                ],
+                "teaser": "artist-teaser.jpg",
+                "teaserVideo": "artist-teaser.mp4",
+                "teaserLabel": "La familia Heeler"
+            },
+            "videos": {
+                "welcome": "welcome-familia-canina.mp4",
+                "despedida": "despedida-familia-canina.mp4",
+                "revelacion": "revelacion-familia-canina.mp4"
+            },
+            "frameBox": {
+                "x": 0.25,
+                "y": 0.17,
+                "w": 0.5,
+                "h": 0.28125
+            },
+            "musicaHint": "Música alegre de aventura al aire libre"
+        },
+        "kpop": {
+            "nombre": "Guerreras K-Pop",
+            "franquicia": "KPop Demon Hunters",
+            "publico": "mixto",
+            "diploma": "Guerrera Legendaria del Escenario",
+            "transition": "none",
+            "colors": {
+                "accent": "#e0218a",
+                "accentSoft": "#ffe3f3",
+                "yellow": "#ffd54f",
+                "ink": "#1a0b2e",
+                "bgLight1": "#fce4ff",
+                "bgLight2": "#e0f7ff",
+                "dark1": "#3d0b52",
+                "dark2": "#12043a",
+                "dark3": "#00d4ff"
+            },
+            "confetti": [
+                "#e0218a",
+                "#00d4ff",
+                "#ffd54f",
+                "#a855f7",
+                "#ffffff",
+                "#ff6ec7"
+            ],
+            "personajes": [
+                {
+                    "emoji": "🎤",
+                    "name": "Rumi",
+                    "img": "rumi.jpg",
+                    "game": [
+                        {
+                            "kind": "ritmo",
+                            "label": "¡Sigue el ritmo!",
+                            "image": "fondo-juego-escenario.jpg",
+                            "lanes": 4,
+                            "seconds": 15
+                        },
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-rumi.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las estrellas!",
+                            "emojis": [
+                                "⭐",
+                                "💫",
+                                "🎵",
+                                "💖"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "⚔️",
+                    "name": "Mira",
+                    "img": "mira.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-mira.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las estrellas!",
+                            "emojis": [
+                                "⭐",
+                                "💫",
+                                "🎵",
+                                "💖"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "💜",
+                    "name": "Zoey",
+                    "img": "zoey.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-zoey.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las estrellas!",
+                            "emojis": [
+                                "⭐",
+                                "💫",
+                                "🎵",
+                                "💖"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🌟",
+                    "name": "Luna",
+                    "img": "luna.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-luna.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las estrellas!",
+                            "emojis": [
+                                "⭐",
+                                "💫",
+                                "🎵",
+                                "💖"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🐯",
+                    "name": "Derpy",
+                    "img": "derpy.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-derpy.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las estrellas!",
+                            "emojis": [
+                                "⭐",
+                                "💫",
+                                "🎵",
+                                "💖"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🎶",
+                    "name": "Sussie",
+                    "img": "sussie.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-sussie.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las estrellas!",
+                            "emojis": [
+                                "⭐",
+                                "💫",
+                                "🎵",
+                                "💖"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                }
+            ],
+            "fullGame": {
+                "kind": "concierto3d",
+                "label": "¡El Show 3D!",
+                "seconds": 24,
+                "image": "fondo-juego-escenario.jpg"
+            },
+            "photoSession": {
+                "video": "entrada-escenario.mp4",
+                "poster": "entrada-escenario-poster.jpg",
+                "characters": [
+                    "Rumi",
+                    "Mira",
+                    "Zoey"
+                ],
+                "teaser": "escenario-teaser.jpg",
+                "teaserVideo": "entrada-escenario.mp4",
+                "teaserLabel": "El trío legendario"
+            },
+            "videos": {
+                "welcome": "welcome-kpop.mp4",
+                "revelacion": "revelacion-kpop.mp4",
+                "despedida": "despedida-kpop.mp4"
+            },
+            "frameBox": {
+                "x": 0.3,
+                "y": 0.34,
+                "w": 0.4,
+                "h": 0.24
+            },
+            "musicaHint": "Pop coreano energético / girl group"
+        },
+        "baby-nube": {
+            "nombre": "Bebé en las Nubes",
+            "franquicia": null,
+            "publico": "nino",
+            "modalidad": "baby_shower",
+            "diploma": "Invitado de honor de Bebé en las Nubes",
+            "colors": {
+                "accent": "#4A80B4",
+                "accentSoft": "#E3EEF7",
+                "yellow": "#E8C98A",
+                "ink": "#24384D",
+                "bgLight1": "#F4F8FC",
+                "bgLight2": "#DCE9F5",
+                "dark1": "#2C4A66",
+                "dark2": "#1E3345",
+                "dark3": "#8FBEDD"
+            },
+            "confetti": [
+                "#8FBEDD",
+                "#FFFFFF",
+                "#E8C98A",
+                "#DCE9F5",
+                "#4A80B4",
+                "#F7EFE2"
+            ],
+            "personajes": [],
+            "frameBox": {
+                "x": 0.3217,
+                "y": 0.2184,
+                "w": 0.5926,
+                "h": 0.3333
+            },
+            "musicaHint": "Cuna suave",
+            "transition": "none"
+        },
+        "baby-safari": {
+            "nombre": "Bebé Safari",
+            "franquicia": null,
+            "publico": "mixto",
+            "modalidad": "baby_shower",
+            "diploma": "Explorador de Bebé Safari",
+            "colors": {
+                "accent": "#7A9455",
+                "accentSoft": "#EAF0E0",
+                "yellow": "#D9B36B",
+                "ink": "#33402A",
+                "bgLight1": "#F6F4EC",
+                "bgLight2": "#E3E9D6",
+                "dark1": "#3E5233",
+                "dark2": "#2B3A24",
+                "dark3": "#A7BE84"
+            },
+            "confetti": [
+                "#A7BE84",
+                "#F6F4EC",
+                "#D9B36B",
+                "#E3E9D6",
+                "#7A9455",
+                "#C9B79A"
+            ],
+            "personajes": [],
+            "frameBox": {
+                "x": 0.1685,
+                "y": 0.1451,
+                "w": 0.6611,
+                "h": 0.3719
+            },
+            "musicaHint": "Selva tranquila",
+            "transition": "none"
+        },
+        "baby-rosas": {
+            "nombre": "Bebé entre Rosas",
+            "franquicia": null,
+            "publico": "nina",
+            "modalidad": "baby_shower",
+            "diploma": "Invitada de honor de Bebé entre Rosas",
+            "colors": {
+                "accent": "#C4708C",
+                "accentSoft": "#F8E6EB",
+                "yellow": "#E3C08D",
+                "ink": "#452A34",
+                "bgLight1": "#FDF7F9",
+                "bgLight2": "#F4E1E7",
+                "dark1": "#7B3F55",
+                "dark2": "#532A3A",
+                "dark3": "#DFA2B6"
+            },
+            "confetti": [
+                "#DFA2B6",
+                "#FFFFFF",
+                "#E3C08D",
+                "#F4E1E7",
+                "#C4708C",
+                "#F7EFE2"
+            ],
+            "personajes": [],
+            "frameBox": {
+                "x": 0.2454,
+                "y": 0.2078,
+                "w": 0.5111,
+                "h": 0.2875
+            },
+            "musicaHint": "Cuna con cuerdas suaves",
+            "transition": "none"
         }
-      ],
-      "fullGame": {
-        "kind": "concierto3d",
-        "stage": "podium-night",
-        "label": "¡El Show del Circuito 3D!",
-        "seconds": 24,
-        "image": "fondo-juego-circuito.jpg"
-      },
-      "videoEstrella": "rayo-mcqueen-estrella.mp4",
-      "videos": {
-        "despedida": "despedida-carreras.mp4",
-        "revelacion": "revelacion-carreras.mp4"
-      },
-      "frameBox": {
-        "x": 0.333,
-        "y": 0.285,
-        "w": 0.343,
-        "h": 0.279
-      },
-      "musicaHint": "Real Gone – Sheryl Crow"
-    },
-    "mickey": {
-      "nombre": "Casa de Mickey",
-      "franquicia": "Casa de Mickey Mouse",
-      "publico": "mixto",
-      "diploma": "Miembro de la Casa Club",
-      "colors": {
-        "accent": "#ff5d8f",
-        "accentSoft": "#f7d9e3",
-        "yellow": "#ffd166",
-        "ink": "#4a2c3a",
-        "bgLight1": "#f3d9e6",
-        "bgLight2": "#e7d6ef",
-        "dark1": "#8e2f52",
-        "dark2": "#5c1e36",
-        "dark3": "#ffd166"
-      },
-      "confetti": [
-        "#ff5d8f",
-        "#ffd166",
-        "#06d6a0",
-        "#4cc9f0",
-        "#b388eb",
-        "#ffffff"
-      ],
-      "personajes": [
-        {
-          "emoji": "⭐",
-          "name": "Mickey",
-          "img": "mickey.jpg"
-        },
-        {
-          "emoji": "🎀",
-          "name": "Minnie",
-          "img": "minnie.jpg"
-        },
-        {
-          "emoji": "🎈",
-          "name": "Donald",
-          "img": "donald.jpg"
-        },
-        {
-          "emoji": "🎉",
-          "name": "Goofy",
-          "img": "goofy.jpg"
-        },
-        {
-          "emoji": "🌸",
-          "name": "Daisy",
-          "img": "daisy.jpg"
-        },
-        {
-          "emoji": "🦴",
-          "name": "Pluto",
-          "img": "pluto.jpg"
-        }
-      ],
-      "frameBox": {
-        "x": 0.32,
-        "y": 0.3,
-        "w": 0.36,
-        "h": 0.28
-      },
-      "musicaHint": "Qué bien (Disney Jr.)"
-    },
-    "hielo": {
-      "nombre": "Reino de Hielo",
-      "franquicia": "Frozen",
-      "publico": "niña",
-      "diploma": "Guardián del Reino de Hielo",
-      "colors": {
-        "accent": "#29b6f6",
-        "accentSoft": "#e1f5fe",
-        "yellow": "#b3e5fc",
-        "ink": "#0d2b3d",
-        "bgLight1": "#e3f2fd",
-        "bgLight2": "#bbdefb",
-        "dark1": "#0d3a5c",
-        "dark2": "#124a73",
-        "dark3": "#81d4fa"
-      },
-      "confetti": [
-        "#29b6f6",
-        "#81d4fa",
-        "#ffffff",
-        "#b388eb",
-        "#e1f5fe",
-        "#90caf9"
-      ],
-      "personajes": [
-        {
-          "emoji": "❄️",
-          "name": "Elsa",
-          "img": "elsa.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-elsa.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los copos!",
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🧡",
-          "name": "Anna",
-          "img": "anna.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-anna.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los copos!",
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "⛄",
-          "name": "Olaf",
-          "img": "olaf.jpg",
-          "game": [
-            {
-              "kind": "armar-muneco",
-              "label": "¡Ármame!",
-              "image": "fondo-juego-nieve.jpg"
-            },
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-olaf.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los copos!",
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🛷",
-          "name": "Kristoff",
-          "img": "kristoff.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-kristoff.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los copos!",
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🦌",
-          "name": "Sven",
-          "img": "sven.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-sven.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los copos!",
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🔥",
-          "name": "Bruni",
-          "img": "bruni.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-bruni.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los copos!",
-              "seconds": 15
-            }
-          ]
-        }
-      ],
-      "fullGame": {
-        "kind": "concierto3d",
-        "stage": "ice-gala",
-        "label": "¡El Show de Hielo 3D!",
-        "seconds": 24,
-        "image": "fondo-juego-nieve.jpg"
-      },
-      "frameBox": {
-        "x": 0.3315,
-        "y": 0.3948,
-        "w": 0.3407,
-        "h": 0.1995
-      },
-      "musicaHint": "Libre Soy",
-      "game": {
-        "kind": "copos",
-        "seconds": 15,
-        "label": "¡Atrapa los copos!"
-      },
-      "videos": {
-        "welcome": "welcome-hielo.mp4",
-        "revelacion": "revelacion.mp4",
-        "despedida": "despedida-hielo.mp4"
-      },
-      "transition": "none",
-      "photoSession": {
-        "video": "entrada-palacio-hielo.mp4",
-        "poster": "entrada-palacio-hielo-poster.jpg",
-        "characters": [
-          "Elsa",
-          "Anna"
-        ],
-        "teaser": "entrada-palacio-hielo-poster.jpg",
-        "teaserVideo": "entrada-palacio-hielo.mp4",
-        "teaserLabel": "Las hermanas del hielo"
-      }
-    },
-    "cachorros": {
-      "nombre": "Patrulla de Cachorros",
-      "franquicia": "Patrulla Canina",
-      "publico": "mixto",
-      "diploma": "Cachorro de Rescate",
-      "colors": {
-        "accent": "#1976d2",
-        "accentSoft": "#e3f2fd",
-        "yellow": "#ffc107",
-        "ink": "#102a43",
-        "bgLight1": "#e3f2fd",
-        "bgLight2": "#fff8e1",
-        "dark1": "#0d47a1",
-        "dark2": "#1565c0",
-        "dark3": "#ffc107"
-      },
-      "confetti": [
-        "#1976d2",
-        "#ffc107",
-        "#e53935",
-        "#43a047",
-        "#ffffff",
-        "#ff9800"
-      ],
-      "personajes": [
-        {
-          "emoji": "🚓",
-          "name": "Chase",
-          "img": "chase.jpg"
-        },
-        {
-          "emoji": "🚒",
-          "name": "Marshall",
-          "img": "marshall.jpg"
-        },
-        {
-          "emoji": "🚁",
-          "name": "Skye",
-          "img": "skye.jpg"
-        },
-        {
-          "emoji": "🚜",
-          "name": "Rubble",
-          "img": "rubble.jpg"
-        },
-        {
-          "emoji": "♻️",
-          "name": "Rocky",
-          "img": "rocky.jpg"
-        },
-        {
-          "emoji": "🌊",
-          "name": "Zuma",
-          "img": "zuma.jpg"
-        }
-      ],
-      "frameBox": {
-        "x": 0.32,
-        "y": 0.3,
-        "w": 0.36,
-        "h": 0.28
-      },
-      "musicaHint": "PAW Patrol Theme"
-    },
-    "heroes": {
-      "nombre": "Súper Héroes",
-      "franquicia": "Marvel / Avengers",
-      "publico": "niño",
-      "diploma": "Súper Héroe Oficial",
-      "colors": {
-        "accent": "#e53935",
-        "accentSoft": "#ffebee",
-        "yellow": "#ffca28",
-        "ink": "#1a1a2e",
-        "bgLight1": "#ffebee",
-        "bgLight2": "#e3f2fd",
-        "dark1": "#7f1d1d",
-        "dark2": "#0d2b5c",
-        "dark3": "#ffca28"
-      },
-      "confetti": [
-        "#e53935",
-        "#1e88e5",
-        "#ffca28",
-        "#43a047",
-        "#ffffff",
-        "#7b1fa2"
-      ],
-      "personajes": [
-        {
-          "emoji": "🕷️",
-          "name": "Spider-Man",
-          "img": "arana.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-arana.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los rayos!",
-              "emojis": [
-                "⚡",
-                "🔨",
-                "💥",
-                "✨"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "💪",
-          "name": "Hulk",
-          "img": "gigante.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-gigante.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los rayos!",
-              "emojis": [
-                "⚡",
-                "🔨",
-                "💥",
-                "✨"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🤖",
-          "name": "Iron Man",
-          "img": "hierro.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-hierro.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los rayos!",
-              "emojis": [
-                "⚡",
-                "🔨",
-                "💥",
-                "✨"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🛡️",
-          "name": "Capitán América",
-          "img": "capitan.jpg",
-          "game": [
-            {
-              "kind": "escudo",
-              "label": "¡Activa el escudo!",
-              "image": "fondo-juego-ciudad.jpg",
-              "seconds": 15
-            },
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-capitan.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los rayos!",
-              "emojis": [
-                "⚡",
-                "🔨",
-                "💥",
-                "✨"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "⚡",
-          "name": "Thor",
-          "img": "trueno.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-trueno.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los rayos!",
-              "emojis": [
-                "⚡",
-                "🔨",
-                "💥",
-                "✨"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🐆",
-          "name": "Pantera Negra",
-          "img": "pantera.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-pantera.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los rayos!",
-              "emojis": [
-                "⚡",
-                "🔨",
-                "💥",
-                "✨"
-              ],
-              "seconds": 15
-            }
-          ]
-        }
-      ],
-      "fullGame": {
-        "kind": "concierto3d",
-        "stage": "rooftop-city",
-        "label": "¡El Show de Héroes 3D!",
-        "seconds": 24,
-        "image": "fondo-juego-ciudad.jpg"
-      },
-      "frameBox": {
-        "x": 0.32,
-        "y": 0.3,
-        "w": 0.36,
-        "h": 0.28
-      },
-      "musicaHint": "Spidey Theme / Avengers",
-      "transition": "none",
-      "photoSession": {
-        "video": "comic-cobra-vida.mp4",
-        "poster": "comic-cobra-vida-poster.jpg",
-        "characters": [
-          "Spider-Man",
-          "Iron Man",
-          "Capitán América"
-        ],
-        "teaser": "comic-teaser.jpg",
-        "teaserLabel": "Los héroes del cómic"
-      },
-      "videos": {
-        "welcome": "welcome-heroes.mp4",
-        "revelacion": "revelacion-heroes.mp4",
-        "despedida": "despedida-heroes.mp4"
-      }
-    },
-    "princesas": {
-      "nombre": "Princesas",
-      "franquicia": "Princesas Disney",
-      "publico": "niña",
-      "diploma": "Princesa del Reino",
-      "colors": {
-        "accent": "#ab47bc",
-        "accentSoft": "#f3e5f5",
-        "yellow": "#f8bbd9",
-        "ink": "#3e1046",
-        "bgLight1": "#f3e5f5",
-        "bgLight2": "#fce4ec",
-        "dark1": "#6a1b9a",
-        "dark2": "#4a148c",
-        "dark3": "#f8bbd9"
-      },
-      "confetti": [
-        "#ab47bc",
-        "#f8bbd9",
-        "#ffd700",
-        "#ffffff",
-        "#ce93d8",
-        "#f48fb1"
-      ],
-      "personajes": [
-        {
-          "emoji": "👠",
-          "name": "Cenicienta",
-          "img": "cenicienta.jpg"
-        },
-        {
-          "emoji": "🌹",
-          "name": "Bella",
-          "img": "bella.jpg"
-        },
-        {
-          "emoji": "🧜‍♀️",
-          "name": "Ariel",
-          "img": "ariel.jpg"
-        },
-        {
-          "emoji": "🌞",
-          "name": "Rapunzel",
-          "img": "rapunzel.jpg"
-        },
-        {
-          "emoji": "🐸",
-          "name": "Tiana",
-          "img": "tiana.jpg"
-        },
-        {
-          "emoji": "🌸",
-          "name": "Aurora",
-          "img": "aurora.jpg"
-        }
-      ],
-      "frameBox": {
-        "x": 0.32,
-        "y": 0.3,
-        "w": 0.36,
-        "h": 0.28
-      },
-      "musicaHint": "Un Mundo Ideal / medley princesas"
-    },
-    "dinos": {
-      "nombre": "Dinosaurios",
-      "franquicia": "",
-      "publico": "mixto",
-      "diploma": "Explorador de Dinosaurios",
-      "colors": {
-        "accent": "#43a047",
-        "accentSoft": "#e8f5e9",
-        "yellow": "#ff9800",
-        "ink": "#1b3a1e",
-        "bgLight1": "#e8f5e9",
-        "bgLight2": "#fff3e0",
-        "dark1": "#1b5e20",
-        "dark2": "#33691e",
-        "dark3": "#ff9800"
-      },
-      "confetti": [
-        "#43a047",
-        "#ff9800",
-        "#8d6e63",
-        "#fdd835",
-        "#ffffff",
-        "#66bb6a"
-      ],
-      "personajes": [
-        {
-          "emoji": "🦖",
-          "name": "T-Rex",
-          "img": "trex.jpg"
-        },
-        {
-          "emoji": "🦕",
-          "name": "Triceratops",
-          "img": "triceratops.jpg"
-        },
-        {
-          "emoji": "🏃",
-          "name": "Velociraptor",
-          "img": "velociraptor.jpg"
-        },
-        {
-          "emoji": "🛡️",
-          "name": "Estegosaurio",
-          "img": "estegosaurio.jpg"
-        },
-        {
-          "emoji": "🌳",
-          "name": "Cuello Largo",
-          "img": "cuellolargo.jpg"
-        },
-        {
-          "emoji": "🪽",
-          "name": "Pterodáctilo",
-          "img": "pterodactilo.jpg"
-        }
-      ],
-      "frameBox": {
-        "x": 0.32,
-        "y": 0.3,
-        "w": 0.36,
-        "h": 0.28
-      },
-      "musicaHint": "canción dinos infantil"
-    },
-    "sirenas": {
-      "nombre": "Bajo el Mar",
-      "franquicia": "La Sirenita",
-      "publico": "niña",
-      "diploma": "Guardián del Océano",
-      "colors": {
-        "accent": "#0288d1",
-        "accentSoft": "#e0f7fa",
-        "yellow": "#4dd0e1",
-        "ink": "#043245",
-        "bgLight1": "#e0f7fa",
-        "bgLight2": "#b2ebf2",
-        "dark1": "#01579b",
-        "dark2": "#006064",
-        "dark3": "#4dd0e1"
-      },
-      "confetti": [
-        "#0288d1",
-        "#4dd0e1",
-        "#80deea",
-        "#f48fb1",
-        "#ffffff",
-        "#ffd54f"
-      ],
-      "personajes": [
-        {
-          "emoji": "🧜‍♀️",
-          "name": "Sirenita",
-          "img": "sirenita.jpg"
-        },
-        {
-          "emoji": "🐡",
-          "name": "Pez Globo",
-          "img": "pezglobo.jpg"
-        },
-        {
-          "emoji": "🐬",
-          "name": "Delfín",
-          "img": "delfin.jpg"
-        },
-        {
-          "emoji": "🐢",
-          "name": "Tortuga",
-          "img": "tortuga.jpg"
-        },
-        {
-          "emoji": "🌊",
-          "name": "Caballito",
-          "img": "caballito.jpg"
-        },
-        {
-          "emoji": "🐙",
-          "name": "Pulpo",
-          "img": "pulpo.jpg"
-        }
-      ],
-      "frameBox": {
-        "x": 0.32,
-        "y": 0.3,
-        "w": 0.36,
-        "h": 0.28
-      },
-      "musicaHint": "Bajo el Mar"
-    },
-    "juguetes": {
-      "nombre": "Historia de Juguetes",
-      "franquicia": "Toy Story",
-      "publico": "mixto",
-      "diploma": "Juguete Favorito",
-      "colors": {
-        "accent": "#1565c0",
-        "accentSoft": "#e3f2fd",
-        "yellow": "#fdd835",
-        "ink": "#1a2340",
-        "bgLight1": "#e3f2fd",
-        "bgLight2": "#fffde7",
-        "dark1": "#0d47a1",
-        "dark2": "#283593",
-        "dark3": "#fdd835"
-      },
-      "confetti": [
-        "#1565c0",
-        "#fdd835",
-        "#e53935",
-        "#43a047",
-        "#ffffff",
-        "#ff7043"
-      ],
-      "personajes": [
-        {
-          "emoji": "🤠",
-          "name": "Vaquero",
-          "img": "vaquero.jpg"
-        },
-        {
-          "emoji": "🚀",
-          "name": "Guardián Espacial",
-          "img": "espacial.jpg"
-        },
-        {
-          "emoji": "🐄",
-          "name": "Vaquerita",
-          "img": "vaquerita.jpg"
-        },
-        {
-          "emoji": "🦖",
-          "name": "Dino de Juguete",
-          "img": "dinojuguete.jpg"
-        },
-        {
-          "emoji": "🐕",
-          "name": "Perro Resorte",
-          "img": "resorte.jpg"
-        },
-        {
-          "emoji": "👽",
-          "name": "Marcianito",
-          "img": "marcianito.jpg"
-        }
-      ],
-      "frameBox": {
-        "x": 0.32,
-        "y": 0.3,
-        "w": 0.36,
-        "h": 0.28
-      },
-      "musicaHint": "Yo Soy Tu Amigo Fiel"
-    },
-    "tropical": {
-      "nombre": "Aventura Tropical",
-      "franquicia": "Lilo & Stitch",
-      "publico": "mixto",
-      "diploma": "Aventurero Tropical",
-      "colors": {
-        "accent": "#3f51b5",
-        "accentSoft": "#e8eaf6",
-        "yellow": "#ff7043",
-        "ink": "#1a1f4b",
-        "bgLight1": "#e8eaf6",
-        "bgLight2": "#fbe9e7",
-        "dark1": "#283593",
-        "dark2": "#1a237e",
-        "dark3": "#ff7043"
-      },
-      "confetti": [
-        "#3f51b5",
-        "#ff7043",
-        "#4dd0e1",
-        "#f48fb1",
-        "#ffffff",
-        "#ffd54f"
-      ],
-      "personajes": [
-        {
-          "emoji": "💙",
-          "name": "Stitch",
-          "img": "alienazul.jpg",
-          "game": [
-            {
-              "kind": "escudo",
-              "label": "¡Atrapa el coco!",
-              "image": "fondo-sala.jpg",
-              "seconds": 15
-            },
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-alienazul.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las flores!",
-              "emojis": [
-                "🌺",
-                "🥥",
-                "🌊",
-                "🍍"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "💗",
-          "name": "Angel",
-          "img": "alienrosa.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-alienrosa.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las flores!",
-              "emojis": [
-                "🌺",
-                "🥥",
-                "🌊",
-                "🍍"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🌺",
-          "name": "Lilo",
-          "img": "hawaiana.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-hawaiana.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las flores!",
-              "emojis": [
-                "🌺",
-                "🥥",
-                "🌊",
-                "🍍"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🐢",
-          "name": "Honu",
-          "img": "tortugamar.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-tortugamar.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las flores!",
-              "emojis": [
-                "🌺",
-                "🥥",
-                "🌊",
-                "🍍"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🦜",
-          "name": "Kiko",
-          "img": "loro.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-loro.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las flores!",
-              "emojis": [
-                "🌺",
-                "🥥",
-                "🌊",
-                "🍍"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🌴",
-          "name": "David",
-          "img": "surfista.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-surfista.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las flores!",
-              "emojis": [
-                "🌺",
-                "🥥",
-                "🌊",
-                "🍍"
-              ],
-              "seconds": 15
-            }
-          ]
-        }
-      ],
-      "fullGame": {
-        "kind": "concierto3d",
-        "stage": "beach-luau",
-        "label": "¡El Show de la Playa 3D!",
-        "seconds": 24,
-        "image": "fondo-juego-playa.jpg"
-      },
-      "frameBox": {
-        "x": 0.32,
-        "y": 0.3,
-        "w": 0.36,
-        "h": 0.28
-      },
-      "musicaHint": "Hawaiian Roller Coaster Ride",
-      "photoSession": {
-        "video": "transicion-sesion-fotos.mp4",
-        "poster": "transicion-alfombra-base-v1.png",
-        "characters": [
-          "Stitch",
-          "Lilo"
-        ],
-        "teaser": "artist-teaser.jpg",
-        "teaserVideo": "artist-teaser.mp4",
-        "teaserLabel": "Los amigos de la isla"
-      },
-      "videos": {
-        "welcome": "welcome-tropical.mp4",
-        "revelacion": "revelacion-tropical.mp4",
-        "despedida": "despedida-tropical.mp4"
-      }
-    },
-    "familia-canina": {
-      "nombre": "Bluey",
-      "franquicia": "Bluey",
-      "publico": "mixto",
-      "diploma": "Amigo Oficial de Bluey y su Familia",
-      "visualVersion": 1,
-      "visualSource": {
-        "kind": "invitation_generic",
-        "version": 1,
-        "asset": "invitation/invitation-base-v1.png"
-      },
-      "colors": {
-        "accent": "#1689d8",
-        "accentSoft": "#dff4ff",
-        "yellow": "#ffd34e",
-        "ink": "#17324d",
-        "bgLight1": "#ecf9ff",
-        "bgLight2": "#fff0d7",
-        "dark1": "#0e5f9f",
-        "dark2": "#123a64",
-        "dark3": "#f28b39"
-      },
-      "confetti": [
-        "#1689d8",
-        "#75cfff",
-        "#f28b39",
-        "#ffd34e",
-        "#ffffff",
-        "#17324d"
-      ],
-      "personajes": [
-        {
-          "emoji": "💙",
-          "name": "Bluey",
-          "img": "azulita.jpg",
-          "game": [
-            {
-              "kind": "escudo",
-              "label": "¡Keepy Uppy!",
-              "image": "fondo-sala.jpg",
-              "seconds": 15
-            },
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-azulita.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los globos!",
-              "emojis": [
-                "🎈",
-                "🐾",
-                "🦴",
-                "⭐"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🧡",
-          "name": "Bingo",
-          "img": "chispa.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-chispa.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los globos!",
-              "emojis": [
-                "🎈",
-                "🐾",
-                "🦴",
-                "⭐"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🎸",
-          "name": "Bandit",
-          "img": "papa-marino.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-papa-marino.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los globos!",
-              "emojis": [
-                "🎈",
-                "🐾",
-                "🦴",
-                "⭐"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🌺",
-          "name": "Chilli",
-          "img": "mama-coral.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-mama-coral.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los globos!",
-              "emojis": [
-                "🎈",
-                "🐾",
-                "🦴",
-                "⭐"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🐾",
-          "name": "Muffin",
-          "img": "muffin.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-muffin.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los globos!",
-              "emojis": [
-                "🎈",
-                "🐾",
-                "🦴",
-                "⭐"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "☁️",
-          "name": "Chloe",
-          "img": "chloe.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-chloe.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa los globos!",
-              "emojis": [
-                "🎈",
-                "🐾",
-                "🦴",
-                "⭐"
-              ],
-              "seconds": 15
-            }
-          ]
-        }
-      ],
-      "fullGame": {
-        "kind": "concierto3d",
-        "stage": "backyard-fiesta",
-        "label": "¡El Show del Patio 3D!",
-        "seconds": 24,
-        "image": "fondo-juego-patio.jpg"
-      },
-      "photoSession": {
-        "video": "transicion-sesion-fotos.mp4",
-        "poster": "transicion-alfombra-base-v1.png",
-        "characters": [
-          "Bluey",
-          "Bingo"
-        ],
-        "teaser": "artist-teaser.jpg",
-        "teaserVideo": "artist-teaser.mp4",
-        "teaserLabel": "La familia Heeler"
-      },
-      "videos": {
-        "welcome": "welcome-familia-canina.mp4",
-        "despedida": "despedida-familia-canina.mp4",
-        "revelacion": "revelacion-familia-canina.mp4"
-      },
-      "frameBox": {
-        "x": 0.25,
-        "y": 0.17,
-        "w": 0.5,
-        "h": 0.28125
-      },
-      "musicaHint": "Música alegre de aventura al aire libre"
-    },
-    "kpop": {
-      "nombre": "Guerreras K-Pop",
-      "franquicia": "KPop Demon Hunters",
-      "publico": "mixto",
-      "diploma": "Guerrera Legendaria del Escenario",
-      "transition": "none",
-      "colors": {
-        "accent": "#e0218a",
-        "accentSoft": "#ffe3f3",
-        "yellow": "#ffd54f",
-        "ink": "#1a0b2e",
-        "bgLight1": "#fce4ff",
-        "bgLight2": "#e0f7ff",
-        "dark1": "#3d0b52",
-        "dark2": "#12043a",
-        "dark3": "#00d4ff"
-      },
-      "confetti": [
-        "#e0218a",
-        "#00d4ff",
-        "#ffd54f",
-        "#a855f7",
-        "#ffffff",
-        "#ff6ec7"
-      ],
-      "personajes": [
-        {
-          "emoji": "🎤",
-          "name": "Rumi",
-          "img": "rumi.jpg",
-          "game": [
-            {
-              "kind": "ritmo",
-              "label": "¡Sigue el ritmo!",
-              "image": "fondo-juego-escenario.jpg",
-              "lanes": 4,
-              "seconds": 15
-            },
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-rumi.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las estrellas!",
-              "emojis": [
-                "⭐",
-                "💫",
-                "🎵",
-                "💖"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "⚔️",
-          "name": "Mira",
-          "img": "mira.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-mira.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las estrellas!",
-              "emojis": [
-                "⭐",
-                "💫",
-                "🎵",
-                "💖"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "💜",
-          "name": "Zoey",
-          "img": "zoey.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-zoey.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las estrellas!",
-              "emojis": [
-                "⭐",
-                "💫",
-                "🎵",
-                "💖"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🌟",
-          "name": "Luna",
-          "img": "luna.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-luna.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las estrellas!",
-              "emojis": [
-                "⭐",
-                "💫",
-                "🎵",
-                "💖"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🐯",
-          "name": "Derpy",
-          "img": "derpy.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-derpy.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las estrellas!",
-              "emojis": [
-                "⭐",
-                "💫",
-                "🎵",
-                "💖"
-              ],
-              "seconds": 15
-            }
-          ]
-        },
-        {
-          "emoji": "🎶",
-          "name": "Sussie",
-          "img": "sussie.jpg",
-          "game": [
-            {
-              "kind": "fichas",
-              "label": "¡Arma la imagen!",
-              "image": "puzzle-sussie.jpg",
-              "cols": 3,
-              "filas": 3
-            },
-            {
-              "kind": "copos",
-              "label": "¡Atrapa las estrellas!",
-              "emojis": [
-                "⭐",
-                "💫",
-                "🎵",
-                "💖"
-              ],
-              "seconds": 15
-            }
-          ]
-        }
-      ],
-      "fullGame": {
-        "kind": "concierto3d",
-        "label": "¡El Show 3D!",
-        "seconds": 24,
-        "image": "fondo-juego-escenario.jpg"
-      },
-      "photoSession": {
-        "video": "entrada-escenario.mp4",
-        "poster": "entrada-escenario-poster.jpg",
-        "characters": [
-          "Rumi",
-          "Mira",
-          "Zoey"
-        ],
-        "teaser": "escenario-teaser.jpg",
-        "teaserVideo": "entrada-escenario.mp4",
-        "teaserLabel": "El trío legendario"
-      },
-      "videos": {
-        "welcome": "welcome-kpop.mp4",
-        "revelacion": "revelacion-kpop.mp4",
-        "despedida": "despedida-kpop.mp4"
-      },
-      "frameBox": {
-        "x": 0.3,
-        "y": 0.34,
-        "w": 0.4,
-        "h": 0.24
-      },
-      "musicaHint": "Pop coreano energético / girl group"
-    },
-    "baby-nube": {
-      "nombre": "Bebé en las Nubes",
-      "franquicia": null,
-      "publico": "nino",
-      "modalidad": "baby_shower",
-      "diploma": "Invitado de honor de Bebé en las Nubes",
-      "colors": {
-        "accent": "#4A80B4",
-        "accentSoft": "#E3EEF7",
-        "yellow": "#E8C98A",
-        "ink": "#24384D",
-        "bgLight1": "#F4F8FC",
-        "bgLight2": "#DCE9F5",
-        "dark1": "#2C4A66",
-        "dark2": "#1E3345",
-        "dark3": "#8FBEDD"
-      },
-      "confetti": [
-        "#8FBEDD",
-        "#FFFFFF",
-        "#E8C98A",
-        "#DCE9F5",
-        "#4A80B4",
-        "#F7EFE2"
-      ],
-      "personajes": [],
-      "frameBox": {
-        "x": 0.3217,
-        "y": 0.2184,
-        "w": 0.5926,
-        "h": 0.3333
-      },
-      "musicaHint": "Cuna suave",
-      "transition": "none"
-    },
-    "baby-safari": {
-      "nombre": "Bebé Safari",
-      "franquicia": null,
-      "publico": "mixto",
-      "modalidad": "baby_shower",
-      "diploma": "Explorador de Bebé Safari",
-      "colors": {
-        "accent": "#7A9455",
-        "accentSoft": "#EAF0E0",
-        "yellow": "#D9B36B",
-        "ink": "#33402A",
-        "bgLight1": "#F6F4EC",
-        "bgLight2": "#E3E9D6",
-        "dark1": "#3E5233",
-        "dark2": "#2B3A24",
-        "dark3": "#A7BE84"
-      },
-      "confetti": [
-        "#A7BE84",
-        "#F6F4EC",
-        "#D9B36B",
-        "#E3E9D6",
-        "#7A9455",
-        "#C9B79A"
-      ],
-      "personajes": [],
-      "frameBox": {
-        "x": 0.1685,
-        "y": 0.1451,
-        "w": 0.6611,
-        "h": 0.3719
-      },
-      "musicaHint": "Selva tranquila",
-      "transition": "none"
     }
-  }
 }

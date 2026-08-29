@@ -47,6 +47,8 @@ $casos = [
     ['rev-baby-safari-nina',    'baby-safari', '',          'f',  'baby_shower',   'Baby shower — Safari · niña SIN nombre ("Nuestra bebe")'],
     ['rev-baby-safari-neutro',  'baby-safari', '',          '',   'baby_shower',   'Baby shower — Safari · sin nombre NI sexo ("Nuestro bebe")'],
     ['rev-baby-nube-nino',      'baby-nube',   'Tomas',     'm',  'baby_shower',   'Baby shower — Nube · nino CON nombre'],
+    ['rev-baby-rosas',          'baby-rosas',  'Amanda',    'f',  'baby_shower',   'Baby shower — ROSAS · nina CON nombre'],
+    ['rev-baby-rosas-nina',     'baby-rosas',  '',          'f',  'baby_shower',   'Baby shower — ROSAS · nina SIN nombre ("Nuestra bebe")'],
     ['rev-hielo',          'hielo',          'Isidora', 'f', 'child_birthday', 'Cumpleanos — Hielo'],
     ['rev-carreras',       'carreras',       'Mateo',   'm', 'child_birthday', 'Cumpleanos — Carreras'],
     ['rev-kpop',           'kpop',           'Antonia', 'f', 'child_birthday', 'Cumpleanos — K-Pop'],

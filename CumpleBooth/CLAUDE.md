@@ -189,18 +189,25 @@ están aplicadas en producción**. Sí lo están en local desde el 2026-08-27
 (junto con la 008 y la 009, que también faltaban ahí). Son aditivas e
 idempotentes, pero producción requiere autorización explícita de Luis.
 
-**Bebé entre Rosas — temática rosada, a medio camino (2026-08-28).** Pedido de
-Luis. Slug `baby-rosas`. Decidida la paleta (rosa polvo y crema, no rosa
-chicle: las otras dos están en registro sobrio y una que se salga parece de
-otro producto), hecho el bloque CSS de la invitación —sus chispas son pétalos
-que caen, no polvo de estrellas ni luciérnagas— y escritos los dos prompts de
-fondo con las dos reglas caras: nada se cruza por delante del marco, y sin
-superficies escribibles en cuadro. Todo en `docs/TEMATICA-BABY-ROSAS.md`.
+**Bebé entre Rosas — tercera temática de baby shower, COMPLETA (2026-08-29).**
+Pedido de Luis. Slug `baby-rosas`, rosa polvo y crema — no rosa chicle: las
+otras dos están en registro sobrio y una que se salga parece de otro producto.
+Registrada en `themes.json` y en presets, con `frameBox` calibrado de verdad.
+Sus chispas en la invitación son **pétalos que caen**, no polvo de estrellas ni
+luciérnagas. Todo en `docs/TEMATICA-BABY-ROSAS.md`.
 
-**Falta generar los dos fondos y ahí se traba todo lo demás**: sin
-`fondo-sala.jpg` no se puede calibrar el `frameBox`, y sin `frameBox` real no
-se registra en `themes.json` ni en presets. **No se registró a medias a
-propósito**: el test verifica los fondos contra disco y un `frameBox` inventado
-pasaría el test sobre un dato falso, que es la degradación silenciosa contra la
-que ese test existe. El bloqueo es de sesión, no de código: budgetpixel devuelve
-*token expired* y Higgsfield pide auth.
+**La lección del `frameBox`, que vale para la próxima temática.** El primer
+`fondo-sala` se pidió con marco ovalado colgado alto, copiando el montaje de
+Safari que evita que la decoración se cruce por delante. Salió precioso y
+cumplía las dos reglas, pero un óvalo alto deja poco espacio para un cuadrado:
+el `frameBox` daba **352 px** contra los 714 de Safari, y la cara del invitado
+habría salido chica. Se pidió de nuevo con marco **grande, rectangular y
+centrado** y quedó en **552 px**. Al pedir el fondo hay que decir el tamaño y la
+forma del marco, no sólo que esté vacío y despejado. Costo total: 6 créditos de
+Higgsfield (3 imágenes), 2 de ellos del descarte.
+
+**Su música es prestada de `baby-nube`** y hay que decirlo: `musica-fondo.mp3` y
+`musica-juego.mp3` son copias. La temática funciona y suena bien, pero no tiene
+identidad sonora propia. **Tampoco tiene el recorrido de 6 videos** — la tabla
+A-BS no lo exige, así que cuenta como completa, pero al lado de las otras dos se
+va a notar.

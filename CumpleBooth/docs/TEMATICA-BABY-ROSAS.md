@@ -7,30 +7,25 @@ Slug: **`baby-rosas`**. Rosa polvo y crema, no rosa chicle: las otras dos
 registro adulto y sobrio, y una temática que se salga de ahí va a parecer de
 otro producto puesta al lado.
 
-## Estado
+## Estado — COMPLETA según la tabla A-BS (2026-08-29)
 
 | Pieza | Estado |
 |---|---|
-| Paleta, nombre, confetti | **Decidido** — abajo |
-| Bloque CSS de la invitación | **Hecho** — `[data-theme="baby-rosas"]` en `assets/invitation.css` |
-| Prompts de los dos fondos | **Escritos** — abajo, listos para pegar |
-| `fondo-banner.jpg` | ⛔ **Falta generar** |
-| `fondo-sala.jpg` | ⛔ **Falta generar** |
-| `frameBox` calibrado | ⛔ Bloqueado: se calibra contra el `fondo-sala.jpg` real |
-| Registro en `themes.json` y presets | ⛔ Bloqueado por los fondos |
-| `musica-fondo.mp3` | Pendiente de decisión (ver abajo) |
-| Recorrido de 6 videos | Opcional — no lo exige la tabla A-BS |
+| Paleta, nombre, confetti | Hecho |
+| Bloque CSS de la invitación | Hecho — `[data-theme="baby-rosas"]`, chispas de pétalos |
+| `fondo-banner.jpg` | Hecho — 1080×1920, generado |
+| `fondo-sala.jpg` | Hecho — 1080×1920, marco grande vacío |
+| `frameBox` calibrado | Hecho — **552×552 px**, verificado con foto compuesta |
+| Registro en `themes.json` y presets | Hecho, y los dos valores comprobados iguales |
+| `musica-fondo.mp3` | **Prestada de `baby-nube`** — ver abajo |
+| Recorrido de 6 videos | No hecho. Opcional: no lo exige la tabla A-BS |
 
-**El bloqueo es uno solo:** los dos generadores de imágenes están sin
-autorizar en la sesión (budgetpixel devuelve *token expired*, Higgsfield pide
-auth). En cuanto uno de los dos esté disponible, lo que falta son dos
-imágenes, una calibración y dos entradas de JSON.
-
-**No se registró la temática a medias a propósito.** El test de temática
-completa verifica los fondos contra disco; registrarla sin ellos lo pondría en
-rojo, y ponerle un `frameBox` inventado sería peor: pasaría el test sobre un
-dato falso, que es exactamente la degradación silenciosa contra la que existe
-ese test.
+Costo: **6 créditos de Higgsfield** (3 imágenes × 2). El primer `fondo-sala`
+salió con un marco ovalado y alto: el cuadrado más grande que cabía adentro
+eran 352 px, la mitad que en Safari (714 px), y la cara del invitado habría
+salido chica. Se pidió de nuevo con marco grande, rectangular y centrado, y
+quedó en 552 px. Los 2 créditos del descarte valen menos que una temática con
+la foto enana.
 
 ## La paleta
 
@@ -108,21 +103,31 @@ trabajo antes:
 El difícil: **tiene que traer un marco decorativo vacío y despejado**, porque
 el `frameBox` apunta adentro de ese marco.
 
-> Vertical 9:16 photograph of a baby shower photo corner in dusty rose and
-> cream. An EMPTY oval decorative frame hangs high and centered on a smooth
-> plain plaster wall. The inside of the frame is completely empty and shows only
-> the bare wall — nothing hangs in it, nothing is written in it, nothing crosses
-> in front of it and nothing touches its edges. ALL decoration sits BELOW and to
-> the SIDES of the frame, clearly outside its outline: pale pink and blush
-> balloons resting on the floor, preserved pale roses, eucalyptus, a cream
+Este es el prompt que **quedó**, con la corrección que importa en negrita:
+
+> Vertical 9:16 photograph of a baby shower photo backdrop in dusty rose and
+> cream. **A LARGE EMPTY rectangular decorative frame** with a soft cream-and-gold
+> moulding **dominates the wall: it is centered and occupies most of the upper two
+> thirds of the image, wide and tall, almost square in shape.** The inside of the
+> frame is completely empty and shows only bare smooth plaster wall — nothing
+> hangs inside it, nothing is written inside it, nothing crosses in front of it,
+> and nothing touches its edges. ALL decoration sits BELOW the frame and outside
+> its outline, along the floor: pale pink and blush balloons resting on the wooden
+> floor, preserved pale roses in ceramic vases, eucalyptus branches, a cream
 > knitted blanket over a low wooden stool. Warm afternoon light, shallow depth of
-> field, warm film grain, tender quiet mood. No people, no hands, no faces, no
-> text, no signage, no lettering, no logos, no watermarks.
+> field, warm film grain, tender quiet mood, elegant and restrained, not candy
+> pink. No people, no hands, no faces, no text, no signage, no lettering, no
+> logos, no watermarks.
 
-El montaje pedido —marco colgado alto, decoración abajo— es el que mejor
-resultó en Safari: así es imposible que se pisen.
+**El primer intento pidió un marco ovalado colgado alto** —copiando el montaje
+de Safari, que evita que la decoración se cruce— y salió precioso, pero un
+óvalo alto deja poco espacio para un cuadrado: el `frameBox` daba 352 px contra
+los 714 de Safari, y la cara del invitado habría salido chica. La lección para
+la próxima: **al pedir el fondo hay que decir el tamaño y la forma del marco,
+no solo que esté vacío y despejado.** Un marco grande, rectangular y centrado
+cumple las dos reglas igual y además deja espacio.
 
-## Cómo se calibra el `frameBox` cuando llegue el fondo
+## Cómo se calibró el `frameBox`
 
 No es un valor a ojo. Se dibuja encima del fondo el rectángulo que devuelve
 `getSquarePhotoGeometry()` con los valores candidatos, se ajusta y se vuelve a
@@ -137,7 +142,7 @@ presets la temática cae a `theme_fallback`, que no define `base_image`, y la
 página muestra dos veces el mismo banner — una degradación silenciosa que ya
 tiene test.
 
-Entrada de presets, con el `frameBox` real reemplazando los ceros:
+Entrada de presets, tal como quedó:
 
 ```json
 "baby-rosas": {
@@ -149,18 +154,17 @@ Entrada de presets, con el `frameBox` real reemplazando los ceros:
   "surface": { "scrim": 0.73, "blur": 14, "saturate": 0.78,
                "title": "#f4e1e7", "surface_mix": 89, "hero_dim": 0.41 },
   "scene": "warm dusty-rose baby shower corner with pale roses, blush balloons, eucalyptus and soft afternoon light",
-  "text_area": { "x": 0, "y": 0, "w": 0, "h": 0, "tone": "#452A34" }
+  "text_area": { "x": 0.2454, "y": 0.2078, "w": 0.5111, "h": 0.2875, "tone": "#452A34" }
 }
 ```
 
-## La música
+## La música — prestada, y hay que decirlo
 
-`musica-fondo.mp3` es obligatoria. Dos caminos, y conviene que lo decida Luis
-porque uno cuesta y el otro no:
-
-- **Copiar la de `baby-nube`.** Es una cuna suave y sirve; queda una temática
-  con música prestada, que es lo que hoy pasa entre nube y safari en el juego.
-- **Generar una propia** con cuerdas suaves. Cuesta créditos y da identidad.
+`musica-fondo.mp3` y `musica-juego.mp3` son **copias de `baby-nube`**. Es una
+cuna suave, ya está loopeada sin costura y suena bien con rosas, así que la
+temática funciona; pero es música prestada y no identidad propia. Generar una
+con cuerdas suaves queda pendiente de que Luis lo pida, porque cuesta créditos
+y la actual no molesta.
 
 Sea cual sea, tiene que quedar **loopeada sin costura**: el fundido final se
 cruza sobre el principio, o se oye un bajón cada 90 s. Así están las otras dos.

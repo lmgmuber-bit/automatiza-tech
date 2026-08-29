@@ -364,6 +364,29 @@
                 "h": 0.3719,
                 "tone": "#33402A"
             }
+        },
+        "baby-rosas": {
+            "status": "active",
+            "background": "fondo-banner.jpg",
+            "base_image": "fondo-sala.jpg",
+            "layout": "storybook-kids-v1",
+            "intro_style": "mágico",
+            "surface": {
+                "scrim": 0.73,
+                "blur": 14,
+                "saturate": 0.78,
+                "title": "#f4e1e7",
+                "surface_mix": 89,
+                "hero_dim": 0.41
+            },
+            "scene": "warm dusty-rose baby shower corner with pale roses, blush balloons, eucalyptus and soft afternoon light",
+            "text_area": {
+                "x": 0.2454,
+                "y": 0.2078,
+                "w": 0.5111,
+                "h": 0.2875,
+                "tone": "#452A34"
+            }
         }
     },
     "theme_fallback": {

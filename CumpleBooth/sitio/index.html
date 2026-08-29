@@ -2,7 +2,15 @@
 <!-- ============================================================
   CumpleClick — Sitio de clientes (landing de conversión)
   Ticket: AT-CUMPLECLICK-011 · vive aislado en sitio/ (no toca kiosco)
-  CONFIG PENDIENTE (Luis): reemplazar [WHATSAPP_NUMBER] (2 usos en href wa.me + footer)
+
+  WhatsApp: 56927002984, el número real de AutomatizaTech (el mismo que usa el
+  tema de automatizatech.cl). Está escrito en los 7 enlaces de esta página; si
+  algún día CumpleClick tiene número propio, se cambia acá.
+
+  Hasta el 2026-08-29 acá había un marcador de configuración sin reemplazar: la
+  página cargaba perfecto y TODOS los botones de "Agenda por WhatsApp" no iban
+  a ninguna parte. `tests/frontend/sitioPublico.test.mjs` bloquea que vuelva a
+  pasar — y no acepta marcadores ni dentro de este comentario, a propósito.
 ============================================================ -->
 <html lang="es-CL">
 <head>
@@ -27,7 +35,7 @@
     <a class="topbar__brand" href="#inicio" aria-label="CumpleClick, volver arriba">
       <img src="assets/cumpleclick-lockup.svg" alt="CumpleClick" width="148" height="40">
     </a>
-    <a class="btn btn--cta btn--sm" href="https://wa.me/[WHATSAPP_NUMBER]?text=Hola%20CumpleClick%2C%20quiero%20agendar%20una%20fecha%20%F0%9F%8E%88" target="_blank" rel="noopener">
+    <a class="btn btn--cta btn--sm" href="https://wa.me/56927002984?text=Hola%20CumpleClick%2C%20quiero%20agendar%20una%20fecha%20%F0%9F%8E%88" target="_blank" rel="noopener">
       Agenda por WhatsApp 📲
     </a>
   </header>
@@ -41,7 +49,7 @@
           <h1 class="hero__title"><span>Su personaje favorito.</span> <em>Su foto.</em> <span>Al instante.</span></h1>
           <p class="hero__sub">Cabina de fotos temática para cumpleaños, fechas especiales y eventos de empresa: ruleta, saludo con su nombre y foto lista en segundos. 🎈</p>
           <div class="hero__ctas">
-            <a class="btn btn--cta" href="https://wa.me/[WHATSAPP_NUMBER]?text=Hola%20CumpleClick%2C%20quiero%20agendar%20una%20fecha%20%F0%9F%8E%88" target="_blank" rel="noopener">
+            <a class="btn btn--cta" href="https://wa.me/56927002984?text=Hola%20CumpleClick%2C%20quiero%20agendar%20una%20fecha%20%F0%9F%8E%88" target="_blank" rel="noopener">
               Agenda la fecha por WhatsApp 📲
             </a>
             <a class="btn btn--ghost" href="#mundos">Conoce los mundos</a>
@@ -169,7 +177,7 @@
             <li>Diplomas personalizados</li>
             <li>Descarga inmediata por QR</li>
           </ul>
-          <a class="btn btn--cta btn--block" href="https://wa.me/[WHATSAPP_NUMBER]?text=Hola%20CumpleClick%2C%20me%20interesa%20el%20Plan%20M%C3%A1gico%20%F0%9F%8E%88" target="_blank" rel="noopener">Agenda el Mágico 📲</a>
+          <a class="btn btn--cta btn--block" href="https://wa.me/56927002984?text=Hola%20CumpleClick%2C%20me%20interesa%20el%20Plan%20M%C3%A1gico%20%F0%9F%8E%88" target="_blank" rel="noopener">Agenda el Mágico 📲</a>
         </article>
         <article class="plan plan--destacado" data-reveal>
           <span class="plan__badge">Más elegido</span>
@@ -184,7 +192,7 @@
             <li>Video personalizado</li>
             <li>2 horas de servicio</li>
           </ul>
-          <a class="btn btn--cta btn--block" href="https://wa.me/[WHATSAPP_NUMBER]?text=Hola%20CumpleClick%2C%20me%20interesa%20el%20Plan%20Premium%20%F0%9F%8E%89" target="_blank" rel="noopener">Agenda el Premium 📲</a>
+          <a class="btn btn--cta btn--block" href="https://wa.me/56927002984?text=Hola%20CumpleClick%2C%20me%20interesa%20el%20Plan%20Premium%20%F0%9F%8E%89" target="_blank" rel="noopener">Agenda el Premium 📲</a>
         </article>
       </div>
       <p class="precios__medida" data-reveal>¿Quieres una temática a la medida? <strong>La creamos por +$25.000.</strong></p>
@@ -214,7 +222,7 @@
           <h3>Y la invitación, ¿ya la tienes?</h3>
           <p>También hacemos <strong>invitaciones digitales</strong> de tu temática: tarjeta web, video o foto lista para compartir por WhatsApp. Pregunta por la tuya al agendar. 💌</p>
         </div>
-        <a class="btn btn--ghost" href="https://wa.me/[WHATSAPP_NUMBER]?text=Hola%20CumpleClick%2C%20quiero%20una%20invitaci%C3%B3n%20digital%20%F0%9F%92%8C" target="_blank" rel="noopener">Quiero mi invitación</a>
+        <a class="btn btn--ghost" href="https://wa.me/56927002984?text=Hola%20CumpleClick%2C%20quiero%20una%20invitaci%C3%B3n%20digital%20%F0%9F%92%8C" target="_blank" rel="noopener">Quiero mi invitación</a>
       </aside>
     </section>
 
@@ -239,7 +247,7 @@
           <h3>Cuéntanos tu evento</h3>
           <p>Déjanos los datos esenciales, registraremos tu solicitud y te responderemos con la disponibilidad y una propuesta a medida.</p>
         </div>
-        <form class="contacto__form" id="form-contacto" data-whatsapp="[WHATSAPP_NUMBER]">
+        <form class="contacto__form" id="form-contacto" data-whatsapp="56927002984">
           <div class="contacto__trampa" aria-hidden="true"><label>No completar<input name="website" type="text" tabindex="-1" autocomplete="off"></label></div>
           <label>Tu nombre<input name="nombre" type="text" autocomplete="name" required></label>
           <label>Empresa u organización<input name="organizacion" type="text" autocomplete="organization"></label>
@@ -320,7 +328,7 @@
         <img class="agenda__mark" src="assets/cumpleclick-mark.svg" alt="" width="72" height="72" aria-hidden="true">
         <h2>¿Agendamos la fecha? 🎉</h2>
         <p>Las fechas de fin de semana se van rápido. Escríbenos y la dejamos guardada hoy.</p>
-        <a class="btn btn--cta btn--xl" href="https://wa.me/[WHATSAPP_NUMBER]?text=Hola%20CumpleClick%2C%20quiero%20agendar%20una%20fecha%20%F0%9F%8E%88" target="_blank" rel="noopener">
+        <a class="btn btn--cta btn--xl" href="https://wa.me/56927002984?text=Hola%20CumpleClick%2C%20quiero%20agendar%20una%20fecha%20%F0%9F%8E%88" target="_blank" rel="noopener">
           Agenda la fecha por WhatsApp 📲
         </a>
       </div>
@@ -332,7 +340,7 @@
     <img src="assets/cumpleclick-lockup.svg" alt="CumpleClick" width="120" height="32" class="footer__logo">
     <p>El flash que tus hijos no van a olvidar.</p>
     <nav class="footer__links" aria-label="Información del servicio"><a href="#condiciones">Condiciones del servicio</a><a href="#privacidad">Privacidad</a><a href="#eventos">Eventos y empresas</a></nav>
-    <p class="footer__cfg">WhatsApp: <code>[WHATSAPP_NUMBER]</code> (número por confirmar)</p>
+    <p class="footer__cfg">Escríbenos por <a href="https://wa.me/56927002984?text=Hola%20CumpleClick%2C%20quiero%20consultar%20por%20una%20fiesta%20%F0%9F%8E%88" rel="noopener">WhatsApp</a></p>
     <p class="footer__legal">© 2026 CumpleClick · by <strong>AutomatizaTech</strong></p>
   </footer>
 

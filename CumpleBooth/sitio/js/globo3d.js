@@ -6,7 +6,11 @@
    - Bajo 30fps sostenido → se retira solo y vuelve la imagen estática.
    - Pausa fuera de viewport y con pestaña oculta.
 */
-import * as THREE from '../vendor/three.module.js';
+/* La build minificada: 357 KB contra 635 KB de la normal, mismo modulo. Como
+   este archivo entra por import() diferido —solo si hay WebGL, el equipo da y
+   no hay reduced-motion— no lo descarga todo el mundo, pero al que le toca no
+   hay motivo para cobrarle 278 KB de mas. */
+import * as THREE from '../vendor/three.module.min.js';
 
 /* Textura de gradiente idéntica al SVG de marca (canvas 2D, sin assets nuevos) */
 function makeGradientTexture(stops, cx, cy, r) {

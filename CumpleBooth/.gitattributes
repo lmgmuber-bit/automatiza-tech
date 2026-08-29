@@ -1,0 +1,9 @@
+# Las librerías de terceros que vivimos en `sitio/vendor/` se guardan tal cual
+# salen de npm, sin que git les toque los finales de línea.
+#
+# No es cosmético: son archivos que no escribimos nosotros y que hay que poder
+# comparar byte a byte con lo que trae `node_modules` para responder "¿esta es
+# de verdad la gsap 3.15.0?". Con la conversión automática a CRLF en Windows el
+# tamaño y el checksum cambian, y esa comparación deja de servir justo cuando
+# se necesita.
+sitio/vendor/*.js -text

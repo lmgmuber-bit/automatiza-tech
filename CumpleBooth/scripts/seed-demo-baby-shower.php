@@ -67,11 +67,11 @@ $EVENTOS = [
             ['Cojín de lactancia', '', null],
         ],
         'apuestas' => [
-            ['Camila', 'mama', 'entre', 'antes'],
-            ['Rosa', 'papa', 'mas35', 'justo'],
-            ['Javiera', 'ambos', 'entre', 'despues'],
-            ['Paz', 'mama', 'menos3', 'justo'],
-            ['Rodrigo', 'mama', 'entre', 'justo'],
+            ['Camila', 'mama', 'entre', 'antes', 18],
+            ['Rosa', 'papa', 'mas35', 'justo', 24],
+            ['Javiera', 'ambos', 'entre', 'despues', 11],
+            ['Paz', 'mama', 'menos3', 'justo', 31],
+            ['Rodrigo', 'mama', 'entre', 'justo', 7],
         ],
     ],
     [
@@ -101,10 +101,10 @@ $EVENTOS = [
             ['Silla para el auto', 'Es la que más nos falta.', null],
         ],
         'apuestas' => [
-            ['Antonia', 'papa', 'mas35', 'despues'],
-            ['Marcelo', 'ambos', 'entre', 'justo'],
-            ['Hernán', 'papa', 'mas35', 'antes'],
-            ['Emilia', 'mama', 'entre', 'justo'],
+            ['Antonia', 'papa', 'mas35', 'despues', 26],
+            ['Marcelo', 'ambos', 'entre', 'justo', 14],
+            ['Hernán', 'papa', 'mas35', 'antes', 9],
+            ['Emilia', 'mama', 'entre', 'justo', 22],
         ],
     ],
 ];
@@ -457,12 +457,27 @@ foreach ($EVENTOS as $ev) {
 
     // ── Apuestas de la cabina ─────────────────────────────────────────────
     $pdo->prepare('DELETE FROM cc_predictions WHERE party_id=?')->execute([$partyId]);
-    foreach ($ev['apuestas'] as [$nombre, $parecido, $peso, $cuando]) {
-        cb_prediction_create_for_party($partyId, [
+    foreach ($ev['apuestas'] as [$nombre, $parecido, $peso, $cuando, $puntaje]) {
+        // `submission_token` es OBLIGATORIO y tiene que ser 32 hex: identifica
+        // el envio y es lo que impide que la misma apuesta entre dos veces. Sin
+        // el, `cb_prediction_validate()` rechaza la fila entera.
+        $r = cb_prediction_create_for_party($partyId, [
             'guest_name' => $nombre, 'parecido' => $parecido, 'peso' => $peso, 'fecha' => $cuando,
+            'puntaje_juego' => $puntaje, 'submission_token' => bin2hex(random_bytes(16)),
         ]);
+        // Y hay que MIRAR lo que devuelve. Este guion contaba el arreglo de
+        // entrada y anunciaba "apuestas: 5" mientras la funcion devolvia
+        // ok:false sin escribir ninguna fila: cc_predictions quedo vacia
+        // durante muchas corridas y el guion siguio diciendo que todo bien.
+        if (empty($r['ok'])) {
+            throw new RuntimeException("apuesta de $nombre rechazada: " . ($r['error'] ?? 'motivo desconocido'));
+        }
     }
-    echo "  apuestas: " . count($ev['apuestas']) . "\n";
+    // El numero sale de la BASE, no del arreglo que le pase.
+    $enBase = $pdo->prepare('SELECT COUNT(*) FROM cc_predictions WHERE party_id=?');
+    $enBase->execute([$partyId]);
+    echo "  apuestas: " . (int) $enBase->fetchColumn() . " (contadas en la base)
+";
 
     // ── Fotos de cabina ───────────────────────────────────────────────────
     $pdo->prepare('DELETE FROM cc_photos WHERE party_id=?')->execute([$partyId]);

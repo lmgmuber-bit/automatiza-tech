@@ -26,6 +26,19 @@
   # versión vieja en silencio en vez de fallar visiblemente.
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteRule ^assets/.*\.(js|css|woff2?)$ - [R=404,L]
+  # Un .php que NO se subio tampoco puede caer al catch-all. Es el mismo error
+  # que arriba con otra cara, y ya paso en produccion: regalos-papas.php y
+  # predicciones.php no estaban en el servidor y respondian 200 con la portada
+  # del kiosco. Un deploy incompleto se veia sano, y cualquier chequeo que mire
+  # el status HTTP lo daba por bueno.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule \.php$ - [R=404,L]
+  # Y lo mismo con los medios de tematicas: un fondo o una musica que falta debe
+  # fallar visiblemente. Sin esto Hostinger devuelve 422 "Invalid source image"
+  # al intentar optimizar un HTML servido como .jpg, que no dice nada de lo que
+  # pasa de verdad.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^themes/.*\.(jpe?g|png|webp|svg|mp3|mp4)$ - [R=404,L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . index.html [L]

@@ -1,6 +1,74 @@
 # CumpleClick — deploy seguro a Hostinger
 
-Objetivo: `https://automatizatech.cl/cumpleclick/`. No hay deploy realizado aún.
+## Dos ambientes (desde 2026-08-29)
+
+Luis compró `cumpleclick.com`. A partir de ahí son dos ambientes, no uno:
+
+| | URL | Rol |
+|---|---|---|
+| **PROD** | `https://cumpleclick.com/` | El que ven los clientes |
+| **Pre-producción** | `https://automatizatech.cl/cumpleclick/` | Pruebas antes de PROD |
+
+**Corrección de este documento:** decía "No hay deploy realizado aún" y era
+falso. `https://automatizatech.cl/cumpleclick/` sirve un build real —comprobado
+por HTTP el 2026-08-29: la portada del kiosco, `album.html`, `cartel-qr.html` y
+`admin/` responden, `invitacion.php` pide token con 400 y `data/parties.json`
+da 403—. Ese deploy está ATRASADO: no tiene `regalos-papas.php`,
+`predicciones.php` ni las temáticas de baby shower.
+
+`cumpleclick.com` al 2026-08-29 es un dominio estacionado de Hostinger (página
+"Parked Domain name", `noindex`). No hay nada de CumpleClick ahí todavía.
+
+### Lo que OBLIGATORIAMENTE tiene que ser distinto entre los dos
+
+Si comparten cualquiera de estas cosas, probar en pre-producción escribe en los
+datos reales de un cliente:
+
+- **Base de datos.** Una por ambiente, con usuario propio. Nunca la misma.
+- **`photo_dir` y `state_dir`.** Las fotos de una prueba no pueden mezclarse con
+  las de una fiesta real. Los dos fuera de `public_html`.
+- **`public_base_url`.** Es el único lugar del que salen TODAS las URLs públicas
+  (invitación, álbum, QR, pantallas de los papás): todo pasa por
+  `cb_public_base_url()` en `public/lib.php`. No se construye nada desde
+  `HTTP_HOST`, así que cambiar el dominio es cambiar esta línea.
+- **`app_hmac_key`.** Distinta por ambiente, o un token de pruebas vale en PROD.
+- **Credenciales de admin.**
+- **`robots.txt`.** Pre-producción va con `Disallow: /` o compite con PROD en
+  Google y publica fiestas de prueba.
+
+### Sobre el cambio de dominio
+
+La aplicación es agnóstica de la ruta a propósito: Vite compila con `base: './'`
+y el `.htaccess` no usa `RewriteBase`. Servirla desde la raíz de un dominio o
+desde una subcarpeta **no requiere ningún cambio de código**, solo la
+configuración externa. Las únicas menciones a `automatizatech.cl` en el código
+son la atribución del pie de la invitación (`public/invitacion.php`), que es
+correcta y se queda, y un comentario en `scripts/web/_at-migrar.php`.
+
+Como PROD es una instalación nueva, no hay invitaciones ni QR ya repartidos
+apuntando al dominio viejo: no hace falta redirección de compatibilidad.
+
+## Verificar un deploy: mirar el CONTENIDO, no el status
+
+Un archivo que no se subió **respondía 200 con la portada del kiosco**, porque
+caía en el catch-all del SPA. Así se veía `regalos-papas.php` en producción: 200,
+803 bytes, y nada avisaba. Cualquier chequeo que mire solo el código HTTP da por
+bueno un deploy incompleto.
+
+Desde 2026-08-29 el `.htaccess` cierra ese agujero: un `.php` inexistente y un
+medio de temática inexistente devuelven **404**, igual que ya hacían los assets
+con hash. Verificado contra Apache real, y comprobado que la URL bonita de
+invitación, el fallback del SPA, `fotos/` (403) y `admin/config.php` (403)
+siguen intactos.
+
+Aun así, al verificar un deploy hay que mirar el `Content-Type` y el tamaño:
+- un `.php` que responde `text/html` de ~800 bytes es la portada del kiosco;
+- un `.jpg` que responde `text/html`, o un 422 "Invalid source image" de
+  Hostinger, es un archivo que no está.
+
+---
+
+## Instalación (vale para los dos ambientes)
 
 ## 1. Preparación privada
 
@@ -9,9 +77,10 @@ Objetivo: `https://automatizatech.cl/cumpleclick/`. No hay deploy realizado aún
 2. Colocar `scripts/`, `database/` y una copia de
    `config/cumpleclick.example.php` fuera de `public_html`.
 3. Ejecutar `php scripts/bootstrap.php` o crear manualmente la configuración
-   externa. Definir `CUMPLECLICK_CONFIG_FILE`; `public_base_url` debe ser
-   `https://automatizatech.cl/cumpleclick` y `photo_dir`/`state_dir` deben estar
-   fuera de DocumentRoot.
+   externa. Definir `CUMPLECLICK_CONFIG_FILE`; `public_base_url` es
+   `https://cumpleclick.com` en PROD y `https://automatizatech.cl/cumpleclick`
+   en pre-produccion, y `photo_dir`/`state_dir` deben estar fuera de
+   DocumentRoot y ser DISTINTOS entre los dos ambientes.
 4. No subir ni mostrar el archivo real, passwords, HMAC key, dumps o backups.
 
 ## 2. Migración y cutover
@@ -42,14 +111,21 @@ npm run build
 php scripts/check-dist-parity.php
 ```
 
-Subir el contenido de `dist/` a `/public_html/cumpleclick/`, incluidos
+Subir el contenido de `dist/` al webroot del ambiente —en PROD la raiz del
+dominio `cumpleclick.com`, en pre-produccion `/public_html/cumpleclick/`—,
+incluidos
 `.htaccess` y `.user.ini`. No subir `src/`, `tests/`, `node_modules/`, config,
 scripts, migraciones, fotos ni backups al webroot. Configurar HTTPS en el
 vhost/proxy con host canónico; no usar el Host header para redirects.
 
 ## 4. Gate posterior
 
-- `api.php?p=demo` → 200 y `ok:true` sin campos internos.
+- `api.php?p=<slug real>` → 200 y `ok:true` sin campos internos. Mirar el
+  CUERPO, no el status: un 200 de ~800 bytes de HTML es la portada del kiosco
+  cayendo al fallback del SPA, no la API.
+- Un `.php` inventado y un medio de temática inventado → **404**, no 200. Si
+  responden 200 falta el `.htaccess` nuevo y no se puede confiar en ningún
+  otro chequeo por HTTP.
 - `/data/parties.json`, `/admin/config.php`, config y storage → 403/404.
 - Un único header `Permissions-Policy: camera=(self), microphone=(), geolocation=()`.
 - Login/CSRF/logout admin; editar frame y confirmar persistencia.

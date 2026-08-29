@@ -17,8 +17,9 @@ otro producto puesta al lado.
 | `fondo-sala.jpg` | Hecho — 1080×1920, marco grande vacío |
 | `frameBox` calibrado | Hecho — **552×552 px**, verificado con foto compuesta |
 | Registro en `themes.json` y presets | Hecho, y los dos valores comprobados iguales |
-| `musica-fondo.mp3` | **Prestada de `baby-nube`** — ver abajo |
-| Recorrido de 6 videos | No hecho. Opcional: no lo exige la tabla A-BS |
+| `musica-fondo.mp3` y `musica-juego.mp3` | Hechas — propias, loopeadas sin costura |
+| Recorrido de 6 videos | Hecho — 5 capítulos + despedida |
+| Narración de Alice | Hecha — 3 propias + 6 copiadas |
 
 Costo: **6 créditos de Higgsfield** (3 imágenes × 2). El primer `fondo-sala`
 salió con un marco ovalado y alto: el cuadrado más grande que cabía adentro
@@ -158,27 +159,60 @@ Entrada de presets, tal como quedó:
 }
 ```
 
-## La música — prestada, y hay que decirlo
+## La música — propia
 
-`musica-fondo.mp3` y `musica-juego.mp3` son **copias de `baby-nube`**. Es una
-cuna suave, ya está loopeada sin costura y suena bien con rosas, así que la
-temática funciona; pero es música prestada y no identidad propia. Generar una
-con cuerdas suaves queda pendiente de que Luis lo pida, porque cuesta créditos
-y la actual no molesta.
+Dos pistas generadas para esta temática (`sonilo_music`, 90 s, 5,63 créditos
+cada una): `musica-fondo.mp3` es una cuna de cuerda de nailon, cuerdas cálidas
+y celesta, sin percusión ni voces; `musica-juego.mp3` es pizzicato y caja de
+música, curiosa pero nunca infantil ni fuerte.
+
+Las dos quedan **loopeadas sin costura**: los últimos 4 s se cruzan sobre el
+principio con fundido, así que la pista sale de 90 s a 86 s y al repetirse no
+se oye el bajón del corte. Sin eso se notaba un hueco cada 90 s, que es la
+razón por la que nube y safari están hechas igual.
+
+Los dos MP3 pesan exactamente lo mismo y **no es un error**: misma duración y
+bitrate constante dan el mismo tamaño. Se comprobó por checksum que el
+contenido es distinto, porque el tamaño idéntico es justo lo que haría pensar
+que uno sobrescribió al otro.
 
 Sea cual sea, tiene que quedar **loopeada sin costura**: el fundido final se
 cruza sobre el principio, o se oye un bajón cada 90 s. Así están las otras dos.
 
-## El recorrido de videos
+## El recorrido de videos — hecho
 
-**No lo exige la tabla A-BS** y la temática se considera completa sin él. Pero
-las otras dos lo tienen, así que al lado se va a notar.
+6 clips (5 capítulos + despedida), `seedance1_5`, 8 s, 720×1280, sin audio,
+9,6 créditos cada uno. El arco y los textos son los mismos que en nube y
+safari —lo que se cuenta es del bebé, no del decorado— y solo cambia el mundo.
 
-Son 6 clips (5 capítulos + despedida), `seedance1_5`, 8 s, 720p, 9:16, sin
-audio: **9,6 créditos cada uno, 57,6 en total**. El arco y los textos son los
-mismos —lo que se cuenta es del bebé, no del decorado— y solo cambia el mundo:
-rosas, tul, pétalos y luz de tarde en vez de nubes o monsteras.
+| # | Plano |
+|---|---|
+| 1 | Cuna crema vacía en penumbra rosada; una lámpara se enciende despacio. Cámara quieta |
+| 2 | Móvil de rosas de fieltro y cintas crema girando lentísimo, visto desde abajo |
+| 3 | Una rosa pálida sola en un jarrón, tres velas encendidas, su sombra moviéndose. Acercamiento lentísimo |
+| 4 | Gorrito de lana rosa polvo sobre una manta crema doblada, pétalos al lado |
+| 5 | Paneo por el rincón: globos, rosas, eucalipto y la manta, todo en su lugar |
+| 6 | Cámara a ras de suelo: globos y pétalos sobre el piso de madera, **sin pared en cuadro** |
 
-De las narraciones, **la mitad se copia**: el capítulo 1, los dos del nombre y
-los tres del cierre son idénticos entre temáticas. Habría que grabar solo los
-capítulos 2, 3 y 5, que son los que hablan desde el mundo de cada una.
+El capítulo 6 evita la pared a propósito: es el mismo remedio que arregló la
+despedida de Safari. Se revisó cuadro a cuadro y **no estampó ni una letra**.
+
+**Un clip falló al enviarse** (el 5) y se reenvió; los trabajos fallidos no se
+cobran, pero conviene saber que pasa y que hay que mirar el estado de cada uno
+en vez de asumir que seis enviados son seis generados.
+
+### La voz
+
+**Solo tres se grabaron.** El capítulo 1, los dos del nombre y los tres del
+cierre son idénticos entre temáticas —son la tesis de la pieza, no el
+decorado— así que se copiaron de `baby-nube` y no se volvieron a pagar. Los que
+hablan desde el mundo de cada temática son el 2, el 3 y el 5:
+
+| # | Texto |
+|---|---|
+| 2 | Mucho antes de nacer, alguien ya elegía para ti cada color y cada flor. |
+| 3 | Hay una vela encendida esperándote, y alguien que ya sabe cómo va a abrazarte. |
+| 5 | Todo ya está en su lugar. Las flores, la manta, la luz. Solo faltas tú. |
+
+220 caracteres de ElevenLabs. Ninguna dice el nombre del bebé: si lo dijera, el
+MP3 serviría para una sola fiesta en vez de para toda la temática.

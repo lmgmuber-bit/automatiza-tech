@@ -206,8 +206,18 @@ centrado** y quedó en **552 px**. Al pedir el fondo hay que decir el tamaño y 
 forma del marco, no sólo que esté vacío y despejado. Costo total: 6 créditos de
 Higgsfield (3 imágenes), 2 de ellos del descarte.
 
-**Su música es prestada de `baby-nube`** y hay que decirlo: `musica-fondo.mp3` y
-`musica-juego.mp3` son copias. La temática funciona y suena bien, pero no tiene
-identidad sonora propia. **Tampoco tiene el recorrido de 6 videos** — la tabla
-A-BS no lo exige, así que cuenta como completa, pero al lado de las otras dos se
-va a notar.
+**Cerrada del todo el 2026-08-29:** música propia (dos pistas `sonilo_music` de
+90 s, loopeadas cruzando los últimos 4 s sobre el principio, quedan en 86 s), el
+recorrido de 6 videos y la voz de Alice. De las narraciones **solo se grabaron
+tres** —los capítulos 2, 3 y 5, que hablan desde el mundo de cada temática—; el
+1, los dos del nombre y los tres del cierre son idénticos entre temáticas y se
+copiaron de `baby-nube` sin volver a pagarlos. La despedida se revisó cuadro a
+cuadro y no estampó ni una letra: el capítulo 6 evita la pared, el mismo remedio
+que arregló Safari.
+
+Dos cosas que conviene no olvidar. **Un clip falló al enviarse y hubo que
+reenviarlo**: seis enviados no son seis generados, hay que mirar el estado de
+cada uno. Y los dos MP3 de música **pesan exactamente lo mismo, y no es un
+error** — misma duración con bitrate constante da el mismo tamaño; se comprobó
+por checksum que el contenido difiere, porque el tamaño idéntico es justo lo que
+haría pensar que uno sobrescribió al otro.

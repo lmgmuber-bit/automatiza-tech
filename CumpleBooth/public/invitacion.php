@@ -650,6 +650,18 @@ $playlistOrdersByTheme = [
             'narracion' => 'despedida-baby-safari-' . $sufijoSexoBebe,
         ],
     ],
+    'baby-rosas' => [
+        'invitation/capitulo-1-la-espera.mp4' => 'Hay esperas que se sienten distintas',
+        'invitation/capitulo-2-antes-de-nacer.mp4' => 'Todo empieza mucho antes de nacer',
+        'invitation/capitulo-3-alguien-te-espera.mp4' => 'Alguien ya te está esperando',
+        'invitation/capitulo-4-su-nombre.mp4' => $capituloNombre,
+        'invitation/capitulo-5-el-mundo-se-acomoda.mp4' => 'El mundo se acomoda para recibirte',
+        // La narración lleva género y el video no: un solo clip, tres voces.
+        'despedida-baby-rosas.mp4' => [
+            'caption' => 'Ven a esperar con nosotros',
+            'narracion' => 'despedida-baby-rosas-' . $sufijoSexoBebe,
+        ],
+    ],
     'carreras' => [
         'saludo-mate.mp4' => 'Mate llega primero',
         'saludo-sally.mp4' => 'Sally viene en camino',

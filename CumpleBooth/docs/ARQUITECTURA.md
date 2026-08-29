@@ -195,19 +195,34 @@ CSRF, sesión admin y rate limit persistente 30 subidas/10 minutos.
 `franquicia` es metadata estrictamente administrativa y no forma parte del
 payload de `api.php`. Los nombres visibles de temas/personajes sí se publican.
 
-Los juegos aceptados son `copos`, `armar-muneco`, `fichas`, `ritmo`, `escudo`
-y `mundo3d`.
+Los juegos que el admin puede asignar a mano son `copos`, `armar-muneco`,
+`fichas`, `ritmo`, `escudo` y `mundo3d` (`cb_game_kinds()`).
 `ritmo` publica 3–5 carriles; `escudo` puede publicar una imagen de fondo pero
 nunca `cols/filas`; `copos` permite hasta ocho emojis temáticos. Todos mantienen
 botón de omitir, objetivos táctiles de al menos 56 px, reduced-motion y una sola
 ruta de salida protegida con `doneRef`.
 
-`mundo3d` es una misión premium de tres carriles implementada por
-`src/ThemeWorld3D.jsx`. Cada temática terminada declara `fullGame` en el
+La misión premium (`fullGame`) de las seis temáticas completas es hoy
+`concierto3d` — **El Show**, un juego de ritmo de concierto implementado por
+`src/StageConcert3D.jsx`. El saneador lo acepta como séptimo `kind`, pero no es
+una casilla manual: lo agrega el motor al final de la cadena. Es UN juego
+reskineado, no seis: `stage` elige solo el vestuario (`neon-arena`, `ice-gala`,
+`beach-luau`, `podium-night`, `backyard-fiesta`, `rooftop-city`) mientras la
+mecánica, el tempo y las ventanas de acierto quedan idénticas, para que los
+puntajes se comparen entre fiestas. El contrato completo está en
+`docs/TEMATICA-COMPLETA.md`.
+
+`mundo3d` es el runner de tres carriles de `src/ThemeWorld3D.jsx`, la misión
+premium anterior. Sigue montado y el backend sigue aceptando el `kind`, pero
+**ninguna temática lo declara hoy**: El Show lo reemplazó en las seis. Sus
+mundos siguen en la lista blanca por si una temática nueva lo quiere:
+`turbo-track`, `puppy-park`, `tropical-wave`, `ice-bridge`, `neon-stage` y
+`hero-city`.
+
+Para las dos vale lo mismo: cada temática terminada declara `fullGame` en el
 catálogo, pero `cb_build_theme_payload()` solo lo publica cuando
 `party.service_plan=full`; una fiesta Booth no recibe esa configuración. El
 frontend la añade como último bonus, conserva el personaje exacto de la ruleta
 mediante su `*-cut.png` y dispone renderer, geometrías, materiales y texturas al
-salir. Los seis mundos activos son `turbo-track`, `puppy-park`,
-`tropical-wave`, `ice-bridge`, `neon-stage` y `hero-city`. `?fx3d=0`, WebGL no
-disponible o reduced-motion activan una salida segura sin bloquear el flujo.
+salir. `?fx3d=0`, WebGL no disponible o reduced-motion activan una salida segura
+sin bloquear el flujo.

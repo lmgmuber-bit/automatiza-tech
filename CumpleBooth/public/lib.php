@@ -601,9 +601,11 @@ function cb_sanitize_theme_game($rawGame, string $base = '', string $diskDir = '
         return [];
     }
     $kind = trim((string) ($rawGame['kind'] ?? ''));
-    // 'concierto3d' = El Show (StageConcert3D.jsx), la misión 3D de K-Pop.
-    // Es un juego de ritmo, no el runner de carriles de 'mundo3d'; convive con
-    // él porque el resto de las temáticas siguen usando ThemeWorld3D.
+    // 'concierto3d' = El Show (StageConcert3D.jsx), la misión Full de las seis
+    // temáticas completas. Es un juego de ritmo, no el runner de carriles de
+    // 'mundo3d': lo reemplazó en las seis, y hoy ninguna temática declara
+    // 'mundo3d'. ThemeWorld3D sigue montado y el kind se sigue aceptando por si
+    // una temática nueva lo quiere, así que el saneador entiende los dos.
     if (!in_array($kind, ['copos', 'armar-muneco', 'fichas', 'ritmo', 'escudo', 'mundo3d', 'concierto3d'], true)) {
         return [];
     }

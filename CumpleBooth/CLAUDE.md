@@ -188,3 +188,19 @@ Las migraciones `010_baby_shower_predictions.php` y `011_gift_mode.php` **no
 están aplicadas en producción**. Sí lo están en local desde el 2026-08-27
 (junto con la 008 y la 009, que también faltaban ahí). Son aditivas e
 idempotentes, pero producción requiere autorización explícita de Luis.
+
+**Bebé entre Rosas — temática rosada, a medio camino (2026-08-28).** Pedido de
+Luis. Slug `baby-rosas`. Decidida la paleta (rosa polvo y crema, no rosa
+chicle: las otras dos están en registro sobrio y una que se salga parece de
+otro producto), hecho el bloque CSS de la invitación —sus chispas son pétalos
+que caen, no polvo de estrellas ni luciérnagas— y escritos los dos prompts de
+fondo con las dos reglas caras: nada se cruza por delante del marco, y sin
+superficies escribibles en cuadro. Todo en `docs/TEMATICA-BABY-ROSAS.md`.
+
+**Falta generar los dos fondos y ahí se traba todo lo demás**: sin
+`fondo-sala.jpg` no se puede calibrar el `frameBox`, y sin `frameBox` real no
+se registra en `themes.json` ni en presets. **No se registró a medias a
+propósito**: el test verifica los fondos contra disco y un `frameBox` inventado
+pasaría el test sobre un dato falso, que es la degradación silenciosa contra la
+que ese test existe. El bloqueo es de sesión, no de código: budgetpixel devuelve
+*token expired* y Higgsfield pide auth.

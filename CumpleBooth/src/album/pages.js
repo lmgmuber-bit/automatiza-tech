@@ -72,6 +72,9 @@ export function buildPages(data) {
   pages.push({
     layout: 'closing',
     eventName: data.event?.name || '',
+    // El cierre necesita el evento entero, no solo el nombre: con el tipo
+    // decide si dice "a la fiesta" o "al baby shower".
+    evento: data.event || null,
     themeName: data.theme?.name || '',
     image: data.theme?.assets?.grupo || data.theme?.assets?.banner || null,
     count: media.length,

@@ -195,6 +195,13 @@ $bebeTitulo = $hayNombreBebe
     : ($esBabyShower
         ? mb_strtoupper(mb_substr($bebeGenerico, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($bebeGenerico, 1, null, 'UTF-8')
         : '');
+// Cómo se titula la invitación. "Invitación de Tomás" es falso en un baby
+// shower: Tomás no invita a nadie, todavía no nace — lo invitan a él. En un
+// cumpleaños "Invitación de Isidora" sí está bien, porque Isidora invita.
+$tituloInvitacion = $esBabyShower
+    ? ($hayNombreBebe ? 'Invitación del baby shower de ' . $birthdayName : 'Invitación de baby shower')
+    : ($birthdayName !== '' ? 'Invitación de ' . $birthdayName : 'Invitación');
+
 // "conocer __": el complemento entero, con preposición, porque "conocer a
 // el bebé" y "conocer la" no se componen pegando partes sueltas.
 $conocerAlBebe = $hayNombreBebe
@@ -1047,7 +1054,7 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>Invitación de <?= $esc($birthdayName !== '' ? $birthdayName : $eventoNombre) ?> · CumpleClick</title>
+<title><?= $esc($tituloInvitacion) ?> · CumpleClick</title>
 <?php
 // Tarjeta al compartir por WhatsApp y redes. A propósito NO lleva la dirección:
 // la vista previa se muestra en cada grupo donde se reenvíe el enlace y Meta la
@@ -1510,11 +1517,11 @@ $cssVer = static function (string $rel): string {
         <?php endif; ?>
         <?php endif; ?>
       </div>
-      <figcaption class="inv-art-caption">Invitación de <?= $esc($birthdayName) ?></figcaption>
+      <figcaption class="inv-art-caption"><?= $esc($tituloInvitacion) ?></figcaption>
     </figure>
     <?php else: ?>
     <figure class="inv-art-frame">
-      <img class="inv-art" src="<?= $esc($imageUrl) ?>" alt="Invitación de <?= $esc($birthdayName) ?>" decoding="async">
+      <img class="inv-art" src="<?= $esc($imageUrl) ?>" alt="<?= $esc($tituloInvitacion) ?>" decoding="async">
       <?php if ($hasVideo): ?>
       <video class="inv-art-video" src="<?= $esc((string) $videoUrl) ?>" controls playsinline loop muted preload="none"></video>
       <?php endif; ?>
@@ -1673,7 +1680,7 @@ $cssVer = static function (string $rel): string {
     data-share-label="<?= $esc($shareKindLabel) ?>"
     data-share-name="<?= $esc('invitacion-' . ($birthdayName !== '' ? $birthdayName : 'cumpleclick')) ?>"
     data-share-text="<?= $esc($shareMessage) ?>"
-    data-share-title="<?= $esc($birthdayName !== '' ? 'Invitación de ' . $birthdayName : 'Invitación') ?>">
+    data-share-title="<?= $esc($tituloInvitacion) ?>">
     <p class="inv-save-label">Guarda y comparte tu invitación</p>
 
     <div class="inv-save-actions">

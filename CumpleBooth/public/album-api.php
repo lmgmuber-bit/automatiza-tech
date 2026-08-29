@@ -114,6 +114,7 @@ if (!$authenticated) {
         'ok' => false,
         'error' => 'pin_required',
         'eventName' => (string) ($party['nombre'] ?? ''),
+        'eventType' => (string) ($party['event_type'] ?? 'child_birthday'),
         'theme' => cb_album_api_theme((string) ($party['tema'] ?? '')),
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     exit;
@@ -193,6 +194,9 @@ echo json_encode([
     'event' => [
         'name' => $eventName,
         'date' => (string) ($party['fecha'] ?? ''),
+        // Sin esto el álbum no puede saber que es un baby shower y le dice
+        // "fiesta" en el cierre, en el título y en los estados vacíos.
+        'type' => (string) ($party['event_type'] ?? 'child_birthday'),
     ],
     'theme' => cb_album_api_theme((string) ($party['tema'] ?? '')),
     'media' => $media,

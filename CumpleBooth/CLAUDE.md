@@ -221,3 +221,34 @@ cada uno. Y los dos MP3 de música **pesan exactamente lo mismo, y no es un
 error** — misma duración con bitrate constante da el mismo tamaño; se comprobó
 por checksum que el contenido difiere, porque el tamaño idéntico es justo lo que
 haría pensar que uno sobrescribió al otro.
+
+**El álbum le decía "fiesta" a un baby shower (2026-08-29).** El cierre decía
+"¡Gracias por venir a la fiesta de Amanda!" — Amanda no nace todavía, no hubo
+ninguna fiesta suya, y la frase suena a error de quien armó el álbum. Eran
+**cinco** textos con el mismo defecto (cierre, estado vacío, alt de la imagen,
+mensaje de no-publicado y título de la pestaña) y arreglar solo el que se ve
+habría dejado el bug vivo en los otros cuatro. Se resuelve como ya lo hacía el
+kiosco: `src/album/evento.js` decide el vocabulario UNA vez y lo consumen todas
+las pantallas. `album-api.php` publica `event.type` (y `eventType` en la
+respuesta con PIN), sin lo cual el álbum no puede saberlo.
+
+**"Invitación de Tomás" también era falso.** Tomás no invita a nadie. Ahora
+`$tituloInvitacion` se resuelve una vez y lo usan el `<title>`, el pie de la
+lámina, el `alt` y el título que se comparte: "Invitación del baby shower de
+Tomás". En cumpleaños sigue diciendo "Invitación de Isidora", que sí es
+correcto porque Isidora invita.
+
+**La dirección tocaba la moldura del marco.** "Av. Los Leones 455, Providencia,
+Santiago" llenaba el renglón de lado a lado. Se le puso `max-width: 88%` y
+`text-wrap: balance`, sin achicar la letra (en un teléfono ya está al límite).
+Medido: 69px de aire a cada lado en 1024px, 25px y dos líneas en 375px.
+
+**Los demos de baby shower terminados** (`scripts/seed-demo-baby-shower.php`)
+llevan 9 invitados con mensaje cada uno. El número no es decorativo: una foto
+CON mensaje se lleva su propia página y sin mensaje se agrupan de a cuatro en un
+mosaico, así que 4 fotos daban un álbum de 4 páginas. Y la portada se lleva una
+foto que no entra a las páginas de adentro, por eso 8 daban 9 y hacen falta 9
+para llegar a 10. Las fotos llevan la marca de agua real de CumpleClick con la
+misma geometría del kiosco (`drawBrandWatermark`: W*0.085, abajo a la izquierda,
+alfa 0.42); el isotipo es SVG y GD no lee SVG, así que se pasa un PNG
+rasterizado del MISMO archivo por `CC_DEMO_LOGO` — no se recrea el logo.

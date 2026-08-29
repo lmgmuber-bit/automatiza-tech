@@ -41,8 +41,22 @@ $EVENTOS = [
         'sexo' => 'f',
         'etiqueta' => 'DEMO Baby shower — niña (Rosas)',
         'fecha' => date('Y-m-d', strtotime('-9 days')),   // ya pasó: el álbum tiene sentido
-        'invitados' => ['Camila Rojas', 'Rosa Fuentes', 'Javiera y Paz', 'Rodrigo Salas'],
-        'retratos' => ['g1.png', 'g2.png', 'g3.png', 'g4.png'],
+        // [nombre, retrato, mensaje]. El mensaje no es adorno: una foto CON
+        // mensaje se lleva su propia página; sin mensaje se agrupan de a cuatro
+        // en un mosaico y el álbum entero queda en cuatro páginas.
+        'invitados' => [
+            ['Camila Rojas', 'g1.png', 'Amanda, tu mamá te esperó con una paciencia que da envidia. Ya te queremos.'],
+            ['Rosa Fuentes', 'g2.png', 'Que tengas la salud de tu bisabuela y el genio de tu papá, mi niña.'],
+            ['Javiera y Paz', 'g3.png', 'Prometemos malcriarte apenas nos dejen. Firmado: tus tías.'],
+            ['Rodrigo Salas', 'g4.png', 'Gracias por dejarnos ser parte de esta espera. Nos vemos afuera, Amanda.'],
+            ['Ana María Soto', 'g5.png', 'Cuarenta años esperando ser abuela y valió cada uno.'],
+            ['Matías Herrera', 'g6.png', 'Bienvenida al club de los que llegan tarde a todo. Es hereditario.'],
+            ['Fernanda y Emilia', 'g7.png', 'Tu prima ya pregunta cuándo vas a poder jugar. Apúrate.'],
+            ['Las chicas de la oficina', 'g8.png', 'Le dijimos a tu mamá que descansara. Se rió de nosotras.'],
+            // La novena no sobra: la portada se lleva una foto y no entra a las
+            // páginas de adentro, así que con ocho el álbum quedaba en nueve.
+            ['Trinidad Miranda', 'g9.png', 'Te vamos a contar mil veces cómo fue este día. Prepárate.'],
+        ],
         'regalos' => [
             ['Coche liviano', 'Que se pliegue con una mano.', 'Camila Rojas'],
             ['Pañales talla recién nacido', 'Un paquete grande alcanza las primeras semanas.', 'Rosa Fuentes'],
@@ -66,8 +80,17 @@ $EVENTOS = [
         'sexo' => 'm',
         'etiqueta' => 'DEMO Baby shower — niño (Nube)',
         'fecha' => date('Y-m-d', strtotime('-16 days')),
-        'invitados' => ['Antonia Vera', 'Los Contreras', 'Don Hernán', 'Emilia Nuñez'],
-        'retratos' => ['b1.png', 'b2.png', 'b3.png', 'b4.png'],
+        'invitados' => [
+            ['Antonia Vera', 'b1.png', 'Tomás, tu mamá cantaba cuando creía que nadie la escuchaba. Ya te conocía.'],
+            ['Los Contreras', 'b2.png', 'De parte de toda la familia: te esperamos hace rato, campeón.'],
+            ['Don Hernán', 'b3.png', 'Cuando puedas caminar te enseño a pescar. Es un trato.'],
+            ['Emilia Nuñez', 'b4.png', 'Gracias por hacernos tíos. No sabíamos que queríamos serlo.'],
+            ['Abuela Marta', 'b5.png', 'Tienes las manos de tu abuelo. Todavía no naces y ya lo sé.'],
+            ['Marcelo y Cristián', 'b6.png', 'Brindamos por ti antes de conocerte. Nos pareció justo.'],
+            ['Valentina Rojas', 'b7.png', 'Que la vida te trate como te esperamos nosotros, Tomás.'],
+            ['Los abuelos Pizarro', 'b8.png', 'Ya tenemos tu pieza lista. No hay apuro, pero ahí está.'],
+            ['Tío Sergio', 'b9.png', 'Tu papá era igual de inquieto. Suerte, mamá.'],
+        ],
         'regalos' => [
             ['Cuna colecho', 'La que se engancha a la cama.', 'Antonia Vera'],
             ['Body manga larga, 0 a 3 meses', '', 'Familia Contreras'],
@@ -154,6 +177,8 @@ function demo_componer(string $temaSlug, string $retrato, string $invitado, stri
         $y += 46;
     }
 
+    demo_marca_de_agua($lienzo, 1080, 1920);
+
     // PNG y no JPG: `cb_photo_absolute_path()` valida la storage_key contra un
     // patrón que termina en `.png` y devuelve null para cualquier otra cosa. El
     // kiosco sube PNG, así que esto sigue el contrato del producto en vez de
@@ -167,6 +192,66 @@ function demo_componer(string $temaSlug, string $retrato, string $invitado, stri
         'width' => 1080,
         'height' => 1920,
     ];
+}
+
+/**
+ * La marca de agua de CumpleClick, con la MISMA geometría del kiosco.
+ *
+ * `drawBrandWatermark()` en src/App.jsx la dibuja así: ancho = W*0.085,
+ * abajo a la izquierda (x = W*0.03, y = H - alto - H*0.025), alfa 0.42.
+ * Las cuatro medidas se copian de ahí; si el kiosco las cambia, esto queda
+ * desalineado y hay que venir a actualizarlo.
+ *
+ * El isotipo original es SVG y GD no lee SVG, así que se usa un PNG
+ * rasterizado del MISMO archivo. NO se recrea el logo: el kiosco dice
+ * explícitamente "sin tarjeta ni recreaciones", y una versión parecida sería
+ * peor que no ponerlo. Si el PNG no está, la foto sale sin marca y el guion
+ * lo avisa, en vez de dibujar algo inventado.
+ */
+function demo_marca_de_agua($lienzo, int $W, int $H): bool
+{
+    static $avisado = false;
+    $logoPng = getenv('CC_DEMO_LOGO') ?: '';
+    if ($logoPng === '' || !is_file($logoPng)) {
+        if (!$avisado) {
+            fwrite(STDERR, "  (sin CC_DEMO_LOGO: las fotos salen sin marca de agua)
+");
+            $avisado = true;
+        }
+        return false;
+    }
+    $logo = imagecreatefrompng($logoPng);
+    imagealphablending($logo, true);
+    $lw = imagesx($logo);
+    $lh = imagesy($logo);
+    $markW = (int) round($W * 0.085);
+    $markH = (int) round($markW * ($lh / $lw));
+    $x = (int) round($W * 0.03);
+    $y = (int) round($H - $markH - $H * 0.025);
+    // GD no tiene globalAlpha: se compone en una capa y se mezcla al 42%.
+    $capa = imagecreatetruecolor($markW, $markH);
+    imagealphablending($capa, false);
+    imagesavealpha($capa, true);
+    imagefill($capa, 0, 0, imagecolorallocatealpha($capa, 0, 0, 0, 127));
+    imagealphablending($capa, true);
+    imagecopyresampled($capa, $logo, 0, 0, 0, 0, $markW, $markH, $lw, $lh);
+    imagecopymerge_alpha($lienzo, $capa, $x, $y, $markW, $markH, 42);
+    imagedestroy($capa);
+    imagedestroy($logo);
+    return true;
+}
+
+/** imagecopymerge() pierde la transparencia; esta variante la conserva. */
+function imagecopymerge_alpha($dst, $src, int $x, int $y, int $w, int $h, int $pct): void
+{
+    $tmp = imagecreatetruecolor($w, $h);
+    imagealphablending($tmp, false);
+    imagesavealpha($tmp, true);
+    imagecopy($tmp, $dst, 0, 0, $x, $y, $w, $h);
+    imagealphablending($tmp, true);
+    imagecopy($tmp, $src, 0, 0, 0, 0, $w, $h);
+    imagecopymerge($dst, $tmp, $x, $y, 0, 0, $w, $h, $pct);
+    imagedestroy($tmp);
 }
 
 function demo_sin_tildes(string $s): string
@@ -270,10 +355,11 @@ foreach ($EVENTOS as $ev) {
     $pdo->prepare('DELETE FROM cc_photos WHERE party_id=?')->execute([$partyId]);
     $dirFotos = (string) cb_config('photo_dir');
     $hechas = 0;
-    foreach ($ev['invitados'] as $i => $invitado) {
-        $retrato = $RETRATOS . '/' . $ev['retratos'][$i];
+    $creditos = [];  // token de foto => [nombre, mensaje], para firmar el álbum
+    foreach ($ev['invitados'] as $i => [$invitado, $archivoRetrato, $mensaje]) {
+        $retrato = $RETRATOS . '/' . $archivoRetrato;
         if (!is_file($retrato)) {
-            echo "  (falta el retrato {$ev['retratos'][$i]}, se omite)\n";
+            echo "  (falta el retrato $archivoRetrato, se omite)\n";
             continue;
         }
         $tokFoto = bin2hex(random_bytes(16));
@@ -292,6 +378,7 @@ foreach ($EVENTOS as $ev) {
         if ($res !== 'ok') {
             throw new RuntimeException("foto de $invitado: $res");
         }
+        $creditos[$tokFoto] = [$invitado, $mensaje];
         $hechas++;
     }
     echo "  fotos de cabina: $hechas\n";
@@ -300,6 +387,21 @@ foreach ($EVENTOS as $ev) {
     $album = cb_album_ensure($partyId);
     $albumId = (int) $album['id'];
     $sumadas = cb_album_sync_booth_photos($albumId, $partyId);
+
+    /* La sincronización enlaza las fotos de cabina por id y no copia autor ni
+       mensaje: en el producto real esos los escribe el invitado desde su
+       teléfono. Acá se rellenan para que el álbum se vea como uno usado de
+       verdad — y además es lo que decide la paginación: una foto CON mensaje se
+       lleva su propia página, sin mensaje se agrupan de a cuatro en un mosaico
+       y el álbum entero queda en cuatro páginas. */
+    $firmar = $pdo->prepare(
+        'UPDATE cc_event_media m JOIN cc_photos ph ON ph.id = m.photo_id
+         SET m.contributor_name = ?, m.contributor_message = ?
+         WHERE m.album_id = ? AND ph.access_token = ?'
+    );
+    foreach ($creditos as $tok => [$quien, $mensajeInvitado]) {
+        $firmar->execute([$quien, $mensajeInvitado, $albumId, $tok]);
+    }
     // Todo lo que entró queda aprobado: este álbum representa uno ya revisado.
     foreach (cb_album_list_media($albumId) as $m) {
         cb_album_set_moderation($albumId, (int) $m['id'], 'approved', 'seed-demo');

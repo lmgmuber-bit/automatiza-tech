@@ -9,6 +9,7 @@ import { applyThemeColors } from '../themeVars.js'
 import FlipBook from './FlipBook.jsx'
 import AlbumPage from './AlbumPage.jsx'
 import { buildPages } from './pages.js'
+import { tituloAlbum } from './evento.js'
 import './album.css'
 
 // Los assets y endpoints se piden relativos a donde vive album.html, así el
@@ -35,7 +36,7 @@ function supportsFlip() {
 
 const MESSAGES = {
   bad_link: 'Este enlace no es válido o ya no está disponible.',
-  not_published: 'Este álbum todavía no está publicado. Pregúntale al organizador de la fiesta.',
+  not_published: 'Este álbum todavía no está publicado. Pregúntale a quien organiza el evento.',
   bad_pin: 'PIN incorrecto.',
   rate_limited: 'Demasiados intentos. Espera un minuto y vuelve a probar.',
   unavailable: 'El servicio no está disponible ahora. Inténtalo en unos minutos.',
@@ -54,12 +55,12 @@ function Shell({ children, tone = '' }) {
   )
 }
 
-function PinGate({ eventName, onUnlock, error, busy }) {
+function PinGate({ evento, onUnlock, error, busy }) {
   const [pin, setPin] = useState('')
   return (
     <Shell>
       <h1 className="album-headline">
-        {eventName ? `Álbum de la fiesta de ${eventName}` : 'Álbum Recuerdo'}
+        {tituloAlbum(evento)}
       </h1>
       <p className="album-lede">Ingresa el PIN de 4 dígitos que te dio el organizador.</p>
       <form
@@ -184,7 +185,11 @@ function App() {
       }
       const code = body?.error || 'unavailable'
       if (code === 'pin_required') {
-        setState({ status: 'pin', eventName: body.eventName || '', theme: body.theme })
+        setState({
+          status: 'pin',
+          evento: { name: body.eventName || '', type: body.eventType || 'child_birthday' },
+          theme: body.theme,
+        })
         applyThemeColors(body.theme?.colors)
         return
       }
@@ -220,7 +225,7 @@ function App() {
   if (state.status === 'pin') {
     return (
       <PinGate
-        eventName={state.eventName}
+        evento={state.evento}
         error={pinError}
         busy={busy}
         onUnlock={async (pin) => {

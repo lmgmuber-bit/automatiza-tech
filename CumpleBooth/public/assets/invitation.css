@@ -1955,6 +1955,28 @@ body.inv-scroll-locked {
   overflow-wrap: anywhere;
 }
 
+/* La dirección es la línea larga: "Av. Los Leones 455, Providencia,
+   Santiago" llenaba el renglón de lado a lado y tocaba la moldura del marco.
+   Se le deja aire y se parte en dos líneas parejas en vez de una larga con
+   una huérfana debajo. No se achica la letra: en un teléfono ya está al
+   límite de lo legible. */
+.inv-body[data-theme="baby-nube"] .inv-plate-chip--place,
+.inv-body[data-theme="baby-safari"] .inv-plate-chip--place,
+.inv-body[data-theme="baby-rosas"] .inv-plate-chip--place {
+  max-width: 88%;
+  margin-inline: auto;
+}
+
+.inv-body[data-theme="baby-nube"] .inv-plate-chip--place > span:last-child,
+.inv-body[data-theme="baby-safari"] .inv-plate-chip--place > span:last-child,
+.inv-body[data-theme="baby-rosas"] .inv-plate-chip--place > span:last-child {
+  text-wrap: balance;
+  /* La dirección chilena trae comas: cortar por palabra se lee natural,
+     partir un nombre de calle por la mitad no. `anywhere` queda solo como
+     último recurso si una sola palabra no cabe. */
+  overflow-wrap: break-word;
+}
+
 /* La cuenta regresiva otra vez, ahora dentro del marco. Es la línea que la
    familia va a mirar cada vez que abra el enlace. */
 .inv-body[data-theme="baby-nube"] .inv-plate-countdown,

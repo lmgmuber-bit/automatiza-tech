@@ -7,11 +7,15 @@
 // Ningún color se escribe acá: todo sale de las variables de la temática que
 // aplicó applyThemeColors() desde themes.json.
 //
+// Cómo se nombra el evento sale de `evento.js`: este álbum también se usa en
+// baby showers, y ahí "la fiesta de Amanda" es falso porque Amanda no nació.
+//
 // Dos páginas seguidas nunca se ven iguales. La paridad del folio decide la
 // inclinación de las fotos, el lado de la composición y si una foto sola va
 // montada sobre el papel o a sangre. Es la diferencia entre un álbum y un
 // listado de fotos con margen blanco.
 
+import { fraseA, esteEvento } from './evento.js'
 import React, { useEffect, useRef, useState } from 'react'
 
 export default function AlbumPage({ page, index, base }) {
@@ -97,7 +101,7 @@ function Photo({ item, base, sizeHint = 'full' }) {
       ref={ref}
       className="mag__photo"
       src={src}
-      alt={item.author ? `Recuerdo compartido por ${item.author}` : 'Recuerdo de la fiesta'}
+      alt={item.author ? `Recuerdo compartido por ${item.author}` : 'Recuerdo del evento'}
       loading="lazy"
       decoding="async"
       draggable="false"
@@ -291,7 +295,7 @@ function ClosingPage({ page, base }) {
         <p className="mag__eyebrow">Y colorín colorado</p>
         <h2 className="mag__title mag__title--closing">
           ¡Gracias por venir<br />
-          {page.eventName ? `a la fiesta de ${page.eventName}!` : 'a la fiesta!'}
+          {`${fraseA(page.evento)}!`}
         </h2>
         <span className="mag__rule" aria-hidden="true" />
         <p className="mag__closing-note">
@@ -300,7 +304,7 @@ function ClosingPage({ page, base }) {
               antes de aprobar nada: el invitado abre el enlace y lo primero que
               lee es un cero. */}
           {page.count === 0
-            ? 'Los recuerdos de esta fiesta están por llegar.'
+            ? `Los recuerdos de ${esteEvento(page.evento)} están por llegar.`
             : page.count === 1
               ? 'Un recuerdo guardado para siempre.'
               : `${page.count} recuerdos guardados para siempre.`}

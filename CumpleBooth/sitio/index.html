@@ -26,7 +26,13 @@
   <link rel="preload" href="fonts/baloo-2-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/baloo-2-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/img/globo-render.webp" as="image" type="image/webp">
-  <link rel="stylesheet" href="css/styles.css">
+  <!-- ?v= no es adorno. `styles.css` y `main.js` tienen nombre FIJO, asi que
+       una vez que un navegador los guardo no hay forma de reemplazarlos: se
+       sube el arreglo, el servidor lo sirve, se purga el CDN, y el visitante
+       sigue ejecutando el archivo viejo hasta que su cache expire. Con la
+       version en la URL es OTRO recurso y lo pide de nuevo, siempre.
+       SUBIR ESTE NUMERO AL TOCAR EL CSS O EL JS. Si no, el cambio no llega. -->
+  <link rel="stylesheet" href="css/styles.css?v=20260830">
 </head>
 <body>
 
@@ -443,6 +449,6 @@
   <script src="vendor/gsap.min.js" defer></script>
   <script src="vendor/ScrollTrigger.min.js" defer></script>
   <script src="vendor/lenis.min.js" defer></script>
-  <script src="js/main.js" defer></script>
+  <script src="js/main.js?v=20260830" defer></script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, existsSync, statSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 
 /* La landing pública (`sitio/`), que es la cara del dominio.
  *
@@ -111,4 +112,50 @@ test('la 404 de marca no depende de ningún archivo externo', () => {
   // El isotipo tiene que ser el de verdad, no un dibujo parecido.
   assert.match(html, /<svg[^>]*viewBox="0 0 400 400"/, 'falta el isotipo incrustado')
   assert.ok(html.includes('#8B5CF6') && html.includes('#D6307F'), 'la 404 no usa los colores de marca')
+})
+
+/* El select de paises del formulario contra la tabla del servidor.
+ *
+ * Son dos archivos distintos —el HTML estatico y `cb_lead_paises()`— y nada los
+ * obliga a coincidir. Si alguien agrega un pais en el select y no en el PHP, el
+ * formulario ofrece un pais que el servidor rechaza, y el visitante ve
+ * "Selecciona el pais de tu telefono" sobre un pais que acaba de seleccionar.
+ * Al reves es mas silencioso todavia: el pais existe en el servidor y nadie
+ * puede elegirlo.
+ *
+ * El test lee la tabla del PHP de verdad, no una copia. Si PHP no esta en esta
+ * maquina se salta, en vez de fallar por algo que no es del proyecto. */
+test('el select de paises del formulario calza con la tabla del servidor', (t) => {
+  const php = process.env.CC_PHP || 'C:/wamp64/bin/php/php8.2.29/php.exe'
+  let tabla
+  try {
+    const salida = execFileSync(php, ['-r',
+      'require "public/lib.leads.php"; echo json_encode(cb_lead_paises());'
+    ], { cwd: new URL('../../', import.meta.url).pathname.replace(/^\//, ''), encoding: 'utf8' })
+    tabla = JSON.parse(salida)
+  } catch {
+    t.skip('no se pudo ejecutar PHP en esta maquina')
+    return
+  }
+
+  const select = INDEX.match(/<select name="pais_telefono"[^>]*>([\s\S]*?)<\/select>/)
+  assert.ok(select, 'el formulario no tiene el select de pais del telefono')
+  const enHtml = [...select[1].matchAll(/<option value="([^"]+)"/g)].map((m) => m[1])
+
+  assert.deepEqual(
+    enHtml.slice().sort(),
+    Object.keys(tabla).sort(),
+    'el select y cb_lead_paises() ofrecen paises distintos'
+  )
+  assert.ok(select[1].includes('value="cl" selected'), 'Chile deberia venir preseleccionado')
+  assert.ok(enHtml.includes('otro'), 'falta la opcion "Otro pais": sin ella se pierde un cliente de un pais no listado')
+
+  // Y que el codigo que se muestra sea el que el servidor va a usar.
+  for (const [clave, pais] of Object.entries(tabla)) {
+    if (!pais.codigo) continue
+    const et = select[1].match(new RegExp('<option value="' + clave + '"[^>]*>([^<]+)<'))
+    assert.ok(et, `${clave}: no esta en el select`)
+    assert.ok(et[1].includes('+' + pais.codigo),
+      `${clave}: el select muestra "${et[1]}" pero el servidor usa el codigo +${pais.codigo}`)
+  }
 })

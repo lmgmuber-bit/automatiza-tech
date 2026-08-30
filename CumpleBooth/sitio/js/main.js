@@ -180,6 +180,11 @@
         organizacion: data.get('organizacion'),
         email: data.get('email'),
         telefono: data.get('telefono'),
+        /* El país del teléfono viaja aparte. El servidor arma el número final
+           (E.164) con este código y valida el largo contra ESE país; sin él,
+           un móvil chileno escrito sin código se guardaba como número de otro
+           país sin que nada fallara. */
+        pais_telefono: data.get('pais_telefono') || 'cl',
         tipo: data.get('tipo'),
         fecha: data.get('fecha'),
         comuna: data.get('comuna'),

@@ -13,6 +13,155 @@ function cb_lead_text($value, int $maxBytes): string
     return $value;
 }
 
+/**
+ * Los países que el formulario ofrece, con su código y el largo del número
+ * NACIONAL (sin el código de país).
+ *
+ * Es la ÚNICA fuente de verdad: el `<select>` de `sitio/index.html` se compara
+ * contra esta tabla en `tests/frontend/sitioPublico.test.mjs`, así que si
+ * alguien agrega un país en un lado y no en el otro, el test lo dice. Sin eso
+ * la lista y la validación se separan en silencio y el formulario empieza a
+ * rechazar países que él mismo ofrece.
+ *
+ * `otro` existe a propósito y NO es un descuido: una lista cerrada deja fuera a
+ * un cliente real de un país que no anticipamos, y perder un lead por eso es
+ * peor que aceptar un largo poco preciso. Ahí se valida solo contra el rango de
+ * E.164.
+ *
+ * Los largos son del número nacional. Si alguno resulta estar mal, se corrige
+ * acá y el resto del sistema se entera solo.
+ *
+ * @return array<string, array{nombre:string, codigo:string, min:int, max:int}>
+ */
+function cb_lead_paises(): array
+{
+    return [
+        'cl'   => ['nombre' => 'Chile',              'codigo' => '56',  'min' => 9,  'max' => 9],
+        'ar'   => ['nombre' => 'Argentina',          'codigo' => '54',  'min' => 10, 'max' => 11],
+        'pe'   => ['nombre' => 'Perú',               'codigo' => '51',  'min' => 9,  'max' => 9],
+        'co'   => ['nombre' => 'Colombia',           'codigo' => '57',  'min' => 10, 'max' => 10],
+        'mx'   => ['nombre' => 'México',             'codigo' => '52',  'min' => 10, 'max' => 10],
+        'ec'   => ['nombre' => 'Ecuador',            'codigo' => '593', 'min' => 8,  'max' => 9],
+        'bo'   => ['nombre' => 'Bolivia',            'codigo' => '591', 'min' => 8,  'max' => 8],
+        'uy'   => ['nombre' => 'Uruguay',            'codigo' => '598', 'min' => 8,  'max' => 9],
+        'py'   => ['nombre' => 'Paraguay',           'codigo' => '595', 'min' => 9,  'max' => 9],
+        'br'   => ['nombre' => 'Brasil',             'codigo' => '55',  'min' => 10, 'max' => 11],
+        've'   => ['nombre' => 'Venezuela',          'codigo' => '58',  'min' => 10, 'max' => 10],
+        'cr'   => ['nombre' => 'Costa Rica',         'codigo' => '506', 'min' => 8,  'max' => 8],
+        'pa'   => ['nombre' => 'Panamá',             'codigo' => '507', 'min' => 7,  'max' => 8],
+        'gt'   => ['nombre' => 'Guatemala',          'codigo' => '502', 'min' => 8,  'max' => 8],
+        'do'   => ['nombre' => 'República Dominicana','codigo' => '1',  'min' => 10, 'max' => 10],
+        'us'   => ['nombre' => 'Estados Unidos',     'codigo' => '1',   'min' => 10, 'max' => 10],
+        'es'   => ['nombre' => 'España',             'codigo' => '34',  'min' => 9,  'max' => 9],
+        'otro' => ['nombre' => 'Otro país',          'codigo' => '',    'min' => 6,  'max' => 14],
+    ];
+}
+
+/**
+ * Arma el número final a partir del país elegido y el número nacional.
+ *
+ * Con el país explícito no queda nada que adivinar. Antes se pedía el número
+ * completo y `974940070` —un móvil chileno escrito sin país— se guardaba como
+ * `+974940070`, que es un número de Qatar bien formado: nadie se enteraba hasta
+ * intentar escribirle.
+ *
+ * @return array{ok:bool, phone:string, error:string}
+ */
+function cb_lead_phone_from_country(string $paisClave, string $numero): array
+{
+    $paises = cb_lead_paises();
+    if (!isset($paises[$paisClave])) {
+        return ['ok' => false, 'phone' => '', 'error' => 'Selecciona el país de tu teléfono.'];
+    }
+    $pais = $paises[$paisClave];
+
+    if ($numero === '' || preg_match('/^[+0-9()\s.\-]+$/', $numero) !== 1) {
+        return ['ok' => false, 'phone' => '', 'error' => 'Ingresa un teléfono válido.'];
+    }
+    $digitos = preg_replace('/\D+/', '', $numero);
+
+    // "Otro país": el número tiene que traer su propio código, porque no lo
+    // sabemos. Se valida solo contra el rango de E.164.
+    if ($pais['codigo'] === '') {
+        if (strlen($digitos) < 8 || strlen($digitos) > 15 || $digitos[0] === '0') {
+            return ['ok' => false, 'phone' => '', 'error' => 'Ingresa el número con el código del país, sin el signo +.'];
+        }
+        return ['ok' => true, 'phone' => '+' . $digitos, 'error' => ''];
+    }
+
+    // Que la persona haya escrito igual el código del país no es un error: se
+    // le saca y se sigue. Es lo que pasa cuando copia y pega el número.
+    if (strpos($digitos, $pais['codigo']) === 0
+        && strlen($digitos) > $pais['max']
+        && strlen($digitos) - strlen($pais['codigo']) >= $pais['min']) {
+        $digitos = substr($digitos, strlen($pais['codigo']));
+    }
+    // Y el 0 de la marcación nacional tampoco: en varios países se escribe.
+    $digitos = ltrim($digitos, '0');
+
+    $largo = strlen($digitos);
+    if ($largo < $pais['min'] || $largo > $pais['max']) {
+        $cuantos = $pais['min'] === $pais['max']
+            ? $pais['min'] . ' dígitos'
+            : 'entre ' . $pais['min'] . ' y ' . $pais['max'] . ' dígitos';
+        return ['ok' => false, 'phone' => '',
+                'error' => 'Un número de ' . $pais['nombre'] . ' tiene ' . $cuantos . '. Escríbelo sin el código del país.'];
+    }
+    return ['ok' => true, 'phone' => '+' . $pais['codigo'] . $digitos, 'error' => ''];
+}
+
+/**
+ * Normaliza un teléfono a E.164: `+` y solo dígitos.
+ *
+ * CumpleClick dejó de ser solo Chile, y un número sin código de país no sirve
+ * para nada: "974940070" puede ser chileno, y también puede no serlo. Sin el
+ * código no se puede llamar, no se puede armar un enlace de WhatsApp, y quien
+ * atienda el lead tiene que adivinar.
+ *
+ * Reglas de E.164: hasta 15 dígitos, el primero nunca es 0. El mínimo de 8 es
+ * nuestro, no del estándar (hay países con números más cortos), y se pone
+ * porque un número de menos de 8 dígitos en este formulario casi siempre es
+ * alguien que escribió a medias.
+ *
+ * `56 9 7494 0070`, `+56974940070` y `(56) 9-7494-0070` son el mismo número y
+ * los tres se guardan igual. Lo que NO se acepta es un número sin país.
+ *
+ * @return string el número normalizado, o '' si no es válido.
+ */
+function cb_normalize_phone(string $raw): string
+{
+    // Solo se admiten los caracteres con los que la gente escribe teléfonos.
+    if ($raw === '' || preg_match('/^[+0-9()\s.\-]+$/', $raw) !== 1) {
+        return '';
+    }
+    /* EL CÓDIGO DE PAÍS ES OBLIGATORIO, y esta es la parte que importa.
+     *
+     * Sin él el número es ambiguo y la ambigüedad no falla: se guarda algo que
+     * parece válido y no lo es. `974940070` —un móvil chileno escrito sin país—
+     * se normalizaba a `+974940070`, que es un número de Qatar perfectamente
+     * bien formado. Nadie se habría enterado hasta intentar escribirle.
+     *
+     * Se acepta el `+` de siempre y el `00` de la marcación antigua. El
+     * formulario ya viene con el código puesto, así que a nadie le cuesta. */
+    // El `+` puede venir dentro de paréntesis o con espacios delante: "(+56) 9…"
+    // es tan válido como "+56 9…". Lo que se exige es que esté ANTES del primer
+    // dígito, no que sea el primer carácter.
+    $tieneMarcaInternacional = preg_match('/^[\s(]*\+/', $raw) === 1
+        || strpos(preg_replace('/\D+/', '', $raw), '00') === 0;
+
+    $digitos = preg_replace('/\D+/', '', $raw);
+    if (strpos($digitos, '00') === 0) {
+        $digitos = substr($digitos, 2);
+    }
+    if (!$tieneMarcaInternacional || $digitos === '' || $digitos[0] === '0') {
+        return '';
+    }
+    if (strlen($digitos) < 8 || strlen($digitos) > 15) {
+        return '';
+    }
+    return '+' . $digitos;
+}
+
 function cb_validate_lead_input(array $input): array
 {
     $data = [
@@ -20,6 +169,9 @@ function cb_validate_lead_input(array $input): array
         'organization' => cb_lead_text($input['organizacion'] ?? '', 160),
         'email' => strtolower(cb_lead_text($input['email'] ?? '', 254)),
         'phone' => cb_lead_text($input['telefono'] ?? '', 30),
+        // Clave del país elegido en el select. Por defecto Chile: es de donde
+        // viene la mayoría y no cambia nada para quien elige otro.
+        'phone_country' => strtolower(cb_lead_text($input['pais_telefono'] ?? 'cl', 8)) ?: 'cl',
         'event_type' => cb_lead_text($input['tipo'] ?? '', 40),
         'event_date' => cb_lead_text($input['fecha'] ?? '', 10),
         'commune' => cb_lead_text($input['comuna'] ?? '', 120),
@@ -32,9 +184,14 @@ function cb_validate_lead_input(array $input): array
         $errors['organizacion'] = 'El nombre de la organización es demasiado largo o inválido.';
     }
     if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) { $errors['email'] = 'Ingresa un correo válido.'; }
-    $phoneDigits = preg_replace('/\D+/', '', $data['phone']);
-    if (preg_match('/^[+0-9() .-]+$/', $data['phone']) !== 1 || strlen((string) $phoneDigits) < 8 || strlen((string) $phoneDigits) > 15) {
-        $errors['telefono'] = 'Ingresa un teléfono válido.';
+    /* El teléfono se guarda NORMALIZADO en E.164, no como lo escribió la
+       persona. El país viene de un select, así que no hay nada que adivinar, y
+       el largo se valida contra ESE país. */
+    $telefono = cb_lead_phone_from_country($data['phone_country'], $data['phone']);
+    if (!$telefono['ok']) {
+        $errors['telefono'] = $telefono['error'];
+    } else {
+        $data['phone'] = $telefono['phone'];
     }
     $eventTypes = ['Cumpleaños', 'Navidad', 'Día del Niño', 'Colegio o jardín', 'Evento de empresa', 'Otro evento especial'];
     if (!in_array($data['event_type'], $eventTypes, true)) { $errors['tipo'] = 'Selecciona un tipo de evento válido.'; }

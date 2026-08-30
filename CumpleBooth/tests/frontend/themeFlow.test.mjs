@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { basename } from 'node:path'
 import { resolveThemeFlow } from '../../src/themeFlow.js'
 import { getSquarePhotoGeometry } from '../../src/frameGeometry.js'
 
@@ -648,6 +649,24 @@ for (const [slug, tema] of BABY_SHOWER) {
     }
     assert.ok(f.x + f.w <= 1 && f.y + f.h <= 1, `${slug}: el frameBox se sale del lienzo`)
     assert.ok(f.w >= 0.05 && f.h >= 0.05, `${slug}: frameBox demasiado chico`)
+  })
+
+  /* El cierre del kiosco. El MP4 estaba en disco en las tres temáticas desde el
+     principio, pero NINGUNA lo declaraba en themes.json, así que
+     `$safeThemeVideo` no lo publicaba y el kiosco caía al genérico
+     `videos/despedida.mp4` — que no existe — y de ahí a una tarjeta con emoji.
+     Nada fallaba: el archivo estaba, el kiosco no reventaba, y la fiesta
+     terminaba sin video. Tener el asset no sirve de nada si nadie lo declara,
+     y por eso este test mira las DOS cosas. */
+  test(`${slug}: el kiosco cierra con video, no con un emoji`, () => {
+    const declarado = tema.videos?.despedida
+    assert.ok(declarado, `${slug}: no declara videos.despedida en themes.json`)
+    assert.equal(declarado, basename(declarado), `${slug}: videos.despedida debe ser solo el nombre del archivo`)
+    assert.match(declarado, /\.mp4$/, `${slug}: videos.despedida debe ser un .mp4`)
+
+    const ruta = new URL(`../../public/themes/${slug}/${declarado}`, import.meta.url)
+    assert.ok(existsSync(ruta), `${slug}: declara ${declarado} y ese archivo no está en disco`)
+    assert.ok(statSync(ruta).size > 500_000, `${slug}: ${declarado} pesa sospechosamente poco`)
   })
 
   test(`${slug}: no declara personajes, porque el recorrido no los usa`, () => {

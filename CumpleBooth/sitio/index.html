@@ -3,18 +3,13 @@
   CumpleClick — Sitio de clientes (landing de conversión)
   Ticket: AT-CUMPLECLICK-011 · vive aislado en sitio/ (no toca kiosco)
 
-  WhatsApp: 56974940070 — el número de CUMPLECLICK, dado por Luis el 2026-08-29.
-  Está escrito en los 7 enlaces de esta página y en el pie.
+  OJO: los comentarios de este archivo se sirven al público y se leen con
+  ver-código-fuente. Acá va solo lo que le sirve a quien edite la página; el
+  porqué de cada cambio vive en el historial de git.
 
-  Ojo: NO es el de AutomatizaTech (56927002984, el que usa el tema de
-  automatizatech.cl). Se probó con ese, sacado del tema, dando por hecho que
-  servía para las dos marcas. No sirve: son negocios distintos y los mensajes de
-  CumpleClick tienen que llegar a su propio número.
-
-  Hasta el 2026-08-29 acá había un marcador de configuración sin reemplazar: la
-  página cargaba perfecto y TODOS los botones de "Agenda por WhatsApp" no iban
-  a ninguna parte. `tests/frontend/sitioPublico.test.mjs` bloquea que vuelva a
-  pasar — y no acepta marcadores ni dentro de este comentario, a propósito.
+  WhatsApp: 56974940070, el de CumpleClick. NO el de AutomatizaTech
+  (56927002984): son negocios distintos. Está en los 7 enlaces y en el pie.
+  `tests/frontend/sitioPublico.test.mjs` lo cuida.
 ============================================================ -->
 <html lang="es-CL">
 <head>
@@ -130,15 +125,9 @@
           <h3>KPop Demon Hunters</h3>
         </li>
       </ul>
-      <!-- Esta línea decía "Y más mundos: Paw Patrol, Princesas Disney, Jurassic
-           World, La Sirenita, Toy Story y Mickey Mouse", como si estuvieran
-           listos. NO EXISTEN: `themes.json` los declara (cachorros, princesas,
-           dinos, sirenas, juguetes, mickey) pero ninguno tiene carpeta en
-           public/themes/ — cero archivos, verificado. Una familia que contratara
-           Paw Patrol se encontraría el día de la fiesta con un kiosco sin fondo,
-           sin música y sin personajes.
-           Ahora se ofrecen por lo que son: temáticas a medida, con su precio.
-           Cuando alguna se construya de verdad, sube al listado de arriba. -->
+      <!-- Estos mundos se producen a pedido. El porqué de la redacción está en
+           el commit c99ebda; no se detalla acá porque los comentarios del HTML
+           se sirven al público y se leen con ver-código-fuente. -->
       <p class="mundos__mas" data-reveal>¿Buscas otro mundo? Paw Patrol, Princesas, Dinosaurios, La Sirenita, Toy Story, Mickey… <a href="#precios">lo creamos a medida para tu fiesta</a>, con sus personajes, su ruleta y sus saludos.</p>
     </section>
 
@@ -293,13 +282,9 @@
         </details>
         <details class="faq__item" data-reveal>
           <summary>¿Se puede personalizar con el nombre del cumpleañero?</summary>
-          <!-- Decía "creamos una temática a medida sin costo extra" y la pregunta
-               de más abajo dice "+$25.000" por lo mismo: dos respuestas seguidas
-               contradiciéndose sobre el mismo servicio, en la página que vende.
-               El precio correcto es +$25.000 (design/MANUAL-DE-MARCA.md:89, la
-               campaña Básico/Full y el bloque de planes de esta misma página).
-               Acá se dice lo que SÍ está incluido, que era el punto de la
-               pregunta, y el extra queda en un solo lugar. -->
+          <!-- El precio de la temática a medida se dice en UN solo lugar: más
+               abajo, +$25.000 (design/MANUAL-DE-MARCA.md:89). Acá va solo lo
+               que está incluido. -->
           <p>Sí: los diplomas llevan su nombre y la temática es la que él o ella elija, sin costo extra. Si quieres una que no esté en la lista, la creamos a medida.</p>
         </details>
         <details class="faq__item" data-reveal>

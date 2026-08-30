@@ -53,6 +53,44 @@ reparto y el sitio pasa a una subcarpeta.
 Nada de esto es un cambio de codigo: Vite compila con `base: './'` y ningun
 .htaccess usa `RewriteBase`.
 
+### Donde vive la configuracion, y por que hay un puente
+
+`cb_config()` busca `$root/config/cumpleclick.local.php`, y `$root` es
+`dirname(__DIR__)` desde `lib.php`. En el servidor `lib.php` queda en
+`public_html/app/`, asi que `$root` es **public_html**: por defecto la
+configuracion —con la clave de la base y la clave HMAC— caeria DENTRO del
+webroot.
+
+La solucion no toca una linea de codigo. Son tres archivos:
+
+    domains/cumpleclick.com/cumpleclick-config.php          <- la de verdad, 0600
+    domains/cumpleclick.com/public_html/config/cumpleclick.local.php   <- puente
+    domains/cumpleclick.com/public_html/config/.htaccess     <- Require all denied
+
+El puente es una linea: `return require '<ruta absoluta de afuera>';`. Aunque
+alguien lo leyera como texto plano, lo unico que veria es una ruta. Verificado
+por HTTP: `/config/`, `/config/cumpleclick.local.php` y `/config/.htaccess`
+devuelven **403**, y `/cumpleclick-config.php` devuelve **404** porque esta
+fuera del webroot.
+
+Los tres valores que faltan los pone Luis, no un agente: `pdo_password`,
+`app_hmac_key` (64 caracteres al azar, propios de este ambiente) y
+`admin_password_hash`. Mientras el hash este vacio nadie puede entrar al admin
+—`admin/index.php` corta antes de `password_verify`— asi que el estado por
+defecto es cerrado, no abierto.
+
+### Ojo con el nivel: `domains/<dominio>/` NO es el webroot
+
+Hostinger deja ahi un archivo `DO_NOT_UPLOAD_HERE` justamente porque es el error
+comun. El webroot es `domains/<dominio>/public_html`. Subir a un nivel de mas no
+da error: los archivos quedan en el servidor, ocupando espacio, sin que nada los
+sirva y sin que nada avise.
+
+Paso el 2026-08-30 con el `dist/` completo (449 archivos, 582 MB). No se perdio
+nada: como el contenido ya estaba en el servidor, se movio a su lugar con `mv`
+—instantaneo— en vez de volver a transferir 570 MB.
+
+
 ### La pagina 404 de marca
 
 `sitio/404.html` es la 404 (y la 403) de TODO el dominio. Va sin una sola

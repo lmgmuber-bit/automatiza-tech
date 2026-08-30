@@ -29,9 +29,23 @@ ErrorDocument 403 /404.html
   <FilesMatch "^(index|404)\.html$">
     Header always set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
-  # Lo que lleva nombre estable pero cambia poco: un día.
+  # El CSS y el JS del sitio SE REVALIDAN SIEMPRE.
+  #
+  # Tenían un día de caché, y como sus nombres son fijos —`main.js`, no
+  # `main-a1b2c3.js`— no hay forma de invalidarlos: quien ya visitó el sitio se
+  # queda 24 horas con la versión vieja. Pasó de verdad: se subió un arreglo,
+  # el servidor ya lo estaba sirviendo, y el navegador seguía ejecutando el
+  # archivo anterior. Un deploy que no llega no es un deploy.
+  #
+  # `no-cache` no significa "no guardar": el navegador guarda igual y pregunta
+  # con el ETag. Si no cambió, el servidor responde 304 sin cuerpo. El costo es
+  # una petición condicional por archivo; a cambio, un arreglo se ve al recargar.
+  #
+  # Las librerías de `vendor/` sí son inmutables —vienen con su versión de npm y
+  # se reemplazan cambiando el archivo entero— pero se dejan igual por
+  # simplicidad: son 880 KB que el 304 no vuelve a transferir.
   <FilesMatch "\.(css|js)$">
-    Header always set Cache-Control "public, max-age=86400"
+    Header always set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
   # Imágenes, video y tipografías: no cambian sin cambiar de nombre.
   <FilesMatch "\.(webp|jpe?g|png|svg|mp4|woff2?)$">

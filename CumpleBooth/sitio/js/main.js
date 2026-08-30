@@ -460,6 +460,57 @@
         document.fonts.ready.then(function () { window.ScrollTrigger.refresh(); });
       }
     }
+    initRedDeSeguridad();
+  }
+
+  /* Red de seguridad de las animaciones de entrada.
+   *
+   * `gsap.from()` pone el elemento en opacidad 0 apenas corre el script y lo
+   * muestra recién cuando su disparador se activa. Si ese disparador no llega a
+   * correr, el elemento se queda invisible PARA SIEMPRE. Y pasa de verdad:
+   * entrando directo a `cumpleclick.com/#demos` la sección quedaba en blanco
+   * —la tarjeta estaba en pantalla, con opacidad 0, y a los 8 segundos seguía
+   * igual—. Las imágenes con carga diferida cambian el alto de la página
+   * después de que se calcularon los disparadores, y los de más abajo quedan
+   * apuntando a una posición que ya no existe.
+   *
+   * Esto NO arregla la causa: deja el contenido visible igual. Es a propósito.
+   * Una animación que no corre es un detalle que casi nadie nota; una sección
+   * invisible es la página rota, y el visitante no tiene forma de saber que
+   * había algo ahí.
+   */
+  function initRedDeSeguridad() {
+    function rescatar() {
+      var alto = window.innerHeight || 0;
+      var nodos = document.querySelectorAll('[data-reveal]');
+      for (var i = 0; i < nodos.length; i++) {
+        var el = nodos[i];
+        var r = el.getBoundingClientRect();
+        // Solo lo que ya debería verse: lo de más abajo tiene que poder animarse.
+        if (r.bottom < 0 || r.top > alto) { continue; }
+        if (window.getComputedStyle(el).opacity !== '0') { continue; }
+        if (window.gsap) {
+          window.gsap.set(el, { opacity: 1, y: 0, rotationX: 0, clearProps: 'transform' });
+        } else {
+          el.style.opacity = '1';
+          el.style.transform = 'none';
+        }
+      }
+    }
+
+    // Un rescate al asentarse la página, y otro cada vez que se deja de hacer
+    // scroll. Con `once` en los disparadores esto no pelea con la animación:
+    // lo que ya se animó tiene opacidad 1 y no se toca.
+    var pendiente = null;
+    function programar() {
+      if (pendiente) { clearTimeout(pendiente); }
+      pendiente = setTimeout(rescatar, 350);
+    }
+    window.addEventListener('load', function () { setTimeout(rescatar, 900); });
+    window.addEventListener('scroll', programar, { passive: true });
+    window.addEventListener('resize', programar, { passive: true });
+    window.addEventListener('hashchange', function () { setTimeout(rescatar, 700); });
+    setTimeout(rescatar, 1500);
   }
 
   if (document.readyState === 'loading') {

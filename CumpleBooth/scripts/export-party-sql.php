@@ -225,4 +225,68 @@ foreach ($slugs as $slug) {
         }
     }
 
+
+    /* ── Las fotos de cabina y el album ──────────────────────────────────────
+       Las FILAS viajan por aca; los PNG son archivos y se suben aparte. Si
+       llegaran las filas sin los archivos, el album se veria con las imagenes
+       rotas y la base diria que todo esta bien — de las dos mitades, esta es la
+       que no avisa cuando falta la otra.
+
+       `cc_event_media.photo_id` se resuelve por `access_token` de la foto, que
+       es UNIQUE, para no depender de que los ids coincidan entre bases. */
+    $st = $pdo->prepare('SELECT * FROM cc_photos WHERE party_id = ? ORDER BY id');
+    $st->execute([$party['id']]);
+    $fotos = $st->fetchAll();
+    if ($fotos) {
+        echo "-- fotos de cabina (" . count($fotos) . ")\n";
+        foreach ($fotos as $f) {
+            cc_emitir($pdo, 'cc_photos', $f, ['party_id' => $fkParty]);
+        }
+    }
+
+    $st = $pdo->prepare('SELECT * FROM cc_event_albums WHERE party_id = ?');
+    $st->execute([$party['id']]);
+    if ($album = $st->fetch()) {
+        $albumIdLocal = (int) $album['id'];
+        $fkAlbum = "(SELECT id FROM cc_event_albums WHERE party_id = $fkParty)";
+        // `cover_media_id` apunta a un id de OTRA tabla que se va a renumerar:
+        // se deja en NULL y la portada la resuelve el album por orden.
+        $album['cover_media_id'] = null;
+        echo "-- album (" . $album['status'] . ")\n";
+        cc_emitir($pdo, 'cc_event_albums', $album, ['party_id' => $fkParty],
+            ['status', 'title', 'subtitle', 'require_pin', 'published_at', 'updated_at'],
+            "party_id = $fkParty");
+
+        $st = $pdo->prepare('SELECT * FROM cc_event_media WHERE album_id = ? ORDER BY sort_order, id');
+        $st->execute([$albumIdLocal]);
+        $medios = $st->fetchAll();
+        if ($medios) {
+            echo "-- fotos dentro del album (" . count($medios) . ")\n";
+            /* Se reemplazan enteras, como los regalos. Las filas de fotos de
+               cabina llevan `access_token` y `storage_key` en NULL —la foto vive
+               en cc_photos— y MySQL admite tantos NULL como quieras en un indice
+               unico, asi que INSERT IGNORE no frena nada: pegar el archivo dos
+               veces dejaba el album con CADA FOTO DUPLICADA. Medido en
+               produccion: 9 fotos -> 18 medios, 26 -> 52. */
+            echo "DELETE FROM cc_event_media WHERE album_id = $fkAlbum;\n\n";
+            foreach ($medios as $m) {
+                $fks = ['album_id' => $fkAlbum, 'party_id' => $fkParty];
+                if ($m['photo_id'] !== null) {
+                    $tok = $pdo->prepare('SELECT access_token FROM cc_photos WHERE id = ?');
+                    $tok->execute([$m['photo_id']]);
+                    $at = (string) $tok->fetchColumn();
+                    $fks['photo_id'] = "(SELECT id FROM cc_photos WHERE access_token = {$q($at)})";
+                }
+                cc_emitir($pdo, 'cc_event_media', $m, $fks);
+            }
+        }
+
+        $st = $pdo->prepare("SELECT * FROM cc_event_album_tokens WHERE album_id = ? AND status = 'active' ORDER BY id");
+        $st->execute([$albumIdLocal]);
+        foreach ($st->fetchAll() as $t) {
+            echo "-- acceso vigente al album\n";
+            cc_emitir($pdo, 'cc_event_album_tokens', $t, ['album_id' => $fkAlbum]);
+        }
+    }
+
 }

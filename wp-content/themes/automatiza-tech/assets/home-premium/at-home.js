@@ -123,9 +123,28 @@
     }
     box.textContent = text || '';
     box.style.display = text ? 'block' : 'none';
-    box.style.border = type === 'error' ? '1px solid rgba(244,139,139,.38)' : '1px solid rgba(52,211,153,.34)';
-    box.style.background = type === 'error' ? 'rgba(244,139,139,.10)' : 'rgba(52,211,153,.10)';
-    box.style.color = type === 'error' ? '#f7b4b4' : '#86efac';
+    // Los colores viven en at-home.css por tema: los tonos pastel del modo oscuro
+    // quedaban en 1.73 de contraste sobre el blanco del modo claro, ilegibles.
+    box.className = 'at-msg at-msg-' + (type === 'error' ? 'error' : 'ok');
+  }
+
+  // WhatsApp en formato internacional: prefijo del <select> + número nacional.
+  // Si el usuario ya escribió "+..." se respeta tal cual y se ignora el select.
+  function buildPhone(countryCode, raw) {
+    var text = String(raw || '').trim();
+    if (text.charAt(0) === '+') {
+      var typed = text.replace(/\D+/g, '');
+      return typed ? '+' + typed : '';
+    }
+    var cc = String(countryCode || '+56').replace(/\D+/g, '') || '56';
+    var digits = text.replace(/\D+/g, '');
+    return digits ? '+' + cc + digits : '';
+  }
+
+  function todayISO() {
+    var d = new Date();
+    function p(n) { return (n < 10 ? '0' : '') + n; }
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
   }
 
   function appendTrackingFields(data) {
@@ -145,10 +164,18 @@
     openModal: function (e) {
       if (e && e.preventDefault) e.preventDefault();
       var el = e && (e.currentTarget || e.target);
-      track('cta_diagnostico_clicked', { intent: state.modalMode, cta_text: el ? (el.textContent || '').trim().slice(0, 80) : '' });
-      setState({ modalOpen: true, menuOpen: false, chatOpen: false });
+      // CTAs de planes/rubros preseleccionan el modo del modal (Diagnóstico|Demo)
+      var mm = el && el.getAttribute ? el.getAttribute('data-modal-mode') : null;
+      track('cta_diagnostico_clicked', { intent: mm || state.modalMode, cta_text: el ? (el.textContent || '').trim().slice(0, 80) : '' });
+      setState({ modalOpen: true, menuOpen: false, chatOpen: false, modalMode: mm || state.modalMode });
       applyMode();
       fillUtm();
+      // a11y: mover el foco al primer control del diálogo
+      setTimeout(function () {
+        var box = document.getElementById('at-modal-box');
+        var f = box && box.querySelector('button, input, select, textarea, a[href]');
+        if (f) f.focus();
+      }, 60);
     },
     closeModal: function () { setState({ modalOpen: false, scheduled: false }); },
     setMode: function (e) { var b = e.currentTarget || e.target; setState({ modalMode: b.getAttribute('data-mode') || 'diagnostico' }); applyMode(); },
@@ -171,11 +198,21 @@
         setFormMessage(form, 'error', 'Elige fecha y hora disponible para agendar.');
         return;
       }
+      // 'YYYY-MM-DD' ordena lexicográficamente igual que por fecha.
+      if (scheduledDate < todayISO()) {
+        setFormMessage(form, 'error', 'Solo puedes agendar desde hoy en adelante. Elige otra fecha.');
+        return;
+      }
+      var phone = buildPhone(data.get('country_code'), data.get('whatsapp'));
+      if (!phone) {
+        setFormMessage(form, 'error', 'Escribe un número de WhatsApp válido.');
+        return;
+      }
       var leadTemperature = (intent === 'demo' || scheduledDate) ? 'caliente' : 'tibio';
       var payload = {
         name: String(data.get('nombre_negocio') || '').trim(),
         email: String(data.get('correo') || '').trim(),
-        phone: String(data.get('whatsapp') || '').trim(),
+        phone: phone,
         scheduled_date: scheduledDate,
         scheduled_time: scheduledTime,
         source: 'home_premium_web_' + intent,
@@ -188,7 +225,10 @@
         utm_medium: String(data.get('utm_medium') || '').trim(),
         utm_campaign: String(data.get('utm_campaign') || '').trim(),
         utm_content: String(data.get('utm_content') || '').trim(),
-        utm_term: String(data.get('utm_term') || '').trim()
+        utm_term: String(data.get('utm_term') || '').trim(),
+        privacy_accepted: data.get('privacy_accept') === '1',
+        privacy_accepted_at: new Date().toISOString(),
+        marketing_optin: data.get('marketing_optin') === '1'
       };
       track('diagnostico_form_started', { intent: intent, interest: interest });
       if (submit) { submit.disabled = true; submit.style.opacity = '.72'; submit.style.cursor = 'wait'; }
@@ -269,6 +309,19 @@
     stopProp: function (e) { if (e && e.stopPropagation) e.stopPropagation(); }
   };
   function wire() {
+    // a11y modal: Escape cierra, Tab queda atrapado dentro del diálogo (WCAG 2.4.3)
+    document.addEventListener('keydown', function (e) {
+      if (!state.modalOpen) return;
+      if (e.key === 'Escape') { H.closeModal(); return; }
+      if (e.key !== 'Tab') return;
+      var box = document.getElementById('at-modal-box');
+      if (!box) return;
+      var f = box.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
+      else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
+    });
     document.querySelectorAll('[data-act]').forEach(function (el) {
       var fn = H[el.getAttribute('data-act')];
       if (fn) el.addEventListener('click', fn);
@@ -323,7 +376,7 @@
     var sp2 = h > 0 ? window.scrollY / h : 0;
     scrollP = sp2;
     bg3dOpacity = Math.max(0, Math.min(1, (window.scrollY - vh * 0.35) / (vh * 0.7))) * 0.9 + 0.1;
-    if (progEl) progEl.style.width = (sp2 * 100) + '%';
+    if (progEl) progEl.style.transform = 'scaleX(' + sp2.toFixed(4) + ')';
   }
 
   /* ---------- tilt ---------- */
@@ -405,7 +458,7 @@
     var camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 100);
     camera.position.z = 10;
 
-    var N = 2200;
+    var N = (window.innerWidth < 768) ? 1100 : 2200; // móvil: mitad de puntos, misma forma
     var mkShape = function (fn) { var a = new Float32Array(N * 3); for (var i = 0; i < N; i++) { var p = fn(i, i / N); a[i * 3] = p[0]; a[i * 3 + 1] = p[1]; a[i * 3 + 2] = p[2]; } return a; };
     var TAU = Math.PI * 2, GA = Math.PI * (1 + Math.sqrt(5));
     var sphere = mkShape(function (i, t) { var phi = Math.acos(1 - 2 * t), th = GA * i, R = 4.0; return [R * Math.sin(phi) * Math.cos(th), R * Math.sin(phi) * Math.sin(th), R * Math.cos(phi)]; });
@@ -453,6 +506,9 @@
 
   /* ---------- intro overlay (chaos -> order) ---------- */
   function initIntro() {
+    // Tráfico pagado (utm_*) va directo al contenido: la intro de 4.4s
+    // destruye el LCP y quema presupuesto de ads en rebotes.
+    try { if (/[?&]utm_/.test(location.search)) return; } catch (e) {}
     // Premium UX: play the brand intro only once per browser session, so
     // internal navigation isn't blocked by the 4.4s sequence every time.
     try { if (sessionStorage.getItem('at_intro_seen')) return; sessionStorage.setItem('at_intro_seen', '1'); } catch (e) {}
@@ -623,6 +679,180 @@
     }
   }
 
+  /* ---------- casos de uso por rubro (tabs + swap animado) ---------- */
+  var RUBROS = {
+    restaurantes: {
+      label: 'RESTAURANTES',
+      title: 'Reservas y pedidos sin teléfono ocupado',
+      dolor: 'Mesas que se pierden porque nadie alcanza a contestar WhatsApp en hora punta.',
+      cliente: 'Hola, ¿tienen mesa para 4 hoy a las 21:00?',
+      tech: '¡Sí! Mesa para 4 disponible a las 21:00. ¿La confirmo a tu nombre?',
+      status: 'RESERVA CONFIRMADA · RECORDATORIO ENVIADO',
+      bullets: ['Reservas y confirmaciones automáticas 24/7', 'Menú y promociones respondidas al instante', 'Recordatorios que reducen mesas vacías'],
+      resultado: 'El equipo cocina y atiende; Tech llena las mesas.'
+    },
+    spa: {
+      label: 'SPA & BELLEZA',
+      title: 'Agenda llena sin contestar el teléfono',
+      dolor: 'Horas perdidas coordinando citas por mensaje y clientas que no llegan.',
+      cliente: '¿Tienen hora para manicure el sábado?',
+      tech: 'Sí. El sábado tengo 10:30 y 15:00 disponibles. ¿Cuál prefieres?',
+      status: 'CITA AGENDADA · SÁB 10:30',
+      bullets: ['Agendamiento por servicio y profesional', 'Recordatorios que bajan las inasistencias', 'Reagendos sin intervención humana'],
+      resultado: 'Menos huecos en la agenda, más manos libres.'
+    },
+    salud: {
+      label: 'CLÍNICAS & SALUD',
+      title: 'Pacientes que se agendan solos',
+      dolor: 'Secretaría colapsada confirmando y reagendando pacientes por teléfono.',
+      cliente: 'Necesito reagendar mi hora del jueves.',
+      tech: 'Claro. Tengo viernes 09:00 o lunes 16:30. ¿Cuál te acomoda?',
+      status: 'HORA REAGENDADA · VIE 09:00',
+      bullets: ['Agenda, confirma y reagenda 24/7', 'Responde preguntas frecuentes: previsión, ubicación, preparación', 'Deriva urgencias a un humano de inmediato'],
+      resultado: 'La secretaría se enfoca en el paciente que tiene al frente.'
+    },
+    retail: {
+      label: 'RETAIL & E-COMMERCE',
+      title: 'Del "¿tienen stock?" a la venta cerrada',
+      dolor: 'Consultas de precio y stock que se enfrían antes de ser respondidas.',
+      cliente: '¿Tienen fundas para iPhone 15? ¿Precio?',
+      tech: 'Sí, tenemos 3 modelos disponibles. Te dejo fotos y el link de pago.',
+      status: 'PEDIDO PAGADO · DESPACHO NOTIFICADO',
+      bullets: ['Catálogo, stock y precios al instante', 'Link de pago dentro de la conversación', 'Seguimiento de pedido automático'],
+      resultado: 'Cada consulta respondida en segundos, sin un vendedor pegado al teléfono.'
+    },
+    servicios: {
+      label: 'SERVICIOS & CONSTRUCCIÓN',
+      title: 'Cotizaciones calificadas, no curiosos',
+      dolor: 'Horas cotizando a contactos que nunca compran.',
+      cliente: 'Necesito cotizar 200 m² de revestimiento.',
+      tech: 'Perfecto. ¿En qué comuna es la obra y para qué fecha lo necesitas?',
+      status: 'LEAD CALIFICADO · VISITA AGENDADA',
+      bullets: ['Califica cada lead: alcance, plazo y ubicación', 'Agenda visitas técnicas en tu calendario', 'Todo queda registrado en el CRM'],
+      resultado: 'Tu equipo solo habla con clientes con intención real.'
+    },
+    creativos: {
+      label: 'ESTUDIOS CREATIVOS',
+      title: 'Fechas, paquetes y reuniones en automático',
+      dolor: 'DMs que preguntan lo mismo y se pierden en la bandeja.',
+      cliente: '¿Tienen disponible el 14 de marzo para un matrimonio?',
+      tech: '¡Sí, tenemos esa fecha! Te envío los paquetes y coordinamos una llamada.',
+      status: 'REUNIÓN AGENDADA · PORTAFOLIO ENVIADO',
+      bullets: ['Responde disponibilidad y paquetes al instante', 'Envía portafolio y precios sin fricción', 'Agenda la reunión de cierre por ti'],
+      resultado: 'El estudio crea; Tech vende las fechas.'
+    }
+  };
+  function initRubros() {
+    var tabsWrap = document.getElementById('at-rb-tabs');
+    var panel = document.getElementById('at-rb-panel');
+    if (!tabsWrap || !panel) return;
+    var tabs = Array.prototype.slice.call(tabsWrap.querySelectorAll('.at-rb-tab'));
+    var T = function (id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; };
+    function apply(key, animate) {
+      var d = RUBROS[key];
+      if (!d) return;
+      tabs.forEach(function (b) {
+        var on = b.getAttribute('data-rb') === key;
+        b.classList.toggle('is-active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      T('at-rb-chat-label', d.label);
+      T('at-rb-c', d.cliente);
+      T('at-rb-t', d.tech);
+      T('at-rb-s', d.status);
+      T('at-rb-title', d.title);
+      T('at-rb-dolor', d.dolor);
+      T('at-rb-l1', d.bullets[0]);
+      T('at-rb-l2', d.bullets[1]);
+      T('at-rb-l3', d.bullets[2]);
+      T('at-rb-res', d.resultado);
+      if (animate && !reduceMotion && window.anime) {
+        window.anime({
+          targets: panel.querySelectorAll('[data-rb-anim]'),
+          opacity: [0, 1],
+          translateY: [12, 0],
+          easing: 'easeOutCubic',
+          duration: 420,
+          delay: window.anime.stagger(45)
+        });
+      }
+    }
+    tabs.forEach(function (b) {
+      b.addEventListener('click', function () { apply(b.getAttribute('data-rb'), true); });
+    });
+    apply('restaurantes', false);
+  }
+
+  /* ---------- sección Quiénes Somos (stagger título + reveals laterales + línea scroll) ---------- */
+  function initQuienes() {
+    var sec = document.getElementById('quienes');
+    if (!sec) return;
+    var path = document.getElementById('at-qs-path');
+    if (reduceMotion) { if (path) path.style.opacity = '.5'; return; }
+
+    // filas: entrada lateral alternada vía IntersectionObserver + clases CSS
+    var rows = Array.prototype.slice.call(sec.querySelectorAll('.at-qs-row'));
+    if ('IntersectionObserver' in window) {
+      rows.forEach(function (r) { r.classList.add('at-prep'); });
+      var io = new IntersectionObserver(function (es) {
+        es.forEach(function (en) {
+          if (!en.isIntersecting) return;
+          en.target.classList.remove('at-prep');
+          en.target.classList.add('at-in');
+          io.unobserve(en.target);
+        });
+      }, { threshold: 0.3 });
+      rows.forEach(function (r) { io.observe(r); });
+    }
+
+    // título: stagger de palabras con anime.js (fallback: queda visible)
+    var title = document.getElementById('at-qs-title');
+    var words = Array.prototype.slice.call(sec.querySelectorAll('.at-qs-w'));
+    if (title && words.length && 'IntersectionObserver' in window) {
+      var played = false;
+      var run = function () {
+        if (played) return; played = true;
+        if (window.anime) {
+          window.anime({
+            targets: words,
+            opacity: [0, 1],
+            translateY: [26, 0],
+            easing: 'easeOutCubic',
+            duration: 700,
+            delay: window.anime.stagger(60)
+          });
+        } else {
+          words.forEach(function (w) { w.style.opacity = '1'; });
+        }
+      };
+      words.forEach(function (w) { w.style.opacity = '0'; });
+      var tio = new IntersectionObserver(function (es) {
+        es.forEach(function (en) { if (en.isIntersecting) { run(); tio.disconnect(); } });
+      }, { threshold: 0.5 });
+      tio.observe(title);
+      setTimeout(run, 9000); // red de seguridad: nunca dejar el título oculto
+    }
+
+    // línea SVG que se dibuja según el avance de la sección en viewport
+    if (path && path.getTotalLength) {
+      var L;
+      try { L = path.getTotalLength(); } catch (e) { L = 0; }
+      if (L > 0) {
+        path.style.strokeDasharray = L + ' ' + L;
+        path.style.strokeDashoffset = String(L);
+        var draw = function () {
+          var r = sec.getBoundingClientRect(), vh = window.innerHeight;
+          var p = (vh - r.top) / (r.height + vh * 0.5);
+          p = Math.max(0, Math.min(1, p));
+          path.style.strokeDashoffset = String(L * (1 - p));
+        };
+        window.addEventListener('scroll', draw, { passive: true });
+        window.addEventListener('resize', draw);
+        draw();
+      }
+    }
+  }
+
   /* ---------- boot ---------- */
   function boot() {
     if (reduceMotion) { var root = document.getElementById('at-root'); if (root) root.setAttribute('data-motion', 'off'); }
@@ -648,12 +878,56 @@
     initDotGrid();
     initBg3D();
     initTilt();
+    initRubros();
+    initQuienes();
 
     wire();
     applyScIf();
     fillUtm();
     applyMode();
+    initCookieBanner();
     track('landing_p0_view', { template: 'AT Home Premium' });
+  }
+
+  // Banner de cookies (Ley 21.719): el home premium y las landings no cargan
+  // footer.php, así que el banner se inyecta aquí. GA4/Meta Pixel deben chequear
+  // localStorage.at_cookie_consent === 'accepted' antes de cargar.
+  function initCookieBanner() {
+    var consent = null;
+    try {
+      consent = localStorage.getItem('at_cookie_consent');
+      if (!consent && localStorage.getItem('cookies-accepted') === 'true') {
+        consent = 'accepted';
+        localStorage.setItem('at_cookie_consent', 'accepted');
+      }
+    } catch (e) { return; }
+    if (consent) return;
+
+    var bar = document.createElement('div');
+    bar.id = 'at-cookie-banner';
+    bar.setAttribute('role', 'dialog');
+    bar.setAttribute('aria-label', 'Consentimiento de cookies');
+    bar.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:100001;max-width:680px;margin:0 auto;background:#0d2044;border:1px solid rgba(45,212,191,.35);border-radius:14px;padding:16px 18px;box-shadow:0 20px 60px -20px rgba(0,0,0,.85);display:flex;flex-wrap:wrap;align-items:center;gap:12px;font-family:Manrope,sans-serif';
+    bar.innerHTML =
+      '<p style="flex:1 1 300px;margin:0;font-size:13px;line-height:1.5;color:#b9c6d8">Usamos cookies esenciales y, solo con tu permiso, analítica y píxeles publicitarios. <a href="/cookies/" style="color:#2dd4bf;text-decoration:underline">Más información</a>.</p>' +
+      '<div style="display:flex;gap:9px;flex-wrap:wrap">' +
+      '<button type="button" id="at-ck-accept" style="background:#2dd4bf;color:#061018;border:none;border-radius:9px;padding:10px 20px;font-family:\'Space Grotesk\',sans-serif;font-weight:600;font-size:13.5px;cursor:pointer">Aceptar</button>' +
+      '<button type="button" id="at-ck-reject" style="background:transparent;color:#b9c6d8;border:1px solid rgba(255,255,255,.25);border-radius:9px;padding:10px 20px;font-family:\'Space Grotesk\',sans-serif;font-weight:600;font-size:13.5px;cursor:pointer">Rechazar</button>' +
+      '</div>';
+    document.body.appendChild(bar);
+
+    function setConsent(value) {
+      try {
+        localStorage.setItem('at_cookie_consent', value);
+        localStorage.setItem('cookies-accepted', value === 'accepted' ? 'true' : 'false');
+      } catch (e) {}
+      bar.remove();
+      document.dispatchEvent(new CustomEvent('at:cookie-consent', { detail: { consent: value } }));
+    }
+    var acceptBtn = document.getElementById('at-ck-accept');
+    var rejectBtn = document.getElementById('at-ck-reject');
+    if (acceptBtn) acceptBtn.addEventListener('click', function () { setConsent('accepted'); });
+    if (rejectBtn) rejectBtn.addEventListener('click', function () { setConsent('rejected'); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

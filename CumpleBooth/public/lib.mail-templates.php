@@ -142,24 +142,24 @@ HTML;
 {$saludo}, recibimos tu solicitud.
 
 Gracias por escribirnos. Vamos a revisar la disponibilidad para tu fecha y nos
-pondremos en contacto contigo a la brevedad posible para contarte como funciona
+pondremos en contacto contigo a la brevedad posible para contarte cómo funciona
 y darte el valor exacto.
 
 LO QUE NOS ENVIASTE
 Tipo de evento: {$lead['event_type']}
 Fecha: {$fecha}
 Comuna o ciudad: {$lead['commune']}
-Telefono: {$lead['phone']}
+Teléfono: {$lead['phone']}
 
-Tu numero de solicitud es {$ref}. Guardalo por si quieres consultarnos algo
+Tu número de solicitud es {$ref}. Guárdalo por si quieres consultarnos algo
 antes de que te contactemos.
 
 Si tu evento es pronto y prefieres avanzar ahora, responde este correo y le
 damos prioridad.
 
 --
-CumpleClick - cabina de fotos tematica para cumpleanos y eventos.
-Un servicio de AutomatizaTech - https://cumpleclick.com
+CumpleClick — cabina de fotos temática para cumpleaños y eventos.
+Un servicio de AutomatizaTech · https://cumpleclick.com
 TXT;
 
     return [
@@ -211,11 +211,11 @@ function cc_mail_aviso_interno(array $lead, string $urlAdmin = ''): array
 <div>{$botones}</div>
 HTML;
 
-    $texto = "SOLICITUD NUEVA - {$ref}\n\n"
+    $texto = "SOLICITUD NUEVA · {$ref}\n\n"
         . "Nombre: {$lead['name']}\n"
-        . (trim((string) ($lead['organization'] ?? '')) !== '' ? "Organizacion: {$lead['organization']}\n" : '')
+        . (trim((string) ($lead['organization'] ?? '')) !== '' ? "Organización: {$lead['organization']}\n" : '')
         . "Correo: {$email}\n"
-        . "Telefono: {$telefono}\n"
+        . "Teléfono: {$telefono}\n"
         . "Tipo de evento: {$lead['event_type']}\n"
         . ($fecha !== '' ? "Fecha: {$fecha}\n" : '')
         . "Comuna o ciudad: {$lead['commune']}\n\n"

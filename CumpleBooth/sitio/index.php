@@ -81,7 +81,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
        bloquea el render; las tipografias van ultimas porque tienen
        `font-display: swap` y el texto se pinta sin esperarlas. -->
   <link rel="preload" href="assets/img/globo-render.webp" as="image" type="image/webp">
-  <link rel="stylesheet" href="css/styles.css?v=20260831h">
+  <link rel="stylesheet" href="css/styles.css?v=20260831i">
   <link rel="preload" href="fonts/baloo-2-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/baloo-2-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
   <!-- ?v= no es adorno. `styles.css` y `main.js` tienen nombre FIJO, asi que
@@ -308,7 +308,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
         <li class="eventos__item" data-reveal><span aria-hidden="true">🔮</span><h3>Las apuestas</h3><p>El momento que a todos les gusta. Quedan en un <strong>tablero privado</strong> que los papás abren después, y muchos imprimen.</p></li>
         <li class="eventos__item" data-reveal><span aria-hidden="true">📖</span><h3>El álbum</h3><p>Las fotos de la cabina más las que suban los invitados desde su celular, en una revista que se hojea.</p></li>
       </ul>
-      <p class="mundos__mas" data-reveal>¿Todavía no saben el nombre, o el sexo? <strong>Está pensado para eso.</strong> La invitación funciona igual, y si la fiesta es justamente para revelarlo, mejor. <a href="#contacto">Cuéntanos tu fecha</a> y te pasamos el valor.</p>
+      <p class="mundos__mas" data-reveal>¿Todavía no saben el nombre o el sexo? <strong>Está pensado para eso.</strong> La invitación funciona igual, y si la fiesta es justamente para revelarlo, mejor. <a href="#contacto">Cuéntanos tu fecha</a> y te pasamos el valor.</p>
     </section>
 
     <!-- 3c · DEMOS EN VIVO -->
@@ -366,7 +366,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
     <section class="experiencia section" id="experiencia">
       <div class="section__head" data-reveal>
         <h2>Una temática en acción</h2>
-        <p>Un ejemplo real del recorrido CumpleClick: ruleta, personaje, juegos y foto final. Cada temática tiene su propio mundo.</p>
+        <p>Así se ve la cabina por dentro: ruleta, personaje, juegos y foto final. Cada temática tiene su propio mundo.</p>
       </div>
       <div class="experiencia__frame" data-depth>
         <button class="experiencia__play" id="btn-play-frozen" type="button" aria-label="Ver ejemplo de la temática Reino de Hielo">
@@ -445,8 +445,8 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
           <p>No es la foto grupal borrosa de siempre: cada niño se lleva la suya, junto a su personaje, al instante.</p>
         </li>
         <li class="porque__item" data-depth>
-          <h3>Papás tranquilos</h3>
-          <p>Con Premium, reciben una galería privada con las fotos de la fiesta. Sin perseguir a nadie por WhatsApp después.</p>
+          <h3>Un recuerdo que queda</h3>
+          <p>En los dos planes, todas las fotos quedan en el <strong>Álbum Recuerdo</strong>, que la familia comparte con los invitados por un enlace privado. Con Premium, además, los papás tienen su propia galería con todo el material de la fiesta.</p>
         </li>
         <li class="porque__item" data-depth>
           <h3>Llegamos y nos encargamos</h3>
@@ -535,7 +535,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
         </details>
         <details class="faq__item" data-reveal>
           <summary>¿Hacen algo más para la fiesta?</summary>
-          <p>Hoy: invitaciones digitales (tarjeta web, video o foto para WhatsApp). Y pronto, mucho más: juegos, animadoras y proveedores para armar la fiesta completa en un solo lugar.</p>
+          <p>Sí: hoy la fiesta va completa —invitación digital, cabina con sus juegos y Álbum Recuerdo—, y todo eso está incluido en los dos planes. Lo que viene después: animadoras y proveedores, para armar la fiesta entera en un solo lugar.</p>
         </details>
         <details class="faq__item" data-reveal>
           <summary>¿Pueden participar en un evento de empresa?</summary>
@@ -543,7 +543,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
         </details>
         <details class="faq__item" data-reveal>
           <summary>¿Cómo se cuidan las fotos y los datos?</summary>
-          <p>Los datos del formulario se usan solo para responder tu solicitud. En el plan Premium, la galería es privada y las fotos se conservan por 30 días después del evento para que puedas descargarlas.</p>
+          <p>Los datos del formulario se usan solo para responder tu solicitud. Las fotos de la fiesta se conservan 30 días después del evento —en los dos planes— para que alcancen a descargarlas, y el enlace del Álbum Recuerdo es privado. En el Plan Premium, los papás tienen además su propia galería.</p>
         </details>
       </div>
     </section>
@@ -602,6 +602,6 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
   <script src="vendor/gsap.min.js" defer></script>
   <script src="vendor/ScrollTrigger.min.js" defer></script>
   <script src="vendor/lenis.min.js" defer></script>
-  <script src="js/main.js?v=20260831h" defer></script>
+  <script src="js/main.js?v=20260831i" defer></script>
 </body>
 </html>

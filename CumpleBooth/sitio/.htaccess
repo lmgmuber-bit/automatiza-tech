@@ -71,3 +71,12 @@ ErrorDocument 403 /404.html
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteRule \.php$ - [R=404,L]
 </IfModule>
+
+# Codificación declarada en la CABECERA, no solo en el <meta>.
+#
+# Los .html estáticos —el kiosco, el álbum, el cartel QR, la 404— se servían con
+# `Content-Type: text/html` a secas. Traen su `<meta charset="UTF-8">`, así que
+# en la práctica se ven bien, pero el navegador tiene que empezar a interpretar
+# bytes antes de llegar a esa etiqueta. Declararlo en la cabecera saca la
+# adivinanza del medio: es la diferencia entre "Cumpleaños" y "Cumplea?os".
+AddDefaultCharset UTF-8

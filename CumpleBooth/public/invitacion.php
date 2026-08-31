@@ -1025,6 +1025,22 @@ if ($finaleNames === '') {
     $finaleNames = $birthdayName;
 }
 
+/* El titulo de la ficha se arma ENTERO acá, no pegando "a " + el nombre.
+   Con un baby shower sin nombre —que es un caso soportado a propósito: hay
+   familias que hacen la fiesta justamente para revelarlo— `$finaleNames`
+   queda vacío y el titular salía literalmente "¿Quieres conocer a ?".
+   Además no se puede resolver pegando texto: sin nombre la frase pide "al
+   bebé"/"a la bebé", y esa contracción no sale de concatenar "a " con nada. */
+if ($finaleNames !== '') {
+    $finaleTitulo = '¿Quieres conocer a ' . $finaleNames . '?';
+} elseif ($esBabyShower) {
+    $finaleTitulo = $sufijoSexoBebe === 'nina'
+        ? '¿Quieres conocer a la bebé?'
+        : '¿Quieres conocer al bebé?';
+} else {
+    $finaleTitulo = '¿Quieres conocer al protagonista?';
+}
+
 // Tokens del hero. Vienen del mismo `surface` del preset que usa la ficha del
 // protagonista, y se calculan haya perfil o no: un fondo claro como `hielo`
 // necesita mucho más velo que uno nocturno como `kpop` para que el nombre se
@@ -1666,8 +1682,9 @@ $cssVer = static function (string $rel): string {
     </div>
     <?php // El costo de no tener cuentas se dice, no se esconde. ?>
     <p class="inv-gifts-nota" data-gifts-nota hidden>
-      Lo que marques queda guardado en este navegador. Si borras sus datos vas a
-      poder seguir llevándolo, pero ya no soltarlo por tu cuenta.
+      Lo que marques queda guardado en este navegador. Si borras sus datos, el
+      regalo sigue reservado a tu nombre, pero ya no vas a poder liberarlo tú
+      mismo: avísale a la familia y ellos lo sueltan.
     </p>
   </section>
   <?php endif; ?>
@@ -1722,7 +1739,7 @@ $cssVer = static function (string $rel): string {
   <?php if ($eventProfile !== null): ?>
   <section class="inv-finale inv-reveal" id="inv-protagonista">
     <p class="inv-kicker"><?= $esc($esBabyShower ? 'Antes del baby shower' : 'Antes de la fiesta') ?></p>
-    <h2 class="inv-finale-title">¿Quieres conocer a <?= $esc($finaleNames) ?>?</h2>
+    <h2 class="inv-finale-title"><?= $esc($finaleTitulo) ?></h2>
     <p class="inv-finale-lede">Gustos, tallas e ideas para regalar, contados por la familia.</p>
 
     <div class="ep-entry" data-event-profile style="--ep-accent:<?= $esc($accent) ?>;--ep-highlight:<?= $esc($yellow) ?>">

@@ -80,7 +80,7 @@ function cc_mail_shell(string $titulo, string $contenido, string $pieExtra = '')
       </p>
       {$pieExtra}
       <p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:#6B6280;">
-        Un servicio de AutomatizaTech · <a href="https://cumpleclick.com" style="color:#8B5CF6;text-decoration:underline;">cumpleclick.com</a>
+        Un servicio de <a href="https://automatizatech.cl" style="color:#8B5CF6;text-decoration:underline;">AutomatizaTech</a> · <a href="https://cumpleclick.com" style="color:#8B5CF6;text-decoration:underline;">cumpleclick.com</a>
       </p>
     </td></tr>
 
@@ -209,7 +209,8 @@ damos prioridad.
 
 --
 CumpleClick — cabina de fotos temática para cumpleaños y eventos.
-Un servicio de AutomatizaTech · https://cumpleclick.com
+Un servicio de AutomatizaTech · https://automatizatech.cl
+CumpleClick · https://cumpleclick.com
 TXT;
 
     return [

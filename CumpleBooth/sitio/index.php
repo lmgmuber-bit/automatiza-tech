@@ -81,7 +81,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
        bloquea el render; las tipografias van ultimas porque tienen
        `font-display: swap` y el texto se pinta sin esperarlas. -->
   <link rel="preload" href="assets/img/globo-render.webp" as="image" type="image/webp">
-  <link rel="stylesheet" href="css/styles.css?v=20260831i">
+  <link rel="stylesheet" href="css/styles.css?v=20260831j">
   <link rel="preload" href="fonts/baloo-2-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/baloo-2-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
   <!-- ?v= no es adorno. `styles.css` y `main.js` tienen nombre FIJO, asi que
@@ -595,13 +595,13 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
             ? $ccMarca['instagram_url']
             : 'https://instagram.com/' . ltrim($ccMarca['instagram'], '@');
     ?> · <a href="<?= $e($ccIg) ?>" target="_blank" rel="noopener"><?= $e($ccMarca['instagram']) ?></a><?php endif; ?></p>
-    <p class="footer__legal">© 2026 CumpleClick · by <strong>AutomatizaTech</strong></p>
+    <p class="footer__legal">© 2026 CumpleClick · by <a href="https://automatizatech.cl" target="_blank" rel="noopener">AutomatizaTech</a></p>
   </footer>
 
   <!-- Motion: self-hosted, sin CDN. El 3D carga DESPUÉS vía import() dinámico desde main.js -->
   <script src="vendor/gsap.min.js" defer></script>
   <script src="vendor/ScrollTrigger.min.js" defer></script>
   <script src="vendor/lenis.min.js" defer></script>
-  <script src="js/main.js?v=20260831i" defer></script>
+  <script src="js/main.js?v=20260831j" defer></script>
 </body>
 </html>

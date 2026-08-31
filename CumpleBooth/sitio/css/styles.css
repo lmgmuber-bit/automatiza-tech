@@ -805,6 +805,12 @@ p { margin: 0 0 1rem; }
   font-size: 0.85em;
 }
 .footer__legal { font-size: 0.85rem; opacity: 0.6; }
+/* El crédito a AutomatizaTech es un enlace. Hereda el color del pie en vez de
+   quedar azul de navegador —que ahí canta—, y el subrayado es lo que avisa que
+   se puede tocar: sin él, con el color heredado, no se distingue del texto. */
+.footer__legal a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.footer__legal a:hover { color: var(--cc-fucsia); }
+.footer__legal a:focus-visible { outline: 3px solid var(--cc-amarillo); outline-offset: 3px; }
 .footer__links {
   display: flex;
   flex-wrap: wrap;

@@ -29,10 +29,24 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
     // Image generation (Higgsfield), HTML templating, and the Playwright
     // render must all be covered by the same guard: any of the three can
     // fail and none of them may crash the process or hang the request.
+    // Images already in hand are used as-is and never regenerated. Higgsfield's
+    // queue swings wildly (measured the same day: 13s for one image, and 122s
+    // for another), and seven of those never fit inside one bounded HTTP
+    // request — a proposal would come back with two photos and five gradients.
+    // Passing them in sidesteps the queue entirely and doubles as the manual
+    // escape hatch when an automated run degrades.
+    const provided = data.images && typeof data.images === 'object' && !Array.isArray(data.images)
+      ? data.images
+      : {};
+    const pending = (Array.isArray(data.image_briefs) ? data.image_briefs : []).filter(
+      (b) => b && b.slide && !provided[b.slide]
+    );
+
     let images;
     let html;
     try {
-      images = await generateProposalImages(data.image_briefs, higgsfieldCredentials);
+      const generated = await generateProposalImages(pending, higgsfieldCredentials);
+      images = Object.assign({}, generated, provided);
       html = renderProposalHtml(data, images);
       await renderToFiles(html, outputDir);
     } catch (err) {

@@ -481,6 +481,21 @@ p { margin: 0 0 1rem; }
   padding: 22px 22px 22px 84px;
   box-shadow: 0 10px 30px rgba(76, 40, 130, 0.08);
 }
+/* Cuando pasa cada etapa. Va ARRIBA del titulo y no dentro del parrafo porque
+   lo que ordena el recorrido es el tiempo —dias antes, en la fiesta, despues—,
+   no el numero: el numero solo dice que hay una secuencia, esta etiqueta dice
+   de que secuencia se trata. Sin ella, las cuatro tarjetas se leen como cuatro
+   funciones sueltas y se pierde justo lo que hay que contar. */
+.paso__cuando {
+  display: block;
+  margin-bottom: 2px;
+  font-family: var(--cc-font-body);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cc-fucsia);
+}
 .paso h3 { font-size: 1.3rem; margin-bottom: 0.25em; }
 .paso p { margin: 0; opacity: 0.85; }
 .paso__num {

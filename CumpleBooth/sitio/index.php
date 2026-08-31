@@ -66,12 +66,12 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>CumpleClick — Cada invitado se lleva su foto con su personaje favorito</title>
-  <meta name="description" content="Cabina de fotos temática para cumpleaños, fechas especiales y eventos de empresa: ruleta, saludo personalizado y foto al instante. Cotiza por WhatsApp.">
+  <meta name="description" content="Invitación digital, cabina de fotos temática con personajes que saludan por su nombre, juegos y álbum con los recuerdos. Para cumpleaños, baby showers y eventos de empresa. Cotiza por WhatsApp.">
   <meta name="theme-color" content="#FFF8EC">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="es_CL">
-  <meta property="og:title" content="CumpleClick — Su personaje favorito, su foto, al instante">
-  <meta property="og:description" content="Una experiencia temática para cumpleaños y eventos: ruleta, saludo personalizado, juegos y foto lista para compartir.">
+  <meta property="og:title" content="CumpleClick — Su personaje favorito, su foto, su recuerdo">
+  <meta property="og:description" content="De la invitación al álbum: la fiesta completa. Cabina temática con personajes que saludan por su nombre, juegos y las fotos de todos en un solo recuerdo.">
   <link rel="icon" type="image/svg+xml" href="assets/cumpleclick-mark.svg">
   <!-- El orden de estas cuatro lineas se midio, no se eligio por gusto.
        `globo-render.webp` ES el elemento LCP de la pagina, asi que su preload
@@ -81,7 +81,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
        bloquea el render; las tipografias van ultimas porque tienen
        `font-display: swap` y el texto se pinta sin esperarlas. -->
   <link rel="preload" href="assets/img/globo-render.webp" as="image" type="image/webp">
-  <link rel="stylesheet" href="css/styles.css?v=20260831a">
+  <link rel="stylesheet" href="css/styles.css?v=20260831b">
   <link rel="preload" href="fonts/baloo-2-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/baloo-2-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
   <!-- ?v= no es adorno. `styles.css` y `main.js` tienen nombre FIJO, asi que
@@ -140,8 +140,8 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
     <section class="hero" id="hero">
       <div class="hero__inner">
         <div class="hero__copy">
-          <h1 class="hero__title"><span>Su personaje favorito.</span> <em>Su foto.</em> <span>Al instante.</span></h1>
-          <p class="hero__sub">Cabina de fotos temática para cumpleaños, fechas especiales y eventos de empresa: ruleta, saludo con su nombre y foto lista en segundos. 🎈</p>
+          <h1 class="hero__title"><span>Su personaje favorito.</span> <em>Su foto.</em> <span>Su recuerdo.</span></h1>
+          <p class="hero__sub">Acompañamos la fiesta entera: la <strong>invitación</strong> que se abre en el celular, la <strong>cabina</strong> que le da a cada invitado su personaje y su foto al instante, los <strong>juegos</strong>, y el <strong>álbum</strong> con los recuerdos de todos. 🎈</p>
           <div class="hero__ctas">
             <a class="btn btn--cta" href="<?= $e($ccWa('Hola CumpleClick, quiero agendar una fecha 🎈')) ?>" target="_blank" rel="noopener">
               Agenda la fecha por WhatsApp 📲
@@ -159,24 +159,34 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
     <!-- 2 · CÓMO FUNCIONA -->
     <section class="pasos section" id="como-funciona">
       <div class="section__head" data-reveal>
-        <h2>Así de fácil: 3 pasos y sonrisa</h2>
+        <h2>Cómo es una fiesta con CumpleClick</h2>
+        <p>Empieza varios días antes, con la invitación. Y no termina cuando se apaga la cabina: termina con el álbum que queda.</p>
       </div>
       <div class="pasos__grid">
         <ol class="pasos__lista">
           <li class="paso" data-reveal>
             <span class="paso__num" aria-hidden="true">1</span>
-            <h3>Toca su nombre</h3>
-            <p>Cada invitado se busca en la pantalla y hace girar la ruleta.</p>
+            <span class="paso__cuando">Días antes</span>
+            <h3>La invitación 💌</h3>
+            <p>Le mandas un enlace por WhatsApp. Se abre como un sobre, con la música y los personajes de la temática elegida, y una cuenta regresiva. No es una imagen: es el primer momento de la fiesta.</p>
           </li>
           <li class="paso" data-reveal>
             <span class="paso__num" aria-hidden="true">2</span>
-            <h3>La ruleta lo sorprende</h3>
-            <p>Le asigna un personaje de la temática, que lo saluda <strong>por su nombre</strong>.</p>
+            <span class="paso__cuando">En la fiesta</span>
+            <h3>La cabina 📸</h3>
+            <p>Cada invitado toca su nombre, la ruleta le asigna un personaje que <strong>lo saluda por su nombre</strong>, y se lleva su foto y su diploma al celular escaneando el QR.</p>
           </li>
           <li class="paso" data-reveal>
             <span class="paso__num" aria-hidden="true">3</span>
-            <h3>Se lleva su foto 📸</h3>
-            <p>Sonríe junto a su personaje, escanea el QR y listo: foto al celular y diploma con su nombre.</p>
+            <span class="paso__cuando">Entre foto y foto</span>
+            <h3>Los juegos 🎮</h3>
+            <p>Juegos de la misma temática en la pantalla, para que la fila sea parte de la fiesta y no una espera.</p>
+          </li>
+          <li class="paso" data-reveal>
+            <span class="paso__num" aria-hidden="true">4</span>
+            <span class="paso__cuando">Después</span>
+            <h3>El álbum 📖</h3>
+            <p>Las fotos de todos quedan en un álbum que se pasa como una revista. Le llega a la familia por un enlace privado, para compartirlo con los invitados.</p>
           </li>
         </ol>
         <figure class="pasos__video" data-reveal>
@@ -563,6 +573,6 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
   <script src="vendor/gsap.min.js" defer></script>
   <script src="vendor/ScrollTrigger.min.js" defer></script>
   <script src="vendor/lenis.min.js" defer></script>
-  <script src="js/main.js?v=20260831a" defer></script>
+  <script src="js/main.js?v=20260831b" defer></script>
 </body>
 </html>

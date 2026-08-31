@@ -33,6 +33,203 @@
   }
 
   /* ---------- GSAP reveals (solo transform/opacity; contenido visible sin JS) ---------- */
+
+  /* ---------- Menú de secciones ----------
+
+     Un "disclosure": un botón que muestra y esconde un panel. No lleva trampa
+     de foco como un diálogo modal —no bloquea el resto de la página— pero sí
+     las tres cosas sin las cuales no se puede usar con teclado: Escape cierra,
+     el foco entra al panel al abrir y vuelve al botón al cerrar.
+
+     Lo de mover el foco a mano no es un adorno: en el HTML el `<nav>` va ANTES
+     del botón, así que al abrir, un Tab llevaría FUERA del panel en vez de
+     adentro. Se podría haber reordenado el marcado, pero el orden actual es el
+     que deja los enlaces en su sitio en escritorio. */
+  function initMenu() {
+    var topbar = document.getElementById('topbar');
+    var boton = document.getElementById('menu-boton');
+    var menu = document.getElementById('menu-principal');
+    if (!topbar || !boton || !menu) return;
+
+    var etiqueta = boton.querySelector('[data-etiqueta-menu]');
+    var enlaces = Array.prototype.slice.call(menu.querySelectorAll('.nav__enlace'));
+
+    function abierto() { return topbar.getAttribute('data-menu') === 'abierto'; }
+
+    function abrir(moverFoco) {
+      topbar.setAttribute('data-menu', 'abierto');
+      boton.setAttribute('aria-expanded', 'true');
+      if (etiqueta) { etiqueta.textContent = 'Cerrar menú'; }
+      if (!moverFoco) { return; }
+      /* En el cuadro siguiente, no ahora: recién ahí el panel dejó de estar
+         `visibility: hidden` y el enlace puede recibir el foco. Llamando a
+         `focus()` en la misma vuelta el foco se quedaba en el botón y quien
+         navega con teclado abría un menú al que no podía entrar. */
+      window.requestAnimationFrame(function () {
+        if (abierto() && enlaces[0]) { enlaces[0].focus(); }
+      });
+    }
+
+    function cerrar(devolverFoco) {
+      if (!abierto()) return;
+      topbar.removeAttribute('data-menu');
+      boton.setAttribute('aria-expanded', 'false');
+      if (etiqueta) { etiqueta.textContent = 'Abrir menú'; }
+      if (devolverFoco) { boton.focus(); }
+    }
+
+    boton.addEventListener('click', function (ev) {
+      if (abierto()) { cerrar(porTeclado(ev)); return; }
+      /* El foco salta al primer enlace SÓLO si se abrió con el teclado.
+
+         Moviéndolo siempre, quien toca la hamburguesa con el dedo veía el
+         primer ítem con el anillo de foco puesto, que parece un error de la
+         página. `detail` vale 0 cuando el clic lo generó Enter o Espacio sobre
+         el botón, y el número de clics cuando vino de un puntero: es la forma
+         de distinguirlos sin escuchar el teclado por separado. */
+      abrir(porTeclado(ev));
+    });
+
+    function porTeclado(ev) { return !ev || ev.detail === 0; }
+
+    /* Al elegir una sección, el panel se va: quien tocó "Precios" quiere ver
+       precios, no el menú tapando la mitad de la pantalla. El desplazamiento en
+       sí lo hace el manejador de anclas de Lenis, o el navegador si no está. */
+    menu.addEventListener('click', function (ev) {
+      if (ev.target.closest('a')) { cerrar(false); }
+    });
+
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && abierto()) { cerrar(true); }
+    });
+
+    /* Tocar fuera cierra. Se escucha en captura para que el panel se cierre
+       aunque el clic caiga sobre algo que detiene la propagación. */
+    document.addEventListener('click', function (ev) {
+      if (abierto() && !topbar.contains(ev.target)) { cerrar(false); }
+    }, true);
+
+    /* Si el foco se va del header con el teclado, el panel sobra. */
+    topbar.addEventListener('focusout', function (ev) {
+      if (abierto() && !topbar.contains(ev.relatedTarget)) { cerrar(false); }
+    });
+
+    /* Al pasar a ancho de escritorio el panel deja de existir como panel: si
+       quedó marcado como abierto, el atributo se arrastra y la hamburguesa
+       reaparece "abierta" al volver a angostar. */
+    var anchoGrande = window.matchMedia('(min-width: 1025px)');
+    var alCambiar = function (e) { if (e.matches) { cerrar(false); } };
+    if (anchoGrande.addEventListener) { anchoGrande.addEventListener('change', alCambiar); }
+    else if (anchoGrande.addListener) { anchoGrande.addListener(alCambiar); }
+
+    /* ---------- Sección activa ----------
+       Un solo IntersectionObserver, con una franja estrecha en el medio de la
+       pantalla: se marca la sección que está cruzando el centro, no la que
+       asoma por abajo. Sin la franja, con dos secciones a la vista se marcarían
+       las dos y el menú parpadearía al hacer scroll. */
+    var porId = {};
+    var objetivos = [];
+    enlaces.forEach(function (a) {
+      var id = a.getAttribute('href');
+      if (!id || id.length < 2) return;
+      var sec = document.querySelector(id);
+      if (!sec) return;
+      porId[id] = a;
+      objetivos.push(sec);
+    });
+    if (!objetivos.length || !('IntersectionObserver' in window)) return;
+
+    var observador = new IntersectionObserver(function (entradas) {
+      entradas.forEach(function (e) {
+        var a = porId['#' + e.target.id];
+        if (!a) return;
+        if (e.isIntersecting) { a.setAttribute('aria-current', 'true'); }
+        else { a.removeAttribute('aria-current'); }
+      });
+    }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+
+    objetivos.forEach(function (sec) { observador.observe(sec); });
+  }
+
+  /* ---------- Revelaciones al entrar en pantalla ----------
+
+     Con IntersectionObserver, NO con ScrollTrigger, y el motivo es medido.
+
+     Cada `gsap.from({scrollTrigger})` crea un disparador por elemento: 59 en
+     esta página. Cada disparador mide la posición de su elemento al nacer y la
+     vuelve a medir en cada `refresh()`, y eso es layout sincrónico sobre un DOM
+     grande. Con la CPU a 1/4 eso costaba tareas largas de 420 ms y 218 ms.
+
+     Se probó `ScrollTrigger.batch()` creyendo que agruparía los disparadores, y
+     no: `ScrollTrigger.getAll()` seguía devolviendo 60. `batch()` coordina los
+     callbacks, no reduce los triggers, así que el bloqueo no bajó. Queda escrito
+     para no volver a intentarlo.
+
+     El observador, en cambio, no mide layout en el hilo principal: el navegador
+     calcula las intersecciones por su cuenta y avisa. Son 3 observadores en vez
+     de 59 disparadores. GSAP se sigue usando para animar —misma duración, mismo
+     ease, mismo desplazamiento— sólo cambia quién avisa que llegó el momento.
+
+     `start: 'top 88%'` de ScrollTrigger equivale a `rootMargin` de -12% abajo:
+     el elemento cuenta como visible cuando su borde superior pasa el 88% del
+     alto de la ventana. Igual para 92% -> -8% y 90% -> -10%. */
+  function revelarAlEntrar(selector, estadoInicial, entrada, margenInferior, totalEscalonado, porContenedor) {
+    var nodos = Array.prototype.slice.call(document.querySelectorAll(selector));
+    if (!nodos.length) return;
+    window.gsap.set(nodos, estadoInicial);
+
+    var animar = function (lote) {
+      var opciones = {};
+      for (var k in entrada) { opciones[k] = entrada[k]; }
+      opciones.overwrite = true;
+      /* `amount` reparte un total fijo: el escalonado no se estira aunque el
+         lote sea grande. El código anterior topaba el retraso con `(i % 3)`. */
+      opciones.stagger = { amount: totalEscalonado };
+      window.gsap.to(lote, opciones);
+    };
+
+    /* `porContenedor` existe por el carrusel de temáticas.
+
+       Las tarjetas `.mundo` viven en una lista que se desplaza en HORIZONTAL, así
+       que cuatro de las nueve están fuera de la ventana por el costado aunque su
+       sección ya se vea entera. Un observador mira la intersección real —los dos
+       ejes— y esas cuatro no intersectaban nunca: quedaban en opacidad 0 hasta
+       que alguien deslizara el carrusel, y encima el carrusel se mueve solo, así
+       que aparecían de golpe a mitad de camino. ScrollTrigger no tenía el
+       problema porque sólo miraba la posición vertical.
+
+       La solución es observar el CONTENEDOR y animar a todos sus hijos de una:
+       vuelve a ser "la sección entró, se revelan sus tarjetas", que es lo que
+       hacía antes. Se agrupa por padre y no por un selector fijo para que siga
+       funcionando si hay más de una lista. */
+    var observados = nodos;
+    var hijosDe = null;
+    if (porContenedor) {
+      hijosDe = new Map();
+      for (var n = 0; n < nodos.length; n++) {
+        var padre = nodos[n].parentElement;
+        if (!padre) { continue; }
+        if (!hijosDe.has(padre)) { hijosDe.set(padre, []); }
+        hijosDe.get(padre).push(nodos[n]);
+      }
+      observados = Array.prototype.slice.call(hijosDe.keys());
+    }
+
+    var obs = new IntersectionObserver(function (entradas) {
+      var lote = [];
+      for (var i = 0; i < entradas.length; i++) {
+        if (!entradas[i].isIntersecting) { continue; }
+        var blanco = entradas[i].target;
+        obs.unobserve(blanco);               /* equivale a `once: true` */
+        if (hijosDe) { lote = lote.concat(hijosDe.get(blanco) || []); }
+        else { lote.push(blanco); }
+      }
+      if (lote.length) { animar(lote); }
+    }, { rootMargin: '0px 0px ' + margenInferior + ' 0px', threshold: 0 });
+
+    for (var j = 0; j < observados.length; j++) { obs.observe(observados[j]); }
+  }
+
   function initReveals() {
     if (reduceMotion) return;
     if (!window.gsap || !window.ScrollTrigger) return;
@@ -40,31 +237,16 @@
 
     /* .mundo va aparte (entrada con perspectiva); excluirlo del reveal genérico
        o el segundo gsap.from captura opacity:0 como estado final */
-    var items = window.gsap.utils.toArray('[data-reveal]:not(.mundo)');
-    items.forEach(function (el, i) {
-      window.gsap.from(el, {
-        y: 36,
-        opacity: 0,
-        duration: 0.7,
-        ease: 'power3.out',
-        delay: (i % 3) * 0.06,
-        scrollTrigger: { trigger: el, start: 'top 88%', once: true }
-      });
-    });
+    revelarAlEntrar('[data-reveal]:not(.mundo)',
+      { opacity: 0, y: 36 },
+      { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' },
+      '-12%', 0.18);
 
-    /* Vitrina: entrada con leve perspectiva (profundidad, sin 3D real) */
-    window.gsap.utils.toArray('.mundo').forEach(function (card, i) {
-      window.gsap.from(card, {
-        y: 44,
-        opacity: 0,
-        rotationX: 8,
-        transformPerspective: 800,
-        duration: 0.8,
-        ease: 'power3.out',
-        delay: (i % 4) * 0.07,
-        scrollTrigger: { trigger: card, start: 'top 92%', once: true }
-      });
-    });
+    revelarAlEntrar('.mundo',
+      { opacity: 0, y: 44, rotationX: 8, transformPerspective: 800 },
+      { opacity: 1, y: 0, rotationX: 0, duration: 0.8, ease: 'power3.out' },
+      '-8%', 0.24, true);   /* por contenedor: el carrusel corre en horizontal */
+
     /* NOTA fusión OpenCode+Claude 2026-07-27: [data-depth] y la salida del hero
        viven en initDepth() e initHeroParallax() (versiones Claude). No repetirlas
        aquí: un segundo gsap.from sobre el mismo elemento captura opacity:0 como
@@ -241,19 +423,10 @@
   function initDepth() {
     if (reduceMotion) return;
     if (!window.gsap || !window.ScrollTrigger) return;
-    window.gsap.utils.toArray('[data-depth]').forEach(function (el, i) {
-      window.gsap.from(el, {
-        y: 52,
-        opacity: 0,
-        rotationX: 14,
-        transformPerspective: 1000,
-        transformOrigin: 'center top',
-        duration: 0.85,
-        ease: 'power3.out',
-        delay: (i % 3) * 0.08,
-        scrollTrigger: { trigger: el, start: 'top 90%', once: true }
-      });
-    });
+    revelarAlEntrar('[data-depth]',
+      { opacity: 0, y: 52, rotationX: 14, transformPerspective: 1000, transformOrigin: 'center top' },
+      { opacity: 1, y: 0, rotationX: 0, duration: 0.85, ease: 'power3.out' },
+      '-10%', 0.24);
   }
 
   /* ---------- Salida del hero con profundidad ----------
@@ -434,11 +607,24 @@
         .then(function (mod) { mod.mountHeroGlobo('hero-visual'); })
         .catch(function () { /* fallback estático ya visible */ });
     };
-    if ('requestIdleCallback' in window) {
-      window.requestIdleCallback(boot, { timeout: 2500 });
-    } else {
-      window.setTimeout(boot, 800);
-    }
+    /* Primero `load`, DESPUÉS el hueco libre.
+
+       `three.module.min.js` + `three.core.min.js` son ~730 KB que hay que
+       parsear y compilar; medido con la CPU a 1/4 eso es una tarea de ~330 ms.
+       Con sólo `requestIdleCallback({timeout: 2500})` el timeout vencía a los
+       2,5 s —o sea en plena ventana del LCP— y esos 330 ms competían con el
+       primer pintado. Encadenarlo a `load` lo saca del camino crítico sin tocar
+       el efecto: mientras tanto se ve `globo-render.webp`, que es el mismo globo,
+       y el 3D lo reemplaza cuando está listo. */
+    var agendar = function () {
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(boot, { timeout: 2000 });
+      } else {
+        window.setTimeout(boot, 300);
+      }
+    };
+    if (document.readyState === 'complete') { agendar(); }
+    else { window.addEventListener('load', agendar); }
   }
 
   function init() {
@@ -447,18 +633,39 @@
     initContactForm();
     initAnalyticsHooks();
     initReveals();
+    initMenu();
     initDepth();
     initHeroParallax();
     initTilt();
     initCarruselAuto();
     initLenis();
     initHero3d();
-    /* Recalcular triggers cuando el layout ya está estable (fuentes + imágenes) */
+    /* UN solo `refresh()`, cuando YA pasaron las dos cosas que mueven el layout.
+
+       El intento anterior fue un debounce de 200 ms, y no servía: `load` y
+       `fonts.ready` no caen juntos —medidos acá, a 2,0 s y 5,7 s— así que el
+       debounce no fusionaba nada, sólo retrasaba cada uno por separado. Seguían
+       siendo dos tareas largas (668 ms y 294 ms), que es exactamente lo que se
+       quería evitar.
+
+       Ahora se espera a que las DOS señales hayan ocurrido y recién ahí se mide
+       una vez. `refresh()` recalcula la posición de todos los disparadores de la
+       página, o sea layout sincrónico sobre un DOM grande: es la operación más
+       cara del arranque y no hay motivo para pagarla dos veces. */
     if (window.ScrollTrigger) {
-      window.addEventListener('load', function () { window.ScrollTrigger.refresh(); });
+      var faltan = 1;
+      var listo = function () {
+        faltan -= 1;
+        if (faltan > 0) { return; }
+        // En rAF para no medir en medio del trabajo de carga del navegador.
+        requestAnimationFrame(function () { window.ScrollTrigger.refresh(); });
+      };
       if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(function () { window.ScrollTrigger.refresh(); });
+        faltan = 2;
+        document.fonts.ready.then(listo);
       }
+      if (document.readyState === 'complete') { listo(); }
+      else { window.addEventListener('load', listo); }
     }
     initRedDeSeguridad();
   }
@@ -482,7 +689,10 @@
   function initRedDeSeguridad() {
     function rescatar() {
       var alto = window.innerHeight || 0;
-      var nodos = document.querySelectorAll('[data-reveal]');
+      // `[data-depth]` va incluido: esos bloques tambien nacen en opacidad 0
+      // y, si su observador no dispara, quedan invisibles para siempre. Antes
+      // la red solo miraba `[data-reveal]` y los dejaba afuera.
+      var nodos = document.querySelectorAll('[data-reveal], [data-depth]');
       for (var i = 0; i < nodos.length; i++) {
         var el = nodos[i];
         var r = el.getBoundingClientRect();

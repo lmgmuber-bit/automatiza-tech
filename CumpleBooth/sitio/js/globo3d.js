@@ -36,7 +36,7 @@ function buildGlobo() {
     0.34, 0.26, 0.88
   );
   const body = new THREE.Mesh(
-    new THREE.SphereGeometry(1, 48, 48),
+    new THREE.SphereGeometry(1, 32, 32),
     new THREE.MeshPhongMaterial({ map: bodyTex, shininess: 60, specular: new THREE.Color('#ffffff') })
   );
   group.add(body);
@@ -130,8 +130,23 @@ export function mountHeroGlobo(containerId) {
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 50);
   camera.position.set(0, 0.1, 4.6);
 
+  /* Perfil de teléfono. Lo que cuesta acá no son los triángulos —son cuatro mil
+     y a una GPU no le pesan— sino los PÍXELES: el globo se dibuja a 335 CSS px,
+     pero a `devicePixelRatio` 2,625 con el tope en 2 eso son 670x670 px reales
+     sombreados 60 veces por segundo, y con `antialias` el buffer va multimuestreado
+     encima. Bajar el tope a 1.5 corta ~44% del trabajo de relleno y apagar el
+     antialias corta el resto.
+
+     PERO el antialias se deja PRENDIDO igual, en teléfono también. Se probó
+     apagarlo y en la captura el borde de la esfera quedaba escalonado contra el
+     fondo crema: el globo es el único objeto del hero y su silueta es una
+     circunferencia limpia, o sea el peor caso para el dentado. El ahorro grande
+     estaba en el pixel ratio (−44% de relleno) y en el tope de 30 cuadros
+     (−50% de trabajo sostenido); el antialias sobre una sola esfera cuesta
+     poco al lado de eso y es lo único de los tres que se nota mirando. */
+  const ESMOVIL = window.matchMedia('(max-width: 820px), (pointer: coarse)').matches;
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, ESMOVIL ? 1.5 : 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   container.appendChild(renderer.domElement);
   container.classList.add('hero__visual--3d');
@@ -191,10 +206,31 @@ export function mountHeroGlobo(containerId) {
 
   const timer = new THREE.Timer();
   timer.connect(document);
+
+  /* El globo flota: sube y baja un 8% y gira despacio. A 30 cuadros por segundo
+     ese movimiento se ve igual, y es la mitad de trabajo sostenido en el hilo
+     principal y en la GPU de un teléfono. En escritorio se deja a 60.
+
+     OJO con el guardián de abajo: mide cuadros por segundo y se retira solo si
+     bajan de cierto punto. Atado al 30 fijo de antes, capear a 30 lo haría
+     apagarse a sí mismo apenas el tope funcionara como corresponde. Por eso el
+     umbral se calcula desde el objetivo (la mitad), y en escritorio sigue dando
+     exactamente 30, que es el valor con el que se venía. */
+  const FPS_OBJETIVO = ESMOVIL ? 30 : 60;
+  const MS_POR_CUADRO = 1000 / FPS_OBJETIVO;
+  const FPS_MINIMO = FPS_OBJETIVO / 2;
+  let ultimoDibujo = 0;
+
   function tick(timestamp) {
     if (degraded) return;
     requestAnimationFrame(tick);
     if (!inView || document.hidden) { last = performance.now(); return; }
+
+    /* Se sale ANTES de tocar nada: sin este corte el tope no ahorraría el
+       trabajo de animación, sólo el `render`. */
+    const ahora = timestamp || performance.now();
+    if (ahora - ultimoDibujo < MS_POR_CUADRO - 1) { return; }
+    ultimoDibujo = ahora;
 
     timer.update(timestamp);
     const t = timer.getElapsed();
@@ -215,7 +251,7 @@ export function mountHeroGlobo(containerId) {
       accum += dt;
       if (frames % WINDOW === 0) {
         const avgFps = 1000 / (accum / (WINDOW - WARMUP > 0 ? Math.min(frames - WARMUP, WINDOW) : WINDOW));
-        if (avgFps < 30) degrade();
+        if (avgFps < FPS_MINIMO) degrade();
         accum = 0;
       }
     }

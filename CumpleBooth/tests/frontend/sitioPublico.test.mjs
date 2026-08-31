@@ -159,3 +159,60 @@ test('el select de paises del formulario calza con la tabla del servidor', (t) =
       `${clave}: el select muestra "${et[1]}" pero el servidor usa el codigo +${pais.codigo}`)
   }
 })
+
+/* El menú de secciones.
+ *
+ * El defecto que cuida es del tipo que no rompe nada: un ítem que apunta a un
+ * `#id` que no existe. El enlace se ve igual, se puede tocar, el panel se
+ * cierra como siempre... y la página no se mueve. No hay error en consola ni
+ * nada que falle; simplemente no pasa nada, y eso sólo se descubre probando el
+ * menú a mano ítem por ítem. Pasa solo con renombrar una sección.
+ *
+ * También se verifica el cableado ARIA del botón, porque `aria-controls`
+ * apuntando a un id equivocado es igual de silencioso: se ve bien y el lector
+ * de pantalla no encuentra el panel.
+ */
+test('cada opción del menú lleva a una sección que existe', () => {
+  const nav = INDEX.match(/<nav class="nav"[^>]*id="([^"]+)"[\s\S]*?<\/nav>/)
+  assert.ok(nav, 'no está el <nav> del menú en el header')
+
+  const destinos = [...nav[0].matchAll(/<a class="nav__enlace" href="#([^"]+)"/g)].map((m) => m[1])
+  assert.ok(destinos.length >= 5, `el menú tiene sólo ${destinos.length} secciones`)
+
+  for (const id of destinos) {
+    assert.match(
+      INDEX,
+      new RegExp(`id="${id}"`),
+      `el menú enlaza a "#${id}" y no hay ningún elemento con ese id`
+    )
+  }
+  assert.equal(new Set(destinos).size, destinos.length, 'hay una sección repetida en el menú')
+})
+
+test('el botón del menú está cableado al panel que abre', () => {
+  const boton = INDEX.match(/<button class="nav__boton"[^>]*>/)
+  assert.ok(boton, 'no está el botón hamburguesa')
+
+  assert.match(boton[0], /aria-expanded="false"/, 'el botón debe arrancar declarando que está cerrado')
+
+  const controla = boton[0].match(/aria-controls="([^"]+)"/)
+  assert.ok(controla, 'al botón le falta aria-controls')
+
+  const nav = INDEX.match(/<nav class="nav"[^>]*id="([^"]+)"/)
+  assert.equal(
+    controla[1],
+    nav[1],
+    'aria-controls apunta a un id distinto del que tiene el <nav>'
+  )
+
+  // El header fijo tapaba el título de la sección a la que se salta.
+  //
+  // Se exige la DECLARACIÓN (`scroll-margin-top:` con dos puntos y un valor),
+  // no la palabra suelta: arriba de la regla hay un comentario que la nombra, y
+  // buscando sólo el nombre el test pasaba en verde con la regla ya borrada.
+  assert.match(
+    readFileSync(new URL('css/styles.css', RAIZ), 'utf8'),
+    /scroll-margin-top\s*:\s*[0-9]/,
+    'sin scroll-margin-top el título queda debajo del header al usar el menú'
+  )
+})

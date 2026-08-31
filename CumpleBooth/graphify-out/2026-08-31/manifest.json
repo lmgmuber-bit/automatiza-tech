@@ -50,8 +50,8 @@
     "semantic_hash": ""
   },
   "public/admin/_style.css.php": {
-    "mtime": 1787690614.0220091,
-    "ast_hash": "d7e1eec650400fb99a3ca8faebbbc1ef",
+    "mtime": 1788095252.1293578,
+    "ast_hash": "0bcc76b302ac40d77bb7328b2cba98f4",
     "semantic_hash": ""
   },
   "public/admin/config.php": {
@@ -60,8 +60,8 @@
     "semantic_hash": ""
   },
   "public/admin/invitations.php": {
-    "mtime": 1787695022.1337087,
-    "ast_hash": "27e742bdf77f351799dd89a46a006f87",
+    "mtime": 1787842274.902755,
+    "ast_hash": "bf74273bbeae8e79d3d8b32a3a92c574",
     "semantic_hash": ""
   },
   "public/api.php": {
@@ -75,13 +75,13 @@
     "semantic_hash": ""
   },
   "public/data/themes.json": {
-    "mtime": 1787749419.324905,
-    "ast_hash": "1550ae7237facad59ed7536ea38c393d",
+    "mtime": 1788061738.672225,
+    "ast_hash": "e4f5a9d5c3883faa1f17536a591a7c0d",
     "semantic_hash": ""
   },
   "public/descargar-invitacion.php": {
-    "mtime": 1787690614.387449,
-    "ast_hash": "edf627fad4a55656753528792227cc53",
+    "mtime": 1787843693.8627744,
+    "ast_hash": "5ebc78acbd67c758032a5ffebb1b8592",
     "semantic_hash": ""
   },
   "public/galeria.php": {
@@ -90,13 +90,13 @@
     "semantic_hash": ""
   },
   "public/lib.invitations.php": {
-    "mtime": 1787695167.5169299,
-    "ast_hash": "354457c1a68a1c48f05d42e028152e5e",
+    "mtime": 1787799672.991123,
+    "ast_hash": "b4e121d662f1f85a699c99ac5cf08c7f",
     "semantic_hash": ""
   },
   "public/lib.php": {
-    "mtime": 1787715041.9839778,
-    "ast_hash": "8126b03b8df28f36f910fc89bd822dd3",
+    "mtime": 1788143956.4564412,
+    "ast_hash": "41fa8e571fef1d1126616efa597ae8f5",
     "semantic_hash": ""
   },
   "public/upload.php": {
@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "src/App.jsx": {
-    "mtime": 1787749068.2679281,
-    "ast_hash": "7b7a5789ea772c206fecaa9c45330057",
+    "mtime": 1787778700.2758563,
+    "ast_hash": "9fd2e0c48a2808f65c452a70a737a1c9",
     "semantic_hash": ""
   },
   "src/ToyTrack3D.jsx": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "tests/backend/run.php": {
-    "mtime": 1787695894.9370391,
-    "ast_hash": "20948371d8ce4c4d351ed2603a1635c2",
+    "mtime": 1788004723.274254,
+    "ast_hash": "4538b50b768b449a29a267d3131a7c10",
     "semantic_hash": ""
   },
   "tests/frontend/frameGeometry.test.mjs": {
@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1787749291.6602345,
-    "ast_hash": "dcab6fb2a723f5929c18a3be136171f2",
+    "mtime": 1788152750.5245762,
+    "ast_hash": "4aaaf1aa65749e15541bd94d22992e4f",
     "semantic_hash": ""
   },
   "OPENCODE.md": {
@@ -250,8 +250,8 @@
     "semantic_hash": ""
   },
   "docs/ARQUITECTURA.md": {
-    "mtime": 1787715477.914102,
-    "ast_hash": "7f5d8023bb1c74e0ffc9c009e923389e",
+    "mtime": 1788004416.5731978,
+    "ast_hash": "ae979d867a0343f99239e2d2318c5d6d",
     "semantic_hash": ""
   },
   "docs/CLAUDE-GATE-A-TAKEOVER.md": {
@@ -265,8 +265,8 @@
     "semantic_hash": ""
   },
   "docs/DEPLOY.md": {
-    "mtime": 1787690612.929027,
-    "ast_hash": "a6cb07368bdb29e5e2039b0f417e1ca1",
+    "mtime": 1788054618.3789814,
+    "ast_hash": "2894f3222b7c87fdb88e398de46065c2",
     "semantic_hash": ""
   },
   "docs/FASE-INVITACIONES-DINAMICAS.md": {
@@ -455,8 +455,8 @@
     "semantic_hash": ""
   },
   "public/invitacion.php": {
-    "mtime": 1787690614.4136317,
-    "ast_hash": "d17f8146203fbbcfa751751554a2c678",
+    "mtime": 1788150493.5931325,
+    "ast_hash": "dc109906eb4640924134917b7656c1a8",
     "semantic_hash": ""
   },
   "tests/backend/seed-invitation-smoke.php": {
@@ -495,8 +495,8 @@
     "semantic_hash": ""
   },
   "tests/frontend/themeFlow.test.mjs": {
-    "mtime": 1787749204.595655,
-    "ast_hash": "edf2973a9d364dc299ce9cdf665a0d20",
+    "mtime": 1788061715.726406,
+    "ast_hash": "11e6408f494fff8283d625ce578ba02c",
     "semantic_hash": ""
   },
   "design/MANUAL-DE-MARCA.md": {
@@ -2420,13 +2420,13 @@
     "semantic_hash": ""
   },
   "sitio/js/globo3d.js": {
-    "mtime": 1787690632.2120118,
-    "ast_hash": "9ab37ad5b2211c0fc930e3b31d73eb6f",
+    "mtime": 1788077844.6374762,
+    "ast_hash": "a8182b8fe008914aba2e36af8f16e981",
     "semantic_hash": ""
   },
   "sitio/js/main.js": {
-    "mtime": 1787690632.2189753,
-    "ast_hash": "78c29de57c63b4a7ac1125833c70cf19",
+    "mtime": 1788148746.766754,
+    "ast_hash": "91367e619b2a768f6270ab6af0d5ac41",
     "semantic_hash": ""
   },
   "docs/OPENCODE-HANDOFF-FRONTEND-WOW.md": {
@@ -2442,11 +2442,6 @@
   "docs/OPENCODE-KPOP-HEROES-IMAGES-EXECUTOR.md": {
     "mtime": 1787690613.0542793,
     "ast_hash": "2a950b404b388505a5d8f65e0b865c70",
-    "semantic_hash": ""
-  },
-  "sitio/index.html": {
-    "mtime": 1787690632.202391,
-    "ast_hash": "c29d3757357b73771a756f984a5621ff",
     "semantic_hash": ""
   },
   "design/explicativo/ia/IMG-09-nina-camara.png": {
@@ -3045,8 +3040,8 @@
     "semantic_hash": ""
   },
   "scripts/export-party-sql.php": {
-    "mtime": 1787690631.3677,
-    "ast_hash": "5b3cc96ad66fec968fb4304c68159b1b",
+    "mtime": 1788059710.2632895,
+    "ast_hash": "b3b1a2f94da2237bd8a3ad9ee4036021",
     "semantic_hash": ""
   },
   "design/renders/kpop-saludos-raw/voz-rumi.html": {
@@ -3485,13 +3480,13 @@
     "semantic_hash": ""
   },
   "public/lib.leads.php": {
-    "mtime": 1787690614.4387827,
-    "ast_hash": "f06564105c85b08a4ed9af013b13f2a3",
+    "mtime": 1788095082.4610708,
+    "ast_hash": "43a3e52941e0c3d27c0af800c6baf4df",
     "semantic_hash": ""
   },
   "sitio/api/contacto.php": {
-    "mtime": 1787690631.6256196,
-    "ast_hash": "9fe6467cf95c42bbac48e4dc709cf7bf",
+    "mtime": 1788095109.1551917,
+    "ast_hash": "cf5c606116385b28b592bbb7d5f47d4e",
     "semantic_hash": ""
   },
   "src/StageConcert3D.jsx": {
@@ -3515,8 +3510,8 @@
     "semantic_hash": ""
   },
   "tests/backend/leads.php": {
-    "mtime": 1787690632.6310985,
-    "ast_hash": "be7b384bcc9593a97bee65858f6ff0a0",
+    "mtime": 1788151607.3875086,
+    "ast_hash": "dc7deffbcd70ce5169b89fed1c8e9d04",
     "semantic_hash": ""
   },
   "tests/frontend/records.test.mjs": {
@@ -3535,8 +3530,8 @@
     "semantic_hash": ""
   },
   "docs/TEMATICA-COMPLETA.md": {
-    "mtime": 1787749274.5105746,
-    "ast_hash": "d121cf30d491f34be05d4531852ac630",
+    "mtime": 1787782598.5430522,
+    "ast_hash": "3e290ae7635235e487d40c7f29f9c43e",
     "semantic_hash": ""
   },
   "qa-evidence/sitio-frontend-audit/REPORT.md": {
@@ -4010,8 +4005,8 @@
     "semantic_hash": ""
   },
   "public/album-api.php": {
-    "mtime": 1787690614.0802963,
-    "ast_hash": "707a1cb1e0b4b186a286655ad6b2f9c5",
+    "mtime": 1788143956.4410336,
+    "ast_hash": "43655281bf75605d9bfccc53a9bfec2a",
     "semantic_hash": ""
   },
   "public/album-intake.php": {
@@ -4025,8 +4020,8 @@
     "semantic_hash": ""
   },
   "public/data/event-profile-presets.json": {
-    "mtime": 1787690614.3567677,
-    "ast_hash": "16d2325a15e25f7194f9a19cba9cc91f",
+    "mtime": 1787972152.0315478,
+    "ast_hash": "fd2123e25f06fa531323e418a1b40475",
     "semantic_hash": ""
   },
   "public/event-profile-media.php": {
@@ -4060,8 +4055,8 @@
     "semantic_hash": ""
   },
   "src/album/AlbumPage.jsx": {
-    "mtime": 1787690632.3194492,
-    "ast_hash": "89fe92b5cab77bf62ae9b3c065b7e4ef",
+    "mtime": 1788143956.457775,
+    "ast_hash": "ab536bb87ac47199129ac47d938363ea",
     "semantic_hash": ""
   },
   "src/album/FlipBook.jsx": {
@@ -4070,18 +4065,18 @@
     "semantic_hash": ""
   },
   "src/album/main.jsx": {
-    "mtime": 1787690632.3908327,
-    "ast_hash": "29936bb9dcc26ef218638fb35d1b573a",
+    "mtime": 1788143956.4620166,
+    "ast_hash": "f1fc645ebeea0d25d1b188074da4237f",
     "semantic_hash": ""
   },
   "src/album/pages.js": {
-    "mtime": 1787690632.4008934,
-    "ast_hash": "322dbc783600ec50572137c195ce316d",
+    "mtime": 1788143956.4620166,
+    "ast_hash": "6c1de1e0227c4e11ad0ad59fbc8ce887",
     "semantic_hash": ""
   },
   "src/cartel-qr/main.jsx": {
-    "mtime": 1787690632.4393587,
-    "ast_hash": "e598228122365d7654ea8d6145e61aff",
+    "mtime": 1788143956.4637494,
+    "ast_hash": "a7610743604b417a2f961a1e559054b0",
     "semantic_hash": ""
   },
   "src/themeVars.js": {
@@ -4505,8 +4500,8 @@
     "semantic_hash": ""
   },
   "public/assets/invitation.js": {
-    "mtime": 1787690614.1876566,
-    "ast_hash": "67089f33f80ae5576d44170565f10203",
+    "mtime": 1787839831.4064682,
+    "ast_hash": "a4e45e12cfdde320c96d449774d12ed6",
     "semantic_hash": ""
   },
   "docs/INVITACION-INMERSIVA.md": {
@@ -4940,8 +4935,8 @@
     "semantic_hash": ""
   },
   "public/predicciones.php": {
-    "mtime": 1787721269.526457,
-    "ast_hash": "f4d3f4de65319d4af8904089848b806f",
+    "mtime": 1787843425.3459675,
+    "ast_hash": "20b9e335d997cd1dc4f87f0fb65bbd12",
     "semantic_hash": ""
   },
   "public/prediction-api.php": {
@@ -4955,13 +4950,13 @@
     "semantic_hash": ""
   },
   "scripts/web/_at-migrar.php": {
-    "mtime": 1787690631.559658,
-    "ast_hash": "a74e6bb6fa94f4fad3d901b04a32f658",
+    "mtime": 1788143956.457448,
+    "ast_hash": "4d27e29e834f5e9e191ac8a2b90e025c",
     "semantic_hash": ""
   },
   "scripts/web/_at-seed-cita-completa.php": {
-    "mtime": 1787690631.5673087,
-    "ast_hash": "355372924d02293b79c7c272879e6792",
+    "mtime": 1788143956.457775,
+    "ast_hash": "46e74599bf9e6015324a3b488558240f",
     "semantic_hash": ""
   },
   "scripts/web/_at-seed-demos.php": {
@@ -5045,8 +5040,8 @@
     "semantic_hash": ""
   },
   "docs/PLAN-BABY-SHOWER-2026-08-25.md": {
-    "mtime": 1787690613.081836,
-    "ast_hash": "a6614d3c04d34a02952b4120b1cdcf04",
+    "mtime": 1787802700.2816763,
+    "ast_hash": "e686943de9e7823df6300ec4fd0c8d9f",
     "semantic_hash": ""
   },
   "public/themes/carreras/invitation/intro-invitacion-wow-v1-poster.jpg": {
@@ -5145,8 +5140,8 @@
     "semantic_hash": ""
   },
   "public/themes/baby-nube/fondo-sala.jpg": {
-    "mtime": 1787740427.2601118,
-    "ast_hash": "9e5e6d3b5a24966562a9b2d53e8e9a5d",
+    "mtime": 1788002304.271753,
+    "ast_hash": "cbd7d10a3d6cdc8e806c25d4a71396af",
     "semantic_hash": ""
   },
   "public/themes/baby-safari/fondo-banner.jpg": {
@@ -5155,8 +5150,523 @@
     "semantic_hash": ""
   },
   "public/themes/baby-safari/fondo-sala.jpg": {
-    "mtime": 1787740427.7241747,
-    "ast_hash": "cdd049f995e4621c5528f74acbc59fda",
+    "mtime": 1787779505.4524186,
+    "ast_hash": "d3d23f0713859901387acff994331e3c",
+    "semantic_hash": ""
+  },
+  "database/migrations/011_gift_mode.down.php": {
+    "mtime": 1787839555.477768,
+    "ast_hash": "3a843db741a4a01108663107f61cfe7e",
+    "semantic_hash": ""
+  },
+  "database/migrations/011_gift_mode.php": {
+    "mtime": 1787839541.7429495,
+    "ast_hash": "068c4be8a7b28732bf8ce7b789c0e9d6",
+    "semantic_hash": ""
+  },
+  "database/migrations/012_lead_mail_tracking.php": {
+    "mtime": 1788095047.8801963,
+    "ast_hash": "c9e1028d33445bffe07769553118d618",
+    "semantic_hash": ""
+  },
+  "public/admin/leads.php": {
+    "mtime": 1788095466.2479174,
+    "ast_hash": "a7d3d9467bff8f81e9aa810288734a17",
+    "semantic_hash": ""
+  },
+  "public/admin/marca.php": {
+    "mtime": 1788143956.4410336,
+    "ast_hash": "fcffd0adcbc8031ac2c65cbf4c6195e0",
+    "semantic_hash": ""
+  },
+  "public/data/marca.json": {
+    "mtime": 1788144703.2151735,
+    "ast_hash": "16c2d09cbb3580c86250bcb77bbe1714",
+    "semantic_hash": ""
+  },
+  "public/gift-api.php": {
+    "mtime": 1787802411.297977,
+    "ast_hash": "4c6d96cda0b7f0606084e4463e476b7a",
+    "semantic_hash": ""
+  },
+  "public/lib.gifts.php": {
+    "mtime": 1787842233.2747614,
+    "ast_hash": "881cc3587d4e52542ca0b36e5a459bae",
+    "semantic_hash": ""
+  },
+  "public/lib.mail-templates.php": {
+    "mtime": 1788151909.868431,
+    "ast_hash": "a40232b43f61563ef4bcec72876ffb58",
+    "semantic_hash": ""
+  },
+  "public/lib.mail.php": {
+    "mtime": 1788094931.501693,
+    "ast_hash": "cc2ba8c09cc98a0e9519b8ace7f41bbb",
+    "semantic_hash": ""
+  },
+  "public/regalos-papas.php": {
+    "mtime": 1787842337.6992874,
+    "ast_hash": "c7ee98a2bdced809472e60f4c5d25594",
+    "semantic_hash": ""
+  },
+  "scripts/lib-woff.php": {
+    "mtime": 1787978171.588712,
+    "ast_hash": "fc26adf6869bc1370e90cd7f02d2a630",
+    "semantic_hash": ""
+  },
+  "scripts/seed-demo-baby-shower.php": {
+    "mtime": 1788018057.6145852,
+    "ast_hash": "db9de786914b7532a411204467cb58d4",
+    "semantic_hash": ""
+  },
+  "scripts/seed-revision-local.php": {
+    "mtime": 1787972173.3999033,
+    "ast_hash": "616ddf86f83513aad0229a30f427412f",
+    "semantic_hash": ""
+  },
+  "scripts/unificar-demos-infantiles.php": {
+    "mtime": 1788058710.9856348,
+    "ast_hash": "3e8303329fe9b418a6f44e1ef1f1382b",
+    "semantic_hash": ""
+  },
+  "sitio/index.php": {
+    "mtime": 1788151958.8359723,
+    "ast_hash": "ae5bc5965fa2f90baf2823687e8a1af7",
+    "semantic_hash": ""
+  },
+  "sitio/vendor/ScrollTrigger.min.js": {
+    "mtime": 1788021202.3041813,
+    "ast_hash": "5445d0e95e612449839d2462ba8ab7d0",
+    "semantic_hash": ""
+  },
+  "sitio/vendor/gsap.min.js": {
+    "mtime": 1788021202.3031814,
+    "ast_hash": "bf3fd8ec2a5d9f4531b4c310222361f8",
+    "semantic_hash": ""
+  },
+  "sitio/vendor/lenis.min.js": {
+    "mtime": 1788021202.3051808,
+    "ast_hash": "e4bb975a6941b411581aeb2454aa47e9",
+    "semantic_hash": ""
+  },
+  "sitio/vendor/three.core.min.js": {
+    "mtime": 1788021628.039488,
+    "ast_hash": "71bebd49f962811bfcec3b3081c6b90d",
+    "semantic_hash": ""
+  },
+  "sitio/vendor/three.module.min.js": {
+    "mtime": 1788021202.3976998,
+    "ast_hash": "3e3d6ba38927e31c553ac94612b9ac82",
+    "semantic_hash": ""
+  },
+  "src/album/evento.js": {
+    "mtime": 1787976991.5739596,
+    "ast_hash": "da7f8ba8f8976ee0d9938e2b1098201b",
+    "semantic_hash": ""
+  },
+  "src/brand/Lockup.jsx": {
+    "mtime": 1788143956.4620166,
+    "ast_hash": "04518140c7f3b1d22caf22be985159cf",
+    "semantic_hash": ""
+  },
+  "tests/backend/fuente-baloo.php": {
+    "mtime": 1787984780.3679008,
+    "ast_hash": "92bd6d0932b58d900e605b53bd32c1ae",
+    "semantic_hash": ""
+  },
+  "tests/frontend/babyShowerVoice.test.mjs": {
+    "mtime": 1788150479.2344146,
+    "ast_hash": "a133f5939389012018b7c4a12850df26",
+    "semantic_hash": ""
+  },
+  "tests/frontend/parentsAccess.test.mjs": {
+    "mtime": 1787843394.505205,
+    "ast_hash": "4441ec290ea64c14696d6a6b47993ba1",
+    "semantic_hash": ""
+  },
+  "tests/frontend/sitioPublico.test.mjs": {
+    "mtime": 1788145252.3932202,
+    "ast_hash": "58cb820b20e2bd0c18b6506fe940621d",
+    "semantic_hash": ""
+  },
+  "docs/TEMATICA-BABY-ROSAS.md": {
+    "mtime": 1787984969.3363547,
+    "ast_hash": "14ba869377eb8bc2b05a9559341aaf17",
+    "semantic_hash": ""
+  },
+  "docs/VIDEOS-INVITACION-BABY-SHOWER.md": {
+    "mtime": 1787967904.887563,
+    "ast_hash": "f29de75f1b2b101f2dc2db361f13f3f1",
+    "semantic_hash": ""
+  },
+  "sitio/404.html": {
+    "mtime": 1788019930.0268755,
+    "ast_hash": "e2b49a4d5a59481e595a167c539e6324",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/fondo-banner.jpg": {
+    "mtime": 1787972131.231091,
+    "ast_hash": "2eac25bf96917fd84c3ffec3a7a45006",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/fondo-sala.jpg": {
+    "mtime": 1787972131.3098283,
+    "ast_hash": "a917d929116e905a4f58e256b56a9342",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/baby-nube-c620.webp": {
+    "mtime": 1788066363.449042,
+    "ast_hash": "f192275f93e4627400b01758942e7310",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/baby-nube.webp": {
+    "mtime": 1788062376.4219964,
+    "ast_hash": "20f319bda48e8a0f3c0750a6e524ea4b",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/baby-rosas-c620.webp": {
+    "mtime": 1788066363.5474205,
+    "ast_hash": "901936b01688810ad21acea91a18f348",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/baby-rosas.webp": {
+    "mtime": 1788062376.1779017,
+    "ast_hash": "3db0d8992765dedc9e1c209183e4353e",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/baby-safari-c620.webp": {
+    "mtime": 1788066363.6597917,
+    "ast_hash": "d8c8638301f3daf65019769104fc048f",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/baby-safari.webp": {
+    "mtime": 1788062376.6759186,
+    "ast_hash": "c0c431fc1b9fd25fe6680e8da0957744",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/correo-logo.png": {
+    "mtime": 1788151471.3545456,
+    "ast_hash": "e565c3b21845cd36a3ce1b10a0dd5c61",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/etapa-album.webp": {
+    "mtime": 1788148424.8169286,
+    "ast_hash": "7d0590851a7a3d3975180b751db4958b",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/etapa-invitacion.webp": {
+    "mtime": 1788148424.5326211,
+    "ast_hash": "14105f8fdcf2c5883b4d6f46eda3789a",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/etapa-juegos.webp": {
+    "mtime": 1788148424.6810367,
+    "ast_hash": "8645d62ab78ec276205b98ac1187c3b1",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/mundo-capitan-c620.webp": {
+    "mtime": 1788066363.8024504,
+    "ast_hash": "14e40b29ceeff123db8a37db3e5ddd99",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/mundo-carreras-c620.webp": {
+    "mtime": 1788066329.165879,
+    "ast_hash": "816f4fa512d4339d951c6436eec1ed2b",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/mundo-hielo-c620.webp": {
+    "mtime": 1788066329.3765438,
+    "ast_hash": "9681507de122950d1808d8832cdbaa28",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/mundo-kpop-real-c620.webp": {
+    "mtime": 1788066363.904084,
+    "ast_hash": "908128753260ec4aa8e5fc87515143c9",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/mundo-perruna-c620.webp": {
+    "mtime": 1788066329.602554,
+    "ast_hash": "1b77b78615b058f9c0d2c0e3c17830fe",
+    "semantic_hash": ""
+  },
+  "sitio/assets/img/mundo-tropical-c620.webp": {
+    "mtime": 1788066329.7118368,
+    "ast_hash": "d98142ada38fb81938917407e5e393ac",
+    "semantic_hash": ""
+  },
+  "public/assets/audio/narracion-final-baby-shower.mp3": {
+    "mtime": 1787803921.6087189,
+    "ast_hash": "1806f3a087a8fbbe2c42ffc831b20a6d",
+    "semantic_hash": ""
+  },
+  "public/assets/audio/narracion-playlist-final-baby-shower-neutro.mp3": {
+    "mtime": 1787967667.6864448,
+    "ast_hash": "3e7bc4214e23094a5e7343e993dabf7a",
+    "semantic_hash": ""
+  },
+  "public/assets/audio/narracion-playlist-final-baby-shower-nina.mp3": {
+    "mtime": 1787967664.39032,
+    "ast_hash": "fd362f8be36e6a9bf83d0bcdbd4d3d79",
+    "semantic_hash": ""
+  },
+  "public/assets/audio/narracion-playlist-final-baby-shower-nino.mp3": {
+    "mtime": 1787967666.0118005,
+    "ast_hash": "5bb220ada80008493af75ce36ddf9778",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/despedida-baby-nube.mp4": {
+    "mtime": 1787803992.201311,
+    "ast_hash": "fae83b61ecacb6719f7f0427e964a271",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/invitation/capitulo-1-la-espera.mp4": {
+    "mtime": 1787803979.350989,
+    "ast_hash": "1ac12c57f369c886851bb7968a0e53e6",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/invitation/capitulo-2-antes-de-nacer.mp4": {
+    "mtime": 1787803982.2254934,
+    "ast_hash": "422924088bf2be84ac72786205b6485c",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/invitation/capitulo-3-alguien-te-espera.mp4": {
+    "mtime": 1787803985.0779724,
+    "ast_hash": "d0860c948b17725be656366a10613067",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/invitation/capitulo-4-su-nombre.mp4": {
+    "mtime": 1787803988.0695302,
+    "ast_hash": "3057996e578227b01212c4d9df6d52b5",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/invitation/capitulo-5-el-mundo-se-acomoda.mp4": {
+    "mtime": 1787803989.2581685,
+    "ast_hash": "27201ca93da85fcebc5bbc8cab051c91",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/musica-fondo.mp3": {
+    "mtime": 1787779285.779812,
+    "ast_hash": "a55873ed0e095c4880ebc8b73767b69c",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/musica-juego.mp3": {
+    "mtime": 1787779288.5884802,
+    "ast_hash": "6d1ac92e756e7397bf955f4fa1a44fde",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/narracion-video/capitulo-1-la-espera.mp3": {
+    "mtime": 1787803891.0820785,
+    "ast_hash": "12afd9a3aea30b97e871c536048ed509",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/narracion-video/capitulo-2-antes-de-nacer.mp3": {
+    "mtime": 1787803892.8354735,
+    "ast_hash": "8c5864440bb3f0d686baace33bf3d563",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/narracion-video/capitulo-3-alguien-te-espera.mp3": {
+    "mtime": 1787803894.0492754,
+    "ast_hash": "0a82e0a0f270b42267c17eb25f2fe3da",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/narracion-video/capitulo-4-sin-nombre.mp3": {
+    "mtime": 1787803896.8160691,
+    "ast_hash": "9c3e80dddb6823dcf9ce247465a67f4d",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/narracion-video/capitulo-4-su-nombre.mp3": {
+    "mtime": 1787803895.4835556,
+    "ast_hash": "d1034808c14acd71082cae329ec0a011",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/narracion-video/capitulo-5-el-mundo-se-acomoda.mp3": {
+    "mtime": 1787803897.9641492,
+    "ast_hash": "108ea8a150a46eb2681e4e09d8755be0",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/narracion-video/despedida-baby-nube-neutro.mp3": {
+    "mtime": 1787967667.6854446,
+    "ast_hash": "3e7bc4214e23094a5e7343e993dabf7a",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/narracion-video/despedida-baby-nube-nina.mp3": {
+    "mtime": 1787967664.3871467,
+    "ast_hash": "fd362f8be36e6a9bf83d0bcdbd4d3d79",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-nube/narracion-video/despedida-baby-nube-nino.mp3": {
+    "mtime": 1787967665.9870179,
+    "ast_hash": "5bb220ada80008493af75ce36ddf9778",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/despedida-baby-rosas.mp4": {
+    "mtime": 1787972768.3579242,
+    "ast_hash": "5c50451848c1c813061294dd18419f99",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/invitation/capitulo-1-la-espera.mp4": {
+    "mtime": 1787972757.00514,
+    "ast_hash": "65a8feb030de9fb8ee64e693a83e7673",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/invitation/capitulo-2-antes-de-nacer.mp4": {
+    "mtime": 1787972759.71005,
+    "ast_hash": "eb2a46a64041e890dfdb9a7fb6605da0",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/invitation/capitulo-3-alguien-te-espera.mp4": {
+    "mtime": 1787972762.3900592,
+    "ast_hash": "7d6b4f0a09d30c99f1478b9df91d5508",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/invitation/capitulo-4-su-nombre.mp4": {
+    "mtime": 1787972765.3901553,
+    "ast_hash": "5ea34f4674b099ca38f5c4ad29492860",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/invitation/capitulo-5-el-mundo-se-acomoda.mp4": {
+    "mtime": 1787972903.8517766,
+    "ast_hash": "f11b2e8cca5bd1d73261bf788b2d34eb",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/musica-fondo.mp3": {
+    "mtime": 1787972951.669843,
+    "ast_hash": "ae7f309f9e0dfa84bc189846edeb264b",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/musica-juego.mp3": {
+    "mtime": 1787972973.304517,
+    "ast_hash": "df8562e1e94a05ac7251e67577d3a9f4",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/narracion-video/capitulo-1-la-espera.mp3": {
+    "mtime": 1787972577.8805528,
+    "ast_hash": "12afd9a3aea30b97e871c536048ed509",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/narracion-video/capitulo-2-antes-de-nacer.mp3": {
+    "mtime": 1787972579.5670464,
+    "ast_hash": "fd062a954fd6090d0d4fe3ca93b183bb",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/narracion-video/capitulo-3-alguien-te-espera.mp3": {
+    "mtime": 1787972581.0891244,
+    "ast_hash": "599e52ced25eb2487fea0428621609fc",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/narracion-video/capitulo-4-sin-nombre.mp3": {
+    "mtime": 1787972577.8805528,
+    "ast_hash": "9c3e80dddb6823dcf9ce247465a67f4d",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/narracion-video/capitulo-4-su-nombre.mp3": {
+    "mtime": 1787972577.8805528,
+    "ast_hash": "d1034808c14acd71082cae329ec0a011",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/narracion-video/capitulo-5-el-mundo-se-acomoda.mp3": {
+    "mtime": 1787972582.899956,
+    "ast_hash": "91ebc2a77aabf7fdbfdc7885a6659991",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/narracion-video/despedida-baby-rosas-neutro.mp3": {
+    "mtime": 1787972577.8900602,
+    "ast_hash": "3e7bc4214e23094a5e7343e993dabf7a",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/narracion-video/despedida-baby-rosas-nina.mp3": {
+    "mtime": 1787972577.8805528,
+    "ast_hash": "fd362f8be36e6a9bf83d0bcdbd4d3d79",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-rosas/narracion-video/despedida-baby-rosas-nino.mp3": {
+    "mtime": 1787972577.8900602,
+    "ast_hash": "5bb220ada80008493af75ce36ddf9778",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/despedida-baby-safari.mp4": {
+    "mtime": 1787804303.9329662,
+    "ast_hash": "905ff11e668977620769c040eb9b0584",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/invitation/capitulo-1-la-espera.mp4": {
+    "mtime": 1787804127.7790494,
+    "ast_hash": "6be736d40175aee60a156f331f37ecc7",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/invitation/capitulo-2-antes-de-nacer.mp4": {
+    "mtime": 1787804130.7426727,
+    "ast_hash": "d9f0b15e8aee36c1ccd28350e1ef57b2",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/invitation/capitulo-3-alguien-te-espera.mp4": {
+    "mtime": 1787804133.9216163,
+    "ast_hash": "48e75027a83913636e838680c60158f4",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/invitation/capitulo-4-su-nombre.mp4": {
+    "mtime": 1787804136.9003344,
+    "ast_hash": "63cebe3ab4585d56a0bc1a447079991e",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/invitation/capitulo-5-el-mundo-se-acomoda.mp4": {
+    "mtime": 1787804139.873142,
+    "ast_hash": "54d51412efbd2d64fc296f4ccb772ee5",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/musica-fondo.mp3": {
+    "mtime": 1787779291.0711,
+    "ast_hash": "0a5b3ac62a064a682685de0121474f44",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/musica-juego.mp3": {
+    "mtime": 1787779293.924068,
+    "ast_hash": "6d1ac92e756e7397bf955f4fa1a44fde",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/narracion-video/capitulo-1-la-espera.mp3": {
+    "mtime": 1787803916.0995688,
+    "ast_hash": "12afd9a3aea30b97e871c536048ed509",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/narracion-video/capitulo-2-antes-de-nacer.mp3": {
+    "mtime": 1787803917.4956179,
+    "ast_hash": "334c4f90a07052893fcb32281408731b",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/narracion-video/capitulo-3-alguien-te-espera.mp3": {
+    "mtime": 1787803918.9206522,
+    "ast_hash": "c45ee1b421ac06e96a4f938462cdf02b",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/narracion-video/capitulo-4-sin-nombre.mp3": {
+    "mtime": 1787803918.9226463,
+    "ast_hash": "9c3e80dddb6823dcf9ce247465a67f4d",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/narracion-video/capitulo-4-su-nombre.mp3": {
+    "mtime": 1787803918.9206522,
+    "ast_hash": "d1034808c14acd71082cae329ec0a011",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/narracion-video/capitulo-5-el-mundo-se-acomoda.mp3": {
+    "mtime": 1787803920.0512385,
+    "ast_hash": "92f07d6f90354473dab369a0aeb4528e",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/narracion-video/despedida-baby-safari-neutro.mp3": {
+    "mtime": 1787967667.6864448,
+    "ast_hash": "3e7bc4214e23094a5e7343e993dabf7a",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/narracion-video/despedida-baby-safari-nina.mp3": {
+    "mtime": 1787967664.3893392,
+    "ast_hash": "fd362f8be36e6a9bf83d0bcdbd4d3d79",
+    "semantic_hash": ""
+  },
+  "public/themes/baby-safari/narracion-video/despedida-baby-safari-nino.mp3": {
+    "mtime": 1787967666.008815,
+    "ast_hash": "5bb220ada80008493af75ce36ddf9778",
     "semantic_hash": ""
   }
 }

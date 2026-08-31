@@ -119,6 +119,24 @@ test('an ordinary row carries no styling classes', () => {
   assert.ok(!html.includes('is-total'));
 });
 
+test('the next-steps slide takes a background photo like the rest', () => {
+  const img = 'https://example.com/next.jpg';
+  const html = renderProposalHtml(DATA, { next_steps: img });
+  assert.ok(html.includes("url('https://example.com/next.jpg')"));
+});
+
+test('offers fullscreen by tap, never claiming to trigger it on its own', () => {
+  const html = renderProposalHtml(DATA);
+  assert.ok(html.includes('id="at-full"'));
+  assert.ok(html.includes('id="at-chip"'));
+  assert.ok(html.includes('id="at-rotate-full"'));
+  // Browsers only grant fullscreen inside a user gesture, so every entry
+  // point has to hang off a click handler.
+  assert.ok(html.includes("chip.addEventListener('click'"));
+  assert.ok(html.includes("rotateFull.addEventListener('click'"));
+  assert.ok(!/orientationchange[\s\S]{0,120}enterFullscreen\(\)/.test(html));
+});
+
 test('the cover keeps its bottom-heavy scrim', () => {
   const img = 'https://example.com/photo.jpg';
   const html = renderProposalHtml(DATA, { cover: img });

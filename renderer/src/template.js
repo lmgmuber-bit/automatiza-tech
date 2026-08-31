@@ -133,8 +133,12 @@ function renderDeckControls() {
     <button class="at-nav" id="at-prev" type="button" aria-label="Lámina anterior">&#8249;</button>
     <span class="at-nav" id="at-counter">1 / 8</span>
     <button class="at-nav" id="at-next" type="button" aria-label="Lámina siguiente">&#8250;</button>
+    <button id="at-full" type="button" aria-label="Pantalla completa" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6" /></svg>
+    </button>
     <button id="at-toggle" type="button">Ver todo</button>
   </div>
+  <button class="at-chip" id="at-chip" type="button" hidden>Toca para ver en pantalla completa</button>
   <div class="at-progress" aria-hidden="true"><span id="at-progress-fill"></span></div>
   <div class="at-rotate" id="at-rotate" hidden>
     <div class="at-rotate-card">
@@ -146,6 +150,7 @@ function renderDeckControls() {
       </svg>
       <p class="at-rotate-title">Gira tu teléfono</p>
       <p class="at-rotate-text">La presentación se ve en pantalla completa en horizontal.</p>
+      <button type="button" id="at-rotate-full" hidden>Ver en pantalla completa</button>
       <button type="button" id="at-rotate-skip">Continuar así</button>
     </div>
   </div>`;
@@ -204,7 +209,18 @@ const STYLE = `
     #at-prev, #at-next { font-size: 22px; line-height: 1; padding: 2px 12px 6px; }
     #at-counter { min-width: 58px; text-align: center; color: #9fb3c8; letter-spacing: .05em; }
     #at-toggle { border: 1px solid rgba(255,255,255,.18); margin-left: 4px; }
+    #at-full { padding: 6px 10px; line-height: 0; }
+    #at-full svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    #at-full[hidden] { display: none; }
     body.mode-list .at-nav { display: none; }
+
+    /* Fullscreen can only be requested from a real tap — browsers reject it
+       on an orientation change alone — so the moment someone turns the
+       phone we put a one-tap shortcut right where the thumb already is. */
+    .at-chip { position: fixed; bottom: 78px; left: 50%; transform: translateX(-50%); z-index: 65;
+      font-family: inherit; font-size: 14px; color: #06222a; background: #00d9c0; border: 0; cursor: pointer;
+      border-radius: 999px; padding: 10px 18px; box-shadow: 0 8px 24px rgba(0,0,0,.45); animation: at-rise .4s ease-out both; }
+    .at-chip[hidden] { display: none; }
 
     /* Fingers need a bigger target than a mouse pointer does. */
     @media (pointer: coarse) {
@@ -223,7 +239,10 @@ const STYLE = `
       stroke-linecap: round; stroke-linejoin: round; animation: at-tilt 2.4s ease-in-out infinite; }
     .at-rotate-title { color: #fff; font-size: 22px; font-weight: 700; margin-top: 18px; }
     .at-rotate-text { color: #9fb3c8; font-size: 15px; line-height: 1.5; margin-top: 8px; }
-    #at-rotate-skip { margin-top: 22px; font-family: inherit; font-size: 15px; color: #dbe4ee; cursor: pointer;
+    #at-rotate-full { display: block; margin: 22px auto 0; font-family: inherit; font-size: 16px; font-weight: 600;
+      color: #06222a; background: #00d9c0; border: 0; border-radius: 999px; padding: 12px 26px; cursor: pointer; }
+    #at-rotate-full[hidden] { display: none; }
+    #at-rotate-skip { margin-top: 14px; font-family: inherit; font-size: 15px; color: #dbe4ee; cursor: pointer;
       background: none; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: 10px 22px; }
     @keyframes at-tilt { 0%, 45% { transform: rotate(0); } 70%, 100% { transform: rotate(-90deg); } }
 
@@ -279,6 +298,7 @@ const STYLE = `
       body.mode-deck .slide.is-active,
       body.mode-deck .slide.is-active *,
       .at-rotate-icon,
+      .at-chip,
       .at-progress span { animation: none !important; transition: none !important; }
     }
   }
@@ -286,7 +306,7 @@ const STYLE = `
   @media print {
     /* Both chrome elements must be gone from the PDF, or the empty progress
        bar tacks a stray blank page onto the end. */
-    .at-bar, .at-progress, .at-rotate { display: none !important; }
+    .at-bar, .at-progress, .at-rotate, .at-chip { display: none !important; }
     .deck { position: static !important; display: block !important; padding: 0 !important; }
     /* No display override here either — the deck's hiding rule is scoped to
        @media screen, so every slide is already visible in the PDF pass and
@@ -341,6 +361,57 @@ const SCRIPT = `
     else if (e.key === 'Home') { show(0); }
     else if (e.key === 'End') { show(slides.length - 1); }
   });
+  // --- Pantalla completa ---------------------------------------------------
+  // Nunca se puede pedir sola: el navegador exige que la peticion nazca de un
+  // toque del usuario, asi que lo mas cerca del automatico es dejarla a un
+  // toque en los tres momentos en que alguien la querria.
+  var fullBtn = document.getElementById('at-full');
+  var chip = document.getElementById('at-chip');
+  var rotateFull = document.getElementById('at-rotate-full');
+  var chipTimer = null;
+
+  function fsElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+  function fsSupported() {
+    var el = document.documentElement;
+    return !!((document.fullscreenEnabled || document.webkitFullscreenEnabled) &&
+      (el.requestFullscreen || el.webkitRequestFullscreen));
+  }
+  function enterFullscreen() {
+    var el = document.documentElement;
+    var req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!req) return;
+    var p = req.call(el);
+    // Safari returns undefined; Chrome rejects if the gesture expired.
+    if (p && p.catch) p.catch(function () {});
+  }
+  function exitFullscreen() {
+    var ex = document.exitFullscreen || document.webkitExitFullscreen;
+    if (ex) ex.call(document);
+  }
+  function hideChip() {
+    if (chipTimer) { clearTimeout(chipTimer); chipTimer = null; }
+    if (chip) chip.hidden = true;
+  }
+  function offerFullscreen() {
+    if (!chip || !fsSupported() || fsElement() || !isTouch()) return;
+    chip.hidden = false;
+    if (chipTimer) clearTimeout(chipTimer);
+    chipTimer = setTimeout(hideChip, 7000);
+  }
+  if (fullBtn && fsSupported()) {
+    fullBtn.hidden = false;
+    fullBtn.addEventListener('click', function () {
+      if (fsElement()) exitFullscreen(); else enterFullscreen();
+    });
+  }
+  if (chip) {
+    chip.addEventListener('click', function () { enterFullscreen(); hideChip(); });
+  }
+  document.addEventListener('fullscreenchange', hideChip);
+  document.addEventListener('webkitfullscreenchange', hideChip);
+
   // --- Teléfono: sugerir el giro y navegar con el dedo ---------------------
   var rotate = document.getElementById('at-rotate');
   var skip = document.getElementById('at-rotate-skip');
@@ -374,9 +445,26 @@ const SCRIPT = `
       updateRotateHint();
     });
   }
-  window.addEventListener('orientationchange', updateRotateHint);
+  if (rotateFull && fsSupported()) {
+    rotateFull.hidden = false;
+    // Tapping here is the gesture the browser needs, and fullscreen survives
+    // the rotation that follows.
+    rotateFull.addEventListener('click', function () {
+      enterFullscreen();
+      rotateDismissed = true;
+      updateRotateHint();
+    });
+  }
+
+  function onOrientationChange() {
+    updateRotateHint();
+    // Turned the phone sideways: this is exactly when someone wants the
+    // slide to fill the screen, so put the shortcut in front of them.
+    if (!screenIsPortrait()) offerFullscreen(); else hideChip();
+  }
+  window.addEventListener('orientationchange', onOrientationChange);
   if (window.screen && window.screen.orientation && window.screen.orientation.addEventListener) {
-    window.screen.orientation.addEventListener('change', updateRotateHint);
+    window.screen.orientation.addEventListener('change', onOrientationChange);
   }
 
   var tStartX = 0, tStartY = 0, tStartAt = 0;
@@ -475,7 +563,7 @@ function renderProposalHtml(data, images = {}) {
       eyebrow: 'Próximos pasos',
       title: 'Cómo seguimos',
       bodyHtml: nextStepsBody,
-      imageUrl: null,
+      imageUrl: images.next_steps,
     }),
     renderClosingSlide(),
   ];

@@ -21,9 +21,14 @@ $TOKEN = 'CAMBIA-ESTO-ANTES-DE-SUBIR';
 // ruta absoluta de la carpeta database/migrations de tu directorio privado.
 $MIGRACIONES_DIR = '';
 
-// Migraciones que NO se aplican todavía. Quita '007_event_album' de la lista
-// cuando el módulo de Álbum Recuerdo esté terminado y subido.
-$OMITIR = ['007_event_album'];
+// Migraciones que NO se aplican todavía.
+//
+// La 007 (Álbum Recuerdo) estuvo acá mientras el módulo no estaba terminado.
+// Se sacó el 2026-08-25, cuando el álbum quedó subido a PROD y verificado
+// archivo por archivo. Mientras estuvo en la lista, PROD servía album.html y
+// sus assets pero album-api.php devolvía 503 `unavailable` para cualquier
+// token: los archivos estaban, las tablas no.
+$OMITIR = [];
 // ---------------------------------------------------------------------------
 
 header('X-Robots-Tag: noindex, nofollow');

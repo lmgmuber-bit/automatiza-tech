@@ -1153,7 +1153,7 @@ $cssVer = static function (string $rel): string {
 <section class='inv-theme-intro' data-inv-theme-intro role='dialog' aria-modal='true' aria-label='Intro de la invitación' aria-hidden='true' hidden>
   <video class='inv-theme-intro-media' data-inv-theme-intro-video src='<?= $esc($themeIntroUrl) ?>'<?php if ($themeIntroPosterUrl !== ''): ?> poster='<?= $esc($themeIntroPosterUrl) ?>'<?php endif; ?> playsinline preload='metadata'></video>
   <div class='inv-theme-intro-shade' aria-hidden='true'></div>
-  <img class='inv-theme-intro-brand' src='brand/cumpleclick-lockup.svg' alt='CumpleClick' width='150' height='38'>
+  <?= cb_lockup_html('claro', 'inv-theme-intro-brand') ?>
   <button class='inv-theme-intro-skip' type='button' data-inv-theme-intro-skip>Omitir intro</button>
   <div class='inv-theme-intro-progress' aria-hidden='true'><span data-inv-theme-intro-progress></span></div>
 </section>
@@ -1872,7 +1872,7 @@ $cssVer = static function (string $rel): string {
   <?php endif; ?>
 
   <footer class="inv-footer">
-    <img class="inv-footer-logo" src="brand/cumpleclick-lockup.svg" alt="CumpleClick" width="160" height="40" loading="lazy">
+    <?= cb_lockup_html('claro', 'inv-footer-logo') ?>
     <p class="inv-footer-credit">
       Hecho por <a href="https://automatizatech.cl" target="_blank" rel="noopener">AutomatizaTech</a>
     </p>

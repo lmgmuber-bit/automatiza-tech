@@ -15,8 +15,23 @@ export function buildPages(data) {
   const media = Array.isArray(data.media) ? data.media : []
   const pages = []
 
+  // La portada sale del cuerpo del album para no repetir la misma foto, y por
+  // eso conviene que sea una foto SIN dedicatoria: la version anterior tomaba
+  // la primera imagen que hubiera y, si esa traia mensaje, el mensaje se iba
+  // con ella y no aparecia en ninguna pagina. Un invitado escribia su
+  // dedicatoria y no quedaba en el album, sin aviso. Paso de verdad en la
+  // demo de Hielo: la tia Carolina escribio y no salia.
+  //
+  // Si el organizador fijo una portada a mano, esa manda igual: es su
+  // decision. En ese caso la foto no se saca del cuerpo, asi que su
+  // dedicatoria tiene su pagina y la foto aparece dos veces —en la tapa y
+  // adentro—, que en una revista se lee de lo mas normal.
+  const portadaElegida = media.find(
+    (item) => item.id === data.album?.coverId && item.kind === 'image'
+  )
   const cover =
-    media.find((item) => item.id === data.album?.coverId && item.kind === 'image') ||
+    portadaElegida ||
+    media.find((item) => item.kind === 'image' && !item.message) ||
     media.find((item) => item.kind === 'image') ||
     null
 
@@ -31,8 +46,11 @@ export function buildPages(data) {
     fallback: data.theme?.assets?.banner || null,
   })
 
-  // La portada no se repite adentro; el resto entra en orden.
-  const rest = cover ? media.filter((item) => item.id !== cover.id) : media
+  // La portada no se repite adentro, salvo que traiga dedicatoria: ahi vuelve a
+  // entrar para que el mensaje tenga su pagina.
+  const rest = cover && !cover.message
+    ? media.filter((item) => item.id !== cover.id)
+    : media
   let buffer = []
 
   const flush = () => {
@@ -78,6 +96,9 @@ export function buildPages(data) {
     themeName: data.theme?.name || '',
     image: data.theme?.assets?.grupo || data.theme?.assets?.banner || null,
     count: media.length,
+    // Contacto de CumpleClick al cierre. Puede venir nulo: la ultima pagina
+    // tiene que seguir funcionando sin el.
+    marca: data.marca || null,
   })
 
   // El pliego de escritorio muestra dos páginas: con un total impar la última

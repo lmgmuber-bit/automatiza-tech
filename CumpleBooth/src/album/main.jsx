@@ -5,7 +5,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { applyThemeColors } from '../themeVars.js'
+import { applyThemeColors, cssUrl } from '../themeVars.js'
 import FlipBook from './FlipBook.jsx'
 import AlbumPage from './AlbumPage.jsx'
 import { buildPages } from './pages.js'
@@ -113,6 +113,12 @@ function Album({ data }) {
 
   useEffect(() => {
     applyThemeColors(data.theme?.colors)
+    // El logo se publica como variable CSS en vez de escribirlo en la hoja de
+    // estilos: un `url()` relativo dentro del CSS se resuelve contra
+    // dist/assets/, no contra el HTML, y terminaría pidiendo
+    // dist/assets/brand/... con 404. Así se arma contra document.baseURI y
+    // funciona igual en /cumpleclick/ que en cualquier subcarpeta.
+    document.documentElement.style.setProperty('--marca-logo', cssUrl('brand/cumpleclick-mark.svg'))
     document.title = data.album?.title || 'Álbum Recuerdo'
   }, [data])
 

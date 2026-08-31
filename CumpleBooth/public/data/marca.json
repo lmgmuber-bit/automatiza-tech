@@ -1,0 +1,17 @@
+{
+  "_LEEME": "Datos de contacto que aparecen en la ultima pagina del Album Recuerdo. Se editan aca y listo: NO hay que recompilar el frontend ni subir nada mas. Si un campo va vacio, esa linea no se muestra. Los campos _url son opcionales: si estan, el dato se vuelve un enlace.",
+  "_PENDIENTE": "Los tres valores de abajo son DE PRUEBA y hay que reemplazarlos antes de mostrarle esto a un cliente: web, instagram y whatsapp. El telefono termina en 0000 0000 a proposito, para que sea evidente que es falso y no le llegue un mensaje a un desconocido.",
+
+  "nombre": "CumpleClick",
+  "lema": "Fotos y recuerdos para tu fiesta",
+  "invitacion": "¿Lo quieres en tu próxima fiesta?",
+
+  "web": "cumpleclick.cl",
+  "web_url": "",
+
+  "instagram": "@cumpleclick",
+  "instagram_url": "",
+
+  "whatsapp": "+56 9 0000 0000",
+  "whatsapp_url": ""
+}

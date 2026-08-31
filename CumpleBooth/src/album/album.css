@@ -264,6 +264,25 @@ body {
 .mag--cover::after, .mag--closing::after, .mag--bleed::after,
 .mag--blank::after { box-shadow: none; }
 
+/* Marca de agua. Va abajo a la derecha porque el folio ocupa el centro, y
+   discreta a proposito: esta pagina es el recuerdo de una familia, no un
+   aviso. La sombra existe para las paginas a sangre, donde el logo cae sobre
+   la foto y sin ella se pierde contra un fondo claro. */
+.mag::before {
+  content: '';
+  position: absolute; right: 4.5cqw; bottom: 2.6cqh;
+  width: 10.5cqw; aspect-ratio: 1;
+  background: var(--marca-logo) center / contain no-repeat;
+  opacity: .34;
+  filter: drop-shadow(0 0.2cqw 0.5cqw rgba(0,0,0,.28));
+  pointer-events: none;
+  z-index: 4;
+}
+/* La portada es arte a sangre y el cierre ya lleva el logo grande y centrado:
+   en las dos la marca de agua sobraria. */
+.mag--cover::before, .mag--closing::before, .mag--blank::before { content: none; }
+.mag--bleed::before { opacity: .42; }
+
 .mag__folio {
   position: absolute; bottom: 3cqh; left: 0; right: 0;
   text-align: center;
@@ -466,6 +485,56 @@ body {
 }
 .mag__frame--video { background: #0d1116; }
 .mag__video { width: 100%; height: 100%; object-fit: contain; display: block; background: #0d1116; }
+
+/* Colofon: la contratapa. Va deliberadamente chico y por debajo del texto de
+   despedida, porque esta pagina es el recuerdo de una familia y no un aviso.
+   Se lee si lo buscas, no compite con el "gracias por venir". */
+.mag__colofon {
+  display: flex; flex-direction: column; align-items: center; gap: 1.4cqh;
+  margin-top: 1.6cqh;
+}
+.mag__rule--colofon { width: 14cqw; height: 0.5cqh; opacity: .75; margin-bottom: 0.6cqh; }
+.mag__colofon-invita {
+  margin: 0; font-size: 3.4cqw; font-weight: 700;
+  color: var(--yellow);
+}
+/* La firma del cierre: el globo con el nombre al lado, centrado. Sin opacidad
+   rebajada, porque aca si es la firma de quien hizo el album y no una marca de
+   agua. Va en tono claro (ver Lockup.jsx): esta pagina es el arte oscuro de la
+   tematica, y el manual pide el isotipo tal cual sobre fondo oscuro, sin
+   recuadrarlo en una caja blanca.
+
+   El font-size manda sobre todo el conjunto: 5.2cqw de palabra deja el globo
+   en 10cqw y el bloque entero cerca del 41% del ancho de la hoja. */
+.mag__colofon-marca {
+  font-size: 5.2cqw;
+  margin: 0.4cqh 0 0.6cqh;
+  filter: drop-shadow(0 0.3cqw 1cqw rgba(0,0,0,.4));
+}
+.mag__colofon-lema { margin: 0; font-size: 2.9cqw; opacity: .82; }
+.mag__colofon-datos {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 0.8cqh 3.4cqw;
+  margin: 0.4cqh 0 0; padding: 0; list-style: none;
+  font-size: 2.9cqw; font-weight: 700; letter-spacing: .04em;
+}
+.mag__colofon-datos a { color: inherit; text-decoration: none; border-bottom: 1px solid currentColor; }
+
+/* El cierre lleva mucho mas texto que la portada: bajada, titulo, conteo y el
+   colofon entero, todo centrado sobre el arte del tema. El velo de la portada
+   se abre en el medio a proposito, para dejar ver la foto, y con el ese texto
+   quedaba ilegible encima de los personajes. Este va al reves: se cierra al
+   centro, que es donde esta el texto. */
+.mag--closing .mag__veil {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--dark1) 60%, transparent) 0%,
+    color-mix(in srgb, var(--dark2) 84%, transparent) 34%,
+    color-mix(in srgb, var(--dark2) 84%, transparent) 74%,
+    color-mix(in srgb, var(--dark2) 94%, transparent) 100%);
+}
+.mag--closing .mag__title,
+.mag--closing .mag__closing-note,
+.mag--closing .mag__colofon { text-shadow: 0 0.3cqw 1.6cqw rgba(0,0,0,.55); }
 
 .mag--closing { justify-content: center; text-align: center; }
 .mag__closing-body { display: flex; flex-direction: column; align-items: center; gap: 2.6cqh; }

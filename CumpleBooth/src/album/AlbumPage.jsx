@@ -17,6 +17,7 @@
 
 import { fraseA, esteEvento } from './evento.js'
 import React, { useEffect, useRef, useState } from 'react'
+import Lockup from '../brand/Lockup.jsx'
 
 export default function AlbumPage({ page, index, base }) {
   if (!page) return null
@@ -309,8 +310,70 @@ function ClosingPage({ page, base }) {
               ? 'Un recuerdo guardado para siempre.'
               : `${page.count} recuerdos guardados para siempre.`}
         </p>
-        <span className="mag__brand">CumpleClick</span>
+        <Colofon marca={page.marca} base={base} />
       </div>
     </Page>
+  )
+}
+
+/**
+ * Cierre de la revista: quien hizo esto y como ubicarlo.
+ *
+ * Los datos vienen de data/marca.json por la API, no compilados en el bundle,
+ * porque el hosting no tiene build: si estuvieran acá habría que recompilar y
+ * resubir assets cada vez que cambie un teléfono.
+ *
+ * Cada dato es un enlace sólo si el JSON trae su `_url`. El `stopPropagation`
+ * del pointerdown es necesario: el pliego arranca el arrastre de página en el
+ * pointerdown de la mitad, y sin esto tocar un enlace empezaría a dar vuelta la
+ * hoja en vez de abrirlo.
+ */
+function Colofon({ marca, base }) {
+  // El nombre viaja dentro del lockup, asi que el lockup solo sirve mientras la
+  // marca se siga llamando CumpleClick. Si alguien cambia `nombre` en el admin
+  // —una marca blanca, por ejemplo— el logo diria una cosa y el dueno del
+  // album seria otro, asi que en ese caso gana el texto.
+  const nombre = (marca?.nombre || 'CumpleClick').trim()
+  const marcaBloque = nombre.toLowerCase() === 'cumpleclick'
+    ? <Lockup base={base} tono="claro" className="mag__colofon-marca" />
+    : <span className="mag__brand">{nombre}</span>
+
+  if (!marca) {
+    return <div className="mag__colofon">{marcaBloque}</div>
+  }
+
+  const datos = [
+    { valor: marca.web, url: marca.web_url },
+    { valor: marca.instagram, url: marca.instagram_url },
+    { valor: marca.whatsapp, url: marca.whatsapp_url },
+  ].filter((dato) => dato.valor)
+
+  return (
+    <div className="mag__colofon">
+      <span className="mag__rule mag__rule--colofon" aria-hidden="true" />
+      {marca.invitacion && <p className="mag__colofon-invita">{marca.invitacion}</p>}
+      {marcaBloque}
+      {marca.lema && <p className="mag__colofon-lema">{marca.lema}</p>}
+      {datos.length > 0 && (
+        <ul className="mag__colofon-datos">
+          {datos.map((dato) => (
+            <li key={dato.valor}>
+              {dato.url
+                ? (
+                  <a
+                    href={dato.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onPointerDown={(event) => event.stopPropagation()}
+                  >
+                    {dato.valor}
+                  </a>
+                  )
+                : dato.valor}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }

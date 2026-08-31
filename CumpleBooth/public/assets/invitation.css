@@ -150,15 +150,70 @@ body.inv-theme-intro-active {
   background: linear-gradient(180deg, rgba(0, 0, 0, .28) 0%, transparent 24%, transparent 72%, rgba(0, 0, 0, .22) 100%);
 }
 
+/* ── Lockup de CumpleClick ───────────────────────────────────────────────────
+   Espejo de src/brand/lockup.css, que usan el album y el cartel QR. No se
+   comparte archivo porque aquella vive dentro del bundle de Vite y esta la
+   sirve PHP directo, pero las clases, las proporciones y el markup
+   (cb_lockup_html() en lib.php) son los mismos para que se vean identicos.
+
+   El nombre va en HTML y no dentro del SVG: un SVG en un <img> no ve las
+   @font-face de la pagina, y Baloo 2 no viene instalada en Windows ni en iOS.
+   Ver el comentario largo en cb_lockup_html().
+
+   Proporciones del archivo oficial (viewBox 640x160): globo 1.93em, aire
+   0.37em, palabra 5.59em de ancho. Todo cuelga del font-size. */
+
+.cc-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.37em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.cc-lockup__mark {
+  width: 1.93em;
+  height: 1.93em;
+  display: block;
+  flex: none;
+}
+
+.cc-lockup__nombre {
+  font-family: "Baloo 2", "Segoe UI Rounded", system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1em;
+  letter-spacing: 0;
+  text-transform: none;
+  transform: translateY(0.04em);
+}
+
+.cc-lockup--marca .cc-lockup__nombre { color: #4C2882; }
+.cc-lockup--marca .cc-lockup__click { color: #D6307F; }
+
+/* Sobre fondo oscuro el globo va tal cual y la palabra en blanco: el manual de
+   marca prohibe recuadrar el logo en una caja blanca. */
+.cc-lockup--claro .cc-lockup__nombre,
+.cc-lockup--claro .cc-lockup__click { color: #fff; }
+
+/* Marca de agua sobre el video de intro. El ancho total del lockup es 7.89em
+   (globo + aire + palabra), asi que el font-size sale de dividir el ancho que
+   se queria —de 86 a 118 px— por esa cifra. */
 .inv-theme-intro-brand {
   position: absolute;
   top: max(18px, calc(10px + env(safe-area-inset-top)));
   left: max(16px, calc(10px + env(safe-area-inset-left)));
   z-index: 2;
-  width: clamp(86px, 24vw, 118px);
-  height: auto;
+  font-size: clamp(10.9px, 3.04vw, 15px);
   opacity: .58;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, .3));
+  /* Dos sombras y no una. Antes la palabra venia en violeta oscuro dentro del
+     SVG y se leia sobre los videos claros, pero desaparecia en los oscuros.
+     Ahora va en blanco, que es lo correcto para una marca de agua, y el
+     problema se invierte: sobre el hielo se pierde. Un contorno corto y opaco
+     mas un halo ancho la sostienen sobre cualquiera de los dos sin subir la
+     opacidad, que es lo que la volveria un cartel en vez de una filigrana. */
+  filter:
+    drop-shadow(0 1px 1.5px rgba(0, 0, 0, .58))
+    drop-shadow(0 2px 10px rgba(0, 0, 0, .45));
 }
 
 .inv-theme-intro-skip {
@@ -1031,9 +1086,9 @@ body.inv-scroll-locked {
   text-align: center;
 }
 
+/* 26 px de alto los marca el globo, que mide 1.93em: 26 / 1.93 = 13.5px. */
 .inv-footer-logo {
-  height: 26px;
-  width: auto;
+  font-size: 13.5px;
   opacity: .85;
 }
 

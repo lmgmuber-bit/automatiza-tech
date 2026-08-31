@@ -1,0 +1,45 @@
+/* Lockup de CumpleClick. Ver Lockup.jsx para por que la palabra se compone en
+   HTML en vez de venir dentro del SVG.
+
+   PROPORCIONES — salen de brand/cumpleclick-lockup.svg, que es la referencia
+   oficial. Ahi, en un viewBox de 640x160: el globo mide 139 unidades de alto,
+   la palabra 72 de font-size, y entre los dos hay 27 de aire. Tomando la
+   palabra como 1em: globo 1.93em, aire 0.37em. Asi el conjunto conserva el
+   equilibrio del archivo original en cualquier tamano. */
+
+.cc-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.37em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.cc-lockup__mark {
+  width: 1.93em;
+  height: 1.93em;
+  display: block;
+  flex: none;
+}
+
+.cc-lockup__nombre {
+  font-family: 'Baloo 2', 'Segoe UI Rounded', 'Segoe UI', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1em;
+  /* Interletrado normal: el manual lo pide expresamente y varias hojas de este
+     proyecto le meten letter-spacing a los titulos por defecto. */
+  letter-spacing: 0;
+  /* La linea base del SVG deja la palabra un pelo mas abajo que el centro del
+     globo. Sin esto el nombre flota. */
+  transform: translateY(0.04em);
+}
+
+/* Colores de marca. Fondos crema o blancos. */
+.cc-lockup--marca .cc-lockup__nombre { color: #4C2882; }
+.cc-lockup--marca .cc-lockup__click { color: #D6307F; }
+
+/* Sobre fondo oscuro. El globo va tal cual —brilla solo— y la palabra en
+   blanco; el manual prohibe recuadrar el logo en una caja blanca, asi que no
+   hay placa ni pastilla detras. */
+.cc-lockup--claro .cc-lockup__nombre { color: #fff; }
+.cc-lockup--claro .cc-lockup__click { color: #fff; }

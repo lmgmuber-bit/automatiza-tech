@@ -12,6 +12,7 @@ import { createRoot } from 'react-dom/client'
 import QRCode from 'qrcode'
 import { applyThemeColors } from '../themeVars.js'
 import './cartel.css'
+import Lockup from '../brand/Lockup.jsx'
 
 const BASE = new URL('./', document.baseURI).href
 
@@ -28,6 +29,74 @@ function formatDate(raw) {
     'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
   const mes = meses[Number(parts[1]) - 1]
   return mes ? `${Number(parts[2])} de ${mes}` : raw
+}
+
+// Iconos dibujados a mano y en `currentColor`: el cartel se imprime, muchas
+// veces en blanco y negro, y un icono de una fuente externa o un PNG de color
+// plano ahi se pierde. Con trazo se sigue reconociendo.
+const ICONOS = {
+  web: 'M12 3a9 9 0 100 18 9 9 0 000-18zM3.6 9h16.8M3.6 15h16.8M12 3c2.4 2.4 3.6 5.4 3.6 9s-1.2 6.6-3.6 9c-2.4-2.4-3.6-5.4-3.6-9S9.6 5.4 12 3z',
+  instagram: 'M7.5 3.5h9a4 4 0 014 4v9a4 4 0 01-4 4h-9a4 4 0 01-4-4v-9a4 4 0 014-4zm4.5 5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm5.1-1.6h.01',
+  whatsapp: 'M3.8 20.2l1.2-4a8 8 0 113 3l-4.2 1zM9 9.4c.3-.7.5-.7.8-.7h.6c.2 0 .5 0 .7.6l.8 1.9c.1.2.1.4 0 .6l-.4.6c-.1.2-.2.4 0 .7a6 6 0 002.6 2.3c.3.1.5.1.7-.1l.6-.7c.2-.2.4-.2.6-.1l1.8.9c.3.1.4.3.4.5 0 .6-.4 1.4-.7 1.6-.5.4-1.1.6-1.8.5a9 9 0 01-5.4-3.4c-.8-1-1.4-2.2-1.4-3.4 0-.7.3-1.4.8-1.8z',
+}
+
+function Dato({ tipo, valor, url }) {
+  const cuerpo = (
+    <>
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d={ICONOS[tipo]} fill="none" stroke="currentColor" strokeWidth="1.7"
+          strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <span>{valor}</span>
+    </>
+  )
+  if (!url) return <li className="sign__dato">{cuerpo}</li>
+  return (
+    <li className="sign__dato">
+      <a href={url} target="_blank" rel="noopener noreferrer">{cuerpo}</a>
+    </li>
+  )
+}
+
+/**
+ * Pie del cartel: la marca y como contactarla.
+ *
+ * Este cartel queda sobre la mesa toda la fiesta y lo mira mucha mas gente que
+ * la revista, asi que es el mejor lugar de todo el producto para que la marca
+ * se lea. Los datos salen de data/marca.json (los mismos que cierran la
+ * revista), no del bundle: se editan en admin/marca.php y cambian sin build.
+ *
+ * Si no hay marca cargada, cae al cierre minimo de siempre en vez de imprimir
+ * un pie a medias.
+ */
+function Pie({ marca }) {
+  // Tono de marca: el cartel se imprime sobre papel blanco, que es donde el
+  // manual quiere el logo a color.
+  const logo = <Lockup base={BASE} tono="marca" className="sign__logo" />
+
+  if (!marca) {
+    return <footer className="sign__foot">{logo}</footer>
+  }
+
+  const datos = [
+    { tipo: 'web', valor: marca.web, url: marca.web_url },
+    { tipo: 'instagram', valor: marca.instagram, url: marca.instagram_url },
+    { tipo: 'whatsapp', valor: marca.whatsapp, url: marca.whatsapp_url },
+  ].filter((dato) => dato.valor)
+
+  return (
+    <footer className="sign__foot">
+      <span className="sign__foot-rule" aria-hidden="true" />
+      {marca.invitacion && <p className="sign__foot-invita">{marca.invitacion}</p>}
+      {logo}
+      {marca.lema && <p className="sign__foot-lema">{marca.lema}</p>}
+      {datos.length > 0 && (
+        <ul className="sign__datos">
+          {datos.map((dato) => <Dato key={dato.valor} {...dato} />)}
+        </ul>
+      )}
+    </footer>
+  )
 }
 
 function Sign({ data }) {
@@ -91,10 +160,7 @@ function Sign({ data }) {
         </p>
       )}
 
-      <footer className="sign__foot">
-        <img src={`${BASE}brand/cumpleclick-mark.svg`} alt="" width="26" height="26" />
-        <span>CumpleClick</span>
-      </footer>
+      <Pie marca={data.marca} />
     </article>
   )
 }

@@ -389,6 +389,74 @@ texto: con las imágenes bloqueadas se ve la marca, no un hueco.
 SPF, DKIM y DMARC están publicados. DMARC en `p=none`; subir a `quarantine`
 recién cuando DKIM lleve semanas estable.
 
+### Cierre de la sesión: el repositorio y producción por fin coinciden
+
+Durante meses producción iba adelante y git no lo reflejaba. Se cerró con el
+**PR #12** (100 commits, 1514 archivos), mergeado a `main` el 2026-08-31, y con
+la rama foto **`prod-sync-2026-08-31`**.
+
+**El flujo de trabajo ahora es canónico y vive en `docs/DEPLOY.md`**, en la
+primera sección: "Git no despliega. El FTP sí". Léela antes de tocar nada —
+resume que mergear a `main` NO publica, que se despliega y se verifica ANTES de
+mergear, y qué archivos del servidor están fuera de git a propósito.
+
+Antes de subir se revisó el contenido de las 374.952 líneas del diff buscando
+credenciales, porque el repositorio es **público** y el CI de GitHub está caído
+por facturación. 20 candidatos, todos benignos. Los tres que parecían riesgosos
+se leyeron uno por uno: el `$TOKEN` de `scripts/web/_at-*.php` es el marcador de
+fábrica y el script se niega a correr con él; `data-inv-token` es dinámico; el
+del tablero es un nombre de clave de `localStorage`.
+
+### Precios: el baby shower ya no es "cuéntanos y te pasamos el valor"
+
+`$59.990` de lista, **`$29.995`** con el 50% de lanzamiento. Aparece en dos
+lugares: tarjeta propia en Precios y el precio concreto en la sección de baby
+shower.
+
+La tarjeta se marca como **otro producto**, no como un tercer nivel: etiqueta
+violeta en vez del fucsia de "Más elegido", y borde suave. Sin esa distinción,
+un baby shower más barato que el Mágico se lee como "el plan básico". La grilla
+pasó de dos a tres columnas en escritorio (`max-width` 880 → 1120).
+
+### Los correos llevan logo, y el encabezado no depende de él
+
+Verificado con un envío real: **llegan a bandeja de entrada**, no a spam.
+
+La primera versión no traía ninguna imagen, por miedo a que los clientes de
+correo las bloquearan. Era pasarse de prudente: lo que penalizan los filtros no
+es UNA imagen, es un correo que ES una imagen y no tiene texto que leer.
+
+Ahora hay logo, pero el encabezado aguanta sin él: el degradé de marca es
+`background-color` sólido MÁS `background-image` (Outlook de escritorio ignora
+el segundo y muestra violeta plano, que es correcto), y el nombre "CumpleClick"
+va como TEXTO al lado del logo. Con las imágenes bloqueadas se ve la banda de
+color y el nombre, no un rectángulo vacío.
+
+El logo se recorta del render maestro (`design/logo/`) a 264px y se muestra a
+56. El test cambió de premisa con el código: exigía CERO imágenes y ahora exige
+que el correo no DEPENDA de ellas — una como máximo, con `alt`, con más de 300
+caracteres de texto alrededor y sin recursos remotos fuera de cumpleclick.com.
+
+### Errores de redacción encontrados leyendo, no escaneando
+
+Los verificadores automáticos de signos y tildes no sirvieron (ver la sección de
+errores). Leyendo el texto aparecieron cuatro cosas reales, ya corregidas:
+
+- **`¿Quieres conocer a ?`** — la invitación pegaba `"a " + nombre + "?"`, y en
+  baby shower el nombre es OPCIONAL a propósito. Sin nombre quedaba el signo
+  colgando. No se arregla concatenando: la frase pide "al bebé"/"a la bebé", y
+  esa contracción no sale de pegar "a " con nada. Hay un test que lo bloquea.
+- **La nota de los regalos** decía lo contrario de lo que pasa.
+- **El correo en texto plano iba sin tildes** — justo la versión que se ve en un
+  reloj o con el HTML bloqueado.
+- **Las cabeceras no declaraban `charset`.** Los .html estáticos se servían como
+  `text/html` a secas; traen su `<meta>`, pero el navegador interpreta bytes
+  antes de llegar a él. Se agregó `AddDefaultCharset UTF-8`.
+
+El crédito a AutomatizaTech pasó a ser enlace en el pie de la landing y de los
+correos. **En el kiosco NO**, a propósito: se muestra en la tablet durante la
+fiesta y un enlace deja que un niño toque y se salga a mitad del evento.
+
 ### Errores de esta sesión, para no repetirlos
 
 - **Dije que la pantalla de marca "nunca se construyó"** sin buscar en otras

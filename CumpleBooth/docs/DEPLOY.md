@@ -1,5 +1,83 @@
 # CumpleClick — deploy seguro a Hostinger
 
+## Git no despliega. El FTP sí. Son dos acciones distintas
+
+Este documento describía cómo subir archivos al servidor y no decía una palabra
+sobre git, y ahí estaba el problema: las dos vías corrían separadas y nadie las
+había conectado por escrito.
+
+**Mergear a `main` no publica nada.** El sitio se sirve desde `public_html` en
+Hostinger, que se llena por FTP. Git guarda la historia; el FTP publica. Que
+algo esté en `main` no significa que esté en `cumpleclick.com`, ni al revés.
+
+Las dos formas de equivocarse:
+
+- **Solo comiteas** → el repositorio queda correcto y el sitio no cambia. Se
+  nota rápido, porque el cambio no aparece.
+- **Solo subes por FTP** → el sitio cambia y el repositorio miente. Esta es la
+  peligrosa, porque no se nota: todo funciona, y la historia queda inservible
+  para entender cómo se llegó ahí o para volver atrás.
+
+La segunda venía pasando durante meses. Producción iba adelante y git no lo
+reflejaba. Se cerró el 2026-08-31 con el PR #12, después de comparar 32 archivos
+por hash entre el servidor y el repositorio (0 diferencias) y de revisar carpeta
+por carpeta que no hubiera nada en el servidor cuyo origen faltara en git.
+
+### El ciclo completo
+
+1. **Rama nueva** desde `main` actualizada. Nunca se trabaja directo sobre `main`.
+2. **Trabajar y comitear**, con los tests en verde.
+3. **Subir a PROD por FTP y VERIFICAR EL CONTENIDO**, no el código HTTP —ver
+   "Verificar un deploy" más abajo, que existe justamente porque un 200 no
+   prueba que el archivo correcto esté arriba.
+4. **PR hacia `main`** y merge.
+5. Cada cierto tiempo, una rama foto `prod-sync-YYYY-MM-DD` desde `main`.
+
+El orden de 3 y 4 importa: **se despliega y se verifica ANTES de mergear.** Si
+algo sale mal en producción, la rama todavía está separada y arreglarlo no
+ensucia `main`. Al revés, un merge apurado deja el error dentro de la historia
+principal.
+
+### Las ramas foto de producción
+
+La convención es `prod-sync-YYYY-MM-DD`, creada desde `main` una vez que lo que
+está en el servidor coincide con el repositorio:
+
+```
+git fetch origin
+git push origin origin/main:refs/heads/prod-sync-2026-08-31
+```
+
+No toca la copia local ni obliga a cambiarse de rama: empuja `origin/main`
+directo al servidor. Sirve como punto exacto al que volver si algo se rompe.
+Existentes: `prod-sync-2025-06-26`, `prod-sync-2026-08-31`.
+
+### Lo que está en el servidor y NO en git, a propósito
+
+Al comparar las carpetas aparecen tres cosas que sobran en `public_html`, y las
+tres son correctas:
+
+- **`config/`** — el puente a la configuración real, que vive fuera del webroot.
+  Nunca va a git: ahí están las credenciales.
+- **`app/album.html`, `app/cartel-qr.html`, `app/index.html`** — compilados de
+  Vite. No están en el repo como archivos porque se GENERAN desde `src/`.
+- **`default.php`** — la página por defecto de Hostinger, basura de cuando se
+  creó el hosting. No ejecuta nada ni expone información; se puede borrar.
+
+Si aparece un cuarto archivo que no encaje en ninguna de esas tres categorías,
+hay que averiguar de dónde salió antes de dejarlo ahí.
+
+### Nota sobre el CI
+
+El repositorio tiene GitHub Actions con escaneo de secretos (gitleaks), sintaxis
+PHP y sniffs de seguridad. Al 2026-08-31 **no corren**: la cuenta está bloqueada
+por facturación y los jobs fallan sin llegar a ejecutarse. Cuatro checks en rojo
+en un PR no significan que el código esté mal; hay que abrir el log y confirmar.
+
+Mientras siga así, el escaneo de secretos hay que hacerlo a mano antes de subir
+—el repositorio es PÚBLICO—, y revisando el CONTENIDO del diff, no los nombres
+de archivo.
+
 ## Dos ambientes (desde 2026-08-29)
 
 Luis compró `cumpleclick.com`. A partir de ahí son dos ambientes, no uno:

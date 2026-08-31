@@ -220,13 +220,13 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1787690594.1689086,
-    "ast_hash": "82f9467062fa6cb24d1ef10d1f58989b",
+    "mtime": 1788191776.3669033,
+    "ast_hash": "b0ddabbd75e42c929973d7f68535ef20",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1788152750.5245762,
-    "ast_hash": "4aaaf1aa65749e15541bd94d22992e4f",
+    "mtime": 1788191747.2637086,
+    "ast_hash": "0d6a56c4447c2ef7c71a0e11d6a8ab15",
     "semantic_hash": ""
   },
   "OPENCODE.md": {
@@ -265,8 +265,8 @@
     "semantic_hash": ""
   },
   "docs/DEPLOY.md": {
-    "mtime": 1788054618.3789814,
-    "ast_hash": "2894f3222b7c87fdb88e398de46065c2",
+    "mtime": 1788191708.574369,
+    "ast_hash": "43dcc12929bafaea5e7a475ee57244fc",
     "semantic_hash": ""
   },
   "docs/FASE-INVITACIONES-DINAMICAS.md": {
@@ -5230,8 +5230,8 @@
     "semantic_hash": ""
   },
   "sitio/index.php": {
-    "mtime": 1788151958.8359723,
-    "ast_hash": "ae5bc5965fa2f90baf2823687e8a1af7",
+    "mtime": 1788189808.73339,
+    "ast_hash": "67e308e2b35872dd1bfeb1c5a7bcf781",
     "semantic_hash": ""
   },
   "sitio/vendor/ScrollTrigger.min.js": {

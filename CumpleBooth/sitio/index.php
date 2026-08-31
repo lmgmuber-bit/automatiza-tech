@@ -1,4 +1,54 @@
-<!DOCTYPE html>
+<?php
+/**
+ * index.php — la landing publica.
+ *
+ * Era `index.html` y paso a PHP por un motivo concreto: el numero de WhatsApp
+ * estaba escrito a mano en OCHO lugares de este archivo, asi que cambiarlo
+ * significaba editar el HTML y volver a subirlo. Ahora sale de
+ * `public/data/marca.json`, el MISMO archivo que usan el cierre del Album
+ * Recuerdo y el cartel QR, y que se edita desde Admin -> Marca. Un solo lugar
+ * para las tres cosas.
+ *
+ * La ruta con `/../public/` funciona en los dos entornos: en local `sitio/` y
+ * `public/` son hermanas, y en el servidor `public` es un enlace simbolico a
+ * `public_html/app`. Es la misma resolucion que ya usa `api/contacto.php`.
+ *
+ * Los valores por defecto NO son de relleno: son los que estaban escritos aca
+ * antes. Si el archivo falta, esta roto o le borran el telefono, la pagina
+ * sigue mostrando un numero que funciona en vez de un `wa.me/` vacio. Una
+ * landing cuyo unico objetivo es que la familia escriba no puede quedarse sin
+ * boton porque fallo un JSON.
+ */
+declare(strict_types=1);
+
+$ccMarca = [
+    'whatsapp' => '+56 9 7494 0070',
+    'instagram' => '',
+    'instagram_url' => '',
+];
+$ccRutaMarca = __DIR__ . '/../public/data/marca.json';
+if (is_file($ccRutaMarca)) {
+    $ccCrudo = json_decode((string) @file_get_contents($ccRutaMarca), true);
+    if (is_array($ccCrudo)) {
+        foreach (array_keys($ccMarca) as $ccClave) {
+            $ccValor = isset($ccCrudo[$ccClave]) ? trim((string) $ccCrudo[$ccClave]) : '';
+            if ($ccValor !== '') { $ccMarca[$ccClave] = $ccValor; }
+        }
+    }
+}
+
+/* wa.me quiere solo digitos: ni +, ni espacios, ni guiones. Se normaliza aca y
+   no al guardar, para que en el admin se pueda escribir el numero como se lee. */
+$ccWaDigitos = preg_replace('/\D/', '', $ccMarca['whatsapp']);
+if ($ccWaDigitos === '') { $ccWaDigitos = '56974940070'; }
+
+$e = static function ($s): string {
+    return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+};
+$ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
+    return 'https://wa.me/' . $ccWaDigitos . '?text=' . rawurlencode($mensaje);
+};
+?><!DOCTYPE html>
 <!-- ============================================================
   CumpleClick — Sitio de clientes (landing de conversión)
   Ticket: AT-CUMPLECLICK-011 · vive aislado en sitio/ (no toca kiosco)
@@ -6,8 +56,8 @@
   OJO: los comentarios de este archivo se sirven al público y se leen con
   ver-código-fuente. Acá va solo lo que le sirve a quien edite la página; el
   porqué de cada cambio vive en el historial de git.
-
-  WhatsApp: 56974940070, el de CumpleClick. NO el de AutomatizaTech
+  WhatsApp: sale de public/data/marca.json (Admin -> Marca). Es el de
+  CumpleClick, NO el de AutomatizaTech.
   (56927002984): son negocios distintos. Está en los 7 enlaces y en el pie.
   `tests/frontend/sitioPublico.test.mjs` lo cuida.
 ============================================================ -->
@@ -64,12 +114,12 @@
         <li class="nav__item"><a class="nav__enlace" href="#eventos">Eventos</a></li>
         <li class="nav__item"><a class="nav__enlace" href="#faq">Preguntas</a></li>
         <li class="nav__item nav__item--cta">
-          <a class="btn btn--cta btn--sm nav__cta" href="https://wa.me/56974940070?text=Hola%20CumpleClick%2C%20quiero%20agendar%20una%20fecha%20%F0%9F%8E%88" target="_blank" rel="noopener">Agenda por WhatsApp 📲</a>
+          <a class="btn btn--cta btn--sm nav__cta" href="<?= $e($ccWa('Hola CumpleClick, quiero agendar una fecha 🎈')) ?>" target="_blank" rel="noopener">Agenda por WhatsApp 📲</a>
         </li>
       </ul>
     </nav>
 
-    <a class="btn btn--cta btn--sm topbar__cta" href="https://wa.me/56974940070?text=Hola%20CumpleClick%2C%20quiero%20agendar%20una%20fecha%20%F0%9F%8E%88" target="_blank" rel="noopener">
+    <a class="btn btn--cta btn--sm topbar__cta" href="<?= $e($ccWa('Hola CumpleClick, quiero agendar una fecha 🎈')) ?>" target="_blank" rel="noopener">
       Agenda<span class="topbar__cta-largo"> por WhatsApp</span> 📲
     </a>
 
@@ -93,7 +143,7 @@
           <h1 class="hero__title"><span>Su personaje favorito.</span> <em>Su foto.</em> <span>Al instante.</span></h1>
           <p class="hero__sub">Cabina de fotos temática para cumpleaños, fechas especiales y eventos de empresa: ruleta, saludo con su nombre y foto lista en segundos. 🎈</p>
           <div class="hero__ctas">
-            <a class="btn btn--cta" href="https://wa.me/56974940070?text=Hola%20CumpleClick%2C%20quiero%20agendar%20una%20fecha%20%F0%9F%8E%88" target="_blank" rel="noopener">
+            <a class="btn btn--cta" href="<?= $e($ccWa('Hola CumpleClick, quiero agendar una fecha 🎈')) ?>" target="_blank" rel="noopener">
               Agenda la fecha por WhatsApp 📲
             </a>
             <a class="btn btn--ghost" href="#mundos">Conoce los mundos</a>
@@ -323,7 +373,7 @@
             <li><strong>Álbum Recuerdo</strong> con las fotos de todos</li>
             <li>Descarga inmediata por QR</li>
           </ul>
-          <a class="btn btn--cta btn--block" href="https://wa.me/56974940070?text=Hola%20CumpleClick%2C%20me%20interesa%20el%20Plan%20M%C3%A1gico%20%F0%9F%8E%88" target="_blank" rel="noopener">Agenda el Mágico 📲</a>
+          <a class="btn btn--cta btn--block" href="<?= $e($ccWa('Hola CumpleClick, me interesa el Plan Mágico 🎈')) ?>" target="_blank" rel="noopener">Agenda el Mágico 📲</a>
         </article>
         <article class="plan plan--destacado" data-reveal>
           <span class="plan__badge">Más elegido</span>
@@ -339,7 +389,7 @@
             <li>Galería privada para papás</li>
             <li>2 horas de servicio</li>
           </ul>
-          <a class="btn btn--cta btn--block" href="https://wa.me/56974940070?text=Hola%20CumpleClick%2C%20me%20interesa%20el%20Plan%20Premium%20%F0%9F%8E%89" target="_blank" rel="noopener">Agenda el Premium 📲</a>
+          <a class="btn btn--cta btn--block" href="<?= $e($ccWa('Hola CumpleClick, me interesa el Plan Premium 🎉')) ?>" target="_blank" rel="noopener">Agenda el Premium 📲</a>
         </article>
       </div>
       <p class="precios__medida" data-reveal>¿Quieres una temática a la medida? <strong>La creamos por +$25.000.</strong></p>
@@ -370,7 +420,7 @@
           <p>Va <strong>incluida en los dos planes</strong>: una invitación web de tu misma temática, con la fecha, el lugar y el mapa, lista para compartir por WhatsApp. 💌</p>
           <p>En el <strong>Plan Premium</strong> se reproduce sola, como una película corta: capítulos en video, música y una voz que cuenta la historia. En el <strong>Mágico</strong>, el invitado la va descubriendo con el dedo.</p>
         </div>
-        <a class="btn btn--ghost" href="https://wa.me/56974940070?text=Hola%20CumpleClick%2C%20quiero%20una%20invitaci%C3%B3n%20digital%20%F0%9F%92%8C" target="_blank" rel="noopener">Quiero mi invitación</a>
+        <a class="btn btn--ghost" href="<?= $e($ccWa('Hola CumpleClick, quiero una invitación digital 💌')) ?>" target="_blank" rel="noopener">Quiero mi invitación</a>
       </aside>
     </section>
 
@@ -395,7 +445,7 @@
           <h3>Cuéntanos tu evento</h3>
           <p>Déjanos los datos esenciales, registraremos tu solicitud y te responderemos con la disponibilidad y una propuesta a medida.</p>
         </div>
-        <form class="contacto__form" id="form-contacto" data-whatsapp="56974940070">
+        <form class="contacto__form" id="form-contacto" data-whatsapp="<?= $e($ccWaDigitos) ?>">
           <div class="contacto__trampa" aria-hidden="true"><label>No completar<input name="website" type="text" tabindex="-1" autocomplete="off"></label></div>
           <label>Tu nombre<input name="nombre" type="text" autocomplete="name" required></label>
           <label>Empresa u organización<input name="organizacion" type="text" autocomplete="organization"></label>
@@ -486,7 +536,7 @@
         <img class="agenda__mark" src="assets/cumpleclick-mark.svg" alt="" width="72" height="72" aria-hidden="true">
         <h2>¿Agendamos la fecha? 🎉</h2>
         <p>Las fechas de fin de semana se van rápido. Escríbenos y la dejamos guardada hoy.</p>
-        <a class="btn btn--cta btn--xl" href="https://wa.me/56974940070?text=Hola%20CumpleClick%2C%20quiero%20agendar%20una%20fecha%20%F0%9F%8E%88" target="_blank" rel="noopener">
+        <a class="btn btn--cta btn--xl" href="<?= $e($ccWa('Hola CumpleClick, quiero agendar una fecha 🎈')) ?>" target="_blank" rel="noopener">
           Agenda la fecha por WhatsApp 📲
         </a>
       </div>
@@ -498,7 +548,14 @@
     <span class="cc-lockup cc-lockup--marca footer__logo"><img class="cc-lockup__mark" src="assets/cumpleclick-mark.svg" alt="CumpleClick" width="400" height="400" draggable="false"><span class="cc-lockup__nombre" aria-hidden="true">Cumple<span class="cc-lockup__click">Click</span></span></span>
     <p>El flash que tus hijos no van a olvidar.</p>
     <nav class="footer__links" aria-label="Información del servicio"><a href="#condiciones">Condiciones del servicio</a><a href="#privacidad">Privacidad</a><a href="#eventos">Eventos y empresas</a></nav>
-    <p class="footer__cfg">Escríbenos por <a href="https://wa.me/56974940070?text=Hola%20CumpleClick%2C%20quiero%20consultar%20por%20una%20fiesta%20%F0%9F%8E%88" rel="noopener">WhatsApp</a></p>
+    <p class="footer__cfg">Escríbenos por <a href="<?= $e($ccWa('Hola CumpleClick, quiero consultar por una fiesta 🎈')) ?>" rel="noopener">WhatsApp</a><?php
+      /* Instagram aparece SOLO si esta cargado en Admin -> Marca. Un enlace a
+         una cuenta que no existe es peor que no tener enlace. */
+      if ($ccMarca['instagram'] !== ''):
+        $ccIg = $ccMarca['instagram_url'] !== ''
+            ? $ccMarca['instagram_url']
+            : 'https://instagram.com/' . ltrim($ccMarca['instagram'], '@');
+    ?> · <a href="<?= $e($ccIg) ?>" target="_blank" rel="noopener"><?= $e($ccMarca['instagram']) ?></a><?php endif; ?></p>
     <p class="footer__legal">© 2026 CumpleClick · by <strong>AutomatizaTech</strong></p>
   </footer>
 

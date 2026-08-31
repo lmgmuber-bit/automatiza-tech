@@ -11,6 +11,16 @@
 # apunta al archivo de al lado y vale para todo el dominio —raíz y subcarpetas—
 # sin que ningún archivo versionado tenga que saber en qué carpeta lo montaron.
 
+# La portada la sirve `index.php`, no un archivo estatico.
+#
+# Se declara el orden a proposito. El numero de WhatsApp y las redes salen de
+# `data/marca.json` y se editan desde el admin; si `index.html` reapareciera y
+# el servidor lo prefiriera, la pagina volveria a servirse estatica y lo que se
+# edite en el admin dejaria de verse, sin que nada falle ni avise.
+<IfModule mod_dir.c>
+  DirectoryIndex index.php index.html
+</IfModule>
+
 ErrorDocument 404 /404.html
 
 # 403 también: `fotos/` y `admin/config.php` responden 403 a propósito, y la
@@ -26,7 +36,7 @@ ErrorDocument 403 /404.html
 
   # index.html se revalida siempre: sin esto, cambiar el precio o el copy no se
   # ve hasta que al visitante se le vence la caché heurística.
-  <FilesMatch "^(index|404)\.html$">
+  <FilesMatch "^(index\.php|index\.html|404\.html)$">
     Header always set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
   # El CSS y el JS del sitio SE REVALIDAN SIEMPRE.

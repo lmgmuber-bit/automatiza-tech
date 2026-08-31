@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, existsSync, statSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 
 /* La landing pública (`sitio/`), que es la cara del dominio.
@@ -21,7 +22,29 @@ import { execFileSync } from 'node:child_process'
  */
 
 const RAIZ = new URL('../../sitio/', import.meta.url)
-const INDEX = readFileSync(new URL('index.html', RAIZ), 'utf8')
+
+/* La landing dejó de ser un archivo estático: es `index.php` y arma los enlaces
+ * de WhatsApp desde `public/data/marca.json`, que se edita en Admin -> Marca.
+ *
+ * Por eso estas pruebas corren sobre el RENDER, no sobre el fuente. Leyendo el
+ * `.php` crudo, un test que busca `wa.me/569...` no encontraría nada —ahí sólo
+ * hay `<?= $ccWa(...) ?>`— y pasaría en verde por vacío, que es la peor forma
+ * de pasar. Lo que le llega al visitante es la salida, y eso es lo que se mide.
+ *
+ * Si PHP no está en esta máquina se cae al fuente y las pruebas que necesitan
+ * el render se saltan solas, en vez de fallar por algo ajeno al proyecto. */
+const PHP = process.env.CC_PHP || 'C:/wamp64/bin/php/php8.2.29/php.exe'
+let RENDER = null
+try {
+  RENDER = execFileSync(PHP, [fileURLToPath(new URL('index.php', RAIZ))], {
+    encoding: 'utf8',
+    maxBuffer: 8 * 1024 * 1024,
+  })
+} catch {
+  RENDER = null
+}
+const FUENTE = readFileSync(new URL('index.php', RAIZ), 'utf8')
+const INDEX = RENDER ?? FUENTE
 
 test('la landing no dejó ningún marcador de configuración sin reemplazar', () => {
   // Genérico a propósito: cualquier [ALGO_ASI] delata un valor que quedó por
@@ -215,4 +238,87 @@ test('el botón del menú está cableado al panel que abre', () => {
     /scroll-margin-top\s*:\s*[0-9]/,
     'sin scroll-margin-top el título queda debajo del header al usar el menú'
   )
+})
+
+/* La landing dinámica.
+ *
+ * El defecto que cuida es de los que no rompen nada: que vuelva a existir un
+ * `index.html`. Si aparece, el servidor puede preferirlo —o alguien lo sube por
+ * costumbre— y la página se sirve estática otra vez. Todo se ve igual, nada
+ * falla, y lo que Luis edite en Admin -> Marca simplemente deja de tener
+ * efecto. Ese es exactamente el problema que esta conversión vino a resolver.
+ */
+test('la portada es PHP y no quedó un index.html que la tape', () => {
+  assert.ok(existsSync(new URL('index.php', RAIZ)), 'falta sitio/index.php')
+  assert.ok(
+    !existsSync(new URL('index.html', RAIZ)),
+    'volvió a aparecer sitio/index.html: taparía a index.php y los datos del admin dejarían de verse'
+  )
+
+  // Y el servidor tiene que preferir PHP explícitamente, no por su orden por defecto.
+  const htaccess = readFileSync(new URL('.htaccess', RAIZ), 'utf8')
+  assert.match(htaccess, /DirectoryIndex\s+index\.php/, 'el .htaccess no declara index.php como portada')
+
+  /* Y que el repositorio lo esté guardando de verdad.
+   *
+   * Esto ya paso DOS veces acá con reglas amplias del .gitignore: primero
+   * `vendor/` —puesta para Composer— se trago las librerias de motion, y
+   * despues `index.php` —puesta para WordPress, sin barra inicial, o sea que
+   * matchea en cualquier carpeta— se trago esta misma portada. En los dos
+   * casos el archivo existia en el disco y en produccion, y en el repo no:
+   * nada falla hasta que alguien clona limpio y le falta la pagina. */
+  let ignorado = false
+  try {
+    execFileSync('git', ['check-ignore', '-q', fileURLToPath(new URL('index.php', RAIZ))])
+    ignorado = true
+  } catch {
+    ignorado = false // check-ignore sale con codigo 1 cuando NO esta ignorado
+  }
+  assert.ok(!ignorado, 'sitio/index.php esta en .gitignore: existe en el disco pero no en el repositorio')
+})
+
+test('el WhatsApp de la landing sale de marca.json, no del HTML', (t) => {
+  if (RENDER === null) {
+    t.skip('no se pudo ejecutar PHP en esta maquina')
+    return
+  }
+  const marca = JSON.parse(
+    readFileSync(new URL('../public/data/marca.json', RAIZ), 'utf8')
+  )
+  const esperado = String(marca.whatsapp || '').replace(/\D/g, '')
+  assert.ok(esperado.length >= 8, 'marca.json no tiene un WhatsApp usable')
+
+  const enlaces = [...RENDER.matchAll(/wa\.me\/(\d+)/g)].map((m) => m[1])
+  assert.ok(enlaces.length >= 5, `se esperaban varios enlaces de WhatsApp, hay ${enlaces.length}`)
+  assert.deepEqual(
+    [...new Set(enlaces)],
+    [esperado],
+    'la landing muestra un numero distinto al de marca.json'
+  )
+
+  // El formulario arma su propio enlace con este atributo; si se queda con el
+  // numero viejo, el boton de la landing y el del formulario van a dos telefonos
+  // distintos y nadie lo nota hasta que un cliente escribe al equivocado.
+  const attr = RENDER.match(/data-whatsapp="(\d+)"/)
+  assert.ok(attr, 'el formulario perdió el atributo data-whatsapp')
+  assert.equal(attr[1], esperado, 'el formulario usa un numero distinto al de marca.json')
+})
+
+test('si marca.json falta o está roto, la landing igual muestra un telefono', (t) => {
+  if (RENDER === null) {
+    t.skip('no se pudo ejecutar PHP en esta maquina')
+    return
+  }
+  // El fuente tiene que traer un respaldo escrito. Sin esto, un JSON mal
+  // guardado desde el admin dejaría la pagina con `wa.me/` vacio: los botones
+  // se verian bien y no llevarian a ninguna parte, en una pagina cuyo unico
+  // objetivo es que la familia escriba.
+  const respaldo = FUENTE.match(/'whatsapp'\s*=>\s*'([^']+)'/)
+  assert.ok(respaldo, 'index.php no declara un WhatsApp de respaldo')
+  assert.match(
+    respaldo[1].replace(/\D/g, ''),
+    /^56\d{9}$/,
+    `el respaldo "${respaldo[1]}" no es un numero chileno valido`
+  )
+  assert.match(FUENTE, /is_file\(\$ccRutaMarca\)/, 'index.php no comprueba que el archivo exista')
 })

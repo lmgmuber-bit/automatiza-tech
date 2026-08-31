@@ -82,13 +82,22 @@ function renderBulletListBody(items, formatter) {
   return `<ul class="body-list">${lis}</ul>`;
 }
 
+function renderPriceCell(row) {
+  const usd = `$${escapeHtml(row.price_usd)} USD`;
+  // The peso conversion only means something to a client billed in Chile.
+  // For anyone abroad it is noise, so a row with no price_clp shows dollars
+  // and nothing else.
+  if (!row.price_clp) return usd;
+  return `${usd} ($${escapeHtml(row.price_clp)} CLP aprox)`;
+}
+
 function renderPricingBody(rows, note) {
   const trs = rows
     .map(
       (row) => `
       <tr>
         <td>${escapeHtml(row.service)}</td>
-        <td>$${escapeHtml(row.price_usd)} USD ($${escapeHtml(row.price_clp)} CLP aprox)</td>
+        <td>${renderPriceCell(row)}</td>
       </tr>`
     )
     .join('');

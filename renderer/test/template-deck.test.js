@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { renderProposalHtml, renderClosingSlide } = require('../src/template');
+const { renderProposalHtml, renderClosingSlide, renderPricingBody } = require('../src/template');
 
 const DATA = {
   company_name: 'Academia de Béisbol',
@@ -77,6 +77,23 @@ test('content slides darken the side the copy sits on, not the bottom', () => {
   // The original bottom-heavy scrim (.15 at the top) left the top-left
   // text of every content slide over the brightest part of the photo.
   assert.ok(html.includes('linear-gradient(100deg, rgba(13,27,42,.97)'));
+});
+
+test('a row without price_clp is priced in dollars only', () => {
+  const html = renderPricingBody(
+    [{ service: 'Anticipo para iniciar (40%)', price_usd: 200 }],
+    'Nota'
+  );
+  assert.ok(html.includes('$200 USD'));
+  assert.ok(!html.includes('CLP'), 'a client billed abroad must not see pesos');
+});
+
+test('a row with price_clp still shows the peso conversion', () => {
+  const html = renderPricingBody(
+    [{ service: 'Sitio web', price_usd: 500, price_clp: 460000 }],
+    null
+  );
+  assert.ok(html.includes('$500 USD ($460000 CLP aprox)'));
 });
 
 test('the cover keeps its bottom-heavy scrim', () => {

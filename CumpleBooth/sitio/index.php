@@ -81,7 +81,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
        bloquea el render; las tipografias van ultimas porque tienen
        `font-display: swap` y el texto se pinta sin esperarlas. -->
   <link rel="preload" href="assets/img/globo-render.webp" as="image" type="image/webp">
-  <link rel="stylesheet" href="css/styles.css?v=20260831g">
+  <link rel="stylesheet" href="css/styles.css?v=20260831h">
   <link rel="preload" href="fonts/baloo-2-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/baloo-2-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
   <!-- ?v= no es adorno. `styles.css` y `main.js` tienen nombre FIJO, asi que
@@ -180,7 +180,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
             <span class="paso__num" aria-hidden="true">3</span>
             <span class="paso__cuando">Entre foto y foto</span>
             <h3>Los juegos 🎮</h3>
-            <p>Juegos de la misma temática en la pantalla, para que la fila sea parte de la fiesta y no una espera.</p>
+            <p>Cada mundo trae los suyos. En Reino de Hielo se atrapan copos y se arma un muñeco; en Carreras se acelera por tu carril; en Familia Canina, <em>Keepy Uppy</em>. Cuatro por temática, para que la fila sea parte de la fiesta y no una espera.</p>
           </li>
           <li class="paso" data-reveal>
             <span class="paso__num" aria-hidden="true">4</span>
@@ -405,7 +405,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
           <p class="plan__precio"><s class="plan__antes">$69.990</s> $34.995</p>
           <ul>
             <li>1 temática a elección</li>
-            <li><strong>3 juegos</strong> por invitado</li>
+            <li><strong>3 juegos</strong> de la temática elegida</li>
             <li>Hasta 200 fotos por fiesta</li>
             <li>Diplomas personalizados</li>
             <li><strong>Invitación digital</strong> para compartir por WhatsApp</li>
@@ -420,7 +420,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
           <p class="plan__precio"><s class="plan__antes">$99.990</s> $49.995</p>
           <ul>
             <li>1 temática a elección</li>
-            <li><strong>Todos los juegos</strong>, incluido El Show 3D</li>
+            <li><strong>Los 4 juegos</strong>, incluido <strong>El Show 3D</strong></li>
             <li>Hasta 200 fotos por fiesta</li>
             <li>Diplomas personalizados</li>
             <li><strong>Invitación automática</strong>: se reproduce sola, con videos y narración</li>
@@ -602,6 +602,6 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
   <script src="vendor/gsap.min.js" defer></script>
   <script src="vendor/ScrollTrigger.min.js" defer></script>
   <script src="vendor/lenis.min.js" defer></script>
-  <script src="js/main.js?v=20260831g" defer></script>
+  <script src="js/main.js?v=20260831h" defer></script>
 </body>
 </html>

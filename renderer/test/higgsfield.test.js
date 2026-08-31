@@ -72,9 +72,15 @@ test('surfaces the response body in the captured error when submit is rejected (
       { keyId: 'id', keySecret: 'secret' }
     );
     assert.equal(result.cover, null);
-    assert.equal(errors.length, 1);
-    assert.match(errors[0], /403/);
-    assert.match(errors[0], /plan does not include API access/);
+    // A failing brief is retried once, so both attempts are logged — and
+    // each line has to carry the full diagnostic, not just the first.
+    assert.equal(errors.length, 2);
+    for (const line of errors) {
+      assert.match(line, /403/);
+      assert.match(line, /plan does not include API access/);
+    }
+    assert.match(errors[0], /intento 1\/2/);
+    assert.match(errors[1], /intento 2\/2/);
   } finally {
     global.fetch = originalFetch;
     console.error = originalConsoleError;

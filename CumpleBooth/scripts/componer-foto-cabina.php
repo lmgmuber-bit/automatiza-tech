@@ -1,25 +1,8 @@
 <?php
 /**
- * componer-foto-cabina.php — arma una foto igual a las que produce el kiosco,
- * para poblar álbumes de demo sin usar fotos de prueba reales.
+ * Compone una foto de cabina igual a las que produce el kiosco, para poblar los
+ * álbumes de demo sin usar fotos de prueba reales.
  *
- * SE USÓ PARA: reemplazar las 13 fotos de prueba de Luis en el álbum de
- * `demo-carreras` (un adulto en penumbra dentro de un marco de Rayo McQueen)
- * por 8 fotos con los niños de IA de `design/explicativo/ia/`. Esos niños NO
- * son reales: están generados y aprobados, y el README del explicativo lo deja
- * por escrito.
- *
- * AL REGISTRARLAS EN EL ÁLBUM, VAN COMO `guest`, NO COMO `booth`.
- * `album-api.php` descarta EN SILENCIO cualquier pieza `booth` que no tenga
- * fila enlazada en `cc_photos` —de ahí sale su token—, y esas filas solo las
- * crea el kiosco de verdad. Registradas como `booth` entran a la base y no
- * aparecen nunca: el ejecutor decía "8 registradas" y el álbum seguía vacío.
- *
- * Y NO hace falta emitir tokens de lectura nuevos: viven en
- * `cc_event_album_tokens` atados al álbum, no a las fotos, así que agregar o
- * quitar piezas no rompe los enlaces de demo de la landing.
- */
-/**
  * La geometría NO se inventa: sale de src/frameGeometry.js, que es lo que usa
  * el kiosco de verdad. El marco dorado ya viene pintado dentro de
  * `fondo-sala.jpg`, y `frameBox` dice dónde va la foto dentro de ese marco. El
@@ -62,7 +45,7 @@ function cuadrarYPegar($lienzo, $src, int $dx, int $dy, int $lado): void
 function componerCabina(
     string $fondoSala, string $cutPersonaje, string $fotoNino,
     string $etiqueta, string $agradece, string $subtexto, string $nombrePersonaje,
-    string $fuenteBold, array $frameBox, string $salida
+    string $fuenteBold, array $frameBox, string $salida, array $acento = [214, 48, 60]
 ): bool {
     $fondo = @imagecreatefromjpeg($fondoSala);
     if (!$fondo) { return false; }
@@ -122,7 +105,7 @@ function componerCabina(
     $wPill = $cajaPill[2] - $cajaPill[0];
     $px = (int) (($ancho - $wPill) / 2);
     $py = $alto - (int) ($alto * 0.028);
-    $rojo = imagecolorallocate($lienzo, 214, 48, 60);
+    $rojo = imagecolorallocate($lienzo, $acento[0], $acento[1], $acento[2]);
     imagefilledrectangle($lienzo, $px - 34, $py - 40, $px + $wPill + 34, $py + 14, $rojo);
     imagettftext($lienzo, $tamPill, 0, $px, $py, $blanco, $fuenteBold, $nombrePersonaje);
 

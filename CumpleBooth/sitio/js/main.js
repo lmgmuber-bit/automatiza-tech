@@ -170,65 +170,148 @@
      de 59 disparadores. GSAP se sigue usando para animar —misma duración, mismo
      ease, mismo desplazamiento— sólo cambia quién avisa que llegó el momento.
 
-     `start: 'top 88%'` de ScrollTrigger equivale a `rootMargin` de -12% abajo:
-     el elemento cuenta como visible cuando su borde superior pasa el 88% del
-     alto de la ventana. Igual para 92% -> -8% y 90% -> -10%. */
-  function revelarAlEntrar(selector, estadoInicial, entrada, margenInferior, totalEscalonado, porContenedor) {
+     El margen inferior es POSITIVO: agranda la zona de deteccion hacia abajo,
+     asi el elemento empieza a aparecer justo ANTES de entrar en pantalla y para
+     cuando se lo ve ya esta a la vista.
+
+     Estuvo en negativo (-8%, -10%, -12%), traduciendo el `start: 'top 88%'` de
+     ScrollTrigger, y fue un error: un margen negativo EXIGE que el elemento
+     entre un 8% dentro de la ventana antes de contar. Sumado a Lenis, que llega
+     frenando y tarda en asentarse, el observador de "Elige tu mundo" llego a
+     dispararse 12 segundos despues de que la seccion ya se veia. Mientras
+     tanto lo unico que mostraba algo era la red de seguridad, y solo lo que ya
+     estaba en pantalla. Se noto como "las secciones se demoran en aparecer".
+
+     ScrollTrigger no tenia el problema porque se actualiza en cada evento de
+     scroll de Lenis, no cuando el navegador decide entregar la interseccion. */
+  /* ---------- Cola de revelaciones, movida por el scroll ----------
+
+     Se probaron dos mecanismos antes y los dos fallaron, cada uno a su manera:
+
+     1. Un ScrollTrigger por elemento. Funcionaba, pero eran 60 disparadores
+        midiendo layout y costaban ~310 ms de hilo bloqueado en el arranque.
+     2. Un IntersectionObserver. Barato, pero el navegador entrega la
+        interseccion cuando quiere: medido en produccion, el aviso de "Elige tu
+        mundo" llego 11 SEGUNDOS despues de que la seccion ya se veia en
+        pantalla. Para el visitante eso es "la seccion no aparece". Cambiar el
+        margen no lo arreglo, porque el problema no era el umbral sino cuando
+        llegaba el aviso.
+
+     Esto es lo mismo que hacia ScrollTrigger pero sin su costo: una sola cola,
+     revisada como mucho una vez por cuadro y solo cuando hay scroll. Cada
+     elemento sale de la cola al revelarse, y cuando la cola queda vacia los
+     listeners se desenganchan solos: no queda nada corriendo el resto de la
+     sesion. */
+  var colaRevelado = [];
+  var revisionPedida = false;
+
+  function pedirRevision() {
+    if (revisionPedida) { return; }
+    revisionPedida = true;
+    window.requestAnimationFrame(revisarCola);
+  }
+
+  function revisarCola() {
+    revisionPedida = false;
+    if (!colaRevelado.length) { return; }
+    var alto = window.innerHeight || 0;
+    var porGrupo = [];
+
+    for (var i = colaRevelado.length - 1; i >= 0; i--) {
+      var item = colaRevelado[i];
+      var r = item.disparador.getBoundingClientRect();
+      /* Se revela un poco ANTES de entrar, para que al llegar ya este a la
+         vista en vez de aparecer sobre el ojo del visitante. */
+      if (r.top > alto + item.margen || r.bottom < -item.margen) { continue; }
+      colaRevelado.splice(i, 1);
+      var slot = null;
+      for (var g = 0; g < porGrupo.length; g++) {
+        if (porGrupo[g].grupo === item.grupo) { slot = porGrupo[g]; break; }
+      }
+      if (!slot) { slot = { grupo: item.grupo, nodos: [] }; porGrupo.push(slot); }
+      slot.nodos = slot.nodos.concat(item.nodos);
+    }
+
+    for (var k = 0; k < porGrupo.length; k++) {
+      porGrupo[k].grupo.animar(porGrupo[k].nodos);
+    }
+
+    if (!colaRevelado.length) {
+      window.removeEventListener('scroll', pedirRevision);
+      window.removeEventListener('resize', pedirRevision);
+    }
+  }
+
+  function revelarAlEntrar(selector, estadoInicial, entrada, margen, totalEscalonado, porContenedor) {
     var nodos = Array.prototype.slice.call(document.querySelectorAll(selector));
-    if (!nodos.length) return;
+    if (!nodos.length) { return; }
     window.gsap.set(nodos, estadoInicial);
 
-    var animar = function (lote) {
-      var opciones = {};
-      for (var k in entrada) { opciones[k] = entrada[k]; }
-      opciones.overwrite = true;
-      /* `amount` reparte un total fijo: el escalonado no se estira aunque el
-         lote sea grande. El código anterior topaba el retraso con `(i % 3)`. */
-      opciones.stagger = { amount: totalEscalonado };
-      window.gsap.to(lote, opciones);
+    var duracionTotal = ((entrada.duration || 0.8) + totalEscalonado) * 1000 + 400;
+
+    var grupo = {
+      animar: function (lote) {
+        if (!lote.length) { return; }
+        var opciones = {};
+        for (var k in entrada) { opciones[k] = entrada[k]; }
+        opciones.overwrite = true;
+        /* `amount` reparte un total fijo: el escalonado no se estira aunque el
+           lote sea grande. El codigo anterior topaba el retraso con `(i % 3)`. */
+        opciones.stagger = { amount: totalEscalonado };
+        window.gsap.to(lote, opciones);
+
+        /* Garantia por lote: cuando la animacion YA deberia haber terminado, lo
+           que siga invisible se muestra sin mas.
+
+           Se agrega porque en "Elige tu mundo" quedaban dos tarjetas en opacidad
+           0 de forma intermitente y no logre explicar por que —la animacion se
+           lanzaba sobre las seis—. Sin entender la causa, la conducta correcta
+           es no dejar que el visitante pague el precio: una tarjeta invisible es
+           un error que se ve, y comprobar un lote una sola vez, tras su propia
+           duracion, no cuesta nada. Si algun dia aparece la causa real, esto
+           deja de dispararse solo. */
+        var propios = lote.slice();
+        window.setTimeout(function () {
+          for (var i = 0; i < propios.length; i++) {
+            if (window.getComputedStyle(propios[i]).opacity !== '0') { continue; }
+            window.gsap.set(propios[i], { opacity: 1, y: 0, rotationX: 0, clearProps: 'transform' });
+          }
+        }, duracionTotal);
+      }
     };
 
-    /* `porContenedor` existe por el carrusel de temáticas.
+    /* `porContenedor` existe por el carrusel de tematicas.
 
-       Las tarjetas `.mundo` viven en una lista que se desplaza en HORIZONTAL, así
-       que cuatro de las nueve están fuera de la ventana por el costado aunque su
-       sección ya se vea entera. Un observador mira la intersección real —los dos
-       ejes— y esas cuatro no intersectaban nunca: quedaban en opacidad 0 hasta
-       que alguien deslizara el carrusel, y encima el carrusel se mueve solo, así
-       que aparecían de golpe a mitad de camino. ScrollTrigger no tenía el
-       problema porque sólo miraba la posición vertical.
-
-       La solución es observar el CONTENEDOR y animar a todos sus hijos de una:
-       vuelve a ser "la sección entró, se revelan sus tarjetas", que es lo que
-       hacía antes. Se agrupa por padre y no por un selector fijo para que siga
-       funcionando si hay más de una lista. */
-    var observados = nodos;
-    var hijosDe = null;
+       Las tarjetas `.mundo` viven en una lista que en pantalla angosta se
+       desplaza en HORIZONTAL, asi que varias quedan fuera de la ventana por el
+       costado aunque su seccion ya se vea entera. Midiendo cada tarjeta, esas
+       no se revelaban hasta que alguien deslizara el carrusel —y el carrusel se
+       mueve solo, asi que aparecian de golpe a mitad de camino—. Se mide el
+       CONTENEDOR y se revelan todos sus hijos juntos: vuelve a ser "la seccion
+       entro, se revelan sus tarjetas". Se agrupa por padre y no por un selector
+       fijo para que siga andando si hay mas de una lista. */
     if (porContenedor) {
-      hijosDe = new Map();
+      var hijosDe = new Map();
       for (var n = 0; n < nodos.length; n++) {
         var padre = nodos[n].parentElement;
         if (!padre) { continue; }
         if (!hijosDe.has(padre)) { hijosDe.set(padre, []); }
         hijosDe.get(padre).push(nodos[n]);
       }
-      observados = Array.prototype.slice.call(hijosDe.keys());
+      hijosDe.forEach(function (hijos, contenedor) {
+        colaRevelado.push({ disparador: contenedor, nodos: hijos, margen: margen, grupo: grupo });
+      });
+    } else {
+      for (var m = 0; m < nodos.length; m++) {
+        colaRevelado.push({ disparador: nodos[m], nodos: [nodos[m]], margen: margen, grupo: grupo });
+      }
     }
 
-    var obs = new IntersectionObserver(function (entradas) {
-      var lote = [];
-      for (var i = 0; i < entradas.length; i++) {
-        if (!entradas[i].isIntersecting) { continue; }
-        var blanco = entradas[i].target;
-        obs.unobserve(blanco);               /* equivale a `once: true` */
-        if (hijosDe) { lote = lote.concat(hijosDe.get(blanco) || []); }
-        else { lote.push(blanco); }
-      }
-      if (lote.length) { animar(lote); }
-    }, { rootMargin: '0px 0px ' + margenInferior + ' 0px', threshold: 0 });
-
-    for (var j = 0; j < observados.length; j++) { obs.observe(observados[j]); }
+    window.addEventListener('scroll', pedirRevision, { passive: true });
+    window.addEventListener('resize', pedirRevision, { passive: true });
+    pedirRevision();   // lo que ya se ve al cargar se revela de una
   }
+
 
   function initReveals() {
     if (reduceMotion) return;
@@ -240,12 +323,12 @@
     revelarAlEntrar('[data-reveal]:not(.mundo)',
       { opacity: 0, y: 36 },
       { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' },
-      '-12%', 0.18);
+      120, 0.18);
 
     revelarAlEntrar('.mundo',
       { opacity: 0, y: 44, rotationX: 8, transformPerspective: 800 },
       { opacity: 1, y: 0, rotationX: 0, duration: 0.8, ease: 'power3.out' },
-      '-8%', 0.24, true);   /* por contenedor: el carrusel corre en horizontal */
+      160, 0.24, true);   /* por contenedor: el carrusel corre en horizontal */
 
     /* NOTA fusión OpenCode+Claude 2026-07-27: [data-depth] y la salida del hero
        viven en initDepth() e initHeroParallax() (versiones Claude). No repetirlas
@@ -426,7 +509,7 @@
     revelarAlEntrar('[data-depth]',
       { opacity: 0, y: 52, rotationX: 14, transformPerspective: 1000, transformOrigin: 'center top' },
       { opacity: 1, y: 0, rotationX: 0, duration: 0.85, ease: 'power3.out' },
-      '-10%', 0.24);
+      120, 0.24);
   }
 
   /* ---------- Salida del hero con profundidad ----------

@@ -1,0 +1,40 @@
+node_modules
+dist
+.DS_Store
+*.local
+config/cumpleclick-config.php
+config/cumpleclick.local.php
+storage/
+backups/
+qa-output/
+
+# Respaldos operativos del .htaccess de PROD: se guardan en disco, no en el repo.
+scripts/web/*_BACKUP
+
+# Los .htaccess de CumpleClick SI se versionan.
+#
+# El .gitignore de la raiz ignora todo `.htaccess` porque ahi vive un WordPress
+# y el suyo es config del servidor. Los de CumpleClick no: llevan el fallback
+# del SPA, la URL bonita de invitacion, las reglas que hacen que un archivo que
+# falta devuelva 404 en vez de 200, y la pagina de error de marca. Son parte del
+# producto y tienen que viajar con el.
+#
+# `public/.htaccess` ya estaba versionado (se agrego a la fuerza en su momento);
+# esto lo deja escrito para que no dependa de acordarse.
+!public/.htaccess
+!sitio/.htaccess
+
+# Y `sitio/vendor/` tambien se versiona.
+#
+# Esta fue la causa de que la landing llegara sin animaciones: alguien dejo ahi
+# gsap, ScrollTrigger, lenis y three, y el `vendor/` del .gitignore de la raiz
+# —pensado para las dependencias de PHP/Composer— se los trago sin decir nada.
+# En disco estaban; en el repo nunca. La pagina cargaba igual, asi que no habia
+# forma de notarlo hasta abrirla y mirar la consola.
+#
+# Se versionan y no se generan al vuelo a proposito: el sitio no tiene paso de
+# compilacion, se sube por FTP tal cual esta. Si hubiera que copiarlos desde
+# node_modules antes de cada subida, olvidarse reproduce exactamente este bug.
+# Lo que esta en git es lo que se sube.
+!sitio/vendor/
+!sitio/vendor/*.js

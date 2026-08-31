@@ -1,0 +1,17 @@
+# Tablero Ágil AT — v8
+# Datos reales NO se versionan (contienen clientes/precios/estados comerciales)
+data/seed-clientes.json
+data/seed-internas.json
+# Credenciales nunca al repo
+.htpasswd
+*.htpasswd
+# Secrets sueltos
+secrets.*
+.env
+.env.local
+# Backups locales
+*.bak
+*.orig
+~$*
+# Evidencia generada por pruebas locales
+tests/*.png

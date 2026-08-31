@@ -1,0 +1,40 @@
+# ==========================================================================
+# .htaccess — Tablero Ágil AutomatizaTech v8
+# COPIAR a .htaccess (sin .example) y ajustar la ruta del AuthUserFile.
+# NO commitear .htpasswd (ver .gitignore).
+# ==========================================================================
+
+# ---- Auth basica (datos comerciales sensibles) ----
+AuthType Basic
+AuthName "Tablero AutomatizaTech — acceso interno"
+# IMPORTANTE: el .htpasswd DEBE vivir FUERA de public_html.
+# En Hostinger, /home/uNNNNNNNN/ es el home del usuario (public_html cuelga de ahi).
+# Ajusta uNNNNNNNN al ID real de tu cuenta (lo ves en el panel de Hostinger o por SFTP).
+AuthUserFile /home/uNNNNNNNN/.htpasswd-tablero
+Require valid-user
+
+# ---- Anti-framing (clickjacking) ----
+Header always set X-Frame-Options "DENY"
+
+# ---- Anti-MIME sniffing ----
+Header always set X-Content-Type-Options "nosniff"
+
+# ---- Referrer policy ----
+Header always set Referrer-Policy "no-referrer"
+
+# ---- No indexar, no cachear (contenido interno) ----
+Header always set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+Header always set Pragma "no-cache"
+# X-Robots-Tag refuerza el <meta name="robots" content="noindex,nofollow"> del HTML
+Header always set X-Robots-Tag "noindex, nofollow"
+
+# ---- CSP: API AT + CDN Tailwind + Google Fonts (deuda: self-host Tailwind) ----
+Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; style-src 'self' https://cdn.tailwindcss.com https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self' https://automatizatech.cl https://www.automatizatech.cl; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+
+# ---- Proteger archivos sensibles del tablero ----
+<FilesMatch "^(LEEME\.txt|CONTEXTO_TABLERO\.md|\.gitignore)$">
+  Require all denied
+</FilesMatch>
+
+# ---- Listado de directorio off ----
+Options -Indexes

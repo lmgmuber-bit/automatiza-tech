@@ -1,0 +1,74 @@
+version: 2
+updated_at: "2026-07-10"
+lease_id: AT-LEASE-20260710-CLAUDE
+handoff_id: AT-HANDOFF-20260710-CODEX-CLAUDE
+state: ACTIVE
+
+holder: claude
+previous_holder: codex
+previous_lease_id: AT-LEASE-20260710-CODEX
+target_holder: null
+granted_by: "Luis Miguel"
+reason: "Luis instruyo a Claude asumir el rol de orquestador principal (2026-07-10). Handoff AT-HANDOFF-20260710-CODEX-CLAUDE aceptado. El ownership de AT-TAB-ARCH-001 (tablero/**) permanece en Codex; Claude orquesta y no edita ese alcance."
+base_commit: "3539c2e034a1aed015f3e7ba901e7110f29b3bee"
+branch: "codex/finish-tablero-v8"
+
+completed:
+  - id: AT-ORCH-001
+    owner: codex
+    status: DONE
+    summary: "Protocolo canonico, prompt Codex, routing de modelos C0-C3, ticket YAML y lease exclusivo implementados."
+  - id: AT-METHOD-001
+    owner: codex
+    status: DONE
+    summary: "Metodo AT, flujo de cliente, catalogo de servicios, casos de uso y prompt maestro final para Claude documentados y sincronizados con el vault."
+
+active:
+  - id: AT-TAB-ARCH-001
+    owner: codex
+    previous_owner: opencode
+    status: READY_FOR_DEPLOY
+    takeover_allowed: true
+    takeover_trigger: LUIS_REASSIGNMENT
+    takeover_reason: "OpenCode quedo sin capacidad y la sincronizacion v8 continua fallando con fetch-error; Luis solicito a Codex verificar y terminar."
+    handoff_quality: RECONSTRUCTED_HANDOFF
+    locked_files:
+      - "tablero/**"
+      - "api-tablero.php"
+      - "setup-at-board.php"
+    verified_progress:
+      - "Tablero movido desde Temp al repositorio como v7.1."
+      - "Seeds reales reemplazados por ejemplos anonimizados."
+      - "agent-log.md reemplazado conceptualmente por ledger de eventos/decisiones."
+      - "Escape de atributos data-* agregado."
+      - ".htpasswd indicado fuera de public_html y headers de hardening agregados."
+      - "CSP y Content-Security-Policy corregidos para permitir exclusivamente la API AT."
+      - "Auth compatible con Hostinger mediante X-AT-Board-Token; query token eliminado."
+      - "Doble carga de wp-config-secrets.php eliminada; JSON ya no se contamina con warnings duplicados."
+      - "Setup dbDelta y ejecución CLI corregidos; WAMP inicializado con 6 clientes y 14 internas."
+      - "GET, POST cliente/interna, preflight, mapeo camelCase y rechazo de query token verificados."
+      - "Playwright validó edición, drag persistente, POST completo y modo offline de solo lectura sin errores JS."
+      - "reset-pass-luis.php eliminado para retirar una credencial temporal del webroot."
+    pending:
+      - "Obtener autorizacion explicita de Luis antes de desplegar."
+      - "Respaldar y subir api-tablero.php, tablero/index.html y .htaccess corregido a PROD."
+      - "Ejecutar smoke test local-PROD y PROD-PROD con token real sin exponerlo."
+      - "Eliminar setup-at-board.php del hosting tras confirmar instalacion."
+      - "Marcar DONE y liberar locks solo despues de la evidencia productiva."
+
+known_risks:
+  - "No existe comunicacion directa entre chats externos; Luis o el ledger son el puente."
+  - "El worktree contiene numerosos cambios locales ajenos y no debe commitearse en bloque."
+  - "PROD aun ejecuta los archivos anteriores y no tiene autorizacion de deploy."
+  - "Las tablas v8 son fuente operativa transitoria; clientes canonicos, GitHub Issues y lease siguen como evolucion."
+  - "El token real nunca debe aparecer en logs, URL, Git, capturas ni reportes."
+
+acceptance_required_from_claude:
+  - "Leer AGENTS.md y Docs/ORCHESTRATION/README.md."
+  - "Leer Docs/ORCHESTRATION/CLAUDE_ORCHESTRATOR_PROMPT_FINAL.md y Docs/METODO_AT/README.md."
+  - "Aceptar explicitamente AT-HANDOFF-20260710-CODEX-CLAUDE antes de repriorizar o delegar."
+  - "Respetar el owner actual de tablero/**, pero aceptar que Luis puede reasignarlo a Claude o Codex si necesita continuidad inmediata."
+  - "Si toma tablero/**, registrar el takeover, verificar el diff existente y continuar desde el checkpoint sin rehacer trabajo terminado."
+  - "Revisar el diff y las pruebas de OpenCode antes de autorizar commit, push o deploy."
+
+next_action: "Esperar autorizacion explicita de Luis para deploy controlado y smoke test productivo; hasta entonces AT-TAB-ARCH-001 permanece READY_FOR_DEPLOY con locks activos."

@@ -1,0 +1,16 @@
+{
+  "_LEEME": "Datos de contacto de CumpleClick que aparecen al cierre del Album Recuerdo y en el cartel QR. Se editan desde el admin, en la pantalla Marca. Si un campo va vacio, esa linea simplemente no se muestra. Los campos _url son opcionales: si estan, el dato se vuelve un enlace.",
+
+  "nombre": "CumpleClick",
+  "lema": "Fotos y recuerdos para tu fiesta",
+  "invitacion": "¿Lo quieres en tu próxima fiesta?",
+
+  "web": "cumpleclick.com",
+  "web_url": "https://cumpleclick.com",
+
+  "instagram": "",
+  "instagram_url": "",
+
+  "whatsapp": "+56 9 7494 0070",
+  "whatsapp_url": "https://wa.me/56974940070"
+}

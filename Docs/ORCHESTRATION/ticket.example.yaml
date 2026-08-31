@@ -1,0 +1,65 @@
+ticket_id: AT-INT-0001
+title: "Titulo corto"
+origin: "Luis | plan_orchestrator | incident | direct_luis"
+portfolio: "AT | client:<id>"
+priority: P2
+status: READY
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C1
+
+objective: "Que resultado debe obtenerse, sin prescribir cada detalle tecnico."
+owner: "opencode | codex | claude | luis"
+reviewer: "codex | opencode | claude | luis | none"
+active_orchestrator: "claude | codex"
+
+ownership:
+  current_owner: "opencode | codex | claude | luis"
+  previous_owners: []
+  takeover_allowed: true
+  takeover_count: 0
+  takeover_reason: null
+  urgency: normal
+  resolution_status: pending
+  reassignment_authorized_by: null
+  handoff_ref: null
+  handoff_quality: "COMPLETE | PARTIAL | RECONSTRUCTED_HANDOFF | none"
+
+scope:
+  allowed_files: []
+  forbidden_files: []
+  locked_files: []
+  branch: "codex/example"
+  base_commit: "<sha>"
+  depends_on: []
+
+routing:
+  complexity: C1
+  risk: low
+  uncertainty: low
+  reversibility: easy
+  selected_profile: standard_executor
+  selected_model: "<runtime selection>"
+  rationale: "<why this profile is sufficient>"
+  independent_review: false
+  human_gate: false
+
+acceptance:
+  criteria: []
+  tests: []
+  evidence_required: []
+  rollback_plan: "<required for high/critical or hard reversibility>"
+
+safety:
+  allow_push: false
+  allow_merge: false
+  allow_deploy: false
+  allow_secrets: false
+  allow_external_messages: false
+
+result:
+  summary: null
+  evidence_refs: []
+  residual_risks: []
+  next_action: null

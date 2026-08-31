@@ -1,0 +1,56 @@
+<svg viewBox="0 0 400 400" width="400" height="400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CumpleClick — globo lente">
+  <!-- Isotipo OFICIAL "El globo dulce" (design/MANUAL-DE-MARCA.md).
+       width/height explícitos: el canvas del diploma necesita naturalWidth. -->
+  <defs>
+    <radialGradient id="cc-body" cx="34%" cy="26%" r="88%">
+      <stop offset="0%" stop-color="#B9A0F7"/>
+      <stop offset="34%" stop-color="#8B5CF6"/>
+      <stop offset="72%" stop-color="#C0409E"/>
+      <stop offset="100%" stop-color="#D6307F"/>
+    </radialGradient>
+    <linearGradient id="cc-ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="55%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#E8A317"/>
+    </linearGradient>
+    <radialGradient id="cc-lens" cx="38%" cy="32%" r="85%">
+      <stop offset="0%" stop-color="#D8CCFB"/>
+      <stop offset="60%" stop-color="#A88BE8"/>
+      <stop offset="100%" stop-color="#8256C9"/>
+    </radialGradient>
+    <linearGradient id="cc-string" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F5C542"/>
+      <stop offset="100%" stop-color="#D99A14"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="78" cy="74" r="11" fill="#8B5CF6"/>
+  <circle cx="46" cy="176" r="9" fill="#A78BFA"/>
+  <circle cx="84" cy="292" r="10" fill="#FBBF24"/>
+  <circle cx="352" cy="196" r="9" fill="#FBBF24"/>
+  <circle cx="330" cy="300" r="10" fill="#D6307F"/>
+
+  <circle cx="196" cy="196" r="112" fill="url(#cc-body)"/>
+  <ellipse cx="150" cy="130" rx="46" ry="30" fill="#FFFFFF" opacity="0.38" transform="rotate(-24 150 130)"/>
+  <ellipse cx="238" cy="286" rx="34" ry="12" fill="#FF9BC8" opacity="0.35" transform="rotate(-18 238 286)"/>
+
+  <g transform="translate(168,188)">
+    <circle r="58" fill="url(#cc-ring)"/>
+    <circle r="41" fill="url(#cc-lens)"/>
+    <ellipse cx="-12" cy="-14" rx="16" ry="10" fill="#FFFFFF" opacity="0.5" transform="rotate(-22 -12 -14)"/>
+    <circle r="41" fill="none" stroke="#C77E0E" stroke-width="1.6" opacity="0.55"/>
+    <circle r="57" fill="none" stroke="#FFF3C4" stroke-width="1.8" opacity="0.7"/>
+  </g>
+
+  <g transform="translate(282,124) rotate(-40)">
+    <path d="M0 -7 Q7 0 0 7 L15 5 Q18 0 15 -5 Z" fill="#C2186B"/>
+    <rect x="13" y="-6" width="8" height="12" rx="3" fill="url(#cc-string)"/>
+  </g>
+  <path d="M297 111 C 303 106, 310 107, 314 113" fill="none" stroke="url(#cc-string)" stroke-width="4.5" stroke-linecap="round"/>
+  <g transform="translate(318,98) rotate(15)">
+    <path d="M0 6 C 0 -2, -9 -3, -9 3 C -9 8, -3 11, 0 15 C 3 11, 9 8, 9 3 C 9 -3, 0 -2, 0 6 Z"
+          fill="none" stroke="url(#cc-string)" stroke-width="4.5" stroke-linejoin="round"/>
+  </g>
+  <path d="M314 113 C 322 132, 306 152, 312 176 C 318 200, 300 222, 310 246 C 316 262, 306 272, 298 278"
+        fill="none" stroke="url(#cc-string)" stroke-width="4.5" stroke-linecap="round"/>
+</svg>

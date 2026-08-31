@@ -1,0 +1,77 @@
+version: 1
+updated_at: "2026-07-10"
+owner: "Luis Miguel"
+
+policy:
+  decision_axes:
+    complexity: [C0, C1, C2, C3]
+    risk: [low, medium, high, critical]
+    uncertainty: [low, medium, high]
+    reversibility: [easy, moderate, hard]
+  rules:
+    - "El perfil final es el mas exigente requerido por cualquier eje."
+    - "Riesgo high eleva como minimo a strong_reasoner."
+    - "Riesgo critical o reversibilidad hard eleva a critical_pipeline."
+    - "Incertidumbre high eleva una clase antes de elegir perfil."
+    - "C3 requiere revision independiente y gate humano."
+    - "No existe downgrade silencioso para high o critical."
+    - "Si la plataforma no puede cambiar de modelo, debe delegar, escalar o registrar la limitacion."
+
+classes:
+  C0:
+    description: "Cambio mecanico, reversible y sin impacto de comportamiento."
+    examples: ["rename", "formato", "documentacion mecanica", "scaffold trivial"]
+    default_profile: fast_economical
+  C1:
+    description: "Cambio acotado con alcance y validacion claros."
+    examples: ["bug local", "feature pequena", "prueba unitaria", "ajuste UI aislado"]
+    default_profile: standard_executor
+  C2:
+    description: "Varios modulos, debug incierto, refactor o arquitectura."
+    examples: ["debug cross-system", "migracion", "refactor estructural", "diseno de API"]
+    default_profile: strong_reasoner
+  C3:
+    description: "Accion sensible, externa, productiva o dificil de revertir."
+    examples: ["auth", "pagos", "secretos", "datos productivos", "deploy", "borrado", "comunicacion externa"]
+    default_profile: critical_pipeline
+
+profiles:
+  fast_economical:
+    intent: "Velocidad y bajo costo para trabajo mecanico."
+    independent_review: false
+    human_gate: false
+  standard_executor:
+    intent: "Implementacion profesional acotada con pruebas."
+    independent_review: false
+    human_gate: false
+  strong_reasoner:
+    intent: "Razonamiento profundo para ambiguedad, arquitectura o debug complejo."
+    independent_review: recommended
+    human_gate: conditional
+  critical_pipeline:
+    intent: "Planificador fuerte, ejecutor controlado, revision independiente y autorizacion humana."
+    independent_review: true
+    human_gate: true
+
+model_map_claude_runtime:
+  note: "Autorizado por Luis 2026-07-10: el orquestador Claude puede delegar a subagentes con modelo por perfil."
+  fast_economical: "claude-haiku-4-5 (subagente)"
+  standard_executor: "claude-sonnet-5 (subagente)"
+  strong_reasoner: "claude-fable-5 / claude-opus-4-8"
+  critical_pipeline: "claude-fable-5 + revision independiente + gate humano"
+
+runtime_record_required:
+  fields:
+    - complexity
+    - risk
+    - uncertainty
+    - reversibility
+    - selected_profile
+    - selected_model
+    - rationale
+    - independent_review
+    - human_gate
+
+portfolio:
+  strategic_center: automatizatech
+  note: "AT recibe peso estrategico, pero P0-P3 conserva su significado operacional."

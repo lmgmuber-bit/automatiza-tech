@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="base.css">
+<style>
+  body {
+    padding: 52px 56px;
+    display: flex; flex-direction: column; align-items: center; gap: 40px;
+  }
+  .header { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .header-logo { height: 120px; }
+  .header-title {
+    font-weight: 800; font-size: 44px; color: var(--tinta);
+    text-align: center; line-height: 1.15;
+  }
+  .plans { display: flex; gap: 36px; width: 100%; max-width: 900px; flex: 1; align-items: stretch; }
+  .plan {
+    flex: 1; background: white;
+    border-radius: 28px; padding: 40px 32px;
+    box-shadow: 0 8px 32px rgba(76,40,130,0.07);
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+    border: 2px solid rgba(139,92,246,0.1);
+    position: relative;
+  }
+  .plan.premium {
+    border-color: var(--fucsia);
+    box-shadow: 0 12px 40px rgba(214,48,127,0.16);
+  }
+  .plan-badge {
+    position: absolute; top: -16px;
+    background: var(--fucsia); color: white;
+    font-weight: 800; font-size: 15px;
+    padding: 6px 24px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .plan-name { font-weight: 800; font-size: 26px; color: var(--tinta); }
+  .plan-price { font-weight: 800; font-size: 48px; color: var(--fucsia); line-height: 1; }
+  .plan-divider { width: 60px; height: 3px; background: var(--lila); border-radius: 2px; opacity: 0.4; }
+  .plan-features { display: flex; flex-direction: column; gap: 14px; width: 100%; }
+  .plan-feature { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 600; color: var(--tinta); }
+  .plan-check { color: var(--fucsia); font-size: 20px; flex-shrink: 0; }
+  .footer {
+    display: flex; align-items: center; gap: 10px; font-weight: 600;
+    font-size: 16px; color: var(--tinta); opacity: 0.6;
+    margin-top: auto;
+  }
+  .footer img { height: 24px; }
+  .extra {
+    font-weight: 600; font-size: 17px; color: var(--tinta);
+    background: rgba(251,191,36,0.18); padding: 12px 28px;
+    border-radius: 16px; text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <img class="header-logo" src="file:///C:/wamp64/www/automatiza-tech/CumpleBooth/design/logo/cumpleclick-globo-lockup.svg">
+    <h1 class="header-title">Planes y precios</h1>
+  </div>
+
+  <div class="plans">
+    <div class="plan">
+      <div class="plan-name">Plan Mágico</div>
+      <div class="plan-price">$69.990</div>
+      <div class="plan-divider"></div>
+      <div class="plan-features">
+        <div class="plan-feature"><span class="plan-check">✓</span> 1 temática a elección</div>
+        <div class="plan-feature"><span class="plan-check">✓</span> Fotos ilimitadas</div>
+        <div class="plan-feature"><span class="plan-check">✓</span> Diplomas personalizados</div>
+        <div class="plan-feature"><span class="plan-check">✓</span> Galería privada para papás</div>
+      </div>
+    </div>
+
+    <div class="plan premium">
+      <div class="plan-badge">Más elegido</div>
+      <div class="plan-name">Plan Premium</div>
+      <div class="plan-price">$99.990</div>
+      <div class="plan-divider"></div>
+      <div class="plan-features">
+        <div class="plan-feature"><span class="plan-check">✓</span> 1 temática a elección</div>
+        <div class="plan-feature"><span class="plan-check">✓</span> Fotos ilimitadas</div>
+        <div class="plan-feature"><span class="plan-check">✓</span> Diplomas personalizados</div>
+        <div class="plan-feature"><span class="plan-check">✓</span> Galería privada para papás</div>
+        <div class="plan-feature"><span class="plan-check">✓</span> Video personalizado</div>
+        <div class="plan-feature"><span class="plan-check">✓</span> 2 horas de servicio</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="extra">¿Quieres una temática a la medida? +$25.000</div>
+
+  <div class="footer">
+    <img src="file:///C:/wamp64/www/automatiza-tech/CumpleBooth/public/brand/cumpleclick-mark.svg"> CumpleClick
+  </div>
+</body>
+</html>

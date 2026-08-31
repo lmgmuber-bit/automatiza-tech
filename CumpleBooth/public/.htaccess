@@ -1,0 +1,74 @@
+# SPA fallback para Apache / Hostinger / WAMP. Funciona en cualquier subcarpeta
+# (sin RewriteBase — usa rutas relativas al directorio del .htaccess).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Las fotos legacy se sirven exclusivamente por ver.php para no exponer nombres.
+  RewriteRule ^fotos/ - [F,L,NC]
+  RewriteRule ^admin/config\.php$ - [F,L,NC]
+  RewriteRule ^index\.html$ - [L]
+  # URL bonita de invitación: /<nombre>-<token> -> invitacion.php?t=<token>
+  #
+  # Un solo segmento a propósito. La primera versión era /i/<nombre>/<token> y
+  # rompía la página entera: invitacion.php enlaza sus assets con rutas
+  # relativas, así que desde dos niveles más abajo el CSS y los videos caían en
+  # el catch-all del SPA y volvían como index.html con status 200 — la
+  # invitación se veía sin estilos y sin videos, y sin ningún error. A la misma
+  # altura que invitacion.php, todo lo relativo sigue resolviendo igual.
+  #
+  # El nombre es decorativo y no se valida: quien autoriza es el token, que
+  # conserva sus 128 bits. QSA es obligatorio, si no se pierden hero/capitulos/qa
+  # y los botones de vista previa del admin dejan de funcionar.
+  # Los enlaces antiguos con invitacion.php?t= siguen sirviendo igual.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^[a-z0-9-]{1,40}-([a-f0-9]{32}|[a-f0-9]{48})$ invitacion.php?t=$1 [L,QSA]
+  # Un asset con hash que ya no existe debe dar 404, NO index.html: servir HTML
+  # con status 200 donde el navegador espera JS/CSS deja la tablet corriendo una
+  # versión vieja en silencio en vez de fallar visiblemente.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^assets/.*\.(js|css|woff2?)$ - [R=404,L]
+  # Un .php que NO se subio tampoco puede caer al catch-all. Es el mismo error
+  # que arriba con otra cara, y ya paso en produccion: regalos-papas.php y
+  # predicciones.php no estaban en el servidor y respondian 200 con la portada
+  # del kiosco. Un deploy incompleto se veia sano, y cualquier chequeo que mire
+  # el status HTTP lo daba por bueno.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule \.php$ - [R=404,L]
+  # Y lo mismo con los medios de tematicas: un fondo o una musica que falta debe
+  # fallar visiblemente. Sin esto Hostinger devuelve 422 "Invalid source image"
+  # al intentar optimizar un HTML servido como .jpg, que no dice nada de lo que
+  # pasa de verdad.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^themes/.*\.(jpe?g|png|webp|svg|mp3|mp4)$ - [R=404,L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . index.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set Permissions-Policy "camera=(self), microphone=(), geolocation=()"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "same-origin"
+
+  # index.html SIEMPRE se revalida. Sin esta cabecera el navegador aplica caché
+  # heurística sobre Last-Modified y sigue pidiendo el bundle viejo tras un
+  # deploy: la tablet queda con una versión anterior aunque el servidor ya tenga
+  # la nueva. Los assets llevan hash en el nombre, así que sí se cachean fuerte.
+  <FilesMatch "^index\.html$">
+    Header always set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+  <FilesMatch "\.(js|css|woff2?)$">
+    Header always set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
+
+# getUserMedia exige HTTPS en producción. La redirección debe configurarse en
+# el vhost/proxy con el host canónico; nunca se construye desde HTTP_HOST aquí.
+
+# Codificación declarada en la CABECERA, no solo en el <meta>.
+#
+# Los .html estáticos —el kiosco, el álbum, el cartel QR, la 404— se servían con
+# `Content-Type: text/html` a secas. Traen su `<meta charset="UTF-8">`, así que
+# en la práctica se ven bien, pero el navegador tiene que empezar a interpretar
+# bytes antes de llegar a esa etiqueta. Declararlo en la cabecera saca la
+# adivinanza del medio: es la diferencia entre "Cumpleaños" y "Cumplea?os".
+AddDefaultCharset UTF-8

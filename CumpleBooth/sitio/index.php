@@ -81,7 +81,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
        bloquea el render; las tipografias van ultimas porque tienen
        `font-display: swap` y el texto se pinta sin esperarlas. -->
   <link rel="preload" href="assets/img/globo-render.webp" as="image" type="image/webp">
-  <link rel="stylesheet" href="css/styles.css?v=20260831e">
+  <link rel="stylesheet" href="css/styles.css?v=20260831g">
   <link rel="preload" href="fonts/baloo-2-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/baloo-2-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
   <!-- ?v= no es adorno. `styles.css` y `main.js` tienen nombre FIJO, asi que
@@ -189,12 +189,41 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
             <p>Las fotos de todos quedan en un álbum que se pasa como una revista. Le llega a la familia por un enlace privado, para compartirlo con los invitados.</p>
           </li>
         </ol>
-        <figure class="pasos__video" data-reveal>
-          <video id="kiosco-video" muted loop playsinline preload="none" poster="assets/img/kiosco-en-fiesta.webp" width="640" height="1148" aria-label="El kiosco CumpleClick funcionando en una fiesta real">
-            <source data-src="assets/video/kiosco-demo.mp4" type="video/mp4">
-          </video>
-          <figcaption>El kiosco en plena fiesta 🎉</figcaption>
-        </figure>
+        <!-- El recorrido en imagenes.
+
+             Antes aca habia solo el video del kiosco, y por eso la seccion se
+             leia como "esto es una cabina de fotos" aunque el texto de al lado
+             ya contara las cuatro etapas. Ahora cada etapa tiene su imagen y el
+             carrusel las va mostrando, asi lo que se lee y lo que se ve dicen
+             lo mismo. El video del kiosco sigue siendo una de las cuatro. -->
+        <div class="etapas" data-reveal id="etapas">
+          <div class="etapas__marco">
+            <figure class="etapa is-activa" data-etapa="0">
+              <img src="assets/img/etapa-invitacion.webp" alt="La invitacion digital de CumpleClick abierta en un telefono, rodeada de globos" width="640" height="1148" loading="lazy" decoding="async">
+              <figcaption><span class="etapa__cuando">Días antes</span> La invitación 💌</figcaption>
+            </figure>
+            <figure class="etapa" data-etapa="1">
+              <video id="kiosco-video" muted loop playsinline preload="none" poster="assets/img/kiosco-en-fiesta.webp" width="640" height="1148" aria-label="El kiosco CumpleClick funcionando en una fiesta real">
+                <source data-src="assets/video/kiosco-demo.mp4" type="video/mp4">
+              </video>
+              <figcaption><span class="etapa__cuando">En la fiesta</span> La cabina 📸</figcaption>
+            </figure>
+            <figure class="etapa" data-etapa="2">
+              <img src="assets/img/etapa-juegos.webp" alt="El kiosco mostrando un juego de la tematica, con dos manos de nino tocando la pantalla" width="640" height="1148" loading="lazy" decoding="async">
+              <figcaption><span class="etapa__cuando">Entre foto y foto</span> Los juegos 🎮</figcaption>
+            </figure>
+            <figure class="etapa" data-etapa="3">
+              <img src="assets/img/etapa-album.webp" alt="El Album Recuerdo abierto, con las fotos de la fiesta" width="640" height="1148" loading="lazy" decoding="async">
+              <figcaption><span class="etapa__cuando">Después</span> El álbum 📖</figcaption>
+            </figure>
+          </div>
+          <div class="etapas__puntos" role="tablist" aria-label="Etapas de la fiesta">
+            <button type="button" class="etapas__punto is-activo" role="tab" aria-selected="true" data-ir="0"><span class="sr-only">Ver la invitación</span></button>
+            <button type="button" class="etapas__punto" role="tab" aria-selected="false" data-ir="1"><span class="sr-only">Ver la cabina</span></button>
+            <button type="button" class="etapas__punto" role="tab" aria-selected="false" data-ir="2"><span class="sr-only">Ver los juegos</span></button>
+            <button type="button" class="etapas__punto" role="tab" aria-selected="false" data-ir="3"><span class="sr-only">Ver el álbum</span></button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -573,6 +602,6 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
   <script src="vendor/gsap.min.js" defer></script>
   <script src="vendor/ScrollTrigger.min.js" defer></script>
   <script src="vendor/lenis.min.js" defer></script>
-  <script src="js/main.js?v=20260831e" defer></script>
+  <script src="js/main.js?v=20260831g" defer></script>
 </body>
 </html>

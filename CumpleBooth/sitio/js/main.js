@@ -16,10 +16,18 @@
     var video = document.getElementById('kiosco-video');
     if (!video) return;
     var source = video.querySelector('source[data-src]');
+    /* Carga el archivo, pero NO decide si suena: eso lo manda el carrusel.
+       El video vive en una de las cuatro diapositivas, y antes se reproducia
+       apenas entraba en pantalla aunque estuviera oculto detras de otra etapa:
+       gastaba bateria y CPU de un telefono en algo que nadie estaba viendo.
+       Si algun dia el video queda fuera del carrusel, el `if` de abajo no
+       encuentra `.etapa` y se reproduce como siempre. */
     var load = function () {
       if (!source || source.src) return;
       source.src = source.getAttribute('data-src');
       video.load();
+      var diapositiva = video.closest ? video.closest('.etapa') : null;
+      if (diapositiva && !diapositiva.classList.contains('is-activa')) { return; }
       var play = video.play();
       if (play && play.catch) play.catch(function () { /* autoplay bloqueado: queda el poster */ });
     };
@@ -184,6 +192,93 @@
 
      ScrollTrigger no tenia el problema porque se actualiza en cada evento de
      scroll de Lenis, no cuando el navegador decide entregar la interseccion. */
+
+  /* ---------- Carrusel de etapas ----------
+
+     Cuatro diapositivas que cuentan el recorrido: invitacion, cabina, juegos y
+     album. Antes aca habia solo el video del kiosco y la seccion se leia como
+     "esto es una cabina", aunque el texto de al lado ya contara las cuatro.
+
+     Tres cuidados que no se ven pero se notan:
+
+     - Se detiene cuando el carrusel no esta en pantalla. Un temporizador que
+       gira solo el resto de la sesion es trabajo que nadie mira.
+     - Se detiene con el puntero encima o con el foco dentro. Nada peor que
+       estar leyendo un pie y que la imagen cambie sola.
+     - Con `prefers-reduced-motion` NO rota: quedan los puntos para elegir. Se
+       respeta el pedido de no animar sin dejar al visitante sin las otras tres
+       imagenes, que es lo que pasaria escondiendolas. */
+  function initEtapas() {
+    var caja = document.getElementById('etapas');
+    if (!caja) { return; }
+    var slides = Array.prototype.slice.call(caja.querySelectorAll('.etapa'));
+    var puntos = Array.prototype.slice.call(caja.querySelectorAll('.etapas__punto'));
+    if (slides.length < 2) { return; }
+
+    var actual = 0;
+    var timer = null;
+    var enPantalla = false;
+    var detenido = false;
+    var video = document.getElementById('kiosco-video');
+
+    function mostrar(i) {
+      actual = (i + slides.length) % slides.length;
+      for (var k = 0; k < slides.length; k++) {
+        var activa = k === actual;
+        slides[k].classList.toggle('is-activa', activa);
+        if (puntos[k]) {
+          puntos[k].classList.toggle('is-activo', activa);
+          puntos[k].setAttribute('aria-selected', activa ? 'true' : 'false');
+        }
+      }
+      /* El video solo corre en su propia diapositiva: reproducir algo que nadie
+         ve gasta bateria y CPU en un telefono. */
+      if (video) {
+        if (slides[actual].contains(video)) {
+          var play = video.play();
+          if (play && play.catch) { play.catch(function () {}); }
+        } else if (!video.paused) {
+          video.pause();
+        }
+      }
+    }
+
+    function arrancar() {
+      if (timer || detenido || !enPantalla || reduceMotion) { return; }
+      timer = window.setInterval(function () { mostrar(actual + 1); }, 5000);
+    }
+    function parar() {
+      if (timer) { window.clearInterval(timer); timer = null; }
+    }
+
+    puntos.forEach(function (b, i) {
+      b.addEventListener('click', function () {
+        detenido = true;      /* si eligio a mano, deja de girar solo */
+        parar();
+        mostrar(i);
+      });
+    });
+
+    caja.addEventListener('mouseenter', parar);
+    caja.addEventListener('mouseleave', arrancar);
+    caja.addEventListener('focusin', parar);
+    caja.addEventListener('focusout', function (ev) {
+      if (!caja.contains(ev.relatedTarget)) { arrancar(); }
+    });
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entradas) {
+        enPantalla = entradas[0].isIntersecting;
+        if (enPantalla) { arrancar(); } else { parar(); }
+      }, { rootMargin: '120px' }).observe(caja);
+    } else {
+      enPantalla = true;
+      arrancar();
+    }
+
+    mostrar(0);
+  }
+
   /* ---------- Cola de revelaciones, movida por el scroll ----------
 
      Se probaron dos mecanismos antes y los dos fallaron, cada uno a su manera:
@@ -717,6 +812,7 @@
     initAnalyticsHooks();
     initReveals();
     initMenu();
+    initEtapas();
     initDepth();
     initHeroParallax();
     initTilt();

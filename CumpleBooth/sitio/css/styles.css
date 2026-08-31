@@ -515,24 +515,99 @@ p { margin: 0 0 1rem; }
   border-radius: 50%;
   border: 3px solid var(--cc-amarillo);
 }
-.pasos__video {
-  margin: 0;
-  text-align: center;
-}
-.pasos__video video {
+/* ---------- Carrusel de etapas ---------- */
+
+.etapas { margin: 0; }
+
+/* Las cuatro diapositivas se apilan y se cruzan por opacidad. El marco reserva
+   la altura con `aspect-ratio` para que al cambiar de una a otra la pagina no
+   pegue un salto: sin eso, la seccion crece y encoge en cada rotacion y el
+   texto de al lado se mueve solo. */
+.etapas__marco {
+  position: relative;
   width: 100%;
   max-width: 340px;
   margin: 0 auto;
+  aspect-ratio: 640 / 1148;
+}
+.etapa {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s ease, visibility 0s linear 0.5s;
+}
+.etapa.is-activa {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.5s ease, visibility 0s linear 0s;
+}
+.etapa img,
+.etapa video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   border-radius: var(--cc-radius);
   border: 4px solid #fff;
   box-shadow: 0 16px 40px rgba(76, 40, 130, 0.16);
   background: var(--cc-tinta);
 }
-.pasos__video figcaption {
-  margin-top: 10px;
-  font-size: 0.95rem;
-  opacity: 0.75;
+/* El pie va SOBRE la imagen y no debajo: puesto debajo, la altura del bloque
+   cambiaba segun el largo del texto de cada etapa y el carrusel temblaba. */
+.etapa figcaption {
+  position: absolute;
+  left: 4px; right: 4px; bottom: 4px;
+  padding: 26px 14px 12px;
+  border-radius: 0 0 calc(var(--cc-radius) - 4px) calc(var(--cc-radius) - 4px);
+  background: linear-gradient(180deg, rgba(44, 33, 64, 0) 0%, rgba(44, 33, 64, 0.82) 55%);
+  color: #fff;
+  font-family: var(--cc-font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  line-height: 1.25;
+  text-align: left;
 }
+.etapa__cuando {
+  display: block;
+  font-family: var(--cc-font-body);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--cc-amarillo);
+}
+
+.etapas__puntos {
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 14px;
+}
+.etapas__punto {
+  width: 11px;
+  height: 11px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(76, 40, 130, 0.22);
+  cursor: pointer;
+  transition: background-color 0.25s ease, transform 0.25s ease;
+}
+.etapas__punto.is-activo { background: var(--cc-fucsia); transform: scale(1.25); }
+.etapas__punto:focus-visible { outline: 3px solid var(--cc-violeta); outline-offset: 3px; }
+
+/* Los puntos son de 11px pero el area que se puede tocar tiene que ser comoda
+   para un pulgar; se agranda sin cambiar lo que se ve. */
+.etapas__punto::before {
+  content: "";
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  margin: -11px 0 0 -11px;
+}
+.etapas__puntos { position: relative; }
+.etapas__punto { position: relative; }
 
 /* ---------- Mundos (vitrina) ---------- */
 .mundos { background: linear-gradient(180deg, var(--cc-crema) 0%, #fdf0e0 100%); }

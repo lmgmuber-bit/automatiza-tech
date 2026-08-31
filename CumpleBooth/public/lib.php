@@ -41,6 +41,19 @@ function cb_config(?string $key = null)
             // codificado se subirá igual y recién fallará al reproducirse en la
             // tablet. Sigue en false por defecto: hay que activarlo a sabiendas.
             'allow_video_upload_without_ffprobe' => false,
+
+            /* Correo saliente (formulario público). Vacío = no se envía nada y
+               el formulario sigue funcionando igual: el lead se guarda y se ve
+               en el admin. Se elige así para que una casilla mal configurada
+               NUNCA le devuelva un error a quien está pidiendo presupuesto. */
+            'smtp_host' => '',
+            'smtp_port' => 587,
+            'smtp_user' => '',
+            'smtp_password' => '',
+            'smtp_from' => '',              // por defecto, el mismo smtp_user
+            'smtp_from_name' => 'CumpleClick',
+            'smtp_reply_to' => '',          // a dónde contesta el cliente
+            'leads_notify_email' => '',     // aviso interno de solicitud nueva
         ];
         $explicitConfig = getenv('CUMPLECLICK_CONFIG_FILE');
         $local = $explicitConfig !== false && $explicitConfig !== ''
@@ -64,6 +77,11 @@ function cb_config(?string $key = null)
             'CC_PARTIES_JSON_PATH' => 'parties_json_path',
             'CC_RETENTION_DAYS' => 'retention_days',
             'CC_FFPROBE_PATH' => 'ffprobe_path',
+            'CC_SMTP_HOST' => 'smtp_host', 'CC_SMTP_PORT' => 'smtp_port',
+            'CC_SMTP_USER' => 'smtp_user', 'CC_SMTP_PASSWORD' => 'smtp_password',
+            'CC_SMTP_FROM' => 'smtp_from', 'CC_SMTP_FROM_NAME' => 'smtp_from_name',
+            'CC_SMTP_REPLY_TO' => 'smtp_reply_to',
+            'CC_LEADS_NOTIFY_EMAIL' => 'leads_notify_email',
         ];
         foreach ($envMap as $env => $name) {
             $value = getenv($env);

@@ -63,4 +63,90 @@ $before = (int) cb_pdo()->query('SELECT COUNT(*) FROM cc_leads')->fetchColumn();
 $after = (int) cb_pdo()->query('SELECT COUNT(*) FROM cc_leads')->fetchColumn();
 lead_check($before === $after, 'migración 006 es idempotente y conserva datos');
 
+/* ================= Correo de confirmación y aviso interno =================
+ *
+ * Lo que se cuida acá no es "que el correo se vea lindo", sino tres defectos
+ * que no rompen nada y salen caros:
+ *
+ * 1. Que un fallo del SMTP tumbe el formulario. El lead ya está guardado
+ *    cuando se intenta enviar; si `cb_lead_enviar_correos` lanzara, el
+ *    visitante vería un error por algo que YA salió bien.
+ * 2. Que el correo se vaya sin versión de texto plano. Es de las señales que
+ *    más pesa en los filtros de spam, y no se nota mirando: en el escritorio
+ *    se ve perfecto igual.
+ * 3. Que la plantilla traiga una imagen remota. La mayoría de los clientes las
+ *    bloquea, así que un encabezado que ES una imagen llega vacío justo en el
+ *    primer correo que le mandamos a alguien.
+ */
+(require dirname(__DIR__, 2) . '/database/migrations/012_lead_mail_tracking.php')(cb_pdo());
+require_once dirname(__DIR__, 2) . '/public/lib.mail.php';
+require_once dirname(__DIR__, 2) . '/public/lib.mail-templates.php';
+
+$cols = [];
+foreach (cb_pdo()->query('PRAGMA table_info(cc_leads)')->fetchAll() as $row) { $cols[] = $row['name']; }
+lead_check(in_array('confirmation_sent_at', $cols, true), 'migración 012 agrega confirmation_sent_at');
+lead_check(in_array('mail_error', $cols, true), 'migración 012 agrega mail_error');
+
+$antes012 = (int) cb_pdo()->query('SELECT COUNT(*) FROM cc_leads')->fetchColumn();
+(require dirname(__DIR__, 2) . '/database/migrations/012_lead_mail_tracking.php')(cb_pdo());
+lead_check($antes012 === (int) cb_pdo()->query('SELECT COUNT(*) FROM cc_leads')->fetchColumn(),
+    'migración 012 es idempotente y conserva datos');
+
+$leadCorreo = $created['lead'];
+lead_check(is_array($leadCorreo) && ($leadCorreo['public_ref'] ?? '') !== '',
+    'cb_create_lead devuelve los datos para armar el correo');
+
+// Sin SMTP configurado NO puede lanzar: el lead ya está guardado.
+$lanzo = false;
+try { cb_lead_enviar_correos($leadCorreo); } catch (Throwable $e) { $lanzo = true; }
+lead_check(!$lanzo, 'sin SMTP configurado, el envío no lanza excepción');
+
+$stmt = cb_pdo()->prepare('SELECT confirmation_sent_at, mail_error FROM cc_leads WHERE public_ref = ?');
+$stmt->execute([$leadCorreo['public_ref']]);
+$fila = $stmt->fetch();
+lead_check(($fila['confirmation_sent_at'] ?? null) === null, 'sin SMTP no se marca como enviado');
+lead_check(trim((string) ($fila['mail_error'] ?? '')) !== '', 'sin SMTP queda registrado el motivo');
+
+foreach ([
+    'confirmación' => cc_mail_confirmacion($leadCorreo),
+    'aviso interno' => cc_mail_aviso_interno($leadCorreo, 'https://cumpleclick.com/admin/leads.php'),
+] as $nombre => $plantilla) {
+    lead_check(trim($plantilla['subject']) !== '', "$nombre: tiene asunto");
+    lead_check(trim($plantilla['html']) !== '', "$nombre: tiene HTML");
+    // Texto plano de VERDAD, no un HTML sin etiquetas ni una cadena de relleno.
+    lead_check(strlen(trim($plantilla['text'])) > 120, "$nombre: trae versión de texto plano");
+    lead_check(strpos($plantilla['text'], '<') === false, "$nombre: la versión de texto no lleva HTML");
+    // Ninguna imagen: la marca se dibuja con color y tipografía.
+    lead_check(stripos($plantilla['html'], '<img') === false, "$nombre: no depende de imágenes");
+    lead_check(preg_match('/(src|background)\s*=\s*["\']https?:/i', $plantilla['html']) === 0,
+        "$nombre: no carga recursos remotos");
+    lead_check(strpos($plantilla['html'], '<script') === false, "$nombre: no inyecta script");
+}
+
+$conf = cc_mail_confirmacion($leadCorreo);
+lead_check(strpos($conf['subject'], (string) $leadCorreo['public_ref']) !== false,
+    'el asunto al cliente lleva el número de solicitud');
+lead_check(stripos($conf['text'], 'brevedad') !== false,
+    'el correo al cliente promete contacto a la brevedad');
+lead_check(in_array('Auto-Submitted: auto-replied', $conf['headers'] ?? [], true),
+    'la confirmación se declara como respuesta automática');
+
+$aviso = cc_mail_aviso_interno($leadCorreo, '');
+lead_check(($aviso['reply_to'] ?? '') === $leadCorreo['email'],
+    'responder el aviso interno escribe al cliente');
+
+// Las cabeceras con acentos van codificadas, o llegan rotas en varios clientes.
+lead_check(cc_mail_encode_header('Muñoz') !== 'Muñoz', 'las cabeceras con acentos se codifican');
+lead_check(cc_mail_encode_header('Hola') === 'Hola', 'las cabeceras ASCII quedan legibles');
+
+// Datos hostiles: no deben escaparse del cuerpo ni de un atributo.
+$hostil = $leadCorreo;
+$hostil['name'] = '<script>alert(1)</script>';
+$hostil['message'] = '"><img src=x onerror=alert(1)>';
+$sucio = cc_mail_aviso_interno($hostil, '');
+lead_check(strpos($sucio['html'], '<script>alert') === false, 'el nombre se escapa en el HTML');
+lead_check(stripos($sucio['html'], '<img src=x') === false, 'el mensaje se escapa en el HTML');
+
+lead_check(cc_mail_enabled() === false, 'sin configuración, el envío se declara apagado');
+
 fwrite(STDOUT, "OK $tests checks leads\n");

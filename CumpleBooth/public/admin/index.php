@@ -612,6 +612,22 @@ if ($formValues === null && $action === 'editar') {
   <nav class="tabs">
     <a class="tab <?= (!in_array($view, ['temas', 'tema'], true) && !$showForm) ? 'active' : '' ?>" href="index.php"><?= admin_icon('party') ?> Fiestas</a>
     <a class="tab <?= (in_array($view, ['temas', 'tema'], true) && !$showForm) ? 'active' : '' ?>" href="index.php?view=temas"><?= admin_icon('palette') ?> Temáticas</a>
+    <?php
+      /* Cuántas solicitudes sin atender. Va en la pestaña a propósito: si el
+         número no se ve desde acá, hay que acordarse de entrar a mirar, y una
+         solicitud que nadie mira es un cliente perdido. Envuelto en try porque
+         `cc_leads` puede no existir todavía en una instalación vieja; en ese
+         caso la pestaña aparece igual, sólo que sin el número. */
+      $leadsNuevos = 0;
+      if (cb_storage_mode() === 'db') {
+          try {
+              $leadsNuevos = (int) cb_pdo()->query("SELECT COUNT(*) FROM cc_leads WHERE status = 'new'")->fetchColumn();
+          } catch (Throwable $e) {
+              $leadsNuevos = 0;
+          }
+      }
+    ?>
+    <a class="tab" href="leads.php"><?= admin_icon('party') ?> Solicitudes<?= $leadsNuevos > 0 ? ' <b class="tab-badge">' . (int) $leadsNuevos . '</b>' : '' ?></a>
   </nav>
 
   <main>

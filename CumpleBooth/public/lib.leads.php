@@ -236,7 +236,11 @@ function cb_create_lead(array $input, string $identity, string $userAgent = ''):
                 $data['commune'], $data['message'], 'new', 'website', '2026-08-01', $now,
                 cb_hmac($identity, 'lead-ip'), cb_hmac($userAgent, 'lead-user-agent'), $now, $now,
             ]);
-            return ['ok' => true, 'reference' => $reference];
+            /* Se devuelven también los datos ya validados: quien llama tiene
+               que armar los correos y sin esto habría que volver a leer de la
+               base la fila recién escrita. */
+            return ['ok' => true, 'reference' => $reference,
+                    'lead' => $data + ['public_ref' => $reference]];
         } catch (PDOException $e) {
             $duplicate = (string) $e->getCode() === '23000'
                 || strpos(strtolower($e->getMessage()), 'unique') !== false
@@ -247,4 +251,96 @@ function cb_create_lead(array $input, string $identity, string $userAgent = ''):
         }
     }
     throw new RuntimeException('No se pudo generar la referencia de la solicitud.');
+}
+
+/**
+ * Manda la confirmación al cliente y el aviso interno, y deja registrado qué
+ * pasó con cada uno.
+ *
+ * No devuelve nada y no lanza: se llama DESPUÉS de haberle respondido al
+ * visitante. Su solicitud ya está guardada; que el correo salga o no es un
+ * problema nuestro, no suyo, y no puede convertirse en un error en su pantalla.
+ * Por eso todo lo que falle termina en `mail_error` y en el log, que es donde
+ * lo vamos a ver nosotros.
+ */
+function cb_lead_enviar_correos(array $lead): void
+{
+    if (!function_exists('cc_mail_send')) {
+        require_once __DIR__ . '/lib.mail.php';
+        require_once __DIR__ . '/lib.mail-templates.php';
+    }
+    if (!cc_mail_enabled()) {
+        cb_lead_marcar_correo($lead['public_ref'] ?? '', null, null, 'SMTP no configurado');
+        return;
+    }
+
+    $cfg = cc_mail_config();
+    $base = rtrim((string) cb_config('public_base_url'), '/');
+    $urlAdmin = $base !== '' ? $base . '/admin/leads.php?ref=' . rawurlencode((string) ($lead['public_ref'] ?? '')) : '';
+
+    $errores = [];
+    $confirmado = null;
+    $avisado = null;
+    $ahora = gmdate('Y-m-d H:i:s');
+
+    // --- Confirmación al cliente ---
+    $plantilla = cc_mail_confirmacion($lead);
+    $envio = cc_mail_send([
+        'to' => (string) ($lead['email'] ?? ''),
+        'to_name' => (string) ($lead['name'] ?? ''),
+        'subject' => $plantilla['subject'],
+        'html' => $plantilla['html'],
+        'text' => $plantilla['text'],
+        'headers' => $plantilla['headers'] ?? [],
+    ]);
+    if ($envio['ok']) {
+        $confirmado = $ahora;
+    } else {
+        $errores[] = 'confirmación: ' . $envio['error'];
+        error_log('CumpleClick correo confirmación: ' . $envio['error']);
+    }
+
+    // --- Aviso interno ---
+    if ($cfg['notify'] !== '') {
+        $aviso = cc_mail_aviso_interno($lead, $urlAdmin);
+        $envio = cc_mail_send([
+            'to' => $cfg['notify'],
+            'subject' => $aviso['subject'],
+            'html' => $aviso['html'],
+            'text' => $aviso['text'],
+            'reply_to' => $aviso['reply_to'] ?? '',
+        ]);
+        if ($envio['ok']) {
+            $avisado = $ahora;
+        } else {
+            $errores[] = 'aviso: ' . $envio['error'];
+            error_log('CumpleClick aviso interno: ' . $envio['error']);
+        }
+    }
+
+    cb_lead_marcar_correo(
+        (string) ($lead['public_ref'] ?? ''),
+        $confirmado,
+        $avisado,
+        $errores === [] ? null : implode(' / ', $errores)
+    );
+}
+
+/** Anota en la fila del lead qué correos salieron y qué falló. */
+function cb_lead_marcar_correo(string $reference, ?string $confirmado, ?string $avisado, ?string $error): void
+{
+    if ($reference === '' || cb_storage_mode() !== 'db') {
+        return;
+    }
+    try {
+        $stmt = cb_pdo()->prepare('UPDATE cc_leads
+            SET confirmation_sent_at = ?, notified_at = ?, mail_error = ?
+            WHERE public_ref = ?');
+        $stmt->execute([$confirmado, $avisado, $error !== null ? substr($error, 0, 255) : null, $reference]);
+    } catch (Throwable $e) {
+        // La migración 012 puede no estar aplicada todavía. El lead ya está
+        // guardado y los correos ya se enviaron: perder el registro no
+        // justifica romper nada.
+        error_log('CumpleClick registro de correo: ' . $e->getMessage());
+    }
 }

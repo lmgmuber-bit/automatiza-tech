@@ -754,3 +754,18 @@ html:has(.profile-savebar) { scroll-padding-bottom:110px; }
 .event-profile-admin .field,.event-profile-admin .field select,.event-profile-admin .field input,.event-profile-admin .field textarea { max-width:100%;min-width:0; }
 .event-profile-admin select { text-overflow:ellipsis; }
 @media(prefers-reduced-motion:reduce){.profile-switch span,.profile-switch span::after{transition:none}}
+
+/* Contador de solicitudes sin atender, dentro de la pestaña. */
+.tab-badge {
+  display: inline-block;
+  min-width: 20px;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #D6307F;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+}

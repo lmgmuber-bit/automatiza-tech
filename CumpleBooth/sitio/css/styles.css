@@ -736,6 +736,12 @@ p { margin: 0 0 1rem; }
   border: 3px solid var(--cc-fucsia);
   box-shadow: 0 18px 48px rgba(214, 48, 127, 0.2);
 }
+/* La tarjeta de baby shower es OTRO producto, no un tercer nivel del mismo.
+   Por eso lleva su propia etiqueta y un borde suave en vez del fucsia de
+   "Más elegido": quien compara planes de cumpleaños tiene que ver de un vistazo
+   que esta columna no compite con las otras dos. */
+.plan--baby { border: 2px solid rgba(139, 92, 246, 0.4); }
+.plan__badge--baby { background: var(--cc-violeta); }
 .plan__badge {
   position: absolute;
   top: -16px;
@@ -1121,7 +1127,7 @@ body.modal-abierto { overflow: hidden; }
   }
   /* Seis tarjetas iguales: 3 columnas Ã— 2 filas en desktop, sin destacadas. */
   .mundos__grid { grid-template-columns: repeat(3, 1fr); }
-  .precios__grid { grid-template-columns: 1fr 1fr; gap: 28px; }
+  .precios__grid { grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 1120px; }
   .precios { padding-top: 72px; }
   .porque__grid { grid-template-columns: repeat(3, 1fr); gap: 24px; }
   .confianza__grid { grid-template-columns: repeat(3, 1fr); }

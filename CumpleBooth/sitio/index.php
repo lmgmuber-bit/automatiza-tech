@@ -81,7 +81,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
        bloquea el render; las tipografias van ultimas porque tienen
        `font-display: swap` y el texto se pinta sin esperarlas. -->
   <link rel="preload" href="assets/img/globo-render.webp" as="image" type="image/webp">
-  <link rel="stylesheet" href="css/styles.css?v=20260831j">
+  <link rel="stylesheet" href="css/styles.css?v=20260831k">
   <link rel="preload" href="fonts/baloo-2-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/baloo-2-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
   <!-- ?v= no es adorno. `styles.css` y `main.js` tienen nombre FIJO, asi que
@@ -308,7 +308,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
         <li class="eventos__item" data-reveal><span aria-hidden="true">🔮</span><h3>Las apuestas</h3><p>El momento que a todos les gusta. Quedan en un <strong>tablero privado</strong> que los papás abren después, y muchos imprimen.</p></li>
         <li class="eventos__item" data-reveal><span aria-hidden="true">📖</span><h3>El álbum</h3><p>Las fotos de la cabina más las que suban los invitados desde su celular, en una revista que se hojea.</p></li>
       </ul>
-      <p class="mundos__mas" data-reveal>¿Todavía no saben el nombre o el sexo? <strong>Está pensado para eso.</strong> La invitación funciona igual, y si la fiesta es justamente para revelarlo, mejor. <a href="#contacto">Cuéntanos tu fecha</a> y te pasamos el valor.</p>
+      <p class="mundos__mas" data-reveal>¿Todavía no saben el nombre o el sexo? <strong>Está pensado para eso.</strong> La invitación funciona igual, y si la fiesta es justamente para revelarlo, mejor. <a href="#precios">Vale <strong>$29.995</strong></a> con el 50% de lanzamiento, e incluye la invitación, las apuestas y el álbum.</p>
     </section>
 
     <!-- 3c · DEMOS EN VIVO -->
@@ -429,6 +429,21 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
             <li>2 horas de servicio</li>
           </ul>
           <a class="btn btn--cta btn--block" href="<?= $e($ccWa('Hola CumpleClick, me interesa el Plan Premium 🎉')) ?>" target="_blank" rel="noopener">Agenda el Premium 📲</a>
+        </article>
+        <article class="plan plan--baby" data-reveal>
+          <span class="plan__badge plan__badge--baby">Baby shower</span>
+          <h3>Plan Baby Shower</h3>
+          <p class="plan__precio"><s class="plan__antes">$59.990</s> $29.995</p>
+          <ul>
+            <li>1 temática a elección: <strong>Nubes, Rosas o Safari</strong></li>
+            <li><strong>Las apuestas</strong> de cada invitado, impresas en su foto</li>
+            <li>Tablero privado con todas, para abrir después</li>
+            <li>Hasta 200 fotos por evento</li>
+            <li><strong>Invitación digital</strong> con cuenta regresiva y <strong>lista de regalos</strong></li>
+            <li><strong>Álbum Recuerdo</strong> con las fotos de todos</li>
+            <li>Descarga inmediata por QR</li>
+          </ul>
+          <a class="btn btn--cta btn--block" href="<?= $e($ccWa('Hola CumpleClick, me interesa el Plan Baby Shower 🍼')) ?>" target="_blank" rel="noopener">Agenda el Baby Shower 📲</a>
         </article>
       </div>
       <p class="precios__medida" data-reveal>¿Quieres una temática a la medida? <strong>La creamos por +$25.000.</strong></p>
@@ -602,6 +617,6 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
   <script src="vendor/gsap.min.js" defer></script>
   <script src="vendor/ScrollTrigger.min.js" defer></script>
   <script src="vendor/lenis.min.js" defer></script>
-  <script src="js/main.js?v=20260831j" defer></script>
+  <script src="js/main.js?v=20260831k" defer></script>
 </body>
 </html>

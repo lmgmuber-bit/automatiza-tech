@@ -116,10 +116,29 @@ foreach ([
     // Texto plano de VERDAD, no un HTML sin etiquetas ni una cadena de relleno.
     lead_check(strlen(trim($plantilla['text'])) > 120, "$nombre: trae versión de texto plano");
     lead_check(strpos($plantilla['text'], '<') === false, "$nombre: la versión de texto no lleva HTML");
-    // Ninguna imagen: la marca se dibuja con color y tipografía.
-    lead_check(stripos($plantilla['html'], '<img') === false, "$nombre: no depende de imágenes");
-    lead_check(preg_match('/(src|background)\s*=\s*["\']https?:/i', $plantilla['html']) === 0,
-        "$nombre: no carga recursos remotos");
+    /* Una imagen COMO MÁXIMO —el logo—, y el correo no puede depender de ella.
+     *
+     * La versión anterior exigía CERO imágenes. Era pasarse de prudente: lo que
+     * penalizan los filtros no es una imagen, es un correo que ES una imagen y
+     * no tiene texto que leer. Pero la cautela de fondo sí valía, así que se
+     * conserva en tres condiciones concretas: una sola imagen, con `alt` —si el
+     * cliente la bloquea se lee la marca en vez de quedar un hueco— y mucho más
+     * texto que imagen. */
+    $imgs = preg_match_all('/<img\b/i', $plantilla['html']);
+    lead_check($imgs <= 1, "$nombre: más de una imagen; el correo no debe depender de imágenes");
+    if ($imgs === 1) {
+        lead_check(preg_match('/<img\b[^>]*\balt="[^"]+"/i', $plantilla['html']) === 1,
+            "$nombre: la imagen necesita alt, o bloqueada deja un hueco");
+        $soloTexto = trim(preg_replace('/\s+/', ' ', strip_tags($plantilla['html'])));
+        lead_check(strlen($soloTexto) > 300, "$nombre: hay imagen pero muy poco texto alrededor");
+    }
+    /* El único recurso remoto permitido es el logo, y del propio dominio. */
+    preg_match_all('/(?:src|background)\s*=\s*["\']([^"\']+)/i', $plantilla['html'], $recursos);
+    foreach ($recursos[1] as $url) {
+        if (strpos($url, 'http') !== 0) { continue; }
+        lead_check(strpos($url, 'https://cumpleclick.com/') === 0,
+            "$nombre: carga algo de otro servidor: $url");
+    }
     lead_check(strpos($plantilla['html'], '<script') === false, "$nombre: no inyecta script");
 }
 

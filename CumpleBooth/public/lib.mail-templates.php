@@ -10,11 +10,19 @@ declare(strict_types=1);
  * clientes donde va a leerse casi todo. Las tablas anidadas con `style=` en
  * cada celda es lo único que se ve igual en todas partes.
  *
- * Sin imágenes remotas. La mayoría de los clientes bloquea las imágenes hasta
- * que el lector las autoriza, así que un encabezado que ES una imagen llega
- * como un rectángulo vacío en el primer contacto —justo el correo que tiene que
- * dar confianza—. La marca se arma con color y tipografía, que siempre se ven.
- * De paso evita el pixel de rastreo que algunos filtros penalizan.
+ * UNA sola imagen: el logo. La versión anterior no traía ninguna, por miedo a
+ * que el cliente de correo las bloqueara, y era pasarse de prudente: Gmail las
+ * muestra por defecto desde hace años y lo que penalizan los filtros no es una
+ * imagen sino un correo que ES una imagen, sin texto que leer.
+ *
+ * Aun así el encabezado no depende de ella. El degradé de marca es color de
+ * fondo, y el nombre "CumpleClick" va como TEXTO al lado del logo: si alguien
+ * tiene las imágenes bloqueadas, ve la banda con los colores y el nombre, no un
+ * rectángulo vacío. El `alt` dice "CumpleClick" por la misma razón.
+ *
+ * El degradé se declara como `background-color` sólido MÁS `background-image`.
+ * Outlook de escritorio ignora el segundo y se queda con el violeta plano, que
+ * es un resultado correcto; el resto ve el degradé completo.
  */
 
 const CC_MAIL_TINTA   = '#4C2882';
@@ -38,6 +46,7 @@ function cc_mail_h(string $s): string
 function cc_mail_shell(string $titulo, string $contenido, string $pieExtra = ''): string
 {
     $t = cc_mail_h($titulo);
+    $logo = 'https://cumpleclick.com/assets/img/correo-logo.png';
     return <<<HTML
 <!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8">
@@ -50,13 +59,20 @@ function cc_mail_shell(string $titulo, string $contenido, string $pieExtra = '')
 <div style="display:none;max-height:0;overflow:hidden;font-size:0;line-height:0;color:#F3EFF7;">{$t}</div>
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F3EFF7;padding:24px 12px;">
 <tr><td align="center">
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:600px;max-width:100%;background:#FFFFFF;border-radius:16px;overflow:hidden;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:600px;max-width:100%;background:#FFFFFF;border-radius:18px;overflow:hidden;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;box-shadow:0 8px 28px rgba(76,40,130,0.10);">
 
-    <tr><td style="background:#4C2882;padding:22px 28px;">
-      <span style="font-size:22px;font-weight:700;color:#FFFFFF;letter-spacing:-0.3px;">Cumple</span><span style="font-size:22px;font-weight:700;color:#FBBF24;letter-spacing:-0.3px;">Click</span>
+    <tr><td style="background-color:#8B5CF6;background-image:linear-gradient(120deg,#8B5CF6 0%,#A24BB6 48%,#D6307F 100%);padding:20px 26px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="padding-right:14px;" valign="middle">
+          <img src="{$logo}" width="56" height="56" alt="CumpleClick" style="display:block;border:0;border-radius:16px;">
+        </td>
+        <td valign="middle">
+          <span style="font-size:24px;font-weight:700;color:#FFFFFF;letter-spacing:-0.4px;">Cumple</span><span style="font-size:24px;font-weight:700;color:#FBBF24;letter-spacing:-0.4px;">Click</span>
+        </td>
+      </tr></table>
     </td></tr>
 
-    <tr><td style="padding:28px;">{$contenido}</td></tr>
+    <tr><td style="padding:30px 28px 28px;">{$contenido}</td></tr>
 
     <tr><td style="background:#FFF8EC;padding:20px 28px;border-top:1px solid #EDE4F5;">
       <p style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#6B6280;">
@@ -73,6 +89,21 @@ function cc_mail_shell(string $titulo, string $contenido, string $pieExtra = '')
 </table>
 </body></html>
 HTML;
+}
+
+/** El WhatsApp sale de `data/marca.json`, la misma fuente que la landing y el
+ *  cierre del álbum: si Luis lo cambia en Admin -> Marca, cambia también acá. */
+function cc_mail_whatsapp(): string
+{
+    static $num = null;
+    if ($num !== null) { return $num; }
+    $num = '';
+    $ruta = __DIR__ . '/data/marca.json';
+    if (is_file($ruta)) {
+        $d = json_decode((string) @file_get_contents($ruta), true);
+        if (is_array($d)) { $num = preg_replace('/\D/', '', (string) ($d['whatsapp'] ?? '')); }
+    }
+    return $num;
 }
 
 /** Una fila de la tabla de datos, para no repetir el mismo `style=` diez veces. */
@@ -115,27 +146,46 @@ function cc_mail_confirmacion(array $lead): array
         . cc_mail_fila('Comuna o ciudad', (string) ($lead['commune'] ?? ''))
         . cc_mail_fila('Teléfono', (string) ($lead['phone'] ?? ''));
 
+    $wa = cc_mail_whatsapp();
+    $botonWa = $wa === '' ? '' : (
+        '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px;"><tr><td '
+        . 'style="background-color:#D6307F;border-radius:999px;">'
+        . '<a href="https://wa.me/' . cc_mail_h($wa) . '" style="display:inline-block;padding:13px 26px;'
+        . 'font-size:15px;font-weight:700;color:#FFFFFF;text-decoration:none;">Escribirnos por WhatsApp</a>'
+        . '</td></tr></table>'
+    );
+
     $contenido = <<<HTML
-<p style="margin:0 0 14px;font-size:17px;line-height:1.5;color:#2C2140;">{$saludo}, recibimos tu solicitud.</p>
-<p style="margin:0 0 20px;font-size:15px;line-height:1.65;color:#4A4160;">
-  Gracias por escribirnos. Vamos a revisar la disponibilidad para tu fecha y
+<p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#D6307F;text-transform:uppercase;letter-spacing:0.6px;">Solicitud recibida</p>
+<h1 style="margin:0 0 16px;font-size:26px;line-height:1.25;color:#2C2140;font-weight:800;">{$saludo}, ya tenemos tu fecha en la mira 🎈</h1>
+
+<p style="margin:0 0 22px;font-size:16px;line-height:1.65;color:#4A4160;">
+  Gracias por escribirnos. Vamos a revisar la disponibilidad y
   <strong style="color:#4C2882;">nos pondremos en contacto contigo a la brevedad posible</strong>
   para contarte cómo funciona y darte el valor exacto.
 </p>
 
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FFF8EC;border-radius:12px;padding:16px 18px;margin:0 0 20px;">
-  <tr><td>
-    <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#4C2882;text-transform:uppercase;letter-spacing:0.4px;">Lo que nos enviaste</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FFF8EC;border-radius:14px;margin:0 0 22px;">
+  <tr><td style="padding:18px 20px;">
+    <p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#4C2882;text-transform:uppercase;letter-spacing:0.6px;">Lo que nos enviaste</p>
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">{$resumen}</table>
   </td></tr>
 </table>
 
-<p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#4A4160;">
-  Tu número de solicitud es <strong style="color:#4C2882;">{$ref}</strong>. Guárdalo por si quieres consultarnos algo antes de que te contactemos.
-</p>
-<p style="margin:0;font-size:14px;line-height:1.6;color:#6B6280;">
-  Si tu evento es pronto y prefieres avanzar ahora, respóndenos este correo y le damos prioridad.
-</p>
+{$botonWa}
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #EDE4F5;">
+  <tr><td style="padding:18px 0 0;">
+    <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#4A4160;">
+      Tu número de solicitud es
+      <span style="display:inline-block;padding:3px 10px;border-radius:6px;background:#EDE7F6;color:#4C2882;font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">{$ref}</span>
+    </p>
+    <p style="margin:0;font-size:14px;line-height:1.6;color:#6B6280;">
+      Guárdalo por si quieres consultarnos algo antes de que te contactemos. Y si tu evento es
+      pronto, respóndenos este correo y le damos prioridad.
+    </p>
+  </td></tr>
+</table>
 HTML;
 
     $texto = <<<TXT

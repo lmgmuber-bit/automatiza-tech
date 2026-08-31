@@ -5,12 +5,18 @@ const POLL_INTERVAL_MS = 5000;
 // dropped every slide to the brand-gradient fallback, so keep a wide margin.
 // Ceiling is n8n's own 300s HTTP default on the "Renderizar Propuesta" node: slides poll
 // in parallel, so worst case here is ~180s + render, leaving real margin under it.
-const POLL_TIMEOUT_MS = 180000;
-// Three at a time, one retry each, and a hard ceiling on the whole image
-// phase: 6 slides must still land comfortably inside the timeout n8n gives
-// the "Renderizar Propuesta" HTTP node (its default, 300s).
-const CONCURRENCY = 3;
+// One image at a time. Higgsfield serves this account's jobs serially, so
+// asking for several at once buys nothing and actively hurts: measured
+// 2026-08-31, a lone image finished in 13s, while three submitted together
+// finished at 24s, 40s and 108s — the queue just backs up behind itself.
+// Six in flight pushed the tail past any sane window (that run produced 2
+// photos out of 6; a later one with batches of three produced none).
+// Sequential, each job gets served immediately: ~15-25s per slide.
+const POLL_TIMEOUT_MS = 90000;
+const CONCURRENCY = 1;
 const MAX_ATTEMPTS = 2;
+// Hard ceiling on the whole image phase, so the render always answers well
+// inside the timeout n8n gives the "Renderizar Propuesta" node (300s).
 const PHASE_BUDGET_MS = 210000;
 
 function authHeader(keyId, keySecret) {
@@ -65,11 +71,8 @@ async function generateImageUrl(prompt, credentials, { timeoutMs } = {}) {
  * Generates one image per brief. Never throws — a failed brief resolves to
  * null so the template can fall back to a brand gradient for that slide.
  *
- * Requests go out a few at a time, never all six at once. Firing the whole
- * batch simultaneously congests Higgsfield's own queue: on 2026-08-31 a real
- * proposal came back with 2 of 6 photos, the other four logging "polling
- * timed out", while a single image requested on its own finished in 71s.
- * Fewer in flight means each one actually gets served inside its window.
+ * Requests go out strictly one at a time — see the CONCURRENCY note above
+ * for the measurements behind that.
  */
 async function generateProposalImages(imageBriefs, credentials) {
   const briefs = Array.isArray(imageBriefs) ? imageBriefs : [];

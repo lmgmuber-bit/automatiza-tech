@@ -36,7 +36,7 @@ function makeTrackingFetch(tracker) {
   };
 }
 
-test('never puts more than three image jobs in flight at once', async () => {
+test('never puts more than one image job in flight at once', async () => {
   const tracker = { inFlight: 0, max: 0, submits: 0 };
   const originalFetch = global.fetch;
   global.fetch = makeTrackingFetch(tracker);
@@ -45,13 +45,11 @@ test('never puts more than three image jobs in flight at once', async () => {
       keyId: 'id',
       keySecret: 'secret',
     });
-    // The regression this guards: all six fired simultaneously congested
-    // Higgsfield's queue and four came back "polling timed out", leaving a
-    // real client proposal with 2 of 6 photos.
-    assert.ok(
-      tracker.max <= 3,
-      `expected at most 3 concurrent jobs, saw ${tracker.max}`
-    );
+    // The regression this guards: Higgsfield serves this account serially,
+    // so anything in flight beyond the first only queues behind it and the
+    // tail times out. Six at once left a real client proposal with 2 of 6
+    // photos; batches of three left it with none.
+    assert.equal(tracker.max, 1, `expected one job at a time, saw ${tracker.max}`);
     assert.equal(tracker.submits, 6, 'every brief must still be requested');
     for (const brief of SIX_BRIEFS) {
       assert.equal(result[brief.slide], 'https://cdn.example.com/i.png');

@@ -292,3 +292,122 @@ calcula la foto y la línea del agradecimiento. Coincidían por copia, y un test
 llegó a exigir que fueran iguales, lo que obligaba a descalibrar uno para
 arreglar el otro. Lo que sí es invariante —y lo que el test verifica ahora— es
 que los dos queden centrados en el mismo punto.
+
+---
+
+## Sesión 2026-08-30/31 — cumpleclick.com en PROD: rendimiento, menú, leads y marca
+
+Todo lo de abajo está **desplegado y verificado por hash** contra el repositorio
+(32 archivos, 0 diferencias). PROD es `https://cumpleclick.com`.
+
+### Cómo se despliega (importante antes de tocar nada)
+
+La cuenta FTP está **enjaulada en `public_html`** y no alcanza `/domains/` ni
+las carpetas hermanas. Eso es bueno —no puede dañar los otros dominios de la
+cuenta— pero significa dos cosas:
+
+- `database/migrations/` y `scripts/` quedan **fuera de alcance**. La migración
+  012 se aplicó con un ejecutor de un solo uso, protegido por token y que se
+  autoborra, subido a `public_html` y verificado por FTP que desapareció. El
+  archivo de la migración **no está en el servidor**, solo sus efectos: es
+  idempotente, así que un `migrate.php` futuro no hará nada, pero conviene
+  subirlo por el File Manager.
+- La configuración real vive en
+  `/home/u402745362/domains/cumpleclick.com/cumpleclick-config.php`, fuera del
+  webroot. Dentro de `public_html/config/cumpleclick.local.php` hay un **puente**
+  de una línea que apunta ahí. Editar el puente no sirve de nada.
+
+`public_html/app/` es el árbol `public/`; `public_html/` es `sitio/`.
+
+### La landing dejó de ser estática
+
+`sitio/index.html` pasó a `sitio/index.php`. El WhatsApp y las redes salen de
+`public/data/marca.json` —la MISMA fuente que el cierre del Álbum Recuerdo y el
+cartel QR— y se editan en **Admin → Marca** (`public/admin/marca.php`).
+
+Dos cosas que no se pueden perder:
+
+- El `.htaccess` declara `DirectoryIndex index.php`. Si `index.html` reaparece,
+  el servidor puede preferirlo y la página vuelve a servirse estática: todo se
+  ve igual y lo que se edite en el admin deja de tener efecto, sin que falle
+  nada. Hay un test que lo bloquea.
+- El `.gitignore` de la raíz tiene `index.php` **sin barra inicial** —regla del
+  bloque de WordPress— y un patrón así hace match en CUALQUIER carpeta. Se
+  estaba tragando la portada: existía en disco y en producción, y en el repo no.
+  Hay una negación y un test que corre `git check-ignore`.
+
+### Las revelaciones NO usan IntersectionObserver, y es a propósito
+
+Se probaron tres mecanismos:
+
+1. Un ScrollTrigger por elemento (60 en la página). Funcionaba, pero medían
+   layout y costaban ~310 ms de hilo bloqueado en el arranque.
+2. `ScrollTrigger.batch()`. **No sirve**: `getAll()` seguía devolviendo 60. Sólo
+   coordina los callbacks, no reduce los disparadores.
+3. `IntersectionObserver`. Barato, pero el navegador entrega la intersección
+   cuando quiere: medido en producción con instrumentación, el aviso del
+   contenedor de "Elige tu mundo" llegó **11 segundos** después de que la
+   sección ya se veía. Cambiar el margen no lo arregló.
+
+Lo que quedó es una cola movida por el scroll, revisada como mucho una vez por
+cuadro, que se desengancha sola cuando se vacía. Más una garantía por lote: al
+terminar la duración de la animación, lo que siga invisible se muestra.
+
+`.mundo` se revela **por contenedor**, no por elemento: en pantalla angosta el
+carrusel corre en horizontal y varias tarjetas quedan fuera por el costado.
+
+### El punto de quiebre del menú depende del ancho del logo
+
+Está en **1120px** y sale de medir: marca 147 + nav 640 + botón 210 = 997, más
+24 de separaciones y 56 de relleno. Estuvo en 1024 y se rompió al traer el
+lockup nuevo, que pasó de 81px a 147px. **Si el lockup vuelve a cambiar de
+tamaño, hay que volver a medir.**
+
+### Leads: correo y pantalla
+
+Los leads se guardaban en `cc_leads` desde la migración 006 pero no había
+pantalla ni correo. Ahora:
+
+- `public/admin/leads.php` — Admin → Solicitudes, con contador de nuevas.
+- `public/lib.mail.php` — SMTP hablado a mano sobre socket, sin dependencias.
+- `public/lib.mail-templates.php` — los dos correos.
+- Migración **012**: `confirmation_sent_at`, `notified_at`, `mail_error`.
+
+El envío **falla en silencio a propósito**: el lead ya está guardado y no tiene
+sentido mostrarle un error al visitante por un problema nuestro. Por eso existen
+esas tres columnas y por eso el admin muestra el estado del correo al lado de
+cada solicitud: sin eso, un buzón mal configurado dejaría a todos sin
+confirmación y no se enteraría nadie.
+
+Se envía **después** de responderle al visitante (`fastcgi_finish_request`).
+
+Anti-spam, y no son adornos: `multipart/alternative` con texto plano de verdad,
+el remitente del sobre igual al `From` (alineación SPF), y **una sola imagen**
+—el logo— con `alt`, sobre un encabezado cuyo color es CSS y cuyo nombre es
+texto: con las imágenes bloqueadas se ve la marca, no un hueco.
+
+SPF, DKIM y DMARC están publicados. DMARC en `p=none`; subir a `quarantine`
+recién cuando DKIM lleve semanas estable.
+
+### Errores de esta sesión, para no repetirlos
+
+- **Dije que la pantalla de marca "nunca se construyó"** sin buscar en otras
+  ramas. Existía en `claude/invitacion-url-plan-y-3-temas`, sin fusionar. Antes
+  de afirmar que algo no existe: `git log --all`, `git branch --contains`.
+- **Una verificación que tapaba el bug**: barrí la página entera y la red de
+  seguridad fue rescatando sección por sección, así que el observador roto
+  parecía funcionar. Cuando hay un mecanismo de respaldo, hay que verificar el
+  mecanismo principal directamente, no el resultado final.
+- **`Array.prototype.slice.call(map.keys())` devuelve `[]`** —un iterador no
+  tiene `length`— sin lanzar ningún error. Usar `Array.from`.
+- **Dos verificadores automáticos inservibles**: uno de signos `¿` que leía
+  código PHP (`?>` tiene interrogación) y daba 1056 falsos positivos, y uno de
+  tildes que marcaba "que", "el", "tu", "si". Probar el verificador contra un
+  caso bueno y uno malo conocidos ANTES de creerle.
+- **Un test cuya regex castigaba el uso correcto**: contaba definiciones de
+  `$sufijoSexoBebe` con `/\$sufijoSexoBebe\s*=/`, que también matchea `===`.
+- **Descarga FTP vacía ≠ archivo ausente**: 30 conexiones seguidas hacen que el
+  servidor corte, y 10 archivos parecían faltar. Con pausas aparecieron los 10.
+- **Decisión de diseño demasiado prudente**: dejé el logo fuera de los correos
+  por miedo al bloqueo de imágenes. Lo que penalizan los filtros no es UNA
+  imagen, es un correo que ES una imagen.

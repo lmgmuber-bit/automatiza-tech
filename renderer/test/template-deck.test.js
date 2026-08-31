@@ -96,6 +96,29 @@ test('a row with price_clp still shows the peso conversion', () => {
   assert.ok(html.includes('$500 USD ($460000 CLP aprox)'));
 });
 
+test('a launch price can strike through the list price and highlight the total', () => {
+  const html = renderPricingBody(
+    [
+      { service: 'Valor normal del proyecto', price_usd: 1500, strike: true },
+      { service: 'Descuento por lanzamiento', price_label: '−$1.000 USD' },
+      { service: 'Inversión total', price_usd: 500, emphasis: true },
+    ],
+    null
+  );
+  assert.ok(html.includes('class="is-struck"'));
+  assert.ok(html.includes('is-total'));
+  assert.ok(html.includes('−$1.000 USD'), 'an explicit label overrides the numeric price');
+  assert.ok(html.includes('$1500 USD'));
+  assert.ok(html.includes('$500 USD'));
+});
+
+test('an ordinary row carries no styling classes', () => {
+  const html = renderPricingBody([{ service: 'Sitio web', price_usd: 500 }], null);
+  assert.ok(html.includes('<tr class="">'));
+  assert.ok(!html.includes('is-struck'));
+  assert.ok(!html.includes('is-total'));
+});
+
 test('the cover keeps its bottom-heavy scrim', () => {
   const img = 'https://example.com/photo.jpg';
   const html = renderProposalHtml(DATA, { cover: img });

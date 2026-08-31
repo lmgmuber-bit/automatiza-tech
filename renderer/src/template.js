@@ -83,6 +83,9 @@ function renderBulletListBody(items, formatter) {
 }
 
 function renderPriceCell(row) {
+  // An explicit label wins: a discount line reads "−$1.000 USD", which is
+  // not a price the numeric fields can express.
+  if (row.price_label) return escapeHtml(row.price_label);
   const usd = `$${escapeHtml(row.price_usd)} USD`;
   // The peso conversion only means something to a client billed in Chile.
   // For anyone abroad it is noise, so a row with no price_clp shows dollars
@@ -95,7 +98,7 @@ function renderPricingBody(rows, note) {
   const trs = rows
     .map(
       (row) => `
-      <tr>
+      <tr class="${row.strike ? 'is-struck' : ''}${row.emphasis ? ' is-total' : ''}">
         <td>${escapeHtml(row.service)}</td>
         <td>${renderPriceCell(row)}</td>
       </tr>`
@@ -169,6 +172,12 @@ const STYLE = `
   .body-list { color: #dbe4ee; font-size: 24px; line-height: 2; padding-left: 28px; text-shadow: 0 1px 12px rgba(6,13,21,.65); }
   .pricing-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
   .pricing-table td { color: #dbe4ee; font-size: 24px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.12); }
+  /* Anchoring a launch price: the list price is struck through and dimmed,
+     the amount the client actually pays is the loudest thing on the slide. */
+  .pricing-table tr.is-struck td { color: #8ea3ba; }
+  .pricing-table tr.is-struck td:last-child { text-decoration: line-through; }
+  .pricing-table tr.is-total td { color: #fff; font-weight: 800; font-size: 30px; padding-top: 20px; border-bottom: 0; }
+  .pricing-table tr.is-total td:last-child { color: #00d9c0; }
   .pricing-note { color: #9fb3c8; font-size: 18px; margin-top: 16px; }
   .slide-closing { display: flex; }
   .closing-left { width: 42%; background: #0a1420; display: flex; align-items: center; justify-content: center; }

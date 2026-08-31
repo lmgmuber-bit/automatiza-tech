@@ -117,7 +117,7 @@
     /* Al pasar a ancho de escritorio el panel deja de existir como panel: si
        quedó marcado como abierto, el atributo se arrastra y la hamburguesa
        reaparece "abierta" al volver a angostar. */
-    var anchoGrande = window.matchMedia('(min-width: 1025px)');
+    var anchoGrande = window.matchMedia('(min-width: 1121px)');
     var alCambiar = function (e) { if (e.matches) { cerrar(false); } };
     if (anchoGrande.addEventListener) { anchoGrande.addEventListener('change', alCambiar); }
     else if (anchoGrande.addListener) { anchoGrande.addListener(alCambiar); }

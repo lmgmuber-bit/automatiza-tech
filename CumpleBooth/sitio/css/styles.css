@@ -261,11 +261,21 @@ p { margin: 0 0 1rem; }
 .nav__boton { display: none; }
 
 /* ---------- Botón hamburguesa y panel (teléfono y tablet) ---------- */
-/* 1024px y no un número redondo cualquiera: medido, la fila de escritorio
-   —marca + siete enlaces + botón de WhatsApp— necesita 985px con sus
-   separaciones y el relleno del header. Con el corte en 980 el primer ancho de
-   escritorio (981px) ya desbordaba por 4px. */
-@media (max-width: 1024px) {
+/* 1120px, y el número sale de medir, no de elegir uno redondo.
+
+   La fila de escritorio es marca + siete enlaces + botón de WhatsApp:
+   147 + 640 + 210 = 997px, más 24 de separaciones y 56 de relleno = 1077, más
+   la barra de desplazamiento. O sea que por debajo de ~1092px no entra.
+
+   Estuvo en 1024 y se rompió al traer el lockup nuevo: el logo pasó de 81px
+   —un SVG compacto— a 147px, porque ahora el wordmark se compone en HTML para
+   no depender de que el visitante tenga Baloo 2 instalada. Ese cambio es
+   correcto y no se toca; lo que había que mover era el corte. Sin esto, entre
+   1025 y 1092px el header desbordaba y la página entera se iba en horizontal.
+
+   La lección: este número depende del ancho REAL del logo. Si el lockup vuelve
+   a cambiar de tamaño, hay que volver a medir. */
+@media (max-width: 1120px) {
   /* El panel cuelga del header y ocupa el ancho completo. `position: fixed` y
      no `absolute` porque el header es `sticky`: con `absolute` el panel se iría
      con el documento al hacer scroll y quedaría flotando a mitad de página. */

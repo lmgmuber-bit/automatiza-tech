@@ -534,6 +534,67 @@ function renderProposalHtml(data, images = {}) {
   const nextStepsBody = renderBulletListBody(data.next_steps, (s) => escapeHtml(s));
   const pricingBody = renderPricingBody(data.pricing_rows, data.pricing_note);
 
+  // Optional extra sections, so a rich meeting gets the slides it deserves
+  // and a thin one is not padded out: 0, 1 or 2 of these sit between the
+  // process and the price, giving a deck of 8, 9 or 10 slides. More than two
+  // is capped on purpose — past that it stops being a proposal.
+  const extraSlides = (Array.isArray(data.extra_slides) ? data.extra_slides : [])
+    .filter((s) => s && s.title)
+    .slice(0, 2)
+    .map((s, i) => ({
+      eyebrow: s.eyebrow || 'En detalle',
+      title: s.title,
+      bodyHtml:
+        Array.isArray(s.bullets) && s.bullets.length
+          ? renderBulletListBody(s.bullets, (b) =>
+              b && b.text
+                ? `<strong>${escapeHtml(b.title)}:</strong> ${escapeHtml(b.text)}`
+                : escapeHtml(b && b.title ? b.title : b)
+            )
+          : renderParagraphBody(s.text || ''),
+      imageKey: `extra_${i + 1}`,
+    }));
+
+  const contentSlides = [
+    {
+      eyebrow: 'El desafío actual',
+      title: data.challenge_title,
+      bodyHtml: renderParagraphBody(data.challenge_text),
+      imageKey: 'challenge',
+    },
+    {
+      eyebrow: 'Nuestra solución',
+      title: data.solution_title,
+      bodyHtml: renderParagraphBody(data.solution_text),
+      imageKey: 'solution',
+    },
+    {
+      eyebrow: 'Beneficios clave',
+      title: 'Lo que gana ' + data.company_name,
+      bodyHtml: benefitsBody,
+      imageKey: 'benefits',
+    },
+    {
+      eyebrow: '¿Cómo funciona?',
+      title: 'Proceso de implementación',
+      bodyHtml: stepsBody,
+      imageKey: 'how_it_works',
+    },
+    ...extraSlides,
+    {
+      eyebrow: 'Inversión',
+      title: 'Precio de la propuesta',
+      bodyHtml: pricingBody,
+      imageKey: 'pricing',
+    },
+    {
+      eyebrow: 'Próximos pasos',
+      title: 'Cómo seguimos',
+      bodyHtml: nextStepsBody,
+      imageKey: 'next_steps',
+    },
+  ];
+
   const slides = [
     renderCoverSlide({
       company_name: data.company_name,
@@ -541,48 +602,17 @@ function renderProposalHtml(data, images = {}) {
       index: 0,
       imageUrl: images.cover,
     }),
-    renderContentSlide({
-      index: 2,
-      eyebrow: 'El desafío actual',
-      title: data.challenge_title,
-      bodyHtml: renderParagraphBody(data.challenge_text),
-      imageUrl: images.challenge,
-    }),
-    renderContentSlide({
-      index: 3,
-      eyebrow: 'Nuestra solución',
-      title: data.solution_title,
-      bodyHtml: renderParagraphBody(data.solution_text),
-      imageUrl: images.solution,
-    }),
-    renderContentSlide({
-      index: 4,
-      eyebrow: 'Beneficios clave',
-      title: 'Lo que gana ' + data.company_name,
-      bodyHtml: benefitsBody,
-      imageUrl: images.benefits,
-    }),
-    renderContentSlide({
-      index: 5,
-      eyebrow: '¿Cómo funciona?',
-      title: 'Proceso de implementación',
-      bodyHtml: stepsBody,
-      imageUrl: images.how_it_works,
-    }),
-    renderContentSlide({
-      index: 6,
-      eyebrow: 'Inversión',
-      title: 'Precio de la propuesta',
-      bodyHtml: pricingBody,
-      imageUrl: images.pricing,
-    }),
-    renderContentSlide({
-      index: 7,
-      eyebrow: 'Próximos pasos',
-      title: 'Cómo seguimos',
-      bodyHtml: nextStepsBody,
-      imageUrl: images.next_steps,
-    }),
+    // The badge number is computed, not hardcoded: inserting a section used
+    // to mean renumbering every slide after it by hand.
+    ...contentSlides.map((s, i) =>
+      renderContentSlide({
+        index: i + 2,
+        eyebrow: s.eyebrow,
+        title: s.title,
+        bodyHtml: s.bodyHtml,
+        imageUrl: images[s.imageKey],
+      })
+    ),
     renderClosingSlide(),
   ];
 

@@ -151,6 +151,69 @@ test('the watermark is legible, not the 4% video-grade mark', () => {
   assert.ok(!html.includes('width: 76px'));
 });
 
+function countSlides(html) {
+  return (html.match(/<section class="slide/g) || []).length;
+}
+
+test('a proposal with no extra sections is still 8 slides', () => {
+  assert.equal(countSlides(renderProposalHtml(DATA)), 8);
+});
+
+test('one extra section makes it 9, two make it 10', () => {
+  const one = { ...DATA, extra_slides: [{ eyebrow: 'Alcance', title: 'Qué incluye', text: 'Detalle' }] };
+  const two = {
+    ...DATA,
+    extra_slides: [
+      { eyebrow: 'Alcance', title: 'Qué incluye', text: 'Detalle' },
+      { eyebrow: 'Soporte', title: 'Acompañamiento', bullets: [{ title: 'A', text: 'B' }] },
+    ],
+  };
+  assert.equal(countSlides(renderProposalHtml(one)), 9);
+  assert.equal(countSlides(renderProposalHtml(two)), 10);
+});
+
+test('never grows past 10 slides, however many extras arrive', () => {
+  const many = {
+    ...DATA,
+    extra_slides: [1, 2, 3, 4, 5].map((n) => ({ title: 'Sección ' + n, text: 'x' })),
+  };
+  assert.equal(countSlides(renderProposalHtml(many)), 10);
+});
+
+test('extra sections take their own background photos', () => {
+  const data = {
+    ...DATA,
+    extra_slides: [
+      { title: 'Uno', text: 'x' },
+      { title: 'Dos', text: 'y' },
+    ],
+  };
+  const html = renderProposalHtml(data, {
+    extra_1: 'https://example.com/e1.jpg',
+    extra_2: 'https://example.com/e2.jpg',
+  });
+  assert.ok(html.includes("url('https://example.com/e1.jpg')"));
+  assert.ok(html.includes("url('https://example.com/e2.jpg')"));
+});
+
+test('badge numbers stay sequential once a section is inserted', () => {
+  const html = renderProposalHtml({
+    ...DATA,
+    extra_slides: [{ eyebrow: 'Alcance', title: 'Qué incluye', text: 'x' }],
+  });
+  // Inserted after "¿Cómo funciona?" (05), so pricing shifts 06 -> 07 and
+  // next steps 07 -> 08. This used to be hardcoded and would have gone wrong.
+  assert.ok(html.includes('06 · Alcance'));
+  assert.ok(html.includes('07 · Inversión'));
+  assert.ok(html.includes('08 · Próximos pasos'));
+});
+
+test('an extra section without a title is dropped rather than rendered empty', () => {
+  const html = renderProposalHtml({ ...DATA, extra_slides: [{ text: 'huérfano' }, null] });
+  assert.equal(countSlides(html), 8);
+  assert.ok(!html.includes('huérfano'));
+});
+
 test('the cover keeps its bottom-heavy scrim', () => {
   const img = 'https://example.com/photo.jpg';
   const html = renderProposalHtml(DATA, { cover: img });

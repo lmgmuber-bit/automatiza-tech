@@ -1663,9 +1663,15 @@ function Intro({ onStart }) {
         <h1 className="intro-title">
           {/* Un baby shower no es "la fiesta de Valentina": Valentina todavia
               no nacio. La bienvenida cambia de forma segun la modalidad. */}
+          {/* Sin nombre la frase cambia entera, no se recorta: "de" seguido
+              de nada es exactamente lo que se quiere evitar. */}
           {esBabyShower()
-            ? <>¡Bienvenidos al<br />baby shower de<br />{CONFIG.nombre}!</>
-            : <>¡Bienvenidos a la<br />fiesta de<br />{CONFIG.nombre}!</>}
+            ? (nombreEvento()
+                ? <>¡Bienvenidos al<br />baby shower de<br />{nombreEvento()}!</>
+                : <>¡Bienvenidos al<br />baby shower!</>)
+            : (nombreEvento()
+                ? <>¡Bienvenidos a la<br />fiesta de<br />{nombreEvento()}!</>
+                : <>¡Bienvenidos a<br />la fiesta!</>)}
         </h1>
         <div className="intro-party-decoration" aria-hidden="true">
           <div className="intro-party-flags">
@@ -1673,9 +1679,11 @@ function Intro({ onStart }) {
           </div>
           <span>¡A celebrar!</span>
         </div>
-        <p className="intro-cake-name" aria-label={`Cumpleaños de ${CONFIG.nombre}`}>
-          {CONFIG.nombre}
-        </p>
+        {nombreEvento() !== '' && (
+          <p className="intro-cake-name" aria-label={eventoFraseEn()}>
+            {nombreEvento()}
+          </p>
+        )}
         <div className="intro-bottom">
           <button
             className="cta pulse"
@@ -1708,12 +1716,24 @@ const esBabyShower = () => CONFIG?.eventType === 'baby_shower'
 // Dos variantes porque el articulo cambia con la preposicion: "por venir AL
 // baby shower" pero "EN EL baby shower". Con una sola quedaba "en al baby
 // shower de Valentina" impreso en el recuerdito que el invitado se lleva.
-const eventoFraseA = () => (esBabyShower()
-  ? `al baby shower de ${CONFIG.nombre}`
-  : `a la fiesta de ${CONFIG.nombre}`)
-const eventoFraseEn = () => (esBabyShower()
-  ? `el baby shower de ${CONFIG.nombre}`
-  : `la fiesta de ${CONFIG.nombre}`)
+//
+// Y el nombre puede venir VACIO. En un baby shower "aun no saben" no hay
+// nombre que poner, que es justo el caso para el que se hizo esa tematica:
+// el recuerdito que el invitado se lleva impreso decia "Gracias por venir al
+// baby shower de " y ahi terminaba (reporte de Luis 2026-08-31). Sin nombre
+// no se rellena el hueco: cambia la frase entera, que es como ya lo resuelve
+// `fraseA()` en src/album/evento.js para el Album Recuerdo.
+const nombreEvento = () => String(CONFIG?.nombre || '').trim()
+const eventoFraseA = () => {
+  const nombre = nombreEvento()
+  if (esBabyShower()) return nombre ? `al baby shower de ${nombre}` : 'al baby shower'
+  return nombre ? `a la fiesta de ${nombre}` : 'a la fiesta'
+}
+const eventoFraseEn = () => {
+  const nombre = nombreEvento()
+  if (esBabyShower()) return nombre ? `el baby shower de ${nombre}` : 'el baby shower'
+  return nombre ? `la fiesta de ${nombre}` : 'la fiesta'
+}
 
 function CumpleClickBrand({ className = '', inverse = false }) {
   return (
@@ -3039,7 +3059,7 @@ function TransicionWow({ invitado, personaje, onDone }) {
       <div className="transition-text">
         <h2>¡Ahora nos tomaremos una foto!</h2>
         <p>Sonríe {invitado},</p>
-        <h1>{CONFIG.nombre}</h1>
+        {nombreEvento() !== '' && <h1>{nombreEvento()}</h1>}
       </div>
       <canvas ref={confRef} className="confetti-canvas" />
     </section>
@@ -3769,7 +3789,9 @@ function QRScreen({ imageDataUrl, invitado, isBabyShower = false, onDiploma, onD
       <div className="qr-veil" />
       <div className="qr-content">
         <CumpleClickBrand />
-        <h1 className="qr-brand">{isBabyShower ? CONFIG.nombre : `Fiesta de ${CONFIG.nombre}`}</h1>
+        <h1 className="qr-brand">{isBabyShower
+          ? (nombreEvento() || 'Baby shower')
+          : (nombreEvento() ? `Fiesta de ${nombreEvento()}` : 'La fiesta')}</h1>
         <h2 className="qr-title">{isBabyShower ? '¡Tu predicción está lista!' : '¡Tu foto está lista! 📸'}</h2>
         <p className="qr-sub">
           {mode === 'error'

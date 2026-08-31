@@ -152,7 +152,32 @@
       introNarrationEnded = true;
       maybeAutoAdvance();
     }, { once: true });
+  } else {
+    // Sin narración de intro no hay nada que esperar, y hay que decirlo
+    // explícitamente: `introNarrationEnded` arranca en false, así que en una
+    // invitación sin audio de Alice en la portada —las tres de baby shower—
+    // se quedaba en false para siempre y `maybeAutoAdvance` salía por la
+    // primera línea. El avance automático simplemente no existía: el invitado
+    // abría el sobre y quedaba parado en la portada hasta que deslizaba a
+    // mano (reporte de Luis 2026-08-31). No fallaba nada, no había error en
+    // consola; sólo no pasaba nada.
+    introNarrationEnded = true;
   }
+
+  // Cuánto se queda la portada antes de que la página baje sola. Alcanza para
+  // que termine la animación del sobre (620 + 380 ms en el CSS) y para que el
+  // invitado vea dónde está parado; más que esto ya se siente trabado.
+  const PAUSA_ANTES_DE_BAJAR = 1200;
+  let bajadaProgramada = false;
+  // La llaman los dos caminos de entrada —con intro temático y sin él— y
+  // `startMusic` puede dispararse varias veces, así que tiene que ser
+  // idempotente. Con hero automático no hace nada: ahí el scroll está
+  // bloqueado y es `markReady` quien avanza cuando el video termina.
+  const programarBajadaAutomatica = () => {
+    if (bajadaProgramada || autoAdvanced || reducedMotion.matches) return;
+    bajadaProgramada = true;
+    window.setTimeout(maybeAutoAdvance, PAUSA_ANTES_DE_BAJAR);
+  };
 
   // El intro temático dura 15 segundos. Si esperamos a que termine para llamar
   // `play()` sobre Alice, Chrome/iOS ya no lo consideran parte del toque del
@@ -218,6 +243,7 @@
   const startMusic = () => {
     // In video mode the first gesture starts video, music and Alice together.
     if (typeof startAutoHero === 'function') startAutoHero();
+    programarBajadaAutomatica();
     primeOutro();
     if (musicStarted) {
       if (introNarrationTriggered || !narrationIntro) {
@@ -291,6 +317,7 @@
 
   const startInvitationAudioAfterThemeIntro = () => {
     if (typeof startAutoHero === 'function') startAutoHero();
+    programarBajadaAutomatica();
     primeOutro();
     const activateAudio = () => {
       if (musicStarted) {
@@ -981,9 +1008,10 @@
         video.src = clip.url;
         if (caption) caption.textContent = clip.caption || '';
         if (progressBar) progressBar.style.transform = 'scaleX(' + ((i) / clips.length).toFixed(4) + ')';
-        // El último clip es "¡Te esperamos!": ahí, y no antes, aparece el
-        // acceso a la invitación.
-        if (hint) hint.classList.toggle('is-visible', i === clips.length - 1);
+        // El acceso a la invitación aparece cuando los videos TERMINAN, no
+        // al empezar el último: mientras el clip corre, un botón encima
+        // compite con lo que se está contando (pedido de Luis 2026-08-31).
+        if (hint) hint.classList.remove('is-visible');
         // Cada capítulo trae su propia línea de Alice (los clips van sin
         // audio propio): si no existe el MP3 de este capítulo en particular,
         // sigue mudo, sin romper el resto de la lista.
@@ -1005,24 +1033,82 @@
       const advance = () => {
         if (index + 1 < clips.length) {
           playAt(index + 1);
-        } else if (progressBar) {
-          progressBar.style.transform = 'scaleX(1)';
+          return;
+        }
+        // Se acabaron los videos. Antes esto sólo llenaba la barra y el
+        // invitado quedaba mirando el último cuadro, sin nada que hacer y
+        // teniendo que deslizar a mano para llegar a la tarjeta.
+        if (progressBar) progressBar.style.transform = 'scaleX(1)';
+        if (!hint) return;
+        hint.classList.add('is-visible');
+        // `block: 'nearest'` no mueve nada si el botón ya se ve —que es lo
+        // normal, con la lista ocupando la pantalla completa—: sólo rescata
+        // al invitado que quedó a medio scroll. Aquí no se salta a la
+        // tarjeta: el último paso lo da él, tocando el botón.
+        if (!reducedMotion.matches && typeof hint.scrollIntoView === 'function') {
+          hint.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
       };
       video.addEventListener('ended', advance);
       playAt(0);
     };
 
-    // The playlist waits until the guest scrolls to it after the intro video.
-    if (typeof IntersectionObserver === 'function') {
-      const observer = new IntersectionObserver((entries) => {
-        if (!entries[0].isIntersecting) return;
-        runPlaylist();
-        observer.disconnect();
-      }, { threshold: 0.4 });
-      observer.observe(playlistSection);
-    } else {
+    // La lista arranca cuando el invitado llega a ella.
+    //
+    // Esto usaba IntersectionObserver y ya nos costó caro dos veces: en la
+    // landing del sitio el observador entregó la intersección ONCE SEGUNDOS
+    // tarde en producción, y probando esta misma sección se comprobó que hay
+    // navegadores donde no dispara NUNCA, con la sección ocupando la pantalla
+    // completa. Cuando eso pasa el invitado se queda mirando un recuadro negro
+    // y la invitación se acaba ahí, sin error ni nada raro en consola.
+    //
+    // Pesa más ahora que la página baja sola hasta acá: antes el invitado
+    // llegaba deslizando y al menos entendía que algo tenía que pasar.
+    //
+    // Se mide a mano contra el viewport, que es lo único que no puede fallar.
+    // El umbral es el mismo 40% de antes.
+    const listaALaVista = () => {
+      const alto = window.innerHeight || 0;
+      if (!alto) return false;
+      const caja = playlistSection.getBoundingClientRect();
+      if (caja.height <= 0) return false;
+      const visible = Math.min(caja.bottom, alto) - Math.max(caja.top, 0);
+      return visible / Math.min(caja.height, alto) >= 0.4;
+    };
+    const revisarLista = (forzar) => {
+      if (started) { dejarDeRevisar(); return; }
+      // `forzar` lo usa el observador: si él dice que la sección se ve, se le
+      // cree aunque la medición diga otra cosa (transform, zoom, contenedores
+      // raros). Al revés también vale: la medición no necesita al observador.
+      if (forzar !== true && !listaALaVista()) return;
       runPlaylist();
+      dejarDeRevisar();
+    };
+    let observador = null;
+    const dejarDeRevisar = () => {
+      window.removeEventListener('scroll', revisarLista);
+      window.removeEventListener('resize', revisarLista);
+      if (observador) { observador.disconnect(); observador = null; }
+    };
+    window.addEventListener('scroll', revisarLista, { passive: true });
+    window.addEventListener('resize', revisarLista);
+    // Y una primera revisión ya, por si la sección entra en pantalla sin que
+    // haya un scroll de por medio (pantallas altas, o el propio avance
+    // automático que llega antes del primer evento).
+    window.requestAnimationFrame(revisarLista);
+
+    // El observador SIGUE puesto, además de la medición. No es cinturón y
+    // tirantes por gusto: probando esto se encontró un navegador donde no
+    // llega ni la intersección NI el evento de scroll, así que ninguno de los
+    // dos alcanza por sí solo, y no hay forma de saber desde acá cuál de los
+    // dos falla en el celular de un invitado. El primero que dispare gana;
+    // `started` impide que la lista arranque dos veces.
+    if (typeof IntersectionObserver === 'function') {
+      observador = new IntersectionObserver((entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        revisarLista(true);
+      }, { threshold: 0.4 });
+      observador.observe(playlistSection);
     }
   }
 

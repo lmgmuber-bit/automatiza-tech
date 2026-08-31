@@ -137,6 +137,20 @@ test('offers fullscreen by tap, never claiming to trigger it on its own', () => 
   assert.ok(!/orientationchange[\s\S]{0,120}enterFullscreen\(\)/.test(html));
 });
 
+test('the closing slide offers the PDF as a download, hidden from the PDF itself', () => {
+  const html = renderProposalHtml(DATA);
+  assert.ok(html.includes('class="pdf-button" href="presentation.pdf" download'));
+  // Relative, so it survives any base URL the renderer is served from.
+  assert.ok(!html.includes('href="https://n8n-propuesta-renderer'));
+  assert.ok(/@media print[\s\S]*?\.pdf-button[\s\S]*?display: none !important/.test(html));
+});
+
+test('the watermark is legible, not the 4% video-grade mark', () => {
+  const html = renderProposalHtml(DATA);
+  assert.ok(html.includes('.at-watermark img { width: 190px'));
+  assert.ok(!html.includes('width: 76px'));
+});
+
 test('the cover keeps its bottom-heavy scrim', () => {
   const img = 'https://example.com/photo.jpg';
   const html = renderProposalHtml(DATA, { cover: img });

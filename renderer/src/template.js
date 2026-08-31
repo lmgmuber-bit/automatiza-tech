@@ -123,6 +123,10 @@ function renderClosingSlide() {
       <div class="closing-right">
         <h2>Hablemos</h2>
         <div class="contact-list">${rows}</div>
+        <a class="pdf-button" href="presentation.pdf" download>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 11l5 5 5-5M4 19h16" /></svg>
+          Descargar la propuesta en PDF
+        </a>
       </div>
     </section>`;
 }
@@ -164,14 +168,19 @@ const STYLE = `
   /* The photo lives on its own layer so the slow zoom can move it without
      dragging the copy along with it. */
   .slide-bg { position: absolute; inset: 0; z-index: 0; background-size: cover; background-position: center; }
-  .at-watermark { position: absolute; top: 32px; left: 32px; z-index: 3; opacity: .4; }
-  .at-watermark img { width: 76px; display: block; }
+  /* The 4%-wide, 40%-opacity watermark is the rule for AT *video*, where it
+     must never compete with the footage. A proposal is a document the client
+     reads: here the logo should be legible, slogan and all. */
+  .at-watermark { position: absolute; top: 40px; left: 44px; z-index: 3; opacity: .92; }
+  .at-watermark img { width: 190px; display: block; }
   .accent-bar { width: 64px; height: 5px; background: #00d9c0; border-radius: 3px; margin: 20px 0; }
   .eyebrow { color: #00d9c0; font-size: 20px; letter-spacing: .15em; text-transform: uppercase; font-weight: 700; }
   .slide-cover .slide-body { position: absolute; left: 64px; right: 64px; bottom: 72px; z-index: 2; }
   .slide-cover h1 { color: #fff; font-size: 72px; font-weight: 800; max-width: 80%; }
   .slide-cover .lede { color: #c9d4e0; font-size: 28px; margin-top: 12px; }
-  .slide-content .slide-text { position: absolute; left: 72px; top: 120px; width: 46%; z-index: 2; }
+  /* Starts below the watermark: at 190px wide the logo reaches ~180px down,
+     and the old 120px offset ran the eyebrow straight through it. */
+  .slide-content .slide-text { position: absolute; left: 72px; top: 240px; width: 46%; z-index: 2; }
   .slide-content h2 { color: #fff; font-size: 46px; font-weight: 800; margin-bottom: 24px; text-shadow: 0 2px 18px rgba(6,13,21,.7); }
   .body-text { color: #dbe4ee; font-size: 26px; line-height: 1.6; text-shadow: 0 1px 12px rgba(6,13,21,.65); }
   .body-list { color: #dbe4ee; font-size: 24px; line-height: 2; padding-left: 28px; text-shadow: 0 1px 12px rgba(6,13,21,.65); }
@@ -192,6 +201,13 @@ const STYLE = `
   .contact-list { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
   .contact-row { color: #dbe4ee; font-size: 24px; text-decoration: none; border-bottom: 1px solid rgba(0,217,192,.35); padding-bottom: 2px; }
   .contact-row:hover { color: #00d9c0; border-bottom-color: #00d9c0; }
+  /* Relative href on purpose: presentation.pdf is the renderer's own sibling
+     of index.html, so this keeps working whatever the base URL ends up being. */
+  .pdf-button { display: inline-flex; align-items: center; gap: 12px; margin-top: 40px; align-self: flex-start;
+    font-size: 22px; font-weight: 700; color: #06222a; background: #00d9c0; text-decoration: none;
+    border-radius: 999px; padding: 18px 32px; }
+  .pdf-button svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .pdf-button:hover { background: #33e3ce; }
 
   @media screen {
     .deck { display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 28px 0 110px; }
@@ -306,7 +322,9 @@ const STYLE = `
   @media print {
     /* Both chrome elements must be gone from the PDF, or the empty progress
        bar tacks a stray blank page onto the end. */
-    .at-bar, .at-progress, .at-rotate, .at-chip { display: none !important; }
+    /* A "download this as PDF" button printed inside the PDF itself is
+       nonsense, so it goes with the rest of the on-screen chrome. */
+    .at-bar, .at-progress, .at-rotate, .at-chip, .pdf-button { display: none !important; }
     .deck { position: static !important; display: block !important; padding: 0 !important; }
     /* No display override here either — the deck's hiding rule is scoped to
        @media screen, so every slide is already visible in the PDF pass and

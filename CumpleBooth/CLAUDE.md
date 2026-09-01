@@ -180,9 +180,22 @@ localhost. Es idempotente salvo los tokens, que se reemiten. Ojo:
 `carreras/fondo-banner.jpg` **es un PNG** con nombre `.jpg` — el navegador lo
 olfatea y no se nota, GD no, por eso el script despacha por contenido.
 
-**Héroes no tiene recorrido.** No figura en `$playlistOrdersByTheme` y en disco
-sólo tiene `revelacion-heroes.mp4`: ni saludos ni despedida. Su invitación se
-muestra sin capítulos. Es anterior a este trabajo y sigue abierto.
+**Héroes: saludos y despedida generados (2026-09-01), sigue sin recorrido de
+invitación.** `public/themes/heroes/` ya tiene los 6 videos que faltaban —
+`saludo-hierro.mp4`, `saludo-gigante.mp4`, `saludo-capitan.mp4`,
+`saludo-trueno.mp4`, `saludo-pantera.mp4` y `despedida-heroes.mp4` — generados
+con Higgsfield (kling3_0, imagen-a-video) y desplegados a PROD. `saludo-arana.mp4`
+(Spider-Man) sigue SIN generar: la imagen fuente `arana.jpg` rebota por filtro
+de contenido nsfw en dos modelos distintos (kling3_0 y seedance_2_5) pese a
+prompts family-friendly explícitos; probablemente el traje ajustado + pose de
+acción fotorrealista disparan el filtro. Aparece igual celebrando en
+`despedida-heroes.mp4` porque esa escena sale de `fondo-banner.jpg`, que ya
+trae a los 6 personajes. El `photoSession` de Héroes en `themes.json` sigue
+referenciando `comic-cobra-vida.mp4`/`comic-cobra-vida-poster.jpg`/
+`comic-teaser.jpg`, que no existen — quedó pendiente, prioridad más baja.
+Héroes **sigue sin figurar en `$playlistOrdersByTheme`**: no tiene recorrido de
+capítulos en la invitación (eso es un trabajo aparte, más grande, no solo los
+saludos del kiosco).
 
 Las migraciones `010_baby_shower_predictions.php` y `011_gift_mode.php` **no
 están aplicadas en producción**. Sí lo están en local desde el 2026-08-27

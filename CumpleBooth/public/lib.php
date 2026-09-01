@@ -1235,6 +1235,86 @@ function cb_photo_absolute_path(string $storageKey): ?string
     return cb_photo_root() . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $storageKey);
 }
 
+/**
+ * Miniatura de una foto de cabina, generada una vez y cacheada junto al
+ * original como `<archivo>.thumb.jpg`.
+ *
+ * POR QUE EXISTE
+ *   El Album Recuerdo mostraba las fotos de cabina en tamano completo: el API
+ *   decia "la cabina no genera miniatura; el original ya es JPEG/PNG del
+ *   kiosco", asumiendo originales livianos. En la practica son composiciones
+ *   de 1080x1920 de 2-3MB, y un album con 9 fotos de cabina cargaba mas de
+ *   20MB en el celular del invitado. Las fotos de invitados si tenian
+ *   miniatura (48KB): esta funcion empareja a las de cabina.
+ *
+ * El formato se detecta por CONTENIDO, no por extension: las claves de
+ * almacenamiento terminan todas en .png aunque el archivo sea JPEG, y
+ * imagecreatefrompng sobre un JPEG devuelve false sin avisar (ya nos paso:
+ * fotos compuestas con el marco vacio y ningun error en el log).
+ *
+ * Devuelve null ante cualquier problema: el que llama sirve el original y la
+ * pagina nunca se rompe, solo pesa mas.
+ */
+function cb_photo_thumbnail_path(string $originalPath): ?string
+{
+    if (!is_file($originalPath) || !function_exists('imagecreatetruecolor')) {
+        return null;
+    }
+    $thumbPath = $originalPath . '.thumb.jpg';
+    if (is_file($thumbPath) && filemtime($thumbPath) >= filemtime($originalPath)) {
+        return $thumbPath;
+    }
+
+    $info = @getimagesize($originalPath);
+    $type = $info[2] ?? 0;
+    $src = null;
+    if ($type === IMAGETYPE_PNG) {
+        $src = @imagecreatefrompng($originalPath);
+    } elseif ($type === IMAGETYPE_JPEG) {
+        $src = @imagecreatefromjpeg($originalPath);
+    } elseif ($type === IMAGETYPE_WEBP && function_exists('imagecreatefromwebp')) {
+        $src = @imagecreatefromwebp($originalPath);
+    }
+    if (!$src) {
+        return null;
+    }
+    $srcW = imagesx($src);
+    $srcH = imagesy($src);
+    if ($srcW < 1 || $srcH < 1) {
+        imagedestroy($src);
+        return null;
+    }
+    // El mismo lado maximo que las miniaturas de invitados (thumb_max_side),
+    // para que en la revista pesen y se vean parejo. Un original ya pequeno no
+    // se agranda: se copia tal cual a JPEG.
+    $max = 640;
+    $scale = min(1.0, $max / max($srcW, $srcH));
+    $dstW = max(1, (int) round($srcW * $scale));
+    $dstH = max(1, (int) round($srcH * $scale));
+    $dst = imagecreatetruecolor($dstW, $dstH);
+    // JPEG no tiene alfa: blanco de fondo para que un PNG transparente no
+    // salga negro, igual que hace cb_album_make_thumbnail.
+    $white = imagecolorallocate($dst, 255, 255, 255);
+    imagefilledrectangle($dst, 0, 0, $dstW, $dstH, $white);
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, $dstW, $dstH, $srcW, $srcH);
+    imagedestroy($src);
+
+    // A un archivo temporal y luego rename: si dos peticiones generan la misma
+    // miniatura a la vez, ninguna sirve un JPEG a medio escribir.
+    $tmp = $thumbPath . '.' . bin2hex(random_bytes(4)) . '.tmp';
+    $ok = imagejpeg($dst, $tmp, 82);
+    imagedestroy($dst);
+    if (!$ok) {
+        @unlink($tmp);
+        return null;
+    }
+    if (!@rename($tmp, $thumbPath)) {
+        @unlink($tmp);
+        return null;
+    }
+    return $thumbPath;
+}
+
 function cb_photo_usage(string $partySlug): array
 {
     if (cb_storage_mode() === 'db') {

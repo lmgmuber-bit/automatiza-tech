@@ -188,7 +188,11 @@ foreach (cb_album_list_media((int) $album['id'], ['approved']) as $row) {
             continue; // foto de cabina sin token utilizable: se omite en silencio
         }
         $url = 'ver.php?t=' . rawurlencode($photoToken) . '&download=inline';
-        $thumb = $url; // la cabina no genera miniatura; el original ya es JPEG/PNG del kiosco
+        // La miniatura la genera ver.php al vuelo y la cachea junto al
+        // original. El supuesto anterior ("el original ya es liviano") era
+        // falso: las composiciones del kiosco pesan 2-3MB y un álbum con 9
+        // fotos de cabina cargaba más de 20MB.
+        $thumb = $url . '&v=thumb';
         $poster = null;
     } else {
         $accessToken = (string) ($row['access_token'] ?? '');

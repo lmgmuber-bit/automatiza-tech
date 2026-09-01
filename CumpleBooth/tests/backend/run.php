@@ -548,4 +548,49 @@ foreach (['invitacion.php', 'predicciones.php', 'regalos-papas.php', 'galeria.ph
     check(strpos($fuente, 'name="theme-color"') !== false, "$paginaConBarra imprime el color de la barra");
 }
 
+// -- Miniaturas de fotos de cabina en el Album Recuerdo ---------------------
+// El album servia las fotos de cabina en tamano completo (2-3MB cada una: un
+// album de 9 cargaba mas de 20MB en el celular). cb_photo_thumbnail_path()
+// genera una miniatura JPEG de 640px cacheada junto al original.
+$fotoGrande = $tmp . '/foto-cabina-test.png';
+$imgGrande = imagecreatetruecolor(1080, 1920);
+imagefilledrectangle($imgGrande, 0, 0, 1079, 1919, imagecolorallocate($imgGrande, 40, 90, 160));
+imagepng($imgGrande, $fotoGrande);
+imagedestroy($imgGrande);
+
+$rutaThumb = cb_photo_thumbnail_path($fotoGrande);
+check($rutaThumb !== null && is_file($rutaThumb), 'la miniatura de cabina se genera');
+$infoThumb = getimagesize((string) $rutaThumb);
+check(($infoThumb['mime'] ?? '') === 'image/jpeg', 'la miniatura es JPEG');
+check(max((int) $infoThumb[0], (int) $infoThumb[1]) <= 640, 'la miniatura no pasa de 640px de lado');
+check(filesize((string) $rutaThumb) < filesize($fotoGrande), 'la miniatura pesa menos que el original');
+
+// El cache: la segunda llamada devuelve el MISMO archivo sin regenerarlo.
+$mtimeAntes = filemtime((string) $rutaThumb);
+clearstatcache();
+check(cb_photo_thumbnail_path($fotoGrande) === $rutaThumb, 'la segunda llamada reusa el cache');
+check(filemtime((string) $rutaThumb) === $mtimeAntes, 'el cache no se regenera si el original no cambio');
+
+// Contenido JPEG bajo clave .png: el formato se detecta por contenido, no por
+// extension (imagecreatefrompng sobre un JPEG devuelve false sin avisar).
+$jpegDisfrazado = $tmp . '/foto-jpeg-disfrazada.png';
+$imgJ = imagecreatetruecolor(800, 1200);
+imagefilledrectangle($imgJ, 0, 0, 799, 1199, imagecolorallocate($imgJ, 120, 60, 30));
+imagejpeg($imgJ, $jpegDisfrazado, 90);
+imagedestroy($imgJ);
+check(cb_photo_thumbnail_path($jpegDisfrazado) !== null, 'un JPEG guardado bajo clave .png tambien genera miniatura');
+
+// Un archivo que no es imagen no revienta nada: devuelve null y se sirve el
+// original.
+$noImagen = $tmp . '/no-imagen.png';
+file_put_contents($noImagen, 'esto no es una imagen');
+check(cb_photo_thumbnail_path($noImagen) === null, 'un archivo corrupto devuelve null, no un fatal');
+
+// Y el API del album tiene que PEDIR la miniatura para las fotos de cabina:
+// sin el `v=thumb` en la URL, todo lo de arriba no sirve de nada.
+$fuenteAlbumApi = (string) file_get_contents(dirname(__DIR__, 2) . '/public/album-api.php');
+// No basta buscar `v=thumb` (la rama de invitados tambien lo tiene): lo que
+// delata la regresion es que reaparezca la asignacion vieja sin miniatura.
+check(strpos($fuenteAlbumApi, '$thumb = $url;') === false, 'la rama de cabina de album-api no volvio a servir el original como miniatura');
+
 fwrite(STDOUT, "OK $tests checks backend\n");

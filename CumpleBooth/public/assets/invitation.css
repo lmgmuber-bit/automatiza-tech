@@ -789,9 +789,23 @@ body.inv-scroll-locked {
 button.inv-scroll-hint {
   border: 0;
   font: inherit;
-  color: inherit;
+  /* Blanco EXPLICITO, no inherit: `button.inv-scroll-hint` es mas especifico
+     que `.inv-scroll-hint`, asi que un inherit aca pisaba el blanco de la
+     base con el color apagado del contenedor y el texto se veia opaco
+     (reporte de Luis 2026-09-01). */
+  color: #fff;
+  opacity: 1;
   cursor: pointer;
   transition: opacity 320ms ease, visibility 320ms ease;
+}
+
+/* La regla de arriba puso opacity:1 con mas especificidad que la base: el
+   estado oculto lo tiene que volver a ganar, o el boton se ve desde el
+   primer segundo. */
+button.inv-scroll-hint.inv-scroll-hint--waiting {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
 }
 
 @keyframes inv-hint-pop {

@@ -782,6 +782,18 @@ body.inv-scroll-locked {
   visibility: hidden;
 }
 
+/* El hint del hero también puede ser un <button> (variante "toca para
+   seguir"): mismo aspecto que el <a>/<span>, sin el traje de botón del
+   navegador. La transición hace que a los 3 segundos aparezca en un fundido
+   en vez de saltar. */
+button.inv-scroll-hint {
+  border: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: opacity 320ms ease, visibility 320ms ease;
+}
+
 @keyframes inv-hint-pop {
   0% { transform: scale(1); }
   40% { transform: scale(1.12); }

@@ -1242,10 +1242,22 @@ $cssVer = static function (string $rel): string {
             // recorrido con los personajes. Queda solo como invitación a
             // seguir bajando, sin `href`. ?>
       <?php if ($hasStoryAheadOfPlate): ?>
-      <span class="inv-scroll-hint<?= $heroAutoUrl !== '' ? ' inv-scroll-hint--waiting' : '' ?>" data-inv-scroll-only<?= $heroAutoUrl !== '' ? ' data-inv-auto-hint aria-hidden="true"' : '' ?>>
+      <?php if ($heroAutoUrl !== ''): ?>
+      <?php // Con hero automático el hint lo gobierna markReady: ni botón ni espera. ?>
+      <span class="inv-scroll-hint inv-scroll-hint--waiting" data-inv-scroll-only data-inv-auto-hint aria-hidden="true">
         <span>Desliza para seguir</span>
         <span class="inv-scroll-arrow" aria-hidden="true"></span>
       </span>
+      <?php else: ?>
+      <?php // Botón, no un cartel: el clic lleva a los videos (pedido de Luis
+            // 2026-08-31). Parte oculto y invitation.js lo muestra a los 3
+            // segundos, para que primero se lean el nombre y los contadores.
+            // Deslizar a mano funciona desde el primer instante igual. ?>
+      <button type="button" class="inv-scroll-hint inv-scroll-hint--waiting" data-inv-scroll-only data-inv-historia aria-hidden="true">
+        <span>Toca para seguir</span>
+        <span class="inv-scroll-arrow" aria-hidden="true"></span>
+      </button>
+      <?php endif; ?>
       <?php else: ?>
       <a class="inv-scroll-hint" href="#inv-detalles">
         <span>Ver invitación</span>

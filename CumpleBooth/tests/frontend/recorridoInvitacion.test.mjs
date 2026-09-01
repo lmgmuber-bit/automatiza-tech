@@ -29,25 +29,38 @@ import { dirname, join } from 'node:path'
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const js = readFileSync(join(raiz, 'public/assets/invitation.js'), 'utf8')
 
-test('sin narración de intro el avance automático igual se habilita', () => {
-  assert.match(
-    js,
-    /if \(narrationIntro instanceof HTMLAudioElement\) \{[\s\S]*?\} else \{[\s\S]*?introNarrationEnded = true;/,
-    'volvió a quedar sin la rama else: en baby shower el avance no se dispara nunca',
+/**
+ * La portada de un baby shower NO baja sola: el invitado decide.
+ *
+ * Historia completa de este punto, porque cambió tres veces en un día:
+ * 1. No pasaba nada nunca (el avance esperaba una narración que no existe).
+ * 2. Se puso un scroll automático a los 1,2s — y Luis lo devolvió: se sentía
+ *    apurado; la portada tiene el nombre, la fecha y los contadores.
+ * 3. Forma final (pedido de Luis 2026-08-31): un BOTÓN "Toca para seguir" que
+ *    aparece a los 3 segundos y cuyo clic lleva a los videos; deslizar a mano
+ *    vale desde el primer instante. Las invitaciones CON narración de Alice
+ *    conservan su avance automático aprobado de 2026-08-12.
+ */
+test('sin narración no hay bajada automática: el que baja es el invitado', () => {
+  assert.ok(!/programarBajadaAutomatica/.test(js), 'volvió el scroll automático de portada')
+  assert.ok(
+    !/\} else \{[\s\S]{0,900}?introNarrationEnded = true;/.test(js),
+    'la rama sin narración volvió a habilitar el avance automático',
   )
 })
 
-test('los dos caminos de entrada programan la bajada a los videos', () => {
-  // Con intro temático y sin él. Si uno de los dos se queda sin la llamada, la
-  // mitad de las invitaciones vuelve a quedarse quieta en la portada.
-  const conIntro = /startInvitationAudioAfterThemeIntro = \(\) => \{[\s\S]{0,200}?programarBajadaAutomatica\(\);/
-  const sinIntro = /const startMusic = \(\) => \{[\s\S]{0,300}?programarBajadaAutomatica\(\);/
-  assert.match(js, conIntro, 'falta la bajada automática tras el intro temático')
-  assert.match(js, sinIntro, 'falta la bajada automática cuando no hay intro temático')
+test('el botón de la historia aparece a los 3 segundos y se arma en los dos caminos de entrada', () => {
+  assert.match(js, /const ESPERA_BOTON_HISTORIA = 3000;/)
+  const conIntro = /startInvitationAudioAfterThemeIntro = \(\) => \{[\s\S]{0,200}?armarBotonHistoria\(\);/
+  const sinIntro = /const startMusic = \(\) => \{[\s\S]{0,300}?armarBotonHistoria\(\);/
+  assert.match(js, conIntro, 'falta armar el botón tras el intro temático')
+  assert.match(js, sinIntro, 'falta armar el botón cuando no hay intro temático')
+  assert.match(js, /botonHistoria\.addEventListener\('click', irALaHistoria\)/)
 })
 
-test('la bajada automática es idempotente y respeta el hero automático', () => {
-  assert.match(js, /if \(bajadaProgramada \|\| autoAdvanced \|\| reducedMotion\.matches\) return;/)
+test('el botón existe en el HTML como <button> y parte oculto', () => {
+  const pagina = readFileSync(join(raiz, 'public/invitacion.php'), 'utf8')
+  assert.match(pagina, /<button type="button" class="inv-scroll-hint inv-scroll-hint--waiting" data-inv-scroll-only data-inv-historia/)
 })
 
 test('"Ver invitación" aparece cuando los videos TERMINAN, no al empezar el último', () => {

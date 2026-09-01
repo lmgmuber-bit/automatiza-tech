@@ -152,31 +152,37 @@
       introNarrationEnded = true;
       maybeAutoAdvance();
     }, { once: true });
-  } else {
-    // Sin narración de intro no hay nada que esperar, y hay que decirlo
-    // explícitamente: `introNarrationEnded` arranca en false, así que en una
-    // invitación sin audio de Alice en la portada —las tres de baby shower—
-    // se quedaba en false para siempre y `maybeAutoAdvance` salía por la
-    // primera línea. El avance automático simplemente no existía: el invitado
-    // abría el sobre y quedaba parado en la portada hasta que deslizaba a
-    // mano (reporte de Luis 2026-08-31). No fallaba nada, no había error en
-    // consola; sólo no pasaba nada.
-    introNarrationEnded = true;
   }
 
-  // Cuánto se queda la portada antes de que la página baje sola. Alcanza para
-  // que termine la animación del sobre (620 + 380 ms en el CSS) y para que el
-  // invitado vea dónde está parado; más que esto ya se siente trabado.
-  const PAUSA_ANTES_DE_BAJAR = 1200;
-  let bajadaProgramada = false;
-  // La llaman los dos caminos de entrada —con intro temático y sin él— y
-  // `startMusic` puede dispararse varias veces, así que tiene que ser
-  // idempotente. Con hero automático no hace nada: ahí el scroll está
-  // bloqueado y es `markReady` quien avanza cuando el video termina.
-  const programarBajadaAutomatica = () => {
-    if (bajadaProgramada || autoAdvanced || reducedMotion.matches) return;
-    bajadaProgramada = true;
-    window.setTimeout(maybeAutoAdvance, PAUSA_ANTES_DE_BAJAR);
+  // Sin narración de Alice en la portada (los baby shower), la página NO baja
+  // sola: primero hubo un hueco donde no pasaba nada nunca, después un scroll
+  // automático a los 1,2s — y Luis lo devolvió: se sentía apurado, la portada
+  // tiene el nombre, la fecha y los dos contadores y el invitado quiere
+  // leerlos (2026-08-31: "mejor que el usuario le dé click para deslizar,
+  // pero que aparezca a los 3 segundos"). Así que: el botón "Toca para
+  // seguir" aparece a los 3 segundos, y el clic lleva a los videos, que ahí
+  // sí corren solos. Deslizar a mano sigue funcionando desde el primer
+  // instante, sin esperar al botón.
+  const ESPERA_BOTON_HISTORIA = 3000;
+  const botonHistoria = document.querySelector('.inv-hero [data-inv-historia]');
+  let historiaArmada = false;
+  const irALaHistoria = () => {
+    const heroSection = document.querySelector('.inv-hero');
+    const nextSection = heroSection ? heroSection.nextElementSibling : null;
+    const target = nextSection
+      ? nextSection.getBoundingClientRect().top + window.scrollY
+      : window.scrollY + window.innerHeight;
+    window.scrollTo({ top: target, behavior: reducedMotion.matches ? 'auto' : 'smooth' });
+  };
+  const armarBotonHistoria = () => {
+    if (historiaArmada || !botonHistoria) return;
+    historiaArmada = true;
+    botonHistoria.addEventListener('click', irALaHistoria);
+    window.setTimeout(() => {
+      botonHistoria.classList.remove('inv-scroll-hint--waiting');
+      botonHistoria.classList.add('inv-scroll-hint--ready');
+      botonHistoria.removeAttribute('aria-hidden');
+    }, ESPERA_BOTON_HISTORIA);
   };
 
   // El intro temático dura 15 segundos. Si esperamos a que termine para llamar
@@ -243,7 +249,7 @@
   const startMusic = () => {
     // In video mode the first gesture starts video, music and Alice together.
     if (typeof startAutoHero === 'function') startAutoHero();
-    programarBajadaAutomatica();
+    armarBotonHistoria();
     primeOutro();
     if (musicStarted) {
       if (introNarrationTriggered || !narrationIntro) {
@@ -317,7 +323,7 @@
 
   const startInvitationAudioAfterThemeIntro = () => {
     if (typeof startAutoHero === 'function') startAutoHero();
-    programarBajadaAutomatica();
+    armarBotonHistoria();
     primeOutro();
     const activateAudio = () => {
       if (musicStarted) {

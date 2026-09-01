@@ -97,6 +97,8 @@ $isoUtc = static function ($value): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive">
+  <?php $ccBarra = cb_theme_meta_color($themeSlug); ?>
+  <?php if ($ccBarra !== ''): ?><meta name="theme-color" content="<?= $escape($ccBarra) ?>"><?php endif; ?>
   <title><?= $invalid ? 'Enlace no disponible' : $escape($tituloPestana) ?> · CumpleClick</title>
   <link rel="icon" href="brand/cumpleclick-mark.svg" type="image/svg+xml">
   <style>

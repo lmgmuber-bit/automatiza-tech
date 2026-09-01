@@ -518,4 +518,34 @@ check(
     'lead persiste sin guardar IP en claro'
 );
 
+// -- Color de la barra del navegador en las paginas PHP ---------------------
+// El kiosco y el album lo resuelven en JS; invitacion, regalos, predicciones y
+// galeria son PHP puro y se quedaban con la barra gris del navegador. Ahora
+// sale de la tematica, igual que en el front y con el mismo token (accent).
+check(cb_theme_meta_color('hielo') === '#29b6f6', 'la barra toma el accent de Reino de Hielo');
+check(cb_theme_meta_color('carreras') === '#e8000d', 'la barra toma el accent de Carreras');
+check(cb_theme_meta_color('baby-safari') === '#7A9455', 'la barra toma el accent de Bebe Safari');
+check(cb_theme_meta_color('princesas') === '#ab47bc', 'la barra toma el accent de Princesas');
+// Sin tematica, o con una inventada, no se inventa un color: mejor la barra por
+// defecto del navegador que una que no corresponde a nada.
+check(cb_theme_meta_color('') === '', 'sin tematica no se imprime color de barra');
+check(cb_theme_meta_color('no-existe') === '', 'una tematica inexistente no inventa color');
+
+// TODAS las tematicas publicadas tienen que poder pintar la barra. Si manana
+// alguien agrega una sin accent, el navegador le pondria gris y nadie se
+// enteraria hasta abrirla en un celular.
+$temasSinBarra = [];
+foreach (array_keys(cb_load_themes()['themes'] ?? []) as $slugTema) {
+    if (cb_theme_meta_color((string) $slugTema) === '') { $temasSinBarra[] = $slugTema; }
+}
+check($temasSinBarra === [], 'todas las tematicas definen color de barra; sin el: ' . implode(', ', $temasSinBarra));
+
+// Y las cuatro paginas PHP tienen que imprimirlo. Es un chequeo sobre el
+// archivo porque montar cada pagina con su token cuesta mas de lo que protege;
+// lo que se fija es que nadie borre el meta sin darse cuenta.
+foreach (['invitacion.php', 'predicciones.php', 'regalos-papas.php', 'galeria.php'] as $paginaConBarra) {
+    $fuente = (string) file_get_contents(dirname(__DIR__, 2) . '/public/' . $paginaConBarra);
+    check(strpos($fuente, 'name="theme-color"') !== false, "$paginaConBarra imprime el color de la barra");
+}
+
 fwrite(STDOUT, "OK $tests checks backend\n");

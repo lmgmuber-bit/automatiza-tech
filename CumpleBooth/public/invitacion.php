@@ -1070,7 +1070,9 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title><?= $esc($tituloInvitacion) ?> · CumpleClick</title>
+<?php $ccBarra = cb_theme_meta_color($themeSlug); ?>
+<?php if ($ccBarra !== ''): ?><meta name="theme-color" content="<?= $esc($ccBarra) ?>">
+<?php endif; ?><title><?= $esc($tituloInvitacion) ?> · CumpleClick</title>
 <?php
 // Tarjeta al compartir por WhatsApp y redes. A propósito NO lleva la dirección:
 // la vista previa se muestra en cada grupo donde se reenvíe el enlace y Meta la

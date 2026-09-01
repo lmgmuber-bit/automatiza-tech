@@ -2306,6 +2306,31 @@ function cb_theme_css_vars(string $themeSlug): string
     return $out ? implode(';', $out) . ';' : '';
 }
 
+/**
+ * El color con que el navegador pinta su barra (`<meta name="theme-color">`).
+ *
+ * En el kiosco y en el álbum lo pone applyThemeColors() al vuelo, pero estas
+ * páginas son PHP puro y no pasan por ahí: se quedaban con la barra gris de
+ * Chrome mientras el resto de la experiencia iba en el color del tema. Salta a
+ * la vista al saltar del kiosco a la invitación en el celular.
+ *
+ * Mismo criterio que en el front: se usa `accent`, el color con el que ya se
+ * reconoce cada temática. Devuelve '' si el tema no existe o no declara accent,
+ * y en ese caso NO se imprime el meta: mejor la barra por defecto del navegador
+ * que un color inventado.
+ */
+function cb_theme_meta_color(string $themeSlug): string
+{
+    if ($themeSlug === '') {
+        return '';
+    }
+    $themes = cb_load_themes();
+    $accent = (string) ($themes['themes'][$themeSlug]['colors']['accent'] ?? '');
+    // Solo hexadecimal, igual que cb_theme_css_vars: esto entra en un atributo
+    // HTML y lo que no calce se descarta en vez de escaparse.
+    return preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent) === 1 ? $accent : '';
+}
+
 // Módulo de invitaciones (depende de cb_config, cb_pdo, etc.).
 require __DIR__ . '/lib.invitations.php';
 

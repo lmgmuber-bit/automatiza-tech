@@ -109,6 +109,8 @@ $avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', '
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive">
+  <?php $ccBarra = cb_theme_meta_color((string) ($acceso['theme_slug'] ?? '')); ?>
+  <?php if ($ccBarra !== ''): ?><meta name="theme-color" content="<?= $esc($ccBarra) ?>"><?php endif; ?>
   <title><?= $invalido ? 'Enlace no disponible' : ($esAbierto ? 'Los regalos' : 'Lista de regalos') ?> · CumpleClick</title>
   <link rel="icon" href="brand/cumpleclick-mark.svg" type="image/svg+xml">
   <style>

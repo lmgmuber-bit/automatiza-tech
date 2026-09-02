@@ -608,6 +608,14 @@ body.inv-theme-intro-active {
   overflow: hidden;
 }
 
+/* Spidey: los tres personajes del fondo ocupan justo el centro, donde el
+   grid centra el texto — el nombre y la fecha les tapaban la cara (Luis lo
+   reportó con captura). El bloque baja al pavimento de la escena; el resto
+   de temáticas conserva el centrado de siempre. */
+[data-theme="spidey"] .inv-hero-stage {
+  align-content: end;
+}
+
 /* El fondo temático es atmósfera, no ilustración: desenfocado y desaturado
    deja de competir con el nombre. La pieza que sí se ve nítida es la
    invitación misma, más abajo. */

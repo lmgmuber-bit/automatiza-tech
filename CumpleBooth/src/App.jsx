@@ -13,6 +13,7 @@ import StageConcert3D from './StageConcert3D.jsx'
 import { createAudioKit, createBeatClock, DEFAULT_BPM } from './gameAudio.js'
 import { configurarRecords, guardarRecord, textoRecord, formatoSegundos } from './records.js'
 import { resolveThemeFlow } from './themeFlow.js'
+import { conVersion } from './assetVersion.js'
 import { selectSpinnerWinnerIndex } from './spinnerWinner.js'
 import { PREDICTION_OPTIONS, createPredictionSubmissionToken, predictionLabels, predictionSummary, validPrediction } from './predictions.js'
 
@@ -32,6 +33,8 @@ const BASE = import.meta.env.BASE_URL // base relativa './' — funciona en cual
 const BRAND_LOGO_SRC = BASE + 'brand/cumpleclick-mark.svg'
 
 let CONFIG = null
+// Versión de assets del tema activo (rompe-cache). La escribe buildRuntime.
+let ASSETS_VERSION = 0
 let PARTY_SLUG = null
 let THEME_SLUG = null
 let STORAGE_KEY = null
@@ -102,7 +105,7 @@ function applyThemeVars(colors) {
     // tras el build de Vite), no contra index.html — con ruta relativa termina
     // pidiendo dist/assets/themes/... (404). Con new URL() queda absoluta y
     // no importa dónde vive el CSS.
-    const grupoUrl = new URL(BASE + 'themes/' + THEME_SLUG + '/grupo-personajes.png', document.baseURI).href
+    const grupoUrl = new URL(conVersion(BASE + 'themes/' + THEME_SLUG + '/grupo-personajes.png', ASSETS_VERSION), document.baseURI).href
     root.setProperty('--grupo-bg', `url("${grupoUrl}")`)
   }
   if (CONFIG?.images?.roulette) {
@@ -118,10 +121,15 @@ function applyThemeVars(colors) {
 function buildRuntime(party, theme, slug) {
   PARTY_SLUG = slug
   THEME_SLUG = theme.slug || slug
-  WELCOME_VIDEO_PRIMARY = theme.videos?.welcome || BASE + 'welcome-car.mp4'
-  REVELACION_VIDEO = theme.videos?.revelacion ? BASE + theme.videos.revelacion : null
+  // Rompe-cache: toda URL de asset DEL TEMA pasa por ver(). Los genéricos
+  // compartidos (videos/, audio/) quedan sin versión: no viven en la carpeta
+  // del tema y casi nunca cambian.
+  ASSETS_VERSION = Number(theme.assetsVersion) || 0
+  const ver = (u) => conVersion(u, ASSETS_VERSION)
+  WELCOME_VIDEO_PRIMARY = theme.videos?.welcome ? ver(theme.videos.welcome) : BASE + 'welcome-car.mp4'
+  REVELACION_VIDEO = theme.videos?.revelacion ? ver(BASE + theme.videos.revelacion) : null
   WELCOME_VIDEO_ALT = THEME_SLUG === 'carreras'
-    ? BASE + 'themes/carreras/saludo-rayo-mcqueen-v3.mp4'
+    ? ver(BASE + 'themes/carreras/saludo-rayo-mcqueen-v3.mp4')
     : null
   STORAGE_KEY = 'booth_' + slug
   // Marcador de la fiesta: los récords se guardan por slug, así una fiesta
@@ -145,23 +153,23 @@ function buildRuntime(party, theme, slug) {
       // siquiera existe en disco — VideoScreen ya cae a una tarjeta con
       // emoji si el archivo falla, así que temas sin despedida propia
       // siguen viéndose exactamente igual que antes de esto.
-      despedida: theme.videos?.despedida ? BASE + theme.videos.despedida : BASE + 'videos/despedida.mp4',
+      despedida: theme.videos?.despedida ? ver(BASE + theme.videos.despedida) : BASE + 'videos/despedida.mp4',
     },
     images: {
-      fondo: BASE + theme.images.sala, // sala con marco dorado (compositing + transicion)
-      bienvenida: BASE + theme.images.banner, // pantalla de bienvenida (intro)
-      roulette: theme.images.roulette ? BASE + theme.images.roulette : null,
+      fondo: ver(BASE + theme.images.sala), // sala con marco dorado (compositing + transicion)
+      bienvenida: ver(BASE + theme.images.banner), // pantalla de bienvenida (intro)
+      roulette: theme.images.roulette ? ver(BASE + theme.images.roulette) : null,
     },
     audio: {
       captura: BASE + 'audio/captura.mp3', // opcional, genérico (no por temática)
       confetti: BASE + 'audio/confetti.mp3', // opcional, genérico (no por temática)
       nota: BASE + 'audio/nota.mp3', // opcional, genérico: al atrapar en el juego de copos
       error: BASE + 'audio/error.mp3', // opcional, genérico: al tocar una trampa en el juego de copos
-      musica: BASE + theme.musica, // música de fondo en loop
+      musica: ver(BASE + theme.musica), // música de fondo en loop
       // Música exclusiva de la pantalla de juegos (Luis, 2026-07-26: en los
       // juegos suena "Y si hacemos un muñeco", en el resto "Libre soy").
       // Sin este archivo el juego conserva la música de fondo normal.
-      musicaJuego: theme.musicaJuego ? BASE + theme.musicaJuego : null,
+      musicaJuego: theme.musicaJuego ? ver(BASE + theme.musicaJuego) : null,
     },
     // Endpoint PHP que guarda la foto y devuelve URL pública (solo en prod/Hostinger).
     // En localhost no existe → el QR cae a texto automáticamente.
@@ -188,29 +196,33 @@ function buildRuntime(party, theme, slug) {
   CHAR_PNG = {}
   CHAR_RUN_ATLAS = {}
   THEME_FLOW = resolveThemeFlow(theme)
+  // Las URLs que publica el flujo también son assets del tema.
+  for (const campo of ['photoSessionVideo', 'photoSessionPoster', 'photoSessionTeaser', 'photoSessionTeaserVideo', 'starVideo']) {
+    if (THEME_FLOW[campo]) THEME_FLOW[campo] = ver(THEME_FLOW[campo])
+  }
   ;(theme.personajes || []).forEach((p) => {
-    CHAR_IMG[p.name] = BASE + p.img
+    CHAR_IMG[p.name] = ver(BASE + p.img)
     // Video de saludo OPCIONAL por temática: themes/<tema>/saludo-<base-del-img>.mp4
     // (si el archivo no existe, VideoPersonaje cae a la imagen automáticamente)
-    CHAR_VIDEO[p.name] = BASE + p.img.replace(/([^/]+)\.(jpe?g|png)$/i, 'saludo-$1.mp4')
+    CHAR_VIDEO[p.name] = ver(BASE + p.img.replace(/([^/]+)\.(jpe?g|png)$/i, 'saludo-$1.mp4'))
     // Narración OPCIONAL antes del juego: themes/<tema>/invitacion-juego-<base-del-img>.mp3
-    CHAR_JUEGO_AUDIO[p.name] = BASE + p.img.replace(/([^/]+)\.(jpe?g|png)$/i, 'invitacion-juego-$1.mp3')
+    CHAR_JUEGO_AUDIO[p.name] = ver(BASE + p.img.replace(/([^/]+)\.(jpe?g|png)$/i, 'invitacion-juego-$1.mp3'))
     // Recorte transparente OPCIONAL del personaje (themes/<slug>/<base>-cut.png).
     // Solo se registra si el backend confirmó que el archivo existe (pngExists).
     if (p.pngExists && p.png) {
-      CHAR_PNG[p.name] = BASE + p.png
+      CHAR_PNG[p.name] = ver(BASE + p.png)
     }
     // El backend publica el atlas únicamente en plan Full y tras confirmar
     // que existe en disco. ThemeWorld3D conserva fallback al recorte/JPG si
     // la carga falla después (por ejemplo, un FTP incompleto).
     if (p.runnerAtlasExists && p.runnerAtlas) {
-      CHAR_RUN_ATLAS[p.name] = BASE + p.runnerAtlas
+      CHAR_RUN_ATLAS[p.name] = ver(BASE + p.runnerAtlas)
     }
   })
   INVITADOS_DEFAULT = Array.isArray(party.invitados) ? party.invitados : []
   preloadBrandLogo()
   // Precarga imagen grupal para watermark en diploma
-  const grupoUrl = BASE + 'themes/' + THEME_SLUG + '/grupo-personajes.png'
+  const grupoUrl = ver(BASE + 'themes/' + THEME_SLUG + '/grupo-personajes.png')
   const gi = new Image()
   gi.onload = () => { GRUPO_IMG = gi }
   gi.src = grupoUrl

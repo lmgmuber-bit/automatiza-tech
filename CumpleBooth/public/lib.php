@@ -767,6 +767,45 @@ function cb_sanitize_party_games($raw): ?array
     return $out;
 }
 
+/**
+ * Versión de los assets de una temática: el mtime más nuevo de su carpeta.
+ *
+ * Existe por el fantasma del cache: los archivos de temática se reemplazan
+ * CON EL MISMO NOMBRE (la convención saludo-<img>.mp4 no es negociable), así
+ * que navegadores y CDN siguen sirviendo el archivo viejo hasta que su cache
+ * expira. Se vio en vivo dos veces el mismo día: la tablet de Luis mostrando
+ * el fondo-banner anterior de Héroes tras corregirlo, y el CDN de Hostinger
+ * sirviendo el welcome-heroes.mp4 previo (x-hcdn HIT). El front agrega este
+ * número como ?v= a cada URL de asset del tema: cambia un archivo, cambia la
+ * URL, y el cache queda fuera de la jugada.
+ *
+ * Es UNA versión por tema, no por archivo, a propósito: un solo mecanismo,
+ * un solo valor que razonar, y el costo es re-descargar el tema completo
+ * cuando cambia algo (raro: los temas cambian por tandas).
+ */
+function cb_theme_assets_version(string $themeDiskDir): int
+{
+    static $cache = [];
+    if (isset($cache[$themeDiskDir])) {
+        return $cache[$themeDiskDir];
+    }
+    $max = 0;
+    if (is_dir($themeDiskDir)) {
+        $it = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($themeDiskDir, FilesystemIterator::SKIP_DOTS)
+        );
+        foreach ($it as $f) {
+            if ($f->isFile()) {
+                $m = (int) $f->getMTime();
+                if ($m > $max) {
+                    $max = $m;
+                }
+            }
+        }
+    }
+    return $cache[$themeDiskDir] = $max;
+}
+
 function cb_build_theme_payload(
     string $themeSlug,
     array $themeData,
@@ -922,6 +961,7 @@ function cb_build_theme_payload(
 
     return [
         'slug'       => $themeSlug,
+        'assetsVersion' => cb_theme_assets_version($themeDiskDir),
         'nombre'     => (string) ($themeData['nombre'] ?? $themeSlug),
         'diploma'    => (string) ($themeData['diploma'] ?? ''),
         'colors'     => $themeData['colors'] ?? new stdClass(),

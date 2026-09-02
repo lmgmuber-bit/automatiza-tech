@@ -593,4 +593,20 @@ $fuenteAlbumApi = (string) file_get_contents(dirname(__DIR__, 2) . '/public/albu
 // delata la regresion es que reaparezca la asignacion vieja sin miniatura.
 check(strpos($fuenteAlbumApi, '$thumb = $url;') === false, 'la rama de cabina de album-api no volvio a servir el original como miniatura');
 
+// -- Version de assets del tema (rompe-cache) -------------------------------
+// El payload publica assetsVersion = mtime mas nuevo de la carpeta del tema.
+// El front lo agrega como ?v= a cada URL: reemplazar un archivo con el mismo
+// nombre cambia la URL y el cache (navegador/CDN) queda fuera de la jugada.
+$dirTemaPrueba = $tmp . '/tema-version';
+mkdir($dirTemaPrueba, 0770, true);
+file_put_contents($dirTemaPrueba . '/a.jpg', 'x');
+touch($dirTemaPrueba . '/a.jpg', 1700000100);
+mkdir($dirTemaPrueba . '/sub', 0770, true);
+file_put_contents($dirTemaPrueba . '/sub/b.mp4', 'y');
+touch($dirTemaPrueba . '/sub/b.mp4', 1700000900);
+check(cb_theme_assets_version($dirTemaPrueba . '/') === 1700000900, 'assetsVersion toma el mtime mas nuevo, tambien de subcarpetas');
+check(cb_theme_assets_version($tmp . '/no-existe/') === 0, 'carpeta inexistente da 0 y el front no agrega ?v=');
+$payloadVersion = cb_build_theme_payload('hielo', cb_load_themes()['themes']['hielo']);
+check(($payloadVersion['assetsVersion'] ?? 0) > 0, 'el payload del tema publica assetsVersion');
+
 fwrite(STDOUT, "OK $tests checks backend\n");

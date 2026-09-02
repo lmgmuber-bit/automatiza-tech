@@ -1,0 +1,119 @@
+{
+  "name": "Argos Mecánico - Aplicar Fix",
+  "nodes": [
+    {
+      "id": "trigger-aplicarfix-1",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"workflow_id\": \"abc123\",\n  \"node_name\": \"HTTP Request\",\n  \"node_parameters\": {}\n}"
+      }
+    },
+    {
+      "id": "get-real-aplicarfix-1",
+      "name": "Leer Workflow Real",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://n8n-n8n.kchiba.easypanel.host/api/v1/workflows/{{ $json.workflow_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "Syp8IlSVK9atiNSD", "name": "AT n8n Self API" }
+      }
+    },
+    {
+      "id": "merge-aplicarfix-1",
+      "name": "Aplicar Cambio (merge)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const real = $input.first().json;\nconst trigger = $('Execute Workflow Trigger').first().json;\nconst node_name = trigger.node_name;\nlet node_parameters = trigger.node_parameters;\nif (typeof node_parameters === 'string') {\n  try { node_parameters = JSON.parse(node_parameters); } catch (e) {\n    return [{ json: { found: false, workflow_id: trigger.workflow_id, node_name, error: 'node_parameters no es JSON valido: ' + e.message } }];\n  }\n}\nconst workflow_id = trigger.workflow_id;\n\nconst SETTINGS_WHITELIST = ['saveDataErrorExecution','saveDataSuccessExecution','saveManualExecutions','saveExecutionProgress','executionTimeout','timezone','errorWorkflow','executionOrder'];\n\nlet found = false;\nconst nodes = (real.nodes || []).map(n => {\n  if (n.name === node_name) {\n    found = true;\n    return { ...n, parameters: node_parameters };\n  }\n  return n;\n});\n\nconst settings = {};\nfor (const key of SETTINGS_WHITELIST) {\n  if (real.settings && Object.prototype.hasOwnProperty.call(real.settings, key)) {\n    settings[key] = real.settings[key];\n  }\n}\n\nreturn [{ json: {\n  found,\n  workflow_id,\n  node_name,\n  nodeCountBefore: (real.nodes || []).length,\n  nodeCountAfter: nodes.length,\n  body: { name: real.name, nodes, connections: real.connections, settings }\n} }];"
+      }
+    },
+    {
+      "id": "if-found-1",
+      "name": "Nodo Encontrado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [660, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.found }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "put-real-aplicarfix-1",
+      "name": "Aplicar PUT",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, -80],
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://n8n-n8n.kchiba.easypanel.host/api/v1/workflows/{{ $json.workflow_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "Syp8IlSVK9atiNSD", "name": "AT n8n Self API" }
+      }
+    },
+    {
+      "id": "error-notfound-1",
+      "name": "Error Nodo No Encontrado",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [880, 80],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            { "id": "e1", "name": "success", "type": "boolean", "value": false },
+            { "id": "e2", "name": "error", "type": "string", "value": "=El nodo '{{ $json.node_name }}' no existe en el workflow real. Usa 'Leer Workflow' para ver los nombres exactos de los nodos antes de intentar modificar." }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": { "main": [[{ "node": "Leer Workflow Real", "type": "main", "index": 0 }]] },
+    "Leer Workflow Real": { "main": [[{ "node": "Aplicar Cambio (merge)", "type": "main", "index": 0 }]] },
+    "Aplicar Cambio (merge)": { "main": [[{ "node": "Nodo Encontrado?", "type": "main", "index": 0 }]] },
+    "Nodo Encontrado?": {
+      "main": [
+        [{ "node": "Aplicar PUT", "type": "main", "index": 0 }],
+        [{ "node": "Error Nodo No Encontrado", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  }
+}

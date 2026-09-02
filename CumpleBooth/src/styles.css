@@ -360,6 +360,25 @@ body {
   font-size: clamp(14px, 3.6vw, 21px);
   line-height: 1.15;
 }
+/* Spidey: el video del pase trae a los tres personajes abajo al centro y la
+   tarjeta grande los tapaba (Luis lo reportó probando el kiosco). Tarjeta
+   compacta y pegada al borde; las demás temáticas quedan como estaban. */
+.photo-session--spidey .photo-session-copy {
+  width: min(64%, 400px);
+  bottom: max(2.5dvh, 18px);
+  padding: 8px 16px 10px;
+}
+.photo-session--spidey .photo-session-kicker {
+  font-size: clamp(10px, 2.3vw, 13px);
+  margin-bottom: 1px;
+}
+.photo-session--spidey .photo-session-copy h2 {
+  font-size: clamp(16px, 4vw, 25px);
+}
+.photo-session--spidey .photo-session-copy p {
+  font-size: clamp(11px, 2.7vw, 15px);
+  margin-top: 3px;
+}
 .photo-session-screen .skip {
   top: max(18px, env(safe-area-inset-top));
   right: max(18px, env(safe-area-inset-right));

@@ -1468,7 +1468,7 @@ function PhotoSessionVideo({ invitado, onDone }) {
   }, [failed, finish])
 
   return (
-    <section className="screen video-screen photo-session-screen">
+    <section className={`screen video-screen photo-session-screen photo-session--${THEME_SLUG}`}>
       {!failed ? (
         <video
           ref={videoRef}

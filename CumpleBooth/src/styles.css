@@ -172,6 +172,12 @@ body {
   top: 14%;
   width: 26%;
 }
+/* Spidey: el fondo-banner ya trae su propia guirnalda de banderines pintada
+   en el arco de globos, y la de HTML se montaba encima (Luis lo reportó).
+   Acá no se reubica: se quita, porque a cualquier altura duplica la del arte. */
+.intro--spidey .intro-party-decoration {
+  display: none;
+}
 .intro--familia-canina .intro-cake-name {
   /* Pedido Luis: sobre el pastel. Franja limpia entre el nivel de bolitas y
      el de estrellitas de la torta — no pisa caras de los personajes. */

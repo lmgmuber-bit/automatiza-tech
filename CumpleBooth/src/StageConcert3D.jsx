@@ -134,6 +134,18 @@ const SHOW_STYLES = {
     riser: '#111c2e',
     truss: '#39527e',
   },
+  // Aventuras Arácnidas (spidey): ciudad de cómic diurna — azules vivos del
+  // show, rojo y amarillo de las viñetas POW/BOOM, morado de Ghost-Spider.
+  // Entrada propia para no salir "prestado" con la paleta nocturna de Héroes.
+  'comic-city': {
+    title: 'El Show Arácnido',
+    lanes: ['#e02525', '#ffd21e', '#9b59d0'],
+    sky: ['#1890d8', '#0b3f8a'],
+    fog: '#1367c4',
+    stage: '#16214a',
+    riser: '#1b2447',
+    truss: '#4d78c8',
+  },
 }
 
 export const SHOW_STAGES = Object.keys(SHOW_STYLES)

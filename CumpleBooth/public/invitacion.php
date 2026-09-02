@@ -954,6 +954,7 @@ $sectionIcon = static function (string $key): string {
         'favorites' => '<path d="M12 20.3l-1.5-1.35C6 14.9 3.5 12.6 3.5 9.6 3.5 7.3 5.3 5.5 7.6 5.5c1.3 0 2.5.6 3.3 1.55l1.1 1.3 1.1-1.3A4.3 4.3 0 0 1 16.4 5.5c2.3 0 4.1 1.8 4.1 4.1 0 3-2.5 5.3-7 9.35z"/>',
         'sizes' => '<rect x="2.5" y="7.5" width="19" height="9" rx="1.8"/><path d="M7 7.5v3.4M12 7.5v4.6M17 7.5v3.4"/>',
         'gifts' => '<path d="M3.5 11.5h17V20a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 20z"/><rect x="2.5" y="7.5" width="19" height="4" rx="1.2"/><path d="M12 7.5v14"/><path d="M12 7.5S10.8 3 8.6 3a2.3 2.3 0 0 0 0 4.5zM12 7.5S13.2 3 15.4 3a2.3 2.3 0 0 1 0 4.5z"/>',
+        'avoid_gifts' => '<circle cx="12" cy="12" r="9"/><path d="M5.9 6.5l12.2 11"/>',
         'custom' => '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8v.4"/>',
     ];
     $inner = $paths[$key] ?? '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>';

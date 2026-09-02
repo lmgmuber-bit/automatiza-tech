@@ -37,9 +37,14 @@ test('los tipos futuros existen como arquitectura, no como UI activa', () => {
 test('campos y secciones infantiles se definen por datos', () => {
   const birthday = presets.event_types.child_birthday
   const sectionKeys = birthday.sections.map((section) => section.key)
-  assert.deepEqual(sectionKeys, ['introduction', 'favorites', 'sizes', 'gifts', 'custom'])
+  // "Mejor no regalar" es una tarjeta propia, no un renglón dentro de la de
+  // regalos: mezclado ahí se leía como una idea más de regalo (pedido de Luis,
+  // 2026-09-02, con la ficha real de Samantha).
+  assert.deepEqual(sectionKeys, ['introduction', 'favorites', 'sizes', 'gifts', 'avoid_gifts', 'custom'])
   assert.ok(birthday.fields.some((field) => field.key === 'shoe_size' && field.section === 'sizes'))
   assert.ok(birthday.fields.some((field) => field.key === 'gift_ideas' && field.section === 'gifts'))
+  assert.ok(birthday.fields.some((field) => field.key === 'avoid_gifts' && field.section === 'avoid_gifts'))
+  assert.ok(presets.section_accents.avoid_gifts?.tone, 'acento propio para la tarjeta de evitar')
 })
 
 test('descriptores generativos no nombran franquicias ni personajes del catálogo', () => {

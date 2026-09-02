@@ -1,16 +1,16 @@
 # Graph Report - CumpleBooth  (2026-09-02)
 
 ## Corpus Check
-- 251 files · ~25,308,190 words
+- 251 files · ~24,669,734 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4281 nodes · 7422 edges · 350 communities (263 shown, 87 thin omitted)
+- 4281 nodes · 7422 edges · 354 communities (263 shown, 91 thin omitted)
 - Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 355 edges (avg confidence: 0.75)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `06cd8f02`
+- Built from commit: `22b25822`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -61,7 +61,7 @@
 - remove-familia-canina-backgrounds.py
 - http-smoke.mjs
 - Imágenes requeridas (8 archivos, 1080×1920, JPG)
-- cb_hmac
+- lib.leads.php
 - Personajes (6) — usa el esqueleto de trex.jpg cambiando escena a la marina y protagonista:
 - campania-fase1/README.md
 - video/README.md
@@ -191,7 +191,7 @@
 - yu
 - gu
 - .setValues
-- .applyMatrix4
+- .onBeforeRender
 - ri
 - ii
 - .length
@@ -221,7 +221,7 @@
 - ep
 - xc
 - .dot
-- .fromBufferAttribute
+- .applyMatrix4
 - .multiplyScalar
 - lib.gifts.php
 - Dc
@@ -243,6 +243,7 @@
 - vd
 - kc
 - qa
+- bn
 - hh
 - ic
 - jf
@@ -252,7 +253,7 @@
 - .findNode
 - oc
 - qh
-- cb_public_base_url
+- cb_config
 - gh
 - barraNavegador.test.mjs
 - buildRuntime
@@ -269,11 +270,13 @@
 - dc
 - mu
 - rc
+- _r
 - Ma
 - .copySampleValue_
 - .computeLineDistances
 - mc
 - .toJSON
+- main
 - bh
 - er
 - fh
@@ -284,6 +287,7 @@
 - vh
 - xh
 - fu
+- .getX
 - _l
 - babyShowerVoice.test.mjs
 - parentsAccess.test.mjs
@@ -304,19 +308,19 @@
 ## Surprising Connections (you probably didn't know these)
 - `seed_attach_outputs()` --calls--> `cb_invitation_storage_key()`  [INFERRED]
   tests/backend/seed-invitation-smoke.php → public/lib.invitations.php
+- `main()` --indirect_call--> `n()`  [INFERRED]
+  scripts/debug-spin.mjs → sitio/vendor/lenis.min.js
 - `Sign()` --references--> `qrcode`  [EXTRACTED]
   src/cartel-qr/main.jsx → package.json
 - `admin_base_url()` --calls--> `cb_public_base_url()`  [INFERRED]
   public/admin/invitations.php → public/lib.php
 - `admin_invitation_next_asset_version()` --calls--> `cb_load_invitation_outputs()`  [INFERRED]
   public/admin/invitations.php → public/lib.invitations.php
-- `cb_album_api_theme()` --calls--> `cb_load_themes()`  [INFERRED]
-  public/album-api.php → public/lib.php
 
 ## Import Cycles
 - None detected.
 
-## Communities (350 total, 87 thin omitted)
+## Communities (354 total, 91 thin omitted)
 
 ### Community 0 - "cb_pdo"
 Cohesion: 0.09
@@ -474,9 +478,9 @@ Nodes (4): main(), Image, Crea los seis recortes transparentes desde los retrato
 Cohesion: 0.50
 Nodes (3): Audio requerido (public/audio/), Imágenes requeridas (8 archivos, 1080×1920, JPG), Tras calibrar el marco de fondo-sala.jpg
 
-### Community 51 - "cb_hmac"
-Cohesion: 0.15
-Nodes (15): cb_hmac(), cb_save_json_file(), cb_save_parties(), cb_valid_galeria_pin(), cb_valid_public_slug(), cb_verify_party_pin(), cb_invitation_preview_mac(), cb_invitation_preview_ok() (+7 more)
+### Community 51 - "lib.leads.php"
+Cohesion: 0.48
+Nodes (5): cb_create_lead(), cb_lead_paises(), cb_lead_phone_from_country(), cb_lead_text(), cb_validate_lead_input()
 
 ### Community 62 - "Personajes (6) — usa el esqueleto de trex.jpg cambiando escena a la marina y protagonista:"
 Cohesion: 0.20
@@ -687,8 +691,8 @@ Cohesion: 0.67
 Nodes (3): check(), Verifica todos los assets de K-Pop y Heroes., sha256()
 
 ### Community 135 - "s"
-Cohesion: 0.08
-Nodes (22): main(), sleep(), i(), n(), o(), scroll(), ub(), _c (+14 more)
+Cohesion: 0.11
+Nodes (19): i(), n(), o(), scroll(), ub(), _c, ci(), pc (+11 more)
 
 ### Community 136 - "lib.event-profiles.php"
 Cohesion: 0.20
@@ -700,7 +704,7 @@ Nodes (35): 10. Propuestas visuales de la clienta — recibidas, 11. Qué NO ver
 
 ### Community 138 - "lib.php"
 Cohesion: 0.07
-Nodes (58): cb_build_theme_payload(), cb_compile_invitation_prompt(), cb_config(), cb_data_dir(), cb_game_kinds(), cb_generate_public_slug(), cb_inspect_video(), cb_invitation_dir() (+50 more)
+Nodes (58): cb_build_theme_payload(), cb_compile_invitation_prompt(), cb_data_dir(), cb_game_kinds(), cb_generate_public_slug(), cb_inspect_video(), cb_load_parties(), cb_load_party_raw() (+50 more)
 
 ### Community 139 - "invitations.php"
 Cohesion: 0.21
@@ -844,7 +848,7 @@ Nodes (3): cb_themes_dir(), cc_build_demos(), cc_tema_terminado()
 
 ### Community 218 - "three.module.min.js"
 Cohesion: 0.05
-Nodes (29): Jl(), Ks(), ui, aa(), ba, Bn, er(), fa (+21 more)
+Nodes (38): gr, Ks(), ui, ai(), ba, Bn, er(), fa (+30 more)
 
 ### Community 221 - "al"
 Cohesion: 0.07
@@ -868,7 +872,7 @@ Nodes (3): qr, sd, sp
 
 ### Community 226 - "mn"
 Cohesion: 0.06
-Nodes (8): bn, fn(), gn(), Mi(), mn, po, wi(), xn
+Nodes (5): hn, Mi(), mn, po, ri()
 
 ### Community 228 - "zh"
 Cohesion: 0.05
@@ -898,9 +902,9 @@ Nodes (3): cp, yu, zu
 Cohesion: 0.08
 Nodes (5): kl, ma, nc, sc, zn
 
-### Community 238 - ".applyMatrix4"
-Cohesion: 0.07
-Nodes (9): ao, io, ka, ko, ln, no, ro, sh() (+1 more)
+### Community 238 - ".onBeforeRender"
+Cohesion: 0.11
+Nodes (7): ao, io, ka, ko, no, ro, sh()
 
 ### Community 239 - "ri"
 Cohesion: 0.18
@@ -927,8 +931,8 @@ Cohesion: 0.22
 Nodes (14): Ae(), ce(), $d(), ee(), ka(), le(), me(), ne() (+6 more)
 
 ### Community 254 - "jr"
-Cohesion: 0.15
-Nodes (15): M(), O(), P(), Q(), _u, _a(), ai(), di (+7 more)
+Cohesion: 0.17
+Nodes (12): M(), O(), P(), Q(), _u, _a(), di, Ei() (+4 more)
 
 ### Community 255 - "Tween"
 Cohesion: 0.15
@@ -945,10 +949,6 @@ Nodes (16): cb_lead_enviar_correos(), cc_mail_address(), cc_mail_build(), cc_mai
 ### Community 263 - "uc"
 Cohesion: 0.12
 Nodes (6): cc(), hc(), lc(), tc, uc, vc
-
-### Community 264 - "ac"
-Cohesion: 0.10
-Nodes (3): ac, ec, ri()
 
 ### Community 268 - ".dot"
 Cohesion: 0.10
@@ -1010,6 +1010,10 @@ Nodes (6): Sa(), aa, eh, nh, ra, rh
 Cohesion: 0.18
 Nodes (3): Ed(), ed, vd
 
+### Community 292 - "bn"
+Cohesion: 0.16
+Nodes (4): bn, fn(), gn(), xn
+
 ### Community 295 - "jf"
 Cohesion: 0.33
 Nodes (9): jf(), mf(), N(), nf(), of(), tf(), uf(), vf() (+1 more)
@@ -1022,9 +1026,9 @@ Nodes (4): abrirImagen(), componerCabina(), cuadrarYPegar(), geometriaFoto()
 Cohesion: 0.22
 Nodes (9): Db(), nb(), oc(), qc(), Tb(), Ua(), Va(), Vb() (+1 more)
 
-### Community 302 - "cb_public_base_url"
-Cohesion: 0.20
-Nodes (10): cb_album_intake_url(), cb_album_sign_url(), cb_album_view_url(), cb_public_base_url(), cb_gift_board_url(), cb_invitation_download_url(), cb_invitation_name_slug(), cb_invitation_pretty_url() (+2 more)
+### Community 302 - "cb_config"
+Cohesion: 0.11
+Nodes (20): cb_album_intake_url(), cb_album_sign_url(), cb_album_view_url(), cb_config(), cb_hmac(), cb_invitation_dir(), cb_photo_absolute_path(), cb_photo_root() (+12 more)
 
 ### Community 305 - "buildRuntime"
 Cohesion: 0.28
@@ -1059,22 +1063,22 @@ Cohesion: 0.05
 Nodes (7): _a, ch, cu, du, jc, vr, wc
 
 ### Community 340 - "_l"
-Cohesion: 0.15
-Nodes (14): gr, _l, ca(), gr(), hi(), hr(), ji(), ki() (+6 more)
+Cohesion: 0.22
+Nodes (8): Jl(), _l, aa(), ca(), ji(), pr(), qn(), Xn()
 
 ## Knowledge Gaps
 - **1053 isolated node(s):** `name`, `private`, `version`, `type`, `dev` (+1048 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **87 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **91 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `ar` connect `ar` to `.toJSON`, `pa`, `hr`, `.invert`, `three.core.min.js`, `.parse`, `.copy`?**
   _High betweenness centrality (0.022) - this node is a cross-community bridge._
-- **Why does `qi` connect `qi` to `.addScaledVector`, `.push`, `pa`, `hr`, `.updateMatrixWorld`, `.dot`, `.fromBufferAttribute`, `.multiplyScalar`, `ii`, `.length`, `.invert`, `hi`, `.fromArray`, `three.core.min.js`, `va`, `xi`, `three.module.min.js`?**
+- **Why does `qi` connect `qi` to `mn`, `.addScaledVector`, `.push`, `pa`, `hr`, `.updateMatrixWorld`, `.dot`, `.multiplyScalar`, `ii`, `.length`, `.invert`, `.getX`, `.fromArray`, `three.core.min.js`, `hi`, `va`, `xi`, `three.module.min.js`?**
   _High betweenness centrality (0.015) - this node is a cross-community bridge._
-- **Why does `ti` connect `ti` to `.push`, `.updateMatrixWorld`, `hr`, `.dot`, `.fromBufferAttribute`, `.applyMatrix4`, `.length`, `.fromArray`, `three.core.min.js`, `xi`, `.copy`, `en`?**
+- **Why does `ti` connect `ti` to `mn`, `.push`, `.updateMatrixWorld`, `hr`, `.dot`, `.applyMatrix4`, `.length`, `.getX`, `.fromArray`, `three.core.min.js`, `xi`, `.copy`, `en`?**
   _High betweenness centrality (0.014) - this node is a cross-community bridge._
 - **What connects `name`, `private`, `version` to the rest of the system?**
   _1053 weakly-connected nodes found - possible documentation gaps or missing edges._

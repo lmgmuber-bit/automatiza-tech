@@ -70,13 +70,13 @@
     "semantic_hash": ""
   },
   "public/data/parties.json": {
-    "mtime": 1787690614.3735332,
+    "mtime": 1788287759.2360225,
     "ast_hash": "b6aa0bcdb0603c9a4aa923b14f528743",
     "semantic_hash": ""
   },
   "public/data/themes.json": {
-    "mtime": 1788061738.672225,
-    "ast_hash": "e4f5a9d5c3883faa1f17536a591a7c0d",
+    "mtime": 1788327211.9560695,
+    "ast_hash": "28fb2f2c79b4a16e8b26e16311d96c55",
     "semantic_hash": ""
   },
   "public/descargar-invitacion.php": {
@@ -85,18 +85,18 @@
     "semantic_hash": ""
   },
   "public/galeria.php": {
-    "mtime": 1787690614.3972578,
-    "ast_hash": "c31af654b55afe10b4f8ee9a4f48e020",
+    "mtime": 1788227696.9893215,
+    "ast_hash": "6edb5a0125e24ef3ca5a9815e77c845e",
     "semantic_hash": ""
   },
   "public/lib.invitations.php": {
-    "mtime": 1787799672.991123,
-    "ast_hash": "b4e121d662f1f85a699c99ac5cf08c7f",
+    "mtime": 1788324000.4169202,
+    "ast_hash": "cce160c8dddb23efe6221f8d68630a34",
     "semantic_hash": ""
   },
   "public/lib.php": {
-    "mtime": 1788143956.4564412,
-    "ast_hash": "41fa8e571fef1d1126616efa597ae8f5",
+    "mtime": 1788328777.3875735,
+    "ast_hash": "41974f8a90b49c5039645b03b6b4ef91",
     "semantic_hash": ""
   },
   "public/upload.php": {
@@ -105,8 +105,8 @@
     "semantic_hash": ""
   },
   "public/ver.php": {
-    "mtime": 1787714672.5678148,
-    "ast_hash": "f31dd6f6ac060fd1d7b084bd3e193dfd",
+    "mtime": 1788229934.2210803,
+    "ast_hash": "226c8a265cd4a68ef92d04a797d094a3",
     "semantic_hash": ""
   },
   "scripts/_cli.php": {
@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "src/App.jsx": {
-    "mtime": 1787778700.2758563,
-    "ast_hash": "9fd2e0c48a2808f65c452a70a737a1c9",
+    "mtime": 1788321909.1269834,
+    "ast_hash": "ae42f04e8232c1a725878dc48ccc69a0",
     "semantic_hash": ""
   },
   "src/ToyTrack3D.jsx": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "tests/backend/run.php": {
-    "mtime": 1788004723.274254,
-    "ast_hash": "4538b50b768b449a29a267d3131a7c10",
+    "mtime": 1788324150.003442,
+    "ast_hash": "f61000223bf09446f7b16a927f5c4c6b",
     "semantic_hash": ""
   },
   "tests/frontend/frameGeometry.test.mjs": {
@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1788191747.2637086,
-    "ast_hash": "0d6a56c4447c2ef7c71a0e11d6a8ab15",
+    "mtime": 1788281223.8346925,
+    "ast_hash": "74a49887ef915c7158379d7cd8aa9b22",
     "semantic_hash": ""
   },
   "OPENCODE.md": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "index.html": {
-    "mtime": 1787690613.9704812,
-    "ast_hash": "f284fcc4d559da75640adb7dd185b183",
+    "mtime": 1788218914.6777139,
+    "ast_hash": "09eed70eef4fbab5675bcd3cead2f83b",
     "semantic_hash": ""
   },
   "public/audio/AUDIO_OPCIONAL.txt": {
@@ -455,8 +455,8 @@
     "semantic_hash": ""
   },
   "public/invitacion.php": {
-    "mtime": 1788150493.5931325,
-    "ast_hash": "dc109906eb4640924134917b7656c1a8",
+    "mtime": 1788232537.7461252,
+    "ast_hash": "8cc9d0068d72266ad7a5c5ff8f355882",
     "semantic_hash": ""
   },
   "tests/backend/seed-invitation-smoke.php": {
@@ -490,8 +490,8 @@
     "semantic_hash": ""
   },
   "src/themeFlow.js": {
-    "mtime": 1787690632.5304468,
-    "ast_hash": "4c06b65f37f2349f257d543614166b03",
+    "mtime": 1788328767.9747398,
+    "ast_hash": "cb51043b56a6328906ec28d02169ff39",
     "semantic_hash": ""
   },
   "tests/frontend/themeFlow.test.mjs": {
@@ -3490,8 +3490,8 @@
     "semantic_hash": ""
   },
   "src/StageConcert3D.jsx": {
-    "mtime": 1787690632.2545667,
-    "ast_hash": "cb19a46dcf540968f2397d3944e6f86d",
+    "mtime": 1788325641.9957976,
+    "ast_hash": "c0d35a49a7263b4bc2ed8326f9d5fc28",
     "semantic_hash": ""
   },
   "src/ThemeWorld3D.jsx": {
@@ -3630,8 +3630,8 @@
     "semantic_hash": ""
   },
   "public/themes/heroes/fondo-banner.jpg": {
-    "mtime": 1787690620.6967695,
-    "ast_hash": "3b4d3d61bb2cd54a34f722e47c1956fa",
+    "mtime": 1788322516.265287,
+    "ast_hash": "1dafdb0ed5ee234bf7d078f75265da7e",
     "semantic_hash": ""
   },
   "public/themes/heroes/gigante-cut.png": {
@@ -4005,8 +4005,8 @@
     "semantic_hash": ""
   },
   "public/album-api.php": {
-    "mtime": 1788143956.4410336,
-    "ast_hash": "43655281bf75605d9bfccc53a9bfec2a",
+    "mtime": 1788230047.8257315,
+    "ast_hash": "b56882a3612054ee06b6af59716e9ee6",
     "semantic_hash": ""
   },
   "public/album-intake.php": {
@@ -4055,8 +4055,8 @@
     "semantic_hash": ""
   },
   "src/album/AlbumPage.jsx": {
-    "mtime": 1788143956.457775,
-    "ast_hash": "ab536bb87ac47199129ac47d938363ea",
+    "mtime": 1788230812.268989,
+    "ast_hash": "b13b5823d1472b19c6836f4a2ef48d93",
     "semantic_hash": ""
   },
   "src/album/FlipBook.jsx": {
@@ -4070,8 +4070,8 @@
     "semantic_hash": ""
   },
   "src/album/pages.js": {
-    "mtime": 1788143956.4620166,
-    "ast_hash": "6c1de1e0227c4e11ad0ad59fbc8ce887",
+    "mtime": 1788230437.288409,
+    "ast_hash": "110e0d2e550c65ae42326cecbd7f42dc",
     "semantic_hash": ""
   },
   "src/cartel-qr/main.jsx": {
@@ -4080,8 +4080,8 @@
     "semantic_hash": ""
   },
   "src/themeVars.js": {
-    "mtime": 1787690632.5473657,
-    "ast_hash": "2dc32870c8e13d1478f28c58f2c5708b",
+    "mtime": 1788218752.6932285,
+    "ast_hash": "5cf97b3f3b7490fcf3eecdc45a4970e2",
     "semantic_hash": ""
   },
   "tests/backend/album.php": {
@@ -4095,8 +4095,8 @@
     "semantic_hash": ""
   },
   "tests/frontend/albumPages.test.mjs": {
-    "mtime": 1787690632.699821,
-    "ast_hash": "695b5760d2d8b9d80f10f8478da651bd",
+    "mtime": 1788230812.562237,
+    "ast_hash": "53826831493863c7233808816c4a6fe7",
     "semantic_hash": ""
   },
   "tests/frontend/eventProfilePresets.test.mjs": {
@@ -4500,8 +4500,8 @@
     "semantic_hash": ""
   },
   "public/assets/invitation.js": {
-    "mtime": 1787839831.4064682,
-    "ast_hash": "a4e45e12cfdde320c96d449774d12ed6",
+    "mtime": 1788232515.9632409,
+    "ast_hash": "0485d151130fd1246080c3e5bd68f0e9",
     "semantic_hash": ""
   },
   "docs/INVITACION-INMERSIVA.md": {
@@ -4935,8 +4935,8 @@
     "semantic_hash": ""
   },
   "public/predicciones.php": {
-    "mtime": 1787843425.3459675,
-    "ast_hash": "20b9e335d997cd1dc4f87f0fb65bbd12",
+    "mtime": 1788227664.8395617,
+    "ast_hash": "3817a5bde60589afec824d5f658dd090",
     "semantic_hash": ""
   },
   "public/prediction-api.php": {
@@ -5205,8 +5205,8 @@
     "semantic_hash": ""
   },
   "public/regalos-papas.php": {
-    "mtime": 1787842337.6992874,
-    "ast_hash": "c7ee98a2bdced809472e60f4c5d25594",
+    "mtime": 1788227664.8405607,
+    "ast_hash": "0a184d574a3df0c8b09ed1ff1149d49e",
     "semantic_hash": ""
   },
   "scripts/lib-woff.php": {
@@ -5230,8 +5230,8 @@
     "semantic_hash": ""
   },
   "sitio/index.php": {
-    "mtime": 1788189808.73339,
-    "ast_hash": "67e308e2b35872dd1bfeb1c5a7bcf781",
+    "mtime": 1788213350.9862733,
+    "ast_hash": "ce94af4c53e035ea5734ea19aa38c547",
     "semantic_hash": ""
   },
   "sitio/vendor/ScrollTrigger.min.js": {
@@ -5280,8 +5280,8 @@
     "semantic_hash": ""
   },
   "tests/frontend/parentsAccess.test.mjs": {
-    "mtime": 1787843394.505205,
-    "ast_hash": "4441ec290ea64c14696d6a6b47993ba1",
+    "mtime": 1788217414.5800998,
+    "ast_hash": "94019733c5d7b805f054f7a0fbeb9b6e",
     "semantic_hash": ""
   },
   "tests/frontend/sitioPublico.test.mjs": {
@@ -5667,6 +5667,266 @@
   "public/themes/baby-safari/narracion-video/despedida-baby-safari-nino.mp3": {
     "mtime": 1787967666.008815,
     "ast_hash": "5bb220ada80008493af75ce36ddf9778",
+    "semantic_hash": ""
+  },
+  "scripts/componer-foto-cabina.php": {
+    "mtime": 1788213425.4389634,
+    "ast_hash": "34bea7abc913d0ffd2dbc83f4207f01b",
+    "semantic_hash": ""
+  },
+  "scripts/seed-demo-album.php": {
+    "mtime": 1788192807.442165,
+    "ast_hash": "9b935d2cfc867db3d66e87ecda4822a5",
+    "semantic_hash": ""
+  },
+  "tests/frontend/barraNavegador.test.mjs": {
+    "mtime": 1788218678.2410715,
+    "ast_hash": "0549f63a3b6bedae63723e6ee2d34a2c",
+    "semantic_hash": ""
+  },
+  "tests/frontend/nombreVacio.test.mjs": {
+    "mtime": 1788218779.2782092,
+    "ast_hash": "59009e1ffa5ff3aaca30061994643071",
+    "semantic_hash": ""
+  },
+  "tests/frontend/recorridoInvitacion.test.mjs": {
+    "mtime": 1788232579.1281338,
+    "ast_hash": "144f87050b543839503369ec18956509",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/despedida-heroes.mp4": {
+    "mtime": 1788322614.8566253,
+    "ast_hash": "804275d384cbdf0624f5047269eb4d55",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/saludo-capitan.mp4": {
+    "mtime": 1788323202.1019988,
+    "ast_hash": "ce475a994b2d047650edca4a0bc1e818",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/saludo-gigante.mp4": {
+    "mtime": 1788323200.0020308,
+    "ast_hash": "d9e11c83e9d97b2df637b94989bcd0b7",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/saludo-hierro.mp4": {
+    "mtime": 1788323201.0435464,
+    "ast_hash": "388b643448d71836b24ef7963e9a8b86",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/saludo-pantera.mp4": {
+    "mtime": 1788323204.1454654,
+    "ast_hash": "cf2dc541bb417e276b22b9319a6596b0",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/saludo-trueno.mp4": {
+    "mtime": 1788323203.134719,
+    "ast_hash": "d2cd82b96eefddbf2d12192e1661473a",
+    "semantic_hash": ""
+  },
+  "src/assetVersion.js": {
+    "mtime": 1788321865.9017322,
+    "ast_hash": "c23aa9d80691242dfa43d12b4416a228",
+    "semantic_hash": ""
+  },
+  "tests/frontend/assetVersion.test.mjs": {
+    "mtime": 1788321941.1656084,
+    "ast_hash": "7666dca8cdb754277c918ccdc2c1232b",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/comic-cobra-vida-poster.jpg": {
+    "mtime": 1788320687.504101,
+    "ast_hash": "4fdb5aa77306d614c1f3a9ea59e25590",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/comic-teaser.jpg": {
+    "mtime": 1788320547.4594903,
+    "ast_hash": "a9d5955eb2923fdc8bd967483862f9a6",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/comic-cobra-vida.mp4": {
+    "mtime": 1788320687.2502668,
+    "ast_hash": "5c2841ecbb7d4f6a709c613d7a5f2695",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/saludo-arana.mp4": {
+    "mtime": 1788323197.2736456,
+    "ast_hash": "1c6bd673273981ddb09617dafa2c9dcc",
+    "semantic_hash": ""
+  },
+  "public/themes/heroes/welcome-heroes.mp4": {
+    "mtime": 1788322613.0304308,
+    "ast_hash": "4a329d3fa26c3c386ae894c80557a9f1",
+    "semantic_hash": ""
+  },
+  "database/migrations/013_narration_intro_output.php": {
+    "mtime": 1788324103.6642134,
+    "ast_hash": "808147e39143627006880451591a9ce5",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/fondo-banner.jpg": {
+    "mtime": 1788327433.3120513,
+    "ast_hash": "ae2965dbb1bdaf7787cbb72c9f178310",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/fondo-juego-ciudad.jpg": {
+    "mtime": 1788326922.2977464,
+    "ast_hash": "def3a3f5d76b6dc0a3c6777f88bcf3fb",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/fondo-sala.jpg": {
+    "mtime": 1788326922.1452496,
+    "ast_hash": "135e46bc8731dc281dc8df63a6e8d847",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/ghost-spider-cut.png": {
+    "mtime": 1788326573.731353,
+    "ast_hash": "d1b1c1e852bf8862074f45d61d5ee0af",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/ghost-spider.jpg": {
+    "mtime": 1788326571.932015,
+    "ast_hash": "4d69caed67a2514034e99c71a2e8edbd",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/hulk-cut.png": {
+    "mtime": 1788326576.3064213,
+    "ast_hash": "489f286f7cb1f493228cb07aeed2ba09",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/hulk.jpg": {
+    "mtime": 1788326574.4417415,
+    "ast_hash": "d5f6b6aee988a8ae393db662729ea741",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/ms-marvel-cut.png": {
+    "mtime": 1788326578.2410717,
+    "ast_hash": "7684a9e1a787f5cdec9bb4f48b2d86b0",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/ms-marvel.jpg": {
+    "mtime": 1788326576.4510305,
+    "ast_hash": "a6bc22f6737804efa0cc5443830779d9",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/pantera-cut.png": {
+    "mtime": 1788326579.5721374,
+    "ast_hash": "47a088dd212a11b2a30c7d61162aaa14",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/pantera.jpg": {
+    "mtime": 1788326578.3541777,
+    "ast_hash": "edcaeb93dd0c1ef420357d12724cdc8d",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/puzzle-ghost-spider.jpg": {
+    "mtime": 1788326573.7486567,
+    "ast_hash": "da35257b10ad1126a9c389d620aa8d8e",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/puzzle-hulk.jpg": {
+    "mtime": 1788326576.3234625,
+    "ast_hash": "bc988909a2c786f2c3498581099ca121",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/puzzle-ms-marvel.jpg": {
+    "mtime": 1788326578.2588165,
+    "ast_hash": "6e6f368fc594bf76b176d3f248247125",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/puzzle-pantera.jpg": {
+    "mtime": 1788326579.59054,
+    "ast_hash": "90d43e3c127c4f722a2e51061c9d6ec1",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/puzzle-spidey.jpg": {
+    "mtime": 1788326571.8072798,
+    "ast_hash": "a76580a9d6360f8a83ba86241de2e74c",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/puzzle-spin.jpg": {
+    "mtime": 1788326574.3533022,
+    "ast_hash": "20a8db87831529339ec268f8765bc6e8",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/roulette/roulette-background-v1.png": {
+    "mtime": 1788327206.6529653,
+    "ast_hash": "f32bbaefc3961cf99aba74f620813da3",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/spidey-cut.png": {
+    "mtime": 1788326571.7887864,
+    "ast_hash": "259ee60be85d2ba77d4501b4ceda7b19",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/spidey.jpg": {
+    "mtime": 1788326570.8157175,
+    "ast_hash": "97612def8bfcc115e2bd71f55014413c",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/spin-cut.png": {
+    "mtime": 1788326574.3356013,
+    "ast_hash": "0b27fc95e28d06121b7451cba6af5f22",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/spin.jpg": {
+    "mtime": 1788326573.896235,
+    "ast_hash": "cecbb36a780eddded5715e0a3cde923c",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/telarana-cobra-vida-poster.jpg": {
+    "mtime": 1788328577.9132953,
+    "ast_hash": "b867d79fafb160ebf8f8b2df7887c5d8",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/trio-teaser.jpg": {
+    "mtime": 1788327486.189828,
+    "ast_hash": "b867d79fafb160ebf8f8b2df7887c5d8",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/despedida-spidey.mp4": {
+    "mtime": 1788328617.1983716,
+    "ast_hash": "b6f79234e841ee587b6e3acb8eac6da7",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/revelacion-spidey.mp4": {
+    "mtime": 1788328617.3138459,
+    "ast_hash": "f5681126c6fa3e6c14cc73d8e1e28921",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/saludo-ghost-spider.mp4": {
+    "mtime": 1788328268.9249046,
+    "ast_hash": "f12e3bafc269e14796a3b7a48e9b99c5",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/saludo-hulk.mp4": {
+    "mtime": 1788328269.1348555,
+    "ast_hash": "393092d6331dad864cddd3231913928b",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/saludo-ms-marvel.mp4": {
+    "mtime": 1788328269.2369556,
+    "ast_hash": "acf662048053db628fde44f3045bf141",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/saludo-pantera.mp4": {
+    "mtime": 1788328269.358594,
+    "ast_hash": "6be65fcf50224e4214368065300583a9",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/saludo-spin.mp4": {
+    "mtime": 1788328269.0353613,
+    "ast_hash": "89b857bc8a394c837d4cd579146a14ab",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/telarana-cobra-vida.mp4": {
+    "mtime": 1788328617.4248488,
+    "ast_hash": "09421f244e2bb621119900f723ad4d2b",
+    "semantic_hash": ""
+  },
+  "public/themes/spidey/welcome-spidey.mp4": {
+    "mtime": 1788328617.088201,
+    "ast_hash": "49ee6a88c9ece9e38d5c9a15f123753a",
     "semantic_hash": ""
   }
 }

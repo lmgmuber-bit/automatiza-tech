@@ -698,6 +698,7 @@ function cb_sanitize_theme_game($rawGame, string $base = '', string $diskDir = '
             'podium-night',
             'backyard-fiesta',
             'rooftop-city',
+            'comic-city',
         ];
         $game['stage'] = in_array($stage, $allowedStages, true) ? $stage : 'neon-arena';
     }

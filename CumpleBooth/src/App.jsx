@@ -1164,7 +1164,10 @@ function ListaInvitados({ invitados, onStart }) {
                 className="welcome-car3d-video"
                 src={welcome.src}
                 autoPlay
-                muted
+                /* Sin muted: la bienvenida ahora trae voces (Spidey, 2026-09-02)
+                   y llegaba muda al kiosco. El invitado ya tocó su nombre, así
+                   que el autoplay con sonido está permitido; la música de fondo
+                   va a 0.15 y no compite. */
                 playsInline
                 onLoadedMetadata={(e) => {
                   // Ya se conoce cuánto dura: el watchdog se ajusta para no

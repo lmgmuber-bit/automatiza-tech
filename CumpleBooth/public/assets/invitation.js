@@ -969,6 +969,61 @@
     }
   });
 
+  // ---------- Descubrir lo que sigue después de la lámina ----------
+  // La lámina parece el final y muchos invitados no bajaban más: nunca veían
+  // el calendario, el mapa ni "Conoce al cumpleañero" (pedido de Luis con la
+  // captura de Samantha). A los 5 s quietos sobre la lámina, un aviso dice lo
+  // que falta y la página baja sola, suave, hasta los datos. Cualquier gesto
+  // del invitado cancela el avance: si ya está scrolleando, manda él.
+  (function () {
+    const marco = document.querySelector('.inv-art-frame');
+    const seccionArte = marco ? marco.closest('section') : null;
+    const siguiente = seccionArte ? seccionArte.nextElementSibling : null;
+    if (!seccionArte || !siguiente) return;
+    let visible = false;
+    let disparado = false;
+    let temporizador = null;
+    const armar = () => {
+      if (disparado || !visible) return;
+      clearTimeout(temporizador);
+      temporizador = setTimeout(avisar, 5000);
+    };
+    // "5 segundos quieto": un gesto no cancela el aviso, reinicia la cuenta.
+    // Cancelarlo del todo dejaba sin aviso justo al que llegó scrolleando.
+    const gestos = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
+    gestos.forEach((g) => window.addEventListener(g, armar, { passive: true }));
+
+    const avisar = () => {
+      if (disparado) return;
+      disparado = true;
+      const perfil = document.querySelector('[data-ep-open]');
+      const extra = perfil && perfil.textContent.trim() !== ''
+        ? ' y ' + perfil.textContent.trim().toLowerCase()
+        : '';
+      const aviso = document.createElement('div');
+      aviso.className = 'inv-descubre';
+      aviso.textContent = '👇 Sigue bajando: agrega la fecha a tu calendario, mira cómo llegar' + extra;
+      document.body.appendChild(aviso);
+      setTimeout(() => aviso.classList.add('inv-descubre--fuera'), 7000);
+      setTimeout(() => aviso.remove(), 7600);
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      siguiente.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    };
+
+    const observador = new IntersectionObserver((entradas) => {
+      entradas.forEach((e) => {
+        visible = e.isIntersecting && e.intersectionRatio >= 0.55;
+        if (visible) {
+          armar();
+        } else {
+          clearTimeout(temporizador);
+          temporizador = null;
+        }
+      });
+    }, { threshold: [0.55] });
+    observador.observe(seccionArte);
+  })();
+
   // ---------- Video de invitación personalizado ----------
   // El video del cliente se ve una sola vez; al terminar, la página avanza
   // sola a la sección que sigue (los datos de la fiesta). Sin esto el video

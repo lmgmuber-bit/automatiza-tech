@@ -1601,6 +1601,12 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
   justify-content: center;
   gap: clamp(3px, 1.2cqw, 10px);
   padding: clamp(6px, 4cqw, 26px) clamp(5px, 3cqw, 20px);
+  /* Altura MINIMA, no fija: con una direccion larga (dos lineas) el contenido
+     superaba la caja y overflow:hidden se comia "Quinta Normal" (se vio con
+     la invitacion real de Samantha). La tarjeta crece con su contenido; el
+     borde y el fondo la siguen, asi que nada queda cortado. */
+  height: auto;
+  min-height: var(--plate-h);
   overflow: hidden;
   border: 1px solid rgba(86, 174, 215, .34);
   border-radius: clamp(12px, 3cqw, 22px);
@@ -1637,7 +1643,12 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 .inv-body[data-theme="hielo"] .inv-plate-name {
   margin: 0;
   color: #0879b1;
-  font-size: clamp(1.7rem, 22cqw, 4.8rem);
+  /* 19cqw y sin cortes a mitad de palabra: a 22cqw un nombre de 8 letras
+     ("Samantha") no cabia y overflow-wrap:anywhere lo partia en "Samanth-a".
+     Los nombres compuestos siguen quebrando por el espacio. */
+  font-size: clamp(1.5rem, 19cqw, 4.4rem);
+  overflow-wrap: normal;
+  word-break: normal;
   line-height: .91;
   text-shadow: 0 2px 0 rgba(255, 255, 255, .85), 0 5px 16px rgba(35, 151, 203, .24);
 }

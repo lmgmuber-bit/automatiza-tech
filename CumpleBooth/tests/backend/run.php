@@ -36,6 +36,8 @@ $genderMigration = require dirname(__DIR__, 2) . '/database/migrations/009_invit
 $genderMigration(cb_pdo());
 $babyShowerMigration = require dirname(__DIR__, 2) . '/database/migrations/010_baby_shower_predictions.php';
 $babyShowerMigration(cb_pdo());
+$narrationMigration = require dirname(__DIR__, 2) . '/database/migrations/013_narration_intro_output.php';
+$narrationMigration(cb_pdo());
 check(cb_storage_mode() === 'db', 'modo DB');
 check(cb_valid_slug('fiesta-1', 2, 40) && !cb_valid_slug('../x', 2, 40), 'slugs estrictos');
 check(cb_normalize_frame_box(['x'=>.2,'y'=>.2,'w'=>.4,'h'=>.4]) !== null, 'frame válido');
@@ -608,5 +610,10 @@ check(cb_theme_assets_version($dirTemaPrueba . '/') === 1700000900, 'assetsVersi
 check(cb_theme_assets_version($tmp . '/no-existe/') === 0, 'carpeta inexistente da 0 y el front no agrega ?v=');
 $payloadVersion = cb_build_theme_payload('hielo', cb_load_themes()['themes']['hielo']);
 check(($payloadVersion['assetsVersion'] ?? 0) > 0, 'el payload del tema publica assetsVersion');
+
+// La clave de almacenamiento acepta mp3: la validacion de subida ya lo
+// aceptaba (narracion de inicio) pero la lista del constructor quedo atras y
+// ni el admin podia guardar una narracion. Se piso con la primera real.
+check(is_string(cb_invitation_storage_key('fiesta-x', 'narracion-intro', 1, 'mp3')), 'storage key acepta mp3 para la narracion');
 
 fwrite(STDOUT, "OK $tests checks backend\n");

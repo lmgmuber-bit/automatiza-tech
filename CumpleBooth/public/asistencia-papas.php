@@ -105,8 +105,11 @@ $cDark2 = $hex($colores['dark2'] ?? '', '#0a1029');
     position: fixed; inset: 0; z-index: -1;
     <?php if ($fondoTemaUrl !== ''): ?>
     background: url("<?= $esc($fondoTemaUrl) ?>") center top / cover no-repeat;
-    filter: blur(14px) saturate(1.05) brightness(0.5);
-    transform: scale(1.08);
+    /* Difuminado suave: con 14px el arte no se distinguía (pedido de Luis:
+       "que se vea más el fondo"); 5px deja reconocer la escena sin robarle
+       legibilidad a las tarjetas, que ya traen su propio vidrio. */
+    filter: blur(5px) saturate(1.05) brightness(0.62);
+    transform: scale(1.04);
     <?php endif; ?>
   }
   main { max-width: 640px; margin: 0 auto; }

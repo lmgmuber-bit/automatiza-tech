@@ -249,6 +249,12 @@ body {
   padding-top: 0.18em;
   padding-bottom: 0.18em;
 }
+/* Spidey: al 55.5% general la etiqueta caía sobre la cara del personaje
+   central (Luis lo reportó probando). Los pies del trío terminan a ~76% del
+   fondo; la etiqueta baja al pavimento de la azotea, debajo de todos. */
+.intro--spidey .intro-cake-name {
+  top: 88%;
+}
 .intro-bottom {
   position: absolute;
   bottom: 1%;

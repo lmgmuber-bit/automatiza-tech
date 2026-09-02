@@ -2383,3 +2383,71 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 .inv-descubre--fuera {
   opacity: 0;
 }
+
+/* ── Confirmar asistencia ─────────────────────────────────────────────── */
+.inv-rsvp {
+  text-align: center;
+  padding: 28px 20px 8px;
+}
+.inv-rsvp-open {
+  margin-top: 6px;
+}
+.inv-rsvp-dialog {
+  width: min(92vw, 26rem);
+  border: none;
+  border-radius: 20px;
+  padding: 24px 22px;
+  background: #101a3d;
+  color: #fff;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+}
+.inv-rsvp-dialog::backdrop {
+  background: rgba(4, 8, 24, 0.72);
+  backdrop-filter: blur(4px);
+}
+.inv-rsvp-title {
+  margin: 0 0 14px;
+  font-size: 1.25rem;
+  text-align: center;
+}
+.inv-rsvp-campo {
+  display: block;
+  margin-bottom: 14px;
+  text-align: left;
+}
+.inv-rsvp-campo span {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.88rem;
+  color: #b9c7f5;
+}
+.inv-rsvp-campo input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font: inherit;
+}
+.inv-rsvp-campo input:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+}
+.inv-rsvp-error {
+  color: #ff9d9d;
+  font-size: 0.88rem;
+}
+.inv-rsvp-acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+.inv-rsvp-ok {
+  text-align: center;
+}
+.inv-rsvp-ok-emoji {
+  font-size: 2.4rem;
+  margin: 0;
+}

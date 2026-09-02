@@ -616,4 +616,33 @@ check(($payloadVersion['assetsVersion'] ?? 0) > 0, 'el payload del tema publica 
 // ni el admin podia guardar una narracion. Se piso con la primera real.
 check(is_string(cb_invitation_storage_key('fiesta-x', 'narracion-intro', 1, 'mp3')), 'storage key acepta mp3 para la narracion');
 
+// -- Confirmaciones de asistencia (RSVP) ------------------------------------
+$rsvpMigration = require dirname(__DIR__, 2) . '/database/migrations/014_rsvp.php';
+$rsvpMigration(cb_pdo());
+$rsvpMigration(cb_pdo()); // idempotente: correrla dos veces no revienta
+require dirname(__DIR__, 2) . '/public/lib.rsvp.php';
+
+check(cb_rsvp_save(9901, 'Familia Diaz', 'Emma y Lucas')['ok'] === true, 'una confirmacion valida se guarda');
+// La misma familia corrige: se ACTUALIZA su fila (el dedupe usa LOWER, que en
+// SQLite solo pliega ASCII; en MySQL la collation utf8mb4_unicode_ci ya
+// compara sin distinguir mayusculas, con acentos incluidos).
+check(cb_rsvp_save(9901, '  familia   diaz  ', 'Emma, Lucas y Sofía')['ok'] === true, 'reconfirmar responde ok');
+$listaRsvp = cb_rsvp_list(9901);
+check(count($listaRsvp) === 1, 'reconfirmar actualiza la fila, no la duplica');
+check(($listaRsvp[0]['guest_names'] ?? '') === 'Emma, Lucas y Sofía', 'la correccion pisa la lista de niños anterior');
+check(cb_rsvp_save(9901, 'X', '')['ok'] === false, 'un nombre de un caracter se rechaza');
+check(cb_rsvp_save(9901, "  \n\t ", '')['ok'] === false, 'espacios y controles no cuentan como nombre');
+check(cb_rsvp_save(9902, 'Carolina Díaz', '')['ok'] === true, 'baby shower confirma solo con el nombre adulto');
+check(cb_rsvp_list(9902)[0]['guest_names'] === null, 'sin niños queda NULL, no cadena vacia');
+check(cb_rsvp_list(9903) === [], 'evento sin confirmaciones da lista vacia');
+check(cb_rsvp_resolve_parents_token('zz-no-es-token') === null, 'token de rol malformado se rechaza');
+
+// Estaticos: la invitacion trae el boton y el modal, y las piezas existen.
+$fuenteInvRsvp = (string) file_get_contents(dirname(__DIR__, 2) . '/public/invitacion.php');
+check(strpos($fuenteInvRsvp, 'data-rsvp-open') !== false && strpos($fuenteInvRsvp, 'data-rsvp-dialog') !== false, 'invitacion.php trae boton y modal de asistencia');
+check(is_file(dirname(__DIR__, 2) . '/public/rsvp-api.php'), 'existe el endpoint rsvp-api.php');
+check(is_file(dirname(__DIR__, 2) . '/public/asistencia-papas.php'), 'existe la pantalla de la familia');
+$fuenteJsRsvp = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/invitation.js');
+check(strpos($fuenteJsRsvp, 'rsvp-api.php') !== false, 'invitation.js envia la confirmacion al endpoint');
+
 fwrite(STDOUT, "OK $tests checks backend\n");

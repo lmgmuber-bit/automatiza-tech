@@ -1907,6 +1907,53 @@ $cssVer = static function (string $rel): string {
   </section>
   <?php endif; ?>
 
+  <?php /* Confirmación de asistencia: vale para TODAS las modalidades. En
+           cumpleaños confirma el apoderado y anota a los niños; en baby
+           shower solo la persona adulta. La familia ve la lista en
+           asistencia-papas.php con su token de rol (pedido de Luis,
+           2026-09-02). */ ?>
+  <section class="inv-rsvp inv-reveal" id="inv-asistencia">
+    <p class="inv-kicker">¿Nos acompañas?</p>
+    <h2 class="inv-finale-title">Confirma tu asistencia</h2>
+    <p class="inv-finale-lede"><?= $esc($esBabyShower
+        ? 'Dinos tu nombre y te guardamos un lugar.'
+        : 'Cuéntanos quiénes vienen para recibirlos como estrellas.') ?></p>
+    <button class="inv-button inv-rsvp-open" type="button" data-rsvp-open>
+      ✅ Click aquí para confirmar asistencia
+    </button>
+
+    <dialog class="inv-rsvp-dialog" data-rsvp-dialog aria-label="Confirmar asistencia">
+      <form data-rsvp-form>
+        <h3 class="inv-rsvp-title">Confirma tu asistencia</h3>
+        <label class="inv-rsvp-campo">
+          <span><?= $esc($esBabyShower ? 'Tu nombre' : 'Nombre del apoderado o familia') ?></span>
+          <input type="text" name="family_name" maxlength="120" required
+                 placeholder="<?= $esc($esBabyShower ? 'Ej: Carolina Díaz' : 'Ej: Familia Díaz / Carolina Díaz') ?>">
+        </label>
+        <?php if (!$esBabyShower): ?>
+        <label class="inv-rsvp-campo">
+          <span>Nombre de los niños que vienen</span>
+          <input type="text" name="guest_names" maxlength="400"
+                 placeholder="Ej: Emma y Lucas">
+        </label>
+        <?php endif; ?>
+        <p class="inv-rsvp-error" data-rsvp-error hidden>No pudimos guardar tu confirmación. Inténtalo de nuevo.</p>
+        <div class="inv-rsvp-acciones">
+          <button class="inv-button" type="submit" data-rsvp-enviar>Confirmar asistencia</button>
+          <button class="inv-button inv-button-ghost" type="button" data-rsvp-cerrar>Cerrar</button>
+        </div>
+      </form>
+      <div class="inv-rsvp-ok" data-rsvp-ok hidden>
+        <p class="inv-rsvp-ok-emoji">🎉</p>
+        <h3 class="inv-rsvp-title">¡Asistencia confirmada!</h3>
+        <p><?= $esc($esBabyShower
+            ? 'Gracias por avisar. ¡Nos vemos en el baby shower!'
+            : '¡La familia ya sabe que vienen! Nos vemos en la fiesta.') ?></p>
+        <button class="inv-button inv-button-ghost" type="button" data-rsvp-cerrar>Cerrar</button>
+      </div>
+    </dialog>
+  </section>
+
   <footer class="inv-footer">
     <?= cb_lockup_html('claro', 'inv-footer-logo') ?>
     <p class="inv-footer-credit">

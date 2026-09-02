@@ -969,6 +969,64 @@
     }
   });
 
+  // ---------- Confirmar asistencia ----------
+  // El invitado confirma desde la invitación misma; la familia ve la lista en
+  // asistencia-papas.php. Si vuelve a abrir, puede corregir: el backend
+  // actualiza su fila por nombre en vez de duplicarla.
+  (function () {
+    const abrir = document.querySelector('[data-rsvp-open]');
+    const dialogo = document.querySelector('[data-rsvp-dialog]');
+    const formulario = document.querySelector('[data-rsvp-form]');
+    if (!abrir || !dialogo || !formulario) return;
+    const exito = dialogo.querySelector('[data-rsvp-ok]');
+    const error = dialogo.querySelector('[data-rsvp-error]');
+    const enviarBtn = dialogo.querySelector('[data-rsvp-enviar]');
+    const token = new URLSearchParams(window.location.search).get('t') || '';
+    const claveLocal = 'cc_rsvp_ok_' + token.slice(0, 12);
+
+    let yaConfirmo = false;
+    try { yaConfirmo = window.localStorage.getItem(claveLocal) === '1'; } catch {}
+    if (yaConfirmo) abrir.textContent = '✅ Asistencia confirmada · toca para editar';
+
+    abrir.addEventListener('click', () => {
+      formulario.hidden = false;
+      if (exito) exito.hidden = true;
+      if (error) error.hidden = true;
+      try { dialogo.showModal(); } catch { dialogo.setAttribute('open', ''); }
+    });
+    dialogo.querySelectorAll('[data-rsvp-cerrar]').forEach((b) => {
+      b.addEventListener('click', () => dialogo.close ? dialogo.close() : dialogo.removeAttribute('open'));
+    });
+
+    formulario.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      if (error) error.hidden = true;
+      if (enviarBtn) { enviarBtn.disabled = true; enviarBtn.textContent = 'Guardando…'; }
+      const datos = new FormData(formulario);
+      try {
+        const respuesta = await fetch('rsvp-api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            t: token,
+            family_name: datos.get('family_name') || '',
+            guest_names: datos.get('guest_names') || '',
+          }),
+        });
+        const cuerpo = await respuesta.json();
+        if (!cuerpo || cuerpo.ok !== true) throw new Error('rechazado');
+        formulario.hidden = true;
+        if (exito) exito.hidden = false;
+        abrir.textContent = '✅ Asistencia confirmada · toca para editar';
+        try { window.localStorage.setItem(claveLocal, '1'); } catch {}
+      } catch {
+        if (error) error.hidden = false;
+      } finally {
+        if (enviarBtn) { enviarBtn.disabled = false; enviarBtn.textContent = 'Confirmar asistencia'; }
+      }
+    });
+  })();
+
   // ---------- Descubrir lo que sigue después de la lámina ----------
   // La lámina parece el final y muchos invitados no bajaban más: nunca veían
   // el calendario, el mapa ni "Conoce al cumpleañero" (pedido de Luis con la

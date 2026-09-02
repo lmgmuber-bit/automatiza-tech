@@ -1554,7 +1554,11 @@ $cssVer = static function (string $rel): string {
     <figure class="inv-art-frame">
       <img class="inv-art" src="<?= $esc($imageUrl) ?>" alt="<?= $esc($tituloInvitacion) ?>" decoding="async">
       <?php if ($hasVideo): ?>
-      <video class="inv-art-video" src="<?= $esc((string) $videoUrl) ?>" controls playsinline loop muted preload="none"></video>
+      <?php /* Sin loop ni muted: el invitado lo inicia con un toque (gesto que
+               ya permite el sonido) y al terminar la página avanza sola a los
+               datos de la fiesta — un video de invitación se ve UNA vez, no en
+               bucle mudo (pedido de Luis con la invitación de Luciano). */ ?>
+      <video class="inv-art-video" src="<?= $esc((string) $videoUrl) ?>" controls playsinline preload="metadata" data-inv-video-final></video>
       <?php endif; ?>
     </figure>
     <?php endif; ?>

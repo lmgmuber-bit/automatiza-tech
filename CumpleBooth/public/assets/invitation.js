@@ -969,6 +969,21 @@
     }
   });
 
+  // ---------- Video de invitación personalizado ----------
+  // El video del cliente se ve una sola vez; al terminar, la página avanza
+  // sola a la sección que sigue (los datos de la fiesta). Sin esto el video
+  // quedaba en bucle y el invitado no sabía que había más abajo.
+  const videoFinal = document.querySelector('[data-inv-video-final]');
+  if (videoFinal) {
+    videoFinal.addEventListener('ended', () => {
+      const seccion = videoFinal.closest('section');
+      const siguiente = seccion ? seccion.nextElementSibling : null;
+      if (siguiente && typeof siguiente.scrollIntoView === 'function') {
+        siguiente.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  }
+
   // ---------- Lista de reproducción de videos reales, sin scroll ----------
   // Nada de imágenes fundiéndose entre sí: son los videos de saludo que ya
   // existen y están aprobados, uno detrás de otro. Un solo <video> cambia de

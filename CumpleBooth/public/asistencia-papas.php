@@ -54,6 +54,28 @@ foreach ($lista as $fila) {
         $totalNinos += count(preg_split('/\s*(?:,| y | e )\s*/u', $g, -1, PREG_SPLIT_NO_EMPTY) ?: []);
     }
 }
+
+// La pantalla viste los colores y el fondo de la temática de la fiesta
+// (pedido de Luis: "muy sencilla"). Si el tema no está o no tiene fondo,
+// cae a la paleta neutra de siempre — nada se rompe por un slug raro.
+$colores = [];
+$fondoTemaUrl = '';
+if (!$invalido) {
+    $slugTema = (string) ($acceso['theme_slug'] ?? '');
+    if (preg_match('/^[a-z0-9-]+$/', $slugTema)) {
+        $temas = cb_load_themes()['themes'] ?? [];
+        $colores = is_array($temas[$slugTema]['colors'] ?? null) ? $temas[$slugTema]['colors'] : [];
+        $rutaFondo = __DIR__ . '/themes/' . $slugTema . '/fondo-banner.jpg';
+        if (is_file($rutaFondo)) {
+            $fondoTemaUrl = 'themes/' . rawurlencode($slugTema) . '/fondo-banner.jpg?v=' . rawurlencode((string) filemtime($rutaFondo));
+        }
+    }
+}
+$hex = static fn ($v, $porDefecto) => preg_match('/^#[0-9a-fA-F]{3,8}$/', (string) $v) === 1 ? (string) $v : $porDefecto;
+$cAccent = $hex($colores['accent'] ?? '', '#7b6cff');
+$cYellow = $hex($colores['yellow'] ?? '', '#ffd75e');
+$cDark1 = $hex($colores['dark1'] ?? '', '#0d1533');
+$cDark2 = $hex($colores['dark2'] ?? '', '#0a1029');
 ?><!doctype html>
 <html lang="es">
 <head>
@@ -62,33 +84,82 @@ foreach ($lista as $fila) {
 <meta name="robots" content="noindex, nofollow">
 <title><?= $esc($titulo) ?> · CumpleClick</title>
 <style>
-  :root { color-scheme: dark; }
+  :root {
+    color-scheme: dark;
+    --accent: <?= $esc($cAccent) ?>;
+    --amarillo: <?= $esc($cYellow) ?>;
+    --fondo1: <?= $esc($cDark1) ?>;
+    --fondo2: <?= $esc($cDark2) ?>;
+  }
   body {
     margin: 0; padding: 24px 16px 48px;
-    background: #0d1533; color: #fff;
-    font: 16px/1.5 "Baloo 2", system-ui, sans-serif;
+    background: linear-gradient(170deg, var(--fondo1), var(--fondo2)) fixed;
+    color: #fff;
+    font: 16px/1.5 "Baloo 2", "Segoe UI", system-ui, sans-serif;
+    min-height: 100dvh;
+  }
+  /* El arte real de la fiesta, difuminado detrás: la familia reconoce SU
+     temática al abrir, igual que en la invitación. */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; z-index: -1;
+    <?php if ($fondoTemaUrl !== ''): ?>
+    background: url("<?= $esc($fondoTemaUrl) ?>") center top / cover no-repeat;
+    filter: blur(14px) saturate(1.05) brightness(0.5);
+    transform: scale(1.08);
+    <?php endif; ?>
   }
   main { max-width: 640px; margin: 0 auto; }
-  h1 { font-size: 1.45rem; line-height: 1.25; margin: 0 0 4px; }
-  .resumen { color: #9fb2e8; margin: 0 0 20px; }
-  .tarjeta {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 16px; padding: 14px 18px; margin-bottom: 12px;
+  .cabecera {
+    background: color-mix(in srgb, var(--fondo1) 74%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    border-top: 4px solid var(--accent);
+    border-radius: 20px;
+    padding: 20px 22px 16px;
+    margin-bottom: 18px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35);
   }
-  .familia { font-weight: 700; font-size: 1.05rem; }
-  .ninos { color: #cdd9ff; margin: 2px 0 0; }
-  .fecha { color: #7d90c9; font-size: 0.82rem; margin: 4px 0 0; }
+  h1 { font-size: 1.45rem; line-height: 1.25; margin: 0 0 8px; }
+  .resumen { margin: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+  .cifra {
+    display: inline-block;
+    background: color-mix(in srgb, var(--amarillo) 22%, transparent);
+    border: 1px solid color-mix(in srgb, var(--amarillo) 55%, transparent);
+    color: var(--amarillo);
+    font-weight: 700; font-size: 0.88rem;
+    padding: 3px 12px; border-radius: 999px;
+  }
+  .tarjeta {
+    background: color-mix(in srgb, var(--fondo1) 68%, transparent);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-left: 4px solid var(--accent);
+    border-radius: 16px; padding: 14px 18px; margin-bottom: 12px;
+    backdrop-filter: blur(8px);
+  }
+  .familia { font-weight: 700; font-size: 1.05rem; margin: 0; }
+  .ninos { color: #e6ecff; margin: 2px 0 0; }
+  .fecha { color: rgba(255,255,255,0.55); font-size: 0.82rem; margin: 4px 0 0; }
   .vacio {
-    text-align: center; padding: 48px 20px; color: #9fb2e8;
-    border: 1px dashed rgba(255,255,255,0.25); border-radius: 16px;
+    text-align: center; padding: 48px 20px; color: rgba(255,255,255,0.8);
+    background: color-mix(in srgb, var(--fondo1) 60%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--accent) 60%, transparent);
+    border-radius: 16px;
+    backdrop-filter: blur(8px);
   }
   .enlaces { margin-top: 28px; display: flex; gap: 10px; flex-wrap: wrap; }
   .enlaces a {
-    color: #fff; text-decoration: none; font-size: 0.9rem;
-    background: rgba(255,255,255,0.1); padding: 8px 14px; border-radius: 999px;
+    color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 600;
+    background: color-mix(in srgb, var(--accent) 40%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+    padding: 8px 14px; border-radius: 999px;
   }
-  .error { text-align: center; padding: 64px 20px; }
+  .pie { margin-top: 30px; text-align: center; color: rgba(255,255,255,0.45); font-size: 0.8rem; }
+  .error {
+    text-align: center; padding: 64px 20px;
+    background: color-mix(in srgb, var(--fondo1) 70%, transparent);
+    border-radius: 20px;
+  }
 </style>
 </head>
 <body>
@@ -99,11 +170,15 @@ foreach ($lista as $fila) {
     <p class="resumen">Este enlace venció o fue reemplazado. Pídele uno nuevo a CumpleClick.</p>
   </div>
 <?php else: ?>
-  <h1><?= $esc($titulo) ?></h1>
-  <p class="resumen">
-    <?= $totalFamilias === 1 ? '1 confirmación' : $esc($totalFamilias . ' confirmaciones') ?>
-    <?php if (!$esBabyShower && $totalNinos > 0): ?> · <?= $esc($totalNinos) ?> <?= $totalNinos === 1 ? 'niño' : 'niños' ?><?php endif; ?>
-  </p>
+  <header class="cabecera">
+    <h1><?= $esc($titulo) ?></h1>
+    <p class="resumen">
+      <span class="cifra"><?= $totalFamilias === 1 ? '1 confirmación' : $esc($totalFamilias . ' confirmaciones') ?></span>
+      <?php if (!$esBabyShower && $totalNinos > 0): ?>
+      <span class="cifra">👧🧒 <?= $esc($totalNinos) ?> <?= $totalNinos === 1 ? 'niño' : 'niños' ?></span>
+      <?php endif; ?>
+    </p>
+  </header>
 
   <?php if (!$lista): ?>
   <div class="vacio">Todavía nadie confirma. Cuando alguien confirme desde la invitación, aparece aquí al instante.</div>
@@ -125,6 +200,7 @@ foreach ($lista as $fila) {
     <a href="regalos-papas.php?t=<?= $esc($token) ?>">🎁 Lista de regalos</a>
   </div>
   <?php endif; ?>
+  <p class="pie">CumpleClick · esta lista se actualiza sola con cada confirmación</p>
 <?php endif; ?>
 </main>
 </body>

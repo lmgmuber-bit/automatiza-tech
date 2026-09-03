@@ -1407,8 +1407,13 @@ $cssVer = static function (string $rel): string {
                 $narrationUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . rawurlencode($narrationKey) . '.mp3';
             }
             $encodedFilePath = implode('/', array_map('rawurlencode', explode('/', $fileName)));
+            // ?v= por archivo: los clips se reemplazan CON EL MISMO NOMBRE
+            // (Kristoff rejuvenecido, 2026-09-03) y sin esto el navegador y el
+            // CDN siguieron sirviendo el capítulo viejo — mismo remedio que ya
+            // usan el intro del tema y el kiosco entero.
             $playlistSlots[] = [
-                'url' => 'themes/' . rawurlencode($themeSlug) . '/' . $encodedFilePath,
+                'url' => 'themes/' . rawurlencode($themeSlug) . '/' . $encodedFilePath
+                    . '?v=' . rawurlencode((string) filemtime($filePath)),
                 'caption' => $caption,
                 'narration' => $narrationUrl,
             ];

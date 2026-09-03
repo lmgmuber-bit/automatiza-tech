@@ -2451,3 +2451,14 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
   font-size: 2.4rem;
   margin: 0;
 }
+
+/* Fundido entre capítulos del recorrido: el video y su gorrito bajan la luz
+   un instante al cambiar de personaje (pedido de la clienta: transiciones
+   menos bruscas). Con prefers-reduced-motion el JS ni aplica la clase. */
+[data-playlist-video],
+[data-playlist-caption] {
+  transition: opacity 260ms ease;
+}
+.inv-clip-fundido {
+  opacity: 0 !important;
+}

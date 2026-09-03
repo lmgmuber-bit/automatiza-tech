@@ -1136,33 +1136,53 @@
       }
 
       let index = 0;
+      // Fundido entre capítulos: el cambio de `src` en seco hacía que el
+      // salto de un personaje al siguiente se sintiera brusco (observación
+      // de la clienta de Samantha, 2026-09-03). Se baja la luz un instante,
+      // se monta el clip nuevo y se vuelve a subir recién cuando ya está
+      // reproduciendo — así tampoco se ve el cuadro de carga.
+      const FUNDIDO_MS = 260;
+      video.addEventListener('playing', () => {
+        video.classList.remove('inv-clip-fundido');
+        if (caption) caption.classList.remove('inv-clip-fundido');
+      });
       const playAt = (i) => {
         index = i;
         const clip = clips[i];
-        video.src = clip.url;
-        if (caption) caption.textContent = clip.caption || '';
-        if (progressBar) progressBar.style.transform = 'scaleX(' + ((i) / clips.length).toFixed(4) + ')';
-        // El acceso a la invitación aparece cuando los videos TERMINAN, no
-        // al empezar el último: mientras el clip corre, un botón encima
-        // compite con lo que se está contando (pedido de Luis 2026-08-31).
-        if (hint) hint.classList.remove('is-visible');
-        // Cada capítulo trae su propia línea de Alice (los clips van sin
-        // audio propio): si no existe el MP3 de este capítulo en particular,
-        // sigue mudo, sin romper el resto de la lista.
-        if (narration) {
-          narration.pause();
-          if (clip.narration) {
-            narration.src = clip.narration;
-            duckWhile(narration);
-          } else {
-            narration.removeAttribute('src');
+        const montar = () => {
+          video.src = clip.url;
+          if (caption) caption.textContent = clip.caption || '';
+          if (progressBar) progressBar.style.transform = 'scaleX(' + ((i) / clips.length).toFixed(4) + ')';
+          // El acceso a la invitación aparece cuando los videos TERMINAN, no
+          // al empezar el último: mientras el clip corre, un botón encima
+          // compite con lo que se está contando (pedido de Luis 2026-08-31).
+          if (hint) hint.classList.remove('is-visible');
+          // Cada capítulo trae su propia línea de Alice (los clips van sin
+          // audio propio): si no existe el MP3 de este capítulo en particular,
+          // sigue mudo, sin romper el resto de la lista.
+          if (narration) {
+            narration.pause();
+            if (clip.narration) {
+              narration.src = clip.narration;
+              duckWhile(narration);
+            } else {
+              narration.removeAttribute('src');
+            }
           }
+          video.play().catch(() => {
+            // Si un clip puntual no puede reproducirse, se salta al
+            // siguiente en vez de dejar la lista trabada en silencio.
+            advance();
+          });
+        };
+        // El primer clip entra directo: no hay nada anterior que fundir.
+        if (i === 0 || reducedMotion.matches) {
+          montar();
+          return;
         }
-        video.play().catch(() => {
-          // Si un clip puntual no puede reproducirse, se salta al
-          // siguiente en vez de dejar la lista trabada en silencio.
-          advance();
-        });
+        video.classList.add('inv-clip-fundido');
+        if (caption) caption.classList.add('inv-clip-fundido');
+        setTimeout(montar, FUNDIDO_MS);
       };
       const advance = () => {
         if (index + 1 < clips.length) {

@@ -65,6 +65,12 @@ ErrorDocument 403 /404.html
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  # La URL corta de invitación (`cumpleclick.com/samantha-<token>`) llega acá,
+  # a la raíz, pero la invitación vive en `/app/`. Se redirige con 301 en vez
+  # de reescribir internamente: la página usa rutas relativas (themes/,
+  # assets/) que solo resuelven bien servida desde `/app/`. El patrón es el
+  # mismo del .htaccess de la app, así los dos aceptan exactamente lo mismo.
+  RewriteRule ^([a-z0-9-]{1,40}-([a-f0-9]{32}|[a-f0-9]{48}))$ /app/$1 [R=301,L]
   # El formulario de contacto es el único PHP del sitio. Cualquier otro .php
   # pedido acá arriba no existe, y debe decirlo: sin esta regla Apache entrega
   # la 404 igual, pero se deja explícito para que quede al lado del resto.

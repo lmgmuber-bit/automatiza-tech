@@ -1329,7 +1329,13 @@ function GestionInvitados({ list, onSave, onClose }) {
    ============================================================ */
 function Spinner({ onDone }) {
   const [winner, setWinner] = useState(null)
+  // Cada reintento incrementa spinId y relanza el efecto del giro.
+  const [spinId, setSpinId] = useState(0)
   const rotRef = useRef(null)
+  // Rotación acumulada: el reintento gira HACIA ADELANTE desde donde quedó la
+  // rueda; si el giro partiera de 0 otra vez se vería rebobinar de golpe.
+  const baseRot = useRef(0)
+  const autoRef = useRef(null)
   const n = PERSONAJES.length
   const angle = 360 / n
   // se elige el GANADOR una sola vez; la rueda gira para dejarlo bajo la flecha
@@ -1341,30 +1347,55 @@ function Spinner({ onDone }) {
 
   useEffect(() => {
     const win = winIdx.current
-    // slot win está a (win*angle) en sentido horario desde arriba.
-    // para dejarlo arriba (bajo la flecha): girar 5 vueltas - win*angle
-    const finalR = 360 * 5 - win * angle
+    const base = baseRot.current
+    // El slot win queda bajo la flecha cuando la rotación ≡ -win*angle (mod
+    // 360). Cinco vueltas desde donde está la rueda, más el ajuste para caer
+    // en el ganador.
+    const bruto = base + 360 * 5
+    const ajuste = ((-win * angle - bruto) % 360 + 360) % 360
+    const finalR = bruto + ajuste
     const dur = REDUCE_MOTION ? 600 : 3600
     const start = performance.now()
     const easeOut = (t) => 1 - Math.pow(1 - t, 3)
     let raf
     const tick = (now) => {
       const t = Math.min(1, (now - start) / dur)
-      const r = finalR * easeOut(t)
+      const r = base + (finalR - base) * easeOut(t)
       if (rotRef.current) rotRef.current.style.setProperty('--spin', r + 'deg')
       if (t < 1) {
         raf = requestAnimationFrame(tick)
       } else {
+        baseRot.current = finalR
         setWinner(PERSONAJES[win])
-        raf = setTimeout(() => onDone(PERSONAJES[win]), REDUCE_MOTION ? 700 : 1600)
+        // La tarjeta de ganador trae el botón de reintento, así que se le da
+        // tiempo a decidir; si nadie toca nada el flujo sigue solo — un kiosco
+        // no puede quedarse pegado esperando a un niño que ya se fue.
+        autoRef.current = setTimeout(() => onDone(PERSONAJES[win]), 8000)
       }
     }
     raf = requestAnimationFrame(tick)
     return () => {
       cancelAnimationFrame(raf)
-      clearTimeout(raf)
+      clearTimeout(autoRef.current)
     }
-  }, [onDone])
+  }, [onDone, spinId])
+
+  const reintentar = () => {
+    clearTimeout(autoRef.current)
+    winIdx.current = selectSpinnerWinnerIndex(PERSONAJES, {
+      themeSlug: THEME_SLUG,
+      search: location.search,
+      hostname: location.hostname,
+      excludeIndex: winIdx.current,
+    })
+    setWinner(null)
+    setSpinId((id) => id + 1)
+  }
+
+  const aceptar = () => {
+    clearTimeout(autoRef.current)
+    onDone(winner)
+  }
 
   return (
     <section className={`screen spinner${CONFIG.images.roulette ? ' has-themed-background' : ''}`}>
@@ -1393,6 +1424,14 @@ function Spinner({ onDone }) {
             <p className="winner-emoji" style={{ fontSize: '60px' }}>{winner.emoji}</p>
             <p className="winner-text">¡Ganador!</p>
             <h2 className="winner-name">{winner.name}</h2>
+            <div className="spinner-winner-actions">
+              <button className="cta" onClick={aceptar}>
+                ✅ ¡Me gusta!
+              </button>
+              <button className="cta ghost" onClick={reintentar}>
+                🔁 Girar de nuevo
+              </button>
+            </div>
           </div>
         )}
       </div>

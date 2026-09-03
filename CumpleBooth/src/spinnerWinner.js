@@ -17,6 +17,7 @@ export function selectSpinnerWinnerIndex(personajes, {
   search = '',
   hostname = '',
   random = Math.random,
+  excludeIndex = -1,
 } = {}) {
   const list = Array.isArray(personajes) ? personajes : []
   if (!list.length) return 0
@@ -30,6 +31,14 @@ export function selectSpinnerWinnerIndex(personajes, {
   if (canForceRayo) {
     const rayoIndex = list.findIndex((personaje) => normalize(personaje?.name) === 'rayo-mcqueen')
     if (rayoIndex >= 0) return rayoIndex
+  }
+
+  // Reintento de la ruleta: el personaje recién rechazado no puede volver a
+  // salir en el giro siguiente — un niño que dijo "ese no" y lo ve salir de
+  // nuevo siente que la ruleta está rota. Se sortea entre los demás.
+  if (Number.isInteger(excludeIndex) && excludeIndex >= 0 && excludeIndex < list.length && list.length > 1) {
+    const pick = Math.min(list.length - 2, Math.max(0, Math.floor(random() * (list.length - 1))))
+    return pick >= excludeIndex ? pick + 1 : pick
   }
 
   return Math.min(list.length - 1, Math.max(0, Math.floor(random() * list.length)))

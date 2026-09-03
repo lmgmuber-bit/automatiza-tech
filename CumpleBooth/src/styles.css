@@ -2142,6 +2142,17 @@ body {
   gap: 12px;
 }
 @keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+/* Botones dentro del círculo del ganador: aceptar o volver a girar. Van en
+   columna porque la tarjeta es redonda y dos botones lado a lado se salen
+   del círculo en la tablet. */
+.spinner-winner-actions {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  margin-top: 4px;
+}
+.spinner-winner-actions .cta {
+  font-size: clamp(14px, 3cqw, 20px);
+  padding: 10px 22px;
+}
 .winner-emoji { color: #fff; line-height: 1; }
 .winner-text { color: var(--yellow); font-size: clamp(16px, 4vw, 24px); font-weight: 800; margin: 0; text-transform: uppercase; letter-spacing: 3px; }
 .winner-name { color: #fff; font-size: clamp(28px, 8vw, 48px); margin: 0; font-weight: 800; text-shadow: 0 4px 16px rgba(0,0,0,0.8); }

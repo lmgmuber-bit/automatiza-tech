@@ -698,6 +698,7 @@ function cb_sanitize_theme_game($rawGame, string $base = '', string $diskDir = '
             'podium-night',
             'backyard-fiesta',
             'rooftop-city',
+            'comic-city',
         ];
         $game['stage'] = in_array($stage, $allowedStages, true) ? $stage : 'neon-arena';
     }
@@ -765,6 +766,45 @@ function cb_sanitize_party_games($raw): ?array
         }
     }
     return $out;
+}
+
+/**
+ * Versión de los assets de una temática: el mtime más nuevo de su carpeta.
+ *
+ * Existe por el fantasma del cache: los archivos de temática se reemplazan
+ * CON EL MISMO NOMBRE (la convención saludo-<img>.mp4 no es negociable), así
+ * que navegadores y CDN siguen sirviendo el archivo viejo hasta que su cache
+ * expira. Se vio en vivo dos veces el mismo día: la tablet de Luis mostrando
+ * el fondo-banner anterior de Héroes tras corregirlo, y el CDN de Hostinger
+ * sirviendo el welcome-heroes.mp4 previo (x-hcdn HIT). El front agrega este
+ * número como ?v= a cada URL de asset del tema: cambia un archivo, cambia la
+ * URL, y el cache queda fuera de la jugada.
+ *
+ * Es UNA versión por tema, no por archivo, a propósito: un solo mecanismo,
+ * un solo valor que razonar, y el costo es re-descargar el tema completo
+ * cuando cambia algo (raro: los temas cambian por tandas).
+ */
+function cb_theme_assets_version(string $themeDiskDir): int
+{
+    static $cache = [];
+    if (isset($cache[$themeDiskDir])) {
+        return $cache[$themeDiskDir];
+    }
+    $max = 0;
+    if (is_dir($themeDiskDir)) {
+        $it = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($themeDiskDir, FilesystemIterator::SKIP_DOTS)
+        );
+        foreach ($it as $f) {
+            if ($f->isFile()) {
+                $m = (int) $f->getMTime();
+                if ($m > $max) {
+                    $max = $m;
+                }
+            }
+        }
+    }
+    return $cache[$themeDiskDir] = $max;
 }
 
 function cb_build_theme_payload(
@@ -922,6 +962,7 @@ function cb_build_theme_payload(
 
     return [
         'slug'       => $themeSlug,
+        'assetsVersion' => cb_theme_assets_version($themeDiskDir),
         'nombre'     => (string) ($themeData['nombre'] ?? $themeSlug),
         'diploma'    => (string) ($themeData['diploma'] ?? ''),
         'colors'     => $themeData['colors'] ?? new stdClass(),
@@ -1233,6 +1274,86 @@ function cb_photo_absolute_path(string $storageKey): ?string
         return null;
     }
     return cb_photo_root() . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $storageKey);
+}
+
+/**
+ * Miniatura de una foto de cabina, generada una vez y cacheada junto al
+ * original como `<archivo>.thumb.jpg`.
+ *
+ * POR QUE EXISTE
+ *   El Album Recuerdo mostraba las fotos de cabina en tamano completo: el API
+ *   decia "la cabina no genera miniatura; el original ya es JPEG/PNG del
+ *   kiosco", asumiendo originales livianos. En la practica son composiciones
+ *   de 1080x1920 de 2-3MB, y un album con 9 fotos de cabina cargaba mas de
+ *   20MB en el celular del invitado. Las fotos de invitados si tenian
+ *   miniatura (48KB): esta funcion empareja a las de cabina.
+ *
+ * El formato se detecta por CONTENIDO, no por extension: las claves de
+ * almacenamiento terminan todas en .png aunque el archivo sea JPEG, y
+ * imagecreatefrompng sobre un JPEG devuelve false sin avisar (ya nos paso:
+ * fotos compuestas con el marco vacio y ningun error en el log).
+ *
+ * Devuelve null ante cualquier problema: el que llama sirve el original y la
+ * pagina nunca se rompe, solo pesa mas.
+ */
+function cb_photo_thumbnail_path(string $originalPath): ?string
+{
+    if (!is_file($originalPath) || !function_exists('imagecreatetruecolor')) {
+        return null;
+    }
+    $thumbPath = $originalPath . '.thumb.jpg';
+    if (is_file($thumbPath) && filemtime($thumbPath) >= filemtime($originalPath)) {
+        return $thumbPath;
+    }
+
+    $info = @getimagesize($originalPath);
+    $type = $info[2] ?? 0;
+    $src = null;
+    if ($type === IMAGETYPE_PNG) {
+        $src = @imagecreatefrompng($originalPath);
+    } elseif ($type === IMAGETYPE_JPEG) {
+        $src = @imagecreatefromjpeg($originalPath);
+    } elseif ($type === IMAGETYPE_WEBP && function_exists('imagecreatefromwebp')) {
+        $src = @imagecreatefromwebp($originalPath);
+    }
+    if (!$src) {
+        return null;
+    }
+    $srcW = imagesx($src);
+    $srcH = imagesy($src);
+    if ($srcW < 1 || $srcH < 1) {
+        imagedestroy($src);
+        return null;
+    }
+    // El mismo lado maximo que las miniaturas de invitados (thumb_max_side),
+    // para que en la revista pesen y se vean parejo. Un original ya pequeno no
+    // se agranda: se copia tal cual a JPEG.
+    $max = 640;
+    $scale = min(1.0, $max / max($srcW, $srcH));
+    $dstW = max(1, (int) round($srcW * $scale));
+    $dstH = max(1, (int) round($srcH * $scale));
+    $dst = imagecreatetruecolor($dstW, $dstH);
+    // JPEG no tiene alfa: blanco de fondo para que un PNG transparente no
+    // salga negro, igual que hace cb_album_make_thumbnail.
+    $white = imagecolorallocate($dst, 255, 255, 255);
+    imagefilledrectangle($dst, 0, 0, $dstW, $dstH, $white);
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, $dstW, $dstH, $srcW, $srcH);
+    imagedestroy($src);
+
+    // A un archivo temporal y luego rename: si dos peticiones generan la misma
+    // miniatura a la vez, ninguna sirve un JPEG a medio escribir.
+    $tmp = $thumbPath . '.' . bin2hex(random_bytes(4)) . '.tmp';
+    $ok = imagejpeg($dst, $tmp, 82);
+    imagedestroy($dst);
+    if (!$ok) {
+        @unlink($tmp);
+        return null;
+    }
+    if (!@rename($tmp, $thumbPath)) {
+        @unlink($tmp);
+        return null;
+    }
+    return $thumbPath;
 }
 
 function cb_photo_usage(string $partySlug): array
@@ -2304,6 +2425,31 @@ function cb_theme_css_vars(string $themeSlug): string
         }
     }
     return $out ? implode(';', $out) . ';' : '';
+}
+
+/**
+ * El color con que el navegador pinta su barra (`<meta name="theme-color">`).
+ *
+ * En el kiosco y en el álbum lo pone applyThemeColors() al vuelo, pero estas
+ * páginas son PHP puro y no pasan por ahí: se quedaban con la barra gris de
+ * Chrome mientras el resto de la experiencia iba en el color del tema. Salta a
+ * la vista al saltar del kiosco a la invitación en el celular.
+ *
+ * Mismo criterio que en el front: se usa `accent`, el color con el que ya se
+ * reconoce cada temática. Devuelve '' si el tema no existe o no declara accent,
+ * y en ese caso NO se imprime el meta: mejor la barra por defecto del navegador
+ * que un color inventado.
+ */
+function cb_theme_meta_color(string $themeSlug): string
+{
+    if ($themeSlug === '') {
+        return '';
+    }
+    $themes = cb_load_themes();
+    $accent = (string) ($themes['themes'][$themeSlug]['colors']['accent'] ?? '');
+    // Solo hexadecimal, igual que cb_theme_css_vars: esto entra en un atributo
+    // HTML y lo que no calce se descarta en vez de escaparse.
+    return preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent) === 1 ? $accent : '';
 }
 
 // Módulo de invitaciones (depende de cb_config, cb_pdo, etc.).

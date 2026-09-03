@@ -29,10 +29,19 @@ export function buildPages(data) {
   const portadaElegida = media.find(
     (item) => item.id === data.album?.coverId && item.kind === 'image'
   )
+  // Y nunca una foto de cabina como portada automatica: las composiciones del
+  // kiosco traen su propia tipografia horneada en los pixeles (titulo,
+  // agradecimiento, pildora del personaje), y la tapa le pone encima el titulo
+  // del album — texto sobre texto, ilegible. Se vio en la portada del baby
+  // shower de Tomas: "El baby shower de Tomas" montado sobre el "Muchas
+  // gracias Antonia Vera..." de la foto. Si el album solo tiene fotos de
+  // cabina, la tapa usa el arte de la tematica (el fallback de siempre) y las
+  // fotos viven adentro. La portada fijada a mano sigue mandando: es decision
+  // del organizador, aunque elija una de cabina.
   const cover =
     portadaElegida ||
-    media.find((item) => item.kind === 'image' && !item.message) ||
-    media.find((item) => item.kind === 'image') ||
+    media.find((item) => item.kind === 'image' && item.source !== 'booth' && !item.message) ||
+    media.find((item) => item.kind === 'image' && item.source !== 'booth') ||
     null
 
   pages.push({

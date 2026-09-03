@@ -81,7 +81,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
        bloquea el render; las tipografias van ultimas porque tienen
        `font-display: swap` y el texto se pinta sin esperarlas. -->
   <link rel="preload" href="assets/img/globo-render.webp" as="image" type="image/webp">
-  <link rel="stylesheet" href="css/styles.css?v=20260831k">
+  <link rel="stylesheet" href="css/styles.css?v=20260901a">
   <link rel="preload" href="fonts/baloo-2-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/baloo-2-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
   <!-- ?v= no es adorno. `styles.css` y `main.js` tienen nombre FIJO, asi que
@@ -308,7 +308,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
         <li class="eventos__item" data-reveal><span aria-hidden="true">🔮</span><h3>Las apuestas</h3><p>El momento que a todos les gusta. Quedan en un <strong>tablero privado</strong> que los papás abren después, y muchos imprimen.</p></li>
         <li class="eventos__item" data-reveal><span aria-hidden="true">📖</span><h3>El álbum</h3><p>Las fotos de la cabina más las que suban los invitados desde su celular, en una revista que se hojea.</p></li>
       </ul>
-      <p class="mundos__mas" data-reveal>¿Todavía no saben el nombre o el sexo? <strong>Está pensado para eso.</strong> La invitación funciona igual, y si la fiesta es justamente para revelarlo, mejor. <a href="#precios">Vale <strong>$29.995</strong></a> con el 50% de lanzamiento, e incluye la invitación, las apuestas y el álbum.</p>
+      <p class="mundos__mas" data-reveal>¿Todavía no saben el nombre o el sexo? <strong>Está pensado para eso.</strong> La invitación funciona igual, y si la fiesta es justamente para revelarlo, mejor. <a href="#demos">Mírala funcionando</a>. Vale <strong>$29.995</strong> con el 50% de lanzamiento, e incluye la invitación, las apuestas y el álbum.</p>
     </section>
 
     <!-- 3c · DEMOS EN VIVO -->
@@ -356,6 +356,15 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
             <a href="/app/invitacion.php?t=53975b2d7c8365c9cf440850b0028522" target="_blank" rel="noopener">Invitación</a> ·
             <a href="/app/?p=demo-bs-nino" target="_blank" rel="noopener">Kiosco</a> ·
             <a href="/app/album.html?t=816d26c2258966fa3eec3f7b5135dae8" target="_blank" rel="noopener">Álbum</a>
+          </p>
+        </li>
+        <li class="demo" data-reveal>
+          <h3>Baby shower · aún no saben</h3>
+          <p>Bebé Safari, sin nombre ni sexo todavía. Así se ve cuando la fiesta es justamente para revelarlo.</p>
+          <p>
+            <a href="/app/invitacion.php?t=3cfccd0a5c3c8599a95ea47d2531439c" target="_blank" rel="noopener">Invitación</a> ·
+            <a href="/app/?p=demo-bs-safari" target="_blank" rel="noopener">Kiosco</a> ·
+            <a href="/app/album.html?t=7665791dcfbf47ed1d3442c08c4a7dc7" target="_blank" rel="noopener">Álbum</a>
           </p>
         </li>
       </ul>
@@ -617,6 +626,6 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
   <script src="vendor/gsap.min.js" defer></script>
   <script src="vendor/ScrollTrigger.min.js" defer></script>
   <script src="vendor/lenis.min.js" defer></script>
-  <script src="js/main.js?v=20260831k" defer></script>
+  <script src="js/main.js?v=20260901a" defer></script>
 </body>
 </html>

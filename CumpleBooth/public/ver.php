@@ -54,7 +54,20 @@ if ($path === null || !is_file($path)) {
     cb_photo_page_error(404, 'Foto no encontrada');
 }
 if (isset($_GET['download'])) {
-    header('Content-Type: image/png');
+    // La revista del álbum pide `v=thumb`: una miniatura cacheada de 640px en
+    // vez del original de 2-3MB. Si no se puede generar, va el original y la
+    // página solo pesa más; nunca se rompe.
+    if ((string) ($_GET['v'] ?? '') === 'thumb') {
+        $thumbPath = cb_photo_thumbnail_path($path);
+        if ($thumbPath !== null) {
+            $path = $thumbPath;
+        }
+    }
+    // El MIME por contenido: el tipo estaba clavado en image/png con nosniff
+    // activo, y las fotos guardadas como JPEG (la clave siempre termina en
+    // .png, el contenido no siempre) salían declaradas con el tipo equivocado.
+    $mime = (string) (@getimagesize($path)['mime'] ?? 'image/png');
+    header('Content-Type: ' . $mime);
     header('X-Content-Type-Options: nosniff');
     header('Content-Length: ' . filesize($path));
     header('Content-Disposition: ' . ((string) $_GET['download'] === 'inline' ? 'inline' : 'attachment') . '; filename="' . preg_replace('/[^A-Za-z0-9._-]/', '-', $downloadName) . '"');

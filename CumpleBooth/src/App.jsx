@@ -13,6 +13,7 @@ import StageConcert3D from './StageConcert3D.jsx'
 import { createAudioKit, createBeatClock, DEFAULT_BPM } from './gameAudio.js'
 import { configurarRecords, guardarRecord, textoRecord, formatoSegundos } from './records.js'
 import { resolveThemeFlow } from './themeFlow.js'
+import { conVersion } from './assetVersion.js'
 import { selectSpinnerWinnerIndex } from './spinnerWinner.js'
 import { PREDICTION_OPTIONS, createPredictionSubmissionToken, predictionLabels, predictionSummary, validPrediction } from './predictions.js'
 
@@ -32,6 +33,8 @@ const BASE = import.meta.env.BASE_URL // base relativa './' — funciona en cual
 const BRAND_LOGO_SRC = BASE + 'brand/cumpleclick-mark.svg'
 
 let CONFIG = null
+// Versión de assets del tema activo (rompe-cache). La escribe buildRuntime.
+let ASSETS_VERSION = 0
 let PARTY_SLUG = null
 let THEME_SLUG = null
 let STORAGE_KEY = null
@@ -102,7 +105,7 @@ function applyThemeVars(colors) {
     // tras el build de Vite), no contra index.html — con ruta relativa termina
     // pidiendo dist/assets/themes/... (404). Con new URL() queda absoluta y
     // no importa dónde vive el CSS.
-    const grupoUrl = new URL(BASE + 'themes/' + THEME_SLUG + '/grupo-personajes.png', document.baseURI).href
+    const grupoUrl = new URL(conVersion(BASE + 'themes/' + THEME_SLUG + '/grupo-personajes.png', ASSETS_VERSION), document.baseURI).href
     root.setProperty('--grupo-bg', `url("${grupoUrl}")`)
   }
   if (CONFIG?.images?.roulette) {
@@ -118,10 +121,15 @@ function applyThemeVars(colors) {
 function buildRuntime(party, theme, slug) {
   PARTY_SLUG = slug
   THEME_SLUG = theme.slug || slug
-  WELCOME_VIDEO_PRIMARY = theme.videos?.welcome || BASE + 'welcome-car.mp4'
-  REVELACION_VIDEO = theme.videos?.revelacion ? BASE + theme.videos.revelacion : null
+  // Rompe-cache: toda URL de asset DEL TEMA pasa por ver(). Los genéricos
+  // compartidos (videos/, audio/) quedan sin versión: no viven en la carpeta
+  // del tema y casi nunca cambian.
+  ASSETS_VERSION = Number(theme.assetsVersion) || 0
+  const ver = (u) => conVersion(u, ASSETS_VERSION)
+  WELCOME_VIDEO_PRIMARY = theme.videos?.welcome ? ver(theme.videos.welcome) : BASE + 'welcome-car.mp4'
+  REVELACION_VIDEO = theme.videos?.revelacion ? ver(BASE + theme.videos.revelacion) : null
   WELCOME_VIDEO_ALT = THEME_SLUG === 'carreras'
-    ? BASE + 'themes/carreras/saludo-rayo-mcqueen-v3.mp4'
+    ? ver(BASE + 'themes/carreras/saludo-rayo-mcqueen-v3.mp4')
     : null
   STORAGE_KEY = 'booth_' + slug
   // Marcador de la fiesta: los récords se guardan por slug, así una fiesta
@@ -145,23 +153,23 @@ function buildRuntime(party, theme, slug) {
       // siquiera existe en disco — VideoScreen ya cae a una tarjeta con
       // emoji si el archivo falla, así que temas sin despedida propia
       // siguen viéndose exactamente igual que antes de esto.
-      despedida: theme.videos?.despedida ? BASE + theme.videos.despedida : BASE + 'videos/despedida.mp4',
+      despedida: theme.videos?.despedida ? ver(BASE + theme.videos.despedida) : BASE + 'videos/despedida.mp4',
     },
     images: {
-      fondo: BASE + theme.images.sala, // sala con marco dorado (compositing + transicion)
-      bienvenida: BASE + theme.images.banner, // pantalla de bienvenida (intro)
-      roulette: theme.images.roulette ? BASE + theme.images.roulette : null,
+      fondo: ver(BASE + theme.images.sala), // sala con marco dorado (compositing + transicion)
+      bienvenida: ver(BASE + theme.images.banner), // pantalla de bienvenida (intro)
+      roulette: theme.images.roulette ? ver(BASE + theme.images.roulette) : null,
     },
     audio: {
       captura: BASE + 'audio/captura.mp3', // opcional, genérico (no por temática)
       confetti: BASE + 'audio/confetti.mp3', // opcional, genérico (no por temática)
       nota: BASE + 'audio/nota.mp3', // opcional, genérico: al atrapar en el juego de copos
       error: BASE + 'audio/error.mp3', // opcional, genérico: al tocar una trampa en el juego de copos
-      musica: BASE + theme.musica, // música de fondo en loop
+      musica: ver(BASE + theme.musica), // música de fondo en loop
       // Música exclusiva de la pantalla de juegos (Luis, 2026-07-26: en los
       // juegos suena "Y si hacemos un muñeco", en el resto "Libre soy").
       // Sin este archivo el juego conserva la música de fondo normal.
-      musicaJuego: theme.musicaJuego ? BASE + theme.musicaJuego : null,
+      musicaJuego: theme.musicaJuego ? ver(BASE + theme.musicaJuego) : null,
     },
     // Endpoint PHP que guarda la foto y devuelve URL pública (solo en prod/Hostinger).
     // En localhost no existe → el QR cae a texto automáticamente.
@@ -188,29 +196,33 @@ function buildRuntime(party, theme, slug) {
   CHAR_PNG = {}
   CHAR_RUN_ATLAS = {}
   THEME_FLOW = resolveThemeFlow(theme)
+  // Las URLs que publica el flujo también son assets del tema.
+  for (const campo of ['photoSessionVideo', 'photoSessionPoster', 'photoSessionTeaser', 'photoSessionTeaserVideo', 'starVideo']) {
+    if (THEME_FLOW[campo]) THEME_FLOW[campo] = ver(THEME_FLOW[campo])
+  }
   ;(theme.personajes || []).forEach((p) => {
-    CHAR_IMG[p.name] = BASE + p.img
+    CHAR_IMG[p.name] = ver(BASE + p.img)
     // Video de saludo OPCIONAL por temática: themes/<tema>/saludo-<base-del-img>.mp4
     // (si el archivo no existe, VideoPersonaje cae a la imagen automáticamente)
-    CHAR_VIDEO[p.name] = BASE + p.img.replace(/([^/]+)\.(jpe?g|png)$/i, 'saludo-$1.mp4')
+    CHAR_VIDEO[p.name] = ver(BASE + p.img.replace(/([^/]+)\.(jpe?g|png)$/i, 'saludo-$1.mp4'))
     // Narración OPCIONAL antes del juego: themes/<tema>/invitacion-juego-<base-del-img>.mp3
-    CHAR_JUEGO_AUDIO[p.name] = BASE + p.img.replace(/([^/]+)\.(jpe?g|png)$/i, 'invitacion-juego-$1.mp3')
+    CHAR_JUEGO_AUDIO[p.name] = ver(BASE + p.img.replace(/([^/]+)\.(jpe?g|png)$/i, 'invitacion-juego-$1.mp3'))
     // Recorte transparente OPCIONAL del personaje (themes/<slug>/<base>-cut.png).
     // Solo se registra si el backend confirmó que el archivo existe (pngExists).
     if (p.pngExists && p.png) {
-      CHAR_PNG[p.name] = BASE + p.png
+      CHAR_PNG[p.name] = ver(BASE + p.png)
     }
     // El backend publica el atlas únicamente en plan Full y tras confirmar
     // que existe en disco. ThemeWorld3D conserva fallback al recorte/JPG si
     // la carga falla después (por ejemplo, un FTP incompleto).
     if (p.runnerAtlasExists && p.runnerAtlas) {
-      CHAR_RUN_ATLAS[p.name] = BASE + p.runnerAtlas
+      CHAR_RUN_ATLAS[p.name] = ver(BASE + p.runnerAtlas)
     }
   })
   INVITADOS_DEFAULT = Array.isArray(party.invitados) ? party.invitados : []
   preloadBrandLogo()
   // Precarga imagen grupal para watermark en diploma
-  const grupoUrl = BASE + 'themes/' + THEME_SLUG + '/grupo-personajes.png'
+  const grupoUrl = ver(BASE + 'themes/' + THEME_SLUG + '/grupo-personajes.png')
   const gi = new Image()
   gi.onload = () => { GRUPO_IMG = gi }
   gi.src = grupoUrl
@@ -1152,7 +1164,10 @@ function ListaInvitados({ invitados, onStart }) {
                 className="welcome-car3d-video"
                 src={welcome.src}
                 autoPlay
-                muted
+                /* Sin muted: la bienvenida ahora trae voces (Spidey, 2026-09-02)
+                   y llegaba muda al kiosco. El invitado ya tocó su nombre, así
+                   que el autoplay con sonido está permitido; la música de fondo
+                   va a 0.15 y no compite. */
                 playsInline
                 onLoadedMetadata={(e) => {
                   // Ya se conoce cuánto dura: el watchdog se ajusta para no
@@ -1314,7 +1329,13 @@ function GestionInvitados({ list, onSave, onClose }) {
    ============================================================ */
 function Spinner({ onDone }) {
   const [winner, setWinner] = useState(null)
+  // Cada reintento incrementa spinId y relanza el efecto del giro.
+  const [spinId, setSpinId] = useState(0)
   const rotRef = useRef(null)
+  // Rotación acumulada: el reintento gira HACIA ADELANTE desde donde quedó la
+  // rueda; si el giro partiera de 0 otra vez se vería rebobinar de golpe.
+  const baseRot = useRef(0)
+  const autoRef = useRef(null)
   const n = PERSONAJES.length
   const angle = 360 / n
   // se elige el GANADOR una sola vez; la rueda gira para dejarlo bajo la flecha
@@ -1326,30 +1347,55 @@ function Spinner({ onDone }) {
 
   useEffect(() => {
     const win = winIdx.current
-    // slot win está a (win*angle) en sentido horario desde arriba.
-    // para dejarlo arriba (bajo la flecha): girar 5 vueltas - win*angle
-    const finalR = 360 * 5 - win * angle
+    const base = baseRot.current
+    // El slot win queda bajo la flecha cuando la rotación ≡ -win*angle (mod
+    // 360). Cinco vueltas desde donde está la rueda, más el ajuste para caer
+    // en el ganador.
+    const bruto = base + 360 * 5
+    const ajuste = ((-win * angle - bruto) % 360 + 360) % 360
+    const finalR = bruto + ajuste
     const dur = REDUCE_MOTION ? 600 : 3600
     const start = performance.now()
     const easeOut = (t) => 1 - Math.pow(1 - t, 3)
     let raf
     const tick = (now) => {
       const t = Math.min(1, (now - start) / dur)
-      const r = finalR * easeOut(t)
+      const r = base + (finalR - base) * easeOut(t)
       if (rotRef.current) rotRef.current.style.setProperty('--spin', r + 'deg')
       if (t < 1) {
         raf = requestAnimationFrame(tick)
       } else {
+        baseRot.current = finalR
         setWinner(PERSONAJES[win])
-        raf = setTimeout(() => onDone(PERSONAJES[win]), REDUCE_MOTION ? 700 : 1600)
+        // La tarjeta de ganador trae el botón de reintento, así que se le da
+        // tiempo a decidir; si nadie toca nada el flujo sigue solo — un kiosco
+        // no puede quedarse pegado esperando a un niño que ya se fue.
+        autoRef.current = setTimeout(() => onDone(PERSONAJES[win]), 8000)
       }
     }
     raf = requestAnimationFrame(tick)
     return () => {
       cancelAnimationFrame(raf)
-      clearTimeout(raf)
+      clearTimeout(autoRef.current)
     }
-  }, [onDone])
+  }, [onDone, spinId])
+
+  const reintentar = () => {
+    clearTimeout(autoRef.current)
+    winIdx.current = selectSpinnerWinnerIndex(PERSONAJES, {
+      themeSlug: THEME_SLUG,
+      search: location.search,
+      hostname: location.hostname,
+      excludeIndex: winIdx.current,
+    })
+    setWinner(null)
+    setSpinId((id) => id + 1)
+  }
+
+  const aceptar = () => {
+    clearTimeout(autoRef.current)
+    onDone(winner)
+  }
 
   return (
     <section className={`screen spinner${CONFIG.images.roulette ? ' has-themed-background' : ''}`}>
@@ -1378,6 +1424,14 @@ function Spinner({ onDone }) {
             <p className="winner-emoji" style={{ fontSize: '60px' }}>{winner.emoji}</p>
             <p className="winner-text">¡Ganador!</p>
             <h2 className="winner-name">{winner.name}</h2>
+            <div className="spinner-winner-actions">
+              <button className="cta" onClick={aceptar}>
+                ✅ ¡Me gusta!
+              </button>
+              <button className="cta ghost" onClick={reintentar}>
+                🔁 Girar de nuevo
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -1456,7 +1510,7 @@ function PhotoSessionVideo({ invitado, onDone }) {
   }, [failed, finish])
 
   return (
-    <section className="screen video-screen photo-session-screen">
+    <section className={`screen video-screen photo-session-screen photo-session--${THEME_SLUG}`}>
       {!failed ? (
         <video
           ref={videoRef}
@@ -1663,9 +1717,15 @@ function Intro({ onStart }) {
         <h1 className="intro-title">
           {/* Un baby shower no es "la fiesta de Valentina": Valentina todavia
               no nacio. La bienvenida cambia de forma segun la modalidad. */}
+          {/* Sin nombre la frase cambia entera, no se recorta: "de" seguido
+              de nada es exactamente lo que se quiere evitar. */}
           {esBabyShower()
-            ? <>¡Bienvenidos al<br />baby shower de<br />{CONFIG.nombre}!</>
-            : <>¡Bienvenidos a la<br />fiesta de<br />{CONFIG.nombre}!</>}
+            ? (nombreEvento()
+                ? <>¡Bienvenidos al<br />baby shower de<br />{nombreEvento()}!</>
+                : <>¡Bienvenidos al<br />baby shower!</>)
+            : (nombreEvento()
+                ? <>¡Bienvenidos a la<br />fiesta de<br />{nombreEvento()}!</>
+                : <>¡Bienvenidos a<br />la fiesta!</>)}
         </h1>
         <div className="intro-party-decoration" aria-hidden="true">
           <div className="intro-party-flags">
@@ -1673,9 +1733,11 @@ function Intro({ onStart }) {
           </div>
           <span>¡A celebrar!</span>
         </div>
-        <p className="intro-cake-name" aria-label={`Cumpleaños de ${CONFIG.nombre}`}>
-          {CONFIG.nombre}
-        </p>
+        {nombreEvento() !== '' && (
+          <p className="intro-cake-name" aria-label={eventoFraseEn()}>
+            {nombreEvento()}
+          </p>
+        )}
         <div className="intro-bottom">
           <button
             className="cta pulse"
@@ -1708,12 +1770,24 @@ const esBabyShower = () => CONFIG?.eventType === 'baby_shower'
 // Dos variantes porque el articulo cambia con la preposicion: "por venir AL
 // baby shower" pero "EN EL baby shower". Con una sola quedaba "en al baby
 // shower de Valentina" impreso en el recuerdito que el invitado se lleva.
-const eventoFraseA = () => (esBabyShower()
-  ? `al baby shower de ${CONFIG.nombre}`
-  : `a la fiesta de ${CONFIG.nombre}`)
-const eventoFraseEn = () => (esBabyShower()
-  ? `el baby shower de ${CONFIG.nombre}`
-  : `la fiesta de ${CONFIG.nombre}`)
+//
+// Y el nombre puede venir VACIO. En un baby shower "aun no saben" no hay
+// nombre que poner, que es justo el caso para el que se hizo esa tematica:
+// el recuerdito que el invitado se lleva impreso decia "Gracias por venir al
+// baby shower de " y ahi terminaba (reporte de Luis 2026-08-31). Sin nombre
+// no se rellena el hueco: cambia la frase entera, que es como ya lo resuelve
+// `fraseA()` en src/album/evento.js para el Album Recuerdo.
+const nombreEvento = () => String(CONFIG?.nombre || '').trim()
+const eventoFraseA = () => {
+  const nombre = nombreEvento()
+  if (esBabyShower()) return nombre ? `al baby shower de ${nombre}` : 'al baby shower'
+  return nombre ? `a la fiesta de ${nombre}` : 'a la fiesta'
+}
+const eventoFraseEn = () => {
+  const nombre = nombreEvento()
+  if (esBabyShower()) return nombre ? `el baby shower de ${nombre}` : 'el baby shower'
+  return nombre ? `la fiesta de ${nombre}` : 'la fiesta'
+}
 
 function CumpleClickBrand({ className = '', inverse = false }) {
   return (
@@ -3039,7 +3113,7 @@ function TransicionWow({ invitado, personaje, onDone }) {
       <div className="transition-text">
         <h2>¡Ahora nos tomaremos una foto!</h2>
         <p>Sonríe {invitado},</p>
-        <h1>{CONFIG.nombre}</h1>
+        {nombreEvento() !== '' && <h1>{nombreEvento()}</h1>}
       </div>
       <canvas ref={confRef} className="confetti-canvas" />
     </section>
@@ -3769,7 +3843,9 @@ function QRScreen({ imageDataUrl, invitado, isBabyShower = false, onDiploma, onD
       <div className="qr-veil" />
       <div className="qr-content">
         <CumpleClickBrand />
-        <h1 className="qr-brand">{isBabyShower ? CONFIG.nombre : `Fiesta de ${CONFIG.nombre}`}</h1>
+        <h1 className="qr-brand">{isBabyShower
+          ? (nombreEvento() || 'Baby shower')
+          : (nombreEvento() ? `Fiesta de ${nombreEvento()}` : 'La fiesta')}</h1>
         <h2 className="qr-title">{isBabyShower ? '¡Tu predicción está lista!' : '¡Tu foto está lista! 📸'}</h2>
         <p className="qr-sub">
           {mode === 'error'

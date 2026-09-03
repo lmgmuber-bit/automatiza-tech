@@ -154,6 +154,37 @@
     }, { once: true });
   }
 
+  // Sin narración de Alice en la portada (los baby shower), la página NO baja
+  // sola: primero hubo un hueco donde no pasaba nada nunca, después un scroll
+  // automático a los 1,2s — y Luis lo devolvió: se sentía apurado, la portada
+  // tiene el nombre, la fecha y los dos contadores y el invitado quiere
+  // leerlos (2026-08-31: "mejor que el usuario le dé click para deslizar,
+  // pero que aparezca a los 3 segundos"). Así que: el botón "Toca para
+  // seguir" aparece a los 3 segundos, y el clic lleva a los videos, que ahí
+  // sí corren solos. Deslizar a mano sigue funcionando desde el primer
+  // instante, sin esperar al botón.
+  const ESPERA_BOTON_HISTORIA = 3000;
+  const botonHistoria = document.querySelector('.inv-hero [data-inv-historia]');
+  let historiaArmada = false;
+  const irALaHistoria = () => {
+    const heroSection = document.querySelector('.inv-hero');
+    const nextSection = heroSection ? heroSection.nextElementSibling : null;
+    const target = nextSection
+      ? nextSection.getBoundingClientRect().top + window.scrollY
+      : window.scrollY + window.innerHeight;
+    window.scrollTo({ top: target, behavior: reducedMotion.matches ? 'auto' : 'smooth' });
+  };
+  const armarBotonHistoria = () => {
+    if (historiaArmada || !botonHistoria) return;
+    historiaArmada = true;
+    botonHistoria.addEventListener('click', irALaHistoria);
+    window.setTimeout(() => {
+      botonHistoria.classList.remove('inv-scroll-hint--waiting');
+      botonHistoria.classList.add('inv-scroll-hint--ready');
+      botonHistoria.removeAttribute('aria-hidden');
+    }, ESPERA_BOTON_HISTORIA);
+  };
+
   // El intro temático dura 15 segundos. Si esperamos a que termine para llamar
   // `play()` sobre Alice, Chrome/iOS ya no lo consideran parte del toque del
   // sobre. Se desbloquea la pista en silencio dentro del gesto y se reinicia;
@@ -218,6 +249,7 @@
   const startMusic = () => {
     // In video mode the first gesture starts video, music and Alice together.
     if (typeof startAutoHero === 'function') startAutoHero();
+    armarBotonHistoria();
     primeOutro();
     if (musicStarted) {
       if (introNarrationTriggered || !narrationIntro) {
@@ -291,6 +323,7 @@
 
   const startInvitationAudioAfterThemeIntro = () => {
     if (typeof startAutoHero === 'function') startAutoHero();
+    armarBotonHistoria();
     primeOutro();
     const activateAudio = () => {
       if (musicStarted) {
@@ -936,6 +969,134 @@
     }
   });
 
+  // ---------- Confirmar asistencia ----------
+  // El invitado confirma desde la invitación misma; la familia ve la lista en
+  // asistencia-papas.php. Si vuelve a abrir, puede corregir: el backend
+  // actualiza su fila por nombre en vez de duplicarla.
+  (function () {
+    const abrir = document.querySelector('[data-rsvp-open]');
+    const dialogo = document.querySelector('[data-rsvp-dialog]');
+    const formulario = document.querySelector('[data-rsvp-form]');
+    if (!abrir || !dialogo || !formulario) return;
+    const exito = dialogo.querySelector('[data-rsvp-ok]');
+    const error = dialogo.querySelector('[data-rsvp-error]');
+    const enviarBtn = dialogo.querySelector('[data-rsvp-enviar]');
+    const token = new URLSearchParams(window.location.search).get('t') || '';
+    const claveLocal = 'cc_rsvp_ok_' + token.slice(0, 12);
+
+    let yaConfirmo = false;
+    try { yaConfirmo = window.localStorage.getItem(claveLocal) === '1'; } catch {}
+    if (yaConfirmo) abrir.textContent = '✅ Asistencia confirmada · toca para editar';
+
+    abrir.addEventListener('click', () => {
+      formulario.hidden = false;
+      if (exito) exito.hidden = true;
+      if (error) error.hidden = true;
+      try { dialogo.showModal(); } catch { dialogo.setAttribute('open', ''); }
+    });
+    dialogo.querySelectorAll('[data-rsvp-cerrar]').forEach((b) => {
+      b.addEventListener('click', () => dialogo.close ? dialogo.close() : dialogo.removeAttribute('open'));
+    });
+
+    formulario.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      if (error) error.hidden = true;
+      if (enviarBtn) { enviarBtn.disabled = true; enviarBtn.textContent = 'Guardando…'; }
+      const datos = new FormData(formulario);
+      try {
+        const respuesta = await fetch('rsvp-api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            t: token,
+            family_name: datos.get('family_name') || '',
+            guest_names: datos.get('guest_names') || '',
+          }),
+        });
+        const cuerpo = await respuesta.json();
+        if (!cuerpo || cuerpo.ok !== true) throw new Error('rechazado');
+        formulario.hidden = true;
+        if (exito) exito.hidden = false;
+        abrir.textContent = '✅ Asistencia confirmada · toca para editar';
+        try { window.localStorage.setItem(claveLocal, '1'); } catch {}
+      } catch {
+        if (error) error.hidden = false;
+      } finally {
+        if (enviarBtn) { enviarBtn.disabled = false; enviarBtn.textContent = 'Confirmar asistencia'; }
+      }
+    });
+  })();
+
+  // ---------- Descubrir lo que sigue después de la lámina ----------
+  // La lámina parece el final y muchos invitados no bajaban más: nunca veían
+  // el calendario, el mapa ni "Conoce al cumpleañero" (pedido de Luis con la
+  // captura de Samantha). A los 5 s quietos sobre la lámina, un aviso dice lo
+  // que falta y la página baja sola, suave, hasta los datos. Cualquier gesto
+  // del invitado cancela el avance: si ya está scrolleando, manda él.
+  (function () {
+    const marco = document.querySelector('.inv-art-frame');
+    const seccionArte = marco ? marco.closest('section') : null;
+    const siguiente = seccionArte ? seccionArte.nextElementSibling : null;
+    if (!seccionArte || !siguiente) return;
+    let visible = false;
+    let disparado = false;
+    let temporizador = null;
+    const armar = () => {
+      if (disparado || !visible) return;
+      clearTimeout(temporizador);
+      temporizador = setTimeout(avisar, 5000);
+    };
+    // "5 segundos quieto": un gesto no cancela el aviso, reinicia la cuenta.
+    // Cancelarlo del todo dejaba sin aviso justo al que llegó scrolleando.
+    const gestos = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
+    gestos.forEach((g) => window.addEventListener(g, armar, { passive: true }));
+
+    const avisar = () => {
+      if (disparado) return;
+      disparado = true;
+      const perfil = document.querySelector('[data-ep-open]');
+      const extra = perfil && perfil.textContent.trim() !== ''
+        ? ' y ' + perfil.textContent.trim().toLowerCase()
+        : '';
+      const aviso = document.createElement('div');
+      aviso.className = 'inv-descubre';
+      aviso.textContent = '👇 Sigue bajando: agrega la fecha a tu calendario, mira cómo llegar' + extra;
+      document.body.appendChild(aviso);
+      setTimeout(() => aviso.classList.add('inv-descubre--fuera'), 7000);
+      setTimeout(() => aviso.remove(), 7600);
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      siguiente.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    };
+
+    const observador = new IntersectionObserver((entradas) => {
+      entradas.forEach((e) => {
+        visible = e.isIntersecting && e.intersectionRatio >= 0.55;
+        if (visible) {
+          armar();
+        } else {
+          clearTimeout(temporizador);
+          temporizador = null;
+        }
+      });
+    }, { threshold: [0.55] });
+    observador.observe(seccionArte);
+  })();
+
+  // ---------- Video de invitación personalizado ----------
+  // El video del cliente se ve una sola vez; al terminar, la página avanza
+  // sola a la sección que sigue (los datos de la fiesta). Sin esto el video
+  // quedaba en bucle y el invitado no sabía que había más abajo.
+  const videoFinal = document.querySelector('[data-inv-video-final]');
+  if (videoFinal) {
+    videoFinal.addEventListener('ended', () => {
+      const seccion = videoFinal.closest('section');
+      const siguiente = seccion ? seccion.nextElementSibling : null;
+      if (siguiente && typeof siguiente.scrollIntoView === 'function') {
+        siguiente.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  }
+
   // ---------- Lista de reproducción de videos reales, sin scroll ----------
   // Nada de imágenes fundiéndose entre sí: son los videos de saludo que ya
   // existen y están aprobados, uno detrás de otro. Un solo <video> cambia de
@@ -975,54 +1136,133 @@
       }
 
       let index = 0;
+      // Fundido entre capítulos: el cambio de `src` en seco hacía que el
+      // salto de un personaje al siguiente se sintiera brusco (observación
+      // de la clienta de Samantha, 2026-09-03). Se baja la luz un instante,
+      // se monta el clip nuevo y se vuelve a subir recién cuando ya está
+      // reproduciendo — así tampoco se ve el cuadro de carga.
+      const FUNDIDO_MS = 260;
+      video.addEventListener('playing', () => {
+        video.classList.remove('inv-clip-fundido');
+        if (caption) caption.classList.remove('inv-clip-fundido');
+      });
       const playAt = (i) => {
         index = i;
         const clip = clips[i];
-        video.src = clip.url;
-        if (caption) caption.textContent = clip.caption || '';
-        if (progressBar) progressBar.style.transform = 'scaleX(' + ((i) / clips.length).toFixed(4) + ')';
-        // El último clip es "¡Te esperamos!": ahí, y no antes, aparece el
-        // acceso a la invitación.
-        if (hint) hint.classList.toggle('is-visible', i === clips.length - 1);
-        // Cada capítulo trae su propia línea de Alice (los clips van sin
-        // audio propio): si no existe el MP3 de este capítulo en particular,
-        // sigue mudo, sin romper el resto de la lista.
-        if (narration) {
-          narration.pause();
-          if (clip.narration) {
-            narration.src = clip.narration;
-            duckWhile(narration);
-          } else {
-            narration.removeAttribute('src');
+        const montar = () => {
+          video.src = clip.url;
+          if (caption) caption.textContent = clip.caption || '';
+          if (progressBar) progressBar.style.transform = 'scaleX(' + ((i) / clips.length).toFixed(4) + ')';
+          // El acceso a la invitación aparece cuando los videos TERMINAN, no
+          // al empezar el último: mientras el clip corre, un botón encima
+          // compite con lo que se está contando (pedido de Luis 2026-08-31).
+          if (hint) hint.classList.remove('is-visible');
+          // Cada capítulo trae su propia línea de Alice (los clips van sin
+          // audio propio): si no existe el MP3 de este capítulo en particular,
+          // sigue mudo, sin romper el resto de la lista.
+          if (narration) {
+            narration.pause();
+            if (clip.narration) {
+              narration.src = clip.narration;
+              duckWhile(narration);
+            } else {
+              narration.removeAttribute('src');
+            }
           }
+          video.play().catch(() => {
+            // Si un clip puntual no puede reproducirse, se salta al
+            // siguiente en vez de dejar la lista trabada en silencio.
+            advance();
+          });
+        };
+        // El primer clip entra directo: no hay nada anterior que fundir.
+        if (i === 0 || reducedMotion.matches) {
+          montar();
+          return;
         }
-        video.play().catch(() => {
-          // Si un clip puntual no puede reproducirse, se salta al
-          // siguiente en vez de dejar la lista trabada en silencio.
-          advance();
-        });
+        video.classList.add('inv-clip-fundido');
+        if (caption) caption.classList.add('inv-clip-fundido');
+        setTimeout(montar, FUNDIDO_MS);
       };
       const advance = () => {
         if (index + 1 < clips.length) {
           playAt(index + 1);
-        } else if (progressBar) {
-          progressBar.style.transform = 'scaleX(1)';
+          return;
+        }
+        // Se acabaron los videos. Antes esto sólo llenaba la barra y el
+        // invitado quedaba mirando el último cuadro, sin nada que hacer y
+        // teniendo que deslizar a mano para llegar a la tarjeta.
+        if (progressBar) progressBar.style.transform = 'scaleX(1)';
+        if (!hint) return;
+        hint.classList.add('is-visible');
+        // `block: 'nearest'` no mueve nada si el botón ya se ve —que es lo
+        // normal, con la lista ocupando la pantalla completa—: sólo rescata
+        // al invitado que quedó a medio scroll. Aquí no se salta a la
+        // tarjeta: el último paso lo da él, tocando el botón.
+        if (!reducedMotion.matches && typeof hint.scrollIntoView === 'function') {
+          hint.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
       };
       video.addEventListener('ended', advance);
       playAt(0);
     };
 
-    // The playlist waits until the guest scrolls to it after the intro video.
-    if (typeof IntersectionObserver === 'function') {
-      const observer = new IntersectionObserver((entries) => {
-        if (!entries[0].isIntersecting) return;
-        runPlaylist();
-        observer.disconnect();
-      }, { threshold: 0.4 });
-      observer.observe(playlistSection);
-    } else {
+    // La lista arranca cuando el invitado llega a ella.
+    //
+    // Esto usaba IntersectionObserver y ya nos costó caro dos veces: en la
+    // landing del sitio el observador entregó la intersección ONCE SEGUNDOS
+    // tarde en producción, y probando esta misma sección se comprobó que hay
+    // navegadores donde no dispara NUNCA, con la sección ocupando la pantalla
+    // completa. Cuando eso pasa el invitado se queda mirando un recuadro negro
+    // y la invitación se acaba ahí, sin error ni nada raro en consola.
+    //
+    // Pesa más ahora que la página baja sola hasta acá: antes el invitado
+    // llegaba deslizando y al menos entendía que algo tenía que pasar.
+    //
+    // Se mide a mano contra el viewport, que es lo único que no puede fallar.
+    // El umbral es el mismo 40% de antes.
+    const listaALaVista = () => {
+      const alto = window.innerHeight || 0;
+      if (!alto) return false;
+      const caja = playlistSection.getBoundingClientRect();
+      if (caja.height <= 0) return false;
+      const visible = Math.min(caja.bottom, alto) - Math.max(caja.top, 0);
+      return visible / Math.min(caja.height, alto) >= 0.4;
+    };
+    const revisarLista = (forzar) => {
+      if (started) { dejarDeRevisar(); return; }
+      // `forzar` lo usa el observador: si él dice que la sección se ve, se le
+      // cree aunque la medición diga otra cosa (transform, zoom, contenedores
+      // raros). Al revés también vale: la medición no necesita al observador.
+      if (forzar !== true && !listaALaVista()) return;
       runPlaylist();
+      dejarDeRevisar();
+    };
+    let observador = null;
+    const dejarDeRevisar = () => {
+      window.removeEventListener('scroll', revisarLista);
+      window.removeEventListener('resize', revisarLista);
+      if (observador) { observador.disconnect(); observador = null; }
+    };
+    window.addEventListener('scroll', revisarLista, { passive: true });
+    window.addEventListener('resize', revisarLista);
+    // Y una primera revisión ya, por si la sección entra en pantalla sin que
+    // haya un scroll de por medio (pantallas altas, o el propio avance
+    // automático que llega antes del primer evento).
+    window.requestAnimationFrame(revisarLista);
+
+    // El observador SIGUE puesto, además de la medición. No es cinturón y
+    // tirantes por gusto: probando esto se encontró un navegador donde no
+    // llega ni la intersección NI el evento de scroll, así que ninguno de los
+    // dos alcanza por sí solo, y no hay forma de saber desde acá cuál de los
+    // dos falla en el celular de un invitado. El primero que dispare gana;
+    // `started` impide que la lista arranque dos veces.
+    if (typeof IntersectionObserver === 'function') {
+      observador = new IntersectionObserver((entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        revisarLista(true);
+      }, { threshold: 0.4 });
+      observador.observe(playlistSection);
     }
   }
 

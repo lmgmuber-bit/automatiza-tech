@@ -35,16 +35,20 @@ try {
     $invalid = true;
 }
 
-// Manda el nombre del bebé, no admin_label: esa es la etiqueta interna del
-// panel —suele ser "Baby shower de Valentina"— y en un titulo que ya empieza
-// con "Las predicciones de" quedaba "Las predicciones de Baby shower de
-// Valentina". admin_label solo entra si no hay nombre.
+// El nombre del bebé, y NUNCA admin_label: esa es la etiqueta interna del panel
+// —cosas como "DEMO Baby shower — Safari (aun no saben)"— y se estaba colando
+// en el título que ve el invitado.
+//
+// Cuando no hay nombre no se puede rellenar el hueco: en un baby shower "aún no
+// saben" no hay nombre que poner, y "Las predicciones de " seguido de nada es
+// justamente lo que se quiere evitar. Cambia la frase entera.
 $eventName = trim((string) ($access['birthday_person_name'] ?? ''));
-if ($eventName === '') {
-    $eventName = trim((string) ($access['admin_label'] ?? ''));
-}
-if ($eventName === '') {
-    $eventName = 'este baby shower';
+if ($eventName !== '') {
+    $tituloPagina = 'Las predicciones de ' . $eventName;
+    $tituloPestana = 'Predicciones · ' . $eventName;
+} else {
+    $tituloPagina = 'Las predicciones del baby shower';
+    $tituloPestana = 'Predicciones del baby shower';
 }
 $themeSlug = (string) ($access['theme_slug'] ?? '');
 $themeVars = $themeSlug !== '' ? cb_theme_css_vars($themeSlug) : '';
@@ -93,7 +97,9 @@ $isoUtc = static function ($value): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive">
-  <title><?= $invalid ? 'Enlace no disponible' : 'Predicciones · ' . $escape($eventName) ?> · CumpleClick</title>
+  <?php $ccBarra = cb_theme_meta_color($themeSlug); ?>
+  <?php if ($ccBarra !== ''): ?><meta name="theme-color" content="<?= $escape($ccBarra) ?>"><?php endif; ?>
+  <title><?= $invalid ? 'Enlace no disponible' : $escape($tituloPestana) ?> · CumpleClick</title>
   <link rel="icon" href="brand/cumpleclick-mark.svg" type="image/svg+xml">
   <style>
     /* Baloo 2 self-hosted, nunca CDN. Sin esto la hoja declara la fuente y el
@@ -318,7 +324,7 @@ $isoUtc = static function ($value): string {
 
   <header class="hero">
     <p class="eyebrow">Tablero de los papás</p>
-    <h1>Las predicciones de <?= $escape($eventName) ?></h1>
+    <h1><?= $escape($tituloPagina) ?></h1>
     <p>Cada boleta guarda una apuesta hecha en la cabina. Imprímanlas o revísenlas juntos cuando llegue el gran día.</p>
   </header>
 

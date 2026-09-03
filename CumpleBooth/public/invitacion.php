@@ -954,6 +954,7 @@ $sectionIcon = static function (string $key): string {
         'favorites' => '<path d="M12 20.3l-1.5-1.35C6 14.9 3.5 12.6 3.5 9.6 3.5 7.3 5.3 5.5 7.6 5.5c1.3 0 2.5.6 3.3 1.55l1.1 1.3 1.1-1.3A4.3 4.3 0 0 1 16.4 5.5c2.3 0 4.1 1.8 4.1 4.1 0 3-2.5 5.3-7 9.35z"/>',
         'sizes' => '<rect x="2.5" y="7.5" width="19" height="9" rx="1.8"/><path d="M7 7.5v3.4M12 7.5v4.6M17 7.5v3.4"/>',
         'gifts' => '<path d="M3.5 11.5h17V20a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 20z"/><rect x="2.5" y="7.5" width="19" height="4" rx="1.2"/><path d="M12 7.5v14"/><path d="M12 7.5S10.8 3 8.6 3a2.3 2.3 0 0 0 0 4.5zM12 7.5S13.2 3 15.4 3a2.3 2.3 0 0 1 0 4.5z"/>',
+        'avoid_gifts' => '<circle cx="12" cy="12" r="9"/><path d="M5.9 6.5l12.2 11"/>',
         'custom' => '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8v.4"/>',
     ];
     $inner = $paths[$key] ?? '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>';
@@ -1070,7 +1071,9 @@ if (preg_match('/^#[0-9a-fA-F]{6}$/', $heroTitle)) {
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title><?= $esc($tituloInvitacion) ?> · CumpleClick</title>
+<?php $ccBarra = cb_theme_meta_color($themeSlug); ?>
+<?php if ($ccBarra !== ''): ?><meta name="theme-color" content="<?= $esc($ccBarra) ?>">
+<?php endif; ?><title><?= $esc($tituloInvitacion) ?> · CumpleClick</title>
 <?php
 // Tarjeta al compartir por WhatsApp y redes. A propósito NO lleva la dirección:
 // la vista previa se muestra en cada grupo donde se reenvíe el enlace y Meta la
@@ -1240,10 +1243,22 @@ $cssVer = static function (string $rel): string {
             // recorrido con los personajes. Queda solo como invitación a
             // seguir bajando, sin `href`. ?>
       <?php if ($hasStoryAheadOfPlate): ?>
-      <span class="inv-scroll-hint<?= $heroAutoUrl !== '' ? ' inv-scroll-hint--waiting' : '' ?>" data-inv-scroll-only<?= $heroAutoUrl !== '' ? ' data-inv-auto-hint aria-hidden="true"' : '' ?>>
+      <?php if ($heroAutoUrl !== ''): ?>
+      <?php // Con hero automático el hint lo gobierna markReady: ni botón ni espera. ?>
+      <span class="inv-scroll-hint inv-scroll-hint--waiting" data-inv-scroll-only data-inv-auto-hint aria-hidden="true">
         <span>Desliza para seguir</span>
         <span class="inv-scroll-arrow" aria-hidden="true"></span>
       </span>
+      <?php else: ?>
+      <?php // Botón, no un cartel: el clic lleva a los videos (pedido de Luis
+            // 2026-08-31). Parte oculto y invitation.js lo muestra a los 3
+            // segundos, para que primero se lean el nombre y los contadores.
+            // Deslizar a mano funciona desde el primer instante igual. ?>
+      <button type="button" class="inv-scroll-hint inv-scroll-hint--waiting" data-inv-scroll-only data-inv-historia aria-hidden="true">
+        <span>Toca para seguir</span>
+        <span class="inv-scroll-arrow" aria-hidden="true"></span>
+      </button>
+      <?php endif; ?>
       <?php else: ?>
       <a class="inv-scroll-hint" href="#inv-detalles">
         <span>Ver invitación</span>
@@ -1392,8 +1407,13 @@ $cssVer = static function (string $rel): string {
                 $narrationUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . rawurlencode($narrationKey) . '.mp3';
             }
             $encodedFilePath = implode('/', array_map('rawurlencode', explode('/', $fileName)));
+            // ?v= por archivo: los clips se reemplazan CON EL MISMO NOMBRE
+            // (Kristoff rejuvenecido, 2026-09-03) y sin esto el navegador y el
+            // CDN siguieron sirviendo el capítulo viejo — mismo remedio que ya
+            // usan el intro del tema y el kiosco entero.
             $playlistSlots[] = [
-                'url' => 'themes/' . rawurlencode($themeSlug) . '/' . $encodedFilePath,
+                'url' => 'themes/' . rawurlencode($themeSlug) . '/' . $encodedFilePath
+                    . '?v=' . rawurlencode((string) filemtime($filePath)),
                 'caption' => $caption,
                 'narration' => $narrationUrl,
             ];
@@ -1539,7 +1559,11 @@ $cssVer = static function (string $rel): string {
     <figure class="inv-art-frame">
       <img class="inv-art" src="<?= $esc($imageUrl) ?>" alt="<?= $esc($tituloInvitacion) ?>" decoding="async">
       <?php if ($hasVideo): ?>
-      <video class="inv-art-video" src="<?= $esc((string) $videoUrl) ?>" controls playsinline loop muted preload="none"></video>
+      <?php /* Sin loop ni muted: el invitado lo inicia con un toque (gesto que
+               ya permite el sonido) y al terminar la página avanza sola a los
+               datos de la fiesta — un video de invitación se ve UNA vez, no en
+               bucle mudo (pedido de Luis con la invitación de Luciano). */ ?>
+      <video class="inv-art-video" src="<?= $esc((string) $videoUrl) ?>" controls playsinline preload="metadata" data-inv-video-final></video>
       <?php endif; ?>
     </figure>
     <?php endif; ?>
@@ -1887,6 +1911,53 @@ $cssVer = static function (string $rel): string {
     </div>
   </section>
   <?php endif; ?>
+
+  <?php /* Confirmación de asistencia: vale para TODAS las modalidades. En
+           cumpleaños confirma el apoderado y anota a los niños; en baby
+           shower solo la persona adulta. La familia ve la lista en
+           asistencia-papas.php con su token de rol (pedido de Luis,
+           2026-09-02). */ ?>
+  <section class="inv-rsvp inv-reveal" id="inv-asistencia">
+    <p class="inv-kicker">¿Nos acompañas?</p>
+    <h2 class="inv-finale-title">Confirma tu asistencia</h2>
+    <p class="inv-finale-lede"><?= $esc($esBabyShower
+        ? 'Dinos tu nombre y te guardamos un lugar.'
+        : 'Cuéntanos quiénes vienen para recibirlos como estrellas.') ?></p>
+    <button class="inv-button inv-rsvp-open" type="button" data-rsvp-open>
+      ✅ Click aquí para confirmar asistencia
+    </button>
+
+    <dialog class="inv-rsvp-dialog" data-rsvp-dialog aria-label="Confirmar asistencia">
+      <form data-rsvp-form>
+        <h3 class="inv-rsvp-title">Confirma tu asistencia</h3>
+        <label class="inv-rsvp-campo">
+          <span><?= $esc($esBabyShower ? 'Tu nombre' : 'Nombre del apoderado o familia') ?></span>
+          <input type="text" name="family_name" maxlength="120" required
+                 placeholder="<?= $esc($esBabyShower ? 'Ej: Carolina Díaz' : 'Ej: Familia Díaz / Carolina Díaz') ?>">
+        </label>
+        <?php if (!$esBabyShower): ?>
+        <label class="inv-rsvp-campo">
+          <span>Nombre de los niños que vienen</span>
+          <input type="text" name="guest_names" maxlength="400"
+                 placeholder="Ej: Emma y Lucas">
+        </label>
+        <?php endif; ?>
+        <p class="inv-rsvp-error" data-rsvp-error hidden>No pudimos guardar tu confirmación. Inténtalo de nuevo.</p>
+        <div class="inv-rsvp-acciones">
+          <button class="inv-button" type="submit" data-rsvp-enviar>Confirmar asistencia</button>
+          <button class="inv-button inv-button-ghost" type="button" data-rsvp-cerrar>Cerrar</button>
+        </div>
+      </form>
+      <div class="inv-rsvp-ok" data-rsvp-ok hidden>
+        <p class="inv-rsvp-ok-emoji">🎉</p>
+        <h3 class="inv-rsvp-title">¡Asistencia confirmada!</h3>
+        <p><?= $esc($esBabyShower
+            ? 'Gracias por avisar. ¡Nos vemos en el baby shower!'
+            : '¡La familia ya sabe que vienen! Nos vemos en la fiesta.') ?></p>
+        <button class="inv-button inv-button-ghost" type="button" data-rsvp-cerrar>Cerrar</button>
+      </div>
+    </dialog>
+  </section>
 
   <footer class="inv-footer">
     <?= cb_lockup_html('claro', 'inv-footer-logo') ?>

@@ -172,6 +172,12 @@ body {
   top: 14%;
   width: 26%;
 }
+/* Spidey: el fondo-banner ya trae su propia guirnalda de banderines pintada
+   en el arco de globos, y la de HTML se montaba encima (Luis lo reportó).
+   Acá no se reubica: se quita, porque a cualquier altura duplica la del arte. */
+.intro--spidey .intro-party-decoration {
+  display: none;
+}
 .intro--familia-canina .intro-cake-name {
   /* Pedido Luis: sobre el pastel. Franja limpia entre el nivel de bolitas y
      el de estrellitas de la torta — no pisa caras de los personajes. */
@@ -242,6 +248,12 @@ body {
   justify-content: center;
   padding-top: 0.18em;
   padding-bottom: 0.18em;
+}
+/* Spidey: al 55.5% general la etiqueta caía sobre la cara del personaje
+   central (Luis lo reportó probando). Los pies del trío terminan a ~76% del
+   fondo; la etiqueta baja al pavimento de la azotea, debajo de todos. */
+.intro--spidey .intro-cake-name {
+  top: 88%;
 }
 .intro-bottom {
   position: absolute;
@@ -353,6 +365,25 @@ body {
   color: rgba(255, 255, 255, 0.9);
   font-size: clamp(14px, 3.6vw, 21px);
   line-height: 1.15;
+}
+/* Spidey: el video del pase trae a los tres personajes abajo al centro y la
+   tarjeta grande los tapaba (Luis lo reportó probando el kiosco). Tarjeta
+   compacta y pegada al borde; las demás temáticas quedan como estaban. */
+.photo-session--spidey .photo-session-copy {
+  width: min(64%, 400px);
+  bottom: max(2.5dvh, 18px);
+  padding: 8px 16px 10px;
+}
+.photo-session--spidey .photo-session-kicker {
+  font-size: clamp(10px, 2.3vw, 13px);
+  margin-bottom: 1px;
+}
+.photo-session--spidey .photo-session-copy h2 {
+  font-size: clamp(16px, 4vw, 25px);
+}
+.photo-session--spidey .photo-session-copy p {
+  font-size: clamp(11px, 2.7vw, 15px);
+  margin-top: 3px;
 }
 .photo-session-screen .skip {
   top: max(18px, env(safe-area-inset-top));
@@ -2111,6 +2142,17 @@ body {
   gap: 12px;
 }
 @keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+/* Botones dentro del círculo del ganador: aceptar o volver a girar. Van en
+   columna porque la tarjeta es redonda y dos botones lado a lado se salen
+   del círculo en la tablet. */
+.spinner-winner-actions {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  margin-top: 4px;
+}
+.spinner-winner-actions .cta {
+  font-size: clamp(14px, 3cqw, 20px);
+  padding: 10px 22px;
+}
 .winner-emoji { color: #fff; line-height: 1; }
 .winner-text { color: var(--yellow); font-size: clamp(16px, 4vw, 24px); font-weight: 800; margin: 0; text-transform: uppercase; letter-spacing: 3px; }
 .winner-name { color: #fff; font-size: clamp(28px, 8vw, 48px); margin: 0; font-weight: 800; text-shadow: 0 4px 16px rgba(0,0,0,0.8); }

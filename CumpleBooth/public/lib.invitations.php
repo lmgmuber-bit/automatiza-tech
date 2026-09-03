@@ -13,7 +13,11 @@ function cb_invitation_storage_key(string $publicSlug, string $assetKey, int $ve
         throw new InvalidArgumentException('asset_key inválido.');
     }
     $ext = strtolower(ltrim($ext, '.'));
-    if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'mp4'], true)) {
+    // mp3: la narración de inicio (personalized_narration_intro) es una salida
+    // de primera clase desde 2026-08 — la validación de subida ya la aceptaba
+    // pero esta lista quedó atrás, así que ni el admin podía guardarla: el
+    // primer intento real (narración de Samantha, 2026-09-02) reventó aquí.
+    if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'mp4', 'mp3'], true)) {
         throw new InvalidArgumentException('Extensión de archivo no permitida.');
     }
     $rand = bin2hex(random_bytes(4));

@@ -1,22 +1,24 @@
 <?php
 /**
- * galeria.php — galería privada de la fiesta con impresión.
+ * galeria.php — galería privada de la fiesta, por invitado, con impresión.
  *
- * Dos pestañas, porque el kiosco produce dos cosas distintas por invitado y
- * mezclarlas en una sola grilla obligaba a mirar una por una para saber cuál
- * era cuál: "Recuerdos" (el diploma / recuerdito que se lleva el invitado) y
- * "Fotos con personaje" (la foto compuesta con el marco de la temática). Las
- * dos se suben por el mismo endpoint y se distinguen por el prefijo del nombre
- * (`diploma-` / `recuerdito-`), igual que ya hace ver.php.
+ * El kiosco produce dos cosas por invitado: el "recuerdo" (diploma /
+ * recuerdito que se lleva) y la "foto con personaje" (compuesta con el marco
+ * de la temática). Las dos se suben por el mismo endpoint y se distinguen por
+ * el prefijo del nombre de archivo (`diploma-` / `recuerdito-`), igual que ya
+ * hace ver.php. El nombre del invitado también viaja en ese nombre de archivo
+ * (`Tio-Pepe.png`), así que las fotos se agrupan contra la lista de invitados
+ * de la fiesta normalizando los dos lados (minúsculas, sin tildes, sin signos).
  *
- * La selección múltiple alimenta dos acciones: imprimir (una foto por hoja,
- * ajustada a la página, N copias, pensado para la Selphy/AirPrint desde la
- * tablet o el notebook) y descargar un ZIP con las elegidas.
+ * Vista principal: la LISTA DE INVITADOS; cada uno despliega su recuerdo y su
+ * foto con personaje. Una segunda vista ("Todas") muestra las dos pestañas
+ * planas. La selección es una sola y se conserva entre vistas y pestañas.
+ * Con lo seleccionado: imprimir (una foto por hoja, N copias, pensado para la
+ * Selphy/AirPrint desde la tablet) o descargar un ZIP.
  *
- * Acceso: PIN de 4 dígitos con hash, sesión corta y rate limit persistente,
- * como siempre. Además, una sesión de admin válida entra sin PIN: el
- * organizador que imprime en la fiesta ya está logueado en el backoffice y no
- * tiene por qué pedirle el PIN a los papás. Se lee la sesión de admin sin
+ * Acceso: PIN de 4 dígitos con hash, sesión corta y rate limit persistente.
+ * Además una sesión de admin válida entra sin PIN: el organizador que imprime
+ * en la fiesta ya está logueado en el backoffice. Se lee la sesión de admin sin
  * crearla (misma técnica que ver-media.php) y recién después se abre la de
  * galería.
  */
@@ -75,7 +77,21 @@ function gallery_label(string $name): string
     $base = preg_replace('/\.png$/i', '', $name);
     $base = preg_replace('/^(diploma|recuerdito)-/', '', $base);
     $base = trim(str_replace(['-', '_'], ' ', $base));
-    return $base === '' || $base === 'foto' || $base === 'invitado' ? 'Invitado' : $base;
+    return $base === '' || $base === 'foto' || $base === 'invitado' ? '' : $base;
+}
+
+/**
+ * Clave de comparación de nombres: minúsculas, sin tildes ni signos. El kiosco
+ * ya reemplazó todo lo que no es letra o número por "-", así que "Tío Pepe" en
+ * la lista y "Tio-Pepe.png" en el archivo tienen que caer en la misma clave.
+ */
+function gallery_norm(string $s): string
+{
+    $s = mb_strtolower(trim($s), 'UTF-8');
+    $map = ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n', 'à' => 'a', 'è' => 'e', 'ì' => 'i', 'ò' => 'o', 'ù' => 'u', 'ä' => 'a', 'ë' => 'e', 'ï' => 'i', 'ö' => 'o'];
+    $s = strtr($s, $map);
+    $s = preg_replace('/[^\pL\pN]+/u', '-', $s);
+    return trim($s, '-');
 }
 
 $slug = (string) ($_GET['p'] ?? '');
@@ -120,16 +136,17 @@ if ($authenticated) {
             $token = (string) ($photo['access_token'] ?? $photo['token'] ?? '');
             $name = (string) ($photo['original_name'] ?? 'foto.png');
             $view = 'ver.php?t=' . rawurlencode($token);
+            $label = gallery_label($name);
             $photos[] = [
                 'id' => $token,
                 'name' => $name,
-                'label' => gallery_label($name),
+                'label' => $label,
+                'norm' => gallery_norm($label),
                 'kind' => gallery_kind($name),
                 'path' => $path,
                 'view' => $view,
                 'thumb' => $view . '&download=inline&v=thumb',
                 'full' => $view . '&download=inline',
-                'created' => (string) ($photo['created_at'] ?? ''),
             ];
         }
     }
@@ -138,16 +155,17 @@ if ($authenticated) {
     foreach (is_dir($legacyDir) ? (glob($legacyDir . '/*.png') ?: []) : [] as $path) {
         $name = basename($path);
         $view = 'ver.php?p=' . rawurlencode($slug) . '&f=' . rawurlencode($name);
+        $label = gallery_label($name);
         $photos[] = [
             'id' => 'legacy:' . $name,
             'name' => $name,
-            'label' => gallery_label($name),
+            'label' => $label,
+            'norm' => gallery_norm($label),
             'kind' => gallery_kind($name),
             'path' => $path,
             'view' => $view,
             'thumb' => $view . '&download=inline&v=thumb',
             'full' => $view . '&download=inline',
-            'created' => '',
         ];
     }
 }
@@ -180,6 +198,35 @@ if ($authenticated && isset($_GET['zip']) && class_exists('ZipArchive')) {
     exit;
 }
 
+// ── Agrupar por invitado ─────────────────────────────────────────────────
+$esBabyShower = (string) ($party['event_type'] ?? 'child_birthday') === 'baby_shower';
+$tituloRecuerdo = $esBabyShower ? 'Recuerdito' : 'Recuerdo';
+$tituloRecuerdos = $esBabyShower ? 'Recuerditos' : 'Recuerdos';
+$byNorm = [];
+foreach ($photos as $ph) { $byNorm[$ph['norm']][] = $ph; }
+$groups = [];
+$assigned = [];
+foreach ((array) ($party['invitados'] ?? []) as $guest) {
+    $gname = trim((string) ($guest['name'] ?? ''));
+    if ($gname === '') { continue; }
+    $key = gallery_norm($gname);
+    $mine = $byNorm[$key] ?? [];
+    if ($mine) { $assigned[$key] = true; }
+    $groups[] = ['name' => $gname, 'key' => $key, 'photos' => $mine];
+}
+// Fotos cuyo nombre no coincide con ningún invitado de la lista: se agrupan
+// por el nombre que traen, y las que no traen ninguno van al final.
+$leftovers = [];
+foreach ($byNorm as $key => $list) {
+    if (isset($assigned[$key])) { continue; }
+    $leftovers[] = ['name' => $key === '' ? 'Sin nombre' : $list[0]['label'], 'key' => $key === '' ? '__sin-nombre' : $key, 'photos' => $list, 'extra' => true];
+}
+usort($leftovers, static fn ($a, $b) => ($a['key'] === '__sin-nombre') <=> ($b['key'] === '__sin-nombre') ?: strcmp($a['name'], $b['name']));
+$groups = array_merge($groups, $leftovers);
+$conFotos = count(array_filter($groups, static fn ($g) => count($g['photos']) > 0));
+$recuerdos = array_values(array_filter($photos, static fn ($ph) => $ph['kind'] === 'recuerdo'));
+$personajes = array_values(array_filter($photos, static fn ($ph) => $ph['kind'] === 'personaje'));
+
 $themes = cb_load_themes();
 $theme = $themes['themes'][$party['tema'] ?? ''] ?? [];
 $colors = $theme['colors'] ?? [];
@@ -187,15 +234,25 @@ $accent = (string) ($colors['accent'] ?? '#7C3AED');
 $dark1 = (string) ($colors['dark1'] ?? '#1a1a1a');
 $dark2 = (string) ($colors['dark2'] ?? '#312e81');
 $yellow = (string) ($colors['yellow'] ?? '#FBBF24');
-$recuerdos = array_values(array_filter($photos, static fn ($ph) => $ph['kind'] === 'recuerdo'));
-$personajes = array_values(array_filter($photos, static fn ($ph) => $ph['kind'] === 'personaje'));
-$esBabyShower = (string) ($party['event_type'] ?? 'child_birthday') === 'baby_shower';
-$tituloRecuerdos = $esBabyShower ? 'Recuerditos' : 'Recuerdos';
 $zipAll = 'galeria.php?p=' . rawurlencode($slug) . '&zip=1';
+
+/** Tarjeta de foto (se usa igual en la vista por invitado y en la plana). */
+function gallery_card(array $ph, string $tituloRecuerdo): void
+{
+    $label = $ph['label'] !== '' ? $ph['label'] : 'Invitado';
+    ?>
+    <figure class="foto" tabindex="0" role="checkbox" aria-checked="false" data-id="<?= gallery_h($ph['id']) ?>" data-full="<?= gallery_h($ph['full']) ?>" data-kind="<?= gallery_h($ph['kind']) ?>">
+      <img src="<?= gallery_h($ph['thumb']) ?>" alt="<?= gallery_h($label) ?>" loading="lazy" decoding="async">
+      <span class="check" aria-hidden="true">✓</span>
+      <a class="ver" href="<?= gallery_h($ph['view']) ?>" target="_blank" rel="noopener" data-ver>Ver</a>
+      <figcaption class="nombre"><?= $ph['kind'] === 'recuerdo' ? '🎓 ' . gallery_h($tituloRecuerdo) : '🎭 Con personaje' ?></figcaption>
+    </figure>
+    <?php
+}
 ?><!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="<?= gallery_h($accent) ?>"><title>Galería · <?= gallery_h($party['nombre'] ?? '') ?></title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;padding:20px 14px 120px;font-family:system-ui,sans-serif;background:linear-gradient(135deg,<?= gallery_h($dark1) ?>,<?= gallery_h($dark2) ?>);color:#fff}
+body{margin:0;min-height:100vh;padding:20px 14px 130px;font-family:system-ui,sans-serif;background:linear-gradient(135deg,<?= gallery_h($dark1) ?>,<?= gallery_h($dark2) ?>);color:#fff}
 .wrap{width:min(1180px,100%);margin:auto;text-align:center}
 h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4vw,2rem)}
 .card{width:min(420px,100%);margin:2rem auto;padding:24px;border-radius:20px;background:#ffffff14}
@@ -203,7 +260,8 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:12px 22px;border:0;border-radius:999px;background:<?= gallery_h($accent) ?>;color:#fff;font-weight:800;font-size:1rem;text-decoration:none;cursor:pointer;font-family:inherit}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn-ghost{background:#ffffff22;color:#fff}
-.btn:focus-visible,.pin:focus-visible,.tab:focus-visible,.foto:focus-visible{outline:3px solid <?= gallery_h($yellow) ?>;outline-offset:3px}
+.btn-mini{min-height:36px;padding:6px 14px;font-size:.85rem}
+.btn:focus-visible,.pin:focus-visible,.tab:focus-visible,.foto:focus-visible,.buscar:focus-visible,summary:focus-visible{outline:3px solid <?= gallery_h($yellow) ?>;outline-offset:3px}
 .error{color:#fecaca}
 .muted{opacity:.8}
 .toolbar{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:.6rem 0 1rem}
@@ -211,14 +269,29 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
 .tab{min-height:48px;padding:10px 20px;border:2px solid #ffffff33;border-radius:999px;background:transparent;color:#fff;font-weight:800;font-size:1rem;cursor:pointer;font-family:inherit}
 .tab[aria-selected="true"]{background:#fff;color:#222;border-color:#fff}
 .tab b{margin-left:6px;padding:2px 9px;border-radius:999px;background:<?= gallery_h($accent) ?>;color:#fff;font-size:.85rem}
-.tab[aria-selected="true"] b{background:<?= gallery_h($accent) ?>}
 .panel[hidden]{display:none}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.buscar{width:min(420px,100%);min-height:48px;margin:0 auto 1rem;padding:10px 16px;border:2px solid #fff5;border-radius:999px;background:#ffffff14;color:#fff;font:inherit;font-size:1rem}
+.buscar::placeholder{color:#fffa}
+.invitados{display:grid;gap:12px;text-align:left}
+.inv{border-radius:18px;background:#ffffff14;overflow:hidden}
+.inv[hidden]{display:none}
+.inv summary{list-style:none;display:flex;align-items:center;gap:12px;min-height:60px;padding:10px 16px;cursor:pointer;font-weight:800;font-size:1.05rem}
+.inv summary::-webkit-details-marker{display:none}
+.inv summary .flecha{margin-left:auto;transition:transform .15s;opacity:.8}
+.inv[open] summary .flecha{transform:rotate(90deg)}
+.inv .conteo{display:inline-flex;gap:6px;font-size:.8rem;font-weight:700;opacity:.9}
+.inv .conteo span{padding:2px 9px;border-radius:999px;background:#0004}
+.inv.vacio summary{opacity:.55;cursor:default}
+.inv .cuerpo{padding:0 14px 14px}
+.inv .acciones{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.inv .vacio-txt{margin:0 0 10px;font-size:.9rem;opacity:.8}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.grid-mini{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
 .foto{position:relative;margin:0;padding:8px;border-radius:16px;background:#fff;color:#222;cursor:pointer;border:3px solid transparent;transition:transform .12s,border-color .12s;user-select:none;-webkit-user-select:none}
 .foto:active{transform:scale(.98)}
 .foto.sel{border-color:<?= gallery_h($accent) ?>;box-shadow:0 0 0 3px #ffffffaa}
 .foto img{display:block;width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:10px;background:#eee}
-.foto .nombre{display:block;margin-top:6px;font-weight:800;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.foto .nombre{display:block;margin-top:6px;font-weight:800;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .foto .check{position:absolute;top:14px;left:14px;width:30px;height:30px;border-radius:50%;background:#fffd;border:2px solid #0003;display:grid;place-items:center;font-size:18px;color:#fff}
 .foto.sel .check{background:<?= gallery_h($accent) ?>;border-color:#fff}
 .foto .ver{position:absolute;top:14px;right:14px;min-height:30px;padding:4px 10px;border-radius:999px;background:#000a;color:#fff;font-size:.8rem;font-weight:800;text-decoration:none}
@@ -226,8 +299,8 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
 .barra-in{width:min(1180px,100%);margin:auto;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
 .barra .cuenta{font-weight:800;min-width:9ch}
 .opciones{display:inline-flex;align-items:center;gap:8px;font-size:.9rem}
-.opciones select,.opciones input[type="checkbox"]{min-height:36px;border-radius:10px;border:1px solid #fff5;background:#fff;color:#222;font:inherit;padding:0 8px}
-.opciones input[type="checkbox"]{width:22px;height:22px;min-height:0}
+.opciones select{min-height:36px;border-radius:10px;border:1px solid #fff5;background:#fff;color:#222;font:inherit;padding:0 8px}
+.opciones input[type="checkbox"]{width:22px;height:22px}
 .pie{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:2.5rem;font-weight:800;opacity:.9}
 #hoja{display:none}
 #aviso{position:fixed;inset:0;z-index:30;display:none;place-items:center;background:#000c;color:#fff;font-weight:800;font-size:1.2rem}
@@ -253,21 +326,60 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
   <?php else: ?><a class="btn btn-ghost" href="admin/index.php">Volver al admin</a><?php endif; ?>
 </div>
 <?php if (!$photos): ?><p class="muted">Todavía no hay fotos. Cuando el kiosco suba la primera, aparece acá.</p><?php else: ?>
-<div class="tabs" role="tablist" aria-label="Tipo de foto">
-  <button class="tab" role="tab" type="button" id="tab-recuerdo" aria-selected="true" aria-controls="panel-recuerdo" data-kind="recuerdo">🎓 <?= gallery_h($tituloRecuerdos) ?><b><?= count($recuerdos) ?></b></button>
-  <button class="tab" role="tab" type="button" id="tab-personaje" aria-selected="false" aria-controls="panel-personaje" data-kind="personaje">🎭 Fotos con personaje<b><?= count($personajes) ?></b></button>
+<div class="tabs" role="tablist" aria-label="Vista">
+  <button class="tab" role="tab" type="button" id="tab-invitados" aria-selected="true" aria-controls="panel-invitados" data-vista="invitados">👥 Por invitado<b><?= (int) $conFotos ?></b></button>
+  <button class="tab" role="tab" type="button" id="tab-recuerdo" aria-selected="false" aria-controls="panel-recuerdo" data-vista="recuerdo">🎓 <?= gallery_h($tituloRecuerdos) ?><b><?= count($recuerdos) ?></b></button>
+  <button class="tab" role="tab" type="button" id="tab-personaje" aria-selected="false" aria-controls="panel-personaje" data-vista="personaje">🎭 Con personaje<b><?= count($personajes) ?></b></button>
 </div>
 <p class="muted" style="margin:0 0 .8rem">Toca una foto para seleccionarla. Abajo puedes imprimir o descargar las elegidas.</p>
+
+<section class="panel" id="panel-invitados" role="tabpanel" aria-labelledby="tab-invitados">
+  <input class="buscar" id="buscar" type="search" placeholder="Buscar invitado…" autocomplete="off" aria-label="Buscar invitado">
+  <div class="invitados" id="invitados">
+    <?php foreach ($groups as $i => $g): ?>
+      <?php
+        $rec = array_values(array_filter($g['photos'], static fn ($p) => $p['kind'] === 'recuerdo'));
+        $per = array_values(array_filter($g['photos'], static fn ($p) => $p['kind'] === 'personaje'));
+        $tiene = count($g['photos']) > 0;
+      ?>
+      <details class="inv <?= $tiene ? '' : 'vacio' ?>" data-nombre="<?= gallery_h(mb_strtolower($g['name'], 'UTF-8')) ?>" <?= $tiene && $conFotos <= 8 ? 'open' : '' ?>>
+        <summary <?= $tiene ? '' : 'tabindex="-1"' ?>>
+          <span><?= gallery_h($g['name']) ?><?= !empty($g['extra']) ? ' <small class="muted">(no está en la lista)</small>' : '' ?></span>
+          <span class="conteo">
+            <?php if ($tiene): ?><span>🎓 <?= count($rec) ?></span><span>🎭 <?= count($per) ?></span><?php else: ?><span>sin fotos aún</span><?php endif; ?>
+          </span>
+          <?php if ($tiene): ?><span class="flecha" aria-hidden="true">▶</span><?php endif; ?>
+        </summary>
+        <?php if ($tiene): ?>
+        <div class="cuerpo">
+          <div class="acciones">
+            <button class="btn btn-ghost btn-mini" type="button" data-elegir-inv>Elegir todo de <?= gallery_h($g['name']) ?></button>
+            <?php if ($rec): ?><button class="btn btn-ghost btn-mini" type="button" data-elegir-inv="recuerdo">Solo <?= gallery_h(mb_strtolower($tituloRecuerdo, 'UTF-8')) ?></button><?php endif; ?>
+            <?php if ($per): ?><button class="btn btn-ghost btn-mini" type="button" data-elegir-inv="personaje">Solo con personaje</button><?php endif; ?>
+          </div>
+          <div class="grid grid-mini">
+            <?php foreach ($rec as $ph) { gallery_card($ph, $tituloRecuerdo); } ?>
+            <?php foreach ($per as $ph) { gallery_card($ph, $tituloRecuerdo); } ?>
+          </div>
+        </div>
+        <?php endif; ?>
+      </details>
+    <?php endforeach; ?>
+  </div>
+  <p class="muted" id="sin-resultados" hidden>Ningún invitado coincide con la búsqueda.</p>
+</section>
+
 <?php foreach (['recuerdo' => $recuerdos, 'personaje' => $personajes] as $kind => $lista): ?>
-<section class="panel" id="panel-<?= $kind ?>" role="tabpanel" aria-labelledby="tab-<?= $kind ?>" <?= $kind === 'recuerdo' ? '' : 'hidden' ?>>
-  <?php if (!$lista): ?><p class="muted">Todavía no hay <?= $kind === 'recuerdo' ? strtolower($tituloRecuerdos) : 'fotos con personaje' ?>.</p><?php else: ?>
+<section class="panel" id="panel-<?= $kind ?>" role="tabpanel" aria-labelledby="tab-<?= $kind ?>" hidden>
+  <?php if (!$lista): ?><p class="muted">Todavía no hay <?= $kind === 'recuerdo' ? mb_strtolower($tituloRecuerdos, 'UTF-8') : 'fotos con personaje' ?>.</p><?php else: ?>
+  <div class="acciones" style="display:flex;gap:8px;justify-content:center;margin:0 0 10px"><button class="btn btn-ghost btn-mini" type="button" data-elegir-vista="<?= $kind ?>">Elegir todas las de esta pestaña</button></div>
   <div class="grid">
     <?php foreach ($lista as $ph): ?>
     <figure class="foto" tabindex="0" role="checkbox" aria-checked="false" data-id="<?= gallery_h($ph['id']) ?>" data-full="<?= gallery_h($ph['full']) ?>" data-kind="<?= $kind ?>">
-      <img src="<?= gallery_h($ph['thumb']) ?>" alt="<?= gallery_h($ph['label']) ?>" loading="lazy" decoding="async">
+      <img src="<?= gallery_h($ph['thumb']) ?>" alt="<?= gallery_h($ph['label'] !== '' ? $ph['label'] : 'Invitado') ?>" loading="lazy" decoding="async">
       <span class="check" aria-hidden="true">✓</span>
       <a class="ver" href="<?= gallery_h($ph['view']) ?>" target="_blank" rel="noopener" data-ver>Ver</a>
-      <figcaption class="nombre"><?= gallery_h($ph['label']) ?></figcaption>
+      <figcaption class="nombre"><?= gallery_h($ph['label'] !== '' ? $ph['label'] : 'Invitado') ?></figcaption>
     </figure>
     <?php endforeach; ?>
   </div>
@@ -282,7 +394,6 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
 <div class="barra" id="barra">
   <div class="barra-in">
     <span class="cuenta" id="cuenta">0 seleccionadas</span>
-    <button class="btn btn-ghost" type="button" id="sel-todas">Todas de esta pestaña</button>
     <button class="btn btn-ghost" type="button" id="sel-ninguna">Ninguna</button>
     <label class="opciones">Copias <select id="copias"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
     <label class="opciones"><input type="checkbox" id="llenar"> Llenar la hoja (recorta un poco)</label>
@@ -296,14 +407,13 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
 (function () {
   'use strict';
   var ZIP_BASE = <?= json_encode($zipAll, JSON_UNESCAPED_SLASHES) ?>;
-  var sel = {}; // id -> {full, kind}
+  var sel = {}; // id -> full (la misma foto aparece en dos vistas; la selección es por id)
   var fotos = Array.prototype.slice.call(document.querySelectorAll('.foto'));
   var cuenta = document.getElementById('cuenta');
   var btnImprimir = document.getElementById('imprimir');
   var btnDescargar = document.getElementById('descargar');
   var hoja = document.getElementById('hoja');
   var aviso = document.getElementById('aviso');
-  var activa = 'recuerdo';
 
   function refresh() {
     var n = Object.keys(sel).length;
@@ -311,49 +421,87 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
     btnImprimir.disabled = n === 0;
     if (btnDescargar) { btnDescargar.disabled = n === 0; }
   }
-  function setSel(fig, on) {
+  function setSel(id, full, on) {
+    if (on) { sel[id] = full; } else { delete sel[id]; }
+    fotos.forEach(function (fig) {
+      if (fig.getAttribute('data-id') !== id) { return; }
+      fig.classList.toggle('sel', on);
+      fig.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+  }
+  function toggle(fig) {
     var id = fig.getAttribute('data-id');
-    if (on) { sel[id] = { full: fig.getAttribute('data-full'), kind: fig.getAttribute('data-kind') }; }
-    else { delete sel[id]; }
-    fig.classList.toggle('sel', on);
-    fig.setAttribute('aria-checked', on ? 'true' : 'false');
+    setSel(id, fig.getAttribute('data-full'), !sel[id]);
+    refresh();
   }
   fotos.forEach(function (fig) {
     fig.addEventListener('click', function (e) {
       if (e.target.closest('[data-ver]')) { return; } // "Ver" abre la foto, no selecciona
-      setSel(fig, !fig.classList.contains('sel'));
-      refresh();
+      toggle(fig);
     });
     fig.addEventListener('keydown', function (e) {
-      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setSel(fig, !fig.classList.contains('sel')); refresh(); }
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(fig); }
     });
   });
 
-  // Pestañas: la selección se conserva al cambiar de pestaña, a propósito —
-  // el organizador puede elegir dos recuerdos y una foto e imprimir los tres.
+  // Vistas: la selección se conserva al cambiar, a propósito — se puede elegir
+  // el recuerdo de un invitado y la foto de otro e imprimir todo junto.
   Array.prototype.slice.call(document.querySelectorAll('.tab')).forEach(function (tab) {
     tab.addEventListener('click', function () {
-      activa = tab.getAttribute('data-kind');
+      var vista = tab.getAttribute('data-vista');
       document.querySelectorAll('.tab').forEach(function (t) { t.setAttribute('aria-selected', t === tab ? 'true' : 'false'); });
-      document.querySelectorAll('.panel').forEach(function (p) { p.hidden = p.id !== 'panel-' + activa; });
+      document.querySelectorAll('.panel').forEach(function (p) { p.hidden = p.id !== 'panel-' + vista; });
     });
   });
 
-  document.getElementById('sel-todas').addEventListener('click', function () {
-    fotos.forEach(function (fig) { if (fig.getAttribute('data-kind') === activa) { setSel(fig, true); } });
-    refresh();
+  // "Elegir todo de <invitado>" (o solo un tipo).
+  Array.prototype.slice.call(document.querySelectorAll('[data-elegir-inv]')).forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var kind = btn.getAttribute('data-elegir-inv');
+      var cards = btn.closest('.inv').querySelectorAll('.foto');
+      Array.prototype.forEach.call(cards, function (fig) {
+        if (kind && fig.getAttribute('data-kind') !== kind) { return; }
+        setSel(fig.getAttribute('data-id'), fig.getAttribute('data-full'), true);
+      });
+      refresh();
+    });
+  });
+  Array.prototype.slice.call(document.querySelectorAll('[data-elegir-vista]')).forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var kind = btn.getAttribute('data-elegir-vista');
+      fotos.forEach(function (fig) {
+        if (fig.getAttribute('data-kind') === kind) { setSel(fig.getAttribute('data-id'), fig.getAttribute('data-full'), true); }
+      });
+      refresh();
+    });
   });
   document.getElementById('sel-ninguna').addEventListener('click', function () {
-    fotos.forEach(function (fig) { setSel(fig, false); });
+    Object.keys(sel).forEach(function (id) { setSel(id, null, false); });
     refresh();
   });
+
+  // Buscador de invitados (filtra las tarjetas por nombre, sin tildes).
+  var buscar = document.getElementById('buscar');
+  var sinRes = document.getElementById('sin-resultados');
+  function norm(s) { return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  if (buscar) {
+    buscar.addEventListener('input', function () {
+      var q = norm(buscar.value.trim());
+      var visibles = 0;
+      Array.prototype.forEach.call(document.querySelectorAll('.inv'), function (inv) {
+        var ok = q === '' || norm(inv.getAttribute('data-nombre') || '').indexOf(q) !== -1;
+        inv.hidden = !ok;
+        if (ok) { visibles++; if (q !== '' && !inv.classList.contains('vacio')) { inv.open = true; } }
+      });
+      sinRes.hidden = visibles > 0;
+    });
+  }
 
   if (btnDescargar) {
     btnDescargar.addEventListener('click', function () {
       var ids = Object.keys(sel);
       if (!ids.length) { return; }
-      var url = ZIP_BASE + ids.map(function (id) { return '&sel[]=' + encodeURIComponent(id); }).join('');
-      window.location.href = url;
+      window.location.href = ZIP_BASE + ids.map(function (id) { return '&sel[]=' + encodeURIComponent(id); }).join('');
     });
   }
 
@@ -381,7 +529,7 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
           img.onerror = resolve;
           setTimeout(resolve, 8000);
         }));
-        img.src = sel[id].full;
+        img.src = sel[id];
         pagina.appendChild(img);
         hoja.appendChild(pagina);
       }

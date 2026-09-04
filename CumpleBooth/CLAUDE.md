@@ -32,12 +32,18 @@ ambos temas — código ya resiliente sin ella. Gotcha de entorno local:
 cumpleañero nunca aparece; usar `config/cumpleclick.local.php` (gitignored)
 en vez de env vars para no reiniciar el servidor de pruebas.
 
-**Galería con pestañas e impresión (2026-09-04).** `public/galeria.php` —la
+**Galería por invitado con impresión (2026-09-04).** `public/galeria.php` —la
 galería privada por fiesta que el admin ya enlazaba— pasó de una grilla plana
-a dos pestañas: **Recuerdos** (diploma/recuerdito, prefijo `diploma-` /
-`recuerdito-` en `original_name`, el mismo criterio de `ver.php`) y **Fotos
-con personaje**. Selección múltiple tocando la tarjeta (se conserva al cambiar
-de pestaña), **Imprimir** (una foto por hoja ajustada a la página, N copias,
+a una **lista de invitados** (los de `cc_guests`, en su orden) donde cada uno
+despliega su **Recuerdo** (diploma/recuerdito, prefijo `diploma-` /
+`recuerdito-` en `original_name`, el mismo criterio de `ver.php`) y su **Foto
+con personaje**, con buscador y "Elegir todo de <invitado>". Las fotos se
+asocian al invitado por el nombre que el kiosco escribe en el archivo
+(`Tio-Pepe.png`), normalizando ambos lados sin tildes ni signos
+(`gallery_norm`); lo que no coincide con ningún invitado queda al final como
+"(no está en la lista)" y sin nombre como "Sin nombre" — nunca se pierde una
+foto. Dos vistas más ("Recuerdos" y "Con personaje", planas) comparten la
+misma selección. Selección múltiple tocando la tarjeta, **Imprimir** (una foto por hoja ajustada a la página, N copias,
 opción "llenar la hoja"; se espera a que carguen todas las imágenes a tamaño
 completo antes de `window.print()`, si no la primera hoja salía en blanco en la
 tablet) y **Descargar ZIP** de las elegidas (`&zip=1&sel[]=<token>`). Es

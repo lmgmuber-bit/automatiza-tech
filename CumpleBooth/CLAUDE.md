@@ -32,6 +32,23 @@ ambos temas — código ya resiliente sin ella. Gotcha de entorno local:
 cumpleañero nunca aparece; usar `config/cumpleclick.local.php` (gitignored)
 en vez de env vars para no reiniciar el servidor de pruebas.
 
+**Galería con pestañas e impresión (2026-09-04).** `public/galeria.php` —la
+galería privada por fiesta que el admin ya enlazaba— pasó de una grilla plana
+a dos pestañas: **Recuerdos** (diploma/recuerdito, prefijo `diploma-` /
+`recuerdito-` en `original_name`, el mismo criterio de `ver.php`) y **Fotos
+con personaje**. Selección múltiple tocando la tarjeta (se conserva al cambiar
+de pestaña), **Imprimir** (una foto por hoja ajustada a la página, N copias,
+opción "llenar la hoja"; se espera a que carguen todas las imágenes a tamaño
+completo antes de `window.print()`, si no la primera hoja salía en blanco en la
+tablet) y **Descargar ZIP** de las elegidas (`&zip=1&sel[]=<token>`). Es
+genérica para todas las temáticas: los colores salen del tema de la fiesta.
+Una **sesión de admin válida entra sin PIN** (misma lectura de `cc_admin` que
+`ver-media.php`), así el organizador imprime en la fiesta sin pedir el PIN.
+Gotcha del entorno local: `config/cumpleclick.local.php` traía
+`'app_hmac_key' => bin2hex(random_bytes(32))` —una clave distinta por
+petición—, con lo que NINGÚN PIN ni HMAC podía verificarse localmente; se
+reemplazó por una clave fija (archivo gitignored).
+
 **Baby shower (2026-08-26, local, sin deploy).** Modalidad nueva: predicciones
 en la cabina + tablero privado de los papás. Backend y decisión de arquitectura
 en `docs/DECISION-PREDICCIONES-POR-EVENTO-2026-08-25.md` (las predicciones son

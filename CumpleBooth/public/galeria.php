@@ -396,7 +396,13 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
     <span class="cuenta" id="cuenta">0 seleccionadas</span>
     <button class="btn btn-ghost" type="button" id="sel-ninguna">Ninguna</button>
     <label class="opciones">Copias <select id="copias"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
-    <label class="opciones"><input type="checkbox" id="llenar"> Llenar la hoja (recorta un poco)</label>
+    <label class="opciones">Papel <select id="formato">
+      <option value="100mm 148mm" selected>10×15 cm (Selphy)</option>
+      <option value="127mm 178mm">13×18 cm</option>
+      <option value="A4 portrait">A4</option>
+      <option value="auto">Según impresora</option>
+    </select></label>
+    <label class="opciones"><input type="checkbox" id="llenar" checked> Llenar la hoja (recorta un poco arriba/abajo)</label>
     <button class="btn" type="button" id="imprimir" disabled>🖨️ Imprimir</button>
     <?php if (class_exists('ZipArchive')): ?><button class="btn btn-ghost" type="button" id="descargar" disabled>⬇️ Descargar ZIP</button><?php endif; ?>
   </div>
@@ -516,6 +522,14 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
     if (!ids.length) { return; }
     var copias = parseInt(document.getElementById('copias').value, 10) || 1;
     hoja.classList.toggle('llenar', document.getElementById('llenar').checked);
+    // Tamaño de hoja: se declara en @page para que el diálogo de impresión
+    // proponga el papel de la Selphy (10×15) sin buscarlo cada vez. Con
+    // "Según impresora" no se declara nada y manda el driver.
+    var formato = document.getElementById('formato').value;
+    var estilo = document.getElementById('page-size');
+    if (!estilo) { estilo = document.createElement('style'); estilo.id = 'page-size'; document.head.appendChild(estilo); }
+    estilo.textContent = formato === 'auto' ? '' : '@media print { @page { size: ' + formato + '; margin: 0; } }';
+    try { localStorage.setItem('cc-galeria-papel', formato); } catch (e) { /* sin almacenamiento: no pasa nada */ }
     hoja.innerHTML = '';
     var esperas = [];
     ids.forEach(function (id) {
@@ -541,6 +555,13 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
     });
   });
   window.addEventListener('afterprint', function () { hoja.innerHTML = ''; });
+
+  // El papel elegido se recuerda en la tablet: en la fiesta se imprime muchas
+  // veces seguidas y no hay que volver a elegirlo.
+  try {
+    var guardado = localStorage.getItem('cc-galeria-papel');
+    if (guardado) { document.getElementById('formato').value = guardado; }
+  } catch (e) { /* sin almacenamiento */ }
 
   refresh();
 })();

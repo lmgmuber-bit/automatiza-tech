@@ -24,7 +24,7 @@ fwrite(STDOUT, 'OK lint PHP ' . PHP_VERSION . ': ' . count($files) . " archivos.
  * aislado (storage_mode=json + carpetas temporales, nunca la BD real) para
  * no arrastrar estado entre archivos ni tocar producción/local real.
  */
-$entrypoints = ['public/admin/index.php', 'public/admin/invitations.php', 'public/upload.php', 'public/galeria.php', 'public/ver.php', 'public/invitacion.php', 'public/descargar-invitacion.php', 'sitio/api/contacto.php'];
+$entrypoints = ['public/admin/index.php', 'public/admin/invitations.php', 'public/admin/aceptaciones.php', 'public/upload.php', 'public/galeria.php', 'public/ver.php', 'public/invitacion.php', 'public/descargar-invitacion.php', 'public/aceptar-plan.php', 'public/comprobante-aceptacion.php', 'sitio/api/contacto.php'];
 $smokeTmp = sys_get_temp_dir() . '/cumpleclick-lint-smoke-' . bin2hex(random_bytes(4));
 mkdir($smokeTmp, 0770, true);
 $smokeEnv = [

@@ -5,6 +5,7 @@
  * Sin dependencias externas. Compatible PHP 8.0+ (baseline 8.2).
  */
 require __DIR__ . '/../lib.php';
+require __DIR__ . '/../lib.acceptance.php';
 require __DIR__ . '/config.php';
 $adminSecureCookie = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
 session_name('cc_admin');
@@ -287,6 +288,22 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 }
             }
 
+            // Cierre del plan: una fiesta solo se activa con aceptación de Términos firmada
+            // (o exención explícita para demos). En modo json no hay tabla y no se bloquea.
+            if ($activa && empty($errs) && cb_storage_mode() === 'db') {
+                try {
+                    $canActivate = $isEdit && cb_party_can_activate($publicSlug);
+                } catch (Throwable $e) {
+                    error_log('CumpleClick acceptance gate: ' . $e->getMessage());
+                    $canActivate = false;
+                }
+                if (!$canActivate) {
+                    $errs[] = $isEdit
+                        ? 'No puedes activar esta fiesta hasta que el cliente acepte los Términos y firme (o la eximas desde "Aceptación"). Guarda como inactiva mientras tanto.'
+                        : 'Una fiesta nueva se crea inactiva: guárdala, genera el enlace de aceptación desde "Aceptación" y actívala cuando el cliente firme.';
+                }
+            }
+
             if (empty($errs)) {
                 $registro = [
                     'admin_label'          => $adminLabel,
@@ -511,6 +528,13 @@ $okFlash = isset($_GET['ok'], $okMessages[$_GET['ok']]) ? $okMessages[$_GET['ok'
 $view = $_GET['view'] ?? 'fiestas';
 $action = $_GET['action'] ?? '';
 $baseUrl = admin_base_url();
+// Estado de aceptación de Términos por fiesta (una consulta para todo el listado).
+try {
+    $acceptanceStates = cb_acceptance_states_by_slug();
+} catch (Throwable $e) {
+    error_log('CumpleClick acceptance states: ' . $e->getMessage());
+    $acceptanceStates = [];
+}
 $detailThemeSlugRaw = is_string($_GET['slug'] ?? null) ? (string) $_GET['slug'] : '';
 $detailThemeSlug = cb_valid_slug($detailThemeSlugRaw, 1, 40) && isset($themes[$detailThemeSlugRaw])
     ? $detailThemeSlugRaw
@@ -561,7 +585,8 @@ if ($formValues === null && $action === 'editar') {
         'birthday_person_name' => '',
         'tema' => array_key_first($themes) ?? '',
         'fecha' => '',
-        'activa' => true,
+        // Nueva fiesta nace inactiva: se activa cuando exista aceptación de Términos.
+        'activa' => false,
         'service_plan' => 'booth',
         'gallery_enabled' => false,
         'juegos' => null,
@@ -766,6 +791,7 @@ if ($formValues === null && $action === 'editar') {
             <input type="checkbox" name="activa" <?= !empty($formValues['activa']) ? 'checked' : '' ?>>
             Fiesta activa (accesible por su URL)
           </label>
+          <p class="muted small">Solo puede activarse cuando el cliente aceptó los Términos y firmó (o la fiesta fue eximida como demo). Genera el enlace desde "Aceptación" en la tarjeta de la fiesta.</p>
 
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">Guardar</button>
@@ -1128,6 +1154,10 @@ if ($formValues === null && $action === 'editar') {
                 </span>
                 <span class="badge badge-off"><?= h($servicePlan) ?></span>
                 <?php if ($galleryEnabled): ?><span class="badge badge-ok">Galería</span><?php endif; ?>
+                <?php $accState = (string) ($acceptanceStates[$publicSlug] ?? 'none'); ?>
+                <span class="badge <?= $accState === 'accepted' ? 'badge-ok' : ($accState === 'waived' ? 'badge-warn' : 'badge-off') ?>" title="Aceptación de Términos y firma">
+                  <?= $accState === 'accepted' ? admin_icon('check') : '' ?> T&amp;C: <?= h(cb_acceptance_status_label($accState)) ?>
+                </span>
               </div>
               <div class="muted small"><?= h($p['birthday_person_name'] ?: '—') ?> · <?= h($p['fecha'] ?: '—') ?> · <?= count($p['invitados'] ?? []) ?> invitados · <?= (int) $photoUsage['count'] ?>/200 fotos · slug: <?= h($publicSlug) ?></div>
               <?php if ($quotaRatio >= 0.8): ?><div class="badge badge-off">Atención: galería al <?= (int) floor($quotaRatio * 100) ?>% de cuota</div><?php endif; ?>
@@ -1149,6 +1179,7 @@ if ($formValues === null && $action === 'editar') {
                 <a class="btn btn-ghost" href="<?= h($galeriaUrl) ?>" target="_blank" rel="noopener"><?= admin_icon('gallery') ?> Galería</a>
               <?php endif; ?>
               <a class="btn btn-ghost" href="<?= h($invitationsUrl) ?>"><?= admin_icon('duplicate') ?> Invitaciones</a>
+              <a class="btn btn-ghost" href="aceptaciones.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('check') ?> Aceptación</a>
               <a class="btn btn-ghost" href="album.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('gallery') ?> Álbum Recuerdo</a>
               <form method="post" action="index.php" class="inline-form">
                 <?= admin_csrf_field() ?>

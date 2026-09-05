@@ -15,6 +15,11 @@ return [
     'photo_dir' => '/home/ACCOUNT/private/cumpleclick/photos',
     'state_dir' => '/home/ACCOUNT/private/cumpleclick/state',
     'invitation_dir' => '/home/ACCOUNT/private/cumpleclick/invitations',
+    // Firmas y comprobantes de aceptación de Términos (evidencia legal, conservar 5 años).
+    'acceptance_dir' => '/home/ACCOUNT/private/cumpleclick/acceptances',
+    // Correo interno que recibe cada aceptación firmada (TODO-LUIS) y remitente de los avisos.
+    'notify_email' => '',
+    'mail_from' => 'no-reply@automatizatech.cl',
     'retention_days' => 30,
     'session_idle_seconds' => 7200,
     'session_absolute_seconds' => 43200,

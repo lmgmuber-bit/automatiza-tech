@@ -24,6 +24,11 @@ function cb_config(?string $key = null)
             'photo_dir' => $root . '/storage/photos',
             'state_dir' => $root . '/storage/state',
             'invitation_dir' => $root . '/storage/invitations',
+            // Firmas y comprobantes de aceptación de Términos (privado, fuera del webroot).
+            'acceptance_dir' => $root . '/storage/acceptances',
+            // Correo interno que recibe cada aceptación firmada; vacío = no se notifica a AT.
+            'notify_email' => '', // TODO-LUIS: definir en config local/prod.
+            'mail_from' => '',
             'parties_json_path' => __DIR__ . '/data/parties.json',
             'retention_days' => 30,
             'session_idle_seconds' => 7200,
@@ -57,6 +62,9 @@ function cb_config(?string $key = null)
             'CC_PUBLIC_BASE_URL' => 'public_base_url',
             'CC_PHOTO_DIR' => 'photo_dir', 'CC_STATE_DIR' => 'state_dir',
             'CC_INVITATION_DIR' => 'invitation_dir',
+            'CC_ACCEPTANCE_DIR' => 'acceptance_dir',
+            'CC_NOTIFY_EMAIL' => 'notify_email',
+            'CC_MAIL_FROM' => 'mail_from',
             'CC_PARTIES_JSON_PATH' => 'parties_json_path',
             'CC_RETENTION_DAYS' => 'retention_days',
             'CC_FFPROBE_PATH' => 'ffprobe_path',

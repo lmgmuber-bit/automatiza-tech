@@ -13,6 +13,16 @@ Ticket `AT-CUMPLECLICK-001` introduced the independent DB, secure PHP backend,
 persistent frames, local Baloo 2, AT branding, private tokenized photos and safe
 rollback/retention.
 
+**Aceptación de Términos + firma (2026-09-05, rama
+`feat/cumpleclick-aceptacion-terminos`, LOCAL only).** A party can only be set
+`activa` when `cc_plan_acceptances` has an `accepted` (client signed via
+`aceptar-plan.php?t=`) or `waived` (explicit demo/internal exemption) row. Code:
+`public/lib.acceptance.php`, `public/admin/aceptaciones.php`, legal drafts in
+`public/legal/*.md` (versioned, hash fail-closed, lawyer review pending).
+Blueprint + FTP order: `Docs/BLUEPRINTS/CUMPLECLICK-ACEPTACION-TERMINOS-Y-FIRMA.md`
+(root repo). Migration `013` numbered to avoid clashing with 008–012 living in
+other worktrees.
+
 **PROD status (corrected 2026-08-03).** PROD *is* deployed, since 2026-07-27, at
 `https://automatizatech.cl/cumpleclick/`. What is **not** deployed is the
 2026-08-02 closure — no merge, no FTP. So PROD runs the 2026-07-27 build, and

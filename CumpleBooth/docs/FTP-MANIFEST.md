@@ -21,6 +21,17 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## Delta local — Aceptación de Términos y firma (rama `feat/cumpleclick-aceptacion-terminos`, no desplegado)
+
+Solo PHP y `.md`; los bundles de `dist/assets/` **no cambian** en este delta.
+Orden: config privada (`acceptance_dir`, `notify_email`, `mail_from`) → migración
+`013_plan_acceptances` → `lib.php` → `lib.acceptance.php` → `legal/*.md` →
+`aceptar-plan.php`, `comprobante-aceptacion.php`, `admin/aceptaciones.php` →
+`admin/index.php` al final. Tabla completa con clasificación OBLIGATORIO/OPCIONAL
+en `Docs/BLUEPRINTS/CUMPLECLICK-ACEPTACION-TERMINOS-Y-FIRMA.md` (repo raíz).
+Verificado local: `tests/backend/acceptance.php` 46 checks, lint 67 archivos,
+paridad public→dist 296 archivos. **No probado en PROD.**
+
 ## Delta local — Álbum Recuerdo (rama `feat/album-recuerdo`, no desplegado)
 
 Este delta **incluye y reemplaza** al de Rayo/Carreras/Hielo de abajo: se

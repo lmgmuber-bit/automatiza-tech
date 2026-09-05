@@ -29,6 +29,15 @@ php scripts/retention.php                  # dry-run
 Confirmar `storage_mode=db`. Programar `retention.php --apply` diariamente por
 cron. Durante estabilización conservar BD, JSON y backups.
 
+Aceptación de Términos y firma (migración `013_plan_acceptances`, 2026-09-05):
+la config privada necesita `acceptance_dir` (ruta absoluta fuera de
+`public_html`, evidencia legal que se conserva 5 años y NO entra en
+`retention.php`), `notify_email` (correo interno que recibe cada aceptación) y
+`mail_from`. Al migrar, las fiestas ya activas quedan eximidas automáticamente;
+desde entonces una fiesta solo se activa con aceptación firmada o exención
+explícita. Detalle y orden de subida en
+`Docs/BLUEPRINTS/CUMPLECLICK-ACEPTACION-TERMINOS-Y-FIRMA.md` (repo raíz).
+
 Rollback: `php scripts/rollback.php` (dry-run), después `--apply`; si la BD está
 caída usar `--snapshot=<snapshot-cutover.json>` y documentar que el RPO es la
 fecha del snapshot. El script no borra tablas ni fotos.

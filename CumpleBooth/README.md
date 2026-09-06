@@ -52,10 +52,14 @@ falla de forma cerrada.
 - `public/`: PHP, catálogo `themes.json` y assets versionados.
 - MySQL: estado mutable (`cc_parties`, `cc_guests`, `cc_photos`,
   `cc_rate_limits`, `cc_theme_prompts`, `cc_leads`,
-  `cc_schema_migrations`).
+  `cc_schema_migrations`, `cc_salas`, `cc_sala_ayudantes`,
+  `cc_sala_acciones`).
 - `dist/`: artefacto generado; nunca editarlo a mano.
 - `docs/CUMPLECLICK-HANDOFF-CODEX.md`: continuidad y regla obligatoria de
   camuflaje para cualquier prompt futuro de imágenes.
+- `public/sala.php` + `public/lib.sala.php`: API de salas de ayudantes del
+  juego 3D (fase 3), migración `014_salas_ayudantes`; contrato en el repo
+  del juego (`app/design/sala-api.md`).
 
 La cámara confirma fotogramas reales antes de habilitar la captura y ofrece un
 selector si Chrome detecta más de un dispositivo. En Admin → Temáticas, cada card

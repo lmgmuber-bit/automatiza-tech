@@ -351,6 +351,7 @@ function Colofon({ marca, base }) {
     { valor: marca.web, url: marca.web_url },
     { valor: marca.instagram, url: marca.instagram_url },
     { valor: marca.whatsapp, url: marca.whatsapp_url },
+    { valor: marca.correo, url: marca.correo_url },
   ].filter((dato) => dato.valor)
 
   return (

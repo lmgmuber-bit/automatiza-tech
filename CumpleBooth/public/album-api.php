@@ -52,7 +52,8 @@ function cb_album_marca(): ?array
         return null;
     }
     $campos = ['nombre', 'lema', 'invitacion', 'web', 'web_url',
-               'instagram', 'instagram_url', 'whatsapp', 'whatsapp_url'];
+               'instagram', 'instagram_url', 'whatsapp', 'whatsapp_url',
+               'correo', 'correo_url'];
     $limpio = [];
     foreach ($campos as $campo) {
         $valor = isset($crudo[$campo]) ? trim((string) $crudo[$campo]) : '';

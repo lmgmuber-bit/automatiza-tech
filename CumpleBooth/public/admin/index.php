@@ -631,6 +631,7 @@ if ($formValues === null && $action === 'editar') {
       }
     ?>
     <a class="tab" href="leads.php"><?= admin_icon('party') ?> Solicitudes<?= $leadsNuevos > 0 ? ' <b class="tab-badge">' . (int) $leadsNuevos . '</b>' : '' ?></a>
+    <a class="tab" href="mensajes.php"><?= admin_icon('party') ?> Mensajes</a>
   </nav>
 
   <main>

@@ -66,6 +66,8 @@ $CAMPOS = [
     'instagram_url' => ['etiqueta' => 'Enlace de Instagram','max' => 200, 'url' => true, 'ayuda' => 'Opcional. Con https://.'],
     'whatsapp'      => ['etiqueta' => 'WhatsApp',           'max' => 40,  'ayuda' => 'Como se lee. Ej: +56 9 1234 5678'],
     'whatsapp_url'  => ['etiqueta' => 'Enlace de WhatsApp', 'max' => 200, 'url' => true, 'ayuda' => 'Opcional. Ej: https://wa.me/56912345678'],
+    'correo'        => ['etiqueta' => 'Correo',             'max' => 60,  'ayuda' => 'Como se lee. Ej: contacto@cumpleclick.com'],
+    'correo_url'    => ['etiqueta' => 'Enlace del correo',  'max' => 200, 'url' => true, 'ayuda' => 'Opcional. Ej: mailto:contacto@cumpleclick.com'],
 ];
 
 $ruta = dirname(__DIR__) . '/data/marca.json';
@@ -212,7 +214,7 @@ $logo = '../brand/cumpleclick-mark.svg';
         <p class="lema"><?= h($valores['lema']) ?></p>
       <?php endif; ?>
       <div class="datos">
-        <?php foreach (['web', 'instagram', 'whatsapp'] as $clave): ?>
+        <?php foreach (['web', 'instagram', 'whatsapp', 'correo'] as $clave): ?>
           <?php if ($valores[$clave] !== ''): ?><span><?= h($valores[$clave]) ?></span><?php endif; ?>
         <?php endforeach; ?>
       </div>

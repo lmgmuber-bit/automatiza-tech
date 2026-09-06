@@ -7,9 +7,9 @@
  * fotos cuando termina la fiesta. Escribir eso a mano cada vez termina en textos
  * distintos, enlaces mal pegados y PIN olvidados.
  *
- * Esta pantalla arma los cuatro mensajes con los datos reales de la fiesta y deja
- * dos botones: copiar, o abrir WhatsApp con el texto ya escrito. No envía nada por
- * su cuenta: abre WhatsApp Web o la app y ahí decide la persona.
+ * Esta pantalla arma los mensajes con los datos reales de la fiesta y deja dos
+ * botones: copiar, o abrir WhatsApp con el texto ya escrito. No envía nada por su
+ * cuenta: abre WhatsApp Web o la app y ahí decide la persona.
  *
  * Lo que la fiesta no puede decir sola va en campos editables arriba: el PIN de la
  * galería (en la base solo está su hash, no se puede leer), el enlace de firma (lo
@@ -40,9 +40,46 @@ function admin_csrf_check(): bool
     $t = $_POST['csrf'] ?? '';
     return is_string($t) && $t !== '' && hash_equals($_SESSION['csrf'] ?? '', $t);
 }
+function admin_csrf_field(): string
+{
+    return '<input type="hidden" name="csrf" value="' . h(admin_csrf_token()) . '">';
+}
+
+/** Los mismos iconos de línea del resto del admin (index.php, leads.php). */
+function admin_icon(string $name): string
+{
+    $paths = [
+        'party' => '<path d="M5.8 11.3 2 22l10.7-3.79"/><path d="M4 3h.01M22 8h.01M15 2h.01M22 20h.01"/><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12v0c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10"/><path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11v0c-.11.7-.72 1.22-1.43 1.22H16"/><path d="M11 2 9.89 4.11a2.9 2.9 0 0 0 .5 3.4l.5.5a2.9 2.9 0 0 1 .5 3.4L9 14"/>',
+        'palette' => '<circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>',
+        'chat' => '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+        'logout' => '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
+        'copy' => '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+        'check' => '<path d="M20 6 9 17l-5-5"/>',
+    ];
+    $d = $paths[$name] ?? '';
+    if ($d === '') { return ''; }
+    return '<svg class="icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' . $d . '</svg>';
+}
+
+/** Glifo oficial de WhatsApp (relleno). Va aparte de admin_icon() porque ese dibuja
+ *  iconos de línea con `stroke`, y el logo de una marca no se dibuja a mano alzada. */
+function icono_whatsapp(int $tam = 18): string
+{
+    return '<svg viewBox="0 0 24 24" width="' . $tam . '" height="' . $tam . '" fill="currentColor" aria-hidden="true" focusable="false">'
+        . '<path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>'
+        . '</svg>';
+}
 
 // ================== SESIÓN (mismo contrato que index.php y leads.php) ==================
 $loginError = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'logout') {
+    if (admin_csrf_check()) {
+        $_SESSION = [];
+        session_destroy();
+        header('Location: mensajes.php');
+        exit;
+    }
+}
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {
     if (!admin_csrf_check()) {
         $loginError = 'Sesión expirada, intenta de nuevo.';
@@ -93,7 +130,7 @@ if (!$loggedIn) {
   <form class="login-card" method="post" action="mensajes.php">
     <h1>CumpleBooth</h1>
     <p class="muted">Mensajes para el cliente</p>
-    <?php if ($loginError !== ''): ?><p class="alert alert-err"><?= h($loginError) ?></p><?php endif; ?>
+    <?php if ($loginError !== ''): ?><p class="alert alert-error"><?= h($loginError) ?></p><?php endif; ?>
     <input type="hidden" name="csrf" value="<?= h(admin_csrf_token()) ?>">
     <input type="hidden" name="action" value="login">
     <label for="password">Contraseña</label>
@@ -106,7 +143,7 @@ if (!$loggedIn) {
 }
 
 // ================== DATOS ==================
-// Solo temáticas con mundo 3D ofrecen el juego; mandar ese enlace en una fiesta
+// Solo las temáticas con mundo 3D ofrecen el juego; mandar ese enlace en una fiesta
 // sin juego sería mandar a una página que no corresponde a su temática.
 $TEMAS_JUEGO_3D = ['hielo' => 'Reino de Hielo en 3D', 'heroes' => 'Misión 3D', 'spidey' => 'Aventura Arácnida en 3D'];
 
@@ -121,7 +158,6 @@ foreach ($parties as $slug => $p) {
     $fiestas[] = [
         'slug' => (string) $slug,
         'nombre' => (string) ($p['nombre'] ?? $p['birthday_person_name'] ?? $slug),
-        'etiqueta' => (string) ($p['admin_label'] ?? ''),
         'tema' => $tema,
         'temaNombre' => cb_theme_public_name($tema),
         'fecha' => (string) ($p['fecha'] ?? ''),
@@ -144,17 +180,28 @@ $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas
 <title>CumpleBooth Admin · Mensajes</title>
 <style><?php require __DIR__ . '/_style.css.php'; ?></style>
 <style>
-  .msg-campos { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px 18px; margin:0 0 22px; }
-  .msg-tarjeta { border:1px solid #e3e0ea; border-radius:14px; padding:16px 18px; margin:0 0 18px; background:#fff; }
-  .msg-tarjeta h3 { margin:0 0 4px; font-size:1.05rem; }
-  .msg-tarjeta .muted { margin:0 0 12px; }
-  .msg-texto { width:100%; min-height:210px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.86rem;
-               line-height:1.55; padding:12px 14px; border:1px solid #ded9e6; border-radius:10px; resize:vertical; background:#fbfafd; }
-  .msg-acciones { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; align-items:center; }
-  .btn-wa { background:#25D366; color:#0b3d20; border:0; }
-  .btn-wa:hover { filter:brightness(.95); }
-  .msg-ok { color:#1a7f4b; font-weight:700; font-size:.9rem; }
-  .msg-aviso { background:#FFF8EC; border:1px solid #f0e2c8; border-radius:10px; padding:10px 12px; font-size:.9rem; margin:0 0 18px; }
+  /* Solo lo que no existe en _style.css.php: la grilla de campos, la caja de texto
+     del mensaje y el botón de WhatsApp con su color de marca. Todo lo demás usa las
+     clases del admin (card, field, btn, tabs, alert). */
+  .msg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px 20px; }
+  .msg-lista { display: grid; gap: 18px; margin-top: 22px; }
+  .msg-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .msg-texto {
+    width: 100%; min-height: 190px; margin-top: 14px;
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    padding: 12px 14px; background: #fff; color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .87rem; line-height: 1.6; resize: vertical;
+  }
+  .msg-texto:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(139,92,246,.12); outline: none; }
+  .msg-acciones { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+  .btn-wa { background: #25D366; color: #08331c; border: 0; }
+  .btn-wa:hover { background: #1eb757; color: #08331c; }
+  .btn-wa svg { flex: 0 0 auto; }
+  .msg-copiado { display: inline-flex; align-items: center; gap: 6px; color: var(--ok, #1a7f4b); font-weight: 700; font-size: .9rem; }
+  /* `display` explícito le gana al display:none implícito de [hidden]: sin esta regla
+     el "¡Copiado!" queda visible desde que carga la página. */
+  .msg-copiado[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -164,23 +211,36 @@ $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas
       <h1>Mensajes para el cliente</h1>
       <p class="muted">Textos listos para copiar o mandar por WhatsApp a quien contrató la fiesta.</p>
     </div>
-    <div class="head-actions"><a class="btn" href="index.php">Volver a Fiestas</a></div>
+    <div class="inline-form logout-btn">
+      <a class="btn btn-ghost" href="marca.php">Datos de la marca</a>
+      <form method="post" action="mensajes.php" class="inline-form">
+        <?= admin_csrf_field() ?><input type="hidden" name="action" value="logout">
+        <button class="btn btn-ghost" type="submit"><?= admin_icon('logout') ?> Salir</button>
+      </form>
+    </div>
   </header>
+
+  <nav class="tabs">
+    <a class="tab" href="index.php"><?= admin_icon('party') ?> Fiestas</a>
+    <a class="tab" href="index.php?view=temas"><?= admin_icon('palette') ?> Temáticas</a>
+    <a class="tab" href="leads.php"><?= admin_icon('party') ?> Solicitudes</a>
+    <a class="tab active" href="mensajes.php"><?= admin_icon('chat') ?> Mensajes</a>
+  </nav>
 
   <main>
     <?php if (!$fiestas): ?>
-      <p class="alert alert-err">No hay fiestas cargadas todavía.</p>
+      <p class="alert alert-error">No hay fiestas cargadas todavía.</p>
     <?php else: ?>
 
-    <div class="msg-aviso">
-      El PIN de la galería no se puede leer desde la base (se guarda cifrado), y los enlaces de
-      firma e invitación se emiten en sus propias pantallas. Complétalos aquí y los textos se
-      arman solos.
-    </div>
-
     <section class="card">
-      <div class="msg-campos">
-        <div>
+      <h2>La fiesta y sus datos</h2>
+      <p class="muted">
+        El PIN de la galería no se puede leer desde la base (se guarda cifrado), y los enlaces de
+        firma e invitación se emiten en sus propias pantallas. Complétalos aquí y los textos se
+        arman solos.
+      </p>
+      <div class="msg-grid" style="margin-top:18px">
+        <div class="field">
           <label for="f-fiesta">Fiesta</label>
           <select id="f-fiesta">
             <?php foreach ($fiestas as $f): ?>
@@ -193,36 +253,40 @@ $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas
             <?php endforeach; ?>
           </select>
         </div>
-        <div>
+        <div class="field">
           <label for="f-cliente">Nombre de quien contrató</label>
           <input type="text" id="f-cliente" placeholder="Ej: Carolina" autocomplete="off">
         </div>
-        <div>
+        <div class="field">
           <label for="f-telefono">WhatsApp del cliente</label>
           <input type="text" id="f-telefono" placeholder="+56 9 1234 5678" autocomplete="off">
-          <small class="ayuda">Opcional. Sin número, WhatsApp te deja elegir el contacto.</small>
+          <small class="muted">Opcional. Sin número, WhatsApp te deja elegir el contacto.</small>
         </div>
-        <div>
+        <div class="field">
           <label for="f-pin">PIN de la galería</label>
           <input type="text" id="f-pin" value="1234" maxlength="4" inputmode="numeric" autocomplete="off">
         </div>
-        <div>
+        <div class="field">
           <label for="f-firma">Enlace de firma</label>
           <input type="text" id="f-firma" placeholder="<?= h($base) ?>/aceptar-plan.php?t=…" autocomplete="off">
-          <small class="ayuda">Se genera en la ficha de la fiesta, en Aceptación.</small>
+          <small class="muted">Se genera en la ficha de la fiesta, en Aceptación.</small>
         </div>
-        <div>
+        <div class="field">
           <label for="f-invitacion">Enlace de la invitación</label>
           <input type="text" id="f-invitacion" placeholder="<?= h($base) ?>/nombre-token" autocomplete="off">
         </div>
       </div>
     </section>
 
-    <div id="msg-lista"></div>
+    <div class="msg-lista" id="msg-lista"></div>
 
     <?php endif; ?>
   </main>
 </div>
+
+<template id="tpl-wa"><?= icono_whatsapp() ?></template>
+<template id="tpl-copy"><?= admin_icon('copy') ?></template>
+<template id="tpl-check"><?= admin_icon('check') ?></template>
 
 <script>
 (function () {
@@ -232,12 +296,16 @@ $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas
   var campos = ['f-cliente', 'f-telefono', 'f-pin', 'f-firma', 'f-invitacion'].map(function (id) {
     return document.getElementById(id);
   });
+  function icono(id) { return document.getElementById(id).innerHTML; }
 
-  // Las plantillas son las mismas que se usan a mano hoy. `{...}` se reemplaza con
-  // los datos de la fiesta; una línea cuyo dato falte se cae entera (ver `bloque`).
+  /** Devuelve la línea solo si hay dato; si no, el texto de reemplazo (o nada). */
+  function bloque(valor, plantilla, vacio) {
+    if (!valor) { return vacio || ''; }
+    return plantilla.replace('{v}', valor);
+  }
+
   var PLANTILLAS = [
     {
-      id: 'bienvenida',
       titulo: 'Bienvenida y firma',
       nota: 'Apenas se cierra el trato. Lleva el enlace de firma y todos los enlaces de la fiesta.',
       texto: function (d) {
@@ -257,7 +325,6 @@ $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas
       }
     },
     {
-      id: 'recordatorio',
       titulo: 'Recordatorio de firma',
       nota: 'Si pasaron unos días y todavía no firman.',
       texto: function (d) {
@@ -267,9 +334,8 @@ $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas
       }
     },
     {
-      id: 'vispera',
       titulo: 'Un día antes',
-      nota: 'Confirma hora y lo que necesitamos en el lugar.',
+      nota: 'Confirma la hora y lo que necesitamos en el lugar.',
       texto: function (d) {
         return '¡Hola ' + d.cliente + '! 👋 Mañana es el cumpleaños de *' + d.nino + '* 🎉\n\n' +
           'Para dejar todo listo necesitamos:\n' +
@@ -280,9 +346,20 @@ $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas
       }
     },
     {
-      id: 'despues',
-      titulo: 'Después de la fiesta',
-      nota: 'Con la galería lista para descargar.',
+      titulo: 'Galería de fotos',
+      nota: 'Solo el enlace y el PIN. Es el que más se reenvía: sirve para el cliente y para los papás invitados.',
+      texto: function (d) {
+        return '📸 *Las fotos del cumpleaños de ' + d.nino + ' ya están listas*\n\n' +
+          'Entra aquí y descárgalas todas:\n' +
+          d.urlGaleria + '\n\n' +
+          'PIN de acceso: *' + d.pin + '*\n\n' +
+          'Puedes verlas, descargar las que quieras e imprimirlas donde prefieras 💜\n' +
+          'CumpleClick · @Cumple_Click · contacto@cumpleclick.com';
+      }
+    },
+    {
+      titulo: 'Agradecimiento después de la fiesta',
+      nota: 'Cierra la experiencia y pide la etiqueta en Instagram.',
       texto: function (d) {
         return '¡Hola ' + d.cliente + '! 🎉 Gracias por dejarnos ser parte del cumpleaños de *' + d.nino + '*.\n\n' +
           'Ya están todas las fotos en tu galería 📸 Entras con tu PIN *' + d.pin + '* y las descargas todas:\n' +
@@ -291,12 +368,6 @@ $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas
       }
     }
   ];
-
-  /** Devuelve la línea solo si hay dato; si no, el texto de reemplazo (o nada). */
-  function bloque(valor, plantilla, vacio) {
-    if (!valor) { return vacio || ''; }
-    return plantilla.replace('{v}', valor);
-  }
 
   function datos() {
     var op = sel.options[sel.selectedIndex];
@@ -329,19 +400,22 @@ $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas
     var d = datos();
     lista.innerHTML = '';
     PLANTILLAS.forEach(function (p) {
-      var texto = p.texto(d);
       var card = document.createElement('section');
-      card.className = 'msg-tarjeta';
+      card.className = 'card';
 
-      var h3 = document.createElement('h3');
-      h3.textContent = p.titulo;
+      var head = document.createElement('div');
+      head.className = 'msg-card-head';
+      var h2 = document.createElement('h2');
+      h2.textContent = p.titulo;
+      head.appendChild(h2);
+
       var nota = document.createElement('p');
       nota.className = 'muted';
       nota.textContent = p.nota;
 
       var ta = document.createElement('textarea');
       ta.className = 'msg-texto';
-      ta.value = texto;
+      ta.value = p.texto(d);
       ta.setAttribute('aria-label', 'Mensaje: ' + p.titulo);
 
       var acciones = document.createElement('div');
@@ -349,19 +423,19 @@ $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas
 
       var copiar = document.createElement('button');
       copiar.type = 'button';
-      copiar.className = 'btn';
-      copiar.textContent = '📋 Copiar';
+      copiar.className = 'btn btn-ghost';
+      copiar.innerHTML = icono('tpl-copy') + ' Copiar';
 
       var wa = document.createElement('a');
       wa.className = 'btn btn-wa';
       wa.target = '_blank';
       wa.rel = 'noopener';
-      wa.textContent = '💬 Enviar por WhatsApp';
+      wa.innerHTML = icono('tpl-wa') + ' Compartir por WhatsApp';
 
       var aviso = document.createElement('span');
-      aviso.className = 'msg-ok';
+      aviso.className = 'msg-copiado';
       aviso.hidden = true;
-      aviso.textContent = '¡Copiado!';
+      aviso.innerHTML = icono('tpl-check') + ' ¡Copiado!';
 
       function refrescarWa() {
         var n = telefonoWa(document.getElementById('f-telefono').value);
@@ -370,18 +444,29 @@ $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas
       refrescarWa();
 
       copiar.addEventListener('click', function () {
-        var listo = function () {
+        var avisar = function (ok) {
+          aviso.innerHTML = ok ? icono('tpl-check') + ' ¡Copiado!' : 'Selecciónalo y copia con Ctrl+C';
+          aviso.style.color = ok ? '' : '#b45309';
           aviso.hidden = false;
-          setTimeout(function () { aviso.hidden = true; }, 1800);
+          setTimeout(function () { aviso.hidden = true; }, 2200);
         };
-        // El portapapeles moderno exige contexto seguro; en http:// del kiosco no
-        // existe, así que se cae a seleccionar + execCommand, que sí funciona ahí.
+        // Copiar puede fallar sin aviso: el portapapeles moderno exige contexto seguro
+        // (el kiosco corre en http://) y execCommand lanza si el documento no tiene el
+        // foco. Cuando falla se selecciona el texto y se dice qué hacer, en vez de
+        // dejar al operador creyendo que copió.
+        var respaldo = function () {
+          try {
+            ta.focus();
+            ta.select();
+            avisar(document.execCommand('copy'));
+          } catch (e) {
+            avisar(false);
+          }
+        };
         if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(ta.value).then(listo, function () { ta.select(); document.execCommand('copy'); listo(); });
+          navigator.clipboard.writeText(ta.value).then(function () { avisar(true); }, respaldo);
         } else {
-          ta.select();
-          document.execCommand('copy');
-          listo();
+          respaldo();
         }
       });
       // Si el operador edita el texto a mano, el botón de WhatsApp manda lo editado.
@@ -390,7 +475,7 @@ $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas
       acciones.appendChild(copiar);
       acciones.appendChild(wa);
       acciones.appendChild(aviso);
-      card.appendChild(h3);
+      card.appendChild(head);
       card.appendChild(nota);
       card.appendChild(ta);
       card.appendChild(acciones);

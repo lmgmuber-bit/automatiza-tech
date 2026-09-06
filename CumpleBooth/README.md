@@ -59,7 +59,9 @@ falla de forma cerrada.
   camuflaje para cualquier prompt futuro de imágenes.
 - `public/sala.php` + `public/lib.sala.php`: API de salas de ayudantes del
   juego 3D (fase 3), migración `014_salas_ayudantes`; contrato en el repo
-  del juego (`app/design/sala-api.md`).
+  del juego (`app/design/sala-api.md`). `op=fotos` entrega al juego las
+  últimas fotos de la fiesta con el PIN de la galería (fase 4); el juego
+  sube sus recuerdos por `upload.php` como cualquier foto de cabina.
 
 La cámara confirma fotogramas reales antes de habilitar la captura y ofrece un
 selector si Chrome detecta más de un dispositivo. En Admin → Temáticas, cada card

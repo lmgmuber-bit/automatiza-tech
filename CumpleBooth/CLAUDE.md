@@ -29,3 +29,14 @@ other worktrees.
 nothing from that closure may be described as live. The previous line here said
 "PROD has not been deployed", which was wrong and is kept noted so the error is
 not reintroduced. Never claim something is in PROD without evidence.
+
+**Juego 3D "Tu Cumple en 3D" (2026-09-06, ramas `feat/cumpleclick-sala-ayudantes`, LOCAL only).**
+The 3D birthday game lives in a separate repo (`C:\wamp64\www\tucumple-repo\`, Higgsfield-hosted for
+demos only: `*.higgsfield.app` returns 401 to anonymous visitors, so at parties it is served from WAMP on the
+LAN). CumpleBooth is its backend: `public/sala.php` + `public/lib.sala.php` + migration
+`014_salas_ayudantes` (phase 3: guests send animo/copos/ayuda from their phones via QR; phase 4:
+`op=fotos` lists the party's kiosk photos for the game, gated by the gallery PIN, and `crear` returns the
+server's LAN IPs for the QR). The game uploads its own 1080x1920 memories through `upload.php` like any
+booth photo and reads the party through `api.php?p=`. Contract: `tucumple-repo/app/design/sala-api.md`.
+Tests: `tests/backend/salas.php` (73 checks). Tickets: `Docs/ORCHESTRATION/AT-CUMPLECLICK-014/015.yaml`.
+Local test party `prueba-3d` (theme hielo, gallery PIN 1234) exists only in the dev DB.

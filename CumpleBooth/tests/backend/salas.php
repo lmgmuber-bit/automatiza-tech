@@ -16,6 +16,8 @@ register_shutdown_function(static function () use ($tmp): void {
 putenv('CC_STORAGE_MODE=db');
 putenv('CC_PDO_DSN=sqlite:' . $tmp . '/salas.sqlite');
 putenv('CC_APP_HMAC_KEY=' . str_repeat('c', 64));
+putenv('CC_PUBLIC_BASE_URL=https://example.test/cumpleclick');
+putenv('CC_PHOTO_DIR=' . $tmp . '/photos'); putenv('CC_STATE_DIR=' . $tmp . '/state'); putenv('CC_INVITATION_DIR=' . $tmp . '/invitations');
 require dirname(__DIR__, 2) . '/public/lib.php';
 require dirname(__DIR__, 2) . '/public/lib.sala.php';
 
@@ -25,8 +27,10 @@ function sala_check(bool $condition, string $message): void {
     $tests++;
     if (!$condition) { throw new RuntimeException('FAIL: ' . $message); }
 }
-(require dirname(__DIR__, 2) . '/database/migrations/001_initial.php')(cb_pdo());
-(require dirname(__DIR__, 2) . '/database/migrations/014_salas_ayudantes.php')(cb_pdo());
+// cb_save_parties (bloque 12) necesita las columnas que agregan 003–007.
+foreach (['001_initial', '002_theme_prompts', '003_invitations_and_plan', '004_gate_a_corrections', '005_theme_prompt_history', '006_public_leads', '007_event_album', '014_salas_ayudantes'] as $migracion) {
+    (require dirname(__DIR__, 2) . '/database/migrations/' . $migracion . '.php')(cb_pdo());
+}
 
 // ── 1) cb_sala_crear: forma de la respuesta y nada en claro en la BD ───────
 $creada = cb_sala_crear('Isidora', '203.0.113.5');
@@ -258,5 +262,37 @@ sala_check(cb_sala_codigo_valido('ABC0O') === null, 'código con dígito fuera d
 sala_check(cb_sala_codigo_valido(123) === null, 'un entero no es un código válido');
 sala_check(cb_sala_codigo_valido(null) === null, 'null no es un código válido');
 sala_check(cb_sala_codigo_valido(['ABCDE']) === null, 'un array no es un código válido');
+
+// ── 12) cb_sala_fotos: fotos del kiosco para el mundo del juego, con PIN ─────
+sala_check(is_array($creada['hosts']), 'cb_sala_crear devuelve la lista de IPs LAN del servidor (puede ser vacía)');
+putenv('CC_PUBLIC_BASE_URL=https://example.test/cumpleclick');
+$fiestas = ['parties' => [
+    'fiesta-pin' => ['nombre' => 'Isidora', 'tema' => 'hielo', 'fecha' => '2026-09-20', 'activa' => true, 'invitados' => [['name' => 'Mateo', 'g' => 'm']],
+        'frameBox' => ['x' => .3, 'y' => .3, 'w' => .4, 'h' => .3], 'galeriaPin' => '1234', 'creada' => '2026-09-06 10:00:00'],
+    'fiesta-sin-pin' => ['nombre' => 'Tomás', 'tema' => 'hielo', 'fecha' => '2026-09-21', 'activa' => true, 'invitados' => [],
+        'frameBox' => ['x' => .3, 'y' => .3, 'w' => .4, 'h' => .3], 'creada' => '2026-09-06 10:00:00'],
+]];
+sala_check(cb_save_parties($fiestas), 'fiestas de prueba guardadas');
+$idFiestaPin = cb_party_db_id('fiesta-pin');
+sala_check(is_int($idFiestaPin), 'la fiesta con PIN tiene id en la BD');
+$insFoto = cb_pdo()->prepare('INSERT INTO cc_photos (party_id,access_token,storage_key,original_name,byte_size,width,height,sha256,created_at,deleted_at) VALUES (?,?,?,?,?,?,?,?,?,NULL)');
+$insFoto->execute([$idFiestaPin, str_repeat('a', 32), 'fiesta-pin/2026/09/' . str_repeat('a', 32) . '.png', 'vieja.png', 1000, 1080, 1920, str_repeat('0', 64), '2026-09-06 10:00:00']);
+$insFoto->execute([$idFiestaPin, str_repeat('b', 32), 'fiesta-pin/2026/09/' . str_repeat('b', 32) . '.png', 'nueva.png', 1000, 1080, 1920, str_repeat('1', 64), '2026-09-06 11:00:00']);
+$sala12 = cb_sala_crear('Isidora', '203.0.113.12');
+$fotosMal = cb_sala_fotos($sala12['codigo'], $sala12['anfitrion'], 'fiesta-pin', '0000');
+sala_check(!$fotosMal['ok'] && $fotosMal['error'] === 'pin_invalido' && $fotosMal['http'] === 403, 'PIN incorrecto → pin_invalido 403');
+$fotosSinPin = cb_sala_fotos($sala12['codigo'], $sala12['anfitrion'], 'fiesta-sin-pin', '1234');
+sala_check(!$fotosSinPin['ok'] && $fotosSinPin['error'] === 'sin_pin' && $fotosSinPin['http'] === 409, 'fiesta sin PIN de galería → sin_pin 409');
+$fotosNoExiste = cb_sala_fotos($sala12['codigo'], $sala12['anfitrion'], 'no-existe', '1234');
+sala_check(!$fotosNoExiste['ok'] && $fotosNoExiste['error'] === 'fiesta_no_existe' && $fotosNoExiste['http'] === 404, 'fiesta inexistente → 404');
+$fotosToken = cb_sala_fotos($sala12['codigo'], str_repeat('f', 32), 'fiesta-pin', '1234');
+sala_check(!$fotosToken['ok'] && $fotosToken['error'] === 'anfitrion_invalido', 'token de anfitrión falso → anfitrion_invalido');
+$fotosOk = cb_sala_fotos($sala12['codigo'], $sala12['anfitrion'], 'fiesta-pin', '1234');
+sala_check($fotosOk['ok'] === true && $fotosOk['total'] === 2 && count($fotosOk['fotos']) === 2, 'PIN correcto → 2 fotos');
+sala_check($fotosOk['fotos'][0]['nombre'] === 'nueva.png' && $fotosOk['fotos'][1]['nombre'] === 'vieja.png', 'las fotos vienen de la más nueva a la más vieja');
+sala_check($fotosOk['fotos'][0]['ver'] === 'ver.php?t=' . str_repeat('b', 32) . '&download=inline' && $fotosOk['fotos'][0]['w'] === 1080, 'cada foto trae su ruta ver.php relativa y sus medidas');
+sala_check(strpos(json_encode($fotosOk), 'storage_key') === false && strpos(json_encode($fotosOk), 'fiesta-pin/2026') === false, 'no se filtran rutas de almacenamiento');
+$fotosMax = cb_sala_fotos($sala12['codigo'], $sala12['anfitrion'], 'fiesta-pin', '1234', 1);
+sala_check(count($fotosMax['fotos']) === 1 && $fotosMax['total'] === 2, 'max=1 devuelve una foto pero total sigue en 2');
 
 fwrite(STDOUT, "OK $tests checks salas\n");

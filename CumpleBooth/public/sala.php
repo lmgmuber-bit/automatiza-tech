@@ -41,7 +41,7 @@ function cc_sala_resultado(array $resultado): void
 $metodo = (string) ($_SERVER['REQUEST_METHOD'] ?? '');
 $op = isset($_GET['op']) && is_string($_GET['op']) ? $_GET['op'] : '';
 $lecturas = ['estado', 'acciones'];
-$escrituras = ['crear', 'unirse', 'accion', 'resumen', 'cerrar'];
+$escrituras = ['crear', 'unirse', 'accion', 'resumen', 'cerrar', 'fotos'];
 
 if (!in_array($op, $lecturas, true) && !in_array($op, $escrituras, true)) {
     cc_sala_responder(422, ['ok' => false, 'error' => 'op_invalida']);
@@ -89,7 +89,8 @@ if (in_array($op, $lecturas, true)) {
 
 try {
     $identidad = cb_request_identity();
-    $limites = ['crear' => [10, 600, 600], 'unirse' => [30, 600, 300], 'accion' => [120, 60, 60], 'resumen' => [120, 60, 30], 'cerrar' => [20, 60, 60]];
+    // `fotos` pide el PIN de la galería: mismo freno que galeria.php contra fuerza bruta.
+    $limites = ['crear' => [10, 600, 600], 'unirse' => [30, 600, 300], 'accion' => [120, 60, 60], 'resumen' => [120, 60, 30], 'cerrar' => [20, 60, 60], 'fotos' => [5, 60, 300]];
     if (isset($limites[$op])) {
         [$max, $ventana, $bloqueo] = $limites[$op];
         $limite = cb_rate_limit('sala-' . $op, $identidad, $max, $ventana, $bloqueo);
@@ -121,6 +122,9 @@ try {
             break;
         case 'cerrar':
             cc_sala_resultado(cb_sala_cerrar($input['codigo'] ?? '', $input['anfitrion'] ?? ''));
+            break;
+        case 'fotos':
+            cc_sala_resultado(cb_sala_fotos($input['codigo'] ?? '', $input['anfitrion'] ?? '', $input['fiesta'] ?? '', is_string($input['pin'] ?? null) ? $input['pin'] : ''));
             break;
         default:
             cc_sala_responder(422, ['ok' => false, 'error' => 'op_invalida']);

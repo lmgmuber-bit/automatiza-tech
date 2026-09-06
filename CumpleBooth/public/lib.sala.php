@@ -122,7 +122,7 @@ function cb_sala_crear(string $festejado, string $identity): array
                     $codigo, cb_hash_token($token), $nombre, null, 0, 'activa', cb_hmac($identity, 'sala-ip'),
                     gmdate('Y-m-d H:i:s', $ahora), gmdate('Y-m-d H:i:s', $ahora + CB_SALA_VIDA_SEGUNDOS), gmdate('Y-m-d H:i:s', $ahora),
                 ]);
-            return ['ok' => true, 'codigo' => $codigo, 'anfitrion' => $token, 'caduca_en' => CB_SALA_VIDA_SEGUNDOS];
+            return ['ok' => true, 'codigo' => $codigo, 'anfitrion' => $token, 'caduca_en' => CB_SALA_VIDA_SEGUNDOS, 'hosts' => cb_sala_ips_lan()];
         } catch (PDOException $e) {
             $duplicado = (string) $e->getCode() === '23000'
                 || strpos(strtolower($e->getMessage()), 'unique') !== false
@@ -374,6 +374,69 @@ function cb_sala_acciones($codigo, $anfitrion, $desde): array
         'seq' => $ultimo,
         'estado' => (string) $sala['estado'],
     ];
+}
+
+/**
+ * IPv4 privadas de este servidor. Cuando el juego corre en la misma máquina que
+ * WAMP (localhost), el QR tiene que apuntar a la IP de la LAN o los celulares no entran.
+ */
+function cb_sala_ips_lan(): array
+{
+    $host = @gethostname();
+    $lista = is_string($host) && $host !== '' ? @gethostbynamel($host) : false;
+    $ips = [];
+    foreach (is_array($lista) ? $lista : [] as $ip) {
+        if (preg_match('/^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/', (string) $ip) === 1) {
+            $ips[] = (string) $ip;
+        }
+    }
+    return array_values(array_unique($ips));
+}
+
+/**
+ * Últimas fotos del kiosco de una fiesta, para colgarlas dentro del mundo del
+ * juego. Misma llave que la galería: el PIN de la fiesta. Devuelve rutas
+ * relativas a la carpeta pública de CumpleClick (`ver.php?t=...`), nunca tokens sueltos.
+ */
+function cb_sala_fotos($codigo, $anfitrion, $fiesta, $pin, int $max = 6): array
+{
+    $pdo = cb_sala_pdo();
+    $sala = cb_sala_buscar($pdo, $codigo);
+    if ($sala === null) {
+        return ['ok' => false, 'error' => 'sala_no_existe', 'http' => 404];
+    }
+    if (!cb_sala_es_anfitrion($sala, $anfitrion)) {
+        return ['ok' => false, 'error' => 'anfitrion_invalido', 'http' => 403];
+    }
+    if (!is_string($fiesta) || !cb_valid_public_slug($fiesta)) {
+        return ['ok' => false, 'error' => 'fiesta_invalida', 'http' => 422];
+    }
+    $party = cb_load_party_raw($fiesta);
+    if ($party === null) {
+        return ['ok' => false, 'error' => 'fiesta_no_existe', 'http' => 404];
+    }
+    if (empty($party['galeriaPinHash']) && empty($party['galeriaPin'])) {
+        return ['ok' => false, 'error' => 'sin_pin', 'http' => 409];
+    }
+    if (!is_string($pin) || !cb_verify_party_pin($party, $pin)) {
+        return ['ok' => false, 'error' => 'pin_invalido', 'http' => 403];
+    }
+    $todas = cb_list_party_photos($fiesta);
+    $fotos = [];
+    foreach (array_slice($todas, 0, max(1, min(12, $max))) as $f) {
+        $token = (string) ($f['access_token'] ?? '');
+        if ($token === '') {
+            continue;
+        }
+        $fotos[] = [
+            'ver' => 'ver.php?t=' . rawurlencode($token) . '&download=inline',
+            'nombre' => (string) ($f['original_name'] ?? ''),
+            'w' => (int) ($f['width'] ?? 0),
+            'h' => (int) ($f['height'] ?? 0),
+            'creada' => (string) ($f['created_at'] ?? ''),
+        ];
+    }
+    return ['ok' => true, 'fotos' => $fotos, 'total' => count($todas)];
 }
 
 function cb_sala_cerrar($codigo, $anfitrion): array

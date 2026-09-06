@@ -2,7 +2,7 @@
 
 > **Aplica a Claude, Codex, OpenCode y Copilot.** Fuente canónica. Si un doc viejo dice
 > otra cosa sobre conexiones, prevalece este archivo.
-> Última verificación real: **2026-08-26**.
+> Última verificación real: **2026-09-06**.
 
 ---
 
@@ -46,8 +46,10 @@ Ahí están, entre otras: Anthropic, OpenAI, Gemini/Google AI Studio, Google Pla
 > texto plano, y contiene claves de producción. Está en el radar de Luis; no es un
 > descubrimiento nuevo que haya que reportar cada vez.
 
-Credenciales que **no** están en ese archivo: FTP de Hostinger, la contraseña de la BD de
-CumpleClick y la API key de n8n (esta última ya vive configurada, ver abajo).
+También están ahí, desde agosto de 2026, el **FTP y el SSH de Hostinger** (bloques `FTP`,
+`ACCESO CUMPLE CLICK SSH` y un segundo `SSH` compartido con otros dominios): ver §3.3. Lo que
+**no** está: la contraseña de la BD de CumpleClick (vive en la config privada del servidor) y la
+API key de n8n (ya configurada, ver abajo).
 
 ---
 
@@ -62,6 +64,7 @@ CumpleClick y la API key de n8n (esta última ya vive configurada, ver abajo).
 | **budgetpixel** | Generación de imagen/video/música | ✅ | ✅ | ❌ |
 | **context7 / metricool** | Docs de librerías / métricas sociales | ❌ | ✅ | ❌ |
 | **Playwright / Chrome DevTools** | QA de frontend, capturas | ✅ plugin | ✅ `browser-use` | ❌ |
+| **Hostinger PROD (SSH/SFTP)** | Desplegar CumpleClick y el juego 3D, correr migraciones, leer logs | ✅ `paramiko` (2026-09-06) | ❌ | ❌ |
 
 **Pendientes de autorizar en Claude:** Notion y Stripe (OAuth), GitHub (header mal formado)
 y `magic` de 21st.dev (API key reseteada). Se arreglan con `/mcp` en sesión interactiva.
@@ -95,6 +98,37 @@ reescribir. **El MCP fusiona los settings guardados e ignora los que uno mande**
 hay solución por MCP: hay que hacer `PUT /api/v1/workflows/<id>` filtrando esas dos claves.
 `callerPolicy` sí es válida. Detalle completo en
 `Docs/2026-08-26-INCIDENTE-SEGURIDAD-N8N-Y-REEL-DIARIO.md` §9.
+
+### 3.3 Hostinger PROD por SSH/SFTP (actualizado 2026-09-06)
+
+**Claude sí puede desplegar a PROD.** Lo hizo el 2026-07-27 (primer deploy de CumpleClick) y el
+2026-09-06 (juego 3D + `sala.php`). No es un FTP a mano de Luis: es SSH con contraseña desde
+Python con `paramiko` (instalado en la máquina), leyendo el bloque `ACCESO CUMPLE CLICK SSH`
+del archivo de claves por etiqueta (`IP`, `PORT`, `USERNAME`, `PASS`) y sin imprimir nunca los
+valores. Windows no tiene `sshpass`; `ssh`/`scp` nativos pedirían la contraseña por consola.
+
+Reglas: (1) solo con autorización explícita de Luis para ese deploy; (2) reconocer primero en
+modo lectura (qué archivos existen, `md5sum` de lo que se va a tocar, migraciones aplicadas en
+`cc_schema_migrations`), y si algo se va a sobrescribir, bajarlo antes; (3) archivos grandes
+van en un `.zip` que se descomprime en el servidor (`unzip` existe; 30 MB tardan ~75 s);
+(4) las migraciones NO se corren con `scripts/migrate.php` en PROD (no existe `scripts/` allá y
+aplicaría todo lo pendiente): se sube la migración a
+`private-cumpleclick/database/migrations/` y se aplica con un runner puntual que la registra en
+`cc_schema_migrations`; (5) verificar después por HTTP desde afuera y con Playwright, y solo
+entonces decir que está en PROD.
+
+Layout en el servidor: webroot `domains/automatizatech.cl/public_html/cumpleclick/` (contenido
+de `dist/`; `juego/` es el juego 3D), config privada en `public_html/config/cumpleclick.local.php`,
+privado en `domains/automatizatech.cl/private-cumpleclick/{photos,invitations,event-profiles,
+database}`. PHP 8.3 CLI, `mysql`, `unzip`, `zip` y `rsync` disponibles. **PROD no es el build
+del 27-jul**: `lib.php` es del 2026-08-26 con migraciones 001–009 (álbum, perfiles de evento,
+género en invitaciones) y, desde el 2026-09-06, 014; 010–013 (aceptación de T&C) siguen sin
+desplegar. Antes de subir un PHP, comparar `md5sum` con `dist/` y las funciones `cb_*` que usa.
+
+Chequeo mínimo (lectura): conectar con paramiko y correr `php -v` y
+`ls domains/automatizatech.cl/public_html/cumpleclick`. El helper de la sesión del 2026-09-06
+(`prod_ssh.py`, ~50 líneas: `credenciales()`, `conectar()`, `run()` con tachado de secretos)
+vive en el scratchpad de esa sesión; rehacerlo es trivial y no debe guardarse en el repo.
 
 ---
 

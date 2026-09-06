@@ -21,6 +21,28 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## DESPLEGADO 2026-09-06 — Juego 3D "Tu Cumple en 3D" + salas de ayudantes (por SSH, Claude)
+
+Deploy aditivo hecho por Claude vía SSH/SFTP (ver `Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md`
+§3.3), autorizado por Luis. Nada existente se sobrescribió. Verificado desde afuera: `sala.php`
+responde el contrato completo (36/36 checks de la prueba de humo contra PROD), el juego carga con
+WebGPU en `https://automatizatech.cl/cumpleclick/juego/?p=<slug>` (fiesta real, QR de ayudantes
+con URL pública, temáticas Hielo y Héroes), 0 errores de consola propios.
+
+| Local | PROD (`/cumpleclick/`) | Nota |
+|---|---|---|
+| `dist/lib.sala.php` | `/lib.sala.php` | nuevo |
+| `dist/sala.php` | `/sala.php` | nuevo; usa 11 funciones `cb_*` que el `lib.php` de PROD (26-ago) ya tiene |
+| `database/migrations/014_salas_ayudantes(.down).php` | `private-cumpleclick/database/migrations/` | aplicada con `private-cumpleclick/database/aplicar-014.php` (runner puntual, registra en `cc_schema_migrations`); tablas `cc_salas`, `cc_sala_ayudantes`, `cc_sala_acciones` |
+| `C:\wamp64\www\juego-prod\` (= `tucumple-repo/app/public`, 180 archivos, 38 MB) | `/juego/` | subido como zip y descomprimido en el servidor |
+| (generado) | `/juego/.htaccess` | reglas propias: 404 limpio para archivos inexistentes (el catch-all SPA del padre se hereda y serviría `index.html` con 200) y `Cache-Control` sin `immutable` porque los archivos del juego no llevan hash |
+
+`api.php`, `upload.php`, `ver.php` y `.htaccess` de la raíz **no cambiaron** (md5 idéntico a
+`dist/`). `lib.php` de PROD es más nuevo que el del 27-jul y NO se tocó. Pendiente aparte: el PIN de
+galería `2026` solo sigue vigente en `demo-kpop-vip`; las otras demos tienen otro PIN (se cambia
+desde el admin). Para actualizar el juego más adelante: regenerar `juego-prod`, zip, subir y
+descomprimir igual; los navegadores revalidan HTML/JS al instante gracias al `.htaccess`.
+
 ## Delta local — Aceptación de Términos y firma (rama `feat/cumpleclick-aceptacion-terminos`, no desplegado)
 
 Solo PHP y `.md`; los bundles de `dist/assets/` **no cambian** en este delta.

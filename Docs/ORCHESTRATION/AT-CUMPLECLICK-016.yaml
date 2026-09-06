@@ -3,7 +3,7 @@ parent_ticket: AT-CUMPLECLICK-015
 title: "Aventura Arácnida v2 — temática Héroes en el motor realista (multi-temática)"
 origin: direct_luis
 priority: P1
-status: WAITING_HUMAN_GATE
+status: DONE
 created_at: "2026-09-06"
 created_by: claude
 objective: >
@@ -107,10 +107,23 @@ execution_log:
       archivos con `game/temas/*`, `game/mundo-ciudad.js`, `temas/heroes/`). Sin commit ni push
       de este ticket en el repo automatiza-tech (solo se tocó `tucumple/CONTEXTO-CODEX.md`, que
       no vive en este repo).
+  - date: "2026-09-06"
+    by: claude
+    what: >
+      DESPLEGADO A PROD por Claude vía SSH/SFTP (paramiko), autorizado por Luis ("tú puedes
+      subir a PROD, por SSH lo hiciste en el pasado"). Deploy aditivo a
+      https://automatizatech.cl/cumpleclick/: `sala.php` + `lib.sala.php` (nuevos), migración
+      014 aplicada con runner puntual en `private-cumpleclick/database/` (tablas cc_salas,
+      cc_sala_ayudantes, cc_sala_acciones; PROD tenía 001–009, 010–013 siguen sin desplegar),
+      juego 3D completo (180 archivos, 38 MB) en `/cumpleclick/juego/` con `.htaccess` propio
+      (404 limpio, sin `immutable`). `api.php`, `upload.php`, `ver.php` y `lib.php` de PROD no se
+      tocaron (md5 iguales a dist / lib.php del 26-ago con las 11 funciones cb_* necesarias).
+      Verificado desde afuera: prueba de humo de sala.php 36/36 contra PROD, juego con WebGPU en
+      temáticas Hielo (fiesta demo-frozen-vip cargada, QR con URL pública, sala creada y cerrada)
+      y Héroes, 0 errores de consola propios. Registro en CumpleBooth/docs/FTP-MANIFEST.md
+      (sección DESPLEGADO 2026-09-06) y Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md §3.3.
 next_action: >
-  Luis prueba las dos versiones (v1 N64 en heroe-aracnido-cumple.higgsfield.app y v2 realista en
-  aventura-aracnida-2.higgsfield.app, o el espejo local juego-spidey-v2) y decide si se justifican
-  las mejoras pendientes: texturas PBR de la ciudad con nano_banana_2 (6 cr) para más realismo
-  que las texturas procedurales actuales, y rigs de baile para Ghost y Spin (8 cr cada uno, hoy
-  no bailan porque sus modelos no tienen esqueleto). También queda pendiente actualizar
-  `app/src/app-meta.json`/`og:image`, que siguen apuntando a la portada del Reino de Hielo.
+  En PROD desde 2026-09-06. Queda la prueba real de Luis con niños, celulares e impresora
+  (galería con PIN; el PIN 2026 solo sigue en demo-kpop-vip, las otras demos lo tienen distinto),
+  el merge de la rama feat/cumpleclick-sala-ayudantes cuando Luis lo apruebe, y borrar la fiesta
+  local de prueba `prueba-3d` si no se quiere conservar.

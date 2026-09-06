@@ -3,7 +3,7 @@ parent_ticket: AT-CUMPLECLICK-013
 title: "Tu Cumple en 3D — Fase 3: ayudantes por celular vía QR (Claude)"
 origin: direct_luis
 priority: P1
-status: WAITING_HUMAN_GATE
+status: DONE
 created_at: "2026-09-06"
 created_by: claude
 objective: >
@@ -47,9 +47,9 @@ safety:
   rate_limit: "enfriamiento por ayudante y tipo; 60 acciones/min por sala; límites por IP"
   body_limit_bytes: 4096
   higgsfield_credits: 0
-  allow_deploy: false
+  allow_deploy: true # PROD por SSH, autorizado por Luis 2026-09-06
   allow_commit: true # solo en ramas propias
-  allow_push: false # PROD va por FTP; lo sube Luis
+  allow_push: false # rama propia sin merge; el deploy a PROD fue por SSH (Claude), no por push
 execution_log:
   - date: "2026-09-06"
     by: claude
@@ -72,7 +72,23 @@ execution_log:
       créditos de Higgsfield gastados (saldo sigue en 99,73). Documentación sincronizada:
       tucumple-repo/app/README.md (estado + sección Fase 3), CumpleBooth/README.md (fuentes
       de verdad). Nada desplegado a PROD; sin commit ni push de este ticket.
+  - date: "2026-09-06"
+    by: claude
+    what: >
+      DESPLEGADO A PROD por Claude vía SSH/SFTP (paramiko), autorizado por Luis ("tú puedes
+      subir a PROD, por SSH lo hiciste en el pasado"). Deploy aditivo a
+      https://automatizatech.cl/cumpleclick/: `sala.php` + `lib.sala.php` (nuevos), migración
+      014 aplicada con runner puntual en `private-cumpleclick/database/` (tablas cc_salas,
+      cc_sala_ayudantes, cc_sala_acciones; PROD tenía 001–009, 010–013 siguen sin desplegar),
+      juego 3D completo (180 archivos, 38 MB) en `/cumpleclick/juego/` con `.htaccess` propio
+      (404 limpio, sin `immutable`). `api.php`, `upload.php`, `ver.php` y `lib.php` de PROD no se
+      tocaron (md5 iguales a dist / lib.php del 26-ago con las 11 funciones cb_* necesarias).
+      Verificado desde afuera: prueba de humo de sala.php 36/36 contra PROD, juego con WebGPU en
+      temáticas Hielo (fiesta demo-frozen-vip cargada, QR con URL pública, sala creada y cerrada)
+      y Héroes, 0 errores de consola propios. Registro en CumpleBooth/docs/FTP-MANIFEST.md
+      (sección DESPLEGADO 2026-09-06) y Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md §3.3.
 next_action: >
-  Luis prueba con un celular real en la misma Wi-Fi, abriendo el juego en la tablet por la IP
-  de la LAN (no localhost) para que el QR sea alcanzable. Después decide el deploy a PROD por
-  FTP (lista de archivos en el informe de Claude) y la ejecución de la migración 014 en PROD.
+  En PROD desde 2026-09-06. Queda la prueba real de Luis con niños, celulares e impresora
+  (galería con PIN; el PIN 2026 solo sigue en demo-kpop-vip, las otras demos lo tienen distinto),
+  el merge de la rama feat/cumpleclick-sala-ayudantes cuando Luis lo apruebe, y borrar la fiesta
+  local de prueba `prueba-3d` si no se quiere conservar.

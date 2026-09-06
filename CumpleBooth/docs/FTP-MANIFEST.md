@@ -44,6 +44,20 @@ Migración 014 aplicada con `database/aplicar-014.php`; PIN 1234 en las 10 fiest
 `database/respaldo-cc_parties-20260906-185354.json`. `fiesta.js` del juego detecta la base como la carpeta
 padre de `juego/` (sirve para `/app/juego/` y `/cumpleclick/juego/`).
 
+### Fiestas reales del domingo 13-sep (cumpleclick.com, 2026-09-06)
+
+Luis pidió que las fiestas reales dejaran de llamarse demo/QA. En PROD: `demo-frozen-vip` → **`isidora-reino-de-hielo`**
+(Isidora, Reino de Hielo; además etiqueta `CLIENTE - Cumple Isidora (Reino de Hielo) 13-sep` y fecha 13-sep, antes
+31-dic) y `qa-spidey` → **`luciano-spidey`** (Luciano, Spidey). El slug es la carpeta de fotos, del álbum y de las
+láminas, así que el renombre fue con script (`database/renombrar-slugs.php`): respaldo JSON de las filas
+(`respaldo-slugs-20260906-202227.json`), carpetas `fotos/<slug>`, `fotos/album/<slug>`, `invitaciones/<slug>`,
+y en una transacción `cc_parties.public_slug`, `cc_photos.storage_key` (26+11), `cc_event_media.storage_key/thumb`
+(14+13), `cc_invitation_outputs.file_storage_key` (1+3). Verificado: API 200 con los nuevos y 404 con los viejos,
+todas las fotos, medios del álbum y láminas existen en disco, `ver.php` sirve las fotos. URLs nuevas:
+`https://cumpleclick.com/app/?p=isidora-reino-de-hielo` y `https://cumpleclick.com/app/?p=luciano-spidey`
+(galería `galeria.php?p=<slug>`, PIN 1234). Los enlaces de invitación van por token y no cambiaron. Regla: un slug
+no se cambia desde el admin (no lo permite) ni a mano en la BD; siempre con este script o uno equivalente.
+
 ## DESPLEGADO 2026-09-06 en automatizatech.cl/cumpleclick (PRE-PRODUCCIÓN) — Juego 3D + salas de ayudantes (por SSH, Claude)
 
 Deploy aditivo hecho por Claude vía SSH/SFTP (ver `Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md`

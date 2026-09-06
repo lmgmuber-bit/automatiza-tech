@@ -1,6 +1,11 @@
 # CumpleClick — deploy seguro a Hostinger
 
-Objetivo: `https://automatizatech.cl/cumpleclick/`. No hay deploy realizado aún.
+**Dos ambientes (desde 2026-08-29):** PROD es `https://cumpleclick.com/app/` (kiosco = `dist/`; la landing
+`sitio/` vive en la raíz del dominio; privado en `domains/cumpleclick.com/{cumpleclick-config.php,almacen,database,scripts}`)
+y `https://automatizatech.cl/cumpleclick/` es **pre-producción**. Claude despliega por SSH/SFTP (paramiko) con autorización
+de Luis; procedimiento y reglas en `Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md` §3.3, historial de subidas en
+`docs/FTP-MANIFEST.md`. El código de PROD es la línea `codex/baby-shower-predicciones`; esta rama contiene el backend de
+salas del juego 3D (`sala.php`, migración 014, ya en PROD) y la aceptación de T&C (NO en PROD).
 
 ## 1. Preparación privada
 

@@ -17,6 +17,9 @@ WordPress.
 - MySQL 8+ o compatible, InnoDB y `utf8mb4`.
 - Node.js + npm solo para compilar el frontend.
 - Apache con `mod_rewrite` y `mod_headers`; HTTPS obligatorio en producción.
+- Producción: `https://cumpleclick.com/app/` (kiosco = `dist/`); pre-producción `https://automatizatech.cl/cumpleclick/`.
+  Estado y procedimiento de subida en `docs/FTP-MANIFEST.md` y `docs/DEPLOY.md`. El juego 3D "Tu Cumple en 3D" vive en
+  `app/juego/` (repo aparte `C:\wamp64\www\tucumple-repo`) y se abre desde el botón "Aventura 3D" de la bienvenida.
 
 ## Desarrollo local
 

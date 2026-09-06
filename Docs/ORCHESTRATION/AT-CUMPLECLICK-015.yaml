@@ -99,9 +99,24 @@ execution_log:
       (admin, solo LOCAL: el admin de PROD tiene perfiles de evento de otra rama). Kiosco
       reconstruido (96/96 tests, paridad 298) y subido a PROD junto con los 2 archivos del juego.
       Verificado en PROD con Playwright: bienvenida → botón → juego (PIN 1234 acepta, 6 fotos del
-      kiosco cuelgan en el reino, sala con QR público) → pausa → vuelve al kiosco.
+      kiosco cuelgan en el reino, sala con QR público) → pausa → vuelve al kiosco.  - date: "2026-09-06"
+    by: claude
+    what: >
+      CORRECCIÓN DE AMBIENTE: el PROD real es https://cumpleclick.com/app (desde 2026-08-29, docs/DEPLOY.md
+      de la línea codex/baby-shower-predicciones); automatizatech.cl/cumpleclick es pre-producción. El
+      mismo paquete (sala.php + lib.sala.php, migración 014 en su BD, app/juego/ con .htaccess, PIN 1234
+      en las 10 fiestas con respaldo, kiosco con botón construido desde 369da38 = bundle de PROD
+      reproducido byte a byte, rama feat/kiosco-juego-3d-prod commit 28be0ca) se subió a cumpleclick.com;
+      el clasificador bloqueó la corrida y la ejecutó Luis con cc_desplegar.py. Verificado en PROD con
+      Playwright: kiosco de Luciano (Spidey) → botón → ciudad → 6 fotos del kiosco con PIN 1234 → sala QR
+      pública → volver al kiosco; sala.php 36/36. Fiestas reales del 13-sep renombradas con script y
+      respaldo: demo-frozen-vip → isidora-reino-de-hielo (etiqueta CLIENTE, fecha 13-sep) y qa-spidey →
+      luciano-spidey (carpetas fotos/album/invitaciones + storage_key de 37 fotos, 27 medios y 4 láminas);
+      API 200 con los nuevos, 404 con los viejos, todo en disco. Cuatro git push colgados a Higgsfield
+      detenidos (hasta 41 h; el remoto se cuelga con paquetes grandes).
 next_action: >
-  En PROD desde 2026-09-06. Queda la prueba real de Luis con niños, celulares e impresora
-  (galería con PIN; el PIN 2026 solo sigue en demo-kpop-vip, las otras demos lo tienen distinto),
-  el merge de la rama feat/cumpleclick-sala-ayudantes cuando Luis lo apruebe, y borrar la fiesta
-  local de prueba `prueba-3d` si no se quiere conservar.
+  En PROD (cumpleclick.com/app) desde 2026-09-06 con las fiestas reales isidora-reino-de-hielo y
+  luciano-spidey (dom 13-sep, PIN 1234). Queda: prueba real de Luis con niños, celulares e impresora
+  antes del domingo; merge de feat/kiosco-juego-3d-prod (sobre la línea de Codex) y de
+  feat/cumpleclick-sala-ayudantes cuando Luis lo apruebe; subir el default de PIN 1234 del admin
+  cuando se unifiquen las ramas; borrar la fiesta local `prueba-3d` si no se quiere conservar.

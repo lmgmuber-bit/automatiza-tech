@@ -89,6 +89,17 @@ execution_log:
       temáticas Hielo (fiesta demo-frozen-vip cargada, QR con URL pública, sala creada y cerrada)
       y Héroes, 0 errores de consola propios. Registro en CumpleBooth/docs/FTP-MANIFEST.md
       (sección DESPLEGADO 2026-09-06) y Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md §3.3.
+  - date: "2026-09-06"
+    by: claude
+    what: >
+      Kiosco principal (Luis: "debe haber uno principal"): el kiosco React ofrece "🎮 Aventura 3D"
+      en la bienvenida de las temáticas con mundo 3D y abre juego/?p=<slug>&kiosco=1; el juego
+      muestra "🏠 Volver al kiosco" en pausa y final. PIN de galería 1234 en las 10 fiestas de
+      PROD (runner privado con respaldo), prellenado en el juego y por defecto en fiestas nuevas
+      (admin, solo LOCAL: el admin de PROD tiene perfiles de evento de otra rama). Kiosco
+      reconstruido (96/96 tests, paridad 298) y subido a PROD junto con los 2 archivos del juego.
+      Verificado en PROD con Playwright: bienvenida → botón → juego (PIN 1234 acepta, 6 fotos del
+      kiosco cuelgan en el reino, sala con QR público) → pausa → vuelve al kiosco.
 next_action: >
   En PROD desde 2026-09-06. Queda la prueba real de Luis con niños, celulares e impresora
   (galería con PIN; el PIN 2026 solo sigue en demo-kpop-vip, las otras demos lo tienen distinto),

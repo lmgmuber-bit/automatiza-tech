@@ -588,10 +588,12 @@ if ($formValues === null && $action === 'editar') {
         // Nueva fiesta nace inactiva: se activa cuando exista aceptación de Términos.
         'activa' => false,
         'service_plan' => 'booth',
-        'gallery_enabled' => false,
+        // Galería habilitada con PIN 1234 por defecto (Luis, 2026-09-06): el juego 3D y
+        // galeria.php funcionan sin configurar nada; el operador puede cambiarlo.
+        'gallery_enabled' => true,
         'juegos' => null,
         'invitados_text' => '',
-        'galeriaPin' => '',
+        'galeriaPin' => '1234',
         'pin_configured' => false,
         'frameBox' => ['x' => 0.32, 'y' => 0.30, 'w' => 0.36, 'h' => 0.28],
     ];

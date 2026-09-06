@@ -37,6 +37,15 @@ con URL pública, temáticas Hielo y Héroes), 0 errores de consola propios.
 | `C:\wamp64\www\juego-prod\` (= `tucumple-repo/app/public`, 180 archivos, 38 MB) | `/juego/` | subido como zip y descomprimido en el servidor |
 | (generado) | `/juego/.htaccess` | reglas propias: 404 limpio para archivos inexistentes (el catch-all SPA del padre se hereda y serviría `index.html` con 200) y `Cache-Control` sin `immutable` porque los archivos del juego no llevan hash |
 
+**Segunda tanda, mismo día (kiosco principal + PIN 1234):**
+
+| Local | PROD (`/cumpleclick/`) | Nota |
+|---|---|---|
+| `dist/index.html` + `dist/assets/{main-DyP8gEfj.js, main-B9-yq8Vw.css, album-BLM5xg1A.js, album-CeNLvTx5.css, cartel-B99n-mNG.js, cartel-CnsaFVl2.css}` | `/index.html`, `/assets/` | kiosco con botón "🎮 Aventura 3D" en la bienvenida (solo temáticas hielo/heroes/spidey) → `juego/?p=<slug>&kiosco=1`. Verificado antes de subir que el bundle de PROD (`main-Bx-ejHH_`) tenía exactamente las mismas cadenas que el local: `src/` de esta rama == lo que corría en PROD. Los assets viejos siguen ahí (no estorban) |
+| `juego-prod/index.html`, `juego-prod/game/main.js` | `/juego/` | con `?kiosco=1` muestra "🏠 Volver al kiosco" en pausa y al final (`base + ?p=slug`); PIN de galería prellenado `1234` |
+| (dato) `private-cumpleclick/database/pin-1234.php` | BD | PIN de galería `1234` en las 10 fiestas de PROD vía `cb_load_parties`/`cb_save_parties` (mismo hash que el admin); respaldo previo `respaldo-cc_parties-20260906-164850.json` en esa carpeta. `galeria.php` y `sala.php?op=fotos` solo exigen el PIN, no `gallery_enabled` |
+| `public/admin/index.php` | **NO subido** | LOCAL: fiesta nueva nace con galería habilitada y PIN `1234` prellenado. El `admin/index.php` de PROD trae los perfiles de evento (commit `5d6d594`, otra rama) que esta rama no tiene: subirlo pisaría eso. Va cuando se unifiquen las ramas |
+
 `api.php`, `upload.php`, `ver.php` y `.htaccess` de la raíz **no cambiaron** (md5 idéntico a
 `dist/`). `lib.php` de PROD es más nuevo que el del 27-jul y NO se tocó. Pendiente aparte: el PIN de
 galería `2026` solo sigue vigente en `demo-kpop-vip`; las otras demos tienen otro PIN (se cambia

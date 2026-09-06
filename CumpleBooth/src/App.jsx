@@ -33,6 +33,13 @@ const BRAND_LOGO_SRC = BASE + 'brand/cumpleclick-mark.svg'
 let CONFIG = null
 let PARTY_SLUG = null
 let THEME_SLUG = null
+// Juego 3D "Tu Cumple en 3D" (carpeta hermana juego/, mismo hosting que el kiosco).
+// Solo las temáticas con mundo 3D lo ofrecen desde la bienvenida; el juego recibe
+// la fiesta por ?p= y, con ?kiosco=1, muestra "Volver al kiosco" en pausa y al final.
+const TEMAS_JUEGO_3D = ['hielo', 'heroes', 'spidey']
+function juego3dUrl() {
+  return BASE + 'juego/?p=' + encodeURIComponent(PARTY_SLUG || '') + '&kiosco=1'
+}
 let STORAGE_KEY = null
 let PERSONAJES = []
 let CHAR_IMG = {}
@@ -1310,6 +1317,17 @@ function Intro({ onStart }) {
             🎉 Toca para entrar
           </button>
           <p className="hint">Te tomaremos una foto de recuerdo 📸</p>
+          {TEMAS_JUEGO_3D.includes(THEME_SLUG) && (
+            <button
+              className="cta cta--juego3d"
+              onClick={(event) => {
+                event.stopPropagation()
+                location.href = juego3dUrl()
+              }}
+            >
+              🎮 Aventura 3D
+            </button>
+          )}
         </div>
       </div>
     </section>

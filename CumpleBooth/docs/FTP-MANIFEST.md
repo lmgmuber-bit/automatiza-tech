@@ -372,3 +372,22 @@ completo en `app/juego/` (repo `tucumple-repo`, 181 archivos, `.htaccess` propio
 (`database/pin-1234.php`, respaldo JSON) y fiestas reales del 13-sep renombradas (`database/renombrar-slugs.php`):
 `isidora-reino-de-hielo`, `luciano-spidey`. Detalle completo en la misma sección del manifiesto de la rama
 `feat/cumpleclick-sala-ayudantes` y en `Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md` §3.3.
+
+## DESPLEGADO 2026-09-06 (tarde) en cumpleclick.com/app — pantalla Mensajes y correo en la marca
+
+Subido por SSH desde esta rama, con los md5 de PROD verificados antes: coincidían byte a byte
+con la base de la rama (PROD guarda los PHP con CRLF; las ediciones se rehicieron en CRLF para
+no convertir el archivo entero en un diff).
+
+| Local (`dist/`) | PROD (`/app/`) | Nota |
+|---|---|---|
+| `assets/album-C3C8CAdS.js`, `assets/cartel-QEaLTDPn.js` | `/assets/` | primero: los HTML nuevos los piden |
+| `album.html`, `cartel-qr.html` | `/` | apuntan a los bundles nuevos |
+| `album-api.php` | `/album-api.php` | publica `correo`/`correo_url` de la marca |
+| `admin/marca.php` | `/admin/marca.php` | campos Correo y Enlace del correo |
+| `admin/mensajes.php` | `/admin/mensajes.php` | **nuevo**: textos para el cliente con copiar / abrir WhatsApp |
+| `admin/index.php` | `/admin/index.php` | pestaña Mensajes en el nav |
+| (dato) `marca-correo.php` | BD/JSON | agregó `correo` a `data/marca.json` con respaldo (`marca.json.bak-20260906-223017`); el archivo NO se subió para no pisar lo editado desde el admin |
+
+Verificado: 173/173 tests, paridad 485 archivos, y por HTTP `admin/mensajes.php` responde con la
+pantalla de login, `album.html` y `cartel-qr.html` sirven los bundles nuevos.

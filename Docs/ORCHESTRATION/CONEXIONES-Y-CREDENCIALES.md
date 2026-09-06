@@ -117,7 +117,14 @@ aplicaría todo lo pendiente): se sube la migración a
 `cc_schema_migrations`; (5) verificar después por HTTP desde afuera y con Playwright, y solo
 entonces decir que está en PROD.
 
-Layout en el servidor: webroot `domains/automatizatech.cl/public_html/cumpleclick/` (contenido
+**Dos ambientes de CumpleClick en la misma cuenta (desde 2026-08-29):** PROD = `cumpleclick.com/app`
+(`domains/cumpleclick.com/`: `public_html/app` = kiosco, `public_html/` = landing, `cumpleclick-config.php`
+real 0600 + puente en `public_html/config/`, `almacen/{fotos,estado,invitaciones}`, `database/`, `scripts/`,
+enlace `public -> public_html/app`; código = línea `codex/baby-shower-predicciones`, migraciones 001–011 + 014).
+Pre-producción = `automatizatech.cl/cumpleclick` (lo descrito abajo). Verificar en cuál se está trabajando antes
+de subir; el 2026-09-06 se subió primero a pre-producción por asumir que era el PROD.
+
+Layout en pre-producción: webroot `domains/automatizatech.cl/public_html/cumpleclick/` (contenido
 de `dist/`; `juego/` es el juego 3D), config privada en `public_html/config/cumpleclick.local.php`,
 privado en `domains/automatizatech.cl/private-cumpleclick/{photos,invitations,event-profiles,
 database}`. PHP 8.3 CLI, `mysql`, `unzip`, `zip` y `rsync` disponibles. **PROD no es el build

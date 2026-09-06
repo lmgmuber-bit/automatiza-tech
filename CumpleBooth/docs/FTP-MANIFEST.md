@@ -21,7 +21,30 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
-## DESPLEGADO 2026-09-06 — Juego 3D "Tu Cumple en 3D" + salas de ayudantes (por SSH, Claude)
+## ⚠️ Dos ambientes: PROD es `cumpleclick.com/app`, pre-producción es `automatizatech.cl/cumpleclick`
+
+Desde 2026-08-29 (ver `docs/DEPLOY.md` en la rama `codex/baby-shower-predicciones`): el kiosco que ven los
+clientes vive en `domains/cumpleclick.com/public_html/app/` (= `dist/`), con la landing en la raíz del dominio,
+config real en `domains/cumpleclick.com/cumpleclick-config.php`, almacén en `domains/cumpleclick.com/almacen/`
+y `database/`, `scripts/` privados (`public` es un enlace a `public_html/app`). Su código es la línea
+`codex/baby-shower-predicciones` (`369da38`, migraciones 001–011, temáticas Spidey y baby shower). La rama
+`feat/cumpleclick-sala-ayudantes` NO contiene esa línea: para tocar el kiosco de PROD hay que partir de `369da38`
+(rama `feat/kiosco-juego-3d-prod`, creada 2026-09-06 con el botón del juego).
+
+## DESPLEGADO 2026-09-06 en cumpleclick.com/app (PROD) — juego 3D + salas + kiosco con botón + PIN 1234
+
+Lo mismo que se había subido a pre-producción esa mañana (tabla de abajo), aplicado al PROD real; lo ejecutó Luis
+con el script preparado por Claude (`cc_desplegar.py`, SSH/SFTP) porque el clasificador de permisos bloqueó la
+corrida desde la sesión. Verificado desde afuera: `sala.php` 36/36, `juego/` con `.htaccess` propio (404 limpio,
+sin `immutable`), kiosco `?p=qa-spidey` (Luciano, temática Spidey) muestra "🎮 Aventura 3D" → juego con la ciudad
+(`Aventura Arácnida 2`, 6 invitados, base `/app/`, PIN 1234 acepta y cuelga 6 fotos del kiosco, sala con QR
+público) → "Volver al kiosco". Kiosco: `index.html` + `assets/main-7reZvA3S.js` + `assets/main-CUtameO5.css`
+construidos desde `369da38` (bundle previo reproducido byte a byte antes del parche; 173/173 tests, paridad 484).
+Migración 014 aplicada con `database/aplicar-014.php`; PIN 1234 en las 10 fiestas con respaldo
+`database/respaldo-cc_parties-20260906-185354.json`. `fiesta.js` del juego detecta la base como la carpeta
+padre de `juego/` (sirve para `/app/juego/` y `/cumpleclick/juego/`).
+
+## DESPLEGADO 2026-09-06 en automatizatech.cl/cumpleclick (PRE-PRODUCCIÓN) — Juego 3D + salas de ayudantes (por SSH, Claude)
 
 Deploy aditivo hecho por Claude vía SSH/SFTP (ver `Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md`
 §3.3), autorizado por Luis. Nada existente se sobrescribió. Verificado desde afuera: `sala.php`

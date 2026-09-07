@@ -28,7 +28,7 @@ $run = static fn(string $f) => (require dirname(__DIR__, 2) . '/database/migrati
 foreach (['001_initial', '002_theme_prompts', '003_invitations_and_plan', '004_gate_a_corrections',
           '005_theme_prompt_history', '006_public_leads', '007_event_album', '008_event_profiles',
           '009_invitation_gender', '010_baby_shower_predictions', '011_gift_mode',
-          '015_party_contacts_billing'] as $m) {
+          '015_party_contacts_billing', '016_discount_percent'] as $m) {
     $run($m . '.php');
 }
 
@@ -107,4 +107,48 @@ cli_check(cb_format_clp(null) === '—', 'sin monto muestra una raya');
 cli_check(cb_parse_clp('  $1.234.567 ') === 1234567, 'lee montos con símbolos y espacios');
 cli_check(cb_parse_clp('') === null && cb_parse_clp('-5') === null, 'vacío y negativo quedan en null');
 
-fwrite(STDOUT, "OK $tests checks cliente (contactos y cobro)\n");
+
+// ── Descuento en porcentaje ─────────────────────────────────────────────────
+// El porcentaje manda sobre el monto: es como se acuerda el descuento y evita que quede
+// un monto en pesos viejo cuando cambia el precio.
+$r = cb_save_party_billing($slug, ['price_total' => '100000', 'discount_percent' => '20',
+                                   'discount_amount' => '5000', 'discount_label' => 'Prueba']);
+cli_check(!empty($r['ok']), 'guarda el cobro con porcentaje');
+$b = cb_party_billing($slug);
+cli_check($b['discount_percent'] === 20.0, 'el porcentaje queda guardado');
+cli_check($b['discount_amount'] === 20000, 'el monto se deriva del porcentaje, no del campo en pesos');
+cli_check($b['total'] === 80000, 'el total descuenta el porcentaje');
+
+// Cambiar el precio recalcula el descuento sin tocar nada más.
+cb_save_party_billing($slug, ['price_total' => '50000', 'discount_percent' => '20']);
+$b = cb_party_billing($slug);
+cli_check($b['discount_amount'] === 10000, 'al cambiar el precio, el descuento se recalcula');
+cli_check($b['total'] === 40000, 'y el total también');
+
+// 100% es el caso de la fiesta sin costo.
+cb_save_party_billing($slug, ['price_total' => '99990', 'discount_percent' => '100',
+                              'discount_label' => 'Fiesta de prueba']);
+$b = cb_party_billing($slug);
+cli_check($b['total'] === 0, 'con 100% el total queda en cero');
+cli_check($b['discount_amount'] === 99990, 'y el descuento es todo el precio');
+
+// Sin porcentaje vuelve a mandar el monto en pesos.
+cb_save_party_billing($slug, ['price_total' => '100000', 'discount_percent' => '', 'discount_amount' => '7000']);
+$b = cb_party_billing($slug);
+cli_check($b['discount_percent'] === null, 'sin porcentaje queda nulo');
+cli_check($b['discount_amount'] === 7000, 'y manda el monto escrito en pesos');
+
+// Lo que no puede pasar.
+$r = cb_save_party_billing($slug, ['price_total' => '100000', 'discount_percent' => '120']);
+cli_check(empty($r['ok']), 'rechaza un porcentaje mayor que 100');
+$r = cb_save_party_billing($slug, ['price_total' => '', 'discount_percent' => '20']);
+cli_check(empty($r['ok']), 'rechaza el porcentaje sin precio cargado');
+
+// Cómo se escribe un porcentaje de verdad.
+cli_check(cb_parse_percent('20%') === 20.0, 'lee "20%"');
+cli_check(cb_parse_percent('12,5') === 12.5, 'lee "12,5" con coma');
+cli_check(cb_parse_percent('') === null, 'un porcentaje vacío es nulo');
+cli_check(cb_parse_percent('0') === 0.0, '0% no es lo mismo que vacío');
+
+echo "OK $tests checks cliente (contactos, cobro y descuento en %)
+";

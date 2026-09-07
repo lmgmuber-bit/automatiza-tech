@@ -664,3 +664,39 @@ El registro paso de 14 a 17 versiones y quedo respaldado en
 Verificado despues del despliegue: `php -l` limpio, md5 del archivo igual al local, smoke de
 PROD 34/34, pruebas de aceptacion 46/46 y backend general 163/163, y los dos correos
 reenviados a una bandeja real con el formato nuevo.
+
+## DESPLEGADO 2026-09-07 (noche) — descuento en porcentaje por fiesta
+
+El descuento solo se podia escribir en pesos, y en la practica se piensa al reves: "a esta le
+hago 20%", "esta va sin costo". Calcularlo a mano es donde aparecen los errores de monto en un
+comprobante ya impreso.
+
+| # | Local | PROD | Nota |
+|---|---|---|---|
+| 1 | `database/migrations/016_discount_percent(.down).php` + `cc-aplicar-016.php` | `domains/cumpleclick.com/database/` | agrega `discount_percent DECIMAL(5,2) NULL` a `cc_parties`; aditiva |
+| 2 | `public/lib.cliente.php` | `/lib.cliente.php` | **en LF** (PROD lo guarda asi) |
+| 3 | `public/lib.comprobante.php` | `/lib.comprobante.php` | **CRLF** |
+| 4 | `public/admin/index.php` | `/admin/index.php` | **CRLF**, ultimo; el campo nuevo en la ficha |
+
+**Como funciona.** En la ficha de la fiesta hay dos campos: *Descuento en %* y *Descuento en
+pesos*. Si el porcentaje esta puesto, **manda**: el monto en pesos se calcula sobre el precio y
+se guarda derivado, asi que el comprobante sigue leyendo un monto y los dos numeros no pueden
+discrepar. Cambiar el precio recalcula el descuento solo. `DECIMAL(5,2)` y no float porque 12,5%
+tiene que valer 12,5 exacto.
+
+El porcentaje aparece en la etiqueta del comprobante ("Descuento · 100% · Fiesta de prueba") y
+en el correo, que ahora muestra tambien el precio del plan y el descuento cuando lo hay, no solo
+el total. `cb_parse_percent()` acepta "20", "20%", "12,5" y "12.5"; distingue vacio de 0%.
+
+**Las dos fiestas del domingo quedaron en costo 0** (marcha blanca), con la nota "Fiesta de
+marcha blanca: el servicio va sin costo." No se invento un precio: poner una cifra que no es la
+real en un documento que ve el cliente es peor que un cero. Si se quiere mostrar el valor de lo
+que se esta regalando, se escribe el precio real y 100 en el porcentaje, y el documento hace la
+resta solo.
+
+Verificado: migracion aplicada y registrada (18 versiones), `php -l` limpio en los tres
+archivos, pruebas `cliente` ampliadas a 46 comprobaciones (16 nuevas de porcentaje: que manda
+sobre el monto, que se recalcula al cambiar el precio, 100% = total cero, rechazo de >100 y de
+porcentaje sin precio), suites `comprobante`, `acceptance`, `run`, `leads` y `album` sin
+cambios, y smoke de PROD 34/34. Los comprobantes de las dos fiestas se generan (62 kB); les
+falta solo cargar los contactos para poder enviarlos.

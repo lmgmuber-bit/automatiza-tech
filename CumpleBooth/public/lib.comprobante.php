@@ -90,6 +90,13 @@ function cb_comprobante_datos(string $slug): ?array
     ];
 }
 
+/** "20%" o "12,5%": sin decimales cuando son cero, y con coma, como se escribe en Chile. */
+function cb_comprobante_porcentaje(float $pct): string
+{
+    $texto = rtrim(rtrim(number_format($pct, 2, ',', ''), '0'), ',');
+    return ($texto === '' ? '0' : $texto) . '%';
+}
+
 /** Fecha larga en español; `strftime` está obsoleto y `IntlDateFormatter` no siempre está. */
 function cb_comprobante_fecha_larga(string $iso): string
 {
@@ -180,8 +187,15 @@ function cb_comprobante_pdf(array $d): string
     if (!empty($d['cobro']['discount_amount'])) {
         $pdf->linea($izq, $y, $der, $y, 0.2, $LINEA);
         $y += 6;
-        $etiqueta = trim((string) $d['cobro']['discount_label']) !== ''
-            ? 'Descuento · ' . $d['cobro']['discount_label'] : 'Descuento';
+        // El porcentaje va en la etiqueta cuando existe: es como se acordó el descuento y
+        // deja explicado de dónde sale el monto que está al lado.
+        $etiqueta = 'Descuento';
+        if (($d['cobro']['discount_percent'] ?? null) !== null) {
+            $etiqueta .= ' · ' . cb_comprobante_porcentaje((float) $d['cobro']['discount_percent']);
+        }
+        if (trim((string) $d['cobro']['discount_label']) !== '') {
+            $etiqueta .= ' · ' . $d['cobro']['discount_label'];
+        }
         $pdf->texto($izq, $y, $etiqueta, 10.5, false, $TINTA);
         $pdf->texto($der, $y, '- ' . cb_format_clp((int) $d['cobro']['discount_amount']), 10.5, false, [22, 120, 60], 'der');
         $y += 4;
@@ -289,8 +303,14 @@ function cb_comprobante_correo(array $d, string $url): array
 
     $nombre = trim((string) ($d['cliente']['nombre'] ?? ''));
     $saludo = $nombre !== '' ? 'Hola ' . cc_mail_h(explode(' ', $nombre)[0]) : 'Hola';
-    $filas = cc_mail_fila('Fiesta', cc_mail_h($d['fiesta']['nombre'] . ' · ' . $d['fiesta']['tema']))
-        . cc_mail_fila('Total', cc_mail_h(cb_format_clp($d['cobro']['total'])));
+    $filas = cc_mail_fila('Fiesta', cc_mail_h($d['fiesta']['nombre'] . ' · ' . $d['fiesta']['tema']));
+    if (!empty($d['cobro']['discount_amount'])) {
+        $comoSeAcordo = ($d['cobro']['discount_percent'] ?? null) !== null
+            ? cb_comprobante_porcentaje((float) $d['cobro']['discount_percent']) . ' · ' : '';
+        $filas .= cc_mail_fila('Precio del plan', cc_mail_h(cb_format_clp($d['cobro']['price_total'])))
+            . cc_mail_fila('Descuento', cc_mail_h($comoSeAcordo . '- ' . cb_format_clp((int) $d['cobro']['discount_amount'])));
+    }
+    $filas .= cc_mail_fila('Total', cc_mail_h(cb_format_clp($d['cobro']['total'])));
     if ($d['cobro']['deposit_amount'] !== null) {
         $filas .= cc_mail_fila('Abono recibido', cc_mail_h(cb_format_clp((int) $d['cobro']['deposit_amount'])))
             . cc_mail_fila('Saldo pendiente', cc_mail_h(cb_format_clp($d['cobro']['balance'])));

@@ -150,6 +150,20 @@ function cb_party_contact_emails(string $publicSlug): array
 }
 
 /**
+ * Porcentaje tal como se escribe: "20", "20%", "12,5" o "12.5". Devuelve `null` si viene
+ * vacío, que es distinto de 0 (0% es un descuento de cero, no "sin descuento").
+ */
+function cb_parse_percent($valor): ?float
+{
+    if ($valor === null) { return null; }
+    $texto = trim(str_replace(['%', ' '], '', (string) $valor));
+    if ($texto === '') { return null; }
+    $texto = str_replace(',', '.', $texto);
+    if (!is_numeric($texto)) { return null; }
+    return round((float) $texto, 2);
+}
+
+/**
  * Cobro de la fiesta, con el total ya calculado.
  *
  * `total` nunca se guarda: se deriva de precio − descuento en cada lectura, para que no
@@ -157,12 +171,14 @@ function cb_party_contact_emails(string $publicSlug): array
  */
 function cb_party_billing(string $publicSlug): array
 {
-    $vacio = ['price_total' => null, 'discount_amount' => null, 'discount_label' => '',
-              'deposit_amount' => null, 'payment_note' => '', 'total' => null, 'balance' => null];
+    $vacio = ['price_total' => null, 'discount_amount' => null, 'discount_percent' => null,
+              'discount_label' => '', 'deposit_amount' => null, 'payment_note' => '',
+              'total' => null, 'balance' => null];
     if (cb_storage_mode() !== 'db' || !cb_valid_public_slug($publicSlug)) { return $vacio; }
     $partyId = cb_party_db_id($publicSlug);
     if ($partyId === null) { return $vacio; }
-    $stmt = cb_pdo()->prepare('SELECT price_total, discount_amount, discount_label, deposit_amount, payment_note
+    $stmt = cb_pdo()->prepare('SELECT price_total, discount_amount, discount_percent, discount_label,
+                                      deposit_amount, payment_note
                                FROM cc_parties WHERE id = ?');
     $stmt->execute([$partyId]);
     $f = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -170,11 +186,19 @@ function cb_party_billing(string $publicSlug): array
 
     $precio = $f['price_total'] !== null ? (int) $f['price_total'] : null;
     $descuento = $f['discount_amount'] !== null ? (int) $f['discount_amount'] : null;
+    $porcentaje = isset($f['discount_percent']) && $f['discount_percent'] !== null
+        ? (float) $f['discount_percent'] : null;
+    // El porcentaje manda: si está puesto, el monto se recalcula sobre el precio vigente.
+    // Así, cambiar el precio no deja un descuento viejo en pesos que ya no corresponde.
+    if ($porcentaje !== null && $precio !== null) {
+        $descuento = (int) round($precio * $porcentaje / 100);
+    }
     $anticipo = $f['deposit_amount'] !== null ? (int) $f['deposit_amount'] : null;
     $total = $precio === null ? null : max(0, $precio - (int) $descuento);
     return [
         'price_total' => $precio,
         'discount_amount' => $descuento,
+        'discount_percent' => $porcentaje,
         'discount_label' => (string) ($f['discount_label'] ?? ''),
         'deposit_amount' => $anticipo,
         'payment_note' => (string) ($f['payment_note'] ?? ''),
@@ -192,8 +216,20 @@ function cb_save_party_billing(string $publicSlug, array $datos): array
 
     $precio = cb_parse_clp($datos['price_total'] ?? null);
     $descuento = cb_parse_clp($datos['discount_amount'] ?? null);
+    $porcentaje = cb_parse_percent($datos['discount_percent'] ?? null);
     $anticipo = cb_parse_clp($datos['deposit_amount'] ?? null);
     $errores = [];
+    if ($porcentaje !== null && ($porcentaje < 0 || $porcentaje > 100)) {
+        $errores[] = 'El descuento en porcentaje va entre 0 y 100.';
+    }
+    if ($porcentaje !== null && $precio === null) {
+        $errores[] = 'Para aplicar un porcentaje hay que cargar el precio del plan.';
+    }
+    // Con porcentaje, el monto en pesos se calcula acá y se guarda derivado: el comprobante
+    // lee un monto y no tiene que hacer cuentas, y los dos números no pueden discrepar.
+    if ($porcentaje !== null && $precio !== null && !$errores) {
+        $descuento = (int) round($precio * $porcentaje / 100);
+    }
     if ($precio !== null && $descuento !== null && $descuento > $precio) {
         $errores[] = 'El descuento no puede ser mayor que el precio.';
     }
@@ -202,11 +238,12 @@ function cb_save_party_billing(string $publicSlug, array $datos): array
     }
     if ($errores) { return ['ok' => false, 'errors' => $errores]; }
 
-    $stmt = cb_pdo()->prepare('UPDATE cc_parties SET price_total = ?, discount_amount = ?, discount_label = ?,
-                               deposit_amount = ?, payment_note = ?, updated_at = ? WHERE id = ?');
+    $stmt = cb_pdo()->prepare('UPDATE cc_parties SET price_total = ?, discount_amount = ?, discount_percent = ?,
+                               discount_label = ?, deposit_amount = ?, payment_note = ?, updated_at = ? WHERE id = ?');
     $stmt->execute([
         $precio,
         $descuento,
+        $porcentaje,
         mb_substr(trim((string) ($datos['discount_label'] ?? '')), 0, 80),
         $anticipo,
         mb_substr(trim((string) ($datos['payment_note'] ?? '')), 0, 160),

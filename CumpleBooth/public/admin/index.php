@@ -355,6 +355,7 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                     $rb = cb_save_party_billing($publicSlug, [
                         'price_total' => $_POST['price_total'] ?? null,
                         'discount_amount' => $_POST['discount_amount'] ?? null,
+                        'discount_percent' => $_POST['discount_percent'] ?? null,
                         'discount_label' => $_POST['discount_label'] ?? '',
                         'deposit_amount' => $_POST['deposit_amount'] ?? null,
                         'payment_note' => $_POST['payment_note'] ?? '',
@@ -405,6 +406,7 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 'cobro' => [
                     'price_total' => (string) ($_POST['price_total'] ?? ''),
                     'discount_amount' => (string) ($_POST['discount_amount'] ?? ''),
+                    'discount_percent' => (string) ($_POST['discount_percent'] ?? ''),
                     'discount_label' => (string) ($_POST['discount_label'] ?? ''),
                     'deposit_amount' => (string) ($_POST['deposit_amount'] ?? ''),
                     'payment_note' => (string) ($_POST['payment_note'] ?? ''),
@@ -650,7 +652,8 @@ if ($formValues === null && $action === 'editar') {
         'pin_configured' => false,
         'frameBox' => ['x' => 0.32, 'y' => 0.30, 'w' => 0.36, 'h' => 0.28],
         'contactos' => [['name' => '', 'email' => '', 'phone' => '', 'relationship' => 'madre', 'is_primary' => true]],
-        'cobro' => ['price_total' => '', 'discount_amount' => '', 'discount_label' => '',
+        'cobro' => ['price_total' => '', 'discount_amount' => '', 'discount_percent' => '',
+                    'discount_label' => '',
                     'deposit_amount' => '', 'payment_note' => ''],
     ];
 }
@@ -909,8 +912,13 @@ if ($formValues === null && $action === 'editar') {
               <label>Precio del plan
                 <input type="text" name="price_total" inputmode="numeric" placeholder="99990" value="<?= h($formValues['cobro']['price_total'] ?? '') ?>">
               </label>
-              <label>Descuento
+              <label>Descuento en %
+                <input type="text" name="discount_percent" inputmode="decimal" placeholder="20" value="<?= h($formValues['cobro']['discount_percent'] ?? '') ?>">
+                <small class="muted">Si lo llenas, manda sobre el monto en pesos. 100 = sin costo.</small>
+              </label>
+              <label>Descuento en pesos
                 <input type="text" name="discount_amount" inputmode="numeric" placeholder="30000" value="<?= h($formValues['cobro']['discount_amount'] ?? '') ?>">
+                <small class="muted">Solo si no usas porcentaje.</small>
               </label>
               <label>Motivo del descuento
                 <input type="text" name="discount_label" maxlength="80" placeholder="Descuento de lanzamiento" value="<?= h($formValues['cobro']['discount_label'] ?? '') ?>">

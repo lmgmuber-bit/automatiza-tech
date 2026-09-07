@@ -25,6 +25,12 @@ const TAMANOS = [
   { id: 'a4', nombre: 'A4 · 21 × 29,7 cm', ancho: 210, alto: 297 },
 ]
 
+// Dos maneras de mostrar la temática, las dos imprimibles: Luis elige por fiesta.
+const ESTILOS = [
+  { id: 'agua', nombre: 'Fondo completo (marco de agua)' },
+  { id: 'cabecera', nombre: 'Cabecera con la temática' },
+]
+
 function useQr(url) {
   const [dataUrl, setDataUrl] = useState(null)
   const [error, setError] = useState(false)
@@ -41,7 +47,7 @@ function useQr(url) {
   return { dataUrl, error }
 }
 
-function Cartel({ cartel, fiesta, tema, marca, pin, tamano }) {
+function Cartel({ cartel, fiesta, tema, marca, pin, tamano, estilo: estiloId }) {
   const { dataUrl, error } = useQr(cartel.url)
   const colores = tema.colors || {}
   const estilo = {
@@ -53,9 +59,9 @@ function Cartel({ cartel, fiesta, tema, marca, pin, tamano }) {
     height: `${tamano.alto}mm`,
   }
   return (
-    <article className="cartel" style={estilo} data-cartel={cartel.id}>
-      {/* El fondo de la temática ocupa la hoja entera: el cartel se ve de ESA fiesta.
-          El QR va sobre una tarjeta blanca, que es el contraste que necesita para escanear. */}
+    <article className={`cartel cartel--${estiloId}`} style={estilo} data-cartel={cartel.id}>
+      {/* La temática se ve entera de fondo (marco de agua) o en una franja de cabecera; en las
+          dos, el QR va sobre un recuadro blanco opaco, que es el contraste que necesita. */}
       {tema.banner && <img className="cartel__fondo" src={`${BASE}${tema.banner}`} alt="" />}
       <div className="cartel__velo" />
 
@@ -86,6 +92,9 @@ function Cartel({ cartel, fiesta, tema, marca, pin, tamano }) {
         </div>
 
         <footer className="cartel__pie">
+          {/* El isotipo va aparte del nombre: el SVG dibuja solo el globo, la palabra
+              "CumpleClick" es texto (misma convención que la galería y el álbum). */}
+          <img className="cartel__logo" src={`${BASE}brand/cumpleclick-mark.svg`} alt="" />
           <span className="cartel__marca">{(marca && marca.nombre) || 'CumpleClick'}</span>
           {marca && marca.web && <span className="cartel__web">{marca.web}</span>}
           {marca && marca.instagram && <span className="cartel__web">{marca.instagram}</span>}
@@ -103,6 +112,7 @@ function App() {
   const [medida, setMedida] = useState({ ancho: 148, alto: 210 })
   const [elegidos, setElegidos] = useState(null)
   const [pin, setPin] = useState('1234')
+  const [estilo, setEstilo] = useState('agua')
 
   useEffect(() => {
     if (!slug) { setError('Falta la fiesta: abre esta página desde el botón "Carteles QR" del admin.'); return }
@@ -167,6 +177,13 @@ function App() {
             </select>
           </label>
 
+          <label>
+            Estilo del cartel
+            <select value={estilo} onChange={(e) => setEstilo(e.target.value)}>
+              {ESTILOS.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+            </select>
+          </label>
+
           {tamanoId === 'custom' && (
             <>
               <label>
@@ -215,7 +232,7 @@ function App() {
       <div className="hojas">
         {visibles.map((c) => (
           <Cartel key={c.id} cartel={c} fiesta={datos.fiesta} tema={datos.tema}
-            marca={datos.marca} pin={pin} tamano={tamano} />
+            marca={datos.marca} pin={pin} tamano={tamano} estilo={estilo} />
         ))}
       </div>
     </>

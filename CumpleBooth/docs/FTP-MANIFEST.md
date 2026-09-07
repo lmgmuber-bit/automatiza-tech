@@ -466,11 +466,20 @@ diseño se mide en `cqh` (altura de la hoja), así que el mismo cartel funciona 
 rehacerlo: el QR va de 31 mm a 62 mm. Al imprimir hay que dejar los márgenes en «ninguno» y
 desactivar «ajustar al papel».
 
-El **fondo de la temática ocupa la hoja completa** y el QR va sobre una tarjeta blanca, que es el
-contraste que necesita para escanear. El fondo va centrado a propósito: la franja que queda a la
-vista cae en la decoración de arriba (globos, guirnaldas, ventanal) y termina justo antes de los
-personajes. Bajarla no alcanza para mostrarlos enteros —la tarjeta ocupa dos tercios de la hoja—
-y solo les cortaría la cabeza.
+**Dos estilos, los dos imprimibles** (se eligen en la misma pantalla):
+
+- **Fondo completo (marco de agua):** el banner de la temática ocupa la hoja entera y la tarjeta
+  es translúcida (blanco al 72% con desenfoque), así los personajes se ven a través de ella. El
+  fondo se ancla abajo para que suban en la hoja y asomen por encima de la tarjeta.
+- **Cabecera con la temática:** franja de 30cqh arriba con la foto y el resto en blanco. La franja
+  es alta a propósito y va a `object-position: center 48%`: con una franja más baja, o con otro
+  encuadre, a los personajes les quedaba cortada la cabeza —lo mismo que Luis marcó en la
+  cabecera del correo—. Con estos valores salen enteros en Hielo y en Spidey.
+
+En los dos, el QR va sobre un recuadro **blanco opaco**: un QR con la foto asomando detrás deja de
+escanear. En el pie va el isotipo `brand/cumpleclick-mark.svg` junto al nombre, el sitio y el
+Instagram (misma convención que la galería y el álbum: el SVG dibuja solo el globo, la palabra
+"CumpleClick" es texto).
 
 Verificado en PROD: los cuatro archivos responden 200, `admin/carteles-api.php` responde 401 sin
 sesión, y los enlaces que arma el servidor son los de `https://cumpleclick.com/app` para las dos

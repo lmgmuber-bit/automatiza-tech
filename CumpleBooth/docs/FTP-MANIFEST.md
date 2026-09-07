@@ -811,3 +811,45 @@ porque ninguna de las dos fiestas que se estaban usando tenia una emitida.
 
 **Pendiente de decision de Luis:** que hacer con `isidora-reino-de-hielo`. Sigue activa, con sus
 enlaces vivos y su album abierto. No se toco: desactivar una fiesta es su decision, no la mia.
+
+## 2026-09-07 — revision previa al domingo y dos hallazgos
+
+### Isidora desactivada
+
+`isidora-reino-de-hielo` (la fiesta de julio que quedo con fecha 13-sep) esta **desactivada**:
+`active=0`, galeria cerrada, aportes cerrados y su enlace de aportes revocado. El kiosco
+responde `{"ok":false,"error":"inactive"}` y su galeria devuelve 404. No se borro nada.
+
+### Revision de las dos fiestas reales: 49 comprobaciones
+
+Samantha y Luciano quedaron verificadas de punta a punta: activas, con la fecha correcta,
+tematica con mundo 3D, **PIN de galeria 1234 comprobado de verdad** (no asumido), fondo y
+cabecera de correo en disco, invitacion emitida y publicada, album con aportes abiertos y
+enlace que sigue vivo el dia de la fiesta, precio cargado y comprobante que se genera (61 kB).
+
+Falta una sola cosa, y es de Luis: **ninguna de las dos tiene contactos cargados**, asi que
+todavia no se les puede mandar el correo.
+
+Sobre el marco de la foto: Samantha usa el **default de la tematica** (`frame_box_json` en
+nulo), igual que usaba Isidora; el kiosco recibe `x=0.3315 y=0.3948 w=0.3407 h=0.1995`. Luciano
+tiene calibracion propia. No es un error, pero conviene mirarlo una vez en el calibrador antes
+del domingo.
+
+### Defecto encontrado: apagar la galeria no la cerraba
+
+`galeria.php` decidia el acceso mirando **solo si existia el hash del PIN**, no el interruptor
+del admin. Apagar "galeria habilitada" no cerraba nada: como todas las fiestas usan el mismo
+PIN, cualquiera con el enlace seguia entrando. Ahora mira `galeriaHabilitada`, que es el
+interruptor **y** el PIN. Verificado: la fiesta desactivada da 404 y las dos reales siguen
+abriendo.
+
+### AVISO IMPORTANTE PARA FUTUROS DESPLIEGUES
+
+**La `galeria.php` de PROD NO es la de esta rama.** PROD corre una version de 32 kB con lista de
+invitados, impresion por invitado y entrada sin PIN para el admin logueado; la de esta linea de
+codigo tiene 8 kB. Viene de otra rama que se desplego aparte.
+
+Por eso el arreglo se aplico **sobre el archivo de PROD** (se bajo, se parcho la linea, se
+volvio a subir) y no subiendo el de la rama, que habria borrado toda esa funcionalidad. Antes de
+subir `galeria.php` desde aca, comparar siempre el md5 con PROD. Fue justo esa comparacion la
+que evito el destrozo.

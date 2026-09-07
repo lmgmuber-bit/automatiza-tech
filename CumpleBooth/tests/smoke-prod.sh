@@ -9,7 +9,7 @@
 # No se guarda ninguno acá: el enlace de aportes se emite de a uno y cambia.
 
 APP="${CC_APP_URL:-https://cumpleclick.com/app}"
-FIESTA_A="${1:-isidora-reino-de-hielo}"
+FIESTA_A="${1:-samantha-hielo}"
 FIESTA_B="${2:-luciano-spidey}"
 TOKEN_VIGENTE="${3:-}"
 

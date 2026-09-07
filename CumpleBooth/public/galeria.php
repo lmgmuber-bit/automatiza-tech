@@ -32,7 +32,10 @@ $slug = (string) ($_GET['p'] ?? '');
 if (!cb_valid_public_slug($slug)) { gallery_message(400, 'Galería no disponible', 'El enlace no es válido.'); }
 $party = cb_load_party_raw($slug);
 if ($party === null) { gallery_message(404, 'Galería no disponible', 'No encontramos esta fiesta.'); }
-$pinEnabled = !empty($party['galeriaPinHash']) || !empty($party['galeriaPin']);
+// Se mira `galeriaHabilitada`, que es "el switch del admin Y hay PIN", y no solo si existe el
+// hash: mirando solo el hash, apagar la galería desde el admin no la cerraba, y como todas las
+// fiestas usan el mismo PIN, cualquiera con el enlace seguía entrando a una galería "apagada".
+$pinEnabled = !empty($party['galeriaHabilitada']);
 if (!$pinEnabled) { gallery_message(404, 'Galería no disponible', 'El organizador aún no habilitó la galería.'); }
 
 $error = '';

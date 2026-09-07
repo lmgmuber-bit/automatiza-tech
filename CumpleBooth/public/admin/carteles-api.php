@@ -217,6 +217,32 @@ function carteles_marca(): ?array
 
 $marca = carteles_marca();
 
+// 5) Cartel de la marca: no lleva un enlace de la fiesta sino el de nuestras redes. Va con
+// la temática igual que los demás, para que en la mesa se vea como parte de la decoración
+// y no como publicidad pegada aparte.
+$redes = '';
+foreach (['instagram_url', 'web_url'] as $campo) {
+    $valor = trim((string) ($marca[$campo] ?? ''));
+    if ($valor === '' && $campo === 'instagram_url' && !empty($marca['instagram'])) {
+        $valor = 'https://instagram.com/' . ltrim((string) $marca['instagram'], '@');
+    }
+    if ($valor === '' && $campo === 'web_url' && !empty($marca['web'])) {
+        $valor = 'https://' . ltrim((string) $marca['web'], '/');
+    }
+    if ($valor !== '') { $redes = $valor; break; }
+}
+if ($redes !== '') {
+    $carteles[] = [
+        'id' => 'marca',
+        'titulo' => '¿Lo quieres en tu fiesta?',
+        'bajada' => 'Cabina de fotos, álbum de recuerdos y juego 3D para cumpleaños. '
+            . 'Escanea y mira todo lo que hacemos.',
+        'url' => $redes,
+        'pie' => trim(($marca['instagram'] ?? '') . '  ·  ' . ($marca['correo'] ?? ''), ' ·'),
+        'necesitaPin' => false,
+    ];
+}
+
 carteles_responder(200, [
     'ok' => true,
     'fiesta' => [

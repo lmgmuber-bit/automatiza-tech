@@ -120,8 +120,10 @@ function App() {
   const slug = useMemo(() => new URLSearchParams(location.search).get('p') || '', [])
   const [datos, setDatos] = useState(null)
   const [error, setError] = useState(null)
-  const [tamanoId, setTamanoId] = useState('a5')
-  const [medida, setMedida] = useState({ ancho: 148, alto: 210 })
+  // Arranca en la medida del porta menú de acrílico, que es el soporte que se usa en la
+  // fiesta; el resto de los tamaños sigue disponible en la lista.
+  const [tamanoId, setTamanoId] = useState('media-carta')
+  const [medida, setMedida] = useState({ ancho: 140, alto: 216 })
   const [elegidos, setElegidos] = useState(null)
   const [pin, setPin] = useState('1234')
   const [estilo, setEstilo] = useState('agua')

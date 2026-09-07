@@ -531,3 +531,14 @@ deja el papel sobrando por los lados.
 tener que emitir otro token del Álbum: levanta la misma pantalla del admin e intercepta la
 respuesta de la API para reemplazar la lista de carteles. Se usa cuando el enlace de aportes ya
 está vivo y compartido, porque volver a generarlo lo revocaría.
+
+### Fondo de la temática en la página de aportes y cartel de marca (2026-09-07)
+
+- `_album-intake.css.php` (**CRLF**, así lo guarda PROD; respaldo en `.bak-20260907`): el banner
+  de la temática pasó de una franja al 22% arriba —que prácticamente no se veía— a **pantalla
+  completa al 78%**, con un velo en degradado encima y los paneles con `backdrop-filter` para que
+  el texto siga legible sobre las temáticas claras.
+- La pantalla de carteles arranca en **Media carta**, la medida del porta menú de acrílico.
+- Cartel nuevo **«¿Lo quieres en tu fiesta?»**: QR a nuestro Instagram (o al sitio, si no hay
+  Instagram cargado en `data/marca.json`), con la temática de la fiesta de fondo. Aparece en toda
+  fiesta y sirve para dejar uno en la mesa como aviso institucional.

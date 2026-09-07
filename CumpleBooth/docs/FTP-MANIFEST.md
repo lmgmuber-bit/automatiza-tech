@@ -777,3 +777,37 @@ de documento, cero elementos fuera y cero controles bajo 40 px (salvo el boton "
 contacto", que es secundario y mide 36). En escritorio, la fila de contactos termina en 661 px
 dentro de un recuadro que llega a 675. Las paginas publicas (home, galeria, subir fotos, admin,
 carteles) declaran todas su `viewport`.
+
+## 2026-09-07 (cierre) — campos crudos y la fiesta de Frozen que no era
+
+### Ningun campo se queda con el estilo del navegador
+
+La regla `.field` solo cubria `text` y `date`, asi que los campos de **correo, telefono, numero,
+hora, clave y URL** salian cuadrados y de 21 px al lado de los demas: es lo que se ve como "HTML
+puro". Se extendio la regla a todos los tipos (`admin/_style.css.php`, **CRLF**).
+
+Verificado recorriendo **14 pantallas y vistas** del admin y midiendo cada control: cero
+elementos con esquinas rectas o bajo 34 px. La revision quedo hecha con la misma medicion que
+detecto el problema, no a ojo.
+
+### La fiesta de Frozen del 13-sep es la de Samantha, no la de Isidora
+
+Al buscar las invitaciones aparecieron **tres** fiestas con fecha 2026-09-13:
+
+| Fiesta | Creada | Invitacion | Estado |
+|---|---|---|---|
+| `samantha-hielo` (Samantha, Hielo) | 02-sep | #22 | la real |
+| `luciano-spidey` (Luciano, Spidey) | 02-sep | #23 | la real |
+| `isidora-reino-de-hielo` (Isidora, Hielo) | **27-jul** | #3 | vieja, con la misma fecha |
+
+`isidora-reino-de-hielo` es de julio: quedo con la fecha del 13-sep y por eso se tomo como la
+fiesta de Frozen en el trabajo anterior. Todo lo que se preparo para ella —album abierto, enlace
+de aportes, cobro en cero, carteles— **corresponde en realidad a Samantha**.
+
+Corregido: la fiesta de Samantha quedo con album creado (id 19), aportes abiertos hasta el
+20-sep, enlace de aportes vigente y cobro en cero con la nota de marcha blanca. Se regeneraron
+sus carteles y los de Luciano, ahora **con el cartel de la invitacion**, que antes no salia
+porque ninguna de las dos fiestas que se estaban usando tenia una emitida.
+
+**Pendiente de decision de Luis:** que hacer con `isidora-reino-de-hielo`. Sigue activa, con sus
+enlaces vivos y su album abierto. No se toco: desactivar una fiesta es su decision, no la mia.

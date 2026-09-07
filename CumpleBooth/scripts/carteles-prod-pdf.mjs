@@ -10,7 +10,7 @@ import puppeteer from 'puppeteer-core'
 
 const CHROME = String.raw`C:\Program Files\Google\Chrome\Application\chrome.exe`
 const BASE = 'http://localhost/cc-dist'
-const [slug, tamano, estilo, salida, cartelesJson] = process.argv.slice(2)
+const [slug, tamano, estilo, salida, cartelesJson, nombreFiesta] = process.argv.slice(2)
 const CARTELES = JSON.parse(cartelesJson)
 
 const nav = await puppeteer.launch({ executablePath: CHROME, headless: 'new' })
@@ -31,6 +31,9 @@ pag.on('request', async (req) => {
     const resp = await fetch(req.url(), { headers: { cookie: cookies } })
     const datos = await resp.json()
     datos.carteles = CARTELES
+    // La fiesta local solo aporta los colores y el banner de la tematica; el nombre que se
+    // imprime es el de la fiesta real.
+    if (nombreFiesta) { datos.fiesta.nombre = nombreFiesta }
     req.respond({ status: 200, contentType: 'application/json; charset=utf-8', body: JSON.stringify(datos) })
   } catch (e) {
     req.abort()

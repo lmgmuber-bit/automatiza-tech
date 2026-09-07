@@ -213,8 +213,18 @@ main { display: flex; flex-direction: column; gap: 20px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-weight: 700; font-size: .92rem; }
 .field small { font-size: .8rem; }
+/* Todos los tipos de campo de texto, no solo `text` y `date`: los de correo, telefono,
+   numero, hora, clave y URL quedaban con el estilo por defecto del navegador (cuadrados
+   y de 21 px) al lado de los demas, que es lo que se ve como "HTML puro". */
 .field input[type="text"],
 .field input[type="date"],
+.field input[type="email"],
+.field input[type="tel"],
+.field input[type="number"],
+.field input[type="time"],
+.field input[type="url"],
+.field input[type="password"],
+.field input:not([type]),
 .field select,
 .field textarea {
   border: 1.5px solid var(--border); border-radius: var(--radius-sm);

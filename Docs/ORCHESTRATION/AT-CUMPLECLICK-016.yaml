@@ -1,0 +1,129 @@
+ticket_id: AT-CUMPLECLICK-016
+parent_ticket: AT-CUMPLECLICK-015
+title: "Aventura Arácnida v2 — temática Héroes en el motor realista (multi-temática)"
+origin: direct_luis
+priority: P1
+status: DONE
+created_at: "2026-09-06"
+created_by: claude
+objective: >
+  Convertir "Tu Cumple en 3D" (motor Three.js + WebGPU) en multi-temática y crear la temática
+  Héroes = "Aventura Arácnida" versión 2: ciudad de noche con el héroe arácnido, TRACE-E, tres
+  mascotas perdidas, un robot que patrulla los tejados, un puente roto de 3 tramos y una torre
+  con la fiesta en la azotea, reutilizando assets del juego v1 (N64, `juego-spidey`) sin gastar
+  créditos. La v1 sigue intacta en su propia carpeta y su propio sitio.
+ownership:
+  planner: claude
+  executor: claude
+  reviewer: claude
+  final_approver: "Luis Miguel"
+  current_owner: claude
+routing:
+  complexity: C2
+  risk: low
+  uncertainty: low
+  reversibility: high
+scope:
+  changed_files:
+    # El juego vive en un repo git APARTE (C:\wamp64\www\tucumple-repo\), no dentro de
+    # automatiza-tech; rutas relativas a ese repo. CumpleBooth NO cambió en este ticket.
+    - "tucumple-repo/app/public/game/temas/index.js"
+    - "tucumple-repo/app/public/game/temas/hielo.js"
+    - "tucumple-repo/app/public/game/temas/heroes.js"
+    - "tucumple-repo/app/public/game/temas/heroes-strings.js"
+    - "tucumple-repo/app/public/game/mundo-ciudad.js"
+    - "tucumple-repo/app/public/game/mundo.js"
+    - "tucumple-repo/app/public/game/save.js"
+    - "tucumple-repo/app/public/game/voz.js"
+    - "tucumple-repo/app/public/game/audio.js"
+    - "tucumple-repo/app/public/game/ui.js"
+    - "tucumple-repo/app/public/game/main.js"
+    - "tucumple-repo/app/public/game/misiones.js"
+    - "tucumple-repo/app/public/index.html"
+    - "tucumple-repo/app/public/temas/heroes/**" # modelos, audio, portada reutilizados del juego v1
+    - "tucumple-repo/app/README.md"
+    - "tucumple-repo/app/design/assets.csv"
+    - "tucumple/CONTEXTO-CODEX.md" # espejo local de solo lectura para Codex; solo doc, §1 y §2
+  not_touched:
+    - "CumpleBooth/**" # no cambió en este ticket
+    - "juego-spidey/**" # v1 de Aventura Arácnida, N64, intacta
+    - "heroe-aracnido-cumple.higgsfield.app" # sitio de la v1, intacto
+safety:
+  higgsfield_credits: 0
+  third_party_assets: false
+  ip_scan_required: true
+  ip_scan_result: >
+    grep -rniE "elsa|anna|olaf|kristoff|sven|bruni|frozen|disney|marvel|spider-man|spiderman"
+    sobre public/game, public/temas/heroes, public/index.html, README.md y design/assets.csv:
+    0 resultados reales (ignorando "Olaff", ya existente y aprobado). Único hit fue un falso
+    positivo de substring ("fpsVentana" contiene "sVen") sin relación con ningún personaje.
+  allow_deploy: true # desplegado por Claude al sitio nuevo aventura-aracnida-2.higgsfield.app
+  allow_commit: true
+  allow_push: true # al repo del juego (tucumple-repo), remoto aracnida2; no es el repo automatiza-tech
+execution_log:
+  - date: "2026-09-06"
+    by: claude
+    what: >
+      Motor convertido a multi-temática: `game/temas/index.js` resuelve la temática por
+      `?tema=`, por el slug de la fiesta de CumpleClick (`?p=`), por la ruta/host del juego, o
+      Hielo por defecto; `aplicarTema()` reemplaza los textos de `T` en el lugar y ajusta CSS,
+      título, `<h1>`, rótulos de botones táctiles, icono del contador y "Controles". Cada
+      temática (`game/temas/hielo.js`, `game/temas/heroes.js`) define clave de guardado propia,
+      ruta de assets, heroína, guía, 7 invitados de la fiesta, criaturas, música, voces, portada,
+      slugs del kiosco, CSS y el módulo de mundo cargado con `import()` dinámico. `save.js`,
+      `voz.js`, `audio.js`, `ui.js`, `main.js`, `mundo.js` y `misiones.js` se hicieron
+      configurables para soportar esto. Temática Héroes creada: textos en
+      `game/temas/heroes-strings.js` (mismas claves que `strings.js`); ids internos de misión
+      sin cambios (`criaturas`=mascotas Bigotes/Chispa/Copito, `cascada`=Octo-bot,
+      `tormenta`=puente de 3 tramos, `castillo`=torre Web-Quarters, `copos`=emblemas); 32 de 43
+      líneas de voz calzan letra por letra con el juego v1, 2 pasos de tutorial reescritos sin
+      voz. Mundo nuevo `game/mundo-ciudad.js` (misma API pública que `mundo.js`): ciudad de
+      noche con plaza, TRACE-E, 21 manzanas de edificios con texturas procedurales, parque con
+      3 mascotas, canal con puente roto, tejado con el Octo-bot patrullando, torre Web-Quarters
+      con azotea de fiesta, 6 puntos seguros, 20 emblemas, skyline de 46 rascacielos, 3
+      cinemáticas propias. Assets reutilizados del juego v1 con nombres neutros en
+      `public/temas/heroes/` (8,4 MB: 8 modelos GLB, música, 43 voces, portada), 0 créditos de
+      Higgsfield gastados. Corregido además un gancho de pruebas preexistente:
+      `window.__juego.forzar()` entregaba "pressed" después del paso de física con fps exactos
+      de 60 y se perdía; ahora se entrega justo antes de ese paso. Verificado con Playwright
+      (WebGPU): partida completa en Héroes — 3 mascotas, puente 3/3 con cinemática, Octo-bot
+      atrapado con cinemática, torre abierta, azotea con fiesta y 7 invitados, fotos automáticas
+      en cada momento clave, 0 errores de consola, 230 draw calls en la plaza, 55 fps en calidad
+      "baja" vía Playwright (Playwright renderiza WebGPU headless a 20–55 fps, por debajo de lo
+      medido a mano, y las cinemáticas duran más en tiempo de reloj). Escáner de propiedad
+      intelectual de Higgsfield: pasó, deploy aceptado. Desplegado a sitio Higgsfield nuevo
+      `aventura-aracnida-2` (website_id `dfc26b1f-2c35-4115-9937-1046097723ee`,
+      `https://aventura-aracnida-2.higgsfield.app`), mismo repo con remoto `aracnida2`, temática
+      detectada por el host. Espejos locales creados/actualizados:
+      `C:\wamp64\www\juego-spidey-v2\` (temática por ruta) y
+      `C:\wamp64\www\tucumple\` (`?tema=heroes` para forzarla). El sitio y la carpeta de la v1
+      (`juego-spidey`, `heroe-aracnido-cumple.higgsfield.app`) no se tocaron; CumpleBooth no
+      cambió en este ticket. Documentación sincronizada: `tucumple-repo/app/README.md` (estado
+      multi-temática, sección "Temáticas", sección "Temática Héroes — Aventura Arácnida v2",
+      parámetro `?tema=`, archivos nuevos, gotchas de fps/gancho de pruebas/Playwright/guardado
+      por temática/draw calls, "Próximas fases"), `tucumple-repo/app/design/assets.csv` (filas
+      de assets Héroes reutilizados, origen "juego v1 / copiados sin costo", 0 cr),
+      `tucumple/CONTEXTO-CODEX.md` (§1 nota de motor multi-temática y sitio nuevo, §2 tabla de
+      archivos con `game/temas/*`, `game/mundo-ciudad.js`, `temas/heroes/`). Sin commit ni push
+      de este ticket en el repo automatiza-tech (solo se tocó `tucumple/CONTEXTO-CODEX.md`, que
+      no vive en este repo).
+  - date: "2026-09-06"
+    by: claude
+    what: >
+      DESPLEGADO A PROD por Claude vía SSH/SFTP (paramiko), autorizado por Luis ("tú puedes
+      subir a PROD, por SSH lo hiciste en el pasado"). Deploy aditivo a
+      https://automatizatech.cl/cumpleclick/: `sala.php` + `lib.sala.php` (nuevos), migración
+      014 aplicada con runner puntual en `private-cumpleclick/database/` (tablas cc_salas,
+      cc_sala_ayudantes, cc_sala_acciones; PROD tenía 001–009, 010–013 siguen sin desplegar),
+      juego 3D completo (180 archivos, 38 MB) en `/cumpleclick/juego/` con `.htaccess` propio
+      (404 limpio, sin `immutable`). `api.php`, `upload.php`, `ver.php` y `lib.php` de PROD no se
+      tocaron (md5 iguales a dist / lib.php del 26-ago con las 11 funciones cb_* necesarias).
+      Verificado desde afuera: prueba de humo de sala.php 36/36 contra PROD, juego con WebGPU en
+      temáticas Hielo (fiesta demo-frozen-vip cargada, QR con URL pública, sala creada y cerrada)
+      y Héroes, 0 errores de consola propios. Registro en CumpleBooth/docs/FTP-MANIFEST.md
+      (sección DESPLEGADO 2026-09-06) y Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md §3.3.
+next_action: >
+  En PROD desde 2026-09-06. Queda la prueba real de Luis con niños, celulares e impresora
+  (galería con PIN; el PIN 2026 solo sigue en demo-kpop-vip, las otras demos lo tienen distinto),
+  el merge de la rama feat/cumpleclick-sala-ayudantes cuando Luis lo apruebe, y borrar la fiesta
+  local de prueba `prueba-3d` si no se quiere conservar.

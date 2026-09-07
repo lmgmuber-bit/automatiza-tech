@@ -1,0 +1,56 @@
+ticket_id: AT-CUMPLECLICK-013
+parent_ticket: AT-CUMPLECLICK-012
+title: "Tu Cumple en 3D — Codex construye su propia versión (desafío)"
+origin: direct_luis
+priority: P2
+status: ASSIGNED
+created_at: "2026-09-06"
+created_by: claude
+objective: >
+  Codex construye una versión propia del juego 3D de cumpleaños reutilizando los assets ya
+  generados (0 créditos) para que Luis compare y elija el mejor de los dos. Claude sigue en
+  paralelo con las fases 3 y 4 de su propio juego.
+ownership:
+  planner: claude
+  executor: codex
+  reviewer: "Luis Miguel"
+  final_approver: "Luis Miguel"
+  current_owner: codex
+routing:
+  complexity: C2
+  risk: low
+  uncertainty: medium
+  reversibility: high
+scope:
+  changed_files:
+    - "C:\\wamp64\\www\\tucumple-codex\\**"
+  read_only:
+    - "C:\\wamp64\\www\\tucumple\\"
+    - "C:\\wamp64\\www\\tucumple-repo\\"
+    - "CumpleBooth/"
+safety:
+  higgsfield_credits: 0
+  paid_apis: false
+  third_party_assets: false
+  franchise_names: false
+  allow_deploy: false
+  allow_commit: true
+  allow_push: false
+references:
+  - "C:\\wamp64\\www\\tucumple\\CODEX-DESAFIO-JUEGO-3D.md"
+  - "C:\\wamp64\\www\\tucumple\\CONTEXTO-CODEX.md"
+  - "Archivo de lecciones de costos del proyecto N64 anterior, §2b (carpeta hermana citada en CONTEXTO-CODEX.md §1 y §3; su nombre no se transcribe aquí por la regla de IP §4.1)"
+execution_log:
+  - date: "2026-09-06"
+    by: claude
+    what: >
+      Escrito el desafío completo para Codex (CODEX-DESAFIO-JUEGO-3D.md) y corregido
+      CONTEXTO-CODEX.md para reflejar que Codex construye su propia versión del juego en
+      C:\wamp64\www\tucumple-codex\, no la fase 3. Documentado el hallazgo del 401
+      (los sitios de Higgsfield exigen sesión propia a cualquier visitante), que descarta la
+      sala multijugador de la plantilla para ayudantes por QR. Claude inició la fase 3 de su
+      propio juego con backend PHP en CumpleBooth.
+next_action: >
+  Codex responde a Luis con el camino elegido (A/B/C/otro), el concepto, los assets que
+  reutiliza y hasta 3 preguntas; luego entrega un corte vertical. Luis evalúa ambos juegos con
+  la rúbrica del §8 de CODEX-DESAFIO-JUEGO-3D.md.

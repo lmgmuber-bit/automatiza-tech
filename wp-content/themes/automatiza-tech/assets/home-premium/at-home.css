@@ -3,7 +3,7 @@
  * Base styles extracted verbatim from the design + runtime additions below.
  */
 *{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: no-preference){html{scroll-behavior:smooth}}
 body{font-family:'Manrope',system-ui,sans-serif;background:#05080d;color:var(--text);-webkit-font-smoothing:antialiased;overflow-x:hidden}
 :root[data-theme="light"] body{background:#e4e9f1}
 #at-bg3d{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(1100px 800px at 72% 12%,#0b1830,#05080d 76%)}
@@ -35,7 +35,7 @@ a{text-decoration:none;color:inherit}
 }
 :root[data-theme="light"]{
   --bg:#eef1f7;--bg-alt:#e4e9f1;--surface:#ffffff;--surface-2:#f5f8fc;--surface-3:#eef3f9;--cta-bg:#e7f2f1;
-  --text:#0e1c30;--text-2:#46586d;--text-3:#5a6c81;--text-faint:#6f8094;
+  --text:#0e1c30;--text-2:#46586d;--text-3:#5a6c81;--text-faint:#647385; /* 6f8094 daba 4.05 sobre blanco (min 4.5) */
   --accent-2:#0d9488;--label:#0e8276;--accent-text:#0c7d70;
   --ov1:rgba(15,30,55,.03);--ov2:rgba(15,30,55,.05);--bd1:rgba(15,30,55,.09);--bd2:rgba(15,30,55,.13);--bd3:rgba(15,30,55,.2);
   --grid:rgba(15,30,55,.045);--menu-bg:rgba(255,255,255,.98);--nav-bg:rgba(255,255,255,.86);--nav-sh:0 12px 40px -26px rgba(15,30,55,.4);
@@ -74,7 +74,74 @@ sc-if[data-when="scheduled"]{display:none}
 /* el ratón no muestra el anillo, solo teclado */
 #at-root :focus:not(:focus-visible){outline:none}
 
+/* ===== casos de uso por rubro (tabs interactivos) ===== */
+.at-rb-tab{font-family:'Space Grotesk';font-weight:600;font-size:13.5px;color:var(--text-3);background:var(--ov1);border:1px solid var(--bd2);border-radius:100px;padding:10px 18px;cursor:pointer;transition:color .2s,border-color .2s,background .2s,transform .2s}
+.at-rb-tab:hover{color:var(--text);border-color:var(--bd3)}
+.at-rb-tab.is-active{color:#061018;background:#2dd4bf;border-color:#2dd4bf;transform:translateY(-1px)}
+
+/* ===== planes portal omnicliente ===== */
+.at-plan-feat{display:flex;align-items:flex-start;gap:9px;font-size:14px;line-height:1.5;color:var(--text-2)}
+.at-plan-feat::before{content:"";flex:none;margin-top:4px;width:13px;height:13px;background:no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232dd4bf' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E")}
+
+/* ===== sección Quiénes Somos =====
+ * Reveals direccionales y línea SVG dibujada por scroll; los estados .at-prep
+ * solo se agregan por JS cuando el motion está permitido (reduced-motion queda
+ * con la sección visible y estática). */
+@keyframes atSpinRev{to{transform:rotate(-360deg)}}
+#at-qs-path{stroke:rgba(45,212,191,.34)}
+:root[data-theme="light"] #at-qs-path{stroke:rgba(13,148,136,.34)}
+.at-qs-row{position:relative;display:flex;gap:clamp(18px,4vw,46px);align-items:flex-start;padding:clamp(22px,3vw,34px) clamp(10px,2vw,22px);border-bottom:1px solid var(--bd1);transition:opacity .8s cubic-bezier(.16,.84,.44,1),transform .8s cubic-bezier(.16,.84,.44,1)}
+.at-qs-row::before{content:"";position:absolute;left:0;top:14%;width:2px;height:72%;background:linear-gradient(180deg,#2dd4bf,transparent);border-radius:2px;transform:scaleY(0);transform-origin:top;transition:transform .9s cubic-bezier(.16,.84,.44,1) .2s}
+.at-qs-row.at-prep[data-qs="l"]{opacity:0;transform:translateX(-46px)}
+.at-qs-row.at-prep[data-qs="r"]{opacity:0;transform:translateX(46px)}
+.at-qs-row.at-in{opacity:1;transform:none}
+.at-qs-row.at-in::before{transform:scaleY(1)}
+.at-qs-num{flex:none;font-family:'Space Grotesk';font-weight:700;font-size:clamp(46px,7vw,84px);line-height:.92;letter-spacing:-.02em;color:transparent;-webkit-text-stroke:1.5px rgba(45,212,191,.55);transition:color .35s ease}
+.at-qs-row:hover .at-qs-num{color:rgba(45,212,191,.9)}
+:root[data-theme="light"] .at-qs-num{-webkit-text-stroke:1.5px rgba(13,148,136,.6)}
+:root[data-theme="light"] .at-qs-row:hover .at-qs-num{color:rgba(13,148,136,.85)}
+.at-qs-w{display:inline-block;will-change:transform,opacity}
+.at-qs-orbit{position:relative;width:min(340px,76vw);aspect-ratio:1/1;margin:0 auto}
+.at-qs-ring{position:absolute;border-radius:50%;pointer-events:none}
+.at-qs-ring-a{inset:0;border:1px dashed rgba(45,212,191,.28);animation:atSpin 46s linear infinite}
+.at-qs-ring-b{inset:13%;border:1px dashed var(--bd3);animation:atSpinRev 70s linear infinite}
+.at-qs-chips{position:absolute;inset:0;animation:atSpin 36s linear infinite}
+.at-qs-chipwrap{position:absolute;transform:translate(-50%,-50%);display:block}
+.at-qs-chip{display:inline-block;font-family:'JetBrains Mono';font-size:9.5px;font-weight:500;letter-spacing:.14em;color:var(--label);background:var(--surface);border:1px solid rgba(45,212,191,.26);border-radius:100px;padding:6px 11px;box-shadow:0 10px 24px -14px rgba(0,0,0,.6);animation:atSpinRev 36s linear infinite;white-space:nowrap}
+@media(max-width:560px){.at-qs-row{gap:16px}.at-qs-num{font-size:40px;-webkit-text-stroke-width:1.2px}}
+
 /* ===== selector de horarios reales (at-agenda.js) ===== */
 .at-slot-btn{font-family:'JetBrains Mono';font-size:12.5px;font-weight:500;color:var(--text-2);background:var(--surface-2);border:1px solid var(--bd2);border-radius:9px;padding:8px 12px;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
 .at-slot-btn:hover{border-color:rgba(45,212,191,.45);color:var(--text)}
 .at-slot-btn.is-active{background:#2dd4bf;border-color:#2dd4bf;color:#061018;font-weight:600}
+
+/* ===== agenda: código de país + fecha =====
+ * El date/select nativos heredan el color-scheme del documento; sin esto el
+ * calendario emergente y el icono del picker salen claros sobre el modal
+ * oscuro (icono invisible). Se ata al tema para que siga al toggle. */
+.at-cc,.at-date{color-scheme:dark}
+:root[data-theme="light"] .at-cc,:root[data-theme="light"] .at-date{color-scheme:light}
+.at-date{cursor:pointer}
+.at-date::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.7;transition:opacity .15s}
+.at-date:hover::-webkit-calendar-picker-indicator,
+.at-date::-webkit-calendar-picker-indicator:hover{opacity:1}
+/* En móvil el prefijo cede ancho al número (el select trae width inline). */
+@media(max-width:430px){.at-cc{width:116px!important;padding-left:8px!important;padding-right:4px!important;font-size:12.5px!important}}
+
+/* ===== modal de agenda: grilla de 2 columnas =====
+ * Aprovecha el ancho del modal para que el formulario no crezca a lo alto y
+ * quepa sin scroll en desktop. Colapsa a una columna en pantallas angostas. */
+/* minmax(0,1fr) y no 1fr: el <select> de interes tiene opciones largas y su
+ * min-content ensancharia su columna, dejando las dos columnas desparejas. */
+.at-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 14px;align-items:start}
+.at-form select,.at-form input{max-width:100%}
+.at-form>.at-f-full,.at-form>[data-form-message]{grid-column:1/-1}
+@media(max-width:700px){.at-form{grid-template-columns:minmax(0,1fr)}}
+
+/* ===== mensajes del formulario de agenda =====
+ * Los pasteles funcionan sobre el modal oscuro pero sobre el blanco del tema
+ * claro caen a 1.73 de contraste. Cada tema lleva su par legible. */
+.at-msg-error{color:#f7b4b4;border:1px solid rgba(244,139,139,.38);background:rgba(244,139,139,.10)}
+.at-msg-ok{color:#86efac;border:1px solid rgba(52,211,153,.34);background:rgba(52,211,153,.10)}
+:root[data-theme="light"] .at-msg-error{color:#b91c1c;border-color:rgba(185,28,28,.34);background:rgba(185,28,28,.07)}
+:root[data-theme="light"] .at-msg-ok{color:#047857;border-color:rgba(4,120,87,.34);background:rgba(4,120,87,.07)}

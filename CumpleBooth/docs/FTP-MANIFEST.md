@@ -21,6 +21,85 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## ⚠️ Dos ambientes: PROD es `cumpleclick.com/app`, pre-producción es `automatizatech.cl/cumpleclick`
+
+Desde 2026-08-29 (ver `docs/DEPLOY.md` en la rama `codex/baby-shower-predicciones`): el kiosco que ven los
+clientes vive en `domains/cumpleclick.com/public_html/app/` (= `dist/`), con la landing en la raíz del dominio,
+config real en `domains/cumpleclick.com/cumpleclick-config.php`, almacén en `domains/cumpleclick.com/almacen/`
+y `database/`, `scripts/` privados (`public` es un enlace a `public_html/app`). Su código es la línea
+`codex/baby-shower-predicciones` (`369da38`, migraciones 001–011, temáticas Spidey y baby shower). La rama
+`feat/cumpleclick-sala-ayudantes` NO contiene esa línea: para tocar el kiosco de PROD hay que partir de `369da38`
+(rama `feat/kiosco-juego-3d-prod`, creada 2026-09-06 con el botón del juego).
+
+## DESPLEGADO 2026-09-06 en cumpleclick.com/app (PROD) — juego 3D + salas + kiosco con botón + PIN 1234
+
+Lo mismo que se había subido a pre-producción esa mañana (tabla de abajo), aplicado al PROD real; lo ejecutó Luis
+con el script preparado por Claude (`cc_desplegar.py`, SSH/SFTP) porque el clasificador de permisos bloqueó la
+corrida desde la sesión. Verificado desde afuera: `sala.php` 36/36, `juego/` con `.htaccess` propio (404 limpio,
+sin `immutable`), kiosco `?p=qa-spidey` (Luciano, temática Spidey) muestra "🎮 Aventura 3D" → juego con la ciudad
+(`Aventura Arácnida 2`, 6 invitados, base `/app/`, PIN 1234 acepta y cuelga 6 fotos del kiosco, sala con QR
+público) → "Volver al kiosco". Kiosco: `index.html` + `assets/main-7reZvA3S.js` + `assets/main-CUtameO5.css`
+construidos desde `369da38` (bundle previo reproducido byte a byte antes del parche; 173/173 tests, paridad 484).
+Migración 014 aplicada con `database/aplicar-014.php`; PIN 1234 en las 10 fiestas con respaldo
+`database/respaldo-cc_parties-20260906-185354.json`. `fiesta.js` del juego detecta la base como la carpeta
+padre de `juego/` (sirve para `/app/juego/` y `/cumpleclick/juego/`).
+
+### Fiestas reales del domingo 13-sep (cumpleclick.com, 2026-09-06)
+
+Luis pidió que las fiestas reales dejaran de llamarse demo/QA. En PROD: `demo-frozen-vip` → **`isidora-reino-de-hielo`**
+(Isidora, Reino de Hielo; además etiqueta `CLIENTE - Cumple Isidora (Reino de Hielo) 13-sep` y fecha 13-sep, antes
+31-dic) y `qa-spidey` → **`luciano-spidey`** (Luciano, Spidey). El slug es la carpeta de fotos, del álbum y de las
+láminas, así que el renombre fue con script (`database/renombrar-slugs.php`): respaldo JSON de las filas
+(`respaldo-slugs-20260906-202227.json`), carpetas `fotos/<slug>`, `fotos/album/<slug>`, `invitaciones/<slug>`,
+y en una transacción `cc_parties.public_slug`, `cc_photos.storage_key` (26+11), `cc_event_media.storage_key/thumb`
+(14+13), `cc_invitation_outputs.file_storage_key` (1+3). Verificado: API 200 con los nuevos y 404 con los viejos,
+todas las fotos, medios del álbum y láminas existen en disco, `ver.php` sirve las fotos. URLs nuevas:
+`https://cumpleclick.com/app/?p=isidora-reino-de-hielo` y `https://cumpleclick.com/app/?p=luciano-spidey`
+(galería `galeria.php?p=<slug>`, PIN 1234). Los enlaces de invitación van por token y no cambiaron. Regla: un slug
+no se cambia desde el admin (no lo permite) ni a mano en la BD; siempre con este script o uno equivalente.
+
+## DESPLEGADO 2026-09-06 en automatizatech.cl/cumpleclick (PRE-PRODUCCIÓN) — Juego 3D + salas de ayudantes (por SSH, Claude)
+
+Deploy aditivo hecho por Claude vía SSH/SFTP (ver `Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md`
+§3.3), autorizado por Luis. Nada existente se sobrescribió. Verificado desde afuera: `sala.php`
+responde el contrato completo (36/36 checks de la prueba de humo contra PROD), el juego carga con
+WebGPU en `https://automatizatech.cl/cumpleclick/juego/?p=<slug>` (fiesta real, QR de ayudantes
+con URL pública, temáticas Hielo y Héroes), 0 errores de consola propios.
+
+| Local | PROD (`/cumpleclick/`) | Nota |
+|---|---|---|
+| `dist/lib.sala.php` | `/lib.sala.php` | nuevo |
+| `dist/sala.php` | `/sala.php` | nuevo; usa 11 funciones `cb_*` que el `lib.php` de PROD (26-ago) ya tiene |
+| `database/migrations/014_salas_ayudantes(.down).php` | `private-cumpleclick/database/migrations/` | aplicada con `private-cumpleclick/database/aplicar-014.php` (runner puntual, registra en `cc_schema_migrations`); tablas `cc_salas`, `cc_sala_ayudantes`, `cc_sala_acciones` |
+| `C:\wamp64\www\juego-prod\` (= `tucumple-repo/app/public`, 180 archivos, 38 MB) | `/juego/` | subido como zip y descomprimido en el servidor |
+| (generado) | `/juego/.htaccess` | reglas propias: 404 limpio para archivos inexistentes (el catch-all SPA del padre se hereda y serviría `index.html` con 200) y `Cache-Control` sin `immutable` porque los archivos del juego no llevan hash |
+
+**Segunda tanda, mismo día (kiosco principal + PIN 1234):**
+
+| Local | PROD (`/cumpleclick/`) | Nota |
+|---|---|---|
+| `dist/index.html` + `dist/assets/{main-DyP8gEfj.js, main-B9-yq8Vw.css, album-BLM5xg1A.js, album-CeNLvTx5.css, cartel-B99n-mNG.js, cartel-CnsaFVl2.css}` | `/index.html`, `/assets/` | kiosco con botón "🎮 Aventura 3D" en la bienvenida (solo temáticas hielo/heroes/spidey) → `juego/?p=<slug>&kiosco=1`. Verificado antes de subir que el bundle de PROD (`main-Bx-ejHH_`) tenía exactamente las mismas cadenas que el local: `src/` de esta rama == lo que corría en PROD. Los assets viejos siguen ahí (no estorban) |
+| `juego-prod/index.html`, `juego-prod/game/main.js` | `/juego/` | con `?kiosco=1` muestra "🏠 Volver al kiosco" en pausa y al final (`base + ?p=slug`); PIN de galería prellenado `1234` |
+| (dato) `private-cumpleclick/database/pin-1234.php` | BD | PIN de galería `1234` en las 10 fiestas de PROD vía `cb_load_parties`/`cb_save_parties` (mismo hash que el admin); respaldo previo `respaldo-cc_parties-20260906-164850.json` en esa carpeta. `galeria.php` y `sala.php?op=fotos` solo exigen el PIN, no `gallery_enabled` |
+| `public/admin/index.php` | **NO subido** | LOCAL: fiesta nueva nace con galería habilitada y PIN `1234` prellenado. El `admin/index.php` de PROD trae los perfiles de evento (commit `5d6d594`, otra rama) que esta rama no tiene: subirlo pisaría eso. Va cuando se unifiquen las ramas |
+
+`api.php`, `upload.php`, `ver.php` y `.htaccess` de la raíz **no cambiaron** (md5 idéntico a
+`dist/`). `lib.php` de PROD es más nuevo que el del 27-jul y NO se tocó. Pendiente aparte: el PIN de
+galería `2026` solo sigue vigente en `demo-kpop-vip`; las otras demos tienen otro PIN (se cambia
+desde el admin). Para actualizar el juego más adelante: regenerar `juego-prod`, zip, subir y
+descomprimir igual; los navegadores revalidan HTML/JS al instante gracias al `.htaccess`.
+
+## Delta local — Aceptación de Términos y firma (rama `feat/cumpleclick-aceptacion-terminos`, no desplegado)
+
+Solo PHP y `.md`; los bundles de `dist/assets/` **no cambian** en este delta.
+Orden: config privada (`acceptance_dir`, `notify_email`, `mail_from`) → migración
+`013_plan_acceptances` → `lib.php` → `lib.acceptance.php` → `legal/*.md` →
+`aceptar-plan.php`, `comprobante-aceptacion.php`, `admin/aceptaciones.php` →
+`admin/index.php` al final. Tabla completa con clasificación OBLIGATORIO/OPCIONAL
+en `Docs/BLUEPRINTS/CUMPLECLICK-ACEPTACION-TERMINOS-Y-FIRMA.md` (repo raíz).
+Verificado local: `tests/backend/acceptance.php` 46 checks, lint 67 archivos,
+paridad public→dist 296 archivos. **No probado en PROD.**
+
 ## Delta local — Álbum Recuerdo (rama `feat/album-recuerdo`, no desplegado)
 
 Este delta **incluye y reemplaza** al de Rayo/Carreras/Hielo de abajo: se

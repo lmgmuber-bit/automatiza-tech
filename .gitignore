@@ -165,3 +165,9 @@ tests/qa-security/node_modules/
 graphify-out/cache/
 graphify-out/2*/
 
+
+# superpowers brainstorming visual companion (local, ephemeral)
+.superpowers/
+
+# git worktrees (local scratch, per superpowers:using-git-worktrees)
+.worktrees/

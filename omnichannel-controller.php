@@ -2901,6 +2901,20 @@ class OmnichannelController {
             $media_url = '';
             if ($msg_type === 'text') {
                 $content = sanitize_textarea_field($message['text']['body'] ?? '');
+            } elseif ($msg_type === 'interactive') {
+                // Respuesta a lista/botón interactivo: el id de la opción elegida viaja en
+                // interactive.list_reply.id o interactive.button_reply.id. El bot n8n espera
+                // ese id como texto (ej. "demo_aurora", id de servicio, día, profesional, etc.).
+                $interactive = $message['interactive'] ?? [];
+                $itype = $interactive['type'] ?? '';
+                if ($itype === 'list_reply') {
+                    $content = sanitize_text_field($interactive['list_reply']['id'] ?? '');
+                } elseif ($itype === 'button_reply') {
+                    $content = sanitize_text_field($interactive['button_reply']['id'] ?? '');
+                }
+            } elseif ($msg_type === 'button') {
+                // Botón de respuesta rápida de plantilla: el id/payload trae la selección.
+                $content = sanitize_text_field($message['button']['payload'] ?? ($message['button']['text'] ?? ''));
             } elseif (in_array($msg_type, ['image','video','audio','document'])) {
                 $media_data = $message[$msg_type] ?? [];
                 $content = sanitize_text_field($media_data['caption'] ?? "[$msg_type]");
@@ -3061,14 +3075,19 @@ class OmnichannelController {
         ];
     }
 
+    private function get_instagram_channel_for_api($channel_id) {
+        return $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT * FROM {$this->prefix}channels WHERE id = %d",
+            absint($channel_id)
+        ));
+    }
+
     /**
      * Send a text DM to an Instagram user (IGSID = recipient).
      * Returns ['success'=>true,'message_id'=>..,'recipient_id'=>..] or ['error'=>..].
      */
     public function send_instagram_message($channel_id, $recipient_igsid, $content) {
-        $channel = $this->wpdb->get_row($this->wpdb->prepare(
-            "SELECT * FROM {$this->prefix}channels WHERE id = %d", absint($channel_id)
-        ));
+        $channel = $this->get_instagram_channel_for_api($channel_id);
         if (!$channel) return ['error' => 'Canal no encontrado'];
         if (empty($recipient_igsid)) return ['error' => 'Falta IGSID del destinatario'];
         if ($content === '' || $content === null) return ['error' => 'Contenido vacío'];
@@ -3086,6 +3105,188 @@ class OmnichannelController {
             ];
         }
         return ['error' => $res['error'] ?? 'Error desconocido al enviar a Instagram'];
+    }
+
+    /**
+     * Crea un contenedor de media de Instagram sin esperar el procesamiento.
+     * Usado por n8n para evitar requests HTTP bloqueantes de varios minutos.
+     */
+    public function create_instagram_media_container($channel_id, $video_url, $caption = '', $media_type = 'REELS') {
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+        if (trim((string) $video_url) === '') return ['error' => 'Falta video_url'];
+
+        $media_type = $media_type === 'STORIES' ? 'STORIES' : 'REELS';
+        $container_body = [
+            'media_type' => $media_type, // REELS | STORIES
+            'video_url'  => $video_url,
+        ];
+        if ($media_type === 'REELS' && $caption !== '') {
+            $container_body['caption'] = $caption;
+        }
+
+        $create = $this->ig_api_request('POST', $channel, 'me/media', $container_body);
+        if (empty($create['success']) || empty($create['data']['id'])) {
+            return [
+                'error'    => $create['error'] ?? 'No se pudo crear el contenedor de media',
+                'fb_error' => $create['fb_error'] ?? null,
+            ];
+        }
+
+        return [
+            'success'     => true,
+            'creation_id' => (string) $create['data']['id'],
+            'media_type'  => $media_type,
+            'status_code' => 'CREATED',
+        ];
+    }
+
+    /**
+     * Pre-flight del token de Instagram de un canal. Hace la llamada mas barata
+     * posible (GET me) y distingue "token vencido" (OAuthException 190) de
+     * cualquier otro fallo, para que quien llame sepa si hay que renovar.
+     */
+    public function check_instagram_token($channel_id) {
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) {
+            return ['ok' => false, 'error' => 'Canal no encontrado', 'channel_id' => absint($channel_id)];
+        }
+        if (empty($channel->bot_token)) {
+            return ['ok' => false, 'expired' => true, 'error' => 'Canal sin token de Instagram configurado'];
+        }
+
+        $res = $this->ig_api_request('GET', $channel, 'me?fields=id,username');
+        if (!empty($res['success'])) {
+            return [
+                'ok'       => true,
+                'id'       => $res['data']['id']       ?? '',
+                'username' => $res['data']['username'] ?? '',
+            ];
+        }
+
+        $code = (int) ($res['fb_error']['code'] ?? 0);
+        return [
+            'ok'       => false,
+            'expired'  => $code === 190,
+            'error'    => $res['error'] ?? 'No se pudo validar el token de Instagram',
+            'code'     => $code,
+            'fb_error' => $res['fb_error'] ?? null,
+        ];
+    }
+
+    /**
+     * Consulta el estado de procesamiento de un contenedor de media.
+     */
+    public function get_instagram_media_status($channel_id, $creation_id) {
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+        $creation_id = trim((string) $creation_id);
+        if ($creation_id === '') return ['error' => 'Falta creation_id'];
+
+        $status = $this->ig_api_request('GET', $channel, rawurlencode($creation_id) . '?fields=status_code');
+        if (empty($status['success'])) {
+            return [
+                'error'       => $status['error'] ?? 'No se pudo consultar el estado del contenedor',
+                'creation_id' => $creation_id,
+                'fb_error'    => $status['fb_error'] ?? null,
+            ];
+        }
+
+        return [
+            'success'     => true,
+            'creation_id' => $creation_id,
+            'status_code' => $status['data']['status_code'] ?? '',
+            'data'        => $status['data'] ?? [],
+        ];
+    }
+
+    /**
+     * Publica un contenedor ya procesado por Instagram.
+     */
+    public function publish_instagram_media_container($channel_id, $creation_id) {
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+        $creation_id = trim((string) $creation_id);
+        if ($creation_id === '') return ['error' => 'Falta creation_id'];
+
+        $publish = $this->ig_api_request('POST', $channel, 'me/media_publish', ['creation_id' => $creation_id]);
+        if (empty($publish['success']) || empty($publish['data']['id'])) {
+            return [
+                'error'       => $publish['error'] ?? 'No se pudo publicar (media_publish)',
+                'creation_id' => $creation_id,
+                'fb_error'    => $publish['fb_error'] ?? null,
+            ];
+        }
+
+        return [
+            'success'     => true,
+            'media_id'    => $publish['data']['id'],
+            'creation_id' => $creation_id,
+        ];
+    }
+
+    /**
+     * Elimina una publicación ya publicada en Instagram por media_id.
+     */
+    public function delete_instagram_media($channel_id, $media_id) {
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+        $media_id = trim((string) $media_id);
+        if ($media_id === '') return ['error' => 'Falta media_id'];
+
+        $delete = $this->ig_api_request('DELETE', $channel, rawurlencode($media_id));
+        if (empty($delete['success'])) {
+            return [
+                'error'    => $delete['error'] ?? 'No se pudo eliminar el media de Instagram',
+                'media_id' => $media_id,
+                'fb_error' => $delete['fb_error'] ?? null,
+            ];
+        }
+
+        return [
+            'success'  => true,
+            'deleted'  => true,
+            'media_id' => $media_id,
+            'data'     => $delete['data'] ?? [],
+        ];
+    }
+
+    /**
+     * Publica un video en Instagram (Reel o Story) vía Graph API — 2 pasos:
+     * crear contenedor (media) -> poll status_code -> media_publish. Usado
+     * por el pipeline "Reel Diario Automático" (ver api-omnichannel.php
+     * ruta reel-diario/publish). El bot_token nunca sale de este servidor.
+     *
+     * @return array ['success'=>true,'media_id'=>..] o ['error'=>.., 'creation_id'=>opcional]
+     */
+    public function publish_instagram_media($channel_id, $video_url, $caption = '', $media_type = 'REELS') {
+        $create = $this->create_instagram_media_container($channel_id, $video_url, $caption, $media_type);
+        if (empty($create['success']) || empty($create['creation_id'])) {
+            return ['error' => $create['error'] ?? 'No se pudo crear el contenedor de media'];
+        }
+        $creation_id = $create['creation_id'];
+
+        // Poll hasta FINISHED, máx 5 min (Meta procesa el video de forma asíncrona).
+        $status_code = null;
+        $deadline = time() + 300;
+        do {
+            sleep(10);
+            $status = $this->get_instagram_media_status($channel_id, $creation_id);
+            $status_code = $status['status_code'] ?? null;
+            if ($status_code === 'ERROR') {
+                return ['error' => 'Instagram reportó ERROR procesando el video', 'creation_id' => $creation_id];
+            }
+        } while ($status_code !== 'FINISHED' && time() < $deadline);
+
+        if ($status_code !== 'FINISHED') {
+            return ['error' => 'Timeout esperando que Instagram procese el video (5 min)', 'creation_id' => $creation_id];
+        }
+
+        $publish = $this->publish_instagram_media_container($channel_id, $creation_id);
+        if (empty($publish['success']) || empty($publish['media_id'])) {
+            return ['error' => $publish['error'] ?? 'No se pudo publicar (media_publish)', 'creation_id' => $creation_id];
+        }
+        return ['success' => true, 'media_id' => $publish['media_id'], 'creation_id' => $creation_id];
     }
 
     /**

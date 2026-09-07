@@ -31,6 +31,12 @@ const ESTILOS = [
   { id: 'cabecera', nombre: 'Cabecera con la temática' },
 ]
 
+// Las fechas vienen del servidor en UTC (YYYY-MM-DD HH:MM:SS); acá solo interesa el día.
+function fechaCorta(iso) {
+  const d = new Date(String(iso).replace(' ', 'T') + 'Z')
+  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleDateString('es-CL')
+}
+
 function useQr(url) {
   const [dataUrl, setDataUrl] = useState(null)
   const [error, setError] = useState(false)
@@ -115,6 +121,7 @@ function App() {
   const [estilo, setEstilo] = useState('agua')
   const [pidiendoAlbum, setPidiendoAlbum] = useState(false)
   const [errorAlbum, setErrorAlbum] = useState('')
+  const [copiado, setCopiado] = useState(false)
 
   useEffect(() => {
     if (!slug) { setError('Falta la fiesta: abre esta página desde el botón "Carteles QR" del admin.'); return }
@@ -181,6 +188,7 @@ function App() {
   }
 
   const visibles = datos.carteles.filter((c) => elegidos.includes(c.id))
+  const enlaceAlbum = (datos.carteles.find((c) => c.id === 'album') || {}).url || ''
 
   return (
     <>
@@ -268,6 +276,12 @@ function App() {
                 vuelve acá.
               </p>
             )}
+            {datos.album.existe && datos.album.abierto && datos.album.enlaceVivo && (
+              <p className="panel__album-txt">
+                Ya hay un enlace de aportes activo (emitido el {fechaCorta(datos.album.enlaceVivo.creado)}).
+                Si lo compartiste con alguien, generar otro lo deja muerto.
+              </p>
+            )}
             {datos.album.existe && datos.album.abierto && (
               <button type="button" className="boton boton--claro" onClick={pedirQrAlbum} disabled={pidiendoAlbum}>
                 {pidiendoAlbum ? 'Generando…' : 'Generar el QR del Álbum'}
@@ -278,6 +292,27 @@ function App() {
         )}
 
         {datos.avisoAlbum && <p className="panel__aviso">{datos.avisoAlbum}</p>}
+
+        {enlaceAlbum && (
+          <div className="panel__enlace">
+            <p className="panel__album-txt">
+              <strong>Enlace de aportes</strong> — el mismo que lleva el QR del cartel. Sirve para
+              mandárselo por WhatsApp a quien no esté en la fiesta.
+            </p>
+            <input className="panel__enlace-txt" type="text" readOnly value={enlaceAlbum}
+              onFocus={(e) => e.target.select()} />
+            <div className="panel__acciones">
+              <button type="button" className="boton boton--claro" onClick={async () => {
+                try { await navigator.clipboard.writeText(enlaceAlbum); setCopiado(true) } catch { setCopiado(false) }
+              }}>{copiado ? 'Copiado' : 'Copiar enlace'}</button>
+              <a className="boton boton--claro" target="_blank" rel="noopener"
+                href={`https://wa.me/?text=${encodeURIComponent(
+                  `Sube tus fotos del cumpleaños de ${datos.fiesta.nombre} acá: ${enlaceAlbum}`)}`}>
+                Enviar por WhatsApp
+              </a>
+            </div>
+          </div>
+        )}
 
         <div className="panel__acciones">
           <button type="button" className="boton" onClick={() => window.print()}>

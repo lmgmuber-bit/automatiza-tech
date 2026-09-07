@@ -121,10 +121,18 @@ if (cb_storage_mode() === 'db' && function_exists('cb_album_find_by_party')) {
         $album = $partyIdAlbum !== null ? cb_album_find_by_party($partyIdAlbum) : null;
         if ($album) {
             $abierto = cb_album_intake_open($album, $party);
+            // Del token activo solo se puede saber CUÁNDO se emitió: en base queda su huella,
+            // no el enlace. Alcanza para avisar que generar otro deja muerto al anterior.
+            $vivo = function_exists('cb_album_active_token_info')
+                ? cb_album_active_token_info((int) $album['id'], 'intake') : null;
             $albumEstado = [
                 'existe' => true,
                 'abierto' => $abierto,
                 'motivo' => $abierto ? '' : (empty($party['activa']) ? 'fiesta_inactiva' : 'aportes_cerrados'),
+                'enlaceVivo' => $vivo ? [
+                    'creado' => (string) ($vivo['created_at'] ?? ''),
+                    'vence' => (string) ($vivo['expires_at'] ?? ''),
+                ] : null,
             ];
         }
     } catch (Throwable $e) {

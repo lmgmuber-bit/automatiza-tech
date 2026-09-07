@@ -493,3 +493,26 @@ fiestas del 13-sep (galería y juego 3D, con banner de temática en disco).
 
 **Pendiente:** Luis va a comprar los soportes acrílicos; cuando dé las medidas se agregan como
 tamaños fijos en la lista (hoy se cargan a mano en «A medida…»).
+
+### Álbum Recuerdo: aportes abiertos en las dos fiestas (2026-09-07)
+
+Para que el cartel «Suma tus fotos» sirva, el álbum de la fiesta tiene que estar recibiendo. Se
+abrió en las dos fiestas del 13-sep con un script puntual (respaldo previo en
+`domains/cumpleclick.com/respaldo-album-*.json`):
+
+| Fiesta | Antes | Ahora |
+|---|---|---|
+| `isidora-reino-de-hielo` | álbum `published`, `intake_enabled=0` | `collecting`, aportes abiertos, videos sí, cierra 2026-09-20 23:59 |
+| `luciano-spidey` | sin álbum | álbum creado (id 18), `collecting`, aportes abiertos, videos sí, misma fecha de cierre |
+
+**El álbum de Isidora estaba publicado con material de prueba** (14 registros no eliminados: fotos
+de cabina de julio/agosto con nombres de otras fiestas y 10 archivos `rescate-*` del 31-ago). Se
+marcaron como `removed` —el mismo borrado que hace el botón del admin, reversible desde el filtro
+«Eliminados»— y la portada quedó en nulo. Respaldo de las filas en
+`respaldo-media-isidora-*.json`. Volver a `collecting` deja el enlace de VISTA del álbum en 404
+hasta que se publique de nuevo después de la fiesta; es el ciclo normal.
+
+La pantalla de carteles ahora avisa **cuándo se emitió el enlace de aportes activo** (en base solo
+queda su huella, así que solo se puede saber la fecha) y, al generar uno nuevo, muestra el enlace
+con botones de **copiar** y **enviar por WhatsApp**: el mismo que lleva el QR, para quien no esté
+en la fiesta.

@@ -228,3 +228,12 @@ body {
   margin: 0 0 16px; padding: 12px 16px; border-radius: 12px;
   background: #EAF7EF; border: 1.5px solid #BFE4CD; color: #1F5134; font-size: .92rem; line-height: 1.5;
 }
+
+.panel__enlace {
+  background: #F7F4FB; border: 1.5px solid #E4DDF0; border-radius: 12px;
+  padding: 14px 16px; margin: 0 0 16px;
+}
+.panel__enlace-txt {
+  width: 100%; margin: 10px 0 12px; padding: 10px 12px; font: inherit; font-size: .9rem;
+  border: 1.5px solid #DED9E6; border-radius: 10px; background: #fff;
+}

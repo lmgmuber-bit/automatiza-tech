@@ -119,6 +119,7 @@ function resolveGame(rawGame) {
       'podium-night',
       'backyard-fiesta',
       'rooftop-city',
+      'comic-city',
     ]
     config.stage = allowedStages.includes(stage) ? stage : 'neon-arena'
     const image = optionalAsset(rawGame.image)

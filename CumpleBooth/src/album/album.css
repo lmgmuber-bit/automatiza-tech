@@ -358,7 +358,22 @@ body {
 .mag__cover-bottom { border-top: 1px solid rgba(255,255,255,.34); padding-top: 2.4cqh; }
 .mag__eyebrow { color: var(--yellow); }
 
-.mag__cover-main { margin-bottom: 4cqh; }
+/* El bloque del título lleva su propia banda de contraste. El velo de la
+   página solo oscurece arriba y abajo, y el título vive justo al medio: sobre
+   arte claro (el banner de Bebé en las Nubes es cielo pálido) el blanco
+   quedaba lavado. La banda es un degradado horizontal que muere en
+   transparente, así no dibuja una caja con bordes sobre la foto; el margen
+   negativo la saca hasta el borde izquierdo de la hoja, como una faja de
+   revista. */
+.mag__cover-main {
+  margin-bottom: 4cqh;
+  margin-left: -7cqw;
+  padding: 3.2cqh 4cqw 3.2cqh 7cqw;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--dark2) 62%, transparent) 0%,
+    color-mix(in srgb, var(--dark2) 46%, transparent) 72%,
+    transparent 100%);
+}
 .mag__title {
   margin: 0;
   font-size: 11cqw; line-height: 1.02; font-weight: 800;

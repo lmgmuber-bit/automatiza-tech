@@ -51,9 +51,13 @@ function acc_signature_png(bool $ink): string {
 }
 
 $run = static fn(string $file) => (require dirname(__DIR__, 2) . '/database/migrations/' . $file)(cb_pdo());
-$run('001_initial.php');
-$run('003_invitations_and_plan.php');
-$run('004_gate_a_corrections.php');
+// Todo el esquema hasta 011: `cb_save_parties()` de esta línea escribe columnas que
+// migraciones posteriores a la 004 agregaron (tipo de evento, galería, juegos).
+foreach (['001_initial', '002_theme_prompts', '003_invitations_and_plan', '004_gate_a_corrections',
+          '005_theme_prompt_history', '006_public_leads', '007_event_album', '008_event_profiles',
+          '009_invitation_gender', '010_baby_shower_predictions', '011_gift_mode'] as $m) {
+    $run($m . '.php');
+}
 
 // Fiestas previas a la migración 013: una activa (queda eximida) y una inactiva.
 $pdo = cb_pdo();

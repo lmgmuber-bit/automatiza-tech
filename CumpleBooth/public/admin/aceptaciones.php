@@ -45,6 +45,7 @@ function admin_icon(string $name): string
 {
     $icons = [
         'copy' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+        'chart' => '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-4M12 16V8M17 16v-6"/>',
         'external' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>',
         'logout' => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>',
         'check' => '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
@@ -143,6 +144,7 @@ if (!$loggedIn) {
         <input type="password" id="password" name="password" required autofocus placeholder="••••••••">
       </div>
       <button type="submit" class="btn btn-cta btn-block">Ingresar</button>
+      <p class="muted small" style="margin-top:12px;text-align:center"><a href="recuperar.php">Olvide la contrasena</a></p>
     </form>
   </main>
 </body>
@@ -309,6 +311,7 @@ $relationships = ['madre' => 'Madre', 'padre' => 'Padre', 'tutor' => 'Tutor/a le
     <a class="tab" href="index.php"><?= admin_icon('party') ?> Fiestas</a>
     <a class="tab" href="index.php?view=temas"><?= admin_icon('palette') ?> Temáticas</a>
     <a class="tab active" href="<?= h($selfUrl) ?>"><?= admin_icon('sign') ?> Aceptación de Términos</a>
+    <a class="tab" href="finanzas.php"><?= admin_icon('chart') ?> Finanzas</a>
   </nav>
 
   <main>

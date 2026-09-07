@@ -54,18 +54,28 @@ body {
   text-align: center;
 }
 
-/* Banner de la temática, muy velado: da identidad sin competir con el texto.
-   La URL la inyecta subir.php solo si el archivo existe en disco. */
+/* Banner de la temática a pantalla completa: el invitado tiene que ver de un vistazo que
+   está en la fiesta de ESE cumpleaños. Antes iba al 22% y solo en la franja de arriba, y
+   prácticamente no se notaba. La URL la inyecta subir.php solo si el archivo existe. */
 .sheet::before {
   content: '';
   position: fixed;
-  inset: 0 0 auto 0;
-  height: 46vh;
+  inset: 0;
   background-size: cover;
-  background-position: center top;
-  opacity: .22;
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 100%);
-  mask-image: linear-gradient(180deg, #000 0%, transparent 100%);
+  background-position: center;
+  opacity: .78;
+  pointer-events: none;
+  z-index: 0;
+}
+/* Velo sobre la foto: sin esto el texto blanco se pierde en las temáticas claras (el
+   ventanal nevado de Hielo es casi blanco). Más denso abajo, que es donde está el
+   formulario, y más liviano arriba, donde se ve la temática. */
+.sheet::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(24, 12, 43, .22) 0%, rgba(24, 12, 43, .48) 42%,
+                                      rgba(24, 12, 43, .70) 100%);
   pointer-events: none;
   z-index: 0;
 }
@@ -97,7 +107,8 @@ body {
 }
 
 .panel {
-  background: rgba(255,255,255,.10);
+  background: rgba(255,255,255,.16);
+  backdrop-filter: blur(10px);
   border: 1px solid rgba(255,255,255,.18);
   border-radius: var(--radius);
   padding: 18px 16px;

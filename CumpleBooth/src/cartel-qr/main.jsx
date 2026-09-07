@@ -38,6 +38,7 @@ const ICONOS = {
   web: 'M12 3a9 9 0 100 18 9 9 0 000-18zM3.6 9h16.8M3.6 15h16.8M12 3c2.4 2.4 3.6 5.4 3.6 9s-1.2 6.6-3.6 9c-2.4-2.4-3.6-5.4-3.6-9S9.6 5.4 12 3z',
   instagram: 'M7.5 3.5h9a4 4 0 014 4v9a4 4 0 01-4 4h-9a4 4 0 01-4-4v-9a4 4 0 014-4zm4.5 5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm5.1-1.6h.01',
   whatsapp: 'M3.8 20.2l1.2-4a8 8 0 113 3l-4.2 1zM9 9.4c.3-.7.5-.7.8-.7h.6c.2 0 .5 0 .7.6l.8 1.9c.1.2.1.4 0 .6l-.4.6c-.1.2-.2.4 0 .7a6 6 0 002.6 2.3c.3.1.5.1.7-.1l.6-.7c.2-.2.4-.2.6-.1l1.8.9c.3.1.4.3.4.5 0 .6-.4 1.4-.7 1.6-.5.4-1.1.6-1.8.5a9 9 0 01-5.4-3.4c-.8-1-1.4-2.2-1.4-3.4 0-.7.3-1.4.8-1.8z',
+  correo: 'M4 5.5h16a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1v-11a1 1 0 011-1zm-.4.6l8.4 6.4 8.4-6.4',
 }
 
 function Dato({ tipo, valor, url }) {
@@ -82,6 +83,7 @@ function Pie({ marca }) {
     { tipo: 'web', valor: marca.web, url: marca.web_url },
     { tipo: 'instagram', valor: marca.instagram, url: marca.instagram_url },
     { tipo: 'whatsapp', valor: marca.whatsapp, url: marca.whatsapp_url },
+    { tipo: 'correo', valor: marca.correo, url: marca.correo_url },
   ].filter((dato) => dato.valor)
 
   return (

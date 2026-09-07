@@ -440,3 +440,780 @@ archivos son `OBLIGATORIO` para que el tema funcione de punta a punta:
 No subir `storage/`, `.uv-cache/`, modelos de recorte, candidatos, frames de QA,
 los scripts Python de construcción ni la fiesta local `DEMO-BLUEY` como si
 fuera información de producción.
+
+## DESPLEGADO 2026-09-06 en cumpleclick.com/app — juego 3D "Tu Cumple en 3D" + salas + botón en el kiosco + PIN 1234
+
+Rama `feat/kiosco-juego-3d-prod` (esta), creada desde `369da38` = lo que corría en PROD (bundle reproducido byte a byte antes
+del cambio). Subido por SSH: `index.html` + `assets/main-7reZvA3S.js` + `assets/main-CUtameO5.css` (botón "🎮 Aventura 3D" en
+la bienvenida de temáticas `hielo`/`heroes`/`spidey` → `juego/?p=<slug>&kiosco=1`), `sala.php` + `lib.sala.php` (de la rama
+`feat/cumpleclick-sala-ayudantes`), migración 014 en `database/migrations/` aplicada con `database/aplicar-014.php`, el juego
+completo en `app/juego/` (repo `tucumple-repo`, 181 archivos, `.htaccess` propio), PIN 1234 en todas las fiestas
+(`database/pin-1234.php`, respaldo JSON) y fiestas reales del 13-sep renombradas (`database/renombrar-slugs.php`):
+`isidora-reino-de-hielo`, `luciano-spidey`. Detalle completo en la misma sección del manifiesto de la rama
+`feat/cumpleclick-sala-ayudantes` y en `Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md` §3.3.
+
+## DESPLEGADO 2026-09-06 (tarde) en cumpleclick.com/app — pantalla Mensajes y correo en la marca
+
+Subido por SSH desde esta rama, con los md5 de PROD verificados antes: coincidían byte a byte
+con la base de la rama (PROD guarda los PHP con CRLF; las ediciones se rehicieron en CRLF para
+no convertir el archivo entero en un diff).
+
+| Local (`dist/`) | PROD (`/app/`) | Nota |
+|---|---|---|
+| `assets/album-C3C8CAdS.js`, `assets/cartel-QEaLTDPn.js` | `/assets/` | primero: los HTML nuevos los piden |
+| `album.html`, `cartel-qr.html` | `/` | apuntan a los bundles nuevos |
+| `album-api.php` | `/album-api.php` | publica `correo`/`correo_url` de la marca |
+| `admin/marca.php` | `/admin/marca.php` | campos Correo y Enlace del correo |
+| `admin/mensajes.php` | `/admin/mensajes.php` | **nuevo**: textos para el cliente con copiar / abrir WhatsApp |
+| `admin/index.php` | `/admin/index.php` | pestaña Mensajes en el nav |
+| (dato) `marca-correo.php` | BD/JSON | agregó `correo` a `data/marca.json` con respaldo (`marca.json.bak-20260906-223017`); el archivo NO se subió para no pisar lo editado desde el admin |
+
+Verificado: 173/173 tests, paridad 485 archivos, y por HTTP `admin/mensajes.php` responde con la
+pantalla de login, `album.html` y `cartel-qr.html` sirven los bundles nuevos.
+
+## DESPLEGADO 2026-09-06 (noche) en cumpleclick.com/app — aceptación de Términos y firma
+
+Portado desde `feat/cumpleclick-aceptacion-terminos` a esta línea (ver el commit): de aquel
+commit solo se copiaron los archivos nuevos; `lib.php` y `admin/index.php` se parchearon a mano
+porque los de esa rama son del build del 27-jul.
+
+Orden real de subida (config → migración → librerías → páginas → admin al final):
+
+| # | Local | PROD | Nota |
+|---|---|---|---|
+| 1 | (script) `config-terminos.php` | `domains/cumpleclick.com/` | agregó `acceptance_dir`, `notify_email`, `mail_from` a `cumpleclick-config.php` insertando texto antes del cierre del array (los secretos existentes no se leen ni se reescriben); respaldo `cumpleclick-config.php.bak-20260907-003647`; creó `almacen/aceptaciones` (0770) |
+| 2 | `dist/lib.php` | `/lib.php` | **con LF**: PROD guarda este archivo en LF y el admin en CRLF; subirlo en CRLF habría cambiado 2.471 finales de línea |
+| 3 | `dist/lib.acceptance.php` | `/lib.acceptance.php` | nuevo |
+| 4 | `dist/legal/*.md` (3) | `/legal/` | carpeta creada en el servidor; sin ellos `aceptar-plan.php` falla cerrado |
+| 5 | `dist/aceptar-plan.php`, `dist/comprobante-aceptacion.php` | `/` | nuevos |
+| 6 | `dist/admin/aceptaciones.php` | `/admin/` | nuevo |
+| 7 | `database/migrations/013_plan_acceptances(.down).php` + `aplicar-013.php` | `domains/cumpleclick.com/database/` | migración aplicada con runner puntual; **las 10 fiestas activas quedaron `waived`** y ninguna dejó de funcionar |
+| 8 | `dist/admin/index.php` | `/admin/index.php` | **último**: activa el cierre del plan y agrega el botón Aceptación |
+
+Gate posterior, todo verificado por HTTP: `aceptar-plan.php?t=x` → 400; token de 32 hex inexistente
+→ 404; `legal/terminos-y-condiciones.md` → 200; `admin/aceptaciones.php` → login; `api.php` del
+kiosco intacto. Y una firma real de punta a punta sobre `demo-carreras`: comprobante de 64 KB con
+la firma embebida y su SHA-256, evidencia en `almacen/aceptaciones/`, y los dos correos enviados
+por SMTP (`client_mail_sent_at` e `internal_mail_sent_at`). La aceptación de prueba, su evidencia
+y el script se borraron después.
+
+**Pendiente de Luis:** los tres textos legales siguen siendo borradores y llevan visible el aviso
+de que no son asesoría legal; hay que pasarlos por abogado antes de usarlos con clientes reales.
+
+## DESPLEGADO 2026-09-07 en cumpleclick.com/app — contactos de quien contrata y cobro
+
+| # | Local | PROD | Nota |
+|---|---|---|---|
+| 1 | `database/migrations/015_party_contacts_billing(.down).php` + `aplicar-015.php` | `domains/cumpleclick.com/database/` | crea `cc_party_contacts` y las 5 columnas de cobro en `cc_parties`; aditiva, ninguna fiesta cambió |
+| 2 | `dist/lib.php` | `/lib.php` | **en LF** (PROD guarda este archivo así); solo suma el `require` de la librería nueva |
+| 3 | `dist/lib.cliente.php` | `/lib.cliente.php` | nuevo: contactos y cobro |
+| 4 | `dist/admin/_style.css.php` | `/admin/_style.css.php` | grillas de contactos y cobro |
+| 5 | `dist/admin/index.php` | `/admin/index.php` | **último**: las dos secciones en la ficha de la fiesta |
+
+Verificado en PROD: las cuatro funciones nuevas responden, el admin y el kiosco siguen sirviendo.
+Probado antes en local de punta a punta con el formulario real: dos contactos (uno de ellos
+"familiar" marcado como principal) y el cobro con descuento ($99.990 − $30.000 = $69.990,
+anticipo $20.000, saldo $49.990).
+
+**Dos fallos preexistentes corregidos de paso** (los dos impedían guardar una fiesta desde el
+admin y ninguno decía por qué): el calibrador del marco rechazaba las fiestas calibradas
+arrastrando, y la validación del PIN exigía volver a escribirlo al editar una fiesta que ya
+tenía galería.
+
+## DESPLEGADO 2026-09-07 en cumpleclick.com/app — carteles QR por fiesta
+
+Pantalla nueva para imprimir los avisos con código QR de cada fiesta. Se entra desde el admin,
+con el botón **Carteles QR** de la fiesta, o directo en `/app/carteles.html?p=<slug>`.
+
+| # | Local | PROD | Nota |
+|---|---|---|---|
+| 1 | `public/admin/carteles-api.php` | `/admin/carteles-api.php` | nuevo; exige sesión de admin porque el cartel de la galería lleva el PIN |
+| 2 | `dist/carteles.html` | `/carteles.html` | nueva entrada del build |
+| 3 | `dist/assets/carteles-OE5qJLX0.js` | `/assets/` | |
+| 4 | `dist/assets/carteles-BcTaWotC.css` | `/assets/` | |
+| 5 | `dist/assets/client-eulB1LW-.js` | `/assets/` | chunk compartido de React que PROD todavía no tenía |
+| 6 | `public/admin/index.php` | `/admin/index.php` | **último**; en CRLF (así lo guarda PROD). Solo agrega el botón por fiesta |
+
+Qué carteles arma, según lo que tenga ESA fiesta: **galería** (con el PIN en grande), **juego 3D**
+de su temática (Hielo, Spidey o Héroes), **invitación** si ya hay una emitida, y **Álbum Recuerdo**.
+
+El del Álbum es distinto: su QR lleva el token de **aportes**, que se emite de a uno y en base solo
+queda su huella. Por eso no se arma al abrir la pantalla —cada visita revocaría el anterior y
+dejaría muertos los carteles ya impresos—: hay un botón **«Generar el QR del Álbum»** que lo pide
+por POST con el CSRF del admin, avisa que el anterior queda revocado, y recién ahí aparece el
+cartel. Si la fiesta no tiene álbum, o los aportes están cerrados, el panel lo dice y enlaza a
+`admin/album.php`.
+
+La hoja sale a **escala real** (`@page` en milímetros) para entrar justa en el soporte: A6, foto
+10×15, foto 13×18, cuadrado 15×15, A5, marco 20×25, A4 y una **medida a pedido** en mm. Todo el
+diseño se mide en `cqh` (altura de la hoja), así que el mismo cartel funciona en A6 y en A4 sin
+rehacerlo: el QR va de 31 mm a 62 mm. Al imprimir hay que dejar los márgenes en «ninguno» y
+desactivar «ajustar al papel».
+
+**Dos estilos, los dos imprimibles** (se eligen en la misma pantalla):
+
+- **Fondo completo (marco de agua):** el banner de la temática ocupa la hoja entera y **no hay
+  recuadro**: los textos van en blanco directamente sobre la foto, con doble sombra (una difusa
+  que los despega y una pegada al borde que los sostiene sobre los fondos claros, como el
+  ventanal nevado de Hielo). El fondo se ancla abajo para que los personajes suban en la hoja.
+- **Cabecera con la temática:** franja de 30cqh arriba con la foto y el resto en blanco. La franja
+  es alta a propósito y va a `object-position: center 48%`: con una franja más baja, o con otro
+  encuadre, a los personajes les quedaba cortada la cabeza —lo mismo que Luis marcó en la
+  cabecera del correo—. Con estos valores salen enteros en Hielo y en Spidey.
+
+En los dos, el QR va sobre un recuadro **blanco opaco**: un QR con la foto asomando detrás deja de
+escanear. En el pie va el isotipo `brand/cumpleclick-mark.svg` junto al nombre, el sitio y el
+Instagram (misma convención que la galería y el álbum: el SVG dibuja solo el globo, la palabra
+"CumpleClick" es texto).
+
+Verificado en PROD: los cuatro archivos responden 200, `admin/carteles-api.php` responde 401 sin
+sesión, y los enlaces que arma el servidor son los de `https://cumpleclick.com/app` para las dos
+fiestas del 13-sep (galería y juego 3D, con banner de temática en disco).
+
+**Pendiente:** Luis va a comprar los soportes acrílicos; cuando dé las medidas se agregan como
+tamaños fijos en la lista (hoy se cargan a mano en «A medida…»).
+
+### Álbum Recuerdo: aportes abiertos en las dos fiestas (2026-09-07)
+
+Para que el cartel «Suma tus fotos» sirva, el álbum de la fiesta tiene que estar recibiendo. Se
+abrió en las dos fiestas del 13-sep con un script puntual (respaldo previo en
+`domains/cumpleclick.com/respaldo-album-*.json`):
+
+| Fiesta | Antes | Ahora |
+|---|---|---|
+| `isidora-reino-de-hielo` | álbum `published`, `intake_enabled=0` | `collecting`, aportes abiertos, videos sí, cierra 2026-09-20 23:59 |
+| `luciano-spidey` | sin álbum | álbum creado (id 18), `collecting`, aportes abiertos, videos sí, misma fecha de cierre |
+
+**El álbum de Isidora estaba publicado con material de prueba** (14 registros no eliminados: fotos
+de cabina de julio/agosto con nombres de otras fiestas y 10 archivos `rescate-*` del 31-ago). Se
+marcaron como `removed` —el mismo borrado que hace el botón del admin, reversible desde el filtro
+«Eliminados»— y la portada quedó en nulo. Respaldo de las filas en
+`respaldo-media-isidora-*.json`. Volver a `collecting` deja el enlace de VISTA del álbum en 404
+hasta que se publique de nuevo después de la fiesta; es el ciclo normal.
+
+La pantalla de carteles ahora avisa **cuándo se emitió el enlace de aportes activo** (en base solo
+queda su huella, así que solo se puede saber la fecha) y, al generar uno nuevo, muestra el enlace
+con botones de **copiar** y **enviar por WhatsApp**: el mismo que lleva el QR, para quien no esté
+en la fiesta.
+
+### La URL escrita bajo el QR y la medida «media carta» (2026-09-07)
+
+Cada cartel lleva ahora **la dirección completa impresa dentro del recuadro blanco, bajo el QR**:
+si la cámara no toma el código, o el celular es viejo, se puede tipear. Va adentro del recuadro a
+propósito, para que quede en tinta oscura sobre blanco también en el estilo de fondo completo.
+
+Se agregó el tamaño **Media carta · 14 × 21,6 cm**, que es el de los porta menú de acrílico
+comunes. **No es A5**: son 8 mm más angosta y 6 mm más alta, así que imprimir un A5 en ese soporte
+deja el papel sobrando por los lados.
+
+`scripts/carteles-prod-pdf.mjs` arma el PDF de una fiesta real con los enlaces de producción sin
+tener que emitir otro token del Álbum: levanta la misma pantalla del admin e intercepta la
+respuesta de la API para reemplazar la lista de carteles. Se usa cuando el enlace de aportes ya
+está vivo y compartido, porque volver a generarlo lo revocaría.
+
+### Fondo de la temática en la página de aportes y cartel de marca (2026-09-07)
+
+- `_album-intake.css.php` (**CRLF**, así lo guarda PROD; respaldo en `.bak-20260907`): el banner
+  de la temática pasó de una franja al 22% arriba —que prácticamente no se veía— a **pantalla
+  completa al 78%**, con un velo en degradado encima y los paneles con `backdrop-filter` para que
+  el texto siga legible sobre las temáticas claras.
+- La pantalla de carteles arranca en **Media carta**, la medida del porta menú de acrílico.
+- Cartel nuevo **«¿Lo quieres en tu fiesta?»**: QR a nuestro Instagram (o al sitio, si no hay
+  Instagram cargado en `data/marca.json`), con la temática de la fiesta de fondo. Aparece en toda
+  fiesta y sirve para dejar uno en la mesa como aviso institucional.
+
+## DESPLEGADO 2026-09-07 en cumpleclick.com/app — comprobante de pago en PDF
+
+Documento con lo cobrado y lo pagado, que se manda por correo con el PDF adjunto y se comparte
+por WhatsApp con un enlace. **No es boleta del SII y el propio PDF lo dice**: la integración
+tributaria es la etapa siguiente, como quedó acordado.
+
+| # | Local | PROD | Nota |
+|---|---|---|---|
+| 1 | `public/brand/pdf-cumpleclick.jpg`, `pdf-automatizatech.jpg` | `/brand/` | los dos logos, rasterizados sobre blanco |
+| 2 | `public/lib.pdf.php` | `/lib.pdf.php` | nuevo: escritor de PDF |
+| 3 | `public/lib.comprobante.php` | `/lib.comprobante.php` | nuevo: datos, maqueta, enlace firmado y correo |
+| 4 | `public/lib.mail.php` | `/lib.mail.php` | **en LF** (PROD lo guarda así); suma adjuntos |
+| 5 | `public/comprobante.php` | `/comprobante.php` | nuevo: descarga por enlace firmado |
+| 6 | `public/admin/comprobante.php` | `/admin/comprobante.php` | nueva pantalla |
+| 7 | `public/admin/mensajes.php` | `/admin/mensajes.php` | **CRLF**; solo la pestaña nueva |
+| 8 | `public/admin/index.php` | `/admin/index.php` | **CRLF**, último; pestaña y botón por fiesta |
+
+**Por qué un escritor de PDF propio.** El proyecto no tiene librería y el hosting no deja
+instalar una. Los otros PDF (manual, términos) se arman con el navegador en el computador de
+Luis, pero este tiene que generarse EN EL SERVIDOR al momento de mandar el correo.
+`lib.pdf.php` cubre justo lo que el documento necesita: Helvetica y Helvetica-Bold (de las 14
+estándar, no hay que incrustar la fuente), texto en WinAnsi con `iconv` para que salgan los
+acentos y la eñe, JPEG embebido tal cual con `DCTDecode` (un PNG obligaría a re-comprimir a
+mano), líneas y rectángulos. El flujo va comprimido con `zlib`, que el servidor tiene.
+
+**El PDF no se guarda en disco**: se arma en cada visita, así que siempre refleja lo que dice la
+ficha hoy. El enlace público va firmado con `cb_hmac()` (24 caracteres en la URL) porque el
+documento es el mismo siempre y no tiene sentido un token de un solo uso; sin firma, cambiar el
+slug en la URL mostraría el cobro de otra fiesta.
+
+Verificado en PROD: `php -l` limpio en los siete archivos, el PDF se genera en el servidor
+(62 KB, los dos logos, comprimido, EOF correcto) y se revisó el archivo bajado —los acentos,
+la eñe y los signos de apertura salen bien—; el enlace con firma inválida responde 403 y sin
+firma 400; `cc_mail_enabled()` es `true`. Pruebas: `tests/backend/comprobante.php` (23
+comprobaciones) y `tests/backend/cliente.php` (30) pasan.
+
+**Pendiente de Luis:** confirmar que el RUT que sale en el comprobante (78.363.717-0, de
+`cb_comprobante_emisor()` en `lib.comprobante.php`) es el correcto para facturar.
+
+### Clases del admin sin CSS detrás (2026-09-07)
+
+Luis vio pantallas del admin con elementos "en HTML puro". La causa: nombres de clase que no
+existen en `admin/_style.css.php`, así que el navegador no aplicaba nada. Se revisaron las siete
+pantallas comparando las clases usadas contra las definidas.
+
+| Pantalla | Clase | Qué pasaba | Arreglo |
+|---|---|---|---|
+| `admin/comprobante.php` | `inline` (×3) | la clase real es `inline-form`; la barra superior y la fila de botones se apilaban | `inline-form` y una `cmp-acciones` propia para la fila |
+| `admin/mensajes.php` | `head` | la cabecera del admin es `topbar`; se veía sin maquetar | `topbar` |
+| `admin/marca.php` | `lede` | el párrafo de entrada quedaba como texto plano | `muted`, que ya existe |
+| `admin/album.php` | `badge--video` | la variante nunca se definió: el badge salía con el estilo base y sin color | definida en `_style.css.php` con `--primary-soft` / `--primary-dark` |
+
+Los cuatro archivos van **en CRLF**, que es como PROD los guarda; se verificó que el md5 de cada
+uno coincidía con su base convertida a CRLF antes de subir, para no ensuciar el diff.
+`btn-label` y `frame-value` en `index.php` quedaron como están: no son estilos, son enganches
+que usa el JavaScript de la pantalla.
+
+## Revision completa antes del domingo 13 (2026-09-07)
+
+Se corrio todo lo que existe y se sumo un smoke de produccion reutilizable,
+`tests/smoke-prod.sh`, que se puede correr despues de cada despliegue.
+
+| Que se probo | Resultado |
+|---|---|
+| Pruebas backend (11 archivos) | todas pasan: 46 aceptacion, 157 album, 30 cliente, 23 comprobante, 32 perfiles, 39 fuente, 45 leads, 8 entrypoints, 28 predicciones, 163 backend general |
+| Pruebas frontend (`npm test`) | 173 de 173 |
+| `php -l` de todo lo publicado en PROD | 49 archivos, 0 con error |
+| Smoke HTTP de PROD | 34 comprobaciones, 0 fuera de lo esperado |
+| Integridad de datos en PROD | 30 revisiones; las dos fiestas activas, con PIN, banner, cabecera de correo, album abierto y enlace de aportes vigente |
+| Correo | los 6 correos del flujo enviados a una bandeja real, con sus adjuntos |
+
+**Tres comprobaciones del smoke fallaban por una expectativa mia equivocada, no por un
+defecto** (quedaron corregidas y documentadas dentro del script):
+
+- `admin/marca.php` devuelve 302 hacia el ingreso en vez de mostrarlo; no filtra nada.
+- La API de carteles corta con 401 antes de mirar el CSRF cuando no hay sesion. Es el orden
+  correcto.
+- `comprobante.php` valida la firma ANTES de mirar si la fiesta existe, asi que una fiesta
+  inventada con firma mala da 403 y no 400: no filtra que fiestas hay.
+
+### Hallazgo: el registro de migraciones de PROD no refleja la realidad
+
+`cc_schema_migrations` en PROD lista 14 versiones y **faltan tres que si estan aplicadas de
+hecho**: `012_lead_mail_tracking` (las columnas `confirmation_sent_at`, `notified_at` y
+`mail_error` estan en `cc_leads`), `013_narration_intro_output` (el enum de
+`cc_invitation_outputs` ya trae `personalized_narration_intro`) y `014_rsvp` (la tabla
+`cc_rsvps` existe). Ademas PROD tiene `014_salas_ayudantes`, que viene de la otra rama y no
+esta en esta linea de codigo: los numeros 013 y 014 chocaron entre ramas.
+
+**Hoy no rompe nada.** El riesgo es a futuro: un runner de migraciones intentaria aplicarlas de
+nuevo y `012` fallaria por columna duplicada, dejando el proceso a medias. Lo prolijo es
+registrar esas tres versiones como ya aplicadas (un INSERT en `cc_schema_migrations`, sin tocar
+ninguna tabla de datos). Queda pendiente de decision de Luis por ser una escritura en PROD.
+
+## DESPLEGADO 2026-09-07 (tarde) — correos de Terminos con la marca y registro de migraciones
+
+**1. Los dos correos de la aceptacion salian en texto pelado.** El cliente recibia un mensaje
+sin logo, con un SHA-256 en medio; desentonaba con el resto de los correos, que ya usaban la
+plantilla de la marca. Ahora los dos van con `cc_mail_shell`: filas de datos, boton para
+descargar el comprobante firmado, y la huella al final en letra chica (es respaldo legal, no
+lo que la persona vino a leer). La fecha del evento se muestra como se escribe en Chile.
+El texto plano se mantiene como alternativa del correo y como respaldo del envio por `mail()`.
+
+| Local | PROD | Nota |
+|---|---|---|
+| `public/lib.acceptance.php` | `/lib.acceptance.php` | **CRLF**; respaldo en `.bak-20260907` |
+
+`cb_send_mail()` acepta ahora un cuarto parametro opcional con el HTML. Sin ese parametro se
+comporta igual que antes, asi que ningun otro envio cambia.
+
+**2. Registro de migraciones al dia.** Se anotaron en `cc_schema_migrations` las tres
+versiones que estaban aplicadas de hecho pero sin registrar: `012_lead_mail_tracking`,
+`013_narration_intro_output` y `014_rsvp`. El script **verifico el efecto de cada una en la
+base antes de anotarla** (columnas de `cc_leads`, el enum de `cc_invitation_outputs` y la
+tabla `cc_rsvps`): marcar como aplicada una migracion que falta seria esconder el problema.
+El registro paso de 14 a 17 versiones y quedo respaldado en
+`~/respaldo-migraciones-20260907.txt`. No se toco ninguna tabla de datos.
+
+Verificado despues del despliegue: `php -l` limpio, md5 del archivo igual al local, smoke de
+PROD 34/34, pruebas de aceptacion 46/46 y backend general 163/163, y los dos correos
+reenviados a una bandeja real con el formato nuevo.
+
+## DESPLEGADO 2026-09-07 (noche) — descuento en porcentaje por fiesta
+
+El descuento solo se podia escribir en pesos, y en la practica se piensa al reves: "a esta le
+hago 20%", "esta va sin costo". Calcularlo a mano es donde aparecen los errores de monto en un
+comprobante ya impreso.
+
+| # | Local | PROD | Nota |
+|---|---|---|---|
+| 1 | `database/migrations/016_discount_percent(.down).php` + `cc-aplicar-016.php` | `domains/cumpleclick.com/database/` | agrega `discount_percent DECIMAL(5,2) NULL` a `cc_parties`; aditiva |
+| 2 | `public/lib.cliente.php` | `/lib.cliente.php` | **en LF** (PROD lo guarda asi) |
+| 3 | `public/lib.comprobante.php` | `/lib.comprobante.php` | **CRLF** |
+| 4 | `public/admin/index.php` | `/admin/index.php` | **CRLF**, ultimo; el campo nuevo en la ficha |
+
+**Como funciona.** En la ficha de la fiesta hay dos campos: *Descuento en %* y *Descuento en
+pesos*. Si el porcentaje esta puesto, **manda**: el monto en pesos se calcula sobre el precio y
+se guarda derivado, asi que el comprobante sigue leyendo un monto y los dos numeros no pueden
+discrepar. Cambiar el precio recalcula el descuento solo. `DECIMAL(5,2)` y no float porque 12,5%
+tiene que valer 12,5 exacto.
+
+El porcentaje aparece en la etiqueta del comprobante ("Descuento · 100% · Fiesta de prueba") y
+en el correo, que ahora muestra tambien el precio del plan y el descuento cuando lo hay, no solo
+el total. `cb_parse_percent()` acepta "20", "20%", "12,5" y "12.5"; distingue vacio de 0%.
+
+**Las dos fiestas del domingo quedaron en costo 0** (marcha blanca), con la nota "Fiesta de
+marcha blanca: el servicio va sin costo." No se invento un precio: poner una cifra que no es la
+real en un documento que ve el cliente es peor que un cero. Si se quiere mostrar el valor de lo
+que se esta regalando, se escribe el precio real y 100 en el porcentaje, y el documento hace la
+resta solo.
+
+Verificado: migracion aplicada y registrada (18 versiones), `php -l` limpio en los tres
+archivos, pruebas `cliente` ampliadas a 46 comprobaciones (16 nuevas de porcentaje: que manda
+sobre el monto, que se recalcula al cambiar el precio, 100% = total cero, rechazo de >100 y de
+porcentaje sin precio), suites `comprobante`, `acceptance`, `run`, `leads` y `album` sin
+cambios, y smoke de PROD 34/34. Los comprobantes de las dos fiestas se generan (62 kB); les
+falta solo cargar los contactos para poder enviarlos.
+
+### El descuento se carga desde la ficha, no por script (2026-09-07)
+
+Se probo el recorrido completo por la pantalla, escribiendo como lo hace una persona:
+`admin/index.php?action=editar&slug=<fiesta>` -> seccion **Cobro del servicio** -> precio
+120.000 y **25** en *Descuento en %* -> Guardar -> reabrir la ficha. Quedo guardado el 25%, el
+monto derivado de 30.000 aparecio solo, y la pantalla muestra "Total con descuento: $90.000".
+El mismo 25% sale despues en el PDF y en el correo.
+
+**Un error propio corregido de paso:** el boton "Ir a la ficha de la fiesta" de la pantalla del
+comprobante apuntaba a `index.php?edit=<slug>`, que no existe —el formulario se abre con
+`?action=editar&slug=`—, asi que caia en la lista de fiestas sin abrir nada. Corregido y
+desplegado (`admin/comprobante.php`).
+
+## DESPLEGADO 2026-09-07 (noche) — catalogo de planes editable desde el admin
+
+Los precios estaban **escritos a mano en el HTML del sitio** (`sitio/index.php`), en tres
+tarjetas: cambiar uno obligaba a editar la pagina y volver a subirla. Ahora viven una sola vez
+en `data/planes.json`, se editan en **Admin -> Planes**, y de ahi los leen el sitio publico y
+el selector de la ficha de la fiesta.
+
+| # | Local | PROD | Nota |
+|---|---|---|---|
+| 1 | `public/lib.planes.php` | `/lib.planes.php` | nuevo: lee, calcula y guarda el catalogo |
+| 2 | `public/data/planes.json` | `/data/planes.json` | nuevo: los tres planes con sus precios reales |
+| 3 | `public/admin/planes.php` | `/admin/planes.php` | nueva pantalla |
+| 4 | `public/admin/index.php` | `/admin/index.php` | **CRLF**; pestaña Planes y selector de plan en la ficha |
+| 5 | `sitio/index.php` | `public_html/index.php` | **en LF** (PROD lo guarda asi); respaldo en `.bak-20260907` |
+
+**El precio con promocion no se guarda: se calcula** restandole el porcentaje al precio normal,
+igual que el descuento por fiesta. Guardar los dos numeros es la forma segura de terminar con un
+sitio que dice una cosa y un comprobante que dice otra. Con la promo de lanzamiento al 50%, el
+catalogo reproduce exactamente los precios que ya mostraba la pagina: $34.995, $49.995 y $29.995.
+
+**El sitio conserva un respaldo con los tres planes escritos.** Si `planes.json` falta o queda
+roto, la landing sigue mostrando precios reales en vez de quedarse sin la seccion que decide la
+venta. Es el mismo criterio que ya usaba con el numero de WhatsApp.
+
+**En la ficha de la fiesta, el plan solo COPIA su precio.** Lo que se guarda es el numero, no el
+plan: si mas adelante cambia el precio del catalogo, una fiesta ya acordada no cambia — seria
+feo que un comprobante ya enviado mostrara otra cifra. El descuento por fiesta se aplica encima.
+
+Los campos de presentacion de cada tarjeta (clase CSS, badge y emoji del boton de WhatsApp) no
+se editan desde el admin porque son diseno, pero se conservan al guardar: si el formulario
+reconstruyera el plan solo con lo que manda, cada guardado borraria el diseno.
+
+Verificado de punta a punta: se cambio el precio del Premium desde la pantalla, se guardo, y el
+sitio paso a mostrar $109.990 tachado con $54.995 — despues se restauro el valor real. El
+selector de la ficha llena el precio ($49.995 al elegir Premium). En PROD: `php -l` limpio en
+los cuatro PHP, la home responde 200 con los precios correctos y su estructura intacta (9
+enlaces de WhatsApp, todas las secciones), `admin/planes.php` pide contrasena, y
+`data/planes.json` **no es accesible por web (403)**. Pruebas backend y smoke 34/34 sin cambios.
+
+## DESPLEGADO 2026-09-07 (cierre) — revision responsiva del admin
+
+Luis edita a veces desde el telefono, asi que se midio cada pantalla del admin a 375 px
+buscando desbordes y controles imposibles de tocar. Cuatro defectos reales, todos en
+`admin/_style.css.php` (**CRLF**) salvo donde se indica:
+
+| Que pasaba | Donde se veia | Arreglo |
+|---|---|---|
+| La barra de botones se salia de la pantalla en movil | Mensajes (3 botones al 100% en una sola fila) | `.inline-form` con `flex-wrap: wrap` dentro del bloque de 480 px |
+| Los campos quedaban en 21 px de alto, sin estilo | Planes y el selector de fiesta del Comprobante | usar la clase `field`, que es la convencion del admin (`admin/planes.php`, `admin/comprobante.php`) |
+| Los cuatro numeros del calibrador de marco, en 20 px y sin borde | Ficha de la fiesta | regla propia para `input[type="number"].frame-value`, 44 px |
+| **La fila de contactos se salia del recuadro** | Ficha de la fiesta, en escritorio | `minmax(0, ...)` en la grilla y `min-width: 0` en los inputs |
+| El selector de plan sin estilo: etiqueta, menu y explicacion en una linea revuelta | Ficha de la fiesta | `.cobro-plan`, que no existia |
+
+**Por que se salia la fila de contactos:** `1fr` es `minmax(auto, 1fr)`, asi que la columna no
+puede achicarse por debajo del ancho minimo del input. Cuatro campos mas el radio "Principal"
+empujaban la grilla fuera del fieldset. Es el mismo error que suele confundirse con "falta
+responsive": no era el ancho de la pantalla, era la grilla.
+
+Verificado a 375 px despues del arreglo: las **nueve** pantallas del admin dan 375 px de ancho
+de documento, cero elementos fuera y cero controles bajo 40 px (salvo el boton "+ Agregar
+contacto", que es secundario y mide 36). En escritorio, la fila de contactos termina en 661 px
+dentro de un recuadro que llega a 675. Las paginas publicas (home, galeria, subir fotos, admin,
+carteles) declaran todas su `viewport`.
+
+## 2026-09-07 (cierre) — campos crudos y la fiesta de Frozen que no era
+
+### Ningun campo se queda con el estilo del navegador
+
+La regla `.field` solo cubria `text` y `date`, asi que los campos de **correo, telefono, numero,
+hora, clave y URL** salian cuadrados y de 21 px al lado de los demas: es lo que se ve como "HTML
+puro". Se extendio la regla a todos los tipos (`admin/_style.css.php`, **CRLF**).
+
+Verificado recorriendo **14 pantallas y vistas** del admin y midiendo cada control: cero
+elementos con esquinas rectas o bajo 34 px. La revision quedo hecha con la misma medicion que
+detecto el problema, no a ojo.
+
+### La fiesta de Frozen del 13-sep es la de Samantha, no la de Isidora
+
+Al buscar las invitaciones aparecieron **tres** fiestas con fecha 2026-09-13:
+
+| Fiesta | Creada | Invitacion | Estado |
+|---|---|---|---|
+| `samantha-hielo` (Samantha, Hielo) | 02-sep | #22 | la real |
+| `luciano-spidey` (Luciano, Spidey) | 02-sep | #23 | la real |
+| `isidora-reino-de-hielo` (Isidora, Hielo) | **27-jul** | #3 | vieja, con la misma fecha |
+
+`isidora-reino-de-hielo` es de julio: quedo con la fecha del 13-sep y por eso se tomo como la
+fiesta de Frozen en el trabajo anterior. Todo lo que se preparo para ella —album abierto, enlace
+de aportes, cobro en cero, carteles— **corresponde en realidad a Samantha**.
+
+Corregido: la fiesta de Samantha quedo con album creado (id 19), aportes abiertos hasta el
+20-sep, enlace de aportes vigente y cobro en cero con la nota de marcha blanca. Se regeneraron
+sus carteles y los de Luciano, ahora **con el cartel de la invitacion**, que antes no salia
+porque ninguna de las dos fiestas que se estaban usando tenia una emitida.
+
+**Pendiente de decision de Luis:** que hacer con `isidora-reino-de-hielo`. Sigue activa, con sus
+enlaces vivos y su album abierto. No se toco: desactivar una fiesta es su decision, no la mia.
+
+## 2026-09-07 — revision previa al domingo y dos hallazgos
+
+### Isidora desactivada
+
+`isidora-reino-de-hielo` (la fiesta de julio que quedo con fecha 13-sep) esta **desactivada**:
+`active=0`, galeria cerrada, aportes cerrados y su enlace de aportes revocado. El kiosco
+responde `{"ok":false,"error":"inactive"}` y su galeria devuelve 404. No se borro nada.
+
+### Revision de las dos fiestas reales: 49 comprobaciones
+
+Samantha y Luciano quedaron verificadas de punta a punta: activas, con la fecha correcta,
+tematica con mundo 3D, **PIN de galeria 1234 comprobado de verdad** (no asumido), fondo y
+cabecera de correo en disco, invitacion emitida y publicada, album con aportes abiertos y
+enlace que sigue vivo el dia de la fiesta, precio cargado y comprobante que se genera (61 kB).
+
+Falta una sola cosa, y es de Luis: **ninguna de las dos tiene contactos cargados**, asi que
+todavia no se les puede mandar el correo.
+
+Sobre el marco de la foto: Samantha usa el **default de la tematica** (`frame_box_json` en
+nulo), igual que usaba Isidora; el kiosco recibe `x=0.3315 y=0.3948 w=0.3407 h=0.1995`. Luciano
+tiene calibracion propia. No es un error, pero conviene mirarlo una vez en el calibrador antes
+del domingo.
+
+### Defecto encontrado: apagar la galeria no la cerraba
+
+`galeria.php` decidia el acceso mirando **solo si existia el hash del PIN**, no el interruptor
+del admin. Apagar "galeria habilitada" no cerraba nada: como todas las fiestas usan el mismo
+PIN, cualquiera con el enlace seguia entrando. Ahora mira `galeriaHabilitada`, que es el
+interruptor **y** el PIN. Verificado: la fiesta desactivada da 404 y las dos reales siguen
+abriendo.
+
+### AVISO IMPORTANTE PARA FUTUROS DESPLIEGUES
+
+**La `galeria.php` de PROD NO es la de esta rama.** PROD corre una version de 32 kB con lista de
+invitados, impresion por invitado y entrada sin PIN para el admin logueado; la de esta linea de
+codigo tiene 8 kB. Viene de otra rama que se desplego aparte.
+
+Por eso el arreglo se aplico **sobre el archivo de PROD** (se bajo, se parcho la linea, se
+volvio a subir) y no subiendo el de la rama, que habria borrado toda esa funcionalidad. Antes de
+subir `galeria.php` desde aca, comparar siempre el md5 con PROD. Fue justo esa comparacion la
+que evito el destrozo.
+
+## DESPLEGADO 2026-09-07 — Ajustes generales: copia oculta y recuperacion de contrasena
+
+Dos cosas que son del **administrador**, no de una fiesta ni de una tematica, asi que viven en
+una pantalla nueva **Admin -> Ajustes** (`data/ajustes.json`, mismo tipo de dato que
+`marca.json` y `planes.json`): Luis las cambia cuando quiera, sin tocar el hosting.
+
+| # | Local | PROD | Nota |
+|---|---|---|---|
+| 1 | `public/lib.ajustes.php` | `/lib.ajustes.php` | nuevo |
+| 2 | `public/lib.admin-password.php` | `/lib.admin-password.php` | nuevo |
+| 3 | `public/lib.mail.php` | `/lib.mail.php` | **en LF**; la copia oculta |
+| 4 | `public/data/ajustes.json` | `/data/ajustes.json` | nuevo; no accesible por web (403) |
+| 5 | `public/admin/ajustes.php`, `recuperar.php` | `/admin/` | pantallas nuevas |
+| 6 | `public/admin/config.php` | `/admin/config.php` | prefiere la contrasena recuperada |
+| 7 | 8 pantallas del admin | `/admin/` | enlace "Olvide la contrasena"; `invitations.php` **en LF** |
+
+**La copia oculta va como destinatario extra del SOBRE, no como cabecera `Bcc:`.** Hablando SMTP
+directo, esa cabecera viajaria dentro del mensaje y el cliente veria a quien mas se le mando,
+que es exactamente lo contrario de una copia oculta. Si el servidor rechaza la copia, el envio
+sigue: que falle la copia no puede impedir que al cliente le llegue su correo.
+
+**La contrasena nueva no reescribe el archivo de configuracion del servidor** (el que tiene las
+credenciales de la base y del SMTP). Queda como hash en el directorio de estado, fuera de la
+carpeta publica, y `admin/config.php` lo prefiere cuando existe. Borrar ese archivo devuelve la
+contrasena original.
+
+Lo que protege la recuperacion: el enlace se manda **siempre** al correo de Ajustes, nunca a uno
+escrito en el formulario; dura 30 minutos; sirve una sola vez; pedirlo esta limitado a 3 veces
+por hora y por IP; y al cambiarla se avisa por correo, para enterarse si no fue uno.
+
+Verificado en PROD: `php -l` limpio en los 15 archivos, ajustes cargados, **enlace de
+recuperacion pedido desde la pantalla real y enviado**, y **un correo de prueba enviado de
+verdad** con su copia oculta saliendo en el sobre y sin que la direccion aparezca en el mensaje.
+Pruebas: `tests/backend/admin-password.php` (26 comprobaciones nuevas) mas las suites de
+cliente, comprobante, backend general, leads y aceptacion. Smoke 33/33.
+
+## DESPLEGADO 2026-09-07 (cierre) — pantalla de Finanzas y logo de Instagram en los carteles
+
+### Finanzas: inversion contra ingresos, con graficos
+
+Luis pidio "un tema de finanzas inversion + ingresos con estadisticas y graficos para saber
+cuanto invierto y cuanto me ingresa". La decision de diseno que importa es **que NO se guarda**:
+el cobro de cada fiesta ya vive en `cc_parties` y **no se copia** a la tabla nueva. La pantalla
+lo lee con el mismo `cb_party_billing()` que arma el comprobante, asi que finanzas y la boleta
+del cliente no pueden mostrar numeros distintos. En `cc_finanzas` va solo lo que la aplicacion
+no puede saber sola: impresora, papel, imanes, publicidad.
+
+Lo regalado se cuenta aparte y **no como ingreso cero**: una fiesta de marcha blanca al 100% es
+plata que se decidio no cobrar, y verla sumada es lo que avisa si la marcha blanca se estira.
+
+| Archivo local | Destino en PROD | Tipo |
+|---|---|---|
+| `public/lib.finanzas.php` | `app/lib.finanzas.php` | OBLIGATORIO (nuevo) |
+| `public/admin/finanzas.php` | `app/admin/finanzas.php` | OBLIGATORIO (nuevo) |
+| `public/admin/index.php` | `app/admin/index.php` | OBLIGATORIO (**CRLF**, solo la pestana) |
+| `public/admin/planes.php` | `app/admin/planes.php` | OBLIGATORIO (**CRLF**, solo la pestana) |
+| `public/admin/ajustes.php` | `app/admin/ajustes.php` | OBLIGATORIO (**CRLF**, solo la pestana) |
+| `public/admin/comprobante.php` | `app/admin/comprobante.php` | OBLIGATORIO (**CRLF**, solo la pestana) |
+| `public/admin/mensajes.php` | `app/admin/mensajes.php` | OBLIGATORIO (**CRLF**, solo la pestana) |
+| `public/admin/aceptaciones.php` | `app/admin/aceptaciones.php` | OBLIGATORIO (**CRLF**, solo la pestana) |
+| `database/migrations/017_finanzas.php` | — | Se aplico con runner puntual, borrado despues |
+
+**La tabla de migraciones en PROD se llama `cc_schema_migrations`, no `cc_migrations`.** El
+runner fallaba en silencio hasta correrlo con `-d display_errors=1`: en el PHP CLI del host los
+errores no salen por defecto. Anotarlo aca ahorra el mismo rato la proxima vez.
+
+Aplicada y registrada: **19 versiones**. Verificado en PROD contra la base real (no solo por
+HTTP): `cb_finanzas_resumen()` devuelve las tres fiestas con precio cargado, los ingresos
+cuadran con la suma de sus partes y el resultado cuadra con ingresado menos invertido.
+`tests/backend/finanzas.php`: 26 comprobaciones. Los otros tests siguen verdes (comprobante 23,
+cliente 46, admin 26).
+
+**Bug que solo aparecio al probar contra PROD:** `lib.finanzas.php` no requeria `lib.php`, asi
+que funcionaba desde el admin (que ya lo carga) y reventaba desde cualquier script. La prueba
+por HTTP no lo habria encontrado nunca, porque sin sesion solo se ve el login.
+
+### El Instagram del pie de los carteles, con su logo
+
+En el pie de cada cartel el handle salia como texto suelto y se leia como un correo. Ahora lleva
+el glifo de la camara al lado, dibujado con `currentColor` para que siga al texto en los dos
+estilos (blanco sobre el fondo en "marco de agua", gris en "cabecera") y dimensionado en `em`,
+no en pixeles, porque el mismo pie se imprime en A6 y en A4.
+
+| Archivo local | Destino en PROD | Tipo |
+|---|---|---|
+| `dist/assets/carteles-DPB3tLmo.js` | `app/assets/carteles-DPB3tLmo.js` | OBLIGATORIO (hash nuevo) |
+| `dist/assets/carteles-DhQkSTt2.css` | `app/assets/carteles-DhQkSTt2.css` | OBLIGATORIO (hash nuevo) |
+| `dist/carteles.html` | `app/carteles.html` | OBLIGATORIO (apunta a los hashes nuevos) |
+
+Los bundles viejos (`carteles-CMXBjjcX.js`, `carteles-CM2zCFlK.css`) quedaron en el servidor y
+se pueden borrar. Verificado por HTTP: los tres responden 200 y el bundle trae `cartel__ig`.
+
+### Catalogo: el recuerdo imantado entra al Plan Premium
+
+`data/planes.json` en PROD se bajo primero y estaba **identico** al del repo (Luis no lo habia
+editado desde el admin). Se agrego una sola linea al Plan Premium, en tercer lugar de la lista
+porque es lo unico fisico del plan y tiene que leerse antes de que dejen de mirar:
+`Foto impresa con iman para el refri: una por invitado (hasta 25)`. Precios sin tocar.
+Respaldo en el scratchpad. Verificado en el sitio publico.
+
+## DESPLEGADO 2026-09-07 (noche) — dos juegos por fiesta, menu y tabla de posiciones
+
+Sesion larga. Lo que sigue es el estado real de PROD al cerrar, con lo que hay que saber para
+retomar sin romper nada.
+
+### Regla que manda sobre todo lo demas: las URL impresas no se tocan
+
+Luis ya imprimio los carteles QR de las dos fiestas del 13-sep. Un QR impreso no se puede
+corregir el dia de la fiesta, asi que **ninguna direccion existente puede cambiar**. El
+procedimiento que se uso y conviene repetir:
+
+1. `scratchpad/urls-criticas.py antes` guarda el estado HTTP de las 10 direcciones que estan
+   impresas o en uso.
+2. Se hace el cambio.
+3. `urls-criticas.py despues` compara y avisa si alguna cambio de estado.
+
+Se corrio en cada paso de esta sesion. **Ninguna URL cambio nunca.**
+
+### El menu de juegos: misma URL, contenido nuevo
+
+`app/juego/?p=<slug>` antes abria el juego directamente. Ahora abre un **menu**, y el juego
+que estaba ahi paso a llamarse `mundo.html` **en la misma carpeta**. Renombrar el HTML y no
+mover la carpeta fue deliberado: asi todas sus rutas relativas siguen resolviendo igual.
+
+- `app/juego/?p=<slug>` -> menu (index.html nuevo)
+- `app/juego/mundo.html` -> el juego de siempre, solo renombrada la entrada
+- `app/juego/festival/` -> "El Festival de las Estrellas" (de Codex)
+
+**Que juegos aparecen depende de la tematica**, y lo decide el servidor en `puntajes.php`. En
+un cumpleanos de superheroes no puede ofrecerse un mundo de nieve. Hoy: `hielo` tiene dos
+juegos, `spidey` y `heroes` tienen uno, y las otras siete tematicas ninguno.
+
+**Ojo con los nombres, que confunden:** la tematica de fiesta `spidey` usa el tema `heroes`
+del motor del juego (el mapeo esta en `juego/game/temas/index.js` linea 20). Por eso los
+recursos aracnidos viven en `juego/temas/heroes/`. Pero en el admin `heroes` es OTRA tematica
+distinta, la de "Mision 3D". No son lo mismo y confundirlas lleva a construir sobre la
+tematica equivocada.
+
+### El Festival de las Estrellas (juego de Codex) — tematica hielo/Frozen
+
+Origen: `C:\wamp64\www\tucumple-codex\`, rama `codex/festival-estrellas`, commit `0b68f50`.
+**El original quedo intacto**; se trabajo sobre una copia. Se subieron solo los 58 archivos
+que su `docs/ENTREGA.md` marca como obligatorios (19,44 MB). Nada de `.git/`, `docs/`,
+`tests/`, `README.md` ni `AGENTS.md`: verificado por HTTP que dan 403/404.
+
+`models/heroina.glb` conserva su SHA-256 aprobado
+(`59fa55ef55bb36e3dc40da5c9a565b9e5eb5fe0d5b7cc81518e1e1a094c4a549`).
+
+**El servidor no conocia la extension `.mjs`.** No esta en `/etc/mime.types` ni en la
+configuracion de Apache, y no habia ningun `.mjs` servido en todo el dominio. Sin declararlo,
+los once modulos del juego se sirven con un tipo que el navegador rechaza al importarlos y la
+pantalla queda negra **sin ningun error visible**. Se resolvio con un `.htaccess` propio en
+`festival/`, aditivo, que solo agrega `AddType text/javascript .mjs` y politica de cache. El
+del padre (`juego/`) no se toco: ya corta el catch-all del kiosco y declara `.glb`, `.wasm` y
+`.js`.
+
+Cambios hechos al codigo de Codex — los tres que pedia el encargo, mas dos correcciones que
+salieron de la prueba de Luis en tablet:
+
+| Que | Donde | Por que |
+|---|---|---|
+| Guardado por fiesta | `src/persistencia.mjs` | la clave era unica, asi que dos cumpleanos en la misma tablet se pisaban los datos. Ahora `cumpleclick-festival-v1:<slug>`; sin `?p=` cae en la clave vieja para no perder una partida abierta antes del cambio |
+| Hook de pruebas cerrado | `src/main.mjs` | `window.__juego` exponia `forzar()`, que inyecta controles: un mando invisible al alcance de cualquiera que abriera la consola durante la fiesta. Ahora solo aparece con `?debug=1` |
+| **Voz de Alice sobre el sintetizador** | `src/main.mjs`, 3 llamadas | decia `audio.localVoice ? null : T.instruccionAudio[...]`, o sea "si la tablet tiene voz espanola, usa esa en vez de la grabacion". Estaba invertido: ganaba el sintetizador del sistema y Alice nunca sonaba. **Las 9 grabaciones que trae el Festival SI son de Alice** (md5 identico a las del juego de hielo); el problema nunca fue el archivo sino cual elegia reproducir |
+| Letras del HUD | `estilo.css`, bloque al final | de 26 a 70 px encima del mundo 3D tapaban justo lo que hay que mirar. Bajadas con `clamp` contra `vmin`. En un caso hubo que igualar especificidad (`#hud #jugador`) porque `#hud strong` ganaba; se hizo **sin `!important`** |
+
+El bloque de CSS va **al final y comentado**, para poder distinguir que se cambio despues de
+la entrega de Codex.
+
+### Posiciones de la fiesta (migracion 018)
+
+`cc_puntajes` (fiesta, juego, jugador, puntaje, fecha). **Guarda cada intento**, no el mejor:
+el mejor se calcula al leer, y asi ademas se puede mostrar cuantas veces jugo cada nino.
+
+La decision de fondo esta probada en `tests/backend/puntajes.php` para que nadie la
+"simplifique" mas adelante: **los puntajes de dos juegos no se suman**. Un juego reparte miles
+de puntos por nivel y el otro decenas por turno; sumandolos, el de numeros grandes decide la
+fiesta entera y el otro no influye. Medido con datos reales en PROD: sumando, Sofia le sacaba
+**4.617** a Matias; con medallas la diferencia quedo en **1 punto**.
+
+Por eso cada juego reparte su propio podio y la tabla general cuenta **medallas** (3/2/1).
+Dentro de cada juego se compara el **mejor intento**, no la suma: con la suma gana el que se
+queda pegado a la tablet toda la tarde, no el que juega bien.
+
+Los nombres se unifican con `MB_CASE_TITLE`, porque "lucho", "Lucho " y "LUCHO" son el mismo
+nino y sin eso la tabla se llena de duplicados justo cuando mas se mira.
+
+`puntajes.php` **no lleva autenticacion, y es a proposito**: lo llama un juego que corre en la
+tablet de la fiesta, sin sesion de admin ni PIN. Una credencial ahi tendria que viajar en el
+JavaScript del juego, donde cualquiera la lee, y no protegeria nada. Lo que si se hace es
+acotar el dano: solo fiestas y juegos que existen, nombre saneado, puntaje acotado y limite
+de peticiones por direccion. El peor caso real es que alguien con el QR del cartel meta
+puntajes falsos en un cumpleanos: molesto, sin consecuencias, y se arregla borrando filas.
+
+### Los juegos reportan
+
+Ambos anotan con `sendBeacon` y no con `fetch`: un turno termina justo cuando la pantalla
+cambia y el nino le pasa la tablet al siguiente, y ahi un envio normal se cancela a mitad de
+vuelo. El beacon lo entrega el navegador aunque la pagina ya se haya ido.
+
+- **Festival** (`src/posiciones.mjs`): anota a cada nino **apenas termina su turno**, no al
+  final de la fiesta. Si la tablet se apaga o el cumpleanos se corta antes de la ceremonia, lo
+  ya jugado no se pierde. El ultimo jugador se anota en `ceremony()`, que es el unico que no
+  pasa por el cambio de turno; mandarlos a todos ahi inflaria su contador de partidas.
+- **mundo.html** (`game/posiciones.js`): es una aventura de un jugador, no por turnos, y no
+  lleva puntos sino objetivos. El puntaje sale del progreso guardado (copos x10, criaturas
+  x40, cascada y tormenta x60, extra por completarla). Recien empezado da 0; completa, 540.
+
+**Cual juego es se lo dice el menu** con `&juego=`, no lo adivina el juego: el motor solo
+conoce su tema, y `spidey` y `heroes` comparten mundo pero son juegos distintos en la tabla.
+
+Nada de esto puede arruinar una partida: si no hay red o el servidor no responde, se pierde
+ese puntaje y el juego sigue igual.
+
+### Girar el aparato y pantalla completa
+
+`juego/orientacion.js` mas `orientacion.css`, compartidos por los dos juegos. Es un script
+clasico y no un modulo porque los dos juegos tienen sistemas de modulos distintos.
+
+**El CSS va en archivo aparte** porque el Festival declara `style-src 'self'` en su CSP: un
+`<style>` inyectado desde el script queda bloqueado como estilo en linea y el aviso se veria
+sin ningun formato.
+
+Detecta el aparato con `pointer: coarse` (el puntero principal es un dedo) y no preguntando
+"hay tactil": un notebook con pantalla tactil respondia que si y recibia un aviso que no le
+corresponde, porque ahi uno agranda la ventana, no gira el monitor. Celular contra tablet lo
+decide el lado corto de `screen` (menos de 500 = celular), no el de la ventana, que cambia al
+girar y clasificaria al mismo aparato de dos formas.
+
+Celular -> "Gira el celular". Tablet -> "Gira la tablet". Computador -> no se muestra nada.
+
+**Pantalla completa:** el navegador no deja entrar por su cuenta. `requestFullscreen()` exige
+un gesto de la persona y **girar el aparato no cuenta como gesto**. Por eso se engancha al
+primer toque despues de girar: como para jugar hay que tocar la pantalla igual, en la practica
+sale automatico. Ademas intenta fijar la orientacion en horizontal (Android lo permite; iOS lo
+ignora sin romper nada).
+
+### Boton para enviar el comprobante desde la ficha
+
+En `admin/index.php`, al pie de la seccion Cobro. El envio sigue viviendo en
+`admin/comprobante.php` —un solo lugar que manda correos— pero antes de llevar alla se dice
+que falta: sin contactos con correo, sin precio, o con descuento sin motivo escrito. Enterarse
+en la otra pantalla obligaba a volver.
+
+### Lista de subida
+
+| Archivo local | Destino en PROD | Tipo |
+|---|---|---|
+| `database/migrations/018_puntajes.php` | — | aplicado con runner puntual, borrado despues |
+| `public/lib.puntajes.php` | `app/lib.puntajes.php` | OBLIGATORIO (nuevo) |
+| `public/puntajes.php` | `app/puntajes.php` | OBLIGATORIO (nuevo) |
+| `scratchpad/menu/index.html` | `app/juego/index.html` | OBLIGATORIO (reemplaza el juego, que paso a `mundo.html`) |
+| `scratchpad/orientacion/orientacion.js` | `app/juego/orientacion.js` | OBLIGATORIO (nuevo) |
+| `scratchpad/orientacion/orientacion.css` | `app/juego/orientacion.css` | OBLIGATORIO (nuevo) |
+| `scratchpad/festival/` (58 archivos) | `app/juego/festival/` | OBLIGATORIO (19,44 MB) |
+| `scratchpad/festival/.htaccess` | `app/juego/festival/.htaccess` | OBLIGATORIO — sin esto el juego no arranca |
+| `scratchpad/game-posiciones/posiciones.js` | `app/juego/game/posiciones.js` | OBLIGATORIO (nuevo) |
+| `main.js` parcheado | `app/juego/game/main.js` | OBLIGATORIO |
+| `public/admin/index.php` | `app/admin/index.php` | OBLIGATORIO (**CRLF**) |
+| `public/admin/_style.css.php` | `app/admin/_style.css.php` | OBLIGATORIO (**CRLF**) |
+| `dist/carteles.html` y sus dos assets | `app/` y `app/assets/` | OBLIGATORIO (los hashes cambian en cada build) |
+
+`mundo.html` se creo copiando `index.html` **en el servidor** con `cp -p`, no subiendolo: asi
+el archivo queda identico bit a bit al que ya funcionaba.
+
+### Respaldo y rollback
+
+`~/respaldos/juego-antes-festival-20260907.tar.gz` (30 MB, 195 archivos, verificado que se
+puede leer) mas una copia local en el scratchpad. Revertir es descomprimir ese tar y borrar
+`festival/`.
+
+### Lo que NO esta probado
+
+- **El Festival nunca ha corrido en la tablet fisica.** Sus 45 fps no estan certificados; su
+  propia documentacion registra caidas y hasta 179 draw calls contra un presupuesto de 150.
+- No hay partida real de 12 participantes; la automatizacion de Codex cubre 8.
+- El aviso de girar se verifico emulando celular y computador. **El caso tablet con tactil no
+  se pudo emular** y se valido por logica contra medidas de aparatos reales.
+- La tabla de posiciones se probo con datos inyectados, no con ninos jugando de verdad.
+
+### Estado de la base al cerrar
+
+20 migraciones aplicadas. `cc_puntajes` y `cc_finanzas` existen y estan **vacias**: los datos
+de prueba se borraron al terminar.

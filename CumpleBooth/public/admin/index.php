@@ -5,8 +5,9 @@
  * Sin dependencias externas. Compatible PHP 8.0+ (baseline 8.2).
  */
 require __DIR__ . '/../lib.php';
-require __DIR__ . '/../lib.acceptance.php';
 require __DIR__ . '/config.php';
+require_once __DIR__ . '/../lib.planes.php';
+require __DIR__ . '/../lib.acceptance.php';
 $adminSecureCookie = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
 session_name('cc_admin');
 session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => $adminSecureCookie, 'httponly' => true, 'samesite' => 'Strict']);
@@ -145,7 +146,9 @@ function admin_icon(string $name): string
         'edit' => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
         'trash' => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
         'copy' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+        'chart' => '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-4M12 16V8M17 16v-6"/>',
         'external' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>',
+        'chat' => '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
         'duplicate' => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V4a2 2 0 0 1 2-2h8"/></svg>',
         'plus' => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
         'logout' => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>',
@@ -261,7 +264,12 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             if ($galleryEnabled && $servicePlan !== 'full') {
                 $errs[] = 'La galería solo puede habilitarse con el plan Full.';
             }
-            if ($galleryEnabled && $galeriaPin === '' && (!$isEdit || empty($parties[$origPublicSlug]['galeriaHabilitada']))) {
+            // `$origPublicSlug` se define más abajo: aquí todavía no existe, así que
+            // `$parties[$origPublicSlug]` era null y la condición se cumplía siempre. Al
+            // editar una fiesta que YA tenía galería con PIN, el formulario exigía
+            // escribir el PIN de nuevo y no dejaba guardar ningún otro cambio.
+            $slugEnEdicion = cb_valid_public_slug((string) ($_POST['slug_original'] ?? '')) ? (string) $_POST['slug_original'] : '';
+            if ($galleryEnabled && $galeriaPin === '' && (!$isEdit || empty($parties[$slugEnEdicion]['galeriaHabilitada']))) {
                 $errs[] = 'Para habilitar la galería debes configurar un PIN de 4 dígitos.';
             }
             if ($galeriaPin !== '' && !cb_valid_galeria_pin($galeriaPin)) {
@@ -269,6 +277,22 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             }
             if (!$frameReset && $frameBox === null) {
                 $errs[] = 'La calibración del marco debe usar valores 0..1 y quedar dentro del lienzo.';
+            }
+
+            // Cierre del plan: una fiesta solo se activa con aceptación de Términos firmada
+            // (o exención explícita para demos). En modo json no hay tabla y no se bloquea.
+            if ($activa && empty($errs) && cb_storage_mode() === 'db') {
+                try {
+                    $canActivate = $isEdit && cb_party_can_activate((string) ($_POST['slug_original'] ?? ''));
+                } catch (Throwable $e) {
+                    error_log('CumpleClick acceptance gate: ' . $e->getMessage());
+                    $canActivate = false;
+                }
+                if (!$canActivate) {
+                    $errs[] = $isEdit
+                        ? 'No puedes activar esta fiesta hasta que el cliente acepte los Términos y firme (o la eximas desde "Aceptación"). Guarda como inactiva mientras tanto.'
+                        : 'Una fiesta nueva se crea inactiva: guárdala, genera el enlace de aceptación desde "Aceptación" y actívala cuando el cliente firme.';
+                }
             }
 
             $publicSlug = '';
@@ -286,22 +310,6 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 } catch (Throwable $e) {
                     error_log('CumpleClick public_slug generation: ' . $e->getMessage());
                     $errs[] = 'No se pudo generar el identificador público único. Reintenta.';
-                }
-            }
-
-            // Cierre del plan: una fiesta solo se activa con aceptación de Términos firmada
-            // (o exención explícita para demos). En modo json no hay tabla y no se bloquea.
-            if ($activa && empty($errs) && cb_storage_mode() === 'db') {
-                try {
-                    $canActivate = $isEdit && cb_party_can_activate($publicSlug);
-                } catch (Throwable $e) {
-                    error_log('CumpleClick acceptance gate: ' . $e->getMessage());
-                    $canActivate = false;
-                }
-                if (!$canActivate) {
-                    $errs[] = $isEdit
-                        ? 'No puedes activar esta fiesta hasta que el cliente acepte los Términos y firme (o la eximas desde "Aceptación"). Guarda como inactiva mientras tanto.'
-                        : 'Una fiesta nueva se crea inactiva: guárdala, genera el enlace de aceptación desde "Aceptación" y actívala cuando el cliente firme.';
                 }
             }
 
@@ -331,8 +339,36 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 }
                 $parties[$publicSlug] = $registro;
                 if (cb_save_parties(['parties' => $parties])) {
-                    header('Location: index.php?ok=' . ($isEdit ? 'editada' : 'creada'));
-                    exit;
+                    // Contactos y cobro van después de guardar: en una fiesta nueva el id
+                    // recién existe acá, y los contactos cuelgan de ese id.
+                    $contactos = [];
+                    $nombres = (array) ($_POST['contacto_name'] ?? []);
+                    $principal = (string) ($_POST['contacto_principal'] ?? '0');
+                    foreach ((array) ($_POST['contacto_email'] ?? []) as $i => $correo) {
+                        $contactos[] = [
+                            'name' => (string) ($nombres[$i] ?? ''),
+                            'email' => (string) $correo,
+                            'phone' => (string) (((array) ($_POST['contacto_phone'] ?? []))[$i] ?? ''),
+                            'relationship' => (string) (((array) ($_POST['contacto_rel'] ?? []))[$i] ?? 'otro'),
+                            'is_primary' => (string) $i === $principal,
+                        ];
+                    }
+                    $rc = cb_save_party_contacts($publicSlug, $contactos);
+                    $rb = cb_save_party_billing($publicSlug, [
+                        'price_total' => $_POST['price_total'] ?? null,
+                        'discount_amount' => $_POST['discount_amount'] ?? null,
+                        'discount_percent' => $_POST['discount_percent'] ?? null,
+                        'discount_label' => $_POST['discount_label'] ?? '',
+                        'deposit_amount' => $_POST['deposit_amount'] ?? null,
+                        'payment_note' => $_POST['payment_note'] ?? '',
+                    ]);
+                    // La fiesta ya quedó guardada: un error acá no la deshace, se avisa y
+                    // se vuelve al formulario con lo que el operador escribió.
+                    $errs = array_merge($errs, (array) ($rc['errors'] ?? []), (array) ($rb['errors'] ?? []));
+                    if (empty($errs)) {
+                        header('Location: index.php?ok=' . ($isEdit ? 'editada' : 'creada'));
+                        exit;
+                    }
                 }
                 $errs[] = 'No se pudo guardar (revisa permisos/errores de BD). Consula los logs del servidor.';
             }
@@ -354,6 +390,29 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 'galeriaPin' => $galeriaPin,
                 'pin_configured' => $isEdit && !empty($parties[$origPublicSlug]['galeriaHabilitada']),
                 'frameBox' => $frameBox,
+                'contactos' => (function (): array {
+                    $filas = [];
+                    $principal = (string) ($_POST['contacto_principal'] ?? '0');
+                    foreach ((array) ($_POST['contacto_email'] ?? []) as $i => $correo) {
+                        $filas[] = [
+                            'name' => (string) (((array) ($_POST['contacto_name'] ?? []))[$i] ?? ''),
+                            'email' => (string) $correo,
+                            'phone' => (string) (((array) ($_POST['contacto_phone'] ?? []))[$i] ?? ''),
+                            'relationship' => (string) (((array) ($_POST['contacto_rel'] ?? []))[$i] ?? 'otro'),
+                            'is_primary' => (string) $i === $principal,
+                        ];
+                    }
+                    $filas[] = ['name' => '', 'email' => '', 'phone' => '', 'relationship' => 'madre', 'is_primary' => false];
+                    return $filas;
+                })(),
+                'cobro' => [
+                    'price_total' => (string) ($_POST['price_total'] ?? ''),
+                    'discount_amount' => (string) ($_POST['discount_amount'] ?? ''),
+                    'discount_percent' => (string) ($_POST['discount_percent'] ?? ''),
+                    'discount_label' => (string) ($_POST['discount_label'] ?? ''),
+                    'deposit_amount' => (string) ($_POST['deposit_amount'] ?? ''),
+                    'payment_note' => (string) ($_POST['payment_note'] ?? ''),
+                ],
             ];
         } elseif ($action === 'eliminar') {
             $publicSlug = cb_valid_public_slug((string) ($_POST['slug'] ?? '')) ? (string) $_POST['slug'] : '';
@@ -481,6 +540,7 @@ if (!$loggedIn) {
         <input type="password" id="password" name="password" required autofocus placeholder="••••••••">
       </div>
       <button type="submit" class="btn btn-cta btn-block">Ingresar</button>
+      <p class="muted small" style="margin-top:12px;text-align:center"><a href="recuperar.php">Olvide la contrasena</a></p>
     </form>
   </main>
 </body>
@@ -531,13 +591,6 @@ $okFlash = isset($_GET['ok'], $okMessages[$_GET['ok']]) ? $okMessages[$_GET['ok'
 $view = $_GET['view'] ?? 'fiestas';
 $action = $_GET['action'] ?? '';
 $baseUrl = admin_base_url();
-// Estado de aceptación de Términos por fiesta (una consulta para todo el listado).
-try {
-    $acceptanceStates = cb_acceptance_states_by_slug();
-} catch (Throwable $e) {
-    error_log('CumpleClick acceptance states: ' . $e->getMessage());
-    $acceptanceStates = [];
-}
 $detailThemeSlugRaw = is_string($_GET['slug'] ?? null) ? (string) $_GET['slug'] : '';
 $detailThemeSlug = cb_valid_slug($detailThemeSlugRaw, 1, 40) && isset($themes[$detailThemeSlugRaw])
     ? $detailThemeSlugRaw
@@ -577,6 +630,8 @@ if ($formValues === null && $action === 'editar') {
             'galeriaPin' => '',
             'pin_configured' => !empty($p['galeriaHabilitada']),
             'frameBox' => cb_normalize_frame_box($p['frameBox'] ?? null),
+            'contactos' => array_merge(cb_party_contacts($editSlug), [['name' => '', 'email' => '', 'phone' => '', 'relationship' => 'madre', 'is_primary' => false]]),
+            'cobro' => array_map(static fn($v) => $v === null ? '' : $v, cb_party_billing($editSlug)),
         ];
     } else {
         $showForm = false;
@@ -593,14 +648,16 @@ if ($formValues === null && $action === 'editar') {
         // Nueva fiesta nace inactiva: se activa cuando exista aceptación de Términos.
         'activa' => false,
         'service_plan' => 'booth',
-        // Galería habilitada con PIN 1234 por defecto (Luis, 2026-09-06): el juego 3D y
-        // galeria.php funcionan sin configurar nada; el operador puede cambiarlo.
-        'gallery_enabled' => true,
+        'gallery_enabled' => false,
         'juegos' => null,
         'invitados_text' => '',
-        'galeriaPin' => '1234',
+        'galeriaPin' => '',
         'pin_configured' => false,
         'frameBox' => ['x' => 0.32, 'y' => 0.30, 'w' => 0.36, 'h' => 0.28],
+        'contactos' => [['name' => '', 'email' => '', 'phone' => '', 'relationship' => 'madre', 'is_primary' => true]],
+        'cobro' => ['price_total' => '', 'discount_amount' => '', 'discount_percent' => '',
+                    'discount_label' => '',
+                    'deposit_amount' => '', 'payment_note' => ''],
     ];
 }
 ?><!DOCTYPE html>
@@ -658,6 +715,10 @@ if ($formValues === null && $action === 'editar') {
       }
     ?>
     <a class="tab" href="leads.php"><?= admin_icon('party') ?> Solicitudes<?= $leadsNuevos > 0 ? ' <b class="tab-badge">' . (int) $leadsNuevos . '</b>' : '' ?></a>
+    <a class="tab" href="mensajes.php"><?= admin_icon('party') ?> Mensajes</a>
+    <a class="tab" href="comprobante.php"><?= admin_icon('copy') ?> Comprobante</a>
+    <a class="tab" href="planes.php"><?= admin_icon('copy') ?> Planes</a>
+    <a class="tab" href="finanzas.php"><?= admin_icon('chart') ?> Finanzas</a>
   </nav>
 
   <main>
@@ -812,15 +873,143 @@ if ($formValues === null && $action === 'editar') {
 
           <fieldset class="field frame-calibrator">
             <legend>Calibrador del marco de cámara</legend>
-            <p class="muted small">Ajusta el marco decorativo sobre el fondo. La zona naranja muestra la foto cuadrada final, centrada y con margen para no tapar el borde dorado.</p>
+            <p class="muted small">Ajusta el marco decorativo sobre el fondo. <!-- step="any": con step="0.001" el navegador rechazaba las fiestas cuyo marco se calibró arrastrando (valores de 4 decimales, como 0.3315) y el formulario no se enviaba, sin decir por qué. El rango 0..1 lo valida el servidor. --> La zona naranja muestra la foto cuadrada final, centrada y con margen para no tapar el borde dorado.</p>
             <div class="frame-preview" style="background-image:url('../themes/<?= h($formValues['tema']) ?>/fondo-sala.jpg')"><span id="frame-overlay"></span></div>
             <div class="frame-grid">
               <?php foreach (['x' => 'X', 'y' => 'Y', 'w' => 'Ancho', 'h' => 'Alto'] as $key => $label): ?>
-                <label><?= h($label) ?><input class="frame-value" data-frame="<?= h($key) ?>" type="number" name="frame_<?= h($key) ?>" min="<?= in_array($key, ['w', 'h'], true) ? '0.05' : '0' ?>" max="1" step="0.001" value="<?= h($formBox[$key]) ?>" required></label>
+                <label><?= h($label) ?><input class="frame-value" data-frame="<?= h($key) ?>" type="number" name="frame_<?= h($key) ?>" min="<?= in_array($key, ['w', 'h'], true) ? '0.05' : '0' ?>" max="1" step="any" value="<?= h($formBox[$key]) ?>" required></label>
               <?php endforeach; ?>
             </div>
             <label class="checkbox-field"><input type="checkbox" name="frame_reset"> Usar calibración predeterminada de la temática</label>
           </fieldset>
+
+          <fieldset class="field">
+            <legend>Quién contrató la fiesta</legend>
+            <p class="muted small">
+              Puede ser la madre, el padre o alguien más de la familia, y puede haber varios.
+              A estos correos se manda la bienvenida, el enlace de firma y el comprobante.
+              El marcado como principal es a quien se le escribe por defecto.
+            </p>
+            <div id="contactos">
+              <?php foreach ($formValues['contactos'] as $i => $c): ?>
+                <div class="contacto-fila">
+                  <input type="text" name="contacto_name[]" placeholder="Nombre" value="<?= h($c['name']) ?>" autocomplete="off">
+                  <input type="email" name="contacto_email[]" placeholder="correo@ejemplo.cl" value="<?= h($c['email']) ?>" autocomplete="off">
+                  <input type="text" name="contacto_phone[]" placeholder="WhatsApp" value="<?= h($c['phone']) ?>" autocomplete="off">
+                  <select name="contacto_rel[]">
+                    <?php foreach (cb_contact_relationships() as $valor => $etiqueta): ?>
+                      <option value="<?= h($valor) ?>" <?= $c['relationship'] === $valor ? 'selected' : '' ?>><?= h($etiqueta) ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                  <label class="checkbox-field" title="Contacto principal">
+                    <input type="radio" name="contacto_principal" value="<?= (int) $i ?>" <?= !empty($c['is_primary']) ? 'checked' : '' ?>> Principal
+                  </label>
+                </div>
+              <?php endforeach; ?>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="agregar-contacto">+ Agregar contacto</button>
+          </fieldset>
+
+          <fieldset class="field">
+            <legend>Cobro del servicio</legend>
+            <p class="muted small">Lo que aparece en el comprobante que recibe el cliente. En pesos, sin decimales.</p>
+            <?php $planesCatalogo = cb_planes()['planes']; ?>
+            <?php if ($planesCatalogo): ?>
+              <label class="cobro-plan">Tomar el precio de un plan
+                <select id="plan-catalogo">
+                  <option value="">Escribir el precio a mano</option>
+                  <?php foreach ($planesCatalogo as $planCat): ?>
+                    <option value="<?= (int) $planCat['precio'] ?>"><?= h($planCat['nombre']) ?> · <?= h(cb_format_clp($planCat['precio'])) ?></option>
+                  <?php endforeach; ?>
+                </select>
+                <small class="muted">Copia el precio vigente al campo de abajo. Queda guardado ese número: si más adelante cambia el precio del plan, esta fiesta no cambia. Se editan en <a href="planes.php">Planes</a>.</small>
+              </label>
+            <?php endif; ?>
+            <div class="cobro-grid">
+              <label>Precio del plan
+                <input type="text" name="price_total" inputmode="numeric" placeholder="99990" value="<?= h($formValues['cobro']['price_total'] ?? '') ?>">
+              </label>
+              <label>Descuento en %
+                <input type="text" name="discount_percent" inputmode="decimal" placeholder="20" value="<?= h($formValues['cobro']['discount_percent'] ?? '') ?>">
+                <small class="muted">Si lo llenas, manda sobre el monto en pesos. 100 = sin costo.</small>
+              </label>
+              <label>Descuento en pesos
+                <input type="text" name="discount_amount" inputmode="numeric" placeholder="30000" value="<?= h($formValues['cobro']['discount_amount'] ?? '') ?>">
+                <small class="muted">Solo si no usas porcentaje.</small>
+              </label>
+              <label>Motivo del descuento
+                <input type="text" name="discount_label" maxlength="80" placeholder="Descuento de lanzamiento" value="<?= h($formValues['cobro']['discount_label'] ?? '') ?>">
+              </label>
+              <label>Anticipo pagado
+                <input type="text" name="deposit_amount" inputmode="numeric" placeholder="30000" value="<?= h($formValues['cobro']['deposit_amount'] ?? '') ?>">
+              </label>
+              <label>Forma de pago
+                <input type="text" name="payment_note" maxlength="160" placeholder="Transferencia" value="<?= h($formValues['cobro']['payment_note'] ?? '') ?>">
+              </label>
+            </div>
+            <?php if (!empty($formValues['cobro']['total'])): ?>
+              <p class="muted small">Total con descuento: <strong><?= h(cb_format_clp((int) $formValues['cobro']['total'])) ?></strong>
+                · Saldo: <strong><?= h(cb_format_clp((int) $formValues['cobro']['balance'])) ?></strong></p>
+            <?php endif; ?>
+
+            <?php
+            /* Mandar el comprobante desde acá, que es donde se acaban de cargar los contactos.
+               El envío en sí sigue viviendo en `comprobante.php` —un solo lugar que manda
+               correos— pero antes de llevarlo allá se dice si falta algo, porque descubrirlo
+               en la otra pantalla obliga a volver. Solo aparece en fiestas ya guardadas. */
+            $slugFicha = ($formValues['modo'] ?? '') === 'editar'
+                ? (string) ($formValues['public_slug'] ?? '') : '';
+            if ($slugFicha !== '') {
+                $cobroActual = cb_party_billing($slugFicha);
+                $correosPapas = cb_party_contact_emails($slugFicha);
+                $pendientes = [];
+                if (!$correosPapas) {
+                    $pendientes[] = 'falta cargar un contacto con correo, acá arriba';
+                }
+                if ($cobroActual['price_total'] === null) {
+                    $pendientes[] = 'falta el precio del servicio';
+                }
+                if ((int) $cobroActual['discount_amount'] > 0 && (string) $cobroActual['discount_label'] === '') {
+                    // Un 100% sin explicación en una boleta se ve mal y genera la pregunta.
+                    $pendientes[] = 'el descuento no tiene motivo escrito: en la boleta sale desnudo';
+                }
+            ?>
+            <div class="cobro-envio">
+              <?php if (!$pendientes): ?>
+                <p class="muted small">
+                  Todo listo: <?= count($correosPapas) ?> correo<?= count($correosPapas) === 1 ? '' : 's' ?>
+                  en la ficha y el comprobante armado.
+                </p>
+                <a class="btn btn-primary" href="comprobante.php?p=<?= h(urlencode($slugFicha)) ?>">
+                  <?= admin_icon('chat') ?> Enviar el comprobante por correo
+                </a>
+              <?php else: ?>
+                <p class="muted small"><strong>Para enviarle el comprobante al papá falta:</strong></p>
+                <ul class="cobro-envio__faltan">
+                  <?php foreach ($pendientes as $p): ?><li><?= h($p) ?></li><?php endforeach; ?>
+                </ul>
+                <a class="btn btn-ghost" href="comprobante.php?p=<?= h(urlencode($slugFicha)) ?>">
+                  Ver el comprobante igual
+                </a>
+              <?php endif; ?>
+            </div>
+            <?php } ?>
+          </fieldset>
+          <script>
+            // Elegir un plan solo COPIA su precio al campo: lo que se guarda es el número,
+            // no el plan. Así, cambiar el catalógo más adelante no le mueve el precio a una
+            // fiesta ya acordada, que es lo que diría un comprobante ya enviado.
+            (function () {
+              var selector = document.getElementById('plan-catalogo');
+              var precio = document.querySelector('[name="price_total"]');
+              if (!selector || !precio) { return; }
+              selector.addEventListener('change', function () {
+                if (selector.value === '') { return; }
+                precio.value = selector.value;
+                precio.focus();
+              });
+            })();
+          </script>
 
           <label class="checkbox-field">
             <input type="checkbox" name="activa" <?= !empty($formValues['activa']) ? 'checked' : '' ?>>
@@ -1162,6 +1351,15 @@ if ($formValues === null && $action === 'editar') {
         </div>
       <?php endif; ?>
 
+      <?php
+        // Estado de aceptación por fiesta: una consulta para todo el listado.
+        try {
+            $acceptanceStates = cb_acceptance_states_by_slug();
+        } catch (Throwable $e) {
+            error_log('CumpleClick acceptance states: ' . $e->getMessage());
+            $acceptanceStates = [];
+        }
+      ?>
       <div class="party-list">
         <?php foreach ($parties as $publicSlug => $p): ?>
           <?php
@@ -1197,10 +1395,6 @@ if ($formValues === null && $action === 'editar') {
                 </span>
                 <span class="badge badge-off"><?= h($servicePlan) ?></span>
                 <?php if ($galleryEnabled): ?><span class="badge badge-ok">Galería</span><?php endif; ?>
-                <?php $accState = (string) ($acceptanceStates[$publicSlug] ?? 'none'); ?>
-                <span class="badge <?= $accState === 'accepted' ? 'badge-ok' : ($accState === 'waived' ? 'badge-warn' : 'badge-off') ?>" title="Aceptación de Términos y firma">
-                  <?= $accState === 'accepted' ? admin_icon('check') : '' ?> T&amp;C: <?= h(cb_acceptance_status_label($accState)) ?>
-                </span>
                 <?php
                 $eventProfileEnabled = !empty($eventProfile['is_enabled']);
                 $eventProfilePeople = is_array($eventProfile['featured_people'] ?? null) ? count($eventProfile['featured_people']) : 0;
@@ -1228,6 +1422,9 @@ if ($formValues === null && $action === 'editar') {
                 <a class="btn btn-ghost" href="<?= h($galeriaUrl) ?>" target="_blank" rel="noopener"><?= admin_icon('gallery') ?> Galería</a>
               <?php endif; ?>
               <a class="btn btn-ghost" href="<?= h($invitationsUrl) ?>"><?= admin_icon('duplicate') ?> Invitaciones</a>
+              <a class="btn btn-ghost" href="mensajes.php?p=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('chat') ?> Mensajes</a>
+              <a class="btn btn-ghost" href="../carteles.html?p=<?= rawurlencode($publicSlug) ?>" target="_blank" rel="noopener"><?= admin_icon('gallery') ?> Carteles QR</a>
+              <a class="btn btn-ghost" href="comprobante.php?p=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('copy') ?> Comprobante</a>
               <a class="btn btn-ghost" href="aceptaciones.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('check') ?> Aceptación</a>
               <?php // Solo si el módulo está realmente utilizable. Los archivos del
                     // álbum pueden estar subidos sin la migración 007 aplicada, y en
@@ -1480,6 +1677,27 @@ if ($formValues === null && $action === 'editar') {
       document.body.style.overflow = 'hidden';
     });
   })();
+})();
+</script>
+<script>
+// Agregar contacto: clona la última fila y la deja vacía. El radio "Principal" usa el
+// índice como valor, así que la copia recibe el siguiente número; si no, dos filas
+// competirían por el mismo valor y el navegador las trataría como una sola opción.
+(function () {
+  var caja = document.getElementById('contactos');
+  var boton = document.getElementById('agregar-contacto');
+  if (!caja || !boton) { return; }
+  boton.addEventListener('click', function () {
+    var filas = caja.querySelectorAll('.contacto-fila');
+    var copia = filas[filas.length - 1].cloneNode(true);
+    copia.querySelectorAll('input').forEach(function (el) {
+      if (el.type === 'radio') { el.value = String(filas.length); el.checked = false; }
+      else { el.value = ''; }
+    });
+    caja.appendChild(copia);
+    var primero = copia.querySelector('input[type="text"]');
+    if (primero) { primero.focus(); }
+  });
 })();
 </script>
 </body>

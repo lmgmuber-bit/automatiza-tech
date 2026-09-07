@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Juegos de la fiesta · CumpleClick</title>
+<!--
+  Menú de los juegos 3D de una fiesta.
+
+  Vive en la MISMA dirección que antes abría el juego directamente
+  (/app/juego/?p=<slug>), porque esa dirección ya está impresa en los carteles QR que
+  cuelgan en la mesa. Cambiar la ruta habría dejado esos códigos apuntando a nada, y un
+  cartel impreso no se puede corregir el día de la fiesta. El juego que estaba acá pasó a
+  llamarse mundo.html, en la misma carpeta, para que sus rutas relativas no se muevan.
+
+  Qué juegos aparecen depende de la temática: en un cumpleaños de superhéroes no puede
+  ofrecerse un mundo de nieve. La lista la decide el servidor en puntajes.php.
+
+  Sin dependencias externas: la tablet de la fiesta puede estar en una red mala y el
+  proyecto no usa CDN.
+-->
+<style>
+  :root {
+    --tinta: #152238;
+    --tinta-suave: #55607a;
+    --glaciar: #5fb6ff;
+    --glaciar-oscuro: #2f8fe0;
+    --lavanda: #8f7bd6;
+    --lavanda-oscura: #6c53c4;
+    --dorado: #ffcf6b;
+    --dorado-oscuro: #f0a94e;
+    --papel: #f2f7ff;
+    --tarjeta: #ffffff;
+    --borde: #d9e6f7;
+    --sombra: 0 2px 4px rgba(21, 34, 56, .06), 0 12px 32px rgba(47, 143, 224, .16);
+    --fuente: "Baloo 2", "Nunito", "Segoe UI Rounded", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; min-height: 100dvh; font-family: var(--fuente); color: var(--tinta);
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #dceeff 0%, transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, #efe6ff 0%, transparent 55%),
+      var(--papel);
+    padding: max(20px, env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .caja { width: 100%; max-width: 780px; }
+
+  header { text-align: center; margin: 6px 0 26px; }
+  .sello {
+    display: inline-block; font-size: .74rem; font-weight: 700; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--lavanda-oscura); margin: 0 0 8px;
+  }
+  h1 { margin: 0; font-size: clamp(1.9rem, 6vw, 2.7rem); line-height: 1.12; font-weight: 800; }
+  .sub { margin: 8px 0 0; color: var(--tinta-suave); font-size: 1.02rem; }
+
+  /* Las tarjetas son el objetivo táctil principal: en una tablet las toca un niño de
+     cinco años, muchas veces con la mano completa. Nada bajo 96 px de alto. */
+  .juegos { display: grid; gap: 16px; grid-template-columns: 1fr; }
+  @media (min-width: 620px) { .juegos { grid-template-columns: 1fr 1fr; } }
+  .juego {
+    display: flex; align-items: center; gap: 16px; min-height: 104px;
+    padding: 18px 20px; border-radius: 22px; text-decoration: none; color: inherit;
+    background: var(--tarjeta); border: 2px solid var(--borde); box-shadow: var(--sombra);
+    transition: transform .12s ease, border-color .12s ease;
+  }
+  .juego:active { transform: scale(.98); border-color: var(--glaciar); }
+  .juego__icono {
+    flex: 0 0 auto; width: 58px; height: 58px; border-radius: 18px; display: grid;
+    place-items: center; font-size: 1.9rem;
+    background: linear-gradient(150deg, var(--glaciar) 0%, var(--lavanda) 100%);
+  }
+  .juego__txt { min-width: 0; }
+  .juego__txt b { display: block; font-size: 1.16rem; line-height: 1.25; }
+  .juego__txt span { display: block; color: var(--tinta-suave); font-size: .92rem; margin-top: 3px; }
+
+  .acciones { display: flex; flex-wrap: wrap; gap: 12px; margin: 22px 0 0; }
+  .boton {
+    flex: 1 1 auto; min-height: 60px; padding: 16px 22px; border-radius: 18px; border: 0;
+    font: inherit; font-size: 1.05rem; font-weight: 800; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    text-decoration: none; color: var(--tinta);
+    background: linear-gradient(160deg, var(--dorado) 0%, var(--dorado-oscuro) 100%);
+    box-shadow: var(--sombra);
+  }
+  .boton--claro { background: var(--tarjeta); border: 2px solid var(--borde); }
+  .boton:active { transform: scale(.98); }
+
+  /* ── Posiciones ───────────────────────────────────────────── */
+  .tablas { margin: 26px 0 0; }
+  .tabla-caja {
+    background: var(--tarjeta); border: 2px solid var(--borde); border-radius: 22px;
+    box-shadow: var(--sombra); padding: 18px 20px; margin: 0 0 16px;
+  }
+  .tabla-caja h2 { margin: 0 0 4px; font-size: 1.2rem; }
+  .tabla-caja p.pie { margin: 12px 0 0; font-size: .86rem; color: var(--tinta-suave); }
+  table { width: 100%; border-collapse: collapse; font-size: 1rem; }
+  th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--borde); }
+  tbody tr:last-child td { border-bottom: 0; }
+  th { font-size: .74rem; text-transform: uppercase; letter-spacing: .08em; color: var(--tinta-suave); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .lugar { width: 44px; font-size: 1.3rem; text-align: center; }
+  .campeon td { background: #fff8e6; font-weight: 800; }
+  .veces { color: var(--tinta-suave); font-size: .82rem; }
+
+  .aviso {
+    background: var(--tarjeta); border: 2px dashed var(--borde); border-radius: 22px;
+    padding: 26px 22px; text-align: center; color: var(--tinta-suave); line-height: 1.55;
+  }
+  .aviso b { display: block; color: var(--tinta); font-size: 1.1rem; margin: 0 0 6px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="caja">
+
+  <header>
+    <p class="sello">CumpleClick</p>
+    <h1 id="titulo">Juegos de la fiesta</h1>
+    <p class="sub" id="bajada">Elige un juego para empezar.</p>
+  </header>
+
+  <main id="pantalla-juegos">
+    <div class="juegos" id="lista"></div>
+    <div class="acciones">
+      <button class="boton" type="button" id="ver-posiciones">🏆 Posiciones</button>
+      <a class="boton boton--claro" id="volver" hidden>◂ Volver</a>
+    </div>
+  </main>
+
+  <main id="pantalla-posiciones" hidden>
+    <div class="tablas" id="tablas"></div>
+    <div class="acciones">
+      <button class="boton boton--claro" type="button" id="ver-juegos">◂ Volver a los juegos</button>
+    </div>
+  </main>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var params = new URLSearchParams(location.search);
+  var slug = (params.get('p') || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 60);
+  var enKiosco = params.get('kiosco') === '1';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+
+  // Los juegos viven en carpetas distintas y algunos los escribe otro agente, así que la
+  // dirección de cada uno se arma acá y no en el servidor: el servidor dice cuáles hay.
+  var RUTAS = {
+    'reino-hielo': 'mundo.html',
+    'aracnida': 'mundo.html',
+    'mision': 'mundo.html',
+    'festival': 'festival/'
+  };
+  var ICONOS = {
+    'reino-hielo': '❄️', 'festival': '✨', 'aracnida': '🕸️', 'mision': '🦸'
+  };
+  var PIES = {
+    'reino-hielo': 'Explora el reino y ayuda a los amigos',
+    'festival': 'Enciende las estrellas por turnos, entre todos',
+    'aracnida': 'Salta por las azoteas y rescata a las mascotas',
+    'mision': 'Una misión para el equipo'
+  };
+
+  function enlaceJuego(id) {
+    var base = RUTAS[id] || 'mundo.html';
+    var q = '?p=' + encodeURIComponent(slug);
+    // Cuál juego es se lo dice el menú, no lo adivina el juego: el motor de mundo.html solo
+    // conoce su tema ("hielo" o "heroes") y un mismo tema sirve a dos temáticas de fiesta
+    // distintas —spidey y heroes comparten mundo—, así que desde adentro no puede saber con
+    // qué nombre anotarse en la tabla.
+    q += '&juego=' + encodeURIComponent(id);
+    if (id === 'festival') { q += '&nombre=' + encodeURIComponent(fiestaNombre || ''); }
+    if (enKiosco) { q += '&kiosco=1'; }
+    // De vuelta al menú, no al kiosco: desde acá el niño puede querer el otro juego.
+    q += '&volver=' + encodeURIComponent(location.pathname + location.search);
+    return base + q;
+  }
+
+  var fiestaNombre = '';
+
+  function pintarJuegos(juegos) {
+    if (!juegos.length) {
+      $('lista').innerHTML = '<div class="aviso"><b>Esta fiesta todavía no tiene juegos</b>'
+        + 'Su temática aún no tiene un mundo 3D. Pídelo y lo preparamos.</div>';
+      return;
+    }
+    $('lista').innerHTML = juegos.map(function (j) {
+      return '<a class="juego" href="' + esc(enlaceJuego(j.id)) + '">'
+        + '<span class="juego__icono">' + (ICONOS[j.id] || '🎮') + '</span>'
+        + '<span class="juego__txt"><b>' + esc(j.nombre) + '</b>'
+        + '<span>' + esc(PIES[j.id] || 'Toca para jugar') + '</span></span></a>';
+    }).join('');
+  }
+
+  function pintarPosiciones(d) {
+    var out = '';
+    if (!d.hay_datos) {
+      out = '<div class="aviso"><b>Todavía nadie ha jugado</b>'
+        + 'Cuando terminen las primeras partidas, acá aparece quién va ganando.</div>';
+      $('tablas').innerHTML = out;
+      return;
+    }
+
+    if (d.general && d.general.length) {
+      out += '<div class="tabla-caja"><h2>🏆 Campeones de la fiesta</h2>'
+        + '<table><thead><tr><th class="lugar"></th><th>Niño</th>'
+        + '<th class="num">🥇</th><th class="num">🥈</th><th class="num">🥉</th>'
+        + '<th class="num">Puntos</th></tr></thead><tbody>'
+        + d.general.map(function (g) {
+            var medalla = { 1: '🥇', 2: '🥈', 3: '🥉' }[g.lugar] || g.lugar + 'º';
+            return '<tr' + (g.lugar === 1 ? ' class="campeon"' : '') + '>'
+              + '<td class="lugar">' + medalla + '</td><td>' + esc(g.jugador) + '</td>'
+              + '<td class="num">' + g.oro + '</td><td class="num">' + g.plata + '</td>'
+              + '<td class="num">' + g.bronce + '</td><td class="num">' + g.total + '</td></tr>';
+          }).join('')
+        + '</tbody></table>'
+        + '<p class="pie">Cada juego reparte oro, plata y bronce. Los dos juegos valen lo '
+        + 'mismo, así se comparan parejo aunque uno dé más puntos que el otro.</p></div>';
+    }
+
+    out += (d.juegos || []).map(function (j) {
+      return '<div class="tabla-caja"><h2>' + (ICONOS[j.id] || '🎮') + ' ' + esc(j.nombre) + '</h2>'
+        + '<table><thead><tr><th class="lugar"></th><th>Niño</th><th class="num">Puntos</th></tr></thead><tbody>'
+        + j.tabla.map(function (f) {
+            var medalla = { 1: '🥇', 2: '🥈', 3: '🥉' }[f.lugar] || f.lugar + 'º';
+            return '<tr><td class="lugar">' + medalla + '</td>'
+              + '<td>' + esc(f.jugador)
+              + (f.veces > 1 ? ' <span class="veces">· ' + f.veces + ' partidas</span>' : '')
+              + '</td><td class="num">' + f.puntaje.toLocaleString('es-CL') + '</td></tr>';
+          }).join('')
+        + '</tbody></table></div>';
+    }).join('');
+
+    out += '<p class="sub" style="text-align:center">' + d.jugadores + ' niños · '
+      + d.partidas + ' partidas jugadas</p>';
+    $('tablas').innerHTML = out;
+  }
+
+  function mostrar(cual) {
+    $('pantalla-juegos').hidden = cual !== 'juegos';
+    $('pantalla-posiciones').hidden = cual !== 'posiciones';
+    $('titulo').textContent = cual === 'juegos' ? 'Juegos de la fiesta' : 'Posiciones';
+    $('bajada').textContent = cual === 'juegos'
+      ? (fiestaNombre ? 'Cumpleaños de ' + fiestaNombre : 'Elige un juego para empezar.')
+      : 'Quién va ganando en el cumpleaños.';
+    window.scrollTo(0, 0);
+  }
+
+  $('ver-posiciones').addEventListener('click', function () { mostrar('posiciones'); });
+  $('ver-juegos').addEventListener('click', function () { mostrar('juegos'); });
+
+  if (enKiosco) {
+    var v = $('volver');
+    v.hidden = false;
+    v.href = '../?p=' + encodeURIComponent(slug);
+    v.textContent = '◂ Volver al kiosco';
+  }
+
+  if (!slug) {
+    $('lista').innerHTML = '<div class="aviso"><b>Falta la fiesta</b>'
+      + 'Abre este menú desde el código QR del cartel o desde el kiosco.</div>';
+    return;
+  }
+
+  fetch('../puntajes.php?p=' + encodeURIComponent(slug), { headers: { 'Accept': 'application/json' } })
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+    .then(function (d) {
+      fiestaNombre = (d.fiesta && d.fiesta.nombre) || '';
+      pintarJuegos(d.juegos_disponibles || []);
+      pintarPosiciones(d);
+      mostrar('juegos');
+    })
+    .catch(function () {
+      // Sin conexión al servidor el menú no puede saber la temática, pero el niño no puede
+      // quedarse mirando una pantalla vacía: se ofrece el juego de siempre, que vive en
+      // esta misma carpeta y no necesita al servidor para arrancar.
+      $('lista').innerHTML = '<a class="juego" href="mundo.html?p=' + esc(slug)
+        + (enKiosco ? '&kiosco=1' : '') + '">'
+        + '<span class="juego__icono">🎮</span><span class="juego__txt">'
+        + '<b>Entrar al juego</b><span>No se pudo consultar la fiesta; este es el juego de siempre</span>'
+        + '</span></a>';
+      $('ver-posiciones').hidden = true;
+    });
+})();
+</script>
+</body>
+</html>

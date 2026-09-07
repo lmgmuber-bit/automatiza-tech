@@ -43,6 +43,12 @@
                     "enabled": true
                 },
                 {
+                    "key": "avoid_gifts",
+                    "label": "Mejor no regalar",
+                    "order": 45,
+                    "enabled": true
+                },
+                {
                     "key": "custom",
                     "label": "Más sobre el protagonista",
                     "order": 50,
@@ -124,6 +130,13 @@
                     "key": "gift_ideas",
                     "label": "Ideas de regalo o lista de deseos",
                     "section": "gifts",
+                    "type": "multiline",
+                    "order": 10
+                },
+                {
+                    "key": "avoid_gifts",
+                    "label": "Prefieren evitar",
+                    "section": "avoid_gifts",
                     "type": "multiline",
                     "order": 10
                 }
@@ -427,6 +440,10 @@
         "gifts": {
             "tone": "#fcd34d",
             "glyph": "❖"
+        },
+        "avoid_gifts": {
+            "tone": "#fca5a5",
+            "glyph": "✕"
         },
         "custom": {
             "tone": "#93c5fd",

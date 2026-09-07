@@ -212,6 +212,7 @@ if (!$loggedIn) {
         <input type="password" id="password" name="password" required autofocus placeholder="••••••••">
       </div>
       <button type="submit" class="btn btn-cta btn-block">Ingresar</button>
+      <p class="muted small" style="margin-top:12px;text-align:center"><a href="recuperar.php">Olvide la contrasena</a></p>
     </form>
   </main>
 </body>

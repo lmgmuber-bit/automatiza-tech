@@ -11,6 +11,23 @@
  * ligeramente corrida y el marco se ve mal recortado.
  */
 
+/** Abre una imagen sea cual sea su formato.
+ *
+ * Antes se usaba `imagecreatefrompng` a secas y los retratos pasaron a JPEG:
+ * la funcion devuelve `false` sin avisar, el `if` la saltaba, y la foto salia
+ * compuesta con el MARCO VACIO. No fallaba nada; solo faltaba la persona.
+ */
+function abrirImagen(string $ruta)
+{
+    if ($ruta === '' || !is_file($ruta)) { return null; }
+    $info = @getimagesize($ruta);
+    $tipo = $info[2] ?? 0;
+    if ($tipo === IMAGETYPE_PNG)  { return @imagecreatefrompng($ruta); }
+    if ($tipo === IMAGETYPE_JPEG) { return @imagecreatefromjpeg($ruta); }
+    if ($tipo === IMAGETYPE_WEBP && function_exists('imagecreatefromwebp')) { return @imagecreatefromwebp($ruta); }
+    return null;
+}
+
 const INSET_RATIO = 0.085;
 
 function geometriaFoto(array $frameBox, int $ancho, int $alto): array
@@ -57,7 +74,7 @@ function componerCabina(
     imagealphablending($lienzo, true);
 
     // 1. La foto del niño, dentro del marco que ya trae el fondo.
-    $nino = @imagecreatefrompng($fotoNino);
+    $nino = abrirImagen($fotoNino);
     if ($nino) {
         $g = geometriaFoto($frameBox, $ancho, $alto);
         cuadrarYPegar($lienzo, $nino, $g['left'], $g['top'], $g['lado']);
@@ -65,7 +82,12 @@ function componerCabina(
     }
 
     // 2. El personaje, apoyado abajo.
-    $cut = @imagecreatefrompng($cutPersonaje);
+    // Ruta vacia = sin personaje (baby shower). imagecreatefrompng lanza
+    // ValueError con cadena vacia, no devuelve false, asi que el @ no basta.
+    /* Ruta vacia = sin personaje (baby shower). Con cadena vacia
+       imagecreatefrompng lanza ValueError en vez de devolver false, asi que
+       el @ no alcanza: hay que preguntar antes. */
+    $cut = abrirImagen($cutPersonaje);
     if ($cut) {
         $cw = imagesx($cut); $ch = imagesy($cut);
         $destAlto = (int) ($alto * 0.30);
@@ -99,17 +121,22 @@ function componerCabina(
     $centrar(40, $agradece, $yBase, $blanco);
     $centrar(26, $subtexto, $yBase + 46, $blanco);
 
-    // 4. Píldora con el nombre del personaje, abajo.
+    // 4. Píldora con el nombre del personaje, abajo. En baby shower no hay
+    //    personajes, así que se pasa vacío y no se dibuja.
+    if ($nombrePersonaje === '') { $etiquetaVacia = true; }
+    $rojo = imagecolorallocate($lienzo, $acento[0], $acento[1], $acento[2]);
     $tamPill = 30;
+    if ($nombrePersonaje !== '') {
     $cajaPill = imagettfbbox($tamPill, 0, $fuenteBold, $nombrePersonaje);
     $wPill = $cajaPill[2] - $cajaPill[0];
     $px = (int) (($ancho - $wPill) / 2);
     $py = $alto - (int) ($alto * 0.028);
-    $rojo = imagecolorallocate($lienzo, $acento[0], $acento[1], $acento[2]);
     imagefilledrectangle($lienzo, $px - 34, $py - 40, $px + $wPill + 34, $py + 14, $rojo);
     imagettftext($lienzo, $tamPill, 0, $px, $py, $blanco, $fuenteBold, $nombrePersonaje);
+    }
 
-    // 5. Etiqueta de la temática, sobre el marco.
+    // 5. Etiqueta de la temática, sobre el marco. También opcional.
+    if ($etiqueta !== '') {
     $tamEt = 20;
     $cajaEt = imagettfbbox($tamEt, 0, $fuenteBold, $etiqueta);
     $wEt = $cajaEt[2] - $cajaEt[0];
@@ -117,6 +144,7 @@ function componerCabina(
     $ey = $g['top'] - (int) ($alto * 0.012);
     imagefilledrectangle($lienzo, $ex - 22, $ey - 28, $ex + $wEt + 22, $ey + 10, $rojo);
     imagettftext($lienzo, $tamEt, 0, $ex, $ey, $blanco, $fuenteBold, $etiqueta);
+    }
 
     $ok = imagejpeg($lienzo, $salida, 88);
     imagedestroy($lienzo);

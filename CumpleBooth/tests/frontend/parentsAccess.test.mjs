@@ -89,3 +89,37 @@ test('el invitado nunca ve quién reservó: sólo la pantalla de los papás lo m
     'la pantalla de los papás sí muestra el nombre de quien reservó',
   )
 })
+
+/**
+ * El tablero de predicciones mostraba la etiqueta INTERNA del panel.
+ *
+ * `admin_label` es lo que el admin escribe para reconocer la fiesta en su
+ * listado: "DEMO Baby shower — Safari (aun no saben)". Estaba puesta como
+ * repuesto de `birthday_person_name`, así que en cuanto la fiesta no tenía
+ * nombre de bebé —el caso de las familias que aún no lo saben, que es
+ * justamente para las que se hizo la temática— el invitado leía el h1
+ * "Las predicciones de DEMO Baby shower — Safari (aun no saben)".
+ *
+ * Nadie lo habría notado desde el código: sólo se ve con una fiesta sin nombre,
+ * y las dos primeras demos tenían nombre. Se detectó abriendo la URL antes de
+ * mandársela a un cliente.
+ *
+ * El arreglo no es concatenar mejor: sin nombre, la frase cambia entera.
+ */
+test('el tablero de predicciones nunca muestra la etiqueta interna del panel', () => {
+  const pagina = leer('public/predicciones.php')
+  assert.ok(
+    !/\$eventName\s*=\s*trim\(\(string\)\s*\(\$access\['admin_label'\]/.test(pagina),
+    'predicciones.php volvió a usar admin_label como repuesto del nombre del bebé',
+  )
+})
+
+test('sin nombre de bebé, el título de predicciones cambia de frase y no queda colgando', () => {
+  const pagina = leer('public/predicciones.php')
+  assert.match(pagina, /\$tituloPagina = 'Las predicciones del baby shower'/)
+  assert.match(pagina, /\$tituloPestana = 'Predicciones del baby shower'/)
+  assert.ok(
+    !/<h1>Las predicciones de <\?=/.test(pagina),
+    'el h1 volvió a pegar el nombre al final de una frase fija',
+  )
+})

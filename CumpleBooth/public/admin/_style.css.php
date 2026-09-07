@@ -229,16 +229,38 @@ main { display: flex; flex-direction: column; gap: 20px; }
   display: flex; align-items: center; gap: 10px; font-weight: 700; cursor: pointer;
 }
 .checkbox-field input { width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary); }
+/* Los cuatro numeros del calibrador de marco no tenian estilo y quedaban en 20 px de
+   alto: imposibles de tocar desde un telefono, que es donde Luis edita a veces. */
+input[type="number"].frame-value {
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 10px; font: inherit; min-height: 44px; background: #fff; color: var(--text);
+}
 .form-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .contacto-fila {
-  display: grid; grid-template-columns: 1.1fr 1.4fr 1fr .9fr auto;
+  display: grid;
+  /* `minmax(0, ...)` y no `1fr`: `1fr` es `minmax(auto, 1fr)` y no deja que la columna
+     baje del ancho minimo del input, asi que la fila se salia del recuadro. */
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, .9fr) auto;
   gap: 8px; align-items: center; margin: 0 0 8px;
 }
 .contacto-fila input[type="text"], .contacto-fila input[type="email"], .contacto-fila select {
   border: 1.5px solid var(--border); border-radius: var(--radius-sm);
   padding: 9px 12px; font: inherit; min-height: 42px; background: #fff; color: var(--text);
+  min-width: 0;   /* el ancho por defecto de un input tambien empuja la grilla */
 }
 .contacto-fila .checkbox-field { font-size: .85rem; white-space: nowrap; }
+/* La linea para tomar el precio de un plan: etiqueta, selector y explicacion, uno debajo
+   del otro. Sin esto los tres quedaban en linea y el texto se colaba entre medio. */
+.cobro-plan {
+  display: flex; flex-direction: column; gap: 5px;
+  font-weight: 700; font-size: .9rem; margin: 0 0 14px;
+}
+.cobro-plan select {
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 9px 12px; font: inherit; font-weight: 400; min-height: 42px;
+  background: #fff; color: var(--text); max-width: 380px;
+}
+.cobro-plan small { font-weight: 400; font-size: .8rem; color: var(--text-muted); }
 .cobro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px 14px; }
 .cobro-grid label { display: flex; flex-direction: column; gap: 5px; font-weight: 700; font-size: .9rem; }
 .cobro-grid input {
@@ -478,7 +500,9 @@ main { display: flex; flex-direction: column; gap: 20px; }
   .party-title, .party-url, .party-actions { flex-direction: column; align-items: stretch; }
   .party-url input { min-width: 0; }
   .btn { width: 100%; }
-  .inline-form { width: 100%; }
+  /* Sin `wrap`, una barra con varios botones los deja a todos al 100% en una sola fila:
+     tres botones de ancho completo uno al lado del otro se salen de la pantalla. */
+  .inline-form { width: 100%; flex-wrap: wrap; }
   .inline-form .btn { width: 100%; }
   .themes-grid { grid-template-columns: 1fr; }
   .theme-detail-head, .detail-section-head { flex-direction: column; align-items: stretch; }

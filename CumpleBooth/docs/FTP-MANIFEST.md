@@ -752,3 +752,28 @@ selector de la ficha llena el precio ($49.995 al elegir Premium). En PROD: `php 
 los cuatro PHP, la home responde 200 con los precios correctos y su estructura intacta (9
 enlaces de WhatsApp, todas las secciones), `admin/planes.php` pide contrasena, y
 `data/planes.json` **no es accesible por web (403)**. Pruebas backend y smoke 34/34 sin cambios.
+
+## DESPLEGADO 2026-09-07 (cierre) — revision responsiva del admin
+
+Luis edita a veces desde el telefono, asi que se midio cada pantalla del admin a 375 px
+buscando desbordes y controles imposibles de tocar. Cuatro defectos reales, todos en
+`admin/_style.css.php` (**CRLF**) salvo donde se indica:
+
+| Que pasaba | Donde se veia | Arreglo |
+|---|---|---|
+| La barra de botones se salia de la pantalla en movil | Mensajes (3 botones al 100% en una sola fila) | `.inline-form` con `flex-wrap: wrap` dentro del bloque de 480 px |
+| Los campos quedaban en 21 px de alto, sin estilo | Planes y el selector de fiesta del Comprobante | usar la clase `field`, que es la convencion del admin (`admin/planes.php`, `admin/comprobante.php`) |
+| Los cuatro numeros del calibrador de marco, en 20 px y sin borde | Ficha de la fiesta | regla propia para `input[type="number"].frame-value`, 44 px |
+| **La fila de contactos se salia del recuadro** | Ficha de la fiesta, en escritorio | `minmax(0, ...)` en la grilla y `min-width: 0` en los inputs |
+| El selector de plan sin estilo: etiqueta, menu y explicacion en una linea revuelta | Ficha de la fiesta | `.cobro-plan`, que no existia |
+
+**Por que se salia la fila de contactos:** `1fr` es `minmax(auto, 1fr)`, asi que la columna no
+puede achicarse por debajo del ancho minimo del input. Cuatro campos mas el radio "Principal"
+empujaban la grilla fuera del fieldset. Es el mismo error que suele confundirse con "falta
+responsive": no era el ancho de la pantalla, era la grilla.
+
+Verificado a 375 px despues del arreglo: las **nueve** pantallas del admin dan 375 px de ancho
+de documento, cero elementos fuera y cero controles bajo 40 px (salvo el boton "+ Agregar
+contacto", que es secundario y mide 36). En escritorio, la fila de contactos termina en 661 px
+dentro de un recuadro que llega a 675. Las paginas publicas (home, galeria, subir fotos, admin,
+carteles) declaran todas su `viewport`.

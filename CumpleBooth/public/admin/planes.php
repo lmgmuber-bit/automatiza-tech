@@ -243,11 +243,11 @@ $catalogo = cb_planes();
           <input type="checkbox" name="promo_activa" value="1" <?= $catalogo['promo']['activa'] ? 'checked' : '' ?>>
           Activa
         </label>
-        <label>Texto que se muestra
+        <label class="field">Texto que se muestra
           <input type="text" name="promo_texto" maxlength="60" value="<?= h($catalogo['promo']['texto']) ?>"
                  placeholder="Precios de lanzamiento">
         </label>
-        <label>Descuento (%)
+        <label class="field">Descuento (%)
           <input type="text" name="promo_porcentaje" inputmode="decimal"
                  value="<?= h(rtrim(rtrim(number_format($catalogo['promo']['porcentaje'], 2, ',', ''), '0'), ',')) ?>"
                  placeholder="50">
@@ -260,10 +260,10 @@ $catalogo = cb_planes();
         <h2><?= h($p['nombre']) ?></h2>
         <div class="pln-grid">
           <div>
-            <label>Nombre
+            <label class="field">Nombre
               <input type="text" name="plan[<?= h($p['slug']) ?>][nombre]" maxlength="60" value="<?= h($p['nombre']) ?>">
             </label>
-            <label>Precio normal (pesos, sin puntos)
+            <label class="field">Precio normal (pesos, sin puntos)
               <input type="text" name="plan[<?= h($p['slug']) ?>][precio_normal]" inputmode="numeric"
                      value="<?= (int) $p['precio_normal'] ?>">
             </label>
@@ -272,7 +272,7 @@ $catalogo = cb_planes();
               <span><?= h(cb_format_clp($p['precio'])) ?></span>
               <span class="muted" style="font-size:.85rem;font-weight:400">es lo que ve el cliente</span>
             </p>
-            <label>Etiqueta de la tarjeta
+            <label class="field">Etiqueta de la tarjeta
               <input type="text" name="plan[<?= h($p['slug']) ?>][etiqueta]" maxlength="30" value="<?= h($p['etiqueta']) ?>"
                      placeholder="Más elegido">
             </label>
@@ -282,7 +282,7 @@ $catalogo = cb_planes();
             </label>
           </div>
           <div>
-            <label>Qué incluye (una línea por punto)
+            <label class="field">Qué incluye (una línea por punto)
               <textarea class="pln-incluye" name="plan[<?= h($p['slug']) ?>][incluye]"><?= h(implode("\n", $p['incluye'])) ?></textarea>
             </label>
           </div>
@@ -293,7 +293,7 @@ $catalogo = cb_planes();
     <section class="card">
       <h2>Temática a medida</h2>
       <p class="muted">Lo que se cobra por crear una temática que no está en el catálogo.</p>
-      <label>Precio adicional (pesos)
+      <label class="field">Precio adicional (pesos)
         <input type="text" name="tematica_a_medida" inputmode="numeric" value="<?= (int) $catalogo['tematica_a_medida'] ?>">
       </label>
     </section>

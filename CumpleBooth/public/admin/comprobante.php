@@ -274,7 +274,7 @@ $textoWhatsapp = $datos !== null ? cb_comprobante_texto_whatsapp($datos, $urlCom
     <?php if (!$fiestas): ?>
       <p class="muted">Todavía no hay fiestas creadas.</p>
     <?php else: ?>
-      <form method="get" class="inline-form">
+      <form method="get" class="inline-form field">
         <select name="p" onchange="this.form.submit()">
           <?php foreach ($fiestas as $slug => $f): ?>
             <option value="<?= h($slug) ?>" <?= $slug === $slugActual ? 'selected' : '' ?>>

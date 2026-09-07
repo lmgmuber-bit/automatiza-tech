@@ -440,3 +440,41 @@ anticipo $20.000, saldo $49.990).
 admin y ninguno decía por qué): el calibrador del marco rechazaba las fiestas calibradas
 arrastrando, y la validación del PIN exigía volver a escribirlo al editar una fiesta que ya
 tenía galería.
+
+## DESPLEGADO 2026-09-07 en cumpleclick.com/app — carteles QR por fiesta
+
+Pantalla nueva para imprimir los avisos con código QR de cada fiesta. Se entra desde el admin,
+con el botón **Carteles QR** de la fiesta, o directo en `/app/carteles.html?p=<slug>`.
+
+| # | Local | PROD | Nota |
+|---|---|---|---|
+| 1 | `public/admin/carteles-api.php` | `/admin/carteles-api.php` | nuevo; exige sesión de admin porque el cartel de la galería lleva el PIN |
+| 2 | `dist/carteles.html` | `/carteles.html` | nueva entrada del build |
+| 3 | `dist/assets/carteles-OE5qJLX0.js` | `/assets/` | |
+| 4 | `dist/assets/carteles-BcTaWotC.css` | `/assets/` | |
+| 5 | `dist/assets/client-eulB1LW-.js` | `/assets/` | chunk compartido de React que PROD todavía no tenía |
+| 6 | `public/admin/index.php` | `/admin/index.php` | **último**; en CRLF (así lo guarda PROD). Solo agrega el botón por fiesta |
+
+Qué carteles arma, según lo que tenga ESA fiesta: **galería** (con el PIN en grande), **juego 3D**
+de su temática (Hielo, Spidey o Héroes) e **invitación** si ya hay una emitida. El del Álbum
+Recuerdo no está acá a propósito: su QR lleva un token de aporte que se emite de a uno y ya tiene
+su propio cartel imprimible en `admin/album.php`.
+
+La hoja sale a **escala real** (`@page` en milímetros) para entrar justa en el soporte: A6, foto
+10×15, foto 13×18, cuadrado 15×15, A5, marco 20×25, A4 y una **medida a pedido** en mm. Todo el
+diseño se mide en `cqh` (altura de la hoja), así que el mismo cartel funciona en A6 y en A4 sin
+rehacerlo: el QR va de 31 mm a 62 mm. Al imprimir hay que dejar los márgenes en «ninguno» y
+desactivar «ajustar al papel».
+
+El **fondo de la temática ocupa la hoja completa** y el QR va sobre una tarjeta blanca, que es el
+contraste que necesita para escanear. El fondo va centrado a propósito: la franja que queda a la
+vista cae en la decoración de arriba (globos, guirnaldas, ventanal) y termina justo antes de los
+personajes. Bajarla no alcanza para mostrarlos enteros —la tarjeta ocupa dos tercios de la hoja—
+y solo les cortaría la cabeza.
+
+Verificado en PROD: los cuatro archivos responden 200, `admin/carteles-api.php` responde 401 sin
+sesión, y los enlaces que arma el servidor son los de `https://cumpleclick.com/app` para las dos
+fiestas del 13-sep (galería y juego 3D, con banner de temática en disco).
+
+**Pendiente:** Luis va a comprar los soportes acrílicos; cuando dé las medidas se agregan como
+tamaños fijos en la lista (hoy se cargan a mano en «A medida…»).

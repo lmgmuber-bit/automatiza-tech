@@ -391,3 +391,32 @@ no convertir el archivo entero en un diff).
 
 Verificado: 173/173 tests, paridad 485 archivos, y por HTTP `admin/mensajes.php` responde con la
 pantalla de login, `album.html` y `cartel-qr.html` sirven los bundles nuevos.
+
+## DESPLEGADO 2026-09-06 (noche) en cumpleclick.com/app — aceptación de Términos y firma
+
+Portado desde `feat/cumpleclick-aceptacion-terminos` a esta línea (ver el commit): de aquel
+commit solo se copiaron los archivos nuevos; `lib.php` y `admin/index.php` se parchearon a mano
+porque los de esa rama son del build del 27-jul.
+
+Orden real de subida (config → migración → librerías → páginas → admin al final):
+
+| # | Local | PROD | Nota |
+|---|---|---|---|
+| 1 | (script) `config-terminos.php` | `domains/cumpleclick.com/` | agregó `acceptance_dir`, `notify_email`, `mail_from` a `cumpleclick-config.php` insertando texto antes del cierre del array (los secretos existentes no se leen ni se reescriben); respaldo `cumpleclick-config.php.bak-20260907-003647`; creó `almacen/aceptaciones` (0770) |
+| 2 | `dist/lib.php` | `/lib.php` | **con LF**: PROD guarda este archivo en LF y el admin en CRLF; subirlo en CRLF habría cambiado 2.471 finales de línea |
+| 3 | `dist/lib.acceptance.php` | `/lib.acceptance.php` | nuevo |
+| 4 | `dist/legal/*.md` (3) | `/legal/` | carpeta creada en el servidor; sin ellos `aceptar-plan.php` falla cerrado |
+| 5 | `dist/aceptar-plan.php`, `dist/comprobante-aceptacion.php` | `/` | nuevos |
+| 6 | `dist/admin/aceptaciones.php` | `/admin/` | nuevo |
+| 7 | `database/migrations/013_plan_acceptances(.down).php` + `aplicar-013.php` | `domains/cumpleclick.com/database/` | migración aplicada con runner puntual; **las 10 fiestas activas quedaron `waived`** y ninguna dejó de funcionar |
+| 8 | `dist/admin/index.php` | `/admin/index.php` | **último**: activa el cierre del plan y agrega el botón Aceptación |
+
+Gate posterior, todo verificado por HTTP: `aceptar-plan.php?t=x` → 400; token de 32 hex inexistente
+→ 404; `legal/terminos-y-condiciones.md` → 200; `admin/aceptaciones.php` → login; `api.php` del
+kiosco intacto. Y una firma real de punta a punta sobre `demo-carreras`: comprobante de 64 KB con
+la firma embebida y su SHA-256, evidencia en `almacen/aceptaciones/`, y los dos correos enviados
+por SMTP (`client_mail_sent_at` e `internal_mail_sent_at`). La aceptación de prueba, su evidencia
+y el script se borraron después.
+
+**Pendiente de Luis:** los tres textos legales siguen siendo borradores y llevan visible el aviso
+de que no son asesoría legal; hay que pasarlos por abogado antes de usarlos con clientes reales.

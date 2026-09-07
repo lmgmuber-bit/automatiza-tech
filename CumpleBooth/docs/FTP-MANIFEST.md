@@ -700,3 +700,16 @@ sobre el monto, que se recalcula al cambiar el precio, 100% = total cero, rechaz
 porcentaje sin precio), suites `comprobante`, `acceptance`, `run`, `leads` y `album` sin
 cambios, y smoke de PROD 34/34. Los comprobantes de las dos fiestas se generan (62 kB); les
 falta solo cargar los contactos para poder enviarlos.
+
+### El descuento se carga desde la ficha, no por script (2026-09-07)
+
+Se probo el recorrido completo por la pantalla, escribiendo como lo hace una persona:
+`admin/index.php?action=editar&slug=<fiesta>` -> seccion **Cobro del servicio** -> precio
+120.000 y **25** en *Descuento en %* -> Guardar -> reabrir la ficha. Quedo guardado el 25%, el
+monto derivado de 30.000 aparecio solo, y la pantalla muestra "Total con descuento: $90.000".
+El mismo 25% sale despues en el PDF y en el correo.
+
+**Un error propio corregido de paso:** el boton "Ir a la ficha de la fiesta" de la pantalla del
+comprobante apuntaba a `index.php?edit=<slug>`, que no existe —el formulario se abre con
+`?action=editar&slug=`—, asi que caia en la lista de fiestas sin abrir nada. Corregido y
+desplegado (`admin/comprobante.php`).

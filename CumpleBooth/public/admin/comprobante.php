@@ -293,7 +293,7 @@ $textoWhatsapp = $datos !== null ? cb_comprobante_texto_whatsapp($datos, $urlCom
         Esta fiesta todavía no tiene <strong>precio cargado</strong>, así que no hay nada que comprobar.
         Cárgalo en la ficha de la fiesta, en la sección «Cobro», y vuelve acá.
       </p>
-      <a class="btn btn-primary" href="index.php?edit=<?= h(rawurlencode($slugActual)) ?>">Ir a la ficha de la fiesta</a>
+      <a class="btn btn-primary" href="index.php?action=editar&amp;slug=<?= h(rawurlencode($slugActual)) ?>">Ir a la ficha de la fiesta</a>
     </section>
   <?php else: ?>
 

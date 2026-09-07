@@ -230,6 +230,22 @@ main { display: flex; flex-direction: column; gap: 20px; }
 }
 .checkbox-field input { width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary); }
 .form-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.contacto-fila {
+  display: grid; grid-template-columns: 1.1fr 1.4fr 1fr .9fr auto;
+  gap: 8px; align-items: center; margin: 0 0 8px;
+}
+.contacto-fila input[type="text"], .contacto-fila input[type="email"], .contacto-fila select {
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 9px 12px; font: inherit; min-height: 42px; background: #fff; color: var(--text);
+}
+.contacto-fila .checkbox-field { font-size: .85rem; white-space: nowrap; }
+.cobro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px 14px; }
+.cobro-grid label { display: flex; flex-direction: column; gap: 5px; font-weight: 700; font-size: .9rem; }
+.cobro-grid input {
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 9px 12px; font: inherit; font-weight: 400; min-height: 42px; background: #fff; color: var(--text);
+}
+@media (max-width: 720px) { .contacto-fila { grid-template-columns: 1fr; } }
 
 /* --- Lista de fiestas --- */
 .list-header {

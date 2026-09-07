@@ -2477,3 +2477,6 @@ require __DIR__ . '/lib.predictions.php';
 
 // Lista de regalos con reserva.
 require __DIR__ . '/lib.gifts.php';
+
+// Contactos de quien contrata la fiesta y datos de cobro (migración 015).
+require __DIR__ . '/lib.cliente.php';

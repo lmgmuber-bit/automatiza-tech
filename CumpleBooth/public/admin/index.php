@@ -262,7 +262,12 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             if ($galleryEnabled && $servicePlan !== 'full') {
                 $errs[] = 'La galería solo puede habilitarse con el plan Full.';
             }
-            if ($galleryEnabled && $galeriaPin === '' && (!$isEdit || empty($parties[$origPublicSlug]['galeriaHabilitada']))) {
+            // `$origPublicSlug` se define más abajo: aquí todavía no existe, así que
+            // `$parties[$origPublicSlug]` era null y la condición se cumplía siempre. Al
+            // editar una fiesta que YA tenía galería con PIN, el formulario exigía
+            // escribir el PIN de nuevo y no dejaba guardar ningún otro cambio.
+            $slugEnEdicion = cb_valid_public_slug((string) ($_POST['slug_original'] ?? '')) ? (string) $_POST['slug_original'] : '';
+            if ($galleryEnabled && $galeriaPin === '' && (!$isEdit || empty($parties[$slugEnEdicion]['galeriaHabilitada']))) {
                 $errs[] = 'Para habilitar la galería debes configurar un PIN de 4 dígitos.';
             }
             if ($galeriaPin !== '' && !cb_valid_galeria_pin($galeriaPin)) {
@@ -332,8 +337,35 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 }
                 $parties[$publicSlug] = $registro;
                 if (cb_save_parties(['parties' => $parties])) {
-                    header('Location: index.php?ok=' . ($isEdit ? 'editada' : 'creada'));
-                    exit;
+                    // Contactos y cobro van después de guardar: en una fiesta nueva el id
+                    // recién existe acá, y los contactos cuelgan de ese id.
+                    $contactos = [];
+                    $nombres = (array) ($_POST['contacto_name'] ?? []);
+                    $principal = (string) ($_POST['contacto_principal'] ?? '0');
+                    foreach ((array) ($_POST['contacto_email'] ?? []) as $i => $correo) {
+                        $contactos[] = [
+                            'name' => (string) ($nombres[$i] ?? ''),
+                            'email' => (string) $correo,
+                            'phone' => (string) (((array) ($_POST['contacto_phone'] ?? []))[$i] ?? ''),
+                            'relationship' => (string) (((array) ($_POST['contacto_rel'] ?? []))[$i] ?? 'otro'),
+                            'is_primary' => (string) $i === $principal,
+                        ];
+                    }
+                    $rc = cb_save_party_contacts($publicSlug, $contactos);
+                    $rb = cb_save_party_billing($publicSlug, [
+                        'price_total' => $_POST['price_total'] ?? null,
+                        'discount_amount' => $_POST['discount_amount'] ?? null,
+                        'discount_label' => $_POST['discount_label'] ?? '',
+                        'deposit_amount' => $_POST['deposit_amount'] ?? null,
+                        'payment_note' => $_POST['payment_note'] ?? '',
+                    ]);
+                    // La fiesta ya quedó guardada: un error acá no la deshace, se avisa y
+                    // se vuelve al formulario con lo que el operador escribió.
+                    $errs = array_merge($errs, (array) ($rc['errors'] ?? []), (array) ($rb['errors'] ?? []));
+                    if (empty($errs)) {
+                        header('Location: index.php?ok=' . ($isEdit ? 'editada' : 'creada'));
+                        exit;
+                    }
                 }
                 $errs[] = 'No se pudo guardar (revisa permisos/errores de BD). Consula los logs del servidor.';
             }
@@ -355,6 +387,28 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 'galeriaPin' => $galeriaPin,
                 'pin_configured' => $isEdit && !empty($parties[$origPublicSlug]['galeriaHabilitada']),
                 'frameBox' => $frameBox,
+                'contactos' => (function (): array {
+                    $filas = [];
+                    $principal = (string) ($_POST['contacto_principal'] ?? '0');
+                    foreach ((array) ($_POST['contacto_email'] ?? []) as $i => $correo) {
+                        $filas[] = [
+                            'name' => (string) (((array) ($_POST['contacto_name'] ?? []))[$i] ?? ''),
+                            'email' => (string) $correo,
+                            'phone' => (string) (((array) ($_POST['contacto_phone'] ?? []))[$i] ?? ''),
+                            'relationship' => (string) (((array) ($_POST['contacto_rel'] ?? []))[$i] ?? 'otro'),
+                            'is_primary' => (string) $i === $principal,
+                        ];
+                    }
+                    $filas[] = ['name' => '', 'email' => '', 'phone' => '', 'relationship' => 'madre', 'is_primary' => false];
+                    return $filas;
+                })(),
+                'cobro' => [
+                    'price_total' => (string) ($_POST['price_total'] ?? ''),
+                    'discount_amount' => (string) ($_POST['discount_amount'] ?? ''),
+                    'discount_label' => (string) ($_POST['discount_label'] ?? ''),
+                    'deposit_amount' => (string) ($_POST['deposit_amount'] ?? ''),
+                    'payment_note' => (string) ($_POST['payment_note'] ?? ''),
+                ],
             ];
         } elseif ($action === 'eliminar') {
             $publicSlug = cb_valid_public_slug((string) ($_POST['slug'] ?? '')) ? (string) $_POST['slug'] : '';
@@ -571,6 +625,8 @@ if ($formValues === null && $action === 'editar') {
             'galeriaPin' => '',
             'pin_configured' => !empty($p['galeriaHabilitada']),
             'frameBox' => cb_normalize_frame_box($p['frameBox'] ?? null),
+            'contactos' => array_merge(cb_party_contacts($editSlug), [['name' => '', 'email' => '', 'phone' => '', 'relationship' => 'madre', 'is_primary' => false]]),
+            'cobro' => array_map(static fn($v) => $v === null ? '' : $v, cb_party_billing($editSlug)),
         ];
     } else {
         $showForm = false;
@@ -593,6 +649,9 @@ if ($formValues === null && $action === 'editar') {
         'galeriaPin' => '',
         'pin_configured' => false,
         'frameBox' => ['x' => 0.32, 'y' => 0.30, 'w' => 0.36, 'h' => 0.28],
+        'contactos' => [['name' => '', 'email' => '', 'phone' => '', 'relationship' => 'madre', 'is_primary' => true]],
+        'cobro' => ['price_total' => '', 'discount_amount' => '', 'discount_label' => '',
+                    'deposit_amount' => '', 'payment_note' => ''],
     ];
 }
 ?><!DOCTYPE html>
@@ -805,14 +864,67 @@ if ($formValues === null && $action === 'editar') {
 
           <fieldset class="field frame-calibrator">
             <legend>Calibrador del marco de cámara</legend>
-            <p class="muted small">Ajusta el marco decorativo sobre el fondo. La zona naranja muestra la foto cuadrada final, centrada y con margen para no tapar el borde dorado.</p>
+            <p class="muted small">Ajusta el marco decorativo sobre el fondo. <!-- step="any": con step="0.001" el navegador rechazaba las fiestas cuyo marco se calibró arrastrando (valores de 4 decimales, como 0.3315) y el formulario no se enviaba, sin decir por qué. El rango 0..1 lo valida el servidor. --> La zona naranja muestra la foto cuadrada final, centrada y con margen para no tapar el borde dorado.</p>
             <div class="frame-preview" style="background-image:url('../themes/<?= h($formValues['tema']) ?>/fondo-sala.jpg')"><span id="frame-overlay"></span></div>
             <div class="frame-grid">
               <?php foreach (['x' => 'X', 'y' => 'Y', 'w' => 'Ancho', 'h' => 'Alto'] as $key => $label): ?>
-                <label><?= h($label) ?><input class="frame-value" data-frame="<?= h($key) ?>" type="number" name="frame_<?= h($key) ?>" min="<?= in_array($key, ['w', 'h'], true) ? '0.05' : '0' ?>" max="1" step="0.001" value="<?= h($formBox[$key]) ?>" required></label>
+                <label><?= h($label) ?><input class="frame-value" data-frame="<?= h($key) ?>" type="number" name="frame_<?= h($key) ?>" min="<?= in_array($key, ['w', 'h'], true) ? '0.05' : '0' ?>" max="1" step="any" value="<?= h($formBox[$key]) ?>" required></label>
               <?php endforeach; ?>
             </div>
             <label class="checkbox-field"><input type="checkbox" name="frame_reset"> Usar calibración predeterminada de la temática</label>
+          </fieldset>
+
+          <fieldset class="field">
+            <legend>Quién contrató la fiesta</legend>
+            <p class="muted small">
+              Puede ser la madre, el padre o alguien más de la familia, y puede haber varios.
+              A estos correos se manda la bienvenida, el enlace de firma y el comprobante.
+              El marcado como principal es a quien se le escribe por defecto.
+            </p>
+            <div id="contactos">
+              <?php foreach ($formValues['contactos'] as $i => $c): ?>
+                <div class="contacto-fila">
+                  <input type="text" name="contacto_name[]" placeholder="Nombre" value="<?= h($c['name']) ?>" autocomplete="off">
+                  <input type="email" name="contacto_email[]" placeholder="correo@ejemplo.cl" value="<?= h($c['email']) ?>" autocomplete="off">
+                  <input type="text" name="contacto_phone[]" placeholder="WhatsApp" value="<?= h($c['phone']) ?>" autocomplete="off">
+                  <select name="contacto_rel[]">
+                    <?php foreach (cb_contact_relationships() as $valor => $etiqueta): ?>
+                      <option value="<?= h($valor) ?>" <?= $c['relationship'] === $valor ? 'selected' : '' ?>><?= h($etiqueta) ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                  <label class="checkbox-field" title="Contacto principal">
+                    <input type="radio" name="contacto_principal" value="<?= (int) $i ?>" <?= !empty($c['is_primary']) ? 'checked' : '' ?>> Principal
+                  </label>
+                </div>
+              <?php endforeach; ?>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="agregar-contacto">+ Agregar contacto</button>
+          </fieldset>
+
+          <fieldset class="field">
+            <legend>Cobro del servicio</legend>
+            <p class="muted small">Lo que aparece en el comprobante que recibe el cliente. En pesos, sin decimales.</p>
+            <div class="cobro-grid">
+              <label>Precio del plan
+                <input type="text" name="price_total" inputmode="numeric" placeholder="99990" value="<?= h($formValues['cobro']['price_total'] ?? '') ?>">
+              </label>
+              <label>Descuento
+                <input type="text" name="discount_amount" inputmode="numeric" placeholder="30000" value="<?= h($formValues['cobro']['discount_amount'] ?? '') ?>">
+              </label>
+              <label>Motivo del descuento
+                <input type="text" name="discount_label" maxlength="80" placeholder="Descuento de lanzamiento" value="<?= h($formValues['cobro']['discount_label'] ?? '') ?>">
+              </label>
+              <label>Anticipo pagado
+                <input type="text" name="deposit_amount" inputmode="numeric" placeholder="30000" value="<?= h($formValues['cobro']['deposit_amount'] ?? '') ?>">
+              </label>
+              <label>Forma de pago
+                <input type="text" name="payment_note" maxlength="160" placeholder="Transferencia" value="<?= h($formValues['cobro']['payment_note'] ?? '') ?>">
+              </label>
+            </div>
+            <?php if (!empty($formValues['cobro']['total'])): ?>
+              <p class="muted small">Total con descuento: <strong><?= h(cb_format_clp((int) $formValues['cobro']['total'])) ?></strong>
+                · Saldo: <strong><?= h(cb_format_clp((int) $formValues['cobro']['balance'])) ?></strong></p>
+            <?php endif; ?>
           </fieldset>
 
           <label class="checkbox-field">
@@ -1479,6 +1591,27 @@ if ($formValues === null && $action === 'editar') {
       document.body.style.overflow = 'hidden';
     });
   })();
+})();
+</script>
+<script>
+// Agregar contacto: clona la última fila y la deja vacía. El radio "Principal" usa el
+// índice como valor, así que la copia recibe el siguiente número; si no, dos filas
+// competirían por el mismo valor y el navegador las trataría como una sola opción.
+(function () {
+  var caja = document.getElementById('contactos');
+  var boton = document.getElementById('agregar-contacto');
+  if (!caja || !boton) { return; }
+  boton.addEventListener('click', function () {
+    var filas = caja.querySelectorAll('.contacto-fila');
+    var copia = filas[filas.length - 1].cloneNode(true);
+    copia.querySelectorAll('input').forEach(function (el) {
+      if (el.type === 'radio') { el.value = String(filas.length); el.checked = false; }
+      else { el.value = ''; }
+    });
+    caja.appendChild(copia);
+    var primero = copia.querySelector('input[type="text"]');
+    if (primero) { primero.focus(); }
+  });
 })();
 </script>
 </body>

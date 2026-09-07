@@ -37,6 +37,11 @@ if (time() - (int) ($_SESSION['admin_seen'] ?? 0) > $idle || time() - (int) ($_S
     carteles_responder(401, ['ok' => false, 'error' => 'sesion_expirada']);
 }
 $_SESSION['admin_seen'] = time();
+// Mismo token que usan los formularios del admin; si la sesión todavía no tiene uno se crea
+// acá igual que en admin/index.php, para poder pedir el enlace de aportes desde esta pantalla.
+if (empty($_SESSION['csrf'])) {
+    $_SESSION['csrf'] = bin2hex(random_bytes(16));
+}
 
 $slug = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : '';
 if (!cb_valid_public_slug($slug)) {
@@ -57,6 +62,40 @@ $nombreNino = (string) ($party['nombre'] ?? $party['birthday_person_name'] ?? ''
 $JUEGOS_3D = ['hielo' => 'Reino de Hielo en 3D', 'heroes' => 'Misión 3D', 'spidey' => 'Aventura Arácnida en 3D'];
 
 $carteles = [];
+$tokenAlbum = '';
+$avisoAlbum = '';
+
+// Emisión del token de aportes del Álbum, solo por POST y con el CSRF del admin: es una
+// acción con consecuencia (revoca el token anterior), no algo que pase por mirar la página.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'album-token') {
+    $enviado = (string) ($_POST['csrf'] ?? '');
+    if ($enviado === '' || !hash_equals((string) ($_SESSION['csrf'] ?? ''), $enviado)) {
+        carteles_responder(403, ['ok' => false, 'error' => 'csrf_invalido']);
+    }
+    try {
+        $partyId = cb_party_db_id($slug);
+        $albumPost = $partyId !== null ? cb_album_find_by_party($partyId) : null;
+        if (!$albumPost) {
+            carteles_responder(409, ['ok' => false, 'error' => 'sin_album']);
+        }
+        // El vencimiento se cuenta desde la fecha del evento y no desde hoy: un cartel
+        // impreso una semana antes tiene que seguir sirviendo el día de la fiesta.
+        $limites = cb_album_limits();
+        $fecha = (string) ($party['fecha'] ?? '');
+        $desde = $fecha !== '' ? strtotime($fecha) : false;
+        if ($desde === false) { $desde = time(); }
+        $expira = gmdate('Y-m-d H:i:s', $desde + ((int) $limites['default_open_days']) * 86400);
+        $tokenAlbum = cb_album_issue_token((int) $albumPost['id'], 'intake', $expira, 'admin-carteles');
+        if ((string) ($albumPost['status'] ?? '') === 'draft') {
+            cb_album_update((int) $albumPost['id'], ['status' => 'collecting']);
+        }
+        $avisoAlbum = 'Enlace de aportes nuevo: el anterior quedó revocado y los carteles del Álbum impresos antes '
+            . 'ya no sirven. Imprime este cartel ahora: al recargar la página el enlace no se puede volver a mostrar.';
+    } catch (Throwable $e) {
+        error_log('CumpleClick carteles token album: ' . $e->getMessage());
+        carteles_responder(500, ['ok' => false, 'error' => 'no_se_pudo_emitir']);
+    }
+}
 
 // 1) Galería: el cartel que más se usa, para que los papás se lleven las fotos.
 if (!empty($party['galeriaHabilitada'])) {
@@ -70,9 +109,40 @@ if (!empty($party['galeriaHabilitada'])) {
     ];
 }
 
-// El cartel para SUBIR fotos al Álbum Recuerdo no se arma aquí: su QR lleva un token de
-// aporte que se emite de a uno (cb_album_issue_token) y vive en admin/album.php, que ya
-// tiene su propio cartel imprimible. Duplicarlo acá emitiría un token nuevo por visita.
+// 2) Álbum Recuerdo: el QR lleva el token de APORTE, que se emite de a uno y en base solo
+// queda su huella. Por eso no se arma solo al abrir la pantalla —cada visita revocaría el
+// anterior y dejaría muertos los carteles ya impresos—: hay que pedirlo explícitamente por
+// POST, y recién ahí este cartel aparece con su enlace.
+$album = null;
+$albumEstado = ['existe' => false, 'abierto' => false, 'motivo' => 'sin_album'];
+if (cb_storage_mode() === 'db' && function_exists('cb_album_find_by_party')) {
+    try {
+        $partyIdAlbum = cb_party_db_id($slug);
+        $album = $partyIdAlbum !== null ? cb_album_find_by_party($partyIdAlbum) : null;
+        if ($album) {
+            $abierto = cb_album_intake_open($album, $party);
+            $albumEstado = [
+                'existe' => true,
+                'abierto' => $abierto,
+                'motivo' => $abierto ? '' : (empty($party['activa']) ? 'fiesta_inactiva' : 'aportes_cerrados'),
+            ];
+        }
+    } catch (Throwable $e) {
+        error_log('CumpleClick carteles album: ' . $e->getMessage());
+    }
+}
+
+// Si en esta misma petición se pidió el token, el cartel sale con su enlace ya listo.
+if ($tokenAlbum !== '') {
+    $carteles[] = [
+        'id' => 'album',
+        'titulo' => 'Suma tus fotos',
+        'bajada' => 'Escanea y sube tus fotos y videos del cumpleaños de ' . $nombreNino . ' al Álbum Recuerdo.',
+        'url' => cb_album_intake_url($tokenAlbum),
+        'pie' => 'Se suben desde tu celular, sin instalar nada',
+        'necesitaPin' => false,
+    ];
+}
 
 // 3) Juego 3D de la temática.
 if (isset($JUEGOS_3D[$temaSlug])) {
@@ -155,4 +225,8 @@ carteles_responder(200, [
     ],
     'carteles' => $carteles,
     'marca' => $marca,
+    'album' => $albumEstado,
+    'avisoAlbum' => $avisoAlbum,
+    // El token del formulario del admin, para poder pedir el enlace de aportes desde acá.
+    'csrf' => (string) ($_SESSION['csrf'] ?? ''),
 ]);

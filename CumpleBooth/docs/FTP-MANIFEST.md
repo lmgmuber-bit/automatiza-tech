@@ -456,9 +456,14 @@ con el botón **Carteles QR** de la fiesta, o directo en `/app/carteles.html?p=<
 | 6 | `public/admin/index.php` | `/admin/index.php` | **último**; en CRLF (así lo guarda PROD). Solo agrega el botón por fiesta |
 
 Qué carteles arma, según lo que tenga ESA fiesta: **galería** (con el PIN en grande), **juego 3D**
-de su temática (Hielo, Spidey o Héroes) e **invitación** si ya hay una emitida. El del Álbum
-Recuerdo no está acá a propósito: su QR lleva un token de aporte que se emite de a uno y ya tiene
-su propio cartel imprimible en `admin/album.php`.
+de su temática (Hielo, Spidey o Héroes), **invitación** si ya hay una emitida, y **Álbum Recuerdo**.
+
+El del Álbum es distinto: su QR lleva el token de **aportes**, que se emite de a uno y en base solo
+queda su huella. Por eso no se arma al abrir la pantalla —cada visita revocaría el anterior y
+dejaría muertos los carteles ya impresos—: hay un botón **«Generar el QR del Álbum»** que lo pide
+por POST con el CSRF del admin, avisa que el anterior queda revocado, y recién ahí aparece el
+cartel. Si la fiesta no tiene álbum, o los aportes están cerrados, el panel lo dice y enlaza a
+`admin/album.php`.
 
 La hoja sale a **escala real** (`@page` en milímetros) para entrar justa en el soporte: A6, foto
 10×15, foto 13×18, cuadrado 15×15, A5, marco 20×25, A4 y una **medida a pedido** en mm. Todo el
@@ -468,9 +473,10 @@ desactivar «ajustar al papel».
 
 **Dos estilos, los dos imprimibles** (se eligen en la misma pantalla):
 
-- **Fondo completo (marco de agua):** el banner de la temática ocupa la hoja entera y la tarjeta
-  es translúcida (blanco al 72% con desenfoque), así los personajes se ven a través de ella. El
-  fondo se ancla abajo para que suban en la hoja y asomen por encima de la tarjeta.
+- **Fondo completo (marco de agua):** el banner de la temática ocupa la hoja entera y **no hay
+  recuadro**: los textos van en blanco directamente sobre la foto, con doble sombra (una difusa
+  que los despega y una pegada al borde que los sostiene sobre los fondos claros, como el
+  ventanal nevado de Hielo). El fondo se ancla abajo para que los personajes suban en la hoja.
 - **Cabecera con la temática:** franja de 30cqh arriba con la foto y el resto en blanco. La franja
   es alta a propósito y va a `object-position: center 48%`: con una franja más baja, o con otro
   encuadre, a los personajes les quedaba cortada la cabeza —lo mismo que Luis marcó en la

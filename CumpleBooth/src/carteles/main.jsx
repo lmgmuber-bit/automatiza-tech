@@ -113,6 +113,8 @@ function App() {
   const [elegidos, setElegidos] = useState(null)
   const [pin, setPin] = useState('1234')
   const [estilo, setEstilo] = useState('agua')
+  const [pidiendoAlbum, setPidiendoAlbum] = useState(false)
+  const [errorAlbum, setErrorAlbum] = useState('')
 
   useEffect(() => {
     if (!slug) { setError('Falta la fiesta: abre esta página desde el botón "Carteles QR" del admin.'); return }
@@ -129,6 +131,30 @@ function App() {
       .then((d) => { setDatos(d); setElegidos(d.carteles.map((c) => c.id)) })
       .catch((e) => setError(String(e.message || e)))
   }, [slug])
+
+  // El QR del Álbum lleva el token de aportes, que se emite de a uno: pedirlo revoca el
+  // anterior y deja muertos los carteles impresos antes. Por eso es un botón aparte y no
+  // algo que pase solo con abrir la pantalla.
+  async function pedirQrAlbum() {
+    setPidiendoAlbum(true)
+    setErrorAlbum('')
+    try {
+      const r = await fetch(`${BASE}admin/carteles-api.php?p=${encodeURIComponent(slug)}`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ accion: 'album-token', csrf: datos.csrf || '' }),
+      })
+      const d = await r.json().catch(() => null)
+      if (!r.ok || !d || !d.ok) throw new Error((d && d.error) || `error_${r.status}`)
+      setDatos(d)
+      setElegidos((prev) => (prev.includes('album') ? prev : [...prev, 'album']))
+    } catch (e) {
+      setErrorAlbum('No se pudo generar el enlace de aportes: ' + String(e.message || e))
+    } finally {
+      setPidiendoAlbum(false)
+    }
+  }
 
   const tamano = tamanoId === 'custom'
     ? { ancho: Math.max(50, medida.ancho), alto: Math.max(50, medida.alto) }
@@ -220,6 +246,38 @@ function App() {
             </label>
           ))}
         </div>
+
+        {datos.album && !datos.carteles.some((c) => c.id === 'album') && (
+          <div className="panel__album">
+            <p className="panel__album-txt">
+              <strong>Álbum Recuerdo:</strong> su QR lleva el enlace de aportes, que se emite de a uno.
+              Al generarlo, <strong>el anterior queda revocado</strong> y cualquier cartel del Álbum que
+              hayas impreso antes deja de servir.
+            </p>
+            {!datos.album.existe && (
+              <p className="panel__album-txt">
+                Esta fiesta todavía no tiene álbum. Créalo en{' '}
+                <a href={`${BASE}admin/album.php?p=${encodeURIComponent(slug)}`}>Álbum Recuerdo</a> y vuelve acá.
+              </p>
+            )}
+            {datos.album.existe && !datos.album.abierto && (
+              <p className="panel__album-txt">
+                Los aportes están cerrados
+                {datos.album.motivo === 'fiesta_inactiva' ? ' porque la fiesta no está activa' : ''}.
+                Ábrelos en <a href={`${BASE}admin/album.php?p=${encodeURIComponent(slug)}`}>Álbum Recuerdo</a> y
+                vuelve acá.
+              </p>
+            )}
+            {datos.album.existe && datos.album.abierto && (
+              <button type="button" className="boton boton--claro" onClick={pedirQrAlbum} disabled={pidiendoAlbum}>
+                {pidiendoAlbum ? 'Generando…' : 'Generar el QR del Álbum'}
+              </button>
+            )}
+            {errorAlbum && <p className="panel__album-txt panel__album-txt--error">{errorAlbum}</p>}
+          </div>
+        )}
+
+        {datos.avisoAlbum && <p className="panel__aviso">{datos.avisoAlbum}</p>}
 
         <div className="panel__acciones">
           <button type="button" className="boton" onClick={() => window.print()}>

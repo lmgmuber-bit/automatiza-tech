@@ -268,6 +268,7 @@ if ($fiestaActual !== null && cb_storage_mode() === 'db'
     <a class="tab" href="index.php?view=temas"><?= admin_icon('palette') ?> Temáticas</a>
     <a class="tab" href="leads.php"><?= admin_icon('party') ?> Solicitudes</a>
     <a class="tab active" href="mensajes.php"><?= admin_icon('chat') ?> Mensajes</a>
+    <a class="tab" href="comprobante.php"><?= admin_icon('copy') ?> Comprobante</a>
   </nav>
 
   <main>

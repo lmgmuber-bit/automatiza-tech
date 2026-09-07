@@ -239,8 +239,15 @@ function cc_mail_build(array $m, array $cfg): string
         'To: ' . cc_mail_address((string) $m['to'], (string) ($m['to_name'] ?? '')),
         'Subject: ' . cc_mail_encode_header((string) ($m['subject'] ?? '')),
         'MIME-Version: 1.0',
-        'Content-Type: multipart/alternative; boundary="' . $limite . '"',
     ];
+    // Con adjuntos el mensaje pasa a ser multipart/mixed: adentro va el cuerpo (texto + HTML)
+    // como una sola parte alternativa y después cada archivo. Sin adjuntos, el correo sale
+    // byte por byte igual que antes.
+    $adjuntos = array_values(array_filter((array) ($m['attachments'] ?? [])));
+    $limiteExt = 'ccx' . bin2hex(random_bytes(12));
+    $cabeceras[] = $adjuntos
+        ? 'Content-Type: multipart/mixed; boundary="' . $limiteExt . '"'
+        : 'Content-Type: multipart/alternative; boundary="' . $limite . '"';
     if ($replyTo !== '') {
         $cabeceras[] = 'Reply-To: ' . $replyTo;
     }
@@ -266,6 +273,29 @@ function cc_mail_build(array $m, array $cfg): string
         cc_mail_quoted_printable($html),
         '--' . $limite . '--',
     ];
+
+    if ($adjuntos) {
+        $envoltura = [
+            '--' . $limiteExt,
+            'Content-Type: multipart/alternative; boundary="' . $limite . '"',
+            '',
+        ];
+        $envoltura = array_merge($envoltura, $partes);
+        foreach ($adjuntos as $a) {
+            $nombre = (string) ($a['filename'] ?? 'archivo.pdf');
+            $tipo = (string) ($a['type'] ?? 'application/octet-stream');
+            $envoltura[] = '--' . $limiteExt;
+            $envoltura[] = 'Content-Type: ' . $tipo . '; name="' . $nombre . '"';
+            $envoltura[] = 'Content-Transfer-Encoding: base64';
+            $envoltura[] = 'Content-Disposition: attachment; filename="' . $nombre . '"';
+            $envoltura[] = '';
+            // base64 cortado a 76 columnas: es lo que pide el RFC y lo que esperan los
+            // servidores; una sola línea larguísima hace que algunos trunquen el mensaje.
+            $envoltura[] = rtrim(chunk_split(base64_encode((string) ($a['data'] ?? '')), 76, "\r\n"), "\r\n");
+        }
+        $envoltura[] = '--' . $limiteExt . '--';
+        $partes = $envoltura;
+    }
 
     return implode("\r\n", $cabeceras) . "\r\n\r\n" . implode("\r\n", $partes);
 }

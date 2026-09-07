@@ -542,3 +542,42 @@ está vivo y compartido, porque volver a generarlo lo revocaría.
 - Cartel nuevo **«¿Lo quieres en tu fiesta?»**: QR a nuestro Instagram (o al sitio, si no hay
   Instagram cargado en `data/marca.json`), con la temática de la fiesta de fondo. Aparece en toda
   fiesta y sirve para dejar uno en la mesa como aviso institucional.
+
+## DESPLEGADO 2026-09-07 en cumpleclick.com/app — comprobante de pago en PDF
+
+Documento con lo cobrado y lo pagado, que se manda por correo con el PDF adjunto y se comparte
+por WhatsApp con un enlace. **No es boleta del SII y el propio PDF lo dice**: la integración
+tributaria es la etapa siguiente, como quedó acordado.
+
+| # | Local | PROD | Nota |
+|---|---|---|---|
+| 1 | `public/brand/pdf-cumpleclick.jpg`, `pdf-automatizatech.jpg` | `/brand/` | los dos logos, rasterizados sobre blanco |
+| 2 | `public/lib.pdf.php` | `/lib.pdf.php` | nuevo: escritor de PDF |
+| 3 | `public/lib.comprobante.php` | `/lib.comprobante.php` | nuevo: datos, maqueta, enlace firmado y correo |
+| 4 | `public/lib.mail.php` | `/lib.mail.php` | **en LF** (PROD lo guarda así); suma adjuntos |
+| 5 | `public/comprobante.php` | `/comprobante.php` | nuevo: descarga por enlace firmado |
+| 6 | `public/admin/comprobante.php` | `/admin/comprobante.php` | nueva pantalla |
+| 7 | `public/admin/mensajes.php` | `/admin/mensajes.php` | **CRLF**; solo la pestaña nueva |
+| 8 | `public/admin/index.php` | `/admin/index.php` | **CRLF**, último; pestaña y botón por fiesta |
+
+**Por qué un escritor de PDF propio.** El proyecto no tiene librería y el hosting no deja
+instalar una. Los otros PDF (manual, términos) se arman con el navegador en el computador de
+Luis, pero este tiene que generarse EN EL SERVIDOR al momento de mandar el correo.
+`lib.pdf.php` cubre justo lo que el documento necesita: Helvetica y Helvetica-Bold (de las 14
+estándar, no hay que incrustar la fuente), texto en WinAnsi con `iconv` para que salgan los
+acentos y la eñe, JPEG embebido tal cual con `DCTDecode` (un PNG obligaría a re-comprimir a
+mano), líneas y rectángulos. El flujo va comprimido con `zlib`, que el servidor tiene.
+
+**El PDF no se guarda en disco**: se arma en cada visita, así que siempre refleja lo que dice la
+ficha hoy. El enlace público va firmado con `cb_hmac()` (24 caracteres en la URL) porque el
+documento es el mismo siempre y no tiene sentido un token de un solo uso; sin firma, cambiar el
+slug en la URL mostraría el cobro de otra fiesta.
+
+Verificado en PROD: `php -l` limpio en los siete archivos, el PDF se genera en el servidor
+(62 KB, los dos logos, comprimido, EOF correcto) y se revisó el archivo bajado —los acentos,
+la eñe y los signos de apertura salen bien—; el enlace con firma inválida responde 403 y sin
+firma 400; `cc_mail_enabled()` es `true`. Pruebas: `tests/backend/comprobante.php` (23
+comprobaciones) y `tests/backend/cliente.php` (30) pasan.
+
+**Pendiente de Luis:** confirmar que el RUT que sale en el comprobante (78.363.717-0, de
+`cb_comprobante_emisor()` en `lib.comprobante.php`) es el correcto para facturar.

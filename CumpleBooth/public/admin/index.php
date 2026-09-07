@@ -6,6 +6,7 @@
  */
 require __DIR__ . '/../lib.php';
 require __DIR__ . '/config.php';
+require_once __DIR__ . '/../lib.planes.php';
 require __DIR__ . '/../lib.acceptance.php';
 $adminSecureCookie = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
 session_name('cc_admin');
@@ -714,6 +715,7 @@ if ($formValues === null && $action === 'editar') {
     <a class="tab" href="leads.php"><?= admin_icon('party') ?> Solicitudes<?= $leadsNuevos > 0 ? ' <b class="tab-badge">' . (int) $leadsNuevos . '</b>' : '' ?></a>
     <a class="tab" href="mensajes.php"><?= admin_icon('party') ?> Mensajes</a>
     <a class="tab" href="comprobante.php"><?= admin_icon('copy') ?> Comprobante</a>
+    <a class="tab" href="planes.php"><?= admin_icon('copy') ?> Planes</a>
   </nav>
 
   <main>
@@ -908,6 +910,18 @@ if ($formValues === null && $action === 'editar') {
           <fieldset class="field">
             <legend>Cobro del servicio</legend>
             <p class="muted small">Lo que aparece en el comprobante que recibe el cliente. En pesos, sin decimales.</p>
+            <?php $planesCatalogo = cb_planes()['planes']; ?>
+            <?php if ($planesCatalogo): ?>
+              <label class="cobro-plan">Tomar el precio de un plan
+                <select id="plan-catalogo">
+                  <option value="">Escribir el precio a mano</option>
+                  <?php foreach ($planesCatalogo as $planCat): ?>
+                    <option value="<?= (int) $planCat['precio'] ?>"><?= h($planCat['nombre']) ?> · <?= h(cb_format_clp($planCat['precio'])) ?></option>
+                  <?php endforeach; ?>
+                </select>
+                <small class="muted">Copia el precio vigente al campo de abajo. Queda guardado ese número: si más adelante cambia el precio del plan, esta fiesta no cambia. Se editan en <a href="planes.php">Planes</a>.</small>
+              </label>
+            <?php endif; ?>
             <div class="cobro-grid">
               <label>Precio del plan
                 <input type="text" name="price_total" inputmode="numeric" placeholder="99990" value="<?= h($formValues['cobro']['price_total'] ?? '') ?>">
@@ -935,6 +949,21 @@ if ($formValues === null && $action === 'editar') {
                 · Saldo: <strong><?= h(cb_format_clp((int) $formValues['cobro']['balance'])) ?></strong></p>
             <?php endif; ?>
           </fieldset>
+          <script>
+            // Elegir un plan solo COPIA su precio al campo: lo que se guarda es el número,
+            // no el plan. Así, cambiar el catalógo más adelante no le mueve el precio a una
+            // fiesta ya acordada, que es lo que diría un comprobante ya enviado.
+            (function () {
+              var selector = document.getElementById('plan-catalogo');
+              var precio = document.querySelector('[name="price_total"]');
+              if (!selector || !precio) { return; }
+              selector.addEventListener('change', function () {
+                if (selector.value === '') { return; }
+                precio.value = selector.value;
+                precio.focus();
+              });
+            })();
+          </script>
 
           <label class="checkbox-field">
             <input type="checkbox" name="activa" <?= !empty($formValues['activa']) ? 'checked' : '' ?>>

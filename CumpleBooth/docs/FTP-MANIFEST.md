@@ -713,3 +713,42 @@ El mismo 25% sale despues en el PDF y en el correo.
 comprobante apuntaba a `index.php?edit=<slug>`, que no existe —el formulario se abre con
 `?action=editar&slug=`—, asi que caia en la lista de fiestas sin abrir nada. Corregido y
 desplegado (`admin/comprobante.php`).
+
+## DESPLEGADO 2026-09-07 (noche) — catalogo de planes editable desde el admin
+
+Los precios estaban **escritos a mano en el HTML del sitio** (`sitio/index.php`), en tres
+tarjetas: cambiar uno obligaba a editar la pagina y volver a subirla. Ahora viven una sola vez
+en `data/planes.json`, se editan en **Admin -> Planes**, y de ahi los leen el sitio publico y
+el selector de la ficha de la fiesta.
+
+| # | Local | PROD | Nota |
+|---|---|---|---|
+| 1 | `public/lib.planes.php` | `/lib.planes.php` | nuevo: lee, calcula y guarda el catalogo |
+| 2 | `public/data/planes.json` | `/data/planes.json` | nuevo: los tres planes con sus precios reales |
+| 3 | `public/admin/planes.php` | `/admin/planes.php` | nueva pantalla |
+| 4 | `public/admin/index.php` | `/admin/index.php` | **CRLF**; pestaña Planes y selector de plan en la ficha |
+| 5 | `sitio/index.php` | `public_html/index.php` | **en LF** (PROD lo guarda asi); respaldo en `.bak-20260907` |
+
+**El precio con promocion no se guarda: se calcula** restandole el porcentaje al precio normal,
+igual que el descuento por fiesta. Guardar los dos numeros es la forma segura de terminar con un
+sitio que dice una cosa y un comprobante que dice otra. Con la promo de lanzamiento al 50%, el
+catalogo reproduce exactamente los precios que ya mostraba la pagina: $34.995, $49.995 y $29.995.
+
+**El sitio conserva un respaldo con los tres planes escritos.** Si `planes.json` falta o queda
+roto, la landing sigue mostrando precios reales en vez de quedarse sin la seccion que decide la
+venta. Es el mismo criterio que ya usaba con el numero de WhatsApp.
+
+**En la ficha de la fiesta, el plan solo COPIA su precio.** Lo que se guarda es el numero, no el
+plan: si mas adelante cambia el precio del catalogo, una fiesta ya acordada no cambia — seria
+feo que un comprobante ya enviado mostrara otra cifra. El descuento por fiesta se aplica encima.
+
+Los campos de presentacion de cada tarjeta (clase CSS, badge y emoji del boton de WhatsApp) no
+se editan desde el admin porque son diseno, pero se conservan al guardar: si el formulario
+reconstruyera el plan solo con lo que manda, cada guardado borraria el diseno.
+
+Verificado de punta a punta: se cambio el precio del Premium desde la pantalla, se guardo, y el
+sitio paso a mostrar $109.990 tachado con $54.995 — despues se restauro el valor real. El
+selector de la ficha llena el precio ($49.995 al elegir Premium). En PROD: `php -l` limpio en
+los cuatro PHP, la home responde 200 con los precios correctos y su estructura intacta (9
+enlaces de WhatsApp, todas las secciones), `admin/planes.php` pide contrasena, y
+`data/planes.json` **no es accesible por web (403)**. Pruebas backend y smoke 34/34 sin cambios.

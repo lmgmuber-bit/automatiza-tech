@@ -289,6 +289,8 @@ main { display: flex; flex-direction: column; gap: 20px; }
 .badge-ok { background: var(--success-soft); color: var(--success); }
 .badge-off { background: #f1f1f4; color: #6b7280; }
 .badge-warn { background: var(--warn-soft); color: var(--warn); }
+/* Duracion de un video en el Album Recuerdo: informativo, no un estado. */
+.badge--video { background: var(--primary-soft); color: var(--primary-dark); }
 
 .party-url { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .party-url input {

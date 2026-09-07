@@ -239,7 +239,7 @@ if ($fiestaActual !== null && cb_storage_mode() === 'db'
 </head>
 <body>
 <div class="wrap">
-  <header class="head">
+  <header class="topbar">
     <div>
       <h1>Mensajes<?= $fiestaActual ? ' · ' . h($fiestaActual['nombre']) : '' ?></h1>
       <p class="muted">

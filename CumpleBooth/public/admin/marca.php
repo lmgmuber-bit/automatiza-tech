@@ -182,7 +182,7 @@ $logo = '../brand/cumpleclick-mark.svg';
   <p><a class="btn btn-ghost" href="index.php">Volver al panel</a></p>
 
   <h1>Datos de la marca</h1>
-  <p class="lede">
+  <p class="muted">
     Es lo que aparece en la <b>última página</b> de cada Álbum Recuerdo. Se guarda
     en <code>data/marca.json</code> y el cambio se ve al recargar cualquier álbum
     publicado, sin subir nada más.

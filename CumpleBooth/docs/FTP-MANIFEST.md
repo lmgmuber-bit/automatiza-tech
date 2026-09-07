@@ -581,3 +581,21 @@ comprobaciones) y `tests/backend/cliente.php` (30) pasan.
 
 **Pendiente de Luis:** confirmar que el RUT que sale en el comprobante (78.363.717-0, de
 `cb_comprobante_emisor()` en `lib.comprobante.php`) es el correcto para facturar.
+
+### Clases del admin sin CSS detrás (2026-09-07)
+
+Luis vio pantallas del admin con elementos "en HTML puro". La causa: nombres de clase que no
+existen en `admin/_style.css.php`, así que el navegador no aplicaba nada. Se revisaron las siete
+pantallas comparando las clases usadas contra las definidas.
+
+| Pantalla | Clase | Qué pasaba | Arreglo |
+|---|---|---|---|
+| `admin/comprobante.php` | `inline` (×3) | la clase real es `inline-form`; la barra superior y la fila de botones se apilaban | `inline-form` y una `cmp-acciones` propia para la fila |
+| `admin/mensajes.php` | `head` | la cabecera del admin es `topbar`; se veía sin maquetar | `topbar` |
+| `admin/marca.php` | `lede` | el párrafo de entrada quedaba como texto plano | `muted`, que ya existe |
+| `admin/album.php` | `badge--video` | la variante nunca se definió: el badge salía con el estilo base y sin color | definida en `_style.css.php` con `--primary-soft` / `--primary-dark` |
+
+Los cuatro archivos van **en CRLF**, que es como PROD los guarda; se verificó que el md5 de cada
+uno coincidía con su base convertida a CRLF antes de subir, para no ensuciar el diff.
+`btn-label` y `frame-value` en `index.php` quedaron como están: no son estilos, son enganches
+que usa el JavaScript de la pantalla.

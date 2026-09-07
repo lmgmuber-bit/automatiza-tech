@@ -239,6 +239,7 @@ $textoWhatsapp = $datos !== null ? cb_comprobante_texto_whatsapp($datos, $urlCom
   .cmp-visor { width: 100%; height: 520px; border: 1.5px solid #DED9E6; border-radius: 12px; background: #fff; }
   .cmp-destino { display: flex; align-items: center; gap: 9px; padding: 6px 0; font-weight: 600; }
   .cmp-destino span { font-weight: 400; color: #6B6280; }
+  .cmp-acciones { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 0; }
 </style>
 </head>
 <body>
@@ -250,7 +251,7 @@ $textoWhatsapp = $datos !== null ? cb_comprobante_texto_whatsapp($datos, $urlCom
         El respaldo de lo cobrado y lo pagado, en PDF. No es boleta del SII: eso se emite aparte.
       </p>
     </div>
-    <form method="post" class="inline">
+    <form method="post" class="inline-form">
       <?= admin_csrf_field() ?>
       <input type="hidden" name="action" value="logout">
       <button class="btn btn-ghost" type="submit"><?= admin_icon('logout') ?> Salir</button>
@@ -273,7 +274,7 @@ $textoWhatsapp = $datos !== null ? cb_comprobante_texto_whatsapp($datos, $urlCom
     <?php if (!$fiestas): ?>
       <p class="muted">Todavía no hay fiestas creadas.</p>
     <?php else: ?>
-      <form method="get" class="inline">
+      <form method="get" class="inline-form">
         <select name="p" onchange="this.form.submit()">
           <?php foreach ($fiestas as $slug => $f): ?>
             <option value="<?= h($slug) ?>" <?= $slug === $slugActual ? 'selected' : '' ?>>
@@ -370,7 +371,7 @@ $textoWhatsapp = $datos !== null ? cb_comprobante_texto_whatsapp($datos, $urlCom
     <section class="card">
       <h2>Mandarlo por WhatsApp</h2>
       <textarea class="cmp-texto" id="texto-wa" readonly><?= h($textoWhatsapp) ?></textarea>
-      <p class="inline" style="margin-top:12px">
+      <p class="cmp-acciones">
         <button type="button" class="btn" data-copiar-de="texto-wa"><?= admin_icon('copy') ?> Copiar texto</button>
         <a class="btn btn-primary" target="_blank" rel="noopener"
            href="https://wa.me/?text=<?= h(rawurlencode($textoWhatsapp)) ?>"><?= icono_whatsapp() ?> Enviar por WhatsApp</a>

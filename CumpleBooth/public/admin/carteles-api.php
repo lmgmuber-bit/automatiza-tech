@@ -137,7 +137,10 @@ if ($tokenAlbum !== '') {
     $carteles[] = [
         'id' => 'album',
         'titulo' => 'Suma tus fotos',
-        'bajada' => 'Escanea y sube tus fotos y videos del cumpleaños de ' . $nombreNino . ' al Álbum Recuerdo.',
+        // El texto sigue a la configuración del álbum: prometer videos en un cartel impreso
+        // cuando la recepción solo acepta fotos deja al invitado con un error en la mano.
+        'bajada' => 'Escanea y sube tus ' . (!empty($album['intake_videos']) ? 'fotos y videos' : 'fotos')
+            . ' del cumpleaños de ' . $nombreNino . ' al Álbum Recuerdo.',
         'url' => cb_album_intake_url($tokenAlbum),
         'pie' => 'Se suben desde tu celular, sin instalar nada',
         'necesitaPin' => false,

@@ -29,6 +29,8 @@ declare(strict_types=1);
  */
 
 /** Configuración del SMTP, ya normalizada. */
+require_once __DIR__ . '/lib.ajustes.php';
+
 function cc_mail_config(): array
 {
     $c = cb_config();
@@ -118,6 +120,30 @@ function cc_smtp_escribir($socket, string $orden): void
  *
  * @param array $m  ['to','to_name','subject','html','text','reply_to','headers']
  */
+/**
+ * Correos que reciben copia oculta del mensaje.
+ *
+ * Se manda como destinatario extra del SOBRE (otro `RCPT TO`) y NO como cabecera `Bcc:`:
+ * hablando SMTP directo, esa cabecera viajaria dentro del mensaje y el cliente veria a quien
+ * mas se le mando. Que es justo lo contrario de una copia oculta.
+ */
+function cc_mail_ocultos(array $m): array
+{
+    $ocultos = [];
+    foreach ((array) ($m['bcc'] ?? []) as $extra) {
+        $extra = trim((string) $extra);
+        if ($extra !== '' && filter_var($extra, FILTER_VALIDATE_EMAIL)) { $ocultos[] = $extra; }
+    }
+    if (function_exists('cb_ajuste_bcc')) {
+        $general = cb_ajuste_bcc();
+        if ($general !== '') { $ocultos[] = $general; }
+    }
+    // Sin duplicados y sin repetir al destinatario, que ya recibe el mensaje.
+    $para = strtolower(trim((string) ($m['to'] ?? '')));
+    return array_values(array_filter(array_unique($ocultos),
+        static fn($o) => strtolower($o) !== $para));
+}
+
 function cc_mail_send(array $m): array
 {
     if (!cc_mail_enabled()) {
@@ -199,6 +225,17 @@ function cc_mail_send(array $m): array
         $r = cc_smtp_leer($socket, $cfg['timeout']);
         if ($r['codigo'] !== 250 && $r['codigo'] !== 251) {
             $cerrar(); return ['ok' => false, 'error' => 'Destinatario rechazado: ' . $r['texto']];
+        }
+
+        // Las copias ocultas van como destinatarios extra del sobre. Si el servidor rechaza
+        // una, se sigue igual: que falle la copia no puede impedir que el cliente reciba su
+        // correo. Queda en el log del servidor para poder revisarlo.
+        foreach (cc_mail_ocultos($m) as $oculto) {
+            cc_smtp_escribir($socket, 'RCPT TO:<' . $oculto . '>');
+            $rc = cc_smtp_leer($socket, $cfg['timeout']);
+            if ($rc['codigo'] !== 250 && $rc['codigo'] !== 251) {
+                error_log('CumpleClick copia oculta rechazada: ' . $rc['texto']);
+            }
         }
 
         cc_smtp_escribir($socket, 'DATA');

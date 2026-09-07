@@ -136,6 +136,7 @@ if (!$loggedIn) {
     <label for="password">Contraseña</label>
     <input type="password" id="password" name="password" required autofocus autocomplete="current-password">
     <button class="btn btn-primary" type="submit">Ingresar</button>
+    <p class="muted small" style="margin-top:12px;text-align:center"><a href="recuperar.php">Olvidé la contraseña</a></p>
   </form>
 </body>
 </html><?php

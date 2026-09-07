@@ -1,14 +1,11 @@
 <?php
 /**
- * admin/planes.php — los precios de los planes, en un solo lugar.
+ * admin/ajustes.php — lo que vale para todo CumpleClick, no para una fiesta.
  *
- * Antes vivían escritos a mano en el HTML del sitio: cambiar uno significaba editar la
- * página y volver a subirla. Acá se editan y el sitio los lee de `data/planes.json`, que es
- * el mismo archivo del que se toma el precio al cargar una fiesta.
- *
- * El precio con promoción no se escribe: se calcula restándole el porcentaje al precio
- * normal. Escribir los dos números es la forma segura de que el sitio diga una cosa y el
- * comprobante otra.
+ * Dos correos que son del administrador y no del cliente: a cual le llega copia oculta de
+ * todo lo que sale, y a cual se manda el enlace cuando se olvida la contraseña. Van acá y no
+ * en la configuración del servidor para que Luis los cambie cuando quiera, sin tocar nada del
+ * hosting.
  */
 require __DIR__ . '/../lib.php';
 require __DIR__ . '/config.php';
@@ -71,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'logou
     if (admin_csrf_check()) {
         $_SESSION = [];
         session_destroy();
-        header('Location: planes.php');
+        header('Location: ajustes.php');
         exit;
     }
 }
@@ -90,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
             $_SESSION['admin_logged'] = true;
             $_SESSION['admin_started'] = time();
             $_SESSION['admin_seen'] = time();
-            header('Location: planes.php');
+            header('Location: ajustes.php');
             exit;
         } else {
             $loginError = 'Contraseña incorrecta.';
@@ -122,9 +119,9 @@ if (!$loggedIn) {
 <style><?php require __DIR__ . '/_style.css.php'; ?></style>
 </head>
 <body class="login-body">
-  <form class="login-card" method="post" action="planes.php">
+  <form class="login-card" method="post" action="ajustes.php">
     <h1>CumpleBooth</h1>
-    <p class="muted">Planes y precios</p>
+    <p class="muted">Ajustes generales</p>
     <?php if ($loginError !== ''): ?><p class="alert alert-error"><?= h($loginError) ?></p><?php endif; ?>
     <input type="hidden" name="csrf" value="<?= h(admin_csrf_token()) ?>">
     <input type="hidden" name="action" value="login">
@@ -140,7 +137,7 @@ if (!$loggedIn) {
 
 
 // ================== DATOS ==================
-require_once __DIR__ . '/../lib.planes.php';
+require_once __DIR__ . '/../lib.ajustes.php';
 
 $aviso = '';
 $errores = [];
@@ -149,66 +146,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'guard
     if (!admin_csrf_check()) {
         $errores[] = 'Sesión expirada, vuelve a intentarlo.';
     } else {
-        $enviados = [];
-        foreach ((array) ($_POST['plan'] ?? []) as $slug => $campos) {
-            if (!is_string($slug) || !is_array($campos)) { continue; }
-            $enviados[] = [
-                'slug' => $slug,
-                'nombre' => (string) ($campos['nombre'] ?? ''),
-                'precio_normal' => (int) preg_replace('/\D/', '', (string) ($campos['precio_normal'] ?? '0')),
-                'destacado' => !empty($campos['destacado']),
-                'etiqueta' => (string) ($campos['etiqueta'] ?? ''),
-                'incluye' => (string) ($campos['incluye'] ?? ''),
-            ];
-        }
-        $r = cb_guardar_planes([
-            'promo' => [
-                'activa' => !empty($_POST['promo_activa']),
-                'texto' => (string) ($_POST['promo_texto'] ?? ''),
-                'porcentaje' => str_replace(',', '.', (string) ($_POST['promo_porcentaje'] ?? '0')),
-            ],
-            'tematica_a_medida' => (int) preg_replace('/\D/', '', (string) ($_POST['tematica_a_medida'] ?? '0')),
-            'planes' => $enviados,
+        $r = cb_guardar_ajustes([
+            'bcc_email' => $_POST['bcc_email'] ?? '',
+            'recovery_email' => $_POST['recovery_email'] ?? '',
         ]);
         if (!empty($r['ok'])) {
-            $aviso = 'Precios guardados. El sitio ya los muestra: recarga cumpleclick.com para verlos.';
+            $aviso = 'Ajustes guardados.';
         } else {
             $errores = $r['errors'];
         }
     }
 }
 
-$catalogo = cb_planes();
+$ajustes = cb_ajustes();
 ?><!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Planes · CumpleBooth</title>
+<title>Ajustes · CumpleBooth</title>
 <style><?php require __DIR__ . '/_style.css.php'; ?></style>
-<style>
-  /* Solo lo que no existe en la hoja compartida. */
-  .pln-promo { display: grid; grid-template-columns: auto 1fr 1fr; gap: 12px 18px; align-items: end; }
-  @media (max-width: 720px) { .pln-promo { grid-template-columns: 1fr; } }
-  .pln-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
-  @media (max-width: 720px) { .pln-grid { grid-template-columns: 1fr; } }
-  .pln-precio {
-    display: flex; align-items: baseline; gap: 10px; margin: 10px 0 0;
-    font-size: 1.15rem; font-weight: 700;
-  }
-  .pln-precio s { font-size: .95rem; font-weight: 400; color: #8B85A0; }
-  .pln-incluye { width: 100%; min-height: 150px; font: inherit; font-size: .92rem; line-height: 1.5;
-    padding: 12px 14px; border: 1.5px solid #DED9E6; border-radius: 12px; resize: vertical; }
-</style>
 </head>
 <body>
 <div class="wrap">
   <header class="topbar">
     <div>
-      <h1>Planes y precios</h1>
-      <p class="muted">
-        Lo que muestra el sitio y lo que se ofrece al cargar una fiesta. Se escribe una vez, acá.
-      </p>
+      <h1>Ajustes generales</h1>
+      <p class="muted">Valen para todo CumpleClick: no dependen de la fiesta ni de la temática.</p>
     </div>
     <form method="post" class="inline-form">
       <?= admin_csrf_field() ?>
@@ -223,7 +187,8 @@ $catalogo = cb_planes();
     <a class="tab" href="leads.php"><?= admin_icon('party') ?> Solicitudes</a>
     <a class="tab" href="mensajes.php"><?= admin_icon('chat') ?> Mensajes</a>
     <a class="tab" href="comprobante.php"><?= admin_icon('copy') ?> Comprobante</a>
-    <a class="tab active" href="planes.php"><?= admin_icon('copy') ?> Planes</a>
+    <a class="tab" href="planes.php"><?= admin_icon('copy') ?> Planes</a>
+    <a class="tab active" href="ajustes.php"><?= admin_icon('copy') ?> Ajustes</a>
   </nav>
 
   <?php if ($aviso !== ''): ?><p class="alert alert-ok"><?= h($aviso) ?></p><?php endif; ?>
@@ -234,74 +199,33 @@ $catalogo = cb_planes();
     <input type="hidden" name="action" value="guardar">
 
     <section class="card">
-      <h2>Promoción</h2>
+      <h2>Copia oculta de los correos</h2>
       <p class="muted">
-        El descuento que se aplica a todos los planes y que el sitio anuncia arriba de los precios.
-        Los precios con descuento no se escriben: salen de restarle este porcentaje al precio normal.
+        Cada correo que sale de CumpleClick —bienvenida, solicitudes, Términos firmados,
+        comprobante— llega también a esta dirección, en copia oculta. El cliente no la ve.
+        Déjala vacía para no mandar copia de nada.
       </p>
-      <div class="pln-promo">
-        <label class="checkbox-field">
-          <input type="checkbox" name="promo_activa" value="1" <?= $catalogo['promo']['activa'] ? 'checked' : '' ?>>
-          Activa
-        </label>
-        <label class="field">Texto que se muestra
-          <input type="text" name="promo_texto" maxlength="60" value="<?= h($catalogo['promo']['texto']) ?>"
-                 placeholder="Precios de lanzamiento">
-        </label>
-        <label class="field">Descuento (%)
-          <input type="text" name="promo_porcentaje" inputmode="decimal"
-                 value="<?= h(rtrim(rtrim(number_format($catalogo['promo']['porcentaje'], 2, ',', ''), '0'), ',')) ?>"
-                 placeholder="50">
-        </label>
-      </div>
+      <label class="field">Correo que recibe copia
+        <input type="email" name="bcc_email" value="<?= h($ajustes['bcc_email']) ?>"
+               placeholder="tucorreo@ejemplo.com" autocomplete="off">
+      </label>
     </section>
 
-    <?php foreach ($catalogo['planes'] as $p): ?>
-      <section class="card">
-        <h2><?= h($p['nombre']) ?></h2>
-        <div class="pln-grid">
-          <div>
-            <label class="field">Nombre
-              <input type="text" name="plan[<?= h($p['slug']) ?>][nombre]" maxlength="60" value="<?= h($p['nombre']) ?>">
-            </label>
-            <label class="field">Precio normal (pesos, sin puntos)
-              <input type="text" name="plan[<?= h($p['slug']) ?>][precio_normal]" inputmode="numeric"
-                     value="<?= (int) $p['precio_normal'] ?>">
-            </label>
-            <p class="pln-precio">
-              <?php if ($p['precio_antes'] !== null): ?><s><?= h(cb_format_clp($p['precio_antes'])) ?></s><?php endif; ?>
-              <span><?= h(cb_format_clp($p['precio'])) ?></span>
-              <span class="muted" style="font-size:.85rem;font-weight:400">es lo que ve el cliente</span>
-            </p>
-            <label class="field">Etiqueta de la tarjeta
-              <input type="text" name="plan[<?= h($p['slug']) ?>][etiqueta]" maxlength="30" value="<?= h($p['etiqueta']) ?>"
-                     placeholder="Más elegido">
-            </label>
-            <label class="checkbox-field">
-              <input type="checkbox" name="plan[<?= h($p['slug']) ?>][destacado]" value="1" <?= $p['destacado'] ? 'checked' : '' ?>>
-              Destacar este plan en el sitio
-            </label>
-          </div>
-          <div>
-            <label class="field">Qué incluye (una línea por punto)
-              <textarea class="pln-incluye" name="plan[<?= h($p['slug']) ?>][incluye]"><?= h(implode("\n", $p['incluye'])) ?></textarea>
-            </label>
-          </div>
-        </div>
-      </section>
-    <?php endforeach; ?>
-
     <section class="card">
-      <h2>Temática a medida</h2>
-      <p class="muted">Lo que se cobra por crear una temática que no está en el catálogo.</p>
-      <label class="field">Precio adicional (pesos)
-        <input type="text" name="tematica_a_medida" inputmode="numeric" value="<?= (int) $catalogo['tematica_a_medida'] ?>">
+      <h2>Recuperar la contraseña</h2>
+      <p class="muted">
+        Si olvidas la contraseña del admin, el enlace para cambiarla se manda <strong>solo a esta
+        dirección</strong>, nunca a una escrita en el formulario. Sin esto cargado, la
+        recuperación queda apagada y hay que cambiarla por el servidor.
+      </p>
+      <label class="field">Correo de recuperación
+        <input type="email" name="recovery_email" value="<?= h($ajustes['recovery_email']) ?>"
+               placeholder="tucorreo@ejemplo.com" autocomplete="off">
       </label>
     </section>
 
     <div class="party-actions">
-      <button class="btn btn-primary" type="submit">Guardar los precios</button>
-      <a class="btn btn-ghost" href="https://cumpleclick.com/#precios" target="_blank" rel="noopener">Ver el sitio</a>
+      <button class="btn btn-primary" type="submit">Guardar ajustes</button>
     </div>
   </form>
 </div>

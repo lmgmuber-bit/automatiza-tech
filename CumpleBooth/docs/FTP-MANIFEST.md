@@ -853,3 +853,39 @@ Por eso el arreglo se aplico **sobre el archivo de PROD** (se bajo, se parcho la
 volvio a subir) y no subiendo el de la rama, que habria borrado toda esa funcionalidad. Antes de
 subir `galeria.php` desde aca, comparar siempre el md5 con PROD. Fue justo esa comparacion la
 que evito el destrozo.
+
+## DESPLEGADO 2026-09-07 — Ajustes generales: copia oculta y recuperacion de contrasena
+
+Dos cosas que son del **administrador**, no de una fiesta ni de una tematica, asi que viven en
+una pantalla nueva **Admin -> Ajustes** (`data/ajustes.json`, mismo tipo de dato que
+`marca.json` y `planes.json`): Luis las cambia cuando quiera, sin tocar el hosting.
+
+| # | Local | PROD | Nota |
+|---|---|---|---|
+| 1 | `public/lib.ajustes.php` | `/lib.ajustes.php` | nuevo |
+| 2 | `public/lib.admin-password.php` | `/lib.admin-password.php` | nuevo |
+| 3 | `public/lib.mail.php` | `/lib.mail.php` | **en LF**; la copia oculta |
+| 4 | `public/data/ajustes.json` | `/data/ajustes.json` | nuevo; no accesible por web (403) |
+| 5 | `public/admin/ajustes.php`, `recuperar.php` | `/admin/` | pantallas nuevas |
+| 6 | `public/admin/config.php` | `/admin/config.php` | prefiere la contrasena recuperada |
+| 7 | 8 pantallas del admin | `/admin/` | enlace "Olvide la contrasena"; `invitations.php` **en LF** |
+
+**La copia oculta va como destinatario extra del SOBRE, no como cabecera `Bcc:`.** Hablando SMTP
+directo, esa cabecera viajaria dentro del mensaje y el cliente veria a quien mas se le mando,
+que es exactamente lo contrario de una copia oculta. Si el servidor rechaza la copia, el envio
+sigue: que falle la copia no puede impedir que al cliente le llegue su correo.
+
+**La contrasena nueva no reescribe el archivo de configuracion del servidor** (el que tiene las
+credenciales de la base y del SMTP). Queda como hash en el directorio de estado, fuera de la
+carpeta publica, y `admin/config.php` lo prefiere cuando existe. Borrar ese archivo devuelve la
+contrasena original.
+
+Lo que protege la recuperacion: el enlace se manda **siempre** al correo de Ajustes, nunca a uno
+escrito en el formulario; dura 30 minutos; sirve una sola vez; pedirlo esta limitado a 3 veces
+por hora y por IP; y al cambiarla se avisa por correo, para enterarse si no fue uno.
+
+Verificado en PROD: `php -l` limpio en los 15 archivos, ajustes cargados, **enlace de
+recuperacion pedido desde la pantalla real y enviado**, y **un correo de prueba enviado de
+verdad** con su copia oculta saliendo en el sobre y sin que la direccion aparezca en el mensaje.
+Pruebas: `tests/backend/admin-password.php` (26 comprobaciones nuevas) mas las suites de
+cliente, comprobante, backend general, leads y aceptacion. Smoke 33/33.

@@ -19,6 +19,7 @@ $partySlug = '';
 $downloadName = 'foto-cumpleclick.png';
 $imageUrl = '';
 $isDiploma = false;
+$isRecuerdito = false;
 
 if ($token !== '') {
     $photo = cb_find_photo_by_token($token);
@@ -32,6 +33,7 @@ if ($token !== '') {
     // El diploma se sube por el mismo endpoint que la foto; se distingue por el
     // nombre con el que lo envía el kiosco para no llamarlo "foto" en la página.
     $isDiploma = strncmp($downloadName, 'diploma-', 8) === 0;
+    $isRecuerdito = strncmp($downloadName, 'recuerdito-', 11) === 0;
 } elseif (cb_valid_slug($legacyParty, 1, 40) && preg_match('/^[A-Za-z0-9_-]+\.png$/', $legacyFile)) {
     $partySlug = $legacyParty;
     $legacyRoot = __DIR__ . '/fotos/' . $partySlug;
@@ -69,11 +71,13 @@ $themesData = cb_load_themes();
 $themeData = $themesData['themes'][$party['tema'] ?? ''] ?? [];
 $colors = is_array($themeData['colors'] ?? null) ? $themeData['colors'] : [];
 $name = (string) ($party['nombre'] ?? 'CumpleClick');
+$eventType = (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
+$assetLabel = $isRecuerdito ? 'recuerdito' : ($isDiploma ? 'diploma' : 'foto');
 $accent = (string) ($colors['accent'] ?? '#7C3AED');
 $yellow = (string) ($colors['yellow'] ?? '#FBBF24');
 $dark1 = (string) ($colors['dark1'] ?? '#1a1a1a');
 $dark2 = (string) ($colors['dark2'] ?? '#312e81');
 ?><!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title><?= $isDiploma ? 'Tu diploma' : 'Tu foto' ?> · Fiesta de <?= htmlspecialchars($name) ?></title>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>Tu <?= htmlspecialchars($assetLabel) ?> · <?= htmlspecialchars($name) ?></title>
 <style>*{box-sizing:border-box}body{min-height:100vh;margin:0;padding:24px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:system-ui,sans-serif;background:linear-gradient(135deg,<?= htmlspecialchars($dark1) ?>,<?= htmlspecialchars($dark2) ?>);color:#fff}.title{color:<?= htmlspecialchars($yellow) ?>;font-size:clamp(1.3rem,5vw,1.8rem);font-weight:800;text-align:center}.photo{display:block;width:100%;max-width:480px;border-radius:18px;box-shadow:0 12px 40px #0008}.button{display:inline-flex;min-height:48px;align-items:center;padding:14px 30px;border-radius:999px;background:<?= htmlspecialchars($accent) ?>;color:#fff;text-decoration:none;font-weight:800}.button:focus-visible{outline:3px solid <?= htmlspecialchars($yellow) ?>;outline-offset:4px}.footer{text-align:center;opacity:.85}</style></head>
-<body><h1 class="title">Fiesta de <?= htmlspecialchars($name) ?></h1><img class="photo" src="<?= $imageUrl ?>" alt="<?= $isDiploma ? 'Tu diploma de la fiesta' : 'Tu foto de la fiesta' ?>"><a class="button" href="<?= $imageUrl ?>"><?= $isDiploma ? 'Guardar diploma' : 'Guardar foto' ?></a><p class="footer">¡Gracias por venir!</p><p class="footer" style="display:flex;align-items:center;gap:8px;font-weight:800"><img src="brand/cumpleclick-mark.svg" alt="" width="24" height="24">CumpleClick</p></body></html>
+<body><h1 class="title"><?= $eventType === 'baby_shower' ? htmlspecialchars($name) : 'Fiesta de ' . htmlspecialchars($name) ?></h1><img class="photo" src="<?= $imageUrl ?>" alt="Tu <?= htmlspecialchars($assetLabel) ?>"><a class="button" href="<?= $imageUrl ?>">Guardar <?= htmlspecialchars($assetLabel) ?></a><p class="footer"><?= $isRecuerdito ? '¡Gracias por compartir tu predicción!' : '¡Gracias por venir!' ?></p><p class="footer" style="display:flex;align-items:center;gap:8px;font-weight:800"><img src="brand/cumpleclick-mark.svg" alt="" width="24" height="24">CumpleClick</p></body></html>

@@ -31,8 +31,19 @@ function cb_invitation_file_path(string $storageKey): ?string
 /** Devuelve los campos obligatorios que faltan o están vacíos. */
 function cb_invitation_mandatory_missing(array $invitation): array
 {
+    $esBabyShower = (string) ($invitation['event_type'] ?? 'child_birthday') === 'baby_shower';
     $missing = [];
-    foreach (['birthday_person_name' => 'nombre del cumpleañero', 'event_date' => 'fecha', 'event_time' => 'hora', 'address' => 'dirección'] as $field => $label) {
+    // En un baby shower el nombre puede no existir todavía, y es un caso
+    // corriente, no un formulario a medio llenar: muchas familias hacen la
+    // fiesta antes de decidirlo, o lo guardan para el nacimiento. Exigirlo
+    // dejaba esas invitaciones sin poder publicarse. La fecha, la hora y la
+    // dirección sí siguen siendo obligatorias — eso se sabe siempre, porque
+    // es el dato de la fiesta y no del bebé.
+    $campos = ['event_date' => 'fecha', 'event_time' => 'hora', 'address' => 'dirección'];
+    if (!$esBabyShower) {
+        $campos = ['birthday_person_name' => 'nombre del cumpleañero'] + $campos;
+    }
+    foreach ($campos as $field => $label) {
         $value = trim((string) ($invitation[$field] ?? ''));
         if ($value === '' || $value === '0000-00-00') {
             $missing[] = $label;
@@ -56,7 +67,11 @@ function cb_invitation_can_publish(array $invitation, array $approvedOutputs): b
 
 function cb_invitation_approved_outputs(int $invitationId, ?string $type = null): array
 {
-    $allowed = ['personalized_image', 'personalized_video'];
+    // La narración de Alice del INICIO es dinámica (lleva el nombre/fecha del
+    // cumpleañero) y se aprueba invitación por invitación, igual que la
+    // imagen/video. El resto del audio (despedida, cápsulas del modo video)
+    // es texto fijo por tema y vive como archivo estático — no pasa por acá.
+    $allowed = ['personalized_image', 'personalized_video', 'personalized_narration_intro'];
     $outputs = cb_load_invitation_outputs($invitationId);
     return array_values(array_filter($outputs, static function (array $o) use ($type, $allowed): bool {
         if ((string) ($o['status'] ?? '') !== 'approved') {
@@ -123,8 +138,13 @@ function cb_create_invitation(array $data): array
     $eventTime = trim((string) ($data['event_time'] ?? ''));
     $address = trim((string) ($data['address'] ?? ''));
     $message = trim((string) ($data['message'] ?? ''));
+    $eventType = (string) ($data['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
     $language = in_array((string) ($data['language'] ?? ''), ['es', 'en', 'pt'], true) ? (string) $data['language'] : 'es';
     $channel = in_array((string) ($data['channel'] ?? ''), ['whatsapp', 'email', 'print'], true) ? (string) $data['channel'] : 'whatsapp';
+    // Elige la narración de cierre de Alice ("cumpleañero" vs "cumpleañera").
+    // NULL/vacío = sin especificar, cae al audio neutro (ver invitacion.php).
+    $genderRaw = (string) ($data['birthday_person_gender'] ?? '');
+    $gender = in_array($genderRaw, ['m', 'f'], true) ? $genderRaw : null;
     $status = 'draft';
     $createdBy = (string) ($data['created_by'] ?? '');
     $promptTemplate = trim((string) ($data['prompt_template'] ?? ''));
@@ -154,8 +174,8 @@ function cb_create_invitation(array $data): array
         return ['ok' => false, 'error' => 'No se pudo generar un token de invitación único.'];
     }
 
-    $stmt = $pdo->prepare('INSERT INTO cc_invitations (public_token_hash, party_id, theme_slug, admin_label, birthday_person_name, event_date, event_time, address, message, language, channel, status, prompt_template, created_at, updated_at, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
-    $stmt->execute([$tokenHash, $partyId, $themeSlug, $adminLabel, $birthdayPersonName, $eventDate, $eventTime, $address, $message, $language, $channel, $status, $promptTemplate, $now, $now, $createdBy]);
+    $stmt = $pdo->prepare('INSERT INTO cc_invitations (public_token_hash, party_id, theme_slug, admin_label, birthday_person_name, birthday_person_gender, event_type, event_date, event_time, address, message, language, channel, status, prompt_template, created_at, updated_at, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+    $stmt->execute([$tokenHash, $partyId, $themeSlug, $adminLabel, $birthdayPersonName, $gender, $eventType, $eventDate, $eventTime, $address, $message, $language, $channel, $status, $promptTemplate, $now, $now, $createdBy]);
     return ['ok' => true, 'id' => (int) $pdo->lastInsertId(), 'token' => $token];
 }
 
@@ -259,7 +279,7 @@ function cb_save_invitation_output(int $invitationId, array $data): array
     }
     $pdo = cb_pdo();
     $assetKey = (string) ($data['asset_key'] ?? '');
-    $outputType = in_array((string) ($data['output_type'] ?? ''), ['personalized_image', 'personalized_video'], true) ? (string) $data['output_type'] : 'personalized_image';
+    $outputType = in_array((string) ($data['output_type'] ?? ''), ['personalized_image', 'personalized_video', 'personalized_narration_intro'], true) ? (string) $data['output_type'] : 'personalized_image';
     $fileStorageKey = (string) ($data['file_storage_key'] ?? '');
     $status = in_array((string) ($data['status'] ?? ''), ['pending', 'approved', 'rejected'], true) ? (string) $data['status'] : 'pending';
     $visualSource = is_array($data['visual_source_json'] ?? null) ? json_encode($data['visual_source_json']) : (string) ($data['visual_source_json'] ?? '');
@@ -450,7 +470,7 @@ function cb_update_invitation(int $id, array $data, string $by): bool
     if (cb_storage_mode() !== 'db') {
         return false;
     }
-    $allowed = ['birthday_person_name', 'event_date', 'event_time', 'address', 'message', 'admin_label', 'language', 'channel', 'prompt_template'];
+    $allowed = ['birthday_person_name', 'birthday_person_gender', 'event_date', 'event_time', 'address', 'message', 'admin_label', 'language', 'channel', 'prompt_template'];
     $fields = [];
     $params = [];
     foreach ($allowed as $key) {
@@ -571,7 +591,7 @@ function cb_duplicate_invitation(int $id, ?int $targetPartyId, string $by): arra
         return ['ok' => false, 'error' => 'Fiesta destino inválida.'];
     }
     $pdo = cb_pdo();
-    $stmt = $pdo->prepare('SELECT public_slug, theme_slug FROM cc_parties WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT public_slug, theme_slug, event_type FROM cc_parties WHERE id = ?');
     $stmt->execute([$partyId]);
     $party = $stmt->fetch();
     if (!$party) {
@@ -581,6 +601,7 @@ function cb_duplicate_invitation(int $id, ?int $targetPartyId, string $by): arra
     return cb_create_invitation([
         'party_id' => $partyId,
         'theme_slug' => (string) ($party['theme_slug'] ?? $source['theme_slug'] ?? ''),
+        'event_type' => (string) ($party['event_type'] ?? $source['event_type'] ?? 'child_birthday'),
         'admin_label' => $label !== '' ? $label . ' (copia)' : '',
         'birthday_person_name' => trim((string) ($source['birthday_person_name'] ?? '')) . ' (copia)',
         'event_date' => (string) ($source['event_date'] ?? ''),
@@ -657,5 +678,162 @@ function cb_validate_invitation_upload(array $file, string $outputType): array
         return ['ok' => true, 'mime' => 'video/mp4', 'byte_size' => $size, 'duration' => $meta['duration']];
     }
 
+    if ($outputType === 'personalized_narration_intro') {
+        // La narración de inicio es una frase corta (nombre + fecha + lugar):
+        // 5 MB de sobra para un MP3 de pocos segundos, nunca debería acercarse.
+        $narrationMax = 5 * 1024 * 1024;
+        if ($size <= 0 || $size > $narrationMax) {
+            return ['ok' => false, 'error' => 'El audio supera el tamaño máximo (' . number_format($narrationMax / 1048576, 1) . ' MB).'];
+        }
+        $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+        if ($ext !== 'mp3') {
+            return ['ok' => false, 'error' => 'Extensión de audio no permitida (solo .mp3).'];
+        }
+        // Firma de bytes mínima: ID3v2 al inicio, o el sync word de un frame
+        // MPEG audio (11 bits en 1). Descarta basura obvia sin exigir ffprobe.
+        $head = @file_get_contents($tmpPath, false, null, 0, 4);
+        $looksLikeMp3 = $head !== false && (
+            substr($head, 0, 3) === 'ID3'
+            || (strlen($head) >= 2 && (ord($head[0]) === 0xFF) && ((ord($head[1]) & 0xE0) === 0xE0))
+        );
+        if (!$looksLikeMp3) {
+            return ['ok' => false, 'error' => 'No parece un archivo MP3 válido.'];
+        }
+        return ['ok' => true, 'mime' => 'audio/mpeg', 'byte_size' => $size];
+    }
+
     return ['ok' => false, 'error' => 'Tipo de output no válido.'];
+}
+/** Acepta el token aleatorio legado (32 hex) o un alias firmado (48 hex). */
+function cb_invitation_public_token_is_valid(string $token): bool
+{
+    return preg_match('/^(?:[a-f0-9]{32}|[a-f0-9]{48})$/', $token) === 1;
+}
+
+/**
+ * Slug decorativo para la URL bonita: solo cosmético, nunca autoriza nada.
+ * Si viene vacío o queda sin caracteres válidos, devuelve 'invitacion'.
+ */
+function cb_invitation_name_slug(string $name): string
+{
+    $slug = $name;
+    $from = ['á','à','ä','â','é','è','ë','ê','í','ì','ï','î','ó','ò','ö','ô','ú','ù','ü','û','ñ','ç',
+             'Á','À','Ä','Â','É','È','Ë','Ê','Í','Ì','Ï','Î','Ó','Ò','Ö','Ô','Ú','Ù','Ü','Û','Ñ','Ç'];
+    $to   = ['a','a','a','a','e','e','e','e','i','i','i','i','o','o','o','o','u','u','u','u','n','c',
+             'a','a','a','a','e','e','e','e','i','i','i','i','o','o','o','o','u','u','u','u','n','c'];
+    $slug = str_replace($from, $to, $slug);
+    $slug = strtolower($slug);
+    $slug = preg_replace('/[^a-z0-9]+/', '-', $slug) ?? '';
+    $slug = trim($slug, '-');
+    if ($slug === '') {
+        return 'invitacion';
+    }
+    return substr($slug, 0, 40);
+}
+
+/**
+ * URL pública "bonita": /<nombre>-<token>, un solo segmento.
+ *
+ * El segmento único NO es capricho: invitacion.php enlaza CSS, JS y videos con
+ * rutas relativas, así que cualquier formato más profundo (/i/nombre/token) los
+ * manda al catch-all del SPA y la invitación se ve sin estilos ni videos.
+ *
+ * Depende de la regla de reescritura del .htaccess. Si esa regla no está, esta
+ * URL da 404 y hay que usar cb_invitation_public_url(). El token es el mismo y
+ * conserva sus 128 bits: el nombre es adorno, no credencial.
+ */
+function cb_invitation_pretty_url(string $token, string $name): string
+{
+    return cb_public_base_url() . '/' . cb_invitation_name_slug($name) . '-' . rawurlencode($token);
+}
+
+/**
+ * Plan contratado de la fiesta dueña de una invitación.
+ *
+ * Regla comercial canónica (docs/CAMPANA-INVITACIONES-BASICO-FULL-2026-08-11.md):
+ *   booth = Plan Básico → invitación Scroll
+ *   full  = Plan Full   → invitación Automática
+ *
+ * Falla cerrado a 'booth': ante cualquier duda se entrega lo contratado en el
+ * plan menor, nunca de más.
+ */
+function cb_invitation_service_plan(?int $partyId): string
+{
+    if ($partyId === null || $partyId < 1 || cb_storage_mode() !== 'db') {
+        return 'booth';
+    }
+    try {
+        $stmt = cb_pdo()->prepare('SELECT service_plan FROM cc_parties WHERE id = ?');
+        $stmt->execute([$partyId]);
+        $plan = (string) $stmt->fetchColumn();
+    } catch (Throwable $e) {
+        return 'booth';
+    }
+    return in_array($plan, ['booth', 'full'], true) ? $plan : 'booth';
+}
+
+/**
+ * Firma de vista previa para el admin.
+ *
+ * Los parámetros `hero` y `capitulos` dejaron de ser públicos: sin esta firma,
+ * el enlace de un invitado entrega siempre la variante de su plan y editar la
+ * URL no la cambia. La firma NO caduca a propósito — lo que protege no es un
+ * secreto, sino que el plan no se pueda subir a mano desde la barra del
+ * navegador; quien reciba un enlace de vista previa ve esa variante y ya.
+ */
+function cb_invitation_preview_mac(int $invitationId, string $hero, string $chapters): string
+{
+    return substr(cb_hmac($invitationId . '|' . $hero . '|' . $chapters, 'invitation-preview-v1'), 0, 24);
+}
+
+function cb_invitation_preview_ok(int $invitationId, string $hero, string $chapters, string $mac): bool
+{
+    if ($mac === '') {
+        return false;
+    }
+    return hash_equals(cb_invitation_preview_mac($invitationId, $hero, $chapters), $mac);
+}
+
+/**
+ * Alias público reconstruible desde el ID, sin guardar el token en texto plano.
+ * Mantiene 128 bits de firma HMAC y no reemplaza ni revoca el enlace aleatorio.
+ */
+function cb_invitation_share_token(int $invitationId): string
+{
+    if ($invitationId < 1) {
+        throw new InvalidArgumentException('ID de invitación inválido.');
+    }
+    $idHex = str_pad(dechex($invitationId), 16, '0', STR_PAD_LEFT);
+    if (strlen($idHex) !== 16 || $idHex[0] > '7') {
+        throw new InvalidArgumentException('ID de invitación fuera de rango.');
+    }
+    return $idHex . substr(cb_hmac($idHex, 'invitation-share-token-v1'), 0, 32);
+}
+
+function cb_invitation_id_from_share_token(string $token): ?int
+{
+    if (preg_match('/^[0-7][a-f0-9]{47}$/', $token) !== 1) {
+        return null;
+    }
+    $idHex = substr($token, 0, 16);
+    $providedMac = substr($token, 16);
+    $expectedMac = substr(cb_hmac($idHex, 'invitation-share-token-v1'), 0, 32);
+    if (!hash_equals($expectedMac, $providedMac)) {
+        return null;
+    }
+    $id = hexdec($idHex);
+    return is_int($id) && $id > 0 ? $id : null;
+}
+
+/** Resuelve enlaces históricos y aliases firmados sin degradar compatibilidad. */
+function cb_load_invitation_by_public_token(string $token): ?array
+{
+    if (cb_storage_mode() !== 'db' || !cb_invitation_public_token_is_valid($token)) {
+        return null;
+    }
+    if (strlen($token) === 32) {
+        return cb_load_invitation_by_token_hash(cb_hash_token($token));
+    }
+    $invitationId = cb_invitation_id_from_share_token($token);
+    return $invitationId !== null ? cb_load_invitation_by_id($invitationId) : null;
 }

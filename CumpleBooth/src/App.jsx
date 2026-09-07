@@ -14,6 +14,7 @@ import { createAudioKit, createBeatClock, DEFAULT_BPM } from './gameAudio.js'
 import { configurarRecords, guardarRecord, textoRecord, formatoSegundos } from './records.js'
 import { resolveThemeFlow } from './themeFlow.js'
 import { selectSpinnerWinnerIndex } from './spinnerWinner.js'
+import { PREDICTION_OPTIONS, createPredictionSubmissionToken, predictionLabels, predictionSummary, validPrediction } from './predictions.js'
 
 /* ============================================================
    RUNTIME CONFIG — multi-fiesta, cero rebuilds ★
@@ -172,6 +173,7 @@ function buildRuntime(party, theme, slug) {
     // Endpoint PHP que guarda la foto y devuelve URL pública (solo en prod/Hostinger).
     // En localhost no existe → el QR cae a texto automáticamente.
     uploadEndpoint: BASE + 'upload.php',
+    predictionEndpoint: BASE + 'prediction-api.php',
     // Geometría del marco decorativo del fondo. Ya viene resuelta desde el
     // backend (override de la fiesta o default de la temática).
     frameBox: normalizeFrameBox(party.frameBox),
@@ -181,6 +183,7 @@ function buildRuntime(party, theme, slug) {
     // Música de fondo habilitada por el admin (default true si no viene del API)
     musicaHabilitada: party.musica !== false,
     servicePlan: party.service_plan === 'full' ? 'full' : 'booth',
+    eventType: party.event_type === 'baby_shower' ? 'baby_shower' : 'child_birthday',
   }
   MUSIC_ENABLED = CONFIG.musicaHabilitada
   CONFETTI_COLORS = Array.isArray(theme.confetti) && theme.confetti.length ? theme.confetti : CONFETTI_COLORS
@@ -346,7 +349,7 @@ function saveInvitados(list) {
   } catch {}
 }
 
-const SCREENS = ['intro', 'invitados', 'spinner', 'photo-session', 'video-personaje', 'juego', 'transition', 'capture', 'revelacion', 'preview', 'qr', 'diploma', 'farewell']
+const SCREENS = ['intro', 'prediccion', 'prediction-save', 'invitados', 'spinner', 'photo-session', 'video-personaje', 'juego', 'transition', 'capture', 'revelacion', 'prediction-reveal', 'preview', 'qr', 'diploma', 'farewell']
 
 // Volumen de la música de fondo. Bajo a propósito: es ambiente, nunca compite
 // con las voces de los personajes ni con la narración.
@@ -463,11 +466,14 @@ function ErrorScreen({ code, onRetry }) {
 }
 
 function BoothApp() {
+  const isBabyShower = CONFIG.eventType === 'baby_shower'
   const [screen, setScreen] = useState('intro')
   const [invitado, setInvitado] = useState(null)
   const [personaje, setPersonaje] = useState(null)
   const [photo, setPhoto] = useState(null)
   const [result, setResult] = useState(null)
+  const [prediction, setPrediction] = useState(null)
+  const [gameScore, setGameScore] = useState(null)
   const [invitadosList, setInvitadosList] = useState(loadInvitados)
   const [gestion, setGestion] = useState(
     () => new URLSearchParams(location.search).has('invitados')
@@ -568,11 +574,14 @@ function BoothApp() {
   }, [])
 
   const go = (s) => setScreen(s)
+  const finishPredictionSave = useCallback(() => setScreen('capture'), [])
   const reset = () => {
     setInvitado(null)
     setPersonaje(null)
     setPhoto(null)
     setResult(null)
+    setPrediction(null)
+    setGameScore(null)
     setScreen('intro')
   }
 
@@ -610,7 +619,16 @@ function BoothApp() {
       )}
 
       {screen === 'intro' && (
-        <Intro onStart={() => { startMusic(); go('invitados') }} />
+        <Intro onStart={() => { startMusic(); go(isBabyShower ? 'prediccion' : 'invitados') }} />
+      )}
+      {screen === 'prediccion' && isBabyShower && (
+        <PredictionScreen
+          onDone={(value) => {
+            setPrediction(value)
+            setInvitado(value.guest_name)
+            go('juego')
+          }}
+        />
       )}
       {screen === 'invitados' && (
         <ListaInvitados
@@ -647,10 +665,29 @@ function BoothApp() {
         />
       )}
       {screen === 'juego' && (
-        <Juego
-          invitado={invitado}
-          personaje={personaje}
-          onDone={() => go(THEME_FLOW.afterGame())}
+        isBabyShower ? (
+          <JuegoCopos
+            config={{ kind: 'copos', seconds: 15, label: '¡Atrapa los chupetes!', emojis: ['🍼'] }}
+            invitado={invitado}
+            personaje={null}
+            onDone={(score) => {
+              setGameScore(Number.isFinite(score) ? score : 0)
+              go('prediction-save')
+            }}
+          />
+        ) : (
+          <Juego
+            invitado={invitado}
+            personaje={personaje}
+            onDone={() => go(THEME_FLOW.afterGame())}
+          />
+        )
+      )}
+      {screen === 'prediction-save' && isBabyShower && prediction && (
+        <PredictionSave
+          prediction={prediction}
+          score={gameScore}
+          onDone={finishPredictionSave}
         />
       )}
       {screen === 'transition' && (
@@ -660,11 +697,27 @@ function BoothApp() {
         <Capture
           onCapture={(dataUrl) => {
             setPhoto(dataUrl)
-            go(REVELACION_VIDEO ? 'revelacion' : 'preview')
+            go(isBabyShower ? 'prediction-reveal' : (REVELACION_VIDEO ? 'revelacion' : 'preview'))
           }}
         />
       )}
       {screen === 'revelacion' && <Revelacion invitado={invitado} onDone={() => go('preview')} />}
+      {screen === 'prediction-reveal' && isBabyShower && prediction && (
+        <PredictionReveal
+          photo={photo}
+          bgRef={bgRef}
+          prediction={prediction}
+          score={gameScore}
+          onRetry={() => {
+            setPhoto(null)
+            go('capture')
+          }}
+          onDone={(composed) => {
+            setResult(composed)
+            go('qr')
+          }}
+        />
+      )}
       {screen === 'preview' && (
         <Preview
           photo={photo}
@@ -685,12 +738,13 @@ function BoothApp() {
         <QRScreen
           imageDataUrl={result}
           invitado={invitado}
+          isBabyShower={isBabyShower}
           onDiploma={() => go('diploma')}
           onDone={() => go('farewell')}
         />
       )}
       {screen === 'diploma' && (
-        <DiplomaScreen invitado={invitado} personaje={personaje} onDone={() => go('farewell')} />
+        <DiplomaScreen invitado={invitado} personaje={personaje} prediction={prediction} score={gameScore} onDone={() => go('farewell')} />
       )}
       {screen === 'farewell' && (
         <VideoScreen
@@ -701,6 +755,325 @@ function BoothApp() {
         />
       )}
     </div>
+  )
+}
+
+function PredictionScreen({ onDone }) {
+  const [value, setValue] = useState({ guest_name: '', parecido: '', peso: '', fecha: '' })
+  const [touched, setTouched] = useState(false)
+  const submissionTokenRef = useRef('')
+  if (!submissionTokenRef.current) submissionTokenRef.current = createPredictionSubmissionToken()
+
+  const choose = (key, option) => setValue((current) => ({ ...current, [key]: option }))
+  const submit = (event) => {
+    event.preventDefault()
+    setTouched(true)
+    if (validPrediction(value)) onDone({
+      ...value,
+      guest_name: value.guest_name.trim(),
+      submission_token: submissionTokenRef.current,
+    })
+  }
+
+  // Las tres preguntas se muestran juntas y no una por pantalla: en una fiesta
+  // hay cola detras del pedestal y cada pantalla extra son dos toques mas y
+  // varios segundos por invitado. Lo que si cambia es como se ven: fichas
+  // grandes que se reconocen de pie y a un metro.
+  const question = (key, title, kicker, orden) => (
+    <fieldset className="prediction-question" style={{ '--orden': orden }}>
+      <legend>
+        <span className="prediction-flag">{kicker}</span>
+        {title}
+      </legend>
+      <div className="prediction-options">
+        {PREDICTION_OPTIONS[key].map((option) => {
+          const elegida = value[key] === option.value
+          return (
+            <button
+              key={option.value}
+              type="button"
+              className={elegida ? 'ficha is-selected' : 'ficha'}
+              aria-pressed={elegida}
+              onClick={() => choose(key, option.value)}
+            >
+              <b className="ficha__valor">{option.short || option.label}</b>
+              <small className="ficha__label">{option.label}</small>
+              <span className="ficha__sello" aria-hidden="true" />
+            </button>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
+
+  // Guirnalda de progreso. Tres banderines que se encienden al responder: en un
+  // baby shower dice "te faltan dos" mucho mejor que una barra de porcentaje,
+  // y ademas es el unico idioma visual que la cabina ya tiene.
+  const respondidas = ['parecido', 'peso', 'fecha'].filter((key) => value[key]).length
+
+  return (
+    <section className="screen prediction-screen" style={{ backgroundImage: `url(${CONFIG.images.fondo})` }}>
+      <div className="prediction-veil" />
+      <div className="prediction-motas" aria-hidden="true">
+        {Array.from({ length: 14 }, (unused, i) => <i key={i} style={{ '--i': i }} />)}
+      </div>
+
+      <form className="prediction-panel" onSubmit={submit}>
+        <div className="prediction-guirnalda" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <span key={i} className={i < respondidas ? 'is-on' : ''} style={{ '--i': i }} />
+          ))}
+        </div>
+
+        <p className="prediction-eyebrow">Una apuesta para recordar</p>
+        <h1>¿Cómo imaginas al bebé?</h1>
+        <p className="prediction-lead">Tres toques y listo. Tu apuesta va en tu foto y queda en el tablero de los papás.</p>
+
+        <label className="prediction-name">
+          <span>Tu nombre</span>
+          <input
+            value={value.guest_name}
+            onChange={(event) => setValue((current) => ({ ...current, guest_name: event.target.value }))}
+            maxLength={80}
+            autoComplete="name"
+            placeholder="Ej. Camila"
+          />
+        </label>
+
+        {question('parecido', '¿A quién se parecerá?', '01', 1)}
+        {question('peso', '¿Cuánto pesará?', '02', 2)}
+        {question('fecha', '¿Cuándo llegará?', '03', 3)}
+
+        {touched && !validPrediction(value) && (
+          <p className="prediction-error" role="alert">Falta tu nombre o alguna respuesta.</p>
+        )}
+        <button className="cta prediction-submit" type="submit">Sellar mi apuesta</button>
+      </form>
+    </section>
+  )
+}
+
+function PredictionSave({ prediction, score, onDone }) {
+  const [attempt, setAttempt] = useState(0)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const controller = new AbortController()
+    let alive = true
+    setError('')
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setError('No hay conexión. Revisa la red del quiosco y vuelve a intentar.')
+      return () => controller.abort()
+    }
+    fetch(CONFIG.predictionEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      signal: controller.signal,
+      body: JSON.stringify({ ...prediction, puntaje_juego: score, party: PARTY_SLUG }),
+    })
+      .then(async (response) => {
+        const data = await response.json().catch(() => null)
+        if (!response.ok || !data?.ok) throw new Error(data?.error || 'save_failed')
+      })
+      .then(() => { if (alive) onDone() })
+      .catch((saveError) => {
+        if (!alive || saveError?.name === 'AbortError') return
+        setError(saveError?.message === 'rate_limited'
+          ? 'Se hicieron muchos intentos seguidos. Espera un momento y vuelve a probar.'
+          : 'No pudimos guardar la predicción. La foto no comenzará hasta que quede segura.')
+      })
+    return () => { alive = false; controller.abort() }
+  }, [attempt, onDone, prediction, score])
+
+  const etiquetas = predictionLabels(prediction)
+
+  return (
+    <section className="screen prediction-saving">
+      <div className="prediction-saving__aura" aria-hidden="true" />
+      {error ? (
+        <div className="prediction-saving__panel is-error" role="alert">
+          <p className="prediction-eyebrow">Tu apuesta sigue aquí</p>
+          <h1>No se pudo guardar todavía</h1>
+          <p>{error}</p>
+          <button className="cta" onClick={() => setAttempt((value) => value + 1)}>Reintentar guardado</button>
+        </div>
+      ) : (
+        <div className="prediction-saving__panel">
+          <p className="prediction-eyebrow">Predicción lista</p>
+          <h1>Sellando tu apuesta…</h1>
+
+          {/* La espera es un POST y puede durar 200 ms o tres segundos. En vez
+              de un spinner que no dice nada, se le muestra al invitado LO QUE
+              acaba de apostar: si la red se demora, mira sus tres respuestas
+              en vez de mirar puntitos. Y si vuelve al instante, la tarjeta ya
+              estaba ahi y no alcanza a verse un parpadeo. */}
+          <div className="boleto" aria-hidden="true">
+            <p className="boleto__nombre">{prediction.guest_name}</p>
+            <ul className="boleto__lineas">
+              <li><span>Se parecerá</span><b>{etiquetas.parecido}</b></li>
+              <li><span>Pesará</span><b>{etiquetas.peso}</b></li>
+              <li><span>Llegará</span><b>{etiquetas.fecha}</b></li>
+            </ul>
+            <span className="boleto__lacre" />
+          </div>
+
+          <p className="sr-only">{predictionSummary(prediction)}</p>
+          <div className="prediction-saving__dots" aria-label="Guardando"><i /><i /><i /></div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function composePredictionImage(bgImg, photoImg, prediction, score) {
+  const W = bgImg?.naturalWidth || 1080
+  const H = bgImg?.naturalHeight || 1920
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')
+  if (bgImg) ctx.drawImage(bgImg, 0, 0, W, H)
+  else { ctx.fillStyle = cssVar('--bg-light1', '#fff3f7'); ctx.fillRect(0, 0, W, H) }
+
+  const geometry = getSquarePhotoGeometry(CONFIG.frameBox, W, H)
+  ctx.save()
+  roundedSquarePath(ctx, geometry.photoLeft, geometry.photoTop, geometry.photoSide, W * 0.008)
+  ctx.clip()
+  const cropSide = Math.min(photoImg.width, photoImg.height)
+  ctx.drawImage(
+    photoImg,
+    (photoImg.width - cropSide) / 2,
+    (photoImg.height - cropSide) / 2,
+    cropSide,
+    cropSide,
+    geometry.photoLeft,
+    geometry.photoTop,
+    geometry.photoSide,
+    geometry.photoSide,
+  )
+  ctx.restore()
+  roundedSquarePath(ctx, geometry.photoLeft, geometry.photoTop, geometry.photoSide, W * 0.008)
+  ctx.lineWidth = Math.max(3, W * 0.006)
+  ctx.strokeStyle = 'rgba(255,255,255,.92)'
+  ctx.stroke()
+  if (THEME_LABEL) drawThemeRibbon(ctx, geometry.cx, geometry.top, geometry.side, W)
+
+  /* La ficha de la apuesta.
+   *
+   * Va MAS ABAJO que antes (0.69 -> 0.742, unos 100 px en un lienzo de 1920):
+   * arriba tapaba el borde inferior del marco y parte de la foto, que es
+   * justamente lo que el invitado quiere ver.
+   *
+   * Y va como marca de agua, no como tarjeta: antes era blanco al 91% con
+   * sombra, o sea un sticker pegado encima de la decoracion que el cliente
+   * pago. Ahora es un cristal translucido con filo claro; la escena se ve por
+   * detras y el texto sigue leyendose porque la tinta es oscura y llena.
+   *
+   * El limite inferior no es libre: la marca de agua de CumpleClick arranca en
+   * 0.927 (ver drawBrandWatermark), asi que el panel cierra en 0.925 para no
+   * pisarla.
+   *
+   * Esto vale para TODAS las tematicas de baby shower: la funcion es una sola y
+   * lee CONFIG.frameBox, no tiene nada escrito por tema.
+   */
+  const labels = predictionLabels(prediction)
+  const panelX = W * 0.075
+  const panelY = H * 0.742
+  const panelW = W * 0.85
+  const panelH = H * 0.183
+  ctx.save()
+  ctx.fillStyle = 'rgba(255,255,255,.66)'
+  roundRectPath(ctx, panelX, panelY, panelW, panelH, W * 0.045)
+  ctx.fill()
+  ctx.lineWidth = Math.max(2, W * 0.0035)
+  ctx.strokeStyle = 'rgba(255,255,255,.72)'
+  ctx.stroke()
+  ctx.restore()
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = cssVar('--dark1', '#38244f')
+  ctx.font = `800 ${Math.round(W * 0.052)}px 'Baloo 2', system-ui, sans-serif`
+  ctx.fillText(`La predicción de ${prediction.guest_name}`, W / 2, panelY + panelH * 0.18)
+  ctx.font = `700 ${Math.round(W * 0.034)}px 'Baloo 2', system-ui, sans-serif`
+  ctx.fillText(`Se parecerá: ${labels.parecido}`, W / 2, panelY + panelH * 0.40)
+  ctx.fillText(`Peso: ${labels.peso}`, W / 2, panelY + panelH * 0.58)
+  ctx.fillText(`Llegará: ${labels.fecha}`, W / 2, panelY + panelH * 0.76)
+  ctx.fillStyle = cssVar('--pink', '#8c5de8')
+  ctx.font = `800 ${Math.round(W * 0.037)}px 'Baloo 2', system-ui, sans-serif`
+  ctx.fillText(`${Number.isFinite(score) ? score : 0} puntos en Atrapa los chupetes`, W / 2, panelY + panelH * 0.91)
+  drawBrandWatermark(ctx, W, H)
+  return canvas.toDataURL('image/png')
+}
+
+function PredictionReveal({ photo, bgRef, prediction, score, onRetry, onDone }) {
+  const [composed, setComposed] = useState(null)
+  const [failed, setFailed] = useState(false)
+  const confettiRef = useRef(null)
+
+  useEffect(() => {
+    if (!photo) return undefined
+    let alive = true
+    const image = new Image()
+    image.onload = async () => {
+      await Promise.all([ensureCanvasFonts(), preloadBrandLogo()])
+      if (!alive) return
+      try {
+        setComposed(composePredictionImage(bgRef.current, image, prediction, score))
+        burstConfetti(confettiRef.current, { duration: 2300, count: 150 })
+      } catch {
+        setFailed(true)
+      }
+    }
+    image.onerror = () => setFailed(true)
+    image.src = photo
+    return () => { alive = false }
+  }, [photo, bgRef, prediction, score])
+
+  const saveAndContinue = () => {
+    if (!composed) return
+    const link = document.createElement('a')
+    link.href = composed
+    link.download = `prediccion-${prediction.guest_name}-${Date.now()}.png`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    onDone(composed)
+  }
+
+  return (
+    <section className={composed ? 'screen prediction-reveal is-listo' : 'screen prediction-reveal'}>
+      <div className="prediction-reveal__headline">
+        <p className="prediction-eyebrow">Así imaginas el gran día</p>
+        <h1>¡Predicción revelada!</h1>
+      </div>
+
+      {/* La foto compuesta llegaba y aparecia, sin mas. Es el momento de mayor
+          pago del recorrido —el invitado lleva un minuto esperando verse— y se
+          resolvia como cargar una imagen. Ahora entra girando desde el canto,
+          como una foto que alguien da vuelta sobre la mesa, y un destello la
+          recorre una sola vez al asentarse. Una vez: repetirlo lo convierte en
+          un banner publicitario. */}
+      <div className="revelado">
+        {composed ? (
+          <>
+            <img src={composed} alt={`Predicción de ${prediction.guest_name}`} />
+            <span className="revelado__brillo" aria-hidden="true" />
+          </>
+        ) : (
+          <div className="revelado__espera">
+            <span className="revelado__marco" aria-hidden="true" />
+            <p>{failed ? 'No pudimos preparar la imagen.' : 'Revelando tu predicción…'}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="prediction-reveal__actions">
+        <button className="cta ghost" onClick={onRetry}>Repetir foto</button>
+        <button className="cta" disabled={!composed} onClick={saveAndContinue}>Guardar y ver mi QR</button>
+      </div>
+      <canvas ref={confettiRef} className="confetti-canvas" />
+    </section>
   )
 }
 
@@ -1295,7 +1668,11 @@ function Intro({ onStart }) {
       <CumpleClickBrand className="intro-brand" inverse />
       <div className="intro-content">
         <h1 className="intro-title">
-          ¡Bienvenidos a la<br />fiesta de<br />{CONFIG.nombre}!
+          {/* Un baby shower no es "la fiesta de Valentina": Valentina todavia
+              no nacio. La bienvenida cambia de forma segun la modalidad. */}
+          {esBabyShower()
+            ? <>¡Bienvenidos al<br />baby shower de<br />{CONFIG.nombre}!</>
+            : <>¡Bienvenidos a la<br />fiesta de<br />{CONFIG.nombre}!</>}
         </h1>
         <div className="intro-party-decoration" aria-hidden="true">
           <div className="intro-party-flags">
@@ -1333,6 +1710,28 @@ function Intro({ onStart }) {
     </section>
   )
 }
+
+/**
+ * Como se nombra el evento en los textos que ve el invitado.
+ *
+ * "la fiesta de Valentina" no sirve para un baby shower: Valentina todavia no
+ * nacio. Se resuelve una vez y no en cada pantalla porque lo usan tanto los
+ * componentes como las funciones que pintan el recuerdito en canvas, que no
+ * reciben props.
+ */
+// Funciones y no constantes: CONFIG se llena con la respuesta de api.php, y a
+// la hora en que el modulo se evalua todavia vale null. Resueltas al importar,
+// el kiosco entero moria con "Cannot read properties of null".
+const esBabyShower = () => CONFIG?.eventType === 'baby_shower'
+// Dos variantes porque el articulo cambia con la preposicion: "por venir AL
+// baby shower" pero "EN EL baby shower". Con una sola quedaba "en al baby
+// shower de Valentina" impreso en el recuerdito que el invitado se lleva.
+const eventoFraseA = () => (esBabyShower()
+  ? `al baby shower de ${CONFIG.nombre}`
+  : `a la fiesta de ${CONFIG.nombre}`)
+const eventoFraseEn = () => (esBabyShower()
+  ? `el baby shower de ${CONFIG.nombre}`
+  : `la fiesta de ${CONFIG.nombre}`)
 
 function CumpleClickBrand({ className = '', inverse = false }) {
   return (
@@ -1394,8 +1793,8 @@ function VideoScreen({ src, onDone, skipLabel, finale }) {
           <div className="big-emoji">{finale ? '👋✨' : '🏎️🎈'}</div>
           <h2>
             {finale
-              ? `¡Gracias por venir a la fiesta de ${CONFIG.nombre}!`
-              : `¡Hola! Bienvenido a la fiesta de ${CONFIG.nombre}`}
+              ? `¡Gracias por venir ${eventoFraseA()}!`
+              : `¡Hola! Bienvenido ${eventoFraseA()}`}
           </h2>
         </div>
       )}
@@ -2451,7 +2850,7 @@ function JuegoCopos({ config, invitado, personaje, onDone }) {
   const finish = useCallback(() => {
     if (doneRef.current) return
     doneRef.current = true
-    onDone()
+    onDone(scoreRef.current)
   }, [onDone])
 
   // Cuenta regresiva.
@@ -3010,8 +3409,10 @@ function composeImage(bgImg, photoImg, invitado = '', charImg = null, charName =
   ctx.fillStyle = cssVar('--yellow', '#ffb800')
   ctx.fillText(line1, textCx, line1Y)
 
-  // Línea 2: "por venir a la fiesta de {CONFIG.nombre}" — mismo estilo (letra + color) que línea 1.
-  const line2 = `por venir a la fiesta de ${CONFIG.nombre}`
+  // Línea 2: "por venir al baby shower de X" o "a la fiesta de X" segun la
+  // modalidad. Es el texto que el invitado se lleva impreso o en el celular,
+  // asi que decirle "fiesta" a un baby shower se nota.
+  const line2 = `por venir ${eventoFraseA()}`
   let fs2 = Math.round(W * 0.036)
   ctx.font = `800 ${fs2}px 'Baloo 2', system-ui, sans-serif`
   while (ctx.measureText(line2).width > maxW2 && fs2 > (textBeside ? 10 : 12)) {
@@ -3338,7 +3739,7 @@ function uploadErrorMessage(error) {
   return 'No pudimos subir la foto. Revisa la conexión y vuelve a intentarlo; la descarga local no se perdió.'
 }
 
-function QRScreen({ imageDataUrl, invitado, onDiploma, onDone }) {
+function QRScreen({ imageDataUrl, invitado, isBabyShower = false, onDiploma, onDone }) {
   const [qrUrl, setQrUrl] = useState(null)
   const [mode, setMode] = useState('loading') // loading | ready | error
   const [errorText, setErrorText] = useState('')
@@ -3386,8 +3787,8 @@ function QRScreen({ imageDataUrl, invitado, onDiploma, onDone }) {
       <div className="qr-veil" />
       <div className="qr-content">
         <CumpleClickBrand />
-        <h1 className="qr-brand">Fiesta de {CONFIG.nombre}</h1>
-        <h2 className="qr-title">¡Tu foto está lista! 📸</h2>
+        <h1 className="qr-brand">{isBabyShower ? CONFIG.nombre : `Fiesta de ${CONFIG.nombre}`}</h1>
+        <h2 className="qr-title">{isBabyShower ? '¡Tu predicción está lista!' : '¡Tu foto está lista! 📸'}</h2>
         <p className="qr-sub">
           {mode === 'error'
             ? 'La descarga local está segura'
@@ -3410,7 +3811,7 @@ function QRScreen({ imageDataUrl, invitado, onDiploma, onDone }) {
         </div>
         <div className="qr-actions">
           <button className="cta" onClick={onDiploma}>
-            🎓 Ver diploma
+            {isBabyShower ? 'Ver mi recuerdito' : '🎓 Ver diploma'}
           </button>
           <button className="cta ghost" onClick={onDone}>
             ✨ Siguiente invitado
@@ -3506,6 +3907,92 @@ function drawStarSeal(ctx, cx, cy, r, colorA, colorB) {
 
 // Genera el diploma vertical (9:16) en canvas, con la paleta de la temática
 // activa (leída de las CSS vars ya aplicadas por applyThemeVars).
+function composeRecuerdito(invitado = '', prediction = null, score = 0, background = null) {
+  const W = 1080
+  const H = 1920
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')
+  const accent = cssVar('--pink', '#8c5de8')
+  const accent2 = cssVar('--yellow', '#f0a9c8')
+  const ink = cssVar('--dark1', '#302442')
+
+  const gradient = ctx.createLinearGradient(0, 0, W, H)
+  gradient.addColorStop(0, cssVar('--bg-light1', '#fff4f8'))
+  gradient.addColorStop(1, cssVar('--bg-light2', '#efe9ff'))
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, W, H)
+  if (background?.complete && (background.naturalWidth || background.width)) {
+    drawImageCover(ctx, background, 0, 0, W, H)
+    ctx.fillStyle = 'rgba(255,250,253,.76)'
+    ctx.fillRect(0, 0, W, H)
+  }
+
+  const margin = W * 0.065
+  ctx.strokeStyle = accent
+  ctx.lineWidth = W * 0.012
+  roundRectPath(ctx, margin, margin, W - margin * 2, H - margin * 2, W * 0.055)
+  ctx.stroke()
+  ctx.strokeStyle = 'rgba(255,255,255,.88)'
+  ctx.lineWidth = W * 0.005
+  roundRectPath(ctx, margin + 20, margin + 20, W - (margin + 20) * 2, H - (margin + 20) * 2, W * 0.045)
+  ctx.stroke()
+
+  drawStarSeal(ctx, W / 2, H * 0.13, W * 0.09, accent, accent2)
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = ink
+  ctx.font = `800 ${Math.round(W * 0.105)}px 'Baloo 2', system-ui, sans-serif`
+  ctx.fillText('RECUERDITO', W / 2, H * 0.245)
+  ctx.fillStyle = accent
+  ctx.font = `800 ${Math.round(W * 0.065)}px 'Baloo 2', system-ui, sans-serif`
+  ctx.fillText(invitado || 'Invitado', W / 2, H * 0.33)
+  ctx.fillStyle = ink
+  ctx.font = `700 ${Math.round(W * 0.041)}px 'Baloo 2', system-ui, sans-serif`
+  ctx.fillText('Cronista del gran día', W / 2, H * 0.385)
+
+  const labels = predictionLabels(prediction || {})
+  const rows = [
+    ['Se parecerá', labels.parecido],
+    ['Pesará', labels.peso],
+    ['Llegará', labels.fecha],
+  ]
+  rows.forEach(([label, value], index) => {
+    const y = H * (0.49 + index * 0.105)
+    ctx.fillStyle = 'rgba(255,255,255,.88)'
+    roundRectPath(ctx, W * 0.14, y - H * 0.039, W * 0.72, H * 0.078, W * 0.035)
+    ctx.fill()
+    ctx.fillStyle = accent
+    ctx.font = `700 ${Math.round(W * 0.029)}px 'Baloo 2', system-ui, sans-serif`
+    ctx.fillText(label.toUpperCase(), W / 2, y - H * 0.012)
+    ctx.fillStyle = ink
+    ctx.font = `800 ${Math.round(W * 0.042)}px 'Baloo 2', system-ui, sans-serif`
+    ctx.fillText(value || '—', W / 2, y + H * 0.016)
+  })
+
+  ctx.fillStyle = accent
+  ctx.font = `800 ${Math.round(W * 0.052)}px 'Baloo 2', system-ui, sans-serif`
+  ctx.fillText(`${Number.isFinite(score) ? score : 0} puntos`, W / 2, H * 0.82)
+  // El recuerdito es lo que el invitado se lleva y muestra. "Una prediccion
+  // para Valentina" describia el papel; lo que corresponde es agradecerle,
+  // igual que hace el diploma de las fiestas infantiles.
+  // Encoge hasta caber, como ya hace el diploma. "Gracias por venir al baby
+  // shower de Valentina" entra justo; con "Maria Jose Fernanda" se salia de la
+  // tarjeta, y en el canvas no hay wrap que lo salve.
+  ctx.fillStyle = ink
+  const cierre = `Gracias por venir ${eventoFraseA()}`
+  let fsCierre = Math.round(W * 0.033)
+  ctx.font = `600 ${fsCierre}px 'Baloo 2', system-ui, sans-serif`
+  while (ctx.measureText(cierre).width > W * 0.8 && fsCierre > 14) {
+    fsCierre -= 1
+    ctx.font = `600 ${fsCierre}px 'Baloo 2', system-ui, sans-serif`
+  }
+  ctx.fillText(cierre, W / 2, H * 0.875)
+  drawBrandWatermark(ctx, W, H)
+  return canvas.toDataURL('image/png')
+}
+
 function composeDiploma(invitado = '', winnerImage = null) {
   const W = 1080
   const H = 1920
@@ -3652,7 +4139,7 @@ function composeDiploma(invitado = '', winnerImage = null) {
   // "en la fiesta de {nombre} · {fecha si está}"
   const fecha = formatFecha(CONFIG && CONFIG.fecha)
   const fiestaLine = CONFIG
-    ? `en la fiesta de ${CONFIG.nombre}${fecha ? ' · ' + fecha : ''}`
+    ? `en ${eventoFraseEn()}${fecha ? ' · ' + fecha : ''}`
     : ''
   if (fiestaLine) {
     let fsFiesta = Math.round(W * 0.043)
@@ -3691,7 +4178,8 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   window.__composeDiploma = composeDiploma
 }
 
-function DiplomaScreen({ invitado, personaje, onDone }) {
+function DiplomaScreen({ invitado, personaje, prediction = null, score = 0, onDone }) {
+  const isBabyShower = CONFIG.eventType === 'baby_shower'
   const [diplomaUrl, setDiplomaUrl] = useState(null)
   // El QR del diploma se genera recién al descargar: sube el PNG y muestra el
   // enlace público, igual que la foto (QRScreen). 'idle' = aún no lo pidió.
@@ -3703,12 +4191,15 @@ function DiplomaScreen({ invitado, personaje, onDone }) {
   useEffect(() => {
     let alive = true
     const render = (winnerImage = null) => {
-      if (alive) setDiplomaUrl(composeDiploma(invitado, winnerImage))
+      if (!alive) return
+      setDiplomaUrl(isBabyShower
+        ? composeRecuerdito(invitado, prediction, score, winnerImage)
+        : composeDiploma(invitado, winnerImage))
     }
 
     Promise.all([ensureCanvasFonts(), preloadBrandLogo()]).then(() => {
       if (!alive) return
-      const winnerSrc = personaje && CHAR_IMG[personaje.name]
+      const winnerSrc = isBabyShower ? CONFIG.images.fondo : (personaje && CHAR_IMG[personaje.name])
       if (!winnerSrc) {
         render()
         return
@@ -3721,7 +4212,7 @@ function DiplomaScreen({ invitado, personaje, onDone }) {
     return () => {
       alive = false
     }
-  }, [invitado, personaje])
+  }, [invitado, personaje, isBabyShower, prediction, score])
 
   useEffect(() => () => { aliveRef.current = false }, [])
 
@@ -3732,7 +4223,7 @@ function DiplomaScreen({ invitado, personaje, onDone }) {
     setQrMode('loading')
     setQrUrl(null)
     setQrError('')
-    uploadPhoto(diplomaUrl, `diploma-${invitado || 'invitado'}`)
+    uploadPhoto(diplomaUrl, `${isBabyShower ? 'recuerdito' : 'diploma'}-${invitado || 'invitado'}`)
       .then((publicUrl) =>
         QRCode.toDataURL(publicUrl, {
           width: 320,
@@ -3751,13 +4242,13 @@ function DiplomaScreen({ invitado, personaje, onDone }) {
         setQrError(uploadErrorMessage(error))
         setQrMode('error')
       })
-  }, [diplomaUrl, invitado])
+  }, [diplomaUrl, invitado, isBabyShower])
 
   const download = () => {
     if (!diplomaUrl) return
     const a = document.createElement('a')
     a.href = diplomaUrl
-    a.download = `diploma-${invitado}-${Date.now()}.png`
+    a.download = `${isBabyShower ? 'recuerdito' : 'diploma'}-${invitado}-${Date.now()}.png`
     document.body.appendChild(a)
     a.click()
     a.remove()
@@ -3768,21 +4259,21 @@ function DiplomaScreen({ invitado, personaje, onDone }) {
     <section className="screen diploma-screen">
       <div className={`diploma-content${qrMode === 'idle' ? '' : ' diploma-content--with-qr'}`}>
         {diplomaUrl ? (
-          <img className="diploma-img" src={diplomaUrl} alt={`Diploma de ${invitado}`} />
+          <img className="diploma-img" src={diplomaUrl} alt={`${isBabyShower ? 'Recuerdito' : 'Diploma'} de ${invitado}`} />
         ) : (
-          <div className="loading">Preparando tu diploma…</div>
+          <div className="loading">Preparando tu {isBabyShower ? 'recuerdito' : 'diploma'}…</div>
         )}
 
         {qrMode !== 'idle' && (
           <div className="diploma-qr">
             {qrMode === 'ready' && qrUrl ? (
               <>
-                <img className="diploma-qr__img" src={qrUrl} alt="Código QR del diploma" />
+                <img className="diploma-qr__img" src={qrUrl} alt={`Código QR del ${isBabyShower ? 'recuerdito' : 'diploma'}`} />
                 <span className="diploma-qr__hint">Escanéalo para bajarlo a otro celular</span>
               </>
             ) : qrMode === 'error' ? (
               <div className="diploma-qr__msg diploma-qr__msg--error" role="alert">
-                <strong>Diploma descargado en la tablet</strong>
+                <strong>{isBabyShower ? 'Recuerdito' : 'Diploma'} descargado en la tablet</strong>
                 <span>{qrError}</span>
                 <button className="qr-retry" onClick={publishQr}>
                   Reintentar QR
@@ -3796,7 +4287,7 @@ function DiplomaScreen({ invitado, personaje, onDone }) {
 
         <div className="diploma-bar">
           <button className="cta" onClick={download} disabled={!diplomaUrl}>
-            💾 Descargar diploma
+            💾 Descargar {isBabyShower ? 'recuerdito' : 'diploma'}
           </button>
           <button className="cta ghost" onClick={onDone}>
             ✨ Siguiente invitado

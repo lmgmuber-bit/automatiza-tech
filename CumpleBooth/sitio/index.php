@@ -1,0 +1,622 @@
+<?php
+/**
+ * index.php — la landing publica.
+ *
+ * Era `index.html` y paso a PHP por un motivo concreto: el numero de WhatsApp
+ * estaba escrito a mano en OCHO lugares de este archivo, asi que cambiarlo
+ * significaba editar el HTML y volver a subirlo. Ahora sale de
+ * `public/data/marca.json`, el MISMO archivo que usan el cierre del Album
+ * Recuerdo y el cartel QR, y que se edita desde Admin -> Marca. Un solo lugar
+ * para las tres cosas.
+ *
+ * La ruta con `/../public/` funciona en los dos entornos: en local `sitio/` y
+ * `public/` son hermanas, y en el servidor `public` es un enlace simbolico a
+ * `public_html/app`. Es la misma resolucion que ya usa `api/contacto.php`.
+ *
+ * Los valores por defecto NO son de relleno: son los que estaban escritos aca
+ * antes. Si el archivo falta, esta roto o le borran el telefono, la pagina
+ * sigue mostrando un numero que funciona en vez de un `wa.me/` vacio. Una
+ * landing cuyo unico objetivo es que la familia escriba no puede quedarse sin
+ * boton porque fallo un JSON.
+ */
+declare(strict_types=1);
+
+$ccMarca = [
+    'whatsapp' => '+56 9 7494 0070',
+    'instagram' => '',
+    'instagram_url' => '',
+];
+$ccRutaMarca = __DIR__ . '/../public/data/marca.json';
+if (is_file($ccRutaMarca)) {
+    $ccCrudo = json_decode((string) @file_get_contents($ccRutaMarca), true);
+    if (is_array($ccCrudo)) {
+        foreach (array_keys($ccMarca) as $ccClave) {
+            $ccValor = isset($ccCrudo[$ccClave]) ? trim((string) $ccCrudo[$ccClave]) : '';
+            if ($ccValor !== '') { $ccMarca[$ccClave] = $ccValor; }
+        }
+    }
+}
+
+/* wa.me quiere solo digitos: ni +, ni espacios, ni guiones. Se normaliza aca y
+   no al guardar, para que en el admin se pueda escribir el numero como se lee. */
+$ccWaDigitos = preg_replace('/\D/', '', $ccMarca['whatsapp']);
+if ($ccWaDigitos === '') { $ccWaDigitos = '56974940070'; }
+
+$e = static function ($s): string {
+    return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+};
+$ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
+    return 'https://wa.me/' . $ccWaDigitos . '?text=' . rawurlencode($mensaje);
+};
+?><!DOCTYPE html>
+<!-- ============================================================
+  CumpleClick — Sitio de clientes (landing de conversión)
+  Ticket: AT-CUMPLECLICK-011 · vive aislado en sitio/ (no toca kiosco)
+
+  OJO: los comentarios de este archivo se sirven al público y se leen con
+  ver-código-fuente. Acá va solo lo que le sirve a quien edite la página; el
+  porqué de cada cambio vive en el historial de git.
+  WhatsApp: sale de public/data/marca.json (Admin -> Marca). Es el de
+  CumpleClick, NO el de AutomatizaTech.
+  (56927002984): son negocios distintos. Está en los 7 enlaces y en el pie.
+  `tests/frontend/sitioPublico.test.mjs` lo cuida.
+============================================================ -->
+<html lang="es-CL">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>CumpleClick — Cada invitado se lleva su foto con su personaje favorito</title>
+  <meta name="description" content="Invitación digital, cabina de fotos temática con personajes que saludan por su nombre, juegos y álbum con los recuerdos. Para cumpleaños, baby showers y eventos de empresa. Cotiza por WhatsApp.">
+  <meta name="theme-color" content="#FFF8EC">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_CL">
+  <meta property="og:title" content="CumpleClick — Su personaje favorito, su foto, su recuerdo">
+  <meta property="og:description" content="De la invitación al álbum: la fiesta completa. Cabina temática con personajes que saludan por su nombre, juegos y las fotos de todos en un solo recuerdo.">
+  <link rel="icon" type="image/svg+xml" href="assets/cumpleclick-mark.svg">
+  <!-- El orden de estas cuatro lineas se midio, no se eligio por gusto.
+       `globo-render.webp` ES el elemento LCP de la pagina, asi que su preload
+       va primero: cuanto antes se descubre, antes pinta. Se probo ponerlo
+       despues de la hoja de estilos y el "load delay" del LCP subio de 395ms
+       a 493ms medido con CPU a 1/4 y Slow 4G. La hoja va segunda porque
+       bloquea el render; las tipografias van ultimas porque tienen
+       `font-display: swap` y el texto se pinta sin esperarlas. -->
+  <link rel="preload" href="assets/img/globo-render.webp" as="image" type="image/webp">
+  <link rel="stylesheet" href="css/styles.css?v=20260831k">
+  <link rel="preload" href="fonts/baloo-2-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/baloo-2-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- ?v= no es adorno. `styles.css` y `main.js` tienen nombre FIJO, asi que
+       una vez que un navegador los guardo no hay forma de reemplazarlos: se
+       sube el arreglo, el servidor lo sirve, se purga el CDN, y el visitante
+       sigue ejecutando el archivo viejo hasta que su cache expire. Con la
+       version en la URL es OTRO recurso y lo pide de nuevo, siempre.
+       SUBIR ESTE NUMERO AL TOCAR EL CSS O EL JS. Si no, el cambio no llega. -->
+</head>
+<body>
+
+  <header class="topbar" id="topbar">
+    <a class="topbar__brand" href="#inicio" aria-label="CumpleClick, volver arriba">
+      <span class="cc-lockup cc-lockup--marca topbar__logo"><img class="cc-lockup__mark" src="assets/cumpleclick-mark.svg" alt="CumpleClick" width="400" height="400" draggable="false"><span class="cc-lockup__nombre" aria-hidden="true">Cumple<span class="cc-lockup__click">Click</span></span></span>
+    </a>
+
+    <!-- El menú.
+
+         En pantalla ancha es una fila de enlaces; en teléfono, un panel que abre
+         el botón de la derecha. Es el MISMO `<nav>` en los dos casos, no dos
+         copias: duplicar el marcado obliga a mantener dos listas y tarde o
+         temprano una queda con una sección de menos. -->
+    <nav class="nav" id="menu-principal" aria-label="Secciones del sitio">
+      <ul class="nav__lista">
+        <li class="nav__item"><a class="nav__enlace" href="#como-funciona">Cómo funciona</a></li>
+        <li class="nav__item"><a class="nav__enlace" href="#mundos">Mundos</a></li>
+        <li class="nav__item"><a class="nav__enlace" href="#baby-shower">Baby shower</a></li>
+        <li class="nav__item"><a class="nav__enlace" href="#demos">Demos</a></li>
+        <li class="nav__item"><a class="nav__enlace" href="#precios">Precios</a></li>
+        <li class="nav__item"><a class="nav__enlace" href="#eventos">Eventos</a></li>
+        <li class="nav__item"><a class="nav__enlace" href="#faq">Preguntas</a></li>
+        <li class="nav__item nav__item--cta">
+          <a class="btn btn--cta btn--sm nav__cta" href="<?= $e($ccWa('Hola CumpleClick, quiero agendar una fecha 🎈')) ?>" target="_blank" rel="noopener">Agenda por WhatsApp 📲</a>
+        </li>
+      </ul>
+    </nav>
+
+    <a class="btn btn--cta btn--sm topbar__cta" href="<?= $e($ccWa('Hola CumpleClick, quiero agendar una fecha 🎈')) ?>" target="_blank" rel="noopener">
+      Agenda<span class="topbar__cta-largo"> por WhatsApp</span> 📲
+    </a>
+
+    <!-- `aria-expanded` y `aria-controls` no son decoración: son lo único que le
+         dice a un lector de pantalla que este botón abre ese panel y si está
+         abierto. El texto del botón vive en `.sr-only` y cambia con el
+         estado; las tres barras son `aria-hidden` porque no significan nada. -->
+    <button class="nav__boton" id="menu-boton" type="button"
+            aria-expanded="false" aria-controls="menu-principal">
+      <span class="nav__barras" aria-hidden="true"></span>
+      <span class="sr-only" data-etiqueta-menu>Abrir menú</span>
+    </button>
+  </header>
+
+  <main id="inicio">
+
+    <!-- 1 · HERO -->
+    <section class="hero" id="hero">
+      <div class="hero__inner">
+        <div class="hero__copy">
+          <h1 class="hero__title"><span>Su personaje favorito.</span> <em>Su foto.</em> <span>Su recuerdo.</span></h1>
+          <p class="hero__sub">Acompañamos la fiesta entera: la <strong>invitación</strong> que se abre en el celular, la <strong>cabina</strong> que le da a cada invitado su personaje y su foto al instante, los <strong>juegos</strong>, y el <strong>álbum</strong> con los recuerdos de todos. 🎈</p>
+          <div class="hero__ctas">
+            <a class="btn btn--cta" href="<?= $e($ccWa('Hola CumpleClick, quiero agendar una fecha 🎈')) ?>" target="_blank" rel="noopener">
+              Agenda la fecha por WhatsApp 📲
+            </a>
+            <a class="btn btn--ghost" href="#mundos">Conoce los mundos</a>
+          </div>
+        </div>
+        <div class="hero__visual" id="hero-visual" data-fallback>
+          <img class="hero__globo" src="assets/img/globo-render.webp" alt="El globo-lente de CumpleClick" width="720" height="720" fetchpriority="high">
+        </div>
+      </div>
+      <div class="hero__confeti" aria-hidden="true"></div>
+    </section>
+
+    <!-- 2 · CÓMO FUNCIONA -->
+    <section class="pasos section" id="como-funciona">
+      <div class="section__head" data-reveal>
+        <h2>Cómo es una fiesta con CumpleClick</h2>
+        <p>Empieza varios días antes, con la invitación. Y no termina cuando se apaga la cabina: termina con el álbum que queda.</p>
+      </div>
+      <div class="pasos__grid">
+        <ol class="pasos__lista">
+          <li class="paso" data-reveal>
+            <span class="paso__num" aria-hidden="true">1</span>
+            <span class="paso__cuando">Días antes</span>
+            <h3>La invitación 💌</h3>
+            <p>Le mandas un enlace por WhatsApp. Se abre como un sobre, con la música y los personajes de la temática elegida, y una cuenta regresiva. No es una imagen: es el primer momento de la fiesta.</p>
+          </li>
+          <li class="paso" data-reveal>
+            <span class="paso__num" aria-hidden="true">2</span>
+            <span class="paso__cuando">En la fiesta</span>
+            <h3>La cabina 📸</h3>
+            <p>Cada invitado toca su nombre, la ruleta le asigna un personaje que <strong>lo saluda por su nombre</strong>, y se lleva su foto y su diploma al celular escaneando el QR.</p>
+          </li>
+          <li class="paso" data-reveal>
+            <span class="paso__num" aria-hidden="true">3</span>
+            <span class="paso__cuando">Entre foto y foto</span>
+            <h3>Los juegos 🎮</h3>
+            <p>Cada mundo trae los suyos. En Reino de Hielo se atrapan copos y se arma un muñeco; en Carreras se acelera por tu carril; en Familia Canina, <em>Keepy Uppy</em>. Cuatro por temática, para que la fila sea parte de la fiesta y no una espera.</p>
+          </li>
+          <li class="paso" data-reveal>
+            <span class="paso__num" aria-hidden="true">4</span>
+            <span class="paso__cuando">Después</span>
+            <h3>El álbum 📖</h3>
+            <p>Las fotos de todos quedan en un álbum que se pasa como una revista. Le llega a la familia por un enlace privado, para compartirlo con los invitados.</p>
+          </li>
+        </ol>
+        <!-- El recorrido en imagenes.
+
+             Antes aca habia solo el video del kiosco, y por eso la seccion se
+             leia como "esto es una cabina de fotos" aunque el texto de al lado
+             ya contara las cuatro etapas. Ahora cada etapa tiene su imagen y el
+             carrusel las va mostrando, asi lo que se lee y lo que se ve dicen
+             lo mismo. El video del kiosco sigue siendo una de las cuatro. -->
+        <div class="etapas" data-reveal id="etapas">
+          <div class="etapas__marco">
+            <figure class="etapa is-activa" data-etapa="0">
+              <img src="assets/img/etapa-invitacion.webp" alt="La invitacion digital de CumpleClick abierta en un telefono, rodeada de globos" width="640" height="1148" loading="lazy" decoding="async">
+              <figcaption><span class="etapa__cuando">Días antes</span> La invitación 💌</figcaption>
+            </figure>
+            <figure class="etapa" data-etapa="1">
+              <video id="kiosco-video" muted loop playsinline preload="none" poster="assets/img/kiosco-en-fiesta.webp" width="640" height="1148" aria-label="El kiosco CumpleClick funcionando en una fiesta real">
+                <source data-src="assets/video/kiosco-demo.mp4" type="video/mp4">
+              </video>
+              <figcaption><span class="etapa__cuando">En la fiesta</span> La cabina 📸</figcaption>
+            </figure>
+            <figure class="etapa" data-etapa="2">
+              <img src="assets/img/etapa-juegos.webp" alt="El kiosco mostrando un juego de la tematica, con dos manos de nino tocando la pantalla" width="640" height="1148" loading="lazy" decoding="async">
+              <figcaption><span class="etapa__cuando">Entre foto y foto</span> Los juegos 🎮</figcaption>
+            </figure>
+            <figure class="etapa" data-etapa="3">
+              <img src="assets/img/etapa-album.webp" alt="El Album Recuerdo abierto, con las fotos de la fiesta" width="640" height="1148" loading="lazy" decoding="async">
+              <figcaption><span class="etapa__cuando">Después</span> El álbum 📖</figcaption>
+            </figure>
+          </div>
+          <div class="etapas__puntos" role="tablist" aria-label="Etapas de la fiesta">
+            <button type="button" class="etapas__punto is-activo" role="tab" aria-selected="true" data-ir="0"><span class="sr-only">Ver la invitación</span></button>
+            <button type="button" class="etapas__punto" role="tab" aria-selected="false" data-ir="1"><span class="sr-only">Ver la cabina</span></button>
+            <button type="button" class="etapas__punto" role="tab" aria-selected="false" data-ir="2"><span class="sr-only">Ver los juegos</span></button>
+            <button type="button" class="etapas__punto" role="tab" aria-selected="false" data-ir="3"><span class="sr-only">Ver el álbum</span></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 · ELIGE TU MUNDO -->
+    <section class="mundos section" id="mundos">
+      <div class="section__head" data-reveal>
+        <h2>Elige tu mundo</h2>
+        <p>Cada temática tiene sus propios personajes, ruleta y sorpresas. ¿Cuál es la de tu casa?</p>
+      </div>
+      <ul class="mundos__grid" id="mundos-grid">
+        <li class="mundo" data-reveal>
+          <img src="assets/img/mundo-perruna.webp" alt="Bluey y su familia celebrando un cumpleaños" loading="lazy" width="900" height="1600"
+            srcset="assets/img/mundo-perruna-c620.webp 620w, assets/img/mundo-perruna.webp 900w"
+            sizes="(max-width: 700px) 54vw, (max-width: 1100px) 30vw, 260px">
+          <h3>Bluey</h3>
+        </li>
+        <li class="mundo" data-reveal>
+          <img src="assets/img/mundo-carreras.webp" alt="Los personajes de Cars en una fiesta de carreras" loading="lazy" width="900" height="1600"
+            srcset="assets/img/mundo-carreras-c620.webp 620w, assets/img/mundo-carreras.webp 900w"
+            sizes="(max-width: 700px) 54vw, (max-width: 1100px) 30vw, 260px">
+          <h3>Cars</h3>
+        </li>
+        <li class="mundo" data-reveal>
+          <img src="assets/img/mundo-hielo.webp" alt="Personajes de Frozen en una fiesta de hielo" loading="lazy" width="900" height="1600"
+            srcset="assets/img/mundo-hielo-c620.webp 620w, assets/img/mundo-hielo.webp 900w"
+            sizes="(max-width: 700px) 54vw, (max-width: 1100px) 30vw, 260px">
+          <h3>Frozen</h3>
+        </li>
+        <li class="mundo" data-reveal>
+          <img src="assets/img/mundo-tropical.webp" alt="Lilo y Stitch en una fiesta tropical" loading="lazy" width="900" height="1600"
+            srcset="assets/img/mundo-tropical-c620.webp 620w, assets/img/mundo-tropical.webp 900w"
+            sizes="(max-width: 700px) 54vw, (max-width: 1100px) 30vw, 260px">
+          <h3>Lilo &amp; Stitch</h3>
+        </li>
+        <li class="mundo" data-reveal>
+          <img src="assets/img/mundo-capitan.jpg" alt="Capitán América en una fiesta de superhéroes" loading="lazy" width="768" height="1365"
+            srcset="assets/img/mundo-capitan-c620.webp 620w, assets/img/mundo-capitan.jpg 768w"
+            sizes="(max-width: 700px) 54vw, (max-width: 1100px) 30vw, 260px">
+          <h3>Capitán América</h3>
+        </li>
+        <li class="mundo" data-reveal>
+          <img src="assets/img/mundo-kpop-real.jpg" alt="Las guerreras KPop Demon Hunters en su escenario" loading="lazy" width="768" height="1365"
+            srcset="assets/img/mundo-kpop-real-c620.webp 620w, assets/img/mundo-kpop-real.jpg 768w"
+            sizes="(max-width: 700px) 54vw, (max-width: 1100px) 30vw, 260px">
+          <h3>KPop Demon Hunters</h3>
+        </li>
+      </ul>
+      <!-- Estos mundos se producen a pedido. El porqué de la redacción está en
+           el commit c99ebda; no se detalla acá porque los comentarios del HTML
+           se sirven al público y se leen con ver-código-fuente. -->
+      <p class="mundos__mas" data-reveal>¿Buscas otro mundo? Paw Patrol, Princesas, Dinosaurios, La Sirenita, Toy Story, Mickey… <a href="#precios">lo creamos a medida para tu fiesta</a>, con sus personajes, su ruleta y sus saludos.</p>
+    </section>
+
+    <!-- 3b · BABY SHOWER -->
+    <section class="mundos section" id="baby-shower">
+      <div class="section__head" data-reveal>
+        <h2>¿Un baby shower? También 🍼</h2>
+        <p>Mismo kiosco, otra historia. Aquí no hay ruleta ni personajes: cada invitado <strong>hace su apuesta</strong> —a quién se parecerá, cuánto pesará, cuándo llegará— y se la lleva impresa en su foto.</p>
+      </div>
+      <ul class="mundos__grid">
+        <li class="mundo" data-reveal>
+          <img src="assets/img/baby-nube.webp" alt="Rincón de baby shower en tonos azules con globos y nubes" loading="lazy" width="900" height="1600"
+            srcset="assets/img/baby-nube-c620.webp 620w, assets/img/baby-nube.webp 900w"
+            sizes="(max-width: 700px) 54vw, (max-width: 1100px) 30vw, 260px">
+          <h3>Bebé en las Nubes</h3>
+        </li>
+        <li class="mundo" data-reveal>
+          <img src="assets/img/baby-rosas.webp" alt="Rincón de baby shower en rosa polvo con rosas y eucalipto" loading="lazy" width="900" height="1600"
+            srcset="assets/img/baby-rosas-c620.webp 620w, assets/img/baby-rosas.webp 900w"
+            sizes="(max-width: 700px) 54vw, (max-width: 1100px) 30vw, 260px">
+          <h3>Bebé entre Rosas</h3>
+        </li>
+        <li class="mundo" data-reveal>
+          <img src="assets/img/baby-safari.webp" alt="Rincón de baby shower con animalitos de safari en tonos tierra" loading="lazy" width="900" height="1600"
+            srcset="assets/img/baby-safari-c620.webp 620w, assets/img/baby-safari.webp 900w"
+            sizes="(max-width: 700px) 54vw, (max-width: 1100px) 30vw, 260px">
+          <h3>Bebé Safari</h3>
+        </li>
+      </ul>
+      <ul class="eventos__grid">
+        <li class="eventos__item" data-reveal><span aria-hidden="true">💌</span><h3>La invitación</h3><p>Con cuenta regresiva y la <strong>lista de regalos</strong>: cada quien reserva el suyo y nadie repite. Los invitados ven qué está tomado, nunca por quién.</p></li>
+        <li class="eventos__item" data-reveal><span aria-hidden="true">🔮</span><h3>Las apuestas</h3><p>El momento que a todos les gusta. Quedan en un <strong>tablero privado</strong> que los papás abren después, y muchos imprimen.</p></li>
+        <li class="eventos__item" data-reveal><span aria-hidden="true">📖</span><h3>El álbum</h3><p>Las fotos de la cabina más las que suban los invitados desde su celular, en una revista que se hojea.</p></li>
+      </ul>
+      <p class="mundos__mas" data-reveal>¿Todavía no saben el nombre o el sexo? <strong>Está pensado para eso.</strong> La invitación funciona igual, y si la fiesta es justamente para revelarlo, mejor. <a href="#precios">Vale <strong>$29.995</strong></a> con el 50% de lanzamiento, e incluye la invitación, las apuestas y el álbum.</p>
+    </section>
+
+    <!-- 3c · DEMOS EN VIVO -->
+    <section class="eventos section" id="demos">
+      <div class="section__head" data-reveal>
+        <h2>Míralo funcionando, ahora</h2>
+        <p>No son pantallazos: son cuatro fiestas de verdad, andando en este momento. Ábrelas y recórrelas como lo haría un invitado.</p>
+      </div>
+      <ul class="eventos__grid">
+        <li class="eventos__item" data-reveal>
+          <span aria-hidden="true">❄️</span>
+          <h3>Frozen · Plan Premium</h3>
+          <p>El recorrido completo, con El Show 3D y la invitación que se reproduce sola.</p>
+          <p>
+            <a href="/app/invitacion.php?t=87b2e06044fd27b9d4a843bb9f29c64b" target="_blank" rel="noopener">Invitación</a> ·
+            <a href="/app/?p=demo-frozen-vip" target="_blank" rel="noopener">Kiosco</a> ·
+            <a href="/app/album.html?t=96789256198e514179437a936fa2b4b0" target="_blank" rel="noopener">Álbum</a>
+          </p>
+        </li>
+        <li class="eventos__item" data-reveal>
+          <span aria-hidden="true">🏁</span>
+          <h3>Cars · Plan Mágico</h3>
+          <p>El mismo kiosco en el plan de entrada, y la invitación que se descubre con el dedo.</p>
+          <p>
+            <a href="/app/invitacion.php?t=f68083b420e9954c3f81755f39b1c84d" target="_blank" rel="noopener">Invitación</a> ·
+            <a href="/app/?p=demo-carreras" target="_blank" rel="noopener">Kiosco</a> ·
+            <a href="/app/album.html?t=5d94780468f7cb75692e95862f470752" target="_blank" rel="noopener">Álbum</a>
+          </p>
+        </li>
+        <li class="eventos__item" data-reveal>
+          <span aria-hidden="true">🌸</span>
+          <h3>Baby shower · Amanda</h3>
+          <p>Bebé entre Rosas, con la lista de regalos y las apuestas ya hechas.</p>
+          <p>
+            <a href="/app/invitacion.php?t=995acd5d483ad29ed70e3693c59f3ec8" target="_blank" rel="noopener">Invitación</a> ·
+            <a href="/app/?p=demo-bs-nina" target="_blank" rel="noopener">Kiosco</a> ·
+            <a href="/app/album.html?t=f733b4e82c90f90511e0a06956a81717" target="_blank" rel="noopener">Álbum</a>
+          </p>
+        </li>
+        <li class="eventos__item" data-reveal>
+          <span aria-hidden="true">☁️</span>
+          <h3>Baby shower · Tomás</h3>
+          <p>Bebé en las Nubes. Fíjate en los dos contadores de la invitación.</p>
+          <p>
+            <a href="/app/invitacion.php?t=53975b2d7c8365c9cf440850b0028522" target="_blank" rel="noopener">Invitación</a> ·
+            <a href="/app/?p=demo-bs-nino" target="_blank" rel="noopener">Kiosco</a> ·
+            <a href="/app/album.html?t=816d26c2258966fa3eec3f7b5135dae8" target="_blank" rel="noopener">Álbum</a>
+          </p>
+        </li>
+      </ul>
+      <p class="mundos__mas" data-reveal>El kiosco pide permiso de cámara porque en la fiesta saca la foto de verdad. Si lo abres en el computador, puedes recorrerlo igual y saltarte esa parte.</p>
+    </section>
+
+    <!-- 4b · EJEMPLO DE TEMÁTICA (video opt-in, no autoplay) -->
+    <section class="experiencia section" id="experiencia">
+      <div class="section__head" data-reveal>
+        <h2>Una temática en acción</h2>
+        <p>Así se ve la cabina por dentro: ruleta, personaje, juegos y foto final. Cada temática tiene su propio mundo.</p>
+      </div>
+      <div class="experiencia__frame" data-depth>
+        <button class="experiencia__play" id="btn-play-frozen" type="button" aria-label="Ver ejemplo de la temática Reino de Hielo">
+          <img src="assets/img/mundo-hielo.webp" alt="Ambientación y personajes de la temática Reino de Hielo" loading="lazy" width="900" height="1600">
+          <span class="experiencia__etiqueta" aria-hidden="true">Ejemplo: Reino de Hielo</span>
+          <span class="experiencia__boton" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+          </span>
+          <span class="experiencia__dur">1 min · demo</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Modal del video (se crea al hacer clic; src se asigna solo ahí) -->
+    <div class="modal" id="modal-frozen" role="dialog" aria-modal="true" aria-labelledby="modal-frozen-titulo" tabindex="-1" hidden>
+      <div class="modal__backdrop" data-close></div>
+      <div class="modal__box">
+        <h2 class="sr-only" id="modal-frozen-titulo">Ejemplo de la temática Reino de Hielo</h2>
+        <button class="modal__cerrar" id="btn-cerrar-frozen" type="button" aria-label="Cerrar video">✕</button>
+        <video id="video-frozen" controls playsinline preload="none" poster="assets/img/mundo-hielo.webp" width="900" height="1600">
+          <source data-src="assets/video/frozen-juegos.mp4" type="video/mp4">
+        </video>
+      </div>
+    </div>
+
+    <!-- 5 · PRECIOS -->
+    <section class="precios section" id="precios">
+      <div class="section__head" data-reveal>
+        <h2>Planes y precios</h2>
+        <p>Sin letra chica: llegamos, montamos, animamos y nos llevamos todo al final.</p>
+        <p class="precios__promo">🎉 Precios de lanzamiento: <strong>50% de descuento</strong></p>
+      </div>
+      <div class="precios__grid">
+        <article class="plan" data-reveal>
+          <h3>Plan Mágico</h3>
+          <p class="plan__precio"><s class="plan__antes">$69.990</s> $34.995</p>
+          <ul>
+            <li>1 temática a elección</li>
+            <li><strong>3 juegos</strong> de la temática elegida</li>
+            <li>Hasta 200 fotos por fiesta</li>
+            <li>Diplomas personalizados</li>
+            <li><strong>Invitación digital</strong> para compartir por WhatsApp</li>
+            <li><strong>Álbum Recuerdo</strong> con las fotos de todos</li>
+            <li>Descarga inmediata por QR</li>
+          </ul>
+          <a class="btn btn--cta btn--block" href="<?= $e($ccWa('Hola CumpleClick, me interesa el Plan Mágico 🎈')) ?>" target="_blank" rel="noopener">Agenda el Mágico 📲</a>
+        </article>
+        <article class="plan plan--destacado" data-reveal>
+          <span class="plan__badge">Más elegido</span>
+          <h3>Plan Premium</h3>
+          <p class="plan__precio"><s class="plan__antes">$99.990</s> $49.995</p>
+          <ul>
+            <li>1 temática a elección</li>
+            <li><strong>Los 4 juegos</strong>, incluido <strong>El Show 3D</strong></li>
+            <li>Hasta 200 fotos por fiesta</li>
+            <li>Diplomas personalizados</li>
+            <li><strong>Invitación automática</strong>: se reproduce sola, con videos y narración</li>
+            <li><strong>Álbum Recuerdo</strong> con las fotos de todos</li>
+            <li>Galería privada para papás</li>
+            <li>2 horas de servicio</li>
+          </ul>
+          <a class="btn btn--cta btn--block" href="<?= $e($ccWa('Hola CumpleClick, me interesa el Plan Premium 🎉')) ?>" target="_blank" rel="noopener">Agenda el Premium 📲</a>
+        </article>
+        <article class="plan plan--baby" data-reveal>
+          <span class="plan__badge plan__badge--baby">Baby shower</span>
+          <h3>Plan Baby Shower</h3>
+          <p class="plan__precio"><s class="plan__antes">$59.990</s> $29.995</p>
+          <ul>
+            <li>1 temática a elección: <strong>Nubes, Rosas o Safari</strong></li>
+            <li><strong>Las apuestas</strong> de cada invitado, impresas en su foto</li>
+            <li>Tablero privado con todas, para abrir después</li>
+            <li>Hasta 200 fotos por evento</li>
+            <li><strong>Invitación digital</strong> con cuenta regresiva y <strong>lista de regalos</strong></li>
+            <li><strong>Álbum Recuerdo</strong> con las fotos de todos</li>
+            <li>Descarga inmediata por QR</li>
+          </ul>
+          <a class="btn btn--cta btn--block" href="<?= $e($ccWa('Hola CumpleClick, me interesa el Plan Baby Shower 🍼')) ?>" target="_blank" rel="noopener">Agenda el Baby Shower 📲</a>
+        </article>
+      </div>
+      <p class="precios__medida" data-reveal>¿Quieres una temática a la medida? <strong>La creamos por +$25.000.</strong></p>
+    </section>
+
+    <!-- 5 · POR QUÉ CUMPLECLICK (diferenciadores + invitaciones digitales) -->
+    <section class="porque section" id="porque">
+      <div class="section__head" data-reveal>
+        <h2>Por qué CumpleClick</h2>
+      </div>
+      <ul class="porque__grid">
+        <li class="porque__item" data-depth>
+          <h3>Cada invitado, su foto</h3>
+          <p>No es la foto grupal borrosa de siempre: cada niño se lleva la suya, junto a su personaje, al instante.</p>
+        </li>
+        <li class="porque__item" data-depth>
+          <h3>Un recuerdo que queda</h3>
+          <p>En los dos planes, todas las fotos quedan en el <strong>Álbum Recuerdo</strong>, que la familia comparte con los invitados por un enlace privado. Con Premium, además, los papás tienen su propia galería con todo el material de la fiesta.</p>
+        </li>
+        <li class="porque__item" data-depth>
+          <h3>Llegamos y nos encargamos</h3>
+          <p>Montamos, animamos y retiramos todo. Tú solo sopla las velas y disfruta. 🎈</p>
+        </li>
+      </ul>
+      <aside class="invitaciones" data-depth>
+        <div class="invitaciones__txt">
+          <h3>Y la invitación, ¿ya la tienes?</h3>
+          <p>Va <strong>incluida en los dos planes</strong>: una invitación web de tu misma temática, con la fecha, el lugar y el mapa, lista para compartir por WhatsApp. 💌</p>
+          <p>En el <strong>Plan Premium</strong> se reproduce sola, como una película corta: capítulos en video, música y una voz que cuenta la historia. En el <strong>Mágico</strong>, el invitado la va descubriendo con el dedo.</p>
+        </div>
+        <a class="btn btn--ghost" href="<?= $e($ccWa('Hola CumpleClick, quiero una invitación digital 💌')) ?>" target="_blank" rel="noopener">Quiero mi invitación</a>
+      </aside>
+    </section>
+
+    <!-- 6 · EVENTOS Y EMPRESAS -->
+    <section class="eventos section" id="eventos">
+      <div class="section__head" data-reveal>
+        <h2>Celebramos tus momentos importantes</h2>
+        <p>CumpleClick no es solo para cumpleaños: llevamos la experiencia a fechas especiales, colegios, equipos y celebraciones de empresa.</p>
+      </div>
+      <ul class="eventos__grid">
+        <li class="eventos__item" data-reveal><span aria-hidden="true">🎂</span><h3>Cumpleaños</h3><p>La experiencia personalizada que ya conoces.</p></li>
+        <li class="eventos__item" data-reveal><span aria-hidden="true">🎄</span><h3>Navidad</h3><p>Fotos y dinámicas para celebrar con magia.</p></li>
+        <li class="eventos__item" data-reveal><span aria-hidden="true">🎈</span><h3>Día del Niño</h3><p>Una actividad que todos quieren probar.</p></li>
+        <li class="eventos__item" data-reveal><span aria-hidden="true">🏫</span><h3>Colegios y jardines</h3><p>Jornadas, aniversarios y celebraciones de curso.</p></li>
+        <li class="eventos__item" data-reveal><span aria-hidden="true">🏢</span><h3>Empresas</h3><p>Activaciones, fiestas internas y eventos familiares.</p></li>
+        <li class="eventos__item" data-reveal><span aria-hidden="true">✨</span><h3>Tu idea</h3><p>Adaptamos personajes, dinámica y look del evento.</p></li>
+      </ul>
+
+      <article class="contacto" data-depth>
+        <div class="contacto__intro">
+          <p class="contacto__eyebrow">Para empresas y organizaciones</p>
+          <h3>Cuéntanos tu evento</h3>
+          <p>Déjanos los datos esenciales, registraremos tu solicitud y te responderemos con la disponibilidad y una propuesta a medida.</p>
+        </div>
+        <form class="contacto__form" id="form-contacto" data-whatsapp="<?= $e($ccWaDigitos) ?>">
+          <div class="contacto__trampa" aria-hidden="true"><label>No completar<input name="website" type="text" tabindex="-1" autocomplete="off"></label></div>
+          <label>Tu nombre<input name="nombre" type="text" autocomplete="name" required></label>
+          <label>Empresa u organización<input name="organizacion" type="text" autocomplete="organization"></label>
+          <label>Correo electrónico<input name="email" type="email" autocomplete="email" required></label>
+          <!-- El país va en un select y NO se adivina del número. Sin él,
+               "974940070" —un móvil chileno escrito sin código— se guardaba
+               como +974940070, un número de Qatar bien formado: se veía válido
+               y no lo era. La lista y los largos por país viven en
+               `cb_lead_paises()` (public/lib.leads.php); un test compara este
+               select contra esa tabla para que no se separen. -->
+          <label>País del teléfono<select name="pais_telefono" required><option value="cl" selected>Chile (+56)</option><option value="ar">Argentina (+54)</option><option value="pe">Perú (+51)</option><option value="co">Colombia (+57)</option><option value="mx">México (+52)</option><option value="ec">Ecuador (+593)</option><option value="bo">Bolivia (+591)</option><option value="uy">Uruguay (+598)</option><option value="py">Paraguay (+595)</option><option value="br">Brasil (+55)</option><option value="ve">Venezuela (+58)</option><option value="cr">Costa Rica (+506)</option><option value="pa">Panamá (+507)</option><option value="gt">Guatemala (+502)</option><option value="do">República Dominicana (+1)</option><option value="us">Estados Unidos (+1)</option><option value="es">España (+34)</option><option value="otro">Otro país</option></select></label>
+          <label>Teléfono / WhatsApp<input name="telefono" type="tel" autocomplete="tel" required placeholder="9 1234 5678" inputmode="tel"></label>
+          <label>Tipo de evento<select name="tipo" required><option value="">Selecciona una opción</option><option>Cumpleaños</option><option>Navidad</option><option>Día del Niño</option><option>Colegio o jardín</option><option>Evento de empresa</option><option>Otro evento especial</option></select></label>
+          <label>Fecha aproximada<input name="fecha" type="date"></label>
+          <label class="contacto__campo--completo">Comuna o ciudad<input name="comuna" type="text" autocomplete="address-level2" required placeholder="Ej.: Santiago Centro"></label>
+          <label class="contacto__campo--completo">Cuéntanos qué necesitas<textarea name="mensaje" rows="4" required placeholder="Ej.: 120 personas, activación de Navidad, comuna y horario aproximado."></textarea></label>
+          <label class="contacto__consentimiento contacto__campo--completo"><input name="consentimiento" type="checkbox" required><span>Acepto que estos datos se usen únicamente para responder mi solicitud de cotización.</span></label>
+          <button class="btn btn--cta contacto__campo--completo" type="submit">Solicitar cotización 📲</button>
+          <p class="contacto__estado contacto__campo--completo" id="contacto-estado" role="status" aria-live="polite"></p>
+        </form>
+      </article>
+    </section>
+
+    <!-- 7 · FAQ -->
+    <section class="faq section" id="faq">
+      <div class="section__head" data-reveal>
+        <h2>Preguntas frecuentes</h2>
+      </div>
+      <div class="faq__lista">
+        <details class="faq__item" data-reveal>
+          <summary>¿Cuánto dura el servicio?</summary>
+          <p>El plan Premium cubre 2 horas de fiesta. Con el plan Mágico nos ajustamos a tu programa; cuéntanos cuánto necesitas al agendar.</p>
+        </details>
+        <details class="faq__item" data-reveal>
+          <summary>¿Cuántos invitados caben?</summary>
+          <p>Cada plan contempla hasta 200 fotos por fiesta. Al cotizar coordinamos el flujo según la cantidad de invitados para que todos tengan su turno.</p>
+        </details>
+        <details class="faq__item" data-reveal>
+          <summary>¿Se puede personalizar con el nombre del cumpleañero?</summary>
+          <!-- El precio de la temática a medida se dice en UN solo lugar: más
+               abajo, +$25.000 (design/MANUAL-DE-MARCA.md:89). Acá va solo lo
+               que está incluido. -->
+          <p>Sí: los diplomas llevan su nombre y la temática es la que él o ella elija, sin costo extra. Si quieres una que no esté en la lista, la creamos a medida.</p>
+        </details>
+        <details class="faq__item" data-reveal>
+          <summary>¿Qué pasa si la temática de mi hijo no está en la lista?</summary>
+          <p>La creamos a medida por <strong>+$25.000</strong>: sus personajes, su ruleta y sus saludos, igual de cuidados que los nuestros.</p>
+        </details>
+        <details class="faq__item" data-reveal>
+          <summary>¿Hacen algo más para la fiesta?</summary>
+          <p>Sí: hoy la fiesta va completa —invitación digital, cabina con sus juegos y Álbum Recuerdo—, y todo eso está incluido en los dos planes. Lo que viene después: animadoras y proveedores, para armar la fiesta entera en un solo lugar.</p>
+        </details>
+        <details class="faq__item" data-reveal>
+          <summary>¿Pueden participar en un evento de empresa?</summary>
+          <p>Sí. Adaptamos la experiencia para activaciones, fiestas de Navidad, Día del Niño, celebraciones internas y eventos familiares. Escríbenos con los datos de tu evento y armamos una propuesta.</p>
+        </details>
+        <details class="faq__item" data-reveal>
+          <summary>¿Cómo se cuidan las fotos y los datos?</summary>
+          <p>Los datos del formulario se usan solo para responder tu solicitud. Las fotos de la fiesta se conservan 30 días después del evento —en los dos planes— para que alcancen a descargarlas, y el enlace del Álbum Recuerdo es privado. En el Plan Premium, los papás tienen además su propia galería.</p>
+        </details>
+      </div>
+    </section>
+
+    <section class="confianza section" id="condiciones" aria-labelledby="confianza-titulo">
+      <div class="section__head" data-reveal>
+        <h2 id="confianza-titulo">Todo claro antes de la fiesta</h2>
+        <p>Confirmamos contigo la fecha, la comuna, la temática elegida y lo incluido en el plan antes de reservar.</p>
+      </div>
+      <div class="confianza__grid">
+        <article class="confianza__item" data-reveal>
+          <h3>Disponibilidad y cobertura</h3>
+          <p>Indícanos fecha y comuna. Te responderemos si está disponible y si existe algún costo de traslado antes de que tomes una decisión.</p>
+        </article>
+        <article class="confianza__item" data-reveal id="privacidad">
+          <h3>Privacidad primero</h3>
+          <p>La solicitud se guarda de forma segura únicamente para poder contactarte. La dirección IP no se conserva como un dato legible.</p>
+        </article>
+        <article class="confianza__item" data-reveal>
+          <h3>Servicio acompañado</h3>
+          <p>Llegamos, montamos la experiencia, acompañamos a los invitados y retiramos el equipo al terminar.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- 8 · CTA FINAL -->
+    <section class="agenda section" id="agenda">
+      <div class="agenda__inner" data-reveal>
+        <img class="agenda__mark" src="assets/cumpleclick-mark.svg" alt="" width="72" height="72" aria-hidden="true">
+        <h2>¿Agendamos la fecha? 🎉</h2>
+        <p>Las fechas de fin de semana se van rápido. Escríbenos y la dejamos guardada hoy.</p>
+        <a class="btn btn--cta btn--xl" href="<?= $e($ccWa('Hola CumpleClick, quiero agendar una fecha 🎈')) ?>" target="_blank" rel="noopener">
+          Agenda la fecha por WhatsApp 📲
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <span class="cc-lockup cc-lockup--marca footer__logo"><img class="cc-lockup__mark" src="assets/cumpleclick-mark.svg" alt="CumpleClick" width="400" height="400" draggable="false"><span class="cc-lockup__nombre" aria-hidden="true">Cumple<span class="cc-lockup__click">Click</span></span></span>
+    <p>El flash que tus hijos no van a olvidar.</p>
+    <nav class="footer__links" aria-label="Información del servicio"><a href="#condiciones">Condiciones del servicio</a><a href="#privacidad">Privacidad</a><a href="#eventos">Eventos y empresas</a></nav>
+    <p class="footer__cfg">Escríbenos por <a href="<?= $e($ccWa('Hola CumpleClick, quiero consultar por una fiesta 🎈')) ?>" rel="noopener">WhatsApp</a><?php
+      /* Instagram aparece SOLO si esta cargado en Admin -> Marca. Un enlace a
+         una cuenta que no existe es peor que no tener enlace. */
+      if ($ccMarca['instagram'] !== ''):
+        $ccIg = $ccMarca['instagram_url'] !== ''
+            ? $ccMarca['instagram_url']
+            : 'https://instagram.com/' . ltrim($ccMarca['instagram'], '@');
+    ?> · <a href="<?= $e($ccIg) ?>" target="_blank" rel="noopener"><?= $e($ccMarca['instagram']) ?></a><?php endif; ?></p>
+    <p class="footer__legal">© 2026 CumpleClick · by <a href="https://automatizatech.cl" target="_blank" rel="noopener">AutomatizaTech</a></p>
+  </footer>
+
+  <!-- Motion: self-hosted, sin CDN. El 3D carga DESPUÉS vía import() dinámico desde main.js -->
+  <script src="vendor/gsap.min.js" defer></script>
+  <script src="vendor/ScrollTrigger.min.js" defer></script>
+  <script src="vendor/lenis.min.js" defer></script>
+  <script src="js/main.js?v=20260831k" defer></script>
+</body>
+</html>

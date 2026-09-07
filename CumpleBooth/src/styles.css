@@ -2193,3 +2193,592 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .gate-spinner { animation-duration: 2.4s; }
 }
+
+/* ---------- BABY SHOWER · PREDICCIÓN ---------- */
+/* ══════════════════════════════════════════════════════════════════════════
+   LA APUESTA — pantalla de predicción de la cabina (baby shower)
+
+   Qué es en la vida real: una tablet sobre un pedestal, en un salón, con gente
+   esperando detrás. El invitado llega de pie, decide en veinte segundos y pasa
+   a la foto. Eso manda todo lo de abajo.
+
+   La versión anterior era un formulario blanco flotando sobre el fondo, con
+   media pantalla vacía debajo. Funcionaba, pero se leía como un trámite: la
+   misma tarjeta blanca con pills que tiene cualquier encuesta. En una fiesta
+   eso es una oportunidad perdida, porque esta pantalla es el único momento en
+   que el invitado le habla al bebé.
+
+   La dirección es "puesto de apuestas de kermesse": guirnalda arriba, fichas
+   de cartón que se levantan y se sellan al elegir, papel picado flotando muy
+   lento al fondo. Nada de eso es adorno suelto — la guirnalda ES el progreso,
+   el sello ES la confirmación, y las fichas son grandes porque se leen de pie.
+
+   Todo va en cqw/cqh sobre el lienzo 9:16, nunca en vw: la tablet se usa
+   apaisada en algunas fiestas y con vw el lienzo se desarma.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.prediction-screen {
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 4cqh 4cqw;
+  background-position: center;
+  background-size: cover;
+  isolation: isolate;
+}
+
+/* Velo cálido, no gris. El fondo del tema se ve pero no compite: se oscurece
+   arriba y abajo y se deja respirar el centro, que es donde va el panel. */
+.prediction-veil {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  /* El velo va en los tonos del tema y no en un morado fijo. Con el valor
+     anterior —negro violaceo al 74%— un fondo pastel como el de Bebe en las
+     Nubes quedaba irreconocible: se pagaba una decoracion y no se veia. Ahora
+     oscurece lo justo para que el panel blanco se despegue y deja leer la
+     escena en los bordes, que es lo que el invitado reconoce de su propia
+     fiesta. */
+  background:
+    radial-gradient(125% 85% at 50% 40%, transparent 34%,
+      color-mix(in srgb, var(--dark2) 52%, transparent) 100%),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--dark1) 26%, transparent),
+      color-mix(in srgb, var(--dark2) 54%, transparent));
+  backdrop-filter: blur(1.5px);
+}
+
+/* Papel picado. Catorce motas, cada una con su ritmo, subiendo muy lento.
+   Es la única animación de fondo y va a 24s: más rápido distrae al que está
+   leyendo las preguntas, que es exactamente lo que no queremos. */
+.prediction-motas {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.prediction-motas i {
+  position: absolute;
+  bottom: -6cqh;
+  left: calc(var(--i) * 7.3cqw + 2cqw);
+  width: 1.5cqw;
+  height: 1.5cqw;
+  border-radius: 40%;
+  opacity: 0;
+  background: var(--yellow, #ffd166);
+  animation: predMota 24s linear infinite;
+  animation-delay: calc(var(--i) * -1.9s);
+}
+.prediction-motas i:nth-child(3n)   { background: var(--pink, #ff7ab6); width: 1.1cqw; height: 1.1cqw; }
+.prediction-motas i:nth-child(3n+1) { background: #fff; border-radius: 50%; }
+@keyframes predMota {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+  12%  { opacity: .62; }
+  88%  { opacity: .38; }
+  100% { transform: translateY(-112cqh) rotate(280deg); opacity: 0; }
+}
+
+/* ── El panel ────────────────────────────────────────────────────────────
+   Sin sombra dramática ni borde blanco: es una hoja de papel apoyada, no una
+   tarjeta flotando en el vacío. La entrada escalonada de sus hijos es el único
+   momento coreografiado de la pantalla. */
+.prediction-panel {
+  position: relative;
+  width: min(92cqw, 760px);
+  padding: 5cqh 5cqw 4cqh;
+  border-radius: 3.5cqw;
+  color: var(--ink, #2d2340);
+  background:
+    linear-gradient(158deg, #fffdf8 0%, #fff6fb 55%, #fdf3ff 100%);
+  box-shadow:
+    0 2cqh 6cqh rgba(20, 10, 37, .34),
+    inset 0 0 0 1px rgba(255, 255, 255, .8);
+}
+/* Sombra de pliegue en el borde superior: el papel se ve apoyado y no pegado. */
+.prediction-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1.2cqh;
+  border-radius: 3.5cqw 3.5cqw 0 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .06), transparent);
+}
+
+.prediction-panel > * {
+  animation: predEntra .55s cubic-bezier(.2, .9, .3, 1) backwards;
+}
+.prediction-panel > .prediction-eyebrow { animation-delay: .05s; }
+.prediction-panel > h1                  { animation-delay: .12s; }
+.prediction-panel > .prediction-lead    { animation-delay: .19s; }
+.prediction-panel > .prediction-name    { animation-delay: .26s; }
+.prediction-panel > .prediction-question { animation-delay: calc(.26s + var(--orden) * .08s); }
+.prediction-panel > .prediction-submit  { animation-delay: .58s; }
+@keyframes predEntra {
+  from { opacity: 0; transform: translateY(1.6cqh); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Guirnalda de progreso ───────────────────────────────────────────────
+   Tres banderines colgando del borde del panel. Se encienden al responder.
+   Dice "te falta uno" sin escribirlo y sin una barra de porcentaje, que en una
+   fiesta infantil no pinta nada. */
+.prediction-guirnalda {
+  position: absolute;
+  top: -1.1cqh;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2.2cqw;
+  animation: none;
+}
+.prediction-guirnalda span {
+  width: 3.4cqw;
+  height: 4.2cqw;
+  background: color-mix(in srgb, var(--ink, #2d2340) 16%, transparent);
+  clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
+  transition: background .35s ease, transform .35s cubic-bezier(.2, 1.6, .4, 1);
+}
+.prediction-guirnalda span.is-on {
+  background: var(--pink);
+  transform: translateY(.5cqh) scale(1.08);
+}
+
+.prediction-eyebrow {
+  margin: 1.2cqh 0 .4cqh;
+  color: var(--pink);
+  font-size: clamp(.72rem, 2cqw, .92rem);
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+.prediction-panel > h1,
+.prediction-saving__panel h1,
+.prediction-reveal__headline h1 {
+  margin: 0;
+  font-size: clamp(2rem, 7.6cqw, 4.4rem);
+  line-height: .94;
+  letter-spacing: -.035em;
+}
+.prediction-lead {
+  max-width: 46ch;
+  margin: 1.4cqh 0 2.6cqh;
+  color: color-mix(in srgb, var(--ink, #2d2340) 68%, #fff);
+  font-size: clamp(.95rem, 2.6cqw, 1.14rem);
+  line-height: 1.42;
+}
+
+/* ── Nombre ──────────────────────────────────────────────────────────────
+   58px de alto mínimo porque se toca con el dedo, no con un mouse. */
+.prediction-name { display: grid; gap: .8cqh; margin-bottom: 3cqh; font-weight: 800; }
+.prediction-name input {
+  min-height: 58px;
+  width: 100%;
+  padding: 1.2cqh 1.8cqw;
+  border: 2px solid color-mix(in srgb, var(--pink) 22%, #e3dfe9);
+  border-radius: 2cqw;
+  background: #fff;
+  color: var(--ink, #2d2340);
+  font: 700 clamp(1.05rem, 3cqw, 1.3rem) 'Baloo 2', system-ui, sans-serif;
+  outline: none;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.prediction-name input:focus {
+  border-color: var(--pink);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--pink) 16%, transparent);
+}
+
+/* ── Preguntas ───────────────────────────────────────────────────────────
+   El número va en un banderín, no en un círculo: mismo idioma que la
+   guirnalda de arriba. */
+.prediction-question { margin: 0 0 2.6cqh; padding: 0; border: 0; }
+.prediction-question legend {
+  display: flex;
+  align-items: center;
+  gap: 1.4cqw;
+  margin-bottom: 1.2cqh;
+  font-size: clamp(1rem, 3cqw, 1.28rem);
+  font-weight: 800;
+}
+.prediction-flag {
+  display: grid;
+  place-items: center;
+  width: 3.6cqw;
+  min-width: 30px;
+  aspect-ratio: 1 / 1.24;
+  padding-bottom: .4cqh;
+  background: var(--pink);
+  color: #fff;
+  font-size: clamp(.62rem, 1.6cqw, .78rem);
+  letter-spacing: .04em;
+  clip-path: polygon(0 0, 100% 0, 100% 66%, 50% 100%, 0 66%);
+}
+
+/* ── Las fichas ──────────────────────────────────────────────────────────
+   Cada opción es una ficha de cartón. Valor grande arriba —se reconoce de pie
+   y a un metro— y el texto completo abajo en chico, que es el que evita
+   cualquier duda de cerca. Sin el valor grande, "Entre 3 y 3,5 kg" obliga a
+   agacharse a leer, y con cola detrás eso se nota. */
+.prediction-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.6cqw;
+}
+.ficha {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: .3cqh;
+  min-height: 88px;
+  padding: 1.4cqh 1cqw;
+  border: 2px solid color-mix(in srgb, var(--pink) 16%, #e3dfe9);
+  border-radius: 2.2cqw;
+  background: #fff;
+  color: var(--ink, #2d2340);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  text-align: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    transform .22s cubic-bezier(.2, 1.4, .4, 1),
+    border-color .2s ease,
+    box-shadow .22s ease;
+}
+.ficha__valor {
+  display: block;
+  font-size: clamp(1.15rem, 3.4cqw, 1.6rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -.02em;
+}
+.ficha__label {
+  display: block;
+  font-size: clamp(.66rem, 1.7cqw, .8rem);
+  font-weight: 700;
+  line-height: 1.15;
+  color: color-mix(in srgb, var(--ink, #2d2340) 55%, #fff);
+  transition: color .2s ease;
+}
+.ficha:active { transform: scale(.96); }
+
+/* El sello. Un disco del color del tema que crece desde el centro y tiñe la
+   ficha entera: la confirmación se ve, no hay que buscarla. */
+.ficha__sello {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  /* Mezclar el acento con negro puro lo mandaba a azul marino en temas frios:
+     la ficha elegida se veia apagada justo en el momento de celebrar. Con la
+     tinta del tema en vez de negro, y en menor proporcion, conserva el color
+     de la fiesta y sigue dando contraste de sobra al texto blanco. */
+  background: radial-gradient(circle at 50% 34%,
+    color-mix(in srgb, var(--pink) 88%, #fff),
+    color-mix(in srgb, var(--pink) 82%, var(--dark1, #2d2340)));
+  transform: scale(0);
+  opacity: 0;
+  transition: transform .34s cubic-bezier(.2, 1.3, .35, 1), opacity .2s ease;
+}
+.ficha.is-selected {
+  border-color: var(--pink);
+  color: #fff;
+  transform: translateY(-.6cqh);
+  box-shadow: 0 1.6cqh 3cqh color-mix(in srgb, var(--pink) 34%, transparent);
+}
+.ficha.is-selected .ficha__sello { transform: scale(1); opacity: 1; }
+.ficha.is-selected .ficha__label { color: rgba(255, 255, 255, .82); }
+
+.prediction-error {
+  margin: .6cqh 0 1.6cqh;
+  color: #a91d48;
+  font-weight: 800;
+}
+.prediction-submit { width: 100%; min-height: 62px; }
+
+/* Nadie marea a un invitado que solo quiere dejar su apuesta. */
+@media (prefers-reduced-motion: reduce) {
+  .prediction-motas { display: none; }
+  .prediction-panel > *,
+  .ficha,
+  .ficha__sello,
+  .prediction-guirnalda span { animation: none !important; transition: none !important; }
+  .ficha.is-selected { transform: none; }
+  .ficha.is-selected .ficha__sello { transform: scale(1); opacity: 1; }
+}
+
+/* Texto solo para lectores de pantalla. El resumen de la apuesta se dibuja
+   como boleto —con la informacion partida en etiqueta y valor— y esa forma no
+   se lee bien en voz alta; esta linea la dice de corrido. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SELLANDO — la espera mientras se guarda la apuesta
+
+   Es un POST: puede tardar 200 ms o tres segundos, y el diseño tiene que
+   verse bien en los dos extremos. La version anterior era un aro que latia y
+   tres puntitos, o sea la pantalla decia "espera" y nada mas.
+
+   Ahora se le muestra al invitado LO QUE acaba de apostar, en forma de boleto
+   con su nombre. Si la red se demora, mira sus tres respuestas; si vuelve al
+   instante, el boleto ya estaba dibujado y no alcanza a verse un parpadeo. El
+   lacre cae una sola vez y se queda: es la unica animacion con final.
+   ══════════════════════════════════════════════════════════════════════════ */
+.prediction-saving {
+  overflow: hidden;
+  padding: 4cqh 5cqw;
+  color: #fff;
+  background:
+    radial-gradient(circle at 50% 32%, color-mix(in srgb, var(--pink) 82%, #fff), var(--dark1) 58%, var(--dark3));
+}
+/* Aura quieta en vez de aro que late: el latido competia con el lacre, que es
+   lo unico que aca merece movimiento. */
+.prediction-saving__aura {
+  position: absolute;
+  width: min(78cqw, 560px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, .1), transparent 62%);
+  box-shadow: 0 0 0 6cqw rgba(255, 255, 255, .045);
+}
+.prediction-saving__panel {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 92cqw);
+  padding: 3cqh 2cqw;
+  text-align: center;
+}
+.prediction-saving__panel .prediction-eyebrow { color: var(--yellow); }
+.prediction-saving__panel p:not(.prediction-eyebrow) {
+  font-size: clamp(1rem, 3cqw, 1.22rem);
+  line-height: 1.45;
+}
+
+/* ── El boleto ─────────────────────────────────────────────────────────── */
+.boleto {
+  position: relative;
+  margin: 3cqh auto 0;
+  padding: 3cqh 5cqw 4cqh;
+  width: min(420px, 82cqw);
+  border-radius: 2.4cqw;
+  color: var(--ink, #2d2340);
+  background: linear-gradient(158deg, #fffdf7, #fff4fa);
+  box-shadow: 0 2.4cqh 5cqh rgba(0, 0, 0, .34);
+  text-align: left;
+  animation: boletoEntra .5s cubic-bezier(.2, .9, .3, 1) backwards;
+}
+/* Muesca de talonario a los costados: el boleto se ve arrancado. */
+.boleto::before,
+.boleto::after {
+  content: "";
+  position: absolute;
+  top: 6.2cqh;
+  width: 2.4cqw;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--dark1);
+}
+.boleto::before { left: -1.2cqw; }
+.boleto::after { right: -1.2cqw; }
+
+.boleto__nombre {
+  margin: 0 0 1.6cqh;
+  padding-bottom: 1.6cqh;
+  border-bottom: 2px dashed color-mix(in srgb, var(--ink, #2d2340) 22%, transparent);
+  font-size: clamp(1.2rem, 4cqw, 1.7rem) !important;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.boleto__lineas { margin: 0; padding: 0; list-style: none; }
+.boleto__lineas li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2cqw;
+  padding: .9cqh 0;
+  font-size: clamp(.86rem, 2.3cqw, 1rem);
+}
+.boleto__lineas span { color: color-mix(in srgb, var(--ink, #2d2340) 55%, #fff); font-weight: 700; }
+.boleto__lineas b { font-weight: 800; text-align: right; }
+
+/* El lacre. Cae, rebota una vez y se queda: la apuesta quedo sellada y la
+   pantalla lo dice sin escribirlo. */
+.boleto__lacre {
+  position: absolute;
+  right: -2.2cqw;
+  bottom: -2.2cqw;
+  width: 11cqw;
+  min-width: 62px;
+  aspect-ratio: 1;
+  border-radius: 46% 54% 52% 48% / 50% 46% 54% 50%;
+  background: radial-gradient(circle at 38% 32%,
+    color-mix(in srgb, var(--pink) 82%, #fff),
+    color-mix(in srgb, var(--pink) 88%, var(--dark1, #2d2340)));
+  box-shadow:
+    0 1cqh 2.4cqh rgba(0, 0, 0, .34),
+    inset 0 -.5cqw 1cqw color-mix(in srgb, var(--dark1, #2d2340) 45%, transparent),
+    inset 0 .4cqw .8cqw rgba(255, 255, 255, .38);
+  animation: lacreCae .62s cubic-bezier(.2, 1.5, .35, 1) .34s backwards;
+}
+/* Sin marca adentro el lacre se leia como un boton azul. Un corazon hundido
+   —hueco arriba, luz abajo, al reves que el relieve de la cera— lo convierte
+   en un sello estampado. */
+.boleto__lacre::after {
+  /* Caracter literal y no el escape CSS ¶5: al pasar por el bundler el
+     escape se comia un digito y salia "¶5" en pantalla. */
+  content: "♥";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: color-mix(in srgb, var(--dark1, #2d2340) 40%, transparent);
+  font-size: 4.6cqw;
+  line-height: 1;
+  text-shadow: 0 .16cqw 0 rgba(255, 255, 255, .4);
+}
+@keyframes boletoEntra {
+  from { opacity: 0; transform: translateY(2.4cqh) rotate(-1.5deg); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes lacreCae {
+  0%   { opacity: 0; transform: scale(2.4) translateY(-3cqh); }
+  60%  { opacity: 1; transform: scale(.92); }
+  100% { opacity: 1; transform: none; }
+}
+
+.prediction-saving__dots { display: flex; justify-content: center; gap: 1cqw; margin-top: 3cqh; }
+.prediction-saving__dots i {
+  width: 1.5cqw; min-width: 10px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .85);
+  animation: predictionDot 1s ease-in-out infinite;
+}
+.prediction-saving__dots i:nth-child(2) { animation-delay: .14s; }
+.prediction-saving__dots i:nth-child(3) { animation-delay: .28s; }
+@keyframes predictionDot { 50% { transform: translateY(-.9cqh); opacity: .45; } }
+
+/* El error no lleva boleto ni lacre: sellar algo que no se guardo seria
+   mentirle al invitado. */
+.prediction-saving__panel.is-error .cta { margin-top: 3cqh; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   REVELADO — el momento de mayor pago del recorrido
+
+   El invitado lleva un minuto esperando verse. Antes la foto compuesta
+   simplemente aparecia. Ahora entra girando desde el canto, como una foto que
+   alguien da vuelta sobre la mesa, y un destello la recorre UNA vez al
+   asentarse. Una sola vez: en bucle se convierte en un banner publicitario.
+   ══════════════════════════════════════════════════════════════════════════ */
+.prediction-reveal {
+  justify-content: flex-start;
+  gap: 2cqh;
+  padding: 3cqh 3cqw;
+  overflow-y: auto;
+  color: #fff;
+  background:
+    radial-gradient(90% 60% at 50% 22%, color-mix(in srgb, var(--pink) 30%, transparent), transparent 70%),
+    linear-gradient(155deg, var(--dark1), var(--dark3));
+}
+.prediction-reveal__headline { z-index: 2; text-align: center; }
+.prediction-reveal__headline .prediction-eyebrow { color: var(--yellow); }
+
+.revelado {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 410px);
+  perspective: 1400px;
+}
+.revelado img {
+  display: block;
+  width: 100%;
+  max-height: 58cqh;
+  object-fit: contain;
+  border-radius: 2.4cqw;
+  box-shadow: 0 2.6cqh 6cqh rgba(0, 0, 0, .46);
+  animation: revelaGiro .78s cubic-bezier(.2, .85, .25, 1) backwards;
+}
+@keyframes revelaGiro {
+  from { opacity: 0; transform: rotateY(-78deg) scale(.88); }
+  to   { opacity: 1; transform: none; }
+}
+/* Destello: una banda diagonal que cruza el retrato al terminar el giro. */
+.revelado__brillo {
+  position: absolute;
+  inset: 0;
+  border-radius: 2.4cqw;
+  pointer-events: none;
+  overflow: hidden;
+}
+.revelado__brillo::after {
+  content: "";
+  position: absolute;
+  top: -60%;
+  left: -140%;
+  width: 60%;
+  height: 220%;
+  transform: rotate(18deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .5), transparent);
+  animation: revelaBrillo .9s ease-out .74s 1 backwards;
+}
+@keyframes revelaBrillo {
+  from { left: -140%; opacity: 0; }
+  25%  { opacity: 1; }
+  to   { left: 190%; opacity: 0; }
+}
+
+/* Espera: un marco vacio del tamano final, para que la foto no empuje el
+   layout al llegar. */
+.revelado__espera {
+  display: grid;
+  place-items: center;
+  gap: 2cqh;
+  aspect-ratio: 3 / 4;
+  border-radius: 2.4cqw;
+  background: rgba(255, 255, 255, .06);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .16);
+  text-align: center;
+}
+.revelado__marco {
+  width: 12cqw; min-width: 44px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, .28);
+  border-top-color: #fff;
+  animation: revelaGira 1s linear infinite;
+}
+@keyframes revelaGira { to { transform: rotate(360deg); } }
+
+.prediction-reveal__actions {
+  z-index: 3;
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 1.4cqw;
+}
+.prediction-reveal__actions .cta { min-height: 52px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .boleto, .boleto__lacre, .revelado img { animation: none !important; }
+  .revelado__brillo { display: none; }
+  .prediction-saving__dots i { animation: none; opacity: .8; }
+}
+
+@media (max-width: 560px) {
+  .prediction-panel { padding: 3.4cqh 4.4cqw; }
+  /* Se mantienen las tres columnas: el valor corto de la ficha cabe donde el
+     label completo no cabia, y apilar nueve fichas obligaba a hacer scroll
+     para ver la tercera pregunta. */
+  .prediction-options { gap: 1.2cqw; }
+  .ficha { min-height: 76px; padding: 1cqh .7cqw; }
+  .prediction-reveal__actions { width: 100%; }
+  .prediction-reveal__actions .cta { flex: 1 1 140px; padding-inline: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prediction-saving__orb,.prediction-saving__dots i { animation: none; }
+  .prediction-options button { transition: none; }
+}

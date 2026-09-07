@@ -1,6 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { basename } from 'node:path'
 import { resolveThemeFlow } from '../../src/themeFlow.js'
+import { getSquarePhotoGeometry } from '../../src/frameGeometry.js'
 
 test('un tema con alfombra reproduce video antes del saludo y luego abre cámara', () => {
   const flow = resolveThemeFlow({
@@ -448,6 +450,11 @@ test('las cadenas K-Pop y Héroes mantienen ritmo/escudo como primer juego', () 
    ──────────────────────────────────────────────────────────────────────── */
 const { readFileSync, existsSync, statSync } = await import('node:fs')
 const TEMAS = JSON.parse(readFileSync(new URL('../../public/data/themes.json', import.meta.url), 'utf8')).themes
+// Presets de la invitación pública: de acá sale qué imagen hace de lámina
+// y en qué coordenadas se escriben los datos encima.
+const PRESETS_INVITACION = JSON.parse(
+  readFileSync(new URL('../../public/data/event-profile-presets.json', import.meta.url), 'utf8')
+)
 
 // Estas seis son las temáticas COMPLETAS. Todas cierran la cadena con la
 // misma misión Full: 'concierto3d' (El Show, ver src/StageConcert3D.jsx).
@@ -608,5 +615,134 @@ for (const [slug, { estrella }] of Object.entries(HOMOLOGADAS)) {
       const ultimaOferta = lista.length - 2
       assert.equal(lista.length - (ultimaOferta + 1), 1, `${slug}/${p.name}`)
     }
+  })
+}
+
+/* ── Temáticas de baby shower (2026-08-26) ─────────────────────────────────
+   No entran en HOMOLOGADAS y no es un olvido: esa tabla exige seis personajes
+   con su cadena de juegos, ruleta, puzzles y videos de saludo, y un baby
+   shower no tiene nada de eso. Su recorrido es intro → apuesta → juego →
+   sellado → foto → revelado → QR → recuerdito, sin ruleta ni personajes.
+
+   Lo que sí necesitan está acá, y se verifica contra disco igual que la tabla
+   A: si alguien agrega una temática de baby shower a medias, el test lo dice
+   en vez de descubrirlo el invitado en la fiesta.
+   ──────────────────────────────────────────────────────────────────────── */
+const BABY_SHOWER = Object.entries(TEMAS).filter(([, t]) => t.modalidad === 'baby_shower')
+
+test('hay al menos una temática de baby shower registrada', () => {
+  assert.ok(BABY_SHOWER.length > 0, 'ninguna temática declara modalidad baby_shower')
+})
+
+for (const [slug, tema] of BABY_SHOWER) {
+  test(`${slug}: paleta, confetti y frameBox completos`, () => {
+    const COLORES = ['accent', 'accentSoft', 'yellow', 'ink', 'bgLight1', 'bgLight2', 'dark1', 'dark2', 'dark3']
+    for (const c of COLORES) {
+      assert.match(String(tema.colors?.[c] ?? ''), /^#[0-9a-fA-F]{3,8}$/, `${slug}: falta o es inválido colors.${c}`)
+    }
+    assert.equal(tema.confetti?.length, 6, `${slug}: el confetti son 6 colores`)
+
+    const f = tema.frameBox
+    assert.ok(f, `${slug}: sin frameBox`)
+    for (const k of ['x', 'y', 'w', 'h']) {
+      assert.equal(typeof f[k], 'number', `${slug}: frameBox.${k} no es número`)
+    }
+    assert.ok(f.x + f.w <= 1 && f.y + f.h <= 1, `${slug}: el frameBox se sale del lienzo`)
+    assert.ok(f.w >= 0.05 && f.h >= 0.05, `${slug}: frameBox demasiado chico`)
+  })
+
+  /* El cierre del kiosco. El MP4 estaba en disco en las tres temáticas desde el
+     principio, pero NINGUNA lo declaraba en themes.json, así que
+     `$safeThemeVideo` no lo publicaba y el kiosco caía al genérico
+     `videos/despedida.mp4` — que no existe — y de ahí a una tarjeta con emoji.
+     Nada fallaba: el archivo estaba, el kiosco no reventaba, y la fiesta
+     terminaba sin video. Tener el asset no sirve de nada si nadie lo declara,
+     y por eso este test mira las DOS cosas. */
+  test(`${slug}: el kiosco cierra con video, no con un emoji`, () => {
+    const declarado = tema.videos?.despedida
+    assert.ok(declarado, `${slug}: no declara videos.despedida en themes.json`)
+    assert.equal(declarado, basename(declarado), `${slug}: videos.despedida debe ser solo el nombre del archivo`)
+    assert.match(declarado, /\.mp4$/, `${slug}: videos.despedida debe ser un .mp4`)
+
+    const ruta = new URL(`../../public/themes/${slug}/${declarado}`, import.meta.url)
+    assert.ok(existsSync(ruta), `${slug}: declara ${declarado} y ese archivo no está en disco`)
+    assert.ok(statSync(ruta).size > 500_000, `${slug}: ${declarado} pesa sospechosamente poco`)
+  })
+
+  test(`${slug}: no declara personajes, porque el recorrido no los usa`, () => {
+    assert.deepEqual(tema.personajes ?? [], [], `${slug}: un baby shower no tiene personajes ni ruleta`)
+  })
+
+  test(`${slug}: están el fondo de bienvenida y el de la foto, los dos en 9:16`, () => {
+    for (const archivo of ['fondo-banner.jpg', 'fondo-sala.jpg']) {
+      const ruta = new URL(`../../public/themes/${slug}/${archivo}`, import.meta.url)
+      assert.ok(existsSync(ruta), `${slug}: falta ${archivo}`)
+      assert.ok(statSync(ruta).size > 20000, `${slug}: ${archivo} pesa sospechosamente poco`)
+    }
+  })
+
+  // El kiosco suena en loop toda la fiesta con themes/<slug>/musica-fondo.mp3.
+  // Ojo con el falso positivo: si el archivo no está, el servidor devuelve el
+  // index.html con 200 y nada avisa — por eso se comprueba contra disco y no
+  // por HTTP. El peso mínimo descarta un archivo truncado.
+  test(`${slug}: música de fondo del kiosco`, () => {
+    const ruta = new URL(`../../public/themes/${slug}/musica-fondo.mp3`, import.meta.url)
+    assert.ok(existsSync(ruta), `${slug}: falta musica-fondo.mp3`)
+    assert.ok(statSync(ruta).size > 200000, `${slug}: musica-fondo.mp3 pesa sospechosamente poco`)
+  })
+
+  // La invitación pública de esta temática. Sin una entrada propia en
+  // event-profile-presets.json, el preset cae a `theme_fallback`, que no
+  // define `base_image`: la página mostraba DOS VECES el mismo fondo —una de
+  // hero y otra de "lámina"— en vez de los datos escritos dentro del marco.
+  // Es una degradación silenciosa: no rompe nada, solo se ve pobre, así que
+  // sin este test volvería sin que nadie se diera cuenta.
+  test(`${slug}: la invitación tiene lámina propia, dentro del marco`, () => {
+    const preset = PRESETS_INVITACION.themes?.[slug]
+    assert.ok(preset, `${slug}: no está en event-profile-presets.json`)
+
+    const base = String(preset.base_image ?? '')
+    assert.ok(base, `${slug}: el preset no declara base_image`)
+    const ruta = new URL(`../../public/themes/${slug}/${base}`, import.meta.url)
+    assert.ok(existsSync(ruta), `${slug}: base_image apunta a ${base}, que no existe`)
+
+    // El texto de la invitación y la foto del kiosco apuntan al MISMO marco
+    // pintado en `fondo-sala.jpg`, así que tienen que quedar centrados en el
+    // mismo punto. No son el mismo rectángulo —y este test llegó a exigir que
+    // lo fueran, que es falso—: `text_area` es la zona de texto tal cual, y
+    // `frameBox` es el ancla desde donde el kiosco calcula la foto (cuadrado
+    // inscrito, menos un 8,5% por lado) y la línea del agradecimiento. Pedir
+    // que fueran iguales obligaba a descalibrar uno para arreglar el otro.
+    //
+    // Lo que sí es invariante es el centro: si alguien recalibra un lado y el
+    // otro no, los centros se separan y la invitación deja de calzar con el
+    // marco. El cuadrado se calcula con la función del propio producto, no con
+    // una copia de la fórmula.
+    const area = preset.text_area
+    assert.ok(area, `${slug}: el preset no declara text_area`)
+    for (const k of ['x', 'y', 'w', 'h']) {
+      assert.equal(typeof area[k], 'number', `${slug}: text_area.${k} no es número`)
+    }
+    // En píxeles reales y no sobre un lienzo 1x1: el cuadrado sale de
+    // `min(ancho, alto)` en PÍXELES, así que en un lienzo cuadrado daría un
+    // recorte distinto al del kiosco, que siempre es 9:16.
+    const [LIENZO_W, LIENZO_H] = [1080, 1920]
+    const foto = getSquarePhotoGeometry(tema.frameBox, LIENZO_W, LIENZO_H)
+    const centro = {
+      x: (foto.photoLeft + foto.photoSide / 2) / LIENZO_W,
+      y: (foto.photoTop + foto.photoSide / 2) / LIENZO_H,
+    }
+    const TOLERANCIA = 0.02  // 2% del lienzo: ~22 px de ancho, ~38 px de alto
+    assert.ok(
+      Math.abs(area.x + area.w / 2 - centro.x) <= TOLERANCIA,
+      `${slug}: el texto de la invitación y la foto del kiosco no comparten centro horizontal `
+        + `(${(area.x + area.w / 2).toFixed(4)} contra ${centro.x.toFixed(4)})`
+    )
+    assert.ok(
+      Math.abs(area.y + area.h / 2 - centro.y) <= TOLERANCIA,
+      `${slug}: el texto de la invitación y la foto del kiosco no comparten centro vertical `
+        + `(${(area.y + area.h / 2).toFixed(4)} contra ${centro.y.toFixed(4)})`
+    )
+    assert.match(String(area.tone ?? ''), /^#[0-9a-fA-F]{6}$/, `${slug}: text_area.tone inválido`)
   })
 }

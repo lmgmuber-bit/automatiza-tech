@@ -1,0 +1,757 @@
+@font-face {
+  font-family: "Baloo 2";
+  src: url("../admin/fonts/baloo2-600.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Baloo 2";
+  src: url("../admin/fonts/baloo2-800.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+}
+
+/* ============================================================
+   Acceso "Conoce a ..." dentro de la invitación.
+   Vive fuera del bloque de descargas para tener jerarquía propia
+   sin competir con la invitación en sí.
+   ============================================================ */
+
+.ep-entry {
+  display: flex;
+  width: 100%;
+  max-width: 420px;
+  justify-content: center;
+}
+
+.ep-trigger {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  width: 100%;
+  min-height: 60px;
+  justify-items: center;
+  gap: 2px;
+  padding: 12px 22px;
+  border: 1px solid color-mix(in srgb, var(--ep-highlight, #fbbf24) 34%, transparent);
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--ep-accent, #7c3aed) 96%, #10081f),
+      color-mix(in srgb, var(--ep-accent, #7c3aed) 68%, #10081f));
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--ep-accent, #7c3aed) 34%, transparent);
+  color: #fff;
+  cursor: pointer;
+  font-family: "Baloo 2", "Segoe UI Rounded", system-ui, sans-serif;
+  text-align: center;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.ep-trigger-kicker {
+  color: #fff;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .16em;
+  opacity: .85;
+  text-transform: uppercase;
+}
+
+.ep-trigger-label {
+  font-size: 1.06rem;
+  font-weight: 800;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+/* Sin antetítulo el botón no necesita dos filas de alto, y el icono puede ir
+   en la misma línea que el texto en vez de apilarse encima. */
+.ep-trigger:not(:has(.ep-trigger-kicker)) {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.ep-trigger-glyph {
+  width: 21px;
+  height: 21px;
+  flex: 0 0 auto;
+}
+
+/* Iconos de los controles del diálogo (omitir, sonido, volver). */
+.ep-btn-glyph {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+
+/* El icono de sonido sigue al estado real del video: tachado mientras está
+   en silencio, con ondas cuando suena. */
+.ep-sound .ep-sound-on,
+.ep-sound[aria-pressed="true"] .ep-sound-off {
+  display: none;
+}
+
+.ep-sound[aria-pressed="true"] .ep-sound-on {
+  display: block;
+}
+
+.ep-close svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* `[hidden]` solo trae `display: none` de la hoja del navegador y pierde
+   contra cualquier clase. Sin esto, dar `display: inline-flex` a los botones
+   de la barra mostraba "Omitir intro" incluso en perfiles sin video de
+   introducción, que es justo lo que ese atributo debía impedir. */
+[hidden] {
+  display: none !important;
+}
+
+/* Filo superior del color de realce: marca el acceso como algo "que se abre"
+   sin un halo de color que ensucie el borde de la tarjeta. */
+.ep-trigger::after {
+  position: absolute;
+  top: 0;
+  right: 18%;
+  left: 18%;
+  height: 2px;
+  border-radius: 0 0 999px 999px;
+  background: linear-gradient(90deg, transparent, var(--ep-highlight, #fbbf24), transparent);
+  content: "";
+  opacity: .9;
+}
+
+.ep-trigger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px color-mix(in srgb, var(--ep-accent, #7c3aed) 44%, transparent);
+}
+
+.ep-trigger:focus-visible,
+.ep-dialog button:focus-visible {
+  outline: 3px solid var(--ep-highlight, #fbbf24);
+  outline-offset: 3px;
+}
+
+body.ep-lock {
+  overflow: hidden;
+}
+
+/* ============================================================
+   Diálogo
+   ============================================================ */
+
+.ep-dialog {
+  position: fixed;
+  z-index: 9999;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  overflow: hidden;
+}
+
+.ep-dialog:not([open]) {
+  display: none;
+}
+
+.ep-dialog::backdrop {
+  background: rgba(4, 7, 18, .88);
+  backdrop-filter: blur(8px);
+}
+
+.ep-shell {
+  --ep-accent: var(--pink, #7c3aed);
+  --ep-highlight: var(--yellow, #fbbf24);
+  --ep-ink: var(--ink, #1f172a);
+  --ep-dark-1: var(--dark1, #24103f);
+  --ep-dark-2: var(--dark2, #10081f);
+  /* Valores por defecto seguros: si un preset no trae `surface`, la ficha
+     igual queda legible. Los presets solo ajustan la intensidad. */
+  --ep-scrim: .9;
+  --ep-bg-blur: 20px;
+  --ep-bg-saturate: .6;
+  --ep-surface-mix: 88%;
+  --ep-title: var(--ep-highlight);
+  --ep-section-tone: var(--ep-highlight);
+  --ep-person-accent: var(--ep-accent);
+  /* Base neutra teñida por el tema. Algunas paletas (carreras) tienen sus
+     "dark" en color saturado; usarlos crudos como superficie deja la ficha
+     monocroma y sin separación entre fondo y tarjeta. */
+  --ep-ink-base: color-mix(in srgb, var(--ep-dark-2) 58%, #0a0912);
+  --ep-ink-raise: color-mix(in srgb, var(--ep-dark-1) 42%, #0f0e1a);
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--ep-ink-base);
+  font-family: "Baloo 2", "Segoe UI Rounded", system-ui, sans-serif;
+  /* La ficha no hereda la alineación del contenedor que la aloja: el acceso
+     vive dentro de una sección centrada de la invitación y sin esto los
+     datos salían centrados y dejaban de escanearse. */
+  text-align: left;
+}
+
+/* El fondo temático se conserva como atmósfera, no como ilustración:
+   desenfocado y desaturado deja de competir con la ficha y con el
+   retrato del protagonista. */
+.ep-shell::before {
+  position: absolute;
+  z-index: -2;
+  inset: -60px;
+  background: var(--ep-background, linear-gradient(145deg, var(--ep-dark-1), var(--ep-dark-2))) center / cover no-repeat;
+  content: "";
+  filter: blur(var(--ep-bg-blur)) saturate(var(--ep-bg-saturate));
+  transform: scale(1.08);
+}
+
+/* Velo de dos paradas derivado de la propia paleta del tema: garantiza
+   contraste incluso en temáticas claras como hielo. */
+.ep-shell::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    radial-gradient(125% 62% at 50% 0%,
+      color-mix(in srgb, var(--ep-ink-base) calc(var(--ep-scrim) * 92%), transparent),
+      transparent 72%),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--ep-ink-raise) calc(var(--ep-scrim) * 88%), transparent),
+      color-mix(in srgb, var(--ep-ink-base) calc(var(--ep-scrim) * 100%), transparent) 58%,
+      color-mix(in srgb, var(--ep-ink-base) 96%, transparent) 100%);
+  content: "";
+}
+
+.ep-toolbar {
+  position: absolute;
+  z-index: 8;
+  top: max(12px, env(safe-area-inset-top));
+  right: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.ep-toolbar button {
+  /* Flex para que el icono y su texto queden alineados en la misma línea. */
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, .3);
+  border-radius: 999px;
+  background: rgba(10, 12, 24, .72);
+  box-shadow: 0 7px 22px rgba(0, 0, 0, .28);
+  color: #fff;
+  cursor: pointer;
+  font: 800 .9rem/1 "Baloo 2", system-ui, sans-serif;
+  pointer-events: auto;
+  backdrop-filter: blur(12px);
+}
+
+.ep-skip {
+  padding: 0 16px;
+}
+
+.ep-close {
+  margin-left: auto;
+  padding: 0;
+}
+
+.ep-view {
+  width: 100%;
+  height: 100%;
+}
+
+.ep-view[hidden] {
+  display: none !important;
+}
+
+/* ============================================================
+   Intro con video (espacio ya preparado, sin video todavía)
+   ============================================================ */
+
+.ep-intro {
+  position: relative;
+  display: grid;
+  place-items: center;
+  background: #05060a;
+}
+
+.ep-intro video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #05060a;
+}
+
+.ep-intro-copy {
+  position: absolute;
+  inset: auto 18px max(40px, calc(24px + env(safe-area-inset-bottom)));
+  z-index: 2;
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 18vh 12px 0;
+  background: linear-gradient(180deg, transparent, rgba(4, 5, 12, .72));
+  text-align: center;
+  text-shadow: 0 3px 22px rgba(0, 0, 0, .8);
+}
+
+.ep-kicker {
+  margin: 0 0 5px;
+  color: var(--ep-title);
+  font-size: .74rem;
+  font-weight: 800;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+
+.ep-intro-title,
+.ep-heading {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(1.8rem, 8vw, 3.4rem);
+  font-weight: 800;
+  line-height: .98;
+  text-wrap: balance;
+}
+
+.ep-intro-phrase {
+  margin: 10px auto 0;
+  max-width: 28rem;
+  font-size: clamp(.98rem, 4vw, 1.2rem);
+  line-height: 1.35;
+}
+
+.ep-sound {
+  position: absolute;
+  z-index: 4;
+  right: 14px;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, .28);
+  border-radius: 999px;
+  background: rgba(8, 10, 20, .66);
+  color: #fff;
+  cursor: pointer;
+  font: 800 .8rem/1 "Baloo 2", system-ui, sans-serif;
+  backdrop-filter: blur(10px);
+}
+
+/* ============================================================
+   Ficha del protagonista
+   ============================================================ */
+
+.ep-profile {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scroll-padding-top: 96px;
+}
+
+.ep-profile-inner {
+  width: min(100%, 780px);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: max(78px, calc(64px + env(safe-area-inset-top))) 18px max(36px, calc(24px + env(safe-area-inset-bottom)));
+}
+
+.ep-profile-header {
+  max-width: 630px;
+  margin: 0 auto 20px;
+  text-align: center;
+  text-shadow: 0 3px 20px rgba(0, 0, 0, .55);
+}
+
+.ep-profile-lede {
+  margin: 10px auto 0;
+  max-width: 36rem;
+  color: rgba(255, 255, 255, .92);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Los protagonistas siguen alcanzables durante todo el scroll: con dos o
+   más personas ya no hay que volver arriba para cambiar de ficha. */
+.ep-tabs {
+  position: sticky;
+  z-index: 6;
+  top: max(4px, env(safe-area-inset-top));
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 18px;
+  padding: 5px;
+  gap: 5px;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 999px;
+  /* Casi opaco a propósito: al quedar pegado durante el scroll, el contenido
+     pasa por debajo y con fondo translúcido el texto se leía a través. */
+  background: color-mix(in srgb, var(--ep-ink-base) 97%, transparent);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  backdrop-filter: blur(14px);
+  scrollbar-width: none;
+}
+
+.ep-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ep-tab {
+  min-height: 46px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, .82);
+  cursor: pointer;
+  font: 800 .94rem/1.1 "Baloo 2", system-ui, sans-serif;
+  white-space: nowrap;
+}
+
+.ep-tab[aria-selected="true"] {
+  background: var(--ep-accent);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, .3);
+  color: #fff;
+}
+
+.ep-person[hidden] {
+  display: none;
+}
+
+.ep-person-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  max-width: 650px;
+  margin: 0 auto 18px;
+  gap: 16px;
+}
+
+.ep-portrait,
+.ep-monogram {
+  width: clamp(88px, 25vw, 132px);
+  aspect-ratio: 1;
+  border: 3px solid color-mix(in srgb, var(--ep-person-accent) 78%, white);
+  border-radius: 42% 58% 54% 46% / 48% 43% 57% 52%;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, .42);
+  transform: rotate(-2deg);
+}
+
+.ep-portrait {
+  display: block;
+  object-fit: cover;
+}
+
+/* Fallback sin foto: no es un hueco, es un elemento con identidad propia
+   y un acento distinto por persona. */
+.ep-monogram {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 32% 28%,
+      color-mix(in srgb, var(--ep-person-accent) 70%, white),
+      color-mix(in srgb, var(--ep-person-accent) 72%, var(--ep-ink-base)) 70%);
+  color: #fff;
+  font-size: 2.4rem;
+  font-weight: 800;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .38);
+}
+
+.ep-person-identity {
+  min-width: 0;
+}
+
+.ep-person-name {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(1.55rem, 6vw, 2.35rem);
+  font-weight: 800;
+  line-height: 1;
+  overflow-wrap: anywhere;
+  text-shadow: 0 3px 18px rgba(0, 0, 0, .5);
+}
+
+.ep-person-nickname {
+  display: inline-block;
+  margin: 8px 0 0;
+  padding: 4px 12px;
+  border: 1px solid color-mix(in srgb, var(--ep-person-accent) 60%, white);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ep-person-accent) 30%, var(--ep-ink-base));
+  color: #fff;
+  font-size: .86rem;
+  font-weight: 800;
+}
+
+.ep-presentation {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 14px 16px;
+  border-left: 4px solid var(--ep-person-accent);
+  border-radius: 4px 16px 16px 4px;
+  background: color-mix(in srgb, var(--ep-ink-raise) 90%, transparent);
+  color: rgba(255, 255, 255, .96);
+  font-size: 1rem;
+  line-height: 1.52;
+  backdrop-filter: blur(10px);
+}
+
+.ep-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 12px;
+}
+
+/* Superficie propia y opaca. Antes las tarjetas eran blanco translúcido
+   al 8-17% y el fondo temático se leía a través del texto. */
+.ep-section {
+  /* El tono de sección se tiñe hacia el acento del tema: las secciones se
+     distinguen entre sí pero la ficha sigue perteneciendo a la temática. */
+  --ep-section-ink: color-mix(in srgb, var(--ep-section-tone) 66%, var(--ep-accent));
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--ep-section-ink) 34%, transparent);
+  border-radius: 20px 20px 20px 8px;
+  border-top: 3px solid color-mix(in srgb, var(--ep-section-ink) 76%, transparent);
+  background:
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--ep-ink-raise) var(--ep-surface-mix), transparent),
+      color-mix(in srgb, var(--ep-ink-base) var(--ep-surface-mix), transparent));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .32);
+}
+
+.ep-section h4 {
+  display: flex;
+  /* `center`, no `baseline`: un SVG no tiene línea base de texto y con
+     `baseline` el icono se apoyaba en el borde inferior del renglón. */
+  align-items: center;
+  margin: 0 0 10px;
+  gap: 8px;
+  color: color-mix(in srgb, var(--ep-section-ink) 58%, white);
+  font-size: 1.06rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+/* El glifo acompaña al color: la sección nunca se distingue solo por tono. */
+.ep-section-glyph {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  opacity: .95;
+}
+
+.ep-fields {
+  display: grid;
+  margin: 0;
+  gap: 10px;
+}
+
+.ep-field {
+  display: grid;
+  gap: 2px;
+}
+
+.ep-field dt {
+  color: rgba(255, 255, 255, .78);
+  font-size: .76rem;
+  font-weight: 800;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+.ep-field dd {
+  margin: 0;
+  color: #fff;
+  font-size: .98rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+/* Cierre alcanzable con una mano al final del recorrido, sin quitar la
+   ✕ superior ni el Escape. */
+.ep-profile-foot {
+  display: flex;
+  justify-content: center;
+  margin: 26px auto 0;
+}
+
+.ep-close-bottom {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: 1px solid rgba(255, 255, 255, .3);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ep-ink-raise) 92%, transparent);
+  color: #fff;
+  cursor: pointer;
+  font: 800 .96rem/1 "Baloo 2", system-ui, sans-serif;
+}
+
+.ep-close-bottom:hover {
+  background: color-mix(in srgb, var(--ep-accent) 60%, var(--ep-dark-1));
+}
+
+/* ============================================================
+   Detalles por temática (solo matices; la base es común)
+   ============================================================ */
+
+[data-ep-layout="speedway-celebration"] .ep-section {
+  border-radius: 8px 24px;
+}
+
+[data-ep-layout="backyard-storybook"] .ep-section {
+  border-radius: 28px 28px 28px 10px;
+}
+
+[data-ep-layout="island-adventure"] .ep-portrait,
+[data-ep-layout="island-adventure"] .ep-monogram {
+  border-radius: 50% 42% 48% 44%;
+}
+
+[data-ep-layout="crystal-palace"] .ep-section {
+  box-shadow: inset 0 0 24px rgba(255, 255, 255, .08), 0 10px 28px rgba(0, 0, 0, .32);
+}
+
+[data-ep-layout="neon-stage"] .ep-section {
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--ep-accent) 20%, transparent),
+    0 10px 28px rgba(0, 0, 0, .32);
+}
+
+.ep-empty {
+  margin: 30px auto;
+  max-width: 32rem;
+  text-align: center;
+}
+
+.ep-fallback-enter .ep-profile-inner {
+  animation: ep-reveal 480ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+@keyframes ep-reveal {
+  from { opacity: 0; transform: translateY(24px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (min-width: 760px) {
+  .ep-person-hero {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .ep-presentation {
+    grid-column: 2;
+  }
+
+  .ep-intro video {
+    object-fit: contain;
+  }
+}
+
+/* En pantallas anchas la ficha se apoya en una columna con fondo propio en
+   vez de flotar sobre una ilustración de 1440px. */
+@media (min-width: 1100px) {
+  .ep-profile-inner {
+    width: min(100%, 940px);
+    margin-top: 26px;
+    margin-bottom: 26px;
+    padding-top: 46px;
+    border-radius: 28px;
+    background: color-mix(in srgb, var(--ep-ink-base) 70%, transparent);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .42);
+    min-height: auto;
+  }
+
+  .ep-profile {
+    display: grid;
+    place-items: start center;
+    padding: 0 24px;
+  }
+
+  .ep-tabs {
+    top: 12px;
+  }
+
+  /* El encabezado del protagonista comparte el ancho de las tarjetas: con
+     `max-width` y `grid-column: 2` quedaba desalineado respecto a la grilla. */
+  .ep-person-hero {
+    max-width: none;
+  }
+
+  .ep-presentation {
+    grid-column: 1 / -1;
+    margin-top: 4px;
+  }
+}
+
+@media (max-width: 420px) {
+  .ep-person-hero {
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .ep-portrait,
+  .ep-monogram {
+    width: 92px;
+  }
+
+  .ep-profile-inner {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ep-trigger,
+  .ep-profile-inner {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+
+  .ep-trigger:hover {
+    transform: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .ep-trigger,
+  .ep-toolbar button,
+  .ep-tab,
+  .ep-section,
+  .ep-close-bottom {
+    border: 2px solid ButtonText;
+  }
+
+  .ep-shell::before {
+    display: none;
+  }
+}

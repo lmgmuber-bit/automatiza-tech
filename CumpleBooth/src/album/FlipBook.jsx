@@ -16,11 +16,23 @@ const DRAG_COMMIT = 0.12
 const WINDOW_SPREADS = 1
 
 export default function FlipBook({ pages, renderPage, onClose, footer }) {
-  const totalPages = pages.length
   const [spread, setSpread] = useState(0)
   const [flipping, setFlipping] = useState(null) // null | 'fwd' | 'back'
   const [drag, setDrag] = useState(null)
   const [singlePage, setSinglePage] = useState(() => matchesSingle())
+
+  // La hoja en blanco que agrega buildPages() existe por una sola razón: que
+  // en el pliego de escritorio la última página no quede sola contra un hueco.
+  // En modo de una página no hay pliego, así que esa hoja pasa a ser una
+  // pantalla vacía al final del álbum: en el celular se cerraba la revista
+  // dando vuelta la página de "gracias por venir" para llegar a nada, y el
+  // contador decía 10 de 10 sobre una hoja sin contenido.
+  const hojas = useMemo(() => {
+    if (!singlePage) return pages
+    const ultima = pages[pages.length - 1]
+    return ultima && ultima.layout === 'blank' ? pages.slice(0, -1) : pages
+  }, [pages, singlePage])
+  const totalPages = hojas.length
 
   const flyingRef = useRef(null)
   const bookRef = useRef(null)
@@ -35,14 +47,19 @@ export default function FlipBook({ pages, renderPage, onClose, footer }) {
   const singlePageRef = useRef(singlePage)
 
   // En pantallas angostas el pliego de dos páginas no cabe: se pasa de a una.
+  // Pero angosto no es lo mismo que chico: un celular acostado mide 812x375 y
+  // entraba acá por el ancho, cuando lo que le falta es alto y horizontal le
+  // sobra. Quedaba una revista de estampilla con la pantalla vacía a los lados.
+  // Por eso se exige además orientación vertical: acostado va el pliego, que es
+  // justo lo que aprovecha el espacio que sí hay.
   function matchesSingle() {
     if (typeof window === 'undefined' || !window.matchMedia) return false
-    return window.matchMedia('(max-width: 820px)').matches
+    return window.matchMedia('(max-width: 820px) and (orientation: portrait)').matches
   }
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return undefined
-    const query = window.matchMedia('(max-width: 820px)')
+    const query = window.matchMedia('(max-width: 820px) and (orientation: portrait)')
     // Se escucha el cambio del media query Y el resize: en pruebas el evento
     // `change` no llegó a dispararse al redimensionar y el pliego se quedó
     // pegado en modo de una página. De qué lado se equivoque esto define el
@@ -207,7 +224,7 @@ export default function FlipBook({ pages, renderPage, onClose, footer }) {
     }
     return (
       <div className={`flip-page flip-page--${side}`}>
-        {visible.has(index) ? renderPage(pages[index], index) : null}
+        {visible.has(index) ? renderPage(hojas[index], index) : null}
         <div className={`flip-shade flip-shade--${side}`} />
       </div>
     )
@@ -273,11 +290,11 @@ export default function FlipBook({ pages, renderPage, onClose, footer }) {
         {flipping && (
           <div className={`flipbook__flying flipbook__flying--${flipping}`} key={`${flipping}-${spread}`}>
             <div className="flip-page flip-page--front">
-              {flyFront >= 0 && flyFront < totalPages && renderPage(pages[flyFront], flyFront)}
+              {flyFront >= 0 && flyFront < totalPages && renderPage(hojas[flyFront], flyFront)}
               <div className="flip-curl" />
             </div>
             <div className="flip-page flip-page--back">
-              {flyBack >= 0 && flyBack < totalPages && renderPage(pages[flyBack], flyBack)}
+              {flyBack >= 0 && flyBack < totalPages && renderPage(hojas[flyBack], flyBack)}
               <div className="flip-curl flip-curl--back" />
             </div>
           </div>
@@ -297,11 +314,11 @@ export default function FlipBook({ pages, renderPage, onClose, footer }) {
             }}
           >
             <div className="flip-page flip-page--front">
-              {drag.front >= 0 && drag.front < totalPages && renderPage(pages[drag.front], drag.front)}
+              {drag.front >= 0 && drag.front < totalPages && renderPage(hojas[drag.front], drag.front)}
               <div className="flip-curl" />
             </div>
             <div className="flip-page flip-page--back">
-              {drag.back >= 0 && drag.back < totalPages && renderPage(pages[drag.back], drag.back)}
+              {drag.back >= 0 && drag.back < totalPages && renderPage(hojas[drag.back], drag.back)}
               <div className="flip-curl flip-curl--back" />
             </div>
           </div>

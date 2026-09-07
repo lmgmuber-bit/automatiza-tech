@@ -225,6 +225,7 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             $tema = (string) ($_POST['tema'] ?? '');
             $fecha = trim((string) ($_POST['fecha'] ?? ''));
             $activa = isset($_POST['activa']);
+            $eventType = (string) ($_POST['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
             $servicePlan = in_array((string) ($_POST['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $_POST['service_plan'] : 'booth';
             $galleryEnabled = isset($_POST['gallery_enabled']);
             // Juegos habilitados para esta fiesta. `juegos_definidos` distingue
@@ -309,6 +310,7 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                     'admin_label'          => $adminLabel,
                     'birthday_person_name' => $birthdayPersonName,
                     'nombre'               => $birthdayPersonName,
+                    'event_type'           => $eventType,
                     'theme_slug'           => $tema,
                     'tema'                 => $tema,
                     'public_slug'          => $publicSlug,
@@ -341,6 +343,7 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 'public_slug' => $publicSlug,
                 'admin_label' => $adminLabel,
                 'birthday_person_name' => $birthdayPersonName,
+                'event_type' => $eventType,
                 'tema' => $tema,
                 'fecha' => $fecha,
                 'activa' => $activa,
@@ -399,7 +402,7 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             if (!isset($themes[$tslug]) || !is_array($themes[$tslug])) {
                 $_SESSION['upload_flash'] = ['tema' => $tslug, 'saved' => [], 'rejected' => [['name' => '(temática)', 'reason' => 'temática inválida']]];
             } else {
-                $rate = cb_rate_limit('admin-theme-upload:' . $tslug, cb_client_ip(), 30, 600, 600);
+                $rate = cb_rate_limit('admin-theme-upload:' . $tslug, cb_request_identity(), 30, 600, 600);
                 if (!$rate['allowed']) {
                     $res = ['saved' => [], 'rejected' => [['name' => '(subida)', 'reason' => 'demasiadas subidas; reintenta en ' . (int) $rate['retry_after'] . ' segundos']]];
                 } else {
@@ -563,6 +566,7 @@ if ($formValues === null && $action === 'editar') {
             'public_slug' => $editSlug,
             'admin_label' => $p['admin_label'] ?? '',
             'birthday_person_name' => $p['birthday_person_name'] ?? '',
+            'event_type' => (string) ($p['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday',
             'tema' => $p['tema'] ?? '',
             'fecha' => $p['fecha'] ?? '',
             'activa' => !empty($p['activa']),
@@ -583,6 +587,7 @@ if ($formValues === null && $action === 'editar') {
         'public_slug' => '',
         'admin_label' => '',
         'birthday_person_name' => '',
+        'event_type' => 'child_birthday',
         'tema' => array_key_first($themes) ?? '',
         'fecha' => '',
         // Nueva fiesta nace inactiva: se activa cuando exista aceptación de Términos.
@@ -625,15 +630,34 @@ if ($formValues === null && $action === 'editar') {
         <div class="kpi-text"><strong><?= (int) $kpiListas ?>/<?= count($themes) ?></strong><span>temáticas listas</span></div>
       </div>
     </div>
-    <form method="post" action="index.php" class="inline-form logout-btn">
-      <?= admin_csrf_field() ?><input type="hidden" name="action" value="logout">
-      <button class="btn btn-ghost" type="submit"><?= admin_icon('logout') ?> Salir</button>
-    </form>
+    <div class="inline-form logout-btn">
+      <a class="btn btn-ghost" href="marca.php">Datos de la marca</a>
+      <form method="post" action="index.php" class="inline-form">
+        <?= admin_csrf_field() ?><input type="hidden" name="action" value="logout">
+        <button class="btn btn-ghost" type="submit"><?= admin_icon('logout') ?> Salir</button>
+      </form>
+    </div>
   </header>
 
   <nav class="tabs">
     <a class="tab <?= (!in_array($view, ['temas', 'tema'], true) && !$showForm) ? 'active' : '' ?>" href="index.php"><?= admin_icon('party') ?> Fiestas</a>
     <a class="tab <?= (in_array($view, ['temas', 'tema'], true) && !$showForm) ? 'active' : '' ?>" href="index.php?view=temas"><?= admin_icon('palette') ?> Temáticas</a>
+    <?php
+      /* Cuántas solicitudes sin atender. Va en la pestaña a propósito: si el
+         número no se ve desde acá, hay que acordarse de entrar a mirar, y una
+         solicitud que nadie mira es un cliente perdido. Envuelto en try porque
+         `cc_leads` puede no existir todavía en una instalación vieja; en ese
+         caso la pestaña aparece igual, sólo que sin el número. */
+      $leadsNuevos = 0;
+      if (cb_storage_mode() === 'db') {
+          try {
+              $leadsNuevos = (int) cb_pdo()->query("SELECT COUNT(*) FROM cc_leads WHERE status = 'new'")->fetchColumn();
+          } catch (Throwable $e) {
+              $leadsNuevos = 0;
+          }
+      }
+    ?>
+    <a class="tab" href="leads.php"><?= admin_icon('party') ?> Solicitudes<?= $leadsNuevos > 0 ? ' <b class="tab-badge">' . (int) $leadsNuevos . '</b>' : '' ?></a>
   </nav>
 
   <main>
@@ -674,6 +698,15 @@ if ($formValues === null && $action === 'editar') {
           <div class="field">
             <label for="f-birthday-name">Nombre del cumpleañero/a</label>
             <input type="text" id="f-birthday-name" name="birthday_person_name" required maxlength="60" value="<?= h($formValues['birthday_person_name']) ?>" placeholder="Ej. Valentina">
+          </div>
+
+          <div class="field">
+            <label for="f-event-type">Modalidad del evento</label>
+            <select id="f-event-type" name="event_type" required>
+              <option value="child_birthday" <?= ($formValues['event_type'] ?? 'child_birthday') === 'child_birthday' ? 'selected' : '' ?>>Cumpleaños infantil</option>
+              <option value="baby_shower" <?= ($formValues['event_type'] ?? '') === 'baby_shower' ? 'selected' : '' ?>>Baby shower</option>
+            </select>
+            <small>La modalidad controla el recorrido y el vocabulario. Los eventos actuales permanecen como cumpleaños infantil.</small>
           </div>
 
           <?php if ($isEdit): ?>
@@ -1145,6 +1178,14 @@ if ($formValues === null && $action === 'editar') {
           $invitationsUrl = 'invitations.php?party=' . rawurlencode($publicSlug);
           $photoUsage = cb_photo_usage((string) $publicSlug);
           $quotaRatio = max($photoUsage['count'] / 200, $photoUsage['bytes'] / 1073741824);
+          $eventProfile = null;
+          $eventProfileAvailable = cb_storage_mode() === 'db' && function_exists('cb_event_profile_get');
+          if ($eventProfileAvailable) {
+              try {
+                  $profilePartyId = cb_party_db_id((string) $publicSlug);
+                  $eventProfile = $profilePartyId !== null ? cb_event_profile_get($profilePartyId, true) : null;
+              } catch (Throwable $e) { error_log('CumpleClick admin profile status: ' . $e->getMessage()); }
+          }
           ?>
           <article class="card party-card" style="--chip-accent: <?= h($temaColor) ?>">
             <div class="party-main">
@@ -1160,6 +1201,12 @@ if ($formValues === null && $action === 'editar') {
                 <span class="badge <?= $accState === 'accepted' ? 'badge-ok' : ($accState === 'waived' ? 'badge-warn' : 'badge-off') ?>" title="Aceptación de Términos y firma">
                   <?= $accState === 'accepted' ? admin_icon('check') : '' ?> T&amp;C: <?= h(cb_acceptance_status_label($accState)) ?>
                 </span>
+                <?php
+                $eventProfileEnabled = !empty($eventProfile['is_enabled']);
+                $eventProfilePeople = is_array($eventProfile['featured_people'] ?? null) ? count($eventProfile['featured_people']) : 0;
+                ?>
+                <?php if ($eventProfileEnabled && $eventProfilePeople > 0): ?><span class="badge badge-ok">Perfil: <?= (int) $eventProfilePeople ?> protagonista<?= $eventProfilePeople === 1 ? '' : 's' ?></span>
+                <?php elseif ($eventProfile !== null): ?><span class="badge badge-off">Perfil desactivado</span><?php endif; ?>
               </div>
               <div class="muted small"><?= h($p['birthday_person_name'] ?: '—') ?> · <?= h($p['fecha'] ?: '—') ?> · <?= count($p['invitados'] ?? []) ?> invitados · <?= (int) $photoUsage['count'] ?>/200 fotos · slug: <?= h($publicSlug) ?></div>
               <?php if ($quotaRatio >= 0.8): ?><div class="badge badge-off">Atención: galería al <?= (int) floor($quotaRatio * 100) ?>% de cuota</div><?php endif; ?>
@@ -1182,7 +1229,15 @@ if ($formValues === null && $action === 'editar') {
               <?php endif; ?>
               <a class="btn btn-ghost" href="<?= h($invitationsUrl) ?>"><?= admin_icon('duplicate') ?> Invitaciones</a>
               <a class="btn btn-ghost" href="aceptaciones.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('check') ?> Aceptación</a>
-              <a class="btn btn-ghost" href="album.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('gallery') ?> Álbum Recuerdo</a>
+              <?php // Solo si el módulo está realmente utilizable. Los archivos del
+                    // álbum pueden estar subidos sin la migración 007 aplicada, y en
+                    // ese estado este botón lleva a una página que falla al consultar.
+                    if (function_exists('cb_album_feature_ready') && cb_album_feature_ready()): ?>
+                <a class="btn btn-ghost" href="album.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('gallery') ?> Álbum Recuerdo</a>
+              <?php endif; ?>
+              <?php if ($eventProfileAvailable): ?>
+                <a class="btn btn-ghost" href="event-profile.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('party') ?> Perfil del protagonista</a>
+              <?php endif; ?>
               <form method="post" action="index.php" class="inline-form">
                 <?= admin_csrf_field() ?>
                 <input type="hidden" name="action" value="duplicar">

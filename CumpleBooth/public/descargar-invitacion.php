@@ -15,7 +15,14 @@ function cb_invitation_deny(): void
     exit;
 }
 
-$requestedType = isset($_GET['type']) && in_array((string) $_GET['type'], ['image', 'video'], true) ? (string) $_GET['type'] : null;
+$requestedType = isset($_GET['type']) && in_array((string) $_GET['type'], ['image', 'video', 'narracion_inicio'], true) ? (string) $_GET['type'] : null;
+
+// Vista previa para la tarjeta de WhatsApp y redes. Mismo archivo y mismo
+// control de token; cambia solo cómo se entrega: los rastreadores no renderizan
+// algo marcado `attachment` ni guardan lo que va `no-store`. Se limita a la
+// imagen: el video y la narración siguen igual que siempre.
+$isSocialPreview = $requestedType === 'image'
+    && isset($_GET['preview']) && (string) $_GET['preview'] === '1';
 
 // Endpoint público sin auth: rate limit persistente por IP antes de cualquier
 // otra cosa, para frenar bursts de enumeración/abuso de descarga.
@@ -28,13 +35,12 @@ if (!$dlLimit['allowed']) {
     exit;
 }
 
-if (!preg_match('/^[a-f0-9]{32}$/', $token)) {
+if (!cb_invitation_public_token_is_valid($token)) {
     cb_invitation_deny();
 }
 
 try {
-    $hash = cb_hash_token($token);
-    $invitation = cb_load_invitation_by_token_hash($hash);
+    $invitation = cb_load_invitation_by_public_token($token);
     if (!$invitation) {
         cb_invitation_deny();
     }
@@ -48,7 +54,7 @@ try {
     // Buscar output aprobado según tipo solicitado o por defecto imagen > video
     $outputs = cb_load_invitation_outputs((int) $invitation['id']);
     $selected = null;
-    $priority = ['personalized_image' => 1, 'personalized_video' => 2];
+    $priority = ['personalized_image' => 1, 'personalized_video' => 2, 'personalized_narration_intro' => 3];
     foreach ($outputs as $output) {
         if ((string) $output['status'] !== 'approved') {
             continue;
@@ -58,6 +64,9 @@ try {
             continue;
         }
         if ($requestedType === 'video' && $outputType !== 'personalized_video') {
+            continue;
+        }
+        if ($requestedType === 'narracion_inicio' && $outputType !== 'personalized_narration_intro') {
             continue;
         }
         if ($selected === null || ($priority[$outputType] ?? 99) < ($priority[(string) $selected['output_type']] ?? 99)) {
@@ -80,16 +89,47 @@ try {
     }
 
     $mime = (string) ($selected['file_mime'] ?: 'application/octet-stream');
-    // Nombre neutro a propósito: nunca exponer el ID interno de la invitación.
-    $fileName = 'invitacion-cumpleclick.' . pathinfo($filePath, PATHINFO_EXTENSION);
+    /* El nombre con el que se guarda.
 
-    // Incrementar contador de descargas de forma no bloqueante
-    cb_increment_invitation_download((int) $invitation['id']);
+       Cuando esta cabecera trae `filename`, MANDA sobre el atributo
+       `download` del enlace: poner un nombre lindo en el HTML y dejar acá
+       otro distinto significa que gana este y el del HTML no se usa nunca.
+       Los dos tienen que decir lo mismo.
 
+       Sigue sin exponer nada interno —el nombre del cumpleañero o del bebé
+       está en toda la página— y pasa por el mismo slug que el resto: sin
+       tildes, sin ñ y en minúscula, que es lo que sobrevive a un FTP y a
+       reenviarlo desde un teléfono. */
+    $quien = trim((string) ($invitation['birthday_person_name'] ?? ''));
+    $prefijo = (string) ($invitation['event_type'] ?? '') === 'baby_shower'
+        ? 'baby-shower-'
+        : 'cumpleanos-';
+    // Sin nombre, un baby shower baja como "baby-shower.jpg" a secas: el
+    // respaldo "cumpleclick" pondría la marca donde va el nombre del bebé, y
+    // en baby shower ese campo está vacío a propósito, no por error.
+    $base = $quien !== ''
+        ? $prefijo . cb_invitation_name_slug($quien)
+        : rtrim($prefijo, '-');
+    $fileName = $base . '.' . pathinfo($filePath, PATHINFO_EXTENSION);
+
+    // Incrementar contador de descargas de forma no bloqueante. El rastreador
+    // que arma la tarjeta no descargó nada: contarlo inflaría la métrica que
+    // Luis usa para saber cuántas familias guardaron su invitación.
+    if (!$isSocialPreview) {
+        cb_increment_invitation_download((int) $invitation['id']);
+    }
+
+    // La narración va dentro de un <audio> de la propia página: si se fuerza
+    // "attachment" algunos navegadores intentan descargar en vez de reproducir.
+    // La vista previa social necesita lo mismo, más una caché pública corta:
+    // WhatsApp descarta la imagen si viene como adjunto o marcada no-store.
+    $disposition = ($selected['output_type'] === 'personalized_narration_intro' || $isSocialPreview)
+        ? 'inline'
+        : 'attachment';
     header('Content-Type: ' . $mime);
-    header('Content-Disposition: attachment; filename="' . $fileName . '"');
+    header('Content-Disposition: ' . $disposition . '; filename="' . $fileName . '"');
     header('Content-Length: ' . filesize($filePath));
-    header('Cache-Control: private, no-store');
+    header('Cache-Control: ' . ($isSocialPreview ? 'public, max-age=86400' : 'private, no-store'));
     header('X-Robots-Tag: noindex, nofollow');
     readfile($filePath);
     exit;

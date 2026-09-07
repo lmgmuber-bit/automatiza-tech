@@ -28,6 +28,14 @@ $promptHistoryMigration = require dirname(__DIR__, 2) . '/database/migrations/00
 $promptHistoryMigration(cb_pdo());
 $leadMigration = require dirname(__DIR__, 2) . '/database/migrations/006_public_leads.php';
 $leadMigration(cb_pdo());
+$albumMigration = require dirname(__DIR__, 2) . '/database/migrations/007_event_album.php';
+$albumMigration(cb_pdo());
+$profileMigration = require dirname(__DIR__, 2) . '/database/migrations/008_event_profiles.php';
+$profileMigration(cb_pdo());
+$genderMigration = require dirname(__DIR__, 2) . '/database/migrations/009_invitation_gender.php';
+$genderMigration(cb_pdo());
+$babyShowerMigration = require dirname(__DIR__, 2) . '/database/migrations/010_baby_shower_predictions.php';
+$babyShowerMigration(cb_pdo());
 check(cb_storage_mode() === 'db', 'modo DB');
 check(cb_valid_slug('fiesta-1', 2, 40) && !cb_valid_slug('../x', 2, 40), 'slugs estrictos');
 check(cb_normalize_frame_box(['x'=>.2,'y'=>.2,'w'=>.4,'h'=>.4]) !== null, 'frame válido');
@@ -412,26 +420,35 @@ check(
     'backend rechaza mundo y simbolo 3D fuera de lista blanca'
 );
 
-$seisMundosFull = [
-    'carreras' => 'turbo-track',
-    'familia-canina' => 'puppy-park',
-    'tropical' => 'tropical-wave',
-    'hielo' => 'ice-bridge',
-    'kpop' => 'neon-stage',
-    'heroes' => 'hero-city',
+// La mision Full que le toca a cada tematica completa. NO se asume una sola:
+// 'concierto3d' (El Show, src/StageConcert3D.jsx) reemplazo al runner de
+// carriles 'mundo3d' en las seis, pero el saneador sigue aceptando ambos, asi
+// que cada tematica declara aca la que espera. Cada kind trae su propia clave
+// de vestuario: 'stage' para El Show, 'world' para el runner.
+$misionFullPorTematica = [
+    'carreras' => ['kind' => 'concierto3d', 'stage' => 'podium-night'],
+    'familia-canina' => ['kind' => 'concierto3d', 'stage' => 'backyard-fiesta'],
+    'tropical' => ['kind' => 'concierto3d', 'stage' => 'beach-luau'],
+    'hielo' => ['kind' => 'concierto3d', 'stage' => 'ice-gala'],
+    // K-Pop no declara 'stage' en themes.json: el saneador lo deja en
+    // 'neon-arena', que es justo el vestuario que le corresponde.
+    'kpop' => ['kind' => 'concierto3d', 'stage' => 'neon-arena'],
+    'heroes' => ['kind' => 'concierto3d', 'stage' => 'rooftop-city'],
 ];
-foreach ($seisMundosFull as $slug => $world) {
+foreach ($misionFullPorTematica as $slug => $esperado) {
     $rawTheme = $themesData['themes'][$slug];
     $boothPayload = cb_build_theme_payload($slug, $rawTheme, null, 'booth');
     $fullPayload = cb_build_theme_payload($slug, $rawTheme, null, 'full');
+    $misionPublicada = (array) ($fullPayload['fullGame'] ?? []);
+    $claveVestuario = $esperado['kind'] === 'concierto3d' ? 'stage' : 'world';
     check(
         empty((array) ($boothPayload['fullGame'] ?? [])),
         $slug . ': Booth no recibe configuracion premium'
     );
     check(
-        ($fullPayload['fullGame']['kind'] ?? '') === 'mundo3d'
-        && ($fullPayload['fullGame']['world'] ?? '') === $world,
-        $slug . ': Full recibe su mundo 3D correcto'
+        ($misionPublicada['kind'] ?? '') === $esperado['kind']
+        && ($misionPublicada[$claveVestuario] ?? '') === $esperado[$claveVestuario],
+        $slug . ': Full recibe la mision premium que le corresponde'
     );
     $atlasMatch = count($fullPayload['personajes'] ?? []) === 6;
     foreach (($rawTheme['personajes'] ?? []) as $index => $rawCharacter) {

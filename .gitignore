@@ -23,6 +23,16 @@ wp-trackback.php
 xmlrpc.php
 index.php
 
+# ...pero NO la portada de CumpleClick.
+#
+# La regla de arriba viene del bloque de WordPress y apunta al `index.php` de
+# la raiz, solo que sin barra inicial un patron de git matchea en CUALQUIER
+# carpeta. `sitio/index.php` es la landing de cumpleclick.com y quedaba fuera
+# del repo sin que nada avisara: existia en el disco y en produccion, y en el
+# repositorio no. Es el mismo accidente que ya se habia comido `sitio/vendor/`
+# con la regla pensada para Composer.
+!CumpleBooth/sitio/index.php
+
 # WordPress Cache y LiteSpeed
 wp-content/cache/
 wp-content/object-cache.php

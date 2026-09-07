@@ -132,6 +132,7 @@ function admin_mime_to_ext(string $mime): string
         'image/png' => 'png',
         'image/webp' => 'webp',
         'video/mp4' => 'mp4',
+        'audio/mpeg' => 'mp3',
         default => 'bin',
     };
 }
@@ -187,7 +188,7 @@ if (!$loggedIn) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CumpleBooth Admin · Ingresar</title>
+<title>CumpleClick Admin · Ingresar</title>
 <style>
 <?php require __DIR__ . '/_style.css.php'; ?>
 </style>
@@ -196,7 +197,7 @@ if (!$loggedIn) {
   <main class="login-card">
     <div class="login-logo">
       <span class="logo-mark"><?= admin_icon('party') ?></span>
-      CumpleBooth <span>Admin</span>
+      CumpleClick <span>Admin</span>
     </div>
     <?php if ($loginError !== ''): ?>
       <p class="alert alert-error"><?= admin_icon('warn') ?> <?= h($loginError) ?></p>
@@ -262,6 +263,7 @@ if ($partyId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($action === 'crear_invitacion') {
             $birthdayPersonName = trim((string) ($_POST['birthday_person_name'] ?? ''));
+            $birthdayPersonGender = in_array((string) ($_POST['birthday_person_gender'] ?? ''), ['m', 'f'], true) ? (string) $_POST['birthday_person_gender'] : '';
             $eventDate = trim((string) ($_POST['event_date'] ?? ''));
             $eventTime = trim((string) ($_POST['event_time'] ?? ''));
             $address = trim((string) ($_POST['address'] ?? ''));
@@ -290,7 +292,9 @@ if ($partyId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     'party_id' => $partyId,
                     'theme_slug' => (string) ($party['theme_slug'] ?? ''),
                     'admin_label' => (string) ($party['admin_label'] ?? ''),
+                    'event_type' => (string) ($party['event_type'] ?? 'child_birthday'),
                     'birthday_person_name' => $birthdayPersonName,
+                    'birthday_person_gender' => $birthdayPersonGender,
                     'event_date' => $eventDate,
                     'event_time' => $eventTime,
                     'address' => $address,
@@ -314,6 +318,7 @@ if ($partyId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $update = [
                     'birthday_person_name' => trim((string) ($_POST['birthday_person_name'] ?? '')),
+                    'birthday_person_gender' => in_array((string) ($_POST['birthday_person_gender'] ?? ''), ['m', 'f'], true) ? (string) $_POST['birthday_person_gender'] : '',
                     'event_date' => trim((string) ($_POST['event_date'] ?? '')),
                     'event_time' => trim((string) ($_POST['event_time'] ?? '')),
                     'address' => trim((string) ($_POST['address'] ?? '')),
@@ -438,10 +443,18 @@ if ($partyId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
             $errors[] = 'No se pudo revocar la invitación.';
-        } elseif ($action === 'subir_output_image' || $action === 'subir_output_video') {
+        } elseif ($action === 'subir_output_image' || $action === 'subir_output_video' || $action === 'subir_output_narracion') {
             $id = filter_input(INPUT_POST, 'invitation_id', FILTER_VALIDATE_INT);
-            $outputType = $action === 'subir_output_image' ? 'personalized_image' : 'personalized_video';
-            $assetKey = $outputType === 'personalized_image' ? 'personalized-image' : 'personalized-video';
+            $outputType = match ($action) {
+                'subir_output_image' => 'personalized_image',
+                'subir_output_video' => 'personalized_video',
+                default => 'personalized_narration_intro',
+            };
+            $assetKey = match ($outputType) {
+                'personalized_image' => 'personalized-image',
+                'personalized_video' => 'personalized-video',
+                default => 'personalized-narration-intro',
+            };
             $file = $_FILES['archivo'] ?? null;
             $uploadLimit = cb_rate_limit('invitation-upload:' . $publicSlug, cb_request_identity(), 20, 600, 600);
             if (!$uploadLimit['allowed']) {
@@ -530,6 +543,31 @@ if ($partyId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $errors[] = 'No se pudo guardar el prompt.';
                 }
             }
+        } elseif ($action === 'emitir_tablero_predicciones') {
+            $id = filter_input(INPUT_POST, 'invitation_id', FILTER_VALIDATE_INT);
+            $owned = $id !== false && $id !== null ? cb_invitation_owned_by_party((int) $id, $partyId) : null;
+            if ($owned === null || (string) ($owned['event_type'] ?? '') !== 'baby_shower') {
+                $errors[] = 'Invitación de baby shower inválida.';
+            } else {
+                try {
+                    $token = cb_invitation_issue_role_token((int) $id, 'parents', null, $by);
+                    $_SESSION['cc_predictions_token'] = ['id' => (int) $id, 'token' => $token];
+                    header('Location: ' . $invitationsUrl . '&ok=tablero_emitido#inv-' . (int) $id);
+                    exit;
+                } catch (Throwable $e) {
+                    error_log('CumpleClick emitir tablero: ' . $e->getMessage());
+                    $errors[] = 'No se pudo emitir el enlace privado del tablero.';
+                }
+            }
+        } elseif ($action === 'revocar_tablero_predicciones') {
+            $id = filter_input(INPUT_POST, 'invitation_id', FILTER_VALIDATE_INT);
+            $owned = $id !== false && $id !== null ? cb_invitation_owned_by_party((int) $id, $partyId) : null;
+            if ($owned !== null && (string) ($owned['event_type'] ?? '') === 'baby_shower') {
+                cb_invitation_revoke_role_tokens((int) $id, 'parents');
+                header('Location: ' . $invitationsUrl . '&ok=tablero_revocado#inv-' . (int) $id);
+                exit;
+            }
+            $errors[] = 'No se pudo revocar el enlace privado del tablero.';
         }
     }
 }
@@ -546,6 +584,8 @@ $okMessages = [
     'publicada' => 'Invitación publicada.',
     'revocada' => 'Invitación revocada.',
     'prompt_guardado' => 'Prompt guardado.',
+    'tablero_emitido' => 'Enlace privado del tablero generado. Cópialo ahora.',
+    'tablero_revocado' => 'Enlace privado del tablero revocado.',
 ];
 if (isset($_GET['ok'], $okMessages[$_GET['ok']])) {
     $okMessage = $okMessages[$_GET['ok']];
@@ -561,13 +601,21 @@ if (!empty($_SESSION['cc_invitation_token'])) {
     }
     unset($_SESSION['cc_invitation_token']);
 }
+$predictionsTokenFlash = null;
+if (!empty($_SESSION['cc_predictions_token'])) {
+    $flash = $_SESSION['cc_predictions_token'];
+    if (is_array($flash) && isset($flash['id'], $flash['token'])) {
+        $predictionsTokenFlash = $flash;
+    }
+    unset($_SESSION['cc_predictions_token']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CumpleBooth Admin · Invitaciones</title>
+<title>CumpleClick Admin · Invitaciones</title>
 <style>
 <?php require __DIR__ . '/_style.css.php'; ?>
 .invite-wrap { max-width: 1180px; }
@@ -673,7 +721,7 @@ if (!empty($_SESSION['cc_invitation_token'])) {
   <header class="topbar">
     <div class="logo">
       <span class="logo-mark"><?= admin_icon('party') ?></span>
-      CumpleBooth <span>Admin</span>
+      CumpleClick <span>Admin</span>
     </div>
     <form method="post" action="invitations.php?party=<?= rawurlencode($publicSlug) ?>" class="inline-form logout-btn">
       <?= admin_csrf_field() ?><input type="hidden" name="action" value="logout">
@@ -729,6 +777,14 @@ if (!empty($_SESSION['cc_invitation_token'])) {
 
             <label for="i-name">Nombre del cumpleañero/a</label>
             <input type="text" id="i-name" name="birthday_person_name" maxlength="120" placeholder="Ej. Martina">
+
+            <label for="i-gender">Cumpleañero o cumpleañera</label>
+            <select id="i-gender" name="birthday_person_gender">
+              <option value="">Sin especificar</option>
+              <option value="m">Niño (cumpleañero)</option>
+              <option value="f">Niña (cumpleañera)</option>
+            </select>
+            <p class="small muted">Elige la narración de cierre de Alice ("toca el botón para conocer al cumpleañero/a"). Sin especificar usa un audio neutro.</p>
 
             <label for="i-date">Fecha del evento</label>
             <input type="date" id="i-date" name="event_date" value="<?= h($party['event_date'] ?? '') ?>">
@@ -808,6 +864,38 @@ if (!empty($_SESSION['cc_invitation_token'])) {
               $showToken = $tokenFlash !== null && (int) $tokenFlash['id'] === (int) $inv['id'];
               $publicUrl = $showToken ? cb_invitation_public_url($tokenFlash['token']) : '';
               $downloadUrl = $showToken ? cb_invitation_download_url($tokenFlash['token']) : '';
+              $isBabyShower = (string) ($inv['event_type'] ?? '') === 'baby_shower';
+              $showPredictionsToken = $predictionsTokenFlash !== null && (int) $predictionsTokenFlash['id'] === (int) $inv['id'];
+              $predictionsUrl = $showPredictionsToken ? cb_prediction_board_url((string) $predictionsTokenFlash['token']) : '';
+              // El mismo token abre las dos pantallas de los papás. Antes solo se
+              // entregaba la de predicciones y la de regalos no la encontraba nadie.
+              $giftsUrl = $showPredictionsToken && function_exists('cb_gift_board_url')
+                  ? cb_gift_board_url((string) $predictionsTokenFlash['token'])
+                  : '';
+              // Enlace reconstruible desde el ID: sirve aunque el token en claro
+              // se haya perdido, sin revocar el aleatorio ni guardarlo en texto.
+              $shareUrl = '';
+              $shareUrlLarga = '';
+              $previewBasico = '';
+              $previewFull = '';
+              try {
+                  $shareToken = cb_invitation_share_token((int) $inv['id']);
+                  // Bonita para compartir; larga como respaldo por si el hosting
+                  // pierde la regla de reescritura del .htaccess.
+                  $shareUrl = cb_invitation_pretty_url($shareToken, (string) ($inv['birthday_person_name'] ?? ''));
+                  $shareUrlLarga = cb_invitation_public_url($shareToken);
+                  // La bonita no trae query string: acá el separador es '?'.
+                  $previewBasico = $shareUrl . '?hero=scroll&capitulos=1&qa='
+                      . cb_invitation_preview_mac((int) $inv['id'], 'scroll', '1');
+                  $previewFull = $shareUrl . '?hero=auto&capitulos=auto&qa='
+                      . cb_invitation_preview_mac((int) $inv['id'], 'auto', 'auto');
+              } catch (Throwable $e) {
+                  $shareUrl = '';
+                  $shareUrlLarga = '';
+              }
+              $planFiesta = cb_invitation_service_plan(
+                  isset($inv['party_id']) && $inv['party_id'] !== null ? (int) $inv['party_id'] : null
+              );
               ?>
               <article class="invite-card" id="inv-<?= (int) $inv['id'] ?>">
                 <div class="invite-card-header">
@@ -842,8 +930,70 @@ if (!empty($_SESSION['cc_invitation_token'])) {
                     <a class="btn btn-ghost btn-sm" href="<?= h($downloadUrl) ?>"><?= admin_icon('download') ?> Descargar</a>
                   </div>
                 </div>
-                <?php elseif (!$showToken): ?>
-                  <p class="small muted">El token en claro ya no está disponible. Regenera el enlace para copiarlo.</p>
+                <?php endif; ?>
+
+                <?php if ($shareUrl !== ''): ?>
+                <div class="token-row">
+                  <input id="share-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($shareUrl) ?>">
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('share-url-<?= (int) $inv['id'] ?>').value)"><?= admin_icon('copy') ?> Copiar enlace</button>
+                </div>
+                <p class="small muted">
+                  Enlace de respaldo, por si el hosting pierde la regla de URL bonita:<br>
+                  <code><?= h($shareUrlLarga) ?></code>
+                </p>
+                <p class="small muted">
+                  El de arriba es el que le mandas al cliente. Se puede recuperar siempre,
+                  aunque hayas perdido el que salió al crear la invitación.
+                  Entrega la versión
+                  <strong><?= $planFiesta === 'full' ? 'Automática (Plan Full)' : 'Scroll (Plan Básico)' ?></strong>,
+                  según el plan de la fiesta. Para cambiarla, cambia el plan en Editar fiesta.
+                </p>
+                <div class="token-row">
+                  <a class="btn btn-ghost btn-sm" href="<?= h($previewBasico) ?>" target="_blank" rel="noopener"><?= admin_icon('external') ?> Ver Básico (scroll)</a>
+                  <a class="btn btn-ghost btn-sm" href="<?= h($previewFull) ?>" target="_blank" rel="noopener"><?= admin_icon('external') ?> Ver Full (automática)</a>
+                </div>
+                <p class="small muted">
+                  Vista previa solo para ti: sirve para comparar los dos planes. No mandes
+                  estos dos enlaces al cliente, llevan la variante forzada.
+                </p>
+                <?php endif; ?>
+
+                <?php if ($isBabyShower): ?>
+                <section class="token-flash" aria-label="Pantallas privadas de los papás">
+                  <label>Las dos pantallas privadas de los papás</label>
+                  <p class="small muted">Un solo token abre las dos: el tablero con todas las apuestas del evento —aunque existan varias invitaciones— y la lista de regalos, donde ellos cargan lo que necesitan y son los únicos que ven quién tomó cada cosa. El token se guarda sólo como hash, y revocarlo cierra las dos.</p>
+                  <?php if ($showPredictionsToken && $predictionsUrl !== ''): ?>
+                    <p class="small"><strong>1. Tablero de predicciones</strong></p>
+                    <div class="token-row">
+                      <input id="predictions-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($predictionsUrl) ?>">
+                      <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('predictions-url-<?= (int) $inv['id'] ?>').value)"><?= admin_icon('copy') ?> Copiar</button>
+                      <a class="btn btn-ghost btn-sm" href="<?= h($predictionsUrl) ?>" target="_blank" rel="noopener noreferrer"><?= admin_icon('external') ?> Abrir</a>
+                    </div>
+                    <?php if ($giftsUrl !== ''): ?>
+                    <p class="small"><strong>2. Lista de regalos</strong></p>
+                    <div class="token-row">
+                      <input id="gifts-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($giftsUrl) ?>">
+                      <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('gifts-url-<?= (int) $inv['id'] ?>').value)"><?= admin_icon('copy') ?> Copiar</button>
+                      <a class="btn btn-ghost btn-sm" href="<?= h($giftsUrl) ?>" target="_blank" rel="noopener noreferrer"><?= admin_icon('external') ?> Abrir</a>
+                    </div>
+                    <?php endif; ?>
+                    <p class="small muted">Guárdalos ahora: por seguridad no se pueden reconstruir después. Emitir otro revoca el anterior. Igual, cada pantalla enlaza a la otra, así que con uno solo se llega a las dos.</p>
+                  <?php endif; ?>
+                  <div class="invite-actions">
+                    <form method="post" action="<?= h($invitationsUrl) ?>#inv-<?= (int) $inv['id'] ?>" class="inline-form">
+                      <?= admin_csrf_field() ?>
+                      <input type="hidden" name="action" value="emitir_tablero_predicciones">
+                      <input type="hidden" name="invitation_id" value="<?= (int) $inv['id'] ?>">
+                      <button type="submit" class="btn btn-primary btn-sm"><?= admin_icon('external') ?> Generar enlaces privados</button>
+                    </form>
+                    <form method="post" action="<?= h($invitationsUrl) ?>#inv-<?= (int) $inv['id'] ?>" class="inline-form" data-confirm="¿Revocar el acceso actual de los papás? Se cierran las dos pantallas.">
+                      <?= admin_csrf_field() ?>
+                      <input type="hidden" name="action" value="revocar_tablero_predicciones">
+                      <input type="hidden" name="invitation_id" value="<?= (int) $inv['id'] ?>">
+                      <button type="submit" class="btn btn-ghost btn-sm">Revocar acceso</button>
+                    </form>
+                  </div>
+                </section>
                 <?php endif; ?>
 
                 <div class="invite-actions">
@@ -916,7 +1066,7 @@ if (!empty($_SESSION['cc_invitation_token'])) {
                       ?>
                         <div class="output-row">
                           <div class="output-meta">
-                            <?= $oType === 'personalized_video' ? admin_icon('video') : admin_icon('image') ?>
+                            <?= $oType === 'personalized_narration_intro' ? '🔊' : ($oType === 'personalized_video' ? admin_icon('video') : admin_icon('image')) ?>
                             <code><?= h($o['asset_key']) ?></code> · <?= h($oType) ?> · <span class="status-badge <?= h(admin_status_class($oStatus)) ?>"><?= h(admin_status_label($oStatus)) ?></span>
                             · <?= admin_format_bytes((int) ($o['file_byte_size'] ?? 0)) ?>
                             · <?= h($o['file_mime'] ?: '—') ?>
@@ -976,6 +1126,16 @@ if (!empty($_SESSION['cc_invitation_token'])) {
                     <input type="file" name="archivo" accept=".mp4" required>
                     <button type="submit" class="btn btn-primary btn-sm"><?= admin_icon('plus') ?> Subir video</button>
                   </form>
+
+                  <form method="post" action="<?= h($invitationsUrl) ?>#inv-<?= (int) $inv['id'] ?>" enctype="multipart/form-data" class="upload-output-form">
+                    <?= admin_csrf_field() ?>
+                    <input type="hidden" name="action" value="subir_output_narracion">
+                    <input type="hidden" name="invitation_id" value="<?= (int) $inv['id'] ?>">
+                    <h4><?= admin_icon('video') ?> Subir narración de inicio (voz Alice, opcional)</h4>
+                    <p class="small muted">MP3 · máx. 5 MB · generar con ElevenLabs, voice_id <code>Xb7hH8MSUJpSbSDYk0k2</code>, modelo <code>eleven_multilingual_v2</code>, texto: "Tenemos el agrado de invitarte a celebrar el cumpleaños de <?= h($inv['birthday_person_name'] ?: '[NOMBRE]') ?>. Es el <?= h($inv['event_date'] ?: '[FECHA]') ?><?= !empty($inv['event_time']) ? ' a las ' . h((string) $inv['event_time']) : '' ?>." — ver docs/INVITACION-MUSICA-Y-NARRACION-ALICE.md</p>
+                    <input type="file" name="archivo" accept=".mp3" required>
+                    <button type="submit" class="btn btn-primary btn-sm"><?= admin_icon('plus') ?> Subir narración</button>
+                  </form>
                   <?php endif; ?>
                 </div>
 
@@ -988,6 +1148,13 @@ if (!empty($_SESSION['cc_invitation_token'])) {
 
                     <label>Nombre del cumpleañero/a</label>
                     <input type="text" name="birthday_person_name" value="<?= h($inv['birthday_person_name']) ?>" required maxlength="120">
+
+                    <label>Cumpleañero o cumpleañera</label>
+                    <select name="birthday_person_gender">
+                      <option value="" <?= ($inv['birthday_person_gender'] ?? '') === '' ? 'selected' : '' ?>>Sin especificar</option>
+                      <option value="m" <?= ($inv['birthday_person_gender'] ?? '') === 'm' ? 'selected' : '' ?>>Niño (cumpleañero)</option>
+                      <option value="f" <?= ($inv['birthday_person_gender'] ?? '') === 'f' ? 'selected' : '' ?>>Niña (cumpleañera)</option>
+                    </select>
 
                     <label>Fecha del evento</label>
                     <input type="date" name="event_date" value="<?= h($inv['event_date']) ?>">

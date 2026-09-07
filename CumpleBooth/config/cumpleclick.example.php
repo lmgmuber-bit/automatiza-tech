@@ -20,6 +20,9 @@ return [
     // Correo interno que recibe cada aceptación firmada (TODO-LUIS) y remitente de los avisos.
     'notify_email' => '',
     'mail_from' => 'no-reply@automatizatech.cl',
+    'event_profile_dir' => '/home/ACCOUNT/private/cumpleclick/event-profiles',
+    // Rollback inmediato: habilitar solo después de migrar y validar.
+    'event_profile_enabled' => false,
     'retention_days' => 30,
     'session_idle_seconds' => 7200,
     'session_absolute_seconds' => 43200,

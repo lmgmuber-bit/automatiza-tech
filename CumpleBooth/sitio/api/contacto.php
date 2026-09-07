@@ -9,10 +9,52 @@ header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: no-referrer');
 header('X-Robots-Tag: noindex, nofollow');
 
-function cc_contact_response(int $status, array $body): void
+/**
+ * Responde y, opcionalmente, sigue trabajando con la conexión ya cerrada.
+ *
+ * El trabajo de después son los dos correos. Hablar SMTP toma su tiempo —dos
+ * mensajes contra un servidor lento pueden ser varios segundos— y sería tiempo
+ * que la persona pasa mirando el botón girar después de haber apretado
+ * "Enviar", cuando su solicitud ya está guardada hace rato. Peor: si el SMTP no
+ * contesta, se llevaría todo el tiempo de espera antes de ver una confirmación
+ * que en realidad ya se había ganado.
+ *
+ * `fastcgi_finish_request()` devuelve la respuesta y libera al navegador, y el
+ * proceso sigue vivo para enviar. Existe en PHP-FPM, que es lo que corre en
+ * Hostinger; donde no esté, el respaldo vacía los búferes con `Content-Length`
+ * declarado, que hace que la mayoría de los clientes den la respuesta por
+ * terminada. Si ni eso funciona, lo único que se pierde es la ventaja: los
+ * correos igual salen y la respuesta igual es correcta, sólo que la espera se
+ * nota.
+ */
+function cc_contact_response(int $status, array $body, ?callable $despues = null): void
 {
     http_response_code($status);
-    echo json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $json = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    if ($despues === null) {
+        echo $json;
+        exit;
+    }
+
+    header('Content-Length: ' . strlen((string) $json));
+    header('Connection: close');
+    echo $json;
+
+    if (function_exists('fastcgi_finish_request')) {
+        fastcgi_finish_request();
+    } else {
+        while (ob_get_level() > 0) { @ob_end_flush(); }
+        @flush();
+    }
+
+    // El visitante ya cerró la pestaña, quizá. El envío tiene que terminar igual.
+    ignore_user_abort(true);
+    try {
+        $despues();
+    } catch (Throwable $e) {
+        error_log('CumpleClick contacto (post-respuesta): ' . $e->getMessage());
+    }
     exit;
 }
 
@@ -56,7 +98,13 @@ try {
     if (!$result['ok']) {
         cc_contact_response(422, ['ok' => false, 'error' => 'Revisa los campos indicados.', 'fields' => $result['errors']]);
     }
-    cc_contact_response(201, ['ok' => true, 'reference' => $result['reference']]);
+    cc_contact_response(
+        201,
+        ['ok' => true, 'reference' => $result['reference']],
+        static function () use ($result): void {
+            cb_lead_enviar_correos($result['lead']);
+        }
+    );
 } catch (JsonException $e) {
     cc_contact_response(400, ['ok' => false, 'error' => 'La solicitud no tiene un formato válido.']);
 } catch (Throwable $e) {

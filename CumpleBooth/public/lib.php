@@ -24,6 +24,8 @@ function cb_config(?string $key = null)
             'photo_dir' => $root . '/storage/photos',
             'state_dir' => $root . '/storage/state',
             'invitation_dir' => $root . '/storage/invitations',
+            'event_profile_dir' => $root . '/storage/event-profiles',
+            'event_profile_enabled' => false,
             // Firmas y comprobantes de aceptación de Términos (privado, fuera del webroot).
             'acceptance_dir' => $root . '/storage/acceptances',
             // Correo interno que recibe cada aceptación firmada; vacío = no se notifica a AT.
@@ -44,6 +46,19 @@ function cb_config(?string $key = null)
             // codificado se subirá igual y recién fallará al reproducirse en la
             // tablet. Sigue en false por defecto: hay que activarlo a sabiendas.
             'allow_video_upload_without_ffprobe' => false,
+
+            /* Correo saliente (formulario público). Vacío = no se envía nada y
+               el formulario sigue funcionando igual: el lead se guarda y se ve
+               en el admin. Se elige así para que una casilla mal configurada
+               NUNCA le devuelva un error a quien está pidiendo presupuesto. */
+            'smtp_host' => '',
+            'smtp_port' => 587,
+            'smtp_user' => '',
+            'smtp_password' => '',
+            'smtp_from' => '',              // por defecto, el mismo smtp_user
+            'smtp_from_name' => 'CumpleClick',
+            'smtp_reply_to' => '',          // a dónde contesta el cliente
+            'leads_notify_email' => '',     // aviso interno de solicitud nueva
         ];
         $explicitConfig = getenv('CUMPLECLICK_CONFIG_FILE');
         $local = $explicitConfig !== false && $explicitConfig !== ''
@@ -62,12 +77,19 @@ function cb_config(?string $key = null)
             'CC_PUBLIC_BASE_URL' => 'public_base_url',
             'CC_PHOTO_DIR' => 'photo_dir', 'CC_STATE_DIR' => 'state_dir',
             'CC_INVITATION_DIR' => 'invitation_dir',
+            'CC_EVENT_PROFILE_DIR' => 'event_profile_dir',
+            'CC_EVENT_PROFILE_ENABLED' => 'event_profile_enabled',
             'CC_ACCEPTANCE_DIR' => 'acceptance_dir',
             'CC_NOTIFY_EMAIL' => 'notify_email',
             'CC_MAIL_FROM' => 'mail_from',
             'CC_PARTIES_JSON_PATH' => 'parties_json_path',
             'CC_RETENTION_DAYS' => 'retention_days',
             'CC_FFPROBE_PATH' => 'ffprobe_path',
+            'CC_SMTP_HOST' => 'smtp_host', 'CC_SMTP_PORT' => 'smtp_port',
+            'CC_SMTP_USER' => 'smtp_user', 'CC_SMTP_PASSWORD' => 'smtp_password',
+            'CC_SMTP_FROM' => 'smtp_from', 'CC_SMTP_FROM_NAME' => 'smtp_from_name',
+            'CC_SMTP_REPLY_TO' => 'smtp_reply_to',
+            'CC_LEADS_NOTIFY_EMAIL' => 'leads_notify_email',
         ];
         foreach ($envMap as $env => $name) {
             $value = getenv($env);
@@ -384,7 +406,7 @@ function cb_load_parties()
 {
     if (cb_storage_mode() === 'db') {
         $pdo = cb_pdo();
-        $rows = $pdo->query('SELECT id, public_slug, admin_label, birthday_person_name, theme_slug, event_date, active, frame_box_json, gallery_pin_hash, gallery_pin_hmac, service_plan, gallery_enabled, created_at, updated_at, anonymized_at FROM cc_parties ORDER BY created_at DESC, id DESC')->fetchAll();
+        $rows = $pdo->query('SELECT id, public_slug, admin_label, birthday_person_name, event_type, theme_slug, event_date, active, frame_box_json, gallery_pin_hash, gallery_pin_hmac, service_plan, gallery_enabled, created_at, updated_at, anonymized_at FROM cc_parties ORDER BY created_at DESC, id DESC')->fetchAll();
         $guestStmt = $pdo->prepare('SELECT name, gender FROM cc_guests WHERE party_id = ? ORDER BY sort_order, id');
         $parties = [];
         foreach ($rows as $row) {
@@ -397,11 +419,13 @@ function cb_load_parties()
             $publicSlug = (string) $row['public_slug'];
             $galleryEnabled = (bool) ($row['gallery_enabled'] ?? 0);
             $servicePlan = in_array((string) ($row['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $row['service_plan'] : 'booth';
+            $eventType = (string) ($row['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
             $parties[$publicSlug] = [
                 'public_slug' => $publicSlug,
                 'admin_label' => (string) ($row['admin_label'] ?? ''),
                 'birthday_person_name' => (string) ($row['birthday_person_name'] ?? ''),
                 'nombre' => (string) ($row['birthday_person_name'] ?? ''),
+                'event_type' => $eventType,
                 'tema' => (string) $row['theme_slug'],
                 'theme_slug' => (string) $row['theme_slug'],
                 'fecha' => (string) ($row['event_date'] ?? ''), 'activa' => (bool) $row['active'],
@@ -431,11 +455,13 @@ function cb_load_parties()
         $themeSlug = (string) ($party['theme_slug'] ?? $party['tema'] ?? '');
         $servicePlan = in_array((string) ($party['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $party['service_plan'] : 'booth';
         $galleryEnabled = (bool) ($party['gallery_enabled'] ?? 0);
+        $eventType = (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
         $normalized[$publicSlug] = [
             'public_slug' => $publicSlug,
             'admin_label' => (string) ($party['admin_label'] ?? ''),
             'birthday_person_name' => $birthdayName,
             'nombre' => $birthdayName,
+            'event_type' => $eventType,
             'tema' => $themeSlug,
             'theme_slug' => $themeSlug,
             'fecha' => (string) ($party['fecha'] ?? ''),
@@ -490,10 +516,12 @@ function cb_save_parties(array $data): bool
             $themeSlug = (string) ($party['theme_slug'] ?? $party['tema'] ?? '');
             $servicePlan = in_array((string) ($party['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $party['service_plan'] : 'booth';
             $galleryEnabled = (bool) ($party['gallery_enabled'] ?? 0);
+            $eventType = (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
             $toSave[$publicSlug] = [
                 'public_slug' => $publicSlug,
                 'admin_label' => (string) ($party['admin_label'] ?? ''),
                 'birthday_person_name' => $birthdayName,
+                'event_type' => $eventType,
                 'theme_slug' => $themeSlug,
                 'fecha' => (string) ($party['fecha'] ?? ''),
                 'activa' => (bool) ($party['activa'] ?? false),
@@ -518,8 +546,9 @@ function cb_save_parties(array $data): bool
         foreach ($existing as $row) {
             $existingMap[(string) $row['public_slug']] = (int) $row['id'];
         }
-        $upsert = $pdo->prepare('UPDATE cc_parties SET admin_label=?, birthday_person_name=?, theme_slug=?, event_date=?, active=?, frame_box_json=?, gallery_pin_hash=?, gallery_pin_hmac=?, service_plan=?, gallery_enabled=?, updated_at=?, anonymized_at=? WHERE public_slug=?');
-        $insert = $pdo->prepare('INSERT INTO cc_parties (public_slug,admin_label,birthday_person_name,theme_slug,event_date,active,frame_box_json,gallery_pin_hash,gallery_pin_hmac,service_plan,gallery_enabled,created_at,updated_at,anonymized_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $upsert = $pdo->prepare('UPDATE cc_parties SET admin_label=?, birthday_person_name=?, event_type=?, theme_slug=?, event_date=?, active=?, frame_box_json=?, gallery_pin_hash=?, gallery_pin_hmac=?, service_plan=?, gallery_enabled=?, updated_at=?, anonymized_at=? WHERE public_slug=?');
+        $insert = $pdo->prepare('INSERT INTO cc_parties (public_slug,admin_label,birthday_person_name,event_type,theme_slug,event_date,active,frame_box_json,gallery_pin_hash,gallery_pin_hmac,service_plan,gallery_enabled,created_at,updated_at,anonymized_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $syncInvitationEventType = $pdo->prepare('UPDATE cc_invitations SET event_type=?, updated_at=? WHERE party_id=?');
         $deleteGuests = $pdo->prepare('DELETE FROM cc_guests WHERE party_id=?');
         $insertGuest = $pdo->prepare('INSERT INTO cc_guests (party_id,name,gender,sort_order,created_at) VALUES (?,?,?,?,?)');
         $seen = [];
@@ -534,9 +563,11 @@ function cb_save_parties(array $data): bool
             $now = gmdate('Y-m-d H:i:s');
             $frameJson = is_array($party['frameBox'] ?? null) ? json_encode($party['frameBox']) : null;
             $servicePlan = in_array((string) ($party['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $party['service_plan'] : 'booth';
+            $eventType = (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
             $values = [
                 (string) ($party['admin_label'] ?? ''),
                 (string) ($party['birthday_person_name'] ?? $party['nombre'] ?? ''),
+                $eventType,
                 (string) ($party['theme_slug'] ?? $party['tema'] ?? ''),
                 ($party['fecha'] ?? '') ?: null,
                 !empty($party['activa']) ? 1 : 0,
@@ -553,9 +584,12 @@ function cb_save_parties(array $data): bool
                 $id = $existingMap[$publicSlug];
             } else {
                 $created = (string) ($party['creada'] ?? $now);
-                $insert->execute([$publicSlug, $values[0], $values[1], $values[2], $values[3], $values[4], $values[5], $values[6], $values[7], $values[8], $values[9], $created, $now, $values[11]]);
+                $insert->execute([$publicSlug, $values[0], $values[1], $values[2], $values[3], $values[4], $values[5], $values[6], $values[7], $values[8], $values[9], $values[10], $created, $now, $values[12]]);
                 $id = (int) $pdo->lastInsertId();
             }
+            // La fiesta es la fuente para sus invitaciones vinculadas. Las
+            // invitaciones sin party_id conservan su modalidad independiente.
+            $syncInvitationEventType->execute([$eventType, $now, $id]);
             $deleteGuests->execute([$id]);
             foreach (array_values($party['invitados'] ?? []) as $order => $guest) {
                 if (is_array($guest) && trim((string) ($guest['name'] ?? '')) !== '') {
@@ -593,9 +627,11 @@ function cb_sanitize_theme_game($rawGame, string $base = '', string $diskDir = '
         return [];
     }
     $kind = trim((string) ($rawGame['kind'] ?? ''));
-    // 'concierto3d' = El Show (StageConcert3D.jsx), la misión 3D de K-Pop.
-    // Es un juego de ritmo, no el runner de carriles de 'mundo3d'; convive con
-    // él porque el resto de las temáticas siguen usando ThemeWorld3D.
+    // 'concierto3d' = El Show (StageConcert3D.jsx), la misión Full de las seis
+    // temáticas completas. Es un juego de ritmo, no el runner de carriles de
+    // 'mundo3d': lo reemplazó en las seis, y hoy ninguna temática declara
+    // 'mundo3d'. ThemeWorld3D sigue montado y el kind se sigue aceptando por si
+    // una temática nueva lo quiere, así que el saneador entiende los dos.
     if (!in_array($kind, ['copos', 'armar-muneco', 'fichas', 'ritmo', 'escudo', 'mundo3d', 'concierto3d'], true)) {
         return [];
     }
@@ -978,6 +1014,7 @@ function cb_resolve_party(string $slugRaw): array
         'public_slug'      => $slug,
         'slug'             => $slug,
         'nombre'           => (string) ($party['nombre'] ?? ''),
+        'event_type'       => (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday',
         'invitados'        => $invitados,
         'frameBox'         => $frameBox,
         'musica'           => !isset($party['musica']) || !empty($party['musica']),
@@ -988,11 +1025,14 @@ function cb_resolve_party(string $slugRaw): array
     // Juegos habilitados para ESTA fiesta (los marca Luis en el admin según el
     // plan contratado. La misión 3D del Full se agrega por separado y nunca
     // depende de esta selección manual.
+    $effectivePlan = $partyPayload['event_type'] === 'baby_shower'
+        ? 'booth'
+        : (string) ($partyPayload['service_plan'] ?? 'booth');
     $themePayload = cb_build_theme_payload(
         $themeSlug,
         $themeData,
         cb_sanitize_party_games($party['juegos'] ?? null),
-        (string) ($partyPayload['service_plan'] ?? 'booth')
+        $effectivePlan
     );
 
     return ['ok' => true, 'party' => $partyPayload, 'theme' => $themePayload];
@@ -1885,10 +1925,13 @@ function cb_inspect_video(string $path): ?array
         return null;
     }
     $videoStream = null;
+    $hasAudio = false;
     foreach ((array) ($data['streams'] ?? []) as $stream) {
-        if (($stream['codec_type'] ?? '') === 'video') {
+        $codecType = (string) ($stream['codec_type'] ?? '');
+        if ($codecType === 'video' && $videoStream === null) {
             $videoStream = $stream;
-            break;
+        } elseif ($codecType === 'audio') {
+            $hasAudio = true;
         }
     }
     if ($videoStream === null) {
@@ -1899,6 +1942,7 @@ function cb_inspect_video(string $path): ?array
         'codec' => (string) ($videoStream['codec_name'] ?? ''),
         'width' => (int) ($videoStream['width'] ?? 0),
         'height' => (int) ($videoStream['height'] ?? 0),
+        'has_audio' => $hasAudio,
     ];
 }
 
@@ -2207,6 +2251,38 @@ function cb_process_theme_uploads(
  * La fuente es siempre themes.json: si un tema no define un token, se cae al
  * default de :root en styles.css, nunca a un color inventado aquí.
  */
+/**
+ * Lockup de CumpleClick: el isotipo con el nombre al lado, para las paginas PHP.
+ *
+ * El nombre NO puede venir del SVG. `brand/cumpleclick-lockup.svg` dibuja la
+ * palabra con un <text> en Baloo 2, y un SVG cargado dentro de un <img> se
+ * renderiza en un documento aislado: no ve las @font-face de la pagina, solo
+ * las fuentes instaladas en el sistema. Baloo 2 no viene con Windows ni con
+ * iOS. Medido en el navegador, la misma palabra ocupa 403 px en Baloo 2,
+ * 437 px en Segoe UI y 496 px en Helvetica: el nombre de la marca cambiaba de
+ * forma segun el aparato del invitado. Compuesta en HTML usa la Baloo 2 que la
+ * pagina ya trae self-hosted.
+ *
+ * Es la version PHP de src/brand/Lockup.jsx (album y cartel QR); las clases y
+ * las proporciones son las mismas para que las dos se vean identicas.
+ *
+ * @param string $tono  'marca' sobre fondos claros, 'claro' sobre oscuros.
+ *                      El manual pide el isotipo tal cual sobre fondo oscuro y
+ *                      prohibe recuadrarlo en una caja blanca.
+ * @param string $extra Clase adicional de quien lo usa, para el tamano.
+ */
+function cb_lockup_html(string $tono = 'marca', string $extra = ''): string
+{
+    $tono = $tono === 'claro' ? 'claro' : 'marca';
+    $clases = trim('cc-lockup cc-lockup--' . $tono . ' ' . $extra);
+    return '<span class="' . htmlspecialchars($clases, ENT_QUOTES, 'UTF-8') . '">'
+         . '<img class="cc-lockup__mark" src="brand/cumpleclick-mark.svg" alt="CumpleClick" '
+         . 'width="400" height="400" draggable="false">'
+         . '<span class="cc-lockup__nombre" aria-hidden="true">'
+         . 'Cumple<span class="cc-lockup__click">Click</span></span>'
+         . '</span>';
+}
+
 function cb_theme_css_vars(string $themeSlug): string
 {
     static $map = [
@@ -2246,3 +2322,12 @@ require __DIR__ . '/lib.leads.php';
 
 // Álbum Recuerdo: álbum por evento, aportes de invitados y curaduría.
 require __DIR__ . '/lib.album.php';
+
+// Perfil del protagonista: datos y media opcionales por evento.
+require __DIR__ . '/lib.event-profiles.php';
+
+// Predicciones por evento y tokens privados de baby shower.
+require __DIR__ . '/lib.predictions.php';
+
+// Lista de regalos con reserva.
+require __DIR__ . '/lib.gifts.php';

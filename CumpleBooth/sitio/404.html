@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, follow">
+<title>Esta página no está — CumpleClick</title>
+<!--
+  Página 404 de todo el dominio.
+
+  Va SIN una sola petición externa: ni CSS, ni JS, ni imágenes, ni tipografías
+  obligatorias. Una página de error que a su vez falla al cargar sus assets es
+  peor que la de Apache, y justo se muestra cuando algo del servidor ya anda
+  mal. Por eso el isotipo va incrustado (es el archivo REAL de
+  assets/cumpleclick-mark.svg, no una recreación) y los estilos van acá adentro.
+
+  La tipografía es la única concesión: se pide Baloo 2 desde la raíz del
+  dominio, y si no está cae a la del sistema sin romper nada.
+
+  Los colores salen de design/tokens.css ("El globo dulce"), los mismos del
+  sitio. No se inventó ninguno.
+
+  El texto no dice solo "no encontrado": en este dominio la mayoría de los 404
+  reales son enlaces de invitación o de álbum vencidos o dados de baja, así que
+  la página lo dice y explica qué hacer.
+-->
+<style>
+  @font-face {
+    font-family: 'Baloo 2';
+    font-style: normal;
+    font-weight: 800;
+    font-display: swap;
+    src: url('/fonts/baloo-2-latin-800-normal.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Baloo 2';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/baloo-2-latin-600-normal.woff2') format('woff2');
+  }
+
+  :root {
+    --cc-violeta: #8B5CF6;
+    --cc-tinta: #4C2882;
+    --cc-fucsia: #D6307F;
+    --cc-fucsia-oscuro: #C2186B;
+    --cc-amarillo: #FBBF24;
+    --cc-crema: #FFF8EC;
+    --cc-lila: #A78BFA;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    /* El fondo se pinta explícito: si el degradé no resuelve, igual queda crema
+       y no el blanco del navegador. */
+    background-color: var(--cc-crema);
+    background-image:
+      radial-gradient(circle at 18% 12%, rgba(167, 139, 250, .20) 0%, transparent 42%),
+      radial-gradient(circle at 86% 82%, rgba(214, 48, 127, .14) 0%, transparent 46%);
+    background-repeat: no-repeat;
+    color: var(--cc-tinta);
+    font-family: 'Baloo 2', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-weight: 600;
+    line-height: 1.55;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+  }
+
+  main {
+    width: 100%;
+    max-width: 560px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+  }
+
+  .globo {
+    width: clamp(132px, 30vw, 188px);
+    height: auto;
+    animation: flotar 5.5s ease-in-out infinite;
+    transform-origin: 50% 30%;
+  }
+  @keyframes flotar {
+    0%, 100% { transform: translateY(0) rotate(-1.2deg); }
+    50%      { transform: translateY(-12px) rotate(1.2deg); }
+  }
+
+  .codigo {
+    margin: 0;
+    font-size: .82rem;
+    font-weight: 800;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--cc-violeta);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(1.85rem, 6vw, 2.6rem);
+    font-weight: 800;
+    line-height: 1.12;
+    text-wrap: balance;
+    color: var(--cc-tinta);
+  }
+  h1 em {
+    font-style: normal;
+    color: var(--cc-fucsia);
+  }
+
+  p {
+    margin: 0;
+    max-width: 46ch;
+    font-size: 1.03rem;
+    color: #5b4478;
+    text-wrap: pretty;
+  }
+
+  .acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 4px;
+  }
+
+  a.boton {
+    display: inline-block;
+    padding: 13px 28px;
+    border-radius: 999px;
+    background: var(--cc-fucsia);
+    color: #fff;
+    font-weight: 800;
+    font-size: 1rem;
+    text-decoration: none;
+    border: 2px solid var(--cc-fucsia);
+    box-shadow: 0 6px 0 var(--cc-fucsia-oscuro);
+    transition: transform .16s ease, box-shadow .16s ease;
+  }
+  a.boton:hover,
+  a.boton:focus-visible {
+    transform: translateY(2px);
+    box-shadow: 0 4px 0 var(--cc-fucsia-oscuro);
+  }
+
+  a.boton--suave {
+    background: transparent;
+    color: var(--cc-tinta);
+    border-color: rgba(76, 40, 130, .28);
+    box-shadow: none;
+  }
+  a.boton--suave:hover,
+  a.boton--suave:focus-visible {
+    border-color: var(--cc-violeta);
+    color: var(--cc-violeta);
+    transform: none;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--cc-violeta);
+    outline-offset: 3px;
+  }
+
+  .nota {
+    margin-top: 6px;
+    font-size: .93rem;
+    color: #7a6796;
+    border-top: 1px dashed rgba(139, 92, 246, .32);
+    padding-top: 18px;
+    max-width: 44ch;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .globo { animation: none; }
+    a.boton { transition: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <!-- Isotipo oficial "El globo dulce", copiado tal cual de
+       sitio/assets/cumpleclick-mark.svg. Los ids llevan prefijo 404- para no
+       chocar con nada si algún día esta página se incrusta en otra. -->
+  <svg class="globo" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CumpleClick">
+    <defs>
+      <radialGradient id="e404-body" cx="34%" cy="26%" r="88%">
+        <stop offset="0%" stop-color="#B9A0F7"/><stop offset="34%" stop-color="#8B5CF6"/>
+        <stop offset="72%" stop-color="#C0409E"/><stop offset="100%" stop-color="#D6307F"/>
+      </radialGradient>
+      <linearGradient id="e404-ring" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#FDE68A"/><stop offset="55%" stop-color="#FBBF24"/>
+        <stop offset="100%" stop-color="#E8A317"/>
+      </linearGradient>
+      <radialGradient id="e404-lens" cx="38%" cy="32%" r="85%">
+        <stop offset="0%" stop-color="#D8CCFB"/><stop offset="60%" stop-color="#A88BE8"/>
+        <stop offset="100%" stop-color="#8256C9"/>
+      </radialGradient>
+      <linearGradient id="e404-string" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#F5C542"/><stop offset="100%" stop-color="#D99A14"/>
+      </linearGradient>
+    </defs>
+    <circle cx="78" cy="74" r="11" fill="#8B5CF6"/>
+    <circle cx="46" cy="176" r="9" fill="#A78BFA"/>
+    <circle cx="84" cy="292" r="10" fill="#FBBF24"/>
+    <circle cx="352" cy="196" r="9" fill="#FBBF24"/>
+    <circle cx="330" cy="300" r="10" fill="#D6307F"/>
+    <circle cx="196" cy="196" r="112" fill="url(#e404-body)"/>
+    <ellipse cx="150" cy="130" rx="46" ry="30" fill="#FFFFFF" opacity="0.38" transform="rotate(-24 150 130)"/>
+    <ellipse cx="238" cy="286" rx="34" ry="12" fill="#FF9BC8" opacity="0.35" transform="rotate(-18 238 286)"/>
+    <g transform="translate(168,188)">
+      <circle r="58" fill="url(#e404-ring)"/>
+      <circle r="41" fill="url(#e404-lens)"/>
+      <ellipse cx="-12" cy="-14" rx="16" ry="10" fill="#FFFFFF" opacity="0.5" transform="rotate(-22 -12 -14)"/>
+      <circle r="41" fill="none" stroke="#C77E0E" stroke-width="1.6" opacity="0.55"/>
+      <circle r="57" fill="none" stroke="#FFF3C4" stroke-width="1.8" opacity="0.7"/>
+    </g>
+    <g transform="translate(282,124) rotate(-40)">
+      <path d="M0 -7 Q7 0 0 7 L15 5 Q18 0 15 -5 Z" fill="#C2186B"/>
+      <rect x="13" y="-6" width="8" height="12" rx="3" fill="url(#e404-string)"/>
+    </g>
+    <path d="M297 111 C 303 106, 310 107, 314 113" fill="none" stroke="url(#e404-string)" stroke-width="4.5" stroke-linecap="round"/>
+    <g transform="translate(318,98) rotate(15)">
+      <path d="M0 6 C 0 -2, -9 -3, -9 3 C -9 8, -3 11, 0 15 C 3 11, 9 8, 9 3 C 9 -3, 0 -2, 0 6 Z"
+            fill="none" stroke="url(#e404-string)" stroke-width="4.5" stroke-linejoin="round"/>
+    </g>
+    <path d="M314 113 C 322 132, 306 152, 312 176 C 318 200, 300 222, 310 246 C 316 262, 306 272, 298 278"
+          fill="none" stroke="url(#e404-string)" stroke-width="4.5" stroke-linecap="round"/>
+  </svg>
+
+  <p class="codigo">Error 404</p>
+
+  <h1>Se nos escapó <em>este globo</em></h1>
+
+  <p>
+    La página que buscas no está acá. Puede que la dirección esté mal escrita, o
+    que sea un enlace de invitación o de álbum que ya venció.
+  </p>
+
+  <div class="acciones">
+    <a class="boton" href="/">Ir al inicio</a>
+    <a class="boton boton--suave" href="/#mundos">Conocer los mundos</a>
+  </div>
+
+  <p class="nota">
+    ¿Llegaste por una invitación o por el álbum de una fiesta? Pídele el enlace
+    nuevo a la familia que te invitó: por seguridad, cada enlace se puede dar de
+    baja y dejar de funcionar.
+  </p>
+</main>
+</body>
+</html>

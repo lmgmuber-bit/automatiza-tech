@@ -6,8 +6,18 @@
 //
 // Ningún color se escribe acá: todo sale de las variables de la temática que
 // aplicó applyThemeColors() desde themes.json.
+//
+// Cómo se nombra el evento sale de `evento.js`: este álbum también se usa en
+// baby showers, y ahí "la fiesta de Amanda" es falso porque Amanda no nació.
+//
+// Dos páginas seguidas nunca se ven iguales. La paridad del folio decide la
+// inclinación de las fotos, el lado de la composición y si una foto sola va
+// montada sobre el papel o a sangre. Es la diferencia entre un álbum y un
+// listado de fotos con margen blanco.
 
+import { fraseA, esteEvento } from './evento.js'
 import React, { useEffect, useRef, useState } from 'react'
+import Lockup from '../brand/Lockup.jsx'
 
 export default function AlbumPage({ page, index, base }) {
   if (!page) return null
@@ -41,8 +51,24 @@ function formatDate(raw) {
   return mes ? `${Number(parts[2])} de ${mes} de ${parts[0]}` : raw
 }
 
-function Folio({ index }) {
-  return <span className="mag__folio">{index + 1}</span>
+/**
+ * Envoltorio de página. Marca la paridad del folio como clase para que el CSS
+ * alterne inclinaciones y composiciones sin que cada diseño tenga que
+ * calcularlo por su cuenta.
+ */
+function Page({ kind, index, extra = '', style, children }) {
+  const alt = typeof index === 'number' && index % 2 === 1
+  const clases = ['mag', `mag--${kind}`, alt ? 'is-alt' : '', extra]
+  return (
+    <div className={clases.filter(Boolean).join(' ')} style={style}>
+      {children}
+    </div>
+  )
+}
+
+function Folio({ index, tone }) {
+  const clase = tone === 'light' ? 'mag__folio mag__folio--light' : 'mag__folio'
+  return <span className={clase}>{index + 1}</span>
 }
 
 /**
@@ -76,7 +102,7 @@ function Photo({ item, base, sizeHint = 'full' }) {
       ref={ref}
       className="mag__photo"
       src={src}
-      alt={item.author ? `Recuerdo compartido por ${item.author}` : 'Recuerdo de la fiesta'}
+      alt={item.author ? `Recuerdo compartido por ${item.author}` : 'Recuerdo del evento'}
       loading="lazy"
       decoding="async"
       draggable="false"
@@ -84,10 +110,11 @@ function Photo({ item, base, sizeHint = 'full' }) {
   )
 }
 
-function Credit({ item }) {
+function Credit({ item, onDark }) {
   if (!item.author && item.source !== 'booth') return null
+  const clase = onDark ? 'mag__credit mag__credit--light' : 'mag__credit'
   return (
-    <p className="mag__credit">
+    <p className={clase}>
       {item.source === 'booth' ? 'Cabina CumpleClick' : item.author}
     </p>
   )
@@ -100,7 +127,7 @@ function CoverPage({ page, base }) {
       ? `url("${base + page.fallback}")`
       : 'none'
   return (
-    <div className="mag mag--cover" style={{ backgroundImage: background }}>
+    <Page kind="cover" style={{ backgroundImage: background }}>
       <div className="mag__veil" />
       <div className="mag__cover-top">
         <span className="mag__eyebrow">Álbum Recuerdo</span>
@@ -108,70 +135,97 @@ function CoverPage({ page, base }) {
       </div>
       <div className="mag__cover-main">
         <h1 className="mag__title">{page.title}</h1>
+        <span className="mag__rule" aria-hidden="true" />
         {page.subtitle && <p className="mag__subtitle">{page.subtitle}</p>}
       </div>
       <div className="mag__cover-bottom">
         {page.date && <span>{formatDate(page.date)}</span>}
         <span className="mag__brand">CumpleClick</span>
       </div>
-    </div>
+    </Page>
   )
 }
 
+/**
+ * Foto sola. Alterna dos tratamientos según el folio: montada sobre el papel
+ * con su marco blanco, o a sangre ocupando la hoja entera con el crédito
+ * sobre un degradado. Dos páginas de foto sola seguidas con el mismo marco
+ * blanco es lo que hacía que el álbum se leyera como una planilla.
+ */
 function FullPage({ page, base, index }) {
   const item = page.items[0]
+  if (index % 2 === 1) {
+    return (
+      <Page kind="full" index={index} extra="mag--bleed">
+        <Photo item={item} base={base} />
+        <div className="mag__scrim" />
+        <Credit item={item} onDark />
+        <Folio index={index} tone="light" />
+      </Page>
+    )
+  }
   return (
-    <div className="mag mag--full">
-      <div className="mag__frame">
+    <Page kind="full" index={index}>
+      <div className="mag__frame mag__frame--tilt">
         <Photo item={item} base={base} />
       </div>
       <Credit item={item} />
       <Folio index={index} />
-    </div>
+    </Page>
   )
 }
 
 function DuoPage({ page, base, index }) {
   return (
-    <div className="mag mag--duo">
+    <Page kind="duo" index={index}>
       {page.items.map((item, i) => (
-        <div className="mag__frame" key={item.id ?? i}>
+        <div className="mag__frame mag__frame--tilt" key={item.id ?? i}>
           <Photo item={item} base={base} sizeHint="thumb" />
         </div>
       ))}
       <Folio index={index} />
-    </div>
+    </Page>
   )
 }
 
 function MosaicPage({ page, base, index }) {
   return (
-    <div className="mag mag--mosaic">
+    <Page kind="mosaic" index={index}>
       <div className="mag__grid">
         {page.items.map((item, i) => (
-          <div className="mag__frame" key={item.id ?? i}>
+          <div className="mag__frame mag__frame--tilt" key={item.id ?? i}>
             <Photo item={item} base={base} sizeHint="thumb" />
           </div>
         ))}
       </div>
       <Folio index={index} />
-    </div>
+    </Page>
   )
 }
 
+/**
+ * Página de dedicatoria. Sólo llega acá un recuerdo que trae mensaje escrito:
+ * la tarjeta está diseñada alrededor del texto y sin él queda un hueco.
+ */
 function NotePage({ page, base, index }) {
   const item = page.items[0]
   return (
-    <div className="mag mag--note">
-      <div className="mag__frame mag__frame--note">
+    <Page kind="note" index={index}>
+      <div className="mag__frame mag__frame--note mag__frame--tilt">
         <Photo item={item} base={base} />
       </div>
       <blockquote className="mag__note">
-        {item.message && <p className="mag__note-text">{item.message}</p>}
-        {item.author && <footer className="mag__note-by">— {item.author}</footer>}
+        <span className="mag__tape" aria-hidden="true" />
+        <p className="mag__note-text">{item.message}</p>
+        {item.author && (
+          <footer className="mag__note-by">
+            <span className="mag__note-dash" aria-hidden="true" />
+            {item.author}
+          </footer>
+        )}
       </blockquote>
       <Folio index={index} />
-    </div>
+    </Page>
   )
 }
 
@@ -209,8 +263,10 @@ function VideoPage({ page, base, index }) {
     }
   }, [active])
 
+  const clase = index % 2 === 1 ? 'mag mag--video is-alt' : 'mag mag--video'
   return (
-    <div className="mag mag--video" ref={wrapRef}>
+    <div className={clase} ref={wrapRef}>
+      <span className="mag__badge">Video</span>
       <div className="mag__frame mag__frame--video">
         <video
           ref={videoRef}
@@ -231,8 +287,8 @@ function VideoPage({ page, base, index }) {
 
 function ClosingPage({ page, base }) {
   return (
-    <div
-      className="mag mag--closing"
+    <Page
+      kind="closing"
       style={page.image ? { backgroundImage: `url("${base + page.image}")` } : undefined}
     >
       <div className="mag__veil" />
@@ -240,15 +296,84 @@ function ClosingPage({ page, base }) {
         <p className="mag__eyebrow">Y colorín colorado</p>
         <h2 className="mag__title mag__title--closing">
           ¡Gracias por venir<br />
-          {page.eventName ? `a la fiesta de ${page.eventName}!` : 'a la fiesta!'}
+          {`${fraseA(page.evento)}!`}
         </h2>
+        <span className="mag__rule" aria-hidden="true" />
         <p className="mag__closing-note">
-          {page.count === 1
-            ? 'Un recuerdo guardado para siempre.'
-            : `${page.count} recuerdos guardados para siempre.`}
+          {/* Con cero recuerdos, contar en número quedaba en "0 recuerdos
+              guardados para siempre". Pasa si el organizador publica el álbum
+              antes de aprobar nada: el invitado abre el enlace y lo primero que
+              lee es un cero. */}
+          {page.count === 0
+            ? `Los recuerdos de ${esteEvento(page.evento)} están por llegar.`
+            : page.count === 1
+              ? 'Un recuerdo guardado para siempre.'
+              : `${page.count} recuerdos guardados para siempre.`}
         </p>
-        <span className="mag__brand">CumpleClick</span>
+        <Colofon marca={page.marca} base={base} />
       </div>
+    </Page>
+  )
+}
+
+/**
+ * Cierre de la revista: quien hizo esto y como ubicarlo.
+ *
+ * Los datos vienen de data/marca.json por la API, no compilados en el bundle,
+ * porque el hosting no tiene build: si estuvieran acá habría que recompilar y
+ * resubir assets cada vez que cambie un teléfono.
+ *
+ * Cada dato es un enlace sólo si el JSON trae su `_url`. El `stopPropagation`
+ * del pointerdown es necesario: el pliego arranca el arrastre de página en el
+ * pointerdown de la mitad, y sin esto tocar un enlace empezaría a dar vuelta la
+ * hoja en vez de abrirlo.
+ */
+function Colofon({ marca, base }) {
+  // El nombre viaja dentro del lockup, asi que el lockup solo sirve mientras la
+  // marca se siga llamando CumpleClick. Si alguien cambia `nombre` en el admin
+  // —una marca blanca, por ejemplo— el logo diria una cosa y el dueno del
+  // album seria otro, asi que en ese caso gana el texto.
+  const nombre = (marca?.nombre || 'CumpleClick').trim()
+  const marcaBloque = nombre.toLowerCase() === 'cumpleclick'
+    ? <Lockup base={base} tono="claro" className="mag__colofon-marca" />
+    : <span className="mag__brand">{nombre}</span>
+
+  if (!marca) {
+    return <div className="mag__colofon">{marcaBloque}</div>
+  }
+
+  const datos = [
+    { valor: marca.web, url: marca.web_url },
+    { valor: marca.instagram, url: marca.instagram_url },
+    { valor: marca.whatsapp, url: marca.whatsapp_url },
+  ].filter((dato) => dato.valor)
+
+  return (
+    <div className="mag__colofon">
+      <span className="mag__rule mag__rule--colofon" aria-hidden="true" />
+      {marca.invitacion && <p className="mag__colofon-invita">{marca.invitacion}</p>}
+      {marcaBloque}
+      {marca.lema && <p className="mag__colofon-lema">{marca.lema}</p>}
+      {datos.length > 0 && (
+        <ul className="mag__colofon-datos">
+          {datos.map((dato) => (
+            <li key={dato.valor}>
+              {dato.url
+                ? (
+                  <a
+                    href={dato.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onPointerDown={(event) => event.stopPropagation()}
+                  >
+                    {dato.valor}
+                  </a>
+                  )
+                : dato.valor}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

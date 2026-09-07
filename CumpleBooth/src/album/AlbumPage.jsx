@@ -121,8 +121,13 @@ function Credit({ item, onDark }) {
 }
 
 function CoverPage({ page, base }) {
+  // La tapa usa la MINIATURA, como todas las páginas de la revista. Cargaba el
+  // original y la portada de Carreras era un PNG de 5,5MB: la revista abría
+  // con la tapa en blanco varios segundos, que es lo primero que ve el
+  // invitado. A 640px de lado, sobre el velo y con el título encima, la
+  // diferencia con el original no se percibe; los 5,4MB de espera sí.
   const background = page.image
-    ? `url("${base + (page.image.url)}")`
+    ? `url("${base + (page.image.thumb || page.image.url)}")`
     : page.fallback
       ? `url("${base + page.fallback}")`
       : 'none'
@@ -346,6 +351,7 @@ function Colofon({ marca, base }) {
     { valor: marca.web, url: marca.web_url },
     { valor: marca.instagram, url: marca.instagram_url },
     { valor: marca.whatsapp, url: marca.whatsapp_url },
+    { valor: marca.correo, url: marca.correo_url },
   ].filter((dato) => dato.valor)
 
   return (

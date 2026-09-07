@@ -1637,6 +1637,220 @@
             },
             "musicaHint": "Pop coreano energético / girl group"
         },
+        "spidey": {
+            "nombre": "Aventuras Arácnidas",
+            "franquicia": "Spidey y sus Sorprendentes Amigos",
+            "publico": "niño",
+            "diploma": "Héroe Arácnido Oficial",
+            "transition": "none",
+            "colors": {
+                "accent": "#e02525",
+                "accentSoft": "#fde3e0",
+                "yellow": "#ffd21e",
+                "ink": "#1b2447",
+                "bgLight1": "#eaf4ff",
+                "bgLight2": "#cfe8ff",
+                "dark1": "#1367c4",
+                "dark2": "#0b3f8a",
+                "dark3": "#9b59d0"
+            },
+            "confetti": [
+                "#e02525",
+                "#ffd21e",
+                "#1890d8",
+                "#9b59d0",
+                "#ffffff",
+                "#16214a"
+            ],
+            "personajes": [
+                {
+                    "emoji": "🕷️",
+                    "name": "Spidey",
+                    "img": "spidey.jpg",
+                    "game": [
+                        {
+                            "kind": "ritmo",
+                            "label": "¡Columpio arácnido!",
+                            "image": "fondo-juego-ciudad.jpg",
+                            "lanes": 4,
+                            "seconds": 15
+                        },
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-spidey.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las telarañas!",
+                            "emojis": [
+                                "🕸️",
+                                "🕷️",
+                                "⭐",
+                                "💥"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "👻",
+                    "name": "Ghost-Spider",
+                    "img": "ghost-spider.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-ghost-spider.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las telarañas!",
+                            "emojis": [
+                                "🕸️",
+                                "🕷️",
+                                "⭐",
+                                "💥"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🕸️",
+                    "name": "Spin",
+                    "img": "spin.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-spin.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las telarañas!",
+                            "emojis": [
+                                "🕸️",
+                                "🕷️",
+                                "⭐",
+                                "💥"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "💪",
+                    "name": "Hulk",
+                    "img": "hulk.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-hulk.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las telarañas!",
+                            "emojis": [
+                                "🕸️",
+                                "🕷️",
+                                "⭐",
+                                "💥"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "✨",
+                    "name": "Ms. Marvel",
+                    "img": "ms-marvel.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-ms-marvel.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las telarañas!",
+                            "emojis": [
+                                "🕸️",
+                                "🕷️",
+                                "⭐",
+                                "💥"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                },
+                {
+                    "emoji": "🐆",
+                    "name": "Pantera Negra",
+                    "img": "pantera.jpg",
+                    "game": [
+                        {
+                            "kind": "fichas",
+                            "label": "¡Arma la imagen!",
+                            "image": "puzzle-pantera.jpg",
+                            "cols": 3,
+                            "filas": 3
+                        },
+                        {
+                            "kind": "copos",
+                            "label": "¡Atrapa las telarañas!",
+                            "emojis": [
+                                "🕸️",
+                                "🕷️",
+                                "⭐",
+                                "💥"
+                            ],
+                            "seconds": 15
+                        }
+                    ]
+                }
+            ],
+            "photoSession": {
+                "video": "telarana-cobra-vida.mp4",
+                "poster": "telarana-cobra-vida-poster.jpg",
+                "teaser": "trio-teaser.jpg",
+                "characters": [
+                    "Spidey",
+                    "Ghost-Spider",
+                    "Spin"
+                ],
+                "teaserLabel": "El equipo arácnido"
+            },
+            "fullGame": {
+                "kind": "concierto3d",
+                "stage": "comic-city",
+                "label": "¡El Show Arácnido 3D!",
+                "seconds": 24,
+                "image": "fondo-juego-ciudad.jpg"
+            },
+            "videos": {
+                "welcome": "welcome-spidey.mp4",
+                "revelacion": "revelacion-spidey.mp4",
+                "despedida": "despedida-spidey.mp4"
+            },
+            "frameBox": {
+                "x": 0.2799,
+                "y": 0.1653,
+                "w": 0.5111,
+                "h": 0.287
+            }
+        },
         "baby-nube": {
             "nombre": "Bebé en las Nubes",
             "franquicia": null,

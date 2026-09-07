@@ -608,6 +608,14 @@ body.inv-theme-intro-active {
   overflow: hidden;
 }
 
+/* Spidey: los tres personajes del fondo ocupan justo el centro, donde el
+   grid centra el texto — el nombre y la fecha les tapaban la cara (Luis lo
+   reportó con captura). El bloque baja al pavimento de la escena; el resto
+   de temáticas conserva el centrado de siempre. */
+[data-theme="spidey"] .inv-hero-stage {
+  align-content: end;
+}
+
 /* El fondo temático es atmósfera, no ilustración: desenfocado y desaturado
    deja de competir con el nombre. La pieza que sí se ve nítida es la
    invitación misma, más abajo. */
@@ -777,6 +785,32 @@ body.inv-scroll-locked {
 }
 
 .inv-scroll-hint--waiting {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+/* El hint del hero también puede ser un <button> (variante "toca para
+   seguir"): mismo aspecto que el <a>/<span>, sin el traje de botón del
+   navegador. La transición hace que a los 3 segundos aparezca en un fundido
+   en vez de saltar. */
+button.inv-scroll-hint {
+  border: 0;
+  font: inherit;
+  /* Blanco EXPLICITO, no inherit: `button.inv-scroll-hint` es mas especifico
+     que `.inv-scroll-hint`, asi que un inherit aca pisaba el blanco de la
+     base con el color apagado del contenedor y el texto se veia opaco
+     (reporte de Luis 2026-09-01). */
+  color: #fff;
+  opacity: 1;
+  cursor: pointer;
+  transition: opacity 320ms ease, visibility 320ms ease;
+}
+
+/* La regla de arriba puso opacity:1 con mas especificidad que la base: el
+   estado oculto lo tiene que volver a ganar, o el boton se ve desde el
+   primer segundo. */
+button.inv-scroll-hint.inv-scroll-hint--waiting {
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
@@ -1575,6 +1609,12 @@ body.inv-scroll-locked {
   justify-content: center;
   gap: clamp(3px, 1.2cqw, 10px);
   padding: clamp(6px, 4cqw, 26px) clamp(5px, 3cqw, 20px);
+  /* Altura MINIMA, no fija: con una direccion larga (dos lineas) el contenido
+     superaba la caja y overflow:hidden se comia "Quinta Normal" (se vio con
+     la invitacion real de Samantha). La tarjeta crece con su contenido; el
+     borde y el fondo la siguen, asi que nada queda cortado. */
+  height: auto;
+  min-height: var(--plate-h);
   overflow: hidden;
   border: 1px solid rgba(86, 174, 215, .34);
   border-radius: clamp(12px, 3cqw, 22px);
@@ -1611,7 +1651,12 @@ body.inv-scroll-locked {
 .inv-body[data-theme="hielo"] .inv-plate-name {
   margin: 0;
   color: #0879b1;
-  font-size: clamp(1.7rem, 22cqw, 4.8rem);
+  /* 19cqw y sin cortes a mitad de palabra: a 22cqw un nombre de 8 letras
+     ("Samantha") no cabia y overflow-wrap:anywhere lo partia en "Samanth-a".
+     Los nombres compuestos siguen quebrando por el espacio. */
+  font-size: clamp(1.5rem, 19cqw, 4.4rem);
+  overflow-wrap: normal;
+  word-break: normal;
   line-height: .91;
   text-shadow: 0 2px 0 rgba(255, 255, 255, .85), 0 5px 16px rgba(35, 151, 203, .24);
 }
@@ -2312,4 +2357,108 @@ body.inv-scroll-locked {
   color: rgba(255, 255, 255, .62);
   font-size: .9rem;
   line-height: 1.4;
+}
+
+/* Aviso "sigue bajando" tras 5 s quieto en la lámina (todas las temáticas):
+   acompaña al auto-scroll para que el invitado sepa qué viene más abajo. */
+.inv-descubre {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  max-width: min(92%, 30rem);
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(10, 18, 40, 0.88);
+  color: #fff;
+  font-size: 0.92rem;
+  line-height: 1.25;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  opacity: 1;
+  transition: opacity 500ms ease;
+}
+.inv-descubre--fuera {
+  opacity: 0;
+}
+
+/* ── Confirmar asistencia ─────────────────────────────────────────────── */
+.inv-rsvp {
+  text-align: center;
+  padding: 28px 20px 8px;
+}
+.inv-rsvp-open {
+  margin-top: 6px;
+}
+.inv-rsvp-dialog {
+  width: min(92vw, 26rem);
+  border: none;
+  border-radius: 20px;
+  padding: 24px 22px;
+  background: #101a3d;
+  color: #fff;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+}
+.inv-rsvp-dialog::backdrop {
+  background: rgba(4, 8, 24, 0.72);
+  backdrop-filter: blur(4px);
+}
+.inv-rsvp-title {
+  margin: 0 0 14px;
+  font-size: 1.25rem;
+  text-align: center;
+}
+.inv-rsvp-campo {
+  display: block;
+  margin-bottom: 14px;
+  text-align: left;
+}
+.inv-rsvp-campo span {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.88rem;
+  color: #b9c7f5;
+}
+.inv-rsvp-campo input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font: inherit;
+}
+.inv-rsvp-campo input:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+}
+.inv-rsvp-error {
+  color: #ff9d9d;
+  font-size: 0.88rem;
+}
+.inv-rsvp-acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+.inv-rsvp-ok {
+  text-align: center;
+}
+.inv-rsvp-ok-emoji {
+  font-size: 2.4rem;
+  margin: 0;
+}
+
+/* Fundido entre capítulos del recorrido: el video y su gorrito bajan la luz
+   un instante al cambiar de personaje (pedido de la clienta: transiciones
+   menos bruscas). Con prefers-reduced-motion el JS ni aplica la clase. */
+[data-playlist-video],
+[data-playlist-caption] {
+  transition: opacity 260ms ease;
+}
+.inv-clip-fundido {
+  opacity: 0 !important;
 }

@@ -36,6 +36,8 @@ $genderMigration = require dirname(__DIR__, 2) . '/database/migrations/009_invit
 $genderMigration(cb_pdo());
 $babyShowerMigration = require dirname(__DIR__, 2) . '/database/migrations/010_baby_shower_predictions.php';
 $babyShowerMigration(cb_pdo());
+$narrationMigration = require dirname(__DIR__, 2) . '/database/migrations/013_narration_intro_output.php';
+$narrationMigration(cb_pdo());
 check(cb_storage_mode() === 'db', 'modo DB');
 check(cb_valid_slug('fiesta-1', 2, 40) && !cb_valid_slug('../x', 2, 40), 'slugs estrictos');
 check(cb_normalize_frame_box(['x'=>.2,'y'=>.2,'w'=>.4,'h'=>.4]) !== null, 'frame válido');
@@ -517,5 +519,130 @@ check(
     && strpos(json_encode($storedLead), '203.0.113.8') === false,
     'lead persiste sin guardar IP en claro'
 );
+
+// -- Color de la barra del navegador en las paginas PHP ---------------------
+// El kiosco y el album lo resuelven en JS; invitacion, regalos, predicciones y
+// galeria son PHP puro y se quedaban con la barra gris del navegador. Ahora
+// sale de la tematica, igual que en el front y con el mismo token (accent).
+check(cb_theme_meta_color('hielo') === '#29b6f6', 'la barra toma el accent de Reino de Hielo');
+check(cb_theme_meta_color('carreras') === '#e8000d', 'la barra toma el accent de Carreras');
+check(cb_theme_meta_color('baby-safari') === '#7A9455', 'la barra toma el accent de Bebe Safari');
+check(cb_theme_meta_color('princesas') === '#ab47bc', 'la barra toma el accent de Princesas');
+// Sin tematica, o con una inventada, no se inventa un color: mejor la barra por
+// defecto del navegador que una que no corresponde a nada.
+check(cb_theme_meta_color('') === '', 'sin tematica no se imprime color de barra');
+check(cb_theme_meta_color('no-existe') === '', 'una tematica inexistente no inventa color');
+
+// TODAS las tematicas publicadas tienen que poder pintar la barra. Si manana
+// alguien agrega una sin accent, el navegador le pondria gris y nadie se
+// enteraria hasta abrirla en un celular.
+$temasSinBarra = [];
+foreach (array_keys(cb_load_themes()['themes'] ?? []) as $slugTema) {
+    if (cb_theme_meta_color((string) $slugTema) === '') { $temasSinBarra[] = $slugTema; }
+}
+check($temasSinBarra === [], 'todas las tematicas definen color de barra; sin el: ' . implode(', ', $temasSinBarra));
+
+// Y las cuatro paginas PHP tienen que imprimirlo. Es un chequeo sobre el
+// archivo porque montar cada pagina con su token cuesta mas de lo que protege;
+// lo que se fija es que nadie borre el meta sin darse cuenta.
+foreach (['invitacion.php', 'predicciones.php', 'regalos-papas.php', 'galeria.php'] as $paginaConBarra) {
+    $fuente = (string) file_get_contents(dirname(__DIR__, 2) . '/public/' . $paginaConBarra);
+    check(strpos($fuente, 'name="theme-color"') !== false, "$paginaConBarra imprime el color de la barra");
+}
+
+// -- Miniaturas de fotos de cabina en el Album Recuerdo ---------------------
+// El album servia las fotos de cabina en tamano completo (2-3MB cada una: un
+// album de 9 cargaba mas de 20MB en el celular). cb_photo_thumbnail_path()
+// genera una miniatura JPEG de 640px cacheada junto al original.
+$fotoGrande = $tmp . '/foto-cabina-test.png';
+$imgGrande = imagecreatetruecolor(1080, 1920);
+imagefilledrectangle($imgGrande, 0, 0, 1079, 1919, imagecolorallocate($imgGrande, 40, 90, 160));
+imagepng($imgGrande, $fotoGrande);
+imagedestroy($imgGrande);
+
+$rutaThumb = cb_photo_thumbnail_path($fotoGrande);
+check($rutaThumb !== null && is_file($rutaThumb), 'la miniatura de cabina se genera');
+$infoThumb = getimagesize((string) $rutaThumb);
+check(($infoThumb['mime'] ?? '') === 'image/jpeg', 'la miniatura es JPEG');
+check(max((int) $infoThumb[0], (int) $infoThumb[1]) <= 640, 'la miniatura no pasa de 640px de lado');
+check(filesize((string) $rutaThumb) < filesize($fotoGrande), 'la miniatura pesa menos que el original');
+
+// El cache: la segunda llamada devuelve el MISMO archivo sin regenerarlo.
+$mtimeAntes = filemtime((string) $rutaThumb);
+clearstatcache();
+check(cb_photo_thumbnail_path($fotoGrande) === $rutaThumb, 'la segunda llamada reusa el cache');
+check(filemtime((string) $rutaThumb) === $mtimeAntes, 'el cache no se regenera si el original no cambio');
+
+// Contenido JPEG bajo clave .png: el formato se detecta por contenido, no por
+// extension (imagecreatefrompng sobre un JPEG devuelve false sin avisar).
+$jpegDisfrazado = $tmp . '/foto-jpeg-disfrazada.png';
+$imgJ = imagecreatetruecolor(800, 1200);
+imagefilledrectangle($imgJ, 0, 0, 799, 1199, imagecolorallocate($imgJ, 120, 60, 30));
+imagejpeg($imgJ, $jpegDisfrazado, 90);
+imagedestroy($imgJ);
+check(cb_photo_thumbnail_path($jpegDisfrazado) !== null, 'un JPEG guardado bajo clave .png tambien genera miniatura');
+
+// Un archivo que no es imagen no revienta nada: devuelve null y se sirve el
+// original.
+$noImagen = $tmp . '/no-imagen.png';
+file_put_contents($noImagen, 'esto no es una imagen');
+check(cb_photo_thumbnail_path($noImagen) === null, 'un archivo corrupto devuelve null, no un fatal');
+
+// Y el API del album tiene que PEDIR la miniatura para las fotos de cabina:
+// sin el `v=thumb` en la URL, todo lo de arriba no sirve de nada.
+$fuenteAlbumApi = (string) file_get_contents(dirname(__DIR__, 2) . '/public/album-api.php');
+// No basta buscar `v=thumb` (la rama de invitados tambien lo tiene): lo que
+// delata la regresion es que reaparezca la asignacion vieja sin miniatura.
+check(strpos($fuenteAlbumApi, '$thumb = $url;') === false, 'la rama de cabina de album-api no volvio a servir el original como miniatura');
+
+// -- Version de assets del tema (rompe-cache) -------------------------------
+// El payload publica assetsVersion = mtime mas nuevo de la carpeta del tema.
+// El front lo agrega como ?v= a cada URL: reemplazar un archivo con el mismo
+// nombre cambia la URL y el cache (navegador/CDN) queda fuera de la jugada.
+$dirTemaPrueba = $tmp . '/tema-version';
+mkdir($dirTemaPrueba, 0770, true);
+file_put_contents($dirTemaPrueba . '/a.jpg', 'x');
+touch($dirTemaPrueba . '/a.jpg', 1700000100);
+mkdir($dirTemaPrueba . '/sub', 0770, true);
+file_put_contents($dirTemaPrueba . '/sub/b.mp4', 'y');
+touch($dirTemaPrueba . '/sub/b.mp4', 1700000900);
+check(cb_theme_assets_version($dirTemaPrueba . '/') === 1700000900, 'assetsVersion toma el mtime mas nuevo, tambien de subcarpetas');
+check(cb_theme_assets_version($tmp . '/no-existe/') === 0, 'carpeta inexistente da 0 y el front no agrega ?v=');
+$payloadVersion = cb_build_theme_payload('hielo', cb_load_themes()['themes']['hielo']);
+check(($payloadVersion['assetsVersion'] ?? 0) > 0, 'el payload del tema publica assetsVersion');
+
+// La clave de almacenamiento acepta mp3: la validacion de subida ya lo
+// aceptaba (narracion de inicio) pero la lista del constructor quedo atras y
+// ni el admin podia guardar una narracion. Se piso con la primera real.
+check(is_string(cb_invitation_storage_key('fiesta-x', 'narracion-intro', 1, 'mp3')), 'storage key acepta mp3 para la narracion');
+
+// -- Confirmaciones de asistencia (RSVP) ------------------------------------
+$rsvpMigration = require dirname(__DIR__, 2) . '/database/migrations/014_rsvp.php';
+$rsvpMigration(cb_pdo());
+$rsvpMigration(cb_pdo()); // idempotente: correrla dos veces no revienta
+require dirname(__DIR__, 2) . '/public/lib.rsvp.php';
+
+check(cb_rsvp_save(9901, 'Familia Diaz', 'Emma y Lucas')['ok'] === true, 'una confirmacion valida se guarda');
+// La misma familia corrige: se ACTUALIZA su fila (el dedupe usa LOWER, que en
+// SQLite solo pliega ASCII; en MySQL la collation utf8mb4_unicode_ci ya
+// compara sin distinguir mayusculas, con acentos incluidos).
+check(cb_rsvp_save(9901, '  familia   diaz  ', 'Emma, Lucas y Sofía')['ok'] === true, 'reconfirmar responde ok');
+$listaRsvp = cb_rsvp_list(9901);
+check(count($listaRsvp) === 1, 'reconfirmar actualiza la fila, no la duplica');
+check(($listaRsvp[0]['guest_names'] ?? '') === 'Emma, Lucas y Sofía', 'la correccion pisa la lista de niños anterior');
+check(cb_rsvp_save(9901, 'X', '')['ok'] === false, 'un nombre de un caracter se rechaza');
+check(cb_rsvp_save(9901, "  \n\t ", '')['ok'] === false, 'espacios y controles no cuentan como nombre');
+check(cb_rsvp_save(9902, 'Carolina Díaz', '')['ok'] === true, 'baby shower confirma solo con el nombre adulto');
+check(cb_rsvp_list(9902)[0]['guest_names'] === null, 'sin niños queda NULL, no cadena vacia');
+check(cb_rsvp_list(9903) === [], 'evento sin confirmaciones da lista vacia');
+check(cb_rsvp_resolve_parents_token('zz-no-es-token') === null, 'token de rol malformado se rechaza');
+
+// Estaticos: la invitacion trae el boton y el modal, y las piezas existen.
+$fuenteInvRsvp = (string) file_get_contents(dirname(__DIR__, 2) . '/public/invitacion.php');
+check(strpos($fuenteInvRsvp, 'data-rsvp-open') !== false && strpos($fuenteInvRsvp, 'data-rsvp-dialog') !== false, 'invitacion.php trae boton y modal de asistencia');
+check(is_file(dirname(__DIR__, 2) . '/public/rsvp-api.php'), 'existe el endpoint rsvp-api.php');
+check(is_file(dirname(__DIR__, 2) . '/public/asistencia-papas.php'), 'existe la pantalla de la familia');
+$fuenteJsRsvp = (string) file_get_contents(dirname(__DIR__, 2) . '/public/assets/invitation.js');
+check(strpos($fuenteJsRsvp, 'rsvp-api.php') !== false, 'invitation.js envia la confirmacion al endpoint');
 
 fwrite(STDOUT, "OK $tests checks backend\n");

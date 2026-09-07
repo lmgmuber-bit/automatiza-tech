@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#103d58">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'">
+  <title></title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./estilo.css">
+  <link rel="stylesheet" href="../orientacion.css">
+  <script src="../orientacion.js" defer></script>
+  <script type="module" src="./src/main.mjs"></script>
+</head>
+<body>
+  <canvas id="mundo"></canvas>
+  <div class="vignette"></div>
+  <header id="hud" hidden>
+    <div class="medallion">✦</div><div><small id="turno"></small><strong id="jugador"></strong></div>
+    <div class="hud-score"><span>★</span> <b id="puntos">0</b><small id="reloj"></small></div>
+    <button id="pausa" class="icon" type="button">Ⅱ</button>
+  </header>
+  <div id="objetivo" hidden><span id="objetivo-icono">✦</span><div><small id="zona"></small><strong id="instruccion"></strong><div id="pasos"></div></div></div>
+  <div id="toast" role="status"></div>
+  <div id="caption" aria-live="polite"></div>
+  <div id="controles" hidden>
+    <div id="palanca"><div class="joy-ring"></div><span id="pomo">✦</span></div>
+    <div class="acciones"><button id="revelar"><span>◎</span><small></small></button><button id="magia"><span>✧</span><small></small></button><button id="saltar"><span>↑</span><small></small></button></div>
+  </div>
+  <main id="inicio" class="screen">
+    <section class="welcome">
+      <div class="eyebrow" data-t="marca"></div><div class="tiny-stars">✧ ─── ✦ ─── ✧</div>
+      <h1 data-t="titulo"></h1><p class="intro" data-t="subtitulo"></p>
+      <form id="config">
+        <div class="fields"><label><span data-t="nombre"></span><input id="nombre" maxlength="24" required autocomplete="off"></label><label class="age"><span data-t="edad"></span><input id="edad" type="number" min="4" max="12" required></label></div>
+        <details id="adultos"><summary data-t="opciones"></summary><label><span data-t="invitados"></span><textarea id="nombres" rows="3" maxlength="320"></textarea></label><p class="hint" data-t="invitadosAyuda"></p><label class="check"><input id="sonido" type="checkbox" checked><span data-t="sonido"></span></label><label class="check"><input id="suave" type="checkbox"><span data-t="suave"></span></label><p id="aviso-voz" class="hint"></p></details>
+        <button id="jugar" class="primary" disabled></button><button id="continuar" class="secondary" type="button" hidden data-t="continuar"></button>
+      </form>
+      <div class="load"><i id="carga"></i></div><p id="carga-texto" class="hint"></p>
+      <footer data-t="pie"></footer>
+    </section>
+    <div class="world-note"><span>✦</span><small data-t="nota"></small></div>
+  </main>
+  <section id="panel" class="screen modal" hidden><div class="paper"><div id="panel-emblema">✦</div><small id="panel-ceja"></small><h2 id="panel-titulo"></h2><p id="panel-texto"></p><div id="resultados"></div><button id="seguir" class="primary"></button><button id="escuchar" class="secondary" data-t="repetir"></button></div></section>
+  <div id="cine" hidden><small data-t="cineCeja"></small><h2 id="cine-titulo"></h2></div>
+  <output id="debug" hidden></output>
+</body>
+</html>

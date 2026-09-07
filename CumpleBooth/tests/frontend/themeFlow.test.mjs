@@ -551,7 +551,7 @@ test('los atlas multivista aprobados corresponden a personajes reales del mundo 
    despedida, y está bloqueado a propósito hasta que Luis pida los videos.
    Cuando estén, se agrega acá y el test pasa a cuidarlo.
    ────────────────────────────────────────────────────────────────────────── */
-const COMPLETAS = ['carreras', 'familia-canina', 'tropical', 'hielo', 'kpop']
+const COMPLETAS = ['carreras', 'familia-canina', 'tropical', 'hielo', 'kpop', 'spidey']
 
 for (const slug of COMPLETAS) {
   test(`${slug}: cumple la tabla A de temática completa`, () => {

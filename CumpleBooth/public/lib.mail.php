@@ -29,6 +29,8 @@ declare(strict_types=1);
  */
 
 /** Configuración del SMTP, ya normalizada. */
+require_once __DIR__ . '/lib.ajustes.php';
+
 function cc_mail_config(): array
 {
     $c = cb_config();
@@ -118,6 +120,30 @@ function cc_smtp_escribir($socket, string $orden): void
  *
  * @param array $m  ['to','to_name','subject','html','text','reply_to','headers']
  */
+/**
+ * Correos que reciben copia oculta del mensaje.
+ *
+ * Se manda como destinatario extra del SOBRE (otro `RCPT TO`) y NO como cabecera `Bcc:`:
+ * hablando SMTP directo, esa cabecera viajaria dentro del mensaje y el cliente veria a quien
+ * mas se le mando. Que es justo lo contrario de una copia oculta.
+ */
+function cc_mail_ocultos(array $m): array
+{
+    $ocultos = [];
+    foreach ((array) ($m['bcc'] ?? []) as $extra) {
+        $extra = trim((string) $extra);
+        if ($extra !== '' && filter_var($extra, FILTER_VALIDATE_EMAIL)) { $ocultos[] = $extra; }
+    }
+    if (function_exists('cb_ajuste_bcc')) {
+        $general = cb_ajuste_bcc();
+        if ($general !== '') { $ocultos[] = $general; }
+    }
+    // Sin duplicados y sin repetir al destinatario, que ya recibe el mensaje.
+    $para = strtolower(trim((string) ($m['to'] ?? '')));
+    return array_values(array_filter(array_unique($ocultos),
+        static fn($o) => strtolower($o) !== $para));
+}
+
 function cc_mail_send(array $m): array
 {
     if (!cc_mail_enabled()) {
@@ -201,6 +227,17 @@ function cc_mail_send(array $m): array
             $cerrar(); return ['ok' => false, 'error' => 'Destinatario rechazado: ' . $r['texto']];
         }
 
+        // Las copias ocultas van como destinatarios extra del sobre. Si el servidor rechaza
+        // una, se sigue igual: que falle la copia no puede impedir que el cliente reciba su
+        // correo. Queda en el log del servidor para poder revisarlo.
+        foreach (cc_mail_ocultos($m) as $oculto) {
+            cc_smtp_escribir($socket, 'RCPT TO:<' . $oculto . '>');
+            $rc = cc_smtp_leer($socket, $cfg['timeout']);
+            if ($rc['codigo'] !== 250 && $rc['codigo'] !== 251) {
+                error_log('CumpleClick copia oculta rechazada: ' . $rc['texto']);
+            }
+        }
+
         cc_smtp_escribir($socket, 'DATA');
         $r = cc_smtp_leer($socket, $cfg['timeout']);
         if ($r['codigo'] !== 354) { $cerrar(); return ['ok' => false, 'error' => 'DATA rechazado: ' . $r['texto']]; }
@@ -239,8 +276,15 @@ function cc_mail_build(array $m, array $cfg): string
         'To: ' . cc_mail_address((string) $m['to'], (string) ($m['to_name'] ?? '')),
         'Subject: ' . cc_mail_encode_header((string) ($m['subject'] ?? '')),
         'MIME-Version: 1.0',
-        'Content-Type: multipart/alternative; boundary="' . $limite . '"',
     ];
+    // Con adjuntos el mensaje pasa a ser multipart/mixed: adentro va el cuerpo (texto + HTML)
+    // como una sola parte alternativa y después cada archivo. Sin adjuntos, el correo sale
+    // byte por byte igual que antes.
+    $adjuntos = array_values(array_filter((array) ($m['attachments'] ?? [])));
+    $limiteExt = 'ccx' . bin2hex(random_bytes(12));
+    $cabeceras[] = $adjuntos
+        ? 'Content-Type: multipart/mixed; boundary="' . $limiteExt . '"'
+        : 'Content-Type: multipart/alternative; boundary="' . $limite . '"';
     if ($replyTo !== '') {
         $cabeceras[] = 'Reply-To: ' . $replyTo;
     }
@@ -266,6 +310,29 @@ function cc_mail_build(array $m, array $cfg): string
         cc_mail_quoted_printable($html),
         '--' . $limite . '--',
     ];
+
+    if ($adjuntos) {
+        $envoltura = [
+            '--' . $limiteExt,
+            'Content-Type: multipart/alternative; boundary="' . $limite . '"',
+            '',
+        ];
+        $envoltura = array_merge($envoltura, $partes);
+        foreach ($adjuntos as $a) {
+            $nombre = (string) ($a['filename'] ?? 'archivo.pdf');
+            $tipo = (string) ($a['type'] ?? 'application/octet-stream');
+            $envoltura[] = '--' . $limiteExt;
+            $envoltura[] = 'Content-Type: ' . $tipo . '; name="' . $nombre . '"';
+            $envoltura[] = 'Content-Transfer-Encoding: base64';
+            $envoltura[] = 'Content-Disposition: attachment; filename="' . $nombre . '"';
+            $envoltura[] = '';
+            // base64 cortado a 76 columnas: es lo que pide el RFC y lo que esperan los
+            // servidores; una sola línea larguísima hace que algunos trunquen el mensaje.
+            $envoltura[] = rtrim(chunk_split(base64_encode((string) ($a['data'] ?? '')), 76, "\r\n"), "\r\n");
+        }
+        $envoltura[] = '--' . $limiteExt . '--';
+        $partes = $envoltura;
+    }
 
     return implode("\r\n", $cabeceras) . "\r\n\r\n" . implode("\r\n", $partes);
 }

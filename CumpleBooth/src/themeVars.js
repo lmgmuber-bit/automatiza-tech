@@ -38,7 +38,37 @@ export function applyThemeColors(colors, target) {
       applied = true
     }
   }
+  // Sólo cuando se está tiñendo el documento de verdad: con un `target`
+  // suelto esto estaría pintando la barra del navegador por un elemento.
+  if (!target) applyBrowserChromeColor(colors.accent)
   return applied
+}
+
+/**
+ * La barra del navegador (Chrome en Android la pinta con `theme-color`).
+ *
+ * Estaba escrita a mano en index.html y album.html con `#e8000d`, que es el
+ * `accent` de CARRERAS: la primera temática. Así que el baby shower Safari
+ * —verde entero— abría el kiosco con una franja roja arriba, y lo mismo
+ * cualquier temática que no fuera Carreras (reporte de Luis 2026-08-31).
+ *
+ * Se usa `accent` y no `dark1` a propósito: con `accent`, Carreras conserva
+ * exactamente el color que ya tenía y sólo cambian las temáticas que estaban
+ * mal. Un token más oscuro habría "mejorado" de paso algo ya aprobado.
+ *
+ * Si el tema no declara accent no se toca nada: queda el valor del HTML, que
+ * es el comportamiento anterior.
+ */
+function applyBrowserChromeColor(accent) {
+  if (typeof accent !== 'string' || accent === '') return
+  if (typeof document === 'undefined') return
+  let meta = document.querySelector('meta[name="theme-color"]')
+  if (!meta) {
+    meta = document.createElement('meta')
+    meta.setAttribute('name', 'theme-color')
+    document.head.appendChild(meta)
+  }
+  meta.setAttribute('content', accent)
 }
 
 /**

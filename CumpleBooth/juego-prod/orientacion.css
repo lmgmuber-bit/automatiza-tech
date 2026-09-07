@@ -1,0 +1,37 @@
+/*
+ * Aviso de "gira la tablet". Va en archivo aparte y no inyectado por JavaScript porque el
+ * Festival declara `style-src 'self'` en su CSP: un <style> creado desde el script queda
+ * bloqueado como estilo en línea, y el aviso se vería sin ningún formato.
+ */
+#cc-gira {
+  position: fixed; inset: 0; z-index: 2147483000; display: none;
+  align-items: center; justify-content: center; padding: 24px;
+  background: linear-gradient(160deg, #132a4a 0%, #1d1136 100%);
+  font-family: "Baloo 2", "Nunito", "Segoe UI", system-ui, sans-serif;
+  color: #fff; text-align: center;
+}
+#cc-gira.cc-gira--on { display: flex; }
+.cc-gira__caja { max-width: 420px; }
+.cc-gira__tit { margin: 22px 0 8px; font-size: clamp(22px, 5vmin, 32px); font-weight: 800; }
+.cc-gira__sub { margin: 0; font-size: clamp(15px, 2.8vmin, 19px); opacity: .9; line-height: 1.5; }
+.cc-gira__pista { margin: 18px 0 0; font-size: clamp(13px, 2.3vmin, 16px); opacity: .65; line-height: 1.5; }
+
+/* La tablet dibujada gira sola: dice qué hacer sin depender de que el niño lea el texto,
+   que a los cinco años es lo que de verdad funciona. */
+.cc-gira__tablet {
+  width: 96px; height: 132px; margin: 0 auto; border: 4px solid #fff;
+  border-radius: 14px; position: relative; opacity: .92;
+  animation: cc-girar 2.4s ease-in-out infinite;
+}
+.cc-gira__tablet span {
+  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+  width: 34px; height: 4px; border-radius: 99px; background: #fff; opacity: .75;
+}
+@keyframes cc-girar {
+  0%, 28% { transform: rotate(0); }
+  52%, 78% { transform: rotate(-90deg); }
+  100% { transform: rotate(-90deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cc-gira__tablet { animation: none; transform: rotate(-90deg); }
+}

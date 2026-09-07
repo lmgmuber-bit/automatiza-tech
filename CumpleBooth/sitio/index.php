@@ -42,6 +42,57 @@ if (is_file($ccRutaMarca)) {
 $ccWaDigitos = preg_replace('/\D/', '', $ccMarca['whatsapp']);
 if ($ccWaDigitos === '') { $ccWaDigitos = '56974940070'; }
 
+/* Los precios salen de `public/data/planes.json` (Admin -> Planes), el MISMO archivo del que
+   se toma el precio al cargar una fiesta. Antes estaban escritos a mano en las tres tarjetas
+   de más abajo, así que cambiar uno obligaba a editar esta página y volver a subirla.
+
+   El respaldo NO es de relleno: son exactamente los planes que estaban acá escritos. Si el
+   archivo falta o queda roto, la página sigue mostrando precios reales en vez de quedarse sin
+   la sección que decide la venta. */
+$ccLibPlanes = __DIR__ . '/../public/lib.planes.php';
+$ccPlanes = ['promo' => ['activa' => false, 'texto' => '', 'porcentaje' => 0],
+             'tematica_a_medida' => 25000, 'planes' => []];
+if (is_file($ccLibPlanes)) {
+    require_once $ccLibPlanes;
+    $ccPlanes = cb_planes();
+}
+if (!$ccPlanes['planes']) {
+    $ccPlanes = [
+        'promo' => ['activa' => true, 'texto' => 'Precios de lanzamiento', 'porcentaje' => 50],
+        'tematica_a_medida' => 25000,
+        'planes' => [
+            ['slug' => 'magico', 'nombre' => 'Plan Mágico', 'precio' => 34995, 'precio_antes' => 69990,
+             'destacado' => false, 'etiqueta' => '', 'clase' => '', 'badge_clase' => '', 'emoji' => '🎈',
+             'incluye' => ['1 temática a elección', '3 juegos de la temática elegida',
+                           'Hasta 200 fotos por fiesta', 'Diplomas personalizados',
+                           'Invitación digital para compartir por WhatsApp',
+                           'Álbum Recuerdo con las fotos de todos', 'Descarga inmediata por QR']],
+            ['slug' => 'premium', 'nombre' => 'Plan Premium', 'precio' => 49995, 'precio_antes' => 99990,
+             'destacado' => true, 'etiqueta' => 'Más elegido', 'clase' => 'plan--destacado',
+             'badge_clase' => '', 'emoji' => '🎉',
+             'incluye' => ['1 temática a elección', 'Los 4 juegos, incluido El Show 3D',
+                           'Hasta 200 fotos por fiesta', 'Diplomas personalizados',
+                           'Invitación automática: se reproduce sola, con videos y narración',
+                           'Álbum Recuerdo con las fotos de todos', 'Galería privada para papás',
+                           '2 horas de servicio']],
+            ['slug' => 'baby', 'nombre' => 'Plan Baby Shower', 'precio' => 29995, 'precio_antes' => 59990,
+             'destacado' => false, 'etiqueta' => 'Baby shower', 'clase' => 'plan--baby',
+             'badge_clase' => 'plan__badge--baby', 'emoji' => '🍼',
+             'incluye' => ['1 temática a elección: Nubes, Rosas o Safari',
+                           'Las apuestas de cada invitado, impresas en su foto',
+                           'Tablero privado con todas, para abrir después',
+                           'Hasta 200 fotos por evento',
+                           'Invitación digital con cuenta regresiva y lista de regalos',
+                           'Álbum Recuerdo con las fotos de todos', 'Descarga inmediata por QR']],
+        ],
+    ];
+}
+
+/* Los precios se escriben como se leen en Chile: $34.995, sin decimales. */
+$ccPrecio = static function ($monto): string {
+    return '$' . number_format((int) $monto, 0, ',', '.');
+};
+
 $e = static function ($s): string {
     return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
 };
@@ -81,7 +132,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
        bloquea el render; las tipografias van ultimas porque tienen
        `font-display: swap` y el texto se pinta sin esperarlas. -->
   <link rel="preload" href="assets/img/globo-render.webp" as="image" type="image/webp">
-  <link rel="stylesheet" href="css/styles.css?v=20260831k">
+  <link rel="stylesheet" href="css/styles.css?v=20260901a">
   <link rel="preload" href="fonts/baloo-2-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/baloo-2-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
   <!-- ?v= no es adorno. `styles.css` y `main.js` tienen nombre FIJO, asi que
@@ -308,7 +359,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
         <li class="eventos__item" data-reveal><span aria-hidden="true">🔮</span><h3>Las apuestas</h3><p>El momento que a todos les gusta. Quedan en un <strong>tablero privado</strong> que los papás abren después, y muchos imprimen.</p></li>
         <li class="eventos__item" data-reveal><span aria-hidden="true">📖</span><h3>El álbum</h3><p>Las fotos de la cabina más las que suban los invitados desde su celular, en una revista que se hojea.</p></li>
       </ul>
-      <p class="mundos__mas" data-reveal>¿Todavía no saben el nombre o el sexo? <strong>Está pensado para eso.</strong> La invitación funciona igual, y si la fiesta es justamente para revelarlo, mejor. <a href="#precios">Vale <strong>$29.995</strong></a> con el 50% de lanzamiento, e incluye la invitación, las apuestas y el álbum.</p>
+      <p class="mundos__mas" data-reveal>¿Todavía no saben el nombre o el sexo? <strong>Está pensado para eso.</strong> La invitación funciona igual, y si la fiesta es justamente para revelarlo, mejor. <a href="#demos">Mírala funcionando</a>. Vale <strong>$29.995</strong> con el 50% de lanzamiento, e incluye la invitación, las apuestas y el álbum.</p>
     </section>
 
     <!-- 3c · DEMOS EN VIVO -->
@@ -358,6 +409,15 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
             <a href="/app/album.html?t=816d26c2258966fa3eec3f7b5135dae8" target="_blank" rel="noopener">Álbum</a>
           </p>
         </li>
+        <li class="demo" data-reveal>
+          <h3>Baby shower · aún no saben</h3>
+          <p>Bebé Safari, sin nombre ni sexo todavía. Así se ve cuando la fiesta es justamente para revelarlo.</p>
+          <p>
+            <a href="/app/invitacion.php?t=3cfccd0a5c3c8599a95ea47d2531439c" target="_blank" rel="noopener">Invitación</a> ·
+            <a href="/app/?p=demo-bs-safari" target="_blank" rel="noopener">Kiosco</a> ·
+            <a href="/app/album.html?t=7665791dcfbf47ed1d3442c08c4a7dc7" target="_blank" rel="noopener">Álbum</a>
+          </p>
+        </li>
       </ul>
       <p class="mundos__mas" data-reveal>El kiosco pide permiso de cámara porque en la fiesta saca la foto de verdad. Si lo abres en el computador, puedes recorrerlo igual y saltarte esa parte.</p>
     </section>
@@ -397,56 +457,29 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
       <div class="section__head" data-reveal>
         <h2>Planes y precios</h2>
         <p>Sin letra chica: llegamos, montamos, animamos y nos llevamos todo al final.</p>
-        <p class="precios__promo">🎉 Precios de lanzamiento: <strong>50% de descuento</strong></p>
+        <?php if ($ccPlanes['promo']['activa']): ?>
+        <p class="precios__promo">🎉 <?= $e($ccPlanes['promo']['texto']) ?>: <strong><?= $e(rtrim(rtrim(number_format($ccPlanes['promo']['porcentaje'], 2, ',', ''), '0'), ',')) ?>% de descuento</strong></p>
+        <?php endif; ?>
       </div>
       <div class="precios__grid">
-        <article class="plan" data-reveal>
-          <h3>Plan Mágico</h3>
-          <p class="plan__precio"><s class="plan__antes">$69.990</s> $34.995</p>
+        <?php foreach ($ccPlanes['planes'] as $ccPlan): ?>
+        <article class="<?= $e(trim('plan ' . ($ccPlan['destacado'] ? 'plan--destacado ' : '') . $ccPlan['clase'])) ?>" data-reveal>
+          <?php if ($ccPlan['etiqueta'] !== ''): ?>
+          <span class="<?= $e(trim('plan__badge ' . $ccPlan['badge_clase'])) ?>"><?= $e($ccPlan['etiqueta']) ?></span>
+          <?php endif; ?>
+          <h3><?= $e($ccPlan['nombre']) ?></h3>
+          <p class="plan__precio"><?php if ($ccPlan['precio_antes'] !== null): ?><s class="plan__antes"><?= $e($ccPrecio($ccPlan['precio_antes'])) ?></s> <?php endif; ?><?= $e($ccPrecio($ccPlan['precio'])) ?></p>
           <ul>
-            <li>1 temática a elección</li>
-            <li><strong>3 juegos</strong> de la temática elegida</li>
-            <li>Hasta 200 fotos por fiesta</li>
-            <li>Diplomas personalizados</li>
-            <li><strong>Invitación digital</strong> para compartir por WhatsApp</li>
-            <li><strong>Álbum Recuerdo</strong> con las fotos de todos</li>
-            <li>Descarga inmediata por QR</li>
+            <?php foreach ($ccPlan['incluye'] as $ccPunto): ?>
+            <li><?= $e($ccPunto) ?></li>
+            <?php endforeach; ?>
           </ul>
-          <a class="btn btn--cta btn--block" href="<?= $e($ccWa('Hola CumpleClick, me interesa el Plan Mágico 🎈')) ?>" target="_blank" rel="noopener">Agenda el Mágico 📲</a>
+          <?php $ccCorto = trim(preg_replace('/^Plan\s+/u', '', $ccPlan['nombre'])); ?>
+          <a class="btn btn--cta btn--block" href="<?= $e($ccWa('Hola CumpleClick, me interesa el ' . $ccPlan['nombre'] . ' ' . $ccPlan['emoji'])) ?>" target="_blank" rel="noopener">Agenda el <?= $e($ccCorto) ?> 📲</a>
         </article>
-        <article class="plan plan--destacado" data-reveal>
-          <span class="plan__badge">Más elegido</span>
-          <h3>Plan Premium</h3>
-          <p class="plan__precio"><s class="plan__antes">$99.990</s> $49.995</p>
-          <ul>
-            <li>1 temática a elección</li>
-            <li><strong>Los 4 juegos</strong>, incluido <strong>El Show 3D</strong></li>
-            <li>Hasta 200 fotos por fiesta</li>
-            <li>Diplomas personalizados</li>
-            <li><strong>Invitación automática</strong>: se reproduce sola, con videos y narración</li>
-            <li><strong>Álbum Recuerdo</strong> con las fotos de todos</li>
-            <li>Galería privada para papás</li>
-            <li>2 horas de servicio</li>
-          </ul>
-          <a class="btn btn--cta btn--block" href="<?= $e($ccWa('Hola CumpleClick, me interesa el Plan Premium 🎉')) ?>" target="_blank" rel="noopener">Agenda el Premium 📲</a>
-        </article>
-        <article class="plan plan--baby" data-reveal>
-          <span class="plan__badge plan__badge--baby">Baby shower</span>
-          <h3>Plan Baby Shower</h3>
-          <p class="plan__precio"><s class="plan__antes">$59.990</s> $29.995</p>
-          <ul>
-            <li>1 temática a elección: <strong>Nubes, Rosas o Safari</strong></li>
-            <li><strong>Las apuestas</strong> de cada invitado, impresas en su foto</li>
-            <li>Tablero privado con todas, para abrir después</li>
-            <li>Hasta 200 fotos por evento</li>
-            <li><strong>Invitación digital</strong> con cuenta regresiva y <strong>lista de regalos</strong></li>
-            <li><strong>Álbum Recuerdo</strong> con las fotos de todos</li>
-            <li>Descarga inmediata por QR</li>
-          </ul>
-          <a class="btn btn--cta btn--block" href="<?= $e($ccWa('Hola CumpleClick, me interesa el Plan Baby Shower 🍼')) ?>" target="_blank" rel="noopener">Agenda el Baby Shower 📲</a>
-        </article>
+        <?php endforeach; ?>
       </div>
-      <p class="precios__medida" data-reveal>¿Quieres una temática a la medida? <strong>La creamos por +$25.000.</strong></p>
+      <p class="precios__medida" data-reveal>¿Quieres una temática a la medida? <strong>La creamos por +<?= $e($ccPrecio($ccPlanes['tematica_a_medida'])) ?>.</strong></p>
     </section>
 
     <!-- 5 · POR QUÉ CUMPLECLICK (diferenciadores + invitaciones digitales) -->
@@ -617,6 +650,6 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
   <script src="vendor/gsap.min.js" defer></script>
   <script src="vendor/ScrollTrigger.min.js" defer></script>
   <script src="vendor/lenis.min.js" defer></script>
-  <script src="js/main.js?v=20260831k" defer></script>
+  <script src="js/main.js?v=20260901a" defer></script>
 </body>
 </html>

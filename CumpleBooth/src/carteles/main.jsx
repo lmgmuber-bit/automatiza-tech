@@ -1,0 +1,225 @@
+// Carteles con QR para imprimir, uno por enlace de la fiesta.
+//
+// Cada fiesta tiene sus propios enlaces y su temática, así que los carteles se arman por
+// fiesta: los datos vienen de admin/carteles-api.php, que exige sesión de admin porque el
+// cartel de la galería lleva el PIN.
+//
+// Se imprime desde el navegador (no se genera PDF): `@page size` toma la medida elegida y
+// cada cartel ocupa una hoja exacta, para que salga a escala real dentro del acrílico.
+import { StrictMode, useEffect, useMemo, useState } from 'react'
+import { createRoot } from 'react-dom/client'
+import QRCode from 'qrcode'
+import './carteles.css'
+
+const BASE = import.meta.env.BASE_URL
+
+// Medidas en milímetros. Las de acrílico son las de portarretratos y portamenús comunes;
+// cuando Luis confirme los soportes que compre, se agregan las suyas a esta lista.
+const TAMANOS = [
+  { id: 'a5', nombre: 'A5 · 14,8 × 21 cm', ancho: 148, alto: 210 },
+  { id: 'a6', nombre: 'A6 · 10,5 × 14,8 cm', ancho: 105, alto: 148 },
+  { id: '10x15', nombre: 'Foto 10 × 15 cm', ancho: 100, alto: 150 },
+  { id: '13x18', nombre: 'Foto 13 × 18 cm', ancho: 130, alto: 180 },
+  { id: '15x15', nombre: 'Cuadrado 15 × 15 cm', ancho: 150, alto: 150 },
+  { id: '20x25', nombre: 'Marco 20 × 25 cm', ancho: 200, alto: 250 },
+  { id: 'a4', nombre: 'A4 · 21 × 29,7 cm', ancho: 210, alto: 297 },
+]
+
+function useQr(url) {
+  const [dataUrl, setDataUrl] = useState(null)
+  const [error, setError] = useState(false)
+  useEffect(() => {
+    let vivo = true
+    if (!url) return undefined
+    // Negro sobre blanco y margen amplio: un QR con los colores de la temática se ve
+    // lindo en pantalla y falla al escanear impreso, que es justo donde tiene que servir.
+    QRCode.toDataURL(url, { errorCorrectionLevel: 'M', margin: 2, width: 900, color: { dark: '#000000', light: '#FFFFFF' } })
+      .then((d) => { if (vivo) setDataUrl(d) })
+      .catch(() => { if (vivo) setError(true) })
+    return () => { vivo = false }
+  }, [url])
+  return { dataUrl, error }
+}
+
+function Cartel({ cartel, fiesta, tema, marca, pin, tamano }) {
+  const { dataUrl, error } = useQr(cartel.url)
+  const colores = tema.colors || {}
+  const estilo = {
+    '--acento': colores.accent || '#8B5CF6',
+    '--oscuro': colores.dark1 || '#2C1A4A',
+    '--tinta': colores.ink || '#241436',
+    '--claro': colores.bgLight1 || '#F3EFF7',
+    width: `${tamano.ancho}mm`,
+    height: `${tamano.alto}mm`,
+  }
+  return (
+    <article className="cartel" style={estilo} data-cartel={cartel.id}>
+      {/* El fondo de la temática ocupa la hoja entera: el cartel se ve de ESA fiesta.
+          El QR va sobre una tarjeta blanca, que es el contraste que necesita para escanear. */}
+      {tema.banner && <img className="cartel__fondo" src={`${BASE}${tema.banner}`} alt="" />}
+      <div className="cartel__velo" />
+
+      <div className="cartel__cuerpo">
+        <header className="cartel__cabecera">
+          <p className="cartel__fiesta">{fiesta.nombre}</p>
+          <p className="cartel__tema">{fiesta.temaNombre}</p>
+        </header>
+
+        <div className="cartel__tarjeta">
+          <h1 className="cartel__titulo">{cartel.titulo}</h1>
+          <p className="cartel__bajada">{cartel.bajada}</p>
+
+          <div className="cartel__qr">
+            {dataUrl && <img src={dataUrl} alt={`Código QR: ${cartel.titulo}`} />}
+            {error && <p className="cartel__error">No se pudo generar el código. Recarga la página.</p>}
+            {!dataUrl && !error && <p className="cartel__espera">Generando el código…</p>}
+          </div>
+
+          <p className="cartel__instruccion">Apunta la cámara de tu celular al código</p>
+
+          {cartel.necesitaPin && (
+            <p className="cartel__pin">
+              PIN: <strong>{pin || '••••'}</strong>
+            </p>
+          )}
+          {cartel.pie && !cartel.necesitaPin && <p className="cartel__pie-nota">{cartel.pie}</p>}
+        </div>
+
+        <footer className="cartel__pie">
+          <span className="cartel__marca">{(marca && marca.nombre) || 'CumpleClick'}</span>
+          {marca && marca.web && <span className="cartel__web">{marca.web}</span>}
+          {marca && marca.instagram && <span className="cartel__web">{marca.instagram}</span>}
+        </footer>
+      </div>
+    </article>
+  )
+}
+
+function App() {
+  const slug = useMemo(() => new URLSearchParams(location.search).get('p') || '', [])
+  const [datos, setDatos] = useState(null)
+  const [error, setError] = useState(null)
+  const [tamanoId, setTamanoId] = useState('a5')
+  const [medida, setMedida] = useState({ ancho: 148, alto: 210 })
+  const [elegidos, setElegidos] = useState(null)
+  const [pin, setPin] = useState('1234')
+
+  useEffect(() => {
+    if (!slug) { setError('Falta la fiesta: abre esta página desde el botón "Carteles QR" del admin.'); return }
+    fetch(`${BASE}admin/carteles-api.php?p=${encodeURIComponent(slug)}`, { credentials: 'same-origin', cache: 'no-store' })
+      .then(async (r) => {
+        const d = await r.json().catch(() => null)
+        if (!r.ok || !d || !d.ok) {
+          throw new Error(d && d.error === 'no_autenticado'
+            ? 'Tu sesión de admin expiró. Entra de nuevo al admin y vuelve a abrir esta página.'
+            : (d && d.error) || `error_${r.status}`)
+        }
+        return d
+      })
+      .then((d) => { setDatos(d); setElegidos(d.carteles.map((c) => c.id)) })
+      .catch((e) => setError(String(e.message || e)))
+  }, [slug])
+
+  const tamano = tamanoId === 'custom'
+    ? { ancho: Math.max(50, medida.ancho), alto: Math.max(50, medida.alto) }
+    : TAMANOS.find((t) => t.id === tamanoId) || TAMANOS[0]
+
+  // `@page size` no se puede poner en una hoja de estilos estática: cambia con lo que se
+  // elija, así que la regla se inyecta y se reemplaza en cada cambio.
+  useEffect(() => {
+    const id = 'regla-pagina'
+    let el = document.getElementById(id)
+    if (!el) { el = document.createElement('style'); el.id = id; document.head.appendChild(el) }
+    el.textContent = `@page { size: ${tamano.ancho}mm ${tamano.alto}mm; margin: 0; }`
+  }, [tamano.ancho, tamano.alto])
+
+  if (error) return <div className="aviso aviso--error">{error}</div>
+  if (!datos) return <div className="aviso">Cargando los carteles…</div>
+  if (!datos.carteles.length) {
+    return (
+      <div className="aviso">
+        Esta fiesta todavía no tiene enlaces para poner en un cartel. Habilita la galería con su PIN,
+        crea la invitación, o elige una temática con juego 3D.
+      </div>
+    )
+  }
+
+  const visibles = datos.carteles.filter((c) => elegidos.includes(c.id))
+
+  return (
+    <>
+      <div className="panel">
+        <div className="panel__cabecera">
+          <h1>Carteles QR · {datos.fiesta.nombre}</h1>
+          <p className="panel__nota">
+            Elige el tamaño de tu soporte e imprime. Cada cartel sale en una hoja del tamaño exacto,
+            a escala real. En el diálogo de impresión deja los márgenes en «ninguno» y desactiva
+            «ajustar al papel».
+          </p>
+        </div>
+
+        <div className="panel__campos">
+          <label>
+            Tamaño del soporte
+            <select value={tamanoId} onChange={(e) => setTamanoId(e.target.value)}>
+              {TAMANOS.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+              <option value="custom">A medida…</option>
+            </select>
+          </label>
+
+          {tamanoId === 'custom' && (
+            <>
+              <label>
+                Ancho (mm)
+                <input type="number" min="50" max="420" value={medida.ancho}
+                  onChange={(e) => setMedida((m) => ({ ...m, ancho: Number(e.target.value) || 0 }))} />
+              </label>
+              <label>
+                Alto (mm)
+                <input type="number" min="50" max="420" value={medida.alto}
+                  onChange={(e) => setMedida((m) => ({ ...m, alto: Number(e.target.value) || 0 }))} />
+              </label>
+            </>
+          )}
+
+          {datos.carteles.some((c) => c.necesitaPin) && (
+            <label>
+              PIN de la galería
+              <input type="text" maxLength={4} inputMode="numeric" value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, ''))} />
+            </label>
+          )}
+        </div>
+
+        <div className="panel__lista">
+          {datos.carteles.map((c) => (
+            <label key={c.id} className="panel__check">
+              <input
+                type="checkbox"
+                checked={elegidos.includes(c.id)}
+                onChange={() => setElegidos((prev) => prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id])}
+              />
+              {c.titulo}
+            </label>
+          ))}
+        </div>
+
+        <div className="panel__acciones">
+          <button type="button" className="boton" onClick={() => window.print()}>
+            Imprimir {visibles.length === 1 ? 'el cartel' : `los ${visibles.length} carteles`}
+          </button>
+          <a className="boton boton--claro" href={`${BASE}admin/index.php`}>Volver al admin</a>
+        </div>
+      </div>
+
+      <div className="hojas">
+        {visibles.map((c) => (
+          <Cartel key={c.id} cartel={c} fiesta={datos.fiesta} tema={datos.tema}
+            marca={datos.marca} pin={pin} tamano={tamano} />
+        ))}
+      </div>
+    </>
+  )
+}
+
+createRoot(document.getElementById('root')).render(<StrictMode><App /></StrictMode>)

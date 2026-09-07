@@ -1339,6 +1339,7 @@ if ($formValues === null && $action === 'editar') {
               <?php endif; ?>
               <a class="btn btn-ghost" href="<?= h($invitationsUrl) ?>"><?= admin_icon('duplicate') ?> Invitaciones</a>
               <a class="btn btn-ghost" href="mensajes.php?p=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('chat') ?> Mensajes</a>
+              <a class="btn btn-ghost" href="../carteles.html?p=<?= rawurlencode($publicSlug) ?>" target="_blank" rel="noopener"><?= admin_icon('gallery') ?> Carteles QR</a>
               <a class="btn btn-ghost" href="aceptaciones.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('check') ?> Aceptación</a>
               <?php // Solo si el módulo está realmente utilizable. Los archivos del
                     // álbum pueden estar subidos sin la migración 007 aplicada, y en

@@ -172,6 +172,39 @@ usort($fiestas, static function ($a, $b) {
     return strcmp($b['fecha'], $a['fecha']);
 });
 $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas[0]['slug'] ?? '');
+$fiestaActual = null;
+foreach ($fiestas as $f) {
+    if ($f['slug'] === $seleccion) { $fiestaActual = $f; break; }
+}
+if ($fiestaActual === null) { $fiestaActual = $fiestas[0] ?? null; $seleccion = $fiestaActual['slug'] ?? ''; }
+
+/* El enlace de la invitación no se pega a mano: se deriva del id de la invitación de
+   esta fiesta, igual que en admin/invitations.php. El token público está hasheado en
+   la base, pero `cb_invitation_share_token()` reconstruye uno compartible a partir del
+   id. Si la fiesta todavía no tiene invitación, el campo queda vacío y editable. */
+$urlInvitacion = '';
+// Las tres funciones viven en lib.invitations.php; se comprueban antes de llamarlas para
+// que la pantalla siga sirviendo aunque ese módulo no esté presente.
+if ($fiestaActual !== null && cb_storage_mode() === 'db'
+    && function_exists('cb_list_invitations')
+    && function_exists('cb_invitation_share_token')
+    && function_exists('cb_invitation_pretty_url')) {
+    try {
+        $partyId = cb_party_db_id($fiestaActual['slug']);
+        if ($partyId !== null) {
+            $invs = cb_list_invitations($partyId);
+            if ($invs) {
+                $inv = $invs[0];
+                $urlInvitacion = cb_invitation_pretty_url(
+                    cb_invitation_share_token((int) $inv['id']),
+                    (string) ($inv['birthday_person_name'] ?? $fiestaActual['nombre'])
+                );
+            }
+        }
+    } catch (Throwable $e) {
+        $urlInvitacion = '';
+    }
+}
 ?><!DOCTYPE html>
 <html lang="es">
 <head>
@@ -208,10 +241,20 @@ $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas
 <div class="wrap">
   <header class="head">
     <div>
-      <h1>Mensajes para el cliente</h1>
-      <p class="muted">Textos listos para copiar o mandar por WhatsApp a quien contrató la fiesta.</p>
+      <h1>Mensajes<?= $fiestaActual ? ' · ' . h($fiestaActual['nombre']) : '' ?></h1>
+      <p class="muted">
+        <?php if ($fiestaActual): ?>
+          Temática <?= h($fiestaActual['temaNombre'] !== '' ? $fiestaActual['temaNombre'] : $fiestaActual['tema']) ?>.
+          Textos listos para copiar o mandar por WhatsApp a quien contrató esta fiesta.
+        <?php else: ?>
+          Textos listos para copiar o mandar por WhatsApp a quien contrató la fiesta.
+        <?php endif; ?>
+      </p>
     </div>
     <div class="inline-form logout-btn">
+      <?php if ($fiestaActual): ?>
+        <a class="btn btn-ghost" href="index.php?action=editar&amp;slug=<?= rawurlencode($fiestaActual['slug']) ?>">Ver la fiesta</a>
+      <?php endif; ?>
       <a class="btn btn-ghost" href="marca.php">Datos de la marca</a>
       <form method="post" action="mensajes.php" class="inline-form">
         <?= admin_csrf_field() ?><input type="hidden" name="action" value="logout">
@@ -273,7 +316,8 @@ $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas
         </div>
         <div class="field">
           <label for="f-invitacion">Enlace de la invitación</label>
-          <input type="text" id="f-invitacion" placeholder="<?= h($base) ?>/nombre-token" autocomplete="off">
+          <input type="text" id="f-invitacion" value="<?= h($urlInvitacion) ?>" placeholder="<?= h($base) ?>/nombre-token" autocomplete="off">
+          <small class="muted"><?= $urlInvitacion !== '' ? 'Tomado de la invitación de esta fiesta.' : 'Esta fiesta todavía no tiene invitación creada.' ?></small>
         </div>
       </div>
     </section>
@@ -483,11 +527,10 @@ $seleccion = isset($_GET['p']) && is_string($_GET['p']) ? $_GET['p'] : ($fiestas
     });
   }
 
+  // Cambiar de fiesta recarga la página en vez de solo repintar: el enlace de la
+  // invitación se resuelve en el servidor y no está en el DOM de las otras fiestas.
   sel.addEventListener('change', function () {
-    var url = new URL(window.location.href);
-    url.searchParams.set('p', sel.value);
-    window.history.replaceState({}, '', url.toString());
-    pintar();
+    window.location.href = 'mensajes.php?p=' + encodeURIComponent(sel.value);
   });
   campos.forEach(function (el) { if (el) { el.addEventListener('input', pintar); } });
   pintar();

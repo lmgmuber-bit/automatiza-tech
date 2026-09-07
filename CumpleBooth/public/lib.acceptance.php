@@ -843,8 +843,14 @@ function cb_waive_acceptance(array $party, string $reason, string $by): array
     return ['ok' => true];
 }
 
-/** Correo simple vía mail() nativo (Hostinger compartido lo soporta). Fail-soft: nunca rompe la aceptación. */
-function cb_send_mail(string $to, string $subject, string $body): bool
+/**
+ * Correo de la aceptación. Fail-soft: nunca rompe la firma si el envío falla.
+ *
+ * `$html` es opcional: cuando viene, el correo sale con la plantilla de la marca y el texto
+ * plano queda como alternativa para los clientes que no muestran HTML. El respaldo por
+ * `mail()` nativo manda solo el texto, que es lo que ese camino sabe hacer.
+ */
+function cb_send_mail(string $to, string $subject, string $body, string $html = ''): bool
 {
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
         return false;
@@ -867,6 +873,7 @@ function cb_send_mail(string $to, string $subject, string $body): bool
                 'to' => $to,
                 'subject' => $subject,
                 'text' => $body,
+                'html' => $html,
                 'reply_to' => $replyTo !== '' && filter_var($replyTo, FILTER_VALIDATE_EMAIL) ? $replyTo : '',
             ]);
             if (!empty($envio['ok'])) {
@@ -891,33 +898,84 @@ function cb_acceptance_send_notifications(array $row, string $receiptToken): arr
     $sent = ['client' => false, 'internal' => false];
     $now = gmdate('Y-m-d H:i:s');
 
+    require_once __DIR__ . '/lib.mail-templates.php';
+
+    $aceptado = cb_chile_datetime((string) $row['accepted_at']);
+    // La fecha del evento viene en ISO desde el resumen del plan; al cliente se le muestra
+    // como se escribe en Chile.
+    if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $eventDate, $iso)) {
+        $eventDate = $iso[3] . '-' . $iso[2] . '-' . $iso[1];
+    }
+    $huella = (string) $row['evidence_sha256'];
+
+    // El texto plano se mantiene: es la alternativa del correo y lo que sale por el
+    // respaldo de mail(). El HTML es lo que ve casi todo el mundo.
     $clientBody = "Hola " . $row['signer_name'] . ",\n\n"
         . "Recibimos tu aceptación de los Términos y Condiciones, la Política de Privacidad y el Consentimiento de imagen de menores de CumpleClick.\n\n"
         . "Plan: $planName\n" . ($eventDate !== '' ? "Fecha del evento: $eventDate\n" : '')
-        . "Fecha de aceptación: " . cb_chile_datetime((string) $row['accepted_at']) . "\n"
+        . "Fecha de aceptación: $aceptado\n"
         . "Versión de los documentos: " . $row['legal_version'] . "\n"
-        . "Huella (SHA-256) del comprobante: " . $row['evidence_sha256'] . "\n\n"
+        . "Huella (SHA-256) del comprobante: $huella\n\n"
         . "Puedes descargar tu copia del comprobante firmado aquí (guárdala; el enlace es personal):\n$receiptUrl\n\n"
         . "Recuerda que la reserva queda confirmada al recibir el anticipo indicado en el Resumen del Plan.\n\n"
         . "CumpleClick · AutomatizaTech\n";
+
+    $filasCliente = cc_mail_fila('Plan', $planName)
+        . cc_mail_fila('Fecha del evento', $eventDate)
+        . cc_mail_fila('Aceptado el', $aceptado)
+        . cc_mail_fila('Versión de los documentos', (string) $row['legal_version']);
+    $contenidoCliente = '<p style="margin:0 0 16px">Hola ' . cc_mail_h((string) $row['signer_name'])
+        . ', recibimos tu aceptación de los <strong>Términos y Condiciones</strong>, la '
+        . '<strong>Política de Privacidad</strong> y el <strong>Consentimiento de imagen de menores</strong>.</p>'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 20px">'
+        . $filasCliente . '</table>'
+        . '<p style="margin:0 0 8px"><a href="' . cc_mail_h($receiptUrl) . '" '
+        . 'style="display:inline-block;background:#7C3AED;color:#ffffff;text-decoration:none;'
+        . 'padding:13px 26px;border-radius:999px;font-weight:700;font-size:15px">Descargar mi comprobante firmado</a></p>'
+        . '<p style="margin:0 0 18px;font-size:13px;color:#6B6280">Guarda este enlace: es personal y es tu copia del documento firmado.</p>'
+        . '<p style="margin:0 0 16px">La reserva queda confirmada al recibir el anticipo indicado en el Resumen del Plan.</p>'
+        // La huella va al final y en letra chica: es respaldo legal, no lo que la persona
+        // vino a leer, pero tiene que ir en el correo para que quede en su bandeja.
+        . '<p style="margin:0;font-size:11px;color:#8B85A0;word-break:break-all">'
+        . 'Huella SHA-256 del comprobante: ' . cc_mail_h($huella) . '</p>';
+
     $clientTo = (string) ($row['signer_email'] ?: $row['client_email']);
-    if (cb_send_mail($clientTo, 'CumpleClick: comprobante de aceptación de Términos', $clientBody)) {
+    if (cb_send_mail($clientTo, 'CumpleClick: comprobante de aceptación de Términos', $clientBody,
+                     cc_mail_shell('Comprobante de aceptación', $contenidoCliente))) {
         $sent['client'] = true;
         cb_pdo()->prepare('UPDATE cc_plan_acceptances SET client_mail_sent_at=? WHERE id=?')->execute([$now, (int) $row['id']]);
     }
 
-    $notify = (string) cb_config('notify_email'); // TODO-LUIS: definir correo de notificación interna en config (notify_email).
+    $notify = (string) cb_config('notify_email');
     if ($notify !== '') {
+        $urlAdmin = cb_public_base_url() . '/admin/aceptaciones.php?party=' . rawurlencode((string) $row['party_public_slug']);
         $internalBody = "Aceptación registrada en CumpleClick.\n\n"
             . "Comprobante N°: " . $row['id'] . "\nFiesta: " . $row['party_public_slug'] . " (" . $row['party_admin_label'] . ")\n"
             . "Cliente: " . $row['client_name'] . " <" . $row['client_email'] . ">\n"
             . "Firmante: " . $row['signer_name'] . " · RUT " . $row['signer_rut'] . " · " . $row['signer_email'] . "\n"
             . "Plan: $planName" . ($eventDate !== '' ? " · Evento: $eventDate" : '') . "\n"
             . "Marketing autorizado: " . (!empty($row['accepted_marketing']) ? 'SÍ' : 'NO') . "\n"
-            . "Aceptado: " . cb_chile_datetime((string) $row['accepted_at']) . " · IP " . $row['ip_address'] . "\n"
-            . "SHA-256 comprobante: " . $row['evidence_sha256'] . "\n\n"
-            . "Descarga la evidencia desde el backoffice: " . cb_public_base_url() . '/admin/aceptaciones.php?party=' . rawurlencode((string) $row['party_public_slug']) . "\n";
-        if (cb_send_mail($notify, 'CumpleClick: nueva aceptación firmada (#' . $row['id'] . ')', $internalBody)) {
+            . "Aceptado: $aceptado · IP " . $row['ip_address'] . "\n"
+            . "SHA-256 comprobante: $huella\n\n"
+            . "Descarga la evidencia desde el backoffice: $urlAdmin\n";
+
+        $filasInternas = cc_mail_fila('Comprobante N°', (string) $row['id'])
+            . cc_mail_fila('Fiesta', (string) $row['party_public_slug'] . ' (' . (string) $row['party_admin_label'] . ')')
+            . cc_mail_fila('Cliente', (string) $row['client_name'] . ' · ' . (string) $row['client_email'])
+            . cc_mail_fila('Firmante', (string) $row['signer_name'] . ' · RUT ' . (string) $row['signer_rut'])
+            . cc_mail_fila('Plan', $planName . ($eventDate !== '' ? ' · Evento: ' . $eventDate : ''))
+            . cc_mail_fila('Marketing autorizado', !empty($row['accepted_marketing']) ? 'SÍ' : 'NO')
+            . cc_mail_fila('Aceptado', $aceptado . ' · IP ' . (string) $row['ip_address']);
+        $contenidoInterno = '<p style="margin:0 0 16px">Se registró una aceptación firmada.</p>'
+            . '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 20px">'
+            . $filasInternas . '</table>'
+            . '<p style="margin:0 0 18px"><a href="' . cc_mail_h($urlAdmin) . '" '
+            . 'style="display:inline-block;background:#7C3AED;color:#ffffff;text-decoration:none;'
+            . 'padding:12px 24px;border-radius:999px;font-weight:700;font-size:15px">Ver la evidencia en el admin</a></p>'
+            . '<p style="margin:0;font-size:11px;color:#8B85A0;word-break:break-all">SHA-256: ' . cc_mail_h($huella) . '</p>';
+
+        if (cb_send_mail($notify, 'CumpleClick: nueva aceptación firmada (#' . $row['id'] . ')', $internalBody,
+                         cc_mail_shell('Nueva aceptación firmada', $contenidoInterno))) {
             $sent['internal'] = true;
             cb_pdo()->prepare('UPDATE cc_plan_acceptances SET internal_mail_sent_at=? WHERE id=?')->execute([$now, (int) $row['id']]);
         }

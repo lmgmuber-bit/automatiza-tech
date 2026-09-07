@@ -636,3 +636,31 @@ esta en esta linea de codigo: los numeros 013 y 014 chocaron entre ramas.
 nuevo y `012` fallaria por columna duplicada, dejando el proceso a medias. Lo prolijo es
 registrar esas tres versiones como ya aplicadas (un INSERT en `cc_schema_migrations`, sin tocar
 ninguna tabla de datos). Queda pendiente de decision de Luis por ser una escritura en PROD.
+
+## DESPLEGADO 2026-09-07 (tarde) — correos de Terminos con la marca y registro de migraciones
+
+**1. Los dos correos de la aceptacion salian en texto pelado.** El cliente recibia un mensaje
+sin logo, con un SHA-256 en medio; desentonaba con el resto de los correos, que ya usaban la
+plantilla de la marca. Ahora los dos van con `cc_mail_shell`: filas de datos, boton para
+descargar el comprobante firmado, y la huella al final en letra chica (es respaldo legal, no
+lo que la persona vino a leer). La fecha del evento se muestra como se escribe en Chile.
+El texto plano se mantiene como alternativa del correo y como respaldo del envio por `mail()`.
+
+| Local | PROD | Nota |
+|---|---|---|
+| `public/lib.acceptance.php` | `/lib.acceptance.php` | **CRLF**; respaldo en `.bak-20260907` |
+
+`cb_send_mail()` acepta ahora un cuarto parametro opcional con el HTML. Sin ese parametro se
+comporta igual que antes, asi que ningun otro envio cambia.
+
+**2. Registro de migraciones al dia.** Se anotaron en `cc_schema_migrations` las tres
+versiones que estaban aplicadas de hecho pero sin registrar: `012_lead_mail_tracking`,
+`013_narration_intro_output` y `014_rsvp`. El script **verifico el efecto de cada una en la
+base antes de anotarla** (columnas de `cc_leads`, el enum de `cc_invitation_outputs` y la
+tabla `cc_rsvps`): marcar como aplicada una migracion que falta seria esconder el problema.
+El registro paso de 14 a 17 versiones y quedo respaldado en
+`~/respaldo-migraciones-20260907.txt`. No se toco ninguna tabla de datos.
+
+Verificado despues del despliegue: `php -l` limpio, md5 del archivo igual al local, smoke de
+PROD 34/34, pruebas de aceptacion 46/46 y backend general 163/163, y los dos correos
+reenviados a una bandeja real con el formato nuevo.

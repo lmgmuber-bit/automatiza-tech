@@ -41,6 +41,11 @@ function cb_config(?string $key = null)
             // codificado se subirá igual y recién fallará al reproducirse en la
             // tablet. Sigue en false por defecto: hay que activarlo a sabiendas.
             'allow_video_upload_without_ffprobe' => false,
+            // Firmas y comprobantes de aceptación de Términos (privado, fuera del webroot).
+            'acceptance_dir' => $root . '/storage/acceptances',
+            // Correo interno que recibe cada aceptación firmada; vacío = no se notifica a AT.
+            'notify_email' => '',
+            'mail_from' => '',
 
             /* Correo saliente (formulario público). Vacío = no se envía nada y
                el formulario sigue funcionando igual: el lead se guarda y se ve
@@ -77,6 +82,9 @@ function cb_config(?string $key = null)
             'CC_PARTIES_JSON_PATH' => 'parties_json_path',
             'CC_RETENTION_DAYS' => 'retention_days',
             'CC_FFPROBE_PATH' => 'ffprobe_path',
+            'CC_ACCEPTANCE_DIR' => 'acceptance_dir',
+            'CC_NOTIFY_EMAIL' => 'notify_email',
+            'CC_MAIL_FROM' => 'mail_from',
             'CC_SMTP_HOST' => 'smtp_host', 'CC_SMTP_PORT' => 'smtp_port',
             'CC_SMTP_USER' => 'smtp_user', 'CC_SMTP_PASSWORD' => 'smtp_password',
             'CC_SMTP_FROM' => 'smtp_from', 'CC_SMTP_FROM_NAME' => 'smtp_from_name',

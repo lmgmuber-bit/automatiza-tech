@@ -6,6 +6,7 @@
  */
 require __DIR__ . '/../lib.php';
 require __DIR__ . '/config.php';
+require __DIR__ . '/../lib.acceptance.php';
 $adminSecureCookie = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
 session_name('cc_admin');
 session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => $adminSecureCookie, 'httponly' => true, 'samesite' => 'Strict']);
@@ -269,6 +270,22 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             }
             if (!$frameReset && $frameBox === null) {
                 $errs[] = 'La calibración del marco debe usar valores 0..1 y quedar dentro del lienzo.';
+            }
+
+            // Cierre del plan: una fiesta solo se activa con aceptación de Términos firmada
+            // (o exención explícita para demos). En modo json no hay tabla y no se bloquea.
+            if ($activa && empty($errs) && cb_storage_mode() === 'db') {
+                try {
+                    $canActivate = $isEdit && cb_party_can_activate((string) ($_POST['slug_original'] ?? ''));
+                } catch (Throwable $e) {
+                    error_log('CumpleClick acceptance gate: ' . $e->getMessage());
+                    $canActivate = false;
+                }
+                if (!$canActivate) {
+                    $errs[] = $isEdit
+                        ? 'No puedes activar esta fiesta hasta que el cliente acepte los Términos y firme (o la eximas desde "Aceptación"). Guarda como inactiva mientras tanto.'
+                        : 'Una fiesta nueva se crea inactiva: guárdala, genera el enlace de aceptación desde "Aceptación" y actívala cuando el cliente firme.';
+                }
             }
 
             $publicSlug = '';
@@ -567,7 +584,8 @@ if ($formValues === null && $action === 'editar') {
         'event_type' => 'child_birthday',
         'tema' => array_key_first($themes) ?? '',
         'fecha' => '',
-        'activa' => true,
+        // Nueva fiesta nace inactiva: se activa cuando exista aceptación de Términos.
+        'activa' => false,
         'service_plan' => 'booth',
         'gallery_enabled' => false,
         'juegos' => null,
@@ -801,6 +819,7 @@ if ($formValues === null && $action === 'editar') {
             <input type="checkbox" name="activa" <?= !empty($formValues['activa']) ? 'checked' : '' ?>>
             Fiesta activa (accesible por su URL)
           </label>
+          <p class="muted small">Solo puede activarse cuando el cliente aceptó los Términos y firmó (o la fiesta fue eximida como demo). Genera el enlace desde "Aceptación" en la tarjeta de la fiesta.</p>
 
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">Guardar</button>
@@ -1136,6 +1155,15 @@ if ($formValues === null && $action === 'editar') {
         </div>
       <?php endif; ?>
 
+      <?php
+        // Estado de aceptación por fiesta: una consulta para todo el listado.
+        try {
+            $acceptanceStates = cb_acceptance_states_by_slug();
+        } catch (Throwable $e) {
+            error_log('CumpleClick acceptance states: ' . $e->getMessage());
+            $acceptanceStates = [];
+        }
+      ?>
       <div class="party-list">
         <?php foreach ($parties as $publicSlug => $p): ?>
           <?php
@@ -1199,6 +1227,7 @@ if ($formValues === null && $action === 'editar') {
               <?php endif; ?>
               <a class="btn btn-ghost" href="<?= h($invitationsUrl) ?>"><?= admin_icon('duplicate') ?> Invitaciones</a>
               <a class="btn btn-ghost" href="mensajes.php?p=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('chat') ?> Mensajes</a>
+              <a class="btn btn-ghost" href="aceptaciones.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('check') ?> Aceptación</a>
               <?php // Solo si el módulo está realmente utilizable. Los archivos del
                     // álbum pueden estar subidos sin la migración 007 aplicada, y en
                     // ese estado este botón lleva a una página que falla al consultar.

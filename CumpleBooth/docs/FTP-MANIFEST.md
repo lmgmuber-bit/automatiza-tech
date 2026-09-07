@@ -420,3 +420,23 @@ y el script se borraron después.
 
 **Pendiente de Luis:** los tres textos legales siguen siendo borradores y llevan visible el aviso
 de que no son asesoría legal; hay que pasarlos por abogado antes de usarlos con clientes reales.
+
+## DESPLEGADO 2026-09-07 en cumpleclick.com/app — contactos de quien contrata y cobro
+
+| # | Local | PROD | Nota |
+|---|---|---|---|
+| 1 | `database/migrations/015_party_contacts_billing(.down).php` + `aplicar-015.php` | `domains/cumpleclick.com/database/` | crea `cc_party_contacts` y las 5 columnas de cobro en `cc_parties`; aditiva, ninguna fiesta cambió |
+| 2 | `dist/lib.php` | `/lib.php` | **en LF** (PROD guarda este archivo así); solo suma el `require` de la librería nueva |
+| 3 | `dist/lib.cliente.php` | `/lib.cliente.php` | nuevo: contactos y cobro |
+| 4 | `dist/admin/_style.css.php` | `/admin/_style.css.php` | grillas de contactos y cobro |
+| 5 | `dist/admin/index.php` | `/admin/index.php` | **último**: las dos secciones en la ficha de la fiesta |
+
+Verificado en PROD: las cuatro funciones nuevas responden, el admin y el kiosco siguen sirviendo.
+Probado antes en local de punta a punta con el formulario real: dos contactos (uno de ellos
+"familiar" marcado como principal) y el cobro con descuento ($99.990 − $30.000 = $69.990,
+anticipo $20.000, saldo $49.990).
+
+**Dos fallos preexistentes corregidos de paso** (los dos impedían guardar una fiesta desde el
+admin y ninguno decía por qué): el calibrador del marco rechazaba las fiestas calibradas
+arrastrando, y la validación del PIN exigía volver a escribirlo al editar una fiesta que ya
+tenía galería.

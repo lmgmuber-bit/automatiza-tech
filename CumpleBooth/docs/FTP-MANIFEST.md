@@ -599,3 +599,40 @@ Los cuatro archivos van **en CRLF**, que es como PROD los guarda; se verificó q
 uno coincidía con su base convertida a CRLF antes de subir, para no ensuciar el diff.
 `btn-label` y `frame-value` en `index.php` quedaron como están: no son estilos, son enganches
 que usa el JavaScript de la pantalla.
+
+## Revision completa antes del domingo 13 (2026-09-07)
+
+Se corrio todo lo que existe y se sumo un smoke de produccion reutilizable,
+`tests/smoke-prod.sh`, que se puede correr despues de cada despliegue.
+
+| Que se probo | Resultado |
+|---|---|
+| Pruebas backend (11 archivos) | todas pasan: 46 aceptacion, 157 album, 30 cliente, 23 comprobante, 32 perfiles, 39 fuente, 45 leads, 8 entrypoints, 28 predicciones, 163 backend general |
+| Pruebas frontend (`npm test`) | 173 de 173 |
+| `php -l` de todo lo publicado en PROD | 49 archivos, 0 con error |
+| Smoke HTTP de PROD | 34 comprobaciones, 0 fuera de lo esperado |
+| Integridad de datos en PROD | 30 revisiones; las dos fiestas activas, con PIN, banner, cabecera de correo, album abierto y enlace de aportes vigente |
+| Correo | los 6 correos del flujo enviados a una bandeja real, con sus adjuntos |
+
+**Tres comprobaciones del smoke fallaban por una expectativa mia equivocada, no por un
+defecto** (quedaron corregidas y documentadas dentro del script):
+
+- `admin/marca.php` devuelve 302 hacia el ingreso en vez de mostrarlo; no filtra nada.
+- La API de carteles corta con 401 antes de mirar el CSRF cuando no hay sesion. Es el orden
+  correcto.
+- `comprobante.php` valida la firma ANTES de mirar si la fiesta existe, asi que una fiesta
+  inventada con firma mala da 403 y no 400: no filtra que fiestas hay.
+
+### Hallazgo: el registro de migraciones de PROD no refleja la realidad
+
+`cc_schema_migrations` en PROD lista 14 versiones y **faltan tres que si estan aplicadas de
+hecho**: `012_lead_mail_tracking` (las columnas `confirmation_sent_at`, `notified_at` y
+`mail_error` estan en `cc_leads`), `013_narration_intro_output` (el enum de
+`cc_invitation_outputs` ya trae `personalized_narration_intro`) y `014_rsvp` (la tabla
+`cc_rsvps` existe). Ademas PROD tiene `014_salas_ayudantes`, que viene de la otra rama y no
+esta en esta linea de codigo: los numeros 013 y 014 chocaron entre ramas.
+
+**Hoy no rompe nada.** El riesgo es a futuro: un runner de migraciones intentaria aplicarlas de
+nuevo y `012` fallaria por columna duplicada, dejando el proceso a medias. Lo prolijo es
+registrar esas tres versiones como ya aplicadas (un INSERT en `cc_schema_migrations`, sin tocar
+ninguna tabla de datos). Queda pendiente de decision de Luis por ser una escritura en PROD.

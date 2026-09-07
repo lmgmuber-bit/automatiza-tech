@@ -516,3 +516,18 @@ La pantalla de carteles ahora avisa **cuándo se emitió el enlace de aportes ac
 queda su huella, así que solo se puede saber la fecha) y, al generar uno nuevo, muestra el enlace
 con botones de **copiar** y **enviar por WhatsApp**: el mismo que lleva el QR, para quien no esté
 en la fiesta.
+
+### La URL escrita bajo el QR y la medida «media carta» (2026-09-07)
+
+Cada cartel lleva ahora **la dirección completa impresa dentro del recuadro blanco, bajo el QR**:
+si la cámara no toma el código, o el celular es viejo, se puede tipear. Va adentro del recuadro a
+propósito, para que quede en tinta oscura sobre blanco también en el estilo de fondo completo.
+
+Se agregó el tamaño **Media carta · 14 × 21,6 cm**, que es el de los porta menú de acrílico
+comunes. **No es A5**: son 8 mm más angosta y 6 mm más alta, así que imprimir un A5 en ese soporte
+deja el papel sobrando por los lados.
+
+`scripts/carteles-prod-pdf.mjs` arma el PDF de una fiesta real con los enlaces de producción sin
+tener que emitir otro token del Álbum: levanta la misma pantalla del admin e intercepta la
+respuesta de la API para reemplazar la lista de carteles. Se usa cuando el enlace de aportes ya
+está vivo y compartido, porque volver a generarlo lo revocaría.

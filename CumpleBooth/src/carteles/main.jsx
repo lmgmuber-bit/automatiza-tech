@@ -17,6 +17,9 @@ const BASE = import.meta.env.BASE_URL
 // cuando Luis confirme los soportes que compre, se agregan las suyas a esta lista.
 const TAMANOS = [
   { id: 'a5', nombre: 'A5 · 14,8 × 21 cm', ancho: 148, alto: 210 },
+  // Media carta = media hoja carta (5,5 × 8,5 pulgadas). Es la medida de los porta menú
+  // de acrílico más comunes, y NO es A5: son 8 mm más angosta y 6 mm más alta.
+  { id: 'media-carta', nombre: 'Media carta · 14 × 21,6 cm (porta menú)', ancho: 140, alto: 216 },
   { id: 'a6', nombre: 'A6 · 10,5 × 14,8 cm', ancho: 105, alto: 148 },
   { id: '10x15', nombre: 'Foto 10 × 15 cm', ancho: 100, alto: 150 },
   { id: '13x18', nombre: 'Foto 13 × 18 cm', ancho: 130, alto: 180 },
@@ -85,6 +88,9 @@ function Cartel({ cartel, fiesta, tema, marca, pin, tamano, estilo: estiloId }) 
             {dataUrl && <img src={dataUrl} alt={`Código QR: ${cartel.titulo}`} />}
             {error && <p className="cartel__error">No se pudo generar el código. Recarga la página.</p>}
             {!dataUrl && !error && <p className="cartel__espera">Generando el código…</p>}
+            {/* La dirección escrita, dentro del recuadro blanco: si la cámara no toma el
+                código, o el celular es viejo, se puede tipear. */}
+            <p className="cartel__url">{cartel.url}</p>
           </div>
 
           <p className="cartel__instruccion">Apunta la cámara de tu celular al código</p>

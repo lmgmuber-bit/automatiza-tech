@@ -6,7 +6,7 @@
 //
 // Se imprime desde el navegador (no se genera PDF): `@page size` toma la medida elegida y
 // cada cartel ocupa una hoja exacta, para que salga a escala real dentro del acrílico.
-import { StrictMode, useEffect, useMemo, useState } from 'react'
+import { Fragment, StrictMode, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import QRCode from 'qrcode'
 import './carteles.css'
@@ -56,6 +56,30 @@ function useQr(url) {
   return { dataUrl, error }
 }
 
+/**
+ * Parte la dirección para que el renglón corte donde la dirección tiene una junta —después
+ * de una barra, un signo de pregunta o un guion— y no a mitad de palabra, que es lo que hacía
+ * `word-break: break-all` (dejaba cosas como «...galeri / a.php»).
+ *
+ * Se hace con `<wbr>`, que es una sugerencia: el navegador corta ahí si le sirve y si no,
+ * sigue de largo. El CSS acompaña con `overflow-wrap: break-word`, así una dirección sin
+ * ninguna junta —un slug larguísimo de una palabra— se parte igual en vez de desbordar.
+ */
+function urlConCortes(url) {
+  const texto = String(url || '')
+  const trozos = []
+  let actual = ''
+  for (const caracter of texto) {
+    actual += caracter
+    // El separador se queda al final del renglón, como se leen las direcciones escritas.
+    if ('/?&=-_'.includes(caracter)) { trozos.push(actual); actual = '' }
+  }
+  if (actual !== '') { trozos.push(actual) }
+  return trozos.map((t, i) => (
+    <Fragment key={i}>{t}{i < trozos.length - 1 && <wbr />}</Fragment>
+  ))
+}
+
 function Cartel({ cartel, fiesta, tema, marca, pin, tamano, estilo: estiloId }) {
   const { dataUrl, error } = useQr(cartel.url)
   const colores = tema.colors || {}
@@ -90,7 +114,7 @@ function Cartel({ cartel, fiesta, tema, marca, pin, tamano, estilo: estiloId }) 
             {!dataUrl && !error && <p className="cartel__espera">Generando el código…</p>}
             {/* La dirección escrita, dentro del recuadro blanco: si la cámara no toma el
                 código, o el celular es viejo, se puede tipear. */}
-            <p className="cartel__url">{cartel.url}</p>
+            <p className="cartel__url">{urlConCortes(cartel.url)}</p>
           </div>
 
           <p className="cartel__instruccion">Apunta la cámara de tu celular al código</p>
@@ -109,7 +133,19 @@ function Cartel({ cartel, fiesta, tema, marca, pin, tamano, estilo: estiloId }) 
           <img className="cartel__logo" src={`${BASE}brand/cumpleclick-mark.svg`} alt="" />
           <span className="cartel__marca">{(marca && marca.nombre) || 'CumpleClick'}</span>
           {marca && marca.web && <span className="cartel__web">{marca.web}</span>}
-          {marca && marca.instagram && <span className="cartel__web">{marca.instagram}</span>}
+          {/* El glifo va con el arroba: suelto, "@cumpleclick" se lee como un correo. Es
+              stroke con currentColor para que siga al texto en los dos estilos de cartel. */}
+          {marca && marca.instagram && (
+            <span className="cartel__web cartel__ig">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                   strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                <rect x="2" y="2" width="20" height="20" rx="5" />
+                <circle cx="12" cy="12" r="4" />
+                <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none" />
+              </svg>
+              {marca.instagram}
+            </span>
+          )}
         </footer>
       </div>
     </article>
@@ -322,9 +358,32 @@ function App() {
           </div>
         )}
 
+        {/* Los tres ajustes que arruinan la impresión si quedan como vienen: el encabezado
+            con la fecha y la URL, el margen que encoge el cartel, y los gráficos de fondo
+            apagados (sin eso el cartel sale en blanco, sin la temática). Van acá y no en un
+            instructivo aparte porque es justo donde se olvidan. */}
+        <div className="panel__impresion">
+          <p className="panel__impresion-tit">Antes de imprimir o guardar en PDF</p>
+          <ul className="panel__impresion-lista">
+            <li><b>Destino:</b> Guardar como PDF <span>— «Microsoft Print to PDF» no sirve: es una
+              impresora y obliga a papel A4, por eso sobra hoja</span></li>
+            <li><b>Márgenes:</b> Ninguno</li>
+            <li><b>Gráficos de fondo:</b> activado <span>— si no, el cartel sale sin el fondo de la temática</span></li>
+            <li><b>Encabezados y pies de página:</b> desactivado <span>— quita la fecha y la dirección web</span></li>
+          </ul>
+          <p className="panel__impresion-pie">
+            Con esto el archivo sale de <b>{tamano.ancho} × {tamano.alto} mm</b> exactos y no hay
+            que recortar nada. Si tu impresora no deja elegir ese tamaño, usa papel <b>carta</b>:
+            media carta es la mitad justa, así que el corte es recto por el medio.
+          </p>
+        </div>
+
         <div className="panel__acciones">
           <button type="button" className="boton" onClick={() => window.print()}>
             Imprimir {visibles.length === 1 ? 'el cartel' : `los ${visibles.length} carteles`}
+          </button>
+          <button type="button" className="boton boton--claro" onClick={() => window.print()}>
+            Guardar en PDF
           </button>
           <a className="boton boton--claro" href={`${BASE}admin/index.php`}>Volver al admin</a>
         </div>

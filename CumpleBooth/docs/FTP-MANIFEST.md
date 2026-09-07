@@ -889,3 +889,252 @@ recuperacion pedido desde la pantalla real y enviado**, y **un correo de prueba 
 verdad** con su copia oculta saliendo en el sobre y sin que la direccion aparezca en el mensaje.
 Pruebas: `tests/backend/admin-password.php` (26 comprobaciones nuevas) mas las suites de
 cliente, comprobante, backend general, leads y aceptacion. Smoke 33/33.
+
+## DESPLEGADO 2026-09-07 (cierre) — pantalla de Finanzas y logo de Instagram en los carteles
+
+### Finanzas: inversion contra ingresos, con graficos
+
+Luis pidio "un tema de finanzas inversion + ingresos con estadisticas y graficos para saber
+cuanto invierto y cuanto me ingresa". La decision de diseno que importa es **que NO se guarda**:
+el cobro de cada fiesta ya vive en `cc_parties` y **no se copia** a la tabla nueva. La pantalla
+lo lee con el mismo `cb_party_billing()` que arma el comprobante, asi que finanzas y la boleta
+del cliente no pueden mostrar numeros distintos. En `cc_finanzas` va solo lo que la aplicacion
+no puede saber sola: impresora, papel, imanes, publicidad.
+
+Lo regalado se cuenta aparte y **no como ingreso cero**: una fiesta de marcha blanca al 100% es
+plata que se decidio no cobrar, y verla sumada es lo que avisa si la marcha blanca se estira.
+
+| Archivo local | Destino en PROD | Tipo |
+|---|---|---|
+| `public/lib.finanzas.php` | `app/lib.finanzas.php` | OBLIGATORIO (nuevo) |
+| `public/admin/finanzas.php` | `app/admin/finanzas.php` | OBLIGATORIO (nuevo) |
+| `public/admin/index.php` | `app/admin/index.php` | OBLIGATORIO (**CRLF**, solo la pestana) |
+| `public/admin/planes.php` | `app/admin/planes.php` | OBLIGATORIO (**CRLF**, solo la pestana) |
+| `public/admin/ajustes.php` | `app/admin/ajustes.php` | OBLIGATORIO (**CRLF**, solo la pestana) |
+| `public/admin/comprobante.php` | `app/admin/comprobante.php` | OBLIGATORIO (**CRLF**, solo la pestana) |
+| `public/admin/mensajes.php` | `app/admin/mensajes.php` | OBLIGATORIO (**CRLF**, solo la pestana) |
+| `public/admin/aceptaciones.php` | `app/admin/aceptaciones.php` | OBLIGATORIO (**CRLF**, solo la pestana) |
+| `database/migrations/017_finanzas.php` | — | Se aplico con runner puntual, borrado despues |
+
+**La tabla de migraciones en PROD se llama `cc_schema_migrations`, no `cc_migrations`.** El
+runner fallaba en silencio hasta correrlo con `-d display_errors=1`: en el PHP CLI del host los
+errores no salen por defecto. Anotarlo aca ahorra el mismo rato la proxima vez.
+
+Aplicada y registrada: **19 versiones**. Verificado en PROD contra la base real (no solo por
+HTTP): `cb_finanzas_resumen()` devuelve las tres fiestas con precio cargado, los ingresos
+cuadran con la suma de sus partes y el resultado cuadra con ingresado menos invertido.
+`tests/backend/finanzas.php`: 26 comprobaciones. Los otros tests siguen verdes (comprobante 23,
+cliente 46, admin 26).
+
+**Bug que solo aparecio al probar contra PROD:** `lib.finanzas.php` no requeria `lib.php`, asi
+que funcionaba desde el admin (que ya lo carga) y reventaba desde cualquier script. La prueba
+por HTTP no lo habria encontrado nunca, porque sin sesion solo se ve el login.
+
+### El Instagram del pie de los carteles, con su logo
+
+En el pie de cada cartel el handle salia como texto suelto y se leia como un correo. Ahora lleva
+el glifo de la camara al lado, dibujado con `currentColor` para que siga al texto en los dos
+estilos (blanco sobre el fondo en "marco de agua", gris en "cabecera") y dimensionado en `em`,
+no en pixeles, porque el mismo pie se imprime en A6 y en A4.
+
+| Archivo local | Destino en PROD | Tipo |
+|---|---|---|
+| `dist/assets/carteles-DPB3tLmo.js` | `app/assets/carteles-DPB3tLmo.js` | OBLIGATORIO (hash nuevo) |
+| `dist/assets/carteles-DhQkSTt2.css` | `app/assets/carteles-DhQkSTt2.css` | OBLIGATORIO (hash nuevo) |
+| `dist/carteles.html` | `app/carteles.html` | OBLIGATORIO (apunta a los hashes nuevos) |
+
+Los bundles viejos (`carteles-CMXBjjcX.js`, `carteles-CM2zCFlK.css`) quedaron en el servidor y
+se pueden borrar. Verificado por HTTP: los tres responden 200 y el bundle trae `cartel__ig`.
+
+### Catalogo: el recuerdo imantado entra al Plan Premium
+
+`data/planes.json` en PROD se bajo primero y estaba **identico** al del repo (Luis no lo habia
+editado desde el admin). Se agrego una sola linea al Plan Premium, en tercer lugar de la lista
+porque es lo unico fisico del plan y tiene que leerse antes de que dejen de mirar:
+`Foto impresa con iman para el refri: una por invitado (hasta 25)`. Precios sin tocar.
+Respaldo en el scratchpad. Verificado en el sitio publico.
+
+## DESPLEGADO 2026-09-07 (noche) — dos juegos por fiesta, menu y tabla de posiciones
+
+Sesion larga. Lo que sigue es el estado real de PROD al cerrar, con lo que hay que saber para
+retomar sin romper nada.
+
+### Regla que manda sobre todo lo demas: las URL impresas no se tocan
+
+Luis ya imprimio los carteles QR de las dos fiestas del 13-sep. Un QR impreso no se puede
+corregir el dia de la fiesta, asi que **ninguna direccion existente puede cambiar**. El
+procedimiento que se uso y conviene repetir:
+
+1. `scratchpad/urls-criticas.py antes` guarda el estado HTTP de las 10 direcciones que estan
+   impresas o en uso.
+2. Se hace el cambio.
+3. `urls-criticas.py despues` compara y avisa si alguna cambio de estado.
+
+Se corrio en cada paso de esta sesion. **Ninguna URL cambio nunca.**
+
+### El menu de juegos: misma URL, contenido nuevo
+
+`app/juego/?p=<slug>` antes abria el juego directamente. Ahora abre un **menu**, y el juego
+que estaba ahi paso a llamarse `mundo.html` **en la misma carpeta**. Renombrar el HTML y no
+mover la carpeta fue deliberado: asi todas sus rutas relativas siguen resolviendo igual.
+
+- `app/juego/?p=<slug>` -> menu (index.html nuevo)
+- `app/juego/mundo.html` -> el juego de siempre, solo renombrada la entrada
+- `app/juego/festival/` -> "El Festival de las Estrellas" (de Codex)
+
+**Que juegos aparecen depende de la tematica**, y lo decide el servidor en `puntajes.php`. En
+un cumpleanos de superheroes no puede ofrecerse un mundo de nieve. Hoy: `hielo` tiene dos
+juegos, `spidey` y `heroes` tienen uno, y las otras siete tematicas ninguno.
+
+**Ojo con los nombres, que confunden:** la tematica de fiesta `spidey` usa el tema `heroes`
+del motor del juego (el mapeo esta en `juego/game/temas/index.js` linea 20). Por eso los
+recursos aracnidos viven en `juego/temas/heroes/`. Pero en el admin `heroes` es OTRA tematica
+distinta, la de "Mision 3D". No son lo mismo y confundirlas lleva a construir sobre la
+tematica equivocada.
+
+### El Festival de las Estrellas (juego de Codex) — tematica hielo/Frozen
+
+Origen: `C:\wamp64\www\tucumple-codex\`, rama `codex/festival-estrellas`, commit `0b68f50`.
+**El original quedo intacto**; se trabajo sobre una copia. Se subieron solo los 58 archivos
+que su `docs/ENTREGA.md` marca como obligatorios (19,44 MB). Nada de `.git/`, `docs/`,
+`tests/`, `README.md` ni `AGENTS.md`: verificado por HTTP que dan 403/404.
+
+`models/heroina.glb` conserva su SHA-256 aprobado
+(`59fa55ef55bb36e3dc40da5c9a565b9e5eb5fe0d5b7cc81518e1e1a094c4a549`).
+
+**El servidor no conocia la extension `.mjs`.** No esta en `/etc/mime.types` ni en la
+configuracion de Apache, y no habia ningun `.mjs` servido en todo el dominio. Sin declararlo,
+los once modulos del juego se sirven con un tipo que el navegador rechaza al importarlos y la
+pantalla queda negra **sin ningun error visible**. Se resolvio con un `.htaccess` propio en
+`festival/`, aditivo, que solo agrega `AddType text/javascript .mjs` y politica de cache. El
+del padre (`juego/`) no se toco: ya corta el catch-all del kiosco y declara `.glb`, `.wasm` y
+`.js`.
+
+Cambios hechos al codigo de Codex — los tres que pedia el encargo, mas dos correcciones que
+salieron de la prueba de Luis en tablet:
+
+| Que | Donde | Por que |
+|---|---|---|
+| Guardado por fiesta | `src/persistencia.mjs` | la clave era unica, asi que dos cumpleanos en la misma tablet se pisaban los datos. Ahora `cumpleclick-festival-v1:<slug>`; sin `?p=` cae en la clave vieja para no perder una partida abierta antes del cambio |
+| Hook de pruebas cerrado | `src/main.mjs` | `window.__juego` exponia `forzar()`, que inyecta controles: un mando invisible al alcance de cualquiera que abriera la consola durante la fiesta. Ahora solo aparece con `?debug=1` |
+| **Voz de Alice sobre el sintetizador** | `src/main.mjs`, 3 llamadas | decia `audio.localVoice ? null : T.instruccionAudio[...]`, o sea "si la tablet tiene voz espanola, usa esa en vez de la grabacion". Estaba invertido: ganaba el sintetizador del sistema y Alice nunca sonaba. **Las 9 grabaciones que trae el Festival SI son de Alice** (md5 identico a las del juego de hielo); el problema nunca fue el archivo sino cual elegia reproducir |
+| Letras del HUD | `estilo.css`, bloque al final | de 26 a 70 px encima del mundo 3D tapaban justo lo que hay que mirar. Bajadas con `clamp` contra `vmin`. En un caso hubo que igualar especificidad (`#hud #jugador`) porque `#hud strong` ganaba; se hizo **sin `!important`** |
+
+El bloque de CSS va **al final y comentado**, para poder distinguir que se cambio despues de
+la entrega de Codex.
+
+### Posiciones de la fiesta (migracion 018)
+
+`cc_puntajes` (fiesta, juego, jugador, puntaje, fecha). **Guarda cada intento**, no el mejor:
+el mejor se calcula al leer, y asi ademas se puede mostrar cuantas veces jugo cada nino.
+
+La decision de fondo esta probada en `tests/backend/puntajes.php` para que nadie la
+"simplifique" mas adelante: **los puntajes de dos juegos no se suman**. Un juego reparte miles
+de puntos por nivel y el otro decenas por turno; sumandolos, el de numeros grandes decide la
+fiesta entera y el otro no influye. Medido con datos reales en PROD: sumando, Sofia le sacaba
+**4.617** a Matias; con medallas la diferencia quedo en **1 punto**.
+
+Por eso cada juego reparte su propio podio y la tabla general cuenta **medallas** (3/2/1).
+Dentro de cada juego se compara el **mejor intento**, no la suma: con la suma gana el que se
+queda pegado a la tablet toda la tarde, no el que juega bien.
+
+Los nombres se unifican con `MB_CASE_TITLE`, porque "lucho", "Lucho " y "LUCHO" son el mismo
+nino y sin eso la tabla se llena de duplicados justo cuando mas se mira.
+
+`puntajes.php` **no lleva autenticacion, y es a proposito**: lo llama un juego que corre en la
+tablet de la fiesta, sin sesion de admin ni PIN. Una credencial ahi tendria que viajar en el
+JavaScript del juego, donde cualquiera la lee, y no protegeria nada. Lo que si se hace es
+acotar el dano: solo fiestas y juegos que existen, nombre saneado, puntaje acotado y limite
+de peticiones por direccion. El peor caso real es que alguien con el QR del cartel meta
+puntajes falsos en un cumpleanos: molesto, sin consecuencias, y se arregla borrando filas.
+
+### Los juegos reportan
+
+Ambos anotan con `sendBeacon` y no con `fetch`: un turno termina justo cuando la pantalla
+cambia y el nino le pasa la tablet al siguiente, y ahi un envio normal se cancela a mitad de
+vuelo. El beacon lo entrega el navegador aunque la pagina ya se haya ido.
+
+- **Festival** (`src/posiciones.mjs`): anota a cada nino **apenas termina su turno**, no al
+  final de la fiesta. Si la tablet se apaga o el cumpleanos se corta antes de la ceremonia, lo
+  ya jugado no se pierde. El ultimo jugador se anota en `ceremony()`, que es el unico que no
+  pasa por el cambio de turno; mandarlos a todos ahi inflaria su contador de partidas.
+- **mundo.html** (`game/posiciones.js`): es una aventura de un jugador, no por turnos, y no
+  lleva puntos sino objetivos. El puntaje sale del progreso guardado (copos x10, criaturas
+  x40, cascada y tormenta x60, extra por completarla). Recien empezado da 0; completa, 540.
+
+**Cual juego es se lo dice el menu** con `&juego=`, no lo adivina el juego: el motor solo
+conoce su tema, y `spidey` y `heroes` comparten mundo pero son juegos distintos en la tabla.
+
+Nada de esto puede arruinar una partida: si no hay red o el servidor no responde, se pierde
+ese puntaje y el juego sigue igual.
+
+### Girar el aparato y pantalla completa
+
+`juego/orientacion.js` mas `orientacion.css`, compartidos por los dos juegos. Es un script
+clasico y no un modulo porque los dos juegos tienen sistemas de modulos distintos.
+
+**El CSS va en archivo aparte** porque el Festival declara `style-src 'self'` en su CSP: un
+`<style>` inyectado desde el script queda bloqueado como estilo en linea y el aviso se veria
+sin ningun formato.
+
+Detecta el aparato con `pointer: coarse` (el puntero principal es un dedo) y no preguntando
+"hay tactil": un notebook con pantalla tactil respondia que si y recibia un aviso que no le
+corresponde, porque ahi uno agranda la ventana, no gira el monitor. Celular contra tablet lo
+decide el lado corto de `screen` (menos de 500 = celular), no el de la ventana, que cambia al
+girar y clasificaria al mismo aparato de dos formas.
+
+Celular -> "Gira el celular". Tablet -> "Gira la tablet". Computador -> no se muestra nada.
+
+**Pantalla completa:** el navegador no deja entrar por su cuenta. `requestFullscreen()` exige
+un gesto de la persona y **girar el aparato no cuenta como gesto**. Por eso se engancha al
+primer toque despues de girar: como para jugar hay que tocar la pantalla igual, en la practica
+sale automatico. Ademas intenta fijar la orientacion en horizontal (Android lo permite; iOS lo
+ignora sin romper nada).
+
+### Boton para enviar el comprobante desde la ficha
+
+En `admin/index.php`, al pie de la seccion Cobro. El envio sigue viviendo en
+`admin/comprobante.php` —un solo lugar que manda correos— pero antes de llevar alla se dice
+que falta: sin contactos con correo, sin precio, o con descuento sin motivo escrito. Enterarse
+en la otra pantalla obligaba a volver.
+
+### Lista de subida
+
+| Archivo local | Destino en PROD | Tipo |
+|---|---|---|
+| `database/migrations/018_puntajes.php` | — | aplicado con runner puntual, borrado despues |
+| `public/lib.puntajes.php` | `app/lib.puntajes.php` | OBLIGATORIO (nuevo) |
+| `public/puntajes.php` | `app/puntajes.php` | OBLIGATORIO (nuevo) |
+| `scratchpad/menu/index.html` | `app/juego/index.html` | OBLIGATORIO (reemplaza el juego, que paso a `mundo.html`) |
+| `scratchpad/orientacion/orientacion.js` | `app/juego/orientacion.js` | OBLIGATORIO (nuevo) |
+| `scratchpad/orientacion/orientacion.css` | `app/juego/orientacion.css` | OBLIGATORIO (nuevo) |
+| `scratchpad/festival/` (58 archivos) | `app/juego/festival/` | OBLIGATORIO (19,44 MB) |
+| `scratchpad/festival/.htaccess` | `app/juego/festival/.htaccess` | OBLIGATORIO — sin esto el juego no arranca |
+| `scratchpad/game-posiciones/posiciones.js` | `app/juego/game/posiciones.js` | OBLIGATORIO (nuevo) |
+| `main.js` parcheado | `app/juego/game/main.js` | OBLIGATORIO |
+| `public/admin/index.php` | `app/admin/index.php` | OBLIGATORIO (**CRLF**) |
+| `public/admin/_style.css.php` | `app/admin/_style.css.php` | OBLIGATORIO (**CRLF**) |
+| `dist/carteles.html` y sus dos assets | `app/` y `app/assets/` | OBLIGATORIO (los hashes cambian en cada build) |
+
+`mundo.html` se creo copiando `index.html` **en el servidor** con `cp -p`, no subiendolo: asi
+el archivo queda identico bit a bit al que ya funcionaba.
+
+### Respaldo y rollback
+
+`~/respaldos/juego-antes-festival-20260907.tar.gz` (30 MB, 195 archivos, verificado que se
+puede leer) mas una copia local en el scratchpad. Revertir es descomprimir ese tar y borrar
+`festival/`.
+
+### Lo que NO esta probado
+
+- **El Festival nunca ha corrido en la tablet fisica.** Sus 45 fps no estan certificados; su
+  propia documentacion registra caidas y hasta 179 draw calls contra un presupuesto de 150.
+- No hay partida real de 12 participantes; la automatizacion de Codex cubre 8.
+- El aviso de girar se verifico emulando celular y computador. **El caso tablet con tactil no
+  se pudo emular** y se valido por logica contra medidas de aparatos reales.
+- La tabla de posiciones se probo con datos inyectados, no con ninos jugando de verdad.
+
+### Estado de la base al cerrar
+
+20 migraciones aplicadas. `cc_puntajes` y `cc_finanzas` existen y estan **vacias**: los datos
+de prueba se borraron al terminar.

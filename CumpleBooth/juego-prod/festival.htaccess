@@ -1,0 +1,26 @@
+# "El Festival de las Estrellas" — juego 3D autónomo (carpeta /app/juego/festival/).
+#
+# Este archivo es ADITIVO: la carpeta padre (/app/juego/) ya trae la regla que corta el
+# catch-all del kiosco —sin ella, pedir un módulo que no existe devolvería el index.html
+# con status 200 y el navegador fallaría sin decir por qué— y ya declara .glb, .wasm y .js.
+# Acá solo se agrega lo que este juego necesita y el padre no tiene.
+
+<IfModule mod_mime.c>
+  # El servidor NO conoce .mjs: no está en /etc/mime.types ni en la configuración de Apache.
+  # Sin esta línea los once módulos de este juego se sirven con un tipo que el navegador
+  # rechaza al importarlos, y la pantalla queda negra sin error visible. Es la razón por la
+  # que este archivo existe.
+  AddType text/javascript .mjs
+</IfModule>
+
+<IfModule mod_headers.c>
+  # Los archivos de este juego no llevan hash en el nombre, así que no pueden quedar
+  # cacheados "para siempre": una corrección nunca llegaría a la tablet. El código se
+  # revalida en cada carga; los modelos, texturas y audio (pesados y estables) duran un día.
+  <FilesMatch "\.(html|mjs|js|css|json)$">
+    Header always set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+  <FilesMatch "\.(glb|jpg|png|mp3|wasm)$">
+    Header always set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+</IfModule>

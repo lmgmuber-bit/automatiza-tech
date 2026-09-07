@@ -271,6 +271,20 @@ input[type="number"].frame-value {
   background: #fff; color: var(--text); max-width: 380px;
 }
 .cobro-plan small { font-weight: 400; font-size: .8rem; color: var(--text-muted); }
+/* Bloque para mandarle el comprobante al papa, al pie del cobro. Va separado por una linea
+   arriba porque es una accion que sale de la ficha, no un campo mas del formulario. */
+.cobro-envio {
+  margin: 16px 0 0; padding: 14px 0 0; border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+}
+.cobro-envio p { margin: 0; }
+.cobro-envio .btn { align-self: flex-start; }
+.cobro-envio__faltan {
+  margin: 0; padding-left: 18px; font-size: .86rem; color: var(--text-muted);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.cobro-envio__faltan li { line-height: 1.4; }
+
 .cobro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px 14px; }
 .cobro-grid label { display: flex; flex-direction: column; gap: 5px; font-weight: 700; font-size: .9rem; }
 .cobro-grid input {

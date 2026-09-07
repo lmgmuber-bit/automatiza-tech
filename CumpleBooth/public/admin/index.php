@@ -146,6 +146,7 @@ function admin_icon(string $name): string
         'edit' => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
         'trash' => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
         'copy' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+        'chart' => '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-4M12 16V8M17 16v-6"/>',
         'external' => '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>',
         'chat' => '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
         'duplicate' => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V4a2 2 0 0 1 2-2h8"/></svg>',
@@ -717,6 +718,7 @@ if ($formValues === null && $action === 'editar') {
     <a class="tab" href="mensajes.php"><?= admin_icon('party') ?> Mensajes</a>
     <a class="tab" href="comprobante.php"><?= admin_icon('copy') ?> Comprobante</a>
     <a class="tab" href="planes.php"><?= admin_icon('copy') ?> Planes</a>
+    <a class="tab" href="finanzas.php"><?= admin_icon('chart') ?> Finanzas</a>
   </nav>
 
   <main>
@@ -949,6 +951,49 @@ if ($formValues === null && $action === 'editar') {
               <p class="muted small">Total con descuento: <strong><?= h(cb_format_clp((int) $formValues['cobro']['total'])) ?></strong>
                 · Saldo: <strong><?= h(cb_format_clp((int) $formValues['cobro']['balance'])) ?></strong></p>
             <?php endif; ?>
+
+            <?php
+            /* Mandar el comprobante desde acá, que es donde se acaban de cargar los contactos.
+               El envío en sí sigue viviendo en `comprobante.php` —un solo lugar que manda
+               correos— pero antes de llevarlo allá se dice si falta algo, porque descubrirlo
+               en la otra pantalla obliga a volver. Solo aparece en fiestas ya guardadas. */
+            $slugFicha = ($formValues['modo'] ?? '') === 'editar'
+                ? (string) ($formValues['public_slug'] ?? '') : '';
+            if ($slugFicha !== '') {
+                $cobroActual = cb_party_billing($slugFicha);
+                $correosPapas = cb_party_contact_emails($slugFicha);
+                $pendientes = [];
+                if (!$correosPapas) {
+                    $pendientes[] = 'falta cargar un contacto con correo, acá arriba';
+                }
+                if ($cobroActual['price_total'] === null) {
+                    $pendientes[] = 'falta el precio del servicio';
+                }
+                if ((int) $cobroActual['discount_amount'] > 0 && (string) $cobroActual['discount_label'] === '') {
+                    // Un 100% sin explicación en una boleta se ve mal y genera la pregunta.
+                    $pendientes[] = 'el descuento no tiene motivo escrito: en la boleta sale desnudo';
+                }
+            ?>
+            <div class="cobro-envio">
+              <?php if (!$pendientes): ?>
+                <p class="muted small">
+                  Todo listo: <?= count($correosPapas) ?> correo<?= count($correosPapas) === 1 ? '' : 's' ?>
+                  en la ficha y el comprobante armado.
+                </p>
+                <a class="btn btn-primary" href="comprobante.php?p=<?= h(urlencode($slugFicha)) ?>">
+                  <?= admin_icon('chat') ?> Enviar el comprobante por correo
+                </a>
+              <?php else: ?>
+                <p class="muted small"><strong>Para enviarle el comprobante al papá falta:</strong></p>
+                <ul class="cobro-envio__faltan">
+                  <?php foreach ($pendientes as $p): ?><li><?= h($p) ?></li><?php endforeach; ?>
+                </ul>
+                <a class="btn btn-ghost" href="comprobante.php?p=<?= h(urlencode($slugFicha)) ?>">
+                  Ver el comprobante igual
+                </a>
+              <?php endif; ?>
+            </div>
+            <?php } ?>
           </fieldset>
           <script>
             // Elegir un plan solo COPIA su precio al campo: lo que se guarda es el número,

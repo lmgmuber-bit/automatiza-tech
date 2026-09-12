@@ -512,6 +512,8 @@ function BoothApp() {
   const [personaje, setPersonaje] = useState(null)
   // Modo Asomate: el elenco elegido y una foto por nino, en el mismo orden.
   const [trasInvitados, setTrasInvitados] = useState('spinner')
+  // La foto grupal: una sola captura, sin ajustes ni dueño.
+  const [grupalFoto, setGrupalFoto] = useState(null)
   const [asomateElenco, setAsomateElenco] = useState([])
   const [asomateFotos, setAsomateFotos] = useState([])
   // La escena de Asomate recompuesta para el diploma. Se arma al guardar, con los recursos
@@ -672,6 +674,14 @@ function BoothApp() {
             startMusic()
             setTrasInvitados('spinner')
             go(isBabyShower ? 'prediccion' : 'invitados')
+          }}
+          onGrupal={() => {
+            // Sin lista de invitados y sin detector de caras: la foto es de todos y el
+            // detector son 9 MB para encontrar UNA cara.
+            startMusic()
+            setInvitado('')
+            setGrupalFoto(null)
+            go('grupal-capturar')
           }}
           onAsomate={() => {
             // Empieza a cargar el detector de caras ahora (9 MB, una vez por carga del kiosco).
@@ -850,10 +860,26 @@ function BoothApp() {
           onSave={(compuesta, heroe) => { setResult(compuesta); setAsomateHeroe(heroe); go('qr') }}
         />
       )}
+      {screen === 'grupal-capturar' && (
+        <Capture
+          onCapture={(dataUrl) => {
+            setGrupalFoto(dataUrl)
+            go('grupal-preview')
+          }}
+        />
+      )}
+      {screen === 'grupal-preview' && grupalFoto && (
+        <GrupalPreview
+          foto={grupalFoto}
+          onRetry={() => { setGrupalFoto(null); go('grupal-capturar') }}
+          onSave={(compuesta) => { setResult(compuesta); go('qr') }}
+        />
+      )}
       {screen === 'qr' && (
         <QRScreen
           imageDataUrl={result}
           invitado={invitado}
+          archivarComo={grupalFoto ? 'grupal-' + (nombreEvento() || 'fiesta') : null}
           isBabyShower={isBabyShower}
           onDiploma={() => go('diploma')}
           onDone={() => go('farewell')}
@@ -1925,6 +1951,61 @@ function AsomateElegir({ onDone, onCancel }) {
 }
 
 /** Compone, deja ajustar cada cara en su hueco y guarda. */
+/**
+ * Vista previa de la foto de todos.
+ *
+ * Mucho mas simple que la de Asomate y a proposito: una foto, sin mandos. En Asomate los
+ * mandos existen porque la cara tiene que caer dentro de un hueco de pocos pixeles; aca la
+ * foto llena un rectangulo grande y moverla solo sirve para empeorarla.
+ */
+function GrupalPreview({ foto, onRetry, onSave }) {
+  const [compuesta, setCompuesta] = useState(null)
+
+  useEffect(() => {
+    let vivo = true
+    const cargar = (src) =>
+      new Promise((ok) => {
+        if (!src) return ok(null)
+        const i = new Image()
+        i.onload = () => ok(i)
+        i.onerror = () => ok(null)
+        i.src = src
+      })
+    Promise.all([
+      cargar(CONFIG.grupal?.fondo),
+      cargar(foto),
+      ensureCanvasFonts(),
+      preloadBrandLogo(),
+    ]).then(([fondo, img]) => {
+      if (!vivo) return
+      // `tituloAsomate(null, 2)` es el texto de grupo: "El cumple de X y sus amigos".
+      setCompuesta(componerGrupal(fondo, img, CONFIG.grupal?.frameBox, tituloAsomate(null, 2)))
+    })
+    return () => {
+      vivo = false
+    }
+  }, [foto])
+
+  return (
+    <section className="screen screen--preview">
+      <h2 className="preview-title">{CONFIG.grupal?.titulo || 'La foto de todos'}</h2>
+      {compuesta
+        ? <img className="preview-img" src={compuesta} alt="La foto de todos" />
+        : <p className="muted">Preparando la foto…</p>}
+      <div className="preview-actions">
+        <button className="cta cta--ghost" onClick={onRetry}>Repetir</button>
+        <button
+          className="cta"
+          disabled={!compuesta}
+          onClick={() => compuesta && onSave(compuesta)}
+        >
+          Guardar
+        </button>
+      </div>
+    </section>
+  )
+}
+
 function AsomatePreview({ elenco, fotos, invitado, onRetry, onSave }) {
   const [compuesta, setCompuesta] = useState(null)
   const [ajustes, setAjustes] = useState(() => elenco.map(() => ({ zoom: 1, dx: 0, dy: 0 })))
@@ -2302,7 +2383,7 @@ function VideoJuegoEstrella({ src, personaje, onDone }) {
 /* ============================================================
    1) INTRO — gate de toque (desbloquea audio/autoplay)
    ============================================================ */
-function Intro({ onStart, onAsomate }) {
+function Intro({ onStart, onAsomate, onGrupal }) {
   const start = () => {
     // desbloquea audio con un sonido silencioso dentro del gesto
     try {
@@ -2375,6 +2456,19 @@ function Intro({ onStart, onAsomate }) {
               }}
             >
               {CONFIG.asomate?.boton || '🦸 Asómate y sé el héroe'}
+            </button>
+          )}
+          {/* La foto de todos. Solo si la temática trae el fondo con el marco grande
+              (CONFIG.grupal); sin él, el kiosco se comporta exactamente como antes. */}
+          {CONFIG.grupal && (
+            <button
+              className="cta cta--grupal"
+              onClick={(event) => {
+                event.stopPropagation()
+                onGrupal()
+              }}
+            >
+              {CONFIG.grupal?.boton || '📸 Foto grupal'}
             </button>
           )}
         </div>
@@ -4518,7 +4612,7 @@ function uploadErrorMessage(error) {
   return 'No pudimos subir la foto. Revisa la conexión y vuelve a intentarlo; la descarga local no se perdió.'
 }
 
-function QRScreen({ imageDataUrl, invitado, isBabyShower = false, onDiploma, onDone }) {
+function QRScreen({ imageDataUrl, invitado, archivarComo = null, isBabyShower = false, onDiploma, onDone }) {
   const [qrUrl, setQrUrl] = useState(null)
   const [mode, setMode] = useState('loading') // loading | ready | error
   const [errorText, setErrorText] = useState('')
@@ -4540,7 +4634,9 @@ function QRScreen({ imageDataUrl, invitado, isBabyShower = false, onDiploma, onD
       })
 
     // Solo se muestra QR si el backend confirmó una URL pública real.
-    uploadPhoto(imageDataUrl, invitado)
+    // `archivarComo` existe para la foto grupal: no tiene dueno y con `invitado` quedaria
+    // archivada a nombre del ultimo nino que jugo.
+    uploadPhoto(imageDataUrl, archivarComo || invitado)
       .then((publicUrl) => makeQR(publicUrl, 'M'))
       .then((q) => {
         if (!alive) return

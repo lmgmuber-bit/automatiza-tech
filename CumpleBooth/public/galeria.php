@@ -65,9 +65,19 @@ function gallery_message(int $status, string $title, string $message): void
     exit;
 }
 
-/** Recuerdo (diploma/recuerdito) o foto con personaje, por el nombre que mandó el kiosco. */
+/**
+ * Qué es cada foto, por el nombre que mandó el kiosco: recuerdo (diploma/recuerdito),
+ * grupal (la foto de todos) o foto con personaje.
+ *
+ * La grupal se separa porque NO tiene dueño: agruparla por invitado la mandaba al final,
+ * bajo "(no está en la lista)", como si fuera un error. Es justo al revés: es la única que
+ * es de la fiesta entera.
+ */
 function gallery_kind(string $name): string
 {
+    if (strncmp($name, 'grupal-', 7) === 0) {
+        return 'grupal';
+    }
     return (strncmp($name, 'diploma-', 8) === 0 || strncmp($name, 'recuerdito-', 11) === 0) ? 'recuerdo' : 'personaje';
 }
 
@@ -226,6 +236,9 @@ foreach ((array) ($party['invitados'] ?? []) as $guest) {
 $leftovers = [];
 foreach ($byNorm as $key => $list) {
     if (isset($assigned[$key])) { continue; }
+    // Las grupales tienen su propia sección: si cayeran acá saldrían como "no está en la lista".
+    $list = array_values(array_filter($list, static fn ($p) => $p['kind'] !== 'grupal'));
+    if (!$list) { continue; }
     $leftovers[] = ['name' => $key === '' ? 'Sin nombre' : $list[0]['label'], 'key' => $key === '' ? '__sin-nombre' : $key, 'photos' => $list, 'extra' => true];
 }
 usort($leftovers, static fn ($a, $b) => ($a['key'] === '__sin-nombre') <=> ($b['key'] === '__sin-nombre') ?: strcmp($a['name'], $b['name']));
@@ -233,6 +246,7 @@ $groups = array_merge($groups, $leftovers);
 $conFotos = count(array_filter($groups, static fn ($g) => count($g['photos']) > 0));
 $recuerdos = array_values(array_filter($photos, static fn ($ph) => $ph['kind'] === 'recuerdo'));
 $personajes = array_values(array_filter($photos, static fn ($ph) => $ph['kind'] === 'personaje'));
+$grupales = array_values(array_filter($photos, static fn ($ph) => $ph['kind'] === 'grupal'));
 
 $themes = cb_load_themes();
 $theme = $themes['themes'][$party['tema'] ?? ''] ?? [];

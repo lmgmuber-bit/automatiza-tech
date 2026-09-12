@@ -2055,7 +2055,13 @@ function GrupalPreview({ foto, onRetry, onSave }) {
         <button
           className="cta"
           disabled={!compuesta}
-          onClick={() => compuesta && onSave(compuesta)}
+          onClick={() => {
+            if (!compuesta) return
+            // A la tablet antes que al servidor: esta foto es de doce personas y no se
+            // repite, así que perderla por el wifi es el peor caso de toda la fiesta.
+            guardarEnLaTablet(compuesta, `grupal-${nombreEvento() || 'fiesta'}`)
+            onSave(compuesta)
+          }}
         >
           Guardar
         </button>
@@ -2145,6 +2151,10 @@ function AsomatePreview({ elenco, fotos, invitado, onRetry, onSave }) {
       banda: { alto: 0.5, suelo: 0.79 },
       marca: false,
     })
+    // Primero a la tablet y después al servidor, igual que la cabina: si el wifi se cae, la
+    // foto ya está en el aparato. Hasta hoy Asómate no dejaba ninguna copia y, si la subida
+    // fallaba, la pantalla igual decía que la descarga local estaba segura.
+    guardarEnLaTablet(compuesta, `asomate-${invitado || 'invitados'}`)
     onSave(compuesta, paraDiploma)
   }
 
@@ -4300,6 +4310,31 @@ function exportarFoto(canvas) {
   return canvas.toDataURL('image/jpeg', CALIDAD_JPEG)
 }
 
+/**
+ * Baja la foto a la tablet. Es el respaldo de la fiesta: si el wifi del salón se cae, la
+ * foto ya está en el aparato y se recupera después.
+ *
+ * 🔴 Se llama ANTES de subir, nunca después. Un corte entre las dos deja la foto sin
+ * ninguna copia, y el niño ya se fue.
+ *
+ * Devuelve si se pudo: el navegador puede negarse (una pestaña sin permiso de descarga), y
+ * quien llame tiene que poder decir la verdad en vez de prometer un respaldo que no existe.
+ */
+function guardarEnLaTablet(imagen, nombre) {
+  if (!imagen) return false
+  try {
+    const a = document.createElement('a')
+    a.href = imagen
+    a.download = `${nombre}-${Date.now()}.${extensionDe(imagen)}`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    return true
+  } catch {
+    return false
+  }
+}
+
 function composeImage(bgImg, photoImg, invitado = '', charImg = null, charName = '') {
   const W = bgImg?.naturalWidth || 1080
   const H = bgImg?.naturalHeight || 1920
@@ -4698,12 +4733,7 @@ function Preview({ photo, bgRef, invitado, personaje, onRetry, onSave }) {
 
   const save = () => {
     if (!composed) return
-    const a = document.createElement('a')
-    a.href = composed
-    a.download = `foto-${invitado}-${Date.now()}.jpg`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
+    guardarEnLaTablet(composed, `foto-${invitado || 'invitado'}`)
     playSound(CONFIG.audio.confetti)
     burstConfetti(confRef.current, { duration: 2600, count: 180 })
     setTimeout(() => onSave(composed), REDUCE_MOTION ? 300 : 1600)

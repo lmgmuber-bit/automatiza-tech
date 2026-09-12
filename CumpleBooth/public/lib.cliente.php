@@ -252,3 +252,78 @@ function cb_save_party_billing(string $publicSlug, array $datos): array
     ]);
     return ['ok' => true];
 }
+
+/**
+ * La invitación vigente de la fiesta, para leerle la hora y la dirección.
+ *
+ * Se prefiere la publicada y, entre varias, la más reciente. Las revocadas no cuentan: su
+ * dirección puede ser justamente la que se corrigió.
+ */
+function cb_party_invitacion_datos(string $publicSlug): array
+{
+    if (cb_storage_mode() !== 'db' || !cb_valid_public_slug($publicSlug)) { return []; }
+    $partyId = cb_party_db_id($publicSlug);
+    if ($partyId === null) { return []; }
+    $stmt = cb_pdo()->prepare(
+        "SELECT event_time, address, event_date FROM cc_invitations
+         WHERE party_id = ? AND status <> 'revoked'
+         ORDER BY (status = 'published') DESC, updated_at DESC, id DESC LIMIT 1"
+    );
+    $stmt->execute([$partyId]);
+    $fila = $stmt->fetch(PDO::FETCH_ASSOC);
+    return is_array($fila) ? $fila : [];
+}
+
+/** El contacto principal de la ficha: nombre, correo y teléfono, o cadenas vacías. */
+function cb_party_contacto_principal(string $publicSlug): array
+{
+    $c = cb_party_contacts($publicSlug)[0] ?? [];
+    return [
+        'name' => trim((string) ($c['name'] ?? '')),
+        'email' => trim((string) ($c['email'] ?? '')),
+        'phone' => trim((string) ($c['phone'] ?? '')),
+    ];
+}
+
+/**
+ * Lo que el Resumen del Plan puede sacar solo de la ficha, sin que nadie lo vuelva a escribir.
+ *
+ * El formulario de "Generar enlace de aceptación" pedía a mano el valor, el anticipo, la hora
+ * y la dirección **teniéndolos ya cargados**: el cobro vive en la ficha y la hora y el lugar
+ * en la invitación publicada. Volver a escribirlos no solo es trabajo repetido, es la forma
+ * más fácil de que el contrato diga un número distinto del que dice la boleta.
+ *
+ * Solo devuelve los campos que tienen dato: los demás quedan fuera para que quien llama pueda
+ * usar `+=` y no pisar lo que el admin ya escribió a mano.
+ *
+ * El valor total es lo que el cliente **paga** (precio menos descuento), que es lo que un
+ * contrato tiene que decir. Si hubo descuento, se explica en las observaciones: un total de
+ * $0 sin explicación al lado se lee como un error.
+ */
+function cb_party_resumen_plan(string $publicSlug): array
+{
+    $resumen = [];
+
+    $invitacion = cb_party_invitacion_datos($publicSlug);
+    $hora = trim((string) ($invitacion['event_time'] ?? ''));
+    $lugar = trim((string) ($invitacion['address'] ?? ''));
+    // "Por confirmar" es un marcador de posición en la invitación, no una dirección.
+    if (preg_match('/^\s*por confirmar\s*$/iu', $lugar) === 1) { $lugar = ''; }
+    if ($hora !== '') { $resumen['event_time'] = $hora; }
+    if ($lugar !== '') { $resumen['event_address'] = $lugar; }
+
+    $cobro = cb_party_billing($publicSlug);
+    if ($cobro['total'] !== null) { $resumen['price_total'] = cb_format_clp((int) $cobro['total']); }
+    if ($cobro['deposit_amount'] !== null) { $resumen['deposit'] = cb_format_clp((int) $cobro['deposit_amount']); }
+    if ((string) $cobro['payment_note'] !== '') { $resumen['balance_due'] = (string) $cobro['payment_note']; }
+
+    $descuento = (int) ($cobro['discount_amount'] ?? 0);
+    if ($descuento > 0 && $cobro['price_total'] !== null) {
+        $motivo = trim((string) $cobro['discount_label']);
+        $resumen['notes'] = 'Precio de lista ' . cb_format_clp((int) $cobro['price_total'])
+            . ' con un descuento de ' . cb_format_clp($descuento)
+            . ($motivo !== '' ? ' (' . $motivo . ')' : '') . '.';
+    }
+
+    return $resumen;
+}

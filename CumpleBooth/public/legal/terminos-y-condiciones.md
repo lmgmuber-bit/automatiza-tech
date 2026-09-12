@@ -1,12 +1,10 @@
-Versión: 2026-09-05
+Versión: 2026-09-07
 
 # Términos y Condiciones del Servicio CumpleClick
 
-> BORRADOR PREPARADO POR EL EQUIPO DE AUTOMATIZATECH. Este texto no constituye asesoría legal y debe ser revisado y aprobado por un abogado o abogada habilitado en Chile antes de usarse con clientes. Los puntos marcados como TODO-LUIS requieren una decisión comercial del titular.
-
 ## 1. Partes y objeto
 
-1.1. Estos Términos y Condiciones (los "Términos") regulan la contratación del servicio de experiencia fotográfica interactiva para eventos denominado CumpleClick (el "Servicio"), prestado por AUTOMATIZATECH SpA, RUT 78.363.717-0 (TODO-LUIS: confirmar razón social, RUT y domicilio), en adelante "CumpleClick" o "el Prestador".
+1.1. Estos Términos y Condiciones (los "Términos") regulan la contratación del servicio de experiencia fotográfica interactiva para eventos denominado CumpleClick (el "Servicio"), prestado por AUTOMATIZATECH SpA, RUT 78.363.717-0, en adelante "CumpleClick" o "el Prestador".
 
 1.2. El "Cliente" es la persona natural o jurídica que contrata el Servicio para un evento determinado y que acepta estos Términos por medios electrónicos. Si el evento es un cumpleaños u otra celebración de un niño, niña o adolescente, el Cliente declara ser su padre, madre o tutor legal, o contar con autorización de ellos.
 
@@ -22,21 +20,21 @@ Versión: 2026-09-05
 
 ## 3. Reserva, anticipo y pago
 
-3.1. La fecha del evento queda reservada solo cuando concurren dos hechos: (a) la aceptación de estos Términos por el Cliente, y (b) la recepción del anticipo indicado en el Resumen del Plan. TODO-LUIS: definir porcentaje o monto del anticipo (por ejemplo, 50% del valor del plan).
+3.1. La fecha del evento queda reservada solo cuando concurren dos hechos: (a) la aceptación de estos Términos por el Cliente, y (b) la recepción del anticipo indicado en el Resumen del Plan. El monto o porcentaje del anticipo se fija para cada evento y se detalla en ese Resumen; si el Resumen no indica anticipo, la reserva queda firme con la sola aceptación de estos Términos.
 
-3.2. El saldo se paga a más tardar el día del evento, antes del inicio del Servicio, salvo acuerdo escrito distinto. TODO-LUIS: definir medios de pago aceptados (transferencia, tarjeta, otros) y datos para transferencia.
+3.2. El saldo se paga a más tardar el día del evento, antes del inicio del Servicio, salvo acuerdo escrito distinto. Los medios de pago aceptados y los datos para efectuarlo se informan al Cliente junto con el Resumen del Plan y en el comprobante de pago.
 
 3.3. Los precios se expresan en pesos chilenos e incluyen IVA cuando corresponda. Los recargos por traslado fuera de la zona de cobertura se informan antes de la aceptación y se indican en el Resumen del Plan.
 
 ## 4. Cancelación por el Cliente
 
-4.1. El Cliente puede cancelar el Servicio comunicándolo por escrito al correo o WhatsApp indicados en el Resumen del Plan. Se aplicará la siguiente escala, calculada sobre el valor total del plan (TODO-LUIS: confirmar plazos y porcentajes):
+4.1. El Cliente puede cancelar el Servicio comunicándolo por escrito al correo o WhatsApp indicados en el Resumen del Plan. Se aplicará la siguiente escala, calculada sobre el valor total del plan:
 
 - Con 15 o más días corridos de anticipación al evento: devolución íntegra del anticipo.
 - Entre 14 y 7 días corridos de anticipación: devolución del 50% del anticipo.
 - Con menos de 7 días corridos de anticipación o inasistencia: el anticipo no es reembolsable, por corresponder a la reserva de fecha y a los costos de preparación de la temática.
 
-4.2. Derecho a retracto. Este contrato se celebra por medios electrónicos. TODO-LUIS y abogado: decidir si se reconoce el derecho a retracto de 10 días del artículo 3 bis de la Ley N° 19.496 o si el Prestador dispone expresamente lo contrario, como permite dicha norma. Mientras no se decida, se aplicará la escala del punto 4.1.
+4.2. Derecho a retracto. Este contrato se celebra por medios electrónicos. Por tratarse de un servicio reservado para una fecha determinada, que el Prestador bloquea en exclusiva para el Cliente y deja de ofrecer a terceros, el Prestador dispone expresamente que no se aplicará el derecho a retracto del artículo 3 bis de la Ley N° 19.496, según lo permite esa misma norma. Esta exclusión se informa al Cliente antes de aceptar y consta en este documento. Las cancelaciones se rigen íntegramente por el punto 4.1.
 
 ## 5. Reprogramación
 
@@ -62,11 +60,11 @@ Versión: 2026-09-05
 
 ## 8. Daños a equipos, seguridad y alergias
 
-8.1. Los equipos (tablet, soporte, iluminación, decoración temática y accesorios) son de propiedad del Prestador. El Cliente responde por los daños, pérdida o robo que sufran los equipos durante el evento por hechos de sus invitados, familiares, personal contratado por él o terceros que ingresen al lugar, hasta el valor de reposición que se detalla en el Resumen del Plan (TODO-LUIS: definir valores de reposición por equipo). No responde por el desgaste normal ni por daños causados por el operador.
+8.1. Los equipos (tablet, soporte, iluminación, decoración temática y accesorios) son de propiedad del Prestador. El Cliente responde por los daños, pérdida o robo que sufran los equipos durante el evento por hechos de sus invitados, familiares, personal contratado por él o terceros que ingresen al lugar, hasta el valor de reposición del equipo afectado, acreditado con la factura de compra o una cotización de reemplazo equivalente. No responde por el desgaste normal ni por daños causados por el operador.
 
 8.2. El Prestador instala los equipos siguiendo prácticas seguras (cables asegurados, soportes estables). El Cliente debe advertir cualquier condición riesgosa del lugar (superficies inestables, piscinas, escaleras, mascotas sin control).
 
-8.3. CumpleClick no entrega alimentos ni golosinas. Si el plan incluye premios o accesorios pequeños (TODO-LUIS: confirmar si aplica), estos pueden contener piezas pequeñas no aptas para menores de 3 años y el Cliente debe supervisar su uso. El Cliente debe informar por anticipado alergias o condiciones relevantes de los participantes que puedan afectar el uso de accesorios, maquillaje o materiales de contacto, si los hubiera.
+8.3. CumpleClick no entrega alimentos ni golosinas. Si el plan contratado incluye premios o accesorios pequeños, estos pueden contener piezas pequeñas no aptas para menores de 3 años y el Cliente debe supervisar su uso. El Cliente debe informar por anticipado alergias o condiciones relevantes de los participantes que puedan afectar el uso de accesorios, maquillaje o materiales de contacto, si los hubiera.
 
 ## 9. Fotografías, datos personales e imagen de menores
 
@@ -102,7 +100,7 @@ Versión: 2026-09-05
 
 13.1. Este contrato se rige por las leyes de la República de Chile, en especial la Ley N° 19.496 sobre protección de los derechos de los consumidores cuando el Cliente actúe como consumidor.
 
-13.2. Las partes procurarán resolver de buena fe cualquier diferencia. De no lograrlo, serán competentes los tribunales ordinarios de la ciudad de Santiago (TODO-LUIS: confirmar domicilio), sin perjuicio del derecho del consumidor a recurrir al Juzgado de Policía Local de su domicilio y al Servicio Nacional del Consumidor (SERNAC).
+13.2. Las partes procurarán resolver de buena fe cualquier diferencia. De no lograrlo, serán competentes los tribunales ordinarios de la ciudad de Santiago, sin perjuicio del derecho del consumidor a recurrir al Juzgado de Policía Local de su domicilio y al Servicio Nacional del Consumidor (SERNAC).
 
 ## 14. Otras disposiciones
 

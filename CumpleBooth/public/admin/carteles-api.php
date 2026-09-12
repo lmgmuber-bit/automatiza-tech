@@ -89,8 +89,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'album
         if ((string) ($albumPost['status'] ?? '') === 'draft') {
             cb_album_update((int) $albumPost['id'], ['status' => 'collecting']);
         }
-        $avisoAlbum = 'Enlace de aportes nuevo: el anterior quedó revocado y los carteles del Álbum impresos antes '
-            . 'ya no sirven. Imprime este cartel ahora: al recargar la página el enlace no se puede volver a mostrar.';
+        $avisoAlbum = 'Enlace de aportes nuevo: el anterior quedó revocado y los carteles del Álbum impresos '
+            . 'antes ya no sirven. Este queda a la vista aunque recargues, así que no hay apuro por imprimirlo.';
     } catch (Throwable $e) {
         error_log('CumpleClick carteles token album: ' . $e->getMessage());
         carteles_responder(500, ['ok' => false, 'error' => 'no_se_pudo_emitir']);
@@ -140,7 +140,19 @@ if (cb_storage_mode() === 'db' && function_exists('cb_album_find_by_party')) {
     }
 }
 
-// Si en esta misma petición se pidió el token, el cartel sale con su enlace ya listo.
+// Si no se acaba de emitir uno, se recalcula el que esté vivo: antes el enlace se mostraba
+// una sola vez y recargar la página hacía desaparecer el cartel del Álbum, obligando a
+// generar otro que dejaba muertos los carteles ya impresos.
+if ($tokenAlbum === '' && $album !== null && !empty($albumEstado['abierto'])
+    && function_exists('cb_album_token_vigente')) {
+    try {
+        $tokenAlbum = cb_album_token_vigente((int) $album['id'], 'intake');
+    } catch (Throwable $e) {
+        error_log('CumpleClick carteles token vigente: ' . $e->getMessage());
+    }
+}
+
+// Si hay token —recién emitido o recuperado—, el cartel sale con su enlace ya listo.
 if ($tokenAlbum !== '') {
     $carteles[] = [
         'id' => 'album',

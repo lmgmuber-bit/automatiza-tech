@@ -15,7 +15,7 @@
  * Sin dependencias externas. Baseline PHP 8.2; compatible con PHP 8.0+.
  */
 
-const CB_LEGAL_VERSION = '2026-09-05';
+const CB_LEGAL_VERSION = '2026-09-07';
 const CB_ACCEPTANCE_SIGNATURE_MAX_BYTES = 300000;
 const CB_ACCEPTANCE_FORM_NONCE_TTL = 7200;
 
@@ -328,7 +328,7 @@ function cb_create_plan_acceptance(array $party, array $input, string $by): arra
         $summary['theme_name'] = cb_theme_public_name((string) ($party['tema'] ?? $party['theme_slug'] ?? ''));
     }
     if (!isset($summary['price_total'])) {
-        $errors['price_total'] = 'Indica el valor total del plan (TODO-LUIS: definir tarifa vigente).';
+        $errors['price_total'] = 'Indica el valor total del plan: es lo que queda escrito en el contrato que firma el papá.';
     }
     if ($errors) {
         return ['ok' => false, 'errors' => $errors];
@@ -408,6 +408,77 @@ function cb_load_acceptance_by_id(int $id): ?array
     $stmt = cb_pdo()->prepare('SELECT * FROM cc_plan_acceptances WHERE id = ?');
     $stmt->execute([$id]);
     return cb_acceptance_decode_row($stmt->fetch() ?: null);
+}
+
+/**
+ * La aceptación pendiente de firma de una fiesta, si hay alguna vigente.
+ *
+ * Deja fuera las vencidas a propósito: reenviar un enlace ya vencido manda al papá a una
+ * pantalla que lo rechaza, que es peor que decir que no hay ninguno.
+ */
+function cb_acceptance_pendiente_de_fiesta(string $publicSlug): ?array
+{
+    foreach (cb_list_party_acceptances($publicSlug) as $row) {
+        if ((string) $row['status'] === 'pending' && !cb_acceptance_is_expired($row)) {
+            return $row;
+        }
+    }
+    return null;
+}
+
+/** La aceptación ya firmada de una fiesta (la más reciente, si hubiera más de una). */
+function cb_acceptance_firmada_de_fiesta(string $publicSlug): ?array
+{
+    foreach (cb_list_party_acceptances($publicSlug) as $row) {
+        if ((string) $row['status'] === 'accepted') {
+            return $row;
+        }
+    }
+    return null;
+}
+
+/**
+ * Emite un enlace de firma nuevo para una aceptación pendiente y devuelve la URL completa.
+ *
+ * El token viejo queda inalcanzable en el mismo movimiento: se guarda solo el hash, así que
+ * escribir el hash del token nuevo es, literalmente, olvidar el anterior. Se renueva también
+ * el vencimiento con la misma ventana original, porque un enlace que se reenvía porque no
+ * llegó no tiene por qué heredar el reloj del que se perdió.
+ */
+function cb_acceptance_rotar_token(int $id): ?string
+{
+    $row = cb_load_acceptance_by_id($id);
+    if ($row === null || (string) $row['status'] !== 'pending') {
+        return null;
+    }
+    $dias = 14;
+    if (!empty($row['created_at']) && !empty($row['expires_at'])) {
+        $ventana = strtotime((string) $row['expires_at']) - strtotime((string) $row['created_at']);
+        if ($ventana > 86400) { $dias = (int) round($ventana / 86400); }
+    }
+    $token = cb_opaque_token(16);
+    $ok = cb_pdo()->prepare('UPDATE cc_plan_acceptances SET public_token_hash=?, expires_at=?, updated_at=? WHERE id=? AND status=\'pending\'')
+        ->execute([cb_hash_token($token), gmdate('Y-m-d H:i:s', time() + $dias * 86400), gmdate('Y-m-d H:i:s'), $id]);
+    return $ok ? cb_acceptance_public_url($token) : null;
+}
+
+/**
+ * Emite un enlace de descarga nuevo para el comprobante firmado y devuelve el token en claro.
+ *
+ * Mismo motivo que el anterior: el token se guarda hasheado y no se puede recuperar. El
+ * correo que lo usa lleva además el PDF adjunto, así que el papá recibe el documento aunque
+ * tuviera guardado el enlace viejo.
+ */
+function cb_acceptance_rotar_receipt_token(int $id): ?string
+{
+    $row = cb_load_acceptance_by_id($id);
+    if ($row === null || (string) $row['status'] !== 'accepted') {
+        return null;
+    }
+    $token = cb_opaque_token(16);
+    $ok = cb_pdo()->prepare('UPDATE cc_plan_acceptances SET receipt_token_hash=?, updated_at=? WHERE id=? AND status=\'accepted\'')
+        ->execute([cb_hash_token($token), gmdate('Y-m-d H:i:s'), $id]);
+    return $ok ? $token : null;
 }
 
 function cb_list_party_acceptances(string $publicSlug): array
@@ -806,6 +877,146 @@ function cb_acceptance_evidence_html(array $row, array $bundle, string $signatur
         . '</body></html>';
 }
 
+/**
+ * El comprobante firmado como PDF: las mismas seis secciones que la evidencia HTML, para
+ * adjuntarlo al correo y descargarlo desde el admin y desde el enlace del cliente.
+ *
+ * La evidencia HTML sigue siendo el documento probatorio: es lo que se hasheó al firmar y lo
+ * que se comprueba byte a byte al servirlo. El PDF es una **copia legible** de esa misma
+ * información, generada a pedido; por eso lleva la huella del HTML y no una propia.
+ *
+ * El texto legal se incluye solo si el que hay hoy en disco es exactamente el que la persona
+ * aceptó (misma huella SHA-256 y misma versión). Si los documentos cambiaron después, el PDF
+ * lo dice y remite a la evidencia HTML, en vez de imprimir un texto que el firmante nunca vio.
+ */
+function cb_acceptance_pdf(array $row): string
+{
+    require_once __DIR__ . '/lib.documentos.php';
+
+    $doc = new CcDocumento();
+    $doc->pie('CumpleClick · AUTOMATIZATECH SpA · Comprobante de aceptación N° ' . (int) $row['id']);
+    $doc->titulo('Comprobante de aceptación de Términos y firma electrónica simple', 16.0);
+    $doc->nota('Comprobante N° ' . (int) $row['id'] . ' · Fiesta: ' . (string) $row['party_public_slug']
+        . ((string) ($row['party_admin_label'] ?? '') !== '' ? ' (' . $row['party_admin_label'] . ')' : ''));
+
+    // 1. Resumen del Plan: solo los campos que el admin completó, con sus etiquetas.
+    $summary = is_array($row['plan_summary'] ?? null) ? $row['plan_summary'] : [];
+    $filas = [];
+    foreach (cb_acceptance_summary_fields() as $key => $label) {
+        if (isset($summary[$key]) && trim((string) $summary[$key]) !== '') {
+            $filas[] = [$label, (string) $summary[$key]];
+        }
+    }
+    $doc->subtitulo('1. Resumen del Plan');
+    if ($filas) { $doc->tabla($filas, 58.0); } else { $doc->nota('Sin resumen cargado.'); }
+
+    // 2. Cliente y firmante.
+    $relaciones = ['madre' => 'Madre', 'padre' => 'Padre', 'tutor' => 'Tutor/a legal', 'autorizado' => 'Adulto autorizado por los padres'];
+    $doc->subtitulo('2. Cliente y firmante');
+    $doc->tabla([
+        ['Cliente (según enlace emitido)', trim((string) $row['client_name'] . ' · ' . (string) $row['client_email']
+            . ((string) ($row['client_phone'] ?? '') !== '' ? ' · ' . $row['client_phone'] : ''))],
+        ['Nombre del firmante', (string) $row['signer_name']],
+        ['RUT', (string) $row['signer_rut']],
+        ['Correo del firmante', (string) $row['signer_email']],
+        ['Relación con el homenajeado', $relaciones[(string) ($row['signer_relationship'] ?? '')] ?? (string) ($row['signer_relationship'] ?? '')],
+    ], 58.0);
+
+    // 3. Declaraciones aceptadas.
+    $doc->subtitulo('3. Declaraciones aceptadas');
+    $doc->lista([
+        (!empty($row['accepted_terms']) ? '[X] ' : '[ ] ') . 'Términos y Condiciones',
+        (!empty($row['accepted_privacy']) ? '[X] ' : '[ ] ') . 'Política de Privacidad',
+        (!empty($row['accepted_minors']) ? '[X] ' : '[ ] ') . 'Consentimiento de imagen de menores',
+        (!empty($row['accepted_marketing']) ? '[X] ' : '[ ] ') . 'Uso promocional de imágenes (opcional)',
+    ]);
+
+    // 4. La firma dibujada. Si la imagen no se puede leer, el documento lo dice: un
+    // recuadro vacío sin explicación parecería un comprobante sin firmar.
+    $doc->subtitulo('4. Firma electrónica simple');
+    $rutaFirma = cb_acceptance_file_path((string) ($row['signature_storage_key'] ?? ''));
+    $firmaOk = $rutaFirma !== null && is_file($rutaFirma)
+        && hash_equals((string) $row['signature_sha256'], (string) hash_file('sha256', $rutaFirma))
+        && $doc->firmaPng($rutaFirma, 70.0);
+    if (!$firmaOk) {
+        $doc->nota('La imagen de la firma no está disponible en esta copia. El trazo original queda en la evidencia HTML del comprobante.');
+    }
+    $doc->nota('SHA-256 de la imagen de firma: ' . (string) $row['signature_sha256']);
+    $doc->texto('Firma electrónica simple conforme a la Ley N° 19.799 (Chile). El firmante trazó su firma en pantalla y marcó las casillas de aceptación indicadas arriba.', 9.5);
+
+    // 5. Evidencia técnica.
+    $acceptedAt = (string) ($row['accepted_at'] ?? '');
+    $evidencia = [
+        ['Fecha y hora de aceptación (UTC)', $acceptedAt],
+        ['Fecha y hora (Chile)', cb_chile_datetime($acceptedAt)],
+        ['Dirección IP', (string) $row['ip_address']],
+        ['Navegador (user-agent)', (string) $row['user_agent']],
+        ['Versión de los documentos', (string) $row['legal_version']],
+        ['SHA-256 del texto aceptado', (string) $row['legal_text_sha256']],
+        ['Enlace emitido el (UTC)', (string) $row['created_at'] . ' por ' . (string) ($row['created_by'] ?? '')],
+        ['Primera visualización (UTC)', (string) ($row['first_viewed_at'] ?? '')],
+    ];
+    foreach ((is_array($row['client_meta'] ?? null) ? $row['client_meta'] : []) as $k => $v) {
+        $evidencia[] = [(string) $k, is_scalar($v) ? (string) $v : (string) json_encode($v, JSON_UNESCAPED_UNICODE)];
+    }
+    $doc->subtitulo('5. Evidencia técnica');
+    $doc->tabla($evidencia, 58.0);
+    $doc->nota('SHA-256 de la evidencia HTML registrada al firmar: ' . (string) $row['evidence_sha256']
+        . '. Ese archivo es el documento probatorio; este PDF es una copia legible de la misma información.');
+
+    // 6. El texto íntegro, solo si es exactamente el que se aceptó.
+    $doc->subtitulo('6. Texto íntegro aceptado');
+    $bundle = null;
+    try { $bundle = cb_legal_bundle(); } catch (Throwable $e) { $bundle = null; }
+    $mismoTexto = $bundle !== null
+        && hash_equals((string) $row['legal_text_sha256'], (string) $bundle['sha256'])
+        && (string) $bundle['version'] === (string) $row['legal_version'];
+    if (!$mismoTexto) {
+        $doc->texto('Los documentos legales vigentes hoy no son los mismos que se aceptaron (versión '
+            . (string) $row['legal_version'] . ', huella ' . (string) $row['legal_text_sha256']
+            . '). El texto íntegro aceptado está en la evidencia HTML del comprobante.', 9.5);
+    } else {
+        foreach ($bundle['documents'] as $docLegal) {
+            $doc->subtitulo((string) $docLegal['title']);
+            cb_acceptance_pdf_markdown($doc, (string) $docLegal['markdown']);
+        }
+    }
+    return $doc->salida();
+}
+
+/**
+ * Vuelca un documento legal en Markdown al PDF, sin pretender interpretarlo entero: los
+ * encabezados salen en negrita, las viñetas como lista y el resto como párrafos. Es lo que
+ * hace falta para que el texto se lea; el HTML de la evidencia sigue siendo la versión fiel.
+ */
+function cb_acceptance_pdf_markdown(CcDocumento $doc, string $markdown): void
+{
+    $limpiar = static fn(string $s): string => trim(preg_replace('/(\*\*|__|`)/', '', $s) ?? '');
+    $lista = [];
+    $volcarLista = static function () use (&$lista, $doc): void {
+        if ($lista) { $doc->lista($lista, 9.5); $lista = []; }
+    };
+    foreach (preg_split('/\n{2,}/', str_replace("\r\n", "\n", $markdown)) as $bloque) {
+        $bloque = trim($bloque);
+        if ($bloque === '' || preg_match('/^Versión:\s*\d{4}-\d{2}-\d{2}$/mu', $bloque) === 1) { continue; }
+        if (preg_match('/^#{1,6}\s+(.+)$/m', $bloque, $m) === 1 && substr_count($bloque, "\n") === 0) {
+            $volcarLista();
+            $doc->texto($limpiar($m[1]), 10.5, true);
+            continue;
+        }
+        $lineas = preg_split('/\n/', $bloque);
+        $esLista = true;
+        foreach ($lineas as $l) { if (!preg_match('/^\s*([-*]|\d+[.)])\s+/', $l)) { $esLista = false; break; } }
+        if ($esLista) {
+            foreach ($lineas as $l) { $lista[] = $limpiar(preg_replace('/^\s*([-*]|\d+[.)])\s+/', '', $l) ?? ''); }
+            continue;
+        }
+        $volcarLista();
+        $doc->texto($limpiar(str_replace("\n", ' ', $bloque)), 9.5);
+    }
+    $volcarLista();
+}
+
 function cb_revoke_acceptance(int $id, string $by): bool
 {
     $now = gmdate('Y-m-d H:i:s');
@@ -850,7 +1061,12 @@ function cb_waive_acceptance(array $party, string $reason, string $by): array
  * plano queda como alternativa para los clientes que no muestran HTML. El respaldo por
  * `mail()` nativo manda solo el texto, que es lo que ese camino sabe hacer.
  */
-function cb_send_mail(string $to, string $subject, string $body, string $html = ''): bool
+/**
+ * @param array<int,array{filename:string,type:string,data:string}> $attachments  Solo viajan
+ *        por SMTP; el respaldo con mail() los omite, y es preferible que el correo llegue sin
+ *        adjunto a que no llegue.
+ */
+function cb_send_mail(string $to, string $subject, string $body, string $html = '', array $attachments = []): bool
 {
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
         return false;
@@ -875,6 +1091,7 @@ function cb_send_mail(string $to, string $subject, string $body, string $html = 
                 'text' => $body,
                 'html' => $html,
                 'reply_to' => $replyTo !== '' && filter_var($replyTo, FILTER_VALIDATE_EMAIL) ? $replyTo : '',
+                'attachments' => $attachments,
             ]);
             if (!empty($envio['ok'])) {
                 return true;
@@ -888,8 +1105,13 @@ function cb_send_mail(string $to, string $subject, string $body, string $html = 
     }
 }
 
-/** Notifica al cliente (copia del comprobante) y a AT. Registra en la fila qué se envió. */
-function cb_acceptance_send_notifications(array $row, string $receiptToken): array
+/**
+ * Notifica al cliente (copia del comprobante) y a AT. Registra en la fila qué se envió.
+ *
+ * `$soloCliente` es para el reenvío desde el admin: el aviso interno dice "nueva aceptación
+ * firmada", y volver a mandarlo por un reenvío haría creer que alguien firmó de nuevo.
+ */
+function cb_acceptance_send_notifications(array $row, string $receiptToken, bool $soloCliente = false): array
 {
     $receiptUrl = cb_acceptance_receipt_url($receiptToken);
     $summary = is_array($row['plan_summary'] ?? null) ? $row['plan_summary'] : [];
@@ -932,7 +1154,8 @@ function cb_acceptance_send_notifications(array $row, string $receiptToken): arr
         . '<p style="margin:0 0 8px"><a href="' . cc_mail_h($receiptUrl) . '" '
         . 'style="display:inline-block;background:#7C3AED;color:#ffffff;text-decoration:none;'
         . 'padding:13px 26px;border-radius:999px;font-weight:700;font-size:15px">Descargar mi comprobante firmado</a></p>'
-        . '<p style="margin:0 0 18px;font-size:13px;color:#6B6280">Guarda este enlace: es personal y es tu copia del documento firmado.</p>'
+        . '<p style="margin:0 0 18px;font-size:13px;color:#6B6280">Guarda este enlace: es personal y es tu copia del documento firmado. '
+        . 'Te lo adjuntamos también en PDF.</p>'
         . '<p style="margin:0 0 16px">La reserva queda confirmada al recibir el anticipo indicado en el Resumen del Plan.</p>'
         // La huella va al final y en letra chica: es respaldo legal, no lo que la persona
         // vino a leer, pero tiene que ir en el correo para que quede en su bandeja.
@@ -940,13 +1163,33 @@ function cb_acceptance_send_notifications(array $row, string $receiptToken): arr
         . 'Huella SHA-256 del comprobante: ' . cc_mail_h($huella) . '</p>';
 
     $clientTo = (string) ($row['signer_email'] ?: $row['client_email']);
+    // El PDF va adjunto, pero nunca a costa del correo: si algo falla al generarlo, el
+    // comprobante se manda igual con el enlace, que es lo que ya funcionaba.
+    $adjuntos = [];
+    try {
+        $adjuntos[] = [
+            'filename' => 'comprobante-terminos-cumpleclick-' . (int) $row['id'] . '.pdf',
+            'type' => 'application/pdf',
+            'data' => cb_acceptance_pdf($row),
+        ];
+    } catch (Throwable $e) {
+        error_log('CumpleClick comprobante PDF: ' . $e->getMessage());
+    }
     if (cb_send_mail($clientTo, 'CumpleClick: comprobante de aceptación de Términos', $clientBody,
-                     cc_mail_shell('Comprobante de aceptación', $contenidoCliente))) {
+                     cc_mail_shell('Comprobante de aceptación', $contenidoCliente), $adjuntos)) {
         $sent['client'] = true;
         cb_pdo()->prepare('UPDATE cc_plan_acceptances SET client_mail_sent_at=? WHERE id=?')->execute([$now, (int) $row['id']]);
     }
+    // El envío automático también entra a la bitácora de la fiesta: es el único de los cuatro
+    // que no dispara nadie a mano, y sin esto el panel del admin lo mostraría como no enviado.
+    // El reenvío desde el admin se registra por su cuenta, con las opciones que usó.
+    if (!$soloCliente) {
+        require_once __DIR__ . '/lib.envios.php';
+        cb_envio_registrar((string) $row['party_public_slug'], 'terminos', $clientTo, !empty($adjuntos),
+            $sent['client'], $sent['client'] ? '' : 'el servidor de correo rechazó el envío', [], 'automático');
+    }
 
-    $notify = (string) cb_config('notify_email');
+    $notify = $soloCliente ? '' : (string) cb_config('notify_email');
     if ($notify !== '') {
         $urlAdmin = cb_public_base_url() . '/admin/aceptaciones.php?party=' . rawurlencode((string) $row['party_public_slug']);
         $internalBody = "Aceptación registrada en CumpleClick.\n\n"

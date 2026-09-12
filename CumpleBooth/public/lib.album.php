@@ -752,6 +752,45 @@ function cb_album_intake_open(array $album, array $party): bool
  * Devuelve el token EN CLARO una sola vez: en base solo queda su SHA-256, así
  * que si el admin cierra la página sin copiarlo hay que regenerarlo.
  */
+/**
+ * El token de una fila de `cc_event_album_tokens`, calculado a partir de la fila misma.
+ *
+ * Se deriva en vez de sortearse para que el admin pueda volver a mostrarlo. La base sigue
+ * guardando SOLO el hash; la llave del HMAC vive fuera de la base, así que una copia de la
+ * base tampoco alcanza para reconstruir un token. Lo único que cambia es que quien tiene la
+ * llave y la fila puede recalcularlo, y eso es justamente lo que hacía falta.
+ *
+ * Salen 32 caracteres hexadecimales porque es lo que exige `cb_album_resolve_token`.
+ */
+function cb_album_token_de(int $tokenId): string
+{
+    return substr(cb_hmac((string) $tokenId, 'album-token-v1'), 0, 32);
+}
+
+/**
+ * El token vivo, en claro. Devuelve '' si no hay ninguno activo, si venció, o si el que hay
+ * es de los antiguos —sorteados al azar—: esos siguen funcionando, pero de ellos solo quedó
+ * el hash y no hay forma de reconstruirlos.
+ */
+function cb_album_token_vigente(int $albumId, string $purpose): string
+{
+    $stmt = cb_album_require_db()->prepare(
+        "SELECT id, token_hash, expires_at FROM cc_event_album_tokens
+         WHERE album_id=? AND purpose=? AND status='active' ORDER BY id DESC"
+    );
+    $stmt->execute([$albumId, $purpose]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        return '';
+    }
+    $expira = (string) ($row['expires_at'] ?? '');
+    if ($expira !== '' && strtotime($expira) < time()) {
+        return '';
+    }
+    $token = cb_album_token_de((int) $row['id']);
+    return hash_equals((string) $row['token_hash'], cb_hash_token($token)) ? $token : '';
+}
+
 function cb_album_issue_token(int $albumId, string $purpose, ?string $expiresAt, ?string $createdBy = null): string
 {
     if (!in_array($purpose, ['intake', 'view'], true)) {
@@ -759,7 +798,6 @@ function cb_album_issue_token(int $albumId, string $purpose, ?string $expiresAt,
     }
     $pdo = cb_album_require_db();
     $now = gmdate('Y-m-d H:i:s');
-    $token = cb_opaque_token(16);
     $pdo->beginTransaction();
     try {
         $revoke = $pdo->prepare(
@@ -767,11 +805,18 @@ function cb_album_issue_token(int $albumId, string $purpose, ?string $expiresAt,
              WHERE album_id=? AND purpose=? AND status='active'"
         );
         $revoke->execute([$now, $albumId, $purpose]);
+        // Se inserta con un hash provisorio al azar para conseguir el id, y recien con ese id
+        // se calcula el token definitivo. `token_hash` tiene indice unico: un provisorio fijo
+        // chocaria con el si alguna fila quedara a medio camino.
         $insert = $pdo->prepare(
             'INSERT INTO cc_event_album_tokens (album_id,token_hash,purpose,status,expires_at,created_at,created_by)
              VALUES (?,?,?,?,?,?,?)'
         );
-        $insert->execute([$albumId, cb_hash_token($token), $purpose, 'active', $expiresAt, $now, $createdBy]);
+        $insert->execute([$albumId, cb_hash_token(cb_opaque_token(16)), $purpose, 'active', $expiresAt, $now, $createdBy]);
+        $filaId = (int) $pdo->lastInsertId();
+        $token = cb_album_token_de($filaId);
+        $pdo->prepare('UPDATE cc_event_album_tokens SET token_hash=? WHERE id=?')
+            ->execute([cb_hash_token($token), $filaId]);
         $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
@@ -808,7 +853,8 @@ function cb_album_resolve_token(string $token, string $purpose): ?array
          FROM cc_event_album_tokens t
          JOIN cc_event_albums a ON a.id = t.album_id
          JOIN cc_parties p ON p.id = a.party_id
-         WHERE t.token_hash=? AND t.purpose=?'
+         WHERE t.token_hash=? AND t.purpose=?
+         ORDER BY t.id DESC'
     );
     $stmt->execute([cb_hash_token($token), $purpose]);
     $row = $stmt->fetch();
@@ -1042,10 +1088,14 @@ function cb_album_list_media(int $albumId, ?array $states = null, ?string $sourc
     if (!$states) {
         return [];
     }
+    // Una foto borrada de la galería no puede seguir en el álbum: el álbum es el PÚBLICO,
+    // y publicar algo que el organizador eliminó es exactamente lo que no debe pasar.
+    // Va como filtro de lectura y no borrando la fila: si se restaura la foto, vuelve sola.
     $sql = 'SELECT m.*, ph.access_token AS photo_token
             FROM cc_event_media m
             LEFT JOIN cc_photos ph ON ph.id = m.photo_id
-            WHERE m.album_id=? AND m.moderation_status IN (' . implode(',', array_fill(0, count($states), '?')) . ')';
+            WHERE m.album_id=? AND (m.photo_id IS NULL OR ph.deleted_at IS NULL)
+              AND m.moderation_status IN (' . implode(',', array_fill(0, count($states), '?')) . ')';
     $params = array_merge([$albumId], $states);
     if ($source !== null && in_array($source, cb_album_sources(), true)) {
         $sql .= ' AND m.source=?';

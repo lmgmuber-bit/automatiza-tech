@@ -221,10 +221,66 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             session_destroy();
             header('Location: index.php');
             exit;
+        } elseif ($action === 'juegos3d') {
+            // Interruptor de la hora de juego. Va como acción propia y no dentro de "Editar
+            // fiesta" a propósito: se usa EN MEDIO de la fiesta, y abrir la ficha entera para
+            // destildar una casilla y guardar todo el formulario es lento y arriesgado.
+            $slugJ = cb_valid_public_slug((string) ($_POST['slug'] ?? '')) ? (string) $_POST['slug'] : '';
+            $datosJ = cb_load_parties();
+            $partiesJ = $datosJ['parties'] ?? $datosJ;
+            if ($slugJ === '' || !isset($partiesJ[$slugJ])) {
+                $formErrors[] = 'La fiesta no existe.';
+            } else {
+                $prender = ($_POST['prender'] ?? '') === '1';
+                $partiesJ[$slugJ]['juegos3d'] = $prender;
+                cb_save_parties(['parties' => $partiesJ]);
+                $_SESSION['envio_flash'] = $prender
+                    ? 'Juegos 3D prendidos: los niños ya pueden entrar con el QR.'
+                    : 'Juegos 3D apagados. Quien entre con el QR verá que se acabó la hora de juego.';
+                header('Location: index.php?ok=envio');
+                exit;
+            }
+        } elseif ($action === 'enviar_manual' || $action === 'reenviar_boleta'
+                  || $action === 'reenviar_firma' || $action === 'reenviar_terminos') {
+            // Los cuatro correos de la fiesta salen por la misma puerta y quedan en la
+            // bitácora (`cc_envios`), que es lo que alimenta el panel de más abajo. Lo que la
+            // ficha no sabe —PIN de la galería y enlace de la invitación— llega del
+            // formulario; el reenvío repite lo que se usó la vez anterior.
+            require_once __DIR__ . '/../lib.envios.php';
+            $slugEnvio = cb_valid_public_slug((string) ($_POST['slug'] ?? '')) ? (string) $_POST['slug'] : '';
+            if ($slugEnvio === '') {
+                $formErrors[] = 'La fiesta no existe.';
+            } else {
+                if ($action === 'enviar_manual') {
+                    $resultado = cb_envio_manual($slugEnvio, [
+                        'pin' => (string) ($_POST['manual_pin'] ?? '1234'),
+                        'invitacion' => (string) ($_POST['manual_invitacion'] ?? ''),
+                    ]);
+                } elseif ($action === 'reenviar_boleta') {
+                    $resultado = cb_envio_boleta($slugEnvio);
+                } elseif ($action === 'reenviar_firma') {
+                    $resultado = cb_envio_reenviar_firma($slugEnvio);
+                } else {
+                    $resultado = cb_envio_reenviar_terminos($slugEnvio);
+                }
+                if ($resultado['ok']) {
+                    // El mensaje viaja por la sesión y no por la URL: dice a qué correo salió
+                    // y, en los que rotan enlace, que el anterior quedó anulado. Eso no cabe
+                    // en un `&ok=` y no se puede reconstruir del otro lado.
+                    $_SESSION['envio_flash'] = $resultado['mensaje'];
+                    header('Location: index.php?action=editar&slug=' . rawurlencode($slugEnvio) . '&ok=envio');
+                    exit;
+                }
+                $formErrors[] = $resultado['mensaje'];
+            }
         } elseif ($action === 'guardar') {
             $isEdit = ($_POST['modo'] ?? '') === 'editar';
             $adminLabel = trim((string) ($_POST['admin_label'] ?? ''));
             $birthdayPersonName = trim((string) ($_POST['birthday_person_name'] ?? ''));
+            // Edad que cumple. Vacio es valido: hay fiestas cargadas antes de que este campo
+            // existiera, y el menu de juegos funciona igual sin ella.
+            $birthdayAge = trim((string) ($_POST['birthday_age'] ?? ''));
+            $birthdayAge = $birthdayAge === '' ? null : max(1, min(17, (int) $birthdayAge));
             $tema = (string) ($_POST['tema'] ?? '');
             $fecha = trim((string) ($_POST['fecha'] ?? ''));
             $activa = isset($_POST['activa']);
@@ -317,6 +373,8 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 $registro = [
                     'admin_label'          => $adminLabel,
                     'birthday_person_name' => $birthdayPersonName,
+                'edad' => $birthdayAge,
+                    'edad' => $birthdayAge,
                     'nombre'               => $birthdayPersonName,
                     'event_type'           => $eventType,
                     'theme_slug'           => $tema,
@@ -330,6 +388,9 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                     'invitados'            => $invitados,
                     'frameBox'             => $frameBox,
                     'creada'               => $isEdit ? ($parties[$origPublicSlug]['creada'] ?? gmdate('Y-m-d H:i:s')) : gmdate('Y-m-d H:i:s'),
+                    // El registro se arma de cero en cada guardado: sin esta línea, editar
+                    // cualquier campo de la ficha volvería a prender los juegos apagados.
+                    'juegos3d'             => $isEdit ? ($parties[$origPublicSlug]['juegos3d'] ?? true) : true,
                 ];
                 if ($galeriaPin !== '') {
                     $registro['galeriaPin'] = $galeriaPin;
@@ -379,6 +440,7 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 'public_slug' => $publicSlug,
                 'admin_label' => $adminLabel,
                 'birthday_person_name' => $birthdayPersonName,
+                'edad' => $birthdayAge,
                 'event_type' => $eventType,
                 'tema' => $tema,
                 'fecha' => $fecha,
@@ -585,8 +647,16 @@ $okMessages = [
     'editada' => 'Fiesta actualizada correctamente.',
     'eliminada' => 'Fiesta eliminada.',
     'duplicada' => 'Fiesta duplicada (queda inactiva por defecto).',
+
+    'manual_enviado' => 'Manual enviado por correo, con el PDF adjunto. Te llegó copia oculta.',
 ];
 $okFlash = isset($_GET['ok'], $okMessages[$_GET['ok']]) ? $okMessages[$_GET['ok']] : null;
+// Los envíos traen su propio mensaje: a qué correo salió y, cuando corresponde, que el
+// enlace anterior quedó anulado. Se consume una sola vez.
+if (($_GET['ok'] ?? '') === 'envio' && isset($_SESSION['envio_flash'])) {
+    $okFlash = (string) $_SESSION['envio_flash'];
+    unset($_SESSION['envio_flash']);
+}
 
 $view = $_GET['view'] ?? 'fiestas';
 $action = $_GET['action'] ?? '';
@@ -619,6 +689,7 @@ if ($formValues === null && $action === 'editar') {
             'public_slug' => $editSlug,
             'admin_label' => $p['admin_label'] ?? '',
             'birthday_person_name' => $p['birthday_person_name'] ?? '',
+            'edad' => $p['edad'] ?? '',
             'event_type' => (string) ($p['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday',
             'tema' => $p['tema'] ?? '',
             'fecha' => $p['fecha'] ?? '',
@@ -759,6 +830,13 @@ if ($formValues === null && $action === 'editar') {
           <div class="field">
             <label for="f-birthday-name">Nombre del cumpleañero/a</label>
             <input type="text" id="f-birthday-name" name="birthday_person_name" required maxlength="60" value="<?= h($formValues['birthday_person_name']) ?>" placeholder="Ej. Valentina">
+          </div>
+
+          <div class="field">
+            <label for="f-birthday-age">Cuántos años cumple <span class="muted small">(opcional)</span></label>
+            <?php // "5" a secas se lee como un valor guardado cuando el campo esta vacio. ?>
+            <input type="number" id="f-birthday-age" name="birthday_age" min="1" max="17" value="<?= h($formValues['edad'] ?? '') ?>" placeholder="Ej: 5">
+            <small class="muted">Aparece en el menú de juegos y en el saludo. Si lo dejas vacío, no se muestra la edad.</small>
           </div>
 
           <div class="field">
@@ -915,14 +993,28 @@ if ($formValues === null && $action === 'editar') {
             <p class="muted small">Lo que aparece en el comprobante que recibe el cliente. En pesos, sin decimales.</p>
             <?php $planesCatalogo = cb_planes()['planes']; ?>
             <?php if ($planesCatalogo): ?>
+              <?php
+                // Este selector no se guarda —no tiene `name`— porque lo que queda en la ficha
+                // es el número, no el plan: si mañana sube el precio del catálogo, una fiesta
+                // ya acordada no puede moverse. Pero volver a abrir la ficha y encontrarlo
+                // siempre en "Escribir el precio a mano" se lee como que no guardó nada. Así
+                // que se marca el plan cuyo precio coincide con el guardado: el selector
+                // *refleja* la ficha aunque no la mande.
+                $precioFicha = preg_replace('/\D/', '', (string) ($formValues['cobro']['price_total'] ?? ''));
+                $calzaAlgunPlan = false;
+                foreach ($planesCatalogo as $planCat) {
+                    if ($precioFicha !== '' && (int) $planCat['precio'] === (int) $precioFicha) { $calzaAlgunPlan = true; }
+                }
+              ?>
               <label class="cobro-plan">Tomar el precio de un plan
                 <select id="plan-catalogo">
-                  <option value="">Escribir el precio a mano</option>
+                  <option value="" <?= $calzaAlgunPlan ? '' : 'selected' ?>>Escribir el precio a mano</option>
                   <?php foreach ($planesCatalogo as $planCat): ?>
-                    <option value="<?= (int) $planCat['precio'] ?>"><?= h($planCat['nombre']) ?> · <?= h(cb_format_clp($planCat['precio'])) ?></option>
+                    <option value="<?= (int) $planCat['precio'] ?>"
+                      <?= $precioFicha !== '' && (int) $planCat['precio'] === (int) $precioFicha ? 'selected' : '' ?>><?= h($planCat['nombre']) ?> · <?= h(cb_format_clp($planCat['precio'])) ?></option>
                   <?php endforeach; ?>
                 </select>
-                <small class="muted">Copia el precio vigente al campo de abajo. Queda guardado ese número: si más adelante cambia el precio del plan, esta fiesta no cambia. Se editan en <a href="planes.php">Planes</a>.</small>
+                <small class="muted">Solo copia el precio al campo de abajo; lo que se guarda es ese número. Si más adelante cambia el precio del plan, esta fiesta no cambia. Se editan en <a href="planes.php">Planes</a>.</small>
               </label>
             <?php endif; ?>
             <div class="cobro-grid">
@@ -974,25 +1066,219 @@ if ($formValues === null && $action === 'editar') {
                     $pendientes[] = 'el descuento no tiene motivo escrito: en la boleta sale desnudo';
                 }
             ?>
+            <?php
+              require_once __DIR__ . '/../lib.manual.php';
+              require_once __DIR__ . '/../lib.envios.php';
+              require_once __DIR__ . '/../lib.acceptance.php';
+              // El panel de los cuatro correos. Antes cada uno vivía en su pantalla y solo
+              // dejaba un mensaje momentáneo: al día siguiente no había forma de saber si el
+              // manual ya se había mandado. Ahora el estado sale de `cc_envios`.
+              $envios = cb_envios_de_fiesta($slugFicha);
+              $opcionesManual = cb_envio_opciones_previas($envios, 'manual');
+              $firmaPendiente = cb_acceptance_pendiente_de_fiesta($slugFicha);
+              $firmaFirmada = cb_acceptance_firmada_de_fiesta($slugFicha);
+              // Cada tipo puede estar bloqueado por un motivo distinto, y decirlo vale más
+              // que un botón gris sin explicación.
+              $bloqueo = [
+                'firma' => $firmaFirmada !== null
+                    ? 'Ya está firmado.'
+                    : ($firmaPendiente === null ? 'No hay enlace pendiente: genéralo en Aceptaciones.' : ''),
+                'manual' => $correosPapas ? '' : 'Carga un contacto con correo en la ficha.',
+                'boleta' => $pendientes ? 'Falta ' . mb_strtolower($pendientes[0]) . '.' : ($correosPapas ? '' : 'Carga un contacto con correo en la ficha.'),
+                'terminos' => $firmaFirmada === null ? 'Nadie ha firmado todavía.' : '',
+              ];
+            ?>
             <div class="cobro-envio">
-              <?php if (!$pendientes): ?>
-                <p class="muted small">
-                  Todo listo: <?= count($correosPapas) ?> correo<?= count($correosPapas) === 1 ? '' : 's' ?>
-                  en la ficha y el comprobante armado.
-                </p>
-                <a class="btn btn-primary" href="comprobante.php?p=<?= h(urlencode($slugFicha)) ?>">
-                  <?= admin_icon('chat') ?> Enviar el comprobante por correo
-                </a>
+              <p class="muted small" style="margin:0">
+                <strong>Correos de esta fiesta.</strong>
+                <?= count($correosPapas) ?> correo<?= count($correosPapas) === 1 ? '' : 's' ?> en la ficha.
+                Los que llevan PDF lo mandan adjunto.
+              </p>
+              <?php /* Cada correo es un bloque que se apila, no una fila de tabla: la ficha
+                       es una columna angosta y tres columnas ahí no caben. Los controles se
+                       enganchan al formulario `cc-envios`, que vive fuera de la ficha. */ ?>
+              <?php foreach ($envios as $tipo => $e):
+                $ultimo = $e['ultimo'];
+                $motivo = $bloqueo[$tipo] ?? '';
+                $accion = $tipo === 'manual' ? 'enviar_manual' : 'reenviar_' . $tipo;
+              ?>
+                <div class="envio">
+                  <div class="envio__cab">
+                    <h4><?= h($e['etiqueta']) ?><?= $e['pdf'] ? ' <span class="envios__pdf">PDF</span>' : '' ?></h4>
+                    <p class="envio__estado">
+                      <?php if ($ultimo): ?>
+                        <strong>Enviado</strong> <?= h(cb_chile_datetime((string) $ultimo['enviado_at'])) ?>
+                        a <?= h((string) $ultimo['destinatario']) ?><?php
+                          if ((int) $e['veces'] > 1) { echo ' · ', (int) $e['veces'], ' veces'; }
+                          if ((string) $ultimo['enviado_por'] === 'automático') { echo ' · salió solo'; }
+                        ?>
+                      <?php else: ?>
+                        Sin enviar
+                      <?php endif; ?>
+                    </p>
+                  </div>
+                  <p class="muted small envio__que"><?= h($e['descripcion']) ?>
+                    <?php if ((int) $e['fallidos'] > 0): ?>
+                      <span class="envios__falla"><?= (int) $e['fallidos'] ?> intento<?= $e['fallidos'] === 1 ? '' : 's' ?> que no salió</span>
+                    <?php endif; ?>
+                    <?php if ($motivo !== ''): ?><span class="envio__motivo"><?= h($motivo) ?></span><?php endif; ?>
+                  </p>
+                  <?php if ($tipo === 'manual' && $motivo === ''): ?>
+                    <?php // El PIN y la invitación no están en la ficha; el reenvío repite lo de la vez anterior. ?>
+                    <div class="cobro-grid envio__campos">
+                      <label>PIN de la galería
+                        <input type="text" name="manual_pin" form="cc-envios" inputmode="numeric" maxlength="6"
+                               value="<?= h((string) ($opcionesManual['pin'] ?? '1234')) ?>">
+                      </label>
+                      <label>Enlace de la invitación <span class="muted small">(opcional)</span>
+                        <input type="url" name="manual_invitacion" form="cc-envios" placeholder="https://cumpleclick.com/..."
+                               value="<?= h((string) ($opcionesManual['invitacion'] ?? '')) ?>">
+                      </label>
+                    </div>
+                  <?php endif; ?>
+                  <div class="envio__botones">
+                    <?php if ($motivo === ''): ?>
+                      <button class="btn <?= $ultimo ? 'btn-ghost' : 'btn-primary' ?>" type="submit"
+                              form="cc-envios" name="action" value="<?= h($accion) ?>"
+                        <?= $e['rota_enlace'] ? 'data-avisar="Se enviará un enlace NUEVO y el anterior dejará de funcionar. ¿Seguir?"' : '' ?>>
+                        <?= admin_icon('chat') ?> <?= $ultimo ? 'Reenviar' : 'Enviar' ?>
+                      </button>
+                    <?php endif; ?>
+                    <?php if ($tipo === 'manual'): ?>
+                      <a class="btn btn-ghost" href="<?= h(cb_manual_url($slugFicha)) ?>" target="_blank" rel="noopener">Ver el manual</a>
+                    <?php elseif ($tipo === 'boleta'): ?>
+                      <a class="btn btn-ghost" href="comprobante.php?p=<?= h(urlencode($slugFicha)) ?>">Ver / elegir destinatarios</a>
+                    <?php elseif ($tipo === 'firma'): ?>
+                      <a class="btn btn-ghost" href="aceptaciones.php?party=<?= h(urlencode($slugFicha)) ?>">Ir a Aceptaciones</a>
+                    <?php endif; ?>
+                  </div>
+                  <?php if ($e['rota_enlace'] && $motivo === ''): ?>
+                    <p class="muted small envio__aviso">Emite un enlace nuevo y anula el anterior.</p>
+                  <?php endif; ?>
+                  <?php
+                    // Mensaje listo para pegar en WhatsApp. Solo lo tienen el manual y el
+                    // comprobante: sus enlaces van firmados con HMAC y son siempre los mismos.
+                    // Los de Términos existen en claro una sola vez y no se pueden copiar acá.
+                    $textoWa = cb_envio_texto_whatsapp($slugFicha, $tipo);
+                  ?>
+                  <?php if ($textoWa !== ''): ?>
+                    <details class="envio__mensaje">
+                      <summary>Mensaje listo para copiar o mandar por WhatsApp</summary>
+                      <textarea readonly rows="6" id="wa-<?= h($tipo) ?>"><?= h($textoWa) ?></textarea>
+                      <div class="envio__botones">
+                        <?php // Reusa el copiador que ya existe para los prompts: lee el value del campo por id. ?>
+                        <button type="button" class="btn btn-ghost" data-copy-prompt="wa-<?= h($tipo) ?>"><?= admin_icon('copy') ?> Copiar</button>
+                        <a class="btn btn-ghost" target="_blank" rel="noopener"
+                           href="https://wa.me/?text=<?= h(rawurlencode($textoWa)) ?>">Compartir por WhatsApp</a>
+                      </div>
+                    </details>
+                  <?php elseif ($e['rota_enlace']): ?>
+                    <p class="muted small envio__aviso">
+                      Sin mensaje para copiar: su enlace es de un solo uso y existe en claro una
+                      sola vez. Se copia en Aceptaciones, cuando se genera.
+                    </p>
+                  <?php endif; ?>
+                </div>
+              <?php endforeach; ?>
+
+          <?php
+            /* Enlace de confirmados para la familia.
+               Va acá y no en Invitaciones porque es lo que Luis comparte con el papá o la
+               mamá junto con el resto de la fiesta, y porque el número de confirmados es
+               dato de la fiesta, no de una invitación en particular.
+               Los botones se enganchan al formulario `cc-envios` con form="cc-envios", igual
+               que el panel de correos: un formulario dentro de otro es HTML inválido y el
+               navegador descarta el de adentro. */
+            require_once __DIR__ . '/../lib.rsvp.php';
+            $rsvpResumen = cb_rsvp_resumen($slugFicha);
+            $rsvpInvit   = cb_rsvp_invitacion_de_fiesta($slugFicha);
+            // El enlace ya no se emite: se calcula del slug, así que está siempre a la vista.
+            // Antes era un token aleatorio guardado hasheado, visible una sola vez, y para
+            // volver a verlo había que generar otro y matar el que ya estaba compartido.
+            $rsvpUrl = cb_rsvp_url_papas_fija($slugFicha);
+            $rsvpWa  = cb_rsvp_texto_whatsapp($slugFicha, $rsvpUrl);
+          ?>
+          <div class="envio envio--confirmados">
+            <h3 class="envio__titulo"><?= admin_icon('party') ?> Confirmados · enlace para la familia</h3>
+            <p class="envio__estado">
+              <?php if ($rsvpResumen['familias'] > 0): ?>
+                <span class="envios__ok"><?= (int) $rsvpResumen['familias'] ?>
+                  familia<?= $rsvpResumen['familias'] === 1 ? '' : 's' ?>
+                  · <?= (int) $rsvpResumen['ninos'] ?> niño<?= $rsvpResumen['ninos'] === 1 ? '' : 's' ?></span>
               <?php else: ?>
-                <p class="muted small"><strong>Para enviarle el comprobante al papá falta:</strong></p>
+                <span class="muted">Todavía no confirma nadie.</span>
+              <?php endif; ?>
+            </p>
+
+            <?php if ($rsvpResumen['lista']): ?>
+              <?php /* Los nombres, no solo el numero: sin esto Luis tenia que generarse a si
+                       mismo el enlace de la familia para ver quien viene. */ ?>
+              <details class="envio__mensaje" open>
+                <summary>Ver quiénes confirmaron</summary>
+                <ul class="rsvp-lista">
+                  <?php foreach ($rsvpResumen['lista'] as $f): ?>
+                    <li>
+                      <strong><?= h($f['familia']) ?></strong>
+                      <?php if ($f['ninos'] !== ''): ?>
+                        <span class="rsvp-lista__ninos"><?= h($f['ninos']) ?></span>
+                        <span class="muted small">(<?= (int) $f['cuantos'] ?>)</span>
+                      <?php else: ?>
+                        <span class="muted small">sin niños anotados</span>
+                      <?php endif; ?>
+                      <span class="muted small rsvp-lista__cuando"><?= h($f['cuando']) ?></span>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+                <p class="muted small" style="margin:8px 0 0">
+                  El conteo de niños es aproximado: los nombres llegan como texto libre
+                  («Emma y Lucas») y se cuentan por las comas y las «y».
+                </p>
+              </details>
+            <?php endif; ?>
+
+            <textarea readonly rows="2" id="rsvp-url" class="envio__enlace"><?= h($rsvpUrl) ?></textarea>
+            <div class="envio__botones">
+              <button type="button" class="btn btn-ghost" data-copy-prompt="rsvp-url"><?= admin_icon('copy') ?> Copiar enlace</button>
+              <a class="btn btn-ghost" target="_blank" rel="noopener" href="<?= h($rsvpUrl) ?>">Abrir</a>
+            </div>
+            <details class="envio__mensaje" open>
+              <summary>Mensaje listo para copiar y pegar por WhatsApp</summary>
+              <textarea readonly rows="6" id="rsvp-wa"><?= h($rsvpWa) ?></textarea>
+              <div class="envio__botones">
+                <button type="button" class="btn btn-ghost" data-copy-prompt="rsvp-wa"><?= admin_icon('copy') ?> Copiar</button>
+                <a class="btn btn-ghost" target="_blank" rel="noopener"
+                   href="https://wa.me/?text=<?= h(rawurlencode($rsvpWa)) ?>">Compartir por WhatsApp</a>
+              </div>
+            </details>
+            <?php if ($rsvpInvit === null): ?>
+              <p class="muted small envio__aviso">
+                Ojo: esta fiesta todavía no tiene invitación, así que nadie puede confirmar.
+                Créala en <a href="invitations.php?party=<?= h(urlencode($slugFicha)) ?>">Invitaciones</a>.
+              </p>
+            <?php endif; ?>
+            <p class="muted small envio__aviso">
+              Es el mismo siempre, no vence y no hay que generarlo. Es privado: quien lo tenga
+              ve los nombres de quienes confirmaron. No es el enlace de la invitación, ese es
+              el que va a los invitados. Para cerrarlo, desactiva la fiesta.
+            </p>
+          </div>
+
+              <?php if ($pendientes): ?>
+                <p class="muted small" style="margin:10px 0 0"><strong>Para enviarle el comprobante al cliente falta:</strong></p>
                 <ul class="cobro-envio__faltan">
                   <?php foreach ($pendientes as $p): ?><li><?= h($p) ?></li><?php endforeach; ?>
                 </ul>
-                <a class="btn btn-ghost" href="comprobante.php?p=<?= h(urlencode($slugFicha)) ?>">
-                  Ver el comprobante igual
-                </a>
               <?php endif; ?>
             </div>
+            <script>
+              // Los dos correos que rotan enlace avisan antes: reenviarlos deja muerto el
+              // enlace que el cliente quizá ya tiene guardado.
+              document.querySelectorAll('[data-avisar]').forEach(function (b) {
+                b.addEventListener('click', function (ev) {
+                  if (!window.confirm(b.getAttribute('data-avisar'))) { ev.preventDefault(); }
+                });
+              });
+            </script>
             <?php } ?>
           </fieldset>
           <script>
@@ -1022,6 +1308,26 @@ if ($formValues === null && $action === 'editar') {
             <a class="btn btn-ghost" href="index.php">Cancelar</a>
           </div>
         </form>
+        <?php if ($slugFicha !== ''): ?>
+          <?php /*
+            🔴 Este formulario va FUERA del de la ficha, y no es un detalle de estilo.
+
+            HTML no permite formularios anidados: el navegador descarta el interno y se queda
+            con sus campos. Cuando los botones de correo vivían dentro del formulario de la
+            ficha, sus `<input name="action" value="reenviar_...">` terminaban dentro del
+            formulario grande, después del `action=guardar`, y PHP se queda con el ÚLTIMO. El
+            resultado era que apretar **Guardar** no guardaba nada y en su lugar mandaba un
+            correo a los papás.
+
+            Los botones del panel se enganchan acá con el atributo `form="cc-envios"`, que
+            asocia un control a un formulario de cualquier parte del documento. Así el panel
+            se ve dentro de la ficha pero no comparte ni un campo con ella.
+          */ ?>
+          <form id="cc-envios" method="post" action="index.php" class="oculto-visual">
+            <?= admin_csrf_field() ?>
+            <input type="hidden" name="slug" value="<?= h($slugFicha) ?>">
+          </form>
+        <?php endif; ?>
       </section>
 
     <?php elseif ($view === 'tema'): ?>
@@ -1419,7 +1725,11 @@ if ($formValues === null && $action === 'editar') {
             <div class="party-actions">
               <a class="btn btn-ghost" href="index.php?action=editar&amp;slug=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('edit') ?> Editar</a>
               <?php if ($tieneGaleriaPin): ?>
-                <a class="btn btn-ghost" href="<?= h($galeriaUrl) ?>" target="_blank" rel="noopener"><?= admin_icon('gallery') ?> Galería</a>
+                <a class="btn btn-ghost" href="<?= h($galeriaUrl) ?>" target="_blank" rel="noopener"><?= admin_icon('gallery') ?> Ver galería</a>
+                <?php /* El de arriba abre la galería pública, donde no se puede borrar nada.
+                        Este lleva a administrarlas, que es lo que uno viene buscando cuando
+                        mira la galería y quiere sacar una foto. */ ?>
+                <a class="btn btn-ghost" href="album.php?party=<?= rawurlencode($publicSlug) ?>#fotos-kiosco"><?= admin_icon('trash') ?> Borrar fotos</a>
               <?php endif; ?>
               <a class="btn btn-ghost" href="<?= h($invitationsUrl) ?>"><?= admin_icon('duplicate') ?> Invitaciones</a>
               <a class="btn btn-ghost" href="mensajes.php?p=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('chat') ?> Mensajes</a>
@@ -1435,6 +1745,17 @@ if ($formValues === null && $action === 'editar') {
               <?php if ($eventProfileAvailable): ?>
                 <a class="btn btn-ghost" href="event-profile.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('party') ?> Perfil del protagonista</a>
               <?php endif; ?>
+              <?php $juegosOn = cb_juegos3d_activos($publicSlug); ?>
+              <form method="post" action="index.php" class="inline-form"
+                    <?= $juegosOn ? 'data-confirm="Los niños que entren con el QR verán que se acabó la hora de juego. ¿Apagar los juegos 3D?"' : '' ?>>
+                <?= admin_csrf_field() ?>
+                <input type="hidden" name="action" value="juegos3d">
+                <input type="hidden" name="slug" value="<?= h($publicSlug) ?>">
+                <input type="hidden" name="prender" value="<?= $juegosOn ? '0' : '1' ?>">
+                <button type="submit" class="btn <?= $juegosOn ? 'btn-ghost' : 'btn-primary' ?>">
+                  <?= $juegosOn ? admin_icon('warn') . ' Apagar juegos 3D' : admin_icon('check') . ' Prender juegos 3D' ?>
+                </button>
+              </form>
               <form method="post" action="index.php" class="inline-form">
                 <?= admin_csrf_field() ?>
                 <input type="hidden" name="action" value="duplicar">

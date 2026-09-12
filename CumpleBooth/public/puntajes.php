@@ -65,13 +65,38 @@ if (cb_party_db_id($slug) === null) {
 // nombre y la temática ya están impresos en el cartel que cuelga en la mesa.
 $fiesta = cb_load_party_raw($slug);
 $tema = (string) ($fiesta['tema'] ?? '');
+// Apagados, la lista sale vacía. El menú se encarga de decirlo con todas sus letras; acá se
+// corta el suministro para que ningún camino alternativo deje entrar igual.
+$juegosActivos = cb_juegos3d_activos($slug);
 $juegos = [];
-foreach (cb_juegos_de_tema($tema) as $id => $j) {
-    $juegos[] = ['id' => $id, 'nombre' => $j['nombre']];
+if ($juegosActivos) {
+    foreach (cb_juegos_de_tema($tema) as $id => $j) {
+        $juegos[] = ['id' => $id, 'nombre' => $j['nombre']];
+    }
 }
+
+// Los invitados que ya estan cargados en la ficha. El menu los ofrece en una lista para que
+// el nino elija en vez de escribir: un nombre tecleado a mano en una tablet, por un chico de
+// cinco anos, llega mal escrito la mitad de las veces, y en la tabla de posiciones cada
+// variante aparece como un nino distinto. Quien no este en la lista puede escribirse igual.
+$invitados = [];
+foreach ((array) ($fiesta['invitados'] ?? []) as $i) {
+    $nombre = cb_puntaje_nombre((string) ($i['name'] ?? ''));
+    if ($nombre !== '') { $invitados[] = $nombre; }
+}
+$invitados = array_values(array_unique($invitados));
+
+$edad = isset($fiesta['edad']) && (int) $fiesta['edad'] > 0 ? (int) $fiesta['edad'] : null;
 
 puntajes_responder(200, [
     'ok' => true,
-    'fiesta' => ['nombre' => (string) ($fiesta['nombre'] ?? ''), 'tema' => $tema],
+    'fiesta' => [
+        'nombre' => (string) ($fiesta['nombre'] ?? ''),
+        'tema' => $tema,
+        'edad' => $edad,
+    ],
+    'invitados' => $invitados,
     'juegos_disponibles' => $juegos,
+    'juegos_activos' => $juegosActivos,
+    'marca' => cb_marca(),
 ] + cb_posiciones($slug));

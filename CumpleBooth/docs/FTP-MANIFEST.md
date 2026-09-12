@@ -1217,3 +1217,1710 @@ puede leer) mas una copia local en el scratchpad. Revertir es descomprimir ese t
 
 20 migraciones aplicadas. `cc_puntajes` y `cc_finanzas` existen y estan **vacias**: los datos
 de prueba se borraron al terminar.
+
+## DESPLEGADO 2026-09-07 (cierre) — manual de la fiesta, PDF de Terminos y los correos desde el admin
+
+Luis pidio que el manual, el enlace de firma y los Terminos firmados salieran **desde el admin,
+por correo, con boton para verlos y ademas el PDF adjunto**. Lo que habia era un script de
+Python del sabado 6 con los datos escritos a mano (`scratchpad/correo/generar_manual.py`),
+hecho para la fiesta equivocada (Isidora) y sin nada de lo que aparecio despues (menu de
+juegos, Posiciones, Festival, Album, comprobante).
+
+### El motor de documentos: `lib.documentos.php`
+
+`CcPdf` (la boleta) dibuja en coordenadas absolutas y no sabe que una hoja se llena. Encima va
+`CcDocumento`: un cursor que avanza, corta la hoja sola, numera las paginas, y ofrece bloques
+(banner, titulo, parrafo, lista, pasos numerados, tabla de dos columnas, imagen, firma). Los
+renglones se parten aca y no con `CcPdf::parrafo()`, porque ese dibuja todas las lineas de una
+vez y no puede detenerse a mitad de parrafo para cambiar de hoja. Una palabra mas larga que el
+renglon (una URL, una huella SHA-256) se corta por letras en vez de salirse del margen.
+
+**La firma dibujada llega como PNG con fondo transparente y el motor solo sabe de JPEG**: se
+aplana sobre blanco con GD (disponible en PROD) a un archivo temporal que se borra al instante.
+
+### El manual: una sola fuente, tres salidas
+
+`lib.manual.php` arma los datos desde la ficha (nombre, edad, fecha, tematica, contacto
+principal, hora y lugar del Resumen del Plan, juegos de la tematica). `cb_manual_secciones()`
+es **el unico lugar donde vive el contenido**; de ahi salen la pagina (`manual.php`), el PDF
+(`&pdf=1`, el mismo que va adjunto) y el correo. Si se escriben por separado terminan diciendo
+cosas distintas.
+
+- Los nombres de los personajes salen de `themes.json` en tiempo de ejecucion: **el
+  repositorio no lleva nombres de franquicias**.
+- Lo que la ficha no sabe entra como parametro al generar: el PIN de la galeria y el enlace de
+  la invitacion (su token va hasheado en la base y **no se puede reconstruir**; se pega a mano,
+  como ya hacia Mensajes).
+- Las dos cifras del manual —minutos de anticipacion y dias de plazo para la lista— son
+  **ajustes** (`manual_anticipacion_min`, `manual_dias_lista`, pantalla Ajustes). Vacias, el
+  manual dice "con anticipacion" y "antes de la fiesta" sin inventar un numero.
+- El enlace va **firmado con HMAC** (`manual.php?p=<slug>&f=<firma>`), igual que el
+  comprobante de pago: trae el nombre del papa y el PIN, y no debe abrirse adivinando el slug.
+  La firma se comprueba antes de mirar si la fiesta existe.
+
+### El PDF de Terminos firmados: `cb_acceptance_pdf()`
+
+Las mismas seis secciones que la evidencia HTML. **La evidencia HTML sigue siendo el documento
+probatorio** (es lo que se hasheo al firmar y se verifica byte a byte); el PDF es una copia
+legible generada a pedido, y por eso lleva la huella del HTML y no una propia.
+
+El texto legal integro se incluye **solo si el que hay hoy en disco es exactamente el que se
+firmo** (misma huella y misma version). Si los documentos cambiaron despues, el PDF lo dice y
+remite a la evidencia HTML, en vez de imprimir un texto que el firmante nunca vio.
+`tests/backend/acceptance-pdf.php` fija ese criterio con una firma PNG real.
+
+Sale por tres lados: adjunto en el correo al firmar (`cb_acceptance_send_notifications`, y si
+el PDF falla el correo sale igual con el enlace), `comprobante-aceptacion.php?r=...&pdf=1` para
+el cliente, y `admin/aceptaciones.php?action=pdf&id=N` con boton "PDF" por fila.
+
+### Los tres correos, separados a proposito
+
+| Correo | Desde donde | Como |
+|---|---|---|
+| **Firma los Terminos** | Aceptaciones, boton junto al enlace recien generado | el enlace es de un solo uso y vence; solo en este correo, para que el papa lo encuentre por lo que es |
+| **El manual de tu fiesta** | ficha de la fiesta, bloque Cobro, con PIN e invitacion opcional | PDF adjunto + boton "Ver el manual"; al contacto principal |
+| **Terminos firmados** | automatico al firmar (ya existia) | ahora con el PDF adjunto |
+
+Los tres con copia oculta al correo de Ajustes. El boton de firma manda el enlace de vuelta
+oculto en el formulario —ya esta a la vista en esa misma pantalla, no expone nada nuevo— y el
+servidor comprueba que sea un enlace de aceptacion de este sitio y de una fila pendiente de
+esta fiesta.
+
+### Reconciliacion de `admin/index.php` y `lib.php`
+
+Los cambios de la edad (`birthday_age`, migracion 019) se habian aplicado sobre copias en el
+scratchpad y subido a PROD, y el repositorio se quedo atras. Se unificaron: el repositorio
+tiene ahora la edad (de PROD) mas el envio del manual (nuevo), y es lo que se subio.
+
+### Lista de subida
+
+| Archivo local | Destino en PROD | Tipo |
+|---|---|---|
+| `public/lib.documentos.php` | `app/lib.documentos.php` | OBLIGATORIO (nuevo) |
+| `public/lib.manual.php` | `app/lib.manual.php` | OBLIGATORIO (nuevo) |
+| `public/manual.php` | `app/manual.php` | OBLIGATORIO (nuevo) |
+| `public/lib.acceptance.php` | `app/lib.acceptance.php` | OBLIGATORIO (**CRLF**) |
+| `public/comprobante-aceptacion.php` | `app/comprobante-aceptacion.php` | OBLIGATORIO (**CRLF**) |
+| `public/lib.ajustes.php` | `app/lib.ajustes.php` | OBLIGATORIO (**CRLF**) |
+| `public/admin/aceptaciones.php` | `app/admin/aceptaciones.php` | OBLIGATORIO (**CRLF**) |
+| `public/admin/ajustes.php` | `app/admin/ajustes.php` | OBLIGATORIO (**CRLF**) |
+| `public/admin/index.php` | `app/admin/index.php` | OBLIGATORIO (**CRLF**) |
+| `public/admin/_style.css.php` | `app/admin/_style.css.php` | OBLIGATORIO (**CRLF**) |
+
+Respaldos en el servidor: `<archivo>.bak-20260907-manual` para los siete modificados.
+
+Verificado en PROD contra datos reales: manual de 3 paginas con la cabecera JPEG de la
+tematica para las dos fiestas; enlace firmado valida y 403 sin firma o con firma falsa; las 10
+URL impresas sin cambio de estado; el admin en pie sin errores PHP. Correo de prueba del
+manual de Samantha enviado a la casilla de Luis con el PDF adjunto (132 kB). Bateria backend:
+257 comprobaciones en verde (manual 41, acceptance-pdf 18, acceptance 46, comprobante 23,
+cliente 46, admin-password 26, finanzas 26, puntajes 31).
+
+**No probado:** el PDF de Terminos contra una firma real de PROD (todavia no hay ninguna
+aceptacion firmada); se probo en local con una firma PNG dibujada con GD. Y el boton de enviar
+la firma se probo por codigo, no disparando un correo a un papa.
+
+---
+
+## DESPLEGADO 2026-09-07 (tarde) — Instagram enlazable en el PDF, la pagina y el correo
+
+Luis: *"el instagram debe estar tambien linkeable en el PDF asi cmo el del correo con el log
+de instagram"*. El correo tampoco lo tenia: ahora las tres piezas llevan la misma cuenta, con
+su icono y como enlace.
+
+### Que se hizo
+
+- **El motor de PDF aprendio a curvar.** `CcPdf` solo sabia lineas, rectangulos y JPEG. Se le
+  agregaron `rectanguloRedondeado()` y `circulo()`, ambos por curvas Bezier, porque el formato
+  PDF no tiene primitiva de arco. Con eso el glifo de Instagram se **dibuja**, no se pega como
+  imagen: sale nitido a cualquier zoom, no depende de que exista un archivo en el servidor
+  (que es justo lo que rompe un PDF en silencio) y no cuesta un JPEG mas.
+- **`CcDocumento::cierreConLogos()`** recibe un parametro `instagram` opcional y pinta la
+  cuenta con el glifo al lado, subrayada, en el morado de enlace, y **anota la zona tocable**
+  incluyendo el icono.
+- **Enlaces de la tabla, corregidos.** La deteccion anterior comparaba el renglon entero con
+  la URL, asi que la fila `https://...galeria.php?p=samantha (PIN 1234)` no se reconocia: la
+  URL y el texto que le sigue comparten renglon. Ahora la URL se consume caracter a caracter,
+  se pinta solo ese tramo como enlace y el resto queda en tinta normal. Antes de esto, las
+  filas mas utiles del manual eran las unicas que **no** se podian tocar.
+- **Bug de sombra corregido** en `CcDocumento::tabla()`: una variable `$ancho` interna pisaba
+  el ancho de la tabla y la fila siguiente quedaba con ancho negativo, lo que hacia que
+  `partir()` no avanzara nunca y agotara la memoria. `partir()` ahora tambien se defiende:
+  con un ancho no positivo devuelve el texto sin partir en vez de colgarse.
+- **El correo:** pie con `@Cumple_Click` y el logo, enlazado. El icono va como PNG alojado
+  (`assets/img/instagram.png`, generado con GD a 4x y reducido) porque los clientes de correo
+  no dibujan SVG; el `alt` es la cuenta, para que con imagenes bloqueadas siga leyendose.
+- **La pagina del manual:** el mismo glifo, en SVG en linea.
+- La cuenta y su enlace salen de `data/marca.json` (Admin -> Marca). Si falta el enlace, se
+  arma con la cuenta, igual que ya hacia el cartel QR.
+
+### Lista de subida
+
+| Orden | Archivo local | Destino en PROD | Tipo |
+|---|---|---|---|
+| 1 | `sitio/assets/img/instagram.png` | `public_html/assets/img/instagram.png` | OBLIGATORIO (nuevo, **raiz del sitio, no `app/`**) |
+| 2 | `public/lib.pdf.php` | `app/lib.pdf.php` | OBLIGATORIO (**CRLF**) |
+| 3 | `public/lib.documentos.php` | `app/lib.documentos.php` | OBLIGATORIO (**CRLF**) |
+| 4 | `public/lib.manual.php` | `app/lib.manual.php` | OBLIGATORIO (**CRLF**) |
+| 5 | `public/lib.mail-templates.php` | `app/lib.mail-templates.php` | OBLIGATORIO (**CRLF**) |
+
+El PNG va **primero** a proposito: el pie del correo lo referencia, y al reves los correos
+enviados en ese hueco saldrian con la imagen rota. `public/manual.php` no cambio (md5 igual
+al de PROD); tampoco `lib.acceptance.php`, `lib.ajustes.php` ni el admin.
+
+Respaldos en el servidor: `<archivo>.bak-20260907-instagram` para los cuatro PHP.
+
+### Verificado en PROD
+
+- md5 de los cuatro PHP en el servidor identicos a los locales; `php -l` limpio en los cuatro.
+- Contra los datos reales de `samantha-hielo` y `luciano-spidey`: PDF valido de 135 y 151 kB,
+  **6 enlaces tocables anotados** en cada uno, `/URI (https://instagram.com/Cumple_Click)`
+  presente, la cuenta impresa al pie (comprobado inflando los flujos, no en los bytes crudos,
+  que darian falso positivo por la anotacion), y la galeria tambien tocable.
+- El PDF real bajado por HTTP y **renderizado**: el glifo sale correcto y el enlace de la
+  ultima pagina es `https://instagram.com/Cumple_Click`.
+- `https://cumpleclick.com/assets/img/instagram.png` responde 200 `image/png`. Ojo: el CDN de
+  Hostinger sirve una version recodificada (1979 bytes vs 1631 en disco) — le pasa igual a
+  `correo-logo.png` desde siempre; la imagen servida es la misma y es valida.
+- La pagina del manual en el navegador: enlace a Instagram con el glifo, color `#d6307f`.
+- El correo renderizado: icono cargado desde el CDN (64x64) y enlazado.
+- Las 10 URL impresas, todas 200, sin cambio de estado.
+- Backend: manual 51, acceptance-pdf 18, comprobante 23, finanzas 26, puntajes 31,
+  fuente-baloo 39, lint OK.
+
+**No probado:** no se envio ningun correo nuevo a un papa; el pie se verifico renderizando el
+HTML del correo, no con un envio real.
+
+---
+
+## DESPLEGADO 2026-09-07 (noche) — Panel de correos con reenvío, y el texto legal sin notas internas
+
+Dos encargos de Luis: *"y desde el admin ya cuando se envia hay un mensaje que diga enviado? y
+boton de reenviar cada uno de los correos con los PDF?"* y *"de paso arregla el texto legal
+borrador"*.
+
+### El problema que resolvía
+
+Mandar un correo dejaba un mensaje en pantalla y **nada más**. Al día siguiente no había forma
+de saber si el manual de una fiesta ya se había enviado. Con dos fiestas se aguanta de
+memoria; con seis, no. El peor caso era el enlace de firma: su botón solo existía en la
+pantalla inmediatamente después de generarlo, así que para reenviarlo había que generar uno
+nuevo —lo que **revocaba el anterior**— sin que nada lo dijera.
+
+### Qué se hizo
+
+- **Migración 020: `cc_envios`.** Bitácora de los cuatro correos. Guarda **cada envío**, no el
+  último por tipo: un reenvío es un hecho distinto y saber cuántas veces se mandó algo es lo
+  que uno quiere cuando el papá dice "no me llegó". Los intentos fallidos también se guardan,
+  y **no** cuentan como enviado.
+- **`public/lib.envios.php` (nuevo).** Los cuatro correos detrás de la misma puerta. No
+  duplica el contenido de ninguno: el del manual sale de `cb_manual_correo()`, el de la boleta
+  de `cb_comprobante_correo()` y el de Términos firmados de la misma función que lo manda al
+  firmar. El único que vive ahí es el de la firma, que estaba escrito **dentro** de
+  `admin/aceptaciones.php` y se movió entero, sin cambiarle una coma.
+- **Panel "Correos de esta fiesta"** en la ficha (sección Cobro): los cuatro con su estado
+  —enviado cuándo, a quién, cuántas veces, cuántos intentos fallaron— y botón de envío o
+  reenvío. Cada tipo bloqueado dice **por qué** ("Ya está firmado", "Nadie ha firmado
+  todavía", "Falta el valor del servicio") en vez de un botón gris sin explicación.
+- **El PIN y el enlace de la invitación quedan guardados** con el envío del manual, y el
+  reenvío los repite. Sin eso, un reenvío saldría sin la invitación que el primero sí llevaba.
+- 🔴 **Los dos correos que rotan enlace avisan antes.** El token de firma y el del comprobante
+  se guardan **hasheados** —a propósito, para que una filtración de la base no permita firmar
+  ni descargar el comprobante de nadie—, así que el enlace en claro existe una sola vez y
+  reenviar obliga a emitir uno nuevo. Los botones lo dicen y piden confirmación. El de
+  Términos firmados lleva además el PDF adjunto, así que el papá recibe el documento aunque
+  tenga guardado el enlace viejo.
+
+### El texto legal
+
+Los tres documentos que firma el cliente llevaban dentro las notas de trabajo: `BORRADOR
+PREPARADO POR EL EQUIPO DE AUTOMATIZATECH`, trece `TODO-LUIS` y dos `(abogado: confirmar...)`.
+Eso iba **dentro del PDF que firma el papá**. Como ninguna fiesta ha firmado todavía (las diez
+están `waived`), nadie lo recibió.
+
+Se cerró cada pendiente con el criterio de no inventar nada:
+
+| Pendiente | Cómo se cerró | De dónde salió el dato |
+|---|---|---|
+| Razón social y RUT | `AUTOMATIZATECH SpA, RUT 78.363.717-0` | dato canónico de la empresa |
+| Contacto de privacidad | `contacto@cumpleclick.com` | `data/marca.json` |
+| Porcentaje del anticipo | **No se fija uno**: es por evento y ya vive en el Resumen del Plan | evitar que el contrato contradiga la ficha |
+| Medios de pago | "se informan junto con el Resumen del Plan y en el comprobante" | los datos bancarios no van en un contrato: cambian |
+| Escala de cancelación | Se adopta la que **ya estaba escrita** (15+ días íntegro, 14-7 el 50%, menos de 7 sin devolución) | el texto ya la traía; solo se quitó el "confirmar" |
+| Valores de reposición | "el valor del equipo afectado, acreditado con factura o cotización" | una tabla que no existía dejaba la cláusula vacía |
+| Retención de fotos | **30 días la foto de cabina y 90 el Álbum Recuerdo** | `lib.php` y `lib.album.php`: la política decía solo 30 |
+| Proveedores | Solo Hostinger (hosting, BD y correo) | verificado en PROD; no se usa Drive |
+| Domicilio | Se quita la mención en la identificación; el foro pactado sigue siendo Santiago | no inventar un domicilio |
+
+🔴 **Una decisión que necesita abogado:** el derecho a retracto del art. 3 bis de la Ley
+19.496 quedó **expresamente excluido**, apoyado en que esa misma norma lo permite si el
+proveedor lo dispone y lo informa antes, y en que el servicio bloquea una fecha en exclusiva.
+Es coherente con la escala de cancelación que ya estaba escrita, pero es una postura legal
+tomada por un agente: hay que confirmarla.
+
+Versión del paquete legal: **2026-09-05 → 2026-09-07**; huella `684a8c4a...`. Cambiar el texto
+cambia la huella, y por eso solo se podía hacer sin ninguna firma emitida: un comprobante
+firmado solo incluye el texto legal si su huella coincide con la firmada.
+
+También salieron tres `TODO-LUIS` del propio admin: el contacto de CumpleClick en el resumen
+del plan ahora sale de `data/marca.json` en vez de estar escrito a mano.
+
+### Arreglos de paso
+
+- **La huella SHA-256 se partía según qué dígitos le tocaran.** En Helvetica una `f` mide 278
+  y un `0` mide 556, así que dos huellas de 64 caracteres ocupan anchos muy distintos: la
+  vieja entraba justa y la nueva se cortaba en dos renglones. Una huella cortada no sirve para
+  verificar nada. Ahora la tabla achica el valor hasta que entre, con prueba de regresión
+  usando la peor huella posible (64 dígitos anchos).
+- **Seis suites de pruebas estaban en rojo desde antes.** Cada una listaba a mano las
+  migraciones que aplicaba y esas listas se quedaron en la 016; la 019 agregó una columna que
+  el código ya escribía. Ahora todas usan `tests/backend/_migraciones.php`, que aplica el
+  esquema completo. Para que eso fuera posible hubo que hacer idempotente la migración 003:
+  sus dos `RENAME COLUMN` no tenían guarda y reventaban al aplicarse dos veces.
+- **La prueba de correos de `leads` contaba imágenes** y el ícono de Instagram la rompió. Se
+  cambió el criterio por el que de verdad importa: el tope subió a dos, pero ahora se exige
+  `alt` en **todas** las imágenes y no solo cuando hay una.
+
+### Lista de subida
+
+| Orden | Archivo local | Destino en PROD | Tipo |
+|---|---|---|---|
+| 1 | `database/migrations/020_envios.php` | (runner puntual, **no queda en el servidor**) | OBLIGATORIO — antes que el código |
+| 2 | `public/legal/terminos-y-condiciones.md` | `app/legal/terminos-y-condiciones.md` | OBLIGATORIO (**CRLF**) |
+| 3 | `public/legal/politica-de-privacidad.md` | `app/legal/politica-de-privacidad.md` | OBLIGATORIO (**CRLF**) |
+| 4 | `public/legal/consentimiento-imagen-menores.md` | `app/legal/consentimiento-imagen-menores.md` | OBLIGATORIO (**CRLF**) |
+| 5 | `public/lib.envios.php` | `app/lib.envios.php` | OBLIGATORIO (nuevo, LF) |
+| 6 | `public/lib.acceptance.php` | `app/lib.acceptance.php` | OBLIGATORIO (**CRLF**) |
+| 7 | `public/lib.documentos.php` | `app/lib.documentos.php` | OBLIGATORIO (LF) |
+| 8 | `public/admin/_style.css.php` | `app/admin/_style.css.php` | OBLIGATORIO (**CRLF**) |
+| 9 | `public/admin/comprobante.php` | `app/admin/comprobante.php` | OBLIGATORIO (**CRLF**) |
+| 10 | `public/admin/aceptaciones.php` | `app/admin/aceptaciones.php` | OBLIGATORIO (**CRLF**) |
+| 11 | `public/admin/index.php` | `app/admin/index.php` | OBLIGATORIO (**CRLF**) |
+
+Los legales van **antes** que el código que los lee, para que no exista un instante con el
+texto viejo y la versión nueva. Respaldos: `<archivo>.bak-20260907-envios` para los diez que
+ya existían. `tests/backend/*` y `database/migrations/020_envios.php` **no se suben**: el
+runner se borró del servidor al terminar.
+
+### Verificado en PROD
+
+- Migración 020 aplicada; `cc_envios` con sus diez columnas. `020_envios.php` y el runner
+  borrados del servidor.
+- md5 de los diez archivos en el servidor **idénticos** a los locales; `php -l` limpio.
+- Contra los datos reales: el texto legal en versión `2026-09-07`, huella `684a8c4a...`, **sin
+  BORRADOR, sin TODO-LUIS y sin notas para el abogado**; nombra el RUT, resuelve el retracto,
+  y la retención dice los dos plazos que el código aplica de verdad (30 y 90 días).
+- El panel devuelve los cuatro correos para las dos fiestas, y reenviar Términos sin firma
+  avisa en vez de reventar.
+- `admin/index.php`, `admin/aceptaciones.php` y `admin/comprobante.php` responden 200.
+- Las 10 URL impresas, todas 200, sin cambio de estado.
+- Batería backend completa: **16 suites en verde** (~660 comprobaciones), incluidas las seis
+  que estaban rotas de antes.
+
+**No probado:** no se mandó ningún correo real desde el panel nuevo. El botón de reenvío se
+ejercitó por código (bitácora, rotación de tokens y los avisos cuando no hay nada que
+reenviar), no disparando un correo a un papá. Tampoco se probó el panel dentro del admin con
+sesión iniciada: se renderizó el bloque real fuera del login.
+
+---
+
+## 🔴 INCIDENTE Y HOTFIX 2026-09-08 — "Guardar" mandaba un correo en vez de guardar
+
+Luis reportó dos síntomas que parecían distintos: *"quiero editar el dato de los años que va a
+cumplir Samantha y siempre sale 5, cuando edito y grabo 4 no lo hace"* y, poco después, la
+pregunta que destapó todo: *"¿cada vez que le doy a guardar se envían los correos?"*.
+
+**Sí se enviaban.** La bitácora `cc_envios` lo dejó por escrito: dos manuales salieron a
+`orihennys88@gmail.com` el 2026-09-08 a las 03:02:36 y 03:02:49 UTC, con trece segundos de
+diferencia. Eso no fue nadie apretando "Reenviar": fue Luis apretando **Guardar** dos veces
+mientras intentaba corregir la edad.
+
+### La causa
+
+El panel de correos se dibujó **dentro** del formulario de la ficha, y cada botón traía su
+propio `<form>`. HTML **no permite formularios anidados**: el navegador descarta el interno y
+se queda con sus campos. Así, los `<input name="action" value="reenviar_...">` terminaban
+dentro del formulario grande, **después** del `action=guardar` de la línea 796. PHP, ante dos
+campos con el mismo nombre, se queda con el último.
+
+Resultado: apretar Guardar mandaba `action=reenviar_...`, así que **no guardaba nada** y en su
+lugar disparaba un correo al cliente. Los dos síntomas eran el mismo bug.
+
+El mismo defecto existía antes del panel: el formulario del manual ya estaba anidado ahí desde
+que se desplegó el manual, más temprano el mismo día. El panel solo lo hizo evidente al
+multiplicarlo por cuatro y al dejar registro de los envíos —sin la bitácora, los dos correos
+habrían salido sin que nadie se enterara nunca.
+
+### El arreglo
+
+Los botones ya no viven en formularios propios: se enganchan con `form="cc-envios"` a un
+formulario declarado **fuera** del de la ficha. El atributo `form` asocia un control a
+cualquier formulario del documento, así que el panel se ve dentro de la ficha sin compartirle
+un solo campo.
+
+### Otros dos bugs que aparecieron tirando del hilo
+
+- **Crear una fiesta estaba roto.** El `INSERT` de `cb_save_parties()` enumeraba los valores a
+  mano y se saltaba `gallery_enabled`: 15 valores para 16 columnas. PDO tiraba `Invalid
+  parameter number`, la función devolvía `false` y **nadie miraba ese `false`**. Ahora los
+  valores se arman desde el mismo arreglo que usa el `UPDATE`.
+- **El campo de la edad decía `placeholder="5"`.** Con el campo vacío, ese 5 gris se lee como
+  un valor guardado. Es la mitad de "siempre sale 5". Ahora dice `Ej: 5`.
+
+### Prueba de regresión
+
+`tests/backend/admin-formularios.php` (51 comprobaciones). Comprueba la propiedad estructural
+—ningún `<form>` dentro de otro en `admin/*.php`, y ningún formulario con dos `action`
+propios— y que guardar la ficha conserve de verdad la edad y la galería, incluido el caso
+exacto que reportó Luis: cambiar 5 por 4 y releer.
+
+### De paso, en el mismo despliegue
+
+- **El panel estaba desalineado.** La versión anterior era una tabla de tres columnas que se
+  apilaba con `@media (max-width: 720px)`. Una media query mide la **ventana**, no el
+  contenedor: la ventana era de 1170 px pero la columna de la ficha de 610, así que nunca se
+  activaba. Ahora cada correo es un bloque que se apila y funciona a cualquier ancho.
+- **El selector "Tomar el precio de un plan" siempre mostraba la primera opción.** No tiene
+  `name` y no se guarda —a propósito: lo que queda en la ficha es el número, para que subir el
+  precio del catálogo no le mueva el precio a una fiesta ya acordada—, pero encontrarlo
+  siempre en "Escribir el precio a mano" se lee como que no guardó. Ahora marca el plan cuyo
+  precio coincide con el guardado: refleja la ficha aunque no la mande.
+- **Mensajes listos para WhatsApp.** El manual y el comprobante tienen su texto ya rellenado
+  con los datos de la fiesta, con botón de copiar y de compartir. Solo esos dos: sus enlaces
+  van firmados con HMAC y son siempre los mismos. Los de Términos no se pueden copiar —existen
+  en claro una sola vez—, así que el de la firma se copia y se manda por WhatsApp desde
+  Aceptaciones, en el momento en que se genera, que es donde ahora hay botón para eso.
+- **Textos neutrales.** "El enlace para que el papá firme" pasó a "para que quien contrató
+  firme": puede ser la mamá, el papá o cualquier adulto responsable. Se mantiene "galería de
+  papás" donde habla del grupo de adultos invitados, que es otra cosa.
+- La fila de la firma ahora lleva botón directo a **Aceptaciones**, que es donde se genera y
+  se manda ese enlace.
+
+### Lista de subida
+
+| Orden | Archivo local | Destino en PROD | Tipo |
+|---|---|---|---|
+| 1 | `public/lib.php` | `app/lib.php` | OBLIGATORIO — arregla el alta de fiestas |
+| 2 | `public/lib.envios.php` | `app/lib.envios.php` | OBLIGATORIO |
+| 3 | `public/admin/_style.css.php` | `app/admin/_style.css.php` | OBLIGATORIO |
+| 4 | `public/admin/aceptaciones.php` | `app/admin/aceptaciones.php` | OBLIGATORIO |
+| 5 | `public/admin/index.php` | `app/admin/index.php` | 🔴 OBLIGATORIO — es el que arregla el incidente |
+
+Respaldos: `.bak-20260908-hotfix` (primera tanda) y `.bak-20260908-wa` (segunda).
+
+### Verificado en PROD
+
+- md5 de los cinco archivos idénticos a los locales; `php -l` limpio.
+- `admin/index.php` y `admin/aceptaciones.php` responden 200.
+- Las 10 URL impresas, todas 200, sin cambio de estado.
+- Batería backend: 17 suites en verde (~710 comprobaciones), con la nueva de formularios.
+
+**No probado:** no se apretó "Guardar" en el admin de PROD con sesión iniciada. La propiedad
+que causó el incidente se comprueba en el código, no en el navegador.
+
+---
+
+## DESPLEGADO 2026-09-08 — El Resumen del Plan se llena solo, y el logo de AT unificado
+
+Luis: *"esos campos ya existen, no tengo que volverlos a llenar al menos que los quiera editar,
+ya deben venir precargados"* y *"en unos PDF vi el logo de AT en negro, deben ser así como el
+del comprobante"*.
+
+### Generar enlace de aceptación: precargado desde la ficha
+
+El formulario pedía a mano el nombre, correo y teléfono del cliente, el valor, el anticipo, la
+hora y la dirección — **teniéndolos todos cargados**. No era solo trabajo repetido: era la
+forma más fácil de que el contrato terminara diciendo un número distinto del que dice la
+boleta.
+
+Dos funciones nuevas en `lib.cliente.php`, que es donde ya viven los contactos y el cobro:
+
+- `cb_party_contacto_principal($slug)` — nombre, correo y teléfono del contacto principal.
+- `cb_party_resumen_plan($slug)` — lo que el Resumen puede deducir: hora y dirección de la
+  invitación publicada, valor y anticipo del cobro, forma de pago, y el descuento explicado.
+
+Tres decisiones que no son obvias:
+
+- **El valor total es lo que se paga**, no el precio de lista: precio menos descuento. Un
+  contrato dice lo que el cliente debe, y así no puede contradecir la boleta, que sale del
+  mismo `cb_party_billing()`.
+- **El descuento se explica en Observaciones.** Un total de `$0` sin nada al lado se lee como
+  un error; con "Precio de lista $49.995 con un descuento de $49.995 (Marcha blanca)" se lee
+  como lo que es.
+- **Lo escrito a mano gana.** Se usa `+=` sobre el arreglo, que no pisa lo que ya trae, y el
+  orden de precedencia es: lo que el admin acaba de escribir (POST) → el último enlace emitido
+  para esa fiesta → la ficha.
+
+`cb_manual_invitacion()` pasó a delegar en `cb_party_invitacion_datos()`: la consulta de "qué
+invitación manda cuando hay varias" ahora tiene un solo dueño, porque la usan el manual y el
+formulario de Términos.
+
+### El logo de AT en la página del manual
+
+`brand/logo-automatizatech.png` es la versión **sobre fondo oscuro**: en el pie blanco de la
+página del manual se veía como un recuadro negro, distinto del logo que sale en el PDF y en el
+comprobante. La página ahora usa el mismo archivo que los documentos,
+`brand/pdf-automatizatech.jpg`.
+
+De paso se le quitó a ese JPEG una franja gris de 4 px que traía arriba del recorte original y
+que en el pie del PDF se veía como una línea suelta encima del logo.
+
+### Lista de subida
+
+| Orden | Archivo local | Destino en PROD | Tipo |
+|---|---|---|---|
+| 1 | `public/brand/pdf-automatizatech.jpg` | `app/brand/pdf-automatizatech.jpg` | OBLIGATORIO (recortado) |
+| 2 | `public/lib.cliente.php` | `app/lib.cliente.php` | OBLIGATORIO |
+| 3 | `public/lib.manual.php` | `app/lib.manual.php` | OBLIGATORIO |
+| 4 | `public/admin/aceptaciones.php` | `app/admin/aceptaciones.php` | OBLIGATORIO |
+
+Respaldos: `.bak-20260908-precarga`.
+
+### Verificado en PROD
+
+- md5 de los cuatro idénticos a los locales; `php -l` limpio.
+- Contra los datos reales: `samantha-hielo` precarga contacto completo (nombre, correo y
+  teléfono), hora `15:00`, la dirección de la invitación, el valor con su nota de descuento y
+  la forma de pago. `luciano-spidey` precarga hora y dirección; su ficha no tiene contactos
+  cargados, y el formulario queda vacío en esos tres campos en vez de inventar nada.
+- La página del manual usa el logo claro y el PDF se sigue armando.
+- El CDN ya sirve el JPEG recortado (1317×241, era 1317×246).
+- Las 10 URL impresas, todas 200. Batería backend: 17 suites en verde.
+
+**No probado:** no se generó un enlace de aceptación real desde el admin de PROD; la precarga
+se comprobó llamando a las funciones con los datos reales, no llenando el formulario.
+
+---
+
+## DESPLEGADO 2026-09-09 — Impulso Arácnido, el aviso de girar que ya no obliga, y el preset de carteles
+
+Tres cosas en una sola subida, autorizada por Luis ("sube todo").
+
+### 1. "Impulso Arácnido" — segundo juego de la temática Spidey
+
+Origen: `C:\wamp64\www\impulso-aracnido\`, rama `codex/equipo-y-colores`, commit `5fff942`.
+**65 archivos, 20,6 MB** en `app/juego/impulso-aracnido/`. Los dos juegos arácnidos conviven:
+la fiesta `spidey` ofrece ahora **Aventura Arácnida en 3D** e **Impulso Arácnido**.
+
+Tres detalles que no son obvios:
+
+- 🔴 **`nombre` no significa lo mismo en los dos juegos.** En `mundo.html` y el Festival es
+  QUIÉN JUEGA; en Impulso es DE QUIÉN ES LA FIESTA ("La fiesta de Luciano · 3 años"). Reusar
+  la rama del menú habría hecho decir *"La fiesta de Sofía"* en el cumpleaños de Luciano. Por
+  eso el menú manda **dos parámetros distintos**: `nombre` (la fiesta) y `jugador` (quién
+  juega, que es el que se anota en la tabla).
+- 🔴 **El juego llegó sin `.htaccess`.** Mismo caso del Festival: el servidor no conoce `.mjs`
+  y sin declararlo la pantalla queda negra sin error visible.
+- **El menú del repositorio estaba desactualizado** (versión anterior al selector de nombres,
+  13.358 bytes contra los 19.462 de PROD). Se sincronizó antes de tocarlo.
+
+**Reporta puntajes**, con un módulo agregado (`src/posiciones.mjs`) y una línea enganchada en
+`terminar()`. **Solo en formato individual**: en el de turnos el juego no pregunta el nombre de
+cada participante, así que los 8-12 turnos quedarían todos a nombre del mismo niño, que es
+peor que no anotar.
+
+### 2. El aviso de girar sugiere, ya no obliga
+
+Pedido de Luis: *"es necesario si el usuario quiere girar mejor, pero no le obliguemos"*.
+
+La versión anterior era una capa a pantalla completa que **solo se iba si el aparato se giraba
+de verdad**. Quien prefiriera vertical —o tuviera el giro bloqueado desde los ajustes del
+sistema— quedaba encerrado sin salida. Ahora hay un botón **"Jugar así"**, se devuelve el
+scroll y la decisión se recuerda en `sessionStorage` (del momento, no de la persona: la
+próxima fiesta vuelve a sugerirlo).
+
+También **se quitó `screen.orientation.lock('landscape')`**: dejaba el aparato clavado en
+apaisado y ya no se podía volver. Eso también era obligar.
+
+⚠️ Esto cambia **los tres juegos**, no solo el nuevo.
+
+### 3. Rendimiento del juego de Frozen en tablets de gama de entrada
+
+La tablet que Luis ya tiene es una **Galaxy Tab A7**: Snapdragon 662, Adreno 610, 3 GB. El
+juego arrancaba en "media" en toda pantalla táctil, y "media" todavía renderiza a ratio 1,5
+con bloom. Ahora, si es táctil y `deviceMemory <= 4` o `hardwareConcurrency <= 8`, arranca
+directo en **"baja"**; y el primer ajuste automático baja de 6 s a **2,5 s**.
+
+🔴 **No está medido en la A7.** Se puede comparar en la tablet real con
+`mundo.html?p=<slug>&calidad=media&debug=1` contra `&calidad=baja&debug=1`; el HUD muestra
+fps, draw calls y qué calidad está activa.
+
+### 4. El preset de carteles que faltaba
+
+**El primer juego de carteles impresos no entró en el acrílico.** Se midió el PDF que se mandó
+a imprimir: **140 × 215,9 mm** (media carta) contra un soporte de **150 × 210 mm**. Sobraban
+**5,9 mm de alto**. No fue error de Luis ni de la imprenta: era el tamaño **por defecto** del
+generador, y su etiqueta decía "(porta menú)", que es justo el soporte que se compró.
+
+Nuevo preset **"Porta menú 15 × 21 cm · el nuestro"** en **146 × 206 mm**, ahora el
+predeterminado. Se imprime 4 mm más chico que la medida del acrílico a propósito: esos 15 × 21
+son el **exterior**, y la ranura donde entra la hoja siempre es menor. Una hoja algo más chica
+se ve igual —el acrílico la enmarca—; una más grande no entra. El de media carta quedó
+rotulado "(no entra en el nuestro)".
+
+⚠️ El rebuild de Vite movió el hash de **seis** bundles, pero la página de carteles solo
+necesita uno nuevo: los otros tres que usa ya estaban en PROD sin cambios. **Los otros cinco
+bundles NO se subieron** — son de otras páginas y habrían arrastrado cambios que nadie pidió.
+
+### Lista de subida (en el orden en que se hizo)
+
+| Orden | Local | Destino | Tipo |
+|---|---|---|---|
+| 1 | 65 archivos de `C:\wamp64\www\impulso-aracnido\` | `app/juego/impulso-aracnido/` | OBLIGATORIO — recursos, luego `src/`, luego CSS, `index.html` al final |
+| 2 | `juego-prod/impulso-aracnido.htaccess` | `app/juego/impulso-aracnido/.htaccess` | 🔴 sin esto el juego no arranca |
+| 3 | `public/lib.puntajes.php` | `app/lib.puntajes.php` | OBLIGATORIO |
+| 4 | `juego-prod/orientacion.js` | `app/juego/orientacion.js` | OBLIGATORIO — afecta a los tres juegos |
+| 5 | `juego-prod/orientacion.css` | `app/juego/orientacion.css` | OBLIGATORIO |
+| 6 | `juego-prod/game/main.js` | `app/juego/game/main.js` | rendimiento de Frozen |
+| 7 | `dist/assets/carteles-ARrrllKm.js` | `app/assets/carteles-ARrrllKm.js` | OBLIGATORIO — antes del html |
+| 8 | `dist/carteles.html` | `app/carteles.html` | OBLIGATORIO |
+| 9 | `juego-prod/menu/index.html` | `app/juego/index.html` | 🔴 **EL ÚLTIMO** |
+
+El menú va al final a propósito: hasta que se sube, el juego nuevo no existe para nadie y el
+cartel QR impreso sigue llevando exactamente a lo de antes.
+
+Respaldos en el servidor: `<archivo>.bak-20260909-impulso` para los seis que se sobrescribieron.
+
+### Verificado en PROD
+
+- **Las 10 URL impresas: ninguna cambió de estado.** `juego/?p=…` pasó de 19.462 a 20.405
+  bytes, que es el menú con el juego nuevo; sigue en 200.
+- md5 de los diez archivos del integrador **idénticos** a los locales; `php -l` limpio.
+- El menú de `luciano-spidey` muestra los **dos** juegos y "Cumpleaños de Luciano · 3 años".
+- El juego nuevo **carga entero desde PROD**: 12 módulos `.mjs`, **ninguno vacío**, 0 recursos
+  fallidos, canvas activo, la ciudad y los tres personajes en pantalla.
+- El botón volver lleva a `app/juego/?p=luciano-spidey&nombre=Luciano&edad=3`.
+- `spidey` → 2 juegos · `heroes` → **solo Misión 3D** · `hielo` → 2 (sin contaminar).
+- `carteles.html` sirve el bundle nuevo y trae el preset de 146 × 206 como predeterminado.
+- 66 archivos y 20 MB en la carpeta del juego (los 65 más el `.htaccess`).
+
+### No probado
+
+- **Ninguna tablet física.** Ni la A7 ni la A9+ recién comprada.
+- **No se jugó una ronda completa** en PROD: pausa, audio, turnos y pantalla final.
+- **El reporte de puntajes se probó en local**, contra el endpoint real, pero no con una
+  partida de verdad en PROD.
+- **45 fps no certificados** en Impulso: en el entorno de prueba hubo caídas a 37-43 fps.
+- Safari/iOS, y niños de verdad.
+
+## 2026-09-09 tarde — Cotejo completo de PROD e imprimir desde el admin
+
+### Cotejo PROD vs repositorio
+
+Se comparó **archivo por archivo, por md5**, todo `cumpleclick.com/app` contra
+`CumpleBooth/public/`. Se hizo después de descubrir que `galeria.php` llevaba 458 líneas de
+atraso en la copia local: desplegarla habría borrado el sistema de impresión, y además hizo
+revisar el archivo equivocado al migrar las fotos a JPEG (de ahí el bug
+`Emilia.jpg (no está en la lista)`).
+
+**Resultado: no hay ningún otro archivo desfasado.** 512 idénticos. Las diferencias que
+aparecen son todas explicables y están detalladas en la memoria
+`reference_cumpleclick_prod_vs_repo`: 14 archivos que solo difieren en CRLF/LF, dos JSON con
+distinta sangría y mismo contenido, y 77 archivos que viven solo en PROD (salidas de build
+con hash, `sala.php`/`lib.sala.php` de otra rama, y assets generados).
+
+### Imprimir fotos del kiosco desde el admin
+
+Antes solo se podía imprimir desde la galería pública (`galeria.php`, con PIN). Ahora la
+sección **Fotos del kiosco** del álbum del admin usa el **mismo mecanismo ya probado con la
+Selphy**: una hoja por foto, `@page` en milímetros, y espera a que carguen todas las
+imágenes antes de `window.print()` (sin esa espera la primera hoja sale en blanco en la
+tablet).
+
+Se reutiliza la selección múltiple que ya existía: lo marcado se puede imprimir o borrar.
+Controles: copias (1-5), papel (10×15 Selphy, 13×18, A4, según impresora) y "llenar la hoja".
+El papel se recuerda en el navegador, porque en la fiesta se imprime muchas veces seguidas.
+
+De paso se corrigió un defecto propio: en la **papelera** las miniaturas salían rotas, porque
+`ver.php` exige `deleted_at IS NULL` y por lo tanto devolvía 404. Ahora una **sesión de admin
+válida** puede ver una foto borrada; para un invitado no cambia nada y el QR de una foto
+borrada sigue dando 404.
+
+### Lista de subida
+
+| Archivo local (`CumpleBooth/public/`) | Destino (`app/`) | Clase | Orden |
+| --- | --- | --- | --- |
+| `lib.php` | `lib.php` | OBLIGATORIO | 1 |
+| `ver.php` | `ver.php` | OBLIGATORIO | 2 |
+| `admin/_style.css.php` | `admin/_style.css.php` | OBLIGATORIO | 3 |
+| `admin/album.php` | `admin/album.php` | OBLIGATORIO | 4 |
+
+El orden importa: `ver.php` llama a `cb_admin_sesion_activa()`, que se define en `lib.php`;
+y el CSS va antes que `album.php` para que la barra nueva no aparezca un instante sin estilo.
+
+No subir: nada del `scratchpad/` (scripts de cotejo, banco de pruebas, respaldos).
+
+### Verificado en PROD
+
+- **Ya está subido** (2026-09-09 15:16). md5 de los cuatro archivos idénticos a los locales,
+  `php -l` limpio en el servidor.
+- Respaldo previo: `~/respaldos/imprimir-admin-antes-20260909-1516.tar.gz`.
+- **Las 10 URL impresas: ninguna cambió de estado.**
+- La foto del enlace que mandó Luis sigue sirviéndose: 200, `image/jpeg`, 542 KB.
+- La lógica de impresión se probó extrayendo el CSS, la barra y el script **del propio
+  `album.php`** y montándolos en un banco con tres fotos: 2 fotos × 3 copias = 6 páginas, las
+  6 imágenes cargadas, `@page` emitido como `127mm 178mm`, `window.print()` llamado una sola
+  vez, y con las reglas de impresión aplicadas el resto del admin queda en `display:none` y
+  cada página ocupa la hoja completa.
+
+### No probado
+
+- **Nadie ha impreso una hoja de verdad desde el admin.** El banco prueba que se arma la hoja
+  y que se llama a imprimir; no prueba la Selphy ni el diálogo de AirPrint.
+- No se abrió el admin de PROD con sesión iniciada (no tengo la contraseña).
+- Tablet física: sigue sin probarse.
+
+## 2026-09-09 noche — El diploma de Asómate lleva la foto del niño hecho héroe
+
+Hasta ahora, al terminar "Asómate y sé el héroe" el diploma se armaba igual que el de la
+ruleta: de fondo la **ilustración del personaje** de la temática. Es lo que corresponde en el
+flujo de la ruleta, donde no existe ninguna foto del niño con el personaje. En Asómate sí
+existe, y es justamente la gracia del juego.
+
+Ahora el diploma de Asómate **es esa foto**, enmarcada:
+
+- **La escena se recompone**, no se reusa la foto. Se dibuja más chica (la figura ocupa del
+  29 % al 79 % del alto en vez del 10 % al 90 %) y sin el título al pie, para que el
+  encabezado y el nombre del diploma no le tapen la cara ni le corten los pies.
+- **Moldura dorada** con degradado y dos filetes, uno claro por fuera y otro oscuro por
+  dentro. Los filetes son lo que hace que se lea como un marco de cuadro y no como una línea
+  dorada encima de la foto. Sellos de estrella en las dos esquinas de arriba; abajo no, ahí
+  va la marca de agua de CumpleClick y se encimaban.
+- **Degradados arriba y abajo en lugar de paneles con borde.** El texto necesita fondo para
+  leerse, pero un recuadro opaco parte la escena en dos.
+- **El texto se reparte a los dos extremos.** Con foto: título, "Se otorga a" y nombre arriba;
+  título honorífico, fiesta y agradecimiento abajo. Sin foto, el reparto es el de siempre.
+- No van el confeti ni el sello inferior cuando hay foto: el confeti queda salpicado encima
+  de la única imagen que importa, y el sello caía sobre las piernas del personaje.
+
+De paso, dos correcciones del mismo tipo que el bug de la galería: la descarga del diploma y
+la de la predicción **deducen la extensión del propio data URL** (`extensionDe`). Estaban
+fijas en `.png` desde antes del cambio a JPEG, así que bajaban un JPEG con nombre `.png`.
+
+### Lista de subida
+
+| Archivo local (`CumpleBooth/dist/`) | Destino (`app/`) | Clase | Orden |
+| --- | --- | --- | --- |
+| `assets/main-DTDqSxpq.js` | `assets/main-DTDqSxpq.js` | OBLIGATORIO | 1 |
+| `index.html` | `index.html` | OBLIGATORIO | 2 |
+
+El orden no es negociable: al revés, el kiosco queda un rato apuntando a un archivo que aún
+no existe. El resto de lo que pide `index.html` (`main-x_rodESo.css`, `browser-BeMEBtOm.js`,
+`client-eulB1LW-.js`, `themeVars-BWg77og2.js`) ya estaba en el servidor con el mismo md5.
+
+No subir: `src/App.jsx` (fuente, no se sirve) ni nada del scratchpad.
+
+### Verificado en PROD
+
+- **Ya está subido** (2026-09-09 16:12). md5 de los dos archivos idénticos a los locales.
+- Respaldo previo: `~/respaldos/kiosco-antes-diploma-heroe-20260909-1612.tar.gz`.
+- `index.html` de PROD apunta a `assets/main-DTDqSxpq.js`, y ese archivo responde 200 con
+  142.176 bytes.
+- **Las 10 URL impresas: ninguna cambió de estado.**
+- El diploma se miró renderizado, con el fondo y el PNG reales de la temática arácnida y una
+  cara de prueba: entra el personaje completo con los pies dentro del marco, y el texto de
+  arriba y el de abajo no lo tapan.
+- Las seis líneas de texto se midieron con sus fuentes y posiciones reales, incluidas las que
+  el entorno local no puede dibujar por no tener fiesta (título honorífico y línea de la
+  fiesta): ninguna se sale del marco ni entra en la banda del personaje.
+
+### No probado
+
+- **Con una cara de verdad.** La prueba usó un rostro dibujado; no se ha visto una foto real
+  de un niño dentro del hueco en el diploma.
+- **En grupo.** Los cálculos cubren dos y tres niños, pero solo se miró el caso de uno.
+- Tablet física, y la impresión del diploma en papel.
+
+## 2026-09-09 cierre — El hueco de Spin estaba corrido
+
+Luis lo vio en el diploma: en Spin (el arácnido de traje negro) el óvalo no calzaba con la
+máscara. Se comía casi entero el lente derecho y dejaba el izquierdo completo, así que la
+cara quedaba de lado.
+
+**Causa:** `tematica.py` saca el centro de la cabeza promediando las filas anchas entre la
+coronilla y `corte_px`. En Spin, que está en pose de salto, entre el mentón y ese corte
+entran las filas donde el brazo se pega a la cabeza: la fila y=448 mide 499 px de ancho
+contra los 462 de la cabeza sola, y esas filas corrieron el promedio 12 px a la derecha.
+Los otros cinco personajes están de pie y de frente, y por eso ninguno falló.
+
+**Arreglo:** `dx: -0.026` en `prototipo/spidey-ajustes.json`, que compensa exactamente ese
+desvío (537,9 medido contra 526 real), y se regeneró el recorte. Se comprobó que de los seis
+PNG solo cambió `spin.png`, y que en `themes.json` el único dato distinto contra el que corre
+en PROD es `spin.cx`: 529,9 → 518,0.
+
+**Sello de versión en las imágenes de Asómate.** Los recortes se llaman siempre igual y se
+sirven con `max-age=2592000`. La tablet de la fiesta ya tiene esos PNG guardados: sin cambiar
+la URL, la corrección no le habría llegado en 30 días. Ahora `cb_theme_asomate` le agrega
+`?v=<mtime>` al fondo y a cada personaje, así que cambiar un archivo cambia su URL.
+
+⚠️ **Para el próximo que verifique:** el CDN de Hostinger **reencoda los PNG**. Lo que
+devuelve HTTP pesa distinto y tiene otro md5 que el archivo del disco aunque sea la misma
+imagen (322.536 bytes contra 310.893 en este caso). Comparar bytes lleva a concluir que el
+despliegue no llegó. Hay que comparar **píxeles**.
+
+### Lista de subida
+
+| Archivo local (`CumpleBooth/public/`) | Destino (`app/`) | Clase | Orden |
+| --- | --- | --- | --- |
+| `themes/spidey/asomate/spin.png` | igual | OBLIGATORIO | 1 |
+| `data/themes.json` | igual | OBLIGATORIO | 2 |
+| `lib.php` | `lib.php` | OBLIGATORIO | 3 |
+
+Primero el PNG y después `themes.json`: al revés hay un momento con la geometría nueva
+apuntando al hueco viejo. `lib.php` puede ir en cualquier momento.
+
+No subir: `prototipo/` ni `themes/spidey/*-cut.png` (originales de trabajo, no se sirven).
+
+### Verificado en PROD
+
+- **Ya está subido** (2026-09-09 16:49 y 17:0x). md5 idénticos, `php -l` limpio.
+- Respaldos: `~/respaldos/spin-antes-20260909-1649.tar.gz` y `~/respaldos/lib-antes-sello-*`.
+- `api.php` entrega las seis URL con sello, y la de Spin (`?v=a1b846`) difiere de las otras
+  cinco, que conservan el suyo.
+- La imagen que devuelve esa URL tiene **cero píxeles de diferencia** con el archivo local.
+- **Las 10 URL impresas: ninguna cambió de estado.**
+- Se miró la composición con el recorte nuevo: los dos lentes de la máscara quedan simétricos,
+  como en Spidey.
+
+### No probado
+
+- En la tablet. El sello debería bastar, pero nadie ha abierto Asómate en el dispositivo real
+  después del cambio.
+
+## 2026-09-09 cierre 2 — El enlace de confirmados pasa a ser fijo
+
+El enlace para la familia era un token aleatorio que se guardaba **hasheado** y se mostraba
+**una sola vez**, al emitirlo. Después no había forma de recuperarlo: para volver a verlo
+había que generar otro, y eso mataba el que ya estaba compartido. Luis se quedó sin el enlace
+de la fiesta de Luciano justo por eso.
+
+El hash tampoco compraba mucho. Lo único que ese enlace muestra son los nombres de quienes
+confirmaron, y esos nombres viven en la misma base de datos que guardaba el hash: quien pueda
+leer una cosa puede leer la otra.
+
+**Ahora es una firma sobre el slug**, el mismo patrón que ya usaba `manual.php`:
+`asistencia-papas.php?p=<slug>&f=<hmac de 24>`. No se emite, se calcula. Está siempre a la
+vista en la ficha de la fiesta, con copiar, abrir y el mensaje de WhatsApp.
+
+- **Los enlaces viejos siguen funcionando.** La pantalla acepta las dos entradas. El token de
+  rol `parents` no se tocó, porque en baby shower ese mismo token abre predicciones y regalos
+  y se emite desde Invitaciones.
+- **Se cierra desactivando la fiesta.** `cb_rsvp_acceso_por_slug` exige `activa`, igual que
+  hacía el camino del token. Desaparecieron los botones "Generar" y "Anular" de la ficha.
+
+**La lista, además, quedó ordenada.** Antes salía por hora de confirmación, que sirve para ver
+quién llegó último y no para buscar un apellido. Ahora va alfabética por familia, comparando
+sin tildes ni mayúsculas (si no, "Álvarez" cae al final en vez de entre "Abreu" y "Andrade",
+y "Ñuñez" antes que "Neumann"). Y los niños salen **uno por uno**, cada uno en su pastilla:
+"Ana y ari" en un renglón se leía como un solo nombre, y esta pantalla existe justamente para
+contar cuántos niños vienen. La regla que separa los nombres es **la misma** que da la cifra
+del encabezado, para que el número y los nombres no puedan discrepar.
+
+### Lista de subida
+
+| Archivo local (`CumpleBooth/public/`) | Destino (`app/`) | Clase | Orden |
+| --- | --- | --- | --- |
+| `lib.rsvp.php` | `lib.rsvp.php` | OBLIGATORIO | 1 |
+| `asistencia-papas.php` | igual | OBLIGATORIO | 2 |
+| `admin/index.php` | `admin/index.php` | OBLIGATORIO | 3 |
+
+`lib.rsvp.php` primero: define las funciones que usan los otros dos.
+
+### Verificado en PROD
+
+- **Ya está subido** (2026-09-09 18:17). md5 idénticos, `php -l` limpio en el servidor.
+- Respaldo: `~/respaldos/confirmados-antes-20260909-1817.tar.gz`.
+- Los dos enlaces reales responden 200 y muestran la lista; una firma inválida y un slug
+  inexistente caen en "Enlace no válido".
+- Las 15 familias de Luciano salen en orden alfabético, y los niños separados en pastillas.
+- **Las 10 URL impresas: ninguna cambió de estado.**
+- En local, con datos sembrados a propósito desordenados y con tildes, el orden salió
+  correcto y la cuenta de niños calzó con los nombres mostrados.
+
+### No probado
+
+- **La ficha del admin con sesión iniciada.** El bloque nuevo se subió con `php -l` limpio,
+  pero nadie lo ha visto renderizado; no tengo la contraseña.
+
+## 2026-09-09 noche 2 — Circuito Arácnido en PROD e Impulso actualizado
+
+Desplegado con autorización de Luis. Detalle de la revisión previa en
+`REVISION-JUEGOS-CODEX.md`.
+
+### Lo que se subió, en orden
+
+1. **Migración 021** (`cc_sala_carreras`), con un runner puntual que aplica **solo esa**.
+   No se usó `migrate.php`: la rama de Codex numera 018 y salta a 021, y PROD ya tenía
+   aplicadas la 019 y la 020, que en esa rama no existen.
+2. **`app/juego/circuito/`**: 37 archivos, 33,3 MB. Se subió el `README.md` por error y se
+   borró del servidor enseguida; el `.htaccess` sí queda, porque es el que declara el tipo de
+   los `.mjs`.
+3. **Backend compartido**, en este orden: `lib.sala.carrera.php` (nuevo), `lib.puntajes.php`,
+   `puntajes.php`, `sala.php`.
+4. **Impulso Arácnido**: `src/entrada.mjs` (nuevo), `reglas`, `datos`, `mundo`, `entorno`,
+   `main`, `estilo.css` e `index.html` al final.
+5. **`app/juego/index.html`** (el menú).
+
+### 🔴 Lo importante: no se subieron los archivos de la rama
+
+Tres archivos compartidos de la rama `codex/narracion-alice` están **atrasados** respecto de
+PROD. Subirlos habría borrado trabajo vivo:
+
+- `puntajes.php` de la rama no devuelve `invitados` ni `edad`: el menú dejaría de ofrecer la
+  lista de nombres y los niños tendrían que teclearlos.
+- `lib.puntajes.php` de la rama no tiene `impulso`: Impulso Arácnido habría **desaparecido**
+  del menú.
+- `orientacion.css` y `orientacion.js` de la rama vuelven a **obligar** a girar el aparato;
+  PROD ya tiene el botón "Jugar así". Esos dos ni se tocaron.
+
+Se tomó el archivo de PROD y se le injertó solo lo que Codex agrega, con aserciones que
+comprueban que lo anterior sigue ahí.
+
+### Un defecto encontrado al probar, no reportado en la entrega
+
+El menú **no conocía `circuito`**: `RUTAS` no tenía su entrada, así que caía al `mundo.html`
+de respaldo y **la tarjeta abría el juego equivocado**. Se le agregaron ruta, ícono (🏎️) y
+pie. Respaldo del menú anterior en `~/respaldos/menu-antes-circuito.html`.
+
+### Verificado en PROD
+
+- **Las 10 URL impresas: ninguna cambió de estado**, medidas antes y después.
+- md5 idéntico en los 37 archivos del juego, los 4 del backend, los 8 de Impulso y el menú.
+- `php -l` limpio en el servidor sobre los cuatro PHP.
+- La API del menú de `luciano-spidey` devuelve los **tres** juegos y conserva los **6
+  invitados** y la edad. La de `samantha-hielo` **no** trae circuito, como corresponde.
+- Circuito **carga en producción**: canvas activo, cero errores de consola, los seis pilotos y
+  el selector de 1 a 5 vueltas, y saluda "¡Vamos, Luciano!".
+- Impulso **sigue cargando** tras la actualización, cero errores, con el control nuevo.
+- `.htaccess` y `src/posiciones.mjs` de Impulso intactos: la integración de puntajes sigue.
+- Los endpoints nuevos responden bien: 403 con JSON limpio sin sesión válida, 422 con petición
+  mal formada, y una operación inventada se sigue rechazando.
+- **Prueba real de sala:** dos jugadores entraron a la misma sala (BCZ4P), fase `espera`, 3
+  vueltas por defecto, y los cuatro puestos libres se llenaron con pilotos automáticos.
+- La sala de prueba **se borró**, y al borrarla desapareció su fila en `cc_sala_carreras`: la
+  cascada de la migración funciona. `cc_salas` volvió a 11 filas, las mismas de antes.
+
+### No probado
+
+- **Ninguna tablet ni celular físico.** Ni una carrera de verdad entre varios aparatos.
+- Safari/iOS.
+- Los 45 fps en móvil **no están certificados**: seis renderizados a la vez en un PC dieron
+  unos 30 fps de mediana.
+- La voz Alice no la ha escuchado una persona.
+- **34 MB por dispositivo.** Un papá con datos móviles y sin el wifi de la casa paga esa
+  descarga. Sin resolver.
+- Doce turnos completos de Impulso, y niños de tres años de verdad.
+
+## 2026-09-09 cierre 3 — Volver al menú, pantalla completa y fondo temático
+
+Tres pedidos de Luis después de probar Circuito.
+
+### Un control común para todos los juegos: `app/juego/pantalla.js`
+
+Dos botones flotantes arriba a la izquierda, en cualquier juego que incluya el archivo:
+**← volver al menú** y **⛶ pantalla completa**.
+
+Va por fuera y no dentro de cada juego porque **el mundo 3D viene empaquetado**: su código
+está en otro repositorio y en PROD solo hay un bundle con nombre con hash. Agregarle un botón
+por dentro obligaba a reconstruirlo entero.
+
+- **Volver** usa el parámetro `volver` que el menú ya mandaba y que el mundo 3D ignoraba. Se
+  valida contra el mismo origen: es un parámetro de la URL y mandar a la gente a otro sitio
+  desde ahí sería un regalo. Pide **dos toques** con tres segundos de gracia: un niño de tres
+  años apoya el dedo donde sea, y un solo toque le borraba la partida.
+- **Pantalla completa** entra también con el primer toque en la página. Antes eso solo pasaba
+  **estando apaisado** (`orientacion.js` lo condicionaba a `!enVertical()`), así que quien
+  jugara en vertical no la veía nunca.
+
+🔴 **Girar el aparato no puede activar la pantalla completa.** `requestFullscreen()` solo
+corre dentro de un gesto de la persona; al girar el teléfono nadie tocó nada y el navegador
+lo rechaza. Lo que sí pasa es que, ya estando en pantalla completa, girar **no la corta**.
+
+🔴 **Los juegos se sirven con `style-src 'self'`.** Un `<style>` inyectado o un atributo
+`style=` los bloquea la CSP **en silencio**: el botón aparece sin forma, pegado arriba a la
+izquierda. Se descubrió probando. Por eso el archivo no tiene ni una hoja de estilo y todo va
+por CSSOM (`el.style.prop = ...`), que la CSP no toca.
+
+Circuito **no** lo lleva: ya tiene sus propios botones de volver y de pantalla completa.
+
+### Fondo de la temática en el menú
+
+El menú y la pantalla "¿Quién va a jugar?" salían con un degradado neutro. Ahora llevan
+detrás el `fondo-banner.jpg` de la temática, el mismo que ya usa la pantalla de confirmados.
+**Ninguna imagen nueva, cero créditos.** Va difuminado y al 34 % porque este menú es claro
+—tarjetas blancas, texto oscuro— y la foto a plena vista dejaba el texto ilegible.
+
+### Lista de subida
+
+| Archivo local (`CumpleBooth/public/juego/`) | Destino (`app/juego/`) | Clase | Orden |
+| --- | --- | --- | --- |
+| `pantalla.js` | `pantalla.js` | OBLIGATORIO | 1 |
+| — | `mundo.html` | OBLIGATORIO | 2 |
+| — | `festival/index.html` | OBLIGATORIO | 2 |
+| — | `impulso-aracnido/index.html` | OBLIGATORIO | 2 |
+| `index.html` | `index.html` | OBLIGATORIO | 3 |
+
+El script primero: si el HTML llega antes, hay un rato pidiendo un archivo que no existe.
+
+⚠️ **Los tres HTML se editaron sobre la copia bajada de PROD, no sobre un original del
+repositorio.** `mundo.html` viene de `tucumple-repo` y en PROD solo existe compilado;
+`festival/index.html` viene de `tucumple-codex`. Un export nuevo de cualquiera de esos dos
+**borra la línea del script**. Está anotado en `PENDIENTES-DE-PRUEBA.md`.
+
+### Verificado en PROD
+
+- **Las 10 URL impresas: ninguna cambió de estado.**
+- Respaldos: `~/respaldos/juegos-antes-pantalla-20260909-*.tar.gz` y `menu-antes-circuito.html`.
+- Los dos botones salen en Aventura Arácnida, Impulso y el Festival, de 44 px de alto, sobre
+  cielo vacío y sin tapar ningún control.
+- **El botón de volver se probó de verdad:** dos toques en Aventura Arácnida y quedó en el
+  menú de juegos.
+- El fondo temático carga en las dos fiestas: el arácnido en la de Luciano y el de hielo en la
+  de Samantha, en el menú y en la pantalla de elegir jugador.
+- El error de CSP que aparece en consola **ya estaba antes**: sale igual en Circuito, que no
+  lleva este script. No lo introdujo este cambio.
+
+### No probado
+
+- Ninguna tablet ni celular físico, que es donde la pantalla completa importa de verdad.
+- Safari en iPhone no permite pantalla completa en una página: ahí el botón **no se dibuja**,
+  a propósito, en vez de quedar uno que no hace nada.
+
+## 2026-09-09 cierre 4 — El enlace de aportes del Álbum se puede volver a mostrar
+
+Luis: *"genero un QR del álbum, recargo la página y no aparece el 5° cartel ni el link"*.
+
+Era por diseño, y el diseño estaba mal. El token de aportes se sorteaba al azar y en la base
+quedaba **solo su hash**, así que se mostraba una única vez. Recargar la página lo perdía, y
+para recuperarlo había que generar otro — que **revoca el anterior** y mata los carteles del
+Álbum ya impresos. O sea: la única forma de volver a ver el enlace era romper el que estaba
+funcionando.
+
+**Ahora el token se deriva de la fila que lo representa**, con la llave HMAC de la aplicación,
+así que el admin siempre puede recalcular el que está vivo. La base sigue guardando solo el
+hash y la llave vive fuera de la base: una copia de la base tampoco alcanza para reconstruir
+un token. Se conserva la revocación, que acá sí importa porque este enlace permite **subir**
+archivos, no solo leer.
+
+### El fallo que encontró la prueba
+
+La primera versión derivaba de `(album, propósito, created_at)`. `created_at` tiene resolución
+de **un segundo** y `token_hash` tiene **índice único**: rotando dos veces dentro del mismo
+segundo, el segundo token salía idéntico al primero y el INSERT moría con *"Duplicate entry
+… for key 'token_hash'"*. Dos clics seguidos en el admin = error 500.
+
+Se corrigió derivando del **id de la fila**, que es único para siempre. Cuesta una sentencia
+más: se inserta con un hash provisorio al azar, se lee el id y recién entonces se calcula el
+token definitivo. El provisorio es aleatorio a propósito; uno fijo volvería a chocar con el
+índice único si alguna fila quedara a medio camino.
+
+**Esto solo salió probando.** El razonamiento previo dijo "dos emisiones en el mismo segundo
+son improbables" y siguió adelante.
+
+### Lista de subida
+
+| Archivo local | Destino (`app/`) | Clase | Orden |
+| --- | --- | --- | --- |
+| `public/lib.album.php` | `lib.album.php` | OBLIGATORIO | 1 |
+| `public/admin/carteles-api.php` | `admin/carteles-api.php` | OBLIGATORIO | 2 |
+| `dist/assets/carteles-CIwK2MVx.js` | igual | OBLIGATORIO | 3 |
+| `dist/carteles.html` | `carteles.html` | OBLIGATORIO | 4 |
+
+El panel del Álbum ahora **sigue apareciendo** aunque el cartel ya esté armado: es el único
+lugar desde donde se rota el enlace, y antes desaparecía justo cuando el cartel existía. El
+botón pasa a decir "Generar uno nuevo (mata el anterior)".
+
+### Verificado en PROD
+
+- **Ciclo completo probado sobre el álbum de la fiesta DEMO** (`demo-carreras`), para no tocar
+  las dos fiestas reales: emitir revoca el anterior y eso mataría un cartel ya impreso.
+  Emitir → recuperar idéntico → sirve para subir → rotar tres veces seguidas en el mismo
+  segundo sin reventar → el viejo queda muerto → el nuevo se recupera. **Ocho de ocho.**
+- La derivación es estable, cambia con la fila y da 32 hexadecimales, que es lo que exige
+  `cb_album_resolve_token`.
+- `php -l` limpio en el servidor. `carteles.html` responde 200.
+- **Las 10 URL impresas: ninguna cambió de estado.**
+- Respaldo: `~/respaldos/album-token-antes-20260909-*.tar.gz`.
+
+### Lo que Luis tiene que hacer una vez
+
+🔴 **Los dos enlaces que están vivos hoy son de los antiguos, sorteados al azar.** De ellos
+solo quedó el hash, así que **no se pueden recuperar**. Hay que generar uno nuevo por fiesta,
+una última vez. Desde ahí en adelante ya no se pierde nunca más.
+
+### No probado
+
+- La página de carteles con sesión de admin iniciada: no tengo la contraseña. El ciclo del
+  token se probó por debajo, llamando a las funciones reales contra la base real.
+
+## 2026-09-09 cierre 5 — Apagar los juegos 3D, y pie de página con la marca
+
+Dos pedidos de Luis: que los niños no se queden pegados al teléfono, y que el menú lleve los
+datos de contacto de CumpleClick.
+
+### El interruptor
+
+Botón **"Apagar juegos 3D"** en cada tarjeta de fiesta del admin, junto a Duplicar. Va ahí y
+no dentro de "Editar fiesta" a propósito: se usa **en medio de la fiesta**, y abrir la ficha
+entera para destildar una casilla y guardar todo el formulario es lento y arriesgado. Pide
+confirmación al apagar, no al prender.
+
+🔴 **La dirección del QR impreso no cambia.** `juego/?p=<slug>` sigue respondiendo igual;
+apagado, muestra "Se acabó la hora de juego · Ahora viene lo mejor: la torta, las fotos y los
+amigos de verdad". Cambiar la dirección no era opción: está impresa en papel.
+
+`puntajes.php` además devuelve la lista de juegos **vacía** cuando está apagado, para que
+ningún camino alternativo deje entrar igual.
+
+### Dos fallos que salieron al probar, no al razonar
+
+1. **La clave se perdía sin avisar.** La primera versión guardaba `juegos3d` en el registro de
+   la fiesta. En PROD las fiestas viven en la **base**, y `cb_save_parties` escribe una lista
+   fija de columnas: la clave no llegaba a ninguna parte. El síntoma fue que el interruptor
+   decía PRENDIDOS después de apagarlo, y `grep juegos3d data/parties.json` daba cero.
+   Se resolvió con la **migración 022** (`games3d_enabled TINYINT NOT NULL DEFAULT 1`).
+2. **Los índices del INSERT están escritos a mano** (`array_slice($values, 0, 12)`,
+   `$values[13]`), y el propio código cuenta que meter una columna en medio ya rompió esto
+   una vez con un "Invalid parameter number". Por eso la columna nueva va **al final de todo**:
+   de los valores, del SET y de la lista de columnas.
+
+⚠️ **Error de orden mío en el despliegue:** subí `lib.php` —cuyo SELECT ya nombraba la
+columna— **antes** de correr la migración. Entre una cosa y otra pasaron segundos y era de
+madrugada, así que no alcanzó a afectar a nadie, pero el orden correcto es siempre migración
+primero. Está anotado porque el próximo puede no tener esa suerte.
+
+### El pie de página
+
+El menú y todas sus pantallas llevan abajo el isotipo de CumpleClick, la frase
+"¿Lo quieres en tu próxima fiesta?" y tres enlaces: la página, Instagram y WhatsApp. Los
+textos y las direcciones salen de `data/marca.json`, no escritos en el juego: cambiar un
+teléfono se hace editando un JSON.
+
+Los íconos de web, Instagram y WhatsApp van **dibujados en el propio HTML**, no como archivos:
+son cuatro trazos, toman el color del texto y no agregan cuatro peticiones más a una tablet en
+plena fiesta. El isotipo de CumpleClick sí es el archivo real (`brand/cumpleclick-mark.svg`).
+
+### Lista de subida
+
+| Archivo local | Destino (`app/`) | Clase | Orden |
+| --- | --- | --- | --- |
+| `database/migrations/022_juegos3d.php` | (privado, runner puntual) | OBLIGATORIO | **1** |
+| `public/lib.php` | `lib.php` | OBLIGATORIO | 2 |
+| `public/puntajes.php` | `puntajes.php` | OBLIGATORIO | 3 |
+| `public/admin/index.php` | `admin/index.php` | OBLIGATORIO | 4 |
+| `public/juego/index.html` | `juego/index.html` | OBLIGATORIO | 5 |
+
+La migración **antes** que `lib.php`: su SELECT nombra la columna nueva y sin ella la consulta
+de fiestas falla entera.
+
+### Verificado en PROD
+
+- Migración 022 aplicada con runner puntual; la columna existe con default 1.
+- **Ciclo completo del interruptor:** apagado → la API devuelve `juegos_activos: false` y cero
+  juegos → el menú muestra la pantalla de despedida → prendido de nuevo → los tres juegos
+  vuelven. Luciano quedó **prendido**.
+- Samantha: 2 juegos y 10 invitados. Luciano: 3 juegos y 17 invitados.
+- El pie sale en las dos fiestas con el isotipo y los tres enlaces.
+- **Las 10 URL impresas: ninguna cambió de estado.**
+- Respaldo: `~/respaldos/apagar-juegos-antes-20260909-*.tar.gz`, con `data/parties.json`.
+
+### No probado
+
+- **El botón del admin, apretado por una persona.** El ciclo se probó llamando a las funciones
+  reales contra la base real, no desde la pantalla: no tengo la contraseña del admin.
+- Un niño ya metido dentro de un juego **no se entera** hasta que vuelve al menú. El
+  interruptor corta la entrada, no la partida en curso.
+
+## 2026-09-09 cierre 6 — El nombre de Asómate sale de la temática
+
+En la fiesta de Samantha, que es de hielo, el botón decía **"Asómate y sé el héroe"**. El
+concepto es el mismo en todas las temáticas —la cara del invitado dentro del personaje— pero
+cómo se llama no lo es.
+
+Ahora los textos viven en `themes.json`, en el bloque `asomate`, igual que ya pasaba con el
+título del diploma:
+
+- **spidey**: `🕷️ Asómate y sé el héroe`
+- **hielo**: `❄️ Asómate y entra al reino`
+
+El kiosco cae al texto genérico si la temática no lo dice, así que una temática a medias no
+se rompe.
+
+### Lista de subida
+
+| Archivo local | Destino (`app/`) | Clase | Orden |
+| --- | --- | --- | --- |
+| `public/data/themes.json` | `data/themes.json` | OBLIGATORIO | 1 |
+| `public/lib.php` | `lib.php` | OBLIGATORIO | 2 |
+| `dist/assets/main-BYsZOpv1.js` | igual | OBLIGATORIO | 3 |
+| `dist/index.html` | `index.html` | OBLIGATORIO | 4 |
+
+### Verificado en PROD
+
+- La API de la fiesta de hielo entrega el botón nuevo y sus **4 personajes**; la de spidey,
+  los **6**. El cambio de forma del retorno de `cb_theme_asomate()` no se llevó nada.
+- **Las 10 URL impresas: ninguna cambió de estado.**
+- Respaldo: `~/respaldos/asomate-nombre-antes-20260909-*.tar.gz`.
+
+### Decisión de Luis: las otras temáticas quedan para después
+
+Se puede agregar Asómate a **carreras, familia-canina, heroes, kpop y tropical** sin gastar
+créditos: tienen los seis recortes y un fondo de sala de 1080×1920. Luis decidió dejarlo
+**para cuando entre una fiesta de esas**, porque lo caro es revisar 30 huecos a ojo.
+
+La receta y los errores ya cometidos quedaron en `ASOMATE-NUEVAS-TEMATICAS.md`.
+
+
+## 2026-09-10 — Asómate: guía del hueco sobre la cámara y mando izquierda/derecha
+
+Luis probó Asómate en las dos fiestas y pidió dos cosas: que la foto se pueda correr a los
+lados, y que "el óvalo de la foto" coincida con "el espacio que dejaste" en el personaje.
+Las tres fotos que produjo hoy (almacén de fotos, 13:18 y 13:23) muestran lo mismo: la cara
+de Luisana quedó a la izquierda del hueco de Ghost-Spider y la de Sofía a la derecha del de
+Elsa, chica y con la pared de fondo.
+
+### Qué era
+
+- **No era geometría.** Los PNG, la geometría de `themes.json` y el bundle de PROD son
+  idénticos a la copia local (md5, y el hueco medido por píxeles calza con el óvalo de
+  `themes.json` en los diez personajes). El hueco recortado y el óvalo donde se recorta la
+  foto coinciden al píxel.
+- **El compositor ya entendía `dx`**, pero la vista previa solo ofrecía tamaño y subir/bajar.
+  Un niño parado a un lado no se podía centrar.
+- **En la cámara no había ninguna marca.** La foto se muestreaba siempre en el centro del
+  cuadro, a un quinto del alto, y nadie sabía que la cara tenía que estar justo ahí.
+
+### Qué cambió
+
+- **`src/asomateGuia.js` (nuevo): la única fuente de la relación foto ↔ hueco.**
+  `FOTO_POR_HUECO = 5`, `rectFotoEnLienzo()` (lo usa el compositor para dibujar la foto),
+  `huecoEnFoto()` y `guiaEnPantalla()` (lo usa la cámara, corrigiendo por `object-fit: cover`).
+  Si cambia una, cambia la otra: no pueden volver a desacordarse.
+- **`Capture` recibe `guia`** (el personaje del niño al que le toca) y dibuja un SVG con el
+  óvalo y el resto del cuadro oscurecido; el texto pasa a "Pon tu cara dentro del óvalo y toca
+  el botón". La foto se captura del video, así que la guía nunca sale en ella. El óvalo es
+  simétrico: da lo mismo que la vista en vivo esté espejada.
+- **Vista previa: tercer deslizador "↔ Izquierda o derecha"** (±1,2 anchos del hueco). Mover a
+  la derecha lleva la cara a la derecha.
+- **`tests/frontend/asomateGuia.test.mjs`**: seis pruebas. La central comprueba que el óvalo de
+  la guía, llevado al lienzo por el rectángulo del compositor, cae exactamente sobre el hueco,
+  con cámara horizontal y vertical. `npm test`: 179/179.
+
+### Lista de subida (hecha por SSH)
+
+| Archivo local | Destino (`app/`) | Clase | Orden |
+| --- | --- | --- | --- |
+| `dist/assets/main-DIoFqU80.js` | igual | OBLIGATORIO | 1 |
+| `dist/assets/main-C_-7odVg.css` | igual | OBLIGATORIO | 2 |
+| `dist/index.html` | `index.html` | OBLIGATORIO | 3 |
+
+No se subió nada más a propósito: `album.html`, `cartel-qr.html`, `carteles.html` y sus
+chunks cambiaron de hash en el build (comparten el chunk `Lockup`) y **no se tocaron**; PROD
+sigue con los suyos, consistentes entre sí. `assets/invitation.css` difiere de la rama y
+tampoco se tocó. Los bundles viejos `main-*` siguen en el servidor (limpieza OPCIONAL).
+
+### Verificado en PROD
+
+- md5 iguales en los tres archivos; `index.html` por HTTP referencia los dos bundles nuevos;
+  el JS servido trae los textos nuevos y la clase `cam-guia`.
+- **Recorrido completo en PROD con una cámara falsa** (`getUserMedia` sobrescrito con un
+  canvas) hasta la vista previa, **sin guardar**: guía centrada (Spidey: rx 189,8 × ry 204,8
+  en una caja de 576×1024, un quinto del alto), tres deslizadores, y la cara dibujada dentro
+  de la guía cayó centrada en el hueco sin mover nada.
+- **Las 10 URL impresas: ninguna cambió de estado.**
+- Respaldo: `~/respaldos/kiosco-antes-asomate-guia-20260910.tar.gz` (`index.html` y los dos
+  bundles anteriores). Rollback: restaurar ese `index.html`.
+
+### Cómo se probó sin cámara (repetible)
+
+- `scratchpad/kiosco-local/servidor.py`, registrado en `.claude/launch.json` como
+  `kiosco-asomate-local`: sirve `dist/` (Vite copia `public/` adentro, así que van temas y
+  recortes) y contesta `api.php` con la respuesta real de PROD guardada en `api-<slug>.json`.
+  Cero base de datos, misma geometría que la fiesta.
+- En el navegador, antes de entrar a Asómate:
+  `navigator.mediaDevices.getUserMedia = async () => canvas.captureStream(15)` con una cara
+  dibujada en el canvas, y `enumerateDevices = async () => []`.
+
+### No probado
+
+- **Un niño real frente a la tablet.** La duda concreta: si un quinto del alto de la pantalla
+  obliga a acercarse demasiado. El ajuste es `FOTO_POR_HUECO`; con 4 la cara sale un 25% más
+  grande a la misma distancia, y cambia la cámara y el compositor a la vez.
+- **Ghost-Spider:** el hueco está DENTRO de la máscara blanca y alrededor queda el aro de la
+  capucha. Si Luis sigue viendo "dos óvalos" ahí, lo que hay que agrandar es el hueco del PNG
+  (receta en `ASOMATE-NUEVAS-TEMATICAS.md`), no el código.
+- Tablet en horizontal: la guía se recalcula con `ResizeObserver`, no visto en un aparato.
+
+### Incidente aparte: 504 durante un minuto
+
+A las 13:37 (hora del servidor) `cumpleclick.com/app/` devolvió **504 desde el borde del CDN**
+mientras el origen contestaba 200 en 0,1 s; el servidor compartido tenía load average 65. Se
+fue solo en un minuto. No es del código y no hay nada que subir. Detalle y cómo distinguirlo
+en la memoria `reference_hostinger_504_borde_cdn_carga`.
+
+## 2026-09-10 cierre 2 — La despedida que no se veía
+
+Luis, en la tablet: al terminar el diploma de Asómate y pasar al siguiente invitado, **no salía
+el video de despedida**. Preguntó si era a propósito. No lo era: la ruleta y Asómate terminan
+en la misma pantalla, `farewell`, y ahí va el video de la temática.
+
+### Qué era
+
+`VideoScreen` tenía una red de seguridad de **1,2 segundos fijos**: si el video no tenía el
+primer cuadro en ese plazo, mostraba la tarjeta "¡Gracias por venir!" 3,2 s y volvía a la
+portada. La despedida de spidey pesa **2,7 MB**; en el wifi de un salón, o con el servidor
+compartido cargado como estaba hoy, el primer cuadro no llegaba a tiempo y el invitado veía la
+tarjeta en vez del video. Que la ruleta "sí lo hiciera" fue casualidad de caché: el mismo
+código, el mismo plazo.
+
+Reproducido en local con un servidor que entrega los `.mp4` con 3 s de demora
+(`kiosco-lento` en `.claude/launch.json`): tarjeta y portada a los 6 s, sin video.
+
+### Qué cambió
+
+- **`src/videoListo.js` (nuevo):** la despedida se **baja entera apenas se conoce la fiesta**,
+  una vez por carga del kiosco, y se guarda en memoria (blob URL). La pantalla de despedida
+  monta el video desde ahí y arranca en el acto. Si la descarga falla, se sigue usando la URL
+  de red, como antes. Siete pruebas en `tests/frontend/videoListo.test.mjs`.
+- **`VideoScreen` espera 6 s** (`VIDEO_ESPERA_MS`) en vez de 1,2 antes de rendirse, y también
+  cae a la tarjeta si el navegador no deja reproducir (antes quedaba un cuadro quieto). Un
+  archivo que falta sigue cayendo al instante por `onError`, y el botón "Terminar" sigue ahí.
+
+`npm test`: 186/186.
+
+### Lista de subida (hecha por SSH)
+
+| Archivo local | Destino (`app/`) | Clase | Orden |
+| --- | --- | --- | --- |
+| `dist/assets/main-D1mrMuzY.js` | igual | OBLIGATORIO | 1 |
+| `dist/index.html` | `index.html` | OBLIGATORIO | 2 |
+
+El CSS no cambió (`main-C_-7odVg.css` sigue). Respaldo:
+`~/respaldos/kiosco-antes-despedida-20260910.tar.gz`.
+
+### Verificado en PROD
+
+- md5 iguales; `index.html` por HTTP referencia el bundle nuevo; el JS trae el precargador.
+- Recorrido completo de Asómate en PROD con cámara falsa y **la subida bloqueada desde el
+  navegador** (para no meter una foto de prueba en el álbum de Luciano): tras "Siguiente
+  invitado", el video de despedida corriendo desde memoria (`blob:`), `readyState` 4, sin
+  tarjeta.
+- **Las 10 URL impresas: ninguna cambió de estado.**
+
+### No probado
+
+- **En la tablet, con el wifi del salón.** Es donde falló; ahora debería verse siempre porque
+  el archivo ya está en la tablet cuando le toca.
+- **El video de bienvenida (`welcome-spidey.mp4`, 3,3 MB) tiene el mismo tipo de red de
+  seguridad** (1,8 s en `PhotoSessionVideo`), y NO se tocó. Si en la tablet la bienvenida a
+  veces sale como póster fijo en vez de video, es esto mismo, y el arreglo es el mismo
+  precargador: `prepararVideo(CONFIG.videos.welcome)` y montar con `urlDeVideo()`.
+
+## 2026-09-10 cierre 3 — Asómate: la cara se ajusta sola
+
+Luis probó los seis personajes arácnidos en la tablet con su propia cara y mandó las fotos:
+**solo Spidey quedaba bien**. En los demás la cara salía chica dentro del hueco, corrida a un
+lado o con el cuello y la pared de fondo a la vista.
+
+### Qué era
+
+La foto se muestreaba siempre en el centro del cuadro y a un tamaño fijo (dos quintos del
+alto). Eso queda bien únicamente si la persona está exactamente a la distancia y en el lugar
+que la guía pide. Luis sostenía la tablet en la mano y se sacó cada foto a una distancia
+distinta: en Spidey estaba cerca y la cara llenó el hueco; en los otros, más lejos. Un niño en
+un kiosco tampoco va a estar nunca en el lugar exacto.
+
+### Qué cambió
+
+- **La cara se detecta y el ajuste se calcula solo.** `src/detectorCara.js` carga MediaPipe
+  Tasks Vision (modelo BlazeFace de corto alcance) en segundo plano apenas se conoce la fiesta,
+  solo si la temática tiene Asómate. Al llegar a la vista previa, se busca la cara en cada foto
+  y `src/caraAuto.js` calcula el zoom y el corrimiento que la dejan **centrada en el hueco y
+  a 1,1 veces su alto**. Los tres mandos parten de ahí: el operador solo afina.
+- **Si el detector no está, falla o no ve nada, todo sigue como antes** (guía + mandos, con
+  el centro y el tamaño fijos). Nunca bloquea: espera a lo sumo 4 s.
+- **El modelo no ve caras chicas.** Probado con una cara real recortada de las fotos de hoy:
+  al 22% del alto del cuadro no detecta nada, al 36% la ve con puntaje 0,9. Un niño a medio
+  metro cae en lo primero. Por eso se mira el cuadro entero **y además cuatro cuadrantes
+  solapados**, donde la misma cara ocupa el doble: cinco pasadas de ~50 ms.
+- Los mandos se **estiran** para incluir el valor automático (una cara en la esquina se corre
+  varios huecos); el de tamaño llega ahora a 3,5.
+- Dependencia nueva en `package.json`: `@mediapipe/tasks-vision` 0.10.14. Sus archivos van
+  copiados en `public/vendor/mediapipe/` (19 MB entre las dos variantes del WebAssembly, el
+  cargador y el modelo de 230 KB) con un `.htaccess` propio: 404 real para lo que no existe,
+  `AddType application/wasm` (el servidor los servía como `text/plain` y la raíz manda
+  `nosniff`) y un mes de caché.
+- Pruebas: `tests/frontend/caraAuto.test.mjs` (5). `npm test`: 191/191.
+
+### Lista de subida (hecha por SSH, en este orden)
+
+| Archivo local | Destino (`app/`) | Clase | Orden |
+| --- | --- | --- | --- |
+| `public/vendor/mediapipe/.htaccess` | `vendor/mediapipe/.htaccess` | OBLIGATORIO | 1 |
+| `public/vendor/mediapipe/blaze_face_short_range.tflite` | igual | OBLIGATORIO | 2 |
+| `public/vendor/mediapipe/vision_wasm_internal.js` + `.wasm` | igual | OBLIGATORIO | 3 |
+| `public/vendor/mediapipe/vision_wasm_nosimd_internal.js` + `.wasm` | igual | OBLIGATORIO (tablets sin SIMD) | 4 |
+| `dist/assets/vision_bundle-Cd7_-YIR.js` | igual | OBLIGATORIO (trozo que carga el detector) | 5 |
+| `dist/assets/main-CxDls_ua.js` | igual | OBLIGATORIO | 6 |
+| `dist/index.html` | `index.html` | OBLIGATORIO | 7 |
+
+El CSS no cambió. Respaldo: `~/respaldos/kiosco-antes-cara-auto-20260910.tar.gz`.
+
+### Verificado en PROD
+
+- md5 iguales en los 9 archivos. `HEAD` del `.wasm`: `application/wasm`, caché de un mes;
+  un `.wasm` inexistente da 404 y no el HTML del kiosco.
+- Recorrido completo en PROD con cámara falsa, **una cara real** (la de Luisana, recortada de
+  la foto de hoy) puesta chica y a un costado del cuadro, y la subida bloqueada desde el
+  navegador: Ms. Marvel salió con la cara centrada y llenando el hueco sin tocar un mando
+  (zoom 2,22; corrimiento −2,84 y 0,58). En local, lo mismo con Pantera Negra y Hulk.
+- El WebAssembly de 9,4 MB tardó 6,6 s en bajar la primera vez desde PROD; queda en caché.
+- **Las 10 URL impresas: ninguna cambió de estado.**
+
+### No probado
+
+- **Un niño real en la tablet.** Lo que hay que mirar: si la cara queda al tamaño correcto en
+  Spidey (hueco dentro de la máscara, donde antes se veía bien con la cara más grande). El
+  número es `factor` en `ajusteParaCara` (1,1); si en algún personaje conviene otro, se puede
+  anotar por personaje en `themes.json` más adelante.
+- Que el detector alcance a cargar en el wifi del salón antes de la primera foto (9,4 MB en
+  segundo plano; el flujo tarda más de medio minuto en llegar a la vista previa).
+- Dos o tres niños: cada foto se detecta por separado, no visto.
+
+## 2026-09-10 cierre 4 — Bienvenida de spidey: la voz femenina no se entendía
+
+Luis, en la tablet: en el video de bienvenida donde los tres arácnidos saludan, lo que dice
+la voz femenina no se entiende.
+
+### Qué era (medido, no supuesto)
+
+Las tres frases se generaron el 2026-09-02 con voces prehechas de ElevenLabs en inglés
+hablando español (`scratchpad/voces-bienvenida-spidey.py`: Josh, Rachel, Antoni) y se
+concatenaron sin nivelar.
+
+- **Nivel:** la línea de Rachel estaba a **−28,2 LUFS**, contra −20,5 y −14,6 las otras dos:
+  entre 8 y 14 dB más baja. En el parlante de una tablet, desaparece.
+- **Dicción:** la transcripción automática de ElevenLabs (`/v1/speech-to-text`, `scribe_v1`)
+  de esa línea dio **"¿Qué acá le diría que se llegaran?"** en vez de "¡Qué alegría que
+  llegaran!". Las dos líneas masculinas transcribieron perfecto.
+
+### Qué se hizo
+
+- **Cada voz en el momento en que su personaje mueve la boca** (Luis: "deben coincidir las
+  voces con los personajes"). Con una hoja de cuadros a 4 por segundo se vio que la niña de
+  capucha blanca saluda con la mano de 0 a 1,75 s, Spidey abre la boca grande de 2,0 a 2,75 s y
+  el trío sonríe de 3,5 a 4,5 s antes del primer plano. Orden nuevo: **Ghost-Spider** (Rachel)
+  "¡Hola! ¡Bienvenidos a la fiesta!" desde 0,20 s; **Spidey** (Josh) "¡Qué alegría que
+  vinieron!" desde 2,25 s; **Spin** (Antoni) "¡Vamos a celebrar en grande!" desde 4,55 s.
+- Frases con sonidos simples y **verificadas por transcripción** antes de usarlas: "¡Qué alegría
+  que llegaran!" salía como "diría que se llegaran"; "¡Hola, hola!" en Rachel salía como
+  "Hola, chola"; Sarah dio basura ("Um, ¿qué rollo Chris K?"). Rachel con `stability` 0,7
+  transcribe exacto.
+- **La toma de Spin se cortaba al final** (Luis: "no termina de decirlo"). Medido: la última
+  sílaba de la toma original caía 30 dB en **60 ms**, un final de guillotina que la
+  transcripción no delata. Se regrabó la misma frase con puntos suspensivos al final
+  ("¡Vamos a celebrar en grande!...") y la caída pasó a **280 ms**; con un punto en vez de
+  exclamación daba 180 ms y la retoma sin cambios 140 ms. Spin arranca ahora en 4,30 s y su
+  última palabra termina en 6,10 s, con 0,3 s de silencio antes del fin del video.
+  Gasto total del día en ElevenLabs: 292 caracteres.
+- Las tres líneas niveladas a **−15,5 LUFS** (±0,1) con ganancia medida y limitador a
+  −1,5 dBFS, colocadas con `adelay`, silencio hasta los 6,5 s del video.
+- El video no se recodificó: se copió la pista de video de `welcome-spidey-voz.mp4` y se
+  cambió solo el audio (`ffmpeg -c:v copy`). Sigue h264 720×1280, 24 fps, 6,5 s, 3,3 MB.
+- Transcripción de la mezcla final: **"Hola, bienvenidos a la fiesta. Qué alegría que
+  vinieron. Vamos a celebrar en grande."**, con las frases empezando en 0,30 s, 2,34 s y
+  4,45 s: donde tenían que estar.
+
+### Lista de subida (hecha por SSH)
+
+| Archivo local | Destino (`app/`) | Clase |
+| --- | --- | --- |
+| `public/themes/spidey/welcome-spidey.mp4` | `themes/spidey/welcome-spidey.mp4` | OBLIGATORIO |
+
+Sin cambio de código. El kiosco pone `?v=<assetsVersion>` (el mtime más nuevo de la carpeta
+del tema) a cada asset, así que la tablet y el CDN piden el archivo nuevo solos:
+`assetsVersion` pasó a `1789054154`. Respaldo:
+`~/respaldos/welcome-spidey-antes-voz-20260910.tar.gz`.
+
+### Verificado en PROD
+
+md5 igual; la API entrega `assetsVersion = 1789055545`; `HEAD` a la URL **con** ese `?v=`
+devuelve los 3.313.131 B del archivo nuevo. Ojo: un `HEAD` a la URL sin `?v=` seguía
+devolviendo el tamaño del archivo anterior (caché del CDN); el kiosco nunca pide esa URL.
+
+### No probado
+
+- **Oírlo en la tablet.** La transcripción dice que se entiende y los tiempos calzan con los
+  cuadros; el gusto lo decide Luis, que tiene el MP4 y una toma alternativa con Alice para el
+  saludo de la niña.
+- Las bienvenidas de las otras temáticas con voz no se midieron. La receta para revisarlas
+  es la misma: `ebur128` por línea y transcribir con `scribe_v1`.
+
+## 2026-09-10 cierre 5 — El CDN achicaba las imágenes en la tablet: la causa real de "los óvalos"
+
+Luis: "en la PC funciona, en la tablet Spin sale con la foto fuera del traje; solo Spidey está
+bien". Con su foto de la tablet se vio que el personaje salía **más chico que su óvalo**, con
+la foto asomando por la derecha del traje.
+
+### Qué era (medido)
+
+El CDN de Hostinger sirve **otra imagen según el User-Agent**: a un navegador Android le
+entrega cada imagen **achicada a 800 px de ancho y convertida a WebP**; a un escritorio, la
+original. Medido pidiendo cada archivo con los dos agentes:
+
+| Imagen | Anotado | Escritorio | Tablet Android |
+| --- | --- | --- | --- |
+| `asomate/fondo.jpg` | 1080×1920 | 1080×1920 | **800×1422** |
+| `spidey.png` | 711×1762 | 711×1762 | 711×1762 |
+| `ghost-spider.png` | 916×1868 | 916×1868 | **800×1631** |
+| `spin.png` | 1063×1285 | 1063×1285 | **800×967** |
+| `hulk.png` | 973×2315 | 973×2315 | **800×1903** |
+| `ms-marvel.png` | 1008×1821 | 1008×1821 | **800×1445** |
+| `pantera.png` | 847×1891 | 847×1891 | **800×1786** |
+
+`componerAsomate()` dibujaba el recorte con `naturalWidth × k`, o sea con el tamaño del
+archivo que llegó, mientras el óvalo usaba las medidas anotadas en `themes.json`. En la
+tablet el personaje salía al 75 % (Spin) y el óvalo al 100 %: la foto se veía fuera del
+traje. **Spidey, de 711 px, era el único que no se achicaba** y por eso era el único que se
+veía bien. Y por lo mismo las fotos de la tablet salían de 800×1422 en vez de 1080×1920.
+
+Ninguna prueba desde el escritorio ni desde Python lo reproducía. Se vio recién al pedir las
+imágenes con el User-Agent de la tablet.
+
+### Qué cambió (tres capas)
+
+1. **`componerAsomate()` dibuja cada recorte con `w`/`h` anotados** y el lienzo mide 1080 de
+   ancho aunque el fondo llegue más chico. Funciona aunque el CDN vuelva a achicar.
+2. **`public/themes/.htaccess` (nuevo):** `Cache-Control: no-transform` para las imágenes.
+   El CDN lo respeta: pedido como Android, `spin.png` volvió a llegar de 1063×1285.
+3. `touch` a los recortes y fondos de Asómate de spidey y hielo para cambiar su `?v=` y que
+   la tablet pidiera versiones frescas; y **Luis vació el caché del CDN en hPanel**. Con eso
+   confirmó en la tablet que Spin y los demás calzan.
+
+### Lista de subida (hecha por SSH)
+
+| Archivo local | Destino (`app/`) | Clase | Orden |
+| --- | --- | --- | --- |
+| `dist/assets/main-BI2KBazm.js` | igual | OBLIGATORIO | 1 |
+| `dist/index.html` | `index.html` | OBLIGATORIO | 2 |
+| `public/themes/.htaccess` | `themes/.htaccess` | OBLIGATORIO | 3 |
+
+Respaldo: `~/respaldos/kiosco-antes-medidas-anotadas-20260910.tar.gz`. Las 10 URL: sin cambio.
+
+### Lección
+
+Cuando el cliente ve en un aparato algo que no se reproduce en el escritorio, **pedir el
+recurso con el User-Agent de ese aparato** antes de tocar el código. Hoy se gastaron horas
+en la geometría de los huecos, que estaba perfecta.
+
+## 2026-09-10 cierre 6 — La bienvenida se cortaba en la tablet lenta
+
+Luis, en la Tab A7: "el saludo se ve lento y a Spin se le corta la última frase". En el
+portátil, completo. El archivo estaba entero (cierre 4): la frase de Spin termina en 6,10 s
+de un video de 6,50 s.
+
+### Qué era
+
+`ListaInvitados` tiene un temporizador de seguridad para bienvenidas que nunca terminan:
+`duración + 0,6 s` desde que se leen los metadatos, y al vencer **cierra la bienvenida sin
+mirar el video**. En una tablet lenta el video arranca tarde o se traba un momento, así que a
+los 7,1 s de reloj todavía iba por Spin, y el temporizador lo mataba a media frase. En el
+portátil el video no se atrasa y el temporizador nunca alcanza a vencer.
+
+Además, al abrir el kiosco se cargaban los 9 MB de WebAssembly del detector de caras
+(cierre 3), justo cuando suena la primera bienvenida: en una Tab A7 eso compite con el video.
+
+### Qué cambió
+
+- **El temporizador, al vencer, mira el video:** si sigue avanzando (`currentTime` creció y no
+  está en pausa ni terminado) le da el tiempo que le falta más 0,6 s, y así hasta un tope de
+  45 s. Solo abandona un video que no avanza. `onEnded` sigue siendo el camino normal.
+- **El detector de caras se carga al tocar "Asómate"**, no al abrir el kiosco. De ahí a la
+  primera foto pasan más de 15 s; si no llegara, la foto se ajusta con la guía y los mandos.
+
+### Lista de subida (hecha por SSH)
+
+| Archivo local | Destino (`app/`) | Clase | Orden |
+| --- | --- | --- | --- |
+| `dist/assets/main-DzdFwgzX.js` | igual | OBLIGATORIO | 1 |
+| `dist/index.html` | `index.html` | OBLIGATORIO | 2 |
+
+Respaldo: `~/respaldos/kiosco-antes-bienvenida-espera-20260910.tar.gz`. Las 10 URL: sin cambio.
+
+### Verificado en PROD
+
+Bienvenida de spidey con una **traba simulada** (pausa de 2,5 s a los 0,5 s de video, desde
+el navegador): a los 7,4 s de reloj, donde antes se cortaba, la bienvenida seguía con el
+video en 3,87 s; `ended` llegó con el video en 6,50 s y recién ahí se cerró, a los 10,1 s. Y
+al abrir el kiosco ya no se descarga ningún archivo del detector.
+
+### No probado
+
+- **La Tab A7 misma.** Si además de arrancar tarde el video se ve a tirones, es la tablet: el
+  temporizador ya no lo corta, pero no lo hace más fluido. Comparar con la otra tablet.
+
+## 2026-09-10 cierre 7 — Frozen: los huecos de Elsa y Olaf se salían del personaje
+
+Luis preguntó si Frozen tenía los mismos errores. Se midió en vez de suponer: para cada
+personaje de hielo se comprobó cuánto del **borde exterior** del óvalo anotado cae sobre
+píxeles opacos del recorte original (si el óvalo está dentro de la figura, el 100 %).
+
+| Personaje | Borde exterior dentro de la figura |
+| --- | --- |
+| anna | 100 % |
+| kristoff | 100 % |
+| elsa | 88 % (se salía por la izquierda y bajaba hasta el cuello) |
+| olaf | 59 % (más ancho y más alto que la cabeza) |
+
+Con la foto ajustada a 1,1 veces el hueco, en esos dos la foto asomaba por fuera del
+personaje. Se recortaron de nuevo desde `elsa-cut.png` y `olaf-cut.png` con un óvalo que
+queda dentro de la cara y cubre cejas a mentón (buscado en una grilla de escalas y
+corrimientos, exigiendo 100 % dentro): Elsa 134×236 centrado en (323,189) en vez de 158×248
+en (303,219); Olaf 302×420 en (323,478) en vez de 336×466 en (323,448). Verificado por
+píxeles: hueco 99-100 % transparente, borde exterior 98,6 % y 99,9 % opaco. En `themes.json`
+solo cambiaron los ocho números (`cx`, `cy`, `rx`, `ry` de los dos).
+
+Los seis de spidey ya cumplían el 100 % (el componente transparente del hueco calzaba con
+el óvalo y estaba encerrado por la figura).
+
+## 2026-09-10 cierre 8 — Frozen: bienvenida con voces
+
+Luis: "el video de bienvenida de Frozen no tiene audio; que tenga voces como el de Spidey".
+El archivo era solo video, 14,04 s: 0-4,5 s un túnel de hielo que se acerca al salón, 4,5 s
+un destello, y de 5 s en adelante Elsa, Anna, Kristoff, Sven y Olaf alrededor de la torta,
+con un destello de magia entre 9 y 11,5 s.
+
+Cuatro voces, colocadas donde el video las pide y **todas verificadas por transcripción**
+antes de usarlas (frases con sonidos simples; `<break time="0.6s" />` al final para que la
+última sílaba tenga cola):
+
+| Cuándo | Quién | Voz | Frase |
+| --- | --- | --- | --- |
+| 1,1 s (túnel) | narradora | Alice | "¡Bienvenidos al reino de hielo!" |
+| 5,5 s (aparece el grupo) | Elsa | Rachel, `stability` 0,7 | "¡Hola! ¡Qué alegría que vinieron!" |
+| 8,2 s | Anna | Jessica | "¡Bienvenidos a la fiesta!" |
+| 10,3 s (destello) | Olaf | Josh | "¡Vamos a celebrar en grande!" |
+
+Kristoff y Sven no hablan: una quinta frase no cabía antes de los 14 s sin apretar. Matilda
+también transcribe bien en español (queda de reserva); Lily no existe en la cuenta. Las
+cuatro líneas a −15,6 LUFS (±0,2); transcripción de la mezcla final exacta. El video no se
+recodificó (`-c:v copy`). Gasto: 382 caracteres de ElevenLabs.
+
+### Lista de subida de los cierres 7 y 8 (hecha por SSH)
+
+| Archivo local | Destino (`app/`) | Clase |
+| --- | --- | --- |
+| `public/themes/hielo/asomate/elsa.png` | igual | OBLIGATORIO |
+| `public/themes/hielo/asomate/olaf.png` | igual | OBLIGATORIO |
+| `public/data/themes.json` | `data/themes.json` | OBLIGATORIO (solo 8 números; PROD era idéntico al local antes) |
+| `public/themes/hielo/welcome-hielo.mp4` | igual | OBLIGATORIO |
+
+Respaldo: `~/respaldos/hielo-antes-huecos-y-bienvenida-20260910.tar.gz`. Verificado: md5
+iguales; la API de `samantha-hielo` entrega la geometría nueva y `assetsVersion` nuevo; con
+User-Agent Android los PNG llegan a tamaño completo y el video con `?v=` pesa lo mismo que el
+local.
+
+### No probado
+
+- Asómate de Frozen con los huecos nuevos en la tablet, y la bienvenida oída ahí.
+
+## 2026-09-10 cierre 9 — Frozen: el pase de artista con voces
+
+Luis: "el pase de artista donde salen las dos hermanas también necesita audio". Es
+`themes/hielo/entrada-palacio-hielo.mp4` (`photoSession.video`, 5,04 s): Elsa y Anna en el
+palacio de hielo, de perfil, girándose hacia la cámara mientras acerca el plano. Tenía una
+pista de audio a **−52,7 LUFS**: silencio en la práctica.
+
+Dos voces, verificadas por transcripción, con `<break time="0.5s" />` al final:
+
+| Cuándo | Quién | Voz | Frase |
+| --- | --- | --- | --- |
+| 0,3 s | Elsa | Rachel, `stability` 0,7 | "¡Ven! ¡Ponte aquí con nosotras!" |
+| 2,5 s | Anna | Jessica | "¡Sonríe para la foto!" |
+
+Las dos a −16 LUFS; la última palabra termina en 3,72 s de 5,04. Transcripción de la mezcla
+exacta. Video sin recodificar. Gasto: 96 caracteres de ElevenLabs (total del día: 478).
+
+| Archivo local | Destino (`app/`) | Clase |
+| --- | --- | --- |
+| `public/themes/hielo/entrada-palacio-hielo.mp4` | igual | OBLIGATORIO |
+
+Respaldo: `~/respaldos/hielo-pase-antes-voz-20260910.tar.gz`. Verificado: md5 igual, la API
+entrega `assetsVersion` nuevo y el `HEAD` con `?v=` pesa lo mismo que el local (6.346.292 B).
+
+### No probado
+
+- Oído en la tablet. Y el resto de temáticas con pase de artista **no se midió**: la receta es
+  `ebur128` sobre el archivo; si da menos de −40 LUFS, está mudo.
+
+## 2026-09-10 cierre 10 — Circuito Arácnido: las flechas empujan, los rayos recargan
+
+Un usuario le hizo dos observaciones a Luis:
+
+1. **Las rampas con flechas mentían.** En un juego de carros una flecha en el suelo significa
+   "esto te empuja de una"; el rayo significa energía. Aquí las flechas **recargaban el turbo**
+   y no empujaban. Ahora las flechas **impulsan** (velocidad de 23 a 37 durante 1,5 s, sin
+   apretar nada) y se agregaron **ocho rayos por vuelta** repartidos por la pista que son los
+   que **recargan** la barra (+30 cada uno).
+2. **En un iPhone con Chrome, al terminar la carrera ningún botón respondía.** En Android y en
+   las dos tablets de Luis funcionaba.
+
+### Qué se cambió
+
+- **`sim.mjs`:** `Piloto` gana `impulso` (segundos de empujón) y `energias` (rayos recogidos);
+  `ENERGIA` lista las ocho posiciones por vuelta con su carril. `paso()` ya no devuelve un
+  booleano sino `'impulso'`, `'energia'` o `''`.
+- **`world.mjs`:** las flechas quedan **igual**; se agregan los rayos, hechos con el mismo
+  contorno del SVG del botón TURBO, extruidos, amarillos, flotando 1,6 sobre la pista, con un
+  balanceo suave. Se apagan al recogerlos y vuelven en la vuelta siguiente.
+- **`main.mjs`:** avisos distintos ("¡Impulso!" y "¡Turbo recargado!", este último con la voz
+  de siempre); `dibujar()` recibe el piloto local para saber qué rayos ya se tomaron.
+- **`main.mjs`, la salida:** `salir()` hacía `dejar(); enviarPuntaje(); voz.detener();
+  musica.pause(); location.href=...` en una sola línea. **Si cualquiera de esas llamadas
+  lanzaba, la navegación no se ejecutaba y el botón parecía muerto.** Ahora cada paso va
+  aislado y, si la asignación se ignora, un respaldo a los 700 ms fuerza la salida. Lo mismo
+  en "¡Otra carrera!".
+- **`circuito.css`:** en iPhone las barras del navegador se montan encima de un elemento
+  `position:fixed; inset:0`, así que el borde inferior —donde están esos botones— no recibe el
+  toque. Las pantallas ahora miden `100dvh`, el alto que de verdad se ve.
+- **`.htaccess` del juego:** los `.mjs` **no entraban** en la regla de caché de la carpeta
+  padre (cubre `.js`, no `.mjs`) y salían sin `Cache-Control`. Un navegador podía quedarse con
+  un `sim.mjs` viejo junto a un `main.mjs` nuevo. Ahora se revalidan siempre. El sello de
+  `index.html` pasó a `?v=impulso-rayos`.
+
+### Cómo se probó
+
+- **Copia de ensayo en el servidor** (`juego/circuito-prueba/`, con los 34 MB de `assets`
+  enlazados, no duplicados) contra el backend real, para no tocar el juego en uso. Borrada al
+  terminar.
+- Carrera completa en esa copia: los rayos se ven flotando, el aviso "¡Turbo recargado!"
+  aparece al recogerlos, y **"Volver al menú" del podio navega** al menú de juegos.
+- La física se comprobó **fuera del navegador**, corriendo `sim.mjs` en node: la rampa da
+  `impulso` y sube la velocidad de 23 a 37 sin tocar la carga; el rayo da `energia` y sube la
+  carga sin acelerar; pasar por el carril equivocado no recoge nada.
+- Los puntajes de prueba se borraron de `cc_puntajes` (quedan solo los ocho jugadores reales).
+
+### Lista de subida (hecha por SSH, en este orden)
+
+| Archivo local | Destino (`app/juego/circuito/`) | Clase |
+| --- | --- | --- |
+| `.htaccess` | igual | OBLIGATORIO (primero: fija la caché de los `.mjs`) |
+| `sim.mjs`, `world.mjs`, `main.mjs` | igual | OBLIGATORIO |
+| `circuito.css` | igual | OBLIGATORIO |
+| `index.html` | igual | OBLIGATORIO (último: trae el sello nuevo) |
+
+Respaldo: `~/respaldos/circuito-antes-impulso-20260910.tar.gz`. Las 10 URL: sin cambio.
+
+🔴 **El Circuito no tiene copia local en esta máquina.** Vino de Codex y PROD es el único
+lugar donde vive. Para trabajarlo se baja con SFTP a `scratchpad/circuito-trabajo/`. Si Codex
+vuelve a exportarlo, **estos cambios se pierden**: hay que pasarle esta sección.
+
+### No probado
+
+- **El iPhone del usuario.** Las dos causas posibles quedaron cerradas (la excepción que
+  cortaba la navegación y el botón bajo la barra del navegador), pero no tengo un iPhone.
+- Que el empujón se sienta bien para un niño: 14 de velocidad extra durante 1,5 s es lo que
+  se eligió; el número está en `IMPULSO_S` y en el `+ 14` de `sim.mjs`.
+- (Cerrado) El usuario había mencionado "un icono arriba que parece un freno de mano".
+  Luis confirmó que **se confundió**: arriba solo están la nota musical y el botón de PAUSA,
+  y ninguno cambia.

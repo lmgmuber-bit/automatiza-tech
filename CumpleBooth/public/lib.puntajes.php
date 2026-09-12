@@ -27,6 +27,11 @@ function cb_juegos(): array
         'reino-hielo' => ['nombre' => 'Reino de Hielo en 3D', 'tema' => 'hielo'],
         'festival' => ['nombre' => 'El Festival de las Estrellas', 'tema' => 'hielo'],
         'aracnida' => ['nombre' => 'Aventura Arácnida en 3D', 'tema' => 'spidey'],
+        // Segundo juego de la temática Spidey, escrito aparte. Convive con el anterior: los
+        // dos aparecen en el menú de esa fiesta. Va en `spidey` y NO en `heroes` a propósito
+        // —son dos temáticas distintas del admin, aunque compartan el mundo 3D—, y meterlo
+        // en `heroes` lo haría aparecer en Misión 3D, que es otra fiesta.
+        'impulso' => ['nombre' => 'Impulso Arácnido', 'tema' => 'spidey'],
         'mision' => ['nombre' => 'Misión 3D', 'tema' => 'heroes'],
     ];
 }

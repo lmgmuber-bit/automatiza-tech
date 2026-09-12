@@ -2996,10 +2996,9 @@ body {
 
 /* Icono de la foto grupal: abajo a la izquierda, discreto, sobre la decoración.
    56 px de lado: por debajo de eso un adulto falla el toque con la tablet en la mano. */
-.intro-grupal {
+.intro-grupal,
+.intro-pantalla {
   position: absolute;
-  left: 14px;
-  bottom: 14px;
   z-index: 3;
   width: 56px;
   height: 56px;
@@ -3015,5 +3014,20 @@ body {
   line-height: 1;
   cursor: pointer;
 }
-.intro-grupal:active { transform: scale(.94); }
-.intro-grupal:focus-visible { outline: 3px solid var(--yellow, #ffb800); outline-offset: 3px; }
+.intro-grupal:active,
+.intro-pantalla:active { transform: scale(.94); }
+.intro-grupal:focus-visible,
+.intro-pantalla:focus-visible { outline: 3px solid var(--yellow, #ffb800); outline-offset: 3px; }
+
+/* La foto grupal abajo a la izquierda; la pantalla completa arriba a la izquierda, la misma
+   esquina que usan los juegos, para que sea el mismo gesto en todo el servicio. Arriba a la
+   derecha está la marca. */
+.intro-grupal {
+  left: max(14px, env(safe-area-inset-left));
+  bottom: max(14px, env(safe-area-inset-bottom));
+}
+.intro-pantalla {
+  left: max(14px, env(safe-area-inset-left));
+  top: max(18px, env(safe-area-inset-top));
+  font-size: 1.35rem;
+}

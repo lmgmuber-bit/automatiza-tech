@@ -2425,6 +2425,93 @@ function VideoJuegoEstrella({ src, personaje, onDone }) {
 }
 
 /* ============================================================
+   0) PANTALLA COMPLETA — lo mismo que hacen los juegos
+   ============================================================ */
+
+/**
+ * Si el navegador de la tablet sabe hacerlo. iPad no: Safari solo deja pantalla completa a
+ * los videos, y ahí el botón no se dibuja en vez de quedar como un botón que no hace nada.
+ */
+function pantallaCompletaDisponible() {
+  if (typeof document === 'undefined') return false
+  const raiz = document.documentElement
+  return Boolean(raiz.requestFullscreen || raiz.webkitRequestFullscreen)
+}
+
+function pantallaCompletaActiva() {
+  if (typeof document === 'undefined') return false
+  return Boolean(document.fullscreenElement || document.webkitFullscreenElement)
+}
+
+/**
+ * 🔴 Esto SOLO funciona dentro de un gesto de la persona. Llamarlo al cargar la pantalla o
+ * al girar la tablet no hace nada: el navegador lo rechaza y no avisa. Por eso se llama
+ * desde los toques de la bienvenida y no desde un efecto.
+ */
+function entrarPantallaCompleta() {
+  const raiz = typeof document !== 'undefined' ? document.documentElement : null
+  const pedir = raiz && (raiz.requestFullscreen || raiz.webkitRequestFullscreen)
+  if (!pedir || pantallaCompletaActiva()) return
+  try {
+    const r = pedir.call(raiz, { navigationUI: 'hide' })
+    if (r && typeof r.catch === 'function') r.catch(() => {})
+  } catch {
+    /* el navegador puede negarse; el kiosco sigue funcionando igual */
+  }
+}
+
+function salirPantallaCompleta() {
+  const fin = document.exitFullscreen || document.webkitExitFullscreen
+  if (!fin || !pantallaCompletaActiva()) return
+  try {
+    const r = fin.call(document)
+    if (r && typeof r.catch === 'function') r.catch(() => {})
+  } catch {
+    /* idem */
+  }
+}
+
+/**
+ * El botón de pantalla completa de la bienvenida.
+ *
+ * Sirve también para SALIR, que es la mitad que suele faltar: en la tablet se sale
+ * deslizando desde el borde de arriba y quien atiende la fiesta no tiene por qué saberlo.
+ */
+function PantallaCompleta() {
+  const [activa, setActiva] = useState(pantallaCompletaActiva)
+
+  useEffect(() => {
+    const mirar = () => setActiva(pantallaCompletaActiva())
+    document.addEventListener('fullscreenchange', mirar)
+    document.addEventListener('webkitfullscreenchange', mirar)
+    return () => {
+      document.removeEventListener('fullscreenchange', mirar)
+      document.removeEventListener('webkitfullscreenchange', mirar)
+    }
+  }, [])
+
+  if (!pantallaCompletaDisponible()) return null
+
+  const texto = activa ? 'Salir de pantalla completa' : 'Pantalla completa'
+  return (
+    <button
+      className="intro-pantalla"
+      type="button"
+      aria-label={texto}
+      aria-pressed={activa}
+      title={texto}
+      onClick={(event) => {
+        event.stopPropagation()
+        if (activa) salirPantallaCompleta()
+        else entrarPantallaCompleta()
+      }}
+    >
+      <span aria-hidden="true">{activa ? '\u2921' : '\u26f6'}</span>
+    </button>
+  )
+}
+
+/* ============================================================
    1) INTRO — gate de toque (desbloquea audio/autoplay)
    ============================================================ */
 function Intro({ onStart, onAsomate, onGrupal }) {
@@ -2434,6 +2521,9 @@ function Intro({ onStart, onAsomate, onGrupal }) {
       const a = new Audio()
       a.play().catch(() => {})
     } catch {}
+    // Y aprovecha el mismo gesto para la pantalla completa: fuera de un toque, el navegador
+    // la rechaza. Nadie tiene que acordarse de apretar nada.
+    entrarPantallaCompleta()
     onStart()
   }
   return (
@@ -2444,6 +2534,7 @@ function Intro({ onStart, onAsomate, onGrupal }) {
     >
       <div className="intro-veil" />
       <CumpleClickBrand className="intro-brand" inverse />
+      <PantallaCompleta />
       {/* La foto de todos: icono chico abajo a la izquierda para no tapar la decoración.
           La dispara un adulto una o dos veces en la fiesta; los botones grandes son los que
           tocan los niños toda la tarde, y darles el mismo peso era equivocado. */}
@@ -2455,6 +2546,7 @@ function Intro({ onStart, onAsomate, onGrupal }) {
           title={CONFIG.grupal?.titulo || 'Foto grupal'}
           onClick={(event) => {
             event.stopPropagation()
+            entrarPantallaCompleta()
             onGrupal()
           }}
         >
@@ -2513,6 +2605,7 @@ function Intro({ onStart, onAsomate, onGrupal }) {
               className="cta cta--asomate"
               onClick={(event) => {
                 event.stopPropagation()
+                entrarPantallaCompleta()
                 onAsomate()
               }}
             >

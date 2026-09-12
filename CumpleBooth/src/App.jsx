@@ -1753,6 +1753,77 @@ function componerAsomate(fondoImg, lista, titulo, opciones = {}) {
   return exportarFoto(c)
 }
 
+/**
+ * La FOTO GRUPAL: una sola foto con todos, dentro del marco grande del fondo `grupal`.
+ *
+ * Por qué no reutiliza el compositor de siempre: ese inscribe un CUADRADO dentro del marco
+ * (`getSquareFrameGeometry`), que es lo correcto para una cara y lo peor posible para un
+ * grupo. Acá el hueco es el rectángulo completo y la foto entra en modo "cubrir": se escala
+ * por el lado que falte y se recorta el sobrante, así el marco nunca queda con franjas
+ * blancas a los costados.
+ *
+ * `frameBox` viene medido al armar el fondo, no estimado después. Esa es la diferencia con
+ * baby-rosas, donde el recuadro se midió a ojo y la foto salió chica y descentrada.
+ */
+function componerGrupal(fondoImg, fotoImg, caja, titulo, opciones = {}) {
+  // El lienzo mide lo que mide el fondo DE VERDAD: el CDN le entrega a Android una copia de
+  // 800 px y con eso todas las medidas relativas caerían en el lugar equivocado.
+  const W = Math.max(1080, fondoImg?.naturalWidth || 1080)
+  const H = fondoImg?.naturalWidth
+    ? Math.round((W * fondoImg.naturalHeight) / fondoImg.naturalWidth)
+    : Math.round((W * 16) / 9)
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const ctx = c.getContext('2d')
+  if (fondoImg) ctx.drawImage(fondoImg, 0, 0, W, H)
+
+  const hueco = {
+    x: Math.round((Number(caja?.x) || 0) * W),
+    y: Math.round((Number(caja?.y) || 0) * H),
+    w: Math.round((Number(caja?.w) || 0) * W),
+    h: Math.round((Number(caja?.h) || 0) * H),
+  }
+
+  if (fotoImg && hueco.w > 0 && hueco.h > 0) {
+    // "Cubrir": se toma del original el rectángulo más grande que tenga la forma del hueco.
+    const k = Math.max(hueco.w / fotoImg.naturalWidth, hueco.h / fotoImg.naturalHeight)
+    const anchoUtil = hueco.w / k
+    const altoUtil = hueco.h / k
+    const sx = (fotoImg.naturalWidth - anchoUtil) / 2
+    // Se recorta más de arriba que de abajo: en una foto de grupo lo que sobra es el techo,
+    // y los pies y el piso son justo lo que no se puede perder.
+    const sy = (fotoImg.naturalHeight - altoUtil) * 0.35
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(hueco.x, hueco.y, hueco.w, hueco.h)
+    ctx.clip()
+    ctx.drawImage(fotoImg, sx, sy, anchoUtil, altoUtil, hueco.x, hueco.y, hueco.w, hueco.h)
+    ctx.restore()
+  }
+
+  if (titulo) {
+    const fs = Math.round(W * 0.05)
+    ctx.font = `800 ${fs}px 'Baloo 2', system-ui, sans-serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    const cy = Math.min(H * 0.94, hueco.y + hueco.h + fs * 1.6)
+    const anchoTexto = Math.min(ctx.measureText(titulo).width, W * 0.84)
+    const pad = W * 0.05
+    const alto = fs * 0.62
+    ctx.save()
+    ctx.fillStyle = 'rgba(255,255,255,.72)'
+    roundRect(ctx, W / 2 - anchoTexto / 2 - pad, cy - fs / 2 - alto, anchoTexto + pad * 2, fs + alto * 2, W * 0.045)
+    ctx.fill()
+    ctx.restore()
+    ctx.fillStyle = cssVar('--dark1', '#38244f')
+    ctx.fillText(titulo, W / 2, cy, W * 0.82)
+  }
+
+  if (opciones.marca !== false) drawBrandWatermark(ctx, W, H)
+  return exportarFoto(c)
+}
+
 /** El texto del pie. En grupo saluda a todos; solo, al invitado. */
 function tituloAsomate(invitado, cuantos) {
   const quien = nombreEvento()

@@ -1066,6 +1066,9 @@ function cb_build_theme_payload(
         // themes.json tampoco lo ofrece, y no cambia en nada.
         'asomate'    => cb_theme_asomate($themeData['asomate'] ?? null, $base, $themeDiskDir,
                                          $themeData['personajes'] ?? []),
+        // "La foto de todos": una sola foto del grupo dentro del marco grande. Misma
+        // prudencia que arriba: se publica solo si el fondo esta en disco.
+        'grupal'     => cb_theme_grupal($themeData['grupal'] ?? null, $base, $themeDiskDir),
         'musica'     => $base . 'musica-fondo.mp3',
         // Música propia de la pantalla de juegos (opcional). Solo se publica si
         // el archivo existe: sin él, el juego sigue sonando con la de fondo.
@@ -1099,6 +1102,42 @@ function cb_sello_archivo(string $ruta): string
 {
     $t = @filemtime($ruta);
     return $t ? substr(dechex($t), -6) : '0';
+}
+
+/**
+ * El bloque de la FOTO GRUPAL de una tematica.
+ *
+ * Devuelve null —y el kiosco no muestra el boton— si falta el bloque en themes.json o si el
+ * fondo no esta en disco. `frameBox` se valida aca: un recuadro fuera del lienzo dejaria la
+ * foto del grupo pegada en un borde, y eso en una fiesta no se puede arreglar.
+ */
+function cb_theme_grupal($bloque, string $base, string $dir): ?array
+{
+    if (!is_array($bloque) || empty($bloque['fondo'])) {
+        return null;
+    }
+    $archivo = (string) $bloque['fondo'];
+    if (!is_file($dir . $archivo)) {
+        return null;
+    }
+    $caja = is_array($bloque['frameBox'] ?? null) ? $bloque['frameBox'] : [];
+    foreach (['x', 'y', 'w', 'h'] as $clave) {
+        if (!isset($caja[$clave]) || !is_numeric($caja[$clave])) {
+            return null;
+        }
+        $caja[$clave] = (float) $caja[$clave];
+    }
+    if ($caja['w'] <= 0.05 || $caja['h'] <= 0.05
+        || $caja['x'] < 0 || $caja['y'] < 0
+        || $caja['x'] + $caja['w'] > 1 || $caja['y'] + $caja['h'] > 1) {
+        return null;
+    }
+
+    return [
+        'fondo'    => $base . $archivo,
+        'frameBox' => $caja,
+        'titulo'   => (string) ($bloque['titulo'] ?? 'La foto de todos'),
+    ];
 }
 
 function cb_theme_asomate($bloque, string $base, string $dir, array $personajesTema = []): ?array

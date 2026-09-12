@@ -1848,8 +1848,11 @@ function componerGrupal(fondoImg, fotoImg, caja, titulo, opciones = {}) {
     const alto = fs * 0.62
     ctx.save()
     ctx.fillStyle = 'rgba(255,255,255,.72)'
-    roundRect(ctx, W / 2 - anchoTexto / 2 - pad, cy - fs / 2 - alto, anchoTexto + pad * 2, fs + alto * 2, W * 0.045)
+    roundRectPath(ctx, W / 2 - anchoTexto / 2 - pad, cy - fs / 2 - alto, anchoTexto + pad * 2, fs + alto * 2, W * 0.045)
     ctx.fill()
+    ctx.lineWidth = Math.max(2, W * 0.0035)
+    ctx.strokeStyle = 'rgba(255,255,255,.72)'
+    ctx.stroke()
     ctx.restore()
     ctx.fillStyle = cssVar('--dark1', '#38244f')
     ctx.fillText(titulo, W / 2, cy, W * 0.82)
@@ -2004,6 +2007,7 @@ function AvisoAcostar() {
  */
 function GrupalPreview({ foto, onRetry, onSave }) {
   const [compuesta, setCompuesta] = useState(null)
+  const [sinMarco, setSinMarco] = useState(false)
 
   useEffect(() => {
     let vivo = true
@@ -2022,8 +2026,17 @@ function GrupalPreview({ foto, onRetry, onSave }) {
       preloadBrandLogo(),
     ]).then(([fondo, img]) => {
       if (!vivo) return
-      // `tituloAsomate(null, 2)` es el texto de grupo: "El cumple de X y sus amigos".
-      setCompuesta(componerGrupal(fondo, img, CONFIG.grupal?.frameBox, tituloAsomate(null, 2)))
+      try {
+        // `tituloAsomate(null, 2)` es el texto de grupo: "El cumple de X y sus amigos".
+        setCompuesta(componerGrupal(fondo, img, CONFIG.grupal?.frameBox, tituloAsomate(null, 2)))
+      } catch (e) {
+        // Si componer falla, la foto del grupo sigue siendo la foto del grupo: se muestra sin
+        // marco y se puede guardar. Antes una excepción acá dejaba "Preparando la foto…" fijo
+        // para siempre, sin aviso y sin salida, con doce personas esperando.
+        console.error('no se pudo componer la foto grupal', e)
+        setSinMarco(true)
+        setCompuesta(foto)
+      }
     })
     return () => {
       vivo = false
@@ -2036,6 +2049,7 @@ function GrupalPreview({ foto, onRetry, onSave }) {
       {compuesta
         ? <img className="preview-img" src={compuesta} alt="La foto de todos" />
         : <p className="muted">Preparando la foto…</p>}
+      {sinMarco && <p className="muted">No se pudo poner el marco, pero la foto está lista para guardar.</p>}
       <div className="preview-actions">
         <button className="cta cta--ghost" onClick={onRetry}>Repetir</button>
         <button

@@ -2444,6 +2444,23 @@ function Intro({ onStart, onAsomate, onGrupal }) {
     >
       <div className="intro-veil" />
       <CumpleClickBrand className="intro-brand" inverse />
+      {/* La foto de todos: icono chico abajo a la izquierda para no tapar la decoración.
+          La dispara un adulto una o dos veces en la fiesta; los botones grandes son los que
+          tocan los niños toda la tarde, y darles el mismo peso era equivocado. */}
+      {CONFIG.grupal && (
+        <button
+          className="intro-grupal"
+          type="button"
+          aria-label={CONFIG.grupal?.titulo || 'Foto grupal'}
+          title={CONFIG.grupal?.titulo || 'Foto grupal'}
+          onClick={(event) => {
+            event.stopPropagation()
+            onGrupal()
+          }}
+        >
+          <span aria-hidden="true">📸</span>
+        </button>
+      )}
       <div className="intro-content">
         <h1 className="intro-title">
           {/* Un baby shower no es "la fiesta de Valentina": Valentina todavia
@@ -2500,19 +2517,6 @@ function Intro({ onStart, onAsomate, onGrupal }) {
               }}
             >
               {CONFIG.asomate?.boton || '🦸 Asómate y sé el héroe'}
-            </button>
-          )}
-          {/* La foto de todos. Solo si la temática trae el fondo con el marco grande
-              (CONFIG.grupal); sin él, el kiosco se comporta exactamente como antes. */}
-          {CONFIG.grupal && (
-            <button
-              className="cta cta--grupal"
-              onClick={(event) => {
-                event.stopPropagation()
-                onGrupal()
-              }}
-            >
-              {CONFIG.grupal?.boton || '📸 Foto grupal'}
             </button>
           )}
         </div>

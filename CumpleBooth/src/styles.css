@@ -2992,3 +2992,28 @@ body {
   font-size: 1.05rem;
   text-align: center;
 }
+
+
+/* Icono de la foto grupal: abajo a la izquierda, discreto, sobre la decoración.
+   56 px de lado: por debajo de eso un adulto falla el toque con la tablet en la mano. */
+.intro-grupal {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 3;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, .55);
+  border-radius: 50%;
+  background: rgba(32, 22, 38, .42);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.intro-grupal:active { transform: scale(.94); }
+.intro-grupal:focus-visible { outline: 3px solid var(--yellow, #ffb800); outline-offset: 3px; }

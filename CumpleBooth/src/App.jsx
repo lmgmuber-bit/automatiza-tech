@@ -861,12 +861,15 @@ function BoothApp() {
         />
       )}
       {screen === 'grupal-capturar' && (
-        <Capture
-          onCapture={(dataUrl) => {
-            setGrupalFoto(dataUrl)
-            go('grupal-preview')
-          }}
-        />
+        <>
+          <AvisoAcostar />
+          <Capture
+            onCapture={(dataUrl) => {
+              setGrupalFoto(dataUrl)
+              go('grupal-preview')
+            }}
+          />
+        </>
       )}
       {screen === 'grupal-preview' && grupalFoto && (
         <GrupalPreview
@@ -1951,6 +1954,41 @@ function AsomateElegir({ onDone, onCancel }) {
 }
 
 /** Compone, deja ajustar cada cara en su hueco y guarda. */
+/**
+ * "Pon la tablet acostada": el aviso de la foto grupal.
+ *
+ * El marco de la foto grupal es apaisado y la camara de una tablet de pie entrega un cuadro
+ * vertical: al encajarlo sobrevive solo el 31% del alto, medido sobre una foto real de la
+ * fiesta. Acostada, la camara entrega casi la forma del marco y el grupo sale grande.
+ *
+ * Avisa mientras la pantalla este de pie y se va solo al girarla. No bloquea la captura: con
+ * el giro bloqueado —que es lo normal en una tablet de kiosco— bloquear dejaria el modo
+ * inservible en plena fiesta.
+ */
+function AvisoAcostar() {
+  const [dePie, setDePie] = useState(
+    () => typeof window !== 'undefined' && window.innerHeight > window.innerWidth
+  )
+
+  useEffect(() => {
+    const mirar = () => setDePie(window.innerHeight > window.innerWidth)
+    window.addEventListener('resize', mirar)
+    window.addEventListener('orientationchange', mirar)
+    mirar()
+    return () => {
+      window.removeEventListener('resize', mirar)
+      window.removeEventListener('orientationchange', mirar)
+    }
+  }, [])
+
+  if (!dePie) return null
+  return (
+    <p className="grupal-acostar" role="status">
+      🔄 <strong>Pon la tablet acostada</strong> para que salgan todos
+    </p>
+  )
+}
+
 /**
  * Vista previa de la foto de todos.
  *

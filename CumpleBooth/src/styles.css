@@ -2979,3 +2979,16 @@ body {
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* Aviso de "pon la tablet acostada" en la foto grupal. Va sobre la cámara, no al lado: si
+   pasa desapercibido, el grupo sale metido en una franja y nadie entiende por qué. */
+.grupal-acostar {
+  margin: 0 auto .6rem;
+  padding: .7rem 1.1rem;
+  max-width: 92%;
+  border-radius: 999px;
+  background: var(--yellow, #ffb800);
+  color: var(--dark2, #3a1f2b);
+  font-size: 1.05rem;
+  text-align: center;
+}

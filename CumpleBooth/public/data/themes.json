@@ -454,6 +454,61 @@
                 "teaser": "entrada-palacio-hielo-poster.jpg",
                 "teaserVideo": "entrada-palacio-hielo.mp4",
                 "teaserLabel": "Las hermanas del hielo"
+            },
+            "asomate": {
+                "fondo": "asomate/fondo.jpg",
+                "personajes": {
+                    "elsa": {
+                        "w": 587,
+                        "h": 1211,
+                        "arriba": 0,
+                        "pies": 1210,
+                        "izq": 0,
+                        "der": 586,
+                        "cx": 323.0,
+                        "cy": 189.0,
+                        "rx": 67.0,
+                        "ry": 118.0
+                    },
+                    "anna": {
+                        "w": 494,
+                        "h": 1210,
+                        "arriba": 0,
+                        "pies": 1209,
+                        "izq": 0,
+                        "der": 493,
+                        "cx": 239.6,
+                        "cy": 255.0,
+                        "rx": 151.9,
+                        "ry": 144.5
+                    },
+                    "olaf": {
+                        "w": 636,
+                        "h": 1363,
+                        "arriba": 0,
+                        "pies": 1362,
+                        "izq": 0,
+                        "der": 635,
+                        "cx": 323.0,
+                        "cy": 478.0,
+                        "rx": 151.0,
+                        "ry": 210.0
+                    },
+                    "kristoff": {
+                        "w": 489,
+                        "h": 935,
+                        "arriba": 0,
+                        "pies": 934,
+                        "izq": 0,
+                        "der": 488,
+                        "cx": 249.2,
+                        "cy": 222.6,
+                        "rx": 107.3,
+                        "ry": 126.1
+                    }
+                },
+                "boton": "❄️ Asómate y entra al reino",
+                "titulo": "¿Con quién te quieres asomar?"
             }
         },
         "cachorros": {
@@ -1849,6 +1904,85 @@
                 "y": 0.1653,
                 "w": 0.5111,
                 "h": 0.287
+            },
+            "asomate": {
+                "fondo": "asomate/fondo.jpg",
+                "personajes": {
+                    "spidey": {
+                        "w": 711,
+                        "h": 1762,
+                        "arriba": 0,
+                        "pies": 1761,
+                        "izq": 0,
+                        "der": 710,
+                        "cx": 356.4,
+                        "cy": 356.4,
+                        "rx": 187.2,
+                        "ry": 202.0
+                    },
+                    "ghost-spider": {
+                        "w": 916,
+                        "h": 1868,
+                        "arriba": 0,
+                        "pies": 1867,
+                        "izq": 0,
+                        "der": 915,
+                        "cx": 386.3,
+                        "cy": 468.0,
+                        "rx": 257.4,
+                        "ry": 265.2
+                    },
+                    "spin": {
+                        "w": 1063,
+                        "h": 1285,
+                        "arriba": 0,
+                        "pies": 1284,
+                        "izq": 0,
+                        "der": 1062,
+                        "cx": 518.0,
+                        "cy": 307.2,
+                        "rx": 164.9,
+                        "ry": 174.1
+                    },
+                    "hulk": {
+                        "w": 973,
+                        "h": 2315,
+                        "arriba": 0,
+                        "pies": 2314,
+                        "izq": 0,
+                        "der": 972,
+                        "cx": 487.0,
+                        "cy": 571.9,
+                        "rx": 287.3,
+                        "ry": 335.2
+                    },
+                    "ms-marvel": {
+                        "w": 1008,
+                        "h": 1821,
+                        "arriba": 0,
+                        "pies": 1820,
+                        "izq": 0,
+                        "der": 1007,
+                        "cx": 480.9,
+                        "cy": 390.6,
+                        "rx": 249.8,
+                        "ry": 221.3
+                    },
+                    "pantera": {
+                        "w": 847,
+                        "h": 1891,
+                        "arriba": 0,
+                        "pies": 1890,
+                        "izq": 0,
+                        "der": 846,
+                        "cx": 423.8,
+                        "cy": 525.0,
+                        "rx": 300.6,
+                        "ry": 297.5
+                    }
+                },
+                "boton": "🕷️ Asómate y sé el héroe",
+                "titulo": "¿Con quién te quieres asomar?"
             }
         },
         "baby-nube": {

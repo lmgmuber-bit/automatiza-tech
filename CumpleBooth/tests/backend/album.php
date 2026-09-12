@@ -23,6 +23,11 @@ putenv('CC_PHOTO_DIR=' . $tmp . '/photos');
 putenv('CC_STATE_DIR=' . $tmp . '/state');
 putenv('CC_INVITATION_DIR=' . $tmp . '/invitations');
 require dirname(__DIR__, 2) . '/public/lib.php';
+// El esquema completo, siempre al día. Antes cada prueba listaba las migraciones a mano y
+// esa lista se quedaba atrás con cada migración nueva.
+require_once __DIR__ . '/_migraciones.php';
+cb_test_migrar_todo(cb_pdo());
+
 
 $tests = 0;
 function album_check(bool $condition, string $message): void

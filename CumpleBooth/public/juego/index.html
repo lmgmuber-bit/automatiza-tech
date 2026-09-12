@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Juegos de la fiesta · CumpleClick</title>
+<!--
+  Menú de los juegos 3D de una fiesta.
+
+  Vive en la MISMA dirección que antes abría el juego directamente
+  (/app/juego/?p=<slug>), porque esa dirección ya está impresa en los carteles QR que
+  cuelgan en la mesa. Cambiar la ruta habría dejado esos códigos apuntando a nada, y un
+  cartel impreso no se puede corregir el día de la fiesta. El juego que estaba acá pasó a
+  llamarse mundo.html, en la misma carpeta, para que sus rutas relativas no se muevan.
+
+  Qué juegos aparecen depende de la temática: en un cumpleaños de superhéroes no puede
+  ofrecerse un mundo de nieve. La lista la decide el servidor en puntajes.php.
+
+  Sin dependencias externas: la tablet de la fiesta puede estar en una red mala y el
+  proyecto no usa CDN.
+-->
+<style>
+  :root {
+    --tinta: #152238;
+    --tinta-suave: #55607a;
+    --glaciar: #5fb6ff;
+    --glaciar-oscuro: #2f8fe0;
+    --lavanda: #8f7bd6;
+    --lavanda-oscura: #6c53c4;
+    --dorado: #ffcf6b;
+    --dorado-oscuro: #f0a94e;
+    --papel: #f2f7ff;
+    --tarjeta: #ffffff;
+    --borde: #d9e6f7;
+    --sombra: 0 2px 4px rgba(21, 34, 56, .06), 0 12px 32px rgba(47, 143, 224, .16);
+    --fuente: "Baloo 2", "Nunito", "Segoe UI Rounded", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; min-height: 100dvh; font-family: var(--fuente); color: var(--tinta);
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #dceeff 0%, transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, #efe6ff 0%, transparent 55%),
+      var(--papel);
+    padding: max(20px, env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .caja { width: 100%; max-width: 780px; }
+
+  .apagado {
+    background: var(--tarjeta); border: 2px solid var(--borde); border-radius: 22px;
+    box-shadow: var(--sombra); padding: 40px 24px; text-align: center;
+  }
+  .apagado__emoji { font-size: 3.4rem; margin: 0 0 8px; }
+  .apagado__tit { margin: 0 0 12px; font-size: 1.5rem; font-weight: 800; }
+  .apagado__txt { margin: 0 0 6px; color: var(--tinta-suave); font-size: 1.05rem; }
+
+  /* El pie va en todas las pantallas: es el único lugar del juego donde alguien que lo está
+     pasando bien puede enterarse de quién lo hizo. */
+  .pie-marca {
+    width: 100%; max-width: 780px; margin: 30px auto 0; text-align: center;
+    color: var(--tinta-suave); font-size: .92rem;
+  }
+  .pie-marca__logo {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin: 0 0 6px; font-weight: 800; color: var(--tinta); font-size: 1.05rem;
+  }
+  .pie-marca__logo img { display: block; }
+  .pie-marca__tit { margin: 0 0 10px; font-weight: 800; color: var(--tinta); }
+  .pie-marca__enlaces { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .pie-marca__enlaces a {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 40px;
+    padding: 8px 14px; border-radius: 999px; text-decoration: none;
+    background: var(--tarjeta); border: 2px solid var(--borde); color: var(--tinta);
+    font-weight: 700;
+  }
+
+  header { text-align: center; margin: 6px 0 26px; }
+  .sello {
+    display: inline-block; font-size: .74rem; font-weight: 700; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--lavanda-oscura); margin: 0 0 8px;
+  }
+  h1 { margin: 0; font-size: clamp(1.9rem, 6vw, 2.7rem); line-height: 1.12; font-weight: 800; }
+  .sub { margin: 8px 0 0; color: var(--tinta-suave); font-size: 1.02rem; }
+
+  /* Las tarjetas son el objetivo táctil principal: en una tablet las toca un niño de
+     cinco años, muchas veces con la mano completa. Nada bajo 96 px de alto. */
+  .juegos { display: grid; gap: 16px; grid-template-columns: 1fr; }
+  @media (min-width: 620px) { .juegos { grid-template-columns: 1fr 1fr; } }
+  .juego {
+    display: flex; align-items: center; gap: 16px; min-height: 104px;
+    padding: 18px 20px; border-radius: 22px; text-decoration: none; color: inherit;
+    background: var(--tarjeta); border: 2px solid var(--borde); box-shadow: var(--sombra);
+    transition: transform .12s ease, border-color .12s ease;
+  }
+  .juego:active { transform: scale(.98); border-color: var(--glaciar); }
+  .juego__icono {
+    flex: 0 0 auto; width: 58px; height: 58px; border-radius: 18px; display: grid;
+    place-items: center; font-size: 1.9rem;
+    background: linear-gradient(150deg, var(--glaciar) 0%, var(--lavanda) 100%);
+  }
+  .juego__txt { min-width: 0; }
+  .juego__txt b { display: block; font-size: 1.16rem; line-height: 1.25; }
+  .juego__txt span { display: block; color: var(--tinta-suave); font-size: .92rem; margin-top: 3px; }
+
+  .acciones { display: flex; flex-wrap: wrap; gap: 12px; margin: 22px 0 0; }
+  .boton {
+    flex: 1 1 auto; min-height: 60px; padding: 16px 22px; border-radius: 18px; border: 0;
+    font: inherit; font-size: 1.05rem; font-weight: 800; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    text-decoration: none; color: var(--tinta);
+    background: linear-gradient(160deg, var(--dorado) 0%, var(--dorado-oscuro) 100%);
+    box-shadow: var(--sombra);
+  }
+  .boton--claro { background: var(--tarjeta); border: 2px solid var(--borde); }
+  .boton:active { transform: scale(.98); }
+
+  /* ── Posiciones ───────────────────────────────────────────── */
+  .tablas { margin: 26px 0 0; }
+  .tabla-caja {
+    background: var(--tarjeta); border: 2px solid var(--borde); border-radius: 22px;
+    box-shadow: var(--sombra); padding: 18px 20px; margin: 0 0 16px;
+  }
+  .tabla-caja h2 { margin: 0 0 4px; font-size: 1.2rem; }
+  .tabla-caja p.pie { margin: 12px 0 0; font-size: .86rem; color: var(--tinta-suave); }
+  table { width: 100%; border-collapse: collapse; font-size: 1rem; }
+  th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--borde); }
+  tbody tr:last-child td { border-bottom: 0; }
+  th { font-size: .74rem; text-transform: uppercase; letter-spacing: .08em; color: var(--tinta-suave); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .lugar { width: 44px; font-size: 1.3rem; text-align: center; }
+  .campeon td { background: #fff8e6; font-weight: 800; }
+  .veces { color: var(--tinta-suave); font-size: .82rem; }
+
+  /* ── Quién juega ──────────────────────────────────────────── */
+  .quien {
+    background: var(--tarjeta); border: 2px solid var(--borde); border-radius: 22px;
+    box-shadow: var(--sombra); padding: 22px 20px;
+  }
+  .quien__tit { margin: 0 0 16px; font-size: 1.2rem; font-weight: 800; text-align: center; }
+  /* Botones grandes y en cuadrícula: el niño toca su nombre, no lo escribe. Un nombre
+     tecleado en una tablet a los cinco años llega mal escrito la mitad de las veces, y en
+     la tabla cada variante aparece como un niño distinto. */
+  .quien__lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+  .quien__nombre {
+    min-height: 64px; padding: 14px 16px; border-radius: 16px; border: 2px solid var(--borde);
+    background: var(--papel); font: inherit; font-size: 1.05rem; font-weight: 700;
+    color: var(--tinta); cursor: pointer; transition: transform .12s ease, border-color .12s ease;
+  }
+  .quien__nombre:active { transform: scale(.97); border-color: var(--glaciar); }
+  .quien__nombre--cumple {
+    background: linear-gradient(160deg, var(--dorado) 0%, var(--dorado-oscuro) 100%);
+    border-color: var(--dorado-oscuro);
+  }
+  .quien__otro { margin: 20px 0 0; padding: 18px 0 0; border-top: 1px solid var(--borde); }
+  .quien__otro label { display: block; font-size: .9rem; color: var(--tinta-suave); margin: 0 0 8px; }
+  .quien__fila { display: flex; gap: 10px; flex-wrap: wrap; }
+  .quien__fila input {
+    flex: 1 1 180px; min-width: 0; min-height: 56px; padding: 12px 16px; border-radius: 16px;
+    border: 2px solid var(--borde); font: inherit; font-size: 1.05rem; background: var(--papel);
+    color: var(--tinta);
+  }
+  .quien__fila .boton { flex: 0 0 auto; }
+  .quien__vacia { color: var(--tinta-suave); font-size: .95rem; line-height: 1.5; margin: 0; }
+
+  .aviso {
+    background: var(--tarjeta); border: 2px dashed var(--borde); border-radius: 22px;
+    padding: 26px 22px; text-align: center; color: var(--tinta-suave); line-height: 1.55;
+  }
+  .aviso b { display: block; color: var(--tinta); font-size: 1.1rem; margin: 0 0 6px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="caja">
+
+  <header>
+    <p class="sello">CumpleClick</p>
+    <h1 id="titulo">Juegos de la fiesta</h1>
+    <p class="sub" id="bajada">Elige un juego para empezar.</p>
+  </header>
+
+  <!-- Quién juega se elige ANTES del juego, no dentro. Los dos juegos preguntan el nombre a
+       su manera, y si cada uno lo pide distinto la tabla de posiciones termina con el mismo
+       niño escrito de tres formas. Acá se elige una vez y viaja en la dirección. -->
+  <main id="pantalla-jugador" hidden>
+    <div class="quien">
+      <p class="quien__tit">¿Quién va a jugar?</p>
+      <div class="quien__lista" id="invitados"></div>
+      <div class="quien__otro">
+        <label for="otro-nombre">¿No estás en la lista? Escribe tu nombre</label>
+        <div class="quien__fila">
+          <input type="text" id="otro-nombre" maxlength="40" autocomplete="off"
+                 placeholder="Tu nombre" enterkeyhint="go">
+          <button class="boton" type="button" id="usar-otro">Listo</button>
+        </div>
+      </div>
+    </div>
+    <div class="acciones">
+      <button class="boton boton--claro" type="button" id="cancelar-jugador">◂ Volver</button>
+    </div>
+  </main>
+
+  <main id="pantalla-juegos">
+    <div class="juegos" id="lista"></div>
+    <div class="acciones">
+      <button class="boton" type="button" id="ver-posiciones">🏆 Posiciones</button>
+      <a class="boton boton--claro" id="volver" hidden>◂ Volver</a>
+    </div>
+  </main>
+
+  <main id="pantalla-posiciones" hidden>
+    <div class="tablas" id="tablas"></div>
+    <div class="acciones">
+      <button class="boton boton--claro" type="button" id="ver-juegos">◂ Volver a los juegos</button>
+    </div>
+  </main>
+
+  <!-- La dirección del QR impreso no cambia nunca. Apagados los juegos, esa misma dirección
+       llega acá en vez de a la lista. -->
+  <main id="pantalla-apagado" hidden>
+    <div class="apagado">
+      <p class="apagado__emoji" aria-hidden="true">🎉</p>
+      <p class="apagado__tit">Se acabó la hora de juego</p>
+      <p class="apagado__txt">Ahora viene lo mejor: la torta, las fotos y los amigos de verdad.</p>
+      <p class="apagado__txt"><strong>¡A disfrutar la fiesta!</strong></p>
+    </div>
+  </main>
+
+  <footer class="pie-marca" id="pie-marca" hidden></footer>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var params = new URLSearchParams(location.search);
+  var slug = (params.get('p') || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 60);
+  var enKiosco = params.get('kiosco') === '1';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+
+  // Los juegos viven en carpetas distintas y algunos los escribe otro agente, así que la
+  // dirección de cada uno se arma acá y no en el servidor: el servidor dice cuáles hay.
+  var RUTAS = {
+    'reino-hielo': 'mundo.html',
+    'aracnida': 'mundo.html',
+    'mision': 'mundo.html',
+    'festival': 'festival/',
+    'impulso': 'impulso-aracnido/',
+    'circuito': 'circuito/'
+  };
+  var ICONOS = {
+    'reino-hielo': '❄️', 'festival': '✨', 'aracnida': '🕸️', 'mision': '🦸',
+    'impulso': '🕷️', 'circuito': '🏎️'
+  };
+  var PIES = {
+    'reino-hielo': 'Explora el reino y ayuda a los amigos',
+    'festival': 'Enciende las estrellas por turnos, entre todos',
+    'aracnida': 'Salta por las azoteas y rescata a las mascotas',
+    'mision': 'Una misión para el equipo',
+    'impulso': 'Recorre la ciudad con el equipo, de azotea en azotea',
+    'circuito': 'Corran juntos por la ciudad, cada uno en su celular'
+  };
+
+  function enlaceJuego(id, jugador) {
+    var base = RUTAS[id] || 'mundo.html';
+    var q = '?p=' + encodeURIComponent(slug);
+    // Cuál juego es se lo dice el menú, no lo adivina el juego: el motor de mundo.html solo
+    // conoce su tema ("hielo" o "heroes") y un mismo tema sirve a dos temáticas de fiesta
+    // distintas —spidey y heroes comparten mundo—, así que desde adentro no puede saber con
+    // qué nombre anotarse en la tabla.
+    q += '&juego=' + encodeURIComponent(id);
+    // Quién juega viaja en la dirección, elegido una sola vez acá. Los juegos lo usan para
+    // saludar y, sobre todo, para anotarse en la tabla con el mismo nombre exacto.
+    //
+    // OJO: `nombre` NO significa lo mismo en todos. En mundo.html y en el Festival es QUIÉN
+    // JUEGA. En Impulso Arácnido es DE QUIÉN ES LA FIESTA: lo pinta como "La fiesta de X · N
+    // años", así que mandarle el nombre del niño que juega haría decir "La fiesta de Sofía"
+    // en el cumpleaños de Luciano. Por eso ese juego recibe siempre el nombre de la fiesta.
+    if (id === 'impulso') {
+      q += '&nombre=' + encodeURIComponent(fiestaNombre || '');
+      // Y aparte, quién juega: ese es el que se anota en la tabla. Van en dos parámetros
+      // distintos porque el juego los usa para cosas distintas y mezclarlos haría que la
+      // tabla se llenara con el nombre del cumpleañero repetido.
+      if (jugador) { q += '&jugador=' + encodeURIComponent(jugador); }
+    }
+    else if (jugador) { q += '&nombre=' + encodeURIComponent(jugador); }
+    else if (id === 'festival') { q += '&nombre=' + encodeURIComponent(fiestaNombre || ''); }
+    if (fiestaEdad) { q += '&edad=' + encodeURIComponent(fiestaEdad); }
+    if (enKiosco) { q += '&kiosco=1'; }
+    // De vuelta al menú, no al kiosco: desde acá el niño puede querer el otro juego.
+    q += '&volver=' + encodeURIComponent(location.pathname + location.search);
+    return base + q;
+  }
+
+  var fiestaNombre = '';
+  var fiestaEdad = null;
+
+  /**
+   * El arte de la fiesta detrás del menú y de la pantalla de elegir jugador.
+   *
+   * Reusa el `fondo-banner.jpg` que ya tiene cada temática, el mismo que usa la pantalla de
+   * confirmados: ninguna imagen nueva. Va suave y difuminado porque este menú es claro —
+   * tarjetas blancas y texto oscuro— y una foto a plena vista deja el texto ilegible.
+   *
+   * Se pinta recién cuando la imagen cargó. Si no existe o falla, el menú se queda con su
+   * degradado de siempre en vez de mostrar un hueco.
+   *
+   * Los estilos van por CSSOM y no por una hoja: los juegos se sirven con `style-src 'self'`
+   * y un `<style>` inyectado lo bloquea la CSP en silencio.
+   */
+  function ponerFondoTema(tema) {
+    if (!/^[a-z0-9-]+$/.test(tema)) { return; }
+    var ruta = '../themes/' + encodeURIComponent(tema) + '/fondo-banner.jpg';
+    var img = new Image();
+    img.onload = function () {
+      var capa = document.createElement('div');
+      var e = capa.style;
+      e.position = 'fixed';
+      e.inset = '0';
+      e.zIndex = '-1';
+      e.backgroundImage = 'url("' + ruta + '")';
+      e.backgroundSize = 'cover';
+      e.backgroundPosition = 'center top';
+      e.backgroundRepeat = 'no-repeat';
+      // El desenfoque deja los bordes transparentes: la escala de más los tapa.
+      e.filter = 'blur(3px) saturate(1.12)';
+      e.transform = 'scale(1.06)';
+      e.opacity = '.34';
+      e.pointerEvents = 'none';
+      document.body.appendChild(capa);
+    };
+    img.src = ruta;
+  }
+  var invitados = [];
+  var juegoElegido = null;
+
+  /** Pinta la pantalla de "quién juega" para el juego que se acaba de tocar. */
+  function pedirJugador(id) {
+    juegoElegido = id;
+    var caja = $('invitados');
+    var botones = [];
+
+    // El cumpleañero primero y destacado: es su fiesta, y es quien más veces va a jugar.
+    if (fiestaNombre) {
+      botones.push('<button class="quien__nombre quien__nombre--cumple" type="button" data-n="'
+        + esc(fiestaNombre) + '">' + esc(fiestaNombre) + '</button>');
+    }
+    invitados.forEach(function (n) {
+      if (n === fiestaNombre) { return; }
+      botones.push('<button class="quien__nombre" type="button" data-n="' + esc(n) + '">'
+        + esc(n) + '</button>');
+    });
+
+    caja.innerHTML = botones.length
+      ? botones.join('')
+      : '<p class="quien__vacia">Todavía no hay invitados cargados en esta fiesta. '
+        + 'Escribe tu nombre abajo para jugar.</p>';
+    $('otro-nombre').value = '';
+    mostrar('jugador');
+  }
+
+  /** Entra al juego elegido con el nombre del jugador. */
+  function jugarComo(nombre) {
+    var limpio = String(nombre || '').trim().slice(0, 40);
+    if (!limpio || !juegoElegido) { return; }
+    location.href = enlaceJuego(juegoElegido, limpio);
+  }
+
+  function pintarJuegos(juegos) {
+    if (!juegos.length) {
+      $('lista').innerHTML = '<div class="aviso"><b>Esta fiesta todavía no tiene juegos</b>'
+        + 'Su temática aún no tiene un mundo 3D. Pídelo y lo preparamos.</div>';
+      return;
+    }
+    // Van como <button> y no como enlace: tocar un juego abre primero la pregunta de quién
+    // juega, y recién después se navega. Un <a> se iría de inmediato.
+    $('lista').innerHTML = juegos.map(function (j) {
+      return '<button class="juego" type="button" data-juego="' + esc(j.id) + '">'
+        + '<span class="juego__icono">' + (ICONOS[j.id] || '🎮') + '</span>'
+        + '<span class="juego__txt"><b>' + esc(j.nombre) + '</b>'
+        + '<span>' + esc(PIES[j.id] || 'Toca para jugar') + '</span></span></button>';
+    }).join('');
+  }
+
+  function pintarPosiciones(d) {
+    var out = '';
+    if (!d.hay_datos) {
+      out = '<div class="aviso"><b>Todavía nadie ha jugado</b>'
+        + 'Cuando terminen las primeras partidas, acá aparece quién va ganando.</div>';
+      $('tablas').innerHTML = out;
+      return;
+    }
+
+    if (d.general && d.general.length) {
+      out += '<div class="tabla-caja"><h2>🏆 Campeones de la fiesta</h2>'
+        + '<table><thead><tr><th class="lugar"></th><th>Niño</th>'
+        + '<th class="num">🥇</th><th class="num">🥈</th><th class="num">🥉</th>'
+        + '<th class="num">Puntos</th></tr></thead><tbody>'
+        + d.general.map(function (g) {
+            var medalla = { 1: '🥇', 2: '🥈', 3: '🥉' }[g.lugar] || g.lugar + 'º';
+            return '<tr' + (g.lugar === 1 ? ' class="campeon"' : '') + '>'
+              + '<td class="lugar">' + medalla + '</td><td>' + esc(g.jugador) + '</td>'
+              + '<td class="num">' + g.oro + '</td><td class="num">' + g.plata + '</td>'
+              + '<td class="num">' + g.bronce + '</td><td class="num">' + g.total + '</td></tr>';
+          }).join('')
+        + '</tbody></table>'
+        + '<p class="pie">Cada juego reparte oro, plata y bronce. Los dos juegos valen lo '
+        + 'mismo, así se comparan parejo aunque uno dé más puntos que el otro.</p></div>';
+    }
+
+    out += (d.juegos || []).map(function (j) {
+      return '<div class="tabla-caja"><h2>' + (ICONOS[j.id] || '🎮') + ' ' + esc(j.nombre) + '</h2>'
+        + '<table><thead><tr><th class="lugar"></th><th>Niño</th><th class="num">Puntos</th></tr></thead><tbody>'
+        + j.tabla.map(function (f) {
+            var medalla = { 1: '🥇', 2: '🥈', 3: '🥉' }[f.lugar] || f.lugar + 'º';
+            return '<tr><td class="lugar">' + medalla + '</td>'
+              + '<td>' + esc(f.jugador)
+              + (f.veces > 1 ? ' <span class="veces">· ' + f.veces + ' partidas</span>' : '')
+              + '</td><td class="num">' + f.puntaje.toLocaleString('es-CL') + '</td></tr>';
+          }).join('')
+        + '</tbody></table></div>';
+    }).join('');
+
+    out += '<p class="sub" style="text-align:center">' + d.jugadores + ' niños · '
+      + d.partidas + ' partidas jugadas</p>';
+    $('tablas').innerHTML = out;
+  }
+
+  /** Cómo se saluda a la fiesta: "Cumpleaños de Samantha · 5 años" si se sabe la edad. */
+  function saludo() {
+    if (!fiestaNombre) { return 'Elige un juego para empezar.'; }
+    var s = 'Cumpleaños de ' + fiestaNombre;
+    if (fiestaEdad) { s += ' · ' + fiestaEdad + (fiestaEdad === 1 ? ' año' : ' años'); }
+    return s;
+  }
+
+  function mostrar(cual) {
+    $('pantalla-juegos').hidden = cual !== 'juegos';
+    $('pantalla-posiciones').hidden = cual !== 'posiciones';
+    $('pantalla-jugador').hidden = cual !== 'jugador';
+    $('pantalla-apagado').hidden = cual !== 'apagado';
+    $('titulo').textContent = cual === 'juegos' ? 'Juegos de la fiesta'
+      : cual === 'jugador' ? 'Antes de jugar'
+      : cual === 'apagado' ? '¡Gracias por jugar!' : 'Posiciones';
+    $('bajada').textContent = cual === 'juegos' ? saludo()
+      : cual === 'jugador' ? 'Toca tu nombre para que tu puntaje quede en la tabla.'
+      : cual === 'apagado' ? saludo()
+      : 'Quién va ganando en el cumpleaños.';
+    window.scrollTo(0, 0);
+  }
+
+  /**
+   * El pie con los datos de CumpleClick. Los textos llegan del servidor (`data/marca.json`)
+   * y no van escritos acá: cambiar un teléfono no puede obligar a tocar el juego.
+   */
+  /* Los logos van dibujados acá y no como archivos sueltos: son cuatro trazos, se pintan
+     con el color del texto y no agregan cuatro peticiones más a una tablet en una fiesta.
+     El isotipo de CumpleClick sí es un archivo, porque es el de verdad y no se recrea. */
+  var LOGOS = {
+    web: '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor"'
+      + ' stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/>'
+      + '<path d="M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18"/></svg>',
+    instagram: '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor"'
+      + ' stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/>'
+      + '<circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.2" fill="currentColor" stroke="none"/></svg>',
+    whatsapp: '<svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true">'
+      + '<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 1.9a8.1 8.1 0 1 1-4.2 15l-.3-.2-3 .8.8-2.9-.2-.3A8.1 8.1 0 0 1 12 3.9zm-3.3 4c-.2 0-.5 0-.7.3-.2.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.7 2.8 4.3 3.8 2.1.8 2.6.7 3 .6.5 0 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.6-.3-1.5-.7c-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a6.6 6.6 0 0 1-3.3-2.9c-.1-.2 0-.4.1-.5l.4-.5c.1-.2.2-.3.3-.5v-.4l-.7-1.7c-.2-.4-.4-.4-.5-.4z"/></svg>'
+  };
+
+  function pintarMarca(m) {
+    if (!m || !m.nombre) { return; }
+    var enlaces = [];
+    if (m.web_url) { enlaces.push([LOGOS.web, m.web || 'Nuestra página', m.web_url]); }
+    if (m.instagram_url) { enlaces.push([LOGOS.instagram, 'Síguenos ' + (m.instagram || ''), m.instagram_url]); }
+    if (m.whatsapp_url) { enlaces.push([LOGOS.whatsapp, 'Escríbenos por WhatsApp', m.whatsapp_url]); }
+    if (!enlaces.length) { return; }
+    $('pie-marca').innerHTML =
+      '<p class="pie-marca__logo">'
+      + '<img src="../brand/cumpleclick-mark.svg" alt="" width="30" height="30">'
+      + '<span>' + esc(m.nombre) + '</span></p>'
+      + '<p class="pie-marca__tit">' + esc(m.invitacion || '¿Lo quieres en tu próxima fiesta?') + '</p>'
+      + '<div class="pie-marca__enlaces">'
+      + enlaces.map(function (e) {
+        return '<a href="' + esc(e[2]) + '" target="_blank" rel="noopener">'
+          + e[0] + esc(e[1].trim()) + '</a>';
+      }).join('')
+      + '</div>';
+    $('pie-marca').hidden = false;
+  }
+
+  $('ver-posiciones').addEventListener('click', function () { mostrar('posiciones'); });
+  $('ver-juegos').addEventListener('click', function () { mostrar('juegos'); });
+  $('cancelar-jugador').addEventListener('click', function () { mostrar('juegos'); });
+
+  // Delegación: las tarjetas se pintan después, así que el manejador va en el contenedor.
+  $('lista').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-juego]');
+    if (b) { pedirJugador(b.getAttribute('data-juego')); }
+  });
+  $('invitados').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-n]');
+    if (b) { jugarComo(b.getAttribute('data-n')); }
+  });
+  $('usar-otro').addEventListener('click', function () { jugarComo($('otro-nombre').value); });
+  $('otro-nombre').addEventListener('keydown', function (e) {
+    // Entrar con la tecla de ir: en el teclado de una tablet es lo que se toca sin pensar.
+    if (e.key === 'Enter') { e.preventDefault(); jugarComo(this.value); }
+  });
+
+  if (enKiosco) {
+    var v = $('volver');
+    v.hidden = false;
+    v.href = '../?p=' + encodeURIComponent(slug);
+    v.textContent = '◂ Volver al kiosco';
+  }
+
+  if (!slug) {
+    $('lista').innerHTML = '<div class="aviso"><b>Falta la fiesta</b>'
+      + 'Abre este menú desde el código QR del cartel o desde el kiosco.</div>';
+    return;
+  }
+
+  fetch('../puntajes.php?p=' + encodeURIComponent(slug), { headers: { 'Accept': 'application/json' } })
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+    .then(function (d) {
+      fiestaNombre = (d.fiesta && d.fiesta.nombre) || '';
+      fiestaEdad = (d.fiesta && d.fiesta.edad) || null;
+      ponerFondoTema((d.fiesta && d.fiesta.tema) || '');
+      invitados = d.invitados || [];
+      pintarMarca(d.marca);
+      // `juegos_activos` ausente significa prendido: una versión vieja del servidor no puede
+      // dejar la fiesta sin juegos por una clave que todavía no manda.
+      if (d.juegos_activos === false) {
+        pintarPosiciones(d);
+        mostrar('apagado');
+        return;
+      }
+      pintarJuegos(d.juegos_disponibles || []);
+      pintarPosiciones(d);
+      mostrar('juegos');
+    })
+    .catch(function () {
+      // Sin conexión al servidor el menú no puede saber la temática, pero el niño no puede
+      // quedarse mirando una pantalla vacía: se ofrece el juego de siempre, que vive en
+      // esta misma carpeta y no necesita al servidor para arrancar.
+      $('lista').innerHTML = '<a class="juego" href="mundo.html?p=' + esc(slug)
+        + (enKiosco ? '&kiosco=1' : '') + '">'
+        + '<span class="juego__icono">🎮</span><span class="juego__txt">'
+        + '<b>Entrar al juego</b><span>No se pudo consultar la fiesta; este es el juego de siempre</span>'
+        + '</span></a>';
+      $('ver-posiciones').hidden = true;
+    });
+})();
+</script>
+</body>
+</html>

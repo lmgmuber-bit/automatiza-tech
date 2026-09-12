@@ -285,6 +285,49 @@ input[type="number"].frame-value {
 }
 .cobro-envio__faltan li { line-height: 1.4; }
 
+/* Los cuatro correos de la fiesta. Cada uno es un bloque que se apila y no una fila de tabla:
+   la ficha es una columna angosta y tres columnas ahi no caben. Una media query no servia
+   —mide la ventana, no el contenedor—, y por eso la version anterior se veia rota en pantalla
+   ancha: la ventana era de 1170 px pero la columna de 610. */
+.envio { padding: 14px 0; border-top: 1px solid var(--border); }
+.envio:first-of-type { border-top: none; padding-top: 8px; }
+.envio__cab {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+  gap: 2px 14px;
+}
+.envio__cab h4 { margin: 0; font-size: .96rem; }
+.envio__estado { margin: 0; font-size: .86rem; color: var(--text-muted); }
+.envio__estado strong { color: var(--text); }
+.envio__que { margin: 3px 0 0; }
+.envio__campos { margin-top: 10px; max-width: 460px; }
+.envio__campos label { font-size: .82rem; }
+.envio__campos input { min-height: 38px; }
+.envio__botones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.envio__botones .btn { align-self: flex-start; }
+.envio__aviso { margin: 6px 0 0; }
+.envio__motivo { display: block; margin-top: 2px; }
+.envios__pdf {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+  background: var(--border); color: var(--text-muted); font-size: .68rem; font-weight: 700;
+  letter-spacing: .04em; vertical-align: middle;
+}
+.envios__falla { display: block; margin-top: 2px; color: #b4232a; font-weight: 700; font-size: .82rem; }
+/* El mensaje listo para WhatsApp va plegado: es util tenerlo a mano, pero cuatro cuadros de
+   texto abiertos convierten el panel en un muro. */
+.envio__mensaje { margin-top: 10px; }
+.envio__mensaje summary {
+  cursor: pointer; font-size: .84rem; font-weight: 700; color: var(--brand);
+  padding: 4px 0; list-style-position: inside;
+}
+.envio__mensaje textarea {
+  width: 100%; margin-top: 8px; padding: 10px 12px; font: inherit; font-size: .86rem;
+  line-height: 1.45; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface-soft, #faf8fe); color: var(--text); resize: vertical;
+}
+/* El formulario de los correos existe solo para que los botones se cuelguen de el con
+   `form="cc-envios"`: no tiene nada que mostrar. */
+.oculto-visual { display: none; }
+
 .cobro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px 14px; }
 .cobro-grid label { display: flex; flex-direction: column; gap: 5px; font-weight: 700; font-size: .9rem; }
 .cobro-grid input {
@@ -835,3 +878,58 @@ html:has(.profile-savebar) { scroll-padding-bottom:110px; }
   line-height: 18px;
   text-align: center;
 }
+
+/* Bloque del enlace de confirmados: hereda de .envio y solo agrega lo suyo — el cuadro
+   con la URL, monoespaciado para poder revisarla de un vistazo antes de compartirla. */
+.envio--confirmados .envio__enlace {
+  width: 100%;
+  margin: 8px 0 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-soft, #f6f8fc);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .78rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+/* Lista de confirmados en la ficha. Una linea por familia; el nombre de los ninos llega
+   como texto libre, asi que se deja fluir y se corta con puntos si no cabe. */
+.rsvp-lista { list-style: none; margin: 8px 0 0; padding: 0; }
+.rsvp-lista li {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
+  padding: 7px 0; border-top: 1px solid var(--border); font-size: .88rem;
+}
+.rsvp-lista li:first-child { border-top: none; }
+.rsvp-lista__ninos { color: var(--text-muted); overflow-wrap: anywhere; }
+.rsvp-lista__cuando { margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Fotos del kiosco: seleccion multiple. Reusa .tile y .tile-media del album para que se
+   vean iguales; lo unico propio es la casilla encima y el encuadre. */
+.fotos-barra {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.fotos-todas { display: inline-flex; align-items: center; gap: 8px; font-size: .9rem; cursor: pointer; }
+.fotos-todas input { width: 18px; height: 18px; }
+.fotos-opcion { display: inline-flex; align-items: center; gap: 6px; font-size: .9rem; }
+.fotos-opcion select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: inherit; font: inherit; }
+.fotos-opcion input[type="checkbox"] { width: 18px; height: 18px; }
+/* Borrar se va al extremo opuesto de Imprimir: son el boton de todos los dias y el que no
+   tiene vuelta atras, y no conviene tenerlos pegados en una tablet. */
+.fotos-barra .fotos-borrar { margin-left: auto; }
+/* La foto del kiosco es 9:16; con el `cover` del album se le comia media imagen, asi que
+   se muestra entera sobre un fondo neutro. */
+.foto-kiosco .tile-media { aspect-ratio: 3 / 4; cursor: pointer; }
+.foto-kiosco .tile-media img { object-fit: contain; background: var(--bg2); }
+.foto-kiosco__marca input {
+  position: absolute; top: 8px; left: 8px; z-index: 2;
+  width: 22px; height: 22px; cursor: pointer;
+}
+.foto-kiosco__marca input:checked ~ img { opacity: .55; }
+.foto-kiosco:has(input:checked) { border-color: var(--danger, #d92b4b); border-width: 2px; }
+.foto-kiosco__marca input:focus-visible ~ img { outline: 3px solid var(--cta); outline-offset: -3px; }
+.foto-kiosco .tile-body { padding: 8px 10px 10px; }
+.foto-kiosco .tile-nombre { margin: 0 0 2px; font-size: .86rem; overflow-wrap: anywhere; }

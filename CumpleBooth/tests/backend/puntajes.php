@@ -41,10 +41,18 @@ require_once $raiz . '/public/lib.puntajes.php';
 echo "Posiciones\n";
 
 // ---------- El catálogo de juegos ----------
-igual('hay cuatro juegos registrados', 4, count(cb_juegos()));
+igual('hay cinco juegos registrados', 5, count(cb_juegos()));
 igual('hielo tiene dos juegos', ['reino-hielo', 'festival'], array_keys(cb_juegos_de_tema('hielo')));
-igual('spidey tiene uno por ahora', ['aracnida'], array_keys(cb_juegos_de_tema('spidey')));
+igual('spidey tiene dos juegos', ['aracnida', 'impulso'], array_keys(cb_juegos_de_tema('spidey')));
 igual('una temática sin juegos devuelve vacío', [], cb_juegos_de_tema('carreras'));
+
+// `spidey` y `heroes` son dos temáticas DISTINTAS del admin aunque compartan el mundo 3D, y
+// es fácil confundirlas: los recursos arácnidos viven en `temas/heroes/` dentro del motor.
+// Meter un juego de Spidey en `heroes` lo haría aparecer en Misión 3D, que es otra fiesta.
+igual('heroes NO hereda los juegos de spidey', ['mision'], array_keys(cb_juegos_de_tema('heroes')));
+foreach (cb_juegos() as $id => $j) {
+    ok("el juego $id declara nombre y temática", ($j['nombre'] ?? '') !== '' && ($j['tema'] ?? '') !== '');
+}
 
 // ---------- Los nombres se unifican ----------
 igual('quita espacios de más', 'Lucho', cb_puntaje_nombre('  lucho  '));

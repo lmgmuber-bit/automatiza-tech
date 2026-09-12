@@ -169,11 +169,25 @@ if ($party === null) {
 $selfUrl = 'aceptaciones.php?party=' . rawurlencode($publicSlug);
 
 // ================== DESCARGAS DE EVIDENCIA (GET) ==================
-if ($party !== null && empty($errors) && in_array((string) ($_GET['action'] ?? ''), ['comprobante', 'firma'], true)) {
+if ($party !== null && empty($errors) && in_array((string) ($_GET['action'] ?? ''), ['comprobante', 'firma', 'pdf'], true)) {
     $row = cb_load_acceptance_by_id((int) ($_GET['id'] ?? 0));
     if (!$row || (string) $row['party_public_slug'] !== $publicSlug || (string) $row['status'] !== 'accepted') {
         http_response_code(404);
         exit('Evidencia no encontrada.');
+    }
+    if ($_GET['action'] === 'pdf') {
+        // Copia legible del comprobante, la misma que se adjunta al correo del cliente.
+        try {
+            $pdf = cb_acceptance_pdf($row);
+        } catch (Throwable $e) {
+            http_response_code(503);
+            exit('No se pudo generar el PDF: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+        }
+        header('Content-Type: application/pdf');
+        header('Content-Length: ' . strlen($pdf));
+        header('Content-Disposition: attachment; filename="comprobante-terminos-cumpleclick-' . (int) $row['id'] . '.pdf"');
+        echo $pdf;
+        exit;
     }
     $isReceipt = $_GET['action'] === 'comprobante';
     $path = cb_acceptance_file_path((string) ($isReceipt ? $row['evidence_storage_key'] : $row['signature_storage_key']));
@@ -216,6 +230,31 @@ if ($party !== null && empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST' &
                     exit;
                 }
                 $formErrors = $result['errors'];
+            } elseif ($action === 'enviar_firma') {
+                // El enlace de firma se muestra una sola vez; el formulario lo devuelve tal
+                // cual para mandarlo por correo. Se comprueba que sea de verdad un enlace de
+                // aceptación de este sitio y de una fila pendiente de esta fiesta: un POST
+                // armado a mano no puede usar el admin para mandar cualquier dirección.
+                $id = (int) ($_POST['id'] ?? 0);
+                $url = trim((string) ($_POST['url'] ?? ''));
+                $row = cb_load_acceptance_by_id($id);
+                $prefijo = rtrim((string) cb_public_base_url(), '/') . '/aceptar-plan.php?t=';
+                if (!$row || (string) $row['party_public_slug'] !== $publicSlug || (string) $row['status'] !== 'pending') {
+                    $errors[] = 'Ese enlace ya no está pendiente.';
+                } elseif (!str_starts_with($url, $prefijo) || !preg_match('/^[a-f0-9]{32,64}$/', substr($url, strlen($prefijo)))) {
+                    $errors[] = 'El enlace no tiene la forma esperada.';
+                } else {
+                    // El correo lo arma `lib.envios.php`, que es de donde lo toma también el
+                    // panel de la ficha para reenviarlo. Antes vivía acá dentro y no había
+                    // forma de mandarlo desde otra pantalla ni de dejar registro.
+                    require_once __DIR__ . '/../lib.envios.php';
+                    $envio = cb_envio_firma($row, $party, $url);
+                    if ($envio['ok']) {
+                        header('Location: ' . $selfUrl . '&ok=firma_enviada');
+                        exit;
+                    }
+                    $errors[] = $envio['mensaje'];
+                }
             } elseif ($action === 'revocar') {
                 $id = (int) ($_POST['id'] ?? 0);
                 $row = cb_load_acceptance_by_id($id);
@@ -239,7 +278,12 @@ if ($party !== null && empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST' &
     }
 }
 
-$okMessages = ['generado' => 'Enlace de aceptación generado. Cópialo y envíalo al cliente: no se volverá a mostrar.', 'revocado' => 'Registro revocado.', 'eximido' => 'Fiesta eximida de aceptación (queda auditado).'];
+$okMessages = [
+    'generado' => 'Enlace de aceptación generado. Mándalo por correo con el botón, o cópialo: no se volverá a mostrar.',
+    'firma_enviada' => 'Correo enviado con el enlace para firmar. Te llegó copia oculta.',
+    'revocado' => 'Registro revocado.',
+    'eximido' => 'Fiesta eximida de aceptación (queda auditado).',
+];
 $okMessage = isset($_GET['ok'], $okMessages[$_GET['ok']]) ? $okMessages[$_GET['ok']] : null;
 $flash = $_SESSION['acceptance_flash'] ?? null;
 unset($_SESSION['acceptance_flash']);
@@ -257,22 +301,36 @@ if ($party !== null && empty($errors)) {
     }
 }
 $summaryLabels = cb_acceptance_summary_fields();
+
+// Todo lo que ya está cargado en la ficha viene puesto: el contacto, el cobro, la hora y la
+// dirección de la invitación. Volver a escribirlo era trabajo repetido y, peor, la forma más
+// fácil de que el contrato termine diciendo un número distinto del que dice la boleta. El
+// orden de precedencia es: lo que el admin acaba de escribir en el formulario (POST), después
+// el último enlace emitido para esta fiesta, y al final la ficha.
+$deLaFicha = $publicSlug !== '' ? cb_party_contacto_principal($publicSlug) : ['name' => '', 'email' => '', 'phone' => ''];
 $prefill = [
-    'client_name' => (string) ($_POST['client_name'] ?? ($state['row']['client_name'] ?? '')),
-    'client_email' => (string) ($_POST['client_email'] ?? ($state['row']['client_email'] ?? '')),
-    'client_phone' => (string) ($_POST['client_phone'] ?? ($state['row']['client_phone'] ?? '')),
+    'client_name' => (string) ($_POST['client_name'] ?? ($state['row']['client_name'] ?? '') ?: $deLaFicha['name']),
+    'client_email' => (string) ($_POST['client_email'] ?? ($state['row']['client_email'] ?? '') ?: $deLaFicha['email']),
+    'client_phone' => (string) ($_POST['client_phone'] ?? ($state['row']['client_phone'] ?? '') ?: $deLaFicha['phone']),
     'expires_days' => (string) ($_POST['expires_days'] ?? '14'),
 ];
 $lastSummary = is_array($state['row']['plan_summary'] ?? null) ? $state['row']['plan_summary'] : [];
 $summaryPrefill = is_array($_POST['summary'] ?? null) ? $_POST['summary'] : $lastSummary;
+// `+=` no pisa lo que ya trae: lo escrito a mano siempre gana sobre lo deducido.
+$summaryPrefill = array_filter($summaryPrefill, static fn($v): bool => trim((string) $v) !== '');
 if ($party !== null) {
+    require_once __DIR__ . '/../lib.manual.php';   // por cb_manual_marca()
+    $summaryPrefill += cb_party_resumen_plan($publicSlug);
     $summaryPrefill += [
         'plan_name' => cb_acceptance_plan_labels()[(string) ($party['service_plan'] ?? 'booth')] ?? '',
         'theme_name' => cb_theme_public_name((string) ($party['tema'] ?? '')),
         'event_date' => (string) ($party['fecha'] ?? ''),
         'service_hours' => ($party['service_plan'] ?? '') === 'full' ? '2 horas' : '',
         'balance_due' => 'El día del evento, antes de iniciar el servicio',
-        'at_contact' => 'TODO-LUIS: WhatsApp y correo de CumpleClick',
+        // El contacto sale de `data/marca.json`, la misma fuente que el manual, el cartel QR
+        // y el pie de los correos. Escribirlo a mano acá era pedir que un día el contrato
+        // dijera un teléfono distinto del que dice todo lo demás.
+        'at_contact' => 'WhatsApp ' . cb_manual_marca()['whatsapp'] . ' · ' . cb_manual_marca()['correo'],
     ];
 }
 $relationships = ['madre' => 'Madre', 'padre' => 'Padre', 'tutor' => 'Tutor/a legal', 'autorizado' => 'Adulto autorizado'];
@@ -336,6 +394,33 @@ $relationships = ['madre' => 'Madre', 'padre' => 'Padre', 'tutor' => 'Tutor/a le
             <button type="button" class="btn btn-icon" data-copy="<?= h($flash['url']) ?>" title="Copiar enlace"><?= admin_icon('copy') ?></button>
             <a class="btn btn-icon" href="<?= h($flash['url']) ?>" target="_blank" rel="noopener" title="Abrir"><?= admin_icon('external') ?></a>
           </div>
+          <?php /* El enlace va oculto en el formulario porque ya está a la vista en esta misma
+                   pantalla: mandarlo de vuelta no expone nada nuevo, y es la única vez que
+                   existe en claro. El servidor igual comprueba que sea un enlace de esta fiesta. */ ?>
+          <form method="post" action="<?= h($selfUrl) ?>" class="inline-form" style="margin-top:12px">
+            <?= admin_csrf_field() ?>
+            <input type="hidden" name="action" value="enviar_firma">
+            <input type="hidden" name="id" value="<?= (int) $flash['id'] ?>">
+            <input type="hidden" name="url" value="<?= h($flash['url']) ?>">
+            <button class="btn btn-primary" type="submit"><?= admin_icon('check') ?> Enviar por correo a <?= h($state['row']['client_email'] ?? '') ?></button>
+          </form>
+          <?php
+            // Este es el único momento en que el enlace existe en claro, así que es el único
+            // en que se puede mandar por WhatsApp. Después queda solo el hash y reenviarlo
+            // obliga a emitir uno nuevo.
+            $festejadoWa = (string) (($party['birthday_person_name'] ?? '') ?: ($party['nombre'] ?? ''));
+            $pilaWa = explode(' ', trim((string) ($state['row']['client_name'] ?? '')))[0];
+            $textoFirmaWa = ($pilaWa !== '' ? 'Hola ' . $pilaWa . '!' : '¡Hola!')
+                . ' Antes de la fiesta de ' . $festejadoWa . ' necesitamos que firmes los Términos y '
+                . "Condiciones. Son dos minutos: revisas el resumen del plan, marcas tres casillas y firmas con el dedo.\n\n"
+                . $flash['url'] . "\n\n"
+                . 'El enlace es personal y de un solo uso. — CumpleClick';
+          ?>
+          <div class="inline-form" style="margin-top:10px">
+            <a class="btn btn-ghost" target="_blank" rel="noopener"
+               href="https://wa.me/?text=<?= h(rawurlencode($textoFirmaWa)) ?>">Mandar por WhatsApp</a>
+            <button type="button" class="btn btn-ghost" data-copy="<?= h($textoFirmaWa) ?>"><?= admin_icon('copy') ?> Copiar el mensaje</button>
+          </div>
         </section>
       <?php endif; ?>
 
@@ -378,6 +463,7 @@ $relationships = ['madre' => 'Madre', 'padre' => 'Padre', 'tutor' => 'Tutor/a le
                   <div class="acc-actions">
                     <?php if ($row['status'] === 'accepted'): ?>
                       <a class="btn btn-ghost btn-sm" href="<?= h($selfUrl) ?>&amp;action=comprobante&amp;id=<?= (int) $row['id'] ?>"><?= admin_icon('download') ?> Comprobante</a>
+                      <a class="btn btn-ghost btn-sm" href="<?= h($selfUrl) ?>&amp;action=pdf&amp;id=<?= (int) $row['id'] ?>"><?= admin_icon('download') ?> PDF</a>
                       <a class="btn btn-ghost btn-sm" href="<?= h($selfUrl) ?>&amp;action=firma&amp;id=<?= (int) $row['id'] ?>" target="_blank" rel="noopener"><?= admin_icon('sign') ?> Firma</a>
                     <?php elseif (in_array($row['status'], ['pending', 'waived'], true)): ?>
                       <form method="post" action="<?= h($selfUrl) ?>" class="inline-form" data-confirm="¿Revocar el registro #<?= (int) $row['id'] ?>?">
@@ -420,7 +506,7 @@ $relationships = ['madre' => 'Madre', 'padre' => 'Padre', 'tutor' => 'Tutor/a le
                 <?php if (in_array($key, ['extras', 'replacement_values', 'notes', 'event_address'], true)): ?>
                   <textarea id="summary_<?= h($key) ?>" name="summary[<?= h($key) ?>]" rows="2" maxlength="600"><?= h($summaryPrefill[$key] ?? '') ?></textarea>
                 <?php else: ?>
-                  <input type="text" id="summary_<?= h($key) ?>" name="summary[<?= h($key) ?>]" maxlength="600" value="<?= h($summaryPrefill[$key] ?? '') ?>" <?= $key === 'price_total' ? 'placeholder="Ej: $49.995 (TODO-LUIS: tarifa vigente)"' : '' ?>>
+                  <input type="text" id="summary_<?= h($key) ?>" name="summary[<?= h($key) ?>]" maxlength="600" value="<?= h($summaryPrefill[$key] ?? '') ?>" <?= $key === 'price_total' ? 'placeholder="Ej: $49.995"' : '' ?>>
                 <?php endif; ?>
               </div>
             <?php endforeach; ?>

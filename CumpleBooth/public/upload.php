@@ -50,10 +50,37 @@ if (!$limit['allowed']) {
 }
 
 $image = (string) $data['image'];
-if (strpos($image, 'data:image/png;base64,') !== 0) {
+// Se aceptan las dos: el kiosco pasó a JPEG 92 (un PNG de 1080x1920 pesa 2,2 MB y el mismo
+// lienzo en JPEG 350 KB), pero una tablet con el bundle viejo en cache sigue mandando PNG y
+// no puede quedarse sin poder subir la foto en plena fiesta.
+// Las firmas van con chr() y no con secuencias de escape: escritas como cadenas escapadas
+// se convirtieron en caracteres UTF-8 al generar este archivo, la comprobacion no calzaba
+// nunca y toda subida JPEG terminaba rechazada.
+$formatos = [
+    'data:image/jpeg;base64,' => [
+        'ext' => 'jpg',
+        'tipo' => IMAGETYPE_JPEG,
+        'firma' => chr(0xFF) . chr(0xD8) . chr(0xFF),
+    ],
+    'data:image/png;base64,' => [
+        'ext' => 'png',
+        'tipo' => IMAGETYPE_PNG,
+        'firma' => chr(0x89) . 'PNG' . chr(0x0D) . chr(0x0A) . chr(0x1A) . chr(0x0A),
+    ],
+];
+$formato = null;
+$prefijo = '';
+foreach ($formatos as $pre => $f) {
+    if (strpos($image, $pre) === 0) {
+        $formato = $f;
+        $prefijo = $pre;
+        break;
+    }
+}
+if ($formato === null) {
     cb_upload_error(415, 'png_required');
 }
-$encoded = substr($image, strlen('data:image/png;base64,'));
+$encoded = substr($image, strlen($prefijo));
 if (strlen($encoded) > (int) ceil(8 * 1024 * 1024 * 4 / 3) + 8) {
     cb_upload_error(413, 'too_big');
 }
@@ -65,11 +92,12 @@ $bytes = strlen($bin);
 if ($bytes > 8 * 1024 * 1024) {
     cb_upload_error(413, 'too_big');
 }
-if (substr($bin, 0, 8) !== "\x89PNG\r\n\x1a\n") {
+// La firma se comprueba igual que antes; que el prefijo diga JPEG no basta.
+if (strpos($bin, $formato['firma']) !== 0) {
     cb_upload_error(415, 'png_required');
 }
 $info = @getimagesizefromstring($bin);
-if ($info === false || ($info[2] ?? null) !== IMAGETYPE_PNG) {
+if ($info === false || ($info[2] ?? null) !== $formato['tipo']) {
     cb_upload_error(415, 'invalid_png');
 }
 $width = (int) ($info[0] ?? 0);
@@ -84,7 +112,7 @@ if ($usage['count'] >= 200 || $usage['bytes'] + $bytes > 1024 * 1024 * 1024) {
 }
 
 $token = bin2hex(random_bytes(16)); // 128 bits, opaco y no enumerable.
-$storageKey = $partySlug . '/' . gmdate('Y/m') . '/' . $token . '.png';
+$storageKey = $partySlug . '/' . gmdate('Y/m') . '/' . $token . '.' . $formato['ext'];
 $path = cb_photo_absolute_path($storageKey);
 if ($path === null) {
     cb_upload_error(500, 'storage_key_failed');
@@ -107,7 +135,7 @@ if ($safeName === '') {
 }
 $record = [
     'token' => $token, 'storage_key' => $storageKey,
-    'original_name' => substr($safeName, 0, 80) . '.png',
+    'original_name' => substr($safeName, 0, 80) . '.' . $formato['ext'],
     'byte_size' => $bytes, 'width' => $width, 'height' => $height,
     'sha256' => hash('sha256', $bin), 'created_at' => gmdate('Y-m-d H:i:s'),
 ];

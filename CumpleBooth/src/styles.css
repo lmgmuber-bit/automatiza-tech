@@ -674,6 +674,19 @@ body {
 .cam-waiting p { font-size: 22px; font-weight: 800; margin: 0; }
 .cam-waiting-sub { font-size: 16px !important; font-weight: 600 !important; opacity: 0.9; }
 
+/* Asómate: el óvalo donde va a caer el hueco del personaje, sobre el video en vivo. */
+.cam-guia {
+  position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%;
+  pointer-events: none;
+}
+.cam-guia__borde {
+  fill: none; stroke: #fff; stroke-width: 4; stroke-dasharray: 16 10;
+  filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.6));
+  animation: guia-late 1.6s ease-in-out infinite;
+}
+@keyframes guia-late { 50% { stroke-opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) { .cam-guia__borde { animation: none; } }
+
 /* ---------- PREVIEW ---------- */
 .preview {
   background: linear-gradient(165deg, var(--bg-light1) 0%, var(--bg-light2) 45%, var(--pink-soft) 100%);
@@ -2144,16 +2157,31 @@ body {
   gap: 12px;
 }
 @keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-/* Botones dentro del círculo del ganador: aceptar o volver a girar. Van en
-   columna porque la tarjeta es redonda y dos botones lado a lado se salen
-   del círculo en la tablet. */
+/* Aceptar o volver a girar. Ya NO viven dentro del círculo del ganador: ahí
+   quedaban de 32 px de alto —el mínimo táctil son 44— porque una tarjeta
+   redonda no da para más, y encima quedaban apretados entre la rueda y el
+   cuadro del teaser. Fuera del círculo el ancho lo manda la pantalla, así que
+   caben lado a lado y grandes. En vertical angosto se apilan solos. */
 .spinner-winner-actions {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  margin-top: 4px;
+  position: relative; z-index: 25;
+  flex: 0 0 auto;
+  width: min(92cqw, 640px);
+  margin: 0 auto;                   /* el espaciado lo pone el gap de .spinner */
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 2.5cqw;
+  animation: popIn 0.35s ease 0.15s backwards;
 }
 .spinner-winner-actions .cta {
-  font-size: clamp(14px, 3cqw, 20px);
-  padding: 10px 22px;
+  flex: 1 1 40%;
+  min-width: 40%;
+  min-height: 52px;                 /* holgado sobre los 44 px mínimos de toque */
+  padding: 3cqw 4cqw;
+  font-size: clamp(16px, 4.2cqw, 26px);
+  white-space: nowrap;
+}
+/* Muy angosto: uno debajo del otro, cada uno a todo el ancho. */
+@container (max-width: 380px) {
+  .spinner-winner-actions .cta { flex: 1 1 100%; min-width: 100%; }
 }
 .winner-emoji { color: #fff; line-height: 1; }
 .winner-text { color: var(--yellow); font-size: clamp(16px, 4vw, 24px); font-weight: 800; margin: 0; text-transform: uppercase; letter-spacing: 3px; }
@@ -2823,4 +2851,131 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .prediction-saving__orb,.prediction-saving__dots i { animation: none; }
   .prediction-options button { transition: none; }
+}
+
+/* ---------- Asómate y sé el héroe ---------- */
+/* Botón de la bienvenida: mismo tamaño y forma que el de Aventura 3D, para que se lean
+   como dos atajos hermanos y no como uno principal y otro de relleno. */
+/* Mismo porte que el de Aventura 3D: son dos atajos hermanos y ninguno debe competir
+   con "Toca para entrar", que es la accion principal. Antes salia de 421 px de ancho
+   contra los 351 del principal, y se leia al reves de lo que es. */
+.cta--asomate {
+  margin-top: 10px;
+  font-size: clamp(16px, 3.8cqw, 22px);
+  padding: 12px 26px;
+  background: linear-gradient(135deg, var(--dark3), var(--pink));
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32);
+}
+.asomate-elegir {
+  gap: 4cqw;
+  padding: 6cqw 4cqw;
+  background: linear-gradient(160deg, var(--dark1) 0%, var(--dark2) 65%, var(--dark3) 140%);
+}
+.asomate-titulo {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(20px, 6cqw, 40px);
+  font-weight: 800;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.55);
+  text-wrap: balance;
+}
+/* Tarjetas grandes: quien elige es un niño de cuatro años con la tablet de pie. */
+.asomate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(28cqw, 1fr));
+  gap: 3cqw;
+  width: 100%;
+  max-width: 92cqw;
+}
+.asomate-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5cqw;
+  padding: 2.5cqw 1.5cqw;
+  border: 0.6cqw solid rgba(255, 255, 255, 0.35);
+  border-radius: 4cqw;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-family: var(--font);
+  font-size: clamp(12px, 3.2cqw, 20px);
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+.asomate-card:active { transform: scale(0.96); background: rgba(255, 255, 255, 0.26); }
+.asomate-card:focus-visible { outline: 4px solid var(--yellow); outline-offset: 3px; }
+.asomate-card img {
+  width: 100%;
+  height: 26cqw;
+  object-fit: contain;
+  object-position: top center;   /* la cabeza es lo que hay que reconocer, no los pies */
+}
+.asomate-volver { align-self: center; }
+/* Mandos para calzar la cara en el hueco. Van entre la foto y la barra de guardar,
+   no encima de la foto: tapar la cara justo mientras se la ajusta no sirve de nada. */
+.asomate-mandos {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5cqw;
+  width: min(88cqw, 560px);
+  margin: 2cqw auto 0;
+}
+.asomate-mando {
+  display: grid;
+  grid-template-columns: 34cqw 1fr;
+  align-items: center;
+  gap: 2cqw;
+  color: #fff;
+  font-size: clamp(12px, 3cqw, 18px);
+  font-weight: 700;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+.asomate-mando input[type='range'] {
+  width: 100%;
+  height: 44px;                  /* franja táctil holgada, aunque la barra se vea fina */
+  accent-color: var(--yellow);
+}
+
+/* Cuántos se asoman y a quién le toca. Botones grandes: quien elige es un niño. */
+.asomate-cuantos, .asomate-quien {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 2cqw;
+}
+.asomate-cuantos__btn, .asomate-quien__btn {
+  padding: 2.4cqw 5cqw;
+  font-size: clamp(13px, 3.4cqw, 20px);
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: none;
+}
+.asomate-cuantos__btn[aria-pressed='true'], .asomate-quien__btn[aria-pressed='true'] {
+  background: linear-gradient(135deg, var(--pink), var(--dark3));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
+}
+.asomate-turno { width: 100%; }
+.asomate-turno__quien {
+  margin: 0 0 1.5cqw;
+  color: var(--yellow);
+  font-size: clamp(12px, 3cqw, 18px);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+/* La tarjeta elegida se marca: con tres niños eligiendo seguido, sin esto no se
+   sabe cuál quedó puesto para cuál. */
+.asomate-card[aria-pressed='true'] {
+  border-color: var(--yellow);
+  background: rgba(255, 255, 255, 0.3);
+}
+.asomate-pie { display: flex; gap: 3cqw; justify-content: center; flex-wrap: wrap; }
+/* Aviso de turno sobre la cámara: sin esto nadie sabe a quién le toca posar. */
+.asomate-turno-aviso {
+  position: absolute; top: 2cqw; left: 50%; transform: translateX(-50%);
+  z-index: 30; margin: 0;
+  padding: 1.6cqw 4cqw;
+  border-radius: 999px;
+  background: rgba(20, 12, 30, 0.78);
+  color: #fff;
+  font-size: clamp(13px, 3.6cqw, 22px);
+  font-weight: 700;
+  white-space: nowrap;
 }

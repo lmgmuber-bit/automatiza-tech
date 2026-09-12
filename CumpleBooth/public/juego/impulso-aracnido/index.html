@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101f46"><meta name="robots" content="noindex,nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'">
+  <title>Impulso Arácnido · CumpleClick</title><link rel="icon" href="data:,"><link rel="stylesheet" href="./estilo.css"><link rel="stylesheet" href="../orientacion.css"><script src="../orientacion.js" defer></script><script type="module" src="./src/main.mjs"></script>
+</head>
+<body>
+<svg class="iconos" aria-hidden="true"><defs>
+  <symbol id="gesto" viewBox="0 0 32 40"><path d="M10 24V7a3 3 0 0 1 6 0v13-3a3 3 0 0 1 6 0v3a3 3 0 0 1 6 0v9c0 5-3 8-8 8h-3c-3 0-5-2-7-5L4 23a3 3 0 0 1 5-3l1 4Z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></symbol>
+  <symbol id="flecha" viewBox="0 0 32 40"><path d="M16 35V5M5 16 16 5l11 11" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="estrella" viewBox="0 0 32 32"><path d="m16 2 4 9 10 1-7 7 2 10-9-5-9 5 2-10-7-7 10-1Z" fill="currentColor"/></symbol>
+</defs></svg>
+<canvas id="ciudad" aria-label="Ciudad tridimensional del circuito"></canvas><div class="grano"></div>
+<main id="portada" class="capa">
+  <section class="presentacion">
+    <div class="sello">CUMPLECLICK <span>●</span> TU EQUIPO, TU AVENTURA</div>
+    <div class="numero">LA CIUDAD ES DE LOS TRES</div>
+    <h1>IMPULSO<br><em>ARÁCNIDO</em><svg class="estrella" aria-hidden="true"><use href="#estrella"/></svg></h1>
+    <p class="bajada">Un dedo. Un gran equipo.</p><p id="fiesta" class="fiesta"></p>
+    <form id="opciones">
+      <fieldset id="equipo" class="equipo"><legend>¿Con quién vas a volar?</legend></fieldset>
+      <div class="instruccion-portada"><svg class="icono-dedo" aria-hidden="true"><use href="#gesto"/></svg><div><b>Mantén para balancearte.</b><br>Suelta para salir volando.</div></div>
+      <fieldset id="habilidades"><legend>Elige tu ritmo</legend>
+        <label><input type="radio" name="modo" value="paseo" checked><span><b>Paseo</b><small>Con ayuda</small></span></label>
+        <label><input type="radio" name="modo" value="aventura"><span><b>Aventura</b><small>A tu ritmo</small></span></label>
+        <label><input type="radio" name="modo" value="desafio"><span><b>Desafío</b><small>Más precisión</small></span></label>
+      </fieldset>
+      <details><summary>Para el adulto · sonido y turnos</summary><div class="ajustes">
+        <label>Cómo jugamos<select id="formato"><option value="individual">Mi ronda · 90 segundos</option><option value="turnos">Tablet compartida · turnos de 60 segundos</option></select></label>
+        <label id="cantidad-fila" hidden>Participantes<select id="cantidad"><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></label>
+        <label><input type="checkbox" id="sonido" checked> Música y voces</label><label><input type="checkbox" id="suave"> Movimiento suave</label>
+      </div></details>
+      <button id="jugar" class="principal" disabled>PREPARANDO LA CIUDAD…</button><button id="continuar" type="button" class="secundario" hidden>Continuar mi ronda</button>
+    </form>
+    <p id="estado-carga" class="pie" role="status">Cargando los recursos locales…</p><div class="barra-carga"><i id="avance-carga"></i></div><p class="pie">Una ronda cortita. Después, ¡a disfrutar la fiesta!</p>
+  </section>
+  <aside class="rotulo" aria-label="Los tres integrantes del equipo"><div class="equipo-grande"><img src="./texturas/retrato-amiga.png" alt="La amiga"><img src="./texturas/retrato-heroe.png" alt="El héroe"><img src="./texturas/retrato-amigo.png" alt="El amigo"></div><b>JUNTOS,<br>¡MÁS ARRIBA!</b><small>LOS TRES PUEDEN VOLAR · SIN ELIMINACIÓN</small></aside>
+</main>
+<header id="hud" hidden><div class="insignia"><img id="avatar-hud" src="./texturas/retrato-heroe.png" alt="El héroe"></div><div><small id="etiqueta-turno">MI RONDA</small><strong id="marcador">0 ★</strong><small id="avatar-elegido">El héroe</small></div><div id="tiempo" aria-label="Tiempo restante">1:30</div><button id="pausar" aria-label="Pausar juego">Ⅱ</button></header>
+<div id="mensaje" hidden><small id="sector">DISTRITO 01 / DESPEGUE</small><strong id="consejo">MANTÉN PARA BALANCEARTE</strong><div id="medidor"><i></i><span></span></div></div>
+<div id="logro" role="status"></div><div id="subtitulo" aria-live="polite"></div>
+<button id="impulso" hidden aria-label="Mantén para balancearte; suelta para volar"><span id="simbolo-impulso"><svg class="gesto" aria-hidden="true"><use href="#gesto"/></svg><svg class="flecha" aria-hidden="true"><use href="#flecha"/></svg></span><b id="texto-impulso">MANTÉN</b><small id="ayuda-impulso">PARA ENGANCHARTE</small></button><span id="tecla" hidden>También puedes usar la barra espaciadora</span>
+<section id="panel" class="capa modal" hidden><div class="tarjeta"><div id="emblema-panel"><svg aria-hidden="true"><use href="#estrella"/></svg></div><small id="ceja-panel"></small><h2 id="titulo-panel"></h2><p id="texto-panel"></p><fieldset id="equipo-panel" class="equipo" hidden><legend>Elige con quién seguir</legend></fieldset><div id="resultados"></div><button id="accion-panel" class="principal"></button><a id="volver" class="secundario" href="../">← Volver al menú</a><button id="inicio-panel" class="discreto">Cambiar opciones</button></div></section>
+<output id="telemetria" hidden></output><a id="salida-final" class="secundario" hidden href="../">← Volver al menú</a>
+</body></html>

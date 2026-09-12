@@ -1,8 +1,6 @@
-Versión: 2026-09-05
+Versión: 2026-09-07
 
 # Consentimiento para la captura y uso de imagen de niños, niñas y adolescentes
-
-> BORRADOR PREPARADO POR EL EQUIPO DE AUTOMATIZATECH. Este texto no constituye asesoría legal y debe ser revisado y aprobado por un abogado o abogada habilitado en Chile antes de usarse con clientes.
 
 ## 1. Quién otorga este consentimiento
 

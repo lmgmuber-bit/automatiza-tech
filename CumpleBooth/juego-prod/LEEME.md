@@ -19,6 +19,13 @@ sido el servidor.
 | `game/main.js` | `app/juego/game/main.js` — parcheado para llamar a lo anterior |
 | `festival.htaccess` | `app/juego/festival/.htaccess` — **sin esto el Festival no arranca** |
 | `festival-src/*` | `app/juego/festival/` (los `.mjs` van en `src/`) — solo los archivos que se modificaron |
+| `impulso-aracnido.htaccess` | `app/juego/impulso-aracnido/.htaccess` — **sin esto Impulso no arranca** |
+
+`impulso-aracnido.htaccess` es el mismo caso que el del Festival: el juego llegó sin
+`.htaccess` propio y el servidor no conoce el tipo `.mjs`. Sin esa línea la pantalla queda
+negra y la consola no dice nada útil. El juego completo (64 archivos de ejecución, 20,6 MB)
+sale de `C:\wamp64\www\impulso-aracnido\`, rama `codex/equipo-y-colores`, commit `5fff942`;
+acá no se versiona, igual que el Festival.
 
 `festival-src/` **no es el juego completo**: son únicamente los archivos que se cambiaron
 respecto de la entrega de Codex. El juego entero (58 archivos, 19,44 MB) sale de

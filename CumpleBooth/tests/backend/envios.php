@@ -15,6 +15,12 @@ require_once $raiz . '/public/lib.php';
 require_once $raiz . '/public/lib.envios.php';
 require_once $raiz . '/public/lib.acceptance.php';
 
+// El esquema completo, igual que las otras suites. Sin esto la prueba corre contra una base
+// vieja: fallaba buscando `games3d_enabled`, la columna que agrega la migración 022, y el
+// error parecía del producto cuando era de la preparación de la prueba.
+require_once __DIR__ . '/_migraciones.php';
+cb_test_migrar_todo(cb_pdo());
+
 $fallos = 0;
 $total = 0;
 function ok(string $que, bool $cond): void

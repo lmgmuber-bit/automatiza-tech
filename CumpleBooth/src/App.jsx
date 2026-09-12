@@ -206,6 +206,12 @@ function buildRuntime(party, theme, slug) {
           })),
         }
       : null,
+    // "Foto grupal": el fondo con el marco grande. El backend ya verificó que el archivo
+    // exista y que el recuadro sea válido; acá solo se resuelve la ruta, igual que arriba.
+    // Sin este bloque el botón no aparece y el kiosco se comporta como antes.
+    grupal: theme.grupal?.fondo
+      ? { ...theme.grupal, fondo: ver(BASE + theme.grupal.fondo) }
+      : null,
     // fecha de la fiesta — el api actual NO la expone (ver docs/ARQUITECTURA.md), así
     // que normalmente queda vacía. Se lee de forma defensiva por si algún día se agrega.
     fecha: party.fecha || '',

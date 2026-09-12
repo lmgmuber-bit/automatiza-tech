@@ -21,6 +21,75 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## DESPLEGADO 2026-09-12 — foto grupal, pantalla completa, Anna de gala
+
+Todo esto **está en PROD** (`cumpleclick.com/app/`), verificado desde afuera.
+Respaldos para volver atrás en `~/respaldos/`:
+`app-antes-grupal-20260912-0116.tar.gz`, `galeria.php.antes-pestana-20260912-0132`,
+`index.html.antes-roundrect-*` y `juego-temas-antes-20260912-0202.tar.gz`.
+
+**La foto de todos.** Una foto del grupo entero dentro de un marco apaisado, distinta de la
+foto de cabina y de Asómate. Se dispara desde un **ícono chico abajo a la izquierda** de la
+bienvenida, no desde la pila de botones: la usa un adulto una o dos veces en la fiesta y
+darle el mismo peso que a los botones que tocan los niños tapaba la decoración. Avisa de
+poner la tablet acostada mientras la pantalla esté de pie, y **avisa, no bloquea**: con el
+giro trabado —lo normal en un kiosco— bloquear dejaría el modo inservible en plena fiesta.
+Se archiva con prefijo `grupal-` porque no tiene dueño, y la galería le da su propia pestaña.
+
+**Pantalla completa** en la bienvenida, arriba a la izquierda, la misma esquina que ya usan
+los juegos. Entra con el toque que arranca la fiesta, porque fuera de un gesto el navegador
+la rechaza sin avisar, y el mismo botón sirve para salir.
+
+**Anna de gala** en los dos juegos que la usan (`juego/models/` y `juego/festival/models/`),
+repintando la textura del modelo: malla, esqueleto y animación quedan idénticos y no se
+gastó ningún crédito. 2,61 MB contra 2,30; se baja en el mismo tiempo que Elsa.
+
+### 🔴 Tres trampas que mordieron hoy
+
+1. **`roundRect` no existe en este proyecto; se llama `roundRectPath`.** La excepción rompía
+   la cadena de promesas y la vista previa quedaba en "Preparando la foto…" **para siempre**,
+   sin error visible y sin salida. No lo vieron las pruebas de backend —miran el tema, no la
+   pantalla— ni la prueba a mano, porque el panel del navegador bloquea la cámara y nunca
+   llega a la vista previa. **Para probar esta pantalla hace falta una cámara falsa**: un
+   canvas con `captureStream()`, la misma técnica que ya se usa en Asómate. Ahora, si componer
+   falla, se muestra la foto sin marco y se puede guardar.
+
+2. **Calcular una lista y no dibujarla.** La galería separaba las fotos grupales del reparto
+   por invitado pero no tenía pestaña donde mostrarlas: la foto se habría subido y
+   desaparecido. Hay una guardia en `tests/backend/grupal.php` para ese fallo exacto.
+
+3. **El CDN.** Bajar un archivo para compararlo **calienta la caché del borde**: si después
+   subes el reemplazo, el borde sigue entregando el viejo hasta 24 horas. Pasó con
+   `hermana.glb`. Se resuelve con un flush desde hPanel o esperando.
+
+## DESPLEGADO 2026-09-12 — el juego 3D vuelve a tener su fuente en el repositorio
+
+El repositorio `C:\wamp64\www	ucumple-repo` estaba **atrasado respecto de PROD** y exportar
+desde él habría borrado trabajo en silencio: sube bien y reporta éxito. Eran cinco archivos
+(`game/main.js`, `ui.js`, `foto.js`, `strings.js`, `index.html`) más `game/posiciones.js`, que
+directamente no existía aunque `main.js` lo importa. Los dos espejos, `juego-prod/` y
+`tucumple/`, estaban **aún más atrasados** y eran los que iban a pisar PROD.
+
+🔴 **`index.html` del repositorio NO es `index.html` de PROD.** En `app/juego/` ese nombre es
+el **menú de juegos**, que viene de CumpleBooth y cuya URL está impresa en los carteles QR.
+La página del repositorio se sirve como **`mundo.html`**. Copiar una encima de la otra rompe
+el menú o borra el juego. Queda dicho dentro del propio archivo.
+
+🔴 **Bug que estaba vivo en PROD y se corrigió: la foto del juego reventaba en Spidey.**
+`aplicarTema` mezclaba los textos con `Object.assign`, que es de un solo nivel: una temática
+que declara su propio bloque `foto` reemplazaba el bloque **entero** y perdía las claves que
+la base agregó después. La temática arácnida tiene su propio `foto`, así que desde el 11-sep
+`T.foto.firmaJugador` no existía ahí y sacar una foto moría con "is not a function". **No se
+veía al cargar: solo al sacar la foto.** Ahora la mezcla entra un nivel y los arreglos se
+siguen reemplazando, o el tutorial arácnido quedaría mezclado con el de hielo. Comprobado
+contra PROD con `luciano-spidey`.
+
+### Sin probar
+
+Nada de esto se ha visto en la tablet física ni con niños: la foto grupal se probó con una
+cámara falsa, y la foto del juego 3D se comprobó leyendo los textos ya mezclados, no sacando
+una foto de verdad en una partida.
+
 ## Delta local — Álbum Recuerdo (rama `feat/album-recuerdo`, no desplegado)
 
 Este delta **incluye y reemplaza** al de Rayo/Carreras/Hielo de abajo: se

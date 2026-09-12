@@ -68,5 +68,18 @@ ok('frameBox con texto en vez de número queda apagado',
 $sinModo = cb_build_theme_payload('carreras', $temas['carreras'] ?? []);
 ok('una temática sin el bloque sigue sin el modo', ($sinModo['grupal'] ?? null) === null);
 
+// ── La galería tiene donde mostrarlas ───────────────────────────────────────
+// Esto mira el TEXTO de galeria.php, no su comportamiento: no dice que la pestaña se vea
+// bien, solo que existe. Está por un error real: la primera versión separaba las grupales
+// del reparto por invitado y armaba la lista, pero no la dibujaba en ninguna parte, así que
+// la foto se subía y no aparecía en ningún lado. Peor que no haber tocado nada.
+$galeria = (string) file_get_contents(__DIR__ . '/../../public/galeria.php');
+ok('la galería reconoce el prefijo grupal-', strpos($galeria, "'grupal-', 7") !== false);
+ok('la galería arma la lista de grupales', strpos($galeria, '$grupales') !== false);
+ok('la galería tiene la pestaña', strpos($galeria, 'data-vista="grupal"') !== false);
+ok('la galería tiene el panel', strpos($galeria, "\$vistas['grupal']") !== false);
+ok('las grupales no caen entre los invitados sin nombre',
+    strpos($galeria, "\$p['kind'] !== 'grupal'") !== false);
+
 echo $fallos === 0 ? "  $total comprobaciones, todas bien\n" : "  $fallos de $total fallaron\n";
 exit($fallos === 0 ? 0 : 1);

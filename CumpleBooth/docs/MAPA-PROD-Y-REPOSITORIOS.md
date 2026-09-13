@@ -83,9 +83,13 @@ aplicado hay que preguntarle a la base, no mirar la carpeta.**
 
 Todo está en `cumpleclick-respaldos`:
 
-- **`automatiza-tech-ramas-juegos-20260913.bundle`:** las 13 ramas que solo existían en este PC,
-  entre ellas `claude/aurora-integracion`, `codex/aurora-*`, `codex/cierre-juegos`,
-  `codex/carrera-grupal` y `codex/invitacion-narracion-3-temas`.
+- **`automatiza-tech-ramas-juegos-20260913.bundle`:** las 14 ramas de juegos e invitaciones que
+  solo existían en este PC, entre ellas `claude/aurora-integracion`, `codex/aurora-*`,
+  `codex/cierre-juegos`, `codex/carrera-grupal`, `codex/narracion-alice` (voces y vueltas del
+  Circuito) y `codex/invitacion-narracion-3-temas`.
+- **`automatiza-tech-otras-ramas-locales-20260913.bundle`:** siete ramas de AutomatizaTech que no
+  estaban en GitHub. Queda fuera `copilot/update-automatia-tech-info`, que trae algo con forma de
+  clave de OpenAI y nunca llegó a GitHub.
 - **`automatiza-tech-wip-otras-sesiones-20260913.bundle`:** una foto de los 153 archivos sin
   commit del checkout principal. No incluye `api/process-at-ig.config.php`, que trae un token en
   texto plano, ni `media/`, que pesa 810 MB.
@@ -112,6 +116,24 @@ Todo está en `cumpleclick-respaldos`:
   `juego/fuentes/` estaban solo en PROD. Se agregan con `git add -f`.
 - **Un export de Codex no se sube sin cotejar** la carpeta del juego contra PROD. Los arreglos del
   Circuito del 10-sep estuvieron a un export de perderse.
-- **Hay preguntas a Codex pendientes** sobre trabajo suyo fuera de este PC, `juego-frozen-codex` y
-  la rama definitiva de Impulso. Codex debe responder en
-  `Docs/ORCHESTRATION/CODEX-RESPUESTA-ALINEACION-JUEGOS-2026-09-13.md`.
+## Lo que respondió Codex el 13-sep
+
+La respuesta completa quedó en el repositorio privado `cumpleclick-respaldos`, en
+`docs/CODEX-RESPUESTA-ALINEACION-JUEGOS-2026-09-13.md`. Va en el privado porque trae los enlaces
+de sus prototipos.
+
+- **Fuera de este PC** no hay versiones de estos juegos. Solo quedan dos prototipos antiguos en sus
+  Sites de ChatGPT, del 4-sep: "Reino Mágico de Hielo N64" y "Aventura Arácnida N64". Sirven como
+  material histórico, no como fuente, y no están respaldados en GitHub.
+- **`juego-frozen-codex`** es "Reino de Hielo — El deseo de Isidora", un prototipo independiente
+  sin destino PROD. Sus 12 cambios cambian la princesa por la corregida del 5-sep. Se conserva
+  como prototipo.
+- **Impulso:** la rama `prod` ya trae las mejoras jugables y la paleta de `codex/cierre-validacion`.
+  No hay nada que portar.
+- **Circuito:** la última rama de Codex es `codex/narracion-alice` (9-sep). Los arreglos que
+  están en PROD son posteriores. No hay que subir el cierre viejo de Codex encima.
+- **Invitaciones K-Pop, Tropical y Familia Canina** (`codex/invitacion-narracion-3-temas`): hay 26
+  medios pagados sin integrar en ninguna rama ni en PROD, comprobado por contenido y por ruta. No
+  hay que regenerarlos. Integrarlos es una decisión pendiente de Luis.
+- **Migraciones:** la `021` es de Codex. Las dos `014` y las dos `013` son distintas y conviven.
+  No hay que renumerarlas.

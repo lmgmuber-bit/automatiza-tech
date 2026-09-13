@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Anna 3D — mirador</title>
+<style>
+  body { margin: 0; background: #eef4fb; }
+  #fila { display: flex; }
+  canvas { display: block; }
+  #error { font: 14px system-ui; color: #a00; padding: 12px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="fila"></div>
+<div id="error"></div>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+/* Mirador de un solo cuadro: nada de requestAnimationFrame, porque con el panel del
+   navegador oculto no se dispara nunca y la pagina se queda en blanco sin decir por que.
+
+   🔴 El modelo NO se clona. `clone()` de un SkinnedMesh deja la copia apuntando al
+   esqueleto original, que nunca se actualiza: la figura se dibuja con otra escala y la
+   camara, calculada sobre la caja del original, encuadra los pies. Se usa el mismo objeto
+   y se le cambia el giro entre dibujo y dibujo. */
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+
+try {
+  const modelo = new URLSearchParams(location.search).get('m') || 'hermana.glb'
+  const ANGULOS = [0, Math.PI * 0.5, Math.PI]   // frente, perfil, espalda
+  const LADO = 420
+
+  const gltf = await new GLTFLoader().loadAsync(modelo)
+  const raiz = gltf.scene
+
+  const escena = new THREE.Scene()
+  escena.add(new THREE.HemisphereLight(0xffffff, 0x9fb4cc, 2.4))
+  const sol = new THREE.DirectionalLight(0xffffff, 1.5)
+  sol.position.set(2, 4, 3)
+  escena.add(sol)
+  escena.add(raiz)
+  escena.updateMatrixWorld(true)
+
+  /* 🔴 La caja. Los vertices y los huesos de este modelo viven a escala 100 y la malla
+     lleva un 0.01 encima, asi que medir los vertices "a mano" y multiplicarlos por la
+     matriz del mundo da una figura de 1,6 CENTIMETROS y la camara termina dentro de una
+     bota. La medida buena es la caja que calcula el propio SkinnedMesh —que si sabe de
+     huesos— llevada al mundo con la matriz de la malla. */
+  const caja = new THREE.Box3()
+  raiz.traverse((o) => {
+    if (!o.isSkinnedMesh && !o.isMesh) return
+    if (o.isSkinnedMesh) o.skeleton.update()
+    o.computeBoundingBox()
+    caja.union(o.boundingBox.clone().applyMatrix4(o.matrixWorld))
+  })
+  const centro = caja.getCenter(new THREE.Vector3())
+  const tam = caja.getSize(new THREE.Vector3())
+  const alcance = Math.max(tam.x, tam.y, tam.z)
+  raiz.position.sub(centro)
+  window.__medidas = { tam: tam.toArray(), centro: centro.toArray() }
+
+  const fila = document.getElementById('fila')
+  for (const giro of ANGULOS) {
+    const lienzo = document.createElement('canvas')
+    lienzo.width = LADO
+    lienzo.height = LADO
+    fila.appendChild(lienzo)
+
+    const r = new THREE.WebGLRenderer({ canvas: lienzo, antialias: true })
+    r.setClearColor(0xeef4fb, 1)
+    r.outputColorSpace = THREE.SRGBColorSpace
+
+    raiz.rotation.y = giro
+    const cam = new THREE.PerspectiveCamera(30, 1, 0.01, 100)
+    cam.position.set(0, 0, alcance * 2.0)
+    cam.lookAt(0, 0, 0)
+    r.render(escena, cam)
+    r.dispose()
+  }
+  document.body.dataset.listo = '1'
+} catch (e) {
+  document.getElementById('error').textContent = 'falló: ' + (e && e.stack ? e.stack : e)
+  document.body.dataset.listo = 'error'
+}
+</script>
+</body>
+</html>

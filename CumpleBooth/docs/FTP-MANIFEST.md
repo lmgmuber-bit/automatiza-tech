@@ -21,6 +21,61 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## DESPLEGADO 2026-09-13 (07:05) — usuarios del backoffice: superadministrador y operadores por fiesta
+
+Luis pidió, la madrugada de las dos fiestas, poder delegar el admin de una fiesta a una persona:
+crearle un usuario, que le llegue un correo con contraseña temporal que debe cambiar, y decidir él
+qué fiestas y qué opciones ve. Está **EN PROD** desde las 07:05. Diseño, módulos y manual en
+`docs/USUARIOS-ADMIN.md`.
+
+**Cómo entra cada uno ahora:**
+- `admin/login.php` (correo + contraseña) es la entrada por defecto: cualquier página del admin sin
+  sesión manda ahí.
+- `admin/maestro.php` es la pantalla de solo contraseña de siempre, intacta: entra como
+  superadministrador. La sesión que Luis tenía abierta sigue valiendo.
+- `admin/usuarios.php` (solo super) crea, habilita/deshabilita y asigna fiestas y módulos.
+- `admin/perfil.php`: nombre y cambio de contraseña.
+
+**Cómo se subió:** `scratchpad/usuarios-admin/desplegar-usuarios.py 4f59f05` (rama
+`claude/admin-usuarios`, base `b93c9a3`).
+1. Cotejó por sha256 que los 17 archivos de PROD que se pisaban eran iguales a la base.
+2. Respaldo `~/respaldos/admin-usuarios-antes-20260913-0705.tar.gz` (17 archivos).
+3. Subió 25 archivos a una carpeta fuera de la web, con sha256 y `php -l`.
+4. Aplicó la migración `023_admin_users` por CLI (`database/aplicar-023.php`): creó
+   `cc_admin_users` y `cc_admin_user_parties`, registradas en `cc_schema_migrations`.
+5. Instaló los 23 archivos web con `mv` atómico en un solo comando y verificó sha256.
+
+| Archivo | Destino | Clase |
+|---|---|---|
+| `database/migrations/023_admin_users.php`, `database/aplicar-023.php` | `domains/cumpleclick.com/database/` | OBLIGATORIO, primero, y correr `php aplicar-023.php` |
+| `public/lib.admin-usuarios.php` (nuevo), `public/lib.php`, `galeria.php`, `ver-media.php`, `ver.php` | `app/` | OBLIGATORIO |
+| `public/admin/_acceso.php`, `login.php`, `maestro.php`, `usuarios.php`, `perfil.php` (nuevos) | `app/admin/` | OBLIGATORIO |
+| `public/admin/` las 13 páginas existentes (todas cargan el portero) | `app/admin/` | OBLIGATORIO, junto con lo anterior |
+
+No subir `tests/`. El `.htaccess` no cambia.
+
+**Rollback:** `python scratchpad/usuarios-admin/rollback-usuarios.py respaldos/admin-usuarios-antes-20260913-0705.tar.gz`
+restaura los 17, borra los 6 nuevos y coteja contra la base. Las tablas se dejan.
+
+**Verificado desde afuera después de subir (15 comprobaciones):** el admin sin sesión redirige a
+`login.php` con `volver`; `login.php` y `maestro.php` responden; la API de carteles contesta 401
+JSON; la galería, `api.php` (kiosco), `ver.php` y el menú de juegos siguen igual; ninguna de las
+10 direcciones de los carteles cambió de estado.
+
+**Probado en local:** `tests/backend/usuarios.php` (52) y `tests/backend/usuarios-http.php` (59,
+con `php -S`: redirecciones, clave maestra, crear operadora, temporal en pantalla sin SMTP,
+cambio obligatorio, lista filtrada, 403 en nueve páginas ajenas, juegos e invitados solo en su
+fiesta, galería sin PIN solo en su fiesta, deshabilitar corta la sesión). Recorrido a mano en el
+navegador: login, clave maestra, Usuarios, crear, entrar como operadora, cambiar contraseña y ver
+solo su fiesta.
+
+**No probado en PROD:** el envío real del correo de bienvenida por SMTP (si falla, la pantalla
+muestra la contraseña temporal una vez para pasarla a mano). Tampoco se creó ningún usuario en
+PROD: eso lo hace Luis desde `maestro.php` → Usuarios.
+
+**Lo que quedó como estaba a propósito:** las 13 páginas conservan su bloque de login por
+contraseña debajo del portero (código muerto; se puede retirar después).
+
 ## DESPLEGADO 2026-09-13 (02:43) — carrera con amigos en Aurora de Cristal, y los trineos ya no se montan
 
 Luis pidió que Aurora pudiera jugarse en grupo, como el Circuito Arácnido. Se construyó en

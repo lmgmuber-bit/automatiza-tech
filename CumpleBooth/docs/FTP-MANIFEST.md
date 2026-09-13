@@ -21,15 +21,45 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
-## NO DESPLEGADO — 2026-09-13: carrera con amigos en Aurora de Cristal
+## DESPLEGADO 2026-09-13 (02:43) — carrera con amigos en Aurora de Cristal, y los trineos ya no se montan
 
 Luis pidió que Aurora pudiera jugarse en grupo, como el Circuito Arácnido. Se construyó en
-paralelo y **no hay nada en PROD**.
+paralelo y Luis autorizó subirlo el mismo 13-sep ("sube a prod… haz un backup, si hay un error
+hacemos rollback"), pidiendo antes corregir que dos trineos quedaban uno encima del otro.
 
 **Dónde está:**
-- **Backend:** esta rama, `claude/aurora-grupal`.
-- **Juego:** repositorio privado `cumpleclick-juego-aurora-cristal`, rama `feat/modo-grupal`.
-- El detalle de cómo se juega está en su `ORIGEN-Y-PROD.md`.
+- **Backend:** esta rama, `claude/aurora-grupal`, commit `7591029`.
+- **Juego:** repositorio privado `cumpleclick-juego-aurora-cristal`, rama `feat/modo-grupal`,
+  commit `2e4d3fa` (carrera con amigos `904fed3` + choques `2e4d3fa`).
+- El detalle de cómo se juega y de los choques está en su `ORIGEN-Y-PROD.md`.
+
+**Cómo se subió:** `scratchpad/choques/desplegar-aurora-grupal.py <kiosco> <aurora>`.
+1. Comprobó que PROD era igual a la base: los 8 archivos, por sha256.
+2. Respaldó en `~/respaldos/aurora-grupal-antes-20260913-0243.tar.gz`, con 8 archivos.
+3. Subió a una carpeta fuera de la web, comparó sha256 y pasó `php -l`.
+4. Instaló con `mv` atómico en un solo comando.
+5. Verificó sha256 en el servidor.
+
+Los tar de las 02:39 y las 02:41 son del ensayo y de un primer intento que no instaló nada:
+`chmod --reference=~/…` no expande la tilde, así que la cadena se cortó antes del primer `mv`.
+
+**Rollback:**
+```bash
+python scratchpad/choques/rollback-aurora-grupal.py respaldos/aurora-grupal-antes-20260913-0243.tar.gz
+```
+Restaura el tar y comprueba cada archivo contra la base.
+
+**Verificado desde afuera después de subir:**
+- **Archivos servidos:** los 6 que se descargan son iguales byte a byte a los commits, con los
+  `.mjs` como `text/javascript` y `no-cache`.
+- **Menú:** manda `jugador` a Aurora.
+- **`sala.php`:** responde JSON a un código inexistente (404) y a un juego inválido (422).
+- **`urls-criticas.py`:** ninguna de las 10 cambió de estado. El menú pasa de 28365 a 28364 bytes.
+- **Aurora en el navegador:** carga `grupal-2` en WebGPU, con el botón "Correr con amigos"
+  habilitado y sin errores en la consola.
+
+**No probado en PROD:** una sala real con amigos. No se abrió ninguna en una fiesta de verdad el
+día del cumpleaños, para no dejar una sala a medias ni puntajes de prueba en la tabla.
 
 **Qué cambia en el backend:**
 - **`lib.sala.carrera.php`:** la sala de carreras pasa a tener reglas por `juego`. Una sala sin

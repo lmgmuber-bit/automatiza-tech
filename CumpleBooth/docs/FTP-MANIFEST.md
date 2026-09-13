@@ -21,6 +21,70 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## NO DESPLEGADO — 2026-09-13: carrera con amigos en Aurora de Cristal
+
+Luis pidió que Aurora pudiera jugarse en grupo, como el Circuito Arácnido. Se construyó en
+paralelo y **no hay nada en PROD**.
+
+**Dónde está:**
+- **Backend:** esta rama, `claude/aurora-grupal`.
+- **Juego:** repositorio privado `cumpleclick-juego-aurora-cristal`, rama `feat/modo-grupal`.
+- El detalle de cómo se juega está en su `ORIGEN-Y-PROD.md`.
+
+**Qué cambia en el backend:**
+- **`lib.sala.carrera.php`:** la sala de carreras pasa a tener reglas por `juego`. Una sala sin
+  `juego` es el Circuito, con los mismos números: el cliente del Circuito que ya está en PROD
+  sigue funcionando.
+  - Reglas de Aurora: tope de 46 m/s, pista de ±6,7, entre 18 y 80 s por vuelta y parrilla de a
+    dos.
+  - Los bots van a la velocidad de la ayuda elegida.
+  - Dos humanos no pueden tener el mismo personaje.
+  - La ayuda (`modo`) la elige quien abre la sala.
+  - El puntaje se iguala según la ayuda, y el que anota la sala va con juego `aurora`.
+  - `juego` y `modo` van en el JSON de `cc_sala_carreras.datos`: **no hace falta migración**.
+- **`juego/index.html` (menú):** le manda `jugador` a Aurora, que lo necesita para entrar a la
+  sala y anotarse.
+- **`lib.puntajes.php`:** solo cambia el comentario de Aurora.
+- **`tests/backend/`:** agrega `carrera-aurora.php` (25 pruebas) y trae `carrera.php`,
+  `carrera-fixture.php` y `carrera-router.php` del Circuito. La fixture ahora crea fiestas de
+  hielo.
+
+**Lista de subida, en este orden:**
+
+| # | Archivo local | Destino en PROD | Clase |
+|---|---|---|---|
+| 1 | `CumpleBooth/public/lib.sala.carrera.php` | `app/lib.sala.carrera.php` | OBLIGATORIO, primero |
+| 2 | `CumpleBooth/public/lib.puntajes.php` | `app/lib.puntajes.php` | OPCIONAL (solo comentario) |
+| 3 | `cumpleclick-juego-aurora-cristal/sim.mjs`, `world.mjs`, `main.mjs`, `aurora.css` | `app/juego/aurora/` | OBLIGATORIO |
+| 4 | `cumpleclick-juego-aurora-cristal/index.html` | `app/juego/aurora/index.html` | OBLIGATORIO, último de Aurora |
+| 5 | `CumpleBooth/public/juego/index.html` | `app/juego/index.html` | OBLIGATORIO. Sin `jugador`, el botón queda deshabilitado |
+
+**No subir:**
+- `tests/backend/carrera*.php`: la fixture dice "Nunca subir al webroot".
+- `tests/grupal.test.mjs`.
+- El `.htaccess` de `app/juego/aurora/` no cambia.
+
+**Probado:**
+- Circuito: 78 pruebas.
+- Aurora: 25 pruebas de backend, 7 de simulación con amigos y las 17 del juego solo.
+- En local, con SQLite de pruebas y dos pestañas:
+  - sala con código y entrada sin código;
+  - personaje reasignado con aviso y controles bloqueados para el invitado;
+  - cuenta regresiva, carrera, llegada registrada y podio igual en las dos pantallas;
+  - piloto automático al dejar la pestaña, con aviso al volver;
+  - la consulta a la sala se detiene después del podio.
+
+**Dos errores encontrados en esa prueba y corregidos antes de commitear:**
+- La llegada no se registraba, porque la posición pasaba la meta.
+- Una pestaña sin cuadros dejaba su trineo detenido.
+
+**No probado:**
+- Tablets o celulares reales, ni seis pantallas en un wifi real.
+- La vista de celular en el panel del navegador de trabajo, que se queda preparando la escena 3D
+  antes de mostrar el menú. Aurora de PROD hace lo mismo en ese panel, así que no lo causa este
+  cambio.
+- La sala no revisa el interruptor de juegos 3D apagados por fiesta. Pasa igual con el Circuito.
+
 ## DESPLEGADO 2026-09-13 (madrugada) — PROD alineado con los repositorios
 
 El cotejo completo y la tabla de qué carpeta sale de qué repositorio están en

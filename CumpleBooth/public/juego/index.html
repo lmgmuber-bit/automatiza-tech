@@ -270,7 +270,7 @@
     'mision': 'Una misión para el equipo',
     'impulso': 'Recorre la ciudad con el equipo, de azotea en azotea',
     'circuito': 'Corran juntos por la ciudad, cada uno en su celular',
-    'aurora': 'Corre en trineo por el reino y junta cristales'
+    'aurora': 'Corre en trineo por el reino, solo o con tus amigos'
   };
 
   function enlaceJuego(id, jugador) {
@@ -297,8 +297,8 @@
     }
     // Aurora usa `nombre` para el cartel "La fiesta de X · N años", igual que Impulso: es
     // el nombre de la FIESTA, no el del que juega. Mandarle el del jugador haría decir "La
-    // fiesta de Sofía" en el cumpleaños de Samantha. No recibe `jugador` porque todavía no
-    // anota puntajes; el día que lo haga se agrega acá, no en el juego.
+    // fiesta de Sofía" en el cumpleaños de Samantha. Desde la carrera con amigos
+    // (2026-09-13) recibe además `jugador`: con ese nombre entra a la sala y se anota en la tabla.
     // El Festival usa `nombre` igual que Impulso: es la cumpleañera. Lo pinta en "X · N
     // años", en "Celebramos a X" y lo dice en voz alta al empezar, así que con el nombre de
     // quien juega saludaba "¡Feliz cumpleaños, Gabriela!" en el cumpleaños de Samantha

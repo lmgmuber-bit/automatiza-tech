@@ -26,11 +26,10 @@ function cb_juegos(): array
     return [
         'reino-hielo' => ['nombre' => 'Reino de Hielo en 3D', 'tema' => 'hielo'],
         'festival' => ['nombre' => 'El Festival de las Estrellas', 'tema' => 'hielo'],
-        // Tercer juego de la temática de hielo. Ojo: todavía NO anota puntajes —es una
-        // carrera individual y su mejor marca vive en el navegador del niño—, así que no
-        // aparece en la tabla de posiciones. Está acá igual porque esta lista es también
-        // de dónde sale `juegos_disponibles`, o sea qué juegos ofrece el menú de la fiesta.
-        // Cuando Aurora reporte, no hay que tocar nada más que el juego.
+        // Tercer juego de la temática de hielo. Corrido solo no anota: la mejor marca vive en
+        // el navegador del niño. Corrido con amigos (2026-09-13) anota desde el servidor, en
+        // lib.sala.carrera.php, igual que el Circuito. Esta lista es también de dónde sale
+        // `juegos_disponibles`, o sea qué juegos ofrece el menú de la fiesta.
         'aurora' => ['nombre' => 'Aurora de Cristal', 'tema' => 'hielo'],
         'aracnida' => ['nombre' => 'Aventura Arácnida en 3D', 'tema' => 'spidey'],
         // Segundo juego de la temática Spidey, escrito aparte. Convive con el anterior: los

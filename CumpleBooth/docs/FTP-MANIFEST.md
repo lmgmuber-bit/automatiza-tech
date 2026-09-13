@@ -76,6 +76,10 @@ PROD: eso lo hace Luis desde `maestro.php` → Usuarios.
 **Lo que quedó como estaba a propósito:** las 13 páginas conservan su bloque de login por
 contraseña debajo del portero (código muerto; se puede retirar después).
 
+**07:20, corrección:** los campos de `login.php` y `maestro.php` salían sin el estilo de los
+inputs del admin (faltaba el `input-icon`). Commit `c9e95f0`; respaldos
+`~/respaldos/*_admin_login.php.antes-*` y `*_maestro.php.antes-*`.
+
 ## DESPLEGADO 2026-09-13 (02:43) — carrera con amigos en Aurora de Cristal, y los trineos ya no se montan
 
 Luis pidió que Aurora pudiera jugarse en grupo, como el Circuito Arácnido. Se construyó en

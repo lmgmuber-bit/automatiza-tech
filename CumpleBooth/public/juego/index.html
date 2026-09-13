@@ -306,9 +306,9 @@
     // jugador iba antes y el menú siempre pide un jugador.
     else if (id === 'aurora' || id === 'festival') {
       q += '&nombre=' + encodeURIComponent(fiestaNombre || '');
-      // Y quien juega, aparte: el Festival lo saluda por su nombre y le da el primer turno,
-      // que es el que se anota en la tabla. Aurora todavía no anota, por eso no lo recibe.
-      if (id === 'festival' && jugador) { q += '&jugador=' + encodeURIComponent(jugador); }
+      // Y quien juega, aparte: el Festival lo saluda por su nombre y le da el primer turno;
+      // Aurora lo usa para entrar a la sala de amigos. En los dos es el nombre de la tabla.
+      if (jugador) { q += '&jugador=' + encodeURIComponent(jugador); }
     }
     else if (jugador) { q += '&nombre=' + encodeURIComponent(jugador); }
     if (fiestaEdad) { q += '&edad=' + encodeURIComponent(fiestaEdad); }

@@ -16,6 +16,7 @@ session_start();
 header('Cache-Control: no-store');
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
+require __DIR__ . '/_acceso.php';   // el portero: sesión, usuario y permisos (2026-09-13)
 
 function h($s): string
 {
@@ -365,12 +366,7 @@ $relationships = ['madre' => 'Madre', 'padre' => 'Padre', 'tutor' => 'Tutor/a le
     </form>
   </header>
 
-  <nav class="tabs">
-    <a class="tab" href="index.php"><?= admin_icon('party') ?> Fiestas</a>
-    <a class="tab" href="index.php?view=temas"><?= admin_icon('palette') ?> Temáticas</a>
-    <a class="tab active" href="<?= h($selfUrl) ?>"><?= admin_icon('sign') ?> Aceptación de Términos</a>
-    <a class="tab" href="finanzas.php"><?= admin_icon('chart') ?> Finanzas</a>
-  </nav>
+  <?= admin_nav('aceptaciones') ?>
 
   <main>
     <a class="detail-back" href="index.php">← Volver a fiestas</a>

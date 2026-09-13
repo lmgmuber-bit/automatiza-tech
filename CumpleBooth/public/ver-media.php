@@ -60,6 +60,11 @@ if (!empty($_COOKIE['cc_admin'])) {
         && time() - (int) ($_SESSION['admin_seen'] ?? 0) <= $idle
         && time() - (int) ($_SESSION['admin_started'] ?? 0) <= $absolute;
     session_write_close();
+    // Solo en las fiestas de ese usuario (2026-09-13); la clave maestra (id 0) las ve todas.
+    if ($isAdmin) {
+        require_once __DIR__ . '/lib.admin-usuarios.php';
+        $isAdmin = cb_admin_usuario_puede_fiesta((int) ($_SESSION['admin_usuario_id'] ?? 0), (string) ($media['public_slug'] ?? ''));
+    }
 }
 
 if (!$isAdmin) {

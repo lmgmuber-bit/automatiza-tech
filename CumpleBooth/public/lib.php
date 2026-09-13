@@ -1641,26 +1641,37 @@ function cb_record_photo(string $partySlug, array $photo): bool
  * Sirve para que el admin vea lo que un invitado no debe ver: en concreto, una foto que está
  * en la papelera y que necesita mirar antes de decidir si la devuelve.
  */
-function cb_admin_sesion_activa(): bool
+function cb_admin_sesion_activa(?string $partySlug = null): bool
 {
-    static $cache = null;
-    if ($cache !== null) {
-        return $cache;
+    // -1 = sin sesión viva; 0 = clave maestra; > 0 = usuario del backoffice (2026-09-13).
+    static $usuarioId = null;
+    if ($usuarioId === null) {
+        $usuarioId = -1;
+        if (!empty($_COOKIE['cc_admin']) && session_status() !== PHP_SESSION_ACTIVE) {
+            $secure = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
+            $previo = session_name('cc_admin');
+            session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => $secure, 'httponly' => true, 'samesite' => 'Strict']);
+            session_start();
+            $viva = !empty($_SESSION['admin_logged'])
+                && time() - (int) ($_SESSION['admin_seen'] ?? 0) <= (int) cb_config('session_idle_seconds')
+                && time() - (int) ($_SESSION['admin_started'] ?? 0) <= (int) cb_config('session_absolute_seconds');
+            if ($viva) {
+                $usuarioId = (int) ($_SESSION['admin_usuario_id'] ?? 0);
+            }
+            session_write_close();
+            session_id('');
+            session_name($previo);
+        }
     }
-    if (empty($_COOKIE['cc_admin']) || session_status() === PHP_SESSION_ACTIVE) {
-        return $cache = false;
+    if ($usuarioId < 0) {
+        return false;
     }
-    $secure = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
-    $previo = session_name('cc_admin');
-    session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => $secure, 'httponly' => true, 'samesite' => 'Strict']);
-    session_start();
-    $cache = !empty($_SESSION['admin_logged'])
-        && time() - (int) ($_SESSION['admin_seen'] ?? 0) <= (int) cb_config('session_idle_seconds')
-        && time() - (int) ($_SESSION['admin_started'] ?? 0) <= (int) cb_config('session_absolute_seconds');
-    session_write_close();
-    session_id('');
-    session_name($previo);
-    return $cache;
+    if ($partySlug === null) {
+        return true;
+    }
+    // Un operador solo ve lo de sus fiestas; la clave maestra, todo.
+    require_once __DIR__ . '/lib.admin-usuarios.php';
+    return cb_admin_usuario_puede_fiesta($usuarioId, $partySlug);
 }
 
 /**

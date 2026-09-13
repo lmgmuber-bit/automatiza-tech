@@ -15,6 +15,7 @@ session_start();
 header('Cache-Control: no-store');
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
+require __DIR__ . '/_acceso.php';   // el portero: sesión, usuario y permisos (2026-09-13)
 
 /** Ruta absoluta a themes/ (junto a public/, un nivel arriba de admin/). */
 function admin_themes_base_dir(): string
@@ -216,6 +217,13 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
         $themesData = cb_load_themes();
         $themes = $themesData['themes'] ?? [];
 
+        // Un operador solo sale, prende o apaga los juegos y agrega invitados; cada una de esas
+        // revisa además que la fiesta sea suya. Todo lo demás es del superadministrador.
+        if (!admin_es_super() && !in_array($action, ['logout', 'juegos3d', 'invitados_agregar'], true)) {
+            $formErrors[] = 'No tienes permiso para esa acción.';
+            $action = '';
+        }
+
         if ($action === 'logout') {
             $_SESSION = [];
             session_destroy();
@@ -230,6 +238,8 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             $partiesJ = $datosJ['parties'] ?? $datosJ;
             if ($slugJ === '' || !isset($partiesJ[$slugJ])) {
                 $formErrors[] = 'La fiesta no existe.';
+            } elseif (!admin_puede('juegos', $slugJ)) {
+                $formErrors[] = 'No tienes permiso para los juegos de esa fiesta.';
             } else {
                 $prender = ($_POST['prender'] ?? '') === '1';
                 $partiesJ[$slugJ]['juegos3d'] = $prender;
@@ -272,6 +282,29 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                     exit;
                 }
                 $formErrors[] = $resultado['mensaje'];
+            }
+        } elseif ($action === 'invitados_agregar') {
+            // Agregar UN invitado en medio de la fiesta, sin abrir la ficha entera: es lo único
+            // de la ficha que un operador puede tocar, y solo en sus fiestas (2026-09-13).
+            $slugI = cb_valid_public_slug((string) ($_POST['slug'] ?? '')) ? (string) $_POST['slug'] : '';
+            $nombreI = trim((string) ($_POST['nombre'] ?? ''));
+            $generoI = ($_POST['genero'] ?? 'f') === 'm' ? 'm' : 'f';
+            $datosI = cb_load_parties();
+            $partiesI = $datosI['parties'];
+            if ($slugI === '' || !isset($partiesI[$slugI])) {
+                $formErrors[] = 'La fiesta no existe.';
+            } elseif (!admin_puede('invitados', $slugI)) {
+                $formErrors[] = 'No tienes permiso para agregar invitados en esa fiesta.';
+            } elseif ($nombreI === '' || mb_strlen($nombreI) > 60) {
+                $formErrors[] = 'Escribe el nombre del invitado (hasta 60 letras).';
+            } else {
+                $partiesI[$slugI]['invitados'][] = ['name' => $nombreI, 'g' => $generoI];
+                if (cb_save_parties(['parties' => $partiesI])) {
+                    $_SESSION['envio_flash'] = 'Invitado agregado: ' . $nombreI . '. Ya puede entrar al kiosco con su nombre.';
+                    header('Location: index.php?ok=envio');
+                    exit;
+                }
+                $formErrors[] = 'No se pudo guardar el invitado.';
             }
         } elseif ($action === 'guardar') {
             $isEdit = ($_POST['modo'] ?? '') === 'editar';
@@ -613,7 +646,7 @@ if (!$loggedIn) {
 
 // ================== DATOS PARA RENDER ==================
 $partiesData = cb_load_parties();
-$parties = $partiesData['parties'];
+$parties = admin_fiestas_visibles($partiesData['parties']);   // un operador ve solo las suyas
 $themesData = cb_load_themes();
 $themes = $themesData['themes'] ?? [];
 $themesBaseDir = admin_themes_base_dir();
@@ -660,6 +693,10 @@ if (($_GET['ok'] ?? '') === 'envio' && isset($_SESSION['envio_flash'])) {
 
 $view = $_GET['view'] ?? 'fiestas';
 $action = $_GET['action'] ?? '';
+// Temáticas y la ficha (nueva o editar) son del superadministrador.
+if (!admin_es_super() && (in_array($view, ['temas', 'tema'], true) || in_array($action, ['nueva', 'editar'], true))) {
+    admin_denegar('es solo para el superadministrador');
+}
 $baseUrl = admin_base_url();
 $detailThemeSlugRaw = is_string($_GET['slug'] ?? null) ? (string) $_GET['slug'] : '';
 $detailThemeSlug = cb_valid_slug($detailThemeSlugRaw, 1, 40) && isset($themes[$detailThemeSlugRaw])
@@ -759,7 +796,8 @@ if ($formValues === null && $action === 'editar') {
       </div>
     </div>
     <div class="inline-form logout-btn">
-      <a class="btn btn-ghost" href="marca.php">Datos de la marca</a>
+      <?= admin_usuario_chip() ?>
+      <?php if (admin_es_super()): ?><a class="btn btn-ghost" href="marca.php">Datos de la marca</a><?php endif; ?>
       <form method="post" action="index.php" class="inline-form">
         <?= admin_csrf_field() ?><input type="hidden" name="action" value="logout">
         <button class="btn btn-ghost" type="submit"><?= admin_icon('logout') ?> Salir</button>
@@ -767,30 +805,7 @@ if ($formValues === null && $action === 'editar') {
     </div>
   </header>
 
-  <nav class="tabs">
-    <a class="tab <?= (!in_array($view, ['temas', 'tema'], true) && !$showForm) ? 'active' : '' ?>" href="index.php"><?= admin_icon('party') ?> Fiestas</a>
-    <a class="tab <?= (in_array($view, ['temas', 'tema'], true) && !$showForm) ? 'active' : '' ?>" href="index.php?view=temas"><?= admin_icon('palette') ?> Temáticas</a>
-    <?php
-      /* Cuántas solicitudes sin atender. Va en la pestaña a propósito: si el
-         número no se ve desde acá, hay que acordarse de entrar a mirar, y una
-         solicitud que nadie mira es un cliente perdido. Envuelto en try porque
-         `cc_leads` puede no existir todavía en una instalación vieja; en ese
-         caso la pestaña aparece igual, sólo que sin el número. */
-      $leadsNuevos = 0;
-      if (cb_storage_mode() === 'db') {
-          try {
-              $leadsNuevos = (int) cb_pdo()->query("SELECT COUNT(*) FROM cc_leads WHERE status = 'new'")->fetchColumn();
-          } catch (Throwable $e) {
-              $leadsNuevos = 0;
-          }
-      }
-    ?>
-    <a class="tab" href="leads.php"><?= admin_icon('party') ?> Solicitudes<?= $leadsNuevos > 0 ? ' <b class="tab-badge">' . (int) $leadsNuevos . '</b>' : '' ?></a>
-    <a class="tab" href="mensajes.php"><?= admin_icon('party') ?> Mensajes</a>
-    <a class="tab" href="comprobante.php"><?= admin_icon('copy') ?> Comprobante</a>
-    <a class="tab" href="planes.php"><?= admin_icon('copy') ?> Planes</a>
-    <a class="tab" href="finanzas.php"><?= admin_icon('chart') ?> Finanzas</a>
-  </nav>
+  <?= admin_nav(in_array($view, ['temas', 'tema'], true) && !$showForm ? 'temas' : 'fiestas') ?>
 
   <main>
     <?php if ($okFlash): ?>
@@ -1645,15 +1660,19 @@ if ($formValues === null && $action === 'editar') {
 
     <?php else: ?>
       <section class="list-header">
-        <h2>Fiestas</h2>
-        <a class="btn btn-cta" href="index.php?action=nueva"><?= admin_icon('plus') ?> Nueva fiesta</a>
+        <h2><?= admin_es_super() ? 'Fiestas' : 'Mis fiestas' ?></h2>
+        <?php if (admin_es_super()): ?><a class="btn btn-cta" href="index.php?action=nueva"><?= admin_icon('plus') ?> Nueva fiesta</a><?php endif; ?>
       </section>
 
       <?php if (empty($parties)): ?>
         <div class="card empty-state">
           <span class="empty-icon"><?= admin_icon('party') ?></span>
-          <p><strong>Aún no hay fiestas creadas.</strong><br>Usa "Nueva fiesta" para empezar.</p>
-          <a class="btn btn-cta" href="index.php?action=nueva"><?= admin_icon('plus') ?> Nueva fiesta</a>
+          <?php if (admin_es_super()): ?>
+            <p><strong>Aún no hay fiestas creadas.</strong><br>Usa "Nueva fiesta" para empezar.</p>
+            <a class="btn btn-cta" href="index.php?action=nueva"><?= admin_icon('plus') ?> Nueva fiesta</a>
+          <?php else: ?>
+            <p><strong>Todavía no tienes fiestas asignadas.</strong><br>Pídele a quien te dio el acceso que te asigne una.</p>
+          <?php endif; ?>
         </div>
       <?php endif; ?>
 
@@ -1723,29 +1742,34 @@ if ($formValues === null && $action === 'editar') {
             </div>
 
             <div class="party-actions">
-              <a class="btn btn-ghost" href="index.php?action=editar&amp;slug=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('edit') ?> Editar</a>
-              <?php if ($tieneGaleriaPin): ?>
+              <?php // Cada botón según lo que este usuario puede hacer en ESTA fiesta (2026-09-13). ?>
+              <?php if (admin_es_super()): ?><a class="btn btn-ghost" href="index.php?action=editar&amp;slug=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('edit') ?> Editar</a><?php endif; ?>
+              <?php if ($tieneGaleriaPin && admin_puede('fotos', $publicSlug)): ?>
                 <a class="btn btn-ghost" href="<?= h($galeriaUrl) ?>" target="_blank" rel="noopener"><?= admin_icon('gallery') ?> Ver galería</a>
                 <?php /* El de arriba abre la galería pública, donde no se puede borrar nada.
                         Este lleva a administrarlas, que es lo que uno viene buscando cuando
                         mira la galería y quiere sacar una foto. */ ?>
                 <a class="btn btn-ghost" href="album.php?party=<?= rawurlencode($publicSlug) ?>#fotos-kiosco"><?= admin_icon('trash') ?> Borrar fotos</a>
               <?php endif; ?>
-              <a class="btn btn-ghost" href="<?= h($invitationsUrl) ?>"><?= admin_icon('duplicate') ?> Invitaciones</a>
-              <a class="btn btn-ghost" href="mensajes.php?p=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('chat') ?> Mensajes</a>
-              <a class="btn btn-ghost" href="../carteles.html?p=<?= rawurlencode($publicSlug) ?>" target="_blank" rel="noopener"><?= admin_icon('gallery') ?> Carteles QR</a>
+              <?php if (admin_es_super()): ?><a class="btn btn-ghost" href="<?= h($invitationsUrl) ?>"><?= admin_icon('duplicate') ?> Invitaciones</a><?php endif; ?>
+              <?php if (admin_puede('mensajes', $publicSlug)): ?><a class="btn btn-ghost" href="mensajes.php?p=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('chat') ?> Mensajes</a><?php endif; ?>
+              <?php if (admin_puede('carteles', $publicSlug)): ?><a class="btn btn-ghost" href="../carteles.html?p=<?= rawurlencode($publicSlug) ?>" target="_blank" rel="noopener"><?= admin_icon('gallery') ?> Carteles QR</a><?php endif; ?>
+              <?php if (admin_puede('juegos', $publicSlug)): ?><a class="btn btn-ghost" href="../juego/?p=<?= rawurlencode($publicSlug) ?>" target="_blank" rel="noopener"><?= admin_icon('external') ?> Juegos y posiciones</a><?php endif; ?>
+              <?php if (admin_es_super()): ?>
               <a class="btn btn-ghost" href="comprobante.php?p=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('copy') ?> Comprobante</a>
               <a class="btn btn-ghost" href="aceptaciones.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('check') ?> Aceptación</a>
+              <?php endif; ?>
               <?php // Solo si el módulo está realmente utilizable. Los archivos del
                     // álbum pueden estar subidos sin la migración 007 aplicada, y en
                     // ese estado este botón lleva a una página que falla al consultar.
-                    if (function_exists('cb_album_feature_ready') && cb_album_feature_ready()): ?>
+                    if (function_exists('cb_album_feature_ready') && cb_album_feature_ready() && admin_puede('album', $publicSlug)): ?>
                 <a class="btn btn-ghost" href="album.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('gallery') ?> Álbum Recuerdo</a>
               <?php endif; ?>
-              <?php if ($eventProfileAvailable): ?>
+              <?php if ($eventProfileAvailable && admin_puede('perfil', $publicSlug)): ?>
                 <a class="btn btn-ghost" href="event-profile.php?party=<?= rawurlencode($publicSlug) ?>"><?= admin_icon('party') ?> Perfil del protagonista</a>
               <?php endif; ?>
               <?php $juegosOn = cb_juegos3d_activos($publicSlug); ?>
+              <?php if (admin_puede('juegos', $publicSlug)): ?>
               <form method="post" action="index.php" class="inline-form"
                     <?= $juegosOn ? 'data-confirm="Los niños que entren con el QR verán que se acabó la hora de juego. ¿Apagar los juegos 3D?"' : '' ?>>
                 <?= admin_csrf_field() ?>
@@ -1756,6 +1780,8 @@ if ($formValues === null && $action === 'editar') {
                   <?= $juegosOn ? admin_icon('warn') . ' Apagar juegos 3D' : admin_icon('check') . ' Prender juegos 3D' ?>
                 </button>
               </form>
+              <?php endif; ?>
+              <?php if (admin_es_super()): ?>
               <form method="post" action="index.php" class="inline-form">
                 <?= admin_csrf_field() ?>
                 <input type="hidden" name="action" value="duplicar">
@@ -1768,7 +1794,23 @@ if ($formValues === null && $action === 'editar') {
                 <input type="hidden" name="slug" value="<?= h($publicSlug) ?>">
                 <button type="submit" class="btn btn-danger"><?= admin_icon('trash') ?> Eliminar</button>
               </form>
+              <?php endif; ?>
             </div>
+            <?php if (admin_puede('invitados', $publicSlug)): ?>
+              <?php // Agregar un invitado en medio de la fiesta, sin abrir la ficha (2026-09-13). ?>
+              <details class="party-invitados">
+                <summary><?= count($p['invitados'] ?? []) ?> invitados · agregar uno</summary>
+                <p class="muted small" style="margin:6px 0"><?= h(implode(' · ', array_map(static fn($i) => (string) ($i['name'] ?? ''), $p['invitados'] ?? [])) ?: 'Sin invitados anotados.') ?></p>
+                <form method="post" action="index.php" class="inline-form">
+                  <?= admin_csrf_field() ?>
+                  <input type="hidden" name="action" value="invitados_agregar">
+                  <input type="hidden" name="slug" value="<?= h($publicSlug) ?>">
+                  <input type="text" name="nombre" required maxlength="60" placeholder="Nombre del invitado" aria-label="Nombre del invitado">
+                  <select name="genero" aria-label="Niño o niña"><option value="f">Niña</option><option value="m">Niño</option></select>
+                  <button type="submit" class="btn btn-primary"><?= admin_icon('plus') ?> Agregar</button>
+                </form>
+              </details>
+            <?php endif; ?>
           </article>
         <?php endforeach; ?>
       </div>

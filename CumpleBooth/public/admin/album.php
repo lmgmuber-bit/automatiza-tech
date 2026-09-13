@@ -17,6 +17,7 @@ session_start();
 header('Cache-Control: no-store');
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
+require __DIR__ . '/_acceso.php';   // el portero: sesión, usuario y permisos (2026-09-13)
 
 function h($s): string
 {
@@ -159,6 +160,10 @@ if (!$loggedIn) {
 $publicSlugRaw = is_string($_GET['party'] ?? null) ? (string) $_GET['party'] : '';
 $publicSlug = cb_valid_public_slug($publicSlugRaw) ? $publicSlugRaw : '';
 $party = $publicSlug !== '' ? cb_load_party_raw($publicSlug) : null;
+// Qué partes de esta página puede usar quien entró (2026-09-13). Un operador con "Fotos del
+// kiosco" ve solo esa sección; el Álbum Recuerdo es otro módulo. El superadministrador, todo.
+$verFotos = admin_puede('fotos', $publicSlug);
+$verAlbum = admin_puede('album', $publicSlug);
 
 $errors = [];
 $okMessage = null;
@@ -199,8 +204,15 @@ if ($album !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'
         $errors[] = 'Sesión expirada, vuelve a intentarlo.';
     } else {
         $action = (string) ($_POST['action'] ?? '');
+        // Un operador solo toca lo de su módulo: las fotos del kiosco, o el álbum.
+        $accionPermitida = in_array($action, ['borrar-fotos', 'restaurar-fotos'], true) ? $verFotos : $verAlbum;
+        if (!$accionPermitida) {
+            $errors[] = 'No tienes permiso para esa acción.';
+        }
         try {
-            if ($action === 'guardar-recepcion') {
+            if (!$accionPermitida) {
+                // El aviso ya quedó arriba.
+            } elseif ($action === 'guardar-recepcion') {
                 $intakeEnabled = !empty($_POST['intake_enabled']) ? 1 : 0;
                 $intakeVideos = !empty($_POST['intake_videos']) ? 1 : 0;
                 $requirePin = !empty($_POST['require_pin']) ? 1 : 0;
@@ -513,6 +525,14 @@ if ($album !== null && $stats !== null) {
    esconde todo lo que no sea la hoja, y en otra pantalla del admin (donde esa hoja no
    existe) dejaria la impresion en blanco. */
 #hoja-imprimir { display: none; }
+<?php if (!$verAlbum): ?>
+/* Este usuario solo tiene "Fotos del kiosco": el resto del álbum no se le muestra (las
+   acciones del álbum se rechazan en el servidor de todos modos). */
+main > section.card:not(#fotos-kiosco) { display: none !important; }
+<?php endif; ?>
+<?php if (!$verFotos): ?>
+main > section#fotos-kiosco { display: none !important; }
+<?php endif; ?>
 #aviso-imprimir {
   position: fixed; inset: 0; z-index: 60; display: none; place-items: center;
   background: rgba(0,0,0,.8); color: #fff; font-weight: 800; font-size: 1.2rem;

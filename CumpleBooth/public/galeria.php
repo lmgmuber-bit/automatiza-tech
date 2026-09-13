@@ -36,6 +36,7 @@ if (!empty($_COOKIE['cc_admin'])) {
     $isAdmin = !empty($_SESSION['admin_logged'])
         && time() - (int) ($_SESSION['admin_seen'] ?? 0) <= $idle
         && time() - (int) ($_SESSION['admin_started'] ?? 0) <= $absolute;
+    $adminUsuarioId = (int) ($_SESSION['admin_usuario_id'] ?? 0);   // 0 = clave maestra
     session_write_close();
     session_id('');
 }
@@ -112,6 +113,12 @@ $slug = (string) ($_GET['p'] ?? '');
 if (!cb_valid_public_slug($slug)) { gallery_message(400, 'Galería no disponible', 'El enlace no es válido.'); }
 $party = cb_load_party_raw($slug);
 if ($party === null) { gallery_message(404, 'Galería no disponible', 'No encontramos esta fiesta.'); }
+// La sesión de admin salta el PIN solo en las fiestas de ese usuario (2026-09-13); el resto
+// entra como cualquier invitado.
+if ($isAdmin) {
+    require_once __DIR__ . '/lib.admin-usuarios.php';
+    $isAdmin = cb_admin_usuario_puede_fiesta($adminUsuarioId, $slug);
+}
 // Se mira `galeriaHabilitada`, que es "el interruptor del admin Y hay PIN", y no solo si
 // existe el hash: mirando solo el hash, apagar la galeria desde el admin no la cerraba, y
 // como todas las fiestas usan el mismo PIN, cualquiera con el enlace seguia entrando.

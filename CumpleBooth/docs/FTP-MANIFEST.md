@@ -21,6 +21,35 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## DESPLEGADO 2026-09-12 (noche) — los respaldos `.bak` de `app/` ya no se sirven
+
+**En PROD y verificado desde afuera (23:15):** `app/.htaccess` lleva al final un
+`<FilesMatch "\.(bak|old|orig|save|swp|antes)([-._].*)?$|~$">` con `Require all denied` (y el
+`Deny from all` de Apache 2.2, igual que `data/.htaccess`). Los 61 `.bak` responden 403, con y sin
+parámetro en la URL; antes `admin/config.php.bak-20260907b` y `lib.php.bak-20260908-hotfix`
+salían 200 como `text/plain`. **No se borró ningún archivo.**
+
+- Se agregó solo texto ASCII en CRLF, como el resto del archivo: sha256 `b02fb095…`, 4578 bytes.
+  El mismo contenido quedó en `CumpleBooth/public/.htaccess` de esta rama, para que un despliegue
+  futuro no borre el bloqueo.
+- Respaldo: `~/respaldos/app-htaccess.antes-bloqueo-bak-20260912-2315`. Para deshacer:
+  `cat ~/respaldos/app-htaccess.antes-bloqueo-bak-20260912-2315 > ~/domains/cumpleclick.com/public_html/app/.htaccess`.
+- `urls-criticas.py despues`: ninguna de las 10 direcciones cambió. Siguen en 200 los bundles del
+  kiosco, `juego/mundo.html` y sus scripts, `hermana.glb`, los PDF de `brand/carteles/`, el `.wasm` y
+  el `.tflite` de MediaPipe, `api.php` y `puntajes.php`. Los 403 de `brand/carteles/` y
+  `vendor/mediapipe/` son por pedir la carpeta sin archivo, y el de `manual.php` sin firma lo da el
+  propio PHP (línea 27).
+- El CDN no los tenía en caché (`x-hcdn-cache-status: DYNAMIC`): el bloqueo rigió al instante, sin
+  purgar.
+- **Qué había quedado expuesto: código, ningún valor de secreto.** `admin/config.php.bak` define
+  `ADMIN_PASSWORD_HASH` leyéndolo con `cb_config()`, no escrito; `lib.php.bak` solo nombra
+  `CC_PDO_PASSWORD`, `CC_SMTP_PASSWORD` y `CC_APP_HMAC_KEY`, con valores por defecto vacíos, porque se
+  leen del entorno o del archivo de configuración fuera de la carpeta pública. Revisados los 61 sin
+  imprimir ningún valor. Es el mismo código del repositorio. **No hace falta cambiar claves.** Por
+  SSH no hay logs de acceso para saber quién los pidió.
+- **Pendiente:** borrar los 61 cuando Luis lo decida. Los respaldos de un despliegue van a
+  `~/respaldos/`, nunca como `<archivo>.bak-*` junto al original.
+
 ## DESPLEGADO 2026-09-12 (tarde) — copia en la tablet, y lo que quedó abierto
 
 **En PROD y verificado desde afuera (15:23):** `assets/main-SnNR4OCg.js` e `index.html`.
@@ -36,10 +65,9 @@ una carpeta temporal de sesión. Cómo correrlos, en el `README.md` de esa carpe
 
 ### Hallazgos que NO se arreglaron (decisión de Luis pendiente)
 
-- 🔴 **61 respaldos `.bak` públicos en `app/`**, 22 de ellos en `admin/`, servidos como
-  `text/plain` sin sesión. `admin/config.php.bak-20260907b` define `ADMIN_PASSWORD_HASH` y se
-  abre desde cualquier navegador. Propuesta: bloquearlos por `.htaccess` sin borrar nada, y
-  después decidir el borrado.
+- ~~**61 respaldos `.bak` públicos en `app/`**~~ **Bloqueados esa misma noche** (sección de
+  arriba). Aquí se dijo que `config.php.bak` exponía el hash del admin: no lo trae, lo lee de la
+  configuración. Falta decidir el borrado.
 - **Los carteles de marca corregidos no están subidos.** La hoja de servicios pasó a seis
   tarjetas (entran Asómate, con sus dos temáticas nombradas, y la foto de todos) y las hojas 1
   y 2 perdieron el bloque de WhatsApp con el número impreso. **En PROD el admin todavía entrega

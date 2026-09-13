@@ -72,3 +72,16 @@
 # bytes antes de llegar a esa etiqueta. Declararlo en la cabecera saca la
 # adivinanza del medio: es la diferencia entre "Cumpleaños" y "Cumplea?os".
 AddDefaultCharset UTF-8
+
+# Respaldos de despliegue (*.bak-*, *.antes-*, etc.) nunca se sirven: exponian
+# el codigo fuente de PHP como texto plano, admin/config.php.bak incluido.
+# Bloqueado 2026-09-12. Los archivos siguen en disco; esto solo corta el HTTP.
+<FilesMatch "\.(bak|old|orig|save|swp|antes)([-._].*)?$|~$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+  </IfModule>
+</FilesMatch>

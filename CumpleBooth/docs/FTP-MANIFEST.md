@@ -21,6 +21,49 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## DESPLEGADO 2026-09-13 (madrugada) — PROD alineado con los repositorios
+
+El cotejo completo y la tabla de qué carpeta sale de qué repositorio están en
+`MAPA-PROD-Y-REPOSITORIOS.md`.
+
+**En PROD y verificado desde afuera:**
+
+- **`public_html/.htaccess`** (raíz del dominio) lleva el mismo `FilesMatch` de respaldos que
+  `app/.htaccess`.
+  - `https://cumpleclick.com/index.php.bak-20260907` (el código de la portada) respondía 200 como
+    `text/plain`; ahora da 403.
+  - `.htaccess.bak` ya daba 403.
+  - La portada y el kiosco siguen en 200, y `urls-criticas.py despues` no muestra cambios.
+  - Respaldo: `~/respaldos/raiz-htaccess.antes-bloqueo-bak-20260912-2355`. sha256 nuevo `b3f14149…`.
+- **Fuera de `public_html`, sin exposición web:** doce migraciones que faltaban en
+  `database/migrations/` y tres scripts más nuevos del repositorio.
+  - Migraciones: `012`, `013_narration_intro_output`, `014_rsvp`, `017` (con su `.down`), `018`,
+    `019`, `020`, `021_sala_carreras` (con su `.down`) y `022` (con su `.down`). La base ya las
+    tenía aplicadas: `cc_schema_migrations` registra 24.
+  - Scripts: `export-party-sql.php`, `web/_at-migrar.php` y `web/_at-seed-cita-completa.php`.
+  - Los quince pasaron sha256 y `php -l`.
+  - Respaldo: `~/respaldos/herramientas-antes-alinear-20260913-0035.tar.gz`.
+
+**NO subido, porque lo bloquearon los permisos (OPCIONAL):** `database/migrations/003_invitations_and_plan.php`
+(el repositorio agrega guardas) y `scripts/retention.php` (solo fines de línea). Ninguno se sirve
+por la web ni se ejecuta solo.
+
+**En esta rama:** el commit `e3e3959` trae 63 archivos que PROD servía y el repositorio no tenía o
+tenía distintos:
+
+- backend de juegos: `lib.puntajes.php`, `sala.php`, `lib.sala.carrera.php` y `lib.sala.php`;
+- migraciones `014_salas_ayudantes` y `021_sala_carreras`;
+- el menú `juego/index.html` y `juego/fuentes/`;
+- `admin/marca.php`, `brand/carteles/` y el logo del PDF;
+- las cabeceras de correo;
+- los scripts de `database/` corridos en el servidor;
+- `sitio/.htaccess`.
+
+**Los juegos pasaron a repositorios privados de `lmgmuber-bit`**, con la rama igual a PROD. La
+lista está en el mapa.
+
+**Lista FTP pendiente:** nada OBLIGATORIO. OPCIONAL: los dos archivos bloqueados de arriba.
+
 ## DESPLEGADO 2026-09-12 (noche) — los respaldos `.bak` de `app/` ya no se sirven
 
 **En PROD y verificado desde afuera (23:15):** `app/.htaccess` lleva al final un

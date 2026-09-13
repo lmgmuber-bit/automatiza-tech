@@ -26,12 +26,21 @@ function cb_juegos(): array
     return [
         'reino-hielo' => ['nombre' => 'Reino de Hielo en 3D', 'tema' => 'hielo'],
         'festival' => ['nombre' => 'El Festival de las Estrellas', 'tema' => 'hielo'],
+        // Tercer juego de la temática de hielo. Ojo: todavía NO anota puntajes —es una
+        // carrera individual y su mejor marca vive en el navegador del niño—, así que no
+        // aparece en la tabla de posiciones. Está acá igual porque esta lista es también
+        // de dónde sale `juegos_disponibles`, o sea qué juegos ofrece el menú de la fiesta.
+        // Cuando Aurora reporte, no hay que tocar nada más que el juego.
+        'aurora' => ['nombre' => 'Aurora de Cristal', 'tema' => 'hielo'],
         'aracnida' => ['nombre' => 'Aventura Arácnida en 3D', 'tema' => 'spidey'],
         // Segundo juego de la temática Spidey, escrito aparte. Convive con el anterior: los
         // dos aparecen en el menú de esa fiesta. Va en `spidey` y NO en `heroes` a propósito
         // —son dos temáticas distintas del admin, aunque compartan el mundo 3D—, y meterlo
         // en `heroes` lo haría aparecer en Misión 3D, que es otra fiesta.
         'impulso' => ['nombre' => 'Impulso Arácnido', 'tema' => 'spidey'],
+        // Tercer juego de spidey: la carrera por sala. Va en `spidey` por lo mismo que
+        // impulso, y comparte tematica con `aracnida`.
+        'circuito' => ['nombre' => 'Circuito Arácnido', 'tema' => 'spidey'],
         'mision' => ['nombre' => 'Misión 3D', 'tema' => 'heroes'],
     ];
 }

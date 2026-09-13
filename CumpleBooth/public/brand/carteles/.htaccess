@@ -1,0 +1,26 @@
+# Carteles y piezas de marca que se DESCARGAN para imprimir o publicar.
+#
+# El CDN de Hostinger reencoda las imagenes: medido el 2026-09-11 sobre esta misma carpeta,
+# `instagram-1-marca-1080x1080.png` —233.891 bytes en disco— se entregaba como WebP de 35.772
+# bytes al escritorio y de 18.186 al navegador de la tablet. Es decir: lo que Luis bajaba para
+# subir a Instagram NO era el PNG de 1080 px, sino una copia achicada y en otro formato. Los
+# PDF llegan intactos, porque el CDN no los toca.
+#
+# `no-transform` le pide al CDN que entregue el archivo tal cual. Es la misma receta que ya
+# frena el problema en `themes/.htaccess`.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(png|jpe?g|webp|gif)$">
+    Header merge Cache-Control "no-transform"
+  </FilesMatch>
+</IfModule>
+
+# Estos archivos cambian cuando cambia el diseno, no cuando cambia una fiesta: se pueden
+# guardar un dia. El admin los enlaza con el nombre exacto, asi que no hay riesgo de mezcla.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(pdf|png|jpe?g)$">
+    Header set Cache-Control "public, max-age=86400, no-transform"
+  </FilesMatch>
+</IfModule>
+
+# Nada que listar aca: el indice es la pestana del admin.
+Options -Indexes

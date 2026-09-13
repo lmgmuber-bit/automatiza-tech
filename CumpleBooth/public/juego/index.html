@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>Juegos de la fiesta · CumpleClick</title>
+<link rel="stylesheet" href="fuentes/baloo2.css">
 <!--
   Menú de los juegos 3D de una fiesta.
 
@@ -255,11 +256,12 @@
     'mision': 'mundo.html',
     'festival': 'festival/',
     'impulso': 'impulso-aracnido/',
-    'circuito': 'circuito/'
+    'circuito': 'circuito/',
+    'aurora': 'aurora/'
   };
   var ICONOS = {
     'reino-hielo': '❄️', 'festival': '✨', 'aracnida': '🕸️', 'mision': '🦸',
-    'impulso': '🕷️', 'circuito': '🏎️'
+    'impulso': '🕷️', 'circuito': '🏎️', 'aurora': '🛷'
   };
   var PIES = {
     'reino-hielo': 'Explora el reino y ayuda a los amigos',
@@ -267,7 +269,8 @@
     'aracnida': 'Salta por las azoteas y rescata a las mascotas',
     'mision': 'Una misión para el equipo',
     'impulso': 'Recorre la ciudad con el equipo, de azotea en azotea',
-    'circuito': 'Corran juntos por la ciudad, cada uno en su celular'
+    'circuito': 'Corran juntos por la ciudad, cada uno en su celular',
+    'aurora': 'Corre en trineo por el reino y junta cristales'
   };
 
   function enlaceJuego(id, jugador) {
@@ -292,8 +295,22 @@
       // tabla se llenara con el nombre del cumpleañero repetido.
       if (jugador) { q += '&jugador=' + encodeURIComponent(jugador); }
     }
+    // Aurora usa `nombre` para el cartel "La fiesta de X · N años", igual que Impulso: es
+    // el nombre de la FIESTA, no el del que juega. Mandarle el del jugador haría decir "La
+    // fiesta de Sofía" en el cumpleaños de Samantha. No recibe `jugador` porque todavía no
+    // anota puntajes; el día que lo haga se agrega acá, no en el juego.
+    // El Festival usa `nombre` igual que Impulso: es la cumpleañera. Lo pinta en "X · N
+    // años", en "Celebramos a X" y lo dice en voz alta al empezar, así que con el nombre de
+    // quien juega saludaba "¡Feliz cumpleaños, Gabriela!" en el cumpleaños de Samantha
+    // (Luis, 2026-09-11). La línea que intentaba esto nunca se ejecutaba: la rama del
+    // jugador iba antes y el menú siempre pide un jugador.
+    else if (id === 'aurora' || id === 'festival') {
+      q += '&nombre=' + encodeURIComponent(fiestaNombre || '');
+      // Y quien juega, aparte: el Festival lo saluda por su nombre y le da el primer turno,
+      // que es el que se anota en la tabla. Aurora todavía no anota, por eso no lo recibe.
+      if (id === 'festival' && jugador) { q += '&jugador=' + encodeURIComponent(jugador); }
+    }
     else if (jugador) { q += '&nombre=' + encodeURIComponent(jugador); }
-    else if (id === 'festival') { q += '&nombre=' + encodeURIComponent(fiestaNombre || ''); }
     if (fiestaEdad) { q += '&edad=' + encodeURIComponent(fiestaEdad); }
     if (enKiosco) { q += '&kiosco=1'; }
     // De vuelta al menú, no al kiosco: desde acá el niño puede querer el otro juego.

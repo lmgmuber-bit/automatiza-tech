@@ -152,6 +152,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'guard
 
 $escribible = is_file($ruta) ? is_writable($ruta) : is_writable(dirname($ruta));
 $logo = '../brand/cumpleclick-mark.svg';
+
+// ── Los carteles de la marca ────────────────────────────────────────────────
+// Archivos estáticos en `brand/carteles/`: se diseñan una vez y se suben, no se generan en
+// el servidor. El PDF es A4 a 300 ppp y es el que se manda a imprimir; el PNG pesa la cuarta
+// parte y sirve para mandarlo por WhatsApp.
+$CARTELES_DIR = __DIR__ . '/../brand/carteles/';
+$CARTELES_URL = '../brand/carteles/';
+$CARTELES = [
+    ['base' => 'cartel-servicios-A4', 'titulo' => 'Qué hacemos y cuánto vale',
+     'texto' => 'Las cuatro etapas del servicio, los tres planes con su precio de lanzamiento y los tres códigos QR.',
+     'imprimible' => true],
+    ['base' => 'cartel-tematicas-A4', 'titulo' => 'Elige tu mundo',
+     'texto' => 'Las temáticas con su imagen real, separadas entre cumpleaños y baby shower.',
+     'imprimible' => true],
+    ['base' => 'aviso-qr-whatsapp-A4', 'titulo' => 'Aviso · WhatsApp',
+     'texto' => 'Una hoja con un solo código grande que abre el chat. Sin el número escrito, a propósito.',
+     'imprimible' => true],
+    ['base' => 'aviso-qr-instagram-A4', 'titulo' => 'Aviso · Instagram',
+     'texto' => 'Una hoja con un solo código grande que lleva al perfil.',
+     'imprimible' => true],
+    ['base' => 'instagram-avatar-1080x1080', 'titulo' => 'Instagram · foto de perfil',
+     'texto' => 'Solo el globo, sin el nombre: a tamaño de avatar el nombre no se lee. Instagram la recorta en círculo.',
+     'imprimible' => false],
+    ['base' => 'instagram-1-marca-1080x1080', 'titulo' => 'Instagram · la marca',
+     'texto' => 'Cuadrada, 1080 × 1080.', 'imprimible' => false],
+    ['base' => 'instagram-2-como-funciona-1080x1350', 'titulo' => 'Instagram · cómo funciona',
+     'texto' => 'Vertical, 1080 × 1350.', 'imprimible' => false],
+    ['base' => 'instagram-3-planes-1080x1350', 'titulo' => 'Instagram · los planes',
+     'texto' => 'Vertical, 1080 × 1350.', 'imprimible' => false],
+    // El carrusel va en este orden: Instagram sube las imágenes en el orden en que se eligen.
+    ['base' => 'instagram-carrusel-1-portada', 'titulo' => 'Carrusel 1 · portada',
+     'texto' => 'La que se ve en el feed. Tiene que dar ganas de deslizar.', 'imprimible' => false],
+    ['base' => 'instagram-carrusel-2-invitacion', 'titulo' => 'Carrusel 2 · la invitación',
+     'texto' => 'Paso 1 de 4 del servicio.', 'imprimible' => false],
+    ['base' => 'instagram-carrusel-3-cabina', 'titulo' => 'Carrusel 3 · la cabina',
+     'texto' => 'Paso 2 de 4.', 'imprimible' => false],
+    ['base' => 'instagram-carrusel-4-juegos', 'titulo' => 'Carrusel 4 · los juegos',
+     'texto' => 'Paso 3 de 4.', 'imprimible' => false],
+    ['base' => 'instagram-carrusel-5-album', 'titulo' => 'Carrusel 5 · el álbum',
+     'texto' => 'Paso 4 de 4.', 'imprimible' => false],
+    ['base' => 'instagram-carrusel-6-tematicas', 'titulo' => 'Carrusel 6 · las temáticas',
+     'texto' => 'Con la imagen real de cada mundo.', 'imprimible' => false],
+    ['base' => 'instagram-carrusel-7-cierre', 'titulo' => 'Carrusel 7 · precios y cierre',
+     'texto' => 'Los tres planes y el llamado a WhatsApp.', 'imprimible' => false],
+];
+
+/** Tamaño legible de un archivo, o null si no está subido. */
+function cartel_peso(string $ruta): ?string
+{
+    if (!is_file($ruta)) {
+        return null;
+    }
+    $b = (int) filesize($ruta);
+    return $b >= 1048576 ? number_format($b / 1048576, 1, ',', '.') . ' MB'
+                         : number_format(max(1, (int) round($b / 1024)), 0, ',', '.') . ' kB';
+}
 ?><!DOCTYPE html>
 <html lang="es">
 <head>
@@ -174,6 +230,18 @@ $logo = '../brand/cumpleclick-mark.svg';
 .marca-previa .lema { margin: 0; opacity: .85; font-size: .9rem; }
 .marca-previa .datos { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: center;
   font-weight: 700; font-size: .86rem; }
+/* Los carteles. La miniatura manda: lo que se baja es una imagen, así que la tarjeta
+   muestra la imagen y no un nombre de archivo. */
+.carteles { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.cartel { display: flex; flex-direction: column; gap: 10px; padding: 14px;
+  border: 1px solid var(--border, #d7e2ee); border-radius: 14px; background: #fff; }
+.cartel img { width: 100%; height: auto; display: block; border-radius: 8px;
+  border: 1px solid #e6edf5; background: #f6f9fc; }
+.cartel h3 { margin: 0; font-size: 1rem; }
+.cartel p { margin: 0; font-size: .84rem; color: var(--text-muted); flex: 1; }
+.cartel .acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.cartel .acciones .btn { font-size: .82rem; padding: 7px 12px; }
+.cartel .falta { font-size: .82rem; font-weight: 700; color: #b3261e; }
 </style>
 </head>
 <body>
@@ -256,6 +324,46 @@ $logo = '../brand/cumpleclick-mark.svg';
       </p>
     </section>
   </form>
+
+  <section class="card">
+    <h2>Carteles para imprimir y publicar</h2>
+    <p class="muted">
+      Llevan el logo y los colores de la marca, y los códigos QR van al WhatsApp, al
+      Instagram y al sitio. El <b>PDF es A4 a 300 ppp</b>: es el que se manda a imprimir.
+      El PNG pesa la cuarta parte y sirve para mandarlo por WhatsApp o subirlo a Instagram.
+      Los precios son los de <a href="planes.php">Planes</a>; si cambian ahí, estos carteles
+      hay que volver a generarlos.
+    </p>
+    <div class="carteles">
+      <?php foreach ($CARTELES as $c): ?>
+        <?php
+          $previa = $CARTELES_DIR . $c['base'] . '-previa.jpg';
+          $pdf    = $CARTELES_DIR . $c['base'] . '.pdf';
+          $png    = $CARTELES_DIR . $c['base'] . ($c['imprimible'] ? '-web.png' : '.png');
+          $pesoPdf = $c['imprimible'] ? cartel_peso($pdf) : null;
+          $pesoPng = cartel_peso($png);
+        ?>
+        <article class="cartel">
+          <?php if (is_file($previa)): ?>
+            <img src="<?= h($CARTELES_URL . $c['base']) ?>-previa.jpg" alt="<?= h($c['titulo']) ?>" loading="lazy">
+          <?php endif; ?>
+          <h3><?= h($c['titulo']) ?></h3>
+          <p><?= h($c['texto']) ?></p>
+          <div class="acciones">
+            <?php if ($c['imprimible'] && $pesoPdf !== null): ?>
+              <a class="btn btn-cta" download href="<?= h($CARTELES_URL . $c['base']) ?>.pdf">PDF · <?= h($pesoPdf) ?></a>
+            <?php endif; ?>
+            <?php if ($pesoPng !== null): ?>
+              <a class="btn btn-ghost" download href="<?= h($CARTELES_URL . $c['base']) ?><?= $c['imprimible'] ? '-web' : '' ?>.png">PNG · <?= h($pesoPng) ?></a>
+            <?php endif; ?>
+            <?php if ($pesoPng === null && ($pesoPdf === null)): ?>
+              <span class="falta">Falta subir este archivo a <code>brand/carteles/</code>.</span>
+            <?php endif; ?>
+          </div>
+        </article>
+      <?php endforeach; ?>
+    </div>
+  </section>
 
 </main>
 </body>

@@ -1,0 +1,12 @@
+# Tipografía compartida por los juegos. Los nombres son estables y el contenido no cambia,
+# así que se guardan un mes; el CSS se revalida por si cambian los pesos.
+AddType font/woff2 .woff2
+Options -Indexes
+<IfModule mod_headers.c>
+  <FilesMatch "\.woff2$">
+    Header always set Cache-Control "public, max-age=2592000"
+  </FilesMatch>
+  <FilesMatch "\.css$">
+    Header always set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>

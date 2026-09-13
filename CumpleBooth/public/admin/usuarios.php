@@ -248,7 +248,7 @@ usort($fiestasOrden, static function ($a, $b) use ($parties) {
       <div class="alert alert-error">Los usuarios necesitan la base de datos con la migración <code>023_admin_users</code> aplicada. Mientras tanto se entra solo con la clave maestra.</div>
     <?php endif; ?>
     <?php if ($yo['id'] === 0 && $listo): ?>
-      <p class="alert alert-ok">Entraste con la clave maestra. Para entrar con tu correo, créate abajo un usuario con rol <strong>Superadministrador</strong>: te llega la contraseña temporal y la cambias al entrar.</p>
+      <p class="alert alert-ok"><span>Entraste con la clave maestra. Para entrar con tu correo, créate abajo un usuario con rol <strong>Superadministrador</strong>: te llega la contraseña temporal y la cambias al entrar.</span></p>
     <?php endif; ?>
 
     <section class="card">

@@ -90,7 +90,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <form method="post" action="maestro.php" class="login-form">
       <input type="hidden" name="csrf" value="<?= h(maestro_csrf()) ?>">
       <label for="password">Contraseña</label>
-      <input type="password" id="password" name="password" required autofocus autocomplete="current-password" placeholder="••••••••">
+      <div class="input-icon">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <input type="password" id="password" name="password" required autofocus autocomplete="current-password" placeholder="••••••••">
+      </div>
       <button type="submit" class="btn btn-cta btn-block">Ingresar</button>
       <p class="muted small" style="margin-top:12px;text-align:center"><a href="recuperar.php">Olvidé la contraseña</a> · <a href="login.php">Entrar con mi correo</a></p>
     </form>

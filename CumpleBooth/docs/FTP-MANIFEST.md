@@ -21,6 +21,43 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## DESPLEGADO 2026-09-12 (tarde) — copia en la tablet, y lo que quedó abierto
+
+**En PROD y verificado desde afuera (15:23):** `assets/main-SnNR4OCg.js` e `index.html`.
+Asómate y la foto grupal bajan la foto a la tablet **antes** de subirla, como ya hacía la
+cabina (`guardarEnLaTablet` en `App.jsx`). Comprobado en PROD con la fiesta `samantha-hielo`,
+cámara falsa y `fetch` de `upload.php` rechazando: se disparó `grupal-Samantha-<sello>.jpg`,
+464 KB, y quedó el botón de reintentar. Respaldo:
+`~/respaldos/index.html.antes-respaldo-tablet-20260912-1523`.
+
+**Generadores guardados en el repositorio:** `CumpleBooth/design/generadores/` (carteles de
+marca, piezas de Instagram, marco de la foto grupal y Anna de gala). Hasta hoy vivían solo en
+una carpeta temporal de sesión. Cómo correrlos, en el `README.md` de esa carpeta.
+
+### Hallazgos que NO se arreglaron (decisión de Luis pendiente)
+
+- 🔴 **61 respaldos `.bak` públicos en `app/`**, 22 de ellos en `admin/`, servidos como
+  `text/plain` sin sesión. `admin/config.php.bak-20260907b` define `ADMIN_PASSWORD_HASH` y se
+  abre desde cualquier navegador. Propuesta: bloquearlos por `.htaccess` sin borrar nada, y
+  después decidir el borrado.
+- **Los carteles de marca corregidos no están subidos.** La hoja de servicios pasó a seis
+  tarjetas (entran Asómate, con sus dos temáticas nombradas, y la foto de todos) y las hojas 1
+  y 2 perdieron el bloque de WhatsApp con el número impreso. **En PROD el admin todavía entrega
+  las hojas viejas con el número.** Las medidas de acrílico (146 × 206, A5, A6, 13 × 18 y A4)
+  existen solo en local.
+- **El PIN de la galería se bloquea con muchos papás en el mismo wifi** y **reintentar una
+  subida duplica la foto.** Detalle en `PENDIENTES-DE-PRUEBA.md` §9.
+- **El Plan Premium dice "Los 4 juegos, con El Show 3D"** y El Show 3D no está entre los
+  juegos desplegados: PROD ofrece 3 en hielo y 3 en spidey (contado en `puntajes.php` el
+  2026-09-12).
+
+### Medido y descartado
+
+Los videos de bienvenida de hielo y spidey y `entrada-palacio-hielo.mp4` tienen el índice
+`moov` al final. **No es un defecto:** el servidor responde 206 a pedidos de rango y el
+navegador pide el final aparte. Medido desde afuera: 1,9 s con dos pedidos contra 1,8 s
+bajando el archivo entero, y Luis los probó en las dos tablets.
+
 ## DESPLEGADO 2026-09-12 — foto grupal, pantalla completa, Anna de gala
 
 Todo esto **está en PROD** (`cumpleclick.com/app/`), verificado desde afuera.

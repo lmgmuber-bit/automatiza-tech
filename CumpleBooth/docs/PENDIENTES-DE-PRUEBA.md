@@ -4,7 +4,7 @@ Lo que está **en producción pero nadie ha visto funcionando de verdad**. Todo 
 verificación técnica (md5, `php -l`, HTTP, mediciones), pero eso comprueba el mecanismo, no el
 resultado con gente y hardware real.
 
-Última actualización: **2026-09-09**. Las fiestas reales son el **domingo 13 de septiembre de
+Última actualización: **2026-09-12**. Las fiestas reales son el **domingo 13 de septiembre de
 2026**: `luciano-spidey` y `samantha-hielo`.
 
 Cuando algo se pruebe, márcalo y anota qué falló, no solo que "funcionó".
@@ -22,6 +22,19 @@ flujo con cámara nunca se ha ejecutado**, en ninguna de las dos tablets (Tab A7
       que cambiar los valores por defecto, no pedirle al niño que apunte mejor.
 - [ ] Que el QR de la foto se pueda escanear y descargar desde otro teléfono.
 - [ ] Aventura 3D y el menú de juegos, en las dos tablets.
+- [ ] **La foto grupal completa (2026-09-12).** Luis vio en las dos tablets el ícono de abajo a
+      la izquierda; falta el flujo entero: tablet acostada, el marco, guardar y verla en la
+      pestaña "La foto de todos" de la galería. Probada con cámara falsa en las dos temáticas y
+      en PROD, nunca con una cámara de verdad.
+- [ ] **La pantalla completa del kiosco (2026-09-12).** El ícono de arriba a la izquierda entra
+      y sale, y el toque de "Toca para entrar" también entra. Probada en un Chromium de
+      escritorio; el panel del navegador de trabajo la bloquea.
+- [ ] **Sacar una foto dentro del juego de Spidey (2026-09-12).** Moría con
+      "T.foto.firmaJugador is not a function" y se corrigió; se comprobó leyendo en PROD los
+      textos ya mezclados, no sacando la foto en una partida.
+- [ ] **Anna de gala en el Reino de Hielo 3D y en el Festival (2026-09-12).** Textura
+      repintada con malla, esqueleto y baile idénticos. Vista en un mirador de escritorio, no
+      en la tablet.
 
 ## 2. Asómate — lo que solo se vio con una cara dibujada
 
@@ -176,6 +189,24 @@ en tablet. Detalle en `AURORA-INTEGRACION-CLAUDE.md`; lo de Codex, en `AURORA-QA
       nuestro código sano. Si pasa el domingo: esperar un minuto y reintentar; el kiosco ya
       abierto sigue andando (las fotos se componen en la tablet), lo que falla es guardar,
       subir y entrar a las salas de los juegos. Tener a mano el soporte de Hostinger.
+- [ ] **La copia de la foto en la tablet, en una tablet de verdad (2026-09-12).** Desde ese día
+      los tres caminos (cabina, Asómate y foto grupal) bajan la foto a la tablet **antes** de
+      subirla. Se probó con cámara falsa y la subida caída, en local y en PROD; nunca en una Tab
+      A7. Con la primera foto de cada fiesta, abrir **Descargas** y comprobar que el archivo está:
+      el código dispara la descarga y **no comprueba que haya ocurrido**, y la pantalla del QR
+      afirma "La descarga local está segura" igual.
+- [ ] **La galería con muchos papás en el mismo wifi.** El límite del PIN es 5 intentos por
+      minuto **por IP** y cuenta también los aciertos: los teléfonos del wifi del salón comparten
+      una IP y el sexto ve "Demasiados intentos" con el PIN correcto. Leído en el código, no
+      visto. Mientras no se arregle: datos móviles y por tandas.
+- [ ] **Reintentar una subida fallida una sola vez.** `upload.php` no reconoce la misma foto dos
+      veces: cada reintento crea otra copia y gasta otro de los 200 cupos de la fiesta.
+- [ ] **No recargar el kiosco sin red.** No hay service worker: una recarga con la red caída deja
+      la tablet sin kiosco. Mientras la pestaña siga abierta, cámara y composición funcionan.
+
+El respaldo completo —cola de fotos en la tablet que se vacía sola, rechazo de duplicados en el
+servidor, pantallas que digan la verdad y arranque sin red— está diseñado y **no construido**:
+unas tres sesiones.
 
 ## 10. Las demás temáticas — DESPUÉS del 13 de septiembre
 

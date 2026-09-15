@@ -26,6 +26,12 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* El navegador esconde `hidden` con la prioridad más baja que existe, y cualquier
+   `.panel{display:flex}` le gana. Sin esta regla el panel "¡Gracias!" se veía desde
+   el principio, debajo del formulario, y en las fiestas del 13-sep los invitados
+   creyeron haber enviado sus fotos sin haber tocado "Enviar". */
+[hidden] { display: none !important; }
+
 html, body { margin: 0; padding: 0; }
 
 body {

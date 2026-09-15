@@ -13,8 +13,14 @@
  * Vista principal: la LISTA DE INVITADOS; cada uno despliega su recuerdo y su
  * foto con personaje. Una segunda vista ("Todas") muestra las dos pestañas
  * planas. La selección es una sola y se conserva entre vistas y pestañas.
- * Con lo seleccionado: imprimir (una foto por hoja, N copias, pensado para la
- * Selphy/AirPrint desde la tablet) o descargar un ZIP.
+ * Con lo seleccionado: descargar un ZIP. Imprimir (una foto por hoja, N copias,
+ * pensado para la Selphy/AirPrint desde la tablet) quedó SOLO para la sesión de admin
+ * (2026-09-15): un invitado no imprime desde su celular, y el botón lo confundía.
+ *
+ * Desde el 2026-09-15 la galería también muestra lo que subieron los invitados por el
+ * Álbum Recuerdo (pestaña "De los invitados"), cada foto o video con el nombre y el
+ * mensaje de quien lo mandó. Se ve lo pendiente y lo aprobado; lo que el organizador
+ * escondió o borró en el admin, no. ver-media.php deja pasar a la sesión de galería.
  *
  * Acceso: PIN de 4 dígitos con hash, sesión corta y rate limit persistente.
  * Además una sesión de admin válida entra sin PIN: el organizador que imprime
@@ -194,6 +200,40 @@ if ($authenticated) {
     }
 }
 
+// Lo que subieron los invitados por el Álbum Recuerdo, con su nombre y su mensaje.
+$aportes = [];
+if ($authenticated && cb_album_feature_ready()) {
+    $partyId = cb_party_db_id($slug);
+    $album = $partyId !== null ? cb_album_find_by_party($partyId) : null;
+    if ($album !== null) {
+        foreach (cb_album_list_media((int) $album['id'], ['pending', 'approved']) as $row) {
+            if ((string) $row['source'] === 'booth') { continue; } // las de cabina ya están arriba
+            $token = (string) ($row['access_token'] ?? '');
+            $path = cb_album_media_path((string) ($row['storage_key'] ?? ''));
+            if ($token === '' || $path === null || !is_file($path)) { continue; }
+            $view = 'ver-media.php?t=' . rawurlencode($token);
+            $esVideo = (string) $row['media_kind'] === 'video';
+            $autor = trim((string) ($row['contributor_name'] ?? ''));
+            $ext = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
+            $aportes[] = [
+                'id' => 'aporte:' . (int) $row['id'],
+                'name' => 'invitado-' . (int) $row['id'] . ($autor !== '' ? '-' . $autor : '') . '.' . $ext,
+                'label' => $autor,
+                'norm' => '',
+                'kind' => 'invitado',
+                'path' => $path,
+                'view' => $view,
+                // Un video sin póster no tiene miniatura: la tarjeta dibuja un cuadro con ▶.
+                'thumb' => $esVideo ? (!empty($row['poster_storage_key']) ? $view . '&v=poster' : '') : $view . '&v=thumb',
+                'full' => $view,
+                'video' => $esVideo,
+                'mensaje' => trim((string) ($row['contributor_message'] ?? '')),
+            ];
+        }
+    }
+}
+$descargables = array_merge($photos, $aportes);
+
 // ZIP: todas, o solo las seleccionadas (`sel[]` trae los ids de la grilla).
 if ($authenticated && isset($_GET['zip']) && class_exists('ZipArchive')) {
     $wanted = null;
@@ -201,7 +241,7 @@ if ($authenticated && isset($_GET['zip']) && class_exists('ZipArchive')) {
         $wanted = [];
         foreach ($_GET['sel'] as $id) { $wanted[(string) $id] = true; }
     }
-    $chosen = $wanted === null ? $photos : array_values(array_filter($photos, static fn ($ph) => isset($wanted[$ph['id']])));
+    $chosen = $wanted === null ? $descargables : array_values(array_filter($descargables, static fn ($ph) => isset($wanted[$ph['id']])));
     if (!$chosen) { gallery_message(400, 'Nada que descargar', 'Selecciona al menos una foto.'); }
     $tmp = tempnam(sys_get_temp_dir(), 'cczip_');
     $zip = new ZipArchive();
@@ -323,6 +363,11 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
 .foto .check{position:absolute;top:14px;left:14px;width:30px;height:30px;border-radius:50%;background:#fffd;border:2px solid #0003;display:grid;place-items:center;font-size:18px;color:#fff}
 .foto.sel .check{background:<?= gallery_h($accent) ?>;border-color:#fff}
 .foto .ver{position:absolute;top:14px;right:14px;min-height:30px;padding:4px 10px;border-radius:999px;background:#000a;color:#fff;font-size:.8rem;font-weight:800;text-decoration:none}
+.grid-aportes{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+.foto-aporte img,.foto-aporte .sin-poster{aspect-ratio:4/5}
+.foto-aporte .sin-poster{display:grid;place-items:center;border-radius:10px;background:#222;color:#fff;font-size:2rem}
+.foto-aporte .play{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:50%;background:#000a;color:#fff;display:grid;place-items:center;font-size:20px;pointer-events:none}
+.foto .mensaje{margin:4px 0 0;font-size:.82rem;font-weight:500;line-height:1.3;color:#444;white-space:normal;overflow-wrap:anywhere}
 .barra{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#111c;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid #ffffff22}
 .barra-in{width:min(1180px,100%);margin:auto;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
 .barra .cuenta{font-weight:800;min-width:9ch}
@@ -349,18 +394,19 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
 <section class="card"><p>Ingresa el PIN de 4 dígitos entregado por el organizador.</p><?php if ($error): ?><p class="error"><?= gallery_h($error) ?></p><?php endif; ?><form method="post"><input type="hidden" name="csrf" value="<?= gallery_h(gallery_csrf()) ?>"><input type="hidden" name="action" value="login"><input class="pin" type="password" name="pin" inputmode="numeric" pattern="\d{4}" maxlength="4" required autocomplete="one-time-code"><p><button class="btn" type="submit">Ver fotos</button></p></form></section>
 <?php else: ?>
 <div class="toolbar">
-  <?php if ($photos && class_exists('ZipArchive')): ?><a class="btn btn-ghost" href="<?= gallery_h($zipAll) ?>">Descargar todas (<?= count($photos) ?>)</a><?php endif; ?>
+  <?php if ($descargables && class_exists('ZipArchive')): ?><a class="btn btn-ghost" href="<?= gallery_h($zipAll) ?>">Descargar todas (<?= count($descargables) ?>)</a><?php endif; ?>
   <?php if (!$isAdmin): ?><form method="post"><input type="hidden" name="csrf" value="<?= gallery_h(gallery_csrf()) ?>"><input type="hidden" name="action" value="logout"><button class="btn btn-ghost" type="submit">Cerrar galería</button></form>
   <?php else: ?><a class="btn btn-ghost" href="admin/index.php">Volver al admin</a><?php endif; ?>
 </div>
-<?php if (!$photos): ?><p class="muted">Todavía no hay fotos. Cuando el kiosco suba la primera, aparece acá.</p><?php else: ?>
+<?php if (!$descargables): ?><p class="muted">Todavía no hay fotos. Cuando el kiosco suba la primera, o un invitado mande la suya, aparece acá.</p><?php else: ?>
 <div class="tabs" role="tablist" aria-label="Vista">
   <button class="tab" role="tab" type="button" id="tab-invitados" aria-selected="true" aria-controls="panel-invitados" data-vista="invitados">👥 Por invitado<b><?= (int) $conFotos ?></b></button>
   <button class="tab" role="tab" type="button" id="tab-recuerdo" aria-selected="false" aria-controls="panel-recuerdo" data-vista="recuerdo">🎓 <?= gallery_h($tituloRecuerdos) ?><b><?= count($recuerdos) ?></b></button>
   <button class="tab" role="tab" type="button" id="tab-personaje" aria-selected="false" aria-controls="panel-personaje" data-vista="personaje">🎭 Con personaje<b><?= count($personajes) ?></b></button>
   <?php if ($grupales): ?><button class="tab" role="tab" type="button" id="tab-grupal" aria-selected="false" aria-controls="panel-grupal" data-vista="grupal">📸 La foto de todos<b><?= count($grupales) ?></b></button><?php endif; ?>
+  <?php if ($aportes): ?><button class="tab" role="tab" type="button" id="tab-invitado" aria-selected="false" aria-controls="panel-invitado" data-vista="invitado">💌 De los invitados<b><?= count($aportes) ?></b></button><?php endif; ?>
 </div>
-<p class="muted" style="margin:0 0 .8rem">Toca una foto para seleccionarla. Abajo puedes imprimir o descargar las elegidas.</p>
+<p class="muted" style="margin:0 0 .8rem">Toca una foto para seleccionarla. Abajo puedes <?= $isAdmin ? 'imprimir o ' : '' ?>descargar las elegidas.</p>
 
 <section class="panel" id="panel-invitados" role="tabpanel" aria-labelledby="tab-invitados">
   <input class="buscar" id="buscar" type="search" placeholder="Buscar invitado…" autocomplete="off" aria-label="Buscar invitado">
@@ -426,15 +472,35 @@ $vacio = ['recuerdo' => mb_strtolower($tituloRecuerdos, 'UTF-8'), 'personaje' =>
   <?php endif; ?>
 </section>
 <?php endforeach; ?>
+<?php if ($aportes): ?>
+<section class="panel" id="panel-invitado" role="tabpanel" aria-labelledby="tab-invitado" hidden>
+  <p class="muted" style="margin:0 0 .8rem">Lo que mandaron los invitados por el Álbum Recuerdo, con su mensaje.</p>
+  <div class="acciones" style="display:flex;gap:8px;justify-content:center;margin:0 0 10px"><button class="btn btn-ghost btn-mini" type="button" data-elegir-vista="invitado">Elegir todas las de esta pestaña</button></div>
+  <div class="grid grid-aportes">
+    <?php foreach ($aportes as $ap): ?>
+    <?php $quien = $ap['label'] !== '' ? $ap['label'] : 'Invitado'; ?>
+    <figure class="foto foto-aporte" tabindex="0" role="checkbox" aria-checked="false" data-id="<?= gallery_h($ap['id']) ?>" data-full="<?= gallery_h($ap['full']) ?>" data-kind="invitado">
+      <?php if ($ap['thumb'] !== ''): ?><img src="<?= gallery_h($ap['thumb']) ?>" alt="<?= gallery_h($quien) ?>" loading="lazy" decoding="async"><?php else: ?><div class="sin-poster" aria-hidden="true">🎬</div><?php endif; ?>
+      <?php if ($ap['video']): ?><span class="play" aria-hidden="true">▶</span><?php endif; ?>
+      <span class="check" aria-hidden="true">✓</span>
+      <a class="ver" href="<?= gallery_h($ap['view']) ?>" target="_blank" rel="noopener" data-ver>Ver</a>
+      <figcaption class="nombre">💌 <?= gallery_h($quien) ?></figcaption>
+      <?php if ($ap['mensaje'] !== ''): ?><p class="mensaje"><?= gallery_h($ap['mensaje']) ?></p><?php endif; ?>
+    </figure>
+    <?php endforeach; ?>
+  </div>
+</section>
+<?php endif; ?>
 <?php endif; ?>
 <?php endif; ?>
 <p class="pie"><img src="brand/cumpleclick-mark.svg" alt="" width="24" height="24">CumpleClick</p>
 </main>
-<?php if ($authenticated && $photos): ?>
+<?php if ($authenticated && $descargables): ?>
 <div class="barra" id="barra">
   <div class="barra-in">
     <span class="cuenta" id="cuenta">0 seleccionadas</span>
     <button class="btn btn-ghost" type="button" id="sel-ninguna">Ninguna</button>
+    <?php if ($isAdmin): ?>
     <label class="opciones">Copias <select id="copias"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
     <label class="opciones">Papel <select id="formato">
       <option value="100mm 148mm" selected>10×15 cm (Selphy)</option>
@@ -444,11 +510,14 @@ $vacio = ['recuerdo' => mb_strtolower($tituloRecuerdos, 'UTF-8'), 'personaje' =>
     </select></label>
     <label class="opciones"><input type="checkbox" id="llenar" checked> Llenar la hoja (recorta un poco arriba/abajo)</label>
     <button class="btn" type="button" id="imprimir" disabled>🖨️ Imprimir</button>
-    <?php if (class_exists('ZipArchive')): ?><button class="btn btn-ghost" type="button" id="descargar" disabled>⬇️ Descargar ZIP</button><?php endif; ?>
+    <?php endif; ?>
+    <?php if (class_exists('ZipArchive')): ?><button class="btn<?= $isAdmin ? ' btn-ghost' : '' ?>" type="button" id="descargar" disabled>⬇️ Descargar ZIP</button><?php endif; ?>
   </div>
 </div>
+<?php if ($isAdmin): ?>
 <div id="hoja" aria-hidden="true"></div>
 <div id="aviso">Preparando la impresión…</div>
+<?php endif; ?>
 <script>
 (function () {
   'use strict';
@@ -464,7 +533,7 @@ $vacio = ['recuerdo' => mb_strtolower($tituloRecuerdos, 'UTF-8'), 'personaje' =>
   function refresh() {
     var n = Object.keys(sel).length;
     cuenta.textContent = n === 1 ? '1 seleccionada' : n + ' seleccionadas';
-    btnImprimir.disabled = n === 0;
+    if (btnImprimir) { btnImprimir.disabled = n === 0; }
     if (btnDescargar) { btnDescargar.disabled = n === 0; }
   }
   function setSel(id, full, on) {
@@ -557,7 +626,7 @@ $vacio = ['recuerdo' => mb_strtolower($tituloRecuerdos, 'UTF-8'), 'personaje' =>
    * window.print(). Sin la espera, la primera hoja salía en blanco en la
    * tablet porque el diálogo se abre antes de que la imagen exista.
    */
-  btnImprimir.addEventListener('click', function () {
+  if (btnImprimir) btnImprimir.addEventListener('click', function () {
     var ids = Object.keys(sel);
     if (!ids.length) { return; }
     var copias = parseInt(document.getElementById('copias').value, 10) || 1;
@@ -594,13 +663,14 @@ $vacio = ['recuerdo' => mb_strtolower($tituloRecuerdos, 'UTF-8'), 'personaje' =>
       window.print();
     });
   });
-  window.addEventListener('afterprint', function () { hoja.innerHTML = ''; });
+  window.addEventListener('afterprint', function () { if (hoja) { hoja.innerHTML = ''; } });
 
   // El papel elegido se recuerda en la tablet: en la fiesta se imprime muchas
   // veces seguidas y no hay que volver a elegirlo.
   try {
     var guardado = localStorage.getItem('cc-galeria-papel');
-    if (guardado) { document.getElementById('formato').value = guardado; }
+    var selFormato = document.getElementById('formato');
+    if (guardado && selFormato) { selFormato.value = guardado; }
   } catch (e) { /* sin almacenamiento */ }
 
   refresh();

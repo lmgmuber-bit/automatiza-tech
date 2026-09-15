@@ -3318,7 +3318,7 @@ migración ya estaba aplicada, el archivo no se ejecuta). Respaldo `~/respaldos/
 **Cotejo final:** PROD igual a `main` y a los repos de los juegos, salvo tres archivos que difieren
 solo en fines de línea. Detalle en `MAPA-PROD-Y-REPOSITORIOS.md` (sección 2026-09-15).
 
-## LOCAL, pendiente de subir — 2026-09-15 (tarde) — subir.php: el "¡Gracias!" se veía sin haber enviado nada
+## DESPLEGADO 2026-09-15 (tarde) en cumpleclick.com/app — subir.php: el "¡Gracias!" se veía sin haber enviado nada
 
 **Qué pasó en las fiestas del 13-sep.** La página de carga del Álbum Recuerdo (`subir.php`, la del QR
 de "comparte tus recuerdos") mostraba el panel **"¡Gracias! / Enviar más recuerdos" desde que abría**,
@@ -3351,8 +3351,7 @@ traduce, una foto queda en disco con miniatura y fila `guest`/`pending`, repetir
 Cómo se sube (por SSH, con respaldo en `~/respaldos/` y `mv` atómico):
 `python scratchpad/usuarios-admin/subir-login.py 6685f56 CumpleBooth/public/_album-intake.css.php`,
 y después `python scratchpad/album-subir/verificar-http.py despues`, que pide `subir.php` con un token
-inválido (la página de estado incluye el mismo CSS) y busca la regla. **Verificado el 15-sep antes de
-subir: PROD todavía NO lleva la regla.** Rollback: `cp ~/respaldos/domains_cumpleclick.com_public_html_app__album-intake.css.php.antes-<sello> ~/domains/cumpleclick.com/public_html/app/_album-intake.css.php`.
+inválido (la página de estado incluye el mismo CSS) y busca la regla. **Subido el 15-sep por la tarde con autorización de Luis: antes de subir PROD no llevaba la regla; después, las dos páginas de estado (400 y 410) la llevan, verificado desde afuera con User-Agent de tablet.** Rollback: `cp ~/respaldos/domains_cumpleclick.com_public_html_app__album-intake.css.php.antes-<sello> ~/domains/cumpleclick.com/public_html/app/_album-intake.css.php`.
 
-**No probado:** en una tablet o celular real contra PROD (falta subirlo). Los tokens de aporte de las
+**No probado:** en una tablet o celular real contra PROD con un token vigente (la verificación fue sobre las páginas de estado, que llevan el mismo CSS). Los tokens de aporte de las
 dos fiestas siguen activos en la base, así que los QR impresos siguen sirviendo cuando esto suba.

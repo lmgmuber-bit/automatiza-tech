@@ -292,6 +292,11 @@ album_check(strpos(cb_theme_css_vars('hielo'), 'javascript') === false, 'solo se
 // Nada se acepta por su extensión ni por el Content-Type que declaró el
 // navegador: solo por los bytes reales.
 $limits = cb_album_limits();
+// Topes acordados con Luis el 2026-09-15: si alguien los toca sin querer, esto avisa.
+album_check((int) $limits['video_max_bytes'] === 60 * 1024 * 1024, 'un video puede pesar hasta 60 MB');
+album_check((float) $limits['video_max_seconds'] === 60.0, 'un video puede durar hasta 1 minuto');
+album_check((int) $limits['album_max_bytes'] === 5 * 1024 * 1024 * 1024, 'el álbum de una fiesta llega a 5 GB');
+album_check((int) $limits['files_per_submit'] === 10 && (int) $limits['videos_per_submit'] === 2 && (int) $limits['image_max_bytes'] === 12 * 1024 * 1024, 'los demás topes siguen iguales');
 $mkImage = static function (string $format, int $w = 40, int $h = 30) use ($tmp): string {
     $path = $tmp . '/img-' . bin2hex(random_bytes(4)) . '.' . $format;
     $im = imagecreatetruecolor($w, $h);
@@ -351,17 +356,24 @@ album_check(
     'un video sobre el peso máximo se rechaza'
 );
 
-// Video más largo que el tope: se arma uno de 60 s con el mismo generador.
-$mvhdLargo = "\x00\x00\x00\x00" . str_repeat("\x00", 8) . pack('N', 1000) . pack('N', 60000) . str_repeat("\x00", 80);
-$mvhd2 = pack('N', 8 + strlen($mvhdLargo)) . 'mvhd' . $mvhdLargo;
-$moovPayload2 = $mvhd2 . $trak;
-$moov2 = pack('N', 8 + strlen($moovPayload2)) . 'moov' . $moovPayload2;
+// Video más largo que el tope: se arma uno que dura un segundo más que el límite, con el
+// mismo generador. Antes decía 60 s a secas, y cuando el tope subió de 30 s a 60 s el
+// "video largo" dejó de serlo y la prueba se puso en rojo sin que hubiera un bug.
+$mp4DeSegundos = static function (float $segundos) use ($ftyp, $trak): string {
+    $mvhdBody = "\x00\x00\x00\x00" . str_repeat("\x00", 8) . pack('N', 1000) . pack('N', (int) round($segundos * 1000)) . str_repeat("\x00", 80);
+    $mvhd = pack('N', 8 + strlen($mvhdBody)) . 'mvhd' . $mvhdBody;
+    $moovPayload = $mvhd . $trak;
+    return $ftyp . pack('N', 8 + strlen($moovPayload)) . 'moov' . $moovPayload;
+};
 $largo = $tmp . '/largo.mp4';
-file_put_contents($largo, $ftyp . $moov2);
+file_put_contents($largo, $mp4DeSegundos((float) $limits['video_max_seconds'] + 1.0));
 album_check(
     cb_album_validate_upload($largo, 1000, true)['error'] === 'video_too_long',
     'un video más largo que el tope se rechaza'
 );
+$justo = $tmp . '/justo.mp4';
+file_put_contents($justo, $mp4DeSegundos((float) $limits['video_max_seconds']));
+album_check(cb_album_validate_upload($justo, 1000, true)['ok'] === true, 'un video de exactamente el tope pasa');
 
 // Video con resolución sobre el límite: 3840 de ancho.
 $tkhd4kBody = "\x00\x00\x00\x00" . str_repeat("\x00", 72) . pack('N', 3840 << 16) . pack('N', 2160 << 16);

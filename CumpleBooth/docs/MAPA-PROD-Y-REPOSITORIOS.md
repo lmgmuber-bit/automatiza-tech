@@ -137,3 +137,44 @@ de sus prototipos.
   hay que regenerarlos. Integrarlos es una decisión pendiente de Luis.
 - **Migraciones:** la `021` es de Codex. Las dos `014` y las dos `013` son distintas y conviven.
   No hay que renumerarlas.
+
+## Re-cotejo del 2026-09-15 (después de las fiestas): PROD y `main` iguales
+
+Luis pidió dejar todo alineado con PROD tras las dos fiestas del 13-sep. **Primero el respaldo
+completo de PROD** (datos reales de las fiestas): volcado de la base (35 tablas, 183 fotos del
+kiosco, 62 invitados, 52 puntajes, 2 usuarios del admin), `tar.gz` del dominio entero (1889
+archivos, 1,2 GB) y del almacén aparte (498 archivos), en `~/respaldos/cumpleclick-*-20260915-*`,
+con copia local del volcado y del almacén en `C:/Users/luis_/respaldos/cumpleclick/` (fuera de
+todo repositorio: son datos de niños y de clientes). Cómo se hizo: `scratchpad/alinear-0915/`.
+🔴 En el PHP de Hostinger están desactivadas `exec`, `passthru` y `system`: `mysqldump` se lanza
+desde la consola SSH, con las credenciales en un archivo `--defaults-extra-file` 0600 que
+escribe PHP y se borra en la misma línea; la contraseña va entre comillas dobles porque lleva
+caracteres que el archivo de opciones interpretaría.
+
+**Resultado del cotejo** (`cotejo-0915.py`, 1273 archivos de PROD): 1136 iguales a un
+repositorio (kiosco 227 + bundle compilado 538, Reino de Hielo 180, Impulso 65, Festival 60,
+Circuito 37, Aurora 29), 134 fuera por regla (las de siempre) y 3 que difieren **solo en fines de
+línea mixtos** (`impulso-aracnido/vendor/three.core.js` y `three.webgpu.js`, `scripts/retention.php`):
+iguales byte a byte quitando los `CR`. Ningún archivo de código cambió en PROD durante las
+fiestas: solo entraron fotos al almacén.
+
+**Lo que se hizo para cerrar la brecha:**
+- Al repo (rama `claude/admin-usuarios`, commit `fe7f43f`) entraron tres `.htaccess` que vivían
+  solo en PROD (`juego/`, `themes/`, `vendor/mediapipe/`) y los seis archivos de MediaPipe
+  (`public/vendor/mediapipe/`), forzados porque el `.gitignore` de la raíz ignora `.htaccess` y
+  `vendor/`. Son los que evitan tres trampas conocidas (`.mjs` como `text/plain`, CDN que achica
+  imágenes, `.wasm` sin MIME).
+- A PROD subió solo `database/migrations/003_invitations_and_plan.php` con guardas (la migración
+  ya estaba aplicada; respaldo `~/respaldos/003_invitations_and_plan.php.antes-*`). `retention.php`
+  resultó igual salvo fines de línea, así que no se tocó.
+- `main` de `automatiza-tech` recibió `claude/admin-usuarios` (que traía `claude/foto-grupal` y
+  `claude/aurora-grupal`). En la unión, tres conflictos se resolvieron a favor de PROD
+  (`sala.php`, `themes/carreras/fondo-juego-ritmo.jpg`, `FTP-MANIFEST.md`, cuyas cuatro secciones
+  exclusivas de `main` se conservaron al final). `main` suma cuatro herramientas en
+  `CumpleBooth/scripts/` (`build-album-promo`, `higgsfield-mcp`, `qa-album-visual`,
+  `record-album-promo`) que no están en PROD ni hacen falta allá.
+- Los juegos ya estaban iguales: Aurora `main` = PROD desde el 13-sep.
+
+**Estado al cerrar:** cada archivo de código de PROD tiene su fuente en `main` de
+`automatiza-tech` o en el repositorio privado de su juego, y el bundle compilado del kiosco en
+PROD es el de `claude/foto-grupal` (`e3e3959`), reproducible con `npm run build`.

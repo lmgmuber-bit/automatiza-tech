@@ -3259,3 +3259,18 @@ en `Docs/BLUEPRINTS/CUMPLECLICK-ACEPTACION-TERMINOS-Y-FIRMA.md` (repo raíz).
 Verificado local: `tests/backend/acceptance.php` 46 checks, lint 67 archivos,
 paridad public→dist 296 archivos. **No probado en PROD.**
 
+## 2026-09-15 — respaldo completo de PROD y alineación con los repositorios (después de las fiestas)
+
+Antes de tocar nada: **respaldo completo** de PROD con los datos de las fiestas (volcado de la
+base, dominio entero 1,2 GB y almacén aparte) en `~/respaldos/cumpleclick-*-20260915-*`, con copia
+local del volcado y del almacén en `C:/Users/luis_/respaldos/cumpleclick/`. Rollback de datos:
+`zcat cumpleclick-db-20260915-1109.sql.gz | mysql ...`; de archivos: `tar xzf cumpleclick-dominio-20260915-1103.tar.gz`.
+
+**Subido a PROD:** solo `database/migrations/003_invitations_and_plan.php` (versión con guardas; la
+migración ya estaba aplicada, el archivo no se ejecuta). Respaldo `~/respaldos/003_invitations_and_plan.php.antes-20260915-*`.
+
+**Al repositorio, sin tocar PROD:** `public/juego/.htaccess`, `public/themes/.htaccess` y
+`public/vendor/mediapipe/` (seis archivos), copiados byte a byte desde PROD.
+
+**Cotejo final:** PROD igual a `main` y a los repos de los juegos, salvo tres archivos que difieren
+solo en fines de línea. Detalle en `MAPA-PROD-Y-REPOSITORIOS.md` (sección 2026-09-15).

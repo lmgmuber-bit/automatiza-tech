@@ -2,6 +2,8 @@
 
 **EN PROD desde el 2026-09-13 a las 07:05** (commit `4f59f05` de `claude/admin-usuarios`; respaldo
 `~/respaldos/admin-usuarios-antes-20260913-0705.tar.gz`). Detalle del despliegue en `FTP-MANIFEST.md`.
+**Correo de bienvenida verificado en PROD:** Luis creó los usuarios para las fiestas del 13-sep y
+confirmó el 15-sep que todos los correos llegaron.
 
 Luis pidió, la madrugada del día de las dos fiestas, poder **delegar el admin de una fiesta** a una
 persona: crearle un usuario, que le llegue un correo corporativo con una contraseña temporal que

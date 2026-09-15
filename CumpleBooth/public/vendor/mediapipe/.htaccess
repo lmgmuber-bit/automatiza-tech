@@ -1,0 +1,23 @@
+# Detector de caras de Asómate (MediaPipe Tasks Vision, copiado de node_modules).
+#
+# 1) Un archivo que no existe debe dar 404 y no el index.html del kiosco: el
+#    catch-all SPA del .htaccess de la raíz se hereda aquí y serviría HTML con
+#    status 200 donde el navegador espera el módulo WebAssembly.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . - [R=404,L]
+</IfModule>
+
+# 2) El servidor no conoce .wasm ni .tflite (los sirve como text/plain, y la raíz
+#    manda nosniff): sin esto WebAssembly.instantiateStreaming rechaza el módulo.
+AddType application/wasm .wasm
+AddType application/octet-stream .tflite
+
+# 3) Pesan 9 MB y no cambian: se guardan un mes en la tablet.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(wasm|tflite)$">
+    Header always set Cache-Control "public, max-age=2592000"
+  </FilesMatch>
+</IfModule>

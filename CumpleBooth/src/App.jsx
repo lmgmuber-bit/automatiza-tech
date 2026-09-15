@@ -206,6 +206,12 @@ function buildRuntime(party, theme, slug) {
           })),
         }
       : null,
+    // "Foto grupal": el fondo con el marco grande. El backend ya verificó que el archivo
+    // exista y que el recuadro sea válido; acá solo se resuelve la ruta, igual que arriba.
+    // Sin este bloque el botón no aparece y el kiosco se comporta como antes.
+    grupal: theme.grupal?.fondo
+      ? { ...theme.grupal, fondo: ver(BASE + theme.grupal.fondo) }
+      : null,
     // fecha de la fiesta — el api actual NO la expone (ver docs/ARQUITECTURA.md), así
     // que normalmente queda vacía. Se lee de forma defensiva por si algún día se agrega.
     fecha: party.fecha || '',
@@ -512,6 +518,8 @@ function BoothApp() {
   const [personaje, setPersonaje] = useState(null)
   // Modo Asomate: el elenco elegido y una foto por nino, en el mismo orden.
   const [trasInvitados, setTrasInvitados] = useState('spinner')
+  // La foto grupal: una sola captura, sin ajustes ni dueño.
+  const [grupalFoto, setGrupalFoto] = useState(null)
   const [asomateElenco, setAsomateElenco] = useState([])
   const [asomateFotos, setAsomateFotos] = useState([])
   // La escena de Asomate recompuesta para el diploma. Se arma al guardar, con los recursos
@@ -672,6 +680,14 @@ function BoothApp() {
             startMusic()
             setTrasInvitados('spinner')
             go(isBabyShower ? 'prediccion' : 'invitados')
+          }}
+          onGrupal={() => {
+            // Sin lista de invitados y sin detector de caras: la foto es de todos y el
+            // detector son 9 MB para encontrar UNA cara.
+            startMusic()
+            setInvitado('')
+            setGrupalFoto(null)
+            go('grupal-capturar')
           }}
           onAsomate={() => {
             // Empieza a cargar el detector de caras ahora (9 MB, una vez por carga del kiosco).
@@ -850,10 +866,29 @@ function BoothApp() {
           onSave={(compuesta, heroe) => { setResult(compuesta); setAsomateHeroe(heroe); go('qr') }}
         />
       )}
+      {screen === 'grupal-capturar' && (
+        <>
+          <AvisoAcostar />
+          <Capture
+            onCapture={(dataUrl) => {
+              setGrupalFoto(dataUrl)
+              go('grupal-preview')
+            }}
+          />
+        </>
+      )}
+      {screen === 'grupal-preview' && grupalFoto && (
+        <GrupalPreview
+          foto={grupalFoto}
+          onRetry={() => { setGrupalFoto(null); go('grupal-capturar') }}
+          onSave={(compuesta) => { setResult(compuesta); go('qr') }}
+        />
+      )}
       {screen === 'qr' && (
         <QRScreen
           imageDataUrl={result}
           invitado={invitado}
+          archivarComo={grupalFoto ? 'grupal-' + (nombreEvento() || 'fiesta') : null}
           isBabyShower={isBabyShower}
           onDiploma={() => go('diploma')}
           onDone={() => go('farewell')}
@@ -1753,6 +1788,80 @@ function componerAsomate(fondoImg, lista, titulo, opciones = {}) {
   return exportarFoto(c)
 }
 
+/**
+ * La FOTO GRUPAL: una sola foto con todos, dentro del marco grande del fondo `grupal`.
+ *
+ * Por qué no reutiliza el compositor de siempre: ese inscribe un CUADRADO dentro del marco
+ * (`getSquareFrameGeometry`), que es lo correcto para una cara y lo peor posible para un
+ * grupo. Acá el hueco es el rectángulo completo y la foto entra en modo "cubrir": se escala
+ * por el lado que falte y se recorta el sobrante, así el marco nunca queda con franjas
+ * blancas a los costados.
+ *
+ * `frameBox` viene medido al armar el fondo, no estimado después. Esa es la diferencia con
+ * baby-rosas, donde el recuadro se midió a ojo y la foto salió chica y descentrada.
+ */
+function componerGrupal(fondoImg, fotoImg, caja, titulo, opciones = {}) {
+  // El lienzo mide lo que mide el fondo DE VERDAD: el CDN le entrega a Android una copia de
+  // 800 px y con eso todas las medidas relativas caerían en el lugar equivocado.
+  const W = Math.max(1080, fondoImg?.naturalWidth || 1080)
+  const H = fondoImg?.naturalWidth
+    ? Math.round((W * fondoImg.naturalHeight) / fondoImg.naturalWidth)
+    : Math.round((W * 16) / 9)
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const ctx = c.getContext('2d')
+  if (fondoImg) ctx.drawImage(fondoImg, 0, 0, W, H)
+
+  const hueco = {
+    x: Math.round((Number(caja?.x) || 0) * W),
+    y: Math.round((Number(caja?.y) || 0) * H),
+    w: Math.round((Number(caja?.w) || 0) * W),
+    h: Math.round((Number(caja?.h) || 0) * H),
+  }
+
+  if (fotoImg && hueco.w > 0 && hueco.h > 0) {
+    // "Cubrir": se toma del original el rectángulo más grande que tenga la forma del hueco.
+    const k = Math.max(hueco.w / fotoImg.naturalWidth, hueco.h / fotoImg.naturalHeight)
+    const anchoUtil = hueco.w / k
+    const altoUtil = hueco.h / k
+    const sx = (fotoImg.naturalWidth - anchoUtil) / 2
+    // Se recorta más de arriba que de abajo: en una foto de grupo lo que sobra es el techo,
+    // y los pies y el piso son justo lo que no se puede perder.
+    const sy = (fotoImg.naturalHeight - altoUtil) * 0.35
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(hueco.x, hueco.y, hueco.w, hueco.h)
+    ctx.clip()
+    ctx.drawImage(fotoImg, sx, sy, anchoUtil, altoUtil, hueco.x, hueco.y, hueco.w, hueco.h)
+    ctx.restore()
+  }
+
+  if (titulo) {
+    const fs = Math.round(W * 0.05)
+    ctx.font = `800 ${fs}px 'Baloo 2', system-ui, sans-serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    const cy = Math.min(H * 0.94, hueco.y + hueco.h + fs * 1.6)
+    const anchoTexto = Math.min(ctx.measureText(titulo).width, W * 0.84)
+    const pad = W * 0.05
+    const alto = fs * 0.62
+    ctx.save()
+    ctx.fillStyle = 'rgba(255,255,255,.72)'
+    roundRectPath(ctx, W / 2 - anchoTexto / 2 - pad, cy - fs / 2 - alto, anchoTexto + pad * 2, fs + alto * 2, W * 0.045)
+    ctx.fill()
+    ctx.lineWidth = Math.max(2, W * 0.0035)
+    ctx.strokeStyle = 'rgba(255,255,255,.72)'
+    ctx.stroke()
+    ctx.restore()
+    ctx.fillStyle = cssVar('--dark1', '#38244f')
+    ctx.fillText(titulo, W / 2, cy, W * 0.82)
+  }
+
+  if (opciones.marca !== false) drawBrandWatermark(ctx, W, H)
+  return exportarFoto(c)
+}
+
 /** El texto del pie. En grupo saluda a todos; solo, al invitado. */
 function tituloAsomate(invitado, cuantos) {
   const quien = nombreEvento()
@@ -1854,6 +1963,113 @@ function AsomateElegir({ onDone, onCancel }) {
 }
 
 /** Compone, deja ajustar cada cara en su hueco y guarda. */
+/**
+ * "Pon la tablet acostada": el aviso de la foto grupal.
+ *
+ * El marco de la foto grupal es apaisado y la camara de una tablet de pie entrega un cuadro
+ * vertical: al encajarlo sobrevive solo el 31% del alto, medido sobre una foto real de la
+ * fiesta. Acostada, la camara entrega casi la forma del marco y el grupo sale grande.
+ *
+ * Avisa mientras la pantalla este de pie y se va solo al girarla. No bloquea la captura: con
+ * el giro bloqueado —que es lo normal en una tablet de kiosco— bloquear dejaria el modo
+ * inservible en plena fiesta.
+ */
+function AvisoAcostar() {
+  const [dePie, setDePie] = useState(
+    () => typeof window !== 'undefined' && window.innerHeight > window.innerWidth
+  )
+
+  useEffect(() => {
+    const mirar = () => setDePie(window.innerHeight > window.innerWidth)
+    window.addEventListener('resize', mirar)
+    window.addEventListener('orientationchange', mirar)
+    mirar()
+    return () => {
+      window.removeEventListener('resize', mirar)
+      window.removeEventListener('orientationchange', mirar)
+    }
+  }, [])
+
+  if (!dePie) return null
+  return (
+    <p className="grupal-acostar" role="status">
+      🔄 <strong>Pon la tablet acostada</strong> para que salgan todos
+    </p>
+  )
+}
+
+/**
+ * Vista previa de la foto de todos.
+ *
+ * Mucho mas simple que la de Asomate y a proposito: una foto, sin mandos. En Asomate los
+ * mandos existen porque la cara tiene que caer dentro de un hueco de pocos pixeles; aca la
+ * foto llena un rectangulo grande y moverla solo sirve para empeorarla.
+ */
+function GrupalPreview({ foto, onRetry, onSave }) {
+  const [compuesta, setCompuesta] = useState(null)
+  const [sinMarco, setSinMarco] = useState(false)
+
+  useEffect(() => {
+    let vivo = true
+    const cargar = (src) =>
+      new Promise((ok) => {
+        if (!src) return ok(null)
+        const i = new Image()
+        i.onload = () => ok(i)
+        i.onerror = () => ok(null)
+        i.src = src
+      })
+    Promise.all([
+      cargar(CONFIG.grupal?.fondo),
+      cargar(foto),
+      ensureCanvasFonts(),
+      preloadBrandLogo(),
+    ]).then(([fondo, img]) => {
+      if (!vivo) return
+      try {
+        // `tituloAsomate(null, 2)` es el texto de grupo: "El cumple de X y sus amigos".
+        setCompuesta(componerGrupal(fondo, img, CONFIG.grupal?.frameBox, tituloAsomate(null, 2)))
+      } catch (e) {
+        // Si componer falla, la foto del grupo sigue siendo la foto del grupo: se muestra sin
+        // marco y se puede guardar. Antes una excepción acá dejaba "Preparando la foto…" fijo
+        // para siempre, sin aviso y sin salida, con doce personas esperando.
+        console.error('no se pudo componer la foto grupal', e)
+        setSinMarco(true)
+        setCompuesta(foto)
+      }
+    })
+    return () => {
+      vivo = false
+    }
+  }, [foto])
+
+  return (
+    <section className="screen screen--preview">
+      <h2 className="preview-title">{CONFIG.grupal?.titulo || 'La foto de todos'}</h2>
+      {compuesta
+        ? <img className="preview-img" src={compuesta} alt="La foto de todos" />
+        : <p className="muted">Preparando la foto…</p>}
+      {sinMarco && <p className="muted">No se pudo poner el marco, pero la foto está lista para guardar.</p>}
+      <div className="preview-actions">
+        <button className="cta cta--ghost" onClick={onRetry}>Repetir</button>
+        <button
+          className="cta"
+          disabled={!compuesta}
+          onClick={() => {
+            if (!compuesta) return
+            // A la tablet antes que al servidor: esta foto es de doce personas y no se
+            // repite, así que perderla por el wifi es el peor caso de toda la fiesta.
+            guardarEnLaTablet(compuesta, `grupal-${nombreEvento() || 'fiesta'}`)
+            onSave(compuesta)
+          }}
+        >
+          Guardar
+        </button>
+      </div>
+    </section>
+  )
+}
+
 function AsomatePreview({ elenco, fotos, invitado, onRetry, onSave }) {
   const [compuesta, setCompuesta] = useState(null)
   const [ajustes, setAjustes] = useState(() => elenco.map(() => ({ zoom: 1, dx: 0, dy: 0 })))
@@ -1935,6 +2151,10 @@ function AsomatePreview({ elenco, fotos, invitado, onRetry, onSave }) {
       banda: { alto: 0.5, suelo: 0.79 },
       marca: false,
     })
+    // Primero a la tablet y después al servidor, igual que la cabina: si el wifi se cae, la
+    // foto ya está en el aparato. Hasta hoy Asómate no dejaba ninguna copia y, si la subida
+    // fallaba, la pantalla igual decía que la descarga local estaba segura.
+    guardarEnLaTablet(compuesta, `asomate-${invitado || 'invitados'}`)
     onSave(compuesta, paraDiploma)
   }
 
@@ -2229,15 +2449,105 @@ function VideoJuegoEstrella({ src, personaje, onDone }) {
 }
 
 /* ============================================================
+   0) PANTALLA COMPLETA — lo mismo que hacen los juegos
+   ============================================================ */
+
+/**
+ * Si el navegador de la tablet sabe hacerlo. iPad no: Safari solo deja pantalla completa a
+ * los videos, y ahí el botón no se dibuja en vez de quedar como un botón que no hace nada.
+ */
+function pantallaCompletaDisponible() {
+  if (typeof document === 'undefined') return false
+  const raiz = document.documentElement
+  return Boolean(raiz.requestFullscreen || raiz.webkitRequestFullscreen)
+}
+
+function pantallaCompletaActiva() {
+  if (typeof document === 'undefined') return false
+  return Boolean(document.fullscreenElement || document.webkitFullscreenElement)
+}
+
+/**
+ * 🔴 Esto SOLO funciona dentro de un gesto de la persona. Llamarlo al cargar la pantalla o
+ * al girar la tablet no hace nada: el navegador lo rechaza y no avisa. Por eso se llama
+ * desde los toques de la bienvenida y no desde un efecto.
+ */
+function entrarPantallaCompleta() {
+  const raiz = typeof document !== 'undefined' ? document.documentElement : null
+  const pedir = raiz && (raiz.requestFullscreen || raiz.webkitRequestFullscreen)
+  if (!pedir || pantallaCompletaActiva()) return
+  try {
+    const r = pedir.call(raiz, { navigationUI: 'hide' })
+    if (r && typeof r.catch === 'function') r.catch(() => {})
+  } catch {
+    /* el navegador puede negarse; el kiosco sigue funcionando igual */
+  }
+}
+
+function salirPantallaCompleta() {
+  const fin = document.exitFullscreen || document.webkitExitFullscreen
+  if (!fin || !pantallaCompletaActiva()) return
+  try {
+    const r = fin.call(document)
+    if (r && typeof r.catch === 'function') r.catch(() => {})
+  } catch {
+    /* idem */
+  }
+}
+
+/**
+ * El botón de pantalla completa de la bienvenida.
+ *
+ * Sirve también para SALIR, que es la mitad que suele faltar: en la tablet se sale
+ * deslizando desde el borde de arriba y quien atiende la fiesta no tiene por qué saberlo.
+ */
+function PantallaCompleta() {
+  const [activa, setActiva] = useState(pantallaCompletaActiva)
+
+  useEffect(() => {
+    const mirar = () => setActiva(pantallaCompletaActiva())
+    document.addEventListener('fullscreenchange', mirar)
+    document.addEventListener('webkitfullscreenchange', mirar)
+    return () => {
+      document.removeEventListener('fullscreenchange', mirar)
+      document.removeEventListener('webkitfullscreenchange', mirar)
+    }
+  }, [])
+
+  if (!pantallaCompletaDisponible()) return null
+
+  const texto = activa ? 'Salir de pantalla completa' : 'Pantalla completa'
+  return (
+    <button
+      className="intro-pantalla"
+      type="button"
+      aria-label={texto}
+      aria-pressed={activa}
+      title={texto}
+      onClick={(event) => {
+        event.stopPropagation()
+        if (activa) salirPantallaCompleta()
+        else entrarPantallaCompleta()
+      }}
+    >
+      <span aria-hidden="true">{activa ? '\u2921' : '\u26f6'}</span>
+    </button>
+  )
+}
+
+/* ============================================================
    1) INTRO — gate de toque (desbloquea audio/autoplay)
    ============================================================ */
-function Intro({ onStart, onAsomate }) {
+function Intro({ onStart, onAsomate, onGrupal }) {
   const start = () => {
     // desbloquea audio con un sonido silencioso dentro del gesto
     try {
       const a = new Audio()
       a.play().catch(() => {})
     } catch {}
+    // Y aprovecha el mismo gesto para la pantalla completa: fuera de un toque, el navegador
+    // la rechaza. Nadie tiene que acordarse de apretar nada.
+    entrarPantallaCompleta()
     onStart()
   }
   return (
@@ -2248,6 +2558,25 @@ function Intro({ onStart, onAsomate }) {
     >
       <div className="intro-veil" />
       <CumpleClickBrand className="intro-brand" inverse />
+      <PantallaCompleta />
+      {/* La foto de todos: icono chico abajo a la izquierda para no tapar la decoración.
+          La dispara un adulto una o dos veces en la fiesta; los botones grandes son los que
+          tocan los niños toda la tarde, y darles el mismo peso era equivocado. */}
+      {CONFIG.grupal && (
+        <button
+          className="intro-grupal"
+          type="button"
+          aria-label={CONFIG.grupal?.titulo || 'Foto grupal'}
+          title={CONFIG.grupal?.titulo || 'Foto grupal'}
+          onClick={(event) => {
+            event.stopPropagation()
+            entrarPantallaCompleta()
+            onGrupal()
+          }}
+        >
+          <span aria-hidden="true">📸</span>
+        </button>
+      )}
       <div className="intro-content">
         <h1 className="intro-title">
           {/* Un baby shower no es "la fiesta de Valentina": Valentina todavia
@@ -2300,6 +2629,7 @@ function Intro({ onStart, onAsomate }) {
               className="cta cta--asomate"
               onClick={(event) => {
                 event.stopPropagation()
+                entrarPantallaCompleta()
                 onAsomate()
               }}
             >
@@ -3980,6 +4310,31 @@ function exportarFoto(canvas) {
   return canvas.toDataURL('image/jpeg', CALIDAD_JPEG)
 }
 
+/**
+ * Baja la foto a la tablet. Es el respaldo de la fiesta: si el wifi del salón se cae, la
+ * foto ya está en el aparato y se recupera después.
+ *
+ * 🔴 Se llama ANTES de subir, nunca después. Un corte entre las dos deja la foto sin
+ * ninguna copia, y el niño ya se fue.
+ *
+ * Devuelve si se pudo: el navegador puede negarse (una pestaña sin permiso de descarga), y
+ * quien llame tiene que poder decir la verdad en vez de prometer un respaldo que no existe.
+ */
+function guardarEnLaTablet(imagen, nombre) {
+  if (!imagen) return false
+  try {
+    const a = document.createElement('a')
+    a.href = imagen
+    a.download = `${nombre}-${Date.now()}.${extensionDe(imagen)}`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    return true
+  } catch {
+    return false
+  }
+}
+
 function composeImage(bgImg, photoImg, invitado = '', charImg = null, charName = '') {
   const W = bgImg?.naturalWidth || 1080
   const H = bgImg?.naturalHeight || 1920
@@ -4378,12 +4733,7 @@ function Preview({ photo, bgRef, invitado, personaje, onRetry, onSave }) {
 
   const save = () => {
     if (!composed) return
-    const a = document.createElement('a')
-    a.href = composed
-    a.download = `foto-${invitado}-${Date.now()}.jpg`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
+    guardarEnLaTablet(composed, `foto-${invitado || 'invitado'}`)
     playSound(CONFIG.audio.confetti)
     burstConfetti(confRef.current, { duration: 2600, count: 180 })
     setTimeout(() => onSave(composed), REDUCE_MOTION ? 300 : 1600)
@@ -4447,7 +4797,7 @@ function uploadErrorMessage(error) {
   return 'No pudimos subir la foto. Revisa la conexión y vuelve a intentarlo; la descarga local no se perdió.'
 }
 
-function QRScreen({ imageDataUrl, invitado, isBabyShower = false, onDiploma, onDone }) {
+function QRScreen({ imageDataUrl, invitado, archivarComo = null, isBabyShower = false, onDiploma, onDone }) {
   const [qrUrl, setQrUrl] = useState(null)
   const [mode, setMode] = useState('loading') // loading | ready | error
   const [errorText, setErrorText] = useState('')
@@ -4469,7 +4819,9 @@ function QRScreen({ imageDataUrl, invitado, isBabyShower = false, onDiploma, onD
       })
 
     // Solo se muestra QR si el backend confirmó una URL pública real.
-    uploadPhoto(imageDataUrl, invitado)
+    // `archivarComo` existe para la foto grupal: no tiene dueno y con `invitado` quedaria
+    // archivada a nombre del ultimo nino que jugo.
+    uploadPhoto(imageDataUrl, archivarComo || invitado)
       .then((publicUrl) => makeQR(publicUrl, 'M'))
       .then((q) => {
         if (!alive) return

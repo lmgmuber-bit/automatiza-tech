@@ -28,6 +28,10 @@ if ($token !== '') {
     // Para un invitado no cambia nada: el QR de una foto borrada sigue dando 404.
     if ($photo === null && cb_admin_sesion_activa()) {
         $photo = cb_find_photo_by_token($token, true);
+        // Y solo si la foto es de una fiesta suya (2026-09-13).
+        if ($photo !== null && !cb_admin_sesion_activa((string) ($photo['party_slug'] ?? $photo['party'] ?? ''))) {
+            $photo = null;
+        }
     }
     if ($photo === null) {
         cb_photo_page_error(404, 'Foto no encontrada');

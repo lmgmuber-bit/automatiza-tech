@@ -21,84 +21,335 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
-## ⚠️ Dos ambientes: PROD es `cumpleclick.com/app`, pre-producción es `automatizatech.cl/cumpleclick`
+## DESPLEGADO 2026-09-13 (07:05) — usuarios del backoffice: superadministrador y operadores por fiesta
 
-Desde 2026-08-29 (ver `docs/DEPLOY.md` en la rama `codex/baby-shower-predicciones`): el kiosco que ven los
-clientes vive en `domains/cumpleclick.com/public_html/app/` (= `dist/`), con la landing en la raíz del dominio,
-config real en `domains/cumpleclick.com/cumpleclick-config.php`, almacén en `domains/cumpleclick.com/almacen/`
-y `database/`, `scripts/` privados (`public` es un enlace a `public_html/app`). Su código es la línea
-`codex/baby-shower-predicciones` (`369da38`, migraciones 001–011, temáticas Spidey y baby shower). La rama
-`feat/cumpleclick-sala-ayudantes` NO contiene esa línea: para tocar el kiosco de PROD hay que partir de `369da38`
-(rama `feat/kiosco-juego-3d-prod`, creada 2026-09-06 con el botón del juego).
+Luis pidió, la madrugada de las dos fiestas, poder delegar el admin de una fiesta a una persona:
+crearle un usuario, que le llegue un correo con contraseña temporal que debe cambiar, y decidir él
+qué fiestas y qué opciones ve. Está **EN PROD** desde las 07:05. Diseño, módulos y manual en
+`docs/USUARIOS-ADMIN.md`.
 
-## DESPLEGADO 2026-09-06 en cumpleclick.com/app (PROD) — juego 3D + salas + kiosco con botón + PIN 1234
+**Cómo entra cada uno ahora:**
+- `admin/login.php` (correo + contraseña) es la entrada por defecto: cualquier página del admin sin
+  sesión manda ahí.
+- `admin/maestro.php` es la pantalla de solo contraseña de siempre, intacta: entra como
+  superadministrador. La sesión que Luis tenía abierta sigue valiendo.
+- `admin/usuarios.php` (solo super) crea, habilita/deshabilita y asigna fiestas y módulos.
+- `admin/perfil.php`: nombre y cambio de contraseña.
 
-Lo mismo que se había subido a pre-producción esa mañana (tabla de abajo), aplicado al PROD real; lo ejecutó Luis
-con el script preparado por Claude (`cc_desplegar.py`, SSH/SFTP) porque el clasificador de permisos bloqueó la
-corrida desde la sesión. Verificado desde afuera: `sala.php` 36/36, `juego/` con `.htaccess` propio (404 limpio,
-sin `immutable`), kiosco `?p=qa-spidey` (Luciano, temática Spidey) muestra "🎮 Aventura 3D" → juego con la ciudad
-(`Aventura Arácnida 2`, 6 invitados, base `/app/`, PIN 1234 acepta y cuelga 6 fotos del kiosco, sala con QR
-público) → "Volver al kiosco". Kiosco: `index.html` + `assets/main-7reZvA3S.js` + `assets/main-CUtameO5.css`
-construidos desde `369da38` (bundle previo reproducido byte a byte antes del parche; 173/173 tests, paridad 484).
-Migración 014 aplicada con `database/aplicar-014.php`; PIN 1234 en las 10 fiestas con respaldo
-`database/respaldo-cc_parties-20260906-185354.json`. `fiesta.js` del juego detecta la base como la carpeta
-padre de `juego/` (sirve para `/app/juego/` y `/cumpleclick/juego/`).
+**Cómo se subió:** `scratchpad/usuarios-admin/desplegar-usuarios.py 4f59f05` (rama
+`claude/admin-usuarios`, base `b93c9a3`).
+1. Cotejó por sha256 que los 17 archivos de PROD que se pisaban eran iguales a la base.
+2. Respaldo `~/respaldos/admin-usuarios-antes-20260913-0705.tar.gz` (17 archivos).
+3. Subió 25 archivos a una carpeta fuera de la web, con sha256 y `php -l`.
+4. Aplicó la migración `023_admin_users` por CLI (`database/aplicar-023.php`): creó
+   `cc_admin_users` y `cc_admin_user_parties`, registradas en `cc_schema_migrations`.
+5. Instaló los 23 archivos web con `mv` atómico en un solo comando y verificó sha256.
 
-### Fiestas reales del domingo 13-sep (cumpleclick.com, 2026-09-06)
-
-Luis pidió que las fiestas reales dejaran de llamarse demo/QA. En PROD: `demo-frozen-vip` → **`isidora-reino-de-hielo`**
-(Isidora, Reino de Hielo; además etiqueta `CLIENTE - Cumple Isidora (Reino de Hielo) 13-sep` y fecha 13-sep, antes
-31-dic) y `qa-spidey` → **`luciano-spidey`** (Luciano, Spidey). El slug es la carpeta de fotos, del álbum y de las
-láminas, así que el renombre fue con script (`database/renombrar-slugs.php`): respaldo JSON de las filas
-(`respaldo-slugs-20260906-202227.json`), carpetas `fotos/<slug>`, `fotos/album/<slug>`, `invitaciones/<slug>`,
-y en una transacción `cc_parties.public_slug`, `cc_photos.storage_key` (26+11), `cc_event_media.storage_key/thumb`
-(14+13), `cc_invitation_outputs.file_storage_key` (1+3). Verificado: API 200 con los nuevos y 404 con los viejos,
-todas las fotos, medios del álbum y láminas existen en disco, `ver.php` sirve las fotos. URLs nuevas:
-`https://cumpleclick.com/app/?p=isidora-reino-de-hielo` y `https://cumpleclick.com/app/?p=luciano-spidey`
-(galería `galeria.php?p=<slug>`, PIN 1234). Los enlaces de invitación van por token y no cambiaron. Regla: un slug
-no se cambia desde el admin (no lo permite) ni a mano en la BD; siempre con este script o uno equivalente.
-
-## DESPLEGADO 2026-09-06 en automatizatech.cl/cumpleclick (PRE-PRODUCCIÓN) — Juego 3D + salas de ayudantes (por SSH, Claude)
-
-Deploy aditivo hecho por Claude vía SSH/SFTP (ver `Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md`
-§3.3), autorizado por Luis. Nada existente se sobrescribió. Verificado desde afuera: `sala.php`
-responde el contrato completo (36/36 checks de la prueba de humo contra PROD), el juego carga con
-WebGPU en `https://automatizatech.cl/cumpleclick/juego/?p=<slug>` (fiesta real, QR de ayudantes
-con URL pública, temáticas Hielo y Héroes), 0 errores de consola propios.
-
-| Local | PROD (`/cumpleclick/`) | Nota |
+| Archivo | Destino | Clase |
 |---|---|---|
-| `dist/lib.sala.php` | `/lib.sala.php` | nuevo |
-| `dist/sala.php` | `/sala.php` | nuevo; usa 11 funciones `cb_*` que el `lib.php` de PROD (26-ago) ya tiene |
-| `database/migrations/014_salas_ayudantes(.down).php` | `private-cumpleclick/database/migrations/` | aplicada con `private-cumpleclick/database/aplicar-014.php` (runner puntual, registra en `cc_schema_migrations`); tablas `cc_salas`, `cc_sala_ayudantes`, `cc_sala_acciones` |
-| `C:\wamp64\www\juego-prod\` (= `tucumple-repo/app/public`, 180 archivos, 38 MB) | `/juego/` | subido como zip y descomprimido en el servidor |
-| (generado) | `/juego/.htaccess` | reglas propias: 404 limpio para archivos inexistentes (el catch-all SPA del padre se hereda y serviría `index.html` con 200) y `Cache-Control` sin `immutable` porque los archivos del juego no llevan hash |
+| `database/migrations/023_admin_users.php`, `database/aplicar-023.php` | `domains/cumpleclick.com/database/` | OBLIGATORIO, primero, y correr `php aplicar-023.php` |
+| `public/lib.admin-usuarios.php` (nuevo), `public/lib.php`, `galeria.php`, `ver-media.php`, `ver.php` | `app/` | OBLIGATORIO |
+| `public/admin/_acceso.php`, `login.php`, `maestro.php`, `usuarios.php`, `perfil.php` (nuevos) | `app/admin/` | OBLIGATORIO |
+| `public/admin/` las 13 páginas existentes (todas cargan el portero) | `app/admin/` | OBLIGATORIO, junto con lo anterior |
 
-**Segunda tanda, mismo día (kiosco principal + PIN 1234):**
+No subir `tests/`. El `.htaccess` no cambia.
 
-| Local | PROD (`/cumpleclick/`) | Nota |
-|---|---|---|
-| `dist/index.html` + `dist/assets/{main-DyP8gEfj.js, main-B9-yq8Vw.css, album-BLM5xg1A.js, album-CeNLvTx5.css, cartel-B99n-mNG.js, cartel-CnsaFVl2.css}` | `/index.html`, `/assets/` | kiosco con botón "🎮 Aventura 3D" en la bienvenida (solo temáticas hielo/heroes/spidey) → `juego/?p=<slug>&kiosco=1`. Verificado antes de subir que el bundle de PROD (`main-Bx-ejHH_`) tenía exactamente las mismas cadenas que el local: `src/` de esta rama == lo que corría en PROD. Los assets viejos siguen ahí (no estorban) |
-| `juego-prod/index.html`, `juego-prod/game/main.js` | `/juego/` | con `?kiosco=1` muestra "🏠 Volver al kiosco" en pausa y al final (`base + ?p=slug`); PIN de galería prellenado `1234` |
-| (dato) `private-cumpleclick/database/pin-1234.php` | BD | PIN de galería `1234` en las 10 fiestas de PROD vía `cb_load_parties`/`cb_save_parties` (mismo hash que el admin); respaldo previo `respaldo-cc_parties-20260906-164850.json` en esa carpeta. `galeria.php` y `sala.php?op=fotos` solo exigen el PIN, no `gallery_enabled` |
-| `public/admin/index.php` | **NO subido** | LOCAL: fiesta nueva nace con galería habilitada y PIN `1234` prellenado. El `admin/index.php` de PROD trae los perfiles de evento (commit `5d6d594`, otra rama) que esta rama no tiene: subirlo pisaría eso. Va cuando se unifiquen las ramas |
+**Rollback:** `python scratchpad/usuarios-admin/rollback-usuarios.py respaldos/admin-usuarios-antes-20260913-0705.tar.gz`
+restaura los 17, borra los 6 nuevos y coteja contra la base. Las tablas se dejan.
 
-`api.php`, `upload.php`, `ver.php` y `.htaccess` de la raíz **no cambiaron** (md5 idéntico a
-`dist/`). `lib.php` de PROD es más nuevo que el del 27-jul y NO se tocó. Pendiente aparte: el PIN de
-galería `2026` solo sigue vigente en `demo-kpop-vip`; las otras demos tienen otro PIN (se cambia
-desde el admin). Para actualizar el juego más adelante: regenerar `juego-prod`, zip, subir y
-descomprimir igual; los navegadores revalidan HTML/JS al instante gracias al `.htaccess`.
+**Verificado desde afuera después de subir (15 comprobaciones):** el admin sin sesión redirige a
+`login.php` con `volver`; `login.php` y `maestro.php` responden; la API de carteles contesta 401
+JSON; la galería, `api.php` (kiosco), `ver.php` y el menú de juegos siguen igual; ninguna de las
+10 direcciones de los carteles cambió de estado.
 
-## Delta local — Aceptación de Términos y firma (rama `feat/cumpleclick-aceptacion-terminos`, no desplegado)
+**Probado en local:** `tests/backend/usuarios.php` (52) y `tests/backend/usuarios-http.php` (59,
+con `php -S`: redirecciones, clave maestra, crear operadora, temporal en pantalla sin SMTP,
+cambio obligatorio, lista filtrada, 403 en nueve páginas ajenas, juegos e invitados solo en su
+fiesta, galería sin PIN solo en su fiesta, deshabilitar corta la sesión). Recorrido a mano en el
+navegador: login, clave maestra, Usuarios, crear, entrar como operadora, cambiar contraseña y ver
+solo su fiesta.
 
-Solo PHP y `.md`; los bundles de `dist/assets/` **no cambian** en este delta.
-Orden: config privada (`acceptance_dir`, `notify_email`, `mail_from`) → migración
-`013_plan_acceptances` → `lib.php` → `lib.acceptance.php` → `legal/*.md` →
-`aceptar-plan.php`, `comprobante-aceptacion.php`, `admin/aceptaciones.php` →
-`admin/index.php` al final. Tabla completa con clasificación OBLIGATORIO/OPCIONAL
-en `Docs/BLUEPRINTS/CUMPLECLICK-ACEPTACION-TERMINOS-Y-FIRMA.md` (repo raíz).
-Verificado local: `tests/backend/acceptance.php` 46 checks, lint 67 archivos,
-paridad public→dist 296 archivos. **No probado en PROD.**
+**No probado en PROD:** el envío real del correo de bienvenida por SMTP (si falla, la pantalla
+muestra la contraseña temporal una vez para pasarla a mano). Tampoco se creó ningún usuario en
+PROD: eso lo hace Luis desde `maestro.php` → Usuarios.
+
+**Lo que quedó como estaba a propósito:** las 13 páginas conservan su bloque de login por
+contraseña debajo del portero (código muerto; se puede retirar después).
+
+**07:20, corrección:** los campos de `login.php` y `maestro.php` salían sin el estilo de los
+inputs del admin (faltaba el `input-icon`). Commit `c9e95f0`; respaldos
+`~/respaldos/*_admin_login.php.antes-*` y `*_maestro.php.antes-*`.
+
+## DESPLEGADO 2026-09-13 (02:43) — carrera con amigos en Aurora de Cristal, y los trineos ya no se montan
+
+Luis pidió que Aurora pudiera jugarse en grupo, como el Circuito Arácnido. Se construyó en
+paralelo y Luis autorizó subirlo el mismo 13-sep ("sube a prod… haz un backup, si hay un error
+hacemos rollback"), pidiendo antes corregir que dos trineos quedaban uno encima del otro.
+
+**Dónde está:**
+- **Backend:** esta rama, `claude/aurora-grupal`, commit `7591029`.
+- **Juego:** repositorio privado `cumpleclick-juego-aurora-cristal`, rama `feat/modo-grupal`,
+  commit `2e4d3fa` (carrera con amigos `904fed3` + choques `2e4d3fa`).
+- El detalle de cómo se juega y de los choques está en su `ORIGEN-Y-PROD.md`.
+
+**Cómo se subió:** `scratchpad/choques/desplegar-aurora-grupal.py <kiosco> <aurora>`.
+1. Comprobó que PROD era igual a la base: los 8 archivos, por sha256.
+2. Respaldó en `~/respaldos/aurora-grupal-antes-20260913-0243.tar.gz`, con 8 archivos.
+3. Subió a una carpeta fuera de la web, comparó sha256 y pasó `php -l`.
+4. Instaló con `mv` atómico en un solo comando.
+5. Verificó sha256 en el servidor.
+
+Los tar de las 02:39 y las 02:41 son del ensayo y de un primer intento que no instaló nada:
+`chmod --reference=~/…` no expande la tilde, así que la cadena se cortó antes del primer `mv`.
+
+**Rollback:**
+```bash
+python scratchpad/choques/rollback-aurora-grupal.py respaldos/aurora-grupal-antes-20260913-0243.tar.gz
+```
+Restaura el tar y comprueba cada archivo contra la base.
+
+**Verificado desde afuera después de subir:**
+- **Archivos servidos:** los 6 que se descargan son iguales byte a byte a los commits, con los
+  `.mjs` como `text/javascript` y `no-cache`.
+- **Menú:** manda `jugador` a Aurora.
+- **`sala.php`:** responde JSON a un código inexistente (404) y a un juego inválido (422).
+- **`urls-criticas.py`:** ninguna de las 10 cambió de estado. El menú pasa de 28365 a 28364 bytes.
+- **Aurora en el navegador:** carga `grupal-2` en WebGPU, con el botón "Correr con amigos"
+  habilitado y sin errores en la consola.
+
+**No probado en PROD:** una sala real con amigos. No se abrió ninguna en una fiesta de verdad el
+día del cumpleaños, para no dejar una sala a medias ni puntajes de prueba en la tabla.
+
+**Qué cambia en el backend:**
+- **`lib.sala.carrera.php`:** la sala de carreras pasa a tener reglas por `juego`. Una sala sin
+  `juego` es el Circuito, con los mismos números: el cliente del Circuito que ya está en PROD
+  sigue funcionando.
+  - Reglas de Aurora: tope de 46 m/s, pista de ±6,7, entre 18 y 80 s por vuelta y parrilla de a
+    dos.
+  - Los bots van a la velocidad de la ayuda elegida.
+  - Dos humanos no pueden tener el mismo personaje.
+  - La ayuda (`modo`) la elige quien abre la sala.
+  - El puntaje se iguala según la ayuda, y el que anota la sala va con juego `aurora`.
+  - `juego` y `modo` van en el JSON de `cc_sala_carreras.datos`: **no hace falta migración**.
+- **`juego/index.html` (menú):** le manda `jugador` a Aurora, que lo necesita para entrar a la
+  sala y anotarse.
+- **`lib.puntajes.php`:** solo cambia el comentario de Aurora.
+- **`tests/backend/`:** agrega `carrera-aurora.php` (25 pruebas) y trae `carrera.php`,
+  `carrera-fixture.php` y `carrera-router.php` del Circuito. La fixture ahora crea fiestas de
+  hielo.
+
+**Lista de subida, en este orden:**
+
+| # | Archivo local | Destino en PROD | Clase |
+|---|---|---|---|
+| 1 | `CumpleBooth/public/lib.sala.carrera.php` | `app/lib.sala.carrera.php` | OBLIGATORIO, primero |
+| 2 | `CumpleBooth/public/lib.puntajes.php` | `app/lib.puntajes.php` | OPCIONAL (solo comentario) |
+| 3 | `cumpleclick-juego-aurora-cristal/sim.mjs`, `world.mjs`, `main.mjs`, `aurora.css` | `app/juego/aurora/` | OBLIGATORIO |
+| 4 | `cumpleclick-juego-aurora-cristal/index.html` | `app/juego/aurora/index.html` | OBLIGATORIO, último de Aurora |
+| 5 | `CumpleBooth/public/juego/index.html` | `app/juego/index.html` | OBLIGATORIO. Sin `jugador`, el botón queda deshabilitado |
+
+**No subir:**
+- `tests/backend/carrera*.php`: la fixture dice "Nunca subir al webroot".
+- `tests/grupal.test.mjs`.
+- El `.htaccess` de `app/juego/aurora/` no cambia.
+
+**Probado:**
+- Circuito: 78 pruebas.
+- Aurora: 25 pruebas de backend, 7 de simulación con amigos y las 17 del juego solo.
+- En local, con SQLite de pruebas y dos pestañas:
+  - sala con código y entrada sin código;
+  - personaje reasignado con aviso y controles bloqueados para el invitado;
+  - cuenta regresiva, carrera, llegada registrada y podio igual en las dos pantallas;
+  - piloto automático al dejar la pestaña, con aviso al volver;
+  - la consulta a la sala se detiene después del podio.
+
+**Dos errores encontrados en esa prueba y corregidos antes de commitear:**
+- La llegada no se registraba, porque la posición pasaba la meta.
+- Una pestaña sin cuadros dejaba su trineo detenido.
+
+**No probado:**
+- Tablets o celulares reales, ni seis pantallas en un wifi real.
+- La vista de celular en el panel del navegador de trabajo, que se queda preparando la escena 3D
+  antes de mostrar el menú. Aurora de PROD hace lo mismo en ese panel, así que no lo causa este
+  cambio.
+- La sala no revisa el interruptor de juegos 3D apagados por fiesta. Pasa igual con el Circuito.
+
+## DESPLEGADO 2026-09-13 (madrugada) — PROD alineado con los repositorios
+
+El cotejo completo y la tabla de qué carpeta sale de qué repositorio están en
+`MAPA-PROD-Y-REPOSITORIOS.md`.
+
+**En PROD y verificado desde afuera:**
+
+- **`public_html/.htaccess`** (raíz del dominio) lleva el mismo `FilesMatch` de respaldos que
+  `app/.htaccess`.
+  - `https://cumpleclick.com/index.php.bak-20260907` (el código de la portada) respondía 200 como
+    `text/plain`; ahora da 403.
+  - `.htaccess.bak` ya daba 403.
+  - La portada y el kiosco siguen en 200, y `urls-criticas.py despues` no muestra cambios.
+  - Respaldo: `~/respaldos/raiz-htaccess.antes-bloqueo-bak-20260912-2355`. sha256 nuevo `b3f14149…`.
+- **Fuera de `public_html`, sin exposición web:** doce migraciones que faltaban en
+  `database/migrations/` y tres scripts más nuevos del repositorio.
+  - Migraciones: `012`, `013_narration_intro_output`, `014_rsvp`, `017` (con su `.down`), `018`,
+    `019`, `020`, `021_sala_carreras` (con su `.down`) y `022` (con su `.down`). La base ya las
+    tenía aplicadas: `cc_schema_migrations` registra 24.
+  - Scripts: `export-party-sql.php`, `web/_at-migrar.php` y `web/_at-seed-cita-completa.php`.
+  - Los quince pasaron sha256 y `php -l`.
+  - Respaldo: `~/respaldos/herramientas-antes-alinear-20260913-0035.tar.gz`.
+
+**NO subido, porque lo bloquearon los permisos (OPCIONAL):** `database/migrations/003_invitations_and_plan.php`
+(el repositorio agrega guardas) y `scripts/retention.php` (solo fines de línea). Ninguno se sirve
+por la web ni se ejecuta solo.
+
+**En esta rama:** el commit `e3e3959` trae 63 archivos que PROD servía y el repositorio no tenía o
+tenía distintos:
+
+- backend de juegos: `lib.puntajes.php`, `sala.php`, `lib.sala.carrera.php` y `lib.sala.php`;
+- migraciones `014_salas_ayudantes` y `021_sala_carreras`;
+- el menú `juego/index.html` y `juego/fuentes/`;
+- `admin/marca.php`, `brand/carteles/` y el logo del PDF;
+- las cabeceras de correo;
+- los scripts de `database/` corridos en el servidor;
+- `sitio/.htaccess`.
+
+**Los juegos pasaron a repositorios privados de `lmgmuber-bit`**, con la rama igual a PROD. La
+lista está en el mapa.
+
+**Lista FTP pendiente:** nada OBLIGATORIO. OPCIONAL: los dos archivos bloqueados de arriba.
+
+## DESPLEGADO 2026-09-12 (noche) — los respaldos `.bak` de `app/` ya no se sirven
+
+**En PROD y verificado desde afuera (23:15):** `app/.htaccess` lleva al final un
+`<FilesMatch "\.(bak|old|orig|save|swp|antes)([-._].*)?$|~$">` con `Require all denied` (y el
+`Deny from all` de Apache 2.2, igual que `data/.htaccess`). Los 61 `.bak` responden 403, con y sin
+parámetro en la URL; antes `admin/config.php.bak-20260907b` y `lib.php.bak-20260908-hotfix`
+salían 200 como `text/plain`. **No se borró ningún archivo.**
+
+- Se agregó solo texto ASCII en CRLF, como el resto del archivo: sha256 `b02fb095…`, 4578 bytes.
+  El mismo contenido quedó en `CumpleBooth/public/.htaccess` de esta rama, para que un despliegue
+  futuro no borre el bloqueo.
+- Respaldo: `~/respaldos/app-htaccess.antes-bloqueo-bak-20260912-2315`. Para deshacer:
+  `cat ~/respaldos/app-htaccess.antes-bloqueo-bak-20260912-2315 > ~/domains/cumpleclick.com/public_html/app/.htaccess`.
+- `urls-criticas.py despues`: ninguna de las 10 direcciones cambió. Siguen en 200 los bundles del
+  kiosco, `juego/mundo.html` y sus scripts, `hermana.glb`, los PDF de `brand/carteles/`, el `.wasm` y
+  el `.tflite` de MediaPipe, `api.php` y `puntajes.php`. Los 403 de `brand/carteles/` y
+  `vendor/mediapipe/` son por pedir la carpeta sin archivo, y el de `manual.php` sin firma lo da el
+  propio PHP (línea 27).
+- El CDN no los tenía en caché (`x-hcdn-cache-status: DYNAMIC`): el bloqueo rigió al instante, sin
+  purgar.
+- **Qué había quedado expuesto: código, ningún valor de secreto.** `admin/config.php.bak` define
+  `ADMIN_PASSWORD_HASH` leyéndolo con `cb_config()`, no escrito; `lib.php.bak` solo nombra
+  `CC_PDO_PASSWORD`, `CC_SMTP_PASSWORD` y `CC_APP_HMAC_KEY`, con valores por defecto vacíos, porque se
+  leen del entorno o del archivo de configuración fuera de la carpeta pública. Revisados los 61 sin
+  imprimir ningún valor. Es el mismo código del repositorio. **No hace falta cambiar claves.** Por
+  SSH no hay logs de acceso para saber quién los pidió.
+- **Pendiente:** borrar los 61 cuando Luis lo decida. Los respaldos de un despliegue van a
+  `~/respaldos/`, nunca como `<archivo>.bak-*` junto al original.
+
+## DESPLEGADO 2026-09-12 (tarde) — copia en la tablet, y lo que quedó abierto
+
+**En PROD y verificado desde afuera (15:23):** `assets/main-SnNR4OCg.js` e `index.html`.
+Asómate y la foto grupal bajan la foto a la tablet **antes** de subirla, como ya hacía la
+cabina (`guardarEnLaTablet` en `App.jsx`). Comprobado en PROD con la fiesta `samantha-hielo`,
+cámara falsa y `fetch` de `upload.php` rechazando: se disparó `grupal-Samantha-<sello>.jpg`,
+464 KB, y quedó el botón de reintentar. Respaldo:
+`~/respaldos/index.html.antes-respaldo-tablet-20260912-1523`.
+
+**Generadores guardados en el repositorio:** `CumpleBooth/design/generadores/` (carteles de
+marca, piezas de Instagram, marco de la foto grupal y Anna de gala). Hasta hoy vivían solo en
+una carpeta temporal de sesión. Cómo correrlos, en el `README.md` de esa carpeta.
+
+### Hallazgos que NO se arreglaron (decisión de Luis pendiente)
+
+- ~~**61 respaldos `.bak` públicos en `app/`**~~ **Bloqueados esa misma noche** (sección de
+  arriba). Aquí se dijo que `config.php.bak` exponía el hash del admin: no lo trae, lo lee de la
+  configuración. Falta decidir el borrado.
+- **Los carteles de marca corregidos no están subidos.** La hoja de servicios pasó a seis
+  tarjetas (entran Asómate, con sus dos temáticas nombradas, y la foto de todos) y las hojas 1
+  y 2 perdieron el bloque de WhatsApp con el número impreso. **En PROD el admin todavía entrega
+  las hojas viejas con el número.** Las medidas de acrílico (146 × 206, A5, A6, 13 × 18 y A4)
+  existen solo en local.
+- **El PIN de la galería se bloquea con muchos papás en el mismo wifi** y **reintentar una
+  subida duplica la foto.** Detalle en `PENDIENTES-DE-PRUEBA.md` §9.
+- **El Plan Premium dice "Los 4 juegos, con El Show 3D"** y El Show 3D no está entre los
+  juegos desplegados: PROD ofrece 3 en hielo y 3 en spidey (contado en `puntajes.php` el
+  2026-09-12).
+
+### Medido y descartado
+
+Los videos de bienvenida de hielo y spidey y `entrada-palacio-hielo.mp4` tienen el índice
+`moov` al final. **No es un defecto:** el servidor responde 206 a pedidos de rango y el
+navegador pide el final aparte. Medido desde afuera: 1,9 s con dos pedidos contra 1,8 s
+bajando el archivo entero, y Luis los probó en las dos tablets.
+
+## DESPLEGADO 2026-09-12 — foto grupal, pantalla completa, Anna de gala
+
+Todo esto **está en PROD** (`cumpleclick.com/app/`), verificado desde afuera.
+Respaldos para volver atrás en `~/respaldos/`:
+`app-antes-grupal-20260912-0116.tar.gz`, `galeria.php.antes-pestana-20260912-0132`,
+`index.html.antes-roundrect-*` y `juego-temas-antes-20260912-0202.tar.gz`.
+
+**La foto de todos.** Una foto del grupo entero dentro de un marco apaisado, distinta de la
+foto de cabina y de Asómate. Se dispara desde un **ícono chico abajo a la izquierda** de la
+bienvenida, no desde la pila de botones: la usa un adulto una o dos veces en la fiesta y
+darle el mismo peso que a los botones que tocan los niños tapaba la decoración. Avisa de
+poner la tablet acostada mientras la pantalla esté de pie, y **avisa, no bloquea**: con el
+giro trabado —lo normal en un kiosco— bloquear dejaría el modo inservible en plena fiesta.
+Se archiva con prefijo `grupal-` porque no tiene dueño, y la galería le da su propia pestaña.
+
+**Pantalla completa** en la bienvenida, arriba a la izquierda, la misma esquina que ya usan
+los juegos. Entra con el toque que arranca la fiesta, porque fuera de un gesto el navegador
+la rechaza sin avisar, y el mismo botón sirve para salir.
+
+**Anna de gala** en los dos juegos que la usan (`juego/models/` y `juego/festival/models/`),
+repintando la textura del modelo: malla, esqueleto y animación quedan idénticos y no se
+gastó ningún crédito. 2,61 MB contra 2,30; se baja en el mismo tiempo que Elsa.
+
+### 🔴 Tres trampas que mordieron hoy
+
+1. **`roundRect` no existe en este proyecto; se llama `roundRectPath`.** La excepción rompía
+   la cadena de promesas y la vista previa quedaba en "Preparando la foto…" **para siempre**,
+   sin error visible y sin salida. No lo vieron las pruebas de backend —miran el tema, no la
+   pantalla— ni la prueba a mano, porque el panel del navegador bloquea la cámara y nunca
+   llega a la vista previa. **Para probar esta pantalla hace falta una cámara falsa**: un
+   canvas con `captureStream()`, la misma técnica que ya se usa en Asómate. Ahora, si componer
+   falla, se muestra la foto sin marco y se puede guardar.
+
+2. **Calcular una lista y no dibujarla.** La galería separaba las fotos grupales del reparto
+   por invitado pero no tenía pestaña donde mostrarlas: la foto se habría subido y
+   desaparecido. Hay una guardia en `tests/backend/grupal.php` para ese fallo exacto.
+
+3. **El CDN.** Bajar un archivo para compararlo **calienta la caché del borde**: si después
+   subes el reemplazo, el borde sigue entregando el viejo hasta 24 horas. Pasó con
+   `hermana.glb`. Se resuelve con un flush desde hPanel o esperando.
+
+## DESPLEGADO 2026-09-12 — el juego 3D vuelve a tener su fuente en el repositorio
+
+El repositorio `C:\wamp64\www	ucumple-repo` estaba **atrasado respecto de PROD** y exportar
+desde él habría borrado trabajo en silencio: sube bien y reporta éxito. Eran cinco archivos
+(`game/main.js`, `ui.js`, `foto.js`, `strings.js`, `index.html`) más `game/posiciones.js`, que
+directamente no existía aunque `main.js` lo importa. Los dos espejos, `juego-prod/` y
+`tucumple/`, estaban **aún más atrasados** y eran los que iban a pisar PROD.
+
+🔴 **`index.html` del repositorio NO es `index.html` de PROD.** En `app/juego/` ese nombre es
+el **menú de juegos**, que viene de CumpleBooth y cuya URL está impresa en los carteles QR.
+La página del repositorio se sirve como **`mundo.html`**. Copiar una encima de la otra rompe
+el menú o borra el juego. Queda dicho dentro del propio archivo.
+
+🔴 **Bug que estaba vivo en PROD y se corrigió: la foto del juego reventaba en Spidey.**
+`aplicarTema` mezclaba los textos con `Object.assign`, que es de un solo nivel: una temática
+que declara su propio bloque `foto` reemplazaba el bloque **entero** y perdía las claves que
+la base agregó después. La temática arácnida tiene su propio `foto`, así que desde el 11-sep
+`T.foto.firmaJugador` no existía ahí y sacar una foto moría con "is not a function". **No se
+veía al cargar: solo al sacar la foto.** Ahora la mezcla entra un nivel y los arreglos se
+siguen reemplazando, o el tutorial arácnido quedaría mezclado con el de hielo. Comprobado
+contra PROD con `luciano-spidey`.
+
+### Sin probar
+
+Nada de esto se ha visto en la tablet física ni con niños: la foto grupal se probó con una
+cámara falsa, y la foto del juego 3D se comprobó leyendo los textos ya mezclados, no sacando
+una foto de verdad en una partida.
 
 ## Delta local — Álbum Recuerdo (rama `feat/album-recuerdo`, no desplegado)
 
@@ -2924,3 +3175,102 @@ vuelve a exportarlo, **estos cambios se pierden**: hay que pasarle esta sección
 - (Cerrado) El usuario había mencionado "un icono arriba que parece un freno de mano".
   Luis confirmó que **se confundió**: arriba solo están la nota musical y el botón de PAUSA,
   y ninguno cambia.
+
+## Secciones traídas de `main` al unir las ramas (2026-09-15)
+
+Estaban en `main` (línea de los PR #16 a #18) y no en la línea `claude/foto-grupal` → `claude/admin-usuarios`. Se conservan tal cual.
+
+## ⚠️ Dos ambientes: PROD es `cumpleclick.com/app`, pre-producción es `automatizatech.cl/cumpleclick`
+
+Desde 2026-08-29 (ver `docs/DEPLOY.md` en la rama `codex/baby-shower-predicciones`): el kiosco que ven los
+clientes vive en `domains/cumpleclick.com/public_html/app/` (= `dist/`), con la landing en la raíz del dominio,
+config real en `domains/cumpleclick.com/cumpleclick-config.php`, almacén en `domains/cumpleclick.com/almacen/`
+y `database/`, `scripts/` privados (`public` es un enlace a `public_html/app`). Su código es la línea
+`codex/baby-shower-predicciones` (`369da38`, migraciones 001–011, temáticas Spidey y baby shower). La rama
+`feat/cumpleclick-sala-ayudantes` NO contiene esa línea: para tocar el kiosco de PROD hay que partir de `369da38`
+(rama `feat/kiosco-juego-3d-prod`, creada 2026-09-06 con el botón del juego).
+
+## DESPLEGADO 2026-09-06 en cumpleclick.com/app (PROD) — juego 3D + salas + kiosco con botón + PIN 1234
+
+Lo mismo que se había subido a pre-producción esa mañana (tabla de abajo), aplicado al PROD real; lo ejecutó Luis
+con el script preparado por Claude (`cc_desplegar.py`, SSH/SFTP) porque el clasificador de permisos bloqueó la
+corrida desde la sesión. Verificado desde afuera: `sala.php` 36/36, `juego/` con `.htaccess` propio (404 limpio,
+sin `immutable`), kiosco `?p=qa-spidey` (Luciano, temática Spidey) muestra "🎮 Aventura 3D" → juego con la ciudad
+(`Aventura Arácnida 2`, 6 invitados, base `/app/`, PIN 1234 acepta y cuelga 6 fotos del kiosco, sala con QR
+público) → "Volver al kiosco". Kiosco: `index.html` + `assets/main-7reZvA3S.js` + `assets/main-CUtameO5.css`
+construidos desde `369da38` (bundle previo reproducido byte a byte antes del parche; 173/173 tests, paridad 484).
+Migración 014 aplicada con `database/aplicar-014.php`; PIN 1234 en las 10 fiestas con respaldo
+`database/respaldo-cc_parties-20260906-185354.json`. `fiesta.js` del juego detecta la base como la carpeta
+padre de `juego/` (sirve para `/app/juego/` y `/cumpleclick/juego/`).
+
+### Fiestas reales del domingo 13-sep (cumpleclick.com, 2026-09-06)
+
+Luis pidió que las fiestas reales dejaran de llamarse demo/QA. En PROD: `demo-frozen-vip` → **`isidora-reino-de-hielo`**
+(Isidora, Reino de Hielo; además etiqueta `CLIENTE - Cumple Isidora (Reino de Hielo) 13-sep` y fecha 13-sep, antes
+31-dic) y `qa-spidey` → **`luciano-spidey`** (Luciano, Spidey). El slug es la carpeta de fotos, del álbum y de las
+láminas, así que el renombre fue con script (`database/renombrar-slugs.php`): respaldo JSON de las filas
+(`respaldo-slugs-20260906-202227.json`), carpetas `fotos/<slug>`, `fotos/album/<slug>`, `invitaciones/<slug>`,
+y en una transacción `cc_parties.public_slug`, `cc_photos.storage_key` (26+11), `cc_event_media.storage_key/thumb`
+(14+13), `cc_invitation_outputs.file_storage_key` (1+3). Verificado: API 200 con los nuevos y 404 con los viejos,
+todas las fotos, medios del álbum y láminas existen en disco, `ver.php` sirve las fotos. URLs nuevas:
+`https://cumpleclick.com/app/?p=isidora-reino-de-hielo` y `https://cumpleclick.com/app/?p=luciano-spidey`
+(galería `galeria.php?p=<slug>`, PIN 1234). Los enlaces de invitación van por token y no cambiaron. Regla: un slug
+no se cambia desde el admin (no lo permite) ni a mano en la BD; siempre con este script o uno equivalente.
+
+## DESPLEGADO 2026-09-06 en automatizatech.cl/cumpleclick (PRE-PRODUCCIÓN) — Juego 3D + salas de ayudantes (por SSH, Claude)
+
+Deploy aditivo hecho por Claude vía SSH/SFTP (ver `Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md`
+§3.3), autorizado por Luis. Nada existente se sobrescribió. Verificado desde afuera: `sala.php`
+responde el contrato completo (36/36 checks de la prueba de humo contra PROD), el juego carga con
+WebGPU en `https://automatizatech.cl/cumpleclick/juego/?p=<slug>` (fiesta real, QR de ayudantes
+con URL pública, temáticas Hielo y Héroes), 0 errores de consola propios.
+
+| Local | PROD (`/cumpleclick/`) | Nota |
+|---|---|---|
+| `dist/lib.sala.php` | `/lib.sala.php` | nuevo |
+| `dist/sala.php` | `/sala.php` | nuevo; usa 11 funciones `cb_*` que el `lib.php` de PROD (26-ago) ya tiene |
+| `database/migrations/014_salas_ayudantes(.down).php` | `private-cumpleclick/database/migrations/` | aplicada con `private-cumpleclick/database/aplicar-014.php` (runner puntual, registra en `cc_schema_migrations`); tablas `cc_salas`, `cc_sala_ayudantes`, `cc_sala_acciones` |
+| `C:\wamp64\www\juego-prod\` (= `tucumple-repo/app/public`, 180 archivos, 38 MB) | `/juego/` | subido como zip y descomprimido en el servidor |
+| (generado) | `/juego/.htaccess` | reglas propias: 404 limpio para archivos inexistentes (el catch-all SPA del padre se hereda y serviría `index.html` con 200) y `Cache-Control` sin `immutable` porque los archivos del juego no llevan hash |
+
+**Segunda tanda, mismo día (kiosco principal + PIN 1234):**
+
+| Local | PROD (`/cumpleclick/`) | Nota |
+|---|---|---|
+| `dist/index.html` + `dist/assets/{main-DyP8gEfj.js, main-B9-yq8Vw.css, album-BLM5xg1A.js, album-CeNLvTx5.css, cartel-B99n-mNG.js, cartel-CnsaFVl2.css}` | `/index.html`, `/assets/` | kiosco con botón "🎮 Aventura 3D" en la bienvenida (solo temáticas hielo/heroes/spidey) → `juego/?p=<slug>&kiosco=1`. Verificado antes de subir que el bundle de PROD (`main-Bx-ejHH_`) tenía exactamente las mismas cadenas que el local: `src/` de esta rama == lo que corría en PROD. Los assets viejos siguen ahí (no estorban) |
+| `juego-prod/index.html`, `juego-prod/game/main.js` | `/juego/` | con `?kiosco=1` muestra "🏠 Volver al kiosco" en pausa y al final (`base + ?p=slug`); PIN de galería prellenado `1234` |
+| (dato) `private-cumpleclick/database/pin-1234.php` | BD | PIN de galería `1234` en las 10 fiestas de PROD vía `cb_load_parties`/`cb_save_parties` (mismo hash que el admin); respaldo previo `respaldo-cc_parties-20260906-164850.json` en esa carpeta. `galeria.php` y `sala.php?op=fotos` solo exigen el PIN, no `gallery_enabled` |
+| `public/admin/index.php` | **NO subido** | LOCAL: fiesta nueva nace con galería habilitada y PIN `1234` prellenado. El `admin/index.php` de PROD trae los perfiles de evento (commit `5d6d594`, otra rama) que esta rama no tiene: subirlo pisaría eso. Va cuando se unifiquen las ramas |
+
+`api.php`, `upload.php`, `ver.php` y `.htaccess` de la raíz **no cambiaron** (md5 idéntico a
+`dist/`). `lib.php` de PROD es más nuevo que el del 27-jul y NO se tocó. Pendiente aparte: el PIN de
+galería `2026` solo sigue vigente en `demo-kpop-vip`; las otras demos tienen otro PIN (se cambia
+desde el admin). Para actualizar el juego más adelante: regenerar `juego-prod`, zip, subir y
+descomprimir igual; los navegadores revalidan HTML/JS al instante gracias al `.htaccess`.
+
+## Delta local — Aceptación de Términos y firma (rama `feat/cumpleclick-aceptacion-terminos`, no desplegado)
+
+Solo PHP y `.md`; los bundles de `dist/assets/` **no cambian** en este delta.
+Orden: config privada (`acceptance_dir`, `notify_email`, `mail_from`) → migración
+`013_plan_acceptances` → `lib.php` → `lib.acceptance.php` → `legal/*.md` →
+`aceptar-plan.php`, `comprobante-aceptacion.php`, `admin/aceptaciones.php` →
+`admin/index.php` al final. Tabla completa con clasificación OBLIGATORIO/OPCIONAL
+en `Docs/BLUEPRINTS/CUMPLECLICK-ACEPTACION-TERMINOS-Y-FIRMA.md` (repo raíz).
+Verificado local: `tests/backend/acceptance.php` 46 checks, lint 67 archivos,
+paridad public→dist 296 archivos. **No probado en PROD.**
+
+## 2026-09-15 — respaldo completo de PROD y alineación con los repositorios (después de las fiestas)
+
+Antes de tocar nada: **respaldo completo** de PROD con los datos de las fiestas (volcado de la
+base, dominio entero 1,2 GB y almacén aparte) en `~/respaldos/cumpleclick-*-20260915-*`, con copia
+local del volcado y del almacén en `C:/Users/luis_/respaldos/cumpleclick/`. Rollback de datos:
+`zcat cumpleclick-db-20260915-1109.sql.gz | mysql ...`; de archivos: `tar xzf cumpleclick-dominio-20260915-1103.tar.gz`.
+
+**Subido a PROD:** solo `database/migrations/003_invitations_and_plan.php` (versión con guardas; la
+migración ya estaba aplicada, el archivo no se ejecuta). Respaldo `~/respaldos/003_invitations_and_plan.php.antes-20260915-*`.
+
+**Al repositorio, sin tocar PROD:** `public/juego/.htaccess`, `public/themes/.htaccess` y
+`public/vendor/mediapipe/` (seis archivos), copiados byte a byte desde PROD.
+
+**Cotejo final:** PROD igual a `main` y a los repos de los juegos, salvo tres archivos que difieren
+solo en fines de línea. Detalle en `MAPA-PROD-Y-REPOSITORIOS.md` (sección 2026-09-15).

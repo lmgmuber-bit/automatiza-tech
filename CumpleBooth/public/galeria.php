@@ -36,6 +36,7 @@ if (!empty($_COOKIE['cc_admin'])) {
     $isAdmin = !empty($_SESSION['admin_logged'])
         && time() - (int) ($_SESSION['admin_seen'] ?? 0) <= $idle
         && time() - (int) ($_SESSION['admin_started'] ?? 0) <= $absolute;
+    $adminUsuarioId = (int) ($_SESSION['admin_usuario_id'] ?? 0);   // 0 = clave maestra
     session_write_close();
     session_id('');
 }
@@ -65,9 +66,19 @@ function gallery_message(int $status, string $title, string $message): void
     exit;
 }
 
-/** Recuerdo (diploma/recuerdito) o foto con personaje, por el nombre que mandó el kiosco. */
+/**
+ * Qué es cada foto, por el nombre que mandó el kiosco: recuerdo (diploma/recuerdito),
+ * grupal (la foto de todos) o foto con personaje.
+ *
+ * La grupal se separa porque NO tiene dueño: agruparla por invitado la mandaba al final,
+ * bajo "(no está en la lista)", como si fuera un error. Es justo al revés: es la única que
+ * es de la fiesta entera.
+ */
 function gallery_kind(string $name): string
 {
+    if (strncmp($name, 'grupal-', 7) === 0) {
+        return 'grupal';
+    }
     return (strncmp($name, 'diploma-', 8) === 0 || strncmp($name, 'recuerdito-', 11) === 0) ? 'recuerdo' : 'personaje';
 }
 
@@ -102,6 +113,12 @@ $slug = (string) ($_GET['p'] ?? '');
 if (!cb_valid_public_slug($slug)) { gallery_message(400, 'Galería no disponible', 'El enlace no es válido.'); }
 $party = cb_load_party_raw($slug);
 if ($party === null) { gallery_message(404, 'Galería no disponible', 'No encontramos esta fiesta.'); }
+// La sesión de admin salta el PIN solo en las fiestas de ese usuario (2026-09-13); el resto
+// entra como cualquier invitado.
+if ($isAdmin) {
+    require_once __DIR__ . '/lib.admin-usuarios.php';
+    $isAdmin = cb_admin_usuario_puede_fiesta($adminUsuarioId, $slug);
+}
 // Se mira `galeriaHabilitada`, que es "el interruptor del admin Y hay PIN", y no solo si
 // existe el hash: mirando solo el hash, apagar la galeria desde el admin no la cerraba, y
 // como todas las fiestas usan el mismo PIN, cualquiera con el enlace seguia entrando.
@@ -226,6 +243,9 @@ foreach ((array) ($party['invitados'] ?? []) as $guest) {
 $leftovers = [];
 foreach ($byNorm as $key => $list) {
     if (isset($assigned[$key])) { continue; }
+    // Las grupales tienen su propia sección: si cayeran acá saldrían como "no está en la lista".
+    $list = array_values(array_filter($list, static fn ($p) => $p['kind'] !== 'grupal'));
+    if (!$list) { continue; }
     $leftovers[] = ['name' => $key === '' ? 'Sin nombre' : $list[0]['label'], 'key' => $key === '' ? '__sin-nombre' : $key, 'photos' => $list, 'extra' => true];
 }
 usort($leftovers, static fn ($a, $b) => ($a['key'] === '__sin-nombre') <=> ($b['key'] === '__sin-nombre') ?: strcmp($a['name'], $b['name']));
@@ -233,6 +253,7 @@ $groups = array_merge($groups, $leftovers);
 $conFotos = count(array_filter($groups, static fn ($g) => count($g['photos']) > 0));
 $recuerdos = array_values(array_filter($photos, static fn ($ph) => $ph['kind'] === 'recuerdo'));
 $personajes = array_values(array_filter($photos, static fn ($ph) => $ph['kind'] === 'personaje'));
+$grupales = array_values(array_filter($photos, static fn ($ph) => $ph['kind'] === 'grupal'));
 
 $themes = cb_load_themes();
 $theme = $themes['themes'][$party['tema'] ?? ''] ?? [];
@@ -337,6 +358,7 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
   <button class="tab" role="tab" type="button" id="tab-invitados" aria-selected="true" aria-controls="panel-invitados" data-vista="invitados">👥 Por invitado<b><?= (int) $conFotos ?></b></button>
   <button class="tab" role="tab" type="button" id="tab-recuerdo" aria-selected="false" aria-controls="panel-recuerdo" data-vista="recuerdo">🎓 <?= gallery_h($tituloRecuerdos) ?><b><?= count($recuerdos) ?></b></button>
   <button class="tab" role="tab" type="button" id="tab-personaje" aria-selected="false" aria-controls="panel-personaje" data-vista="personaje">🎭 Con personaje<b><?= count($personajes) ?></b></button>
+  <?php if ($grupales): ?><button class="tab" role="tab" type="button" id="tab-grupal" aria-selected="false" aria-controls="panel-grupal" data-vista="grupal">📸 La foto de todos<b><?= count($grupales) ?></b></button><?php endif; ?>
 </div>
 <p class="muted" style="margin:0 0 .8rem">Toca una foto para seleccionarla. Abajo puedes imprimir o descargar las elegidas.</p>
 
@@ -376,17 +398,28 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
   <p class="muted" id="sin-resultados" hidden>Ningún invitado coincide con la búsqueda.</p>
 </section>
 
-<?php foreach (['recuerdo' => $recuerdos, 'personaje' => $personajes] as $kind => $lista): ?>
+<?php
+// La foto de todos entra al bucle solo si existe: la pestaña tampoco se dibuja sin ella.
+$vistas = ['recuerdo' => $recuerdos, 'personaje' => $personajes];
+if ($grupales) { $vistas['grupal'] = $grupales; }
+$vacio = ['recuerdo' => mb_strtolower($tituloRecuerdos, 'UTF-8'), 'personaje' => 'fotos con personaje', 'grupal' => 'fotos de todos'];
+?>
+<?php foreach ($vistas as $kind => $lista): ?>
 <section class="panel" id="panel-<?= $kind ?>" role="tabpanel" aria-labelledby="tab-<?= $kind ?>" hidden>
-  <?php if (!$lista): ?><p class="muted">Todavía no hay <?= $kind === 'recuerdo' ? mb_strtolower($tituloRecuerdos, 'UTF-8') : 'fotos con personaje' ?>.</p><?php else: ?>
+  <?php if (!$lista): ?><p class="muted">Todavía no hay <?= gallery_h($vacio[$kind]) ?>.</p><?php else: ?>
   <div class="acciones" style="display:flex;gap:8px;justify-content:center;margin:0 0 10px"><button class="btn btn-ghost btn-mini" type="button" data-elegir-vista="<?= $kind ?>">Elegir todas las de esta pestaña</button></div>
   <div class="grid">
     <?php foreach ($lista as $ph): ?>
+    <?php
+      // La grupal no tiene dueño: su archivo se llama `grupal-<fiesta>` y poner eso de pie
+      // daba "grupal samantha", que no es el nombre de nadie.
+      $pie = $kind === 'grupal' ? 'La foto de todos' : ($ph['label'] !== '' ? $ph['label'] : 'Invitado');
+    ?>
     <figure class="foto" tabindex="0" role="checkbox" aria-checked="false" data-id="<?= gallery_h($ph['id']) ?>" data-full="<?= gallery_h($ph['full']) ?>" data-kind="<?= $kind ?>">
-      <img src="<?= gallery_h($ph['thumb']) ?>" alt="<?= gallery_h($ph['label'] !== '' ? $ph['label'] : 'Invitado') ?>" loading="lazy" decoding="async">
+      <img src="<?= gallery_h($ph['thumb']) ?>" alt="<?= gallery_h($pie) ?>" loading="lazy" decoding="async">
       <span class="check" aria-hidden="true">✓</span>
       <a class="ver" href="<?= gallery_h($ph['view']) ?>" target="_blank" rel="noopener" data-ver>Ver</a>
-      <figcaption class="nombre"><?= gallery_h($ph['label'] !== '' ? $ph['label'] : 'Invitado') ?></figcaption>
+      <figcaption class="nombre"><?= gallery_h($pie) ?></figcaption>
     </figure>
     <?php endforeach; ?>
   </div>

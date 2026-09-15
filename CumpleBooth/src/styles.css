@@ -2979,3 +2979,55 @@ body {
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* Aviso de "pon la tablet acostada" en la foto grupal. Va sobre la cámara, no al lado: si
+   pasa desapercibido, el grupo sale metido en una franja y nadie entiende por qué. */
+.grupal-acostar {
+  margin: 0 auto .6rem;
+  padding: .7rem 1.1rem;
+  max-width: 92%;
+  border-radius: 999px;
+  background: var(--yellow, #ffb800);
+  color: var(--dark2, #3a1f2b);
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+
+/* Icono de la foto grupal: abajo a la izquierda, discreto, sobre la decoración.
+   56 px de lado: por debajo de eso un adulto falla el toque con la tablet en la mano. */
+.intro-grupal,
+.intro-pantalla {
+  position: absolute;
+  z-index: 3;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, .55);
+  border-radius: 50%;
+  background: rgba(32, 22, 38, .42);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.intro-grupal:active,
+.intro-pantalla:active { transform: scale(.94); }
+.intro-grupal:focus-visible,
+.intro-pantalla:focus-visible { outline: 3px solid var(--yellow, #ffb800); outline-offset: 3px; }
+
+/* La foto grupal abajo a la izquierda; la pantalla completa arriba a la izquierda, la misma
+   esquina que usan los juegos, para que sea el mismo gesto en todo el servicio. Arriba a la
+   derecha está la marca. */
+.intro-grupal {
+  left: max(14px, env(safe-area-inset-left));
+  bottom: max(14px, env(safe-area-inset-bottom));
+}
+.intro-pantalla {
+  left: max(14px, env(safe-area-inset-left));
+  top: max(18px, env(safe-area-inset-top));
+  font-size: 1.35rem;
+}

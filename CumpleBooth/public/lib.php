@@ -1066,6 +1066,9 @@ function cb_build_theme_payload(
         // themes.json tampoco lo ofrece, y no cambia en nada.
         'asomate'    => cb_theme_asomate($themeData['asomate'] ?? null, $base, $themeDiskDir,
                                          $themeData['personajes'] ?? []),
+        // "La foto de todos": una sola foto del grupo dentro del marco grande. Misma
+        // prudencia que arriba: se publica solo si el fondo esta en disco.
+        'grupal'     => cb_theme_grupal($themeData['grupal'] ?? null, $base, $themeDiskDir),
         'musica'     => $base . 'musica-fondo.mp3',
         // Música propia de la pantalla de juegos (opcional). Solo se publica si
         // el archivo existe: sin él, el juego sigue sonando con la de fondo.
@@ -1099,6 +1102,42 @@ function cb_sello_archivo(string $ruta): string
 {
     $t = @filemtime($ruta);
     return $t ? substr(dechex($t), -6) : '0';
+}
+
+/**
+ * El bloque de la FOTO GRUPAL de una tematica.
+ *
+ * Devuelve null —y el kiosco no muestra el boton— si falta el bloque en themes.json o si el
+ * fondo no esta en disco. `frameBox` se valida aca: un recuadro fuera del lienzo dejaria la
+ * foto del grupo pegada en un borde, y eso en una fiesta no se puede arreglar.
+ */
+function cb_theme_grupal($bloque, string $base, string $dir): ?array
+{
+    if (!is_array($bloque) || empty($bloque['fondo'])) {
+        return null;
+    }
+    $archivo = (string) $bloque['fondo'];
+    if (!is_file($dir . $archivo)) {
+        return null;
+    }
+    $caja = is_array($bloque['frameBox'] ?? null) ? $bloque['frameBox'] : [];
+    foreach (['x', 'y', 'w', 'h'] as $clave) {
+        if (!isset($caja[$clave]) || !is_numeric($caja[$clave])) {
+            return null;
+        }
+        $caja[$clave] = (float) $caja[$clave];
+    }
+    if ($caja['w'] <= 0.05 || $caja['h'] <= 0.05
+        || $caja['x'] < 0 || $caja['y'] < 0
+        || $caja['x'] + $caja['w'] > 1 || $caja['y'] + $caja['h'] > 1) {
+        return null;
+    }
+
+    return [
+        'fondo'    => $base . $archivo,
+        'frameBox' => $caja,
+        'titulo'   => (string) ($bloque['titulo'] ?? 'La foto de todos'),
+    ];
 }
 
 function cb_theme_asomate($bloque, string $base, string $dir, array $personajesTema = []): ?array
@@ -1602,26 +1641,37 @@ function cb_record_photo(string $partySlug, array $photo): bool
  * Sirve para que el admin vea lo que un invitado no debe ver: en concreto, una foto que está
  * en la papelera y que necesita mirar antes de decidir si la devuelve.
  */
-function cb_admin_sesion_activa(): bool
+function cb_admin_sesion_activa(?string $partySlug = null): bool
 {
-    static $cache = null;
-    if ($cache !== null) {
-        return $cache;
+    // -1 = sin sesión viva; 0 = clave maestra; > 0 = usuario del backoffice (2026-09-13).
+    static $usuarioId = null;
+    if ($usuarioId === null) {
+        $usuarioId = -1;
+        if (!empty($_COOKIE['cc_admin']) && session_status() !== PHP_SESSION_ACTIVE) {
+            $secure = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
+            $previo = session_name('cc_admin');
+            session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => $secure, 'httponly' => true, 'samesite' => 'Strict']);
+            session_start();
+            $viva = !empty($_SESSION['admin_logged'])
+                && time() - (int) ($_SESSION['admin_seen'] ?? 0) <= (int) cb_config('session_idle_seconds')
+                && time() - (int) ($_SESSION['admin_started'] ?? 0) <= (int) cb_config('session_absolute_seconds');
+            if ($viva) {
+                $usuarioId = (int) ($_SESSION['admin_usuario_id'] ?? 0);
+            }
+            session_write_close();
+            session_id('');
+            session_name($previo);
+        }
     }
-    if (empty($_COOKIE['cc_admin']) || session_status() === PHP_SESSION_ACTIVE) {
-        return $cache = false;
+    if ($usuarioId < 0) {
+        return false;
     }
-    $secure = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
-    $previo = session_name('cc_admin');
-    session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => $secure, 'httponly' => true, 'samesite' => 'Strict']);
-    session_start();
-    $cache = !empty($_SESSION['admin_logged'])
-        && time() - (int) ($_SESSION['admin_seen'] ?? 0) <= (int) cb_config('session_idle_seconds')
-        && time() - (int) ($_SESSION['admin_started'] ?? 0) <= (int) cb_config('session_absolute_seconds');
-    session_write_close();
-    session_id('');
-    session_name($previo);
-    return $cache;
+    if ($partySlug === null) {
+        return true;
+    }
+    // Un operador solo ve lo de sus fiestas; la clave maestra, todo.
+    require_once __DIR__ . '/lib.admin-usuarios.php';
+    return cb_admin_usuario_puede_fiesta($usuarioId, $partySlug);
 }
 
 /**

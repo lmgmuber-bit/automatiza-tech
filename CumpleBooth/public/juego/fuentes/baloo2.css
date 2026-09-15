@@ -1,0 +1,11 @@
+/* Baloo 2: la tipografía de las temáticas del kiosco.
+ *
+ * El menú y el Reino de Hielo ya la NOMBRAN en su `font-family`, pero nadie la cargaba, así
+ * que en la tablet caían a la fuente del sistema y cada juego se veía de una familia
+ * distinta (Luis, 2026-09-11). El Festival ni siquiera la nombraba: usaba Georgia.
+ * Son los mismos archivos que compila el kiosco, copiados acá para que los juegos —que no
+ * pasan por Vite— puedan pedirlos por una ruta estable.
+ */
+@font-face { font-family: 'Baloo 2'; font-style: normal; font-weight: 600; font-display: swap; src: url('./baloo2-600.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-style: normal; font-weight: 700; font-display: swap; src: url('./baloo2-700.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-style: normal; font-weight: 800; font-display: swap; src: url('./baloo2-800.woff2') format('woff2'); }

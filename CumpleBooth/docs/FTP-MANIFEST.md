@@ -3379,3 +3379,37 @@ Subido por SSH con `subir-login.py` (respaldo `~/respaldos/…app_lib.album.php.
 `album-intake.php` por GET contesta 405, o sea el archivo nuevo carga y corre (`subir.php` llama a
 `cb_album_limits()` antes de mirar el token). **No probado:** subir un video real de 50-60 MB desde
 un celular contra PROD.
+
+## DESPLEGADO 2026-09-15 (tarde, 3) en cumpleclick.com/app — galería pública: sin imprimir para invitados y pestaña "De los invitados" con mensaje
+
+Pedido de Luis. En `galeria.php` (la galería con PIN):
+- **Imprimir quedó solo para la sesión de admin.** Un invitado ya no ve copias, papel, "llenar la
+  hoja" ni el botón; conserva seleccionar y **descargar ZIP**. El organizador logueado sigue
+  imprimiendo desde la tablet igual que antes.
+- **Pestaña "💌 De los invitados"**: lo que mandaron por el Álbum Recuerdo (`subir.php`), cada foto
+  o video con el nombre y el mensaje de quien lo mandó (los videos con ▶ y su póster si lo trajo).
+  Entran también al ZIP y a "Descargar todas". **Se ve lo pendiente y lo aprobado**: el invitado ve
+  su foto apenas la manda; lo que el organizador esconde o borra en el admin desaparece. Si Luis
+  prefiere que solo salga lo aprobado, es cambiar `['pending', 'approved']` por `['approved']` en
+  `galeria.php` y en `ver-media.php`.
+- `ver-media.php` deja pasar a la **sesión de galería** (lee `cc_gallery` sin crearla, como hace con
+  la de admin): sin sesión sigue exigiendo aprobado + álbum publicado, así que la revista pública no
+  cambia.
+
+Rama `claude/galeria-invitados` (commit `89128dc`, base `main` `6bc78c5`). Prueba
+`tests/backend/galeria-http.php` (23 checks sobre `php -S` + SQLite): PIN malo y bueno, pestaña con
+nombre y mensaje, el escondido no aparece ni se sirve, miniatura solo con sesión, ZIP, y el admin
+conserva imprimir. Suites `album` 162, `album-intake-http` 26, `usuarios-http` 59. Vista en el
+navegador con el servidor local `galeria-invitados-local` (`.claude/launch.json`, siembra 4 aportes).
+
+| Local | Destino PROD | Clase |
+|---|---|---|
+| `CumpleBooth/public/galeria.php` | `app/galeria.php` | **OBLIGATORIO** |
+| `CumpleBooth/public/ver-media.php` | `app/ver-media.php` | **OBLIGATORIO** (sin él las miniaturas de la pestaña dan 404) |
+| `CumpleBooth/tests/backend/galeria-http.php` | — | OPCIONAL, no se sube |
+
+Subidos por SSH con `subir-login.py` (respaldos `~/respaldos/…app_galeria.php.antes-<sello>` y
+`…app_ver-media.php.antes-<sello>`, `php -l`, `mv` atómico, sha256 igual al commit). Verificado desde
+afuera con el PIN real de la fiesta de Luciano: la galería abre, sin botón de imprimir y con el texto
+"Abajo puedes descargar las elegidas"; la pestaña de invitados no aparece todavía porque en PROD no
+hay aportes. **No probado:** un aporte real en PROD viéndose en la pestaña (no hay ninguno aún).

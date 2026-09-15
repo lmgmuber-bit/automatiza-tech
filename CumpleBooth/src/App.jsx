@@ -15,6 +15,7 @@ import { configurarRecords, guardarRecord, textoRecord, formatoSegundos } from '
 import { resolveThemeFlow } from './themeFlow.js'
 import { conVersion } from './assetVersion.js'
 import { selectSpinnerWinnerIndex } from './spinnerWinner.js'
+import { celdaBajoPunto, esArrastre, intercambiar } from './puzzleArrastre.js'
 import { guiaEnPantalla, rectFotoEnLienzo } from './asomateGuia.js'
 import { prepararVideo, urlDeVideo } from './videoListo.js'
 import { ajusteParaCara } from './caraAuto.js'
@@ -534,6 +535,9 @@ function BoothApp() {
     () => new URLSearchParams(location.search).has('invitados')
   )
   const [muted, setMuted] = useState(false)
+  // Botón "volver" (2026-09-15): en la fiesta, para repetir la ruleta o cambiar de niño había
+  // que recargar la página. Abre una hoja con las vueltas posibles desde la pantalla actual.
+  const [volverAbierto, setVolverAbierto] = useState(false)
   const bgRef = useRef(null)
   const musicRef = useRef(null)
   const musicTrackRef = useRef(null) // pista sonando, para no reiniciarla en cada render
@@ -651,9 +655,40 @@ function BoothApp() {
     setTimeout(() => (tapCornerR.current = 0), 1500)
   }
 
+  // Dónde se puede volver atrás: del recorrido de la ruleta (no de Asómate, que ya tiene su
+  // propio Atrás, ni del baby shower, que no pasa por la ruleta).
+  const conVolver = !isBabyShower && trasInvitados === 'spinner'
+    && ['invitados', 'spinner', 'photo-session', 'video-personaje', 'juego', 'transition'].includes(screen)
+  const volverA = (destino) => {
+    setVolverAbierto(false)
+    if (destino === 'intro') { reset(); return }
+    setPersonaje(null)
+    if (destino === 'invitados') setInvitado(null)
+    go(destino)
+  }
+
   return (
-    <div className="app">
+    <div className={`app${conVolver ? ' app--con-volver' : ''}`}>
       <div className="corner-hit-right" onClick={cornerTapRight} aria-hidden />
+
+      {conVolver && !volverAbierto && (
+        <button className="volver-btn" type="button" onClick={() => setVolverAbierto(true)} aria-label="Volver atrás">
+          ←
+        </button>
+      )}
+      {volverAbierto && (
+        <div className="volver-hoja" role="dialog" aria-label="Volver atrás">
+          <p>¿A dónde volvemos?</p>
+          {screen !== 'invitados' && screen !== 'spinner' && (
+            <button className="cta" onClick={() => volverA('spinner')}>🎡 Volver a la ruleta</button>
+          )}
+          {screen !== 'invitados' && (
+            <button className="cta" onClick={() => volverA('invitados')}>🧒 Elegir otro niño</button>
+          )}
+          <button className="cta" onClick={() => volverA('intro')}>🏠 Volver al inicio</button>
+          <button className="cta ghost" onClick={() => setVolverAbierto(false)}>Seguir aquí ✖</button>
+        </div>
+      )}
 
       {/* Botón mute flotante — siempre visible excepto en intro */}
       {screen !== 'intro' && MUSIC_ENABLED && (
@@ -1503,10 +1538,16 @@ function GestionInvitados({ list, onSave, onClose }) {
 /* ============================================================
    1-C) SPINNER — ruleta gira personajes Disney
    ============================================================ */
+// Cuántas veces puede girar un niño antes de que la ruleta le pregunte qué personaje quiere.
+// En la fiesta del 13-sep giraban y giraban buscando a uno en particular (Luis, 2026-09-15).
+const RULETA_MAX_GIROS = 3
+
 function Spinner({ onDone }) {
   const [winner, setWinner] = useState(null)
   // Cada reintento incrementa spinId y relanza el efecto del giro.
   const [spinId, setSpinId] = useState(0)
+  const giros = spinId + 1
+  const [eligiendo, setEligiendo] = useState(false)
   const rotRef = useRef(null)
   // Rotación acumulada: el reintento gira HACIA ADELANTE desde donde quedó la
   // rueda; si el giro partiera de 0 otra vez se vería rebobinar de golpe.
@@ -1573,8 +1614,40 @@ function Spinner({ onDone }) {
     onDone(winner)
   }
 
+  // Después de RULETA_MAX_GIROS giros, en vez de girar otra vez se elige el personaje a dedo.
+  // Mientras elige, el kiosco espera más (20 s) pero no para siempre: si nadie toca nada,
+  // sigue con el último ganador.
+  const abrirEleccion = () => {
+    clearTimeout(autoRef.current)
+    setEligiendo(true)
+    autoRef.current = setTimeout(() => onDone(winner), 20000)
+  }
+  const cerrarEleccion = () => {
+    clearTimeout(autoRef.current)
+    setEligiendo(false)
+    autoRef.current = setTimeout(() => onDone(winner), 8000)
+  }
+  const elegir = (p) => {
+    clearTimeout(autoRef.current)
+    onDone(p)
+  }
+
   return (
     <section className={`screen spinner${CONFIG.images.roulette ? ' has-themed-background' : ''}`}>
+      {eligiendo && (
+        <div className="spinner-elegir" role="dialog" aria-label="Elegir personaje">
+          <p className="spinner-elegir__titulo">¿Qué personaje te gustaría?</p>
+          <div className="spinner-elegir__grid">
+            {PERSONAJES.map((p) => (
+              <button key={p.name} type="button" className="spinner-elegir__btn" onClick={() => elegir(p)}>
+                <span className="spinner-elegir__emoji" aria-hidden="true">{p.emoji}</span>
+                <span>{p.name}</span>
+              </button>
+            ))}
+          </div>
+          <button className="cta ghost" onClick={cerrarEleccion}>Volver a la ruleta</button>
+        </div>
+      )}
       <div className="spinner-wrapper">
         <div className="spinner-pointer">▼</div>
         <div className="spinner-rotator" ref={rotRef} style={{ '--spin': '0deg' }}>
@@ -1612,9 +1685,15 @@ function Spinner({ onDone }) {
           <button className="cta" onClick={aceptar}>
             ✅ ¡Me gusta!
           </button>
-          <button className="cta ghost" onClick={reintentar}>
-            🔁 Girar de nuevo
-          </button>
+          {giros >= RULETA_MAX_GIROS ? (
+            <button className="cta ghost" onClick={abrirEleccion}>
+              🎯 Elegir mi personaje
+            </button>
+          ) : (
+            <button className="cta ghost" onClick={reintentar}>
+              🔁 Girar de nuevo
+            </button>
+          )}
         </div>
       )}
       {/* Mientras hay ganador el teaser estorba: se lleva el espacio que necesitan los
@@ -3199,6 +3278,16 @@ function JuegoFichas({ config, invitado, personaje, onDone }) {
   const total = cols * filas
   const [orden, setOrden] = useState(() => barajarPiezas(total))
   const [elegida, setElegida] = useState(null)
+  // Arrastre (2026-09-15): en la fiesta los niños arrastraban las piezas en vez de tocar dos.
+  // { desde, x0, y0, x, y, movido, lado, sobre }: la pieza que se levantó, dónde empezó el
+  // dedo, dónde va, si ya se movió lo suficiente para ser arrastre, el tamaño de la ficha
+  // fantasma y la casilla que hay debajo del dedo. Tocar dos piezas sigue funcionando.
+  const [arrastre, setArrastre] = useState(null)
+  // La misma información en un ref: los oyentes de la ventana la leen sin cerrar sobre un
+  // render viejo, y así no hay efectos secundarios dentro de un actualizador de estado.
+  const arrastreRef = useRef(null)
+  const fijarArrastre = (v) => { arrastreRef.current = v; setArrastre(v) }
+  const tableroRef = useRef(null)
   const [esRecord, setEsRecord] = useState(false)
   // En los rompecabezas no hay puntaje: el récord es el MEJOR TIEMPO, y por
   // eso se guarda con modo 'menor'.
@@ -3231,15 +3320,62 @@ function JuegoFichas({ config, invitado, personaje, onDone }) {
       setElegida(null)
       return
     }
-    setOrden((prev) => {
-      const next = [...prev]
-      ;[next[elegida], next[pos]] = [next[pos], next[elegida]]
-      return next
-    })
+    setOrden((prev) => intercambiar(prev, elegida, pos))
     setElegida(null)
   }
 
+  // Levantar una pieza. Si el dedo se mueve más de UMBRAL_ARRASTRE_PX es un arrastre y al
+  // soltar se cambia por la casilla que quede debajo; si no se movió, es el toque de siempre.
+  const levantar = (pos) => (e) => {
+    if (listo || arrastreRef.current) return
+    const rect = tableroRef.current?.getBoundingClientRect()
+    const lado = rect ? rect.width / cols : 0
+    fijarArrastre({ desde: pos, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, movido: false, lado, sobre: pos })
+  }
+
+  useEffect(() => {
+    if (!arrastre) return undefined
+    const mover = (e) => {
+      const prev = arrastreRef.current
+      if (!prev) return
+      const movido = prev.movido || esArrastre(e.clientX - prev.x0, e.clientY - prev.y0)
+      const rect = tableroRef.current?.getBoundingClientRect()
+      const sobre = movido ? celdaBajoPunto(rect, cols, filas, e.clientX, e.clientY) : prev.sobre
+      fijarArrastre({ ...prev, x: e.clientX, y: e.clientY, movido, sobre })
+    }
+    const soltar = (e) => {
+      const prev = arrastreRef.current
+      if (!prev) return
+      fijarArrastre(null)
+      if (!prev.movido) {
+        tocar(prev.desde)
+        return
+      }
+      const rect = tableroRef.current?.getBoundingClientRect()
+      const hasta = celdaBajoPunto(rect, cols, filas, e.clientX, e.clientY)
+      if (hasta >= 0 && hasta !== prev.desde) {
+        setOrden((orden) => intercambiar(orden, prev.desde, hasta))
+        setElegida(null)
+      }
+    }
+    window.addEventListener('pointermove', mover)
+    window.addEventListener('pointerup', soltar)
+    window.addEventListener('pointercancel', soltar)
+    return () => {
+      window.removeEventListener('pointermove', mover)
+      window.removeEventListener('pointerup', soltar)
+      window.removeEventListener('pointercancel', soltar)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrastre?.desde, cols, filas])
+
   const bienPuestas = orden.filter((v, i) => v === i).length
+  const fondoPieza = (pieza) => ({
+    backgroundImage: `url("${config.image}")`,
+    backgroundSize: `${cols * 100}% ${filas * 100}%`,
+    backgroundPosition: `${cols > 1 ? ((pieza % cols) * 100) / (cols - 1) : 0}% ${filas > 1 ? (Math.floor(pieza / cols) * 100) / (filas - 1) : 0}%`,
+  })
+  const arrastrando = arrastre && arrastre.movido
 
   if (!config.image) {
     // Sin imagen publicada no hay rompecabezas posible: se avanza sin trabar
@@ -3262,7 +3398,8 @@ function JuegoFichas({ config, invitado, personaje, onDone }) {
       </div>
 
       {/* Pista: cómo debe quedar armado. Una vez resuelto sobra — el propio
-          tablero ya es la imagen completa. */}
+          tablero ya es la imagen completa. Va grande y arriba del tablero: en la
+          fiesta la miniatura de 56 px no se veía (Luis, 2026-09-15). */}
       {!listo && (
         <div className="juego-pista">
           <span className="juego-pista__etiqueta">Así se ve</span>
@@ -3275,32 +3412,34 @@ function JuegoFichas({ config, invitado, personaje, onDone }) {
       <p className="juego-sub">
         {listo
           ? `${personaje?.name || 'Tu amigo'} está listo para la foto`
-          : `${invitado ? invitado + ', t' : 'T'}oca dos piezas para cambiarlas`}
+          : `${invitado ? invitado + ', a' : 'A'}rrastra una pieza sobre otra para cambiarlas`}
       </p>
 
       <div
-        className={`puzzle-tablero${listo ? ' puzzle-tablero--listo' : ''}`}
+        ref={tableroRef}
+        className={`puzzle-tablero${listo ? ' puzzle-tablero--listo' : ''}${arrastrando ? ' puzzle-tablero--arrastrando' : ''}`}
         style={{ '--puzzle-cols': cols, '--puzzle-filas': filas }}
       >
-        {orden.map((pieza, pos) => {
-          const col = pieza % cols
-          const fila = Math.floor(pieza / cols)
-          return (
-            <button
-              key={pos}
-              type="button"
-              className={`puzzle-pieza${elegida === pos ? ' puzzle-pieza--elegida' : ''}${pieza === pos ? ' puzzle-pieza--ok' : ''}`}
-              onClick={() => tocar(pos)}
-              aria-label={`Pieza ${pos + 1}`}
-              style={{
-                backgroundImage: `url("${config.image}")`,
-                backgroundSize: `${cols * 100}% ${filas * 100}%`,
-                backgroundPosition: `${cols > 1 ? (col * 100) / (cols - 1) : 0}% ${filas > 1 ? (fila * 100) / (filas - 1) : 0}%`,
-              }}
-            />
-          )
-        })}
+        {orden.map((pieza, pos) => (
+          <button
+            key={pos}
+            type="button"
+            className={`puzzle-pieza${elegida === pos ? ' puzzle-pieza--elegida' : ''}${pieza === pos ? ' puzzle-pieza--ok' : ''}${arrastrando && arrastre.desde === pos ? ' puzzle-pieza--origen' : ''}${arrastrando && arrastre.sobre === pos && arrastre.desde !== pos ? ' puzzle-pieza--destino' : ''}`}
+            onPointerDown={levantar(pos)}
+            aria-label={`Pieza ${pos + 1}`}
+            style={fondoPieza(pieza)}
+          />
+        ))}
       </div>
+
+      {/* Ficha fantasma que sigue al dedo mientras se arrastra. */}
+      {arrastrando && (
+        <span
+          className="puzzle-fantasma"
+          aria-hidden="true"
+          style={{ left: arrastre.x, top: arrastre.y, width: arrastre.lado, height: arrastre.lado, ...fondoPieza(orden[arrastre.desde]) }}
+        />
+      )}
 
       {listo && <button className="cta pulse" onClick={finish}>Ahora sí, mi foto 📸</button>}
 

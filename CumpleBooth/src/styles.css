@@ -972,20 +972,22 @@ body {
   font-variant-numeric: tabular-nums; /* el contador no baila al cambiar */
 }
 
-/* Pista del rompecabezas de fichas: en espejo con el contador (arriba a la
-   derecha), la imagen completa y sin recortar para saber cómo debe quedar. */
+/* Pista del rompecabezas de fichas: la imagen completa para saber cómo debe quedar.
+   Antes era una miniatura de 56 px en la esquina y en la fiesta nadie la veía (Luis,
+   2026-09-15): ahora va grande, en el flujo, justo arriba del tablero. */
 .juego-pista {
-  position: absolute; top: 14px; right: 16px; z-index: 3;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  position: relative; z-index: 3;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  margin: 0 auto;
 }
 .juego-pista__etiqueta {
-  color: #fff; font-weight: 800; font-size: 11px;
-  background: rgba(0,0,0,0.42); padding: 2px 9px; border-radius: 999px;
+  color: #fff; font-weight: 800; font-size: clamp(12px, 3cqw, 15px);
+  background: rgba(0,0,0,0.42); padding: 3px 12px; border-radius: 999px;
 }
 .juego-pista__img {
-  width: 56px; height: 56px; object-fit: cover;
-  border-radius: 10px; border: 2px solid rgba(255,255,255,0.8);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+  width: min(34cqw, 230px); aspect-ratio: 1 / 1; height: auto; object-fit: cover;
+  border-radius: 14px; border: 3px solid rgba(255,255,255,0.85);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.4);
 }
 .juego-title {
   position: relative; z-index: 3;
@@ -3031,3 +3033,84 @@ body {
   top: max(18px, env(safe-area-inset-top));
   font-size: 1.35rem;
 }
+
+/* ============================================================
+   Correcciones tras las fiestas del 13-sep (2026-09-15)
+   ============================================================ */
+
+/* Rompecabezas: arrastrar una ficha sobre otra. `touch-action: none` es lo que deja que el
+   dedo arrastre sin que la tablet convierta el gesto en un desplazamiento de página. */
+.puzzle-pieza { touch-action: none; }
+.puzzle-tablero--arrastrando .puzzle-pieza { transition: none; }
+.puzzle-pieza--origen { opacity: 0.35; }
+.puzzle-pieza--destino {
+  outline-color: var(--yellow);
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.45);
+  transform: scale(0.94);
+}
+/* La ficha fantasma que sigue al dedo. */
+.puzzle-fantasma {
+  position: fixed; z-index: 60; pointer-events: none;
+  transform: translate(-50%, -50%) scale(1.08);
+  border-radius: 10px; border: 3px solid rgba(255,255,255,0.9);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.45);
+  background-repeat: no-repeat;
+}
+
+/* Ruleta: después de tres giros, elegir el personaje a dedo. */
+.spinner-elegir {
+  position: absolute; inset: 0; z-index: 40;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; padding: 24px;
+  background: rgba(10, 3, 34, 0.9);
+  animation: fade 0.3s ease;
+}
+.spinner-elegir__titulo {
+  margin: 0; color: #fff; font-weight: 800;
+  font-size: clamp(22px, 6cqw, 34px);
+  text-shadow: 0 2px 14px rgba(0,0,0,0.6);
+}
+.spinner-elegir__grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 3cqw;
+  width: min(92cqw, 560px);
+}
+.spinner-elegir__btn {
+  min-height: 22cqw; padding: 10px 6px;
+  border-radius: 18px; border: 2px solid rgba(255,255,255,0.55);
+  background: rgba(255,255,255,0.14); color: #fff;
+  font-family: var(--font); font-weight: 800; font-size: clamp(14px, 3.6cqw, 20px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer;
+}
+.spinner-elegir__btn:active { transform: scale(0.95); background: rgba(255,255,255,0.28); }
+.spinner-elegir__emoji { font-size: clamp(34px, 10cqw, 56px); line-height: 1; }
+
+/* El Show 3D: la tarjeta de arranque también responde al toque. */
+.show3d-card--lista { cursor: pointer; }
+
+/* Botón "volver" y su hoja de opciones. Arriba a la izquierda, como en cualquier app; los
+   marcadores de los juegos se corren a la derecha para dejarle sitio. */
+.volver-btn {
+  position: fixed; top: 14px; left: 14px; z-index: 999;
+  min-width: 48px; height: 48px; padding: 0 16px;
+  border-radius: 999px; border: 1px solid rgba(255,255,255,0.6);
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
+  color: #fff; font-family: var(--font); font-weight: 800; font-size: 24px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.25); cursor: pointer;
+}
+.volver-btn:active { transform: scale(0.92); }
+.app--con-volver .juego-hud { left: 76px; max-width: calc(100% - 190px); }
+.app--con-volver .show3d-hud { left: 74px; }
+.volver-hoja {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 24px;
+  background: rgba(10, 3, 34, 0.86);
+  animation: fade 0.25s ease;
+}
+.volver-hoja p {
+  margin: 0 0 8px; color: #fff; font-weight: 800;
+  font-size: clamp(22px, 6cqw, 32px);
+}
+.volver-hoja .cta { width: min(88cqw, 420px); min-height: 56px; }

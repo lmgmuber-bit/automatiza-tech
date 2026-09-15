@@ -3317,3 +3317,42 @@ migración ya estaba aplicada, el archivo no se ejecuta). Respaldo `~/respaldos/
 
 **Cotejo final:** PROD igual a `main` y a los repos de los juegos, salvo tres archivos que difieren
 solo en fines de línea. Detalle en `MAPA-PROD-Y-REPOSITORIOS.md` (sección 2026-09-15).
+
+## LOCAL, pendiente de subir — 2026-09-15 (tarde) — subir.php: el "¡Gracias!" se veía sin haber enviado nada
+
+**Qué pasó en las fiestas del 13-sep.** La página de carga del Álbum Recuerdo (`subir.php`, la del QR
+de "comparte tus recuerdos") mostraba el panel **"¡Gracias! / Enviar más recuerdos" desde que abría**,
+debajo del formulario. Los invitados lo vieron, creyeron que ya habían enviado y no tocaron "Enviar".
+Consultado en PROD el 15-sep (solo lectura, `cc_event_media`): **cero aportes de invitados** en
+`samantha-hielo` y en `luciano-spidey`; lo único que hay son las 19 fotos de la cabina de Samantha.
+
+**Causa.** `_album-intake.css.php` define `.panel{display:flex}` y el navegador aplica el atributo
+`hidden` con la prioridad más baja que existe, así que cualquier `display` de clase le gana. El
+JavaScript estaba bien: solo muestra el panel cuando TODOS los archivos contestaron `ok`; el
+problema es que el panel ya estaba visible antes de eso.
+
+**Corrección** (rama `claude/album-subir-hidden`, commit `6685f56`, base `main` `bcbc531`):
+una regla `[hidden]{display:none !important}` al principio del CSS. Probado en el navegador con el
+CSS real: antes `#panel-done` calzaba `display:flex` al abrir; después `none`, y al terminar el
+envío el formulario se esconde y el panel aparece. Probado el envío de verdad por HTTP
+(`tests/backend/album-intake-http.php`, 26 checks sobre `php -S` + SQLite): la página lleva la regla,
+el endpoint rechaza GET/token malo/sin consentimiento/formato ajeno con las claves que la página
+traduce, una foto queda en disco con miniatura y fila `guest`/`pending`, repetirla contesta
+`duplicate`, y con el álbum cerrado todo contesta 403. Suite del kiosco: 199 de 199.
+
+**Lista para subir (archivo a archivo):**
+
+| Local | Destino PROD | Clase |
+|---|---|---|
+| `CumpleBooth/public/_album-intake.css.php` | `app/_album-intake.css.php` | **OBLIGATORIO** (único archivo; `subir.php` no cambia) |
+| `CumpleBooth/tests/frontend/subirHidden.test.mjs` | — | OPCIONAL, no se sube |
+| `CumpleBooth/tests/backend/album-intake-http.php` | — | OPCIONAL, no se sube |
+
+Cómo se sube (por SSH, con respaldo en `~/respaldos/` y `mv` atómico):
+`python scratchpad/usuarios-admin/subir-login.py 6685f56 CumpleBooth/public/_album-intake.css.php`,
+y después `python scratchpad/album-subir/verificar-http.py despues`, que pide `subir.php` con un token
+inválido (la página de estado incluye el mismo CSS) y busca la regla. **Verificado el 15-sep antes de
+subir: PROD todavía NO lleva la regla.** Rollback: `cp ~/respaldos/domains_cumpleclick.com_public_html_app__album-intake.css.php.antes-<sello> ~/domains/cumpleclick.com/public_html/app/_album-intake.css.php`.
+
+**No probado:** en una tablet o celular real contra PROD (falta subirlo). Los tokens de aporte de las
+dos fiestas siguen activos en la base, así que los QR impresos siguen sirviendo cuando esto suba.

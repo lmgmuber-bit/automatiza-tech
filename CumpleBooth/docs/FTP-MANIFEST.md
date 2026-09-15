@@ -3355,3 +3355,27 @@ inválido (la página de estado incluye el mismo CSS) y busca la regla. **Subido
 
 **No probado:** en una tablet o celular real contra PROD con un token vigente (la verificación fue sobre las páginas de estado, que llevan el mismo CSS). Los tokens de aporte de las
 dos fiestas siguen activos en la base, así que los QR impresos siguen sirviendo cuando esto suba.
+
+## DESPLEGADO 2026-09-15 (tarde, 2) en cumpleclick.com/app — topes del Álbum: videos de 60 MB y 1 minuto, 5 GB por fiesta
+
+Pedido de Luis. Antes: 40 MB, 30 s y 3 GB. Todo lo demás sigue igual (10 archivos y 2 videos por
+envío, fotos de 12 MB, 400 archivos por álbum, 30 archivos cada 10 minutos por celular, recepción
+abierta 7 días). Un solo lugar: `cb_album_limits()` en `lib.album.php`; la página del invitado y el
+endpoint leen de ahí. `app/.user.ini` en PROD permite 80M por archivo y 90M por envío (y PHP reporta
+2048M efectivos), así que 60 MB más el póster entran sin tocar el servidor.
+
+Rama `claude/album-limites` (commit `1c244f0`, base `main` `a664916`). La prueba
+`tests/backend/album.php` fijaba el "video largo" en 60 s a secas y se puso en rojo al subir el
+tope: ahora dura un segundo más que el límite, y hay un check de que un video de exactamente el
+tope pasa (162 checks). `album-intake-http.php` 26 de 26.
+
+| Local | Destino PROD | Clase |
+|---|---|---|
+| `CumpleBooth/public/lib.album.php` | `app/lib.album.php` | **OBLIGATORIO** (único archivo) |
+| `CumpleBooth/tests/backend/album.php` | — | OPCIONAL, no se sube |
+
+Subido por SSH con `subir-login.py` (respaldo `~/respaldos/…app_lib.album.php.antes-<sello>`, `php -l`,
+`mv` atómico, sha256 igual al commit). Verificado desde afuera: `subir.php?t=malo` contesta 400 y
+`album-intake.php` por GET contesta 405, o sea el archivo nuevo carga y corre (`subir.php` llama a
+`cb_album_limits()` antes de mirar el token). **No probado:** subir un video real de 50-60 MB desde
+un celular contra PROD.

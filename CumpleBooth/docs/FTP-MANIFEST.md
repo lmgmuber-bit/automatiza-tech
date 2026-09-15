@@ -3259,6 +3259,49 @@ en `Docs/BLUEPRINTS/CUMPLECLICK-ACEPTACION-TERMINOS-Y-FIRMA.md` (repo raíz).
 Verificado local: `tests/backend/acceptance.php` 46 checks, lint 67 archivos,
 paridad public→dist 296 archivos. **No probado en PROD.**
 
+## DESPLEGADO 2026-09-15 (11:51) — correcciones del kiosco tras las fiestas del 13-sep
+
+Lo que Luis vio en las dos fiestas y pidió corregir:
+
+1. **Rompecabezas (`JuegoFichas`):** los niños arrastraban las piezas en vez de tocar dos. Ahora
+   se **arrastra una ficha sobre otra** (tocar dos sigue funcionando); la ficha fantasma sigue al
+   dedo y la casilla de destino se marca. La **imagen de referencia va grande** (34 % del ancho)
+   arriba del tablero, no como miniatura de 56 px en la esquina. Lógica pura en
+   `src/puzzleArrastre.js` con `tests/frontend/puzzleArrastre.test.mjs`.
+2. **El Show 3D (`StageConcert3D`):** tocaban los aros de la pantalla y no el botón de abajo.
+   Un toque en el escenario o en la tarjeta arranca el show; el texto lo dice.
+3. **Ruleta (`Spinner`):** después de tres giros, en vez de "Girar de nuevo" aparece **"Elegir mi
+   personaje"** con una grilla de los seis. Mientras elige, el kiosco espera 20 s y después sigue
+   con el último ganador (nunca se queda pegado).
+4. **Botón "volver"** arriba a la izquierda en todo el recorrido de la ruleta (invitados, ruleta,
+   pase de artista, saludo, juegos, transición): volver a la ruleta, elegir otro niño o volver al
+   inicio, sin recargar la página. Los marcadores de los juegos se corren a la derecha para
+   dejarle sitio. No aparece en Asómate (tiene su propio Atrás) ni en el baby shower.
+
+**Cómo se subió:** `scratchpad/correcciones-fiesta/subir-kiosco.py`. Bundle compilado de la rama
+`claude/correcciones-fiesta` (commit `901ed9b`): solo los **6 bundles nuevos** de `dist/assets`
+(los que ya existían son idénticos por hash) y `index.html` al final. Respaldo
+`~/respaldos/app-index.html.antes-20260915-1151` (y el respaldo completo de la mañana).
+
+| Archivo | Destino | Clase |
+|---|---|---|
+| `dist/assets/main-C-EjuEtQ.js`, `main-BQAKXBRo.css`, `Lockup-B8jQuzlB.js`, `album-Bs0LUAAv.js`, `cartel-SlR9LYHX.js`, `cartel-yJHq8X4K.css` | `app/assets/` | OBLIGATORIO, primero (nuevos; nada se pisa) |
+| `dist/index.html` | `app/index.html` | OBLIGATORIO, al final |
+
+**No se tocaron** `album.html`, `cartel-qr.html` ni `carteles.html`: siguen con sus bundles de
+antes. `dist/` no va al repo.
+
+**Verificado:** 196 pruebas de frontend; recorrido completo en el navegador con la fiesta de
+hielo (invitados → ruleta con tres giros y elección → pase de artista → rompecabezas con
+arrastre y con toque → oferta de juegos → Show 3D arrancando con un toque en el aro → botón
+volver desde el juego a la ruleta). En PROD, desde afuera: `index.html` y los bundles son iguales
+byte a byte a `dist/`, `api.php` responde y las 10 direcciones de los carteles no cambiaron.
+
+**Rollback:** `cp ~/respaldos/app-index.html.antes-20260915-1151 ~/domains/cumpleclick.com/public_html/app/index.html`.
+
+**No probado:** en tablet física (el arrastre usa Pointer Events con `touch-action: none`, que
+es lo que usa el juego de armar el muñeco, que sí se usó en las fiestas).
+
 ## 2026-09-15 — respaldo completo de PROD y alineación con los repositorios (después de las fiestas)
 
 Antes de tocar nada: **respaldo completo** de PROD con los datos de las fiestas (volcado de la

@@ -2695,8 +2695,8 @@
     "semantic_hash": ""
   },
   "public/admin/album.php": {
-    "mtime": 1789293195.267705,
-    "ast_hash": "3288a35686f499eb6c5ef4c85fbd60ea",
+    "mtime": 1789499449.6955636,
+    "ast_hash": "936a9e5cb12a93f8a0ee2709f58261ca",
     "semantic_hash": ""
   },
   "public/admin/event-profile.php": {
@@ -5612,6 +5612,16 @@
   "tests/backend/galeria-http.php": {
     "mtime": 1789499025.008317,
     "ast_hash": "88ade8c2d9ebdbf2f498491e95d834cb",
+    "semantic_hash": ""
+  },
+  "public/admin/paginador.js": {
+    "mtime": 1789499663.7278323,
+    "ast_hash": "f796c70c9ecc5f7a2bd62ee121614b67",
+    "semantic_hash": ""
+  },
+  "tests/frontend/paginador.test.mjs": {
+    "mtime": 1789499493.2997873,
+    "ast_hash": "cb5487d908dd8488d7a1627675ad4510",
     "semantic_hash": ""
   }
 }

@@ -3413,3 +3413,41 @@ Subidos por SSH con `subir-login.py` (respaldos `~/respaldos/…app_galeria.php.
 afuera con el PIN real de la fiesta de Luciano: la galería abre, sin botón de imprimir y con el texto
 "Abajo puedes descargar las elegidas"; la pestaña de invitados no aparece todavía porque en PROD no
 hay aportes. **No probado:** un aporte real en PROD viéndose en la pestaña (no hay ninguno aún).
+
+## DESPLEGADO 2026-09-15 (tarde, 4) en cumpleclick.com/app — Admin → Álbum Recuerdo: Curaduría y Fotos del kiosco paginadas
+
+Pedido de Luis: con 80 fotos las dos listas eran un scroll eterno. Cada una lleva ahora una barra
+arriba y otra abajo con "1–20 de 84", los números de página (‹ 1 2 3 … 9 ›) y el selector de
+**10 / 20 / 50 / 100 por página** (20 por defecto). Siguen siendo dos listas separadas, como estaban.
+
+Cómo está hecho: `public/admin/paginador.js` (aritmética + DOM) incluido **inline** desde `album.php`
+con un require de PHP, igual que los estilos; no hay archivos aparte que cargar. Todas las tarjetas
+siguen en el DOM y solo se esconden las de otras páginas (`.pag-oculta`, con `!important`): las
+casillas marcadas en otra página siguen marcadas (borrar, restaurar e imprimir en bloque no
+cambian; "Marcar todas" sigue marcando todas las de la lista, no solo la página) y el arrastre para
+reordenar sigue viendo el orden entero. El tamaño se recuerda por sección (localStorage) y la
+página por sección y fiesta (sessionStorage): aprobar una foto en la página 5 y volver deja la 5.
+
+🔴 **Trampa que mordió:** PHP interpreta las etiquetas de apertura de PHP también dentro de un
+archivo `.js` incluido con `require`. El comentario de cabecera del paginador decía la etiqueta
+literal y el require se llamaba a sí mismo sin fin: la página salía completa pero sin scripts y sin
+error visible (el fatal caía al final, tras todo el HTML). Ningún `<` seguido de `?` en ese archivo.
+
+Rama `claude/album-admin-paginado` (commit `ecfce41`, base `main` `1db8f68`). Prueba
+`tests/frontend/paginador.test.mjs` (7: páginas, rangos, acotado, botones con puntos; se evalúa con
+`vm` porque el paquete del kiosco es ESM). Visto en el navegador con el servidor local
+`album-admin-local` (`scratchpad/album-admin/servir.php`: 61 recuerdos y 27 fotos de cabina): 4
+barras, 1–20 de 61 → página 2 = 21–40, tamaño 50 recordado, una casilla marcada en la página 1
+sigue marcada tras ir a la 2 ("Borrar 1 foto"). Suites: frontend 206 (paginador incluido),
+`usuarios-http` 59, `galeria-http` 23.
+
+| Local | Destino PROD | Clase |
+|---|---|---|
+| `CumpleBooth/public/admin/album.php` | `app/admin/album.php` | **OBLIGATORIO** |
+| `CumpleBooth/public/admin/paginador.js` | `app/admin/paginador.js` | **OBLIGATORIO** (nuevo; sin él `album.php` da fatal al final de la página) |
+| `CumpleBooth/tests/frontend/paginador.test.mjs` | — | OPCIONAL, no se sube |
+
+Subidos por SSH con `subir-login.py` (respaldo `~/respaldos/…app_admin_album.php.antes-<sello>`,
+`php -l`, `mv` atómico, sha256 igual al commit). Verificado desde afuera: `admin/album.php` sin
+sesión contesta 302 al login (un error de PHP daría 500). **No probado:** la página con sesión de
+admin en PROD (nadie la ha abierto desde la subida); localmente sí, de punta a punta.

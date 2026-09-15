@@ -69,9 +69,9 @@ fiesta, galería sin PIN solo en su fiesta, deshabilitar corta la sesión). Reco
 navegador: login, clave maestra, Usuarios, crear, entrar como operadora, cambiar contraseña y ver
 solo su fiesta.
 
-**No probado en PROD:** el envío real del correo de bienvenida por SMTP (si falla, la pantalla
-muestra la contraseña temporal una vez para pasarla a mano). Tampoco se creó ningún usuario en
-PROD: eso lo hace Luis desde `maestro.php` → Usuarios.
+**Verificado después en PROD (15-sep):** Luis creó los usuarios desde `maestro.php` → Usuarios y
+confirmó que **todos los correos de bienvenida llegaron** por SMTP. (Si el SMTP fallara, la
+pantalla muestra la contraseña temporal una vez para pasarla a mano.)
 
 **Lo que quedó como estaba a propósito:** las 13 páginas conservan su bloque de login por
 contraseña debajo del portero (código muerto; se puede retirar después).

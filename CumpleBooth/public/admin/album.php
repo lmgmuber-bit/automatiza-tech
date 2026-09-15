@@ -538,6 +538,18 @@ main > section#fotos-kiosco { display: none !important; }
   background: rgba(0,0,0,.8); color: #fff; font-weight: 800; font-size: 1.2rem;
 }
 #aviso-imprimir.on { display: grid; }
+/* Paginación de Curaduría y Fotos del kiosco (2026-09-15): con 80 fotos el scroll era eterno. */
+.pag-barra { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin: 12px 0; }
+.pag-info { font-weight: 700; color: var(--text-muted); }
+.pag-paginas { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.pag-btn { min-width: 38px; min-height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
+.pag-btn:hover { background: var(--primary-soft); }
+.pag-btn[aria-current="page"] { background: var(--primary); color: #fff; border-color: transparent; }
+.pag-btn:disabled { opacity: .4; cursor: default; background: var(--card-bg); }
+.pag-puntos { padding: 0 4px; color: var(--text-muted); }
+.pag-tam { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-muted); }
+.pag-tam select { min-height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); font: inherit; padding: 0 8px; }
+.pag-oculta { display: none !important; }
 @media print {
   @page { margin: 0; }
   body { background: #fff; }
@@ -943,7 +955,7 @@ main > section#fotos-kiosco { display: none !important; }
               </button>
             </div>
 
-            <ol class="curation-grid">
+            <ol class="curation-grid" id="fotos-kiosco-grid">
               <?php foreach ($fotosMostrar as $f): ?>
                 <?php
                   $tok = (string) ($f['access_token'] ?? '');
@@ -1176,7 +1188,21 @@ main > section#fotos-kiosco { display: none !important; }
   </main>
 </div>
 
+<script><?php require __DIR__ . '/paginador.js'; ?></script>
 <script>
+// Curaduría y Fotos del kiosco paginadas (2026-09-15). Todas las tarjetas siguen en el DOM:
+// las casillas marcadas en otra página siguen marcadas y el arrastre ve el orden entero.
+(function () {
+  var slug = <?= json_encode($publicSlug, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+  window.ccPaginador.ccPaginar(document.getElementById('curation-grid'), {
+    clave: 'curaduria:' + slug + ':' + <?= json_encode($filterKey, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
+    etiqueta: 'recuerdos'
+  });
+  window.ccPaginador.ccPaginar(document.getElementById('fotos-kiosco-grid'), {
+    clave: 'kiosco:' + slug + ':' + <?= json_encode($verPapelera ? 'papelera' : 'galeria') ?>,
+    etiqueta: 'fotos'
+  });
+})();
 document.addEventListener('click', function (event) {
   var copyBtn = event.target.closest('[data-copy]');
   if (copyBtn && navigator.clipboard) {

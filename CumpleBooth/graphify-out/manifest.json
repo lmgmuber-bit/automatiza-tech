@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "src/App.jsx": {
-    "mtime": 1789292182.597973,
-    "ast_hash": "bdeb5ea6960706fabe8358b5b3797e83",
+    "mtime": 1789483169.0459409,
+    "ast_hash": "fcc501a7c498e86212f7857d19503894",
     "semantic_hash": ""
   },
   "src/ToyTrack3D.jsx": {
@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "docs/FTP-MANIFEST.md": {
-    "mtime": 1789481405.6132202,
-    "ast_hash": "f0b9ae20b3615116e49141373367e15c",
+    "mtime": 1789488891.191993,
+    "ast_hash": "1e3c9a65f4a5abc3a502eb498569caa0",
     "semantic_hash": ""
   },
   "docs/OPENCODE-PROMPT-2026-07-14.md": {
@@ -2390,8 +2390,8 @@
     "semantic_hash": ""
   },
   "src/StageConcert3D.jsx": {
-    "mtime": 1789292182.598973,
-    "ast_hash": "3c65275ec18d8c561159b89585d256b2",
+    "mtime": 1789483033.4394245,
+    "ast_hash": "7e1ff2fa639227cff7951495ca9c09af",
     "semantic_hash": ""
   },
   "src/ThemeWorld3D.jsx": {
@@ -2690,8 +2690,8 @@
     "semantic_hash": ""
   },
   "public/_album-intake.css.php": {
-    "mtime": 1789292177.2944338,
-    "ast_hash": "1058a196526af030fcb2d5f7d510b46f",
+    "mtime": 1789488413.8952918,
+    "ast_hash": "334d9bfbe7ab16f75af2dd9e0a5d7a3b",
     "semantic_hash": ""
   },
   "public/admin/album.php": {
@@ -5310,8 +5310,8 @@
     "semantic_hash": ""
   },
   "docs/MAPA-PROD-Y-REPOSITORIOS.md": {
-    "mtime": 1789292176.8582413,
-    "ast_hash": "96f24f9322d02ff7f1cc341d4966375e",
+    "mtime": 1789481614.054527,
+    "ast_hash": "cc2969c16aa687f536d0ada4110dd8e5",
     "semantic_hash": ""
   },
   "docs/OPENCODE-HANDOFF-VIDEOS-PROMOCIONALES-2026-08-05.md": {
@@ -5320,8 +5320,8 @@
     "semantic_hash": ""
   },
   "docs/USUARIOS-ADMIN.md": {
-    "mtime": 1789294048.3121512,
-    "ast_hash": "b3d69d29eef6f7c23014f437fd4f036c",
+    "mtime": 1789484920.541671,
+    "ast_hash": "c5e99dc2c68b52873e213de225719cd8",
     "semantic_hash": ""
   },
   "public/brand/carteles/aviso-qr-instagram-A4.pdf": {
@@ -5587,6 +5587,26 @@
   "design/album-promo/clips/portrait-video.mp4": {
     "mtime": 1789481404.8009832,
     "ast_hash": "d0d93283a95c545d0987f00053627a94",
+    "semantic_hash": ""
+  },
+  "src/puzzleArrastre.js": {
+    "mtime": 1789482984.2816572,
+    "ast_hash": "5585e77a21ebfd141b364c7294c681a0",
+    "semantic_hash": ""
+  },
+  "tests/backend/album-intake-http.php": {
+    "mtime": 1789488727.227212,
+    "ast_hash": "812aa5e407b7828cdbd440d021d9a9a3",
+    "semantic_hash": ""
+  },
+  "tests/frontend/puzzleArrastre.test.mjs": {
+    "mtime": 1789483338.5077748,
+    "ast_hash": "4c9f8f3c0e430155290f904943c444bf",
+    "semantic_hash": ""
+  },
+  "tests/frontend/subirHidden.test.mjs": {
+    "mtime": 1789488377.503712,
+    "ast_hash": "f6fc2336583391667773266148b2c7b6",
     "semantic_hash": ""
   }
 }

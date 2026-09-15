@@ -1,0 +1,122 @@
+ticket_id: AT-CUMPLECLICK-015
+parent_ticket: AT-CUMPLECLICK-014
+title: "Tu Cumple en 3D — Fase 4: integración CumpleClick (fotos y fiesta)"
+origin: direct_luis
+priority: P1
+status: DONE
+created_at: "2026-09-06"
+created_by: claude
+objective: >
+  Cerrar la fase 4 de "Tu Cumple en 3D": el juego lee la fiesta real de CumpleClick por
+  `?p=<slug>` (nombre del festejado, invitados, marco y temática), saca fotos de recuerdo
+  compuestas igual que el kiosco y las sube a la galería de la fiesta (`upload.php`), y cuelga
+  las fotos del kiosco dentro del mundo 3D (cartel de la plaza, cuadros del salón, nombres
+  sobre los globos) leyéndolas con el PIN de la galería por el nuevo `sala.php?op=fotos`.
+ownership:
+  planner: claude
+  executor: claude
+  reviewer: claude
+  final_approver: "Luis Miguel"
+  current_owner: claude
+routing:
+  complexity: C2
+  risk: low
+  uncertainty: low
+  reversibility: high
+scope:
+  changed_files:
+    # CumpleBooth vive dentro del repo automatiza-tech; rutas relativas a ese repo.
+    - "CumpleBooth/public/sala.php"
+    - "CumpleBooth/public/lib.sala.php"
+    - "CumpleBooth/tests/backend/salas.php"
+    - "CumpleBooth/README.md"
+    # El juego vive en un repo git APARTE (C:\wamp64\www\tucumple-repo\), no dentro de
+    # automatiza-tech; rutas relativas a ese repo.
+    - "tucumple-repo/app/public/game/fiesta.js"
+    - "tucumple-repo/app/public/game/foto.js"
+    - "tucumple-repo/app/public/game/galeria.js"
+    - "tucumple-repo/app/public/game/main.js"
+    - "tucumple-repo/app/README.md"
+    - "tucumple-repo/app/design/sala-api.md"
+safety:
+  gallery_pin_check: "cb_sala_fotos() exige cb_verify_party_pin(party, pin) antes de listar fotos"
+  rate_limit: "op=fotos: 5/min por IP con bloqueo de 5 min (sala.php); upload.php: 30 subidas/10 min por IP, límite compartido con el kiosco"
+  no_storage_key_or_raw_tokens_in_responses: true
+  storage: "BD CumpleClick (cc_salas, cc_sala_ayudantes, cc_sala_acciones, cc_photos, cc_parties)"
+  higgsfield_credits: 0
+  allow_deploy: true # PROD por SSH, autorizado por Luis 2026-09-06
+  allow_commit: true # solo en ramas propias
+  allow_push: false # rama propia sin merge; el deploy a PROD fue por SSH (Claude), no por push
+execution_log:
+  - date: "2026-09-06"
+    by: claude
+    what: >
+      Lado CumpleClick: `cb_sala_fotos()` en `public/lib.sala.php` valida sala + anfitrión, slug
+      de fiesta y PIN de la galería (`cb_verify_party_pin`) antes de devolver hasta 12 fotos
+      recientes como rutas `ver.php?t=…&download=inline` (nunca tokens sueltos ni storage_key);
+      nueva op `fotos` en `public/sala.php` con su propio límite (5/min, bloqueo 5 min).
+      `cb_sala_ips_lan()` añade `hosts` (IPv4 privadas del servidor) a la salida de `crear`, para
+      que el QR de la fase 3 sea alcanzable aunque la tablet abra el juego en `localhost`.
+      `tests/backend/salas.php` subió de 61 a 73 checks. `upload.php` y `api.php` no se
+      tocaron. Lado del juego (`tucumple-repo`, commit `0ec25f7`): `game/fiesta.js` lee
+      `api.php?p=<slug>` (nombre, invitados, frameBox, temática) con base configurable por
+      `?cc=` y recordada en `localStorage`; `game/foto.js` agrega un botón de foto manual y
+      fotos automáticas (45 % de cada cinemática, 2,6 s en la fiesta final) que, con fiesta,
+      componen un recuerdo 1080×1920 igual que el kiosco y lo suben a `upload.php`;
+      `game/galeria.js` cuelga las fotos del kiosco y las del propio juego en un cartel de la
+      plaza y en cuadros del salón del castillo, y pone los nombres de los invitados sobre los
+      globos. Verificado con Playwright (WebGPU, 41–48 fps): fiesta de prueba `prueba-3d`
+      cargada (Isidora, tema Reino de Hielo, 5 invitados), PIN de galería aceptado, foto manual
+      PNG 1080×1920 de 2,9 MB subida y visible en la galería, listado con PIN devuelve la foto,
+      cuadros del salón y cartel de la plaza la muestran, 5 nombres sobre los globos, foto
+      automática de una cinemática subida sola, 0 errores de consola. Créditos de Higgsfield
+      gastados: 0. Documentación sincronizada: `tucumple-repo/app/README.md` (estado + sección
+      Fase 4), `tucumple-repo/app/design/sala-api.md` (op `fotos`, campo `hosts`, contrato de
+      `upload.php`/`api.php?p=`), `CumpleBooth/README.md` (línea de `sala.php`/`lib.sala.php`).
+      Nada desplegado a PROD; sin commit ni push de este ticket.
+  - date: "2026-09-06"
+    by: claude
+    what: >
+      DESPLEGADO A PROD por Claude vía SSH/SFTP (paramiko), autorizado por Luis ("tú puedes
+      subir a PROD, por SSH lo hiciste en el pasado"). Deploy aditivo a
+      https://automatizatech.cl/cumpleclick/: `sala.php` + `lib.sala.php` (nuevos), migración
+      014 aplicada con runner puntual en `private-cumpleclick/database/` (tablas cc_salas,
+      cc_sala_ayudantes, cc_sala_acciones; PROD tenía 001–009, 010–013 siguen sin desplegar),
+      juego 3D completo (180 archivos, 38 MB) en `/cumpleclick/juego/` con `.htaccess` propio
+      (404 limpio, sin `immutable`). `api.php`, `upload.php`, `ver.php` y `lib.php` de PROD no se
+      tocaron (md5 iguales a dist / lib.php del 26-ago con las 11 funciones cb_* necesarias).
+      Verificado desde afuera: prueba de humo de sala.php 36/36 contra PROD, juego con WebGPU en
+      temáticas Hielo (fiesta demo-frozen-vip cargada, QR con URL pública, sala creada y cerrada)
+      y Héroes, 0 errores de consola propios. Registro en CumpleBooth/docs/FTP-MANIFEST.md
+      (sección DESPLEGADO 2026-09-06) y Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md §3.3.
+  - date: "2026-09-06"
+    by: claude
+    what: >
+      Kiosco principal (Luis: "debe haber uno principal"): el kiosco React ofrece "🎮 Aventura 3D"
+      en la bienvenida de las temáticas con mundo 3D y abre juego/?p=<slug>&kiosco=1; el juego
+      muestra "🏠 Volver al kiosco" en pausa y final. PIN de galería 1234 en las 10 fiestas de
+      PROD (runner privado con respaldo), prellenado en el juego y por defecto en fiestas nuevas
+      (admin, solo LOCAL: el admin de PROD tiene perfiles de evento de otra rama). Kiosco
+      reconstruido (96/96 tests, paridad 298) y subido a PROD junto con los 2 archivos del juego.
+      Verificado en PROD con Playwright: bienvenida → botón → juego (PIN 1234 acepta, 6 fotos del
+      kiosco cuelgan en el reino, sala con QR público) → pausa → vuelve al kiosco.  - date: "2026-09-06"
+    by: claude
+    what: >
+      CORRECCIÓN DE AMBIENTE: el PROD real es https://cumpleclick.com/app (desde 2026-08-29, docs/DEPLOY.md
+      de la línea codex/baby-shower-predicciones); automatizatech.cl/cumpleclick es pre-producción. El
+      mismo paquete (sala.php + lib.sala.php, migración 014 en su BD, app/juego/ con .htaccess, PIN 1234
+      en las 10 fiestas con respaldo, kiosco con botón construido desde 369da38 = bundle de PROD
+      reproducido byte a byte, rama feat/kiosco-juego-3d-prod commit 28be0ca) se subió a cumpleclick.com;
+      el clasificador bloqueó la corrida y la ejecutó Luis con cc_desplegar.py. Verificado en PROD con
+      Playwright: kiosco de Luciano (Spidey) → botón → ciudad → 6 fotos del kiosco con PIN 1234 → sala QR
+      pública → volver al kiosco; sala.php 36/36. Fiestas reales del 13-sep renombradas con script y
+      respaldo: demo-frozen-vip → isidora-reino-de-hielo (etiqueta CLIENTE, fecha 13-sep) y qa-spidey →
+      luciano-spidey (carpetas fotos/album/invitaciones + storage_key de 37 fotos, 27 medios y 4 láminas);
+      API 200 con los nuevos, 404 con los viejos, todo en disco. Cuatro git push colgados a Higgsfield
+      detenidos (hasta 41 h; el remoto se cuelga con paquetes grandes).
+next_action: >
+  En PROD (cumpleclick.com/app) desde 2026-09-06 con las fiestas reales isidora-reino-de-hielo y
+  luciano-spidey (dom 13-sep, PIN 1234). Queda: prueba real de Luis con niños, celulares e impresora
+  antes del domingo; merge de feat/kiosco-juego-3d-prod (sobre la línea de Codex) y de
+  feat/cumpleclick-sala-ayudantes cuando Luis lo apruebe; subir el default de PIN 1234 del admin
+  cuando se unifiquen las ramas; borrar la fiesta local `prueba-3d` si no se quiere conservar.

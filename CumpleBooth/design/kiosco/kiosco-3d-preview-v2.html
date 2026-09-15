@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kiosco CumpleClick 3D V2 — Vertical · Inclinable · Ajustable</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#14141e;font-family:'Segoe UI',sans-serif;overflow:hidden;height:100vh}
+#title{position:absolute;top:14px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;background:rgba(0,0,0,0.5);padding:6px 18px;border-radius:14px;z-index:10;pointer-events:none}
+#badge{position:absolute;top:14px;right:16px;color:#ffd700;font-size:11px;background:rgba(0,0,0,0.6);padding:5px 12px;border-radius:10px;z-index:10;font-weight:bold}
+#panel{position:absolute;top:56px;right:16px;background:rgba(0,0,0,0.72);color:#ccc;padding:13px 16px;border-radius:10px;font-size:11px;line-height:1.8;z-index:10;max-width:230px}
+#panel h3{color:#fff;font-size:13px;margin-bottom:2px}
+#panel .r{display:flex;justify-content:space-between}
+#panel .r span:last-child{color:#fff}
+#panel .h{color:#ffd700}
+#panel hr{border-color:rgba(255,255,255,0.08);margin:5px 0}
+#legend{position:absolute;top:16px;left:16px;color:#999;font-size:10px;background:rgba(0,0,0,0.5);padding:9px 12px;border-radius:8px;line-height:1.7;z-index:10}
+#legend b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+#sliders{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);display:flex;gap:18px;align-items:center;z-index:10;background:rgba(0,0,0,0.55);padding:10px 20px;border-radius:20px}
+#sliders label{color:#bbb;font-size:11px;white-space:nowrap}
+#sliders input[type=range]{width:100px;accent-color:#e94560}
+#sliders .val{color:#ffd700;font-size:12px;font-weight:bold;min-width:42px;text-align:center}
+#bar{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10;flex-wrap:wrap;justify-content:center}
+#bar button{background:rgba(255,255,255,0.1);color:#ddd;border:1px solid rgba(255,255,255,0.15);padding:8px 14px;border-radius:18px;cursor:pointer;font-size:12px;transition:.2s;white-space:nowrap}
+#bar button:hover{background:rgba(255,255,255,0.2);color:#fff}
+#bar button.on{background:#e94560;border-color:#e94560;color:#fff}
+</style>
+</head>
+<body>
+<div id="title">🎂 Kiosco CumpleClick 3D — Tab A7 10.4" · Vertical · Inclinable</div>
+<div id="badge">V2</div>
+<div id="legend">
+<b style="background:#e94560"></b> Tablet Samsung<br>
+<b style="background:#f5e6d3"></b> Carcasa MDF blanco<br>
+<b style="background:#ffd700"></b> Tira LED RGB<br>
+<b style="background:#6366f1"></b> Pedestal metálico<br>
+<b style="background:#374151"></b> Base antivotante<br>
+<b style="background:#ec4899"></b> Power bank
+</div>
+<div id="panel">
+<h3>📐 Ficha carpintero</h3>
+<div class="r"><span>Tablet</span><span>Tab A7 10.4"</span></div>
+<div class="r"><span>Marco MDF</span><span class="h">22.8 × 31.8 cm</span></div>
+<div class="r"><span>Grosor</span><span>5 cm</span></div>
+<div class="r"><span>Pedestal</span><span>tubo 5 cm Ø</span></div>
+<div class="r"><span>Altura pantalla</span><span class="h" id="hD">~78 cm</span></div>
+<div class="r"><span>Inclinación</span><span class="h" id="tD">15°</span></div>
+<div class="r"><span>Base</span><span>42 × 36 cm</span></div>
+<hr>
+<div class="r"><span>💰 Carpintero</span><span class="h">$80–180 mil</span></div>
+<div class="r"><span>💰 LED + Power</span><span class="h">$30–40 mil</span></div>
+</div>
+<div id="sliders">
+<label>⬆ Altura</label>
+<input type="range" id="hSlider" min="70" max="90" value="78" step="1">
+<span class="val" id="hVal">78 cm</span>
+<label>↻ Inclinación</label>
+<input type="range" id="tSlider" min="0" max="30" value="15" step="1">
+<span class="val" id="tVal">15°</span>
+</div>
+<div id="bar">
+<button onclick="v('front')">👁 Frontal</button>
+<button onclick="v('three')">📐 3/4</button>
+<button onclick="v('side')">📏 Lateral</button>
+<button onclick="v('top')">🔝 Superior</button>
+<button onclick="v('kid')">👶 Niño</button>
+<button onclick="v('close')">🔎 Detalle</button>
+<button id="ledBtn" class="on" onclick="tLed()">💡 LED</button>
+<button onclick="tXray()">🔍 Rayos X</button>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+
+<script type="module">
+import * as T from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ── Scene setup ──
+const S = new T.Scene();
+S.background = new T.Color(0x14141e);
+S.fog = new T.Fog(0x14141e, 2, 5);
+
+const C = new T.PerspectiveCamera(40, innerWidth/innerHeight, 0.05, 15);
+C.position.set(0.9, 0.6, 1.6);
+
+const R = new T.WebGLRenderer({antialias:true});
+R.setSize(innerWidth, innerHeight);
+R.setPixelRatio(Math.min(devicePixelRatio, 2));
+R.shadowMap.enabled = true;
+R.shadowMap.type = T.PCFSoftShadowMap;
+R.toneMapping = T.ACESFilmicToneMapping;
+R.toneMappingExposure = 1.1;
+document.body.appendChild(R.domElement);
+
+const O = new OrbitControls(C, R.domElement);
+O.target.set(0, 0.15, 0);
+O.enableDamping = true;
+O.dampingFactor = 0.1;
+O.minDistance = 0.3;
+O.maxDistance = 3;
+O.maxPolarAngle = 1.05;
+O.update();
+
+// ── Lights ──
+S.add(new T.AmbientLight(0x404060, 1.5));
+
+const sun = new T.DirectionalLight(0xfff5e8, 5);
+sun.position.set(1.5, 2.5, 1.8);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.near = 0.05;
+sun.shadow.camera.far = 10;
+sun.shadow.camera.left = -2.5; sun.shadow.camera.right = 2.5;
+sun.shadow.camera.top = 2.5; sun.shadow.camera.bottom = -2.5;
+sun.shadow.bias = -0.0002;
+S.add(sun);
+
+const fill = new T.DirectionalLight(0x8899cc, 2);
+fill.position.set(-0.8, 0.8, -0.8);
+S.add(fill);
+
+const rim = new T.DirectionalLight(0xffccaa, 2.5);
+rim.position.set(0, 0.6, -1.5);
+S.add(rim);
+
+// ── Floor ──
+const floor = new T.Mesh(
+  new T.PlaneGeometry(3, 3),
+  new T.MeshStandardMaterial({color: 0x1c1c2e, roughness: 0.5})
+);
+floor.rotation.x = -Math.PI/2;
+floor.position.y = -1.05;
+floor.receiveShadow = true;
+S.add(floor);
+
+const grid = new T.GridHelper(3, 30, 0x333355, 0x222244);
+grid.position.y = -1.048;
+S.add(grid);
+
+// ── Materials ──
+const MDF = new T.MeshStandardMaterial({color: 0xf5e6d3, roughness: 0.35});
+const METAL = new T.MeshStandardMaterial({color: 0x6366f1, roughness: 0.2, metalness: 0.7});
+const BASE_MAT = new T.MeshStandardMaterial({color: 0x374151, roughness: 0.35, metalness: 0.3});
+const BLACK = new T.MeshStandardMaterial({color: 0x111111, roughness: 0.1, metalness: 0.9});
+const BATT = new T.MeshStandardMaterial({color: 0xec4899, roughness: 0.3, metalness: 0.35});
+
+// ── Dimensions (meters) ──
+const TW = 0.158, TH = 0.248;      // tablet portrait
+const FW = 0.228, FH = 0.318, FD = 0.05;  // frame
+const BW = 0.42, BD = 0.36, BH = 0.028;   // base
+const PR = 0.024;                        // pedestal radius
+const FL = -1.05;                        // floor
+
+// ── State ──
+let pedH = 0.734;           // pedestal height (78cm default)
+let tilt = 15 * Math.PI/180;
+let ledOn = true;
+let xray = false;
+
+// ── Root ──
+const root = new T.Group();
+S.add(root);
+
+// ── Base ──
+const baseGrp = new T.Group();
+baseGrp.position.y = FL + BH;
+root.add(baseGrp);
+
+const baseBody = new T.Mesh(new T.BoxGeometry(BW, BH, BD), BASE_MAT);
+baseBody.position.y = BH/2;
+baseBody.castShadow = true;
+baseBody.receiveShadow = true;
+baseGrp.add(baseBody);
+
+// Base label
+const bcv = document.createElement('canvas'); bcv.width=512; bcv.height=56;
+const bctx = bcv.getContext('2d');
+bctx.fillStyle='#ffffff'; bctx.font='bold 26px "Segoe UI"'; bctx.textAlign='center';
+bctx.fillText('CumpleClick.cl', 256, 36);
+const btex = new T.CanvasTexture(bcv); btex.colorSpace = T.SRGBColorSpace;
+const blbl = new T.Mesh(new T.PlaneGeometry(BW*0.55, BH*0.55), new T.MeshBasicMaterial({map:btex,transparent:true,opacity:0.65}));
+blbl.rotation.x = -Math.PI/2; blbl.position.y = BH+0.001; blbl.position.z = BD*0.22;
+baseGrp.add(blbl);
+
+// ── Pedestal (dynamically rebuilt) ──
+const pedGrp = new T.Group();
+pedGrp.position.y = FL + BH;
+root.add(pedGrp);
+
+// Build pedestal parts
+function buildPedestal(h) {
+  // Clear previous
+  while(pedGrp.children.length > 0) pedGrp.remove(pedGrp.children[0]);
+
+  // Tube
+  const tube = new T.Mesh(new T.CylinderGeometry(PR, PR*1.08, h, 32), METAL);
+  tube.position.y = h/2;
+  tube.castShadow = true; tube.receiveShadow = true;
+  pedGrp.add(tube);
+
+  // Adjustment collar
+  const collar = new T.Mesh(new T.CylinderGeometry(PR*1.35, PR*1.35, 0.022, 32), METAL);
+  collar.position.y = h;
+  pedGrp.add(collar);
+
+  // Hinge
+  const hinge = new T.Mesh(new T.CylinderGeometry(0.014, 0.014, 0.055, 16), METAL);
+  hinge.rotation.z = Math.PI/2;
+  hinge.position.y = h + 0.018;
+  pedGrp.add(hinge);
+
+  // Position the frame pivot at top of tube
+  pivot.position.y = h + 0.018;
+}
+
+// ── Frame pivot (tilts around hinge) ──
+const pivot = new T.Group();
+pivot.position.y = pedH + 0.018;
+pedGrp.add(pivot);
+
+const frameGrp = new T.Group();
+frameGrp.rotation.x = tilt;
+pivot.add(frameGrp);
+
+// Frame MDF body
+const fBody = new T.Mesh(new T.BoxGeometry(FW, FH, FD), MDF);
+fBody.castShadow = true; fBody.receiveShadow = true;
+frameGrp.add(fBody);
+
+// Front bezel (4 strips with opening for tablet)
+const bw = 0.012; // bezel strip width
+const bTop = new T.Mesh(new T.BoxGeometry(FW, bw, 0.002), new T.MeshStandardMaterial({color:0x1a1025, roughness:0.55}));
+bTop.position.set(0, FH/2 - bw/2, FD/2 + 0.001);
+frameGrp.add(bTop);
+const bBot = new T.Mesh(new T.BoxGeometry(FW, bw, 0.002), bTop.material);
+bBot.position.set(0, -FH/2 + bw/2, FD/2 + 0.001);
+frameGrp.add(bBot);
+const bLeft = new T.Mesh(new T.BoxGeometry(bw, FH - 2*bw, 0.002), bTop.material);
+bLeft.position.set(-FW/2 + bw/2, 0, FD/2 + 0.001);
+frameGrp.add(bLeft);
+const bRight = new T.Mesh(new T.BoxGeometry(bw, FH - 2*bw, 0.002), bTop.material);
+bRight.position.set(FW/2 - bw/2, 0, FD/2 + 0.001);
+frameGrp.add(bRight);
+
+// ── Tablet inside frame ──
+const tGrp = new T.Group();
+tGrp.position.z = FD/2 + 0.006;
+frameGrp.add(tGrp);
+
+// Tablet body
+tGrp.add(new T.Mesh(new T.BoxGeometry(TW, TH, 0.003), BLACK)).position.z = 0.001;
+
+// Screen
+const sCv = document.createElement('canvas'); sCv.width=432; sCv.height=678;
+const sCx = sCv.getContext('2d');
+sCx.fillStyle='#0b1120'; sCx.fillRect(0,0,432,678);
+sCx.fillStyle='#ffffff'; sCx.font='bold 50px "Segoe UI"'; sCx.textAlign='center';
+sCx.fillText('🎂', 216, 240);
+sCx.fillText('CumpleClick', 216, 310);
+sCx.font='27px "Segoe UI"'; sCx.fillText('Fotos Mágicas', 216, 360);
+sCx.font='17px "Segoe UI"'; sCx.fillStyle='#8899aa';
+sCx.fillText('Toca tu nombre', 216, 430);
+sCx.fillText('para empezar', 216, 458);
+sCx.fillStyle='#ffd700'; sCx.font='15px "Segoe UI"';
+sCx.fillText('━━━━━━━━━━━━━━', 216, 510);
+sCx.fillText('Elige tu personaje', 216, 545);
+sCx.font='28px "Segoe UI"';
+sCx.fillText('🦊  🚗  ❄️  🎤  🐶', 216, 595);
+
+const sTex = new T.CanvasTexture(sCv); sTex.colorSpace = T.SRGBColorSpace;
+const sMat = new T.MeshStandardMaterial({map:sTex, roughness:0.1, metalness:0.05, emissive:0x223355, emissiveIntensity:0.25});
+const sMesh = new T.Mesh(new T.PlaneGeometry(TW-0.012, TH-0.012), sMat);
+sMesh.position.z = 0.004;
+tGrp.add(sMesh);
+
+// Camera dot
+tGrp.add(new T.Mesh(new T.SphereGeometry(0.0018,8,6), BLACK)).position.set(0, TH/2-0.01, 0.005);
+
+// ── LED strip ──
+const leds = [];
+const lGrp = new T.Group();
+frameGrp.add(lGrp);
+
+const lw = FW-0.045, lh = FH-0.045;
+const lz = FD/2 + 0.002;
+const sp = 0.018;
+
+for (let x=-lw/2; x<=lw/2; x+=sp) [lh/2,-lh/2].forEach(y=>mkLED(x,y));
+for (let y=-lh/2+sp; y<=lh/2-sp; y+=sp) [-lw/2,lw/2].forEach(x=>mkLED(x,y));
+
+function mkLED(x,y) {
+  const g = new T.SphereGeometry(0.0035,6,5);
+  const m = new T.MeshStandardMaterial({color:0xffd700, roughness:0.1, emissive:0xff9500, emissiveIntensity:4});
+  const led = new T.Mesh(g,m);
+  led.position.set(x,y,lz);
+  lGrp.add(led);
+  leds.push({mesh:led, px:x, py:y, m});
+}
+
+// ── Battery compartment ──
+const batGrp = new T.Group();
+batGrp.position.set(0, -FH/2+0.04, -FD/2+0.01);
+frameGrp.add(batGrp);
+batGrp.add(new T.Mesh(new T.BoxGeometry(0.065,0.04,0.02), BATT));
+const batDot = new T.Mesh(new T.CylinderGeometry(0.008,0.008,0.025,16), BATT);
+batDot.position.z = -0.018;
+batGrp.add(batDot);
+
+// ── Cable ──
+const cablePath = new T.CatmullRomCurve3([
+  new T.Vector3(0, -TH/2+0.01, 0.005),
+  new T.Vector3(0, -TH/2-0.012, 0),
+  new T.Vector3(0, -TH/2-0.015, -FD/2+0.015),
+]);
+tGrp.add(new T.Mesh(
+  new T.TubeGeometry(cablePath, 20, 0.0025, 8, false),
+  new T.MeshStandardMaterial({color:0x333, roughness:0.6})
+));
+
+// ── Child reference ──
+const kidGrp = new T.Group();
+kidGrp.position.set(0.5, FL+BH, 0.5);
+root.add(kidGrp);
+const kMat = new T.MeshStandardMaterial({color:0x556688, roughness:0.85, opacity:0.5, transparent:true});
+kidGrp.add(new T.Mesh(new T.CapsuleGeometry(0.048, 0.28, 8, 12), kMat)).position.y = 0.55;
+kidGrp.add(new T.Mesh(new T.SphereGeometry(0.054, 16, 12), kMat)).position.y = 0.77;
+const arm = new T.Mesh(new T.CapsuleGeometry(0.015, 0.13, 4, 8), kMat);
+arm.position.set(-0.05, 0.56, -0.03); arm.rotation.z=0.4; arm.rotation.x=-0.15;
+kidGrp.add(arm);
+
+// ── Height ruler ──
+function updateRuler() {
+  root.children.filter(c=>c.userData?.ruler).forEach(c=>root.remove(c));
+  const baseTop = FL + BH;
+  const screenMid = baseTop + pedH + 0.018;
+
+  // Vertical line
+  const vl = new T.Line(
+    new T.BufferGeometry().setFromPoints([
+      new T.Vector3(-0.38, baseTop, -0.3),
+      new T.Vector3(-0.38, screenMid, -0.3)
+    ]),
+    new T.LineBasicMaterial({color:0xffffff, transparent:true, opacity:0.35})
+  );
+  vl.userData = {ruler:true}; root.add(vl);
+
+  // Ticks
+  for (let y=baseTop+0.1; y<screenMid; y+=0.1) {
+    const tk = new T.Line(
+      new T.BufferGeometry().setFromPoints([
+        new T.Vector3(-0.41, y, -0.3),
+        new T.Vector3(-0.35, y, -0.3)
+      ]),
+      new T.LineBasicMaterial({color:0x666, transparent:true, opacity:0.35})
+    );
+    tk.userData = {ruler:true}; root.add(tk);
+  }
+
+  // Label
+  const rc = document.createElement('canvas'); rc.width=128; rc.height=32;
+  const rctx = rc.getContext('2d');
+  rctx.fillStyle='#fff'; rctx.font='17px "Segoe UI"'; rctx.textAlign='center';
+  const scm = Math.round((screenMid + 1.05) * 100);
+  rctx.fillText(`~${scm} cm`, 64, 22);
+  const rTex = new T.CanvasTexture(rc); rTex.colorSpace = T.SRGBColorSpace;
+  const rL = new T.Mesh(new T.PlaneGeometry(0.09, 0.024), new T.MeshBasicMaterial({map:rTex, transparent:true}));
+  rL.position.set(-0.38, screenMid, -0.35);
+  rL.userData = {ruler:true}; root.add(rL);
+
+  document.getElementById('hD').textContent = `~${scm} cm`;
+}
+
+buildPedestal(pedH);
+updateRuler();
+
+// ── Camera presets ──
+function animCam(pos, tgt) {
+  const sp = C.position.clone(), st = O.target.clone();
+  const s = performance.now();
+  function step(t) {
+    const p = Math.min((t-s)/700, 1);
+    const e = 1 - Math.pow(1-p, 3);
+    C.position.lerpVectors(sp, pos, e);
+    O.target.lerpVectors(st, tgt, e);
+    O.update();
+    if (p<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+window.v = (view) => {
+  const scY = (pedH + 0.018) * 0.35;
+  const views = {
+    front: [new T.Vector3(0, scY, 2.2), new T.Vector3(0, scY, 0)],
+    three: [new T.Vector3(0.85, scY+0.3, 1.5), new T.Vector3(0, scY, 0)],
+    side: [new T.Vector3(1.8, scY, 0), new T.Vector3(0, scY, 0)],
+    top: [new T.Vector3(0, 2, 0.01), new T.Vector3(0, scY, 0)],
+    kid: [new T.Vector3(0.35, scY-0.1, 0.55), new T.Vector3(0, scY, 0)],
+    close: [new T.Vector3(0.1, scY, 0.52), new T.Vector3(0, scY, 0)],
+  };
+  const [p, t] = views[view];
+  animCam(p, t);
+};
+
+// ── LED toggle ──
+window.tLed = () => {
+  ledOn = !ledOn;
+  leds.forEach(l => {
+    l.m.emissiveIntensity = ledOn ? 4 : 0;
+    l.m.color.set(ledOn ? 0xffd700 : 0x333);
+  });
+  document.getElementById('ledBtn').classList.toggle('on', ledOn);
+  document.getElementById('ledBtn').textContent = ledOn ? '💡 LED ON' : '💡 LED OFF';
+};
+
+// ── X-ray toggle ──
+window.tXray = () => {
+  xray = !xray;
+  root.traverse(c => {
+    if (c.material?.isMeshStandardMaterial && c!==sMat && c!==kMat) {
+      c.material.wireframe = xray;
+      c.material.transparent = xray;
+      c.material.opacity = xray ? 0.35 : 1;
+    }
+  });
+};
+
+// ── Sliders ──
+document.getElementById('hSlider').addEventListener('input', e => {
+  const cm = parseFloat(e.target.value);
+  pedH = cm/100 - 0.046;
+  buildPedestal(pedH);
+  updateRuler();
+  // Follow screen
+  O.target.set(0, (pedH+0.018)*0.35, 0);
+  document.getElementById('hVal').textContent = cm + ' cm';
+});
+
+document.getElementById('tSlider').addEventListener('input', e => {
+  tilt = parseFloat(e.target.value) * Math.PI/180;
+  frameGrp.rotation.x = tilt;
+  updateRuler();
+  document.getElementById('tVal').textContent = e.target.value + '°';
+  document.getElementById('tD').textContent = e.target.value + '°';
+});
+
+// ── Animation ──
+function loop() {
+  requestAnimationFrame(loop);
+  if (ledOn) {
+    const t = Date.now() * 0.004;
+    leds.forEach(l => {
+      l.m.emissiveIntensity = 3 + Math.sin(t + l.px*18 + l.py*22);
+    });
+  }
+  O.update();
+  R.render(S, C);
+}
+loop();
+
+window.addEventListener('resize', () => {
+  C.aspect = innerWidth/innerHeight;
+  C.updateProjectionMatrix();
+  R.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

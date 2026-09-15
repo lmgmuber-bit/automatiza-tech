@@ -7,10 +7,21 @@ config/cumpleclick.local.php
 storage/
 backups/
 qa-output/
+qa-evidence/
+tmp/
+_voces.json
+hielo-bruni-v2.png
+NUL;
+# Fuentes multimedia intermedias/regenerables; los finales aprobados sí se versionan.
+design/renders/
+design/screens/
+design/explicativo/fakecam/
+design/explicativo/ia/
+design/explicativo/prueba-infografia/
+design/explicativo/_sin-audio/
 
 # Respaldos operativos del .htaccess de PROD: se guardan en disco, no en el repo.
 scripts/web/*_BACKUP
-
 # Los .htaccess de CumpleClick SI se versionan.
 #
 # El .gitignore de la raiz ignora todo `.htaccess` porque ahi vive un WordPress
@@ -23,7 +34,6 @@ scripts/web/*_BACKUP
 # esto lo deja escrito para que no dependa de acordarse.
 !public/.htaccess
 !sitio/.htaccess
-
 # Y `sitio/vendor/` tambien se versiona.
 #
 # Esta fue la causa de que la landing llegara sin animaciones: alguien dejo ahi

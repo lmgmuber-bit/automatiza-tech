@@ -1,16 +1,16 @@
 # Graph Report - CumpleBooth  (2026-09-15)
 
 ## Corpus Check
-- 398 files · ~8,463,968 words
+- 402 files · ~8,468,309 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 5494 nodes · 9571 edges · 470 communities (406 shown, 64 thin omitted)
+- 5513 nodes · 9599 edges · 480 communities (401 shown, 79 thin omitted)
 - Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 601 edges (avg confidence: 0.77)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `088d85a3`
+- Built from commit: `18223f7d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -123,7 +123,7 @@
 - test-gdigrab.mjs
 - verify-kpop-heroes.py
 - debug-invitados.mjs
-- s
+- .dot
 - lib.event-profiles.php
 - Plan — Modalidad Baby Shower
 - lib.php
@@ -168,23 +168,23 @@
 - Aviso — el commit de respaldo `af7eac3` mezcla dos procedencias
 - Decisión: las predicciones pertenecen al evento
 - _at-verificar.php
-- js/main.js
+- xi
 - ti
 - qi
 - three.module.min.js
 - _i
 - ar
-- al
+- pl
 - gsap.min.js
 - ai
 - eo
 - qr
 - mn
-- fi
+- jn
 - zh
-- .dispose
-- .addScaledVector
-- .push
+- i
+- wa
+- .setAttribute
 - ScrollTrigger.min.js
 - Kiosco CumpleClick — Especificaciones para Carpintero
 - eu
@@ -195,46 +195,46 @@
 - ri
 - ii
 - Ji
-- lib.comprobante.php
+- lib.cliente.php
 - id
 - src/main.mjs
 - va
 - gh
-- rr
+- .constructor
 - KIOSCO CUMPLECLICK — PLANO PARA CARPINTERO
 - di
 - lib.acceptance.php
-- wu
+- fc
 - ce
 - pr
 - jr
 - v
 - Handoff Claude → Codex — pulir la revista del Álbum Recuerdo + video promocional
-- .updateMatrixWorld
+- qa
 - .dispatchEvent
 - mundo.mjs
-- cc_mail_send
+- cb_config
 - oi
 - Mapa PROD ↔ repositorios de CumpleClick
-- cb_party_db_id
-- ac
+- cb_public_base_url
+- .push
 - pa
-- ep
+- cb_acceptance_send_notifications
 - qa-album-visual.mjs
-- .dot
-- hn
+- lo
+- .parse
 - kd
 - CcDocumento
 - Términos y Condiciones del Servicio CumpleClick
-- .copy
+- .update
 - record-album-promo.mjs
 - od
 - Política de Privacidad y Tratamiento de Datos Personales de CumpleClick
 - Bebé entre Rosas — la tercera temática de baby shower
 - Videos de la invitación de baby shower
-- wi
+- .invert
 - asomateGuia.test.mjs
-- .multiplyScalar
+- .copy
 - 3. Lista exacta de subida
 - en
 - rb
@@ -244,18 +244,19 @@
 - .getPoint
 - vd
 - Aurora de Cristal — integración en el menú de la fiesta
-- .getDataURL
+- pi
 - DESPLEGADO 2026-09-07 (noche) — dos juegos por fiesta, menu y tabla de posiciones
 - yh
 - Handoff a OpenCode — videos promocionales CumpleClick (2026-08-05)
-- bn
-- .fromArray
+- cb_hmac
+- ga
 - componer-foto-cabina.php
-- hr
-- yu
+- lib.finanzas.php
+- wu
 - build-album-promo.mjs
-- fd
+- .update
 - cb_carrera_entrar
+- .updateMatrixWorld
 - barraNavegador.test.mjs
 - buildRuntime
 - t
@@ -266,8 +267,9 @@
 - juego/orientacion.js
 - Consentimiento para la captura y uso de imagen de niños, niñas y adolescentes
 - xd
+- wh
 - cb_puntaje_anotar
-- .fromBufferAttribute
+- xc
 - dc
 - Usuarios del backoffice: superadministrador y operadores (2026-09-13)
 - higgsfield-mcp.mjs
@@ -275,19 +277,20 @@
 - carteles/main.jsx
 - Navegador
 - aceptaciones.php
-- .toJSON
+- ch
 - ajustes.php
 - admin/comprobante.php
 - marco9.py
 - Pendientes de prueba
 - admin/finanzas.php
 - mensajes.php
-- cb_public_base_url
+- cb_manual_datos
 - planes.php
 - lib.gifts.php
 - Dc
 - lib.ajustes.php
 - perfil.php
+- zn
 - juego-prod/orientacion.js
 - babyShowerVoice.test.mjs
 - parentsAccess.test.mjs
@@ -295,7 +298,7 @@
 - Delta local — Álbum Recuerdo (rama `feat/album-recuerdo`, no desplegado)
 - lib.planes.php
 - detectarCara
-- reglas.mjs
+- frame
 - 2026-09-07 — revision previa al domingo y dos hallazgos
 - carteles-prod-pdf.mjs
 - pdf-a-png.mjs
@@ -314,6 +317,7 @@
 - 2026-09-10 — Asómate: guía del hueco sobre la cámara y mando izquierda/derecha
 - 🔴 INCIDENTE Y HOTFIX 2026-09-08 — "Guardar" mandaba un correo en vez de guardar
 - datos.mjs
+- lib.admin-password.php
 - Generadores de imágenes de CumpleClick
 - 2026-09-09 cierre 5 — Apagar los juegos 3D, y pie de página con la marca
 - DESPLEGADO 2026-09-07 (noche) — Panel de correos con reenvío, y el texto legal sin notas internas
@@ -330,7 +334,7 @@
 - 2026-09-10 cierre 4 — Bienvenida de spidey: la voz femenina no se entendía
 - 2026-09-10 cierre 6 — La bienvenida se cortaba en la tablet lenta
 - Integrante
-- .computeLineDistances
+- JuegoFichas
 - 2026-09-10 cierre 10 — Circuito Arácnido: las flechas empujan, los rayos recargan
 - 2026-09-10 cierre 5 — El CDN achicaba las imágenes en la tablet: la causa real de "los óvalos"
 - DESPLEGADO 2026-09-08 — El Resumen del Plan se llena solo, y el logo de AT unificado
@@ -346,14 +350,25 @@
 - Archivos del juego que viven en PROD
 - sala.php
 - 2026-09-10 cierre 8 — Frozen: bienvenida con voces
+- admin/usuarios.php
 - cb_test_migrar_todo
+- rd
+- fi
+- jh
+- mu
+- rc
+- jc
+- er
+- nr
+- oh
+- wc
 
 ## God Nodes (most connected - your core abstractions)
 1. `cb_pdo()` - 90 edges
 2. `ai()` - 85 edges
 3. `qi` - 84 edges
 4. `ti` - 76 edges
-5. `Manifiesto FTP CumpleClick — no desplegado` - 66 edges
+5. `Manifiesto FTP CumpleClick — no desplegado` - 69 edges
 6. `_i` - 59 edges
 7. `cb_storage_mode()` - 55 edges
 8. `ar` - 47 edges
@@ -375,11 +390,11 @@
 ## Import Cycles
 - None detected.
 
-## Communities (470 total, 64 thin omitted)
+## Communities (480 total, 79 thin omitted)
 
 ### Community 0 - "cb_pdo"
-Cohesion: 0.08
-Nodes (58): cb_album_feature_ready(), cb_find_photo_by_token(), cb_list_party_photos(), cb_load_json_file(), cb_mutate_json_state(), cb_pdo(), cb_photo_usage(), cb_photos_admin() (+50 more)
+Cohesion: 0.07
+Nodes (67): cb_acceptance_public_url(), cb_acceptance_rotar_receipt_token(), cb_acceptance_rotar_token(), cb_acceptance_text(), cb_create_plan_acceptance(), cb_load_acceptance_by_id(), cb_waive_acceptance(), cb_album_feature_ready() (+59 more)
 
 ### Community 1 - "OpenCode Go — Tema 02: Familia Canina Azul/Naranja"
 Cohesion: 0.05
@@ -418,8 +433,8 @@ Cohesion: 0.09
 Nodes (21): 1. El cuadro verde donde va la foto del niño, 2. Los subtítulos del video pisaban los botones del kiosco, 3. `screen-03-ruleta.png` no era la ruleta — CORREGIDO, Carrusel IG (`design/explicativo/carrusel-01..06.png`), ⚠️ Correcciones del 2026-07-26 — leer antes de regenerar nada, Créditos IA, Cómo regenerar TODO, en orden, Infografías (`design/explicativo/`) (+13 more)
 
 ### Community 10 - "lenis.min.js"
-Cohesion: 0.09
-Nodes (22): advance(), checkOverflow(), cleanUpClassName(), constructor(), destroy(), emit(), internalStart(), internalStop() (+14 more)
+Cohesion: 0.06
+Nodes (44): buildGlobo(), makeGradientTexture(), mountHeroGlobo(), hero3dEligible(), init(), initAnalyticsHooks(), initCarruselAuto(), initContactForm() (+36 more)
 
 ### Community 11 - "Personajes (6)"
 Cohesion: 0.20
@@ -470,8 +485,8 @@ Cohesion: 0.25
 Nodes (7): CumpleClick — Fase 1 implementada, Diploma, Estado verificado 2026-07-13, Extensión de producción manual — 2026-07-26, Foto premium y frames, Galería y fotos, Sitio público y captación — 2026-08-01
 
 ### Community 23 - "Manifiesto FTP CumpleClick — no desplegado"
-Cohesion: 0.05
-Nodes (43): 2026-09-10 cierre 7 — Frozen: los huecos de Elsa y Olaf se salían del personaje, 2026-09-10 cierre 9 — Frozen: el pase de artista con voces, AT-CUMPLECLICK-007 — Familia Canina (agregar al Orden 2), Clases del admin sin CSS detrás (2026-09-07), Delta AT-CUMPLECLICK-012 — misión WOW 3D Full (2026-07-29), Delta local — Aceptación de Términos y firma (rama `feat/cumpleclick-aceptacion-terminos`, no desplegado), Delta local — actualizado 2026-07-27, Delta local AUD-2026-08-03 - MP4 optimizados (superado, ver arriba) (+35 more)
+Cohesion: 0.04
+Nodes (46): 2026-09-10 cierre 7 — Frozen: los huecos de Elsa y Olaf se salían del personaje, 2026-09-10 cierre 9 — Frozen: el pase de artista con voces, 2026-09-15 — respaldo completo de PROD y alineación con los repositorios (después de las fiestas), AT-CUMPLECLICK-007 — Familia Canina (agregar al Orden 2), Clases del admin sin CSS detrás (2026-09-07), Delta AT-CUMPLECLICK-012 — misión WOW 3D Full (2026-07-29), Delta local — Aceptación de Términos y firma (rama `feat/cumpleclick-aceptacion-terminos`, no desplegado), Delta local — actualizado 2026-07-27 (+38 more)
 
 ### Community 24 - "ThemeWorld3D.jsx"
 Cohesion: 0.27
@@ -522,8 +537,8 @@ Cohesion: 0.33
 Nodes (5): CumpleClick — Especificaciones de redes sociales, Formatos, Grilla de contenido (semana tipo), Perfil, Reglas duras
 
 ### Community 46 - "AlbumPage.jsx"
-Cohesion: 0.06
-Nodes (29): AlbumPage(), ClosingPage(), CoverPage(), formatDate(), elEvento(), esBabyShower(), esteEvento(), fraseA() (+21 more)
+Cohesion: 0.05
+Nodes (32): AlbumPage(), ClosingPage(), CoverPage(), formatDate(), elEvento(), esBabyShower(), esteEvento(), fraseA() (+24 more)
 
 ### Community 47 - "Álbum Recuerdo — propuesta técnica (pendiente de aprobación)"
 Cohesion: 0.06
@@ -749,9 +764,9 @@ Nodes (3): getScreen(), main(), sleep()
 Cohesion: 0.67
 Nodes (3): check(), Verifica todos los assets de K-Pop y Heroes., sha256()
 
-### Community 135 - "s"
+### Community 135 - ".dot"
 Cohesion: 0.06
-Nodes (24): main(), sleep(), i(), n(), o(), scroll(), ub(), ci() (+16 more)
+Nodes (10): ca(), dr, ea, fr, gr, lr, pn(), _r (+2 more)
 
 ### Community 136 - "lib.event-profiles.php"
 Cohesion: 0.19
@@ -762,8 +777,8 @@ Cohesion: 0.06
 Nodes (35): 10. Propuestas visuales de la clienta — recibidas, 11. Qué NO verifiqué, 1. Resumen para decidir en dos minutos, 2. Lo que verifiqué en el código, 3. Decisión de arquitectura, 4.1 Migración 010, 4.2 La lista de regalos, 4.3 Los tres enlaces (+27 more)
 
 ### Community 138 - "lib.php"
-Cohesion: 0.05
-Nodes (68): cb_acceptance_dir(), cb_acceptance_form_nonce(), cb_acceptance_form_nonce_valid(), cb_admin_sesion_activa(), cb_build_theme_payload(), cb_compile_invitation_prompt(), cb_config(), cb_data_dir() (+60 more)
+Cohesion: 0.06
+Nodes (68): cb_build_theme_payload(), cb_compile_invitation_prompt(), cb_data_dir(), cb_find_photo_by_token(), cb_game_kinds(), cb_generate_public_slug(), cb_inspect_video(), cb_invitation_dir() (+60 more)
 
 ### Community 139 - "invitations.php"
 Cohesion: 0.21
@@ -778,8 +793,8 @@ Cohesion: 0.17
 Nodes (11): A1 · carreras — `themes/carreras/invitation/invitation-motion-v1.mp4`, A2 · familia-canina — `themes/familia-canina/invitation/invitation-motion-v1.mp4`, A3 · tropical — `themes/tropical/invitation/invitation-motion-v1.mp4`, A4 · hielo — `themes/hielo/invitation/invitation-motion-v1.mp4`, A5 · kpop — `themes/kpop/invitation/invitation-motion-v1.mp4`, Coste y orden sugerido, Familia A — fondo de la invitación (5 clips, uno por temática), Familia B — intro del perfil del protagonista (5 clips) (+3 more)
 
 ### Community 146 - "StageConcert3D.jsx"
-Cohesion: 0.11
-Nodes (30): barajarPiezas(), Capture(), construirChartRitmo(), JuegoCopos(), JuegoEscudo(), JuegoFichas(), JuegoMuneco(), JuegoRitmo() (+22 more)
+Cohesion: 0.12
+Nodes (28): Capture(), construirChartRitmo(), JuegoCopos(), JuegoEscudo(), JuegoMuneco(), JuegoRitmo(), MUNECO_PARTES, playSound() (+20 more)
 
 ### Community 148 - "Baby shower: qué es una temática completa (2026-08-26)"
 Cohesion: 0.10
@@ -787,7 +802,7 @@ Nodes (19): Baby shower: qué es una temática completa (2026-08-26), Cadena de 
 
 ### Community 149 - "three.core.min.js"
 Cohesion: 0.02
-Nodes (62): ah, an, ba, bc, bh, bind(), br, cn (+54 more)
+Nodes (80): Na(), al(), an, ba, bc, bh, bind(), br (+72 more)
 
 ### Community 150 - "Handoff a Codex — Video WOW del "juego estrella" (El Show 3D)"
 Cohesion: 0.20
@@ -905,45 +920,45 @@ Nodes (6): Aviso — el commit de respaldo `af7eac3` mezcla dos procedencias, Es
 Cohesion: 0.29
 Nodes (6): Alternativa descartada, Consecuencias, Contexto, Decisión, Decisión: las predicciones pertenecen al evento, Por qué es mejor
 
-### Community 204 - "js/main.js"
-Cohesion: 0.16
-Nodes (22): buildGlobo(), makeGradientTexture(), mountHeroGlobo(), hero3dEligible(), init(), initAnalyticsHooks(), initCarruselAuto(), initContactForm() (+14 more)
-
 ### Community 218 - "three.module.min.js"
-Cohesion: 0.04
-Nodes (44): Jl(), Ks(), _l, ql(), aa(), ai(), ba, Bn (+36 more)
+Cohesion: 0.05
+Nodes (38): Ks(), _l, ai(), ba, Bn, ca(), er(), fa (+30 more)
 
-### Community 221 - "al"
-Cohesion: 0.06
-Nodes (23): al(), bl(), cl(), dl(), el(), gl(), _h, hl() (+15 more)
+### Community 221 - "pl"
+Cohesion: 0.08
+Nodes (12): dl(), fl(), gl(), il(), kh, ml(), ol(), pl() (+4 more)
 
 ### Community 222 - "gsap.min.js"
 Cohesion: 0.08
-Nodes (13): ia(), ja(), Lc(), Nc(), oa(), pa(), qa(), Rd() (+5 more)
+Nodes (14): Ba(), ia(), ja(), Lc(), Nc(), oa(), pa(), qa() (+6 more)
 
 ### Community 223 - "ai"
-Cohesion: 0.08
-Nodes (5): ai(), ni(), dr(), lr(), Yn()
+Cohesion: 0.05
+Nodes (6): ai(), hr, or, dr(), lr(), Yn()
 
 ### Community 224 - "eo"
-Cohesion: 0.08
-Nodes (4): dp, eo, fo(), no
+Cohesion: 0.06
+Nodes (9): dp, eo, fo(), io, ip, ka, no, ro (+1 more)
 
 ### Community 225 - "qr"
-Cohesion: 0.06
-Nodes (4): pn(), qr, sd, sp
+Cohesion: 0.05
+Nodes (3): qr, sd, sp
 
-### Community 229 - ".dispose"
-Cohesion: 0.06
-Nodes (5): ih, ip, iu, pd, uh
+### Community 226 - "mn"
+Cohesion: 0.04
+Nodes (10): bn, fn(), gn(), hn, Mi(), mn, po, ri() (+2 more)
 
-### Community 230 - ".addScaledVector"
-Cohesion: 0.11
-Nodes (4): Ba(), jr, uu, xr
-
-### Community 231 - ".push"
+### Community 229 - "i"
 Cohesion: 0.09
-Nodes (3): hp, Wn, zl
+Nodes (14): main(), sleep(), i(), n(), scroll(), ub(), ci(), pc (+6 more)
+
+### Community 230 - "wa"
+Cohesion: 0.12
+Nodes (4): Sa(), aa, ra, wa
+
+### Community 231 - ".setAttribute"
+Cohesion: 0.06
+Nodes (11): bl(), el(), fh, Gs(), hp, ll(), rl(), vh (+3 more)
 
 ### Community 232 - "ScrollTrigger.min.js"
 Cohesion: 0.07
@@ -953,61 +968,69 @@ Nodes (5): ic(), Ka(), La(), Mp(), rb()
 Cohesion: 0.10
 Nodes (19): 1. Vista general, 2.1 Carcasa (marco MDF), 2.2 Hueco para tablet (frente) — UNIVERSAL AJUSTABLE, 2.3 Retén de tablet (tapa trasera), 2.4 Canal para tira LED (borde interno del frente), 2.5 Compartimento power bank (trasero, abajo), 2.6 Base antivotante (piso), 2.7 Pedestal metálico (+11 more)
 
+### Community 234 - "eu"
+Cohesion: 0.08
+Nodes (3): au, eu, su
+
 ### Community 235 - "_acceso.php"
 Cohesion: 0.30
 Nodes (13): admin_acceso_h(), admin_denegar(), admin_es_super(), admin_exigir(), admin_exigir_super(), admin_fiesta_permitida(), admin_fiestas_visibles(), admin_ir_al_login() (+5 more)
 
 ### Community 237 - ".setValues"
-Cohesion: 0.05
-Nodes (9): cc(), ec, kl, ma, nc, rc, sc, tc (+1 more)
+Cohesion: 0.06
+Nodes (7): ic, kl, ma, nc, ql(), sc, tc
 
 ### Community 238 - ".applyMatrix4"
 Cohesion: 0.06
-Nodes (14): Sa(), aa, ao, Do, go, io, ka, ko (+6 more)
+Nodes (9): ah, ao, ko, ln, mh, qd, sh(), th (+1 more)
 
 ### Community 239 - "ri"
-Cohesion: 0.18
-Nodes (6): ci(), li(), oi(), ri, si(), ui()
+Cohesion: 0.19
+Nodes (5): ci(), li(), oi(), ri, si()
 
 ### Community 240 - "ii"
 Cohesion: 0.06
-Nodes (6): hd, hi(), ii(), zi, bi, fi()
+Nodes (5): hi(), ii(), zi, bi, fi()
 
-### Community 242 - "lib.comprobante.php"
-Cohesion: 0.16
-Nodes (26): cb_admin_correo_bienvenida(), cb_contact_relationships(), cb_format_clp(), cb_comprobante_correo(), cb_comprobante_datos(), cb_comprobante_emisor(), cb_comprobante_fecha_larga(), cb_comprobante_firma() (+18 more)
+### Community 242 - "lib.cliente.php"
+Cohesion: 0.17
+Nodes (20): cb_contact_relationships(), cb_format_clp(), cb_parse_clp(), cb_parse_percent(), cb_party_contact_emails(), cb_party_contacto_principal(), cb_party_contacts(), cb_save_party_billing() (+12 more)
 
 ### Community 244 - "src/main.mjs"
-Cohesion: 0.12
-Nodes (31): guardar(), actualizarUI(), aplicarAvatar(), aros, camPos, configurar(), estado(), frame() (+23 more)
+Cohesion: 0.11
+Nodes (29): ROLES, guardar(), aplicarAvatar(), aros, camPos, configurar(), estado(), guardarSiguiente() (+21 more)
 
 ### Community 245 - "va"
-Cohesion: 0.07
-Nodes (11): dh, In, kn, lh, _o, up(), Yi, ga() (+3 more)
+Cohesion: 0.11
+Nodes (8): dh, In, kn, lh, _o, Yi, ga(), va()
 
-### Community 247 - "rr"
-Cohesion: 0.22
-Nodes (4): mr, rr(), sr(), xr()
+### Community 247 - ".constructor"
+Cohesion: 0.08
+Nodes (11): _c, mr, on, sa, yn(), ma, pa, rr() (+3 more)
 
 ### Community 248 - "KIOSCO CUMPLECLICK — PLANO PARA CARPINTERO"
 Cohesion: 0.18
 Nodes (10): CONTACTO PARA DUDAS, ESPUMA DE AJUSTE (para que calce cualquier tablet), KIOSCO CUMPLECLICK — PLANO PARA CARPINTERO, LISTA DE COMPRAS, OPCIONAL (si es fácil, si no, no), PIEZA 1 — MARCO (la caja que va arriba), PIEZA 2 — TAPA TRASERA, PIEZA 3 — BASE (piso) (+2 more)
 
 ### Community 250 - "lib.acceptance.php"
-Cohesion: 0.09
-Nodes (46): cb_accept_plan(), cb_acceptance_decode_row(), cb_acceptance_decode_signature(), cb_acceptance_evidence_html(), cb_acceptance_file_path(), cb_acceptance_firmada_de_fiesta(), cb_acceptance_is_expired(), cb_acceptance_pdf() (+38 more)
+Cohesion: 0.12
+Nodes (30): cb_accept_plan(), cb_acceptance_decode_row(), cb_acceptance_decode_signature(), cb_acceptance_dir(), cb_acceptance_evidence_html(), cb_acceptance_file_path(), cb_acceptance_firmada_de_fiesta(), cb_acceptance_is_expired() (+22 more)
+
+### Community 251 - "fc"
+Cohesion: 0.13
+Nodes (3): fc, mc, oc()
 
 ### Community 252 - "ce"
-Cohesion: 0.14
-Nodes (20): Ae(), ce(), $d(), ee(), he(), ka(), le(), ma() (+12 more)
+Cohesion: 0.13
+Nodes (21): Ae(), ce(), $d(), ee(), he(), ka(), le(), ma() (+13 more)
 
 ### Community 253 - "pr"
-Cohesion: 0.07
-Nodes (5): bi(), Ei(), pr, rr, vi()
+Cohesion: 0.06
+Nodes (6): bi(), pr, rr, vi(), Br(), hr()
 
 ### Community 254 - "jr"
 Cohesion: 0.10
-Nodes (18): p, Hd(), M(), O(), P(), Q(), _u, yn() (+10 more)
+Nodes (22): o(), M(), O(), P(), Q(), s, _u, _a() (+14 more)
 
 ### Community 255 - "v"
 Cohesion: 0.24
@@ -1017,61 +1040,49 @@ Nodes (12): Ao(), cb(), cc(), ga(), gb(), ha(), hb(), r() (+4 more)
 Cohesion: 0.18
 Nodes (10): 1. Responsive de verdad en los 3 formatos (P1), 2. QA visual real (P1, ya estaba en el plan de Fase D y no hay evidencia de que se haya hecho en dispositivo), 3. Imágenes de prueba con Higgsfield (autorización de Luis pendiente de confirmar cupo/costo), 4. Video promocional/educativo del servicio (depende del punto 3), Handoff Claude → Codex — pulir la revista del Álbum Recuerdo + video promocional, Nota de Claude sobre Higgsfield, Qué falta — el encargo real, Qué YA existe (no partir de cero) (+2 more)
 
-### Community 257 - ".updateMatrixWorld"
-Cohesion: 0.08
-Nodes (9): Gc(), Hc(), Na(), _c, da, na, pu, qa (+1 more)
-
-### Community 258 - ".dispatchEvent"
-Cohesion: 0.09
-Nodes (4): Cr, jc, ud, vr
-
 ### Community 259 - "mundo.mjs"
-Cohesion: 0.14
-Nodes (15): PERSONAJES, personajeValido(), ROLES, crearEntorno(), mate(), crearEquipo(), cache, cargarGLB() (+7 more)
+Cohesion: 0.16
+Nodes (13): PERSONAJES, crearEntorno(), mate(), crearEquipo(), cache, cargarGLB(), draco, loader (+5 more)
 
-### Community 260 - "cc_mail_send"
-Cohesion: 0.20
-Nodes (16): cb_create_lead(), cb_lead_enviar_correos(), cb_lead_paises(), cb_lead_phone_from_country(), cb_lead_text(), cb_validate_lead_input(), cc_mail_address(), cc_mail_build() (+8 more)
+### Community 260 - "cb_config"
+Cohesion: 0.30
+Nodes (14): cb_send_mail(), cb_admin_sesion_activa(), cb_config(), cb_lead_enviar_correos(), cc_mail_address(), cc_mail_build(), cc_mail_config(), cc_mail_enabled() (+6 more)
 
 ### Community 261 - "oi"
-Cohesion: 0.06
-Nodes (11): bu, e, fc, fu, hc(), kc, mc, mu (+3 more)
+Cohesion: 0.20
+Nodes (4): e, fu, kc, oi()
 
 ### Community 262 - "Mapa PROD ↔ repositorios de CumpleClick"
-Cohesion: 0.18
-Nodes (10): Cómo volver a cotejar, La base de datos, Las dos diferencias explicadas, Lo que queda fuera de git a propósito (134), Lo que respondió Codex el 13-sep, Mapa PROD ↔ repositorios de CumpleClick, Qué carpeta de PROD sale de dónde, Ramas locales y trabajo sin commit (+2 more)
+Cohesion: 0.17
+Nodes (11): Cómo volver a cotejar, La base de datos, Las dos diferencias explicadas, Lo que queda fuera de git a propósito (134), Lo que respondió Codex el 13-sep, Mapa PROD ↔ repositorios de CumpleClick, Qué carpeta de PROD sale de dónde, Ramas locales y trabajo sin commit (+3 more)
 
-### Community 263 - "cb_party_db_id"
-Cohesion: 0.10
-Nodes (37): cb_juegos3d_activos(), cb_load_party_raw(), cb_party_db_id(), cb_photo_borrar(), cb_valid_public_slug(), cb_parse_clp(), cb_parse_percent(), cb_party_billing() (+29 more)
+### Community 263 - "cb_public_base_url"
+Cohesion: 0.13
+Nodes (19): cb_acceptance_receipt_url(), cb_album_intake_url(), cb_album_sign_url(), cb_album_view_url(), cb_juegos3d_activos(), cb_load_party_raw(), cb_public_base_url(), cb_invitation_download_url() (+11 more)
 
-### Community 265 - "pa"
-Cohesion: 0.11
-Nodes (3): ki, pa, wd
+### Community 264 - ".push"
+Cohesion: 0.04
+Nodes (12): _a, ac, cc(), cu, du, ec, hc(), jd (+4 more)
+
+### Community 266 - "cb_acceptance_send_notifications"
+Cohesion: 0.22
+Nodes (19): cb_acceptance_send_notifications(), cb_admin_correo_bienvenida(), cb_comprobante_correo(), cb_envio_firma(), cb_envio_firma_correo(), cb_envio_reenviar_firma(), cb_envio_reenviar_terminos(), cb_envio_registrar() (+11 more)
 
 ### Community 267 - "qa-album-visual.mjs"
 Cohesion: 0.25
 Nodes (8): abrirAlbum(), ESCENARIOS, escucharConsola(), esperar(), main(), pasarPagina(), registrar(), resultados
 
-### Community 268 - ".dot"
-Cohesion: 0.06
-Nodes (7): Ia(), ea, lo, qo(), vo, wa, wo
-
-### Community 269 - "hn"
-Cohesion: 0.14
-Nodes (3): hn, po, ri()
+### Community 268 - "lo"
+Cohesion: 0.07
+Nodes (3): go, lo, mo
 
 ### Community 270 - "kd"
-Cohesion: 0.10
-Nodes (5): Ad(), ad, Cd, kd, Td
+Cohesion: 0.12
+Nodes (3): Ad(), ad, kd
 
 ### Community 272 - "Términos y Condiciones del Servicio CumpleClick"
 Cohesion: 0.12
 Nodes (15): 10. Propiedad intelectual y temáticas, 11. Limitación de responsabilidad, 12. Aceptación electrónica y valor probatorio, 13. Legislación aplicable y solución de controversias, 14. Otras disposiciones, 1. Partes y objeto, 2. Planes, alcance y lo que no está incluido, 3. Reserva, anticipo y pago (+7 more)
-
-### Community 273 - ".copy"
-Cohesion: 0.06
-Nodes (12): ca(), fh, ic, ku, la, mh, mo, pi (+4 more)
 
 ### Community 274 - "record-album-promo.mjs"
 Cohesion: 0.35
@@ -1089,17 +1100,13 @@ Nodes (13): Bebé entre Rosas — la tercera temática de baby shower, Cómo se 
 Cohesion: 0.14
 Nodes (13): Capítulos, Cómo verificar cuando lleguen, De qué tratan estos videos, Dos reglas que no son negociables, El arco, El cierre lleva género (2026-08-28), Hero — los dos modos, La voz (+5 more)
 
-### Community 279 - "wi"
-Cohesion: 0.18
-Nodes (3): fn(), wi(), xn
-
 ### Community 280 - "asomateGuia.test.mjs"
 Cohesion: 0.13
 Nodes (17): GuiaAsomate(), FOTO_POR_HUECO, guiaEnPantalla(), huecoEnFoto(), rectFotoEnLienzo(), ajusteParaCara(), recortar(), SELFIE (+9 more)
 
-### Community 281 - ".multiplyScalar"
-Cohesion: 0.05
-Nodes (7): dn, jh, md, op, rn, un, wh
+### Community 281 - ".copy"
+Cohesion: 0.08
+Nodes (3): dn, ud, uu
 
 ### Community 282 - "3. Lista exacta de subida"
 Cohesion: 0.12
@@ -1117,21 +1124,17 @@ Nodes (10): cc_baloo_ttf(), cc_sfnt_metricas(), cc_woff_a_sfnt(), demo_ancho_tex
 Cohesion: 0.22
 Nodes (11): Aa(), Animation(), Ca(), Da(), la(), na(), Ua(), Va() (+3 more)
 
-### Community 288 - ".getPoint"
-Cohesion: 0.08
-Nodes (6): eh, jo, nh, oh, ph, rh
-
 ### Community 289 - "vd"
-Cohesion: 0.08
-Nodes (6): Ed(), bd, constructor(), ed, rd, vd
+Cohesion: 0.18
+Nodes (3): Ed(), ed, vd
 
 ### Community 290 - "Aurora de Cristal — integración en el menú de la fiesta"
 Cohesion: 0.20
 Nodes (9): Aurora de Cristal — integración en el menú de la fiesta, Dos cosas que faltaban y se agregaron, Lo que NO está probado, y hay que decirlo, Lo que verifiqué del paquete de Codex, Probado (Chrome de escritorio, servidor local), Qué botón vuelve a dónde (decidido explícitamente), Qué se cambió, archivo por archivo, Subida y rollback (+1 more)
 
-### Community 291 - ".getDataURL"
+### Community 291 - "pi"
 Cohesion: 0.18
-Nodes (4): li(), tu, ui, vi
+Nodes (6): Ei(), li(), pi, tu, ui, vi
 
 ### Community 292 - "DESPLEGADO 2026-09-07 (noche) — dos juegos por fiesta, menu y tabla de posiciones"
 Cohesion: 0.17
@@ -1141,29 +1144,33 @@ Nodes (12): Boton para enviar el comprobante desde la ficha, DESPLEGADO 2026-09-
 Cohesion: 0.20
 Nodes (9): ⚠️ Antes de nada, Clips 6-10 (Higgsfield, variedad para el ad principal, 2026-08-07), Cómo reproducir/editar (scripts en `scratchpad/`), Decisiones y correcciones ya aplicadas (no las repitas), Handoff a OpenCode — videos promocionales CumpleClick (2026-08-05), Otros entregables de esta sesión, Qué se hizo (contexto completo), Riesgo de copyright (ya evaluado y aceptado por Luis, no re-litigar) (+1 more)
 
-### Community 296 - ".fromArray"
-Cohesion: 0.11
-Nodes (3): ga, hh, ya
+### Community 295 - "cb_hmac"
+Cohesion: 0.21
+Nodes (11): cb_acceptance_form_nonce(), cb_acceptance_form_nonce_valid(), cb_hmac(), cb_invitation_preview_mac(), cb_invitation_preview_ok(), cb_invitation_share_token(), cb_create_lead(), cb_lead_paises() (+3 more)
 
 ### Community 297 - "componer-foto-cabina.php"
 Cohesion: 0.70
 Nodes (4): abrirImagen(), componerCabina(), cuadrarYPegar(), geometriaFoto()
 
-### Community 299 - "yu"
-Cohesion: 0.09
-Nodes (3): cp, yu, zu
+### Community 298 - "lib.finanzas.php"
+Cohesion: 0.40
+Nodes (9): cb_finanzas_borrar(), cb_finanzas_categorias(), cb_finanzas_disponible(), cb_finanzas_equilibrio(), cb_finanzas_fiestas(), cb_finanzas_guardar(), cb_finanzas_movimientos(), cb_finanzas_resumen() (+1 more)
+
+### Community 299 - "wu"
+Cohesion: 0.06
+Nodes (4): cp, wu, yu, zu
 
 ### Community 300 - "build-album-promo.mjs"
 Cohesion: 0.39
 Nodes (8): construir(), duracionReal(), filtroBase(), GUION, main(), renderPngs(), sh(), TEXTOS
 
-### Community 301 - "fd"
-Cohesion: 0.18
-Nodes (4): fd(), gd(), yd, zd
+### Community 301 - ".update"
+Cohesion: 0.07
+Nodes (8): Hd(), ep, fd(), gd(), hd, pd, yd, zd
 
 ### Community 302 - "cb_carrera_entrar"
-Cohesion: 0.08
-Nodes (61): cb_admin_estado_listo(), cb_admin_password_archivo(), cb_admin_password_cambiar(), cb_admin_password_override(), cb_admin_reset_archivo(), cb_admin_reset_borrar(), cb_admin_reset_emitir(), cb_admin_reset_valido() (+53 more)
+Cohesion: 0.10
+Nodes (52): cb_carrera_anotar(), cb_carrera_avanzar(), cb_carrera_completar_equipo(), cb_carrera_datos(), cb_carrera_entrar(), cb_carrera_error(), cb_carrera_ficha(), cb_carrera_guardar() (+44 more)
 
 ### Community 305 - "buildRuntime"
 Cohesion: 0.14
@@ -1209,10 +1216,6 @@ Nodes (7): App(), Cartel(), ESTILOS, fechaCorta(), TAMANOS, urlConCortes(), useQ
 Cohesion: 0.38
 Nodes (3): admin_csrf_field(), admin_csrf_token(), h()
 
-### Community 327 - ".toJSON"
-Cohesion: 0.06
-Nodes (6): _a, ch, cu, du, fl(), wc
-
 ### Community 328 - "ajustes.php"
 Cohesion: 0.38
 Nodes (3): admin_csrf_field(), admin_csrf_token(), h()
@@ -1237,9 +1240,9 @@ Nodes (3): admin_csrf_field(), admin_csrf_token(), h()
 Cohesion: 0.38
 Nodes (3): admin_csrf_field(), admin_csrf_token(), h()
 
-### Community 334 - "cb_public_base_url"
-Cohesion: 0.10
-Nodes (27): admin_csrf_field(), admin_csrf_token(), h(), usuarios_enviar_correo(), usuarios_fiesta_etiqueta(), cb_album_intake_url(), cb_album_sign_url(), cb_album_view_url() (+19 more)
+### Community 334 - "cb_manual_datos"
+Cohesion: 0.19
+Nodes (16): cb_theme_css_vars(), cb_envio_manual(), cb_manual_banner(), cb_manual_cabecera_compuesta(), cb_manual_datos(), cb_manual_fecha_larga(), cb_manual_firma(), cb_manual_firma_valida() (+8 more)
 
 ### Community 335 - "planes.php"
 Cohesion: 0.38
@@ -1251,7 +1254,7 @@ Nodes (13): cb_gift_add(), cb_gift_board_url(), cb_gift_claim(), cb_gift_clean_t
 
 ### Community 337 - "Dc"
 Cohesion: 0.18
-Nodes (12): C(), Dc(), Ja(), pb(), tc(), vc(), Wa(), wc() (+4 more)
+Nodes (13): C(), Dc(), Ia(), Ja(), pb(), tc(), vc(), Wa() (+5 more)
 
 ### Community 338 - "lib.ajustes.php"
 Cohesion: 0.57
@@ -1277,9 +1280,9 @@ Nodes (5): cb_guardar_planes(), cb_plan(), cb_planes(), cb_planes_por_defecto(),
 Cohesion: 0.70
 Nodes (4): detectarCara(), prepararDetector(), recorte(), ventanas()
 
-### Community 358 - "reglas.mjs"
-Cohesion: 0.43
-Nodes (6): aroY(), avanzar(), carril(), enganchar(), MODOS, soltar()
+### Community 358 - "frame"
+Cohesion: 0.27
+Nodes (10): actualizarUI(), frame(), logro(), aroY(), avanzar(), carril(), enganchar(), MODOS (+2 more)
 
 ### Community 359 - "2026-09-07 — revision previa al domingo y dos hallazgos"
 Cohesion: 0.40
@@ -1314,8 +1317,8 @@ Cohesion: 0.27
 Nodes (10): _assertThisInitialized(), ic(), ta(), Timeline(), Tween(), w(), x(), xa() (+2 more)
 
 ### Community 376 - ".clone"
-Cohesion: 0.07
-Nodes (4): dd, hu, nu, xc
+Cohesion: 0.03
+Nodes (13): dd, hh, hu, ih, iu, Jl(), nh, nu (+5 more)
 
 ### Community 377 - "oc"
 Cohesion: 0.20
@@ -1338,8 +1341,12 @@ Cohesion: 0.25
 Nodes (8): De paso, en el mismo despliegue, El arreglo, 🔴 INCIDENTE Y HOTFIX 2026-09-08 — "Guardar" mandaba un correo en vez de guardar, La causa, Lista de subida, Otros dos bugs que aparecieron tirando del hilo, Prueba de regresión, Verificado en PROD
 
 ### Community 400 - "datos.mjs"
-Cohesion: 0.43
-Nodes (6): borrar(), cargar(), clave(), limpiarNombre(), parametros(), regreso()
+Cohesion: 0.39
+Nodes (7): personajeValido(), borrar(), cargar(), clave(), limpiarNombre(), parametros(), regreso()
+
+### Community 401 - "lib.admin-password.php"
+Cohesion: 0.44
+Nodes (8): cb_admin_estado_listo(), cb_admin_password_archivo(), cb_admin_password_cambiar(), cb_admin_password_override(), cb_admin_reset_archivo(), cb_admin_reset_borrar(), cb_admin_reset_emitir(), cb_admin_reset_valido()
 
 ### Community 402 - "Generadores de imágenes de CumpleClick"
 Cohesion: 0.29
@@ -1397,6 +1404,10 @@ Nodes (6): 2026-09-10 cierre 4 — Bienvenida de spidey: la voz femenina no se e
 Cohesion: 0.33
 Nodes (6): 2026-09-10 cierre 6 — La bienvenida se cortaba en la tablet lenta, Lista de subida (hecha por SSH), No probado, Qué cambió, Qué era, Verificado en PROD
 
+### Community 418 - "JuegoFichas"
+Cohesion: 0.39
+Nodes (7): barajarPiezas(), JuegoFichas(), celdaBajoPunto(), esArrastre(), intercambiar(), UMBRAL_ARRASTRE_PX, tablero
+
 ### Community 419 - "2026-09-10 cierre 10 — Circuito Arácnido: las flechas empujan, los rayos recargan"
 Cohesion: 0.40
 Nodes (5): 2026-09-10 cierre 10 — Circuito Arácnido: las flechas empujan, los rayos recargan, Cómo se probó, Lista de subida (hecha por SSH, en este orden), No probado, Qué se cambió
@@ -1449,25 +1460,29 @@ Nodes (3): Antes de tocar cualquiera de estos archivos, Archivos del juego que v
 Cohesion: 0.67
 Nodes (3): 2026-09-10 cierre 8 — Frozen: bienvenida con voces, Lista de subida de los cierres 7 y 8 (hecha por SSH), No probado
 
+### Community 435 - "admin/usuarios.php"
+Cohesion: 0.32
+Nodes (6): admin_csrf_field(), admin_csrf_token(), h(), usuarios_enviar_correo(), usuarios_fiesta_etiqueta(), cb_theme_public_name()
+
 ## Knowledge Gaps
-- **1396 isolated node(s):** `params`, `saved`, `audio`, `input`, `state` (+1391 more)
+- **1403 isolated node(s):** `params`, `saved`, `audio`, `input`, `state` (+1398 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **64 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **79 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `v()` connect `v` to `detectarCara`, `t`, `Tween`, `gsap.min.js`, `jr`?**
-  _High betweenness centrality (0.053) - this node is a cross-community bridge._
+- **Why does `v()` connect `v` to `detectarCara`, `t`, `.constructor`, `gsap.min.js`, `jr`, `Tween`?**
+  _High betweenness centrality (0.054) - this node is a cross-community bridge._
 - **Why does `detectarCara()` connect `detectarCara` to `DiplomaScreen`, `App.jsx`, `v`?**
-  _High betweenness centrality (0.052) - this node is a cross-community bridge._
-- **Why does `ti` connect `ti` to `.setFromMatrixColumn`, `.setFromSpherical`, `.multiplyScalar`, `hr`, `.dot`, `.applyMatrix4`, `.applyQuaternion`, `ii`, `.applyMatrix3`, `.setFromCylindrical`, `.getX`, `three.core.min.js`, `qi`, `en`?**
+  _High betweenness centrality (0.053) - this node is a cross-community bridge._
+- **Why does `ti` connect `ti` to `mn`, `.dot`, `xi`, `.update`, `.applyMatrix4`, `.updateMatrixWorld`, `three.core.min.js`, `.copy`, `en`, `pr`, `ai`?**
   _High betweenness centrality (0.021) - this node is a cross-community bridge._
 - **Are the 76 inferred relationships involving `cb_pdo()` (e.g. with `admin_nav()` and `cb_accept_plan()`) actually correct?**
   _`cb_pdo()` has 76 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `params`, `saved`, `audio` to the rest of the system?**
-  _1396 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1403 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `cb_pdo` be split into smaller, more focused modules?**
-  _Cohesion score 0.07578084997439836 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07237871674491393 - nodes in this community are weakly interconnected._
 - **Should `OpenCode Go — Tema 02: Familia Canina Azul/Naranja` be split into smaller, more focused modules?**
   _Cohesion score 0.05 - nodes in this community are weakly interconnected._

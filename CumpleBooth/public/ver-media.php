@@ -65,14 +65,37 @@ if (!empty($_COOKIE['cc_admin'])) {
         require_once __DIR__ . '/lib.admin-usuarios.php';
         $isAdmin = cb_admin_usuario_puede_fiesta((int) ($_SESSION['admin_usuario_id'] ?? 0), (string) ($media['public_slug'] ?? ''));
     }
+    session_id('');
+}
+
+// Un invitado que abrió la galería con el PIN también ve lo que subieron los invitados
+// (2026-09-15): la galería lo muestra en su pestaña "De los invitados" aunque el álbum
+// todavía se esté armando. La sesión de galería se lee sin crearla, igual que la de admin.
+$galeriaAbierta = false;
+if (!$isAdmin && !empty($_COOKIE['cc_gallery'])) {
+    $secure = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
+    session_name('cc_gallery');
+    session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => $secure, 'httponly' => true, 'samesite' => 'Lax']);
+    session_start();
+    $galeriaAbierta = (int) ($_SESSION['gallery_auth'][(string) ($media['public_slug'] ?? '')] ?? 0) >= time();
+    session_write_close();
 }
 
 if (!$isAdmin) {
-    if ((string) $media['moderation_status'] !== 'approved') {
-        cb_media_error(404);
-    }
-    if ((string) $media['album_status'] !== 'published') {
-        cb_media_error(404);
+    $estado = (string) $media['moderation_status'];
+    if ($galeriaAbierta) {
+        // Con la galería abierta se ve lo pendiente y lo aprobado; lo que el organizador
+        // escondió o borró, no.
+        if (!in_array($estado, ['pending', 'approved'], true)) {
+            cb_media_error(404);
+        }
+    } else {
+        if ($estado !== 'approved') {
+            cb_media_error(404);
+        }
+        if ((string) $media['album_status'] !== 'published') {
+            cb_media_error(404);
+        }
     }
 }
 

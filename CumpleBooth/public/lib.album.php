@@ -56,12 +56,15 @@ function cb_album_limits(): array
         'files_per_submit' => 10,       // archivos por envío de un invitado
         'videos_per_submit' => 2,
         'image_max_bytes' => 12 * 1024 * 1024,
-        'video_max_bytes' => 40 * 1024 * 1024,
-        'video_max_seconds' => 30.0,
+        // Luis subió los topes de video el 2026-09-15 (eran 40 MB y 30 s): un minuto de
+        // celular en 1080p pesa 50-60 MB. app/.user.ini permite 80M por archivo y 90M por
+        // envío, así que 60 MB + el póster entran; si esto vuelve a subir, subir eso también.
+        'video_max_bytes' => 60 * 1024 * 1024,
+        'video_max_seconds' => 60.0,
         'video_max_dimension' => 1920,
         'image_max_dimension' => 8000,  // una foto de celular moderna no pasa de aquí
         'album_max_files' => 400,
-        'album_max_bytes' => 3 * 1024 * 1024 * 1024,
+        'album_max_bytes' => 5 * 1024 * 1024 * 1024,  // 5 GB por fiesta (era 3 GB)
         'thumb_max_side' => 640,
         // El límite cuenta ARCHIVOS, no envíos: la página sube uno por
         // petición para poder mostrar progreso real y reintentar el que falle

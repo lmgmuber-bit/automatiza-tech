@@ -154,6 +154,8 @@ g_check(str_contains($html, 'ver-media.php?t=' . $visible['access_token'] . '&am
 g_check(!str_contains($html, 'id="imprimir"') && !str_contains($html, 'Preparando la impresión') && !str_contains($html, 'Copias <select'), 'un invitado NO ve nada de imprimir');
 g_check(str_contains($html, 'id="descargar"') && str_contains($html, 'puedes descargar las elegidas'), 'sí puede descargar las elegidas');
 g_check(str_contains($html, 'Descargar todas (1)'), '"Descargar todas" cuenta el aporte visible');
+g_check(str_contains($html, 'id="visor"') && str_contains($html, 'id="visor-prev"') && str_contains($html, 'id="visor-next"'), 'la galería abierta trae el visor con anterior y siguiente');
+g_check(preg_match('/<a class="ver" href="ver-media\.php\?t=[a-f0-9]{32}" target="_blank" rel="noopener" data-ver>Ver<\/a>/', $html) === 1, '"Ver" conserva su enlace real (sin JavaScript sigue abriendo la foto)');
 
 // ── ver-media.php: miniatura para la sesión de galería, 404 para el resto ───
 $r = $inv->pedir('GET', '/ver-media.php?t=' . $visible['access_token'] . '&v=thumb');

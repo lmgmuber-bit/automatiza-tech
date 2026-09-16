@@ -85,8 +85,8 @@
     "semantic_hash": ""
   },
   "public/galeria.php": {
-    "mtime": 1789555968.31585,
-    "ast_hash": "1daf1c23adf31208a016a007549fa9be",
+    "mtime": 1789498851.9699879,
+    "ast_hash": "948dfb97818c975ca8efed9a502ad98f",
     "semantic_hash": ""
   },
   "public/lib.invitations.php": {
@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "docs/FTP-MANIFEST.md": {
-    "mtime": 1789556036.3754013,
-    "ast_hash": "2a43459e4d76a50dca07ca66a0912a25",
+    "mtime": 1789499136.6240115,
+    "ast_hash": "79d3d477ba5855a74a54fca2aa8c25b3",
     "semantic_hash": ""
   },
   "docs/OPENCODE-PROMPT-2026-07-14.md": {
@@ -5610,8 +5610,8 @@
     "semantic_hash": ""
   },
   "tests/backend/galeria-http.php": {
-    "mtime": 1789555800.736091,
-    "ast_hash": "3986939dac201b40cae3f91ee94d4982",
+    "mtime": 1789499025.008317,
+    "ast_hash": "88ade8c2d9ebdbf2f498491e95d834cb",
     "semantic_hash": ""
   },
   "public/admin/paginador.js": {

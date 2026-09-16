@@ -378,6 +378,27 @@ h1{color:<?= gallery_h($yellow) ?>;margin:.2rem 0 .6rem;font-size:clamp(1.3rem,4
 #hoja{display:none}
 #aviso{position:fixed;inset:0;z-index:30;display:none;place-items:center;background:#000c;color:#fff;font-weight:800;font-size:1.2rem}
 #aviso.on{display:grid}
+/* Visor a pantalla completa (2026-09-16): "Ver" abre la foto y se pasa a la anterior o a la
+   siguiente con las flechas, el teclado o deslizando el dedo. */
+#visor{position:fixed;inset:0;z-index:40;display:grid;grid-template-rows:auto 1fr auto;background:#050505;color:#fff;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+#visor[hidden]{display:none}
+.visor-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px}
+.visor-top .cuenta{font-weight:800}
+.visor-media{position:relative;display:grid;place-items:center;min-height:0;padding:0 64px}
+/* El contenedor interno toma el alto de la fila y es FLEX, no grid: dentro de un grid la
+   foto queda en una fila de alto automático y su max-height en porcentaje no tiene contra
+   qué medirse, así que salía a tamaño natural (medido: 896×1195 en una fila de 603 px). */
+#visor-media{display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:0}
+.visor-media img,.visor-media video{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:10px;box-shadow:0 10px 40px #000;background:#111}
+.visor-nav{position:absolute;top:50%;transform:translateY(-50%);width:52px;height:52px;border:0;border-radius:50%;background:#ffffff2e;color:#fff;font-size:30px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.visor-nav:active{background:#ffffff55}
+#visor-prev{left:8px}
+#visor-next{right:8px}
+.visor-pie{padding:10px 14px calc(12px + env(safe-area-inset-bottom));text-align:center;font-weight:700;line-height:1.35;overflow-wrap:anywhere}
+.visor-pie .mensaje-visor{display:block;margin-top:4px;font-weight:500;opacity:.9}
+.visor-btn{min-height:44px;padding:8px 16px;border:0;border-radius:999px;background:#ffffff22;color:#fff;font:inherit;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+body.con-visor{overflow:hidden}
+@media (max-width:520px){.visor-media{padding:0 8px}.visor-nav{width:44px;height:44px;font-size:26px;background:#0008}}
 @media print{
   @page{margin:0}
   body{background:#fff;color:#000;padding:0;min-height:0}
@@ -514,6 +535,21 @@ $vacio = ['recuerdo' => mb_strtolower($tituloRecuerdos, 'UTF-8'), 'personaje' =>
     <?php if (class_exists('ZipArchive')): ?><button class="btn<?= $isAdmin ? ' btn-ghost' : '' ?>" type="button" id="descargar" disabled>⬇️ Descargar ZIP</button><?php endif; ?>
   </div>
 </div>
+<div id="visor" role="dialog" aria-modal="true" aria-label="Foto ampliada" hidden>
+  <div class="visor-top">
+    <span class="cuenta" id="visor-cuenta"></span>
+    <span>
+      <a class="visor-btn" id="visor-descargar" href="#" download>⬇️ Guardar</a>
+      <button class="visor-btn" type="button" id="visor-cerrar" aria-label="Cerrar">✕ Cerrar</button>
+    </span>
+  </div>
+  <div class="visor-media" id="visor-media-zona">
+    <button class="visor-nav" type="button" id="visor-prev" aria-label="Anterior">‹</button>
+    <div id="visor-media"></div>
+    <button class="visor-nav" type="button" id="visor-next" aria-label="Siguiente">›</button>
+  </div>
+  <p class="visor-pie" id="visor-pie"></p>
+</div>
 <?php if ($isAdmin): ?>
 <div id="hoja" aria-hidden="true"></div>
 <div id="aviso">Preparando la impresión…</div>
@@ -558,6 +594,112 @@ $vacio = ['recuerdo' => mb_strtolower($tituloRecuerdos, 'UTF-8'), 'personaje' =>
       if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(fig); }
     });
   });
+
+  /**
+   * Visor (2026-09-16): "Ver" ya no abre la foto en otra pestaña; la muestra a pantalla
+   * completa y desde ahí se pasa a la anterior o a la siguiente con las flechas de los
+   * costados, con el teclado o deslizando el dedo. Se recorre lo que está a la vista en la
+   * pestaña actual (en "Por invitado", lo desplegado). El enlace conserva su href, así que
+   * sin JavaScript sigue abriendo la foto.
+   */
+  var visor = document.getElementById('visor');
+  var visorMedia = document.getElementById('visor-media');
+  var visorPie = document.getElementById('visor-pie');
+  var visorCuenta = document.getElementById('visor-cuenta');
+  var visorDescargar = document.getElementById('visor-descargar');
+  var visorLista = [];
+  var visorPos = -1;
+
+  function visorVisibles() {
+    var panel = document.querySelector('.panel:not([hidden])');
+    return Array.prototype.filter.call((panel || document).querySelectorAll('.foto'), function (f) {
+      return f.offsetParent !== null;
+    });
+  }
+  function visorPintar() {
+    var fig = visorLista[visorPos];
+    if (!fig) { return; }
+    var full = fig.getAttribute('data-full');
+    var esVideo = !!fig.querySelector('.play');
+    visorMedia.innerHTML = '';
+    if (esVideo) {
+      var video = document.createElement('video');
+      video.controls = true; video.playsInline = true; video.autoplay = true; video.src = full;
+      visorMedia.appendChild(video);
+    } else {
+      var img = document.createElement('img');
+      img.alt = ''; img.src = full;
+      visorMedia.appendChild(img);
+    }
+    var nombre = fig.querySelector('.nombre');
+    var mensaje = fig.querySelector('.mensaje');
+    visorPie.textContent = nombre ? nombre.textContent : '';
+    if (mensaje) {
+      var m = document.createElement('span');
+      m.className = 'mensaje-visor';
+      m.textContent = mensaje.textContent;
+      visorPie.appendChild(m);
+    }
+    visorCuenta.textContent = (visorPos + 1) + ' / ' + visorLista.length;
+    visorDescargar.href = full;
+    // La siguiente se pide antes de que la deslicen: así el paso se siente instantáneo.
+    var proxima = visorLista[(visorPos + 1) % visorLista.length];
+    if (proxima && !proxima.querySelector('.play')) { var pre = new Image(); pre.src = proxima.getAttribute('data-full'); }
+  }
+  function visorAbrir(fig) {
+    visorLista = visorVisibles();
+    visorPos = visorLista.indexOf(fig);
+    if (visorPos < 0) { visorLista = [fig]; visorPos = 0; }
+    visorPintar();
+    visor.hidden = false;
+    document.body.classList.add('con-visor');
+    document.getElementById('visor-cerrar').focus();
+  }
+  function visorMover(delta) {
+    if (!visorLista.length) { return; }
+    visorPos = (visorPos + delta + visorLista.length) % visorLista.length;
+    visorPintar();
+  }
+  function visorCerrar() {
+    visor.hidden = true;
+    visorMedia.innerHTML = '';
+    document.body.classList.remove('con-visor');
+  }
+  if (visor) {
+    document.addEventListener('click', function (e) {
+      var ver = e.target.closest('[data-ver]');
+      if (!ver) { return; }
+      var fig = ver.closest('.foto');
+      if (!fig) { return; }
+      e.preventDefault();
+      visorAbrir(fig);
+    });
+    document.getElementById('visor-prev').addEventListener('click', function () { visorMover(-1); });
+    document.getElementById('visor-next').addEventListener('click', function () { visorMover(1); });
+    document.getElementById('visor-cerrar').addEventListener('click', visorCerrar);
+    // Tocar el fondo oscuro (no la foto ni los botones) también cierra.
+    document.getElementById('visor-media-zona').addEventListener('click', function (e) {
+      if (e.target === e.currentTarget || e.target === visorMedia) { visorCerrar(); }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (visor.hidden) { return; }
+      if (e.key === 'ArrowRight') { e.preventDefault(); visorMover(1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); visorMover(-1); }
+      else if (e.key === 'Escape') { e.preventDefault(); visorCerrar(); }
+    });
+    // Deslizar: se compara dónde bajó el dedo y dónde se levantó. Un gesto más vertical que
+    // horizontal no cuenta, para no pelear con el scroll ni con los controles del video.
+    var toque = null;
+    visor.addEventListener('pointerdown', function (e) { toque = { x: e.clientX, y: e.clientY }; });
+    visor.addEventListener('pointerup', function (e) {
+      if (!toque) { return; }
+      var dx = e.clientX - toque.x;
+      var dy = e.clientY - toque.y;
+      toque = null;
+      if (Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy) * 1.2) { visorMover(dx < 0 ? 1 : -1); }
+    });
+    visor.addEventListener('pointercancel', function () { toque = null; });
+  }
 
   // Vistas: la selección se conserva al cambiar, a propósito — se puede elegir
   // el recuerdo de un invitado y la foto de otro e imprimir todo junto.

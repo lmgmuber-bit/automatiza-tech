@@ -3451,3 +3451,33 @@ Subidos por SSH con `subir-login.py` (respaldo `~/respaldos/…app_admin_album.p
 `php -l`, `mv` atómico, sha256 igual al commit). Verificado desde afuera: `admin/album.php` sin
 sesión contesta 302 al login (un error de PHP daría 500). **No probado:** la página con sesión de
 admin en PROD (nadie la ha abierto desde la subida); localmente sí, de punta a punta.
+
+## DESPLEGADO 2026-09-16 en cumpleclick.com/app — galería pública: visor con anterior y siguiente
+
+Pedido de Luis: al abrir una foto en la galería con PIN, poder pasar a la anterior y a la siguiente
+sin salir. En `galeria.php`, **"Ver" ya no abre otra pestaña**: muestra la foto (o el video) a
+pantalla completa con el nombre y el mensaje de quien la mandó, el contador "1 / 27", flechas a
+los costados, teclado (← → Esc), **deslizar el dedo** (un gesto más vertical que horizontal no
+cuenta, para no pelear con el scroll ni con los controles del video), botón Guardar (baja el
+archivo) y Cerrar (o tocar el fondo). Se recorre lo visible en la pestaña actual (en "Por invitado",
+lo desplegado); la siguiente foto se precarga. El enlace conserva su `href`: sin JavaScript sigue
+abriendo la foto como antes.
+
+Trampa medida: la foto iba dentro de un grid y quedaba en una fila de alto automático, así que su
+`max-height:100%` no tenía contra qué medirse y salía a tamaño natural (896×1195 en una fila de
+603 px); el contenedor interno es flex y toma el alto de la fila. Probado en el navegador en
+1024×768 y en 375×812 (la foto cabe, flechas dentro de la pantalla, sin scroll horizontal), con
+foto y con video, flechas, teclado, deslizar a los dos lados y Escape.
+
+Rama `claude/galeria-visor` (commit `aa357a9`, base `main` `5d33b4d`). `tests/backend/galeria-http.php`
+sube a 25 checks (el visor está en la página y "Ver" conserva su enlace real).
+
+| Local | Destino PROD | Clase |
+|---|---|---|
+| `CumpleBooth/public/galeria.php` | `app/galeria.php` | **OBLIGATORIO** (único archivo) |
+
+Subido por SSH con `subir-login.py` (respaldo `~/respaldos/…app_galeria.php.antes-<sello>`, `php -l`,
+`mv` atómico, sha256 igual al commit). Verificado desde afuera con el PIN real de la fiesta de
+Samantha: la galería trae el visor y sus flechas, 56 enlaces "Ver" y ningún botón de imprimir para
+el invitado. **No probado:** deslizar con el dedo en una tablet o celular real contra PROD (en el
+navegador se simuló el gesto).

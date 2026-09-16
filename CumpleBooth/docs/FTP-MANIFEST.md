@@ -3479,5 +3479,4 @@ sube a 25 checks (el visor está en la página y "Ver" conserva su enlace real).
 Subido por SSH con `subir-login.py` (respaldo `~/respaldos/…app_galeria.php.antes-<sello>`, `php -l`,
 `mv` atómico, sha256 igual al commit). Verificado desde afuera con el PIN real de la fiesta de
 Samantha: la galería trae el visor y sus flechas, 56 enlaces "Ver" y ningún botón de imprimir para
-el invitado. **No probado:** deslizar con el dedo en una tablet o celular real contra PROD (en el
-navegador se simuló el gesto).
+el invitado. **Probado por Luis en su celular contra PROD el 16-sep:** el deslizar funciona. Queda sin probar solo en la tablet Tab A7.

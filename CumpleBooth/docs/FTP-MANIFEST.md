@@ -3585,3 +3585,29 @@ probó en el navegador del escritorio) y Android real; el camino de "arranca con
 solo tiene prueba unitaria porque el navegador del escritorio dejó sonar sin gesto tras la primera
 visita. **Derechos:** la pista es un cover de "Let It Go" (Disney); en el álbum privado de la
 familia es decisión de Luis; para Instagram usar la biblioteca de música de la app.
+
+## PENDIENTE DE SUBIR 2026-09-17 (tarde) — música y pantalla completa como iconos en el Álbum en línea (rama `claude/album-iconos`)
+
+**Qué es.** Luis vio el álbum en el celular con la subida de las 09:02 y pidió que silenciar la
+música y la pantalla completa sean **iconos chicos, sin texto**. Las tres pastillas con texto se
+apilaban en tres filas y le quitaban alto a la hoja. Ahora "Ver como lista" sigue como pastilla y
+al lado van dos iconos de 44 px (el mínimo táctil, más chicos que las flechas de página de 56 px):
+parlante con ondas cuando suena y tachado en silencio; cuatro esquinas hacia afuera para entrar a
+pantalla completa y hacia adentro para salir. El nombre queda en `aria-label` y `title`
+("Silenciar música" / "Poner música", "Pantalla completa" / "Salir de pantalla completa"), así que
+el lector de pantalla y las pruebas siguen viendo el texto. Medido en 375×812: los tres controles
+caben en una fila y la hoja pasa de 324×576 a 347×617 (0,5625), sin scroll; en 1280×800 igual que
+antes. Cambios en `src/album/main.jsx` (`IconoMusica`, `IconoPantalla`) y `src/album/album.css`
+(`.flip-btn--icono`). `npm test`: 214 pasan.
+
+**Lista exacta para PROD (`cumpleclick.com/app/`), en este orden:**
+
+| # | Ruta local (`CumpleBooth/`) | Destino en PROD | Clase |
+|---|---|---|---|
+| 1 | `dist/assets/album-OpgQ5_F6.js` | `app/assets/album-OpgQ5_F6.js` | OBLIGATORIO |
+| 2 | `dist/assets/album-DgK5J8hg.css` | `app/assets/album-DgK5J8hg.css` | OBLIGATORIO |
+| 3 | `dist/album.html` | `app/album.html` | OBLIGATORIO, **al final** (respaldar antes) |
+
+Los otros cuatro trozos que referencia `album.html` (`client-eulB1LW-.js`, `themeVars-BWg77og2.js`,
+`Lockup-B8jQuzlB.js`, `Lockup-CQYbo7Xc.css`) ya están en PROD desde las 09:02 con esos mismos
+nombres. Vuelta atrás: restaurar `album.html` desde `~/respaldos/`. No probado en celular real.

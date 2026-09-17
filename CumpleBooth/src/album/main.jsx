@@ -141,6 +141,29 @@ function Scroller({ pages }) {
   )
 }
 
+/** Parlante con ondas cuando suena; tachado cuando está en silencio. */
+function IconoMusica({ sonando }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 9.5v5h3.5L13 19V5L7.5 9.5H4z" />
+      {sonando
+        ? <><path d="M16.5 8.5a5 5 0 0 1 0 7" /><path d="M19.5 6a9 9 0 0 1 0 12" /></>
+        : <path d="M16.5 9.5l5 5M21.5 9.5l-5 5" />}
+    </svg>
+  )
+}
+
+/** Cuatro esquinas: hacia afuera para entrar, hacia adentro para salir. */
+function IconoPantalla({ completa }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {completa
+        ? <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+        : <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" />}
+    </svg>
+  )
+}
+
 function Album({ data }) {
   const pages = useMemo(() => buildPages(data), [data])
   const [flip, setFlip] = useState(() => supportsFlip())
@@ -174,24 +197,37 @@ function Album({ data }) {
     return () => document.removeEventListener('fullscreenchange', onChange)
   }, [])
 
+  // Pantalla completa y música van como iconos chicos, sin texto (Luis, 17-sep):
+  // en el celular tres pastillas con texto se apilaban en tres filas y le
+  // quitaban alto a la hoja. El nombre queda en aria-label y title.
+  const rotuloPantalla = fullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'
+  const rotuloMusica = sonando ? 'Silenciar música' : 'Poner música'
   const controls = (
     <div className="album-tools">
       <button type="button" className="flip-btn flip-btn--wide" onClick={() => setFlip((value) => !value)}>
         {flip ? 'Ver como lista' : 'Ver como revista'}
       </button>
       {document.documentElement.requestFullscreen && (
-        <button type="button" className="flip-btn flip-btn--wide" onClick={toggleFullscreen}>
-          {fullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+        <button
+          type="button"
+          className="flip-btn flip-btn--icono"
+          onClick={toggleFullscreen}
+          aria-label={rotuloPantalla}
+          title={rotuloPantalla}
+        >
+          <IconoPantalla completa={fullscreen} />
         </button>
       )}
       {musica && (
         <button
           type="button"
-          className="flip-btn flip-btn--wide flip-btn--musica"
+          className="flip-btn flip-btn--icono flip-btn--musica"
           aria-pressed={sonando}
+          aria-label={rotuloMusica}
+          title={rotuloMusica}
           onClick={alternarMusica}
         >
-          {sonando ? 'Silenciar música' : 'Poner música'}
+          <IconoMusica sonando={sonando} />
         </button>
       )}
     </div>

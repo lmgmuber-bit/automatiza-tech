@@ -238,6 +238,9 @@ body {
 }
 .flip-btn:disabled { opacity: .35; cursor: not-allowed; }
 .flip-btn--wide { padding: 0 20px; }
+/* Iconos chicos (pantalla completa y música): 44px es el mínimo táctil. Más
+   chicos que las flechas de página a propósito: son ajustes, no navegación. */
+.flip-btn--icono { width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; }
 
 .flip-indicator { margin: 0 6px; font-weight: 700; opacity: .9; min-width: 74px; text-align: center; }
 .flip-indicator span { color: var(--yellow); font-size: 1.15rem; }

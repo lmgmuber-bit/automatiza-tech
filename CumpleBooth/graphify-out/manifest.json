@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "docs/FTP-MANIFEST.md": {
-    "mtime": 1789558615.973619,
-    "ast_hash": "0bfa0187e2d2cb8ab32c3d806a97664f",
+    "mtime": 1789645084.936128,
+    "ast_hash": "e82298c8b7c7c1d34c6b167e300b768d",
     "semantic_hash": ""
   },
   "docs/OPENCODE-PROMPT-2026-07-14.md": {
@@ -2760,13 +2760,13 @@
     "semantic_hash": ""
   },
   "src/album/FlipBook.jsx": {
-    "mtime": 1789292182.602973,
-    "ast_hash": "6fbd2d2bd295dbcb541c09235e6652e9",
+    "mtime": 1789644277.395001,
+    "ast_hash": "68963026c3b2e636ae59ab24945f7b54",
     "semantic_hash": ""
   },
   "src/album/main.jsx": {
-    "mtime": 1789621503.4344046,
-    "ast_hash": "bf526a33b610923acb4575f2a49577cf",
+    "mtime": 1789644277.3960176,
+    "ast_hash": "cc9e7d3b088977ad43848a24bbd92031",
     "semantic_hash": ""
   },
   "src/album/pages.js": {
@@ -4790,8 +4790,8 @@
     "semantic_hash": ""
   },
   "docs/PENDIENTES-DE-PRUEBA.md": {
-    "mtime": 1789292176.8704586,
-    "ast_hash": "8f723d32a94b5eb6f92a44f7a1ce081a",
+    "mtime": 1789645084.9371295,
+    "ast_hash": "6813d57c39f8e21504f0147c4e600344",
     "semantic_hash": ""
   },
   "docs/REVISION-JUEGOS-CODEX.md": {

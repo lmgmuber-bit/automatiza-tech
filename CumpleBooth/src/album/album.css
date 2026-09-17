@@ -104,37 +104,59 @@ body {
 
 .album-root { min-height: 100dvh; display: flex; flex-direction: column; }
 
+/* Grilla y no flex, con el alto de la pantalla escrito: dos filas, la revista
+   (todo lo que sobre) y los controles (lo que midan). Medido en Chrome 152: si
+   el área de la revista es un item flex que crece dentro de un alto heredado
+   de `min-height`, sus unidades `cqh` valen 0 y la revista desaparece; en una
+   fila `1fr` de una grilla con alto definido, `100cqh` es el alto real. */
 .flipbook-stage {
-  flex: 1;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100dvh;
+  display: grid; grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center; align-items: center;
   gap: 16px; padding: 18px 14px calc(14px + env(safe-area-inset-bottom));
   min-height: 0;
 }
 
-/* El pliego es 3:2 (dos páginas 3:4 lado a lado). Se acota por ancho y por
-   alto a la vez para que nunca se salga de pantalla en horizontal.
+/* Las hojas son 9:16, como la pantalla de un celular y como las fotos del
+   kiosco (el lienzo de la cabina es 9:16). Eran 3:4 y en el celular la hoja
+   dejaba un tercio de la pantalla vacío arriba y abajo; Luis pidió que el
+   álbum se vea en 9:16 (2026-09-17). El pliego de escritorio son dos hojas
+   9:16 lado a lado: 9:8.
 
-   Los 150px que se le restan al alto son el espacio de la cabecera y la barra
-   de controles. Estaban fijos, y en un celular acostado —375px de alto— se
-   comían el 40% de la pantalla: la revista quedaba de 169x225, un 12% del
-   viewport, con el resto en fondo vacío. Ahora la reserva es proporcional en
-   pantallas bajas, que es donde molesta; en escritorio sigue dando 150px. */
-/* 30dvh es la barra de controles (56px) más el aire del escenario, medido en
-   una pantalla de 375px de alto. Debajo de 500px de viewport la reserva se
-   vuelve proporcional; encima, `min()` devuelve los 150px de siempre, así que
-   escritorio y celular vertical no cambian en nada. */
+   La revista se mide contra el área que queda entre el borde y la barra de
+   controles (`.flipbook-area`, un contenedor de tamaño): manda el alto o el
+   ancho, el que se acabe primero, y nunca se sale de ahí. Antes se restaba
+   un `--chrome` fijo al alto del viewport, y con tres filas de botones en el
+   celular (lista, pantalla completa, música) la hoja se salía de la pantalla.
+   `--chrome` queda solo como respaldo para navegadores sin unidades de
+   contenedor (cq*), que tampoco dibujan bien las páginas. */
 :root { --chrome: min(150px, 30dvh); }
+
+.flipbook-area {
+  align-self: stretch; min-height: 0; width: 100%;
+  container-type: size;
+  display: flex; align-items: center; justify-content: center;
+}
 
 .flipbook {
   position: relative;
-  width: min(96vw, calc((100dvh - var(--chrome)) * 1.5), 1180px);
-  aspect-ratio: 3 / 2;
+  width: min(96vw, calc((100dvh - var(--chrome)) * 1.125), 1180px);
+  aspect-ratio: 9 / 8;
   perspective: 2400px;
   user-select: none;
 }
 .flipbook-stage.is-single .flipbook {
-  width: min(94vw, calc((100dvh - var(--chrome)) * 0.75), 560px);
-  aspect-ratio: 3 / 4;
+  width: min(94vw, calc((100dvh - var(--chrome)) * 0.5625), 560px);
+  aspect-ratio: 9 / 16;
+}
+@supports (height: 1cqh) {
+  /* 1049px es el alto de un pliego de 1180px de ancho; 995px, el de una hoja
+     sola de 560px: los mismos topes de siempre, escritos por el alto. El ancho
+     sale de la proporción; hay que decirlo también para is-single, que si no
+     gana con su `width` y la hoja queda ancha y aplastada. */
+  .flipbook, .flipbook-stage.is-single .flipbook { width: auto; }
+  .flipbook { height: min(100cqh, calc(100cqw * 8 / 9), 1049px); }
+  .flipbook-stage.is-single .flipbook { height: min(100cqh, calc(100cqw * 16 / 9), 995px); }
 }
 
 .flipbook__half { position: absolute; top: 0; bottom: 0; width: 50%; }
@@ -173,13 +195,16 @@ body {
   transform-style: preserve-3d;
   z-index: 8;
 }
+/* La duración la fija FlipBook.jsx (FLIP_MS) en --flip-ms: así el giro y el
+   desmontaje de la hoja voladora son el mismo número y no dos que se
+   desincronizan. Los 820ms son solo el respaldo. */
 .flipbook__flying--fwd {
   left: 50%; transform-origin: left center;
-  animation: flip-fwd 820ms cubic-bezier(.42,0,.28,1) forwards;
+  animation: flip-fwd var(--flip-ms, 820ms) cubic-bezier(.42,0,.28,1) forwards;
 }
 .flipbook__flying--back {
   left: 0; transform-origin: right center;
-  animation: flip-back 820ms cubic-bezier(.42,0,.28,1) forwards;
+  animation: flip-back var(--flip-ms, 820ms) cubic-bezier(.42,0,.28,1) forwards;
 }
 .flipbook-stage.is-single .flipbook__flying { width: 100%; }
 .flipbook-stage.is-single .flipbook__flying--fwd { left: 0; }
@@ -617,7 +642,7 @@ body {
 .album-scroll__page {
   position: relative;
   width: min(94vw, 560px);
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 9 / 16;
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: 0 14px 40px rgba(0,0,0,.34);

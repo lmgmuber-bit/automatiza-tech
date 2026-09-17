@@ -237,6 +237,9 @@ su primera fiesta, con las mismas herramientas:
 - [ ] **Silenciar y recargar:** tocar "Silenciar música", recargar: debe abrir en silencio con el
   botón "Poner música".
 - [ ] **Bloqueo de pantalla / llamada:** al volver, ¿el botón dice lo que está pasando de verdad?
+- [ ] **Hoja 9:16 en un celular real (17-sep, mañana):** con el PIN puesto, ¿se ve la hoja entera sin
+  hacer scroll, con los tres botones abajo? Medido solo en Chrome del escritorio a 375×812.
+- [ ] **Pase de página a 1,4 s:** ¿se ve fluido en un celular de gama baja? (antes 0,82 s).
 
 ## Por qué esta lista existe
 

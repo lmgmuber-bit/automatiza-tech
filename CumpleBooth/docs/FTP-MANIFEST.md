@@ -3483,6 +3483,24 @@ el invitado. **Probado por Luis en su celular contra PROD el 16-sep:** el desliz
 
 ## PENDIENTE DE SUBIR 2026-09-17 — música de fondo en el Álbum Recuerdo en línea (rama `claude/album-musica`)
 
+**Segundo cierre, misma rama (17-sep, mañana): revista en 9:16 y pase de página más lento.**
+Luis vio el video del álbum y pidió que la revista se vea en 9:16 y que las páginas pasen más lento
+"para que se vea más". Las hojas eran 3:4 y en el celular dejaban un tercio de la pantalla vacío;
+ahora son **9:16** (como la pantalla del celular y como las fotos del kiosco), el pliego de
+escritorio son dos hojas 9:16 (9:8) y la lista también. La revista se mide contra el espacio que
+queda entre el borde y los botones (`.flipbook-area`, `container-type: size`; el escenario pasó a
+grilla con `height: 100dvh` porque, medido en Chrome 152, dentro de un item flex de alto heredado
+las unidades `cqh` valen 0 y la hoja desaparecía). Medido en 375×812: hoja 324×576 (0,5625), sin
+scroll, con las tres filas de botones; en 1280×800: pliego 783×696, hojas 392×696. El giro dura
+**1,4 s** (`FLIP_MS`, antes 0,82 s) y el CSS lo lee de `--flip-ms`, así que hay un solo número. Se
+quitó el aviso "Gira tu celular" (con hojas 9:16, de pie es la mejor vista; el aviso además no
+tenía estilos). Los bundles cambiaron de nombre: la tabla de abajo ya trae los nuevos.
+🔴 **El video del álbum v1 salió mal por la grabación, no por la revista:** Playwright no amplía
+la imagen, y al pedir 1080×1920 con un viewport de 540×960 la revista quedó chica en la esquina
+superior izquierda con gris alrededor. `Videos/cumpleclick-reels/herramientas/grabador/grabar-album.js`
+ahora graba al tamaño del viewport (618×1099: 9:16 y justo bajo el tope de 560×995 de la hoja) y se amplía con ffmpeg; con `DIST_LOCAL` sirve el
+`album.html` y `assets/` locales sobre los datos de PROD, que es como se grabó la v2 sin desplegar.
+
 **Qué es.** Luis pidió que la música del video del álbum (el saxo que mandó para la fiesta de
 Samantha) suene también en el enlace del álbum que reciben los papás. La revista ahora toma la
 pista de `theme.assets.musica`, que `album-api.php` publica solo si existe
@@ -3526,11 +3544,11 @@ kiosco no cambió.
 
 | # | Ruta local (`CumpleBooth/`) | Destino en PROD | Clase |
 |---|---|---|---|
-| 1 | `dist/assets/album-BcT2rgdj.js` | `app/assets/album-BcT2rgdj.js` | OBLIGATORIO |
+| 1 | `dist/assets/album-kh1kFZA4.js` | `app/assets/album-kh1kFZA4.js` | OBLIGATORIO |
 | 2 | `dist/assets/client-eulB1LW-.js` | `app/assets/client-eulB1LW-.js` | OBLIGATORIO |
 | 3 | `dist/assets/themeVars-BWg77og2.js` | `app/assets/themeVars-BWg77og2.js` | OBLIGATORIO |
 | 4 | `dist/assets/Lockup-B8jQuzlB.js` | `app/assets/Lockup-B8jQuzlB.js` | OBLIGATORIO |
-| 5 | `dist/assets/album-BVveikdZ.css` | `app/assets/album-BVveikdZ.css` | OBLIGATORIO |
+| 5 | `dist/assets/album-CuW-nFvu.css` | `app/assets/album-CuW-nFvu.css` | OBLIGATORIO |
 | 6 | `public/themes/hielo/musica-album.mp3` | `app/themes/hielo/musica-album.mp3` | OBLIGATORIO (3,5 MB) |
 | 7 | `public/album-api.php` | `app/album-api.php` | OBLIGATORIO (respaldar antes) |
 | 8 | `dist/album.html` | `app/album.html` | OBLIGATORIO, **al final** (respaldar antes) |

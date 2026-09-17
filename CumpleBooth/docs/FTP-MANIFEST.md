@@ -3480,3 +3480,108 @@ Subido por SSH con `subir-login.py` (respaldo `~/respaldos/…app_galeria.php.an
 `mv` atómico, sha256 igual al commit). Verificado desde afuera con el PIN real de la fiesta de
 Samantha: la galería trae el visor y sus flechas, 56 enlaces "Ver" y ningún botón de imprimir para
 el invitado. **Probado por Luis en su celular contra PROD el 16-sep:** el deslizar funciona. Queda sin probar solo en la tablet Tab A7.
+
+## DESPLEGADO 2026-09-17 — música de fondo, revista 9:16 y pase lento en el Álbum Recuerdo en línea (rama `claude/album-musica`, PR #28)
+
+**Subido a PROD el 2026-09-17 09:02 (hora local; 12:03 en el servidor), autorizado por Luis.** Con `scratchpad/album-916/subir-album.py`
+(paramiko, credenciales por etiqueta): reconocimiento en lectura (el `album-api.php` de PROD era el
+de `main`, md5 `d2831dc8d445` sin CR; tres trozos ya existían con el mismo nombre por ser hash de
+contenido), respaldo `~/respaldos/app-album.html.antes-20260917-0902` y
+`~/respaldos/app-album-api.php.antes-20260917-0902`, subida por SFTP a carpeta temporal con cotejo
+sha256, `php -l`, instalación con `mv` atómico y `album.html` al final. Verificado desde afuera: los
+ocho archivos bajan idénticos (md5) a los locales, el mp3 como `audio/mpeg` de 3.533.328 bytes, y
+`album-api.php?t=<enlace de Samantha>` contesta `pin_required` con
+`theme.assets.musica = "themes/hielo/musica-album.mp3"`. Los trozos viejos (`album-C3C8CAdS.js`,
+`themeVars-CrD8eenD.js`, `Lockup-B3fsldPW.js`, `album-CEoolKS_.css`) siguen en `app/assets/`; no se
+borró nada. Vuelta atrás: restaurar los dos respaldos. Sigue **sin probar en iPhone/Android reales**
+(`PENDIENTES-DE-PRUEBA.md`, ítem 11).
+
+**Segundo cierre, misma rama (17-sep, mañana): revista en 9:16 y pase de página más lento.**
+Luis vio el video del álbum y pidió que la revista se vea en 9:16 y que las páginas pasen más lento
+"para que se vea más". Las hojas eran 3:4 y en el celular dejaban un tercio de la pantalla vacío;
+ahora son **9:16** (como la pantalla del celular y como las fotos del kiosco), el pliego de
+escritorio son dos hojas 9:16 (9:8) y la lista también. La revista se mide contra el espacio que
+queda entre el borde y los botones (`.flipbook-area`, `container-type: size`; el escenario pasó a
+grilla con `height: 100dvh` porque, medido en Chrome 152, dentro de un item flex de alto heredado
+las unidades `cqh` valen 0 y la hoja desaparecía). Medido en 375×812: hoja 324×576 (0,5625), sin
+scroll, con las tres filas de botones; en 1280×800: pliego 783×696, hojas 392×696. El giro dura
+**1,4 s** (`FLIP_MS`, antes 0,82 s) y el CSS lo lee de `--flip-ms`, así que hay un solo número. Se
+quitó el aviso "Gira tu celular" (con hojas 9:16, de pie es la mejor vista; el aviso además no
+tenía estilos). Los bundles cambiaron de nombre: la tabla de abajo ya trae los nuevos.
+🔴 **El video del álbum v1 salió mal por la grabación, no por la revista:** Playwright no amplía
+la imagen, y al pedir 1080×1920 con un viewport de 540×960 la revista quedó chica en la esquina
+superior izquierda con gris alrededor. `Videos/cumpleclick-reels/herramientas/grabador/grabar-album.js`
+ahora graba al tamaño del viewport (618×1099: 9:16 y justo bajo el tope de 560×995 de la hoja) y se amplía con ffmpeg; con `DIST_LOCAL` sirve el
+`album.html` y `assets/` locales sobre los datos de PROD, que es como se grabó la v2 sin desplegar.
+
+**Qué es.** Luis pidió que la música del video del álbum (el saxo que mandó para la fiesta de
+Samantha) suene también en el enlace del álbum que reciben los papás. La revista ahora toma la
+pista de `theme.assets.musica`, que `album-api.php` publica solo si existe
+`themes/<tema>/musica-album.mp3` (mismo mecanismo que `fondo-banner.jpg`, `fondo-sala.jpg` y
+`grupo-personajes.png`). Hoy solo `hielo` la trae; una temática sin archivo no cambia en nada.
+
+**Cómo se comporta.** Botón "Poner música / Silenciar música" junto a "Pantalla completa" (en la
+revista y en la vista de lista). El toque de "Abrir el álbum" del PIN destraba el audio dentro del
+mismo gesto (iOS no deja sonar audio pedido después del fetch del PIN; la temática ya viene en la
+respuesta `pin_required`). Si el álbum abre ya desbloqueado (PIN en sesión) y el navegador niega el
+arranque sin gesto, parte con el primer toque o tecla. La elección de silenciar se recuerda en el
+dispositivo (`localStorage` `cc-album-musica`). Volumen 0,6 (iOS lo ignora: la pista va normalizada
+a −17 LUFS). Si el sistema pausa la pista (llamada), el botón lo refleja.
+
+**Archivos de código.** `src/album/musica.js` (nuevo, lógica pura: `Reproductor`, `fuenteMusica`,
+preferencia), `src/album/main.jsx` (reproductor único, `useMusica`, el PIN destraba, botón),
+`src/album/album.css` (estado encendido del botón), `public/album-api.php` (`'musica' =>
+'musica-album.mp3'` en los assets), `public/themes/hielo/musica-album.mp3` (3.533.328 bytes,
+220,8 s, 128 kbps, −17 LUFS; viene de `Videos/cumpleclick-reels/material/samantha-hielo/recursos/musica-album-saxo.mp3`).
+
+**Pruebas.** `tests/frontend/albumMusica.test.mjs` (8: ruta de la pista, preferencia con
+almacenamiento roto, destrabar con y sin silencio, espera del primer gesto, no encender si apagaron
+mientras esperaba, alternar y recordar, estado que sigue al elemento) → `npm test`: 214 pasan.
+`tests/backend/album-api-http.php` (18: `pin_required` ya trae la pista, PIN malo 403, PIN bueno
+trae la misma pista, el mp3 se sirve entero y como audio, spidey no publica la clave) → `php
+tests/backend/album-api-http.php`. `tests/backend/album.php`: 162, sin cambios. Visto en el
+navegador del escritorio con `album-musica-local` (`.claude/launch.json`, puerto 5187,
+`scratchpad/album-musica/servir.php`: SQLite temporal con la fiesta de Samantha, PIN 1234, seis
+fotos aprobadas, sirve `dist/`): el toque del PIN arranca la música (petición del mp3 200), el botón
+alterna, con "no" guardado la recarga queda en silencio, con "si" vuelve a sonar, pasar página no la corta.
+
+**🔴 Ojo con los bundles.** El `album.html` de PROD referencia `album-C3C8CAdS.js`,
+`themeVars-CrD8eenD.js`, `Lockup-B3fsldPW.js`, `Lockup-CQYbo7Xc.css` y `album-CEoolKS_.css`
+(comprobado por HTTP el 17-sep). El build nuevo referencia SEIS archivos y uno es un trozo nuevo
+(`client-*.js`): hay que subirlos todos antes que el `album.html`, si no la revista queda en
+blanco. Los viejos se quedan (el kiosco no los usa; no borrar nada). `index.html` y los bundles del
+kiosco (`main-*.js`, `three.module-*.js`, `vision_bundle-*.js`, `browser-*.js`) NO se suben: el
+kiosco no cambió.
+
+**Lista exacta para PROD (`cumpleclick.com/app/`), en este orden:**
+
+| # | Ruta local (`CumpleBooth/`) | Destino en PROD | Clase |
+|---|---|---|---|
+| 1 | `dist/assets/album-kh1kFZA4.js` | `app/assets/album-kh1kFZA4.js` | OBLIGATORIO |
+| 2 | `dist/assets/client-eulB1LW-.js` | `app/assets/client-eulB1LW-.js` | OBLIGATORIO |
+| 3 | `dist/assets/themeVars-BWg77og2.js` | `app/assets/themeVars-BWg77og2.js` | OBLIGATORIO |
+| 4 | `dist/assets/Lockup-B8jQuzlB.js` | `app/assets/Lockup-B8jQuzlB.js` | OBLIGATORIO |
+| 5 | `dist/assets/album-CuW-nFvu.css` | `app/assets/album-CuW-nFvu.css` | OBLIGATORIO |
+| 6 | `public/themes/hielo/musica-album.mp3` | `app/themes/hielo/musica-album.mp3` | OBLIGATORIO (3,5 MB) |
+| 7 | `public/album-api.php` | `app/album-api.php` | OBLIGATORIO (respaldar antes) |
+| 8 | `dist/album.html` | `app/album.html` | OBLIGATORIO, **al final** (respaldar antes) |
+
+`assets/Lockup-CQYbo7Xc.css` ya está en PROD con ese mismo nombre (mismo contenido: el nombre es
+el hash). No subir: `scratchpad/album-musica/*`, `token.txt`, ningún `.sqlite`.
+
+**Respaldo y vuelta atrás.** Antes de 7 y 8: copiar `app/album-api.php` y `app/album.html` a
+`~/respaldos/domains_cumpleclick.com_public_html_app_<nombre>.antes-<sello>`. Volver atrás = restaurar
+esos dos archivos (los bundles viejos siguen en `app/assets/`); el mp3 y los bundles nuevos pueden
+quedarse sin efecto.
+
+**Verificar desde afuera después de subir.**
+- `curl -sI https://cumpleclick.com/app/themes/hielo/musica-album.mp3` → 200, `audio/mpeg`, 3533328 bytes.
+- `curl -s https://cumpleclick.com/app/album.html` → referencia los seis nombres de arriba, y cada uno contesta 200.
+- `album-api.php?t=<token de lectura de Samantha>` → `pin_required` con `theme.assets.musica = "themes/hielo/musica-album.mp3"`.
+- Abrir el enlace real en el celular, PIN 1234: al tocar "Abrir el álbum" suena el saxo y el botón dice "Silenciar música".
+
+**No probado.** iPhone real (el destrabe en el toque del PIN es la parte pensada para iOS y solo se
+probó en el navegador del escritorio) y Android real; el camino de "arranca con el primer toque"
+solo tiene prueba unitaria porque el navegador del escritorio dejó sonar sin gesto tras la primera
+visita. **Derechos:** la pista es un cover de "Let It Go" (Disney); en el álbum privado de la
+familia es decisión de Luis; para Instagram usar la biblioteca de música de la app.

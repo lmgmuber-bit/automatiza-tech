@@ -9,7 +9,11 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-const FLIP_MS = 820
+// Duración del giro de la hoja. Eran 820 ms; Luis pidió que se vea más lento,
+// para que la página se aprecie mientras gira (2026-09-17). El mismo número
+// se publica al CSS como --flip-ms: la hoja voladora se desmonta justo cuando
+// termina de girar, ni antes ni después.
+const FLIP_MS = 1400
 // Debajo de este umbral el arrastre vuelve atrás en vez de completar el giro.
 const DRAG_COMMIT = 0.12
 // Cuántos pliegos se mantienen montados a cada lado del actual.
@@ -160,7 +164,9 @@ export default function FlipBook({ pages, renderPage, onClose, footer }) {
       const dir = dragDir.current
       const stepNow = singlePageRef.current ? 1 : 2
       if (progress > DRAG_COMMIT) {
-        animate(progress, 1, (1 - progress) * 320, () => {
+        // Al soltar, lo que falta del giro va a la mitad del ritmo del botón:
+        // el arrastre ya mostró la primera parte del movimiento.
+        animate(progress, 1, (1 - progress) * FLIP_MS * 0.45, () => {
           setDrag(null)
           setSpread((s) => (dir === 'fwd' ? s + stepNow : Math.max(0, s - stepNow)))
         })
@@ -253,76 +259,78 @@ export default function FlipBook({ pages, renderPage, onClose, footer }) {
 
   return (
     <div className={`flipbook-stage ${singlePage ? 'is-single' : ''}`}>
-      <div className={`flipbook ${busy ? 'is-flipping' : ''}`} ref={bookRef}>
-        {!singlePage && (
-          <div
-            className="flipbook__half flipbook__half--left"
-            style={{ cursor: canBack ? 'grab' : 'default', touchAction: 'pan-y' }}
-            onPointerDown={(event) => startDrag(event, 'back')}
-          >
-            {drag
-              ? drag.dir === 'fwd' && renderStatic(leftIdx, 'left')
-              : renderStatic(flipping === 'back' ? previewLeft : leftIdx, 'left')}
-          </div>
-        )}
-
-        <div
-          className={`flipbook__half ${singlePage ? 'flipbook__half--only' : 'flipbook__half--right'}`}
-          style={{ cursor: canFwd ? 'grab' : 'default', touchAction: 'pan-y' }}
-          onPointerDown={(event) => {
-            if (!singlePage) return startDrag(event, 'fwd')
-            // En una sola página se decide por la mitad tocada, como hacía el
-            // prototipo: izquierda vuelve, derecha avanza.
-            const box = bookRef.current?.getBoundingClientRect()
-            const back = box && event.clientX < box.left + box.width / 2
-            return startDrag(event, back ? 'back' : 'fwd')
-          }}
-        >
-          {singlePage
-            ? renderStatic(spread, 'only')
-            : drag
-              ? drag.dir === 'back' && renderStatic(rightIdx, 'right')
-              : renderStatic(flipping === 'fwd' ? previewRight : rightIdx, 'right')}
-        </div>
-
-        {!singlePage && <div className="flipbook__spine" />}
-
-        {flipping && (
-          <div className={`flipbook__flying flipbook__flying--${flipping}`} key={`${flipping}-${spread}`}>
-            <div className="flip-page flip-page--front">
-              {flyFront >= 0 && flyFront < totalPages && renderPage(hojas[flyFront], flyFront)}
-              <div className="flip-curl" />
+      <div className="flipbook-area">
+        <div className={`flipbook ${busy ? 'is-flipping' : ''}`} ref={bookRef} style={{ '--flip-ms': `${FLIP_MS}ms` }}>
+          {!singlePage && (
+            <div
+              className="flipbook__half flipbook__half--left"
+              style={{ cursor: canBack ? 'grab' : 'default', touchAction: 'pan-y' }}
+              onPointerDown={(event) => startDrag(event, 'back')}
+            >
+              {drag
+                ? drag.dir === 'fwd' && renderStatic(leftIdx, 'left')
+                : renderStatic(flipping === 'back' ? previewLeft : leftIdx, 'left')}
             </div>
-            <div className="flip-page flip-page--back">
-              {flyBack >= 0 && flyBack < totalPages && renderPage(hojas[flyBack], flyBack)}
-              <div className="flip-curl flip-curl--back" />
-            </div>
-          </div>
-        )}
+          )}
 
-        {drag && (
           <div
-            ref={flyingRef}
-            className={`flipbook__flying flipbook__flying--drag flipbook__flying--drag-${drag.dir}`}
-            key={`drag-${drag.dir}-${spread}`}
-            style={{
-              transform: 'rotateY(0deg)',
-              transformOrigin: drag.dir === 'fwd' ? 'left center' : 'right center',
-              animationName: 'none',
-              left: drag.dir === 'back' || singlePage ? 0 : '50%',
-              width: singlePage ? '100%' : '50%',
+            className={`flipbook__half ${singlePage ? 'flipbook__half--only' : 'flipbook__half--right'}`}
+            style={{ cursor: canFwd ? 'grab' : 'default', touchAction: 'pan-y' }}
+            onPointerDown={(event) => {
+              if (!singlePage) return startDrag(event, 'fwd')
+              // En una sola página se decide por la mitad tocada, como hacía el
+              // prototipo: izquierda vuelve, derecha avanza.
+              const box = bookRef.current?.getBoundingClientRect()
+              const back = box && event.clientX < box.left + box.width / 2
+              return startDrag(event, back ? 'back' : 'fwd')
             }}
           >
-            <div className="flip-page flip-page--front">
-              {drag.front >= 0 && drag.front < totalPages && renderPage(hojas[drag.front], drag.front)}
-              <div className="flip-curl" />
-            </div>
-            <div className="flip-page flip-page--back">
-              {drag.back >= 0 && drag.back < totalPages && renderPage(hojas[drag.back], drag.back)}
-              <div className="flip-curl flip-curl--back" />
-            </div>
+            {singlePage
+              ? renderStatic(spread, 'only')
+              : drag
+                ? drag.dir === 'back' && renderStatic(rightIdx, 'right')
+                : renderStatic(flipping === 'fwd' ? previewRight : rightIdx, 'right')}
           </div>
-        )}
+
+          {!singlePage && <div className="flipbook__spine" />}
+
+          {flipping && (
+            <div className={`flipbook__flying flipbook__flying--${flipping}`} key={`${flipping}-${spread}`}>
+              <div className="flip-page flip-page--front">
+                {flyFront >= 0 && flyFront < totalPages && renderPage(hojas[flyFront], flyFront)}
+                <div className="flip-curl" />
+              </div>
+              <div className="flip-page flip-page--back">
+                {flyBack >= 0 && flyBack < totalPages && renderPage(hojas[flyBack], flyBack)}
+                <div className="flip-curl flip-curl--back" />
+              </div>
+            </div>
+          )}
+
+          {drag && (
+            <div
+              ref={flyingRef}
+              className={`flipbook__flying flipbook__flying--drag flipbook__flying--drag-${drag.dir}`}
+              key={`drag-${drag.dir}-${spread}`}
+              style={{
+                transform: 'rotateY(0deg)',
+                transformOrigin: drag.dir === 'fwd' ? 'left center' : 'right center',
+                animationName: 'none',
+                left: drag.dir === 'back' || singlePage ? 0 : '50%',
+                width: singlePage ? '100%' : '50%',
+              }}
+            >
+              <div className="flip-page flip-page--front">
+                {drag.front >= 0 && drag.front < totalPages && renderPage(hojas[drag.front], drag.front)}
+                <div className="flip-curl" />
+              </div>
+              <div className="flip-page flip-page--back">
+                {drag.back >= 0 && drag.back < totalPages && renderPage(hojas[drag.back], drag.back)}
+                <div className="flip-curl flip-curl--back" />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flipbook-controls">

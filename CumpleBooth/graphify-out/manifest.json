@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "docs/FTP-MANIFEST.md": {
-    "mtime": 1789556036.3754013,
-    "ast_hash": "2a43459e4d76a50dca07ca66a0912a25",
+    "mtime": 1789645084.936128,
+    "ast_hash": "e82298c8b7c7c1d34c6b167e300b768d",
     "semantic_hash": ""
   },
   "docs/OPENCODE-PROMPT-2026-07-14.md": {
@@ -2705,8 +2705,8 @@
     "semantic_hash": ""
   },
   "public/album-api.php": {
-    "mtime": 1789292177.3157723,
-    "ast_hash": "e83ce84d6f8bcd3830c349dac74be95c",
+    "mtime": 1789621432.3823576,
+    "ast_hash": "447bcf5d2cc17832901bc27f606f48a1",
     "semantic_hash": ""
   },
   "public/album-intake.php": {
@@ -2760,13 +2760,13 @@
     "semantic_hash": ""
   },
   "src/album/FlipBook.jsx": {
-    "mtime": 1789292182.602973,
-    "ast_hash": "6fbd2d2bd295dbcb541c09235e6652e9",
+    "mtime": 1789644277.395001,
+    "ast_hash": "68963026c3b2e636ae59ab24945f7b54",
     "semantic_hash": ""
   },
   "src/album/main.jsx": {
-    "mtime": 1789481404.8338237,
-    "ast_hash": "f298b4d8e36c286a3049f538043e4f35",
+    "mtime": 1789644277.3960176,
+    "ast_hash": "cc9e7d3b088977ad43848a24bbd92031",
     "semantic_hash": ""
   },
   "src/album/pages.js": {
@@ -4790,8 +4790,8 @@
     "semantic_hash": ""
   },
   "docs/PENDIENTES-DE-PRUEBA.md": {
-    "mtime": 1789292176.8704586,
-    "ast_hash": "8f723d32a94b5eb6f92a44f7a1ce081a",
+    "mtime": 1789645084.9371295,
+    "ast_hash": "6813d57c39f8e21504f0147c4e600344",
     "semantic_hash": ""
   },
   "docs/REVISION-JUEGOS-CODEX.md": {
@@ -5622,6 +5622,26 @@
   "tests/frontend/paginador.test.mjs": {
     "mtime": 1789499493.2997873,
     "ast_hash": "cb5487d908dd8488d7a1627675ad4510",
+    "semantic_hash": ""
+  },
+  "src/album/musica.js": {
+    "mtime": 1789621399.5732007,
+    "ast_hash": "8b57bc3446376ecb22a23839beebaa8c",
+    "semantic_hash": ""
+  },
+  "tests/backend/album-api-http.php": {
+    "mtime": 1789621688.8804946,
+    "ast_hash": "8294b959ad927ce498abff34801b21f8",
+    "semantic_hash": ""
+  },
+  "tests/frontend/albumMusica.test.mjs": {
+    "mtime": 1789621426.1488526,
+    "ast_hash": "8784e1d75cc4641854ae6fc57f799161",
+    "semantic_hash": ""
+  },
+  "public/themes/hielo/musica-album.mp3": {
+    "mtime": 1789621010.9028697,
+    "ast_hash": "e0f39acb57c33e2f8ed4677a02d23105",
     "semantic_hash": ""
   }
 }

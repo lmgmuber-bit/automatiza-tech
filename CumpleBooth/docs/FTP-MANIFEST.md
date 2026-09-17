@@ -3586,7 +3586,9 @@ solo tiene prueba unitaria porque el navegador del escritorio dejó sonar sin ge
 visita. **Derechos:** la pista es un cover de "Let It Go" (Disney); en el álbum privado de la
 familia es decisión de Luis; para Instagram usar la biblioteca de música de la app.
 
-## PENDIENTE DE SUBIR 2026-09-17 (tarde) — música y pantalla completa como iconos en el Álbum en línea (rama `claude/album-iconos`)
+## DESPLEGADO 2026-09-17 10:00 — música y pantalla completa como iconos en el Álbum en línea (rama `claude/album-iconos`, PR #29)
+
+**Subido a PROD el 2026-09-17 a las 10:00 (hora local), autorizado por Luis**, con `scratchpad/album-916/subir-iconos.py`: el `album.html` de PROD era el de las 09:02 (md5 `d82105808b23`), respaldo `~/respaldos/app-album.html.antes-20260917-1000`, subida por SFTP con cotejo sha256, instalación atómica con `album.html` al final, y los tres archivos bajan idénticos (md5) desde afuera. Vuelta atrás: restaurar ese respaldo. Sin probar en celular real.
 
 **Qué es.** Luis vio el álbum en el celular con la subida de las 09:02 y pidió que silenciar la
 música y la pantalla completa sean **iconos chicos, sin texto**. Las tres pastillas con texto se

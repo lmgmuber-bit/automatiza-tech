@@ -3481,7 +3481,20 @@ Subido por SSH con `subir-login.py` (respaldo `~/respaldos/…app_galeria.php.an
 Samantha: la galería trae el visor y sus flechas, 56 enlaces "Ver" y ningún botón de imprimir para
 el invitado. **Probado por Luis en su celular contra PROD el 16-sep:** el deslizar funciona. Queda sin probar solo en la tablet Tab A7.
 
-## PENDIENTE DE SUBIR 2026-09-17 — música de fondo en el Álbum Recuerdo en línea (rama `claude/album-musica`)
+## DESPLEGADO 2026-09-17 — música de fondo, revista 9:16 y pase lento en el Álbum Recuerdo en línea (rama `claude/album-musica`, PR #28)
+
+**Subido a PROD el 2026-09-17 09:02 (hora local; 12:03 en el servidor), autorizado por Luis.** Con `scratchpad/album-916/subir-album.py`
+(paramiko, credenciales por etiqueta): reconocimiento en lectura (el `album-api.php` de PROD era el
+de `main`, md5 `d2831dc8d445` sin CR; tres trozos ya existían con el mismo nombre por ser hash de
+contenido), respaldo `~/respaldos/app-album.html.antes-20260917-0902` y
+`~/respaldos/app-album-api.php.antes-20260917-0902`, subida por SFTP a carpeta temporal con cotejo
+sha256, `php -l`, instalación con `mv` atómico y `album.html` al final. Verificado desde afuera: los
+ocho archivos bajan idénticos (md5) a los locales, el mp3 como `audio/mpeg` de 3.533.328 bytes, y
+`album-api.php?t=<enlace de Samantha>` contesta `pin_required` con
+`theme.assets.musica = "themes/hielo/musica-album.mp3"`. Los trozos viejos (`album-C3C8CAdS.js`,
+`themeVars-CrD8eenD.js`, `Lockup-B3fsldPW.js`, `album-CEoolKS_.css`) siguen en `app/assets/`; no se
+borró nada. Vuelta atrás: restaurar los dos respaldos. Sigue **sin probar en iPhone/Android reales**
+(`PENDIENTES-DE-PRUEBA.md`, ítem 11).
 
 **Segundo cierre, misma rama (17-sep, mañana): revista en 9:16 y pase de página más lento.**
 Luis vio el video del álbum y pidió que la revista se vea en 9:16 y que las páginas pasen más lento

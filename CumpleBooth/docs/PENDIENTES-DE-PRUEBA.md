@@ -227,7 +227,7 @@ su primera fiesta, con las mismas herramientas:
 - [ ] **Videos pesados**: la despedida se precarga en memoria; las bienvenidas largas de otras
       temáticas se apoyan en el temporizador que ahora espera mientras el video avance.
 
-## 11. Música de fondo del Álbum Recuerdo en línea (2026-09-17, todavía NO en PROD)
+## 11. Música de fondo y revista 9:16 del Álbum Recuerdo en línea (2026-09-17, EN PROD desde las 09:02)
 
 - [ ] **iPhone real:** abrir el enlace del álbum de Samantha, escribir el PIN y tocar "Abrir el álbum":
   ¿suena el saxo sin tocar nada más? Es el caso pensado para iOS (el audio se destraba dentro del

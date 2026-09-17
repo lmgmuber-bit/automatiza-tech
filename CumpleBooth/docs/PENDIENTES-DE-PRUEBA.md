@@ -227,6 +227,17 @@ su primera fiesta, con las mismas herramientas:
 - [ ] **Videos pesados**: la despedida se precarga en memoria; las bienvenidas largas de otras
       temáticas se apoyan en el temporizador que ahora espera mientras el video avance.
 
+## 11. Música de fondo del Álbum Recuerdo en línea (2026-09-17, todavía NO en PROD)
+
+- [ ] **iPhone real:** abrir el enlace del álbum de Samantha, escribir el PIN y tocar "Abrir el álbum":
+  ¿suena el saxo sin tocar nada más? Es el caso pensado para iOS (el audio se destraba dentro del
+  toque del PIN) y solo se vio en el navegador del escritorio.
+- [ ] **Android real:** lo mismo, y además recargar con el PIN ya en sesión: ¿parte sola o con el
+  primer toque? Anotar cuál de las dos.
+- [ ] **Silenciar y recargar:** tocar "Silenciar música", recargar: debe abrir en silencio con el
+  botón "Poner música".
+- [ ] **Bloqueo de pantalla / llamada:** al volver, ¿el botón dice lo que está pasando de verdad?
+
 ## Por qué esta lista existe
 
 Porque "verificado" y "probado" no son lo mismo, y confundirlos ya costó caro acá: el md5 de

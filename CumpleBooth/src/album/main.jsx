@@ -10,11 +10,40 @@ import FlipBook from './FlipBook.jsx'
 import AlbumPage from './AlbumPage.jsx'
 import { buildPages } from './pages.js'
 import { tituloAlbum } from './evento.js'
+import { Reproductor, fuenteMusica } from './musica.js'
 import './album.css'
 
 // Los assets y endpoints se piden relativos a donde vive album.html, así el
 // álbum funciona igual en /cumpleclick/ que en cualquier subcarpeta.
 const BASE = new URL('./', document.baseURI).href
+
+// Un solo reproductor para toda la página: el formulario del PIN lo destraba
+// dentro del toque de "Abrir el álbum" y la revista lo sigue usando después.
+function almacenLocal() {
+  try {
+    return window.localStorage
+  } catch {
+    return null
+  }
+}
+const reproductor = new Reproductor({ storage: almacenLocal() })
+
+/** Estado de la música de fondo, para el botón de la revista. */
+function useMusica(src) {
+  const [sonando, setSonando] = useState(reproductor.sonando)
+  useEffect(() => {
+    if (!src) return undefined
+    reproductor.cargar(src)
+    const soltar = reproductor.suscribir(setSonando)
+    // Si el álbum abrió sin pedir PIN no hubo gesto: parte con el primer toque.
+    reproductor.arrancar(document)
+    return () => {
+      soltar()
+      reproductor.cancelarEspera()
+    }
+  }, [src])
+  return { sonando, alternar: () => reproductor.alternar() }
+}
 
 function getToken() {
   const value = new URLSearchParams(window.location.search).get('t') || ''
@@ -55,7 +84,7 @@ function Shell({ children, tone = '' }) {
   )
 }
 
-function PinGate({ evento, onUnlock, error, busy }) {
+function PinGate({ evento, onUnlock, error, busy, musica }) {
   const [pin, setPin] = useState('')
   return (
     <Shell>
@@ -67,7 +96,13 @@ function PinGate({ evento, onUnlock, error, busy }) {
         className="album-pin-form"
         onSubmit={(event) => {
           event.preventDefault()
-          if (pin.length === 4) onUnlock(pin)
+          if (pin.length !== 4) return
+          // La música se destraba acá, dentro del toque: iOS no deja sonar
+          // audio que se pida recién después del fetch del PIN.
+          if (musica) reproductor.destrabar(musica)
+          onUnlock(pin).then((abierto) => {
+            if (!abierto) reproductor.pausar()
+          })
         }}
       >
         <label className="sr-only" htmlFor="pin">PIN</label>
@@ -169,6 +204,8 @@ function Album({ data }) {
   const pages = useMemo(() => buildPages(data), [data])
   const [flip, setFlip] = useState(() => supportsFlip())
   const [fullscreen, setFullscreen] = useState(false)
+  const musica = fuenteMusica(data.theme, BASE)
+  const { sonando, alternar: alternarMusica } = useMusica(musica)
 
   useEffect(() => {
     applyThemeColors(data.theme?.colors)
@@ -204,6 +241,16 @@ function Album({ data }) {
       {document.documentElement.requestFullscreen && (
         <button type="button" className="flip-btn flip-btn--wide" onClick={toggleFullscreen}>
           {fullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+        </button>
+      )}
+      {musica && (
+        <button
+          type="button"
+          className="flip-btn flip-btn--wide flip-btn--musica"
+          aria-pressed={sonando}
+          onClick={alternarMusica}
+        >
+          {sonando ? 'Silenciar música' : 'Poner música'}
         </button>
       )}
     </div>
@@ -247,7 +294,7 @@ function App() {
 
       if (body && body.ok) {
         setState({ status: 'ready', data: body })
-        return
+        return true
       }
       const code = body?.error || 'unavailable'
       if (code === 'pin_required') {
@@ -257,19 +304,21 @@ function App() {
           theme: body.theme,
         })
         applyThemeColors(body.theme?.colors)
-        return
+        return false
       }
       if (pin) {
         setPinError(MESSAGES[code] || MESSAGES.unavailable)
-        return
+        return false
       }
       setState({ status: 'error', error: MESSAGES[code] || MESSAGES.unavailable })
+      return false
     } catch (e) {
       if (pin) {
         setPinError(MESSAGES.network)
-        return
+        return false
       }
       setState({ status: 'error', error: MESSAGES.network })
+      return false
     }
   }, [token])
 
@@ -294,11 +343,13 @@ function App() {
         evento={state.evento}
         error={pinError}
         busy={busy}
+        musica={fuenteMusica(state.theme, BASE)}
         onUnlock={async (pin) => {
           setBusy(true)
           setPinError(null)
-          await load(pin)
+          const abierto = await load(pin)
           setBusy(false)
+          return abierto
         }}
       />
     )

@@ -159,13 +159,25 @@ if (!$authenticated) {
 }
 
 // ── Datos ───────────────────────────────────────────────────────────────────
-/** Paleta y assets de la temática, tal cual los declara el catálogo. */
+/**
+ * Paleta y assets de la temática, tal cual los declara el catálogo.
+ *
+ * `musica` es la pista de fondo del álbum en línea (`musica-album.mp3` en la
+ * carpeta de la temática): solo se publica si el archivo existe, así una
+ * temática sin música no cambia nada en la revista.
+ */
 function cb_album_api_theme(string $themeSlug): array
 {
     $themes = cb_load_themes()['themes'] ?? [];
     $theme = is_array($themes[$themeSlug] ?? null) ? $themes[$themeSlug] : [];
     $assets = [];
-    foreach (['banner' => 'fondo-banner.jpg', 'sala' => 'fondo-sala.jpg', 'grupo' => 'grupo-personajes.png'] as $key => $file) {
+    $files = [
+        'banner' => 'fondo-banner.jpg',
+        'sala' => 'fondo-sala.jpg',
+        'grupo' => 'grupo-personajes.png',
+        'musica' => 'musica-album.mp3',
+    ];
+    foreach ($files as $key => $file) {
         $rel = 'themes/' . $themeSlug . '/' . $file;
         if ($themeSlug !== '' && is_file(__DIR__ . '/' . $rel)) {
             $assets[$key] = $rel;

@@ -219,6 +219,9 @@ body {
 
 .album-tools { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
+/* Botón de la música de fondo: se ve "encendido" mientras suena. */
+.flip-btn--musica[aria-pressed="true"] { background: rgba(255,255,255,.3); border-color: rgba(255,255,255,.55); }
+
 /* ── Páginas ──────────────────────────────────────────────────────────────── */
 
 /* El papel sale de la temática. Era una crema fija (#fffdf8), así que el álbum

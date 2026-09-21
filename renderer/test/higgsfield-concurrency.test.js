@@ -15,7 +15,7 @@ const SIX_BRIEFS = [
 // from its submit until its status call resolves as completed.
 function makeTrackingFetch(tracker) {
   return async (url) => {
-    if (String(url).endsWith('/soul/standard')) {
+    if (String(url).endsWith('/soul/v2/standard')) {
       tracker.inFlight += 1;
       tracker.max = Math.max(tracker.max, tracker.inFlight);
       tracker.submits += 1;
@@ -24,7 +24,7 @@ function makeTrackingFetch(tracker) {
         ok: true,
         json: async () => ({
           status: 'queued',
-          status_url: 'https://platform.higgsfield.ai/requests/req/status',
+          status_url: 'https://api.higgsfield.ai/requests/req/status',
         }),
       };
     }
@@ -80,7 +80,7 @@ test('a slide that keeps failing resolves to null without holding up the rest', 
   const originalConsoleError = console.error;
   console.error = () => {};
   global.fetch = async (url) => {
-    if (String(url).endsWith('/soul/standard')) {
+    if (String(url).endsWith('/soul/v2/standard')) {
       // Only the cover is rejected; the other briefs go through.
       return { ok: true, json: async () => ({ status: 'queued', status_url: 'https://x/status' }) };
     }

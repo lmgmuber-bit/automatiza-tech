@@ -103,7 +103,7 @@ test('POST /render survives a Higgsfield image-generation failure without hangin
     // (including this test's own HTTP calls to the local Express server)
     // must keep hitting the real fetch, since higgsfield.js's default
     // fetchImpl and this test file both resolve to the same global.fetch.
-    if (String(url).endsWith('/soul/standard')) {
+    if (String(url).endsWith('/soul/v2/standard')) {
       return { ok: false, status: 500 };
     }
     return originalFetch(url, init);

@@ -10,14 +10,14 @@ function makeFakeFetch({
   submitBody = '',
 } = {}) {
   return async (url) => {
-    if (String(url).endsWith('/soul/standard')) {
+    if (String(url).endsWith('/soul/v2/standard')) {
       if (!submitOk) return { ok: false, status: submitStatus, text: async () => submitBody };
       return {
         ok: true,
         json: async () => ({
           status: 'queued',
           request_id: 'req-1',
-          status_url: 'https://platform.higgsfield.ai/requests/req-1/status',
+          status_url: 'https://api.higgsfield.ai/requests/req-1/status',
         }),
       };
     }
@@ -137,6 +137,29 @@ test('never throws when the briefs array contains malformed entries', async () =
     // Entries with no slide identifier at all (null/undefined/no .slide) are
     // skipped rather than crashing the whole batch.
     assert.deepEqual(Object.keys(result), ['cover']);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('submits each brief to Soul 2 on the documented API host, keeping the 16:9 720p framing', async () => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, init) => {
+    calls.push({ url: String(url), init });
+    if (calls.length === 1) {
+      return {
+        ok: true,
+        json: async () => ({ status: 'queued', request_id: 'req-1', status_url: 'https://api.higgsfield.ai/requests/req-1/status' }),
+      };
+    }
+    return { ok: true, json: async () => ({ status: 'completed', images: [{ url: 'https://cdn.example.com/img.jpg' }] }) };
+  };
+  try {
+    await generateProposalImages([{ slide: 'cover', prompt: 'foto de academia' }], { keyId: 'id', keySecret: 'secret' });
+    assert.equal(calls[0].url, 'https://api.higgsfield.ai/higgsfield-ai/soul/v2/standard');
+    assert.equal(calls[0].init.method, 'POST');
+    assert.deepEqual(JSON.parse(calls[0].init.body), { prompt: 'foto de academia', aspect_ratio: '16:9', resolution: '720p' });
   } finally {
     global.fetch = originalFetch;
   }

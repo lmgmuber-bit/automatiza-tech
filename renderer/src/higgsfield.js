@@ -1,4 +1,7 @@
-const ENDPOINT = 'https://platform.higgsfield.ai/higgsfield-ai/soul/standard';
+// Soul 2 (soul/v2/standard) on the documented API host. Same request fields as
+// Soul Standard (prompt, aspect_ratio, resolution); listed at $0.0032/image vs
+// $0.0938 for Soul Standard on open.higgsfield.ai/pricing (2026-09-20).
+const ENDPOINT = 'https://api.higgsfield.ai/higgsfield-ai/soul/v2/standard';
 const POLL_INTERVAL_MS = 5000;
 // Higgsfield's queue is the bottleneck, not the generation: measured 71s end-to-end
 // (37s still queued) on 2026-08-30 vs ~12s earlier the same day. 60s silently

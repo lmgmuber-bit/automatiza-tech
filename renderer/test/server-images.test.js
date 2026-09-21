@@ -70,7 +70,7 @@ test('briefs without a supplied image are still generated', async () => {
   const originalFetch = global.fetch;
   global.fetch = async (url, opts) => {
     const u = String(url);
-    if (u.endsWith('/soul/standard')) {
+    if (u.endsWith('/soul/v2/standard')) {
       asked.push('submit');
       return { ok: true, json: async () => ({ status: 'queued', status_url: 'https://higgsfield/status' }) };
     }
@@ -105,7 +105,7 @@ test('a payload with no images field behaves exactly as before', async () => {
   const originalFetch = global.fetch;
   global.fetch = async (url, opts) => {
     const u = String(url);
-    if (u.endsWith('/soul/standard')) {
+    if (u.endsWith('/soul/v2/standard')) {
       return { ok: true, json: async () => ({ status: 'queued', status_url: 'https://higgsfield/status' }) };
     }
     if (u.includes('higgsfield')) {

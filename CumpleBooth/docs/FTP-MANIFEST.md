@@ -3650,7 +3650,9 @@ Sin migración: solo cambia el valor que se escribe en `expires_at`. Después de
 Álbum de Luciano basta con **Guardar** la configuración de recepción (extiende el enlace vigente al
 29-sep) o **Generar enlace nuevo**. Vuelta atrás: restaurar los dos respaldos.
 
-## PENDIENTE DE SUBIR 2026-09-20 (noche) — Curaduría: marcar varios y aprobar de una (rama `claude/album-aprobar-varios`)
+## DESPLEGADO 2026-09-20 23:51 — Curaduría: marcar varios y aprobar de una (rama `claude/album-aprobar-varios`, PR #32)
+
+**Subido a PROD el 2026-09-20 a las 23:51 (hora local), autorizado por Luis**, con `scratchpad/album-916/subir-varios.py`: los tres archivos de PROD eran los de `main`, respaldos `~/respaldos/app-lib.album.php.antes-20260920-2351`, `~/respaldos/app-admin__style.css.php.antes-20260920-2351` y `~/respaldos/app-admin_album.php.antes-20260920-2351`, subida por SFTP con cotejo sha256 y `php -l`, instalación atómica con `lib.album.php` primero. Verificado: la función y la acción están en PROD, la hoja de estilos trae `.tile-marca`, `admin/album.php` y `subir.php` contestan sin `Fatal`. Vuelta atrás: restaurar los tres respaldos. Nadie ha usado todavía la barra en PROD con sesión iniciada.
 
 **Qué es.** La mamá de Luciano mandó 66 fotos y 19 videos que se subieron por el formulario de
 aportes a su nombre (`scratchpad/album-916/subir-aportes.py`, con el mensaje partido en cuatro

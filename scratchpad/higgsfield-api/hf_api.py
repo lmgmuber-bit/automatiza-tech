@@ -170,9 +170,15 @@ def cmd_generar(c, a):
     print("estimado: %s (%s)" % ("$%.4f" % total if total is not None else "?", det))
     if not a.si:
         print("sin --si no se genera: valido el cuerpo contra la API (gratis)...")
-        cuerpo_prueba = dict(body)
-        cuerpo_prueba["prompt"] = ""  # prompt vacio: la API rechaza con 422 y lista campos/valores validos
+        # Sin `prompt` la API responde 422 "Field required" y lista los valores validos de los
+        # demas campos. OJO: un prompt VACIO ("") si se acepta y encola un trabajo real (paso el
+        # 2026-09-21), por eso se quita del cuerpo y, si igual entrara, se cancela en el acto.
+        cuerpo_prueba = {k: v for k, v in body.items() if k != "prompt"}
         code, d = c.call("/" + a.slug, cuerpo_prueba)
+        if code == 200 and isinstance(d, dict) and d.get("request_id"):
+            cc, cd = c.call("/requests/%s/cancel" % d["request_id"], {})
+            print("la API encolo un trabajo en la validacion; cancelado ->", cc, c.red(json.dumps(cd))[:200])
+            return 1
         print("validacion ->", code, json.dumps(d, ensure_ascii=False)[:600] if not isinstance(d, str) else d)
         return 0
     code, d = c.call("/" + a.slug, body)

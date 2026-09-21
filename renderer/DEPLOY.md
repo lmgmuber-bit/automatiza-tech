@@ -36,11 +36,14 @@ costó reconstruir el contexto: leer esto entero antes de tocar el servicio.
   `{prompt, aspect_ratio: "16:9", resolution: "720p"}`.
 - Precio de lista en `open.higgsfield.ai/pricing`: Soul 2 $0,0032 por imagen;
   Soul Standard $0,0938.
-- Credenciales: par `HF_API_KEY_ID` / `HF_API_KEY_SECRET`. En el archivo de
-  claves de Luis (fuera del repo) están bajo el bloque **"API N8N"**. Ojo: el
-  archivo tiene **otro** par de Higgsfield, rotulado "API KEY Higgsfield +
-  N8N", que también autentica pero no es el que usa el contenedor. Las dos
-  cuentas se administran en `open.higgsfield.ai` (antes `cloud.`), y el saldo
+- Credenciales: variables de entorno `HF_API_KEY_ID` / `HF_API_KEY_SECRET` del
+  contenedor. 🔴 **Sus valores son el par rotulado "API KEY Higgsfield + N8N"**
+  del archivo de claves de Luis (fuera del repo), verificado el 2026-09-20 por
+  huella sha256 del ID (`72620442cc…`). El archivo tiene **otro** par, escrito
+  literalmente como `HF_API_KEY_ID=` / `HF_API_KEY_SECRET=` dentro del bloque
+  "API N8N": es **otra cuenta**, autentica pero responde `403
+  not_enough_credits`. No confundirlos por el nombre de la variable. Las
+  cuentas se administran en `open.higgsfield.ai` (antes `cloud.`) y el saldo
   solo se ve ahí con sesión: la API no tiene endpoint de saldo.
 - Una imagen a la vez (`CONCURRENCY = 1`), 2 intentos por lámina, 90 s de
   espera por imagen y 210 s de presupuesto total: la lámina que no alcanza
@@ -102,7 +105,9 @@ costó reconstruir el contexto: leer esto entero antes de tocar el servicio.
   Luis; `/health` 200; prueba real `prueba-soul2-20260920` respondió 200 en
   85 s con foto PNG de 2,7 MB en la portada. La página de esa prueba sigue
   publicada en `/p/prueba-soul2-20260920/`.
-- Pendiente: medir cuánto tarda Soul 2 por imagen dentro del contenedor. Si una
-  lámina ronda los 60 s, seis en serie no caben en los 210 s del presupuesto y
-  las últimas seguirán cayendo al degradado; ahí conviene subir `CONCURRENCY`
-  o el presupuesto, con medición previa.
+- Medido el 2026-09-20 con la clave del contenedor: Soul 2 tarda **25 s** por
+  imagen (submit → completed). Los 85 s de la prueba de una lámina incluyen
+  ~60 s de Playwright/PDF. Con seis láminas en serie (6 × 25 = 150 s) más el
+  PDF se roza el presupuesto de 210 s: si vuelven a verse degradados, subir
+  `CONCURRENCY` a 2 en `src/higgsfield.js` (las mediciones de agosto que
+  desaconsejaban paralelizar eran con Soul Standard, no con Soul 2).

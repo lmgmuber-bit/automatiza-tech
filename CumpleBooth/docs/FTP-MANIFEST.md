@@ -3614,7 +3614,9 @@ Los otros cuatro trozos que referencia `album.html` (`client-eulB1LW-.js`, `them
 `Lockup-B8jQuzlB.js`, `Lockup-CQYbo7Xc.css`) ya están en PROD desde las 09:02 con esos mismos
 nombres. Vuelta atrás: restaurar `album.html` desde `~/respaldos/`. No probado en celular real.
 
-## PENDIENTE DE SUBIR 2026-09-20 — el enlace de aportes del Álbum nacía vencido después de la fiesta (rama `claude/album-enlace-vencimiento`)
+## DESPLEGADO 2026-09-20 22:31 — el enlace de aportes del Álbum nacía vencido después de la fiesta (rama `claude/album-enlace-vencimiento`, PR #30)
+
+**Subido a PROD el 2026-09-20 a las 22:31 (hora local), autorizado por Luis**, con `scratchpad/album-916/subir-vencimiento.py`: los dos archivos de PROD eran los de `main` (md5 sin CR `21903b445e0e` y `0206fc3f7828`), respaldos `~/respaldos/app-lib.album.php.antes-20260920-2231` y `~/respaldos/app-admin_album.php.antes-20260920-2231`, subida por SFTP con cotejo sha256 y `php -l`, instalación atómica con `lib.album.php` primero. Verificado desde afuera: `subir.php` con un enlace falso sigue contestando 410 con su mensaje limpio y `admin/album.php` contesta 200, sin `Fatal`. Vuelta atrás: restaurar los dos respaldos.
 
 **Qué pasó.** Luis quiso subir más fotos al álbum de Luciano (fiesta del 13-sep), amplió el cierre de
 la recepción al 29-sep y regeneró el enlace de aportes: `subir.php` contestaba "Este enlace ya no está

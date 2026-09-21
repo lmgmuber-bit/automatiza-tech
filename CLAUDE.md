@@ -32,6 +32,8 @@ Antes de decir "no tengo acceso", "no puedo conectarme a n8n" o "no tengo creden
 
 Las credenciales viven **fuera del repo**, en `C:\Users\luis_\OneDrive\Documentos\APIS KEy\APIS KEY.txt`. Léelas solo si las necesitas y **nunca copies un valor al repositorio, a un `.env`, a un config, a documentación ni a un log**. Si hay que armar un archivo de configuración, entrégale la plantilla a Luis y que él pegue los valores; un agente no escribe secretos.
 
+**Higgsfield: generar por la API REST, no por el MCP (regla de Luis, 2026-09-21).** El MCP gasta los créditos del plan de higgsfield.ai y están en cero; la API tiene saldo propio en USD (cuenta del rótulo **"API KEY Higgsfield + N8N"** del archivo de claves: $32,37 el 21-sep, 15 % de descuento; el otro par, `HF_API_KEY_ID=` del bloque "API N8N", es otra cuenta en $0). Cliente listo para cualquier agente: `scratchpad/higgsfield-api/hf_api.py` (`models`, `estimar`, `generar --si`, `estado`, `bajar`); lee las claves por rótulo y no las imprime. No hay endpoint de saldo ni `get_cost`: estimar con la tabla de lista, mostrar el costo a Luis y recién con su ok correr `generar --si`. La API solo tiene imagen y video (Soul 2 $0,0032/img, Kling 3.0 std $0,063/s): sin Nano Banana, Veo, 3D, audio, lipsync ni upscale, que siguen necesitando MCP con saldo o budgetpixel. Detalle en `Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md` y en la skill `higgsfield-studio` (`references/api-rest.md`).
+
 ## Orquestacion multiagente AT
 
 - Fuente canonica: `Docs/ORCHESTRATION/README.md`.

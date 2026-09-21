@@ -3613,3 +3613,37 @@ antes. Cambios en `src/album/main.jsx` (`IconoMusica`, `IconoPantalla`) y `src/a
 Los otros cuatro trozos que referencia `album.html` (`client-eulB1LW-.js`, `themeVars-BWg77og2.js`,
 `Lockup-B8jQuzlB.js`, `Lockup-CQYbo7Xc.css`) ya están en PROD desde las 09:02 con esos mismos
 nombres. Vuelta atrás: restaurar `album.html` desde `~/respaldos/`. No probado en celular real.
+
+## PENDIENTE DE SUBIR 2026-09-20 — el enlace de aportes del Álbum nacía vencido después de la fiesta (rama `claude/album-enlace-vencimiento`)
+
+**Qué pasó.** Luis quiso subir más fotos al álbum de Luciano (fiesta del 13-sep), amplió el cierre de
+la recepción al 29-sep y regeneró el enlace de aportes: `subir.php` contestaba "Este enlace ya no está
+disponible". Medido en la base de PROD (solo lectura): el álbum estaba `collecting` con
+`intake_closes_at = 2026-09-29 23:59:59`, pero los cinco enlaces generados esa noche nacieron con
+`expires_at = 2026-09-20 00:00:00`, ya pasado. El admin calculaba el vencimiento del enlace como
+**fecha de la fiesta + `default_open_days` (7)** y nada más: ocho días después de la fiesta, todo
+enlace nuevo moría al nacer, y ampliar el cierre del álbum no tocaba el enlace vigente.
+
+**Arreglo.** `cb_album_intake_token_expiry($album, $party)` en `lib.album.php`: gana la fecha más
+lejana entre la fiesta + 7 días, la fecha de cierre de la recepción si la hay (se devuelve tal como
+está guardada, sin correrla por zona horaria) y hoy + 7 días. El admin la usa en "Generar enlace
+nuevo". Y `cb_album_extend_intake_tokens($albumId, $until)`: al guardar la configuración de
+recepción con una fecha de cierre, los enlaces activos que vencían antes se extienden hasta esa
+fecha (los que no vencen nunca o vencen después no se tocan), con aviso en el mensaje de éxito. La
+fecha de cierre del álbum sigue mandando en `cb_album_intake_open()`.
+
+**Pruebas.** `tests/backend/album.php`: 8 comprobaciones nuevas (enlace tras la fiesta sirve una
+semana desde hoy; con cierre ampliado vence con él; antes de la fiesta sigue mandando la fiesta;
+extender solo alarga, nunca acorta; el enlace extendido sigue abriendo) → OK 169.
+`album-api-http.php` OK 18. `php -l` limpio. No se probó el formulario del admin por HTTP.
+
+**Lista exacta para PROD (`cumpleclick.com/app/`):**
+
+| # | Ruta local (`CumpleBooth/`) | Destino en PROD | Clase |
+|---|---|---|---|
+| 1 | `public/lib.album.php` | `app/lib.album.php` | OBLIGATORIO, primero (respaldar antes) |
+| 2 | `public/admin/album.php` | `app/admin/album.php` | OBLIGATORIO (respaldar antes) |
+
+Sin migración: solo cambia el valor que se escribe en `expires_at`. Después de subir, en Admin →
+Álbum de Luciano basta con **Guardar** la configuración de recepción (extiende el enlace vigente al
+29-sep) o **Generar enlace nuevo**. Vuelta atrás: restaurar los dos respaldos.

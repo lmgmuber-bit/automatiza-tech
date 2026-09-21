@@ -123,8 +123,35 @@ album_check(cb_album_resolve_token($live, 'intake') !== null, 'un token vigente 
 album_check(cb_album_active_token_info($albumId, 'intake') !== null, 'el admin puede ver la vigencia sin el token en claro');
 cb_album_revoke_tokens($albumId, 'intake');
 album_check(cb_album_resolve_token($live, 'intake') === null, 'revocar cierra el acceso de inmediato');
+
+// ── Vencimiento del enlace de aportes ───────────────────────────────────────
+// El caso de Luciano (20-sep): fiesta hace ocho días, recepción ampliada, y
+// cada enlace nuevo nacía vencido porque solo se miraba la fecha de la fiesta.
+$hoy = time();
+$fiestaVieja = ['fecha' => gmdate('Y-m-d', $hoy - 8 * 86400)];
 album_check(
-    (int) cb_pdo()->query("SELECT COUNT(*) FROM cc_event_album_tokens WHERE album_id=$albumId")->fetchColumn() === 4,
+    cb_album_intake_token_expiry(['intake_closes_at' => null], $fiestaVieja, $hoy) === gmdate('Y-m-d H:i:s', $hoy + 7 * 86400),
+    'un enlace generado después de la fiesta sirve al menos una semana desde hoy'
+);
+$cierreLejano = gmdate('Y-m-d', $hoy + 20 * 86400) . ' 23:59:59';
+album_check(
+    cb_album_intake_token_expiry(['intake_closes_at' => $cierreLejano], $fiestaVieja, $hoy) === $cierreLejano,
+    'si la recepción se amplió, el enlace vence con ella'
+);
+$fiestaFutura = ['fecha' => gmdate('Y-m-d', $hoy + 30 * 86400)];
+album_check(
+    cb_album_intake_token_expiry([], $fiestaFutura, $hoy) === gmdate('Y-m-d H:i:s', strtotime($fiestaFutura['fecha']) + 7 * 86400),
+    'antes de la fiesta sigue mandando la fecha de la fiesta más los días por defecto'
+);
+$corto = cb_album_issue_token($albumId, 'intake', gmdate('Y-m-d H:i:s', $hoy + 60), 'test');
+album_check(cb_album_extend_intake_tokens($albumId, gmdate('Y-m-d H:i:s', $hoy + 3600)) === 1, 'ampliar el cierre extiende el enlace activo que vencía antes');
+album_check(cb_album_extend_intake_tokens($albumId, gmdate('Y-m-d H:i:s', $hoy + 1800)) === 0, 'no acorta un enlace que ya vence después');
+album_check((string) cb_album_active_token_info($albumId, 'intake')['expires_at'] === gmdate('Y-m-d H:i:s', $hoy + 3600), 'la vigencia nueva queda guardada');
+album_check(cb_album_resolve_token($corto, 'intake') !== null, 'el enlace extendido sigue abriendo');
+cb_album_revoke_tokens($albumId, 'intake');
+album_check(
+    // Cinco: los cuatro de arriba más el enlace corto de la prueba de extensión.
+    (int) cb_pdo()->query("SELECT COUNT(*) FROM cc_event_album_tokens WHERE album_id=$albumId")->fetchColumn() === 5,
     'revocar conserva el histórico de tokens emitidos'
 );
 

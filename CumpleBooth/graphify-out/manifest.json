@@ -85,7 +85,7 @@
     "semantic_hash": ""
   },
   "public/galeria.php": {
-    "mtime": 1789555968.31585,
+    "mtime": 1789953914.1517618,
     "ast_hash": "1daf1c23adf31208a016a007549fa9be",
     "semantic_hash": ""
   },
@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "docs/FTP-MANIFEST.md": {
-    "mtime": 1789646683.5843656,
-    "ast_hash": "c40c438d7ebf5f3d3d7d9c3e06187fef",
+    "mtime": 1789954112.4422169,
+    "ast_hash": "6e28b88498efb4a451e940b4d1b9d70c",
     "semantic_hash": ""
   },
   "docs/OPENCODE-PROMPT-2026-07-14.md": {
@@ -2690,13 +2690,13 @@
     "semantic_hash": ""
   },
   "public/_album-intake.css.php": {
-    "mtime": 1789488413.8952918,
+    "mtime": 1789953914.1451378,
     "ast_hash": "334d9bfbe7ab16f75af2dd9e0a5d7a3b",
     "semantic_hash": ""
   },
   "public/admin/album.php": {
-    "mtime": 1789499449.6955636,
-    "ast_hash": "936a9e5cb12a93f8a0ee2709f58261ca",
+    "mtime": 1789954033.7985544,
+    "ast_hash": "7424433954cc977da6cc09a401547be3",
     "semantic_hash": ""
   },
   "public/admin/event-profile.php": {
@@ -2705,7 +2705,7 @@
     "semantic_hash": ""
   },
   "public/album-api.php": {
-    "mtime": 1789621432.3823576,
+    "mtime": 1789953914.1497629,
     "ast_hash": "447bcf5d2cc17832901bc27f606f48a1",
     "semantic_hash": ""
   },
@@ -2730,8 +2730,8 @@
     "semantic_hash": ""
   },
   "public/lib.album.php": {
-    "mtime": 1789490806.7732882,
-    "ast_hash": "7d0eca03e6c6ef35d80b682cd94ead3a",
+    "mtime": 1789954033.797546,
+    "ast_hash": "cdfa05e2b536b98ffe30df453adb75b9",
     "semantic_hash": ""
   },
   "public/lib.event-profiles.php": {
@@ -2745,7 +2745,7 @@
     "semantic_hash": ""
   },
   "public/ver-media.php": {
-    "mtime": 1789498851.9679556,
+    "mtime": 1789953914.1904812,
     "ast_hash": "6a4ba4f4a12b5a0db6098917209f5c61",
     "semantic_hash": ""
   },
@@ -2760,12 +2760,12 @@
     "semantic_hash": ""
   },
   "src/album/FlipBook.jsx": {
-    "mtime": 1789644277.395001,
+    "mtime": 1789953914.192481,
     "ast_hash": "68963026c3b2e636ae59ab24945f7b54",
     "semantic_hash": ""
   },
   "src/album/main.jsx": {
-    "mtime": 1789649376.3791761,
+    "mtime": 1789953914.194481,
     "ast_hash": "aac9cbcb7c1a9fa48950bfc03a7bb4cf",
     "semantic_hash": ""
   },
@@ -2785,8 +2785,8 @@
     "semantic_hash": ""
   },
   "tests/backend/album.php": {
-    "mtime": 1789490875.082982,
-    "ast_hash": "a639bedbfc10e302f4e99d5f8e2fcfdf",
+    "mtime": 1789954064.4785638,
+    "ast_hash": "1b23658410da71003cf4623222bd5934",
     "semantic_hash": ""
   },
   "tests/backend/event-profiles.php": {
@@ -4790,7 +4790,7 @@
     "semantic_hash": ""
   },
   "docs/PENDIENTES-DE-PRUEBA.md": {
-    "mtime": 1789646683.5853636,
+    "mtime": 1789953914.0345888,
     "ast_hash": "67a0e037632a9bde97e8ab4baa42c992",
     "semantic_hash": ""
   },
@@ -5595,8 +5595,8 @@
     "semantic_hash": ""
   },
   "tests/backend/album-intake-http.php": {
-    "mtime": 1789488727.227212,
-    "ast_hash": "812aa5e407b7828cdbd440d021d9a9a3",
+    "mtime": 1789953914.1975074,
+    "ast_hash": "533049fb71ac996f46f9306bf6d4f116",
     "semantic_hash": ""
   },
   "tests/frontend/puzzleArrastre.test.mjs": {
@@ -5605,42 +5605,42 @@
     "semantic_hash": ""
   },
   "tests/frontend/subirHidden.test.mjs": {
-    "mtime": 1789488377.503712,
-    "ast_hash": "f6fc2336583391667773266148b2c7b6",
+    "mtime": 1789953914.2031753,
+    "ast_hash": "39b36e1f5561deccdf12abc68b2705ba",
     "semantic_hash": ""
   },
   "tests/backend/galeria-http.php": {
-    "mtime": 1789555800.736091,
-    "ast_hash": "3986939dac201b40cae3f91ee94d4982",
+    "mtime": 1789953914.2001748,
+    "ast_hash": "0899e03c354e2bcfe0380654462faf43",
     "semantic_hash": ""
   },
   "public/admin/paginador.js": {
-    "mtime": 1789499663.7278323,
-    "ast_hash": "f796c70c9ecc5f7a2bd62ee121614b67",
+    "mtime": 1789953914.1487622,
+    "ast_hash": "f0c72fbd63924ae4f3f9dbba005ef423",
     "semantic_hash": ""
   },
   "tests/frontend/paginador.test.mjs": {
-    "mtime": 1789499493.2997873,
-    "ast_hash": "cb5487d908dd8488d7a1627675ad4510",
+    "mtime": 1789953914.2022004,
+    "ast_hash": "9c3786f7055f19ce63db29a6f11f517e",
     "semantic_hash": ""
   },
   "src/album/musica.js": {
-    "mtime": 1789621399.5732007,
-    "ast_hash": "8b57bc3446376ecb22a23839beebaa8c",
+    "mtime": 1789953914.1954815,
+    "ast_hash": "7a84084dcce7fbcc82326147d3ba9b09",
     "semantic_hash": ""
   },
   "tests/backend/album-api-http.php": {
-    "mtime": 1789621688.8804946,
-    "ast_hash": "8294b959ad927ce498abff34801b21f8",
+    "mtime": 1789953914.1954815,
+    "ast_hash": "3c6e919cf440a2452c4652288f728403",
     "semantic_hash": ""
   },
   "tests/frontend/albumMusica.test.mjs": {
-    "mtime": 1789621426.1488526,
-    "ast_hash": "8784e1d75cc4641854ae6fc57f799161",
+    "mtime": 1789953914.2001748,
+    "ast_hash": "fbab01a40495c249e26fef29e8f660d8",
     "semantic_hash": ""
   },
   "public/themes/hielo/musica-album.mp3": {
-    "mtime": 1789621010.9028697,
+    "mtime": 1789953914.1894739,
     "ast_hash": "e0f39acb57c33e2f8ed4677a02d23105",
     "semantic_hash": ""
   }

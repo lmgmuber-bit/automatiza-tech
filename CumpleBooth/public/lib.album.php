@@ -1197,6 +1197,26 @@ function cb_album_set_moderation(int $albumId, int $mediaId, string $state, ?str
     return $stmt->rowCount() > 0;
 }
 
+/**
+ * Cambia el estado de varios recuerdos de una vez; devuelve cuántos cambió.
+ * Los ids ajenos al álbum no cambian nada (misma regla que de a uno).
+ * Nació para la Curaduría: con 84 aportes de una mamá, aprobar de a uno era
+ * eterno y "Aprobar los pendientes" no dejaba excluir dos o tres.
+ */
+function cb_album_set_moderation_many(int $albumId, array $mediaIds, string $state, ?string $reviewedBy = null): int
+{
+    if (!in_array($state, cb_album_moderation_states(), true)) {
+        return 0;
+    }
+    $hechos = 0;
+    foreach (array_unique(array_map('intval', $mediaIds)) as $mediaId) {
+        if ($mediaId > 0 && cb_album_set_moderation($albumId, $mediaId, $state, $reviewedBy)) {
+            $hechos++;
+        }
+    }
+    return $hechos;
+}
+
 /** Reordena aplicando la lista recibida; los ids ajenos al álbum se ignoran. */
 function cb_album_reorder(int $albumId, array $mediaIds): void
 {

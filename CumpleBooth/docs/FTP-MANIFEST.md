@@ -3649,3 +3649,34 @@ extender solo alarga, nunca acorta; el enlace extendido sigue abriendo) → OK 1
 Sin migración: solo cambia el valor que se escribe en `expires_at`. Después de subir, en Admin →
 Álbum de Luciano basta con **Guardar** la configuración de recepción (extiende el enlace vigente al
 29-sep) o **Generar enlace nuevo**. Vuelta atrás: restaurar los dos respaldos.
+
+## PENDIENTE DE SUBIR 2026-09-20 (noche) — Curaduría: marcar varios y aprobar de una (rama `claude/album-aprobar-varios`)
+
+**Qué es.** La mamá de Luciano mandó 66 fotos y 19 videos que se subieron por el formulario de
+aportes a su nombre (`scratchpad/album-916/subir-aportes.py`, con el mensaje partido en cuatro
+dedicatorias), y Luis se encontró con 95 aportes pendientes para aprobar de a uno. "Aprobar los N
+pendientes" ya existía, pero no dejaba excluir dos o tres. Ahora cada tarjeta de la Curaduría trae
+una **casilla** (arriba a la derecha, 26 px, lejos de las insignias) y una barra con **Marcar todos**,
+la cuenta de marcados y tres botones: **Aprobar marcados**, **Ocultar marcados** y **Eliminar marcados**
+(este último pide confirmación). "Marcar todos" marca las tarjetas de todas las páginas del filtro
+(el paginador las deja en el DOM). Las casillas van con `form="form-moderar-varios"` porque cada
+tarjeta ya tiene sus propios formularios y no se pueden anidar. Acción `moderar-varios` en
+`admin/album.php` sobre `cb_album_set_moderation_many()` (`lib.album.php`); si se oculta o elimina la
+portada de a varios, la portada se suelta como con el botón de a uno.
+
+**Pruebas.** `tests/backend/album.php` OK 174 (5 nuevas: cuenta solo lo que cambió, aplica el
+estado, rechaza un estado desconocido, sin ids no hace nada). Nueva `tests/backend/album-moderar-varios-http.php`
+OK 11 (entra con la clave maestra, la página trae la barra y una casilla por recuerdo, aprueba
+exactamente dos de tres, sin marcar nada avisa y no cambia nada, un id ajeno no cuenta, eliminar la
+portada la suelta, sin sesión no entra). Visto en Chromium con `servir-admin.php`: marcar todos,
+desmarcar una y aprobar. `php -l` limpio.
+
+**Lista exacta para PROD (`cumpleclick.com/app/`), en este orden:**
+
+| # | Ruta local (`CumpleBooth/`) | Destino en PROD | Clase |
+|---|---|---|---|
+| 1 | `public/lib.album.php` | `app/lib.album.php` | OBLIGATORIO, primero (respaldar antes) |
+| 2 | `public/admin/_style.css.php` | `app/admin/_style.css.php` | OBLIGATORIO (respaldar antes) |
+| 3 | `public/admin/album.php` | `app/admin/album.php` | OBLIGATORIO (respaldar antes) |
+
+Sin migración. Vuelta atrás: restaurar los tres respaldos.

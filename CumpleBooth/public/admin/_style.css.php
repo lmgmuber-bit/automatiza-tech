@@ -760,7 +760,18 @@ input[type="number"].frame-value {
   font-size: .82rem; color: var(--text-muted);
 }
 
-.tile-badges { position: absolute; top: 6px; left: 6px; right: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+.tile-badges { position: absolute; top: 6px; left: 6px; right: 40px; display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* Curaduría: marcar varios (20-sep). La casilla va arriba a la derecha, lejos de las
+   insignias, y grande para el dedo; la tarjeta marcada se enmarca del color del botón. */
+.seleccion-barra {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.seleccion-barra .curacion-eliminar { margin-left: auto; }
+.tile-marca { position: absolute; top: 6px; right: 6px; z-index: 3; }
+.tile-marca input { display: block; width: 26px; height: 26px; cursor: pointer; accent-color: var(--cta); }
+.tile:has(.tile-marca input:checked) { outline: 3px solid var(--cta); outline-offset: -3px; }
 .badge {
   padding: 2px 8px; border-radius: 999px;
   font-size: .68rem; font-weight: 800; letter-spacing: .03em;

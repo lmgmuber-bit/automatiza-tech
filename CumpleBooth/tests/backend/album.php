@@ -249,6 +249,13 @@ album_check($removed['storage_key'] === $guestKey, 'eliminar conserva la referen
 album_check(count(cb_album_list_media($albumId)) === 1, 'lo eliminado sale del listado por defecto');
 album_check(cb_album_usage($albumId)['count'] === 0, 'lo eliminado sí libera cuota, porque la retención lo purgará');
 album_check(cb_album_set_moderation($albumId, $guestId, 'approved', 'test'), 'restaurar funciona');
+
+// Varios de una: el id ajeno o inexistente no cuenta, el repetido cuenta una vez.
+album_check(cb_album_set_moderation_many($albumId, [$guestId, $guestId, 999999], 'hidden', 'test') === 1, 'moderar varios cuenta solo los que cambió');
+album_check(cb_album_find_media($albumId, $guestId)['moderation_status'] === 'hidden', 'moderar varios aplica el estado');
+album_check(cb_album_set_moderation_many($albumId, [$guestId], 'inventado', 'test') === 0, 'moderar varios rechaza un estado desconocido');
+album_check(cb_album_set_moderation_many($albumId, [], 'approved', 'test') === 0, 'moderar varios sin ids no hace nada');
+album_check(cb_album_set_moderation_many($albumId, [$guestId], 'approved', 'test') === 1, 'moderar varios vuelve a aprobar');
 album_check(count(cb_album_list_media($albumId, ['approved'])) === 2, 'lo restaurado vuelve a aparecer');
 
 // Un id de otro álbum no se puede moderar desde este.

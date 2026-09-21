@@ -50,8 +50,8 @@
     "semantic_hash": ""
   },
   "public/admin/_style.css.php": {
-    "mtime": 1789292177.2964337,
-    "ast_hash": "6c5909c3ea6a97bf54cf6bd976bfb8ac",
+    "mtime": 1789958690.952605,
+    "ast_hash": "308a5578f4aabb3ff7aeee37d66e9477",
     "semantic_hash": ""
   },
   "public/admin/config.php": {
@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "docs/FTP-MANIFEST.md": {
-    "mtime": 1789954112.4422169,
-    "ast_hash": "6e28b88498efb4a451e940b4d1b9d70c",
+    "mtime": 1789954338.4463377,
+    "ast_hash": "945eb382d0ecc58fd0eb72e1fea93cda",
     "semantic_hash": ""
   },
   "docs/OPENCODE-PROMPT-2026-07-14.md": {
@@ -2695,8 +2695,8 @@
     "semantic_hash": ""
   },
   "public/admin/album.php": {
-    "mtime": 1789954033.7985544,
-    "ast_hash": "7424433954cc977da6cc09a401547be3",
+    "mtime": 1789958690.951607,
+    "ast_hash": "a051d1a75d202a14e0935b4eb112fc35",
     "semantic_hash": ""
   },
   "public/admin/event-profile.php": {
@@ -2730,8 +2730,8 @@
     "semantic_hash": ""
   },
   "public/lib.album.php": {
-    "mtime": 1789954033.797546,
-    "ast_hash": "cdfa05e2b536b98ffe30df453adb75b9",
+    "mtime": 1789958690.9506052,
+    "ast_hash": "0065c9646c572037ccc449637b685dc9",
     "semantic_hash": ""
   },
   "public/lib.event-profiles.php": {
@@ -2785,8 +2785,8 @@
     "semantic_hash": ""
   },
   "tests/backend/album.php": {
-    "mtime": 1789954064.4785638,
-    "ast_hash": "1b23658410da71003cf4623222bd5934",
+    "mtime": 1789958690.952605,
+    "ast_hash": "e4303ba4e06039a9d765ad83ec1e6bc4",
     "semantic_hash": ""
   },
   "tests/backend/event-profiles.php": {
@@ -5642,6 +5642,11 @@
   "public/themes/hielo/musica-album.mp3": {
     "mtime": 1789953914.1894739,
     "ast_hash": "e0f39acb57c33e2f8ed4677a02d23105",
+    "semantic_hash": ""
+  },
+  "tests/backend/album-moderar-varios-http.php": {
+    "mtime": 1789958785.4132168,
+    "ast_hash": "d114670d0181b5d528760941ff094d17",
     "semantic_hash": ""
   }
 }

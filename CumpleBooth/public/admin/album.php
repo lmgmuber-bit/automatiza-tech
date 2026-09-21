@@ -347,6 +347,28 @@ if ($album !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'
                 $okMessage = $aprobados === 0
                     ? 'No había recuerdos pendientes.'
                     : ($aprobados === 1 ? 'Se aprobó 1 recuerdo.' : "Se aprobaron $aprobados recuerdos.");
+            } elseif ($action === 'moderar-varios') {
+                // Marcar todos, desmarcar dos o tres y aprobar de una (Luis, 20-sep):
+                // con 84 aportes de una mamá, de a uno era eterno y "Aprobar los
+                // pendientes" no dejaba excluir nada.
+                $ids = array_values(array_unique(array_filter(
+                    array_map('intval', (array) ($_POST['media'] ?? [])),
+                    static fn(int $x): bool => $x > 0
+                )));
+                $state = (string) ($_POST['estado'] ?? '');
+                if (!$ids) {
+                    $errors[] = 'Marca al menos un recuerdo.';
+                } elseif (!in_array($state, ['approved', 'hidden', 'removed'], true)) {
+                    $errors[] = 'Acción desconocida.';
+                } else {
+                    $hechos = cb_album_set_moderation_many($albumId, $ids, $state, 'admin');
+                    $raiz = ['approved' => 'aprob', 'hidden' => 'ocult', 'removed' => 'elimin'][$state];
+                    $okMessage = $hechos === 1 ? "Se {$raiz}ó 1 recuerdo." : "Se {$raiz}aron $hechos recuerdos.";
+                    if (in_array($state, ['hidden', 'removed'], true) && in_array((int) $album['cover_media_id'], $ids, true)) {
+                        cb_album_update($albumId, ['cover_media_id' => null]);
+                        $okMessage .= ' Se quitó la portada.';
+                    }
+                }
             } elseif ($action === 'portada') {
                 $mediaId = (int) ($_POST['media'] ?? 0);
                 $target = cb_album_find_media($albumId, $mediaId);
@@ -782,6 +804,26 @@ main > section#fotos-kiosco { display: none !important; }
               : 'No hay recuerdos en este filtro.' ?>
           </p>
         <?php else: ?>
+          <?php /* Marcar varios: las casillas van dentro de cada tarjeta con `form=` apuntando
+                   a este formulario, porque cada tarjeta ya tiene sus propios formularios y no
+                   se pueden anidar. "Marcar todos" marca las de todas las páginas del filtro. */ ?>
+          <form method="post" action="<?= h($selfUrl) ?>" class="seleccion-barra" id="form-moderar-varios">
+            <?= admin_csrf_field() ?>
+            <input type="hidden" name="action" value="moderar-varios">
+            <label class="fotos-todas">
+              <input type="checkbox" id="curacion-marcar-todos">
+              Marcar todos
+            </label>
+            <span class="muted" id="curacion-cuenta">Nada marcado</span>
+            <button type="submit" name="estado" value="approved" class="btn btn-primary btn-sm" disabled>
+              <?= admin_icon('check') ?> Aprobar marcados
+            </button>
+            <button type="submit" name="estado" value="hidden" class="btn btn-ghost btn-sm" disabled>Ocultar marcados</button>
+            <button type="submit" name="estado" value="removed" class="btn btn-danger btn-sm curacion-eliminar" disabled
+                    data-confirm="Se pueden restaurar después desde el filtro &quot;Eliminados&quot;. ¿Eliminar los recuerdos marcados?">
+              Eliminar marcados
+            </button>
+          </form>
           <ol class="curation-grid" id="curation-grid" data-reorder="<?= $filterKey === 'todos' ? '1' : '0' ?>">
             <?php foreach ($mediaList as $index => $item): ?>
               <?php
@@ -805,6 +847,10 @@ main > section#fotos-kiosco { display: none !important; }
               <li class="tile is-<?= h($state) ?> <?= $isCover ? 'is-cover' : '' ?>"
                   data-media="<?= $mediaId ?>" <?= $filterKey === 'todos' ? 'draggable="true"' : '' ?>>
                 <div class="tile-media">
+                  <label class="tile-marca">
+                    <input type="checkbox" name="media[]" value="<?= $mediaId ?>" form="form-moderar-varios"
+                           aria-label="Marcar este recuerdo">
+                  </label>
                   <?php if ($isVideo): ?>
                     <video class="tile-video" preload="none"
                            <?= $item['poster_storage_key'] ? 'poster="../ver-media.php?t=' . rawurlencode((string) $item['access_token']) . '&amp;v=poster"' : '' ?>
@@ -1219,6 +1265,39 @@ document.addEventListener('submit', function (event) {
   var message = event.target.getAttribute('data-confirm');
   if (message && !window.confirm(message)) { event.preventDefault(); }
 });
+
+// Marcar varios en Curaduría (20-sep): marcar todos, desmarcar dos o tres y
+// aprobar de una. Los botones quedan apagados mientras no haya nada marcado.
+(function () {
+  var form = document.getElementById('form-moderar-varios');
+  if (!form) { return; }
+  var todos = document.getElementById('curacion-marcar-todos');
+  var cuenta = document.getElementById('curacion-cuenta');
+  var botones = form.querySelectorAll('button[name="estado"]');
+  var casillas = document.querySelectorAll('#curation-grid input[name="media[]"]');
+  function marcadas() {
+    return Array.prototype.filter.call(casillas, function (c) { return c.checked; }).length;
+  }
+  function refrescar() {
+    var n = marcadas();
+    cuenta.textContent = n === 0
+      ? 'Nada marcado'
+      : (n === 1 ? '1 marcado' : n + ' marcados') + (n < casillas.length ? ' de ' + casillas.length : '');
+    Array.prototype.forEach.call(botones, function (b) { b.disabled = n === 0; });
+    todos.checked = n === casillas.length && n > 0;
+    todos.indeterminate = n > 0 && n < casillas.length;
+  }
+  todos.addEventListener('change', function () {
+    Array.prototype.forEach.call(casillas, function (c) { c.checked = todos.checked; });
+    refrescar();
+  });
+  Array.prototype.forEach.call(casillas, function (c) { c.addEventListener('change', refrescar); });
+  form.addEventListener('click', function (event) {
+    var boton = event.target.closest('button[data-confirm]');
+    if (boton && !window.confirm(boton.getAttribute('data-confirm'))) { event.preventDefault(); }
+  });
+  refrescar();
+})();
 
 // Reordenar arrastrando, solo en escritorio y solo sin filtro. Es una mejora
 // sobre las flechas, que siguen siendo el camino que funciona en celular, con

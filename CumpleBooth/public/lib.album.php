@@ -830,6 +830,56 @@ function cb_album_issue_token(int $albumId, string $purpose, ?string $expiresAt,
     return $token;
 }
 
+/**
+ * Hasta cuándo sirve un enlace de aportes recién generado.
+ *
+ * Antes era solo la fecha de la fiesta más `default_open_days`. En el álbum de
+ * Luciano, ocho días después de la fiesta, cada enlace nuevo nacía ya vencido
+ * (13-sep + 7 = 20-sep) aunque el organizador había corrido el cierre de la
+ * recepción al 29-sep: "Este enlace ya no está disponible" en cada intento.
+ * Ahora gana la fecha más lejana entre la fiesta más los días por defecto, la
+ * fecha de cierre de la recepción si la hay, y hoy más los días por defecto
+ * (un enlace nuevo tiene que servir al menos esa semana). La fecha de cierre
+ * del álbum sigue mandando en cb_album_intake_open(): esto solo evita que el
+ * enlace muera antes que ella.
+ */
+function cb_album_intake_token_expiry(array $album, array $party, ?int $now = null): string
+{
+    $now = $now ?? time();
+    $dias = (int) (cb_album_limits()['default_open_days'] ?? 7);
+    $candidatos = [[$now + $dias * 86400, gmdate('Y-m-d H:i:s', $now + $dias * 86400)]];
+    $fecha = (string) ($party['fecha'] ?? '');
+    $base = $fecha !== '' ? strtotime($fecha) : false;
+    if ($base !== false) {
+        $candidatos[] = [$base + $dias * 86400, gmdate('Y-m-d H:i:s', $base + $dias * 86400)];
+    }
+    $cierre = (string) ($album['intake_closes_at'] ?? '');
+    $cierreTs = $cierre !== '' ? strtotime($cierre) : false;
+    if ($cierreTs !== false) {
+        // Se devuelve tal como está guardada, para no correrla por la zona horaria.
+        $candidatos[] = [$cierreTs, $cierre];
+    }
+    usort($candidatos, static fn(array $a, array $b): int => $b[0] <=> $a[0]);
+    return $candidatos[0][1];
+}
+
+/**
+ * Cuando el organizador corre la fecha de cierre de la recepción, los enlaces
+ * de aportes activos que vencían antes se extienden hasta esa fecha: el cartel
+ * impreso o el enlace ya mandado siguen sirviendo sin regenerar nada. Los que
+ * no vencen nunca (NULL) o vencen después no se tocan. Devuelve cuántos cambió.
+ */
+function cb_album_extend_intake_tokens(int $albumId, string $until): int
+{
+    $stmt = cb_album_require_db()->prepare(
+        "UPDATE cc_event_album_tokens SET expires_at=?
+         WHERE album_id=? AND purpose='intake' AND status='active'
+           AND expires_at IS NOT NULL AND expires_at < ?"
+    );
+    $stmt->execute([$until, $albumId, $until]);
+    return $stmt->rowCount();
+}
+
 /** Revoca todos los tokens activos de un propósito. No borra el histórico. */
 function cb_album_revoke_tokens(int $albumId, string $purpose): void
 {

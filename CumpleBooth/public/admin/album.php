@@ -251,6 +251,12 @@ if ($album !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'
                         'status' => $status,
                     ]);
                     $okMessage = 'Configuración de recepción guardada.';
+                    // Si corrió la fecha de cierre, el enlace vigente la acompaña:
+                    // antes quedaba vencido y había que regenerarlo (y el nuevo
+                    // también nacía vencido).
+                    if ($closesAt !== null && cb_album_extend_intake_tokens($albumId, $closesAt) > 0) {
+                        $okMessage .= ' El enlace de aportes vigente se extendió hasta esa fecha.';
+                    }
                 }
             } elseif ($action === 'guardar-publicacion') {
                 $title = trim((string) ($_POST['title'] ?? ''));
@@ -265,13 +271,11 @@ if ($album !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'
                     $okMessage = 'Título y subtítulo guardados.';
                 }
             } elseif ($action === 'generar-token') {
-                // El vencimiento por defecto se calcula desde la fecha del
-                // evento, no desde hoy: un cartel impreso una semana antes debe
-                // seguir sirviendo el día de la fiesta.
-                $eventDate = (string) ($party['fecha'] ?? '');
-                $base = $eventDate !== '' ? strtotime($eventDate) : false;
-                if ($base === false) { $base = time(); }
-                $expiresAt = gmdate('Y-m-d H:i:s', $base + $limits['default_open_days'] * 86400);
+                // El vencimiento sale de cb_album_intake_token_expiry(): la
+                // fecha de la fiesta más los días por defecto (un cartel impreso
+                // una semana antes debe servir el día de la fiesta), la fecha de
+                // cierre ampliada si la hay, o al menos una semana desde hoy.
+                $expiresAt = cb_album_intake_token_expiry($album, $party);
                 $freshToken = cb_album_issue_token($albumId, 'intake', $expiresAt, 'admin');
                 if ((string) $album['status'] === 'draft') {
                     cb_album_update($albumId, ['status' => 'collecting']);

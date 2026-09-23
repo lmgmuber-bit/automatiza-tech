@@ -492,3 +492,9 @@ fiesta y un enlace deja que un niño toque y se salga a mitad del evento.
 - **Decisión de diseño demasiado prudente**: dejé el logo fuera de los correos
   por miedo al bloqueo de imágenes. Lo que penalizan los filtros no es UNA
   imagen, es un correo que ES una imagen.
+
+## Posfiesta: la línea de trabajo (desde 2026-09-22)
+
+Después de una fiesta no se improvisa: álbum a los papás, tres videos y textos siguen una línea fija aprobada por
+Luis. Mapa en `docs/POSFIESTA-LINEA-DE-TRABAJO.md`; guía completa fuera del repo en
+`C:\Users\luis_\Videos\cumpleclick-reels\GUIA-POSFIESTA.md`. Leer antes de tocar videos, textos o el álbum.

@@ -268,6 +268,17 @@ function VideoPage({ page, base, index }) {
     }
   }, [active])
 
+  // Sin póster (los videos subidos por script o desde navegadores que no lo
+  // capturan llegan sin él) la hoja mostraba un rectángulo negro. Con
+  // `preload="metadata"` y un salto a los 0,1 s el navegador pinta el primer
+  // cuadro como vista previa; el `src` sigue entrando solo con la hoja a la
+  // vista, así que no se descargan videos de más.
+  const mostrarPrimerCuadro = (event) => {
+    const video = event.currentTarget
+    if (!item.poster && video.currentTime === 0 && video.readyState >= 1) {
+      try { video.currentTime = 0.1 } catch (e) { /* sin seek: queda como estaba */ }
+    }
+  }
   const clase = index % 2 === 1 ? 'mag mag--video is-alt' : 'mag mag--video'
   return (
     <div className={clase} ref={wrapRef}>
@@ -278,9 +289,10 @@ function VideoPage({ page, base, index }) {
           className="mag__video"
           controls
           playsInline
-          preload="none"
+          preload={item.poster ? 'none' : 'metadata'}
           poster={item.poster ? base + item.poster : undefined}
           src={active ? base + item.url : undefined}
+          onLoadedMetadata={mostrarPrimerCuadro}
         />
       </div>
       {item.message && <p className="mag__note-text mag__note-text--video">{item.message}</p>}

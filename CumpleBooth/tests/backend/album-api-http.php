@@ -135,4 +135,18 @@ $assets = $r['json']['theme']['assets'] ?? [];
 m_check(!array_key_exists('musica', (array) $assets), 'una temática sin pista no publica la clave musica');
 m_check(($assets['banner'] ?? '') === 'themes/spidey/fondo-banner.jpg', 'y sus otros assets siguen igual');
 
+// ── Spidey: una fiesta con su propia pista (musica-album-<slug>.mp3) ────────
+// La pista por fiesta le gana a la de la temática y no exige que la temática tenga una.
+$propia = $raiz . '/public/themes/spidey/musica-album-luciano-spidey.mp3';
+copy($pista, $propia);
+try {
+    $r = pedir('GET', '/album-api.php?t=' . $tokenSpidey);
+    m_check(($r['json']['theme']['assets']['musica'] ?? '') === 'themes/spidey/musica-album-luciano-spidey.mp3', 'la fiesta con pista propia la publica aunque la temática no tenga');
+    $r = pedir('GET', '/album-api.php?t=' . $tokenHielo);
+    m_check(($r['json']['theme']['assets']['musica'] ?? '') === 'themes/hielo/musica-album.mp3', 'y la otra fiesta sigue con la de su temática');
+} finally {
+    @unlink($propia);
+}
+m_check(!is_file($propia), 'la pista de prueba se borró');
+
 echo "OK $tests checks album-api-http\n";

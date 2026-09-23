@@ -261,8 +261,15 @@ body {
   container-type: size;
   container-name: mag;
   display: flex; flex-direction: column;
-  padding: 7cqw 7cqw 9cqh;
-  gap: 3cqh;
+  /* 🔴 Las medidas de la hoja MISMA van en % y no en cqw/cqh: un elemento no
+     puede medirse contra su propio contenedor, así que `7cqw` acá se
+     resolvía contra el escenario entero. En el celular daba casi lo mismo,
+     pero en escritorio (dos hojas) el relleno salía de 96 px en vez de 31 y
+     las fotos quedaban apretadas en un tercio de la hoja (Luis, 22-sep).
+     Los hijos sí pueden usar cqw/cqh. El % de padding se mide contra el
+     ancho; la hoja es 9:16, así que 16 % de ancho = 9 % de alto. */
+  padding: 7% 7% 16%;
+  row-gap: 3%;
   color: var(--ink);
   overflow: hidden;
   background-color: var(--paper);
@@ -276,8 +283,8 @@ body {
       color-mix(in srgb, var(--yellow) 24%, transparent) 0 9%, transparent 10%),
     radial-gradient(130% 80% at 50% -14%,
       color-mix(in srgb, var(--pink-soft) 62%, transparent), transparent 62%);
-  background-size: 6.4cqw 6.4cqw, 9.7cqw 9.7cqw, 100% 100%;
-  background-position: 0 0, 3.1cqw 4.3cqw, 0 0;
+  background-size: 6.4% 3.6%, 9.7% 5.46%, 100% 100%;
+  background-position: 0 0, 3.1% 2.4%, 0 0;
 }
 .mag--blank { background: transparent; }
 
@@ -369,7 +376,7 @@ body {
 .mag--cover, .mag--closing {
   background-size: cover; background-position: center;
   color: #fff; justify-content: space-between;
-  padding: 8cqw 7cqw;
+  padding: 8% 7%;
 }
 .mag__veil {
   position: absolute; inset: 0;
@@ -458,7 +465,7 @@ body {
 
 /* ── Dedicatoria ──────────────────────────────────────────────────────────── */
 
-.mag--note { gap: 3.4cqh; }
+.mag--note { row-gap: 3.4%; }
 .mag__frame--note { flex: 1.9; }
 
 /* Tarjeta pegada con cinta. La cinta es el único adorno que se permite acá y
@@ -522,7 +529,7 @@ body {
 
 /* ── Video ────────────────────────────────────────────────────────────────── */
 
-.mag--video { padding-top: 9cqh; }
+.mag--video { padding-top: 16%; }
 .mag__badge {
   position: absolute; top: 3.4cqh; left: 7cqw; z-index: 4;
   padding: 1cqh 2.8cqw; border-radius: 999px;

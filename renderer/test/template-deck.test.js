@@ -219,3 +219,34 @@ test('the cover keeps its bottom-heavy scrim', () => {
   const html = renderProposalHtml(DATA, { cover: img });
   assert.ok(html.includes('linear-gradient(180deg, rgba(13,27,42,.15)'));
 });
+
+test('closing slide puts an icon beside each contact', () => {
+  const html = renderClosingSlide();
+  const rows = html.match(/<a class="contact-row"[\s\S]*?<\/a>/g) || [];
+  assert.equal(rows.length, 4);
+  for (const row of rows) {
+    assert.ok(row.includes('class="contact-icon"'), 'every contact carries its icon');
+    assert.ok(row.includes('<svg'), 'the icon is inline SVG, no extra request');
+    assert.ok(row.includes('class="contact-label"'));
+  }
+  assert.ok(rows[0].includes('mailto:contacto@automatizatech.cl'));
+  assert.ok(rows[2].includes('wa.me/56927002984'));
+});
+
+test('every slide photo is preloaded from the head, once each', () => {
+  const images = {
+    cover: 'https://example.cl/p/cover.jpg',
+    challenge: 'https://example.cl/p/challenge.jpg',
+    solution: 'https://example.cl/p/cover.jpg',
+  };
+  const html = renderProposalHtml(DATA, images);
+  const head = html.slice(0, html.indexOf('</head>'));
+  const links = head.match(/<link rel="preload" as="image" href="[^"]+" \/>/g) || [];
+  assert.equal(links.length, 2, 'duplicates collapse to a single preload');
+  assert.ok(head.includes('href="https://example.cl/p/challenge.jpg"'));
+});
+
+test('no preload links when the proposal has no photos', () => {
+  const html = renderProposalHtml(DATA, {});
+  assert.ok(!html.includes('rel="preload"'));
+});

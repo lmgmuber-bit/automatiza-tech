@@ -14,6 +14,10 @@ Antes de trabajar, crea una rama nueva. Usa y manten actualizados `CLAUDE.md`, `
 - No guardar secretos, tokens, passwords, credenciales ni datos sensibles.
 <!-- AI-MEMORY-WORKFLOW:END -->
 
+## Propuestas comerciales
+
+Toda propuesta de cliente usa la plantilla única del `propuesta-renderer` (regla de Luis, 2026-09-23), nunca Gamma: `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`.
+
 
 
 

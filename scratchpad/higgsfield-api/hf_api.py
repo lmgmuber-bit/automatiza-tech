@@ -159,7 +159,9 @@ def cmd_generar(c, a):
     body = {"prompt": a.prompt} if a.prompt else {}
     for kv in a.param or []:
         k, v = kv.split("=", 1)
-        if v.isdigit():
+        if v[:1] in "[{":  # listas u objetos JSON (video_urls, image_urls)
+            body[k] = json.loads(v)
+        elif v.isdigit():
             body[k] = int(v)
         elif v.lower() in ("true", "false"):
             body[k] = v.lower() == "true"
@@ -173,11 +175,17 @@ def cmd_generar(c, a):
         # Sin `prompt` la API responde 422 "Field required" y lista los valores validos de los
         # demas campos. OJO: un prompt VACIO ("") si se acepta y encola un trabajo real (paso el
         # 2026-09-21), por eso se quita del cuerpo y, si igual entrara, se cancela en el acto.
-        cuerpo_prueba = {k: v for k, v in body.items() if k != "prompt"}
+        # 2026-09-21: image-to-video NO valida image_url ni enums antes de encolar (entraron
+        # "validacion" y aspect_ratio "abc" como trabajos reales) y Kling no se deja cancelar.
+        # Por eso se quita tambien toda clave *url*: sin un campo obligatorio la API contesta
+        # 400/422 y no encola nada. Para probar el tipo de un campo, mandar un valor de OTRO tipo
+        # (duration=abc da 400 sin encolar); nunca un valor "invalido" del tipo correcto.
+        cuerpo_prueba = {k: v for k, v in body.items() if k != "prompt" and "url" not in k.lower()}
         code, d = c.call("/" + a.slug, cuerpo_prueba)
         if code == 200 and isinstance(d, dict) and d.get("request_id"):
+            print("OJO: la API encolo un trabajo real en la validacion; request_id:", d["request_id"])
             cc, cd = c.call("/requests/%s/cancel" % d["request_id"], {})
-            print("la API encolo un trabajo en la validacion; cancelado ->", cc, c.red(json.dumps(cd))[:200])
+            print("cancelar ->", cc, c.red(json.dumps(cd))[:200], "| si no se pudo, seguirlo con: estado", d["request_id"])
             return 1
         print("validacion ->", code, json.dumps(d, ensure_ascii=False)[:600] if not isinstance(d, str) else d)
         return 0
@@ -192,7 +200,7 @@ def cmd_generar(c, a):
         code, s = c.call(st_url)
         st = s.get("status") if isinstance(s, dict) else None
         if st in ("completed", "failed", "nsfw", "canceled"):
-            print("terminal: %s a los %.0fs" % (st, time.time() - t0))
+            print("terminal: %s a los %.0fs" % (st, time.time() - t0) + ((" | error: " + str(s.get("error"))) if isinstance(s, dict) and s.get("error") else ""))
             for k in ("images", "videos", "video", "output"):
                 if isinstance(s, dict) and s.get(k):
                     print(k + ":", json.dumps(s[k], ensure_ascii=False)[:800])

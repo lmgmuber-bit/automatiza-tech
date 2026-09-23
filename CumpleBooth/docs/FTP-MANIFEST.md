@@ -3650,6 +3650,28 @@ Sin migración: solo cambia el valor que se escribe en `expires_at`. Después de
 Álbum de Luciano basta con **Guardar** la configuración de recepción (extiende el enlace vigente al
 29-sep) o **Generar enlace nuevo**. Vuelta atrás: restaurar los dos respaldos.
 
+## DESPLEGADO 2026-09-21 14:18 — Música del Álbum por fiesta (rama `claude/album-musica-por-fiesta`)
+
+`album-api.php`: `cb_album_api_theme($tema, $slugFiesta)` publica `themes/<tema>/musica-album-<slug>.mp3` si existe, por encima de la
+pista de la temática. Nació porque los papás de Luciano querían Sunflower en su álbum y la música del álbum era por temática (sonaría
+en todos los cumples spidey). Los archivos por fiesta **no se versionan** (`.gitignore`: canciones con derechos); viven solo en el servidor.
+Prueba `tests/backend/album-api-http.php` (21 checks). **Subido a PROD el 21-sep 14:18 con `scratchpad/album-916/subir-musica-album.py`**
+(`album-api.php` + `themes/spidey/musica-album-luciano-spidey.mp3` a −17 LUFS, 128 kbps); respaldo `~/respaldos/app-album-api.php.antes-20260921-1418`.
+Verificado: la API del álbum de Luciano publica `theme.assets.musica = themes/spidey/musica-album-luciano-spidey.mp3` y el mp3 contesta 200.
+
+## DESPLEGADO 2026-09-22 08:55 — Revista del Álbum: fotos a tamaño completo en escritorio y vista previa de los videos (misma rama)
+
+Luis vio en escritorio las fotos en un tercio de la hoja y los videos negros. 🔴 Causa: `.mag` (la hoja, `container-type: size`) declaraba
+`padding: 7cqw 7cqw 9cqh` sobre sí misma, y las unidades de contenedor de un elemento se resuelven contra el contenedor de ARRIBA (el
+escenario): en el pliego de dos hojas el relleno medía 96 px en vez de 31. Arreglo: las medidas de la hoja misma en % (`padding: 7% 7% 16%`,
+`row-gap: 3%`, trama, portada/cierre/video/nota); los hijos siguen en cqw/cqh. Medido en PROD tras subir: relleno 31 px, dúo 393 px de ancho,
+mosaico 217×364 por celda, video 385×614. Videos: `VideoPage` pide `preload="metadata"` y salta a 0,1 s cuando no hay póster (se ve el primer
+cuadro); además los 19 videos de la mamá de Luciano (subidos por script, sin póster) recibieron su póster con
+`scratchpad/album-916/subir-posters-luciano.py` (primer cuadro por ffmpeg → `almacen/fotos/album/luciano-spidey/2026/09/`, `poster_storage_key`
+en `cc_event_media`; respaldo de las 19 filas en `posters-luciano-respaldo-<sello>.json`). **Subido a PROD el 22-sep 08:55 con
+`subir-album-v3.py`**: `assets/album-zYhkPpjF.js`, `assets/album-CaWnfSyi.css`, `album.html` (respaldo `~/respaldos/app-album.html.antes-20260922-0855`);
+los otros cuatro trozos ya estaban desde el PR #29. Verificado por md5 desde afuera y en el navegador; la API reporta 19 de 19 videos con póster.
+🔴 El navegador guarda `album.html` en caché: quien ya lo tenía abierto ve la revista vieja hasta recargar (el CDN sí entrega la nueva).
 ## DESPLEGADO 2026-09-20 23:51 — Curaduría: marcar varios y aprobar de una (rama `claude/album-aprobar-varios`, PR #32)
 
 **Subido a PROD el 2026-09-20 a las 23:51 (hora local), autorizado por Luis**, con `scratchpad/album-916/subir-varios.py`: los tres archivos de PROD eran los de `main`, respaldos `~/respaldos/app-lib.album.php.antes-20260920-2351`, `~/respaldos/app-admin__style.css.php.antes-20260920-2351` y `~/respaldos/app-admin_album.php.antes-20260920-2351`, subida por SFTP con cotejo sha256 y `php -l`, instalación atómica con `lib.album.php` primero. Verificado: la función y la acción están en PROD, la hoja de estilos trae `.tile-marca`, `admin/album.php` y `subir.php` contestan sin `Fatal`. Vuelta atrás: restaurar los tres respaldos. Nadie ha usado todavía la barra en PROD con sesión iniciada.

@@ -100,7 +100,7 @@ if ($signMode) {
         'date' => (string) ($signParty['fecha'] ?? ''),
         'message' => $signMessage,
         'uploadUrl' => cb_album_intake_url($token),
-        'theme' => cb_album_api_theme((string) ($signParty['tema'] ?? '')),
+        'theme' => cb_album_api_theme((string) ($signParty['tema'] ?? ''), (string) ($signParty['public_slug'] ?? '')),
         'open' => cb_album_intake_open($signAlbum, $signParty),
         // El cartel se imprime y queda sobre la mesa toda la fiesta: es el
         // lugar donde mas gente ve la marca. Lleva el mismo pie que el cierre
@@ -153,7 +153,7 @@ if (!$authenticated) {
         'error' => 'pin_required',
         'eventName' => (string) ($party['nombre'] ?? ''),
         'eventType' => (string) ($party['event_type'] ?? 'child_birthday'),
-        'theme' => cb_album_api_theme((string) ($party['tema'] ?? '')),
+        'theme' => cb_album_api_theme((string) ($party['tema'] ?? ''), (string) ($party['public_slug'] ?? '')),
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -165,8 +165,14 @@ if (!$authenticated) {
  * `musica` es la pista de fondo del álbum en línea (`musica-album.mp3` en la
  * carpeta de la temática): solo se publica si el archivo existe, así una
  * temática sin música no cambia nada en la revista.
+ *
+ * Una fiesta puede traer su propia pista: `themes/<tema>/musica-album-<slug>.mp3`
+ * (el slug público de la fiesta) le gana a la de la temática. Nació el 2026-09-21
+ * porque los papás de Luciano querían su canción en el álbum y la música de la
+ * temática es de todas las fiestas de esa temática. Esos archivos por fiesta no
+ * se versionan (canciones con derechos): viven solo en el servidor.
  */
-function cb_album_api_theme(string $themeSlug): array
+function cb_album_api_theme(string $themeSlug, string $partySlug = ''): array
 {
     $themes = cb_load_themes()['themes'] ?? [];
     $theme = is_array($themes[$themeSlug] ?? null) ? $themes[$themeSlug] : [];
@@ -181,6 +187,12 @@ function cb_album_api_theme(string $themeSlug): array
         $rel = 'themes/' . $themeSlug . '/' . $file;
         if ($themeSlug !== '' && is_file(__DIR__ . '/' . $rel)) {
             $assets[$key] = $rel;
+        }
+    }
+    if ($themeSlug !== '' && $partySlug !== '' && preg_match('/^[a-z0-9-]{1,80}$/', $partySlug)) {
+        $propia = 'themes/' . $themeSlug . '/musica-album-' . $partySlug . '.mp3';
+        if (is_file(__DIR__ . '/' . $propia)) {
+            $assets['musica'] = $propia;
         }
     }
     return [
@@ -255,7 +267,7 @@ echo json_encode([
         // "fiesta" en el cierre, en el título y en los estados vacíos.
         'type' => (string) ($party['event_type'] ?? 'child_birthday'),
     ],
-    'theme' => cb_album_api_theme((string) ($party['tema'] ?? '')),
+    'theme' => cb_album_api_theme((string) ($party['tema'] ?? ''), (string) ($party['public_slug'] ?? '')),
     'marca' => $marca,
     'media' => $media,
 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

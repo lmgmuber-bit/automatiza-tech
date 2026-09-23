@@ -171,3 +171,5 @@ graphify-out/2*/
 
 # git worktrees (local scratch, per superpowers:using-git-worktrees)
 .worktrees/
+# Pistas del álbum por fiesta (canciones con derechos): solo en el servidor
+CumpleBooth/public/themes/*/musica-album-*.mp3

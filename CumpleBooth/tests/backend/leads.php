@@ -12,6 +12,11 @@ putenv('CC_STORAGE_MODE=db');
 putenv('CC_PDO_DSN=sqlite:' . $tmp . '/leads.sqlite');
 putenv('CC_APP_HMAC_KEY=' . str_repeat('b', 64));
 require dirname(__DIR__, 2) . '/public/lib.php';
+// El esquema completo, siempre al día. Antes cada prueba listaba las migraciones a mano y
+// esa lista se quedaba atrás con cada migración nueva.
+require_once __DIR__ . '/_migraciones.php';
+cb_test_migrar_todo(cb_pdo());
+
 
 $tests = 0;
 function lead_check(bool $condition, string $message): void {
@@ -121,14 +126,20 @@ foreach ([
      * La versión anterior exigía CERO imágenes. Era pasarse de prudente: lo que
      * penalizan los filtros no es una imagen, es un correo que ES una imagen y
      * no tiene texto que leer. Pero la cautela de fondo sí valía, así que se
-     * conserva en tres condiciones concretas: una sola imagen, con `alt` —si el
-     * cliente la bloquea se lee la marca en vez de quedar un hueco— y mucho más
-     * texto que imagen. */
+     * conserva en tres condiciones concretas: pocas imágenes, TODAS con `alt`
+     * —si el cliente las bloquea se lee la marca en vez de quedar un hueco— y
+     * mucho más texto que imagen.
+     *
+     * El tope subió de una a dos cuando el pie sumó el ícono de Instagram. Lo
+     * que importa no es el número sino que el correo se entienda con las
+     * imágenes bloqueadas, y por eso ahora el `alt` se exige en TODAS y no solo
+     * cuando hay una: el `alt` del ícono es la cuenta, así que bloqueado se lee
+     * "@Cumple_Click" y el enlace sigue siendo el texto. */
     $imgs = preg_match_all('/<img\b/i', $plantilla['html']);
-    lead_check($imgs <= 1, "$nombre: más de una imagen; el correo no debe depender de imágenes");
-    if ($imgs === 1) {
-        lead_check(preg_match('/<img\b[^>]*\balt="[^"]+"/i', $plantilla['html']) === 1,
-            "$nombre: la imagen necesita alt, o bloqueada deja un hueco");
+    lead_check($imgs <= 2, "$nombre: demasiadas imágenes; el correo no debe depender de imágenes");
+    if ($imgs > 0) {
+        lead_check(preg_match_all('/<img\b[^>]*\balt="[^"]+"/i', $plantilla['html']) === $imgs,
+            "$nombre: hay imágenes sin alt; bloqueadas dejan un hueco");
         $soloTexto = trim(preg_replace('/\s+/', ' ', strip_tags($plantilla['html'])));
         lead_check(strlen($soloTexto) > 300, "$nombre: hay imagen pero muy poco texto alrededor");
     }

@@ -13,6 +13,7 @@ session_start();
 header('Cache-Control: no-store');
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
+require __DIR__ . '/_acceso.php';   // el portero: sesión, usuario y permisos (2026-09-13)
 
 function h($s): string
 {

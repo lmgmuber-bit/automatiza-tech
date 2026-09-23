@@ -7,7 +7,7 @@
  */
 declare(strict_types=1);
 
-require __DIR__ . '/lib.php';
+require_once __DIR__ . '/lib.php';
 require __DIR__ . '/lib.sala.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -41,7 +41,8 @@ function cc_sala_resultado(array $resultado): void
 $metodo = (string) ($_SERVER['REQUEST_METHOD'] ?? '');
 $op = isset($_GET['op']) && is_string($_GET['op']) ? $_GET['op'] : '';
 $lecturas = ['estado', 'acciones'];
-$escrituras = ['crear', 'unirse', 'accion', 'resumen', 'cerrar', 'fotos'];
+$escrituras = ['crear', 'unirse', 'accion', 'resumen', 'cerrar', 'fotos',
+    'carrera_entrar', 'carrera_estado', 'carrera_iniciar', 'carrera_salir', 'carrera_configurar'];
 
 if (!in_array($op, $lecturas, true) && !in_array($op, $escrituras, true)) {
     cc_sala_responder(422, ['ok' => false, 'error' => 'op_invalida']);
@@ -87,6 +88,14 @@ if (in_array($op, $lecturas, true)) {
     }
 }
 
+    // Las operaciones de carrera se autentican por plaza y sala (codigo + token del
+    // ayudante), y por eso van antes del limite por IP: en una fiesta los seis
+    // dispositivos salen por la misma IP del wifi de la casa y el limite frenaria la
+    // carrera entera. La autorizacion real la hace cb_carrera_operar.
+    if (strpos($op, 'carrera_') === 0) {
+        require_once __DIR__ . '/lib.sala.carrera.php';
+        cc_sala_resultado(cb_carrera_operar($op, $input));
+    }
 try {
     $identidad = cb_request_identity();
     // `fotos` pide el PIN de la galería: mismo freno que galeria.php contra fuerza bruta.

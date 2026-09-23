@@ -16,13 +16,23 @@ $legacyParty = (string) ($_GET['p'] ?? '');
 $photo = null;
 $path = null;
 $partySlug = '';
-$downloadName = 'foto-cumpleclick.png';
+$downloadName = 'foto-cumpleclick.jpg';   // solo el respaldo: manda original_name
 $imageUrl = '';
 $isDiploma = false;
 $isRecuerdito = false;
 
 if ($token !== '') {
     $photo = cb_find_photo_by_token($token);
+    // Segunda oportunidad solo para el admin logueado: en la papelera necesita ver la foto
+    // para decidir si la devuelve, y sin esto las miniaturas de la papelera salían rotas.
+    // Para un invitado no cambia nada: el QR de una foto borrada sigue dando 404.
+    if ($photo === null && cb_admin_sesion_activa()) {
+        $photo = cb_find_photo_by_token($token, true);
+        // Y solo si la foto es de una fiesta suya (2026-09-13).
+        if ($photo !== null && !cb_admin_sesion_activa((string) ($photo['party_slug'] ?? $photo['party'] ?? ''))) {
+            $photo = null;
+        }
+    }
     if ($photo === null) {
         cb_photo_page_error(404, 'Foto no encontrada');
     }

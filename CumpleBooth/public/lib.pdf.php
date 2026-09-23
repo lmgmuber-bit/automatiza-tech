@@ -64,6 +64,9 @@ final class CcPdf
     private string $actual = '';
     /** @var array<string,array{id:int,ancho:int,alto:int,datos:string}> */
     private array $imagenes = [];
+    /** @var array<int,array<int,array{x1:float,y1:float,x2:float,y2:float,url:string}>> por página */
+    private array $enlaces = [];
+    private int $paginaActual = 0;
 
     public function __construct(float $anchoMm = 210.0, float $altoMm = 297.0)
     {
@@ -91,6 +94,31 @@ final class CcPdf
     {
         $this->paginas[] = $this->actual;
         $this->actual = '';
+        $this->paginaActual++;
+    }
+
+    /**
+     * Marca un rectángulo como enlace a una dirección web.
+     *
+     * En un PDF los enlaces no son parte del dibujo: son *anotaciones*, una lista aparte que
+     * cuelga de la página y dice "esta zona lleva a esta URL". Por eso hay que anotar
+     * separado el texto que ya se escribió; el visor no adivina que un texto es un enlace.
+     *
+     * Las coordenadas son las mismas milimétricas de todo lo demás: `$yMm` es la línea base
+     * del texto, y la zona se estira un poco arriba y abajo para que se pueda tocar con el
+     * dedo en un teléfono.
+     */
+    public function enlace(float $xMm, float $yMm, float $anchoMm, float $altoMm, string $url): void
+    {
+        $url = trim($url);
+        if ($url === '' || !preg_match('#^https?://#i', $url)) { return; }
+        $this->enlaces[$this->paginaActual][] = [
+            'x1' => $this->pt($xMm),
+            'y1' => $this->y($yMm + 1.2),
+            'x2' => $this->pt($xMm + $anchoMm),
+            'y2' => $this->y($yMm - $altoMm),
+            'url' => $url,
+        ];
     }
 
     public function altoMm(): float
@@ -205,6 +233,70 @@ final class CcPdf
     }
 
     /**
+     * Trazo de un rectángulo con las esquinas redondeadas.
+     *
+     * El PDF no tiene primitiva de arco: cada esquina es una curva Bézier cúbica. El 0.5523
+     * es la constante de siempre —la que hace que la curva pase por el radio exacto a 45°—;
+     * con cualquier otro valor las esquinas se ven ovaladas.
+     *
+     * @param array{0:int,1:int,2:int} $rgb
+     */
+    public function rectanguloRedondeado(float $xMm, float $yMm, float $anchoMm, float $altoMm,
+                                         float $radioMm, float $grosorMm = 0.2,
+                                         array $rgb = [0, 0, 0]): void
+    {
+        [$r, $g, $b] = $rgb;
+        $iz = $this->pt($xMm);
+        $de = $this->pt($xMm + $anchoMm);
+        $ar = $this->y($yMm);                       // en el PDF el eje Y crece hacia arriba
+        $ab = $this->y($yMm + $altoMm);
+        $ra = $this->pt(min($radioMm, $anchoMm / 2, $altoMm / 2));
+        $k = $ra * 0.5523;
+        $n = static fn(float $v): string => self::num($v);
+
+        $this->actual .= sprintf("%s %s %s RG %s w\n",
+            self::num($r / 255), self::num($g / 255), self::num($b / 255),
+            self::num($this->pt($grosorMm)));
+        $this->actual .= $n($iz + $ra) . ' ' . $n($ar) . " m\n"
+            . $n($de - $ra) . ' ' . $n($ar) . " l\n"
+            . $n($de - $ra + $k) . ' ' . $n($ar) . ' ' . $n($de) . ' ' . $n($ar - $ra + $k) . ' ' . $n($de) . ' ' . $n($ar - $ra) . " c\n"
+            . $n($de) . ' ' . $n($ab + $ra) . " l\n"
+            . $n($de) . ' ' . $n($ab + $ra - $k) . ' ' . $n($de - $ra + $k) . ' ' . $n($ab) . ' ' . $n($de - $ra) . ' ' . $n($ab) . " c\n"
+            . $n($iz + $ra) . ' ' . $n($ab) . " l\n"
+            . $n($iz + $ra - $k) . ' ' . $n($ab) . ' ' . $n($iz) . ' ' . $n($ab + $ra - $k) . ' ' . $n($iz) . ' ' . $n($ab + $ra) . " c\n"
+            . $n($iz) . ' ' . $n($ar - $ra) . " l\n"
+            . $n($iz) . ' ' . $n($ar - $ra + $k) . ' ' . $n($iz + $ra - $k) . ' ' . $n($ar) . ' ' . $n($iz + $ra) . ' ' . $n($ar) . " c\n"
+            . "S\n";
+    }
+
+    /**
+     * Circunferencia, trazada o rellena. Mismo truco que las esquinas: cuatro Bézier.
+     *
+     * @param array{0:int,1:int,2:int} $rgb
+     */
+    public function circulo(float $cxMm, float $cyMm, float $radioMm, float $grosorMm = 0.2,
+                            array $rgb = [0, 0, 0], bool $relleno = false): void
+    {
+        [$r, $g, $b] = $rgb;
+        $cx = $this->pt($cxMm);
+        $cy = $this->y($cyMm);
+        $ra = $this->pt($radioMm);
+        $k = $ra * 0.5523;
+        $n = static fn(float $v): string => self::num($v);
+        $col = self::num($r / 255) . ' ' . self::num($g / 255) . ' ' . self::num($b / 255);
+
+        $this->actual .= $relleno
+            ? $col . " rg\n"
+            : $col . ' RG ' . self::num($this->pt($grosorMm)) . " w\n";
+        $this->actual .= $n($cx + $ra) . ' ' . $n($cy) . " m\n"
+            . $n($cx + $ra) . ' ' . $n($cy + $k) . ' ' . $n($cx + $k) . ' ' . $n($cy + $ra) . ' ' . $n($cx) . ' ' . $n($cy + $ra) . " c\n"
+            . $n($cx - $k) . ' ' . $n($cy + $ra) . ' ' . $n($cx - $ra) . ' ' . $n($cy + $k) . ' ' . $n($cx - $ra) . ' ' . $n($cy) . " c\n"
+            . $n($cx - $ra) . ' ' . $n($cy - $k) . ' ' . $n($cx - $k) . ' ' . $n($cy - $ra) . ' ' . $n($cx) . ' ' . $n($cy - $ra) . " c\n"
+            . $n($cx + $k) . ' ' . $n($cy - $ra) . ' ' . $n($cx + $ra) . ' ' . $n($cy - $k) . ' ' . $n($cx + $ra) . ' ' . $n($cy) . " c\n"
+            . ($relleno ? "f\n" : "S\n");
+    }
+
+    /**
      * Coloca un JPEG. La altura sale de la proporción real del archivo: pedir las dos medidas
      * invita a deformar el logo, que es lo único que se dibuja acá.
      * Devuelve la altura usada en milímetros.
@@ -263,11 +355,27 @@ final class CcPdf
 
         $idsPagina = [];
         $cuerposPagina = [];
-        foreach ($paginas as $flujo) {
+        $anotacionesPagina = [];
+        foreach ($paginas as $n => $flujo) {
             $idPagina = $siguiente++;
             $idFlujo = $siguiente++;
             $idsPagina[] = $idPagina;
             $cuerposPagina[$idPagina] = [$idFlujo, $flujo];
+            // Cada enlace es un objeto aparte que la página referencia en /Annots.
+            $ids = [];
+            foreach ($this->enlaces[$n] ?? [] as $en) {
+                $idAnot = $siguiente++;
+                $ids[] = $idAnot;
+                $objetos[$idAnot] = '<< /Type /Annot /Subtype /Link /Rect ['
+                    . self::num($en['x1']) . ' ' . self::num($en['y2']) . ' '
+                    . self::num($en['x2']) . ' ' . self::num($en['y1']) . ']'
+                    // Sin borde: el subrayado lo dibuja el documento, no el visor.
+                    // La URL es ASCII y no pasa por CP1252: solo hay que escapar lo que en un
+                    // PDF cierra una cadena literal.
+                    . ' /Border [0 0 0] /A << /S /URI /URI ('
+                    . str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $en['url']) . ') >> >>';
+            }
+            $anotacionesPagina[$idPagina] = $ids;
         }
 
         $objetos[$idCatalogo] = "<< /Type /Catalog /Pages $idPaginas 0 R >>";
@@ -287,9 +395,12 @@ final class CcPdf
             . ($recursos ? ' /XObject << ' . implode(' ', $recursos) . ' >>' : '') . ' >>';
 
         foreach ($cuerposPagina as $idPagina => [$idFlujo, $flujo]) {
+            $anots = $anotacionesPagina[$idPagina] ?? [];
             $objetos[$idPagina] = '<< /Type /Page /Parent ' . $idPaginas . ' 0 R /MediaBox [0 0 '
                 . self::num($this->ancho) . ' ' . self::num($this->alto) . '] /Resources '
-                . $recursosTxt . ' /Contents ' . $idFlujo . " 0 R >>";
+                . $recursosTxt . ' /Contents ' . $idFlujo . ' 0 R'
+                . ($anots ? ' /Annots [' . implode(' ', array_map(static fn($i) => "$i 0 R", $anots)) . ']' : '')
+                . " >>";
             // Comprimido si el servidor tiene zlib; si no, en claro. El PDF es válido igual.
             $comprimido = function_exists('gzcompress') ? gzcompress($flujo, 6) : false;
             $datos = $comprimido !== false ? $comprimido : $flujo;

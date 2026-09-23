@@ -17,6 +17,7 @@ session_start();
 header('Cache-Control: no-store');
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
+require __DIR__ . '/_acceso.php';   // el portero: sesión, usuario y permisos (2026-09-13)
 
 function h($s): string
 {
@@ -150,6 +151,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'guard
         $r = cb_guardar_ajustes([
             'bcc_email' => $_POST['bcc_email'] ?? '',
             'recovery_email' => $_POST['recovery_email'] ?? '',
+            'manual_anticipacion_min' => $_POST['manual_anticipacion_min'] ?? '',
+            'manual_dias_lista' => $_POST['manual_dias_lista'] ?? '',
         ]);
         if (!empty($r['ok'])) {
             $aviso = 'Ajustes guardados.';
@@ -182,16 +185,7 @@ $ajustes = cb_ajustes();
     </form>
   </header>
 
-  <nav class="tabs">
-    <a class="tab" href="index.php"><?= admin_icon('party') ?> Fiestas</a>
-    <a class="tab" href="index.php?view=temas"><?= admin_icon('palette') ?> Temáticas</a>
-    <a class="tab" href="leads.php"><?= admin_icon('party') ?> Solicitudes</a>
-    <a class="tab" href="mensajes.php"><?= admin_icon('chat') ?> Mensajes</a>
-    <a class="tab" href="comprobante.php"><?= admin_icon('copy') ?> Comprobante</a>
-    <a class="tab" href="planes.php"><?= admin_icon('copy') ?> Planes</a>
-    <a class="tab active" href="ajustes.php"><?= admin_icon('copy') ?> Ajustes</a>
-    <a class="tab" href="finanzas.php"><?= admin_icon('chart') ?> Finanzas</a>
-  </nav>
+  <?= admin_nav('ajustes') ?>
 
   <?php if ($aviso !== ''): ?><p class="alert alert-ok"><?= h($aviso) ?></p><?php endif; ?>
   <?php foreach ($errores as $e): ?><p class="alert alert-error"><?= h($e) ?></p><?php endforeach; ?>
@@ -224,6 +218,24 @@ $ajustes = cb_ajustes();
         <input type="email" name="recovery_email" value="<?= h($ajustes['recovery_email']) ?>"
                placeholder="tucorreo@ejemplo.com" autocomplete="off">
       </label>
+    </section>
+
+    <section class="card">
+      <h2>El manual de la fiesta</h2>
+      <p class="muted">
+        Dos cifras que van escritas en el manual que reciben los papás. Si las dejas vacías, el
+        manual dice "con anticipación" y "antes de la fiesta" sin poner el número.
+      </p>
+      <div class="cobro-grid">
+        <label>Minutos que llegamos antes
+          <input type="number" name="manual_anticipacion_min" min="0" max="240" inputmode="numeric"
+                 value="<?= (int) ($ajustes['manual_anticipacion_min'] ?? 0) ?: '' ?>" placeholder="30">
+        </label>
+        <label>Días de plazo para mandar la lista de invitados
+          <input type="number" name="manual_dias_lista" min="0" max="60" inputmode="numeric"
+                 value="<?= (int) ($ajustes['manual_dias_lista'] ?? 0) ?: '' ?>" placeholder="3">
+        </label>
+      </div>
     </section>
 
     <div class="party-actions">

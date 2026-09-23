@@ -59,7 +59,26 @@ export async function boot() {
 
   // ── Motor y mundo ──────────────────────────────────────────────────────
   const canvas = document.getElementById("juego");
-  const calidadPedida = CALIDADES[q.get("calidad")] ? q.get("calidad") : (isTouch ? "media" : "alta");
+  /*
+   * Con qué calidad se arranca.
+   *
+   * Antes toda pantalla táctil empezaba en "media", y eso deja mal parada a una tablet de
+   * gama de entrada: "media" todavía renderiza a ratio 1.5 y con bloom, y en una Galaxy Tab
+   * A7 (Adreno 610, 3 GB) eso son los primeros segundos a tirones. El juego baja solo cuando
+   * mide los fps, pero para entonces el niño ya vio la primera impresión.
+   *
+   * Se decide por dos señales que el navegador entrega gratis: memoria y núcleos. No son
+   * exactas —`deviceMemory` viene redondeada y Safari no la expone— pero para separar "tablet
+   * barata" de "iPad o teléfono nuevo" alcanzan, y equivocarse cuesta poco: arrancar bajo de
+   * más se ve algo más simple un rato hasta que suba; arrancar alto de más se ve a tirones.
+   */
+  const memoria = navigator.deviceMemory || 0;      // 0 = el navegador no lo dice
+  const nucleos = navigator.hardwareConcurrency || 0;
+  const aparatoJusto = isTouch && ((memoria > 0 && memoria <= 4) || (nucleos > 0 && nucleos <= 8));
+  const calidadPedida = CALIDADES[q.get("calidad")]
+    ? q.get("calidad")
+    : (isTouch ? (aparatoJusto ? "baja" : "media") : "alta");
+  if (debug) { console.info("calidad inicial:", calidadPedida, "· memoria", memoria, "GB · núcleos", nucleos); }
   const motor = await crearMotor(canvas, { calidad: calidadPedida });
   const { scene, camera } = motor;
   const { crearMundo } = await tema.mundo();
@@ -326,7 +345,11 @@ export async function boot() {
     fpsAcc += dt; fpsN++; fpsVentana += dt;
     if (fpsVentana >= 3) {
       fpsMedia = fpsN / fpsAcc;
-      if ((state === "jugando" || state === "libre") && fpsMedia < 45 && time - ultimoAjuste > 6 && !q.get("calidad")) {
+      // El primer ajuste va rápido (2,5 s) y los siguientes espaciados (6 s): si el aparato
+      // no da, conviene enterarse enseguida; después hay que dejarle tiempo a la nueva
+      // calidad antes de volver a bajar, o se desploma hasta lo más bajo por una caída suelta.
+      const espera = motor.calidad === calidadPedida ? 2.5 : 6;
+      if ((state === "jugando" || state === "libre") && fpsMedia < 45 && time - ultimoAjuste > espera && !q.get("calidad")) {
         const nuevo = motor.bajarCalidad();
         if (nuevo) { ultimoAjuste = time; if (debug) console.info("calidad →", nuevo, "por", fpsMedia.toFixed(0), "fps"); }
       }

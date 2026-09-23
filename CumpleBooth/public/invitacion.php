@@ -1648,6 +1648,7 @@ $cssVer = static function (string $rel): string {
         // Se renderiza entero en el servidor: sin JS se ve igual, solo que
         // no se puede reservar, y eso es mejor que una sección vacía. ?>
   <section class="inv-gifts inv-reveal" data-inv-gifts data-inv-token="<?= $esc($token) ?>"
+           data-inv-base="<?= $esc(rtrim((string) cb_public_base_url(), '/')) ?>/"
            data-gifts-tomado="<?= $esc($regalosTomado) ?>">
     <p class="inv-kicker">Para cuando llegue</p>
     <h2 class="inv-gifts-title"><?= $esc($regalosGancho) ?></h2>
@@ -1917,7 +1918,14 @@ $cssVer = static function (string $rel): string {
            shower solo la persona adulta. La familia ve la lista en
            asistencia-papas.php con su token de rol (pedido de Luis,
            2026-09-02). */ ?>
-  <section class="inv-rsvp inv-reveal" id="inv-asistencia">
+  <?php /* El token y la base van en el HTML porque el enlace bonito
+         (/app/luciano-<token>) NO tiene query string: leyendolo de `?t=` el
+         navegador lo veia vacio y toda confirmacion se rechazaba. Y la ruta
+         del endpoint tiene que ser absoluta: relativa, una barra final en el
+         enlace la manda a /app/luciano-<token>/rsvp-api.php, que no existe. */ ?>
+  <section class="inv-rsvp inv-reveal" id="inv-asistencia"
+           data-inv-token="<?= $esc($token) ?>"
+           data-inv-base="<?= $esc(rtrim((string) cb_public_base_url(), '/')) ?>/">
     <p class="inv-kicker">¿Nos acompañas?</p>
     <h2 class="inv-finale-title">Confirma tu asistencia</h2>
     <p class="inv-finale-lede"><?= $esc($esBabyShower

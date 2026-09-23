@@ -1,16 +1,14 @@
-Versión: 2026-09-05
+Versión: 2026-09-07
 
 # Política de Privacidad y Tratamiento de Datos Personales de CumpleClick
 
-> BORRADOR PREPARADO POR EL EQUIPO DE AUTOMATIZATECH. Este texto no constituye asesoría legal y debe ser revisado y aprobado por un abogado o abogada habilitado en Chile antes de usarse con clientes. Los puntos marcados como TODO-LUIS requieren una decisión del titular.
-
 ## 1. Responsable del tratamiento
 
-El responsable del tratamiento de los datos personales es AUTOMATIZATECH SpA, RUT 78.363.717-0 (TODO-LUIS: confirmar razón social, RUT y domicilio), operadora del servicio CumpleClick. Contacto para materias de privacidad: TODO-LUIS: correo electrónico de contacto (por ejemplo, privacidad@automatizatech.cl).
+El responsable del tratamiento de los datos personales es AUTOMATIZATECH SpA, RUT 78.363.717-0, operadora del servicio CumpleClick. Contacto para materias de privacidad: contacto@cumpleclick.com.
 
 ## 2. Marco legal
 
-Esta Política se dicta conforme a la Ley N° 19.628 sobre protección de la vida privada y a la Ley N° 21.719, que la modifica y crea la Agencia de Protección de Datos Personales, cuyas disposiciones son plenamente exigibles a partir del 1 de diciembre de 2026 (abogado: confirmar fecha de entrada en vigencia y régimen transitorio). CumpleClick aplica desde ya los principios de licitud, finalidad, proporcionalidad, calidad, seguridad, transparencia y responsabilidad que dichas normas establecen, con especial atención al interés superior del niño cuando se tratan datos de niños, niñas y adolescentes.
+Esta Política se dicta conforme a la Ley N° 19.628 sobre protección de la vida privada y a la Ley N° 21.719, que la modifica y crea la Agencia de Protección de Datos Personales, cuyas disposiciones son plenamente exigibles a partir del 1 de diciembre de 2026. CumpleClick aplica desde ya los principios de licitud, finalidad, proporcionalidad, calidad, seguridad, transparencia y responsabilidad que dichas normas establecen, con especial atención al interés superior del niño cuando se tratan datos de niños, niñas y adolescentes.
 
 ## 3. Qué datos tratamos y de quién
 
@@ -50,15 +48,18 @@ No usamos los datos de menores con fines publicitarios, de perfilamiento ni los 
 
 ## 6. Plazos de conservación
 
-- Fotografías del evento y enlaces de descarga: 30 días corridos desde el evento (TODO-LUIS: confirmar plazo; hoy la configuración de retención es de 30 días). Al vencer, se eliminan de forma definitiva. El Cliente debe descargarlas antes.
+- Fotografías tomadas en la cabina y sus enlaces de descarga: 30 días corridos desde el evento.
+- Álbum Recuerdo (las fotos y videos que suben los propios invitados): 90 días corridos desde el evento.
+
+En ambos casos, al vencer el plazo el material se elimina de forma definitiva y el Cliente debe descargarlo antes. Los plazos se indican también en la galería y en el álbum de cada fiesta.
 - Nombres de invitados y datos operativos del evento: se anonimizan junto con la eliminación de las fotografías.
-- Evidencia de aceptación del contrato (comprobante firmado, hash, IP, fecha): 5 años desde el evento, plazo de prescripción general de acciones (abogado: confirmar plazo adecuado).
-- Solicitudes de cotización no concretadas: 12 meses (TODO-LUIS: confirmar).
+- Evidencia de aceptación del contrato (comprobante firmado, hash, IP, fecha): 5 años desde el evento, en línea con el plazo de prescripción general de las acciones civiles.
+- Solicitudes de cotización no concretadas: 12 meses.
 - Material autorizado para marketing: hasta que el Cliente revoque su autorización.
 
 ## 7. Encargados y destinatarios
 
-Para prestar el servicio utilizamos proveedores que actúan como encargados de tratamiento y solo bajo nuestras instrucciones: alojamiento web y base de datos (Hostinger), servicio de correo electrónico para notificaciones y, cuando el Cliente lo solicite, almacenamiento en la nube para la entrega de material (TODO-LUIS: listar proveedores reales, por ejemplo Google Drive). Algunos de estos proveedores pueden operar servidores fuera de Chile; exigimos garantías contractuales de seguridad y confidencialidad. No vendemos ni cedemos datos personales.
+Para prestar el servicio utilizamos proveedores que actúan como encargados de tratamiento y solo bajo nuestras instrucciones: alojamiento web, base de datos y correo saliente de notificaciones (Hostinger International Ltd.). No usamos servicios de almacenamiento en la nube de terceros para entregar el material: las fotografías se sirven desde la misma infraestructura. Este proveedor opera servidores fuera de Chile; exigimos garantías contractuales de seguridad y confidencialidad. No vendemos ni cedemos datos personales.
 
 ## 8. Derechos de las personas
 
@@ -72,7 +73,7 @@ Solo aceptamos que los datos e imágenes de un niño, niña o adolescente sean t
 
 ## 10. Cookies y analítica
 
-El kiosco fotográfico y la página de aceptación no utilizan cookies de seguimiento ni herramientas de analítica de terceros. El panel de administración usa una cookie de sesión estrictamente necesaria. TODO-LUIS: actualizar esta sección si el sitio comercial incorpora analítica o píxeles publicitarios.
+El kiosco fotográfico y la página de aceptación no utilizan cookies de seguimiento ni herramientas de analítica de terceros. El panel de administración usa una cookie de sesión estrictamente necesaria. Esta Política cubre el servicio CumpleClick; si el sitio comercial incorpora analítica o píxeles publicitarios, se informará en el aviso de cookies de ese sitio.
 
 ## 11. Cambios a esta Política
 

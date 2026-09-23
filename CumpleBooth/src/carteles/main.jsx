@@ -13,13 +13,24 @@ import './carteles.css'
 
 const BASE = import.meta.env.BASE_URL
 
-// Medidas en milímetros. Las de acrílico son las de portarretratos y portamenús comunes;
-// cuando Luis confirme los soportes que compre, se agregan las suyas a esta lista.
+// Medidas en milímetros. Las de acrílico son las de portarretratos y portamenús comunes.
 const TAMANOS = [
+  /*
+   * El soporte que Luis compró de verdad, medido con regla: 15 cm de ancho por 21 de alto.
+   * Va primero y es el que arranca elegido.
+   *
+   * Se imprime a 146 × 206 y no a 150 × 210 a propósito: esos 15 × 21 son la medida de AFUERA
+   * del acrílico, y la ranura donde entra la hoja es siempre algo menor. Dejar 2 mm por lado
+   * hace que entre sin forzar. Una hoja un poco más chica se ve igual —el acrílico la
+   * enmarca—; una más grande no entra, y esa es justamente la falla que hubo que corregir.
+   */
+  { id: 'porta-menu-15x21', nombre: 'Porta menú 15 × 21 cm · el nuestro', ancho: 146, alto: 206 },
   { id: 'a5', nombre: 'A5 · 14,8 × 21 cm', ancho: 148, alto: 210 },
   // Media carta = media hoja carta (5,5 × 8,5 pulgadas). Es la medida de los porta menú
   // de acrílico más comunes, y NO es A5: son 8 mm más angosta y 6 mm más alta.
-  { id: 'media-carta', nombre: 'Media carta · 14 × 21,6 cm (porta menú)', ancho: 140, alto: 216 },
+  // 🔴 Con 216 mm de alto NO entra en el porta menú de 21 cm: sobresale 6 mm. Fue el error
+  // de la primera impresión, cuando esta era la medida por defecto.
+  { id: 'media-carta', nombre: 'Media carta · 14 × 21,6 cm (no entra en el nuestro)', ancho: 140, alto: 216 },
   { id: 'a6', nombre: 'A6 · 10,5 × 14,8 cm', ancho: 105, alto: 148 },
   { id: '10x15', nombre: 'Foto 10 × 15 cm', ancho: 100, alto: 150 },
   { id: '13x18', nombre: 'Foto 13 × 18 cm', ancho: 130, alto: 180 },
@@ -158,8 +169,8 @@ function App() {
   const [error, setError] = useState(null)
   // Arranca en la medida del porta menú de acrílico, que es el soporte que se usa en la
   // fiesta; el resto de los tamaños sigue disponible en la lista.
-  const [tamanoId, setTamanoId] = useState('media-carta')
-  const [medida, setMedida] = useState({ ancho: 140, alto: 216 })
+  const [tamanoId, setTamanoId] = useState('porta-menu-15x21')
+  const [medida, setMedida] = useState({ ancho: 146, alto: 206 })
   const [elegidos, setElegidos] = useState(null)
   const [pin, setPin] = useState('1234')
   const [estilo, setEstilo] = useState('agua')
@@ -299,13 +310,18 @@ function App() {
           ))}
         </div>
 
-        {datos.album && !datos.carteles.some((c) => c.id === 'album') && (
+        {/* El panel sigue apareciendo aunque el cartel ya esté armado: es el único lugar
+            desde donde se puede rotar el enlace, y antes desaparecía justo cuando el cartel
+            existía. Lo que cambia es el texto, porque ya no hay nada que explicar. */}
+        {datos.album && (
           <div className="panel__album">
-            <p className="panel__album-txt">
-              <strong>Álbum Recuerdo:</strong> su QR lleva el enlace de aportes, que se emite de a uno.
-              Al generarlo, <strong>el anterior queda revocado</strong> y cualquier cartel del Álbum que
-              hayas impreso antes deja de servir.
-            </p>
+            {!datos.carteles.some((c) => c.id === 'album') && (
+              <p className="panel__album-txt">
+                <strong>Álbum Recuerdo:</strong> su QR lleva el enlace de aportes, que se emite de a uno.
+                Al generarlo, <strong>el anterior queda revocado</strong> y cualquier cartel del Álbum que
+                hayas impreso antes deja de servir.
+              </p>
+            )}
             {!datos.album.existe && (
               <p className="panel__album-txt">
                 Esta fiesta todavía no tiene álbum. Créalo en{' '}
@@ -320,7 +336,8 @@ function App() {
                 vuelve acá.
               </p>
             )}
-            {datos.album.existe && datos.album.abierto && datos.album.enlaceVivo && (
+            {datos.album.existe && datos.album.abierto && datos.album.enlaceVivo
+              && !datos.carteles.some((c) => c.id === 'album') && (
               <p className="panel__album-txt">
                 Ya hay un enlace de aportes activo (emitido el {fechaCorta(datos.album.enlaceVivo.creado)}).
                 Si lo compartiste con alguien, generar otro lo deja muerto.
@@ -328,7 +345,11 @@ function App() {
             )}
             {datos.album.existe && datos.album.abierto && (
               <button type="button" className="boton boton--claro" onClick={pedirQrAlbum} disabled={pidiendoAlbum}>
-                {pidiendoAlbum ? 'Generando…' : 'Generar el QR del Álbum'}
+                {pidiendoAlbum
+                  ? 'Generando…'
+                  : (datos.carteles.some((c) => c.id === 'album')
+                    ? 'Generar uno nuevo (mata el anterior)'
+                    : 'Generar el QR del Álbum')}
               </button>
             )}
             {errorAlbum && <p className="panel__album-txt panel__album-txt--error">{errorAlbum}</p>}

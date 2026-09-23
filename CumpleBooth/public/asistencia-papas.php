@@ -19,12 +19,19 @@ header('Referrer-Policy: no-referrer');
 header('X-Robots-Tag: noindex, nofollow');
 
 $esc = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+// Dos entradas: el enlace fijo (slug + firma), que es el que reparte el admin, y el token
+// de rol, que sigue vivo porque hay enlaces ya compartidos y porque en baby shower el mismo
+// token abre predicciones y regalos.
 $token = (string) ($_GET['t'] ?? '');
+$slug = (string) ($_GET['p'] ?? '');
+$firma = (string) ($_GET['f'] ?? '');
 $acceso = null;
 $invalido = false;
 
 try {
-    $acceso = cb_rsvp_resolve_parents_token($token);
+    $acceso = $slug !== ''
+        ? cb_rsvp_acceso_por_slug($slug, $firma)
+        : cb_rsvp_resolve_parents_token($token);
     if ($acceso === null) {
         $invalido = true;
     }
@@ -44,15 +51,27 @@ if (!$invalido) {
         ? ($nombre !== '' ? "Confirmados al baby shower de $nombre" : 'Confirmados al baby shower')
         : ($nombre !== '' ? "Confirmados a la fiesta de $nombre" : 'Confirmados a la fiesta');
 }
+// Los niños llegan como texto libre ("Emma y Lucas", "Sofía, Tomás"). Una sola regla los
+// separa, y con ella se cuentan Y se listan: si fueran dos reglas distintas, el número del
+// encabezado y los nombres de abajo podrían no coincidir.
+$ninosDe = static function ($texto): array {
+    return preg_split('/\s*(?:,| y | e )\s*/u', trim((string) $texto), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+};
+
+// Orden alfabético por familia, no por hora de confirmación: la familia usa esta pantalla
+// para buscar un apellido, no para ver quién llegó último. Se compara sin tildes ni
+// mayúsculas, o "Álvarez" cae al final en vez de entre "Abreu" y "Andrade".
+$claveOrden = static function ($s): string {
+    return strtr(mb_strtolower(trim((string) $s), 'UTF-8'),
+        ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'nz']);
+};
+usort($lista, static fn($a, $b) => strcmp(
+    $claveOrden($a['family_name'] ?? ''), $claveOrden($b['family_name'] ?? '')));
+
 $totalFamilias = count($lista);
 $totalNinos = 0;
 foreach ($lista as $fila) {
-    $g = trim((string) ($fila['guest_names'] ?? ''));
-    if ($g !== '') {
-        // Los niños llegan como texto libre ("Emma y Lucas", "Sofía, Tomás"):
-        // se cuentan los separadores más comunes para dar una cifra honesta.
-        $totalNinos += count(preg_split('/\s*(?:,| y | e )\s*/u', $g, -1, PREG_SPLIT_NO_EMPTY) ?: []);
-    }
+    $totalNinos += count($ninosDe($fila['guest_names'] ?? ''));
 }
 
 // La pantalla viste los colores y el fondo de la temática de la fiesta
@@ -140,8 +159,22 @@ $cDark2 = $hex($colores['dark2'] ?? '', '#0a1029');
     border-radius: 16px; padding: 14px 18px; margin-bottom: 12px;
     backdrop-filter: blur(8px);
   }
-  .familia { font-weight: 700; font-size: 1.05rem; margin: 0; }
-  .ninos { color: #e6ecff; margin: 2px 0 0; }
+  .familia { font-weight: 700; font-size: 1.05rem; margin: 0; display: flex; align-items: center; gap: 10px; }
+  .num {
+    flex: none; width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: color-mix(in srgb, var(--amarillo) 24%, transparent);
+    border: 1px solid color-mix(in srgb, var(--amarillo) 55%, transparent);
+    color: var(--amarillo); font-size: 0.8rem; font-variant-numeric: tabular-nums;
+  }
+  .ninos { color: #e6ecff; margin: 6px 0 0 36px; padding: 0; list-style: none;
+           display: flex; flex-wrap: wrap; gap: 6px; }
+  .ninos li {
+    background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 999px; padding: 3px 12px; font-size: 0.92rem;
+  }
+  .ninos--vacio { color: rgba(255,255,255,0.55); font-size: 0.9rem; }
+  .fecha { margin-left: 36px !important; }
   .fecha { color: rgba(255,255,255,0.55); font-size: 0.82rem; margin: 4px 0 0; }
   .vacio {
     text-align: center; padding: 48px 20px; color: rgba(255,255,255,0.8);
@@ -170,7 +203,7 @@ $cDark2 = $hex($colores['dark2'] ?? '', '#0a1029');
 <?php if ($invalido): ?>
   <div class="error">
     <h1>Enlace no válido</h1>
-    <p class="resumen">Este enlace venció o fue reemplazado. Pídele uno nuevo a CumpleClick.</p>
+    <p class="resumen">Revisa que hayas copiado el enlace completo. Si la fiesta ya terminó, esta lista se cierra.</p>
   </div>
 <?php else: ?>
   <header class="cabecera">
@@ -186,18 +219,25 @@ $cDark2 = $hex($colores['dark2'] ?? '', '#0a1029');
   <?php if (!$lista): ?>
   <div class="vacio">Todavía nadie confirma. Cuando alguien confirme desde la invitación, aparece aquí al instante.</div>
   <?php else: ?>
-  <?php foreach ($lista as $fila): ?>
+  <?php foreach ($lista as $i => $fila): ?>
+  <?php $ninos = $ninosDe($fila['guest_names'] ?? ''); ?>
   <article class="tarjeta">
-    <p class="familia"><?= $esc($fila['family_name']) ?></p>
-    <?php if (trim((string) ($fila['guest_names'] ?? '')) !== ''): ?>
-    <p class="ninos">👧🧒 <?= $esc($fila['guest_names']) ?></p>
+    <p class="familia"><span class="num"><?= $esc($i + 1) ?></span><?= $esc($fila['family_name']) ?></p>
+    <?php if ($ninos): ?>
+    <?php /* Un nombre por línea y no la frase entera: "Ana y ari" en un renglón se lee como
+             un nombre solo, y esta pantalla existe para contar cuántos niños vienen. */ ?>
+    <ul class="ninos">
+      <?php foreach ($ninos as $n): ?><li><?= $esc($n) ?></li><?php endforeach; ?>
+    </ul>
+    <?php else: ?>
+    <p class="ninos ninos--vacio">Sin niños anotados</p>
     <?php endif; ?>
     <p class="fecha">Confirmó el <?= $esc(date('d-m-Y H:i', strtotime((string) $fila['created_at']) ?: time())) ?></p>
   </article>
   <?php endforeach; ?>
   <?php endif; ?>
 
-  <?php if ($esBabyShower): ?>
+  <?php if ($esBabyShower && $token !== ''): ?>
   <div class="enlaces">
     <a href="predicciones.php?t=<?= $esc($token) ?>">🔮 Predicciones</a>
     <a href="regalos-papas.php?t=<?= $esc($token) ?>">🎁 Lista de regalos</a>

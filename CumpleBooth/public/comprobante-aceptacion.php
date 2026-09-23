@@ -56,6 +56,22 @@ if (!hash_equals((string) $row['evidence_sha256'], (string) hash_file('sha256', 
     cb_receipt_error(409, 'El comprobante no pasó la verificación de integridad. Escríbenos a CumpleClick.');
 }
 
+// La copia en PDF se arma a pedido a partir del registro; la evidencia HTML de arriba ya
+// pasó la comprobación de integridad, así que acá no se vuelve a verificar nada.
+if (($_GET['pdf'] ?? '') === '1') {
+    try {
+        $pdf = cb_acceptance_pdf($row);
+    } catch (Throwable $e) {
+        error_log('CumpleClick comprobante-aceptacion.php PDF: ' . $e->getMessage());
+        cb_receipt_error(503, 'No se pudo generar el PDF en este momento. El comprobante en HTML sigue disponible.');
+    }
+    header('Content-Type: application/pdf');
+    header('Content-Length: ' . strlen($pdf));
+    header('Content-Disposition: ' . ((($_GET['d'] ?? '') === '1') ? 'attachment' : 'inline')
+        . '; filename="comprobante-terminos-cumpleclick-' . (int) $row['id'] . '.pdf"');
+    echo $pdf;
+    exit;
+}
 header('Content-Type: text/html; charset=utf-8');
 header('Content-Length: ' . (string) filesize($path));
 $disposition = (($_GET['d'] ?? '') === '1') ? 'attachment' : 'inline';

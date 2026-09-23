@@ -21,6 +21,7 @@ session_start();
 header('Cache-Control: no-store');
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
+require __DIR__ . '/_acceso.php';   // el portero: sesión, usuario y permisos (2026-09-13)
 
 function h($s): string
 {
@@ -179,35 +180,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'envia
         } elseif (!cc_mail_enabled()) {
             $avisoError = 'El envío de correo no está configurado en el servidor.';
         } else {
-            // Los correos válidos son los de la ficha y nada más: el formulario manda solo
-            // marcas, pero un POST armado a mano podría traer cualquier dirección.
-            $permitidos = cb_party_contact_emails($slugEnvio);
-            $pdf = cb_comprobante_pdf($datos);
-            $archivo = cb_comprobante_nombre_archivo($datos);
-            $url = cb_comprobante_url($slugEnvio);
-            $correo = cb_comprobante_correo($datos, $url);
-            $ok = [];
-            $fallaron = [];
-            foreach ($destinos as $destino) {
-                if (!in_array($destino, $permitidos, true)) { continue; }
-                $envio = cc_mail_send([
-                    'to' => $destino,
-                    'subject' => $correo['subject'],
-                    'text' => $correo['text'],
-                    'html' => $correo['html'],
-                    'attachments' => [[
-                        'filename' => $archivo,
-                        'type' => 'application/pdf',
-                        'data' => $pdf,
-                    ]],
-                ]);
-                if (!empty($envio['ok'])) { $ok[] = $destino; } else { $fallaron[] = $destino; }
-            }
-            if ($ok) {
-                $aviso = 'Comprobante enviado a ' . implode(', ', $ok) . '.';
-            }
-            if ($fallaron) {
-                $avisoError = 'No se pudo enviar a ' . implode(', ', $fallaron) . '. Revisa el correo del servidor.';
+            // El envío pasa por `lib.envios.php`, que valida los destinatarios contra la
+            // ficha —el formulario manda solo marcas, pero un POST armado a mano podría
+            // traer cualquier dirección— y deja el registro que lee el panel de la ficha.
+            require_once __DIR__ . '/../lib.envios.php';
+            $resultado = cb_envio_boleta($slugEnvio, $destinos);
+            if ($resultado['ok']) {
+                $aviso = $resultado['mensaje'];
+            } else {
+                $avisoError = $resultado['mensaje'];
             }
         }
         $slugActual = isset($fiestas[$slugEnvio]) ? $slugEnvio : $slugActual;
@@ -260,14 +241,7 @@ $textoWhatsapp = $datos !== null ? cb_comprobante_texto_whatsapp($datos, $urlCom
     </form>
   </header>
 
-  <nav class="tabs">
-    <a class="tab" href="index.php"><?= admin_icon('party') ?> Fiestas</a>
-    <a class="tab" href="index.php?view=temas"><?= admin_icon('palette') ?> Temáticas</a>
-    <a class="tab" href="leads.php"><?= admin_icon('party') ?> Solicitudes</a>
-    <a class="tab" href="mensajes.php"><?= admin_icon('chat') ?> Mensajes</a>
-    <a class="tab active" href="comprobante.php"><?= admin_icon('copy') ?> Comprobante</a>
-    <a class="tab" href="finanzas.php"><?= admin_icon('chart') ?> Finanzas</a>
-  </nav>
+  <?= admin_nav('comprobante') ?>
 
   <?php if ($aviso !== ''): ?><p class="alert alert-ok"><?= h($aviso) ?></p><?php endif; ?>
   <?php if ($avisoError !== ''): ?><p class="alert alert-error"><?= h($avisoError) ?></p><?php endif; ?>

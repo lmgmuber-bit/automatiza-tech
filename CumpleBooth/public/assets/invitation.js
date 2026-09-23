@@ -981,7 +981,15 @@
     const exito = dialogo.querySelector('[data-rsvp-ok]');
     const error = dialogo.querySelector('[data-rsvp-error]');
     const enviarBtn = dialogo.querySelector('[data-rsvp-enviar]');
-    const token = new URLSearchParams(window.location.search).get('t') || '';
+    // El token viene del HTML: el enlace bonito (/app/luciano-<token>) no tiene query
+    // string, asi que leerlo de `?t=` lo dejaba VACIO y el servidor rechazaba todo.
+    // Se conserva `?t=` como respaldo para los enlaces del formato antiguo.
+    const seccion = document.getElementById('inv-asistencia');
+    const token = (seccion && seccion.getAttribute('data-inv-token'))
+      || new URLSearchParams(window.location.search).get('t') || '';
+    // Absoluta: con una barra final en el enlace, la relativa apunta a una carpeta
+    // que no existe y la confirmacion muere en un 404.
+    const base = (seccion && seccion.getAttribute('data-inv-base')) || '';
     const claveLocal = 'cc_rsvp_ok_' + token.slice(0, 12);
 
     let yaConfirmo = false;
@@ -1004,7 +1012,7 @@
       if (enviarBtn) { enviarBtn.disabled = true; enviarBtn.textContent = 'Guardando…'; }
       const datos = new FormData(formulario);
       try {
-        const respuesta = await fetch('rsvp-api.php', {
+        const respuesta = await fetch(base + 'rsvp-api.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1427,7 +1435,10 @@
   };
 
   const pedir = async (cuerpo) => {
-    const respuesta = await fetch('gift-api.php', {
+    // Absoluta por lo mismo que el RSVP: una barra final en el enlace mandaba la
+    // peticion a una carpeta inexistente.
+    const baseRegalos = seccion.getAttribute('data-inv-base') || '';
+    const respuesta = await fetch(baseRegalos + 'gift-api.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(Object.assign({ t: invitacion, visitante: leerToken() }, cuerpo)),

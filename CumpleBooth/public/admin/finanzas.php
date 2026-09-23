@@ -21,6 +21,7 @@ session_start();
 header('Cache-Control: no-store');
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
+require __DIR__ . '/_acceso.php';   // el portero: sesión, usuario y permisos (2026-09-13)
 
 function h($s): string
 {
@@ -269,15 +270,7 @@ $meses = array_slice($r['meses'], -12);
     </form>
   </header>
 
-  <nav class="tabs">
-    <a class="tab" href="index.php"><?= admin_icon('party') ?> Fiestas</a>
-    <a class="tab" href="index.php?view=temas"><?= admin_icon('palette') ?> Temáticas</a>
-    <a class="tab" href="leads.php"><?= admin_icon('party') ?> Solicitudes</a>
-    <a class="tab" href="mensajes.php"><?= admin_icon('chat') ?> Mensajes</a>
-    <a class="tab" href="comprobante.php"><?= admin_icon('copy') ?> Comprobante</a>
-    <a class="tab" href="planes.php"><?= admin_icon('copy') ?> Planes</a>
-    <a class="tab active" href="finanzas.php"><?= admin_icon('chart') ?> Finanzas</a>
-  </nav>
+  <?= admin_nav('finanzas') ?>
 
   <?php if ($aviso !== ''): ?><p class="alert alert-ok"><?= h($aviso) ?></p><?php endif; ?>
   <?php foreach ($errores as $e): ?><p class="alert alert-error"><?= h($e) ?></p><?php endforeach; ?>

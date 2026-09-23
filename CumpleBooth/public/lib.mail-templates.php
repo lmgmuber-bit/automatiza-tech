@@ -47,6 +47,7 @@ function cc_mail_shell(string $titulo, string $contenido, string $pieExtra = '')
 {
     $t = cc_mail_h($titulo);
     $logo = 'https://cumpleclick.com/assets/img/correo-logo.png';
+    $ig = cc_mail_instagram();
     return <<<HTML
 <!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8">
@@ -79,6 +80,7 @@ function cc_mail_shell(string $titulo, string $contenido, string $pieExtra = '')
         CumpleClick — cabina de fotos temática para cumpleaños y eventos.
       </p>
       {$pieExtra}
+      {$ig}
       <p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:#6B6280;">
         Un servicio de <a href="https://automatizatech.cl" style="color:#8B5CF6;text-decoration:underline;">AutomatizaTech</a> · <a href="https://cumpleclick.com" style="color:#8B5CF6;text-decoration:underline;">cumpleclick.com</a>
       </p>
@@ -91,17 +93,50 @@ function cc_mail_shell(string $titulo, string $contenido, string $pieExtra = '')
 HTML;
 }
 
+/**
+ * La cuenta de Instagram al pie de todo correo, con su ícono y como enlace.
+ *
+ * El ícono es un PNG alojado en el sitio y no un SVG en línea: los clientes de correo no
+ * dibujan SVG. Si el correo se abre con las imágenes bloqueadas queda el texto de la cuenta,
+ * que sigue siendo el enlace; por eso el `alt` dice la cuenta y no "Instagram".
+ *
+ * Sale de `data/marca.json`, igual que el resto del contacto: se edita en Admin -> Marca.
+ */
+function cc_mail_instagram(): string
+{
+    $marca = cc_mail_marca();
+    $cuenta = trim((string) ($marca['instagram'] ?? ''));
+    if ($cuenta === '') { return ''; }
+    $url = trim((string) ($marca['instagram_url'] ?? '')) ?: 'https://instagram.com/' . ltrim($cuenta, '@');
+    $u = cc_mail_h($url);
+    $c = cc_mail_h($cuenta);
+    return '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:10px 0 0;"><tr>'
+        . '<td style="padding-right:7px;" valign="middle">'
+        . '<a href="' . $u . '"><img src="https://cumpleclick.com/assets/img/instagram.png" width="16" height="16" '
+        . 'alt="' . $c . '" style="display:block;border:0;"></a></td>'
+        . '<td valign="middle"><a href="' . $u . '" style="font-size:13px;color:#D6307F;text-decoration:none;'
+        . 'font-weight:600;">' . $c . '</a></td>'
+        . '</tr></table>';
+}
+
+/** El archivo de marca completo, leído una sola vez. */
+function cc_mail_marca(): array
+{
+    static $marca = null;
+    if ($marca === null) {
+        $crudo = json_decode((string) @file_get_contents(__DIR__ . '/data/marca.json'), true);
+        $marca = is_array($crudo) ? $crudo : [];
+    }
+    return $marca;
+}
+
 /** El WhatsApp sale de `data/marca.json`, la misma fuente que la landing y el
  *  cierre del álbum: si Luis lo cambia en Admin -> Marca, cambia también acá. */
 function cc_mail_whatsapp(): string
 {
     static $num = null;
-    if ($num !== null) { return $num; }
-    $num = '';
-    $ruta = __DIR__ . '/data/marca.json';
-    if (is_file($ruta)) {
-        $d = json_decode((string) @file_get_contents($ruta), true);
-        if (is_array($d)) { $num = preg_replace('/\D/', '', (string) ($d['whatsapp'] ?? '')); }
+    if ($num === null) {
+        $num = (string) preg_replace('/\D/', '', (string) (cc_mail_marca()['whatsapp'] ?? ''));
     }
     return $num;
 }

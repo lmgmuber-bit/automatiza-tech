@@ -15,6 +15,11 @@ import { configurarRecords, guardarRecord, textoRecord, formatoSegundos } from '
 import { resolveThemeFlow } from './themeFlow.js'
 import { conVersion } from './assetVersion.js'
 import { selectSpinnerWinnerIndex } from './spinnerWinner.js'
+import { celdaBajoPunto, esArrastre, intercambiar } from './puzzleArrastre.js'
+import { guiaEnPantalla, rectFotoEnLienzo } from './asomateGuia.js'
+import { prepararVideo, urlDeVideo } from './videoListo.js'
+import { ajusteParaCara } from './caraAuto.js'
+import { detectarCara, prepararDetector } from './detectorCara.js'
 import { PREDICTION_OPTIONS, createPredictionSubmissionToken, predictionLabels, predictionSummary, validPrediction } from './predictions.js'
 
 /* ============================================================
@@ -185,6 +190,29 @@ function buildRuntime(party, theme, slug) {
     // Geometría del marco decorativo del fondo. Ya viene resuelta desde el
     // backend (override de la fiesta o default de la temática).
     frameBox: normalizeFrameBox(party.frameBox),
+    // "Asómate y sé el héroe": el invitado pone la cara en el hueco del personaje.
+    // El backend ya resolvió las rutas y verificó que los archivos existan; si la
+    // temática no lo trae, queda null y el botón de la bienvenida no aparece.
+    asomate: theme.asomate?.personajes?.length
+      ? {
+          // Se copia el bloque entero y recién después se reescriben las rutas. Enumerando
+          // los campos a mano se perdieron `boton` y `titulo` sin ningún error: el kiosco
+          // siguió mostrando "sé el héroe" en una fiesta de hielo aunque el servidor ya
+          // mandaba el texto bueno.
+          ...theme.asomate,
+          fondo: ver(BASE + theme.asomate.fondo),
+          personajes: theme.asomate.personajes.map((p) => ({
+            ...p,
+            png: ver(BASE + p.png),
+          })),
+        }
+      : null,
+    // "Foto grupal": el fondo con el marco grande. El backend ya verificó que el archivo
+    // exista y que el recuadro sea válido; acá solo se resuelve la ruta, igual que arriba.
+    // Sin este bloque el botón no aparece y el kiosco se comporta como antes.
+    grupal: theme.grupal?.fondo
+      ? { ...theme.grupal, fondo: ver(BASE + theme.grupal.fondo) }
+      : null,
     // fecha de la fiesta — el api actual NO la expone (ver docs/ARQUITECTURA.md), así
     // que normalmente queda vacía. Se lee de forma defensiva por si algún día se agrega.
     fecha: party.fecha || '',
@@ -228,6 +256,13 @@ function buildRuntime(party, theme, slug) {
   })
   INVITADOS_DEFAULT = Array.isArray(party.invitados) ? party.invitados : []
   preloadBrandLogo()
+  // La despedida se baja entera ahora, una vez por carga del kiosco. En el wifi del salón el
+  // primer cuadro no llegaba a tiempo y el invitado veía una tarjeta en vez del video
+  // (Luis, tablet, 2026-09-10). Si falla la descarga se sigue usando la URL de red.
+  prepararVideo(CONFIG.videos.despedida)
+  // El detector de caras de Asómate NO se carga acá: son 9 MB de WebAssembly que en una tablet
+  // lenta competían con la primera bienvenida (la Tab A7 la reproducía a tirones). Se carga al
+  // tocar el botón de Asómate; de ahí a la primera foto pasan más de 15 s.
   // Precarga imagen grupal para watermark en diploma
   const grupoUrl = ver(BASE + 'themes/' + THEME_SLUG + '/grupo-personajes.png')
   const gi = new Image()
@@ -482,6 +517,15 @@ function BoothApp() {
   const [screen, setScreen] = useState('intro')
   const [invitado, setInvitado] = useState(null)
   const [personaje, setPersonaje] = useState(null)
+  // Modo Asomate: el elenco elegido y una foto por nino, en el mismo orden.
+  const [trasInvitados, setTrasInvitados] = useState('spinner')
+  // La foto grupal: una sola captura, sin ajustes ni dueño.
+  const [grupalFoto, setGrupalFoto] = useState(null)
+  const [asomateElenco, setAsomateElenco] = useState([])
+  const [asomateFotos, setAsomateFotos] = useState([])
+  // La escena de Asomate recompuesta para el diploma. Se arma al guardar, con los recursos
+  // ya cargados; rehacerla en la pantalla del diploma obligaria a volver a bajar todo.
+  const [asomateHeroe, setAsomateHeroe] = useState(null)
   const [photo, setPhoto] = useState(null)
   const [result, setResult] = useState(null)
   const [prediction, setPrediction] = useState(null)
@@ -491,6 +535,9 @@ function BoothApp() {
     () => new URLSearchParams(location.search).has('invitados')
   )
   const [muted, setMuted] = useState(false)
+  // Botón "volver" (2026-09-15): en la fiesta, para repetir la ruleta o cambiar de niño había
+  // que recargar la página. Abre una hoja con las vueltas posibles desde la pantalla actual.
+  const [volverAbierto, setVolverAbierto] = useState(false)
   const bgRef = useRef(null)
   const musicRef = useRef(null)
   const musicTrackRef = useRef(null) // pista sonando, para no reiniciarla en cada render
@@ -592,6 +639,7 @@ function BoothApp() {
     setPersonaje(null)
     setPhoto(null)
     setResult(null)
+    setAsomateHeroe(null)
     setPrediction(null)
     setGameScore(null)
     setScreen('intro')
@@ -607,9 +655,40 @@ function BoothApp() {
     setTimeout(() => (tapCornerR.current = 0), 1500)
   }
 
+  // Dónde se puede volver atrás: del recorrido de la ruleta (no de Asómate, que ya tiene su
+  // propio Atrás, ni del baby shower, que no pasa por la ruleta).
+  const conVolver = !isBabyShower && trasInvitados === 'spinner'
+    && ['invitados', 'spinner', 'photo-session', 'video-personaje', 'juego', 'transition'].includes(screen)
+  const volverA = (destino) => {
+    setVolverAbierto(false)
+    if (destino === 'intro') { reset(); return }
+    setPersonaje(null)
+    if (destino === 'invitados') setInvitado(null)
+    go(destino)
+  }
+
   return (
-    <div className="app">
+    <div className={`app${conVolver ? ' app--con-volver' : ''}`}>
       <div className="corner-hit-right" onClick={cornerTapRight} aria-hidden />
+
+      {conVolver && !volverAbierto && (
+        <button className="volver-btn" type="button" onClick={() => setVolverAbierto(true)} aria-label="Volver atrás">
+          ←
+        </button>
+      )}
+      {volverAbierto && (
+        <div className="volver-hoja" role="dialog" aria-label="Volver atrás">
+          <p>¿A dónde volvemos?</p>
+          {screen !== 'invitados' && screen !== 'spinner' && (
+            <button className="cta" onClick={() => volverA('spinner')}>🎡 Volver a la ruleta</button>
+          )}
+          {screen !== 'invitados' && (
+            <button className="cta" onClick={() => volverA('invitados')}>🧒 Elegir otro niño</button>
+          )}
+          <button className="cta" onClick={() => volverA('intro')}>🏠 Volver al inicio</button>
+          <button className="cta ghost" onClick={() => setVolverAbierto(false)}>Seguir aquí ✖</button>
+        </div>
+      )}
 
       {/* Botón mute flotante — siempre visible excepto en intro */}
       {screen !== 'intro' && MUSIC_ENABLED && (
@@ -631,7 +710,32 @@ function BoothApp() {
       )}
 
       {screen === 'intro' && (
-        <Intro onStart={() => { startMusic(); go(isBabyShower ? 'prediccion' : 'invitados') }} />
+        <Intro
+          onStart={() => {
+            startMusic()
+            setTrasInvitados('spinner')
+            go(isBabyShower ? 'prediccion' : 'invitados')
+          }}
+          onGrupal={() => {
+            // Sin lista de invitados y sin detector de caras: la foto es de todos y el
+            // detector son 9 MB para encontrar UNA cara.
+            startMusic()
+            setInvitado('')
+            setGrupalFoto(null)
+            go('grupal-capturar')
+          }}
+          onAsomate={() => {
+            // Empieza a cargar el detector de caras ahora (9 MB, una vez por carga del kiosco).
+            // Si no llega a tiempo o falla, la foto se ajusta con la guía y los mandos.
+            prepararDetector(BASE).catch(() => {})
+            startMusic()
+            setAsomateElenco([])
+            setAsomateFotos([])
+            setAsomateHeroe(null)
+            setTrasInvitados('asomate-elegir')
+            go('invitados')
+          }}
+        />
       )}
       {screen === 'prediccion' && isBabyShower && (
         <PredictionScreen
@@ -645,9 +749,15 @@ function BoothApp() {
       {screen === 'invitados' && (
         <ListaInvitados
           invitados={invitadosList}
+          etiqueta={trasInvitados === 'asomate-elegir'
+            ? 'Elegir personaje 🦸'
+            : 'Toca para girar la ruleta 🎉'}
           onStart={(nombre) => {
             setInvitado(nombre)
-            go('spinner')
+            // Asomate tambien pasa por aca: sin invitado el diploma salia a nombre de
+            // "Invitado" y sin personaje, y la foto entraba a la galeria como foto.png,
+            // sin dueno. Un toque mas, y el recuerdo queda con nombre.
+            go(trasInvitados)
           }}
         />
       )}
@@ -746,21 +856,94 @@ function BoothApp() {
           }}
         />
       )}
+      {/* Asomate y se el heroe. Es un camino APARTE: no toca la ruleta, el juego ni el
+          recorrido de siempre. Reutiliza Capture y QRScreen, asi que la foto se sube,
+          se descarga por QR y termina en la despedida igual que cualquier otra. */}
+      {screen === 'asomate-elegir' && (
+        <AsomateElegir
+          onDone={(elenco) => {
+            setAsomateElenco(elenco)
+            setAsomateFotos([])
+            go('asomate-capturar')
+          }}
+          onCancel={() => go('intro')}
+        />
+      )}
+      {screen === 'asomate-capturar' && asomateElenco.length > 0 && (
+        <>
+          {/* Se fotografia de a un nino por vez. La alternativa —una sola foto de los tres
+              y repartirla en franjas— exige que se queden quietos y en orden, y basta que
+              uno se corra para que su cara termine en el hueco del de al lado. */}
+          {asomateElenco.length > 1 && (
+            <p className="asomate-turno-aviso">
+              Le toca a {asomateElenco[asomateFotos.length]?.emoji}{' '}
+              <strong>{asomateElenco[asomateFotos.length]?.nombre}</strong>
+              {' '}· {asomateFotos.length + 1} de {asomateElenco.length}
+            </p>
+          )}
+          <Capture
+            key={asomateFotos.length}
+            guia={asomateElenco[asomateFotos.length]}
+            onCapture={(dataUrl) => {
+              const fotos = [...asomateFotos, dataUrl]
+              setAsomateFotos(fotos)
+              if (fotos.length >= asomateElenco.length) go('asomate-preview')
+            }}
+          />
+        </>
+      )}
+      {screen === 'asomate-preview' && asomateElenco.length > 0 && (
+        <AsomatePreview
+          elenco={asomateElenco}
+          fotos={asomateFotos}
+          invitado={invitado}
+          onRetry={() => { setAsomateFotos([]); go('asomate-capturar') }}
+          onSave={(compuesta, heroe) => { setResult(compuesta); setAsomateHeroe(heroe); go('qr') }}
+        />
+      )}
+      {screen === 'grupal-capturar' && (
+        <>
+          <AvisoAcostar />
+          <Capture
+            onCapture={(dataUrl) => {
+              setGrupalFoto(dataUrl)
+              go('grupal-preview')
+            }}
+          />
+        </>
+      )}
+      {screen === 'grupal-preview' && grupalFoto && (
+        <GrupalPreview
+          foto={grupalFoto}
+          onRetry={() => { setGrupalFoto(null); go('grupal-capturar') }}
+          onSave={(compuesta) => { setResult(compuesta); go('qr') }}
+        />
+      )}
       {screen === 'qr' && (
         <QRScreen
           imageDataUrl={result}
           invitado={invitado}
+          archivarComo={grupalFoto ? 'grupal-' + (nombreEvento() || 'fiesta') : null}
           isBabyShower={isBabyShower}
           onDiploma={() => go('diploma')}
           onDone={() => go('farewell')}
         />
       )}
       {screen === 'diploma' && (
-        <DiplomaScreen invitado={invitado} personaje={personaje} prediction={prediction} score={gameScore} onDone={() => go('farewell')} />
+        /* En Asomate el personaje no sale de la ruleta sino del hueco elegido:
+           sin esto el diploma se dibujaba sin imagen y a nombre de "Invitado". */
+        <DiplomaScreen
+          invitado={invitado}
+          personaje={personaje || personajeDeAsomate(asomateElenco)}
+          heroe={asomateHeroe}
+          prediction={prediction}
+          score={gameScore}
+          onDone={() => go('farewell')}
+        />
       )}
       {screen === 'farewell' && (
         <VideoScreen
-          src={CONFIG.videos.despedida}
+          src={urlDeVideo(CONFIG.videos.despedida)}
           skipLabel="Terminar"
           finale
           onDone={reset}
@@ -1015,7 +1198,7 @@ function composePredictionImage(bgImg, photoImg, prediction, score) {
   ctx.font = `800 ${Math.round(W * 0.037)}px 'Baloo 2', system-ui, sans-serif`
   ctx.fillText(`${Number.isFinite(score) ? score : 0} puntos en Atrapa los chupetes`, W / 2, panelY + panelH * 0.91)
   drawBrandWatermark(ctx, W, H)
-  return canvas.toDataURL('image/png')
+  return exportarFoto(canvas)
 }
 
 function PredictionReveal({ photo, bgRef, prediction, score, onRetry, onDone }) {
@@ -1046,7 +1229,7 @@ function PredictionReveal({ photo, bgRef, prediction, score, onRetry, onDone }) 
     if (!composed) return
     const link = document.createElement('a')
     link.href = composed
-    link.download = `prediccion-${prediction.guest_name}-${Date.now()}.png`
+    link.download = `prediccion-${prediction.guest_name}-${Date.now()}.${extensionDe(composed)}`
     document.body.appendChild(link)
     link.click()
     link.remove()
@@ -1092,11 +1275,14 @@ function PredictionReveal({ photo, bgRef, prediction, score, onRetry, onDone }) 
 /* ============================================================
    1-B) LISTA INVITADOS — muestra quiénes vinieron + bienvenida
    ============================================================ */
-function ListaInvitados({ invitados, onStart }) {
+function ListaInvitados({ invitados, onStart, etiqueta = 'Toca para girar la ruleta 🎉' }) {
   const [selected, setSelected] = useState(null)
   const [welcome, setWelcome] = useState(null)
   const [readyToSpin, setReadyToSpin] = useState(false)
   const advanceTimer = useRef(null)
+  const welcomeVideoRef = useRef(null)
+  // Para saber si el video sigue avanzando cuando vence el temporizador.
+  const welcomeProgress = useRef({ t: -1, desde: 0 })
 
   useEffect(() => () => clearTimeout(advanceTimer.current), [])
 
@@ -1105,9 +1291,25 @@ function ListaInvitados({ invitados, onStart }) {
   // de 5.2s, lo que CORTABA cualquier bienvenida más larga (la intro inmersiva
   // de Reino de Hielo dura 14s y se veía apenas un tercio). Ahora se reajusta
   // con la duración real en cuanto el navegador lee los metadatos.
+  //
+  // Y cuando vence, ANTES de cortar mira el video: si sigue avanzando (una
+  // tablet lenta que arrancó tarde o se trabó un momento) le da el tiempo que le
+  // falta, hasta un tope. En la Tab A7 la bienvenida de spidey arrancaba con
+  // retraso y el temporizador la cortaba a los 7,1 s, con Spin a media frase
+  // (Luis, 2026-09-10). Solo un video que no avanza se abandona.
+  const WELCOME_TOPE_MS = 45000
   const scheduleAdvance = (ms) => {
     clearTimeout(advanceTimer.current)
+    if (!welcomeProgress.current.desde) welcomeProgress.current.desde = Date.now()
     advanceTimer.current = setTimeout(() => {
+      const v = welcomeVideoRef.current
+      const avanzo = v && !v.ended && !v.paused && v.currentTime > welcomeProgress.current.t + 0.05
+      const dentroDelTope = Date.now() - welcomeProgress.current.desde < WELCOME_TOPE_MS
+      if (avanzo && dentroDelTope && Number.isFinite(v.duration)) {
+        welcomeProgress.current.t = v.currentTime
+        scheduleAdvance(Math.max(800, (v.duration - v.currentTime) * 1000 + 600))
+        return
+      }
       setWelcome(null)
       setReadyToSpin(true)
     }, ms)
@@ -1176,10 +1378,12 @@ function ListaInvitados({ invitados, onStart }) {
                    que el autoplay con sonido está permitido; la música de fondo
                    va a 0.15 y no compite. */
                 playsInline
+                ref={welcomeVideoRef}
                 onLoadedMetadata={(e) => {
                   // Ya se conoce cuánto dura: el watchdog se ajusta para no
                   // cortar bienvenidas largas ni esperar de más en las cortas.
                   const dur = Number(e.currentTarget?.duration)
+                  welcomeProgress.current = { t: -1, desde: Date.now() }
                   if (Number.isFinite(dur) && dur > 0) {
                     scheduleAdvance(Math.min(30000, dur * 1000 + 600))
                   }
@@ -1208,7 +1412,7 @@ function ListaInvitados({ invitados, onStart }) {
           <p className="spin-ready-emoji pulse">🎡</p>
           <h2>¡{selected}, es tu turno!</h2>
           <button className="cta pulse" onClick={() => onStart(selected)}>
-            Toca para girar la ruleta 🎉
+            {etiqueta}
           </button>
         </div>
       )}
@@ -1334,10 +1538,16 @@ function GestionInvitados({ list, onSave, onClose }) {
 /* ============================================================
    1-C) SPINNER — ruleta gira personajes Disney
    ============================================================ */
+// Cuántas veces puede girar un niño antes de que la ruleta le pregunte qué personaje quiere.
+// En la fiesta del 13-sep giraban y giraban buscando a uno en particular (Luis, 2026-09-15).
+const RULETA_MAX_GIROS = 3
+
 function Spinner({ onDone }) {
   const [winner, setWinner] = useState(null)
   // Cada reintento incrementa spinId y relanza el efecto del giro.
   const [spinId, setSpinId] = useState(0)
+  const giros = spinId + 1
+  const [eligiendo, setEligiendo] = useState(false)
   const rotRef = useRef(null)
   // Rotación acumulada: el reintento gira HACIA ADELANTE desde donde quedó la
   // rueda; si el giro partiera de 0 otra vez se vería rebobinar de golpe.
@@ -1404,8 +1614,40 @@ function Spinner({ onDone }) {
     onDone(winner)
   }
 
+  // Después de RULETA_MAX_GIROS giros, en vez de girar otra vez se elige el personaje a dedo.
+  // Mientras elige, el kiosco espera más (20 s) pero no para siempre: si nadie toca nada,
+  // sigue con el último ganador.
+  const abrirEleccion = () => {
+    clearTimeout(autoRef.current)
+    setEligiendo(true)
+    autoRef.current = setTimeout(() => onDone(winner), 20000)
+  }
+  const cerrarEleccion = () => {
+    clearTimeout(autoRef.current)
+    setEligiendo(false)
+    autoRef.current = setTimeout(() => onDone(winner), 8000)
+  }
+  const elegir = (p) => {
+    clearTimeout(autoRef.current)
+    onDone(p)
+  }
+
   return (
     <section className={`screen spinner${CONFIG.images.roulette ? ' has-themed-background' : ''}`}>
+      {eligiendo && (
+        <div className="spinner-elegir" role="dialog" aria-label="Elegir personaje">
+          <p className="spinner-elegir__titulo">¿Qué personaje te gustaría?</p>
+          <div className="spinner-elegir__grid">
+            {PERSONAJES.map((p) => (
+              <button key={p.name} type="button" className="spinner-elegir__btn" onClick={() => elegir(p)}>
+                <span className="spinner-elegir__emoji" aria-hidden="true">{p.emoji}</span>
+                <span>{p.name}</span>
+              </button>
+            ))}
+          </div>
+          <button className="cta ghost" onClick={cerrarEleccion}>Volver a la ruleta</button>
+        </div>
+      )}
       <div className="spinner-wrapper">
         <div className="spinner-pointer">▼</div>
         <div className="spinner-rotator" ref={rotRef} style={{ '--spin': '0deg' }}>
@@ -1431,18 +1673,32 @@ function Spinner({ onDone }) {
             <p className="winner-emoji" style={{ fontSize: '60px' }}>{winner.emoji}</p>
             <p className="winner-text">¡Ganador!</p>
             <h2 className="winner-name">{winner.name}</h2>
-            <div className="spinner-winner-actions">
-              <button className="cta" onClick={aceptar}>
-                ✅ ¡Me gusta!
-              </button>
-              <button className="cta ghost" onClick={reintentar}>
-                🔁 Girar de nuevo
-              </button>
-            </div>
           </div>
         )}
       </div>
-      {(THEME_FLOW.photoSessionTeaserVideo || THEME_FLOW.photoSessionTeaser) && THEME_FLOW.teaserLabel && (
+      {/* Los botones van FUERA del circulo del ganador. Dentro quedaban de 32 px de alto
+          (el minimo tactil son 44) porque la tarjeta es redonda y no cabe nada mas, y encima
+          quedaban apretados entre la rueda y el cuadro del teaser. Aca abajo mandan el ancho
+          de la pantalla, no el diametro del circulo. */}
+      {winner && (
+        <div className="spinner-winner-actions">
+          <button className="cta" onClick={aceptar}>
+            ✅ ¡Me gusta!
+          </button>
+          {giros >= RULETA_MAX_GIROS ? (
+            <button className="cta ghost" onClick={abrirEleccion}>
+              🎯 Elegir mi personaje
+            </button>
+          ) : (
+            <button className="cta ghost" onClick={reintentar}>
+              🔁 Girar de nuevo
+            </button>
+          )}
+        </div>
+      )}
+      {/* Mientras hay ganador el teaser estorba: se lleva el espacio que necesitan los
+          botones y compite con el nombre que se acaba de revelar. */}
+      {!winner && (THEME_FLOW.photoSessionTeaserVideo || THEME_FLOW.photoSessionTeaser) && THEME_FLOW.teaserLabel && (
         <div className="spinner-artist-teaser">
           {THEME_FLOW.photoSessionTeaserVideo ? (
             // Video en loop mudo: los artistas bailando mientras gira la ruleta.
@@ -1465,6 +1721,577 @@ function Spinner({ onDone }) {
           </span>
         </div>
       )}
+    </section>
+  )
+}
+
+/**
+ * El personaje que representa una tanda de Asomate, para el diploma.
+ *
+ * El diploma busca la imagen por `personaje.name` en CHAR_IMG (los JPG de la tematica),
+ * asi que devuelve esa forma y no el recorte con hueco. En la grupal manda el primero:
+ * el diploma es del invitado que se anoto, los demas son sus amigos.
+ */
+function personajeDeAsomate(elenco) {
+  const primero = elenco && elenco[0]
+  return primero ? { name: primero.nombre, emoji: primero.emoji } : null
+}
+
+/* ============================================================
+   Asómate y sé el héroe — la cara del invitado en el cuerpo del personaje
+   ============================================================ */
+
+/**
+ * Altura común a la que se dibujan TODOS los personajes de la escena.
+ *
+ * No basta con escalar cada uno por su propia altura: si uno es más ancho que su carril hay
+ * que achicarlo, y entonces vuelve a quedar más bajo que los demás (paso con Kristoff, que
+ * salía a la mitad de Olaf). Se busca primero la mayor altura que TODOS pueden alcanzar sin
+ * salirse de su carril, y recién después se escala cada uno a esa altura.
+ */
+function alturaComunAsomate(lista, W, H, banda) {
+  const total = lista.length
+  const carril = (W / total) * (total === 1 ? 0.86 : 0.94)
+  // `banda.alto` dice cuanto del lienzo puede ocupar la figura. El diploma pide una banda
+  // mas baja que la foto: alli la escena comparte el lienzo con el titulo y el nombre, y a
+  // la altura de la foto la cara del nino quedaba debajo del texto.
+  let altura = H * (banda && banda.alto ? banda.alto : (total === 1 ? 0.8 : 0.62))
+  for (const p of lista) {
+    const g = p.personaje
+    altura = Math.min(altura, (g.pies - g.arriba) * (carril / (g.der - g.izq)))
+  }
+  return altura
+}
+
+/**
+ * Dibuja la escena: fondo, las fotos de los invitados dentro de sus óvalos, y los personajes
+ * (que ya traen el hueco recortado) encima.
+ *
+ * La escala la manda la ALTURA DE LA FIGURA, no el hueco de la cara. Escalando por el hueco
+ * los cuerpos quedan de tamaños muy distintos —los personajes no comparten la proporción
+ * cabeza/cuerpo: la de Elsa es el 15% de su cuerpo y la de Olaf el 28%— y uno sale al doble
+ * de alto que otro. El costo es que el hueco queda de distinto tamaño según el personaje,
+ * que se nota mucho menos.
+ */
+function componerAsomate(fondoImg, lista, titulo, opciones = {}) {
+  // El lienzo mide lo que mide el fondo DE VERDAD, no lo que llegó: el CDN de Hostinger le
+  // entrega a una tablet Android una copia de 800 px de ancho (2026-09-10), y con eso la foto
+  // salía de 800×1422 en vez de 1080×1920.
+  const W = Math.max(1080, fondoImg?.naturalWidth || 1080)
+  const H = fondoImg?.naturalWidth ? Math.round((W * fondoImg.naturalHeight) / fondoImg.naturalWidth) : Math.round((W * 16) / 9)
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const ctx = c.getContext('2d')
+
+  if (fondoImg) ctx.drawImage(fondoImg, 0, 0, W, H)
+
+  const total = lista.length
+  const banda = opciones.banda
+  const alturaComun = alturaComunAsomate(lista, W, H, banda)
+  const sitios = lista.map((p, i) => {
+    const g = p.personaje
+    const k = alturaComun / (g.pies - g.arriba)
+    const ox = (W / total) * (i + 0.5) - ((g.izq + g.der) / 2) * k
+    // Los pies de todos en el mismo suelo: alineando por la cara quedan flotando.
+    const suelo = banda && banda.suelo ? banda.suelo : (total === 1 ? 0.9 : 0.8)
+    const oy = H * suelo - g.pies * k
+    return { k, ox, oy, hx: ox + g.cx * k, hy: oy + g.cy * k, rx: g.rx * k, ry: g.ry * k }
+  })
+
+  // 1) las fotos, detrás y recortadas al óvalo
+  sitios.forEach((s, i) => {
+    const { foto, ajuste } = lista[i]
+    ctx.save()
+    ctx.beginPath()
+    ctx.ellipse(s.hx, s.hy, s.rx, s.ry, 0, 0, Math.PI * 2)
+    ctx.clip()
+    if (foto) {
+      // El mismo rectángulo que la guía de la cámara da por hecho (asomateGuia.js): si esto
+      // cambiara acá y no allá, el óvalo de la cámara y el hueco dejarían de coincidir.
+      const r = rectFotoEnLienzo(s, foto, ajuste || {})
+      ctx.drawImage(foto, r.x, r.y, r.ancho, r.alto)
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,0.78)'
+      ctx.fillRect(s.hx - s.rx, s.hy - s.ry, s.rx * 2, s.ry * 2)
+    }
+    // Sombra hacia dentro: sin esto la cara se ve pegada encima, no adentro del traje.
+    ctx.shadowColor = 'rgba(0,0,0,.45)'
+    ctx.shadowBlur = s.rx * 0.22
+    ctx.lineWidth = s.rx * 0.18
+    ctx.strokeStyle = 'rgba(0,0,0,.5)'
+    ctx.beginPath()
+    ctx.ellipse(s.hx, s.hy, s.rx + ctx.lineWidth / 2, s.ry + ctx.lineWidth / 2, 0, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.restore()
+  })
+
+  // 2) los personajes, encima. Se dibujan con las medidas ANOTADAS en themes.json (w, h), no
+  // con las del archivo que llegó: el CDN le entrega a la tablet una copia achicada a 800 px
+  // de ancho, y dibujándola a su tamaño natural el personaje salía más chico que su óvalo,
+  // con la foto asomando por fuera del traje. Solo Spidey, de 711 px, se salvaba. (Luis lo
+  // vio en la tablet el 2026-09-10; desde el escritorio no se reproducía.)
+  sitios.forEach((s, i) => {
+    const { png, personaje: g } = lista[i]
+    if (!png) return
+    const ancho = (g.w > 0 ? g.w : png.naturalWidth) * s.k
+    const alto = (g.h > 0 ? g.h : png.naturalHeight) * s.k
+    ctx.drawImage(png, s.ox, s.oy, ancho, alto)
+  })
+
+  if (titulo) {
+    // Mismo panel que usa el resto del kiosco: blanco translúcido y tinta --dark1.
+    const cuerpo = Math.round(W * 0.052)
+    ctx.font = `800 ${cuerpo}px 'Baloo 2', system-ui, sans-serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    const an = Math.min(ctx.measureText(titulo).width, W * 0.82)
+    const cx = W / 2
+    const cy = H * 0.9
+    const px = W * 0.055
+    const py = cuerpo * 0.62
+    ctx.save()
+    ctx.fillStyle = 'rgba(255,255,255,.66)'
+    roundRectPath(ctx, cx - an / 2 - px, cy - cuerpo / 2 - py, an + px * 2, cuerpo + py * 2, W * 0.045)
+    ctx.fill()
+    ctx.lineWidth = Math.max(2, W * 0.0035)
+    ctx.strokeStyle = 'rgba(255,255,255,.72)'
+    ctx.stroke()
+    ctx.restore()
+    ctx.fillStyle = cssVar('--dark1', '#38244f')
+    ctx.fillText(titulo, cx, cy, W * 0.82)
+  }
+
+  // El diploma dibuja su propia marca de agua: dos logos encimados se ven como un error.
+  if (opciones.marca !== false) drawBrandWatermark(ctx, W, H)
+  return exportarFoto(c)
+}
+
+/**
+ * La FOTO GRUPAL: una sola foto con todos, dentro del marco grande del fondo `grupal`.
+ *
+ * Por qué no reutiliza el compositor de siempre: ese inscribe un CUADRADO dentro del marco
+ * (`getSquareFrameGeometry`), que es lo correcto para una cara y lo peor posible para un
+ * grupo. Acá el hueco es el rectángulo completo y la foto entra en modo "cubrir": se escala
+ * por el lado que falte y se recorta el sobrante, así el marco nunca queda con franjas
+ * blancas a los costados.
+ *
+ * `frameBox` viene medido al armar el fondo, no estimado después. Esa es la diferencia con
+ * baby-rosas, donde el recuadro se midió a ojo y la foto salió chica y descentrada.
+ */
+function componerGrupal(fondoImg, fotoImg, caja, titulo, opciones = {}) {
+  // El lienzo mide lo que mide el fondo DE VERDAD: el CDN le entrega a Android una copia de
+  // 800 px y con eso todas las medidas relativas caerían en el lugar equivocado.
+  const W = Math.max(1080, fondoImg?.naturalWidth || 1080)
+  const H = fondoImg?.naturalWidth
+    ? Math.round((W * fondoImg.naturalHeight) / fondoImg.naturalWidth)
+    : Math.round((W * 16) / 9)
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const ctx = c.getContext('2d')
+  if (fondoImg) ctx.drawImage(fondoImg, 0, 0, W, H)
+
+  const hueco = {
+    x: Math.round((Number(caja?.x) || 0) * W),
+    y: Math.round((Number(caja?.y) || 0) * H),
+    w: Math.round((Number(caja?.w) || 0) * W),
+    h: Math.round((Number(caja?.h) || 0) * H),
+  }
+
+  if (fotoImg && hueco.w > 0 && hueco.h > 0) {
+    // "Cubrir": se toma del original el rectángulo más grande que tenga la forma del hueco.
+    const k = Math.max(hueco.w / fotoImg.naturalWidth, hueco.h / fotoImg.naturalHeight)
+    const anchoUtil = hueco.w / k
+    const altoUtil = hueco.h / k
+    const sx = (fotoImg.naturalWidth - anchoUtil) / 2
+    // Se recorta más de arriba que de abajo: en una foto de grupo lo que sobra es el techo,
+    // y los pies y el piso son justo lo que no se puede perder.
+    const sy = (fotoImg.naturalHeight - altoUtil) * 0.35
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(hueco.x, hueco.y, hueco.w, hueco.h)
+    ctx.clip()
+    ctx.drawImage(fotoImg, sx, sy, anchoUtil, altoUtil, hueco.x, hueco.y, hueco.w, hueco.h)
+    ctx.restore()
+  }
+
+  if (titulo) {
+    const fs = Math.round(W * 0.05)
+    ctx.font = `800 ${fs}px 'Baloo 2', system-ui, sans-serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    const cy = Math.min(H * 0.94, hueco.y + hueco.h + fs * 1.6)
+    const anchoTexto = Math.min(ctx.measureText(titulo).width, W * 0.84)
+    const pad = W * 0.05
+    const alto = fs * 0.62
+    ctx.save()
+    ctx.fillStyle = 'rgba(255,255,255,.72)'
+    roundRectPath(ctx, W / 2 - anchoTexto / 2 - pad, cy - fs / 2 - alto, anchoTexto + pad * 2, fs + alto * 2, W * 0.045)
+    ctx.fill()
+    ctx.lineWidth = Math.max(2, W * 0.0035)
+    ctx.strokeStyle = 'rgba(255,255,255,.72)'
+    ctx.stroke()
+    ctx.restore()
+    ctx.fillStyle = cssVar('--dark1', '#38244f')
+    ctx.fillText(titulo, W / 2, cy, W * 0.82)
+  }
+
+  if (opciones.marca !== false) drawBrandWatermark(ctx, W, H)
+  return exportarFoto(c)
+}
+
+/** El texto del pie. En grupo saluda a todos; solo, al invitado. */
+function tituloAsomate(invitado, cuantos) {
+  const quien = nombreEvento()
+  if (cuantos > 1) return quien ? `El cumple de ${quien} y sus amigos` : '¡Amigos!'
+  if (invitado && quien) return `${invitado} en el cumple de ${quien}`
+  if (quien) return `¡Feliz cumple, ${quien}!`
+  return invitado ? `¡${invitado}!` : ''
+}
+
+/**
+ * Elegir cuántos se asoman y con qué personaje cada uno.
+ *
+ * Cada niño se fotografía por separado, por turnos. La alternativa —una sola foto de los
+ * tres y repartir la imagen en franjas— exige que se queden quietos y en orden, y con niños
+ * de cuatro años eso no pasa: bastaba que uno se corriera para que su cara terminara en el
+ * hueco del de al lado.
+ */
+function AsomateElegir({ onDone, onCancel }) {
+  const disponibles = CONFIG.asomate?.personajes || []
+  const [cuantos, setCuantos] = useState(1)
+  const [turno, setTurno] = useState(0)   // a que nino le toca elegir
+  const [elegidos, setElegidos] = useState([disponibles[0], disponibles[1], disponibles[2]])
+
+  const cambiarCuantos = (n) => {
+    setCuantos(n)
+    setTurno(0)
+    setElegidos((prev) => prev.map((p, i) => p || disponibles[Math.min(i, disponibles.length - 1)]))
+  }
+  const elegir = (indice, personaje) =>
+    setElegidos((prev) => prev.map((p, i) => (i === indice ? personaje : p)))
+
+  const listos = elegidos.slice(0, cuantos).filter(Boolean)
+
+  return (
+    <section className="screen asomate-elegir">
+      <h1 className="asomate-titulo">
+        {CONFIG.asomate?.titulo || '¿Con quién te quieres asomar?'}
+      </h1>
+
+      {disponibles.length > 1 && (
+        <div className="asomate-cuantos" role="group" aria-label="Cuántos se asoman">
+          {[1, 2, 3].map((n) => (
+            <button
+              key={n}
+              className="cta asomate-cuantos__btn"
+              aria-pressed={cuantos === n}
+              onClick={() => cambiarCuantos(n)}
+            >
+              {n === 1 ? 'Yo solo' : n === 2 ? 'Los dos' : 'Los tres'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Un nino por vez. Mostrando los tres a la vez eran 18 tarjetas y pantalla y media
+          de scroll: para elegir, un nino de cuatro anos se pierde. */}
+      <div className="asomate-turno">
+        {cuantos > 1 && (
+          <p className="asomate-turno__quien">
+            Niño {turno + 1} de {cuantos}
+          </p>
+        )}
+        <div className="asomate-grid">
+          {disponibles.map((p) => (
+            <button
+              key={p.clave}
+              className="asomate-card"
+              aria-pressed={elegidos[turno]?.clave === p.clave}
+              onClick={() => elegir(turno, p)}
+            >
+              <img src={p.png} alt="" loading="lazy" />
+              <span>
+                {p.emoji} {p.nombre}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="asomate-pie">
+        <button
+          className="cta ghost"
+          onClick={() => (turno > 0 ? setTurno(turno - 1) : onCancel())}
+        >
+          ← {turno > 0 ? 'Atrás' : 'Volver'}
+        </button>
+        {turno + 1 < cuantos ? (
+          <button className="cta" onClick={() => setTurno(turno + 1)} disabled={!elegidos[turno]}>
+            Siguiente niño →
+          </button>
+        ) : (
+          <button className="cta" onClick={() => onDone(listos)} disabled={listos.length < cuantos}>
+            {cuantos > 1 ? '📸 A las fotos' : '📸 A la foto'}
+          </button>
+        )}
+      </div>
+    </section>
+  )
+}
+
+/** Compone, deja ajustar cada cara en su hueco y guarda. */
+/**
+ * "Pon la tablet acostada": el aviso de la foto grupal.
+ *
+ * El marco de la foto grupal es apaisado y la camara de una tablet de pie entrega un cuadro
+ * vertical: al encajarlo sobrevive solo el 31% del alto, medido sobre una foto real de la
+ * fiesta. Acostada, la camara entrega casi la forma del marco y el grupo sale grande.
+ *
+ * Avisa mientras la pantalla este de pie y se va solo al girarla. No bloquea la captura: con
+ * el giro bloqueado —que es lo normal en una tablet de kiosco— bloquear dejaria el modo
+ * inservible en plena fiesta.
+ */
+function AvisoAcostar() {
+  const [dePie, setDePie] = useState(
+    () => typeof window !== 'undefined' && window.innerHeight > window.innerWidth
+  )
+
+  useEffect(() => {
+    const mirar = () => setDePie(window.innerHeight > window.innerWidth)
+    window.addEventListener('resize', mirar)
+    window.addEventListener('orientationchange', mirar)
+    mirar()
+    return () => {
+      window.removeEventListener('resize', mirar)
+      window.removeEventListener('orientationchange', mirar)
+    }
+  }, [])
+
+  if (!dePie) return null
+  return (
+    <p className="grupal-acostar" role="status">
+      🔄 <strong>Pon la tablet acostada</strong> para que salgan todos
+    </p>
+  )
+}
+
+/**
+ * Vista previa de la foto de todos.
+ *
+ * Mucho mas simple que la de Asomate y a proposito: una foto, sin mandos. En Asomate los
+ * mandos existen porque la cara tiene que caer dentro de un hueco de pocos pixeles; aca la
+ * foto llena un rectangulo grande y moverla solo sirve para empeorarla.
+ */
+function GrupalPreview({ foto, onRetry, onSave }) {
+  const [compuesta, setCompuesta] = useState(null)
+  const [sinMarco, setSinMarco] = useState(false)
+
+  useEffect(() => {
+    let vivo = true
+    const cargar = (src) =>
+      new Promise((ok) => {
+        if (!src) return ok(null)
+        const i = new Image()
+        i.onload = () => ok(i)
+        i.onerror = () => ok(null)
+        i.src = src
+      })
+    Promise.all([
+      cargar(CONFIG.grupal?.fondo),
+      cargar(foto),
+      ensureCanvasFonts(),
+      preloadBrandLogo(),
+    ]).then(([fondo, img]) => {
+      if (!vivo) return
+      try {
+        // `tituloAsomate(null, 2)` es el texto de grupo: "El cumple de X y sus amigos".
+        setCompuesta(componerGrupal(fondo, img, CONFIG.grupal?.frameBox, tituloAsomate(null, 2)))
+      } catch (e) {
+        // Si componer falla, la foto del grupo sigue siendo la foto del grupo: se muestra sin
+        // marco y se puede guardar. Antes una excepción acá dejaba "Preparando la foto…" fijo
+        // para siempre, sin aviso y sin salida, con doce personas esperando.
+        console.error('no se pudo componer la foto grupal', e)
+        setSinMarco(true)
+        setCompuesta(foto)
+      }
+    })
+    return () => {
+      vivo = false
+    }
+  }, [foto])
+
+  return (
+    <section className="screen screen--preview">
+      <h2 className="preview-title">{CONFIG.grupal?.titulo || 'La foto de todos'}</h2>
+      {compuesta
+        ? <img className="preview-img" src={compuesta} alt="La foto de todos" />
+        : <p className="muted">Preparando la foto…</p>}
+      {sinMarco && <p className="muted">No se pudo poner el marco, pero la foto está lista para guardar.</p>}
+      <div className="preview-actions">
+        <button className="cta cta--ghost" onClick={onRetry}>Repetir</button>
+        <button
+          className="cta"
+          disabled={!compuesta}
+          onClick={() => {
+            if (!compuesta) return
+            // A la tablet antes que al servidor: esta foto es de doce personas y no se
+            // repite, así que perderla por el wifi es el peor caso de toda la fiesta.
+            guardarEnLaTablet(compuesta, `grupal-${nombreEvento() || 'fiesta'}`)
+            onSave(compuesta)
+          }}
+        >
+          Guardar
+        </button>
+      </div>
+    </section>
+  )
+}
+
+function AsomatePreview({ elenco, fotos, invitado, onRetry, onSave }) {
+  const [compuesta, setCompuesta] = useState(null)
+  const [ajustes, setAjustes] = useState(() => elenco.map(() => ({ zoom: 1, dx: 0, dy: 0 })))
+  const [quien, setQuien] = useState(0)
+  const recursos = useRef(null)
+
+  useEffect(() => {
+    let vivo = true
+    const cargar = (src) =>
+      new Promise((ok) => {
+        if (!src) return ok(null)
+        const i = new Image()
+        i.onload = () => ok(i)
+        i.onerror = () => ok(null)
+        i.src = src
+      })
+    Promise.all([
+      cargar(CONFIG.asomate?.fondo),
+      Promise.all(elenco.map((p) => cargar(p.png))),
+      Promise.all(fotos.map((f) => cargar(f))),
+      ensureCanvasFonts(),
+      preloadBrandLogo(),
+    ]).then(async ([fondo, pngs, imgs]) => {
+      if (!vivo) return
+      recursos.current = { fondo, pngs, imgs }
+      setAjustes((a) => [...a]) // dispara el redibujo con los recursos ya cargados
+      // Ajuste automático: se busca la cara en cada foto y los mandos parten de ahí. Con
+      // seis personajes probados en la tablet, solo Spidey salía bien al centro y tamaño
+      // fijos (Luis, 2026-09-10). Si el detector no está o no ve nada, quedan como estaban.
+      const caras = await Promise.all(imgs.map((img) => (img ? detectarCara(img, { base: BASE }) : null)))
+      if (!vivo) return
+      setAjustes((a) =>
+        a.map((ajuste, i) => {
+          const auto = caras[i] && imgs[i] ? ajusteParaCara(caras[i], imgs[i], elenco[i]) : null
+          return auto || ajuste
+        })
+      )
+    })
+    return () => {
+      vivo = false
+    }
+  }, [elenco, fotos])
+
+  useEffect(() => {
+    const r = recursos.current
+    if (!r) return
+    const lista = elenco.map((personaje, i) => ({
+      personaje,
+      png: r.pngs[i],
+      foto: r.imgs[i],
+      ajuste: ajustes[i],
+    }))
+    setCompuesta(componerAsomate(r.fondo, lista, tituloAsomate(invitado, elenco.length)))
+  }, [ajustes, elenco, invitado])
+
+  const mover = (clave, valor) =>
+    setAjustes((a) => a.map((x, i) => (i === quien ? { ...x, [clave]: valor } : x)))
+
+  /**
+   * Guarda la foto y, con ella, la escena que va a llevar el diploma.
+   *
+   * El diploma NO usa la ilustracion del personaje (eso es lo que hace el diploma de la
+   * ruleta, donde no existe ninguna foto del nino con el personaje). Aca la gracia es que
+   * el nino se convirtio en heroe, asi que esa misma escena es la que va enmarcada.
+   *
+   * Se recompone en vez de reusar la foto: mas chica y sin titulo al pie, para que el
+   * encabezado y el nombre del diploma no le tapen la cara ni le corten los pies.
+   */
+  const guardar = () => {
+    const r = recursos.current
+    if (!compuesta || !r) return
+    const lista = elenco.map((personaje, i) => ({
+      personaje,
+      png: r.pngs[i],
+      foto: r.imgs[i],
+      ajuste: ajustes[i],
+    }))
+    const paraDiploma = componerAsomate(r.fondo, lista, '', {
+      banda: { alto: 0.5, suelo: 0.79 },
+      marca: false,
+    })
+    // Primero a la tablet y después al servidor, igual que la cabina: si el wifi se cae, la
+    // foto ya está en el aparato. Hasta hoy Asómate no dejaba ninguna copia y, si la subida
+    // fallaba, la pantalla igual decía que la descarga local estaba segura.
+    guardarEnLaTablet(compuesta, `asomate-${invitado || 'invitados'}`)
+    onSave(compuesta, paraDiploma)
+  }
+
+  const mando = (clave, min, max, etiqueta) => {
+    const valor = ajustes[quien]?.[clave] ?? 0
+    // El ajuste automático puede dejar el valor fuera del recorrido normal (una cara en la
+    // esquina del cuadro se corre varios huecos): el mando se estira para incluirlo.
+    const desde = Math.min(min, valor - 0.5)
+    const hasta = Math.max(max, valor + 0.5)
+    return (
+      <label className="asomate-mando">
+        <span>{etiqueta}</span>
+        <input
+          type="range"
+          min={desde}
+          max={hasta}
+          step="0.01"
+          value={valor}
+          onChange={(e) => mover(clave, parseFloat(e.target.value))}
+        />
+      </label>
+    )
+  }
+
+  return (
+    <section className="screen preview asomate-preview">
+      {compuesta ? (
+        <img className="preview-img" src={compuesta} alt="Tu foto con el personaje" />
+      ) : (
+        <div className="loading">Preparando tu foto…</div>
+      )}
+      <div className="asomate-mandos">
+        {elenco.length > 1 && (
+          <div className="asomate-quien" role="group" aria-label="A quién ajustar">
+            {elenco.map((p, i) => (
+              <button
+                key={i}
+                className="cta asomate-quien__btn"
+                aria-pressed={quien === i}
+                onClick={() => setQuien(i)}
+              >
+                {p.emoji} {i + 1}
+              </button>
+            ))}
+          </div>
+        )}
+        {mando('zoom', 0.45, 3.5, '🔍 Tamaño')}
+        {mando('dx', -1.2, 1.2, '↔ Izquierda o derecha')}
+        {mando('dy', -1.2, 1.2, '↕ Subir o bajar')}
+      </div>
+      <div className="preview-bar">
+        <button className="cta ghost" onClick={onRetry}>
+          🔄 Otra vez
+        </button>
+        <button className="cta" onClick={guardar} disabled={!compuesta}>
+          💾 Guardar
+        </button>
+      </div>
     </section>
   )
 }
@@ -1701,15 +2528,105 @@ function VideoJuegoEstrella({ src, personaje, onDone }) {
 }
 
 /* ============================================================
+   0) PANTALLA COMPLETA — lo mismo que hacen los juegos
+   ============================================================ */
+
+/**
+ * Si el navegador de la tablet sabe hacerlo. iPad no: Safari solo deja pantalla completa a
+ * los videos, y ahí el botón no se dibuja en vez de quedar como un botón que no hace nada.
+ */
+function pantallaCompletaDisponible() {
+  if (typeof document === 'undefined') return false
+  const raiz = document.documentElement
+  return Boolean(raiz.requestFullscreen || raiz.webkitRequestFullscreen)
+}
+
+function pantallaCompletaActiva() {
+  if (typeof document === 'undefined') return false
+  return Boolean(document.fullscreenElement || document.webkitFullscreenElement)
+}
+
+/**
+ * 🔴 Esto SOLO funciona dentro de un gesto de la persona. Llamarlo al cargar la pantalla o
+ * al girar la tablet no hace nada: el navegador lo rechaza y no avisa. Por eso se llama
+ * desde los toques de la bienvenida y no desde un efecto.
+ */
+function entrarPantallaCompleta() {
+  const raiz = typeof document !== 'undefined' ? document.documentElement : null
+  const pedir = raiz && (raiz.requestFullscreen || raiz.webkitRequestFullscreen)
+  if (!pedir || pantallaCompletaActiva()) return
+  try {
+    const r = pedir.call(raiz, { navigationUI: 'hide' })
+    if (r && typeof r.catch === 'function') r.catch(() => {})
+  } catch {
+    /* el navegador puede negarse; el kiosco sigue funcionando igual */
+  }
+}
+
+function salirPantallaCompleta() {
+  const fin = document.exitFullscreen || document.webkitExitFullscreen
+  if (!fin || !pantallaCompletaActiva()) return
+  try {
+    const r = fin.call(document)
+    if (r && typeof r.catch === 'function') r.catch(() => {})
+  } catch {
+    /* idem */
+  }
+}
+
+/**
+ * El botón de pantalla completa de la bienvenida.
+ *
+ * Sirve también para SALIR, que es la mitad que suele faltar: en la tablet se sale
+ * deslizando desde el borde de arriba y quien atiende la fiesta no tiene por qué saberlo.
+ */
+function PantallaCompleta() {
+  const [activa, setActiva] = useState(pantallaCompletaActiva)
+
+  useEffect(() => {
+    const mirar = () => setActiva(pantallaCompletaActiva())
+    document.addEventListener('fullscreenchange', mirar)
+    document.addEventListener('webkitfullscreenchange', mirar)
+    return () => {
+      document.removeEventListener('fullscreenchange', mirar)
+      document.removeEventListener('webkitfullscreenchange', mirar)
+    }
+  }, [])
+
+  if (!pantallaCompletaDisponible()) return null
+
+  const texto = activa ? 'Salir de pantalla completa' : 'Pantalla completa'
+  return (
+    <button
+      className="intro-pantalla"
+      type="button"
+      aria-label={texto}
+      aria-pressed={activa}
+      title={texto}
+      onClick={(event) => {
+        event.stopPropagation()
+        if (activa) salirPantallaCompleta()
+        else entrarPantallaCompleta()
+      }}
+    >
+      <span aria-hidden="true">{activa ? '\u2921' : '\u26f6'}</span>
+    </button>
+  )
+}
+
+/* ============================================================
    1) INTRO — gate de toque (desbloquea audio/autoplay)
    ============================================================ */
-function Intro({ onStart }) {
+function Intro({ onStart, onAsomate, onGrupal }) {
   const start = () => {
     // desbloquea audio con un sonido silencioso dentro del gesto
     try {
       const a = new Audio()
       a.play().catch(() => {})
     } catch {}
+    // Y aprovecha el mismo gesto para la pantalla completa: fuera de un toque, el navegador
+    // la rechaza. Nadie tiene que acordarse de apretar nada.
+    entrarPantallaCompleta()
     onStart()
   }
   return (
@@ -1720,6 +2637,25 @@ function Intro({ onStart }) {
     >
       <div className="intro-veil" />
       <CumpleClickBrand className="intro-brand" inverse />
+      <PantallaCompleta />
+      {/* La foto de todos: icono chico abajo a la izquierda para no tapar la decoración.
+          La dispara un adulto una o dos veces en la fiesta; los botones grandes son los que
+          tocan los niños toda la tarde, y darles el mismo peso era equivocado. */}
+      {CONFIG.grupal && (
+        <button
+          className="intro-grupal"
+          type="button"
+          aria-label={CONFIG.grupal?.titulo || 'Foto grupal'}
+          title={CONFIG.grupal?.titulo || 'Foto grupal'}
+          onClick={(event) => {
+            event.stopPropagation()
+            entrarPantallaCompleta()
+            onGrupal()
+          }}
+        >
+          <span aria-hidden="true">📸</span>
+        </button>
+      )}
       <div className="intro-content">
         <h1 className="intro-title">
           {/* Un baby shower no es "la fiesta de Valentina": Valentina todavia
@@ -1740,11 +2676,9 @@ function Intro({ onStart }) {
           </div>
           <span>¡A celebrar!</span>
         </div>
-        {nombreEvento() !== '' && (
-          <p className="intro-cake-name" aria-label={eventoFraseEn()}>
-            {nombreEvento()}
-          </p>
-        )}
+        {/* La etiqueta con el nombre sobre la torta se quitó (Luis, 2026-09-09): el nombre
+            ya está en el titular de arriba, y en Spidey la etiqueta caía sobre el texto del
+            botón de entrar. El CSS .intro-cake-name se deja por si se quiere recuperar. */}
         <div className="intro-bottom">
           <button
             className="cta pulse"
@@ -1765,6 +2699,20 @@ function Intro({ onStart }) {
               }}
             >
               🎮 Aventura 3D
+            </button>
+          )}
+          {/* Solo si la tematica trae recortes con hueco (CONFIG.asomate). Una tematica
+              sin eso no muestra el boton y se comporta exactamente como antes. */}
+          {CONFIG.asomate && (
+            <button
+              className="cta cta--asomate"
+              onClick={(event) => {
+                event.stopPropagation()
+                entrarPantallaCompleta()
+                onAsomate()
+              }}
+            >
+              {CONFIG.asomate?.boton || '🦸 Asómate y sé el héroe'}
             </button>
           )}
         </div>
@@ -1822,6 +2770,10 @@ function CumpleClickBrand({ className = '', inverse = false }) {
 /* ============================================================
    2/6) VIDEO (saludo / despedida) — resiliente si falta el archivo
    ============================================================ */
+// Cuánto se le espera al video antes de mostrar la tarjeta. Con el archivo ya en memoria
+// arranca en el acto; esto solo manda cuando hubo que ir a buscarlo a la red.
+const VIDEO_ESPERA_MS = 6000
+
 function VideoScreen({ src, onDone, skipLabel, finale }) {
   const vRef = useRef(null)
   const [failed, setFailed] = useState(false)
@@ -1835,11 +2787,17 @@ function VideoScreen({ src, onDone, skipLabel, finale }) {
   useEffect(() => {
     const v = vRef.current
     if (!v) return
-    v.play().catch(() => {})
-    // red de seguridad: si el video no carga en 1.2s, no bloquear el flujo
+    // Si el navegador no deja reproducir (autoplay bloqueado), un cuadro quieto no sirve de
+    // despedida: mejor la tarjeta, que avanza sola.
+    v.play().catch(() => setFailed(true))
+    // Red de seguridad: si el video no carga, no bloquear el flujo. Antes eran 1,2 s fijos y
+    // en el wifi del salón la despedida de spidey (2,7 MB) no alcanzaba a tener el primer
+    // cuadro: se veía la tarjeta en vez del video. Ahora se espera VIDEO_ESPERA_MS; lo normal
+    // es que ni se note, porque la despedida viene bajada de antemano (videoListo.js). Un
+    // archivo que falta sigue cayendo al instante por onError, y el botón de saltar sigue ahí.
     const t = setTimeout(() => {
       if (v.readyState < 2 && !doneRef.current) setFailed(true)
-    }, 1200)
+    }, VIDEO_ESPERA_MS)
     return () => clearTimeout(t)
   }, [])
 
@@ -2320,6 +3278,16 @@ function JuegoFichas({ config, invitado, personaje, onDone }) {
   const total = cols * filas
   const [orden, setOrden] = useState(() => barajarPiezas(total))
   const [elegida, setElegida] = useState(null)
+  // Arrastre (2026-09-15): en la fiesta los niños arrastraban las piezas en vez de tocar dos.
+  // { desde, x0, y0, x, y, movido, lado, sobre }: la pieza que se levantó, dónde empezó el
+  // dedo, dónde va, si ya se movió lo suficiente para ser arrastre, el tamaño de la ficha
+  // fantasma y la casilla que hay debajo del dedo. Tocar dos piezas sigue funcionando.
+  const [arrastre, setArrastre] = useState(null)
+  // La misma información en un ref: los oyentes de la ventana la leen sin cerrar sobre un
+  // render viejo, y así no hay efectos secundarios dentro de un actualizador de estado.
+  const arrastreRef = useRef(null)
+  const fijarArrastre = (v) => { arrastreRef.current = v; setArrastre(v) }
+  const tableroRef = useRef(null)
   const [esRecord, setEsRecord] = useState(false)
   // En los rompecabezas no hay puntaje: el récord es el MEJOR TIEMPO, y por
   // eso se guarda con modo 'menor'.
@@ -2352,15 +3320,62 @@ function JuegoFichas({ config, invitado, personaje, onDone }) {
       setElegida(null)
       return
     }
-    setOrden((prev) => {
-      const next = [...prev]
-      ;[next[elegida], next[pos]] = [next[pos], next[elegida]]
-      return next
-    })
+    setOrden((prev) => intercambiar(prev, elegida, pos))
     setElegida(null)
   }
 
+  // Levantar una pieza. Si el dedo se mueve más de UMBRAL_ARRASTRE_PX es un arrastre y al
+  // soltar se cambia por la casilla que quede debajo; si no se movió, es el toque de siempre.
+  const levantar = (pos) => (e) => {
+    if (listo || arrastreRef.current) return
+    const rect = tableroRef.current?.getBoundingClientRect()
+    const lado = rect ? rect.width / cols : 0
+    fijarArrastre({ desde: pos, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, movido: false, lado, sobre: pos })
+  }
+
+  useEffect(() => {
+    if (!arrastre) return undefined
+    const mover = (e) => {
+      const prev = arrastreRef.current
+      if (!prev) return
+      const movido = prev.movido || esArrastre(e.clientX - prev.x0, e.clientY - prev.y0)
+      const rect = tableroRef.current?.getBoundingClientRect()
+      const sobre = movido ? celdaBajoPunto(rect, cols, filas, e.clientX, e.clientY) : prev.sobre
+      fijarArrastre({ ...prev, x: e.clientX, y: e.clientY, movido, sobre })
+    }
+    const soltar = (e) => {
+      const prev = arrastreRef.current
+      if (!prev) return
+      fijarArrastre(null)
+      if (!prev.movido) {
+        tocar(prev.desde)
+        return
+      }
+      const rect = tableroRef.current?.getBoundingClientRect()
+      const hasta = celdaBajoPunto(rect, cols, filas, e.clientX, e.clientY)
+      if (hasta >= 0 && hasta !== prev.desde) {
+        setOrden((orden) => intercambiar(orden, prev.desde, hasta))
+        setElegida(null)
+      }
+    }
+    window.addEventListener('pointermove', mover)
+    window.addEventListener('pointerup', soltar)
+    window.addEventListener('pointercancel', soltar)
+    return () => {
+      window.removeEventListener('pointermove', mover)
+      window.removeEventListener('pointerup', soltar)
+      window.removeEventListener('pointercancel', soltar)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrastre?.desde, cols, filas])
+
   const bienPuestas = orden.filter((v, i) => v === i).length
+  const fondoPieza = (pieza) => ({
+    backgroundImage: `url("${config.image}")`,
+    backgroundSize: `${cols * 100}% ${filas * 100}%`,
+    backgroundPosition: `${cols > 1 ? ((pieza % cols) * 100) / (cols - 1) : 0}% ${filas > 1 ? (Math.floor(pieza / cols) * 100) / (filas - 1) : 0}%`,
+  })
+  const arrastrando = arrastre && arrastre.movido
 
   if (!config.image) {
     // Sin imagen publicada no hay rompecabezas posible: se avanza sin trabar
@@ -2383,7 +3398,8 @@ function JuegoFichas({ config, invitado, personaje, onDone }) {
       </div>
 
       {/* Pista: cómo debe quedar armado. Una vez resuelto sobra — el propio
-          tablero ya es la imagen completa. */}
+          tablero ya es la imagen completa. Va grande y arriba del tablero: en la
+          fiesta la miniatura de 56 px no se veía (Luis, 2026-09-15). */}
       {!listo && (
         <div className="juego-pista">
           <span className="juego-pista__etiqueta">Así se ve</span>
@@ -2396,32 +3412,34 @@ function JuegoFichas({ config, invitado, personaje, onDone }) {
       <p className="juego-sub">
         {listo
           ? `${personaje?.name || 'Tu amigo'} está listo para la foto`
-          : `${invitado ? invitado + ', t' : 'T'}oca dos piezas para cambiarlas`}
+          : `${invitado ? invitado + ', a' : 'A'}rrastra una pieza sobre otra para cambiarlas`}
       </p>
 
       <div
-        className={`puzzle-tablero${listo ? ' puzzle-tablero--listo' : ''}`}
+        ref={tableroRef}
+        className={`puzzle-tablero${listo ? ' puzzle-tablero--listo' : ''}${arrastrando ? ' puzzle-tablero--arrastrando' : ''}`}
         style={{ '--puzzle-cols': cols, '--puzzle-filas': filas }}
       >
-        {orden.map((pieza, pos) => {
-          const col = pieza % cols
-          const fila = Math.floor(pieza / cols)
-          return (
-            <button
-              key={pos}
-              type="button"
-              className={`puzzle-pieza${elegida === pos ? ' puzzle-pieza--elegida' : ''}${pieza === pos ? ' puzzle-pieza--ok' : ''}`}
-              onClick={() => tocar(pos)}
-              aria-label={`Pieza ${pos + 1}`}
-              style={{
-                backgroundImage: `url("${config.image}")`,
-                backgroundSize: `${cols * 100}% ${filas * 100}%`,
-                backgroundPosition: `${cols > 1 ? (col * 100) / (cols - 1) : 0}% ${filas > 1 ? (fila * 100) / (filas - 1) : 0}%`,
-              }}
-            />
-          )
-        })}
+        {orden.map((pieza, pos) => (
+          <button
+            key={pos}
+            type="button"
+            className={`puzzle-pieza${elegida === pos ? ' puzzle-pieza--elegida' : ''}${pieza === pos ? ' puzzle-pieza--ok' : ''}${arrastrando && arrastre.desde === pos ? ' puzzle-pieza--origen' : ''}${arrastrando && arrastre.sobre === pos && arrastre.desde !== pos ? ' puzzle-pieza--destino' : ''}`}
+            onPointerDown={levantar(pos)}
+            aria-label={`Pieza ${pos + 1}`}
+            style={fondoPieza(pieza)}
+          />
+        ))}
       </div>
+
+      {/* Ficha fantasma que sigue al dedo mientras se arrastra. */}
+      {arrastrando && (
+        <span
+          className="puzzle-fantasma"
+          aria-hidden="true"
+          style={{ left: arrastre.x, top: arrastre.y, width: arrastre.lado, height: arrastre.lado, ...fondoPieza(orden[arrastre.desde]) }}
+        />
+      )}
 
       {listo && <button className="cta pulse" onClick={finish}>Ahora sí, mi foto 📸</button>}
 
@@ -3141,7 +4159,35 @@ function TransicionWow({ invitado, personaje, onDone }) {
 /* ============================================================
    4) CAPTURE — webcam en vivo + capturar
    ============================================================ */
-function Capture({ onCapture }) {
+/**
+ * La guía de Asómate sobre la cámara: el óvalo donde va a caer el hueco del personaje, con
+ * el resto del cuadro oscurecido para que el niño ponga la cara ahí. Es una capa aparte del
+ * video: la foto se captura del video y la guía nunca sale en ella. El óvalo es simétrico,
+ * así que da lo mismo que la vista en vivo esté espejada.
+ */
+function GuiaAsomate({ personaje, caja }) {
+  const g = guiaEnPantalla(personaje, caja, caja)
+  return (
+    <svg
+      className="cam-guia"
+      viewBox={`0 0 ${caja.ancho} ${caja.alto}`}
+      width={caja.ancho}
+      height={caja.alto}
+      aria-hidden="true"
+    >
+      <defs>
+        <mask id="cam-guia-hueco">
+          <rect width="100%" height="100%" fill="#fff" />
+          <ellipse cx={g.cx} cy={g.cy} rx={g.rx} ry={g.ry} fill="#000" />
+        </mask>
+      </defs>
+      <rect width="100%" height="100%" fill="rgba(0,0,0,0.45)" mask="url(#cam-guia-hueco)" />
+      <ellipse className="cam-guia__borde" cx={g.cx} cy={g.cy} rx={g.rx} ry={g.ry} />
+    </svg>
+  )
+}
+
+function Capture({ onCapture, guia }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [error, setError] = useState(null)
@@ -3150,6 +4196,32 @@ function Capture({ onCapture }) {
   const [attempt, setAttempt] = useState(0) // reintentos sin recargar la página
   const [cameras, setCameras] = useState([])
   const [selectedCamera, setSelectedCamera] = useState('')
+  // Asómate: la caja del video y el tamaño del cuadro, para ubicar la guía. Se mide cuando
+  // la cámara ya entrega imagen y cada vez que la caja cambia (giro de la tablet, barra del
+  // navegador que aparece o se esconde).
+  const [cajaGuia, setCajaGuia] = useState(null)
+
+  useEffect(() => {
+    if (!guia || !ready) return undefined
+    const video = videoRef.current
+    const medir = () => {
+      if (!video || !video.videoWidth) return
+      setCajaGuia({
+        ancho: video.clientWidth,
+        alto: video.clientHeight,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+      })
+    }
+    medir()
+    window.addEventListener('resize', medir)
+    const observador = typeof ResizeObserver !== 'undefined' && video ? new ResizeObserver(medir) : null
+    if (observador) observador.observe(video)
+    return () => {
+      window.removeEventListener('resize', medir)
+      if (observador) observador.disconnect()
+    }
+  }, [guia, ready])
 
   useEffect(() => {
     let cancelled = false
@@ -3308,6 +4380,7 @@ function Capture({ onCapture }) {
       ) : (
         <>
           <video ref={videoRef} className="cam mirror" playsInline muted autoPlay />
+          {guia && ready && cajaGuia && <GuiaAsomate personaje={guia} caja={cajaGuia} />}
           {!ready && (
             <div className="cam-waiting">
               <div className="big-emoji">📷</div>
@@ -3320,7 +4393,9 @@ function Capture({ onCapture }) {
             <button className="shutter" onClick={startCountdown} aria-label="Capturar foto" disabled={!ready}>
               📸
             </button>
-            <p className="capture-hint">¡Sonríe! Toca el botón</p>
+            <p className="capture-hint">
+              {guia ? 'Pon tu cara dentro del óvalo y toca el botón' : '¡Sonríe! Toca el botón'}
+            </p>
           </div>
         </>
       )}
@@ -3344,6 +4419,59 @@ function roundedSquarePath(ctx, x, y, size, radius) {
   ctx.lineTo(x, y + r)
   ctx.quadraticCurveTo(x, y, x + r, y)
   ctx.closePath()
+}
+
+/**
+ * Como sale del lienzo la foto que se entrega y se sube.
+ *
+ * JPEG y no PNG: el PNG de una foto de 1080x1920 pesa ~2,2 MB y el mismo lienzo en JPEG 92
+ * pesa ~350 KB. Seis veces menos por el wifi del salon, que es donde el invitado decide si
+ * guarda la foto o se aburre. La perdida existe —JPEG siempre pierde— pero medida sobre una
+ * foto real da 1 punto de error sobre 255, y ampliando 3x el texto (lo peor para JPEG) no se
+ * distingue del PNG. Por debajo de 90 si aparece halo en las letras, por eso 92 y no menos.
+ *
+ * La captura de la camara NO pasa por aca: se compone desde ella y comprimirla antes seria
+ * una perdida de mas, sin ganar nada.
+ */
+const CALIDAD_JPEG = 0.92
+/**
+ * La extension que de verdad tiene el archivo, leida del propio data URL.
+ *
+ * Escrita a mano se desincroniza: al pasar el kiosco a JPEG, las descargas siguieron
+ * llamandose ".png" y en la galeria publica el mismo desfase hizo que "Emilia.jpg" no
+ * calzara con la invitada Emilia.
+ */
+function extensionDe(dataUrl) {
+  return /^data:image\/png/i.test(dataUrl || '') ? 'png' : 'jpg'
+}
+
+function exportarFoto(canvas) {
+  return canvas.toDataURL('image/jpeg', CALIDAD_JPEG)
+}
+
+/**
+ * Baja la foto a la tablet. Es el respaldo de la fiesta: si el wifi del salón se cae, la
+ * foto ya está en el aparato y se recupera después.
+ *
+ * 🔴 Se llama ANTES de subir, nunca después. Un corte entre las dos deja la foto sin
+ * ninguna copia, y el niño ya se fue.
+ *
+ * Devuelve si se pudo: el navegador puede negarse (una pestaña sin permiso de descarga), y
+ * quien llame tiene que poder decir la verdad en vez de prometer un respaldo que no existe.
+ */
+function guardarEnLaTablet(imagen, nombre) {
+  if (!imagen) return false
+  try {
+    const a = document.createElement('a')
+    a.href = imagen
+    a.download = `${nombre}-${Date.now()}.${extensionDe(imagen)}`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    return true
+  } catch {
+    return false
+  }
 }
 
 function composeImage(bgImg, photoImg, invitado = '', charImg = null, charName = '') {
@@ -3503,7 +4631,7 @@ function composeImage(bgImg, photoImg, invitado = '', charImg = null, charName =
 
   drawBrandWatermark(ctx, W, H)
 
-  return c.toDataURL('image/png')
+  return exportarFoto(c)
 }
 
 /**
@@ -3744,12 +4872,7 @@ function Preview({ photo, bgRef, invitado, personaje, onRetry, onSave }) {
 
   const save = () => {
     if (!composed) return
-    const a = document.createElement('a')
-    a.href = composed
-    a.download = `foto-${invitado}-${Date.now()}.png`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
+    guardarEnLaTablet(composed, `foto-${invitado || 'invitado'}`)
     playSound(CONFIG.audio.confetti)
     burstConfetti(confRef.current, { duration: 2600, count: 180 })
     setTimeout(() => onSave(composed), REDUCE_MOTION ? 300 : 1600)
@@ -3813,7 +4936,7 @@ function uploadErrorMessage(error) {
   return 'No pudimos subir la foto. Revisa la conexión y vuelve a intentarlo; la descarga local no se perdió.'
 }
 
-function QRScreen({ imageDataUrl, invitado, isBabyShower = false, onDiploma, onDone }) {
+function QRScreen({ imageDataUrl, invitado, archivarComo = null, isBabyShower = false, onDiploma, onDone }) {
   const [qrUrl, setQrUrl] = useState(null)
   const [mode, setMode] = useState('loading') // loading | ready | error
   const [errorText, setErrorText] = useState('')
@@ -3835,7 +4958,9 @@ function QRScreen({ imageDataUrl, invitado, isBabyShower = false, onDiploma, onD
       })
 
     // Solo se muestra QR si el backend confirmó una URL pública real.
-    uploadPhoto(imageDataUrl, invitado)
+    // `archivarComo` existe para la foto grupal: no tiene dueno y con `invitado` quedaria
+    // archivada a nombre del ultimo nino que jugo.
+    uploadPhoto(imageDataUrl, archivarComo || invitado)
       .then((publicUrl) => makeQR(publicUrl, 'M'))
       .then((q) => {
         if (!alive) return
@@ -4066,10 +5191,10 @@ function composeRecuerdito(invitado = '', prediction = null, score = 0, backgrou
   }
   ctx.fillText(cierre, W / 2, H * 0.875)
   drawBrandWatermark(ctx, W, H)
-  return canvas.toDataURL('image/png')
+  return exportarFoto(canvas)
 }
 
-function composeDiploma(invitado = '', winnerImage = null) {
+function composeDiploma(invitado = '', winnerImage = null, heroeImagen = null) {
   const W = 1080
   const H = 1920
   const c = document.createElement('canvas')
@@ -4091,9 +5216,34 @@ function composeDiploma(invitado = '', winnerImage = null) {
   ctx.fillStyle = bgGrad
   ctx.fillRect(0, 0, W, H)
 
+  // Con Asomate, el protagonista es la foto del niño hecho héroe, y el diploma se arma
+  // alrededor de ella. La ilustración del personaje solo entra cuando esa foto no existe,
+  // que es el caso del flujo de la ruleta.
+  const hayHeroe = heroeImagen && heroeImagen.complete && (heroeImagen.naturalWidth || heroeImagen.width)
+  if (hayHeroe) {
+    // La escena viene en 9:16, el mismo lienzo del diploma: entra entera, sin recorte y sin
+    // deformarse. Sin veladura encima: acá la foto ES el diploma, no su fondo.
+    ctx.drawImage(heroeImagen, 0, 0, W, H)
+    // Degradados arriba y abajo, no paneles con borde: el texto necesita fondo para leerse,
+    // pero un recuadro opaco encima parte la escena en dos. La figura se compuso dentro de
+    // la banda 0,29-0,79 justamente para caber entre los dos degradados.
+    const velArriba = ctx.createLinearGradient(0, 0, 0, H * 0.32)
+    velArriba.addColorStop(0, 'rgba(10,6,22,0.80)')
+    velArriba.addColorStop(0.7, 'rgba(10,6,22,0.42)')
+    velArriba.addColorStop(1, 'rgba(10,6,22,0)')
+    ctx.fillStyle = velArriba
+    ctx.fillRect(0, 0, W, H * 0.32)
+    const velAbajo = ctx.createLinearGradient(0, H * 0.74, 0, H)
+    velAbajo.addColorStop(0, 'rgba(10,6,22,0)')
+    velAbajo.addColorStop(0.35, 'rgba(10,6,22,0.52)')
+    velAbajo.addColorStop(1, 'rgba(10,6,22,0.86)')
+    ctx.fillStyle = velAbajo
+    ctx.fillRect(0, H * 0.74, W, H * 0.26)
+  }
+
   // El personaje ganador de la ruleta protagoniza el Diploma. La veladura
   // cálida mantiene el texto legible sin esconder la escena de celebración.
-  const hasWinnerBackground = winnerImage && winnerImage.complete && (winnerImage.naturalWidth || winnerImage.width)
+  const hasWinnerBackground = !hayHeroe && winnerImage && winnerImage.complete && (winnerImage.naturalWidth || winnerImage.width)
   if (hasWinnerBackground) {
     ctx.save()
     drawImageCover(ctx, winnerImage, 0, 0, W, H)
@@ -4106,9 +5256,10 @@ function composeDiploma(invitado = '', winnerImage = null) {
     ctx.restore()
   }
 
-  // Confeti sutil de fondo (paleta de la temática)
+  // Confeti sutil de fondo (paleta de la temática). Con la foto del héroe no va: le queda
+  // salpicada encima y ensucia la única imagen que importa.
   const rand = mulberry32(1234567)
-  for (let i = 0; i < 46; i++) {
+  for (let i = 0; !hayHeroe && i < 46; i++) {
     const rx = rand() * W
     const ry = rand() * H
     const rr = 4 + rand() * 7
@@ -4122,7 +5273,7 @@ function composeDiploma(invitado = '', winnerImage = null) {
   }
 
   // Marca de agua de respaldo: con ganador se usa su ilustración completa.
-  if (!hasWinnerBackground && GRUPO_IMG && GRUPO_IMG.complete && GRUPO_IMG.naturalWidth) {
+  if (!hayHeroe && !hasWinnerBackground && GRUPO_IMG && GRUPO_IMG.complete && GRUPO_IMG.naturalWidth) {
     const imgAspect = GRUPO_IMG.naturalWidth / GRUPO_IMG.naturalHeight
     const maxW = W * 0.85
     const maxH = H * 0.65
@@ -4135,22 +5286,58 @@ function composeDiploma(invitado = '', winnerImage = null) {
     ctx.restore()
   }
 
-  // Marco decorativo dorado (doble línea)
   const pad = W * 0.055
-  ctx.save()
-  ctx.strokeStyle = '#c6922e'
-  ctx.lineWidth = W * 0.012
-  roundRectPath(ctx, pad, pad, W - pad * 2, H - pad * 2, W * 0.05)
-  ctx.stroke()
-  const pad2 = pad + W * 0.02
-  ctx.strokeStyle = '#fbe7ab'
-  ctx.lineWidth = W * 0.004
-  roundRectPath(ctx, pad2, pad2, W - pad2 * 2, H - pad2 * 2, W * 0.044)
-  ctx.stroke()
-  ctx.restore()
+  if (hayHeroe) {
+    // Moldura, no un borde: una banda ancha con degradado y un filete claro por fuera y uno
+    // oscuro por dentro. Los dos filetes son lo que hace que se lea como un marco de cuadro
+    // y no como una línea dorada dibujada sobre la foto.
+    const oro = ctx.createLinearGradient(0, 0, W, H)
+    oro.addColorStop(0, '#f7dc85')
+    oro.addColorStop(0.34, '#c6922e')
+    oro.addColorStop(0.62, '#fbeab4')
+    oro.addColorStop(1, '#a97620')
+    const m = W * 0.046
+    const banda = W * 0.034
+    ctx.save()
+    ctx.shadowColor = 'rgba(0,0,0,0.55)'
+    ctx.shadowBlur = W * 0.022
+    ctx.strokeStyle = oro
+    ctx.lineWidth = banda
+    roundRectPath(ctx, m, m, W - m * 2, H - m * 2, W * 0.045)
+    ctx.stroke()
+    ctx.shadowColor = 'transparent'
+    ctx.lineWidth = W * 0.0045
+    const fuera = m - banda / 2
+    ctx.strokeStyle = 'rgba(255,247,214,0.92)'
+    roundRectPath(ctx, fuera, fuera, W - fuera * 2, H - fuera * 2, W * 0.055)
+    ctx.stroke()
+    const dentro = m + banda / 2
+    ctx.strokeStyle = 'rgba(58,34,4,0.8)'
+    roundRectPath(ctx, dentro, dentro, W - dentro * 2, H - dentro * 2, W * 0.035)
+    ctx.stroke()
+    ctx.restore()
+    // Sellos solo en las dos esquinas de arriba: abajo a la izquierda va la marca de agua
+    // de CumpleClick y los dos se encimaban.
+    const eq = m + W * 0.03
+    drawStarSeal(ctx, eq, eq, W * 0.052, accent, yellow)
+    drawStarSeal(ctx, W - eq, eq, W * 0.052, accent, yellow)
+  } else {
+    // Marco decorativo dorado (doble línea)
+    ctx.save()
+    ctx.strokeStyle = '#c6922e'
+    ctx.lineWidth = W * 0.012
+    roundRectPath(ctx, pad, pad, W - pad * 2, H - pad * 2, W * 0.05)
+    ctx.stroke()
+    const pad2 = pad + W * 0.02
+    ctx.strokeStyle = '#fbe7ab'
+    ctx.lineWidth = W * 0.004
+    roundRectPath(ctx, pad2, pad2, W - pad2 * 2, H - pad2 * 2, W * 0.044)
+    ctx.stroke()
+    ctx.restore()
 
-  // Sello superior
-  drawStarSeal(ctx, W / 2, pad + H * 0.075, W * 0.085, accent, yellow)
+    // Sello superior
+    drawStarSeal(ctx, W / 2, pad + H * 0.075, W * 0.085, accent, yellow)
+  }
 
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -4169,47 +5356,57 @@ function composeDiploma(invitado = '', winnerImage = null) {
     ctx.restore()
   }
 
+  // Con la foto del héroe el texto se va a los dos extremos para no taparla, y baja un poco
+  // de tamaño porque tiene menos alto donde repartirse. Sin foto, el reparto es el de
+  // siempre: ahí el diploma es texto y puede usar todo el lienzo.
+  const Y = hayHeroe
+    ? { diploma: 0.094, otorga: 0.154, nombre: 0.214, linea: 0.250, titulo: 0.828, fiesta: 0.884, gracias: 0.936 }
+    : { diploma: 0.235, otorga: 0.300, nombre: 0.375, linea: 0.400, titulo: 0.465, fiesta: 0.580, gracias: 0.895 }
+  const F = hayHeroe
+    ? { diploma: 0.118, otorga: 0.040, nombre: 0.092, titulo: 0.055, fiesta: 0.036, gracias: 0.030 }
+    : { diploma: 0.145, otorga: 0.047, nombre: 0.105, titulo: 0.064, fiesta: 0.043, gracias: 0.035 }
+
   // Título "DIPLOMA"
-  ctx.font = `800 ${Math.round(W * 0.145)}px 'Baloo 2', system-ui, sans-serif`
+  ctx.font = `800 ${Math.round(W * F.diploma)}px 'Baloo 2', system-ui, sans-serif`
   ctx.shadowColor = 'rgba(0,0,0,0.18)'
   ctx.shadowBlur = W * 0.01
   ctx.shadowOffsetY = W * 0.006
-  drawDiplomaText('DIPLOMA', W / 2, H * 0.235, W * 0.009)
+  drawDiplomaText('DIPLOMA', W / 2, H * Y.diploma, W * 0.009)
   ctx.shadowColor = 'transparent'
 
   // "Se otorga a"
-  ctx.font = `700 ${Math.round(W * 0.047)}px 'Baloo 2', system-ui, sans-serif`
-  drawDiplomaText('Se otorga a', W / 2, H * 0.3, W * 0.0045)
+  ctx.font = `700 ${Math.round(W * F.otorga)}px 'Baloo 2', system-ui, sans-serif`
+  drawDiplomaText('Se otorga a', W / 2, H * Y.otorga, W * 0.0045)
 
   // Nombre del invitado (destacado, shrink-to-fit)
   const nameText = invitado || 'Invitado'
-  let fsName = Math.round(W * 0.105)
+  let fsName = Math.round(W * F.nombre)
   ctx.font = `800 ${fsName}px 'Baloo 2', system-ui, sans-serif`
   while (ctx.measureText(nameText).width > W * 0.82 && fsName > 30) {
     fsName -= 2
     ctx.font = `800 ${fsName}px 'Baloo 2', system-ui, sans-serif`
   }
-  drawDiplomaText(nameText, W / 2, H * 0.375, W * 0.007)
+  drawDiplomaText(nameText, W / 2, H * Y.nombre, W * 0.007)
 
   // Línea decorativa dorada bajo el nombre
   ctx.strokeStyle = yellow
   ctx.lineWidth = W * 0.006
   ctx.lineCap = 'round'
   ctx.beginPath()
-  ctx.moveTo(W * 0.28, H * 0.4)
-  ctx.lineTo(W * 0.72, H * 0.4)
+  ctx.moveTo(W * 0.28, H * Y.linea)
+  ctx.lineTo(W * 0.72, H * Y.linea)
   ctx.stroke()
 
   // Título honorífico de la temática (theme.diploma), ej "Piloto Oficial del Equipo"
   const diplomaTitle = DIPLOMA || ''
   if (diplomaTitle) {
-    let fsTitle = Math.round(W * 0.064)
+    let fsTitle = Math.round(W * F.titulo)
     ctx.font = `800 ${fsTitle}px 'Baloo 2', system-ui, sans-serif`
     while (ctx.measureText(diplomaTitle).width > W * 0.8 && fsTitle > 22) {
       fsTitle -= 2
       ctx.font = `800 ${fsTitle}px 'Baloo 2', system-ui, sans-serif`
     }
-    drawDiplomaText(diplomaTitle, W / 2, H * 0.465, W * 0.0055)
+    drawDiplomaText(diplomaTitle, W / 2, H * Y.titulo, W * 0.0055)
   }
 
   // "en la fiesta de {nombre} · {fecha si está}"
@@ -4218,23 +5415,24 @@ function composeDiploma(invitado = '', winnerImage = null) {
     ? `en ${eventoFraseEn()}${fecha ? ' · ' + fecha : ''}`
     : ''
   if (fiestaLine) {
-    let fsFiesta = Math.round(W * 0.043)
+    let fsFiesta = Math.round(W * F.fiesta)
     ctx.font = `600 ${fsFiesta}px 'Baloo 2', system-ui, sans-serif`
     while (ctx.measureText(fiestaLine).width > W * 0.84 && fsFiesta > 16) {
       fsFiesta -= 2
       ctx.font = `600 ${fsFiesta}px 'Baloo 2', system-ui, sans-serif`
     }
-    drawDiplomaText(fiestaLine, W / 2, H * 0.58, W * 0.004)
+    drawDiplomaText(fiestaLine, W / 2, H * Y.fiesta, W * 0.004)
   }
 
-  // Sello inferior + agradecimiento final
-  drawStarSeal(ctx, W / 2, H * 0.8, W * 0.105, dark1, yellow)
-  ctx.font = `700 ${Math.round(W * 0.035)}px 'Baloo 2', system-ui, sans-serif`
-  drawDiplomaText('¡Gracias por celebrar con nosotros!', W / 2, H * 0.895, W * 0.0035)
+  // Sello inferior + agradecimiento final. El sello no va con la foto del héroe: caería
+  // justo sobre las piernas del personaje.
+  if (!hayHeroe) drawStarSeal(ctx, W / 2, H * 0.8, W * 0.105, dark1, yellow)
+  ctx.font = `700 ${Math.round(W * F.gracias)}px 'Baloo 2', system-ui, sans-serif`
+  drawDiplomaText('¡Gracias por celebrar con nosotros!', W / 2, H * Y.gracias, W * 0.0035)
 
   drawBrandWatermark(ctx, W, H)
 
-  return c.toDataURL('image/png')
+  return exportarFoto(c)
 }
 
 // PRNG determinístico simple (mismo confeti de fondo en cada render del diploma)
@@ -4252,9 +5450,12 @@ function mulberry32(seed) {
 // dev: permite verificar el diploma sin pasar por todo el flujo
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   window.__composeDiploma = composeDiploma
+  // Y la escena de Asomate, para poder mirar el diploma del heroe sin camara ni ninos.
+  window.__componerAsomate = componerAsomate
+  window.__CONFIG = CONFIG
 }
 
-function DiplomaScreen({ invitado, personaje, prediction = null, score = 0, onDone }) {
+function DiplomaScreen({ invitado, personaje, heroe = null, prediction = null, score = 0, onDone }) {
   const isBabyShower = CONFIG.eventType === 'baby_shower'
   const [diplomaUrl, setDiplomaUrl] = useState(null)
   // El QR del diploma se genera recién al descargar: sube el PNG y muestra el
@@ -4266,29 +5467,35 @@ function DiplomaScreen({ invitado, personaje, prediction = null, score = 0, onDo
 
   useEffect(() => {
     let alive = true
-    const render = (winnerImage = null) => {
-      if (!alive) return
-      setDiplomaUrl(isBabyShower
-        ? composeRecuerdito(invitado, prediction, score, winnerImage)
-        : composeDiploma(invitado, winnerImage))
-    }
+    const cargar = (src) =>
+      new Promise((ok) => {
+        if (!src) return ok(null)
+        const img = new Image()
+        img.onload = () => ok(img)
+        img.onerror = () => ok(null)
+        img.src = src
+      })
 
-    Promise.all([ensureCanvasFonts(), preloadBrandLogo()]).then(() => {
-      if (!alive) return
-      const winnerSrc = isBabyShower ? CONFIG.images.fondo : (personaje && CHAR_IMG[personaje.name])
-      if (!winnerSrc) {
-        render()
-        return
-      }
-      const winnerImage = new Image()
-      winnerImage.onload = () => render(winnerImage)
-      winnerImage.onerror = () => render()
-      winnerImage.src = winnerSrc
-    })
+    Promise.all([ensureCanvasFonts(), preloadBrandLogo()])
+      .then(() => {
+        if (!alive) return null
+        // Con escena de Asomate el diploma se arma sobre ella. La ilustracion del personaje
+        // solo hace falta en el otro flujo, donde no existe ninguna foto del nino con el.
+        const winnerSrc = heroe
+          ? null
+          : (isBabyShower ? CONFIG.images.fondo : (personaje && CHAR_IMG[personaje.name]))
+        return Promise.all([cargar(heroe), cargar(winnerSrc)])
+      })
+      .then((imgs) => {
+        if (!alive || !imgs) return
+        setDiplomaUrl(isBabyShower
+          ? composeRecuerdito(invitado, prediction, score, imgs[1])
+          : composeDiploma(invitado, imgs[1], imgs[0]))
+      })
     return () => {
       alive = false
     }
-  }, [invitado, personaje, isBabyShower, prediction, score])
+  }, [invitado, personaje, heroe, isBabyShower, prediction, score])
 
   useEffect(() => () => { aliveRef.current = false }, [])
 
@@ -4324,7 +5531,7 @@ function DiplomaScreen({ invitado, personaje, prediction = null, score = 0, onDo
     if (!diplomaUrl) return
     const a = document.createElement('a')
     a.href = diplomaUrl
-    a.download = `${isBabyShower ? 'recuerdito' : 'diploma'}-${invitado}-${Date.now()}.png`
+    a.download = `${isBabyShower ? 'recuerdito' : 'diploma'}-${invitado}-${Date.now()}.${extensionDe(diplomaUrl)}`
     document.body.appendChild(a)
     a.click()
     a.remove()

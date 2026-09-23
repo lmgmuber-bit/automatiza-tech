@@ -25,6 +25,11 @@ putenv('CC_EVENT_PROFILE_ENABLED=true');
 
 $root = dirname(__DIR__, 2);
 require $root . '/public/lib.php';
+// El esquema completo, siempre al día. Antes cada prueba listaba las migraciones a mano y
+// esa lista se quedaba atrás con cada migración nueva.
+require_once __DIR__ . '/_migraciones.php';
+cb_test_migrar_todo(cb_pdo());
+
 foreach ([
     '001_initial', '002_theme_prompts', '003_invitations_and_plan',
     '004_gate_a_corrections', '005_theme_prompt_history', '006_public_leads',

@@ -10,6 +10,11 @@ triggers:
 
 # at-proposal-refiner (GitHub Copilot)
 
+> **Desde 2026-09-23 la presentación es la del `propuesta-renderer`, no Gamma**
+> (`Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`). Donde esta skill dice "presentación Gamma", leer
+> `ver-presentacion.php?id=<unique_id>`. Refinar la presentación = editar el JSON y volver a renderizar
+> con el mismo `unique_id`; el endpoint de prompts sigue sirviendo para el `system_prompt` del chatbot.
+
 ## Purpose
 
 Valida una propuesta existente contra la reunión real y la presentación Gamma.

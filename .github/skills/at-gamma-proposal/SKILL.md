@@ -1,84 +1,52 @@
 ---
 name: at-gamma-proposal
-description: Genera el prompt Gamma 8-slides + system prompt chatbot + prompt de diseño visual para propuestas Automatizatech
+description: Arma la propuesta comercial AT con la plantilla única del propuesta-renderer (JSON de láminas + fotos + system prompt del chatbot). Ya no genera prompts de Gamma.
 triggers:
   - generar propuesta gamma
   - nueva propuesta cliente
   - propuesta gamma automatizatech
   - crear presentación gamma
+  - crear propuesta automatizatech
 ---
 
 # at-gamma-proposal (GitHub Copilot)
 
-## Purpose
+> **Regla (2026-09-23):** toda propuesta usa la plantilla del `propuesta-renderer`, la misma de la
+> propuesta de Jeffer García (id 42). **No generar prompts para Gamma.** El nombre de la skill se
+> mantiene solo por los disparadores.
 
-Generar los assets de propuesta para un cliente nuevo de Automatizatech:
-1. Gamma Presentation Prompt (8 slides)
-2. Chatbot System Prompt (demo dinámico)
-3. Design Prototype Prompt (para Open Design / Claude Design)
+Guía completa, con el procedimiento de punta a punta: `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`.
 
-Panel admin: `https://automatizatech.cl/wp-admin/admin.php?page=automatiza-proposals`
-Referencia completa: `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\automatizatech-pipeline.md`
+## Entrada
 
-## Required Input
+Transcripción o notas de la reunión, sitio y redes del cliente, catálogo si existe, y los precios que
+decida Luis (proponer, nunca darlos por aprobados).
 
-```
-CLIENTE: nombre, empresa, rubro, email, teléfono, redes sociales
-DIAGNÓSTICO: descripción del negocio, problema principal, objetivo
-SOLUCIÓN: servicios incluidos, beneficio clave
-PRECIOS: tabla USD + CLP, ofertas especiales
-IDENTIDAD: colores corporativos, logo, estilo visual
-```
+## Salida 1: JSON del renderer
 
-## Output 1: Gamma Prompt
+Campos obligatorios (`renderer/src/schema.js`): `unique_id`, `client_name`, `company_name`,
+`challenge_title`, `challenge_text`, `solution_title`, `solution_text`, `benefits[]`,
+`how_it_works[]`, `pricing_rows[]`, `next_steps[]`. Opcionales: `extra_slides[]` (máx. 2),
+`pricing_note`, `image_briefs[]`, `images{}`.
 
-```
-Crea una presentación profesional de 7 a 10 slides para AutomatizaTech presentando
-una propuesta a {{NOMBRE_EMPRESA}}. Estilo: Fotográfico profesional, cinemático y tecnológico.
+- Precios en CLP con `price_label`; `price_usd: 0`.
+- Fotos sin texto, logos ni rostros; costo mostrado y "ok" de Luis antes de generar.
+- Previsualizar gratis con `renderProposalHtml` antes de gastar o de tocar PROD.
 
-Slide 1: Portada — "Transformación Digital para {{NOMBRE_EMPRESA}}"
-         Logo AT URL centrado pequeño.
-Slide 2: El Desafío Actual — {{NOMBRE_CLIENTE}} enfrenta {{DESAFIO}}.
-Slide 3: Nuestra Solución — AutomatizaTech propone {{SOLUCION}}.
-Slide 4: Beneficios Clave — lista de 4 beneficios específicos.
-Slide 5: ¿Cómo Funciona? — 3 pasos de implementación.
-Slide 6: Inversión — tabla de precios USD + CLP.
-Slide 7: Próximos Pasos — Aprobación → Kick-off → Implementación → Entrega.
-Slide 8: Contacto — Logo AT + contacto@automatizatech.cl / automatizatech.cl / +56 9 2700 2984
+## Salida 2: system prompt del chatbot
 
-Logo AT: https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech+slogan.png
-```
+Con datos reales del cliente (teléfono, sucursales, servicios, precios públicos) y reglas de
+derivación a un humano. Webhook demo: `https://n8n-n8n.kchiba.easypanel.host/webhook/demo-dinamico/chat`
+(busca el prompt por `sessionId` = `unique_id`).
 
-## Output 2: Chatbot System Prompt
+## Después
 
-```
-Eres un asistente virtual de {{NOMBRE_EMPRESA}}, una {{DESCRIPCION}}.
-FUNCIONES: responder sobre productos, precios, pedidos, derivar a {{NOMBRE_CLIENTE}}.
-CONTACTO: {{TELEFONO}} / {{INSTAGRAM}}
-TONO: Amigable, profesional. IDIOMA: Español.
-```
+Crear la fila con `api-save-proposal.php`, renderizar con ese `unique_id`, y en el panel
+(`wp-admin/admin.php?page=automatiza-proposals`) completar y **Guardar**: si no, `n8n_chat_url` queda
+vacío y el demo muestra "Demo en Configuración". Para ajustar una propuesta existente, se edita el JSON
+y se vuelve a renderizar con el mismo `unique_id` (ver `at-proposal-refiner`).
 
-Webhook demo n8n: `https://n8n-n8n.kchiba.easypanel.host/webhook/demo-dinamico/chat`
+## Salida 3: prompt de diseño (opcional)
 
-## Paso Intermedio (antes de Output 3)
-
-Pedir historial de la llamada + presentación Gamma generada.
-Evaluar coherencia. Si hay gaps → ejecutar flujo `at-proposal-refiner`
-(ver `.github/skills/at-proposal-refiner/SKILL.md`).
-
-## Output 3: Prompt de Diseño (requiere logo + redes)
-
-1. Pedir logo al usuario (imagen o URL)
-2. Visitar Instagram + Facebook + sitio web del cliente
-3. Extraer: paleta real, tono, catálogo, historia, ubicación, público
-
-Generar prompt detallado con 7 frames, animaciones, transiciones y requisitos técnicos.
-Ver plantilla completa en: `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\automatizatech-pipeline.md`
-
-## Flujo del Pipeline
-
-```
-Reunión → Output 1+2 → guardar en /wp-admin → edit_id
-       → at-proposal-refiner (validar) → Output 3 (diseño)
-       → segunda reunión → ejecución → cliente definitivo
-```
+Si la propuesta incluye un sitio nuevo, el prompt de prototipo para Claude Design / Open Design sigue
+como antes: ver `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\automatizatech-pipeline.md`.

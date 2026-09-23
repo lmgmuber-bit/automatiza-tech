@@ -50,6 +50,8 @@ Las credenciales viven **fuera del repo**, en `C:\Users\luis_\OneDrive\Documento
 ## Método AT y casos de uso
 
 Para planificar, cotizar, ejecutar, entregar o retomar trabajo con clientes, leer `Docs/METODO_AT/README.md`. Las fuentes canónicas son `Docs/METODO_AT/APLICACION_DEL_METODO_AT.md` y `Docs/METODO_AT/SERVICIOS_Y_CASOS_DE_USO.md`. Para marketing, nichos y contenido de Instagram/Reels, usar `Docs/MARKETING/2026-07-22-AT-ESTUDIO-NICHOS-Y-ESTRATEGIA-REELS-INSTAGRAM.md`. Distinguir siempre capacidades actuales comprobadas de trabajo en curso y roadmap.
+
+**Propuestas comerciales: una sola plantilla (regla de Luis, 2026-09-23).** Toda propuesta de cliente se arma con la plantilla del `propuesta-renderer` (la misma estructura y controles que la de Jeffer, propuesta 42): no se vuelve a Gamma ni se diseña una presentación nueva. Procedimiento, campos del JSON, fotos alojadas (no el CDN de Higgsfield) y el paso de **Guardar** en el panel para que el chatbot funcione: `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`.
 <!-- AT-METHOD:END -->
 
 <!-- AT-VIDEO-RULES:START -->

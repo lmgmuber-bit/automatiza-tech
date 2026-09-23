@@ -15,11 +15,11 @@ Este repositorio tiene skills de propuestas en `.github/skills/`. Usarlas cuando
 
 ### at-gamma-proposal → `.github/skills/at-gamma-proposal/SKILL.md`
 Triggers: "generar propuesta gamma", "nueva propuesta cliente"
-Genera: Gamma prompt (8 slides) + chatbot system prompt + prompt de diseño visual
+Genera: JSON de la plantilla única del `propuesta-renderer` + chatbot system prompt (+ prompt de diseño si aplica). **Ya no genera prompts de Gamma**: regla en `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`.
 
 ### at-proposal-refiner → `.github/skills/at-proposal-refiner/SKILL.md`
 Triggers: "refinar propuesta", "mejorar prompt gamma"
-Flujo: historial + Gamma → API → evalúa → refina → prompt de diseño
+Flujo: historial + presentación del renderer → API → evalúa → refina (editar JSON y re-renderizar) → prompt de diseño
 
 ### API del pipeline
 ```

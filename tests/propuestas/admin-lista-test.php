@@ -80,5 +80,71 @@ ok(at_pa_siguiente_paso('v3', 'lista') === ['tab' => 'envio', 'texto' => 'Enviar
 ok(at_pa_siguiente_paso('v3', 'sent') === null && at_pa_siguiente_paso(null, 'sent') === null, 'enviada no tiene siguiente paso');
 ok(at_pa_siguiente_paso(null, 'pending') === ['tab' => 'envio', 'texto' => 'Enviar al cliente'], 'vieja pendiente');
 
+// Correo al cliente
+$r = at_pa_correo_textos(null, 'Ferretería Sur');
+ok($r === [
+    'asunto' => 'Propuesta de Automatización Inteligente - Ferretería Sur',
+    'introduccion' => 'Es un placer presentarle nuestra propuesta de automatización inteligente diseñada específicamente para Ferretería Sur.',
+    'que_incluye' => 'Hemos analizado sus requerimientos y preparado una solución personalizada que optimizará sus procesos de negocio mediante inteligencia artificial.',
+    'cierre' => 'Quedamos atentos a sus comentarios y consultas.',
+], 'correo_textos sin payload: textos por defecto');
+
+$payload_ferreteria = [
+    'solution_title' => 'Catálogo con asistente',
+    'benefits' => [['title' => 'Atención 24/7'], ['title' => 'Menos llamadas perdidas'], ['title' => 'Pedidos ordenados']],
+    'next_steps' => ['Revisar la propuesta el jueves.'],
+];
+$r = at_pa_correo_textos($payload_ferreteria, 'Ferretería Sur');
+ok($r['asunto'] === 'Propuesta para Ferretería Sur: Catálogo con asistente', 'correo_textos: asunto armado con la solución');
+ok($r['que_incluye'] === 'Catálogo con asistente: Atención 24/7, Menos llamadas perdidas y Pedidos ordenados.', 'correo_textos: qué incluye enumera los beneficios');
+ok($r['cierre'] === 'Como próximo paso: Revisar la propuesta el jueves. Quedamos atentos a sus comentarios y consultas.', 'correo_textos: cierre con el próximo paso');
+ok($r['introduccion'] === 'Es un placer presentarle la propuesta que preparamos para Ferretería Sur a partir de nuestra conversación.', 'correo_textos: introducción con el contenido');
+
+$payload_con_ia = $payload_ferreteria;
+$payload_con_ia['correo_cliente'] = [
+    'asunto' => 'Asunto IA', 'introduccion' => 'Introducción IA', 'que_incluye' => 'Qué incluye IA', 'cierre' => 'Cierre IA',
+];
+ok(at_pa_correo_textos($payload_con_ia, 'Ferretería Sur') === [
+    'asunto' => 'Asunto IA', 'introduccion' => 'Introducción IA', 'que_incluye' => 'Qué incluye IA', 'cierre' => 'Cierre IA',
+], 'correo_textos: correo_cliente completo se usa tal cual');
+$payload_con_ia_espacios = $payload_ferreteria;
+$payload_con_ia_espacios['correo_cliente'] = [
+    'asunto' => '  Asunto IA  ', 'introduccion' => 'Introducción IA', 'que_incluye' => 'Qué incluye IA', 'cierre' => 'Cierre IA',
+];
+ok(at_pa_correo_textos($payload_con_ia_espacios, 'Ferretería Sur')['asunto'] === 'Asunto IA', 'correo_textos: correo_cliente se recorta (trim)');
+
+$payload_parcial = $payload_ferreteria;
+$payload_parcial['correo_cliente'] = [
+    'asunto' => '', 'introduccion' => 'Introducción IA', 'que_incluye' => 'Qué incluye IA',
+];
+$r = at_pa_correo_textos($payload_parcial, 'Ferretería Sur');
+ok($r['asunto'] === 'Propuesta para Ferretería Sur: Catálogo con asistente', 'correo_textos: asunto vacío en correo_cliente cae al respaldo del payload');
+ok($r['cierre'] === 'Como próximo paso: Revisar la propuesta el jueves. Quedamos atentos a sus comentarios y consultas.', 'correo_textos: cierre sin clave en correo_cliente cae al respaldo del payload');
+ok($r['introduccion'] === 'Introducción IA' && $r['que_incluye'] === 'Qué incluye IA', 'correo_textos: lo que sí mandó la IA se respeta');
+
+ok(strpos(at_pa_correo_textos(null, '')['asunto'], 'su empresa') !== false, 'correo_textos: empresa vacía usa «su empresa»');
+ok(strpos(at_pa_correo_textos(null, '   ')['asunto'], 'su empresa') !== false, 'correo_textos: empresa solo con espacios usa «su empresa»');
+
+ok(at_pa_payload_con_correo(['a' => 1], ['asunto' => ' X ', 'introduccion' => 'Y']) === [
+    'a' => 1,
+    'correo_cliente' => ['asunto' => 'X', 'introduccion' => 'Y', 'que_incluye' => '', 'cierre' => ''],
+], 'payload_con_correo: agrega correo_cliente con las cuatro claves');
+
+// URL del PDF del renderer
+$host = 'https://n8n-propuesta-renderer.kchiba.easypanel.host';
+ok(at_pa_url_pdf_renderer("$host/p/uBn21AF16EcM/index.html", '') === "$host/p/uBn21AF16EcM/presentation.pdf", 'url_pdf_renderer: desde index.html');
+ok(at_pa_url_pdf_renderer("$host/p/uBn21AF16EcM/", '') === "$host/p/uBn21AF16EcM/presentation.pdf", 'url_pdf_renderer: desde la carpeta sin index.html');
+ok(at_pa_url_pdf_renderer("$host/p/abc123/index.html", "$host/p/EY2U5YW7zRO6/presentation.pdf") === "$host/p/EY2U5YW7zRO6/presentation.pdf", 'url_pdf_renderer: pdf_path del renderer manda aunque la presentación sea otra');
+ok(at_pa_url_pdf_renderer("http://$host/p/uBn21AF16EcM/index.html", '') === '', 'url_pdf_renderer: http sin s no vale');
+$sin_s = 'http://n8n-propuesta-renderer.kchiba.easypanel.host/p/uBn21AF16EcM/index.html';
+ok(at_pa_url_pdf_renderer($sin_s, '') === '', 'url_pdf_renderer: http sin s (literal) no vale');
+ok(at_pa_url_pdf_renderer('https://gamma.app/p/uBn21AF16EcM/index.html', '') === '', 'url_pdf_renderer: otro host no vale');
+ok(at_pa_url_pdf_renderer('https://evil.example/p/x/index.html', '') === '', 'url_pdf_renderer: host ajeno no vale');
+ok(at_pa_url_pdf_renderer("$host.evil.com/p/abc123/index.html", '') === '', 'url_pdf_renderer: host parecido (sufijo) no vale');
+ok(at_pa_url_pdf_renderer("$host/p/../index.html", '') === '', 'url_pdf_renderer: .. en la presentación no vale');
+ok(at_pa_url_pdf_renderer('', "$host/../presentation.pdf") === '', 'url_pdf_renderer: .. en el pdf_path no vale');
+ok(at_pa_url_pdf_renderer("$host/p/ab\$cd/index.html", '') === '', 'url_pdf_renderer: id con caracteres raros no vale');
+ok(at_pa_url_pdf_renderer('', '') === '', 'url_pdf_renderer: ambos vacíos no vale');
+
 echo $fallas ? "$fallas FALLA(S)\n" : "TODO OK\n";
 exit($fallas ? 1 : 0);

@@ -237,3 +237,88 @@ function at_pa_siguiente_paso(?string $flujo, ?string $status): ?array {
 	}
 	return ['tab' => 'envio', 'texto' => 'Enviar al cliente'];
 }
+
+if (!defined('AT_PA_PDF_MAX_BYTES')) {
+	// En base64 el adjunto crece ~33 %: 15 MB quedan en ~20 MB, bajo los 25 MB por adjunto que aceptan Hostinger y Gmail.
+	define('AT_PA_PDF_MAX_BYTES', 15 * 1024 * 1024);
+}
+if (!defined('AT_PA_RENDERER_HOST')) {
+	define('AT_PA_RENDERER_HOST', 'n8n-propuesta-renderer.kchiba.easypanel.host');
+}
+
+/** «a, b y c» */
+function at_pa_enumerar(array $items): string {
+	if (count($items) < 2) {
+		return (string) ($items[0] ?? '');
+	}
+	$ultimo = array_pop($items);
+	return implode(', ', $items) . ' y ' . $ultimo;
+}
+
+/** Los cuatro textos del correo al cliente, nunca vacíos: los que escribió la IA (correo_cliente) o, si faltan, armados con el contenido. */
+function at_pa_correo_textos(?array $payload, string $empresa): array {
+	$empresa = trim($empresa) !== '' ? trim($empresa) : 'su empresa';
+	$texto = function ($v): string { return is_string($v) ? trim($v) : ''; };
+	$respaldo = [
+		'asunto'       => "Propuesta de Automatización Inteligente - $empresa",
+		'introduccion' => "Es un placer presentarle nuestra propuesta de automatización inteligente diseñada específicamente para $empresa.",
+		'que_incluye'  => 'Hemos analizado sus requerimientos y preparado una solución personalizada que optimizará sus procesos de negocio mediante inteligencia artificial.',
+		'cierre'       => 'Quedamos atentos a sus comentarios y consultas.',
+	];
+	if (is_array($payload)) {
+		$solucion = $texto($payload['solution_title'] ?? '');
+		$beneficios = [];
+		foreach ((array) ($payload['benefits'] ?? []) as $b) {
+			$t = is_array($b) ? $texto($b['title'] ?? '') : '';
+			if ($t !== '') {
+				$beneficios[] = $t;
+			}
+		}
+		$pasos = [];
+		foreach ((array) ($payload['next_steps'] ?? []) as $s) {
+			if ($texto($s) !== '') {
+				$pasos[] = rtrim($texto($s), '.');
+			}
+		}
+		$respaldo['introduccion'] = "Es un placer presentarle la propuesta que preparamos para $empresa a partir de nuestra conversación.";
+		if ($solucion !== '') {
+			$respaldo['asunto'] = "Propuesta para $empresa: $solucion";
+		}
+		if ($beneficios) {
+			$respaldo['que_incluye'] = ($solucion !== '' ? "$solucion: " : '') . at_pa_enumerar($beneficios) . '.';
+		}
+		if ($pasos) {
+			$respaldo['cierre'] = 'Como próximo paso: ' . $pasos[0] . '. Quedamos atentos a sus comentarios y consultas.';
+		}
+	}
+	$ia = is_array($payload) && isset($payload['correo_cliente']) && is_array($payload['correo_cliente']) ? $payload['correo_cliente'] : [];
+	$r = [];
+	foreach ($respaldo as $k => $v) {
+		$r[$k] = $texto($ia[$k] ?? '') !== '' ? $texto($ia[$k]) : $v;
+	}
+	return $r;
+}
+
+/** El payload con los cuatro textos del correo en correo_cliente. */
+function at_pa_payload_con_correo(array $payload, array $textos): array {
+	$c = [];
+	foreach (['asunto', 'introduccion', 'que_incluye', 'cierre'] as $k) {
+		$c[$k] = is_string($textos[$k] ?? null) ? trim($textos[$k]) : '';
+	}
+	$payload['correo_cliente'] = $c;
+	return $payload;
+}
+
+/** URL del PDF de la presentación en el renderer, o '' si la propuesta no vive ahí. Solo https y solo el host del renderer. */
+function at_pa_url_pdf_renderer(string $presentacion, string $pdf_path): string {
+	$host = preg_quote(AT_PA_RENDERER_HOST, '#');
+	$pdf_path = trim($pdf_path);
+	if ($pdf_path !== '' && strpos($pdf_path, '..') === false
+		&& preg_match('#^https://' . $host . '/[A-Za-z0-9/_.-]+\.pdf$#', $pdf_path)) {
+		return $pdf_path;
+	}
+	if (preg_match('#^https://' . $host . '/p/([A-Za-z0-9]{6,32})/(index\.html)?$#', trim($presentacion), $m)) {
+		return 'https://' . AT_PA_RENDERER_HOST . '/p/' . $m[1] . '/presentation.pdf';
+	}
+	return '';
+}

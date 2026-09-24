@@ -72,9 +72,15 @@ Se enlaza `automatizatech.cl/ver-presentacion.php?id=`.
 **Orden obligatorio:** el bucle de reintentos de «3 Final» solo se publica con un renderer que ya reutiliza
 fotos (zip `32ccabf` o posterior). Con un renderer anterior, cada reintento vuelve a pagar todas las fotos.
 
-Estado al 2026-09-24 (madrugada): renderer `32ccabf` en Easypanel (verificado: `/render` responde `images.reused`);
-Borrador, Cambios y Final con reintentos, fotos por rubro y aviso de errores publicados en n8n; Meet apuntando a
-`propuesta-v3-borrador`.
+Estado al 2026-09-24 (02:20): renderer `2b92e3d` en Easypanel (manifiesto antes del render, `unique_id` validado;
+verificado: responde 400 «unique_id inválido»); Borrador, Cambios y Final con reintentos, fotos por rubro y aviso de
+errores publicados en n8n; Meet apuntando a `propuesta-v3-borrador`; WordPress con las reglas v3 cerradas (envío
+solo desde `lista` y desde el panel, `/prompts` 409 en v3, `/state` rechaza `sent`, botón Destrabar, Enter guarda,
+precios obligatorios para aprobar). Respaldo previo: `~/respaldos/propuestas-antes-14b-20260924-021846.tar.gz`.
+
+Pendiente, a propósito: el webhook del Borrador y `/render` todavía no piden clave. Lo primero exige editar el
+workflow de Meet (ver el aviso de arriba sobre reprocesar transcripciones); lo segundo, que Luis cargue una
+variable nueva en Easypanel.
 
 - Workflows: `python N8N/propuestas-v3/build_N_*.py` genera el JSON y `python N8N/propuestas-v3/deploy.py N-*.json`
   lo publica (crea o actualiza por nombre, filtra por el host de AT; la clave no se imprime).

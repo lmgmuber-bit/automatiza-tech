@@ -22,7 +22,7 @@ PROMPT_CAMBIOS = """Recibes el JSON de una propuesta comercial y los comentarios
 
 CODE_PAYLOAD = r"""// Une las dos ramas: con comentario (lo aplicó el modelo) o sin comentario (solo cambiaron precios).
 // Nunca lanza: si algo no cuadra devuelve ok=false con el motivo, para marcar la propuesta en error.
-const estado = $('Leer estado').first().json;
+const estado = $('Leer estado').first().json.body;
 let p = estado.payload;
 let reason = '';
 if ($('Aplicar comentarios').isExecuted) {
@@ -48,8 +48,15 @@ if (!reason) p.extra_slides = (p.extra_slides || []).slice(0, 2);
 // WordPress restaura precios y unique_id de todos modos; aquí solo se asegura el formato.
 return [{ json: { ok: !reason, reason, id: estado.id, unique_id: estado.unique_id, company: estado.company_name, payload: p } }];"""
 
-CODE_MOTIVO = r"""// Motivo legible para status_note, venga de donde venga el fallo.
-const base = $('Payload final').first().json;
+CODE_MOTIVO = r"""// Motivo legible para status_note, venga de donde venga el fallo (lectura, modelo o guardado).
+const hook = $('Webhook').first().json.body || {};
+let base = { id: hook.id, unique_id: '', company: `propuesta ${hook.id}`, reason: '' };
+if ($('Payload final').isExecuted) {
+  base = $('Payload final').first().json;
+} else {
+  const le = $('Leer estado').first().json;
+  base.reason = `No se pudo leer la propuesta en WordPress (HTTP ${le.statusCode})`;
+}
 let reason = base.reason;
 if (!reason && $('Guardar y volver a borrador').isExecuted) {
   const g = $('Guardar y volver a borrador').first().json;
@@ -59,7 +66,7 @@ if (!reason && $('Guardar y volver a borrador').isExecuted) {
 return [{ json: { id: base.id, unique_id: base.unique_id, company: base.company, reason: reason || 'Error desconocido al aplicar los cambios', exec: $execution.id } }];"""
 
 EMAIL_OK = """=<h3>{{ $('Vista previa').item.json.view_url ? '' : '⚠️ ' }}Cambios aplicados: {{ $('Payload final').item.json.company }}</h3>
-<p>Último comentario: <em>{{ $('Leer estado').item.json.ultimo_comentario || '(sin comentario: solo precios)' }}</em></p>
+<p>Último comentario: <em>{{ $('Leer estado').item.json.body.ultimo_comentario || '(sin comentario: solo precios)' }}</em></p>
 {{ $('Vista previa').item.json.view_url ? '' : '<p style="color:#b45309"><strong>La nueva vista previa no se pudo generar.</strong> Los cambios quedaron guardados; «Pedir cambios» sin comentario la vuelve a generar.</p>' }}
 <p><a href="__VER__{{ $('Payload final').item.json.unique_id }}">👀 Ver la nueva vista previa (sin fotos)</a></p>
 <p><a href="__PANEL__{{ $('Payload final').item.json.id }}">✏️ Seguir revisando o aprobar en el panel</a></p>
@@ -67,7 +74,7 @@ EMAIL_OK = """=<h3>{{ $('Vista previa').item.json.view_url ? '' : '⚠️ ' }}Ca
 
 EMAIL_ERROR = """=<h3>⚠️ No se pudieron aplicar los cambios: {{ $('Motivo del error').item.json.company }}</h3>
 <p>{{ $('Motivo del error').item.json.reason }}</p>
-<p>La propuesta quedó en estado <strong>error</strong>. Desde el panel puedes volver a «Pedir cambios» o aprobarla.</p>
+<p>{{ $('Marcar error').item.json.statusCode === 200 ? 'La propuesta quedó en estado <strong>error</strong>. Desde el panel puedes volver a «Pedir cambios» o aprobarla.' : '<strong>Tampoco se pudo marcar como error</strong> (HTTP ' + $('Marcar error').item.json.statusCode + '): puede haber quedado en «ajustando». Revísala en el panel.' }}</p>
 <p><a href="__PANEL__{{ $('Motivo del error').item.json.id }}">✏️ Abrir en el panel</a></p>
 <p style="color:#666">Ejecución de n8n: {{ $('Motivo del error').item.json.exec }}</p>""".replace('__PANEL__', PANEL)
 
@@ -107,15 +114,13 @@ nodes = [
          {'httpMethod': 'POST', 'path': 'propuesta-v3-cambios', 'authentication': 'headerAuth',
           'responseMode': 'onReceived', 'options': {}},
          webhookId='propuesta-v3-cambios', credentials=CRED_WP),
-    node('c2', 'Leer estado', 'n8n-nodes-base.httpRequest', 4.2, [220, 0],
-         {'method': 'GET', 'url': f"={WP}/proposal/{{{{ $json.body.id }}}}/state",
-          'authentication': 'genericCredentialType', 'genericAuthType': 'httpHeaderAuth', 'options': {}},
-         credentials=CRED_WP),
-    iff('c3', '¿Hay comentario?', [440, 0], "={{ String($json.ultimo_comentario || '').trim().length > 0 }}"),
+    wp_http('c2', 'Leer estado', [220, 0], 'GET', f"={WP}/proposal/{{{{ $json.body.id }}}}/state"),
+    iff('c2b', '¿Estado leído?', [330, 0], '={{ $json.statusCode === 200 }}'),
+    iff('c3', '¿Hay comentario?', [440, 0], "={{ String($json.body.ultimo_comentario || '').trim().length > 0 }}"),
     node('c4', 'Aplicar comentarios', 'n8n-nodes-base.openAi', 1, [660, -120],
          {'resource': 'chat', 'model': 'gpt-4o',
           'prompt': {'messages': [{'role': 'system', 'content': PROMPT_CAMBIOS},
-                                  {'content': "={{ JSON.stringify({ comentarios: $json.ultimo_comentario, propuesta: $json.payload }) }}"}]},
+                                  {'content': "={{ JSON.stringify({ comentarios: $json.body.ultimo_comentario, propuesta: $json.body.payload }) }}"}]},
           'options': {'temperature': 0.2}, 'requestOptions': {}},
          credentials=CRED_OPENAI, onError='continueRegularOutput'),
     node('c5', 'Payload final', 'n8n-nodes-base.code', 2, [880, 0], {'jsCode': CODE_PAYLOAD}),
@@ -151,7 +156,9 @@ def link(a, b, output=0):
 
 connections = {}
 link('Webhook', 'Leer estado')
-link('Leer estado', '¿Hay comentario?')
+link('Leer estado', '¿Estado leído?')
+link('¿Estado leído?', '¿Hay comentario?', 0)
+link('¿Estado leído?', 'Motivo del error', 1)
 link('¿Hay comentario?', 'Aplicar comentarios', 0)
 link('¿Hay comentario?', 'Payload final', 1)
 link('Aplicar comentarios', 'Payload final')

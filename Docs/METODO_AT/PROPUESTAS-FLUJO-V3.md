@@ -13,7 +13,7 @@ Plan de implementación: `Docs/superpowers/plans/2026-09-23-flujo-propuestas-v3.
 2. **«Propuestas v3 · 1 Borrador»** (`7hglMG2j17HdOh6U`): GPT-4o redacta con la plantilla, precios «Por confirmar»,
    fotos descritas por rubro (ver abajo), asistente de demo; crea la fila en WordPress (`borrador`, `flujo='v3'`),
    vista previa **sin fotos** con sello Borrador y correo de marca a Luis. Gasto en fotos: cero.
-3. **Panel WordPress** (Propuestas › la propuesta › «Revisión v3»): Luis escribe precios y comentarios →
+3. **Panel WordPress** (Propuestas › la propuesta › pestaña «Revisión y precios»): Luis escribe precios y comentarios →
    **Pedir cambios** → «2 Cambios» (`25rjGcjDYPDECn6p`) aplica solo los comentarios (nunca toca precios: WordPress
    los restaura), rehace la vista previa y avisa. Se repite las veces que haga falta. Si falla, la propuesta
    queda en `error` con el motivo y llega un correo.
@@ -33,6 +33,34 @@ Estados: `borrador → ajustando|generando`, `ajustando → borrador|error`, `ge
 propuesta en `error` con el motivo. Si un flujo se cae igual (OpenAI caído, un JSON ilegible), el workflow
 «0 Avisar error» (`m7TOfKznVSBGz4Nd`, `settings.errorWorkflow` de los tres) le escribe a Luis. Una propuesta que
 haya quedado en `ajustando` o `generando` se destraba desde el panel (pasa a `error`, que es transición válida).
+
+## Panel de propuestas (wp-admin › Propuestas, EN PROD desde el 2026-09-24 15:48)
+
+Diseño: `Docs/superpowers/specs/2026-09-24-modulo-propuestas-admin-design.md`; plan:
+`Docs/superpowers/plans/2026-09-24-modulo-propuestas-admin.md`.
+
+- **Lista** (`WP_List_Table`): buscador por empresa, cliente, correo o teléfono; vistas por estado con su conteo
+  (Todas, Borrador, Enviadas, Pendiente, Error…); filtro de fechas Desde/Hasta; orden por columna; paginación con
+  «Opciones de pantalla» (5 a 200 por página).
+- **Borrar:** una sola con el enlace «Borrar» bajo el nombre de la empresa (WordPress lo muestra al pasar el mouse
+  por la fila; no está escondido por error); varias marcando las casillas → «Acciones en lote» → «Borrar» →
+  «Aplicar». Los dos piden confirmación. Buscar, Filtrar o Enter nunca borran (el servidor exige `bulk_action`).
+- **Ficha** en pestañas: Resumen (con «Siguiente paso»), Cliente y enlaces, Revisión y precios (solo v3), Contenido,
+  Seguimiento y Envío. En el celular las pestañas pasan a un selector.
+- **Guardar** es una barra fija, oculta en «Revisión y precios» (ahí guardan «Pedir cambios» y «Aprobar»). En las
+  propuestas viejas la casilla «Enviar correo» viene marcada como siempre: la barra lo avisa con el correo del
+  cliente y Guardar (o Enter) pide confirmar antes de mandarlo.
+- **Página clásica** de respaldo: `…/wp-admin/admin.php?page=automatiza-proposals&clasico=1` (su ✏️ abre la ficha
+  nueva; para editar en la clásica, agregar `&edit_id=N`). Se retira en un PR posterior.
+- **Código:** `inc/propuestas-admin/` (`consultas.php` puras, probadas con `php tests/propuestas/admin-lista-test.php`;
+  `acciones.php`, `lista.php`, `ficha.php`, `clasico.php`) y `assets/css|js/propuestas-admin.*`. Solo se cargan en el
+  admin (`is_admin()`), nunca en el sitio ni en la API REST que usa n8n. `functions.php` no se tocó.
+- **Despliegue y rollback:** respaldos en `~/respaldos/` con marca `20260924-154847` (tema completo, tabla
+  `wp_automatiza_propuestas` con sus 19 filas y los dos archivos reemplazados). Rollback:
+  `cd ~ && tar xzf respaldos/propuestas-admin-antes-20260924-154847.tar.gz` (restaura `admin-proposals.php` y
+  `client-details-module.php`); con eso los archivos nuevos quedan sin uso porque PROD solo incluye
+  `inc/admin-proposals.php`. 🔴 En Hostinger `wp db export` sale con código 255 sin mensaje y sin archivo: la tabla
+  se respalda con un script PHP con `SHORTINIT` (`SHOW CREATE TABLE` + un `INSERT` por fila).
 
 ## Fotos por rubro (regla de Luis, 2026-09-24)
 

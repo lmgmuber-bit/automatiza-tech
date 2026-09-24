@@ -295,6 +295,19 @@
       "onError": "continueRegularOutput"
     },
     {
+      "id": "c9b",
+      "name": "Armar correo cambios",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1870,
+        -240
+      ],
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst br = (s) => esc(s).replace(/\\n/g, '<br>');\nconst est = $('Leer estado').first().json.body;\nconst pf = $('Payload final').first().json;\nconst v = $('Vista previa').first().json;\nconst ok = !!v.view_url;\nconst html = `<div style=\"margin:0;padding:24px 12px;background:#eef2f6;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(13,27,42,.08);\">\n<tr><td style=\"background:#0d1b2a;padding:18px 24px;\">\n<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr>\n<td style=\"vertical-align:middle;\"><img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" width=\"44\" height=\"37\" alt=\"AutomatizaTech\" style=\"display:block;border:0;\"></td>\n<td style=\"vertical-align:middle;padding-left:12px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#ffffff;font-size:16px;font-weight:700;\">AutomatizaTech<br><span style=\"color:#00d9c0;font-size:12px;font-weight:600;letter-spacing:.04em;\">Propuestas · aviso interno</span></td>\n</tr></table>\n</td></tr>\n<tr><td style=\"height:4px;background:#00d9c0;line-height:4px;font-size:0;\">&nbsp;</td></tr>\n<tr><td style=\"padding:26px 24px 8px;\">\n<span style=\"display:inline-block;background:#dbeafe;color:#1e40af;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 12px;border-radius:999px;\">Cambios aplicados</span>\n<h1 style=\"margin:14px 0 16px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:22px;line-height:1.3;color:#0d1b2a;\">Cambios aplicados: ${esc(pf.company)}</h1>\n${ok ? '' : `<div style=\"background:#fffbeb;border-left:4px solid #f59e0b;border-radius:8px;padding:14px 16px;margin:0 0 16px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.55;color:#334155;\"><strong>La nueva vista previa no se pudo generar.</strong> Los cambios quedaron guardados; «Pedir cambios» sin comentario la vuelve a generar.</div>`}<p style=\"margin:0 0 14px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#334155;\"><strong>Tu comentario</strong></p><div style=\"background:#f8fafc;border-left:4px solid #cbd5e1;border-radius:8px;padding:14px 16px;margin:0 0 16px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.55;color:#334155;\">${br(est.ultimo_comentario) || \"(sin comentario: solo cambiaste precios)\"}</div><p style=\"margin:0 0 14px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#334155;\">Tus precios se mantienen tal como los dejaste en el panel. No se ha gastado nada en fotos.</p><div style=\"margin:6px 0 4px;\"><a href=\"https://automatizatech.cl/ver-presentacion.php?id=${esc(pf.unique_id)}\" style=\"display:inline-block;background:#00d9c0;color:#0d1b2a;border:2px solid #00d9c0;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:10px;margin:6px 8px 6px 0;\">👀 Ver la nueva vista previa</a><a href=\"https://automatizatech.cl/wp-admin/admin.php?page=automatiza-proposals&edit_id=${esc(pf.id)}\" style=\"display:inline-block;background:#ffffff;color:#0d1b2a;border:2px solid #0d1b2a;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:10px;margin:6px 8px 6px 0;\">✏️ Seguir revisando o aprobar</a></div>\n</td></tr>\n<tr><td style=\"padding:14px 24px 22px;border-top:1px solid #e2e8f0;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#64748b;\">\nAviso automático del flujo de propuestas de AutomatizaTech. Nada de esto se envía al cliente: el envío lo haces tú desde el panel.\n</td></tr>\n</table>\n</div>`;\nreturn [{ json: { asunto: (ok ? '' : '⚠️ ') + pf.company + ' · cambios aplicados', html } }];"
+      }
+    },
+    {
       "id": "c10",
       "name": "Correo cambios aplicados",
       "type": "n8n-nodes-base.emailSend",
@@ -306,8 +319,8 @@
       "parameters": {
         "fromEmail": "contacto@automatizatech.cl",
         "toEmail": "lmgm.0303@gmail.com",
-        "subject": "={{ ($('Vista previa').item.json.view_url ? '' : '⚠️ ') + $('Payload final').item.json.company + ' · cambios aplicados' }}",
-        "html": "=<h3>{{ $('Vista previa').item.json.view_url ? '' : '⚠️ ' }}Cambios aplicados: {{ $('Payload final').item.json.company }}</h3>\n<p>Último comentario: <em>{{ $('Leer estado').item.json.body.ultimo_comentario || '(sin comentario: solo precios)' }}</em></p>\n{{ $('Vista previa').item.json.view_url ? '' : '<p style=\"color:#b45309\"><strong>La nueva vista previa no se pudo generar.</strong> Los cambios quedaron guardados; «Pedir cambios» sin comentario la vuelve a generar.</p>' }}\n<p><a href=\"https://automatizatech.cl/ver-presentacion.php?id={{ $('Payload final').item.json.unique_id }}\">👀 Ver la nueva vista previa (sin fotos)</a></p>\n<p><a href=\"https://automatizatech.cl/wp-admin/admin.php?page=automatiza-proposals&edit_id={{ $('Payload final').item.json.id }}\">✏️ Seguir revisando o aprobar en el panel</a></p>\n<p style=\"color:#666\">No se ha gastado nada en fotos. Nada se envía al cliente desde este flujo.</p>",
+        "subject": "={{ $json.asunto }}",
+        "html": "={{ $json.html }}",
         "options": {}
       },
       "credentials": {
@@ -364,6 +377,19 @@
       }
     },
     {
+      "id": "c12b",
+      "name": "Armar correo error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2090,
+        120
+      ],
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst br = (s) => esc(s).replace(/\\n/g, '<br>');\nconst m = $('Motivo del error').first().json;\nconst me = $('Marcar error').first().json;\nconst marcado = me.statusCode === 200;\nconst html = `<div style=\"margin:0;padding:24px 12px;background:#eef2f6;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(13,27,42,.08);\">\n<tr><td style=\"background:#0d1b2a;padding:18px 24px;\">\n<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr>\n<td style=\"vertical-align:middle;\"><img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" width=\"44\" height=\"37\" alt=\"AutomatizaTech\" style=\"display:block;border:0;\"></td>\n<td style=\"vertical-align:middle;padding-left:12px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#ffffff;font-size:16px;font-weight:700;\">AutomatizaTech<br><span style=\"color:#00d9c0;font-size:12px;font-weight:600;letter-spacing:.04em;\">Propuestas · aviso interno</span></td>\n</tr></table>\n</td></tr>\n<tr><td style=\"height:4px;background:#00d9c0;line-height:4px;font-size:0;\">&nbsp;</td></tr>\n<tr><td style=\"padding:26px 24px 8px;\">\n<span style=\"display:inline-block;background:#fee2e2;color:#991b1b;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 12px;border-radius:999px;\">Error</span>\n<h1 style=\"margin:14px 0 16px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:22px;line-height:1.3;color:#0d1b2a;\">No se pudieron aplicar los cambios: ${esc(m.company)}</h1>\n<div style=\"background:#fef2f2;border-left:4px solid #ef4444;border-radius:8px;padding:14px 16px;margin:0 0 16px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.55;color:#334155;\">${br(m.reason)}</div>${marcado ? `<p style=\"margin:0 0 14px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#334155;\">La propuesta quedó en estado <strong>error</strong>. Desde el panel puedes volver a «Pedir cambios» o aprobarla.</p>` : `<div style=\"background:#fef2f2;border-left:4px solid #ef4444;border-radius:8px;padding:14px 16px;margin:0 0 16px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.55;color:#334155;\"><strong>Tampoco se pudo marcar como error</strong> (HTTP ${esc(me.statusCode)}): puede haber quedado en «ajustando». Revísala en el panel.</div>`}<div style=\"margin:6px 0 4px;\"><a href=\"https://automatizatech.cl/wp-admin/admin.php?page=automatiza-proposals&edit_id=${esc(m.id)}\" style=\"display:inline-block;background:#00d9c0;color:#0d1b2a;border:2px solid #00d9c0;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:10px;margin:6px 8px 6px 0;\">✏️ Abrir en el panel</a></div><p style=\"margin:18px 0 0;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#64748b;\">Ejecución de n8n: ${esc(m.exec)}</p>\n</td></tr>\n<tr><td style=\"padding:14px 24px 22px;border-top:1px solid #e2e8f0;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#64748b;\">\nAviso automático del flujo de propuestas de AutomatizaTech. Nada de esto se envía al cliente: el envío lo haces tú desde el panel.\n</td></tr>\n</table>\n</div>`;\nreturn [{ json: { asunto: '⚠️ ' + m.company + ' · no se pudieron aplicar los cambios', html } }];"
+      }
+    },
+    {
       "id": "c13",
       "name": "Correo con problema",
       "type": "n8n-nodes-base.emailSend",
@@ -375,8 +401,8 @@
       "parameters": {
         "fromEmail": "contacto@automatizatech.cl",
         "toEmail": "lmgm.0303@gmail.com",
-        "subject": "={{ '⚠️ ' + $('Motivo del error').item.json.company + ' · no se pudieron aplicar los cambios' }}",
-        "html": "=<h3>⚠️ No se pudieron aplicar los cambios: {{ $('Motivo del error').item.json.company }}</h3>\n<p>{{ $('Motivo del error').item.json.reason }}</p>\n<p>{{ $('Marcar error').item.json.statusCode === 200 ? 'La propuesta quedó en estado <strong>error</strong>. Desde el panel puedes volver a «Pedir cambios» o aprobarla.' : '<strong>Tampoco se pudo marcar como error</strong> (HTTP ' + $('Marcar error').item.json.statusCode + '): puede haber quedado en «ajustando». Revísala en el panel.' }}</p>\n<p><a href=\"https://automatizatech.cl/wp-admin/admin.php?page=automatiza-proposals&edit_id={{ $('Motivo del error').item.json.id }}\">✏️ Abrir en el panel</a></p>\n<p style=\"color:#666\">Ejecución de n8n: {{ $('Motivo del error').item.json.exec }}</p>",
+        "subject": "={{ $json.asunto }}",
+        "html": "={{ $json.html }}",
         "options": {}
       },
       "credentials": {
@@ -519,6 +545,17 @@
       "main": [
         [
           {
+            "node": "Armar correo cambios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar correo cambios": {
+      "main": [
+        [
+          {
             "node": "Correo cambios aplicados",
             "type": "main",
             "index": 0
@@ -538,6 +575,17 @@
       ]
     },
     "Marcar error": {
+      "main": [
+        [
+          {
+            "node": "Armar correo error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar correo error": {
       "main": [
         [
           {

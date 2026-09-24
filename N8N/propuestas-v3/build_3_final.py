@@ -9,6 +9,7 @@ Solo referencia credenciales por id; no contiene secretos.
 """
 import json, os
 from fotos_guard import JS_LIMPIAR_FOTOS
+from correos import correo_final
 
 CRED_SMTP = {'smtp': {'id': 'dyhVFWmjRNC45ccA', 'name': 'SMTP account PROD'}}
 CRED_WP = {'httpHeaderAuth': {'id': '1NI0sJKc0kC430pb', 'name': 'AT REST Secret (header)'}}
@@ -57,15 +58,6 @@ return [{ json: { ok: false, id: hook.id, unique_id: '', company: `propuesta ${h
   problemas: [`No se pudo leer la propuesta en WordPress (HTTP ${le.statusCode})`],
   note: `No se pudo leer la propuesta en WordPress (HTTP ${le.statusCode})`, fotos_locales: 0, fotos_pedidas: 0, chat_respuesta: '' } }];"""
 
-EMAIL = """={{ $('Guardar resultado').item.json.statusCode === 200 ? '' : '<p style="color:#b91c1c"><strong>No se pudo guardar el resultado en WordPress</strong> (HTTP ' + $('Guardar resultado').item.json.statusCode + '): la propuesta puede seguir en «generando». Revísala en el panel.</p>' }}
-<h3>{{ $json.ok ? '✅ Lista para enviar' : '⚠️ La versión final tiene problemas' }}: {{ $json.company }}</h3>
-{{ $json.ok
-  ? '<ul><li>Presentación publicada y accesible</li><li>' + ($('Revisar fotos').isExecuted ? $('Revisar fotos').first().json.fotos_reemplazadas : 0) + ' descripciones de fotos reemplazadas por el filtro (pedían pantallas, texto o personas)</li><li>PDF generado</li><li>' + $json.fotos_locales + ' de ' + $json.fotos_pedidas + ' fotos guardadas junto a la presentación</li><li>El chatbot de demo respondió</li></ul>'
-  : '<p>Problemas encontrados:</p><ul><li>' + $json.problemas.join('</li><li>') + '</li></ul><p>La propuesta quedó en <strong>error</strong>: desde el panel puedes volver a aprobarla o pedir cambios.</p>' }}
-{{ $json.chat_respuesta ? '<p>Respuesta del chatbot a «Hola»: <em>' + $json.chat_respuesta + '</em></p>' : '' }}
-{{ $json.unique_id ? '<p><a href="__VER__' + $json.unique_id + '">📊 Ver la presentación final</a> (el PDF se descarga desde la última lámina)</p>' : '' }}
-<p><a href="__PANEL__{{ $json.id }}">✏️ Abrir en el panel</a></p>
-<p style="color:#666">El envío al cliente lo haces tú desde el panel, con la casilla «Enviar correo».</p>""".replace('__VER__', VER).replace('__PANEL__', PANEL)
 
 
 def node(id_, name, type_, version, pos, params, **extra):
@@ -124,11 +116,10 @@ nodes = [
     http('f10', 'Guardar resultado', [1760, 0], 'POST', f"={WP}/proposal/{{{{ $json.id }}}}/state",
          "={{ JSON.stringify({ status: $json.ok ? 'lista' : 'error', note: $json.note + ($json.ok ? '' : ' (ejecución ' + $execution.id + ')') }) }}"),
     node('f11', 'Resultado', 'n8n-nodes-base.code', 2, [1980, 0],
-         {'jsCode': "// Vuelve a poner el resultado de la verificación como item (Guardar resultado solo trae la respuesta HTTP).\nconst v = $('Verificar').isExecuted ? $('Verificar').first().json : $('Motivo lectura').first().json;\nreturn [{ json: v }];"}),
+         {'jsCode': correo_final()}),
     node('f12', 'Correo a Luis', 'n8n-nodes-base.emailSend', 1, [2200, 0],
          {'fromEmail': 'contacto@automatizatech.cl', 'toEmail': LUIS,
-          'subject': "={{ ($json.ok ? '✅ ' : '⚠️ ') + $json.company + ($json.ok ? ' · lista para enviar' : ' · la versión final tiene problemas') }}",
-          'html': EMAIL, 'options': {}},
+          'subject': '={{ $json.asunto }}', 'html': '={{ $json.html }}', 'options': {}},
          credentials=CRED_SMTP),
 ]
 

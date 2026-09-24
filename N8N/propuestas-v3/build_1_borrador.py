@@ -5,6 +5,7 @@ Solo referencia credenciales por id; no contiene secretos.
 """
 import json, os
 from fotos_guard import JS_LIMPIAR_FOTOS
+from correos import correo_borrador
 
 CRED_OPENAI = {'openAiApi': {'id': 'g52IEXpRfN5r7jKw', 'name': 'OpenAi account'}}
 CRED_SMTP = {'smtp': {'id': 'dyhVFWmjRNC45ccA', 'name': 'SMTP account PROD'}}
@@ -69,14 +70,6 @@ return [{ json: {
   system_prompt: $('Personalidad del chatbot').first().json.message.content,
 } }];"""
 
-# Nunca enlazar *.easypanel.host en un correo: el SMTP de Hostinger lo rechaza como spam
-# (554 5.7.1, medido el 2026-09-24). La presentación se enlaza por ver-presentacion.php.
-EMAIL_HTML = """=<h3>{{ $('Vista previa (sin fotos)').item.json.view_url ? '' : '⚠️ ' }}Borrador de propuesta: {{ $('Armar payload').item.json.payload.company_name }}</h3>
-<p style="white-space:pre-wrap">{{ $('Armar payload').item.json.resumen }}</p>
-{{ $('Vista previa (sin fotos)').item.json.view_url ? '' : '<p style="color:#b45309"><strong>La vista previa no se pudo generar.</strong> La propuesta quedó creada en borrador: en el panel, «Pedir cambios» (aunque sea sin comentario) vuelve a generarla.</p>' }}
-<p><a href="https://automatizatech.cl/ver-presentacion.php?id={{ $('Crear en WordPress').item.json.unique_id }}">👀 Ver vista previa (sin fotos)</a></p>
-<p><a href="{{ $('Crear en WordPress').item.json.panel_url }}">✏️ Revisar en el panel: precios, comentarios y aprobación</a></p>
-<p style="color:#666">Los precios dicen «Por confirmar» hasta que los escribas en el panel. No se ha gastado nada en fotos. Nada se envía al cliente desde este flujo.</p>"""
 
 
 def node(id_, name, type_, version, pos, params, **extra):
@@ -113,10 +106,10 @@ nodes = [
           'jsonBody': "={{ JSON.stringify(Object.assign({}, $('Armar payload').item.json.payload, { unique_id: $('Crear en WordPress').item.json.unique_id, draft: true, image_briefs: [] })) }}",
           'options': {'timeout': 120000}},
          onError='continueRegularOutput'),
+    node('b6b', 'Armar correo', 'n8n-nodes-base.code', 2, [1210, 0], {'jsCode': correo_borrador()}),
     node('b7', 'Correo a Luis', 'n8n-nodes-base.emailSend', 1, [1320, 0],
          {'fromEmail': 'contacto@automatizatech.cl', 'toEmail': LUIS,
-          'subject': "={{ ($('Vista previa (sin fotos)').item.json.view_url ? '' : '⚠️ ') + $('Armar payload').item.json.payload.company_name + ' · borrador listo para revisar' }}",
-          'html': EMAIL_HTML, 'options': {}},
+          'subject': '={{ $json.asunto }}', 'html': '={{ $json.html }}', 'options': {}},
          credentials=CRED_SMTP),
 ]
 order = [n['name'] for n in nodes]

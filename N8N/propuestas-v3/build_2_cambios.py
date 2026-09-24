@@ -7,6 +7,7 @@ Nunca deja una propuesta trabada en «ajustando»: si algo falla, la pasa a «er
 Solo referencia credenciales por id; no contiene secretos.
 """
 import json, os
+from correos import correo_cambios_ok, correo_cambios_error
 
 CRED_OPENAI = {'openAiApi': {'id': 'g52IEXpRfN5r7jKw', 'name': 'OpenAi account'}}
 CRED_SMTP = {'smtp': {'id': 'dyhVFWmjRNC45ccA', 'name': 'SMTP account PROD'}}
@@ -65,18 +66,7 @@ if (!reason && $('Guardar y volver a borrador').isExecuted) {
 }
 return [{ json: { id: base.id, unique_id: base.unique_id, company: base.company, reason: reason || 'Error desconocido al aplicar los cambios', exec: $execution.id } }];"""
 
-EMAIL_OK = """=<h3>{{ $('Vista previa').item.json.view_url ? '' : '⚠️ ' }}Cambios aplicados: {{ $('Payload final').item.json.company }}</h3>
-<p>Último comentario: <em>{{ $('Leer estado').item.json.body.ultimo_comentario || '(sin comentario: solo precios)' }}</em></p>
-{{ $('Vista previa').item.json.view_url ? '' : '<p style="color:#b45309"><strong>La nueva vista previa no se pudo generar.</strong> Los cambios quedaron guardados; «Pedir cambios» sin comentario la vuelve a generar.</p>' }}
-<p><a href="__VER__{{ $('Payload final').item.json.unique_id }}">👀 Ver la nueva vista previa (sin fotos)</a></p>
-<p><a href="__PANEL__{{ $('Payload final').item.json.id }}">✏️ Seguir revisando o aprobar en el panel</a></p>
-<p style="color:#666">No se ha gastado nada en fotos. Nada se envía al cliente desde este flujo.</p>""".replace('__VER__', VER).replace('__PANEL__', PANEL)
 
-EMAIL_ERROR = """=<h3>⚠️ No se pudieron aplicar los cambios: {{ $('Motivo del error').item.json.company }}</h3>
-<p>{{ $('Motivo del error').item.json.reason }}</p>
-<p>{{ $('Marcar error').item.json.statusCode === 200 ? 'La propuesta quedó en estado <strong>error</strong>. Desde el panel puedes volver a «Pedir cambios» o aprobarla.' : '<strong>Tampoco se pudo marcar como error</strong> (HTTP ' + $('Marcar error').item.json.statusCode + '): puede haber quedado en «ajustando». Revísala en el panel.' }}</p>
-<p><a href="__PANEL__{{ $('Motivo del error').item.json.id }}">✏️ Abrir en el panel</a></p>
-<p style="color:#666">Ejecución de n8n: {{ $('Motivo del error').item.json.exec }}</p>""".replace('__PANEL__', PANEL)
 
 
 def node(id_, name, type_, version, pos, params, **extra):
@@ -134,16 +124,14 @@ nodes = [
           'jsonBody': "={{ JSON.stringify(Object.assign({}, $('Guardar y volver a borrador').item.json.body.payload, { unique_id: $('Payload final').item.json.unique_id, draft: true, image_briefs: [] })) }}",
           'options': {'timeout': 120000}},
          onError='continueRegularOutput'),
-    email('c10', 'Correo cambios aplicados', [1980, -240],
-          "={{ ($('Vista previa').item.json.view_url ? '' : '⚠️ ') + $('Payload final').item.json.company + ' · cambios aplicados' }}",
-          EMAIL_OK),
+    node('c9b', 'Armar correo cambios', 'n8n-nodes-base.code', 2, [1870, -240], {'jsCode': correo_cambios_ok()}),
+    email('c10', 'Correo cambios aplicados', [1980, -240], '={{ $json.asunto }}', '={{ $json.html }}'),
     node('c11', 'Motivo del error', 'n8n-nodes-base.code', 2, [1760, 120], {'jsCode': CODE_MOTIVO}),
     wp_http('c12', 'Marcar error', [1980, 120], 'POST',
             f"={WP}/proposal/{{{{ $json.id }}}}/state",
             "={{ JSON.stringify({ status: 'error', note: $json.reason + ' (ejecución ' + $json.exec + ')' }) }}"),
-    email('c13', 'Correo con problema', [2200, 120],
-          "={{ '⚠️ ' + $('Motivo del error').item.json.company + ' · no se pudieron aplicar los cambios' }}",
-          EMAIL_ERROR),
+    node('c12b', 'Armar correo error', 'n8n-nodes-base.code', 2, [2090, 120], {'jsCode': correo_cambios_error()}),
+    email('c13', 'Correo con problema', [2200, 120], '={{ $json.asunto }}', '={{ $json.html }}'),
 ]
 
 
@@ -168,9 +156,11 @@ link('¿Payload OK?', 'Motivo del error', 1)
 link('Guardar y volver a borrador', '¿Guardado OK?')
 link('¿Guardado OK?', 'Vista previa', 0)
 link('¿Guardado OK?', 'Motivo del error', 1)
-link('Vista previa', 'Correo cambios aplicados')
+link('Vista previa', 'Armar correo cambios')
+link('Armar correo cambios', 'Correo cambios aplicados')
 link('Motivo del error', 'Marcar error')
-link('Marcar error', 'Correo con problema')
+link('Marcar error', 'Armar correo error')
+link('Armar correo error', 'Correo con problema')
 
 wf = {'name': 'Propuestas v3 · 2 Cambios', 'nodes': nodes, 'connections': connections,
       'settings': {'executionOrder': 'v1'}}

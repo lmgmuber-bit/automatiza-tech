@@ -5,6 +5,7 @@ const { generateProposalImages } = require('./higgsfield');
 const { renderProposalHtml } = require('./template');
 const { renderToFiles } = require('./render');
 const { persistImages } = require('./images-store');
+const { promptHash, readManifest, writeManifest, reusablePhotos } = require('./photo-manifest');
 
 function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
   const app = express();
@@ -36,16 +37,22 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
     // request — a proposal would come back with two photos and five gradients.
     // Passing them in sidesteps the queue entirely and doubles as the manual
     // escape hatch when an automated run degrades.
-    const provided = data.images && typeof data.images === 'object' && !Array.isArray(data.images)
+    const imageBriefs = Array.isArray(data.image_briefs) ? data.image_briefs : [];
+    const dataImages = data.images && typeof data.images === 'object' && !Array.isArray(data.images)
       ? data.images
       : {};
-    const pending = (Array.isArray(data.image_briefs) ? data.image_briefs : []).filter(
-      (b) => b && b.slide && !provided[b.slide]
-    );
 
-    const requested = (Array.isArray(data.image_briefs) ? data.image_briefs : [])
-      .map((b) => b && b.slide)
-      .filter(Boolean);
+    // A repeated /render for the same unique_id (n8n's "3 Final" flow retries
+    // up to 3 times while anything is missing) must not pay Higgsfield again
+    // for a brief whose prompt did not change: reuse the photo it already
+    // saved to disk on a previous call. Explicitly provided images still win
+    // over a reused one, same as they win over generating a fresh one.
+    const existingManifest = await readManifest(outputDir);
+    const reused = await reusablePhotos(imageBriefs, existingManifest, outputDir);
+    const provided = Object.assign({}, reused, dataImages);
+    const pending = imageBriefs.filter((b) => b && b.slide && !provided[b.slide]);
+
+    const requested = imageBriefs.map((b) => b && b.slide).filter(Boolean);
 
     let images;
     let report;
@@ -60,6 +67,25 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
       return res.status(502).json({ error: 'render failed', details: err.message });
     }
 
+    // Record, for every brief whose final image ended up as a local
+    // img/... file (freshly generated or reused this call), which prompt
+    // produced it — so the next retry can tell "same brief" from "prompt
+    // changed". Provided photos with no brief, and briefs that stayed
+    // remote/missing, are never recorded: there is nothing safe to reuse.
+    const nextManifest = Object.assign({}, existingManifest);
+    for (const brief of imageBriefs) {
+      const slide = brief && brief.slide;
+      if (!slide || !brief.prompt) continue;
+      const finalImage = images[slide];
+      if (typeof finalImage !== 'string' || !finalImage.startsWith('img/')) continue;
+      nextManifest[slide] = { file: finalImage.slice('img/'.length), hash: promptHash(brief.prompt) };
+    }
+    try {
+      await writeManifest(outputDir, nextManifest);
+    } catch (err) {
+      console.error('POST /render: no se pudo guardar el manifiesto de fotos:', err.message);
+    }
+
     res.json({
       view_url: `${baseUrl}/p/${data.unique_id}/index.html`,
       pdf_url: `${baseUrl}/p/${data.unique_id}/presentation.pdf`,
@@ -68,6 +94,10 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
         stored_local: report.saved.length,
         kept_remote: report.kept_remote,
         missing: requested.filter((slide) => !images[slide]),
+        // A slide explicitly provided in data.images wins over a reused one
+        // (see `provided` above), so it was not actually served by the
+        // manifest even though it also had a reusable entry.
+        reused: Object.keys(reused).filter((slide) => !dataImages[slide]).length,
       },
     });
   });

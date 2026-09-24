@@ -45,6 +45,7 @@ scope:
   allowed_files:
     - "CumpleBooth/database/migrations/024_agenda_eventos.php"
     - "CumpleBooth/database/migrations/024_agenda_eventos.down.php"
+    - "CumpleBooth/database/aplicar-024.php"
     - "CumpleBooth/public/lib.agenda.php"
     - "CumpleBooth/public/admin/agenda.php"
     - "CumpleBooth/public/admin/agenda-ics.php"

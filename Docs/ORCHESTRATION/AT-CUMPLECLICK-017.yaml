@@ -45,6 +45,7 @@ scope:
     - "CumpleBooth/docs/MARKETING-CUMPLECLICK-30-DIAS.md"
     - "CumpleBooth/database/migrations/025_marketing_contenido.php"
     - "CumpleBooth/database/migrations/025_marketing_contenido.down.php"
+    - "CumpleBooth/database/aplicar-025.php"
     - "CumpleBooth/public/lib.marketing.php"
     - "CumpleBooth/public/admin/contenido.php"
     - "CumpleBooth/public/admin/contenido-media.php"

@@ -26,6 +26,7 @@ Tickets: `Docs/ORCHESTRATION/AT-CUMPLECLICK-017.yaml` (marketing) y `AT-CUMPLECL
    | Archivo | 018 (agenda) | 017 (marketing) |
    |---|---|---|
    | `database/migrations/` | crea **`024_agenda_eventos.php`** (+ `.down.php`) | crea **`025_marketing_contenido.php`** (+ `.down.php`) |
+   | `database/aplicar-0NN.php` | crea **`aplicar-024.php`** (copia de `aplicar-023.php`) | crea **`aplicar-025.php`** (ídem) |
    | `public/lib.admin-usuarios.php` `CB_ADMIN_MODULOS` | agrega la clave `agenda` **justo después de `invitados`** | agrega la clave `marketing` **al final, después de `perfil`** |
    | `public/admin/_acceso.php` `admin_nav()` | agrega la pestaña Agenda **justo después de Fiestas** | agrega la pestaña Contenido **justo después de Finanzas** |
    | `docs/FTP-MANIFEST.md` | **anexa** una sección al final con fecha y ticket | **anexa** una sección al final con fecha y ticket |
@@ -38,6 +39,13 @@ Tickets: `Docs/ORCHESTRATION/AT-CUMPLECLICK-017.yaml` (marketing) y `AT-CUMPLECL
    destino en PROD, `OBLIGATORIO`/`OPCIONAL`, orden). Claude despliega por SSH con el go de Luis
    (reconocer, respaldar en `~/respaldos/`, subir, `php -l`, verificar desde afuera) y después
    mergea. 🔴 **La migración va antes que el código**, o la consulta de fiestas falla entera.
+   **Migraciones:** en local se aplican con `php scripts/migrate.php` (runner, tabla
+   `cc_schema_migrations`); en PROD Claude corre por SSH un script de un solo uso por migración,
+   `database/aplicar-0NN.php`, calcado de `database/aplicar-023.php` (comprueba la versión, corre
+   la migración, la registra e imprime las tablas). Cada ticket entrega el suyo.
+   **CSRF y helpers del admin:** cada página copia sus helpers (`admin_csrf_token()`,
+   `admin_csrf_check()`, `admin_csrf_field()`, `h()`), como en `admin/aceptaciones.php` líneas
+   26–45; no hay un include compartido para eso y no es el momento de crearlo.
 5. **Sin secretos, nunca:** las claves viven en `C:\Users\luis_\OneDrive\Documentos\APIS KEy\APIS KEY.txt`
    y se leen por rótulo. No van a `.env`, config, docs, logs ni al chat. El repositorio es público.
 6. **El CI de GitHub no corre** (cuenta bloqueada por facturación desde el 21-sep): correr en local

@@ -21,6 +21,8 @@
 - PROD: los archivos de WordPress se suben por SSH solo con autorización explícita de Luis para ese deploy (reconocer, respaldar, subir, verificar desde afuera). El renderer lo despliega Luis con un zip.
 - Los archivos del repo están en CRLF: cada edición conserva los fines de línea del archivo.
 - Regla de fundamentos: cada verificación de este plan se hace midiendo (HTTP, consulta, prueba), no suponiendo.
+- **Respaldar antes de cada cambio en PROD** (regla de Luis, 2026-09-23): tabla, archivos, flujos de n8n y renderer tienen un respaldo nombrado y verificado antes de tocarse. Ya hechos al empezar la ejecución (2026-09-24 01:33): `~/respaldos/wp_automatiza_propuestas-antes-v3-20260924-013320.sql` (11 filas, md5 `e580d02e5aa8e75e7a4e324aca98b72c`) y `~/respaldos/tema-propuestas-antes-v3-20260924-013331.tar.gz` (functions.php, admin-proposals.php, rest-proposals.php, api-save-proposal.php, api-get-prompt.php, api-save-presentation.php, ver-demo.php, ver-presentacion.php). Los flujos de n8n se exportan a `C:/Users/luis_/respaldos/n8n/2026-09-23/` antes de editarlos.
+- 🔴 **`functions.php` NO se toca ni se sube**: el de PROD va por delante de `main` (carga `inc/admin-at-finanzas.php`, que no está en el repo; cotejado el 2026-09-24). Subir el de la rama borraría Finanzas AT en PROD.
 
 ## Estados (`status`) y transiciones del flujo v3
 
@@ -52,7 +54,6 @@
 | `tests/propuestas/flow-test.php` (nuevo) | Pruebas de las reglas puras |
 | `wp-content/themes/automatiza-tech/inc/rest-proposals.php` | Rutas `POST /proposal` y `GET/POST /proposal/{id}/state` |
 | `wp-content/themes/automatiza-tech/inc/admin-proposals.php` | Sección de revisión v3, botones, candado de envío, texto del PDF |
-| `wp-content/themes/automatiza-tech/functions.php` | Cargar `proposals-flow.php` |
 | n8n: `Propuestas v3 · 1 Borrador`, `· 2 Cambios`, `· 3 Final` (nuevos) | Orquestación |
 | `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md` | Documentar el flujo v3 |
 
@@ -420,7 +421,7 @@ Expected: `200` (el volumen persiste; el deploy no borra presentaciones).
 **Files:**
 - Create: `wp-content/themes/automatiza-tech/inc/proposals-flow.php`
 - Create: `tests/propuestas/flow-test.php`
-- Modify: `wp-content/themes/automatiza-tech/functions.php` (una línea antes del `require_once` de `rest-proposals.php`, hoy en la línea ~1340)
+- Modify: `wp-content/themes/automatiza-tech/inc/rest-proposals.php` y `inc/admin-proposals.php` (una línea `require_once` en cada uno; **no** `functions.php`, ver Global Constraints)
 
 **Interfaces:**
 - Produces (todas puras salvo la migración):
@@ -641,10 +642,11 @@ if (function_exists('add_action')) {
 }
 ```
 
-En `functions.php`, justo antes de `require_once get_template_directory() . '/inc/rest-proposals.php';`:
+En `inc/rest-proposals.php` y en `inc/admin-proposals.php`, justo después de su guarda `if (!defined('ABSPATH')) { exit; }` (o equivalente al inicio del archivo), agrega:
 ```php
-require_once get_template_directory() . '/inc/proposals-flow.php';
+require_once __DIR__ . '/proposals-flow.php';
 ```
+(`require_once` evita la doble carga; así `functions.php` queda intacto.)
 
 - [ ] **Step 4: Correr y ver que pasa**
 
@@ -655,7 +657,7 @@ Run también: `"/c/wamp64/bin/php/php8.4.15/php.exe" -l wp-content/themes/automa
 - [ ] **Step 5: Commit**
 
 ```bash
-git add wp-content/themes/automatiza-tech/inc/proposals-flow.php tests/propuestas/flow-test.php wp-content/themes/automatiza-tech/functions.php
+git add wp-content/themes/automatiza-tech/inc/proposals-flow.php tests/propuestas/flow-test.php wp-content/themes/automatiza-tech/inc/rest-proposals.php wp-content/themes/automatiza-tech/inc/admin-proposals.php
 git commit -m "feat(propuestas): reglas del flujo v3 (estados, precios, envio) y migracion de columnas"
 ```
 
@@ -991,20 +993,21 @@ git commit -m "feat(propuestas): panel v3 con precios, cambios y aprobacion; env
 
 ### Task 8: Desplegar WordPress en PROD y probar las rutas
 
-**Files:** los 4 archivos de Tasks 5–7. **Requiere autorización explícita de Luis para este deploy.**
+**Files:** `inc/proposals-flow.php` (nuevo), `inc/rest-proposals.php`, `inc/admin-proposals.php`. **`functions.php` no se sube.** **Requiere autorización explícita de Luis para este deploy.**
 
 - [ ] **Step 1: Cotejar PROD antes de subir** (la copia local puede estar vieja)
 
-Por SSH (helper `prod_ssh.py` del scratchpad, que tapa valores): `md5sum` de `wp-content/themes/automatiza-tech/{functions.php,inc/admin-proposals.php,inc/rest-proposals.php}` en `domains/automatizatech.cl/public_html/` vs `git show origin/main:<ruta> | md5sum`. Si alguno difiere, **detenerse** y traer el de PROD al repo antes de aplicar los cambios encima.
+Por SSH (helper `prod_ssh.py` del scratchpad, que tapa valores), sin retornos de carro: `tr -d '\r' < <archivo> | md5sum` de `inc/admin-proposals.php` e `inc/rest-proposals.php` en PROD vs `git show <commit base de la Task 5>:<ruta> | tr -d '\r' | md5sum`. Cotejo del 2026-09-24: ambos idénticos (`5cde0abb1ea0…` y `e115a143e163…`). Si alguno cambió desde entonces, **detenerse** y traer el de PROD al repo antes de aplicar los cambios encima.
 
 - [ ] **Step 2: Respaldar y subir**
 
 ```bash
 # en el servidor
 cd ~/domains/automatizatech.cl/public_html/wp-content/themes/automatiza-tech
-tar czf ~/respaldos/tema-propuestas-antes-v3-$(date +%Y%m%d-%H%M).tar.gz functions.php inc/admin-proposals.php inc/rest-proposals.php
+tar czf ~/respaldos/tema-propuestas-antes-deploy-v3-$(date +%Y%m%d-%H%M).tar.gz inc/admin-proposals.php inc/rest-proposals.php
+mysqldump no está disponible desde PHP en Hostinger: repetir el respaldo de la tabla con el mismo script PHP del 2026-09-24 (SELECT * → archivo .sql 0600 en ~/respaldos) justo antes de la migración.
 ```
-Subir por SFTP: `inc/proposals-flow.php` (primero, porque `functions.php` lo requiere), luego `inc/rest-proposals.php`, `inc/admin-proposals.php` y al final `functions.php`. `php -l` de cada uno en el servidor.
+Subir por SFTP: `inc/proposals-flow.php` **primero** (los otros dos lo requieren), luego `inc/rest-proposals.php` e `inc/admin-proposals.php`. `php -l` de cada uno en el servidor. Rollback: extraer el tar de este paso sobre la misma carpeta y borrar `inc/proposals-flow.php`; las columnas nuevas pueden quedarse (son `DEFAULT NULL` y el código viejo no las lee).
 
 - [ ] **Step 3: Migración**
 
@@ -1253,7 +1256,7 @@ En el panel, fila `[PRUEBA]` → **Aprobar**. Expected, medido:
 - Modify (n8n): nodo **Enviar a Workflow Propuestas** de `FrWZcgbizlipK5pb` → URL `https://n8n-n8n.kchiba.easypanel.host/webhook/propuesta-v3-borrador`.
 - Modify: `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md` (sección nueva "Flujo automático v3").
 
-- [ ] **Step 1: Cambiar la URL** con `n8n_update_partial_workflow` (`updateNode` → `parameters.url`). Anotar el valor anterior (`.../webhook/generar-propuesta-v2`) para revertir.
+- [ ] **Step 1: Respaldar y cambiar la URL** — exportar primero el workflow completo (`n8n_get_workflow` modo `full`) a `C:/Users/luis_/respaldos/n8n/2026-09-23/FrWZcgbizlipK5pb-antes-v3.json` y comprobar que el archivo tiene los 8 nodos. Luego `n8n_update_partial_workflow` (`updateNode` → `parameters.url`). Valor anterior para revertir: `=https://n8n-n8n.kchiba.easypanel.host/webhook/generar-propuesta-v2`.
 
 - [ ] **Step 2: Documentar** — agregar a la guía:
 ```markdown

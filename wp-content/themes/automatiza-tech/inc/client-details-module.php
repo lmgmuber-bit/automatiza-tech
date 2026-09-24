@@ -222,7 +222,7 @@ class AutomatizaTech_Client_Details {
             ),
             // ===== TIPOS CON DOCUMENTOS ADJUNTOS =====
             'presentacion' => array(
-                'label' => '🎨 Presentación (Gamma)',
+                'label' => '🎨 Presentación',
                 'icon' => '🎨',
                 'color' => '#a855f7',
                 'accepts_file' => true
@@ -1716,7 +1716,7 @@ class AutomatizaTech_Client_Details {
                 modalHtml += '<div class="cdw-attachment-section" style="margin-top: 15px; padding: 15px; background: #f0f9ff; border: 1px dashed #0ea5e9; border-radius: 8px;">';
                 modalHtml += '<h4 style="margin: 0 0 10px 0; color: #0369a1; font-size: 14px;">📎 Documento Adjunto (opcional)</h4>';
                 modalHtml += '<div class="cdw-form-group"><label>Subir archivo</label><input type="file" name="attachment" accept=".pdf,.doc,.docx,.txt,.md,.jpg,.jpeg,.png,.gif,.xls,.xlsx"></div>';
-                modalHtml += '<div class="cdw-form-group"><label>O pegar URL (Gamma, Google Docs, etc.)</label><input type="url" name="attachment_url" placeholder="https://..."></div>';
+                modalHtml += '<div class="cdw-form-group"><label>O pegar URL (presentación, Google Docs, etc.)</label><input type="url" name="attachment_url" placeholder="https://..."></div>';
                 modalHtml += '<input type="hidden" name="attachment_name" value="">';
                 modalHtml += '<input type="hidden" name="attachment_type" value="link">';
                 modalHtml += '<p style="font-size: 12px; color: #64748b; margin: 8px 0 0 0;">Formatos: PDF, Word, Excel, TXT, Markdown, Imágenes</p>';

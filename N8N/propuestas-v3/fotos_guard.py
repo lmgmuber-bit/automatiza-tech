@@ -10,8 +10,8 @@ a 720p ese día:
 
 Por eso el filtro:
   1. reemplaza la descripción si pide algo que trae texto o contenido en pantalla;
-  2. deja pasar productos con etiqueta o pantalla (botellas, cajas, celulares, libros) solo si la descripción
-     dice que van sin etiqueta, de espaldas, apagados o desenfocados;
+  2. neutraliza los productos con etiqueta o pantalla (botellas, cajas, celulares, libros): les agrega
+     "plain unlabeled" o "pantalla apagada y de espaldas" en vez de perder la escena del rubro;
   3. en la portada, reemplaza si pide un fondo con estructuras (estadio, fachada, calle, muro) y siempre
      agrega primer plano con fondo desenfocado;
   4. siempre agrega el cierre de prohibiciones.
@@ -38,27 +38,43 @@ const SEGURAS = {
   next_steps: 'open country road through green hills at sunrise, soft mist, hopeful calm atmosphere',
   extra: 'soft pattern of light and shadow on a textured surface next to a small plant, calm minimal composition',
 };
+// GPT-4o escribe escenas del rubro ("hand holding a wine bottle") pero no agrega "sin etiqueta" aunque se le
+// pida (Borrador 403817, 2026-09-24). En vez de perder la escena, el filtro la neutraliza: producto sin etiqueta,
+// pantallas apagadas y de espaldas. Si aun así queda algo sin neutralizar, se reemplaza.
+const PRODUCTO = /\b((?:(?:wine|beer|liquor|whisky|whiskey|pisco|vodka|gin|rum|glass|plastic|cardboard|gift|delivery)\s+)?(?:bottles?|cans?|jars?|box(?:es)?|packages?|parcels?|books?|jerseys?|t-?shirts?))\b/gi;
+const PANTALLA = /\b(screens?|monitors?|displays?|laptops?|computers?|tablets?|phones?|smartphones?|cell ?phones?)\b/i;
+function neutralizar(tema) {
+  if (!CON_ETIQUETA.test(tema) || NEUTRALIZADO.test(tema)) return tema;
+  let t = tema.replace(/\s*with (?:its|a|the|their) labels?/gi, '').replace(PRODUCTO, 'plain unlabeled $1');
+  if (PANTALLA.test(t)) t += ', every screen dark and facing away from the camera';
+  if (/\b(shelves|shelf)\b/i.test(t) && !/unlabell?ed/i.test(t)) t += ', shelves holding only plain unlabeled products';
+  return t;
+}
 function motivoFoto(slide, tema) {
   if (!tema) return 'vacía';
   if (PROHIBIDO.test(tema)) return 'texto o pantalla';
-  if (CON_ETIQUETA.test(tema) && !NEUTRALIZADO.test(tema)) return 'producto con etiqueta o pantalla visible';
   if (slide === 'cover' && FONDO_PORTADA.test(tema)) return 'portada con estructuras de fondo';
+  if (CON_ETIQUETA.test(tema) && !NEUTRALIZADO.test(tema)) return 'producto con etiqueta o pantalla visible';
   return '';
 }
 function limpiarFotos(briefs) {
   let reemplazadas = 0;
+  let neutralizadas = 0;
   const limpias = (briefs || []).filter((b) => b && b.slide).map((b) => {
     // Se descarta la lista de prohibiciones que haya escrito el modelo: el cierre lo pone siempre el filtro.
-    let tema = String(b.prompt || '').split(/,\s*no (?:people facing camera|screens?|signs?|labels?|text)\b/i)[0].trim();
+    const original = String(b.prompt || '').split(/,\s*no (?:people facing camera|screens?|signs?|labels?|text)\b/i)[0].trim();
+    let tema = neutralizar(original);
     if (motivoFoto(b.slide, tema)) {
       reemplazadas++;
       tema = SEGURAS[b.slide] || SEGURAS.extra;
+    } else if (tema !== original) {
+      neutralizadas++;
     }
     if (b.slide === 'cover' && !PRIMER_PLANO.test(tema)) {
       tema += ', close-up, shallow depth of field, background completely blurred';
     }
     return { slide: b.slide, prompt: `${tema}, ${CIERRE}` };
   });
-  return { limpias, reemplazadas };
+  return { limpias, reemplazadas, neutralizadas };
 }
 """

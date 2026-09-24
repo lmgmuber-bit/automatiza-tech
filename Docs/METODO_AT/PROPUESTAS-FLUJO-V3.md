@@ -41,9 +41,12 @@ sus productos y lugares, **con personas en acción**. Lo medido con Soul 2 a 720
 Reglas que aplica `N8N/propuestas-v3/fotos_guard.py` (compartido por Borrador y Final; pruebas en `probar_fotos.py`):
 - Se reemplaza toda descripción que pida pantallas con contenido, sitios web, gráficos, documentos, pizarras,
   letreros, carteles, marcadores, menús o texto.
-- Productos con etiqueta o pantalla (botellas, latas, cajas, celulares, laptops, libros) pasan solo si la
-  descripción dice sin etiqueta, de espaldas, apagado, cerrado o desenfocado. Para licores: un vaso servido o
-  botellas sin etiqueta (sin probar todavía con fotos reales).
+- Productos con etiqueta o pantalla (botellas, latas, cajas, paquetes, celulares, laptops, libros, estantes):
+  el filtro los **neutraliza** («plain unlabeled …», «every screen dark and facing away») en vez de perder la
+  escena, porque GPT-4o no escribe «sin etiqueta» aunque se le pida. Probado con una botillería ficticia
+  (filas 49–51): de 4 de 8 fotos neutras a 8 de 8 del rubro. Falta ver las fotos reales de licores.
+- Cada lámina muestra el mundo del cliente, nunca la solución de AutomatizaTech (nada de celulares navegando,
+  computadores, oficinas ni reuniones); el prompt de Borrador dice qué mostrar por lámina.
 - La portada va siempre en primer plano con el fondo desenfocado; se reemplaza si pide estadio, fachada, calle o muro.
 - Los reemplazos son escenas neutras que sirven para cualquier rubro, nunca las de otro cliente.
 - Siempre se agrega el cierre `no signs, no labels, no text, no lettering, no logos, no watermarks`.
@@ -64,5 +67,10 @@ Se enlaza `automatizatech.cl/ver-presentacion.php?id=`.
   Respaldos antes de cada publicación en `C:/Users/luis_/respaldos/n8n/<fecha>...`.
 - Renderer: lo despliega Luis soltando el zip (`git archive --format=zip -o x.zip <commit>:renderer`) en Easypanel.
   Rollback = el zip anterior.
+- 🔴 **Editar el workflow de Meet reprocesa transcripciones viejas.** El 2026-09-24, al cambiar solo la URL del
+  nodo de envío por la API, el disparador de Drive volvió a tomar la transcripción real de Orly que ya estaba en
+  la carpeta y creó la fila 48 (borrador, con su correo real; no se le envió nada). Antes de tocar ese workflow,
+  sacar de Transcripciones lo ya procesado (por ejemplo a una subcarpeta «Procesadas») o contar con que se
+  repetirá el borrador.
 - Meet: para volver al flujo viejo, la URL del nodo «Enviar a Workflow Propuestas» vuelve a
   `https://n8n-n8n.kchiba.easypanel.host/webhook/generar-propuesta-v2` (`APuTGmusbjLAJ74w`, queda de respaldo).

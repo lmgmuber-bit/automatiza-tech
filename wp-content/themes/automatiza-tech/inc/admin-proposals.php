@@ -11,6 +11,30 @@ if (!defined('ABSPATH')) {
 
 require_once __DIR__ . '/proposals-flow.php';
 
+if (!defined('AT_N8N_V3_CAMBIOS')) {
+    define('AT_N8N_V3_CAMBIOS', 'https://n8n-n8n.kchiba.easypanel.host/webhook/propuesta-v3-cambios');
+}
+if (!defined('AT_N8N_V3_FINAL')) {
+    define('AT_N8N_V3_FINAL', 'https://n8n-n8n.kchiba.easypanel.host/webhook/propuesta-v3-final');
+}
+
+/** Avisa a n8n; devuelve '' si respondió 2xx o el motivo del fallo. */
+function at_v3_llamar_n8n(string $url, int $id): string {
+    if (!defined('AT_REST_SECRET') || AT_REST_SECRET === '') {
+        return 'AT_REST_SECRET no está configurado.';
+    }
+    $r = wp_remote_post($url, [
+        'timeout' => 15,
+        'headers' => ['Content-Type' => 'application/json', 'X-AT-Secret' => AT_REST_SECRET],
+        'body'    => wp_json_encode(['id' => $id]),
+    ]);
+    if (is_wp_error($r)) {
+        return $r->get_error_message();
+    }
+    $code = wp_remote_retrieve_response_code($r);
+    return ($code >= 200 && $code < 300) ? '' : "n8n respondió HTTP {$code}";
+}
+
 /**
  * Agregar menú de administración
  */
@@ -63,8 +87,41 @@ function automatiza_tech_proposals_page() {
         }
     }
 
+    // --- PROCESAR BOTONES DEL PANEL v3 (pedir cambios / aprobar) ---
+    if (isset($_POST['at_v3_accion'], $_POST['proposal_id']) && current_user_can('manage_options')) {
+        $id = (int) $_POST['proposal_id'];
+        check_admin_referer('at_v3_' . $id);
+        $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $id));
+        $accion = sanitize_key($_POST['at_v3_accion']);
+        if ($row && $row->flujo === 'v3' && in_array($accion, ['cambios', 'aprobar'], true)) {
+            $payload = json_decode((string) $row->gamma_prompt_text, true) ?: [];
+            $filas = isset($_POST['at_precio']) && is_array($_POST['at_precio']) ? wp_unslash($_POST['at_precio']) : [];
+            $payload = at_propuesta_aplicar_precios($payload, $filas, sanitize_textarea_field(wp_unslash($_POST['at_nota_precio'] ?? '')));
+            $hacia = $accion === 'cambios' ? 'ajustando' : 'generando';
+            if (!at_propuesta_transicion_valida((string) $row->status, $hacia)) {
+                $message = '<div class="notice notice-error"><p>No se puede pasar de <strong>' . esc_html($row->status) . '</strong> a <strong>' . esc_html($hacia) . '</strong>.</p></div>';
+            } else {
+                $update = ['gamma_prompt_text' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'status' => $hacia, 'status_note' => ''];
+                $comentario = trim(sanitize_textarea_field(wp_unslash($_POST['at_comentario'] ?? '')));
+                if ($accion === 'cambios') {
+                    $update['feedback_log'] = at_propuesta_agregar_comentario($row->feedback_log, $comentario, current_time('mysql'));
+                }
+                $wpdb->update($table_name, $update, ['id' => $id]);
+                $fallo = at_v3_llamar_n8n($accion === 'cambios' ? AT_N8N_V3_CAMBIOS : AT_N8N_V3_FINAL, $id);
+                if ($fallo !== '') {
+                    $wpdb->update($table_name, ['status' => 'error', 'status_note' => 'No se pudo avisar a n8n: ' . $fallo], ['id' => $id]);
+                    $message = '<div class="notice notice-error"><p>' . esc_html('No se pudo avisar a n8n: ' . $fallo) . '</p></div>';
+                } else {
+                    $message = '<div class="notice notice-success"><p>' . ($accion === 'cambios'
+                        ? 'Cambios enviados. Te llegará un correo con la nueva vista previa.'
+                        : 'Aprobada. Se están generando las fotos y la versión final; te llegará un correo cuando esté verificada.') . '</p></div>';
+                }
+            }
+        }
+    }
+
     // --- PROCESAR FORMULARIO ---
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proposal_id'])) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proposal_id']) && !isset($_POST['at_v3_accion'])) {
         // Verificar nonce para seguridad
         if (!isset($_POST['automatiza_proposal_nonce']) || !wp_verify_nonce($_POST['automatiza_proposal_nonce'], 'save_proposal')) {
             echo '<div class="notice notice-error"><p>Error de seguridad. Intente nuevamente.</p></div>';
@@ -117,6 +174,12 @@ function automatiza_tech_proposals_page() {
 
         // Actualizar BD
         $send_email = isset($_POST['send_email']) && $_POST['send_email'] === '1';
+        $actual = $wpdb->get_row($wpdb->prepare("SELECT flujo, status FROM {$table_name} WHERE id = %d", $id));
+        $es_v3 = $actual && $actual->flujo === 'v3';
+        if ($send_email && $actual && !at_propuesta_puede_enviarse($actual->flujo, (string) $actual->status)) {
+            $send_email = false;
+            $bloqueo_envio = true;
+        }
         $update_data = [
             'client_name' => $client_name,
             'company_name' => $company_name,
@@ -124,7 +187,7 @@ function automatiza_tech_proposals_page() {
             'client_email' => $client_email,
             'gamma_iframe_url' => $gamma_url,
             'n8n_chat_url' => $n8n_url,
-            'status' => $send_email ? 'sent' : 'pending'
+            'status' => $send_email ? 'sent' : ($es_v3 ? $actual->status : 'pending')
         ];
         // Solo actualizar prompts si se enviaron (no vacíos)
         if (!empty($gamma_prompt)) {
@@ -139,12 +202,18 @@ function automatiza_tech_proposals_page() {
 
         $wpdb->update($table_name, $update_data, ['id' => $id]);
 
+        if (!empty($bloqueo_envio)) {
+            $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: una propuesta v3 solo se envía cuando está <strong>lista</strong> (versión final verificada).</p></div>';
+        }
+
         // Obtener datos actualizados para el email
         $proposal = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $id));
-        
+
         // --- ENVIAR EMAIL (solo si el checkbox está marcado) ---
         if (!$send_email) {
-            $message = '<div class="notice notice-success is-dismissible"><p>✅ Propuesta guardada correctamente. <strong>No se envió correo</strong> (checkbox desmarcado).</p></div>';
+            if (empty($bloqueo_envio)) {
+                $message = '<div class="notice notice-success is-dismissible"><p>✅ Propuesta guardada correctamente. <strong>No se envió correo</strong> (checkbox desmarcado).</p></div>';
+            }
         } else {
             $to = $proposal->client_email;
         
@@ -166,6 +235,28 @@ function automatiza_tech_proposals_page() {
             $intro_text = !empty($email_intro) ? nl2br(esc_html($email_intro)) : 'Es un placer presentarle nuestra propuesta de automatización inteligente diseñada específicamente para <strong>' . esc_html($company_name) . '</strong>.';
             $highlight_text = !empty($email_highlight) ? nl2br(esc_html($email_highlight)) : 'Hemos analizado sus requerimientos y preparado una solución personalizada que optimizará sus procesos de negocio mediante inteligencia artificial.';
             $closing_text = !empty($email_closing) ? nl2br(esc_html($email_closing)) : 'Quedamos atentos a sus comentarios y consultas.';
+
+            // Preparar adjuntos - Verificar si hay PDF actual o recién subido
+            $attachments = array();
+
+            // Primero verificar si se subió un nuevo PDF
+            if (isset($pdf_file_path) && file_exists($pdf_file_path)) {
+                $attachments[] = $pdf_file_path;
+            }
+            // Si no hay nuevo, verificar si hay uno existente en la BD
+            elseif (!empty($proposal->pdf_path)) {
+                // Convertir URL a ruta física
+                $upload_dir = wp_upload_dir();
+                $pdf_url = $proposal->pdf_path;
+
+                // Intentar obtener ruta física desde URL
+                if (strpos($pdf_url, $upload_dir['baseurl']) !== false) {
+                    $pdf_file_path = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $pdf_url);
+                    if (file_exists($pdf_file_path)) {
+                        $attachments[] = $pdf_file_path;
+                    }
+                }
+            }
 
             // Template HTML (mismo estilo que recordatorios)
             $body = '
@@ -214,8 +305,10 @@ function automatiza_tech_proposals_page() {
                             <a href="' . esc_url($link_demo) . '" class="btn btn-secondary">🤖 Probar Demo Chatbot</a>
                         </div>
                         
-                        <p style="font-size: 14px; color: #666; text-align: center;">Adjunto encontrará también una copia en PDF de la presentación para su archivo.</p>
-                        
+                        ' . (!empty($attachments)
+                            ? '<p style="font-size: 14px; color: #666; text-align: center;">Adjunto encontrará también una copia en PDF de la presentación para su archivo.</p>'
+                            : '<p style="font-size: 14px; color: #666; text-align: center;">Puede descargar la presentación en PDF desde el botón del final de la presentación.</p>') . '
+
                         <p>' . $closing_text . '</p>
                         
                         <p>Atentamente,<br><strong>El equipo de Automatiza Tech</strong></p>
@@ -237,28 +330,6 @@ function automatiza_tech_proposals_page() {
             $headers[] = 'Reply-To: ' . $admin_email;
             // Copia oculta para registro interno
             $headers[] = 'Bcc: automatizacionesbotcore@gmail.com';
-
-            // Preparar adjuntos - Verificar si hay PDF actual o recién subido
-            $attachments = array();
-            
-            // Primero verificar si se subió un nuevo PDF
-            if (isset($pdf_file_path) && file_exists($pdf_file_path)) {
-                $attachments[] = $pdf_file_path;
-            } 
-            // Si no hay nuevo, verificar si hay uno existente en la BD
-            elseif (!empty($proposal->pdf_path)) {
-                // Convertir URL a ruta física
-                $upload_dir = wp_upload_dir();
-                $pdf_url = $proposal->pdf_path;
-                
-                // Intentar obtener ruta física desde URL
-                if (strpos($pdf_url, $upload_dir['baseurl']) !== false) {
-                    $pdf_file_path = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $pdf_url);
-                    if (file_exists($pdf_file_path)) {
-                        $attachments[] = $pdf_file_path;
-                    }
-                }
-            }
 
             // Capturar errores de envío
             global $phpmailer;
@@ -770,13 +841,54 @@ function automatiza_tech_proposals_page() {
                                 </div>
                                 <?php endif; ?>
 
+                                <?php if (($edit_proposal->flujo ?? '') === 'v3'):
+                                    $pl = json_decode((string) $edit_proposal->gamma_prompt_text, true) ?: [];
+                                    $costo = at_propuesta_costo_fotos($pl);
+                                    $filas = $pl['pricing_rows'] ?? [];
+                                    for ($i = count($filas); $i < 6; $i++) { $filas[] = ['service' => '', 'price_label' => '']; }
+                                    $log = json_decode((string) $edit_proposal->feedback_log, true) ?: [];
+                                ?>
+                                <div class="v3-section" style="margin-top:20px;padding:20px;background:#f0fdfa;border:1px solid #14b8a6;border-radius:8px;">
+                                  <h3 style="margin-top:0;color:#0f766e;">🔁 Revisión de la propuesta (flujo v3)</h3>
+                                  <p>Estado: <strong><?php echo esc_html($edit_proposal->status); ?></strong>
+                                     <?php if ($edit_proposal->status_note): ?> — <?php echo esc_html($edit_proposal->status_note); ?><?php endif; ?>
+                                     · <a href="<?php echo esc_url($edit_proposal->gamma_iframe_url); ?>" target="_blank">Ver vista previa</a></p>
+                                  <?php wp_nonce_field('at_v3_' . $edit_proposal->id); ?>
+                                  <table class="widefat" style="max-width:820px;">
+                                    <thead><tr><th>Servicio</th><th>Precio (texto tal cual)</th><th>Destacar</th></tr></thead>
+                                    <tbody>
+                                    <?php foreach ($filas as $i => $f): ?>
+                                      <tr>
+                                        <td><input type="text" class="regular-text" name="at_precio[<?php echo $i; ?>][service]" value="<?php echo esc_attr($f['service'] ?? ''); ?>"></td>
+                                        <td><input type="text" class="regular-text" name="at_precio[<?php echo $i; ?>][price_label]" value="<?php echo esc_attr($f['price_label'] ?? ''); ?>"></td>
+                                        <td><input type="checkbox" name="at_precio[<?php echo $i; ?>][emphasis]" value="1" <?php checked(!empty($f['emphasis'])); ?>></td>
+                                      </tr>
+                                    <?php endforeach; ?>
+                                    </tbody>
+                                  </table>
+                                  <p><label>Nota de precios<br><textarea name="at_nota_precio" rows="2" class="large-text"><?php echo esc_textarea($pl['pricing_note'] ?? ''); ?></textarea></label></p>
+                                  <p><label>Comentarios para ajustar (qué cambiar en textos, láminas o chatbot)<br><textarea name="at_comentario" rows="4" class="large-text"></textarea></label></p>
+                                  <?php if ($log): ?><details><summary>Historial de comentarios (<?php echo count($log); ?>)</summary><ul>
+                                    <?php foreach ($log as $c): ?><li><?php echo esc_html($c['fecha'] . ' — ' . $c['comentario']); ?></li><?php endforeach; ?>
+                                  </ul></details><?php endif; ?>
+                                  <p>
+                                    <button type="submit" name="at_v3_accion" value="cambios" class="button">✏️ Pedir cambios (sin costo)</button>
+                                    <button type="submit" name="at_v3_accion" value="aprobar" class="button button-primary"
+                                      onclick="return confirm('Se generarán <?php echo (int) $costo['fotos']; ?> fotos (≈ US$<?php echo esc_js(number_format($costo['usd_lista'], 4, ',', '.')); ?> de lista) y la versión final. ¿Aprobar?');">
+                                      ✅ Aprobar y generar versión final (<?php echo (int) $costo['fotos']; ?> fotos ≈ US$<?php echo esc_html(number_format($costo['usd_lista'], 4, ',', '.')); ?>)</button>
+                                  </p>
+                                </div>
+                                <?php endif; ?>
+
                                 <!-- CHECKBOX PARA ENVIAR CORREO -->
                                 <div class="checkbox-section">
                                     <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 15px;">
-                                        <input type="checkbox" name="send_email" value="1" id="send_email" checked style="width: 20px; height: 20px;">
+                                        <?php $puede = at_propuesta_puede_enviarse($edit_proposal->flujo ?? null, (string) $edit_proposal->status); ?>
+                                        <input type="checkbox" name="send_email" value="1" id="send_email" <?php echo $puede ? 'checked' : 'disabled'; ?> style="width: 20px; height: 20px;">
                                         <span style="color: #065f46; font-weight: 600;">📧 Enviar correo con la propuesta al cliente</span>
                                     </label>
                                     <p style="margin: 8px 0 0 30px; color: #047857; font-size: 13px;">Si desmarcas esta opción, solo se guardarán los datos sin enviar el correo.</p>
+                                    <?php if (!$puede): ?><p style="margin:8px 0 0 30px;color:#b45309;">Se habilita cuando la propuesta esté <strong>lista</strong>.</p><?php endif; ?>
                                 </div>
 
                                 <!-- SECCIÓN DE PERSONALIZACIÓN DEL CORREO -->

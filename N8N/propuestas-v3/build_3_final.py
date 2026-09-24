@@ -8,6 +8,7 @@ presentación, renderiza y verifica presentación, PDF y chatbot. Termina SIEMPR
 Solo referencia credenciales por id; no contiene secretos.
 """
 import json, os
+from fotos_guard import JS_LIMPIAR_FOTOS
 
 CRED_SMTP = {'smtp': {'id': 'dyhVFWmjRNC45ccA', 'name': 'SMTP account PROD'}}
 CRED_WP = {'httpHeaderAuth': {'id': '1NI0sJKc0kC430pb', 'name': 'AT REST Secret (header)'}}
@@ -43,6 +44,12 @@ return [{ json: {
   note: ok ? `Verificada: presentación, PDF, ${img.stored_local || 0} fotos locales y chatbot OK` : problemas.join(' · '),
 } }];"""
 
+CODE_REVISAR = r"""
+// Último filtro antes de gastar: no guarda nada, solo decide qué fotos se le piden al renderer.
+const e = $('Leer estado').first().json.body;
+const r = limpiarFotos(e.payload.image_briefs);
+return [{ json: { unique_id: e.unique_id, payload: Object.assign({}, e.payload, { image_briefs: r.limpias }), fotos_reemplazadas: r.reemplazadas } }];"""
+
 CODE_MOTIVO = r"""// Falló la lectura del estado: no hay payload que renderizar.
 const hook = $('Webhook').first().json.body || {};
 const le = $('Leer estado').first().json;
@@ -53,7 +60,7 @@ return [{ json: { ok: false, id: hook.id, unique_id: '', company: `propuesta ${h
 EMAIL = """={{ $('Guardar resultado').item.json.statusCode === 200 ? '' : '<p style="color:#b91c1c"><strong>No se pudo guardar el resultado en WordPress</strong> (HTTP ' + $('Guardar resultado').item.json.statusCode + '): la propuesta puede seguir en «generando». Revísala en el panel.</p>' }}
 <h3>{{ $json.ok ? '✅ Lista para enviar' : '⚠️ La versión final tiene problemas' }}: {{ $json.company }}</h3>
 {{ $json.ok
-  ? '<ul><li>Presentación publicada y accesible</li><li>PDF generado</li><li>' + $json.fotos_locales + ' de ' + $json.fotos_pedidas + ' fotos guardadas junto a la presentación</li><li>El chatbot de demo respondió</li></ul>'
+  ? '<ul><li>Presentación publicada y accesible</li><li>' + ($('Revisar fotos').isExecuted ? $('Revisar fotos').first().json.fotos_reemplazadas : 0) + ' descripciones de fotos reemplazadas por el filtro (pedían pantallas, texto o personas)</li><li>PDF generado</li><li>' + $json.fotos_locales + ' de ' + $json.fotos_pedidas + ' fotos guardadas junto a la presentación</li><li>El chatbot de demo respondió</li></ul>'
   : '<p>Problemas encontrados:</p><ul><li>' + $json.problemas.join('</li><li>') + '</li></ul><p>La propuesta quedó en <strong>error</strong>: desde el panel puedes volver a aprobarla o pedir cambios.</p>' }}
 {{ $json.chat_respuesta ? '<p>Respuesta del chatbot a «Hola»: <em>' + $json.chat_respuesta + '</em></p>' : '' }}
 {{ $json.unique_id ? '<p><a href="__VER__' + $json.unique_id + '">📊 Ver la presentación final</a> (el PDF se descarga desde la última lámina)</p>' : '' }}
@@ -95,10 +102,13 @@ nodes = [
          webhookId='propuesta-v3-final', credentials=CRED_WP),
     http('f2', 'Leer estado', [220, 0], 'GET', f"={WP}/proposal/{{{{ $json.body.id }}}}/state"),
     iff('f3', '¿Estado leído?', [440, 0], '={{ $json.statusCode === 200 }}'),
+    # Revisar fotos: último filtro antes de gastar. No guarda nada; solo decide qué se le pide al renderer.
+    node('f3b', 'Revisar fotos', 'n8n-nodes-base.code', 2, [550, -120],
+         {'jsCode': JS_LIMPIAR_FOTOS + CODE_REVISAR}),
     # Render final: aquí SÍ se piden las fotos (image_briefs del payload). El renderer se da ~210 s para fotos + render.
     node('f4', 'Render final', 'n8n-nodes-base.httpRequest', 4.2, [660, -120],
          {'method': 'POST', 'url': RENDERER, 'sendBody': True, 'specifyBody': 'json',
-          'jsonBody': "={{ JSON.stringify(Object.assign({}, $json.body.payload, { unique_id: $json.body.unique_id, draft: false })) }}",
+          'jsonBody': "={{ JSON.stringify(Object.assign({}, $json.payload, { unique_id: $json.unique_id, draft: false })) }}",
           'options': {'timeout': 290000}},
          onError='continueRegularOutput'),
     http('f5', 'Ver presentación', [880, -120], 'GET',
@@ -133,7 +143,8 @@ def link(a, b, output=0):
 connections = {}
 link('Webhook', 'Leer estado')
 link('Leer estado', '¿Estado leído?')
-link('¿Estado leído?', 'Render final', 0)
+link('¿Estado leído?', 'Revisar fotos', 0)
+link('Revisar fotos', 'Render final')
 link('¿Estado leído?', 'Motivo lectura', 1)
 link('Render final', 'Ver presentación')
 link('Ver presentación', 'PDF')

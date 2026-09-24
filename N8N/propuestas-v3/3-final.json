@@ -90,6 +90,19 @@
       }
     },
     {
+      "id": "f3b",
+      "name": "Revisar fotos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        550,
+        -120
+      ],
+      "parameters": {
+        "jsCode": "\nconst PROHIBIDO = /\\b(screens?|monitors?|displays?|laptops?|computers?|tablets?|phones?|smartphones?|websites?|web ?pages?|web ?design|interfaces?|dashboards?|apps?|charts?|graphs?|flow ?charts?|diagrams?|infographics?|whiteboards?|tables?|spreadsheets?|clipboards?|checklists?|documents?|papers?|forms?|signs?|signage|posters?|banners?|text|letters?|lettering|words?|numbers?|meetings?|people|persons?|man|men|woman|women|team|consultants?|director|office)\\b/i;\nconst CIERRE = 'no people facing camera, no screens, no phones, no computers, no papers, no signs, no text, no lettering, no logos, no watermarks';\nconst SEGURAS = {\n  cover: 'elegant exterior of the business at golden hour, fresh flowers in the foreground, warm cinematic light',\n  challenge: 'quiet empty room at night lit by a single warm lamp, rain drops on a large window, calm melancholic mood',\n  solution: 'bright calm interior with natural light through tall windows and fresh flowers on a wooden sideboard',\n  benefits: 'aerial view of Santiago de Chile at dusk with the Andes mountains behind, city lights turning on',\n  how_it_works: 'minimal light wooden surface by a bright window with a small potted plant and a ceramic cup, soft morning light',\n  pricing: 'elegant bouquet of white flowers tied with a gold ribbon on a white marble surface, soft warm light',\n  next_steps: 'peaceful garden path at sunrise with green lawn, tall trees and soft mist, hopeful calm atmosphere',\n  extra: 'two white lilies side by side on white linen with soft golden bokeh, minimal elegant still life',\n};\nfunction limpiarFotos(briefs) {\n  let reemplazadas = 0;\n  const limpias = (briefs || []).filter((b) => b && b.slide).map((b) => {\n    const tema = String(b.prompt || '').split(/,?\\s*no people facing camera/i)[0].trim();\n    if (!tema || PROHIBIDO.test(tema)) {\n      reemplazadas++;\n      return { slide: b.slide, prompt: `${SEGURAS[b.slide] || SEGURAS.extra}, ${CIERRE}` };\n    }\n    return { slide: b.slide, prompt: `${tema}, ${CIERRE}` };\n  });\n  return { limpias, reemplazadas };\n}\n\n// Último filtro antes de gastar: no guarda nada, solo decide qué fotos se le piden al renderer.\nconst e = $('Leer estado').first().json.body;\nconst r = limpiarFotos(e.payload.image_briefs);\nreturn [{ json: { unique_id: e.unique_id, payload: Object.assign({}, e.payload, { image_briefs: r.limpias }), fotos_reemplazadas: r.reemplazadas } }];"
+      }
+    },
+    {
       "id": "f4",
       "name": "Render final",
       "type": "n8n-nodes-base.httpRequest",
@@ -103,7 +116,7 @@
         "url": "https://n8n-propuesta-renderer.kchiba.easypanel.host/render",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify(Object.assign({}, $json.body.payload, { unique_id: $json.body.unique_id, draft: false })) }}",
+        "jsonBody": "={{ JSON.stringify(Object.assign({}, $json.payload, { unique_id: $json.unique_id, draft: false })) }}",
         "options": {
           "timeout": 290000
         }
@@ -267,7 +280,7 @@
         "fromEmail": "contacto@automatizatech.cl",
         "toEmail": "lmgm.0303@gmail.com",
         "subject": "={{ ($json.ok ? '✅ ' : '⚠️ ') + $json.company + ($json.ok ? ' · lista para enviar' : ' · la versión final tiene problemas') }}",
-        "html": "={{ $('Guardar resultado').item.json.statusCode === 200 ? '' : '<p style=\"color:#b91c1c\"><strong>No se pudo guardar el resultado en WordPress</strong> (HTTP ' + $('Guardar resultado').item.json.statusCode + '): la propuesta puede seguir en «generando». Revísala en el panel.</p>' }}\n<h3>{{ $json.ok ? '✅ Lista para enviar' : '⚠️ La versión final tiene problemas' }}: {{ $json.company }}</h3>\n{{ $json.ok\n  ? '<ul><li>Presentación publicada y accesible</li><li>PDF generado</li><li>' + $json.fotos_locales + ' de ' + $json.fotos_pedidas + ' fotos guardadas junto a la presentación</li><li>El chatbot de demo respondió</li></ul>'\n  : '<p>Problemas encontrados:</p><ul><li>' + $json.problemas.join('</li><li>') + '</li></ul><p>La propuesta quedó en <strong>error</strong>: desde el panel puedes volver a aprobarla o pedir cambios.</p>' }}\n{{ $json.chat_respuesta ? '<p>Respuesta del chatbot a «Hola»: <em>' + $json.chat_respuesta + '</em></p>' : '' }}\n{{ $json.unique_id ? '<p><a href=\"https://automatizatech.cl/ver-presentacion.php?id=' + $json.unique_id + '\">📊 Ver la presentación final</a> (el PDF se descarga desde la última lámina)</p>' : '' }}\n<p><a href=\"https://automatizatech.cl/wp-admin/admin.php?page=automatiza-proposals&edit_id={{ $json.id }}\">✏️ Abrir en el panel</a></p>\n<p style=\"color:#666\">El envío al cliente lo haces tú desde el panel, con la casilla «Enviar correo».</p>",
+        "html": "={{ $('Guardar resultado').item.json.statusCode === 200 ? '' : '<p style=\"color:#b91c1c\"><strong>No se pudo guardar el resultado en WordPress</strong> (HTTP ' + $('Guardar resultado').item.json.statusCode + '): la propuesta puede seguir en «generando». Revísala en el panel.</p>' }}\n<h3>{{ $json.ok ? '✅ Lista para enviar' : '⚠️ La versión final tiene problemas' }}: {{ $json.company }}</h3>\n{{ $json.ok\n  ? '<ul><li>Presentación publicada y accesible</li><li>' + ($('Revisar fotos').isExecuted ? $('Revisar fotos').first().json.fotos_reemplazadas : 0) + ' descripciones de fotos reemplazadas por el filtro (pedían pantallas, texto o personas)</li><li>PDF generado</li><li>' + $json.fotos_locales + ' de ' + $json.fotos_pedidas + ' fotos guardadas junto a la presentación</li><li>El chatbot de demo respondió</li></ul>'\n  : '<p>Problemas encontrados:</p><ul><li>' + $json.problemas.join('</li><li>') + '</li></ul><p>La propuesta quedó en <strong>error</strong>: desde el panel puedes volver a aprobarla o pedir cambios.</p>' }}\n{{ $json.chat_respuesta ? '<p>Respuesta del chatbot a «Hola»: <em>' + $json.chat_respuesta + '</em></p>' : '' }}\n{{ $json.unique_id ? '<p><a href=\"https://automatizatech.cl/ver-presentacion.php?id=' + $json.unique_id + '\">📊 Ver la presentación final</a> (el PDF se descarga desde la última lámina)</p>' : '' }}\n<p><a href=\"https://automatizatech.cl/wp-admin/admin.php?page=automatiza-proposals&edit_id={{ $json.id }}\">✏️ Abrir en el panel</a></p>\n<p style=\"color:#666\">El envío al cliente lo haces tú desde el panel, con la casilla «Enviar correo».</p>",
         "options": {}
       },
       "credentials": {
@@ -305,7 +318,7 @@
       "main": [
         [
           {
-            "node": "Render final",
+            "node": "Revisar fotos",
             "type": "main",
             "index": 0
           }
@@ -313,6 +326,17 @@
         [
           {
             "node": "Motivo lectura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revisar fotos": {
+      "main": [
+        [
+          {
+            "node": "Render final",
             "type": "main",
             "index": 0
           }

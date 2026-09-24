@@ -4,6 +4,7 @@ Plan: Docs/superpowers/plans/2026-09-23-flujo-propuestas-v3.md, Task 10.
 Solo referencia credenciales por id; no contiene secretos.
 """
 import json, os
+from fotos_guard import JS_LIMPIAR_FOTOS
 
 CRED_OPENAI = {'openAiApi': {'id': 'g52IEXpRfN5r7jKw', 'name': 'OpenAi account'}}
 CRED_SMTP = {'smtp': {'id': 'dyhVFWmjRNC45ccA', 'name': 'SMTP account PROD'}}
@@ -54,7 +55,7 @@ if (!d.pricing_rows.length) d.pricing_rows = [{ service: 'Servicio', price_usd: 
 d.pricing_note = '';
 d.extra_slides = (d.extra_slides || []).slice(0, 2);
 const validSlides = new Set(['cover', 'challenge', 'solution', 'benefits', 'how_it_works', 'pricing', 'next_steps', ...d.extra_slides.map((_, i) => `extra_${i + 1}`)]);
-d.image_briefs = (d.image_briefs || []).filter((b) => b && validSlides.has(b.slide) && b.prompt);
+d.image_briefs = limpiarFotos((d.image_briefs || []).filter((b) => b && validSlides.has(b.slide) && b.prompt)).limpias;
 if (prueba) d.company_name = `[PRUEBA] ${d.company_name}`;
 const resumen = d.resumen_para_luis || '';
 const phone = d.phone || '';
@@ -100,7 +101,7 @@ nodes = [
                                   {'content': "={{ $('Webhook (Entrada)').item.json.body.transcript }}"}]},
           'options': {'temperature': 0.4}, 'requestOptions': {}},
          credentials=CRED_OPENAI),
-    node('b4', 'Armar payload', 'n8n-nodes-base.code', 2, [660, 0], {'jsCode': CODE_ARMAR}),
+    node('b4', 'Armar payload', 'n8n-nodes-base.code', 2, [660, 0], {'jsCode': JS_LIMPIAR_FOTOS + '\n' + CODE_ARMAR}),
     node('b5', 'Crear en WordPress', 'n8n-nodes-base.httpRequest', 4.2, [880, 0],
          {'method': 'POST', 'url': f'{WP}/proposal', 'authentication': 'genericCredentialType',
           'genericAuthType': 'httpHeaderAuth', 'sendBody': True, 'specifyBody': 'json',

@@ -74,17 +74,34 @@
   // ---------- Lista: confirmar el borrado masivo ----------
   // La lista es un único <form method="get"> con buscador, filtros de fecha y los selectores de
   // acción masiva de WP_List_Table (id="bulk-action-selector-top"/"-bottom", name="action"/"action2",
-  // botones «Aplicar» id="doaction"/"doaction2"). Buscar y Filtrar comparten ese mismo <form>, así que
-  // solo se confirma cuando el botón que disparó el envío (event.submitter) es uno de los «Aplicar».
+  // botones «Aplicar» id="doaction"/"doaction2"). Buscar y Filtrar comparten ese mismo <form>: cuando
+  // el navegador da SubmitEvent.submitter, solo se confirma si ese botón fue uno de los «Aplicar»
+  // (Buscar/Filtrar nunca preguntan). Sin submitter (Safari viejo), hay un respaldo más abajo.
   var selectorTop = document.getElementById('bulk-action-selector-top');
   var listaForm = selectorTop ? selectorTop.closest('form') : null;
   if (listaForm) {
     listaForm.addEventListener('submit', function (e) {
-      var boton = e.submitter;
-      if (!boton || (boton.id !== 'doaction' && boton.id !== 'doaction2')) { return; }
-      var nombreSelect = boton.id === 'doaction' ? 'action' : 'action2';
-      var select = listaForm.elements[nombreSelect];
-      if (!select || select.value !== 'borrar') { return; }
+      var borrando;
+      if (e.submitter) {
+        // Camino preciso: sabemos exactamente qué botón envió el formulario, así que Buscar y
+        // Filtrar (que comparten este mismo <form>) nunca disparan la confirmación.
+        var boton = e.submitter;
+        if (boton.id !== 'doaction' && boton.id !== 'doaction2') { return; }
+        var nombreSelect = boton.id === 'doaction' ? 'action' : 'action2';
+        var select = listaForm.elements[nombreSelect];
+        borrando = !!select && select.value === 'borrar';
+      } else {
+        // Respaldo: Safari < 15.4 y otros navegadores viejos no dan SubmitEvent.submitter, así que
+        // no hay forma de saber qué botón se apretó. La regla es «nunca borrar sin confirmar», así
+        // que se trata como borrado masivo si cualquiera de los dos selectores de acción (arriba o
+        // abajo) está en "borrar" y hay filas marcadas. Efecto secundario aceptado a propósito: en
+        // ese caso, si alguien deja «Borrar» elegido y aprieta Buscar o Filtrar, también preguntará;
+        // es la dirección segura — preguntar de más nunca borra nada, no preguntar sí puede.
+        var accionTop = listaForm.elements['action'];
+        var accionBottom = listaForm.elements['action2'];
+        borrando = (!!accionTop && accionTop.value === 'borrar') || (!!accionBottom && accionBottom.value === 'borrar');
+      }
+      if (!borrando) { return; }
       var marcados = listaForm.querySelectorAll('input[name="proposal_ids[]"]:checked');
       if (!marcados.length) { return; }
       if (!window.confirm('¿Borrar ' + marcados.length + ' propuesta(s)? No se puede deshacer.')) {

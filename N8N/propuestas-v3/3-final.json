@@ -1,0 +1,414 @@
+{
+  "name": "Propuestas v3 · 3 Final",
+  "nodes": [
+    {
+      "id": "f1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "propuesta-v3-final",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "propuesta-v3-final",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1NI0sJKc0kC430pb",
+          "name": "AT REST Secret (header)"
+        }
+      }
+    },
+    {
+      "id": "f2",
+      "name": "Leer estado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{{ $json.body.id }}/state",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1NI0sJKc0kC430pb",
+          "name": "AT REST Secret (header)"
+        }
+      }
+    },
+    {
+      "id": "f3",
+      "name": "¿Estado leído?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f3-c",
+              "leftValue": "={{ $json.statusCode === 200 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f4",
+      "name": "Render final",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        -120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n-propuesta-renderer.kchiba.easypanel.host/render",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify(Object.assign({}, $json.body.payload, { unique_id: $json.body.unique_id, draft: false })) }}",
+        "options": {
+          "timeout": 290000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "f5",
+      "name": "Ver presentación",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        -120
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://automatizatech.cl/ver-presentacion.php?id={{ $('Leer estado').item.json.body.unique_id }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      }
+    },
+    {
+      "id": "f6",
+      "name": "PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        -120
+      ],
+      "parameters": {
+        "method": "HEAD",
+        "url": "={{ 'https://n8n-propuesta-renderer.kchiba.easypanel.host/p/' + $('Leer estado').item.json.body.unique_id + '/presentation.pdf' }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      }
+    },
+    {
+      "id": "f7",
+      "name": "Probar chatbot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        -120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n-n8n.kchiba.easypanel.host/webhook/demo-dinamico/chat",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          },
+          "timeout": 90000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chatInput: 'Hola', sessionId: $('Leer estado').item.json.body.unique_id, action: 'sendMessage' }) }}"
+      }
+    },
+    {
+      "id": "f8",
+      "name": "Verificar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        -120
+      ],
+      "parameters": {
+        "jsCode": "// Junta las verificaciones. Nada aquí lanza: el resultado decide «lista» o «error».\nconst est = $('Leer estado').first().json.body;\nconst r = $('Render final').first().json || {};\nconst img = r.images || {};\nconst problemas = [];\nif (!r.view_url) problemas.push('el renderer no devolvió la presentación' + (r.error ? ` (${r.error.message || r.error})` : ''));\nif ((img.missing || []).length) problemas.push(`fotos que no se generaron: ${img.missing.join(', ')}`);\nif ((img.kept_remote || []).length) problemas.push(`fotos que no se pudieron guardar en local: ${img.kept_remote.join(', ')}`);\nconst pres = $('Ver presentación').first().json;\nif (pres.statusCode !== 200) problemas.push(`ver-presentacion respondió ${pres.statusCode}`);\nconst pdf = $('PDF').first().json;\nif (pdf.statusCode !== 200) problemas.push(`el PDF respondió ${pdf.statusCode}`);\nconst chat = $('Probar chatbot').first().json;\nconst respuesta = chat.body && chat.body.output ? String(chat.body.output) : '';\nif (chat.statusCode !== 200 || !respuesta) problemas.push(`el chatbot de demo no respondió (HTTP ${chat.statusCode})`);\nconst ok = problemas.length === 0;\nreturn [{ json: {\n  ok, problemas, id: est.id, unique_id: est.unique_id, company: est.company_name,\n  fotos_locales: img.stored_local || 0, fotos_pedidas: img.requested || 0,\n  chat_respuesta: respuesta.slice(0, 300),\n  note: ok ? `Verificada: presentación, PDF, ${img.stored_local || 0} fotos locales y chatbot OK` : problemas.join(' · '),\n} }];"
+      }
+    },
+    {
+      "id": "f9",
+      "name": "Motivo lectura",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        160
+      ],
+      "parameters": {
+        "jsCode": "// Falló la lectura del estado: no hay payload que renderizar.\nconst hook = $('Webhook').first().json.body || {};\nconst le = $('Leer estado').first().json;\nreturn [{ json: { ok: false, id: hook.id, unique_id: '', company: `propuesta ${hook.id}`,\n  problemas: [`No se pudo leer la propuesta en WordPress (HTTP ${le.statusCode})`],\n  note: `No se pudo leer la propuesta en WordPress (HTTP ${le.statusCode})`, fotos_locales: 0, fotos_pedidas: 0, chat_respuesta: '' } }];"
+      }
+    },
+    {
+      "id": "f10",
+      "name": "Guardar resultado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{{ $json.id }}/state",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: $json.ok ? 'lista' : 'error', note: $json.note + ($json.ok ? '' : ' (ejecución ' + $execution.id + ')') }) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1NI0sJKc0kC430pb",
+          "name": "AT REST Secret (header)"
+        }
+      }
+    },
+    {
+      "id": "f11",
+      "name": "Resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Vuelve a poner el resultado de la verificación como item (Guardar resultado solo trae la respuesta HTTP).\nconst v = $('Verificar').isExecuted ? $('Verificar').first().json : $('Motivo lectura').first().json;\nreturn [{ json: v }];"
+      }
+    },
+    {
+      "id": "f12",
+      "name": "Correo a Luis",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        0
+      ],
+      "parameters": {
+        "fromEmail": "contacto@automatizatech.cl",
+        "toEmail": "lmgm.0303@gmail.com",
+        "subject": "={{ ($json.ok ? '✅ ' : '⚠️ ') + $json.company + ($json.ok ? ' · lista para enviar' : ' · la versión final tiene problemas') }}",
+        "html": "={{ $('Guardar resultado').item.json.statusCode === 200 ? '' : '<p style=\"color:#b91c1c\"><strong>No se pudo guardar el resultado en WordPress</strong> (HTTP ' + $('Guardar resultado').item.json.statusCode + '): la propuesta puede seguir en «generando». Revísala en el panel.</p>' }}\n<h3>{{ $json.ok ? '✅ Lista para enviar' : '⚠️ La versión final tiene problemas' }}: {{ $json.company }}</h3>\n{{ $json.ok\n  ? '<ul><li>Presentación publicada y accesible</li><li>PDF generado</li><li>' + $json.fotos_locales + ' de ' + $json.fotos_pedidas + ' fotos guardadas junto a la presentación</li><li>El chatbot de demo respondió</li></ul>'\n  : '<p>Problemas encontrados:</p><ul><li>' + $json.problemas.join('</li><li>') + '</li></ul><p>La propuesta quedó en <strong>error</strong>: desde el panel puedes volver a aprobarla o pedir cambios.</p>' }}\n{{ $json.chat_respuesta ? '<p>Respuesta del chatbot a «Hola»: <em>' + $json.chat_respuesta + '</em></p>' : '' }}\n{{ $json.unique_id ? '<p><a href=\"https://automatizatech.cl/ver-presentacion.php?id=' + $json.unique_id + '\">📊 Ver la presentación final</a> (el PDF se descarga desde la última lámina)</p>' : '' }}\n<p><a href=\"https://automatizatech.cl/wp-admin/admin.php?page=automatiza-proposals&edit_id={{ $json.id }}\">✏️ Abrir en el panel</a></p>\n<p style=\"color:#666\">El envío al cliente lo haces tú desde el panel, con la casilla «Enviar correo».</p>",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Leer estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer estado": {
+      "main": [
+        [
+          {
+            "node": "¿Estado leído?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Estado leído?": {
+      "main": [
+        [
+          {
+            "node": "Render final",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Motivo lectura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render final": {
+      "main": [
+        [
+          {
+            "node": "Ver presentación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ver presentación": {
+      "main": [
+        [
+          {
+            "node": "PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF": {
+      "main": [
+        [
+          {
+            "node": "Probar chatbot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Probar chatbot": {
+      "main": [
+        [
+          {
+            "node": "Verificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar": {
+      "main": [
+        [
+          {
+            "node": "Guardar resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Motivo lectura": {
+      "main": [
+        [
+          {
+            "node": "Guardar resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar resultado": {
+      "main": [
+        [
+          {
+            "node": "Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resultado": {
+      "main": [
+        [
+          {
+            "node": "Correo a Luis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

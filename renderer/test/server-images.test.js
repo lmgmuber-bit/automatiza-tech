@@ -83,6 +83,9 @@ test('briefs without a supplied image are still generated', async () => {
     if (u.includes('higgsfield')) {
       return { ok: true, json: async () => ({ status: 'completed', images: [{ url: 'https://cdn.example.com/nueva.png' }] }) };
     }
+    if (String(url).startsWith('https://cdn.example.com/')) {
+      return { ok: true, status: 200, headers: { get: () => 'image/png' }, arrayBuffer: async () => Buffer.from('PNG') };
+    }
     return originalFetch(url, opts);
   };
   try {
@@ -98,8 +101,8 @@ test('briefs without a supplied image are still generated', async () => {
     assert.equal(res.status, 200);
     assert.equal(asked.length, 1, 'solo la lámina que falta se pide');
     const html = await fs.readFile(path.join(dir, PAYLOAD.unique_id, 'index.html'), 'utf8');
-    assert.ok(html.includes("url('https://cdn.example.com/ya-la-tengo.png')"));
-    assert.ok(html.includes("url('https://cdn.example.com/nueva.png')"));
+    assert.ok(html.includes("url('img/cover.png')"));
+    assert.ok(html.includes("url('img/pricing.png')"));
   } finally {
     global.fetch = originalFetch;
     await fs.rm(dir, { recursive: true, force: true });
@@ -117,6 +120,9 @@ test('a payload with no images field behaves exactly as before', async () => {
     if (u.includes('higgsfield')) {
       return { ok: true, json: async () => ({ status: 'completed', images: [{ url: 'https://cdn.example.com/g.png' }] }) };
     }
+    if (String(url).startsWith('https://cdn.example.com/')) {
+      return { ok: true, status: 200, headers: { get: () => 'image/png' }, arrayBuffer: async () => Buffer.from('PNG') };
+    }
     return originalFetch(url, opts);
   };
   try {
@@ -124,7 +130,7 @@ test('a payload with no images field behaves exactly as before', async () => {
     const res = await post(app, { ...PAYLOAD, image_briefs: [{ slide: 'cover', prompt: 'foto' }] });
     assert.equal(res.status, 200);
     const html = await fs.readFile(path.join(dir, PAYLOAD.unique_id, 'index.html'), 'utf8');
-    assert.ok(html.includes("url('https://cdn.example.com/g.png')"));
+    assert.ok(html.includes("url('img/cover.png')"));
   } finally {
     global.fetch = originalFetch;
     await fs.rm(dir, { recursive: true, force: true });

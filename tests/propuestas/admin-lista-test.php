@@ -130,6 +130,27 @@ ok(at_pa_payload_con_correo(['a' => 1], ['asunto' => ' X ', 'introduccion' => 'Y
     'correo_cliente' => ['asunto' => 'X', 'introduccion' => 'Y', 'que_incluye' => '', 'cierre' => ''],
 ], 'payload_con_correo: agrega correo_cliente con las cuatro claves');
 
+// M3: el próximo paso que ya termina en «?» o «!» no suma un punto («?.»/«!.»)
+$payload_pregunta = $payload_ferreteria;
+$payload_pregunta['next_steps'] = ['¿Podemos agendar una llamada el jueves?'];
+ok(at_pa_correo_textos($payload_pregunta, 'Ferretería Sur')['cierre']
+    === 'Como próximo paso: ¿Podemos agendar una llamada el jueves? Quedamos atentos a sus comentarios y consultas.',
+    'correo_textos: próximo paso que termina en «?» no agrega un punto extra');
+
+// F2: at_pa_correo_es_respaldo — no congelar el respaldo calculado si nadie lo tocó
+$textos_iguales_al_respaldo = at_pa_correo_textos($payload_ferreteria, 'Ferretería Sur');
+ok(at_pa_correo_es_respaldo($payload_ferreteria, 'Ferretería Sur', $textos_iguales_al_respaldo) === true,
+    'correo_es_respaldo: (a) sin correo_cliente y textos iguales al respaldo → true');
+$textos_con_asunto_editado = $textos_iguales_al_respaldo;
+$textos_con_asunto_editado['asunto'] = 'Un asunto distinto que Luis escribió a mano';
+ok(at_pa_correo_es_respaldo($payload_ferreteria, 'Ferretería Sur', $textos_con_asunto_editado) === false,
+    'correo_es_respaldo: (b) mismo caso pero un texto editado → false');
+ok(at_pa_correo_es_respaldo($payload_con_ia, 'Ferretería Sur', at_pa_correo_textos($payload_con_ia, 'Ferretería Sur')) === false,
+    'correo_es_respaldo: (c) payload CON correo_cliente → false aunque los textos calcen');
+$fallback_generico = at_pa_correo_textos(null, 'Ferretería Sur');
+ok(at_pa_correo_es_respaldo(null, 'Ferretería Sur', $fallback_generico) === true,
+    'correo_es_respaldo: (d) payload nulo y textos iguales al respaldo genérico → true');
+
 // URL del PDF del renderer
 $host = 'https://n8n-propuesta-renderer.kchiba.easypanel.host';
 ok(at_pa_url_pdf_renderer("$host/p/uBn21AF16EcM/index.html", '') === "$host/p/uBn21AF16EcM/presentation.pdf", 'url_pdf_renderer: desde index.html');

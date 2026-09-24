@@ -288,7 +288,9 @@ function at_pa_correo_textos(?array $payload, string $empresa): array {
 			$respaldo['que_incluye'] = ($solucion !== '' ? "$solucion: " : '') . at_pa_enumerar($beneficios) . '.';
 		}
 		if ($pasos) {
-			$respaldo['cierre'] = 'Como próximo paso: ' . $pasos[0] . '. Quedamos atentos a sus comentarios y consultas.';
+			// Si el próximo paso ya termina en «?» o «!», no se le agrega un punto (evita «?.»/«!.»).
+			$pregunta_o_exclamacion = in_array(substr($pasos[0], -1), ['?', '!'], true);
+			$respaldo['cierre'] = 'Como próximo paso: ' . $pasos[0] . ($pregunta_o_exclamacion ? ' ' : '. ') . 'Quedamos atentos a sus comentarios y consultas.';
 		}
 	}
 	$ia = is_array($payload) && isset($payload['correo_cliente']) && is_array($payload['correo_cliente']) ? $payload['correo_cliente'] : [];
@@ -297,6 +299,24 @@ function at_pa_correo_textos(?array $payload, string $empresa): array {
 		$r[$k] = $texto($ia[$k] ?? '') !== '' ? $texto($ia[$k]) : $v;
 	}
 	return $r;
+}
+
+/** True cuando $textos (los que se van a guardar) son, sin editar, el mismo respaldo calculado:
+ *  el payload no trae un correo_cliente propio y los cuatro textos (trim) coinciden con
+ *  at_pa_correo_textos($payload, $empresa). Evita congelar en el payload un texto calculado que
+ *  nadie tocó (ni la IA ni Luis), para que siga recalculándose si cambia el contenido. */
+function at_pa_correo_es_respaldo(?array $payload, string $empresa, array $textos): bool {
+	if (is_array($payload) && isset($payload['correo_cliente']) && is_array($payload['correo_cliente'])) {
+		return false;
+	}
+	$calculado = at_pa_correo_textos($payload, $empresa);
+	foreach (['asunto', 'introduccion', 'que_incluye', 'cierre'] as $k) {
+		$v = is_string($textos[$k] ?? null) ? trim($textos[$k]) : '';
+		if ($v !== trim((string) ($calculado[$k] ?? ''))) {
+			return false;
+		}
+	}
+	return true;
 }
 
 /** El payload con los cuatro textos del correo en correo_cliente. */

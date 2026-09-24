@@ -53,7 +53,19 @@
     // no deben seguir saltando. La bandera se reinicia en el próximo 'submit' o, ya en este mismo intento
     // fallido, apenas termina la ráfaga síncrona de eventos 'invalid' (setTimeout de 0).
     var primerInvalido = true;
+
+    // F4: guardia contra doble envío (doble clic o Enter repetido). Sin ella, un doble clic en un
+    // botón v3 («Aprobar») podía llamar a n8n dos veces. El botón fijo de Guardar vive en .at-pa-guardar.
+    var enviando = false;
+    var botonGuardarPrincipal = guardar ? guardar.querySelector('button[type="submit"]') : null;
+    var textoGuardarOriginal = botonGuardarPrincipal ? botonGuardarPrincipal.textContent : '';
+
     form.addEventListener('submit', function (e) {
+      if (enviando) {
+        // Ya se está enviando este formulario: un segundo submit (doble clic, Enter repetido) se ignora.
+        e.preventDefault();
+        return;
+      }
       primerInvalido = true;
       // C1: fuera de los botones de Revisión (name="at_v3_accion"), Guardar reenvía el correo si
       // #send_email sigue marcado y habilitado. Cubre clic en Guardar, Enter (pasa por el botón
@@ -67,6 +79,23 @@
           }
         }
       }
+      if (!e.defaultPrevented) {
+        enviando = true;
+        // setTimeout(0): al nombre/valor del botón que envió (submitter) ya lo tomó el navegador para
+        // los datos del formulario: recién ahora es seguro deshabilitar los botones sin perderlo.
+        setTimeout(function () {
+          var enviaCorreo = campoSendEmail && campoSendEmail.checked && !campoSendEmail.disabled;
+          if (botonGuardarPrincipal) { botonGuardarPrincipal.textContent = enviaCorreo ? 'Enviando…' : 'Guardando…'; }
+          form.querySelectorAll('button[type="submit"]').forEach(function (b) { b.disabled = true; });
+        }, 0);
+      }
+    });
+    // Volver de la caché de retroceso (back/forward) con el formulario tal como quedó: reactivar botones.
+    window.addEventListener('pageshow', function (e) {
+      if (!e.persisted) { return; }
+      enviando = false;
+      form.querySelectorAll('button[type="submit"]').forEach(function (b) { b.disabled = false; });
+      if (botonGuardarPrincipal) { botonGuardarPrincipal.textContent = textoGuardarOriginal; }
     });
     form.addEventListener('invalid', function (e) {
       if (!primerInvalido) { return; }

@@ -232,7 +232,11 @@ function at_pa_render_ficha($p, string $message): void {
               <span>📧 Enviar correo con la propuesta al cliente</span>
             </label>
             <p>Si desmarcas esta opción, solo se guardarán los datos sin enviar el correo.</p>
+            <?php if (at_pa_url_pdf_renderer((string) $p->gamma_iframe_url, (string) $p->pdf_path) !== ''): ?>
             <p class="description">Se adjunta el PDF que subas en «Cliente y enlaces»; si no subiste uno, se adjunta el de la presentación (hasta 15 MB). Si pesa más, el correo lleva solo los botones.</p>
+            <?php else: ?>
+            <p class="description">Se adjunta el PDF que subas en «Cliente y enlaces» o el que ya esté guardado; sin PDF, el correo lleva solo los botones.</p>
+            <?php endif; ?>
             <?php if (!$puede): ?><p class="at-pa-aviso">Se habilita cuando la propuesta esté <strong>lista</strong>.</p><?php endif; ?>
           </div>
 

@@ -103,12 +103,16 @@ function at_pa_accion_v3(): string {
             // Si vinieron los cuatro campos del correo (siempre, porque son del mismo formulario), se guardan
             // en el payload también aquí, para que lo que Luis editó viaje a n8n aunque falte un precio.
             if (isset($_POST['email_subject'], $_POST['email_intro'], $_POST['email_highlight'], $_POST['email_closing'])) {
-                $payload = at_pa_payload_con_correo($payload, [
+                $textos_correo = [
                     'asunto'       => sanitize_text_field(wp_unslash($_POST['email_subject'])),
                     'introduccion' => sanitize_textarea_field(wp_unslash($_POST['email_intro'])),
                     'que_incluye'  => sanitize_textarea_field(wp_unslash($_POST['email_highlight'])),
                     'cierre'       => sanitize_textarea_field(wp_unslash($_POST['email_closing'])),
-                ]);
+                ];
+                // No congelar en el payload el respaldo calculado si nadie lo tocó (ni la IA, ni Luis).
+                if (!at_pa_correo_es_respaldo($payload, (string) $row->company_name, $textos_correo)) {
+                    $payload = at_pa_payload_con_correo($payload, $textos_correo);
+                }
             }
             $hacia = $accion === 'cambios' ? 'ajustando' : 'generando';
             if (!at_propuesta_transicion_valida((string) $row->status, $hacia)) {
@@ -199,7 +203,7 @@ function at_pa_guardar(): string {
 
         // Actualizar BD
         $send_email = isset($_POST['send_email']) && $_POST['send_email'] === '1';
-        $actual = $wpdb->get_row($wpdb->prepare("SELECT flujo, status, gamma_prompt_text FROM {$table_name} WHERE id = %d", $id));
+        $actual = $wpdb->get_row($wpdb->prepare("SELECT flujo, status, gamma_prompt_text, company_name FROM {$table_name} WHERE id = %d", $id));
         $es_v3 = $actual && $actual->flujo === 'v3';
         if ($send_email && $actual && !at_propuesta_puede_enviarse($actual->flujo, (string) $actual->status)) {
             $send_email = false;
@@ -231,15 +235,26 @@ function at_pa_guardar(): string {
             $update_data['pdf_path'] = $pdf_path;
         }
 
-        // Guardar los cuatro textos del correo en el payload (correo_cliente), salvo si n8n
-        // podría estar escribiendo el mismo payload en paralelo (v3 en ajustando/generando).
+        // Guardar los cuatro textos del correo en el payload (correo_cliente), salvo si «2 Cambios»
+        // (n8n) podría estar escribiendo el mismo payload en paralelo (v3 en ajustando; «3 Final»
+        // nunca escribe el payload, así que generando no corre este riesgo).
         $actual_status = $actual ? (string) $actual->status : '';
-        if (!($es_v3 && in_array($actual_status, ['ajustando', 'generando'], true))) {
-            $base_json = array_key_exists('gamma_prompt_text', $update_data) ? $update_data['gamma_prompt_text'] : (string) ($actual->gamma_prompt_text ?? '');
-            $base_decodificada = json_decode((string) $base_json, true);
-            if (is_array($base_decodificada)) {
-                $update_data['gamma_prompt_text'] = wp_json_encode(at_pa_payload_con_correo($base_decodificada, $textos), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $empresa_de_la_fila = $actual ? (string) $actual->company_name : '';
+        $base_json = array_key_exists('gamma_prompt_text', $update_data) ? $update_data['gamma_prompt_text'] : (string) ($actual->gamma_prompt_text ?? '');
+        $base_decodificada = json_decode((string) $base_json, true);
+        $base_decodificada = is_array($base_decodificada) ? $base_decodificada : null;
+        $aviso_correo_no_guardado = '';
+        if ($es_v3 && $actual_status === 'ajustando') {
+            $mostrados = at_pa_correo_textos($base_decodificada, $empresa_de_la_fila);
+            foreach ($textos as $k => $v) {
+                if (trim((string) $v) !== trim((string) ($mostrados[$k] ?? ''))) {
+                    $aviso_correo_no_guardado = 'Los textos del correo no se guardaron: la propuesta se está ajustando; vuelve a guardarlos cuando termine.';
+                    break;
+                }
             }
+        } elseif ($base_decodificada !== null && !at_pa_correo_es_respaldo($base_decodificada, $empresa_de_la_fila, $textos)) {
+            // No congelar en el payload el respaldo calculado si nadie lo tocó (ni la IA, ni Luis).
+            $update_data['gamma_prompt_text'] = wp_json_encode(at_pa_payload_con_correo($base_decodificada, $textos), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
 
         $wpdb->update($table_name, $update_data, ['id' => $id]);
@@ -311,7 +326,8 @@ function at_pa_guardar(): string {
             if (empty($attachments)) {
                 $pdf_renderer_url = at_pa_url_pdf_renderer((string) $proposal->gamma_iframe_url, (string) $proposal->pdf_path);
                 if ($pdf_renderer_url !== '') {
-                    $pdf_tmp_dir = trailingslashit(get_temp_dir()) . 'at-propuesta-' . $id;
+                    // Carpeta única por request: dos envíos a la vez (doble clic o dos pestañas) no se pisan el PDF.
+                    $pdf_tmp_dir = trailingslashit(get_temp_dir()) . 'at-propuesta-' . $id . '-' . wp_generate_password(8, false, false) . '/';
                     $tmp = trailingslashit($pdf_tmp_dir) . 'Propuesta-' . sanitize_file_name($company_name ?: 'AutomatizaTech') . '.pdf';
                     wp_mkdir_p($pdf_tmp_dir);
                     $pdf_resp = wp_remote_get($pdf_renderer_url, [
@@ -319,6 +335,7 @@ function at_pa_guardar(): string {
                         'stream'              => true,
                         'filename'            => $tmp,
                         'limit_response_size' => AT_PA_PDF_MAX_BYTES + 1,
+                        'redirection'         => 0,
                     ]);
                     $pdf_codigo = is_wp_error($pdf_resp) ? 0 : (int) wp_remote_retrieve_response_code($pdf_resp);
                     $pdf_tamano = file_exists($tmp) ? filesize($tmp) : 0;
@@ -448,5 +465,12 @@ function at_pa_guardar(): string {
             }
         } // cierre del else is_email
         } // cierre del else send_email
+
+        if ($aviso_correo_no_guardado !== '') {
+            $pos_cierre = strrpos($message, '</p>');
+            if ($pos_cierre !== false) {
+                $message = substr($message, 0, $pos_cierre) . ' ' . esc_html($aviso_correo_no_guardado) . substr($message, $pos_cierre);
+            }
+        }
     return $message;
 }

@@ -189,8 +189,9 @@ function automatiza_tech_proposals_page() {
             'n8n_chat_url' => $n8n_url,
             'status' => $send_email ? 'sent' : ($es_v3 ? $actual->status : 'pending')
         ];
-        // Solo actualizar prompts si se enviaron (no vacíos)
-        if (!empty($gamma_prompt)) {
+        // Solo actualizar prompts si se enviaron (no vacíos). En v3 el payload lo maneja
+        // el flujo (n8n / botones de Revisión); el guardado normal no debe pisarlo.
+        if (!empty($gamma_prompt) && !$es_v3) {
             $update_data['gamma_prompt_text'] = $gamma_prompt;
         }
         if (!empty($system_prompt)) {
@@ -809,8 +810,10 @@ function automatiza_tech_proposals_page() {
                                         </details>
                                         
                                         <label for="gamma_prompt" style="display: block; margin-bottom: 5px; font-weight: 500;">✏️ Editar prompt:</label>
-                                        <textarea name="gamma_prompt" id="gamma_prompt" class="large-text" rows="6" 
+                                        <?php $gamma_prompt_es_v3 = ($edit_proposal->flujo ?? '') === 'v3'; ?>
+                                        <textarea name="gamma_prompt" id="gamma_prompt" class="large-text" rows="6" <?php echo $gamma_prompt_es_v3 ? 'readonly' : ''; ?>
                                             placeholder="Deja vacío para mantener el actual..."><?php echo esc_textarea($edit_proposal->gamma_prompt_text); ?></textarea>
+                                        <?php if ($gamma_prompt_es_v3): ?><p style="margin:5px 0 0 0;color:#b45309;font-size:13px;">En propuestas v3 este campo lo maneja el flujo; los cambios se piden en «Revisión de la propuesta».</p><?php endif; ?>
                                     </div>
                                     
                                     <!-- PROMPT CHATBOT -->

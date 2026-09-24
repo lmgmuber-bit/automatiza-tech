@@ -18,7 +18,7 @@ LUIS = 'lmgm.0303@gmail.com'
 VER = 'https://automatizatech.cl/ver-presentacion.php?id='
 PANEL = 'https://automatizatech.cl/wp-admin/admin.php?page=automatiza-proposals&edit_id='
 
-PROMPT_CAMBIOS = """Recibes el JSON de una propuesta comercial y los comentarios del consultor. Devuelve SOLO el JSON completo (sin texto antes ni después, sin bloques de código) con SOLO los cambios que piden los comentarios; todo lo demás queda idéntico, con la misma forma y claves. No toques pricing_rows, pricing_note ni unique_id (se descartan igual). Mantén español de Chile y el mismo tratamiento (tú/usted). Si un comentario pide cambiar precios, ignóralo: los precios se editan en el panel. Si pide una lámina extra nueva, agrégala en extra_slides (máximo 2) y su image_brief extra_N con el mismo cierre de prohibiciones que las demás."""
+PROMPT_CAMBIOS = """Recibes el JSON de una propuesta comercial y los comentarios del consultor. Devuelve SOLO el objeto JSON de la propuesta, directamente (no lo envuelvas en otra clave como "propuesta"; sin texto antes ni después, sin bloques de código), con SOLO los cambios que piden los comentarios; todo lo demás queda idéntico, con la misma forma y claves. No toques pricing_rows, pricing_note ni unique_id (se descartan igual). Mantén español de Chile y el mismo tratamiento (tú/usted). Si un comentario pide cambiar precios, ignóralo: los precios se editan en el panel. Si pide una lámina extra nueva, agrégala en extra_slides (máximo 2) y su image_brief extra_N con el mismo cierre de prohibiciones que las demás."""
 
 CODE_PAYLOAD = r"""// Une las dos ramas: con comentario (lo aplicó el modelo) o sin comentario (solo cambiaron precios).
 // Nunca lanza: si algo no cuadra devuelve ok=false con el motivo, para marcar la propuesta en error.
@@ -33,7 +33,11 @@ if ($('Aplicar comentarios').isExecuted) {
   } else {
     try {
       if (typeof c === 'string') c = c.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
-      p = typeof c === 'string' ? JSON.parse(c) : c;
+      const parsed = typeof c === 'string' ? JSON.parse(c) : c;
+      // El modelo a veces imita la forma de la entrada y devuelve {propuesta: {...}} (medido: ejecución 403689).
+      const candidato = parsed && parsed.propuesta && typeof parsed.propuesta === 'object' ? parsed.propuesta : parsed;
+      // Lo que el modelo omita se conserva de lo guardado: nunca se manda a WordPress un payload incompleto.
+      p = Object.assign({}, estado.payload, candidato);
     } catch (e) {
       reason = 'El modelo devolvió un JSON inválido al aplicar los comentarios';
     }

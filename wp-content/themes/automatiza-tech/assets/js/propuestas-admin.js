@@ -172,10 +172,10 @@
   // los selectores de acción masiva cuando no se eligió ninguna): se limpia siempre que aparezca algo.
   if (selectorTop) {
     var params = new URLSearchParams(window.location.search);
-    var huboBorrado = params.has('delete_id') || params.get('action') === 'borrar' || params.get('action2') === 'borrar' || params.get('bulk_action') === 'borrar_marcadas';
+    var huboBorrado = params.has('delete_id') || params.get('action') === 'borrar' || params.get('action2') === 'borrar' || params.has('at_borrar_marcadas');
     var cambios = false;
     if (huboBorrado) {
-      var fijas = ['action', 'action2', '_wpnonce', '_wp_http_referer', 'delete_id', 'bulk_action', 'filtrar'];
+      var fijas = ['action', 'action2', '_wpnonce', '_wp_http_referer', 'delete_id', 'bulk_action', 'at_borrar_marcadas', 'filtrar'];
       // El script de URL canónica de WordPress reescribe "proposal_ids[]" a "proposal_ids[0]" antes de
       // que corra este replaceState, así que hay que borrar cualquier clave que empiece con "proposal_ids",
       // sea cual sea su índice o si trae corchetes o no (no alcanza con el nombre literal "proposal_ids[]").

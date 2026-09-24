@@ -26,11 +26,13 @@ function at_pa_procesar_acciones(): string {
                 return at_pa_borrar_varias(array_map('intval', (array) $_GET['proposal_ids']));
             }
         }
-        // Botón «🗑️ Borrar marcadas» de la lista (name="bulk_action" value="borrar_marcadas"),
-        // fuera de los selectores action/action2 de WP_List_Table.
-        if (sanitize_key(wp_unslash($_GET['bulk_action'])) === 'borrar_marcadas' && !empty($_GET['proposal_ids'])) {
-            return at_pa_borrar_varias(array_map('intval', (array) $_GET['proposal_ids']));
-        }
+    }
+    // Botón «🗑️ Borrar marcadas» de la lista (name="at_borrar_marcadas" value="1"), con nombre
+    // propio porque common.js de WordPress intercepta cualquier submit con name="bulk_action" y
+    // lo bloquea si el <select> de acción masiva sigue en "-1" (nuestro botón no lo cambia).
+    // Buscar, Filtrar y Enter no mandan ni bulk_action ni at_borrar_marcadas.
+    if (isset($_GET['at_borrar_marcadas']) && !empty($_GET['proposal_ids'])) {
+        return at_pa_borrar_varias(array_map('intval', (array) $_GET['proposal_ids']));
     }
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
         return '';

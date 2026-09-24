@@ -68,10 +68,12 @@ return [{ json: {
   system_prompt: $('Personalidad del chatbot').first().json.message.content,
 } }];"""
 
+# Nunca enlazar *.easypanel.host en un correo: el SMTP de Hostinger lo rechaza como spam
+# (554 5.7.1, medido el 2026-09-24). La presentación se enlaza por ver-presentacion.php.
 EMAIL_HTML = """=<h3>{{ $('Vista previa (sin fotos)').item.json.view_url ? '' : '⚠️ ' }}Borrador de propuesta: {{ $('Armar payload').item.json.payload.company_name }}</h3>
 <p style="white-space:pre-wrap">{{ $('Armar payload').item.json.resumen }}</p>
 {{ $('Vista previa (sin fotos)').item.json.view_url ? '' : '<p style="color:#b45309"><strong>La vista previa no se pudo generar.</strong> La propuesta quedó creada en borrador: en el panel, «Pedir cambios» (aunque sea sin comentario) vuelve a generarla.</p>' }}
-<p><a href="{{ $('Crear en WordPress').item.json.view_url }}">👀 Ver vista previa (sin fotos)</a></p>
+<p><a href="https://automatizatech.cl/ver-presentacion.php?id={{ $('Crear en WordPress').item.json.unique_id }}">👀 Ver vista previa (sin fotos)</a></p>
 <p><a href="{{ $('Crear en WordPress').item.json.panel_url }}">✏️ Revisar en el panel: precios, comentarios y aprobación</a></p>
 <p style="color:#666">Los precios dicen «Por confirmar» hasta que los escribas en el panel. No se ha gastado nada en fotos. Nada se envía al cliente desde este flujo.</p>"""
 

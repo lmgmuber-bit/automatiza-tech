@@ -82,21 +82,32 @@ require_once __DIR__ . '/propuestas-admin/consultas.php';
 require_once __DIR__ . '/propuestas-admin/acciones.php';
 require_once __DIR__ . '/propuestas-admin/clasico.php';
 require_once __DIR__ . '/propuestas-admin/lista.php';
+require_once __DIR__ . '/propuestas-admin/ficha.php';
 
 /**
- * Página Propuestas. &clasico=1 o &edit_id=... abren el módulo clásico (ficha; también red de seguridad).
- * Tarea 3 del plan: la lista nueva (WP_List_Table) ya está conectada; la tarea 4 reemplaza la ficha.
+ * Página Propuestas. &clasico=1 abre el módulo clásico (red de seguridad). &edit_id=... abre la ficha nueva de 6 pestañas.
  */
 function automatiza_tech_proposals_page() {
     if (!current_user_can('manage_options')) {
         wp_die('No tienes permisos para ver las propuestas.');
     }
     // El clásico procesa sus propios formularios (no tienen action: vuelven a esta misma URL con clasico=1).
-    // Tarea 3: la ficha todavía es la del clásico.
-    if (isset($_GET['clasico']) || isset($_GET['edit_id'])) {
+    if (isset($_GET['clasico'])) {
         automatiza_tech_proposals_page_clasico();
         return;
     }
-    at_pa_render_lista(at_pa_procesar_acciones());
+    $message = at_pa_procesar_acciones();
+    $edit_id = isset($_GET['edit_id']) ? (int) $_GET['edit_id'] : 0;
+    if ($edit_id > 0) {
+        global $wpdb;
+        $p = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}automatiza_propuestas WHERE id = %d", $edit_id));
+        if ($p) {
+            at_pa_render_ficha($p, $message);
+            return;
+        }
+        $message .= '<div class="notice notice-error"><p>Esa propuesta no existe (id ' . (int) $edit_id . '). <a href="'
+            . esc_url(admin_url('admin.php?page=automatiza-proposals')) . '">Ver la lista</a></p></div>';
+    }
+    at_pa_render_lista($message);
 }
 ?>

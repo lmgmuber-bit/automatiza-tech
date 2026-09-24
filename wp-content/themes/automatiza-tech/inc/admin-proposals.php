@@ -9,7 +9,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once __DIR__ . '/proposals-flow.php';
+if (is_admin()) {
+    require_once __DIR__ . '/proposals-flow.php';
+}
 
 if (!defined('AT_N8N_V3_CAMBIOS')) {
     define('AT_N8N_V3_CAMBIOS', 'https://n8n-n8n.kchiba.easypanel.host/webhook/propuesta-v3-cambios');
@@ -40,7 +42,7 @@ function at_v3_llamar_n8n(string $url, int $id): string {
  */
 function automatiza_tech_proposals_menu() {
     $hook = add_menu_page(
-        'Aprobar Propuestas',
+        'Propuestas',
         'Propuestas',
         'manage_options',
         'automatiza-proposals',
@@ -78,11 +80,13 @@ add_action('admin_enqueue_scripts', function ($hook) {
     }
 });
 
-require_once __DIR__ . '/propuestas-admin/consultas.php';
-require_once __DIR__ . '/propuestas-admin/acciones.php';
-require_once __DIR__ . '/propuestas-admin/clasico.php';
-require_once __DIR__ . '/propuestas-admin/lista.php';
-require_once __DIR__ . '/propuestas-admin/ficha.php';
+if (is_admin()) {
+    require_once __DIR__ . '/propuestas-admin/consultas.php';
+    require_once __DIR__ . '/propuestas-admin/acciones.php';
+    require_once __DIR__ . '/propuestas-admin/clasico.php';
+    require_once __DIR__ . '/propuestas-admin/lista.php';
+    require_once __DIR__ . '/propuestas-admin/ficha.php';
+}
 
 /**
  * Página Propuestas. &clasico=1 abre el módulo clásico (red de seguridad). &edit_id=... abre la ficha nueva de 6 pestañas.

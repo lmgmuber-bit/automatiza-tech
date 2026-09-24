@@ -271,7 +271,10 @@ function at_pa_render_ficha($p, string $message): void {
           </div>
         </section>
 
-        <div class="at-pa-guardar"><button type="submit" class="button button-primary button-large">💾 Guardar</button></div>
+        <div class="at-pa-guardar">
+          <p class="at-pa-guardar-aviso" hidden></p>
+          <button type="submit" class="button button-primary button-large">💾 Guardar</button>
+        </div>
       </form>
     </div>
     <?php

@@ -15,11 +15,16 @@ function at_pa_procesar_acciones(): string {
     if (isset($_GET['delete_id'], $_GET['_wpnonce'])) {
         return at_pa_borrar_una();
     }
-    // Borrado masivo de la lista (WP_List_Table, formulario GET): action o action2 = borrar.
-    foreach (['action', 'action2'] as $k) {
-        $v = sanitize_key(wp_unslash($_GET[$k] ?? ''));
-        if ($v === 'borrar' && !empty($_GET['proposal_ids'])) {
-            return at_pa_borrar_varias(array_map('intval', (array) $_GET['proposal_ids']));
+    // Borrado masivo de la lista (WP_List_Table, formulario GET): action o action2 = borrar,
+    // solo cuando lo envía un botón «Aplicar» real (name="bulk_action" en #doaction/#doaction2,
+    // WP 6.9.4 y 7.1.2). Buscar (sin name), Filtrar (name="filtrar") y Enter (botón Buscar) no
+    // mandan bulk_action, así que ya no pueden caer en el borrado masivo.
+    if (isset($_GET['bulk_action'])) {
+        foreach (['action', 'action2'] as $k) {
+            $v = sanitize_key(wp_unslash($_GET[$k] ?? ''));
+            if ($v === 'borrar' && !empty($_GET['proposal_ids'])) {
+                return at_pa_borrar_varias(array_map('intval', (array) $_GET['proposal_ids']));
+            }
         }
     }
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
@@ -165,7 +170,7 @@ function at_pa_guardar(): string {
                 $pdf_path = $movefile['url']; // Guardamos la URL pública
                 $pdf_file_path = $movefile['file']; // Ruta física para adjuntar al mail
             } else {
-                $message = '<div class="notice notice-error"><p>Error al subir PDF: ' . $movefile['error'] . '</p></div>';
+                $message = '<div class="notice notice-error"><p>Error al subir PDF: ' . esc_html($movefile['error']) . '</p></div>';
             }
         }
 

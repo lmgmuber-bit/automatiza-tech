@@ -12,6 +12,27 @@
     var sel = form.querySelector('.at-pa-tabs-movil');
     var guardar = form.querySelector('.at-pa-guardar');
 
+    // C1: aviso en la barra fija cuando Guardar también va a enviar el correo (#send_email marcado
+    // y habilitado), y confirmación antes de guardar en ese caso. #client_email y #send_email viven
+    // en pestañas que pueden estar ocultas (hidden), pero siguen en el DOM y son consultables.
+    var avisoEnvio = guardar ? guardar.querySelector('.at-pa-guardar-aviso') : null;
+    var campoSendEmail = form.querySelector('#send_email');
+    var campoClientEmail = form.querySelector('#client_email');
+    var actualizarAvisoEnvio = function () {
+      if (!avisoEnvio) { return; }
+      if (campoSendEmail && campoSendEmail.checked && !campoSendEmail.disabled) {
+        var correo = campoClientEmail ? campoClientEmail.value : '';
+        avisoEnvio.textContent = 'Al guardar también se enviará el correo a ' + correo + '.';
+        avisoEnvio.hidden = false;
+      } else {
+        avisoEnvio.textContent = '';
+        avisoEnvio.hidden = true;
+      }
+    };
+    if (campoSendEmail) { campoSendEmail.addEventListener('change', actualizarAvisoEnvio); }
+    if (campoClientEmail) { campoClientEmail.addEventListener('input', actualizarAvisoEnvio); }
+    actualizarAvisoEnvio();
+
     var mostrar = function (clave) {
       if (!form.querySelector('.at-pa-panel[data-panel="' + clave + '"]')) { clave = 'resumen'; }
       form.querySelectorAll('.at-pa-panel').forEach(function (p) { p.hidden = p.getAttribute('data-panel') !== clave; });
@@ -32,7 +53,21 @@
     // no deben seguir saltando. La bandera se reinicia en el próximo 'submit' o, ya en este mismo intento
     // fallido, apenas termina la ráfaga síncrona de eventos 'invalid' (setTimeout de 0).
     var primerInvalido = true;
-    form.addEventListener('submit', function () { primerInvalido = true; });
+    form.addEventListener('submit', function (e) {
+      primerInvalido = true;
+      // C1: fuera de los botones de Revisión (name="at_v3_accion"), Guardar reenvía el correo si
+      // #send_email sigue marcado y habilitado. Cubre clic en Guardar, Enter (pasa por el botón
+      // oculto por defecto, sin name) y el caso sin e.submitter (Safari viejo): ambos se tratan
+      // como guardado normal, igual que pide el brief.
+      if (!(e.submitter && e.submitter.name === 'at_v3_accion')) {
+        if (campoSendEmail && campoSendEmail.checked && !campoSendEmail.disabled) {
+          var correoConfirmar = campoClientEmail ? campoClientEmail.value : '';
+          if (!window.confirm('Además de guardar, se enviará el correo con la propuesta a ' + correoConfirmar + '. ¿Continuar?')) {
+            e.preventDefault();
+          }
+        }
+      }
+    });
     form.addEventListener('invalid', function (e) {
       if (!primerInvalido) { return; }
       primerInvalido = false;
@@ -110,13 +145,15 @@
     });
   }
 
-  // ---------- Lista: URL limpia tras un borrado (masivo o de una fila) ----------
+  // ---------- Lista: URL limpia tras un borrado, Buscar, Filtrar o paginar ----------
   // Sin esto, F5 repite ?action=borrar&proposal_ids[]=…&_wpnonce=… (o ?delete_id=…&_wpnonce=…): no borra
   // nada de nuevo porque las filas ya no están, pero vuelve a mostrar el aviso de éxito como si acabara
-  // de pasar. Se limpia solo cuando la URL trae evidencia real de un borrado ya hecho.
+  // de pasar. Buscar, Filtrar y paginar dejan su propia basura (_wpnonce, _wp_http_referer y el "-1" de
+  // los selectores de acción masiva cuando no se eligió ninguna): se limpia siempre que aparezca algo.
   if (selectorTop) {
     var params = new URLSearchParams(window.location.search);
     var huboBorrado = params.has('delete_id') || params.get('action') === 'borrar' || params.get('action2') === 'borrar';
+    var cambios = false;
     if (huboBorrado) {
       var fijas = ['action', 'action2', '_wpnonce', '_wp_http_referer', 'delete_id', 'bulk_action', 'filtrar'];
       // El script de URL canónica de WordPress reescribe "proposal_ids[]" a "proposal_ids[0]" antes de
@@ -125,8 +162,19 @@
       var claves = [];
       params.forEach(function (_, k) { claves.push(k); });
       claves.forEach(function (k) {
-        if (fijas.indexOf(k) !== -1 || k.indexOf('proposal_ids') === 0) { params.delete(k); }
+        if (fijas.indexOf(k) !== -1 || k.indexOf('proposal_ids') === 0) { params.delete(k); cambios = true; }
       });
+    } else {
+      // Sin borrado: Buscar, Filtrar o una página nueva conservan s, grupo, desde, hasta, orderby,
+      // order y paged tal cual; solo se quita el nonce, el referer y "-1" (ninguna acción elegida).
+      ['_wpnonce', '_wp_http_referer'].forEach(function (k) {
+        if (params.has(k)) { params.delete(k); cambios = true; }
+      });
+      ['action', 'action2'].forEach(function (k) {
+        if (params.get(k) === '-1') { params.delete(k); cambios = true; }
+      });
+    }
+    if (cambios) {
       var query = params.toString();
       var limpia = window.location.pathname + (query ? '?' + query : '') + window.location.hash;
       window.history.replaceState(null, '', limpia);

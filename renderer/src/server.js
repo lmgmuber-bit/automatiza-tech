@@ -4,6 +4,7 @@ const { validatePayload } = require('./schema');
 const { generateProposalImages } = require('./higgsfield');
 const { renderProposalHtml } = require('./template');
 const { renderToFiles } = require('./render');
+const { persistImages } = require('./images-store');
 
 function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
   const app = express();
@@ -42,11 +43,16 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
       (b) => b && b.slide && !provided[b.slide]
     );
 
+    const requested = (Array.isArray(data.image_briefs) ? data.image_briefs : [])
+      .map((b) => b && b.slide)
+      .filter(Boolean);
+
     let images;
+    let report;
     let html;
     try {
       const generated = await generateProposalImages(pending, higgsfieldCredentials);
-      images = Object.assign({}, generated, provided);
+      ({ images, report } = await persistImages(Object.assign({}, generated, provided), outputDir));
       html = renderProposalHtml(data, images);
       await renderToFiles(html, outputDir);
     } catch (err) {
@@ -57,6 +63,12 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
     res.json({
       view_url: `${baseUrl}/p/${data.unique_id}/index.html`,
       pdf_url: `${baseUrl}/p/${data.unique_id}/presentation.pdf`,
+      images: {
+        requested: requested.length,
+        stored_local: report.saved.length,
+        kept_remote: report.kept_remote,
+        missing: requested.filter((slide) => !images[slide]),
+      },
     });
   });
 

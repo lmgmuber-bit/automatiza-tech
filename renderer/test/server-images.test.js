@@ -45,6 +45,9 @@ test('a slide whose image is supplied is never requested from Higgsfield', async
       asked.push(String(url));
       return { ok: false, status: 500, text: async () => 'no debio llamarse' };
     }
+    if (String(url) === 'https://cdn.example.com/ya-la-tengo.png') {
+      return { ok: true, status: 200, headers: { get: () => 'image/png' }, arrayBuffer: async () => Buffer.from('PNG') };
+    }
     return originalFetch(url, opts);
   };
   try {
@@ -56,8 +59,11 @@ test('a slide whose image is supplied is never requested from Higgsfield', async
     });
     assert.equal(res.status, 200);
     assert.deepEqual(asked, [], 'no debe pedirse ninguna imagen ya provista');
+    assert.ok(res.body.images, 'respuesta debe tener objeto images');
+    assert.equal(res.body.images.stored_local, 1);
+    assert.deepEqual(res.body.images.missing, []);
     const html = await fs.readFile(path.join(dir, PAYLOAD.unique_id, 'index.html'), 'utf8');
-    assert.ok(html.includes("url('https://cdn.example.com/ya-la-tengo.png')"));
+    assert.ok(html.includes("url('img/cover.png')"), 'la foto provista queda guardada y enlazada en local');
   } finally {
     global.fetch = originalFetch;
     await fs.rm(dir, { recursive: true, force: true });
@@ -119,6 +125,25 @@ test('a payload with no images field behaves exactly as before', async () => {
     assert.equal(res.status, 200);
     const html = await fs.readFile(path.join(dir, PAYLOAD.unique_id, 'index.html'), 'utf8');
     assert.ok(html.includes("url('https://cdn.example.com/g.png')"));
+  } finally {
+    global.fetch = originalFetch;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('a brief whose photo could not be generated is reported as missing', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'at-render-'));
+  const originalFetch = global.fetch;
+  global.fetch = async (url, opts) => {
+    if (String(url).includes('higgsfield')) return { ok: false, status: 500, text: async () => 'caido' };
+    return originalFetch(url, opts);
+  };
+  try {
+    const app = createApp({ publicDir: dir, baseUrl: 'http://x', higgsfieldCredentials: { keyId: 'k', keySecret: 's' } });
+    const res = await post(app, { ...PAYLOAD, unique_id: 'faltante', image_briefs: [{ slide: 'cover', prompt: 'foto' }] });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.images.requested, 1);
+    assert.deepEqual(res.body.images.missing, ['cover']);
   } finally {
     global.fetch = originalFetch;
     await fs.rm(dir, { recursive: true, force: true });

@@ -124,6 +124,53 @@
       "onError": "continueRegularOutput"
     },
     {
+      "id": "f4b",
+      "name": "¿Reintentar render?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        770,
+        -300
+      ],
+      "parameters": {
+        "jsCode": "// Tras cada render: si faltan fotos o no hubo presentación, se vuelve a llamar al renderer.\n// El renderer reutiliza las fotos ya guardadas con el mismo prompt (manifest.json) y solo pide las que faltan,\n// así que un reintento no vuelve a pagar las que ya salieron. Tope: MAX_RENDERS llamadas.\nconst MAX_RENDERS = 3;\nconst r = $json || {};\nconst faltan = !r.view_url || ((r.images && r.images.missing) || []).length > 0;\nconst intento = $runIndex + 1;\nconst base = $('Revisar fotos').first().json;\nreturn [{ json: Object.assign({}, base, { reintentar: faltan && intento < MAX_RENDERS, intento }) }];"
+      }
+    },
+    {
+      "id": "f4c",
+      "name": "¿Faltan fotos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        -300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f4c-c",
+              "leftValue": "={{ $json.reintentar }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
       "id": "f5",
       "name": "Ver presentación",
       "type": "n8n-nodes-base.httpRequest",
@@ -134,7 +181,7 @@
       ],
       "parameters": {
         "method": "GET",
-        "url": "=https://automatizatech.cl/ver-presentacion.php?id={{ $('Leer estado').item.json.body.unique_id }}",
+        "url": "=https://automatizatech.cl/ver-presentacion.php?id={{ $('Leer estado').first().json.body.unique_id }}",
         "options": {
           "response": {
             "response": {
@@ -157,7 +204,7 @@
       ],
       "parameters": {
         "method": "HEAD",
-        "url": "={{ 'https://n8n-propuesta-renderer.kchiba.easypanel.host/p/' + $('Leer estado').item.json.body.unique_id + '/presentation.pdf' }}",
+        "url": "={{ 'https://n8n-propuesta-renderer.kchiba.easypanel.host/p/' + $('Leer estado').first().json.body.unique_id + '/presentation.pdf' }}",
         "options": {
           "response": {
             "response": {
@@ -192,7 +239,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ chatInput: 'Hola', sessionId: $('Leer estado').item.json.body.unique_id, action: 'sendMessage' }) }}"
+        "jsonBody": "={{ JSON.stringify({ chatInput: 'Hola', sessionId: $('Leer estado').first().json.body.unique_id, action: 'sendMessage' }) }}"
       }
     },
     {
@@ -205,7 +252,7 @@
         -120
       ],
       "parameters": {
-        "jsCode": "// Junta las verificaciones. Nada aquí lanza: el resultado decide «lista» o «error».\nconst est = $('Leer estado').first().json.body;\nconst r = $('Render final').first().json || {};\nconst img = r.images || {};\nconst problemas = [];\nif (!r.view_url) problemas.push('el renderer no devolvió la presentación' + (r.error ? ` (${r.error.message || r.error})` : ''));\nif ((img.missing || []).length) problemas.push(`fotos que no se generaron: ${img.missing.join(', ')}`);\nif ((img.kept_remote || []).length) problemas.push(`fotos que no se pudieron guardar en local: ${img.kept_remote.join(', ')}`);\nconst pres = $('Ver presentación').first().json;\nif (pres.statusCode !== 200) problemas.push(`ver-presentacion respondió ${pres.statusCode}`);\nconst pdf = $('PDF').first().json;\nif (pdf.statusCode !== 200) problemas.push(`el PDF respondió ${pdf.statusCode}`);\nconst chat = $('Probar chatbot').first().json;\nconst respuesta = chat.body && chat.body.output ? String(chat.body.output) : '';\nif (chat.statusCode !== 200 || !respuesta) problemas.push(`el chatbot de demo no respondió (HTTP ${chat.statusCode})`);\nconst ok = problemas.length === 0;\nreturn [{ json: {\n  ok, problemas, id: est.id, unique_id: est.unique_id, company: est.company_name,\n  fotos_locales: img.stored_local || 0, fotos_pedidas: img.requested || 0,\n  chat_respuesta: respuesta.slice(0, 300),\n  note: ok ? `Verificada: presentación, PDF, ${img.stored_local || 0} fotos locales y chatbot OK` : problemas.join(' · '),\n} }];"
+        "jsCode": "// Junta las verificaciones. Nada aquí lanza: el resultado decide «lista» o «error».\nconst est = $('Leer estado').first().json.body;\n// Sin runIndex, $('Render final') devuelve la ÚLTIMA pasada del bucle de reintentos.\nconst r = $('Render final').first().json || {};\nconst img = r.images || {};\nconst renders = $('¿Reintentar render?').first().json.intento;\nconst problemas = [];\nif (!r.view_url) problemas.push('el renderer no devolvió la presentación' + (r.error ? ` (${r.error.message || r.error})` : ''));\nif ((img.missing || []).length) problemas.push(`fotos que no se generaron tras ${renders} intentos: ${img.missing.join(', ')}`);\nif ((img.kept_remote || []).length) problemas.push(`fotos que no se pudieron guardar en local: ${img.kept_remote.join(', ')}`);\nconst pres = $('Ver presentación').first().json;\nif (pres.statusCode !== 200) problemas.push(`ver-presentacion respondió ${pres.statusCode}`);\nconst pdf = $('PDF').first().json;\nif (pdf.statusCode !== 200) problemas.push(`el PDF respondió ${pdf.statusCode}`);\nconst chat = $('Probar chatbot').first().json;\nconst respuesta = chat.body && chat.body.output ? String(chat.body.output) : '';\nif (chat.statusCode !== 200 || !respuesta) problemas.push(`el chatbot de demo no respondió (HTTP ${chat.statusCode})`);\nconst ok = problemas.length === 0;\nreturn [{ json: {\n  ok, problemas, id: est.id, unique_id: est.unique_id, company: est.company_name,\n  fotos_locales: img.stored_local || 0, fotos_pedidas: img.requested || 0,\n  chat_respuesta: respuesta.slice(0, 300),\n  note: ok ? `Verificada: presentación, PDF, ${img.stored_local || 0} fotos locales (${renders} render${renders === 1 ? '' : 's'}) y chatbot OK` : problemas.join(' · '),\n} }];"
       }
     },
     {
@@ -345,6 +392,35 @@
     },
     "Render final": {
       "main": [
+        [
+          {
+            "node": "¿Reintentar render?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Reintentar render?": {
+      "main": [
+        [
+          {
+            "node": "¿Faltan fotos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Faltan fotos?": {
+      "main": [
+        [
+          {
+            "node": "Render final",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Ver presentación",

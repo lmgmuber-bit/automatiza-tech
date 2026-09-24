@@ -24,11 +24,13 @@ FULL = {'response': {'response': {'fullResponse': True, 'neverError': True}}}
 
 CODE_VERIFICAR = r"""// Junta las verificaciones. Nada aquí lanza: el resultado decide «lista» o «error».
 const est = $('Leer estado').first().json.body;
+// Sin runIndex, $('Render final') devuelve la ÚLTIMA pasada del bucle de reintentos.
 const r = $('Render final').first().json || {};
 const img = r.images || {};
+const renders = $('¿Reintentar render?').first().json.intento;
 const problemas = [];
 if (!r.view_url) problemas.push('el renderer no devolvió la presentación' + (r.error ? ` (${r.error.message || r.error})` : ''));
-if ((img.missing || []).length) problemas.push(`fotos que no se generaron: ${img.missing.join(', ')}`);
+if ((img.missing || []).length) problemas.push(`fotos que no se generaron tras ${renders} intentos: ${img.missing.join(', ')}`);
 if ((img.kept_remote || []).length) problemas.push(`fotos que no se pudieron guardar en local: ${img.kept_remote.join(', ')}`);
 const pres = $('Ver presentación').first().json;
 if (pres.statusCode !== 200) problemas.push(`ver-presentacion respondió ${pres.statusCode}`);
@@ -42,7 +44,7 @@ return [{ json: {
   ok, problemas, id: est.id, unique_id: est.unique_id, company: est.company_name,
   fotos_locales: img.stored_local || 0, fotos_pedidas: img.requested || 0,
   chat_respuesta: respuesta.slice(0, 300),
-  note: ok ? `Verificada: presentación, PDF, ${img.stored_local || 0} fotos locales y chatbot OK` : problemas.join(' · '),
+  note: ok ? `Verificada: presentación, PDF, ${img.stored_local || 0} fotos locales (${renders} render${renders === 1 ? '' : 's'}) y chatbot OK` : problemas.join(' · '),
 } }];"""
 
 CODE_REVISAR = r"""
@@ -50,6 +52,17 @@ CODE_REVISAR = r"""
 const e = $('Leer estado').first().json.body;
 const r = limpiarFotos(e.payload.image_briefs);
 return [{ json: { unique_id: e.unique_id, payload: Object.assign({}, e.payload, { image_briefs: r.limpias }), fotos_reemplazadas: r.reemplazadas } }];"""
+
+MAX_RENDERS = 3
+CODE_REINTENTAR = r"""// Tras cada render: si faltan fotos o no hubo presentación, se vuelve a llamar al renderer.
+// El renderer reutiliza las fotos ya guardadas con el mismo prompt (manifest.json) y solo pide las que faltan,
+// así que un reintento no vuelve a pagar las que ya salieron. Tope: MAX_RENDERS llamadas.
+const MAX_RENDERS = __MAX__;
+const r = $json || {};
+const faltan = !r.view_url || ((r.images && r.images.missing) || []).length > 0;
+const intento = $runIndex + 1;
+const base = $('Revisar fotos').first().json;
+return [{ json: Object.assign({}, base, { reintentar: faltan && intento < MAX_RENDERS, intento }) }];""".replace('__MAX__', str(MAX_RENDERS))
 
 CODE_MOTIVO = r"""// Falló la lectura del estado: no hay payload que renderizar.
 const hook = $('Webhook').first().json.body || {};
@@ -97,19 +110,22 @@ nodes = [
     # Revisar fotos: último filtro antes de gastar. No guarda nada; solo decide qué se le pide al renderer.
     node('f3b', 'Revisar fotos', 'n8n-nodes-base.code', 2, [550, -120],
          {'jsCode': JS_LIMPIAR_FOTOS + CODE_REVISAR}),
-    # Render final: aquí SÍ se piden las fotos (image_briefs del payload). El renderer se da ~210 s para fotos + render.
+    # Render final: aquí SÍ se piden las fotos (image_briefs del payload). El renderer se da ~210 s para fotos + render;
+    # si faltan fotos, «¿Reintentar render?» vuelve a llamarlo (hasta MAX_RENDERS) y el renderer reutiliza las ya guardadas.
     node('f4', 'Render final', 'n8n-nodes-base.httpRequest', 4.2, [660, -120],
          {'method': 'POST', 'url': RENDERER, 'sendBody': True, 'specifyBody': 'json',
           'jsonBody': "={{ JSON.stringify(Object.assign({}, $json.payload, { unique_id: $json.unique_id, draft: false })) }}",
           'options': {'timeout': 290000}},
          onError='continueRegularOutput'),
+    node('f4b', '¿Reintentar render?', 'n8n-nodes-base.code', 2, [770, -300], {'jsCode': CODE_REINTENTAR}),
+    iff('f4c', '¿Faltan fotos?', [880, -300], '={{ $json.reintentar }}'),
     http('f5', 'Ver presentación', [880, -120], 'GET',
-         f"={VER}{{{{ $('Leer estado').item.json.body.unique_id }}}}", cred=False, timeout=30000),
+         f"={VER}{{{{ $('Leer estado').first().json.body.unique_id }}}}", cred=False, timeout=30000),
     http('f6', 'PDF', [1100, -120], 'HEAD',
-         "={{ 'https://n8n-propuesta-renderer.kchiba.easypanel.host/p/' + $('Leer estado').item.json.body.unique_id + '/presentation.pdf' }}",
+         "={{ 'https://n8n-propuesta-renderer.kchiba.easypanel.host/p/' + $('Leer estado').first().json.body.unique_id + '/presentation.pdf' }}",
          cred=False, timeout=30000),
     http('f7', 'Probar chatbot', [1320, -120], 'POST', CHAT,
-         "={{ JSON.stringify({ chatInput: 'Hola', sessionId: $('Leer estado').item.json.body.unique_id, action: 'sendMessage' }) }}",
+         "={{ JSON.stringify({ chatInput: 'Hola', sessionId: $('Leer estado').first().json.body.unique_id, action: 'sendMessage' }) }}",
          cred=False, timeout=90000),
     node('f8', 'Verificar', 'n8n-nodes-base.code', 2, [1540, -120], {'jsCode': CODE_VERIFICAR}),
     node('f9', 'Motivo lectura', 'n8n-nodes-base.code', 2, [660, 160], {'jsCode': CODE_MOTIVO}),
@@ -137,7 +153,10 @@ link('Leer estado', '¿Estado leído?')
 link('¿Estado leído?', 'Revisar fotos', 0)
 link('Revisar fotos', 'Render final')
 link('¿Estado leído?', 'Motivo lectura', 1)
-link('Render final', 'Ver presentación')
+link('Render final', '¿Reintentar render?')
+link('¿Reintentar render?', '¿Faltan fotos?')
+link('¿Faltan fotos?', 'Render final', 0)
+link('¿Faltan fotos?', 'Ver presentación', 1)
 link('Ver presentación', 'PDF')
 link('PDF', 'Probar chatbot')
 link('Probar chatbot', 'Verificar')

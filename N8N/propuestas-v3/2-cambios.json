@@ -1,0 +1,496 @@
+{
+  "name": "Propuestas v3 · 2 Cambios",
+  "nodes": [
+    {
+      "id": "c1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "propuesta-v3-cambios",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "propuesta-v3-cambios",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1NI0sJKc0kC430pb",
+          "name": "AT REST Secret (header)"
+        }
+      }
+    },
+    {
+      "id": "c2",
+      "name": "Leer estado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{{ $json.body.id }}/state",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1NI0sJKc0kC430pb",
+          "name": "AT REST Secret (header)"
+        }
+      }
+    },
+    {
+      "id": "c3",
+      "name": "¿Hay comentario?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c3-c",
+              "leftValue": "={{ String($json.ultimo_comentario || '').trim().length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c4",
+      "name": "Aplicar comentarios",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -120
+      ],
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Recibes el JSON de una propuesta comercial y los comentarios del consultor. Devuelve SOLO el JSON completo (sin texto antes ni después, sin bloques de código) con SOLO los cambios que piden los comentarios; todo lo demás queda idéntico, con la misma forma y claves. No toques pricing_rows, pricing_note ni unique_id (se descartan igual). Mantén español de Chile y el mismo tratamiento (tú/usted). Si un comentario pide cambiar precios, ignóralo: los precios se editan en el panel. Si pide una lámina extra nueva, agrégala en extra_slides (máximo 2) y su image_brief extra_N con el mismo cierre de prohibiciones que las demás."
+            },
+            {
+              "content": "={{ JSON.stringify({ comentarios: $json.ultimo_comentario, propuesta: $json.payload }) }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2
+        },
+        "requestOptions": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c5",
+      "name": "Payload final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Une las dos ramas: con comentario (lo aplicó el modelo) o sin comentario (solo cambiaron precios).\n// Nunca lanza: si algo no cuadra devuelve ok=false con el motivo, para marcar la propuesta en error.\nconst estado = $('Leer estado').first().json;\nlet p = estado.payload;\nlet reason = '';\nif ($('Aplicar comentarios').isExecuted) {\n  const ia = $('Aplicar comentarios').first().json;\n  let c = ia && ia.message ? ia.message.content : null;\n  if (!c) {\n    reason = 'El modelo no respondió al aplicar los comentarios' + (ia && ia.error ? ': ' + (ia.error.message || ia.error) : '');\n  } else {\n    try {\n      if (typeof c === 'string') c = c.trim().replace(/^```(?:json)?\\s*/i, '').replace(/```\\s*$/, '');\n      p = typeof c === 'string' ? JSON.parse(c) : c;\n    } catch (e) {\n      reason = 'El modelo devolvió un JSON inválido al aplicar los comentarios';\n    }\n  }\n}\nif (!reason && (!p || typeof p !== 'object')) reason = 'La propuesta no tiene un payload legible';\nif (!reason) p.extra_slides = (p.extra_slides || []).slice(0, 2);\n// WordPress restaura precios y unique_id de todos modos; aquí solo se asegura el formato.\nreturn [{ json: { ok: !reason, reason, id: estado.id, unique_id: estado.unique_id, company: estado.company_name, payload: p } }];"
+      }
+    },
+    {
+      "id": "c6",
+      "name": "¿Payload OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c6-c",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c7",
+      "name": "Guardar y volver a borrador",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        -120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{{ $json.id }}/state",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'borrador', note: '', payload: $json.payload }) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1NI0sJKc0kC430pb",
+          "name": "AT REST Secret (header)"
+        }
+      }
+    },
+    {
+      "id": "c8",
+      "name": "¿Guardado OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1540,
+        -120
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c8-c",
+              "leftValue": "={{ $json.statusCode === 200 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c9",
+      "name": "Vista previa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        -240
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n-propuesta-renderer.kchiba.easypanel.host/render",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify(Object.assign({}, $('Guardar y volver a borrador').item.json.body.payload, { unique_id: $('Payload final').item.json.unique_id, draft: true, image_briefs: [] })) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c10",
+      "name": "Correo cambios aplicados",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        1980,
+        -240
+      ],
+      "parameters": {
+        "fromEmail": "contacto@automatizatech.cl",
+        "toEmail": "lmgm.0303@gmail.com",
+        "subject": "={{ ($('Vista previa').item.json.view_url ? '' : '⚠️ ') + $('Payload final').item.json.company + ' · cambios aplicados' }}",
+        "html": "=<h3>{{ $('Vista previa').item.json.view_url ? '' : '⚠️ ' }}Cambios aplicados: {{ $('Payload final').item.json.company }}</h3>\n<p>Último comentario: <em>{{ $('Leer estado').item.json.ultimo_comentario || '(sin comentario: solo precios)' }}</em></p>\n{{ $('Vista previa').item.json.view_url ? '' : '<p style=\"color:#b45309\"><strong>La nueva vista previa no se pudo generar.</strong> Los cambios quedaron guardados; «Pedir cambios» sin comentario la vuelve a generar.</p>' }}\n<p><a href=\"https://automatizatech.cl/ver-presentacion.php?id={{ $('Payload final').item.json.unique_id }}\">👀 Ver la nueva vista previa (sin fotos)</a></p>\n<p><a href=\"https://automatizatech.cl/wp-admin/admin.php?page=automatiza-proposals&edit_id={{ $('Payload final').item.json.id }}\">✏️ Seguir revisando o aprobar en el panel</a></p>\n<p style=\"color:#666\">No se ha gastado nada en fotos. Nada se envía al cliente desde este flujo.</p>",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    },
+    {
+      "id": "c11",
+      "name": "Motivo del error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        120
+      ],
+      "parameters": {
+        "jsCode": "// Motivo legible para status_note, venga de donde venga el fallo.\nconst base = $('Payload final').first().json;\nlet reason = base.reason;\nif (!reason && $('Guardar y volver a borrador').isExecuted) {\n  const g = $('Guardar y volver a borrador').first().json;\n  const msg = g.body && (g.body.message || g.body.code) ? ' — ' + (g.body.message || g.body.code) : '';\n  reason = `WordPress rechazó el cambio (HTTP ${g.statusCode})${msg}`;\n}\nreturn [{ json: { id: base.id, unique_id: base.unique_id, company: base.company, reason: reason || 'Error desconocido al aplicar los cambios', exec: $execution.id } }];"
+      }
+    },
+    {
+      "id": "c12",
+      "name": "Marcar error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{{ $json.id }}/state",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'error', note: $json.reason + ' (ejecución ' + $json.exec + ')' }) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1NI0sJKc0kC430pb",
+          "name": "AT REST Secret (header)"
+        }
+      }
+    },
+    {
+      "id": "c13",
+      "name": "Correo con problema",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        120
+      ],
+      "parameters": {
+        "fromEmail": "contacto@automatizatech.cl",
+        "toEmail": "lmgm.0303@gmail.com",
+        "subject": "={{ '⚠️ ' + $('Motivo del error').item.json.company + ' · no se pudieron aplicar los cambios' }}",
+        "html": "=<h3>⚠️ No se pudieron aplicar los cambios: {{ $('Motivo del error').item.json.company }}</h3>\n<p>{{ $('Motivo del error').item.json.reason }}</p>\n<p>La propuesta quedó en estado <strong>error</strong>. Desde el panel puedes volver a «Pedir cambios» o aprobarla.</p>\n<p><a href=\"https://automatizatech.cl/wp-admin/admin.php?page=automatiza-proposals&edit_id={{ $('Motivo del error').item.json.id }}\">✏️ Abrir en el panel</a></p>\n<p style=\"color:#666\">Ejecución de n8n: {{ $('Motivo del error').item.json.exec }}</p>",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Leer estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer estado": {
+      "main": [
+        [
+          {
+            "node": "¿Hay comentario?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay comentario?": {
+      "main": [
+        [
+          {
+            "node": "Aplicar comentarios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Payload final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aplicar comentarios": {
+      "main": [
+        [
+          {
+            "node": "Payload final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payload final": {
+      "main": [
+        [
+          {
+            "node": "¿Payload OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Payload OK?": {
+      "main": [
+        [
+          {
+            "node": "Guardar y volver a borrador",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Motivo del error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar y volver a borrador": {
+      "main": [
+        [
+          {
+            "node": "¿Guardado OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Guardado OK?": {
+      "main": [
+        [
+          {
+            "node": "Vista previa",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Motivo del error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vista previa": {
+      "main": [
+        [
+          {
+            "node": "Correo cambios aplicados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Motivo del error": {
+      "main": [
+        [
+          {
+            "node": "Marcar error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar error": {
+      "main": [
+        [
+          {
+            "node": "Correo con problema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

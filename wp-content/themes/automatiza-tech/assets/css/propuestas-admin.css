@@ -45,7 +45,10 @@
 .at-pa-aviso { color: #b45309; }
 .at-pa-guardar { position: sticky; bottom: 0; z-index: 10; background: #f0f0f1; border-top: 1px solid #c3c4c7; padding: 10px 0; margin-top: 8px; text-align: right; }
 @media (max-width: 782px) {
-  .at-pa-tabs { display: none; }
+  /* .at-pa-js .at-pa-tabs (0,2,0) fuera del media query le gana a esta regla (0,1,0)
+     si acá solo dijera .at-pa-tabs: repetirla con el mismo prefijo iguala la especificidad
+     y, al venir después en la hoja, esta es la que manda en celular. */
+  .at-pa-tabs, .at-pa-js .at-pa-tabs { display: none; }
   .at-pa-js .at-pa-tabs-movil { display: block; }
   .at-pa-panel { padding: 12px; }
   .at-pa-precios thead { display: none; }

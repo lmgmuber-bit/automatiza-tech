@@ -20,12 +20,19 @@ Plan de implementación: `Docs/superpowers/plans/2026-09-23-flujo-propuestas-v3.
 4. **Aprobar** (el botón muestra cuántas fotos y su costo) → «3 Final» (`elReU26Sju1lpdO5`): filtra las
    descripciones, genera las fotos con Soul 2, las guarda en `/p/<id>/img/` junto a la presentación y renderiza.
    Si faltan fotos, **reintenta hasta 3 renders**; el renderer reutiliza las ya guardadas con el mismo prompt
-   (`img/manifest.json`), así que no se pagan dos veces. Verifica presentación, PDF y chatbot. Queda `lista` o
-   `error` con el detalle, y llega el correo.
+   (`img/manifest.json`), así que una foto ya guardada no se vuelve a pagar. Sí puede pagarse de nuevo una foto
+   que Higgsfield cobró pero no alcanzó a entregar (se corta por tiempo y se pide otra vez): el botón muestra el
+   costo normal (≈ US$0,0032 por foto) y el peor caso teórico con reintentos es ≈ 6 veces eso. Verifica
+   presentación, PDF y chatbot. Queda `lista` o `error` con el detalle, y llega el correo.
 5. **Envío**: solo desde `lista`, con la casilla «Enviar correo» del panel. Nunca automático.
 
 Estados: `borrador → ajustando|generando`, `ajustando → borrador|error`, `generando → lista|error`,
 `lista → ajustando|sent`, `error → borrador|ajustando|generando`. Las propuestas viejas (`flujo` NULL) siguen igual.
+
+**Si algo se cae.** Los nodos HTTP de Cambios y Final siguen ante un timeout o una conexión cortada y dejan la
+propuesta en `error` con el motivo. Si un flujo se cae igual (OpenAI caído, un JSON ilegible), el workflow
+«0 Avisar error» (`m7TOfKznVSBGz4Nd`, `settings.errorWorkflow` de los tres) le escribe a Luis. Una propuesta que
+haya quedado en `ajustando` o `generando` se destraba desde el panel (pasa a `error`, que es transición válida).
 
 ## Fotos por rubro (regla de Luis, 2026-09-24)
 
@@ -61,6 +68,13 @@ Los tres flujos envían a Luis un correo de marca (`N8N/propuestas-v3/email_tpl.
 Se enlaza `automatizatech.cl/ver-presentacion.php?id=`.
 
 ## Cómo se publica y cómo se revierte
+
+**Orden obligatorio:** el bucle de reintentos de «3 Final» solo se publica con un renderer que ya reutiliza
+fotos (zip `32ccabf` o posterior). Con un renderer anterior, cada reintento vuelve a pagar todas las fotos.
+
+Estado al 2026-09-24 (madrugada): renderer `32ccabf` en Easypanel (verificado: `/render` responde `images.reused`);
+Borrador, Cambios y Final con reintentos, fotos por rubro y aviso de errores publicados en n8n; Meet apuntando a
+`propuesta-v3-borrador`.
 
 - Workflows: `python N8N/propuestas-v3/build_N_*.py` genera el JSON y `python N8N/propuestas-v3/deploy.py N-*.json`
   lo publica (crea o actualiza por nombre, filtra por el host de AT; la clave no se imprime).

@@ -39,6 +39,11 @@
 .at-pa-enlaces, .at-pa-botones { display: flex; flex-wrap: wrap; gap: 8px; }
 .at-pa-botones .button, .at-pa-enlaces .button { white-space: normal; height: auto; min-height: 30px; line-height: 1.4; padding-top: 4px; padding-bottom: 4px; }
 .at-pa .form-table input.regular-text, .at-pa .form-table input.large-text, .at-pa textarea.large-text { width: 100%; max-width: 100%; box-sizing: border-box; }
+/* input[type=file] tiene un ancho mínimo de contenido (~363px, botón "Elegir archivo" + nombre) que con
+   table-layout:auto (el default) estira toda .form-table y desborda el panel en celular (390 vs 375 de scrollWidth). */
+.at-pa .form-table { width: 100%; table-layout: fixed; }
+.at-pa .form-table td, .at-pa .form-table th { min-width: 0; }
+.at-pa input[type="file"] { max-width: 100%; }
 .at-pa-precios { max-width: 820px; }
 .at-pa-precios input[type="text"] { width: 100%; box-sizing: border-box; }
 .at-pa-codigo { max-height: 300px; overflow: auto; white-space: pre-wrap; font-family: monospace; font-size: 12px; line-height: 1.5; background: #fff; border: 1px solid #e2e8f0; padding: 12px; margin-top: 8px; }

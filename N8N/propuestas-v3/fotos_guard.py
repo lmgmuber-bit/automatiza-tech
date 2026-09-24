@@ -28,6 +28,7 @@ const NEUTRALIZADO = /(facing away|closed|turned off|switched off|dark screen|sc
 const FONDO_PORTADA = /\b(stadiums?|facades?|storefronts?|shop ?fronts?|exteriors?|buildings?|streets?|walls?|billboards?|bleachers?|grandstands?)\b/i;
 const PRIMER_PLANO = /(close-?up|macro|shallow depth of field|bokeh|blurred background|background (completely )?blurred)/i;
 const CIERRE = 'no signs, no labels, no text, no lettering, no logos, no watermarks';
+const NEGATIVAS = /[,.;]?\s*\b(?:no|without)\b(?:\s+any)?[^,.;]*?\b(?:people facing camera|screens?|signs?|signage|labels?|text|lettering|logos?|words?|watermarks?|writing)\b[^,.;]*/gi;
 const SEGURAS = {
   cover: 'close-up of warm morning light falling across a textured wooden surface with a small green plant, background completely blurred into soft golden bokeh, shallow depth of field',
   challenge: 'quiet empty room at night lit by a single warm lamp, rain drops on a large window, calm pensive mood',
@@ -62,7 +63,9 @@ function limpiarFotos(briefs) {
   let neutralizadas = 0;
   const limpias = (briefs || []).filter((b) => b && b.slide).map((b) => {
     // Se descarta la lista de prohibiciones que haya escrito el modelo: el cierre lo pone siempre el filtro.
-    const original = String(b.prompt || '').split(/,\s*no (?:people facing camera|screens?|signs?|labels?|text)\b/i)[0].trim();
+    // Cualquier forma: ", no text", ". No signs", "without any text or signage" (revisión final 2026-09-24, M5:
+    // antes solo se cortaba ", no …" y una escena buena caía en PROHIBIDO por su propia prohibición).
+    const original = String(b.prompt || '').replace(NEGATIVAS, '').trim().replace(/[\s,.;]+$/, '');
     let tema = neutralizar(original);
     if (motivoFoto(b.slide, tema)) {
       reemplazadas++;

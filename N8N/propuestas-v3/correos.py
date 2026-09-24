@@ -64,6 +64,26 @@ const marcado = me.statusCode === 200;"""
                      'No se pudieron aplicar los cambios: ${esc(m.company)}', etiqueta('Error', 'error'), cuerpo)
 
 
+def correo_error_flujo():
+    """Correo del workflow de errores: cualquier flujo v3 que se caiga sin llegar a su propio aviso."""
+    prep = """const w = $json.workflow || {};
+const x = $json.execution || {};
+const err = x.error || {};
+const nombre = String(w.name || 'flujo de propuestas');
+const esBorrador = /borrador/i.test(nombre);"""
+    borrador = caja('<strong>Puede que una reunión no haya generado su borrador.</strong> La transcripción sigue en '
+                    'Drive › Transcripciones: para reintentar, vuelve a subirla (una copia) o pídemelo.', 'aviso')
+    otros = caja('<strong>Si era una propuesta en «ajustando» o «generando», puede haber quedado trabada.</strong> '
+                 'Revísala en el panel de propuestas.', 'aviso')
+    cuerpo = ("${esBorrador ? `" + borrador + "` : `" + otros + "`}"
+              + parrafo('<strong>Qué falló</strong>')
+              + caja('${esc(err.message || "Sin mensaje de error")}', 'error')
+              + nota('Flujo: ${esc(nombre)} · paso: ${esc(x.lastNodeExecuted || "desconocido")} · '
+                     'ejecución de n8n: ${esc(x.id || "")}'))
+    return js_correo(prep, "'⚠️ Falló ' + nombre", 'Falló un flujo de propuestas: ${esc(nombre)}',
+                     etiqueta('Error', 'error'), cuerpo)
+
+
 def correo_final():
     prep = """const v = $('Verificar').isExecuted ? $('Verificar').first().json : $('Motivo lectura').first().json;
 const g = $('Guardar resultado').first().json;

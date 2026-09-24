@@ -56,13 +56,14 @@ if ($('Payload final').isExecuted) {
   base = $('Payload final').first().json;
 } else {
   const le = $('Leer estado').first().json;
-  base.reason = `No se pudo leer la propuesta en WordPress (HTTP ${le.statusCode})`;
+  base.reason = `No se pudo leer la propuesta en WordPress (${le.statusCode ? 'HTTP ' + le.statusCode : 'sin respuesta' + (le.error && le.error.message ? ': ' + le.error.message : '')})`;
 }
 let reason = base.reason;
 if (!reason && $('Guardar y volver a borrador').isExecuted) {
   const g = $('Guardar y volver a borrador').first().json;
   const msg = g.body && (g.body.message || g.body.code) ? ' — ' + (g.body.message || g.body.code) : '';
-  reason = `WordPress rechazó el cambio (HTTP ${g.statusCode})${msg}`;
+  reason = g.statusCode ? `WordPress rechazó el cambio (HTTP ${g.statusCode})${msg}`
+    : `WordPress no respondió al guardar el cambio${g.error && g.error.message ? ': ' + g.error.message : ''}`;
 }
 return [{ json: { id: base.id, unique_id: base.unique_id, company: base.company, reason: reason || 'Error desconocido al aplicar los cambios', exec: $execution.id } }];"""
 
@@ -81,7 +82,11 @@ def wp_http(id_, name, pos, method, url, body_expr=None):
               'options': {'response': {'response': {'fullResponse': True, 'neverError': True}}}}
     if body_expr:
         params.update({'sendBody': True, 'specifyBody': 'json', 'jsonBody': body_expr})
-    return node(id_, name, 'n8n-nodes-base.httpRequest', 4.2, pos, params, credentials=CRED_WP)
+    # neverError solo cubre respuestas con código de error; un timeout o una conexión cortada lanzan igual.
+    # continueRegularOutput deja pasar {error} sin statusCode, y los «¿… OK?» lo mandan a la rama de error
+    # (revisión final 2026-09-24, I1: si no, la propuesta quedaba trabada en «ajustando»).
+    return node(id_, name, 'n8n-nodes-base.httpRequest', 4.2, pos, params, credentials=CRED_WP,
+                onError='continueRegularOutput')
 
 
 def email(id_, name, pos, subject, html):
@@ -163,7 +168,8 @@ link('Marcar error', 'Armar correo error')
 link('Armar correo error', 'Correo con problema')
 
 wf = {'name': 'Propuestas v3 · 2 Cambios', 'nodes': nodes, 'connections': connections,
-      'settings': {'executionOrder': 'v1'}}
+      # Si el flujo se cae sin llegar a su propio aviso, «0 Avisar error» (build_0_errores.py) le escribe a Luis.
+      'settings': {'executionOrder': 'v1', 'errorWorkflow': 'm7TOfKznVSBGz4Nd'}}
 out = os.path.join(os.path.dirname(os.path.abspath(__file__)), '2-cambios.json')
 json.dump(wf, open(out, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
 print('escrito', out, len(nodes), 'nodos')

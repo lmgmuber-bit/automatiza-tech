@@ -1,6 +1,7 @@
 """Publica (crea o actualiza por nombre) y activa un workflow de N8N/propuestas-v3 en el n8n de AT.
 
 Uso: python N8N/propuestas-v3/deploy.py 1-borrador.json
+     python N8N/propuestas-v3/deploy.py 0-errores.json --sin-activar
 La API key se lee de la config local del conector n8n-mcp (~/.claude.json) y nunca se imprime.
 """
 import json, os, sys, urllib.request, urllib.error, urllib.parse
@@ -59,7 +60,7 @@ def main():
     cursor = None
     while True:
         if cursor:
-            resp = call('GET', f'/workflows?limit=250&cursor={cursor}')
+            resp = call('GET', '/workflows?limit=250&cursor=' + urllib.parse.quote(cursor, safe=''))
         else:
             resp = call('GET', '/workflows?limit=250')
 
@@ -67,7 +68,8 @@ def main():
             if w['name'] == wf['name']:
                 existentes.append(w)
 
-        cursor = resp.get('pagination', {}).get('nextCursor')
+        # La API pública de n8n devuelve el cursor en la raíz de la respuesta ({"data": [...], "nextCursor": "..."}).
+        cursor = resp.get('nextCursor')
         if not cursor:
             break
 
@@ -79,7 +81,9 @@ def main():
     else:
         wid = call('POST', '/workflows', body)['id']
         accion = 'creado'
-    call('POST', f'/workflows/{wid}/activate')
+    # El workflow de errores (Error Trigger) no se activa: n8n lo corre igual cuando otro workflow falla.
+    if '--sin-activar' not in sys.argv:
+        call('POST', f'/workflows/{wid}/activate')
     w = call('GET', f'/workflows/{wid}')
     print(f"{accion}: {w['name']} id={wid} activo={w['active']} nodos={len(w['nodes'])}")
 

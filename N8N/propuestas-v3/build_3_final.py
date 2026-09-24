@@ -49,9 +49,19 @@ return [{ json: {
 
 CODE_REVISAR = r"""
 // Último filtro antes de gastar: no guarda nada, solo decide qué fotos se le piden al renderer.
-const e = $('Leer estado').first().json.body;
-const r = limpiarFotos(e.payload.image_briefs);
-return [{ json: { unique_id: e.unique_id, payload: Object.assign({}, e.payload, { image_briefs: r.limpias }), fotos_reemplazadas: r.reemplazadas } }];"""
+// Solo láminas que existen y una foto por lámina: Cambios puede dejar briefs de extras borradas o repetidos,
+// y cada uno se paga (revisión final 2026-09-24, M6). Nunca lanza: sin payload el renderer contesta 400 y
+// Verificar deja la propuesta en «error» en vez de trabada en «generando» (I1).
+const e = $('Leer estado').first().json.body || {};
+const p = e.payload && typeof e.payload === 'object' ? e.payload : {};
+const extras = Math.min(Array.isArray(p.extra_slides) ? p.extra_slides.length : 0, 2);
+const validas = new Set(['cover', 'challenge', 'solution', 'benefits', 'how_it_works', 'pricing', 'next_steps',
+  ...Array.from({ length: extras }, (_, i) => `extra_${i + 1}`)]);
+const vistas = new Set();
+const briefs = (Array.isArray(p.image_briefs) ? p.image_briefs : [])
+  .filter((b) => b && validas.has(b.slide) && !vistas.has(b.slide) && vistas.add(b.slide));
+const r = limpiarFotos(briefs);
+return [{ json: { unique_id: e.unique_id, payload: Object.assign({}, p, { image_briefs: r.limpias }), fotos_reemplazadas: r.reemplazadas } }];"""
 
 MAX_RENDERS = 3
 CODE_REINTENTAR = r"""// Tras cada render: si faltan fotos o no hubo presentación, se vuelve a llamar al renderer.
@@ -88,7 +98,9 @@ def http(id_, name, pos, method, url, body_expr=None, cred=True, timeout=None):
     if body_expr:
         params.update({'sendBody': True, 'specifyBody': 'json', 'jsonBody': body_expr})
     extra = {'credentials': CRED_WP} if cred else {}
-    return node(id_, name, 'n8n-nodes-base.httpRequest', 4.2, pos, params, **extra)
+    # neverError no cubre timeouts ni conexiones cortadas: sin esto la propuesta quedaba en «generando»
+    # (revisión final 2026-09-24, I1). Con {error} y sin statusCode, las comprobaciones de 200 lo tratan como falla.
+    return node(id_, name, 'n8n-nodes-base.httpRequest', 4.2, pos, params, onError='continueRegularOutput', **extra)
 
 
 def iff(id_, name, pos, left):
@@ -166,7 +178,8 @@ link('Guardar resultado', 'Resultado')
 link('Resultado', 'Correo a Luis')
 
 wf = {'name': 'Propuestas v3 · 3 Final', 'nodes': nodes, 'connections': connections,
-      'settings': {'executionOrder': 'v1'}}
+      # Si el flujo se cae sin llegar a su propio aviso, «0 Avisar error» (build_0_errores.py) le escribe a Luis.
+      'settings': {'executionOrder': 'v1', 'errorWorkflow': 'm7TOfKznVSBGz4Nd'}}
 out = os.path.join(os.path.dirname(os.path.abspath(__file__)), '3-final.json')
 json.dump(wf, open(out, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
 print('escrito', out, len(nodes), 'nodos')

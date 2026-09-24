@@ -4,7 +4,7 @@ Uso: python N8N/propuestas-v3/probar_correos.py <carpeta_salida>
 No toca n8n ni envía correos.
 """
 import json, os, subprocess, sys
-from correos import correo_borrador, correo_cambios_ok, correo_cambios_error, correo_final
+from correos import correo_borrador, correo_cambios_ok, correo_cambios_error, correo_final, correo_error_flujo
 
 out = sys.argv[1] if len(sys.argv) > 1 else '.'
 os.makedirs(out, exist_ok=True)
@@ -34,11 +34,19 @@ casos = {
         'Verificar': {'ok': False, 'company': '[PRUEBA] Funerarias Amor de Dios', 'unique_id': 'NOlyRnH3HcmI', 'id': 47,
                       'fotos_locales': 4, 'fotos_pedidas': 7, 'problemas': ['fotos que no se generaron: how_it_works, pricing, next_steps'], 'chat_respuesta': ''},
         'Guardar resultado': {'statusCode': 200}, 'Revisar fotos': {'fotos_reemplazadas': 6}}),
+    'error-borrador': (correo_error_flujo(), {'$json': {
+        'workflow': {'name': 'Propuestas v3 · 1 Borrador'},
+        'execution': {'id': '403900', 'lastNodeExecuted': 'Armar payload', 'error': {'message': 'Unexpected token < in JSON'},
+                      'url': 'https://n8n-n8n.kchiba.easypanel.host/workflow/x/executions/403900'}}}),
+    'error-final': (correo_error_flujo(), {'$json': {
+        'workflow': {'name': 'Propuestas v3 · 3 Final'},
+        'execution': {'id': '403901', 'lastNodeExecuted': 'Verificar', 'error': {'message': "Cannot read properties of undefined <b>"}}}}),
 }
 
 for nombre, (codigo, datos) in casos.items():
     js = ('const DATA = ' + json.dumps(datos, ensure_ascii=False) + ';\n'
           "const $ = (n) => ({ isExecuted: n in DATA, first: () => ({ json: DATA[n] }) });\n"
+          "const $json = DATA.$json || {};\n"
           "const salida = (function () {\n" + codigo + "\n})();\n"
           "process.stdout.write(JSON.stringify(salida[0].json));")
     r = subprocess.run(['node', '-e', js], capture_output=True, text=True, encoding='utf-8')

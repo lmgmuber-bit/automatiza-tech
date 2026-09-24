@@ -122,7 +122,8 @@ order = [n['name'] for n in nodes]
 connections = {a: {'main': [[{'node': b, 'type': 'main', 'index': 0}]]} for a, b in zip(order, order[1:])}
 
 wf = {'name': 'Propuestas v3 · 1 Borrador', 'nodes': nodes, 'connections': connections,
-      'settings': {'executionOrder': 'v1'}}
+      # Si el flujo se cae sin llegar a su propio aviso, «0 Avisar error» (build_0_errores.py) le escribe a Luis.
+      'settings': {'executionOrder': 'v1', 'errorWorkflow': 'm7TOfKznVSBGz4Nd'}}
 out = os.path.join(os.path.dirname(os.path.abspath(__file__)), '1-borrador.json')
 json.dump(wf, open(out, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
 print('escrito', out, len(nodes), 'nodos')

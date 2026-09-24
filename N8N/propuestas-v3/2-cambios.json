@@ -53,7 +53,8 @@
           "id": "1NI0sJKc0kC430pb",
           "name": "AT REST Secret (header)"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "c2b",
@@ -237,7 +238,8 @@
           "id": "1NI0sJKc0kC430pb",
           "name": "AT REST Secret (header)"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "c8",
@@ -340,7 +342,7 @@
         120
       ],
       "parameters": {
-        "jsCode": "// Motivo legible para status_note, venga de donde venga el fallo (lectura, modelo o guardado).\nconst hook = $('Webhook').first().json.body || {};\nlet base = { id: hook.id, unique_id: '', company: `propuesta ${hook.id}`, reason: '' };\nif ($('Payload final').isExecuted) {\n  base = $('Payload final').first().json;\n} else {\n  const le = $('Leer estado').first().json;\n  base.reason = `No se pudo leer la propuesta en WordPress (HTTP ${le.statusCode})`;\n}\nlet reason = base.reason;\nif (!reason && $('Guardar y volver a borrador').isExecuted) {\n  const g = $('Guardar y volver a borrador').first().json;\n  const msg = g.body && (g.body.message || g.body.code) ? ' — ' + (g.body.message || g.body.code) : '';\n  reason = `WordPress rechazó el cambio (HTTP ${g.statusCode})${msg}`;\n}\nreturn [{ json: { id: base.id, unique_id: base.unique_id, company: base.company, reason: reason || 'Error desconocido al aplicar los cambios', exec: $execution.id } }];"
+        "jsCode": "// Motivo legible para status_note, venga de donde venga el fallo (lectura, modelo o guardado).\nconst hook = $('Webhook').first().json.body || {};\nlet base = { id: hook.id, unique_id: '', company: `propuesta ${hook.id}`, reason: '' };\nif ($('Payload final').isExecuted) {\n  base = $('Payload final').first().json;\n} else {\n  const le = $('Leer estado').first().json;\n  base.reason = `No se pudo leer la propuesta en WordPress (${le.statusCode ? 'HTTP ' + le.statusCode : 'sin respuesta' + (le.error && le.error.message ? ': ' + le.error.message : '')})`;\n}\nlet reason = base.reason;\nif (!reason && $('Guardar y volver a borrador').isExecuted) {\n  const g = $('Guardar y volver a borrador').first().json;\n  const msg = g.body && (g.body.message || g.body.code) ? ' — ' + (g.body.message || g.body.code) : '';\n  reason = g.statusCode ? `WordPress rechazó el cambio (HTTP ${g.statusCode})${msg}`\n    : `WordPress no respondió al guardar el cambio${g.error && g.error.message ? ': ' + g.error.message : ''}`;\n}\nreturn [{ json: { id: base.id, unique_id: base.unique_id, company: base.company, reason: reason || 'Error desconocido al aplicar los cambios', exec: $execution.id } }];"
       }
     },
     {
@@ -374,7 +376,8 @@
           "id": "1NI0sJKc0kC430pb",
           "name": "AT REST Secret (header)"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "id": "c12b",
@@ -598,6 +601,7 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "m7TOfKznVSBGz4Nd"
   }
 }

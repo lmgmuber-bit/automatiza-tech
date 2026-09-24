@@ -20,6 +20,10 @@ CASOS = [
     ('how_it_works', 'man arranging flowers on a wooden table by a window', C),
     ('how_it_works', 'clean wooden desk with a closed laptop and a cup of coffee', C),
     ('benefits', 'happy customer receiving a delivery at home', C),
+    # Prohibiciones escritas por el modelo en otras formas (revisión final, M5): no deben tumbar la escena
+    ('cover', 'close-up of hands holding white lilies in a serene chapel. No text, no signs', C),
+    ('solution', 'family walking together in a memorial garden without any text or signage', C),
+    ('benefits', 'coach high-fiving kids after practice; no logos or lettering anywhere', C),
     # Lo que trae texto inventado o contenido en pantalla (se reemplaza)
     ('cover', 'youth baseball players playing a game in a stadium at golden hour', R),
     ('cover', 'elegant storefront of the funeral home at dusk', R),
@@ -46,7 +50,9 @@ CASOS = [
 briefs = [{'slide': s, 'prompt': p} for s, p, _ in CASOS]
 js = (JS_LIMPIAR_FOTOS + '\nconst BRIEFS = ' + json.dumps(briefs) + ';\n'
       'process.stdout.write(JSON.stringify(BRIEFS.map((b) => { const r = limpiarFotos([b]); '
-      'return { salida: r.limpias[0].prompt, reemplazadas: r.reemplazadas, neutralizadas: r.neutralizadas }; })));')
+      'const r2 = limpiarFotos(r.limpias); '
+      'return { salida: r.limpias[0].prompt, reemplazadas: r.reemplazadas, neutralizadas: r.neutralizadas, '
+      'segunda: r2.limpias[0].prompt }; })));')
 r = subprocess.run(['node', '-e', js], capture_output=True, text=True, encoding='utf-8')
 if r.returncode != 0:
     print(r.stderr[-800:]); sys.exit(1)
@@ -60,6 +66,10 @@ for (slide, prompt, debe), res in zip(CASOS, json.loads(r.stdout)):
         print(f"      -> {res['salida'][:150]}")
     if not res['salida'].endswith('no signs, no labels, no text, no lettering, no logos, no watermarks'):
         print('    MAL: falta el cierre'); fallas += 1
+    # Borrador guarda la descripción ya filtrada y Final la vuelve a filtrar: si el texto cambiara, el hash del
+    # prompt cambiaría y el renderer volvería a pagar una foto que ya tiene.
+    if res['segunda'] != res['salida']:
+        print(f"    MAL: filtrar dos veces cambia el texto -> {res['segunda'][:120]}"); fallas += 1
     if slide == 'cover' and 'close-up' not in res['salida'] and 'blurred' not in res['salida']:
         print('    MAL: portada sin primer plano'); fallas += 1
 print('TODO OK' if not fallas else f'{fallas} falla(s)')

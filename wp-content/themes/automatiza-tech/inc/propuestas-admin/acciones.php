@@ -93,6 +93,16 @@ function at_pa_accion_v3(): string {
             // Antes de aplicar (que descarta en silencio una fila con servicio y sin precio).
             $filas_con_precio_vacio = at_propuesta_filas_con_precio_vacio($filas);
             $payload = at_propuesta_aplicar_precios($payload, $filas, sanitize_textarea_field(wp_unslash($_POST['at_nota_precio'] ?? '')));
+            // Si vinieron los cuatro campos del correo (siempre, porque son del mismo formulario), se guardan
+            // en el payload también aquí, para que lo que Luis editó viaje a n8n aunque falte un precio.
+            if (isset($_POST['email_subject'], $_POST['email_intro'], $_POST['email_highlight'], $_POST['email_closing'])) {
+                $payload = at_pa_payload_con_correo($payload, [
+                    'asunto'       => sanitize_text_field(wp_unslash($_POST['email_subject'])),
+                    'introduccion' => sanitize_textarea_field(wp_unslash($_POST['email_intro'])),
+                    'que_incluye'  => sanitize_textarea_field(wp_unslash($_POST['email_highlight'])),
+                    'cierre'       => sanitize_textarea_field(wp_unslash($_POST['email_closing'])),
+                ]);
+            }
             $hacia = $accion === 'cambios' ? 'ajustando' : 'generando';
             if (!at_propuesta_transicion_valida((string) $row->status, $hacia)) {
                 $message = '<div class="notice notice-error"><p>No se puede pasar de <strong>' . esc_html($row->status) . '</strong> a <strong>' . esc_html($hacia) . '</strong>.</p></div>';
@@ -135,10 +145,16 @@ function at_pa_guardar(): string {
         $company_name = sanitize_text_field($_POST['company_name']);
         $phone = sanitize_text_field($_POST['phone'] ?? '');
         $client_email = sanitize_email($_POST['client_email']);
-        $email_subject = sanitize_text_field($_POST['email_subject']);
-        $email_intro = wp_kses_post($_POST['email_intro']);
-        $email_highlight = wp_kses_post($_POST['email_highlight']);
-        $email_closing = wp_kses_post($_POST['email_closing']);
+        $email_subject = sanitize_text_field(wp_unslash($_POST['email_subject']));
+        $email_intro = sanitize_textarea_field(wp_unslash($_POST['email_intro']));
+        $email_highlight = sanitize_textarea_field(wp_unslash($_POST['email_highlight']));
+        $email_closing = sanitize_textarea_field(wp_unslash($_POST['email_closing']));
+        $textos = [
+            'asunto'       => $email_subject,
+            'introduccion' => $email_intro,
+            'que_incluye'  => $email_highlight,
+            'cierre'       => $email_closing,
+        ];
         
         // Capturar prompts editados
         $gamma_prompt = isset($_POST['gamma_prompt']) ? sanitize_textarea_field($_POST['gamma_prompt']) : '';
@@ -176,7 +192,7 @@ function at_pa_guardar(): string {
 
         // Actualizar BD
         $send_email = isset($_POST['send_email']) && $_POST['send_email'] === '1';
-        $actual = $wpdb->get_row($wpdb->prepare("SELECT flujo, status FROM {$table_name} WHERE id = %d", $id));
+        $actual = $wpdb->get_row($wpdb->prepare("SELECT flujo, status, gamma_prompt_text FROM {$table_name} WHERE id = %d", $id));
         $es_v3 = $actual && $actual->flujo === 'v3';
         if ($send_email && $actual && !at_propuesta_puede_enviarse($actual->flujo, (string) $actual->status)) {
             $send_email = false;
@@ -208,6 +224,17 @@ function at_pa_guardar(): string {
             $update_data['pdf_path'] = $pdf_path;
         }
 
+        // Guardar los cuatro textos del correo en el payload (correo_cliente), salvo si n8n
+        // podría estar escribiendo el mismo payload en paralelo (v3 en ajustando/generando).
+        $actual_status = $actual ? (string) $actual->status : '';
+        if (!($es_v3 && in_array($actual_status, ['ajustando', 'generando'], true))) {
+            $base_json = array_key_exists('gamma_prompt_text', $update_data) ? $update_data['gamma_prompt_text'] : (string) ($actual->gamma_prompt_text ?? '');
+            $base_decodificada = json_decode((string) $base_json, true);
+            if (is_array($base_decodificada)) {
+                $update_data['gamma_prompt_text'] = wp_json_encode(at_pa_payload_con_correo($base_decodificada, $textos), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            }
+        }
+
         $wpdb->update($table_name, $update_data, ['id' => $id]);
 
         if (!empty($bloqueo_envio)) {
@@ -229,23 +256,30 @@ function at_pa_guardar(): string {
         if (!is_email($to)) {
              $message = '<div class="notice notice-error is-dismissible"><p>Error: El email del cliente (' . esc_html($to) . ') no es válido. La propuesta se guardó pero no se envió el correo.</p></div>';
         } else {
-            $subject = !empty($email_subject) ? $email_subject : "Propuesta de Automatización Inteligente - $company_name";
-            
+            // Texto sugerido si el campo vino vacío (el que escribió la IA, o el genérico armado del contenido).
+            $payload_envio = json_decode((string) $proposal->gamma_prompt_text, true);
+            $correo_defecto = at_pa_correo_textos(is_array($payload_envio) ? $payload_envio : null, (string) $company_name);
+
+            $subject = !empty($email_subject) ? $email_subject : $correo_defecto['asunto'];
+
             $link_presentacion = get_site_url() . '/ver-presentacion.php?id=' . $proposal->unique_link_id;
             $link_demo = get_site_url() . '/ver-demo.php?id=' . $proposal->unique_link_id;
-            
+
             // Obtener logo y datos del sitio
             $site_title = get_bloginfo('name');
             $logo_url = 'https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png';
             $footer_text = get_bloginfo('description');
 
             // Contenido personalizable del email
-            $intro_text = !empty($email_intro) ? nl2br(esc_html($email_intro)) : 'Es un placer presentarle nuestra propuesta de automatización inteligente diseñada específicamente para <strong>' . esc_html($company_name) . '</strong>.';
-            $highlight_text = !empty($email_highlight) ? nl2br(esc_html($email_highlight)) : 'Hemos analizado sus requerimientos y preparado una solución personalizada que optimizará sus procesos de negocio mediante inteligencia artificial.';
-            $closing_text = !empty($email_closing) ? nl2br(esc_html($email_closing)) : 'Quedamos atentos a sus comentarios y consultas.';
+            $intro_text = !empty($email_intro) ? nl2br(esc_html($email_intro)) : nl2br(esc_html($correo_defecto['introduccion']));
+            $highlight_text = !empty($email_highlight) ? nl2br(esc_html($email_highlight)) : nl2br(esc_html($correo_defecto['que_incluye']));
+            $closing_text = !empty($email_closing) ? nl2br(esc_html($email_closing)) : nl2br(esc_html($correo_defecto['cierre']));
 
             // Preparar adjuntos - Verificar si hay PDF actual o recién subido
             $attachments = array();
+            $pdf_tmp_path = '';
+            $pdf_tmp_dir = '';
+            $pdf_omitido_motivo = '';
 
             // Primero verificar si se subió un nuevo PDF
             if (isset($pdf_file_path) && file_exists($pdf_file_path)) {
@@ -262,6 +296,43 @@ function at_pa_guardar(): string {
                     $pdf_file_path = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $pdf_url);
                     if (file_exists($pdf_file_path)) {
                         $attachments[] = $pdf_file_path;
+                    }
+                }
+            }
+
+            // Si sigue sin haber adjunto, bajar el PDF de la presentación desde el renderer (tope AT_PA_PDF_MAX_BYTES).
+            if (empty($attachments)) {
+                $pdf_renderer_url = at_pa_url_pdf_renderer((string) $proposal->gamma_iframe_url, (string) $proposal->pdf_path);
+                if ($pdf_renderer_url !== '') {
+                    $pdf_tmp_dir = trailingslashit(get_temp_dir()) . 'at-propuesta-' . $id;
+                    $tmp = trailingslashit($pdf_tmp_dir) . 'Propuesta-' . sanitize_file_name($company_name ?: 'AutomatizaTech') . '.pdf';
+                    wp_mkdir_p($pdf_tmp_dir);
+                    $pdf_resp = wp_remote_get($pdf_renderer_url, [
+                        'timeout'             => 60,
+                        'stream'              => true,
+                        'filename'            => $tmp,
+                        'limit_response_size' => AT_PA_PDF_MAX_BYTES + 1,
+                    ]);
+                    $pdf_codigo = is_wp_error($pdf_resp) ? 0 : (int) wp_remote_retrieve_response_code($pdf_resp);
+                    $pdf_tamano = file_exists($tmp) ? filesize($tmp) : 0;
+                    $pdf_cabecera = $pdf_tamano ? (string) @file_get_contents($tmp, false, null, 0, 4) : '';
+                    if (is_wp_error($pdf_resp) || $pdf_codigo !== 200) {
+                        $pdf_omitido_motivo = 'no se pudo descargar el PDF de la presentación';
+                    } elseif ($pdf_tamano > AT_PA_PDF_MAX_BYTES) {
+                        $pdf_omitido_motivo = 'el PDF pesa ' . number_format($pdf_tamano / 1024 / 1024, 1, ',', '.') . ' MB (tope 15 MB)';
+                    } elseif ($pdf_cabecera !== '%PDF') {
+                        $pdf_omitido_motivo = 'no se pudo descargar el PDF de la presentación';
+                    } else {
+                        $attachments[] = $tmp;
+                        $pdf_tmp_path = $tmp;
+                    }
+                    // Si no quedó adjunto, no dejar el archivo ni la carpeta a medio bajar.
+                    if ($pdf_tmp_path === '') {
+                        if (file_exists($tmp)) {
+                            @unlink($tmp);
+                        }
+                        @rmdir($pdf_tmp_dir);
+                        $pdf_tmp_dir = '';
                     }
                 }
             }
@@ -343,9 +414,23 @@ function at_pa_guardar(): string {
             global $phpmailer;
             $sent = wp_mail($to, $subject, $body, $headers, $attachments);
 
+            // El PDF bajado del renderer es temporal: se borra se haya enviado el correo o no.
+            if ($pdf_tmp_path !== '') {
+                @unlink($pdf_tmp_path);
+            }
+            if ($pdf_tmp_dir !== '') {
+                @rmdir($pdf_tmp_dir);
+            }
+
             if ($sent) {
-                $attachment_msg = !empty($attachments) ? ' (con PDF adjunto)' : ' (sin PDF adjunto)';
-                $message = '<div class="notice notice-success is-dismissible"><p>Propuesta actualizada y correo enviado a ' . esc_html($to) . $attachment_msg . '</p></div>';
+                if (!empty($attachments)) {
+                    $attachment_msg = ' (con PDF adjunto)';
+                } elseif ($pdf_omitido_motivo !== '') {
+                    $attachment_msg = ' (sin PDF adjunto: ' . $pdf_omitido_motivo . '; el cliente lo baja desde la presentación)';
+                } else {
+                    $attachment_msg = ' (sin PDF adjunto)';
+                }
+                $message = '<div class="notice notice-success is-dismissible"><p>Propuesta actualizada y correo enviado a ' . esc_html($to) . esc_html($attachment_msg) . '</p></div>';
             } else {
                 // Intentar obtener detalles del error (si están disponibles en global $phpmailer)
                 $error_details = '';

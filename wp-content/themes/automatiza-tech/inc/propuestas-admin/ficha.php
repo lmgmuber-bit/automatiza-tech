@@ -216,6 +216,10 @@ function at_pa_render_ficha($p, string $message): void {
           <?php if (function_exists('automatiza_render_prospect_details')) { automatiza_render_prospect_details($p->id); } else { echo '<p>El módulo de seguimiento no está disponible.</p>'; } ?>
         </section>
 
+        <?php
+          $payload = json_decode((string) $p->gamma_prompt_text, true);
+          $correo = at_pa_correo_textos(is_array($payload) ? $payload : null, (string) $p->company_name);
+        ?>
         <section class="at-pa-panel" data-panel="envio" role="tabpanel">
           <div class="checkbox-section">
             <label>
@@ -228,42 +232,40 @@ function at_pa_render_ficha($p, string $message): void {
               <span>📧 Enviar correo con la propuesta al cliente</span>
             </label>
             <p>Si desmarcas esta opción, solo se guardarán los datos sin enviar el correo.</p>
+            <p class="description">Se adjunta el PDF que subas en «Cliente y enlaces»; si no subiste uno, se adjunta el de la presentación (hasta 15 MB). Si pesa más, el correo lleva solo los botones.</p>
             <?php if (!$puede): ?><p class="at-pa-aviso">Se habilita cuando la propuesta esté <strong>lista</strong>.</p><?php endif; ?>
           </div>
 
           <div class="email-section">
             <h3>✉️ Personalizar Contenido del Correo</h3>
-            <p>Edita el contenido del correo antes de enviarlo. Deja en blanco para usar el texto por defecto.</p>
+            <p>Texto sugerido según la reunión con el cliente. Puedes editarlo; se guarda al apretar Guardar.</p>
             <table class="form-table">
               <tr>
                 <th scope="row"><label for="email_subject">Asunto del Correo</label></th>
                 <td>
                   <input type="text" name="email_subject" id="email_subject" class="large-text"
                       placeholder="Propuesta de Automatización Inteligente - <?php echo esc_attr($p->company_name ?: '[Nombre Empresa]'); ?>"
-                      value="">
+                      value="<?php echo esc_attr($correo['asunto']); ?>">
                 </td>
               </tr>
               <tr>
                 <th scope="row"><label for="email_intro">Párrafo de Introducción</label></th>
                 <td>
-                  <textarea name="email_intro" id="email_intro" class="large-text" rows="3"
-                      placeholder="Es un placer presentarle nuestra propuesta de automatización inteligente diseñada específicamente para [Nombre Empresa]."></textarea>
+                  <textarea name="email_intro" id="email_intro" class="large-text" rows="3"><?php echo esc_textarea($correo['introduccion']); ?></textarea>
                   <p class="description">Texto después del saludo "Estimado/a [Nombre],"</p>
                 </td>
               </tr>
               <tr>
                 <th scope="row"><label for="email_highlight">Caja Destacada (¿Qué incluye?)</label></th>
                 <td>
-                  <textarea name="email_highlight" id="email_highlight" class="large-text" rows="3"
-                      placeholder="Hemos analizado sus requerimientos y preparado una solución personalizada que optimizará sus procesos de negocio mediante inteligencia artificial."></textarea>
+                  <textarea name="email_highlight" id="email_highlight" class="large-text" rows="3"><?php echo esc_textarea($correo['que_incluye']); ?></textarea>
                   <p class="description">Texto dentro del recuadro azul destacado.</p>
                 </td>
               </tr>
               <tr>
                 <th scope="row"><label for="email_closing">Párrafo de Cierre</label></th>
                 <td>
-                  <textarea name="email_closing" id="email_closing" class="large-text" rows="2"
-                      placeholder="Quedamos atentos a sus comentarios y consultas."></textarea>
+                  <textarea name="email_closing" id="email_closing" class="large-text" rows="2"><?php echo esc_textarea($correo['cierre']); ?></textarea>
                   <p class="description">Texto antes de "Atentamente, El equipo de Automatiza Tech"</p>
                 </td>
               </tr>

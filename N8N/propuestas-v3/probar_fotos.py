@@ -27,6 +27,16 @@ CASOS = [
     ('extra_1', 'shelf of books in a library', True),
     ('how_it_works', 'clean wooden desk with a closed laptop and a cup of coffee', False),
     ('solution', 'monitor displaying a dashboard in an office', True),
+    # Botillería de prueba (fila 49, 2026-09-24): lo que escribió GPT-4o
+    ('cover', 'close-up of a wine bottle being held by a hand in a cozy store setting, blurred background', True),
+    ('cover', 'close-up of a hand holding a plain unlabeled wine bottle, blurred background', False),
+    ('extra_1', 'two-phase project plan on a desk, people discussing', True),
+    ('solution', 'person using a smartphone to browse a digital catalog in a relaxed environment', True),
+    ('pricing', 'business meeting with documents and a laptop on the table', True),
+    ('challenge', 'busy store with customers browsing the shelves', True),
+    ('benefits', 'happy customer receiving a delivery at home', False),
+    ('how_it_works', 'close-up of hands wrapping a gift box in kraft paper', True),
+    ('how_it_works', 'close-up of hands wrapping a plain gift box in kraft paper', False),
     ('next_steps', '', True),
 ]
 

@@ -20,9 +20,11 @@ Nunca prohíbe personas: lo que hizo buenas las fotos de Jeffer fueron los jugad
 """
 
 JS_LIMPIAR_FOTOS = r"""
-const PROHIBIDO = /\b(websites?|web ?pages?|web ?design|interfaces?|dashboards?|apps?|charts?|graphs?|flow ?charts?|diagrams?|infographics?|whiteboards?|spreadsheets?|clipboards?|checklists?|documents?|papers?|forms?|signs?|signage|posters?|banners?|billboards?|scoreboards?|menus?|newspapers?|magazines?|text|letters?|lettering|words?|numbers?|meetings?|office)\b/i;
-const CON_ETIQUETA = /\b(screens?|monitors?|displays?|laptops?|computers?|tablets?|phones?|smartphones?|cell ?phones?|bottles?|cans?|boxes?|packag\w*|books?|labels?|jerseys?|t-?shirts?)\b/i;
-const NEUTRALIZADO = /(facing away|closed|turned off|switched off|dark screen|screen off|unlabell?ed|without (a |any )?labels?|no labels?|plain|blank|out of focus|blurred|from behind|seen from the back)/i;
+const PROHIBIDO = /\b(websites?|web ?pages?|web ?design|interfaces?|dashboards?|apps?|charts?|graphs?|flow ?charts?|diagrams?|infographics?|whiteboards?|spreadsheets?|clipboards?|checklists?|documents?|paperwork|printed|forms?|signs?|signage|posters?|banners?|billboards?|scoreboards?|menus?|newspapers?|magazines?|catalogu?e?s?|brochures?|flyers?|receipts?|invoices?|price tags?|calendars?|notebooks?|notepads?|project plans?|business plans?|plans? on|text|letters?|lettering|words?|numbers?|meetings?|office)\b/i;
+const CON_ETIQUETA = /\b(screens?|monitors?|displays?|laptops?|computers?|tablets?|phones?|smartphones?|cell ?phones?|bottles?|cans?|box(?:es)?|packag\w*|books?|labels?|shelves|shelf|jerseys?|t-?shirts?)\b/i;
+// Solo cuenta lo que neutraliza al PRODUCTO. "blurred background" desenfoca el fondo, no la etiqueta
+// (botillería de prueba 49, 2026-09-24: "wine bottle ... blurred background" habría salido con etiqueta nítida).
+const NEUTRALIZADO = /(facing away|closed|turned off|switched off|dark screen|screen off|unlabell?ed|without (a |any )?labels?|plain|blank|from behind|seen from the back)/i;
 const FONDO_PORTADA = /\b(stadiums?|facades?|storefronts?|shop ?fronts?|exteriors?|buildings?|streets?|walls?|billboards?|bleachers?|grandstands?)\b/i;
 const PRIMER_PLANO = /(close-?up|macro|shallow depth of field|bokeh|blurred background|background (completely )?blurred)/i;
 const CIERRE = 'no signs, no labels, no text, no lettering, no logos, no watermarks';

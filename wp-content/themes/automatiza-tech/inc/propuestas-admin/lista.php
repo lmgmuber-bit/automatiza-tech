@@ -84,7 +84,9 @@ class AT_Propuestas_Lista extends WP_List_Table {
         $q = ['page' => 'automatiza-proposals', 'edit_id' => (int) $item->id];
         $volver = http_build_query(at_pa_query_volver($this->f));
         if ($volver !== '') {
-            $q['volver'] = $volver;
+            // add_query_arg no codifica: sin esto, el «&» interno de $volver se lee como
+            // separador de parámetros de nivel superior y la ficha pierde grupo/orden/página.
+            $q['volver'] = rawurlencode($volver);
         }
         return add_query_arg($q, admin_url('admin.php'));
     }

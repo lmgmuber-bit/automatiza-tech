@@ -14,7 +14,8 @@ function at_pa_render_ficha($p, string $message): void {
     if (!isset($pestanas[$tab])) {
         $tab = 'resumen';
     }
-    $url_lista = add_query_arg(at_pa_volver_desde_param(wp_unslash((string) ($_GET['volver'] ?? ''))) + ['page' => 'automatiza-proposals'], admin_url('admin.php'));
+    $volver_get = is_string($_GET['volver'] ?? null) ? wp_unslash($_GET['volver']) : '';
+    $url_lista = add_query_arg(array_map('rawurlencode', at_pa_volver_desde_param($volver_get)) + ['page' => 'automatiza-proposals'], admin_url('admin.php'));
     $estado = at_pa_estado_etiqueta($p->status);
     $link_pres = get_site_url() . '/ver-presentacion.php?id=' . rawurlencode((string) $p->unique_link_id);
     $link_demo = get_site_url() . '/ver-demo.php?id=' . rawurlencode((string) $p->unique_link_id);
@@ -32,6 +33,7 @@ function at_pa_render_ficha($p, string $message): void {
         </div>
         <div><span class="at-estado <?php echo esc_attr($estado['clase']); ?>"><?php echo esc_html($estado['etiqueta']); ?></span><?php echo $es_v3 ? ' <span class="at-marca-v3">v3</span>' : ''; ?></div>
       </div>
+      <hr class="wp-header-end">
       <?php echo $message; ?>
 
       <form method="POST" enctype="multipart/form-data" class="at-pa-form" data-tab-inicial="<?php echo esc_attr($tab); ?>">
@@ -54,7 +56,7 @@ function at_pa_render_ficha($p, string $message): void {
         <section class="at-pa-panel" data-panel="resumen" role="tabpanel">
           <div class="at-pa-resumen">
             <div class="at-pa-caja"><h3>Contacto</h3>
-              <?php echo $p->client_email ? '<a href="mailto:' . esc_attr($p->client_email) . '">' . esc_html($p->client_email) . '</a>' : '—'; ?>
+              <?php echo $p->client_email ? sprintf('<a href="%s">%s</a>', esc_url('mailto:' . $p->client_email), esc_html($p->client_email)) : '—'; ?>
               <?php echo $p->phone ? '<br>' . esc_html($p->phone) : ''; ?>
             </div>
             <div class="at-pa-caja"><h3>Enlaces</h3>
@@ -137,7 +139,7 @@ function at_pa_render_ficha($p, string $message): void {
         <?php if ($es_v3):
             $pl = json_decode((string) $p->gamma_prompt_text, true) ?: [];
             $costo = at_propuesta_costo_fotos($pl);
-            $filas = $pl['pricing_rows'] ?? [];
+            $filas = is_array($pl['pricing_rows'] ?? null) ? array_values($pl['pricing_rows']) : [];
             for ($i = count($filas); $i < 6; $i++) { $filas[] = ['service' => '', 'price_label' => '']; }
             $log = json_decode((string) $p->feedback_log, true) ?: [];
         ?>
@@ -149,11 +151,11 @@ function at_pa_render_ficha($p, string $message): void {
           <table class="widefat at-pa-precios">
             <thead><tr><th>Servicio</th><th>Precio (texto tal cual)</th><th>Destacar</th></tr></thead>
             <tbody>
-            <?php foreach ($filas as $i => $f): ?>
+            <?php foreach ($filas as $i => $f): $f = is_array($f) ? $f : []; ?>
               <tr>
-                <td data-titulo="Servicio"><input type="text" name="at_precio[<?php echo $i; ?>][service]" value="<?php echo esc_attr($f['service'] ?? ''); ?>"></td>
-                <td data-titulo="Precio"><input type="text" name="at_precio[<?php echo $i; ?>][price_label]" value="<?php echo esc_attr($f['price_label'] ?? ''); ?>"></td>
-                <td data-titulo="Destacar"><input type="checkbox" name="at_precio[<?php echo $i; ?>][emphasis]" value="1" <?php checked(!empty($f['emphasis'])); ?>></td>
+                <td data-titulo="Servicio"><input type="text" name="at_precio[<?php echo (int) $i; ?>][service]" value="<?php echo esc_attr($f['service'] ?? ''); ?>"></td>
+                <td data-titulo="Precio"><input type="text" name="at_precio[<?php echo (int) $i; ?>][price_label]" value="<?php echo esc_attr($f['price_label'] ?? ''); ?>"></td>
+                <td data-titulo="Destacar"><input type="checkbox" name="at_precio[<?php echo (int) $i; ?>][emphasis]" value="1" <?php checked(!empty($f['emphasis'])); ?>></td>
               </tr>
             <?php endforeach; ?>
             </tbody>
@@ -163,6 +165,7 @@ function at_pa_render_ficha($p, string $message): void {
           <?php if ($log): ?><details><summary>Historial de comentarios (<?php echo count($log); ?>)</summary><ul>
             <?php foreach ($log as $c): ?><li><?php echo esc_html(($c['fecha'] ?? '') . ' — ' . ($c['comentario'] ?? '')); ?></li><?php endforeach; ?>
           </ul></details><?php endif; ?>
+          <p class="at-pa-aviso">Los precios, la nota y los comentarios se guardan con «Pedir cambios» o «Aprobar»; el botón Guardar no los guarda.</p>
           <p class="at-pa-botones">
             <button type="submit" name="at_v3_accion" value="cambios" class="button">✏️ Pedir cambios (sin costo)</button>
             <button type="submit" name="at_v3_accion" value="aprobar" class="button button-primary"
@@ -195,7 +198,7 @@ function at_pa_render_ficha($p, string $message): void {
             <?php $gamma_prompt_es_v3 = ($p->flujo ?? '') === 'v3'; ?>
             <textarea name="gamma_prompt" id="gamma_prompt" class="large-text" rows="6" <?php echo $gamma_prompt_es_v3 ? 'readonly' : ''; ?>
                 placeholder="Deja vacío para mantener el actual..."><?php echo esc_textarea($p->gamma_prompt_text); ?></textarea>
-            <?php if ($gamma_prompt_es_v3): ?><p>En propuestas v3 este campo lo maneja el flujo; los cambios se piden en «Revisión de la propuesta».</p><?php endif; ?>
+            <?php if ($gamma_prompt_es_v3): ?><p class="at-pa-aviso">En propuestas v3 este campo lo maneja el flujo; los cambios se piden en «Revisión de la propuesta».</p><?php endif; ?>
           </div>
           <div>
             <h4>🤖 Prompt del Chatbot (System Prompt)</h4>

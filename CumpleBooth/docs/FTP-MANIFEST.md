@@ -3789,3 +3789,8 @@ editoriales y no borra assets privados: solo usar con respaldo y aprobación exp
 **Costos:** Higgsfield $0; ElevenLabs $0; request_id no aplica, sin solicitudes de generación.
 **Preguntas abiertas:** ninguna para usar este backend. Luis define el día 1 de la estrategia
 en la siguiente parte. Mantener un único PR del ticket abierto mientras se completa esa entrega.
+
+**Verificación responsive adicional (2026-09-24):** 36 vistas de Agenda/Contenido en Chromium,
+anchos 320, 360, 390, 768, 1024 y 1440 px; calendario, ficha y lista/semana sin desbordamiento ni
+errores JavaScript. Ajustado el ancho del selector de archivos en la ficha de Contenido.
+Regresión tras el ajuste: HTTP 36 comprobaciones y lint de contenido.php correctos.

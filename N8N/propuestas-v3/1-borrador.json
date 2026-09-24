@@ -1,0 +1,246 @@
+{
+  "name": "Propuestas v3 · 1 Borrador",
+  "nodes": [
+    {
+      "id": "b1",
+      "name": "Webhook (Entrada)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "propuesta-v3-borrador",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "propuesta-v3-borrador"
+    },
+    {
+      "id": "b2",
+      "name": "Redactar propuesta",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Eres consultor senior de AutomatizaTech (Chile). Con la transcripción de una reunión con un cliente, redacta el contenido de una propuesta comercial que se mostrará con una plantilla fija de láminas. Responde SOLO un objeto JSON (sin texto antes ni después, sin bloques de código) con esta forma exacta:\n{\n \"client_name\": \"Nombre y apellido del cliente\",\n \"company_name\": \"Nombre del negocio\",\n \"phone\": \"teléfono del cliente si aparece, si no vacío\",\n \"challenge_title\": \"máx. 7 palabras\",\n \"challenge_text\": \"60 a 80 palabras, con datos concretos dichos en la reunión (cifras, lugares, experiencias). No inventes cifras.\",\n \"solution_title\": \"máx. 7 palabras\",\n \"solution_text\": \"60 a 80 palabras: qué hará AutomatizaTech y cómo resuelve cada problema mencionado\",\n \"benefits\": [{\"title\": \"máx. 5 palabras\", \"text\": \"una línea, empieza en minúscula\"}],\n \"how_it_works\": [{\"step_title\": \"máx. 4 palabras\", \"step_text\": \"una línea, empieza en minúscula\"}],\n \"extra_slides\": [{\"eyebrow\": \"etiqueta corta\", \"title\": \"título\", \"bullets\": [{\"title\": \"punto\", \"text\": \"una línea\"}]}],\n \"pricing_rows\": [{\"service\": \"nombre del servicio o fase\", \"price_usd\": 0, \"price_label\": \"Por confirmar\"}],\n \"pricing_note\": \"\",\n \"next_steps\": [\"paso concreto acordado en la reunión\"],\n \"image_briefs\": [{\"slide\": \"cover|challenge|solution|benefits|how_it_works|extra_1|extra_2|pricing|next_steps\", \"prompt\": \"descripción en inglés\"}],\n \"tono\": \"tu o usted\",\n \"resumen_para_luis\": \"3 a 5 líneas: qué pidió el cliente, presupuesto mencionado, dudas abiertas\"\n}\nReglas:\n- Español de Chile. Trata al cliente de \"tú\", salvo rubros donde corresponde \"usted\" (funerario, salud, legal): ahí \"usted\" en todo el texto.\n- benefits: 4 o 5. how_it_works: 4 o 5 pasos. next_steps: 3 o 4.\n- extra_slides: 0, 1 o 2, solo si la reunión trae material real (por ejemplo fases o planes que el cliente pidió). No rellenes.\n- PRECIOS: nunca escribas montos. Cada fila lleva \"price_label\": \"Por confirmar\" y \"price_usd\": 0. Las filas nombran los servicios o fases que se cotizarán. \"pricing_note\" vacío.\n- image_briefs: una por lámina usada (cover, challenge, solution, benefits, how_it_works, pricing, next_steps y extra_N por cada extra). Fotografía realista, cálida y respetuosa del rubro. Cada prompt termina con: \"no people facing camera, no screens, no phones, no computers, no papers, no signs, no text, no lettering, no logos, no watermarks\". Nunca infografías, diagramas ni oficinas con papeles.\n- No inventes datos del cliente (teléfonos, direcciones, precios, años) que no estén en la transcripción."
+            },
+            {
+              "content": "={{ $('Webhook (Entrada)').item.json.body.transcript }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4
+        },
+        "requestOptions": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "id": "b3",
+      "name": "Personalidad del chatbot",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Escribe el system prompt de un asistente virtual de demostración para este negocio, en español de Chile. Estructura: identidad (1 párrafo); TONO (tú o usted según el rubro, breve, sin emojis si el rubro es delicado); ATENCIÓN URGENTE (si aplica al rubro: primero empatía, luego el contacto directo del negocio); SERVICIOS; PRECIOS (solo los que aparezcan en la transcripción, con la aclaración de que un asesor confirma); REGLAS (no inventar datos; derivar a un humano cuando hay intención clara de contratar pidiendo nombre, teléfono y comuna). Usa solo datos que estén en la transcripción. Devuelve solo el texto del system prompt."
+            },
+            {
+              "content": "={{ $('Webhook (Entrada)').item.json.body.transcript }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4
+        },
+        "requestOptions": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "id": "b4",
+      "name": "Armar payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Reglas que no se le confían al modelo: formato JSON, precios y cantidad de láminas extra.\nlet raw = $('Redactar propuesta').first().json.message.content;\nif (typeof raw === 'string') {\n  raw = raw.trim().replace(/^```(?:json)?\\s*/i, '').replace(/```\\s*$/, '');\n}\nconst d = typeof raw === 'string' ? JSON.parse(raw) : raw;\nconst body = $('Webhook (Entrada)').first().json.body || {};\nconst prueba = body.prueba === true;\nd.pricing_rows = (d.pricing_rows || []).map((r) => ({ service: String(r.service || 'Servicio'), price_usd: 0, price_label: 'Por confirmar' }));\nif (!d.pricing_rows.length) d.pricing_rows = [{ service: 'Servicio', price_usd: 0, price_label: 'Por confirmar' }];\nd.pricing_note = '';\nd.extra_slides = (d.extra_slides || []).slice(0, 2);\nconst validSlides = new Set(['cover', 'challenge', 'solution', 'benefits', 'how_it_works', 'pricing', 'next_steps', ...d.extra_slides.map((_, i) => `extra_${i + 1}`)]);\nd.image_briefs = (d.image_briefs || []).filter((b) => b && validSlides.has(b.slide) && b.prompt);\nif (prueba) d.company_name = `[PRUEBA] ${d.company_name}`;\nconst resumen = d.resumen_para_luis || '';\nconst phone = d.phone || '';\ndelete d.resumen_para_luis; delete d.tono; delete d.phone;\nreturn [{ json: {\n  payload: d,\n  resumen,\n  phone,\n  client_email: prueba ? 'contacto@automatizatech.cl' : (body.client_email || ''),\n  transcript: body.transcript || '',\n  system_prompt: $('Personalidad del chatbot').first().json.message.content,\n} }];"
+      }
+    },
+    {
+      "id": "b5",
+      "name": "Crear en WordPress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ client_email: $json.client_email, phone: $json.phone, transcript: $json.transcript, system_prompt: $json.system_prompt, payload: $json.payload }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1NI0sJKc0kC430pb",
+          "name": "AT REST Secret (header)"
+        }
+      }
+    },
+    {
+      "id": "b6",
+      "name": "Vista previa (sin fotos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n-propuesta-renderer.kchiba.easypanel.host/render",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify(Object.assign({}, $('Armar payload').item.json.payload, { unique_id: $('Crear en WordPress').item.json.unique_id, draft: true, image_briefs: [] })) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "b7",
+      "name": "Correo a Luis",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "fromEmail": "contacto@automatizatech.cl",
+        "toEmail": "lmgm.0303@gmail.com",
+        "subject": "={{ ($('Vista previa (sin fotos)').item.json.view_url ? '' : '⚠️ ') + $('Armar payload').item.json.payload.company_name + ' · borrador listo para revisar' }}",
+        "html": "=<h3>{{ $('Vista previa (sin fotos)').item.json.view_url ? '' : '⚠️ ' }}Borrador de propuesta: {{ $('Armar payload').item.json.payload.company_name }}</h3>\n<p style=\"white-space:pre-wrap\">{{ $('Armar payload').item.json.resumen }}</p>\n{{ $('Vista previa (sin fotos)').item.json.view_url ? '' : '<p style=\"color:#b45309\"><strong>La vista previa no se pudo generar.</strong> La propuesta quedó creada en borrador: en el panel, «Pedir cambios» (aunque sea sin comentario) vuelve a generarla.</p>' }}\n<p><a href=\"{{ $('Crear en WordPress').item.json.view_url }}\">👀 Ver vista previa (sin fotos)</a></p>\n<p><a href=\"{{ $('Crear en WordPress').item.json.panel_url }}\">✏️ Revisar en el panel: precios, comentarios y aprobación</a></p>\n<p style=\"color:#666\">Los precios dicen «Por confirmar» hasta que los escribas en el panel. No se ha gastado nada en fotos. Nada se envía al cliente desde este flujo.</p>",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook (Entrada)": {
+      "main": [
+        [
+          {
+            "node": "Redactar propuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redactar propuesta": {
+      "main": [
+        [
+          {
+            "node": "Personalidad del chatbot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Personalidad del chatbot": {
+      "main": [
+        [
+          {
+            "node": "Armar payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar payload": {
+      "main": [
+        [
+          {
+            "node": "Crear en WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear en WordPress": {
+      "main": [
+        [
+          {
+            "node": "Vista previa (sin fotos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vista previa (sin fotos)": {
+      "main": [
+        [
+          {
+            "node": "Correo a Luis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

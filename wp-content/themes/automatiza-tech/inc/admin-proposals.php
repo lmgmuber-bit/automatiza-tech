@@ -70,7 +70,9 @@ add_action('admin_enqueue_scripts', function ($hook) {
     }
     $dir = get_template_directory() . '/assets';
     $url = get_template_directory_uri() . '/assets';
-    wp_enqueue_style('at-propuestas-admin', $url . '/css/propuestas-admin.css', [], (string) filemtime($dir . '/css/propuestas-admin.css'));
+    if (file_exists($dir . '/css/propuestas-admin.css')) {
+        wp_enqueue_style('at-propuestas-admin', $url . '/css/propuestas-admin.css', [], (string) filemtime($dir . '/css/propuestas-admin.css'));
+    }
     if (file_exists($dir . '/js/propuestas-admin.js')) {
         wp_enqueue_script('at-propuestas-admin', $url . '/js/propuestas-admin.js', [], (string) filemtime($dir . '/js/propuestas-admin.js'), true);
     }

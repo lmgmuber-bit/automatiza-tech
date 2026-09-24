@@ -109,7 +109,7 @@ class AT_Propuestas_Lista extends WP_List_Table {
     protected function column_contacto($item) {
         $partes = [];
         if (!empty($item->client_email)) {
-            $partes[] = sprintf('<a href="mailto:%s">%s</a>', esc_attr($item->client_email), esc_html($item->client_email));
+            $partes[] = sprintf('<a href="%s">%s</a>', esc_url('mailto:' . $item->client_email), esc_html($item->client_email));
         }
         if (!empty($item->phone)) {
             $partes[] = esc_html($item->phone);

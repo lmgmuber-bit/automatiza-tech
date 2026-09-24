@@ -26,6 +26,15 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
     }
 
     const data = req.body;
+
+    // unique_id becomes a filesystem path segment via path.join below and is
+    // echoed back in view_url/pdf_url: reject anything that is not a plain
+    // token before touching Higgsfield or the filesystem, or a value like
+    // "../evil" could write (and later serve) outside publicDir.
+    if (typeof data.unique_id !== 'string' || !/^[A-Za-z0-9_-]{6,64}$/.test(data.unique_id)) {
+      return res.status(400).json({ error: { message: 'unique_id inválido' } });
+    }
+
     const outputDir = path.join(publicDir, data.unique_id);
 
     // Image generation (Higgsfield), HTML templating, and the Playwright
@@ -56,13 +65,10 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
 
     let images;
     let report;
-    let html;
     let generated;
     try {
       generated = await generateProposalImages(pending, higgsfieldCredentials);
       ({ images, report } = await persistImages(Object.assign({}, generated, provided), outputDir));
-      html = renderProposalHtml(data, images);
-      await renderToFiles(html, outputDir);
     } catch (err) {
       console.error('POST /render failed:', err.stack || err.message);
       return res.status(502).json({ error: 'render failed', details: err.message });
@@ -89,6 +95,12 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
     // [[Prototype]] to that value instead, so the entry silently vanishes
     // from what gets written back and the object's own property lookups get
     // confused. A null-prototype target has no such setter to trigger.
+    //
+    // Written as soon as persistImages succeeds — before the HTML/Playwright
+    // render below — so that if renderToFiles fails after the photos are
+    // already on disk, the manifest still records them and a retry (n8n's
+    // "3 Final" flow retries /render up to 3 times while anything is
+    // missing) reuses the files instead of paying Higgsfield again.
     const generatedSlides = new Set(Object.keys(generated || {}).filter((slide) => generated[slide]));
     const reusedSlides = new Set(reusedThisCall);
     const nextManifest = Object.create(null);
@@ -107,6 +119,15 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
       await writeManifest(outputDir, nextManifest);
     } catch (err) {
       console.error('POST /render: no se pudo guardar el manifiesto de fotos:', err.message);
+    }
+
+    let html;
+    try {
+      html = renderProposalHtml(data, images);
+      await renderToFiles(html, outputDir);
+    } catch (err) {
+      console.error('POST /render failed:', err.stack || err.message);
+      return res.status(502).json({ error: 'render failed', details: err.message });
     }
 
     res.json({

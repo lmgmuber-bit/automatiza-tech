@@ -4,6 +4,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { createApp } = require('../src/server');
+const { promptHash } = require('../src/photo-manifest');
 
 const PAYLOAD = {
   unique_id: 'test-images-passthrough',
@@ -345,6 +346,115 @@ test('a brief whose photo could not be generated is reported as missing', async 
     assert.equal(res.status, 200);
     assert.equal(res.body.images.requested, 1);
     assert.deepEqual(res.body.images.missing, ['cover']);
+  } finally {
+    global.fetch = originalFetch;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('the photo manifest is written as soon as the photos are persisted, and survives a render step that fails afterward', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'at-render-'));
+  const renderPath = require.resolve('../src/render');
+  const serverPath = require.resolve('../src/server');
+  const originalFetch = global.fetch;
+
+  // Make sure ../src/render is in the require cache so its exports object
+  // can be mutated in place, then remember the real renderToFiles to
+  // restore it afterward.
+  require(renderPath);
+  const realRenderToFiles = require.cache[renderPath].exports.renderToFiles;
+
+  const submittedPrompts = [];
+  global.fetch = async (url, opts) => {
+    const u = String(url);
+    if (u.endsWith('/soul/v2/standard')) {
+      const body = JSON.parse(opts.body);
+      submittedPrompts.push(body.prompt);
+      return { ok: true, json: async () => ({ status: 'queued', status_url: 'https://higgsfield/status/cover' }) };
+    }
+    if (u.includes('/status/')) {
+      return { ok: true, json: async () => ({ status: 'completed', images: [{ url: 'https://cdn.example.com/cover.png' }] }) };
+    }
+    if (u.startsWith('https://cdn.example.com/')) {
+      return { ok: true, status: 200, headers: { get: () => 'image/png' }, arrayBuffer: async () => Buffer.from('PNG') };
+    }
+    return originalFetch(url, opts);
+  };
+
+  try {
+    const payload = {
+      ...PAYLOAD,
+      unique_id: 'manifiesto-antes-del-render',
+      image_briefs: [{ slide: 'cover', prompt: 'foto de portada' }],
+    };
+
+    // Stub renderToFiles to fail (simulating Playwright dying) AFTER the
+    // photo has already been generated and persisted, then re-require
+    // server.js so it picks up the stub (server.js destructures
+    // renderToFiles from ../src/render at require time).
+    require.cache[renderPath].exports.renderToFiles = async () => {
+      throw new Error('playwright boom');
+    };
+    delete require.cache[serverPath];
+    const { createApp: createAppBroken } = require(serverPath);
+
+    const appBroken = createAppBroken({ publicDir: dir, baseUrl: 'http://x', higgsfieldCredentials: { keyId: 'k', keySecret: 's' } });
+    const first = await post(appBroken, payload);
+    assert.equal(first.status, 502, 'el render sigue respondiendo 502 cuando falla despues de generar la foto');
+
+    const manifestRaw = await fs.readFile(path.join(dir, payload.unique_id, 'img', 'manifest.json'), 'utf8');
+    const manifest = JSON.parse(manifestRaw);
+    assert.ok(manifest.cover, 'el manifiesto debe existir con la lamina generada aunque el render haya fallado');
+    assert.equal(manifest.cover.hash, promptHash('foto de portada'));
+
+    // Restore the real renderToFiles and re-require server.js so the second
+    // call (and any test file that requires it fresh afterward) uses the
+    // real render step again.
+    require.cache[renderPath].exports.renderToFiles = realRenderToFiles;
+    delete require.cache[serverPath];
+    const { createApp: createAppFixed } = require(serverPath);
+
+    submittedPrompts.length = 0;
+    const appFixed = createAppFixed({ publicDir: dir, baseUrl: 'http://x', higgsfieldCredentials: { keyId: 'k', keySecret: 's' } });
+    const second = await post(appFixed, payload);
+    assert.equal(second.status, 200, 'con el render funcionando, el segundo intento debe completarse');
+    assert.deepEqual(submittedPrompts, [], 'cover ya quedo en el manifiesto: no debe volver a pedirse a Higgsfield');
+    assert.equal(second.body.images.reused, 1, 'cover se sirve desde el manifiesto escrito antes del render fallido');
+  } finally {
+    require.cache[renderPath].exports.renderToFiles = realRenderToFiles;
+    delete require.cache[serverPath];
+    global.fetch = originalFetch;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('unique_id with path traversal or slashes is rejected with 400 before any Higgsfield call', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'at-render-'));
+  const asked = [];
+  const originalFetch = global.fetch;
+  global.fetch = async (url, opts) => {
+    // `post()` itself uses fetch to call the local test server; only
+    // Higgsfield calls count as "should never have happened".
+    if (String(url).includes('higgsfield')) asked.push(String(url));
+    return originalFetch(url, opts);
+  };
+  try {
+    const app = createApp({ publicDir: dir, baseUrl: 'http://x', higgsfieldCredentials: {} });
+
+    const traversal = await post(app, { ...PAYLOAD, unique_id: '../evil' });
+    assert.equal(traversal.status, 400);
+    assert.deepEqual(traversal.body, { error: { message: 'unique_id inválido' } });
+
+    const slash = await post(app, { ...PAYLOAD, unique_id: 'a/b' });
+    assert.equal(slash.status, 400);
+    assert.deepEqual(slash.body, { error: { message: 'unique_id inválido' } });
+
+    assert.deepEqual(asked, [], 'un unique_id invalido no debe generar ninguna llamada a Higgsfield ni de otro tipo');
+
+    // Existing real ids must keep working.
+    const ok = await post(app, { ...PAYLOAD, unique_id: 'verif-v3-fotos' });
+    assert.equal(ok.status, 200, 'un unique_id real existente debe seguir funcionando');
+    await fs.access(path.join(dir, 'verif-v3-fotos', 'index.html'));
   } finally {
     global.fetch = originalFetch;
     await fs.rm(dir, { recursive: true, force: true });

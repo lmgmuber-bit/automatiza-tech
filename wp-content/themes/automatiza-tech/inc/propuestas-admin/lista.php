@@ -137,7 +137,9 @@ class AT_Propuestas_Lista extends WP_List_Table {
         if ($which !== 'top') {
             return;
         }
-        echo '<div class="alignleft actions"><button type="submit" name="bulk_action" value="borrar_marcadas" class="button at-borrar-marcadas">🗑️ Borrar marcadas</button></div>';
+        if ($this->has_items()) {
+            echo '<div class="alignleft actions"><button type="submit" name="bulk_action" value="borrar_marcadas" class="button at-borrar-marcadas">🗑️ Borrar marcadas</button></div>';
+        }
         printf('<div class="alignleft actions at-fechas"><label>Desde <input type="date" name="desde" value="%s"></label> <label>Hasta <input type="date" name="hasta" value="%s"></label> ',
             esc_attr($this->f['desde']), esc_attr($this->f['hasta']));
         submit_button('Filtrar', '', 'filtrar', false);

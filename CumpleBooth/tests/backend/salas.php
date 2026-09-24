@@ -13,9 +13,10 @@ register_shutdown_function(static function () use ($tmp): void {
     if (is_file($db)) { @unlink($db); }
     @rmdir($tmp);
 });
+putenv('CUMPLECLICK_CONFIG_FILE=' . $tmp . '/no-config.php');
 putenv('CC_STORAGE_MODE=db');
 putenv('CC_PDO_DSN=sqlite:' . $tmp . '/salas.sqlite');
-putenv('CC_APP_HMAC_KEY=' . str_repeat('c', 64));
+putenv('CC_APP_HMAC_KEY=' . bin2hex(random_bytes(32)));
 putenv('CC_PUBLIC_BASE_URL=https://example.test/cumpleclick');
 putenv('CC_PHOTO_DIR=' . $tmp . '/photos'); putenv('CC_STATE_DIR=' . $tmp . '/state'); putenv('CC_INVITATION_DIR=' . $tmp . '/invitations');
 require dirname(__DIR__, 2) . '/public/lib.php';
@@ -27,10 +28,9 @@ function sala_check(bool $condition, string $message): void {
     $tests++;
     if (!$condition) { throw new RuntimeException('FAIL: ' . $message); }
 }
-// cb_save_parties (bloque 12) necesita las columnas que agregan 003–007.
-foreach (['001_initial', '002_theme_prompts', '003_invitations_and_plan', '004_gate_a_corrections', '005_theme_prompt_history', '006_public_leads', '007_event_album', '014_salas_ayudantes'] as $migracion) {
-    (require dirname(__DIR__, 2) . '/database/migrations/' . $migracion . '.php')(cb_pdo());
-}
+// Usar el esquema completo evita que futuras columnas de fiestas dejen obsoleta la prueba.
+require_once __DIR__ . '/_migraciones.php';
+cb_test_migrar_todo(cb_pdo());
 
 // ── 1) cb_sala_crear: forma de la respuesta y nada en claro en la BD ───────
 $creada = cb_sala_crear('Isidora', '203.0.113.5');

@@ -252,7 +252,7 @@ $textoWhatsapp = $datos !== null ? cb_comprobante_texto_whatsapp($datos, $urlCom
       <p class="muted">Todavía no hay fiestas creadas.</p>
     <?php else: ?>
       <form method="get" class="inline-form field">
-        <select name="p" onchange="this.form.submit()">
+        <select aria-label="Fiesta del comprobante" name="p" onchange="this.form.submit()">
           <?php foreach ($fiestas as $slug => $f): ?>
             <option value="<?= h($slug) ?>" <?= $slug === $slugActual ? 'selected' : '' ?>>
               <?= h($f['nombre']) ?><?= $f['fecha'] !== '' ? ' · ' . h($f['fecha']) : '' ?>
@@ -315,7 +315,7 @@ $textoWhatsapp = $datos !== null ? cb_comprobante_texto_whatsapp($datos, $urlCom
         abajo muestra el comprobante actualizado sin tener que generar nada de nuevo.
       </p>
       <p class="party-url">
-        <input type="text" readonly value="<?= h($urlComprobante) ?>" id="url-comprobante">
+        <input type="text" readonly value="<?= h($urlComprobante) ?>" aria-label="Enlace del comprobante" id="url-comprobante">
         <button type="button" class="btn btn-icon" data-copiar="<?= h($urlComprobante) ?>" title="Copiar enlace"><?= admin_icon('copy') ?></button>
         <a class="btn btn-icon" href="<?= h($urlComprobante) ?>" target="_blank" rel="noopener" title="Abrir el PDF">↗</a>
       </p>
@@ -347,7 +347,7 @@ $textoWhatsapp = $datos !== null ? cb_comprobante_texto_whatsapp($datos, $urlCom
 
     <section class="card">
       <h2>Mandarlo por WhatsApp</h2>
-      <textarea class="cmp-texto" id="texto-wa" readonly><?= h($textoWhatsapp) ?></textarea>
+      <textarea class="cmp-texto" aria-label="Mensaje del comprobante para WhatsApp" id="texto-wa" readonly><?= h($textoWhatsapp) ?></textarea>
       <p class="cmp-acciones">
         <button type="button" class="btn" data-copiar-de="texto-wa"><?= admin_icon('copy') ?> Copiar texto</button>
         <a class="btn btn-primary" target="_blank" rel="noopener"

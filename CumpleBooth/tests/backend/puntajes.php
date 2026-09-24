@@ -8,6 +8,7 @@
  * prueba falla y explica por qué.
  */
 
+require __DIR__ . '/_aislamiento-local.php';
 $raiz = dirname(__DIR__, 2);
 require_once $raiz . '/public/lib.php';
 
@@ -41,9 +42,9 @@ require_once $raiz . '/public/lib.puntajes.php';
 echo "Posiciones\n";
 
 // ---------- El catálogo de juegos ----------
-igual('hay cinco juegos registrados', 5, count(cb_juegos()));
-igual('hielo tiene dos juegos', ['reino-hielo', 'festival'], array_keys(cb_juegos_de_tema('hielo')));
-igual('spidey tiene dos juegos', ['aracnida', 'impulso'], array_keys(cb_juegos_de_tema('spidey')));
+igual('hay siete juegos registrados', 7, count(cb_juegos()));
+igual('hielo tiene tres juegos', ['reino-hielo', 'festival', 'aurora'], array_keys(cb_juegos_de_tema('hielo')));
+igual('spidey tiene tres juegos', ['aracnida', 'impulso', 'circuito'], array_keys(cb_juegos_de_tema('spidey')));
 igual('una temática sin juegos devuelve vacío', [], cb_juegos_de_tema('carreras'));
 
 // `spidey` y `heroes` son dos temáticas DISTINTAS del admin aunque compartan el mundo 3D, y

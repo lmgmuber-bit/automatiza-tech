@@ -10,6 +10,8 @@
 .at-marca-v3 { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 4px; font-size: 11px; font-weight: 700; line-height: 1.6; background: var(--at-navy); color: #fff; }
 .at-pa .at-cliente { color: #64748b; }
 .at-pa .row-actions .at-borrar { color: #b32d2e; }
+.at-pa .wp-list-table .row-actions { position: static; }
+.at-pa .at-borrar-marcadas { color: #b32d2e; border-color: #b32d2e; }
 .at-pa .at-fechas label { margin-right: 6px; }
 .at-pa .at-fechas input[type="date"] { max-width: 150px; }
 @media (max-width: 782px) {
@@ -48,7 +50,7 @@
 .at-pa-precios input[type="text"] { width: 100%; box-sizing: border-box; }
 .at-pa-codigo { max-height: 300px; overflow: auto; white-space: pre-wrap; font-family: monospace; font-size: 12px; line-height: 1.5; background: #fff; border: 1px solid #e2e8f0; padding: 12px; margin-top: 8px; }
 .at-pa-aviso { color: #b45309; }
-.at-pa-guardar { position: sticky; bottom: 0; z-index: 10; background: #f0f0f1; border-top: 1px solid #c3c4c7; padding: 10px 0; margin-top: 8px; text-align: right; }
+.at-pa-guardar { position: sticky; bottom: 0; z-index: 10; background: #f0f0f1; border-top: 1px solid #c3c4c7; padding: 10px 0; padding-right: 110px; margin-top: 8px; text-align: right; }
 @media (max-width: 782px) {
   /* .at-pa-js .at-pa-tabs (0,2,0) fuera del media query le gana a esta regla (0,1,0)
      si acá solo dijera .at-pa-tabs: repetirla con el mismo prefijo iguala la especificidad

@@ -137,6 +137,7 @@ class AT_Propuestas_Lista extends WP_List_Table {
         if ($which !== 'top') {
             return;
         }
+        echo '<div class="alignleft actions"><button type="submit" name="bulk_action" value="borrar_marcadas" class="button at-borrar-marcadas">🗑️ Borrar marcadas</button></div>';
         printf('<div class="alignleft actions at-fechas"><label>Desde <input type="date" name="desde" value="%s"></label> <label>Hasta <input type="date" name="hasta" value="%s"></label> ',
             esc_attr($this->f['desde']), esc_attr($this->f['hasta']));
         submit_button('Filtrar', '', 'filtrar', false);
@@ -148,7 +149,7 @@ class AT_Propuestas_Lista extends WP_List_Table {
 function at_pa_render_lista(string $message): void {
     $f = at_pa_normalizar_filtros(wp_unslash($_GET));
     // Que la paginación y el orden no repitan una acción ya hecha (borrado) al armar sus enlaces.
-    $_SERVER['REQUEST_URI'] = remove_query_arg(['action', 'action2', 'proposal_ids', '_wpnonce', '_wp_http_referer', 'delete_id', 'filtrar'], $_SERVER['REQUEST_URI']);
+    $_SERVER['REQUEST_URI'] = remove_query_arg(['action', 'action2', 'proposal_ids', '_wpnonce', '_wp_http_referer', 'delete_id', 'filtrar', 'bulk_action'], $_SERVER['REQUEST_URI']);
     $tabla = new AT_Propuestas_Lista($f);
     $tabla->prepare_items();
     echo '<div class="wrap at-pa">';

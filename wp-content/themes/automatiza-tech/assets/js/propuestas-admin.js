@@ -143,6 +143,26 @@
         e.preventDefault();
       }
     });
+
+    // ---------- Lista: botón «🗑️ Borrar marcadas» (fuera del selector de acción masiva) ----------
+    // Corre en el 'click' del botón, antes de que el navegador dispare 'submit' (y existe en todos
+    // los navegadores, a diferencia de SubmitEvent.submitter). El listener de submit de arriba no
+    // vuelve a preguntar por este botón: su e.submitter.id no es "doaction"/"doaction2", así que
+    // retorna enseguida.
+    var botonBorrarMarcadas = listaForm.querySelector('.at-borrar-marcadas');
+    if (botonBorrarMarcadas) {
+      botonBorrarMarcadas.addEventListener('click', function (e) {
+        var marcadas = listaForm.querySelectorAll('input[name="proposal_ids[]"]:checked');
+        if (!marcadas.length) {
+          window.alert('Marca al menos una propuesta para borrar.');
+          e.preventDefault();
+          return;
+        }
+        if (!window.confirm('¿Borrar ' + marcadas.length + ' propuesta(s)? No se puede deshacer.')) {
+          e.preventDefault();
+        }
+      });
+    }
   }
 
   // ---------- Lista: URL limpia tras un borrado, Buscar, Filtrar o paginar ----------
@@ -152,7 +172,7 @@
   // los selectores de acción masiva cuando no se eligió ninguna): se limpia siempre que aparezca algo.
   if (selectorTop) {
     var params = new URLSearchParams(window.location.search);
-    var huboBorrado = params.has('delete_id') || params.get('action') === 'borrar' || params.get('action2') === 'borrar';
+    var huboBorrado = params.has('delete_id') || params.get('action') === 'borrar' || params.get('action2') === 'borrar' || params.get('bulk_action') === 'borrar_marcadas';
     var cambios = false;
     if (huboBorrado) {
       var fijas = ['action', 'action2', '_wpnonce', '_wp_http_referer', 'delete_id', 'bulk_action', 'filtrar'];

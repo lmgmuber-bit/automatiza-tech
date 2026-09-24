@@ -26,6 +26,11 @@ function at_pa_procesar_acciones(): string {
                 return at_pa_borrar_varias(array_map('intval', (array) $_GET['proposal_ids']));
             }
         }
+        // Botón «🗑️ Borrar marcadas» de la lista (name="bulk_action" value="borrar_marcadas"),
+        // fuera de los selectores action/action2 de WP_List_Table.
+        if (sanitize_key(wp_unslash($_GET['bulk_action'])) === 'borrar_marcadas' && !empty($_GET['proposal_ids'])) {
+            return at_pa_borrar_varias(array_map('intval', (array) $_GET['proposal_ids']));
+        }
     }
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
         return '';
@@ -319,7 +324,7 @@ function at_pa_guardar(): string {
                     if (is_wp_error($pdf_resp) || $pdf_codigo !== 200) {
                         $pdf_omitido_motivo = 'no se pudo descargar el PDF de la presentación';
                     } elseif ($pdf_tamano > AT_PA_PDF_MAX_BYTES) {
-                        $pdf_omitido_motivo = 'el PDF pesa ' . number_format($pdf_tamano / 1024 / 1024, 1, ',', '.') . ' MB (tope 15 MB)';
+                        $pdf_omitido_motivo = 'el PDF pesa más de 15 MB';
                     } elseif ($pdf_cabecera !== '%PDF') {
                         $pdf_omitido_motivo = 'no se pudo descargar el PDF de la presentación';
                     } else {

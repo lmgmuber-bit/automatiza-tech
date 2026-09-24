@@ -19,6 +19,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once __DIR__ . '/proposals-flow.php';
+
 /**
  * Verifica el secret compartido del header X-AT-Secret.
  */

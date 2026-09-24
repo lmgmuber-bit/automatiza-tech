@@ -55,6 +55,18 @@ function at_propuesta_aplicar_precios(array $payload, array $filas, string $nota
 	return $payload;
 }
 
+/** Una fila enviada con servicio pero sin precio se perdería en silencio al aplicar precios. */
+function at_propuesta_filas_con_precio_vacio(array $filas): bool {
+	foreach ($filas as $f) {
+		$servicio = trim((string) ($f['service'] ?? ''));
+		$precio = trim((string) ($f['price_label'] ?? ''));
+		if ($servicio !== '' && $precio === '') {
+			return true;
+		}
+	}
+	return false;
+}
+
 /** No se puede aprobar sin precios reales: sin filas, o con alguna en blanco o "Por confirmar". */
 function at_propuesta_precios_pendientes(array $payload): bool {
 	$filas = $payload['pricing_rows'] ?? [];

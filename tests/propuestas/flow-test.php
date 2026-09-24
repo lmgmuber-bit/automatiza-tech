@@ -38,6 +38,20 @@ ok(($p2['pricing_rows'][1]['emphasis'] ?? false) === true, 'fila destacada');
 ok($p2['pricing_note'] === 'Valores en pesos.', 'nota recortada');
 ok(at_propuesta_aplicar_precios($p, [], 'n')['pricing_rows'] === $p['pricing_rows'], 'sin filas se conservan las anteriores');
 
+// Fila con servicio pero sin precio: no se puede descartar en silencio al aprobar
+ok(!at_propuesta_filas_con_precio_vacio([]), 'sin filas, nada que perder');
+ok(!at_propuesta_filas_con_precio_vacio([['service' => '', 'price_label' => '']]), 'fila totalmente vacía no cuenta (placeholder)');
+ok(!at_propuesta_filas_con_precio_vacio([['service' => 'Fase 1', 'price_label' => '$250.000']]), 'servicio y precio completos, nada pendiente');
+ok(at_propuesta_filas_con_precio_vacio([['service' => 'Fase 2', 'price_label' => '']]), 'servicio sin precio, sí pendiente');
+ok(at_propuesta_filas_con_precio_vacio([['service' => ' Fase 2 ', 'price_label' => '   ']]), 'detecta con espacios (trim)');
+// El caso real del panel: Fase 1 completa + Fase 2 con nombre y precio vacío + filas placeholder vacías
+ok(at_propuesta_filas_con_precio_vacio([
+    ['service' => 'Fase 1', 'price_label' => '$250.000 en 2 pagos'],
+    ['service' => 'Fase 2', 'price_label' => ''],
+    ['service' => '', 'price_label' => ''],
+    ['service' => '', 'price_label' => ''],
+]), 'Fase 1 completa no debe tapar que Fase 2 quedó sin precio');
+
 // No se aprueba con precios pendientes
 ok(at_propuesta_precios_pendientes([]), 'sin pricing_rows, precios pendientes');
 ok(at_propuesta_precios_pendientes(['pricing_rows' => []]), 'pricing_rows vacío, precios pendientes');

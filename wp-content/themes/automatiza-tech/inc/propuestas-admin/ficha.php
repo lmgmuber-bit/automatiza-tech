@@ -106,10 +106,10 @@ function at_pa_render_ficha($p, string $message): void {
               </td>
             </tr>
             <tr>
-              <th scope="row"><label for="gamma_url">URL Iframe Gamma</label></th>
+              <th scope="row"><label for="gamma_url">URL de la presentación</label></th>
               <td>
-                <input type="text" name="gamma_url" id="gamma_url" class="large-text" placeholder="Pega aquí el código <iframe> o la URL directa..." required value="<?php echo esc_attr($p->gamma_iframe_url); ?>">
-                <p class="description">Puedes pegar el código completo del Embed de Gamma (&lt;iframe...&gt;) o solo la URL.</p>
+                <input type="text" name="gamma_url" id="gamma_url" class="large-text" placeholder="https://n8n-propuesta-renderer.kchiba.easypanel.host/p/…/index.html" required value="<?php echo esc_attr($p->gamma_iframe_url); ?>">
+                <p class="description">La dirección de la presentación que genera el renderer de AutomatizaTech (servidor de n8n). El cliente la ve en automatizatech.cl/ver-presentacion.php.</p>
               </td>
             </tr>
             <tr>
@@ -189,16 +189,16 @@ function at_pa_render_ficha($p, string $message): void {
             </details>
           <?php else: ?><p>Esta propuesta no tiene transcripción guardada.</p><?php endif; ?>
           <div>
-            <h4>📊 Prompt para Gamma (Presentación)</h4>
+            <h4>📊 Contenido de la presentación</h4>
             <details>
               <summary>👁️ Ver prompt actual (clic para expandir)</summary>
-              <div class="at-pa-codigo"><?php echo esc_html($p->gamma_prompt_text ?: '(Sin prompt guardado)'); ?></div>
+              <div class="at-pa-codigo"><?php echo esc_html($p->gamma_prompt_text ?: '(Sin contenido guardado)'); ?></div>
             </details>
-            <label for="gamma_prompt">✏️ Editar prompt:</label>
+            <label for="gamma_prompt">✏️ Editar contenido:</label>
             <?php $gamma_prompt_es_v3 = ($p->flujo ?? '') === 'v3'; ?>
             <textarea name="gamma_prompt" id="gamma_prompt" class="large-text" rows="6" <?php echo $gamma_prompt_es_v3 ? 'readonly' : ''; ?>
                 placeholder="Deja vacío para mantener el actual..."><?php echo esc_textarea($p->gamma_prompt_text); ?></textarea>
-            <?php if ($gamma_prompt_es_v3): ?><p class="at-pa-aviso">En propuestas v3 este campo lo maneja el flujo; los cambios se piden en «Revisión de la propuesta».</p><?php endif; ?>
+            <?php if ($gamma_prompt_es_v3): ?><p class="at-pa-aviso">En propuestas v3 este campo lo maneja el flujo; los cambios se piden en la pestaña «Revisión y precios».</p><?php endif; ?>
           </div>
           <div>
             <h4>🤖 Prompt del Chatbot (System Prompt)</h4>

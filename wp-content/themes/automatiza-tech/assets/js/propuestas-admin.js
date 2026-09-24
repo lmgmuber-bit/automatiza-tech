@@ -101,8 +101,14 @@
     var params = new URLSearchParams(window.location.search);
     var huboBorrado = params.has('delete_id') || params.get('action') === 'borrar' || params.get('action2') === 'borrar';
     if (huboBorrado) {
-      ['action', 'action2', 'proposal_ids[]', '_wpnonce', '_wp_http_referer', 'delete_id', 'bulk_action', 'filtrar'].forEach(function (k) {
-        params.delete(k);
+      var fijas = ['action', 'action2', '_wpnonce', '_wp_http_referer', 'delete_id', 'bulk_action', 'filtrar'];
+      // El script de URL canónica de WordPress reescribe "proposal_ids[]" a "proposal_ids[0]" antes de
+      // que corra este replaceState, así que hay que borrar cualquier clave que empiece con "proposal_ids",
+      // sea cual sea su índice o si trae corchetes o no (no alcanza con el nombre literal "proposal_ids[]").
+      var claves = [];
+      params.forEach(function (_, k) { claves.push(k); });
+      claves.forEach(function (k) {
+        if (fijas.indexOf(k) !== -1 || k.indexOf('proposal_ids') === 0) { params.delete(k); }
       });
       var query = params.toString();
       var limpia = window.location.pathname + (query ? '?' + query : '') + window.location.hash;

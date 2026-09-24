@@ -240,6 +240,98 @@ test('a brief whose prompt changed on retry is regenerated instead of reused', a
   }
 });
 
+test('a slide satisfied by data.images this call is never recorded in the manifest, so a later retry without that override still asks Higgsfield', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'at-render-'));
+  const uniqueId = 'no-reusar-lo-provisto-por-data-images';
+  const imgDir = path.join(dir, uniqueId, 'img');
+  await fs.mkdir(imgDir, { recursive: true });
+  // "an existing local img file" the caller points data.images.cover at —
+  // already on disk, not something this call needs to download.
+  await fs.writeFile(path.join(imgDir, 'cover.png'), 'PNGDATA');
+
+  const submittedPrompts = [];
+  const originalFetch = global.fetch;
+  global.fetch = async (url, opts) => {
+    const u = String(url);
+    if (u.endsWith('/soul/v2/standard')) {
+      const body = JSON.parse(opts.body);
+      submittedPrompts.push(body.prompt);
+      return { ok: true, json: async () => ({ status: 'queued', status_url: 'https://higgsfield/status/cover' }) };
+    }
+    if (u.includes('/status/')) {
+      return { ok: true, json: async () => ({ status: 'completed', images: [{ url: 'https://cdn.example.com/cover.png' }] }) };
+    }
+    if (u.startsWith('https://cdn.example.com/')) {
+      return { ok: true, status: 200, headers: { get: () => 'image/png' }, arrayBuffer: async () => Buffer.from('PNG') };
+    }
+    return originalFetch(url, opts);
+  };
+  try {
+    const app = createApp({ publicDir: dir, baseUrl: 'http://x', higgsfieldCredentials: { keyId: 'k', keySecret: 's' } });
+    const basePayload = { ...PAYLOAD, unique_id: uniqueId, image_briefs: [{ slide: 'cover', prompt: 'P1' }] };
+
+    // Call 1: cover is satisfied by data.images, so Higgsfield is never asked.
+    const first = await post(app, { ...basePayload, images: { cover: 'img/cover.png' } });
+    assert.equal(first.status, 200);
+    assert.deepEqual(submittedPrompts, [], 'data.images ya cubre cover; Higgsfield no debe llamarse');
+    assert.equal(first.body.images.reused, 0);
+
+    // Call 2: same unique_id, same prompt, but WITHOUT the data.images
+    // override this time. Because call 1 must not have recorded "cover" in
+    // the manifest (it never verified the prompt produced that file), this
+    // retry cannot silently reuse it — it has to ask Higgsfield again.
+    submittedPrompts.length = 0;
+    const second = await post(app, basePayload);
+    assert.equal(second.status, 200);
+    assert.deepEqual(submittedPrompts, ['P1'], 'sin el data.images, cover debe pedirse de nuevo: nunca quedo en el manifiesto');
+    assert.equal(second.body.images.reused, 0, 'lo provisto por data.images no cuenta como reusado ni deja rastro en el manifiesto');
+  } finally {
+    global.fetch = originalFetch;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('a manifest.json entry literally named "__proto__" is treated as ordinary data, never as a real prototype', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'at-render-'));
+  const uniqueId = 'proto-pollution-guard';
+  const imgDir = path.join(dir, uniqueId, 'img');
+  await fs.mkdir(imgDir, { recursive: true });
+  await fs.writeFile(path.join(imgDir, 'cover.png'), 'PNGDATA');
+  // Written as a raw JSON string (not via an object literal, where
+  // `{ __proto__: ... }` sets the literal's own prototype instead of a key)
+  // so the file on disk genuinely has an own "__proto__" property once
+  // JSON.parse reads it back — exactly what a corrupted or crafted
+  // manifest.json could contain. `Object.assign({}, parsed)` onto a plain
+  // object would silently reassign that plain object's OWN prototype to
+  // this entry's value instead of copying it as a normal key — which is
+  // exactly the "hit the prototype" the fix must avoid.
+  await fs.writeFile(
+    path.join(imgDir, 'manifest.json'),
+    '{"__proto__": {"pwned": "si"}, "cover": {"file": "cover.png", "hash": "no-coincide"}}'
+  );
+  const originalFetch = global.fetch;
+  global.fetch = async (url, opts) =>
+    String(url).includes('higgsfield') ? { ok: false, status: 500, text: async () => 'caido' } : originalFetch(url, opts);
+  try {
+    const app = createApp({ publicDir: dir, baseUrl: 'http://x', higgsfieldCredentials: {} });
+    const res = await post(app, { ...PAYLOAD, unique_id: uniqueId, image_briefs: [{ slide: 'cover', prompt: 'foto' }] });
+    assert.equal(res.status, 200);
+    // The differentiating check: if the manifest-merge ever assigns the
+    // "__proto__" entry onto a plain object (Object.assign({}, existing)),
+    // that entry stops being an enumerable own property — it becomes the
+    // object's actual [[Prototype]] instead — so it silently vanishes from
+    // the JSON written back to disk. With the null-prototype build it
+    // round-trips like any other slide.
+    const manifestRaw = await fs.readFile(path.join(imgDir, 'manifest.json'), 'utf8');
+    const manifest = JSON.parse(manifestRaw);
+    assert.deepEqual(manifest.__proto__, { pwned: 'si' }, 'la entrada "__proto__" debe conservarse como dato, no perderse');
+    assert.deepEqual(manifest.cover, { file: 'cover.png', hash: 'no-coincide' }, 'las demas entradas no deben verse afectadas');
+  } finally {
+    global.fetch = originalFetch;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('a brief whose photo could not be generated is reported as missing', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'at-render-'));
   const originalFetch = global.fetch;

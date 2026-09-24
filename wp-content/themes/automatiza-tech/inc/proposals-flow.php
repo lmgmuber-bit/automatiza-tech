@@ -28,6 +28,11 @@ function at_propuesta_puede_enviarse(?string $flujo, string $status): bool {
 	return in_array($status, ['lista', 'sent'], true);
 }
 
+/** El envío al cliente ('sent') solo lo hace el panel; la API REST no puede pedirlo. */
+function at_propuesta_estado_permitido_por_api(string $hacia): bool {
+	return $hacia !== 'sent';
+}
+
 /** Precios que Luis escribe en el panel. Sin filas válidas, se conservan las anteriores. */
 function at_propuesta_aplicar_precios(array $payload, array $filas, string $nota): array {
 	$limpias = [];
@@ -48,6 +53,21 @@ function at_propuesta_aplicar_precios(array $payload, array $filas, string $nota
 	}
 	$payload['pricing_note'] = trim($nota);
 	return $payload;
+}
+
+/** No se puede aprobar sin precios reales: sin filas, o con alguna en blanco o "Por confirmar". */
+function at_propuesta_precios_pendientes(array $payload): bool {
+	$filas = $payload['pricing_rows'] ?? [];
+	if (!is_array($filas) || !$filas) {
+		return true;
+	}
+	foreach ($filas as $f) {
+		$precio = strtolower(trim((string) ($f['price_label'] ?? '')));
+		if ($precio === '' || $precio === 'por confirmar') {
+			return true;
+		}
+	}
+	return false;
 }
 
 /** Un payload que llega de n8n nunca cambia precios ni el unique_id de lo guardado. */

@@ -17,11 +17,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proposal_id'])) {
         wp_die('Token de seguridad inválido');
     }
     $id = intval($_POST['proposal_id']);
+    $row_actual = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $id));
+
+    if ($row_actual && function_exists('at_propuesta_puede_enviarse') && !at_propuesta_puede_enviarse($row_actual->flujo, (string) $row_actual->status)) {
+        $message = '<div class="alert alert-danger">Esta propuesta solo se puede enviar cuando esté <strong>lista</strong> (versión final verificada).</div>';
+    } else {
     $client_name = sanitize_text_field($_POST['client_name']);
     $company_name = sanitize_text_field($_POST['company_name']);
     $gamma_url = esc_url_raw($_POST['gamma_url']);
     $n8n_url = esc_url_raw($_POST['n8n_url']);
-    
+
     // Manejo de PDF
     $pdf_path = '';
     if (!empty($_FILES['pdf_file']['name'])) {
@@ -56,11 +61,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proposal_id'])) {
 
     // Obtener datos actualizados para el email
     $proposal = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $id));
-    
+
     // --- ENVIAR EMAIL ---
     $to = $proposal->client_email;
     $subject = "Propuesta de Automatización Inteligente - $company_name";
-    
+
     $link_presentacion = get_site_url() . '/ver-presentacion.php?id=' . $proposal->unique_link_id;
     $link_demo = get_site_url() . '/ver-demo.php?id=' . $proposal->unique_link_id;
 
@@ -87,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proposal_id'])) {
                 <p>Estimado/a <strong>$client_name</strong>,</p>
                 <p>Es un placer presentarle nuestra propuesta de automatización diseñada específicamente para <strong>$company_name</strong>.</p>
                 <p>Hemos analizado sus requerimientos y preparado una solución que optimizará sus procesos de negocio.</p>
-                
+
                 <div style='text-align: center; margin: 30px 0;'>
                     <a href='$link_presentacion' class='btn'>Ver Presentación Interactiva</a>
                     <br><br>
@@ -95,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proposal_id'])) {
                 </div>
 
                 <p>Adjunto encontrará también una copia en PDF de la presentación para su archivo.</p>
-                
+
                 <p>Quedamos atentos a sus comentarios.</p>
                 <p>Atentamente,<br>El equipo de Automatiza Tech</p>
             </div>
@@ -119,6 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proposal_id'])) {
         $message = '<div class="alert alert-success">Propuesta actualizada y correo enviado a ' . $to . '</div>';
     } else {
         $message = '<div class="alert alert-warning">Propuesta guardada, pero falló el envío del correo. Revise la configuración SMTP.</div>';
+    }
     }
 }
 

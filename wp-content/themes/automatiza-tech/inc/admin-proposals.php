@@ -87,34 +87,49 @@ function automatiza_tech_proposals_page() {
         }
     }
 
-    // --- PROCESAR BOTONES DEL PANEL v3 (pedir cambios / aprobar) ---
+    // --- PROCESAR BOTONES DEL PANEL v3 (pedir cambios / aprobar / destrabar) ---
     if (isset($_POST['at_v3_accion'], $_POST['proposal_id']) && current_user_can('manage_options')) {
         $id = (int) $_POST['proposal_id'];
         check_admin_referer('at_v3_' . $id);
         $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $id));
         $accion = sanitize_key($_POST['at_v3_accion']);
-        if ($row && $row->flujo === 'v3' && in_array($accion, ['cambios', 'aprobar'], true)) {
+        if ($row && $row->flujo === 'v3' && $accion === 'destrabar') {
+            if (!at_propuesta_transicion_valida((string) $row->status, 'error')) {
+                $message = '<div class="notice notice-error"><p>No se puede pasar de <strong>' . esc_html($row->status) . '</strong> a <strong>error</strong>.</p></div>';
+            } else {
+                $wpdb->update($table_name, [
+                    'status'      => 'error',
+                    'status_note' => 'Destrabada a mano desde el panel (' . current_time('mysql') . ')',
+                ], ['id' => $id]);
+                $message = '<div class="notice notice-success"><p>Propuesta destrabada: quedó en <strong>error</strong> para poder reintentar.</p></div>';
+            }
+        } elseif ($row && $row->flujo === 'v3' && in_array($accion, ['cambios', 'aprobar'], true)) {
             $payload = json_decode((string) $row->gamma_prompt_text, true) ?: [];
             $filas = isset($_POST['at_precio']) && is_array($_POST['at_precio']) ? wp_unslash($_POST['at_precio']) : [];
             $payload = at_propuesta_aplicar_precios($payload, $filas, sanitize_textarea_field(wp_unslash($_POST['at_nota_precio'] ?? '')));
-            $hacia = $accion === 'cambios' ? 'ajustando' : 'generando';
-            if (!at_propuesta_transicion_valida((string) $row->status, $hacia)) {
-                $message = '<div class="notice notice-error"><p>No se puede pasar de <strong>' . esc_html($row->status) . '</strong> a <strong>' . esc_html($hacia) . '</strong>.</p></div>';
+            if ($accion === 'aprobar' && at_propuesta_precios_pendientes($payload)) {
+                $wpdb->update($table_name, ['gamma_prompt_text' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)], ['id' => $id]);
+                $message = '<div class="notice notice-error"><p>Escribe los precios antes de aprobar.</p></div>';
             } else {
-                $update = ['gamma_prompt_text' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'status' => $hacia, 'status_note' => ''];
-                $comentario = trim(sanitize_textarea_field(wp_unslash($_POST['at_comentario'] ?? '')));
-                if ($accion === 'cambios') {
-                    $update['feedback_log'] = at_propuesta_agregar_comentario($row->feedback_log, $comentario, current_time('mysql'));
-                }
-                $wpdb->update($table_name, $update, ['id' => $id]);
-                $fallo = at_v3_llamar_n8n($accion === 'cambios' ? AT_N8N_V3_CAMBIOS : AT_N8N_V3_FINAL, $id);
-                if ($fallo !== '') {
-                    $wpdb->update($table_name, ['status' => 'error', 'status_note' => 'No se pudo avisar a n8n: ' . $fallo], ['id' => $id]);
-                    $message = '<div class="notice notice-error"><p>' . esc_html('No se pudo avisar a n8n: ' . $fallo) . '</p></div>';
+                $hacia = $accion === 'cambios' ? 'ajustando' : 'generando';
+                if (!at_propuesta_transicion_valida((string) $row->status, $hacia)) {
+                    $message = '<div class="notice notice-error"><p>No se puede pasar de <strong>' . esc_html($row->status) . '</strong> a <strong>' . esc_html($hacia) . '</strong>.</p></div>';
                 } else {
-                    $message = '<div class="notice notice-success"><p>' . ($accion === 'cambios'
-                        ? 'Cambios enviados. Te llegará un correo con la nueva vista previa.'
-                        : 'Aprobada. Se están generando las fotos y la versión final; te llegará un correo cuando esté verificada.') . '</p></div>';
+                    $update = ['gamma_prompt_text' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'status' => $hacia, 'status_note' => ''];
+                    $comentario = trim(sanitize_textarea_field(wp_unslash($_POST['at_comentario'] ?? '')));
+                    if ($accion === 'cambios') {
+                        $update['feedback_log'] = at_propuesta_agregar_comentario($row->feedback_log, $comentario, current_time('mysql'));
+                    }
+                    $wpdb->update($table_name, $update, ['id' => $id]);
+                    $fallo = at_v3_llamar_n8n($accion === 'cambios' ? AT_N8N_V3_CAMBIOS : AT_N8N_V3_FINAL, $id);
+                    if ($fallo !== '') {
+                        $wpdb->update($table_name, ['status' => 'error', 'status_note' => 'No se pudo avisar a n8n: ' . $fallo], ['id' => $id]);
+                        $message = '<div class="notice notice-error"><p>' . esc_html('No se pudo avisar a n8n: ' . $fallo) . '</p></div>';
+                    } else {
+                        $message = '<div class="notice notice-success"><p>' . ($accion === 'cambios'
+                            ? 'Cambios enviados. Te llegará un correo con la nueva vista previa.'
+                            : 'Aprobada. Se están generando las fotos y la versión final; te llegará un correo cuando esté verificada.') . '</p></div>';
+                    }
                 }
             }
         }
@@ -187,8 +202,13 @@ function automatiza_tech_proposals_page() {
             'client_email' => $client_email,
             'gamma_iframe_url' => $gamma_url,
             'n8n_chat_url' => $n8n_url,
-            'status' => $send_email ? 'sent' : ($es_v3 ? $actual->status : 'pending')
         ];
+        // v3: el guardado normal no debe reescribir el estado del flujo; solo lo toca al enviar.
+        if ($send_email) {
+            $update_data['status'] = 'sent';
+        } elseif (!$es_v3) {
+            $update_data['status'] = 'pending';
+        }
         // Solo actualizar prompts si se enviaron (no vacíos). En v3 el payload lo maneja
         // el flujo (n8n / botones de Revisión); el guardado normal no debe pisarlo.
         if (!empty($gamma_prompt) && !$es_v3) {
@@ -735,6 +755,7 @@ function automatiza_tech_proposals_page() {
                             </div>
 
                             <form method="POST" enctype="multipart/form-data">
+                                <button type="submit" style="display:none" tabindex="-1" aria-hidden="true"></button>
                                 <?php wp_nonce_field('save_proposal', 'automatiza_proposal_nonce'); ?>
                                 <input type="hidden" name="proposal_id" value="<?php echo $edit_proposal->id; ?>">
                                 
@@ -879,6 +900,11 @@ function automatiza_tech_proposals_page() {
                                     <button type="submit" name="at_v3_accion" value="aprobar" class="button button-primary"
                                       onclick="return confirm('Se generarán <?php echo (int) $costo['fotos']; ?> fotos (≈ US$<?php echo esc_js(number_format($costo['usd_lista'], 4, ',', '.')); ?> de lista) y la versión final. ¿Aprobar?');">
                                       ✅ Aprobar y generar versión final (<?php echo (int) $costo['fotos']; ?> fotos ≈ US$<?php echo esc_html(number_format($costo['usd_lista'], 4, ',', '.')); ?>)</button>
+                                    <?php if (in_array($edit_proposal->status, ['ajustando', 'generando'], true)): ?>
+                                    <button type="submit" name="at_v3_accion" value="destrabar" class="button"
+                                      onclick="return confirm('¿Destrabar esta propuesta? Va a quedar en estado «error» para poder reintentar. No se llama a n8n ni se tocan precios.');">
+                                      🔓 Destrabar (pasar a error)</button>
+                                    <?php endif; ?>
                                   </p>
                                 </div>
                                 <?php endif; ?>
@@ -886,8 +912,12 @@ function automatiza_tech_proposals_page() {
                                 <!-- CHECKBOX PARA ENVIAR CORREO -->
                                 <div class="checkbox-section">
                                     <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 15px;">
-                                        <?php $puede = at_propuesta_puede_enviarse($edit_proposal->flujo ?? null, (string) $edit_proposal->status); ?>
-                                        <input type="checkbox" name="send_email" value="1" id="send_email" <?php echo $puede ? 'checked' : 'disabled'; ?> style="width: 20px; height: 20px;">
+                                        <?php
+                                        $puede = at_propuesta_puede_enviarse($edit_proposal->flujo ?? null, (string) $edit_proposal->status);
+                                        $es_v3_checkbox = ($edit_proposal->flujo ?? '') === 'v3';
+                                        $send_email_attr = !$puede ? 'disabled' : ($es_v3_checkbox ? '' : 'checked');
+                                        ?>
+                                        <input type="checkbox" name="send_email" value="1" id="send_email" <?php echo $send_email_attr; ?> style="width: 20px; height: 20px;">
                                         <span style="color: #065f46; font-weight: 600;">📧 Enviar correo con la propuesta al cliente</span>
                                     </label>
                                     <p style="margin: 8px 0 0 30px; color: #047857; font-size: 13px;">Si desmarcas esta opción, solo se guardarán los datos sin enviar el correo.</p>

@@ -94,15 +94,22 @@ function automatiza_proposals_rest_update(WP_REST_Request $request) {
     $table = $wpdb->prefix . 'automatiza_propuestas';
     $id = (int) $request['id'];
 
-    $exists = $wpdb->get_var($wpdb->prepare(
-        "SELECT id FROM {$table} WHERE id = %d",
+    $row = $wpdb->get_row($wpdb->prepare(
+        "SELECT id, flujo FROM {$table} WHERE id = %d",
         $id
     ));
-    if (!$exists) {
+    if (!$row) {
         return new WP_Error(
             'at_proposal_not_found',
             "No existe la propuesta con id {$id}.",
             ['status' => 404]
+        );
+    }
+    if ($row->flujo === 'v3') {
+        return new WP_Error(
+            'at_v3_usa_estado',
+            'Esta propuesta usa el flujo v3: los prompts se manejan por /proposal/{id}/state, no por este endpoint.',
+            ['status' => 409]
         );
     }
 
@@ -249,6 +256,9 @@ function automatiza_proposals_rest_state_set(WP_REST_Request $request) {
     }
     $p = $request->get_json_params();
     $nuevo = (string) ($p['status'] ?? '');
+    if (!at_propuesta_estado_permitido_por_api($nuevo)) {
+        return new WP_Error('at_envio_solo_panel', 'El envío al cliente (sent) solo se hace desde el panel.', ['status' => 409]);
+    }
     if (!at_propuesta_transicion_valida((string) $row->status, $nuevo)) {
         return new WP_Error('at_transicion', "Transición no permitida: {$row->status} → {$nuevo}", ['status' => 409]);
     }

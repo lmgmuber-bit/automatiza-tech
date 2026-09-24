@@ -20,6 +20,11 @@ ok(at_propuesta_puede_enviarse('', 'draft'), 'flujo vacío = vieja');
 ok(!at_propuesta_puede_enviarse('v3', 'borrador'), 'v3 en borrador no se envía');
 ok(at_propuesta_puede_enviarse('v3', 'lista'), 'v3 lista se envía');
 
+// La API REST no puede mandar 'sent'; eso lo hace solo el panel
+ok(!at_propuesta_estado_permitido_por_api('sent'), 'la API no puede pedir sent');
+ok(at_propuesta_estado_permitido_por_api('lista'), 'la API sí puede pedir lista');
+ok(at_propuesta_estado_permitido_por_api('ajustando'), 'la API sí puede pedir ajustando');
+
 // Precios desde el panel
 $p = ['pricing_rows' => [['service' => 'X', 'price_usd' => 0, 'price_label' => 'Por confirmar']], 'pricing_note' => ''];
 $p2 = at_propuesta_aplicar_precios($p, [
@@ -32,6 +37,18 @@ ok($p2['pricing_rows'][0] === ['service' => 'Fase 1', 'price_usd' => 0, 'price_l
 ok(($p2['pricing_rows'][1]['emphasis'] ?? false) === true, 'fila destacada');
 ok($p2['pricing_note'] === 'Valores en pesos.', 'nota recortada');
 ok(at_propuesta_aplicar_precios($p, [], 'n')['pricing_rows'] === $p['pricing_rows'], 'sin filas se conservan las anteriores');
+
+// No se aprueba con precios pendientes
+ok(at_propuesta_precios_pendientes([]), 'sin pricing_rows, precios pendientes');
+ok(at_propuesta_precios_pendientes(['pricing_rows' => []]), 'pricing_rows vacío, precios pendientes');
+ok(at_propuesta_precios_pendientes(['pricing_rows' => [['service' => 'X', 'price_label' => '']]]), 'price_label vacío, pendiente');
+ok(at_propuesta_precios_pendientes(['pricing_rows' => [['service' => 'X', 'price_label' => 'Por confirmar']]]), '"Por confirmar" literal, pendiente');
+ok(at_propuesta_precios_pendientes(['pricing_rows' => [['service' => 'X', 'price_label' => ' por CONFIRMAR ']]]), '"Por confirmar" sin mayúsculas ni espacios, pendiente');
+ok(!at_propuesta_precios_pendientes(['pricing_rows' => [['service' => 'X', 'price_label' => '$250.000 en 2 pagos']]]), 'precio real escrito, no pendiente');
+ok(at_propuesta_precios_pendientes(['pricing_rows' => [
+    ['service' => 'X', 'price_label' => '$250.000'],
+    ['service' => 'Y', 'price_label' => ''],
+]]), 'una sola fila sin precio entre varias también bloquea');
 
 // Nadie más cambia precios
 $guardado = ['unique_id' => 'abc', 'pricing_rows' => [['service' => 'A', 'price_usd' => 0, 'price_label' => '$1']], 'pricing_note' => 'n', 'challenge_text' => 'viejo'];

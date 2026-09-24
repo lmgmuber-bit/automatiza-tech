@@ -242,6 +242,7 @@ function admin_nav(string $activa = 'fiestas'): string
         $tabs[] = ['comprobante', 'comprobante.php', $icono('copy') . ' Comprobante'];
         $tabs[] = ['planes', 'planes.php', $icono('copy') . ' Planes'];
         $tabs[] = ['finanzas', 'finanzas.php', $icono('chart') . ' Finanzas'];
+        $tabs[] = ['marketing', 'contenido.php', 'Contenido'];
         $tabs[] = ['ajustes', 'ajustes.php', $icono('copy') . ' Ajustes'];
         $tabs[] = ['usuarios', 'usuarios.php', $icono('party') . ' Usuarios'];
     } elseif (in_array('mensajes', $u['modulos'], true) && $u['fiestas']) {

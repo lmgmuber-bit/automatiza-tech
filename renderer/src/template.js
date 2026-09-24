@@ -224,6 +224,9 @@ const STYLE = `
     border-radius: 999px; padding: 18px 32px; }
   .pdf-button svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
   .pdf-button:hover { background: #33e3ce; }
+  .at-draft-badge { position: fixed; top: 18px; right: 18px; z-index: 50; background: #f59e0b; color: #1f1300;
+    font: 700 15px/1 system-ui, sans-serif; padding: 10px 16px; border-radius: 999px; letter-spacing: .02em; }
+  body.is-draft .pdf-button { display: none !important; }
 
   @media screen {
     .deck { display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 28px 0 110px; }
@@ -651,7 +654,8 @@ function renderProposalHtml(data, images = {}) {
 ${preloadLinks}
 <style>${STYLE}</style>
 </head>
-<body>
+<body${data.draft ? ' class="is-draft"' : ''}>
+${data.draft ? '<div class="at-draft-badge">Borrador · vista previa sin fotos</div>' : ''}
 <div class="deck">
 ${slides.join('\n')}
 </div>

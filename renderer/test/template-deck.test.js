@@ -250,3 +250,15 @@ test('no preload links when the proposal has no photos', () => {
   const html = renderProposalHtml(DATA, {});
   assert.ok(!html.includes('rel="preload"'));
 });
+
+test('draft previews carry a visible badge and hide the PDF button', () => {
+  const html = renderProposalHtml({ ...DATA, draft: true });
+  assert.ok(html.includes('class="at-draft-badge"'));
+  assert.ok(html.includes('Borrador · vista previa sin fotos'));
+  assert.ok(html.includes('body.is-draft .pdf-button'));
+});
+
+test('final proposals have no draft badge', () => {
+  const html = renderProposalHtml(DATA);
+  assert.ok(!html.includes('class="at-draft-badge"'));
+});

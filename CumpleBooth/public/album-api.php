@@ -28,6 +28,40 @@ function cb_album_api_fail(int $status, string $error, array $extra = []): void
     exit;
 }
 
+/**
+ * Datos de contacto de CumpleClick para el pie de la revista y del cartel QR.
+ *
+ * Viven en data/marca.json y no en el codigo del frontend a proposito: el
+ * hosting no tiene build, asi que si estuvieran compilados dentro del bundle
+ * habria que rehacer el build y volver a subir assets cada vez que cambie un
+ * telefono. Asi se edita un JSON por FTP (o desde admin/marca.php) y el cambio
+ * se ve al recargar.
+ *
+ * Solo se publican campos no vacios. Si el archivo no existe o esta roto se
+ * devuelve null y quien llama cae a su cierre de siempre: ni la revista ni el
+ * cartel se rompen por un JSON mal editado.
+ */
+function cb_album_marca(): ?array
+{
+    $path = __DIR__ . '/data/marca.json';
+    if (!is_file($path)) {
+        return null;
+    }
+    $crudo = json_decode((string) @file_get_contents($path), true);
+    if (!is_array($crudo)) {
+        return null;
+    }
+    $campos = ['nombre', 'lema', 'invitacion', 'web', 'web_url',
+               'instagram', 'instagram_url', 'whatsapp', 'whatsapp_url',
+               'correo', 'correo_url'];
+    $limpio = [];
+    foreach ($campos as $campo) {
+        $valor = isset($crudo[$campo]) ? trim((string) $crudo[$campo]) : '';
+        if ($valor !== '') { $limpio[$campo] = $valor; }
+    }
+    return $limpio === [] ? null : $limpio;
+}
+
 $token = (string) ($_REQUEST['t'] ?? '');
 if (!preg_match('/^[a-f0-9]{32}$/', $token)) {
     cb_album_api_fail(400, 'bad_link');
@@ -66,8 +100,12 @@ if ($signMode) {
         'date' => (string) ($signParty['fecha'] ?? ''),
         'message' => $signMessage,
         'uploadUrl' => cb_album_intake_url($token),
-        'theme' => cb_album_api_theme((string) ($signParty['tema'] ?? '')),
+        'theme' => cb_album_api_theme((string) ($signParty['tema'] ?? ''), (string) ($signParty['public_slug'] ?? '')),
         'open' => cb_album_intake_open($signAlbum, $signParty),
+        // El cartel se imprime y queda sobre la mesa toda la fiesta: es el
+        // lugar donde mas gente ve la marca. Lleva el mismo pie que el cierre
+        // de la revista, de la misma fuente.
+        'marca' => cb_album_marca(),
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -114,22 +152,47 @@ if (!$authenticated) {
         'ok' => false,
         'error' => 'pin_required',
         'eventName' => (string) ($party['nombre'] ?? ''),
-        'theme' => cb_album_api_theme((string) ($party['tema'] ?? '')),
+        'eventType' => (string) ($party['event_type'] ?? 'child_birthday'),
+        'theme' => cb_album_api_theme((string) ($party['tema'] ?? ''), (string) ($party['public_slug'] ?? '')),
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 // ── Datos ───────────────────────────────────────────────────────────────────
-/** Paleta y assets de la temática, tal cual los declara el catálogo. */
-function cb_album_api_theme(string $themeSlug): array
+/**
+ * Paleta y assets de la temática, tal cual los declara el catálogo.
+ *
+ * `musica` es la pista de fondo del álbum en línea (`musica-album.mp3` en la
+ * carpeta de la temática): solo se publica si el archivo existe, así una
+ * temática sin música no cambia nada en la revista.
+ *
+ * Una fiesta puede traer su propia pista: `themes/<tema>/musica-album-<slug>.mp3`
+ * (el slug público de la fiesta) le gana a la de la temática. Nació el 2026-09-21
+ * porque los papás de Luciano querían su canción en el álbum y la música de la
+ * temática es de todas las fiestas de esa temática. Esos archivos por fiesta no
+ * se versionan (canciones con derechos): viven solo en el servidor.
+ */
+function cb_album_api_theme(string $themeSlug, string $partySlug = ''): array
 {
     $themes = cb_load_themes()['themes'] ?? [];
     $theme = is_array($themes[$themeSlug] ?? null) ? $themes[$themeSlug] : [];
     $assets = [];
-    foreach (['banner' => 'fondo-banner.jpg', 'sala' => 'fondo-sala.jpg', 'grupo' => 'grupo-personajes.png'] as $key => $file) {
+    $files = [
+        'banner' => 'fondo-banner.jpg',
+        'sala' => 'fondo-sala.jpg',
+        'grupo' => 'grupo-personajes.png',
+        'musica' => 'musica-album.mp3',
+    ];
+    foreach ($files as $key => $file) {
         $rel = 'themes/' . $themeSlug . '/' . $file;
         if ($themeSlug !== '' && is_file(__DIR__ . '/' . $rel)) {
             $assets[$key] = $rel;
+        }
+    }
+    if ($themeSlug !== '' && $partySlug !== '' && preg_match('/^[a-z0-9-]{1,80}$/', $partySlug)) {
+        $propia = 'themes/' . $themeSlug . '/musica-album-' . $partySlug . '.mp3';
+        if (is_file(__DIR__ . '/' . $propia)) {
+            $assets['musica'] = $propia;
         }
     }
     return [
@@ -150,7 +213,11 @@ foreach (cb_album_list_media((int) $album['id'], ['approved']) as $row) {
             continue; // foto de cabina sin token utilizable: se omite en silencio
         }
         $url = 'ver.php?t=' . rawurlencode($photoToken) . '&download=inline';
-        $thumb = $url; // la cabina no genera miniatura; el original ya es JPEG/PNG del kiosco
+        // La miniatura la genera ver.php al vuelo y la cachea junto al
+        // original. El supuesto anterior ("el original ya es liviano") era
+        // falso: las composiciones del kiosco pesan 2-3MB y un álbum con 9
+        // fotos de cabina cargaba más de 20MB.
+        $thumb = $url . '&v=thumb';
         $poster = null;
     } else {
         $accessToken = (string) ($row['access_token'] ?? '');
@@ -180,6 +247,9 @@ foreach (cb_album_list_media((int) $album['id'], ['approved']) as $row) {
 }
 
 $eventName = (string) ($party['nombre'] ?? '');
+
+$marca = cb_album_marca();
+
 echo json_encode([
     'ok' => true,
     'album' => [
@@ -193,7 +263,11 @@ echo json_encode([
     'event' => [
         'name' => $eventName,
         'date' => (string) ($party['fecha'] ?? ''),
+        // Sin esto el álbum no puede saber que es un baby shower y le dice
+        // "fiesta" en el cierre, en el título y en los estados vacíos.
+        'type' => (string) ($party['event_type'] ?? 'child_birthday'),
     ],
-    'theme' => cb_album_api_theme((string) ($party['tema'] ?? '')),
+    'theme' => cb_album_api_theme((string) ($party['tema'] ?? ''), (string) ($party['public_slug'] ?? '')),
+    'marca' => $marca,
     'media' => $media,
 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

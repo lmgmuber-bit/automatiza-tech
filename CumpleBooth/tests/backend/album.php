@@ -23,6 +23,11 @@ putenv('CC_PHOTO_DIR=' . $tmp . '/photos');
 putenv('CC_STATE_DIR=' . $tmp . '/state');
 putenv('CC_INVITATION_DIR=' . $tmp . '/invitations');
 require dirname(__DIR__, 2) . '/public/lib.php';
+// El esquema completo, siempre al día. Antes cada prueba listaba las migraciones a mano y
+// esa lista se quedaba atrás con cada migración nueva.
+require_once __DIR__ . '/_migraciones.php';
+cb_test_migrar_todo(cb_pdo());
+
 
 $tests = 0;
 function album_check(bool $condition, string $message): void
@@ -36,7 +41,8 @@ $root = dirname(__DIR__, 2);
 foreach ([
     '001_initial', '002_theme_prompts', '003_invitations_and_plan',
     '004_gate_a_corrections', '005_theme_prompt_history', '006_public_leads',
-    '007_event_album',
+    '007_event_album', '008_event_profiles', '009_invitation_gender',
+    '010_baby_shower_predictions',
 ] as $version) {
     $migration = require $root . '/database/migrations/' . $version . '.php';
     $migration(cb_pdo());
@@ -117,8 +123,35 @@ album_check(cb_album_resolve_token($live, 'intake') !== null, 'un token vigente 
 album_check(cb_album_active_token_info($albumId, 'intake') !== null, 'el admin puede ver la vigencia sin el token en claro');
 cb_album_revoke_tokens($albumId, 'intake');
 album_check(cb_album_resolve_token($live, 'intake') === null, 'revocar cierra el acceso de inmediato');
+
+// ── Vencimiento del enlace de aportes ───────────────────────────────────────
+// El caso de Luciano (20-sep): fiesta hace ocho días, recepción ampliada, y
+// cada enlace nuevo nacía vencido porque solo se miraba la fecha de la fiesta.
+$hoy = time();
+$fiestaVieja = ['fecha' => gmdate('Y-m-d', $hoy - 8 * 86400)];
 album_check(
-    (int) cb_pdo()->query("SELECT COUNT(*) FROM cc_event_album_tokens WHERE album_id=$albumId")->fetchColumn() === 4,
+    cb_album_intake_token_expiry(['intake_closes_at' => null], $fiestaVieja, $hoy) === gmdate('Y-m-d H:i:s', $hoy + 7 * 86400),
+    'un enlace generado después de la fiesta sirve al menos una semana desde hoy'
+);
+$cierreLejano = gmdate('Y-m-d', $hoy + 20 * 86400) . ' 23:59:59';
+album_check(
+    cb_album_intake_token_expiry(['intake_closes_at' => $cierreLejano], $fiestaVieja, $hoy) === $cierreLejano,
+    'si la recepción se amplió, el enlace vence con ella'
+);
+$fiestaFutura = ['fecha' => gmdate('Y-m-d', $hoy + 30 * 86400)];
+album_check(
+    cb_album_intake_token_expiry([], $fiestaFutura, $hoy) === gmdate('Y-m-d H:i:s', strtotime($fiestaFutura['fecha']) + 7 * 86400),
+    'antes de la fiesta sigue mandando la fecha de la fiesta más los días por defecto'
+);
+$corto = cb_album_issue_token($albumId, 'intake', gmdate('Y-m-d H:i:s', $hoy + 60), 'test');
+album_check(cb_album_extend_intake_tokens($albumId, gmdate('Y-m-d H:i:s', $hoy + 3600)) === 1, 'ampliar el cierre extiende el enlace activo que vencía antes');
+album_check(cb_album_extend_intake_tokens($albumId, gmdate('Y-m-d H:i:s', $hoy + 1800)) === 0, 'no acorta un enlace que ya vence después');
+album_check((string) cb_album_active_token_info($albumId, 'intake')['expires_at'] === gmdate('Y-m-d H:i:s', $hoy + 3600), 'la vigencia nueva queda guardada');
+album_check(cb_album_resolve_token($corto, 'intake') !== null, 'el enlace extendido sigue abriendo');
+cb_album_revoke_tokens($albumId, 'intake');
+album_check(
+    // Cinco: los cuatro de arriba más el enlace corto de la prueba de extensión.
+    (int) cb_pdo()->query("SELECT COUNT(*) FROM cc_event_album_tokens WHERE album_id=$albumId")->fetchColumn() === 5,
     'revocar conserva el histórico de tokens emitidos'
 );
 
@@ -216,6 +249,13 @@ album_check($removed['storage_key'] === $guestKey, 'eliminar conserva la referen
 album_check(count(cb_album_list_media($albumId)) === 1, 'lo eliminado sale del listado por defecto');
 album_check(cb_album_usage($albumId)['count'] === 0, 'lo eliminado sí libera cuota, porque la retención lo purgará');
 album_check(cb_album_set_moderation($albumId, $guestId, 'approved', 'test'), 'restaurar funciona');
+
+// Varios de una: el id ajeno o inexistente no cuenta, el repetido cuenta una vez.
+album_check(cb_album_set_moderation_many($albumId, [$guestId, $guestId, 999999], 'hidden', 'test') === 1, 'moderar varios cuenta solo los que cambió');
+album_check(cb_album_find_media($albumId, $guestId)['moderation_status'] === 'hidden', 'moderar varios aplica el estado');
+album_check(cb_album_set_moderation_many($albumId, [$guestId], 'inventado', 'test') === 0, 'moderar varios rechaza un estado desconocido');
+album_check(cb_album_set_moderation_many($albumId, [], 'approved', 'test') === 0, 'moderar varios sin ids no hace nada');
+album_check(cb_album_set_moderation_many($albumId, [$guestId], 'approved', 'test') === 1, 'moderar varios vuelve a aprobar');
 album_check(count(cb_album_list_media($albumId, ['approved'])) === 2, 'lo restaurado vuelve a aparecer');
 
 // Un id de otro álbum no se puede moderar desde este.
@@ -286,6 +326,11 @@ album_check(strpos(cb_theme_css_vars('hielo'), 'javascript') === false, 'solo se
 // Nada se acepta por su extensión ni por el Content-Type que declaró el
 // navegador: solo por los bytes reales.
 $limits = cb_album_limits();
+// Topes acordados con Luis el 2026-09-15: si alguien los toca sin querer, esto avisa.
+album_check((int) $limits['video_max_bytes'] === 60 * 1024 * 1024, 'un video puede pesar hasta 60 MB');
+album_check((float) $limits['video_max_seconds'] === 60.0, 'un video puede durar hasta 1 minuto');
+album_check((int) $limits['album_max_bytes'] === 5 * 1024 * 1024 * 1024, 'el álbum de una fiesta llega a 5 GB');
+album_check((int) $limits['files_per_submit'] === 10 && (int) $limits['videos_per_submit'] === 2 && (int) $limits['image_max_bytes'] === 12 * 1024 * 1024, 'los demás topes siguen iguales');
 $mkImage = static function (string $format, int $w = 40, int $h = 30) use ($tmp): string {
     $path = $tmp . '/img-' . bin2hex(random_bytes(4)) . '.' . $format;
     $im = imagecreatetruecolor($w, $h);
@@ -345,17 +390,24 @@ album_check(
     'un video sobre el peso máximo se rechaza'
 );
 
-// Video más largo que el tope: se arma uno de 60 s con el mismo generador.
-$mvhdLargo = "\x00\x00\x00\x00" . str_repeat("\x00", 8) . pack('N', 1000) . pack('N', 60000) . str_repeat("\x00", 80);
-$mvhd2 = pack('N', 8 + strlen($mvhdLargo)) . 'mvhd' . $mvhdLargo;
-$moovPayload2 = $mvhd2 . $trak;
-$moov2 = pack('N', 8 + strlen($moovPayload2)) . 'moov' . $moovPayload2;
+// Video más largo que el tope: se arma uno que dura un segundo más que el límite, con el
+// mismo generador. Antes decía 60 s a secas, y cuando el tope subió de 30 s a 60 s el
+// "video largo" dejó de serlo y la prueba se puso en rojo sin que hubiera un bug.
+$mp4DeSegundos = static function (float $segundos) use ($ftyp, $trak): string {
+    $mvhdBody = "\x00\x00\x00\x00" . str_repeat("\x00", 8) . pack('N', 1000) . pack('N', (int) round($segundos * 1000)) . str_repeat("\x00", 80);
+    $mvhd = pack('N', 8 + strlen($mvhdBody)) . 'mvhd' . $mvhdBody;
+    $moovPayload = $mvhd . $trak;
+    return $ftyp . pack('N', 8 + strlen($moovPayload)) . 'moov' . $moovPayload;
+};
 $largo = $tmp . '/largo.mp4';
-file_put_contents($largo, $ftyp . $moov2);
+file_put_contents($largo, $mp4DeSegundos((float) $limits['video_max_seconds'] + 1.0));
 album_check(
     cb_album_validate_upload($largo, 1000, true)['error'] === 'video_too_long',
     'un video más largo que el tope se rechaza'
 );
+$justo = $tmp . '/justo.mp4';
+file_put_contents($justo, $mp4DeSegundos((float) $limits['video_max_seconds']));
+album_check(cb_album_validate_upload($justo, 1000, true)['ok'] === true, 'un video de exactamente el tope pasa');
 
 // Video con resolución sobre el límite: 3840 de ancho.
 $tkhd4kBody = "\x00\x00\x00\x00" . str_repeat("\x00", 72) . pack('N', 3840 << 16) . pack('N', 2160 << 16);

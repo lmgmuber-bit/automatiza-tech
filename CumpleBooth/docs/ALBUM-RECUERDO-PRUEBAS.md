@@ -197,3 +197,90 @@ línea:
 Los 3 GB por álbum es el número que necesito revisar contigo: multiplicado por
 varias fiestas puede llenar el Hostinger y afectar el sitio de AutomatizaTech.
 Dime cuánto espacio real tienes y lo ajusto.
+
+---
+
+# Rediseño de la revista y bugs encontrados (2026-08-25)
+
+Estado: **hecho en local, sin deploy.** Rama `claude/invitacion-url-plan-y-3-temas`.
+
+## Los dos bugs
+
+Ninguno daba error. Los dos se veían como decisiones de diseño feas.
+
+**1. La página de nota salía vacía.** `pages.js` mandaba a diseño de
+dedicatoria cualquier recuerdo con **mensaje o autor**. Como el formulario del
+invitado pide el nombre y deja el mensaje opcional, la mayoría de las fotos
+caían ahí: la revista armaba una cita con su comilla, su firma abajo y un hueco
+enorme en el medio donde no había nada escrito. Ahora sólo el **mensaje** hace
+página de nota; sin mensaje la foto sigue el flujo normal y el nombre aparece
+como crédito al pie.
+
+**2. El precheck del seed pedía recortes de Reino de Hielo para cualquier
+tema.** `_at-seed-cita-completa.php` exigía `elsa-cut.png`, `anna-cut.png`, etc.
+aun cuando había una carpeta `_fotos-demo` con fotos reales, que es justo el
+caso en que esos recortes no se usan. Resultado: el script no podía armar una
+fiesta de ningún tema que no fuera hielo. Ahora la guía del tema sólo se exige
+cuando de verdad hay que componer con GD.
+
+## Qué cambió visualmente
+
+El álbum se veía igual en todas las temáticas: `--paper` era una crema fija
+(`#fffdf8`), así que la temática vivía sólo dentro de las fotos y el resto de la
+revista no se enteraba. Ahora:
+
+| Elemento | Antes | Ahora |
+|---|---|---|
+| Papel | crema fija para todos los temas | derivado de `bgLight1` del tema |
+| Fondo de hoja | plano | confeti impreso en dos colores del tema, más un tinte suave arriba |
+| Canto de página | nada | franja superior en el acento del tema, más filete alrededor |
+| Marco de foto | `box-shadow` interior que la foto tapaba, o sea invisible | passe-partout blanco real (`border`) + aro del tema + sombra teñida |
+| Composición | rectángulos iguales, todos derechos | fotos inclinadas alternando lado, foto sola a sangre en páginas impares, dúo asimétrico, mosaico desalineado |
+| Dedicatoria | serif de sistema, raya larga antes del nombre | manuscrita Caveat, cinta washi en el color del tema, firma con guión como elemento |
+| Entrada | nada | foto que se acerca, tarjeta y texto que suben, escalonados; todo detrás de `prefers-reduced-motion` |
+
+El passe-partout es el caso que vale contar: estaba escrito como
+`box-shadow: inset 0 0 0 0.9cqw #fff`, y un `box-shadow` interior se pinta
+**debajo del contenido**. La foto lo tapaba entero. El marco blanco llevaba
+tiempo en el CSS sin verse nunca.
+
+## Video en la revista
+
+La página de video existía en el código desde el principio pero no había ningún
+video con qué verla. El seed ahora acepta un `_video-demo.mp4` al lado del
+script y le arma su página, con insignia y pie de autor.
+
+El póster (el primer cuadro que se ve antes de apretar play) sale de un
+`_video-demo.jpg` hermano. Se intentó primero con ffmpeg y **no sirve**: PHP
+bajo Apache no lo encuentra en el PATH, y en hosting compartido muchas veces
+`exec()` viene deshabilitado. O sea que justo en producción no habría póster.
+El archivo hermano es el camino confiable; ffmpeg quedó de respaldo.
+
+## Mensajes del seed
+
+Estaban escritos para una niña llamada Isidora: "reina del hielo", "Perdón,
+prima", "Mi niña querida". Al correr el script con otro tema y otro
+protagonista la revista felicitaba a alguien que no era. Ahora son neutros en
+género y toman `$NOMBRE`.
+
+## Cómo se probó
+
+Dos fiestas completas en una instancia local aparte
+(`C:\wamp64\www\cumpleclick-local`, storage privado fuera del webroot):
+
+- **Reino de Hielo**, 9 fotos + 1 video, 5 con mensaje.
+- **Carreras**, 9 fotos, 5 con mensaje.
+
+Medido con Chromium en 1280x860 y 390x844, en revista y en lista:
+0 imágenes rotas, 0 errores de consola, sin desborde horizontal, Caveat
+cargando, y el papel devolviendo `srgb(0.95 0.98 1.0)` en hielo contra
+`srgb(1 0.98 0.93)` en carreras — o sea que el tema sí llega al papel.
+
+Las fotos de las dos demos se generaron con Higgsfield (`soul_2`, 3:4) y el
+video con `kling3_0_turbo`. Viven en `storage/fotos-demo-hielo/` y
+`storage/fotos-demo-carreras/`, fuera de git.
+
+## Lo que sigue sin probarse
+
+Lo mismo de la lista de arriba: el arrastre con el dedo en un teléfono de
+verdad y el cartel impreso en papel.

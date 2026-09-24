@@ -17,6 +17,9 @@ WordPress.
 - MySQL 8+ o compatible, InnoDB y `utf8mb4`.
 - Node.js + npm solo para compilar el frontend.
 - Apache con `mod_rewrite` y `mod_headers`; HTTPS obligatorio en producción.
+- Producción: `https://cumpleclick.com/app/` (kiosco = `dist/`); pre-producción `https://automatizatech.cl/cumpleclick/`.
+  Estado y procedimiento de subida en `docs/FTP-MANIFEST.md` y `docs/DEPLOY.md`. El juego 3D "Tu Cumple en 3D" vive en
+  `app/juego/` (repo aparte `C:\wamp64\www\tucumple-repo`) y se abre desde el botón "Aventura 3D" de la bienvenida.
 
 ## Desarrollo local
 
@@ -52,10 +55,16 @@ falla de forma cerrada.
 - `public/`: PHP, catálogo `themes.json` y assets versionados.
 - MySQL: estado mutable (`cc_parties`, `cc_guests`, `cc_photos`,
   `cc_rate_limits`, `cc_theme_prompts`, `cc_leads`,
-  `cc_schema_migrations`).
+  `cc_schema_migrations`, `cc_salas`, `cc_sala_ayudantes`,
+  `cc_sala_acciones`).
 - `dist/`: artefacto generado; nunca editarlo a mano.
 - `docs/CUMPLECLICK-HANDOFF-CODEX.md`: continuidad y regla obligatoria de
   camuflaje para cualquier prompt futuro de imágenes.
+- `public/sala.php` + `public/lib.sala.php`: API de salas de ayudantes del
+  juego 3D (fase 3), migración `014_salas_ayudantes`; contrato en el repo
+  del juego (`app/design/sala-api.md`). `op=fotos` entrega al juego las
+  últimas fotos de la fiesta con el PIN de la galería (fase 4); el juego
+  sube sus recuerdos por `upload.php` como cualquier foto de cabina.
 
 La cámara confirma fotogramas reales antes de habilitar la captura y ofrece un
 selector si Chrome detecta más de un dispositivo. En Admin → Temáticas, cada card

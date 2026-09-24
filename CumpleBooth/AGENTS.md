@@ -48,6 +48,13 @@ continue instead of starting blind.
   copied.
 - Public identity/path: CumpleClick by AutomatizaTech, `/cumpleclick/`;
   technical project name remains CumpleBooth.
+- Marketing video ads (main ad + 4 per-theme videos, 2026-08-05) are **not**
+  part of this repo — they live in a Claude Code session's temp scratchpad, not
+  committed and not deployed. If Luis asks to continue/adjust them, read
+  `docs/OPENCODE-HANDOFF-VIDEOS-PROMOCIONALES-2026-08-05.md` first — it has the
+  exact paths, scripts, timestamps and rules (ElevenLabs key handling, copyright
+  risk already accepted for WhatsApp-only distribution) needed to continue
+  without redoing work or re-litigating decisions already made with Luis.
 - PHP 8.0+ (baseline 8.2), MySQL/InnoDB/utf8mb4 and an independent database.
 - `public/` and `src/` are source; `dist/` is generated once after integration.
 - Never version or deploy real config, passwords, HMAC keys, backups or photos.
@@ -57,3 +64,27 @@ continue instead of starting blind.
   character or franchise. Ask Luis before spending a generation if uncertain.
 - Run frontend/backend tests, build, dist parity and Chrome QA proportionally.
 - Do not deploy, merge or upload to PROD without Luis's approval.
+
+## Deploy: git y FTP son dos acciones, no una (added 2026-08-31)
+
+Read `docs/DEPLOY.md`, first section, BEFORE shipping anything.
+
+Merging to `main` does NOT publish. The site is served from `public_html` on
+Hostinger, filled over FTP; git keeps history, FTP publishes. Something being on
+`main` does not mean it is on cumpleclick.com, nor the other way round.
+
+The loop: branch off `main` -> commit with tests green -> **upload over FTP and
+verify the CONTENT, not the HTTP status** -> PR to `main` -> occasionally a
+`prod-sync-YYYY-MM-DD` snapshot branch.
+
+Deploy and verify BEFORE merging. If production breaks, the branch is still
+separate and fixing it does not dirty `main`.
+
+Until 2026-08-31 production ran ahead of git for months. That is closed now
+(PR #12, `prod-sync-2026-08-31`); do not reopen it by uploading without
+committing.
+
+Note: GitHub Actions —secret scanning included— is not running (billing). Four
+red checks on a PR may mean the jobs never started, not that the code is wrong;
+open the log. The repo is PUBLIC, so scan diffs for credentials by CONTENT, not
+by filename, until CI is back.

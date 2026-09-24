@@ -1,0 +1,70 @@
+{
+  "_LEEME": "Catálogo de planes de CumpleClick. Es la ÚNICA fuente de los precios: de aquí los lee el sitio público y de aquí se toma el precio al cargar una fiesta en el admin. Se edita desde el admin, en la pantalla Planes. Los precios van en pesos enteros, sin puntos. El precio que se muestra se calcula: precio_normal menos el porcentaje de la promoción, así no pueden quedar dos números que no cuadren.",
+  "promo": {
+    "activa": true,
+    "texto": "Precios de lanzamiento",
+    "porcentaje": 50
+  },
+  "tematica_a_medida": 25000,
+  "planes": [
+    {
+      "slug": "magico",
+      "nombre": "Plan Mágico",
+      "precio_normal": 69990,
+      "destacado": false,
+      "etiqueta": "",
+      "clase": "",
+      "badge_clase": "",
+      "emoji": "🎈",
+      "incluye": [
+        "1 temática a elección",
+        "3 juegos de la temática elegida",
+        "Hasta 200 fotos por fiesta",
+        "Diplomas personalizados",
+        "Invitación digital para compartir por WhatsApp",
+        "Álbum Recuerdo con las fotos de todos",
+        "Descarga inmediata por QR"
+      ]
+    },
+    {
+      "slug": "premium",
+      "nombre": "Plan Premium",
+      "precio_normal": 99990,
+      "destacado": true,
+      "etiqueta": "Más elegido",
+      "clase": "",
+      "badge_clase": "",
+      "emoji": "🎉",
+      "incluye": [
+        "1 temática a elección",
+        "Los 4 juegos, incluido El Show 3D",
+        "Foto impresa con imán para el refri: una por invitado (hasta 25)",
+        "Hasta 200 fotos por fiesta",
+        "Diplomas personalizados",
+        "Invitación automática: se reproduce sola, con videos y narración",
+        "Álbum Recuerdo con las fotos de todos",
+        "Galería privada para papás",
+        "2 horas de servicio"
+      ]
+    },
+    {
+      "slug": "baby",
+      "nombre": "Plan Baby Shower",
+      "precio_normal": 59990,
+      "destacado": false,
+      "etiqueta": "Baby shower",
+      "clase": "plan--baby",
+      "badge_clase": "plan__badge--baby",
+      "emoji": "🍼",
+      "incluye": [
+        "1 temática a elección: Nubes, Rosas o Safari",
+        "Las apuestas de cada invitado, impresas en su foto",
+        "Tablero privado con todas, para abrir después",
+        "Hasta 200 fotos por evento",
+        "Invitación digital con cuenta regresiva y lista de regalos",
+        "Álbum Recuerdo con las fotos de todos",
+        "Descarga inmediata por QR"
+      ]
+    }
+  ]
+}

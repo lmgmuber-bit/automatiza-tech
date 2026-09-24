@@ -47,13 +47,20 @@ return static function (PDO $pdo): void {
         }
     };
 
-    // Renombrar y agregar columnas en cc_parties
-    if ($mysql) {
-        $pdo->exec("ALTER TABLE cc_parties CHANGE slug public_slug VARCHAR(80) NOT NULL");
-        $pdo->exec("ALTER TABLE cc_parties CHANGE name birthday_person_name VARCHAR(255) NOT NULL");
-    } else {
-        $pdo->exec("ALTER TABLE cc_parties RENAME COLUMN slug TO public_slug");
-        $pdo->exec("ALTER TABLE cc_parties RENAME COLUMN name TO birthday_person_name");
+    // Renombrar y agregar columnas en cc_parties.
+    //
+    // Los dos renombres van con guarda, como el resto del archivo: sin ella, aplicar esta
+    // migración dos veces revienta —la columna `slug` ya no existe— y eso impedía que las
+    // pruebas aplicaran el esquema completo de una pasada.
+    if ($hasColumn($pdo, 'cc_parties', 'slug')) {
+        $pdo->exec($mysql
+            ? "ALTER TABLE cc_parties CHANGE slug public_slug VARCHAR(80) NOT NULL"
+            : "ALTER TABLE cc_parties RENAME COLUMN slug TO public_slug");
+    }
+    if ($hasColumn($pdo, 'cc_parties', 'name')) {
+        $pdo->exec($mysql
+            ? "ALTER TABLE cc_parties CHANGE name birthday_person_name VARCHAR(255) NOT NULL"
+            : "ALTER TABLE cc_parties RENAME COLUMN name TO birthday_person_name");
     }
     $after = $mysql ? ' AFTER birthday_person_name' : '';
     if (!$hasColumn($pdo, 'cc_parties', 'admin_label')) {

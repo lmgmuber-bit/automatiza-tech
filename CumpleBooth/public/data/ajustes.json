@@ -1,0 +1,5 @@
+{
+    "_LEEME": "Ajustes generales del admin de CumpleClick. Se editan desde el admin, en la pantalla Ajustes. bcc_email recibe copia oculta de TODO correo que sale; recovery_email es a donde se manda el enlace para recuperar la contrasena.",
+    "bcc_email": "lmgm.0303@gmail.com",
+    "recovery_email": "lmgm.0303@gmail.com"
+}

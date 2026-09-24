@@ -454,6 +454,71 @@
         "teaser": "entrada-palacio-hielo-poster.jpg",
         "teaserVideo": "entrada-palacio-hielo.mp4",
         "teaserLabel": "Las hermanas del hielo"
+      },
+      "asomate": {
+        "fondo": "asomate/fondo.jpg",
+        "personajes": {
+          "elsa": {
+            "w": 587,
+            "h": 1211,
+            "arriba": 0,
+            "pies": 1210,
+            "izq": 0,
+            "der": 586,
+            "cx": 323.0,
+            "cy": 189.0,
+            "rx": 67.0,
+            "ry": 118.0
+          },
+          "anna": {
+            "w": 494,
+            "h": 1210,
+            "arriba": 0,
+            "pies": 1209,
+            "izq": 0,
+            "der": 493,
+            "cx": 239.6,
+            "cy": 255.0,
+            "rx": 151.9,
+            "ry": 144.5
+          },
+          "olaf": {
+            "w": 636,
+            "h": 1363,
+            "arriba": 0,
+            "pies": 1362,
+            "izq": 0,
+            "der": 635,
+            "cx": 323.0,
+            "cy": 478.0,
+            "rx": 151.0,
+            "ry": 210.0
+          },
+          "kristoff": {
+            "w": 489,
+            "h": 935,
+            "arriba": 0,
+            "pies": 934,
+            "izq": 0,
+            "der": 488,
+            "cx": 249.2,
+            "cy": 222.6,
+            "rx": 107.3,
+            "ry": 126.1
+          }
+        },
+        "boton": "❄️ Asómate y entra al reino",
+        "titulo": "¿Con quién te quieres asomar?"
+      },
+      "grupal": {
+        "fondo": "fondo-grupal.jpg",
+        "frameBox": {
+          "x": 0.125,
+          "y": 0.3766,
+          "w": 0.7481,
+          "h": 0.2339
+        },
+        "titulo": "La foto de todos"
       }
     },
     "cachorros": {
@@ -1636,6 +1701,423 @@
         "h": 0.24
       },
       "musicaHint": "Pop coreano energético / girl group"
+    },
+    "spidey": {
+      "nombre": "Aventuras Arácnidas",
+      "franquicia": "Spidey y sus Sorprendentes Amigos",
+      "publico": "niño",
+      "diploma": "Héroe Arácnido Oficial",
+      "transition": "none",
+      "colors": {
+        "accent": "#e02525",
+        "accentSoft": "#fde3e0",
+        "yellow": "#ffd21e",
+        "ink": "#1b2447",
+        "bgLight1": "#eaf4ff",
+        "bgLight2": "#cfe8ff",
+        "dark1": "#1367c4",
+        "dark2": "#0b3f8a",
+        "dark3": "#9b59d0"
+      },
+      "confetti": [
+        "#e02525",
+        "#ffd21e",
+        "#1890d8",
+        "#9b59d0",
+        "#ffffff",
+        "#16214a"
+      ],
+      "personajes": [
+        {
+          "emoji": "🕷️",
+          "name": "Spidey",
+          "img": "spidey.jpg",
+          "game": [
+            {
+              "kind": "ritmo",
+              "label": "¡Columpio arácnido!",
+              "image": "fondo-juego-ciudad.jpg",
+              "lanes": 4,
+              "seconds": 15
+            },
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-spidey.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las telarañas!",
+              "emojis": [
+                "🕸️",
+                "🕷️",
+                "⭐",
+                "💥"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "👻",
+          "name": "Ghost-Spider",
+          "img": "ghost-spider.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-ghost-spider.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las telarañas!",
+              "emojis": [
+                "🕸️",
+                "🕷️",
+                "⭐",
+                "💥"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🕸️",
+          "name": "Spin",
+          "img": "spin.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-spin.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las telarañas!",
+              "emojis": [
+                "🕸️",
+                "🕷️",
+                "⭐",
+                "💥"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "💪",
+          "name": "Hulk",
+          "img": "hulk.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-hulk.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las telarañas!",
+              "emojis": [
+                "🕸️",
+                "🕷️",
+                "⭐",
+                "💥"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "✨",
+          "name": "Ms. Marvel",
+          "img": "ms-marvel.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-ms-marvel.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las telarañas!",
+              "emojis": [
+                "🕸️",
+                "🕷️",
+                "⭐",
+                "💥"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🐆",
+          "name": "Pantera Negra",
+          "img": "pantera.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-pantera.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las telarañas!",
+              "emojis": [
+                "🕸️",
+                "🕷️",
+                "⭐",
+                "💥"
+              ],
+              "seconds": 15
+            }
+          ]
+        }
+      ],
+      "photoSession": {
+        "video": "telarana-cobra-vida.mp4",
+        "poster": "telarana-cobra-vida-poster.jpg",
+        "teaser": "trio-teaser.jpg",
+        "characters": [
+          "Spidey",
+          "Ghost-Spider",
+          "Spin"
+        ],
+        "teaserLabel": "El equipo arácnido"
+      },
+      "fullGame": {
+        "kind": "concierto3d",
+        "stage": "comic-city",
+        "label": "¡El Show Arácnido 3D!",
+        "seconds": 24,
+        "image": "fondo-juego-ciudad.jpg"
+      },
+      "videos": {
+        "welcome": "welcome-spidey.mp4",
+        "revelacion": "revelacion-spidey.mp4",
+        "despedida": "despedida-spidey.mp4"
+      },
+      "frameBox": {
+        "x": 0.2799,
+        "y": 0.1653,
+        "w": 0.5111,
+        "h": 0.287
+      },
+      "asomate": {
+        "fondo": "asomate/fondo.jpg",
+        "personajes": {
+          "spidey": {
+            "w": 711,
+            "h": 1762,
+            "arriba": 0,
+            "pies": 1761,
+            "izq": 0,
+            "der": 710,
+            "cx": 356.4,
+            "cy": 356.4,
+            "rx": 187.2,
+            "ry": 202.0
+          },
+          "ghost-spider": {
+            "w": 916,
+            "h": 1868,
+            "arriba": 0,
+            "pies": 1867,
+            "izq": 0,
+            "der": 915,
+            "cx": 386.3,
+            "cy": 468.0,
+            "rx": 257.4,
+            "ry": 265.2
+          },
+          "spin": {
+            "w": 1063,
+            "h": 1285,
+            "arriba": 0,
+            "pies": 1284,
+            "izq": 0,
+            "der": 1062,
+            "cx": 518.0,
+            "cy": 307.2,
+            "rx": 164.9,
+            "ry": 174.1
+          },
+          "hulk": {
+            "w": 973,
+            "h": 2315,
+            "arriba": 0,
+            "pies": 2314,
+            "izq": 0,
+            "der": 972,
+            "cx": 487.0,
+            "cy": 571.9,
+            "rx": 287.3,
+            "ry": 335.2
+          },
+          "ms-marvel": {
+            "w": 1008,
+            "h": 1821,
+            "arriba": 0,
+            "pies": 1820,
+            "izq": 0,
+            "der": 1007,
+            "cx": 480.9,
+            "cy": 390.6,
+            "rx": 249.8,
+            "ry": 221.3
+          },
+          "pantera": {
+            "w": 847,
+            "h": 1891,
+            "arriba": 0,
+            "pies": 1890,
+            "izq": 0,
+            "der": 846,
+            "cx": 423.8,
+            "cy": 525.0,
+            "rx": 300.6,
+            "ry": 297.5
+          }
+        },
+        "boton": "🕷️ Asómate y sé el héroe",
+        "titulo": "¿Con quién te quieres asomar?"
+      },
+      "grupal": {
+        "fondo": "fondo-grupal.jpg",
+        "frameBox": {
+          "x": 0.1713,
+          "y": 0.1854,
+          "w": 0.6574,
+          "h": 0.2573
+        },
+        "titulo": "La foto de todos"
+      }
+    },
+    "baby-nube": {
+      "nombre": "Bebé en las Nubes",
+      "franquicia": null,
+      "publico": "nino",
+      "modalidad": "baby_shower",
+      "diploma": "Invitado de honor de Bebé en las Nubes",
+      "colors": {
+        "accent": "#4A80B4",
+        "accentSoft": "#E3EEF7",
+        "yellow": "#E8C98A",
+        "ink": "#24384D",
+        "bgLight1": "#F4F8FC",
+        "bgLight2": "#DCE9F5",
+        "dark1": "#2C4A66",
+        "dark2": "#1E3345",
+        "dark3": "#8FBEDD"
+      },
+      "confetti": [
+        "#8FBEDD",
+        "#FFFFFF",
+        "#E8C98A",
+        "#DCE9F5",
+        "#4A80B4",
+        "#F7EFE2"
+      ],
+      "videos": {
+        "despedida": "despedida-baby-nube.mp4"
+      },
+      "personajes": [],
+      "frameBox": {
+        "x": 0.3217,
+        "y": 0.2184,
+        "w": 0.5926,
+        "h": 0.3333
+      },
+      "musicaHint": "Cuna suave",
+      "transition": "none"
+    },
+    "baby-safari": {
+      "nombre": "Bebé Safari",
+      "franquicia": null,
+      "publico": "mixto",
+      "modalidad": "baby_shower",
+      "diploma": "Explorador de Bebé Safari",
+      "colors": {
+        "accent": "#7A9455",
+        "accentSoft": "#EAF0E0",
+        "yellow": "#D9B36B",
+        "ink": "#33402A",
+        "bgLight1": "#F6F4EC",
+        "bgLight2": "#E3E9D6",
+        "dark1": "#3E5233",
+        "dark2": "#2B3A24",
+        "dark3": "#A7BE84"
+      },
+      "confetti": [
+        "#A7BE84",
+        "#F6F4EC",
+        "#D9B36B",
+        "#E3E9D6",
+        "#7A9455",
+        "#C9B79A"
+      ],
+      "videos": {
+        "despedida": "despedida-baby-safari.mp4"
+      },
+      "personajes": [],
+      "frameBox": {
+        "x": 0.1685,
+        "y": 0.1451,
+        "w": 0.6611,
+        "h": 0.3719
+      },
+      "musicaHint": "Selva tranquila",
+      "transition": "none"
+    },
+    "baby-rosas": {
+      "nombre": "Bebé entre Rosas",
+      "franquicia": null,
+      "publico": "nina",
+      "modalidad": "baby_shower",
+      "diploma": "Invitada de honor de Bebé entre Rosas",
+      "colors": {
+        "accent": "#C4708C",
+        "accentSoft": "#F8E6EB",
+        "yellow": "#E3C08D",
+        "ink": "#452A34",
+        "bgLight1": "#FDF7F9",
+        "bgLight2": "#F4E1E7",
+        "dark1": "#7B3F55",
+        "dark2": "#532A3A",
+        "dark3": "#DFA2B6"
+      },
+      "confetti": [
+        "#DFA2B6",
+        "#FFFFFF",
+        "#E3C08D",
+        "#F4E1E7",
+        "#C4708C",
+        "#F7EFE2"
+      ],
+      "videos": {
+        "despedida": "despedida-baby-rosas.mp4"
+      },
+      "personajes": [],
+      "frameBox": {
+        "x": 0.1789,
+        "y": 0.0907,
+        "w": 0.6192,
+        "h": 0.5265
+      },
+      "musicaHint": "Cuna con cuerdas suaves",
+      "transition": "none"
     }
   }
 }

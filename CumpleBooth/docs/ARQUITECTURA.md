@@ -40,6 +40,13 @@ vive en MySQL/InnoDB/utf8mb4:
   SHA-256 y son revocables sin perder el histórico. Las fotos de cabina **no se
   copian**: `cc_event_media.photo_id` referencia `cc_photos` y el álbum solo
   aporta orden, aprobación y portada.
+- `cc_event_profiles`, `cc_event_profile_sections`, `cc_featured_people`,
+  `cc_event_profile_fields`, `cc_event_profile_media` y
+  `cc_event_profile_generations`: Perfil del protagonista opcional por fiesta.
+  Admite varias personas, campos/secciones ordenables, consentimiento público e
+  IA por separado y cotizaciones aprobables sin invocar al proveedor. El
+  catálogo visual/textual vive en `event-profile-presets.json`, con cinco temas
+  infantiles activos y fallback para temas futuros.
 - `cc_schema_migrations`: versiones aplicadas.
 
 `storage_mode=db|json` permite rollback temporal, sin doble escritura. La
@@ -83,6 +90,20 @@ slots JPG/PNG conocidos; rechaza path traversal, textos de más de 20.000 bytes 
 nombres internos de franquicia/personaje. `scripts/import-theme-prompts.php` migra
 los 78 prompts asociados desde Markdown, con dry-run por defecto.
 
+- `GET invitacion.php?t=<token>` incorpora el perfil solo cuando el feature flag,
+  el perfil y el contenido público están activos; sin ellos conserva exactamente
+  el contrato anterior. `GET event-profile-media.php?t=<token>&mt=<token>` exige
+  una invitación publicada, vigente y del mismo evento antes de servir foto,
+  poster o video desde storage privado.
+- El intro cinematográfico de la invitación se activa por convención, no por
+  condicionales de tema: `public/themes/<slug>/invitation/intro-invitacion-wow-v1.mp4`
+  y su póster opcional. Así las cinco temáticas actuales y las futuras pueden
+  incorporarlo sin cambiar PHP o JavaScript. Si falta el MP4, el sobre conserva
+  su flujo anterior; si existe, reproduce con audio y permite `Omitir intro`.
+- `admin/event-profile.php?party=<slug>` administra textos, varias personas,
+  orden, visibilidad, consentimientos y el borrador/cotización del intro. Todas
+  las mutaciones usan sesión admin, CSRF, rate limit y ownership de la fiesta.
+
 ## Frontend
 
 El build tiene **tres entradas** (`vite.config.js`): `index.html` (kiosco),
@@ -119,6 +140,32 @@ configuración, no una dependencia para registrar solicitudes.
 
 ## Seguridad y ciclo de vida
 
+### Modalidad baby shower y predicciones
+
+`event_type` conserva `child_birthday` como default compatible y activa la rama
+`baby_shower` sólo cuando el evento lo declara. La cabina sigue resolviendo el
+evento por `public_slug`; para baby shower omite ruleta, videos de personaje y
+Show 3D, y encadena predicción, juego corto, guardado, foto, revelación, QR y
+recuerdito. El router histórico de cumpleaños no cambia.
+
+`POST prediction-api.php` vuelve a resolver la fiesta activa y guarda la apuesta
+en `cc_predictions.party_id`; no acepta ids internos desde el cliente. Esta
+propiedad por evento es deliberada porque una fiesta puede tener varias
+invitaciones. Los enlaces del tablero siguen siendo invitation-owned: un token
+opaco de `cc_invitation_tokens` resuelve invitación → evento y
+`GET predicciones.php?t=<token>` reúne todas las apuestas de la fiesta. La
+decisión completa está en
+`docs/DECISION-PREDICCIONES-POR-EVENTO-2026-08-25.md`.
+
+El guardado usa una clave aleatoria por recorrido y conserva sólo su hash con
+unicidad por evento, por lo que doble toque y reintento de red son idempotentes.
+Cuando cambia la modalidad de una fiesta, sus invitaciones vinculadas se
+sincronizan; una invitación sin fiesta conserva su modalidad independiente.
+
+La lista futura de regalos queda preparada en `cc_gift_items`, sin interfaz ni
+mutaciones públicas en esta fase. Sus datos y sus tokens pertenecen a la
+invitación.
+
 La configuración externa es obligatoria para admin/uploads. PDO usa prepared
 statements nativos y errores fail-closed. PIN =
 `password_hash(HMAC(PIN, pepper))`; duplicar limpia PIN. `Permissions-Policy`
@@ -127,6 +174,9 @@ efectiva: `camera=(self), microphone=(), geolocation=()`.
 `scripts/retention.php` es dry-run por defecto. A los 30 días desde la fecha de
 fiesta —o creación si falta— desactiva y anonimiza la fiesta, borra invitados y
 PIN, marca metadata de fotos y elimina archivos, reintentando un unlink fallido.
+La misma retención elimina por cascada datos del perfil y después borra sus
+archivos privados; el script sigue siendo dry-run salvo `--apply` explícito.
+
 
 ## Estudio manual de producción de temáticas (2026-07-26)
 
@@ -145,19 +195,34 @@ CSRF, sesión admin y rate limit persistente 30 subidas/10 minutos.
 `franquicia` es metadata estrictamente administrativa y no forma parte del
 payload de `api.php`. Los nombres visibles de temas/personajes sí se publican.
 
-Los juegos aceptados son `copos`, `armar-muneco`, `fichas`, `ritmo`, `escudo`
-y `mundo3d`.
+Los juegos que el admin puede asignar a mano son `copos`, `armar-muneco`,
+`fichas`, `ritmo`, `escudo` y `mundo3d` (`cb_game_kinds()`).
 `ritmo` publica 3–5 carriles; `escudo` puede publicar una imagen de fondo pero
 nunca `cols/filas`; `copos` permite hasta ocho emojis temáticos. Todos mantienen
 botón de omitir, objetivos táctiles de al menos 56 px, reduced-motion y una sola
 ruta de salida protegida con `doneRef`.
 
-`mundo3d` es una misión premium de tres carriles implementada por
-`src/ThemeWorld3D.jsx`. Cada temática terminada declara `fullGame` en el
+La misión premium (`fullGame`) de las seis temáticas completas es hoy
+`concierto3d` — **El Show**, un juego de ritmo de concierto implementado por
+`src/StageConcert3D.jsx`. El saneador lo acepta como séptimo `kind`, pero no es
+una casilla manual: lo agrega el motor al final de la cadena. Es UN juego
+reskineado, no seis: `stage` elige solo el vestuario (`neon-arena`, `ice-gala`,
+`beach-luau`, `podium-night`, `backyard-fiesta`, `rooftop-city`) mientras la
+mecánica, el tempo y las ventanas de acierto quedan idénticas, para que los
+puntajes se comparen entre fiestas. El contrato completo está en
+`docs/TEMATICA-COMPLETA.md`.
+
+`mundo3d` es el runner de tres carriles de `src/ThemeWorld3D.jsx`, la misión
+premium anterior. Sigue montado y el backend sigue aceptando el `kind`, pero
+**ninguna temática lo declara hoy**: El Show lo reemplazó en las seis. Sus
+mundos siguen en la lista blanca por si una temática nueva lo quiere:
+`turbo-track`, `puppy-park`, `tropical-wave`, `ice-bridge`, `neon-stage` y
+`hero-city`.
+
+Para las dos vale lo mismo: cada temática terminada declara `fullGame` en el
 catálogo, pero `cb_build_theme_payload()` solo lo publica cuando
 `party.service_plan=full`; una fiesta Booth no recibe esa configuración. El
 frontend la añade como último bonus, conserva el personaje exacto de la ruleta
 mediante su `*-cut.png` y dispone renderer, geometrías, materiales y texturas al
-salir. Los seis mundos activos son `turbo-track`, `puppy-park`,
-`tropical-wave`, `ice-bridge`, `neon-stage` y `hero-city`. `?fx3d=0`, WebGL no
-disponible o reduced-motion activan una salida segura sin bloquear el flujo.
+salir. `?fx3d=0`, WebGL no disponible o reduced-motion activan una salida segura
+sin bloquear el flujo.

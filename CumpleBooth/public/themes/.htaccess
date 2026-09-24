@@ -1,0 +1,14 @@
+# Recursos de las temáticas (fondos, recortes, videos).
+#
+# El CDN de Hostinger le entrega a los navegadores Android una copia de cada imagen
+# achicada a 800 px de ancho y convertida a WebP (visto el 2026-09-10: en la tablet el
+# fondo de 1080×1920 llegaba de 800×1422 y los recortes de Asómate de más de 800 px
+# llegaban reducidos, así que el personaje se dibujaba más chico que su óvalo y solo
+# Spidey, de 711 px, se veía bien). `no-transform` le pide al CDN que no toque las
+# imágenes. El kiosco además dibuja con las medidas anotadas en themes.json, así que
+# funciona aunque el CDN ignore esta cabecera.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(png|jpe?g|webp|gif)$">
+    Header merge Cache-Control "no-transform"
+  </FilesMatch>
+</IfModule>

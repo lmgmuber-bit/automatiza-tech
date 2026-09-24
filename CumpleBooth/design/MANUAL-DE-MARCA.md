@@ -18,7 +18,8 @@ Filosofía de diseño completa: [`../docs/BRAND-FILOSOFIA-CUMPLECLICK.md`](../do
 
 | Archivo | Uso |
 |---|---|
-| `logo/cumpleclick-logo-master-render.png` | **Master de referencia** (render Higgsfield 1024px). Avatar de redes, mockups, impresión pequeña. |
+| `logo/logo-icon-wordmark.png` | **PNG transparente recomendado para referencias de marca en Higgsfield y overlays de watermark**. Encuadre ajustado, símbolo + nombre. |
+| `logo/cumpleclick-logo-master-render.png` | Master visual con fondo crema opaco (render Higgsfield 1024px). Avatar de redes y mockups; **no usar como watermark**. |
 | `logo/cumpleclick-globo-mark.svg` | Isotipo vectorial (solo símbolo). Favicon, watermark, stickers, tamaños chicos. |
 | `logo/cumpleclick-globo-lockup.svg` | Lockup vertical (símbolo + wordmark). Cabeceras, portadas, diplomas. |
 | `renders/` | Direcciones alternativas exploradas (caramelo, medalla oro, globo vidrio). **No usar como logo**; sirven para campañas especiales. |
@@ -28,6 +29,7 @@ Filosofía de diseño completa: [`../docs/BRAND-FILOSOFIA-CUMPLECLICK.md`](../do
 - **Zona de respeto**: alrededor del logo, mínimo el diámetro del aro amarillo del lente libre de otros elementos.
 - **Tamaño mínimo**: isotipo 24px; lockup 120px de alto.
 - **Fondos**: el logo vive sobre **crema** (`#FFF8EC`) o blanco. Sobre fondos oscuros/violeta usar el isotipo tal cual (el globo brilla solo); nunca recuadrarlo en una caja blanca.
+- **Video generativo**: adjuntar `logo-icon-wordmark.png` como referencia exclusiva del logo y pedirlo muy pequeño, sutil, translúcido y estable en la esquina superior izquierda. En la primera generación no imponer un porcentaje exacto; conservar la redacción históricamente validada en Higgsfield.
 - **Prohibido**: rotar, estirar, cambiar los colores del globo, agregar sombras duras, poner texto encima del globo, usar el hilo dorado separado del globo.
 
 ---

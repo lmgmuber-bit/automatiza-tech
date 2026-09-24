@@ -146,6 +146,54 @@ p { margin: 0 0 1rem; }
   .btn--xl { font-size: 1.05rem; padding: 0.9em 1.3em; white-space: normal; }
 }
 
+/* ---------- Lockup de CumpleClick ----------
+   Espejo de src/brand/lockup.css (album y cartel QR) y de cb_lockup_html() en
+   public/lib.php (invitacion). Mismas clases, mismo markup, mismas
+   proporciones; no se comparte archivo porque este sitio es HTML plano sin
+   build y aquellos viven dentro del bundle de Vite o los sirve PHP.
+
+   El nombre va en HTML y no dentro del SVG. `cumpleclick-lockup.svg` lo dibuja
+   con un <text> en Baloo 2, y un SVG cargado en un <img> se renderiza aislado:
+   no ve las @font-face de la pagina, solo las fuentes del sistema. Baloo 2 no
+   viene con Windows ni con iOS, asi que el nombre de la marca salia en Segoe
+   UI o en Helvetica segun el visitante — 403 px, 437 px o 496 px de ancho para
+   la misma palabra.
+
+   Proporciones del archivo oficial (viewBox 640x160): globo 1.93em, aire
+   0.37em, palabra 5.59em. Todo cuelga del font-size. */
+
+.cc-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.37em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.cc-lockup__mark {
+  width: 1.93em;
+  height: 1.93em;
+  display: block;
+  flex: none;
+}
+
+.cc-lockup__nombre {
+  font-family: var(--cc-font-display);
+  font-weight: 800;
+  font-size: 1em;
+  letter-spacing: 0;
+  text-transform: none;
+  transform: translateY(0.04em);
+}
+
+/* Cabecera y pie van sobre crema, que es donde el manual quiere el logo a
+   color. Si alguna vez alguno pasa a fondo oscuro, cambiar la clase a
+   `cc-lockup--claro` (el manual prohibe recuadrarlo en una caja blanca). */
+.cc-lockup--marca .cc-lockup__nombre { color: var(--cc-tinta, #4C2882); }
+.cc-lockup--marca .cc-lockup__click { color: var(--cc-fucsia, #D6307F); }
+.cc-lockup--claro .cc-lockup__nombre,
+.cc-lockup--claro .cc-lockup__click { color: #fff; }
+
 /* ---------- Header ---------- */
 .topbar {
   position: sticky;
@@ -162,7 +210,180 @@ p { margin: 0 0 1rem; }
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(76, 40, 130, 0.08);
 }
-.topbar__brand img { height: 36px; width: auto; }
+/* 36 px de alto los da el globo: 36 / 1.93 = 18.65px de font-size. */
+.topbar__logo { font-size: 18.65px; }
+
+/* ---------- Menú de secciones ---------- */
+
+/* El header fija 64px arriba y tapaba el título de la sección a la que se
+   saltaba. Había un `offset: -72` al hacer scroll, pero vive DENTRO de
+   `initLenis()`, que se sale antes si el visitante pide menos animación o si
+   Lenis no cargó: en esos dos casos el ancla caía debajo del header y no se
+   veía a dónde había llegado. `scroll-margin-top` lo arregla en el CSS, o sea
+   en todos los caminos —enlace del menú, del pie, teclado o URL pegada con
+   `#precios`— sin depender de que corra un solo script. */
+:where(section[id], main[id]) { scroll-margin-top: 76px; }
+
+.nav__lista {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nav__enlace {
+  display: block;
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: var(--cc-tinta);
+  font-family: var(--cc-font-body);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.nav__enlace:hover { background: rgba(139, 92, 246, 0.12); }
+.nav__enlace:focus-visible { outline: 3px solid var(--cc-violeta); outline-offset: 2px; }
+
+/* La sección que se está mirando. El subrayado va con `box-shadow` y no con
+   `border-bottom` para que marcar el activo no cambie la altura del enlace y
+   empuje la fila entera un pixel. */
+.nav__enlace[aria-current="true"] {
+  color: var(--cc-fucsia);
+  box-shadow: inset 0 -2px 0 0 var(--cc-fucsia);
+  border-radius: 6px;
+}
+
+/* En escritorio el CTA que se ve es el del header, no el del panel. */
+.nav__item--cta { display: none; }
+.nav__boton { display: none; }
+
+/* ---------- Botón hamburguesa y panel (teléfono y tablet) ---------- */
+/* 1120px, y el número sale de medir, no de elegir uno redondo.
+
+   La fila de escritorio es marca + siete enlaces + botón de WhatsApp:
+   147 + 640 + 210 = 997px, más 24 de separaciones y 56 de relleno = 1077, más
+   la barra de desplazamiento. O sea que por debajo de ~1092px no entra.
+
+   Estuvo en 1024 y se rompió al traer el lockup nuevo: el logo pasó de 81px
+   —un SVG compacto— a 147px, porque ahora el wordmark se compone en HTML para
+   no depender de que el visitante tenga Baloo 2 instalada. Ese cambio es
+   correcto y no se toca; lo que había que mover era el corte. Sin esto, entre
+   1025 y 1092px el header desbordaba y la página entera se iba en horizontal.
+
+   La lección: este número depende del ancho REAL del logo. Si el lockup vuelve
+   a cambiar de tamaño, hay que volver a medir. */
+@media (max-width: 1120px) {
+  /* El panel cuelga del header y ocupa el ancho completo. `position: fixed` y
+     no `absolute` porque el header es `sticky`: con `absolute` el panel se iría
+     con el documento al hacer scroll y quedaría flotando a mitad de página. */
+  .nav {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    right: 0;
+    z-index: 39;
+    max-height: calc(100dvh - 64px);
+    overflow-y: auto;
+    padding: 8px 16px 18px;
+    /* Fondo SÓLIDO, no translúcido.
+
+       Estaba en `rgba(...,0.98)` con desenfoque detrás y en la captura se leía
+       el titular del hero a través del panel: el menú parecía a medio hacer. El
+       desenfoque tampoco es de fiar acá —el header que lo contiene ya tiene el
+       suyo, y donde `backdrop-filter` no está soportado el respaldo era un
+       fondo casi transparente, o sea el peor caso justo en el navegador más
+       viejo. Un color plano se ve igual en todos y no deja nada legible atrás. */
+    background: var(--cc-crema);
+    border-bottom: 1px solid rgba(76, 40, 130, 0.12);
+    box-shadow: 0 16px 32px rgba(76, 40, 130, 0.14);
+
+    /* Cerrado. `visibility` además de `opacity` para que el panel oculto no sea
+       enfocable con Tab: con sólo `opacity: 0` los siete enlaces siguen en el
+       orden de tabulación y quien navega con teclado recorre un menú invisible. */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    pointer-events: none;
+    /* `visibility` no se interpola: se cambia de golpe, y CUÁNDO importa.
+       Al cerrar se retrasa 0,2s (`linear 0.2s`) para que el panel alcance a
+       desvanecerse antes de desaparecer; al abrir el retraso es 0, así el panel
+       es enfocable en el mismo instante en que se lo marca como abierto. Con el
+       retraso en los dos sentidos, mover el foco al primer enlace fallaba en
+       silencio: el elemento todavía estaba `hidden` y `focus()` no hace nada. */
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+  }
+  .topbar[data-menu="abierto"] .nav {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    pointer-events: auto;
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0s;
+  }
+
+  .nav__lista { flex-direction: column; align-items: stretch; gap: 2px; }
+  .nav__enlace {
+    padding: 13px 14px;          /* alto de toque cómodo, no un enlace de 20px */
+    font-size: 1.05rem;
+    border-radius: 12px;
+  }
+  .nav__enlace[aria-current="true"] {
+    background: rgba(214, 48, 127, 0.10);
+    box-shadow: none;
+    border-radius: 12px;
+  }
+  .nav__item--cta { display: block; margin-top: 10px; }
+  .nav__cta { display: flex; justify-content: center; width: 100%; }
+
+  .nav__boton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;                 /* 44x44 es el mínimo cómodo para el pulgar */
+    height: 44px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid rgba(76, 40, 130, 0.18);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--cc-tinta);
+    cursor: pointer;
+  }
+  .nav__boton:focus-visible { outline: 3px solid var(--cc-violeta); outline-offset: 2px; }
+
+  /* Tres barras con un solo elemento: la del medio es el `span` y las otras dos
+     son sus pseudoelementos. Al abrir, la del medio se desvanece y las otras
+     dos rotan hasta formar la cruz. */
+  .nav__barras,
+  .nav__barras::before,
+  .nav__barras::after {
+    display: block;
+    width: 20px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    transition: transform 0.22s ease, opacity 0.16s ease;
+  }
+  .nav__barras { position: relative; }
+  .nav__barras::before,
+  .nav__barras::after { content: ""; position: absolute; left: 0; }
+  .nav__barras::before { top: -6px; }
+  .nav__barras::after  { top: 6px; }
+
+  .topbar[data-menu="abierto"] .nav__barras { background: transparent; }
+  .topbar[data-menu="abierto"] .nav__barras::before { transform: translateY(6px) rotate(45deg); }
+  .topbar[data-menu="abierto"] .nav__barras::after  { transform: translateY(-6px) rotate(-45deg); }
+}
+
+/* Debajo de 720px el CTA del header se acorta a "Agenda 📲": el botón es el
+   único camino a WhatsApp siempre visible, así que se achica pero no se
+   esconde; el texto completo sigue en el panel. */
+@media (max-width: 720px) {
+  .topbar__cta-largo { display: none; }
+}
+
 
 /* ---------- Hero ---------- */
 .hero {
@@ -260,6 +481,21 @@ p { margin: 0 0 1rem; }
   padding: 22px 22px 22px 84px;
   box-shadow: 0 10px 30px rgba(76, 40, 130, 0.08);
 }
+/* Cuando pasa cada etapa. Va ARRIBA del titulo y no dentro del parrafo porque
+   lo que ordena el recorrido es el tiempo —dias antes, en la fiesta, despues—,
+   no el numero: el numero solo dice que hay una secuencia, esta etiqueta dice
+   de que secuencia se trata. Sin ella, las cuatro tarjetas se leen como cuatro
+   funciones sueltas y se pierde justo lo que hay que contar. */
+.paso__cuando {
+  display: block;
+  margin-bottom: 2px;
+  font-family: var(--cc-font-body);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cc-fucsia);
+}
 .paso h3 { font-size: 1.3rem; margin-bottom: 0.25em; }
 .paso p { margin: 0; opacity: 0.85; }
 .paso__num {
@@ -279,24 +515,99 @@ p { margin: 0 0 1rem; }
   border-radius: 50%;
   border: 3px solid var(--cc-amarillo);
 }
-.pasos__video {
-  margin: 0;
-  text-align: center;
-}
-.pasos__video video {
+/* ---------- Carrusel de etapas ---------- */
+
+.etapas { margin: 0; }
+
+/* Las cuatro diapositivas se apilan y se cruzan por opacidad. El marco reserva
+   la altura con `aspect-ratio` para que al cambiar de una a otra la pagina no
+   pegue un salto: sin eso, la seccion crece y encoge en cada rotacion y el
+   texto de al lado se mueve solo. */
+.etapas__marco {
+  position: relative;
   width: 100%;
   max-width: 340px;
   margin: 0 auto;
+  aspect-ratio: 640 / 1148;
+}
+.etapa {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s ease, visibility 0s linear 0.5s;
+}
+.etapa.is-activa {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.5s ease, visibility 0s linear 0s;
+}
+.etapa img,
+.etapa video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   border-radius: var(--cc-radius);
   border: 4px solid #fff;
   box-shadow: 0 16px 40px rgba(76, 40, 130, 0.16);
   background: var(--cc-tinta);
 }
-.pasos__video figcaption {
-  margin-top: 10px;
-  font-size: 0.95rem;
-  opacity: 0.75;
+/* El pie va SOBRE la imagen y no debajo: puesto debajo, la altura del bloque
+   cambiaba segun el largo del texto de cada etapa y el carrusel temblaba. */
+.etapa figcaption {
+  position: absolute;
+  left: 4px; right: 4px; bottom: 4px;
+  padding: 26px 14px 12px;
+  border-radius: 0 0 calc(var(--cc-radius) - 4px) calc(var(--cc-radius) - 4px);
+  background: linear-gradient(180deg, rgba(44, 33, 64, 0) 0%, rgba(44, 33, 64, 0.82) 55%);
+  color: #fff;
+  font-family: var(--cc-font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  line-height: 1.25;
+  text-align: left;
 }
+.etapa__cuando {
+  display: block;
+  font-family: var(--cc-font-body);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--cc-amarillo);
+}
+
+.etapas__puntos {
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 14px;
+}
+.etapas__punto {
+  width: 11px;
+  height: 11px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(76, 40, 130, 0.22);
+  cursor: pointer;
+  transition: background-color 0.25s ease, transform 0.25s ease;
+}
+.etapas__punto.is-activo { background: var(--cc-fucsia); transform: scale(1.25); }
+.etapas__punto:focus-visible { outline: 3px solid var(--cc-violeta); outline-offset: 3px; }
+
+/* Los puntos son de 11px pero el area que se puede tocar tiene que ser comoda
+   para un pulgar; se agranda sin cambiar lo que se ve. */
+.etapas__punto::before {
+  content: "";
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  margin: -11px 0 0 -11px;
+}
+.etapas__puntos { position: relative; }
+.etapas__punto { position: relative; }
 
 /* ---------- Mundos (vitrina) ---------- */
 .mundos { background: linear-gradient(180deg, var(--cc-crema) 0%, #fdf0e0 100%); }
@@ -425,6 +736,12 @@ p { margin: 0 0 1rem; }
   border: 3px solid var(--cc-fucsia);
   box-shadow: 0 18px 48px rgba(214, 48, 127, 0.2);
 }
+/* La tarjeta de baby shower es OTRO producto, no un tercer nivel del mismo.
+   Por eso lleva su propia etiqueta y un borde suave en vez del fucsia de
+   "Más elegido": quien compara planes de cumpleaños tiene que ver de un vistazo
+   que esta columna no compite con las otras dos. */
+.plan--baby { border: 2px solid rgba(139, 92, 246, 0.4); }
+.plan__badge--baby { background: var(--cc-violeta); }
 .plan__badge {
   position: absolute;
   top: -16px;
@@ -483,7 +800,8 @@ p { margin: 0 0 1rem; }
   border-top: 1px solid rgba(76, 40, 130, 0.1);
   font-size: 0.95rem;
 }
-.footer__logo { height: 30px; width: auto; margin: 0 auto 12px; }
+/* 30 px de alto: 30 / 1.93 = 15.54px. */
+.footer__logo { font-size: 15.54px; margin: 0 auto 12px; }
 .footer p { margin: 0 0 6px; opacity: 0.8; }
 .footer__cfg { font-size: 0.85rem; opacity: 0.6; }
 .footer__cfg code {
@@ -493,6 +811,12 @@ p { margin: 0 0 1rem; }
   font-size: 0.85em;
 }
 .footer__legal { font-size: 0.85rem; opacity: 0.6; }
+/* El crédito a AutomatizaTech es un enlace. Hereda el color del pie en vez de
+   quedar azul de navegador —que ahí canta—, y el subrayado es lo que avisa que
+   se puede tocar: sin él, con el color heredado, no se distingue del texto. */
+.footer__legal a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.footer__legal a:hover { color: var(--cc-fucsia); }
+.footer__legal a:focus-visible { outline: 3px solid var(--cc-amarillo); outline-offset: 3px; }
 .footer__links {
   display: flex;
   flex-wrap: wrap;
@@ -773,7 +1097,13 @@ body.modal-abierto { overflow: hidden; }
 .confianza__item p { margin: 0; opacity: 0.88; }
 
 /* ---------- Reveal base (GSAP pone los estados; sin JS todo visible) ---------- */
-[data-reveal] { will-change: transform, opacity; }
+/* `will-change` NO va acá. Estaba puesto sobre `[data-reveal]`, que en esta
+   página son 53 elementos: el navegador le daba a cada uno su propia capa de
+   composición y las sostenía TODA la sesión, aunque la animación de entrada
+   dura 0,7s y corre una sola vez (`once: true`). En un teléfono eso es
+   memoria de video y trabajo de compositor permanentes a cambio de nada.
+   GSAP ya promueve el elemento solo mientras lo está animando (force3D),
+   que es exactamente el rato en que sirve. */
 /* Los bloques con profundidad necesitan contexto 3D en el padre para que
    rotationX se vea como perspectiva y no como un aplastado vertical. */
 [data-depth] { will-change: transform, opacity; transform-style: preserve-3d; }
@@ -797,7 +1127,7 @@ body.modal-abierto { overflow: hidden; }
   }
   /* Seis tarjetas iguales: 3 columnas Ã— 2 filas en desktop, sin destacadas. */
   .mundos__grid { grid-template-columns: repeat(3, 1fr); }
-  .precios__grid { grid-template-columns: 1fr 1fr; gap: 28px; }
+  .precios__grid { grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 1120px; }
   .precios { padding-top: 72px; }
   .porque__grid { grid-template-columns: repeat(3, 1fr); gap: 24px; }
   .confianza__grid { grid-template-columns: repeat(3, 1fr); }

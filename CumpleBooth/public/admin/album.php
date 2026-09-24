@@ -17,6 +17,7 @@ session_start();
 header('Cache-Control: no-store');
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
+require __DIR__ . '/_acceso.php';   // el portero: sesión, usuario y permisos (2026-09-13)
 
 function h($s): string
 {
@@ -146,6 +147,7 @@ if (!$loggedIn) {
         <input type="password" id="password" name="password" required autofocus placeholder="••••••••">
       </div>
       <button type="submit" class="btn btn-cta btn-block">Ingresar</button>
+      <p class="muted small" style="margin-top:12px;text-align:center"><a href="recuperar.php">Olvide la contrasena</a></p>
     </form>
   </main>
 </body>
@@ -158,6 +160,10 @@ if (!$loggedIn) {
 $publicSlugRaw = is_string($_GET['party'] ?? null) ? (string) $_GET['party'] : '';
 $publicSlug = cb_valid_public_slug($publicSlugRaw) ? $publicSlugRaw : '';
 $party = $publicSlug !== '' ? cb_load_party_raw($publicSlug) : null;
+// Qué partes de esta página puede usar quien entró (2026-09-13). Un operador con "Fotos del
+// kiosco" ve solo esa sección; el Álbum Recuerdo es otro módulo. El superadministrador, todo.
+$verFotos = admin_puede('fotos', $publicSlug);
+$verAlbum = admin_puede('album', $publicSlug);
 
 $errors = [];
 $okMessage = null;
@@ -198,8 +204,15 @@ if ($album !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'
         $errors[] = 'Sesión expirada, vuelve a intentarlo.';
     } else {
         $action = (string) ($_POST['action'] ?? '');
+        // Un operador solo toca lo de su módulo: las fotos del kiosco, o el álbum.
+        $accionPermitida = in_array($action, ['borrar-fotos', 'restaurar-fotos'], true) ? $verFotos : $verAlbum;
+        if (!$accionPermitida) {
+            $errors[] = 'No tienes permiso para esa acción.';
+        }
         try {
-            if ($action === 'guardar-recepcion') {
+            if (!$accionPermitida) {
+                // El aviso ya quedó arriba.
+            } elseif ($action === 'guardar-recepcion') {
                 $intakeEnabled = !empty($_POST['intake_enabled']) ? 1 : 0;
                 $intakeVideos = !empty($_POST['intake_videos']) ? 1 : 0;
                 $requirePin = !empty($_POST['require_pin']) ? 1 : 0;
@@ -238,6 +251,12 @@ if ($album !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'
                         'status' => $status,
                     ]);
                     $okMessage = 'Configuración de recepción guardada.';
+                    // Si corrió la fecha de cierre, el enlace vigente la acompaña:
+                    // antes quedaba vencido y había que regenerarlo (y el nuevo
+                    // también nacía vencido).
+                    if ($closesAt !== null && cb_album_extend_intake_tokens($albumId, $closesAt) > 0) {
+                        $okMessage .= ' El enlace de aportes vigente se extendió hasta esa fecha.';
+                    }
                 }
             } elseif ($action === 'guardar-publicacion') {
                 $title = trim((string) ($_POST['title'] ?? ''));
@@ -252,13 +271,11 @@ if ($album !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'
                     $okMessage = 'Título y subtítulo guardados.';
                 }
             } elseif ($action === 'generar-token') {
-                // El vencimiento por defecto se calcula desde la fecha del
-                // evento, no desde hoy: un cartel impreso una semana antes debe
-                // seguir sirviendo el día de la fiesta.
-                $eventDate = (string) ($party['fecha'] ?? '');
-                $base = $eventDate !== '' ? strtotime($eventDate) : false;
-                if ($base === false) { $base = time(); }
-                $expiresAt = gmdate('Y-m-d H:i:s', $base + $limits['default_open_days'] * 86400);
+                // El vencimiento sale de cb_album_intake_token_expiry(): la
+                // fecha de la fiesta más los días por defecto (un cartel impreso
+                // una semana antes debe servir el día de la fiesta), la fecha de
+                // cierre ampliada si la hay, o al menos una semana desde hoy.
+                $expiresAt = cb_album_intake_token_expiry($album, $party);
                 $freshToken = cb_album_issue_token($albumId, 'intake', $expiresAt, 'admin');
                 if ((string) $album['status'] === 'draft') {
                     cb_album_update($albumId, ['status' => 'collecting']);
@@ -275,6 +292,32 @@ if ($album !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'
             } elseif ($action === 'reabrir-recepcion') {
                 cb_album_update($albumId, ['status' => 'collecting']);
                 $okMessage = 'Recepción reabierta. Genera un enlace nuevo para volver a recibir aportes.';
+            } elseif ($action === 'borrar-fotos' || $action === 'restaurar-fotos') {
+                // Fotos del kiosco (cc_photos), no del album: son colecciones distintas y
+                // hasta ahora no habia forma de borrar una desde el admin. Llegan varias a la
+                // vez: con 18 fotos, borrarlas de a una no es una opcion real.
+                $restaurar = $action === 'restaurar-fotos';
+                $ids = array_values(array_unique(array_filter(
+                    array_map('intval', (array) ($_POST['fotos'] ?? [])),
+                    static fn(int $x): bool => $x > 0
+                )));
+                $hechas = 0;
+                foreach ($ids as $fotoId) {
+                    if (cb_photo_borrar($publicSlug, $fotoId, $restaurar)) {
+                        $hechas++;
+                    }
+                }
+                if ($hechas === 0) {
+                    $errors[] = $ids
+                        ? 'No se pudo ' . ($restaurar ? 'restaurar' : 'borrar') . ' ninguna de esas fotos.'
+                        : 'No marcaste ninguna foto.';
+                } else {
+                    $okMessage = $restaurar
+                        ? ($hechas === 1 ? 'Foto devuelta a la galería.' : "$hechas fotos devueltas a la galería.")
+                        : ($hechas === 1
+                            ? 'Foto borrada. Está en la papelera y puedes devolverla; su QR dejó de funcionar.'
+                            : "$hechas fotos borradas. Están en la papelera y puedes devolverlas; sus QR dejaron de funcionar.");
+                }
             } elseif ($action === 'moderar') {
                 $mediaId = (int) ($_POST['media'] ?? 0);
                 $state = (string) ($_POST['estado'] ?? '');
@@ -304,6 +347,28 @@ if ($album !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'
                 $okMessage = $aprobados === 0
                     ? 'No había recuerdos pendientes.'
                     : ($aprobados === 1 ? 'Se aprobó 1 recuerdo.' : "Se aprobaron $aprobados recuerdos.");
+            } elseif ($action === 'moderar-varios') {
+                // Marcar todos, desmarcar dos o tres y aprobar de una (Luis, 20-sep):
+                // con 84 aportes de una mamá, de a uno era eterno y "Aprobar los
+                // pendientes" no dejaba excluir nada.
+                $ids = array_values(array_unique(array_filter(
+                    array_map('intval', (array) ($_POST['media'] ?? [])),
+                    static fn(int $x): bool => $x > 0
+                )));
+                $state = (string) ($_POST['estado'] ?? '');
+                if (!$ids) {
+                    $errors[] = 'Marca al menos un recuerdo.';
+                } elseif (!in_array($state, ['approved', 'hidden', 'removed'], true)) {
+                    $errors[] = 'Acción desconocida.';
+                } else {
+                    $hechos = cb_album_set_moderation_many($albumId, $ids, $state, 'admin');
+                    $raiz = ['approved' => 'aprob', 'hidden' => 'ocult', 'removed' => 'elimin'][$state];
+                    $okMessage = $hechos === 1 ? "Se {$raiz}ó 1 recuerdo." : "Se {$raiz}aron $hechos recuerdos.";
+                    if (in_array($state, ['hidden', 'removed'], true) && in_array((int) $album['cover_media_id'], $ids, true)) {
+                        cb_album_update($albumId, ['cover_media_id' => null]);
+                        $okMessage .= ' Se quitó la portada.';
+                    }
+                }
             } elseif ($action === 'portada') {
                 $mediaId = (int) ($_POST['media'] ?? 0);
                 $target = cb_album_find_media($albumId, $mediaId);
@@ -480,6 +545,50 @@ if ($album !== null && $stats !== null) {
 <title>Álbum Recuerdo · <?= h($eventLabel) ?></title>
 <style>
 <?php require __DIR__ . '/_style.css.php'; ?>
+</style>
+<style>
+/* Impresion de las fotos del kiosco. Esta aca y no en _style.css.php a proposito: la regla
+   esconde todo lo que no sea la hoja, y en otra pantalla del admin (donde esa hoja no
+   existe) dejaria la impresion en blanco. */
+#hoja-imprimir { display: none; }
+<?php if (!$verAlbum): ?>
+/* Este usuario solo tiene "Fotos del kiosco": el resto del álbum no se le muestra (las
+   acciones del álbum se rechazan en el servidor de todos modos). */
+main > section.card:not(#fotos-kiosco) { display: none !important; }
+<?php endif; ?>
+<?php if (!$verFotos): ?>
+main > section#fotos-kiosco { display: none !important; }
+<?php endif; ?>
+#aviso-imprimir {
+  position: fixed; inset: 0; z-index: 60; display: none; place-items: center;
+  background: rgba(0,0,0,.8); color: #fff; font-weight: 800; font-size: 1.2rem;
+}
+#aviso-imprimir.on { display: grid; }
+/* Paginación de Curaduría y Fotos del kiosco (2026-09-15): con 80 fotos el scroll era eterno. */
+.pag-barra { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin: 12px 0; }
+.pag-info { font-weight: 700; color: var(--text-muted); }
+.pag-paginas { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.pag-btn { min-width: 38px; min-height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
+.pag-btn:hover { background: var(--primary-soft); }
+.pag-btn[aria-current="page"] { background: var(--primary); color: #fff; border-color: transparent; }
+.pag-btn:disabled { opacity: .4; cursor: default; background: var(--card-bg); }
+.pag-puntos { padding: 0 4px; color: var(--text-muted); }
+.pag-tam { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-muted); }
+.pag-tam select { min-height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); font: inherit; padding: 0 8px; }
+.pag-oculta { display: none !important; }
+@media print {
+  @page { margin: 0; }
+  body { background: #fff; }
+  body > *:not(#hoja-imprimir) { display: none !important; }
+  #hoja-imprimir { display: block !important; }
+  .pagina-foto {
+    width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center;
+    page-break-after: always; break-after: page; overflow: hidden; background: #fff;
+  }
+  .pagina-foto:last-child { page-break-after: auto; break-after: auto; }
+  .pagina-foto img { width: 100%; height: 100%; object-fit: contain; }
+  #hoja-imprimir.llenar .pagina-foto img { object-fit: cover; }
+}
 </style>
 </head>
 <body>
@@ -695,6 +804,26 @@ if ($album !== null && $stats !== null) {
               : 'No hay recuerdos en este filtro.' ?>
           </p>
         <?php else: ?>
+          <?php /* Marcar varios: las casillas van dentro de cada tarjeta con `form=` apuntando
+                   a este formulario, porque cada tarjeta ya tiene sus propios formularios y no
+                   se pueden anidar. "Marcar todos" marca las de todas las páginas del filtro. */ ?>
+          <form method="post" action="<?= h($selfUrl) ?>" class="seleccion-barra" id="form-moderar-varios">
+            <?= admin_csrf_field() ?>
+            <input type="hidden" name="action" value="moderar-varios">
+            <label class="fotos-todas">
+              <input type="checkbox" id="curacion-marcar-todos">
+              Marcar todos
+            </label>
+            <span class="muted" id="curacion-cuenta">Nada marcado</span>
+            <button type="submit" name="estado" value="approved" class="btn btn-primary btn-sm" disabled>
+              <?= admin_icon('check') ?> Aprobar marcados
+            </button>
+            <button type="submit" name="estado" value="hidden" class="btn btn-ghost btn-sm" disabled>Ocultar marcados</button>
+            <button type="submit" name="estado" value="removed" class="btn btn-danger btn-sm curacion-eliminar" disabled
+                    data-confirm="Se pueden restaurar después desde el filtro &quot;Eliminados&quot;. ¿Eliminar los recuerdos marcados?">
+              Eliminar marcados
+            </button>
+          </form>
           <ol class="curation-grid" id="curation-grid" data-reorder="<?= $filterKey === 'todos' ? '1' : '0' ?>">
             <?php foreach ($mediaList as $index => $item): ?>
               <?php
@@ -718,6 +847,10 @@ if ($album !== null && $stats !== null) {
               <li class="tile is-<?= h($state) ?> <?= $isCover ? 'is-cover' : '' ?>"
                   data-media="<?= $mediaId ?>" <?= $filterKey === 'todos' ? 'draggable="true"' : '' ?>>
                 <div class="tile-media">
+                  <label class="tile-marca">
+                    <input type="checkbox" name="media[]" value="<?= $mediaId ?>" form="form-moderar-varios"
+                           aria-label="Marcar este recuerdo">
+                  </label>
                   <?php if ($isVideo): ?>
                     <video class="tile-video" preload="none"
                            <?= $item['poster_storage_key'] ? 'poster="../ver-media.php?t=' . rawurlencode((string) $item['access_token']) . '&amp;v=poster"' : '' ?>
@@ -793,6 +926,224 @@ if ($album !== null && $stats !== null) {
               funcionan igual en celular y con teclado.
             </p>
           <?php endif; ?>
+        <?php endif; ?>
+      </section>
+
+
+
+      <?php
+        /* Fotos del kiosco.
+           Van acá y no en la Curaduría porque son OTRA colección: la Curaduría trabaja sobre
+           `cc_event_media` (el álbum) y esto es `cc_photos` (lo que sale de la cabina). Quitar
+           algo del álbum nunca las tocó, y por eso una foto quitada del álbum seguía saliendo
+           en la galería con PIN. Este es el único lugar donde se pueden borrar de verdad. */
+        $verPapelera = ($_GET['papelera'] ?? '') === '1';
+        $fotosKiosco = cb_photos_admin($publicSlug, true);
+        $fotosVivas = array_values(array_filter($fotosKiosco, static fn($f) => empty($f['deleted_at'])));
+        $fotosBorradas = array_values(array_filter($fotosKiosco, static fn($f) => !empty($f['deleted_at'])));
+        $fotosMostrar = $verPapelera ? $fotosBorradas : $fotosVivas;
+      ?>
+      <section class="card" id="fotos-kiosco">
+        <h2>Fotos del kiosco</h2>
+        <p class="muted">
+          Lo que sale de la cabina. Es lo que ven los papás en la galería con PIN, y es
+          <strong>distinto del álbum de arriba</strong>: quitar una foto del álbum no la borra
+          de acá.
+        </p>
+
+        <nav class="curation-filters">
+          <a class="chip <?= $verPapelera ? '' : 'is-active' ?>" href="<?= h($selfUrl) ?>#fotos-kiosco">
+            En la galería <span class="chip-count"><?= count($fotosVivas) ?></span>
+          </a>
+          <a class="chip <?= $verPapelera ? 'is-active' : '' ?>" href="<?= h($selfUrl . '&papelera=1') ?>#fotos-kiosco">
+            Papelera <span class="chip-count"><?= count($fotosBorradas) ?></span>
+          </a>
+        </nav>
+
+        <?php if (!$fotosMostrar): ?>
+          <p class="muted empty-note">
+            <?= $verPapelera ? 'No has borrado ninguna foto.' : 'Todavía no hay fotos del kiosco en esta fiesta.' ?>
+          </p>
+        <?php else: ?>
+          <?php /* Un solo formulario para todas: con 18 fotos, borrarlas de a una es
+                   inviable. Se marca lo que sobra y se manda de una vez. */ ?>
+          <form method="post" action="<?= h($selfUrl) ?>" id="form-fotos-kiosco"
+                data-confirm="<?= $verPapelera
+                  ? '¿Devolver a la galería las fotos marcadas?'
+                  : 'Las marcadas salen de la galería y su QR deja de funcionar. El enlace de la galería no se toca. ¿Borrarlas?' ?>">
+            <?= admin_csrf_field() ?>
+            <input type="hidden" name="action" value="<?= $verPapelera ? 'restaurar-fotos' : 'borrar-fotos' ?>">
+
+            <div class="fotos-barra">
+              <label class="fotos-todas">
+                <input type="checkbox" id="fotos-marcar-todas">
+                Marcar todas
+              </label>
+              <label class="fotos-opcion">Copias
+                <select id="fotos-copias">
+                  <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                </select>
+              </label>
+              <label class="fotos-opcion">Papel
+                <select id="fotos-papel">
+                  <option value="100mm 148mm" selected>10x15 cm (Selphy)</option>
+                  <option value="127mm 178mm">13x18 cm</option>
+                  <option value="A4 portrait">A4</option>
+                  <option value="auto">Segun impresora</option>
+                </select>
+              </label>
+              <label class="fotos-opcion">
+                <input type="checkbox" id="fotos-llenar" checked> Llenar la hoja
+              </label>
+              <button type="button" class="btn btn-primary btn-sm" id="fotos-imprimir" disabled>
+                🖨️ Imprimir <span data-cuenta>las marcadas</span>
+              </button>
+              <button type="submit" class="btn <?= $verPapelera ? 'btn-primary' : 'btn-ghost' ?> btn-sm fotos-borrar"
+                      id="fotos-accion" disabled>
+                <?= $verPapelera ? admin_icon('check') . ' Restaurar' : admin_icon('trash') . ' Borrar' ?>
+                <span data-cuenta>las marcadas</span>
+              </button>
+            </div>
+
+            <ol class="curation-grid" id="fotos-kiosco-grid">
+              <?php foreach ($fotosMostrar as $f): ?>
+                <?php
+                  $tok = (string) ($f['access_token'] ?? '');
+                  $nombre = (string) ($f['original_name'] ?? 'foto');
+                  // Diploma y recuerdito se distinguen por el nombre con que los sube el kiosco.
+                  $tipo = strncmp($nombre, 'diploma-', 8) === 0 ? 'Diploma'
+                        : (strncmp($nombre, 'recuerdito-', 11) === 0 ? 'Recuerdito' : 'Foto');
+                ?>
+                <li class="tile foto-kiosco"
+                    data-full="../ver.php?t=<?= h(rawurlencode($tok)) ?>&amp;download=inline">
+                  <?php /* La miniatura ES la casilla: en tablet marcar un cuadradito de
+                           16 px con el dedo es una pelea que no hay por qué dar. */ ?>
+                  <label class="tile-media foto-kiosco__marca">
+                    <input type="checkbox" name="fotos[]" value="<?= (int) $f['id'] ?>">
+                    <img loading="lazy" alt="<?= h($nombre) ?>"
+                         src="../ver.php?t=<?= h(rawurlencode($tok)) ?>&amp;download=inline">
+                  </label>
+                  <div class="tile-body">
+                    <p class="tile-nombre"><strong><?= h($nombre) ?></strong></p>
+                    <p class="muted small">
+                      <?= h($tipo) ?> · <?= h(substr((string) $f['created_at'], 0, 16)) ?>
+                      · <a href="../ver.php?t=<?= h(rawurlencode($tok)) ?>" target="_blank" rel="noopener">Ver grande</a>
+                    </p>
+                  </div>
+                </li>
+              <?php endforeach; ?>
+            </ol>
+          </form>
+
+          <div id="hoja-imprimir" aria-hidden="true"></div>
+          <div id="aviso-imprimir">Preparando la impresion...</div>
+
+          <?php if (!$verPapelera): ?>
+            <p class="muted small">
+              El borrado va a la papelera: nada se pierde y puedes devolverlo. El archivo se
+              elimina de verdad recién con el anonimizado de la fiesta, a los 30 días.
+            </p>
+          <?php endif; ?>
+
+          <script>
+            /* Cuenta lo marcado y deja el botón apagado mientras no haya nada: apretar
+               "Borrar" sin selección y que no pase nada se lee como que el botón no sirve. */
+            (function () {
+              var form = document.getElementById('form-fotos-kiosco');
+              if (!form) return;
+              var todas = document.getElementById('fotos-marcar-todas');
+              var boton = document.getElementById('fotos-accion');
+              var cuenta = boton.querySelector('[data-cuenta]');
+              var imprimir = document.getElementById('fotos-imprimir');
+              var cuentaImp = imprimir.querySelector('[data-cuenta]');
+              var casillas = form.querySelectorAll('input[name="fotos[]"]');
+              var hoja = document.getElementById('hoja-imprimir');
+              var aviso = document.getElementById('aviso-imprimir');
+
+              function marcadas() {
+                return Array.prototype.filter.call(casillas, function (c) { return c.checked; });
+              }
+              function refrescar() {
+                var n = marcadas().length;
+                var texto = n === 0 ? 'las marcadas' : (n === 1 ? '1 foto' : n + ' fotos');
+                boton.disabled = n === 0;
+                imprimir.disabled = n === 0;
+                cuenta.textContent = texto;
+                cuentaImp.textContent = texto;
+                todas.checked = n === casillas.length && n > 0;
+                todas.indeterminate = n > 0 && n < casillas.length;
+              }
+              todas.addEventListener('change', function () {
+                casillas.forEach(function (c) { c.checked = todas.checked; });
+                refrescar();
+              });
+              casillas.forEach(function (c) { c.addEventListener('change', refrescar); });
+
+              /* La hoja se cuelga del <body> para que la regla de impresion pueda esconder
+                 el resto del admin con `body > *` sin pelear con el layout de la pagina. */
+              document.body.appendChild(hoja);
+              document.body.appendChild(aviso);
+
+              /* Impresion: una pagina por foto (por copias), se espera a que carguen TODAS
+                 y recien ahi window.print(). Sin la espera la primera hoja sale en blanco
+                 en la tablet, porque el dialogo se abre antes de que la imagen exista. Es
+                 el mismo mecanismo de la galeria publica, ya probado con la Selphy. */
+              imprimir.addEventListener('click', function () {
+                var elegidas = marcadas();
+                if (!elegidas.length) { return; }
+                var copias = parseInt(document.getElementById('fotos-copias').value, 10) || 1;
+                hoja.classList.toggle('llenar', document.getElementById('fotos-llenar').checked);
+                // El tamano de hoja se declara en @page para que el dialogo proponga el
+                // papel de la Selphy sin tener que buscarlo cada vez.
+                var papel = document.getElementById('fotos-papel').value;
+                var estilo = document.getElementById('fotos-papel-css');
+                if (!estilo) {
+                  estilo = document.createElement('style');
+                  estilo.id = 'fotos-papel-css';
+                  document.head.appendChild(estilo);
+                }
+                estilo.textContent = papel === 'auto'
+                  ? ''
+                  : '@media print { @page { size: ' + papel + '; margin: 0; } }';
+                try { localStorage.setItem('cc-admin-papel', papel); } catch (e) { /* sin almacenamiento */ }
+
+                hoja.innerHTML = '';
+                var esperas = [];
+                elegidas.forEach(function (c) {
+                  var tarjeta = c.closest('.foto-kiosco');
+                  var url = tarjeta ? tarjeta.getAttribute('data-full') : '';
+                  for (var i = 0; i < copias; i++) {
+                    var pagina = document.createElement('div');
+                    pagina.className = 'pagina-foto';
+                    var img = document.createElement('img');
+                    img.alt = '';
+                    esperas.push(new Promise(function (resolve) {
+                      img.onload = resolve;
+                      img.onerror = resolve;
+                      setTimeout(resolve, 8000);
+                    }));
+                    img.src = url;
+                    pagina.appendChild(img);
+                    hoja.appendChild(pagina);
+                  }
+                });
+                aviso.classList.add('on');
+                Promise.all(esperas).then(function () {
+                  aviso.classList.remove('on');
+                  window.print();
+                });
+              });
+              window.addEventListener('afterprint', function () { hoja.innerHTML = ''; });
+
+              // El papel elegido se recuerda: en la fiesta se imprime muchas veces seguidas.
+              try {
+                var guardado = localStorage.getItem('cc-admin-papel');
+                if (guardado) { document.getElementById('fotos-papel').value = guardado; }
+              } catch (e) { /* sin almacenamiento */ }
+
+              refrescar();
+            })();
+          </script>
         <?php endif; ?>
       </section>
 
@@ -887,7 +1238,21 @@ if ($album !== null && $stats !== null) {
   </main>
 </div>
 
+<script><?php require __DIR__ . '/paginador.js'; ?></script>
 <script>
+// Curaduría y Fotos del kiosco paginadas (2026-09-15). Todas las tarjetas siguen en el DOM:
+// las casillas marcadas en otra página siguen marcadas y el arrastre ve el orden entero.
+(function () {
+  var slug = <?= json_encode($publicSlug, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+  window.ccPaginador.ccPaginar(document.getElementById('curation-grid'), {
+    clave: 'curaduria:' + slug + ':' + <?= json_encode($filterKey, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>,
+    etiqueta: 'recuerdos'
+  });
+  window.ccPaginador.ccPaginar(document.getElementById('fotos-kiosco-grid'), {
+    clave: 'kiosco:' + slug + ':' + <?= json_encode($verPapelera ? 'papelera' : 'galeria') ?>,
+    etiqueta: 'fotos'
+  });
+})();
 document.addEventListener('click', function (event) {
   var copyBtn = event.target.closest('[data-copy]');
   if (copyBtn && navigator.clipboard) {
@@ -900,6 +1265,39 @@ document.addEventListener('submit', function (event) {
   var message = event.target.getAttribute('data-confirm');
   if (message && !window.confirm(message)) { event.preventDefault(); }
 });
+
+// Marcar varios en Curaduría (20-sep): marcar todos, desmarcar dos o tres y
+// aprobar de una. Los botones quedan apagados mientras no haya nada marcado.
+(function () {
+  var form = document.getElementById('form-moderar-varios');
+  if (!form) { return; }
+  var todos = document.getElementById('curacion-marcar-todos');
+  var cuenta = document.getElementById('curacion-cuenta');
+  var botones = form.querySelectorAll('button[name="estado"]');
+  var casillas = document.querySelectorAll('#curation-grid input[name="media[]"]');
+  function marcadas() {
+    return Array.prototype.filter.call(casillas, function (c) { return c.checked; }).length;
+  }
+  function refrescar() {
+    var n = marcadas();
+    cuenta.textContent = n === 0
+      ? 'Nada marcado'
+      : (n === 1 ? '1 marcado' : n + ' marcados') + (n < casillas.length ? ' de ' + casillas.length : '');
+    Array.prototype.forEach.call(botones, function (b) { b.disabled = n === 0; });
+    todos.checked = n === casillas.length && n > 0;
+    todos.indeterminate = n > 0 && n < casillas.length;
+  }
+  todos.addEventListener('change', function () {
+    Array.prototype.forEach.call(casillas, function (c) { c.checked = todos.checked; });
+    refrescar();
+  });
+  Array.prototype.forEach.call(casillas, function (c) { c.addEventListener('change', refrescar); });
+  form.addEventListener('click', function (event) {
+    var boton = event.target.closest('button[data-confirm]');
+    if (boton && !window.confirm(boton.getAttribute('data-confirm'))) { event.preventDefault(); }
+  });
+  refrescar();
+})();
 
 // Reordenar arrastrando, solo en escritorio y solo sin filtro. Es una mejora
 // sobre las flechas, que siguen siendo el camino que funciona en celular, con

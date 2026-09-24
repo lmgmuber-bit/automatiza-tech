@@ -129,3 +129,56 @@ test('datos incompletos no revientan el armado', () => {
   assert.deepEqual(layouts(pages), ['cover', 'closing'])
   assert.equal(pages[0].title, 'Álbum Recuerdo')
 })
+
+/**
+ * Las fotos de cabina no pueden ser portada automática.
+ *
+ * Traen su propia tipografía horneada en los píxeles (título, agradecimiento,
+ * píldora del personaje), y la tapa les pone encima el título del álbum: texto
+ * sobre texto. Se vio en producción en la portada del baby shower de Tomás.
+ */
+test('con solo fotos de cabina, la portada usa el arte de la temática', () => {
+  const pages = buildPages({
+    ...base,
+    media: [foto(1, { source: 'booth' }), foto(2, { source: 'booth' })],
+  })
+  assert.equal(pages[0].image, null)
+  assert.equal(pages[0].fallback, 'themes/hielo/fondo-banner.jpg')
+  // Y las dos fotos siguen viviendo adentro del álbum.
+  const dentro = pages.slice(1).flatMap((p) => p.items || [])
+  assert.equal(dentro.length, 2)
+})
+
+test('habiendo foto de invitado, esa gana la portada sobre la de cabina', () => {
+  const pages = buildPages({
+    ...base,
+    media: [foto(1, { source: 'booth' }), foto(2, { source: 'guest' })],
+  })
+  assert.equal(pages[0].image?.id, 2)
+})
+
+test('el organizador puede fijar una de cabina como portada, y su decisión manda', () => {
+  const pages = buildPages({
+    ...base,
+    album: { ...base.album, coverId: 1 },
+    media: [foto(1, { source: 'booth' }), foto(2, { source: 'guest' })],
+  })
+  assert.equal(pages[0].image?.id, 1)
+})
+
+/**
+ * La tapa carga la miniatura, no el original.
+ *
+ * La portada de Carreras era un PNG de 5,5MB: la revista abría con la tapa en
+ * blanco varios segundos. Toda la revista usa miniaturas de ~48KB; la tapa no
+ * puede ser la excepción justo siendo lo primero que se ve.
+ */
+test('la tapa de la revista usa la miniatura de la foto, no el original', async () => {
+  const { readFileSync } = await import('node:fs')
+  const fuente = readFileSync(new URL('../../src/album/AlbumPage.jsx', import.meta.url), 'utf8')
+  assert.match(fuente, /page\.image\.thumb \|\| page\.image\.url/)
+  assert.ok(
+    !/`url\("\$\{base \+ \(page\.image\.url\)\}"\)`/.test(fuente),
+    'la tapa volvió a cargar el original completo',
+  )
+})

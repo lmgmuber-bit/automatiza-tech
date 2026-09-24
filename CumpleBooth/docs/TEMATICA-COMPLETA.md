@@ -195,3 +195,125 @@ se puede mostrar a medio hacer sin que se vea rota.
 | K-Pop | ✅ | — |
 | **Héroes** | ⚠️ | los 6 `saludo-*.mp4` y `despedida-heroes.mp4` (bloqueado a propósito hasta que Luis lo pida) |
 | Mickey, Cachorros, Princesas, Dinos, Sirenas, Juguetes | ❌ | todo — cero assets |
+
+---
+
+# Baby shower: qué es una temática completa (2026-08-26)
+
+La tabla A de arriba **no aplica**. Está escrita para cumpleaños infantiles y
+exige seis personajes con su cadena de juegos, ruleta, puzzles y videos de
+saludo. Un baby shower no tiene nada de eso, y pedírselo dejaría a las dos
+temáticas marcadas como "a medias" para siempre por algo que no van a tener
+nunca.
+
+El recorrido real de la cabina en modalidad `baby_shower` es:
+
+> intro → apuesta → juego → sellado → foto → revelado → QR → recuerdito
+
+Sin lista de invitados, sin ruleta y sin personajes. La rama se activa sola con
+`cc_parties.event_type = 'baby_shower'`.
+
+## Tabla A-BS — OBLIGATORIO
+
+| # | Archivo | Cant. | Para qué |
+|---|---|---|---|
+| 1 | `fondo-banner.jpg` | 1 | Pantalla de bienvenida. **9:16**, 1080×1920 |
+| 2 | `fondo-sala.jpg` | 1 | Fondo de la foto final. 9:16, y **tiene que traer un marco decorativo vacío y despejado**: `frameBox` apunta adentro de ese marco |
+| 3 | `musica-fondo.mp3` | 1 | Música en loop de todo el kiosco |
+
+Nada más. No van personajes, ni `roulette/`, ni puzzles, ni saludos.
+
+### Y en `public/data/themes.json`
+
+- `modalidad: "baby_shower"` — es lo que separa estas temáticas de las otras,
+  tanto para el código como para los tests.
+- `nombre`, `publico`, `diploma` (el texto del recuerdito)
+- `colors` — los mismos 9 tokens
+- `confetti` — 6 colores
+- `frameBox` — **calibrado contra el marco de su propio `fondo-sala.jpg`**, no
+  heredado de otra temática. Ver abajo.
+- `personajes: []` — vacío, y el test lo exige: si trae personajes es que
+  alguien copió una temática infantil sin limpiarla.
+
+## Cómo se calibra el frameBox
+
+`frameBox` no es un valor a ojo: marca el recuadro **dentro del marco
+decorativo pintado en `fondo-sala.jpg`** (ver `src/frameGeometry.js`). Si el
+fondo no tiene marco, no hay nada que calibrar y la foto del invitado queda
+flotando sobre la decoración.
+
+El método que funcionó: una página de un solo uso que carga el fondo y le
+dibuja encima el rectángulo que devuelve `getSquarePhotoGeometry()` con los
+valores candidatos. Se ajusta y se vuelve a mirar; dos iteraciones alcanzan.
+Conviene dejar un ~10% de aire respecto del borde interior, porque un recorte
+que pisa la moldura delata el montaje.
+
+**Pero el overlay no alcanza: la prueba que vale es la foto ya compuesta.** En
+Safari el recuadro se veía bien en el overlay y recién con la foto encima se
+notó que quedaba al filo del riel.
+
+## El marco tiene que estar DESPEJADO
+
+Aprendido rehaciendo Safari dos veces. Si un peluche, una planta o un globo se
+cruzan por delante del marco en la foto de fondo, la foto del invitado los tapa
+—se dibuja encima— y el cliente ve su decoración mutilada. En el primer intento
+el león se sentaba delante del marco y la foto le comía la melena.
+
+Al pedir el fondo hay que decirlo explícito: *nada se cruza por delante del
+marco ni toca sus bordes; los peluches van a los lados y por debajo, fuera de
+su contorno*. El montaje que mejor resultó fue el marco colgado alto en la
+pared, con los animales abajo: ahí es imposible que se pisen.
+
+## Lo que NO hace falta
+
+- `grupo-personajes.png`: el cierre del Álbum Recuerdo cae al `fondo-banner.jpg`
+  cuando no está, y para un baby shower ese fondo es justamente la foto que
+  corresponde. Generar un "grupo" sin personajes no aporta nada.
+- `despedida-<slug>.mp4`: cae al genérico `videos/despedida.mp4`.
+- `musica-juego.mp3`: si falta, el juego suena con la música de fondo.
+
+## Estado al 2026-08-26
+
+`baby-nube` (Bebé en las Nubes) y `baby-safari` (Bebé Safari) **cumplen la
+tabla A-BS completa**, música incluida. Las pistas las generó Luis con Gemini a
+partir de los prompts acordados; llegaron con fundido de salida en los últimos
+~2 s, que en loop se oye como un bajón cada 90 segundos, así que se les cortó
+la cola y se les hizo un cruce de 2 s envolviendo el final sobre el principio.
+Medido antes y después: la diferencia de nivel entre el primer y el último
+segundo pasó de ~20 dB a menos de 3,5 dB.
+
+Las dos llevan además `musica-juego.mp3`, que es la misma pista para ambas
+porque sirve igual en las dos.
+
+**Al pedir música nueva, exigir siempre loop sin fundido en los extremos.** Es
+lo que más se olvida y lo único que no se nota hasta que suena en bucle.
+
+## La invitación pública
+
+Una temática de baby shower no está completa hasta que su **invitación** se ve
+como corresponde. No es lo mismo que la cabina, y se rompe de forma silenciosa.
+
+Hace falta una entrada propia en `public/data/event-profile-presets.json`
+dentro de `themes`, con dos claves:
+
+- `base_image: "fondo-sala.jpg"` — la lámina de la invitación. Es la misma foto
+  del kiosco, así que no se genera nada nuevo.
+- `text_area` — **exactamente los cuatro números del `frameBox`**, más un
+  `tone` con la tinta. Los datos de la fiesta se escriben así dentro del marco
+  decorativo que la foto ya trae: el mismo marco que en la fiesta encuadra la
+  foto del invitado.
+
+Sin esa entrada el preset cae a `theme_fallback`, que no define `base_image`, y
+la invitación muestra **dos veces el mismo `fondo-banner.jpg`** — una de hero y
+otra de "lámina". No rompe nada, solo se ve pobre, que es justamente por qué
+hay un test (`la invitación tiene lámina propia, dentro del marco`) que exige
+que los dos números sigan siendo el mismo.
+
+Lo que **no** hace falta: video. Las temáticas infantiles apoyan la invitación
+en el recorrido de personajes, y un baby shower no tiene personajes. En vez de
+imitar ese formato con una foto fija —que da una versión pobre de la misma
+idea— la invitación de baby shower usa el bloque "la espera" que cierra
+`public/assets/invitation.css`: la fotografía respira, `.inv-sparks` se
+convierte en estrellas o luciérnagas según el tema, y la cuenta regresiva pone
+el número grande y solo. Todo cuelga de `[data-theme]`, así que agregar una
+temática de baby shower nueva pide sumar su slug a esos selectores.

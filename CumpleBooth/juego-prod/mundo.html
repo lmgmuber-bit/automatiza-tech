@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <title>Tu Cumple en 3D · Reino de Hielo</title>
+    <meta property="og:title" content="Tu Cumple en 3D · Misión Cumpleaños" />
+    <meta property="og:description" content="Un videojuego 3D de tu fiesta: tú eres la heroína del reino de hielo." />
+    <meta property="og:image" content="https://tu-cumple-en-3d.higgsfield.app/portada.jpg" />
+    <meta name="theme-color" content="#5fb6ff" />
+    <style>
+      :root {
+        --hielo: #bfe3ff;
+        --glaciar: #5fb6ff;
+        --glaciar-oscuro: #2f8fe0;
+        --lavanda: #8f7bd6;
+        --lavanda-oscura: #6c53c4;
+        --dorado: #ffcf6b;
+        --dorado-oscuro: #f0a94e;
+        --tinta: #152238;
+        --vidrio-claro: rgba(255, 255, 255, 0.8);
+        --vidrio-claro-suave: rgba(255, 255, 255, 0.58);
+        --vidrio-borde: rgba(255, 255, 255, 0.75);
+        --fuente: "Baloo 2", "Nunito", "Segoe UI Rounded", system-ui, sans-serif;
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body {
+        margin: 0; height: 100%; overflow: hidden;
+        font-family: var(--fuente); color: var(--tinta);
+        background: linear-gradient(180deg, #eef8ff 0%, var(--hielo) 45%, #d8ecff 100%);
+      }
+      #juego {
+        position: fixed; inset: 0; width: 100%; height: 100%; display: block;
+        touch-action: none;
+      }
+      button {
+        font-family: var(--fuente); font-size: 1.05rem; font-weight: 700; border: 0; border-radius: 20px;
+        min-height: 56px; padding: 0.85rem 1.7rem; cursor: pointer; color: #fff;
+        background: linear-gradient(180deg, var(--glaciar), var(--glaciar-oscuro));
+        box-shadow: 0 6px 16px rgba(47, 110, 190, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+        letter-spacing: 0.2px;
+      }
+      button:hover { filter: brightness(1.06); }
+      button:active {
+        transform: translateY(3px) scale(0.98);
+        box-shadow: 0 2px 6px rgba(47, 110, 190, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        filter: brightness(0.98);
+      }
+      button.rojo {
+        background: linear-gradient(180deg, var(--dorado), var(--dorado-oscuro)); color: var(--tinta);
+        box-shadow: 0 6px 16px rgba(240, 169, 78, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+      }
+      button.rojo:active {
+        box-shadow: 0 2px 6px rgba(240, 169, 78, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+      }
+      button.secundario {
+        background: rgba(255, 255, 255, 0.78); color: var(--glaciar-oscuro);
+        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        border: 2px solid rgba(255, 255, 255, 0.85);
+        box-shadow: 0 4px 12px rgba(21, 34, 56, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      }
+      button.secundario:active { box-shadow: 0 2px 6px rgba(21, 34, 56, 0.14); }
+      [hidden] { display: none !important; }
+
+      /* Pantallas */
+      .pantalla {
+        position: fixed; inset: 0; display: grid; place-content: center; gap: 1rem; justify-items: center;
+        background: radial-gradient(120% 120% at 50% 0%, rgba(143, 123, 214, 0.35), rgba(21, 34, 56, 0.55));
+        backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        padding: 1.2rem; text-align: center; z-index: 20;
+      }
+      .tarjeta {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.64));
+        backdrop-filter: blur(20px) saturate(140%); -webkit-backdrop-filter: blur(20px) saturate(140%);
+        border: 1px solid var(--vidrio-borde); border-radius: 28px; padding: 1.8rem 2rem;
+        box-shadow: 0 24px 54px rgba(21, 34, 56, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+        max-width: min(92vw, 540px); display: grid; gap: 1rem; justify-items: center;
+      }
+      h1 {
+        margin: 0; font-size: clamp(1.9rem, 6vw, 3.1rem); font-weight: 800; color: var(--glaciar-oscuro);
+        text-shadow: 0 2px 0 rgba(255, 255, 255, 0.65), 0 10px 26px rgba(95, 182, 255, 0.35);
+        letter-spacing: 0.4px; line-height: 1.08;
+      }
+      h1 small {
+        display: block; font-size: 0.42em; font-weight: 700; color: var(--lavanda-oscura);
+        text-shadow: none; margin-top: 0.4rem; letter-spacing: 0.2px;
+      }
+      h2 {
+        margin: 0; font-size: clamp(1.6rem, 5vw, 2.5rem); font-weight: 800; color: var(--lavanda-oscura);
+        text-shadow: 0 2px 0 rgba(255, 255, 255, 0.5);
+      }
+      .fila { display: flex; gap: 0.9rem; flex-wrap: wrap; justify-content: center; align-items: center; }
+      label.campo { display: grid; gap: 0.35rem; font-weight: 700; font-size: 0.92rem; text-align: left; color: var(--tinta); }
+      input[type="text"], input[type="number"] {
+        font-family: var(--fuente); font-size: 1.1rem; padding: 0.65rem 0.9rem;
+        border: 2px solid rgba(95, 182, 255, 0.4); border-radius: 16px; width: 100%;
+        background: rgba(255, 255, 255, 0.85); color: var(--tinta);
+        box-shadow: inset 0 2px 6px rgba(21, 34, 56, 0.08);
+        transition: border-color 120ms ease, box-shadow 120ms ease;
+      }
+      input[type="text"]:focus, input[type="number"]:focus {
+        outline: none; border-color: var(--glaciar); box-shadow: 0 0 0 4px rgba(95, 182, 255, 0.25);
+      }
+      input[type="text"] { width: 14rem; } input[type="number"] { width: 5.5rem; }
+      label.check { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-size: 0.98rem; color: var(--tinta); }
+      label.check input { width: 1.5rem; height: 1.5rem; accent-color: var(--lavanda); border-radius: 6px; }
+      .ayuda-desc { font-size: 0.82rem; opacity: 0.75; margin: 0; max-width: 32rem; }
+      #controles-lista { text-align: left; max-height: 55vh; overflow: auto; padding-right: 0.4rem; }
+      #controles-lista h3 { margin: 0.7rem 0 0.25rem; color: var(--glaciar-oscuro); font-size: 1.05rem; }
+      #controles-lista p { margin: 0; font-size: 0.95rem; line-height: 1.5; color: var(--tinta); }
+
+      /* HUD */
+      #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+      #hud.oculto { display: none; }
+      #panel-mision {
+        position: absolute; left: 16px; top: 16px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.6));
+        backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        border: 1px solid var(--vidrio-borde); border-radius: 20px; padding: 12px 16px; max-width: min(46vw, 340px);
+        box-shadow: 0 10px 24px rgba(21, 34, 56, 0.18);
+      }
+      #objetivo { margin: 0 0 6px; font-weight: 800; font-size: 0.95rem; line-height: 1.3; color: var(--tinta); }
+      #misiones { list-style: none; margin: 0; padding: 0; font-size: 0.85rem; color: var(--tinta); }
+      #misiones li { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
+      #copos {
+        position: absolute; right: 16px; top: 16px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.6));
+        backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        border: 1px solid var(--vidrio-borde); border-radius: 20px; padding: 8px 16px;
+        font-weight: 800; font-size: 1.05rem; color: var(--tinta); box-shadow: 0 10px 24px rgba(21, 34, 56, 0.18);
+      }
+      #btn-pausa { position: absolute; right: 16px; top: 64px; pointer-events: auto; padding: 0.5rem 1.1rem; font-size: 1rem; }
+      #toast {
+        position: absolute; left: 50%; bottom: 20%; transform: translate(-50%, 16px); opacity: 0;
+        transition: opacity 260ms cubic-bezier(.2,.8,.2,1), transform 260ms cubic-bezier(.2,.8,.2,1);
+        background: linear-gradient(180deg, rgba(21, 34, 56, 0.94), rgba(21, 34, 56, 0.84));
+        backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        color: #fff; padding: 12px 22px; border-radius: 999px; font-weight: 700; font-size: 1.05rem;
+        border: 2px solid rgba(255, 207, 107, 0.75); max-width: 90vw; text-align: center;
+        box-shadow: 0 14px 30px rgba(21, 34, 56, 0.35);
+      }
+      #toast.visible { opacity: 1; transform: translate(-50%, 0); }
+      #dialogo {
+        position: absolute; left: 50%; bottom: 8%; transform: translateX(-50%); opacity: 0;
+        transition: opacity 220ms ease;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.93), rgba(255, 255, 255, 0.8));
+        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        color: var(--tinta); padding: 14px 22px; border-radius: 22px; border: 1px solid var(--vidrio-borde);
+        font-weight: 700; font-size: 1.1rem; max-width: 90vw; text-align: center;
+        box-shadow: 0 16px 34px rgba(95, 110, 214, 0.25);
+      }
+      #dialogo.visible { opacity: 1; }
+      #tutorial {
+        position: absolute; left: 50%; top: 14%; transform: translateX(-50%); pointer-events: auto;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.93), rgba(255, 255, 255, 0.8));
+        backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        border: 1px solid var(--vidrio-borde); border-radius: 24px; padding: 12px 20px; display: flex; gap: 16px;
+        align-items: center; box-shadow: 0 16px 34px rgba(21, 34, 56, 0.22); max-width: 92vw;
+      }
+      #tutorial.pop { animation: pop 320ms ease-out; }
+      @keyframes pop {
+        from { transform: translateX(-50%) scale(0.6); opacity: 0; }
+        to { transform: translateX(-50%) scale(1); opacity: 1; }
+      }
+      #tut-icono { font-size: 2.6rem; line-height: 1; }
+      #tut-texto { font-weight: 700; font-size: 1.05rem; max-width: 46vw; color: var(--tinta); }
+      #btn-saltar-tutorial { font-size: 0.85rem; padding: 0.6rem 1rem; }
+      #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 15; }
+      #flash.on { animation: flash 420ms ease-out; }
+      @keyframes flash { from { opacity: 0.55; } to { opacity: 0; } }
+      #debug {
+        position: fixed; left: 10px; bottom: 10px; background: rgba(21, 34, 56, 0.75); color: var(--hielo);
+        font-family: var(--fuente); font-size: 12px; padding: 6px 10px; border-radius: 10px; z-index: 30;
+      }
+      #cargando {
+        position: fixed; inset: 0; display: grid; place-content: center;
+        background: linear-gradient(180deg, var(--hielo), var(--glaciar)); color: #fff;
+        font-size: 1.7rem; font-weight: 800; z-index: 40; text-shadow: 0 4px 12px rgba(21, 34, 56, 0.35);
+      }
+
+      /* Controles táctiles */
+      #touch { position: fixed; inset: 0; pointer-events: none; z-index: 12; display: none; }
+      #touch.visible { display: block; }
+      #joy {
+        position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        border: 3px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 8px 20px rgba(21, 34, 56, 0.25), inset 0 2px 8px rgba(255, 255, 255, 0.35);
+        display: none;
+      }
+      #joy.on { display: block; }
+      #joy-knob {
+        position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; border-radius: 50%;
+        background: linear-gradient(180deg, var(--lavanda), var(--lavanda-oscura));
+        border: 3px solid #fff; box-shadow: 0 6px 14px rgba(21, 34, 56, 0.35); transform: translate(-50%, -50%);
+      }
+      .btn-t {
+        position: absolute; pointer-events: auto; width: 72px; height: 72px; border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.85); color: #fff; font-weight: 800;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+        user-select: none; text-shadow: 0 1px 3px rgba(21, 34, 56, 0.5);
+        box-shadow: 0 8px 18px rgba(21, 34, 56, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        padding: 2px; line-height: 1.1; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+        transition: transform 100ms ease, filter 100ms ease;
+      }
+      .btn-t-icono { font-size: 1.3rem; line-height: 1; }
+      .btn-t-texto { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; }
+      .btn-t.activo { transform: scale(0.9); filter: brightness(1.25); }
+      #b-jump { right: 24px; bottom: 96px; background: linear-gradient(180deg, var(--lavanda), var(--lavanda-oscura)); }
+      #b-congelar { right: 124px; bottom: 44px; background: linear-gradient(180deg, var(--glaciar), var(--glaciar-oscuro)); }
+      #b-magia {
+        right: 130px; bottom: 140px; background: linear-gradient(180deg, var(--dorado), var(--dorado-oscuro));
+        color: var(--tinta); text-shadow: none;
+      }
+      #b-revelar { right: 24px; bottom: 206px; background: linear-gradient(180deg, var(--lavanda-oscura), #4d3897); }
+
+      @media (max-width: 720px) {
+        #panel-mision { max-width: 60vw; padding: 8px 10px; }
+        #objetivo { font-size: 0.82rem; }
+        #misiones { font-size: 0.76rem; }
+        #copos { font-size: 0.92rem; padding: 6px 10px; }
+        #btn-pausa { top: 56px; }
+        .btn-t { width: 64px; height: 64px; }
+        .btn-t-icono { font-size: 1.1rem; }
+        .btn-t-texto { font-size: 0.54rem; }
+        #b-jump { width: 76px; height: 76px; }
+        #joy { width: 104px; height: 104px; margin: -52px 0 0 -52px; }
+        #joy-knob { width: 48px; height: 48px; }
+      }
+      @media (max-width: 420px) {
+        .tarjeta { padding: 1.4rem 1.3rem; border-radius: 22px; gap: 0.8rem; }
+        input[type="text"] { width: 100%; }
+        .fila { gap: 0.6rem; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #tutorial.pop, #flash.on { animation: none; }
+        #toast, #dialogo, button, .btn-t { transition: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="juego"></canvas>
+    <div id="cargando">Nevando sobre el reino…</div>
+
+    <div id="hud" class="oculto">
+      <div id="panel-mision">
+        <p id="objetivo"></p>
+        <ul id="misiones"></ul>
+      </div>
+      <div id="copos">❄️ 0 / 20</div>
+      <button id="btn-pausa" type="button" aria-label="Pausa">⏸ Pausa</button>
+      <div id="toast" role="status" aria-live="polite"></div>
+      <div id="dialogo"></div>
+      <div id="tutorial" hidden>
+        <div id="tut-icono">🕹️</div>
+        <div id="tut-texto"></div>
+        <button id="btn-saltar-tutorial" class="secundario" type="button">Saltar tutorial</button>
+      </div>
+    </div>
+
+    <div id="touch">
+      <div id="joy"><div id="joy-knob"></div></div>
+      <button id="b-revelar" class="btn-t" type="button" aria-label="Revelar caminos ocultos"><span class="btn-t-icono" aria-hidden="true">👁️</span><span class="btn-t-texto">Revelar</span></button>
+      <button id="b-magia" class="btn-t" type="button" aria-label="Magia a distancia"><span class="btn-t-icono" aria-hidden="true">✨</span><span class="btn-t-texto">Magia</span></button>
+      <button id="b-congelar" class="btn-t" type="button" aria-label="Congelar un camino de hielo"><span class="btn-t-icono" aria-hidden="true">❄️</span><span class="btn-t-texto">Congelar</span></button>
+      <button id="b-jump" class="btn-t" type="button" aria-label="Saltar"><span class="btn-t-icono" aria-hidden="true">⬆️</span><span class="btn-t-texto">Salto</span></button>
+    </div>
+
+    <div id="flash"></div>
+    <div id="debug" hidden></div>
+
+    <section id="pantalla-inicio" class="pantalla">
+      <div class="tarjeta">
+        <h1>Reino de Hielo<small>La magia perdida · Misión Cumpleaños</small></h1>
+        <p id="saludo" style="margin:0;font-weight:700"></p>
+        <p id="fiesta-info" style="margin:0;font-weight:800;color:var(--glaciar-oscuro)" hidden></p>
+        <div class="fila">
+          <label class="campo">Nombre del festejado<input id="in-nombre" type="text" maxlength="24" autocomplete="off" /></label>
+          <label class="campo">Edad<input id="in-edad" type="number" min="1" max="99" /></label>
+          <label class="campo" id="campo-pin" hidden>PIN de la galería<input id="in-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4 dígitos" value="1234" /></label>
+        </div>
+        <div class="fila">
+          <label class="check"><input id="in-ayuda" type="checkbox" /> Modo ayuda</label>
+          <label class="check"><input id="in-sonido" type="checkbox" checked /> Sonido</label>
+          <label class="check"><input id="in-destellos" type="checkbox" checked /> Destellos</label>
+        </div>
+        <p class="ayuda-desc">Modo ayuda: la magia llega más lejos, la guía brilla más y todo es más fácil.</p>
+        <div class="fila">
+          <button id="btn-jugar" class="rojo" type="button">▶ ¡Jugar!</button>
+          <button id="btn-controles" class="secundario" type="button">❄️ Controles</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="pantalla-pausa" class="pantalla" hidden>
+      <div class="tarjeta">
+        <h2>Pausa</h2>
+        <div class="fila">
+          <label class="check"><input id="pausa-ayuda" type="checkbox" /> Modo ayuda</label>
+          <label class="check"><input id="pausa-sonido" type="checkbox" /> Sonido</label>
+        </div>
+        <div class="fila">
+          <button id="btn-continuar" class="rojo" type="button">▶ Continuar</button>
+          <button id="btn-controles-pausa" class="secundario" type="button">❄️ Controles</button>
+        </div>
+        <button id="btn-reiniciar" class="secundario" type="button">↺ Empezar de nuevo</button>
+        <button id="btn-kiosco-pausa" class="secundario" type="button" hidden style="display:none">🏠 Volver al kiosco</button>
+      </div>
+    </section>
+
+    <section id="pantalla-final" class="pantalla" hidden>
+      <div class="tarjeta">
+        <h2 id="final-titulo"></h2>
+        <p id="final-sub" style="margin:0;font-size:1.3rem;font-weight:700;color:var(--glaciar-oscuro)"></p>
+        <p id="final-copos" style="margin:0;font-weight:700"></p>
+        <div class="fila">
+          <button id="btn-repetir" class="rojo" type="button">🔁 Repetir la aventura</button>
+          <button id="btn-explorar" type="button">🏔️ Explorar libremente</button>
+          <button id="btn-kiosco-final" type="button" hidden style="display:none">🏠 Volver al kiosco</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="pantalla-controles" class="pantalla" hidden>
+      <div class="tarjeta">
+        <h2>Controles</h2>
+        <div id="controles-lista"></div>
+        <button id="btn-cerrar-controles" class="rojo" type="button">Cerrar</button>
+      </div>
+    </section>
+
+    <link rel="stylesheet" href="./orientacion.css">
+    <script src="./orientacion.js" defer></script>
+    <script type="module" src="./client.js"></script>
+  </body>
+</html>

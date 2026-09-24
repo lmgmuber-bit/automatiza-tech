@@ -1,0 +1,94 @@
+ticket_id: AT-CUMPLECLICK-014
+parent_ticket: AT-CUMPLECLICK-013
+title: "Tu Cumple en 3D — Fase 3: ayudantes por celular vía QR (Claude)"
+origin: direct_luis
+priority: P1
+status: DONE
+created_at: "2026-09-06"
+created_by: claude
+objective: >
+  Cerrar la fase 3 de "Tu Cumple en 3D": ayudantes por celular vía QR durante la fiesta
+  (ánimo, copos, ayuda), sin depender de la sala multijugador de Higgsfield (bloqueada por un
+  401 a cualquier visitante sin sesión). Backend propio de salas en CumpleBooth, cliente HTTP
+  con polling y generador de QR en el juego.
+ownership:
+  planner: claude
+  executor: claude
+  reviewer: claude
+  final_approver: "Luis Miguel"
+  current_owner: claude
+routing:
+  complexity: C2
+  risk: low
+  uncertainty: low
+  reversibility: high
+scope:
+  changed_files:
+    # CumpleBooth vive dentro del repo automatiza-tech; rutas relativas a ese repo.
+    - "CumpleBooth/public/sala.php"
+    - "CumpleBooth/public/lib.sala.php"
+    - "CumpleBooth/database/migrations/014_salas_ayudantes.php"
+    - "CumpleBooth/database/migrations/014_salas_ayudantes.down.php"
+    - "CumpleBooth/README.md"
+    # El juego vive en un repo git APARTE (C:\wamp64\www\tucumple-repo\, rama
+    # feat/fase3-ayudantes-qr), no dentro de automatiza-tech; rutas relativas a ese repo.
+    - "tucumple-repo/app/public/game/qr.js"
+    - "tucumple-repo/app/public/game/sala.js"
+    - "tucumple-repo/app/public/game/ayudantes.js"
+    - "tucumple-repo/app/public/ayudante.html"
+    - "tucumple-repo/app/public/ayudante.js"
+    - "tucumple-repo/app/public/game/strings.js"
+    - "tucumple-repo/app/public/game/main.js"
+safety:
+  storage: "BD CumpleClick (cc_salas, cc_sala_ayudantes, cc_sala_acciones)"
+  prepared_statements: true
+  raw_ip_storage: false
+  tokens_hashed: true
+  rate_limit: "enfriamiento por ayudante y tipo; 60 acciones/min por sala; límites por IP"
+  body_limit_bytes: 4096
+  higgsfield_credits: 0
+  allow_deploy: true # PROD por SSH, autorizado por Luis 2026-09-06
+  allow_commit: true # solo en ramas propias
+  allow_push: false # rama propia sin merge; el deploy a PROD fue por SSH (Claude), no por push
+execution_log:
+  - date: "2026-09-06"
+    by: claude
+    what: >
+      Hallazgo: los sitios alojados en Higgsfield responden 401 "unauthenticated" a cualquier
+      visitante sin sesión de Higgsfield (verificado con curl y navegador limpio en los tres
+      juegos del proyecto), y publish_website solo lista en el feed comunitario (prohibido por
+      Luis). Por eso la sala multijugador de la plantilla (Durable Object, src/room.ts +
+      src/logic.js) queda intacta sin usarse, y la fase 3 construyó un backend propio: PHP en
+      CumpleBooth (public/sala.php + public/lib.sala.php, migración 014_salas_ayudantes,
+      tablas cc_salas/cc_sala_ayudantes/cc_sala_acciones) con polling HTTP JSON (700 ms
+      acciones, 2 s resumen); contrato documentado en tucumple-repo/app/design/sala-api.md.
+      Del lado del juego: generador de QR propio (game/qr.js), cliente HTTP (game/sala.js),
+      orquestador que crea la sala y aplica acciones (game/ayudantes.js) y la página del
+      celular (ayudante.html/.js). Tokens hasheados, IP solo como HMAC, enfriamientos por
+      ayudante y tipo, cupo 12 por sala, tope 60 acciones/min, sala vive 6 horas. Verificado:
+      prueba de humo HTTP del contrato completo (36 checks OK), 6 QR decodificados con OpenCV
+      (v1, v3, v5, v7, v10 x2), partida en navegador con celular simulado (3 acciones
+      recibidas y aplicadas, heroe.ayuda true, revelado activo, 58 fps, 54 draw calls). 0
+      créditos de Higgsfield gastados (saldo sigue en 99,73). Documentación sincronizada:
+      tucumple-repo/app/README.md (estado + sección Fase 3), CumpleBooth/README.md (fuentes
+      de verdad). Nada desplegado a PROD; sin commit ni push de este ticket.
+  - date: "2026-09-06"
+    by: claude
+    what: >
+      DESPLEGADO A PROD por Claude vía SSH/SFTP (paramiko), autorizado por Luis ("tú puedes
+      subir a PROD, por SSH lo hiciste en el pasado"). Deploy aditivo a
+      https://automatizatech.cl/cumpleclick/: `sala.php` + `lib.sala.php` (nuevos), migración
+      014 aplicada con runner puntual en `private-cumpleclick/database/` (tablas cc_salas,
+      cc_sala_ayudantes, cc_sala_acciones; PROD tenía 001–009, 010–013 siguen sin desplegar),
+      juego 3D completo (180 archivos, 38 MB) en `/cumpleclick/juego/` con `.htaccess` propio
+      (404 limpio, sin `immutable`). `api.php`, `upload.php`, `ver.php` y `lib.php` de PROD no se
+      tocaron (md5 iguales a dist / lib.php del 26-ago con las 11 funciones cb_* necesarias).
+      Verificado desde afuera: prueba de humo de sala.php 36/36 contra PROD, juego con WebGPU en
+      temáticas Hielo (fiesta demo-frozen-vip cargada, QR con URL pública, sala creada y cerrada)
+      y Héroes, 0 errores de consola propios. Registro en CumpleBooth/docs/FTP-MANIFEST.md
+      (sección DESPLEGADO 2026-09-06) y Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md §3.3.
+next_action: >
+  En PROD desde 2026-09-06. Queda la prueba real de Luis con niños, celulares e impresora
+  (galería con PIN; el PIN 2026 solo sigue en demo-kpop-vip, las otras demos lo tienen distinto),
+  el merge de la rama feat/cumpleclick-sala-ayudantes cuando Luis lo apruebe, y borrar la fiesta
+  local de prueba `prueba-3d` si no se quiere conservar.

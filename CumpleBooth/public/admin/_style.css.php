@@ -213,8 +213,18 @@ main { display: flex; flex-direction: column; gap: 20px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-weight: 700; font-size: .92rem; }
 .field small { font-size: .8rem; }
+/* Todos los tipos de campo de texto, no solo `text` y `date`: los de correo, telefono,
+   numero, hora, clave y URL quedaban con el estilo por defecto del navegador (cuadrados
+   y de 21 px) al lado de los demas, que es lo que se ve como "HTML puro". */
 .field input[type="text"],
 .field input[type="date"],
+.field input[type="email"],
+.field input[type="tel"],
+.field input[type="number"],
+.field input[type="time"],
+.field input[type="url"],
+.field input[type="password"],
+.field input:not([type]),
 .field select,
 .field textarea {
   border: 1.5px solid var(--border); border-radius: var(--radius-sm);
@@ -229,7 +239,102 @@ main { display: flex; flex-direction: column; gap: 20px; }
   display: flex; align-items: center; gap: 10px; font-weight: 700; cursor: pointer;
 }
 .checkbox-field input { width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary); }
+/* Los cuatro numeros del calibrador de marco no tenian estilo y quedaban en 20 px de
+   alto: imposibles de tocar desde un telefono, que es donde Luis edita a veces. */
+input[type="number"].frame-value {
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 10px; font: inherit; min-height: 44px; background: #fff; color: var(--text);
+}
 .form-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.contacto-fila {
+  display: grid;
+  /* `minmax(0, ...)` y no `1fr`: `1fr` es `minmax(auto, 1fr)` y no deja que la columna
+     baje del ancho minimo del input, asi que la fila se salia del recuadro. */
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, .9fr) auto;
+  gap: 8px; align-items: center; margin: 0 0 8px;
+}
+.contacto-fila input[type="text"], .contacto-fila input[type="email"], .contacto-fila select {
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 9px 12px; font: inherit; min-height: 42px; background: #fff; color: var(--text);
+  min-width: 0;   /* el ancho por defecto de un input tambien empuja la grilla */
+}
+.contacto-fila .checkbox-field { font-size: .85rem; white-space: nowrap; }
+/* La linea para tomar el precio de un plan: etiqueta, selector y explicacion, uno debajo
+   del otro. Sin esto los tres quedaban en linea y el texto se colaba entre medio. */
+.cobro-plan {
+  display: flex; flex-direction: column; gap: 5px;
+  font-weight: 700; font-size: .9rem; margin: 0 0 14px;
+}
+.cobro-plan select {
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 9px 12px; font: inherit; font-weight: 400; min-height: 42px;
+  background: #fff; color: var(--text); max-width: 380px;
+}
+.cobro-plan small { font-weight: 400; font-size: .8rem; color: var(--text-muted); }
+/* Bloque para mandarle el comprobante al papa, al pie del cobro. Va separado por una linea
+   arriba porque es una accion que sale de la ficha, no un campo mas del formulario. */
+.cobro-envio {
+  margin: 16px 0 0; padding: 14px 0 0; border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+}
+.cobro-envio p { margin: 0; }
+.cobro-envio .btn { align-self: flex-start; }
+.cobro-envio__faltan {
+  margin: 0; padding-left: 18px; font-size: .86rem; color: var(--text-muted);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.cobro-envio__faltan li { line-height: 1.4; }
+
+/* Los cuatro correos de la fiesta. Cada uno es un bloque que se apila y no una fila de tabla:
+   la ficha es una columna angosta y tres columnas ahi no caben. Una media query no servia
+   —mide la ventana, no el contenedor—, y por eso la version anterior se veia rota en pantalla
+   ancha: la ventana era de 1170 px pero la columna de 610. */
+.envio { padding: 14px 0; border-top: 1px solid var(--border); }
+.envio:first-of-type { border-top: none; padding-top: 8px; }
+.envio__cab {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+  gap: 2px 14px;
+}
+.envio__cab h4 { margin: 0; font-size: .96rem; }
+.envio__estado { margin: 0; font-size: .86rem; color: var(--text-muted); }
+.envio__estado strong { color: var(--text); }
+.envio__que { margin: 3px 0 0; }
+.envio__campos { margin-top: 10px; max-width: 460px; }
+.envio__campos label { font-size: .82rem; }
+.envio__campos input { min-height: 38px; }
+.envio__botones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.envio__botones .btn { align-self: flex-start; }
+.envio__aviso { margin: 6px 0 0; }
+.envio__motivo { display: block; margin-top: 2px; }
+.envios__pdf {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+  background: var(--border); color: var(--text-muted); font-size: .68rem; font-weight: 700;
+  letter-spacing: .04em; vertical-align: middle;
+}
+.envios__falla { display: block; margin-top: 2px; color: #b4232a; font-weight: 700; font-size: .82rem; }
+/* El mensaje listo para WhatsApp va plegado: es util tenerlo a mano, pero cuatro cuadros de
+   texto abiertos convierten el panel en un muro. */
+.envio__mensaje { margin-top: 10px; }
+.envio__mensaje summary {
+  cursor: pointer; font-size: .84rem; font-weight: 700; color: var(--brand);
+  padding: 4px 0; list-style-position: inside;
+}
+.envio__mensaje textarea {
+  width: 100%; margin-top: 8px; padding: 10px 12px; font: inherit; font-size: .86rem;
+  line-height: 1.45; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface-soft, #faf8fe); color: var(--text); resize: vertical;
+}
+/* El formulario de los correos existe solo para que los botones se cuelguen de el con
+   `form="cc-envios"`: no tiene nada que mostrar. */
+.oculto-visual { display: none; }
+
+.cobro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px 14px; }
+.cobro-grid label { display: flex; flex-direction: column; gap: 5px; font-weight: 700; font-size: .9rem; }
+.cobro-grid input {
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 9px 12px; font: inherit; font-weight: 400; min-height: 42px; background: #fff; color: var(--text);
+}
+@media (max-width: 720px) { .contacto-fila { grid-template-columns: 1fr; } }
 
 /* --- Lista de fiestas --- */
 .list-header {
@@ -273,6 +378,8 @@ main { display: flex; flex-direction: column; gap: 20px; }
 .badge-ok { background: var(--success-soft); color: var(--success); }
 .badge-off { background: #f1f1f4; color: #6b7280; }
 .badge-warn { background: var(--warn-soft); color: var(--warn); }
+/* Duracion de un video en el Album Recuerdo: informativo, no un estado. */
+.badge--video { background: var(--primary-soft); color: var(--primary-dark); }
 
 .party-url { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .party-url input {
@@ -460,7 +567,9 @@ main { display: flex; flex-direction: column; gap: 20px; }
   .party-title, .party-url, .party-actions { flex-direction: column; align-items: stretch; }
   .party-url input { min-width: 0; }
   .btn { width: 100%; }
-  .inline-form { width: 100%; }
+  /* Sin `wrap`, una barra con varios botones los deja a todos al 100% en una sola fila:
+     tres botones de ancho completo uno al lado del otro se salen de la pantalla. */
+  .inline-form { width: 100%; flex-wrap: wrap; }
   .inline-form .btn { width: 100%; }
   .themes-grid { grid-template-columns: 1fr; }
   .theme-detail-head, .detail-section-head { flex-direction: column; align-items: stretch; }
@@ -651,7 +760,18 @@ main { display: flex; flex-direction: column; gap: 20px; }
   font-size: .82rem; color: var(--text-muted);
 }
 
-.tile-badges { position: absolute; top: 6px; left: 6px; right: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+.tile-badges { position: absolute; top: 6px; left: 6px; right: 40px; display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* Curaduría: marcar varios (20-sep). La casilla va arriba a la derecha, lejos de las
+   insignias, y grande para el dedo; la tarjeta marcada se enmarca del color del botón. */
+.seleccion-barra {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.seleccion-barra .curacion-eliminar { margin-left: auto; }
+.tile-marca { position: absolute; top: 6px; right: 6px; z-index: 3; }
+.tile-marca input { display: block; width: 26px; height: 26px; cursor: pointer; accent-color: var(--cta); }
+.tile:has(.tile-marca input:checked) { outline: 3px solid var(--cta); outline-offset: -3px; }
 .badge {
   padding: 2px 8px; border-radius: 999px;
   font-size: .68rem; font-weight: 800; letter-spacing: .03em;
@@ -681,3 +801,146 @@ main { display: flex; flex-direction: column; gap: 20px; }
 .tile-order .btn[disabled] { opacity: .35; cursor: not-allowed; }
 
 .reorder-form { margin-top: 14px; }
+
+/* Perfil del protagonista */
+.event-profile-admin { max-width:1040px; }
+.profile-page-head,.profile-card-head,.profile-person-head,.profile-fields-head { display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap; }
+.profile-page-head h1 { margin:0;color:var(--text);font:700 clamp(1.7rem,4vw,2.5rem)/1.1 var(--font-display); }
+.profile-page-head p { margin:.35rem 0 0; }
+.profile-eyebrow { color:var(--cta);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:.78rem; }
+.profile-page-actions { display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap; }
+.profile-page-actions .btn { min-height:42px; }
+/* Estado de publicación: el admin debe saber de un vistazo qué ve el invitado. */
+.profile-status { display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:14px;background:#fff;font-weight:800;font-size:.9rem; }
+.profile-status-dot { flex:0 0 auto;width:11px;height:11px;border-radius:50%;background:var(--muted); }
+.profile-status[data-state=live] { border-color:var(--success);background:#f0fdf4;color:#166534; }
+.profile-status[data-state=live] .profile-status-dot { background:var(--success); }
+.profile-status[data-state=off] { border-color:var(--border);color:var(--muted); }
+.profile-status[data-state=incomplete] { border-color:#f59e0b;background:#fffbeb;color:#92400e; }
+.profile-status[data-state=incomplete] .profile-status-dot { background:#f59e0b; }
+.profile-stack,.profile-people,.profile-fields { display:flex;flex-direction:column;gap:18px; }
+.profile-grid { display:grid;gap:14px; }
+.profile-grid--2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.profile-grid--3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.profile-grid-span { grid-column:1/-1; }
+.profile-switch { display:flex;align-items:center;gap:10px;font-weight:800;cursor:pointer; }
+.profile-switch input { position:absolute;opacity:0; }
+.profile-switch span { width:50px;height:28px;padding:3px;border-radius:999px;background:#d1d5db;transition:.2s; }
+.profile-switch span::after { content:'';display:block;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 7px rgba(0,0,0,.2);transition:.2s; }
+.profile-switch input:focus-visible + span { outline:3px solid color-mix(in srgb,var(--cta) 45%,transparent);outline-offset:3px; }
+.profile-switch input:checked + span { background:var(--success); }
+.profile-switch input:checked + span::after { transform:translateX(22px); }
+.profile-sort-list { display:flex;flex-direction:column;gap:10px; }
+.profile-sort-row { display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px;border:1px solid var(--border);border-radius:14px;background:#faf7ff; }
+.profile-sort-row input[type=text],.profile-field-row input,.profile-field-row select,.profile-field-row textarea,.profile-video-card input[type=number] { width:100%;min-height:44px;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;font:inherit;color:var(--text);background:#fff; }
+.profile-person { padding:20px;border:2px solid var(--border);border-radius:18px;background:linear-gradient(145deg,#fff,#fcfaff); }
+.profile-person h3,.profile-person h4,.profile-quote h3 { margin:0;color:var(--text); }
+.profile-consents { display:grid;gap:8px;margin:16px 0;padding:14px;border-radius:14px;background:#f8f4ff; }
+.profile-ai-consent { color:#7c2d12; }
+.profile-fields-head { align-items:baseline;margin:18px 0 10px; }
+.profile-fields-head h4 { margin:0; }
+.profile-fields-head p { margin:0; }
+/* Los datos se agrupan por bloque publicable en vez de ser una lista plana. */
+.profile-field-group { padding:12px;border:1px solid var(--border);border-radius:16px;background:#fbf9ff; }
+.profile-field-group-head { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px; }
+.profile-field-group-head h5 { margin:0;color:var(--text);font:800 1rem/1.2 var(--font-display); }
+.profile-field-rows { display:flex;flex-direction:column;gap:10px; }
+.profile-group-empty { margin:0;padding:10px 12px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);font-size:.86rem; }
+.profile-field-row { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,.9fr) auto auto;gap:10px;align-items:end;padding:10px;border:1px solid var(--border);border-radius:14px;background:#fff; }
+.profile-field-cell { display:grid;gap:4px;min-width:0; }
+.profile-field-cell > span { color:var(--muted);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em; }
+.profile-field-visible { align-self:center;white-space:nowrap; }
+.profile-order-actions { display:flex;gap:6px;align-items:center; }
+.profile-order-actions .btn-icon { flex:0 0 44px; }
+.profile-person-index { color:var(--muted);font-size:.82rem;font-weight:700; }
+.privacy-card { display:grid;grid-template-columns:auto 1fr;gap:16px;border:2px solid #f59e0b;background:#fffbeb; }
+.privacy-card h2 { margin:0; }.privacy-card p { margin:.4rem 0 .8rem; }
+.privacy-icon { display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--warn-soft);color:var(--warn); }
+/* La barra flota sobre el formulario, así que el contenedor reserva su alto:
+   antes tapaba de forma permanente la primera fila de campos. `scroll-padding`
+   evita además que el campo enfocado con teclado quede debajo de la barra. */
+.profile-stack { padding-bottom:84px; }
+html:has(.profile-savebar) { scroll-padding-bottom:110px; }
+.profile-savebar { position:sticky;bottom:10px;z-index:4;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:-84px;padding:13px 16px;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.97);box-shadow:var(--shadow-hover);backdrop-filter:blur(6px); }
+.profile-upload-form,.profile-approval-form { display:grid;gap:12px; }
+.profile-photo-card h2,.profile-video-card h2 { display:flex;align-items:center;gap:8px; }
+.profile-quote { margin-top:20px;padding:18px;border:1px solid var(--border);border-radius:16px;background:#faf7ff; }
+.profile-quote-meta { display:flex;gap:16px;flex-wrap:wrap;margin:10px 0; }
+.profile-quote pre { max-height:320px;overflow:auto;white-space:pre-wrap;padding:14px;border-radius:12px;background:#211938;color:#fff;font-size:.78rem; }
+/* `1fr` respeta el min-content del hijo: el select de tipo de evento, con
+   opciones largas, inflaba la columna y hacía scrollear la página entera en
+   horizontal. `minmax(0,1fr)` deja que el contenido se encoja. */
+@media(max-width:760px){.profile-grid--2,.profile-grid--3{grid-template-columns:minmax(0,1fr)}.profile-field-row,.profile-sort-row{grid-template-columns:minmax(0,1fr)}.profile-field-row{align-items:stretch}.profile-order-actions{justify-content:flex-end}.privacy-card{grid-template-columns:1fr}.profile-savebar{bottom:4px}.event-profile-admin .btn{white-space:normal}.profile-page-actions{justify-content:flex-start;width:100%}.profile-status{width:100%}}
+.event-profile-admin .field,.event-profile-admin .field select,.event-profile-admin .field input,.event-profile-admin .field textarea { max-width:100%;min-width:0; }
+.event-profile-admin select { text-overflow:ellipsis; }
+@media(prefers-reduced-motion:reduce){.profile-switch span,.profile-switch span::after{transition:none}}
+
+/* Contador de solicitudes sin atender, dentro de la pestaña. */
+.tab-badge {
+  display: inline-block;
+  min-width: 20px;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #D6307F;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* Bloque del enlace de confirmados: hereda de .envio y solo agrega lo suyo — el cuadro
+   con la URL, monoespaciado para poder revisarla de un vistazo antes de compartirla. */
+.envio--confirmados .envio__enlace {
+  width: 100%;
+  margin: 8px 0 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-soft, #f6f8fc);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .78rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+/* Lista de confirmados en la ficha. Una linea por familia; el nombre de los ninos llega
+   como texto libre, asi que se deja fluir y se corta con puntos si no cabe. */
+.rsvp-lista { list-style: none; margin: 8px 0 0; padding: 0; }
+.rsvp-lista li {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
+  padding: 7px 0; border-top: 1px solid var(--border); font-size: .88rem;
+}
+.rsvp-lista li:first-child { border-top: none; }
+.rsvp-lista__ninos { color: var(--text-muted); overflow-wrap: anywhere; }
+.rsvp-lista__cuando { margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Fotos del kiosco: seleccion multiple. Reusa .tile y .tile-media del album para que se
+   vean iguales; lo unico propio es la casilla encima y el encuadre. */
+.fotos-barra {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.fotos-todas { display: inline-flex; align-items: center; gap: 8px; font-size: .9rem; cursor: pointer; }
+.fotos-todas input { width: 18px; height: 18px; }
+.fotos-opcion { display: inline-flex; align-items: center; gap: 6px; font-size: .9rem; }
+.fotos-opcion select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: inherit; font: inherit; }
+.fotos-opcion input[type="checkbox"] { width: 18px; height: 18px; }
+/* Borrar se va al extremo opuesto de Imprimir: son el boton de todos los dias y el que no
+   tiene vuelta atras, y no conviene tenerlos pegados en una tablet. */
+.fotos-barra .fotos-borrar { margin-left: auto; }
+/* La foto del kiosco es 9:16; con el `cover` del album se le comia media imagen, asi que
+   se muestra entera sobre un fondo neutro. */
+.foto-kiosco .tile-media { aspect-ratio: 3 / 4; cursor: pointer; }
+.foto-kiosco .tile-media img { object-fit: contain; background: var(--bg2); }
+.foto-kiosco__marca input {
+  position: absolute; top: 8px; left: 8px; z-index: 2;
+  width: 22px; height: 22px; cursor: pointer;
+}
+.foto-kiosco__marca input:checked ~ img { opacity: .55; }
+.foto-kiosco:has(input:checked) { border-color: var(--danger, #d92b4b); border-width: 2px; }
+.foto-kiosco__marca input:focus-visible ~ img { outline: 3px solid var(--cta); outline-offset: -3px; }
+.foto-kiosco .tile-body { padding: 8px 10px 10px; }
+.foto-kiosco .tile-nombre { margin: 0 0 2px; font-size: .86rem; overflow-wrap: anywhere; }

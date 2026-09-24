@@ -21,18 +21,50 @@
  * confirmar, así que se dejaron conservadores y centralizados para que
  * ajustarlos sea una línea y no una cacería por el código.
  */
+/**
+ * ¿El módulo de Álbum está realmente utilizable?
+ *
+ * Los archivos del álbum pueden estar subidos aunque la migración 007 no se haya
+ * aplicado — pasó exactamente eso en PROD el 2026-08-23. En ese estado el botón
+ * "Álbum Recuerdo" del backoffice llevaba a una página que reventaba al primer
+ * SELECT. Preguntar por la tabla es la única señal honesta: que el PHP exista no
+ * significa que el módulo funcione.
+ *
+ * El resultado se cachea por request: se llama una vez por fiesta al pintar la
+ * lista y no tiene sentido consultar la base en cada vuelta del bucle.
+ */
+function cb_album_feature_ready(): bool
+{
+    static $ready = null;
+    if ($ready !== null) {
+        return $ready;
+    }
+    if (cb_storage_mode() !== 'db') {
+        return $ready = false;
+    }
+    try {
+        cb_pdo()->query('SELECT 1 FROM cc_event_albums LIMIT 1');
+        return $ready = true;
+    } catch (Throwable $e) {
+        return $ready = false;
+    }
+}
+
 function cb_album_limits(): array
 {
     return [
         'files_per_submit' => 10,       // archivos por envío de un invitado
         'videos_per_submit' => 2,
         'image_max_bytes' => 12 * 1024 * 1024,
-        'video_max_bytes' => 40 * 1024 * 1024,
-        'video_max_seconds' => 30.0,
+        // Luis subió los topes de video el 2026-09-15 (eran 40 MB y 30 s): un minuto de
+        // celular en 1080p pesa 50-60 MB. app/.user.ini permite 80M por archivo y 90M por
+        // envío, así que 60 MB + el póster entran; si esto vuelve a subir, subir eso también.
+        'video_max_bytes' => 60 * 1024 * 1024,
+        'video_max_seconds' => 60.0,
         'video_max_dimension' => 1920,
         'image_max_dimension' => 8000,  // una foto de celular moderna no pasa de aquí
         'album_max_files' => 400,
-        'album_max_bytes' => 3 * 1024 * 1024 * 1024,
+        'album_max_bytes' => 5 * 1024 * 1024 * 1024,  // 5 GB por fiesta (era 3 GB)
         'thumb_max_side' => 640,
         // El límite cuenta ARCHIVOS, no envíos: la página sube uno por
         // petición para poder mostrar progreso real y reintentar el que falle
@@ -723,6 +755,45 @@ function cb_album_intake_open(array $album, array $party): bool
  * Devuelve el token EN CLARO una sola vez: en base solo queda su SHA-256, así
  * que si el admin cierra la página sin copiarlo hay que regenerarlo.
  */
+/**
+ * El token de una fila de `cc_event_album_tokens`, calculado a partir de la fila misma.
+ *
+ * Se deriva en vez de sortearse para que el admin pueda volver a mostrarlo. La base sigue
+ * guardando SOLO el hash; la llave del HMAC vive fuera de la base, así que una copia de la
+ * base tampoco alcanza para reconstruir un token. Lo único que cambia es que quien tiene la
+ * llave y la fila puede recalcularlo, y eso es justamente lo que hacía falta.
+ *
+ * Salen 32 caracteres hexadecimales porque es lo que exige `cb_album_resolve_token`.
+ */
+function cb_album_token_de(int $tokenId): string
+{
+    return substr(cb_hmac((string) $tokenId, 'album-token-v1'), 0, 32);
+}
+
+/**
+ * El token vivo, en claro. Devuelve '' si no hay ninguno activo, si venció, o si el que hay
+ * es de los antiguos —sorteados al azar—: esos siguen funcionando, pero de ellos solo quedó
+ * el hash y no hay forma de reconstruirlos.
+ */
+function cb_album_token_vigente(int $albumId, string $purpose): string
+{
+    $stmt = cb_album_require_db()->prepare(
+        "SELECT id, token_hash, expires_at FROM cc_event_album_tokens
+         WHERE album_id=? AND purpose=? AND status='active' ORDER BY id DESC"
+    );
+    $stmt->execute([$albumId, $purpose]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        return '';
+    }
+    $expira = (string) ($row['expires_at'] ?? '');
+    if ($expira !== '' && strtotime($expira) < time()) {
+        return '';
+    }
+    $token = cb_album_token_de((int) $row['id']);
+    return hash_equals((string) $row['token_hash'], cb_hash_token($token)) ? $token : '';
+}
+
 function cb_album_issue_token(int $albumId, string $purpose, ?string $expiresAt, ?string $createdBy = null): string
 {
     if (!in_array($purpose, ['intake', 'view'], true)) {
@@ -730,7 +801,6 @@ function cb_album_issue_token(int $albumId, string $purpose, ?string $expiresAt,
     }
     $pdo = cb_album_require_db();
     $now = gmdate('Y-m-d H:i:s');
-    $token = cb_opaque_token(16);
     $pdo->beginTransaction();
     try {
         $revoke = $pdo->prepare(
@@ -738,11 +808,18 @@ function cb_album_issue_token(int $albumId, string $purpose, ?string $expiresAt,
              WHERE album_id=? AND purpose=? AND status='active'"
         );
         $revoke->execute([$now, $albumId, $purpose]);
+        // Se inserta con un hash provisorio al azar para conseguir el id, y recien con ese id
+        // se calcula el token definitivo. `token_hash` tiene indice unico: un provisorio fijo
+        // chocaria con el si alguna fila quedara a medio camino.
         $insert = $pdo->prepare(
             'INSERT INTO cc_event_album_tokens (album_id,token_hash,purpose,status,expires_at,created_at,created_by)
              VALUES (?,?,?,?,?,?,?)'
         );
-        $insert->execute([$albumId, cb_hash_token($token), $purpose, 'active', $expiresAt, $now, $createdBy]);
+        $insert->execute([$albumId, cb_hash_token(cb_opaque_token(16)), $purpose, 'active', $expiresAt, $now, $createdBy]);
+        $filaId = (int) $pdo->lastInsertId();
+        $token = cb_album_token_de($filaId);
+        $pdo->prepare('UPDATE cc_event_album_tokens SET token_hash=? WHERE id=?')
+            ->execute([cb_hash_token($token), $filaId]);
         $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
@@ -751,6 +828,56 @@ function cb_album_issue_token(int $albumId, string $purpose, ?string $expiresAt,
         throw $e;
     }
     return $token;
+}
+
+/**
+ * Hasta cuándo sirve un enlace de aportes recién generado.
+ *
+ * Antes era solo la fecha de la fiesta más `default_open_days`. En el álbum de
+ * Luciano, ocho días después de la fiesta, cada enlace nuevo nacía ya vencido
+ * (13-sep + 7 = 20-sep) aunque el organizador había corrido el cierre de la
+ * recepción al 29-sep: "Este enlace ya no está disponible" en cada intento.
+ * Ahora gana la fecha más lejana entre la fiesta más los días por defecto, la
+ * fecha de cierre de la recepción si la hay, y hoy más los días por defecto
+ * (un enlace nuevo tiene que servir al menos esa semana). La fecha de cierre
+ * del álbum sigue mandando en cb_album_intake_open(): esto solo evita que el
+ * enlace muera antes que ella.
+ */
+function cb_album_intake_token_expiry(array $album, array $party, ?int $now = null): string
+{
+    $now = $now ?? time();
+    $dias = (int) (cb_album_limits()['default_open_days'] ?? 7);
+    $candidatos = [[$now + $dias * 86400, gmdate('Y-m-d H:i:s', $now + $dias * 86400)]];
+    $fecha = (string) ($party['fecha'] ?? '');
+    $base = $fecha !== '' ? strtotime($fecha) : false;
+    if ($base !== false) {
+        $candidatos[] = [$base + $dias * 86400, gmdate('Y-m-d H:i:s', $base + $dias * 86400)];
+    }
+    $cierre = (string) ($album['intake_closes_at'] ?? '');
+    $cierreTs = $cierre !== '' ? strtotime($cierre) : false;
+    if ($cierreTs !== false) {
+        // Se devuelve tal como está guardada, para no correrla por la zona horaria.
+        $candidatos[] = [$cierreTs, $cierre];
+    }
+    usort($candidatos, static fn(array $a, array $b): int => $b[0] <=> $a[0]);
+    return $candidatos[0][1];
+}
+
+/**
+ * Cuando el organizador corre la fecha de cierre de la recepción, los enlaces
+ * de aportes activos que vencían antes se extienden hasta esa fecha: el cartel
+ * impreso o el enlace ya mandado siguen sirviendo sin regenerar nada. Los que
+ * no vencen nunca (NULL) o vencen después no se tocan. Devuelve cuántos cambió.
+ */
+function cb_album_extend_intake_tokens(int $albumId, string $until): int
+{
+    $stmt = cb_album_require_db()->prepare(
+        "UPDATE cc_event_album_tokens SET expires_at=?
+         WHERE album_id=? AND purpose='intake' AND status='active'
+           AND expires_at IS NOT NULL AND expires_at < ?"
+    );
+    $stmt->execute([$until, $albumId, $until]);
+    return $stmt->rowCount();
 }
 
 /** Revoca todos los tokens activos de un propósito. No borra el histórico. */
@@ -779,7 +906,8 @@ function cb_album_resolve_token(string $token, string $purpose): ?array
          FROM cc_event_album_tokens t
          JOIN cc_event_albums a ON a.id = t.album_id
          JOIN cc_parties p ON p.id = a.party_id
-         WHERE t.token_hash=? AND t.purpose=?'
+         WHERE t.token_hash=? AND t.purpose=?
+         ORDER BY t.id DESC'
     );
     $stmt->execute([cb_hash_token($token), $purpose]);
     $row = $stmt->fetch();
@@ -1013,10 +1141,14 @@ function cb_album_list_media(int $albumId, ?array $states = null, ?string $sourc
     if (!$states) {
         return [];
     }
+    // Una foto borrada de la galería no puede seguir en el álbum: el álbum es el PÚBLICO,
+    // y publicar algo que el organizador eliminó es exactamente lo que no debe pasar.
+    // Va como filtro de lectura y no borrando la fila: si se restaura la foto, vuelve sola.
     $sql = 'SELECT m.*, ph.access_token AS photo_token
             FROM cc_event_media m
             LEFT JOIN cc_photos ph ON ph.id = m.photo_id
-            WHERE m.album_id=? AND m.moderation_status IN (' . implode(',', array_fill(0, count($states), '?')) . ')';
+            WHERE m.album_id=? AND (m.photo_id IS NULL OR ph.deleted_at IS NULL)
+              AND m.moderation_status IN (' . implode(',', array_fill(0, count($states), '?')) . ')';
     $params = array_merge([$albumId], $states);
     if ($source !== null && in_array($source, cb_album_sources(), true)) {
         $sql .= ' AND m.source=?';
@@ -1063,6 +1195,26 @@ function cb_album_set_moderation(int $albumId, int $mediaId, string $state, ?str
     );
     $stmt->execute([$state, $now, $reviewedBy, $state === 'removed' ? $now : null, $albumId, $mediaId]);
     return $stmt->rowCount() > 0;
+}
+
+/**
+ * Cambia el estado de varios recuerdos de una vez; devuelve cuántos cambió.
+ * Los ids ajenos al álbum no cambian nada (misma regla que de a uno).
+ * Nació para la Curaduría: con 84 aportes de una mamá, aprobar de a uno era
+ * eterno y "Aprobar los pendientes" no dejaba excluir dos o tres.
+ */
+function cb_album_set_moderation_many(int $albumId, array $mediaIds, string $state, ?string $reviewedBy = null): int
+{
+    if (!in_array($state, cb_album_moderation_states(), true)) {
+        return 0;
+    }
+    $hechos = 0;
+    foreach (array_unique(array_map('intval', $mediaIds)) as $mediaId) {
+        if ($mediaId > 0 && cb_album_set_moderation($albumId, $mediaId, $state, $reviewedBy)) {
+            $hechos++;
+        }
+    }
+    return $hechos;
 }
 
 /** Reordena aplicando la lista recibida; los ids ajenos al álbum se ignoran. */

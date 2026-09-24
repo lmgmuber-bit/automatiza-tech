@@ -134,6 +134,18 @@ const SHOW_STYLES = {
     riser: '#111c2e',
     truss: '#39527e',
   },
+  // Aventuras Arácnidas (spidey): ciudad de cómic diurna — azules vivos del
+  // show, rojo y amarillo de las viñetas POW/BOOM, morado de Ghost-Spider.
+  // Entrada propia para no salir "prestado" con la paleta nocturna de Héroes.
+  'comic-city': {
+    title: 'El Show Arácnido',
+    lanes: ['#e02525', '#ffd21e', '#9b59d0'],
+    sky: ['#1890d8', '#0b3f8a'],
+    fog: '#1367c4',
+    stage: '#16214a',
+    riser: '#1b2447',
+    truss: '#4d78c8',
+  },
 }
 
 export const SHOW_STAGES = Object.keys(SHOW_STYLES)
@@ -1372,6 +1384,12 @@ export default function StageConcert3D({
   // carril. Los botones de abajo son el blanco accesible garantizado, pero un
   // niño va a tocar la nota que ve, no el botón.
   const canvasTap = (event) => {
+    // En la fiesta del 13-sep los niños tocaban los aros de la pantalla para empezar y no el
+    // botón de abajo (Luis). Un toque en el escenario arranca el show apenas está listo.
+    if (phase === 'intro') {
+      if (ready) start()
+      return
+    }
     if (phase !== 'playing') return
     const rect = event.currentTarget.getBoundingClientRect()
     const rel = (event.clientX - rect.left) / rect.width
@@ -1426,10 +1444,14 @@ export default function StageConcert3D({
       )}
 
       {phase === 'intro' && !unavailable && (
-        <div className="show3d-card show3d-card--intro">
+        /* La tarjeta entera también arranca: el niño toca donde sea, no busca el botón. */
+        <div
+          className={`show3d-card show3d-card--intro${ready ? ' show3d-card--lista' : ''}`}
+          onPointerDown={ready ? start : undefined}
+        >
           <p className="show3d-kicker">El escenario es tuyo, {invitado || 'estrella'}</p>
           <h2>{style.title}</h2>
-          <p>Toca cada nota cuando llegue al aro.</p>
+          <p>{ready ? 'Toca los aros para empezar. Después, toca cada nota cuando llegue al aro.' : 'Toca cada nota cuando llegue al aro.'}</p>
           <button className="show3d-start" onClick={start} disabled={!ready}>
             {ready ? '¡Que empiece el show! 🎤' : 'Encendiendo luces…'}
           </button>

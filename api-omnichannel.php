@@ -16,6 +16,7 @@ require_once __DIR__ . '/wp-load.php';
 ob_end_clean();
 
 require_once __DIR__ . '/omnichannel-controller.php';
+require_once __DIR__ . '/omnichannel-atfinance-controller.php';
 require_once __DIR__ . '/at-rate-limit.php';
 require_once __DIR__ . '/at-mime-check.php';
 
@@ -30,6 +31,8 @@ at_cors_apply([
 ]);
 
 $controller = new OmnichannelController();
+$atfinance = new OmniATFinanceController();
+$atfinance->maybe_create_tables(); // no-op salvo primera vez / upgrade (option-gated)
 
 // Parse request
 $method = $_SERVER['REQUEST_METHOD'];
@@ -120,6 +123,82 @@ function authenticate_client($controller) {
         send_json(['error' => 'API key inválida o cuenta suspendida'], 403);
     }
     return $client;
+}
+
+/* ==== Contrato de suscripción (Fase 5 §8-bis): aceptación click-wrap + cancelación 1 clic ==== */
+
+define('AT_SUBSCRIPTION_CONTRACT_VERSION', 'v1-2026-07');
+
+function at_omni_subscription_table() {
+    if (get_option('omni_subscription_events_db') === '1') return;
+    global $wpdb;
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+    dbDelta("CREATE TABLE {$wpdb->prefix}omnichannel_subscription_events (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        client_id BIGINT UNSIGNED NOT NULL,
+        event_type VARCHAR(20) NOT NULL DEFAULT 'accept',
+        contract_version VARCHAR(30) NOT NULL DEFAULT '',
+        ip VARCHAR(64) NOT NULL DEFAULT '',
+        user_agent VARCHAR(255) NOT NULL DEFAULT '',
+        created_at DATETIME NOT NULL,
+        PRIMARY KEY (id),
+        KEY client_event (client_id, event_type)
+    ) " . $wpdb->get_charset_collate() . ";");
+    update_option('omni_subscription_events_db', '1');
+}
+
+function at_omni_subscription_status($client) {
+    global $wpdb;
+    $accept = $wpdb->get_row($wpdb->prepare(
+        "SELECT contract_version, ip, created_at FROM {$wpdb->prefix}omnichannel_subscription_events
+         WHERE client_id = %d AND event_type = 'accept' AND contract_version = %s
+         ORDER BY id DESC LIMIT 1",
+        $client->id, AT_SUBSCRIPTION_CONTRACT_VERSION
+    ));
+    $cancel = $wpdb->get_row($wpdb->prepare(
+        "SELECT created_at FROM {$wpdb->prefix}omnichannel_subscription_events
+         WHERE client_id = %d AND event_type = 'cancel' ORDER BY id DESC LIMIT 1",
+        $client->id
+    ));
+    return [
+        'contract_version' => AT_SUBSCRIPTION_CONTRACT_VERSION,
+        'accepted'         => (bool) $accept,
+        'accepted_at'      => $accept->created_at ?? null,
+        'cancel_requested' => (bool) $cancel,
+        'cancel_requested_at' => $cancel->created_at ?? null,
+        'period_end'       => $client->period_end ?? null,
+        'contract_html'    => $accept ? '' : at_omni_subscription_contract_html($client),
+    ];
+}
+
+/** Contrato de suscripción generado por plan (plantilla Fase 5 §8-bis + correcciones C1-C11). */
+function at_omni_subscription_contract_html($client) {
+    $plans = [
+        'basic'        => ['nombre' => 'Básico',      'precio' => 'USD 99/mes',  'promo' => true],
+        'professional' => ['nombre' => 'Profesional', 'precio' => 'USD 199/mes', 'promo' => true],
+        'enterprise'   => ['nombre' => 'Enterprise',  'precio' => 'USD 399/mes (o según cotización)', 'promo' => false],
+    ];
+    $p = $plans[$client->plan_type ?? 'basic'] ?? $plans['basic'];
+    $empresa = esc_html($client->company_name ?? 'el Cliente');
+    $promo = $p['promo']
+        ? '<h3>2. Período promocional "1 mes gratis"</h3>
+<p>El primer mes no se factura; la facturación inicia al término del Período Promocional. La promoción aplica una sola vez por cliente/RUT y durante ella rigen íntegramente estos términos. Terminado el período, la suscripción se renueva automáticamente de forma mensual al precio de lista vigente, salvo que el Cliente cancele mediante el botón <strong>"Cancelar Suscripción"</strong> de este portal. AutomatizaTech avisará por correo el término del período promocional con al menos 7 días de anticipación al primer cobro. El Cliente que califique como micro o pequeña empresa (Ley 20.416) conserva su derecho a retracto conforme a la Ley 19.496.</p>'
+        : '<h3>2. Facturación desde el inicio</h3><p>El plan Enterprise no incluye período promocional; la facturación rige desde la fecha de inicio del servicio.</p>';
+
+    return '<h2>Contrato de Suscripción — Portal OmniCliente</h2>
+<p><strong>AUTOMATIZATECH SpA</strong>, RUT 78.363.717-0, Providencia, Chile ("AT") y <strong>' . $empresa . '</strong> (el "Cliente") acuerdan la suscripción al Portal OmniCliente bajo los <a href="https://automatizatech.cl/terminos/" target="_blank" rel="noopener">Términos de Servicio</a> y la <a href="https://automatizatech.cl/privacidad/" target="_blank" rel="noopener">Política de Privacidad</a>, que forman parte integrante de este contrato, con las siguientes condiciones particulares:</p>
+<h3>1. Plan contratado</h3>
+<p>Plan <strong>' . esc_html($p['nombre']) . '</strong> — ' . esc_html($p['precio']) . ', facturación mensual anticipada. Tarifas en USD convertidas a CLP según el Dólar Observado del Banco Central de Chile al día de emisión de cada factura. Los límites del plan (conversaciones, canales, agentes) son los informados al contratar y visibles en el portal.</p>
+' . $promo . '
+<h3>3. Cancelación</h3>
+<p>El Cliente puede cancelar en cualquier momento desde el botón "Cancelar Suscripción" del portal, con efecto al término del período facturado en curso. La suspensión por no pago procede tras 7 días de gracia con aviso.</p>
+<h3>4. Datos personales</h3>
+<p>Cuando AT procese datos de los clientes finales del Cliente a través de bots o del portal, actuará como encargado de tratamiento conforme al DPA descrito en los Términos de Servicio y la Ley 21.719. Al término, el Cliente puede exportar sus datos dentro de los 30 días siguientes.</p>
+<h3>5. Naturaleza del servicio de IA</h3>
+<p>Los asistentes con IA constituyen obligaciones de medios y no de resultado; el Cliente es responsable de mantener actualizada la información de su negocio.</p>
+<h3>6. Aceptación electrónica</h3>
+<p>La aceptación mediante el checkbox de este portal, con registro de IP y fecha/hora, constituye consentimiento válido y evidencia de celebración de este contrato (Ley 19.799 sobre documentos electrónicos).</p>
+<p style="opacity:.75;font-size:12px">Versión del contrato: ' . AT_SUBSCRIPTION_CONTRACT_VERSION . '</p>';
 }
 
 function authenticate_admin() {
@@ -257,6 +336,197 @@ try {
             'version'      => (int) $pc->version,
             'updated_at'   => $pc->updated_at,
         ]);
+    }
+
+    // ---- CONSUMO DE TOKENS IA para N8N (autenticado via HMAC, mismo esquema que prompt-config) ----
+    // Los workflows de bots (channel_id fijo por clon) reportan tokens sin necesitar la
+    // API key del cliente; el channel_id se resuelve a client_id server-side (no confiar
+    // en un client_id que mande n8n).
+    if (isset($segments[0]) && $segments[0] === 'bot-usage-ingest' && $method === 'POST') {
+        $bi_channel_id = absint($body['channel_id'] ?? 0);
+        $bi_token = sanitize_text_field($body['token'] ?? '');
+        $bi_secret = defined('OMNI_ADMIN_SECRET') ? OMNI_ADMIN_SECRET : 'omni_default_secret';
+        $bi_expected = hash_hmac('sha256', 'bot-usage-ingest:' . $bi_channel_id, $bi_secret);
+        if (empty($bi_token) || !hash_equals($bi_expected, $bi_token)) {
+            send_json(['error' => 'Token inválido'], 403);
+        }
+        $bi_owner_client_id = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT client_id FROM {$wpdb->prefix}omnichannel_channels WHERE id = %d", $bi_channel_id
+        ));
+        if (!$bi_owner_client_id) {
+            send_json(['error' => 'Canal no encontrado'], 404);
+        }
+        $result = $atfinance->log_usage([
+            'client_id'         => $bi_owner_client_id,
+            'channel_id'        => $bi_channel_id,
+            'bot_name'          => $body['bot_name'] ?? '',
+            'source'            => 'bot',
+            'model'             => $body['model'] ?? '',
+            'prompt_tokens'     => $body['prompt_tokens'] ?? 0,
+            'completion_tokens' => $body['completion_tokens'] ?? 0,
+            'total_tokens'      => $body['total_tokens'] ?? 0,
+            'cost_usd'          => $body['cost_usd'] ?? null,
+        ]);
+        send_json($result, isset($result['error']) ? 400 : 201);
+    }
+
+    // ---- REEL DIARIO AUTOMÁTICO: sube/borra el video final para poder publicarlo ----
+    // Secret AISLADO (REEL_DIARIO_SECRET, header X-Reel-Diario-Secret) — a propósito
+    // NO usa OMNI_ADMIN_SECRET ni ninguna tabla de clientes: este pipeline es 100%
+    // ajeno al portal (ver project_at_reel_diario_automatico). Solo mueve un archivo
+    // de video a una carpeta dedicada y devuelve/borra su URL pública.
+    if (isset($segments[0]) && $segments[0] === 'reel-diario') {
+        $rd_provided = $_SERVER['HTTP_X_REEL_DIARIO_SECRET'] ?? '';
+        if (!defined('REEL_DIARIO_SECRET') || REEL_DIARIO_SECRET === '' || !hash_equals((string) REEL_DIARIO_SECRET, (string) $rd_provided)) {
+            send_json(['error' => 'Secret inválido'], 403);
+        }
+
+        // GET/POST reel-diario/token-check — pre-flight barato del token de Instagram.
+        // Se llama al INICIO del pipeline para abortar antes de descargar clips, correr el
+        // QA de vision y renderizar. Sin esto, un token vencido se descubria recien en
+        // media-create, despues de ~90s de render y del gasto de IA (incidente 2026-08-14).
+        // Devuelve 502 si el token no sirve, para que el nodo de n8n corte la ejecucion solo.
+        if (($segments[1] ?? '') === 'token-check' && ($method === 'GET' || $method === 'POST')) {
+            $rd_channel_id = absint($body['channel_id'] ?? ($_GET['channel_id'] ?? (defined('REEL_DIARIO_CHANNEL_ID') ? REEL_DIARIO_CHANNEL_ID : 0)));
+            if (!$rd_channel_id) {
+                send_json(['error' => 'Falta channel_id (o define REEL_DIARIO_CHANNEL_ID en wp-config-secrets.php)'], 400);
+            }
+            $result = $controller->check_instagram_token($rd_channel_id);
+            send_json($result, empty($result['ok']) ? 502 : 200);
+        }
+
+        // POST reel-diario/upload — multipart, campo "video" (mp4). Devuelve URL pública.
+        if (($segments[1] ?? '') === 'upload' && $method === 'POST') {
+            if (empty($_FILES['video']) || $_FILES['video']['error'] !== UPLOAD_ERR_OK) {
+                send_json(['error' => 'Falta el archivo "video" o hubo un error de subida'], 400);
+            }
+            $rd_mime = at_verify_upload_mime($_FILES['video']['tmp_name'], ['video/mp4']);
+            if (!$rd_mime) {
+                send_json(['error' => 'El archivo no es un mp4 válido'], 400);
+            }
+            $rd_max_bytes = 100 * 1024 * 1024; // 100MB, generoso para un reel de 20s
+            if ($_FILES['video']['size'] > $rd_max_bytes) {
+                send_json(['error' => 'Video demasiado grande'], 400);
+            }
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            $rd_subdir_filter = function ($dirs) {
+                $dirs['subdir'] = '/reel-diario';
+                $dirs['path']   = $dirs['basedir'] . $dirs['subdir'];
+                $dirs['url']    = $dirs['baseurl'] . $dirs['subdir'];
+                return $dirs;
+            };
+            add_filter('upload_dir', $rd_subdir_filter);
+            $rd_file = [
+                'name'     => 'reel-diario-' . gmdate('Ymd-His') . '.mp4',
+                'type'     => $rd_mime,
+                'tmp_name' => $_FILES['video']['tmp_name'],
+                'error'    => $_FILES['video']['error'],
+                'size'     => $_FILES['video']['size'],
+            ];
+            $rd_upload = wp_handle_upload($rd_file, ['test_form' => false]);
+            remove_filter('upload_dir', $rd_subdir_filter);
+            if (isset($rd_upload['error'])) {
+                send_json(['error' => $rd_upload['error']], 500);
+            }
+            send_json(['url' => $rd_upload['url'], 'file' => basename($rd_upload['file'])], 201);
+        }
+
+        // POST reel-diario/media-create — body {video_url, caption?, media_type?, channel_id?}.
+        // Crea el contenedor de Instagram y devuelve creation_id sin hacer polling bloqueante.
+        if (($segments[1] ?? '') === 'media-create' && $method === 'POST') {
+            $rd_video_url = esc_url_raw($body['video_url'] ?? '');
+            if ($rd_video_url === '') {
+                send_json(['error' => 'Falta video_url'], 400);
+            }
+            $rd_media_type = ($body['media_type'] ?? 'REELS') === 'STORIES' ? 'STORIES' : 'REELS';
+            $rd_caption = sanitize_textarea_field($body['caption'] ?? '');
+            $rd_channel_id = absint($body['channel_id'] ?? (defined('REEL_DIARIO_CHANNEL_ID') ? REEL_DIARIO_CHANNEL_ID : 0));
+            if (!$rd_channel_id) {
+                send_json(['error' => 'Falta channel_id (o define REEL_DIARIO_CHANNEL_ID en wp-config-secrets.php)'], 400);
+            }
+            $result = $controller->create_instagram_media_container($rd_channel_id, $rd_video_url, $rd_caption, $rd_media_type);
+            send_json($result, isset($result['error']) ? 502 : 201);
+        }
+
+        // GET/POST reel-diario/media-status — query/body {creation_id, channel_id?}.
+        // n8n hace el polling y evita que nginx/Hostinger corte un request largo.
+        if (($segments[1] ?? '') === 'media-status' && ($method === 'GET' || $method === 'POST')) {
+            $rd_creation_id = sanitize_text_field($body['creation_id'] ?? ($_GET['creation_id'] ?? ''));
+            if ($rd_creation_id === '') {
+                send_json(['error' => 'Falta creation_id'], 400);
+            }
+            $rd_channel_id = absint($body['channel_id'] ?? ($_GET['channel_id'] ?? (defined('REEL_DIARIO_CHANNEL_ID') ? REEL_DIARIO_CHANNEL_ID : 0)));
+            if (!$rd_channel_id) {
+                send_json(['error' => 'Falta channel_id (o define REEL_DIARIO_CHANNEL_ID en wp-config-secrets.php)'], 400);
+            }
+            $result = $controller->get_instagram_media_status($rd_channel_id, $rd_creation_id);
+            send_json($result, isset($result['error']) ? 502 : 200);
+        }
+
+        // POST reel-diario/media-publish — body {creation_id, channel_id?}.
+        // Publica un contenedor cuyo status_code ya es FINISHED.
+        if (($segments[1] ?? '') === 'media-publish' && $method === 'POST') {
+            $rd_creation_id = sanitize_text_field($body['creation_id'] ?? '');
+            if ($rd_creation_id === '') {
+                send_json(['error' => 'Falta creation_id'], 400);
+            }
+            $rd_channel_id = absint($body['channel_id'] ?? (defined('REEL_DIARIO_CHANNEL_ID') ? REEL_DIARIO_CHANNEL_ID : 0));
+            if (!$rd_channel_id) {
+                send_json(['error' => 'Falta channel_id (o define REEL_DIARIO_CHANNEL_ID en wp-config-secrets.php)'], 400);
+            }
+            $result = $controller->publish_instagram_media_container($rd_channel_id, $rd_creation_id);
+            send_json($result, isset($result['error']) ? 502 : 201);
+        }
+
+        // POST reel-diario/media-delete — body {media_id, channel_id?}.
+        // Elimina una publicación ya publicada en Instagram cuando el post salió mal.
+        if (($segments[1] ?? '') === 'media-delete' && $method === 'POST') {
+            $rd_media_id = sanitize_text_field($body['media_id'] ?? '');
+            if ($rd_media_id === '') {
+                send_json(['error' => 'Falta media_id'], 400);
+            }
+            $rd_channel_id = absint($body['channel_id'] ?? (defined('REEL_DIARIO_CHANNEL_ID') ? REEL_DIARIO_CHANNEL_ID : 0));
+            if (!$rd_channel_id) {
+                send_json(['error' => 'Falta channel_id (o define REEL_DIARIO_CHANNEL_ID en wp-config-secrets.php)'], 400);
+            }
+            $result = $controller->delete_instagram_media($rd_channel_id, $rd_media_id);
+            send_json($result, isset($result['error']) ? 502 : 200);
+        }
+
+        // POST reel-diario/publish — body {video_url, caption?, media_type?, channel_id?}.
+        // Compatibilidad: hace el flujo completo server-side. Para n8n usar media-create/status/publish
+        // porque esta ruta puede bloquear varios minutos y chocar con timeouts de nginx/Hostinger.
+        if (($segments[1] ?? '') === 'publish' && $method === 'POST') {
+            set_time_limit(320); // el poll de media_publish puede tardar hasta 5 min
+            $rd_video_url = esc_url_raw($body['video_url'] ?? '');
+            if ($rd_video_url === '') {
+                send_json(['error' => 'Falta video_url'], 400);
+            }
+            $rd_media_type = ($body['media_type'] ?? 'REELS') === 'STORIES' ? 'STORIES' : 'REELS';
+            $rd_caption = sanitize_textarea_field($body['caption'] ?? '');
+            $rd_channel_id = absint($body['channel_id'] ?? (defined('REEL_DIARIO_CHANNEL_ID') ? REEL_DIARIO_CHANNEL_ID : 0));
+            if (!$rd_channel_id) {
+                send_json(['error' => 'Falta channel_id (o define REEL_DIARIO_CHANNEL_ID en wp-config-secrets.php)'], 400);
+            }
+            $result = $controller->publish_instagram_media($rd_channel_id, $rd_video_url, $rd_caption, $rd_media_type);
+            send_json($result, isset($result['error']) ? 502 : 201);
+        }
+
+        // POST reel-diario/delete — body {"file":"reel-diario-....mp4"}. Limpieza post-publish.
+        if (($segments[1] ?? '') === 'delete' && $method === 'POST') {
+            $rd_name = sanitize_file_name($body['file'] ?? '');
+            if ($rd_name === '' || strpos($rd_name, '..') !== false) {
+                send_json(['error' => 'Nombre de archivo inválido'], 400);
+            }
+            $rd_upload_dir = wp_upload_dir();
+            $rd_path = $rd_upload_dir['basedir'] . '/reel-diario/' . $rd_name;
+            if (file_exists($rd_path)) {
+                @unlink($rd_path);
+            }
+            send_json(['deleted' => true]);
+        }
+
+        send_json(['error' => 'Ruta reel-diario no encontrada'], 404);
     }
 
     // ---- N8N CALLBACK (respuesta del bot) ----
@@ -856,6 +1126,41 @@ try {
                     $conv_id = absint($body['conversation_id'] ?? 0);
                     if (!$conv_id) send_json(['error' => 'conversation_id requerido'], 400);
                     send_json($controller->send_agent_message($conv_id, $body));
+                }
+                break;
+
+            // Admin: Finanzas AT — gastos de infraestructura (mensual/anual)
+            case 'finance':
+                if ($method === 'GET' && !isset($segments[2])) {
+                    send_json($atfinance->get_expenses(isset($_GET['active']) && $_GET['active'] === '1'));
+                }
+                if ($method === 'POST' && !isset($segments[2])) {
+                    $result = $atfinance->create_expense($body);
+                    send_json($result, isset($result['error']) ? 400 : 201);
+                }
+                if ($method === 'PUT' && isset($segments[2])) {
+                    send_json($atfinance->update_expense(absint($segments[2]), $body));
+                }
+                if ($method === 'DELETE' && isset($segments[2])) {
+                    send_json($atfinance->delete_expense(absint($segments[2])));
+                }
+                break;
+
+            case 'finance-summary':
+                if ($method === 'GET') {
+                    send_json($atfinance->finance_summary());
+                }
+                break;
+
+            // Admin: consumo de tokens IA (todos los clientes; filtro client_id opcional,
+            // incluido '0' explícito para ver solo AT/plataforma/demos internos)
+            case 'usage-stats':
+                if ($method === 'GET') {
+                    $has_filter = isset($_GET['client_id']) && $_GET['client_id'] !== '';
+                    send_json($atfinance->usage_stats(
+                        $has_filter ? absint($_GET['client_id']) : -1,
+                        absint($_GET['days'] ?? 30)
+                    ));
                 }
                 break;
 
@@ -1569,6 +1874,72 @@ try {
                 $pw['max_agents'] = (int) ($client->max_agents ?? 3);
                 $pw['plan_type'] = $client->plan_type ?? 'basic';
                 send_json($pw);
+            }
+            break;
+
+        // --- CONTRATO DE SUSCRIPCIÓN (aceptación click-wrap Fase 5 §8-bis) ---
+        // GET  subscription           -> estado (aceptado/pendiente/cancelación) + HTML del contrato por plan
+        // POST subscription/accept    -> registra aceptación con IP + timestamp + versión (evidencia Ley 21.719)
+        // POST subscription/cancel    -> cancelación en 1 clic (Ley 21.398), efectiva al fin del ciclo, avisa a AT
+        case 'subscription':
+            at_omni_subscription_table();
+            $sub_action = $segments[1] ?? '';
+            if ($method === 'GET' && $sub_action === '') {
+                send_json(at_omni_subscription_status($client));
+            }
+            if ($method === 'POST' && $sub_action === 'accept') {
+                if (empty($body['accept'])) {
+                    send_json(['error' => 'Debes aceptar el contrato para continuar'], 400);
+                }
+                global $wpdb;
+                $status = at_omni_subscription_status($client);
+                if (!$status['accepted']) {
+                    $wpdb->insert($wpdb->prefix . 'omnichannel_subscription_events', [
+                        'client_id'        => $client_id,
+                        'event_type'       => 'accept',
+                        'contract_version' => AT_SUBSCRIPTION_CONTRACT_VERSION,
+                        'ip'               => sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? ''),
+                        'user_agent'       => substr(sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255),
+                        'created_at'       => current_time('mysql'),
+                    ]);
+                }
+                send_json(at_omni_subscription_status($client));
+            }
+            if ($method === 'POST' && $sub_action === 'cancel') {
+                global $wpdb;
+                $wpdb->insert($wpdb->prefix . 'omnichannel_subscription_events', [
+                    'client_id'        => $client_id,
+                    'event_type'       => 'cancel',
+                    'contract_version' => AT_SUBSCRIPTION_CONTRACT_VERSION,
+                    'ip'               => sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? ''),
+                    'user_agent'       => substr(sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255),
+                    'created_at'       => current_time('mysql'),
+                ]);
+                // Aviso a AT (falla silenciosa: la cancelación queda registrada igual)
+                @wp_mail(
+                    'contacto@automatizatech.cl',
+                    '⚠️ Cancelación de suscripción — ' . ($client->company_name ?? ('cliente #' . $client_id)),
+                    "El cliente {$client->company_name} (id $client_id, email {$client->email}) solicitó cancelar su suscripción desde el portal.\n\n" .
+                    "Fecha: " . current_time('mysql') . "\nIP: " . ($_SERVER['REMOTE_ADDR'] ?? '') . "\n" .
+                    "Plan: " . ($client->plan_type ?? '-') . "\nFin del período en curso: " . ($client->period_end ?? '-') . "\n\n" .
+                    "La cancelación es efectiva al término del período facturado en curso (ToS §4)."
+                );
+                send_json(at_omni_subscription_status($client));
+            }
+            break;
+
+        // --- CONSUMO IA (solo datos del propio cliente) ---
+        case 'usage-stats':
+            if ($method === 'GET') {
+                send_json($atfinance->usage_stats($client_id, absint($_GET['days'] ?? 30)));
+            }
+            break;
+
+        // --- INGESTA DE USO IA desde n8n (autenticada por API key del cliente) ---
+        case 'usage-ingest':
+            if ($method === 'POST') {
+                $result = $atfinance->ingest_from_n8n($client_id, $body);
+                send_json($result, isset($result['error']) ? ($result['code'] ?? 400) : 201);
             }
             break;
 

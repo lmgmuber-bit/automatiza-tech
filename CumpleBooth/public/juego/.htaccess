@@ -1,0 +1,32 @@
+# Juego 3D "Tu Cumple en 3D" (carpeta /cumpleclick/juego/).
+#
+# 1) Un archivo que no existe debe dar 404, NO el index.html del kiosco: el
+#    catch-all SPA del .htaccess de CumpleClick se hereda aquí y serviría HTML
+#    con status 200 donde el navegador espera un módulo JS o un modelo GLB.
+#    Con reglas propias (sin RewriteOptions Inherit) las del padre dejan de
+#    aplicar en esta carpeta; el juego solo pide archivos reales.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . - [R=404,L]
+</IfModule>
+
+# 2) Los archivos del juego NO llevan hash en el nombre, así que no pueden
+#    heredar el "immutable, 1 año" que el padre pone a todo .js/.css: la tablet
+#    quedaría con una versión vieja tras cada actualización. HTML, JS y JSON se
+#    revalidan siempre; modelos, texturas y audio (pesados y estables) se
+#    guardan un día.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|json|css)$">
+    Header always set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+  <FilesMatch "\.(glb|jpg|png|mp3|wasm)$">
+    Header always set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+</IfModule>
+<IfModule mod_mime.c>
+  AddType model/gltf-binary .glb
+  AddType application/wasm .wasm
+  AddType text/javascript .js
+</IfModule>

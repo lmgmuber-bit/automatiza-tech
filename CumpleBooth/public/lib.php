@@ -24,6 +24,8 @@ function cb_config(?string $key = null)
             'photo_dir' => $root . '/storage/photos',
             'state_dir' => $root . '/storage/state',
             'invitation_dir' => $root . '/storage/invitations',
+            'event_profile_dir' => $root . '/storage/event-profiles',
+            'event_profile_enabled' => false,
             'parties_json_path' => __DIR__ . '/data/parties.json',
             'retention_days' => 30,
             'session_idle_seconds' => 7200,
@@ -39,6 +41,24 @@ function cb_config(?string $key = null)
             // codificado se subirá igual y recién fallará al reproducirse en la
             // tablet. Sigue en false por defecto: hay que activarlo a sabiendas.
             'allow_video_upload_without_ffprobe' => false,
+            // Firmas y comprobantes de aceptación de Términos (privado, fuera del webroot).
+            'acceptance_dir' => $root . '/storage/acceptances',
+            // Correo interno que recibe cada aceptación firmada; vacío = no se notifica a AT.
+            'notify_email' => '',
+            'mail_from' => '',
+
+            /* Correo saliente (formulario público). Vacío = no se envía nada y
+               el formulario sigue funcionando igual: el lead se guarda y se ve
+               en el admin. Se elige así para que una casilla mal configurada
+               NUNCA le devuelva un error a quien está pidiendo presupuesto. */
+            'smtp_host' => '',
+            'smtp_port' => 587,
+            'smtp_user' => '',
+            'smtp_password' => '',
+            'smtp_from' => '',              // por defecto, el mismo smtp_user
+            'smtp_from_name' => 'CumpleClick',
+            'smtp_reply_to' => '',          // a dónde contesta el cliente
+            'leads_notify_email' => '',     // aviso interno de solicitud nueva
         ];
         $explicitConfig = getenv('CUMPLECLICK_CONFIG_FILE');
         $local = $explicitConfig !== false && $explicitConfig !== ''
@@ -57,9 +77,19 @@ function cb_config(?string $key = null)
             'CC_PUBLIC_BASE_URL' => 'public_base_url',
             'CC_PHOTO_DIR' => 'photo_dir', 'CC_STATE_DIR' => 'state_dir',
             'CC_INVITATION_DIR' => 'invitation_dir',
+            'CC_EVENT_PROFILE_DIR' => 'event_profile_dir',
+            'CC_EVENT_PROFILE_ENABLED' => 'event_profile_enabled',
             'CC_PARTIES_JSON_PATH' => 'parties_json_path',
             'CC_RETENTION_DAYS' => 'retention_days',
             'CC_FFPROBE_PATH' => 'ffprobe_path',
+            'CC_ACCEPTANCE_DIR' => 'acceptance_dir',
+            'CC_NOTIFY_EMAIL' => 'notify_email',
+            'CC_MAIL_FROM' => 'mail_from',
+            'CC_SMTP_HOST' => 'smtp_host', 'CC_SMTP_PORT' => 'smtp_port',
+            'CC_SMTP_USER' => 'smtp_user', 'CC_SMTP_PASSWORD' => 'smtp_password',
+            'CC_SMTP_FROM' => 'smtp_from', 'CC_SMTP_FROM_NAME' => 'smtp_from_name',
+            'CC_SMTP_REPLY_TO' => 'smtp_reply_to',
+            'CC_LEADS_NOTIFY_EMAIL' => 'leads_notify_email',
         ];
         foreach ($envMap as $env => $name) {
             $value = getenv($env);
@@ -376,7 +406,7 @@ function cb_load_parties()
 {
     if (cb_storage_mode() === 'db') {
         $pdo = cb_pdo();
-        $rows = $pdo->query('SELECT id, public_slug, admin_label, birthday_person_name, theme_slug, event_date, active, frame_box_json, gallery_pin_hash, gallery_pin_hmac, service_plan, gallery_enabled, created_at, updated_at, anonymized_at FROM cc_parties ORDER BY created_at DESC, id DESC')->fetchAll();
+        $rows = $pdo->query('SELECT id, public_slug, admin_label, birthday_person_name, birthday_age, event_type, theme_slug, event_date, active, frame_box_json, gallery_pin_hash, gallery_pin_hmac, service_plan, gallery_enabled, games3d_enabled, created_at, updated_at, anonymized_at FROM cc_parties ORDER BY created_at DESC, id DESC')->fetchAll();
         $guestStmt = $pdo->prepare('SELECT name, gender FROM cc_guests WHERE party_id = ? ORDER BY sort_order, id');
         $parties = [];
         foreach ($rows as $row) {
@@ -389,11 +419,17 @@ function cb_load_parties()
             $publicSlug = (string) $row['public_slug'];
             $galleryEnabled = (bool) ($row['gallery_enabled'] ?? 0);
             $servicePlan = in_array((string) ($row['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $row['service_plan'] : 'booth';
+            $eventType = (string) ($row['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
             $parties[$publicSlug] = [
                 'public_slug' => $publicSlug,
                 'admin_label' => (string) ($row['admin_label'] ?? ''),
                 'birthday_person_name' => (string) ($row['birthday_person_name'] ?? ''),
                 'nombre' => (string) ($row['birthday_person_name'] ?? ''),
+                // Cuantos anos cumple. Se usa para saludarlo por su edad en el menu y en
+                // los juegos; nula mientras nadie la escriba en la ficha.
+                'edad' => isset($row['birthday_age']) && $row['birthday_age'] !== null
+                    ? (int) $row['birthday_age'] : null,
+                'event_type' => $eventType,
                 'tema' => (string) $row['theme_slug'],
                 'theme_slug' => (string) $row['theme_slug'],
                 'fecha' => (string) ($row['event_date'] ?? ''), 'activa' => (bool) $row['active'],
@@ -403,6 +439,9 @@ function cb_load_parties()
                 'galeriaHabilitada' => $galleryEnabled && !empty($row['gallery_pin_hash']),
                 'service_plan' => $servicePlan,
                 'gallery_enabled' => $galleryEnabled,
+                // Ausente cuenta como prendido: la columna es nueva y las fiestas de antes
+                // no pueden quedarse sin juegos por eso.
+                'juegos3d' => !array_key_exists('games3d_enabled', $row) || (bool) $row['games3d_enabled'],
                 'creada' => (string) $row['created_at'],
                 'anonymizedAt' => (string) ($row['anonymized_at'] ?? ''),
             ];
@@ -423,11 +462,14 @@ function cb_load_parties()
         $themeSlug = (string) ($party['theme_slug'] ?? $party['tema'] ?? '');
         $servicePlan = in_array((string) ($party['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $party['service_plan'] : 'booth';
         $galleryEnabled = (bool) ($party['gallery_enabled'] ?? 0);
+        $eventType = (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
         $normalized[$publicSlug] = [
             'public_slug' => $publicSlug,
             'admin_label' => (string) ($party['admin_label'] ?? ''),
             'birthday_person_name' => $birthdayName,
             'nombre' => $birthdayName,
+            'edad' => isset($party['edad']) && (int) $party['edad'] > 0 ? (int) $party['edad'] : null,
+            'event_type' => $eventType,
             'tema' => $themeSlug,
             'theme_slug' => $themeSlug,
             'fecha' => (string) ($party['fecha'] ?? ''),
@@ -482,14 +524,17 @@ function cb_save_parties(array $data): bool
             $themeSlug = (string) ($party['theme_slug'] ?? $party['tema'] ?? '');
             $servicePlan = in_array((string) ($party['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $party['service_plan'] : 'booth';
             $galleryEnabled = (bool) ($party['gallery_enabled'] ?? 0);
+            $eventType = (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
             $toSave[$publicSlug] = [
                 'public_slug' => $publicSlug,
                 'admin_label' => (string) ($party['admin_label'] ?? ''),
                 'birthday_person_name' => $birthdayName,
+                'event_type' => $eventType,
                 'theme_slug' => $themeSlug,
                 'fecha' => (string) ($party['fecha'] ?? ''),
                 'activa' => (bool) ($party['activa'] ?? false),
                 'invitados' => is_array($party['invitados'] ?? null) ? $party['invitados'] : [],
+                'juegos3d' => !array_key_exists('juegos3d', $party) || !empty($party['juegos3d']),
                 'frameBox' => cb_normalize_frame_box($party['frameBox'] ?? null),
                 'galeriaPinHash' => (string) ($party['galeriaPinHash'] ?? ''),
                 'galeriaPinHmac' => (string) ($party['galeriaPinHmac'] ?? ''),
@@ -510,8 +555,11 @@ function cb_save_parties(array $data): bool
         foreach ($existing as $row) {
             $existingMap[(string) $row['public_slug']] = (int) $row['id'];
         }
-        $upsert = $pdo->prepare('UPDATE cc_parties SET admin_label=?, birthday_person_name=?, theme_slug=?, event_date=?, active=?, frame_box_json=?, gallery_pin_hash=?, gallery_pin_hmac=?, service_plan=?, gallery_enabled=?, updated_at=?, anonymized_at=? WHERE public_slug=?');
-        $insert = $pdo->prepare('INSERT INTO cc_parties (public_slug,admin_label,birthday_person_name,theme_slug,event_date,active,frame_box_json,gallery_pin_hash,gallery_pin_hmac,service_plan,gallery_enabled,created_at,updated_at,anonymized_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        // `games3d_enabled` va al final de todo a propósito: los índices del INSERT están
+        // escritos a mano más abajo y meter una columna en medio ya rompió esto una vez.
+        $upsert = $pdo->prepare('UPDATE cc_parties SET admin_label=?, birthday_person_name=?, birthday_age=?, event_type=?, theme_slug=?, event_date=?, active=?, frame_box_json=?, gallery_pin_hash=?, gallery_pin_hmac=?, service_plan=?, gallery_enabled=?, updated_at=?, anonymized_at=?, games3d_enabled=? WHERE public_slug=?');
+        $insert = $pdo->prepare('INSERT INTO cc_parties (public_slug,admin_label,birthday_person_name,birthday_age,event_type,theme_slug,event_date,active,frame_box_json,gallery_pin_hash,gallery_pin_hmac,service_plan,gallery_enabled,created_at,updated_at,anonymized_at,games3d_enabled) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $syncInvitationEventType = $pdo->prepare('UPDATE cc_invitations SET event_type=?, updated_at=? WHERE party_id=?');
         $deleteGuests = $pdo->prepare('DELETE FROM cc_guests WHERE party_id=?');
         $insertGuest = $pdo->prepare('INSERT INTO cc_guests (party_id,name,gender,sort_order,created_at) VALUES (?,?,?,?,?)');
         $seen = [];
@@ -526,9 +574,15 @@ function cb_save_parties(array $data): bool
             $now = gmdate('Y-m-d H:i:s');
             $frameJson = is_array($party['frameBox'] ?? null) ? json_encode($party['frameBox']) : null;
             $servicePlan = in_array((string) ($party['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $party['service_plan'] : 'booth';
+            $eventType = (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
             $values = [
                 (string) ($party['admin_label'] ?? ''),
                 (string) ($party['birthday_person_name'] ?? $party['nombre'] ?? ''),
+                // Edad que cumple. Se acota a un rango con sentido para una fiesta infantil:
+                // fuera de el, casi siempre es un error de tecleo y es mejor guardar nada.
+                isset($party['edad']) && (int) $party['edad'] >= 1 && (int) $party['edad'] <= 17
+                    ? (int) $party['edad'] : null,
+                $eventType,
                 (string) ($party['theme_slug'] ?? $party['tema'] ?? ''),
                 ($party['fecha'] ?? '') ?: null,
                 !empty($party['activa']) ? 1 : 0,
@@ -539,15 +593,25 @@ function cb_save_parties(array $data): bool
                 !empty($party['gallery_enabled']) ? 1 : 0,
                 $now,
                 ($party['anonymizedAt'] ?? '') ?: null,
+                !array_key_exists('juegos3d', $party) || !empty($party['juegos3d']) ? 1 : 0,
             ];
             if (isset($existingMap[$publicSlug])) {
                 $upsert->execute(array_merge($values, [$publicSlug]));
                 $id = $existingMap[$publicSlug];
             } else {
                 $created = (string) ($party['creada'] ?? $now);
-                $insert->execute([$publicSlug, $values[0], $values[1], $values[2], $values[3], $values[4], $values[5], $values[6], $values[7], $values[8], $values[9], $created, $now, $values[11]]);
+                // Los mismos valores del UPDATE, con `created_at` intercalado antes de
+                // `updated_at`. Se arma desde `$values` y no repitiendo índices a mano:
+                // enumerarlos uno por uno ya se saltó `gallery_enabled` una vez, y como la
+                // cuenta quedaba en 15 para 16 columnas, PDO tiraba "Invalid parameter
+                // number" y `cb_save_parties()` devolvía `false` sin que nadie lo mirara.
+                $sinFechas = array_slice($values, 0, 12);          // hasta gallery_enabled
+                $insert->execute(array_merge([$publicSlug], $sinFechas, [$created, $now, $values[13], $values[14]]));
                 $id = (int) $pdo->lastInsertId();
             }
+            // La fiesta es la fuente para sus invitaciones vinculadas. Las
+            // invitaciones sin party_id conservan su modalidad independiente.
+            $syncInvitationEventType->execute([$eventType, $now, $id]);
             $deleteGuests->execute([$id]);
             foreach (array_values($party['invitados'] ?? []) as $order => $guest) {
                 if (is_array($guest) && trim((string) ($guest['name'] ?? '')) !== '') {
@@ -585,9 +649,11 @@ function cb_sanitize_theme_game($rawGame, string $base = '', string $diskDir = '
         return [];
     }
     $kind = trim((string) ($rawGame['kind'] ?? ''));
-    // 'concierto3d' = El Show (StageConcert3D.jsx), la misión 3D de K-Pop.
-    // Es un juego de ritmo, no el runner de carriles de 'mundo3d'; convive con
-    // él porque el resto de las temáticas siguen usando ThemeWorld3D.
+    // 'concierto3d' = El Show (StageConcert3D.jsx), la misión Full de las seis
+    // temáticas completas. Es un juego de ritmo, no el runner de carriles de
+    // 'mundo3d': lo reemplazó en las seis, y hoy ninguna temática declara
+    // 'mundo3d'. ThemeWorld3D sigue montado y el kind se sigue aceptando por si
+    // una temática nueva lo quiere, así que el saneador entiende los dos.
     if (!in_array($kind, ['copos', 'armar-muneco', 'fichas', 'ritmo', 'escudo', 'mundo3d', 'concierto3d'], true)) {
         return [];
     }
@@ -662,6 +728,7 @@ function cb_sanitize_theme_game($rawGame, string $base = '', string $diskDir = '
             'podium-night',
             'backyard-fiesta',
             'rooftop-city',
+            'comic-city',
         ];
         $game['stage'] = in_array($stage, $allowedStages, true) ? $stage : 'neon-arena';
     }
@@ -716,6 +783,53 @@ function cb_theme_available_game_kinds(array $themeData): array
  * (comportamiento histórico, no se toca ninguna fiesta existente). Un array
  * vacío SÍ es una elección válida: significa "esta fiesta no juega".
  */
+/**
+ * Datos de contacto de CumpleClick, para los pies de página.
+ *
+ * Viven en `data/marca.json` y no dentro de un bundle a propósito: el hosting no compila
+ * nada, así que cambiar un teléfono se hace editando un JSON y se ve al recargar, sin
+ * rehacer el build.
+ *
+ * Hay una función igual dentro de `album-api.php`. No se reutiliza porque ese archivo ES un
+ * endpoint: incluirlo desde otro lado ejecutaría su propia respuesta.
+ *
+ * Solo salen los campos no vacíos, y si el archivo falta o está roto devuelve []: ningún pie
+ * de página se rompe por un JSON mal editado.
+ */
+function cb_marca(): array
+{
+    $ruta = __DIR__ . '/data/marca.json';
+    $crudo = is_file($ruta) ? json_decode((string) @file_get_contents($ruta), true) : null;
+    if (!is_array($crudo)) {
+        return [];
+    }
+    $limpio = [];
+    foreach (['nombre', 'lema', 'invitacion', 'web', 'web_url', 'instagram', 'instagram_url',
+              'whatsapp', 'whatsapp_url', 'correo', 'correo_url'] as $campo) {
+        $valor = isset($crudo[$campo]) ? trim((string) $crudo[$campo]) : '';
+        if ($valor !== '') {
+            $limpio[$campo] = $valor;
+        }
+    }
+    return $limpio;
+}
+
+/**
+ * ¿Están prendidos los juegos 3D de esta fiesta?
+ *
+ * Ausente significa PRENDIDO: todas las fiestas que ya existen no tienen la clave y no se
+ * les puede apagar el juego por un cambio de código.
+ *
+ * Apagarlos no cambia ninguna dirección. El QR de los carteles apunta a `juego/?p=<slug>` y
+ * eso está impreso en papel: apagado, esa misma dirección responde con la pantalla de "se
+ * acabó la hora de juego" en vez de con la lista.
+ */
+function cb_juegos3d_activos(string $publicSlug): bool
+{
+    $party = cb_load_party_raw($publicSlug);
+    return $party === null || !array_key_exists('juegos3d', $party) || !empty($party['juegos3d']);
+}
+
 function cb_sanitize_party_games($raw): ?array
 {
     if (!is_array($raw)) {
@@ -729,6 +843,45 @@ function cb_sanitize_party_games($raw): ?array
         }
     }
     return $out;
+}
+
+/**
+ * Versión de los assets de una temática: el mtime más nuevo de su carpeta.
+ *
+ * Existe por el fantasma del cache: los archivos de temática se reemplazan
+ * CON EL MISMO NOMBRE (la convención saludo-<img>.mp4 no es negociable), así
+ * que navegadores y CDN siguen sirviendo el archivo viejo hasta que su cache
+ * expira. Se vio en vivo dos veces el mismo día: la tablet de Luis mostrando
+ * el fondo-banner anterior de Héroes tras corregirlo, y el CDN de Hostinger
+ * sirviendo el welcome-heroes.mp4 previo (x-hcdn HIT). El front agrega este
+ * número como ?v= a cada URL de asset del tema: cambia un archivo, cambia la
+ * URL, y el cache queda fuera de la jugada.
+ *
+ * Es UNA versión por tema, no por archivo, a propósito: un solo mecanismo,
+ * un solo valor que razonar, y el costo es re-descargar el tema completo
+ * cuando cambia algo (raro: los temas cambian por tandas).
+ */
+function cb_theme_assets_version(string $themeDiskDir): int
+{
+    static $cache = [];
+    if (isset($cache[$themeDiskDir])) {
+        return $cache[$themeDiskDir];
+    }
+    $max = 0;
+    if (is_dir($themeDiskDir)) {
+        $it = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($themeDiskDir, FilesystemIterator::SKIP_DOTS)
+        );
+        foreach ($it as $f) {
+            if ($f->isFile()) {
+                $m = (int) $f->getMTime();
+                if ($m > $max) {
+                    $max = $m;
+                }
+            }
+        }
+    }
+    return $cache[$themeDiskDir] = $max;
 }
 
 function cb_build_theme_payload(
@@ -886,6 +1039,7 @@ function cb_build_theme_payload(
 
     return [
         'slug'       => $themeSlug,
+        'assetsVersion' => cb_theme_assets_version($themeDiskDir),
         'nombre'     => (string) ($themeData['nombre'] ?? $themeSlug),
         'diploma'    => (string) ($themeData['diploma'] ?? ''),
         'colors'     => $themeData['colors'] ?? new stdClass(),
@@ -906,6 +1060,15 @@ function cb_build_theme_payload(
                 ? $base . 'roulette/roulette-background-v1.png'
                 : '',
         ],
+        // "Asómate y sé el héroe": el invitado pone la cara en el hueco del personaje.
+        // Se publica SOLO si los archivos están en disco: un despliegue a medias deja el
+        // modo apagado en vez de romper el kiosco. Una temática sin bloque `asomate` en
+        // themes.json tampoco lo ofrece, y no cambia en nada.
+        'asomate'    => cb_theme_asomate($themeData['asomate'] ?? null, $base, $themeDiskDir,
+                                         $themeData['personajes'] ?? []),
+        // "La foto de todos": una sola foto del grupo dentro del marco grande. Misma
+        // prudencia que arriba: se publica solo si el fondo esta en disco.
+        'grupal'     => cb_theme_grupal($themeData['grupal'] ?? null, $base, $themeDiskDir),
         'musica'     => $base . 'musica-fondo.mp3',
         // Música propia de la pantalla de juegos (opcional). Solo se publica si
         // el archivo existe: sin él, el juego sigue sonando con la de fondo.
@@ -913,6 +1076,128 @@ function cb_build_theme_payload(
             ? $base . 'musica-juego.mp3'
             : '',
     ];
+}
+
+/**
+ * Recursos del modo "Asómate y sé el héroe" de una temática, listos para el kiosco.
+ *
+ * Devuelve null si la temática no declara el modo, o si falta algún archivo en disco:
+ * es preferible que el botón no aparezca a que aparezca y lleve a una pantalla rota.
+ * Las claves de geometría se copian una por una a propósito, para que un themes.json
+ * editado a mano no pueda inyectar campos sueltos al payload público.
+ */
+/**
+ * Sello de version de un archivo, para que una cache no siga sirviendo el anterior.
+ *
+ * Los recortes se llaman siempre igual (`asomate/spin.png`) y el servidor los manda con
+ * `Cache-Control: public, max-age=2592000`. La tablet de la fiesta ya bajo esos PNG: sin
+ * cambiar la URL, corregir un recorte no le llega en 30 dias. Con el sello, cambiar el
+ * archivo cambia la URL y la copia guardada queda descartada sola.
+ *
+ * Aviso para el proximo que compare: el CDN de Hostinger REENCODA los PNG, asi que el md5 y
+ * el tamano de lo que devuelve HTTP no calzan con el archivo del disco aunque sean la misma
+ * imagen. Para saber si un cambio llego hay que comparar PIXELES, no bytes.
+ */
+function cb_sello_archivo(string $ruta): string
+{
+    $t = @filemtime($ruta);
+    return $t ? substr(dechex($t), -6) : '0';
+}
+
+/**
+ * El bloque de la FOTO GRUPAL de una tematica.
+ *
+ * Devuelve null —y el kiosco no muestra el boton— si falta el bloque en themes.json o si el
+ * fondo no esta en disco. `frameBox` se valida aca: un recuadro fuera del lienzo dejaria la
+ * foto del grupo pegada en un borde, y eso en una fiesta no se puede arreglar.
+ */
+function cb_theme_grupal($bloque, string $base, string $dir): ?array
+{
+    if (!is_array($bloque) || empty($bloque['fondo'])) {
+        return null;
+    }
+    $archivo = (string) $bloque['fondo'];
+    if (!is_file($dir . $archivo)) {
+        return null;
+    }
+    $caja = is_array($bloque['frameBox'] ?? null) ? $bloque['frameBox'] : [];
+    foreach (['x', 'y', 'w', 'h'] as $clave) {
+        if (!isset($caja[$clave]) || !is_numeric($caja[$clave])) {
+            return null;
+        }
+        $caja[$clave] = (float) $caja[$clave];
+    }
+    if ($caja['w'] <= 0.05 || $caja['h'] <= 0.05
+        || $caja['x'] < 0 || $caja['y'] < 0
+        || $caja['x'] + $caja['w'] > 1 || $caja['y'] + $caja['h'] > 1) {
+        return null;
+    }
+
+    return [
+        'fondo'    => $base . $archivo,
+        'frameBox' => $caja,
+        'titulo'   => (string) ($bloque['titulo'] ?? 'La foto de todos'),
+    ];
+}
+
+function cb_theme_asomate($bloque, string $base, string $dir, array $personajesTema = []): ?array
+{
+    if (!is_array($bloque) || !is_array($bloque['personajes'] ?? null)) {
+        return null;
+    }
+    $fondoRel = (string) ($bloque['fondo'] ?? '');
+    if ($fondoRel === '' || !is_file($dir . $fondoRel)) {
+        return null;
+    }
+
+    // El nombre y el emoji NO se derivan de la clave: la clave sale del archivo
+    // ("pantera.jpg" -> "pantera") y el personaje puede llamarse "Pantera Negra".
+    // Se toman de la propia temática, que es la fuente de verdad de los nombres.
+    $porArchivo = [];
+    foreach ($personajesTema as $p) {
+        $img = (string) ($p['img'] ?? '');
+        if ($img !== '') {
+            $porArchivo[pathinfo($img, PATHINFO_FILENAME)] = $p;
+        }
+    }
+
+    $campos = ['w', 'h', 'arriba', 'pies', 'izq', 'der', 'cx', 'cy', 'rx', 'ry'];
+    $personajes = [];
+    foreach ($bloque['personajes'] as $clave => $geo) {
+        if (!cb_valid_slug((string) $clave, 1, 60) || !is_array($geo)) {
+            continue;
+        }
+        $rel = 'asomate/' . $clave . '.png';
+        if (!is_file($dir . $rel)) {
+            continue;
+        }
+        $ficha = $porArchivo[(string) $clave] ?? [];
+        $limpio = [
+            'clave'  => (string) $clave,
+            'png'    => $base . $rel . '?v=' . cb_sello_archivo($dir . $rel),
+            'nombre' => (string) ($ficha['name'] ?? $clave),
+            'emoji'  => (string) ($ficha['emoji'] ?? ''),
+        ];
+        foreach ($campos as $campo) {
+            $limpio[$campo] = (float) ($geo[$campo] ?? 0);
+        }
+        $personajes[] = $limpio;
+    }
+
+    if (!$personajes) {
+        return null;
+    }
+    // Cómo se llama el modo lo decide la temática: en una fiesta de hielo, "sé el héroe" no
+    // significa nada. El kiosco cae a un texto neutro si la temática no lo dice.
+    $textos = [];
+    foreach (['boton', 'titulo'] as $campo) {
+        $valor = trim((string) ($bloque[$campo] ?? ''));
+        if ($valor !== '') {
+            $textos[$campo] = $valor;
+        }
+    }
+    return ['fondo' => $base . $fondoRel . '?v=' . cb_sello_archivo($dir . $fondoRel),
+            'personajes' => $personajes] + $textos;
 }
 
 /**
@@ -970,6 +1255,7 @@ function cb_resolve_party(string $slugRaw): array
         'public_slug'      => $slug,
         'slug'             => $slug,
         'nombre'           => (string) ($party['nombre'] ?? ''),
+        'event_type'       => (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday',
         'invitados'        => $invitados,
         'frameBox'         => $frameBox,
         'musica'           => !isset($party['musica']) || !empty($party['musica']),
@@ -980,11 +1266,14 @@ function cb_resolve_party(string $slugRaw): array
     // Juegos habilitados para ESTA fiesta (los marca Luis en el admin según el
     // plan contratado. La misión 3D del Full se agrega por separado y nunca
     // depende de esta selección manual.
+    $effectivePlan = $partyPayload['event_type'] === 'baby_shower'
+        ? 'booth'
+        : (string) ($partyPayload['service_plan'] ?? 'booth');
     $themePayload = cb_build_theme_payload(
         $themeSlug,
         $themeData,
         cb_sanitize_party_games($party['juegos'] ?? null),
-        (string) ($partyPayload['service_plan'] ?? 'booth')
+        $effectivePlan
     );
 
     return ['ok' => true, 'party' => $partyPayload, 'theme' => $themePayload];
@@ -1189,10 +1478,92 @@ function cb_photo_absolute_path(string $storageKey): ?string
 {
     // El prefijo debe aceptar exactamente el mismo rango que public_slug.
     // Los slugs opacos de fiesta pueden medir hasta 80 caracteres.
-    if (!preg_match('#^[a-z0-9-]{1,80}/\d{4}/\d{2}/[a-f0-9]{32}\.png$#', $storageKey)) {
+    // .jpg además de .png desde que el kiosco compone en JPEG (un PNG de 1080x1920 pesa
+    // 2,2 MB y el mismo lienzo en JPEG 350 KB). Las fotos .png anteriores siguen valiendo.
+    if (!preg_match('#^[a-z0-9-]{1,80}/\d{4}/\d{2}/[a-f0-9]{32}\.(?:png|jpg)$#', $storageKey)) {
         return null;
     }
     return cb_photo_root() . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $storageKey);
+}
+
+/**
+ * Miniatura de una foto de cabina, generada una vez y cacheada junto al
+ * original como `<archivo>.thumb.jpg`.
+ *
+ * POR QUE EXISTE
+ *   El Album Recuerdo mostraba las fotos de cabina en tamano completo: el API
+ *   decia "la cabina no genera miniatura; el original ya es JPEG/PNG del
+ *   kiosco", asumiendo originales livianos. En la practica son composiciones
+ *   de 1080x1920 de 2-3MB, y un album con 9 fotos de cabina cargaba mas de
+ *   20MB en el celular del invitado. Las fotos de invitados si tenian
+ *   miniatura (48KB): esta funcion empareja a las de cabina.
+ *
+ * El formato se detecta por CONTENIDO, no por extension: las claves de
+ * almacenamiento terminan todas en .png aunque el archivo sea JPEG, y
+ * imagecreatefrompng sobre un JPEG devuelve false sin avisar (ya nos paso:
+ * fotos compuestas con el marco vacio y ningun error en el log).
+ *
+ * Devuelve null ante cualquier problema: el que llama sirve el original y la
+ * pagina nunca se rompe, solo pesa mas.
+ */
+function cb_photo_thumbnail_path(string $originalPath): ?string
+{
+    if (!is_file($originalPath) || !function_exists('imagecreatetruecolor')) {
+        return null;
+    }
+    $thumbPath = $originalPath . '.thumb.jpg';
+    if (is_file($thumbPath) && filemtime($thumbPath) >= filemtime($originalPath)) {
+        return $thumbPath;
+    }
+
+    $info = @getimagesize($originalPath);
+    $type = $info[2] ?? 0;
+    $src = null;
+    if ($type === IMAGETYPE_PNG) {
+        $src = @imagecreatefrompng($originalPath);
+    } elseif ($type === IMAGETYPE_JPEG) {
+        $src = @imagecreatefromjpeg($originalPath);
+    } elseif ($type === IMAGETYPE_WEBP && function_exists('imagecreatefromwebp')) {
+        $src = @imagecreatefromwebp($originalPath);
+    }
+    if (!$src) {
+        return null;
+    }
+    $srcW = imagesx($src);
+    $srcH = imagesy($src);
+    if ($srcW < 1 || $srcH < 1) {
+        imagedestroy($src);
+        return null;
+    }
+    // El mismo lado maximo que las miniaturas de invitados (thumb_max_side),
+    // para que en la revista pesen y se vean parejo. Un original ya pequeno no
+    // se agranda: se copia tal cual a JPEG.
+    $max = 640;
+    $scale = min(1.0, $max / max($srcW, $srcH));
+    $dstW = max(1, (int) round($srcW * $scale));
+    $dstH = max(1, (int) round($srcH * $scale));
+    $dst = imagecreatetruecolor($dstW, $dstH);
+    // JPEG no tiene alfa: blanco de fondo para que un PNG transparente no
+    // salga negro, igual que hace cb_album_make_thumbnail.
+    $white = imagecolorallocate($dst, 255, 255, 255);
+    imagefilledrectangle($dst, 0, 0, $dstW, $dstH, $white);
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, $dstW, $dstH, $srcW, $srcH);
+    imagedestroy($src);
+
+    // A un archivo temporal y luego rename: si dos peticiones generan la misma
+    // miniatura a la vez, ninguna sirve un JPEG a medio escribir.
+    $tmp = $thumbPath . '.' . bin2hex(random_bytes(4)) . '.tmp';
+    $ok = imagejpeg($dst, $tmp, 82);
+    imagedestroy($dst);
+    if (!$ok) {
+        @unlink($tmp);
+        return null;
+    }
+    if (!@rename($tmp, $thumbPath)) {
+        @unlink($tmp);
+        return null;
+    }
+    return $thumbPath;
 }
 
 function cb_photo_usage(string $partySlug): array
@@ -1262,24 +1633,115 @@ function cb_record_photo(string $partySlug, array $photo): bool
     return cb_record_photo_with_quota($partySlug, $photo) === 'ok';
 }
 
-function cb_find_photo_by_token(string $token): ?array
+/**
+ * ¿Hay una sesión de admin viva? Se lee SIN crearla: solo si el navegador ya trae la cookie
+ * `cc_admin` se abre esa sesión, se mira y se cierra enseguida. Es la misma técnica con la
+ * que la galería deja entrar al organizador sin pedirle el PIN.
+ *
+ * Sirve para que el admin vea lo que un invitado no debe ver: en concreto, una foto que está
+ * en la papelera y que necesita mirar antes de decidir si la devuelve.
+ */
+function cb_admin_sesion_activa(?string $partySlug = null): bool
+{
+    // -1 = sin sesión viva; 0 = clave maestra; > 0 = usuario del backoffice (2026-09-13).
+    static $usuarioId = null;
+    if ($usuarioId === null) {
+        $usuarioId = -1;
+        if (!empty($_COOKIE['cc_admin']) && session_status() !== PHP_SESSION_ACTIVE) {
+            $secure = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
+            $previo = session_name('cc_admin');
+            session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => $secure, 'httponly' => true, 'samesite' => 'Strict']);
+            session_start();
+            $viva = !empty($_SESSION['admin_logged'])
+                && time() - (int) ($_SESSION['admin_seen'] ?? 0) <= (int) cb_config('session_idle_seconds')
+                && time() - (int) ($_SESSION['admin_started'] ?? 0) <= (int) cb_config('session_absolute_seconds');
+            if ($viva) {
+                $usuarioId = (int) ($_SESSION['admin_usuario_id'] ?? 0);
+            }
+            session_write_close();
+            session_id('');
+            session_name($previo);
+        }
+    }
+    if ($usuarioId < 0) {
+        return false;
+    }
+    if ($partySlug === null) {
+        return true;
+    }
+    // Un operador solo ve lo de sus fiestas; la clave maestra, todo.
+    require_once __DIR__ . '/lib.admin-usuarios.php';
+    return cb_admin_usuario_puede_fiesta($usuarioId, $partySlug);
+}
+
+/**
+ * La foto de un token. `$incluirBorradas` queda en false a propósito: es lo que hace que el
+ * QR de una foto borrada deje de servir, y cualquier llamada que no lo pida sigue igual.
+ */
+function cb_find_photo_by_token(string $token, bool $incluirBorradas = false): ?array
 {
     if (!preg_match('/^[a-f0-9]{32}$/', $token)) {
         return null;
     }
     if (cb_storage_mode() === 'db') {
-        $stmt = cb_pdo()->prepare('SELECT ph.*, p.public_slug AS party_slug FROM cc_photos ph JOIN cc_parties p ON p.id=ph.party_id WHERE ph.access_token=? AND ph.deleted_at IS NULL');
+        $sql = 'SELECT ph.*, p.public_slug AS party_slug FROM cc_photos ph JOIN cc_parties p ON p.id=ph.party_id WHERE ph.access_token=?'
+            . ($incluirBorradas ? '' : ' AND ph.deleted_at IS NULL');
+        $stmt = cb_pdo()->prepare($sql);
         $stmt->execute([$token]);
         $row = $stmt->fetch();
         return $row ?: null;
     }
     $data = cb_load_json_file(cb_state_path('photos.json'));
     $photo = $data['photos'][$token] ?? null;
-    if (!is_array($photo) || !empty($photo['deleted_at'])) {
+    if (!is_array($photo) || (!$incluirBorradas && !empty($photo['deleted_at']))) {
         return null;
     }
     $photo['party_slug'] = $photo['party'] ?? '';
     return $photo;
+}
+
+/**
+ * Fotos del kiosco de una fiesta, incluidas las borradas. Para el admin, que necesita ver
+ * la papelera para poder deshacer; la galería usa cb_list_party_photos, que las excluye.
+ */
+function cb_photos_admin(string $partySlug, bool $incluirBorradas = false): array
+{
+    if (cb_storage_mode() !== 'db') {
+        return cb_list_party_photos($partySlug);
+    }
+    $sql = 'SELECT ph.* FROM cc_photos ph JOIN cc_parties p ON p.id=ph.party_id
+            WHERE p.public_slug=?'
+        . ($incluirBorradas ? '' : ' AND ph.deleted_at IS NULL')
+        . ' ORDER BY ph.created_at DESC';
+    $stmt = cb_pdo()->prepare($sql);
+    $stmt->execute([$partySlug]);
+    return $stmt->fetchAll();
+}
+
+/**
+ * Borra (o restaura) una foto del kiosco.
+ *
+ * Es borrado BLANDO: se marca `deleted_at` y el archivo se queda en disco. Una foto de un
+ * cumpleaños no se puede recuperar si alguien se equivoca de botón, así que el admin tiene
+ * papelera. La limpieza definitiva ya existe aparte (anonimizado a los 30 días).
+ *
+ * Consecuencia que hay que decirle a quien borra: el QR de ESA foto deja de funcionar,
+ * porque cb_find_photo_by_token exige `deleted_at IS NULL`. El enlace de la galería no se
+ * toca: depende del slug de la fiesta, no de las fotos.
+ */
+function cb_photo_borrar(string $partySlug, int $photoId, bool $restaurar = false): bool
+{
+    if (cb_storage_mode() !== 'db' || !cb_valid_public_slug($partySlug)) {
+        return false;
+    }
+    $partyId = cb_party_db_id($partySlug);
+    if ($partyId === null) {
+        return false;
+    }
+    // El party_id va en el WHERE: sin eso, un id de otra fiesta borraría fotos ajenas.
+    $stmt = cb_pdo()->prepare('UPDATE cc_photos SET deleted_at=? WHERE id=? AND party_id=?');
+    return $stmt->execute([$restaurar ? null : gmdate('Y-m-d H:i:s'), $photoId, $partyId])
+        && $stmt->rowCount() > 0;
 }
 
 function cb_list_party_photos(string $partySlug): array
@@ -1877,10 +2339,13 @@ function cb_inspect_video(string $path): ?array
         return null;
     }
     $videoStream = null;
+    $hasAudio = false;
     foreach ((array) ($data['streams'] ?? []) as $stream) {
-        if (($stream['codec_type'] ?? '') === 'video') {
+        $codecType = (string) ($stream['codec_type'] ?? '');
+        if ($codecType === 'video' && $videoStream === null) {
             $videoStream = $stream;
-            break;
+        } elseif ($codecType === 'audio') {
+            $hasAudio = true;
         }
     }
     if ($videoStream === null) {
@@ -1891,6 +2356,7 @@ function cb_inspect_video(string $path): ?array
         'codec' => (string) ($videoStream['codec_name'] ?? ''),
         'width' => (int) ($videoStream['width'] ?? 0),
         'height' => (int) ($videoStream['height'] ?? 0),
+        'has_audio' => $hasAudio,
     ];
 }
 
@@ -2199,6 +2665,38 @@ function cb_process_theme_uploads(
  * La fuente es siempre themes.json: si un tema no define un token, se cae al
  * default de :root en styles.css, nunca a un color inventado aquí.
  */
+/**
+ * Lockup de CumpleClick: el isotipo con el nombre al lado, para las paginas PHP.
+ *
+ * El nombre NO puede venir del SVG. `brand/cumpleclick-lockup.svg` dibuja la
+ * palabra con un <text> en Baloo 2, y un SVG cargado dentro de un <img> se
+ * renderiza en un documento aislado: no ve las @font-face de la pagina, solo
+ * las fuentes instaladas en el sistema. Baloo 2 no viene con Windows ni con
+ * iOS. Medido en el navegador, la misma palabra ocupa 403 px en Baloo 2,
+ * 437 px en Segoe UI y 496 px en Helvetica: el nombre de la marca cambiaba de
+ * forma segun el aparato del invitado. Compuesta en HTML usa la Baloo 2 que la
+ * pagina ya trae self-hosted.
+ *
+ * Es la version PHP de src/brand/Lockup.jsx (album y cartel QR); las clases y
+ * las proporciones son las mismas para que las dos se vean identicas.
+ *
+ * @param string $tono  'marca' sobre fondos claros, 'claro' sobre oscuros.
+ *                      El manual pide el isotipo tal cual sobre fondo oscuro y
+ *                      prohibe recuadrarlo en una caja blanca.
+ * @param string $extra Clase adicional de quien lo usa, para el tamano.
+ */
+function cb_lockup_html(string $tono = 'marca', string $extra = ''): string
+{
+    $tono = $tono === 'claro' ? 'claro' : 'marca';
+    $clases = trim('cc-lockup cc-lockup--' . $tono . ' ' . $extra);
+    return '<span class="' . htmlspecialchars($clases, ENT_QUOTES, 'UTF-8') . '">'
+         . '<img class="cc-lockup__mark" src="brand/cumpleclick-mark.svg" alt="CumpleClick" '
+         . 'width="400" height="400" draggable="false">'
+         . '<span class="cc-lockup__nombre" aria-hidden="true">'
+         . 'Cumple<span class="cc-lockup__click">Click</span></span>'
+         . '</span>';
+}
+
 function cb_theme_css_vars(string $themeSlug): string
 {
     static $map = [
@@ -2230,6 +2728,31 @@ function cb_theme_css_vars(string $themeSlug): string
     return $out ? implode(';', $out) . ';' : '';
 }
 
+/**
+ * El color con que el navegador pinta su barra (`<meta name="theme-color">`).
+ *
+ * En el kiosco y en el álbum lo pone applyThemeColors() al vuelo, pero estas
+ * páginas son PHP puro y no pasan por ahí: se quedaban con la barra gris de
+ * Chrome mientras el resto de la experiencia iba en el color del tema. Salta a
+ * la vista al saltar del kiosco a la invitación en el celular.
+ *
+ * Mismo criterio que en el front: se usa `accent`, el color con el que ya se
+ * reconoce cada temática. Devuelve '' si el tema no existe o no declara accent,
+ * y en ese caso NO se imprime el meta: mejor la barra por defecto del navegador
+ * que un color inventado.
+ */
+function cb_theme_meta_color(string $themeSlug): string
+{
+    if ($themeSlug === '') {
+        return '';
+    }
+    $themes = cb_load_themes();
+    $accent = (string) ($themes['themes'][$themeSlug]['colors']['accent'] ?? '');
+    // Solo hexadecimal, igual que cb_theme_css_vars: esto entra en un atributo
+    // HTML y lo que no calce se descarta en vez de escaparse.
+    return preg_match('/^#[0-9a-fA-F]{3,8}$/', $accent) === 1 ? $accent : '';
+}
+
 // Módulo de invitaciones (depende de cb_config, cb_pdo, etc.).
 require __DIR__ . '/lib.invitations.php';
 
@@ -2238,3 +2761,15 @@ require __DIR__ . '/lib.leads.php';
 
 // Álbum Recuerdo: álbum por evento, aportes de invitados y curaduría.
 require __DIR__ . '/lib.album.php';
+
+// Perfil del protagonista: datos y media opcionales por evento.
+require __DIR__ . '/lib.event-profiles.php';
+
+// Predicciones por evento y tokens privados de baby shower.
+require __DIR__ . '/lib.predictions.php';
+
+// Lista de regalos con reserva.
+require __DIR__ . '/lib.gifts.php';
+
+// Contactos de quien contrata la fiesta y datos de cobro (migración 015).
+require __DIR__ . '/lib.cliente.php';

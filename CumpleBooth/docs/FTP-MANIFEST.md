@@ -3704,3 +3704,87 @@ desmarcar una y aprobar. `php -l` limpio.
 | 3 | `public/admin/album.php` | `app/admin/album.php` | OBLIGATORIO (respaldar antes) |
 
 Sin migración. Vuelta atrás: restaurar los tres respaldos.
+
+## PENDIENTE DE REVISIÓN — 2026-09-24 — Correcciones del backoffice
+
+Rama `codex/correcciones-backoffice`, nacida de `main` (21c0c1a), worktree propio.
+Luis autorizó corregir los ocho hallazgos de la auditoría. Claude revisa e integra; no se ha
+fusionado, publicado esta rama ni desplegado. Los archivos de Agenda 018 y Contenido 017
+permanecen en sus ramas.
+
+**Cambios:** Archivar una invitación actualiza solo el estado y conserva sus datos; valida
+sesión, CSRF y pertenencia al evento. Se rechazan fechas inexistentes y horas imposibles
+antes de guardar en Invitaciones, Finanzas, Fiestas y cierre del Álbum. Las fechas vacías
+opcionales siguen admitidas. El vencimiento inválido de una invitación no guarda parcialmente.
+La migración 022 comprueba si existe la columna en SQLite/MySQL y conserva el interruptor.
+Se ajustan los tamaños mínimos de campos, rejillas y selectores a celulares de 320 px,
+manteniendo los tokens y el diseño del admin. Nombres accesibles explícitos en contactos,
+comprobantes, invitaciones y protagonistas, también en las plantillas clonadas.
+
+**Pruebas reproducibles (PHP WAMP 8.3.28):**
+- 29 suites backend: 1313 comprobaciones, cero fallos. Incluyen 35 HTTP de regresión,
+  25 fechas y 3 de migración 022 en SQLite.
+- Migración 022 en MySQL 8.4.7 desechable: 3 comprobaciones, cero fallos.
+- Frontend existente: 214 pruebas, cero fallos.
+- `tests/backend/backoffice-ui.cjs`: 36 vistas; 320, 360, 390, 768, 1024 y 1440 px.
+  Abre formularios plegados y agrega un protagonista; comprueba ancho, nombres accesibles
+  y ausencia de ids duplicados. Evidencia ampliada y resultados definitivos en el reporte
+  de revisión de Claude.
+- Puntajes espera los siete juegos registrados; Salas usa el conjunto completo de migraciones.
+  Envíos, Manual y Puntajes tienen entorno efímero sin configuración real. Envíos verifica
+  las 25 comprobaciones, incluida la rotación de enlaces, sin saltarla ni mandar correos.
+- Ejecutar PHP: `php tests/backend/backoffice-http.php`, `php tests/backend/fechas.php`,
+  `php tests/backend/migracion-022.php`. `--mysql` requiere exclusivamente una instancia
+  desechable en loopback:33387, como las suites 017/018; nunca apuntarla a otra base.
+- UI: definir `CC_QA_PHP`, `CC_QA_CHROME` y `CC_QA_OUT` con rutas locales; ejecutar
+  `node tests/backend/backoffice-ui.cjs`. Requiere las dependencias del package-lock existente.
+  No hay dependencias nuevas ni llamadas a generación.
+- Fase roja y verde, salidas por suite, capturas, lint y escaneo de secretos se conservan en
+  la carpeta local `correcciones-backoffice` de esta tarea.
+
+**Lista exacta FTP/SFTP, únicamente tras revisión y autorización de Luis.**
+Raíz local:
+`C:/Users/luis_/.codex/worktrees/cumpleclick-correcciones-backoffice/automatiza-tech/CumpleBooth/`.
+Cada ruta local de la tabla se concatena con esa raíz. Destinos relativos al HOME SSH.
+
+| Orden | Ruta local | Destino relativo en PROD | Clase |
+|---|---|---|---|
+| 1 | database/migrations/022_juegos3d.php | domains/cumpleclick.com/database/migrations/022_juegos3d.php | OBLIGATORIO para actualizar el migrador; no ejecutar otra migración ni borrar datos |
+| 2 | public/lib.fechas.php | domains/cumpleclick.com/public_html/app/lib.fechas.php | OBLIGATORIO, antes de las librerías y páginas que lo cargan |
+| 3 | public/lib.invitations.php | domains/cumpleclick.com/public_html/app/lib.invitations.php | OBLIGATORIO |
+| 3 | public/lib.finanzas.php | domains/cumpleclick.com/public_html/app/lib.finanzas.php | OBLIGATORIO |
+| 4 | public/admin/_style.css.php | domains/cumpleclick.com/public_html/app/admin/_style.css.php | OBLIGATORIO |
+| 4 | public/admin/index.php | domains/cumpleclick.com/public_html/app/admin/index.php | OBLIGATORIO |
+| 4 | public/admin/invitations.php | domains/cumpleclick.com/public_html/app/admin/invitations.php | OBLIGATORIO |
+| 4 | public/admin/comprobante.php | domains/cumpleclick.com/public_html/app/admin/comprobante.php | OBLIGATORIO |
+| 4 | public/admin/event-profile.php | domains/cumpleclick.com/public_html/app/admin/event-profile.php | OBLIGATORIO |
+| 4 | public/admin/album.php | domains/cumpleclick.com/public_html/app/admin/album.php | OBLIGATORIO |
+
+Scripts desplegables nuevos: ninguno. Pruebas, fixtures, JSON de QA, SQLite, sesiones,
+datadir/logs de MySQL, capturas, node_modules, Graphify y documentación **NO se suben**.
+No hay nuevos assets ni archivos opcionales de producto. Respaldar los diez archivos si
+existen; subir el helper primero. No hace falta alterar una base donde ya existe la columna
+de 022. La corrección de validación evita nuevos datos inválidos; no normaliza fechas antiguas.
+
+**Vuelta atrás:** restaurar el código respaldado de los archivos existentes y retirar el
+helper solo después de restaurar todas sus referencias. No borrar la columna games3d_enabled.
+No reabrir ni reconstruir datos de invitaciones ya dañadas por el archivado antiguo:
+su recuperación requiere un respaldo que permita comprobar los valores originales.
+
+### No probado — Correcciones del backoffice
+
+- Producción, datos reales, credenciales y permisos del hosting; sin subida FTP/SFTP.
+- Safari, Firefox, iOS y Android físicos; los tamaños móviles se probaron en Chromium.
+- Auditoría completa WCAG, navegación con lector de pantalla real y zoom del sistema.
+  Se comprobaron nombres accesibles, ids únicos y tamaños en las vistas indicadas.
+- Envíos SMTP, entregas reales, generación de imágenes/audio/video y cobros externos.
+- Flujos HTTP completos bajo MySQL: las pruebas HTTP utilizan SQLite; se probó 022
+  bajo ambos motores. Las suites propias 017/018 se revalidaron también en MySQL.
+- Integración simultánea de las tres ramas: Claude debe revisarla antes de merge/deploy.
+- GitHub Actions y CI remota no se ejecutaron en esta tarea.
+- Recuperación de datos que ya se hubiesen perdido al archivar una invitación antigua.
+
+**Costos:** Higgsfield 0 créditos; ElevenLabs 0 créditos; request_id no aplica.
+**Pendientes para Claude/Luis:** revisar las tres ramas y el orden de integración; contrastar
+los briefs canónicos 017/018 ausentes de los worktrees revisados; aprobar publicación remota
+de las ramas aún locales y, por separado, cualquier despliegue. No se solicita activación automática.

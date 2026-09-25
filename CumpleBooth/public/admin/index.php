@@ -5,6 +5,7 @@
  * Sin dependencias externas. Compatible PHP 8.0+ (baseline 8.2).
  */
 require __DIR__ . '/../lib.php';
+require_once __DIR__ . '/../lib.fechas.php';
 require __DIR__ . '/config.php';
 require_once __DIR__ . '/../lib.planes.php';
 require __DIR__ . '/../lib.acceptance.php';
@@ -347,8 +348,8 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             if (!isset($themes[$tema])) {
                 $errs[] = 'Selecciona una temática válida.';
             }
-            if ($fecha !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
-                $errs[] = 'La fecha debe tener formato AAAA-MM-DD.';
+            if ($fecha !== '' && !cb_fecha_valida($fecha)) {
+                $errs[] = 'La fecha debe ser un día real con formato AAAA-MM-DD.';
             }
             if ($galleryEnabled && $servicePlan !== 'full') {
                 $errs[] = 'La galería solo puede habilitarse con el plan Full.';
@@ -986,10 +987,10 @@ if ($formValues === null && $action === 'editar') {
             <div id="contactos">
               <?php foreach ($formValues['contactos'] as $i => $c): ?>
                 <div class="contacto-fila">
-                  <input type="text" name="contacto_name[]" placeholder="Nombre" value="<?= h($c['name']) ?>" autocomplete="off">
-                  <input type="email" name="contacto_email[]" placeholder="correo@ejemplo.cl" value="<?= h($c['email']) ?>" autocomplete="off">
-                  <input type="text" name="contacto_phone[]" placeholder="WhatsApp" value="<?= h($c['phone']) ?>" autocomplete="off">
-                  <select name="contacto_rel[]">
+                  <input type="text" aria-label="Nombre del contacto" name="contacto_name[]" placeholder="Nombre" value="<?= h($c['name']) ?>" autocomplete="off">
+                  <input type="email" aria-label="Correo del contacto" name="contacto_email[]" placeholder="correo@ejemplo.cl" value="<?= h($c['email']) ?>" autocomplete="off">
+                  <input type="text" aria-label="WhatsApp del contacto" name="contacto_phone[]" placeholder="WhatsApp" value="<?= h($c['phone']) ?>" autocomplete="off">
+                  <select aria-label="Parentesco del contacto" name="contacto_rel[]">
                     <?php foreach (cb_contact_relationships() as $valor => $etiqueta): ?>
                       <option value="<?= h($valor) ?>" <?= $c['relationship'] === $valor ? 'selected' : '' ?>><?= h($etiqueta) ?></option>
                     <?php endforeach; ?>
@@ -1179,7 +1180,7 @@ if ($formValues === null && $action === 'editar') {
                   <?php if ($textoWa !== ''): ?>
                     <details class="envio__mensaje">
                       <summary>Mensaje listo para copiar o mandar por WhatsApp</summary>
-                      <textarea readonly rows="6" id="wa-<?= h($tipo) ?>"><?= h($textoWa) ?></textarea>
+                      <textarea aria-label="Mensaje de WhatsApp del servicio" readonly rows="6" id="wa-<?= h($tipo) ?>"><?= h($textoWa) ?></textarea>
                       <div class="envio__botones">
                         <?php // Reusa el copiador que ya existe para los prompts: lee el value del campo por id. ?>
                         <button type="button" class="btn btn-ghost" data-copy-prompt="wa-<?= h($tipo) ?>"><?= admin_icon('copy') ?> Copiar</button>
@@ -1251,14 +1252,14 @@ if ($formValues === null && $action === 'editar') {
               </details>
             <?php endif; ?>
 
-            <textarea readonly rows="2" id="rsvp-url" class="envio__enlace"><?= h($rsvpUrl) ?></textarea>
+            <textarea readonly rows="2" aria-label="Enlace para confirmar asistencia" id="rsvp-url" class="envio__enlace"><?= h($rsvpUrl) ?></textarea>
             <div class="envio__botones">
               <button type="button" class="btn btn-ghost" data-copy-prompt="rsvp-url"><?= admin_icon('copy') ?> Copiar enlace</button>
               <a class="btn btn-ghost" target="_blank" rel="noopener" href="<?= h($rsvpUrl) ?>">Abrir</a>
             </div>
             <details class="envio__mensaje" open>
               <summary>Mensaje listo para copiar y pegar por WhatsApp</summary>
-              <textarea readonly rows="6" id="rsvp-wa"><?= h($rsvpWa) ?></textarea>
+              <textarea readonly rows="6" aria-label="Mensaje de WhatsApp para confirmar asistencia" id="rsvp-wa"><?= h($rsvpWa) ?></textarea>
               <div class="envio__botones">
                 <button type="button" class="btn btn-ghost" data-copy-prompt="rsvp-wa"><?= admin_icon('copy') ?> Copiar</button>
                 <a class="btn btn-ghost" target="_blank" rel="noopener"

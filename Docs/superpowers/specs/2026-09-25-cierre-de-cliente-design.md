@@ -161,9 +161,16 @@ En la configuración de facturación (`invoice-settings.php`), junto a los datos
   - qué aceptó: las filas de precios como casillas, con la primera marcada;
   - quién aceptó: el nombre del cliente de la propuesta, editable;
   - nota con lo que dijo el cliente (obligatoria, por ejemplo «Me escribió por WhatsApp: sí, partamos con la fase 1»);
+  - evidencia: hasta 3 imágenes (captura del WhatsApp o del correo), opcional pero recomendada (pedido de Luis, 25-sep);
   - casilla «Enviar el correo de bienvenida», marcada.
 - Al guardar dispara lo mismo que «Al aceptar, en orden». El registro en Seguimiento dice canal `manual`, el usuario de WordPress que lo registró, por dónde aceptó el cliente, la fecha declarada y la nota. La constancia formal queda con la firma del contrato.
 - Pide confirmación antes de guardar: «Esto pasa la propuesta a aceptada, crea al cliente y le envía la bienvenida. ¿Seguir?».
+- **Las imágenes de evidencia no son públicas.** Traen datos personales (teléfono, nombre, conversación):
+  - solo JPG, PNG o WEBP, hasta 5 MB cada una; el tipo real se revisa con `getimagesize()`, no por la extensión;
+  - se guardan con nombre aleatorio en `uploads/automatiza-tech-evidencias/<id de la propuesta>/`, con un `.htaccess` que niega el acceso directo, igual que la carpeta de contratos (`ContractService::storage_dir()`);
+  - se ven solo desde el panel, por `admin-ajax.php` con nonce y permiso de administrador, el mismo patrón que la descarga de contratos (`secure_pdf_url()`);
+  - el registro de Seguimiento guarda el enlace protegido en `attachment_url`, más nombre y tipo, y la pestaña Seguimiento muestra la miniatura;
+  - no entran a la biblioteca de medios de WordPress ni al repositorio.
 
 ### Etapa 4 · WhatsApp automático con botones para responder
 
@@ -210,6 +217,7 @@ Scripts PHP con el mismo patrón de las pruebas del panel de propuestas, en loca
 - Página de respuesta: aceptar, evaluar y rechazar; aceptar dos veces; GET que no acepta; nonce vencido; campo trampa lleno; límite por IP; RUT inválido.
 - Aceptación completa en local con una propuesta de prueba: estado, Seguimiento, ficha única, correo de bienvenida capturado y contrato en borrador.
 - «Registrar aceptación»: sin nota no guarda, usuario sin permiso rechazado, fecha anterior respetada, casilla de bienvenida apagada no envía el correo, propuesta ya aceptada no se registra dos veces.
+- Evidencia: acepta JPG, PNG y WEBP; rechaza un PDF renombrado a `.png`, un archivo de más de 5 MB y una cuarta imagen; la URL directa del archivo da 403 desde afuera; el visor sin sesión o sin nonce no la entrega.
 - Endpoint de WhatsApp: sin clave, con clave mala, teléfono que no coincide, las tres salidas, dos toques seguidos, código inexistente. Normalización de teléfonos chilenos («+56 9 …», «9 …», «569…»).
 - Una prueba real de punta a punta con el teléfono de Luis como cliente de prueba, antes de usarlo con clientes.
 

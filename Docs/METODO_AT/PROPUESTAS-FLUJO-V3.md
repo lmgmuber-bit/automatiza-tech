@@ -128,9 +128,9 @@ errores publicados en n8n; Meet apuntando a `propuesta-v3-borrador`; WordPress c
 solo desde `lista` y desde el panel, `/prompts` 409 en v3, `/state` rechaza `sent`, botón Destrabar, Enter guarda,
 precios obligatorios para aprobar). Respaldo previo: `~/respaldos/propuestas-antes-14b-20260924-021846.tar.gz`.
 
-Pendiente, a propósito: el webhook del Borrador y `/render` todavía no piden clave. Lo primero exige editar el
-workflow de Meet (ver el aviso de arriba sobre reprocesar transcripciones); lo segundo, que Luis cargue una
-variable nueva en Easypanel.
+Pendiente de endurecimiento del flujo: detalle en la nota privada de la bóveda
+(`10-Projects/2026-09-24-Propuestas-v3-y-Panel-Admin.md`). Cualquier cambio al workflow de Meet exige antes leer el
+aviso de abajo sobre reprocesar transcripciones.
 
 - Workflows: `python N8N/propuestas-v3/build_N_*.py` genera el JSON y `python N8N/propuestas-v3/deploy.py N-*.json`
   lo publica (crea o actualiza por nombre, filtra por el host de AT; la clave no se imprime).

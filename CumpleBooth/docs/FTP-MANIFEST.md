@@ -3705,6 +3705,102 @@ desmarcar una y aprobar. `php -l` limpio.
 
 Sin migración. Vuelta atrás: restaurar los tres respaldos.
 
+## LOCAL 2026-09-24 — AT-CUMPLECLICK-017, módulo Contenido (backend)
+
+**Estado:** implementado en `codex/marketing-contenido`, worktree separado desde main.
+Sin merge ni despliegue. Claude revisa/orquesta y Luis aprueba. Esta entrega cierra solamente
+el módulo: estrategia de 30 días y assets siguen en el mismo ticket, rama y PR.
+
+**Comportamiento.** Calendario mensual con tarjetas por formato; lista semanal; ficha editable,
+vista previa privada, copiar texto y primer comentario por separado, estados válidos, URL al
+marcar publicada y métricas manuales por pieza/semana. Solo superusuarios, incluso cuando un
+operador tiene marcada la clave marketing. CSRF en todas las escrituras. Programada organiza
+el calendario: no se conecta ni publica en Instagram. Los tres hashtags fijos se agregan al
+copiar; etiquetas de temática se guardan en el primer comentario, sin romper anclas de URLs.
+
+**Datos y archivos.** Migración 025 crea solo cc_marketing_piezas y cc_marketing_semanas,
+repetible en MySQL/SQLite, sin tocar cc_parties. Importación transaccional e idempotente por
+fecha+título; no pisa ediciones humanas ni importa aprobaciones/publicaciones. Cinco ejemplos
+adaptados de textos reales de Luciano prueban el módulo; sus fechas son de fixture, no el plan.
+Una pieza admite un archivo; en carruseles se usa portada y enlace externo al conjunto.
+Imágenes JPG/PNG/WebP o MP4 hasta 60 MiB (60 x 1024 x 1024 bytes), tipo por bytes, extensión
+canónica y nombres aleatorios. Almacén: `cb_photo_root()/marketing/<año>/<mes>/`, la misma
+raíz del Álbum. Con photo_root=almacen/fotos queda almacen/fotos/marketing, fuera del webroot.
+El reemplazo elimina el anterior sin referencias después de confirmar la escritura; editar texto
+no restaura claves antiguas. El endpoint sirve bytes solo con sesión super vigente, inline y
+Cache-Control private,no-store. No descarga URLs externas.
+
+**Pruebas locales, PHP WAMP 8.3.28:**
+- `php tests/backend/marketing.php` → `Marketing SQLite: OK 60 comprobaciones`.
+- `php tests/backend/marketing.php --mysql` → `Marketing MySQL: OK 60 comprobaciones`.
+  MySQL 8.4.7 desechable, loopback:33387; sin usar WAMP de trabajo ni PROD.
+- `php tests/backend/marketing-http.php` → `Marketing HTTP: OK 36 comprobaciones`.
+- Cobertura: alta/edición/transiciones, publicación con URL, métricas y semana histórica fuera de
+  las últimas 52; CSRF, XSS, ACL y revocación de permisos; tipo real frente a extensión falsa,
+  límite exacto 60 MiB y exceso, MP4 truncado, sustitución y carrera entre texto/asset;
+  seed CLI y ejecutor 025 repetidos; rollback de filas y archivos; migración up/down repetida.
+- Regresión de usuarios, HTTP de usuarios y Finanzas; lint de los 11 PHP cambiados y escaneo
+  de secretos del diff en la evidencia de entrega.
+- Chromium escritorio y móvil 390 px: calendario de siete columnas/lista, guardar ficha,
+  asset visible, copiar ambos textos en portapapeles, métricas; sin desbordamiento ni errores JS.
+  Seis capturas locales con datos de prueba, sin fotos de niños.
+
+**Lista exacta FTP/SFTP para Claude, después de revisión y autorización de Luis.**
+Raíz local:
+`C:/Users/luis_/.codex/worktrees/cumpleclick-marketing-contenido/automatiza-tech/CumpleBooth/`.
+Cada ruta de la tabla se concatena con esa raíz. Destinos relativos al HOME SSH;
+`domains/cumpleclick.com/public` es el enlace privado existente a public_html/app.
+Respaldar archivos/base antes de ejecutar la migración. Conservar los hunks de Agenda 018
+al integrar los dos archivos compartidos: no sobrescribirlos con una copia de esta rama.
+
+| Orden | Ruta local | Destino relativo en PROD | Clase |
+|---|---|---|---|
+| 1 | database/migrations/025_marketing_contenido.php | domains/cumpleclick.com/database/migrations/025_marketing_contenido.php | OBLIGATORIO |
+| 1 | database/migrations/025_marketing_contenido.down.php | domains/cumpleclick.com/database/migrations/025_marketing_contenido.down.php | OPCIONAL, rollback elimina las dos tablas; no ejecutar normalmente |
+| 2 | database/aplicar-025.php | domains/cumpleclick.com/database/aplicar-025.php | OBLIGATORIO, ejecutar por SSH antes de lib/admin |
+| 3 | public/lib.marketing.php | domains/cumpleclick.com/public_html/app/lib.marketing.php | OBLIGATORIO |
+| 3 | public/lib.admin-usuarios.php | domains/cumpleclick.com/public_html/app/lib.admin-usuarios.php | OBLIGATORIO, solo clave marketing al final después de perfil |
+| 4 | public/admin/contenido.php | domains/cumpleclick.com/public_html/app/admin/contenido.php | OBLIGATORIO |
+| 4 | public/admin/contenido-media.php | domains/cumpleclick.com/public_html/app/admin/contenido-media.php | OBLIGATORIO |
+| 4 | public/admin/_acceso.php | domains/cumpleclick.com/public_html/app/admin/_acceso.php | OBLIGATORIO, solo pestaña Contenido después de Finanzas |
+| 5 | scripts/seed-marketing-30-dias.php | domains/cumpleclick.com/scripts/seed-marketing-30-dias.php | OBLIGATORIO para importar el futuro JSON aprobado; fuera de public_html |
+
+Desde `domains/cumpleclick.com`: `php database/aplicar-025.php` (applied/skip y tablas).
+Después código, lint y prueba autorizada con sesión. PHP del hosting necesita fileinfo, GD,
+mbstring y PDO; upload_max_filesize al menos 60M y post_max_size mayor, por ejemplo 64M;
+revisar además límite del proxy. El JSON definitivo se importa por CLI con su ruta privada.
+No ejecutar --ejemplo en PROD. No subir marketing-ejemplos.json, tests, SQLite, datadir MySQL,
+capturas, qa scripts, node_modules, graphify-out, sesiones, credenciales ni este manifiesto.
+Los assets reales se subirán desde el admin o la importación autorizada; no copiar el almacén QA.
+Rollback de código: restaurar respaldo; las tablas pueden conservarse. El .down pierde datos
+editoriales y no borra assets privados: solo usar con respaldo y aprobación explícita.
+
+### No probado — AT-CUMPLECLICK-017, backend
+
+- PROD, permisos del almacén y límites PHP/proxy del hosting. Nada desplegado.
+- Safari/iOS/Android físicos; QA en Chromium local con viewport móvil.
+- Reproducción de un MP4 real de 60 MiB y seek por Range; el endpoint usa el modelo ver-media
+  solicitado y no implementa Range. La fixture MP4 prueba metadatos/tipo, no decodificación.
+- Instagram real, Insights y publicación automática: esta última está fuera de alcance.
+- Plan completo de 30 días, assets finales y carga de la primera semana: siguiente parte del ticket.
+- GitHub Actions (el brief informa bloqueo de facturación); evidencia de ejecución local.
+- Revisión final de Claude y activación en hosting.
+
+**Costos:** Higgsfield $0; ElevenLabs $0; request_id no aplica, sin solicitudes de generación.
+**Preguntas abiertas:** ninguna para usar este backend. Luis define el día 1 de la estrategia
+en la siguiente parte. Mantener un único PR del ticket abierto mientras se completa esa entrega.
+
+**Verificación responsive adicional (2026-09-24):** 36 vistas de Agenda/Contenido en Chromium,
+anchos 320, 360, 390, 768, 1024 y 1440 px; calendario, ficha y lista/semana sin desbordamiento ni
+errores JavaScript. Ajustado el ancho del selector de archivos en la ficha de Contenido.
+Regresión tras el ajuste: HTTP 36 comprobaciones y lint de contenido.php correctos.
+
+**Ajuste de Claude en la revisión (2026-09-25, pedido de Luis; misma rama):**
+- `admin/contenido-media.php` responde rangos (`Accept-Ranges: bytes`, `206` con `Content-Range`, `416` fuera del
+  archivo, varios rangos → completo, `HEAD` sin cuerpo) y envía el archivo por trozos de 64 KB en vez de `readfile`.
+  Safari e iOS no reproducen un MP4 si el servidor no contesta `206` a `bytes=0-1`; el resto del comportamiento
+  (sesión super obligatoria, `private, no-store`, inline) no cambia.
+- Pruebas: `marketing-http.php` 41 (antes 36): rango inicial, rango abierto, rango fuera del archivo y varios rangos.
 ## PENDIENTE DE DESPLIEGUE — 2026-09-24 — AT-CUMPLECLICK-018 Agenda y avisos
 
 Rama `codex/agenda-eventos`, desde `main` `21c0c1a0`. Ejecutor: Codex; orquestador/revisor:

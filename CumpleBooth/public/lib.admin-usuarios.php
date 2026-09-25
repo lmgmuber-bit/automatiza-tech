@@ -22,6 +22,7 @@ const CB_ADMIN_MODULOS = [
     'mensajes'  => ['nombre' => 'Mensajes', 'detalle' => 'La pestaña Mensajes de su fiesta'],
     'album'     => ['nombre' => 'Álbum Recuerdo', 'detalle' => 'Recibir y curar los aportes de los papás'],
     'perfil'    => ['nombre' => 'Perfil del protagonista', 'detalle' => 'Editar el perfil del festejado'],
+    'marketing' => ['nombre' => 'Contenido', 'detalle' => 'Organizar publicaciones y métricas'],
 ];
 /** Lo que se marca por defecto al crear un operador: lo que se usa durante la fiesta. */
 const CB_ADMIN_MODULOS_RECOMENDADOS = ['fotos', 'juegos', 'carteles', 'invitados'];

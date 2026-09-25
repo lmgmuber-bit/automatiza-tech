@@ -10,6 +10,7 @@
  * No se manda ningún correo: se prueban el registro, la lectura y la rotación de tokens.
  */
 
+require __DIR__ . '/_aislamiento-local.php';
 $raiz = dirname(__DIR__, 2);
 require_once $raiz . '/public/lib.php';
 require_once $raiz . '/public/lib.envios.php';
@@ -20,6 +21,10 @@ require_once $raiz . '/public/lib.acceptance.php';
 // error parecía del producto cuando era de la preparación de la prueba.
 require_once __DIR__ . '/_migraciones.php';
 cb_test_migrar_todo(cb_pdo());
+if (!cb_save_parties(['parties' => ['qa-envios' => [
+    'nombre' => 'Evento de prueba', 'tema' => 'carreras', 'fecha' => '2026-09-26',
+    'activa' => false, 'service_plan' => 'booth', 'invitados' => [],
+]]])) { throw new RuntimeException('No se creó la fiesta de prueba'); }
 
 $fallos = 0;
 $total = 0;
@@ -84,7 +89,7 @@ $fiestas = cb_load_parties()['parties'] ?? [];
 $slugReal = '';
 foreach ($fiestas as $s => $f) { $slugReal = (string) $s; break; }
 if ($slugReal === '') {
-    echo "  (sin fiestas en la base: no se prueba la rotación de tokens)\n";
+    throw new RuntimeException('Falta la fiesta de prueba para verificar la rotación');
 } else {
     $party = $fiestas[$slugReal] + ['public_slug' => $slugReal];
     $creada = cb_create_plan_acceptance($party, [

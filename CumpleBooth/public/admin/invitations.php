@@ -274,11 +274,11 @@ if ($partyId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $channel = in_array((string) ($_POST['channel'] ?? ''), ['whatsapp', 'email', 'print'], true) ? (string) $_POST['channel'] : 'whatsapp';
             $promptTemplate = trim((string) ($_POST['prompt_template'] ?? ''));
 
-            if ($eventDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $eventDate)) {
-                $errors[] = 'La fecha debe tener formato AAAA-MM-DD.';
+            if ($eventDate !== '' && !cb_fecha_valida($eventDate)) {
+                $errors[] = 'La fecha debe existir y tener formato AAAA-MM-DD.';
             }
-            if ($eventTime !== '' && !preg_match('/^\d{2}:\d{2}$/', $eventTime)) {
-                $errors[] = 'La hora debe tener formato HH:MM.';
+            if ($eventTime !== '' && !cb_hora_valida($eventTime)) {
+                $errors[] = 'La hora debe estar entre 00:00 y 23:59, en formato HH:MM.';
             }
             if ($promptTemplate !== '') {
                 $validation = cb_validate_invitation_prompt_template($promptTemplate, $themeData);
@@ -313,6 +313,16 @@ if ($partyId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $errors[] = $res['error'] ?? 'No se pudo crear la invitación.';
             }
+        } elseif ($action === 'archivar_invitacion') {
+            $id = filter_input(INPUT_POST, 'invitation_id', FILTER_VALIDATE_INT);
+            if ($id === false || $id === null || cb_invitation_owned_by_party((int) $id, $partyId) === null) {
+                $errors[] = 'Invitación inválida.';
+            } elseif (!cb_update_invitation_status((int) $id, 'archived', $by)) {
+                $errors[] = 'No se pudo archivar la invitación.';
+            } else {
+                header('Location: ' . $invitationsUrl . '&ok=actualizada#inv-' . (int) $id);
+                exit;
+            }
         } elseif ($action === 'actualizar_invitacion') {
             $id = filter_input(INPUT_POST, 'invitation_id', FILTER_VALIDATE_INT);
             if ($id === false || $id === null || cb_invitation_owned_by_party((int) $id, $partyId) === null) {
@@ -332,11 +342,11 @@ if ($partyId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $status = in_array((string) ($_POST['status'] ?? ''), ['draft', 'pending', 'approved', 'published', 'revoked', 'archived'], true)
                     ? (string) $_POST['status'] : 'draft';
 
-                if ($update['event_date'] !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $update['event_date'])) {
-                    $errors[] = 'La fecha debe tener formato AAAA-MM-DD.';
+                if ($update['event_date'] !== '' && !cb_fecha_valida($update['event_date'])) {
+                    $errors[] = 'La fecha debe existir y tener formato AAAA-MM-DD.';
                 }
-                if ($update['event_time'] !== '' && !preg_match('/^\d{2}:\d{2}$/', $update['event_time'])) {
-                    $errors[] = 'La hora debe tener formato HH:MM.';
+                if ($update['event_time'] !== '' && !cb_hora_valida($update['event_time'])) {
+                    $errors[] = 'La hora debe estar entre 00:00 y 23:59, en formato HH:MM.';
                 }
 
                 $promptTemplate = trim((string) ($_POST['prompt_template'] ?? ''));
@@ -621,6 +631,7 @@ if (!empty($_SESSION['cc_predictions_token'])) {
 <style>
 <?php require __DIR__ . '/_style.css.php'; ?>
 .invite-wrap { max-width: 1180px; }
+.invite-wrap code { overflow-wrap: anywhere; }
 .invite-head {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; flex-wrap: wrap;
   padding: 8px 4px 18px; border-bottom: 4px solid var(--chip-accent, var(--primary)); margin-bottom: 22px;
@@ -640,9 +651,11 @@ if (!empty($_SESSION['cc_predictions_token'])) {
 .status-published { background: #e0f2fe; color: #0369a1; }
 .status-rejected { background: var(--danger-soft); color: var(--danger); }
 
-.invite-grid { display: grid; grid-template-columns: 340px 1fr; gap: 22px; align-items: start; }
-@media (max-width: 900px) { .invite-grid { grid-template-columns: 1fr; } }
+.invite-grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 22px; align-items: start; }
+@media (max-width: 900px) { .invite-grid { grid-template-columns: minmax(0, 1fr); } }
 
+.invite-grid > * { min-width: 0; }
+.invite-grid input[type="file"] { width: 100%; min-width: 0; max-width: 100%; }
 .invite-form { display: flex; flex-direction: column; gap: 12px; }
 .invite-form label { font-weight: 700; font-size: .9rem; }
 .invite-form input[type="text"],
@@ -652,7 +665,7 @@ if (!empty($_SESSION['cc_predictions_token'])) {
 .invite-form textarea {
   border: 1.5px solid var(--border); border-radius: var(--radius-sm);
   padding: 10px 12px; font-size: .95rem; font-family: var(--font-body);
-  min-height: 44px; background: #fff; color: var(--text); width: 100%;
+  min-height: 44px; background: #fff; color: var(--text); width: 100%; min-width: 0; max-width: 100%;
 }
 .invite-form textarea { min-height: 90px; resize: vertical; }
 .invite-form small { color: var(--text-muted); font-size: .78rem; }
@@ -675,7 +688,7 @@ if (!empty($_SESSION['cc_predictions_token'])) {
 .token-flash label { font-size: .8rem; font-weight: 700; color: var(--primary); }
 .token-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .token-row input {
-  flex: 1; min-width: 220px; min-height: 44px;
+  flex: 1; min-width: min(220px, 100%); min-height: 44px;
   border: 1.5px solid var(--border); border-radius: var(--radius-sm);
   padding: 0 10px; font-size: .8rem; color: var(--text); background: #fff;
   font-family: ui-monospace, Consolas, monospace;
@@ -922,12 +935,12 @@ if (!empty($_SESSION['cc_predictions_token'])) {
                 <div class="token-flash">
                   <label>Enlace público (se muestra una sola vez; guárdalo)</label>
                   <div class="token-row">
-                    <input id="public-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($publicUrl) ?>">
+                    <input aria-label="Enlace público de la invitación" id="public-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($publicUrl) ?>">
                     <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('public-url-<?= (int) $inv['id'] ?>').value)"><?= admin_icon('copy') ?> Copiar</button>
                     <a class="btn btn-ghost btn-sm" href="<?= h($publicUrl) ?>" target="_blank" rel="noopener"><?= admin_icon('external') ?> Abrir</a>
                   </div>
                   <div class="token-row">
-                    <input id="download-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($downloadUrl) ?>">
+                    <input aria-label="Enlace de descarga" id="download-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($downloadUrl) ?>">
                     <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('download-url-<?= (int) $inv['id'] ?>').value)"><?= admin_icon('copy') ?> Copiar descarga</button>
                     <a class="btn btn-ghost btn-sm" href="<?= h($downloadUrl) ?>"><?= admin_icon('download') ?> Descargar</a>
                   </div>
@@ -936,7 +949,7 @@ if (!empty($_SESSION['cc_predictions_token'])) {
 
                 <?php if ($shareUrl !== ''): ?>
                 <div class="token-row">
-                  <input id="share-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($shareUrl) ?>">
+                  <input aria-label="Enlace para compartir" id="share-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($shareUrl) ?>">
                   <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('share-url-<?= (int) $inv['id'] ?>').value)"><?= admin_icon('copy') ?> Copiar enlace</button>
                 </div>
                 <p class="small muted">
@@ -967,14 +980,14 @@ if (!empty($_SESSION['cc_predictions_token'])) {
                   <?php if ($showPredictionsToken && $predictionsUrl !== ''): ?>
                     <p class="small"><strong>1. Tablero de predicciones</strong></p>
                     <div class="token-row">
-                      <input id="predictions-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($predictionsUrl) ?>">
+                      <input aria-label="Tablero privado de predicciones" id="predictions-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($predictionsUrl) ?>">
                       <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('predictions-url-<?= (int) $inv['id'] ?>').value)"><?= admin_icon('copy') ?> Copiar</button>
                       <a class="btn btn-ghost btn-sm" href="<?= h($predictionsUrl) ?>" target="_blank" rel="noopener noreferrer"><?= admin_icon('external') ?> Abrir</a>
                     </div>
                     <?php if ($giftsUrl !== ''): ?>
                     <p class="small"><strong>2. Lista de regalos</strong></p>
                     <div class="token-row">
-                      <input id="gifts-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($giftsUrl) ?>">
+                      <input aria-label="Lista privada de regalos" id="gifts-url-<?= (int) $inv['id'] ?>" type="text" readonly value="<?= h($giftsUrl) ?>">
                       <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('gifts-url-<?= (int) $inv['id'] ?>').value)"><?= admin_icon('copy') ?> Copiar</button>
                       <a class="btn btn-ghost btn-sm" href="<?= h($giftsUrl) ?>" target="_blank" rel="noopener noreferrer"><?= admin_icon('external') ?> Abrir</a>
                     </div>
@@ -1026,9 +1039,8 @@ if (!empty($_SESSION['cc_predictions_token'])) {
                   <?php if (!$isPublished && !$isArchived): ?>
                     <form method="post" action="<?= h($invitationsUrl) ?>#inv-<?= (int) $inv['id'] ?>" class="inline-form" data-confirm="¿Archivar esta invitación?">
                       <?= admin_csrf_field() ?>
-                      <input type="hidden" name="action" value="actualizar_invitacion">
+                      <input type="hidden" name="action" value="archivar_invitacion">
                       <input type="hidden" name="invitation_id" value="<?= (int) $inv['id'] ?>">
-                      <input type="hidden" name="status" value="archived">
                       <button type="submit" class="btn btn-ghost btn-sm">Archivar</button>
                     </form>
                   <?php endif; ?>
@@ -1048,8 +1060,8 @@ if (!empty($_SESSION['cc_predictions_token'])) {
                     <?= admin_csrf_field() ?>
                     <input type="hidden" name="action" value="guardar_prompt">
                     <input type="hidden" name="invitation_id" value="<?= (int) $inv['id'] ?>">
-                    <label>Plantilla del prompt</label>
-                    <textarea name="prompt_template" maxlength="20000"><?= h(trim((string) ($inv['prompt_template'] ?? '')) !== '' ? (string) $inv['prompt_template'] : cb_default_invitation_prompt_template()) ?></textarea>
+                    <label for="inv-field-1-<?= (int) $inv['id'] ?>">Plantilla del prompt</label>
+                    <textarea id="inv-field-1-<?= (int) $inv['id'] ?>" name="prompt_template" maxlength="20000"><?= h(trim((string) ($inv['prompt_template'] ?? '')) !== '' ? (string) $inv['prompt_template'] : cb_default_invitation_prompt_template()) ?></textarea>
                     <button type="submit" class="btn btn-ghost btn-sm"><?= admin_icon('check') ?> Guardar plantilla</button>
                   </form>
                 </div>
@@ -1115,7 +1127,7 @@ if (!empty($_SESSION['cc_predictions_token'])) {
                     <input type="hidden" name="invitation_id" value="<?= (int) $inv['id'] ?>">
                     <h4><?= admin_icon('image') ?> Subir imagen personalizada</h4>
                     <p class="small muted">JPG/PNG/WebP · máx. <?= number_format(cb_theme_image_max_bytes() / 1048576, 1) ?> MB · mín. 320×320px</p>
-                    <input type="file" name="archivo" accept=".jpg,.jpeg,.png,.webp" required>
+                    <input type="file" aria-label="Imagen personalizada de la invitación" name="archivo" accept=".jpg,.jpeg,.png,.webp" required>
                     <button type="submit" class="btn btn-primary btn-sm"><?= admin_icon('plus') ?> Subir imagen</button>
                   </form>
 
@@ -1125,7 +1137,7 @@ if (!empty($_SESSION['cc_predictions_token'])) {
                     <input type="hidden" name="invitation_id" value="<?= (int) $inv['id'] ?>">
                     <h4><?= admin_icon('video') ?> Subir video personalizado (opcional)</h4>
                     <p class="small muted">MP4 · máx. <?= number_format(cb_theme_upload_max_bytes() / 1048576, 1) ?> MB</p>
-                    <input type="file" name="archivo" accept=".mp4" required>
+                    <input type="file" aria-label="Video personalizado de la invitación" name="archivo" accept=".mp4" required>
                     <button type="submit" class="btn btn-primary btn-sm"><?= admin_icon('plus') ?> Subir video</button>
                   </form>
 
@@ -1135,7 +1147,7 @@ if (!empty($_SESSION['cc_predictions_token'])) {
                     <input type="hidden" name="invitation_id" value="<?= (int) $inv['id'] ?>">
                     <h4><?= admin_icon('video') ?> Subir narración de inicio (voz Alice, opcional)</h4>
                     <p class="small muted">MP3 · máx. 5 MB · generar con ElevenLabs, voice_id <code>Xb7hH8MSUJpSbSDYk0k2</code>, modelo <code>eleven_multilingual_v2</code>, texto: "Tenemos el agrado de invitarte a celebrar el cumpleaños de <?= h($inv['birthday_person_name'] ?: '[NOMBRE]') ?>. Es el <?= h($inv['event_date'] ?: '[FECHA]') ?><?= !empty($inv['event_time']) ? ' a las ' . h((string) $inv['event_time']) : '' ?>." — ver docs/INVITACION-MUSICA-Y-NARRACION-ALICE.md</p>
-                    <input type="file" name="archivo" accept=".mp3" required>
+                    <input type="file" aria-label="Narración de la invitación" name="archivo" accept=".mp3" required>
                     <button type="submit" class="btn btn-primary btn-sm"><?= admin_icon('plus') ?> Subir narración</button>
                   </form>
                   <?php endif; ?>
@@ -1148,54 +1160,54 @@ if (!empty($_SESSION['cc_predictions_token'])) {
                     <input type="hidden" name="action" value="actualizar_invitacion">
                     <input type="hidden" name="invitation_id" value="<?= (int) $inv['id'] ?>">
 
-                    <label>Nombre del cumpleañero/a</label>
-                    <input type="text" name="birthday_person_name" value="<?= h($inv['birthday_person_name']) ?>" required maxlength="120">
+                    <label for="inv-field-2-<?= (int) $inv['id'] ?>">Nombre del cumpleañero/a</label>
+                    <input id="inv-field-2-<?= (int) $inv['id'] ?>" type="text" name="birthday_person_name" value="<?= h($inv['birthday_person_name']) ?>" required maxlength="120">
 
-                    <label>Cumpleañero o cumpleañera</label>
-                    <select name="birthday_person_gender">
+                    <label for="inv-field-3-<?= (int) $inv['id'] ?>">Cumpleañero o cumpleañera</label>
+                    <select id="inv-field-3-<?= (int) $inv['id'] ?>" name="birthday_person_gender">
                       <option value="" <?= ($inv['birthday_person_gender'] ?? '') === '' ? 'selected' : '' ?>>Sin especificar</option>
                       <option value="m" <?= ($inv['birthday_person_gender'] ?? '') === 'm' ? 'selected' : '' ?>>Niño (cumpleañero)</option>
                       <option value="f" <?= ($inv['birthday_person_gender'] ?? '') === 'f' ? 'selected' : '' ?>>Niña (cumpleañera)</option>
                     </select>
 
-                    <label>Fecha del evento</label>
-                    <input type="date" name="event_date" value="<?= h($inv['event_date']) ?>">
+                    <label for="inv-field-4-<?= (int) $inv['id'] ?>">Fecha del evento</label>
+                    <input id="inv-field-4-<?= (int) $inv['id'] ?>" type="date" name="event_date" value="<?= h($inv['event_date']) ?>">
 
-                    <label>Hora del evento</label>
-                    <input type="time" name="event_time" value="<?= h($inv['event_time']) ?>">
+                    <label for="inv-field-5-<?= (int) $inv['id'] ?>">Hora del evento</label>
+                    <input id="inv-field-5-<?= (int) $inv['id'] ?>" type="time" name="event_time" value="<?= h($inv['event_time']) ?>">
 
-                    <label>Dirección / lugar</label>
-                    <input type="text" name="address" value="<?= h($inv['address']) ?>" maxlength="255">
+                    <label for="inv-field-6-<?= (int) $inv['id'] ?>">Dirección / lugar</label>
+                    <input id="inv-field-6-<?= (int) $inv['id'] ?>" type="text" name="address" value="<?= h($inv['address']) ?>" maxlength="255">
 
-                    <label>Mensaje personalizado</label>
-                    <textarea name="message" maxlength="1000"><?= h($inv['message']) ?></textarea>
+                    <label for="inv-field-7-<?= (int) $inv['id'] ?>">Mensaje personalizado</label>
+                    <textarea id="inv-field-7-<?= (int) $inv['id'] ?>" name="message" maxlength="1000"><?= h($inv['message']) ?></textarea>
 
-                    <label>Plantilla del prompt</label>
-                    <textarea name="prompt_template" maxlength="20000"><?= h(trim((string) ($inv['prompt_template'] ?? '')) !== '' ? (string) $inv['prompt_template'] : cb_default_invitation_prompt_template()) ?></textarea>
+                    <label for="inv-field-8-<?= (int) $inv['id'] ?>">Plantilla del prompt</label>
+                    <textarea id="inv-field-8-<?= (int) $inv['id'] ?>" name="prompt_template" maxlength="20000"><?= h(trim((string) ($inv['prompt_template'] ?? '')) !== '' ? (string) $inv['prompt_template'] : cb_default_invitation_prompt_template()) ?></textarea>
 
-                    <label>Idioma</label>
-                    <select name="language">
+                    <label for="inv-field-9-<?= (int) $inv['id'] ?>">Idioma</label>
+                    <select id="inv-field-9-<?= (int) $inv['id'] ?>" name="language">
                       <?php foreach (['es' => 'Español', 'en' => 'English', 'pt' => 'Português'] as $k => $l): ?>
                         <option value="<?= h($k) ?>" <?= ($inv['language'] ?? 'es') === $k ? 'selected' : '' ?>><?= h($l) ?></option>
                       <?php endforeach; ?>
                     </select>
 
-                    <label>Canal</label>
-                    <select name="channel">
+                    <label for="inv-field-10-<?= (int) $inv['id'] ?>">Canal</label>
+                    <select id="inv-field-10-<?= (int) $inv['id'] ?>" name="channel">
                       <?php foreach (['whatsapp' => 'WhatsApp', 'email' => 'Email', 'print' => 'Impresión'] as $k => $l): ?>
                         <option value="<?= h($k) ?>" <?= ($inv['channel'] ?? 'whatsapp') === $k ? 'selected' : '' ?>><?= h($l) ?></option>
                       <?php endforeach; ?>
                     </select>
 
-                    <label>Estado</label>
-                    <select name="status">
+                    <label for="inv-field-11-<?= (int) $inv['id'] ?>">Estado</label>
+                    <select id="inv-field-11-<?= (int) $inv['id'] ?>" name="status">
                       <?php foreach (['draft' => 'Borrador', 'pending' => 'Pendiente', 'approved' => 'Aprobada', 'published' => 'Publicada', 'revoked' => 'Revocada', 'archived' => 'Archivada'] as $k => $l): ?>
                         <option value="<?= h($k) ?>" <?= $status === $k ? 'selected' : '' ?>><?= h($l) ?></option>
                       <?php endforeach; ?>
                     </select>
 
-                    <label>Vence (AAAA-MM-DD, opcional)</label>
-                    <input type="date" name="expires_at" value="<?= h(!empty($inv['expires_at']) && (string) $inv['expires_at'] !== '0000-00-00 00:00:00' ? date('Y-m-d', strtotime((string) $inv['expires_at'])) : '') ?>">
+                    <label for="inv-field-12-<?= (int) $inv['id'] ?>">Vence (AAAA-MM-DD, opcional)</label>
+                    <input id="inv-field-12-<?= (int) $inv['id'] ?>" type="date" name="expires_at" value="<?= h(!empty($inv['expires_at']) && (string) $inv['expires_at'] !== '0000-00-00 00:00:00' ? date('Y-m-d', strtotime((string) $inv['expires_at'])) : '') ?>">
 
                     <div class="invite-actions">
                       <button type="submit" class="btn btn-primary">Guardar cambios</button>

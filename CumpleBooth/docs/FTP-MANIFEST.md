@@ -3705,7 +3705,7 @@ desmarcar una y aprobar. `php -l` limpio.
 
 Sin migración. Vuelta atrás: restaurar los tres respaldos.
 
-## LOCAL 2026-09-24 — AT-CUMPLECLICK-017, módulo Contenido (backend)
+## DESPLEGADO 2026-09-25 00:48 — AT-CUMPLECLICK-017, módulo Contenido (backend) (rama `codex/marketing-contenido`, PR #44)
 
 **Estado:** implementado en `codex/marketing-contenido`, worktree separado desde main.
 Sin merge ni despliegue. Claude revisa/orquesta y Luis aprueba. Esta entrega cierra solamente
@@ -3801,7 +3801,7 @@ Regresión tras el ajuste: HTTP 36 comprobaciones y lint de contenido.php correc
   Safari e iOS no reproducen un MP4 si el servidor no contesta `206` a `bytes=0-1`; el resto del comportamiento
   (sesión super obligatoria, `private, no-store`, inline) no cambia.
 - Pruebas: `marketing-http.php` 41 (antes 36): rango inicial, rango abierto, rango fuera del archivo y varios rangos.
-## PENDIENTE DE DESPLIEGUE — 2026-09-24 — AT-CUMPLECLICK-018 Agenda y avisos
+## DESPLEGADO 2026-09-25 00:47 — AT-CUMPLECLICK-018 Agenda y avisos (rama `codex/agenda-eventos`, PR #40)
 
 Rama `codex/agenda-eventos`, desde `main` `21c0c1a0`. Ejecutor: Codex; orquestador/revisor:
 Claude; aprobador: Luis. Clase: producto/backend/admin; riesgo medio por permisos y correos;
@@ -3915,7 +3915,7 @@ Falta aprobación de despliegue y verificación de recepción real con Claude y 
 - Sin invitación, la referencia dice "sin invitación registrada" en vez de separadores vacíos (`admin/agenda.php`).
 - Pruebas: `agenda.php` 158 (antes 154) y `agenda-http.php` 30, en verde. Luis decidió que los operadores sí vean
   abono y saldo en su correo: sin cambio ahí.
-## PENDIENTE DE REVISIÓN — 2026-09-24 — Correcciones del backoffice
+## DESPLEGADO 2026-09-25 00:45 — Correcciones del backoffice (rama `codex/correcciones-backoffice`, PR #43)
 
 Rama `codex/correcciones-backoffice`, nacida de `main` (21c0c1a), worktree propio.
 Luis autorizó corregir los ocho hallazgos de la auditoría. Claude revisa e integra; no se ha
@@ -3998,3 +3998,32 @@ su recuperación requiere un respaldo que permita comprobar los valores original
 **Pendientes para Claude/Luis:** revisar las tres ramas y el orden de integración; contrastar
 los briefs canónicos 017/018 ausentes de los worktrees revisados; aprobar publicación remota
 de las ramas aún locales y, por separado, cualquier despliegue. No se solicita activación automática.
+
+## CIERRE 2026-09-25 — Codex (018, 017 backend, correcciones) revisado, desplegado y mergeado
+
+Con el go de Luis, Claude publicó las tres ramas, desplegó por SSH en el orden correcciones → Agenda → Contenido y
+mergeó los PR #43, #40, #44 (y los pendientes #39 y #35). `main` (`35322d9`) es igual a PROD en los 24 archivos
+desplegados (sha256 sin CR, cotejado desde afuera).
+
+- **Correcciones (00:45):** 10 archivos de `public/`, sin migración. Verificado en el servidor: `cb_fecha_valida`
+  rechaza 30-feb y acepta 29-feb-2028, `cb_hora_valida` rechaza 24:00; las siete páginas del admin responden 302/200.
+  Respaldo `~/respaldos/correcciones-backoffice-antes-20260925-0045/`.
+- **Agenda 018 (00:47):** `php database/aplicar-024.php` → `applied 024_agenda_eventos`; luego `lib.agenda.php`,
+  `lib.admin-usuarios.php` y `admin/_acceso.php` (versión integrada, con `agenda` y `marketing`), `admin/agenda.php`,
+  `admin/agenda-ics.php` y `scripts/agenda-correos.php`. Verificado: `cb_agenda_listar` del maestro lista las 5 fiestas
+  reales de sep/oct (estado derivado `realizada`); `agenda.php` → 302 sin sesión; `agenda-ics.php` → 403 sin firma.
+  Respaldos `~/respaldos/agenda-018-migracion-antes-20260925-0047/` y `agenda-018-codigo-antes-20260925-0047/`.
+  **Correos:** admin configurado (correo de Luis) y activados por CLI; `--simular` → sin pendientes a esa hora.
+  🔴 **Cron pendiente:** Hostinger no tiene `crontab` por SSH; se agrega en hPanel → Cron Jobs, cada 5 minutos:
+  `cd /home/<usuario>/domains/cumpleclick.com && /usr/bin/php scripts/agenda-correos.php --enviar >> /home/<usuario>/domains/cumpleclick.com/logs/agenda-correos.log 2>&1`
+  (PHP CLI del hosting: 8.3.33 en `/usr/bin/php`; la carpeta `logs/` ya existe). Sin el cron no sale ningún aviso.
+- **Contenido 017 (00:48):** `php database/aplicar-025.php` → `applied 025_marketing_contenido`; luego `lib.marketing.php`,
+  `admin/contenido.php`, `admin/contenido-media.php` (con `Range` para Safari/iOS) y `scripts/seed-marketing-30-dias.php`.
+  Límites del hosting: `upload_max_filesize 80M`, `post_max_size 90M` (≥ 60 MB). `contenido.php` → 302 sin sesión;
+  `contenido-media.php` → 403 sin sesión. Respaldos `~/respaldos/contenido-017-*-antes-20260925-0048/`.
+  El ticket 017 sigue abierto: estrategia de 30 días y assets (Codex, misma rama nueva desde `main`).
+
+### No probado (25-sep)
+Admin con sesión iniciada en PROD (verificación por CLI y HTTP sin sesión); primer correo real (depende del cron);
+suscripción ICS en un teléfono; MP4 en un iPhone real; la fiesta `p:1` "Cumple Isidora" existe en la base de PROD
+y aparece en la Agenda como realizada (revisar si es de prueba).

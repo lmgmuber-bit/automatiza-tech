@@ -1,0 +1,520 @@
+{
+  "name": "Propuestas v3 · 3 Final",
+  "nodes": [
+    {
+      "id": "f1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "propuesta-v3-final",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "propuesta-v3-final",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1NI0sJKc0kC430pb",
+          "name": "AT REST Secret (header)"
+        }
+      }
+    },
+    {
+      "id": "f2",
+      "name": "Leer estado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{{ $json.body.id }}/state",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1NI0sJKc0kC430pb",
+          "name": "AT REST Secret (header)"
+        }
+      }
+    },
+    {
+      "id": "f3",
+      "name": "¿Estado leído?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f3-c",
+              "leftValue": "={{ $json.statusCode === 200 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f3b",
+      "name": "Revisar fotos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        550,
+        -120
+      ],
+      "parameters": {
+        "jsCode": "\nconst PROHIBIDO = /\\b(websites?|web ?pages?|web ?design|interfaces?|dashboards?|apps?|charts?|graphs?|flow ?charts?|diagrams?|infographics?|whiteboards?|spreadsheets?|clipboards?|checklists?|documents?|paperwork|printed|forms?|signs?|signage|posters?|banners?|billboards?|scoreboards?|menus?|newspapers?|magazines?|catalogu?e?s?|brochures?|flyers?|receipts?|invoices?|price tags?|calendars?|notebooks?|notepads?|project plans?|business plans?|plans? on|text|letters?|lettering|words?|numbers?|meetings?|office)\\b/i;\nconst CON_ETIQUETA = /\\b(screens?|monitors?|displays?|laptops?|computers?|tablets?|phones?|smartphones?|cell ?phones?|bottles?|cans?|box(?:es)?|packag\\w*|books?|labels?|shelves|shelf|jerseys?|t-?shirts?)\\b/i;\n// Solo cuenta lo que neutraliza al PRODUCTO. \"blurred background\" desenfoca el fondo, no la etiqueta\n// (botillería de prueba 49, 2026-09-24: \"wine bottle ... blurred background\" habría salido con etiqueta nítida).\nconst NEUTRALIZADO = /(facing away|closed|turned off|switched off|dark screen|screen off|unlabell?ed|without (a |any )?labels?|plain|blank|from behind|seen from the back)/i;\nconst FONDO_PORTADA = /\\b(stadiums?|facades?|storefronts?|shop ?fronts?|exteriors?|buildings?|streets?|walls?|billboards?|bleachers?|grandstands?)\\b/i;\nconst PRIMER_PLANO = /(close-?up|macro|shallow depth of field|bokeh|blurred background|background (completely )?blurred)/i;\nconst CIERRE = 'no signs, no labels, no text, no lettering, no logos, no watermarks';\nconst NEGATIVAS = /[,.;]?\\s*\\b(?:no|without)\\b(?:\\s+any)?[^,.;]*?\\b(?:people facing camera|screens?|signs?|signage|labels?|text|lettering|logos?|words?|watermarks?|writing)\\b[^,.;]*/gi;\nconst SEGURAS = {\n  cover: 'close-up of warm morning light falling across a textured wooden surface with a small green plant, background completely blurred into soft golden bokeh, shallow depth of field',\n  challenge: 'quiet empty room at night lit by a single warm lamp, rain drops on a large window, calm pensive mood',\n  solution: 'bright calm space with natural light through tall windows and a green plant, soft morning light',\n  benefits: 'wide open landscape of the Chilean central valley at sunrise with the Andes in the distance, soft golden light',\n  how_it_works: 'close-up of hands arranging small wooden blocks in a neat row on a light table, soft daylight, shallow depth of field',\n  pricing: 'close-up of a single green sprout growing from rich dark soil in soft morning light, shallow depth of field',\n  next_steps: 'open country road through green hills at sunrise, soft mist, hopeful calm atmosphere',\n  extra: 'soft pattern of light and shadow on a textured surface next to a small plant, calm minimal composition',\n};\n// GPT-4o escribe escenas del rubro (\"hand holding a wine bottle\") pero no agrega \"sin etiqueta\" aunque se le\n// pida (Borrador 403817, 2026-09-24). En vez de perder la escena, el filtro la neutraliza: producto sin etiqueta,\n// pantallas apagadas y de espaldas. Si aun así queda algo sin neutralizar, se reemplaza.\nconst PRODUCTO = /\\b((?:(?:wine|beer|liquor|whisky|whiskey|pisco|vodka|gin|rum|glass|plastic|cardboard|gift|delivery)\\s+)?(?:bottles?|cans?|jars?|box(?:es)?|packages?|parcels?|books?|jerseys?|t-?shirts?))\\b/gi;\nconst PANTALLA = /\\b(screens?|monitors?|displays?|laptops?|computers?|tablets?|phones?|smartphones?|cell ?phones?)\\b/i;\nfunction neutralizar(tema) {\n  if (!CON_ETIQUETA.test(tema) || NEUTRALIZADO.test(tema)) return tema;\n  let t = tema.replace(/\\s*with (?:its|a|the|their) labels?/gi, '').replace(PRODUCTO, 'plain unlabeled $1');\n  if (PANTALLA.test(t)) t += ', every screen dark and facing away from the camera';\n  if (/\\b(shelves|shelf)\\b/i.test(t) && !/unlabell?ed/i.test(t)) t += ', shelves holding only plain unlabeled products';\n  return t;\n}\nfunction motivoFoto(slide, tema) {\n  if (!tema) return 'vacía';\n  if (PROHIBIDO.test(tema)) return 'texto o pantalla';\n  if (slide === 'cover' && FONDO_PORTADA.test(tema)) return 'portada con estructuras de fondo';\n  if (CON_ETIQUETA.test(tema) && !NEUTRALIZADO.test(tema)) return 'producto con etiqueta o pantalla visible';\n  return '';\n}\nfunction limpiarFotos(briefs) {\n  let reemplazadas = 0;\n  let neutralizadas = 0;\n  const limpias = (briefs || []).filter((b) => b && b.slide).map((b) => {\n    // Se descarta la lista de prohibiciones que haya escrito el modelo: el cierre lo pone siempre el filtro.\n    // Cualquier forma: \", no text\", \". No signs\", \"without any text or signage\" (revisión final 2026-09-24, M5:\n    // antes solo se cortaba \", no …\" y una escena buena caía en PROHIBIDO por su propia prohibición).\n    const original = String(b.prompt || '').replace(NEGATIVAS, '').trim().replace(/[\\s,.;]+$/, '');\n    let tema = neutralizar(original);\n    if (motivoFoto(b.slide, tema)) {\n      reemplazadas++;\n      tema = SEGURAS[b.slide] || SEGURAS.extra;\n    } else if (tema !== original) {\n      neutralizadas++;\n    }\n    if (b.slide === 'cover' && !PRIMER_PLANO.test(tema)) {\n      tema += ', close-up, shallow depth of field, background completely blurred';\n    }\n    return { slide: b.slide, prompt: `${tema}, ${CIERRE}` };\n  });\n  return { limpias, reemplazadas, neutralizadas };\n}\n\n// Último filtro antes de gastar: no guarda nada, solo decide qué fotos se le piden al renderer.\n// Solo láminas que existen y una foto por lámina: Cambios puede dejar briefs de extras borradas o repetidos,\n// y cada uno se paga (revisión final 2026-09-24, M6). Nunca lanza: sin payload el renderer contesta 400 y\n// Verificar deja la propuesta en «error» en vez de trabada en «generando» (I1).\nconst e = $('Leer estado').first().json.body || {};\nconst p = e.payload && typeof e.payload === 'object' ? e.payload : {};\nconst extras = Math.min(Array.isArray(p.extra_slides) ? p.extra_slides.length : 0, 2);\nconst validas = new Set(['cover', 'challenge', 'solution', 'benefits', 'how_it_works', 'pricing', 'next_steps',\n  ...Array.from({ length: extras }, (_, i) => `extra_${i + 1}`)]);\nconst vistas = new Set();\nconst briefs = (Array.isArray(p.image_briefs) ? p.image_briefs : [])\n  .filter((b) => b && validas.has(b.slide) && !vistas.has(b.slide) && vistas.add(b.slide));\nconst r = limpiarFotos(briefs);\nreturn [{ json: { unique_id: e.unique_id, payload: Object.assign({}, p, { image_briefs: r.limpias }), fotos_reemplazadas: r.reemplazadas } }];"
+      }
+    },
+    {
+      "id": "f4",
+      "name": "Render final",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        -120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n-propuesta-renderer.kchiba.easypanel.host/render",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify(Object.assign({}, $json.payload, { unique_id: $json.unique_id, draft: false })) }}",
+        "options": {
+          "timeout": 290000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "f4b",
+      "name": "¿Reintentar render?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        770,
+        -300
+      ],
+      "parameters": {
+        "jsCode": "// Tras cada render: si faltan fotos o no hubo presentación, se vuelve a llamar al renderer.\n// El renderer reutiliza las fotos ya guardadas con el mismo prompt (manifest.json) y solo pide las que faltan,\n// así que un reintento no vuelve a pagar las que ya salieron. Tope: MAX_RENDERS llamadas.\nconst MAX_RENDERS = 3;\nconst r = $json || {};\nconst faltan = !r.view_url || ((r.images && r.images.missing) || []).length > 0;\nconst intento = $runIndex + 1;\nconst base = $('Revisar fotos').first().json;\nreturn [{ json: Object.assign({}, base, { reintentar: faltan && intento < MAX_RENDERS, intento }) }];"
+      }
+    },
+    {
+      "id": "f4c",
+      "name": "¿Faltan fotos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        -300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f4c-c",
+              "leftValue": "={{ $json.reintentar }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f5",
+      "name": "Ver presentación",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        -120
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://automatizatech.cl/ver-presentacion.php?id={{ $('Leer estado').first().json.body.unique_id }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "f6",
+      "name": "PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        -120
+      ],
+      "parameters": {
+        "method": "HEAD",
+        "url": "={{ 'https://n8n-propuesta-renderer.kchiba.easypanel.host/p/' + $('Leer estado').first().json.body.unique_id + '/presentation.pdf' }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "f7",
+      "name": "Probar chatbot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        -120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n-n8n.kchiba.easypanel.host/webhook/demo-dinamico/chat",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          },
+          "timeout": 90000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chatInput: 'Hola', sessionId: $('Leer estado').first().json.body.unique_id, action: 'sendMessage' }) }}"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "f8",
+      "name": "Verificar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        -120
+      ],
+      "parameters": {
+        "jsCode": "// Junta las verificaciones. Nada aquí lanza: el resultado decide «lista» o «error».\nconst est = $('Leer estado').first().json.body;\n// Sin runIndex, $('Render final') devuelve la ÚLTIMA pasada del bucle de reintentos.\nconst r = $('Render final').first().json || {};\nconst img = r.images || {};\nconst renders = $('¿Reintentar render?').first().json.intento;\nconst problemas = [];\nif (!r.view_url) problemas.push('el renderer no devolvió la presentación' + (r.error ? ` (${r.error.message || r.error})` : ''));\nif ((img.missing || []).length) problemas.push(`fotos que no se generaron tras ${renders} intentos: ${img.missing.join(', ')}`);\nif ((img.kept_remote || []).length) problemas.push(`fotos que no se pudieron guardar en local: ${img.kept_remote.join(', ')}`);\nconst pres = $('Ver presentación').first().json;\nif (pres.statusCode !== 200) problemas.push(`ver-presentacion respondió ${pres.statusCode}`);\nconst pdf = $('PDF').first().json;\nif (pdf.statusCode !== 200) problemas.push(`el PDF respondió ${pdf.statusCode}`);\nconst chat = $('Probar chatbot').first().json;\nconst respuesta = chat.body && chat.body.output ? String(chat.body.output) : '';\nif (chat.statusCode !== 200 || !respuesta) problemas.push(`el chatbot de demo no respondió (HTTP ${chat.statusCode})`);\nconst ok = problemas.length === 0;\nreturn [{ json: {\n  ok, problemas, id: est.id, unique_id: est.unique_id, company: est.company_name,\n  fotos_locales: img.stored_local || 0, fotos_pedidas: img.requested || 0,\n  chat_respuesta: respuesta.slice(0, 300),\n  note: ok ? `Verificada: presentación, PDF, ${img.stored_local || 0} fotos locales (${renders} render${renders === 1 ? '' : 's'}) y chatbot OK` : problemas.join(' · '),\n} }];"
+      }
+    },
+    {
+      "id": "f9",
+      "name": "Motivo lectura",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        160
+      ],
+      "parameters": {
+        "jsCode": "// Falló la lectura del estado: no hay payload que renderizar.\nconst hook = $('Webhook').first().json.body || {};\nconst le = $('Leer estado').first().json;\nreturn [{ json: { ok: false, id: hook.id, unique_id: '', company: `propuesta ${hook.id}`,\n  problemas: [`No se pudo leer la propuesta en WordPress (HTTP ${le.statusCode})`],\n  note: `No se pudo leer la propuesta en WordPress (HTTP ${le.statusCode})`, fotos_locales: 0, fotos_pedidas: 0, chat_respuesta: '' } }];"
+      }
+    },
+    {
+      "id": "f10",
+      "name": "Guardar resultado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{{ $json.id }}/state",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: $json.ok ? 'lista' : 'error', note: $json.note + ($json.ok ? '' : ' (ejecución ' + $execution.id + ')') }) }}"
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1NI0sJKc0kC430pb",
+          "name": "AT REST Secret (header)"
+        }
+      }
+    },
+    {
+      "id": "f11",
+      "name": "Resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst br = (s) => esc(s).replace(/\\n/g, '<br>');\nconst v = $('Verificar').isExecuted ? $('Verificar').first().json : $('Motivo lectura').first().json;\nconst g = $('Guardar resultado').first().json;\nconst rev = $('Revisar fotos').isExecuted ? $('Revisar fotos').first().json.fotos_reemplazadas : 0;\nconst ok = v.ok;\nconst li = (t) => `<li style=\"margin:0 0 6px;\">${t}</li>`;\nconst html = `<div style=\"margin:0;padding:24px 12px;background:#eef2f6;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(13,27,42,.08);\">\n<tr><td style=\"background:#0d1b2a;padding:18px 24px;\">\n<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr>\n<td style=\"vertical-align:middle;\"><img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" width=\"44\" height=\"37\" alt=\"AutomatizaTech\" style=\"display:block;border:0;\"></td>\n<td style=\"vertical-align:middle;padding-left:12px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#ffffff;font-size:16px;font-weight:700;\">AutomatizaTech<br><span style=\"color:#00d9c0;font-size:12px;font-weight:600;letter-spacing:.04em;\">Propuestas · aviso interno</span></td>\n</tr></table>\n</td></tr>\n<tr><td style=\"height:4px;background:#00d9c0;line-height:4px;font-size:0;\">&nbsp;</td></tr>\n<tr><td style=\"padding:26px 24px 8px;\">\n${ok ? `<span style=\"display:inline-block;background:#dcfce7;color:#166534;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 12px;border-radius:999px;\">Lista para enviar</span>` : `<span style=\"display:inline-block;background:#fee2e2;color:#991b1b;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 12px;border-radius:999px;\">Con problemas</span>`}\n<h1 style=\"margin:14px 0 16px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:22px;line-height:1.3;color:#0d1b2a;\">${ok ? 'Lista para enviar' : 'La versión final tiene problemas'}: ${esc(v.company)}</h1>\n${g.statusCode === 200 ? '' : `<div style=\"background:#fef2f2;border-left:4px solid #ef4444;border-radius:8px;padding:14px 16px;margin:0 0 16px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.55;color:#334155;\"><strong>No se pudo guardar el resultado en WordPress</strong> (HTTP ${esc(g.statusCode)}): la propuesta puede seguir en «generando». Revísala en el panel.</div>`}${ok ? `<div style=\"background:#f0fdf4;border-left:4px solid #22c55e;border-radius:8px;padding:14px 16px;margin:0 0 16px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.55;color:#334155;\"><ul style=\"margin:0;padding-left:18px;\">${li(\"Presentación publicada y accesible\")}${li(\"PDF generado\")}${li(esc(v.fotos_locales) + \" de \" + esc(v.fotos_pedidas) + \" fotos guardadas junto a la presentación\")}${rev ? li(esc(rev) + \" descripciones de fotos reemplazadas por el filtro (pedían pantallas, texto o personas)\") : \"\"}${li(\"El chatbot de demo respondió\")}</ul></div>` : `<div style=\"background:#fef2f2;border-left:4px solid #ef4444;border-radius:8px;padding:14px 16px;margin:0 0 16px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.55;color:#334155;\"><ul style=\"margin:0;padding-left:18px;\">${(v.problemas || []).map((p) => li(esc(p))).join(\"\")}</ul></div><p style=\"margin:0 0 14px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#334155;\">La propuesta quedó en <strong>error</strong>: desde el panel puedes volver a aprobarla o pedir cambios.</p>`}${v.chat_respuesta ? `<p style=\"margin:0 0 14px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#334155;\"><strong>El chatbot respondió a «Hola»:</strong></p><div style=\"background:#f8fafc;border-left:4px solid #cbd5e1;border-radius:8px;padding:14px 16px;margin:0 0 16px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.55;color:#334155;\">${br(v.chat_respuesta)}</div>` : ''}<div style=\"margin:6px 0 4px;\">${v.unique_id ? `<a href=\"https://automatizatech.cl/ver-presentacion.php?id=${esc(v.unique_id)}\" style=\"display:inline-block;background:#00d9c0;color:#0d1b2a;border:2px solid #00d9c0;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:10px;margin:6px 8px 6px 0;\">📊 Ver la presentación final</a>` : ''}<a href=\"https://automatizatech.cl/wp-admin/admin.php?page=automatiza-proposals&edit_id=${esc(v.id)}\" style=\"display:inline-block;background:#ffffff;color:#0d1b2a;border:2px solid #0d1b2a;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:10px;margin:6px 8px 6px 0;\">✏️ Abrir en el panel</a></div><p style=\"margin:18px 0 0;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#64748b;\">El PDF se descarga desde la última lámina. El envío al cliente lo haces tú desde el panel, con la casilla «Enviar correo».</p>\n</td></tr>\n<tr><td style=\"padding:14px 24px 22px;border-top:1px solid #e2e8f0;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#64748b;\">\nAviso automático del flujo de propuestas de AutomatizaTech. Nada de esto se envía al cliente: el envío lo haces tú desde el panel.\n</td></tr>\n</table>\n</div>`;\nreturn [{ json: { asunto: (ok ? '✅ ' : '⚠️ ') + v.company + (ok ? ' · lista para enviar' : ' · la versión final tiene problemas'), html } }];"
+      }
+    },
+    {
+      "id": "f12",
+      "name": "Correo a Luis",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        0
+      ],
+      "parameters": {
+        "fromEmail": "contacto@automatizatech.cl",
+        "toEmail": "lmgm.0303@gmail.com",
+        "subject": "={{ $json.asunto }}",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Leer estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer estado": {
+      "main": [
+        [
+          {
+            "node": "¿Estado leído?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Estado leído?": {
+      "main": [
+        [
+          {
+            "node": "Revisar fotos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Motivo lectura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revisar fotos": {
+      "main": [
+        [
+          {
+            "node": "Render final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render final": {
+      "main": [
+        [
+          {
+            "node": "¿Reintentar render?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Reintentar render?": {
+      "main": [
+        [
+          {
+            "node": "¿Faltan fotos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Faltan fotos?": {
+      "main": [
+        [
+          {
+            "node": "Render final",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ver presentación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ver presentación": {
+      "main": [
+        [
+          {
+            "node": "PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF": {
+      "main": [
+        [
+          {
+            "node": "Probar chatbot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Probar chatbot": {
+      "main": [
+        [
+          {
+            "node": "Verificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar": {
+      "main": [
+        [
+          {
+            "node": "Guardar resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Motivo lectura": {
+      "main": [
+        [
+          {
+            "node": "Guardar resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar resultado": {
+      "main": [
+        [
+          {
+            "node": "Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resultado": {
+      "main": [
+        [
+          {
+            "node": "Correo a Luis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "m7TOfKznVSBGz4Nd"
+  }
+}

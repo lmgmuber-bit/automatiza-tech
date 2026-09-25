@@ -10,6 +10,7 @@ Esta carpeta documenta cómo AutomatizaTech diagnostica, propone, ejecuta, entre
 
 - [Aplicación del Método AT](./APLICACION_DEL_METODO_AT.md): recorrido común del cliente, seis pasos, roles, gates y soporte.
 - [Servicios y casos de uso](./SERVICIOS_Y_CASOS_DE_USO.md): catálogo de servicios, selección de solución, ejemplos, entregables, métricas y diagramas.
+- [Propuestas: flujo automático v3](./PROPUESTAS-FLUJO-V3.md): de la transcripción de Meet al envío, con revisión en el panel, fotos por rubro y reintentos.
 - [Flujo cliente end-to-end](../FLUJO_CLIENTE_END_TO_END.md): inventario histórico de capacidades existentes, faltantes y automatizaciones propuestas.
 - [Prompt final de Claude Orquestador](../ORCHESTRATION/CLAUDE_ORCHESTRATOR_PROMPT_FINAL.md): contexto autónomo para iniciar o recuperar al orquestador principal.
 

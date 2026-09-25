@@ -1,0 +1,271 @@
+{
+  "name": "Propuestas v3 · 1 Borrador",
+  "nodes": [
+    {
+      "id": "b1",
+      "name": "Webhook (Entrada)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "propuesta-v3-borrador",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "propuesta-v3-borrador"
+    },
+    {
+      "id": "b2",
+      "name": "Redactar propuesta",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Eres consultor senior de AutomatizaTech (Chile). Con la transcripción de una reunión con un cliente, redacta el contenido de una propuesta comercial que se mostrará con una plantilla fija de láminas. Responde SOLO un objeto JSON (sin texto antes ni después, sin bloques de código) con esta forma exacta:\n{\n \"client_name\": \"Nombre y apellido del cliente\",\n \"company_name\": \"Nombre del negocio\",\n \"phone\": \"teléfono del cliente si aparece, si no vacío\",\n \"challenge_title\": \"máx. 7 palabras\",\n \"challenge_text\": \"60 a 80 palabras, con datos concretos dichos en la reunión (cifras, lugares, experiencias). No inventes cifras.\",\n \"solution_title\": \"máx. 7 palabras\",\n \"solution_text\": \"60 a 80 palabras: qué hará AutomatizaTech y cómo resuelve cada problema mencionado\",\n \"benefits\": [{\"title\": \"máx. 5 palabras\", \"text\": \"una línea, empieza en minúscula\"}],\n \"how_it_works\": [{\"step_title\": \"máx. 4 palabras\", \"step_text\": \"una línea, empieza en minúscula\"}],\n \"extra_slides\": [{\"eyebrow\": \"etiqueta corta\", \"title\": \"título\", \"bullets\": [{\"title\": \"punto\", \"text\": \"una línea\"}]}],\n \"pricing_rows\": [{\"service\": \"nombre del servicio o fase\", \"price_usd\": 0, \"price_label\": \"Por confirmar\"}],\n \"pricing_note\": \"\",\n \"next_steps\": [\"paso concreto acordado en la reunión\"],\n \"image_briefs\": [{\"slide\": \"cover|challenge|solution|benefits|how_it_works|extra_1|extra_2|pricing|next_steps\", \"prompt\": \"descripción en inglés\"}],\n \"tono\": \"tu o usted\",\n \"resumen_para_luis\": \"3 a 5 líneas: qué pidió el cliente, presupuesto mencionado, dudas abiertas\"\n}\nReglas:\n- Español de Chile. Trata al cliente de \"tú\", salvo rubros donde corresponde \"usted\" (funerario, salud, legal): ahí \"usted\" en todo el texto.\n- benefits: 4 o 5. how_it_works: 4 o 5 pasos. next_steps: 3 o 4.\n- extra_slides: 0, 1 o 2, solo si la reunión trae material real (por ejemplo fases o planes que el cliente pidió). No rellenes.\n- PRECIOS: nunca escribas montos. Cada fila lleva \"price_label\": \"Por confirmar\" y \"price_usd\": 0. Las filas nombran los servicios o fases que se cotizarán. \"pricing_note\" vacío.\n- image_briefs: una por lámina usada (cover, challenge, solution, benefits, how_it_works, pricing, next_steps y extra_N por cada extra). Fotografía realista, cálida y respetuosa, del RUBRO de este cliente: su gente trabajando o atendiendo, sus clientes, sus productos y sus lugares (por ejemplo, una academia de béisbol: niños entrenando, un bateador, un entrenador con su equipo; una funeraria: manos dejando un lirio, velas, una capilla serena). Se permiten personas en acción.\n  · Cada foto muestra el MUNDO DEL CLIENTE, nunca la solución de AutomatizaTech: nada de celulares navegando, catálogos digitales, computadores, oficinas, reuniones, apretones de mano, planes ni documentos, aunque la lámina hable de tecnología.\n  · Qué mostrar en cada lámina: cover = primer plano de las manos o de un detalle del oficio del rubro; challenge = el negocio en su momento más exigente (por ejemplo, un mesón lleno un viernes en la noche); solution = un cliente del rubro disfrutando el producto o el servicio; benefits = la gente del negocio contenta atendiendo; how_it_works = manos haciendo el trabajo del rubro (preparar, envolver, entregar); pricing = un detalle del producto del rubro como bodegón; next_steps = una escena esperanzadora del rubro (una entrega que llega, un brindis, un equipo celebrando); extra_N = otra escena distinta del mismo rubro.\n  · cover: SIEMPRE un primer plano de una persona o un objeto del rubro, con el fondo completamente desenfocado o con cielo detrás; nunca estadios, fachadas, calles, galerías ni muros de fondo (ahí el modelo de imagen inventa carteles).\n  · Si el producto del rubro lleva etiqueta o pantalla (botellas, latas, cajas, celulares, libros), muéstralo sin etiqueta, de espaldas, apagado o desenfocado, o muestra el producto en uso (un vaso servido en vez de la botella); escríbelo así en el prompt (por ejemplo \"unlabeled bottle\", \"phone screen facing away\").\n  · Nunca pantallas con contenido, sitios web, gráficos, documentos, pizarras, letreros, carteles, marcadores, menús ni texto de ningún tipo.\n  · Cada prompt termina con: \"no signs, no labels, no text, no lettering, no logos, no watermarks\".\n- No inventes datos del cliente (teléfonos, direcciones, precios, años) que no estén en la transcripción."
+            },
+            {
+              "content": "={{ $('Webhook (Entrada)').item.json.body.transcript }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4
+        },
+        "requestOptions": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "id": "b3",
+      "name": "Personalidad del chatbot",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Escribe el system prompt de un asistente virtual de demostración para este negocio, en español de Chile. Estructura: identidad (1 párrafo); TONO (tú o usted según el rubro, breve, sin emojis si el rubro es delicado); ATENCIÓN URGENTE (si aplica al rubro: primero empatía, luego el contacto directo del negocio); SERVICIOS; PRECIOS (solo los que aparezcan en la transcripción, con la aclaración de que un asesor confirma); REGLAS (no inventar datos; derivar a un humano cuando hay intención clara de contratar pidiendo nombre, teléfono y comuna). Usa solo datos que estén en la transcripción. Devuelve solo el texto del system prompt."
+            },
+            {
+              "content": "={{ $('Webhook (Entrada)').item.json.body.transcript }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4
+        },
+        "requestOptions": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "g52IEXpRfN5r7jKw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "id": "b4",
+      "name": "Armar payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "jsCode": "\nconst PROHIBIDO = /\\b(websites?|web ?pages?|web ?design|interfaces?|dashboards?|apps?|charts?|graphs?|flow ?charts?|diagrams?|infographics?|whiteboards?|spreadsheets?|clipboards?|checklists?|documents?|paperwork|printed|forms?|signs?|signage|posters?|banners?|billboards?|scoreboards?|menus?|newspapers?|magazines?|catalogu?e?s?|brochures?|flyers?|receipts?|invoices?|price tags?|calendars?|notebooks?|notepads?|project plans?|business plans?|plans? on|text|letters?|lettering|words?|numbers?|meetings?|office)\\b/i;\nconst CON_ETIQUETA = /\\b(screens?|monitors?|displays?|laptops?|computers?|tablets?|phones?|smartphones?|cell ?phones?|bottles?|cans?|box(?:es)?|packag\\w*|books?|labels?|shelves|shelf|jerseys?|t-?shirts?)\\b/i;\n// Solo cuenta lo que neutraliza al PRODUCTO. \"blurred background\" desenfoca el fondo, no la etiqueta\n// (botillería de prueba 49, 2026-09-24: \"wine bottle ... blurred background\" habría salido con etiqueta nítida).\nconst NEUTRALIZADO = /(facing away|closed|turned off|switched off|dark screen|screen off|unlabell?ed|without (a |any )?labels?|plain|blank|from behind|seen from the back)/i;\nconst FONDO_PORTADA = /\\b(stadiums?|facades?|storefronts?|shop ?fronts?|exteriors?|buildings?|streets?|walls?|billboards?|bleachers?|grandstands?)\\b/i;\nconst PRIMER_PLANO = /(close-?up|macro|shallow depth of field|bokeh|blurred background|background (completely )?blurred)/i;\nconst CIERRE = 'no signs, no labels, no text, no lettering, no logos, no watermarks';\nconst NEGATIVAS = /[,.;]?\\s*\\b(?:no|without)\\b(?:\\s+any)?[^,.;]*?\\b(?:people facing camera|screens?|signs?|signage|labels?|text|lettering|logos?|words?|watermarks?|writing)\\b[^,.;]*/gi;\nconst SEGURAS = {\n  cover: 'close-up of warm morning light falling across a textured wooden surface with a small green plant, background completely blurred into soft golden bokeh, shallow depth of field',\n  challenge: 'quiet empty room at night lit by a single warm lamp, rain drops on a large window, calm pensive mood',\n  solution: 'bright calm space with natural light through tall windows and a green plant, soft morning light',\n  benefits: 'wide open landscape of the Chilean central valley at sunrise with the Andes in the distance, soft golden light',\n  how_it_works: 'close-up of hands arranging small wooden blocks in a neat row on a light table, soft daylight, shallow depth of field',\n  pricing: 'close-up of a single green sprout growing from rich dark soil in soft morning light, shallow depth of field',\n  next_steps: 'open country road through green hills at sunrise, soft mist, hopeful calm atmosphere',\n  extra: 'soft pattern of light and shadow on a textured surface next to a small plant, calm minimal composition',\n};\n// GPT-4o escribe escenas del rubro (\"hand holding a wine bottle\") pero no agrega \"sin etiqueta\" aunque se le\n// pida (Borrador 403817, 2026-09-24). En vez de perder la escena, el filtro la neutraliza: producto sin etiqueta,\n// pantallas apagadas y de espaldas. Si aun así queda algo sin neutralizar, se reemplaza.\nconst PRODUCTO = /\\b((?:(?:wine|beer|liquor|whisky|whiskey|pisco|vodka|gin|rum|glass|plastic|cardboard|gift|delivery)\\s+)?(?:bottles?|cans?|jars?|box(?:es)?|packages?|parcels?|books?|jerseys?|t-?shirts?))\\b/gi;\nconst PANTALLA = /\\b(screens?|monitors?|displays?|laptops?|computers?|tablets?|phones?|smartphones?|cell ?phones?)\\b/i;\nfunction neutralizar(tema) {\n  if (!CON_ETIQUETA.test(tema) || NEUTRALIZADO.test(tema)) return tema;\n  let t = tema.replace(/\\s*with (?:its|a|the|their) labels?/gi, '').replace(PRODUCTO, 'plain unlabeled $1');\n  if (PANTALLA.test(t)) t += ', every screen dark and facing away from the camera';\n  if (/\\b(shelves|shelf)\\b/i.test(t) && !/unlabell?ed/i.test(t)) t += ', shelves holding only plain unlabeled products';\n  return t;\n}\nfunction motivoFoto(slide, tema) {\n  if (!tema) return 'vacía';\n  if (PROHIBIDO.test(tema)) return 'texto o pantalla';\n  if (slide === 'cover' && FONDO_PORTADA.test(tema)) return 'portada con estructuras de fondo';\n  if (CON_ETIQUETA.test(tema) && !NEUTRALIZADO.test(tema)) return 'producto con etiqueta o pantalla visible';\n  return '';\n}\nfunction limpiarFotos(briefs) {\n  let reemplazadas = 0;\n  let neutralizadas = 0;\n  const limpias = (briefs || []).filter((b) => b && b.slide).map((b) => {\n    // Se descarta la lista de prohibiciones que haya escrito el modelo: el cierre lo pone siempre el filtro.\n    // Cualquier forma: \", no text\", \". No signs\", \"without any text or signage\" (revisión final 2026-09-24, M5:\n    // antes solo se cortaba \", no …\" y una escena buena caía en PROHIBIDO por su propia prohibición).\n    const original = String(b.prompt || '').replace(NEGATIVAS, '').trim().replace(/[\\s,.;]+$/, '');\n    let tema = neutralizar(original);\n    if (motivoFoto(b.slide, tema)) {\n      reemplazadas++;\n      tema = SEGURAS[b.slide] || SEGURAS.extra;\n    } else if (tema !== original) {\n      neutralizadas++;\n    }\n    if (b.slide === 'cover' && !PRIMER_PLANO.test(tema)) {\n      tema += ', close-up, shallow depth of field, background completely blurred';\n    }\n    return { slide: b.slide, prompt: `${tema}, ${CIERRE}` };\n  });\n  return { limpias, reemplazadas, neutralizadas };\n}\n\n// Reglas que no se le confían al modelo: formato JSON, precios y cantidad de láminas extra.\nlet raw = $('Redactar propuesta').first().json.message.content;\nif (typeof raw === 'string') {\n  raw = raw.trim().replace(/^```(?:json)?\\s*/i, '').replace(/```\\s*$/, '');\n}\nconst d = typeof raw === 'string' ? JSON.parse(raw) : raw;\nconst body = $('Webhook (Entrada)').first().json.body || {};\nconst prueba = body.prueba === true;\nd.pricing_rows = (d.pricing_rows || []).map((r) => ({ service: String(r.service || 'Servicio'), price_usd: 0, price_label: 'Por confirmar' }));\nif (!d.pricing_rows.length) d.pricing_rows = [{ service: 'Servicio', price_usd: 0, price_label: 'Por confirmar' }];\nd.pricing_note = '';\nd.extra_slides = (d.extra_slides || []).slice(0, 2);\nconst validSlides = new Set(['cover', 'challenge', 'solution', 'benefits', 'how_it_works', 'pricing', 'next_steps', ...d.extra_slides.map((_, i) => `extra_${i + 1}`)]);\nd.image_briefs = limpiarFotos((d.image_briefs || []).filter((b) => b && validSlides.has(b.slide) && b.prompt)).limpias;\nif (prueba) d.company_name = `[PRUEBA] ${d.company_name}`;\nconst resumen = d.resumen_para_luis || '';\nconst phone = d.phone || '';\ndelete d.resumen_para_luis; delete d.tono; delete d.phone;\nreturn [{ json: {\n  payload: d,\n  resumen,\n  phone,\n  client_email: prueba ? 'contacto@automatizatech.cl' : (body.client_email || ''),\n  transcript: body.transcript || '',\n  system_prompt: $('Personalidad del chatbot').first().json.message.content,\n} }];"
+      }
+    },
+    {
+      "id": "b5",
+      "name": "Crear en WordPress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ client_email: $json.client_email, phone: $json.phone, transcript: $json.transcript, system_prompt: $json.system_prompt, payload: $json.payload }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1NI0sJKc0kC430pb",
+          "name": "AT REST Secret (header)"
+        }
+      }
+    },
+    {
+      "id": "b6",
+      "name": "Vista previa (sin fotos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n-propuesta-renderer.kchiba.easypanel.host/render",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify(Object.assign({}, $('Armar payload').item.json.payload, { unique_id: $('Crear en WordPress').item.json.unique_id, draft: true, image_briefs: [] })) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "b6b",
+      "name": "Armar correo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1210,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst br = (s) => esc(s).replace(/\\n/g, '<br>');\nconst a = $('Armar payload').first().json;\nconst c = $('Crear en WordPress').first().json;\nconst v = $('Vista previa (sin fotos)').first().json;\nconst ok = !!v.view_url;\nconst html = `<div style=\"margin:0;padding:24px 12px;background:#eef2f6;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(13,27,42,.08);\">\n<tr><td style=\"background:#0d1b2a;padding:18px 24px;\">\n<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr>\n<td style=\"vertical-align:middle;\"><img src=\"https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png\" width=\"44\" height=\"37\" alt=\"AutomatizaTech\" style=\"display:block;border:0;\"></td>\n<td style=\"vertical-align:middle;padding-left:12px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#ffffff;font-size:16px;font-weight:700;\">AutomatizaTech<br><span style=\"color:#00d9c0;font-size:12px;font-weight:600;letter-spacing:.04em;\">Propuestas · aviso interno</span></td>\n</tr></table>\n</td></tr>\n<tr><td style=\"height:4px;background:#00d9c0;line-height:4px;font-size:0;\">&nbsp;</td></tr>\n<tr><td style=\"padding:26px 24px 8px;\">\n<span style=\"display:inline-block;background:#fef3c7;color:#92400e;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 12px;border-radius:999px;\">Borrador</span>\n<h1 style=\"margin:14px 0 16px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:22px;line-height:1.3;color:#0d1b2a;\">Borrador listo: ${esc(a.payload.company_name)}</h1>\n${ok ? '' : `<div style=\"background:#fffbeb;border-left:4px solid #f59e0b;border-radius:8px;padding:14px 16px;margin:0 0 16px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.55;color:#334155;\"><strong>La vista previa no se pudo generar.</strong> La propuesta quedó creada en borrador; en el panel, «Pedir cambios» (aunque sea sin comentario) la vuelve a generar.</div>`}<p style=\"margin:0 0 14px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#334155;\"><strong>Lo que pidió el cliente</strong></p><div style=\"background:#f8fafc;border-left:4px solid #cbd5e1;border-radius:8px;padding:14px 16px;margin:0 0 16px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.55;color:#334155;\">${br(a.resumen) || \"Sin resumen.\"}</div><p style=\"margin:0 0 14px;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#334155;\">Los precios dicen <strong>«Por confirmar»</strong> hasta que los escribas en el panel. No se ha gastado nada en fotos.</p><div style=\"margin:6px 0 4px;\"><a href=\"https://automatizatech.cl/ver-presentacion.php?id=${esc(c.unique_id)}\" style=\"display:inline-block;background:#00d9c0;color:#0d1b2a;border:2px solid #00d9c0;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:10px;margin:6px 8px 6px 0;\">👀 Ver vista previa</a><a href=\"${esc(c.panel_url)}\" style=\"display:inline-block;background:#ffffff;color:#0d1b2a;border:2px solid #0d1b2a;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:10px;margin:6px 8px 6px 0;\">✏️ Revisar y aprobar</a></div>\n</td></tr>\n<tr><td style=\"padding:14px 24px 22px;border-top:1px solid #e2e8f0;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#64748b;\">\nAviso automático del flujo de propuestas de AutomatizaTech. Nada de esto se envía al cliente: el envío lo haces tú desde el panel.\n</td></tr>\n</table>\n</div>`;\nreturn [{ json: { asunto: (ok ? '' : '⚠️ ') + a.payload.company_name + ' · borrador listo para revisar', html } }];"
+      }
+    },
+    {
+      "id": "b7",
+      "name": "Correo a Luis",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "fromEmail": "contacto@automatizatech.cl",
+        "toEmail": "lmgm.0303@gmail.com",
+        "subject": "={{ $json.asunto }}",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook (Entrada)": {
+      "main": [
+        [
+          {
+            "node": "Redactar propuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redactar propuesta": {
+      "main": [
+        [
+          {
+            "node": "Personalidad del chatbot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Personalidad del chatbot": {
+      "main": [
+        [
+          {
+            "node": "Armar payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar payload": {
+      "main": [
+        [
+          {
+            "node": "Crear en WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear en WordPress": {
+      "main": [
+        [
+          {
+            "node": "Vista previa (sin fotos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vista previa (sin fotos)": {
+      "main": [
+        [
+          {
+            "node": "Armar correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar correo": {
+      "main": [
+        [
+          {
+            "node": "Correo a Luis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "m7TOfKznVSBGz4Nd"
+  }
+}

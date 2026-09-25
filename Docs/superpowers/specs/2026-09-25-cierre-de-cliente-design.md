@@ -25,6 +25,7 @@ Hoy el cliente dice que sí por WhatsApp o en una llamada y el sistema no se ent
 6. Ficha única de cliente con la opción A: la ficha del CRM es la única que se abre; los datos de contratos, facturas y accesos siguen en su tabla, enlazados por id.
 7. Anticipo por transferencia (propuesto por Claude; Luis no respondió la pregunta). Pago con Flow queda fuera de esta etapa.
 8. El envío de la propuesta sale también por WhatsApp, en forma automática, y el mensaje trae botones para responder ahí mismo: «Acepto la propuesta», «La sigo evaluando» y «No, gracias». Tocar «Acepto» en WhatsApp dispara lo mismo que aceptar en la página (Luis, 25-sep).
+9. En el panel existe «Registrar aceptación» para cuando el cliente ya dijo que sí por otro lado (WhatsApp, correo, llamada) y no va a usar los botones, como el caso de la propuesta 43. Dispara lo mismo que la aceptación del cliente (Luis, 25-sep).
 
 ## 3. Recorrido
 
@@ -151,6 +152,19 @@ En la configuración de facturación (`invoice-settings.php`), junto a los datos
 - Disponible para propuestas en `sent`, `evaluando` o `rechazada` que tengan correo o teléfono.
 - El envío normal de la propuesta, en la pestaña Envío, suma la casilla «También por WhatsApp», marcada cuando la propuesta tiene teléfono.
 
+**«Registrar aceptación» (a mano, desde el panel)**
+
+- Botón en la pestaña Envío de la ficha, para propuestas en `sent`, `evaluando` o `rechazada`. Sirve cuando el cliente ya aceptó por WhatsApp, correo, llamada o en una reunión y no va a usar la página ni los botones.
+- Formulario corto:
+  - por dónde aceptó: WhatsApp, correo, llamada, reunión u otro;
+  - fecha en que aceptó (hoy por defecto; puede ser anterior);
+  - qué aceptó: las filas de precios como casillas, con la primera marcada;
+  - quién aceptó: el nombre del cliente de la propuesta, editable;
+  - nota con lo que dijo el cliente (obligatoria, por ejemplo «Me escribió por WhatsApp: sí, partamos con la fase 1»);
+  - casilla «Enviar el correo de bienvenida», marcada.
+- Al guardar dispara lo mismo que «Al aceptar, en orden». El registro en Seguimiento dice canal `manual`, el usuario de WordPress que lo registró, por dónde aceptó el cliente, la fecha declarada y la nota. La constancia formal queda con la firma del contrato.
+- Pide confirmación antes de guardar: «Esto pasa la propuesta a aceptada, crea al cliente y le envía la bienvenida. ¿Seguir?».
+
 ### Etapa 4 · WhatsApp automático con botones para responder
 
 **Envío**
@@ -195,6 +209,7 @@ Scripts PHP con el mismo patrón de las pruebas del panel de propuestas, en loca
 - Plantilla de servicio: todos los marcadores reemplazados; la de soporte sigue igual (comparación del texto generado antes y después).
 - Página de respuesta: aceptar, evaluar y rechazar; aceptar dos veces; GET que no acepta; nonce vencido; campo trampa lleno; límite por IP; RUT inválido.
 - Aceptación completa en local con una propuesta de prueba: estado, Seguimiento, ficha única, correo de bienvenida capturado y contrato en borrador.
+- «Registrar aceptación»: sin nota no guarda, usuario sin permiso rechazado, fecha anterior respetada, casilla de bienvenida apagada no envía el correo, propuesta ya aceptada no se registra dos veces.
 - Endpoint de WhatsApp: sin clave, con clave mala, teléfono que no coincide, las tres salidas, dos toques seguidos, código inexistente. Normalización de teléfonos chilenos («+56 9 …», «9 …», «569…»).
 - Una prueba real de punta a punta con el teléfono de Luis como cliente de prueba, antes de usarlo con clientes.
 
@@ -207,4 +222,4 @@ Pago en línea con Flow, formulario del cliente para subir logo y archivos, hoja
 - Todo local primero.
 - A PROD por SSH solo con el ok de Luis y por etapa: respaldo de la base y de los archivos, luego migración antes que el código, luego verificación desde afuera.
 - `ver-presentacion.php` vive en la raíz del sitio: se respalda y se sube aparte.
-- Primer caso real: la propuesta 43, cuyo cliente ya dijo que sí por WhatsApp, con «Pedir respuesta».
+- Primer caso real: la propuesta 43, cuyo cliente ya dijo que sí por WhatsApp, con «Registrar aceptación».

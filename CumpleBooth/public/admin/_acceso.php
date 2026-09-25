@@ -227,6 +227,7 @@ function admin_nav(string $activa = 'fiestas'): string
     $u = admin_usuario_actual();
     $super = $u['rol'] === 'super';
     $tabs = [['fiestas', 'index.php', $icono('party') . ' Fiestas']];
+    if (admin_puede('agenda')) { $tabs[] = ['agenda', 'agenda.php', 'Agenda']; }
     if ($super) {
         $tabs[] = ['temas', 'index.php?view=temas', $icono('palette') . ' Temáticas'];
         $nuevos = 0;
@@ -242,6 +243,7 @@ function admin_nav(string $activa = 'fiestas'): string
         $tabs[] = ['comprobante', 'comprobante.php', $icono('copy') . ' Comprobante'];
         $tabs[] = ['planes', 'planes.php', $icono('copy') . ' Planes'];
         $tabs[] = ['finanzas', 'finanzas.php', $icono('chart') . ' Finanzas'];
+        $tabs[] = ['marketing', 'contenido.php', 'Contenido'];
         $tabs[] = ['ajustes', 'ajustes.php', $icono('copy') . ' Ajustes'];
         $tabs[] = ['usuarios', 'usuarios.php', $icono('party') . ' Usuarios'];
     } elseif (in_array('mensajes', $u['modulos'], true) && $u['fiestas']) {

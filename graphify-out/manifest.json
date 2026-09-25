@@ -215,9 +215,9 @@
     "semantic_hash": "a6f0ea1682f7d7721229a8a55ae61b1b"
   },
   "N8N/PROD/google-meet-transcription-trigger.json": {
-    "mtime": 1790296728.3937337,
-    "ast_hash": "842880d590990b926609f6d4d3d23880",
-    "semantic_hash": "842880d590990b926609f6d4d3d23880"
+    "mtime": 1790367004.3216918,
+    "ast_hash": "a6bd1d14b0d753b6ddc574ca6ad47b00",
+    "semantic_hash": ""
   },
   "N8N/PROD/propuesta-gamma-workflow.json": {
     "mtime": 1790296728.3947349,
@@ -440,9 +440,9 @@
     "semantic_hash": "561dec9972e69f1040b585a2125db65f"
   },
   "admin-approve-proposal.php": {
-    "mtime": 1790296728.4563296,
-    "ast_hash": "1e4b759d7cd77829922f9b3959ec2ea6",
-    "semantic_hash": "1e4b759d7cd77829922f9b3959ec2ea6"
+    "mtime": 1790367004.347307,
+    "ast_hash": "523f2f0bbbcb51e15a93b2b1a46553b7",
+    "semantic_hash": ""
   },
   "admin-omnichannel-superadmin.php": {
     "mtime": 1790296728.4563296,
@@ -2745,9 +2745,9 @@
     "semantic_hash": "238b77c0afe140a122bc1ca8b49ffe7e"
   },
   "wp-content/themes/automatiza-tech/inc/admin-proposals.php": {
-    "mtime": 1790296730.5143244,
-    "ast_hash": "447c7432f2e46c34aabe3a222621401d",
-    "semantic_hash": "447c7432f2e46c34aabe3a222621401d"
+    "mtime": 1790367004.4679434,
+    "ast_hash": "d7a3405979470dc8a4e4c740820e4a4e",
+    "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/admin-qa-module.php": {
     "mtime": 1790296730.5172803,
@@ -2770,9 +2770,9 @@
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/client-details-module.php": {
-    "mtime": 1790296730.5202818,
-    "ast_hash": "d2c7c38a72e8e4bef43a18e7ad39279c",
-    "semantic_hash": "d2c7c38a72e8e4bef43a18e7ad39279c"
+    "mtime": 1790367004.4679434,
+    "ast_hash": "c0b9a759e66a2663e2c2f3497518ac31",
+    "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/client-operations-module.php": {
     "mtime": 1790296730.521281,
@@ -2840,9 +2840,9 @@
     "semantic_hash": "ee8a91bae9ef1beb4119ed9800c1523c"
   },
   "wp-content/themes/automatiza-tech/inc/rest-proposals.php": {
-    "mtime": 1790296730.5350995,
-    "ast_hash": "877a0689b2f9cb3bd20038a329e86542",
-    "semantic_hash": "877a0689b2f9cb3bd20038a329e86542"
+    "mtime": 1790367004.4875555,
+    "ast_hash": "50bb4080bf99fe8ea77cb50a275451a8",
+    "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/service-categories-manager.php": {
     "mtime": 1790296730.5361,
@@ -3340,8 +3340,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/database/migrations/022_juegos3d.php": {
-    "mtime": 1790296716.617517,
-    "ast_hash": "03b8aa19a17bd233741e1bcd24025629",
+    "mtime": 1790367004.2373736,
+    "ast_hash": "73cf77df9b76dbbc3baaa66fd05568cb",
     "semantic_hash": ""
   },
   "CumpleBooth/design/generadores/anna-3d/extraer.py": {
@@ -3450,8 +3450,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/admin/_style.css.php": {
-    "mtime": 1790296722.3402326,
-    "ast_hash": "308a5578f4aabb3ff7aeee37d66e9477",
+    "mtime": 1790367004.2652779,
+    "ast_hash": "487074ef6832e71e9449699326309688",
     "semantic_hash": ""
   },
   "CumpleBooth/public/admin/aceptaciones.php": {
@@ -3465,8 +3465,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/admin/album.php": {
-    "mtime": 1790296722.3428686,
-    "ast_hash": "a051d1a75d202a14e0935b4eb112fc35",
+    "mtime": 1790367004.2675695,
+    "ast_hash": "4c8502a4bad6e6afa5be3c79b1f48c95",
     "semantic_hash": ""
   },
   "CumpleBooth/public/admin/carteles-api.php": {
@@ -3475,8 +3475,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/admin/comprobante.php": {
-    "mtime": 1790296722.3448675,
-    "ast_hash": "a3f1ecab375ad3d03815bed616841949",
+    "mtime": 1790367004.2675695,
+    "ast_hash": "0842d9fa46b295a3da8cc54360c15824",
     "semantic_hash": ""
   },
   "CumpleBooth/public/admin/config.php": {
@@ -3485,8 +3485,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/admin/event-profile.php": {
-    "mtime": 1790296722.3470936,
-    "ast_hash": "a1f7d3b2d69e5a315163caac6f381761",
+    "mtime": 1790367004.2675695,
+    "ast_hash": "2d2103eae8b473bc33e19509056d2107",
     "semantic_hash": ""
   },
   "CumpleBooth/public/admin/finanzas.php": {
@@ -3495,8 +3495,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/admin/invitations.php": {
-    "mtime": 1790296722.3598993,
-    "ast_hash": "e60c7e4ab5c61edc949ccb516d3121be",
+    "mtime": 1790367004.2776284,
+    "ast_hash": "480ddabd136166ab53bb6ed136cbbd9a",
     "semantic_hash": ""
   },
   "CumpleBooth/public/admin/leads.php": {
@@ -3740,8 +3740,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/lib.finanzas.php": {
-    "mtime": 1790296722.7975707,
-    "ast_hash": "b88491db10000f016bf0ef27b71099c8",
+    "mtime": 1790367004.2839408,
+    "ast_hash": "c2f5e59120091fcc59fad29491509908",
     "semantic_hash": ""
   },
   "CumpleBooth/public/lib.gifts.php": {
@@ -3750,8 +3750,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/lib.invitations.php": {
-    "mtime": 1790296722.7995696,
-    "ast_hash": "ff36f564f2ae6de774d16410d2fedf32",
+    "mtime": 1790367004.2854953,
+    "ast_hash": "68853a7d91079d558a68a2b01e54e99e",
     "semantic_hash": ""
   },
   "CumpleBooth/public/lib.leads.php": {
@@ -4370,8 +4370,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/tests/backend/envios.php": {
-    "mtime": 1790296728.1892507,
-    "ast_hash": "dec162e3a9d69aa8d98b85ef6e38cd13",
+    "mtime": 1790367004.2962625,
+    "ast_hash": "7f31b6215bb1b9d7866e6062a0fa05cf",
     "semantic_hash": ""
   },
   "CumpleBooth/tests/backend/event-profiles.php": {
@@ -4410,8 +4410,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/tests/backend/manual.php": {
-    "mtime": 1790296728.1967168,
-    "ast_hash": "4c98906757c901c0b9cca48031833849",
+    "mtime": 1790367004.2983785,
+    "ast_hash": "f168c0bf1b10ce0ad2a05f5a831f8e59",
     "semantic_hash": ""
   },
   "CumpleBooth/tests/backend/predictions.php": {
@@ -4420,8 +4420,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/tests/backend/puntajes.php": {
-    "mtime": 1790296728.1987202,
-    "ast_hash": "d7a8658436bedf125848c4b442c44067",
+    "mtime": 1790367004.3006535,
+    "ast_hash": "7f7ee2e93d7e13093e75f9216822a003",
     "semantic_hash": ""
   },
   "CumpleBooth/tests/backend/run.php": {
@@ -4715,8 +4715,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1790296716.4621682,
-    "ast_hash": "b6012bfac17cc21df07589626cd13802",
+    "mtime": 1790367004.2373736,
+    "ast_hash": "dcc33f1d683cbb03ce108639499f8ec8",
     "semantic_hash": ""
   },
   "CONTEXTO_COMPLETO.md": {
@@ -5105,8 +5105,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/design/generadores/README.md": {
-    "mtime": 1790296717.998916,
-    "ast_hash": "1ecfe87f6d0723948cde285fbfbbff38",
+    "mtime": 1790367004.2508316,
+    "ast_hash": "4dac7122cce2298a45b5e59977ed60f5",
     "semantic_hash": ""
   },
   "CumpleBooth/design/generadores/anna-3d/ver.html": {
@@ -5290,8 +5290,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/docs/FTP-MANIFEST.md": {
-    "mtime": 1790296721.704466,
-    "ast_hash": "2a8d38c545a3007f8d4bb84eeda0e2b0",
+    "mtime": 1790367004.259838,
+    "ast_hash": "baef523834233f46f15e82918d256e34",
     "semantic_hash": ""
   },
   "CumpleBooth/docs/HIGGSFIELD-PROMPTS-CUMPLECLICK-MARCA-DE-AGUA-2026-08-11.md": {
@@ -5705,8 +5705,8 @@
     "semantic_hash": ""
   },
   "Docs/METODO_AT/README.md": {
-    "mtime": 1790296728.3218663,
-    "ast_hash": "bf008261638a568e58368d0db9fbbef3",
+    "mtime": 1790367004.3074913,
+    "ast_hash": "2c9728551fcff5bfbe6c7445f3cb47a4",
     "semantic_hash": ""
   },
   "Docs/METODO_AT/SERVICIOS_Y_CASOS_DE_USO.md": {
@@ -9570,8 +9570,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/admin/_acceso.php": {
-    "mtime": 1790296722.3386252,
-    "ast_hash": "580e0b9cf27a5476cf5305a6a2d4ab5c",
+    "mtime": 1790367004.2636142,
+    "ast_hash": "1e960d19f2577f48c0d191af2dd5d38b",
     "semantic_hash": ""
   },
   "CumpleBooth/public/admin/login.php": {
@@ -9595,8 +9595,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/lib.admin-usuarios.php": {
-    "mtime": 1790296722.7895973,
-    "ast_hash": "953ff68a1792bacd7da06fca7bc53a98",
+    "mtime": 1790367004.2797463,
+    "ast_hash": "9ddb2ec63f946d0e59c6f4da2a98ed78",
     "semantic_hash": ""
   },
   "CumpleBooth/public/lib.sala.carrera.php": {
@@ -9655,8 +9655,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/tests/backend/salas.php": {
-    "mtime": 1790296728.2007177,
-    "ast_hash": "db4dbcc81ce8792de5b3d815372d4983",
+    "mtime": 1790367004.3006535,
+    "ast_hash": "997d010d0c2e589fabc5fa70bfacc9f6",
     "semantic_hash": ""
   },
   "CumpleBooth/tests/backend/usuarios-http.php": {
@@ -10354,6 +10354,471 @@
     "ast_hash": "39b36e1f5561deccdf12abc68b2705ba",
     "semantic_hash": ""
   },
+  "N8N/propuestas-v3/0-errores.json": {
+    "mtime": 1790367004.3242335,
+    "ast_hash": "bc4d0bd07e1348ccdf7a4e09a716374d",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/1-borrador.json": {
+    "mtime": 1790367004.3277051,
+    "ast_hash": "deaf10e60886063bef243b7c6cc85a05",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/2-cambios.json": {
+    "mtime": 1790367004.3294744,
+    "ast_hash": "986989ca7f8ffe20416fe6ff34cebe03",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/3-final.json": {
+    "mtime": 1790367004.3294744,
+    "ast_hash": "3dfcbcf8a03169f6667418000d9faa19",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/build_0_errores.py": {
+    "mtime": 1790367004.3294744,
+    "ast_hash": "7d907b29b010b7cd7f43edad3f38d410",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/build_1_borrador.py": {
+    "mtime": 1790367004.3294744,
+    "ast_hash": "27180e73d111c4aa85a81123f6d6300d",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/build_2_cambios.py": {
+    "mtime": 1790367004.3294744,
+    "ast_hash": "ff8794fedfb4a449bf35fe2214bab41d",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/build_3_final.py": {
+    "mtime": 1790367004.3294744,
+    "ast_hash": "c8ff4b38d3bf6e7d1ef4555d6ecc5172",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/correos.py": {
+    "mtime": 1790367004.337498,
+    "ast_hash": "11701d0b9ef66601fc9ba57cf5ab5b9c",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/deploy.py": {
+    "mtime": 1790367004.337498,
+    "ast_hash": "61ddbb518b4f09a4eaf4be6e962ba50d",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/email_tpl.py": {
+    "mtime": 1790367004.337498,
+    "ast_hash": "e5cb581da14d5e2a96234640ffa60d8d",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/fotos_guard.py": {
+    "mtime": 1790367004.337498,
+    "ast_hash": "79b08eb7cead3c54d950222e3c4b49d8",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/probar_correos.py": {
+    "mtime": 1790367004.337498,
+    "ast_hash": "9ac4cc57c0f0adfba0f708c8b3586033",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/probar_fotos.py": {
+    "mtime": 1790367004.344907,
+    "ast_hash": "96d28f90e565b5f5ca483396cb54e9a8",
+    "semantic_hash": ""
+  },
+  "api-save-presentation.php": {
+    "mtime": 1790367004.3486793,
+    "ast_hash": "5fb27b86a2b1f72d8a7e9876382b1d3f",
+    "semantic_hash": ""
+  },
+  "renderer/package.json": {
+    "mtime": 1790367004.434073,
+    "ast_hash": "72ba4809eeff9b0b9dcb3f1cca0046c8",
+    "semantic_hash": ""
+  },
+  "renderer/src/escape.js": {
+    "mtime": 1790367004.434073,
+    "ast_hash": "9b45a44f72bcb82ff087ae1548e527dc",
+    "semantic_hash": ""
+  },
+  "renderer/src/higgsfield.js": {
+    "mtime": 1790367004.4376013,
+    "ast_hash": "4a49df450dad78b9774b245de2672f93",
+    "semantic_hash": ""
+  },
+  "renderer/src/images-store.js": {
+    "mtime": 1790367004.4376013,
+    "ast_hash": "f8ec3ead52038963f75f3e597e1d8e87",
+    "semantic_hash": ""
+  },
+  "renderer/src/index.js": {
+    "mtime": 1790367004.4376013,
+    "ast_hash": "a3c2e0e9fa61191b540937c6b6d6e1c1",
+    "semantic_hash": ""
+  },
+  "renderer/src/photo-manifest.js": {
+    "mtime": 1790367004.4376013,
+    "ast_hash": "a2f83f5b5d1d64342d353e3569bc65b7",
+    "semantic_hash": ""
+  },
+  "renderer/src/render.js": {
+    "mtime": 1790367004.4376013,
+    "ast_hash": "a34f2592e07b6a4ea30b7f6e279c9c76",
+    "semantic_hash": ""
+  },
+  "renderer/src/schema.js": {
+    "mtime": 1790367004.4376013,
+    "ast_hash": "44e834b6b7f9ca723e448b50109ae2a0",
+    "semantic_hash": ""
+  },
+  "renderer/src/server.js": {
+    "mtime": 1790367004.4376013,
+    "ast_hash": "7106983796db09ce2fb32e1e4089b9cf",
+    "semantic_hash": ""
+  },
+  "renderer/src/template.js": {
+    "mtime": 1790367004.44871,
+    "ast_hash": "5c9ff24281e70777e35f49c3a8197f1d",
+    "semantic_hash": ""
+  },
+  "renderer/test/escape.test.js": {
+    "mtime": 1790367004.4506674,
+    "ast_hash": "b8b653d2e8a421493defbc1933b2f770",
+    "semantic_hash": ""
+  },
+  "renderer/test/higgsfield-concurrency.test.js": {
+    "mtime": 1790367004.4506674,
+    "ast_hash": "ba0eeb94f901e537d459df6eb70a7855",
+    "semantic_hash": ""
+  },
+  "renderer/test/higgsfield.test.js": {
+    "mtime": 1790367004.4506674,
+    "ast_hash": "303491470c6a654488ea43f7f1528cf9",
+    "semantic_hash": ""
+  },
+  "renderer/test/images-store.test.js": {
+    "mtime": 1790367004.4506674,
+    "ast_hash": "fd3c7d369410ac5d567b7508a7a06d1d",
+    "semantic_hash": ""
+  },
+  "renderer/test/photo-manifest.test.js": {
+    "mtime": 1790367004.4506674,
+    "ast_hash": "3bed46723e2fe10a4039a6f5fe3d4ffd",
+    "semantic_hash": ""
+  },
+  "renderer/test/render.test.js": {
+    "mtime": 1790367004.4506674,
+    "ast_hash": "7d56c25fed1ed004910cbd5dcad3695c",
+    "semantic_hash": ""
+  },
+  "renderer/test/schema.test.js": {
+    "mtime": 1790367004.4506674,
+    "ast_hash": "d3a3c1d5a760b20097d5cf396eaf1d27",
+    "semantic_hash": ""
+  },
+  "renderer/test/server-images.test.js": {
+    "mtime": 1790367004.4575617,
+    "ast_hash": "4b09ef091695b50ccdfa3b874d30724c",
+    "semantic_hash": ""
+  },
+  "renderer/test/server.test.js": {
+    "mtime": 1790367004.4575617,
+    "ast_hash": "f93cdaf35d0031261c1aa55c8dbea930",
+    "semantic_hash": ""
+  },
+  "renderer/test/template-deck.test.js": {
+    "mtime": 1790367004.4575617,
+    "ast_hash": "ba6940d5ea68d215667e935021b7ee1c",
+    "semantic_hash": ""
+  },
+  "renderer/test/template.test.js": {
+    "mtime": 1790367004.4636538,
+    "ast_hash": "161fa6517d4ac827d542a87e0ac499eb",
+    "semantic_hash": ""
+  },
+  "scratchpad/higgsfield-api/hf_api.py": {
+    "mtime": 1790296729.1031933,
+    "ast_hash": "e7a03b7478a91b7a8a5dbd513b170fe6",
+    "semantic_hash": ""
+  },
+  "tests/propuestas/admin-lista-test.php": {
+    "mtime": 1790367004.4668882,
+    "ast_hash": "3a40f3eda62ec6ae436e3037f80117e9",
+    "semantic_hash": ""
+  },
+  "tests/propuestas/flow-test.php": {
+    "mtime": 1790367004.4679434,
+    "ast_hash": "ec38f684931b289f6b449e376eb173cf",
+    "semantic_hash": ""
+  },
+  "wp-content/themes/automatiza-tech/assets/js/propuestas-admin.js": {
+    "mtime": 1790367004.4679434,
+    "ast_hash": "c72a063b0a671b6ff4f9a1033c42ddd0",
+    "semantic_hash": ""
+  },
+  "wp-content/themes/automatiza-tech/inc/proposals-flow.php": {
+    "mtime": 1790367004.4774697,
+    "ast_hash": "580a18fc010abe4ca07ea6eb4fc677db",
+    "semantic_hash": ""
+  },
+  "wp-content/themes/automatiza-tech/inc/propuestas-admin/acciones.php": {
+    "mtime": 1790367004.4774697,
+    "ast_hash": "3a0587899056ead5bd165152ef007388",
+    "semantic_hash": ""
+  },
+  "wp-content/themes/automatiza-tech/inc/propuestas-admin/clasico.php": {
+    "mtime": 1790367004.4795213,
+    "ast_hash": "0181540421e0738b233fb51acebe5350",
+    "semantic_hash": ""
+  },
+  "wp-content/themes/automatiza-tech/inc/propuestas-admin/consultas.php": {
+    "mtime": 1790367004.4818935,
+    "ast_hash": "250db0cc8c35ef148e618637d6499a56",
+    "semantic_hash": ""
+  },
+  "wp-content/themes/automatiza-tech/inc/propuestas-admin/ficha.php": {
+    "mtime": 1790367004.483653,
+    "ast_hash": "c41fb604b8f0d9b50e1c9c71a0e84d67",
+    "semantic_hash": ""
+  },
+  "wp-content/themes/automatiza-tech/inc/propuestas-admin/lista.php": {
+    "mtime": 1790367004.4855256,
+    "ast_hash": "a5a442685b8546eff6eb444abb26a0aa",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/docs/POSFIESTA-LINEA-DE-TRABAJO.md": {
+    "mtime": 1790296721.7259176,
+    "ast_hash": "9064457d01fdddc16fd962d2ce5edb8f",
+    "semantic_hash": ""
+  },
+  "Docs/BLUEPRINTS/MG-MUEBLES-CONFIGURADOR-3D.md": {
+    "mtime": 1790296728.297355,
+    "ast_hash": "e69ded1749255d190bac60e70c687982",
+    "semantic_hash": ""
+  },
+  "Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md": {
+    "mtime": 1790367004.3074913,
+    "ast_hash": "cb84d089f03bf9f041060db229bcb43c",
+    "semantic_hash": ""
+  },
+  "Docs/superpowers/plans/2026-09-23-flujo-propuestas-v3.md": {
+    "mtime": 1790367004.3141513,
+    "ast_hash": "db8a43eedf7aa89615614210e9ac8d3b",
+    "semantic_hash": ""
+  },
+  "Docs/superpowers/plans/2026-09-24-modulo-propuestas-admin.md": {
+    "mtime": 1790367004.317453,
+    "ast_hash": "20df13ddfb6667bd0fc91cce83a9482e",
+    "semantic_hash": ""
+  },
+  "Docs/superpowers/plans/2026-09-24-propuestas-correo-precargado.md": {
+    "mtime": 1790367004.317453,
+    "ast_hash": "3e1f3c0a44235136e880fb20c0cada3a",
+    "semantic_hash": ""
+  },
+  "Docs/superpowers/specs/2026-09-24-modulo-propuestas-admin-design.md": {
+    "mtime": 1790367004.3208008,
+    "ast_hash": "2fb85c750a761f7a4ca593c54dae2077",
+    "semantic_hash": ""
+  },
+  "renderer/DEPLOY.md": {
+    "mtime": 1790367004.431963,
+    "ast_hash": "d89ac2a0164fbc3facccc527f2c3ae7f",
+    "semantic_hash": ""
+  },
+  "scratchpad/higgsfield-api/PROMPT-AGENTE.md": {
+    "mtime": 1790296729.1011672,
+    "ast_hash": "b2e0f6fc5ee8ac63d7b49c616145c5ac",
+    "semantic_hash": ""
+  },
+  "scratchpad/higgsfield-api/README.md": {
+    "mtime": 1790296729.1021788,
+    "ast_hash": "90a77c58562c67f70070d9eb81ae1f9f",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/public/themes/hielo/musica-album.mp3": {
+    "mtime": 1790296725.770342,
+    "ast_hash": "e0f39acb57c33e2f8ed4677a02d23105",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/database/aplicar-024.php": {
+    "mtime": 1790367004.2373736,
+    "ast_hash": "1dda539a56911910903eee5b771f469a",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/database/aplicar-025.php": {
+    "mtime": 1790367004.2373736,
+    "ast_hash": "8867cde7d826aaeffd403e498c359a3c",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/database/migrations/024_agenda_eventos.down.php": {
+    "mtime": 1790367004.2373736,
+    "ast_hash": "ea21e64d22d53251e507c4de3220f4fd",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/database/migrations/024_agenda_eventos.php": {
+    "mtime": 1790367004.2475958,
+    "ast_hash": "95728a43f26fb237cfb815e404791488",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/database/migrations/025_marketing_contenido.down.php": {
+    "mtime": 1790367004.2485814,
+    "ast_hash": "41cb08369e9982624101dfe4154be1da",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/database/migrations/025_marketing_contenido.php": {
+    "mtime": 1790367004.2485814,
+    "ast_hash": "f014881b98243a289d1fc00d9fe8a0b9",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/design/generadores/arte/cartel-feria.py": {
+    "mtime": 1790367004.2508316,
+    "ast_hash": "8c54c1245018995251b738114740c021",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/design/generadores/arte/marketing-ejemplos.json": {
+    "mtime": 1790367004.2508316,
+    "ast_hash": "cfaeb8a93cc4c88af7b66d2c2ee10c8a",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/design/generadores/arte/whatsapp-logo.py": {
+    "mtime": 1790367004.2508316,
+    "ast_hash": "a8273e319807363e4361c67ab954386f",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/design/generadores/arte/whatsapp-sigueme.py": {
+    "mtime": 1790367004.2508316,
+    "ast_hash": "30fe0a61c17ac0abd06a2eefe49b54f2",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/public/admin/agenda-ics.php": {
+    "mtime": 1790367004.2670574,
+    "ast_hash": "2a3b298dff362fdf2483f97e0654e1f0",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/public/admin/agenda.php": {
+    "mtime": 1790367004.2675695,
+    "ast_hash": "6b88f34ef2ace682d2b54bf359a289a1",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/public/admin/contenido-media.php": {
+    "mtime": 1790367004.2675695,
+    "ast_hash": "bd6addd17f240b2f7e33242feb4899e1",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/public/admin/contenido.php": {
+    "mtime": 1790367004.2675695,
+    "ast_hash": "aad74762f0e76e41bf7e9b9d024240b7",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/public/lib.agenda.php": {
+    "mtime": 1790367004.2797463,
+    "ast_hash": "b87936673a87da333b7a95b75ea4ffce",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/public/lib.fechas.php": {
+    "mtime": 1790367004.2797463,
+    "ast_hash": "53a2b7564f2d37a13de2a0a18f488f0a",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/public/lib.marketing.php": {
+    "mtime": 1790367004.2854953,
+    "ast_hash": "7991b6947e3f18410d00b7bdc0b92d07",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/scripts/agenda-correos.php": {
+    "mtime": 1790367004.2875202,
+    "ast_hash": "c2a77d7a01b005607c99eb9ed789c64d",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/scripts/seed-marketing-30-dias.php": {
+    "mtime": 1790367004.2875202,
+    "ast_hash": "4f1856dad58f99e1032f145b7a80a153",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/tests/backend/_aislamiento-local.php": {
+    "mtime": 1790367004.2875202,
+    "ast_hash": "94ab36254256e78660bb9c3773cf4b20",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/tests/backend/_backoffice-ui-checks.cjs": {
+    "mtime": 1790367004.2875202,
+    "ast_hash": "7a7ca8143af18bcfd978910059f4c911",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/tests/backend/agenda-http.php": {
+    "mtime": 1790367004.2875202,
+    "ast_hash": "eff9820bdee67a38d3cdc268124cfef3",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/tests/backend/agenda.php": {
+    "mtime": 1790367004.2875202,
+    "ast_hash": "083fbad98758cfadec5fcd83171d8451",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/tests/backend/backoffice-http.php": {
+    "mtime": 1790367004.2875202,
+    "ast_hash": "8e365c6544855754a354c1f2507910c7",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/tests/backend/backoffice-ui.cjs": {
+    "mtime": 1790367004.2875202,
+    "ast_hash": "665f87f2e36875d72b2247d804c9e319",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/tests/backend/fechas.php": {
+    "mtime": 1790367004.2973375,
+    "ast_hash": "493240372853febf54254224652cc206",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/tests/backend/marketing-http.php": {
+    "mtime": 1790367004.3006535,
+    "ast_hash": "c65d768f5f4f87d7bda0fd357e150cfd",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/tests/backend/marketing.php": {
+    "mtime": 1790367004.3006535,
+    "ast_hash": "4425f90c808645dc0fab833c30653a0c",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/tests/backend/migracion-022.php": {
+    "mtime": 1790367004.3006535,
+    "ast_hash": "e025ba09cf4749d44cc667dc032c8c2d",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/tests/backend/seed-backoffice-ui.php": {
+    "mtime": 1790367004.3074913,
+    "ast_hash": "d84008c86e7241928ebba37afd9bdaa1",
+    "semantic_hash": ""
+  },
+  "renderer/test/server-auth.test.js": {
+    "mtime": 1790367004.4575617,
+    "ast_hash": "c4d446ea50df86953f0cdd1e29d671b7",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/docs/CODEX-HANDOFF-MARKETING-Y-AGENDA-2026-09-24.md": {
+    "mtime": 1790367004.2508316,
+    "ast_hash": "276b505539e0f0c24fee85a52180870e",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/docs/REVISION-CLAUDE-017-018-BACKOFFICE-2026-09-24.md": {
+    "mtime": 1790367004.259838,
+    "ast_hash": "3467109f58b8081c1deb62c4df885e46",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/docs/superpowers/plans/2026-09-24-correcciones-backoffice.md": {
+    "mtime": 1790367004.261854,
+    "ast_hash": "d1c17502565c7ddfbd558da006ca9adb",
+    "semantic_hash": ""
+  },
+  "Docs/ORCHESTRATION/AT-CUMPLECLICK-017.yaml": {
+    "mtime": 1790367004.3074913,
+    "ast_hash": "e8a1417986da933bf36a1fc8082db47a",
+    "semantic_hash": ""
+  },
+  "Docs/ORCHESTRATION/AT-CUMPLECLICK-018.yaml": {
+    "mtime": 1790367004.3074913,
+    "ast_hash": "aed6f921ee85ba3732d71359cb73afbc",
+    "semantic_hash": ""
+  },
   "N8N/PROD/wa-plantillas-2026-09-24/aplicar_recordatorios.py": {
     "mtime": 1790366714.423514,
     "ast_hash": "fbe9600145e895c22716011ad97a3c78",
@@ -10367,6 +10832,11 @@
   "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/argos_preparar_datos.js": {
     "mtime": 1790296731.0576441,
     "ast_hash": "6eaf17a3e819b81d44bb787473056c15",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/argos_quitar_continueonfail.py": {
+    "mtime": 1790360929.3084207,
+    "ast_hash": "d8ac5c085ff4b8189de7e6d5610118ef",
     "semantic_hash": ""
   },
   "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/build_1h.js": {
@@ -10489,21 +10959,6 @@
     "ast_hash": "c43aacaba6a262ef5ddf5bc8fa988014",
     "semantic_hash": ""
   },
-  "scratchpad/higgsfield-api/hf_api.py": {
-    "mtime": 1790296729.1031933,
-    "ast_hash": "e7a03b7478a91b7a8a5dbd513b170fe6",
-    "semantic_hash": ""
-  },
-  "CumpleBooth/docs/POSFIESTA-LINEA-DE-TRABAJO.md": {
-    "mtime": 1790296721.7259176,
-    "ast_hash": "9064457d01fdddc16fd962d2ce5edb8f",
-    "semantic_hash": ""
-  },
-  "Docs/BLUEPRINTS/MG-MUEBLES-CONFIGURADOR-3D.md": {
-    "mtime": 1790296728.297355,
-    "ast_hash": "e69ded1749255d190bac60e70c687982",
-    "semantic_hash": ""
-  },
   "N8N/PROD/wa-plantillas-2026-09-24/README.md": {
     "mtime": 1790366792.1293578,
     "ast_hash": "f69a8b373990a98a53b405aa90c40b15",
@@ -10512,26 +10967,6 @@
   "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/argos_url_historial.txt": {
     "mtime": 1790296731.0586438,
     "ast_hash": "7c2e9da00546a10a347346aa84247482",
-    "semantic_hash": ""
-  },
-  "scratchpad/higgsfield-api/PROMPT-AGENTE.md": {
-    "mtime": 1790296729.1011672,
-    "ast_hash": "b2e0f6fc5ee8ac63d7b49c616145c5ac",
-    "semantic_hash": ""
-  },
-  "scratchpad/higgsfield-api/README.md": {
-    "mtime": 1790296729.1021788,
-    "ast_hash": "90a77c58562c67f70070d9eb81ae1f9f",
-    "semantic_hash": ""
-  },
-  "CumpleBooth/public/themes/hielo/musica-album.mp3": {
-    "mtime": 1790296725.770342,
-    "ast_hash": "e0f39acb57c33e2f8ed4677a02d23105",
-    "semantic_hash": ""
-  },
-  "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/argos_quitar_continueonfail.py": {
-    "mtime": 1790360929.3084207,
-    "ast_hash": "d8ac5c085ff4b8189de7e6d5610118ef",
     "semantic_hash": ""
   }
 }

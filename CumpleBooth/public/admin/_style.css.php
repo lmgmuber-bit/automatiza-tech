@@ -210,7 +210,8 @@ main { display: flex; flex-direction: column; gap: 20px; }
 /* --- Formulario de fiesta --- */
 .form-card { max-width: 640px; }
 .party-form { display: flex; flex-direction: column; gap: 16px; }
-.field { display: flex; flex-direction: column; gap: 6px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; max-width: 100%; }
+.party-form fieldset { min-inline-size: 0; width: 100%; }
 .field label { font-weight: 700; font-size: .92rem; }
 .field small { font-size: .8rem; }
 /* Todos los tipos de campo de texto, no solo `text` y `date`: los de correo, telefono,
@@ -231,6 +232,7 @@ main { display: flex; flex-direction: column; gap: 20px; }
   padding: 10px 14px; font-size: 1rem; font-family: var(--font-body);
   min-height: 44px; background: #fff; color: var(--text);
   transition: border-color .2s, box-shadow .2s;
+  min-width: 0; max-width: 100%;
 }
 .field textarea { min-height: 120px; resize: vertical; }
 .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(139,92,246,.12); }
@@ -268,7 +270,7 @@ input[type="number"].frame-value {
 .cobro-plan select {
   border: 1.5px solid var(--border); border-radius: var(--radius-sm);
   padding: 9px 12px; font: inherit; font-weight: 400; min-height: 42px;
-  background: #fff; color: var(--text); max-width: 380px;
+  background: #fff; color: var(--text); width: 100%; max-width: min(100%, 380px); min-width: 0;
 }
 .cobro-plan small { font-weight: 400; font-size: .8rem; color: var(--text-muted); }
 /* Bloque para mandarle el comprobante al papa, al pie del cobro. Va separado por una linea
@@ -328,9 +330,10 @@ input[type="number"].frame-value {
    `form="cc-envios"`: no tiene nada que mostrar. */
 .oculto-visual { display: none; }
 
-.cobro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px 14px; }
-.cobro-grid label { display: flex; flex-direction: column; gap: 5px; font-weight: 700; font-size: .9rem; }
+.cobro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); gap: 12px 14px; }
+.cobro-grid label { min-width: 0; display: flex; flex-direction: column; gap: 5px; font-weight: 700; font-size: .9rem; }
 .cobro-grid input {
+  width: 100%; min-width: 0;
   border: 1.5px solid var(--border); border-radius: var(--radius-sm);
   padding: 9px 12px; font: inherit; font-weight: 400; min-height: 42px; background: #fff; color: var(--text);
 }

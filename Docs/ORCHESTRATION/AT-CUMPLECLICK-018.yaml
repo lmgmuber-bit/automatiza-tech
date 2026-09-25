@@ -1,0 +1,99 @@
+ticket_id: AT-CUMPLECLICK-018
+title: "Agenda de eventos: calendario de agendamientos en el admin de CumpleClick"
+origin: direct_luis
+portfolio: "client:cumpleclick"
+priority: P1
+status: DONE
+status_note: "EN PROD 2026-09-25 00:47 (PR #40 mergeado); cron de avisos pendiente en hPanel"
+created_at: "2026-09-24"
+created_by: claude
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C1
+
+objective: >
+  Módulo "Agenda" del admin: calendario mensual y lista de próximos 30 días con todas las fiestas
+  (leídas de cc_parties, sin columnas nuevas) enriquecidas con hora, montaje, lugar, contacto y
+  estado de la reserva, más eventos que no son fiestas (visita, reunión, feria, entrega, bloqueo),
+  aviso de choques, checklist calculado (términos firmados, álbum, manual) y suscripción ICS para
+  el teléfono. Misma identidad que el resto del admin. Brief completo:
+  CumpleBooth/docs/CODEX-HANDOFF-MARKETING-Y-AGENDA-2026-09-24.md (§2).
+owner: codex
+reviewer: claude
+active_orchestrator: claude
+
+ownership:
+  planner: claude
+  executor: codex
+  reviewer: claude
+  final_approver: "Luis Miguel"
+  current_owner: codex
+  previous_owners: []
+  takeover_allowed: true
+  takeover_count: 0
+  takeover_reason: null
+  urgency: normal
+  resolution_status: pending
+  reassignment_authorized_by: "Luis Miguel"
+  handoff_ref: "CumpleBooth/docs/CODEX-HANDOFF-MARKETING-Y-AGENDA-2026-09-24.md"
+  handoff_quality: COMPLETE
+
+scope:
+  branch: "codex/agenda-eventos"
+  base_commit: "21c0c1a"
+  depends_on: []
+  allowed_files:
+    - "CumpleBooth/database/migrations/024_agenda_eventos.php"
+    - "CumpleBooth/database/migrations/024_agenda_eventos.down.php"
+    - "CumpleBooth/database/aplicar-024.php"
+    - "CumpleBooth/public/lib.agenda.php"
+    - "CumpleBooth/public/admin/agenda.php"
+    - "CumpleBooth/public/admin/agenda-ics.php"
+    - "CumpleBooth/tests/backend/agenda.php"
+    - "CumpleBooth/tests/backend/agenda-http.php"
+    - "CumpleBooth/public/lib.admin-usuarios.php"   # solo agregar la clave 'agenda' después de 'invitados'
+    - "CumpleBooth/public/admin/_acceso.php"         # solo agregar la pestaña Agenda después de Fiestas
+    - "CumpleBooth/docs/FTP-MANIFEST.md"             # solo anexar una sección al final
+  forbidden_files:
+    - "CLAUDE.md"
+    - "CumpleBooth/CLAUDE.md"
+    - "AGENTS.md"
+    - "CumpleBooth/public/lib.php"                   # cc_parties tiene columnas fijas: no tocar
+  locked_files:
+    - "CumpleBooth/database/migrations/025_*"        # es del ticket 017
+
+routing:
+  complexity: C1
+  risk: low
+  uncertainty: low
+  reversibility: easy
+  selected_profile: standard_executor
+  selected_model: "codex (runtime de Luis)"
+  rationale: "CRUD + calendario server-rendered sobre patrones que ya existen en el admin; sin gasto ni PROD."
+  independent_review: true
+  human_gate: true
+
+acceptance:
+  criteria:
+    - "Las fiestas samantha-hielo y luciano-spidey aparecen en septiembre sin cargar nada a mano"
+    - "Se crea la feria del 26-sep como evento tipo feria; choques avisan sin bloquear"
+    - "Checklist por fiesta calculado desde acceptance/album/manual, no duplicado"
+    - "ICS válido con enlace HMAC; operador sin módulo recibe 403"
+    - "Migración 024 idempotente (MySQL y SQLite) con .down"
+  tests:
+    - "php -l en todo lo nuevo (PHP de WAMP)"
+    - "tests/backend/agenda.php y agenda-http.php en verde"
+    - "escaneo de secretos sobre el diff"
+  evidence_required:
+    - "Capturas del mes y de la lista de próximos 30 días en local (escritorio y ancho de teléfono)"
+    - "Salida de las pruebas"
+    - "Lista FTP exacta (migración → lib → admin) y sección en FTP-MANIFEST con 'No probado'"
+  rollback_plan: "Migración .down + no subir los archivos nuevos; nada en PROD hasta el deploy de Claude"
+
+safety:
+  allow_push: true
+  allow_merge: false
+  allow_deploy: false
+  allow_secrets: false
+  allow_external_messages: false

@@ -3704,3 +3704,326 @@ desmarcar una y aprobar. `php -l` limpio.
 | 3 | `public/admin/album.php` | `app/admin/album.php` | OBLIGATORIO (respaldar antes) |
 
 Sin migración. Vuelta atrás: restaurar los tres respaldos.
+
+## DESPLEGADO 2026-09-25 00:48 — AT-CUMPLECLICK-017, módulo Contenido (backend) (rama `codex/marketing-contenido`, PR #44)
+
+**Estado:** implementado en `codex/marketing-contenido`, worktree separado desde main.
+Sin merge ni despliegue. Claude revisa/orquesta y Luis aprueba. Esta entrega cierra solamente
+el módulo: estrategia de 30 días y assets siguen en el mismo ticket, rama y PR.
+
+**Comportamiento.** Calendario mensual con tarjetas por formato; lista semanal; ficha editable,
+vista previa privada, copiar texto y primer comentario por separado, estados válidos, URL al
+marcar publicada y métricas manuales por pieza/semana. Solo superusuarios, incluso cuando un
+operador tiene marcada la clave marketing. CSRF en todas las escrituras. Programada organiza
+el calendario: no se conecta ni publica en Instagram. Los tres hashtags fijos se agregan al
+copiar; etiquetas de temática se guardan en el primer comentario, sin romper anclas de URLs.
+
+**Datos y archivos.** Migración 025 crea solo cc_marketing_piezas y cc_marketing_semanas,
+repetible en MySQL/SQLite, sin tocar cc_parties. Importación transaccional e idempotente por
+fecha+título; no pisa ediciones humanas ni importa aprobaciones/publicaciones. Cinco ejemplos
+adaptados de textos reales de Luciano prueban el módulo; sus fechas son de fixture, no el plan.
+Una pieza admite un archivo; en carruseles se usa portada y enlace externo al conjunto.
+Imágenes JPG/PNG/WebP o MP4 hasta 60 MiB (60 x 1024 x 1024 bytes), tipo por bytes, extensión
+canónica y nombres aleatorios. Almacén: `cb_photo_root()/marketing/<año>/<mes>/`, la misma
+raíz del Álbum. Con photo_root=almacen/fotos queda almacen/fotos/marketing, fuera del webroot.
+El reemplazo elimina el anterior sin referencias después de confirmar la escritura; editar texto
+no restaura claves antiguas. El endpoint sirve bytes solo con sesión super vigente, inline y
+Cache-Control private,no-store. No descarga URLs externas.
+
+**Pruebas locales, PHP WAMP 8.3.28:**
+- `php tests/backend/marketing.php` → `Marketing SQLite: OK 60 comprobaciones`.
+- `php tests/backend/marketing.php --mysql` → `Marketing MySQL: OK 60 comprobaciones`.
+  MySQL 8.4.7 desechable, loopback:33387; sin usar WAMP de trabajo ni PROD.
+- `php tests/backend/marketing-http.php` → `Marketing HTTP: OK 36 comprobaciones`.
+- Cobertura: alta/edición/transiciones, publicación con URL, métricas y semana histórica fuera de
+  las últimas 52; CSRF, XSS, ACL y revocación de permisos; tipo real frente a extensión falsa,
+  límite exacto 60 MiB y exceso, MP4 truncado, sustitución y carrera entre texto/asset;
+  seed CLI y ejecutor 025 repetidos; rollback de filas y archivos; migración up/down repetida.
+- Regresión de usuarios, HTTP de usuarios y Finanzas; lint de los 11 PHP cambiados y escaneo
+  de secretos del diff en la evidencia de entrega.
+- Chromium escritorio y móvil 390 px: calendario de siete columnas/lista, guardar ficha,
+  asset visible, copiar ambos textos en portapapeles, métricas; sin desbordamiento ni errores JS.
+  Seis capturas locales con datos de prueba, sin fotos de niños.
+
+**Lista exacta FTP/SFTP para Claude, después de revisión y autorización de Luis.**
+Raíz local:
+`C:/Users/luis_/.codex/worktrees/cumpleclick-marketing-contenido/automatiza-tech/CumpleBooth/`.
+Cada ruta de la tabla se concatena con esa raíz. Destinos relativos al HOME SSH;
+`domains/cumpleclick.com/public` es el enlace privado existente a public_html/app.
+Respaldar archivos/base antes de ejecutar la migración. Conservar los hunks de Agenda 018
+al integrar los dos archivos compartidos: no sobrescribirlos con una copia de esta rama.
+
+| Orden | Ruta local | Destino relativo en PROD | Clase |
+|---|---|---|---|
+| 1 | database/migrations/025_marketing_contenido.php | domains/cumpleclick.com/database/migrations/025_marketing_contenido.php | OBLIGATORIO |
+| 1 | database/migrations/025_marketing_contenido.down.php | domains/cumpleclick.com/database/migrations/025_marketing_contenido.down.php | OPCIONAL, rollback elimina las dos tablas; no ejecutar normalmente |
+| 2 | database/aplicar-025.php | domains/cumpleclick.com/database/aplicar-025.php | OBLIGATORIO, ejecutar por SSH antes de lib/admin |
+| 3 | public/lib.marketing.php | domains/cumpleclick.com/public_html/app/lib.marketing.php | OBLIGATORIO |
+| 3 | public/lib.admin-usuarios.php | domains/cumpleclick.com/public_html/app/lib.admin-usuarios.php | OBLIGATORIO, solo clave marketing al final después de perfil |
+| 4 | public/admin/contenido.php | domains/cumpleclick.com/public_html/app/admin/contenido.php | OBLIGATORIO |
+| 4 | public/admin/contenido-media.php | domains/cumpleclick.com/public_html/app/admin/contenido-media.php | OBLIGATORIO |
+| 4 | public/admin/_acceso.php | domains/cumpleclick.com/public_html/app/admin/_acceso.php | OBLIGATORIO, solo pestaña Contenido después de Finanzas |
+| 5 | scripts/seed-marketing-30-dias.php | domains/cumpleclick.com/scripts/seed-marketing-30-dias.php | OBLIGATORIO para importar el futuro JSON aprobado; fuera de public_html |
+
+Desde `domains/cumpleclick.com`: `php database/aplicar-025.php` (applied/skip y tablas).
+Después código, lint y prueba autorizada con sesión. PHP del hosting necesita fileinfo, GD,
+mbstring y PDO; upload_max_filesize al menos 60M y post_max_size mayor, por ejemplo 64M;
+revisar además límite del proxy. El JSON definitivo se importa por CLI con su ruta privada.
+No ejecutar --ejemplo en PROD. No subir marketing-ejemplos.json, tests, SQLite, datadir MySQL,
+capturas, qa scripts, node_modules, graphify-out, sesiones, credenciales ni este manifiesto.
+Los assets reales se subirán desde el admin o la importación autorizada; no copiar el almacén QA.
+Rollback de código: restaurar respaldo; las tablas pueden conservarse. El .down pierde datos
+editoriales y no borra assets privados: solo usar con respaldo y aprobación explícita.
+
+### No probado — AT-CUMPLECLICK-017, backend
+
+- PROD, permisos del almacén y límites PHP/proxy del hosting. Nada desplegado.
+- Safari/iOS/Android físicos; QA en Chromium local con viewport móvil.
+- Reproducción de un MP4 real de 60 MiB y seek por Range; el endpoint usa el modelo ver-media
+  solicitado y no implementa Range. La fixture MP4 prueba metadatos/tipo, no decodificación.
+- Instagram real, Insights y publicación automática: esta última está fuera de alcance.
+- Plan completo de 30 días, assets finales y carga de la primera semana: siguiente parte del ticket.
+- GitHub Actions (el brief informa bloqueo de facturación); evidencia de ejecución local.
+- Revisión final de Claude y activación en hosting.
+
+**Costos:** Higgsfield $0; ElevenLabs $0; request_id no aplica, sin solicitudes de generación.
+**Preguntas abiertas:** ninguna para usar este backend. Luis define el día 1 de la estrategia
+en la siguiente parte. Mantener un único PR del ticket abierto mientras se completa esa entrega.
+
+**Verificación responsive adicional (2026-09-24):** 36 vistas de Agenda/Contenido en Chromium,
+anchos 320, 360, 390, 768, 1024 y 1440 px; calendario, ficha y lista/semana sin desbordamiento ni
+errores JavaScript. Ajustado el ancho del selector de archivos en la ficha de Contenido.
+Regresión tras el ajuste: HTTP 36 comprobaciones y lint de contenido.php correctos.
+
+**Ajuste de Claude en la revisión (2026-09-25, pedido de Luis; misma rama):**
+- `admin/contenido-media.php` responde rangos (`Accept-Ranges: bytes`, `206` con `Content-Range`, `416` fuera del
+  archivo, varios rangos → completo, `HEAD` sin cuerpo) y envía el archivo por trozos de 64 KB en vez de `readfile`.
+  Safari e iOS no reproducen un MP4 si el servidor no contesta `206` a `bytes=0-1`; el resto del comportamiento
+  (sesión super obligatoria, `private, no-store`, inline) no cambia.
+- Pruebas: `marketing-http.php` 41 (antes 36): rango inicial, rango abierto, rango fuera del archivo y varios rangos.
+## DESPLEGADO 2026-09-25 00:47 — AT-CUMPLECLICK-018 Agenda y avisos (rama `codex/agenda-eventos`, PR #40)
+
+Rama `codex/agenda-eventos`, desde `main` `21c0c1a0`. Ejecutor: Codex; orquestador/revisor:
+Claude; aprobador: Luis. Clase: producto/backend/admin; riesgo medio por permisos y correos;
+reversibilidad: restaurar archivos y pausar cron, sin modificar fiestas. Incertidumbre reducida
+con bases desechables, pruebas HTTP y Chromium. No merge ni deploy ejecutados.
+
+**Comportamiento.** Calendario mensual, lista de próximos 30 días, logística, avisos de cruces y
+checklist calculado. Las fiestas aparecen automáticamente incluso sin fila logística. Su fecha
+siempre procede de `cc_parties.event_date`: se cambia desde Fiestas y la agenda/ICS/correos la
+siguen; la fecha de visitas, ferias y otros eventos generales se edita aquí. Editar no modifica
+invitaciones, cobros ni estados del checklist. Operadores: solo sus fiestas y con módulo Agenda;
+eventos generales: solo superusuario. Cancelación conserva historial.
+
+**Ampliación autorizada por Luis en esta conversación.** Aviso diario a las **09:00** con detalles;
+semanal los lunes a las **08:00** con el resumen de lunes a domingo, zona `America/Santiago`.
+Se avisa también cuando el período está vacío. El administrador recibe todo, en la dirección que
+Luis confirmó y que se introduce por la pantalla de preferencias (no se publica en el repositorio).
+Cada usuario activo con al menos una fiesta asignada recibe solo sus fiestas en su correo registrado,
+aunque no tenga acceso a la pantalla Agenda. Se reutiliza `cc_admin_user_parties`; no se crea
+una lista paralela. Desactivar/quitar todas las asignaciones detiene los avisos. Usuarios con rol
+super y fila en la tabla también reciben únicamente su alcance asignado; el destinatario global
+es el configurado en Agenda. Eventos generales no tienen asignación a operadores en esta versión.
+
+Los avisos usan SMTP existente, HTML + texto, y no salen al guardar preferencias. Desactivados por
+defecto hasta configurar correo y activación. Preferencias y marcas quedan en
+`<state_dir>/agenda-correos/`, privado, sin cuerpos ni credenciales. Marcas por tipo/período/usuario
+y bloqueo exclusivo evitan envíos duplicados. Un resultado SMTP incierto queda en revisión, sin
+reintento automático. Se usa la misma lectura fresca para dirección y asignaciones; una revocación
+durante la tanda se omite sin detener los demás. Si la copia oculta global apunta a alguien distinto
+del administrador o del destinatario, se bloquea el envío con `revisar_copias`; corregirla en Ajustes.
+No hay correo instantáneo de reasignación: el próximo resumen toma las asignaciones actuales.
+
+**Pruebas locales (PHP WAMP 8.3.28):**
+- `php tests/backend/agenda.php` → `Agenda SQLite: OK 154 comprobaciones`.
+- `php tests/backend/agenda.php --mysql` → `Agenda MySQL: OK 154 comprobaciones`.
+  MySQL 8.4.7 aislado en loopback:33387, base efímera, sin usar el MySQL de WAMP ni PROD.
+- `php tests/backend/agenda-http.php` → `Agenda HTTP: OK 30 comprobaciones`.
+- Regresión: `usuarios.php` 52; `usuarios-http.php` 59; `finanzas.php` 26, correctas.
+- Migración: repetir up y down, reaplicar y conservar fiestas; ACL de lectura/escritura, CSRF,
+  firma ICS/revocación, cruces, fecha canónica, contenido y aislamiento de avisos, deduplicación,
+  horarios 08:00/08:59/09:00 y reloj UTC, períodos vacíos, errores SMTP simulados y flags contradictorios.
+- Chromium: grilla de siete columnas, guardar ficha por formulario, lista móvil a 390 px sin
+  desbordamiento y primer evento visible al abrir; cero errores JavaScript. Capturas en el artefacto local.
+- `php -l` en los 11 archivos PHP nuevos/cambiados y escaneo de secretos del diff antes del push.
+  Los transportes de correo en pruebas capturan mensajes en memoria: ninguna entrega externa.
+
+**Lista exacta FTP/SFTP para Claude, solo tras aprobación de Luis.**
+Raíz local de esta entrega:
+`C:/Users/luis_/.codex/worktrees/cumpleclick-agenda-eventos/automatiza-tech/CumpleBooth/`.
+Cada ruta local de la tabla se concatena con esa raíz. Los destinos son relativos al HOME de SSH;
+`domains/cumpleclick.com/public` es el enlace privado existente a `public_html/app`.
+Respaldar archivos y base antes de aplicar.
+
+| Orden | Ruta local | Destino relativo en PROD | Clase |
+|---|---|---|---|
+| 1 | database/migrations/024_agenda_eventos.php | domains/cumpleclick.com/database/migrations/024_agenda_eventos.php | OBLIGATORIO |
+| 1 | database/migrations/024_agenda_eventos.down.php | domains/cumpleclick.com/database/migrations/024_agenda_eventos.down.php | OPCIONAL, rollback destructivo de logística; no ejecutar normalmente |
+| 2 | database/aplicar-024.php | domains/cumpleclick.com/database/aplicar-024.php | OBLIGATORIO, ejecutar por SSH antes de código |
+| 3 | public/lib.agenda.php | domains/cumpleclick.com/public_html/app/lib.agenda.php | OBLIGATORIO |
+| 3 | public/lib.admin-usuarios.php | domains/cumpleclick.com/public_html/app/lib.admin-usuarios.php | OBLIGATORIO, solo clave agenda después de invitados |
+| 4 | public/admin/agenda.php | domains/cumpleclick.com/public_html/app/admin/agenda.php | OBLIGATORIO |
+| 4 | public/admin/agenda-ics.php | domains/cumpleclick.com/public_html/app/admin/agenda-ics.php | OBLIGATORIO |
+| 4 | public/admin/_acceso.php | domains/cumpleclick.com/public_html/app/admin/_acceso.php | OBLIGATORIO, solo pestaña Agenda después de Fiestas |
+| 5 | scripts/agenda-correos.php | domains/cumpleclick.com/scripts/agenda-correos.php | OBLIGATORIO para los avisos, fuera de public_html |
+
+Ejecutar desde `domains/cumpleclick.com`: `php database/aplicar-024.php`; debe decir applied/skip
+y mostrar `cc_agenda_eventos`. Después lint en servidor y revisión autorizada de calendario/ICS.
+No subir pruebas, fixtures, SQLite, datadir MySQL, capturas, node_modules, gráfos, archivos de QA,
+credenciales, preferencias locales ni marcas de prueba. Este manifiesto es documentación local.
+
+**Activación de avisos, pendiente de deploy autorizado:**
+1. Agenda → Correos: introducir el correo confirmado por Luis y activar. Usuarios → revisar el
+   correo y asignaciones de cada persona; no modificar la cuenta de Teomar desde Codex.
+2. `php scripts/agenda-correos.php --simular` no entrega ni crea marcas. Fuera de los horarios
+   puede indicar sin pendientes; no es una prueba de SMTP.
+3. Claude instala un único cron cada cinco minutos para `php scripts/agenda-correos.php --enviar`,
+   usando rutas absolutas y el PHP del hosting. El script decide día/hora en Chile, así que el reloj
+   del cron puede estar en UTC y el horario de verano lo resuelve PHP. No instalar duplicados.
+4. Verificar aceptación SMTP y recepción en los buzones con Luis. El comando devuelve 1 ante
+   `sin_smtp`, `revisar` o `revisar_copias`; revisar el historial privado. El historial del admin
+   muestra aceptación del servidor de correo, no garantiza recepción en bandeja.
+5. Ante `enviando/revisar`, comprobar primero con el proveedor si recibió el mensaje. Si no,
+   respaldar y retirar exclusivamente la marca de ese tipo/fecha/usuario antes de repetir. Si el
+   resultado es incierto, no reenviar. Nunca borrar todas las marcas para reintentar.
+6. Pausar: desmarcar avisos y suspender ese cron. No hay recuperación automática de períodos
+   anteriores si el programador no corrió durante todo el día/lunes.
+
+ICS es una suscripción privada por HMAC, sin sesión de navegador. Incluye título, fecha/hora,
+lugar y estado; excluye notas, teléfonos y pagos. Desactivar usuario/quitar módulo revoca
+acceso. No compartir ni capturar el enlace con firma. La app de calendario decide la frecuencia
+de actualización. La rotación global de HMAC invalida todos los enlaces que dependen de esa clave.
+
+### No probado — AT-CUMPLECLICK-018
+
+- PROD, cuenta real de Teomar, datos/asignaciones reales y permisos del hosting.
+- Cron en Hostinger, SMTP real, bandeja de Gmail y entrega a usuarios. Ningún correo externo enviado.
+- Suscripción y refresco real en Apple/Google Calendar; ICS validado por estructura y HTTP local.
+- Caída real de proceso justo durante SMTP (se prueba resultado incierto y persistencia, no se mata un SMTP real).
+- GitHub Actions: según el brief está bloqueado por facturación; evidencia de validación local.
+- Revisión y deploy de Claude pendientes. No se afirma que nada de esta sección esté en producción.
+
+**Costos:** Higgsfield $0; ElevenLabs $0; ninguna solicitud de generación, request_id no aplica.
+**Preguntas abiertas:** ninguna para implementar los horarios/destinatarios confirmados.
+Falta aprobación de despliegue y verificación de recepción real con Claude y Luis.
+
+**Ajustes de Claude en la revisión (2026-09-25, con decisión de Luis; misma rama, PR #40):**
+- La copia oculta configurada en Ajustes ya no bloquea los avisos (`revisar_copias`): la fija el superadministrador y es
+  el buzón del negocio, así que cuenta como copia legítima. Cualquier otra copia sigue bloqueando (`lib.agenda.php`).
+- Una fiesta sin fila de logística ya no sale como "Consulta": el estado se deriva (fecha pasada → Realizada; fiesta
+  activa → Confirmada; si no → Consulta) y pasa a ser el inicial de la fila cuando alguien guarda la logística.
+- Sin invitación, la referencia dice "sin invitación registrada" en vez de separadores vacíos (`admin/agenda.php`).
+- Pruebas: `agenda.php` 158 (antes 154) y `agenda-http.php` 30, en verde. Luis decidió que los operadores sí vean
+  abono y saldo en su correo: sin cambio ahí.
+## DESPLEGADO 2026-09-25 00:45 — Correcciones del backoffice (rama `codex/correcciones-backoffice`, PR #43)
+
+Rama `codex/correcciones-backoffice`, nacida de `main` (21c0c1a), worktree propio.
+Luis autorizó corregir los ocho hallazgos de la auditoría. Claude revisa e integra; no se ha
+fusionado, publicado esta rama ni desplegado. Los archivos de Agenda 018 y Contenido 017
+permanecen en sus ramas.
+
+**Cambios:** Archivar una invitación actualiza solo el estado y conserva sus datos; valida
+sesión, CSRF y pertenencia al evento. Se rechazan fechas inexistentes y horas imposibles
+antes de guardar en Invitaciones, Finanzas, Fiestas y cierre del Álbum. Las fechas vacías
+opcionales siguen admitidas. El vencimiento inválido de una invitación no guarda parcialmente.
+La migración 022 comprueba si existe la columna en SQLite/MySQL y conserva el interruptor.
+Se ajustan los tamaños mínimos de campos, rejillas y selectores a celulares de 320 px,
+manteniendo los tokens y el diseño del admin. Nombres accesibles explícitos en contactos,
+comprobantes, invitaciones y protagonistas, también en las plantillas clonadas.
+
+**Pruebas reproducibles (PHP WAMP 8.3.28):**
+- 29 suites backend: 1313 comprobaciones, cero fallos. Incluyen 35 HTTP de regresión,
+  25 fechas y 3 de migración 022 en SQLite.
+- Migración 022 en MySQL 8.4.7 desechable: 3 comprobaciones, cero fallos.
+- Frontend existente: 214 pruebas, cero fallos.
+- `tests/backend/backoffice-ui.cjs`: 36 vistas; 320, 360, 390, 768, 1024 y 1440 px.
+  Abre formularios plegados y agrega un protagonista; comprueba ancho, nombres accesibles
+  y ausencia de ids duplicados. Evidencia ampliada y resultados definitivos en el reporte
+  de revisión de Claude.
+- Puntajes espera los siete juegos registrados; Salas usa el conjunto completo de migraciones.
+  Envíos, Manual y Puntajes tienen entorno efímero sin configuración real. Envíos verifica
+  las 25 comprobaciones, incluida la rotación de enlaces, sin saltarla ni mandar correos.
+- Ejecutar PHP: `php tests/backend/backoffice-http.php`, `php tests/backend/fechas.php`,
+  `php tests/backend/migracion-022.php`. `--mysql` requiere exclusivamente una instancia
+  desechable en loopback:33387, como las suites 017/018; nunca apuntarla a otra base.
+- UI: definir `CC_QA_PHP`, `CC_QA_CHROME` y `CC_QA_OUT` con rutas locales; ejecutar
+  `node tests/backend/backoffice-ui.cjs`. Requiere las dependencias del package-lock existente.
+  No hay dependencias nuevas ni llamadas a generación.
+- Fase roja y verde, salidas por suite, capturas, lint y escaneo de secretos se conservan en
+  la carpeta local `correcciones-backoffice` de esta tarea.
+
+**Lista exacta FTP/SFTP, únicamente tras revisión y autorización de Luis.**
+Raíz local:
+`C:/Users/luis_/.codex/worktrees/cumpleclick-correcciones-backoffice/automatiza-tech/CumpleBooth/`.
+Cada ruta local de la tabla se concatena con esa raíz. Destinos relativos al HOME SSH.
+
+| Orden | Ruta local | Destino relativo en PROD | Clase |
+|---|---|---|---|
+| 1 | database/migrations/022_juegos3d.php | domains/cumpleclick.com/database/migrations/022_juegos3d.php | OBLIGATORIO para actualizar el migrador; no ejecutar otra migración ni borrar datos |
+| 2 | public/lib.fechas.php | domains/cumpleclick.com/public_html/app/lib.fechas.php | OBLIGATORIO, antes de las librerías y páginas que lo cargan |
+| 3 | public/lib.invitations.php | domains/cumpleclick.com/public_html/app/lib.invitations.php | OBLIGATORIO |
+| 3 | public/lib.finanzas.php | domains/cumpleclick.com/public_html/app/lib.finanzas.php | OBLIGATORIO |
+| 4 | public/admin/_style.css.php | domains/cumpleclick.com/public_html/app/admin/_style.css.php | OBLIGATORIO |
+| 4 | public/admin/index.php | domains/cumpleclick.com/public_html/app/admin/index.php | OBLIGATORIO |
+| 4 | public/admin/invitations.php | domains/cumpleclick.com/public_html/app/admin/invitations.php | OBLIGATORIO |
+| 4 | public/admin/comprobante.php | domains/cumpleclick.com/public_html/app/admin/comprobante.php | OBLIGATORIO |
+| 4 | public/admin/event-profile.php | domains/cumpleclick.com/public_html/app/admin/event-profile.php | OBLIGATORIO |
+| 4 | public/admin/album.php | domains/cumpleclick.com/public_html/app/admin/album.php | OBLIGATORIO |
+
+Scripts desplegables nuevos: ninguno. Pruebas, fixtures, JSON de QA, SQLite, sesiones,
+datadir/logs de MySQL, capturas, node_modules, Graphify y documentación **NO se suben**.
+No hay nuevos assets ni archivos opcionales de producto. Respaldar los diez archivos si
+existen; subir el helper primero. No hace falta alterar una base donde ya existe la columna
+de 022. La corrección de validación evita nuevos datos inválidos; no normaliza fechas antiguas.
+
+**Vuelta atrás:** restaurar el código respaldado de los archivos existentes y retirar el
+helper solo después de restaurar todas sus referencias. No borrar la columna games3d_enabled.
+No reabrir ni reconstruir datos de invitaciones ya dañadas por el archivado antiguo:
+su recuperación requiere un respaldo que permita comprobar los valores originales.
+
+### No probado — Correcciones del backoffice
+
+- Producción, datos reales, credenciales y permisos del hosting; sin subida FTP/SFTP.
+- Safari, Firefox, iOS y Android físicos; los tamaños móviles se probaron en Chromium.
+- Auditoría completa WCAG, navegación con lector de pantalla real y zoom del sistema.
+  Se comprobaron nombres accesibles, ids únicos y tamaños en las vistas indicadas.
+- Envíos SMTP, entregas reales, generación de imágenes/audio/video y cobros externos.
+- Flujos HTTP completos bajo MySQL: las pruebas HTTP utilizan SQLite; se probó 022
+  bajo ambos motores. Las suites propias 017/018 se revalidaron también en MySQL.
+- Integración simultánea de las tres ramas: Claude debe revisarla antes de merge/deploy.
+- GitHub Actions y CI remota no se ejecutaron en esta tarea.
+- Recuperación de datos que ya se hubiesen perdido al archivar una invitación antigua.
+
+**Costos:** Higgsfield 0 créditos; ElevenLabs 0 créditos; request_id no aplica.
+**Pendientes para Claude/Luis:** revisar las tres ramas y el orden de integración; contrastar
+los briefs canónicos 017/018 ausentes de los worktrees revisados; aprobar publicación remota
+de las ramas aún locales y, por separado, cualquier despliegue. No se solicita activación automática.
+
+## CIERRE 2026-09-25 — Codex (018, 017 backend, correcciones) revisado, desplegado y mergeado
+
+Con el go de Luis, Claude publicó las tres ramas, desplegó por SSH en el orden correcciones → Agenda → Contenido y
+mergeó los PR #43, #40, #44 (y los pendientes #39 y #35). `main` (`35322d9`) es igual a PROD en los 24 archivos
+desplegados (sha256 sin CR, cotejado desde afuera).
+
+- **Correcciones (00:45):** 10 archivos de `public/`, sin migración. Verificado en el servidor: `cb_fecha_valida`
+  rechaza 30-feb y acepta 29-feb-2028, `cb_hora_valida` rechaza 24:00; las siete páginas del admin responden 302/200.
+  Respaldo `~/respaldos/correcciones-backoffice-antes-20260925-0045/`.
+- **Agenda 018 (00:47):** `php database/aplicar-024.php` → `applied 024_agenda_eventos`; luego `lib.agenda.php`,
+  `lib.admin-usuarios.php` y `admin/_acceso.php` (versión integrada, con `agenda` y `marketing`), `admin/agenda.php`,
+  `admin/agenda-ics.php` y `scripts/agenda-correos.php`. Verificado: `cb_agenda_listar` del maestro lista las 5 fiestas
+  reales de sep/oct (estado derivado `realizada`); `agenda.php` → 302 sin sesión; `agenda-ics.php` → 403 sin firma.
+  Respaldos `~/respaldos/agenda-018-migracion-antes-20260925-0047/` y `agenda-018-codigo-antes-20260925-0047/`.
+  **Correos:** admin configurado (correo de Luis) y activados por CLI; `--simular` → sin pendientes a esa hora.
+  🔴 **Cron pendiente:** Hostinger no tiene `crontab` por SSH; se agrega en hPanel → Cron Jobs, cada 5 minutos:
+  `cd /home/<usuario>/domains/cumpleclick.com && /usr/bin/php scripts/agenda-correos.php --enviar >> /home/<usuario>/domains/cumpleclick.com/logs/agenda-correos.log 2>&1`
+  (PHP CLI del hosting: 8.3.33 en `/usr/bin/php`; la carpeta `logs/` ya existe). Sin el cron no sale ningún aviso.
+- **Contenido 017 (00:48):** `php database/aplicar-025.php` → `applied 025_marketing_contenido`; luego `lib.marketing.php`,
+  `admin/contenido.php`, `admin/contenido-media.php` (con `Range` para Safari/iOS) y `scripts/seed-marketing-30-dias.php`.
+  Límites del hosting: `upload_max_filesize 80M`, `post_max_size 90M` (≥ 60 MB). `contenido.php` → 302 sin sesión;
+  `contenido-media.php` → 403 sin sesión. Respaldos `~/respaldos/contenido-017-*-antes-20260925-0048/`.
+  El ticket 017 sigue abierto: estrategia de 30 días y assets (Codex, misma rama nueva desde `main`).
+
+### No probado (25-sep)
+Admin con sesión iniciada en PROD (verificación por CLI y HTTP sin sesión); primer correo real (depende del cron);
+suscripción ICS en un teléfono; MP4 en un iPhone real; la fiesta `p:1` "Cumple Isidora" existe en la base de PROD
+y aparece en la Agenda como realizada (revisar si es de prueba).

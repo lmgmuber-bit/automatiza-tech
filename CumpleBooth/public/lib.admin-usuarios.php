@@ -18,9 +18,11 @@ const CB_ADMIN_MODULOS = [
     'juegos'    => ['nombre' => 'Juegos 3D', 'detalle' => 'Prender o apagar los juegos y ver la tabla de posiciones'],
     'carteles'  => ['nombre' => 'Carteles QR', 'detalle' => 'Ver e imprimir los carteles de la fiesta'],
     'invitados' => ['nombre' => 'Agregar invitados', 'detalle' => 'Sumar a la lista un niño que llega sin estar anotado'],
+    'agenda'    => ['nombre' => 'Agenda de eventos', 'detalle' => 'Ver y organizar las fiestas asignadas'],
     'mensajes'  => ['nombre' => 'Mensajes', 'detalle' => 'La pestaña Mensajes de su fiesta'],
     'album'     => ['nombre' => 'Álbum Recuerdo', 'detalle' => 'Recibir y curar los aportes de los papás'],
     'perfil'    => ['nombre' => 'Perfil del protagonista', 'detalle' => 'Editar el perfil del festejado'],
+    'marketing' => ['nombre' => 'Contenido', 'detalle' => 'Organizar publicaciones y métricas'],
 ];
 /** Lo que se marca por defecto al crear un operador: lo que se usa durante la fiesta. */
 const CB_ADMIN_MODULOS_RECOMENDADOS = ['fotos', 'juegos', 'carteles', 'invitados'];

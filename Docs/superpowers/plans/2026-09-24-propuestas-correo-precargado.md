@@ -167,6 +167,10 @@ Requisitos:
 
 ### Task 3: Borrar a la vista y espacio para la burbuja ARIA
 
+> **Corrección tras la prueba (2026-09-24):** el botón quedó como `name="at_borrar_marcadas" value="1"`, con rama
+> propia en el servidor, y solo se dibuja si hay filas. Con `name="bulk_action"` (lo que dice abajo), el
+> `common.js` de WordPress bloqueaba todo envío porque el menú de lote seguía en «-1».
+
 **Files:**
 - Modify: `wp-content/themes/automatiza-tech/inc/propuestas-admin/lista.php` (`extra_tablenav`, `at_pa_render_lista`)
 - Modify: `wp-content/themes/automatiza-tech/inc/propuestas-admin/acciones.php` (`at_pa_procesar_acciones`)

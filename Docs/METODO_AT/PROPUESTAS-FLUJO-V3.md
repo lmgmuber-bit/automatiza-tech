@@ -42,14 +42,30 @@ Diseño: `Docs/superpowers/specs/2026-09-24-modulo-propuestas-admin-design.md`; 
 - **Lista** (`WP_List_Table`): buscador por empresa, cliente, correo o teléfono; vistas por estado con su conteo
   (Todas, Borrador, Enviadas, Pendiente, Error…); filtro de fechas Desde/Hasta; orden por columna; paginación con
   «Opciones de pantalla» (5 a 200 por página).
-- **Borrar:** una sola con el enlace «Borrar» bajo el nombre de la empresa (WordPress lo muestra al pasar el mouse
-  por la fila; no está escondido por error); varias marcando las casillas → «Acciones en lote» → «Borrar» →
-  «Aplicar». Los dos piden confirmación. Buscar, Filtrar o Enter nunca borran (el servidor exige `bulk_action`).
+- **Borrar:** una sola con el enlace «Borrar» bajo el nombre de la empresa (siempre visible desde el 24-sep 22:30);
+  varias marcando las casillas → botón rojo «🗑️ Borrar marcadas», o «Acciones en lote» → «Borrar» → «Aplicar».
+  Todo pide confirmación. Buscar, Filtrar o Enter nunca borran. 🔴 El botón se llama `at_borrar_marcadas` a
+  propósito: `wp-admin/js/common.js` bloquea cualquier envío con `name="bulk_action"` si el menú de lote está en
+  «-1» (así falló la primera versión del botón en la prueba local).
 - **Ficha** en pestañas: Resumen (con «Siguiente paso»), Cliente y enlaces, Revisión y precios (solo v3), Contenido,
   Seguimiento y Envío. En el celular las pestañas pasan a un selector.
 - **Guardar** es una barra fija, oculta en «Revisión y precios» (ahí guardan «Pedir cambios» y «Aprobar»). En las
   propuestas viejas la casilla «Enviar correo» viene marcada como siempre: la barra lo avisa con el correo del
   cliente y Guardar (o Enter) pide confirmar antes de mandarlo.
+- **Correo al cliente precargado (desde el 24-sep 22:30):** la pestaña Envío trae el asunto, la introducción,
+  «¿Qué incluye?» y el cierre ya escritos. Los redacta GPT-4o en «1 Borrador» desde la reunión (clave
+  `correo_cliente` dentro del contenido, sin montos, saludo ni firma) y «2 Cambios» los ajusta si los comentarios
+  cambian la solución, las fases o los próximos pasos. Si una propuesta no los trae, WordPress los arma desde su
+  contenido (`at_pa_correo_textos`). Lo que Luis edite se guarda con Guardar, salvo con la propuesta en
+  `ajustando` (lo avisa). Guardar sin tocarlos no congela el texto sugerido. Verificado en PROD con una propuesta
+  de prueba (fila 52, borrada después).
+- **PDF adjunto, en este orden:** el que Luis suba en «Cliente y enlaces» (plan B, siempre gana); el ya guardado en
+  WordPress; el de la presentación bajado del renderer (`/p/<id>/presentation.pdf`, solo https y solo ese host,
+  sin redirecciones) si pesa hasta 15 MB. Si no se puede, el correo sale con los botones y el aviso dice por qué.
+  Medido en local por SMTP real: el PDF de Orly (14,2 MB) da un correo de 18,6 MB, 98 MB de memoria y 4,6 s.
+  Un correo de ~19 MB puede rebotar en el servidor de algún cliente; el rebote llega a contacto@.
+- **Guardar** no envía dos veces (doble clic bloqueado) y deja 110 px a la derecha para la burbuja ARIA/MAXTECH
+  (mu-plugin de PROD `aria-widget-flotante.php`, fija abajo a la derecha en todo el admin).
 - **Página clásica** de respaldo: `…/wp-admin/admin.php?page=automatiza-proposals&clasico=1` (su ✏️ abre la ficha
   nueva; para editar en la clásica, agregar `&edit_id=N`). Se retira en un PR posterior.
 - **Código:** `inc/propuestas-admin/` (`consultas.php` puras, probadas con `php tests/propuestas/admin-lista-test.php`;
@@ -61,6 +77,12 @@ Diseño: `Docs/superpowers/specs/2026-09-24-modulo-propuestas-admin-design.md`; 
   `client-details-module.php`); con eso los archivos nuevos quedan sin uso porque PROD solo incluye
   `inc/admin-proposals.php`. 🔴 En Hostinger `wp db export` sale con código 255 sin mensaje y sin archivo: la tabla
   se respalda con un script PHP con `SHORTINIT` (`SHOW CREATE TABLE` + un `INSERT` por fila).
+- **Segunda subida (24-sep 22:30, correo precargado):** 6 archivos (`consultas.php`, `acciones.php`, `ficha.php`,
+  `lista.php`, CSS y JS). Respaldos con marca `20260924-222959`: tema completo y
+  `~/respaldos/propuestas-correo-antes-20260924-222959.tar.gz` (rollback: `cd ~ && tar xzf` de ese archivo).
+  n8n: «1 Borrador» y «2 Cambios» publicados con `deploy.py` después de comprobar que los vivos eran iguales al
+  repo; respaldo previo en `C:/Users/luis_/respaldos/n8n/2026-09-24-correo-precargado/` (rollback: volver a
+  publicar esos JSON).
 
 ## Fotos por rubro (regla de Luis, 2026-09-24)
 

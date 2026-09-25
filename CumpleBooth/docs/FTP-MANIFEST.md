@@ -3705,6 +3705,120 @@ desmarcar una y aprobar. `php -l` limpio.
 
 Sin migración. Vuelta atrás: restaurar los tres respaldos.
 
+## PENDIENTE DE DESPLIEGUE — 2026-09-24 — AT-CUMPLECLICK-018 Agenda y avisos
+
+Rama `codex/agenda-eventos`, desde `main` `21c0c1a0`. Ejecutor: Codex; orquestador/revisor:
+Claude; aprobador: Luis. Clase: producto/backend/admin; riesgo medio por permisos y correos;
+reversibilidad: restaurar archivos y pausar cron, sin modificar fiestas. Incertidumbre reducida
+con bases desechables, pruebas HTTP y Chromium. No merge ni deploy ejecutados.
+
+**Comportamiento.** Calendario mensual, lista de próximos 30 días, logística, avisos de cruces y
+checklist calculado. Las fiestas aparecen automáticamente incluso sin fila logística. Su fecha
+siempre procede de `cc_parties.event_date`: se cambia desde Fiestas y la agenda/ICS/correos la
+siguen; la fecha de visitas, ferias y otros eventos generales se edita aquí. Editar no modifica
+invitaciones, cobros ni estados del checklist. Operadores: solo sus fiestas y con módulo Agenda;
+eventos generales: solo superusuario. Cancelación conserva historial.
+
+**Ampliación autorizada por Luis en esta conversación.** Aviso diario a las **09:00** con detalles;
+semanal los lunes a las **08:00** con el resumen de lunes a domingo, zona `America/Santiago`.
+Se avisa también cuando el período está vacío. El administrador recibe todo, en la dirección que
+Luis confirmó y que se introduce por la pantalla de preferencias (no se publica en el repositorio).
+Cada usuario activo con al menos una fiesta asignada recibe solo sus fiestas en su correo registrado,
+aunque no tenga acceso a la pantalla Agenda. Se reutiliza `cc_admin_user_parties`; no se crea
+una lista paralela. Desactivar/quitar todas las asignaciones detiene los avisos. Usuarios con rol
+super y fila en la tabla también reciben únicamente su alcance asignado; el destinatario global
+es el configurado en Agenda. Eventos generales no tienen asignación a operadores en esta versión.
+
+Los avisos usan SMTP existente, HTML + texto, y no salen al guardar preferencias. Desactivados por
+defecto hasta configurar correo y activación. Preferencias y marcas quedan en
+`<state_dir>/agenda-correos/`, privado, sin cuerpos ni credenciales. Marcas por tipo/período/usuario
+y bloqueo exclusivo evitan envíos duplicados. Un resultado SMTP incierto queda en revisión, sin
+reintento automático. Se usa la misma lectura fresca para dirección y asignaciones; una revocación
+durante la tanda se omite sin detener los demás. Si la copia oculta global apunta a alguien distinto
+del administrador o del destinatario, se bloquea el envío con `revisar_copias`; corregirla en Ajustes.
+No hay correo instantáneo de reasignación: el próximo resumen toma las asignaciones actuales.
+
+**Pruebas locales (PHP WAMP 8.3.28):**
+- `php tests/backend/agenda.php` → `Agenda SQLite: OK 154 comprobaciones`.
+- `php tests/backend/agenda.php --mysql` → `Agenda MySQL: OK 154 comprobaciones`.
+  MySQL 8.4.7 aislado en loopback:33387, base efímera, sin usar el MySQL de WAMP ni PROD.
+- `php tests/backend/agenda-http.php` → `Agenda HTTP: OK 30 comprobaciones`.
+- Regresión: `usuarios.php` 52; `usuarios-http.php` 59; `finanzas.php` 26, correctas.
+- Migración: repetir up y down, reaplicar y conservar fiestas; ACL de lectura/escritura, CSRF,
+  firma ICS/revocación, cruces, fecha canónica, contenido y aislamiento de avisos, deduplicación,
+  horarios 08:00/08:59/09:00 y reloj UTC, períodos vacíos, errores SMTP simulados y flags contradictorios.
+- Chromium: grilla de siete columnas, guardar ficha por formulario, lista móvil a 390 px sin
+  desbordamiento y primer evento visible al abrir; cero errores JavaScript. Capturas en el artefacto local.
+- `php -l` en los 11 archivos PHP nuevos/cambiados y escaneo de secretos del diff antes del push.
+  Los transportes de correo en pruebas capturan mensajes en memoria: ninguna entrega externa.
+
+**Lista exacta FTP/SFTP para Claude, solo tras aprobación de Luis.**
+Raíz local de esta entrega:
+`C:/Users/luis_/.codex/worktrees/cumpleclick-agenda-eventos/automatiza-tech/CumpleBooth/`.
+Cada ruta local de la tabla se concatena con esa raíz. Los destinos son relativos al HOME de SSH;
+`domains/cumpleclick.com/public` es el enlace privado existente a `public_html/app`.
+Respaldar archivos y base antes de aplicar.
+
+| Orden | Ruta local | Destino relativo en PROD | Clase |
+|---|---|---|---|
+| 1 | database/migrations/024_agenda_eventos.php | domains/cumpleclick.com/database/migrations/024_agenda_eventos.php | OBLIGATORIO |
+| 1 | database/migrations/024_agenda_eventos.down.php | domains/cumpleclick.com/database/migrations/024_agenda_eventos.down.php | OPCIONAL, rollback destructivo de logística; no ejecutar normalmente |
+| 2 | database/aplicar-024.php | domains/cumpleclick.com/database/aplicar-024.php | OBLIGATORIO, ejecutar por SSH antes de código |
+| 3 | public/lib.agenda.php | domains/cumpleclick.com/public_html/app/lib.agenda.php | OBLIGATORIO |
+| 3 | public/lib.admin-usuarios.php | domains/cumpleclick.com/public_html/app/lib.admin-usuarios.php | OBLIGATORIO, solo clave agenda después de invitados |
+| 4 | public/admin/agenda.php | domains/cumpleclick.com/public_html/app/admin/agenda.php | OBLIGATORIO |
+| 4 | public/admin/agenda-ics.php | domains/cumpleclick.com/public_html/app/admin/agenda-ics.php | OBLIGATORIO |
+| 4 | public/admin/_acceso.php | domains/cumpleclick.com/public_html/app/admin/_acceso.php | OBLIGATORIO, solo pestaña Agenda después de Fiestas |
+| 5 | scripts/agenda-correos.php | domains/cumpleclick.com/scripts/agenda-correos.php | OBLIGATORIO para los avisos, fuera de public_html |
+
+Ejecutar desde `domains/cumpleclick.com`: `php database/aplicar-024.php`; debe decir applied/skip
+y mostrar `cc_agenda_eventos`. Después lint en servidor y revisión autorizada de calendario/ICS.
+No subir pruebas, fixtures, SQLite, datadir MySQL, capturas, node_modules, gráfos, archivos de QA,
+credenciales, preferencias locales ni marcas de prueba. Este manifiesto es documentación local.
+
+**Activación de avisos, pendiente de deploy autorizado:**
+1. Agenda → Correos: introducir el correo confirmado por Luis y activar. Usuarios → revisar el
+   correo y asignaciones de cada persona; no modificar la cuenta de Teomar desde Codex.
+2. `php scripts/agenda-correos.php --simular` no entrega ni crea marcas. Fuera de los horarios
+   puede indicar sin pendientes; no es una prueba de SMTP.
+3. Claude instala un único cron cada cinco minutos para `php scripts/agenda-correos.php --enviar`,
+   usando rutas absolutas y el PHP del hosting. El script decide día/hora en Chile, así que el reloj
+   del cron puede estar en UTC y el horario de verano lo resuelve PHP. No instalar duplicados.
+4. Verificar aceptación SMTP y recepción en los buzones con Luis. El comando devuelve 1 ante
+   `sin_smtp`, `revisar` o `revisar_copias`; revisar el historial privado. El historial del admin
+   muestra aceptación del servidor de correo, no garantiza recepción en bandeja.
+5. Ante `enviando/revisar`, comprobar primero con el proveedor si recibió el mensaje. Si no,
+   respaldar y retirar exclusivamente la marca de ese tipo/fecha/usuario antes de repetir. Si el
+   resultado es incierto, no reenviar. Nunca borrar todas las marcas para reintentar.
+6. Pausar: desmarcar avisos y suspender ese cron. No hay recuperación automática de períodos
+   anteriores si el programador no corrió durante todo el día/lunes.
+
+ICS es una suscripción privada por HMAC, sin sesión de navegador. Incluye título, fecha/hora,
+lugar y estado; excluye notas, teléfonos y pagos. Desactivar usuario/quitar módulo revoca
+acceso. No compartir ni capturar el enlace con firma. La app de calendario decide la frecuencia
+de actualización. La rotación global de HMAC invalida todos los enlaces que dependen de esa clave.
+
+### No probado — AT-CUMPLECLICK-018
+
+- PROD, cuenta real de Teomar, datos/asignaciones reales y permisos del hosting.
+- Cron en Hostinger, SMTP real, bandeja de Gmail y entrega a usuarios. Ningún correo externo enviado.
+- Suscripción y refresco real en Apple/Google Calendar; ICS validado por estructura y HTTP local.
+- Caída real de proceso justo durante SMTP (se prueba resultado incierto y persistencia, no se mata un SMTP real).
+- GitHub Actions: según el brief está bloqueado por facturación; evidencia de validación local.
+- Revisión y deploy de Claude pendientes. No se afirma que nada de esta sección esté en producción.
+
+**Costos:** Higgsfield $0; ElevenLabs $0; ninguna solicitud de generación, request_id no aplica.
+**Preguntas abiertas:** ninguna para implementar los horarios/destinatarios confirmados.
+Falta aprobación de despliegue y verificación de recepción real con Claude y Luis.
+
+**Ajustes de Claude en la revisión (2026-09-25, con decisión de Luis; misma rama, PR #40):**
+- La copia oculta configurada en Ajustes ya no bloquea los avisos (`revisar_copias`): la fija el superadministrador y es
+  el buzón del negocio, así que cuenta como copia legítima. Cualquier otra copia sigue bloqueando (`lib.agenda.php`).
+- Una fiesta sin fila de logística ya no sale como "Consulta": el estado se deriva (fecha pasada → Realizada; fiesta
+  activa → Confirmada; si no → Consulta) y pasa a ser el inicial de la fila cuando alguien guarda la logística.
+- Sin invitación, la referencia dice "sin invitación registrada" en vez de separadores vacíos (`admin/agenda.php`).
+- Pruebas: `agenda.php` 158 (antes 154) y `agenda-http.php` 30, en verde. Luis decidió que los operadores sí vean
+  abono y saldo en su correo: sin cambio ahí.
 ## PENDIENTE DE REVISIÓN — 2026-09-24 — Correcciones del backoffice
 
 Rama `codex/correcciones-backoffice`, nacida de `main` (21c0c1a), worktree propio.

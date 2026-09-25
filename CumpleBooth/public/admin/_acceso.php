@@ -227,6 +227,7 @@ function admin_nav(string $activa = 'fiestas'): string
     $u = admin_usuario_actual();
     $super = $u['rol'] === 'super';
     $tabs = [['fiestas', 'index.php', $icono('party') . ' Fiestas']];
+    if (admin_puede('agenda')) { $tabs[] = ['agenda', 'agenda.php', 'Agenda']; }
     if ($super) {
         $tabs[] = ['temas', 'index.php?view=temas', $icono('palette') . ' Temáticas'];
         $nuevos = 0;

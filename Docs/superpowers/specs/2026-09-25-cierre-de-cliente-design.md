@@ -24,19 +24,21 @@ Hoy el cliente dice que sí por WhatsApp o en una llamada y el sistema no se ent
 5. El contrato necesita la firma de AT antes de llegar al cliente: se crea en borrador al aceptar y le llega cuando Luis lo firma (camino 1; Luis no respondió la pregunta del momento del contrato y este es el que coincide con su primera respuesta).
 6. Ficha única de cliente con la opción A: la ficha del CRM es la única que se abre; los datos de contratos, facturas y accesos siguen en su tabla, enlazados por id.
 7. Anticipo por transferencia (propuesto por Claude; Luis no respondió la pregunta). Pago con Flow queda fuera de esta etapa.
+8. El envío de la propuesta sale también por WhatsApp, en forma automática, y el mensaje trae botones para responder ahí mismo: «Acepto la propuesta», «La sigo evaluando» y «No, gracias». Tocar «Acepto» en WhatsApp dispara lo mismo que aceptar en la página (Luis, 25-sep).
 
 ## 3. Recorrido
 
 ```
-Propuesta enviada ──► Correo que pide aceptarla: botón «✅ Aceptar la propuesta»
-        │
-        └── o Luis aprieta «Pedir respuesta» ──► correo + WhatsApp con el mismo enlace
+Luis envía la propuesta ──► Correo: presentación, PDF y «✅ Aceptar la propuesta»
+                        └─► WhatsApp: resumen + botones «Acepto la propuesta» / «La sigo evaluando» / «No, gracias» + «Ver la propuesta»
+        (o Luis aprieta «Pedir respuesta» ──► el mismo correo y el mismo WhatsApp de nuevo)
                                   │
-                                  ▼
-             Página de respuesta en automatizatech.cl (presentación + 3 botones)
+             Responde en la página de automatizatech.cl      Responde tocando un botón en WhatsApp
+             (nombre, RUT, qué acepta)                       (desde el teléfono de la propuesta)
+                                  └──────────────┬──────────────┘
              ├─ «La sigo evaluando» ─► estado evaluando, aviso a Luis
              ├─ «No, gracias»       ─► estado rechazada, aviso a Luis
-             └─ «Acepto la propuesta» (nombre, RUT, qué acepta)
+             └─ «Acepto la propuesta»
                         │  (todo automático)
                         ├─ registro en Seguimiento con huella de lo aceptado
                         ├─ propuesta aceptada
@@ -144,21 +146,40 @@ En la configuración de facturación (`invoice-settings.php`), junto a los datos
   El botón del correo no acepta por sí solo: los filtros de correo abren los enlaces sin que nadie los toque. La aceptación se confirma en la página, con nombre, RUT y la casilla, en un clic más.
 - En la pestaña Envío de la ficha, el botón nuevo «Pedir respuesta»:
   - manda un correo corto con el mismo bloque «Aceptar la propuesta»;
-  - ofrece «Enviar por mi WhatsApp» (`wa.me` con el mensaje y el enlace ya escritos, desde el teléfono de Luis);
+  - manda el mismo WhatsApp del envío (etapa 4), o, mientras la plantilla no esté aprobada, ofrece «Enviar por mi WhatsApp» (`wa.me` con el mensaje y el enlace ya escritos, desde el teléfono de Luis);
   - deja el envío en Seguimiento.
 - Disponible para propuestas en `sent`, `evaluando` o `rechazada` que tengan correo o teléfono.
+- El envío normal de la propuesta, en la pestaña Envío, suma la casilla «También por WhatsApp», marcada cuando la propuesta tiene teléfono.
 
-### Etapa 4 · WhatsApp automático
+### Etapa 4 · WhatsApp automático con botones para responder
 
-- Plantilla nueva en Meta, `propuesta_respuesta`, en español y con botón de enlace sin emoji. Meta rechaza emojis en botones: lo medimos el 24-sep. Categoría Utility; si Meta la reclasifica como Marketing, se informa a Luis antes de usarla.
-- Flujo nuevo en n8n con webhook protegido por cabecera, igual que el Borrador. WordPress lo llama desde «Pedir respuesta» con nombre, teléfono y código. n8n manda la plantilla con la credencial de WhatsApp de Meta que ya usan los recordatorios.
-- Mientras la plantilla no esté aprobada, el botón `wa.me` de la etapa 3 sigue siendo la vía.
+**Envío**
+
+- Plantilla nueva en Meta, `propuesta_respuesta`, en español, con variables para el nombre, la empresa y lo que se propone partir con su precio (ej. «Fase 1: Configurador 3D, $2.000.000 IVA incluido»). Lleva cuatro botones sin emoji (Meta rechaza emojis en botones: lo medimos el 24-sep):
+  - tres de respuesta rápida: «Acepto la propuesta», «La sigo evaluando» y «No, gracias», con carga `btn_propuesta_acepta_<código>`, `btn_propuesta_evalua_<código>` y `btn_propuesta_rechaza_<código>`;
+  - uno de enlace: «Ver la propuesta», a la página de respuesta.
+- Categoría Utility; si Meta la reclasifica como Marketing, se informa a Luis antes de usarla.
+- Flujo nuevo en n8n, «Propuesta · WhatsApp», con webhook protegido por cabecera igual que el Borrador. WordPress lo llama al enviar la propuesta (casilla «También por WhatsApp») y desde «Pedir respuesta», con nombre, teléfono, código y texto de lo propuesto. n8n manda la plantilla con la credencial de WhatsApp de Meta que ya usan los recordatorios.
+- Mientras la plantilla no esté aprobada, la vía es el botón `wa.me` de la etapa 3.
 - Un 200 con `wamid` no significa entregado (error 131047, medido el 24-sep). El panel dice «enviado a WhatsApp», no «entregado». El correo siempre sale.
+
+**Respuesta con un toque en WhatsApp**
+
+- Cuando el cliente toca un botón, Meta avisa al bot principal de WhatsApp de AT, que ya enruta las cargas de los botones de plantilla (`button.payload`) desde el 24-sep. Se le agrega la ruta `btn_propuesta_*`, que llama a un endpoint REST nuevo de WordPress, `at/v1/propuesta-respuesta`, protegido con clave de cabecera, con la salida, el código, el teléfono que tocó y el `wamid`.
+- WordPress acepta la respuesta solo si el teléfono que tocó coincide con el de la propuesta, comparando los números normalizados (solo dígitos, con 56 delante). Si no coincide, no cambia el estado: lo anota en Seguimiento y avisa a Luis.
+- «Acepto la propuesta» en WhatsApp dispara exactamente lo mismo que aceptar en la página (sección «Al aceptar, en orden»). Lo aceptado es lo que decía el mensaje, que es la primera fila de precios, y el registro guarda canal `whatsapp`, teléfono, `wamid` y la huella del contenido. No pide RUT: el RUT lo pide el contrato al firmar.
+- Tocar un botón abre la ventana de 24 horas, así que el bot contesta en el mismo chat sin plantilla:
+  - aceptar: «¡Gracias! Recibimos tu aceptación. Te enviamos por correo los primeros pasos y el contrato llega para firmar»;
+  - evaluar: «Gracias por contarnos. Si tienes dudas, escríbenos por aquí»;
+  - rechazar: «Gracias por tu respuesta. Si algo cambia, aquí estamos».
+- Tocar dos veces o tocar después de aceptar no repite nada: la respuesta es idempotente, igual que en la página.
+- Tocar el bot principal requiere el ok explícito de Luis en el momento de hacerlo: es el que atiende a todos los contactos.
 
 ## 5. Seguridad
 
 - La página de respuesta es pública: solo acepta POST, con nonce, campo trampa, límite por IP y el código de 12 caracteres. Responde igual si el código no existe, para no revelar cuáles existen.
 - El RUT se valida con dígito verificador.
+- El endpoint de respuestas por WhatsApp (`at/v1/propuesta-respuesta`) exige clave de cabecera, guardada solo en n8n y en `wp-config.php`, y solo acepta la respuesta si el teléfono que tocó el botón es el de la propuesta.
 - Los datos bancarios se guardan como opciones de WordPress. No son secretos, pero no se escriben en el repositorio.
 - El enlace al portal que va en la bienvenida usa la función de firma de enlaces vigente. La rama `claude/crm-enlaces-fichas` la reemplaza: si se despliega antes, la bienvenida usa la nueva.
 - El repositorio es público: nada de esta obra describe ni deja expuestos datos de clientes.
@@ -174,6 +195,8 @@ Scripts PHP con el mismo patrón de las pruebas del panel de propuestas, en loca
 - Plantilla de servicio: todos los marcadores reemplazados; la de soporte sigue igual (comparación del texto generado antes y después).
 - Página de respuesta: aceptar, evaluar y rechazar; aceptar dos veces; GET que no acepta; nonce vencido; campo trampa lleno; límite por IP; RUT inválido.
 - Aceptación completa en local con una propuesta de prueba: estado, Seguimiento, ficha única, correo de bienvenida capturado y contrato en borrador.
+- Endpoint de WhatsApp: sin clave, con clave mala, teléfono que no coincide, las tres salidas, dos toques seguidos, código inexistente. Normalización de teléfonos chilenos («+56 9 …», «9 …», «569…»).
+- Una prueba real de punta a punta con el teléfono de Luis como cliente de prueba, antes de usarlo con clientes.
 
 ## 7. Fuera de esta etapa
 

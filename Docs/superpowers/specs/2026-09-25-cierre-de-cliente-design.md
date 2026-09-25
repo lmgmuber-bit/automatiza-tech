@@ -26,6 +26,8 @@ Hoy el cliente dice que sí por WhatsApp o en una llamada y el sistema no se ent
 7. Anticipo por transferencia (propuesto por Claude; Luis no respondió la pregunta). Pago con Flow queda fuera de esta etapa.
 8. El envío de la propuesta sale también por WhatsApp, en forma automática, y el mensaje trae botones para responder ahí mismo: «Acepto la propuesta», «La sigo evaluando» y «No, gracias». Tocar «Acepto» en WhatsApp dispara lo mismo que aceptar en la página (Luis, 25-sep).
 9. En el panel existe «Registrar aceptación» para cuando el cliente ya dijo que sí por otro lado (WhatsApp, correo, llamada) y no va a usar los botones, como el caso de la propuesta 43. Dispara lo mismo que la aceptación del cliente (Luis, 25-sep).
+10. El contrato de servicio lo ajusta siempre Luis antes de firmarlo, porque cambia según el cliente y los servicios que se le ofrecen. El borrador que se arma solo al aceptar es un punto de partida, nunca sale sin esa revisión (Luis, 25-sep).
+11. La reunión de inicio la coordina Luis en persona con el cliente: es la bienvenida oficial, donde le explica los pasos a seguir y los ítems de trabajo. El sistema no la agenda; la bienvenida la anuncia (Luis, 25-sep).
 
 ## 3. Recorrido
 
@@ -83,7 +85,7 @@ Cada etapa se prueba y puede subirse a PROD por separado, en este orden.
   
   Queda marcada como borrador para revisión de abogado.
 - **El módulo respeta la plantilla pedida.** `load_template($template_id)` elige el archivo según el id (`soporte_v2` → soporte, `servicio_v1` → servicio). El título del contrato sale de la plantilla o de un mapa por tipo, ya no fijo. Los contratos de soporte existentes no cambian.
-- **Luis puede ajustar antes de firmar.** En la página de firma de AT (`contracts/at-sign-contract.php`), cuando el contrato es de servicio, aparecen editables alcance, entregables y plazo, precargados desde la propuesta. Al guardar se regeneran el texto y el PDF antes de la firma.
+- **Luis ajusta el contrato antes de firmar, siempre a mano.** En la página de firma de AT (`contracts/at-sign-contract.php`), cuando el contrato es de servicio, aparecen editables los servicios contratados (uno por línea, con su precio), el alcance, los entregables, el plazo y la forma de pago, precargados desde la propuesta. Al guardar se regeneran el texto y el PDF. El botón de firmar queda deshabilitado hasta que Luis guarde al menos una vez la revisión: así ningún contrato de servicio sale con el borrador automático sin mirar.
 
 ### Etapa 3 · Respuesta del cliente y aceptación automática
 
@@ -130,12 +132,12 @@ Reemplaza a `_enviar_correo_bienvenida()`, también cuando Luis convierte a mano
 1. Tu contrato: «te llega en un correo aparte para firmarlo».
 2. Anticipo: el 50 % de lo aceptado, con los datos de transferencia. El monto se calcula de las etiquetas de precio (ej. «$2.000.000 en 2 pagos» → primer pago $1.000.000). Las filas mensuales («al mes») no entran al anticipo. Si una etiqueta no se puede leer, el correo dice «según tu contrato».
 3. Marca y accesos: responder el correo o escribir por WhatsApp.
-4. Reunión de inicio: enlace para agendar si existe en ajustes; si no, «te escribimos para agendarla».
+4. Reunión de inicio: «Te vamos a contactar para coordinar la reunión de inicio, donde te damos la bienvenida oficial y repasamos juntos los pasos a seguir y los ítems de trabajo». Sin enlace de agenda: la coordina Luis.
 5. Tu portal: enlace a la línea de tiempo.
 
 **Ajustes nuevos**
 
-En la configuración de facturación (`invoice-settings.php`), junto a los datos de la empresa: banco, tipo de cuenta, número, titular, RUT del titular, correo para avisar el pago y enlace opcional para agendar la reunión de inicio. Los escribe Luis; ningún agente los escribe.
+En la configuración de facturación (`invoice-settings.php`), junto a los datos de la empresa: banco, tipo de cuenta, número, titular, RUT del titular, correo para avisar el pago. Los escribe Luis; ningún agente los escribe.
 
 **«Pedir respuesta» y el correo de la propuesta**
 

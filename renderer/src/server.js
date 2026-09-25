@@ -1,3 +1,4 @@
+const crypto = require('node:crypto');
 const path = require('node:path');
 const express = require('express');
 const { validatePayload } = require('./schema');
@@ -7,7 +8,19 @@ const { renderToFiles } = require('./render');
 const { persistImages } = require('./images-store');
 const { promptHash, readManifest, writeManifest, reusablePhotos } = require('./photo-manifest');
 
-function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
+// Compara en tiempo constante: una respuesta que tarda distinto según cuántos caracteres calzan
+// deja adivinar la clave de a uno.
+function claveCorrecta(dada, esperada) {
+  const a = Buffer.from(String(dada || ''), 'utf8');
+  const b = Buffer.from(String(esperada), 'utf8');
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+// renderKey vacío (sin variable RENDER_KEY) deja /render abierto, como antes: así el código nuevo
+// se puede desplegar antes de que n8n mande la clave. Con renderKey, /render exige la cabecera
+// X-AT-Render-Key y la revisa antes que el payload, para no gastar en Higgsfield ni tocar el disco
+// por un pedido ajeno. /health y las presentaciones públicas (/p/…) siguen sin clave.
+function createApp({ publicDir, baseUrl, higgsfieldCredentials, renderKey = '' }) {
   const app = express();
   app.use(express.json({ limit: '2mb' }));
 
@@ -19,7 +32,12 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials }) {
     res.json({ status: 'ok' });
   });
 
-  app.post('/render', async (req, res) => {
+  app.post('/render', (req, res, next) => {
+    if (!renderKey || claveCorrecta(req.get('x-at-render-key'), renderKey)) {
+      return next();
+    }
+    return res.status(401).json({ error: 'unauthorized' });
+  }, async (req, res) => {
     const { valid, errors } = validatePayload(req.body);
     if (!valid) {
       return res.status(400).json({ error: 'invalid payload', details: errors });
@@ -150,6 +168,7 @@ function start() {
   const port = process.env.PORT || 3000;
   const publicDir = process.env.PUBLIC_DIR || path.join(__dirname, '..', 'public');
   const baseUrl = process.env.BASE_URL || `http://localhost:${port}`;
+  const renderKey = (process.env.RENDER_KEY || '').trim();
   const app = createApp({
     publicDir,
     baseUrl,
@@ -157,9 +176,11 @@ function start() {
       keyId: process.env.HF_API_KEY_ID,
       keySecret: process.env.HF_API_KEY_SECRET,
     },
+    renderKey,
   });
   app.listen(port, () => {
-    console.log(`propuesta-renderer listening on :${port}`);
+    // Nunca se imprime la clave: solo si está puesta.
+    console.log(`propuesta-renderer listening on :${port} (/render ${renderKey ? 'exige clave' : 'abierto: sin RENDER_KEY'})`);
   });
 }
 

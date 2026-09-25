@@ -10,6 +10,8 @@ from correos import correo_borrador
 CRED_OPENAI = {'openAiApi': {'id': 'g52IEXpRfN5r7jKw', 'name': 'OpenAi account'}}
 CRED_SMTP = {'smtp': {'id': 'dyhVFWmjRNC45ccA', 'name': 'SMTP account PROD'}}
 CRED_WP = {'httpHeaderAuth': {'id': '1NI0sJKc0kC430pb', 'name': 'AT REST Secret (header)'}}
+CRED_RENDER = {'httpHeaderAuth': {'id': 'fj2orzbsjlnHaiLd', 'name': 'X-AT-Render-Key'}}  # clave de /render del renderer
+CRED_BORRADOR = {'httpHeaderAuth': {'id': 'HQ3y7F1f5InsCjkV', 'name': 'X-AT-Borrador-Key'}}  # clave que manda el flujo de Meet
 WP = 'https://automatizatech.cl/?rest_route=/automatiza-tech/v1'
 RENDERER = 'https://n8n-propuesta-renderer.kchiba.easypanel.host/render'
 LUIS = 'lmgm.0303@gmail.com'
@@ -90,8 +92,9 @@ def node(id_, name, type_, version, pos, params, **extra):
 
 nodes = [
     node('b1', 'Webhook (Entrada)', 'n8n-nodes-base.webhook', 2, [0, 0],
-         {'httpMethod': 'POST', 'path': 'propuesta-v3-borrador', 'responseMode': 'onReceived', 'options': {}},
-         webhookId='propuesta-v3-borrador'),
+         {'httpMethod': 'POST', 'path': 'propuesta-v3-borrador', 'authentication': 'headerAuth',
+          'responseMode': 'onReceived', 'options': {}},
+         webhookId='propuesta-v3-borrador', credentials=CRED_BORRADOR),
     node('b2', 'Redactar propuesta', 'n8n-nodes-base.openAi', 1, [220, 0],
          {'resource': 'chat', 'model': 'gpt-4o',
           'prompt': {'messages': [{'role': 'system', 'content': PROMPT_REDACTAR},
@@ -112,10 +115,11 @@ nodes = [
           'options': {}},
          credentials=CRED_WP),
     node('b6', 'Vista previa (sin fotos)', 'n8n-nodes-base.httpRequest', 4.2, [1100, 0],
-         {'method': 'POST', 'url': RENDERER, 'sendBody': True, 'specifyBody': 'json',
+         {'method': 'POST', 'url': RENDERER, 'authentication': 'genericCredentialType', 'genericAuthType': 'httpHeaderAuth',
+          'sendBody': True, 'specifyBody': 'json',
           'jsonBody': "={{ JSON.stringify(Object.assign({}, $('Armar payload').item.json.payload, { unique_id: $('Crear en WordPress').item.json.unique_id, draft: true, image_briefs: [] })) }}",
           'options': {'timeout': 120000}},
-         onError='continueRegularOutput'),
+         onError='continueRegularOutput', credentials=CRED_RENDER),
     node('b6b', 'Armar correo', 'n8n-nodes-base.code', 2, [1210, 0], {'jsCode': correo_borrador()}),
     node('b7', 'Correo a Luis', 'n8n-nodes-base.emailSend', 1, [1320, 0],
          {'fromEmail': 'contacto@automatizatech.cl', 'toEmail': LUIS,

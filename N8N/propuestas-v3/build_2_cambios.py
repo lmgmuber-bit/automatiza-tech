@@ -12,6 +12,7 @@ from correos import correo_cambios_ok, correo_cambios_error
 CRED_OPENAI = {'openAiApi': {'id': 'g52IEXpRfN5r7jKw', 'name': 'OpenAi account'}}
 CRED_SMTP = {'smtp': {'id': 'dyhVFWmjRNC45ccA', 'name': 'SMTP account PROD'}}
 CRED_WP = {'httpHeaderAuth': {'id': '1NI0sJKc0kC430pb', 'name': 'AT REST Secret (header)'}}
+CRED_RENDER = {'httpHeaderAuth': {'id': 'fj2orzbsjlnHaiLd', 'name': 'X-AT-Render-Key'}}  # clave de /render del renderer
 WP = 'https://automatizatech.cl/?rest_route=/automatiza-tech/v1'
 RENDERER = 'https://n8n-propuesta-renderer.kchiba.easypanel.host/render'
 LUIS = 'lmgm.0303@gmail.com'
@@ -125,10 +126,11 @@ nodes = [
             "={{ JSON.stringify({ status: 'borrador', note: '', payload: $json.payload }) }}"),
     iff('c8', '¿Guardado OK?', [1540, -120], '={{ $json.statusCode === 200 }}'),
     node('c9', 'Vista previa', 'n8n-nodes-base.httpRequest', 4.2, [1760, -240],
-         {'method': 'POST', 'url': RENDERER, 'sendBody': True, 'specifyBody': 'json',
+         {'method': 'POST', 'url': RENDERER, 'authentication': 'genericCredentialType', 'genericAuthType': 'httpHeaderAuth',
+          'sendBody': True, 'specifyBody': 'json',
           'jsonBody': "={{ JSON.stringify(Object.assign({}, $('Guardar y volver a borrador').item.json.body.payload, { unique_id: $('Payload final').item.json.unique_id, draft: true, image_briefs: [] })) }}",
           'options': {'timeout': 120000}},
-         onError='continueRegularOutput'),
+         onError='continueRegularOutput', credentials=CRED_RENDER),
     node('c9b', 'Armar correo cambios', 'n8n-nodes-base.code', 2, [1870, -240], {'jsCode': correo_cambios_ok()}),
     email('c10', 'Correo cambios aplicados', [1980, -240], '={{ $json.asunto }}', '={{ $json.html }}'),
     node('c11', 'Motivo del error', 'n8n-nodes-base.code', 2, [1760, 120], {'jsCode': CODE_MOTIVO}),

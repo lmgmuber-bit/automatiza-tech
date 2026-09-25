@@ -4,6 +4,8 @@
  * Requiere storage_mode=db. Los archivos se almacenan fuera del webroot.
  */
 
+require_once __DIR__ . '/lib.fechas.php';
+
 function cb_invitation_storage_key(string $publicSlug, string $assetKey, int $version, string $ext): string
 {
     if (!cb_valid_public_slug($publicSlug)) {
@@ -156,11 +158,11 @@ function cb_create_invitation(array $data): array
         $promptTemplate = cb_default_invitation_prompt_template();
     }
 
-    if ($eventDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $eventDate)) {
-        return ['ok' => false, 'error' => 'La fecha debe tener formato AAAA-MM-DD.'];
+    if ($eventDate !== '' && !cb_fecha_valida($eventDate)) {
+        return ['ok' => false, 'error' => 'La fecha debe existir y tener formato AAAA-MM-DD.'];
     }
-    if ($eventTime !== '' && !preg_match('/^\d{2}:\d{2}$/', $eventTime)) {
-        return ['ok' => false, 'error' => 'La hora debe tener formato HH:MM.'];
+    if ($eventTime !== '' && !cb_hora_valida($eventTime)) {
+        return ['ok' => false, 'error' => 'La hora debe estar entre 00:00 y 23:59, en formato HH:MM.'];
     }
 
     $check = $pdo->prepare('SELECT 1 FROM cc_invitations WHERE public_token_hash = ?');
@@ -473,6 +475,22 @@ function cb_update_invitation(int $id, array $data, string $by): bool
 {
     if (cb_storage_mode() !== 'db') {
         return false;
+    }
+    foreach (['event_date' => 'cb_fecha_valida', 'event_time' => 'cb_hora_valida'] as $field => $validar) {
+        if (isset($data[$field]) && (string) $data[$field] !== '' && !$validar((string) $data[$field])) {
+            return false;
+        }
+    }
+    // Validar todo antes de construir el UPDATE para evitar guardados parciales.
+    if (array_key_exists('expires_at', $data)) {
+        $expires = (string) $data['expires_at'];
+        if ($expires !== '' && $expires !== '0000-00-00 00:00:00') {
+            $parts = explode(' ', $expires);
+            if (count($parts) > 2 || !cb_fecha_valida($parts[0])
+                || (isset($parts[1]) && !cb_hora_valida($parts[1]))) {
+                return false;
+            }
+        }
     }
     $allowed = ['birthday_person_name', 'birthday_person_gender', 'event_date', 'event_time', 'address', 'message', 'admin_label', 'language', 'channel', 'prompt_template'];
     $fields = [];

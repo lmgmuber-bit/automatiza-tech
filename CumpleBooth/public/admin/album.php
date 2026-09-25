@@ -8,6 +8,7 @@
  * aprueba ni reordena.
  */
 require __DIR__ . '/../lib.php';
+require_once __DIR__ . '/../lib.fechas.php';
 require __DIR__ . '/config.php';
 
 $adminSecureCookie = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
@@ -221,8 +222,8 @@ if ($album !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'
                 $closesAt = null;
                 if ($closesRaw !== '') {
                     // <input type="date"> entrega YYYY-MM-DD; se cierra al final del día.
-                    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $closesRaw)) {
-                        $errors[] = 'La fecha de cierre no tiene un formato válido.';
+                    if (!cb_fecha_valida($closesRaw)) {
+                        $errors[] = 'La fecha de cierre debe existir y tener formato AAAA-MM-DD.';
                     } else {
                         $closesAt = $closesRaw . ' 23:59:59';
                     }

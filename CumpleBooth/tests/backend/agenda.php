@@ -53,7 +53,19 @@ check(count(cb_agenda_listar('2026-09-01','2026-09-30',$operator))===1, 'operado
 $sin = $operator; $sin['modulos'] = [];
 rejects(fn()=>cb_agenda_listar('2026-09-01','2026-09-30',$sin), 'sin módulo no lee');
 $sam = cb_agenda_obtener('p:'.$sid, $super);
-check($sam['estado']==='consulta', 'activa no inventa reserva confirmada');
+check($sam['estado']==='realizada', 'fiesta ya realizada sin logística se muestra como realizada');
+check(cb_agenda_obtener('p:'.$lid, $super)['estado']==='realizada', 'también la inactiva, si la fecha ya pasó');
+// cb_save_parties reemplaza el conjunto completo: se pasan también las dos fiestas de siempre.
+cb_save_parties(['parties'=>[
+    'samantha-hielo'=>['nombre'=>'Samantha','tema'=>'hielo','fecha'=>'2026-09-13','activa'=>true,'creada'=>'2026-09-01 10:00:00','service_plan'=>'full'],
+    'luciano-spidey'=>['nombre'=>'Luciano','tema'=>'spidey','fecha'=>'2026-09-13','activa'=>false,'creada'=>'2026-09-01 10:00:00','service_plan'=>'booth'],
+    'futura-activa'=>['nombre'=>'Futura activa','tema'=>'hielo','fecha'=>'2099-01-10','activa'=>true,'creada'=>'2026-09-01 10:00:00','service_plan'=>'full'],
+    'futura-inactiva'=>['nombre'=>'Futura inactiva','tema'=>'hielo','fecha'=>'2099-01-11','activa'=>false,'creada'=>'2026-09-01 10:00:00','service_plan'=>'booth'],
+]]);
+check(cb_agenda_obtener('p:'.cb_party_db_id('futura-activa'), $super)['estado']==='confirmada', 'fiesta futura activa sin logística se muestra confirmada');
+check(cb_agenda_obtener('p:'.cb_party_db_id('futura-inactiva'), $super)['estado']==='consulta', 'fiesta futura inactiva sin logística queda en consulta');
+check((int)$pdo->query('SELECT COUNT(*) FROM cc_agenda_eventos')->fetchColumn()===0, 'derivar el estado no escribe');
+$pdo->exec("DELETE FROM cc_parties WHERE public_slug IN ('futura-activa','futura-inactiva')");
 $sam = cb_agenda_guardar(array_merge($sam,['hora_inicio'=>'16:00','hora_fin'=>'18:00','hora_montaje'=>'15:30','estado'=>'confirmada']),$super);
 $sam = cb_agenda_guardar(array_merge($sam,['lugar'=>'Sala de ejemplo']),$super);
 check((int)$pdo->query('SELECT COUNT(*) FROM cc_agenda_eventos')->fetchColumn()===1, 'editar fiesta hace upsert, no duplica');
@@ -174,12 +186,12 @@ $messages=[];cb_agenda_correo_ejecutar(new DateTimeImmutable('2026-09-15 09:00:0
 check(count($messages)===1&&$messages[0]['to']==='admin@example.invalid','quitar todas las asignaciones detiene avisos del usuario');
 
 
-cb_guardar_ajustes(['bcc_email'=>'otro-usuario@example.invalid']);
+cb_guardar_ajustes(['bcc_email'=>'buzon-negocio@example.invalid']);
 $messages=[]; $bccResult=cb_agenda_correo_ejecutar(new DateTimeImmutable('2026-09-16 09:00:00',$tz),false,$receiver);
-check($messages===[]&&$bccResult['diario']==='revisar_copias','copia global ajena no filtra agenda a otra persona');
+check(count($messages)===1&&$bccResult['diario']==='enviado','la copia oculta de Ajustes es del negocio y no bloquea el aviso (Luis, 25-sep)');
 cb_guardar_ajustes(['bcc_email'=>'admin@example.invalid']);
-$messages=[]; cb_agenda_correo_ejecutar(new DateTimeImmutable('2026-09-16 09:00:00',$tz),false,$receiver);
-check(count($messages)===1,'copia global del administrador conserva el envío sin consumir la marca anterior');
+$messages=[]; cb_agenda_correo_ejecutar(new DateTimeImmutable('2026-09-18 09:00:00',$tz),false,$receiver);
+check(count($messages)===1,'copia global igual al administrador también envía');
 cb_guardar_ajustes(['bcc_email'=>'']);
 
 cb_admin_asignar_fiestas($uid,['samantha-hielo']);

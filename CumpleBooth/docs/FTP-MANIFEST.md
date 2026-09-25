@@ -3810,3 +3810,12 @@ de actualización. La rotación global de HMAC invalida todos los enlaces que de
 **Costos:** Higgsfield $0; ElevenLabs $0; ninguna solicitud de generación, request_id no aplica.
 **Preguntas abiertas:** ninguna para implementar los horarios/destinatarios confirmados.
 Falta aprobación de despliegue y verificación de recepción real con Claude y Luis.
+
+**Ajustes de Claude en la revisión (2026-09-25, con decisión de Luis; misma rama, PR #40):**
+- La copia oculta configurada en Ajustes ya no bloquea los avisos (`revisar_copias`): la fija el superadministrador y es
+  el buzón del negocio, así que cuenta como copia legítima. Cualquier otra copia sigue bloqueando (`lib.agenda.php`).
+- Una fiesta sin fila de logística ya no sale como "Consulta": el estado se deriva (fecha pasada → Realizada; fiesta
+  activa → Confirmada; si no → Consulta) y pasa a ser el inicial de la fila cuando alguien guarda la logística.
+- Sin invitación, la referencia dice "sin invitación registrada" en vez de separadores vacíos (`admin/agenda.php`).
+- Pruebas: `agenda.php` 158 (antes 154) y `agenda-http.php` 30, en verde. Luis decidió que los operadores sí vean
+  abono y saldo en su correo: sin cambio ahí.

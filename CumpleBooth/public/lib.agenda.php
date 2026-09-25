@@ -32,7 +32,7 @@ function cb_agenda_select_fiestas(): string {
 }
 function cb_agenda_normalizar(array $r): array {
     $party = !empty($r['party_id']);
-    return array_replace([
+    $e = array_replace([
         'id'=>null,'party_id'=>null,'tipo'=>'fiesta','titulo'=>'','fecha'=>'',
         'hora_inicio'=>null,'hora_fin'=>null,'hora_montaje'=>null,'lugar'=>'',
         'contacto_nombre'=>'','contacto_telefono'=>'','estado'=>'consulta','notas'=>'',
@@ -43,6 +43,14 @@ function cb_agenda_normalizar(array $r): array {
         'titulo'=>(string)($r['titulo'] ?: ($r['admin_label'] ?? '') ?: ($r['birthday_person_name'] ?? 'Evento')),
         'updated_at'=>(string)($r['updated_at'] ?: ($r['fiesta_updated_at'] ?? '')),
     ]);
+    // Una fiesta sin fila de logística no se muestra como "Consulta": el estado se deriva de lo que ya se
+    // sabe de ella (Luis, 25-sep). Ya pasó → realizada; activa → confirmada; si no → consulta. En cuanto
+    // alguien guarda la logística, manda el estado guardado (este derivado es el inicial de esa fila).
+    if ($party && empty($r['id'])) {
+        $hoy = (new DateTimeImmutable('now', new DateTimeZone('America/Santiago')))->format('Y-m-d');
+        $e['estado'] = ($e['fecha'] !== '' && $e['fecha'] < $hoy) ? 'realizada' : (!empty($e['active']) ? 'confirmada' : 'consulta');
+    }
+    return $e;
 }
 function cb_agenda_listar(string $desde, string $hasta, array $u): array {
     cb_agenda_exigir($u);
@@ -314,7 +322,9 @@ function cb_agenda_correo_ejecutar(DateTimeImmutable $now,bool $simular=true,?ca
             if($simular){$result[$key]='simulacion';continue;}
             require_once __DIR__.'/lib.mail.php';
             $copies=cc_mail_ocultos(['to'=>$mail['to']]);
-            $allowed=[strtolower($cfg['email']),strtolower($mail['to'])];
+            // La copia oculta de Ajustes la fija el superadministrador: es el buzón del negocio y su copia es
+            // legítima (Luis, 25-sep). Cualquier otra copia sigue bloqueando el envío con revisar_copias.
+            $allowed=[strtolower($cfg['email']),strtolower($mail['to']),strtolower(function_exists('cb_ajuste_bcc')?cb_ajuste_bcc():'')];
             if(array_filter($copies,static fn($email)=>!in_array(strtolower($email),$allowed,true))){
                 $result[$key]='revisar_copias';continue;
             }

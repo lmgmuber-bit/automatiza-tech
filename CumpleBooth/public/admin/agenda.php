@@ -150,7 +150,8 @@ $group=[];foreach($events as $e){$group[$e['fecha']][]=$e;}
 <li>Términos: <strong><?= h(['accepted'=>'firmados','waived'=>'eximidos'][$ck['terminos']]??'pendientes') ?></strong></li>
 <li>Manual: <strong><?= $ck['manual']?'enviado':'sin envío registrado' ?></strong></li><li>Álbum: <strong><?= $ck['album']?'publicado':'pendiente' ?></strong></li>
 </ul><p>Abono: <?= $ck['cobro']['deposit_amount']===null?'sin registro':h(cb_format_clp($ck['cobro']['deposit_amount'])) ?> · Saldo: <?= $ck['cobro']['balance']===null?'por definir':h(cb_format_clp($ck['cobro']['balance'])) ?></p>
-<p class="agenda-ayuda">Referencia de la invitación: <?= h(($ck['referencia']['event_date']??'').' · '.($ck['referencia']['event_time']??'').' · '.($ck['referencia']['address']??'Sin dirección registrada')) ?>. Editar la logística aquí no cambia la invitación.</p>
+<?php $refInv=array_filter([$ck['referencia']['event_date']??'',$ck['referencia']['event_time']??'',$ck['referencia']['address']??''],static fn($v)=>(string)$v!==''); ?>
+<p class="agenda-ayuda">Referencia de la invitación: <?= h($refInv?implode(' · ',$refInv):'sin invitación registrada') ?>. Editar la logística aquí no cambia la invitación.</p>
 <?php endif; ?>
 </section>
 <?php elseif($error===''): ?>

@@ -13,7 +13,7 @@ Plan de implementación: `Docs/superpowers/plans/2026-09-23-flujo-propuestas-v3.
 2. **«Propuestas v3 · 1 Borrador»** (`7hglMG2j17HdOh6U`): GPT-4o redacta con la plantilla, precios «Por confirmar»,
    fotos descritas por rubro (ver abajo), asistente de demo; crea la fila en WordPress (`borrador`, `flujo='v3'`),
    vista previa **sin fotos** con sello Borrador y correo de marca a Luis. Gasto en fotos: cero.
-3. **Panel WordPress** (Propuestas › la propuesta › «Revisión v3»): Luis escribe precios y comentarios →
+3. **Panel WordPress** (Propuestas › la propuesta › pestaña «Revisión y precios»): Luis escribe precios y comentarios →
    **Pedir cambios** → «2 Cambios» (`25rjGcjDYPDECn6p`) aplica solo los comentarios (nunca toca precios: WordPress
    los restaura), rehace la vista previa y avisa. Se repite las veces que haga falta. Si falla, la propuesta
    queda en `error` con el motivo y llega un correo.
@@ -33,6 +33,56 @@ Estados: `borrador → ajustando|generando`, `ajustando → borrador|error`, `ge
 propuesta en `error` con el motivo. Si un flujo se cae igual (OpenAI caído, un JSON ilegible), el workflow
 «0 Avisar error» (`m7TOfKznVSBGz4Nd`, `settings.errorWorkflow` de los tres) le escribe a Luis. Una propuesta que
 haya quedado en `ajustando` o `generando` se destraba desde el panel (pasa a `error`, que es transición válida).
+
+## Panel de propuestas (wp-admin › Propuestas, EN PROD desde el 2026-09-24 15:48)
+
+Diseño: `Docs/superpowers/specs/2026-09-24-modulo-propuestas-admin-design.md`; plan:
+`Docs/superpowers/plans/2026-09-24-modulo-propuestas-admin.md`.
+
+- **Lista** (`WP_List_Table`): buscador por empresa, cliente, correo o teléfono; vistas por estado con su conteo
+  (Todas, Borrador, Enviadas, Pendiente, Error…); filtro de fechas Desde/Hasta; orden por columna; paginación con
+  «Opciones de pantalla» (5 a 200 por página).
+- **Borrar:** una sola con el enlace «Borrar» bajo el nombre de la empresa (siempre visible desde el 24-sep 22:30);
+  varias marcando las casillas → botón rojo «🗑️ Borrar marcadas», o «Acciones en lote» → «Borrar» → «Aplicar».
+  Todo pide confirmación. Buscar, Filtrar o Enter nunca borran. 🔴 El botón se llama `at_borrar_marcadas` a
+  propósito: `wp-admin/js/common.js` bloquea cualquier envío con `name="bulk_action"` si el menú de lote está en
+  «-1» (así falló la primera versión del botón en la prueba local).
+- **Ficha** en pestañas: Resumen (con «Siguiente paso»), Cliente y enlaces, Revisión y precios (solo v3), Contenido,
+  Seguimiento y Envío. En el celular las pestañas pasan a un selector.
+- **Guardar** es una barra fija, oculta en «Revisión y precios» (ahí guardan «Pedir cambios» y «Aprobar»). En las
+  propuestas viejas la casilla «Enviar correo» viene marcada como siempre: la barra lo avisa con el correo del
+  cliente y Guardar (o Enter) pide confirmar antes de mandarlo.
+- **Correo al cliente precargado (desde el 24-sep 22:30):** la pestaña Envío trae el asunto, la introducción,
+  «¿Qué incluye?» y el cierre ya escritos. Los redacta GPT-4o en «1 Borrador» desde la reunión (clave
+  `correo_cliente` dentro del contenido, sin montos, saludo ni firma) y «2 Cambios» los ajusta si los comentarios
+  cambian la solución, las fases o los próximos pasos. Si una propuesta no los trae, WordPress los arma desde su
+  contenido (`at_pa_correo_textos`). Lo que Luis edite se guarda con Guardar, salvo con la propuesta en
+  `ajustando` (lo avisa). Guardar sin tocarlos no congela el texto sugerido. Verificado en PROD con una propuesta
+  de prueba (fila 52, borrada después).
+- **PDF adjunto, en este orden:** el que Luis suba en «Cliente y enlaces» (plan B, siempre gana); el ya guardado en
+  WordPress; el de la presentación bajado del renderer (`/p/<id>/presentation.pdf`, solo https y solo ese host,
+  sin redirecciones) si pesa hasta 15 MB. Si no se puede, el correo sale con los botones y el aviso dice por qué.
+  Medido en local por SMTP real: el PDF de Orly (14,2 MB) da un correo de 18,6 MB, 98 MB de memoria y 4,6 s.
+  Un correo de ~19 MB puede rebotar en el servidor de algún cliente; el rebote llega a contacto@.
+- **Guardar** no envía dos veces (doble clic bloqueado) y deja 110 px a la derecha para la burbuja ARIA/MAXTECH
+  (mu-plugin de PROD `aria-widget-flotante.php`, fija abajo a la derecha en todo el admin).
+- **Página clásica** de respaldo: `…/wp-admin/admin.php?page=automatiza-proposals&clasico=1` (su ✏️ abre la ficha
+  nueva; para editar en la clásica, agregar `&edit_id=N`). Se retira en un PR posterior.
+- **Código:** `inc/propuestas-admin/` (`consultas.php` puras, probadas con `php tests/propuestas/admin-lista-test.php`;
+  `acciones.php`, `lista.php`, `ficha.php`, `clasico.php`) y `assets/css|js/propuestas-admin.*`. Solo se cargan en el
+  admin (`is_admin()`), nunca en el sitio ni en la API REST que usa n8n. `functions.php` no se tocó.
+- **Despliegue y rollback:** respaldos en `~/respaldos/` con marca `20260924-154847` (tema completo, tabla
+  `wp_automatiza_propuestas` con sus 19 filas y los dos archivos reemplazados). Rollback:
+  `cd ~ && tar xzf respaldos/propuestas-admin-antes-20260924-154847.tar.gz` (restaura `admin-proposals.php` y
+  `client-details-module.php`); con eso los archivos nuevos quedan sin uso porque PROD solo incluye
+  `inc/admin-proposals.php`. 🔴 En Hostinger `wp db export` sale con código 255 sin mensaje y sin archivo: la tabla
+  se respalda con un script PHP con `SHORTINIT` (`SHOW CREATE TABLE` + un `INSERT` por fila).
+- **Segunda subida (24-sep 22:30, correo precargado):** 6 archivos (`consultas.php`, `acciones.php`, `ficha.php`,
+  `lista.php`, CSS y JS). Respaldos con marca `20260924-222959`: tema completo y
+  `~/respaldos/propuestas-correo-antes-20260924-222959.tar.gz` (rollback: `cd ~ && tar xzf` de ese archivo).
+  n8n: «1 Borrador» y «2 Cambios» publicados con `deploy.py` después de comprobar que los vivos eran iguales al
+  repo; respaldo previo en `C:/Users/luis_/respaldos/n8n/2026-09-24-correo-precargado/` (rollback: volver a
+  publicar esos JSON).
 
 ## Fotos por rubro (regla de Luis, 2026-09-24)
 
@@ -78,9 +128,9 @@ errores publicados en n8n; Meet apuntando a `propuesta-v3-borrador`; WordPress c
 solo desde `lista` y desde el panel, `/prompts` 409 en v3, `/state` rechaza `sent`, botón Destrabar, Enter guarda,
 precios obligatorios para aprobar). Respaldo previo: `~/respaldos/propuestas-antes-14b-20260924-021846.tar.gz`.
 
-Pendiente, a propósito: el webhook del Borrador y `/render` todavía no piden clave. Lo primero exige editar el
-workflow de Meet (ver el aviso de arriba sobre reprocesar transcripciones); lo segundo, que Luis cargue una
-variable nueva en Easypanel.
+Pendiente de endurecimiento del flujo: detalle en la nota privada de la bóveda
+(`10-Projects/2026-09-24-Propuestas-v3-y-Panel-Admin.md`). Cualquier cambio al workflow de Meet exige antes leer el
+aviso de abajo sobre reprocesar transcripciones.
 
 - Workflows: `python N8N/propuestas-v3/build_N_*.py` genera el JSON y `python N8N/propuestas-v3/deploy.py N-*.json`
   lo publica (crea o actualiza por nombre, filtra por el host de AT; la clave no se imprime).

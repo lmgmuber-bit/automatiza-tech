@@ -29,6 +29,7 @@ PROMPT_REDACTAR = """Eres consultor senior de AutomatizaTech (Chile). Con la tra
  "pricing_rows": [{"service": "nombre del servicio o fase", "price_usd": 0, "price_label": "Por confirmar"}],
  "pricing_note": "",
  "next_steps": ["paso concreto acordado en la reunión"],
+ "correo_cliente": {"asunto": "máx. 12 palabras, con el nombre del negocio", "introduccion": "2 o 3 frases que retoman lo conversado en la reunión", "que_incluye": "2 o 3 frases con lo que trae la propuesta (servicios o fases), sin montos", "cierre": "1 o 2 frases con el siguiente paso acordado"},
  "image_briefs": [{"slide": "cover|challenge|solution|benefits|how_it_works|extra_1|extra_2|pricing|next_steps", "prompt": "descripción en inglés"}],
  "tono": "tu o usted",
  "resumen_para_luis": "3 a 5 líneas: qué pidió el cliente, presupuesto mencionado, dudas abiertas"
@@ -45,7 +46,8 @@ Reglas:
   · Si el producto del rubro lleva etiqueta o pantalla (botellas, latas, cajas, celulares, libros), muéstralo sin etiqueta, de espaldas, apagado o desenfocado, o muestra el producto en uso (un vaso servido en vez de la botella); escríbelo así en el prompt (por ejemplo "unlabeled bottle", "phone screen facing away").
   · Nunca pantallas con contenido, sitios web, gráficos, documentos, pizarras, letreros, carteles, marcadores, menús ni texto de ningún tipo.
   · Cada prompt termina con: "no signs, no labels, no text, no lettering, no logos, no watermarks".
-- No inventes datos del cliente (teléfonos, direcciones, precios, años) que no estén en la transcripción."""
+- No inventes datos del cliente (teléfonos, direcciones, precios, años) que no estén en la transcripción.
+- correo_cliente: es el correo con el que Luis enviará la propuesta al cliente. Mismo tratamiento (tú/usted) que la propuesta. Sin saludo ni firma (la plantilla ya pone «Estimado/a <nombre>,» y «Atentamente, El equipo de Automatiza Tech»). Sin montos. No menciones enlaces, botones ni adjuntos (la plantilla los agrega). Cálido y concreto, con algo propio de la reunión."""
 
 PROMPT_BOT = """Escribe el system prompt de un asistente virtual de demostración para este negocio, en español de Chile. Estructura: identidad (1 párrafo); TONO (tú o usted según el rubro, breve, sin emojis si el rubro es delicado); ATENCIÓN URGENTE (si aplica al rubro: primero empatía, luego el contacto directo del negocio); SERVICIOS; PRECIOS (solo los que aparezcan en la transcripción, con la aclaración de que un asesor confirma); REGLAS (no inventar datos; derivar a un humano cuando hay intención clara de contratar pidiendo nombre, teléfono y comuna). Usa solo datos que estén en la transcripción. Devuelve solo el texto del system prompt."""
 
@@ -67,6 +69,8 @@ if (prueba) d.company_name = `[PRUEBA] ${d.company_name}`;
 const resumen = d.resumen_para_luis || '';
 const phone = d.phone || '';
 delete d.resumen_para_luis; delete d.tono; delete d.phone;
+const cc = (d.correo_cliente && typeof d.correo_cliente === 'object') ? d.correo_cliente : {};
+d.correo_cliente = { asunto: String(cc.asunto || '').trim(), introduccion: String(cc.introduccion || '').trim(), que_incluye: String(cc.que_incluye || '').trim(), cierre: String(cc.cierre || '').trim() };
 return [{ json: {
   payload: d,
   resumen,

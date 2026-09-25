@@ -26,5 +26,22 @@ catch(Throwable $e){contenido_media_error(503);}
 $key=$piece['asset_key']??'';$path=cb_marketing_media_path($key);
 if($path===null||!is_file($path)){contenido_media_error(404);}
 $ext=pathinfo($key,PATHINFO_EXTENSION);$types=['jpg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','mp4'=>'video/mp4'];
+$size=(int)filesize($path);
 header('Content-Type: '.$types[$ext]);header('Content-Disposition: inline; filename="contenido.'.$ext.'"');
-header('Cache-Control: private, no-store');header('Content-Length: '.filesize($path));readfile($path);
+header('Cache-Control: private, no-store');header('Accept-Ranges: bytes');
+// Rangos (RFC 9110 §14): Safari e iOS no reproducen un MP4 si el servidor no contesta 206 a "bytes=0-1"
+// (Luis, 25-sep). Un solo rango; varios rangos o uno mal formado se sirven completos; fuera del archivo, 416.
+$range=(string)($_SERVER['HTTP_RANGE']??'');$start=0;$end=$size-1;$partial=false;
+if($range!==''&&preg_match('/^bytes=(\d*)-(\d*)$/D',$range,$m)&&($m[1]!==''||$m[2]!=='')){
+    if($m[1]===''){$start=max(0,$size-(int)$m[2]);}
+    else{$start=(int)$m[1];if($m[2]!==''){$end=min($end,(int)$m[2]);}}
+    if($start>$end||$start>=$size){http_response_code(416);header('Content-Range: bytes */'.$size);exit;}
+    $partial=true;
+}
+if($partial){http_response_code(206);header('Content-Range: bytes '.$start.'-'.$end.'/'.$size);}
+header('Content-Length: '.($end-$start+1));
+if(($_SERVER['REQUEST_METHOD']??'GET')==='HEAD'){exit;}
+$fh=fopen($path,'rb');if($fh===false){contenido_media_error(503);}
+fseek($fh,$start);$left=$end-$start+1;
+while($left>0&&!feof($fh)){$chunk=fread($fh,min(65536,$left));if($chunk===false||$chunk===''){break;}echo $chunk;$left-=strlen($chunk);}
+fclose($fh);

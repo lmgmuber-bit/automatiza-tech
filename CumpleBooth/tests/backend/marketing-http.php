@@ -23,8 +23,8 @@ for($i=0;$i<50;$i++){$s=@fsockopen('127.0.0.1',(int)parse_url($base,PHP_URL_PORT
 class MarketingBrowser{
     private array $cookies=[];
     public function __construct(private string $base){}
-    public function request(string $method,string $path,?array $data=null,?array $file=null):array{
-        $headers=[];$body=$data===null?'':http_build_query($data);
+    public function request(string $method,string $path,?array $data=null,?array $file=null,array $extra=[]):array{
+        $headers=$extra;$body=$data===null?'':http_build_query($data);
         if($file!==null){
             $boundary='cc'.bin2hex(random_bytes(12));$body='';
             foreach($data??[]as$k=>$v){$body.="--$boundary\r\nContent-Disposition: form-data; name=\"$k\"\r\n\r\n$v\r\n";}
@@ -74,6 +74,15 @@ $p=cb_marketing_obtener($id);mh(str_ends_with($p['asset_key'],'.png'),'extensió
 $r=$admin->request('GET','/admin/contenido-media.php?id='.$id);
 mh($r['status']===200&&$r['body']===$png&&str_contains($r['headers']['content-type']??'','image/png'),'media con sesión entrega bytes correctos');
 mh(str_contains($r['headers']['cache-control']??'','private')&&str_contains($r['headers']['content-disposition']??'','inline'),'cabeceras privadas e inline');
+mh(($r['headers']['accept-ranges']??'')==='bytes','media anuncia rangos (Safari/iOS los exige para reproducir MP4)');
+$r=$admin->request('GET','/admin/contenido-media.php?id='.$id,null,null,['Range: bytes=0-3']);
+mh($r['status']===206&&$r['body']===substr($png,0,4)&&($r['headers']['content-range']??'')==='bytes 0-3/'.strlen($png)&&($r['headers']['content-length']??'')==='4','rango inicial responde 206 con los bytes justos');
+$r=$admin->request('GET','/admin/contenido-media.php?id='.$id,null,null,['Range: bytes='.(strlen($png)-2).'-']);
+mh($r['status']===206&&$r['body']===substr($png,-2)&&($r['headers']['content-range']??'')==='bytes '.(strlen($png)-2).'-'.(strlen($png)-1).'/'.strlen($png),'rango abierto llega hasta el final');
+$r=$admin->request('GET','/admin/contenido-media.php?id='.$id,null,null,['Range: bytes=999999-']);
+mh($r['status']===416&&($r['headers']['content-range']??'')==='bytes */'.strlen($png),'rango fuera del archivo responde 416');
+$r=$admin->request('GET','/admin/contenido-media.php?id='.$id,null,null,['Range: bytes=0-1,4-5']);
+mh($r['status']===200&&$r['body']===$png,'varios rangos se sirven completos');
 $anon=new MarketingBrowser($base);$r=$anon->request('GET','/admin/contenido-media.php?id='.$id);mh($r['status']===403,'media sin sesión403');
 $r=$anon->request('GET','/admin/contenido.php');mh($r['status']===302,'página sin sesión al login');
 $op=new MarketingBrowser($base);$r=$op->request('GET','/admin/login.php');

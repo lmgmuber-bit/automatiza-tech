@@ -3794,3 +3794,10 @@ en la siguiente parte. Mantener un único PR del ticket abierto mientras se comp
 anchos 320, 360, 390, 768, 1024 y 1440 px; calendario, ficha y lista/semana sin desbordamiento ni
 errores JavaScript. Ajustado el ancho del selector de archivos en la ficha de Contenido.
 Regresión tras el ajuste: HTTP 36 comprobaciones y lint de contenido.php correctos.
+
+**Ajuste de Claude en la revisión (2026-09-25, pedido de Luis; misma rama):**
+- `admin/contenido-media.php` responde rangos (`Accept-Ranges: bytes`, `206` con `Content-Range`, `416` fuera del
+  archivo, varios rangos → completo, `HEAD` sin cuerpo) y envía el archivo por trozos de 64 KB en vez de `readfile`.
+  Safari e iOS no reproducen un MP4 si el servidor no contesta `206` a `bytes=0-1`; el resto del comportamiento
+  (sesión super obligatoria, `private, no-store`, inline) no cambia.
+- Pruebas: `marketing-http.php` 41 (antes 36): rango inicial, rango abierto, rango fuera del archivo y varios rangos.

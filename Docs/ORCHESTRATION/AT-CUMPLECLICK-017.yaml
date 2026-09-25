@@ -3,7 +3,8 @@ title: "Estrategia de marketing de 30 días para @Cumple_Click + módulo Conteni
 origin: direct_luis
 portfolio: "client:cumpleclick"
 priority: P1
-status: READY
+status: IN_PROGRESS
+status_note: "backend EN PROD 2026-09-25 00:48 (PR #44 mergeado); falta estrategia de 30 días y assets"
 created_at: "2026-09-24"
 created_by: claude
 

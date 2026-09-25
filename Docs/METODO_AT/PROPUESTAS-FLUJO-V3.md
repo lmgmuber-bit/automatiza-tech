@@ -128,9 +128,18 @@ errores publicados en n8n; Meet apuntando a `propuesta-v3-borrador`; WordPress c
 solo desde `lista` y desde el panel, `/prompts` 409 en v3, `/state` rechaza `sent`, botón Destrabar, Enter guarda,
 precios obligatorios para aprobar). Respaldo previo: `~/respaldos/propuestas-antes-14b-20260924-021846.tar.gz`.
 
-Pendiente de endurecimiento del flujo: detalle en la nota privada de la bóveda
-(`10-Projects/2026-09-24-Propuestas-v3-y-Panel-Admin.md`). Cualquier cambio al workflow de Meet exige antes leer el
-aviso de abajo sobre reprocesar transcripciones.
+**Claves de las entradas del flujo (desde el 2026-09-25):**
+- `POST /render` del renderer exige la cabecera `X-AT-Render-Key` (variable `RENDER_KEY` en Easypanel). En n8n la
+  manda la credencial «X-AT-Render-Key» de los nodos «Vista previa (sin fotos)», «Vista previa» y «Render final».
+  Sin clave responde 401; `/health` y las presentaciones (`/p/…`) siguen públicas.
+- El webhook de «1 Borrador» exige la cabecera `X-AT-Borrador-Key` (credencial «X-AT-Borrador-Key»), que manda el
+  nodo «Enviar a Workflow Propuestas» del flujo de Meet. Sin clave responde 403 y no crea ejecución.
+- Para cambiar una clave: editar el «Value» de la credencial en n8n y, en el caso del renderer, poner el mismo valor
+  en `RENDER_KEY` y redesplegar. El campo «Name» de la credencial es el nombre de la cabecera: debe ser
+  exactamente `X-AT-Render-Key` o `X-AT-Borrador-Key` (con otro texto, n8n falla con «Header name must be a valid
+  HTTP token»).
+
+Cualquier cambio al workflow de Meet exige antes leer el aviso de abajo sobre reprocesar transcripciones.
 
 - Workflows: `python N8N/propuestas-v3/build_N_*.py` genera el JSON y `python N8N/propuestas-v3/deploy.py N-*.json`
   lo publica (crea o actualiza por nombre, filtra por el host de AT; la clave no se imprime).
@@ -144,3 +153,6 @@ aviso de abajo sobre reprocesar transcripciones.
   repetirá el borrador.
 - Meet: para volver al flujo viejo, la URL del nodo «Enviar a Workflow Propuestas» vuelve a
   `https://n8n-n8n.kchiba.easypanel.host/webhook/generar-propuesta-v2` (`APuTGmusbjLAJ74w`, queda de respaldo).
+  Desde el 2026-09-25 ese flujo está **desactivado**: para usarlo hay que activarlo y ponerle a su nodo
+  «Renderizar Propuesta» la credencial «X-AT-Render-Key», o su `/render` responderá 401.
+- Las transcripciones ya procesadas van a Drive › «Transcripciones procesadas» (fuera de la carpeta que vigila Meet).

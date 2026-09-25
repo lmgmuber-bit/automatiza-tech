@@ -13,10 +13,17 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "propuesta-v3-borrador",
+        "authentication": "headerAuth",
         "responseMode": "onReceived",
         "options": {}
       },
-      "webhookId": "propuesta-v3-borrador"
+      "webhookId": "propuesta-v3-borrador",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "HQ3y7F1f5InsCjkV",
+          "name": "X-AT-Borrador-Key"
+        }
+      }
     },
     {
       "id": "b2",
@@ -139,6 +146,8 @@
       "parameters": {
         "method": "POST",
         "url": "https://n8n-propuesta-renderer.kchiba.easypanel.host/render",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify(Object.assign({}, $('Armar payload').item.json.payload, { unique_id: $('Crear en WordPress').item.json.unique_id, draft: true, image_briefs: [] })) }}",
@@ -146,7 +155,13 @@
           "timeout": 120000
         }
       },
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fj2orzbsjlnHaiLd",
+          "name": "X-AT-Render-Key"
+        }
+      }
     },
     {
       "id": "b6b",

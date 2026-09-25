@@ -13,6 +13,7 @@ from correos import correo_final
 
 CRED_SMTP = {'smtp': {'id': 'dyhVFWmjRNC45ccA', 'name': 'SMTP account PROD'}}
 CRED_WP = {'httpHeaderAuth': {'id': '1NI0sJKc0kC430pb', 'name': 'AT REST Secret (header)'}}
+CRED_RENDER = {'httpHeaderAuth': {'id': 'fj2orzbsjlnHaiLd', 'name': 'X-AT-Render-Key'}}  # clave de /render del renderer
 WP = 'https://automatizatech.cl/?rest_route=/automatiza-tech/v1'
 RENDERER = 'https://n8n-propuesta-renderer.kchiba.easypanel.host/render'
 CHAT = 'https://n8n-n8n.kchiba.easypanel.host/webhook/demo-dinamico/chat'
@@ -125,10 +126,11 @@ nodes = [
     # Render final: aquí SÍ se piden las fotos (image_briefs del payload). El renderer se da ~210 s para fotos + render;
     # si faltan fotos, «¿Reintentar render?» vuelve a llamarlo (hasta MAX_RENDERS) y el renderer reutiliza las ya guardadas.
     node('f4', 'Render final', 'n8n-nodes-base.httpRequest', 4.2, [660, -120],
-         {'method': 'POST', 'url': RENDERER, 'sendBody': True, 'specifyBody': 'json',
+         {'method': 'POST', 'url': RENDERER, 'authentication': 'genericCredentialType', 'genericAuthType': 'httpHeaderAuth',
+          'sendBody': True, 'specifyBody': 'json',
           'jsonBody': "={{ JSON.stringify(Object.assign({}, $json.payload, { unique_id: $json.unique_id, draft: false })) }}",
           'options': {'timeout': 290000}},
-         onError='continueRegularOutput'),
+         onError='continueRegularOutput', credentials=CRED_RENDER),
     node('f4b', '¿Reintentar render?', 'n8n-nodes-base.code', 2, [770, -300], {'jsCode': CODE_REINTENTAR}),
     iff('f4c', '¿Faltan fotos?', [880, -300], '={{ $json.reintentar }}'),
     http('f5', 'Ver presentación', [880, -120], 'GET',

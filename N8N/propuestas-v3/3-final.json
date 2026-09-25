@@ -115,6 +115,8 @@
       "parameters": {
         "method": "POST",
         "url": "https://n8n-propuesta-renderer.kchiba.easypanel.host/render",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify(Object.assign({}, $json.payload, { unique_id: $json.unique_id, draft: false })) }}",
@@ -122,7 +124,13 @@
           "timeout": 290000
         }
       },
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fj2orzbsjlnHaiLd",
+          "name": "X-AT-Render-Key"
+        }
+      }
     },
     {
       "id": "f4b",

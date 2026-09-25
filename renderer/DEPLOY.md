@@ -69,6 +69,9 @@ costó reconstruir el contexto: leer esto entero antes de tocar el servicio.
   suelta él.
 - Variables de entorno (pestaña Environment): `PORT=3000`,
   `PUBLIC_DIR=/app/public`, `BASE_URL`, `HF_API_KEY_ID`, `HF_API_KEY_SECRET`.
+- `RENDER_KEY` (desde el 2026-09-25): con valor, `POST /render` exige la cabecera `X-AT-Render-Key` con ese
+  mismo valor (401 si falta o no calza); sin valor, queda abierto. En n8n la manda la credencial «X-AT-Render-Key»
+  de los nodos que llaman a `/render`. Si se cambia, cambiarla en los dos lados. `/health` y `/p/` no la piden.
   Después de cambiarlas hay que pulsar Deploy para que el contenedor las tome.
 - Rollback: subir el zip del commit anterior por el mismo camino.
 

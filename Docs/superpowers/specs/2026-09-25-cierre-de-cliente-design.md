@@ -17,7 +17,7 @@ Hoy el cliente dice que sí por WhatsApp o en una llamada y el sistema no se ent
 
 ## 2. Decisiones de Luis
 
-1. La propuesta se responde en el sitio de AT: botón en el correo de la propuesta y un botón «Pedir respuesta» en el panel, que manda correo y WhatsApp con el enlace.
+1. La propuesta se responde en el sitio de AT. El correo de la propuesta le pide al cliente, en forma explícita, que la acepte (botón «Aceptar la propuesta»), y un botón «Pedir respuesta» en el panel manda correo y WhatsApp con el mismo enlace.
 2. La página de respuesta ofrece tres salidas: aceptar, seguir evaluando y rechazar.
 3. Al aceptar, el prospecto pasa solo a cliente y le llega el correo de bienvenida. «Convertir a Cliente» queda como respaldo manual.
 4. El contrato de servicio cubre solo lo que el cliente acepta que parte (normalmente la primera fase). Las fases siguientes van como anexo cuando parten.
@@ -28,7 +28,7 @@ Hoy el cliente dice que sí por WhatsApp o en una llamada y el sistema no se ent
 ## 3. Recorrido
 
 ```
-Propuesta enviada ──► Correo con «Ver y responder la propuesta»
+Propuesta enviada ──► Correo que pide aceptarla: botón «✅ Aceptar la propuesta»
         │
         └── o Luis aprieta «Pedir respuesta» ──► correo + WhatsApp con el mismo enlace
                                   │
@@ -136,9 +136,14 @@ En la configuración de facturación (`invoice-settings.php`), junto a los datos
 
 **«Pedir respuesta» y el correo de la propuesta**
 
-- El correo de la propuesta (`propuestas-admin/acciones.php`) suma el botón «Ver y responder la propuesta», que lleva a la página de respuesta.
+- **El correo de la propuesta pide la aceptación en forma explícita** (pedido de Luis, 25-sep). En `propuestas-admin/acciones.php`, después de los botones de la presentación y la demo, va un bloque destacado con:
+  - el texto «Si estás de acuerdo con la propuesta, acéptala aquí. Con tu aceptación te enviamos el contrato y los primeros pasos para partir»;
+  - un botón principal «✅ Aceptar la propuesta», que abre la página de respuesta con el formulario de aceptación ya desplegado (`ver-presentacion.php?id=<código>&responder=aceptar`);
+  - un enlace secundario «¿Tienes dudas o necesitas más tiempo? Cuéntanos aquí», que abre la misma página en «La sigo evaluando».
+  
+  El botón del correo no acepta por sí solo: los filtros de correo abren los enlaces sin que nadie los toque. La aceptación se confirma en la página, con nombre, RUT y la casilla, en un clic más.
 - En la pestaña Envío de la ficha, el botón nuevo «Pedir respuesta»:
-  - manda un correo corto con el enlace;
+  - manda un correo corto con el mismo bloque «Aceptar la propuesta»;
   - ofrece «Enviar por mi WhatsApp» (`wa.me` con el mensaje y el enlace ya escritos, desde el teléfono de Luis);
   - deja el envío en Seguimiento.
 - Disponible para propuestas en `sent`, `evaluando` o `rechazada` que tengan correo o teléfono.

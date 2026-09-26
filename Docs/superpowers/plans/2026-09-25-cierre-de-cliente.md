@@ -1666,6 +1666,104 @@ git commit -m "feat(contratos): plantilla de servicios, revisión obligatoria an
 
 ---
 
+### Task 5b: Contrato según el tipo de cliente (persona natural o empresa) y correcciones de la revisión de la Task 5
+
+Aprobado por Luis el 26-sep. Corre DESPUÉS de la Task 6. Parte de lo que dejó la Task 5 (`contracts/contract-service.php`, `contracts/at-sign-contract.php`, `Docs/CONTRATO_SERVICIO_DESARROLLO.md`, `tests/cierre/plantilla-test.php`, `tests/cierre/contrato-wp-test.php`) y de `inc/cierre-cliente/puras.php` (Task 1).
+
+**Por qué:** la plantilla asumía que el cliente siempre es una empresa («razón social …, representada por …»). Si el contrato va a nombre de una persona, quedaba «Julio Chirinos, representada por Julio Chirinos» o a nombre de una marca que no es persona jurídica. Además la revisión de la Task 5 encontró tres defectos que Luis aprobó corregir.
+
+**Files:**
+- Modify: `contracts/contract-service.php` (CRLF), `contracts/at-sign-contract.php` (CRLF), `Docs/CONTRATO_SERVICIO_DESARROLLO.md`, `wp-content/themes/automatiza-tech/inc/cierre-cliente/puras.php`
+- Test: `tests/cierre/plantilla-test.php`, `tests/cierre/contrato-wp-test.php`, `tests/cierre/puras-test.php`
+
+**Interfaces que produce (las usa la Task 7):**
+- `ContractService::comparecencia_cliente(array $ph): string` — párrafo del cliente en «Comparecientes», derivado de los marcadores; nunca se guarda: se calcula al generar el PDF.
+- `ContractService::faltantes($c): array` — etiquetas de los datos esenciales que faltan (o son inválidos) para firmar un contrato de servicios; `[]` si está completo o si no es de servicios.
+- `ContractService::actualizar_datos_cliente($contract_id, array $datos)` — guarda los datos que el cliente da después de aceptar (`tipo_cliente`, `razon_social_cliente`, `rut_cliente`, `domicilio_cliente`); contrato actualizado o `WP_Error`.
+- Marcador nuevo `tipo_cliente`: `'persona'` | `'empresa'` | ausente (sin elegir).
+
+---
+
+#### 1. Limpieza del texto de la revisión (defecto: «50%de» salía «50 anticipo», «<24 horas» salía con entidades)
+
+- `at-sign-contract.php` deja de pasar los campos por `sanitize_textarea_field` / `sanitize_text_field`: entrega `wp_unslash($_POST[...])` tal cual a `guardar_revision()`.
+- La limpieza vive en `ContractService` (un método privado usado por `guardar_revision()` y `actualizar_datos_cliente()`): `str_replace("\0", '', ...)`, `wp_check_invalid_utf8(...)`, fines de línea `\r\n`/`\r` → `\n`, `trim`. Nada de `strip_tags`, entidades ni quitar `%`. El destino es el PDF; donde se muestre en HTML se escapa al imprimir (la página ya usa `esc_attr`/`esc_textarea`: confírmalo).
+- Prueba (contrato-wp-test.php): guardar `plazo` = `Respuesta en <24 horas, "comillas" y 'simples'; 50%de anticipo` y comprobar que el marcador guardado es **idéntico**.
+
+#### 2. Tipo de cliente y párrafo del cliente según el tipo
+
+- En la plantilla, el párrafo que hoy empieza con `**{{razon_social_cliente}}** (en adelante "**EL CLIENTE**"), RUT …` (sección «Comparecientes», después de `**Y POR LA OTRA:**`) se reemplaza por una sola línea: `{{comparecencia_cliente}}`.
+- `ContractService::comparecencia_cliente(array $ph)` arma el texto (los valores vacíos se muestran como `_______`, igual que el resto del PDF; negritas con `**` como el resto de la plantilla):
+  - `empresa`:
+    `**{razon_social_cliente}** (en adelante "**EL CLIENTE**"), RUT **{rut_cliente}**, representada por **{representante_cliente_nombre}**, RUT **{representante_cliente_rut}**, correo {email_cliente}, teléfono {telefono_cliente}, con domicilio en {domicilio_cliente}.`
+  - `persona`:
+    `**{razon_social_cliente}** (en adelante "**EL CLIENTE**"), RUT **{rut_cliente}**, correo {email_cliente}, teléfono {telefono_cliente}, con domicilio en {domicilio_cliente}, para su proyecto «{nombre_proyecto}».`
+    La frase `, para su proyecto «{nombre_proyecto}»` va solo si `nombre_proyecto` no está vacío y es distinto (sin mayúsculas ni espacios de más) de `razon_social_cliente`; si no, el párrafo termina en `…con domicilio en {domicilio_cliente}.`
+  - sin elegir (no hay `tipo_cliente`): el formato de `persona` **sin** la frase del proyecto (borrador neutro; la firma igual queda bloqueada hasta elegir).
+- Donde se reemplazan los `{{marcadores}}` al generar el PDF, `{{comparecencia_cliente}}` se calcula con este método a partir de los marcadores del contrato. No se guarda en la base.
+- **Persona natural = sus datos de la aceptación.** Método privado usado por `guardar_revision()` y `actualizar_datos_cliente()`: si `tipo_cliente` es `persona` y `razon_social_cliente` está vacío, toma `representante_cliente_nombre`; si `rut_cliente` está vacío, toma `representante_cliente_rut` (quien aceptó es el cliente).
+- `campos_revision()` agrega, en este orden al principio: `'tipo_cliente' => ['Tipo de cliente', 'tipo']`; y después de `domicilio_cliente`: `'representante_cliente_nombre' => ['Representante (solo si es empresa)', 'linea']`, `'representante_cliente_rut' => ['RUT del representante (solo si es empresa)', 'linea']`. Al final: `'fases_siguientes' => ['Fases siguientes (una por línea, empezando con «- »)', 'texto']`.
+- `at-sign-contract.php` dibuja el tipo `'tipo'` como un `<select>` con «— Elegir —» (valor vacío), «Persona natural (a su nombre)» (`persona`) y «Empresa o persona jurídica» (`empresa`). `guardar_revision()` solo acepta `persona`, `empresa` o vacío para `tipo_cliente`.
+- `at_cc_marcadores_servicios()` (puras.php) acepta la clave opcional `tipo_cliente` en `$d` y la pasa al marcador si es `persona` o `empresa`; agregar `'tipo_cliente'` a `at_cc_claves_contrato_servicios()`. Sin tipo, todo sigue como hoy.
+
+#### 3. No se firma con datos en blanco
+
+- `ContractService::faltantes($c)`: solo para `type === 'servicios'`. Siempre exige `tipo_cliente` («Tipo de cliente»). Luego:
+  - `persona`: `razon_social_cliente` («Nombre completo del cliente»), `rut_cliente` («RUT del cliente»), `domicilio_cliente`, `monto_total`, `forma_pago`.
+  - `empresa`: `razon_social_cliente` («Razón social»), `rut_cliente` («RUT de la empresa»), `representante_cliente_nombre`, `representante_cliente_rut`, `domicilio_cliente`, `monto_total`, `forma_pago`.
+  - Un RUT presente pero inválido cuenta como faltante con la etiqueta «RUT … (no es válido)»; se valida con `at_cc_rut_valido()` si existe (`function_exists`), si no, basta con que no esté vacío.
+  - Las etiquetas salen de `campos_revision()` salvo las nombradas arriba.
+- `sign_as_at()`: después del chequeo de revisión existente, si `faltantes($c)` no está vacío devuelve `WP_Error('faltan_datos', 'Antes de firmar completa: ' . implode(', ', $faltantes) . '.')`.
+- `at-sign-contract.php`: cuando la revisión ya está guardada pero hay faltantes, muestra ese mismo mensaje en un aviso visible (lista de lo que falta) y **no** muestra el bloque de firma, igual que hoy cuando falta la revisión.
+
+#### 4. Cláusula 14.1 (texto aprobado por Luis)
+
+En la plantilla, reemplazar `14.1. La propuesta incluye además las siguientes fases, con precios referenciales que se confirman al iniciar cada una:` por:
+`14.1. Fases siguientes de la propuesta (precios referenciales que se confirman al iniciar cada una):`
+
+#### 5. Nota para el abogado (no sale en el PDF)
+
+Antes de `## Comparecientes` (el PDF se genera desde el primer `##`, así que esto no se imprime), agregar una cita:
+`> Nota para la revisión legal: si EL CLIENTE es persona natural, revisar la aplicación de la Ley 19.496 (y de la Ley 20.416 para micro y pequeñas empresas) sobre las cláusulas de responsabilidad, término anticipado, domicilio y jurisdicción.`
+
+#### 6. Datos que da el cliente después de aceptar (lo usa la Task 7)
+
+`ContractService::actualizar_datos_cliente($contract_id, array $datos)`:
+- Solo contratos `servicios` en `draft` o `at_pending` **y sin revisión de AT guardada** (si ya hay `revision_at`, devuelve `WP_Error('ya_revisado', ...)`: Luis ya lo ajustó y manda lo suyo).
+- Acepta solo `tipo_cliente` (`persona`|`empresa`), `razon_social_cliente`, `rut_cliente`, `domicilio_cliente`; ignora el resto. Limpia como en el punto 1; aplica «persona natural = sus datos de la aceptación».
+- No marca `revision_at`. Guarda y regenera el PDF (mismo camino que `guardar_revision`).
+
+#### 7. Línea en la bienvenida
+
+En `at_cc_bienvenida_html()` (puras.php), cuando `con_propuesta` es verdadero, agregar un párrafo antes del cierre del correo con este texto exacto:
+«Para preparar tu contrato necesitamos saber a nombre de quién va (tú o tu empresa), el RUT y la dirección. Si ya los completaste en la página de la propuesta, no tienes que hacer nada; si no, respóndenos este correo con esos datos.»
+Prueba en `puras-test.php`: aparece con `con_propuesta` y no aparece sin propuesta.
+
+---
+
+#### Pruebas (TDD: primero fallan, después pasan)
+
+- `plantilla-test.php`: `comparecencia_cliente` es un marcador **derivado** permitido (lista `$derivados`, igual que `$empresa`); en los obligatorios, `comparecencia_cliente` reemplaza a `razon_social_cliente`, `representante_cliente_nombre` y `representante_cliente_rut`; la plantilla ya no contiene «representada por **{{»; contiene «14.1. Fases siguientes de la propuesta»; la nota legal está **antes** del primer `##`.
+- `contrato-wp-test.php` (ajustar la prueba existente, sin debilitarla):
+  - comparecencia `empresa` con todos los datos: contiene «representada por»; `persona` con `nombre_proyecto` distinto: no contiene «representada por» y termina con «para su proyecto «…».»; `persona` con `nombre_proyecto` igual al nombre: sin la frase; sin tipo: sin «representada por» ni proyecto; vacíos como `_______`.
+  - `faltantes()`: sin tipo → incluye «Tipo de cliente»; persona completa → `[]`; empresa sin representante → lo lista; RUT inválido → lo lista; contrato `soporte` → `[]`.
+  - `sign_as_at()` con revisión guardada pero faltantes → `WP_Error('faltan_datos')`; completando los datos → firma (`at_signed`). La prueba existente «con revisión se firma» ahora completa tipo y datos esenciales antes de firmar; se conserva la aserción de que vaciar un campo lo borra.
+  - persona natural toma nombre y RUT del representante si vienen vacíos.
+  - limpieza: el texto con `<`, comillas y `%xx` se guarda idéntico.
+  - `actualizar_datos_cliente()`: guarda tipo/razón/RUT/domicilio sin marcar revisión; ignora claves ajenas; con revisión ya guardada → `WP_Error('ya_revisado')`; firmado → error.
+  - el PDF regenerado contiene el párrafo del tipo elegido (extraer el texto del PDF como ya hace la prueba, o comprobar el texto que se pasa al generador).
+- `puras-test.php`: `tipo_cliente` pasa al marcador; la línea nueva de la bienvenida.
+- Correr: `plantilla-test.php`, `puras-test.php`, `contrato-wp-test.php`, `clientes-wp-test.php`, `cierre-wp-test.php` (Task 6), todas en `TODO OK`.
+
+#### Commit
+
+```bash
+git add contracts/contract-service.php contracts/at-sign-contract.php Docs/CONTRATO_SERVICIO_DESARROLLO.md wp-content/themes/automatiza-tech/inc/cierre-cliente/puras.php tests/cierre/plantilla-test.php tests/cierre/contrato-wp-test.php tests/cierre/puras-test.php
+git commit -m "feat(cierre): contrato a nombre de persona natural o empresa, sin firma con datos en blanco" -m "Co-Authored-By: <modelo> <noreply@anthropic.com>"
+```
+
+---
+
 ### Task 6: Cierre automático al aceptar (`contrato.php`, `ajustes.php`, `bienvenida.php`, `respuesta.php`)
 
 **Files:**
@@ -2280,6 +2378,55 @@ git commit -m "feat(cierre): al aceptar pasa a cliente, recibe la bienvenida y s
 
 ---
 
+#### Ajuste del controlador (hallazgo de la revisión de la Task 4) — forma parte de esta tarea
+
+El CRM llama a `_enviar_correo_bienvenida()` también cuando se crea un **prospecto** con la casilla «Enviar correo de bienvenida» marcada (formulario «Nuevo Cliente / Prospecto» de `crm-ai-completo.php`). Desde la Task 4 esa función delega en `at_cc_enviar_bienvenida()`, así que, sin este ajuste, un prospecto recibiría la bienvenida de cliente (anticipo, datos de transferencia, reunión de inicio). La bienvenida nueva es solo para clientes.
+
+1. En `at_cc_enviar_bienvenida()` (bienvenida.php), la consulta pasa a leer también `tipo`, y la función devuelve `false` sin enviar nada si el registro no es cliente:
+
+```php
+	$c = $wpdb->get_row($wpdb->prepare("SELECT id, nombre, email, empresa, tipo FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $crm_id));
+	if (!$c || !is_email((string) $c->email) || (string) $c->tipo !== 'cliente') {
+		return false;
+	}
+```
+
+   (Reemplaza las dos primeras sentencias de la función que trae el código de arriba. En el cierre automático no cambia nada: `at_cc_asegurar_cliente()` deja el registro como `cliente` antes de llamar a la bienvenida.)
+
+2. En `wp-content/mu-plugins/crm-ai-completo.php` (archivo CRLF: mide CR y LF antes y después con PHP), en `_enviar_correo_bienvenida()`, reemplazar el bloque que dejó la Task 4:
+
+```php
+        if (function_exists('at_cc_enviar_bienvenida')) {
+            at_cc_enviar_bienvenida((int) $cliente_id);
+            return;
+        }
+```
+
+   por:
+
+```php
+        // Solo clientes: si es prospecto (o no se pudo enviar), sigue la bienvenida de siempre.
+        if (function_exists('at_cc_enviar_bienvenida') && at_cc_enviar_bienvenida((int) $cliente_id)) {
+            return;
+        }
+```
+
+   Confirma con `grep -cF` que `at_cc_enviar_bienvenida((int) $cliente_id);` aparece una sola vez antes de editar.
+
+3. En `tests/cierre/cierre-wp-test.php`, antes del `fin();` final, agregar (usa el `$correos` que ya captura la prueba):
+
+```php
+$antes = count($correos);
+$wpdb->insert($wpdb->prefix . 'crm_clientes', ['nombre' => 'Prospecto Prueba', 'email' => 'prueba-cierre-prospecto@example.com', 'tipo' => 'prospecto']);
+$prospecto = (int) $wpdb->insert_id;
+ok(at_cc_enviar_bienvenida($prospecto) === false && count($correos) === $antes, 'un prospecto no recibe la bienvenida de cliente');
+$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $prospecto));
+```
+
+4. Agregar `wp-content/mu-plugins/crm-ai-completo.php` al `git add` del commit de esta tarea.
+
+---
+
 ### Task 7: Página pública de respuesta (`pagina.php`, `ver-presentacion.php`)
 
 **Files:**
@@ -2525,6 +2672,40 @@ nocache_headers();
 git add wp-content/themes/automatiza-tech/inc/cierre-cliente/pagina.php wp-content/themes/automatiza-tech/inc/cierre-cliente/cargar.php ver-presentacion.php
 git commit -m "feat(cierre): el cliente acepta, evalúa o rechaza desde la página de la propuesta" -m "Co-Authored-By: <modelo> <noreply@anthropic.com>"
 ```
+
+---
+
+#### Ajuste del controlador (aprobado por Luis el 26-sep) — forma parte de esta tarea: «Datos para tu contrato»
+
+Justo después de aceptar, la página ofrece un formulario **opcional** para saber a nombre de quién va el contrato. Aceptar sigue pidiendo solo nombre, RUT y la casilla. Usa lo que dejó la Task 5b: `ContractService::actualizar_datos_cliente($contract_id, $datos)` (guarda `tipo_cliente`, `razon_social_cliente`, `rut_cliente`, `domicilio_cliente` sin marcar la revisión; `WP_Error('ya_revisado')` si Luis ya revisó; si el tipo es `persona`, toma solos el nombre y el RUT de quien aceptó) y `at_cc_contrato_de_propuesta(int $propuesta_id): ?object` (Task 6). Si la clase `ContractService` no está cargada, `require_once ABSPATH . 'contracts/contract-service.php';`.
+
+1. **Función testeable** en `pagina.php`: `at_cc_guardar_datos_contrato(object $p, array $post): string` devuelve una clave de mensaje:
+   - La propuesta debe estar `aceptada` y tener contrato (`at_cc_contrato_de_propuesta`); si no → `'recibida'`.
+   - `tipo` = `persona` | `empresa` (otro valor → `'datos_contrato'`). `direccion` obligatoria (recortada, máx. 300). Si `empresa`: `razon_social` obligatoria (máx. 200) y `rut_empresa` válido con `at_cc_rut_valido()` y guardado con `at_cc_rut_formato()`; si falta algo → `'datos_contrato'`.
+   - Llama a `ContractService::actualizar_datos_cliente($c->id, ['tipo_cliente' => $tipo, 'domicilio_cliente' => $direccion] + (empresa ? ['razon_social_cliente' => $razon, 'rut_cliente' => $rut] : []))`.
+   - Ficha operativa (`wp_automatiza_tech_clients`, fila `id = $c->client_id`): completa **solo los campos vacíos**: `billing_address` = dirección; `tax_id` = RUT de la empresa, o, si es persona, el RUT de quien aceptó (marcador `representante_cliente_rut` del contrato); `company` = razón social solo si es empresa. `$wpdb->update` con formatos.
+   - Siempre anota en Seguimiento con `at_cc_anotar_simple($p, 'respuesta_cliente', 'Datos para el contrato', <tipo, razón social, RUT y dirección en líneas>)`, se hayan aplicado o no.
+   - Devuelve `'datos_ok'` si se guardó en el contrato, o `'datos_recibidos'` si el contrato ya tenía la revisión de Luis (`ya_revisado`).
+2. **Acción pública** `admin-post.php?action=at_cc_datos_contrato` (con `nopriv`), mismo patrón que `at_cc_procesar_respuesta_publica`: solo POST, trampa `sitio_web` → `'recibida'`, nonce de la acción `at_cc_datos_contrato_<codigo>` → `'vencida'`, `at_cc_limite_ip_ok('datos_contrato', 10, HOUR_IN_SECONDS)` → `'limite'`; luego `at_cc_guardar_datos_contrato()` y redirige a `ver-presentacion.php?id=<código>&respuesta=<clave>`.
+3. **En la barra**, cuando la propuesta está `aceptada` y su contrato admite datos del cliente (existe, es `servicios`, está en `draft`/`at_pending` y sin `revision_at` en sus marcadores): junto a «✅ Esta propuesta ya está aceptada…», un botón secundario «Datos para tu contrato» que abre el diálogo `at-cc-datos`. El diálogo se abre solo cuando la página llega con `respuesta=aceptada`. Textos exactos:
+   - Título: «Datos para tu contrato»
+   - Texto: «Opcional: si nos dejas estos datos ahora, tu contrato llega listo para firmar.»
+   - Pregunta «¿A nombre de quién va el contrato?» con dos opciones: «A mi nombre (persona natural)» (`persona`, marcada) y «De una empresa» (`empresa`).
+   - Solo si es empresa (mostrar/ocultar con el mismo JS de la barra; el servidor valida igual): «Razón social de la empresa» y «RUT de la empresa».
+   - Siempre: «Dirección (calle, número, comuna y ciudad)».
+   - Botones: «Guardar datos» y «Ahora no».
+   - Ocultos: `action=at_cc_datos_contrato`, `codigo`, `_wpnonce`, trampa `sitio_web` (reutilizar el patrón de `$ocultos`).
+4. **Mensajes nuevos** en `at_cc_mensaje_respuesta()` (puras.php), con prueba en `puras-test.php`:
+   - `'datos_ok'` => `['ok', '¡Listo! Con estos datos preparamos tu contrato.']`
+   - `'datos_recibidos'` => `['ok', 'Recibimos tus datos. Luis los revisa junto con tu contrato.']`
+   - `'datos_contrato'` => `['aviso', 'Revisa los datos del contrato: la dirección y, si es una empresa, su razón social y un RUT válido.']`
+5. **Prueba** `tests/cierre/pagina-datos-wp-test.php` (patrón de las demás `*-wp-test.php`: `wp-bootstrap.php`, `pre_wp_mail` capturado, datos `prueba-cierre-` que se borran al final): crear una propuesta, aceptarla con `at_cc_registrar_respuesta` (canal `pagina`, nombre y RUT `11.111.111-1`) para que existan cliente, ficha operativa y contrato; luego:
+   - persona + dirección → `'datos_ok'`; el contrato queda con `tipo_cliente=persona`, `razon_social_cliente` = nombre de quien aceptó, `rut_cliente` = su RUT, `domicilio_cliente` = la dirección, y **sin** `revision_at`; la ficha operativa recibe `billing_address` y `tax_id` si estaban vacíos.
+   - empresa sin RUT válido → `'datos_contrato'` y nada cambia.
+   - empresa completa → `'datos_ok'`, `company` de la ficha se llena solo si estaba vacío (probar que no pisa un valor existente).
+   - con la revisión de Luis ya guardada (`ContractService::guardar_revision`) → `'datos_recibidos'` y el contrato no cambia, pero queda la nota en Seguimiento.
+   - propuesta no aceptada → `'recibida'`.
+6. Agregar `wp-content/themes/automatiza-tech/inc/cierre-cliente/puras.php`, `tests/cierre/puras-test.php` y `tests/cierre/pagina-datos-wp-test.php` al commit de esta tarea.
 
 ---
 
@@ -3138,6 +3319,49 @@ function at_cc_rest_respuesta_whatsapp(WP_REST_Request $r) {
 git add wp-content/themes/automatiza-tech/inc/cierre-cliente/whatsapp.php tests/cierre/rest-wp-test.php
 git commit -m "feat(cierre): endpoint para responder la propuesta con un botón de WhatsApp y envío por plantilla (inactivo)" -m "Co-Authored-By: <modelo> <noreply@anthropic.com>"
 ```
+
+---
+
+#### Ajuste del controlador (aprobado por Luis el 25-sep) — forma parte de esta tarea
+
+La spec (etapa 4) dice: si el teléfono que tocó el botón no coincide con el de la propuesta, no se cambia el estado, **se anota en Seguimiento y se avisa a Luis**. El código de arriba solo anota. Agregar el aviso por correo:
+
+1. En `at_cc_rest_respuesta_whatsapp()`, en la rama del teléfono distinto, justo después de la línea `at_cc_anotar_simple($p, 'respuesta_cliente', 'Respuesta por WhatsApp desde un número distinto (no se aplicó)', ...);` y antes del `return`, agregar:
+
+```php
+		at_cc_avisar_numero_distinto($p, $salida, $tel);
+```
+
+2. Agregar al final de `whatsapp.php`:
+
+```php
+/** Aviso a Luis cuando alguien responde el WhatsApp de la propuesta desde otro número (aprobado por Luis el 25-sep). */
+function at_cc_avisar_numero_distinto(object $p, string $salida, string $tel): void {
+	$botones = ['acepta' => 'Acepto la propuesta', 'evalua' => 'La sigo evaluando', 'rechaza' => 'No, gracias'];
+	$quien = trim((string) $p->company_name) !== '' ? (string) $p->company_name : (string) $p->client_name;
+	$html = '<p>Alguien tocó «' . esc_html($botones[$salida] ?? $salida) . '» en el WhatsApp de la propuesta ' . esc_html((string) $p->unique_link_id)
+		. ', pero desde un número distinto al de la propuesta (' . esc_html($tel) . '). No se cambió el estado.</p>'
+		. '<p>Revisa la ficha y confirma con el cliente. Si la respuesta es válida, regístrala con «Registrar aceptación».</p>'
+		. '<p><a href="' . esc_url(admin_url('admin.php?page=automatiza-proposals&edit_id=' . (int) $p->id . '&tab=envio')) . '">Abrir la propuesta en el panel</a></p>';
+	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+	wp_mail((string) get_option('admin_email'), 'Respuesta a la propuesta de ' . $quien . ' desde otro número', $html, ['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $from . '>']);
+}
+```
+
+3. En `tests/cierre/rest-wp-test.php`, reemplazar la línea `add_filter('pre_wp_mail', function () { return true; });` por:
+
+```php
+$correos = [];
+add_filter('pre_wp_mail', function ($r, $a) use (&$correos) { $correos[] = $a; return true; }, 10, 2);
+```
+
+   y justo después de la aserción `'teléfono distinto: no cambia nada'`, agregar:
+
+```php
+ok(count($correos) === 1 && $correos[0]['to'] === get_option('admin_email') && strpos($correos[0]['subject'], 'desde otro número') !== false, 'teléfono distinto: avisa a Luis por correo');
+```
+
+   (Hasta ese punto ninguna otra llamada manda correo: las de 401 y `no_existe` cortan antes.)
 
 ---
 

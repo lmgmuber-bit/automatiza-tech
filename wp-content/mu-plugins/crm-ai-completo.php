@@ -7660,8 +7660,8 @@ class AutomatizaTech_CRM_AI {
     
     private function _enviar_correo_bienvenida($cliente_id) {
         // Cierre de cliente: bienvenida con la lista de arranque (inc/cierre-cliente/bienvenida.php).
-        if (function_exists('at_cc_enviar_bienvenida')) {
-            at_cc_enviar_bienvenida((int) $cliente_id);
+        // Solo clientes: si es prospecto (o no se pudo enviar), sigue la bienvenida de siempre.
+        if (function_exists('at_cc_enviar_bienvenida') && at_cc_enviar_bienvenida((int) $cliente_id)) {
             return;
         }
         global $wpdb;

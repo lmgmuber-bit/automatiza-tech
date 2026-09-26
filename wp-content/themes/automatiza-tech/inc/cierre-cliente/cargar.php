@@ -10,3 +10,7 @@ if (!defined('ABSPATH')) {
 require_once dirname(__DIR__) . '/proposals-flow.php';
 require_once __DIR__ . '/puras.php';
 require_once __DIR__ . '/clientes.php';
+require_once __DIR__ . '/contrato.php';
+require_once __DIR__ . '/ajustes.php';
+require_once __DIR__ . '/bienvenida.php';
+require_once __DIR__ . '/respuesta.php';

@@ -405,6 +405,53 @@ $sin_modulo = trim((string) shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escape
 @unlink($guion_r1);
 ok($sin_modulo === '{"rut":"RUT"}', 'T15 r1: sin el módulo de cierre, ContractService solo conoce el RUT: ' . $sin_modulo);
 
+// ---------- T15 ronda 2: el rótulo del firmante sale del tipo guardado, no de adivinar ----------
+// Antes el PDF decía «RUT» si el número pasaba el dígito verificador chileno. Un DNI hecho solo de
+// dígitos pasa por azar (~1 de cada 11): «111111111» es un RUT válido como texto, y el bloque de
+// firmas decía «RUT: 111111111» mientras el cuerpo del mismo contrato decía «DNI N° 111111111».
+// De punta a punta: persona con DNI «111111111» que firma con ese número.
+$c17 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['tipo_documento_cliente' => 'dni', 'rut_cliente' => '111111111', 'representante_cliente_nombre' => 'Ana Prueba', 'tipo_documento_representante' => 'dni', 'representante_cliente_rut' => '111111111'] + $completo_persona + $contacto_r1, 'created_by' => 0]);
+$f17 = firmar_de_punta_a_punta($c17->id, ['signer_name' => 'Ana Prueba', 'signer_rut' => '111111111', 'signer_email' => 'ana@example.com']);
+ok(!is_wp_error($f17) && $f17->status === 'signed', 'T15 r2: la persona con un DNI que también pasa como RUT firma' . (is_wp_error($f17) ? ' (' . $f17->get_error_code() . ')' : ''));
+$txt17 = is_wp_error($f17) ? '' : texto_pdf(ContractService::storage_dir() . '/' . $f17->contract_number . '-FIRMADO.pdf');
+ok(strpos($txt17, 'DNI N° 111111111') !== false && strpos($txt17, 'Documento: 111111111') !== false && strpos($txt17, 'RUT: 111111111') === false, 'T15 r2: DNI que pasa como RUT: el bloque de firmas dice «Documento», como el cuerpo');
+ok(strpos($txt17, 'Ana Prueba · Documento 111111111') !== false && strpos($txt17, 'RUT 111111111') === false, 'T15 r2: DNI que pasa como RUT: el registro de firma dice «Documento»');
+ok(strpos($txt17, 'RUT: 78.363.717-0') !== false && strpos($txt17, 'Firma AT · RUT 78.363.717-0') !== false, 'T15 r2: la columna y el registro de AT siguen diciendo «RUT»');
+// El PDF armado directo desde los marcadores (sin base), para los demás casos.
+function rotulos_pdf_r2(array $ph, ?array $firma_cliente): string {
+	require_once get_template_directory() . '/lib/contract-pdf-fpdf.php';
+	$ph['comparecencia_cliente'] = ContractService::comparecencia_cliente($ph);
+	$firmas = ['at' => ['signer_name' => 'Firma AT', 'signer_rut' => '78.363.717-0', 'signed_at' => '2026-09-26 10:00:00']];
+	if ($firma_cliente !== null) $firmas['client'] = $firma_cliente + ['signer_email' => 'firmante@example.com', 'signed_at' => '2026-09-26 10:05:00'];
+	// El cuerpo empieza en el primer «##» (lo anterior es el título del documento y no se dibuja).
+	$pdf = new ContractPDFFPDF($ph, "## COMPARECIENTES\n\n{{comparecencia_cliente}}\n", $firmas);
+	$pdf->build();
+	$archivo = tempnam(sys_get_temp_dir(), 'at-cc-r2-');
+	$pdf->Output('F', $archivo);
+	$texto = texto_pdf($archivo);
+	@unlink($archivo);
+	return $texto;
+}
+$empresa_dni_r2 = ['tipo_documento_representante' => 'dni', 'representante_cliente_rut' => '111111111'] + $completo_empresa;
+$t = rotulos_pdf_r2($empresa_dni_r2, ['signer_name' => 'Ana Prueba', 'signer_rut' => '111111111']);
+ok(strpos($t, 'DNI N° 111111111') !== false && strpos($t, 'Documento: 111111111') !== false && strpos($t, 'Ana Prueba · Documento 111111111') !== false && strpos($t, 'RUT: 111111111') === false, 'T15 r2: empresa con representante con DNI que pasa como RUT: firmas y registro dicen «Documento»');
+$t = rotulos_pdf_r2($empresa_dni_r2, null);
+ok(strpos($t, 'Documento: 111111111') !== false && strpos($t, 'RUT: 111111111') === false && strpos($t, 'Pendiente de firma') !== false, 'T15 r2: antes de que firme el cliente, su columna también usa el tipo guardado');
+$t = rotulos_pdf_r2($empresa_dni_r2, ['signer_name' => 'Ana Prueba', 'signer_rut' => '10.000.013-K']);
+ok(strpos($t, 'RUT: 10.000.013-K') !== false && strpos($t, 'Ana Prueba · RUT 10.000.013-K') !== false, 'T15 r2: quien firma con el RUT de la empresa lleva «RUT»');
+$persona_dni_r2 = ['tipo_documento_cliente' => 'dni', 'rut_cliente' => '111111111'] + $completo_persona;
+$t = rotulos_pdf_r2($persona_dni_r2, ['signer_name' => 'Ana Prueba', 'signer_rut' => '111.111.111']);
+ok(strpos($t, 'Documento: 111.111.111') !== false && strpos($t, 'RUT: 111.111.111') === false, 'T15 r2: el mismo DNI escrito con puntos se reconoce y dice «Documento»');
+// Para una persona manda el documento del cuerpo (tipo_documento_cliente), aunque quede un tipo de representante viejo.
+$t = rotulos_pdf_r2(['tipo_documento_cliente' => 'pasaporte', 'rut_cliente' => '111111111', 'tipo_documento_representante' => 'rut', 'representante_cliente_rut' => '111111111'] + $completo_persona, ['signer_name' => 'Ana Prueba', 'signer_rut' => '111111111']);
+ok(strpos($t, 'pasaporte N° 111111111') !== false && strpos($t, 'Documento: 111111111') !== false && strpos($t, 'RUT: 111111111') === false, 'T15 r2: persona: el rótulo sigue al documento que imprime el cuerpo');
+// Sin tipo guardado (soporte o contratos anteriores a la Task 15) se sigue infiriendo por el dígito verificador.
+$soporte_r2 = ['representante_cliente_nombre' => 'Cliente Soporte', 'representante_cliente_rut' => '111111111'];
+$t = rotulos_pdf_r2($soporte_r2, ['signer_name' => 'Cliente Soporte', 'signer_rut' => '111111111']);
+ok(strpos($t, 'RUT: 111111111') !== false && strpos($t, 'Cliente Soporte · RUT 111111111') !== false, 'T15 r2: sin tipo guardado, un RUT válido sigue diciendo «RUT»');
+$t = rotulos_pdf_r2($soporte_r2, ['signer_name' => 'Cliente Soporte', 'signer_rut' => '12345678']);
+ok(strpos($t, 'Documento: 12345678') !== false && strpos($t, 'Cliente Soporte · Documento 12345678') !== false, 'T15 r2: sin tipo guardado, un número que no es RUT sigue diciendo «Documento»');
+
 $wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE id IN (%d, %d, %d, %d, %d, %d, %d, %d)", $c->id, $sop->id, $c2->id, $c3->id, $c4->id, $c5->id, $c6->id, $c7->id));
 foreach ([$c, $sop, $c2, $c3, $c4, $c5, $c6, $c7] as $x) { @unlink(pdf_de($x)); }
 // Task 15: sus contratos de prueba.
@@ -414,8 +461,8 @@ foreach ([$c10, $c11, $c12, $c13] as $x) {
 		@unlink(pdf_de($x));
 	}
 }
-// T15 ronda 1: los contratos firmados de punta a punta, con su PDF firmado y sus imágenes de firma.
-foreach ([$c14, $c15, $c16] as $x) {
+// T15 rondas 1 y 2: los contratos firmados de punta a punta, con su PDF firmado y sus imágenes de firma.
+foreach ([$c14, $c15, $c16, $c17] as $x) {
 	if (is_object($x)) {
 		borrar_firmado_r1(ContractService::get_by_id($x->id));
 		$wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE id = %d", $x->id));

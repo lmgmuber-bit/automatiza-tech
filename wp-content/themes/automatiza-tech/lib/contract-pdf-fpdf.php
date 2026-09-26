@@ -392,13 +392,45 @@ class ContractPDFFPDF extends FPDF {
     }
 
     /**
-     * Rótulo del número de un firmante: «RUT» si es un RUT válido (o está vacío, o no hay con qué
-     * validarlo); si no, «Documento» (DNI o pasaporte de un firmante extranjero, T15 ronda 1).
+     * Rótulo del número de un firmante: «RUT» o «Documento» (DNI o pasaporte, T15 ronda 1).
+     * T15 ronda 2: si el firmante es el cliente y su número es uno de los que imprime el cuerpo
+     * del contrato, manda el tipo guardado con ese número (el mismo que usa comparecencia_cliente).
+     * Solo sin tipo guardado (soporte, contratos anteriores a la Task 15) se infiere: «RUT» si es
+     * un RUT válido (o está vacío, o no hay con qué validarlo). Inferir con un tipo guardado fallaba:
+     * un DNI de solo dígitos pasa el dígito verificador por azar y el PDF decía «RUT» bajo un «DNI N°».
      */
-    private static function rotuloDocumento($numero) {
+    private function rotuloDocumento($numero, $es_cliente = false) {
         $n = trim((string) $numero);
-        if ($n === '' || !function_exists('at_cc_rut_valido') || at_cc_rut_valido($n)) return 'RUT';
+        if ($n === '') return 'RUT';
+        $tipo = $es_cliente ? $this->tipoDocumentoGuardado($n) : '';
+        if ($tipo !== '') return $tipo === 'rut' ? 'RUT' : 'Documento';
+        if (!function_exists('at_cc_rut_valido') || at_cc_rut_valido($n)) return 'RUT';
         return 'Documento';
+    }
+
+    /**
+     * Tipo guardado ('rut', 'dni', 'pasaporte') del número del cuerpo que coincide con $numero
+     * (se comparan solo letras y dígitos, así «12.345.678» es «12345678»), o '' si no coincide
+     * ninguno o no tiene tipo. Los pares son los que imprime comparecencia_cliente: la empresa, su
+     * RUT (siempre RUT) y el documento de su representante; la persona (o sin tipo), su documento.
+     */
+    private function tipoDocumentoGuardado($numero) {
+        $clave = function ($s) { return strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', (string) $s)); };
+        $buscado = $clave($numero);
+        if ($buscado === '') return '';
+        if (($this->ph['tipo_cliente'] ?? '') === 'empresa') {
+            $pares = array(
+                array('rut', $this->ph['rut_cliente'] ?? ''),
+                array($this->ph['tipo_documento_representante'] ?? '', $this->ph['representante_cliente_rut'] ?? ''),
+            );
+        } else {
+            $pares = array(array($this->ph['tipo_documento_cliente'] ?? '', $this->ph['rut_cliente'] ?? ''));
+        }
+        foreach ($pares as $par) {
+            $tipo = strtolower(trim((string) $par[0]));
+            if ($tipo !== '' && is_scalar($par[1]) && $clave($par[1]) === $buscado) return $tipo;
+        }
+        return '';
     }
 
     private function renderSignatureBlock() {
@@ -450,9 +482,9 @@ class ContractPDFFPDF extends FPDF {
         $this->SetTextColor(...$this->gray);
         $at_rut = $at_sig['signer_rut'] ?? ($this->ph['representante_at_rut'] ?? '');
         $cl_rut = $cl_sig['signer_rut'] ?? ($this->ph['representante_cliente_rut'] ?? '');
-        $this->Cell($col_w, 4, self::enc(self::rotuloDocumento($at_rut) . ': ' . $at_rut), 0, 0, 'C');
+        $this->Cell($col_w, 4, self::enc($this->rotuloDocumento($at_rut) . ': ' . $at_rut), 0, 0, 'C');
         $this->Cell(10, 4, '', 0, 0);
-        $this->Cell($col_w, 4, self::enc(self::rotuloDocumento($cl_rut) . ': ' . $cl_rut), 0, 1, 'C');
+        $this->Cell($col_w, 4, self::enc($this->rotuloDocumento($cl_rut, true) . ': ' . $cl_rut), 0, 1, 'C');
 
         $this->Cell($col_w, 4, self::enc('AutomatizaTech SpA'), 0, 0, 'C');
         $this->Cell(10, 4, '', 0, 0);
@@ -487,10 +519,10 @@ class ContractPDFFPDF extends FPDF {
         $this->SetTextColor(...$this->text_col);
 
         if ($at) $this->renderAuditTable('PROVEEDOR (AutomatizaTech)', $at);
-        if ($cl) $this->renderAuditTable('CLIENTE', $cl);
+        if ($cl) $this->renderAuditTable('CLIENTE', $cl, true);
     }
 
-    private function renderAuditTable($title, $sig) {
+    private function renderAuditTable($title, $sig, $es_cliente = false) {
         $this->Ln(2);
         $this->SetFont('Arial', 'B', 8);
         $this->SetTextColor(...$this->secondary);
@@ -498,7 +530,7 @@ class ContractPDFFPDF extends FPDF {
         $this->SetTextColor(...$this->text_col);
 
         $rows = array(
-            'Firmante'      => ($sig['signer_name'] ?? '') . '  ·  ' . self::rotuloDocumento($sig['signer_rut'] ?? '') . ' ' . ($sig['signer_rut'] ?? ''),
+            'Firmante'      => ($sig['signer_name'] ?? '') . '  ·  ' . $this->rotuloDocumento($sig['signer_rut'] ?? '', $es_cliente) . ' ' . ($sig['signer_rut'] ?? ''),
             'Email'         => $sig['signer_email'] ?? '',
             'Fecha y hora'  => $sig['signed_at'] ?? '',
             'Dirección IP'  => $sig['ip'] ?? '',

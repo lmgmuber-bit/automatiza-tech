@@ -163,7 +163,10 @@ function at_cc_accion_registrar_aceptacion(): void {
 		'bienvenida'   => !empty($_POST['bienvenida']),
 		'usuario_id'   => get_current_user_id(),
 	]);
-	$detalles = array_merge($ev['errores'], (array) $r['avisos']);
+	// Ronda 1, hallazgo 1: 'avisos_operativos' (p. ej. datos bancarios sin configurar) también se
+	// muestra aquí. En el canal manual at_cc_avisar_luis() no manda nada, así que este panel es el
+	// único lugar donde Luis puede enterarse de que tiene que mandarle los datos de transferencia.
+	$detalles = array_merge($ev['errores'], (array) $r['avisos'], (array) ($r['avisos_operativos'] ?? []));
 	if (!$r['ok']) {
 		$volver(['tipo' => 'error', 'texto' => (string) $r['mensaje'], 'detalles' => $detalles]);
 	}
@@ -190,10 +193,16 @@ function at_cc_render_panel_respuesta(object $p): void {
 		return;
 	}
 	echo '<p>';
-	if (at_cc_puede_pedir_respuesta($estado)) {
+	$puede_pedir = at_cc_puede_pedir_respuesta($estado);
+	if ($puede_pedir) {
 		echo '<button type="submit" class="button" form="at-cc-f-pedir">📧 Pedir respuesta por correo</button> ';
 	}
-	if ($wa !== '') {
+	// Ronda 1, hallazgo 2: el enlace de aceptar solo se dibuja en la página pública cuando la
+	// propuesta está en sent/evaluando/rechazada (at_cc_render_barra() en pagina.php). Mandarlo en
+	// otro estado (p. ej. 'lista') deja al cliente con un enlace que no muestra dónde aceptar.
+	if (!$puede_pedir) {
+		echo '<span class="description">El WhatsApp con el enlace de aceptar se habilita cuando la propuesta esté enviada.</span>';
+	} elseif ($wa !== '') {
 		echo '<a class="button" target="_blank" rel="noopener" href="' . esc_url($wa) . '">💬 Enviar por mi WhatsApp</a>';
 	} else {
 		echo '<span class="description">Sin teléfono: agrégalo en «Cliente y enlaces» para mandar el WhatsApp.</span>';

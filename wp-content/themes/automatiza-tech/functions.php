@@ -1357,6 +1357,13 @@ require_once get_template_directory() . '/inc/admin-n8n-errors.php';
 require_once get_template_directory() . '/inc/admin-qa-module.php';
 
 /**
+ * Finanzas AT — gastos de infraestructura de TODOS los proyectos
+ * (mensual/anual, CLP/USD) + costo IA 30d. Comparte tablas con el
+ * módulo de consumo del portal (omnichannel-atfinance-controller.php).
+ */
+require_once get_template_directory() . '/inc/admin-at-finanzas.php';
+
+/**
  * Módulo de Contratos con Doble Firma (AT + Cliente)
  * - Admin page: Contactos > Contratos
  * - Widget en ficha del cliente (pestaña "📜 Contratos")

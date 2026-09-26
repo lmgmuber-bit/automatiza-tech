@@ -203,10 +203,10 @@
         "revelacion": "revelacion-carreras.mp4"
       },
       "frameBox": {
-        "x": 0.333,
-        "y": 0.285,
-        "w": 0.343,
-        "h": 0.279
+        "x": 0.3485,
+        "y": 0.3424,
+        "w": 0.3012,
+        "h": 0.1694
       },
       "musicaHint": "Real Gone – Sheryl Crow"
     },
@@ -427,10 +427,10 @@
         "image": "fondo-juego-nieve.jpg"
       },
       "frameBox": {
-        "x": 0.3315,
-        "y": 0.3948,
-        "w": 0.3407,
-        "h": 0.1995
+        "x": 0.3122,
+        "y": 0.3881,
+        "w": 0.3793,
+        "h": 0.2134
       },
       "musicaHint": "Libre Soy",
       "game": {
@@ -775,10 +775,10 @@
         "image": "fondo-juego-ciudad.jpg"
       },
       "frameBox": {
-        "x": 0.32,
-        "y": 0.3,
-        "w": 0.36,
-        "h": 0.28
+        "x": 0.1772,
+        "y": 0.4507,
+        "w": 0.3771,
+        "h": 0.2121
       },
       "musicaHint": "Spidey Theme / Avengers",
       "transition": "none",
@@ -1245,10 +1245,10 @@
         "image": "fondo-juego-playa.jpg"
       },
       "frameBox": {
-        "x": 0.32,
-        "y": 0.3,
-        "w": 0.36,
-        "h": 0.28
+        "x": 0.2801,
+        "y": 0.3789,
+        "w": 0.4306,
+        "h": 0.2422
       },
       "musicaHint": "Hawaiian Roller Coaster Ride",
       "photoSession": {
@@ -1480,10 +1480,10 @@
         "revelacion": "revelacion-familia-canina.mp4"
       },
       "frameBox": {
-        "x": 0.25,
-        "y": 0.17,
-        "w": 0.5,
-        "h": 0.28125
+        "x": 0.2635,
+        "y": 0.1774,
+        "w": 0.473,
+        "h": 0.2661
       },
       "musicaHint": "Música alegre de aventura al aire libre"
     },
@@ -1695,10 +1695,10 @@
         "despedida": "despedida-kpop.mp4"
       },
       "frameBox": {
-        "x": 0.3,
-        "y": 0.34,
-        "w": 0.4,
-        "h": 0.24
+        "x": 0.1381,
+        "y": 0.3933,
+        "w": 0.4016,
+        "h": 0.2259
       },
       "musicaHint": "Pop coreano energético / girl group"
     },
@@ -1910,10 +1910,10 @@
         "despedida": "despedida-spidey.mp4"
       },
       "frameBox": {
-        "x": 0.2799,
-        "y": 0.1653,
-        "w": 0.5111,
-        "h": 0.287
+        "x": 0.2748,
+        "y": 0.1973,
+        "w": 0.4485,
+        "h": 0.2523
       },
       "asomate": {
         "fondo": "asomate/fondo.jpg",

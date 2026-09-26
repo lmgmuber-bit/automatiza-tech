@@ -4583,7 +4583,9 @@ function composeImage(bgImg, photoImg, invitado = '', charImg = null, charName =
   // Agradecimiento al costado del marco: K-Pop a la derecha (Luis, 2026-07-28),
   // Héroes a la izquierda y alineado a la izquierda (Luis, 2026-08-01, con
   // captura). El resto sigue como siempre: centrado debajo de la foto completa.
-  const textSide = THEME_SLUG === 'kpop' ? 'right' : THEME_SLUG === 'heroes' ? 'left' : null
+  // Héroes pasó a la derecha el 26-09: con el marco calibrado sobre fondo-sala.jpg (antes usaba el marco por
+  // defecto y la foto caía sobre los globos) a la izquierda quedan 190 px y el texto salía diminuto sobre el borde.
+  const textSide = THEME_SLUG === 'kpop' || THEME_SLUG === 'heroes' ? 'right' : null
   const textBeside = textSide !== null
   const textSideMargin = W * 0.045
   const textSideCx = textSide === 'right' ? (frameRight + W) / 2 : frameLeft / 2

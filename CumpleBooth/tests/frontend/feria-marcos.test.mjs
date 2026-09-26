@@ -124,11 +124,13 @@ test('marcos: la foto de cada temática infantil cae dentro del marco pintado', 
   const saveDataUrl = (name, src) => { if (!artifacts || !src?.startsWith('data:')) return; const ext = src.startsWith('data:image/png') ? '.png' : '.jpg'; writeFileSync(join(artifacts, name + ext), Buffer.from(src.split(',')[1], 'base64')) }
   const shot=async(name)=>{if(artifacts){mkdirSync(artifacts,{recursive:true});await page.screenshot({path:join(artifacts,name+'.png'),fullPage:false})}}
   const button=async(label)=>{const h=await page.waitForFunction((text)=>[...document.querySelectorAll('button')].find((node)=>node.textContent.includes(text)&&!node.disabled),{},label);await h.asElement().click()}
+  // Tras el nombre llega la intro de la temática si la trae (26-09): se salta con un toque, como en una fiesta.
+  const pasarIntro=async()=>{await page.waitForFunction(()=>document.querySelector('main')?.dataset.step!=='name');if(await page.$('[data-step=welcome]')){await page.waitForSelector('[data-feria-welcome]');await page.click('[data-feria-welcome]')}}
   // Una foto por temática infantil, por el recorrido real de la cabina: la guardamos para mirarla y medimos
   // que el cuadro de la foto quede dentro de la abertura del marco pintado en fondo-sala.jpg.
   for (const tema of ['hielo','spidey','kpop','familia-canina','tropical','carreras','heroes']) {
     await page.goto(origin+'/?'+new URLSearchParams({p:fixture.slug,tema,modo:'infantil'}),{waitUntil:'networkidle0'})
-    await page.click('input[type=checkbox]');await button('Saltar')
+    await page.click('input[type=checkbox]');await button('Saltar');await pasarIntro()
     await page.waitForFunction(()=>['menu','roulette','camera'].includes(document.querySelector('main')?.dataset.step))
     if (await page.$('[data-step=menu]')) await button('Foto con tu personaje')
     await page.waitForSelector('[data-step=roulette]');await button('¡Me gusta!');await button('Continuar')

@@ -476,7 +476,9 @@ export default function App() {
     characters={PERSONAJES} filter={FERIA_THEME?.filtro} base={BASE} Spinner={Spinner} Character={VideoPersonaje}
     renderPhoto={composeFeriaPhoto} renderDiploma={composeFeriaDiploma}
     asomate={CONFIG.asomate || null} gameFor={feriaGameFor} Game={Juego} AsomatePick={AsomateElegir} Capture={Capture}
-    AsomateReview={AsomatePreview} asomatePerson={personajeDeAsomate} prepareAsomate={prepararAsomateFeria} />
+    AsomateReview={AsomatePreview} asomatePerson={personajeDeAsomate} prepareAsomate={prepararAsomateFeria}
+    welcomeSrc={FERIA_THEME?.videos?.welcome || THEME_SLUG === 'carreras' ? WELCOME_VIDEO_PRIMARY : null}
+    music={MUSIC_ENABLED ? CONFIG.audio.musica : null} />
   return <BoothApp key={slug} />
 }
 

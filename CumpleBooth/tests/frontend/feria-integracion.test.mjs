@@ -124,14 +124,16 @@ test('integración real 020 + build 021: SQLite aislada, tres fondos adultos y f
   const saveDataUrl = (name, src) => { if (!artifacts || !src?.startsWith('data:')) return; const ext = src.startsWith('data:image/png') ? '.png' : '.jpg'; writeFileSync(join(artifacts, name + ext), Buffer.from(src.split(',')[1], 'base64')) }
   const shot=async(name)=>{if(artifacts){mkdirSync(artifacts,{recursive:true});await page.screenshot({path:join(artifacts,name+'.png'),fullPage:false})}}
   const button=async(label)=>{const h=await page.waitForFunction((text)=>[...document.querySelectorAll('button')].find((node)=>node.textContent.includes(text)&&!node.disabled),{},label);await h.asElement().click()}
+  // Tras el nombre llega la intro de la temática si la trae (26-09): se salta con un toque, como en una fiesta.
+  const pasarIntro=async()=>{await page.waitForFunction(()=>document.querySelector('main')?.dataset.step!=='name');if(await page.$('[data-step=welcome]')){await page.waitForSelector('[data-feria-welcome]');await page.click('[data-feria-welcome]')}}
   await page.goto(origin+'/feria.html?f='+fixture.slug,{waitUntil:'networkidle0'})
   await button('Toca para empezar');await shot('01-selector')
   await button('Adultos');await shot('02-mundos-adultos')
   for(const theme of ['adulto-estudio-bn','adulto-glam-dorado','adulto-noche-brujas']){
     await page.goto(origin+'/?'+new URLSearchParams({p:fixture.slug,tema:theme,modo:'adulto'}),{waitUntil:'networkidle0'})
-    await button('Saltar');await page.waitForSelector('[data-step=camera]')
-    // Sin Asómate no hay menú: del nombre se pasa directo a la cámara.
-    assert.deepEqual(await page.evaluate(()=>window.__pasos),['name','camera'],'sin menú en '+theme)
+    await button('Saltar');await pasarIntro();await page.waitForSelector('[data-step=camera]')
+    // Sin Asómate no hay menú: del nombre se pasa a la cámara, con la intro solo si la temática la trae (Noche de Brujas).
+    assert.deepEqual(await page.evaluate(()=>window.__pasos),theme==='adulto-noche-brujas'?['name','welcome','camera']:['name','camera'],'sin menú en '+theme)
     await page.waitForFunction(()=> {
       const canvas = document.querySelector('.feria-camera-frame canvas')
       const status = document.querySelector('main')?.dataset.segmentation
@@ -159,7 +161,15 @@ test('integración real 020 + build 021: SQLite aislada, tres fondos adultos y f
   page.removeAllListeners('request')
   await page.setRequestInterception(false)
   await page.goto(origin+'/?'+new URLSearchParams({p:fixture.slug,tema:'hielo',modo:'infantil'}),{waitUntil:'networkidle0'})
+  // La prueba corre con movimiento reducido (la intro muestra un emoji, como en la fiesta): para ver el video se
+  // desactiva solo aquí; la ruleta ya leyó la preferencia al cargar y sigue igual.
+  await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'no-preference'}])
   await page.click('input[type=checkbox]');await button('Saltar')
+  await page.waitForSelector('[data-feria-welcome] video');await new Promise((done)=>setTimeout(done,1500))
+  const intro=await page.$eval('[data-feria-welcome] video',(v)=>({t:v.currentTime,paused:v.paused,muted:v.muted,src:v.currentSrc}));await shot('08-ninos-intro')
+  assert.ok(intro.t>0.3&&!intro.paused&&!intro.muted&&intro.src.includes('welcome-hielo'),'la intro de Hielo suena y avanza: '+JSON.stringify(intro))
+  await pasarIntro();await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}])
+  assert.ok(await page.evaluate(()=>window.__pasos.includes('welcome')),'Hielo muestra su intro antes del menú')
   // Hielo trae Asómate: en Niños se elige primero (26-09). Después, ruleta, personaje y su minijuego como en una fiesta.
   await page.waitForSelector('[data-step=menu]');await shot('08a-ninos-menu')
   assert.ok((await page.$eval('.feria-opcion-asomate',(n)=>n.textContent)).length>0,'Hielo ofrece Asómate en la feria')
@@ -199,7 +209,7 @@ test('integración real 020 + build 021: SQLite aislada, tres fondos adultos y f
     await page.goto(origin+'/?'+new URLSearchParams({p:fixture.slug,tema,modo}),{waitUntil:'networkidle0'})
     if(await page.$('.feria-consent input'))await page.click('.feria-consent input')
     if(nombre){await page.type('.feria-name-label input',nombre);await button('Continuar')}else await button('Saltar')
-    await page.waitForSelector('[data-step=menu]')
+    await pasarIntro();await page.waitForSelector('[data-step=menu]')
     const opciones=await page.$$eval('.feria-opcion',(nodes)=>nodes.map((node)=>node.textContent.trim()))
     await shot(prefijo+'-menu')
     await page.click('.feria-opcion-asomate')
@@ -249,7 +259,7 @@ test('integración real 020 + build 021: SQLite aislada, tres fondos adultos y f
     }else assert.equal(await page.evaluate(()=>[...document.querySelectorAll('button')].some((b)=>b.textContent.includes('diploma'))),false,'Adultos no ofrece diploma')
     const pasos=await page.evaluate(()=>window.__pasos), descargas=await page.evaluate(()=>window.__descargas)
     const captura=['asomate-capturar','asomate-preview','preview']
-    assert.deepEqual(pasos,['name','menu','asomate-elegir','menu','asomate-elegir',...captura,...(repetir?captura:[]),'qr',...(diploma?['diploma']:[])])
+    assert.deepEqual(pasos,['name','welcome','menu','asomate-elegir','menu','asomate-elegir',...captura,...(repetir?captura:[]),'qr',...(diploma?['diploma']:[])])
     return{tema,modo,nombre:nombre||'',opciones,cartas,elegido:cartas[carta],etiqueta,repetida:repetir,ajusteAutomatico:ajuste,medida,pasos,descargas}
   }
   camPortrait=asomatePortrait

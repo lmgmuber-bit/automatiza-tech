@@ -28,12 +28,30 @@ ok(count($correos) === 1 && $correos[0]['to'] === get_option('admin_email') && s
 $notas = $wpdb->get_col($wpdb->prepare("SELECT detail_type FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d", $pid));
 ok(in_array('aviso_operativo', $notas, true), 'teléfono distinto: queda una nota interna aviso_operativo');
 ok(!in_array('respuesta_cliente', $notas, true), 'teléfono distinto: ninguna nota pública respuesta_cliente con el teléfono de un tercero');
+// Ronda 1, hallazgo 2: un reintento del webhook con el mismo wamid no repite la nota ni el correo.
+$notas_antes = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d", $pid));
+$r = pedir(['salida' => 'acepta', 'codigo' => $codigo, 'telefono' => '56911112222', 'wamid' => 'w1'], AT_REST_SECRET)->get_data();
+$notas_despues = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d", $pid));
+ok($r['ok'] === false && $r['motivo'] === 'telefono' && count($correos) === 1 && $notas_despues === $notas_antes, 'teléfono distinto: mismo wamid no repite nota ni correo');
 $r = pedir(['salida' => 'evalua', 'codigo' => $codigo, 'telefono' => '+56 9 3333 3333', 'wamid' => 'w2'], AT_REST_SECRET)->get_data();
 ok($r['ok'] === true && $r['estado'] === 'evaluando', 'evalúa por WhatsApp');
 $r = pedir(['salida' => 'acepta', 'codigo' => $codigo, 'telefono' => '933333333', 'wamid' => 'w3'], AT_REST_SECRET)->get_data();
 ok($r['ok'] === true && $r['estado'] === 'aceptada' && at_cc_contrato_de_propuesta($pid) !== null, 'acepta por WhatsApp: cierre completo');
 $r = pedir(['salida' => 'acepta', 'codigo' => $codigo, 'telefono' => '933333333', 'wamid' => 'w4'], AT_REST_SECRET)->get_data();
 ok($r['ok'] === true && $r['motivo'] === 'ya_aceptada', 'dos toques no repiten');
+// Ronda 1, hallazgo 1: tocar «La sigo evaluando» o «No, gracias» DESPUÉS de haber aceptado no repite
+// nada, pero deja rastro interno y avisa a Luis (con el mismo wamid no se repite: hallazgo 2).
+$correos_antes = count($correos);
+$r = pedir(['salida' => 'evalua', 'codigo' => $codigo, 'telefono' => '933333333', 'wamid' => 'w5'], AT_REST_SECRET)->get_data();
+ok($r['ok'] === false && $r['motivo'] === 'ya_aceptada_otra_salida' && at_cc_propuesta_por_id($pid)->status === 'aceptada', 'toca «la sigo evaluando» tras aceptar: no cambia nada');
+ok(count($correos) === $correos_antes + 1 && strpos(end($correos)['subject'], 'después de aceptar') !== false, 'toca tras aceptar: avisa a Luis por correo');
+$ultima = $wpdb->get_row($wpdb->prepare("SELECT detail_type, metadata FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d ORDER BY id DESC LIMIT 1", $pid));
+ok($ultima->detail_type === 'aviso_operativo' && strpos((string) $ultima->metadata, 'w5') !== false, 'toca tras aceptar: queda una nota interna con el wamid');
+$correos_antes = count($correos);
+$notas_antes = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d", $pid));
+$r = pedir(['salida' => 'evalua', 'codigo' => $codigo, 'telefono' => '933333333', 'wamid' => 'w5'], AT_REST_SECRET)->get_data();
+$notas_despues = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d", $pid));
+ok($r['ok'] === false && $r['motivo'] === 'ya_aceptada_otra_salida' && count($correos) === $correos_antes && $notas_despues === $notas_antes, 'toca tras aceptar: mismo wamid no repite nota ni correo');
 ok(pedir(['salida' => 'otra', 'codigo' => $codigo, 'telefono' => '933333333'], AT_REST_SECRET)->get_data()['ok'] === false, 'salida inválida');
 ok(!at_cc_whatsapp_plantilla_activa(), 'plantilla inactiva por defecto');
 ok(at_cc_enviar_whatsapp_plantilla(at_cc_propuesta_por_id($pid)) !== '', 'sin plantilla activa no se envía');
@@ -41,10 +59,21 @@ ok(at_cc_enviar_whatsapp_plantilla(at_cc_propuesta_por_id($pid)) !== '', 'sin pl
 $crm = at_cc_crm_de_email($marca . '@example.com');
 $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}automatiza_contracts WHERE proposal_id = %d", $pid));
 $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d", $pid));
+// Ronda 1, hallazgo 3: automatiza_migrate_prospect_to_client() copia filas a automatiza_clients_details
+// durante la aceptación por WhatsApp; sin este borrado quedan huérfanas en la base local.
+$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}automatiza_clients_details WHERE propuesta_origin_id = %d", $pid));
 if ($crm) {
 	$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}crm_historial WHERE cliente_id = %d", $crm));
 	$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}automatiza_tech_clients WHERE crm_cliente_id = %d", $crm));
 	$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $crm));
 }
 $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}automatiza_propuestas WHERE id = %d", $pid));
+// Huérfanas de corridas anteriores (solo en esta base local de pruebas): filas de
+// automatiza_clients_details cuyo cliente o propuesta de origen ya no existen.
+$wpdb->query(
+	"DELETE cd FROM {$wpdb->prefix}automatiza_clients_details cd
+	 LEFT JOIN {$wpdb->prefix}automatiza_tech_clients c ON c.id = cd.client_id
+	 LEFT JOIN {$wpdb->prefix}automatiza_propuestas p ON p.id = cd.propuesta_origin_id
+	 WHERE c.id IS NULL OR (cd.propuesta_origin_id IS NOT NULL AND p.id IS NULL)"
+);
 fin();

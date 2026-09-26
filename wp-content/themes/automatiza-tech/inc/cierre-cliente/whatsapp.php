@@ -121,6 +121,29 @@ function at_cc_rest_auth(WP_REST_Request $r) {
 	return true;
 }
 
+/**
+ * true si ya existe una nota interna 'aviso_operativo' de esta propuesta con este wamid (ronda 1,
+ * hallazgo 2): evita que un reintento del webhook (mismo wamid) repita la nota y el correo a Luis.
+ * $wamid vacío nunca deduplica: no hay forma de distinguir dos toques sin id de mensaje.
+ */
+function at_cc_wamid_ya_avisado(int $propuesta_id, string $wamid): bool {
+	if ($wamid === '') {
+		return false;
+	}
+	global $wpdb;
+	$metadatas = $wpdb->get_col($wpdb->prepare(
+		"SELECT metadata FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d AND detail_type = 'aviso_operativo' AND metadata IS NOT NULL",
+		$propuesta_id
+	));
+	foreach ((array) $metadatas as $m) {
+		$d = json_decode((string) $m, true);
+		if (is_array($d) && (string) ($d['wamid'] ?? '') === $wamid) {
+			return true;
+		}
+	}
+	return false;
+}
+
 /** El bot principal de WhatsApp llama aquí cuando el cliente toca un botón de la plantilla. */
 function at_cc_rest_respuesta_whatsapp(WP_REST_Request $r) {
 	$salida = sanitize_key((string) $r->get_param('salida'));
@@ -132,9 +155,21 @@ function at_cc_rest_respuesta_whatsapp(WP_REST_Request $r) {
 	}
 	$esperado = at_cc_telefono_normalizado((string) $p->phone);
 	if ($esperado === '' || $esperado !== at_cc_telefono_normalizado($tel)) {
-		at_cc_anotar_simple($p, 'aviso_operativo', 'Respuesta por WhatsApp desde un número distinto (no se aplicó)', 'Salida: ' . $salida . ' · número que respondió: ' . $tel);
-		at_cc_avisar_numero_distinto($p, $salida, $tel);
+		if (!at_cc_wamid_ya_avisado((int) $p->id, $wamid)) {
+			at_cc_anotar_simple($p, 'aviso_operativo', 'Respuesta por WhatsApp desde un número distinto (no se aplicó)', 'Salida: ' . $salida . ' · número que respondió: ' . $tel, ['wamid' => $wamid]);
+			at_cc_avisar_numero_distinto($p, $salida, $tel);
+		}
 		return ['ok' => false, 'motivo' => 'telefono'];
+	}
+	// Ronda 1, hallazgo 1: la propuesta ya está aceptada y tocaron un botón distinto de «Acepto» (los
+	// botones de la plantilla quedan en el chat para siempre). No se repite el cierre ni cambia el
+	// estado; solo queda un rastro interno y un aviso a Luis, deduplicado por wamid como arriba.
+	if ((string) $p->status === 'aceptada' && $salida !== 'acepta') {
+		if (!at_cc_wamid_ya_avisado((int) $p->id, $wamid)) {
+			at_cc_anotar_simple($p, 'aviso_operativo', 'Tocó un botón de WhatsApp después de haber aceptado (no se aplicó)', 'Salida: ' . $salida, ['wamid' => $wamid]);
+			at_cc_avisar_respuesta_tras_aceptar($p, $salida);
+		}
+		return ['ok' => false, 'motivo' => 'ya_aceptada_otra_salida'];
 	}
 	$res = at_cc_registrar_respuesta($p, $salida, [
 		'canal'      => 'whatsapp',
@@ -158,4 +193,21 @@ function at_cc_avisar_numero_distinto(object $p, string $salida, string $tel): v
 		. '<p><a href="' . esc_url(admin_url('admin.php?page=automatiza-proposals&edit_id=' . (int) $p->id . '&tab=envio')) . '">Abrir la propuesta en el panel</a></p>';
 	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
 	wp_mail((string) get_option('admin_email'), 'Respuesta a la propuesta de ' . $quien . ' desde otro número', $html, ['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $from . '>']);
+}
+
+/**
+ * Aviso a Luis cuando alguien toca «No, gracias» o «La sigo evaluando» en el WhatsApp de la propuesta
+ * DESPUÉS de haber aceptado (ronda 1, hallazgo 1). No se cambió nada: es informativo, para que Luis
+ * confirme con el cliente si hace falta (mismo formato que at_cc_avisar_numero_distinto).
+ */
+function at_cc_avisar_respuesta_tras_aceptar(object $p, string $salida): void {
+	$botones = ['acepta' => 'Acepto la propuesta', 'evalua' => 'La sigo evaluando', 'rechaza' => 'No, gracias'];
+	$quien = trim((string) $p->company_name) !== '' ? (string) $p->company_name : (string) $p->client_name;
+	$boton = $botones[$salida] ?? $salida;
+	$html = '<p>' . esc_html($quien) . ' tocó «' . esc_html($boton) . '» en el WhatsApp de la propuesta ' . esc_html((string) $p->unique_link_id)
+		. ', pero ya la había aceptado antes. No se cambió el estado ni se repitió el cierre.</p>'
+		. '<p>Puede ser un toque accidental o un mensaje viejo del chat: confirma con el cliente si hace falta.</p>'
+		. '<p><a href="' . esc_url(admin_url('admin.php?page=automatiza-proposals&edit_id=' . (int) $p->id . '&tab=envio')) . '">Abrir la propuesta en el panel</a></p>';
+	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+	wp_mail((string) get_option('admin_email'), $quien . ' tocó «' . $boton . '» en WhatsApp después de aceptar', $html, ['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $from . '>']);
 }

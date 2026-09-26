@@ -318,7 +318,9 @@ dialog.feria-qr canvas { display: block; margin: 12px auto; max-width: 100%; hei
     <div class="feria-impresion">
       <label>Papel <select id="papel"><option value="100mm 148mm" selected>10×15 cm (Selphy)</option><option value="127mm 178mm">13×18 cm</option><option value="A4 portrait">A4</option><option value="auto">Según impresora</option></select></label>
       <label>Copias <select id="copias"><?php for ($i = 1; $i <= 5; $i++): ?><option value="<?= $i ?>"><?= $i ?></option><?php endfor; ?></select></label>
-      <label><input type="checkbox" id="llenar" checked> Llenar la hoja</label>
+      <?php /* La foto de feria es 9:16 y el 10×15 es 2:3: "llenar" corta ~15 mm arriba y abajo, justo la franja con
+         CumpleClick y el organizador (Luis, 26-09: "no sale abajo los datos"). Por defecto se imprime entera. */ ?>
+      <label><input type="checkbox" id="llenar"> Llenar la hoja <span class="muted">(recorta arriba y abajo: se pierde la franja)</span></label>
     </div>
     <p class="muted"><?= $gal['total'] === 1 ? '1 foto' : (int) $gal['total'] . ' fotos' ?><?= array_filter($filtros) ? ' con esta búsqueda' : '' ?>. La hora es la de Chile.
       <?php if ($sinNumero > 0): ?> Hay <?= $sinNumero ?> foto<?= $sinNumero === 1 ? '' : 's' ?> sin número (la tablet no alcanzó a reservarlo): <a href="album.php?party=<?= h(rawurlencode($feria['slug'])) ?>#fotos-kiosco">verlas en Fotos del kiosco</a>.<?php endif; ?></p>

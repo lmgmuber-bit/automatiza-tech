@@ -35,15 +35,24 @@ if ($('Aplicar comentarios').isExecuted) {
     reason = 'El modelo no respondió al aplicar los comentarios' + (ia && ia.error ? ': ' + (ia.error.message || ia.error) : '');
   } else {
     try {
-      // leerJsonModelo (json_guard.py) tolera bloques de código, texto alrededor y llaves de más
-      // (medido: ejecución 408862, una «}» extra al final tumbó un cambio bien aplicado).
+      // leerJsonModelo (json_guard.py): JSON.parse estricto; solo tolera llaves «}» de más al final
+      // (medido: ejecución 408862, una «}» extra tumbó un cambio bien aplicado).
       const parsed = leerJsonModelo(c);
+      if (!esObjetoPlano(parsed)) throw new Error('la respuesta no es un objeto JSON');
       // El modelo a veces imita la forma de la entrada y devuelve {propuesta: {...}} (medido: ejecución 403689).
-      const candidato = parsed && parsed.propuesta && typeof parsed.propuesta === 'object' ? parsed.propuesta : parsed;
+      // Si el envoltorio trae algo más que la propuesta (y los comentarios de la entrada), es ambiguo.
+      const envuelta = esObjetoPlano(parsed.propuesta);
+      if (envuelta && Object.keys(parsed).some((k) => k !== 'propuesta' && k !== 'comentarios')) {
+        throw new Error('la respuesta mezcla la propuesta con otras claves');
+      }
+      const candidato = envuelta ? parsed.propuesta : parsed;
+      // Una nota o un «antes/después» no es la propuesta: toda clave debe ser de la propuesta.
+      const ajenas = Object.keys(candidato).filter((k) => !(k in (estado.payload || {})) && !CLAVES_PROPUESTA.includes(k));
+      if (ajenas.length) throw new Error('la respuesta trae claves que no son de la propuesta: ' + ajenas.join(', '));
       // Lo que el modelo omita se conserva de lo guardado: nunca se manda a WordPress un payload incompleto.
       p = Object.assign({}, estado.payload, candidato);
     } catch (e) {
-      reason = 'El modelo devolvió un JSON inválido al aplicar los comentarios';
+      reason = 'No se pudo usar la respuesta del modelo al aplicar los comentarios: ' + (e && e.message ? e.message : String(e));
     }
   }
 }

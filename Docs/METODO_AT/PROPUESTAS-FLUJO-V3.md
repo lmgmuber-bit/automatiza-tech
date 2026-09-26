@@ -35,14 +35,18 @@ propuesta en `error` con el motivo. Si un flujo se cae igual (OpenAI caído, un 
 haya quedado en `ajustando` o `generando` se destraba desde el panel (pasa a `error`, que es transición válida).
 Desde `error` no hace falta destrabar: basta escribir el comentario de nuevo y apretar «Pedir cambios» (o «Aprobar»).
 
-**Respuesta de la IA con llaves o texto de más (EN PROD desde el 2026-09-26 16:26, autorizado por Luis).** El nodo
-OpenAI de «1 Borrador» y «2 Cambios» no fuerza JSON, y el 26-sep «2 Cambios» dejó la 53 en `error` por una llave `}`
-de más al final de una respuesta que traía bien el cambio pedido (ejecución 408862). Los dos flujos leen ahora la
-respuesta con `leerJsonModelo` (`N8N/propuestas-v3/json_guard.py`): toma el primer objeto JSON completo, sin contar
-llaves dentro de los textos, y nunca completa datos (una respuesta cortada sigue siendo `error`). Prueba:
-`python N8N/propuestas-v3/probar_json.py` (18 casos; corre con node el código real de los nodos). Antes de publicar,
-lo vivo era idéntico al repo; respaldo en `C:/Users/luis_/respaldos/n8n/2026-09-26-json-robusto/` (rollback: volver
-a publicar esos JSON, o construir desde el commit anterior y `deploy.py`).
+**Respuesta de la IA con llaves de más (2026-09-26, autorizado por Luis).** El nodo OpenAI de «1 Borrador» y
+«2 Cambios» no fuerza JSON, y el 26-sep «2 Cambios» dejó la 53 en `error` por una llave `}` de más al final de una
+respuesta que traía bien el cambio pedido (ejecución 408862). Los dos flujos leen la respuesta con `leerJsonModelo`
+(`N8N/propuestas-v3/json_guard.py`): `JSON.parse` estricto como siempre, con una sola tolerancia (un objeto completo
+seguido solo de llaves `}` y espacios). «2 Cambios» además rechaza lo que no es la propuesta ni un pedazo de ella
+(un arreglo, `null`, claves que no son de la propuesta, un envoltorio `{propuesta}` con otras claves) y sigue
+aceptando respuestas parciales, que se completan con lo guardado; su aviso de error ahora dice el motivo real.
+🔴 No hacerla más tolerante: la primera versión publicada (16:26) buscaba la propuesta en cualquier parte del texto, y
+dos rondas de revisión adversarial mostraron que así toma una nota, la versión «antes» o la plantilla del prompt y
+la guarda como cambio correcto. Casos en `python N8N/propuestas-v3/probar_json.py` (46; corre con node el código
+real de los nodos). Respaldo de lo que había antes del 26-sep en `C:/Users/luis_/respaldos/n8n/2026-09-26-json-robusto/`
+(rollback: volver a publicar esos JSON, o construir desde `origin/main` y `deploy.py`).
 
 ## Panel de propuestas (wp-admin › Propuestas, EN PROD desde el 2026-09-24 15:48)
 

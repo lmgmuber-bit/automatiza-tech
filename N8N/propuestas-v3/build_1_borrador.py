@@ -55,9 +55,10 @@ Reglas:
 PROMPT_BOT = """Escribe el system prompt de un asistente virtual de demostración para este negocio, en español de Chile. Estructura: identidad (1 párrafo); TONO (tú o usted según el rubro, breve, sin emojis si el rubro es delicado); ATENCIÓN URGENTE (si aplica al rubro: primero empatía, luego el contacto directo del negocio); SERVICIOS; PRECIOS (solo los que aparezcan en la transcripción, con la aclaración de que un asesor confirma); REGLAS (no inventar datos; derivar a un humano cuando hay intención clara de contratar pidiendo nombre, teléfono y comuna). Usa solo datos que estén en la transcripción. Devuelve solo el texto del system prompt."""
 
 CODE_ARMAR = r"""// Reglas que no se le confían al modelo: formato JSON, precios y cantidad de láminas extra.
-// leerJsonModelo (json_guard.py) tolera bloques de código, texto alrededor y llaves de más; si la respuesta
-// no trae un objeto completo, lanza y «0 Avisar error» le escribe a Luis.
+// leerJsonModelo (json_guard.py): JSON.parse estricto; solo tolera llaves «}» de más al final. Si la respuesta
+// no se puede leer o no es un objeto, lanza y «0 Avisar error» le escribe a Luis.
 const d = leerJsonModelo($('Redactar propuesta').first().json.message.content);
+if (!esObjetoPlano(d)) throw new Error('la respuesta del modelo no es un objeto JSON');
 const body = $('Webhook (Entrada)').first().json.body || {};
 const prueba = body.prueba === true;
 d.pricing_rows = (d.pricing_rows || []).map((r) => ({ service: String(r.service || 'Servicio'), price_usd: 0, price_label: 'Por confirmar' }));

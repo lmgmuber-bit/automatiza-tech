@@ -14,3 +14,4 @@ require_once __DIR__ . '/contrato.php';
 require_once __DIR__ . '/ajustes.php';
 require_once __DIR__ . '/bienvenida.php';
 require_once __DIR__ . '/respuesta.php';
+require_once __DIR__ . '/pagina.php';

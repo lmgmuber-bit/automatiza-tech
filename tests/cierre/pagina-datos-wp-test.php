@@ -1,0 +1,138 @@
+<?php
+// Correr: AT_WP_LOAD=<ruta> php tests/cierre/pagina-datos-wp-test.php
+require __DIR__ . '/wp-bootstrap.php';
+require_once ABSPATH . 'contracts/contract-service.php';
+global $wpdb;
+$correos = [];
+add_filter('pre_wp_mail', function ($nulo, $atts) use (&$correos) { $correos[] = $atts; return true; }, 10, 2);
+$marca = 'prueba-cierre-datos-' . strtolower(wp_generate_password(6, false, false));
+$payload = [
+	'company_name' => '[PRUEBA] Muebles', 'solution_text' => 'Configurador 3D de módulos.',
+	'pricing_rows' => [['service' => 'Fase 1: Configurador 3D', 'price_usd' => 0, 'price_label' => '$2.000.000 en 2 pagos']],
+];
+$creadas = [];
+function crear_propuesta_datos(string $marca, array $payload, array &$creadas): object {
+	global $wpdb;
+	$ok = $wpdb->insert($wpdb->prefix . 'automatiza_propuestas', [
+		'client_email' => $marca . microtime(true) . '@example.com', 'unique_link_id' => substr(md5($marca . microtime(true)), 0, 12),
+		'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Muebles', 'phone' => '+56 9 2222 2222',
+		'status' => 'sent', 'flujo' => 'v3', 'gamma_prompt_text' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
+		'transcript_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql'),
+	]);
+	if (!$ok) { fwrite(STDERR, "No se pudo insertar la propuesta de prueba: {$wpdb->last_error}\n"); exit(2); }
+	$creadas[] = (int) $wpdb->insert_id;
+	return at_cc_propuesta_por_id((int) $wpdb->insert_id);
+}
+$det = $wpdb->prefix . 'automatiza_propuestas_details';
+$tech = $wpdb->prefix . 'automatiza_tech_clients';
+
+// Propuesta no aceptada: 'recibida', sin contrato.
+$sin_aceptar = crear_propuesta_datos($marca . '-sin-aceptar', $payload, $creadas);
+ok(at_cc_guardar_datos_contrato($sin_aceptar, ['tipo' => 'persona', 'direccion' => 'Calle Falsa 123, Santiago']) === 'recibida', 'propuesta no aceptada: recibida');
+
+// Aceptar para tener cliente, ficha operativa y contrato de servicios.
+function aceptar_para_prueba(object $p): array {
+	$filas = at_cc_filas_aceptadas(at_cc_filas_de_propuesta($p), [0]);
+	$r = at_cc_registrar_respuesta($p, 'acepta', [
+		'canal' => 'pagina', 'nombre' => 'Ana Prueba', 'rut' => '11.111.111-1',
+		'filas' => $filas, 'fecha' => current_time('mysql'), 'bienvenida' => false,
+	]);
+	if (!$r['ok'] || $r['estado'] !== 'aceptada' || !$r['contrato_id']) {
+		fwrite(STDERR, "No se pudo aceptar la propuesta de prueba.\n");
+		exit(2);
+	}
+	return $r;
+}
+
+// ---------- persona + dirección ----------
+$p1 = crear_propuesta_datos($marca . '-persona', $payload, $creadas);
+$r1 = aceptar_para_prueba($p1);
+$p1 = at_cc_propuesta_por_id($p1->id);
+$antes_notas_1 = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente'", $p1->id));
+$clave1 = at_cc_guardar_datos_contrato($p1, ['tipo' => 'persona', 'direccion' => 'Av. Siempre Viva 742, Providencia']);
+ok($clave1 === 'datos_ok', 'persona + dirección: datos_ok');
+$c1 = ContractService::get_by_id((int) $r1['contrato_id']);
+$ph1 = json_decode($c1->placeholders, true);
+ok(($ph1['tipo_cliente'] ?? '') === 'persona', 'persona: tipo_cliente = persona');
+ok(($ph1['razon_social_cliente'] ?? '') === 'Ana Prueba', 'persona: razon_social_cliente = nombre de quien aceptó');
+ok(($ph1['rut_cliente'] ?? '') === '11.111.111-1', 'persona: rut_cliente = su RUT');
+ok(($ph1['domicilio_cliente'] ?? '') === 'Av. Siempre Viva 742, Providencia', 'persona: domicilio_cliente = la dirección');
+ok(empty($ph1['revision_at']), 'persona: sin revision_at (Luis no ha revisado)');
+$fila_tech_1 = $wpdb->get_row($wpdb->prepare("SELECT billing_address, tax_id FROM {$tech} WHERE id = %d", (int) $c1->client_id));
+ok($fila_tech_1 && $fila_tech_1->billing_address === 'Av. Siempre Viva 742, Providencia', 'persona: ficha operativa recibe billing_address (estaba vacío)');
+ok($fila_tech_1 && $fila_tech_1->tax_id === '11.111.111-1', 'persona: ficha operativa recibe tax_id con el RUT de quien aceptó (estaba vacío)');
+ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente'", $p1->id)) === $antes_notas_1 + 1, 'persona: queda una nota nueva en Seguimiento');
+
+// ---------- empresa sin RUT válido ----------
+$p2 = crear_propuesta_datos($marca . '-empresa-mal', $payload, $creadas);
+$r2 = aceptar_para_prueba($p2);
+$p2 = at_cc_propuesta_por_id($p2->id);
+$c2_antes = ContractService::get_by_id((int) $r2['contrato_id']);
+$ph2_antes = $c2_antes->placeholders;
+$fila_tech_2_antes = $wpdb->get_row($wpdb->prepare("SELECT billing_address, tax_id, company FROM {$tech} WHERE id = %d", (int) $c2_antes->client_id));
+$notas_2_antes = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente'", $p2->id));
+$clave2 = at_cc_guardar_datos_contrato($p2, ['tipo' => 'empresa', 'direccion' => 'Otra 1', 'razon_social' => '[PRUEBA] Muebles SpA', 'rut_empresa' => '11.111.111-2']);
+ok($clave2 === 'datos_contrato', 'empresa sin RUT válido: datos_contrato');
+ok(ContractService::get_by_id((int) $r2['contrato_id'])->placeholders === $ph2_antes, 'empresa sin RUT válido: el contrato no cambia');
+$fila_tech_2_despues = $wpdb->get_row($wpdb->prepare("SELECT billing_address, tax_id, company FROM {$tech} WHERE id = %d", (int) $c2_antes->client_id));
+ok($fila_tech_2_despues == $fila_tech_2_antes, 'empresa sin RUT válido: la ficha operativa no cambia');
+ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente'", $p2->id)) === $notas_2_antes, 'empresa sin RUT válido: no queda nota nueva (nada cambia)');
+
+// ---------- empresa completa (company de la ficha ya viene con un valor: no se pisa) ----------
+$p3 = crear_propuesta_datos($marca . '-empresa-ok', $payload, $creadas);
+$r3 = aceptar_para_prueba($p3);
+$p3 = at_cc_propuesta_por_id($p3->id);
+$c3 = ContractService::get_by_id((int) $r3['contrato_id']);
+$company_antes = (string) $wpdb->get_var($wpdb->prepare("SELECT company FROM {$tech} WHERE id = %d", (int) $c3->client_id));
+ok($company_antes !== '', 'empresa completa: la ficha operativa ya trae una empresa (la de la propuesta)');
+$clave3 = at_cc_guardar_datos_contrato($p3, ['tipo' => 'empresa', 'direccion' => 'Calle Uno 1, Ñuñoa', 'razon_social' => '[PRUEBA] Muebles SpA', 'rut_empresa' => '10.000.013-K']);
+ok($clave3 === 'datos_ok', 'empresa completa: datos_ok');
+$ph3 = json_decode(ContractService::get_by_id((int) $r3['contrato_id'])->placeholders, true);
+ok(($ph3['tipo_cliente'] ?? '') === 'empresa' && ($ph3['razon_social_cliente'] ?? '') === '[PRUEBA] Muebles SpA' && ($ph3['rut_cliente'] ?? '') === '10.000.013-K', 'empresa completa: contrato con razón social y RUT de la empresa');
+$company_despues = (string) $wpdb->get_var($wpdb->prepare("SELECT company FROM {$tech} WHERE id = %d", (int) $c3->client_id));
+ok($company_despues === $company_antes, 'empresa completa: la ficha operativa no pisa la empresa que ya tenía');
+
+// ---------- con la revisión de Luis ya guardada ----------
+$p4 = crear_propuesta_datos($marca . '-revisado', $payload, $creadas);
+$r4 = aceptar_para_prueba($p4);
+$p4 = at_cc_propuesta_por_id($p4->id);
+ContractService::guardar_revision((int) $r4['contrato_id'], ['plazo' => 'Ocho semanas']);
+$ph4_antes = ContractService::get_by_id((int) $r4['contrato_id'])->placeholders;
+$notas_4_antes = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente'", $p4->id));
+$clave4 = at_cc_guardar_datos_contrato($p4, ['tipo' => 'persona', 'direccion' => 'Calle Dos 2']);
+ok($clave4 === 'datos_recibidos', 'con revisión de Luis ya guardada: datos_recibidos');
+ok(ContractService::get_by_id((int) $r4['contrato_id'])->placeholders === $ph4_antes, 'con revisión ya guardada: el contrato no cambia');
+ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente'", $p4->id)) === $notas_4_antes + 1, 'con revisión ya guardada: igual queda la nota en Seguimiento');
+
+// ---------- la barra pública ofrece «Datos para tu contrato» solo cuando corresponde ----------
+ob_start();
+at_cc_render_barra(at_cc_propuesta_por_id($p1->id));
+$html_p1 = (string) ob_get_clean();
+ok(strpos($html_p1, 'Datos para tu contrato') !== false && strpos($html_p1, 'id="at-cc-datos"') !== false, 'aceptada sin revisión de Luis: la barra ofrece el botón y el diálogo');
+ok(strpos($html_p1, 'A mi nombre (persona natural)') !== false && strpos($html_p1, 'De una empresa') !== false && strpos($html_p1, 'Razón social de la empresa') !== false && strpos($html_p1, 'RUT de la empresa') !== false && strpos($html_p1, 'Dirección (calle, número, comuna y ciudad)') !== false, 'el diálogo trae los campos y textos pedidos');
+$_GET['respuesta'] = 'aceptada';
+ob_start();
+at_cc_render_barra(at_cc_propuesta_por_id($p1->id));
+$html_p1_abre = (string) ob_get_clean();
+unset($_GET['respuesta']);
+ok(strpos($html_p1_abre, '"at-cc-datos"') !== false && strpos($html_p1_abre, 'var inicial = "at-cc-datos"') !== false, 'con respuesta=aceptada el diálogo se abre solo');
+ob_start();
+at_cc_render_barra(at_cc_propuesta_por_id($p4->id));
+$html_p4 = (string) ob_get_clean();
+ok(strpos($html_p4, 'Datos para tu contrato') === false, 'con la revisión de Luis ya guardada: la barra no ofrece el botón');
+
+// Limpieza
+$ids = implode(',', array_map('intval', $creadas));
+$emails = $wpdb->get_col("SELECT client_email FROM {$wpdb->prefix}automatiza_propuestas WHERE id IN ({$ids})");
+$crm_ids = array_filter(array_map('at_cc_crm_de_email', $emails));
+$wpdb->query("DELETE FROM " . ContractService::table() . " WHERE proposal_id IN ({$ids})");
+$wpdb->query("DELETE FROM {$det} WHERE propuesta_id IN ({$ids})");
+$wpdb->query("DELETE FROM {$wpdb->prefix}automatiza_clients_details WHERE propuesta_origin_id IN ({$ids})");
+if ($crm_ids) {
+	$lista = implode(',', array_map('intval', $crm_ids));
+	$wpdb->query("DELETE FROM {$wpdb->prefix}crm_historial WHERE cliente_id IN ({$lista})");
+	$wpdb->query("DELETE FROM {$wpdb->prefix}automatiza_tech_clients WHERE crm_cliente_id IN ({$lista})");
+	$wpdb->query("DELETE FROM {$wpdb->prefix}crm_clientes WHERE id IN ({$lista})");
+}
+$wpdb->query("DELETE FROM {$wpdb->prefix}automatiza_propuestas WHERE id IN ({$ids})");
+fin();

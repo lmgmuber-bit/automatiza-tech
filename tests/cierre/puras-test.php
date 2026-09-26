@@ -118,6 +118,10 @@ ok(array_diff(array_keys($m4), at_cc_claves_contrato_servicios()) === [], 'con t
 // Mensajes de la página
 ok(at_cc_mensaje_respuesta('aceptada')['tipo'] === 'ok' && at_cc_mensaje_respuesta('datos')['tipo'] === 'aviso' && at_cc_mensaje_respuesta('error')['tipo'] === 'error', 'mensajes');
 ok(at_cc_mensaje_respuesta('inventado') === null, 'mensaje desconocido');
+// Task 7 (ajuste): mensajes de «Datos para tu contrato».
+ok(at_cc_mensaje_respuesta('datos_ok') === ['tipo' => 'ok', 'texto' => '¡Listo! Con estos datos preparamos tu contrato.'], 'mensaje datos_ok');
+ok(at_cc_mensaje_respuesta('datos_recibidos') === ['tipo' => 'ok', 'texto' => 'Recibimos tus datos. Luis los revisa junto con tu contrato.'], 'mensaje datos_recibidos');
+ok(at_cc_mensaje_respuesta('datos_contrato') === ['tipo' => 'aviso', 'texto' => 'Revisa los datos del contrato: la dirección y, si es una empresa, su razón social y un RUT válido.'], 'mensaje datos_contrato');
 
 // Evidencia
 $tmp = sys_get_temp_dir() . '/at-cc-prueba-' . getmypid();

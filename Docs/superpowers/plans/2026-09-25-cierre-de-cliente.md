@@ -1739,6 +1739,15 @@ En `at_cc_bienvenida_html()` (puras.php), cuando `con_propuesta` es verdadero, a
 «Para preparar tu contrato necesitamos saber a nombre de quién va (tú o tu empresa), el RUT y la dirección. Si ya los completaste en la página de la propuesta, no tienes que hacer nada; si no, respóndenos este correo con esos datos.»
 Prueba en `puras-test.php`: aparece con `con_propuesta` y no aparece sin propuesta.
 
+#### 8. Enlaces a PDF del portal del cliente (del cotejo de PROD del 25-sep)
+
+El módulo de contratos que trae esta rama solo entrega los PDF a través de `ContractService::secure_pdf_url()` (descarga con permiso). La línea de tiempo pública del cliente en `wp-content/mu-plugins/crm-ai-completo.php` todavía enlaza directo al archivo (`$c['signed_pdf_url']` y `$c['pdf_url']`, hoy alrededor de las líneas 4806 y 4824, en el bloque de contratos que consulta `signed_pdf_url, pdf_url, sign_token, …`): con el módulo nuevo esos enlaces darán 403.
+- Cambiarlos por `ContractService::secure_pdf_url((object) $c, true, $c['sign_token'])` (firmado) y `ContractService::secure_pdf_url((object) $c, false, $c['sign_token'])` (preliminar), dentro de `esc_url()`.
+- Si la clase no está cargada en esa petición pública, cargarla con `require_once ABSPATH . 'contracts/contract-service.php'` cuando el archivo exista (confirma cómo se carga hoy el módulo en el front). Si aun así no existe la clase, no mostrar el enlace (nunca el directo).
+- `crm-ai-completo.php` es CRLF: mide CR y LF con PHP antes y después y conserva la diferencia; confirma los anclajes con `grep -cF`.
+- Prueba (en `contrato-wp-test.php` o una nueva `portal-pdf-wp-test.php`): generar el HTML de la línea de tiempo pública de un cliente de prueba con un contrato (buffer de salida) y comprobar que el enlace contiene `admin-ajax.php?action=at_download_contract` y el token, y que no contiene la URL directa de `uploads/automatiza-tech-contracts`. Si generar esa vista en la prueba no es viable, explica por qué en el reporte y prueba al menos la función que arma el enlace.
+- Agregar `wp-content/mu-plugins/crm-ai-completo.php` (y la prueba nueva, si la hay) al commit.
+
 ---
 
 #### Pruebas (TDD: primero fallan, después pasan)
@@ -1758,7 +1767,7 @@ Prueba en `puras-test.php`: aparece con `con_propuesta` y no aparece sin propues
 #### Commit
 
 ```bash
-git add contracts/contract-service.php contracts/at-sign-contract.php Docs/CONTRATO_SERVICIO_DESARROLLO.md wp-content/themes/automatiza-tech/inc/cierre-cliente/puras.php tests/cierre/plantilla-test.php tests/cierre/contrato-wp-test.php tests/cierre/puras-test.php
+git add contracts/contract-service.php contracts/at-sign-contract.php wp-content/mu-plugins/crm-ai-completo.php Docs/CONTRATO_SERVICIO_DESARROLLO.md wp-content/themes/automatiza-tech/inc/cierre-cliente/puras.php tests/cierre/plantilla-test.php tests/cierre/contrato-wp-test.php tests/cierre/puras-test.php
 git commit -m "feat(cierre): contrato a nombre de persona natural o empresa, sin firma con datos en blanco" -m "Co-Authored-By: <modelo> <noreply@anthropic.com>"
 ```
 
@@ -3578,6 +3587,7 @@ No se delega: modifica el bot principal de PROD (`WhatsApp Tech - Principal (PRO
 
   La columna `crm_cliente_id` la crea sola el primer `admin_init`.
 - [ ] **Step 3:** Con la autorización: respaldo `~/respaldos/cierre-cliente-antes-<fecha>.tar.gz` (archivos) y volcado de las tablas `wp_automatiza_tech_clients`, `wp_crm_clientes` y `wp_automatiza_propuestas`; subir cada archivo a un temporal, `php -l` y mover; comparar md5.
-- [ ] **Step 4:** Verificar desde afuera: portada 200; `ver-presentacion.php?id=<una enviada>` 200 con la barra y `Cache-Control` sin caché; `/wp-admin/admin.php?page=automatiza-proposals` 302 al login (no 500); `/wp-json/at/v1/propuesta-respuesta` sin clave 401; la URL directa de la carpeta de evidencias 403. Purgar LiteSpeed si corresponde.
+- [ ] **Step 3b: Carpeta de contratos.** Subir el código no la cierra: el `.htaccess` de `wp-content/uploads/automatiza-tech-contracts/` solo se reescribe cuando se genera o firma un contrato. Escribirlo a mano al desplegar, con el mismo contenido que escribe `ContractService::storage_dir()` en esta rama (respaldo del actual antes).
+- [ ] **Step 4:** Verificar desde afuera: la URL directa de un PDF y de una firma de contrato pasa de 200 a 403; `admin-ajax.php?action=at_download_contract` sin token da 403; `contracts/sign-contract.php` con un token inválido no da 500; Luis, con sesión iniciada, prueba los botones de PDF en el admin de contratos, en la ficha del CRM y en el portal del cliente. Además: portada 200; `ver-presentacion.php?id=<una enviada>` 200 con la barra y `Cache-Control` sin caché; `/wp-admin/admin.php?page=automatiza-proposals` 302 al login (no 500); `/wp-json/at/v1/propuesta-respuesta` sin clave 401; la URL directa de la carpeta de evidencias 403. Purgar LiteSpeed si corresponde.
 - [ ] **Step 5:** Luis revisa con su sesión: completar «Ajustes del cierre» (datos de transferencia), ver la pestaña del CRM, y usar «Registrar aceptación» en la propuesta 43 como primer caso real.
 - [ ] **Step 6:** Documentar: sección «Cierre de cliente» en `Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`; puntero en `CLAUDE.md`; memoria `project_at_cierre_cliente`; commit, push y PR hacia `main` con la lista de despliegue y lo que queda pendiente de la Task 12.

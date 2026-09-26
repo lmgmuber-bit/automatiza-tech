@@ -3374,6 +3374,12 @@ ok(count($correos) === 1 && $correos[0]['to'] === get_option('admin_email') && s
 
 ---
 
+#### Ajuste del controlador 2 (26-sep): la nota del número distinto es interna
+
+La línea de `at_cc_rest_respuesta_whatsapp()` que anota «Respuesta por WhatsApp desde un número distinto (no se aplicó)» usa el tipo `'respuesta_cliente'`, que se muestra en la página pública del prospecto, y su descripción lleva el teléfono de un tercero. Usa el tipo interno `'aviso_operativo'` (está en `at_cc_tipos_internos()` de puras.php y no sale en ninguna vista pública). Agrega a `tests/cierre/rest-wp-test.php` una aserción: tras la respuesta desde otro número, la propuesta tiene una nota `aviso_operativo` y ninguna `respuesta_cliente` con ese teléfono.
+
+---
+
 ### Task 10b: Contexto de la propuesta para el bot (`whatsapp.php`) — agregada por Luis el 25-sep
 
 Cuando el cliente **escribe** en vez de tocar un botón («sí, acepto», «tengo una duda del precio»), el agente de IA del bot principal no sabe que esa persona tiene una propuesta esperando respuesta. Esta tarea agrega el endpoint que el bot consulta antes de pasarle el mensaje a la IA (la parte del bot es la Task 12b). Un mensaje de texto **nunca** cambia el estado: solo se anota y se avisa a Luis.
@@ -3519,6 +3525,16 @@ function at_cc_avisar_mensaje_whatsapp(object $p, string $mensaje): void {
 git add wp-content/themes/automatiza-tech/inc/cierre-cliente/whatsapp.php tests/cierre/contexto-wp-test.php
 git commit -m "feat(cierre): contexto de la propuesta para el bot de WhatsApp y aviso a Luis cuando el cliente escribe" -m "Co-Authored-By: <modelo> <noreply@anthropic.com>"
 ```
+
+---
+
+#### Ajuste del controlador (26-sep): el mensaje del cliente es una nota interna
+
+`at_cc_rest_contexto_whatsapp()` anota el mensaje con el tipo `'respuesta_cliente'`, que se muestra en la página pública del prospecto. Usa un tipo interno nuevo, `'mensaje_whatsapp'`:
+- agrégalo a `at_cc_tipos_internos()` en puras.php (con su aserción en `puras-test.php`);
+- agrégalo a `get_detail_types()` de `inc/client-details-module.php` con la etiqueta `'💬 Mensaje por WhatsApp'`, ícono `'💬'` y color `'#0f766e'`, **después** de `'respuesta_cliente'` (nunca como primera clave: la primera es el tipo por defecto del formulario de Seguimiento); archivo CRLF: mide CR/LF con PHP antes y después;
+- en `tests/cierre/contexto-wp-test.php`, la aserción «queda anotado en Seguimiento» cuenta `detail_type = 'mensaje_whatsapp'`.
+Suma `puras.php`, `puras-test.php` e `inc/client-details-module.php` al commit.
 
 ---
 

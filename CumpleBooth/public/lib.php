@@ -1172,11 +1172,13 @@ function cb_theme_asomate($bloque, string $base, string $dir, array $personajesT
             continue;
         }
         $ficha = $porArchivo[(string) $clave] ?? [];
+        // Una temática sin ruleta (Fiestas Patrias, 2026-09-26: huasos y huasitas solo para Asómate) no tiene
+        // personajes de donde sacar el nombre: entonces lo trae el propio bloque de Asómate.
         $limpio = [
             'clave'  => (string) $clave,
             'png'    => $base . $rel . '?v=' . cb_sello_archivo($dir . $rel),
-            'nombre' => (string) ($ficha['name'] ?? $clave),
-            'emoji'  => (string) ($ficha['emoji'] ?? ''),
+            'nombre' => (string) ($ficha['name'] ?? $geo['nombre'] ?? $clave),
+            'emoji'  => (string) ($ficha['emoji'] ?? $geo['emoji'] ?? ''),
         ];
         foreach ($campos as $campo) {
             $limpio[$campo] = (float) ($geo[$campo] ?? 0);

@@ -1,0 +1,354 @@
+<?php
+/**
+ * Modo feria de punta a punta (AT-CUMPLECLICK-020, 2026-09-26):
+ *
+ *  - migración 026 repetible;
+ *  - una fiesta SIN feria responde exactamente igual en api.php, con o sin `tema` y `modo`;
+ *  - con feria: api.php cambia de temática según `tema`/`modo`, rechaza lo no habilitado y suma `feria`;
+ *  - feria-api.php: datos + mundos por modo, número F-### correlativo, nombre limpio;
+ *  - upload.php: liga la foto a su número, nunca pierde una foto por una reserva mala, usa el tope de la feria;
+ *  - galeria.php no existe para una feria;
+ *  - galería del admin: búsqueda por número, nombre, modo, temática y hora; contador de impresiones;
+ *  - duplicar; y retention.php borra las fotos de feria a los 7 días sin tocar una fiesta normal.
+ *
+ * Nunca toca una base real: la SQLite vive en una carpeta temporal que se borra al final.
+ */
+if (PHP_SAPI !== 'cli') { exit(2); }
+$raiz = dirname(__DIR__, 2);
+$tmp = sys_get_temp_dir() . '/cumpleclick-ferias-http-' . bin2hex(random_bytes(4));
+mkdir($tmp . '/state', 0770, true);
+mkdir($tmp . '/photos', 0770, true);
+$puerto = 19100 + random_int(0, 200);
+$base = 'http://127.0.0.1:' . $puerto;
+
+$env = array_merge(getenv(), [
+    'CC_STORAGE_MODE' => 'db', 'CC_PDO_DSN' => 'sqlite:' . $tmp . '/test.sqlite',
+    'CC_APP_HMAC_KEY' => str_repeat('f', 64), 'CC_PUBLIC_BASE_URL' => $base,
+    'CC_PHOTO_DIR' => $tmp . '/photos', 'CC_STATE_DIR' => $tmp . '/state',
+    'CC_INVITATION_DIR' => $tmp . '/invitations',
+    'CUMPLECLICK_CONFIG_FILE' => $tmp . '/no-config.php', 'CC_AJUSTES_PATH' => $tmp . '/ajustes.json',
+    'CC_SMTP_HOST' => '',
+    'CC_ADMIN_PASSWORD_HASH' => password_hash('clave-maestra-feria-1234', PASSWORD_DEFAULT),
+]);
+foreach ($env as $k => $v) { putenv($k . '=' . $v); }
+require $raiz . '/public/lib.php';
+require $raiz . '/public/lib.ferias.php';
+require_once __DIR__ . '/_migraciones.php';
+$pdo = cb_pdo();
+cb_test_migrar_todo($pdo);
+
+$tests = 0;
+function f_check(bool $cond, string $msg): void { global $tests; $tests++; if (!$cond) { throw new RuntimeException('FAIL: ' . $msg); } }
+
+// ── Migración ───────────────────────────────────────────────────────────────
+$up = require $raiz . '/database/migrations/026_modo_feria.php';
+$up($pdo); $up($pdo);
+f_check(cb_ferias_listo(), 'las dos tablas existen y la migración se puede repetir');
+
+// ── Una fiesta normal y una feria ───────────────────────────────────────────
+$hoy = (new DateTimeImmutable('now', new DateTimeZone('America/Santiago')))->format('Y-m-d');
+f_check(cb_save_parties(['parties' => ['luciano-spidey' => [
+    'nombre' => 'Luciano', 'tema' => 'spidey', 'fecha' => $hoy, 'activa' => true,
+    'invitados' => [['name' => 'Ana', 'g' => 'f']], 'creada' => gmdate('Y-m-d H:i:s'),
+]]]), 'fiesta normal creada');
+f_check(cb_feria_de_fiesta('luciano-spidey') === null, 'una fiesta normal no es feria');
+
+[$datos, $errores] = cb_feria_validar([
+    'nombre' => 'Mini Paseo Dieciochero', 'organizador' => 'Royal Art Academy', 'organizador_ig' => 'royalart.cl',
+    'lugar' => 'Grecia 3348', 'fecha' => $hoy, 'hora_inicio' => '10:00', 'mesa' => '6',
+    'mundos_infantil' => ['hielo', 'spidey', 'no-existe', 'hielo'], 'mundos_adulto' => ['hielo', 'baby-nube'],
+    'retencion_dias' => 7, 'max_fotos' => 10, 'activa' => '1',
+]);
+f_check($errores === [], 'la ficha de la feria valida: ' . implode(' ', $errores));
+f_check($datos['mundos_infantil'] === ['hielo', 'spidey'], 'se descarta la temática que no existe y la repetida');
+f_check($datos['organizador_ig'] === '@royalart.cl', 'el Instagram del organizador queda con @');
+[, $malos] = cb_feria_validar(['nombre' => '', 'fecha' => '2026-02-30', 'activa' => '1', 'max_fotos' => 3]);
+f_check(count($malos) >= 3, 'sin nombre, con fecha imposible y sin mundos no se guarda');
+
+$feria = cb_feria_guardar($datos, null, 'test');
+$slug = $feria['slug'];
+f_check(cb_valid_public_slug($slug) && str_contains($slug, 'feria'), 'la feria tiene su fiesta con slug propio');
+f_check($feria['activa'] && $feria['party_activa'], 'feria y fiesta quedan activas');
+require_once $raiz . '/public/lib.acceptance.php';
+f_check(cb_party_can_activate($slug), 'la fiesta de la feria queda eximida de firma (evento propio)');
+f_check(cb_feria_recuerdo($feria) === 'Mini Paseo Dieciochero · Royal Art Academy · ' . cb_feria_fecha_texto($hoy), 'línea de recuerdo');
+f_check(cb_feria_fecha_texto('2026-09-26') === '26 sep 2026', 'fecha en texto');
+
+// ── Servidor ────────────────────────────────────────────────────────────────
+$servidor = proc_open([PHP_BINARY, '-S', '127.0.0.1:' . $puerto, '-t', $raiz . '/public'],
+    [0 => ['pipe', 'r'], 1 => ['file', $tmp . '/servidor.log', 'a'], 2 => ['file', $tmp . '/servidor.log', 'a']], $pipes, $raiz . '/public', $env);
+register_shutdown_function(static function () use ($servidor, $tmp): void {
+    if (is_resource($servidor)) { proc_terminate($servidor); }
+    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($tmp, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST);
+    foreach ($it as $file) { $file->isDir() ? @rmdir($file->getPathname()) : @unlink($file->getPathname()); }
+    @rmdir($tmp);
+});
+for ($i = 0; $i < 50; $i++) {
+    $s = @fsockopen('127.0.0.1', $puerto, $errno, $errstr, 0.2);
+    if ($s) { fclose($s); break; }
+    usleep(100000);
+}
+
+function pedir(string $metodo, string $ruta, ?array $json = null): array
+{
+    global $base;
+    $cuerpo = $json !== null ? json_encode($json) : '';
+    $ctx = stream_context_create(['http' => ['method' => $metodo, 'ignore_errors' => true, 'timeout' => 20,
+        'header' => $json !== null ? "Content-Type: application/json\r\nContent-Length: " . strlen($cuerpo) : '',
+        'content' => $cuerpo]]);
+    $texto = (string) @file_get_contents($base . $ruta, false, $ctx);
+    $estado = 0;
+    foreach ($http_response_header ?? [] as $linea) {
+        if (preg_match('/^HTTP\/\S+ (\d{3})/', $linea, $m)) { $estado = (int) $m[1]; }
+    }
+    $data = json_decode($texto, true);
+    return ['estado' => $estado, 'texto' => $texto, 'json' => is_array($data) ? $data : null];
+}
+
+function jpeg(int $semilla): string
+{
+    $im = imagecreatetruecolor(90, 160);
+    imagefilledrectangle($im, 0, 0, 90, 160, imagecolorallocate($im, ($semilla * 37) % 255, 120, 200));
+    ob_start(); imagejpeg($im, null, 85); return (string) ob_get_clean();
+}
+
+function subir(string $party, int $semilla, ?string $reserva = null): array
+{
+    $cuerpo = ['party' => $party, 'name' => 'visita', 'image' => 'data:image/jpeg;base64,' . base64_encode(jpeg($semilla))];
+    if ($reserva !== null) { $cuerpo['feria_reserva'] = $reserva; }
+    return pedir('POST', '/upload.php', $cuerpo);
+}
+
+echo "Modo feria por HTTP en $base\n";
+
+// ── Fiesta normal: api.php igual que antes ──────────────────────────────────
+$normal = pedir('GET', '/api.php?p=luciano-spidey');
+f_check($normal['estado'] === 200 && ($normal['json']['ok'] ?? false) === true, 'la fiesta normal responde');
+f_check(!array_key_exists('feria', $normal['json']), 'la fiesta normal no trae feria');
+$normalConParametros = pedir('GET', '/api.php?p=luciano-spidey&tema=hielo&modo=adulto');
+f_check($normalConParametros['texto'] === $normal['texto'], 'en una fiesta normal, tema y modo no cambian nada (misma respuesta byte a byte)');
+f_check(pedir('GET', '/feria-api.php?f=luciano-spidey')['estado'] === 404, 'feria-api no atiende fiestas normales');
+
+// ── api.php con feria ───────────────────────────────────────────────────────
+$r = pedir('GET', '/api.php?p=' . $slug);
+f_check($r['estado'] === 200 && ($r['json']['theme']['slug'] ?? '') === 'hielo', 'sin tema, la primera temática infantil');
+f_check(($r['json']['feria']['modo'] ?? '') === 'infantil', 'sin modo, infantil');
+f_check(($r['json']['feria']['modos'] ?? null) === ['infantil' => ['hielo', 'spidey'], 'adulto' => ['hielo', 'baby-nube']], 'modos habilitados');
+f_check(($r['json']['feria']['recuerdo'] ?? '') === cb_feria_recuerdo($feria), 'recuerdo en la respuesta');
+f_check(($r['json']['feria']['organizador_ig'] ?? '') === '@royalart.cl' && ($r['json']['feria']['mesa'] ?? '') === '6', 'organizador y mesa');
+f_check(($r['json']['party']['invitados'] ?? null) === [] && ($r['json']['party']['nombre'] ?? '') === 'Mini Paseo Dieciochero', 'sin lista de invitados, nombre de la feria');
+$r = pedir('GET', '/api.php?p=' . $slug . '&tema=spidey&modo=infantil');
+f_check(($r['json']['theme']['slug'] ?? '') === 'spidey', 'el visitante elige spidey');
+$sinJuegos = true;
+foreach (($r['json']['theme']['personajes'] ?? []) as $p) { if (!empty((array) $p['game'])) { $sinJuegos = false; } }
+f_check($sinJuegos && count($r['json']['theme']['personajes']) > 0, 'en feria los personajes no traen minijuego (la fila avanza)');
+$r = pedir('GET', '/api.php?p=' . $slug . '&tema=baby-nube&modo=adulto');
+f_check(($r['json']['theme']['slug'] ?? '') === 'baby-nube' && ($r['json']['theme']['personajes'] ?? null) === [], 'adulto con temática sin personajes');
+f_check(pedir('GET', '/api.php?p=' . $slug . '&tema=baby-nube&modo=infantil')['json']['error'] === 'tema_no_habilitado', 'temática no habilitada en ese modo: 403');
+f_check(pedir('GET', '/api.php?p=' . $slug . '&tema=spidey&modo=adulto')['estado'] === 403, 'spidey no está en adultos');
+f_check(pedir('GET', '/api.php?p=' . $slug . '&tema=hielo&modo=abuelos')['estado'] === 400, 'modo inválido: 400');
+
+// ── feria-api.php GET ───────────────────────────────────────────────────────
+$r = pedir('GET', '/feria-api.php?f=' . $slug);
+f_check($r['estado'] === 200 && ($r['json']['ok'] ?? false) === true, 'feria-api responde');
+f_check(!isset($r['json']['feria']['modo']) && !isset($r['json']['feria']['modos']), 'la ficha del selector no trae modo ni modos');
+$mundos = $r['json']['mundos'] ?? [];
+f_check(array_column($mundos['infantil'] ?? [], 'slug') === ['hielo', 'spidey'], 'mundos infantiles');
+f_check(($mundos['adulto'][1]['slug'] ?? '') === 'baby-nube' && ($mundos['adulto'][1]['personajes'] ?? true) === false, 'baby-nube va sin personajes');
+f_check(($mundos['infantil'][0]['personajes'] ?? false) === true && str_starts_with((string) $mundos['infantil'][0]['imagen'], 'themes/hielo/'), 'hielo con personajes e imagen');
+f_check(array_key_exists('video_espera', $r['json']), 'trae el video de espera (vacío si el archivo aún no está)');
+
+// ── Número F-### ────────────────────────────────────────────────────────────
+$n1 = pedir('POST', '/feria-api.php', ['accion' => 'numero', 'f' => $slug, 'modo' => 'infantil', 'tema' => 'hielo', 'nombre' => 'Sofía']);
+f_check(($n1['json']['numero'] ?? 0) === 1 && ($n1['json']['etiqueta'] ?? '') === 'F-001', 'primer número F-001');
+f_check((bool) preg_match('/^[a-f0-9]{32}$/', (string) ($n1['json']['reserva'] ?? '')), 'reserva de 32 hex');
+$n2 = pedir('POST', '/feria-api.php', ['accion' => 'numero', 'f' => $slug, 'modo' => 'adulto', 'tema' => 'baby-nube', 'nombre' => '<b>Ro</b>berto 😀 Pérez González y más']);
+f_check(($n2['json']['numero'] ?? 0) === 2, 'segundo número');
+$nombre2 = (string) $pdo->query('SELECT nombre FROM cc_feria_fotos WHERE numero = 2')->fetchColumn();
+f_check(!str_contains($nombre2, '<') && mb_strlen($nombre2) <= 20, 'el nombre queda sin símbolos y con 20 caracteres como máximo: ' . $nombre2);
+f_check(strlen((string) $pdo->query('SELECT reserva FROM cc_feria_fotos WHERE numero = 1')->fetchColumn()) === 64
+    && (string) $pdo->query('SELECT reserva FROM cc_feria_fotos WHERE numero = 1')->fetchColumn() !== $n1['json']['reserva'], 'la base guarda la huella, no el token');
+f_check(pedir('POST', '/feria-api.php', ['accion' => 'numero', 'f' => $slug, 'modo' => 'infantil', 'tema' => 'baby-nube'])['estado'] === 403, 'no reserva con una temática no habilitada');
+f_check(pedir('POST', '/feria-api.php', ['accion' => 'otra', 'f' => $slug])['estado'] === 400, 'acción desconocida: 400');
+
+// ── upload.php ──────────────────────────────────────────────────────────────
+$u1 = subir($slug, 1, $n1['json']['reserva']);
+f_check($u1['estado'] === 200 && ($u1['json']['ok'] ?? false) === true, 'la foto de Sofía se sube');
+f_check((int) $pdo->query('SELECT COUNT(*) FROM cc_feria_fotos WHERE numero = 1 AND photo_id IS NOT NULL')->fetchColumn() === 1, 'y queda ligada a F-001');
+$u1b = subir($slug, 2, $n1['json']['reserva']);
+f_check(($u1b['json']['ok'] ?? false) === true, 'reusar la reserva no impide guardar la foto');
+$ligada = (int) $pdo->query('SELECT photo_id FROM cc_feria_fotos WHERE numero = 1')->fetchColumn();
+f_check($ligada === (int) $pdo->query("SELECT MIN(id) FROM cc_photos")->fetchColumn(), 'pero F-001 sigue con la primera foto');
+f_check((subir($slug, 3, 'no-es-un-token')['json']['ok'] ?? false) === true, 'una reserva inválida no pierde la foto');
+f_check((subir($slug, 4)['json']['ok'] ?? false) === true, 'sin reserva también se guarda');
+f_check((subir($slug, 5, $n2['json']['reserva'])['json']['ok'] ?? false) === true, 'la foto de F-002 se sube');
+// Una reserva de OTRA feria no liga una foto de esta.
+$otra = cb_feria_guardar(array_merge($datos, ['nombre' => 'Otra feria']), null, 'test');
+$nOtra = pedir('POST', '/feria-api.php', ['accion' => 'numero', 'f' => $otra['slug'], 'modo' => 'infantil', 'tema' => 'hielo', 'nombre' => 'X']);
+f_check(($nOtra['json']['numero'] ?? 0) === 1, 'cada feria numera desde 1');
+subir($slug, 6, $nOtra['json']['reserva']);
+f_check((int) $pdo->query('SELECT COUNT(*) FROM cc_feria_fotos WHERE feria_id = ' . $otra['id'] . ' AND photo_id IS NOT NULL')->fetchColumn() === 0, 'una reserva de otra feria no se liga');
+f_check((subir($otra['slug'], 13, $nOtra['json']['reserva'])['json']['ok'] ?? false) === true, 'la otra feria sube su propia foto');
+// Tope de la feria (10 en esta prueba) en vez de 200.
+for ($i = 7; $i <= 10; $i++) { subir($slug, $i); }
+$lleno = subir($slug, 11);
+f_check($lleno['estado'] === 507 && ($lleno['json']['max_photos'] ?? 0) === 10, 'la feria usa su propio tope de fotos');
+f_check((subir('luciano-spidey', 12)['json']['ok'] ?? false) === true, 'la fiesta normal sigue subiendo con su tope de siempre');
+
+// ── Sin galería pública ─────────────────────────────────────────────────────
+$g = pedir('GET', '/galeria.php?p=' . $slug);
+f_check($g['estado'] === 404 && str_contains($g['texto'], 'no tienen galería pública'), 'galeria.php no existe para una feria');
+
+// ── Galería del admin ───────────────────────────────────────────────────────
+$feria = cb_feria_por_id($feria['id']);
+$todo = cb_feria_galeria($feria);
+f_check($todo['total'] === 2 && $todo['fotos'][0]['etiqueta'] === 'F-002', 'la galería lista las fotos con número, la más nueva primero');
+f_check(cb_feria_galeria($feria, ['q' => 'F-001'])['total'] === 1 && cb_feria_galeria($feria, ['q' => '1'])['fotos'][0]['nombre'] === 'Sofía', 'busca por número');
+f_check(cb_feria_galeria($feria, ['q' => 'sof'])['total'] === 1, 'busca por nombre sin importar mayúsculas');
+f_check(cb_feria_galeria($feria, ['modo' => 'adulto'])['total'] === 1 && cb_feria_galeria($feria, ['tema' => 'hielo'])['total'] === 1, 'filtra por modo y temática');
+$idSofia = (int) $pdo->query('SELECT photo_id FROM cc_feria_fotos WHERE numero = 1 AND feria_id = ' . $feria['id'])->fetchColumn();
+$pdo->prepare('UPDATE cc_photos SET created_at = ? WHERE id = ?')->execute(['2026-09-26 14:00:00', $idSofia]); // 11:00 en Chile
+f_check(cb_feria_galeria($feria, ['desde' => '10:30', 'hasta' => '11:30'])['total'] === 1, 'filtra por hora de Chile');
+$idFila = (int) $todo['fotos'][1]['id'];
+f_check(cb_feria_sumar_impresion($feria, $idFila, 2) === 2 && cb_feria_sumar_impresion($feria, $idFila) === 3, 'cuenta las impresiones');
+f_check(cb_feria_sumar_impresion($otra, $idFila) === null, 'no suma impresiones de otra feria');
+$lista = cb_ferias_listar();
+$fila = array_values(array_filter($lista, static fn($f) => $f['id'] === $feria['id']))[0];
+f_check($fila['fotos'] === 2 && $fila['impresiones'] === 3, 'el listado cuenta fotos numeradas e impresiones');
+
+// ── Duplicar y desactivar ───────────────────────────────────────────────────
+$copia = cb_feria_duplicar($feria['id'], 'test');
+f_check(!$copia['activa'] && !$copia['party_activa'] && $copia['duplicada_de'] === $feria['id'], 'la copia nace inactiva y recuerda su origen');
+f_check($copia['mundos'] === $feria['mundos'] && $copia['slug'] !== $feria['slug'], 'misma configuración, fiesta nueva');
+f_check(pedir('GET', '/feria-api.php?f=' . $copia['slug'])['estado'] === 404, 'una feria inactiva no se ofrece');
+f_check(pedir('GET', '/api.php?p=' . $copia['slug'])['estado'] === 403, 'ni el kiosco la abre');
+
+// ── Panel: admin/ferias.php con la clave maestra ────────────────────────────
+final class Panel
+{
+    public array $cookies = [];
+    public function __construct(private string $base) {}
+    public function pedir(string $metodo, string $ruta, ?array $datos = null): array
+    {
+        $cab = [];
+        if ($this->cookies) { $cab[] = 'Cookie: ' . implode('; ', array_map(fn($k) => $k . '=' . $this->cookies[$k], array_keys($this->cookies))); }
+        $cuerpo = $datos !== null ? http_build_query($datos) : '';
+        if ($datos !== null) { $cab[] = 'Content-Type: application/x-www-form-urlencoded'; $cab[] = 'Content-Length: ' . strlen($cuerpo); }
+        $ctx = stream_context_create(['http' => ['method' => $metodo, 'header' => implode("\r\n", $cab), 'content' => $cuerpo,
+            'follow_location' => 0, 'ignore_errors' => true, 'timeout' => 20]]);
+        $html = (string) @file_get_contents($this->base . $ruta, false, $ctx);
+        $estado = 0; $ubicacion = '';
+        foreach ($http_response_header ?? [] as $l) {
+            if (preg_match('/^HTTP\/\S+ (\d{3})/', $l, $m)) { $estado = (int) $m[1]; }
+            if (stripos($l, 'Location:') === 0) { $ubicacion = trim(substr($l, 9)); }
+            if (stripos($l, 'Set-Cookie:') === 0 && preg_match('/^Set-Cookie:\s*([^=]+)=([^;]*)/i', $l, $m)) { $this->cookies[$m[1]] = $m[2]; }
+        }
+        return ['estado' => $estado, 'ubicacion' => $ubicacion, 'html' => $html];
+    }
+    public function csrf(string $html): string { return preg_match('/name="csrf" value="([a-f0-9]+)"/', $html, $m) ? $m[1] : ''; }
+}
+$panel = new Panel($base);
+f_check($panel->pedir('GET', '/admin/ferias.php')['estado'] === 302, 'sin sesión, el panel de ferias manda al login');
+$r = $panel->pedir('GET', '/admin/maestro.php');
+$r = $panel->pedir('POST', '/admin/maestro.php', ['csrf' => $panel->csrf($r['html']), 'password' => 'clave-maestra-feria-1234']);
+f_check($r['estado'] === 302, 'entra con la clave maestra');
+$r = $panel->pedir('GET', '/admin/ferias.php');
+f_check($r['estado'] === 200 && str_contains($r['html'], 'Mini Paseo Dieciochero') && str_contains($r['html'], 'href="ferias.php"'), 'la lista muestra la feria y la pestaña Ferias');
+$r = $panel->pedir('GET', '/admin/ferias.php?nueva=1');
+f_check(str_contains($r['html'], 'value="adulto-glam-dorado"') && substr_count($r['html'], 'name="mundos_infantil[]" value="adulto-') === 0, 'la ficha ofrece las adultas solo en Adultos');
+$r = $panel->pedir('POST', '/admin/ferias.php', ['csrf' => $panel->csrf($r['html']), 'action' => 'guardar', 'nombre' => 'Feria del panel',
+    'fecha' => $hoy, 'organizador' => 'Junta de vecinos', 'mundos_infantil' => ['spidey'], 'mundos_adulto' => ['adulto-glam-dorado'], 'activa' => '1',
+    'retencion_dias' => '7', 'max_fotos' => '500']);
+f_check($r['estado'] === 303 && str_contains($r['ubicacion'], 'ok=creada'), 'crea una feria desde el formulario');
+$creada = array_values(array_filter(cb_ferias_listar(), static fn($f) => $f['nombre'] === 'Feria del panel'))[0] ?? null;
+f_check($creada !== null && $creada['activa'] && $creada['mundos']['infantil'] === ['spidey'], 'queda guardada, activa y con sus mundos');
+$r = $panel->pedir('POST', '/admin/ferias.php', ['csrf' => 'malo', 'action' => 'guardar', 'nombre' => 'Intrusa', 'fecha' => $hoy]);
+f_check($r['estado'] === 403, 'sin CSRF válido no guarda');
+$r = $panel->pedir('GET', '/admin/ferias.php?galeria=' . $feria['id'] . '&q=F-001');
+f_check($r['estado'] === 200 && str_contains($r['html'], 'F-001') && !str_contains($r['html'], '>F-002<'), 'la galería busca por número');
+f_check(str_contains($r['html'], 'data-qr="' . $base . '/ver.php?t='), 'cada foto trae su QR');
+$idF1 = (int) $pdo->query('SELECT id FROM cc_feria_fotos WHERE numero = 1 AND feria_id = ' . $feria['id'])->fetchColumn();
+$antes = (int) $pdo->query("SELECT impresiones FROM cc_feria_fotos WHERE id = $idF1")->fetchColumn();
+$r = $panel->pedir('POST', '/admin/ferias.php', ['csrf' => $panel->csrf($r['html']), 'action' => 'imprimir', 'feria' => $feria['id'], 'foto' => $idF1, 'copias' => 2]);
+$j = json_decode($r['html'], true);
+f_check(($j['ok'] ?? false) === true && $j['impresiones'] === $antes + 2, 'reimprimir suma las copias al contador');
+$r = $panel->pedir('GET', '/admin/ferias.php?galeria=999999');
+f_check($r['estado'] === 404, 'una feria que no existe da 404');
+
+// ── Temáticas adultas propias (26-09) ───────────────────────────────────────
+$temas = cb_load_themes()['themes'];
+$adultas = ['adulto-estudio-bn', 'adulto-glam-dorado', 'adulto-noche-brujas'];
+foreach ($adultas as $t) {
+    f_check(($temas[$t]['audiencia'] ?? '') === 'adulto' && ($temas[$t]['personajes'] ?? null) === [] && array_key_exists('franquicia', $temas[$t]) && $temas[$t]['franquicia'] === null,
+        "$t: adulta, sin personajes y sin franquicia");
+    foreach (['fondo-sala.jpg', 'fondo-banner.jpg', 'fondo-escena.jpg'] as $archivo) {
+        $ruta = $raiz . "/public/themes/$t/$archivo";
+        $info = is_file($ruta) ? getimagesize($ruta) : false;
+        f_check($info !== false && $info[0] === 1080 && $info[1] === 1920, "$t/$archivo existe y mide 1080x1920");
+    }
+    f_check(cb_normalize_frame_box($temas[$t]['frameBox'] ?? null) !== null, "$t: frameBox válido para el modo marco");
+}
+[$datosAdultos, $erroresAdultos] = cb_feria_validar(['nombre' => 'Feria de adultos', 'fecha' => $hoy, 'activa' => '1',
+    'mundos_infantil' => ['hielo', 'adulto-glam-dorado'], 'mundos_adulto' => $adultas, 'max_fotos' => 100]);
+f_check($erroresAdultos === [] && $datosAdultos['mundos_infantil'] === ['hielo'], 'una temática adulta no entra en Niños');
+f_check($datosAdultos['mundos_adulto'] === $adultas, 'las tres adultas entran en Adultos');
+$feriaAdultos = cb_feria_guardar($datosAdultos, null, 'test');
+$r = pedir('GET', '/api.php?p=' . $feriaAdultos['slug'] . '&tema=adulto-estudio-bn&modo=adulto');
+f_check(($r['json']['theme']['filtro'] ?? '') === 'bn', 'el estudio llega con filtro blanco y negro');
+f_check(($r['json']['theme']['modoFoto'] ?? '') === 'fondo' && ($r['json']['theme']['images']['escena'] ?? '') === 'themes/adulto-estudio-bn/fondo-escena.jpg', 'modo fondo con su escena');
+f_check(($r['json']['party']['musica'] ?? true) === false, 'sin archivo de música, la tablet no la pide');
+$r = pedir('GET', '/api.php?p=' . $feriaAdultos['slug'] . '&tema=adulto-glam-dorado&modo=adulto');
+f_check(!isset($r['json']['theme']['filtro']) && ($r['json']['theme']['personajes'] ?? null) === [], 'glam a color y sin ruleta');
+$r = pedir('GET', '/api.php?p=' . $slug . '&tema=hielo&modo=infantil');
+f_check(($r['json']['theme']['modoFoto'] ?? '') === 'marco', 'una temática infantil sigue con marco');
+$r = pedir('GET', '/feria-api.php?f=' . $feriaAdultos['slug']);
+f_check(array_column($r['json']['mundos']['adulto'] ?? [], 'personajes') === [false, false, false], 'el selector sabe que las adultas van sin ruleta');
+
+// Fiestas Patrias: temática chilena sin personajes, para Niños y Adultos.
+$chile = $temas['fiestas-patrias'] ?? [];
+f_check(!isset($chile['audiencia']) && ($chile['personajes'] ?? null) === [] && array_key_exists('franquicia', $chile) && $chile['franquicia'] === null,
+    'fiestas-patrias: para todos, sin personajes y sin franquicia');
+foreach (['fondo-sala.jpg', 'fondo-banner.jpg', 'fondo-escena.jpg'] as $archivo) {
+    $info = @getimagesize($raiz . "/public/themes/fiestas-patrias/$archivo");
+    f_check($info !== false && $info[0] === 1080 && $info[1] === 1920, "fiestas-patrias/$archivo existe y mide 1080x1920");
+}
+[$datosChile] = cb_feria_validar(['nombre' => 'Feria dieciochera', 'fecha' => $hoy, 'activa' => '1',
+    'mundos_infantil' => ['fiestas-patrias'], 'mundos_adulto' => ['fiestas-patrias'], 'max_fotos' => 100]);
+f_check($datosChile['mundos_infantil'] === ['fiestas-patrias'] && $datosChile['mundos_adulto'] === ['fiestas-patrias'], 'Fiestas Patrias entra en los dos modos');
+$feriaChile = cb_feria_guardar($datosChile, null, 'test');
+$r = pedir('GET', '/api.php?p=' . $feriaChile['slug'] . '&tema=fiestas-patrias&modo=infantil');
+f_check(($r['json']['theme']['modoFoto'] ?? '') === 'fondo' && ($r['json']['theme']['personajes'] ?? null) === []
+    && ($r['json']['feria']['modo'] ?? '') === 'infantil', 'en Niños llega con fondo completo y sin ruleta');
+$aso = $r['json']['theme']['asomate'] ?? null;
+f_check(is_array($aso) && count($aso['personajes'] ?? []) === 6, 'Fiestas Patrias trae Asómate con seis personajes');
+f_check(array_column($aso['personajes'] ?? [], 'nombre') === ['Huasita de vestido floreado', 'Huasita de chupalla', 'Huasita de manta',
+    'Huaso de chamanto', 'Huaso de chupalla', 'Huaso de gala'], 'los nombres salen del bloque de Asómate, sin ruleta');
+$okGeo = true;
+foreach (($aso['personajes'] ?? []) as $p) {
+    $png = $raiz . '/public/themes/fiestas-patrias/asomate/' . $p['clave'] . '.png';
+    $info = @getimagesize($png);
+    $okGeo = $okGeo && $info !== false && $info[0] === (int) $p['w'] && $info[1] === (int) $p['h']
+        && $p['cx'] - $p['rx'] > 0 && $p['cx'] + $p['rx'] < $p['w'] && $p['cy'] - $p['ry'] > 0;
+}
+f_check($okGeo, 'cada recorte mide lo anotado y su hueco cae dentro de la figura');
+f_check(str_starts_with((string) ($aso['fondo'] ?? ''), 'themes/fiestas-patrias/asomate/fondo.jpg?v='), 'el fondo de Asómate va con sello de versión');
+
+// ── Retención: 7 días para la feria, nada para la fiesta normal ─────────────
+$pdo->prepare('UPDATE cc_ferias SET fecha = ? WHERE id = ?')->execute([gmdate('Y-m-d', time() - 8 * 86400), $feria['id']]);
+$archivos = $pdo->query('SELECT storage_key FROM cc_photos WHERE party_id = ' . $feria['party_id'])->fetchAll(PDO::FETCH_COLUMN);
+$proc = proc_open([PHP_BINARY, $raiz . '/scripts/retention.php', '--apply'], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $tuberias, $raiz, $env);
+$salida = stream_get_contents($tuberias[1]) . stream_get_contents($tuberias[2]);
+$codigo = proc_close($proc);
+f_check($codigo === 0 && str_contains($salida, 'ferias: 1'), 'retention.php corre y cuenta la feria vencida: ' . trim($salida));
+f_check((int) $pdo->query('SELECT COUNT(*) FROM cc_photos WHERE party_id = ' . $feria['party_id'] . ' AND deleted_at IS NULL')->fetchColumn() === 0, 'las fotos de la feria vencida se borran');
+$quedan = 0;
+foreach ($archivos as $k) { $p = cb_photo_absolute_path((string) $k); if ($p && is_file($p)) { $quedan++; } }
+f_check($quedan === 0 && count($archivos) > 0, 'y sus archivos también');
+f_check((string) $pdo->query("SELECT GROUP_CONCAT(nombre, '') FROM cc_feria_fotos WHERE feria_id = " . $feria['id'])->fetchColumn() === '', 'los nombres de los visitantes se borran');
+f_check((int) $pdo->query('SELECT COUNT(*) FROM cc_feria_fotos WHERE feria_id = ' . $feria['id'])->fetchColumn() === 2, 'los números quedan para contar');
+$lucianoId = cb_party_db_id('luciano-spidey');
+f_check((int) $pdo->query("SELECT COUNT(*) FROM cc_photos WHERE party_id = $lucianoId AND deleted_at IS NULL")->fetchColumn() === 1, 'la fiesta normal de hoy no se toca');
+f_check((int) $pdo->query('SELECT COUNT(*) FROM cc_photos WHERE party_id = ' . $otra['party_id'] . ' AND deleted_at IS NULL')->fetchColumn() === 1, 'ni la feria que no ha vencido');
+f_check(pedir('GET', '/api.php?p=' . $slug)['estado'] === 403, 'la feria archivada ya no abre');
+
+echo "OK: $tests comprobaciones\n";

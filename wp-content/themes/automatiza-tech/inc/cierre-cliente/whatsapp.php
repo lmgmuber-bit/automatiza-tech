@@ -227,7 +227,15 @@ function at_cc_propuesta_pendiente_por_telefono(string $tel): ?object {
 	if (strlen($n) < 8) {
 		return null;
 	}
-	$filas = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}automatiza_propuestas WHERE status IN ('sent','evaluando') AND phone <> '' ORDER BY id DESC LIMIT 200");
+	// Ronda 1 de revisión (26-sep), hallazgo 4: con $wpdb->prepare() (los estados son literales, pero
+	// van como parámetros igual que el resto del archivo) y tope 1000 en vez de 200: con ~2 leads/mes
+	// (Docs/2026-09-04-RADIOGRAFIA-AT-ESTUDIO-EXHAUSTIVO.md) el total de propuestas 'sent'/'evaluando'
+	// nunca se acerca a esa cifra, así que 1000 sigue trayendo todas sin paginar.
+	$filas = $wpdb->get_results($wpdb->prepare(
+		"SELECT * FROM {$wpdb->prefix}automatiza_propuestas WHERE status IN (%s,%s) AND phone <> '' ORDER BY id DESC LIMIT 1000",
+		'sent',
+		'evaluando'
+	));
 	foreach ((array) $filas as $p) {
 		if (at_cc_telefono_normalizado((string) $p->phone) === $n) {
 			return $p;
@@ -242,15 +250,22 @@ function at_cc_rest_contexto_whatsapp(WP_REST_Request $r) {
 	if (!$p) {
 		return ['tiene' => false];
 	}
-	$mensaje = trim(sanitize_textarea_field((string) $r->get_param('mensaje')));
+	// Ronda 1 de revisión (26-sep), hallazgo 2: no usar sanitize_textarea_field() para guardar — borra
+	// '%XX' (lo confunde con una secuencia %-encoded) y convierte '<' en la entidad '&lt;' antes de que
+	// el mensaje llegue a la nota o al correo. Se guarda el texto tal cual llegó (solo UTF-8 válido y
+	// sin caracteres de control) y se escapa recién a la salida (esc_html en el correo y en el CRM).
+	$mensaje = trim(wp_check_invalid_utf8((string) $r->get_param('mensaje'), true));
+	$mensaje = (string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $mensaje);
 	if ($mensaje !== '') {
 		$mensaje = mb_substr($mensaje, 0, 1000);
+		// Ajuste del controlador (26-sep): 'mensaje_whatsapp' es un tipo interno (at_cc_tipos_internos(),
+		// puras.php), no el público 'respuesta_cliente': es una nota, nunca una respuesta real.
+		// Ronda 1 de revisión (26-sep), hallazgo 1: la nota se guarda SIEMPRE; solo el correo a Luis
+		// queda detrás del transient de 30 minutos, para no perder mensajes intermedios del chat.
+		at_cc_anotar_simple($p, 'mensaje_whatsapp', 'Mensaje por WhatsApp sobre la propuesta (no cambia el estado)', $mensaje);
 		$clave = 'at_cc_ctx_aviso_' . (int) $p->id;
 		if (!get_transient($clave)) {
 			set_transient($clave, 1, 30 * MINUTE_IN_SECONDS);
-			// Ajuste del controlador (26-sep): 'mensaje_whatsapp' es un tipo interno (at_cc_tipos_internos(),
-			// puras.php), no el público 'respuesta_cliente': es una nota, nunca una respuesta real.
-			at_cc_anotar_simple($p, 'mensaje_whatsapp', 'Mensaje por WhatsApp sobre la propuesta (no cambia el estado)', $mensaje);
 			at_cc_avisar_mensaje_whatsapp($p, $mensaje);
 		}
 	}

@@ -19,7 +19,15 @@ ok(at_pa_grupo_de_estado('evaluando') === 'evaluando' && at_pa_grupo_de_estado('
 ok(at_pa_grupo_de_estado('contracted') === 'aceptadas', 'contracted (Contactos) cae en Aceptadas');
 ok(at_pa_estado_etiqueta('aceptada') === ['etiqueta' => 'Aceptada', 'clase' => 'at-estado--aceptadas'], 'etiqueta de aceptada');
 ok(at_pa_estado_etiqueta('evaluando')['etiqueta'] === 'En evaluación' && at_pa_estado_etiqueta('rechazada')['etiqueta'] === 'Rechazada' && at_pa_estado_etiqueta('contracted')['etiqueta'] === 'Contratada', 'etiquetas nuevas');
-ok(array_keys(at_pa_grupos_estado()) === ['borrador', 'ajustando', 'generando', 'lista', 'enviadas', 'evaluando', 'aceptadas', 'rechazadas', 'pendiente', 'error'], 'orden de los grupos');
+ok(array_keys(at_pa_grupos_estado()) === ['borrador', 'ajustando', 'generando', 'lista', 'enviadas', 'evaluando', 'aceptadas', 'rechazadas', 'pendiente', 'error', 'archivadas'], 'orden de los grupos');
+// Task 14: estado «Archivada» con su vista propia; «Todas» las sigue contando (sin filtro de estado).
+ok(at_pa_grupos_estado()['archivadas'] === ['etiqueta' => 'Archivadas', 'estados' => ['archivada']], 'vista Archivadas');
+ok(at_pa_grupo_de_estado('archivada') === 'archivadas', 'archivada cae en Archivadas');
+ok(at_pa_estado_etiqueta('archivada') === ['etiqueta' => 'Archivada', 'clase' => 'at-estado--archivadas'], 'etiqueta de archivada');
+$ca = at_pa_contar_grupos(['archivada' => 2, 'sent' => 1]);
+ok($ca['todas'] === 3 && $ca['archivadas'] === 2 && $ca['enviadas'] === 1 && $ca['otros'] === 0, 'conteo: Todas incluye las archivadas');
+ok(at_pa_where(at_pa_normalizar_filtros(['grupo' => 'archivadas']), function ($s) { return $s; }) === ['sql' => 'WHERE status IN (%s)', 'args' => ['archivada']], 'WHERE de la vista Archivadas');
+ok(at_pa_where(at_pa_normalizar_filtros([]), function ($s) { return $s; }) === ['sql' => '', 'args' => []], 'Todas sigue sin filtro de estado');
 $c = at_pa_contar_grupos(['sent' => 9, 'borrador' => 7, 'pending' => 1, 'draft' => 1, 'error' => 1, '' => 2]);
 ok($c['todas'] === 21 && $c['borrador'] === 8 && $c['enviadas'] === 9 && $c['otros'] === 2 && $c['lista'] === 0, 'conteo por grupo');
 
@@ -50,7 +58,7 @@ $w = at_pa_where(at_pa_normalizar_filtros(['grupo' => 'borrador', 'desde' => '20
 ok($w['sql'] === 'WHERE status IN (%s,%s) AND created_at >= %s AND created_at <= %s', 'WHERE de grupo y fechas');
 ok($w['args'] === ['borrador', 'draft', '2026-09-01 00:00:00', '2026-09-30 23:59:59'], 'args de grupo y fechas');
 $w = at_pa_where(at_pa_normalizar_filtros(['grupo' => 'otros']), $esc_like);
-ok(strpos($w['sql'], '(status IS NULL OR status NOT IN (') === 0 + strlen('WHERE ') && count($w['args']) === 12, 'otros = ni nulo ni conocido');
+ok(strpos($w['sql'], '(status IS NULL OR status NOT IN (') === 0 + strlen('WHERE ') && count($w['args']) === 13, 'otros = ni nulo ni conocido');
 
 // ORDER y límites
 ok(at_pa_order_sql(at_pa_normalizar_filtros([])) === 'ORDER BY created_at DESC, id DESC', 'orden por defecto');

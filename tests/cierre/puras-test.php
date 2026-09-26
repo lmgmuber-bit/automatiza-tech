@@ -23,6 +23,22 @@ ok(!at_cc_transicion_respuesta_valida('pending', 'evaluando', true), 'a mano sol
 ok(at_cc_puede_pedir_respuesta('sent') && at_cc_puede_pedir_respuesta('evaluando') && at_cc_puede_pedir_respuesta('rechazada'), 'se pide respuesta en sent, evaluando y rechazada');
 ok(!at_cc_puede_pedir_respuesta('aceptada') && !at_cc_puede_pedir_respuesta('borrador') && !at_cc_puede_pedir_respuesta('lista'), 'no se pide en aceptada, borrador ni lista');
 
+// Task 14 (aprobada por Luis el 26-sep): estado «Archivada». Se archiva lo viejo o reemplazado; el
+// cliente ya no puede responderla y Luis la puede desarchivar o registrar una aceptación a mano.
+foreach (['sent', 'evaluando', 'rechazada', 'pending', 'lista', 'borrador', 'draft', 'error'] as $s) {
+	ok(at_cc_puede_archivar($s), "se puede archivar desde {$s}");
+}
+foreach (['aceptada', 'contracted', 'ajustando', 'archivada', 'generando', '', 'raro'] as $s) {
+	ok(!at_cc_puede_archivar($s), "no se puede archivar desde «{$s}»");
+}
+foreach (['aceptada', 'evaluando', 'rechazada'] as $hacia) {
+	ok(!at_cc_transicion_respuesta_valida('archivada', $hacia), "el cliente no responde una archivada (archivada -> {$hacia})");
+}
+ok(at_cc_transicion_respuesta_valida('archivada', 'aceptada', true), 'a mano sí se registra la aceptación de una archivada');
+ok(!at_cc_transicion_respuesta_valida('archivada', 'evaluando', true) && !at_cc_transicion_respuesta_valida('archivada', 'rechazada', true), 'a mano, desde archivada solo se registra aceptación');
+ok(!at_cc_transicion_respuesta_valida('sent', 'archivada') && !at_cc_transicion_respuesta_valida('sent', 'archivada', true), 'una respuesta nunca archiva (eso es solo de Luis)');
+ok(!at_cc_puede_pedir_respuesta('archivada'), 'no se pide respuesta de una archivada (sin barra pública ni «Pedir respuesta»)');
+
 // Montos y anticipo
 ok(at_cc_monto_de_etiqueta('$2.000.000 en 2 pagos') === 2000000, 'monto con puntos');
 ok(at_cc_monto_de_etiqueta('$250.000 en 2 pagos') === 250000, 'monto $250.000');

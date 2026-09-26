@@ -237,9 +237,12 @@ function at_pa_render_ficha($p, string $message): void {
               // at_propuesta_puede_enviarse().
               $estados_con_respuesta_checkbox = ['aceptada', 'evaluando', 'rechazada'];
               $tiene_respuesta_checkbox = in_array((string) $p->status, $estados_con_respuesta_checkbox, true);
-              $send_email_attr = ($tiene_respuesta_checkbox || !$puede) ? 'disabled' : ($es_v3_checkbox ? '' : 'checked');
-              $whatsapp_marcado = !$tiene_respuesta_checkbox && trim((string) $p->phone) !== '';
-              $whatsapp_deshabilitado = $tiene_respuesta_checkbox || trim((string) $p->phone) === '';
+              // Task 14: una archivada tampoco se reenvía (acciones.php la protege); se desarchiva primero.
+              $archivada_checkbox = (string) $p->status === 'archivada';
+              $sin_envio_checkbox = $tiene_respuesta_checkbox || $archivada_checkbox;
+              $send_email_attr = ($sin_envio_checkbox || !$puede) ? 'disabled' : ($es_v3_checkbox ? '' : 'checked');
+              $whatsapp_marcado = !$sin_envio_checkbox && trim((string) $p->phone) !== '';
+              $whatsapp_deshabilitado = $sin_envio_checkbox || trim((string) $p->phone) === '';
               ?>
               <input type="checkbox" name="send_email" value="1" id="send_email" <?php echo $send_email_attr; ?>>
               <span>📧 Enviar correo con la propuesta al cliente</span>
@@ -255,7 +258,9 @@ function at_pa_render_ficha($p, string $message): void {
             <?php else: ?>
             <p class="description">Se adjunta el PDF que subas en «Cliente y enlaces» o el que ya esté guardado; sin PDF, el correo lleva solo los botones.</p>
             <?php endif; ?>
-            <?php if ($tiene_respuesta_checkbox): ?>
+            <?php if ($archivada_checkbox): ?>
+            <p class="at-pa-aviso">Esta propuesta está archivada: desarchívala para volver a enviarla.</p>
+            <?php elseif ($tiene_respuesta_checkbox): ?>
             <p class="at-pa-aviso">Esta propuesta ya tiene respuesta del cliente: para volver a escribirle usa «Pedir respuesta».</p>
             <?php elseif (!$puede): ?>
             <p class="at-pa-aviso">Se habilita cuando la propuesta esté <strong>lista</strong>.</p>

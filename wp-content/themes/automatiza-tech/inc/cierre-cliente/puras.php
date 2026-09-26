@@ -23,17 +23,26 @@ function at_cc_tipos_internos(): array {
 	return ['cierre_incompleto', 'aviso_operativo', 'pedido_respuesta', 'mensaje_whatsapp'];
 }
 
-/** Transiciones de una respuesta. A mano (Luis) también se acepta una propuesta en pending o lista. */
+/** Transiciones de una respuesta. A mano (Luis) también se acepta una propuesta en pending, lista o
+ *  archivada (Task 14). Desde 'archivada' el cliente no tiene ninguna transición: ni por la página ni
+ *  por WhatsApp. */
 function at_cc_transicion_respuesta_valida(string $desde, string $hacia, bool $manual = false): bool {
 	$permitidas = [
 		'sent'      => ['evaluando', 'rechazada', 'aceptada'],
 		'evaluando' => ['rechazada', 'aceptada'],
 		'rechazada' => ['aceptada'],
 	];
-	if ($manual && $hacia === 'aceptada' && in_array($desde, ['pending', 'lista'], true)) {
+	if ($manual && $hacia === 'aceptada' && in_array($desde, ['pending', 'lista', 'archivada'], true)) {
 		return true;
 	}
 	return in_array($hacia, $permitidas[$desde] ?? [], true);
+}
+
+/** Task 14 (aprobada por Luis el 26-sep): estados desde los que Luis puede archivar una propuesta
+ *  vieja o reemplazada. No se archiva lo aceptado ('aceptada', 'contracted'), lo que n8n está
+ *  trabajando ('ajustando', 'generando') ni lo ya archivado. */
+function at_cc_puede_archivar(string $status): bool {
+	return in_array($status, ['sent', 'evaluando', 'rechazada', 'pending', 'lista', 'borrador', 'draft', 'error'], true);
 }
 
 /** Estados en que tiene sentido pedirle la respuesta al cliente. */

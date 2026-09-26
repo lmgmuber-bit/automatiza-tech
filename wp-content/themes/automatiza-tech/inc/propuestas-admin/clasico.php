@@ -154,7 +154,8 @@ function automatiza_tech_proposals_page_clasico() {
         // Revisión final (26-sep), hallazgo 4: la misma guarda que at_pa_guardar() (acciones.php).
         // Una propuesta con respuesta del cliente (aceptada, evaluando o rechazada) no se reenvía ni
         // pierde su estado en un guardado desde esta página.
-        $estado_protegido = $actual && in_array((string) $actual->status, ['aceptada', 'evaluando', 'rechazada'], true);
+        // Task 14: una archivada también (se desarchiva desde «Respuesta del cliente» en la ficha nueva).
+        $estado_protegido = $actual && in_array((string) $actual->status, ['aceptada', 'evaluando', 'rechazada', 'archivada'], true);
         if ($send_email && $estado_protegido) {
             $send_email = false;
             $bloqueo_envio_aceptada = true;
@@ -190,6 +191,8 @@ function automatiza_tech_proposals_page_clasico() {
 
         if (!empty($bloqueo_envio)) {
             $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: una propuesta v3 solo se envía cuando está <strong>lista</strong> (versión final verificada).</p></div>';
+        } elseif (!empty($bloqueo_envio_aceptada) && $actual && (string) $actual->status === 'archivada') {
+            $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: esta propuesta está archivada. Desarchívala en «Respuesta del cliente» para volver a enviarla.</p></div>';
         } elseif (!empty($bloqueo_envio_aceptada)) {
             $descripcion_respuesta = [
                 'aceptada'  => 'el cliente ya aceptó esta propuesta',
@@ -900,13 +903,15 @@ function automatiza_tech_proposals_page_clasico() {
                                         $es_v3_checkbox = ($edit_proposal->flujo ?? '') === 'v3';
                                         // Revisión final (26-sep), hallazgo 4: como en ficha.php, con respuesta del cliente la casilla queda desmarcada y deshabilitada.
                                         $tiene_respuesta_checkbox = in_array((string) $edit_proposal->status, ['aceptada', 'evaluando', 'rechazada'], true);
-                                        $send_email_attr = ($tiene_respuesta_checkbox || !$puede) ? 'disabled' : ($es_v3_checkbox ? '' : 'checked');
+                                        // Task 14: archivada, igual que con respuesta del cliente.
+                                        $archivada_checkbox = (string) $edit_proposal->status === 'archivada';
+                                        $send_email_attr = ($tiene_respuesta_checkbox || $archivada_checkbox || !$puede) ? 'disabled' : ($es_v3_checkbox ? '' : 'checked');
                                         ?>
                                         <input type="checkbox" name="send_email" value="1" id="send_email" <?php echo $send_email_attr; ?> style="width: 20px; height: 20px;">
                                         <span style="color: #065f46; font-weight: 600;">📧 Enviar correo con la propuesta al cliente</span>
                                     </label>
                                     <p style="margin: 8px 0 0 30px; color: #047857; font-size: 13px;">Si desmarcas esta opción, solo se guardarán los datos sin enviar el correo.</p>
-                                    <?php if (!$puede): ?><p style="margin:8px 0 0 30px;color:#b45309;">Se habilita cuando la propuesta esté <strong>lista</strong>.</p><?php endif; ?>
+                                    <?php if ($archivada_checkbox): ?><p style="margin:8px 0 0 30px;color:#b45309;">Esta propuesta está archivada: desarchívala para volver a enviarla.</p><?php elseif (!$puede): ?><p style="margin:8px 0 0 30px;color:#b45309;">Se habilita cuando la propuesta esté <strong>lista</strong>.</p><?php endif; ?>
                                 </div>
 
                                 <!-- SECCIÓN DE PERSONALIZACIÓN DEL CORREO -->

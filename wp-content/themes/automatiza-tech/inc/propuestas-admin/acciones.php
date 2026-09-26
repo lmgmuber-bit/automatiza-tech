@@ -216,7 +216,9 @@ function at_pa_guardar(): string {
         // marcado por defecto en propuestas viejas (ficha.php), así que esto ocurría con un simple
         // «Guardar».
         $estados_con_respuesta = ['aceptada', 'evaluando', 'rechazada'];
-        $estado_protegido = $actual && in_array((string) $actual->status, $estados_con_respuesta, true);
+        // Task 14: una archivada también es protegida: Guardar no la reabre (a 'sent' o 'pending') ni
+        // la reenvía; se desarchiva desde «Respuesta del cliente» (cierre-cliente/archivo.php).
+        $estado_protegido = $actual && in_array((string) $actual->status, array_merge($estados_con_respuesta, ['archivada']), true);
         // Ronda 2, hallazgo 2: la guarda cubre los TRES estados con respuesta del cliente, no solo
         // "aceptada". Antes, "evaluando"/"rechazada" + Guardar con el checkbox de envío marcado (su
         // valor por defecto en propuestas viejas, ficha.php) seguían reenviando el correo completo
@@ -279,6 +281,8 @@ function at_pa_guardar(): string {
 
         if (!empty($bloqueo_envio)) {
             $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: una propuesta v3 solo se envía cuando está <strong>lista</strong> (versión final verificada).</p></div>';
+        } elseif (!empty($bloqueo_envio_aceptada) && $actual && (string) $actual->status === 'archivada') {
+            $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: esta propuesta está archivada. Desarchívala en «Respuesta del cliente» para volver a enviarla.</p></div>';
         } elseif (!empty($bloqueo_envio_aceptada)) {
             // Ronda 2, hallazgo 2: el aviso ya no asume "ya aceptó"; describe el estado real
             // ('aceptada', 'evaluando' o 'rechazada') para que Luis entienda por qué no se envió.

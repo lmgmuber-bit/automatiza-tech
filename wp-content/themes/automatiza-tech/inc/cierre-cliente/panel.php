@@ -259,7 +259,12 @@ function at_cc_render_panel_respuesta(object $p): void {
 	// Ronda 1, hallazgo 2: el enlace de aceptar solo se dibuja en la página pública cuando la
 	// propuesta está en sent/evaluando/rechazada (at_cc_render_barra() en pagina.php). Mandarlo en
 	// otro estado (p. ej. 'lista') deja al cliente con un enlace que no muestra dónde aceptar.
-	if (!$puede_pedir) {
+	if ($estado === 'archivada') {
+		// Task 14: archivada = el cliente ya no puede responderla (sin barra pública, sin «Pedir
+		// respuesta» ni WhatsApp); Luis la desarchiva aquí o registra la aceptación a mano (más abajo).
+		echo '<span class="description">Archivada: el cliente ya no puede responderla. Queda como historial.</span> '
+			. '<button type="submit" class="button" form="at-cc-f-desarchivar">Desarchivar</button>';
+	} elseif (!$puede_pedir) {
 		echo '<span class="description">El WhatsApp con el enlace de aceptar se habilita cuando la propuesta esté enviada.</span>';
 	} elseif ($wa !== '') {
 		// Ronda 1, hallazgo 1 (whatsapp.php): esc_url() borra '%0a'/'%0d' y pega el mensaje con el
@@ -267,6 +272,10 @@ function at_cc_render_panel_respuesta(object $p): void {
 		echo '<a class="button" target="_blank" rel="noopener" href="' . esc_attr($wa) . '">💬 Enviar por mi WhatsApp</a>';
 	} else {
 		echo '<span class="description">Sin teléfono: agrégalo en «Cliente y enlaces» para mandar el WhatsApp.</span>';
+	}
+	// Task 14: propuestas viejas o reemplazadas (at_cc_puede_archivar(): no aceptadas ni en manos de n8n).
+	if (at_cc_puede_archivar($estado)) {
+		echo ' <button type="submit" class="button button-secondary" form="at-cc-f-archivar" onclick="return confirm(\'¿Archivar esta propuesta? El cliente ya no podrá responderla desde su enlace. Puedes desarchivarla cuando quieras.\');">🗄️ Archivar</button>';
 	}
 	echo '</p>';
 	if (!at_cc_transicion_respuesta_valida($estado, 'aceptada', true)) {
@@ -385,6 +394,17 @@ function at_cc_render_formularios_respuesta(object $p): void {
 			. '<input type="hidden" name="action" value="at_cc_completar_cierre"><input type="hidden" name="proposal_id" value="' . $id . '">'
 			. wp_nonce_field('at_cc_completar_' . $id, '_wpnonce', true, false) . '</form>';
 	}
+	// Task 14: Archivar / Desarchivar (acciones en archivo.php).
+	if (at_cc_puede_archivar((string) $p->status)) {
+		echo '<form id="at-cc-f-archivar" method="post" action="' . $url . '" hidden>'
+			. '<input type="hidden" name="action" value="at_cc_archivar"><input type="hidden" name="proposal_id" value="' . $id . '">'
+			. wp_nonce_field('at_cc_archivar_' . $id, '_wpnonce', true, false) . '</form>';
+	}
+	if ((string) $p->status === 'archivada') {
+		echo '<form id="at-cc-f-desarchivar" method="post" action="' . $url . '" hidden>'
+			. '<input type="hidden" name="action" value="at_cc_desarchivar"><input type="hidden" name="proposal_id" value="' . $id . '">'
+			. wp_nonce_field('at_cc_desarchivar_' . $id, '_wpnonce', true, false) . '</form>';
+	}
 	// Ronda 2, hallazgo 5: estos formularios están fuera de .at-pa-form (no se pueden anidar), así
 	// que la guardia contra doble envío de esa otra ficha (F4, assets/js/propuestas-admin.js) nunca los
 	// alcanza: cada uno solo escucha su propio 'submit'. Sus botones viven en at_cc_render_panel_respuesta()
@@ -392,5 +412,5 @@ function at_cc_render_formularios_respuesta(object $p): void {
 	// Revisión final (26-sep), hallazgo 2: solo los BOTONES. El navegador arma los datos del envío
 	// después del evento submit y omite los controles deshabilitados: deshabilitar también los campos
 	// con form="…" (canal, nota, filas, RUT, evidencia…) hacía que nunca llegaran al servidor.
-	echo "<script>(function(){function candado(id){var f=document.getElementById(id);if(!f){return;}var enviando=false;f.addEventListener('submit',function(e){if(enviando){e.preventDefault();return;}enviando=true;document.querySelectorAll('button[form=\"'+id+'\"], #'+id+' button').forEach(function(b){b.disabled=true;});});}candado('at-cc-f-pedir');candado('at-cc-f-aceptar');candado('at-cc-f-completar');})();</script>";
+	echo "<script>(function(){function candado(id){var f=document.getElementById(id);if(!f){return;}var enviando=false;f.addEventListener('submit',function(e){if(enviando){e.preventDefault();return;}enviando=true;document.querySelectorAll('button[form=\"'+id+'\"], #'+id+' button').forEach(function(b){b.disabled=true;});});}candado('at-cc-f-pedir');candado('at-cc-f-aceptar');candado('at-cc-f-completar');candado('at-cc-f-archivar');candado('at-cc-f-desarchivar');})();</script>";
 }

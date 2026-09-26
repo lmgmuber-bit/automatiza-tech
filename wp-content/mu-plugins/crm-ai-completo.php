@@ -532,6 +532,12 @@ class AutomatizaTech_CRM_AI {
             ['id' => $id]
         );
         if ($res !== false) {
+            if (function_exists('at_cc_asegurar_cliente')) {
+                $conv = $wpdb->get_row($wpdb->prepare("SELECT nombre, email, empresa, telefono FROM {$this->tabla_clientes} WHERE id = %d", $id));
+                if ($conv && is_email((string) $conv->email)) {
+                    at_cc_asegurar_cliente(['nombre' => $conv->nombre, 'email' => $conv->email, 'empresa' => $conv->empresa, 'telefono' => $conv->telefono, 'origen' => 'crm_manual']);
+                }
+            }
             if (isset($_POST['enviar_bienvenida']) && $_POST['enviar_bienvenida'] === 'true') {
                 $this->_enviar_correo_bienvenida($id);
             }
@@ -583,6 +589,10 @@ class AutomatizaTech_CRM_AI {
             $cliente_id = $wpdb->insert_id;
         }
         
+        if (function_exists('at_cc_asegurar_cliente')) {
+            at_cc_asegurar_cliente(['nombre' => $propuesta->client_name, 'email' => $propuesta->client_email, 'empresa' => $propuesta->company_name, 'telefono' => $propuesta->phone, 'origen' => 'propuesta_web']);
+        }
+
         // Registrar evento en historial
         $wpdb->insert($this->tabla_historial, [
             'cliente_id' => $cliente_id,
@@ -1943,6 +1953,7 @@ class AutomatizaTech_CRM_AI {
                         <?php if (!$is_designer_only): ?>
                         <button class="ficha-tab" data-target="tab-general">📋 General</button>
                         <button class="ficha-tab" data-target="tab-proyectos">🚀 Proyectos <span class="ficha-tab-badge"><?php echo count($proyectos); ?></span></button>
+                        <button class="ficha-tab" data-target="tab-operacion">📜 Contratos y operación</button>
                         <?php endif; ?>
                     </div>
                     
@@ -2169,6 +2180,32 @@ class AutomatizaTech_CRM_AI {
                         <p><button class="button" id="btnAbrirModalProyecto">+ Agregar Proyecto</button></p>
                     </div>
                     </div><!-- /tab-proyectos -->
+                    <!-- Tab: Contratos y operación (ficha única, cierre de cliente) -->
+                    <div class="ficha-tab-content" id="tab-operacion">
+                    <div class="ficha-card">
+                        <h3>📜 Contratos y operación</h3>
+                        <?php
+                        $at_cc_tech = function_exists('at_cc_tech_de_crm') ? at_cc_tech_de_crm((int) ($cliente['id'] ?? 0)) : null;
+                        if ($at_cc_tech):
+                            if (function_exists('automatiza_client_full_modal_button')):
+                                echo '<p>' . automatiza_client_full_modal_button((int) $at_cc_tech->id, '📋 Ver ficha operativa (facturación, accesos, técnico y redes)') . '</p>';
+                            endif;
+                            if (function_exists('at_render_client_contracts_widget')):
+                                at_render_client_contracts_widget($at_cc_tech);
+                            endif;
+                        elseif (($cliente['tipo'] ?? '') === 'cliente' && function_exists('at_cc_asegurar_cliente')): ?>
+                            <p>Este cliente todavía no tiene ficha operativa (contratos, facturación y accesos).</p>
+                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                <input type="hidden" name="action" value="at_cc_crear_ficha_operativa">
+                                <input type="hidden" name="crm_id" value="<?php echo (int) $cliente['id']; ?>">
+                                <?php wp_nonce_field('at_cc_crear_ficha_operativa_' . (int) $cliente['id']); ?>
+                                <button type="submit" class="button button-primary">Crear ficha operativa</button>
+                            </form>
+                        <?php else: ?>
+                            <p>La ficha operativa se crea cuando el prospecto pasa a cliente.</p>
+                        <?php endif; ?>
+                    </div>
+                    </div><!-- /tab-operacion -->
                     <?php endif; ?>
                 </div>
                 
@@ -4284,6 +4321,17 @@ class AutomatizaTech_CRM_AI {
         return md5($cliente_id . 'AUTOMATIZA_CRM_V2' . $email);
     }
     
+    /** URL pública de la línea de tiempo del cliente; '' si no existe o no tiene correo. */
+    public function url_portal($cliente_id) {
+        global $wpdb;
+        $cliente_id = (int) $cliente_id;
+        $email = $wpdb->get_var($wpdb->prepare("SELECT email FROM {$this->tabla_clientes} WHERE id = %d", $cliente_id));
+        if (!$email) {
+            return '';
+        }
+        return home_url('/?crm_view=timeline&cid=' . $cliente_id . '&token=' . $this->_generar_token($cliente_id, $email));
+    }
+
     public function render_public_timeline() {
         if (is_admin()) return;
         
@@ -7611,6 +7659,11 @@ class AutomatizaTech_CRM_AI {
     }
     
     private function _enviar_correo_bienvenida($cliente_id) {
+        // Cierre de cliente: bienvenida con la lista de arranque (inc/cierre-cliente/bienvenida.php).
+        if (function_exists('at_cc_enviar_bienvenida')) {
+            at_cc_enviar_bienvenida((int) $cliente_id);
+            return;
+        }
         global $wpdb;
 
         if (!$cliente_id) {
@@ -8401,4 +8454,9 @@ class AutomatizaTech_CRM_AI {
 }
 
 // Inicializar
-new AutomatizaTech_CRM_AI();
+$GLOBALS['at_crm_ai'] = new AutomatizaTech_CRM_AI();
+
+/** Enlace público a la línea de tiempo de un cliente del CRM, con la firma de enlaces del CRM; '' si no hay. */
+function at_crm_url_portal(int $cliente_id): string {
+    return isset($GLOBALS['at_crm_ai']) ? (string) $GLOBALS['at_crm_ai']->url_portal($cliente_id) : '';
+}

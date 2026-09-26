@@ -145,6 +145,11 @@ class AutomatizaTech_Client_Details {
      */
     public static function get_detail_types() {
         return array(
+            'respuesta_cliente' => array(
+                'label' => '✅ Respuesta del cliente',
+                'icon' => '✅',
+                'color' => '#059669'
+            ),
             'propuesta_enviada' => array(
                 'label' => '📄 Propuesta Enviada',
                 'icon' => '📄',

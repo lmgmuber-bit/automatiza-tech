@@ -897,6 +897,11 @@ class AutomatizaTechContactForm {
         if ($result) {
             // Obtener el ID del cliente recién creado
             $client_id = $wpdb->insert_id;
+
+            // Ficha única: el lead contratado queda también como cliente en el CRM, enlazado.
+            if (function_exists('at_cc_asegurar_cliente')) {
+                at_cc_asegurar_cliente(['nombre' => $contact->name, 'email' => $contact->email, 'empresa' => $contact->company, 'telefono' => $contact->phone, 'origen' => 'contactos']);
+            }
             
             // Obtener datos completos del cliente
             $client_data = $wpdb->get_row($wpdb->prepare(
@@ -6090,6 +6095,9 @@ class AutomatizaTechContactForm {
                                        title="Ver ficha completa del cliente">
                                        📋 Ficha
                                     </a>
+                                    <?php if (!empty($client->crm_cliente_id)): ?>
+                                    <br><a href="<?php echo esc_url(admin_url('admin.php?page=automatiza-crm-ficha&id=' . (int) $client->crm_cliente_id)); ?>" class="button button-small" style="margin-top:4px">Ficha única</a>
+                                    <?php endif; ?>
                                 </td>
                                 
                                 <!-- Editar (solo para administradores) -->

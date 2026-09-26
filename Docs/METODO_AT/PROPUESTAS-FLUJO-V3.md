@@ -33,6 +33,16 @@ Estados: `borrador → ajustando|generando`, `ajustando → borrador|error`, `ge
 propuesta en `error` con el motivo. Si un flujo se cae igual (OpenAI caído, un JSON ilegible), el workflow
 «0 Avisar error» (`m7TOfKznVSBGz4Nd`, `settings.errorWorkflow` de los tres) le escribe a Luis. Una propuesta que
 haya quedado en `ajustando` o `generando` se destraba desde el panel (pasa a `error`, que es transición válida).
+Desde `error` no hace falta destrabar: basta escribir el comentario de nuevo y apretar «Pedir cambios» (o «Aprobar»).
+
+**Respuesta de la IA con llaves o texto de más (EN PROD desde el 2026-09-26 16:26, autorizado por Luis).** El nodo
+OpenAI de «1 Borrador» y «2 Cambios» no fuerza JSON, y el 26-sep «2 Cambios» dejó la 53 en `error` por una llave `}`
+de más al final de una respuesta que traía bien el cambio pedido (ejecución 408862). Los dos flujos leen ahora la
+respuesta con `leerJsonModelo` (`N8N/propuestas-v3/json_guard.py`): toma el primer objeto JSON completo, sin contar
+llaves dentro de los textos, y nunca completa datos (una respuesta cortada sigue siendo `error`). Prueba:
+`python N8N/propuestas-v3/probar_json.py` (18 casos; corre con node el código real de los nodos). Antes de publicar,
+lo vivo era idéntico al repo; respaldo en `C:/Users/luis_/respaldos/n8n/2026-09-26-json-robusto/` (rollback: volver
+a publicar esos JSON, o construir desde el commit anterior y `deploy.py`).
 
 ## Panel de propuestas (wp-admin › Propuestas, EN PROD desde el 2026-09-24 15:48)
 

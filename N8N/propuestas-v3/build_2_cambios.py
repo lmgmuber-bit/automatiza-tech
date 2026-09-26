@@ -8,6 +8,7 @@ Solo referencia credenciales por id; no contiene secretos.
 """
 import json, os
 from correos import correo_cambios_ok, correo_cambios_error
+from json_guard import JS_LEER_JSON
 
 CRED_OPENAI = {'openAiApi': {'id': 'g52IEXpRfN5r7jKw', 'name': 'OpenAi account'}}
 CRED_SMTP = {'smtp': {'id': 'dyhVFWmjRNC45ccA', 'name': 'SMTP account PROD'}}
@@ -34,8 +35,9 @@ if ($('Aplicar comentarios').isExecuted) {
     reason = 'El modelo no respondió al aplicar los comentarios' + (ia && ia.error ? ': ' + (ia.error.message || ia.error) : '');
   } else {
     try {
-      if (typeof c === 'string') c = c.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
-      const parsed = typeof c === 'string' ? JSON.parse(c) : c;
+      // leerJsonModelo (json_guard.py) tolera bloques de código, texto alrededor y llaves de más
+      // (medido: ejecución 408862, una «}» extra al final tumbó un cambio bien aplicado).
+      const parsed = leerJsonModelo(c);
       // El modelo a veces imita la forma de la entrada y devuelve {propuesta: {...}} (medido: ejecución 403689).
       const candidato = parsed && parsed.propuesta && typeof parsed.propuesta === 'object' ? parsed.propuesta : parsed;
       // Lo que el modelo omita se conserva de lo guardado: nunca se manda a WordPress un payload incompleto.
@@ -119,7 +121,7 @@ nodes = [
                                   {'content': "={{ JSON.stringify({ comentarios: $json.body.ultimo_comentario, propuesta: $json.body.payload }) }}"}]},
           'options': {'temperature': 0.2}, 'requestOptions': {}},
          credentials=CRED_OPENAI, onError='continueRegularOutput'),
-    node('c5', 'Payload final', 'n8n-nodes-base.code', 2, [880, 0], {'jsCode': CODE_PAYLOAD}),
+    node('c5', 'Payload final', 'n8n-nodes-base.code', 2, [880, 0], {'jsCode': JS_LEER_JSON + '\n' + CODE_PAYLOAD}),
     iff('c6', '¿Payload OK?', [1100, 0], '={{ $json.ok }}'),
     wp_http('c7', 'Guardar y volver a borrador', [1320, -120], 'POST',
             f"={WP}/proposal/{{{{ $json.id }}}}/state",

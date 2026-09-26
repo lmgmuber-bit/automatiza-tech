@@ -5,6 +5,7 @@ Solo referencia credenciales por id; no contiene secretos.
 """
 import json, os
 from fotos_guard import JS_LIMPIAR_FOTOS
+from json_guard import JS_LEER_JSON
 from correos import correo_borrador
 
 CRED_OPENAI = {'openAiApi': {'id': 'g52IEXpRfN5r7jKw', 'name': 'OpenAi account'}}
@@ -54,11 +55,9 @@ Reglas:
 PROMPT_BOT = """Escribe el system prompt de un asistente virtual de demostración para este negocio, en español de Chile. Estructura: identidad (1 párrafo); TONO (tú o usted según el rubro, breve, sin emojis si el rubro es delicado); ATENCIÓN URGENTE (si aplica al rubro: primero empatía, luego el contacto directo del negocio); SERVICIOS; PRECIOS (solo los que aparezcan en la transcripción, con la aclaración de que un asesor confirma); REGLAS (no inventar datos; derivar a un humano cuando hay intención clara de contratar pidiendo nombre, teléfono y comuna). Usa solo datos que estén en la transcripción. Devuelve solo el texto del system prompt."""
 
 CODE_ARMAR = r"""// Reglas que no se le confían al modelo: formato JSON, precios y cantidad de láminas extra.
-let raw = $('Redactar propuesta').first().json.message.content;
-if (typeof raw === 'string') {
-  raw = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
-}
-const d = typeof raw === 'string' ? JSON.parse(raw) : raw;
+// leerJsonModelo (json_guard.py) tolera bloques de código, texto alrededor y llaves de más; si la respuesta
+// no trae un objeto completo, lanza y «0 Avisar error» le escribe a Luis.
+const d = leerJsonModelo($('Redactar propuesta').first().json.message.content);
 const body = $('Webhook (Entrada)').first().json.body || {};
 const prueba = body.prueba === true;
 d.pricing_rows = (d.pricing_rows || []).map((r) => ({ service: String(r.service || 'Servicio'), price_usd: 0, price_label: 'Por confirmar' }));
@@ -107,7 +106,7 @@ nodes = [
                                   {'content': "={{ $('Webhook (Entrada)').item.json.body.transcript }}"}]},
           'options': {'temperature': 0.4}, 'requestOptions': {}},
          credentials=CRED_OPENAI),
-    node('b4', 'Armar payload', 'n8n-nodes-base.code', 2, [660, 0], {'jsCode': JS_LIMPIAR_FOTOS + '\n' + CODE_ARMAR}),
+    node('b4', 'Armar payload', 'n8n-nodes-base.code', 2, [660, 0], {'jsCode': JS_LIMPIAR_FOTOS + '\n' + JS_LEER_JSON + '\n' + CODE_ARMAR}),
     node('b5', 'Crear en WordPress', 'n8n-nodes-base.httpRequest', 4.2, [880, 0],
          {'method': 'POST', 'url': f'{WP}/proposal', 'authentication': 'genericCredentialType',
           'genericAuthType': 'httpHeaderAuth', 'sendBody': True, 'specifyBody': 'json',

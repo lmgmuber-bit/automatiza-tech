@@ -204,9 +204,9 @@ function at_cc_guardar_datos_contrato(object $p, array $post): string {
 		at_cc_anotar_simple($p, 'cierre_incompleto', 'Datos del contrato no se guardaron del todo', 'No se pudo terminar de guardar los datos del contrato: ' . $e->getMessage());
 		return 'datos_recibidos';
 	}
-	// Descripción genérica a propósito: llega a la línea de tiempo pública del cliente (token
-	// calculable, ver crm-ai-completo.php). El tipo, la razón social, el RUT y la dirección solo
-	// debe verlos Luis, así que van en metadata (la lee el panel interno, nunca la vista pública).
+	// Descripción genérica a propósito: la descripción puede verla el cliente en su portal. El tipo,
+	// la razón social, el RUT y la dirección solo debe verlos Luis, así que van en metadata (la lee el
+	// panel interno, nunca la vista del cliente).
 	$meta = ['tipo' => $tipo, 'direccion' => $direccion];
 	if ($tipo === 'empresa') {
 		$meta['razon_social'] = $razon;

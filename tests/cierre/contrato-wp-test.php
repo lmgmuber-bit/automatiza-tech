@@ -235,6 +235,32 @@ $h = pagina_revision($c3->at_review_token);
 ok(strpos($h, 'id="signForm"') !== false && strpos($h, 'Antes de firmar completa') === false, 'con los datos completos aparece el bloque de firma');
 wp_set_current_user(0);
 
+// Revisión final (26-sep), hallazgo 5: el contrato de servicios vencía 30 días después de la
+// aceptación; con la revisión, los datos del cliente y la reunión de inicio en medio, el cliente
+// podía recibir un enlace ya vencido. Al enviárselo, el plazo corre de nuevo (30 días desde el envío).
+// $c está firmado por AT (más arriba). Se simula que ya pasaron 32 días desde la aceptación.
+$wpdb->update(ContractService::table(), ['expires_at' => date('Y-m-d H:i:s', strtotime('-2 days'))], ['id' => $c->id]);
+$correos = [];
+$envio = ContractService::send_for_client_signature($c->id, 'cliente@example.com', 'Cliente Prueba');
+$c_enviado = ContractService::get_by_id($c->id);
+ok($envio === true && $c_enviado->status === 'sent', 'RF5: el contrato de servicios firmado por AT se envía al cliente');
+ok(strtotime($c_enviado->expires_at) > strtotime('+29 days'), 'RF5: al enviarlo, el vencimiento pasa a 30 días desde el envío: ' . $c_enviado->expires_at);
+$correo_firma = $correos ? end($correos) : null;
+ok($correo_firma && strpos((string) $correo_firma['message'], 'Tu enlace personal expira el ' . $c_enviado->expires_at) !== false, 'RF5: el correo al cliente muestra el vencimiento nuevo, no una fecha pasada');
+$firma_cliente = ContractService::sign_as_client($c_enviado->sign_token, ['signer_name' => 'Cliente Prueba', 'signer_rut' => '11.111.111-1', 'signer_email' => 'cliente@example.com', 'method' => 'canvas', 'signature_dataurl' => $firma_png]);
+ok(!is_wp_error($firma_cliente) && $firma_cliente->status === 'signed', 'RF5: el cliente firma sin «Link expirado»' . (is_wp_error($firma_cliente) ? ' (' . $firma_cliente->get_error_code() . ')' : ''));
+if (!is_wp_error($firma_cliente)) {
+	@unlink(ContractService::storage_dir() . '/' . $firma_cliente->contract_number . '-FIRMADO.pdf');
+	$sig_cliente = str_replace(wp_upload_dir()['baseurl'], wp_upload_dir()['basedir'], (string) $firma_cliente->signature_image_url);
+	if ($sig_cliente !== '' && strpos($sig_cliente, '/signatures/sig-client-') !== false) {
+		@unlink($sig_cliente);
+	}
+}
+// Un contrato de soporte no cambia su vencimiento.
+$wpdb->update(ContractService::table(), ['status' => 'at_signed', 'expires_at' => '2026-01-01 00:00:00', 'placeholders' => wp_json_encode(['email_cliente' => 'soporte@example.com'])], ['id' => $sop->id]);
+ContractService::send_for_client_signature($sop->id);
+ok(ContractService::get_by_id($sop->id)->expires_at === '2026-01-01 00:00:00', 'RF5: el de soporte conserva su vencimiento al enviarse');
+
 $wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE id IN (%d, %d, %d, %d, %d, %d, %d, %d)", $c->id, $sop->id, $c2->id, $c3->id, $c4->id, $c5->id, $c6->id, $c7->id));
 foreach ([$c, $sop, $c2, $c3, $c4, $c5, $c6, $c7] as $x) { @unlink(pdf_de($x)); }
 fin();

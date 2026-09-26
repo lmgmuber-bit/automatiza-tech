@@ -73,9 +73,60 @@ function at_cc_tech_de_crm(int $crm_id): ?object {
 	return $fila ?: null;
 }
 
+/** Todas las fichas operativas enlazadas a un cliente del CRM, en el mismo orden que at_cc_tech_de_crm(). */
+function at_cc_techs_de_crm(int $crm_id): array {
+	if ($crm_id <= 0) {
+		return [];
+	}
+	global $wpdb;
+	at_cc_migrar_esquema();
+	return (array) $wpdb->get_results($wpdb->prepare(
+		"SELECT * FROM {$wpdb->prefix}automatiza_tech_clients WHERE crm_cliente_id = %d
+		 ORDER BY (plan_id IS NOT NULL OR contract_value > 0) DESC, id DESC",
+		$crm_id
+	));
+}
+
+/**
+ * Revisión final (26-sep), hallazgo 6: la pestaña «Contratos y operación» muestra el widget de la
+ * ficha principal (at_cc_tech_de_crm()); si el cliente tiene más fichas enlazadas (p. ej. se pasó a
+ * contratado en Contactos después de aceptar la propuesta), avisa y lista aquí los contratos de las
+ * demás, para que el contrato de servicios de una ficha no quede oculto. El widget no se dibuja dos
+ * veces porque trae un modal con ids fijos.
+ */
+function at_cc_render_contratos_otras_fichas(int $crm_id, int $principal_id): void {
+	$otras = array_values(array_filter(at_cc_techs_de_crm($crm_id), function ($t) use ($principal_id) { return (int) $t->id !== $principal_id; }));
+	if (!$otras) {
+		return;
+	}
+	$hay_servicio = function_exists('at_cc_cargar_contract_service') ? at_cc_cargar_contract_service() : class_exists('ContractService');
+	echo '<div class="notice notice-warning inline" style="margin:12px 0"><p>Este cliente tiene ' . (int) (count($otras) + 1) . ' fichas operativas enlazadas. Arriba está la principal; estos son los contratos de las otras:</p></div>';
+	foreach ($otras as $t) {
+		echo '<div style="border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;margin:8px 0">';
+		echo '<p style="margin:0 0 6px"><strong>Ficha #' . (int) $t->id . '</strong> · ' . esc_html((string) $t->name);
+		if (function_exists('automatiza_client_full_modal_button') && current_user_can('manage_options')) {
+			echo ' ' . automatiza_client_full_modal_button((int) $t->id, '📋 Ver esta ficha');
+		}
+		echo '</p>';
+		$contratos = $hay_servicio ? (array) ContractService::list_by_client((int) $t->id) : [];
+		if (!$contratos) {
+			echo '<p class="description" style="margin:0">Sin contratos.</p></div>';
+			continue;
+		}
+		echo '<ul style="margin:0 0 0 18px;list-style:disc">';
+		foreach ($contratos as $c) {
+			echo '<li><a href="' . esc_url(admin_url('admin.php?page=at-contracts&id=' . (int) $c->id)) . '">' . esc_html((string) $c->contract_number) . '</a>'
+				. ' · ' . esc_html(ucfirst((string) ($c->type ?: 'soporte'))) . ' · ' . esc_html((string) $c->status) . '</li>';
+		}
+		echo '</ul></div>';
+	}
+}
+
 /**
  * Garantiza que la persona sea cliente en el CRM y tenga su ficha operativa enlazada.
  * Un cliente que ya era cliente conserva su fecha de contrato.
+ * $d['crm_id'] (opcional): la fila del CRM que quien llama ya conoce (la ficha donde Luis apretó
+ * «Crear ficha operativa» o «Convertir a Cliente»). Se usa esa y no la primera con el mismo correo.
  */
 function at_cc_asegurar_cliente(array $d) {
 	global $wpdb;
@@ -86,13 +137,26 @@ function at_cc_asegurar_cliente(array $d) {
 	if ($email === '' || !is_email($email)) {
 		return new WP_Error('sin_correo', 'El cliente no tiene un correo válido.');
 	}
-	$nombre = trim((string) ($d['nombre'] ?? ''));
-	$empresa = trim((string) ($d['empresa'] ?? ''));
-	$telefono = trim((string) ($d['telefono'] ?? ''));
+	// Revisión final (26-sep), hallazgo 1: el nombre puede llegar tal como lo escribió el cliente en
+	// la página pública (pagina.php lo guarda sin limpiar para la metadata de la respuesta). Aquí va
+	// a las tablas que el admin muestra, así que nombre, empresa y teléfono se limpian como texto
+	// plano antes de escribirlos.
+	$nombre = trim(sanitize_text_field((string) ($d['nombre'] ?? '')));
+	$empresa = trim(sanitize_text_field((string) ($d['empresa'] ?? '')));
+	$telefono = trim(sanitize_text_field((string) ($d['telefono'] ?? '')));
 	$fecha = trim((string) ($d['fecha_contrato'] ?? '')) !== '' ? (string) $d['fecha_contrato'] : current_time('mysql');
 	$nombre_ficha = $nombre !== '' ? $nombre : ($empresa !== '' ? $empresa : $email);
 
-	$fila = $wpdb->get_row($wpdb->prepare("SELECT id, tipo, fecha_contrato FROM {$crm} WHERE LOWER(TRIM(email)) = %s ORDER BY id ASC LIMIT 1", $email));
+	// Revisión final (26-sep), hallazgo 3: con correos repetidos en el CRM, la fila que indica quien
+	// llama manda sobre la búsqueda por correo (que toma la de id más bajo).
+	$fila = null;
+	$crm_pedido = (int) ($d['crm_id'] ?? 0);
+	if ($crm_pedido > 0) {
+		$fila = $wpdb->get_row($wpdb->prepare("SELECT id, tipo, fecha_contrato FROM {$crm} WHERE id = %d", $crm_pedido));
+	}
+	if (!$fila) {
+		$fila = $wpdb->get_row($wpdb->prepare("SELECT id, tipo, fecha_contrato FROM {$crm} WHERE LOWER(TRIM(email)) = %s ORDER BY id ASC LIMIT 1", $email));
+	}
 	if ($fila) {
 		$crm_id = (int) $fila->id;
 		$cambios = [];
@@ -124,7 +188,15 @@ function at_cc_asegurar_cliente(array $d) {
 
 	$tech_id = (int) $wpdb->get_var($wpdb->prepare("SELECT id FROM {$tech} WHERE crm_cliente_id = %d ORDER BY id ASC LIMIT 1", $crm_id));
 	if (!$tech_id) {
-		$tech_id = (int) $wpdb->get_var($wpdb->prepare("SELECT id FROM {$tech} WHERE LOWER(TRIM(email)) = %s ORDER BY id ASC LIMIT 1", $email));
+		// Revisión final (26-sep), hallazgo 3: por correo solo se toma una ficha sin enlazar (o enlazada
+		// a una fila del CRM que ya no existe), prefiriendo las sin enlazar. Una ficha que ya es de otra
+		// fila del CRM con el mismo correo no se le quita a esa fila: se crea una nueva más abajo.
+		$tech_id = (int) $wpdb->get_var($wpdb->prepare(
+			"SELECT t.id FROM {$tech} t LEFT JOIN {$crm} c ON c.id = t.crm_cliente_id
+			 WHERE LOWER(TRIM(t.email)) = %s AND (t.crm_cliente_id IS NULL OR c.id IS NULL)
+			 ORDER BY (t.crm_cliente_id IS NULL) DESC, t.id ASC LIMIT 1",
+			$email
+		));
 		if ($tech_id) {
 			$wpdb->update($tech, ['crm_cliente_id' => $crm_id], ['id' => $tech_id]);
 		}
@@ -162,7 +234,7 @@ function at_cc_accion_crear_ficha_operativa(): void {
 	global $wpdb;
 	$c = $wpdb->get_row($wpdb->prepare("SELECT nombre, email, empresa, telefono, tipo FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $crm_id));
 	if ($c && $c->tipo === 'cliente') {
-		at_cc_asegurar_cliente(['nombre' => $c->nombre, 'email' => $c->email, 'empresa' => $c->empresa, 'telefono' => $c->telefono, 'origen' => 'crm_manual']);
+		at_cc_asegurar_cliente(['crm_id' => $crm_id, 'nombre' => $c->nombre, 'email' => $c->email, 'empresa' => $c->empresa, 'telefono' => $c->telefono, 'origen' => 'crm_manual']);
 	}
 	wp_safe_redirect(admin_url('admin.php?page=automatiza-crm-ficha&id=' . $crm_id));
 	exit;

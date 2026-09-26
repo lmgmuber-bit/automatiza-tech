@@ -164,4 +164,86 @@ $claves_tipos = array_keys($tipos);
 ok($claves_tipos[0] !== 'respuesta_cliente', 'T4R1: respuesta_cliente no es el tipo por defecto de un registro nuevo de Seguimiento');
 ok(isset($tipos['respuesta_cliente']), 'T4R1: respuesta_cliente sigue disponible en la lista de tipos');
 
+// Revisión final (26-sep), hallazgo 9: las notas internas del cierre están en la lista (si no, al
+// editarlas con ✏️ el <select> caía en la primera opción, 'propuesta_enviada', que es pública), con
+// la marca «(interno)» y ninguna como primera opción.
+foreach (['pedido_respuesta', 'cierre_incompleto', 'aviso_operativo'] as $tipo_interno) {
+	ok(isset($tipos[$tipo_interno]) && strpos($tipos[$tipo_interno]['label'], '(interno)') !== false, "RF9: {$tipo_interno} está en get_detail_types() con la etiqueta «(interno)»");
+	ok($claves_tipos[0] !== $tipo_interno, "RF9: {$tipo_interno} no es la primera opción del select");
+}
+ok($claves_tipos[0] === 'propuesta_enviada', 'RF9: la primera opción sigue siendo propuesta_enviada (sin cambios para un registro nuevo)');
+
+add_filter('pre_wp_mail', '__return_true'); // create_contract() avisa por correo a quien revisa.
+$marca_rf = 'prueba-cierre-rf-' . strtolower(wp_generate_password(6, false, false));
+
+// Revisión final (26-sep), hallazgo 1: nombre, empresa y teléfono llegan a las dos tablas como texto
+// plano aunque vengan con etiquetas (el nombre de la página pública se recibe tal cual).
+$email_x = $marca_rf . '-x@example.com';
+$rx = at_cc_asegurar_cliente(['nombre' => 'Ana <img src=x onerror=alert(1)> Prueba', 'email' => $email_x, 'empresa' => '<b>[PRUEBA]</b> Empresa', 'telefono' => '+56 9 1111 1111<script>x</script>']);
+$cx = is_array($rx) ? $wpdb->get_row($wpdb->prepare("SELECT nombre, empresa, telefono FROM {$crm} WHERE id = %d", $rx['crm_id'])) : null;
+$tx = is_array($rx) ? $wpdb->get_row($wpdb->prepare("SELECT name, company, phone FROM {$tech} WHERE id = %d", $rx['tech_id'])) : null;
+ok($cx && $cx->nombre === 'Ana Prueba' && $tx && $tx->name === 'Ana Prueba', 'RF1: el nombre queda sin etiquetas en el CRM y en la ficha operativa: ' . ($cx->nombre ?? '?') . ' / ' . ($tx->name ?? '?'));
+ok($cx && $cx->empresa === '[PRUEBA] Empresa' && $tx && $tx->company === '[PRUEBA] Empresa', 'RF1: la empresa queda sin etiquetas en las dos tablas');
+ok($cx && $tx && strpos($cx->telefono . $tx->phone, '<') === false && $cx->telefono === '+56 9 1111 1111', 'RF1: el teléfono queda sin etiquetas en las dos tablas');
+$email_x2 = $marca_rf . '-x2@example.com';
+$rx2 = at_cc_asegurar_cliente(['nombre' => '<img src=x onerror=alert(1)>', 'email' => $email_x2]);
+$cx2 = is_array($rx2) ? $wpdb->get_var($wpdb->prepare("SELECT nombre FROM {$crm} WHERE id = %d", $rx2['crm_id'])) : null;
+$tx2 = is_array($rx2) ? $wpdb->get_var($wpdb->prepare("SELECT name FROM {$tech} WHERE id = %d", $rx2['tech_id'])) : null;
+ok($cx2 === $email_x2 && $tx2 === $email_x2, 'RF1: un nombre que es solo una etiqueta queda vacío y la ficha toma el correo: ' . var_export($cx2, true));
+
+// Revisión final (26-sep), hallazgo 3: con dos filas del CRM con el mismo correo, quien llama con
+// crm_id convierte y enlaza ESA fila, no la de id más bajo; y la ficha de una fila no se le quita
+// para dársela a la otra.
+$email_dup = $marca_rf . '-dup@example.com';
+$wpdb->insert($crm, ['nombre' => 'Fila A', 'email' => $email_dup, 'tipo' => 'prospecto', 'estado' => 'nuevo']);
+$crm_a = (int) $wpdb->insert_id;
+$wpdb->insert($crm, ['nombre' => 'Fila B', 'email' => $email_dup, 'tipo' => 'cliente', 'estado' => 'contratado']);
+$crm_b = (int) $wpdb->insert_id;
+$rb = at_cc_asegurar_cliente(['crm_id' => $crm_b, 'nombre' => 'Fila B', 'email' => $email_dup]);
+ok(is_array($rb) && $rb['crm_id'] === $crm_b, 'RF3: con crm_id se usa esa fila del CRM (B), no la de id menor (A)');
+ok($wpdb->get_var($wpdb->prepare("SELECT tipo FROM {$crm} WHERE id = %d", $crm_a)) === 'prospecto', 'RF3: la otra fila con el mismo correo (A) sigue como prospecto');
+ok(is_array($rb) && at_cc_tech_de_crm($crm_b) && (int) at_cc_tech_de_crm($crm_b)->id === $rb['tech_id'] && at_cc_tech_de_crm($crm_a) === null, 'RF3: la ficha operativa queda enlazada a B y no a A');
+$ra = at_cc_asegurar_cliente(['nombre' => 'Fila A', 'email' => $email_dup]);
+ok(is_array($ra) && $ra['crm_id'] === $crm_a && is_array($rb) && $ra['tech_id'] !== $rb['tech_id'], 'RF3: sin crm_id (por correo) toma A y le crea su propia ficha, sin reusar la de B');
+ok(is_array($rb) && at_cc_tech_de_crm($crm_b) && (int) at_cc_tech_de_crm($crm_b)->id === $rb['tech_id'], 'RF3: B conserva su ficha operativa');
+// La búsqueda por correo prefiere una ficha sin enlazar.
+$email_pref = $marca_rf . '-pref@example.com';
+$wpdb->insert($crm, ['nombre' => 'Otra fila', 'email' => $email_pref, 'tipo' => 'cliente']);
+$crm_otra = (int) $wpdb->insert_id;
+$wpdb->insert($tech, ['name' => 'Ficha de otra fila', 'email' => $email_pref, 'contract_status' => 'active', 'crm_cliente_id' => $crm_otra]);
+$tech_otra = (int) $wpdb->insert_id;
+$wpdb->insert($tech, ['name' => 'Ficha suelta', 'email' => $email_pref, 'contract_status' => 'active']);
+$tech_suelta = (int) $wpdb->insert_id;
+$wpdb->insert($crm, ['nombre' => 'Fila nueva', 'email' => $email_pref, 'tipo' => 'cliente']);
+$crm_nueva = (int) $wpdb->insert_id;
+$rp = at_cc_asegurar_cliente(['crm_id' => $crm_nueva, 'email' => $email_pref]);
+ok(is_array($rp) && $rp['tech_id'] === $tech_suelta && (int) $wpdb->get_var($wpdb->prepare("SELECT crm_cliente_id FROM {$tech} WHERE id = %d", $tech_otra)) === $crm_otra, 'RF3: por correo se toma la ficha sin enlazar y la de otra fila no se toca');
+
+// Revisión final (26-sep), hallazgo 6: con dos fichas operativas enlazadas al mismo cliente del CRM,
+// la pestaña avisa y lista también los contratos de la ficha que no es la principal.
+require_once ABSPATH . 'contracts/contract-service.php';
+$email_6 = $marca_rf . '-6@example.com';
+$r6 = at_cc_asegurar_cliente(['nombre' => 'Cliente Dos Fichas', 'email' => $email_6, 'valor' => 1000]);
+$ct6 = ContractService::create_contract(['client_id' => $r6['tech_id'], 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Dos Fichas'], 'created_by' => 0]);
+ob_start();
+at_cc_render_contratos_otras_fichas($r6['crm_id'], $r6['tech_id']);
+ok(ob_get_clean() === '', 'RF6: con una sola ficha no se agrega nada a la pestaña');
+$wpdb->insert($tech, ['name' => 'Cliente Dos Fichas', 'email' => $email_6, 'contract_status' => 'active', 'contract_value' => 2000, 'crm_cliente_id' => $r6['crm_id']]);
+$t6b = (int) $wpdb->insert_id;
+$principal6 = at_cc_tech_de_crm($r6['crm_id']);
+ok($principal6 && (int) $principal6->id === $t6b, 'RF6: la ficha principal pasa a ser la más nueva (la del contrato de servicios queda oculta en el widget)');
+ok(count(at_cc_techs_de_crm($r6['crm_id'])) === 2, 'RF6: at_cc_techs_de_crm lista las dos fichas');
+ob_start();
+at_cc_render_contratos_otras_fichas($r6['crm_id'], (int) $principal6->id);
+$h6 = (string) ob_get_clean();
+ok(is_object($ct6) && strpos($h6, esc_html($ct6->contract_number)) !== false, 'RF6: la pestaña lista el contrato de servicios de la otra ficha');
+ok(strpos($h6, '2 fichas operativas enlazadas') !== false, 'RF6: la pestaña avisa que hay más de una ficha');
+if (is_object($ct6)) {
+	$wpdb->delete(ContractService::table(), ['id' => $ct6->id]);
+	@unlink(ContractService::storage_dir() . '/' . $ct6->contract_number . '.pdf');
+}
+
+$wpdb->query($wpdb->prepare("DELETE FROM {$tech} WHERE email LIKE %s", $wpdb->esc_like($marca_rf) . '%'));
+$wpdb->query($wpdb->prepare("DELETE FROM {$crm} WHERE email LIKE %s", $wpdb->esc_like($marca_rf) . '%'));
+
 fin();

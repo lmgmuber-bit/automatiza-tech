@@ -480,6 +480,17 @@ class ContractService {
         $name  = $to_name  ?: ($ph['representante_cliente_nombre'] ?? ($ph['razon_social_cliente'] ?? 'Cliente'));
         if (!$email || !is_email($email)) return new WP_Error('bad_email','Email destinatario inválido');
 
+        // Contrato de servicios (cierre de cliente): entre la aceptación y este envío hay pasos
+        // manuales (datos del cliente, revisión, reunión de inicio), así que el plazo de firma corre
+        // desde que se le envía al cliente: 30 días desde hoy, nunca menos de lo que ya tenía.
+        if (($c->type ?? '') === 'servicios') {
+            $nuevo_vencimiento = date('Y-m-d H:i:s', strtotime('+30 days'));
+            if (empty($c->expires_at) || strtotime($c->expires_at) < strtotime($nuevo_vencimiento)) {
+                $wpdb->update(self::table(), array('expires_at' => $nuevo_vencimiento), array('id' => $c->id));
+                $c->expires_at = $nuevo_vencimiento;
+            }
+        }
+
         $sign_url = home_url('/contracts/sign-contract.php?token=' . $c->sign_token);
         $pdf_path = self::contract_pdf_path($c, false);
         ContractMailer::send_signature_request($email, $name, $c, $sign_url, $pdf_path);

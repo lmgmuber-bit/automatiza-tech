@@ -6,6 +6,7 @@ if (!defined('ABSPATH')) {
 
 add_action('admin_post_at_cc_pedir_respuesta', 'at_cc_accion_pedir_respuesta');
 add_action('admin_post_at_cc_registrar_aceptacion', 'at_cc_accion_registrar_aceptacion');
+add_action('admin_post_at_cc_completar_cierre', 'at_cc_accion_completar_cierre');
 add_action('wp_ajax_at_cc_ver_evidencia', 'at_cc_ver_evidencia');
 
 function at_cc_url_ficha_propuesta(int $id): string {
@@ -314,9 +315,59 @@ function at_cc_render_resumen_aceptada(object $p, ?array $ultima): void {
 		echo '<span class="description">Contrato ' . esc_html((string) $c->contract_number) . ': ' . esc_html((string) $c->status) . '</span>';
 	}
 	echo '</p>';
+	// Revisión final (26-sep), hallazgo 7: un cierre que quedó a medias (no se pudo pasar a cliente o
+	// no se creó el contrato) se completa desde aquí; el formulario real está en
+	// at_cc_render_formularios_respuesta().
+	if (at_cc_cierre_incompleto($p)) {
+		$faltas = [];
+		if (!$crm_id || !at_cc_tech_de_crm($crm_id)) {
+			$faltas[] = 'pasar al cliente a la ficha única';
+		}
+		if (!$c) {
+			$faltas[] = 'crear el contrato de servicios';
+		}
+		echo '<div class="notice notice-warning inline" style="margin:8px 0;padding:8px 12px">';
+		echo '<p style="margin:0 0 6px"><strong>⚠️ El cierre quedó a medias:</strong> falta ' . esc_html(implode(' y ', $faltas)) . '. El motivo está en Seguimiento («Cierre incompleto»). Si era el correo del cliente, corrígelo en «Cliente y enlaces» y guarda antes de completar.</p>';
+		echo '<label style="display:block;margin:0 0 6px"><input type="checkbox" name="bienvenida" value="1" form="at-cc-f-completar" checked> Enviarle el correo de bienvenida si todavía no le llegó</label>';
+		echo '<button type="submit" class="button button-primary" form="at-cc-f-completar">🔁 Completar cierre</button>';
+		echo '</div>';
+	}
 	foreach ((array) ($ultima['evidencias'] ?? []) as $ev) {
 		echo '<a href="' . esc_url((string) $ev['url']) . '" target="_blank" rel="noopener"><img src="' . esc_url((string) $ev['url']) . '" alt="Evidencia" style="max-width:140px;max-height:140px;margin:4px;border:1px solid #ddd;border-radius:6px"></a>';
 	}
+}
+
+/** «Completar cierre» (revisión final 26-sep, hallazgo 7): vuelve a correr el cierre con la última
+ *  aceptación registrada, sin repetir lo que ya se hizo (at_cc_completar_cierre()). */
+function at_cc_accion_completar_cierre(): void {
+	$id = (int) ($_POST['proposal_id'] ?? 0);
+	check_admin_referer('at_cc_completar_' . $id);
+	if (!current_user_can('manage_options')) {
+		wp_die('Sin permiso.', '', ['response' => 403]);
+	}
+	$p = at_cc_propuesta_por_id($id);
+	$candado = 'at_cc_completar_' . $id;
+	if (!$p || (string) $p->status !== 'aceptada') {
+		at_cc_guardar_aviso(['propuesta_id' => $id, 'tipo' => 'error', 'texto' => 'Esta propuesta no está aceptada: no hay cierre que completar.']);
+	} elseif (!at_cc_cierre_incompleto($p)) {
+		at_cc_guardar_aviso(['propuesta_id' => $id, 'tipo' => 'ok', 'texto' => 'El cierre ya estaba completo: no se repitió nada.']);
+	} elseif (get_transient($candado)) {
+		at_cc_guardar_aviso(['propuesta_id' => $id, 'tipo' => 'aviso', 'texto' => 'Ya se está completando el cierre: espera un minuto antes de repetirlo.']);
+	} else {
+		set_transient($candado, 1, 60);
+		$r = at_cc_completar_cierre($p, !empty($_POST['bienvenida']));
+		delete_transient($candado);
+		$detalles = array_merge((array) $r['avisos'], (array) ($r['avisos_operativos'] ?? []));
+		if (!$r['ok']) {
+			at_cc_guardar_aviso(['propuesta_id' => $id, 'tipo' => 'error', 'texto' => (string) $r['mensaje'], 'detalles' => $detalles]);
+		} elseif (!empty($r['avisos'])) {
+			at_cc_guardar_aviso(['propuesta_id' => $id, 'tipo' => 'error', 'texto' => 'El cierre sigue incompleto.', 'detalles' => $detalles]);
+		} else {
+			at_cc_guardar_aviso(['propuesta_id' => $id, 'tipo' => $detalles ? 'aviso' : 'ok', 'texto' => 'Cierre completado: el cliente está en la ficha única y el contrato quedó listo para tu revisión.', 'detalles' => $detalles]);
+		}
+	}
+	wp_safe_redirect(at_cc_url_ficha_propuesta($id));
+	exit;
 }
 
 /** Formularios reales del bloque; van después del formulario de la ficha (no se pueden anidar). */
@@ -329,9 +380,17 @@ function at_cc_render_formularios_respuesta(object $p): void {
 	echo '<form id="at-cc-f-aceptar" method="post" action="' . $url . '" enctype="multipart/form-data" hidden>'
 		. '<input type="hidden" name="action" value="at_cc_registrar_aceptacion"><input type="hidden" name="proposal_id" value="' . $id . '">'
 		. wp_nonce_field('at_cc_aceptar_' . $id, '_wpnonce', true, false) . '</form>';
-	// Ronda 2, hallazgo 5: estos dos formularios están fuera de .at-pa-form (no se pueden anidar), así
+	if ((string) $p->status === 'aceptada' && at_cc_cierre_incompleto($p)) {
+		echo '<form id="at-cc-f-completar" method="post" action="' . $url . '" hidden>'
+			. '<input type="hidden" name="action" value="at_cc_completar_cierre"><input type="hidden" name="proposal_id" value="' . $id . '">'
+			. wp_nonce_field('at_cc_completar_' . $id, '_wpnonce', true, false) . '</form>';
+	}
+	// Ronda 2, hallazgo 5: estos formularios están fuera de .at-pa-form (no se pueden anidar), así
 	// que la guardia contra doble envío de esa otra ficha (F4, assets/js/propuestas-admin.js) nunca los
 	// alcanza: cada uno solo escucha su propio 'submit'. Sus botones viven en at_cc_render_panel_respuesta()
 	// y apuntan aquí con form="…", así que se deshabilitan por ese atributo, no por closest('form').
-	echo "<script>(function(){function candado(id){var f=document.getElementById(id);if(!f){return;}var enviando=false;f.addEventListener('submit',function(e){if(enviando){e.preventDefault();return;}enviando=true;document.querySelectorAll('[form=\"'+id+'\"]').forEach(function(b){b.disabled=true;});});}candado('at-cc-f-pedir');candado('at-cc-f-aceptar');})();</script>";
+	// Revisión final (26-sep), hallazgo 2: solo los BOTONES. El navegador arma los datos del envío
+	// después del evento submit y omite los controles deshabilitados: deshabilitar también los campos
+	// con form="…" (canal, nota, filas, RUT, evidencia…) hacía que nunca llegaran al servidor.
+	echo "<script>(function(){function candado(id){var f=document.getElementById(id);if(!f){return;}var enviando=false;f.addEventListener('submit',function(e){if(enviando){e.preventDefault();return;}enviando=true;document.querySelectorAll('button[form=\"'+id+'\"], #'+id+' button').forEach(function(b){b.disabled=true;});});}candado('at-cc-f-pedir');candado('at-cc-f-aceptar');candado('at-cc-f-completar');})();</script>";
 }

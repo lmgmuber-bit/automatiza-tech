@@ -248,7 +248,12 @@ class AutomatizaTech_Client_Operations {
      */
     public function ajax_get_full_details() {
         check_ajax_referer('client_operations_nonce', 'nonce');
-        
+
+        // Misma capacidad que la lista de clientes y que los demás handlers de este módulo.
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Sin permisos', 403);
+        }
+
         $client_id = intval($_POST['client_id']);
         
         global $wpdb;
@@ -763,7 +768,8 @@ class AutomatizaTech_Client_Operations {
                                 <h3 style="margin: 0; color: #0277bd;">🚀 Avances del Proyecto</h3>
                                 <p style="margin: 5px 0 0 0; font-size: 13px; color: #555;">Notifica al cliente sobre los hitos y actualizaciones importantes.</p>
                             </div>
-                            <button type="button" onclick="openNotifyProgressModal(<?php echo $client->id; ?>, '<?php echo esc_attr($client->name); ?>', '<?php echo esc_attr($client->email); ?>')" 
+                            <?php // Los datos del cliente van en atributos data-* (se leen con getAttribute), nunca dentro del código del onclick. ?>
+                            <button type="button" data-client-id="<?php echo (int) $client->id; ?>" data-client-name="<?php echo esc_attr($client->name); ?>" data-client-email="<?php echo esc_attr($client->email); ?>" onclick="openNotifyProgressModal(this.getAttribute('data-client-id'), this.getAttribute('data-client-name'), this.getAttribute('data-client-email'))"
                                     style="background: linear-gradient(135deg, #0288d1, #01579b); color: white; border: none; padding: 8px 15px; border-radius: 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 6px rgba(2, 136, 209, 0.3);">
                                 <span style="font-size: 16px;">📢</span> Notificar Avance
                             </button>
@@ -1334,10 +1340,10 @@ class AutomatizaTech_Client_Operations {
                 <div id="${modalId}" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100001; display: flex; justify-content: center; align-items: center;">
                     <div style="background: white; width: 90%; max-width: 500px; padding: 25px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
                         <h3 style="margin-top: 0; color: #1e3a8a;">📢 Notificar Avance de Proyecto</h3>
-                        <p style="color: #666; font-size: 14px;">Cliente: <strong>${clientName}</strong> (${clientEmail})</p>
-                        
+                        <p style="color: #666; font-size: 14px;">Cliente: <strong class="at-notify-client-name"></strong> (<span class="at-notify-client-email"></span>)</p>
+
                         <form onsubmit="submitNotifyProgress(event)">
-                            <input type="hidden" name="client_id" value="${clientId}">
+                            <input type="hidden" name="client_id" value="${parseInt(clientId, 10) || 0}">
                             
                             <div style="margin-bottom: 15px;">
                                 <label style="display: block; font-weight: bold; margin-bottom: 5px;">Título del Avance</label>
@@ -1359,6 +1365,10 @@ class AutomatizaTech_Client_Operations {
             `;
             
             document.body.insertAdjacentHTML('beforeend', modalHTML);
+            // Nombre y correo como texto, no como HTML.
+            const nuevoModal = document.getElementById(modalId);
+            nuevoModal.querySelector('.at-notify-client-name').textContent = clientName || '';
+            nuevoModal.querySelector('.at-notify-client-email').textContent = clientEmail || '';
         }
         
         function submitNotifyProgress(e) {

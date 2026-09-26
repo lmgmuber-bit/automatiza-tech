@@ -83,6 +83,10 @@ ok(at_cc_url_respuesta('https://ejemplo.cl/', 'aB3 x', 'aceptar') === 'https://e
 ok(at_cc_url_respuesta('https://ejemplo.cl', 'abc') === 'https://ejemplo.cl/ver-presentacion.php?id=abc', 'URL sin responder');
 $bl = at_cc_bloque_aceptar_html('https://e.cl/?a=1&b=2', 'https://e.cl/ev');
 ok(strpos($bl, 'Aceptar la propuesta') !== false && strpos($bl, 'href="https://e.cl/?a=1&amp;b=2"') !== false && strpos($bl, 'https://e.cl/ev') !== false, 'bloque de aceptar con enlaces escapados');
+// Revisión final (26-sep), hallazgo 8: sin URL de evaluar (propuesta rechazada) no va el enlace de dudas.
+$bl_sin = at_cc_bloque_aceptar_html('https://e.cl/?a=1', '');
+ok(strpos($bl_sin, 'Aceptar la propuesta') !== false && strpos($bl_sin, '¿Tienes dudas') === false && substr_count($bl_sin, '<a ') === 1, 'RF8: bloque sin URL de evaluar: solo el botón de aceptar');
+ok(strpos($bl, '¿Tienes dudas') !== false && substr_count($bl, '<a ') === 2, 'RF8: con URL de evaluar sigue el enlace de dudas');
 $t = at_cc_texto_whatsapp('Ana', 'Muebles', 'https://e.cl/x');
 ok(strpos($t, 'Hola Ana') === 0 && strpos($t, 'para Muebles') !== false && strpos($t, 'https://e.cl/x') !== false, 'texto de WhatsApp');
 ok(at_cc_url_wa_me('+56 9 1234 5678', 'a b') === 'https://wa.me/56912345678?text=a%20b', 'enlace wa.me');

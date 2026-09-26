@@ -151,6 +151,14 @@ function automatiza_tech_proposals_page_clasico() {
             $send_email = false;
             $bloqueo_envio = true;
         }
+        // Revisión final (26-sep), hallazgo 4: la misma guarda que at_pa_guardar() (acciones.php).
+        // Una propuesta con respuesta del cliente (aceptada, evaluando o rechazada) no se reenvía ni
+        // pierde su estado en un guardado desde esta página.
+        $estado_protegido = $actual && in_array((string) $actual->status, ['aceptada', 'evaluando', 'rechazada'], true);
+        if ($send_email && $estado_protegido) {
+            $send_email = false;
+            $bloqueo_envio_aceptada = true;
+        }
         $update_data = [
             'client_name' => $client_name,
             'company_name' => $company_name,
@@ -160,9 +168,10 @@ function automatiza_tech_proposals_page_clasico() {
             'n8n_chat_url' => $n8n_url,
         ];
         // v3: el guardado normal no debe reescribir el estado del flujo; solo lo toca al enviar.
+        // Tampoco lo hace si la propuesta ya tiene respuesta del cliente.
         if ($send_email) {
             $update_data['status'] = 'sent';
-        } elseif (!$es_v3) {
+        } elseif (!$es_v3 && !$estado_protegido) {
             $update_data['status'] = 'pending';
         }
         // Solo actualizar prompts si se enviaron (no vacíos). En v3 el payload lo maneja
@@ -181,6 +190,13 @@ function automatiza_tech_proposals_page_clasico() {
 
         if (!empty($bloqueo_envio)) {
             $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: una propuesta v3 solo se envía cuando está <strong>lista</strong> (versión final verificada).</p></div>';
+        } elseif (!empty($bloqueo_envio_aceptada)) {
+            $descripcion_respuesta = [
+                'aceptada'  => 'el cliente ya aceptó esta propuesta',
+                'evaluando' => 'el cliente la sigue evaluando',
+                'rechazada' => 'el cliente ya rechazó esta propuesta',
+            ][$actual ? (string) $actual->status : ''] ?? 'el cliente ya respondió esta propuesta';
+            $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: ' . esc_html($descripcion_respuesta) . '. Para pedirle otra respuesta, usa el panel de «Respuesta del cliente».</p></div>';
         }
 
         // Obtener datos actualizados para el email
@@ -188,7 +204,7 @@ function automatiza_tech_proposals_page_clasico() {
 
         // --- ENVIAR EMAIL (solo si el checkbox está marcado) ---
         if (!$send_email) {
-            if (empty($bloqueo_envio)) {
+            if (empty($bloqueo_envio) && empty($bloqueo_envio_aceptada)) {
                 $message = '<div class="notice notice-success is-dismissible"><p>✅ Propuesta guardada correctamente. <strong>No se envió correo</strong> (checkbox desmarcado).</p></div>';
             }
         } else {
@@ -882,7 +898,9 @@ function automatiza_tech_proposals_page_clasico() {
                                         <?php
                                         $puede = at_propuesta_puede_enviarse($edit_proposal->flujo ?? null, (string) $edit_proposal->status);
                                         $es_v3_checkbox = ($edit_proposal->flujo ?? '') === 'v3';
-                                        $send_email_attr = !$puede ? 'disabled' : ($es_v3_checkbox ? '' : 'checked');
+                                        // Revisión final (26-sep), hallazgo 4: como en ficha.php, con respuesta del cliente la casilla queda desmarcada y deshabilitada.
+                                        $tiene_respuesta_checkbox = in_array((string) $edit_proposal->status, ['aceptada', 'evaluando', 'rechazada'], true);
+                                        $send_email_attr = ($tiene_respuesta_checkbox || !$puede) ? 'disabled' : ($es_v3_checkbox ? '' : 'checked');
                                         ?>
                                         <input type="checkbox" name="send_email" value="1" id="send_email" <?php echo $send_email_attr; ?> style="width: 20px; height: 20px;">
                                         <span style="color: #065f46; font-weight: 600;">📧 Enviar correo con la propuesta al cliente</span>

@@ -44,8 +44,7 @@ function at_cc_anotar_simple(object $p, string $tipo, string $titulo, string $de
 }
 
 /** Registro de la respuesta en Seguimiento. La descripción es lo que puede ver el cliente (llega a
- *  la línea de tiempo pública de «Ver mi portal», protegida solo por un token calculable): salida,
- *  canal, fecha y filas aceptadas. Nombre, RUT, comentario/nota interna y evidencias quedan solo en
+ *  la línea de tiempo de su portal, «Ver mi portal»): salida, canal, fecha y filas aceptadas. Nombre, RUT, comentario/nota interna y evidencias quedan solo en
  *  metadata (de ahí los leen at_cc_ultima_respuesta y el panel), y attachment_url/attachment_name no
  *  se llenan con la evidencia para que el archivo no aparezca en esa misma línea de tiempo pública. */
 function at_cc_anotar_respuesta(object $p, string $salida, array $d, bool $cambio_estado): int {
@@ -105,6 +104,12 @@ function at_cc_ultima_respuesta(int $propuesta_id, ?string $salida = null): ?arr
 			'salida'     => $s,
 			'filas'      => (array) ($m['filas'] ?? []),
 			'evidencias' => (array) ($m['evidencias'] ?? []),
+			// Revisión final (26-sep), hallazgo 7: lo necesario para completar un cierre a medias.
+			'canal'           => (string) ($m['canal'] ?? ''),
+			'canal_manual'    => (string) ($m['canal_manual'] ?? ''),
+			'nombre'          => (string) ($m['nombre'] ?? ''),
+			'rut'             => (string) ($m['rut'] ?? ''),
+			'fecha_declarada' => (string) ($m['fecha_declarada'] ?? ''),
 		];
 	}
 	return null;
@@ -132,9 +137,9 @@ function at_cc_registrar_respuesta(object $p, string $salida, array $d): array {
 	}
 	$manual = ($d['canal'] ?? '') === 'manual';
 	if (!at_cc_transicion_respuesta_valida($desde, $hacia, $manual)) {
-		// Una propuesta rechazada sigue ofreciendo «la sigo evaluando» / «no, gracias» (barra
-		// pública y correo «Pedir respuesta»): no es un error, se anota y se avisa a Luis sin
-		// cambiar el estado.
+		// Una propuesta rechazada todavía puede recibir «la sigo evaluando» / «no, gracias» (por
+		// ejemplo, desde un correo anterior al rechazo): no es un error, se anota y se avisa a Luis
+		// sin cambiar el estado.
 		if ($desde === 'rechazada' && $salida !== 'acepta') {
 			at_cc_anotar_respuesta($p, $salida, $d, false);
 			at_cc_avisar_luis($p, $salida, $d, $base);
@@ -198,19 +203,24 @@ function at_cc_ejecutar_cierre(object $p, array $d): array {
 	if (is_wp_error($cli)) {
 		return ['avisos' => ['No se pudo pasar a cliente: ' . $cli->get_error_message()], 'crm_id' => null, 'contrato_id' => null];
 	}
+	// Revisión final (26-sep), hallazgo 7: al completar un cierre a medias ('reintento'), lo que ya se
+	// hizo la primera vez no se repite: ni el Seguimiento migrado, ni el historial, ni la bienvenida.
+	$reintento = !empty($d['reintento']);
 	try {
-		if (function_exists('automatiza_migrate_prospect_to_client')) {
+		if (function_exists('automatiza_migrate_prospect_to_client') && !($reintento && at_cc_seguimiento_migrado((int) $p->id))) {
 			automatiza_migrate_prospect_to_client($cli['tech_id'], (int) $p->id);
 		}
 	} catch (\Throwable $e) {
 		$avisos[] = 'El Seguimiento no se migró: ' . $e->getMessage();
 	}
 	try {
-		at_cc_historial_crm($cli['crm_id'], 'conversion', 'Aceptó la propuesta', 'Propuesta ' . $p->unique_link_id . ' aceptada ' . at_cc_canal_texto($d) . '.');
+		if (!($reintento && at_cc_historial_aceptacion_existe((int) $cli['crm_id'], (string) $p->unique_link_id))) {
+			at_cc_historial_crm($cli['crm_id'], 'conversion', 'Aceptó la propuesta', 'Propuesta ' . $p->unique_link_id . ' aceptada ' . at_cc_canal_texto($d) . '.');
+		}
 	} catch (\Throwable $e) {
 		$avisos[] = 'No se pudo anotar el historial del CRM: ' . $e->getMessage();
 	}
-	if (!empty($d['bienvenida'])) {
+	if (!empty($d['bienvenida']) && !($reintento && at_cc_bienvenida_enviada((int) $cli['crm_id']))) {
 		try {
 			if (!at_cc_enviar_bienvenida($cli['crm_id'], $p, $filas)) {
 				$avisos[] = 'El correo de bienvenida no salió (revisa el SMTP).';
@@ -238,6 +248,79 @@ function at_cc_ejecutar_cierre(object $p, array $d): array {
 		$avisos[] = 'El contrato no se creó: ' . $e->getMessage();
 	}
 	return ['avisos' => $avisos, 'avisos_operativos' => $avisos_operativos, 'crm_id' => $cli['crm_id'], 'contrato_id' => $contrato_id];
+}
+
+/** El Seguimiento de la propuesta ya se migró a una ficha operativa (queda la fila 'contratacion'). */
+function at_cc_seguimiento_migrado(int $propuesta_id): bool {
+	global $wpdb;
+	return (int) $wpdb->get_var($wpdb->prepare(
+		"SELECT COUNT(*) FROM {$wpdb->prefix}automatiza_clients_details WHERE propuesta_origin_id = %d AND detail_type = 'contratacion'",
+		$propuesta_id
+	)) > 0;
+}
+
+/** El historial del CRM ya tiene la conversión por esta propuesta. */
+function at_cc_historial_aceptacion_existe(int $crm_id, string $codigo): bool {
+	global $wpdb;
+	return (int) $wpdb->get_var($wpdb->prepare(
+		"SELECT COUNT(*) FROM {$wpdb->prefix}crm_historial WHERE cliente_id = %d AND tipo_evento = 'conversion' AND titulo = 'Aceptó la propuesta' AND descripcion LIKE %s",
+		$crm_id,
+		'Propuesta ' . $wpdb->esc_like($codigo) . ' %'
+	)) > 0;
+}
+
+/** La bienvenida ya le llegó a este cliente (at_cc_enviar_bienvenida() anota el envío exitoso). */
+function at_cc_bienvenida_enviada(int $crm_id): bool {
+	global $wpdb;
+	return (int) $wpdb->get_var($wpdb->prepare(
+		"SELECT COUNT(*) FROM {$wpdb->prefix}crm_historial WHERE cliente_id = %d AND tipo_evento = 'email_bienvenida' AND descripcion = %s",
+		$crm_id,
+		'Se envió la bienvenida con los primeros pasos.'
+	)) > 0;
+}
+
+/** Revisión final (26-sep), hallazgo 7: la propuesta está aceptada pero el cierre quedó a medias
+ *  (sin cliente con ficha operativa, o sin contrato). */
+function at_cc_cierre_incompleto(object $p): bool {
+	if ((string) $p->status !== 'aceptada') {
+		return false;
+	}
+	$crm_id = at_cc_crm_de_email((string) $p->client_email);
+	if (!$crm_id || !at_cc_tech_de_crm($crm_id)) {
+		return true;
+	}
+	return at_cc_contrato_de_propuesta((int) $p->id) === null;
+}
+
+/** Completa un cierre a medias con la última aceptación registrada. Pasar a cliente y el contrato ya
+ *  son idempotentes; el resto no se repite si ya se hizo (at_cc_ejecutar_cierre() con 'reintento'). */
+function at_cc_completar_cierre(object $p, bool $bienvenida): array {
+	$base = ['ok' => false, 'mensaje' => '', 'avisos' => [], 'avisos_operativos' => [], 'crm_id' => null, 'contrato_id' => null];
+	if ((string) $p->status !== 'aceptada') {
+		return array_merge($base, ['mensaje' => 'Esta propuesta no está aceptada: no hay cierre que completar.']);
+	}
+	$u = at_cc_ultima_respuesta((int) $p->id, 'acepta');
+	if (!$u) {
+		return array_merge($base, ['mensaje' => 'No hay una aceptación registrada en Seguimiento para esta propuesta.']);
+	}
+	$d = [
+		'canal'        => $u['canal'],
+		'canal_manual' => $u['canal_manual'],
+		'nombre'       => $u['nombre'],
+		'rut'          => $u['rut'],
+		'filas'        => $u['filas'],
+		'fecha'        => $u['fecha_declarada'] !== '' ? $u['fecha_declarada'] : $u['fecha'],
+		'bienvenida'   => $bienvenida,
+		'reintento'    => true,
+	];
+	$r = array_merge($base, ['ok' => true, 'mensaje' => 'completado'], at_cc_ejecutar_cierre($p, $d));
+	if (!empty($r['avisos'])) {
+		at_cc_anotar_simple($p, 'cierre_incompleto', 'Cierre incompleto (al completarlo desde el panel)', implode("\n", $r['avisos']));
+	}
+	if (!empty($r['avisos_operativos'])) {
+		at_cc_anotar_simple($p, 'aviso_operativo', 'Revisar datos bancarios', implode("\n", $r['avisos_operativos']));
+	}
+	return $r;
 }
 
 /** Aviso a Luis por correo (WhatsApp a Luis no llega: 131047). No se avisa lo que él mismo registró. */
@@ -278,7 +361,10 @@ function at_cc_enviar_pedido_respuesta(object $p): bool {
 		return false;
 	}
 	$base = get_site_url();
-	$bloque = at_cc_bloque_aceptar_html(at_cc_url_respuesta($base, (string) $p->unique_link_id, 'aceptar'), at_cc_url_respuesta($base, (string) $p->unique_link_id, 'evaluar'));
+	// Revisión final (26-sep), hallazgo 8: la página de una propuesta rechazada solo ofrece aceptar
+	// (at_cc_render_barra()), así que el correo tampoco lleva el enlace de «¿Tienes dudas…?».
+	$url_evaluar = (string) $p->status === 'rechazada' ? '' : at_cc_url_respuesta($base, (string) $p->unique_link_id, 'evaluar');
+	$bloque = at_cc_bloque_aceptar_html(at_cc_url_respuesta($base, (string) $p->unique_link_id, 'aceptar'), $url_evaluar);
 	$html = at_cc_pedido_respuesta_html((string) $p->client_name, (string) $p->company_name, $bloque, AT_CC_LOGO, at_cc_url_respuesta($base, (string) $p->unique_link_id));
 	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
 	$asunto = 'Tu propuesta de AutomatizaTech' . (trim((string) $p->company_name) !== '' ? ' para ' . $p->company_name : '');

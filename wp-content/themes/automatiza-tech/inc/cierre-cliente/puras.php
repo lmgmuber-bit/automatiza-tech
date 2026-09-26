@@ -219,14 +219,15 @@ function at_cc_url_respuesta(string $base, string $codigo, string $responder = '
 	return $responder !== '' ? $u . '&responder=' . rawurlencode($responder) : $u;
 }
 
-/** Bloque del correo que pide aceptar la propuesta. El botón abre la página: no acepta por sí solo. */
+/** Bloque del correo que pide aceptar la propuesta. El botón abre la página: no acepta por sí solo.
+ *  Con $url_evaluar vacío no se dibuja el enlace de «¿Tienes dudas…?» (propuesta rechazada). */
 function at_cc_bloque_aceptar_html(string $url_aceptar, string $url_evaluar): string {
 	$a = htmlspecialchars($url_aceptar, ENT_QUOTES, 'UTF-8');
 	$e = htmlspecialchars($url_evaluar, ENT_QUOTES, 'UTF-8');
 	return '<div style="background:#ecfdf5;border:1px solid #10b981;border-radius:8px;padding:20px;margin:24px 0;text-align:center">'
 		. '<p style="margin:0 0 14px 0;color:#065f46;font-size:15px">Si estás de acuerdo con la propuesta, acéptala aquí. Con tu aceptación te enviamos el contrato y los primeros pasos para partir.</p>'
 		. '<a href="' . $a . '" style="display:inline-block;background:#059669;color:#ffffff;text-decoration:none;font-weight:bold;padding:14px 32px;border-radius:30px;font-size:16px">✅ Aceptar la propuesta</a>'
-		. '<p style="margin:14px 0 0 0;font-size:13px"><a href="' . $e . '" style="color:#047857">¿Tienes dudas o necesitas más tiempo? Cuéntanos aquí</a></p>'
+		. ($url_evaluar !== '' ? '<p style="margin:14px 0 0 0;font-size:13px"><a href="' . $e . '" style="color:#047857">¿Tienes dudas o necesitas más tiempo? Cuéntanos aquí</a></p>' : '')
 		. '</div>';
 }
 

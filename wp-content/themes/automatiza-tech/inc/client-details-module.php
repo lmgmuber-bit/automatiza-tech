@@ -165,6 +165,24 @@ class AutomatizaTech_Client_Details {
                 'icon' => '💬',
                 'color' => '#0f766e'
             ),
+            // Revisión final (26-sep), hallazgo 9: notas internas del cierre de cliente
+            // (at_cc_tipos_internos()). Deben estar en la lista para que, al editarlas con ✏️, el
+            // <select> conserve su tipo en vez de caer en el primero ('propuesta_enviada').
+            'pedido_respuesta' => array(
+                'label' => '📨 Pedido de respuesta (interno)',
+                'icon' => '📨',
+                'color' => '#64748b'
+            ),
+            'cierre_incompleto' => array(
+                'label' => '⚠️ Cierre incompleto (interno)',
+                'icon' => '⚠️',
+                'color' => '#b45309'
+            ),
+            'aviso_operativo' => array(
+                'label' => 'ℹ️ Aviso operativo (interno)',
+                'icon' => 'ℹ️',
+                'color' => '#64748b'
+            ),
             'cotizacion' => array(
                 'label' => '💰 Cotización',
                 'icon' => '💰',

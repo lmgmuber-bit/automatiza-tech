@@ -114,9 +114,9 @@ ok($r['avisos_operativos'] === [], 'acepta: sin avisos operativos (banco configu
 $u = at_cc_ultima_respuesta((int) $p->id);
 ok($u && $u['salida'] === 'acepta', 'última respuesta es la aceptación');
 
-// T6 ronda 1 (revisión), hallazgo 2: el RUT y la nota interna no van en la descripción (la lee la
-// línea de tiempo pública del cliente, «Ver mi portal», protegida solo por un token calculable);
-// quedan solo en la metadata, que es de donde los lee el panel interno.
+// T6 ronda 1 (revisión), hallazgo 2: el RUT y la nota interna no van en la descripción (la
+// descripción puede verla el cliente en su portal, «Ver mi portal»); quedan solo en la metadata,
+// que es de donde los lee el panel interno.
 $fila_resp = $wpdb->get_row($wpdb->prepare("SELECT description, metadata FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente' ORDER BY id DESC LIMIT 1", $p->id));
 ok($fila_resp && strpos($fila_resp->description, '11.111.111-1') === false && strpos($fila_resp->description, 'pidió factura') === false && strpos($fila_resp->description, 'Ana Prueba') === false, 'la descripción pública no lleva el RUT, el nombre ni la nota interna');
 ok($fila_resp && strpos($fila_resp->metadata, '11.111.111-1') !== false && strpos($fila_resp->metadata, 'pidió factura') !== false, 'la metadata interna sí lleva el RUT y la nota');
@@ -247,6 +247,53 @@ $m_bienvenida_ctrl->invoke($GLOBALS['at_crm_ai'], $cliente_bcc);
 remove_filter('pre_wp_mail', $filtro_bcc_falla, 20);
 ok(count($correos) === 1 && strpos((string) $correos[0]['subject'], 'bienvenida') !== false, 'Bcc rechazado en un cliente: no manda además la bienvenida antigua' . ' (correos: ' . count($correos) . ')');
 $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $cliente_bcc));
+
+// Revisión final (26-sep), hallazgo 8: «Pedir respuesta» a una rechazada no manda el enlace de dudas
+// (la página de una rechazada solo ofrece aceptar); a una en evaluación, sí.
+$correos = [];
+$p8 = crear_propuesta($marca . '-rf8', 'rechazada', $payload, $creadas);
+ok(at_cc_enviar_pedido_respuesta($p8) && count($correos) === 1 && strpos($correos[0]['message'], 'responder=aceptar') !== false && strpos($correos[0]['message'], 'responder=evaluar') === false && strpos($correos[0]['message'], '¿Tienes dudas') === false, 'RF8: rechazada: el correo lleva solo el enlace de aceptar');
+$correos = [];
+$p8e = crear_propuesta($marca . '-rf8e', 'evaluando', $payload, $creadas);
+ok(at_cc_enviar_pedido_respuesta($p8e) && count($correos) === 1 && strpos($correos[0]['message'], 'responder=evaluar') !== false, 'RF8: en evaluación: el correo sigue con el enlace de dudas');
+
+// Revisión final (26-sep), hallazgo 7: un cierre a medias se completa con la última aceptación, sin
+// repetir lo que ya se hizo.
+$cuenta = function (string $sql, ...$args) use ($wpdb): int { return (int) $wpdb->get_var($wpdb->prepare($sql, ...$args)); };
+$sql_contratacion = "SELECT COUNT(*) FROM {$wpdb->prefix}automatiza_clients_details WHERE propuesta_origin_id = %d AND detail_type = 'contratacion'";
+$sql_conversion = "SELECT COUNT(*) FROM {$wpdb->prefix}crm_historial WHERE cliente_id = %d AND tipo_evento = 'conversion' AND titulo = 'Aceptó la propuesta'";
+// (a) Correo inválido (la propuesta $pi de más arriba): no se pudo pasar a cliente. Luis corrige el correo y completa.
+ok(at_cc_cierre_incompleto(at_cc_propuesta_por_id($pi->id)), 'RF7: correo inválido: el cierre queda incompleto');
+$wpdb->update($wpdb->prefix . 'automatiza_propuestas', ['client_email' => $marca . '-rf7@example.com'], ['id' => $pi->id]);
+$pi_ok = at_cc_propuesta_por_id($pi->id);
+$correos = [];
+$r7 = at_cc_completar_cierre($pi_ok, true);
+$crm7 = at_cc_crm_de_email($pi_ok->client_email);
+ok($r7['ok'] && $r7['avisos'] === [] && $crm7 > 0 && $wpdb->get_var($wpdb->prepare("SELECT tipo FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $crm7)) === 'cliente' && at_cc_tech_de_crm($crm7) !== null, 'RF7: completar: pasa a cliente con su ficha operativa' . ($r7['avisos'] ? ': ' . implode(' | ', $r7['avisos']) : ''));
+$c7 = at_cc_contrato_de_propuesta((int) $pi->id);
+$ph7 = $c7 ? json_decode($c7->placeholders, true) : [];
+ok($c7 && $c7->type === 'servicios' && ($ph7['monto_total'] ?? '') === '$2.000.000' && (int) $c7->client_id === (int) at_cc_tech_de_crm($crm7)->id, 'RF7: completar: crea el contrato de servicios con lo aceptado');
+ok(!at_cc_cierre_incompleto($pi_ok), 'RF7: completar: el cierre ya no está incompleto');
+ok(count(array_filter($correos, function ($x) use ($pi_ok) { return $x['to'] === $pi_ok->client_email && strpos((string) $x['subject'], 'bienvenida') !== false; })) === 1, 'RF7: completar: la bienvenida sale una vez');
+ok($cuenta($sql_contratacion, $pi->id) === 1 && $cuenta($sql_conversion, $crm7) === 1, 'RF7: completar: Seguimiento migrado y conversión anotada una vez');
+$correos = [];
+$r7b = at_cc_completar_cierre($pi_ok, true);
+ok($r7b['ok'] && count(array_filter($correos, function ($x) use ($pi_ok) { return $x['to'] === $pi_ok->client_email; })) === 0, 'RF7: completar dos veces: no reenvía la bienvenida');
+ok($cuenta($sql_contratacion, $pi->id) === 1 && $cuenta($sql_conversion, $crm7) === 1 && $cuenta("SELECT COUNT(*) FROM " . ContractService::table() . " WHERE proposal_id = %d", $pi->id) === 1, 'RF7: completar dos veces: no repite la migración, la conversión ni el contrato');
+// (b) Contrato que falta (se borra el de la propuesta $p, aceptada completa más arriba): se crea el
+// contrato y nada más (la bienvenida ya había salido).
+$wpdb->delete(ContractService::table(), ['proposal_id' => $p->id]);
+$p_fresca = at_cc_propuesta_por_id($p->id);
+ok(at_cc_cierre_incompleto($p_fresca), 'RF7: sin contrato: el cierre queda incompleto');
+$contratacion_antes = $cuenta($sql_contratacion, $p->id);
+$crm_p = at_cc_crm_de_email($p->client_email);
+$conversion_antes = $cuenta($sql_conversion, $crm_p);
+$correos = [];
+$r7c = at_cc_completar_cierre($p_fresca, true);
+ok($r7c['ok'] && at_cc_contrato_de_propuesta((int) $p->id) !== null && !at_cc_cierre_incompleto($p_fresca), 'RF7: sin contrato: completar crea el contrato');
+ok(count(array_filter($correos, function ($x) use ($p_fresca) { return $x['to'] === $p_fresca->client_email; })) === 0, 'RF7: sin contrato: no reenvía la bienvenida que ya había salido');
+ok($cuenta($sql_contratacion, $p->id) === $contratacion_antes && $cuenta($sql_conversion, $crm_p) === $conversion_antes, 'RF7: sin contrato: no vuelve a migrar el Seguimiento ni a anotar la conversión');
+ok(!at_cc_completar_cierre(at_cc_propuesta_por_id($p8->id), true)['ok'], 'RF7: una propuesta que no está aceptada no se completa');
 
 // Limpieza
 $ids = implode(',', array_map('intval', $creadas));

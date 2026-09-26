@@ -535,7 +535,7 @@ class AutomatizaTech_CRM_AI {
             if (function_exists('at_cc_asegurar_cliente')) {
                 $conv = $wpdb->get_row($wpdb->prepare("SELECT nombre, email, empresa, telefono FROM {$this->tabla_clientes} WHERE id = %d", $id));
                 if ($conv && is_email((string) $conv->email)) {
-                    at_cc_asegurar_cliente(['nombre' => $conv->nombre, 'email' => $conv->email, 'empresa' => $conv->empresa, 'telefono' => $conv->telefono, 'origen' => 'crm_manual']);
+                    at_cc_asegurar_cliente(['crm_id' => $id, 'nombre' => $conv->nombre, 'email' => $conv->email, 'empresa' => $conv->empresa, 'telefono' => $conv->telefono, 'origen' => 'crm_manual']);
                 }
             }
             if (isset($_POST['enviar_bienvenida']) && $_POST['enviar_bienvenida'] === 'true') {
@@ -590,7 +590,7 @@ class AutomatizaTech_CRM_AI {
         }
         
         if (function_exists('at_cc_asegurar_cliente')) {
-            at_cc_asegurar_cliente(['nombre' => $propuesta->client_name, 'email' => $propuesta->client_email, 'empresa' => $propuesta->company_name, 'telefono' => $propuesta->phone, 'origen' => 'propuesta_web']);
+            at_cc_asegurar_cliente(['crm_id' => (int) $cliente_id, 'nombre' => $propuesta->client_name, 'email' => $propuesta->client_email, 'empresa' => $propuesta->company_name, 'telefono' => $propuesta->phone, 'origen' => 'propuesta_web']);
         }
 
         // Registrar evento en historial
@@ -2187,11 +2187,15 @@ class AutomatizaTech_CRM_AI {
                         <?php
                         $at_cc_tech = function_exists('at_cc_tech_de_crm') ? at_cc_tech_de_crm((int) ($cliente['id'] ?? 0)) : null;
                         if ($at_cc_tech):
-                            if (function_exists('automatiza_client_full_modal_button')):
+                            // La ficha operativa completa se abre por AJAX y exige manage_options (igual que la lista de clientes).
+                            if (function_exists('automatiza_client_full_modal_button') && current_user_can('manage_options')):
                                 echo '<p>' . automatiza_client_full_modal_button((int) $at_cc_tech->id, '📋 Ver ficha operativa (facturación, accesos, técnico y redes)') . '</p>';
                             endif;
                             if (function_exists('at_render_client_contracts_widget')):
                                 at_render_client_contracts_widget($at_cc_tech);
+                            endif;
+                            if (function_exists('at_cc_render_contratos_otras_fichas')):
+                                at_cc_render_contratos_otras_fichas((int) ($cliente['id'] ?? 0), (int) $at_cc_tech->id);
                             endif;
                         elseif (($cliente['tipo'] ?? '') === 'cliente' && function_exists('at_cc_asegurar_cliente')): ?>
                             <p>Este cliente todavía no tiene ficha operativa (contratos, facturación y accesos).</p>

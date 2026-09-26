@@ -121,10 +121,21 @@ function at_cc_registrar_respuesta(object $p, string $salida, array $d): array {
 	}
 	if ($desde === $hacia) {
 		at_cc_anotar_respuesta($p, $salida, $d, false);
+		if (!empty($d['comentario'])) {
+			at_cc_avisar_luis($p, $salida, $d, $base);
+		}
 		return array_merge($base, ['ok' => true, 'mensaje' => 'anotada']);
 	}
 	$manual = ($d['canal'] ?? '') === 'manual';
 	if (!at_cc_transicion_respuesta_valida($desde, $hacia, $manual)) {
+		// Una propuesta rechazada sigue ofreciendo «la sigo evaluando» / «no, gracias» (barra
+		// pública y correo «Pedir respuesta»): no es un error, se anota y se avisa a Luis sin
+		// cambiar el estado.
+		if ($desde === 'rechazada' && $salida !== 'acepta') {
+			at_cc_anotar_respuesta($p, $salida, $d, false);
+			at_cc_avisar_luis($p, $salida, $d, $base);
+			return array_merge($base, ['ok' => true, 'mensaje' => 'anotada']);
+		}
 		return array_merge($base, ['mensaje' => 'Esta propuesta no está esperando respuesta.']);
 	}
 	$n = $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}automatiza_propuestas SET status = %s WHERE id = %d AND status = %s", $hacia, (int) $p->id, $desde));
@@ -141,41 +152,65 @@ function at_cc_registrar_respuesta(object $p, string $salida, array $d): array {
 	return $r;
 }
 
-/** Cliente oficial, Seguimiento migrado, bienvenida y contrato. Cada paso que falla queda como aviso. */
+/** Cliente oficial, Seguimiento migrado, bienvenida y contrato. Cada paso que falla queda como aviso,
+ *  incluida una excepción (p. ej. FPDF sin poder escribir el PDF): nunca se deja escapar, o
+ *  at_cc_avisar_luis() (que corre justo después, en at_cc_registrar_respuesta) no llegaría a correr. */
 function at_cc_ejecutar_cierre(object $p, array $d): array {
 	$avisos = [];
 	$filas = (array) ($d['filas'] ?? []);
-	$cli = at_cc_asegurar_cliente([
-		'nombre'         => trim((string) ($d['nombre'] ?? '')) !== '' ? (string) $d['nombre'] : (string) $p->client_name,
-		'email'          => (string) $p->client_email,
-		'empresa'        => (string) $p->company_name,
-		'telefono'       => (string) $p->phone,
-		'origen'         => 'propuesta_aceptada',
-		'valor'          => at_cc_total_unico($filas),
-		'servicios'      => implode(' + ', array_map(function ($f) { return trim((string) ($f['service'] ?? '')); }, $filas)),
-		'fecha_contrato' => (string) ($d['fecha'] ?? current_time('mysql')),
-	]);
+	try {
+		$cli = at_cc_asegurar_cliente([
+			'nombre'         => trim((string) ($d['nombre'] ?? '')) !== '' ? (string) $d['nombre'] : (string) $p->client_name,
+			'email'          => (string) $p->client_email,
+			'empresa'        => (string) $p->company_name,
+			'telefono'       => (string) $p->phone,
+			'origen'         => 'propuesta_aceptada',
+			'valor'          => at_cc_total_unico($filas),
+			'servicios'      => implode(' + ', array_map(function ($f) { return trim((string) ($f['service'] ?? '')); }, $filas)),
+			'fecha_contrato' => (string) ($d['fecha'] ?? current_time('mysql')),
+		]);
+	} catch (\Throwable $e) {
+		return ['avisos' => ['No se pudo pasar a cliente: ' . $e->getMessage()], 'crm_id' => null, 'contrato_id' => null];
+	}
 	if (is_wp_error($cli)) {
 		return ['avisos' => ['No se pudo pasar a cliente: ' . $cli->get_error_message()], 'crm_id' => null, 'contrato_id' => null];
 	}
-	if (function_exists('automatiza_migrate_prospect_to_client')) {
-		automatiza_migrate_prospect_to_client($cli['tech_id'], (int) $p->id);
+	try {
+		if (function_exists('automatiza_migrate_prospect_to_client')) {
+			automatiza_migrate_prospect_to_client($cli['tech_id'], (int) $p->id);
+		}
+	} catch (\Throwable $e) {
+		$avisos[] = 'El Seguimiento no se migró: ' . $e->getMessage();
 	}
-	at_cc_historial_crm($cli['crm_id'], 'conversion', 'Aceptó la propuesta', 'Propuesta ' . $p->unique_link_id . ' aceptada ' . at_cc_canal_texto($d) . '.');
-	if (!empty($d['bienvenida']) && !at_cc_enviar_bienvenida($cli['crm_id'], $p, $filas)) {
-		$avisos[] = 'El correo de bienvenida no salió (revisa el SMTP).';
+	try {
+		at_cc_historial_crm($cli['crm_id'], 'conversion', 'Aceptó la propuesta', 'Propuesta ' . $p->unique_link_id . ' aceptada ' . at_cc_canal_texto($d) . '.');
+	} catch (\Throwable $e) {
+		$avisos[] = 'No se pudo anotar el historial del CRM: ' . $e->getMessage();
 	}
-	$contrato = at_cc_crear_contrato_servicios($p, $cli['tech_id'], $filas, [
-		'nombre'      => (string) ($d['nombre'] ?? ''),
-		'rut'         => (string) ($d['rut'] ?? ''),
-		'fecha'       => (string) ($d['fecha'] ?? current_time('mysql')),
-		'canal_texto' => at_cc_canal_texto($d),
-	]);
+	if (!empty($d['bienvenida'])) {
+		try {
+			if (!at_cc_enviar_bienvenida($cli['crm_id'], $p, $filas)) {
+				$avisos[] = 'El correo de bienvenida no salió (revisa el SMTP).';
+			}
+		} catch (\Throwable $e) {
+			$avisos[] = 'El correo de bienvenida no salió: ' . $e->getMessage();
+		}
+	}
 	$contrato_id = null;
-	if (is_wp_error($contrato)) {
-		$avisos[] = 'El contrato no se creó: ' . $contrato->get_error_message();
-	} else {
-		$contrato_id = $contrato;
+	try {
+		$contrato = at_cc_crear_contrato_servicios($p, $cli['tech_id'], $filas, [
+			'nombre'      => (string) ($d['nombre'] ?? ''),
+			'rut'         => (string) ($d['rut'] ?? ''),
+			'fecha'       => (string) ($d['fecha'] ?? current_time('mysql')),
+			'canal_texto' => at_cc_canal_texto($d),
+		]);
+		if (is_wp_error($contrato)) {
+			$avisos[] = 'El contrato no se creó: ' . $contrato->get_error_message();
+		} else {
+			$contrato_id = $contrato;
+		}
+	} catch (\Throwable $e) {
+		$avisos[] = 'El contrato no se creó: ' . $e->getMessage();
 	}
 	return ['avisos' => $avisos, 'crm_id' => $cli['crm_id'], 'contrato_id' => $contrato_id];
 }

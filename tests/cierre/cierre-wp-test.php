@@ -43,8 +43,50 @@ ok(count($correos) === 1 && $correos[0]['to'] === get_option('admin_email'), 'ev
 $p = at_cc_propuesta_por_id($p->id);
 $r = at_cc_registrar_respuesta($p, 'evalua', ['canal' => 'pagina', 'comentario' => 'Otra duda']);
 ok($r['ok'] && $r['mensaje'] === 'anotada' && (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente'", $p->id)) === 2, 'evaluar dos veces anota sin cambiar estado');
+// T6 ronda 1, hallazgo 3: una segunda duda en el mismo estado también avisa a Luis (antes no avisaba nada).
+ok(count($correos) === 2 && $correos[1]['to'] === get_option('admin_email') && strpos($correos[1]['message'], 'Otra duda') !== false, 'evaluar de nuevo con comentario avisa a Luis');
 $r = at_cc_registrar_respuesta($p, 'rechaza', ['canal' => 'pagina', 'comentario' => 'Muy caro']);
 ok($r['ok'] && at_cc_propuesta_por_id($p->id)->status === 'rechazada', 'rechaza');
+
+// T6 ronda 1, hallazgo 2: rechazada y luego "la sigo evaluando" (o "no, gracias" de nuevo) no es un
+// error: la barra pública y el correo «Pedir respuesta» siguen ofreciendo esas salidas a una
+// propuesta rechazada. Se anota y avisa a Luis, sin cambiar el estado ni decir "ya_aceptada".
+$correos = [];
+$rj = crear_propuesta($marca . '-f2', 'rechazada', $payload, $creadas);
+$r2 = at_cc_registrar_respuesta($rj, 'evalua', ['canal' => 'pagina', 'comentario' => '¿Hay descuento al contado?']);
+ok($r2['ok'] && $r2['mensaje'] === 'anotada' && at_cc_propuesta_por_id($rj->id)->status === 'rechazada', 'rechazada + evaluar: se anota sin cambiar el estado');
+ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente'", $rj->id)) === 1, 'rechazada + evaluar: queda en Seguimiento');
+ok(count($correos) === 1 && $correos[0]['to'] === get_option('admin_email') && strpos($correos[0]['message'], 'descuento al contado') !== false, 'rechazada + evaluar: avisa a Luis');
+$correos = [];
+$r3 = at_cc_registrar_respuesta(at_cc_propuesta_por_id($rj->id), 'rechaza', ['canal' => 'pagina', 'comentario' => 'Sigue sin convencerme']);
+ok($r3['ok'] && $r3['mensaje'] === 'anotada' && at_cc_propuesta_por_id($rj->id)->status === 'rechazada', 'rechazada + rechazar de nuevo: se anota sin cambiar el estado');
+ok(count($correos) === 1 && $correos[0]['to'] === get_option('admin_email'), 'rechazada + rechazar de nuevo: también avisa a Luis');
+
+// T6 ronda 1, hallazgo 1: si ContractService::create_contract() lanza una excepción (p. ej. FPDF no
+// pudo escribir el PDF por cuota de disco o permisos), el cierre no muere con un error fatal: el
+// cliente y la bienvenida ya ejecutados no se pierden, el contrato queda como aviso y Luis es
+// notificado igual (antes, at_cc_avisar_luis() nunca llegaba a correr).
+$dir_falla = sys_get_temp_dir() . '/at-cc-test-pdf-falla-' . getmypid();
+if (file_exists($dir_falla)) { @unlink($dir_falla . '/automatiza-tech-contracts'); @rmdir($dir_falla); }
+mkdir($dir_falla, 0777, true);
+file_put_contents($dir_falla . '/automatiza-tech-contracts', 'esto no es una carpeta'); // fuerza que FPDF no pueda escribir el PDF
+$filtro_pdf_falla = function ($u) use ($dir_falla) {
+	$u['basedir'] = $dir_falla;
+	$u['baseurl'] = 'http://example.invalid/at-cc-test-pdf-falla';
+	return $u;
+};
+add_filter('upload_dir', $filtro_pdf_falla);
+$correos = [];
+$pf = crear_propuesta($marca . '-f1', 'sent', $payload, $creadas);
+$filas_pf = at_cc_filas_aceptadas(at_cc_filas_de_propuesta($pf), [0]);
+$r_pf = at_cc_registrar_respuesta($pf, 'acepta', ['canal' => 'pagina', 'nombre' => 'Cliente PDF Falla', 'filas' => $filas_pf, 'fecha' => current_time('mysql'), 'bienvenida' => false]);
+remove_filter('upload_dir', $filtro_pdf_falla);
+@unlink($dir_falla . '/automatiza-tech-contracts');
+@rmdir($dir_falla);
+ok($r_pf['ok'] && at_cc_propuesta_por_id($pf->id)->status === 'aceptada', 'PDF falla: igual pasa a aceptada, sin error fatal');
+ok($r_pf['crm_id'] > 0 && $wpdb->get_var($wpdb->prepare("SELECT tipo FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $r_pf['crm_id'])) === 'cliente', 'PDF falla: igual pasa a cliente');
+ok(!empty($r_pf['avisos']) && strpos(implode(' | ', $r_pf['avisos']), 'contrato') !== false, 'PDF falla: el contrato queda como aviso, no como fatal' . ($r_pf['avisos'] ? ': ' . implode(' | ', $r_pf['avisos']) : ''));
+ok(count(array_filter($correos, function ($x) { return $x['to'] === get_option('admin_email') && strpos((string) $x['subject'], 'aceptó la propuesta') !== false; })) === 1, 'PDF falla: Luis igual recibe el aviso de aceptación');
 
 // Acepta (cambió de opinión) desde la página
 $correos = [];

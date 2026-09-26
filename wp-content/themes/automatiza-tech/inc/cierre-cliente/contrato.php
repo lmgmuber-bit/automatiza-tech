@@ -49,14 +49,21 @@ function at_cc_crear_contrato_servicios(object $p, int $tech_id, array $filas, a
 		require_once $f;
 	}
 	$ph = at_cc_marcadores_servicios(at_cc_datos_contrato($p, $filas, $aceptante));
-	$c = ContractService::create_contract([
-		'client_id'       => $tech_id,
-		'proposal_id'     => (int) $p->id,
-		'type'            => 'servicios',
-		'template_id'     => 'servicios_v1',
-		'placeholders'    => $ph,
-		'expires_in_days' => 30,
-	]);
+	try {
+		$c = ContractService::create_contract([
+			'client_id'       => $tech_id,
+			'proposal_id'     => (int) $p->id,
+			'type'            => 'servicios',
+			'template_id'     => 'servicios_v1',
+			'placeholders'    => $ph,
+			'expires_in_days' => 30,
+		]);
+	} catch (\Throwable $e) {
+		// P. ej. FPDF no pudo escribir el PDF (cuota de disco, permisos): la fila del contrato
+		// puede quedar creada en 'at_pending' sin pdf_url ni document_hash, pero el cierre
+		// (cliente, bienvenida, aviso a Luis) no debe morir con un error fatal por esto.
+		return new WP_Error('contrato', $e->getMessage());
+	}
 	return is_wp_error($c) ? $c : (int) $c->id;
 }
 

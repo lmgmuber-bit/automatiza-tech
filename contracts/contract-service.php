@@ -98,12 +98,12 @@ class ContractService {
     }
     /**
      * Task 15: tipos de documento del cliente y del representante: valor => texto del selector. Sin
-     * tipo guardado (contratos anteriores) cuenta como RUT. La lista vive en at_cc_tipos_documento()
-     * (cierre de cliente); esta copia es para cuando el módulo no está cargado.
+     * tipo guardado (contratos anteriores) cuenta como RUT. Una sola lista: at_cc_tipos_documento()
+     * (cierre de cliente, se carga siempre con el tema). Sin ese módulo, solo el RUT.
      */
     public static function tipos_documento() {
         if (function_exists('at_cc_tipos_documento')) return at_cc_tipos_documento();
-        return array('rut' => 'RUT', 'dni' => 'DNI', 'pasaporte' => 'Pasaporte');
+        return array('rut' => 'RUT');
     }
     /** El número vale para su tipo (vacío = RUT). Sin el módulo de cierre, solo se valida el RUT si se puede. */
     private static function documento_valido($tipo, $numero) {
@@ -614,9 +614,15 @@ class ContractService {
         $ua  = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 400);
 
         $ph = json_decode($c->placeholders, true) ?: array();
-        $ph['representante_cliente_nombre'] = $data['signer_name'];
-        $ph['representante_cliente_rut']    = $data['signer_rut'];
-        $ph['email_cliente']                = $data['signer_email'];
+        // T15 ronda 1: en un contrato de servicios el cuerpo es el que AT revisó y firmó (nombre,
+        // documento y su tipo, correo y teléfono del cliente). Lo que escribe el firmante queda solo
+        // en los campos de firma (signer_*): si no, un RUT escrito al firmar pisaba el pasaporte
+        // revisado y el PDF decía «pasaporte N° **11.111.111-1**». Soporte sigue como siempre.
+        if (($c->type ?? '') !== 'servicios') {
+            $ph['representante_cliente_nombre'] = $data['signer_name'];
+            $ph['representante_cliente_rut']    = $data['signer_rut'];
+            $ph['email_cliente']                = $data['signer_email'];
+        }
         $ph['fecha_firma_larga']            = self::fecha_larga(date('Y-m-d'));
         $ph['fecha_firma_cliente']          = self::fecha_larga(date('Y-m-d')); // Vigencia inicia desde esta fecha
 

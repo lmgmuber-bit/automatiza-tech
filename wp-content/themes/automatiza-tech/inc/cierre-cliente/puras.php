@@ -143,7 +143,8 @@ function at_cc_tipos_documento(): array {
 }
 
 /** RUT: dígito verificador. DNI y pasaporte: sin espacios, de 5 a 20 letras (sin tilde ni ñ, como en
- *  los documentos de viaje), dígitos, puntos o guiones. Un tipo desconocido no es válido. */
+ *  los documentos de viaje), dígitos, puntos o guiones, con al menos 4 letras o dígitos (T15 ronda 1:
+ *  '-----' pasaba y el contrato decía «DNI N° **-----**»). Un tipo desconocido no es válido. */
 function at_cc_documento_valido(string $tipo, string $numero): bool {
 	if ($tipo === 'rut') {
 		return at_cc_rut_valido($numero);
@@ -151,7 +152,8 @@ function at_cc_documento_valido(string $tipo, string $numero): bool {
 	if (!isset(at_cc_tipos_documento()[$tipo])) {
 		return false;
 	}
-	return (bool) preg_match('/^[A-Za-z0-9.\-]{5,20}$/', (string) preg_replace('/\s+/u', '', $numero));
+	$n = (string) preg_replace('/\s+/u', '', $numero);
+	return preg_match('/^[A-Za-z0-9.\-]{5,20}$/', $n) === 1 && preg_match_all('/[A-Za-z0-9]/', $n) >= 4;
 }
 
 /** Número como se guarda: el RUT con puntos y guion; DNI y pasaporte recortados, en mayúsculas y sin espacios. */

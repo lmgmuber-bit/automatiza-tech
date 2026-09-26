@@ -391,6 +391,16 @@ class ContractPDFFPDF extends FPDF {
         return $text;
     }
 
+    /**
+     * Rótulo del número de un firmante: «RUT» si es un RUT válido (o está vacío, o no hay con qué
+     * validarlo); si no, «Documento» (DNI o pasaporte de un firmante extranjero, T15 ronda 1).
+     */
+    private static function rotuloDocumento($numero) {
+        $n = trim((string) $numero);
+        if ($n === '' || !function_exists('at_cc_rut_valido') || at_cc_rut_valido($n)) return 'RUT';
+        return 'Documento';
+    }
+
     private function renderSignatureBlock() {
         $this->Ln(6);
         if ($this->GetY() > 200) $this->AddPage();
@@ -440,9 +450,9 @@ class ContractPDFFPDF extends FPDF {
         $this->SetTextColor(...$this->gray);
         $at_rut = $at_sig['signer_rut'] ?? ($this->ph['representante_at_rut'] ?? '');
         $cl_rut = $cl_sig['signer_rut'] ?? ($this->ph['representante_cliente_rut'] ?? '');
-        $this->Cell($col_w, 4, self::enc('RUT: ' . $at_rut), 0, 0, 'C');
+        $this->Cell($col_w, 4, self::enc(self::rotuloDocumento($at_rut) . ': ' . $at_rut), 0, 0, 'C');
         $this->Cell(10, 4, '', 0, 0);
-        $this->Cell($col_w, 4, self::enc('RUT: ' . $cl_rut), 0, 1, 'C');
+        $this->Cell($col_w, 4, self::enc(self::rotuloDocumento($cl_rut) . ': ' . $cl_rut), 0, 1, 'C');
 
         $this->Cell($col_w, 4, self::enc('AutomatizaTech SpA'), 0, 0, 'C');
         $this->Cell(10, 4, '', 0, 0);
@@ -488,7 +498,7 @@ class ContractPDFFPDF extends FPDF {
         $this->SetTextColor(...$this->text_col);
 
         $rows = array(
-            'Firmante'      => ($sig['signer_name'] ?? '') . '  ·  RUT ' . ($sig['signer_rut'] ?? ''),
+            'Firmante'      => ($sig['signer_name'] ?? '') . '  ·  ' . self::rotuloDocumento($sig['signer_rut'] ?? '') . ' ' . ($sig['signer_rut'] ?? ''),
             'Email'         => $sig['signer_email'] ?? '',
             'Fecha y hora'  => $sig['signed_at'] ?? '',
             'Dirección IP'  => $sig['ip'] ?? '',

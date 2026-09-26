@@ -139,7 +139,7 @@ hr{border:0;border-top:1px solid #e5e9f0;margin:14px 0}
           <label>Nombre completo del firmante</label>
           <input type="text" name="signer_name" required value="<?= esc_attr($ph['representante_cliente_nombre'] ?? '') ?>">
 
-          <label>RUT</label>
+          <label>RUT o documento</label>
           <input type="text" name="signer_rut" required placeholder="12.345.678-9" value="<?= esc_attr($ph['representante_cliente_rut'] ?? '') ?>">
 
           <label>Email</label>

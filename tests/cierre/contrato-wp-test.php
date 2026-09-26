@@ -338,11 +338,86 @@ $wpdb->update(ContractService::table(), ['status' => 'at_signed', 'expires_at' =
 ContractService::send_for_client_signature($sop->id);
 ok(ContractService::get_by_id($sop->id)->expires_at === '2026-01-01 00:00:00', 'RF5: el de soporte conserva su vencimiento al enviarse');
 
+// ---------- T15 ronda 1, hallazgo 2: la firma del cliente no reescribe el cuerpo que AT revisó ----------
+// Antes, sign_as_client() copiaba el RUT que el firmante escribe sobre representante_cliente_rut sin tocar
+// su tipo: el PDF firmado decía «pasaporte N° **11.111.111-1**». Y el bloque de firmas decía siempre «RUT:».
+// Revisión (si es de servicios), firma de AT, envío y firma del cliente. AT firma con el RUT público de
+// AutomatizaTech para que su columna no se confunda con la del cliente.
+function firmar_de_punta_a_punta(int $id, array $firma_cliente) {
+	global $firma_png;
+	if (ContractService::get_by_id($id)->type === 'servicios') ContractService::guardar_revision($id, []);
+	$a = ContractService::sign_as_at($id, ['signer_name' => 'Firma AT', 'signer_rut' => '78.363.717-0', 'signer_email' => 'at@example.com', 'method' => 'canvas', 'signature_dataurl' => $firma_png]);
+	if (is_wp_error($a)) return $a;
+	$e = ContractService::send_for_client_signature($id, 'cliente@example.com', 'Cliente Prueba');
+	if (is_wp_error($e)) return $e;
+	return ContractService::sign_as_client(ContractService::get_by_id($id)->sign_token, $firma_cliente + ['method' => 'canvas', 'signature_dataurl' => $firma_png]);
+}
+function borrar_firmado_r1($x) {
+	if (!is_object($x)) return;
+	@unlink(ContractService::storage_dir() . '/' . $x->contract_number . '-FIRMADO.pdf');
+	$up = wp_upload_dir();
+	foreach ([(string) ($x->signature_image_url ?? ''), (string) ($x->at_signature_image_url ?? '')] as $url) {
+		$p = str_replace($up['baseurl'], $up['basedir'], $url);
+		if ($p !== '' && preg_match('#/signatures/sig-(client|at)-[0-9a-f]+\.(png|jpeg)$#', $p)) @unlink($p);
+	}
+}
+$cuerpo_r1 = ['razon_social_cliente', 'rut_cliente', 'tipo_documento_cliente', 'representante_cliente_nombre', 'representante_cliente_rut', 'tipo_documento_representante', 'email_cliente', 'telefono_cliente'];
+$cuerpo_de = function ($x) use ($cuerpo_r1) {
+	$ph = json_decode((string) $x->placeholders, true) ?: [];
+	return array_map(function ($k) use ($ph) { return $ph[$k] ?? null; }, array_combine($cuerpo_r1, $cuerpo_r1));
+};
+$contacto_r1 = ['email_cliente' => 'ana@example.com', 'telefono_cliente' => '+56 9 1111 1111'];
+// Empresa cuyo representante tiene pasaporte; firma alguien que escribe un RUT.
+$c14 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => $completo_empresa_pas + $contacto_r1, 'created_by' => 0]);
+$f14 = firmar_de_punta_a_punta($c14->id, ['signer_name' => 'Otro Firmante', 'signer_rut' => '11.111.111-1', 'signer_email' => 'firmante@example.com']);
+ok(!is_wp_error($f14) && $f14->status === 'signed', 'T15 r1: la empresa con representante con pasaporte firma' . (is_wp_error($f14) ? ' (' . $f14->get_error_code() . ')' : ''));
+$cuerpo14 = is_wp_error($f14) ? [] : $cuerpo_de($f14);
+ok(($cuerpo14['representante_cliente_rut'] ?? '') === 'AB123456' && ($cuerpo14['tipo_documento_representante'] ?? '') === 'pasaporte' && ($cuerpo14['representante_cliente_nombre'] ?? '') === 'Ana Prueba' && ($cuerpo14['email_cliente'] ?? '') === 'ana@example.com', 'T15 r1: servicios: el cuerpo conserva el pasaporte, el nombre y el correo que AT revisó');
+ok($cuerpo14 === $cuerpo_de((object) ['placeholders' => wp_json_encode($completo_empresa_pas + $contacto_r1)]),'T15 r1: servicios: ningún dato del cuerpo cambia al firmar el cliente');
+ok(!is_wp_error($f14) && $f14->signer_rut === '11.111.111-1' && $f14->signer_name === 'Otro Firmante' && $f14->signer_email === 'firmante@example.com', 'T15 r1: lo que escribe el firmante queda en los campos de firma');
+ok(!is_wp_error($f14) && !empty(json_decode($f14->placeholders, true)['fecha_firma_cliente']), 'T15 r1: la fecha de firma del cliente se sigue anotando');
+$txt14 = is_wp_error($f14) ? '' : texto_pdf(ContractService::storage_dir() . '/' . $f14->contract_number . '-FIRMADO.pdf');
+ok(strpos($txt14, 'representada por Ana Prueba') !== false && strpos($txt14, 'pasaporte N° AB123456') !== false && strpos($txt14, 'N° 11.111.111-1') === false, 'T15 r1: el PDF firmado sigue con el pasaporte revisado');
+ok(strpos($txt14, 'RUT: 11.111.111-1') !== false && strpos($txt14, 'RUT: 78.363.717-0') !== false && strpos($txt14, 'Documento:') === false, 'T15 r1: el bloque de firmas dice «RUT: 11.111.111-1» para quien firmó con RUT');
+ok(strpos($txt14, 'Otro Firmante · RUT 11.111.111-1') !== false, 'T15 r1: el registro de firma dice «RUT» para quien firmó con RUT');
+// Persona con DNI que firma con su DNI.
+$c15 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => $completo_persona_dni + ['representante_cliente_nombre' => 'Ana Prueba', 'tipo_documento_representante' => 'dni', 'representante_cliente_rut' => '12345678'] + $contacto_r1, 'created_by' => 0]);
+$f15 = firmar_de_punta_a_punta($c15->id, ['signer_name' => 'Ana Prueba', 'signer_rut' => '12345678', 'signer_email' => 'ana@example.com']);
+ok(!is_wp_error($f15) && $f15->status === 'signed', 'T15 r1: la persona con DNI firma' . (is_wp_error($f15) ? ' (' . $f15->get_error_code() . ')' : ''));
+$txt15 = is_wp_error($f15) ? '' : texto_pdf(ContractService::storage_dir() . '/' . $f15->contract_number . '-FIRMADO.pdf');
+ok(strpos($txt15, 'DNI N° 12345678') !== false && strpos($txt15, 'Documento: 12345678') !== false && strpos($txt15, 'RUT: 12345678') === false, 'T15 r1: firmante con DNI: el bloque de firmas dice «Documento: 12345678»');
+ok(strpos($txt15, 'Ana Prueba · Documento 12345678') !== false && strpos($txt15, 'RUT 12345678') === false, 'T15 r1: firmante con DNI: el registro de firma dice «Documento 12345678»');
+// Un contrato de soporte sigue tomando del firmante el nombre, el RUT y el correo, como hoy.
+$c16 = ContractService::create_contract(['client_id' => 0, 'type' => 'soporte', 'template_id' => 'soporte_v2', 'placeholders' => ['representante_cliente_nombre' => 'Antes', 'representante_cliente_rut' => '10.000.013-K', 'email_cliente' => 'antes@example.com'], 'created_by' => 0]);
+$f16 = firmar_de_punta_a_punta($c16->id, ['signer_name' => 'Cliente Soporte', 'signer_rut' => '11.111.111-1', 'signer_email' => 'soporte-firma@example.com']);
+$ph16 = is_wp_error($f16) ? [] : json_decode($f16->placeholders, true);
+ok(!is_wp_error($f16) && ($ph16['representante_cliente_nombre'] ?? '') === 'Cliente Soporte' && ($ph16['representante_cliente_rut'] ?? '') === '11.111.111-1' && ($ph16['email_cliente'] ?? '') === 'soporte-firma@example.com', 'T15 r1: soporte: la firma del cliente sigue escribiendo nombre, RUT y correo en el contrato');
+// La página de firma rotula el campo como «RUT o documento» (placeholder igual).
+$pagina_firma = (string) file_get_contents(ABSPATH . 'contracts/sign-contract.php');
+ok(strpos($pagina_firma, '<label>RUT o documento</label>') !== false && strpos($pagina_firma, '<label>RUT</label>') === false && strpos($pagina_firma, 'name="signer_rut" required placeholder="12.345.678-9"') !== false, 'T15 r1: la página de firma pide «RUT o documento»');
+
+// ---------- T15 ronda 1, hallazgo 3: una sola lista de tipos de documento ----------
+ok(ContractService::tipos_documento() === at_cc_tipos_documento(), 'T15 r1: ContractService usa la lista de at_cc_tipos_documento()');
+// Sin el módulo de cierre (un PHP aparte, sin WordPress), ContractService solo conoce el RUT.
+$guion_r1 = tempnam(sys_get_temp_dir(), 'at-cc-r1-');
+file_put_contents($guion_r1, '<?php define("ABSPATH", __DIR__ . "/"); function add_action() {} require ' . var_export(ABSPATH . 'contracts/contract-service.php', true) . '; echo json_encode(ContractService::tipos_documento());');
+$sin_modulo = trim((string) shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($guion_r1)));
+@unlink($guion_r1);
+ok($sin_modulo === '{"rut":"RUT"}', 'T15 r1: sin el módulo de cierre, ContractService solo conoce el RUT: ' . $sin_modulo);
+
 $wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE id IN (%d, %d, %d, %d, %d, %d, %d, %d)", $c->id, $sop->id, $c2->id, $c3->id, $c4->id, $c5->id, $c6->id, $c7->id));
 foreach ([$c, $sop, $c2, $c3, $c4, $c5, $c6, $c7] as $x) { @unlink(pdf_de($x)); }
 // Task 15: sus contratos de prueba.
 foreach ([$c10, $c11, $c12, $c13] as $x) {
 	if (is_object($x)) {
+		$wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE id = %d", $x->id));
+		@unlink(pdf_de($x));
+	}
+}
+// T15 ronda 1: los contratos firmados de punta a punta, con su PDF firmado y sus imágenes de firma.
+foreach ([$c14, $c15, $c16] as $x) {
+	if (is_object($x)) {
+		borrar_firmado_r1(ContractService::get_by_id($x->id));
 		$wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE id = %d", $x->id));
 		@unlink(pdf_de($x));
 	}

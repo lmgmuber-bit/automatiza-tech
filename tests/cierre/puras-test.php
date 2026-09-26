@@ -92,6 +92,10 @@ ok(at_cc_documento_valido('pasaporte', str_repeat('A', 20)) && !at_cc_documento_
 ok(!at_cc_documento_valido('pasaporte', 'X12') && !at_cc_documento_valido('dni', '1234') && !at_cc_documento_valido('dni', ''), 'T15: menos de 5 caracteres no es válido');
 ok(!at_cc_documento_valido('dni', '1234#5678') && !at_cc_documento_valido('pasaporte', 'AB/123456') && !at_cc_documento_valido('dni', 'ÑANDÚ1234'), 'T15: caracteres fuera de letras (sin tilde ni ñ, como en los documentos de viaje), dígitos, punto y guion no son válidos');
 ok(!at_cc_documento_valido('cedula', '12345678') && !at_cc_documento_valido('', '11.111.111-1') && !at_cc_documento_valido('RUT', '11.111.111-1'), 'T15: tipo desconocido no es válido');
+// T15 ronda 1, hallazgo 1: un DNI o pasaporte hecho solo de signos pasaba y el contrato decía «DNI N° **-----**».
+ok(!at_cc_documento_valido('dni', '.....') && !at_cc_documento_valido('pasaporte', '-----') && !at_cc_documento_valido('dni', '.-.-.'), 'T15 r1: DNI o pasaporte hecho solo de puntos y guiones no es válido');
+ok(!at_cc_documento_valido('dni', '1.2.3.') && !at_cc_documento_valido('pasaporte', 'A-B-C-'), 'T15 r1: con menos de 4 letras o dígitos no es válido');
+ok(at_cc_documento_valido('dni', '12.345.678') && at_cc_documento_valido('pasaporte', 'AB-12345') && at_cc_documento_valido('dni', '1.2.3.4'), 'T15 r1: con 4 o más letras o dígitos sigue siendo válido');
 ok(at_cc_documento_formato('rut', '111111111') === '11.111.111-1' && at_cc_documento_formato('rut', '10000013k') === '10.000.013-K', 'T15: formato de RUT');
 ok(at_cc_documento_formato('dni', ' 12 345 678 ') === '12345678' && at_cc_documento_formato('pasaporte', ' ab-123.456 ') === 'AB-123.456', 'T15: DNI y pasaporte recortados, en mayúsculas y sin espacios');
 ok(at_cc_documento_texto('rut', '11.111.111-1') === 'RUT **11.111.111-1**', 'T15: texto del contrato con RUT');

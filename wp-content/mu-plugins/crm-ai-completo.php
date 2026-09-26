@@ -4362,6 +4362,15 @@ class AutomatizaTech_CRM_AI {
             if ($wpdb->get_var("SHOW TABLES LIKE '$table_client_details'") == $table_client_details) {
                 $client_details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_client_details WHERE client_id = %d", $cliente_id), ARRAY_A);
                 foreach ($client_details as $d) {
+                    // T10b ronda 1 (revisión), hallazgo 1: un Seguimiento migrado desde el prospecto
+                    // puede traer un tipo interno (p. ej. 'mensaje_whatsapp'), que nunca debe llegar a
+                    // esta línea de tiempo pública del cliente. Misma lista que ya filtra
+                    // $prospect_details más abajo, vía at_cc_tipos_internos() si el módulo de cierre
+                    // está cargado (siempre, salvo en pruebas puras del mu-plugin).
+                    $at_cc_tipos_internos_cliente = function_exists('at_cc_tipos_internos') ? at_cc_tipos_internos() : ['cierre_incompleto', 'aviso_operativo', 'pedido_respuesta', 'mensaje_whatsapp'];
+                    if (in_array($d['detail_type'] ?? '', $at_cc_tipos_internos_cliente, true)) {
+                        continue;
+                    }
                     $d['source'] = 'client';
                     // Prioridad de fecha: completed_date > scheduled_date > created_at
                     if (!empty($d['completed_date'])) {

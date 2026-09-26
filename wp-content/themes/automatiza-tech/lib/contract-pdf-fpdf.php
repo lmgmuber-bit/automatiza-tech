@@ -157,8 +157,12 @@ class ContractPDFFPDF extends FPDF {
     }
 
     private function renderBody() {
-        $body = $this->replacePlaceholders($this->body);
-        $body = preg_replace('#</?(?!br\b)[a-z][^>]*>#i', '', $body);
+        // Quita etiquetas SOLO de la plantilla (nunca de los valores del cliente): así un "<"
+        // sin cerrar en un dato como el plazo no se come el resto del contrato hasta el próximo
+        // ">" que aparezca en otro marcador o en otra línea (antes esto corría después de
+        // replacePlaceholders() y [^>]* cruzaba saltos de línea).
+        $body = preg_replace('#</?(?!br\b)[a-z][^>]*>#i', '', $this->body);
+        $body = $this->replacePlaceholders($body);
         $lines = preg_split("/\r\n|\n|\r/", $body);
 
         // skip until first H1 to avoid re-rendering doc title

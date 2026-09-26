@@ -251,10 +251,14 @@ class ContractService {
             }
             $nuevos[$k] = $v;
         }
+        $tipo_previo = (string) ($ph['tipo_cliente'] ?? '');
         $ph = array_merge($ph, $nuevos);
-        if (($ph['tipo_cliente'] ?? '') === 'persona') {
-            // A su nombre: el contrato va a nombre y RUT de quien aceptó, no de la marca de la
-            // propuesta, salvo que el cliente haya escrito otros.
+        if (($ph['tipo_cliente'] ?? '') === 'persona' && $tipo_previo !== 'persona') {
+            // A su nombre, la primera vez que pasa a persona en esta llamada: el contrato va a
+            // nombre y RUT de quien aceptó, no de la marca de la propuesta (o de la empresa
+            // anterior), salvo que el cliente haya escrito otros. Si ya era 'persona' antes de
+            // esta llamada, no se toca: no hay que borrar un nombre que el cliente ya personalizó
+            // en una llamada previa solo porque esta llamada no lo reenvía.
             foreach (array('razon_social_cliente' => 'representante_cliente_nombre', 'rut_cliente' => 'representante_cliente_rut') as $k => $de) {
                 if (!isset($nuevos[$k]) && trim((string) ($ph[$de] ?? '')) !== '') unset($ph[$k]);
             }

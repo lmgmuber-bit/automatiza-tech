@@ -133,6 +133,28 @@ $u5 = ContractService::actualizar_datos_cliente($c->id, ['domicilio_cliente' => 
 ok(is_wp_error($u5) && $u5->get_error_code() !== 'ya_revisado', 'un contrato ya firmado no se toca');
 ok(is_wp_error(ContractService::actualizar_datos_cliente($sop->id, ['tipo_cliente' => 'persona'])), 'un contrato de soporte no recibe estos datos');
 
+// Task 5b ronda 1 (hallazgo 1): una segunda llamada que no repite el nombre no debe borrar el
+// que el cliente ya había escrito explícitamente en una llamada anterior (antes se borraba
+// porque el bloque de "persona natural" no distinguía "esta llamada no lo trae" de "nunca se
+// personalizó"; lo confundía con el nombre por defecto de la propuesta).
+$c4 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Muebles', 'representante_cliente_nombre' => 'Representante Distinto', 'representante_cliente_rut' => '22.222.222-2', 'monto_total' => '$1.000', 'forma_pago' => 'Contado.'], 'created_by' => 0]);
+$v1 = ContractService::actualizar_datos_cliente($c4->id, ['tipo_cliente' => 'persona', 'razon_social_cliente' => 'Nombre Propio Del Cliente', 'rut_cliente' => '33.333.333-3', 'domicilio_cliente' => 'Calle Uno 1']);
+$phv1 = is_wp_error($v1) ? [] : json_decode($v1->placeholders, true);
+ok(!is_wp_error($v1) && ($phv1['razon_social_cliente'] ?? '') === 'Nombre Propio Del Cliente' && ($phv1['rut_cliente'] ?? '') === '33.333.333-3', 'persona: guarda el nombre y RUT que escribió el cliente, distintos del representante');
+$v2 = ContractService::actualizar_datos_cliente($c4->id, ['domicilio_cliente' => 'Calle Dos 2']);
+$phv2 = is_wp_error($v2) ? [] : json_decode($v2->placeholders, true);
+ok(!is_wp_error($v2) && ($phv2['razon_social_cliente'] ?? '') === 'Nombre Propio Del Cliente' && ($phv2['rut_cliente'] ?? '') === '33.333.333-3' && ($phv2['domicilio_cliente'] ?? '') === 'Calle Dos 2', 'una segunda llamada que solo cambia el domicilio no borra el nombre ya personalizado');
+
+// Task 5b ronda 1 (hallazgo 2): un "<" sin cerrar en un dato (plazo) no debe borrar cláusulas
+// completas del PDF (el regex que quita etiquetas cruzaba líneas y se comía todo hasta el
+// próximo ">", que podía venir de otro marcador varias líneas más abajo).
+$c5 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Muebles', 'monto_total' => '$1.000.000'], 'created_by' => 0]);
+ContractService::guardar_revision($c5->id, ['tipo_cliente' => 'empresa', 'rut_cliente' => '10.000.013-K', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1', 'domicilio_cliente' => 'Calle Falsa 123, Santiago', 'plazo' => 'Entrega <a convenir en la reunion de inicio', 'forma_pago' => '50 % al firmar -> 50 % a la entrega']);
+$txt5 = texto_pdf(pdf_de($c5));
+ok(strpos($txt5, '5.1. El precio total') !== false, 'un "<" sin cerrar en el plazo no borra la cláusula del precio (5.1)');
+ok(strpos($txt5, 'CLÁUSULA QUINTA') !== false, 'tampoco borra el título de la cláusula quinta');
+ok(strpos($txt5, 'Entrega <a convenir en la reunion de inicio') !== false && strpos($txt5, '50 % al firmar -> 50 % a la entrega') !== false, 'el plazo y la forma de pago se ven tal cual, con el "<" y el "->"');
+
 // ---------- Task 5b: la página de revisión (contracts/at-sign-contract.php) ----------
 function pagina_revision(string $token, ?array $post = null): string {
 	$_GET = ['token' => $token];
@@ -161,6 +183,6 @@ $h = pagina_revision($c3->at_review_token);
 ok(strpos($h, 'id="signForm"') !== false && strpos($h, 'Antes de firmar completa') === false, 'con los datos completos aparece el bloque de firma');
 wp_set_current_user(0);
 
-$wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE id IN (%d, %d, %d, %d)", $c->id, $sop->id, $c2->id, $c3->id));
-foreach ([$c, $sop, $c2, $c3] as $x) { @unlink(pdf_de($x)); }
+$wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE id IN (%d, %d, %d, %d, %d, %d)", $c->id, $sop->id, $c2->id, $c3->id, $c4->id, $c5->id));
+foreach ([$c, $sop, $c2, $c3, $c4, $c5] as $x) { @unlink(pdf_de($x)); }
 fin();

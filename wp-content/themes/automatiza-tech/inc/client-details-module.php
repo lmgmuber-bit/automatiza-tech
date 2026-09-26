@@ -158,6 +158,13 @@ class AutomatizaTech_Client_Details {
                 'icon' => '✅',
                 'color' => '#059669'
             ),
+            // Task 10b (ajuste del controlador 26-sep): mensaje de texto del cliente al bot de
+            // WhatsApp sobre su propuesta; nota interna, nunca cambia el estado.
+            'mensaje_whatsapp' => array(
+                'label' => '💬 Mensaje por WhatsApp',
+                'icon' => '💬',
+                'color' => '#0f766e'
+            ),
             'cotizacion' => array(
                 'label' => '💰 Cotización',
                 'icon' => '💰',

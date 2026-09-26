@@ -211,3 +211,68 @@ function at_cc_avisar_respuesta_tras_aceptar(object $p, string $salida): void {
 	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
 	wp_mail((string) get_option('admin_email'), $quien . ' tocó «' . $boton . '» en WhatsApp después de aceptar', $html, ['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $from . '>']);
 }
+
+add_action('rest_api_init', function () {
+	register_rest_route('at/v1', '/propuesta-contexto', [
+		'methods'             => 'POST',
+		'callback'            => 'at_cc_rest_contexto_whatsapp',
+		'permission_callback' => 'at_cc_rest_auth',
+	]);
+});
+
+/** La propuesta más reciente enviada o en evaluación para ese teléfono; null si no hay. */
+function at_cc_propuesta_pendiente_por_telefono(string $tel): ?object {
+	global $wpdb;
+	$n = at_cc_telefono_normalizado($tel);
+	if (strlen($n) < 8) {
+		return null;
+	}
+	$filas = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}automatiza_propuestas WHERE status IN ('sent','evaluando') AND phone <> '' ORDER BY id DESC LIMIT 200");
+	foreach ((array) $filas as $p) {
+		if (at_cc_telefono_normalizado((string) $p->phone) === $n) {
+			return $p;
+		}
+	}
+	return null;
+}
+
+/** El bot principal consulta aquí antes de pasarle un mensaje de texto a la IA. Un texto nunca cambia el estado. */
+function at_cc_rest_contexto_whatsapp(WP_REST_Request $r) {
+	$p = at_cc_propuesta_pendiente_por_telefono(sanitize_text_field((string) $r->get_param('telefono')));
+	if (!$p) {
+		return ['tiene' => false];
+	}
+	$mensaje = trim(sanitize_textarea_field((string) $r->get_param('mensaje')));
+	if ($mensaje !== '') {
+		$mensaje = mb_substr($mensaje, 0, 1000);
+		$clave = 'at_cc_ctx_aviso_' . (int) $p->id;
+		if (!get_transient($clave)) {
+			set_transient($clave, 1, 30 * MINUTE_IN_SECONDS);
+			// Ajuste del controlador (26-sep): 'mensaje_whatsapp' es un tipo interno (at_cc_tipos_internos(),
+			// puras.php), no el público 'respuesta_cliente': es una nota, nunca una respuesta real.
+			at_cc_anotar_simple($p, 'mensaje_whatsapp', 'Mensaje por WhatsApp sobre la propuesta (no cambia el estado)', $mensaje);
+			at_cc_avisar_mensaje_whatsapp($p, $mensaje);
+		}
+	}
+	$filas = at_cc_filas_de_propuesta($p);
+	return [
+		'tiene'     => true,
+		'codigo'    => (string) $p->unique_link_id,
+		'nombre'    => (string) $p->client_name,
+		'empresa'   => (string) $p->company_name,
+		'estado'    => (string) $p->status,
+		'propuesto' => $filas ? trim(($filas[0]['service'] ?? '') . ', ' . ($filas[0]['price_label'] ?? ''), ' ,') : '',
+		'url'       => at_cc_url_respuesta(get_site_url(), (string) $p->unique_link_id),
+	];
+}
+
+/** Correo a Luis con lo que el cliente escribió por WhatsApp sobre su propuesta. */
+function at_cc_avisar_mensaje_whatsapp(object $p, string $mensaje): void {
+	$quien = trim((string) $p->company_name) !== '' ? (string) $p->company_name : (string) $p->client_name;
+	$html = '<p>' . esc_html($quien) . ' escribió por WhatsApp sobre su propuesta (' . esc_html((string) $p->unique_link_id) . '):</p>'
+		. '<blockquote style="border-left:3px solid #10b981;margin:0 0 12px 0;padding:8px 12px">' . nl2br(esc_html($mensaje)) . '</blockquote>'
+		. '<p>El bot le pidió usar el botón «Acepto la propuesta» o el enlace para dejar registrada su respuesta; un mensaje de texto no cambia el estado. Si ya te dijo que sí, regístralo con «Registrar aceptación». Puede haber más mensajes en el chat: este aviso sale como máximo una vez cada 30 minutos.</p>'
+		. '<p><a href="' . esc_url(admin_url('admin.php?page=automatiza-proposals&edit_id=' . (int) $p->id . '&tab=envio')) . '">Abrir la propuesta en el panel</a></p>';
+	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+	wp_mail((string) get_option('admin_email'), $quien . ' escribió por WhatsApp sobre su propuesta', $html, ['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $from . '>']);
+}

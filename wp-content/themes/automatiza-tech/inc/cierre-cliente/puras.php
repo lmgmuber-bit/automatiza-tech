@@ -16,8 +16,11 @@ function at_cc_salidas(): array {
  *  pedir la respuesta») y, peor, cualquier fila 'propuesta_enviada' ya existente hacía que esa vista
  *  dejara de agregar la tarjeta automática «Propuesta Creada» con el PDF (crm-ai-completo.php,
  *  render_public_prospect_timeline()). */
+// 'mensaje_whatsapp' (Task 10b, ajuste del controlador 26-sep): el mensaje de texto que el cliente le
+// escribe al bot de WhatsApp sobre su propuesta. Es una nota interna, no una respuesta real (no cambia
+// el estado), así que no puede compartir el tipo público 'respuesta_cliente'.
 function at_cc_tipos_internos(): array {
-	return ['cierre_incompleto', 'aviso_operativo', 'pedido_respuesta'];
+	return ['cierre_incompleto', 'aviso_operativo', 'pedido_respuesta', 'mensaje_whatsapp'];
 }
 
 /** Transiciones de una respuesta. A mano (Luis) también se acepta una propuesta en pending o lista. */

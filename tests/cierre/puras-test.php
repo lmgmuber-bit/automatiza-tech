@@ -9,7 +9,7 @@ function ok($cond, $msg) { global $fallas; if ($cond) { echo "ok   $msg\n"; } el
 ok(at_cc_salidas() === ['acepta' => 'aceptada', 'evalua' => 'evaluando', 'rechaza' => 'rechazada'], 'salidas');
 // Task 8 (ajuste del controlador): tipos de Seguimiento que crm-ai-completo.php debe excluir de
 // las dos líneas de tiempo públicas (cliente y prospecto).
-ok(at_cc_tipos_internos() === ['cierre_incompleto', 'aviso_operativo', 'pedido_respuesta'], 'tipos internos: nunca a una página pública');
+ok(at_cc_tipos_internos() === ['cierre_incompleto', 'aviso_operativo', 'pedido_respuesta', 'mensaje_whatsapp'], 'tipos internos: nunca a una página pública');
 ok(at_cc_transicion_respuesta_valida('sent', 'aceptada'), 'sent -> aceptada');
 ok(at_cc_transicion_respuesta_valida('sent', 'evaluando') && at_cc_transicion_respuesta_valida('sent', 'rechazada'), 'sent -> evaluando / rechazada');
 ok(at_cc_transicion_respuesta_valida('evaluando', 'aceptada') && at_cc_transicion_respuesta_valida('evaluando', 'rechazada'), 'evaluando -> aceptada / rechazada');

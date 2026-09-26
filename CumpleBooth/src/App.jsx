@@ -51,7 +51,8 @@ let THEME_SLUG = null
 // Juego 3D "Tu Cumple en 3D" (carpeta hermana juego/, mismo hosting que el kiosco).
 // Solo las temáticas con mundo 3D lo ofrecen desde la bienvenida; el juego recibe
 // la fiesta por ?p= y, con ?kiosco=1, muestra "Volver al kiosco" en pausa y al final.
-const TEMAS_JUEGO_3D = ['hielo', 'heroes', 'spidey']
+// Fiestas Patrias (26-09): su juego es Chile en Volantín, que el menú ofrece por la temática de la fiesta.
+const TEMAS_JUEGO_3D = ['hielo', 'heroes', 'spidey', 'fiestas-patrias']
 function juego3dUrl() {
   return BASE + 'juego/?p=' + encodeURIComponent(PARTY_SLUG || '') + '&kiosco=1'
 }
@@ -478,6 +479,7 @@ export default function App() {
     asomate={CONFIG.asomate || null} gameFor={feriaGameFor} Game={Juego} AsomatePick={AsomateElegir} Capture={Capture}
     AsomateReview={AsomatePreview} asomatePerson={personajeDeAsomate} prepareAsomate={prepararAsomateFeria}
     welcomeSrc={FERIA_THEME?.videos?.welcome || THEME_SLUG === 'carreras' ? WELCOME_VIDEO_PRIMARY : null}
+    volantinUrl={THEME_SLUG === 'fiestas-patrias' ? BASE + 'juego/volantin/' : null}
     music={MUSIC_ENABLED ? CONFIG.audio.musica : null} />
   return <BoothApp key={slug} />
 }
@@ -796,13 +798,15 @@ function BoothApp() {
           invitados={invitadosList}
           etiqueta={trasInvitados === 'asomate-elegir'
             ? 'Elegir personaje 🦸'
-            : 'Toca para girar la ruleta 🎉'}
+            : PERSONAJES.length ? 'Toca para girar la ruleta 🎉' : 'Toca para tu foto 📸'}
           onStart={(nombre) => {
             setInvitado(nombre)
             // Asomate tambien pasa por aca: sin invitado el diploma salia a nombre de
             // "Invitado" y sin personaje, y la foto entraba a la galeria como foto.png,
             // sin dueno. Un toque mas, y el recuerdo queda con nombre.
-            go(trasInvitados)
+            // Una temática sin personajes (Fiestas Patrias, 26-09) no tiene ruleta: con cero personajes el Spinner
+            // quedaba trabado (ángulo 360/0 y personaje indefinido). Se pasa directo a la cámara.
+            go(trasInvitados === 'spinner' && !PERSONAJES.length ? 'capture' : trasInvitados)
           }}
         />
       )}

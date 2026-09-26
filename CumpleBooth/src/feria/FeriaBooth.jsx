@@ -13,7 +13,7 @@ import './feria.css'
 // este archivo no dependa del estado de BoothApp; la foto igual sale con número, recuerdo y QR de la feria.
 export default function FeriaBooth({ feria, theme, themeData, characters, filter, base, Spinner, Character, renderPhoto, renderDiploma,
   asomate = null, gameFor = null, Game = null, AsomatePick = null, Capture = null, AsomateReview = null, asomatePerson = null, prepareAsomate = null,
-  welcomeSrc = null, music = null }) {
+  welcomeSrc = null, music = null, volantinUrl = null }) {
   const [segmenter, setSegmenter] = useState(null)
   const [step, setStep] = useState('name')
   const [name, setName] = useState('')
@@ -119,6 +119,13 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
     if (route === 'asomate') { setFotosAsomate([]); setStep('asomate-capturar') } else setStep('camera')
   }
   const withCharacters = Boolean(characters?.length)
+  // Chile en Volantín en la feria (26-09): sin `p`, así que no anota puntaje ni hay tabla con nombres de niños ajenos;
+  // con kiosco=1 el juego vuelve solo a la feria 45 s después del final.
+  const volantin = volantinUrl ? (() => {
+    const url = new URL(volantinUrl, location.href)
+    url.search = new URLSearchParams({ kiosco: '1', nombre: feria.nombre, jugador: firstName(name), volver: destination }).toString()
+    return url.href
+  })() : null
 
   return <main className={`app feria-kiosco feria-kiosco-${feria.modo}`} data-step={step} data-segmentation={segmenter ? JSON.stringify(segmenter.metrics) : undefined}
     style={{ '--feria-fondo': `url("${new URL(base + 'feria/fondo.jpg', location.href).href}")` }}>
@@ -131,6 +138,7 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
     {step === 'menu' && <section className="feria-panel feria-menu"><span className="feria-eyebrow">{child ? 'ELIGE TU AVENTURA' : 'ELIGE TU FOTO'}</span><h1 ref={heading} tabIndex={-1}>¿Cómo quieres tu foto?</h1>
       <div className="feria-menu-opciones">
         <button className="feria-opcion" onClick={startPersonaje}><span aria-hidden="true">{withCharacters ? '🎡' : '📸'}</span><strong>{withCharacters ? 'Foto con tu personaje' : 'Foto con la temática'}</strong><small>{withCharacters ? 'Gira la ruleta, conoce a tu personaje y juega antes de la foto' : 'Tu foto con el fondo de esta temática'}</small></button>
+        {volantin && <button className="feria-opcion feria-opcion-juego" onClick={() => location.assign(volantin)}><span aria-hidden="true">🪁</span><strong>Juega Chile en Volantín</strong><small>Encumbra tu volantín de los cerros a la fonda</small></button>}
         <button className="feria-opcion feria-opcion-asomate" onClick={startAsomate}><strong>{asomate?.boton || '🦸 Asómate y sé el héroe'}</strong><small>{asomate?.titulo || 'Pon tu cara en el traje de tu personaje'}</small></button>
       </div>
     </section>}

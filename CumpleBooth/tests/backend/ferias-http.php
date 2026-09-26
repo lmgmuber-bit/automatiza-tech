@@ -360,4 +360,24 @@ f_check((int) $pdo->query("SELECT COUNT(*) FROM cc_photos WHERE party_id = $luci
 f_check((int) $pdo->query('SELECT COUNT(*) FROM cc_photos WHERE party_id = ' . $otra['party_id'] . ' AND deleted_at IS NULL')->fetchColumn() === 1, 'ni la feria que no ha vencido');
 f_check(pedir('GET', '/api.php?p=' . $slug)['estado'] === 403, 'la feria archivada ya no abre');
 
+// ── Chile en Volantín en la temática Fiestas Patrias (26-09) ─────────────────────────────────────────
+$fiestas = cb_load_parties()['parties'];
+$fiestas['fp-volantin'] = ['nombre' => 'Fiesta dieciochera', 'tema' => 'fiestas-patrias', 'fecha' => date('Y-m-d'), 'activa' => true,
+    'invitados' => [['name' => 'Ana', 'g' => 'f']], 'creada' => gmdate('Y-m-d H:i:s')];
+cb_save_parties(['parties' => $fiestas]);
+$menu = pedir('GET', '/puntajes.php?p=fp-volantin');
+f_check(in_array('volantin', array_column($menu['json']['juegos_disponibles'] ?? [], 'id'), true), 'el menú de una fiesta de Fiestas Patrias ofrece Chile en Volantín');
+// El juego manda un formulario (URLSearchParams), no JSON: puntajes.php lee $_POST.
+$anota = static function (int $n) use ($base): int {
+    $cuerpo = http_build_query(['p' => 'fp-volantin', 'juego' => 'volantin', 'jugador' => 'Ana', 'puntaje' => (string) $n]);
+    $ctx = stream_context_create(['http' => ['method' => 'POST', 'ignore_errors' => true, 'timeout' => 20,
+        'header' => "Content-Type: application/x-www-form-urlencoded\r\nContent-Length: " . strlen($cuerpo), 'content' => $cuerpo]]);
+    @file_get_contents($base . '/puntajes.php', false, $ctx);
+    return preg_match('/^HTTP\/\S+ (\d{3})/', $http_response_header[0] ?? '', $m) ? (int) $m[1] : 0;
+};
+f_check($anota(512) === 200, 'el volantín anota un puntaje real');
+f_check($anota(1500) === 400, 'y rechaza uno imposible (tope 1.000)');
+$api = pedir('GET', '/api.php?p=fp-volantin');
+f_check(($api['json']['theme']['personajes'] ?? null) === [] && ($api['json']['theme']['slug'] ?? '') === 'fiestas-patrias', 'la fiesta normal de Fiestas Patrias abre sin personajes (el kiosco salta la ruleta)');
+
 echo "OK: $tests comprobaciones\n";

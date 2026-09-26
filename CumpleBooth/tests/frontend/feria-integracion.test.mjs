@@ -267,7 +267,8 @@ test('integración real 020 + build 021: SQLite aislada, tres fondos adultos y f
   assert.match(asomateNinos.opciones[0],/Foto con tu personaje/);assert.match(asomateNinos.opciones[1],/Asómate/)
   // Adultos con una temática que trae Asómate (fiestas-patrias): el menú aparece y la ruta completa funciona.
   const asomateAdultos=await asomate({tema:'fiestas-patrias',modo:'adulto',nombre:'',carta:3,prefijo:'13-asomate-adultos-fiestas-patrias'})
-  assert.match(asomateAdultos.opciones[0],/Foto con la temática/);assert.match(asomateAdultos.opciones[1],/huas/i)
+  // Fiestas Patrias trae además Chile en Volantín (26-09): se buscan por texto, no por posición.
+  assert.match(asomateAdultos.opciones[0],/Foto con la temática/);assert.ok(asomateAdultos.opciones.some((o)=>/huas/i.test(o)),'ofrece Asómate de huaso');assert.ok(asomateAdultos.opciones.some((o)=>/Volantín/.test(o)),'ofrece el volantín')
   // Niños con fiestas-patrias (la temática de la feria de hoy): sin ruleta, Asómate de huaso y diploma.
   const asomateNinosFp=await asomate({tema:'fiestas-patrias',modo:'infantil',nombre:'Pía',carta:0,prefijo:'14-asomate-ninos-fiestas-patrias'})
   assert.match(asomateNinosFp.opciones[0],/Foto con la temática/)

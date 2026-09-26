@@ -10,7 +10,7 @@ if (!function_exists('at_cc_tipos_internos')) {
 	fwrite(STDERR, "at_cc_tipos_internos() no está definida: revisa puras.php.\n");
 	exit(2);
 }
-ok(at_cc_tipos_internos() === ['cierre_incompleto', 'aviso_operativo', 'pedido_respuesta'], 'at_cc_tipos_internos: lista de tipos que nunca son públicos');
+ok(at_cc_tipos_internos() === ['cierre_incompleto', 'aviso_operativo', 'pedido_respuesta', 'mensaje_whatsapp'], 'at_cc_tipos_internos: lista de tipos que nunca son públicos');
 
 $marca = 'prueba-panel-timeline-' . strtolower(wp_generate_password(6, false, false));
 $email = $marca . '@example.com';

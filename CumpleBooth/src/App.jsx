@@ -1,5 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import QRCode from 'qrcode'
+import FeriaBooth from './feria/FeriaBooth.jsx'
+import { apiQuery, feriaFromResponse } from './feria/contract.js'
+import { loadImage } from './feria/media.js'
+import { createFeriaPhoto } from './feria/photo.js'
 import { ensureCanvasFonts } from './fonts.js'
 import { applyThemeColors } from './themeVars.js'
 import {
@@ -38,6 +42,8 @@ const BASE = import.meta.env.BASE_URL // base relativa './' — funciona en cual
 const BRAND_LOGO_SRC = BASE + 'brand/cumpleclick-mark.svg'
 
 let CONFIG = null
+let FERIA = null
+let FERIA_THEME = null
 // Versión de assets del tema activo (rompe-cache). La escribe buildRuntime.
 let ASSETS_VERSION = 0
 let PARTY_SLUG = null
@@ -430,7 +436,7 @@ export default function App() {
     setStatus('loading')
     let alive = true
 
-    fetch(BASE + 'api.php?p=' + encodeURIComponent(p), { cache: 'no-store' })
+    fetch(BASE + 'api.php?' + apiQuery(location.search), { cache: 'no-store' })
       .then(async (res) => {
         const data = await res.json().catch(() => null)
         if (!data || !data.ok) {
@@ -440,7 +446,10 @@ export default function App() {
       })
       .then((data) => {
         if (!alive) return
+        FERIA = feriaFromResponse(data)
+        FERIA_THEME = FERIA ? data.theme : null
         buildRuntime(data.party, data.theme, p)
+        if (FERIA) THEME_LABEL = (data.theme.nombre || '').toUpperCase()
         applyThemeVars(data.theme && data.theme.colors)
         setStatus('ready')
       })
@@ -461,12 +470,36 @@ export default function App() {
     return <ErrorScreen code={errorCode} onRetry={() => setRetryTick((t) => t + 1)} />
   }
   // status === 'ready' → RUNTIME ya está poblado, es seguro montar la app
+  if (FERIA) return <FeriaBooth key={slug} feria={FERIA} theme={THEME_SLUG} themeData={FERIA_THEME}
+    characters={PERSONAJES} filter={FERIA_THEME?.filtro} base={BASE} Spinner={Spinner} Character={VideoPersonaje}
+    renderPhoto={composeFeriaPhoto} renderDiploma={composeFeriaDiploma} />
   return <BoothApp key={slug} />
 }
 
 /* ============================================================
    Pantallas de la puerta de entrada (sin RUNTIME todavía, look genérico)
    ============================================================ */
+// Adaptadores exclusivos de feria; el recorrido normal conserva sus compositores.
+async function composeFeriaPhoto(source, name, person, filter, segmenter) {
+  await Promise.all([ensureCanvasFonts(), preloadBrandLogo()])
+  return createFeriaPhoto({ source, name, person, filter, segmenter, base: BASE, theme: FERIA_THEME,
+    frame: async (image) => {
+      const [background, character] = await Promise.all([
+        loadImage(CONFIG.images.fondo), loadImage(CHAR_PNG[person?.name]).catch(() => null),
+      ])
+      return composeImage(background, image, name, character, person?.name || '')
+    },
+  })
+}
+
+async function composeFeriaDiploma(name, person) {
+  await Promise.all([ensureCanvasFonts(), preloadBrandLogo()])
+  const [winner, hero] = await Promise.all([
+    loadImage(CHAR_IMG[person?.name]).catch(() => null), loadImage(CHAR_PNG[person?.name]).catch(() => null),
+  ])
+  return composeDiploma(name, winner, hero)
+}
+
 function NoPartyScreen() {
   return (
     <div className="app">
@@ -1568,6 +1601,12 @@ function Spinner({ onDone }) {
     // El slot win queda bajo la flecha cuando la rotación ≡ -win*angle (mod
     // 360). Cinco vueltas desde donde está la rueda, más el ajuste para caer
     // en el ganador.
+    if (FERIA && REDUCE_MOTION) {
+      if (rotRef.current) rotRef.current.style.setProperty('--spin', `${-win * angle}deg`)
+      setWinner(PERSONAJES[win])
+      autoRef.current = setTimeout(() => onDone(PERSONAJES[win]), 8000)
+      return () => clearTimeout(autoRef.current)
+    }
     const bruto = base + 360 * 5
     const ajuste = ((-win * angle - bruto) % 360 + 360) % 360
     const finalR = bruto + ajuste
@@ -2745,11 +2784,13 @@ const esBabyShower = () => CONFIG?.eventType === 'baby_shower'
 // `fraseA()` en src/album/evento.js para el Album Recuerdo.
 const nombreEvento = () => String(CONFIG?.nombre || '').trim()
 const eventoFraseA = () => {
+  if (FERIA) return `a ${FERIA.nombre}`
   const nombre = nombreEvento()
   if (esBabyShower()) return nombre ? `al baby shower de ${nombre}` : 'al baby shower'
   return nombre ? `a la fiesta de ${nombre}` : 'a la fiesta'
 }
 const eventoFraseEn = () => {
+  if (FERIA) return FERIA.nombre
   const nombre = nombreEvento()
   if (esBabyShower()) return nombre ? `el baby shower de ${nombre}` : 'el baby shower'
   return nombre ? `la fiesta de ${nombre}` : 'la fiesta'
@@ -5411,7 +5452,7 @@ function composeDiploma(invitado = '', winnerImage = null, heroeImagen = null) {
 
   // "en la fiesta de {nombre} · {fecha si está}"
   const fecha = formatFecha(CONFIG && CONFIG.fecha)
-  const fiestaLine = CONFIG
+  const fiestaLine = FERIA ? `en ${FERIA.nombre} · ${FERIA.fecha_texto}` : CONFIG
     ? `en ${eventoFraseEn()}${fecha ? ' · ' + fecha : ''}`
     : ''
   if (fiestaLine) {

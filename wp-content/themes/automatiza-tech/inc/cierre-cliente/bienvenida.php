@@ -22,7 +22,15 @@ function at_cc_historial_crm(int $crm_id, string $tipo, string $titulo, string $
 function at_cc_enviar_bienvenida(int $crm_id, ?object $p = null, array $filas = []): bool {
 	global $wpdb;
 	$c = $wpdb->get_row($wpdb->prepare("SELECT id, nombre, email, empresa, tipo FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $crm_id));
-	if (!$c || !is_email((string) $c->email) || (string) $c->tipo !== 'cliente') {
+	if (!$c || (string) $c->tipo !== 'cliente') {
+		return false;
+	}
+	// T6 ronda 2, hallazgo 1: antes, un correo con formato inválido (no vacío) hacía que esta guarda
+	// devolviera false antes de wp_mail()/at_cc_historial_crm(); como el controlador
+	// (_enviar_correo_bienvenida) ya no cae al correo antiguo para un 'cliente' (hallazgo 3 de la
+	// ronda 1), el evento desaparecía sin ningún rastro. Ahora queda en el historial del cliente.
+	if (!is_email((string) $c->email)) {
+		at_cc_historial_crm($crm_id, 'email_bienvenida', 'Correo de bienvenida enviado', 'Falló el envío de la bienvenida: el correo del cliente no tiene un formato válido.');
 		return false;
 	}
 	if ($p === null) {

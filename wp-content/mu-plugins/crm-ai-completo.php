@@ -4390,7 +4390,9 @@ class AutomatizaTech_CRM_AI {
                     foreach ($prospect_details as $d) {
                         // T6 ronda 1 (revisión), hallazgo 5: aviso interno de un cierre a medias (correo inválido,
                         // contrato que no se creó, etc.); nunca a la línea de tiempo pública del cliente.
-                        if (($d['detail_type'] ?? '') === 'cierre_incompleto') {
+                        // T6 ronda 2, hallazgo 2: 'aviso_operativo' (p. ej. datos bancarios pendientes) tampoco
+                        // es para el cliente: es un recordatorio de configuración solo para Luis.
+                        if (in_array($d['detail_type'] ?? '', ['cierre_incompleto', 'aviso_operativo'], true)) {
                             continue;
                         }
                         $d['source'] = 'prospect';

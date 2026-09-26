@@ -110,7 +110,7 @@ function at_cc_ultima_respuesta(int $propuesta_id, ?string $salida = null): ?arr
 /** Registra la respuesta y, si acepta, ejecuta el cierre. Idempotente frente a una segunda aceptación. */
 function at_cc_registrar_respuesta(object $p, string $salida, array $d): array {
 	global $wpdb;
-	$base = ['ok' => false, 'estado' => (string) $p->status, 'mensaje' => '', 'avisos' => [], 'crm_id' => null, 'contrato_id' => null];
+	$base = ['ok' => false, 'estado' => (string) $p->status, 'mensaje' => '', 'avisos' => [], 'avisos_operativos' => [], 'crm_id' => null, 'contrato_id' => null];
 	$salidas = at_cc_salidas();
 	if (!isset($salidas[$salida])) {
 		return array_merge($base, ['mensaje' => 'Respuesta no válida.']);
@@ -156,15 +156,27 @@ function at_cc_registrar_respuesta(object $p, string $salida, array $d): array {
 		// cliente (excluido en crm-ai-completo.php).
 		at_cc_anotar_simple($p, 'cierre_incompleto', 'Cierre incompleto', implode("\n", $r['avisos']));
 	}
+	if (!empty($r['avisos_operativos'])) {
+		// T6 ronda 2, hallazgo 2: un recordatorio operativo (p. ej. datos bancarios sin configurar) no
+		// es un paso fallido -el cliente se creó, el contrato quedó en borrador y la bienvenida salió-,
+		// así que no comparte el 'cierre_incompleto' de los fallos reales; queda con su propio tipo,
+		// también excluido de la línea de tiempo pública del cliente (crm-ai-completo.php).
+		at_cc_anotar_simple($p, 'aviso_operativo', 'Revisar datos bancarios', implode("\n", $r['avisos_operativos']));
+	}
 	at_cc_avisar_luis($p, $salida, $d, $r);
 	return $r;
 }
 
 /** Cliente oficial, Seguimiento migrado, bienvenida y contrato. Cada paso que falla queda como aviso,
  *  incluida una excepción (p. ej. FPDF sin poder escribir el PDF): nunca se deja escapar, o
- *  at_cc_avisar_luis() (que corre justo después, en at_cc_registrar_respuesta) no llegaría a correr. */
+ *  at_cc_avisar_luis() (que corre justo después, en at_cc_registrar_respuesta) no llegaría a correr.
+ *  'avisos' son pasos que realmente fallaron; 'avisos_operativos' son recordatorios de configuración
+ *  (p. ej. datos bancarios pendientes) que no representan ningún fallo del cierre (T6 ronda 2,
+ *  hallazgo 2): los dos llegan al correo de Luis, pero solo 'avisos' deja el rastro de
+ *  'cierre_incompleto' en Seguimiento. */
 function at_cc_ejecutar_cierre(object $p, array $d): array {
 	$avisos = [];
+	$avisos_operativos = [];
 	$filas = (array) ($d['filas'] ?? []);
 	try {
 		$cli = at_cc_asegurar_cliente([
@@ -200,7 +212,7 @@ function at_cc_ejecutar_cierre(object $p, array $d): array {
 			if (!at_cc_enviar_bienvenida($cli['crm_id'], $p, $filas)) {
 				$avisos[] = 'El correo de bienvenida no salió (revisa el SMTP).';
 			} elseif (!at_cc_banco_completo(at_cc_datos_banco())) {
-				$avisos[] = 'Faltan los datos bancarios (Propuestas › Ajustes del cierre): envíale al cliente los datos de transferencia.';
+				$avisos_operativos[] = 'Faltan los datos bancarios (Propuestas › Ajustes del cierre): envíale al cliente los datos de transferencia.';
 			}
 		} catch (\Throwable $e) {
 			$avisos[] = 'El correo de bienvenida no salió: ' . $e->getMessage();
@@ -222,7 +234,7 @@ function at_cc_ejecutar_cierre(object $p, array $d): array {
 	} catch (\Throwable $e) {
 		$avisos[] = 'El contrato no se creó: ' . $e->getMessage();
 	}
-	return ['avisos' => $avisos, 'crm_id' => $cli['crm_id'], 'contrato_id' => $contrato_id];
+	return ['avisos' => $avisos, 'avisos_operativos' => $avisos_operativos, 'crm_id' => $cli['crm_id'], 'contrato_id' => $contrato_id];
 }
 
 /** Aviso a Luis por correo (WhatsApp a Luis no llega: 131047). No se avisa lo que él mismo registró. */
@@ -243,6 +255,9 @@ function at_cc_avisar_luis(object $p, string $salida, array $d, array $r): void 
 	}
 	foreach ((array) ($r['avisos'] ?? []) as $a) {
 		$lineas[] = '⚠️ ' . $a;
+	}
+	foreach ((array) ($r['avisos_operativos'] ?? []) as $a) {
+		$lineas[] = 'ℹ️ ' . $a;
 	}
 	$html = '<p>' . implode('<br>', array_map('esc_html', $lineas)) . '</p>'
 		. '<p><a href="' . esc_url(admin_url('admin.php?page=automatiza-proposals&edit_id=' . (int) $p->id . '&tab=envio')) . '">Abrir la propuesta en el panel</a></p>';

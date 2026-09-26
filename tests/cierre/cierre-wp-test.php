@@ -110,6 +110,7 @@ ok(($ph['monto_total'] ?? '') === '$2.000.000' && ($ph['representante_cliente_ru
 $al_cliente = array_values(array_filter($correos, function ($m) use ($p) { return $m['to'] === $p->client_email; }));
 ok(count($al_cliente) === 1 && strpos($al_cliente[0]['subject'], 'bienvenida') !== false && strpos($al_cliente[0]['message'], '$1.000.000') !== false, 'acepta: bienvenida al cliente con el anticipo');
 ok($r['avisos'] === [], 'acepta: sin avisos' . ($r['avisos'] ? ': ' . implode(' | ', $r['avisos']) : ''));
+ok($r['avisos_operativos'] === [], 'acepta: sin avisos operativos (banco configurado)' . ($r['avisos_operativos'] ? ': ' . implode(' | ', $r['avisos_operativos']) : ''));
 $u = at_cc_ultima_respuesta((int) $p->id);
 ok($u && $u['salida'] === 'acepta', 'última respuesta es la aceptación');
 
@@ -190,12 +191,20 @@ ok(!at_cc_banco_completo(at_cc_datos_banco()), 'sin datos bancarios');
 // T6 ronda 1 (revisión), hallazgo 4: si salió la bienvenida y faltan los datos bancarios, el aviso a
 // Luis lo dice (antes: la bienvenida decía «los datos de transferencia van por separado» y Luis no
 // se enteraba de que tenía que mandarlos él mismo).
+// T6 ronda 2, hallazgo 2: faltar los datos bancarios no es un paso fallido -el cliente se creó, el
+// contrato quedó en borrador y la bienvenida salió-, así que ya no comparte el 'cierre_incompleto'
+// que usan los fallos reales (antes, CUALQUIER aceptación exitosa sin banco configurado lo disparaba).
+// Sigue avisando a Luis por correo y queda en Seguimiento con su propio tipo, 'aviso_operativo'.
 $correos = [];
 $sb = crear_propuesta($marca . '-banco', 'sent', $payload, $creadas);
 $r_sb = at_cc_registrar_respuesta($sb, 'acepta', ['canal' => 'pagina', 'nombre' => 'Cliente Sin Banco', 'filas' => at_cc_filas_aceptadas(at_cc_filas_de_propuesta($sb), [0]), 'fecha' => current_time('mysql'), 'bienvenida' => true]);
 ok($r_sb['ok'] && at_cc_propuesta_por_id($sb->id)->status === 'aceptada', 'sin banco: igual queda aceptada');
-ok(in_array('Faltan los datos bancarios (Propuestas › Ajustes del cierre): envíale al cliente los datos de transferencia.', $r_sb['avisos'], true), 'sin banco: el aviso a Luis dice que faltan los datos bancarios' . ($r_sb['avisos'] ? ': ' . implode(' | ', $r_sb['avisos']) : ''));
+ok($r_sb['avisos'] === [], 'sin banco: no es un aviso de fallo real' . ($r_sb['avisos'] ? ': ' . implode(' | ', $r_sb['avisos']) : ''));
+ok(in_array('Faltan los datos bancarios (Propuestas › Ajustes del cierre): envíale al cliente los datos de transferencia.', $r_sb['avisos_operativos'], true), 'sin banco: queda como aviso operativo' . (!empty($r_sb['avisos_operativos']) ? ': ' . implode(' | ', $r_sb['avisos_operativos']) : ''));
+ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'cierre_incompleto'", $sb->id)) === 0, 'sin banco: no queda como cierre incompleto');
+ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'aviso_operativo'", $sb->id)) === 1, 'sin banco: queda un aviso operativo propio en Seguimiento');
 ok(count(array_filter($correos, function ($x) use ($sb) { return $x['to'] === $sb->client_email; })) === 1, 'sin banco: la bienvenida igual sale');
+ok(count(array_filter($correos, function ($x) { return $x['to'] === get_option('admin_email') && strpos((string) $x['message'], 'Faltan los datos bancarios') !== false; })) === 1, 'sin banco: Luis igual recibe el aviso por correo');
 
 // Un prospecto no recibe la bienvenida de cliente
 $antes = count($correos);
@@ -203,6 +212,22 @@ $wpdb->insert($wpdb->prefix . 'crm_clientes', ['nombre' => 'Prospecto Prueba', '
 $prospecto = (int) $wpdb->insert_id;
 ok(at_cc_enviar_bienvenida($prospecto) === false && count($correos) === $antes, 'un prospecto no recibe la bienvenida de cliente');
 $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $prospecto));
+
+// T6 ronda 2, hallazgo 1: un cliente (tipo='cliente') con el correo mal formado (no vacío, p. ej. sin
+// arroba) ya no desaparece sin rastro: antes de este fix, la guarda de entrada de
+// at_cc_enviar_bienvenida() volvía false antes de wp_mail()/at_cc_historial_crm(), y el controlador
+// (_enviar_correo_bienvenida) ya no cae al correo antiguo para un 'cliente' (hallazgo 3, ronda 1) -
+// así que ni el correo ni el historial quedaban, y Luis nunca se enteraba de que un cliente recién
+// convertido no recibió su bienvenida.
+$correos = [];
+$wpdb->insert($wpdb->prefix . 'crm_clientes', ['nombre' => 'Cliente Correo Invalido', 'email' => 'no-es-un-email-valido', 'tipo' => 'cliente']);
+$cliente_correo_malo = (int) $wpdb->insert_id;
+$hist_antes = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}crm_historial WHERE cliente_id = %d", $cliente_correo_malo));
+ok(at_cc_enviar_bienvenida($cliente_correo_malo) === false && count($correos) === 0, 'cliente con correo mal formado: no manda nada');
+$hist_despues = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}crm_historial WHERE cliente_id = %d", $cliente_correo_malo));
+ok($hist_despues === $hist_antes + 1, 'cliente con correo mal formado: ahora queda un rastro en el historial (antes desaparecía sin dejar ninguno)');
+$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}crm_historial WHERE cliente_id = %d", $cliente_correo_malo));
+$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $cliente_correo_malo));
 
 // T6 ronda 1 (revisión), hallazgo 3: un Bcc rechazado hace que wp_mail() devuelva false aunque el
 // correo principal sí llegó; el controlador (_enviar_correo_bienvenida, disparado por «Convertir a

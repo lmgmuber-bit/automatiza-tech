@@ -9,10 +9,19 @@ function at_cc_whatsapp_plantilla_activa(): bool {
 	return get_option('at_cc_wa_plantilla_activa') === '1' && defined('AT_N8N_CC_WHATSAPP') && AT_N8N_CC_WHATSAPP !== '' && function_exists('at_cc_enviar_whatsapp_plantilla');
 }
 
-/** Botón para mandar el WhatsApp desde el teléfono de Luis; '' si no hay teléfono. */
+/**
+ * Botón para mandar el WhatsApp desde el teléfono de Luis; '' si no hay teléfono.
+ * Ronda 1, hallazgo 1: NO pasar $u por esc_url(). esc_url() borra '%0a'/'%0d' de cualquier URL, y
+ * at_cc_url_wa_me() arma 'https://wa.me/<dígitos>?text=' . rawurlencode($texto), donde el texto
+ * (at_cc_texto_whatsapp()) trae un salto de línea justo después del enlace para aceptar; esc_url()
+ * dejaba el mensaje pegado ("...aceptar aquí: https://…&responder=aceptarSi tienes dudas..."),
+ * y WhatsApp tomaba "&responder=aceptarSi" como parte del enlace. $u ya es seguro por construcción
+ * (esquema https fijo, dígitos de at_cc_telefono_normalizado() y texto con rawurlencode, que nunca
+ * deja '<', '>', '"', '\'' ni '&' sueltos), así que basta con esc_attr() para el atributo href.
+ */
 function at_cc_boton_wa_me(object $p): string {
 	$u = at_cc_url_wa_me((string) $p->phone, at_cc_texto_whatsapp((string) $p->client_name, (string) $p->company_name, at_cc_url_respuesta(get_site_url(), (string) $p->unique_link_id, 'aceptar')));
-	return $u === '' ? '' : '<a class="button button-primary" target="_blank" rel="noopener" href="' . esc_url($u) . '">💬 Enviar por mi WhatsApp</a>';
+	return $u === '' ? '' : '<a class="button button-primary" target="_blank" rel="noopener" href="' . esc_attr($u) . '">💬 Enviar por mi WhatsApp</a>';
 }
 
 /**

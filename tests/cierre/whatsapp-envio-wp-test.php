@@ -83,6 +83,27 @@ $tipos3 = at_cc_test_tipos_de($p3->id);
 ok(!in_array('pedido_respuesta', $tipos3, true), 'ofrecer el botón (no enviar) no anota «pedido_respuesta»');
 ok(!in_array('propuesta_enviada', $tipos3, true), 'tampoco usa «propuesta_enviada» en este camino');
 
+// --- 3b) Ronda 1, hallazgo 1: esc_url() borraba '%0a'/'%0d' del mensaje y pegaba el texto siguiente
+// justo después del enlace para aceptar ("...aceptar aquí: https://…&responder=aceptarSi tienes
+// dudas..."), y WhatsApp tomaba "&responder=aceptarSi" como parte del enlace (sanitize_key() en
+// pagina.php lo dejaba en 'aceptarsi', que no abre el formulario de aceptar solo). Ahora el botón usa
+// esc_attr(): se decodifica el parámetro text= del href y se comprueba que trae el salto de línea
+// real y que el enlace para aceptar queda íntegro, sin nada pegado.
+if (!preg_match('/href="([^"]+)"/', $aviso3, $m_href)) {
+	ok(false, 'no se encontró href= en el aviso de wa.me');
+} else {
+	$href = html_entity_decode($m_href[1], ENT_QUOTES, 'UTF-8');
+	if (!preg_match('/[?&]text=([^&]*)/', $href, $m_text)) {
+		ok(false, 'no se encontró el parámetro text= en el href de wa.me');
+	} else {
+		$texto = rawurldecode($m_text[1]);
+		ok(strpos($texto, "\n") !== false, 'el mensaje de wa.me trae el salto de línea real (esc_attr no lo borra como esc_url)');
+		preg_match('#https?://\S*/ver-presentacion\.php\?id=\S*#', $texto, $m_enlace);
+		$enlace = $m_enlace[0] ?? '';
+		ok($enlace !== '' && substr($enlace, -strlen('responder=aceptar')) === 'responder=aceptar', 'el enlace para aceptar dentro del mensaje termina exactamente en "responder=aceptar", sin el texto siguiente pegado');
+	}
+}
+
 // --- 4) at_cc_whatsapp_tras_pedido (usado por «Pedir respuesta») ---
 $detalles_sin_tel = at_cc_whatsapp_tras_pedido($p1);
 ok($detalles_sin_tel === ['Sin teléfono: no se mandó WhatsApp.'], 'at_cc_whatsapp_tras_pedido sin teléfono');

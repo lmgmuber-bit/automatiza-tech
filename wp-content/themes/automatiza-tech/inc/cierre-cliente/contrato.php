@@ -41,6 +41,13 @@ function at_cc_datos_contrato(object $p, array $filas_aceptadas, array $aceptant
 
 /** Crea el borrador del contrato de servicios; devuelve su id o WP_Error. */
 function at_cc_crear_contrato_servicios(object $p, int $tech_id, array $filas, array $aceptante) {
+	// Ronda 1, hallazgo 2 (T9): red de seguridad. Si por otra vía (p. ej. un guardado que reabrió el
+	// envío) at_cc_ejecutar_cierre() se ejecutara dos veces para la misma propuesta, no se crea un
+	// segundo contrato: se devuelve el que ya existe.
+	$existente = at_cc_contrato_de_propuesta((int) $p->id);
+	if ($existente) {
+		return (int) $existente->id;
+	}
 	if (!class_exists('ContractService')) {
 		$f = ABSPATH . 'contracts/contract-service.php';
 		if (!file_exists($f)) {

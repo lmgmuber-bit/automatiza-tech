@@ -46,6 +46,19 @@ $sent = crear_propuesta_panel($marca, 'sent', $creadas);
 $h_sent = render_panel($sent);
 ok(strpos($h_sent, 'Enviar por mi WhatsApp') !== false && strpos($h_sent, 'wa.me') !== false, 'estado sent (puede pedir respuesta): sí ofrece el WhatsApp con el enlace de aceptar');
 
+// Ronda 1, hallazgo 1 (whatsapp.php): este botón usaba el mismo esc_url($wa) que borraba el salto de
+// línea del mensaje y pegaba "responder=aceptar" con el texto siguiente. Con esc_attr(), el parámetro
+// text= del href debe traer el salto de línea real y el enlace para aceptar debe quedar íntegro.
+if (preg_match('/href="([^"]+)"/', $h_sent, $m_href) && preg_match('/[?&]text=([^&]*)/', html_entity_decode($m_href[1], ENT_QUOTES, 'UTF-8'), $m_text)) {
+	$texto_panel = rawurldecode($m_text[1]);
+	ok(strpos($texto_panel, "\n") !== false, 'panel.php: el mensaje de wa.me trae el salto de línea real (esc_attr no lo borra)');
+	preg_match('#https?://\S*/ver-presentacion\.php\?id=\S*#', $texto_panel, $m_enlace_panel);
+	$enlace_panel = $m_enlace_panel[0] ?? '';
+	ok($enlace_panel !== '' && substr($enlace_panel, -strlen('responder=aceptar')) === 'responder=aceptar', 'panel.php: el enlace para aceptar dentro del mensaje termina en "responder=aceptar", sin texto pegado');
+} else {
+	ok(false, 'panel.php: no se pudo extraer el parámetro text= del botón de wa.me');
+}
+
 foreach (['lista', 'pending', 'borrador', 'generando', 'ajustando', 'error', 'contracted'] as $estado_sin_barra) {
 	$q = crear_propuesta_panel($marca, $estado_sin_barra, $creadas);
 	$h = render_panel($q);

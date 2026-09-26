@@ -261,7 +261,9 @@ function at_cc_render_panel_respuesta(object $p): void {
 	if (!$puede_pedir) {
 		echo '<span class="description">El WhatsApp con el enlace de aceptar se habilita cuando la propuesta esté enviada.</span>';
 	} elseif ($wa !== '') {
-		echo '<a class="button" target="_blank" rel="noopener" href="' . esc_url($wa) . '">💬 Enviar por mi WhatsApp</a>';
+		// Ronda 1, hallazgo 1 (whatsapp.php): esc_url() borra '%0a'/'%0d' y pega el mensaje con el
+		// enlace para aceptar; $wa ya es segura por construcción (at_cc_url_wa_me()), basta esc_attr().
+		echo '<a class="button" target="_blank" rel="noopener" href="' . esc_attr($wa) . '">💬 Enviar por mi WhatsApp</a>';
 	} else {
 		echo '<span class="description">Sin teléfono: agrégalo en «Cliente y enlaces» para mandar el WhatsApp.</span>';
 	}

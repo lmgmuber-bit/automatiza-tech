@@ -209,6 +209,19 @@ function at_pa_guardar(): string {
             $send_email = false;
             $bloqueo_envio = true;
         }
+        // Ronda 1, hallazgo 2: una propuesta con respuesta del cliente (aceptada, evaluando o
+        // rechazada) no pierde ese estado en un guardado normal, y una ya aceptada no se reabre para
+        // reenviar el correo (que la volvería a 'sent' y dejaría una segunda aceptación disparar de
+        // nuevo el cierre completo: segundo cliente/contrato/bienvenida). El checkbox de envío viene
+        // marcado por defecto en propuestas viejas (ficha.php), así que esto ocurría con un simple
+        // «Guardar».
+        $estados_con_respuesta = ['aceptada', 'evaluando', 'rechazada'];
+        $estado_protegido = $actual && in_array((string) $actual->status, $estados_con_respuesta, true);
+        $ya_aceptada = $actual && (string) $actual->status === 'aceptada';
+        if ($send_email && $ya_aceptada) {
+            $send_email = false;
+            $bloqueo_envio_aceptada = true;
+        }
         $update_data = [
             'client_name' => $client_name,
             'company_name' => $company_name,
@@ -218,9 +231,10 @@ function at_pa_guardar(): string {
             'n8n_chat_url' => $n8n_url,
         ];
         // v3: el guardado normal no debe reescribir el estado del flujo; solo lo toca al enviar.
+        // Ronda 1, hallazgo 2: tampoco lo hace si la propuesta ya tiene respuesta del cliente.
         if ($send_email) {
             $update_data['status'] = 'sent';
-        } elseif (!$es_v3) {
+        } elseif (!$es_v3 && !$estado_protegido) {
             $update_data['status'] = 'pending';
         }
         // Solo actualizar prompts si se enviaron (no vacíos). En v3 el payload lo maneja
@@ -261,6 +275,8 @@ function at_pa_guardar(): string {
 
         if (!empty($bloqueo_envio)) {
             $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: una propuesta v3 solo se envía cuando está <strong>lista</strong> (versión final verificada).</p></div>';
+        } elseif (!empty($bloqueo_envio_aceptada)) {
+            $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: el cliente ya aceptó esta propuesta. Para pedirle otra respuesta, usa el panel de «Respuesta del cliente».</p></div>';
         }
 
         // Obtener datos actualizados para el email
@@ -268,7 +284,7 @@ function at_pa_guardar(): string {
 
         // --- ENVIAR EMAIL (solo si el checkbox está marcado) ---
         if (!$send_email) {
-            if (empty($bloqueo_envio)) {
+            if (empty($bloqueo_envio) && empty($bloqueo_envio_aceptada)) {
                 $message = '<div class="notice notice-success is-dismissible"><p>✅ Propuesta guardada correctamente. <strong>No se envió correo</strong> (checkbox desmarcado).</p></div>';
             }
         } else {

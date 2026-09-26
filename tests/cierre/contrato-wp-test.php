@@ -17,6 +17,7 @@ ok(is_object($c) && $c->type === 'servicios' && $c->template_id === 'servicios_v
 $ph = json_decode($c->placeholders, true);
 ok(strpos($ph['contract_title'], 'DESARROLLO') !== false, 'título de servicios guardado');
 ok(ContractService::necesita_revision($c), 'necesita revisión antes de firmar');
+$token_antes = $c->at_review_token;
 $firma = ContractService::sign_as_at($c->id, ['signer_name' => 'Prueba', 'signer_rut' => '11.111.111-1', 'signer_email' => 'prueba@example.com', 'method' => 'canvas', 'signature_dataurl' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==']);
 ok(is_wp_error($firma) && $firma->get_error_code() === 'sin_revision', 'no se firma sin revisión');
 $r = ContractService::guardar_revision($c->id, ['plazo' => 'Ocho semanas', 'rut_cliente' => '11.111.111-1', 'monto_total' => '', 'inventado' => 'x']);
@@ -25,6 +26,13 @@ ok(!is_wp_error($r) && $ph2['plazo'] === 'Ocho semanas' && $ph2['rut_cliente'] =
 ok(!ContractService::necesita_revision($r), 'ya no necesita revisión');
 $firma2 = ContractService::sign_as_at($c->id, ['signer_name' => 'Prueba', 'signer_rut' => '11.111.111-1', 'signer_email' => 'prueba@example.com', 'method' => 'canvas', 'signature_dataurl' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==']);
 ok(!is_wp_error($firma2) && $firma2->status === 'at_signed', 'con revisión se firma');
+// T5 ronda 1: sign_as_at() rota at_review_token (E4). at-sign-contract.php debe
+// redirigir (PRG) al token nuevo tras firmar, porque el viejo queda muerto:
+// si no redirige, el siguiente POST "Enviar al cliente" a la URL vieja (que
+// no trae action) llega con el token muerto y la página responde 404.
+ok($firma2->at_review_token !== $token_antes, 'firmar rota el token de revisión');
+ok(ContractService::get_by_at_token($token_antes) === null, 'el token de revisión viejo ya no resuelve tras firmar');
+ok(is_object(ContractService::get_by_at_token($firma2->at_review_token)) && ContractService::get_by_at_token($firma2->at_review_token)->id === $firma2->id, 'el token de revisión nuevo sí resuelve');
 ok(is_wp_error(ContractService::guardar_revision($c->id, ['plazo' => 'x'])), 'firmado ya no se edita');
 $sop = ContractService::create_contract(['client_id' => 0, 'type' => 'soporte', 'template_id' => 'soporte_v2', 'placeholders' => [], 'created_by' => 0]);
 ok(is_object($sop) && !ContractService::necesita_revision($sop), 'el de soporte no pide revisión');

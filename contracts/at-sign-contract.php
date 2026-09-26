@@ -26,6 +26,12 @@ if (!$c) { status_header(404); echo 'Contrato no encontrado'; exit; }
 
 $flash = '';
 $flash_type = '';
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['firmado'])) {
+    // Llega desde el PRG tras firmar (ver action=sign): el token de la URL
+    // ya es el nuevo (rotado por E4), así que el flash se re-muestra por GET.
+    $flash = 'Firmaste el contrato. Ya puedes enviarlo al cliente.';
+    $flash_type = 'ok';
+}
 
 // POST: firmar como AT
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
@@ -49,11 +55,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $r = ContractService::sign_as_at($c->id, $data);
         if (is_wp_error($r)) { $flash = $r->get_error_message(); $flash_type = 'error'; }
         else {
-            $flash = 'Firmaste el contrato. Ya puedes enviarlo al cliente.';
-            $flash_type = 'ok';
-            $c = $r;
-            // E4: at_review_token rotated — refresh local $token so PDF iframe still works
-            $token = $c->at_review_token;
+            // E4 rotates at_review_token al firmar: el token de la URL actual
+            // (todavía el viejo) ya no resuelve con get_by_at_token(). Sin un
+            // redirect (PRG), el siguiente POST ("Enviar al cliente"), que se
+            // publica sin action a la URL actual, llegaría con el token
+            // muerto y esta página respondería 404. Se redirige al token
+            // nuevo antes de renderizar cualquier formulario.
+            wp_safe_redirect(home_url('/contracts/at-sign-contract.php?token=' . $r->at_review_token . '&firmado=1'));
+            exit;
         }
     } elseif ($_POST['action'] === 'revisar') {
         $cambios = array();

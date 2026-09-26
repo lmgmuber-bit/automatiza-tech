@@ -33,9 +33,9 @@ $firma_png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ
 $datos_firma = ['signer_name' => 'Prueba', 'signer_rut' => '11.111.111-1', 'signer_email' => 'prueba@example.com', 'method' => 'canvas', 'signature_dataurl' => $firma_png];
 
 // ---------- Task 5b: el párrafo del cliente según sea persona natural o empresa ----------
-$datos = ['razon_social_cliente' => '[PRUEBA] Muebles SpA', 'rut_cliente' => '10.000.013-K', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1', 'email_cliente' => 'ana@example.com', 'telefono_cliente' => '+56 9 1111 1111', 'domicilio_cliente' => 'Calle Falsa 123, Santiago', 'nombre_proyecto' => 'Tienda en línea'];
+$datos = ['razon_social_cliente' => '[PRUEBA] Negocio SpA', 'rut_cliente' => '10.000.013-K', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1', 'email_cliente' => 'ana@example.com', 'telefono_cliente' => '+56 9 1111 1111', 'domicilio_cliente' => 'Calle Falsa 123, Santiago', 'nombre_proyecto' => 'Tienda en línea'];
 $emp = ContractService::comparecencia_cliente(['tipo_cliente' => 'empresa'] + $datos);
-ok($emp === '**[PRUEBA] Muebles SpA** (en adelante "**EL CLIENTE**"), RUT **10.000.013-K**, representada por **Ana Prueba**, RUT **11.111.111-1**, correo ana@example.com, teléfono +56 9 1111 1111, con domicilio en Calle Falsa 123, Santiago.', 'empresa: comparece representada, con el texto aprobado');
+ok($emp === '**[PRUEBA] Negocio SpA** (en adelante "**EL CLIENTE**"), RUT **10.000.013-K**, representada por **Ana Prueba**, RUT **11.111.111-1**, correo ana@example.com, teléfono +56 9 1111 1111, con domicilio en Calle Falsa 123, Santiago.', 'empresa: comparece representada, con el texto aprobado');
 $per_datos = ['tipo_cliente' => 'persona', 'razon_social_cliente' => 'Ana Prueba', 'rut_cliente' => '11.111.111-1'] + $datos;
 $per = ContractService::comparecencia_cliente($per_datos);
 ok($per === '**Ana Prueba** (en adelante "**EL CLIENTE**"), RUT **11.111.111-1**, correo ana@example.com, teléfono +56 9 1111 1111, con domicilio en Calle Falsa 123, Santiago, para su proyecto «Tienda en línea».', 'persona: con su proyecto y el texto aprobado');
@@ -52,7 +52,7 @@ ok(ContractService::comparecencia_cliente(['tipo_cliente' => 'empresa']) === '**
 // ---------- Task 5b: no se firma con datos esenciales en blanco ----------
 $ct = function (array $ph, string $tipo = 'servicios') { return (object) ['type' => $tipo, 'placeholders' => wp_json_encode($ph)]; };
 $completo_persona = ['tipo_cliente' => 'persona', 'razon_social_cliente' => 'Ana Prueba', 'rut_cliente' => '11.111.111-1', 'domicilio_cliente' => 'Calle Falsa 123, Santiago', 'monto_total' => '$1.000', 'forma_pago' => '50 % al firmar y 50 % a la entrega.'];
-$completo_empresa = ['tipo_cliente' => 'empresa', 'razon_social_cliente' => '[PRUEBA] Muebles SpA', 'rut_cliente' => '10.000.013-K', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1'] + $completo_persona;
+$completo_empresa = ['tipo_cliente' => 'empresa', 'razon_social_cliente' => '[PRUEBA] Negocio SpA', 'rut_cliente' => '10.000.013-K', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1'] + $completo_persona;
 ok(in_array('Tipo de cliente', ContractService::faltantes($ct(array_diff_key($completo_persona, ['tipo_cliente' => 1]))), true), 'sin tipo: falta «Tipo de cliente»');
 ok(in_array('Tipo de cliente', ContractService::faltantes($ct(['tipo_cliente' => 'sociedad'] + $completo_persona)), true), 'un tipo desconocido cuenta como sin tipo');
 ok(ContractService::faltantes($ct($completo_persona)) === [], 'persona completa: no falta nada');
@@ -72,7 +72,7 @@ $per_dni = ['tipo_documento_cliente' => 'dni', 'rut_cliente' => '12345678'] + $p
 ok(ContractService::comparecencia_cliente($per_dni) === '**Ana Prueba** (en adelante "**EL CLIENTE**"), DNI N° **12345678**, correo ana@example.com, teléfono +56 9 1111 1111, con domicilio en Calle Falsa 123, Santiago, para su proyecto «Tienda en línea».', 'T15: persona con DNI: comparece con «DNI N° **…**»');
 ok(strpos(ContractService::comparecencia_cliente(['tipo_documento_cliente' => 'pasaporte', 'rut_cliente' => 'AB123456'] + $per_datos), 'pasaporte N° **AB123456**, correo') !== false, 'T15: persona con pasaporte: comparece con «pasaporte N° **…**»');
 $emp_pas = ContractService::comparecencia_cliente(['tipo_cliente' => 'empresa', 'tipo_documento_representante' => 'pasaporte', 'representante_cliente_rut' => 'AB123456'] + $datos);
-ok($emp_pas === '**[PRUEBA] Muebles SpA** (en adelante "**EL CLIENTE**"), RUT **10.000.013-K**, representada por **Ana Prueba**, pasaporte N° **AB123456**, correo ana@example.com, teléfono +56 9 1111 1111, con domicilio en Calle Falsa 123, Santiago.', 'T15: empresa con representante con pasaporte: «representada por **X**, pasaporte N° **…**»');
+ok($emp_pas === '**[PRUEBA] Negocio SpA** (en adelante "**EL CLIENTE**"), RUT **10.000.013-K**, representada por **Ana Prueba**, pasaporte N° **AB123456**, correo ana@example.com, teléfono +56 9 1111 1111, con domicilio en Calle Falsa 123, Santiago.', 'T15: empresa con representante con pasaporte: «representada por **X**, pasaporte N° **…**»');
 ok(strpos(ContractService::comparecencia_cliente(['tipo_cliente' => 'empresa', 'tipo_documento_cliente' => 'dni'] + $datos), '"**EL CLIENTE**"), RUT **10.000.013-K**, representada') !== false, 'T15: la empresa siempre muestra RUT para su propio número');
 ok(ContractService::comparecencia_cliente(['tipo_cliente' => 'empresa', 'tipo_documento_representante' => 'dni']) === '**_______** (en adelante "**EL CLIENTE**"), RUT **_______**, representada por **_______**, DNI N° **_______**, correo _______, teléfono _______, con domicilio en _______.', 'T15: sin número, el rótulo del tipo con _______');
 ok($per === ContractService::comparecencia_cliente(['tipo_documento_cliente' => 'rut'] + $per_datos) && $emp === ContractService::comparecencia_cliente(['tipo_cliente' => 'empresa', 'tipo_documento_representante' => 'rut'] + $datos), 'T15: sin tipo de documento (contratos viejos) sale igual que con RUT');
@@ -87,7 +87,7 @@ ok(ContractService::faltantes($ct(['representante_cliente_rut' => 'AB'] + $compl
 ok(ContractService::faltantes($ct(['tipo_documento_cliente' => 'dni', 'rut_cliente' => '12345678'] + $completo_empresa)) === ['RUT de la empresa (no es válido)'], 'T15: el RUT de la empresa sigue validándose como RUT aunque el tipo del cliente diga DNI');
 ok(ContractService::faltantes($ct(['tipo_documento_cliente' => 'cedula', 'rut_cliente' => '12345678'] + $completo_persona)) === ['Documento del cliente (no es válido)'], 'T15: un tipo de documento desconocido no valida');
 
-$c = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Muebles', 'monto_total' => '$1.000'], 'created_by' => 0]);
+$c = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Negocio', 'monto_total' => '$1.000'], 'created_by' => 0]);
 ok(is_object($c) && $c->type === 'servicios' && $c->template_id === 'servicios_v1' && $c->status === 'at_pending', 'contrato de servicios creado en at_pending');
 $ph = json_decode($c->placeholders, true);
 ok(strpos($ph['contract_title'], 'DESARROLLO') !== false, 'título de servicios guardado');
@@ -131,19 +131,19 @@ $sop = ContractService::create_contract(['client_id' => 0, 'type' => 'soporte', 
 ok(is_object($sop) && !ContractService::necesita_revision($sop), 'el de soporte no pide revisión');
 
 // ---------- Task 5b: datos que da el cliente después de aceptar (los usa la Task 7) ----------
-$c2 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Muebles', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1', 'nombre_proyecto' => '[PRUEBA] Muebles', 'monto_total' => '$1.000', 'forma_pago' => 'Contado.'], 'created_by' => 0]);
-$u = ContractService::actualizar_datos_cliente($c2->id, ['tipo_cliente' => 'empresa', 'razon_social_cliente' => '[PRUEBA] Muebles SpA', 'rut_cliente' => '10.000.013-K', 'domicilio_cliente' => " Calle Falsa 123,\r\nSantiago ", 'monto_total' => '$1', 'representante_cliente_nombre' => 'Otra', 'revision_at' => '2026-01-01 00:00:00', 'inventado' => 'x']);
+$c2 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Negocio', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1', 'nombre_proyecto' => '[PRUEBA] Negocio', 'monto_total' => '$1.000', 'forma_pago' => 'Contado.'], 'created_by' => 0]);
+$u = ContractService::actualizar_datos_cliente($c2->id, ['tipo_cliente' => 'empresa', 'razon_social_cliente' => '[PRUEBA] Negocio SpA', 'rut_cliente' => '10.000.013-K', 'domicilio_cliente' => " Calle Falsa 123,\r\nSantiago ", 'monto_total' => '$1', 'representante_cliente_nombre' => 'Otra', 'revision_at' => '2026-01-01 00:00:00', 'inventado' => 'x']);
 $phu = is_wp_error($u) ? [] : json_decode($u->placeholders, true);
-ok(($phu['tipo_cliente'] ?? '') === 'empresa' && ($phu['razon_social_cliente'] ?? '') === '[PRUEBA] Muebles SpA' && ($phu['rut_cliente'] ?? '') === '10.000.013-K' && ($phu['domicilio_cliente'] ?? '') === "Calle Falsa 123,\nSantiago", 'guarda tipo, razón social, RUT y domicilio (limpios)');
+ok(($phu['tipo_cliente'] ?? '') === 'empresa' && ($phu['razon_social_cliente'] ?? '') === '[PRUEBA] Negocio SpA' && ($phu['rut_cliente'] ?? '') === '10.000.013-K' && ($phu['domicilio_cliente'] ?? '') === "Calle Falsa 123,\nSantiago", 'guarda tipo, razón social, RUT y domicilio (limpios)');
 ok(($phu['monto_total'] ?? '') === '$1.000' && ($phu['representante_cliente_nombre'] ?? '') === 'Ana Prueba' && !isset($phu['inventado']), 'ignora las claves ajenas');
 ok(!isset($phu['revision_at']) && !is_wp_error($u) && ContractService::necesita_revision($u), 'no marca la revisión: Luis igual la revisa');
 $txtu = texto_pdf(pdf_de($c2));
-ok(strpos($txtu, 'representada por') !== false && strpos($txtu, 'Muebles SpA') !== false && strpos($txtu, 'con domicilio en Calle Falsa 123, Santiago.') !== false, 'el PDF regenerado trae el párrafo de empresa');
+ok(strpos($txtu, 'representada por') !== false && strpos($txtu, 'Negocio SpA') !== false && strpos($txtu, 'con domicilio en Calle Falsa 123, Santiago.') !== false, 'el PDF regenerado trae el párrafo de empresa');
 $u2 = ContractService::actualizar_datos_cliente($c2->id, ['tipo_cliente' => 'persona', 'domicilio_cliente' => 'Calle Falsa 123, Santiago']);
 $phu2 = is_wp_error($u2) ? [] : json_decode($u2->placeholders, true);
 ok(($phu2['tipo_cliente'] ?? '') === 'persona' && ($phu2['razon_social_cliente'] ?? '') === 'Ana Prueba' && ($phu2['rut_cliente'] ?? '') === '11.111.111-1', 'persona natural: el contrato va a nombre y RUT de quien aceptó, no de la marca');
 $txtu2 = texto_pdf(pdf_de($c2));
-ok(strpos($txtu2, 'representada por') === false && strpos($txtu2, 'para su proyecto «[PRUEBA] Muebles».') !== false, 'el PDF regenerado trae el párrafo de persona con su proyecto');
+ok(strpos($txtu2, 'representada por') === false && strpos($txtu2, 'para su proyecto «[PRUEBA] Negocio».') !== false, 'el PDF regenerado trae el párrafo de persona con su proyecto');
 $antes = ContractService::get_by_id($c2->id)->placeholders;
 $u3 = ContractService::actualizar_datos_cliente($c2->id, ['tipo_cliente' => 'sociedad', 'domicilio_cliente' => 'Otra 1']);
 ok(is_wp_error($u3) && ContractService::get_by_id($c2->id)->placeholders === $antes, 'un tipo desconocido se rechaza y no cambia nada');
@@ -159,7 +159,7 @@ ok(is_wp_error(ContractService::actualizar_datos_cliente($sop->id, ['tipo_client
 // que el cliente ya había escrito explícitamente en una llamada anterior (antes se borraba
 // porque el bloque de "persona natural" no distinguía "esta llamada no lo trae" de "nunca se
 // personalizó"; lo confundía con el nombre por defecto de la propuesta).
-$c4 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Muebles', 'representante_cliente_nombre' => 'Representante Distinto', 'representante_cliente_rut' => '22.222.222-2', 'monto_total' => '$1.000', 'forma_pago' => 'Contado.'], 'created_by' => 0]);
+$c4 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Negocio', 'representante_cliente_nombre' => 'Representante Distinto', 'representante_cliente_rut' => '22.222.222-2', 'monto_total' => '$1.000', 'forma_pago' => 'Contado.'], 'created_by' => 0]);
 $v1 = ContractService::actualizar_datos_cliente($c4->id, ['tipo_cliente' => 'persona', 'razon_social_cliente' => 'Nombre Propio Del Cliente', 'rut_cliente' => '33.333.333-3', 'domicilio_cliente' => 'Calle Uno 1']);
 $phv1 = is_wp_error($v1) ? [] : json_decode($v1->placeholders, true);
 ok(!is_wp_error($v1) && ($phv1['razon_social_cliente'] ?? '') === 'Nombre Propio Del Cliente' && ($phv1['rut_cliente'] ?? '') === '33.333.333-3', 'persona: guarda el nombre y RUT que escribió el cliente, distintos del representante');
@@ -170,7 +170,7 @@ ok(!is_wp_error($v2) && ($phv2['razon_social_cliente'] ?? '') === 'Nombre Propio
 // Task 5b ronda 1 (hallazgo 2): un "<" sin cerrar en un dato (plazo) no debe borrar cláusulas
 // completas del PDF (el regex que quita etiquetas cruzaba líneas y se comía todo hasta el
 // próximo ">", que podía venir de otro marcador varias líneas más abajo).
-$c5 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Muebles', 'monto_total' => '$1.000.000'], 'created_by' => 0]);
+$c5 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Negocio', 'monto_total' => '$1.000.000'], 'created_by' => 0]);
 ContractService::guardar_revision($c5->id, ['tipo_cliente' => 'empresa', 'rut_cliente' => '10.000.013-K', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1', 'domicilio_cliente' => 'Calle Falsa 123, Santiago', 'plazo' => 'Entrega <a convenir en la reunion de inicio', 'forma_pago' => '50 % al firmar -> 50 % a la entrega']);
 $txt5 = texto_pdf(pdf_de($c5));
 ok(strpos($txt5, '5.1. El precio total') !== false, 'un "<" sin cerrar en el plazo no borra la cláusula del precio (5.1)');
@@ -184,16 +184,16 @@ ok(strpos($txt5, 'Entrega <a convenir en la reunion de inicio') !== false && str
 // escribe otro nombre, se respeta. faltantes() además detecta como red de seguridad el caso en
 // que, por otra vía, la razón social siga igual a la marca.
 $marca_precio = ['monto_total' => '$1.000', 'forma_pago' => 'Contado.'];
-$c6 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Marca Muebles', 'nombre_proyecto' => '[PRUEBA] Marca Muebles', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1'] + $marca_precio, 'created_by' => 0]);
+$c6 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Marca Negocio', 'nombre_proyecto' => '[PRUEBA] Marca Negocio', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1'] + $marca_precio, 'created_by' => 0]);
 $r6 = ContractService::guardar_revision($c6->id, ['tipo_cliente' => 'persona', 'domicilio_cliente' => 'Calle Falsa 123, Santiago']);
 $ph6 = is_wp_error($r6) ? [] : json_decode($r6->placeholders, true);
 ok(!is_wp_error($r6) && ($ph6['razon_social_cliente'] ?? '') === 'Ana Prueba', 'persona sin tocar la razón social: toma el nombre de quien aceptó, no el de la marca');
 ok(!is_wp_error($r6) && ContractService::faltantes($r6) === [], 'con el nombre corregido ya no falta nada');
-$c7 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Marca Muebles', 'nombre_proyecto' => '[PRUEBA] Marca Muebles', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1'] + $marca_precio, 'created_by' => 0]);
+$c7 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Marca Negocio', 'nombre_proyecto' => '[PRUEBA] Marca Negocio', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1'] + $marca_precio, 'created_by' => 0]);
 $r7 = ContractService::guardar_revision($c7->id, ['tipo_cliente' => 'persona', 'razon_social_cliente' => 'Otro Nombre Del Cliente', 'domicilio_cliente' => 'Calle Falsa 123, Santiago']);
 $ph7 = is_wp_error($r7) ? [] : json_decode($r7->placeholders, true);
 ok(!is_wp_error($r7) && ($ph7['razon_social_cliente'] ?? '') === 'Otro Nombre Del Cliente', 'si Luis escribe un nombre distinto del de la marca, se respeta');
-$marca_persona_base = ['tipo_cliente' => 'persona', 'razon_social_cliente' => '[PRUEBA] Marca Muebles', 'nombre_proyecto' => '[PRUEBA] Marca Muebles', 'representante_cliente_nombre' => 'Ana Prueba', 'rut_cliente' => '11.111.111-1', 'domicilio_cliente' => 'Calle Falsa 123, Santiago'] + $marca_precio;
+$marca_persona_base = ['tipo_cliente' => 'persona', 'razon_social_cliente' => '[PRUEBA] Marca Negocio', 'nombre_proyecto' => '[PRUEBA] Marca Negocio', 'representante_cliente_nombre' => 'Ana Prueba', 'rut_cliente' => '11.111.111-1', 'domicilio_cliente' => 'Calle Falsa 123, Santiago'] + $marca_precio;
 ok(ContractService::faltantes($ct($marca_persona_base)) === ['Nombre completo del cliente (hoy dice el nombre de la marca)'], 'faltantes(): red de seguridad si la razón social sigue igual a la marca y distinta de quien aceptó');
 ok(ContractService::faltantes($ct(array_diff_key($marca_persona_base, ['representante_cliente_nombre' => 1]))) === [], 'faltantes(): sin representante en los datos, no hay con qué comparar y no se marca como marca');
 ok(ContractService::faltantes($ct(['razon_social_cliente' => 'Ana Prueba', 'nombre_proyecto' => '  ana   PRUEBA '] + array_diff_key($marca_persona_base, ['razon_social_cliente' => 1, 'nombre_proyecto' => 1]))) === [], 'faltantes(): si su propio nombre coincide con el del proyecto, no se marca como marca');
@@ -205,8 +205,8 @@ ok(ContractService::faltantes($ct(['razon_social_cliente' => 'Ana Prueba', 'nomb
 // ANTES de llamar a persona_marca_igual_al_proyecto(), así que ni el reemplazo ni la red de
 // seguridad de faltantes() se activaban (los dos exigían representante_cliente_nombre !== '' en
 // el momento de la llamada): el contrato quedaba a nombre de la marca con el RUT personal.
-$c8 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Marca Muebles', 'nombre_proyecto' => '[PRUEBA] Marca Muebles', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1'] + $marca_precio, 'created_by' => 0]);
-$r8 = ContractService::guardar_revision($c8->id, ['tipo_cliente' => 'persona', 'razon_social_cliente' => '[PRUEBA] Marca Muebles', 'representante_cliente_nombre' => '', 'domicilio_cliente' => 'Calle Falsa 123, Santiago']);
+$c8 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Marca Negocio', 'nombre_proyecto' => '[PRUEBA] Marca Negocio', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1'] + $marca_precio, 'created_by' => 0]);
+$r8 = ContractService::guardar_revision($c8->id, ['tipo_cliente' => 'persona', 'razon_social_cliente' => '[PRUEBA] Marca Negocio', 'representante_cliente_nombre' => '', 'domicilio_cliente' => 'Calle Falsa 123, Santiago']);
 $ph8 = is_wp_error($r8) ? [] : json_decode($r8->placeholders, true);
 ok(!is_wp_error($r8) && ($ph8['razon_social_cliente'] ?? '') === 'Ana Prueba' && ($ph8['rut_cliente'] ?? '') === '11.111.111-1', 'persona: si Luis borra el representante en la misma llamada, igual toma el nombre y RUT de quien aceptó, no el de la marca');
 ok(!is_wp_error($r8) && ContractService::faltantes($r8) === [], 'con el nombre corregido en la misma llamada, faltantes() ya no lo marca');
@@ -215,7 +215,7 @@ ok(!is_wp_error($r8) && ContractService::faltantes($r8) === [], 'con el nombre c
 // contrato) protege incluso cuando representante_cliente_nombre YA está vacío en lo guardado
 // (una revisión anterior a este arreglo, u otra vía): faltantes() lo detecta igual, y una
 // revisión posterior que no toca la razón social la corrige usando aceptante_nombre.
-$marca_sin_representante = ['tipo_cliente' => 'persona', 'razon_social_cliente' => '[PRUEBA] Marca Muebles', 'nombre_proyecto' => '[PRUEBA] Marca Muebles', 'aceptante_nombre' => 'Ana Prueba', 'rut_cliente' => '11.111.111-1', 'domicilio_cliente' => 'Calle Falsa 123, Santiago'] + $marca_precio;
+$marca_sin_representante = ['tipo_cliente' => 'persona', 'razon_social_cliente' => '[PRUEBA] Marca Negocio', 'nombre_proyecto' => '[PRUEBA] Marca Negocio', 'aceptante_nombre' => 'Ana Prueba', 'rut_cliente' => '11.111.111-1', 'domicilio_cliente' => 'Calle Falsa 123, Santiago'] + $marca_precio;
 ok(ContractService::faltantes($ct($marca_sin_representante)) === ['Nombre completo del cliente (hoy dice el nombre de la marca)'], 'faltantes(): aceptante_nombre detecta la marca aunque representante_cliente_nombre ya no esté guardado');
 $c9 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => $marca_sin_representante, 'created_by' => 0]);
 $r9 = ContractService::guardar_revision($c9->id, ['domicilio_cliente' => 'Calle Falsa 123, Santiago']);
@@ -236,7 +236,7 @@ ok($cr['tipo_documento_cliente'] === ['Tipo de documento del cliente', 'document
 ok($cr['rut_cliente'][0] === 'Documento del cliente (RUT si es empresa)' && $cr['representante_cliente_rut'][0] === 'Documento del representante (solo si es empresa)', 'T15: etiquetas de los números: «Documento del cliente (RUT si es empresa)» y «Documento del representante (solo si es empresa)»');
 ok(ContractService::tipos_documento() === ['rut' => 'RUT', 'dni' => 'DNI', 'pasaporte' => 'Pasaporte'], 'T15: tipos de documento del selector');
 // Aceptó con DNI (marcadores como los arma at_cc_marcadores_servicios()) y el cliente deja sus datos como persona.
-$ph_dni = ['razon_social_cliente' => '[PRUEBA] Marca Muebles', 'nombre_proyecto' => '[PRUEBA] Marca Muebles', 'representante_cliente_nombre' => 'Ana Prueba', 'aceptante_nombre' => 'Ana Prueba', 'tipo_documento_cliente' => 'rut', 'tipo_documento_representante' => 'dni', 'representante_cliente_rut' => '12345678'] + $marca_precio;
+$ph_dni = ['razon_social_cliente' => '[PRUEBA] Marca Negocio', 'nombre_proyecto' => '[PRUEBA] Marca Negocio', 'representante_cliente_nombre' => 'Ana Prueba', 'aceptante_nombre' => 'Ana Prueba', 'tipo_documento_cliente' => 'rut', 'tipo_documento_representante' => 'dni', 'representante_cliente_rut' => '12345678'] + $marca_precio;
 $c10 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => $ph_dni, 'created_by' => 0]);
 $u10 = ContractService::actualizar_datos_cliente($c10->id, ['tipo_cliente' => 'persona', 'domicilio_cliente' => 'Calle Falsa 123, Santiago']);
 $ph10 = is_wp_error($u10) ? [] : json_decode($u10->placeholders, true);
@@ -247,7 +247,7 @@ ok(strpos($txt10, 'DNI N° 12345678') !== false && strpos($txt10, 'RUT 12345678'
 $antes10 = ContractService::get_by_id($c10->id)->placeholders;
 $u10x = ContractService::actualizar_datos_cliente($c10->id, ['tipo_documento_cliente' => 'cedula', 'domicilio_cliente' => 'Otra 1']);
 ok(is_wp_error($u10x) && ContractService::get_by_id($c10->id)->placeholders === $antes10, 'T15: datos del cliente con un tipo de documento desconocido: se rechaza y no cambia nada');
-$u10b = ContractService::actualizar_datos_cliente($c10->id, ['tipo_cliente' => 'empresa', 'razon_social_cliente' => '[PRUEBA] Muebles SpA', 'rut_cliente' => '10.000.013-K', 'tipo_documento_cliente' => 'rut']);
+$u10b = ContractService::actualizar_datos_cliente($c10->id, ['tipo_cliente' => 'empresa', 'razon_social_cliente' => '[PRUEBA] Negocio SpA', 'rut_cliente' => '10.000.013-K', 'tipo_documento_cliente' => 'rut']);
 $ph10b = is_wp_error($u10b) ? [] : json_decode($u10b->placeholders, true);
 ok(($ph10b['tipo_documento_cliente'] ?? '') === 'rut' && ($ph10b['rut_cliente'] ?? '') === '10.000.013-K' && ($ph10b['tipo_documento_representante'] ?? '') === 'dni', 'T15: empresa: el cliente es RUT y el representante conserva su DNI');
 $txt10b = texto_pdf(pdf_de($c10));
@@ -282,7 +282,7 @@ function pagina_revision(string $token, ?array $post = null): string {
 }
 $admins = get_users(['role' => 'administrator', 'number' => 1, 'fields' => 'ID']);
 wp_set_current_user((int) ($admins[0] ?? 0));
-$c3 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Muebles'], 'created_by' => 0]);
+$c3 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Negocio'], 'created_by' => 0]);
 $h = pagina_revision($c3->at_review_token);
 ok(strpos($h, '<select name="rev[tipo_cliente]"') !== false && strpos($h, '— Elegir —') !== false && strpos($h, 'Persona natural (a su nombre)') !== false && strpos($h, 'Empresa o persona jurídica') !== false, 'la página pide el tipo de cliente con un selector');
 ok(strpos($h, 'Representante (solo si es empresa)') !== false && strpos($h, 'Fases siguientes (una por línea, empezando con «- »)') !== false, 'la página muestra los campos nuevos de la revisión');
@@ -302,8 +302,8 @@ ContractService::guardar_revision($c3->id, ['rut_cliente' => '10.000.013-K', 're
 $h = pagina_revision($c3->at_review_token);
 ok(strpos($h, 'id="signForm"') !== false && strpos($h, 'Antes de firmar completa') === false, 'con los datos completos aparece el bloque de firma');
 // Task 15: la página guarda el tipo de documento del representante y lo muestra elegido.
-$c13 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Muebles SpA'] + $marca_precio, 'created_by' => 0]);
-$rev13 = ['tipo_cliente' => 'empresa', 'razon_social_cliente' => '[PRUEBA] Muebles SpA', 'tipo_documento_cliente' => 'rut', 'rut_cliente' => '10.000.013-K', 'domicilio_cliente' => 'Calle Falsa 123, Santiago', 'representante_cliente_nombre' => 'Ana Prueba', 'tipo_documento_representante' => 'pasaporte', 'representante_cliente_rut' => 'AB123456', 'monto_total' => '$1.000', 'forma_pago' => 'Contado.'];
+$c13 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Negocio SpA'] + $marca_precio, 'created_by' => 0]);
+$rev13 = ['tipo_cliente' => 'empresa', 'razon_social_cliente' => '[PRUEBA] Negocio SpA', 'tipo_documento_cliente' => 'rut', 'rut_cliente' => '10.000.013-K', 'domicilio_cliente' => 'Calle Falsa 123, Santiago', 'representante_cliente_nombre' => 'Ana Prueba', 'tipo_documento_representante' => 'pasaporte', 'representante_cliente_rut' => 'AB123456', 'monto_total' => '$1.000', 'forma_pago' => 'Contado.'];
 $h13 = pagina_revision($c13->at_review_token, ['_at_nonce' => wp_create_nonce('at_sign_' . $c13->id), 'action' => 'revisar', 'rev' => wp_slash($rev13)]);
 $ph13 = json_decode(ContractService::get_by_id($c13->id)->placeholders, true);
 ok(($ph13['tipo_documento_representante'] ?? '') === 'pasaporte' && ($ph13['representante_cliente_rut'] ?? '') === 'AB123456', 'T15: la página guarda el pasaporte del representante');

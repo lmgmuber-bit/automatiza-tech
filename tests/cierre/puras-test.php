@@ -50,12 +50,12 @@ ok(!at_cc_transicion_respuesta_valida('sent', 'archivada') && !at_cc_transicion_
 ok(!at_cc_puede_pedir_respuesta('archivada'), 'no se pide respuesta de una archivada (sin barra pública ni «Pedir respuesta»)');
 
 // Montos y anticipo
-ok(at_cc_monto_de_etiqueta('$2.000.000 en 2 pagos') === 2000000, 'monto con puntos');
+ok(at_cc_monto_de_etiqueta('$1.000.000 en 2 pagos') === 1000000, 'monto con puntos');
 ok(at_cc_monto_de_etiqueta('$250.000 en 2 pagos') === 250000, 'monto $250.000');
 ok(at_cc_monto_de_etiqueta('$1.250.000 en 2 pagos (estimado)') === 1250000, 'monto estimado');
 ok(at_cc_monto_de_etiqueta('$120.000 al mes') === 120000, 'monto mensual se lee');
 ok(at_cc_monto_de_etiqueta('Incluido') === null && at_cc_monto_de_etiqueta('Por confirmar') === null, 'sin monto');
-ok(at_cc_es_mensual('$120.000 al mes') && at_cc_es_mensual('$50.000 mensual') && !at_cc_es_mensual('$2.000.000 en 2 pagos'), 'mensual');
+ok(at_cc_es_mensual('$120.000 al mes') && at_cc_es_mensual('$50.000 mensual') && !at_cc_es_mensual('$1.000.000 en 2 pagos'), 'mensual');
 $filas = [
 	['service' => 'Fase 1', 'price_label' => '$250.000 en 2 pagos'],
 	['service' => 'Fase 2', 'price_label' => '$400.000 en 2 pagos'],
@@ -64,7 +64,7 @@ $filas = [
 ];
 ok(at_cc_total_unico($filas) === 650000, 'total único sin mensuales ni incluidos');
 ok(at_cc_anticipo($filas) === 325000, 'anticipo 50 %');
-ok(at_cc_anticipo([['service' => 'X', 'price_label' => '$2.000.000 en 2 pagos']]) === 1000000, 'anticipo de una fase');
+ok(at_cc_anticipo([['service' => 'X', 'price_label' => '$1.000.000 en 2 pagos']]) === 500000, 'anticipo de una fase');
 ok(at_cc_anticipo([['service' => 'X', 'price_label' => 'Por confirmar']]) === null, 'anticipo sin montos');
 ok(at_cc_anticipo([['service' => 'X', 'price_label' => '$333']]) === 167, 'anticipo redondea');
 ok(at_cc_formato_clp(1000000) === '$1.000.000' && at_cc_formato_clp(0) === '$0', 'formato CLP');
@@ -142,14 +142,14 @@ ok(strpos($bl, 'Aceptar la propuesta') !== false && strpos($bl, 'href="https://e
 $bl_sin = at_cc_bloque_aceptar_html('https://e.cl/?a=1', '');
 ok(strpos($bl_sin, 'Aceptar la propuesta') !== false && strpos($bl_sin, '¿Tienes dudas') === false && substr_count($bl_sin, '<a ') === 1, 'RF8: bloque sin URL de evaluar: solo el botón de aceptar');
 ok(strpos($bl, '¿Tienes dudas') !== false && substr_count($bl, '<a ') === 2, 'RF8: con URL de evaluar sigue el enlace de dudas');
-$t = at_cc_texto_whatsapp('Ana', 'Muebles', 'https://e.cl/x');
-ok(strpos($t, 'Hola Ana') === 0 && strpos($t, 'para Muebles') !== false && strpos($t, 'https://e.cl/x') !== false, 'texto de WhatsApp');
+$t = at_cc_texto_whatsapp('Ana', 'Empresa', 'https://e.cl/x');
+ok(strpos($t, 'Hola Ana') === 0 && strpos($t, 'para Empresa') !== false && strpos($t, 'https://e.cl/x') !== false, 'texto de WhatsApp');
 ok(at_cc_url_wa_me('+56 9 1234 5678', 'a b') === 'https://wa.me/56912345678?text=a%20b', 'enlace wa.me');
 ok(at_cc_url_wa_me('', 'x') === '', 'sin teléfono no hay enlace');
 
 // Marcadores del contrato de servicios
 $m = at_cc_marcadores_servicios([
-	'empresa' => 'Muebles', 'representante' => 'Ana', 'rut_representante' => '11.111.111-1',
+	'empresa' => 'Empresa', 'representante' => 'Ana', 'rut_representante' => '11.111.111-1',
 	'email' => 'ana@example.com', 'telefono' => '+56 9 1111 1111', 'codigo_propuesta' => 'abc123',
 	'fecha_propuesta' => '24 de septiembre de 2026', 'fecha_aceptacion' => '25 de septiembre de 2026',
 	'canal_aceptacion' => 'en la página de la propuesta', 'filas_aceptadas' => [$filas[0], $filas[2]],
@@ -171,7 +171,7 @@ ok(($m['aceptante_nombre'] ?? null) === 'Ana' && ($m2['aceptante_nombre'] ?? nul
 ok(in_array('tipo_cliente', at_cc_claves_contrato_servicios(), true), 'tipo_cliente es un marcador conocido');
 ok(!isset($m['tipo_cliente']) && !isset($m2['tipo_cliente']), 'sin tipo no hay marcador de tipo');
 $m3 = at_cc_marcadores_servicios(['representante' => 'Ana', 'tipo_cliente' => 'persona']);
-$m4 = at_cc_marcadores_servicios(['empresa' => 'Muebles', 'representante' => 'Ana', 'tipo_cliente' => 'empresa']);
+$m4 = at_cc_marcadores_servicios(['empresa' => 'Empresa', 'representante' => 'Ana', 'tipo_cliente' => 'empresa']);
 $m5 = at_cc_marcadores_servicios(['representante' => 'Ana', 'tipo_cliente' => 'otra cosa']);
 ok(($m3['tipo_cliente'] ?? '') === 'persona' && ($m4['tipo_cliente'] ?? '') === 'empresa', 'tipo_cliente persona o empresa pasa al marcador');
 ok(!isset($m5['tipo_cliente']), 'un tipo desconocido no pasa al marcador');
@@ -213,7 +213,7 @@ ok(at_cc_mimes_evidencia() === ['image/jpeg' => 'jpg', 'image/png' => 'png', 'im
 // Correos
 $banco = ['banco' => 'Banco de Prueba', 'tipo' => 'Cuenta corriente', 'numero' => '123', 'titular' => 'AutomatizaTech SpA', 'rut' => '78.363.717-0'];
 ok(at_cc_banco_completo($banco) && !at_cc_banco_completo(['banco' => 'X']), 'banco completo');
-$b = at_cc_bienvenida_html(['nombre' => 'Ana <b>', 'empresa' => 'Muebles', 'anticipo' => 1000000, 'banco' => $banco, 'correo_pago' => 'pagos@example.com', 'whatsapp' => '+56 9 2700 2984', 'url_portal' => 'https://example.com/portal?a=1&b=2', 'logo' => '', 'con_propuesta' => true]);
+$b = at_cc_bienvenida_html(['nombre' => 'Ana <b>', 'empresa' => 'Empresa', 'anticipo' => 1000000, 'banco' => $banco, 'correo_pago' => 'pagos@example.com', 'whatsapp' => '+56 9 2700 2984', 'url_portal' => 'https://example.com/portal?a=1&b=2', 'logo' => '', 'con_propuesta' => true]);
 ok(strpos($b, '$1.000.000') !== false && strpos($b, 'Banco de Prueba') !== false, 'bienvenida con anticipo y banco');
 ok(strpos($b, 'Ana &lt;b&gt;') !== false, 'nombre escapado');
 ok(strpos($b, 'https://wa.me/56927002984') !== false, 'enlace al WhatsApp de AT');
@@ -229,7 +229,7 @@ ok(strpos($b, $linea_datos) !== false && strpos($b2, $linea_datos) !== false, 'c
 ok(strpos($b3, 'Para preparar tu contrato') === false, 'sin propuesta no pide los datos del contrato');
 $pos_datos = strpos($b, $linea_datos);
 ok($pos_datos !== false && $pos_datos < strpos($b, 'Un abrazo'), 'la línea de los datos va antes del cierre del correo');
-$pd = at_cc_pedido_respuesta_html('Ana', 'Muebles', '<div>BLOQUE</div>', '', 'https://e.cl/v');
+$pd = at_cc_pedido_respuesta_html('Ana', 'Empresa', '<div>BLOQUE</div>', '', 'https://e.cl/v');
 ok(strpos($pd, 'Hola <strong>Ana</strong>') !== false && strpos($pd, '<div>BLOQUE</div>') !== false && strpos($pd, 'https://e.cl/v') !== false, 'correo para pedir respuesta');
 
 echo $fallas ? "\n$fallas FALLAS\n" : "\nTODO OK\n";

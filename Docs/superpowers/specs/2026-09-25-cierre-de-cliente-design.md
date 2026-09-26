@@ -183,7 +183,7 @@ En una página propia, Propuestas › «Ajustes del cierre» (opciones de WordPr
 
 **Envío**
 
-- Plantilla nueva en Meta, `propuesta_respuesta`, en español, con variables para el nombre, la empresa y lo que se propone partir con su precio (ej. «Fase 1: Configurador 3D, $2.000.000 IVA incluido»). Lleva cuatro botones sin emoji (Meta rechaza emojis en botones: lo medimos el 24-sep):
+- Plantilla nueva en Meta, `propuesta_respuesta`, en español, con variables para el nombre, la empresa y lo que se propone partir con su precio (ej. «Fase 1: Servicio de prueba, $1.000.000 IVA incluido»). Lleva cuatro botones sin emoji (Meta rechaza emojis en botones: lo medimos el 24-sep):
   - tres de respuesta rápida: «Acepto la propuesta», «La sigo evaluando» y «No, gracias», con carga `btn_propuesta_acepta_<código>`, `btn_propuesta_evalua_<código>` y `btn_propuesta_rechaza_<código>`;
   - uno de enlace: «Ver la propuesta», a la página de respuesta.
 - Categoría Utility; si Meta la reclasifica como Marketing, se informa a Luis antes de usarla.
@@ -217,7 +217,7 @@ En una página propia, Propuestas › «Ajustes del cierre» (opciones de WordPr
 - El RUT se valida con dígito verificador.
 - El endpoint de respuestas por WhatsApp (`at/v1/propuesta-respuesta`) exige clave de cabecera, guardada solo en n8n y en `wp-config.php`, y solo acepta la respuesta si el teléfono que tocó el botón es el de la propuesta.
 - Los datos bancarios se guardan como opciones de WordPress. No son secretos, pero no se escriben en el repositorio.
-- El enlace al portal que va en la bienvenida usa la función de firma de enlaces vigente. La rama `claude/crm-enlaces-fichas` la reemplaza: si se despliega antes, la bienvenida usa la nueva.
+- El enlace al portal que va en la bienvenida se arma con `at_crm_url_portal()`.
 - El repositorio es público: nada de esta obra describe ni deja expuestos datos de clientes.
 
 ## 6. Pruebas
@@ -246,3 +246,9 @@ Pago en línea con Flow, formulario del cliente para subir logo y archivos, hoja
 - A PROD por SSH solo con el ok de Luis y por etapa: respaldo de la base y de los archivos, luego migración antes que el código, luego verificación desde afuera.
 - `ver-presentacion.php` vive en la raíz del sitio: se respalda y se sube aparte.
 - Primer caso real: la propuesta 43, cuyo cliente ya dijo que sí por WhatsApp, con «Registrar aceptación».
+
+## Addenda (26-sep)
+
+- **Estado `archivada`** (Task 14): Luis archiva una propuesta vieja o reemplazada; el cliente ya no puede responderla (ni desde la página ni por WhatsApp). Luis la desarchiva, o registra la aceptación a mano si el estado en que estaba antes de archivarla ya lo permitía.
+- **Tipo de documento** (Task 15): el cliente (persona o representante de una empresa) acepta con RUT, DNI o pasaporte; la empresa siempre comparece con RUT. El contrato y sus avisos muestran el tipo y el número tal como se declararon.
+- **Línea de tiempo del cliente por su ficha enlazada** (Task 16): el portal del cliente y la ficha del admin arman la línea de tiempo de `wp_automatiza_clients_details` por los ids de sus fichas operativas enlazadas (`wp_automatiza_tech_clients.crm_cliente_id`), nunca por su propio id del CRM. Sin ficha enlazada no se muestra ninguna fila de clientes.

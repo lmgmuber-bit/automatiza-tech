@@ -23,9 +23,12 @@ if (!isset($GLOBALS['at_crm_ai']) || !method_exists($GLOBALS['at_crm_ai'], 'rend
 	fwrite(STDERR, "El mu-plugin crm-ai-completo.php no está cargado en ese sitio.\n");
 	exit(2);
 }
+// El token sale de la URL real que arma get_prospect_timeline_url(): no se repite aquí su receta.
+$url_prospecto = AutomatizaTech_CRM_AI::get_prospect_timeline_url($propuesta_id);
+parse_str((string) wp_parse_url($url_prospecto, PHP_URL_QUERY), $q_prospecto);
 $_GET['crm_view'] = 'prospect_timeline';
 $_GET['pid'] = $propuesta_id;
-$_GET['token'] = md5($propuesta_id . 'AUTOMATIZA_PROSPECT_V1' . $email);
+$_GET['token'] = (string) ($q_prospecto['token'] ?? '');
 $GLOBALS['at_crm_ai']->render_public_prospect_timeline();
 // No debería llegar aquí: el método real siempre termina con exit; si esto se ve en stderr, revisa
 // is_admin() en el entorno del WordPress local de prueba.

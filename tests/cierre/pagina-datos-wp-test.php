@@ -7,15 +7,15 @@ $correos = [];
 add_filter('pre_wp_mail', function ($nulo, $atts) use (&$correos) { $correos[] = $atts; return true; }, 10, 2);
 $marca = 'prueba-cierre-datos-' . strtolower(wp_generate_password(6, false, false));
 $payload = [
-	'company_name' => '[PRUEBA] Muebles', 'solution_text' => 'Configurador 3D de módulos.',
-	'pricing_rows' => [['service' => 'Fase 1: Configurador 3D', 'price_usd' => 0, 'price_label' => '$2.000.000 en 2 pagos']],
+	'company_name' => '[PRUEBA] Empresa', 'solution_text' => 'Servicio de prueba.',
+	'pricing_rows' => [['service' => 'Fase 1: Servicio de prueba', 'price_usd' => 0, 'price_label' => '$1.000.000 en 2 pagos']],
 ];
 $creadas = [];
 function crear_propuesta_datos(string $marca, array $payload, array &$creadas): object {
 	global $wpdb;
 	$ok = $wpdb->insert($wpdb->prefix . 'automatiza_propuestas', [
 		'client_email' => $marca . microtime(true) . '@example.com', 'unique_link_id' => substr(md5($marca . microtime(true)), 0, 12),
-		'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Muebles', 'phone' => '+56 9 2222 2222',
+		'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Empresa', 'phone' => '+56 9 2222 2222',
 		'status' => 'sent', 'flujo' => 'v3', 'gamma_prompt_text' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
 		'transcript_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql'),
 	]);
@@ -75,7 +75,7 @@ $c2_antes = ContractService::get_by_id((int) $r2['contrato_id']);
 $ph2_antes = $c2_antes->placeholders;
 $fila_tech_2_antes = $wpdb->get_row($wpdb->prepare("SELECT billing_address, tax_id, company FROM {$tech} WHERE id = %d", (int) $c2_antes->client_id));
 $notas_2_antes = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente'", $p2->id));
-$clave2 = at_cc_guardar_datos_contrato($p2, ['tipo' => 'empresa', 'direccion' => 'Otra 1', 'razon_social' => '[PRUEBA] Muebles SpA', 'rut_empresa' => '11.111.111-2']);
+$clave2 = at_cc_guardar_datos_contrato($p2, ['tipo' => 'empresa', 'direccion' => 'Otra 1', 'razon_social' => '[PRUEBA] Empresa SpA', 'rut_empresa' => '11.111.111-2']);
 ok($clave2 === 'datos_contrato', 'empresa sin RUT válido: datos_contrato');
 ok(ContractService::get_by_id((int) $r2['contrato_id'])->placeholders === $ph2_antes, 'empresa sin RUT válido: el contrato no cambia');
 $fila_tech_2_despues = $wpdb->get_row($wpdb->prepare("SELECT billing_address, tax_id, company FROM {$tech} WHERE id = %d", (int) $c2_antes->client_id));
@@ -89,16 +89,16 @@ $p3 = at_cc_propuesta_por_id($p3->id);
 $c3 = ContractService::get_by_id((int) $r3['contrato_id']);
 $company_antes = (string) $wpdb->get_var($wpdb->prepare("SELECT company FROM {$tech} WHERE id = %d", (int) $c3->client_id));
 ok($company_antes !== '', 'empresa completa: la ficha operativa ya trae una empresa (la de la propuesta)');
-$clave3 = at_cc_guardar_datos_contrato($p3, ['tipo' => 'empresa', 'direccion' => 'Calle Uno 1, Ñuñoa', 'razon_social' => '[PRUEBA] Muebles SpA', 'rut_empresa' => '10.000.013-K']);
+$clave3 = at_cc_guardar_datos_contrato($p3, ['tipo' => 'empresa', 'direccion' => 'Calle Uno 1, Ñuñoa', 'razon_social' => '[PRUEBA] Empresa SpA', 'rut_empresa' => '10.000.013-K']);
 ok($clave3 === 'datos_ok', 'empresa completa: datos_ok');
 $ph3 = json_decode(ContractService::get_by_id((int) $r3['contrato_id'])->placeholders, true);
-ok(($ph3['tipo_cliente'] ?? '') === 'empresa' && ($ph3['razon_social_cliente'] ?? '') === '[PRUEBA] Muebles SpA' && ($ph3['rut_cliente'] ?? '') === '10.000.013-K', 'empresa completa: contrato con razón social y RUT de la empresa');
+ok(($ph3['tipo_cliente'] ?? '') === 'empresa' && ($ph3['razon_social_cliente'] ?? '') === '[PRUEBA] Empresa SpA' && ($ph3['rut_cliente'] ?? '') === '10.000.013-K', 'empresa completa: contrato con razón social y RUT de la empresa');
 $company_despues = (string) $wpdb->get_var($wpdb->prepare("SELECT company FROM {$tech} WHERE id = %d", (int) $c3->client_id));
 ok($company_despues === $company_antes, 'empresa completa: la ficha operativa no pisa la empresa que ya tenía');
 $nota3 = $wpdb->get_row($wpdb->prepare("SELECT description, metadata FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente' ORDER BY id DESC LIMIT 1", $p3->id));
 $meta3 = json_decode((string) $nota3->metadata, true) ?: [];
-ok(strpos((string) $nota3->description, 'Muebles SpA') === false && strpos((string) $nota3->description, '10.000.013-K') === false && strpos((string) $nota3->description, 'Calle Uno 1') === false, 'empresa completa: la descripción pública (Seguimiento) no lleva razón social, RUT ni dirección');
-ok(($meta3['razon_social'] ?? '') === '[PRUEBA] Muebles SpA' && ($meta3['rut'] ?? '') === '10.000.013-K' && ($meta3['direccion'] ?? '') === 'Calle Uno 1, Ñuñoa', 'empresa completa: razón social, RUT y dirección quedan en metadata');
+ok(strpos((string) $nota3->description, 'Empresa SpA') === false && strpos((string) $nota3->description, '10.000.013-K') === false && strpos((string) $nota3->description, 'Calle Uno 1') === false, 'empresa completa: la descripción pública (Seguimiento) no lleva razón social, RUT ni dirección');
+ok(($meta3['razon_social'] ?? '') === '[PRUEBA] Empresa SpA' && ($meta3['rut'] ?? '') === '10.000.013-K' && ($meta3['direccion'] ?? '') === 'Calle Uno 1, Ñuñoa', 'empresa completa: razón social, RUT y dirección quedan en metadata');
 
 // ---------- Task 15: persona que aceptó con DNI ----------
 $p10 = crear_propuesta_datos($marca . '-persona-dni', $payload, $creadas);
@@ -127,7 +127,7 @@ $r11 = at_cc_registrar_respuesta($p11, 'acepta', [
 	'filas' => at_cc_filas_aceptadas(at_cc_filas_de_propuesta($p11), [0]), 'fecha' => current_time('mysql'), 'bienvenida' => false,
 ]);
 $p11 = at_cc_propuesta_por_id($p11->id);
-$clave11 = at_cc_guardar_datos_contrato($p11, ['tipo' => 'empresa', 'direccion' => 'Calle Uno 1, Ñuñoa', 'razon_social' => '[PRUEBA] Muebles SpA', 'rut_empresa' => '10.000.013-K']);
+$clave11 = at_cc_guardar_datos_contrato($p11, ['tipo' => 'empresa', 'direccion' => 'Calle Uno 1, Ñuñoa', 'razon_social' => '[PRUEBA] Empresa SpA', 'rut_empresa' => '10.000.013-K']);
 $ph11 = json_decode(ContractService::get_by_id((int) $r11['contrato_id'])->placeholders, true);
 ok($clave11 === 'datos_ok' && ($ph11['tipo_documento_cliente'] ?? '') === 'rut' && ($ph11['rut_cliente'] ?? '') === '10.000.013-K' && ($ph11['tipo_documento_representante'] ?? '') === 'pasaporte', 'T15: empresa: el cliente queda con RUT y el representante con su pasaporte');
 ok(strpos(ContractService::comparecencia_cliente($ph11), 'RUT **10.000.013-K**, representada por **Ana Prueba**, pasaporte N° **AB123456**, correo') !== false, 'T15: la comparecencia de la empresa: «representada por **Ana Prueba**, pasaporte N° **AB123456**»');

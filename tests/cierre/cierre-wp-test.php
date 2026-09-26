@@ -6,11 +6,11 @@ $correos = [];
 add_filter('pre_wp_mail', function ($nulo, $atts) use (&$correos) { $correos[] = $atts; return true; }, 10, 2);
 $marca = 'prueba-cierre-' . strtolower(wp_generate_password(6, false, false));
 $payload = [
-	'company_name' => '[PRUEBA] Muebles', 'solution_text' => 'Configurador 3D de módulos.',
-	'how_it_works' => [['step_title' => 'Configurador', 'step_text' => 'Arrastrar y apilar módulos']],
+	'company_name' => '[PRUEBA] Empresa', 'solution_text' => 'Servicio de prueba.',
+	'how_it_works' => [['step_title' => 'Servicio', 'step_text' => 'Servicio de prueba']],
 	'pricing_rows' => [
-		['service' => 'Fase 1: Configurador 3D', 'price_usd' => 0, 'price_label' => '$2.000.000 en 2 pagos'],
-		['service' => 'Fase 2: Sitio web', 'price_usd' => 0, 'price_label' => '$2.500.000 en 2 pagos (estimado)'],
+		['service' => 'Fase 1: Servicio de prueba', 'price_usd' => 0, 'price_label' => '$1.000.000 en 2 pagos'],
+		['service' => 'Fase 2: Servicio adicional', 'price_usd' => 0, 'price_label' => '$1.500.000 en 2 pagos (estimado)'],
 	],
 ];
 $creadas = [];
@@ -18,7 +18,7 @@ function crear_propuesta(string $marca, string $status, array $payload, array &$
 	global $wpdb;
 	$ok = $wpdb->insert($wpdb->prefix . 'automatiza_propuestas', [
 		'client_email' => $marca . '-' . $status . '@example.com', 'unique_link_id' => substr(md5($marca . $status . microtime(true)), 0, 12),
-		'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Muebles', 'phone' => '+56 9 2222 2222',
+		'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Empresa', 'phone' => '+56 9 2222 2222',
 		'status' => $status, 'flujo' => 'v3', 'gamma_prompt_text' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
 		'transcript_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql'),
 	]);
@@ -106,9 +106,9 @@ ok(at_cc_tech_de_crm((int) $r['crm_id']) !== null, 'acepta: con ficha operativa 
 $c = at_cc_contrato_de_propuesta((int) $p->id);
 $ph = $c ? json_decode($c->placeholders, true) : [];
 ok($c && $c->type === 'servicios' && $c->template_id === 'servicios_v1' && $c->status === 'at_pending' && (int) $c->client_id === (int) at_cc_tech_de_crm((int) $r['crm_id'])->id, 'acepta: contrato de servicios en borrador para la ficha operativa');
-ok(($ph['monto_total'] ?? '') === '$2.000.000' && ($ph['representante_cliente_rut'] ?? '') === '11.111.111-1' && strpos($ph['fases_siguientes'] ?? '', 'Fase 2') !== false && strpos($ph['entregables'] ?? '', 'Configurador') !== false, 'acepta: contrato con los datos de lo aceptado');
+ok(($ph['monto_total'] ?? '') === '$1.000.000' && ($ph['representante_cliente_rut'] ?? '') === '11.111.111-1' && strpos($ph['fases_siguientes'] ?? '', 'Fase 2') !== false && strpos($ph['entregables'] ?? '', 'Servicio') !== false, 'acepta: contrato con los datos de lo aceptado');
 $al_cliente = array_values(array_filter($correos, function ($m) use ($p) { return $m['to'] === $p->client_email; }));
-ok(count($al_cliente) === 1 && strpos($al_cliente[0]['subject'], 'bienvenida') !== false && strpos($al_cliente[0]['message'], '$1.000.000') !== false, 'acepta: bienvenida al cliente con el anticipo');
+ok(count($al_cliente) === 1 && strpos($al_cliente[0]['subject'], 'bienvenida') !== false && strpos($al_cliente[0]['message'], '$500.000') !== false, 'acepta: bienvenida al cliente con el anticipo');
 ok($r['avisos'] === [], 'acepta: sin avisos' . ($r['avisos'] ? ': ' . implode(' | ', $r['avisos']) : ''));
 ok($r['avisos_operativos'] === [], 'acepta: sin avisos operativos (banco configurado)' . ($r['avisos_operativos'] ? ': ' . implode(' | ', $r['avisos_operativos']) : ''));
 $u = at_cc_ultima_respuesta((int) $p->id);
@@ -144,7 +144,7 @@ $u_tras_nota = at_cc_ultima_respuesta((int) $p->id);
 ok($u_tras_nota && $u_tras_nota['salida'] === 'acepta' && $u_tras_nota['filas'] === $filas, 'una nota simple posterior no tapa la última aceptación real');
 $correos = [];
 $bienvenida_2 = at_cc_enviar_bienvenida((int) $r['crm_id']);
-ok($bienvenida_2 && count($correos) === 1 && strpos($correos[0]['message'], '$1.000.000') !== false, 'la bienvenida sigue con el anticipo aunque haya una nota simple después');
+ok($bienvenida_2 && count($correos) === 1 && strpos($correos[0]['message'], '$500.000') !== false, 'la bienvenida sigue con el anticipo aunque haya una nota simple después');
 
 // Idempotente
 $r2 = at_cc_registrar_respuesta(at_cc_propuesta_por_id($p->id), 'acepta', ['canal' => 'pagina', 'filas' => $filas]);
@@ -159,7 +159,7 @@ ok(!at_cc_registrar_respuesta($b, 'acepta', ['canal' => 'pagina'])['ok'] && at_c
 // registro genérico de "Aceptó la propuesta", sin rastro del fallo.
 $wpdb->insert($wpdb->prefix . 'automatiza_propuestas', [
 	'client_email' => 'correo-invalido-sin-arroba', 'unique_link_id' => substr(md5($marca . '-invalido' . microtime(true)), 0, 12),
-	'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Muebles', 'phone' => '+56 9 2222 2222',
+	'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Empresa', 'phone' => '+56 9 2222 2222',
 	'status' => 'sent', 'flujo' => 'v3', 'gamma_prompt_text' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
 	'transcript_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql'),
 ]);
@@ -182,7 +182,7 @@ ok($r['ok'] && at_cc_propuesta_por_id($m->id)->status === 'aceptada', 'a mano de
 ok(count(array_filter($correos, function ($x) use ($m) { return $x['to'] === $m->client_email; })) === 0, 'a mano sin bienvenida: no escribe al cliente');
 ok(count(array_filter($correos, function ($x) { return strpos((string) $x['subject'], 'aceptó la propuesta') !== false; })) === 0, 'a mano no manda el aviso «aceptó la propuesta» (lo registró Luis)');
 $ph_m = json_decode(at_cc_contrato_de_propuesta((int) $m->id)->placeholders, true);
-ok(($ph_m['monto_total'] ?? '') === '$4.500.000' && strpos($ph_m['canal_aceptacion'] ?? '', 'por WhatsApp') === 0, 'a mano: contrato con lo marcado y el canal');
+ok(($ph_m['monto_total'] ?? '') === '$2.500.000' && strpos($ph_m['canal_aceptacion'] ?? '', 'por WhatsApp') === 0, 'a mano: contrato con lo marcado y el canal');
 
 // T6 ronda 1 (revisión), hallazgo 6: la aceptación manual también se ejercita de punta a punta desde
 // 'lista' (antes solo se probaba desde 'pending').
@@ -192,7 +192,7 @@ $r_l = at_cc_registrar_respuesta($l, 'acepta', ['canal' => 'manual', 'canal_manu
 ok($r_l['ok'] && at_cc_propuesta_por_id($l->id)->status === 'aceptada', 'a mano desde lista');
 ok(count(array_filter($correos, function ($x) use ($l) { return $x['to'] === $l->client_email; })) === 0, 'a mano desde lista sin bienvenida: no escribe al cliente');
 $ph_l = json_decode(at_cc_contrato_de_propuesta((int) $l->id)->placeholders, true);
-ok(($ph_l['monto_total'] ?? '') === '$4.500.000' && strpos($ph_l['canal_aceptacion'] ?? '', 'por WhatsApp') === 0, 'a mano desde lista: contrato con lo marcado y el canal');
+ok(($ph_l['monto_total'] ?? '') === '$2.500.000' && strpos($ph_l['canal_aceptacion'] ?? '', 'por WhatsApp') === 0, 'a mano desde lista: contrato con lo marcado y el canal');
 
 // Pedir respuesta y bienvenida sin banco
 $correos = [];
@@ -285,7 +285,7 @@ $crm7 = at_cc_crm_de_email($pi_ok->client_email);
 ok($r7['ok'] && $r7['avisos'] === [] && $crm7 > 0 && $wpdb->get_var($wpdb->prepare("SELECT tipo FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $crm7)) === 'cliente' && at_cc_tech_de_crm($crm7) !== null, 'RF7: completar: pasa a cliente con su ficha operativa' . ($r7['avisos'] ? ': ' . implode(' | ', $r7['avisos']) : ''));
 $c7 = at_cc_contrato_de_propuesta((int) $pi->id);
 $ph7 = $c7 ? json_decode($c7->placeholders, true) : [];
-ok($c7 && $c7->type === 'servicios' && ($ph7['monto_total'] ?? '') === '$2.000.000' && (int) $c7->client_id === (int) at_cc_tech_de_crm($crm7)->id, 'RF7: completar: crea el contrato de servicios con lo aceptado');
+ok($c7 && $c7->type === 'servicios' && ($ph7['monto_total'] ?? '') === '$1.000.000' && (int) $c7->client_id === (int) at_cc_tech_de_crm($crm7)->id, 'RF7: completar: crea el contrato de servicios con lo aceptado');
 ok(!at_cc_cierre_incompleto($pi_ok), 'RF7: completar: el cierre ya no está incompleto');
 ok(count(array_filter($correos, function ($x) use ($pi_ok) { return $x['to'] === $pi_ok->client_email && strpos((string) $x['subject'], 'bienvenida') !== false; })) === 1, 'RF7: completar: la bienvenida sale una vez');
 ok($cuenta($sql_contratacion, $pi->id) === 1 && $cuenta($sql_conversion, $crm7) === 1, 'RF7: completar: Seguimiento migrado y conversión anotada una vez');

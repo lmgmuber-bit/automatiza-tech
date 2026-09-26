@@ -1358,6 +1358,23 @@ class AutomatizaTech_CRM_AI {
         $this->render_styles();
     }
     
+    /**
+     * Task 16: ids de las fichas operativas (wp_automatiza_tech_clients) enlazadas a un cliente del
+     * CRM (wp_crm_clientes.id). render_public_timeline() y render_ficha_cliente() filtraban
+     * wp_automatiza_clients_details por ese mismo id del CRM, pero quien escribe esa tabla siempre
+     * guarda el id de la ficha operativa: las filas de un cliente nunca le aparecían en su propio
+     * portal, y si el id del CRM de un cliente coincidía con el id de ficha operativa de otro, un
+     * cliente vería las filas de otro. Falla cerrada: sin el módulo de cierre cargado o sin fichas
+     * enlazadas, no se devuelve ningún id (nunca se vuelve a filtrar por el id del CRM).
+     */
+    private function _ids_ficha_operativa(int $cliente_id): array {
+        if ($cliente_id <= 0 || !function_exists('at_cc_techs_de_crm')) {
+            return [];
+        }
+        $ids = array_map(function ($t) { return (int) $t->id; }, at_cc_techs_de_crm($cliente_id));
+        return array_values(array_filter($ids, function ($id) { return $id > 0; }));
+    }
+
     // ========== FICHA CLIENTE ==========
     public function render_ficha_cliente() {
         echo '<h1>Ficha de Cliente: Gestión del Servicio y Métricas</h1>';
@@ -1732,9 +1749,12 @@ class AutomatizaTech_CRM_AI {
         $unified_timeline = [];
 
         // 1. Detalles de CLIENTE (wp_automatiza_clients_details)
+        // Task 16: por la ficha operativa enlazada (_ids_ficha_operativa()), nunca por el id del CRM.
         $table_client_details = $wpdb->prefix . 'automatiza_clients_details';
-        if ($wpdb->get_var("SHOW TABLES LIKE '$table_client_details'") == $table_client_details) {
-            $client_details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_client_details WHERE client_id = %d", $cliente_id), ARRAY_A);
+        $ids_ficha_operativa = $this->_ids_ficha_operativa($cliente_id);
+        if ($ids_ficha_operativa && $wpdb->get_var("SHOW TABLES LIKE '$table_client_details'") == $table_client_details) {
+            $marcadores = implode(',', array_fill(0, count($ids_ficha_operativa), '%d'));
+            $client_details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_client_details WHERE client_id IN ($marcadores)", $ids_ficha_operativa), ARRAY_A);
             foreach ($client_details as $d) {
                 $d['source'] = 'client';
                 // Prioridad de fecha: completed_date > scheduled_date > created_at
@@ -4362,9 +4382,15 @@ class AutomatizaTech_CRM_AI {
             $unified_timeline = [];
             
             // 1. Detalles de CLIENTE (wp_automatiza_clients_details)
+            // Task 16: por la ficha operativa enlazada (_ids_ficha_operativa()), nunca por el id del
+            // CRM: quien escribe esta tabla guarda el id de la ficha operativa, no el del CRM. Sin
+            // fichas enlazadas (o sin el módulo de cierre cargado), no se consulta ni se muestra
+            // ninguna fila de clientes (falla cerrada).
             $table_client_details = $wpdb->prefix . 'automatiza_clients_details';
-            if ($wpdb->get_var("SHOW TABLES LIKE '$table_client_details'") == $table_client_details) {
-                $client_details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_client_details WHERE client_id = %d", $cliente_id), ARRAY_A);
+            $ids_ficha_operativa = $this->_ids_ficha_operativa($cliente_id);
+            if ($ids_ficha_operativa && $wpdb->get_var("SHOW TABLES LIKE '$table_client_details'") == $table_client_details) {
+                $marcadores = implode(',', array_fill(0, count($ids_ficha_operativa), '%d'));
+                $client_details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_client_details WHERE client_id IN ($marcadores)", $ids_ficha_operativa), ARRAY_A);
                 foreach ($client_details as $d) {
                     // T10b ronda 1 (revisión), hallazgo 1: un Seguimiento migrado desde el prospecto
                     // puede traer un tipo interno (p. ej. 'mensaje_whatsapp'), que nunca debe llegar a

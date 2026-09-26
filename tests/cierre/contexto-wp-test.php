@@ -10,7 +10,7 @@ if (!defined('AT_REST_SECRET') || AT_REST_SECRET === '') {
 }
 $marca = 'prueba-cierre-' . strtolower(wp_generate_password(6, false, false));
 $codigo = substr(md5($marca), 0, 12);
-$wpdb->insert($wpdb->prefix . 'automatiza_propuestas', ['client_email' => $marca . '@example.com', 'unique_link_id' => $codigo, 'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Muebles', 'phone' => '+56 9 4444 5555', 'status' => 'sent', 'flujo' => 'v3', 'gamma_prompt_text' => wp_json_encode(['pricing_rows' => [['service' => 'Fase 1', 'price_usd' => 0, 'price_label' => '$1.000.000 en 2 pagos']]]), 'transcript_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql')]);
+$wpdb->insert($wpdb->prefix . 'automatiza_propuestas', ['client_email' => $marca . '@example.com', 'unique_link_id' => $codigo, 'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Empresa', 'phone' => '+56 9 4444 5555', 'status' => 'sent', 'flujo' => 'v3', 'gamma_prompt_text' => wp_json_encode(['pricing_rows' => [['service' => 'Fase 1', 'price_usd' => 0, 'price_label' => '$1.000.000 en 2 pagos']]]), 'transcript_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql')]);
 $pid = (int) $wpdb->insert_id;
 function contexto(array $cuerpo, ?string $clave = null) {
 	$r = new WP_REST_Request('POST', '/at/v1/propuesta-contexto');

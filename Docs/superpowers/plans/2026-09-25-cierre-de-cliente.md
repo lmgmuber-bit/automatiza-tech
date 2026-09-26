@@ -1670,7 +1670,7 @@ git commit -m "feat(contratos): plantilla de servicios, revisión obligatoria an
 
 Aprobado por Luis el 26-sep. Corre DESPUÉS de la Task 6. Parte de lo que dejó la Task 5 (`contracts/contract-service.php`, `contracts/at-sign-contract.php`, `Docs/CONTRATO_SERVICIO_DESARROLLO.md`, `tests/cierre/plantilla-test.php`, `tests/cierre/contrato-wp-test.php`) y de `inc/cierre-cliente/puras.php` (Task 1).
 
-**Por qué:** la plantilla asumía que el cliente siempre es una empresa («razón social …, representada por …»). Si el contrato va a nombre de una persona, quedaba «Julio Chirinos, representada por Julio Chirinos» o a nombre de una marca que no es persona jurídica. Además la revisión de la Task 5 encontró tres defectos que Luis aprobó corregir.
+**Por qué:** la plantilla asumía que el cliente siempre es una empresa («razón social …, representada por …»). Si el contrato va a nombre de una persona, quedaba «Nombre Apellido, representada por Nombre Apellido» o a nombre de una marca que no es persona jurídica. Además la revisión de la Task 5 encontró tres defectos que Luis aprobó corregir.
 
 **Files:**
 - Modify: `contracts/contract-service.php` (CRLF), `contracts/at-sign-contract.php` (CRLF), `Docs/CONTRATO_SERVICIO_DESARROLLO.md`, `wp-content/themes/automatiza-tech/inc/cierre-cliente/puras.php`
@@ -1804,11 +1804,11 @@ $correos = [];
 add_filter('pre_wp_mail', function ($nulo, $atts) use (&$correos) { $correos[] = $atts; return true; }, 10, 2);
 $marca = 'prueba-cierre-' . strtolower(wp_generate_password(6, false, false));
 $payload = [
-	'company_name' => '[PRUEBA] Muebles', 'solution_text' => 'Configurador 3D de módulos.',
-	'how_it_works' => [['step_title' => 'Configurador', 'step_text' => 'Arrastrar y apilar módulos']],
+	'company_name' => '[PRUEBA] Empresa', 'solution_text' => 'Servicio de prueba.',
+	'how_it_works' => [['step_title' => 'Servicio', 'step_text' => 'Servicio de prueba']],
 	'pricing_rows' => [
-		['service' => 'Fase 1: Configurador 3D', 'price_usd' => 0, 'price_label' => '$2.000.000 en 2 pagos'],
-		['service' => 'Fase 2: Sitio web', 'price_usd' => 0, 'price_label' => '$2.500.000 en 2 pagos (estimado)'],
+		['service' => 'Fase 1: Servicio de prueba', 'price_usd' => 0, 'price_label' => '$1.000.000 en 2 pagos'],
+		['service' => 'Fase 2: Servicio adicional', 'price_usd' => 0, 'price_label' => '$1.500.000 en 2 pagos (estimado)'],
 	],
 ];
 $creadas = [];
@@ -1855,7 +1855,7 @@ ok(at_cc_tech_de_crm((int) $r['crm_id']) !== null, 'acepta: con ficha operativa 
 $c = at_cc_contrato_de_propuesta((int) $p->id);
 $ph = $c ? json_decode($c->placeholders, true) : [];
 ok($c && $c->type === 'servicios' && $c->template_id === 'servicios_v1' && $c->status === 'at_pending' && (int) $c->client_id === (int) at_cc_tech_de_crm((int) $r['crm_id'])->id, 'acepta: contrato de servicios en borrador para la ficha operativa');
-ok(($ph['monto_total'] ?? '') === '$2.000.000' && ($ph['representante_cliente_rut'] ?? '') === '11.111.111-1' && strpos($ph['fases_siguientes'] ?? '', 'Fase 2') !== false && strpos($ph['entregables'] ?? '', 'Configurador') !== false, 'acepta: contrato con los datos de lo aceptado');
+ok(($ph['monto_total'] ?? '') === '$1.000.000' && ($ph['representante_cliente_rut'] ?? '') === '11.111.111-1' && strpos($ph['fases_siguientes'] ?? '', 'Fase 2') !== false && strpos($ph['entregables'] ?? '', 'Servicio') !== false, 'acepta: contrato con los datos de lo aceptado');
 $al_cliente = array_values(array_filter($correos, function ($m) use ($p) { return $m['to'] === $p->client_email; }));
 ok(count($al_cliente) === 1 && strpos($al_cliente[0]['subject'], 'bienvenida') !== false && strpos($al_cliente[0]['message'], '$1.000.000') !== false, 'acepta: bienvenida al cliente con el anticipo');
 ok($r['avisos'] === [], 'acepta: sin avisos' . ($r['avisos'] ? ': ' . implode(' | ', $r['avisos']) : ''));

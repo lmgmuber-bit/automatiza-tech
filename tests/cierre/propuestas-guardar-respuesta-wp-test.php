@@ -9,6 +9,13 @@
 // (segundo cliente/contrato/bienvenida). En 'evaluando'/'rechazada', un simple Guardar hacía
 // desaparecer la barra pública para aceptar.
 // Reproducido en el WordPress local: propuesta con flujo NULL en 'aceptada' (como las viejas).
+// Ronda 2, hallazgo 2 (T9): la guarda de la ronda 1 solo protegía 'aceptada' del reenvío
+// (con el checkbox de correo marcado, el valor por defecto). 'evaluando' y 'rechazada' seguían sin
+// guarda: Guardar con el checkbox marcado las reenviaba completas (con "Aceptar la propuesta") y
+// las volvía a 'sent', borrando en silencio la respuesta ya registrada del cliente. Reproducido en
+// el WordPress local: propuesta con flujo NULL en 'rechazada' o 'evaluando' + Guardar con el
+// checkbox de envío marcado -> wpdb confirmaba status='sent' y se capturaba 1 correo real con
+// 'Aceptar la propuesta' y 'responder=aceptar'.
 if (!defined('WP_ADMIN')) {
 	define('WP_ADMIN', true);
 }
@@ -97,6 +104,28 @@ ok(pa_guardar_estado($id_eval) === 'evaluando', 'evaluando + Guardar sin correo:
 $id_rech = pa_guardar_crear($marca, 'rechazada', null, $creadas);
 pa_guardar_post($id_rech, false);
 ok(pa_guardar_estado($id_rech) === 'rechazada', 'rechazada + Guardar sin correo: el estado no pasa a "pending"');
+
+// --- Ronda 2, hallazgo 2: Evaluando + Guardar CON el checkbox de envío marcado (su valor por
+//     defecto en propuestas viejas) tampoco reenvía el correo ni vuelve a "sent". ---
+$id_eval2 = pa_guardar_crear($marca, 'evaluando', null, $creadas);
+$correos = [];
+$msg_eval = pa_guardar_post($id_eval2, true);
+ok(pa_guardar_estado($id_eval2) === 'evaluando', 'evaluando + Guardar con envío marcado: el estado no vuelve a "sent"');
+ok(count($correos) === 0, 'evaluando + Guardar con envío marcado: no se manda ningún correo (' . count($correos) . ')');
+ok(strpos($msg_eval, 'la sigue evaluando') !== false, 'evaluando + Guardar con envío marcado: el aviso explica que la sigue evaluando: ' . $msg_eval);
+ok(strpos($msg_eval, 'Aceptar la propuesta') === false, 'evaluando + Guardar con envío marcado: no ofrece "Aceptar la propuesta"');
+ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d", $id_eval2)) === 0, 'evaluando + Guardar con envío marcado: no queda ninguna nota nueva de envío en Seguimiento');
+
+// --- Ronda 2, hallazgo 2: Rechazada + Guardar CON el checkbox de envío marcado tampoco reenvía el
+//     correo ni vuelve a "sent". ---
+$id_rech2 = pa_guardar_crear($marca, 'rechazada', null, $creadas);
+$correos = [];
+$msg_rech = pa_guardar_post($id_rech2, true);
+ok(pa_guardar_estado($id_rech2) === 'rechazada', 'rechazada + Guardar con envío marcado: el estado no vuelve a "sent"');
+ok(count($correos) === 0, 'rechazada + Guardar con envío marcado: no se manda ningún correo (' . count($correos) . ')');
+ok(strpos($msg_rech, 'ya rechazó') !== false, 'rechazada + Guardar con envío marcado: el aviso explica que ya rechazó: ' . $msg_rech);
+ok(strpos($msg_rech, 'Aceptar la propuesta') === false, 'rechazada + Guardar con envío marcado: no ofrece "Aceptar la propuesta"');
+ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d", $id_rech2)) === 0, 'rechazada + Guardar con envío marcado: no queda ninguna nota nueva de envío en Seguimiento');
 
 // --- 5) No rompe lo existente: una propuesta del flujo viejo SIN respuesta del cliente sigue
 //        pasando a "pending" con un Guardar sin correo. ---

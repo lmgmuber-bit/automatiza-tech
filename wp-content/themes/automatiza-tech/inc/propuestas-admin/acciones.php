@@ -217,8 +217,12 @@ function at_pa_guardar(): string {
         // «Guardar».
         $estados_con_respuesta = ['aceptada', 'evaluando', 'rechazada'];
         $estado_protegido = $actual && in_array((string) $actual->status, $estados_con_respuesta, true);
-        $ya_aceptada = $actual && (string) $actual->status === 'aceptada';
-        if ($send_email && $ya_aceptada) {
+        // Ronda 2, hallazgo 2: la guarda cubre los TRES estados con respuesta del cliente, no solo
+        // "aceptada". Antes, "evaluando"/"rechazada" + Guardar con el checkbox de envío marcado (su
+        // valor por defecto en propuestas viejas, ficha.php) seguían reenviando el correo completo
+        // -con el botón "Aceptar la propuesta"- y volviendo el estado a 'sent', borrando en silencio
+        // la respuesta que el cliente ya había dado.
+        if ($send_email && $estado_protegido) {
             $send_email = false;
             $bloqueo_envio_aceptada = true;
         }
@@ -276,7 +280,14 @@ function at_pa_guardar(): string {
         if (!empty($bloqueo_envio)) {
             $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: una propuesta v3 solo se envía cuando está <strong>lista</strong> (versión final verificada).</p></div>';
         } elseif (!empty($bloqueo_envio_aceptada)) {
-            $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: el cliente ya aceptó esta propuesta. Para pedirle otra respuesta, usa el panel de «Respuesta del cliente».</p></div>';
+            // Ronda 2, hallazgo 2: el aviso ya no asume "ya aceptó"; describe el estado real
+            // ('aceptada', 'evaluando' o 'rechazada') para que Luis entienda por qué no se envió.
+            $descripcion_respuesta = [
+                'aceptada'  => 'el cliente ya aceptó esta propuesta',
+                'evaluando' => 'el cliente la sigue evaluando',
+                'rechazada' => 'el cliente ya rechazó esta propuesta',
+            ][$actual ? (string) $actual->status : ''] ?? 'el cliente ya respondió esta propuesta';
+            $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: ' . esc_html($descripcion_respuesta) . '. Para pedirle otra respuesta, usa el panel de «Respuesta del cliente».</p></div>';
         }
 
         // Obtener datos actualizados para el email

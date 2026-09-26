@@ -65,8 +65,8 @@ Cada etapa se prueba y puede subirse a PROD por separado, en este orden.
   - la aceptación de la propuesta;
   - «Convertir a Cliente» e «Importar & Convertir» del CRM;
   - `move_to_clients()` de Contactos, cuando un lead pasa a contratado.
-- **La ficha del CRM muestra todo.** Pestañas nuevas en la ficha del CRM con el contenido del registro enlazado, reutilizando las funciones de render que ya existen en `client-operations-module.php` y `contracts/client-contracts-widget.php`: Contratos, Facturación, Accesos, Técnico y Redes. La Identidad del CRM es la única; la pestaña Identidad de la ficha de operaciones deja de mostrarse. Si hay datos de marca solo en `tech_clients`, la migración los copia a la ficha del CRM cuando ahí estén vacíos.
-- **Contactos queda para leads.** La lista de clientes de Contactos se mantiene como listado, pero cada fila abre la ficha del CRM enlazada, no el modal de operaciones.
+- **La ficha del CRM muestra todo.** Pestaña nueva en la ficha del CRM, «📜 Contratos y operación», con el registro enlazado: los contratos del cliente (el widget actual, `at_render_client_contracts_widget()`) y el botón que abre la ficha operativa completa, con facturación, accesos, técnico y redes (`automatiza_client_full_modal_button()`, cuyo modal ya se carga en todo el wp-admin). Si el cliente todavía no tiene registro enlazado, la pestaña ofrece «Crear ficha operativa», que llama a la función puente. La duplicación de la Identidad entre las dos fichas queda para después.
+- **Contactos queda para leads.** La lista de clientes de Contactos se mantiene, y cada fila suma el enlace «Ficha única (CRM)» a la ficha enlazada.
 - **Sin borrar nada.** Ninguna tabla ni columna se elimina en esta etapa.
 
 ### Etapa 2 · Contrato de servicio
@@ -84,7 +84,7 @@ Cada etapa se prueba y puede subirse a PROD por separado, en este orden.
   - fases siguientes como anexo.
   
   Queda marcada como borrador para revisión de abogado.
-- **El módulo respeta la plantilla pedida.** `load_template($template_id)` elige el archivo según el id (`soporte_v2` → soporte, `servicio_v1` → servicio). El título del contrato sale de la plantilla o de un mapa por tipo, ya no fijo. Los contratos de soporte existentes no cambian.
+- **El módulo respeta la plantilla pedida.** `load_template($template_id)` elige el archivo según el id (`soporte_v2` → soporte, `servicios_v1` → servicios; `servicios` ya existe en el tipo ENUM de la tabla de contratos, así que no hay cambio de base). El título del contrato sale de la plantilla o de un mapa por tipo, ya no fijo. Los contratos de soporte existentes no cambian.
 - **Luis ajusta el contrato antes de firmar, siempre a mano.** En la página de firma de AT (`contracts/at-sign-contract.php`), cuando el contrato es de servicio, aparecen editables los servicios contratados (uno por línea, con su precio), el alcance, los entregables, el plazo y la forma de pago, precargados desde la propuesta. Al guardar se regeneran el texto y el PDF. El botón de firmar queda deshabilitado hasta que Luis guarde al menos una vez la revisión: así ningún contrato de servicio sale con el borrador automático sin mirar.
 
 ### Etapa 3 · Respuesta del cliente y aceptación automática
@@ -120,7 +120,7 @@ Cada respuesta queda en `wp_automatiza_propuestas_details` («Seguimiento»), ti
 1. Registro y estado `aceptada`.
 2. `at_cliente_asegurar()` con los datos de la propuesta: cliente oficial en la ficha única, tipo `cliente`, estado `contratado`, fecha de contrato hoy.
 3. Correo de bienvenida.
-4. Borrador del contrato de servicio (`type` `servicio`, `template_id` `servicio_v1`, `proposal_id`) con el correo actual «Revisar y firmar contrato» a Luis.
+4. Borrador del contrato de servicio (`type` `servicios`, `template_id` `servicios_v1`, `proposal_id`) con el correo actual «Revisar y firmar contrato» a Luis.
 5. Aviso a Luis por correo.
 
 Si falla un paso, los anteriores quedan hechos, el fallo queda en Seguimiento y en el aviso a Luis, y el resto se completa a mano: «Convertir a Cliente» y crear el contrato desde la ficha.
@@ -137,7 +137,7 @@ Reemplaza a `_enviar_correo_bienvenida()`, también cuando Luis convierte a mano
 
 **Ajustes nuevos**
 
-En la configuración de facturación (`invoice-settings.php`), junto a los datos de la empresa: banco, tipo de cuenta, número, titular, RUT del titular, correo para avisar el pago. Los escribe Luis; ningún agente los escribe.
+En una página propia, Propuestas › «Ajustes del cierre» (opciones de WordPress con prefijo `at_cc_`): banco, tipo de cuenta, número, titular, RUT del titular y correo para avisar el pago. Los escribe Luis; ningún agente los escribe. Si faltan, la bienvenida dice «te enviamos los datos de pago por separado» y el aviso a Luis lo advierte.
 
 **«Pedir respuesta» y el correo de la propuesta**
 

@@ -51,19 +51,19 @@ ok(!at_cc_puede_pedir_respuesta('archivada'), 'no se pide respuesta de una archi
 
 // Montos y anticipo
 ok(at_cc_monto_de_etiqueta('$1.000.000 en 2 pagos') === 1000000, 'monto con puntos');
-ok(at_cc_monto_de_etiqueta('$250.000 en 2 pagos') === 250000, 'monto $250.000');
+ok(at_cc_monto_de_etiqueta('$300.000 en 2 pagos') === 300000, 'monto $300.000');
 ok(at_cc_monto_de_etiqueta('$1.250.000 en 2 pagos (estimado)') === 1250000, 'monto estimado');
-ok(at_cc_monto_de_etiqueta('$120.000 al mes') === 120000, 'monto mensual se lee');
+ok(at_cc_monto_de_etiqueta('$100.000 al mes') === 100000, 'monto mensual se lee');
 ok(at_cc_monto_de_etiqueta('Incluido') === null && at_cc_monto_de_etiqueta('Por confirmar') === null, 'sin monto');
-ok(at_cc_es_mensual('$120.000 al mes') && at_cc_es_mensual('$50.000 mensual') && !at_cc_es_mensual('$1.000.000 en 2 pagos'), 'mensual');
+ok(at_cc_es_mensual('$100.000 al mes') &&at_cc_es_mensual('$50.000 mensual') && !at_cc_es_mensual('$1.000.000 en 2 pagos'), 'mensual');
 $filas = [
-	['service' => 'Fase 1', 'price_label' => '$250.000 en 2 pagos'],
-	['service' => 'Fase 2', 'price_label' => '$400.000 en 2 pagos'],
-	['service' => 'Google Ads', 'price_label' => '$120.000 al mes'],
+	['service' => 'Fase 1', 'price_label' => '$300.000 en 2 pagos'],
+	['service' => 'Fase 2', 'price_label' => '$500.000 en 2 pagos'],
+	['service' => 'Google Ads', 'price_label' => '$100.000 al mes'],
 	['service' => 'Soporte', 'price_label' => 'Incluido'],
 ];
-ok(at_cc_total_unico($filas) === 650000, 'total único sin mensuales ni incluidos');
-ok(at_cc_anticipo($filas) === 325000, 'anticipo 50 %');
+ok(at_cc_total_unico($filas) === 800000, 'total único sin mensuales ni incluidos');
+ok(at_cc_anticipo($filas) === 400000, 'anticipo 50 %');
 ok(at_cc_anticipo([['service' => 'X', 'price_label' => '$1.000.000 en 2 pagos']]) === 500000, 'anticipo de una fase');
 ok(at_cc_anticipo([['service' => 'X', 'price_label' => 'Por confirmar']]) === null, 'anticipo sin montos');
 ok(at_cc_anticipo([['service' => 'X', 'price_label' => '$333']]) === 167, 'anticipo redondea');
@@ -155,10 +155,10 @@ $m = at_cc_marcadores_servicios([
 	'canal_aceptacion' => 'en la página de la propuesta', 'filas_aceptadas' => [$filas[0], $filas[2]],
 	'filas_siguientes' => [$filas[1]], 'alcance' => 'Sitio', 'entregables' => '- Sitio', 'plazo' => 'Ocho semanas',
 ]);
-ok($m['monto_total'] === '$250.000', 'monto total sin mensuales');
-ok(strpos($m['forma_pago'], '$125.000') !== false && strpos($m['forma_pago'], 'Google Ads') !== false, 'forma de pago con anticipo y mensual');
-ok($m['servicios_contratados'] === "- **Fase 1**: \$250.000 en 2 pagos\n- **Google Ads**: \$120.000 al mes", 'servicios en lista');
-ok($m['fases_siguientes'] === '- **Fase 2**: $400.000 en 2 pagos', 'fases siguientes');
+ok($m['monto_total'] === '$300.000', 'monto total sin mensuales');
+ok(strpos($m['forma_pago'], '$150.000') !== false && strpos($m['forma_pago'], 'Google Ads') !== false, 'forma de pago con anticipo y mensual');
+ok($m['servicios_contratados'] === "- **Fase 1**: \$300.000 en 2 pagos\n- **Google Ads**: \$100.000 al mes", 'servicios en lista');
+ok($m['fases_siguientes'] === '- **Fase 2**: $500.000 en 2 pagos', 'fases siguientes');
 ok(!isset($m['rut_cliente']) && !isset($m['domicilio_cliente']), 'vacíos no se incluyen (quedan en blanco para llenar)');
 ok(array_diff(array_keys($m), at_cc_claves_contrato_servicios()) === [], 'solo claves conocidas');
 $m2 = at_cc_marcadores_servicios(['representante' => 'Ana', 'filas_aceptadas' => [['service' => 'X', 'price_label' => 'Por confirmar']]]);

@@ -179,7 +179,7 @@ $wpdb->query($wpdb->prepare("DELETE FROM {$tabla_propuestas_details} WHERE propu
 $wpdb->query($wpdb->prepare("DELETE FROM {$tabla_propuestas} WHERE id = %d", (int) $pD->id));
 
 // Limpieza
-$wpdb->query($wpdb->prepare("DELETE FROM {$tabla_details} WHERE client_id IN (%d, %d)", $techA, $crmA));
+$wpdb->query($wpdb->prepare("DELETE FROM {$tabla_details} WHERE client_id IN (%d, %d, %d)", $techA, $crmA, $crmC));
 $wpdb->query($wpdb->prepare("DELETE FROM {$tabla_tech} WHERE id = %d OR crm_cliente_id IN (%d, %d)", $crmA, $crmA, $crmB));
 $wpdb->query($wpdb->prepare("DELETE FROM {$tabla_crm} WHERE id IN (%d, %d, %d)", $crmA, $crmB, $crmC));
 

@@ -136,21 +136,21 @@ ok(at_cc_puede_pedir_respuesta('sent') && at_cc_puede_pedir_respuesta('evaluando
 ok(!at_cc_puede_pedir_respuesta('aceptada') && !at_cc_puede_pedir_respuesta('borrador') && !at_cc_puede_pedir_respuesta('lista'), 'no se pide en aceptada, borrador ni lista');
 
 // Montos y anticipo
-ok(at_cc_monto_de_etiqueta('$2.000.000 en 2 pagos') === 2000000, 'monto con puntos');
-ok(at_cc_monto_de_etiqueta('$250.000 en 2 pagos') === 250000, 'monto $250.000');
+ok(at_cc_monto_de_etiqueta('$1.000.000 en 2 pagos') === 1000000, 'monto con puntos');
+ok(at_cc_monto_de_etiqueta('$300.000 en 2 pagos') === 300000, 'monto $300.000');
 ok(at_cc_monto_de_etiqueta('$1.250.000 en 2 pagos (estimado)') === 1250000, 'monto estimado');
-ok(at_cc_monto_de_etiqueta('$120.000 al mes') === 120000, 'monto mensual se lee');
+ok(at_cc_monto_de_etiqueta('$100.000 al mes') === 100000, 'monto mensual se lee');
 ok(at_cc_monto_de_etiqueta('Incluido') === null && at_cc_monto_de_etiqueta('Por confirmar') === null, 'sin monto');
-ok(at_cc_es_mensual('$120.000 al mes') && at_cc_es_mensual('$50.000 mensual') && !at_cc_es_mensual('$2.000.000 en 2 pagos'), 'mensual');
+ok(at_cc_es_mensual('$100.000 al mes') && at_cc_es_mensual('$50.000 mensual') && !at_cc_es_mensual('$1.000.000 en 2 pagos'), 'mensual');
 $filas = [
-	['service' => 'Fase 1', 'price_label' => '$250.000 en 2 pagos'],
-	['service' => 'Fase 2', 'price_label' => '$400.000 en 2 pagos'],
-	['service' => 'Google Ads', 'price_label' => '$120.000 al mes'],
+	['service' => 'Fase 1', 'price_label' => '$300.000 en 2 pagos'],
+	['service' => 'Fase 2', 'price_label' => '$500.000 en 2 pagos'],
+	['service' => 'Google Ads', 'price_label' => '$100.000 al mes'],
 	['service' => 'Soporte', 'price_label' => 'Incluido'],
 ];
-ok(at_cc_total_unico($filas) === 650000, 'total único sin mensuales ni incluidos');
-ok(at_cc_anticipo($filas) === 325000, 'anticipo 50 %');
-ok(at_cc_anticipo([['service' => 'X', 'price_label' => '$2.000.000 en 2 pagos']]) === 1000000, 'anticipo de una fase');
+ok(at_cc_total_unico($filas) === 800000, 'total único sin mensuales ni incluidos');
+ok(at_cc_anticipo($filas) === 400000, 'anticipo 50 %');
+ok(at_cc_anticipo([['service' => 'X', 'price_label' => '$1.000.000 en 2 pagos']]) === 500000, 'anticipo de una fase');
 ok(at_cc_anticipo([['service' => 'X', 'price_label' => 'Por confirmar']]) === null, 'anticipo sin montos');
 ok(at_cc_anticipo([['service' => 'X', 'price_label' => '$333']]) === 167, 'anticipo redondea');
 ok(at_cc_formato_clp(1000000) === '$1.000.000' && at_cc_formato_clp(0) === '$0', 'formato CLP');
@@ -195,23 +195,23 @@ ok(at_cc_url_respuesta('https://ejemplo.cl/', 'aB3 x', 'aceptar') === 'https://e
 ok(at_cc_url_respuesta('https://ejemplo.cl', 'abc') === 'https://ejemplo.cl/ver-presentacion.php?id=abc', 'URL sin responder');
 $bl = at_cc_bloque_aceptar_html('https://e.cl/?a=1&b=2', 'https://e.cl/ev');
 ok(strpos($bl, 'Aceptar la propuesta') !== false && strpos($bl, 'href="https://e.cl/?a=1&amp;b=2"') !== false && strpos($bl, 'https://e.cl/ev') !== false, 'bloque de aceptar con enlaces escapados');
-$t = at_cc_texto_whatsapp('Ana', 'Muebles', 'https://e.cl/x');
-ok(strpos($t, 'Hola Ana') === 0 && strpos($t, 'para Muebles') !== false && strpos($t, 'https://e.cl/x') !== false, 'texto de WhatsApp');
+$t = at_cc_texto_whatsapp('Ana', 'Empresa', 'https://e.cl/x');
+ok(strpos($t, 'Hola Ana') === 0 && strpos($t, 'para Empresa') !== false && strpos($t, 'https://e.cl/x') !== false, 'texto de WhatsApp');
 ok(at_cc_url_wa_me('+56 9 1234 5678', 'a b') === 'https://wa.me/56912345678?text=a%20b', 'enlace wa.me');
 ok(at_cc_url_wa_me('', 'x') === '', 'sin teléfono no hay enlace');
 
 // Marcadores del contrato de servicios
 $m = at_cc_marcadores_servicios([
-	'empresa' => 'Muebles', 'representante' => 'Ana', 'rut_representante' => '11.111.111-1',
+	'empresa' => 'Empresa', 'representante' => 'Ana', 'rut_representante' => '11.111.111-1',
 	'email' => 'ana@example.com', 'telefono' => '+56 9 1111 1111', 'codigo_propuesta' => 'abc123',
 	'fecha_propuesta' => '24 de septiembre de 2026', 'fecha_aceptacion' => '25 de septiembre de 2026',
 	'canal_aceptacion' => 'en la página de la propuesta', 'filas_aceptadas' => [$filas[0], $filas[2]],
 	'filas_siguientes' => [$filas[1]], 'alcance' => 'Sitio', 'entregables' => '- Sitio', 'plazo' => 'Ocho semanas',
 ]);
-ok($m['monto_total'] === '$250.000', 'monto total sin mensuales');
-ok(strpos($m['forma_pago'], '$125.000') !== false && strpos($m['forma_pago'], 'Google Ads') !== false, 'forma de pago con anticipo y mensual');
-ok($m['servicios_contratados'] === "- **Fase 1**: \$250.000 en 2 pagos\n- **Google Ads**: \$120.000 al mes", 'servicios en lista');
-ok($m['fases_siguientes'] === '- **Fase 2**: $400.000 en 2 pagos', 'fases siguientes');
+ok($m['monto_total'] === '$300.000', 'monto total sin mensuales');
+ok(strpos($m['forma_pago'], '$150.000') !== false && strpos($m['forma_pago'], 'Google Ads') !== false, 'forma de pago con anticipo y mensual');
+ok($m['servicios_contratados'] === "- **Fase 1**: \$300.000 en 2 pagos\n- **Google Ads**: \$100.000 al mes", 'servicios en lista');
+ok($m['fases_siguientes'] === '- **Fase 2**: $500.000 en 2 pagos', 'fases siguientes');
 ok(!isset($m['rut_cliente']) && !isset($m['domicilio_cliente']), 'vacíos no se incluyen (quedan en blanco para llenar)');
 ok(array_diff(array_keys($m), at_cc_claves_contrato_servicios()) === [], 'solo claves conocidas');
 $m2 = at_cc_marcadores_servicios(['representante' => 'Ana', 'filas_aceptadas' => [['service' => 'X', 'price_label' => 'Por confirmar']]]);
@@ -240,7 +240,7 @@ ok(at_cc_mimes_evidencia() === ['image/jpeg' => 'jpg', 'image/png' => 'png', 'im
 // Correos
 $banco = ['banco' => 'Banco de Prueba', 'tipo' => 'Cuenta corriente', 'numero' => '123', 'titular' => 'AutomatizaTech SpA', 'rut' => '78.363.717-0'];
 ok(at_cc_banco_completo($banco) && !at_cc_banco_completo(['banco' => 'X']), 'banco completo');
-$b = at_cc_bienvenida_html(['nombre' => 'Ana <b>', 'empresa' => 'Muebles', 'anticipo' => 1000000, 'banco' => $banco, 'correo_pago' => 'pagos@example.com', 'whatsapp' => '+56 9 2700 2984', 'url_portal' => 'https://example.com/portal?a=1&b=2', 'logo' => '', 'con_propuesta' => true]);
+$b = at_cc_bienvenida_html(['nombre' => 'Ana <b>', 'empresa' => 'Empresa', 'anticipo' => 1000000, 'banco' => $banco, 'correo_pago' => 'pagos@example.com', 'whatsapp' => '+56 9 2700 2984', 'url_portal' => 'https://example.com/portal?a=1&b=2', 'logo' => '', 'con_propuesta' => true]);
 ok(strpos($b, '$1.000.000') !== false && strpos($b, 'Banco de Prueba') !== false, 'bienvenida con anticipo y banco');
 ok(strpos($b, 'Ana &lt;b&gt;') !== false, 'nombre escapado');
 ok(strpos($b, 'https://wa.me/56927002984') !== false, 'enlace al WhatsApp de AT');
@@ -250,7 +250,7 @@ $b2 = at_cc_bienvenida_html(['nombre' => 'Ana', 'empresa' => '', 'anticipo' => n
 ok(strpos($b2, 'por separado') !== false && strpos($b2, 'va en tu contrato') !== false, 'sin banco ni anticipo');
 $b3 = at_cc_bienvenida_html(['nombre' => 'Ana', 'con_propuesta' => false]);
 ok(strpos($b3, 'anticipo') === false && strpos($b3, 'Tu contrato') === false, 'sin propuesta no habla de contrato ni anticipo');
-$pd = at_cc_pedido_respuesta_html('Ana', 'Muebles', '<div>BLOQUE</div>', '', 'https://e.cl/v');
+$pd = at_cc_pedido_respuesta_html('Ana', 'Empresa', '<div>BLOQUE</div>', '', 'https://e.cl/v');
 ok(strpos($pd, 'Hola <strong>Ana</strong>') !== false && strpos($pd, '<div>BLOQUE</div>') !== false && strpos($pd, 'https://e.cl/v') !== false, 'correo para pedir respuesta');
 
 echo $fallas ? "\n$fallas FALLAS\n" : "\nTODO OK\n";
@@ -293,7 +293,7 @@ function at_cc_puede_pedir_respuesta(string $status): bool {
 	return in_array($status, ['sent', 'evaluando', 'rechazada'], true);
 }
 
-/** Primer monto en pesos de una etiqueta ('$2.000.000 en 2 pagos' => 2000000); null si no hay. */
+/** Primer monto en pesos de una etiqueta ('$1.000.000 en 2 pagos' => 1000000); null si no hay. */
 function at_cc_monto_de_etiqueta(string $etiqueta): ?int {
 	if (!preg_match('/\$\s*(\d{1,3}(?:\.\d{3})+|\d+)/', $etiqueta, $m)) {
 		return null;
@@ -1487,7 +1487,7 @@ ok(strpos(ContractService::load_template('servicios_v1'), 'DESARROLLO E IMPLEMEN
 ok(strpos(ContractService::load_template('soporte_v2'), 'POST-PROYECTO') !== false, 'load_template sigue cargando la de soporte');
 ok(strpos(ContractService::titulo_por_tipo('servicios'), 'DESARROLLO') !== false && strpos(ContractService::titulo_por_tipo('soporte'), 'POST-PROYECTO') !== false, 'título por tipo');
 
-$c = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Muebles', 'monto_total' => '$1.000'], 'created_by' => 0]);
+$c = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Empresa', 'monto_total' => '$1.000'], 'created_by' => 0]);
 ok(is_object($c) && $c->type === 'servicios' && $c->template_id === 'servicios_v1' && $c->status === 'at_pending', 'contrato de servicios creado en at_pending');
 $ph = json_decode($c->placeholders, true);
 ok(strpos($ph['contract_title'], 'DESARROLLO') !== false, 'título de servicios guardado');
@@ -1816,7 +1816,7 @@ function crear_propuesta(string $marca, string $status, array $payload, array &$
 	global $wpdb;
 	$ok = $wpdb->insert($wpdb->prefix . 'automatiza_propuestas', [
 		'client_email' => $marca . '-' . $status . '@example.com', 'unique_link_id' => substr(md5($marca . $status . microtime(true)), 0, 12),
-		'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Muebles', 'phone' => '+56 9 2222 2222',
+		'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Empresa', 'phone' => '+56 9 2222 2222',
 		'status' => $status, 'flujo' => 'v3', 'gamma_prompt_text' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
 		'transcript_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql'),
 	]);
@@ -3191,7 +3191,7 @@ if (!defined('AT_REST_SECRET') || AT_REST_SECRET === '') {
 	exit(2);
 }
 $marca = 'prueba-cierre-' . strtolower(wp_generate_password(6, false, false));
-$wpdb->insert($wpdb->prefix . 'automatiza_propuestas', ['client_email' => $marca . '@example.com', 'unique_link_id' => substr(md5($marca), 0, 12), 'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Muebles', 'phone' => '+56 9 3333 3333', 'status' => 'sent', 'flujo' => 'v3', 'gamma_prompt_text' => wp_json_encode(['pricing_rows' => [['service' => 'Fase 1', 'price_usd' => 0, 'price_label' => '$1.000.000 en 2 pagos']]]), 'transcript_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql')]);
+$wpdb->insert($wpdb->prefix . 'automatiza_propuestas', ['client_email' => $marca . '@example.com', 'unique_link_id' => substr(md5($marca), 0, 12), 'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Empresa', 'phone' => '+56 9 3333 3333', 'status' => 'sent', 'flujo' => 'v3', 'gamma_prompt_text' => wp_json_encode(['pricing_rows' => [['service' => 'Fase 1', 'price_usd' => 0, 'price_label' => '$1.000.000 en 2 pagos']]]), 'transcript_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql')]);
 $pid = (int) $wpdb->insert_id;
 $codigo = substr(md5($marca), 0, 12);
 function pedir(array $cuerpo, ?string $clave = null) {
@@ -3409,7 +3409,7 @@ if (!defined('AT_REST_SECRET') || AT_REST_SECRET === '') {
 }
 $marca = 'prueba-cierre-' . strtolower(wp_generate_password(6, false, false));
 $codigo = substr(md5($marca), 0, 12);
-$wpdb->insert($wpdb->prefix . 'automatiza_propuestas', ['client_email' => $marca . '@example.com', 'unique_link_id' => $codigo, 'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Muebles', 'phone' => '+56 9 4444 5555', 'status' => 'sent', 'flujo' => 'v3', 'gamma_prompt_text' => wp_json_encode(['pricing_rows' => [['service' => 'Fase 1', 'price_usd' => 0, 'price_label' => '$1.000.000 en 2 pagos']]]), 'transcript_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql')]);
+$wpdb->insert($wpdb->prefix . 'automatiza_propuestas', ['client_email' => $marca . '@example.com', 'unique_link_id' => $codigo, 'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Empresa', 'phone' => '+56 9 4444 5555', 'status' => 'sent', 'flujo' => 'v3', 'gamma_prompt_text' => wp_json_encode(['pricing_rows' => [['service' => 'Fase 1', 'price_usd' => 0, 'price_label' => '$1.000.000 en 2 pagos']]]), 'transcript_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql')]);
 $pid = (int) $wpdb->insert_id;
 function contexto(array $cuerpo, ?string $clave = null) {
 	$r = new WP_REST_Request('POST', '/at/v1/propuesta-contexto');

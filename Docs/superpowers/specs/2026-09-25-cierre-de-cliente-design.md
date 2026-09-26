@@ -135,7 +135,7 @@ Si falla un paso, los anteriores quedan hechos, el fallo queda en Seguimiento y 
 Reemplaza a `_enviar_correo_bienvenida()`, también cuando Luis convierte a mano. Si el cliente no tiene propuesta aceptada, omite lo que depende de ella.
 
 1. Tu contrato: «te llega en un correo aparte para firmarlo».
-2. Anticipo: el 50 % de lo aceptado, con los datos de transferencia. El monto se calcula de las etiquetas de precio (ej. «$2.000.000 en 2 pagos» → primer pago $1.000.000). Las filas mensuales («al mes») no entran al anticipo. Si una etiqueta no se puede leer, el correo dice «según tu contrato».
+2. Anticipo: el 50 % de lo aceptado, con los datos de transferencia. El monto se calcula de las etiquetas de precio (ej. «$1.000.000 en 2 pagos» → primer pago $500.000). Las filas mensuales («al mes») no entran al anticipo. Si una etiqueta no se puede leer, el correo dice «según tu contrato».
 3. Marca y accesos: responder el correo o escribir por WhatsApp.
 4. Reunión de inicio: «Te vamos a contactar para coordinar la reunión de inicio, donde te damos la bienvenida oficial y repasamos juntos los pasos a seguir y los ítems de trabajo». Sin enlace de agenda: la coordina Luis.
 5. Tu portal: enlace a la línea de tiempo.
@@ -227,7 +227,7 @@ Scripts PHP con el mismo patrón de las pruebas del panel de propuestas, en loca
 - Transiciones de estado: cada una permitida y rechazada.
 - `at_cliente_asegurar()`: cliente nuevo, existente en una tabla, existente en ambas, correo con mayúsculas y espacios, dos llamadas seguidas sin duplicar.
 - Migración del enlace sobre una copia con los datos de PROD (2 filas).
-- Cálculo del anticipo desde etiquetas reales: «$2.000.000 en 2 pagos», «$250.000 en 2 pagos», «$120.000 al mes», «Incluido», «Por confirmar».
+- Cálculo del anticipo desde etiquetas como «$1.000.000 en 2 pagos», «$300.000 en 2 pagos», «$100.000 al mes», «Incluido», «Por confirmar».
 - Plantilla de servicio: todos los marcadores reemplazados; la de soporte sigue igual (comparación del texto generado antes y después).
 - Página de respuesta: aceptar, evaluar y rechazar; aceptar dos veces; GET que no acepta; nonce vencido; campo trampa lleno; límite por IP; RUT inválido.
 - Aceptación completa en local con una propuesta de prueba: estado, Seguimiento, ficha única, correo de bienvenida capturado y contrato en borrador.

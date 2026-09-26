@@ -6,7 +6,7 @@
 require __DIR__ . '/wp-bootstrap.php';
 global $wpdb;
 
-foreach (['at_cc_correo_avisos', 'at_cc_correo_copia', 'at_cc_cabecera_copia', 'at_cc_avisar_luis', 'at_cc_enviar_bienvenida', 'at_cc_enviar_pedido_respuesta', 'at_cc_asegurar_cliente'] as $fn) {
+foreach (['at_cc_correo_avisos', 'at_cc_correo_copia', 'at_cc_cabecera_copia', 'at_cc_avisar_luis', 'at_cc_enviar_bienvenida', 'at_cc_enviar_pedido_respuesta', 'at_cc_asegurar_cliente', 'at_cc_propuesta_por_id'] as $fn) {
 	if (!function_exists($fn)) {
 		fwrite(STDERR, "$fn() no está definida: revisa ajustes.php/respuesta.php/bienvenida.php.\n");
 		exit(2);

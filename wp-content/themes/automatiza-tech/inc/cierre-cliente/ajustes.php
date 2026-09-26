@@ -45,7 +45,7 @@ function at_cc_render_ajustes(): void {
 	<div class="wrap">
 		<h1>Ajustes del cierre de cliente</h1>
 		<p>Estos datos van en el correo de bienvenida, en el paso del anticipo. Si falta alguno, el correo dice que los datos de pago van por separado.</p>
-		<p>El correo principal recibe tus avisos del cierre (cliente aceptó, revisar y firmar, mensajes por WhatsApp) y las respuestas de los clientes. La copia oculta recibe una copia de todos esos correos y de los que le llegan al cliente; el cliente no la ve. Si el principal queda vacío, se usa el correo de administrador de WordPress.</p>
+		<p>El correo principal recibe tus avisos del cierre (cliente aceptó, revisar y firmar, mensajes por WhatsApp) y las respuestas de los clientes. La copia oculta recibe una copia de esos avisos y de los correos de bienvenida y de pedido de respuesta que le llegan al cliente; el cliente no la ve. Las respuestas de los clientes llegan solo al correo principal, y los correos del contrato (revisión, firma y copia firmada) no llevan esta copia. Si el principal queda vacío, se usa el correo de administrador de WordPress.</p>
 		<form method="post" action="options.php">
 			<?php settings_fields('at_cc_ajustes'); ?>
 			<table class="form-table" role="presentation">

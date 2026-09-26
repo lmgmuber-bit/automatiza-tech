@@ -182,6 +182,19 @@ at_cc_render_barra(at_cc_propuesta_por_id($p4->id));
 $html_p4 = (string) ob_get_clean();
 ok(strpos($html_p4, 'Datos para tu contrato') === false, 'con la revisión de Luis ya guardada: la barra no ofrece el botón');
 
+// ---------- T11 ronda 1, hallazgo 2: en 'rechazada' solo se ofrece "Acepto la propuesta" ----------
+// Una propuesta rechazada solo puede pasar a 'aceptada' (at_cc_transicion_respuesta_valida()); tocar
+// "La sigo evaluando" o "No, gracias" no la sacaba de 'rechazada' (respuesta.php anota una nota para
+// Luis pero no cambia el estado), así que esos dos botones no debían seguir ofreciéndose.
+$p9 = crear_propuesta_datos($marca . '-rechazada', $payload, $creadas);
+$wpdb->update($wpdb->prefix . 'automatiza_propuestas', ['status' => 'rechazada'], ['id' => (int) $p9->id]);
+ob_start();
+at_cc_render_barra(at_cc_propuesta_por_id($p9->id));
+$html_p9 = (string) ob_get_clean();
+ok(strpos($html_p9, 'Acepto la propuesta') !== false && strpos($html_p9, 'id="at-cc-acepta"') !== false, 'rechazada: sigue ofreciendo "Acepto la propuesta" y su diálogo');
+ok(strpos($html_p9, 'La sigo evaluando') === false && strpos($html_p9, 'No, gracias') === false, 'rechazada: ya no ofrece "La sigo evaluando" ni "No, gracias"');
+ok(strpos($html_p9, 'id="at-cc-evalua"') === false && strpos($html_p9, 'id="at-cc-rechaza"') === false, 'rechazada: tampoco deja sus diálogos (ni sus formularios) en el HTML');
+
 // Limpieza
 $ids = implode(',', array_map('intval', $creadas));
 $emails = $wpdb->get_col("SELECT client_email FROM {$wpdb->prefix}automatiza_propuestas WHERE id IN ({$ids})");

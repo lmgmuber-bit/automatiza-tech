@@ -64,7 +64,11 @@ function at_cc_limite_codigo_ok(string $accion, string $codigo, int $max, int $s
 }
 
 function at_cc_procesar_respuesta_publica(): void {
-	$codigo = sanitize_text_field(wp_unslash($_POST['codigo'] ?? ''));
+	// Ronda 1 de revisión (26-sep), hallazgo 5 (T11): el código solo se usa aquí para armar el
+	// redirect a ver-presentacion.php (nunca para el nonce, los límites o buscar la propuesta, que
+	// siguen exigiendo POST más abajo); tomarlo también de GET evita que un GET a esta acción
+	// devuelva «ID de presentación no válido» en vez de la página correcta con el aviso de error.
+	$codigo = sanitize_text_field(wp_unslash($_POST['codigo'] ?? $_GET['codigo'] ?? ''));
 	$volver = function (string $clave) use ($codigo): void {
 		wp_safe_redirect(home_url('/ver-presentacion.php?id=' . rawurlencode($codigo) . '&respuesta=' . rawurlencode($clave)));
 		exit;
@@ -90,10 +94,20 @@ function at_cc_procesar_respuesta_publica(): void {
 		$volver('recibida');
 	}
 	$salida = sanitize_key(wp_unslash($_POST['salida'] ?? ''));
+	// Ronda 1 de revisión (26-sep), hallazgo 1 (T11): sanitize_text_field()/sanitize_textarea_field()
+	// comparten _sanitize_text_fields(), que borra '%' seguido de dos caracteres hexadecimales
+	// (lo confunde con un byte %-encoded): «¿El 50%de anticipo puede ser en 2 cuotas?» llegaba a Luis
+	// como «¿El 50 anticipo puede ser en 2 cuotas?». Se guarda el texto tal cual llegó (solo UTF-8
+	// válido y sin caracteres de control) y se escapa recién a la salida (correo a Luis con esc_html;
+	// panel y widget ya escapan). Mismo criterio que whatsapp.php (T10b) y contract-service.php (T5b).
+	$nombre_bruto = trim(wp_check_invalid_utf8((string) wp_unslash($_POST['nombre'] ?? ''), true));
+	$nombre_bruto = (string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $nombre_bruto);
+	$comentario_bruto = trim(wp_check_invalid_utf8((string) wp_unslash($_POST['comentario'] ?? ''), true));
+	$comentario_bruto = (string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $comentario_bruto);
 	$d = [
 		'canal'      => 'pagina',
-		'nombre'     => sanitize_text_field(wp_unslash($_POST['nombre'] ?? '')),
-		'comentario' => sanitize_textarea_field(wp_unslash($_POST['comentario'] ?? '')),
+		'nombre'     => $nombre_bruto,
+		'comentario' => mb_substr($comentario_bruto, 0, 1000),
 		'ip'         => at_cc_ip(),
 		'ip_reenviada' => at_cc_ip_reenviada(),
 		'agente'     => mb_substr(sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'] ?? '')), 0, 300),
@@ -232,7 +246,8 @@ function at_cc_guardar_datos_contrato(object $p, array $post): string {
 }
 
 function at_cc_procesar_datos_contrato_publica(): void {
-	$codigo = sanitize_text_field(wp_unslash($_POST['codigo'] ?? ''));
+	// Mismo criterio que at_cc_procesar_respuesta_publica(): T11 ronda 1, hallazgo 5.
+	$codigo = sanitize_text_field(wp_unslash($_POST['codigo'] ?? $_GET['codigo'] ?? ''));
 	$volver = function (string $clave) use ($codigo): void {
 		wp_safe_redirect(home_url('/ver-presentacion.php?id=' . rawurlencode($codigo) . '&respuesta=' . rawurlencode($clave)));
 		exit;
@@ -318,6 +333,8 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 		<?php if ($mostrar_datos_contrato): ?>
 			<button type="button" class="at-cc-btn at-cc-sec" data-abrir="at-cc-datos">Datos para tu contrato</button>
 		<?php endif; ?>
+	<?php elseif ($estado === 'rechazada'): ?>
+		<button type="button" class="at-cc-btn at-cc-si" data-abrir="at-cc-acepta">Acepto la propuesta</button>
 	<?php else: ?>
 		<button type="button" class="at-cc-btn at-cc-si" data-abrir="at-cc-acepta">Acepto la propuesta</button>
 		<button type="button" class="at-cc-btn at-cc-sec" data-abrir="at-cc-evalua">La sigo evaluando</button>
@@ -347,6 +364,7 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 		</div>
 	</form>
 </dialog>
+<?php if ($estado !== 'rechazada'): ?>
 <dialog class="at-cc-dlg" id="at-cc-evalua">
 	<form method="post" action="<?php echo esc_url($accion); ?>">
 		<?php echo $ocultos('evalua'); ?>
@@ -371,6 +389,7 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 		</div>
 	</form>
 </dialog>
+<?php endif; ?>
 <?php endif; ?>
 <?php if ($mostrar_datos_contrato): ?>
 <dialog class="at-cc-dlg" id="at-cc-datos">

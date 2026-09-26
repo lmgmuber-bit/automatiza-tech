@@ -228,14 +228,25 @@ function at_pa_render_ficha($p, string $message): void {
               <?php
               $puede = at_propuesta_puede_enviarse($p->flujo ?? null, (string) $p->status);
               $es_v3_checkbox = ($p->flujo ?? '') === 'v3';
-              $send_email_attr = !$puede ? 'disabled' : ($es_v3_checkbox ? '' : 'checked');
+              // Ronda 1 de revisión (26-sep), hallazgo 4 (T11): con respuesta del cliente ('aceptada',
+              // 'evaluando' o 'rechazada') Guardar ya no reenvía nada (acciones.php, guarda de la
+              // Task 9), pero at_propuesta_puede_enviarse() solo bloquea esto para flujo v3 fuera de
+              // 'lista'/'sent': en una propuesta clásica (flujo distinto de v3) las casillas seguían
+              // marcadas y habilitadas, dando a entender que sí se iba a reenviar. Se desmarcan y
+              // deshabilitan aquí para los tres estados, sin tocar la guarda real ni
+              // at_propuesta_puede_enviarse().
+              $estados_con_respuesta_checkbox = ['aceptada', 'evaluando', 'rechazada'];
+              $tiene_respuesta_checkbox = in_array((string) $p->status, $estados_con_respuesta_checkbox, true);
+              $send_email_attr = ($tiene_respuesta_checkbox || !$puede) ? 'disabled' : ($es_v3_checkbox ? '' : 'checked');
+              $whatsapp_marcado = !$tiene_respuesta_checkbox && trim((string) $p->phone) !== '';
+              $whatsapp_deshabilitado = $tiene_respuesta_checkbox || trim((string) $p->phone) === '';
               ?>
               <input type="checkbox" name="send_email" value="1" id="send_email" <?php echo $send_email_attr; ?>>
               <span>📧 Enviar correo con la propuesta al cliente</span>
             </label>
             <p>Si desmarcas esta opción, solo se guardarán los datos sin enviar el correo.</p>
             <label style="display:block;margin-top:8px">
-              <input type="checkbox" name="at_cc_whatsapp" value="1" <?php checked(trim((string) $p->phone) !== ''); ?> <?php disabled(trim((string) $p->phone) === ''); ?>>
+              <input type="checkbox" name="at_cc_whatsapp" value="1" <?php checked($whatsapp_marcado); ?> <?php disabled($whatsapp_deshabilitado); ?>>
               <span>💬 También por WhatsApp (con el enlace para aceptar)</span>
             </label>
             <p class="description">El correo lleva el botón «Aceptar la propuesta». El WhatsApp sale desde tu teléfono hasta que Meta apruebe la plantilla con botones.</p>
@@ -244,7 +255,11 @@ function at_pa_render_ficha($p, string $message): void {
             <?php else: ?>
             <p class="description">Se adjunta el PDF que subas en «Cliente y enlaces» o el que ya esté guardado; sin PDF, el correo lleva solo los botones.</p>
             <?php endif; ?>
-            <?php if (!$puede): ?><p class="at-pa-aviso">Se habilita cuando la propuesta esté <strong>lista</strong>.</p><?php endif; ?>
+            <?php if ($tiene_respuesta_checkbox): ?>
+            <p class="at-pa-aviso">Esta propuesta ya tiene respuesta del cliente: para volver a escribirle usa «Pedir respuesta».</p>
+            <?php elseif (!$puede): ?>
+            <p class="at-pa-aviso">Se habilita cuando la propuesta esté <strong>lista</strong>.</p>
+            <?php endif; ?>
           </div>
 
           <div class="email-section">

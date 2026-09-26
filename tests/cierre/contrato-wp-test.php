@@ -176,6 +176,37 @@ ok(ContractService::faltantes($ct($marca_persona_base)) === ['Nombre completo de
 ok(ContractService::faltantes($ct(array_diff_key($marca_persona_base, ['representante_cliente_nombre' => 1]))) === [], 'faltantes(): sin representante en los datos, no hay con qué comparar y no se marca como marca');
 ok(ContractService::faltantes($ct(['razon_social_cliente' => 'Ana Prueba', 'nombre_proyecto' => '  ana   PRUEBA '] + array_diff_key($marca_persona_base, ['razon_social_cliente' => 1, 'nombre_proyecto' => 1]))) === [], 'faltantes(): si su propio nombre coincide con el del proyecto, no se marca como marca');
 
+// Task 5b ronda 2: at-sign-contract.php manda SIEMPRE los 13 campos como texto plano, incluido
+// representante_cliente_nombre con la etiqueta «Representante (solo si es empresa)». Si Luis
+// elige 'persona' y, siguiendo esa etiqueta, borra el nombre del representante en la MISMA
+// llamada (deja el RUT tal cual), guardar_revision() hacía unset(representante_cliente_nombre)
+// ANTES de llamar a persona_marca_igual_al_proyecto(), así que ni el reemplazo ni la red de
+// seguridad de faltantes() se activaban (los dos exigían representante_cliente_nombre !== '' en
+// el momento de la llamada): el contrato quedaba a nombre de la marca con el RUT personal.
+$c8 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Marca Muebles', 'nombre_proyecto' => '[PRUEBA] Marca Muebles', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1'] + $marca_precio, 'created_by' => 0]);
+$r8 = ContractService::guardar_revision($c8->id, ['tipo_cliente' => 'persona', 'razon_social_cliente' => '[PRUEBA] Marca Muebles', 'representante_cliente_nombre' => '', 'domicilio_cliente' => 'Calle Falsa 123, Santiago']);
+$ph8 = is_wp_error($r8) ? [] : json_decode($r8->placeholders, true);
+ok(!is_wp_error($r8) && ($ph8['razon_social_cliente'] ?? '') === 'Ana Prueba' && ($ph8['rut_cliente'] ?? '') === '11.111.111-1', 'persona: si Luis borra el representante en la misma llamada, igual toma el nombre y RUT de quien aceptó, no el de la marca');
+ok(!is_wp_error($r8) && ContractService::faltantes($r8) === [], 'con el nombre corregido en la misma llamada, faltantes() ya no lo marca');
+
+// El marcador inmutable 'aceptante_nombre' (lo escribe at_cc_marcadores_servicios() al crear el
+// contrato) protege incluso cuando representante_cliente_nombre YA está vacío en lo guardado
+// (una revisión anterior a este arreglo, u otra vía): faltantes() lo detecta igual, y una
+// revisión posterior que no toca la razón social la corrige usando aceptante_nombre.
+$marca_sin_representante = ['tipo_cliente' => 'persona', 'razon_social_cliente' => '[PRUEBA] Marca Muebles', 'nombre_proyecto' => '[PRUEBA] Marca Muebles', 'aceptante_nombre' => 'Ana Prueba', 'rut_cliente' => '11.111.111-1', 'domicilio_cliente' => 'Calle Falsa 123, Santiago'] + $marca_precio;
+ok(ContractService::faltantes($ct($marca_sin_representante)) === ['Nombre completo del cliente (hoy dice el nombre de la marca)'], 'faltantes(): aceptante_nombre detecta la marca aunque representante_cliente_nombre ya no esté guardado');
+$c9 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => $marca_sin_representante, 'created_by' => 0]);
+$r9 = ContractService::guardar_revision($c9->id, ['domicilio_cliente' => 'Calle Falsa 123, Santiago']);
+$ph9 = is_wp_error($r9) ? [] : json_decode($r9->placeholders, true);
+ok(!is_wp_error($r9) && ($ph9['razon_social_cliente'] ?? '') === 'Ana Prueba', 'guardar_revision() corrige la marca usando aceptante_nombre aunque representante_cliente_nombre ya esté vacío');
+// aceptante_nombre nunca es editable desde la revisión: no está en campos_revision(), así que
+// guardar_revision() lo ignora aunque venga en $cambios (at-sign-contract.php no lo manda, pero
+// se comprueba igual que la protección no depende de eso).
+ok(!array_key_exists('aceptante_nombre', ContractService::campos_revision()), 'aceptante_nombre no está entre los campos editables de la revisión');
+$r10 = ContractService::guardar_revision($c9->id, ['aceptante_nombre' => 'Otra Persona']);
+$ph10 = is_wp_error($r10) ? [] : json_decode($r10->placeholders, true);
+ok(!is_wp_error($r10) && ($ph10['aceptante_nombre'] ?? '') === 'Ana Prueba', 'guardar_revision() no cambia aceptante_nombre aunque venga en $cambios');
+
 // ---------- Task 5b: la página de revisión (contracts/at-sign-contract.php) ----------
 function pagina_revision(string $token, ?array $post = null): string {
 	$_GET = ['token' => $token];

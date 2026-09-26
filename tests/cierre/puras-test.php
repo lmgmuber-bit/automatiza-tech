@@ -101,6 +101,10 @@ ok(!isset($m['rut_cliente']) && !isset($m['domicilio_cliente']), 'vacíos no se 
 ok(array_diff(array_keys($m), at_cc_claves_contrato_servicios()) === [], 'solo claves conocidas');
 $m2 = at_cc_marcadores_servicios(['representante' => 'Ana', 'filas_aceptadas' => [['service' => 'X', 'price_label' => 'Por confirmar']]]);
 ok(!isset($m2['monto_total']) && $m2['razon_social_cliente'] === 'Ana' && $m2['fases_siguientes'] === 'La propuesta no tiene fases siguientes.', 'sin montos ni empresa');
+// Task 5b ronda 2: 'aceptante_nombre' es un marcador inmutable con el nombre de quien aceptó,
+// escrito siempre (haya empresa o no), para que ContractService lo use como fuente estable
+// aunque representante_cliente_nombre se borre después en la revisión.
+ok(($m['aceptante_nombre'] ?? null) === 'Ana' && ($m2['aceptante_nombre'] ?? null) === 'Ana', "aceptante_nombre guarda el nombre de quien aceptó");
 // Task 5b: tipo de cliente opcional (persona o empresa); sin tipo, todo sigue como antes.
 ok(in_array('tipo_cliente', at_cc_claves_contrato_servicios(), true), 'tipo_cliente es un marcador conocido');
 ok(!isset($m['tipo_cliente']) && !isset($m2['tipo_cliente']), 'sin tipo no hay marcador de tipo');

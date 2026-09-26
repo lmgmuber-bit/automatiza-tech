@@ -250,7 +250,7 @@ function at_cc_claves_contrato_servicios(): array {
 		'email_cliente', 'telefono_cliente', 'domicilio_cliente', 'propuesta_codigo', 'fecha_propuesta',
 		'fecha_aceptacion', 'canal_aceptacion', 'nombre_proyecto', 'servicios_contratados', 'alcance',
 		'entregables', 'plazo', 'monto_total', 'forma_pago', 'fases_siguientes', 'garantia_meses_servicio',
-		'tipo_cliente',
+		'tipo_cliente', 'aceptante_nombre',
 	];
 }
 
@@ -285,6 +285,10 @@ function at_cc_marcadores_servicios(array $d): array {
 		'tipo_cliente'                 => in_array($tipo, ['persona', 'empresa'], true) ? $tipo : '',
 		'razon_social_cliente'         => $empresa !== '' ? $empresa : $repr,
 		'rut_cliente'                  => (string) ($d['rut_cliente'] ?? ''),
+		// Inmutable: nombre de quien aceptó, escrito una sola vez aquí y nunca en campos_revision(),
+		// para que ContractService sepa a quién pertenece el contrato aunque representante_cliente_nombre
+		// se borre después en la revisión (ese campo dice «solo si es empresa» y es natural borrarlo).
+		'aceptante_nombre'             => $repr,
 		'representante_cliente_nombre' => $repr,
 		'representante_cliente_rut'    => (string) ($d['rut_representante'] ?? ''),
 		'email_cliente'                => (string) ($d['email'] ?? ''),

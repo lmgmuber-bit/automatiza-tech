@@ -137,14 +137,17 @@ class ContractService {
         }
         // Red de seguridad: persona natural cuyo nombre sigue siendo el de la marca de la
         // propuesta (razon_social_cliente == nombre_proyecto) y distinto del nombre de quien
-        // aceptó. No debería firmarse así aunque el campo no esté vacío.
+        // aceptó. No debería firmarse así aunque el campo no esté vacío. Se compara contra
+        // nombre_de_quien_acepto() (el marcador inmutable 'aceptante_nombre' si existe) y no
+        // solo contra representante_cliente_nombre, que puede haberse borrado en una revisión
+        // anterior (ese campo es «solo si es empresa» y se borra al elegir persona natural).
         if ($tipo === 'persona') {
-            $razon         = trim((string) ($ph['razon_social_cliente'] ?? ''));
-            $proyecto      = trim((string) ($ph['nombre_proyecto'] ?? ''));
-            $representante = trim((string) ($ph['representante_cliente_nombre'] ?? ''));
-            if ($razon !== '' && $proyecto !== '' && $representante !== ''
+            $razon     = trim((string) ($ph['razon_social_cliente'] ?? ''));
+            $proyecto  = trim((string) ($ph['nombre_proyecto'] ?? ''));
+            $aceptante = self::nombre_de_quien_acepto($ph);
+            if ($razon !== '' && $proyecto !== '' && $aceptante !== ''
                 && self::normalizar_nombre($razon) === self::normalizar_nombre($proyecto)
-                && self::normalizar_nombre($razon) !== self::normalizar_nombre($representante)) {
+                && self::normalizar_nombre($razon) !== self::normalizar_nombre($aceptante)) {
                 $faltan[] = 'Nombre completo del cliente (hoy dice el nombre de la marca)';
             }
         }
@@ -209,19 +212,35 @@ class ContractService {
         return function_exists('mb_strtolower') ? mb_strtolower($s, 'UTF-8') : strtolower($s);
     }
     /**
+     * Nombre de quien aceptó la propuesta, para saber si «persona natural» sigue a nombre de la
+     * marca. Se prefiere el marcador inmutable 'aceptante_nombre' (lo escribe una sola vez
+     * at_cc_marcadores_servicios() al crear el contrato y no está en campos_revision(): nunca se
+     * edita ni se borra desde la revisión). Si el contrato es anterior a ese marcador (o se creó
+     * sin pasar por at_cc_marcadores_servicios(), como en las pruebas), se cae a
+     * representante_cliente_nombre tal como venga en $ph.
+     */
+    private static function nombre_de_quien_acepto(array $ph) {
+        $v = trim((string) ($ph['aceptante_nombre'] ?? ''));
+        return $v !== '' ? $v : trim((string) ($ph['representante_cliente_nombre'] ?? ''));
+    }
+    /**
      * Persona natural cuyo razon_social_cliente sigue siendo el de la marca de la propuesta (el
      * formulario precarga razon_social_cliente = nombre_proyecto = empresa): se reemplaza por el
      * nombre de quien aceptó, salvo que Luis ya haya escrito un nombre distinto del de la marca.
+     * $ph_original son los marcadores tal como estaban ANTES de aplicar los cambios de esta misma
+     * llamada: representante_cliente_nombre puede llegar recién vaciado en $ph (Luis lo borra al
+     * elegir persona natural, siguiendo la etiqueta «solo si es empresa»), así que
+     * nombre_de_quien_acepto() se calcula sobre el estado previo, no sobre el ya mutado.
      */
-    private static function persona_marca_igual_al_proyecto(array $ph) {
+    private static function persona_marca_igual_al_proyecto(array $ph, array $ph_original) {
         if (($ph['tipo_cliente'] ?? '') !== 'persona') return $ph;
-        $razon         = trim((string) ($ph['razon_social_cliente'] ?? ''));
-        $proyecto      = trim((string) ($ph['nombre_proyecto'] ?? ''));
-        $representante = trim((string) ($ph['representante_cliente_nombre'] ?? ''));
-        if ($razon !== '' && $proyecto !== '' && $representante !== ''
+        $razon     = trim((string) ($ph['razon_social_cliente'] ?? ''));
+        $proyecto  = trim((string) ($ph['nombre_proyecto'] ?? ''));
+        $aceptante = self::nombre_de_quien_acepto($ph_original);
+        if ($razon !== '' && $proyecto !== '' && $aceptante !== ''
             && self::normalizar_nombre($razon) === self::normalizar_nombre($proyecto)
-            && self::normalizar_nombre($razon) !== self::normalizar_nombre($representante)) {
-            $ph['razon_social_cliente'] = $representante;
+            && self::normalizar_nombre($razon) !== self::normalizar_nombre($aceptante)) {
+            $ph['razon_social_cliente'] = $aceptante;
         }
         return $ph;
     }
@@ -248,14 +267,15 @@ class ContractService {
                 return new WP_Error('tipo_cliente_invalido', 'El tipo de cliente debe ser persona natural o empresa.');
             }
         }
-        $ph = json_decode($c->placeholders, true) ?: array();
+        $ph_original = json_decode($c->placeholders, true) ?: array();
+        $ph = $ph_original;
         foreach (self::campos_revision() as $k => $_) {
             if (array_key_exists($k, $cambios)) {
                 $v = self::limpiar_texto($cambios[$k]);
                 if ($v === '') unset($ph[$k]); else $ph[$k] = $v;
             }
         }
-        $ph = self::persona_marca_igual_al_proyecto($ph);
+        $ph = self::persona_marca_igual_al_proyecto($ph, $ph_original);
         $ph = self::persona_con_datos_de_aceptacion($ph);
         $ph['revision_at'] = current_time('mysql');
         return self::guardar_marcadores($c, $ph);

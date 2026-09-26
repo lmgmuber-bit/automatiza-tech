@@ -170,7 +170,7 @@ En una página propia, Propuestas › «Ajustes del cierre» (opciones de WordPr
 - **Las imágenes de evidencia no son públicas.** Traen datos personales (teléfono, nombre, conversación):
   - solo JPG, PNG o WEBP, hasta 5 MB cada una; el tipo real se revisa con `getimagesize()`, no por la extensión;
   - se guardan con nombre aleatorio en `uploads/automatiza-tech-evidencias/<id de la propuesta>/`, con un `.htaccess` que niega el acceso directo, igual que la carpeta de contratos (`ContractService::storage_dir()`);
-  - se ven solo desde el panel, por `admin-ajax.php` con nonce y permiso de administrador, el mismo patrón que la descarga de contratos (`secure_pdf_url()`);
+  - se ven solo desde el panel, por `admin-ajax.php` con la sesión de un administrador (`manage_options`); el enlace que queda guardado no lleva nonce porque vencería;
   - el registro de Seguimiento guarda el enlace protegido en `attachment_url`, más nombre y tipo, y la pestaña Seguimiento muestra la miniatura;
   - no entran a la biblioteca de medios de WordPress ni al repositorio.
 

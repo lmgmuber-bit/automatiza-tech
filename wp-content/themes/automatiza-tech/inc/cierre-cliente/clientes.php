@@ -12,6 +12,12 @@ function at_cc_migrar_esquema(): void {
 	if (get_option('at_cierre_schema') === '1') {
 		return;
 	}
+	if (get_transient('at_cc_migrar_intento')) {
+		// Un intento anterior falló hace poco (tabla bloqueada, sin privilegio ALTER en el
+		// hosting, etc.): se espera el enfriamiento en vez de repetir el ALTER en cada
+		// admin_init/asegurar_cliente mientras el problema persista.
+		return;
+	}
 	global $wpdb;
 	$tech = $wpdb->prefix . 'automatiza_tech_clients';
 	$crm = $wpdb->prefix . 'crm_clientes';
@@ -19,14 +25,18 @@ function at_cc_migrar_esquema(): void {
 	if (!$cols) {
 		return;
 	}
+	$error_alter = '';
 	if (!in_array('crm_cliente_id', $cols, true)) {
 		$wpdb->query("ALTER TABLE {$tech} ADD COLUMN crm_cliente_id BIGINT(20) UNSIGNED NULL DEFAULT NULL, ADD INDEX idx_crm_cliente (crm_cliente_id)");
+		$error_alter = $wpdb->last_error;
 		$cols = $wpdb->get_col("SHOW COLUMNS FROM {$tech}");
 	}
 	if (!in_array('crm_cliente_id', $cols, true)) {
 		// El ALTER falló (tabla bloqueada, sin privilegio ALTER en el hosting, etc.). No marcamos
-		// el esquema como migrado para que se reintente en el próximo admin_init / asegurar_cliente.
-		error_log('at_cc: no se pudo agregar crm_cliente_id a ' . $tech . ': ' . $wpdb->last_error);
+		// el esquema como migrado, pero sí un enfriamiento de 5 minutos para no reintentar el
+		// ALTER en cada admin_init/asegurar_cliente mientras el problema persista.
+		set_transient('at_cc_migrar_intento', 1, 5 * MINUTE_IN_SECONDS);
+		error_log('at_cc: no se pudo agregar crm_cliente_id a ' . $tech . ': ' . $error_alter);
 		return;
 	}
 	$wpdb->query("UPDATE {$tech} t JOIN {$crm} c ON LOWER(TRIM(c.email)) = LOWER(TRIM(t.email)) SET t.crm_cliente_id = c.id WHERE t.crm_cliente_id IS NULL AND t.email <> ''");

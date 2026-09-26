@@ -11,10 +11,21 @@ ok(get_option('at_cierre_schema') === '1', 'esquema marcado');
 
 // Hallazgo T3 ronda 1: si el ALTER TABLE falla (tabla bloqueada, sin privilegio ALTER en
 // hosting compartido, etc.), el esquema NO debe marcarse como migrado, para que se reintente
-// en la próxima llamada. Lo simulamos bloqueando la tabla desde una segunda conexión MySQL
-// (medido: SHOW COLUMNS no se bloquea con LOCK TABLES ... WRITE de otra sesión, pero ALTER
-// TABLE sí espera el metadata lock y falla al vencer lock_wait_timeout).
+// más adelante. Lo simulamos bloqueando la tabla desde una segunda conexión MySQL (medido:
+// SHOW COLUMNS no se bloquea con LOCK TABLES ... WRITE de otra sesión, pero ALTER TABLE sí
+// espera el metadata lock y falla al vencer lock_wait_timeout).
+//
+// Hallazgo T3 ronda 2, punto 1: el mensaje registrado debe llevar el error REAL de MySQL, no
+// quedar vacío porque el SHOW COLUMNS de verificación (una consulta exitosa) corre entre el
+// ALTER fallido y la lectura de $wpdb->last_error. Se comprueba capturando error_log() en un
+// archivo temporal propio (fuera del repo) y revisando que el mensaje no termine en ": ".
+//
+// Hallazgo T3 ronda 2, punto 2: mientras la migración siga fallando, no debe reintentar el
+// ALTER en cada llamada sin límite: debe haber un enfriamiento (transient) entre reintentos.
+// Se comprueba liberando la tabla pero dejando el enfriamiento activo: el esquema debe seguir
+// sin migrarse; solo al "expirar" el enfriamiento (simulado con delete_transient) se reintenta.
 delete_option('at_cierre_schema');
+delete_transient('at_cc_migrar_intento');
 $wpdb->query("ALTER TABLE {$tech} DROP COLUMN crm_cliente_id");
 $host_candado = DB_HOST;
 $puerto_candado = 3306;
@@ -25,18 +36,38 @@ if (strpos($host_candado, ':') !== false) {
 $candado = mysqli_init();
 $con_candado = $candado ? @mysqli_real_connect($candado, $host_candado, DB_USER, DB_PASSWORD, DB_NAME, $puerto_candado) : false;
 if ($con_candado && mysqli_query($candado, "LOCK TABLES {$tech} WRITE")) {
+	$log_temporal = sys_get_temp_dir() . '/at_cc_test_error_' . getmypid() . '.log';
+	@unlink($log_temporal);
+	$error_log_previo = ini_get('error_log');
+	ini_set('error_log', $log_temporal);
+
 	$wpdb->query('SET SESSION lock_wait_timeout = 2');
 	at_cc_migrar_esquema();
 	ok(get_option('at_cierre_schema') !== '1', 'ALTER bloqueado: el esquema NO se marca como migrado');
 	ok(!in_array('crm_cliente_id', $wpdb->get_col("SHOW COLUMNS FROM {$tech}"), true), 'ALTER bloqueado: la columna sigue sin crearse');
+	ok((bool) get_transient('at_cc_migrar_intento'), 'ALTER bloqueado: se activa el enfriamiento de reintento');
+
+	$contenido_log = @file_get_contents($log_temporal) ?: '';
+	ini_set('error_log', $error_log_previo);
+	@unlink($log_temporal);
+	ok((bool) preg_match('/at_cc: no se pudo agregar crm_cliente_id a \S+: .+/', $contenido_log), 'el error registrado lleva el mensaje real de MySQL, no queda vacío');
+
 	mysqli_query($candado, 'UNLOCK TABLES');
 	mysqli_close($candado);
 	$wpdb->query('SET SESSION lock_wait_timeout = DEFAULT');
+
+	// La tabla ya está libre, pero el enfriamiento sigue activo: no debe reintentar el ALTER.
 	at_cc_migrar_esquema();
-	ok(get_option('at_cierre_schema') === '1', 'reintento sin bloqueo: el esquema se marca al fin');
-	ok(in_array('crm_cliente_id', $wpdb->get_col("SHOW COLUMNS FROM {$tech}"), true), 'reintento sin bloqueo: la columna queda creada');
+	ok(get_option('at_cierre_schema') !== '1', 'con enfriamiento activo: el esquema sigue sin marcarse aunque la tabla ya esté libre');
+	ok(!in_array('crm_cliente_id', $wpdb->get_col("SHOW COLUMNS FROM {$tech}"), true), 'con enfriamiento activo: la columna sigue sin crearse');
+
+	// Se simula que el enfriamiento expiró (en producción, a los 5 minutos) y se reintenta.
+	delete_transient('at_cc_migrar_intento');
+	at_cc_migrar_esquema();
+	ok(get_option('at_cierre_schema') === '1', 'enfriamiento expirado: el esquema se marca al fin');
+	ok(in_array('crm_cliente_id', $wpdb->get_col("SHOW COLUMNS FROM {$tech}"), true), 'enfriamiento expirado: la columna queda creada');
 } else {
-	echo "AVISO: no se pudo abrir una segunda conexión MySQL para simular el bloqueo de la tabla; se omite la prueba del hallazgo T3 ronda 1 (ALTER fallido).\n";
+	echo "AVISO: no se pudo abrir una segunda conexión MySQL para simular el bloqueo de la tabla; se omite la prueba de los hallazgos T3 ronda 2 (error real y enfriamiento de reintento).\n";
 	at_cc_migrar_esquema();
 }
 

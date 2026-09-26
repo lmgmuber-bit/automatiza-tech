@@ -120,6 +120,64 @@ ok(strpos($err_c, 'Fatal error') === false, 'sin fichas enlazadas: la vista no t
 ok($html_c !== '', 'sin fichas enlazadas: la vista igual generó HTML (no se cae en blanco)');
 ok(strpos($html_c, 'MARCA-C-NUNCA-SIN-FICHA') === false, 'sin fichas enlazadas: la fila guardada con el id del CRM de C no aparece (falla cerrada, nunca se vuelve a filtrar por ese id)');
 
+// ---------- T16 ronda 1 (revisión), hallazgo 1: aceptar una propuesta no duplica sus marcas ----------
+// automatiza_migrate_prospect_to_client() copia cada fila de propuestas_details a clients_details al
+// aceptar (con el tech_id enlazado) y marca la fila original con metadata.migrated_to_client. El bloque
+// de propuestas_details de más arriba salta esas filas ya migradas; sin ese salto, cada marca ("Nota
+// previa" y "Aceptó la propuesta") aparecía dos veces en la pestaña «Todos» del portal (y "Aceptó la
+// propuesta" tres, sumando el historial del CRM, que es una fila aparte y no se toca aquí).
+$emailD = $marca . '-d@example.com';
+$tabla_propuestas = $wpdb->prefix . 'automatiza_propuestas';
+$tabla_propuestas_details = $wpdb->prefix . 'automatiza_propuestas_details';
+$payload_d = [
+	'company_name' => '[PRUEBA] Empresa', 'solution_text' => 'Servicio de prueba.',
+	'how_it_works' => [['step_title' => 'Servicio', 'step_text' => 'Servicio de prueba']],
+	'pricing_rows' => [
+		['service' => 'Fase 1: Servicio de prueba', 'price_usd' => 0, 'price_label' => '$1.000.000 en 2 pagos'],
+	],
+];
+$ok_pd = $wpdb->insert($tabla_propuestas, [
+	'client_email' => $emailD, 'unique_link_id' => substr(md5($marca . 'd' . microtime(true)), 0, 12),
+	'client_name' => 'Prueba Enlace D', 'company_name' => '[PRUEBA] Empresa', 'phone' => '+56 9 2222 6666',
+	'status' => 'sent', 'flujo' => 'v3', 'gamma_prompt_text' => wp_json_encode($payload_d, JSON_UNESCAPED_UNICODE),
+	'transcript_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql'),
+]);
+ok($ok_pd !== false, 'D: propuesta de prueba creada');
+$pD = at_cc_propuesta_por_id((int) $wpdb->insert_id);
+at_cc_anotar_simple($pD, 'nota', 'Nota previa de prueba', 'MARCA-NOTA-PREVIA-UNA-VEZ');
+
+add_filter('pre_wp_mail', function ($nulo, $atts) { return true; }, 10, 2); // no importa enviar de verdad aquí
+$filas_d = at_cc_filas_aceptadas(at_cc_filas_de_propuesta($pD), [0]);
+$r_d = at_cc_registrar_respuesta($pD, 'acepta', ['canal' => 'pagina', 'nombre' => 'Prueba Enlace D', 'rut' => '11.111.111-1', 'filas' => $filas_d, 'fecha' => current_time('mysql'), 'bienvenida' => false]);
+ok($r_d['ok'] && $r_d['estado'] === 'aceptada' && $r_d['crm_id'] > 0, 'D: propuesta aceptada y pasada a cliente');
+$crmD = (int) $r_d['crm_id'];
+
+[$html_d, $err_d] = at_cc_test_ver_portal($crmD);
+ok($html_d !== '' && strpos($err_d, 'Fatal error') === false, 'D: el portal se genera sin errores de PHP: ' . trim($err_d));
+
+// Aislar la pestaña «Todos»: cada item también se repite, sin ser un bug, en su pestaña por categoría
+// (p. ej. una nota vive en «Todos» y en «Notas»), así que contar sobre el HTML completo no serviría.
+if (!preg_match('/id="tl-content-todos".*?(?=<!-- Pestaña: Reuniones -->)/s', $html_d, $m_todos)) {
+	ok(false, 'D: no se pudo aislar la pestaña «Todos» del portal (revisar el marcador HTML)');
+} else {
+	$todos_html = $m_todos[0];
+	ok(substr_count($todos_html, 'MARCA-NOTA-PREVIA-UNA-VEZ') === 1, 'D: la nota previa aparece una sola vez en «Todos» (antes del fix: 2, la original y la migrada)');
+	ok(substr_count($todos_html, 'Aceptó la propuesta') === 2, 'D: «Aceptó la propuesta» aparece dos veces en «Todos» (la fila migrada + el historial del CRM; antes del fix: 3, sumando la original del prospecto)');
+}
+
+// Limpieza D
+$techD_row = at_cc_tech_de_crm($crmD);
+$techD_id = $techD_row ? (int) $techD_row->id : 0;
+if ($techD_id) {
+	$wpdb->query($wpdb->prepare("DELETE FROM {$tabla_details} WHERE client_id = %d", $techD_id));
+}
+$wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE proposal_id = %d", (int) $pD->id));
+$wpdb->query($wpdb->prepare("DELETE FROM {$tabla_tech} WHERE crm_cliente_id = %d", $crmD));
+$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}crm_historial WHERE cliente_id = %d", $crmD));
+$wpdb->query($wpdb->prepare("DELETE FROM {$tabla_crm} WHERE id = %d", $crmD));
+$wpdb->query($wpdb->prepare("DELETE FROM {$tabla_propuestas_details} WHERE propuesta_id = %d", (int) $pD->id));
+$wpdb->query($wpdb->prepare("DELETE FROM {$tabla_propuestas} WHERE id = %d", (int) $pD->id));
+
 // Limpieza
 $wpdb->query($wpdb->prepare("DELETE FROM {$tabla_details} WHERE client_id IN (%d, %d)", $techA, $crmA));
 $wpdb->query($wpdb->prepare("DELETE FROM {$tabla_tech} WHERE id = %d OR crm_cliente_id IN (%d, %d)", $crmA, $crmA, $crmB));

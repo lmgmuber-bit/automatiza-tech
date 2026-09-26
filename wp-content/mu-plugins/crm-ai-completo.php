@@ -1781,6 +1781,14 @@ class AutomatizaTech_CRM_AI {
             if ($propuesta_id && $wpdb->get_var("SHOW TABLES LIKE '$table_propuestas_details'") == $table_propuestas_details) {
                 $prospect_details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_propuestas_details WHERE propuesta_id = %d", $propuesta_id), ARRAY_A);
                 foreach ($prospect_details as $d) {
+                    // T16 ronda 1 (revisión), hallazgo 1: esta fila ya se copió a clients_details (arriba)
+                    // cuando se aceptó la propuesta; automatiza_migrate_prospect_to_client() marca
+                    // metadata.migrated_to_client en la propia fila del prospecto al migrarla. Sin este
+                    // salto, la fila migrada y su original se ven dos veces en la línea de tiempo.
+                    $meta_prospecto = !empty($d['metadata']) ? json_decode($d['metadata'], true) : null;
+                    if (!empty($meta_prospecto['migrated_to_client'])) {
+                        continue;
+                    }
                     $d['source'] = 'prospect';
                     // Prioridad de fecha: completed_date > scheduled_date > created_at
                     if (!empty($d['completed_date'])) {
@@ -2882,7 +2890,12 @@ class AutomatizaTech_CRM_AI {
                                             echo '<span title="Cliente notificado via email ' . $notif_date . '" style="font-size: 11px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 8px; display: inline-flex; align-items: center; gap: 3px;">📧 Notificado</span>';
                                         }
                                     }
-                                    if (!$is_notified && !empty($h['id']) && (strpos($h['title'] ?? $h['titulo'], 'ctualiz') !== false)) {
+                                    // T16 ronda 1 (revisión), hallazgo 2: el botón manda data-id = el id de esta
+                                    // fila, y el manejador (crm_enviar_notificacion_historial) siempre busca ese id
+                                    // en $this->tabla_historial (wp_crm_historial). Con las filas de clients_details
+                                    // ahora visibles aquí (bloque 1, arriba), data-id apuntaría a una tabla distinta:
+                                    // solo las filas 'system' (el historial legacy) viven ahí.
+                                    if (!$is_notified && !empty($h['id']) && ($h['source'] ?? '') === 'system' && (strpos($h['title'] ?? $h['titulo'], 'ctualiz') !== false)) {
                                         echo '<button type="button" class="button button-small btn-notificar-historial" data-id="' . $h['id'] . '" data-client="' . $cliente_id . '" style="margin-left:5px; font-size:10px; background:#f0fdf4; border:1px solid #16a34a; color:#166534;">📧 Enviar ahora</button>';
                                     }
                                     ?>
@@ -4435,6 +4448,14 @@ class AutomatizaTech_CRM_AI {
                         // si el módulo de cierre está cargado (siempre, salvo en pruebas puras del mu-plugin).
                         $at_cc_tipos_internos = function_exists('at_cc_tipos_internos') ? at_cc_tipos_internos() : ['cierre_incompleto', 'aviso_operativo'];
                         if (in_array($d['detail_type'] ?? '', $at_cc_tipos_internos, true)) {
+                            continue;
+                        }
+                        // T16 ronda 1 (revisión), hallazgo 1: esta fila ya se copió a clients_details (arriba)
+                        // cuando se aceptó la propuesta; automatiza_migrate_prospect_to_client() marca
+                        // metadata.migrated_to_client en la propia fila del prospecto al migrarla. Sin este
+                        // salto, la fila migrada y su original se ven dos veces en la línea de tiempo pública.
+                        $meta_prospecto = !empty($d['metadata']) ? json_decode($d['metadata'], true) : null;
+                        if (!empty($meta_prospecto['migrated_to_client'])) {
                             continue;
                         }
                         $d['source'] = 'prospect';
@@ -8396,16 +8417,27 @@ class AutomatizaTech_CRM_AI {
 
     public function crm_enviar_notificacion_historial() {
         check_admin_referer('crm_nonce', 'nonce');
-        
+        // T16 ronda 1 (revisión), hallazgo 2: esta acción manda un correo a nombre de AutomatizaTech y
+        // marca el historial como notificado; solo Luis (u otro admin) puede dispararla.
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('No tienes permisos.');
+        }
+
         $historial_id = intval($_POST['historial_id']);
         $cliente_id = intval($_POST['cliente_id']);
-        
+
         global $wpdb;
 
         // Obtener datos del historial item
         $historial = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->tabla_historial} WHERE id = %d", $historial_id));
         if (!$historial) {
             wp_send_json_error('No se encontró el item del historial.');
+        }
+        // T16 ronda 1, hallazgo 2: el id del historial no está ligado al cliente en la consulta de arriba;
+        // sin este chequeo, un historial_id de otro cliente notificaría (y marcaría como notificado) la
+        // fila equivocada.
+        if ((int) $historial->cliente_id !== $cliente_id) {
+            wp_send_json_error('El historial no pertenece a este cliente.');
         }
 
         // Obtener cliente para el email

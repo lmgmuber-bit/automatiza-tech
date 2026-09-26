@@ -61,7 +61,15 @@ function at_cc_tech_de_crm(int $crm_id): ?object {
 	}
 	global $wpdb;
 	at_cc_migrar_esquema();
-	$fila = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}automatiza_tech_clients WHERE crm_cliente_id = %d ORDER BY id ASC LIMIT 1", $crm_id));
+	// Un mismo cliente del CRM puede tener más de una ficha operativa enlazada (por ejemplo, una
+	// vacía creada al convertirlo a cliente en el CRM y otra con el contrato al pasarlo a
+	// contratado en Contactos). Se prefiere la que tiene plan o valor de contrato; entre varias
+	// así, la más reciente.
+	$fila = $wpdb->get_row($wpdb->prepare(
+		"SELECT * FROM {$wpdb->prefix}automatiza_tech_clients WHERE crm_cliente_id = %d
+		 ORDER BY (plan_id IS NOT NULL OR contract_value > 0) DESC, id DESC LIMIT 1",
+		$crm_id
+	));
 	return $fila ?: null;
 }
 

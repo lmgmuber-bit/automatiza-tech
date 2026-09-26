@@ -899,8 +899,15 @@ class AutomatizaTechContactForm {
             $client_id = $wpdb->insert_id;
 
             // Ficha única: el lead contratado queda también como cliente en el CRM, enlazado.
+            // Si el cliente ya tenía una ficha operativa por otro camino (CRM manual o propuesta
+            // aceptada), el puente devuelve ESA ficha (tech_id) y no la que se acaba de crear
+            // aquí ($client_id): se enlaza también la ficha nueva al mismo cliente del CRM, para
+            // que no quede una segunda ficha (con el plan y el valor del contrato) sin enlazar.
             if (function_exists('at_cc_asegurar_cliente')) {
-                at_cc_asegurar_cliente(['nombre' => $contact->name, 'email' => $contact->email, 'empresa' => $contact->company, 'telefono' => $contact->phone, 'origen' => 'contactos']);
+                $puente = at_cc_asegurar_cliente(['nombre' => $contact->name, 'email' => $contact->email, 'empresa' => $contact->company, 'telefono' => $contact->phone, 'origen' => 'contactos']);
+                if (is_array($puente) && (int) $puente['tech_id'] !== (int) $client_id) {
+                    $wpdb->update($this->clients_table_name, ['crm_cliente_id' => (int) $puente['crm_id']], ['id' => $client_id]);
+                }
             }
             
             // Obtener datos completos del cliente

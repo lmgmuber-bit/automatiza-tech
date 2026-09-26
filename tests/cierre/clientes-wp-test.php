@@ -108,4 +108,60 @@ ok(at_cc_crm_de_email(strtoupper($email)) === $r['crm_id'] && at_cc_crm_de_email
 
 $wpdb->query($wpdb->prepare("DELETE FROM {$tech} WHERE email LIKE %s", $wpdb->esc_like($marca) . '%'));
 $wpdb->query($wpdb->prepare("DELETE FROM {$crm} WHERE email LIKE %s", $wpdb->esc_like($marca) . '%'));
+
+// Hallazgo T4 ronda 1, punto 1: "pasar a contratado" en Contactos (move_to_clients) no debe crear
+// una segunda ficha operativa sin enlazar cuando el cliente ya tiene una ficha por otro camino
+// (CRM manual o propuesta aceptada). Se reproduce igual que en la revisión: primero una ficha
+// vacía enlazada (T1, como la crea "Convertir a Cliente"), luego move_to_clients() (Contactos)
+// para el mismo correo, con un plan real (T2, con plan_id y contract_value).
+$marca4 = 'prueba-cierre-t4r1-' . strtolower(wp_generate_password(6, false, false));
+$email4 = $marca4 . '@example.com';
+$servicios = $wpdb->prefix . 'automatiza_services';
+$contactos = $wpdb->prefix . 'automatiza_tech_contacts';
+
+$wpdb->insert($servicios, ['name' => '[PRUEBA] Plan Cierre T4R1', 'price_clp' => 150000, 'status' => 'active'], ['%s', '%d', '%s']);
+$plan_id4 = (int) $wpdb->insert_id;
+
+$r1 = at_cc_asegurar_cliente(['nombre' => 'Cliente Ronda1', 'email' => $email4]);
+ok(is_array($r1) && $r1['crm_id'] > 0 && $r1['tech_id'] > 0, 'T4R1: ficha T1 (vacía) creada por el puente, como al convertir a cliente en el CRM');
+
+$wpdb->insert($contactos, [
+    'name' => 'Cliente Ronda1',
+    'email' => $email4,
+    'company' => '[PRUEBA]',
+    'phone' => '',
+    'tax_id' => '11.111.111-1',
+    'message' => 'prueba automatizada',
+    'status' => 'new',
+], ['%s', '%s', '%s', '%s', '%s', '%s', '%s']);
+$contact_id4 = (int) $wpdb->insert_id;
+
+$form4 = new AutomatizaTechContactForm();
+$rm4 = new ReflectionMethod($form4, 'move_to_clients');
+$rm4->setAccessible(true);
+$ok_move4 = $rm4->invoke($form4, $contact_id4, (string) $plan_id4, false);
+ok($ok_move4 === true, 'T4R1: move_to_clients() convierte el contacto');
+
+$t2 = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$tech} WHERE email = %s ORDER BY id DESC LIMIT 1", $email4));
+ok($t2 && (int) $t2->plan_id === $plan_id4 && (float) $t2->contract_value === 150000.0, 'T4R1: T2 (Contactos) queda con el plan y el valor del contrato');
+ok($t2 && (int) $t2->id !== (int) $r1['tech_id'], 'T4R1: T2 es una ficha distinta de T1 (se reproduce el escenario del hallazgo)');
+ok($t2 && (int) $t2->crm_cliente_id === (int) $r1['crm_id'], 'T4R1: T2 queda enlazada al MISMO cliente del CRM que T1, no huérfana');
+
+$ficha_pestana = at_cc_tech_de_crm((int) $r1['crm_id']);
+ok($ficha_pestana && (int) $ficha_pestana->id === (int) $t2->id, 'T4R1: la pestaña "Contratos y operación" (at_cc_tech_de_crm) muestra la ficha con el contrato (T2), no la vacía (T1)');
+
+$wpdb->query($wpdb->prepare("DELETE FROM {$tech} WHERE email LIKE %s", $wpdb->esc_like($marca4) . '%'));
+$wpdb->query($wpdb->prepare("DELETE FROM {$crm} WHERE email LIKE %s", $wpdb->esc_like($marca4) . '%'));
+$wpdb->query($wpdb->prepare("DELETE FROM {$contactos} WHERE email LIKE %s", $wpdb->esc_like($marca4) . '%'));
+$wpdb->delete($servicios, ['id' => $plan_id4]);
+
+// Hallazgo T4 ronda 1, punto 2: 'respuesta_cliente' no puede ser el primer tipo de
+// get_detail_types(), porque showAddDetailModal() no preselecciona ningún <option> para un
+// registro nuevo y el navegador elige el primero (quedaría marcado "Respuesta del cliente" sin
+// que nadie lo haya elegido). Debe seguir presente en la lista, solo que no primero.
+$tipos = AutomatizaTech_Client_Details::get_detail_types();
+$claves_tipos = array_keys($tipos);
+ok($claves_tipos[0] !== 'respuesta_cliente', 'T4R1: respuesta_cliente no es el tipo por defecto de un registro nuevo de Seguimiento');
+ok(isset($tipos['respuesta_cliente']), 'T4R1: respuesta_cliente sigue disponible en la lista de tipos');
+
 fin();

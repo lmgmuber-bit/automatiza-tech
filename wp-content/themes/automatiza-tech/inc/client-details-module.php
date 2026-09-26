@@ -145,15 +145,18 @@ class AutomatizaTech_Client_Details {
      */
     public static function get_detail_types() {
         return array(
-            'respuesta_cliente' => array(
-                'label' => '✅ Respuesta del cliente',
-                'icon' => '✅',
-                'color' => '#059669'
-            ),
             'propuesta_enviada' => array(
                 'label' => '📄 Propuesta Enviada',
                 'icon' => '📄',
                 'color' => '#667eea'
+            ),
+            // Hallazgo T4 ronda 1: no puede ir primero. Sin tipo preseleccionado, el <select> de
+            // showAddDetailModal() elige el primero por defecto; un registro nuevo de Seguimiento
+            // quedaría marcado "Respuesta del cliente" aunque nadie haya elegido ese tipo.
+            'respuesta_cliente' => array(
+                'label' => '✅ Respuesta del cliente',
+                'icon' => '✅',
+                'color' => '#059669'
             ),
             'cotizacion' => array(
                 'label' => '💰 Cotización',

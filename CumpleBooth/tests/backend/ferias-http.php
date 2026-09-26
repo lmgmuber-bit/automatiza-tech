@@ -139,11 +139,18 @@ f_check(($r['json']['feria']['organizador_ig'] ?? '') === '@royalart.cl' && ($r[
 f_check(($r['json']['party']['invitados'] ?? null) === [] && ($r['json']['party']['nombre'] ?? '') === 'Mini Paseo Dieciochero', 'sin lista de invitados, nombre de la feria');
 $r = pedir('GET', '/api.php?p=' . $slug . '&tema=spidey&modo=infantil');
 f_check(($r['json']['theme']['slug'] ?? '') === 'spidey', 'el visitante elige spidey');
-$sinJuegos = true;
-foreach (($r['json']['theme']['personajes'] ?? []) as $p) { if (!empty((array) $p['game'])) { $sinJuegos = false; } }
-f_check($sinJuegos && count($r['json']['theme']['personajes']) > 0, 'en feria los personajes no traen minijuego (la fila avanza)');
+$conJuego = 0;
+foreach (($r['json']['theme']['personajes'] ?? []) as $p) { if (!empty((array) $p['game'])) { $conJuego++; } }
+$fiesta = cb_build_theme_payload('spidey', cb_load_themes()['themes']['spidey'], null, 'booth');
+$enFiesta = count(array_filter($fiesta['personajes'], static fn($p) => !empty((array) $p['game'])));
+f_check($enFiesta > 0 && $conJuego === $enFiesta, 'en Niños los personajes traen el mismo minijuego que en una fiesta');
 $r = pedir('GET', '/api.php?p=' . $slug . '&tema=baby-nube&modo=adulto');
 f_check(($r['json']['theme']['slug'] ?? '') === 'baby-nube' && ($r['json']['theme']['personajes'] ?? null) === [], 'adulto con temática sin personajes');
+$r = pedir('GET', '/api.php?p=' . $slug . '&tema=hielo&modo=adulto');
+$adultoJuega = false;
+foreach (($r['json']['theme']['personajes'] ?? []) as $p) { if (!empty((array) $p['game'])) { $adultoJuega = true; } }
+f_check(($r['json']['theme']['slug'] ?? '') === 'hielo' && !$adultoJuega, 'en Adultos no aparece minijuego aunque la temática traiga personajes');
+f_check(empty((array) ($r['json']['theme']['game'] ?? [])), 'en Adultos tampoco llega el juego general de la temática');
 f_check(pedir('GET', '/api.php?p=' . $slug . '&tema=baby-nube&modo=infantil')['json']['error'] === 'tema_no_habilitado', 'temática no habilitada en ese modo: 403');
 f_check(pedir('GET', '/api.php?p=' . $slug . '&tema=spidey&modo=adulto')['estado'] === 403, 'spidey no está en adultos');
 f_check(pedir('GET', '/api.php?p=' . $slug . '&tema=hielo&modo=abuelos')['estado'] === 400, 'modo inválido: 400');
@@ -208,6 +215,8 @@ f_check(cb_feria_galeria($feria, ['q' => 'sof'])['total'] === 1, 'busca por nomb
 f_check(cb_feria_galeria($feria, ['modo' => 'adulto'])['total'] === 1 && cb_feria_galeria($feria, ['tema' => 'hielo'])['total'] === 1, 'filtra por modo y temática');
 $idSofia = (int) $pdo->query('SELECT photo_id FROM cc_feria_fotos WHERE numero = 1 AND feria_id = ' . $feria['id'])->fetchColumn();
 $pdo->prepare('UPDATE cc_photos SET created_at = ? WHERE id = ?')->execute(['2026-09-26 14:00:00', $idSofia]); // 11:00 en Chile
+// Las demás fotos a una hora fija lejos del rango: con la hora real, la prueba fallaba entre 10:30 y 11:30.
+$pdo->prepare('UPDATE cc_photos SET created_at = ? WHERE id IN (SELECT photo_id FROM cc_feria_fotos WHERE feria_id = ?) AND id <> ?')->execute(['2026-09-26 20:00:00', $feria['id'], $idSofia]); // 17:00 en Chile
 f_check(cb_feria_galeria($feria, ['desde' => '10:30', 'hasta' => '11:30'])['total'] === 1, 'filtra por hora de Chile');
 $idFila = (int) $todo['fotos'][1]['id'];
 f_check(cb_feria_sumar_impresion($feria, $idFila, 2) === 2 && cb_feria_sumar_impresion($feria, $idFila) === 3, 'cuenta las impresiones');

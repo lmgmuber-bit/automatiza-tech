@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { apiQuery, feriaFromResponse, firstName, returnUrl, kioskUrl, enabledModes, initialPhotoStep, filterFor, reservation, upload, armIdle, footerLines } from '../../src/feria/contract.js'
+import { afterName, souvenirLines, apiQuery, feriaFromResponse, firstName, returnUrl, kioskUrl, enabledModes, initialPhotoStep, filterFor, reservation, upload, armIdle, footerLines } from '../../src/feria/contract.js'
 
 test('una fiesta normal no activa feria aunque su URL tenga modo y tema', () => {
   assert.equal(feriaFromResponse({ ok: true, party: {}, theme: {} }), null)
@@ -32,8 +32,18 @@ test('mundos y recorridos: sin mundos no hay botón, sin personajes no hay rulet
   assert.deepEqual(enabledModes({ infantil: [], adulto: [{ slug: 'estudio' }] }), ['adulto'])
   assert.equal(initialPhotoStep([]), 'camera')
   assert.equal(initialPhotoStep([{ name: 'Estrella' }]), 'roulette')
+  // Con Asómate en la temática se elige primero; sin él, igual que antes.
+  assert.equal(afterName([{ name: 'Estrella' }], true), 'menu')
+  assert.equal(afterName([], true), 'menu')
+  assert.equal(afterName([{ name: 'Estrella' }], false), 'roulette')
+  assert.equal(afterName([], false), 'camera')
   assert.equal(filterFor('bn'), 'grayscale(1) contrast(1.08)')
   assert.equal(filterFor(undefined), 'none')
+})
+test('franja de recuerdo: feria y fecha, organizador nombrado y número', () => {
+  assert.deepEqual(souvenirLines({ nombre: 'Mini Paseo Dieciochero', fecha_texto: '26 sep 2026', organizador: 'Royal Art Academy', organizador_ig: '@royalart.cl' }, { etiqueta: 'F-005' }),
+    { titulo: 'Mini Paseo Dieciochero · 26 sep 2026', organiza: 'Organiza Royal Art Academy · @royalart.cl', etiqueta: 'F-005' })
+  assert.deepEqual(souvenirLines({ nombre: 'Feria', organizador_ig: '@feria' }, { etiqueta: 'F-001' }), { titulo: 'Feria', organiza: '@feria', etiqueta: 'F-001' })
 })
 test('franja mantiene recuerdo, organizador y número del servidor', () => {
   assert.deepEqual(footerLines({ recuerdo: 'Un día especial', organizador_ig: '@feria' }, { etiqueta: 'F-027' }), ['Un día especial', '@feria', 'F-027'])

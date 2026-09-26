@@ -35,8 +35,16 @@ export function kioskUrl(slug, theme, mode, selector) {
 
 export const enabledModes = (worlds) => ['infantil', 'adulto'].filter((mode) => Array.isArray(worlds?.[mode]) && worlds[mode].length)
 export const initialPhotoStep = (characters) => characters?.length ? 'roulette' : 'camera'
+// Con Asómate disponible se ofrece elegir; sin él, el recorrido de siempre (ruleta o cámara directa).
+export const afterName = (characters, hasAsomate) => hasAsomate ? 'menu' : initialPhotoStep(characters)
 export const filterFor = (filter) => filter === 'bn' ? 'grayscale(1) contrast(1.08)' : 'none'
 export const footerLines = (feria, held) => [feria.recuerdo || feria.nombre || '', feria.organizador_ig || feria.organizador || '', held.etiqueta]
+// Franja de recuerdo (26-09): la feria y su fecha arriba; abajo el organizador nombrado (sin su logo, pidió Luis) y el número.
+export const souvenirLines = (feria, held) => ({
+  titulo: [feria.nombre, feria.fecha_texto].filter(Boolean).join(' · '),
+  organiza: feria.organizador ? `Organiza ${feria.organizador}${feria.organizador_ig ? ' · ' + feria.organizador_ig : ''}` : (feria.organizador_ig || ''),
+  etiqueta: held?.etiqueta || '',
+})
 
 export function armIdle(onIdle, milliseconds, clock = globalThis) {
   let timer

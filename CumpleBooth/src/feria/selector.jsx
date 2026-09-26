@@ -1,10 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { armIdle, enabledModes, grantConsent, kioskUrl, returnUrl } from './contract.js'
+import { FullscreenButton, useFullscreenOnTap } from './fullscreen.jsx'
 import './feria.css'
 
 const BASE = import.meta.env.BASE_URL
 const labels = { infantil: 'Niños', adulto: 'Adultos' }
+// Fondo de la feria (Higgsfield, 26-09): uno por evento, se cambia reemplazando el archivo.
+// Dirección absoluta: una url() relativa dentro de una variable CSS se resuelve contra la hoja que la usa (assets/).
+const fondo = { '--feria-fondo': `url("${new URL(BASE + 'feria/fondo.jpg', location.href).href}")` }
 
 function Selector() {
   const slug = new URLSearchParams(location.search).get('f') || ''
@@ -18,6 +22,7 @@ function Selector() {
   const [videoFailed, setVideoFailed] = useState(false)
   const reduced = useRef(matchMedia('(prefers-reduced-motion: reduce)').matches)
   const heading = useRef(null)
+  useFullscreenOnTap()
 
   useEffect(() => {
     const controller = new AbortController()
@@ -52,17 +57,18 @@ function Selector() {
   }
   const brand = <div className="feria-brand"><img src={BASE + 'brand/cumpleclick-mark.svg'} alt="" /><span>CumpleClick</span></div>
 
-  if (error || !data) return <main className="feria-selector feria-center">{brand}<h1>{error ? 'Volvamos a intentarlo' : 'Preparando la feria…'}</h1><p role={error ? 'alert' : 'status'}>{error || 'Un momento, ya comenzamos.'}</p>{error && <button onClick={() => setRetry(retry + 1)}>Reintentar</button>}</main>
+  if (error || !data) return <main className="feria-selector feria-center" style={fondo}>{brand}<h1>{error ? 'Volvamos a intentarlo' : 'Preparando la feria…'}</h1><p role={error ? 'alert' : 'status'}>{error || 'Un momento, ya comenzamos.'}</p>{error && <button onClick={() => setRetry(retry + 1)}>Reintentar</button>}</main>
 
-  return <main className={`feria-selector ${screen === 'idle' ? 'feria-idle' : 'feria-screen-' + screen}`}>
+  return <main className={`feria-selector ${screen === 'idle' ? 'feria-idle' : 'feria-screen-' + screen}`} style={fondo}>
     {screen === 'idle' ? <>
       {data.video_espera && !videoFailed && !reduced.current && <video className="feria-idle-video" src={BASE + data.video_espera} autoPlay loop muted playsInline onError={() => setVideoFailed(true)} />}
+      <FullscreenButton className="feria-fullscreen-idle" />
       <button className="feria-idle-touch" onClick={() => setScreen('modes')} aria-label="Toca para empezar">
         {brand}<span className="feria-eyebrow">UN RECUERDO PARA LLEVAR</span><h1>{data.feria.nombre}</h1><p>Tu foto. Tu momento.<br />Un recuerdo de hoy.</p><span className="feria-start">Toca para empezar <span aria-hidden="true">→</span></span>
         <span className="feria-location">{[data.feria.fecha_texto, data.feria.lugar].filter(Boolean).join(' · ')}</span>
       </button>
     </> : <>
-      <header>{brand}<span className="feria-event-name">{data.feria.nombre}</span></header>
+      <header>{brand}<span className="feria-event-name">{data.feria.nombre}</span><FullscreenButton /></header>
       <section className="feria-content">
         <span className="feria-eyebrow">{screen === 'modes' ? '01 / TU EXPERIENCIA' : '02 / TU MUNDO'}</span>
         <h1 ref={heading} tabIndex={-1}>{screen === 'modes' ? 'Este momento es tuyo' : 'Elige cómo recordarlo'}</h1>

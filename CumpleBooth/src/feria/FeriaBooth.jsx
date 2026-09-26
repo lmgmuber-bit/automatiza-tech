@@ -3,11 +3,16 @@ import QRCode from 'qrcode'
 import Camera from './Camera.jsx'
 import { createSegmenter } from './segmentation.js'
 import { filterImage } from './photo.js'
-import { armIdle, firstName, initialPhotoStep, reservation, returnUrl, takeConsent, upload } from './contract.js'
+import { afterName, armIdle, firstName, initialPhotoStep, reservation, returnUrl, takeConsent, upload } from './contract.js'
 import { downloadImage, withRemembrance } from './media.js'
+import { FullscreenButton, useFullscreenOnTap } from './fullscreen.jsx'
 import './feria.css'
 
-export default function FeriaBooth({ feria, theme, themeData, characters, filter, base, Spinner, Character, renderPhoto, renderDiploma }) {
+// Niños en feria recupera lo de una fiesta (Luis, 26-09, ya en la feria): el minijuego del personaje antes de la
+// foto y Asómate cuando la temática lo trae. Las piezas son las del kiosco normal y llegan como props, para que
+// este archivo no dependa del estado de BoothApp; la foto igual sale con número, recuerdo y QR de la feria.
+export default function FeriaBooth({ feria, theme, themeData, characters, filter, base, Spinner, Character, renderPhoto, renderDiploma,
+  asomate = null, gameFor = null, Game = null, AsomatePick = null, Capture = null, AsomateReview = null, asomatePerson = null, prepareAsomate = null }) {
   const [segmenter, setSegmenter] = useState(null)
   const [step, setStep] = useState('name')
   const [name, setName] = useState('')
@@ -21,6 +26,10 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [remaining, setRemaining] = useState(60)
+  const [route, setRoute] = useState('personaje')
+  const [elenco, setElenco] = useState([])
+  const [fotosAsomate, setFotosAsomate] = useState([])
+  const [heroe, setHeroe] = useState(null)
   const locked = useRef(false)
   const reservationRef = useRef(null)
   const uploaded = useRef('')
@@ -30,6 +39,9 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
   const finish = useCallback(() => location.replace(destination), [destination])
   const winner = useCallback((value) => { setPerson(value); setStep('character') }, [])
   const camera = useCallback(() => setStep('camera'), [])
+  const afterCharacter = useCallback(() => setStep(child && gameFor && person && gameFor(person.name) ? 'juego' : 'camera'), [child, gameFor, person])
+  const asomateOk = Boolean(asomate && AsomatePick && Capture && AsomateReview)
+  useFullscreenOnTap()
 
   useEffect(() => {
     if (themeData.modoFoto !== 'fondo') return
@@ -48,7 +60,8 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
     return () => { idle.stop(); clearInterval(clock) }
   }, [completed, finish])
 
-  const prepare = async (source) => {
+  // `precompuesta`: la escena de Asómate ya viene armada por su propio compositor; solo le falta el recuerdo y el número.
+  const prepare = async (source, precompuesta = route === 'asomate') => {
     if (locked.current) return
     locked.current = true; setBusy(true); setError(''); setRaw(source); setStep('preview')
     try {
@@ -57,7 +70,7 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
       const number = reservationRef.current
       setHeld(number)
       const compositionStart = performance.now()
-      const composed = await renderPhoto(source, firstName(name), person, filter, segmenter)
+      const composed = precompuesta ? source : await renderPhoto(source, firstName(name), person, filter, segmenter)
       const finalPhoto = await filterImage(await withRemembrance(composed, feria, number), filter)
       if (segmenter) segmenter.metrics.compositionMs = performance.now() - compositionStart
       setPhoto(finalPhoto)
@@ -84,24 +97,55 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
     if (locked.current) return
     locked.current = true; setBusy(true); setError('')
     try {
-      if (!diploma) setDiploma(await withRemembrance(await renderDiploma(firstName(name), person), feria, held))
+      if (!diploma) setDiploma(await withRemembrance(await renderDiploma(firstName(name), person, route === 'asomate' ? heroe : null), feria, held))
       setStep('diploma')
     } catch { setError('No pudimos preparar el diploma. Puedes intentarlo nuevamente.') }
     finally { locked.current = false; setBusy(false) }
   }
 
-  return <main className={`app feria-kiosco feria-kiosco-${feria.modo}`} data-step={step} data-segmentation={segmenter ? JSON.stringify(segmenter.metrics) : undefined}>
-    <header className="feria-kiosk-header"><span>CumpleClick <b>·</b> {feria.nombre}</span>{!completed && <button className="feria-quiet" disabled={busy} onClick={finish}>Salir</button>}</header>
+  const startAsomate = () => {
+    if (prepareAsomate) prepareAsomate()
+    setRoute('asomate'); setElenco([]); setFotosAsomate([]); setStep('asomate-elegir')
+  }
+  const startPersonaje = () => { setRoute('personaje'); setStep(initialPhotoStep(characters)) }
+  const retake = () => {
+    setPhoto(null); setError('')
+    if (route === 'asomate') { setFotosAsomate([]); setStep('asomate-capturar') } else setStep('camera')
+  }
+  const withCharacters = Boolean(characters?.length)
+
+  return <main className={`app feria-kiosco feria-kiosco-${feria.modo}`} data-step={step} data-segmentation={segmenter ? JSON.stringify(segmenter.metrics) : undefined}
+    style={{ '--feria-fondo': `url("${new URL(base + 'feria/fondo.jpg', location.href).href}")` }}>
+    <header className="feria-kiosk-header"><span>CumpleClick <b>·</b> {feria.nombre}</span><span className="feria-kiosk-acciones"><FullscreenButton />{!completed && <button className="feria-quiet" disabled={busy} onClick={finish}>Salir</button>}</span></header>
     {step === 'name' && <section className="feria-panel feria-name"><img className="feria-name-logo" src={base + 'brand/cumpleclick-mark.svg'} alt="CumpleClick" /><span className="feria-eyebrow">{child ? 'TU AVENTURA COMIENZA' : 'UN RETRATO A TU MANERA'}</span><h1 ref={heading} tabIndex={-1}>¿Cómo te llamas?</h1><p>Solo tu primer nombre, si quieres.</p><label className="feria-name-label">Tu nombre <span>(opcional)</span><input value={name} maxLength={20} autoComplete="off" autoCapitalize="words" onChange={(e) => setName(e.target.value)} placeholder="Tu primer nombre" /></label>
       {child && !consent && <label className="feria-consent"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />Soy el adulto responsable y autorizo tomar la foto</label>}
-      <button className="feria-primary" disabled={!consent} onClick={() => { setName(firstName(name)); setStep(initialPhotoStep(characters)) }}>Continuar <span aria-hidden="true">→</span></button><button className="feria-quiet" disabled={!consent} onClick={() => { setName(''); setStep(initialPhotoStep(characters)) }}>Saltar</button>
+      <button className="feria-primary" disabled={!consent} onClick={() => { setName(firstName(name)); setStep(afterName(characters, asomateOk)) }}>Continuar <span aria-hidden="true">→</span></button><button className="feria-quiet" disabled={!consent} onClick={() => { setName(''); setStep(afterName(characters, asomateOk)) }}>Saltar</button>
+    </section>}
+    {step === 'menu' && <section className="feria-panel feria-menu"><span className="feria-eyebrow">{child ? 'ELIGE TU AVENTURA' : 'ELIGE TU FOTO'}</span><h1 ref={heading} tabIndex={-1}>¿Cómo quieres tu foto?</h1>
+      <div className="feria-menu-opciones">
+        <button className="feria-opcion" onClick={startPersonaje}><span aria-hidden="true">{withCharacters ? '🎡' : '📸'}</span><strong>{withCharacters ? 'Foto con tu personaje' : 'Foto con la temática'}</strong><small>{withCharacters ? 'Gira la ruleta, conoce a tu personaje y juega antes de la foto' : 'Tu foto con el fondo de esta temática'}</small></button>
+        <button className="feria-opcion feria-opcion-asomate" onClick={startAsomate}><strong>{asomate?.boton || '🦸 Asómate y sé el héroe'}</strong><small>{asomate?.titulo || 'Pon tu cara en el traje de tu personaje'}</small></button>
+      </div>
     </section>}
     {step === 'roulette' && <Spinner onDone={winner} />}
-    {step === 'character' && <Character personaje={person} invitado={name} onDone={camera} />}
+    {step === 'character' && <Character personaje={person} invitado={name} onDone={afterCharacter} />}
+    {step === 'juego' && Game && <Game invitado={name} personaje={person} onDone={camera} />}
+    {step === 'asomate-elegir' && asomateOk && <AsomatePick onDone={(nuevo) => { setElenco(nuevo); setFotosAsomate([]); setStep('asomate-capturar') }} onCancel={() => setStep('menu')} />}
+    {step === 'asomate-capturar' && asomateOk && elenco.length > 0 && <>
+      {elenco.length > 1 && <p className="asomate-turno-aviso">Le toca a {elenco[fotosAsomate.length]?.emoji} <strong>{elenco[fotosAsomate.length]?.nombre}</strong> · {fotosAsomate.length + 1} de {elenco.length}</p>}
+      <Capture key={fotosAsomate.length} guia={elenco[fotosAsomate.length]} onCapture={(dataUrl) => {
+        const fotos = [...fotosAsomate, dataUrl]
+        setFotosAsomate(fotos)
+        if (fotos.length >= elenco.length) setStep('asomate-preview')
+      }} />
+    </>}
+    {step === 'asomate-preview' && asomateOk && elenco.length > 0 && <AsomateReview elenco={elenco} fotos={fotosAsomate} invitado={name}
+      onRetry={() => { setFotosAsomate([]); setStep('asomate-capturar') }}
+      onSave={(compuesta, paraDiploma) => { setPerson(asomatePerson ? asomatePerson(elenco) : null); setHeroe(paraDiploma || null); setDiploma(null); prepare(compuesta, true) }} />}
     {step === 'camera' && <Camera filter={filter} segmenter={segmenter} scene={themeData.images?.escena} base={base} onCapture={prepare} />}
     {step === 'preview' && <section className="feria-panel feria-preview"><span className="feria-eyebrow">TU RECUERDO DE HOY</span><h1 ref={heading} tabIndex={-1}>{held ? `Tu foto: ${held.etiqueta}` : 'Preparando tu recuerdo'}</h1>{photo ? <img className="feria-result" src={photo} alt="Tu foto con el recuerdo y el número de la feria" /> : <p role="status">{busy ? 'Estamos preparando tu foto…' : 'La foto está lista para reintentar.'}</p>}
       {error && <p role="alert">{error}</p>}
-      <div className="feria-actions">{photo ? <button className="feria-primary" disabled={busy} onClick={save}>{busy ? 'Preparando el QR…' : 'Guardar y ver mi QR'}</button> : <button className="feria-primary" disabled={busy} onClick={() => prepare(raw)}>Reintentar</button>}<button className="feria-quiet" disabled={busy} onClick={() => { setPhoto(null); setError(''); setStep('camera') }}>Tomar otra foto</button>{error && raw && <button className="feria-quiet" onClick={() => downloadImage(photo || raw, held?.etiqueta)}>Guardar en esta tablet</button>}</div>
+      <div className="feria-actions">{photo ? <button className="feria-primary" disabled={busy} onClick={save}>{busy ? 'Preparando el QR…' : 'Guardar y ver mi QR'}</button> : <button className="feria-primary" disabled={busy} onClick={() => prepare(raw)}>Reintentar</button>}<button className="feria-quiet" disabled={busy} onClick={retake}>Tomar otra foto</button>{error && raw && <button className="feria-quiet" onClick={() => downloadImage(photo || raw, held?.etiqueta)}>Guardar en esta tablet</button>}</div>
     </section>}
     {completed && <section className={`feria-panel feria-complete ${step === 'diploma' ? 'feria-diploma' : ''}`}><span className="feria-eyebrow">{step === 'diploma' ? 'UN DIPLOMA PARA TI' : 'LLÉVATE ESTE MOMENTO'}</span><h1 ref={heading} tabIndex={-1}>Tu foto: {held.etiqueta}</h1>
       {step === 'qr' ? <><img className="feria-qr" src={qr} alt="Escanea este código QR para descargar tu foto" /><p>Escanea el QR con tu celular.<br />Guarda tu número para encontrar tu foto.</p>{child && <button disabled={busy} onClick={showDiploma}>{busy ? 'Preparando diploma…' : 'Ver mi diploma'}</button>}</> : <><img className="feria-result" src={diploma} alt={`Diploma en ${feria.nombre} · ${feria.fecha_texto}`} /><div className="feria-actions"><button onClick={() => downloadImage(diploma, `diploma-${held.etiqueta}`)}>Guardar diploma en la tablet</button><button className="feria-quiet" onClick={() => setStep('qr')}>Volver al QR de mi foto</button></div></>}

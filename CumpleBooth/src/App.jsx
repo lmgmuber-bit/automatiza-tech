@@ -450,6 +450,8 @@ export default function App() {
         FERIA_THEME = FERIA ? data.theme : null
         buildRuntime(data.party, data.theme, p)
         if (FERIA) THEME_LABEL = (data.theme.nombre || '').toUpperCase()
+        // Los récords de los minijuegos guardan el nombre del niño en la tablet: en una feria son desconocidos.
+        if (FERIA) configurarRecords(null)
         applyThemeVars(data.theme && data.theme.colors)
         setStatus('ready')
       })
@@ -472,7 +474,9 @@ export default function App() {
   // status === 'ready' → RUNTIME ya está poblado, es seguro montar la app
   if (FERIA) return <FeriaBooth key={slug} feria={FERIA} theme={THEME_SLUG} themeData={FERIA_THEME}
     characters={PERSONAJES} filter={FERIA_THEME?.filtro} base={BASE} Spinner={Spinner} Character={VideoPersonaje}
-    renderPhoto={composeFeriaPhoto} renderDiploma={composeFeriaDiploma} />
+    renderPhoto={composeFeriaPhoto} renderDiploma={composeFeriaDiploma}
+    asomate={CONFIG.asomate || null} gameFor={feriaGameFor} Game={Juego} AsomatePick={AsomateElegir} Capture={Capture}
+    AsomateReview={AsomatePreview} asomatePerson={personajeDeAsomate} prepareAsomate={prepararAsomateFeria} />
   return <BoothApp key={slug} />
 }
 
@@ -480,6 +484,10 @@ export default function App() {
    Pantallas de la puerta de entrada (sin RUNTIME todavía, look genérico)
    ============================================================ */
 // Adaptadores exclusivos de feria; el recorrido normal conserva sus compositores.
+// THEME_FLOW se reasigna al cargar la temática: se consulta al momento, no se copia.
+const feriaGameFor = (nombre) => THEME_FLOW.gameFor(nombre)
+const prepararAsomateFeria = () => { prepararDetector(BASE).catch(() => {}) }
+
 async function composeFeriaPhoto(source, name, person, filter, segmenter) {
   await Promise.all([ensureCanvasFonts(), preloadBrandLogo()])
   return createFeriaPhoto({ source, name, person, filter, segmenter, base: BASE, theme: FERIA_THEME,
@@ -492,8 +500,10 @@ async function composeFeriaPhoto(source, name, person, filter, segmenter) {
   })
 }
 
-async function composeFeriaDiploma(name, person) {
+async function composeFeriaDiploma(name, person, heroe = null) {
   await Promise.all([ensureCanvasFonts(), preloadBrandLogo()])
+  // Asómate: el diploma se arma sobre la escena del niño convertido en personaje, como en DiplomaScreen.
+  if (heroe) return composeDiploma(name, null, await loadImage(heroe).catch(() => null))
   const [winner, hero] = await Promise.all([
     loadImage(CHAR_IMG[person?.name]).catch(() => null), loadImage(CHAR_PNG[person?.name]).catch(() => null),
   ])
@@ -1982,6 +1992,8 @@ function componerGrupal(fondoImg, fotoImg, caja, titulo, opciones = {}) {
 
 /** El texto del pie. En grupo saluda a todos; solo, al invitado. */
 function tituloAsomate(invitado, cuantos) {
+  // En una feria no hay cumpleañero (26-09: salía "Tomás en el cumple de <feria>" en la foto que se lleva la gente).
+  if (FERIA) return cuantos > 1 ? `Amigos en ${FERIA.nombre}` : (invitado ? `${invitado} en ${FERIA.nombre}` : `Un recuerdo de ${FERIA.nombre}`)
   const quien = nombreEvento()
   if (cuantos > 1) return quien ? `El cumple de ${quien} y sus amigos` : '¡Amigos!'
   if (invitado && quien) return `${invitado} en el cumple de ${quien}`
@@ -2272,7 +2284,8 @@ function AsomatePreview({ elenco, fotos, invitado, onRetry, onSave }) {
     // Primero a la tablet y después al servidor, igual que la cabina: si el wifi se cae, la
     // foto ya está en el aparato. Hasta hoy Asómate no dejaba ninguna copia y, si la subida
     // fallaba, la pantalla igual decía que la descarga local estaba segura.
-    guardarEnLaTablet(compuesta, `asomate-${invitado || 'invitados'}`)
+    // En feria la copia la guarda la cabina de feria con su número F-###; aquí saldría una segunda sin número.
+    if (!FERIA) guardarEnLaTablet(compuesta, `asomate-${invitado || 'invitados'}`)
     onSave(compuesta, paraDiploma)
   }
 

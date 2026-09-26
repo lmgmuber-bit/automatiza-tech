@@ -298,7 +298,13 @@ function cb_feria_resolver(array $feria, array $resuelto, string $tema, string $
     // Las temáticas adultas pueden venir sin música (así las aprobó Luis el 26-09): sin archivo, sin
     // música, en vez de dejar que la tablet pida un MP3 que no existe.
     $party['musica'] = $party['musica'] && is_file(cb_themes_dir() . '/' . $tema . '/musica-fondo.mp3');
-    $theme = cb_build_theme_payload($tema, $themeData, [], 'booth');
+    // Niños juega el minijuego de su personaje, como en una fiesta (Luis, 26-09, ya en la feria: "no está la
+    // opción de juegos"). Adultos no tiene personajes; se deja la lista vacía para que nunca aparezca uno.
+    $theme = cb_build_theme_payload($tema, $themeData, $modo === 'infantil' ? null : [], 'booth');
+    if ($modo !== 'infantil') {
+        // El juego general de la temática no pasa por el filtro de personajes: en Adultos también se apaga.
+        $theme['game'] = new stdClass();
+    }
     // Filtro de la foto final, por temática (hoy solo "bn": el estudio en blanco y negro que la
     // competencia vende a adultos). El kiosco lo aplica al componer; sin el campo, foto a color.
     if (($themeData['filtro'] ?? '') === 'bn') {

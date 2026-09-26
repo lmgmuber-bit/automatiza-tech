@@ -46,7 +46,10 @@ aceptando respuestas parciales, que se completan con lo guardado; su aviso de er
 dos rondas de revisión adversarial mostraron que así toma una nota, la versión «antes» o la plantilla del prompt y
 la guarda como cambio correcto. Casos en `python N8N/propuestas-v3/probar_json.py` (46; corre con node el código
 real de los nodos). Respaldo de lo que había antes del 26-sep en `C:/Users/luis_/respaldos/n8n/2026-09-26-json-robusto/`
-(rollback: volver a publicar esos JSON, o construir desde `origin/main` y `deploy.py`).
+(rollback: volver a publicar esos JSON, o construir desde `origin/main` y `deploy.py`). Esta versión corre desde el
+26-sep 18:06; la anterior de ese día quedó respaldada como `*.vivo-v1-antes-v3.json` en la misma carpeta. Límite conocido,
+del lado seguro: si la IA envuelve la propuesta y agrega una nota (`{propuesta, cambios: …}`), «2 Cambios» marca error;
+basta volver a «Pedir cambios».
 
 ## Panel de propuestas (wp-admin › Propuestas, EN PROD desde el 2026-09-24 15:48)
 

@@ -2,7 +2,7 @@
   "_LEEME": "Catálogo de planes de CumpleClick. Es la ÚNICA fuente de los precios: de aquí los lee el sitio público y de aquí se toma el precio al cargar una fiesta en el admin. Se edita desde el admin, en la pantalla Planes. Los precios van en pesos enteros, sin puntos. El precio que se muestra se calcula: precio_normal menos el porcentaje de la promoción, así no pueden quedar dos números que no cuadren.",
   "promo": {
     "activa": true,
-    "texto": "Precios de lanzamiento",
+    "texto": "Precios de lanzamiento válidos hasta el 31/12/2026",
     "porcentaje": 50
   },
   "tematica_a_medida": 25000,
@@ -38,7 +38,7 @@
       "incluye": [
         "1 temática a elección",
         "Los 4 juegos, incluido El Show 3D",
-        "Foto impresa con imán para el refri: una por invitado (hasta 25)",
+        "Fotos impresas con imán para el refri",
         "Hasta 200 fotos por fiesta",
         "Diplomas personalizados",
         "Invitación automática: se reproduce sola, con videos y narración",

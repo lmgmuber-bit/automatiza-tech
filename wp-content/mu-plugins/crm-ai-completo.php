@@ -4388,7 +4388,7 @@ class AutomatizaTech_CRM_AI {
                 if ($propuesta_id && $wpdb->get_var("SHOW TABLES LIKE '$table_propuestas_details'") == $table_propuestas_details) {
                     $prospect_details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_propuestas_details WHERE propuesta_id = %d", $propuesta_id), ARRAY_A);
                     foreach ($prospect_details as $d) {
-                        // T6 ronda 1, hallazgo 5: aviso interno de un cierre a medias (correo inválido,
+                        // T6 ronda 1 (revisión), hallazgo 5: aviso interno de un cierre a medias (correo inválido,
                         // contrato que no se creó, etc.); nunca a la línea de tiempo pública del cliente.
                         if (($d['detail_type'] ?? '') === 'cierre_incompleto') {
                             continue;
@@ -7666,7 +7666,7 @@ class AutomatizaTech_CRM_AI {
     private function _enviar_correo_bienvenida($cliente_id) {
         global $wpdb;
         // Cierre de cliente: bienvenida con la lista de arranque (inc/cierre-cliente/bienvenida.php).
-        // T6 ronda 1, hallazgo 3: se decide por el tipo del registro en el CRM, nunca por lo que
+        // T6 ronda 1 (revisión), hallazgo 3: se decide por el tipo del registro en el CRM, nunca por lo que
         // devuelva at_cc_enviar_bienvenida() — wp_mail() puede volver false porque PHPMailer rechazó
         // un Bcc aunque el correo principal sí haya llegado, y eso no debe mandar además la
         // bienvenida antigua (el cliente recibiría dos). Un prospecto sigue con la de siempre.

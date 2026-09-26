@@ -9,6 +9,37 @@ at_cc_migrar_esquema();
 ok(in_array('crm_cliente_id', $wpdb->get_col("SHOW COLUMNS FROM {$tech}"), true), 'columna crm_cliente_id creada');
 ok(get_option('at_cierre_schema') === '1', 'esquema marcado');
 
+// Hallazgo T3 ronda 1: si el ALTER TABLE falla (tabla bloqueada, sin privilegio ALTER en
+// hosting compartido, etc.), el esquema NO debe marcarse como migrado, para que se reintente
+// en la próxima llamada. Lo simulamos bloqueando la tabla desde una segunda conexión MySQL
+// (medido: SHOW COLUMNS no se bloquea con LOCK TABLES ... WRITE de otra sesión, pero ALTER
+// TABLE sí espera el metadata lock y falla al vencer lock_wait_timeout).
+delete_option('at_cierre_schema');
+$wpdb->query("ALTER TABLE {$tech} DROP COLUMN crm_cliente_id");
+$host_candado = DB_HOST;
+$puerto_candado = 3306;
+if (strpos($host_candado, ':') !== false) {
+	[$host_candado, $puerto_candado] = explode(':', $host_candado, 2);
+	$puerto_candado = (int) $puerto_candado;
+}
+$candado = mysqli_init();
+$con_candado = $candado ? @mysqli_real_connect($candado, $host_candado, DB_USER, DB_PASSWORD, DB_NAME, $puerto_candado) : false;
+if ($con_candado && mysqli_query($candado, "LOCK TABLES {$tech} WRITE")) {
+	$wpdb->query('SET SESSION lock_wait_timeout = 2');
+	at_cc_migrar_esquema();
+	ok(get_option('at_cierre_schema') !== '1', 'ALTER bloqueado: el esquema NO se marca como migrado');
+	ok(!in_array('crm_cliente_id', $wpdb->get_col("SHOW COLUMNS FROM {$tech}"), true), 'ALTER bloqueado: la columna sigue sin crearse');
+	mysqli_query($candado, 'UNLOCK TABLES');
+	mysqli_close($candado);
+	$wpdb->query('SET SESSION lock_wait_timeout = DEFAULT');
+	at_cc_migrar_esquema();
+	ok(get_option('at_cierre_schema') === '1', 'reintento sin bloqueo: el esquema se marca al fin');
+	ok(in_array('crm_cliente_id', $wpdb->get_col("SHOW COLUMNS FROM {$tech}"), true), 'reintento sin bloqueo: la columna queda creada');
+} else {
+	echo "AVISO: no se pudo abrir una segunda conexión MySQL para simular el bloqueo de la tabla; se omite la prueba del hallazgo T3 ronda 1 (ALTER fallido).\n";
+	at_cc_migrar_esquema();
+}
+
 $marca = 'prueba-cierre-' . strtolower(wp_generate_password(6, false, false));
 $email = $marca . '@example.com';
 

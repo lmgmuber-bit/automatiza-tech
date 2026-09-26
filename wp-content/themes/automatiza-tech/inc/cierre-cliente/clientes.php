@@ -21,6 +21,13 @@ function at_cc_migrar_esquema(): void {
 	}
 	if (!in_array('crm_cliente_id', $cols, true)) {
 		$wpdb->query("ALTER TABLE {$tech} ADD COLUMN crm_cliente_id BIGINT(20) UNSIGNED NULL DEFAULT NULL, ADD INDEX idx_crm_cliente (crm_cliente_id)");
+		$cols = $wpdb->get_col("SHOW COLUMNS FROM {$tech}");
+	}
+	if (!in_array('crm_cliente_id', $cols, true)) {
+		// El ALTER falló (tabla bloqueada, sin privilegio ALTER en el hosting, etc.). No marcamos
+		// el esquema como migrado para que se reintente en el próximo admin_init / asegurar_cliente.
+		error_log('at_cc: no se pudo agregar crm_cliente_id a ' . $tech . ': ' . $wpdb->last_error);
+		return;
 	}
 	$wpdb->query("UPDATE {$tech} t JOIN {$crm} c ON LOWER(TRIM(c.email)) = LOWER(TRIM(t.email)) SET t.crm_cliente_id = c.id WHERE t.crm_cliente_id IS NULL AND t.email <> ''");
 	update_option('at_cierre_schema', '1');

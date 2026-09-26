@@ -3346,7 +3346,7 @@ No se delega: modifica el bot principal de PROD (`WhatsApp Tech - Principal (PRO
 - [ ] **Step 2:** Pedir la autorización de Luis con la lista exacta y este orden:
   1. `Docs/CONTRATO_SERVICIO_DESARROLLO.md`;
   2. los archivos nuevos de `inc/cierre-cliente/`;
-  3. `contracts/contract-service.php` y `contracts/at-sign-contract.php`;
+  3. el módulo `contracts/` completo desde esta rama: `contract-service.php`, `at-sign-contract.php`, `admin-contracts.php`, `client-contracts-widget.php` y `sign-contract.php`, **juntos**. Cotejo del 25-sep: en PROD esos cinco son versiones del 9-12 de mayo, anteriores a los cambios de `main` del 13-may que esta rama trae; subir solo dos dejaría páginas viejas enlazando PDF de una forma que el `contract-service.php` nuevo ya no admite. `contract-mailer.php`, `create-contract.php`, `setup-contracts-db.php` y `at-path-safe.php` ya son iguales a `main`;
   4. `inc/client-details-module.php`, `inc/contact-form.php`, `propuestas-admin/consultas.php`, `assets/css/propuestas-admin.css`, `propuestas-admin/acciones.php` y `propuestas-admin/ficha.php`;
   5. `mu-plugins/crm-ai-completo.php`;
   6. `inc/admin-proposals.php`, que carga el módulo: va al final de los del tema;

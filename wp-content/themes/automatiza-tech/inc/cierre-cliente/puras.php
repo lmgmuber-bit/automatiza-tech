@@ -10,9 +10,14 @@ function at_cc_salidas(): array {
 }
 
 /** Tipos de Seguimiento que son solo para Luis: nunca deben verse en una página pública
- *  (línea de tiempo del cliente ni la del prospecto, en crm-ai-completo.php). */
+ *  (línea de tiempo del cliente ni la del prospecto, en crm-ai-completo.php).
+ *  'pedido_respuesta' (Ronda 2, hallazgo 1): antes se anotaba con el tipo público 'propuesta_enviada',
+ *  así que la línea de tiempo pública del prospecto se lo mostraba (incluido «Falló el correo para
+ *  pedir la respuesta») y, peor, cualquier fila 'propuesta_enviada' ya existente hacía que esa vista
+ *  dejara de agregar la tarjeta automática «Propuesta Creada» con el PDF (crm-ai-completo.php,
+ *  render_public_prospect_timeline()). */
 function at_cc_tipos_internos(): array {
-	return ['cierre_incompleto', 'aviso_operativo'];
+	return ['cierre_incompleto', 'aviso_operativo', 'pedido_respuesta'];
 }
 
 /** Transiciones de una respuesta. A mano (Luis) también se acepta una propuesta en pending o lista. */

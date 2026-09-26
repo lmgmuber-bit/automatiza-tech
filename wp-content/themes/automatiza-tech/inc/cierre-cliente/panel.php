@@ -82,6 +82,22 @@ function at_cc_guardar_evidencias(int $propuesta_id, array $archivos): array {
 	return ['guardadas' => $guardadas, 'errores' => $errores];
 }
 
+/** Borra evidencias recién guardadas cuando el registro no se aplicó (Ronda 2, hallazgo 4): sin esto
+ *  quedan huérfanas en disco -con datos personales- sin ninguna fila de Seguimiento que las referencie. */
+function at_cc_borrar_evidencias(int $propuesta_id, array $guardadas): void {
+	if (!$guardadas) {
+		return;
+	}
+	$dir = at_cc_dir_evidencias() . '/' . $propuesta_id;
+	foreach ($guardadas as $g) {
+		$archivo = (string) ($g['archivo'] ?? '');
+		if ($archivo === '' || !preg_match('/^[a-f0-9]{24}\.(jpg|png|webp)$/', $archivo)) {
+			continue;
+		}
+		@unlink($dir . '/' . $archivo);
+	}
+}
+
 /** Muestra una evidencia solo a un administrador con sesión. */
 function at_cc_ver_evidencia(): void {
 	if (!current_user_can('manage_options')) {
@@ -114,13 +130,23 @@ function at_cc_accion_pedir_respuesta(): void {
 		wp_die('Sin permiso.', '', ['response' => 403]);
 	}
 	$p = at_cc_propuesta_por_id($id);
+	$candado = 'at_cc_pedido_' . $id;
 	if (!$p || !at_cc_puede_pedir_respuesta((string) $p->status)) {
 		at_cc_guardar_aviso(['propuesta_id' => $id, 'tipo' => 'error', 'texto' => 'Esta propuesta no está esperando respuesta: se pide cuando ya fue enviada.']);
 	} elseif (!is_email((string) $p->client_email)) {
 		at_cc_guardar_aviso(['propuesta_id' => $id, 'tipo' => 'error', 'texto' => 'La propuesta no tiene un correo válido del cliente.']);
+	} elseif (get_transient($candado)) {
+		// Ronda 2, hallazgo 5: sin este candado, un doble clic en «Pedir respuesta» manda dos correos
+		// (y, con la Task 10, dos WhatsApp) con dos notas en Seguimiento. Se marca ANTES de enviar, no
+		// después, para que dos clics casi simultáneos no alcancen a pasar los dos por aquí.
+		at_cc_guardar_aviso(['propuesta_id' => $id, 'tipo' => 'aviso', 'texto' => 'Ya se le pidió la respuesta hace un momento: espera un minuto antes de repetirlo.']);
 	} else {
+		set_transient($candado, 1, 60);
 		$ok = at_cc_enviar_pedido_respuesta($p);
-		at_cc_anotar_simple($p, 'propuesta_enviada', $ok ? 'Se le pidió la respuesta al cliente por correo' : 'Falló el correo para pedir la respuesta');
+		// Ronda 2, hallazgo 1: 'pedido_respuesta' (no 'propuesta_enviada', que es un tipo público) para
+		// que esta nota nunca llegue a la línea de tiempo pública del prospecto ni le tape la tarjeta
+		// automática «Propuesta Creada» (at_cc_tipos_internos(), puras.php).
+		at_cc_anotar_simple($p, 'pedido_respuesta', $ok ? 'Se le pidió la respuesta al cliente por correo' : 'Falló el correo para pedir la respuesta');
 		$detalles = function_exists('at_cc_whatsapp_tras_pedido') ? at_cc_whatsapp_tras_pedido($p) : [];
 		at_cc_guardar_aviso(['propuesta_id' => $id, 'tipo' => $ok ? 'ok' : 'error', 'texto' => $ok ? 'Le pedimos la respuesta por correo.' : 'No salió el correo. Revisa el SMTP.', 'detalles' => $detalles]);
 	}
@@ -148,21 +174,53 @@ function at_cc_accion_registrar_aceptacion(): void {
 	if ($nota === '' || !isset(at_cc_canales_manuales()[$canal])) {
 		$volver(['tipo' => 'error', 'texto' => 'Falta decir por dónde aceptó y qué dijo el cliente.']);
 	}
-	$fecha = at_cc_fecha_declarada(sanitize_text_field(wp_unslash($_POST['fecha'] ?? '')), current_time('Y-m-d'));
+	// Ronda 2, hallazgo 3: un RUT con dígito verificador equivocado se descartaba en silencio
+	// (quedaba '' sin avisar), y la aceptación se registraba igual en verde, con el contrato sin RUT.
 	$rut = sanitize_text_field(wp_unslash($_POST['rut'] ?? ''));
+	if ($rut !== '' && !at_cc_rut_valido($rut)) {
+		$volver(['tipo' => 'error', 'texto' => 'El RUT no es válido: corrígelo o déjalo en blanco.']);
+	}
+	// Ronda 2, hallazgo 2: la página pública exige al menos una fila aceptada cuando la propuesta tiene
+	// filas (pagina.php, at_cc_procesar_respuesta_publica()); el camino manual no lo exigía, así que
+	// desmarcar la única casilla dejaba la propuesta aceptada sin servicios contratados, sin monto y
+	// con todas las filas como «fases siguientes» en el contrato.
+	$todas = at_cc_filas_de_propuesta($p);
+	$filas = at_cc_filas_aceptadas($todas, array_map('sanitize_text_field', (array) wp_unslash($_POST['filas'] ?? [])));
+	if ($todas && !$filas) {
+		$volver(['tipo' => 'error', 'texto' => 'Marca qué aceptó el cliente.']);
+	}
+	// Ronda 2, hallazgo 4: se valida el estado ANTES de guardar evidencias (con datos personales) en
+	// disco, para no guardar nada cuando el registro de todos modos no se va a aplicar. Esto no
+	// reemplaza el mismo chequeo dentro de at_cc_registrar_respuesta(): dos pestañas abiertas pueden
+	// cambiar el estado entre este chequeo y el UPDATE de más abajo, así que si igual se cuela una
+	// evidencia huérfana, se borra después (más abajo, con at_cc_borrar_evidencias()).
+	$estado = (string) $p->status;
+	if ($estado === 'aceptada') {
+		$volver(['tipo' => 'ok', 'texto' => 'La propuesta ya estaba aceptada: no se repitió nada.']);
+	}
+	if (!at_cc_transicion_respuesta_valida($estado, 'aceptada', true)) {
+		$volver(['tipo' => 'error', 'texto' => 'Esta propuesta no está esperando respuesta.']);
+	}
+	$fecha = at_cc_fecha_declarada(sanitize_text_field(wp_unslash($_POST['fecha'] ?? '')), current_time('Y-m-d'));
 	$ev = at_cc_guardar_evidencias($id, at_cc_archivos_normalizados($_FILES['evidencia'] ?? []));
 	$r = at_cc_registrar_respuesta($p, 'acepta', [
 		'canal'        => 'manual',
 		'canal_manual' => $canal,
 		'nombre'       => sanitize_text_field(wp_unslash($_POST['nombre'] ?? '')),
-		'rut'          => at_cc_rut_valido($rut) ? at_cc_rut_formato($rut) : '',
+		'rut'          => $rut !== '' ? at_cc_rut_formato($rut) : '',
 		'comentario'   => $nota,
-		'filas'        => at_cc_filas_aceptadas(at_cc_filas_de_propuesta($p), array_map('sanitize_text_field', (array) wp_unslash($_POST['filas'] ?? []))),
+		'filas'        => $filas,
 		'fecha'        => $fecha !== '' ? $fecha : current_time('mysql'),
 		'evidencias'   => $ev['guardadas'],
 		'bienvenida'   => !empty($_POST['bienvenida']),
 		'usuario_id'   => get_current_user_id(),
 	]);
+	// Ronda 2, hallazgo 4: el registro no se aplicó (la propuesta cambió mientras se enviaba el
+	// formulario, o -pese al chequeo de arriba- ya estaba aceptada por la otra pestaña): las evidencias
+	// que se acaban de guardar quedan huérfanas, sin ninguna fila que las referencie.
+	if (!$r['ok'] || $r['mensaje'] === 'ya_aceptada') {
+		at_cc_borrar_evidencias($id, $ev['guardadas']);
+	}
 	// Ronda 1, hallazgo 1: 'avisos_operativos' (p. ej. datos bancarios sin configurar) también se
 	// muestra aquí. En el canal manual at_cc_avisar_luis() no manda nada, así que este panel es el
 	// único lugar donde Luis puede enterarse de que tiene que mandarle los datos de transferencia.
@@ -269,4 +327,9 @@ function at_cc_render_formularios_respuesta(object $p): void {
 	echo '<form id="at-cc-f-aceptar" method="post" action="' . $url . '" enctype="multipart/form-data" hidden>'
 		. '<input type="hidden" name="action" value="at_cc_registrar_aceptacion"><input type="hidden" name="proposal_id" value="' . $id . '">'
 		. wp_nonce_field('at_cc_aceptar_' . $id, '_wpnonce', true, false) . '</form>';
+	// Ronda 2, hallazgo 5: estos dos formularios están fuera de .at-pa-form (no se pueden anidar), así
+	// que la guardia contra doble envío de esa otra ficha (F4, assets/js/propuestas-admin.js) nunca los
+	// alcanza: cada uno solo escucha su propio 'submit'. Sus botones viven en at_cc_render_panel_respuesta()
+	// y apuntan aquí con form="…", así que se deshabilitan por ese atributo, no por closest('form').
+	echo "<script>(function(){function candado(id){var f=document.getElementById(id);if(!f){return;}var enviando=false;f.addEventListener('submit',function(e){if(enviando){e.preventDefault();return;}enviando=true;document.querySelectorAll('[form=\"'+id+'\"]').forEach(function(b){b.disabled=true;});});}candado('at-cc-f-pedir');candado('at-cc-f-aceptar');})();</script>";
 }

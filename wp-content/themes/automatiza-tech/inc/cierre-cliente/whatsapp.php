@@ -198,7 +198,9 @@ function at_cc_avisar_numero_distinto(object $p, string $salida, string $tel): v
 		. '<p>Revisa la ficha y confirma con el cliente. Si la respuesta es válida, regístrala con «Registrar aceptación».</p>'
 		. '<p><a href="' . esc_url(admin_url('admin.php?page=automatiza-proposals&edit_id=' . (int) $p->id . '&tab=envio')) . '">Abrir la propuesta en el panel</a></p>';
 	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
-	wp_mail((string) get_option('admin_email'), 'Respuesta a la propuesta de ' . $quien . ' desde otro número', $html, ['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $from . '>']);
+	$destinatario = at_cc_correo_avisos();
+	$headers = array_merge(['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $from . '>'], at_cc_cabecera_copia($destinatario));
+	wp_mail($destinatario, 'Respuesta a la propuesta de ' . $quien . ' desde otro número', $html, $headers);
 }
 
 /**
@@ -215,7 +217,9 @@ function at_cc_avisar_respuesta_tras_aceptar(object $p, string $salida): void {
 		. '<p>Puede ser un toque accidental o un mensaje viejo del chat: confirma con el cliente si hace falta.</p>'
 		. '<p><a href="' . esc_url(admin_url('admin.php?page=automatiza-proposals&edit_id=' . (int) $p->id . '&tab=envio')) . '">Abrir la propuesta en el panel</a></p>';
 	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
-	wp_mail((string) get_option('admin_email'), $quien . ' tocó «' . $boton . '» en WhatsApp después de aceptar', $html, ['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $from . '>']);
+	$destinatario = at_cc_correo_avisos();
+	$headers = array_merge(['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $from . '>'], at_cc_cabecera_copia($destinatario));
+	wp_mail($destinatario, $quien . ' tocó «' . $boton . '» en WhatsApp después de aceptar', $html, $headers);
 }
 
 add_action('rest_api_init', function () {
@@ -295,5 +299,7 @@ function at_cc_avisar_mensaje_whatsapp(object $p, string $mensaje): void {
 		. '<p>El bot le pidió usar el botón «Acepto la propuesta» o el enlace para dejar registrada su respuesta; un mensaje de texto no cambia el estado. Si ya te dijo que sí, regístralo con «Registrar aceptación». Puede haber más mensajes en el chat: este aviso sale como máximo una vez cada 30 minutos.</p>'
 		. '<p><a href="' . esc_url(admin_url('admin.php?page=automatiza-proposals&edit_id=' . (int) $p->id . '&tab=envio')) . '">Abrir la propuesta en el panel</a></p>';
 	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
-	wp_mail((string) get_option('admin_email'), $quien . ' escribió por WhatsApp sobre su propuesta', $html, ['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $from . '>']);
+	$destinatario = at_cc_correo_avisos();
+	$headers = array_merge(['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $from . '>'], at_cc_cabecera_copia($destinatario));
+	wp_mail($destinatario, $quien . ' escribió por WhatsApp sobre su propuesta', $html, $headers);
 }

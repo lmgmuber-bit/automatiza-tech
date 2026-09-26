@@ -57,12 +57,12 @@ function at_cc_enviar_bienvenida(int $crm_id, ?object $p = null, array $filas = 
 		'con_propuesta' => (bool) $p,
 	]);
 	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
-	$headers = [
+	$headers = array_merge([
 		'Content-Type: text/html; charset=UTF-8',
 		'From: Automatiza Tech <' . $from . '>',
-		'Reply-To: ' . get_option('admin_email'),
+		'Reply-To: ' . at_cc_correo_avisos(),
 		'Bcc: lgonzalez@automatizatech.cl, adriana.perez@automatizatech.cl',
-	];
+	], at_cc_cabecera_copia((string) $c->email));
 	$enviado = wp_mail((string) $c->email, '¡Te damos la bienvenida a AutomatizaTech! Tus primeros pasos', $html, $headers);
 	at_cc_historial_crm($crm_id, 'email_bienvenida', 'Correo de bienvenida enviado', $enviado ? 'Se envió la bienvenida con los primeros pasos.' : 'Falló el envío de la bienvenida.');
 	return (bool) $enviado;

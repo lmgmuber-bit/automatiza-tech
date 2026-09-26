@@ -374,7 +374,9 @@ function at_cc_avisar_luis(object $p, string $salida, array $d, array $r): void 
 		$html .= '<p><a href="' . esc_url(home_url('/contracts/at-sign-contract.php?token=' . $c->at_review_token)) . '">Revisar, ajustar y firmar el contrato</a></p>';
 	}
 	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
-	wp_mail((string) get_option('admin_email'), $quien . ' ' . ($titulos[$salida] ?? $salida), $html, ['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $from . '>']);
+	$destinatario = at_cc_correo_avisos();
+	$headers = array_merge(['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $from . '>'], at_cc_cabecera_copia($destinatario));
+	wp_mail($destinatario, $quien . ' ' . ($titulos[$salida] ?? $salida), $html, $headers);
 }
 
 /** Correo corto que pide la respuesta, con el bloque de aceptar. */
@@ -390,10 +392,11 @@ function at_cc_enviar_pedido_respuesta(object $p): bool {
 	$html = at_cc_pedido_respuesta_html((string) $p->client_name, (string) $p->company_name, $bloque, AT_CC_LOGO, at_cc_url_respuesta($base, (string) $p->unique_link_id));
 	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
 	$asunto = 'Tu propuesta de AutomatizaTech' . (trim((string) $p->company_name) !== '' ? ' para ' . $p->company_name : '');
-	return (bool) wp_mail((string) $p->client_email, $asunto, $html, [
+	$headers = array_merge([
 		'Content-Type: text/html; charset=UTF-8',
 		'From: Automatiza Tech <' . $from . '>',
-		'Reply-To: ' . get_option('admin_email'),
+		'Reply-To: ' . at_cc_correo_avisos(),
 		'Bcc: automatizacionesbotcore@gmail.com',
-	]);
+	], at_cc_cabecera_copia((string) $p->client_email));
+	return (bool) wp_mail((string) $p->client_email, $asunto, $html, $headers);
 }

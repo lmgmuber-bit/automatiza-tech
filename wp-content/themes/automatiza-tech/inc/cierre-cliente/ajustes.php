@@ -13,14 +13,21 @@ function at_cc_opciones_cierre(): array {
 		'at_cc_rut_titular'   => 'RUT del titular',
 		'at_cc_correo_pago'   => 'Correo para avisar el pago',
 		'at_cc_whatsapp_at'   => 'WhatsApp de AutomatizaTech (con 56 adelante)',
+		'at_cc_correo_avisos' => 'Correo principal del cierre (tus avisos y las respuestas de los clientes)',
+		'at_cc_correo_copia'  => 'Copia oculta de los correos del cierre',
 	];
+}
+
+/** Las tres opciones que son direcciones de correo: se sanean con sanitize_email() y se dibujan con type="email". */
+function at_cc_opciones_correo_cierre(): array {
+	return ['at_cc_correo_pago', 'at_cc_correo_avisos', 'at_cc_correo_copia'];
 }
 
 add_action('admin_init', function () {
 	foreach (at_cc_opciones_cierre() as $k => $_) {
 		register_setting('at_cc_ajustes', $k, [
 			'type'              => 'string',
-			'sanitize_callback' => $k === 'at_cc_correo_pago' ? 'sanitize_email' : 'sanitize_text_field',
+			'sanitize_callback' => in_array($k, at_cc_opciones_correo_cierre(), true) ? 'sanitize_email' : 'sanitize_text_field',
 			'default'           => '',
 		]);
 	}
@@ -38,13 +45,15 @@ function at_cc_render_ajustes(): void {
 	<div class="wrap">
 		<h1>Ajustes del cierre de cliente</h1>
 		<p>Estos datos van en el correo de bienvenida, en el paso del anticipo. Si falta alguno, el correo dice que los datos de pago van por separado.</p>
+		<p>El correo principal recibe tus avisos del cierre (cliente aceptó, revisar y firmar, mensajes por WhatsApp) y las respuestas de los clientes. La copia oculta recibe una copia de todos esos correos y de los que le llegan al cliente; el cliente no la ve. Si el principal queda vacío, se usa el correo de administrador de WordPress.</p>
 		<form method="post" action="options.php">
 			<?php settings_fields('at_cc_ajustes'); ?>
 			<table class="form-table" role="presentation">
 				<?php foreach (at_cc_opciones_cierre() as $k => $t): ?>
+				<?php $tipo = in_array($k, at_cc_opciones_correo_cierre(), true) ? 'email' : 'text'; ?>
 				<tr>
 					<th scope="row"><label for="<?php echo esc_attr($k); ?>"><?php echo esc_html($t); ?></label></th>
-					<td><input type="text" class="regular-text" id="<?php echo esc_attr($k); ?>" name="<?php echo esc_attr($k); ?>" value="<?php echo esc_attr((string) get_option($k, '')); ?>"></td>
+					<td><input type="<?php echo esc_attr($tipo); ?>" class="regular-text" id="<?php echo esc_attr($k); ?>" name="<?php echo esc_attr($k); ?>" value="<?php echo esc_attr((string) get_option($k, '')); ?>"></td>
 				</tr>
 				<?php endforeach; ?>
 			</table>
@@ -67,4 +76,26 @@ function at_cc_datos_banco(): array {
 function at_cc_whatsapp_at(): string {
 	$n = trim((string) get_option('at_cc_whatsapp_at', ''));
 	return $n !== '' ? $n : '56927002984';
+}
+
+/** Correo principal del cierre: tus avisos y las respuestas de los clientes. Sin uno válido, el de administrador de WordPress. */
+function at_cc_correo_avisos(): string {
+	$c = trim((string) get_option('at_cc_correo_avisos', ''));
+	return is_email($c) ? $c : (string) get_option('admin_email');
+}
+
+/** Copia oculta de los correos del cierre; '' si no hay una válida. */
+function at_cc_correo_copia(): string {
+	$c = trim((string) get_option('at_cc_correo_copia', ''));
+	return is_email($c) ? $c : '';
+}
+
+/** Cabecera 'Bcc: <copia>' para un correo del cierre; [] si no hay copia o es igual (sin distinguir
+ *  mayúsculas, recortada) al destinatario, para no duplicar el mismo correo. */
+function at_cc_cabecera_copia(string $destinatario): array {
+	$copia = at_cc_correo_copia();
+	if ($copia === '' || strtolower(trim($destinatario)) === strtolower($copia)) {
+		return [];
+	}
+	return ['Bcc: ' . $copia];
 }

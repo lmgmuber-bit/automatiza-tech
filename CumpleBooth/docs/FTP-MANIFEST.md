@@ -4123,3 +4123,88 @@ balancea, el distintivo de chat late con un halo y el botón da un salto cuando 
 Verificado desde afuera y en el navegador a 390 px en PROD: aviso visible, animaciones activas, cero errores.
 Respaldos: `~/respaldos/sitio-*.antes-20260925-2315`.
 
+
+
+## AT-CUMPLECLICK-021 — kiosco de feria (Codex, 2026-09-26; LOCAL, SIN DEPLOY)
+
+Rama `codex/modo-feria-kiosco`, base `origin/main` = `4cdc795`. Revisor Claude, aprobador Luis. No se hizo merge ni despliegue. Costo 0 créditos; request_id: no aplica.
+
+Selector Niños/Adultos, autorización infantil, nombre opcional, foto numerada, QR y diploma infantil. Adultos con filtro blanco y negro y recorte real sobre fondo completo. Worker cancelable a los 4 s; por debajo de 15 FPS, vista previa normal y recorte solo en foto final. La foto conserva el marco si falla el modelo. Las máscaras y los fotogramas permanecen sincronizados; cámara/worker se liberan al salir.
+
+### Pruebas y evidencia
+
+`npm test` con `CC_FERIA_BACKEND_ROOT` y fixture de retrato configurados: **236 tests / 236 pass / 0 fail / 0 skipped**. `npm run build`: **exit 0** (advertencia preexistente del chunk Three.js de ~734 kB). Regresión normal en navegador y respuesta PHP normal idéntica byte a byte. Integración real contra `C:/wamp64/www/automatiza-tech/.worktrees/modo-feria/CumpleBooth`, con SQLite/almacenamiento temporales y cuatro fotos ligadas a su número; ningún archivo del backend modificado.
+
+Capturas 1200 × 2000, instrucciones y salidas en `src/feria/evidencia/`. Las imágenes son de prueba técnica, no material publicitario ni fotos de clientes. CSV de archivos y SHA-256 en `src/feria/evidencia/FTP-021.csv`.
+
+Mediciones en Chrome/153.0.8010.53 **en PC**, no Tab A7. Composición = recorte + franja + filtro + JPEG, excluye reserva/subida HTTP. FPS redondeados a un decimal; la decisión del umbral se toma antes de redondear.
+
+| Temática | FPS iniciales | Últimos FPS | Vista previa | Composición completa |
+|---|---:|---:|---|---:|
+| adulto-estudio-bn | 15 | 15 | final-only | 354 ms |
+| adulto-glam-dorado | 19 | 25 | live | 225 ms |
+| adulto-noche-brujas | 20.3 | 22.9 | live | 246 ms |
+
+### Orden FTP exacto (a ejecutar por Claude tras aprobación)
+
+**Precondición obligatoria:** integrar el ticket 020 y su propio manifiesto, aplicando la migración 026 ANTES de su PHP. El 020 también entrega catálogo, escenas adultas y video de espera. **No subir este `dist/` entero ni sus PHP**: son copias de la base anterior a 020. Las rutas de destino de la tabla son relativas a `domains/cumpleclick.com/`.
+
+Orden 1: modelo, SDK y verificar el WASM/.htaccess existente. Orden 2: assets compilados. Orden 3: entradas HTML. Orden 4: selector. Mantener los assets con hashes anteriores hasta que las sesiones abiertas terminen. No hay archivos opcionales nuevos; las capturas y el resto de la evidencia son solo revisión y NO se suben.
+
+| Orden | Clasificación | Ruta local exacta | Destino PROD |
+|---:|---|---|---|
+| 1 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/feria/vision-segmenter.js | public_html/app/feria/vision-segmenter.js |
+| 1 | OBLIGATORIO (verificar; subir si falta o difiere) | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/public/vendor/mediapipe/.htaccess | public_html/app/vendor/mediapipe/.htaccess |
+| 1 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/vendor/mediapipe/selfie_segmenter.tflite | public_html/app/vendor/mediapipe/selfie_segmenter.tflite |
+| 1 | OBLIGATORIO (verificar; subir si falta o difiere) | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/public/vendor/mediapipe/vision_wasm_internal.js | public_html/app/vendor/mediapipe/vision_wasm_internal.js |
+| 1 | OBLIGATORIO (verificar; subir si falta o difiere) | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/public/vendor/mediapipe/vision_wasm_internal.wasm | public_html/app/vendor/mediapipe/vision_wasm_internal.wasm |
+| 1 | OBLIGATORIO (verificar; subir si falta o difiere) | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/public/vendor/mediapipe/vision_wasm_nosimd_internal.js | public_html/app/vendor/mediapipe/vision_wasm_nosimd_internal.js |
+| 1 | OBLIGATORIO (verificar; subir si falta o difiere) | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/public/vendor/mediapipe/vision_wasm_nosimd_internal.wasm | public_html/app/vendor/mediapipe/vision_wasm_nosimd_internal.wasm |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/album-CaWnfSyi.css | public_html/app/assets/album-CaWnfSyi.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/album-zYhkPpjF.js | public_html/app/assets/album-zYhkPpjF.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-600-normal-B4tNaogw.woff | public_html/app/assets/baloo-2-latin-600-normal-B4tNaogw.woff |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-600-normal-tIfxVoAe.woff2 | public_html/app/assets/baloo-2-latin-600-normal-tIfxVoAe.woff2 |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-700-normal-CqTg7A15.woff2 | public_html/app/assets/baloo-2-latin-700-normal-CqTg7A15.woff2 |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-700-normal-Ld3Zm3l2.woff | public_html/app/assets/baloo-2-latin-700-normal-Ld3Zm3l2.woff |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-800-normal-B8BXfZF7.woff | public_html/app/assets/baloo-2-latin-800-normal-B8BXfZF7.woff |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-800-normal-BbF3Etk1.woff2 | public_html/app/assets/baloo-2-latin-800-normal-BbF3Etk1.woff2 |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/browser-BeMEBtOm.js | public_html/app/assets/browser-BeMEBtOm.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/cartel-SlR9LYHX.js | public_html/app/assets/cartel-SlR9LYHX.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/cartel-yJHq8X4K.css | public_html/app/assets/cartel-yJHq8X4K.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/carteles-CIwK2MVx.js | public_html/app/assets/carteles-CIwK2MVx.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/carteles-CRjFN5QB.css | public_html/app/assets/carteles-CRjFN5QB.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/caveat-latin-500-normal-B9SDL8cy.woff2 | public_html/app/assets/caveat-latin-500-normal-B9SDL8cy.woff2 |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/caveat-latin-500-normal-Do9veZfZ.woff | public_html/app/assets/caveat-latin-500-normal-Do9veZfZ.woff |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/client-eulB1LW-.js | public_html/app/assets/client-eulB1LW-.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/cumpleclick-mark-C2JZLqUO.svg | public_html/app/assets/cumpleclick-mark-C2JZLqUO.svg |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/feria-BF1TD7YO.js | public_html/app/assets/feria-BF1TD7YO.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/feria-DiVuzLyh.js | public_html/app/assets/feria-DiVuzLyh.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/feria-DpAUL2uk.css | public_html/app/assets/feria-DpAUL2uk.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/Lockup-B8jQuzlB.js | public_html/app/assets/Lockup-B8jQuzlB.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/Lockup-CQYbo7Xc.css | public_html/app/assets/Lockup-CQYbo7Xc.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/main-BQAKXBRo.css | public_html/app/assets/main-BQAKXBRo.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/main-DvPs7Asy.js | public_html/app/assets/main-DvPs7Asy.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/segment.worker-CZ45B1n2.js | public_html/app/assets/segment.worker-CZ45B1n2.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/themeVars-BWg77og2.js | public_html/app/assets/themeVars-BWg77og2.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/three.module-Y-ql4QRg.js | public_html/app/assets/three.module-Y-ql4QRg.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/vision_bundle-Cd7_-YIR.js | public_html/app/assets/vision_bundle-Cd7_-YIR.js |
+| 3 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/album.html | public_html/app/album.html |
+| 3 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/cartel-qr.html | public_html/app/cartel-qr.html |
+| 3 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/carteles.html | public_html/app/carteles.html |
+| 3 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/index.html | public_html/app/index.html |
+| 4 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/feria.html | public_html/app/feria.html |
+
+No subir `src/`, tests, node_modules, evidencias, ADB, fixtures, SQLite, fotos de prueba, logs ni configuraciones. El HTML fuente `public/feria.html` tampoco se sube directamente: usar `dist/feria.html` procesado por Vite.
+
+### No probado
+
+- Galaxy Tab A7 física: pendiente de conexión USB de Luis; ADB preparado, sin dispositivo detectado al cerrar la verificación en PC. No atribuir estos FPS al equipo real.
+- Cámara física frontal/trasera, iluminación de feria, grupos/personas en movimiento y una jornada continua. Las pruebas usan un retrato público por canvas.
+- Hostinger/HTTPS/CSP real, Selphy 10×15, permisos efectivos de descarga del navegador y task de retención. Corresponden a la validación integrada de Claude; no se accedió a PROD.
+
+### Contrato y preguntas abiertas para Claude
+
+- `upload.php` puede responder éxito aunque no ligue la reserva. Si se pierde una respuesta y se reintenta una reserva ya usada, puede guardar una copia sin vínculo. Se mantuvo el contrato; revisar confirmación/idempotencia en 020 antes de prometer recuperación de todos los casos de red.
+- El diploma se guarda en la tablet; el QR es de la foto. Entrega por QR del diploma requeriría acordar un contrato adicional, que no se inventó aquí.
+- La fuente del modelo quedó en `src/feria/models/` para respetar los archivos autorizados; Vite la emite en `vendor/mediapipe/selfie_segmenter.tflite`. Se reutiliza el mismo WASM instalado. Proveniencia y SHA-256 en `models/NOTICE.md`.
+- Sin nombres de franquicias en el nuevo copy. Las imágenes/nombres de personajes siguen viniendo del catálogo existente de 020.

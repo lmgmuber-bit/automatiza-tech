@@ -197,6 +197,14 @@ En una página propia, Propuestas › «Ajustes del cierre» (opciones de WordPr
   - rechazar: «Gracias por tu respuesta. Si algo cambia, aquí estamos».
 - Tocar dos veces o tocar después de aceptar no repite nada: la respuesta es idempotente, igual que en la página.
 - Tocar el bot principal requiere el ok explícito de Luis en el momento de hacerlo: es el que atiende a todos los contactos.
+- Si la respuesta no se pudo aplicar (número distinto, WordPress sin responder, transición no permitida), el bot contesta «Gracias por tu respuesta. La revisamos y te contactamos por aquí.» y, si el número es distinto, Luis recibe un correo «Respuesta a la propuesta de {empresa} desde otro número» (aprobados por Luis el 25-sep).
+
+**Cuando el cliente escribe en vez de tocar un botón** (agregado por Luis el 25-sep; Tasks 10b y 12b del plan)
+
+- Antes de pasarle un mensaje de texto a la IA, el bot consulta `at/v1/propuesta-contexto` con el teléfono. Si ese número tiene una propuesta enviada o en evaluación, la IA recibe una línea de contexto (empresa, lo propuesto y el enlace para responder).
+- La IA nunca da por aceptada ni rechazada una propuesta por texto: agradece y pide tocar «Acepto la propuesta» o usar el enlace; las dudas las responde y dice que Luis le escribirá.
+- El mensaje queda anotado en Seguimiento y Luis recibe un correo «{empresa} escribió por WhatsApp sobre su propuesta» con el texto, como máximo una vez cada 30 minutos por propuesta. Si el cliente ya dijo que sí, Luis lo registra con «Registrar aceptación».
+- Si WordPress no responde, el bot sigue como hoy.
 
 ## 5. Seguridad
 

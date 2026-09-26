@@ -3141,6 +3141,154 @@ git commit -m "feat(cierre): endpoint para responder la propuesta con un botón 
 
 ---
 
+### Task 10b: Contexto de la propuesta para el bot (`whatsapp.php`) — agregada por Luis el 25-sep
+
+Cuando el cliente **escribe** en vez de tocar un botón («sí, acepto», «tengo una duda del precio»), el agente de IA del bot principal no sabe que esa persona tiene una propuesta esperando respuesta. Esta tarea agrega el endpoint que el bot consulta antes de pasarle el mensaje a la IA (la parte del bot es la Task 12b). Un mensaje de texto **nunca** cambia el estado: solo se anota y se avisa a Luis.
+
+**Files:**
+- Modify: `wp-content/themes/automatiza-tech/inc/cierre-cliente/whatsapp.php`
+- Test: `tests/cierre/contexto-wp-test.php`
+
+**Interfaces:**
+- Consumes: Task 10 (`at_cc_rest_auth`), Task 6 (`at_cc_anotar_simple`, `at_cc_filas_de_propuesta`, `at_cc_propuesta_por_id`), Task 1 (`at_cc_telefono_normalizado`, `at_cc_url_respuesta`).
+- Produces:
+  - `at_cc_propuesta_pendiente_por_telefono(string $tel): ?object` — la propuesta más reciente en `sent` o `evaluando` cuyo teléfono normalizado coincide; `null` si no hay.
+  - `POST /wp-json/at/v1/propuesta-contexto` con cabecera `X-AT-Secret` y JSON `{telefono, mensaje?}` → `{tiene:false}` o `{tiene:true, codigo, nombre, empresa, estado, propuesto, url}`. Si trae `mensaje`, lo anota en Seguimiento (`respuesta_cliente`) y avisa a Luis por correo, **una vez cada 30 minutos por propuesta** (transient `at_cc_ctx_aviso_<id>`).
+
+- [ ] **Step 1: Prueba** `tests/cierre/contexto-wp-test.php`:
+
+```php
+<?php
+// Correr: AT_WP_LOAD=<ruta> php tests/cierre/contexto-wp-test.php
+require __DIR__ . '/wp-bootstrap.php';
+global $wpdb;
+$correos = [];
+add_filter('pre_wp_mail', function ($r, $a) use (&$correos) { $correos[] = $a; return true; }, 10, 2);
+if (!defined('AT_REST_SECRET') || AT_REST_SECRET === '') {
+	fwrite(STDERR, "AT_REST_SECRET no está definido en el sitio de prueba.\n");
+	exit(2);
+}
+$marca = 'prueba-cierre-' . strtolower(wp_generate_password(6, false, false));
+$codigo = substr(md5($marca), 0, 12);
+$wpdb->insert($wpdb->prefix . 'automatiza_propuestas', ['client_email' => $marca . '@example.com', 'unique_link_id' => $codigo, 'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Muebles', 'phone' => '+56 9 4444 5555', 'status' => 'sent', 'flujo' => 'v3', 'gamma_prompt_text' => wp_json_encode(['pricing_rows' => [['service' => 'Fase 1', 'price_usd' => 0, 'price_label' => '$1.000.000 en 2 pagos']]]), 'transcript_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql')]);
+$pid = (int) $wpdb->insert_id;
+function contexto(array $cuerpo, ?string $clave = null) {
+	$r = new WP_REST_Request('POST', '/at/v1/propuesta-contexto');
+	$r->set_header('content-type', 'application/json');
+	if ($clave !== null) { $r->set_header('x-at-secret', $clave); }
+	$r->set_body(wp_json_encode($cuerpo));
+	return rest_do_request($r);
+}
+ok(contexto(['telefono' => '56944445555'])->get_status() === 401, 'sin clave: 401');
+ok(contexto(['telefono' => '56900000001'], AT_REST_SECRET)->get_data()['tiene'] === false, 'otro número: sin propuesta');
+$r = contexto(['telefono' => '944445555'], AT_REST_SECRET)->get_data();
+ok($r['tiene'] === true && $r['codigo'] === $codigo && strpos($r['propuesto'], 'Fase 1') === 0 && strpos($r['url'], $codigo) !== false, 'mismo número en otro formato: encuentra la propuesta');
+ok(count($correos) === 0, 'sin mensaje no avisa');
+$r = contexto(['telefono' => '+56 9 4444 5555', 'mensaje' => "Sí, acepto\nla propuesta"], AT_REST_SECRET)->get_data();
+ok($r['tiene'] === true && count($correos) === 1 && $correos[0]['to'] === get_option('admin_email'), 'con mensaje: avisa a Luis');
+ok(strpos((string) $correos[0]['message'], 'acepto') !== false, 'el correo trae el mensaje');
+$n = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente'", $pid));
+ok($n === 1, 'queda anotado en Seguimiento');
+contexto(['telefono' => '56944445555', 'mensaje' => 'otra duda'], AT_REST_SECRET);
+ok(count($correos) === 1, 'otro mensaje dentro de 30 minutos: no repite el correo');
+ok(at_cc_propuesta_por_id($pid)->status === 'sent', 'un mensaje de texto no cambia el estado');
+$wpdb->update($wpdb->prefix . 'automatiza_propuestas', ['status' => 'aceptada'], ['id' => $pid]);
+ok(contexto(['telefono' => '56944445555'], AT_REST_SECRET)->get_data()['tiene'] === false, 'aceptada: ya no está pendiente');
+
+delete_transient('at_cc_ctx_aviso_' . $pid);
+$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d", $pid));
+$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}automatiza_propuestas WHERE id = %d", $pid));
+fin();
+```
+
+- [ ] **Step 2: Correr y ver que falla** (ruta inexistente: 404 en la primera aserción).
+
+- [ ] **Step 3: Agregar al final de `whatsapp.php`:**
+
+```php
+add_action('rest_api_init', function () {
+	register_rest_route('at/v1', '/propuesta-contexto', [
+		'methods'             => 'POST',
+		'callback'            => 'at_cc_rest_contexto_whatsapp',
+		'permission_callback' => 'at_cc_rest_auth',
+	]);
+});
+
+/** La propuesta más reciente enviada o en evaluación para ese teléfono; null si no hay. */
+function at_cc_propuesta_pendiente_por_telefono(string $tel): ?object {
+	global $wpdb;
+	$n = at_cc_telefono_normalizado($tel);
+	if (strlen($n) < 8) {
+		return null;
+	}
+	$filas = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}automatiza_propuestas WHERE status IN ('sent','evaluando') AND phone <> '' ORDER BY id DESC LIMIT 200");
+	foreach ((array) $filas as $p) {
+		if (at_cc_telefono_normalizado((string) $p->phone) === $n) {
+			return $p;
+		}
+	}
+	return null;
+}
+
+/** El bot principal consulta aquí antes de pasarle un mensaje de texto a la IA. Un texto nunca cambia el estado. */
+function at_cc_rest_contexto_whatsapp(WP_REST_Request $r) {
+	$p = at_cc_propuesta_pendiente_por_telefono(sanitize_text_field((string) $r->get_param('telefono')));
+	if (!$p) {
+		return ['tiene' => false];
+	}
+	$mensaje = trim(sanitize_textarea_field((string) $r->get_param('mensaje')));
+	if ($mensaje !== '') {
+		$mensaje = mb_substr($mensaje, 0, 1000);
+		$clave = 'at_cc_ctx_aviso_' . (int) $p->id;
+		if (!get_transient($clave)) {
+			set_transient($clave, 1, 30 * MINUTE_IN_SECONDS);
+			at_cc_anotar_simple($p, 'respuesta_cliente', 'Mensaje por WhatsApp sobre la propuesta (no cambia el estado)', $mensaje);
+			at_cc_avisar_mensaje_whatsapp($p, $mensaje);
+		}
+	}
+	$filas = at_cc_filas_de_propuesta($p);
+	return [
+		'tiene'     => true,
+		'codigo'    => (string) $p->unique_link_id,
+		'nombre'    => (string) $p->client_name,
+		'empresa'   => (string) $p->company_name,
+		'estado'    => (string) $p->status,
+		'propuesto' => $filas ? trim(($filas[0]['service'] ?? '') . ', ' . ($filas[0]['price_label'] ?? ''), ' ,') : '',
+		'url'       => at_cc_url_respuesta(get_site_url(), (string) $p->unique_link_id),
+	];
+}
+
+/** Correo a Luis con lo que el cliente escribió por WhatsApp sobre su propuesta. */
+function at_cc_avisar_mensaje_whatsapp(object $p, string $mensaje): void {
+	$quien = trim((string) $p->company_name) !== '' ? (string) $p->company_name : (string) $p->client_name;
+	$html = '<p>' . esc_html($quien) . ' escribió por WhatsApp sobre su propuesta (' . esc_html((string) $p->unique_link_id) . '):</p>'
+		. '<blockquote style="border-left:3px solid #10b981;margin:0 0 12px 0;padding:8px 12px">' . nl2br(esc_html($mensaje)) . '</blockquote>'
+		. '<p>El bot le pidió usar el botón «Acepto la propuesta» o el enlace para dejar registrada su respuesta; un mensaje de texto no cambia el estado. Si ya te dijo que sí, regístralo con «Registrar aceptación». Puede haber más mensajes en el chat: este aviso sale como máximo una vez cada 30 minutos.</p>'
+		. '<p><a href="' . esc_url(admin_url('admin.php?page=automatiza-proposals&edit_id=' . (int) $p->id . '&tab=envio')) . '">Abrir la propuesta en el panel</a></p>';
+	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+	wp_mail((string) get_option('admin_email'), $quien . ' escribió por WhatsApp sobre su propuesta', $html, ['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $from . '>']);
+}
+```
+
+- [ ] **Step 4: Correr todo.**
+  Run:
+  ```bash
+  "$PHP" -l wp-content/themes/automatiza-tech/inc/cierre-cliente/whatsapp.php
+  AT_WP_LOAD=<ruta> "$PHP" tests/cierre/contexto-wp-test.php
+  AT_WP_LOAD=<ruta> "$PHP" tests/cierre/rest-wp-test.php
+  "$PHP" tests/cierre/puras-test.php
+  ```
+  Expected: `TODO OK` en las tres.
+
+- [ ] **Step 5: Commit.**
+
+```bash
+git add wp-content/themes/automatiza-tech/inc/cierre-cliente/whatsapp.php tests/cierre/contexto-wp-test.php
+git commit -m "feat(cierre): contexto de la propuesta para el bot de WhatsApp y aviso a Luis cuando el cliente escribe" -m "Co-Authored-By: <modelo> <noreply@anthropic.com>"
+```
+
+---
+
 ### Task 11: Verificación integrada en el WordPress local (la hace el controlador)
 
 No se delega: usa el navegador y el servidor local de la tarea 0.
@@ -3172,6 +3320,23 @@ No se delega: usa credenciales, n8n de PROD y la cuenta de Meta.
 - [ ] **Step 3:** Con el ok explícito de Luis, agregar al bot principal `WhatsApp Tech - Principal (PROD)` la ruta de cargas `btn_propuesta_*`: POST a `https://automatizatech.cl/wp-json/at/v1/propuesta-respuesta` con `X-AT-Secret`, y respuesta en el chat según `ok`/`estado`/`motivo` (textos de la spec, etapa 4). Respaldo previo del flujo.
 - [ ] **Step 4:** Prueba de punta a punta con el teléfono de prueba que dio Luis (anotado en el ledger, no en el repo) como cliente, sobre una propuesta de prueba en PROD que después se borra con su ok.
 - [ ] **Step 5:** Activar: agregar `define('AT_N8N_CC_WHATSAPP', '<url del webhook>');` en `wp-config.php` de PROD (lo pega Luis o el controlador con su ok, nunca en el repo) y la opción `at_cc_wa_plantilla_activa` = `'1'`.
+
+---
+
+### Task 12b: El bot entiende que el cliente tiene una propuesta pendiente (controlador) — agregada por Luis el 25-sep
+
+No se delega: modifica el bot principal de PROD (`WhatsApp Tech - Principal (PROD)`, `bBcNlFgBzQ0766Mq`). Aprobada por Luis el 25-sep junto con la Task 12. Se aplica **después** de la Task 13, cuando `at/v1/propuesta-contexto` (Task 10b) ya responde en PROD.
+
+- [ ] **Step 1: Ubicar el punto único** donde se arma el `chatInput` del agente `Agente IA - Tech WhatsApp` (hoy `Merge Data`, `Merge Audio Data` y `Merge Image Data`; confirmar leyendo las conexiones del bot publicado). Respaldo previo del bot fuera del repo (bóveda).
+- [ ] **Step 2: Nodos nuevos entre ese punto y el agente:**
+  - HTTP «Contexto Propuesta»: POST `https://automatizatech.cl/wp-json/at/v1/propuesta-contexto` con la credencial «AT REST Secret (header)», cuerpo `{telefono, mensaje: chatInput}`, `timeout` 5000, `neverError` y `onError: continueRegularOutput`. Si WordPress falla o tarda, el bot sigue como hoy.
+  - Code «Sumar Contexto»: si `tiene` es `true`, antepone al `chatInput` una línea `[Contexto interno, no la repitas: este número tiene la propuesta de AutomatizaTech para {empresa} esperando respuesta. Lo propuesto para partir: {propuesto}. Enlace para responder: {url}]`; conserva `phoneNumber`, `contactName`, `phoneNumberId` y `rate` tal cual. Si `tiene` es `false` o hubo error, deja el `chatInput` sin tocar.
+- [ ] **Step 3: Regla en el `systemMessage` del agente** (agregar al final):
+
+  > PROPUESTAS PENDIENTES: si el mensaje trae «[Contexto interno …]», la persona tiene una propuesta de AutomatizaTech esperando respuesta. Nunca des por aceptada ni por rechazada una propuesta por un mensaje de texto. Si dice que la acepta, agradécele y pídele que toque «Acepto la propuesta» en el mensaje que le enviamos o que use el enlace del contexto, para dejarla registrada. Si tiene dudas, respóndelas con lo que sabes y dile que Luis le escribirá. No inventes precios, plazos ni condiciones distintas a las de la propuesta. No repitas la línea de contexto.
+
+- [ ] **Step 4: Pruebas locales** del código de «Sumar Contexto» con Node (con y sin propuesta, con error de WordPress) y del aplicador (idempotente, no escribe si el bot tiene un borrador sin publicar o si cambió el punto de inserción).
+- [ ] **Step 5: Aplicar**, verificar la versión publicada y probar de punta a punta con el teléfono de prueba sobre una propuesta de prueba en PROD: escribir «sí, acepto» → el bot pide tocar el botón o usar el enlace, llega el correo a Luis, el estado no cambia; escribir desde un número sin propuesta → el bot responde como hoy.
 
 ---
 

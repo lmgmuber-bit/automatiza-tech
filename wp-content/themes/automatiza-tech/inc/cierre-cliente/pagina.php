@@ -142,13 +142,15 @@ function at_cc_guardar_datos_contrato(object $p, array $post): string {
 		return 'recibida';
 	}
 	$r = ContractService::actualizar_datos_cliente((int) $c->id, $datos);
-	$lineas = ['Tipo: ' . (ContractService::tipos_cliente()[$tipo] ?? $tipo)];
+	// Descripción genérica a propósito: llega a la línea de tiempo pública del cliente (token
+	// calculable, ver crm-ai-completo.php). El tipo, la razón social, el RUT y la dirección solo
+	// debe verlos Luis, así que van en metadata (la lee el panel interno, nunca la vista pública).
+	$meta = ['tipo' => $tipo, 'direccion' => $direccion];
 	if ($tipo === 'empresa') {
-		$lineas[] = 'Razón social: ' . $razon;
-		$lineas[] = 'RUT: ' . $rut_empresa;
+		$meta['razon_social'] = $razon;
+		$meta['rut'] = $rut_empresa;
 	}
-	$lineas[] = 'Dirección: ' . $direccion;
-	at_cc_anotar_simple($p, 'respuesta_cliente', 'Datos para el contrato', implode("\n", $lineas));
+	at_cc_anotar_simple($p, 'respuesta_cliente', 'Datos para el contrato', 'El cliente dejó sus datos para el contrato.', $meta);
 	if (is_wp_error($r)) {
 		return $r->get_error_code() === 'ya_revisado' ? 'datos_recibidos' : 'datos_contrato';
 	}

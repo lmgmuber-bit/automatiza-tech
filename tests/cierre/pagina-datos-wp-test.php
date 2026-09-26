@@ -62,6 +62,10 @@ $fila_tech_1 = $wpdb->get_row($wpdb->prepare("SELECT billing_address, tax_id FRO
 ok($fila_tech_1 && $fila_tech_1->billing_address === 'Av. Siempre Viva 742, Providencia', 'persona: ficha operativa recibe billing_address (estaba vacío)');
 ok($fila_tech_1 && $fila_tech_1->tax_id === '11.111.111-1', 'persona: ficha operativa recibe tax_id con el RUT de quien aceptó (estaba vacío)');
 ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente'", $p1->id)) === $antes_notas_1 + 1, 'persona: queda una nota nueva en Seguimiento');
+$nota1 = $wpdb->get_row($wpdb->prepare("SELECT description, metadata FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente' ORDER BY id DESC LIMIT 1", $p1->id));
+$meta1 = json_decode((string) $nota1->metadata, true) ?: [];
+ok(strpos((string) $nota1->description, 'Av. Siempre Viva') === false && strpos((string) $nota1->description, '11.111.111-1') === false, 'persona: la descripción pública (Seguimiento) no lleva la dirección ni el RUT');
+ok(($meta1['direccion'] ?? '') === 'Av. Siempre Viva 742, Providencia' && ($meta1['tipo'] ?? '') === 'persona', 'persona: la dirección y el tipo quedan en metadata, no en la descripción pública');
 
 // ---------- empresa sin RUT válido ----------
 $p2 = crear_propuesta_datos($marca . '-empresa-mal', $payload, $creadas);
@@ -91,6 +95,10 @@ $ph3 = json_decode(ContractService::get_by_id((int) $r3['contrato_id'])->placeho
 ok(($ph3['tipo_cliente'] ?? '') === 'empresa' && ($ph3['razon_social_cliente'] ?? '') === '[PRUEBA] Muebles SpA' && ($ph3['rut_cliente'] ?? '') === '10.000.013-K', 'empresa completa: contrato con razón social y RUT de la empresa');
 $company_despues = (string) $wpdb->get_var($wpdb->prepare("SELECT company FROM {$tech} WHERE id = %d", (int) $c3->client_id));
 ok($company_despues === $company_antes, 'empresa completa: la ficha operativa no pisa la empresa que ya tenía');
+$nota3 = $wpdb->get_row($wpdb->prepare("SELECT description, metadata FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente' ORDER BY id DESC LIMIT 1", $p3->id));
+$meta3 = json_decode((string) $nota3->metadata, true) ?: [];
+ok(strpos((string) $nota3->description, 'Muebles SpA') === false && strpos((string) $nota3->description, '10.000.013-K') === false && strpos((string) $nota3->description, 'Calle Uno 1') === false, 'empresa completa: la descripción pública (Seguimiento) no lleva razón social, RUT ni dirección');
+ok(($meta3['razon_social'] ?? '') === '[PRUEBA] Muebles SpA' && ($meta3['rut'] ?? '') === '10.000.013-K' && ($meta3['direccion'] ?? '') === 'Calle Uno 1, Ñuñoa', 'empresa completa: razón social, RUT y dirección quedan en metadata');
 
 // ---------- con la revisión de Luis ya guardada ----------
 $p4 = crear_propuesta_datos($marca . '-revisado', $payload, $creadas);
@@ -103,6 +111,10 @@ $clave4 = at_cc_guardar_datos_contrato($p4, ['tipo' => 'persona', 'direccion' =>
 ok($clave4 === 'datos_recibidos', 'con revisión de Luis ya guardada: datos_recibidos');
 ok(ContractService::get_by_id((int) $r4['contrato_id'])->placeholders === $ph4_antes, 'con revisión ya guardada: el contrato no cambia');
 ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente'", $p4->id)) === $notas_4_antes + 1, 'con revisión ya guardada: igual queda la nota en Seguimiento');
+$nota4 = $wpdb->get_row($wpdb->prepare("SELECT description, metadata FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente' ORDER BY id DESC LIMIT 1", $p4->id));
+$meta4 = json_decode((string) $nota4->metadata, true) ?: [];
+ok(strpos((string) $nota4->description, 'Calle Dos 2') === false, 'con revisión ya guardada: la descripción pública tampoco lleva la dirección');
+ok(($meta4['direccion'] ?? '') === 'Calle Dos 2', 'con revisión ya guardada: la dirección queda en metadata igual');
 
 // ---------- la barra pública ofrece «Datos para tu contrato» solo cuando corresponde ----------
 ob_start();

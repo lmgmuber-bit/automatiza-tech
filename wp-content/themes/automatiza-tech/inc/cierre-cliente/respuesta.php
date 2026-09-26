@@ -24,8 +24,10 @@ function at_cc_filas_de_propuesta(object $p): array {
 	return at_cc_filas_de_payload((string) $p->gamma_prompt_text);
 }
 
-/** Registro simple en Seguimiento; devuelve su id. */
-function at_cc_anotar_simple(object $p, string $tipo, string $titulo, string $descripcion = ''): int {
+/** Registro simple en Seguimiento; devuelve su id. $descripcion puede llegar a la línea de tiempo
+ *  pública del cliente (mismo riesgo documentado en at_cc_anotar_respuesta): nunca lleva datos
+ *  personales. Lo que solo debe ver Luis (RUT, razón social, dirección, etc.) va en $metadata. */
+function at_cc_anotar_simple(object $p, string $tipo, string $titulo, string $descripcion = '', array $metadata = []): int {
 	global $wpdb;
 	$wpdb->insert($wpdb->prefix . 'automatiza_propuestas_details', [
 		'propuesta_id'   => (int) $p->id,
@@ -34,6 +36,7 @@ function at_cc_anotar_simple(object $p, string $tipo, string $titulo, string $de
 		'description'    => $descripcion,
 		'status'         => 'completed',
 		'completed_date' => current_time('Y-m-d'),
+		'metadata'       => $metadata ? wp_json_encode($metadata, JSON_UNESCAPED_UNICODE) : null,
 		'created_by'     => get_current_user_id() ?: null,
 		'created_at'     => current_time('mysql'),
 	]);

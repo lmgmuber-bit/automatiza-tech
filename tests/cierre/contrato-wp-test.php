@@ -155,6 +155,27 @@ ok(strpos($txt5, '5.1. El precio total') !== false, 'un "<" sin cerrar en el pla
 ok(strpos($txt5, 'CLÁUSULA QUINTA') !== false, 'tampoco borra el título de la cláusula quinta');
 ok(strpos($txt5, 'Entrega <a convenir en la reunion de inicio') !== false && strpos($txt5, '50 % al firmar -> 50 % a la entrega') !== false, 'el plazo y la forma de pago se ven tal cual, con el "<" y el "->"');
 
+// Task 5b ronda 1 (hallazgo 3): el formulario de revisión precarga razon_social_cliente con el
+// nombre de la marca de la propuesta (igual que nombre_proyecto). Si Luis elige 'persona' y
+// guarda sin tocar la razón social, guardar_revision() debe reemplazarla por el nombre de quien
+// aceptó (representante_cliente_nombre), no dejar el contrato a nombre de la marca. Si Luis
+// escribe otro nombre, se respeta. faltantes() además detecta como red de seguridad el caso en
+// que, por otra vía, la razón social siga igual a la marca.
+$marca_precio = ['monto_total' => '$1.000', 'forma_pago' => 'Contado.'];
+$c6 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Marca Muebles', 'nombre_proyecto' => '[PRUEBA] Marca Muebles', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1'] + $marca_precio, 'created_by' => 0]);
+$r6 = ContractService::guardar_revision($c6->id, ['tipo_cliente' => 'persona', 'domicilio_cliente' => 'Calle Falsa 123, Santiago']);
+$ph6 = is_wp_error($r6) ? [] : json_decode($r6->placeholders, true);
+ok(!is_wp_error($r6) && ($ph6['razon_social_cliente'] ?? '') === 'Ana Prueba', 'persona sin tocar la razón social: toma el nombre de quien aceptó, no el de la marca');
+ok(!is_wp_error($r6) && ContractService::faltantes($r6) === [], 'con el nombre corregido ya no falta nada');
+$c7 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Marca Muebles', 'nombre_proyecto' => '[PRUEBA] Marca Muebles', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1'] + $marca_precio, 'created_by' => 0]);
+$r7 = ContractService::guardar_revision($c7->id, ['tipo_cliente' => 'persona', 'razon_social_cliente' => 'Otro Nombre Del Cliente', 'domicilio_cliente' => 'Calle Falsa 123, Santiago']);
+$ph7 = is_wp_error($r7) ? [] : json_decode($r7->placeholders, true);
+ok(!is_wp_error($r7) && ($ph7['razon_social_cliente'] ?? '') === 'Otro Nombre Del Cliente', 'si Luis escribe un nombre distinto del de la marca, se respeta');
+$marca_persona_base = ['tipo_cliente' => 'persona', 'razon_social_cliente' => '[PRUEBA] Marca Muebles', 'nombre_proyecto' => '[PRUEBA] Marca Muebles', 'representante_cliente_nombre' => 'Ana Prueba', 'rut_cliente' => '11.111.111-1', 'domicilio_cliente' => 'Calle Falsa 123, Santiago'] + $marca_precio;
+ok(ContractService::faltantes($ct($marca_persona_base)) === ['Nombre completo del cliente (hoy dice el nombre de la marca)'], 'faltantes(): red de seguridad si la razón social sigue igual a la marca y distinta de quien aceptó');
+ok(ContractService::faltantes($ct(array_diff_key($marca_persona_base, ['representante_cliente_nombre' => 1]))) === [], 'faltantes(): sin representante en los datos, no hay con qué comparar y no se marca como marca');
+ok(ContractService::faltantes($ct(['razon_social_cliente' => 'Ana Prueba', 'nombre_proyecto' => '  ana   PRUEBA '] + array_diff_key($marca_persona_base, ['razon_social_cliente' => 1, 'nombre_proyecto' => 1]))) === [], 'faltantes(): si su propio nombre coincide con el del proyecto, no se marca como marca');
+
 // ---------- Task 5b: la página de revisión (contracts/at-sign-contract.php) ----------
 function pagina_revision(string $token, ?array $post = null): string {
 	$_GET = ['token' => $token];
@@ -183,6 +204,6 @@ $h = pagina_revision($c3->at_review_token);
 ok(strpos($h, 'id="signForm"') !== false && strpos($h, 'Antes de firmar completa') === false, 'con los datos completos aparece el bloque de firma');
 wp_set_current_user(0);
 
-$wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE id IN (%d, %d, %d, %d, %d, %d)", $c->id, $sop->id, $c2->id, $c3->id, $c4->id, $c5->id));
-foreach ([$c, $sop, $c2, $c3, $c4, $c5] as $x) { @unlink(pdf_de($x)); }
+$wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE id IN (%d, %d, %d, %d, %d, %d, %d, %d)", $c->id, $sop->id, $c2->id, $c3->id, $c4->id, $c5->id, $c6->id, $c7->id));
+foreach ([$c, $sop, $c2, $c3, $c4, $c5, $c6, $c7] as $x) { @unlink(pdf_de($x)); }
 fin();

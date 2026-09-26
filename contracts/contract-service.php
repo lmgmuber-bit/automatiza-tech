@@ -135,6 +135,19 @@ class ContractService {
                 $faltan[] = $etiqueta . ' (no es válido)';
             }
         }
+        // Red de seguridad: persona natural cuyo nombre sigue siendo el de la marca de la
+        // propuesta (razon_social_cliente == nombre_proyecto) y distinto del nombre de quien
+        // aceptó. No debería firmarse así aunque el campo no esté vacío.
+        if ($tipo === 'persona') {
+            $razon         = trim((string) ($ph['razon_social_cliente'] ?? ''));
+            $proyecto      = trim((string) ($ph['nombre_proyecto'] ?? ''));
+            $representante = trim((string) ($ph['representante_cliente_nombre'] ?? ''));
+            if ($razon !== '' && $proyecto !== '' && $representante !== ''
+                && self::normalizar_nombre($razon) === self::normalizar_nombre($proyecto)
+                && self::normalizar_nombre($razon) !== self::normalizar_nombre($representante)) {
+                $faltan[] = 'Nombre completo del cliente (hoy dice el nombre de la marca)';
+            }
+        }
         return $faltan;
     }
     /** El aviso de lo que falta para firmar (el mismo en la firma y en la página de revisión). */
@@ -190,6 +203,28 @@ class ContractService {
         }
         return $ph;
     }
+    /** Normaliza un nombre para comparar: sin mayúsculas ni espacios de más. */
+    private static function normalizar_nombre($s) {
+        $s = trim((string) preg_replace('/\s+/u', ' ', (string) $s));
+        return function_exists('mb_strtolower') ? mb_strtolower($s, 'UTF-8') : strtolower($s);
+    }
+    /**
+     * Persona natural cuyo razon_social_cliente sigue siendo el de la marca de la propuesta (el
+     * formulario precarga razon_social_cliente = nombre_proyecto = empresa): se reemplaza por el
+     * nombre de quien aceptó, salvo que Luis ya haya escrito un nombre distinto del de la marca.
+     */
+    private static function persona_marca_igual_al_proyecto(array $ph) {
+        if (($ph['tipo_cliente'] ?? '') !== 'persona') return $ph;
+        $razon         = trim((string) ($ph['razon_social_cliente'] ?? ''));
+        $proyecto      = trim((string) ($ph['nombre_proyecto'] ?? ''));
+        $representante = trim((string) ($ph['representante_cliente_nombre'] ?? ''));
+        if ($razon !== '' && $proyecto !== '' && $representante !== ''
+            && self::normalizar_nombre($razon) === self::normalizar_nombre($proyecto)
+            && self::normalizar_nombre($razon) !== self::normalizar_nombre($representante)) {
+            $ph['razon_social_cliente'] = $representante;
+        }
+        return $ph;
+    }
     /** Guarda los marcadores y regenera el PDF preliminar. */
     private static function guardar_marcadores($c, array $ph) {
         global $wpdb;
@@ -220,6 +255,7 @@ class ContractService {
                 if ($v === '') unset($ph[$k]); else $ph[$k] = $v;
             }
         }
+        $ph = self::persona_marca_igual_al_proyecto($ph);
         $ph = self::persona_con_datos_de_aceptacion($ph);
         $ph['revision_at'] = current_time('mysql');
         return self::guardar_marcadores($c, $ph);

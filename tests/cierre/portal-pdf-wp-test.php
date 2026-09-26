@@ -48,7 +48,7 @@ foreach (['signed' => 'F', 'at_signed' => 'A'] as $estado => $letra) {
 	}
 	$ok = $wpdb->insert($tabla, $fila);
 	ok((bool) $ok, "contrato de prueba en estado {$estado}");
-	$contratos[$estado] = ['id' => (int) $wpdb->insert_id, 'token' => $fila['sign_token']];
+	$contratos[$estado] = ['id' => (int) $wpdb->insert_id, 'sign_token' => $fila['sign_token'], 'at_review_token' => $fila['at_review_token']];
 }
 
 $url = $GLOBALS['at_crm_ai']->url_portal((int) $r['crm_id']);
@@ -74,12 +74,14 @@ foreach ($m[1] as $href) {
 	$enlaces[(int) ($p['contract_id'] ?? 0)] = ['href' => $href, 'p' => $p];
 }
 $f = $enlaces[$contratos['signed']['id']] ?? null;
-ok($f && strpos($f['href'], 'admin-ajax.php?action=at_download_contract') !== false && ($f['p']['signed'] ?? '') === '1' && ($f['p']['token'] ?? '') === $contratos['signed']['token'], 'firmado: «Descargar PDF» va por la descarga con permiso, el PDF firmado y el token');
+ok($f && strpos($f['href'], 'admin-ajax.php?action=at_download_contract') !== false && ($f['p']['signed'] ?? '') === '1' && ($f['p']['token'] ?? '') === $contratos['signed']['at_review_token'], 'firmado: «Descargar PDF» va por la descarga con permiso, el PDF firmado y el at_review_token');
+ok($f && ($f['p']['token'] ?? '') !== $contratos['signed']['sign_token'], 'firmado: el enlace no lleva el sign_token (ese token también permite firmar como el cliente)');
 $a = $enlaces[$contratos['at_signed']['id']] ?? null;
-ok($a && strpos($a['href'], 'admin-ajax.php?action=at_download_contract') !== false && !isset($a['p']['signed']) && ($a['p']['token'] ?? '') === $contratos['at_signed']['token'], 'listo para revisar: «Ver contrato» va por la descarga con permiso, el PDF preliminar y el token');
+ok($a && strpos($a['href'], 'admin-ajax.php?action=at_download_contract') !== false && !isset($a['p']['signed']) && ($a['p']['token'] ?? '') === $contratos['at_signed']['at_review_token'], 'listo para revisar: «Ver contrato» va por la descarga con permiso, el PDF preliminar y el at_review_token');
+ok($a && ($a['p']['token'] ?? '') !== $contratos['at_signed']['sign_token'], 'listo para revisar: el enlace no lleva el sign_token');
 foreach ($contratos as $estado => $x) {
-	$c = ContractService::get_by_token($x['token']);
-	ok($c && (int) $c->id === $x['id'], "el token del enlace ({$estado}) abre ese mismo contrato en la descarga");
+	$c = ContractService::get_by_at_token($x['at_review_token']);
+	ok($c && (int) $c->id === $x['id'], "el at_review_token del enlace ({$estado}) abre ese mismo contrato en la descarga");
 }
 ok(strpos($html, 'automatiza-tech-contracts') === false, 'la vista no enlaza directo a uploads/automatiza-tech-contracts');
 

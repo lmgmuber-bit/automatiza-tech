@@ -4746,7 +4746,7 @@ class AutomatizaTech_CRM_AI {
                         if (!$at_client_id) { $at_client_id = $cliente_id; }
                         $all_contracts = $wpdb->get_results($wpdb->prepare(
                             "SELECT id, contract_number, type, status, signed_at, sent_at, created_at,
-                                    signed_pdf_url, pdf_url, sign_token, monthly_amount, currency
+                                    signed_pdf_url, pdf_url, sign_token, at_review_token, monthly_amount, currency
                              FROM {$contracts_table}
                              WHERE client_id = %d
                              ORDER BY created_at DESC",
@@ -4818,8 +4818,8 @@ class AutomatizaTech_CRM_AI {
                                         <?php endif; ?>
                                     </div>
                                 </div>
-                                <?php if ($is_signed && !empty($c['signed_pdf_url']) && $pdf_seguro && !empty($c['sign_token'])): ?>
-                                    <a href="<?php echo esc_url(ContractService::secure_pdf_url((object) $c, true, $c['sign_token'])); ?>"
+                                <?php if ($is_signed && !empty($c['signed_pdf_url']) && $pdf_seguro && !empty($c['at_review_token'])): ?>
+                                    <a href="<?php echo esc_url(ContractService::secure_pdf_url((object) $c, true, $c['at_review_token'])); ?>"
                                        download target="_blank"
                                        style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(34,197,94,.3);white-space:nowrap;"
                                        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
@@ -4835,8 +4835,8 @@ class AutomatizaTech_CRM_AI {
                                         ✍️ Firmar ahora
                                     </a>
                                 <?php elseif ($in_prep): ?>
-                                    <?php if ($status === 'at_signed' && !empty($c['pdf_url']) && $pdf_seguro && !empty($c['sign_token'])): ?>
-                                        <a href="<?php echo esc_url(ContractService::secure_pdf_url((object) $c, false, $c['sign_token'])); ?>"
+                                    <?php if ($status === 'at_signed' && !empty($c['pdf_url']) && $pdf_seguro && !empty($c['at_review_token'])): ?>
+                                        <a href="<?php echo esc_url(ContractService::secure_pdf_url((object) $c, false, $c['at_review_token'])); ?>"
                                            target="_blank"
                                            style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(59,130,246,.3);white-space:nowrap;"
                                            onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">

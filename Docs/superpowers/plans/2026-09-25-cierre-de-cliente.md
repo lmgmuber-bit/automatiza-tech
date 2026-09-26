@@ -3564,6 +3564,8 @@ No se delega: usa el navegador y el servidor local de la tarea 0.
 
 No se delega: usa credenciales, n8n de PROD y la cuenta de Meta.
 
+**Estado al 26-sep:** Step 1 a medias: `propuesta_respuesta` y `propuesta_respuesta_v2` (sin precio) están enviadas a Meta; las dos siguen en revisión y Meta las dejó como MARKETING, aunque la v2 se envió como Utility. Step 2: el flujo n8n «Propuestas v3 · 4 WhatsApp» (`Ex5wZac9VCc66WOm`) está creado e inactivo. Steps 3 a 5 pendientes hasta que Meta responda. Mientras tanto el panel ofrece «Enviar por mi WhatsApp» (`wa.me`).
+
 - [ ] **Step 1:** Con el ok de Luis, crear en Meta la plantilla `propuesta_respuesta` (`es`, categoría Utility, sin emojis en botones): cuerpo con `{{1}}` nombre, `{{2}}` empresa, `{{3}}` lo propuesto; tres respuestas rápidas «Acepto la propuesta», «La sigo evaluando», «No, gracias» y un botón de enlace «Ver la propuesta» con sufijo dinámico al código. Esperar `APPROVED`; si Meta la reclasifica como Marketing, informar a Luis antes de seguir. Las cargas de las respuestas rápidas se definen al enviar: `btn_propuesta_acepta_<código>`, `btn_propuesta_evalua_<código>`, `btn_propuesta_rechaza_<código>`.
 - [ ] **Step 2:** Crear en n8n el flujo «Propuesta · WhatsApp»: webhook con autenticación por cabecera `X-AT-Secret` (credencial con el valor de `AT_REST_SECRET`, que n8n ya usa para llamar a WordPress) → envío de la plantilla con la credencial de WhatsApp de Meta de los recordatorios. Respaldo del JSON en `C:\Users\luis_\respaldos\n8n\`.
 - [ ] **Step 3:** Con el ok explícito de Luis, agregar al bot principal `WhatsApp Tech - Principal (PROD)` la ruta de cargas `btn_propuesta_*`: POST a `https://automatizatech.cl/wp-json/at/v1/propuesta-respuesta` con `X-AT-Secret`, y respuesta en el chat según `ok`/`estado`/`motivo` (textos de la spec, etapa 4). Respaldo previo del flujo.
@@ -3575,6 +3577,8 @@ No se delega: usa credenciales, n8n de PROD y la cuenta de Meta.
 ### Task 12b: El bot entiende que el cliente tiene una propuesta pendiente (controlador) — agregada por Luis el 25-sep
 
 No se delega: modifica el bot principal de PROD (`WhatsApp Tech - Principal (PROD)`, `bBcNlFgBzQ0766Mq`). Aprobada por Luis el 25-sep junto con la Task 12. Se aplica **después** de la Task 13, cuando `at/v1/propuesta-contexto` (Task 10b) ya responde en PROD.
+
+**Estado al 26-sep:** pendiente, se aplica junto con la Task 12. El aplicador y el código de «Sumar Contexto» están listos fuera del repo, sin aplicar; la ruta `at/v1/propuesta-contexto` ya está EN PROD.
 
 - [ ] **Step 1: Ubicar el punto único** donde se arma el `chatInput` del agente `Agente IA - Tech WhatsApp` (hoy `Merge Data`, `Merge Audio Data` y `Merge Image Data`; confirmar leyendo las conexiones del bot publicado). Respaldo previo del bot fuera del repo (bóveda).
 - [ ] **Step 2: Nodos nuevos entre ese punto y el agente:**
@@ -3596,7 +3600,7 @@ No se delega: modifica el bot principal de PROD (`WhatsApp Tech - Principal (PRO
 **Script:** `.superpowers/sdd/2026-09-25-cierre-de-cliente/t13/deploy_cierre.py` (copia del scratchpad; `cotejar` por defecto, `subir`, `rollback <tar>`), con `render_check_cierre.php` (panel dibujado como administrador con wp-cli, solo conteos) y `archivar_siete.php` (`wp eval-file`, `aplicar` para escribir). Sube el contenido commiteado (`git show <commit>:<ruta>`), cada archivo a un temporal con `php -l` antes del `mv`, y compara la huella después.
 
 - [x] **Step 1: Cotejar PROD** (hecho el 26-sep, resultado arriba). Se repite solo al correr `subir`: si algo cambió, aborta sin tocar nada.
-- [ ] **Step 2:** Pedir la autorización de Luis con esta lista y este orden:
+- [x] **Step 2:** Autorizado por Luis el 26-sep. Lista y orden:
   1. `Docs/CONTRATO_SERVICIO_DESARROLLO.md` → `domains/automatizatech.cl/Docs/` (**fuera de `public_html`**: `load_template()` también la busca ahí, y una plantilla no necesita ser pública);
   2. los 11 archivos nuevos de `inc/cierre-cliente/` (inertes hasta el paso 6; `cargar.php` al final);
   3. contratos, **juntos**: `lib/contract-pdf-fpdf.php`, `contracts/contract-service.php`, `at-sign-contract.php`, `sign-contract.php`, `admin-contracts.php`, `client-contracts-widget.php`; enseguida el `.htaccess` con `Deny from all` en `uploads/automatiza-tech-contracts/` (el código solo lo reescribe al generar o firmar) y la carpeta `uploads/automatiza-tech-evidencias/` con el mismo `.htaccess`. Las firmas que el admin muestre por URL directa dejan de verse (403): es el efecto buscado;
@@ -3605,7 +3609,33 @@ No se delega: modifica el bot principal de PROD (`WhatsApp Tech - Principal (PRO
   6. `inc/admin-proposals.php`, que carga el módulo; verificación del panel como administrador;
   7. **archivar 11, 12, 14, 16, 21, 22 y 26** con `archivar_siete.php aplicar` (crea antes la columna `crm_cliente_id` con `at_cc_migrar_esquema()`); la 42 y la 43 quedan `sent`;
   8. `ver-presentacion.php` (la barra pública), recién con las siete archivadas.
-- [ ] **Step 3:** Con la autorización, `python deploy_cierre.py subir`: respaldo del tema completo, respaldo rápido de los 17 archivos que se sobrescriben (extraído aparte y comparado), copia del `.htaccess` de contratos y volcado de `wp_automatiza_propuestas`, `_propuestas_details`, `wp_crm_clientes`, `wp_automatiza_tech_clients`, `_contracts` y `_clients_details`; sube por grupos con chequeos desde afuera tras cada uno y rollback automático si algo falla. El rollback conserva el `.htaccess` nuevo de contratos y devuelve las siete a `sent`.
-- [ ] **Step 4:** Verificación (la hace el script): portada, `/wp-json/`, admin 302; `POST /wp-json/at/v1/propuesta-respuesta` y `/propuesta-contexto` sin clave → 401; `at_download_contract` sin token → 403; una sonda con nombre nuevo en cada carpeta privada → 403 (luego se borra); `sign-contract.php` con token inválido ≠ 500; `ver-presentacion.php` de la 43 con barra y de la 14 sin barra, ambas con `Cache-Control: no-store`; panel dibujado como administrador (ficha enviada con «Archivar», ficha archivada con «Desarchivar»). Informativo: un contrato real de la carpeta debería dar 403 (si no, purgar la caché del CDN). Después, Luis con su sesión prueba los botones de PDF en el admin de contratos, en la ficha del CRM y en el portal del cliente.
-- [ ] **Step 5:** Luis revisa con su sesión: completar «Ajustes del cierre» (datos de transferencia), ver la pestaña del CRM, y usar «Registrar aceptación» en la propuesta 43 como primer caso real.
-- [ ] **Step 6:** Documentar: sección «Cierre de cliente» en `Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`; puntero en `CLAUDE.md`; memoria `project_at_cierre_cliente`; commit, push y PR hacia `main` con la lista de despliegue y lo que queda pendiente de la Task 12.
+- [x] **Step 3 (hecho el 26-sep a las 13:36, RESULTADO OK, marca `20260926-133408`):** `python deploy_cierre.py subir`: respaldo del tema completo, respaldo rápido de los 17 archivos que se sobrescriben (extraído aparte y comparado), copia del `.htaccess` de contratos y volcado de `wp_automatiza_propuestas`, `_propuestas_details`, `wp_crm_clientes`, `wp_automatiza_tech_clients`, `_contracts` y `_clients_details`; sube por grupos con chequeos desde afuera tras cada uno y rollback automático si algo falla. El rollback conserva el `.htaccess` nuevo de contratos y devuelve las siete a `sent`.
+- [x] **Step 4 (hecho: todo lo esperado, más `debug.log` sin avisos nuevos):** Verificación (la hace el script): portada, `/wp-json/`, admin 302; `POST /wp-json/at/v1/propuesta-respuesta` y `/propuesta-contexto` sin clave → 401; `at_download_contract` sin token → 403; una sonda con nombre nuevo en cada carpeta privada → 403 (luego se borra); `sign-contract.php` con token inválido ≠ 500; `ver-presentacion.php` de la 43 con barra y de la 14 sin barra, ambas con `Cache-Control: no-store`; panel dibujado como administrador (ficha enviada con «Archivar», ficha archivada con «Desarchivar»). Informativo: un contrato real de la carpeta debería dar 403 (si no, purgar la caché del CDN). Después, Luis con su sesión prueba los botones de PDF en el admin de contratos, en la ficha del CRM y en el portal del cliente.
+- [ ] **Step 5 (en curso):** «Ajustes del cierre» completo el 26-sep; faltan los PDF con su sesión y la aceptación de la 43. Luis revisa con su sesión: completar «Ajustes del cierre» (datos de transferencia), ver la pestaña del CRM, y usar «Registrar aceptación» en la propuesta 43 como primer caso real.
+- [x] **Step 6 (26-sep):** Documentar: sección «Cierre de cliente» en `Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`; puntero en `CLAUDE.md`; memoria `project_at_cierre_cliente`; commit, push y PR hacia `main` con la lista de despliegue y lo que queda pendiente de la Task 12.
+
+---
+
+## Tareas agregadas después del plan (26-sep, todas EN PROD)
+
+Sus briefs completos quedaron en el espacio de trabajo local (fuera del repo); aquí queda lo que hace cada una.
+
+- **Task 14: estado «Archivada»** (Luis, 26-sep). El cliente no puede responder una archivada; Luis la desarchiva (vuelve al
+  estado anterior) o registra la aceptación a mano si antes estaba `sent`, `evaluando`, `rechazada`, `pending` o `lista`. Vista
+  «Archivadas». `inc/cierre-cliente/archivo.php`, prueba `tests/cierre/archivo-wp-test.php`. Al desplegar se archivaron 11, 12, 14,
+  16, 21, 22 y 26.
+- **Task 15: tipo de documento** (RUT, DNI o pasaporte) en la aceptación, el registro a mano y el contrato; solo el RUT se valida
+  con dígito verificador y una empresa siempre usa RUT. `at_cc_tipos_documento()` y afines en `puras.php`.
+- **Task 16: la línea de tiempo del cliente lee su ficha enlazada.** El portal y la ficha del CRM leían
+  `wp_automatiza_clients_details` con el id del CRM, pero todos escriben con el id de la ficha operativa: ahora usan
+  `at_cc_techs_de_crm()` y, sin fichas enlazadas, no muestran filas (falla cerrada). En la misma tarea: las notas migradas del
+  prospecto no se repiten, «Enviar ahora» del historial exige administrador y que la nota sea del cliente, y las pruebas y documentos
+  usan datos genéricos. Prueba `tests/cierre/timeline-ficha-enlazada-wp-test.php` y `notificar-historial-wp-test.php`.
+- **Task 17: correo principal del cierre y copia oculta** (Luis, 26-sep). Dos campos en «Ajustes del cierre»: el principal recibe
+  los avisos a Luis y es el `Reply-To` de la bienvenida y de «Pedir respuesta»; la copia oculta va en todos esos correos. Vacíos,
+  todo queda como antes (correo de administrador de WordPress). Las respuestas de los clientes llegan solo al principal. Prueba
+  `tests/cierre/correos-cierre-wp-test.php`.
+
+**Despliegues:** Tasks 1 a 15 el 26-sep a las 13:36 (commit `547f08d`); Tasks 16 y 17 a las 20:13 (commit `793e995`). Cotejo del
+26-sep por la noche: los 29 archivos del cierre en PROD son idénticos a esta rama. Detalle, respaldos y rollback en la sección
+«Cierre de cliente» de `Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`.

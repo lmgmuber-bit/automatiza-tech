@@ -84,6 +84,52 @@ Diseño: `Docs/superpowers/specs/2026-09-24-modulo-propuestas-admin-design.md`; 
   repo; respaldo previo en `C:/Users/luis_/respaldos/n8n/2026-09-24-correo-precargado/` (rollback: volver a
   publicar esos JSON).
 
+## Cierre de cliente (EN PROD desde el 2026-09-26 13:36)
+
+Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
+`Docs/superpowers/plans/2026-09-25-cierre-de-cliente.md`; rama `claude/cierre-cliente`.
+
+- **Responder la propuesta.** `ver-presentacion.php` lleva abajo una barra con «Acepto la propuesta», «La sigo
+  evaluando» y «No, gracias» mientras la propuesta está `sent` o `evaluando`. Al aceptar, el cliente escribe su
+  nombre, elige su documento (RUT, que se valida con dígito verificador, DNI o pasaporte) y marca lo que acepta. El
+  correo de la propuesta trae el mismo botón «Aceptar la propuesta». La página no se guarda en caché (formularios
+  con nonce).
+- **Al aceptar, todo es automático:** nota en Seguimiento con la huella de lo aceptado, propuesta `aceptada`,
+  prospecto → cliente en la ficha única (`wp_automatiza_tech_clients.crm_cliente_id` enlaza con `wp_crm_clientes`),
+  correo de bienvenida, contrato de servicios en borrador (`servicios_v1`) y correo «Revisar y firmar» a Luis. El
+  cliente ve además el formulario opcional «Datos para tu contrato» (persona natural o empresa, domicilio; la
+  empresa con razón social y RUT). «La sigo evaluando» y «No, gracias» cambian el estado y avisan a Luis.
+- **Panel** (ficha › pestaña Envío › «Respuesta del cliente»): estado y última respuesta; «📧 Pedir respuesta por
+  correo» (candado de 60 s contra el doble clic) y «Enviar por mi WhatsApp» (`wa.me` con el mensaje y el enlace
+  ya escritos); «Registrar aceptación a mano» para cuando el cliente dijo que sí por otro lado, con documento
+  opcional y evidencia privada (imágenes JPG, PNG o WebP que solo se abren con sesión); «🗄️ Archivar» / «Desarchivar».
+- **Archivada:** el cliente ya no puede responderla (ni por la página ni por WhatsApp) y queda como historial; Luis
+  puede desarchivarla o registrar la aceptación a mano desde ahí. Una reevaluación se hace con una propuesta nueva.
+  Vista «Archivadas» en la lista. Archivadas al desplegar (decisión de Luis): 11, 12, 14, 16, 21, 22 y 26; la 42
+  y la 43 siguen `sent`.
+- **Contrato de servicio:** plantilla `CONTRATO_SERVICIO_DESARROLLO.md`, que en PROD vive en
+  `domains/automatizatech.cl/Docs/` (fuera de `public_html`; `ContractService::load_template()` la busca ahí). La
+  comparecencia sale según el tipo de cliente y el documento. Luis la ajusta en la revisión de AT
+  (`contracts/at-sign-contract.php`) y no se puede firmar con datos esenciales en blanco. Los PDF se bajan por
+  `admin-ajax.php?action=at_download_contract` con token o sesión. Las carpetas privadas de contratos y evidencias
+  bloquean el acceso directo (403, verificado al desplegar).
+- **Ajustes del cierre** (Propuestas › Ajustes del cierre): banco, tipo y número de cuenta, titular y su RUT,
+  correo para avisar el pago y WhatsApp de AT. Van en la bienvenida; si faltan, el cierre igual corre y el correo
+  a Luis lo recuerda.
+- **WhatsApp automático: listo pero apagado** hasta la Task 12 del plan. Se enciende con las tres cosas juntas:
+  plantilla de Meta aprobada, flujo n8n `Ex5wZac9VCc66WOm` activo, constante `AT_N8N_CC_WHATSAPP` en
+  `wp-config.php` y opción `at_cc_wa_plantilla_activa` = `1`. Mientras tanto el panel ofrece «Enviar por mi
+  WhatsApp». Las rutas `POST /wp-json/at/v1/propuesta-respuesta` y `/propuesta-contexto` (para el bot) exigen la
+  cabecera `X-AT-Secret`; sin ella responden 401.
+- **Código y pruebas:** `inc/cierre-cliente/` (lo carga `inc/admin-proposals.php` vía `cargar.php`; `puras.php` sin
+  WordPress), `contracts/`, `lib/contract-pdf-fpdf.php`, `mu-plugins/crm-ai-completo.php` (pestaña «📜 Contratos y
+  operación» del CRM) y `ver-presentacion.php`. Pruebas: `tests/cierre/` y `tests/propuestas/` (23 suites).
+- **Despliegue y rollback (26-sep, marca `20260926-133408`):** respaldos en `~/respaldos/`: tema completo,
+  `cierre-cliente-antes-20260926-133408.tar.gz` (los 17 archivos reemplazados), `contracts-htaccess.antes-…` y
+  `tablas-antes-cierre-20260926-133408.sql` (seis tablas). Rollback manual: `cd ~ && tar xzf
+  respaldos/cierre-cliente-antes-20260926-133408.tar.gz`, borrar `inc/cierre-cliente/` y la plantilla nueva, y
+  devolver a `sent` las siete archivadas. La columna `crm_cliente_id` puede quedarse (admite nulos).
+
 ## Fotos por rubro (regla de Luis, 2026-09-24)
 
 Las fotos son del rubro de cada cliente, como las de Jeffer (béisbol) y Orly (funeraria): su gente, sus clientes,

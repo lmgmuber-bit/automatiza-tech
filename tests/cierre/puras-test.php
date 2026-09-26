@@ -101,6 +101,15 @@ ok(!isset($m['rut_cliente']) && !isset($m['domicilio_cliente']), 'vacíos no se 
 ok(array_diff(array_keys($m), at_cc_claves_contrato_servicios()) === [], 'solo claves conocidas');
 $m2 = at_cc_marcadores_servicios(['representante' => 'Ana', 'filas_aceptadas' => [['service' => 'X', 'price_label' => 'Por confirmar']]]);
 ok(!isset($m2['monto_total']) && $m2['razon_social_cliente'] === 'Ana' && $m2['fases_siguientes'] === 'La propuesta no tiene fases siguientes.', 'sin montos ni empresa');
+// Task 5b: tipo de cliente opcional (persona o empresa); sin tipo, todo sigue como antes.
+ok(in_array('tipo_cliente', at_cc_claves_contrato_servicios(), true), 'tipo_cliente es un marcador conocido');
+ok(!isset($m['tipo_cliente']) && !isset($m2['tipo_cliente']), 'sin tipo no hay marcador de tipo');
+$m3 = at_cc_marcadores_servicios(['representante' => 'Ana', 'tipo_cliente' => 'persona']);
+$m4 = at_cc_marcadores_servicios(['empresa' => 'Muebles', 'representante' => 'Ana', 'tipo_cliente' => 'empresa']);
+$m5 = at_cc_marcadores_servicios(['representante' => 'Ana', 'tipo_cliente' => 'otra cosa']);
+ok(($m3['tipo_cliente'] ?? '') === 'persona' && ($m4['tipo_cliente'] ?? '') === 'empresa', 'tipo_cliente persona o empresa pasa al marcador');
+ok(!isset($m5['tipo_cliente']), 'un tipo desconocido no pasa al marcador');
+ok(array_diff(array_keys($m4), at_cc_claves_contrato_servicios()) === [], 'con tipo, solo claves conocidas');
 
 // Mensajes de la página
 ok(at_cc_mensaje_respuesta('aceptada')['tipo'] === 'ok' && at_cc_mensaje_respuesta('datos')['tipo'] === 'aviso' && at_cc_mensaje_respuesta('error')['tipo'] === 'error', 'mensajes');
@@ -135,6 +144,12 @@ $b2 = at_cc_bienvenida_html(['nombre' => 'Ana', 'empresa' => '', 'anticipo' => n
 ok(strpos($b2, 'por separado') !== false && strpos($b2, 'va en tu contrato') !== false, 'sin banco ni anticipo');
 $b3 = at_cc_bienvenida_html(['nombre' => 'Ana', 'con_propuesta' => false]);
 ok(strpos($b3, 'anticipo') === false && strpos($b3, 'Tu contrato') === false, 'sin propuesta no habla de contrato ni anticipo');
+// Task 5b: la bienvenida pide los datos del contrato (a nombre de quién, RUT y dirección).
+$linea_datos = 'Para preparar tu contrato necesitamos saber a nombre de quién va (tú o tu empresa), el RUT y la dirección. Si ya los completaste en la página de la propuesta, no tienes que hacer nada; si no, respóndenos este correo con esos datos.';
+ok(strpos($b, $linea_datos) !== false && strpos($b2, $linea_datos) !== false, 'con propuesta pide los datos del contrato (texto exacto)');
+ok(strpos($b3, 'Para preparar tu contrato') === false, 'sin propuesta no pide los datos del contrato');
+$pos_datos = strpos($b, $linea_datos);
+ok($pos_datos !== false && $pos_datos < strpos($b, 'Un abrazo'), 'la línea de los datos va antes del cierre del correo');
 $pd = at_cc_pedido_respuesta_html('Ana', 'Muebles', '<div>BLOQUE</div>', '', 'https://e.cl/v');
 ok(strpos($pd, 'Hola <strong>Ana</strong>') !== false && strpos($pd, '<div>BLOQUE</div>') !== false && strpos($pd, 'https://e.cl/v') !== false, 'correo para pedir respuesta');
 

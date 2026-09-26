@@ -5,6 +5,8 @@
 
 ---
 
+> Nota para la revisión legal: si EL CLIENTE es persona natural, revisar la aplicación de la Ley 19.496 (y de la Ley 20.416 para micro y pequeñas empresas) sobre las cláusulas de responsabilidad, término anticipado, domicilio y jurisdicción.
+
 ## Comparecientes
 
 En **{{ciudad_firma}}**, a **{{fecha_firma_larga}}**, comparecen:
@@ -13,7 +15,7 @@ En **{{ciudad_firma}}**, a **{{fecha_firma_larga}}**, comparecen:
 **AutomatizaTech SpA** (en adelante "**EL PROVEEDOR**" o "**AT**"), RUT **{{rut_at}}**, representada legalmente por **{{representante_at_nombre}}**, RUT **{{representante_at_rut}}**, con domicilio en {{domicilio_at}}, correo {{email_at}}.
 
 **Y POR LA OTRA:**
-**{{razon_social_cliente}}** (en adelante "**EL CLIENTE**"), RUT **{{rut_cliente}}**, representada por **{{representante_cliente_nombre}}**, RUT **{{representante_cliente_rut}}**, correo {{email_cliente}}, teléfono {{telefono_cliente}}, con domicilio en {{domicilio_cliente}}.
+{{comparecencia_cliente}}
 
 Ambas partes, en adelante "**LAS PARTES**", acuerdan el siguiente contrato (en adelante el "**Contrato**"), que se rige por las cláusulas siguientes y, en lo no previsto, por la legislación chilena.
 
@@ -125,7 +127,7 @@ Ambas partes, en adelante "**LAS PARTES**", acuerdan el siguiente contrato (en a
 
 ## CLÁUSULA DECIMOCUARTA — Fases siguientes
 
-14.1. La propuesta incluye además las siguientes fases, con precios referenciales que se confirman al iniciar cada una:
+14.1. Fases siguientes de la propuesta (precios referenciales que se confirman al iniciar cada una):
 
 {{fases_siguientes}}
 

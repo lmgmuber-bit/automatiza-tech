@@ -4766,6 +4766,14 @@ class AutomatizaTech_CRM_AI {
                                 'nda'       => 'Acuerdo de Confidencialidad (NDA)',
                                 'handover'  => 'Acta de Entrega y Cierre',
                             ];
+                            // Task 5b: los PDF solo se entregan por la descarga con permiso
+                            // (admin-ajax.php?action=at_download_contract + token del contrato);
+                            // el archivo en uploads/automatiza-tech-contracts está bloqueado (403).
+                            // Si el módulo de contratos no está, no hay enlace (nunca el directo).
+                            if (!class_exists('ContractService') && file_exists(ABSPATH . 'contracts/contract-service.php')) {
+                                require_once ABSPATH . 'contracts/contract-service.php';
+                            }
+                            $pdf_seguro = class_exists('ContractService');
                             foreach ($all_contracts as $c):
                                 $label      = $type_labels[$c['type']] ?? ucfirst($c['type']);
                                 $status     = $c['status'];
@@ -4810,8 +4818,8 @@ class AutomatizaTech_CRM_AI {
                                         <?php endif; ?>
                                     </div>
                                 </div>
-                                <?php if ($is_signed && !empty($c['signed_pdf_url'])): ?>
-                                    <a href="<?php echo esc_url($c['signed_pdf_url']); ?>"
+                                <?php if ($is_signed && !empty($c['signed_pdf_url']) && $pdf_seguro && !empty($c['sign_token'])): ?>
+                                    <a href="<?php echo esc_url(ContractService::secure_pdf_url((object) $c, true, $c['sign_token'])); ?>"
                                        download target="_blank"
                                        style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(34,197,94,.3);white-space:nowrap;"
                                        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
@@ -4827,8 +4835,8 @@ class AutomatizaTech_CRM_AI {
                                         ✍️ Firmar ahora
                                     </a>
                                 <?php elseif ($in_prep): ?>
-                                    <?php if ($status === 'at_signed' && !empty($c['pdf_url'])): ?>
-                                        <a href="<?php echo esc_url($c['pdf_url']); ?>"
+                                    <?php if ($status === 'at_signed' && !empty($c['pdf_url']) && $pdf_seguro && !empty($c['sign_token'])): ?>
+                                        <a href="<?php echo esc_url(ContractService::secure_pdf_url((object) $c, false, $c['sign_token'])); ?>"
                                            target="_blank"
                                            style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(59,130,246,.3);white-space:nowrap;"
                                            onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">

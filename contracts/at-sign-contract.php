@@ -67,8 +67,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     } elseif ($_POST['action'] === 'revisar') {
         $cambios = array();
         foreach (ContractService::campos_revision() as $k => $_) {
-            if (isset($_POST['rev'][$k])) {
-                $cambios[$k] = sanitize_textarea_field(wp_unslash($_POST['rev'][$k]));
+            if (isset($_POST['rev'][$k]) && is_scalar($_POST['rev'][$k])) {
+                // Tal cual: va al PDF y ContractService lo limpia (nulos, UTF-8, fines de línea).
+                // sanitize_* cortaba «50%de» y dejaba «<24 horas» con entidades. Al mostrarlo aquí se escapa.
+                $cambios[$k] = wp_unslash($_POST['rev'][$k]);
             }
         }
         $r = ContractService::guardar_revision($c->id, $cambios);
@@ -107,6 +109,8 @@ iframe{width:100%;height:780px;border:1px solid #e5e9f0;border-radius:8px}
 .flash{padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:14px}
 .flash.ok{background:#dcf8e6;color:var(--ok)}
 .flash.error{background:#fde0e0;color:var(--err)}
+.flash.aviso{background:#fff4dc;color:#b46400}
+select{width:100%;padding:10px 12px;border:1px solid #d6dde6;border-radius:6px;font-size:14px;background:#fff}
 .badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase}
 .b-draft,.b-at_pending{background:#fff4dc;color:#b46400}
 .b-at_signed{background:#dde8f9;color:var(--brand)}
@@ -159,7 +163,13 @@ hr{border:0;border-top:1px solid #e5e9f0;margin:16px 0}
             <input type="hidden" name="action" value="revisar">
             <?php foreach (ContractService::campos_revision() as $k => $campo): ?>
               <label><?= esc_html($campo[0]) ?></label>
-              <?php if ($campo[1] === 'texto'): ?>
+              <?php if ($campo[1] === 'tipo'): ?>
+                <select name="rev[<?= esc_attr($k) ?>]">
+                  <?php foreach (array('' => '— Elegir —') + ContractService::tipos_cliente() as $valor => $texto): ?>
+                    <option value="<?= esc_attr($valor) ?>"<?php selected((string) ($ph[$k] ?? ''), (string) $valor); ?>><?= esc_html($texto) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              <?php elseif ($campo[1] === 'texto'): ?>
                 <textarea name="rev[<?= esc_attr($k) ?>]" rows="4" style="width:100%"><?= esc_textarea($ph[$k] ?? '') ?></textarea>
               <?php else: ?>
                 <input type="text" name="rev[<?= esc_attr($k) ?>]" value="<?= esc_attr($ph[$k] ?? '') ?>">
@@ -169,8 +179,11 @@ hr{border:0;border-top:1px solid #e5e9f0;margin:16px 0}
           </form>
           <hr>
         <?php endif; ?>
+        <?php $faltantes = ContractService::faltantes($c); ?>
         <?php if (ContractService::necesita_revision($c)): ?>
           <p class="muted"><strong>Para firmar, primero guarda la revisión.</strong></p>
+        <?php elseif ($faltantes): ?>
+          <div class="flash aviso"><?= esc_html(ContractService::mensaje_faltantes($faltantes)) ?></div>
         <?php else: ?>
         <h3 style="margin:0 0 6px 0">🖋️ Firmar como representante AT</h3>
         <p class="muted" style="margin:0 0 12px 0">Tu firma se aplicará al contrato y luego podrás enviarlo al cliente.</p>

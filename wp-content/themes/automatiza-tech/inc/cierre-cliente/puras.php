@@ -250,6 +250,7 @@ function at_cc_claves_contrato_servicios(): array {
 		'email_cliente', 'telefono_cliente', 'domicilio_cliente', 'propuesta_codigo', 'fecha_propuesta',
 		'fecha_aceptacion', 'canal_aceptacion', 'nombre_proyecto', 'servicios_contratados', 'alcance',
 		'entregables', 'plazo', 'monto_total', 'forma_pago', 'fases_siguientes', 'garantia_meses_servicio',
+		'tipo_cliente',
 	];
 }
 
@@ -278,7 +279,10 @@ function at_cc_marcadores_servicios(array $d): array {
 	$empresa = trim((string) ($d['empresa'] ?? ''));
 	$repr = trim((string) ($d['representante'] ?? ''));
 	$siguientes = at_cc_servicios_markdown((array) ($d['filas_siguientes'] ?? []));
+	// Opcional: 'persona' (a su nombre) o 'empresa'. Sin tipo (o desconocido) queda sin elegir.
+	$tipo = (string) ($d['tipo_cliente'] ?? '');
 	$ph = [
+		'tipo_cliente'                 => in_array($tipo, ['persona', 'empresa'], true) ? $tipo : '',
 		'razon_social_cliente'         => $empresa !== '' ? $empresa : $repr,
 		'rut_cliente'                  => (string) ($d['rut_cliente'] ?? ''),
 		'representante_cliente_nombre' => $repr,
@@ -428,6 +432,9 @@ function at_cc_bienvenida_html(array $v): string {
 		. '<table role="presentation" style="width:100%;border-collapse:collapse">' . $lista . '</table>'
 		. ($portal !== '' ? '<p style="text-align:center;margin:26px 0"><a href="' . $h($portal) . '" style="background:#059669;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:24px;font-weight:bold">Ver mi portal</a></p>'
 			. '<p style="font-size:13px;color:#555">En tu portal vas a ver el avance de tu proyecto y la historia de lo que hemos hecho juntos.</p>' : '')
+		. (!empty($v['con_propuesta'])
+			? '<p>Para preparar tu contrato necesitamos saber a nombre de quién va (tú o tu empresa), el RUT y la dirección. Si ya los completaste en la página de la propuesta, no tienes que hacer nada; si no, respóndenos este correo con esos datos.</p>'
+			: '')
 		. '<p>Cualquier duda, responde este correo.</p><p>Un abrazo,<br><strong>El equipo de AutomatizaTech</strong></p></div>'
 		. '<div style="background:#f1f1f1;color:#777;text-align:center;font-size:12px;padding:14px">© ' . date('Y') . ' AutomatizaTech · automatizatech.cl</div>'
 		. '</div></body></html>';

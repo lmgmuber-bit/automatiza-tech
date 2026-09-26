@@ -69,18 +69,29 @@ class ContractService {
         return 'CONTRATO DE PRESTACIÓN DE SERVICIOS, CESIÓN DE PROPIEDAD INTELECTUAL Y SOPORTE TÉCNICO POST-PROYECTO';
     }
 
-    /** Campos que AT ajusta antes de firmar un contrato de servicios: clave => [etiqueta, 'linea'|'texto']. */
+    /** Campos que AT ajusta antes de firmar un contrato de servicios: clave => [etiqueta, 'tipo'|'linea'|'texto']. */
     public static function campos_revision() {
         return array(
-            'razon_social_cliente'  => array('Cliente (razón social o nombre)', 'linea'),
-            'rut_cliente'           => array('RUT del cliente', 'linea'),
-            'domicilio_cliente'     => array('Domicilio del cliente', 'linea'),
-            'servicios_contratados' => array('Servicios contratados (uno por línea, empezando con «- »)', 'texto'),
-            'alcance'               => array('Alcance', 'texto'),
-            'entregables'           => array('Entregables (uno por línea, empezando con «- »)', 'texto'),
-            'plazo'                 => array('Plazo', 'texto'),
-            'monto_total'           => array('Precio total, IVA incluido', 'linea'),
-            'forma_pago'            => array('Forma de pago', 'texto'),
+            'tipo_cliente'                 => array('Tipo de cliente', 'tipo'),
+            'razon_social_cliente'         => array('Cliente (razón social o nombre)', 'linea'),
+            'rut_cliente'                  => array('RUT del cliente', 'linea'),
+            'domicilio_cliente'            => array('Domicilio del cliente', 'linea'),
+            'representante_cliente_nombre' => array('Representante (solo si es empresa)', 'linea'),
+            'representante_cliente_rut'    => array('RUT del representante (solo si es empresa)', 'linea'),
+            'servicios_contratados'        => array('Servicios contratados (uno por línea, empezando con «- »)', 'texto'),
+            'alcance'                      => array('Alcance', 'texto'),
+            'entregables'                  => array('Entregables (uno por línea, empezando con «- »)', 'texto'),
+            'plazo'                        => array('Plazo', 'texto'),
+            'monto_total'                  => array('Precio total, IVA incluido', 'linea'),
+            'forma_pago'                   => array('Forma de pago', 'texto'),
+            'fases_siguientes'             => array('Fases siguientes (una por línea, empezando con «- »)', 'texto'),
+        );
+    }
+    /** Tipos de cliente de un contrato de servicios: valor => texto del selector. */
+    public static function tipos_cliente() {
+        return array(
+            'persona' => 'Persona natural (a su nombre)',
+            'empresa' => 'Empresa o persona jurídica',
         );
     }
     /** Un contrato de servicios no se firma hasta que AT guarda su revisión. */
@@ -89,28 +100,167 @@ class ContractService {
         $ph = json_decode($c->placeholders, true) ?: array();
         return empty($ph['revision_at']);
     }
-    /** Guarda la revisión de AT (solo antes de firmar) y regenera el PDF. */
-    public static function guardar_revision($contract_id, array $cambios) {
-        global $wpdb;
-        $c = self::get_by_id($contract_id);
-        if (!$c) return new WP_Error('not_found', 'Contrato no encontrado');
-        if (!in_array($c->status, array('draft', 'at_pending'), true)) {
-            return new WP_Error('bad_status', 'El contrato ya fue firmado: no se puede editar.');
+    /**
+     * Datos esenciales que faltan (o son inválidos) para firmar un contrato de servicios: sus
+     * etiquetas, en orden. [] si está completo o si el contrato no es de servicios.
+     */
+    public static function faltantes($c) {
+        if (!$c || ($c->type ?? '') !== 'servicios') return array();
+        $ph = json_decode((string) $c->placeholders, true) ?: array();
+        $campos = self::campos_revision();
+        $tipo = (string) ($ph['tipo_cliente'] ?? '');
+        $exigidos = array();
+        if ($tipo === 'persona') {
+            $exigidos = array('razon_social_cliente' => 'Nombre completo del cliente', 'rut_cliente' => 'RUT del cliente');
+        } elseif ($tipo === 'empresa') {
+            $exigidos = array(
+                'razon_social_cliente'         => 'Razón social',
+                'rut_cliente'                  => 'RUT de la empresa',
+                'representante_cliente_nombre' => $campos['representante_cliente_nombre'][0],
+                'representante_cliente_rut'    => $campos['representante_cliente_rut'][0],
+            );
+        } else {
+            // Sin tipo: se exige elegirlo y, mientras, se listan también los datos comunes.
+            $exigidos = array('razon_social_cliente' => $campos['razon_social_cliente'][0], 'rut_cliente' => $campos['rut_cliente'][0]);
         }
-        $ph = json_decode($c->placeholders, true) ?: array();
-        foreach (self::campos_revision() as $k => $_) {
-            if (array_key_exists($k, $cambios)) {
-                $v = trim((string) $cambios[$k]);
-                if ($v === '') unset($ph[$k]); else $ph[$k] = $v;
+        foreach (array('domicilio_cliente', 'monto_total', 'forma_pago') as $k) {
+            $exigidos[$k] = $campos[$k][0];
+        }
+        $faltan = array_key_exists($tipo, self::tipos_cliente()) ? array() : array($campos['tipo_cliente'][0]);
+        foreach ($exigidos as $k => $etiqueta) {
+            $v = trim((string) ($ph[$k] ?? ''));
+            if ($v === '') {
+                $faltan[] = $etiqueta;
+            } elseif (in_array($k, array('rut_cliente', 'representante_cliente_rut'), true) && function_exists('at_cc_rut_valido') && !at_cc_rut_valido($v)) {
+                $faltan[] = $etiqueta . ' (no es válido)';
             }
         }
-        $ph['revision_at'] = current_time('mysql');
+        return $faltan;
+    }
+    /** El aviso de lo que falta para firmar (el mismo en la firma y en la página de revisión). */
+    public static function mensaje_faltantes(array $faltantes) {
+        return 'Antes de firmar completa: ' . implode(', ', $faltantes) . '.';
+    }
+    /**
+     * Párrafo de EL CLIENTE en «Comparecientes», según sea persona natural o empresa. Se calcula
+     * al generar el PDF desde los marcadores; nunca se guarda. Vacíos = '_______', como el resto del PDF.
+     */
+    public static function comparecencia_cliente(array $ph) {
+        $val = function ($k) use ($ph) {
+            // Una sola línea de Markdown: sin saltos ni asteriscos que rompan las negritas.
+            $s = trim((string) preg_replace('/\s+/u', ' ', str_replace('*', '', (string) ($ph[$k] ?? ''))));
+            return $s !== '' ? $s : '_______';
+        };
+        $tipo = (string) ($ph['tipo_cliente'] ?? '');
+        $t = '**' . $val('razon_social_cliente') . '** (en adelante "**EL CLIENTE**"), RUT **' . $val('rut_cliente') . '**';
+        if ($tipo === 'empresa') {
+            $t .= ', representada por **' . $val('representante_cliente_nombre') . '**, RUT **' . $val('representante_cliente_rut') . '**';
+        }
+        $t .= ', correo ' . $val('email_cliente') . ', teléfono ' . $val('telefono_cliente') . ', con domicilio en ' . $val('domicilio_cliente');
+        if ($tipo === 'persona') {
+            $normal = function ($s) {
+                $s = trim((string) preg_replace('/\s+/u', ' ', (string) $s));
+                return function_exists('mb_strtolower') ? mb_strtolower($s, 'UTF-8') : strtolower($s);
+            };
+            $proyecto = $normal($ph['nombre_proyecto'] ?? '');
+            if ($proyecto !== '' && $proyecto !== $normal($ph['razon_social_cliente'] ?? '')) {
+                $t .= ', para su proyecto «' . $val('nombre_proyecto') . '»';
+            }
+        }
+        return $t . '.';
+    }
+    /**
+     * Limpia un texto que va al PDF: sin bytes nulos, UTF-8 válido, fines de línea \n y recortado.
+     * No quita etiquetas, entidades ni '%': donde se muestra en HTML se escapa al imprimir.
+     */
+    private static function limpiar_texto($v) {
+        $v = str_replace("\0", '', (string) $v);
+        $v = wp_check_invalid_utf8($v, true);
+        $v = str_replace(array("\r\n", "\r"), "\n", $v);
+        return trim($v);
+    }
+    /** Persona natural = sus datos de la aceptación: nombre y RUT vacíos se toman de quien aceptó. */
+    private static function persona_con_datos_de_aceptacion(array $ph) {
+        if (($ph['tipo_cliente'] ?? '') !== 'persona') return $ph;
+        $origen = array('razon_social_cliente' => 'representante_cliente_nombre', 'rut_cliente' => 'representante_cliente_rut');
+        foreach ($origen as $k => $de) {
+            if (trim((string) ($ph[$k] ?? '')) === '' && trim((string) ($ph[$de] ?? '')) !== '') {
+                $ph[$k] = $ph[$de];
+            }
+        }
+        return $ph;
+    }
+    /** Guarda los marcadores y regenera el PDF preliminar. */
+    private static function guardar_marcadores($c, array $ph) {
+        global $wpdb;
         $wpdb->update(self::table(), array('placeholders' => wp_json_encode($ph, JSON_UNESCAPED_UNICODE)), array('id' => $c->id));
         $pdf = self::render_pdf($c->id);
         if ($pdf) {
             $wpdb->update(self::table(), array('pdf_url' => self::path_to_url($pdf), 'document_hash' => hash_file('sha256', $pdf)), array('id' => $c->id));
         }
         return self::get_by_id($c->id);
+    }
+    /** Guarda la revisión de AT (solo antes de firmar) y regenera el PDF. */
+    public static function guardar_revision($contract_id, array $cambios) {
+        $c = self::get_by_id($contract_id);
+        if (!$c) return new WP_Error('not_found', 'Contrato no encontrado');
+        if (!in_array($c->status, array('draft', 'at_pending'), true)) {
+            return new WP_Error('bad_status', 'El contrato ya fue firmado: no se puede editar.');
+        }
+        if (array_key_exists('tipo_cliente', $cambios)) {
+            $tipo = self::limpiar_texto($cambios['tipo_cliente']);
+            if ($tipo !== '' && !array_key_exists($tipo, self::tipos_cliente())) {
+                return new WP_Error('tipo_cliente_invalido', 'El tipo de cliente debe ser persona natural o empresa.');
+            }
+        }
+        $ph = json_decode($c->placeholders, true) ?: array();
+        foreach (self::campos_revision() as $k => $_) {
+            if (array_key_exists($k, $cambios)) {
+                $v = self::limpiar_texto($cambios[$k]);
+                if ($v === '') unset($ph[$k]); else $ph[$k] = $v;
+            }
+        }
+        $ph = self::persona_con_datos_de_aceptacion($ph);
+        $ph['revision_at'] = current_time('mysql');
+        return self::guardar_marcadores($c, $ph);
+    }
+    /**
+     * Datos que da el cliente después de aceptar (tipo, razón social, RUT y domicilio). Solo en un
+     * contrato de servicios sin firmar y sin la revisión de AT; no marca la revisión.
+     */
+    public static function actualizar_datos_cliente($contract_id, array $datos) {
+        $c = self::get_by_id($contract_id);
+        if (!$c) return new WP_Error('not_found', 'Contrato no encontrado');
+        if ($c->type !== 'servicios') {
+            return new WP_Error('bad_type', 'Este contrato no recibe datos del cliente.');
+        }
+        if (!in_array($c->status, array('draft', 'at_pending'), true)) {
+            return new WP_Error('bad_status', 'El contrato ya fue firmado: no se puede editar.');
+        }
+        $ph = json_decode($c->placeholders, true) ?: array();
+        if (!empty($ph['revision_at'])) {
+            return new WP_Error('ya_revisado', 'AutomatizaTech ya revisó el contrato: los cambios de datos se ven directamente con nosotros.');
+        }
+        $nuevos = array();
+        foreach (array('tipo_cliente', 'razon_social_cliente', 'rut_cliente', 'domicilio_cliente') as $k) {
+            if (!array_key_exists($k, $datos)) continue;
+            $v = self::limpiar_texto($datos[$k]);
+            if ($v === '') continue; // Lo que el cliente deja en blanco no borra lo que ya había.
+            if ($k === 'tipo_cliente' && !array_key_exists($v, self::tipos_cliente())) {
+                return new WP_Error('tipo_cliente_invalido', 'El tipo de cliente debe ser persona natural o empresa.');
+            }
+            $nuevos[$k] = $v;
+        }
+        $ph = array_merge($ph, $nuevos);
+        if (($ph['tipo_cliente'] ?? '') === 'persona') {
+            // A su nombre: el contrato va a nombre y RUT de quien aceptó, no de la marca de la
+            // propuesta, salvo que el cliente haya escrito otros.
+            foreach (array('razon_social_cliente' => 'representante_cliente_nombre', 'rut_cliente' => 'representante_cliente_rut') as $k => $de) {
+                if (!isset($nuevos[$k]) && trim((string) ($ph[$de] ?? '')) !== '') unset($ph[$k]);
+            }
+        }
+        $ph = self::persona_con_datos_de_aceptacion($ph);
+        return self::guardar_marcadores($c, $ph);
     }
 
     /* ---------- Defaults compañía ---------- */
@@ -213,6 +363,10 @@ class ContractService {
         }
         if (self::necesita_revision($c)) {
             return new WP_Error('sin_revision', 'Guarda la revisión del contrato antes de firmarlo.');
+        }
+        $faltantes = self::faltantes($c);
+        if ($faltantes) {
+            return new WP_Error('faltan_datos', self::mensaje_faltantes($faltantes));
         }
         foreach (array('signer_name','signer_rut','signer_email','method') as $r) {
             if (empty($data[$r])) return new WP_Error('missing_'.$r, "Falta: $r");
@@ -480,6 +634,8 @@ class ContractService {
         }
 
         require_once get_template_directory() . '/lib/contract-pdf-fpdf.php';
+        // Derivado, no se guarda: el párrafo de EL CLIENTE según su tipo (plantilla de servicios).
+        $ph['comparecencia_cliente'] = self::comparecencia_cliente($ph);
         $pdf = new ContractPDFFPDF($ph, $body, $signatures);
         $pdf->build();
         $file = self::contract_pdf_path($c, $final);

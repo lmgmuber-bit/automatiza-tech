@@ -15,7 +15,8 @@ Spec: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md` (rama `cla
 - **Nunca tocar `wp-content/themes/automatiza-tech/functions.php`:** PROD va adelantado. El módulo lo carga `inc/admin-proposals.php`.
 - **Fines de línea:** en este worktree los archivos existentes están en CRLF (`grep -c $'\r' <archivo>` igual a `wc -l`). Se editan solo con la herramienta Edit, nunca reescribiéndolos con scripts. Al terminar cada tarea, comprobar que cada archivo existente modificado sigue con CRLF en todas sus líneas. Los archivos nuevos pueden ser LF.
 - **Si un archivo CRLF quedó con líneas LF** después de editarlo, normalizarlo así (y volver a contar):
-  `"$PHP" -r '$f=$argv[1]; file_put_contents($f, preg_replace("/?
+  `"$PHP" -r '$f=$argv[1]; file_put_contents($f, preg_replace("/
+?
 /", "
 ", file_get_contents($f)));' <archivo>`
 - **Prefijo `at_cc_`** para toda función, opción, acción, nonce y transient nuevos. Textos de interfaz y correos en español de Chile.
@@ -24,7 +25,7 @@ Spec: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md` (rama `cla
   - Toda salida escapada (`esc_html`, `esc_attr`, `esc_url`, `esc_textarea`; en funciones puras, `htmlspecialchars(..., ENT_QUOTES, 'UTF-8')`).
   - Acciones de Luis: `manage_options` + nonce. Acción pública: nonce + campo trampa + límite por IP, y nunca por GET.
   - Las imágenes de evidencia nunca quedan públicas.
-- **El repositorio es público:** ningún nombre real de cliente, teléfono, correo, RUT personal ni secreto en código, pruebas, comentarios ni commits. En pruebas: `example.com`, RUT `11.111.111-1`, `10.000.013-K` y el de AutomatizaTech `78.363.717-0`.
+- **El repositorio es público:** ningún nombre real de cliente, teléfono, correo, RUT personal ni secreto en código, pruebas, comentarios ni commits. En pruebas: `example.com`, RUT `11.111.111-1`, `10.000.013-K`. Excepción decidida por Luis (25-sep): los datos públicos de AutomatizaTech (RUT `78.363.717-0` y WhatsApp `+56 9 2700 2984`) sí pueden ir en código y pruebas, porque ya están publicados en el sitio. El teléfono para las pruebas reales de WhatsApp (Task 12) lo tiene el controlador y no va al repo.
 - **Tipos de contrato reales:** `type` = `servicios` (ya existe en el ENUM de `wp_automatiza_contracts`), `template_id` = `servicios_v1`. Sin cambios al ENUM.
 - **Estados nuevos de propuesta:** `evaluando`, `rechazada`, `aceptada` (la columna `status` es `varchar(50)`: sin cambio de base). Tipo nuevo de Seguimiento: `respuesta_cliente` (`detail_type` es `varchar(50)`).
 - **Único cambio de base:** columna `crm_cliente_id BIGINT UNSIGNED NULL` con índice en `wp_automatiza_tech_clients`, idempotente y con la opción `at_cierre_schema` = `'1'`.
@@ -3169,7 +3170,7 @@ No se delega: usa credenciales, n8n de PROD y la cuenta de Meta.
 - [ ] **Step 1:** Con el ok de Luis, crear en Meta la plantilla `propuesta_respuesta` (`es`, categoría Utility, sin emojis en botones): cuerpo con `{{1}}` nombre, `{{2}}` empresa, `{{3}}` lo propuesto; tres respuestas rápidas «Acepto la propuesta», «La sigo evaluando», «No, gracias» y un botón de enlace «Ver la propuesta» con sufijo dinámico al código. Esperar `APPROVED`; si Meta la reclasifica como Marketing, informar a Luis antes de seguir. Las cargas de las respuestas rápidas se definen al enviar: `btn_propuesta_acepta_<código>`, `btn_propuesta_evalua_<código>`, `btn_propuesta_rechaza_<código>`.
 - [ ] **Step 2:** Crear en n8n el flujo «Propuesta · WhatsApp»: webhook con autenticación por cabecera `X-AT-Secret` (credencial con el valor de `AT_REST_SECRET`, que n8n ya usa para llamar a WordPress) → envío de la plantilla con la credencial de WhatsApp de Meta de los recordatorios. Respaldo del JSON en `C:\Users\luis_\respaldos\n8n\`.
 - [ ] **Step 3:** Con el ok explícito de Luis, agregar al bot principal `WhatsApp Tech - Principal (PROD)` la ruta de cargas `btn_propuesta_*`: POST a `https://automatizatech.cl/wp-json/at/v1/propuesta-respuesta` con `X-AT-Secret`, y respuesta en el chat según `ok`/`estado`/`motivo` (textos de la spec, etapa 4). Respaldo previo del flujo.
-- [ ] **Step 4:** Prueba de punta a punta con el teléfono de Luis como cliente, sobre una propuesta de prueba en PROD que después se borra con su ok.
+- [ ] **Step 4:** Prueba de punta a punta con el teléfono de prueba que dio Luis (anotado en el ledger, no en el repo) como cliente, sobre una propuesta de prueba en PROD que después se borra con su ok.
 - [ ] **Step 5:** Activar: agregar `define('AT_N8N_CC_WHATSAPP', '<url del webhook>');` en `wp-config.php` de PROD (lo pega Luis o el controlador con su ok, nunca en el repo) y la opción `at_cc_wa_plantilla_activa` = `'1'`.
 
 ---

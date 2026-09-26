@@ -1,0 +1,14 @@
+Salida resumida de npm test; log completo en carpeta local de evidencias.
+
+> cumple-booth-plantilla@1.0.0 test
+> node --test tests/frontend/*.test.mjs
+
+✔ fuenteMusica: arma la ruta con la base o devuelve null si la temática no trae pista (1.0843ms)
+ℹ tests 236
+ℹ suites 0
+ℹ pass 236
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 57578.3883

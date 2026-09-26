@@ -9,6 +9,12 @@ function at_cc_salidas(): array {
 	return ['acepta' => 'aceptada', 'evalua' => 'evaluando', 'rechaza' => 'rechazada'];
 }
 
+/** Tipos de Seguimiento que son solo para Luis: nunca deben verse en una página pública
+ *  (línea de tiempo del cliente ni la del prospecto, en crm-ai-completo.php). */
+function at_cc_tipos_internos(): array {
+	return ['cierre_incompleto', 'aviso_operativo'];
+}
+
 /** Transiciones de una respuesta. A mano (Luis) también se acepta una propuesta en pending o lista. */
 function at_cc_transicion_respuesta_valida(string $desde, string $hacia, bool $manual = false): bool {
 	$permitidas = [

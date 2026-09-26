@@ -4392,7 +4392,10 @@ class AutomatizaTech_CRM_AI {
                         // contrato que no se creó, etc.); nunca a la línea de tiempo pública del cliente.
                         // T6 ronda 2, hallazgo 2: 'aviso_operativo' (p. ej. datos bancarios pendientes) tampoco
                         // es para el cliente: es un recordatorio de configuración solo para Luis.
-                        if (in_array($d['detail_type'] ?? '', ['cierre_incompleto', 'aviso_operativo'], true)) {
+                        // T8: misma lista que usa render_public_prospect_timeline(), desde at_cc_tipos_internos()
+                        // si el módulo de cierre está cargado (siempre, salvo en pruebas puras del mu-plugin).
+                        $at_cc_tipos_internos = function_exists('at_cc_tipos_internos') ? at_cc_tipos_internos() : ['cierre_incompleto', 'aviso_operativo'];
+                        if (in_array($d['detail_type'] ?? '', $at_cc_tipos_internos, true)) {
                             continue;
                         }
                         $d['source'] = 'prospect';
@@ -6111,7 +6114,13 @@ class AutomatizaTech_CRM_AI {
         $timeline_items = [];
         if ($wpdb->get_var("SHOW TABLES LIKE '$table_details'") == $table_details) {
             $details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_details WHERE propuesta_id = %d", $propuesta_id), ARRAY_A);
+            // T8: notas internas de Luis (cierre a medias, recordatorio operativo) nunca a esta línea de
+            // tiempo pública del prospecto; misma lista que usa render_public_timeline() más arriba.
+            $at_cc_tipos_internos = function_exists('at_cc_tipos_internos') ? at_cc_tipos_internos() : ['cierre_incompleto', 'aviso_operativo'];
             foreach ($details as $d) {
+                if (in_array($d['detail_type'] ?? '', $at_cc_tipos_internos, true)) {
+                    continue;
+                }
                 if (!empty($d['completed_date'])) {
                     $ts = strtotime($d['completed_date']);
                 } elseif (!empty($d['scheduled_date'])) {

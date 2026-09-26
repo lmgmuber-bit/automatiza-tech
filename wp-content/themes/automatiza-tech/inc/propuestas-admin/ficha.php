@@ -35,6 +35,7 @@ function at_pa_render_ficha($p, string $message): void {
       </div>
       <hr class="wp-header-end">
       <?php echo $message; ?>
+      <?php if (function_exists('at_cc_aviso_panel')) { echo at_cc_aviso_panel((int) $p->id); } ?>
 
       <form method="POST" enctype="multipart/form-data" class="at-pa-form" data-tab-inicial="<?php echo esc_attr($tab); ?>">
         <button type="submit" style="display:none" tabindex="-1" aria-hidden="true"></button>
@@ -221,6 +222,7 @@ function at_pa_render_ficha($p, string $message): void {
           $correo = at_pa_correo_textos(is_array($payload) ? $payload : null, (string) $p->company_name);
         ?>
         <section class="at-pa-panel" data-panel="envio" role="tabpanel">
+          <?php if (function_exists('at_cc_render_panel_respuesta')) { at_cc_render_panel_respuesta($p); } ?>
           <div class="checkbox-section">
             <label>
               <?php
@@ -282,6 +284,7 @@ function at_pa_render_ficha($p, string $message): void {
           <button type="submit" class="button button-primary button-large">💾 Guardar</button>
         </div>
       </form>
+      <?php if (function_exists('at_cc_render_formularios_respuesta')) { at_cc_render_formularios_respuesta($p); } ?>
     </div>
     <?php
 }

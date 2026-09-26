@@ -171,6 +171,12 @@ function at_cc_rest_respuesta_whatsapp(WP_REST_Request $r) {
 		}
 		return ['ok' => false, 'motivo' => 'ya_aceptada_otra_salida'];
 	}
+	// T14 ronda 1, hallazgo 2: los botones de la plantilla quedan en el chat aunque la propuesta se haya
+	// archivado. at_cc_registrar_respuesta() la rechaza (el bot recibe la misma respuesta de siempre),
+	// pero el intento queda como nota interna para Luis, deduplicada por wamid como las de arriba.
+	if ((string) $p->status === 'archivada' && isset(at_cc_salidas()[$salida]) && !at_cc_wamid_ya_avisado((int) $p->id, $wamid)) {
+		at_cc_anotar_intento_archivada($p, $salida, 'whatsapp', ['wamid' => $wamid, 'telefono' => $tel]);
+	}
 	$res = at_cc_registrar_respuesta($p, $salida, [
 		'canal'      => 'whatsapp',
 		'telefono'   => $tel,

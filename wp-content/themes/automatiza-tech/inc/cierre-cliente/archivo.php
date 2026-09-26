@@ -49,27 +49,66 @@ function at_cc_archivar_propuesta(object $p, int $usuario_id = 0): array {
 	if ($n !== 1) {
 		return ['ok' => false, 'mensaje' => 'La propuesta cambió mientras la archivabas: recarga la ficha e inténtalo de nuevo.'];
 	}
-	$p->status = 'archivada';
 	// 'aviso_operativo' es un tipo interno (at_cc_tipos_internos()): no sale en las vistas públicas.
-	at_cc_anotar_simple($p, 'aviso_operativo', 'Propuesta archivada', 'El cliente ya no puede responderla desde su enlace; queda como historial.', [
+	$nota = at_cc_anotar_simple($p, 'aviso_operativo', 'Propuesta archivada', 'El cliente ya no puede responderla desde su enlace; queda como historial.', [
 		'estado_anterior' => $desde,
 		'usuario_id'      => $usuario_id,
 	]);
+	if ($nota <= 0) {
+		// T14 ronda 1, hallazgo 1: sin esta nota, desarchivar no sabría a qué estado volver y caería en
+		// 'sent' (una v3 en borrador quedaría con la barra de aceptar). Se deshace el archivo, con la
+		// misma condición de estado que el UPDATE de arriba.
+		$deshecho = $wpdb->query($wpdb->prepare(
+			"UPDATE {$wpdb->prefix}automatiza_propuestas SET status = %s WHERE id = %d AND status = %s",
+			$desde,
+			(int) $p->id,
+			'archivada'
+		));
+		if ($deshecho === 1) {
+			return ['ok' => false, 'mensaje' => 'No se pudo anotar el archivo en Seguimiento, así que la propuesta no se archivó: inténtalo de nuevo.'];
+		}
+		$p->status = 'archivada';
+		return ['ok' => false, 'mensaje' => 'La propuesta quedó archivada, pero no se pudo anotar en Seguimiento el estado en que estaba («' . at_cc_estado_en_palabras($desde) . '»): revisa la ficha antes de desarchivarla.'];
+	}
+	$p->status = 'archivada';
 	return ['ok' => true, 'mensaje' => 'Propuesta archivada: el cliente ya no puede responderla desde su enlace. Queda como historial y puedes desarchivarla cuando quieras.'];
 }
 
-/** Estado en que estaba la propuesta antes de su último archivo: el 'estado_anterior' de la última nota
- *  «Propuesta archivada»; 'sent' si no hay nota o si lo que trae no es un estado desde el que se archiva. */
+/** Estado en que estaba la propuesta antes de su último archivo: el 'estado_anterior' de la nota
+ *  «Propuesta archivada» más nueva que lo traiga; 'sent' si ninguna lo trae o si lo que traen no es un
+ *  estado desde el que se archiva. T14 ronda 1, hallazgo 1: no basta con la última nota, porque el botón
+ *  ✏️ Editar de Seguimiento no actualiza la nota sino que inserta otra con el mismo tipo y título, sin
+ *  metadata (AutomatizaTech_Client_Details::add_prospect_detail()). */
 function at_cc_estado_antes_de_archivar(int $propuesta_id): string {
 	global $wpdb;
-	$meta = $wpdb->get_var($wpdb->prepare(
-		"SELECT metadata FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d AND detail_type = 'aviso_operativo' AND title = %s ORDER BY id DESC LIMIT 1",
+	$metas = $wpdb->get_col($wpdb->prepare(
+		"SELECT metadata FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d AND detail_type = 'aviso_operativo' AND title = %s ORDER BY id DESC",
 		$propuesta_id,
 		'Propuesta archivada'
 	));
-	$d = json_decode((string) $meta, true);
-	$anterior = is_array($d) ? (string) ($d['estado_anterior'] ?? '') : '';
-	return at_cc_puede_archivar($anterior) ? $anterior : 'sent';
+	foreach ((array) $metas as $meta) {
+		$d = json_decode((string) $meta, true);
+		$anterior = is_array($d) ? (string) ($d['estado_anterior'] ?? '') : '';
+		if (at_cc_puede_archivar($anterior)) {
+			return $anterior;
+		}
+	}
+	return 'sent';
+}
+
+/** Rastro interno cuando el cliente intenta responder una propuesta archivada (T14 ronda 1, hallazgo 2):
+ *  la respuesta no se aplica, pero Luis la ve en Seguimiento (tipo interno 'aviso_operativo', no sale en
+ *  las vistas públicas) y puede registrar una aceptación a mano si corresponde. La descripción no lleva
+ *  datos personales; lo que mandó el cliente (nombre, comentario, IP, teléfono, wamid) va en $metadata. */
+function at_cc_anotar_intento_archivada(object $p, string $salida, string $canal, array $metadata = []): int {
+	$canales = ['pagina' => 'la página de la propuesta', 'whatsapp' => 'WhatsApp'];
+	return at_cc_anotar_simple(
+		$p,
+		'aviso_operativo',
+		'Intentó responder una propuesta archivada (no se aplicó)',
+		'Salida: ' . $salida . ' · por ' . ($canales[$canal] ?? $canal) . '. La propuesta está archivada: no cambió nada.',
+		array_merge(['salida' => $salida, 'canal' => $canal], $metadata)
+	);
 }
 
 /** Desarchiva la propuesta: vuelve al estado que tenía antes de archivarla. ['ok' => bool, 'mensaje' => string]. */

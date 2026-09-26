@@ -140,6 +140,64 @@ $req->set_param('wamid', 'wamid.' . $marca);
 $correos = [];
 $rw = at_cc_rest_respuesta_whatsapp($req);
 ok(is_array($rw) && $rw['ok'] === false && ar_estado((int) $p->id) === 'archivada' && count($correos) === 0, 'archivada + botón «Acepto» del WhatsApp: no se aplica: ' . wp_json_encode($rw));
+ok(($rw['estado'] ?? '') === 'archivada' && ($rw['motivo'] ?? '') === 'Esta propuesta no está esperando respuesta.', 'archivada + WhatsApp: la respuesta al bot no cambia (estado y motivo de siempre)');
+// T14 ronda 1, hallazgo 2: el intento no se pierde en silencio. Queda una nota interna en Seguimiento
+// (tipo aviso_operativo, que no sale en las vistas públicas), deduplicada por wamid como las demás
+// notas del endpoint. La nota no lleva el teléfono en la descripción: va en la metadata.
+$titulo_intento = 'Intentó responder una propuesta archivada (no se aplicó)';
+$ni = ar_notas((int) $p->id, $titulo_intento);
+$mi = json_decode((string) ($ni[0]->metadata ?? ''), true);
+ok(count($ni) === 1 && $ni[0]->detail_type === 'aviso_operativo' && is_array($mi) && ($mi['wamid'] ?? '') === 'wamid.' . $marca && ($mi['salida'] ?? '') === 'acepta' && ($mi['canal'] ?? '') === 'whatsapp', 'archivada + «Acepto» por WhatsApp: queda una nota interna del intento con su wamid (' . count($ni) . ' notas)');
+ok(strpos((string) ($ni[0]->description ?? ''), 'acepta') !== false && strpos((string) ($ni[0]->description ?? ''), '2222') === false, 'la nota del intento dice la salida y no lleva el teléfono en la descripción: ' . (string) ($ni[0]->description ?? ''));
+$correos = [];
+$rw_bis = at_cc_rest_respuesta_whatsapp($req);
+ok(is_array($rw_bis) && $rw_bis['ok'] === false && count(ar_notas((int) $p->id, $titulo_intento)) === 1 && count($correos) === 0, 'reintento del webhook con el mismo wamid: no repite la nota ni manda correos');
+$req2 = new WP_REST_Request('POST', '/automatiza/v1/propuesta-respuesta');
+$req2->set_param('codigo', (string) $p->unique_link_id);
+$req2->set_param('salida', 'rechaza');
+$req2->set_param('telefono', '+56 9 2222 2222');
+$req2->set_param('wamid', 'wamid.' . $marca . '-2');
+at_cc_rest_respuesta_whatsapp($req2);
+ok(count(ar_notas((int) $p->id, $titulo_intento)) === 2 && ar_estado((int) $p->id) === 'archivada', 'otro toque (otro wamid): segunda nota y sigue archivada');
+$req3 = new WP_REST_Request('POST', '/automatiza/v1/propuesta-respuesta');
+$req3->set_param('codigo', (string) $p->unique_link_id);
+$req3->set_param('salida', 'inventada');
+$req3->set_param('telefono', '+56 9 2222 2222');
+$req3->set_param('wamid', 'wamid.' . $marca . '-3');
+at_cc_rest_respuesta_whatsapp($req3);
+ok(count(ar_notas((int) $p->id, $titulo_intento)) === 2, 'una salida que no existe no deja nota de intento');
+// Página pública: un cliente que tenía la página abierta desde antes del archivo manda el formulario.
+// La acción real termina en exit: corre en un proceso aparte (pagina-respuesta-publica-wp-test-run.php)
+// con una IP propia, para no gastar el límite por IP que usan las otras pruebas de la página.
+function ar_responder_pagina(array $post, string $ip): array {
+	$env = getenv();
+	$env['REMOTE_ADDR'] = $ip;
+	$proc = proc_open([PHP_BINARY, __DIR__ . '/pagina-respuesta-publica-wp-test-run.php', 'responder', 'POST', json_encode($post), '{}'], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, null, $env);
+	if (!is_resource($proc)) {
+		return ['redirect' => '', 'correos' => -1];
+	}
+	$out = (string) stream_get_contents($pipes[1]);
+	stream_get_contents($pipes[2]);
+	fclose($pipes[1]);
+	fclose($pipes[2]);
+	proc_close($proc);
+	return ['redirect' => preg_match('/^REDIRECT:(.*)$/m', $out, $m) ? trim($m[1]) : '', 'correos' => preg_match_all('/^MAIL:/m', $out)];
+}
+$ip_pagina = '198.51.100.214';
+$codigo_p = (string) $p->unique_link_id;
+$post_pagina = [
+	'action' => 'at_cc_responder', 'codigo' => $codigo_p, 'salida' => 'acepta', 'nombre' => 'Cliente Prueba', 'rut' => '11.111.111-1',
+	'acepto' => '1', 'filas' => ['0'], 'comentario' => 'Acepto la de siempre (prueba).', '_wpnonce' => wp_create_nonce('at_cc_responder_' . $codigo_p),
+];
+$rp = ar_responder_pagina($post_pagina, $ip_pagina);
+$np = array_values(array_filter(ar_notas((int) $p->id, $titulo_intento), function ($n) { $m = json_decode((string) $n->metadata, true); return is_array($m) && ($m['canal'] ?? '') === 'pagina'; }));
+$mp = json_decode((string) ($np[0]->metadata ?? ''), true);
+ok(strpos($rp['redirect'], 'respuesta=error') !== false && $rp['correos'] === 0 && ar_estado((int) $p->id) === 'archivada', 'archivada + «Acepto» desde la página: no se aplica, redirige al error de siempre y sin correos (' . $rp['redirect'] . ', ' . $rp['correos'] . ' correos)');
+ok(count($np) === 1 && $np[0]->detail_type === 'aviso_operativo' && ($mp['salida'] ?? '') === 'acepta' && ($mp['ip'] ?? '') === $ip_pagina && ($mp['comentario'] ?? '') === 'Acepto la de siempre (prueba).', 'archivada + página: queda una nota interna del intento con salida, IP y comentario en la metadata (' . count($np) . ' notas)');
+ok(strpos((string) ($np[0]->description ?? ''), '11.111.111-1') === false && strpos((string) ($np[0]->description ?? ''), 'Cliente Prueba') === false, 'la nota del intento por la página no lleva nombre ni RUT en la descripción');
+ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente'", $p->id)) === 0, 'después de los intentos: sigue sin ninguna respuesta del cliente en Seguimiento');
+delete_transient('at_cc_lim_cod_' . md5('responder|' . $codigo_p));
+delete_transient('at_cc_lim_' . md5('responder|' . $ip_pagina));
 
 // ================= 4) Aceptación manual (Luis) desde archivada: cierre completo =================
 $pm = ar_crear($marca, 'sent', null, $creadas);
@@ -186,6 +244,33 @@ $wpdb->update($tabla_p, ['status' => 'error'], ['id' => $pl->id]);
 at_cc_archivar_propuesta(at_cc_propuesta_por_id((int) $pl->id), 0);
 at_cc_desarchivar_propuesta(at_cc_propuesta_por_id((int) $pl->id), 0);
 ok(ar_estado((int) $pl->id) === 'error', 'archivada dos veces: desarchivar usa la última nota (error, no lista)');
+// T14 ronda 1, hallazgo 1: el botón ✏️ Editar de Seguimiento no actualiza la nota, inserta una fila
+// NUEVA con el mismo tipo y título pero sin metadata (AutomatizaTech_Client_Details::add_prospect_detail).
+// Desarchivar debe saltarse esa copia y usar la nota que sí trae el estado anterior: si no, una v3 en
+// borrador volvía a 'sent' y quedaba con la barra de aceptar y sin salida en el flujo v3.
+$pb = ar_crear($marca, 'borrador', 'v3', $creadas);
+at_cc_archivar_propuesta($pb, 0);
+$id_copia = (new AutomatizaTech_Client_Details())->add_prospect_detail((int) $pb->id, [
+	'detail_type' => 'aviso_operativo', 'title' => 'Propuesta archivada',
+	'description' => 'El cliente ya no puede responderla desde su enlace; queda como historial. Reemplazada por la nueva.', 'status' => 'completed',
+]);
+$nb = ar_notas((int) $pb->id, 'Propuesta archivada');
+ok($id_copia && count($nb) === 2 && (int) $nb[0]->id === (int) $id_copia && $nb[0]->metadata === null, 'precondición: la edición desde Seguimiento dejó una nota «Propuesta archivada» más nueva y sin metadata');
+$rb = at_cc_desarchivar_propuesta(at_cc_propuesta_por_id((int) $pb->id), 0);
+ok($rb['ok'] === true && ar_estado((int) $pb->id) === 'borrador', 'nota de archivo editada en Seguimiento: desarchivar la v3 vuelve a borrador, no a sent: ' . $rb['mensaje']);
+// Sin la nota no se sabría a qué estado volver: si no se puede anotar, el archivo se deshace.
+$pf1 = ar_crear($marca, 'lista', 'v3', $creadas);
+$romper_nota = function ($q) use ($det) {
+	return (stripos($q, 'INSERT INTO `' . $det . '`') === 0 && strpos($q, 'Propuesta archivada') !== false) ? str_replace('`' . $det . '`', '`' . $det . '_no_existe`', $q) : $q;
+};
+add_filter('query', $romper_nota);
+$errores_antes = $wpdb->suppress_errors(true);
+$rf1 = at_cc_archivar_propuesta($pf1, 0);
+$wpdb->suppress_errors($errores_antes);
+remove_filter('query', $romper_nota);
+ok($rf1['ok'] === false && $rf1['mensaje'] !== '' && ar_estado((int) $pf1->id) === 'lista' && $pf1->status === 'lista' && count(ar_notas((int) $pf1->id, 'Propuesta archivada')) === 0, 'si la nota «Propuesta archivada» no se puede guardar: ok=false y la propuesta sigue en lista: ' . $rf1['mensaje']);
+$rf2 = at_cc_archivar_propuesta(at_cc_propuesta_por_id((int) $pf1->id), 0);
+ok($rf2['ok'] === true && ar_estado((int) $pf1->id) === 'archivada' && count(ar_notas((int) $pf1->id, 'Propuesta archivada')) === 1, 'control: sin la falla, la misma propuesta sí se archiva con su nota');
 // Archivada sin nota (por ejemplo, a mano en la base): vuelve a sent.
 $ps = ar_crear($marca, 'archivada', null, $creadas);
 $rds = at_cc_desarchivar_propuesta($ps, 0);

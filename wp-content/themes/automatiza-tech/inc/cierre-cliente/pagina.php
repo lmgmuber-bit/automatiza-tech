@@ -124,6 +124,17 @@ function at_cc_procesar_respuesta_publica(): void {
 		}
 		$d['rut'] = at_cc_rut_formato($rut);
 	}
+	// T14 ronda 1, hallazgo 2: un cliente con la página abierta desde antes del archivo manda el
+	// formulario. at_cc_registrar_respuesta() la rechaza (redirige al error de siempre), pero el intento
+	// queda como nota interna para Luis. El límite por código de arriba acota cuántas notas puede dejar.
+	if ((string) $p->status === 'archivada' && isset(at_cc_salidas()[$salida])) {
+		at_cc_anotar_intento_archivada($p, $salida, 'pagina', [
+			'nombre'     => $d['nombre'],
+			'rut'        => (string) ($d['rut'] ?? ''),
+			'comentario' => $d['comentario'],
+			'ip'         => $d['ip'],
+		]);
+	}
 	$r = at_cc_registrar_respuesta($p, $salida, $d);
 	$volver($r['ok'] ? $r['estado'] : 'error');
 }

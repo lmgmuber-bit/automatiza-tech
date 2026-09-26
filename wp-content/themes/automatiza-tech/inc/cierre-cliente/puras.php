@@ -25,15 +25,22 @@ function at_cc_tipos_internos(): array {
 
 /** Transiciones de una respuesta. A mano (Luis) también se acepta una propuesta en pending, lista o
  *  archivada (Task 14). Desde 'archivada' el cliente no tiene ninguna transición: ni por la página ni
- *  por WhatsApp. */
-function at_cc_transicion_respuesta_valida(string $desde, string $hacia, bool $manual = false): bool {
+ *  por WhatsApp.
+ *  T14 ronda 1 (2ª revisión), hallazgo 1: una archivada se acepta a mano solo si el estado en que estaba
+ *  antes de archivarla ($antes_de_archivar, at_cc_estado_antes_de_archivar() en archivo.php) también lo
+ *  permitía: sent, evaluando, rechazada, pending o lista. Una v3 archivada desde borrador (sin versión
+ *  final, precios «Por confirmar») no se acepta a mano, igual que un borrador. Sin ese dato, no. */
+function at_cc_transicion_respuesta_valida(string $desde, string $hacia, bool $manual = false, string $antes_de_archivar = ''): bool {
 	$permitidas = [
 		'sent'      => ['evaluando', 'rechazada', 'aceptada'],
 		'evaluando' => ['rechazada', 'aceptada'],
 		'rechazada' => ['aceptada'],
 	];
-	if ($manual && $hacia === 'aceptada' && in_array($desde, ['pending', 'lista', 'archivada'], true)) {
+	if ($manual && $hacia === 'aceptada' && in_array($desde, ['pending', 'lista'], true)) {
 		return true;
+	}
+	if ($manual && $hacia === 'aceptada' && $desde === 'archivada') {
+		return $antes_de_archivar !== 'archivada' && at_cc_transicion_respuesta_valida($antes_de_archivar, 'aceptada', true);
 	}
 	return in_array($hacia, $permitidas[$desde] ?? [], true);
 }

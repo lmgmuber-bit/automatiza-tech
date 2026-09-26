@@ -218,6 +218,51 @@ ok(count(array_filter($correos, function ($c) use ($pm2) { return ($c['to'] ?? '
 // Una aceptada ya no se puede archivar.
 $ra = at_cc_archivar_propuesta($pm2, 0);
 ok($ra['ok'] === false && $ra['mensaje'] !== '' && ar_estado((int) $pm2->id) === 'aceptada' && count(ar_notas((int) $pm2->id, 'Propuesta archivada')) === 1, 'no se puede archivar una aceptada (ok=false, sigue aceptada, sin nota nueva): ' . $ra['mensaje']);
+// T14 ronda 1 (2ª revisión), hallazgo 1: la aceptación a mano de una archivada depende del estado en que
+// estaba antes de archivarla. Una v3 archivada desde borrador (sin versión final, precios «Por
+// confirmar») no se acepta a mano: un borrador nunca se pudo, y archivarlo no debe abrir esa puerta
+// (cliente, contrato con monto nulo y bienvenida). La de arriba (archivada desde sent) sí se aceptó.
+/** Corre la acción real «Registrar aceptación» (termina en exit) en un proceso aparte. */
+function ar_aceptar_panel(int $propuesta_id, int $admin_id): string {
+	$proc = proc_open([PHP_BINARY, __DIR__ . '/panel-respuesta-wp-test-run.php', (string) $propuesta_id, (string) $admin_id], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+	if (!is_resource($proc)) {
+		return '';
+	}
+	$out = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
+	fclose($pipes[1]);
+	fclose($pipes[2]);
+	proc_close($proc);
+	return (string) $out;
+}
+$pab = ar_crear($marca, 'borrador', 'v3', $creadas);
+at_cc_archivar_propuesta($pab, 0);
+$pab = at_cc_propuesta_por_id((int) $pab->id);
+ok($pab->status === 'archivada' && at_cc_estado_antes_de_archivar((int) $pab->id) === 'borrador', 'precondición: v3 archivada desde borrador');
+$correos = [];
+$rab = at_cc_registrar_respuesta($pab, 'acepta', [
+	'canal' => 'manual', 'canal_manual' => 'whatsapp', 'nombre' => 'Cliente Prueba', 'rut' => '11.111.111-1',
+	'comentario' => 'Me confirmó por WhatsApp (prueba).', 'filas' => at_cc_filas_aceptadas(at_cc_filas_de_propuesta($pab), [0]),
+	'fecha' => current_time('mysql'), 'bienvenida' => true, 'usuario_id' => $admin_id,
+]);
+ok($rab['ok'] === false && ar_estado((int) $pab->id) === 'archivada' && count($correos) === 0, 'archivada desde borrador + aceptación manual: no se aplica, sigue archivada y sin correos (' . count($correos) . '): ' . $rab['mensaje']);
+ok(at_cc_contrato_de_propuesta((int) $pab->id) === null && !at_cc_crm_de_email((string) $pab->client_email) && (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente'", $pab->id)) === 0, 'archivada desde borrador: no se creó cliente, contrato ni respuesta en Seguimiento');
+$pab = at_cc_propuesta_por_id((int) $pab->id);
+$h_ab = ar_capturar(function () use ($pab) { at_cc_render_panel_respuesta($pab); });
+ok(strpos($h_ab, 'Registrar aceptación a mano') === false && strpos($h_ab, 'form="at-cc-f-aceptar"') === false, 'panel, archivada desde borrador: sin «Registrar aceptación a mano»');
+ok(strpos($h_ab, 'Desarchívala para trabajarla.') !== false && strpos($h_ab, 'form="at-cc-f-desarchivar"') !== false, 'panel, archivada desde borrador: «Desarchívala para trabajarla.» y el botón Desarchivar');
+// La acción real del formulario (por ejemplo, una pestaña abierta desde antes del archivo).
+delete_transient('at_cc_aviso_' . $admin_id);
+ar_aceptar_panel((int) $pab->id, $admin_id);
+$av_ab = ar_aviso($admin_id);
+ok(ar_estado((int) $pab->id) === 'archivada' && is_array($av_ab) && ($av_ab['tipo'] ?? '') === 'error' && stripos((string) ($av_ab['texto'] ?? ''), 'desarchívala') !== false, 'acción «Registrar aceptación» sobre una archivada desde borrador: aviso rojo que pide desarchivarla y sigue archivada: ' . (string) ($av_ab['texto'] ?? ''));
+ok(at_cc_contrato_de_propuesta((int) $pab->id) === null && !at_cc_crm_de_email((string) $pab->client_email), 'acción «Registrar aceptación» sobre una archivada desde borrador: sin cliente ni contrato');
+delete_transient('at_cc_aviso_' . $admin_id);
+// Control: una v3 archivada desde lista (con versión final) sí ofrece el registro a mano.
+$pal = ar_crear($marca, 'lista', 'v3', $creadas);
+at_cc_archivar_propuesta($pal, 0);
+$pal = at_cc_propuesta_por_id((int) $pal->id);
+$h_al = ar_capturar(function () use ($pal) { at_cc_render_panel_respuesta($pal); });
+ok($pal->status === 'archivada' && strpos($h_al, 'Registrar aceptación a mano') !== false && strpos($h_al, 'Desarchívala para trabajarla.') === false, 'panel, archivada desde lista: sí ofrece el registro de aceptación a mano');
 
 // ================= 5) Estados que no se archivan =================
 foreach (['aceptada', 'contracted', 'ajustando'] as $estado) {
@@ -271,6 +316,50 @@ remove_filter('query', $romper_nota);
 ok($rf1['ok'] === false && $rf1['mensaje'] !== '' && ar_estado((int) $pf1->id) === 'lista' && $pf1->status === 'lista' && count(ar_notas((int) $pf1->id, 'Propuesta archivada')) === 0, 'si la nota «Propuesta archivada» no se puede guardar: ok=false y la propuesta sigue en lista: ' . $rf1['mensaje']);
 $rf2 = at_cc_archivar_propuesta(at_cc_propuesta_por_id((int) $pf1->id), 0);
 ok($rf2['ok'] === true && ar_estado((int) $pf1->id) === 'archivada' && count(ar_notas((int) $pf1->id, 'Propuesta archivada')) === 1, 'control: sin la falla, la misma propuesta sí se archiva con su nota');
+// T14 ronda 1 (2ª revisión), hallazgo 3: un error real de SQL en el UPDATE ($wpdb->query() === false) no
+// se confunde con una carrera (0 filas): queda en el log con el prefijo at_cc: y el error de la base, y
+// el aviso pide reintentar. La carrera conserva su mensaje y no escribe en el log.
+$log_prueba = tempnam(sys_get_temp_dir(), 'at_cc_log_');
+$log_antes = ini_get('error_log');
+ini_set('error_log', $log_prueba);
+$id_romper = 0;
+$romper_update = function ($q) use ($tabla_p, &$id_romper) {
+	return (stripos($q, 'UPDATE ' . $tabla_p . ' SET status') === 0 && strpos($q, 'WHERE id = ' . $id_romper . ' AND') !== false) ? str_replace('UPDATE ' . $tabla_p . ' ', 'UPDATE ' . $tabla_p . '_no_existe ', $q) : $q;
+};
+$pe = ar_crear($marca, 'sent', null, $creadas);
+$id_romper = (int) $pe->id;
+add_filter('query', $romper_update);
+$errores_antes = $wpdb->suppress_errors(true);
+$re = at_cc_archivar_propuesta($pe, 0);
+$wpdb->suppress_errors($errores_antes);
+remove_filter('query', $romper_update);
+$log_texto = (string) file_get_contents($log_prueba);
+ok($re['ok'] === false && $re['mensaje'] === 'No se pudo guardar: inténtalo de nuevo.' && ar_estado((int) $pe->id) === 'sent' && $pe->status === 'sent' && count(ar_notas((int) $pe->id, 'Propuesta archivada')) === 0, 'error de SQL al archivar: ok=false, «No se pudo guardar: inténtalo de nuevo.» y sigue en sent: ' . $re['mensaje']);
+ok(strpos($log_texto, 'at_cc:') !== false && strpos($log_texto, '_no_existe') !== false, 'error de SQL al archivar: queda en el log con at_cc: y el error de la base: ' . trim($log_texto));
+at_cc_archivar_propuesta($pe, 0);
+file_put_contents($log_prueba, '');
+add_filter('query', $romper_update);
+$errores_antes = $wpdb->suppress_errors(true);
+$rde = at_cc_desarchivar_propuesta(at_cc_propuesta_por_id((int) $pe->id), 0);
+$wpdb->suppress_errors($errores_antes);
+remove_filter('query', $romper_update);
+$log_texto = (string) file_get_contents($log_prueba);
+ok($rde['ok'] === false && $rde['mensaje'] === 'No se pudo guardar: inténtalo de nuevo.' && ar_estado((int) $pe->id) === 'archivada' && count(ar_notas((int) $pe->id, 'Propuesta desarchivada')) === 0, 'error de SQL al desarchivar: ok=false, «No se pudo guardar: inténtalo de nuevo.» y sigue archivada: ' . $rde['mensaje']);
+ok(strpos($log_texto, 'at_cc:') !== false && strpos($log_texto, '_no_existe') !== false, 'error de SQL al desarchivar: queda en el log con at_cc: y el error de la base: ' . trim($log_texto));
+// Carreras (0 filas): el objeto en memoria dice un estado y la base ya tiene otro.
+file_put_contents($log_prueba, '');
+$pc = ar_crear($marca, 'sent', null, $creadas);
+$wpdb->update($tabla_p, ['status' => 'evaluando'], ['id' => $pc->id]);
+$rc = at_cc_archivar_propuesta($pc, 0);
+ok($rc['ok'] === false && strpos($rc['mensaje'], 'La propuesta cambió mientras la archivabas') === 0 && ar_estado((int) $pc->id) === 'evaluando', 'carrera al archivar (0 filas): conserva su mensaje y la base no cambia: ' . $rc['mensaje']);
+at_cc_archivar_propuesta(at_cc_propuesta_por_id((int) $pc->id), 0);
+$pc_vieja = at_cc_propuesta_por_id((int) $pc->id);
+$wpdb->update($tabla_p, ['status' => 'sent'], ['id' => $pc->id]);
+$rdc = at_cc_desarchivar_propuesta($pc_vieja, 0);
+ok($rdc['ok'] === false && strpos($rdc['mensaje'], 'La propuesta cambió mientras la desarchivabas') === 0 && ar_estado((int) $pc->id) === 'sent', 'carrera al desarchivar (0 filas): conserva su mensaje y la base no cambia: ' . $rdc['mensaje']);
+ok(strpos((string) file_get_contents($log_prueba), 'at_cc:') === false, 'las carreras no escriben en el log');
+ini_set('error_log', (string) $log_antes);
+@unlink($log_prueba);
 // Archivada sin nota (por ejemplo, a mano en la base): vuelve a sent.
 $ps = ar_crear($marca, 'archivada', null, $creadas);
 $rds = at_cc_desarchivar_propuesta($ps, 0);
@@ -342,6 +431,19 @@ $_GET = [];
 $cb_clasico = ar_checkbox($he, 'send_email');
 ok(strpos($cb_clasico, 'disabled') !== false && strpos($cb_clasico, 'checked') === false, 'clásico, archivada: la casilla de envío sale deshabilitada y sin marcar: ' . $cb_clasico);
 ok(strpos($he, 'Esta propuesta está archivada: desarchívala para volver a enviarla.') !== false, 'clásico, archivada: muestra el aviso de archivada');
+// T14 ronda 1 (2ª revisión), hallazgo 2: en una v3 archivada, el aviso de archivada gana al genérico
+// de v3 («solo se envía cuando está lista»), que no explica por qué no salió.
+$pg3 = ar_crear($marca, 'sent', 'v3', $creadas);
+at_cc_archivar_propuesta($pg3, 0);
+$correos = [];
+$mg3 = ar_guardar_post((int) $pg3->id, true);
+ok(ar_estado((int) $pg3->id) === 'archivada' && count($correos) === 0 && strpos($mg3, 'está archivada') !== false && strpos($mg3, 'solo se envía cuando está') === false, 'v3 archivada + Guardar con envío marcado: el aviso es el de archivada, no el de v3: ' . wp_strip_all_tags($mg3));
+$hc3 = ar_clasico_guardar((int) $pg3->id, true);
+ok(ar_estado((int) $pg3->id) === 'archivada' && count($correos) === 0 && strpos($hc3, 'está archivada') !== false && strpos($hc3, 'solo se envía cuando está') === false, 'clásico, v3 archivada + Guardar con envío marcado: el aviso es el de archivada, no el de v3');
+// Control: una v3 en borrador (no archivada) sigue recibiendo el aviso de v3.
+$pb3 = ar_crear($marca, 'borrador', 'v3', $creadas);
+$mb3 = ar_guardar_post((int) $pb3->id, true);
+ok(ar_estado((int) $pb3->id) === 'borrador' && strpos($mb3, 'solo se envía cuando está') !== false && strpos($mb3, 'está archivada') === false, 'control: v3 en borrador + Guardar con envío marcado: sigue el aviso de v3');
 
 // ================= 8) Ficha: casillas de envío y bloque «Respuesta del cliente» =================
 foreach ([null, 'v3'] as $flujo) {

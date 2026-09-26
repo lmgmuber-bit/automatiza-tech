@@ -136,7 +136,10 @@ function at_cc_registrar_respuesta(object $p, string $salida, array $d): array {
 		return array_merge($base, ['ok' => true, 'mensaje' => 'anotada']);
 	}
 	$manual = ($d['canal'] ?? '') === 'manual';
-	if (!at_cc_transicion_respuesta_valida($desde, $hacia, $manual)) {
+	// T14 ronda 1 (2ª revisión), hallazgo 1: desde 'archivada', la aceptación a mano depende del estado en
+	// que estaba antes de archivarla (una v3 archivada desde borrador no se acepta a mano).
+	$antes_de_archivar = ($manual && $desde === 'archivada') ? at_cc_estado_antes_de_archivar((int) $p->id) : '';
+	if (!at_cc_transicion_respuesta_valida($desde, $hacia, $manual, $antes_de_archivar)) {
 		// Una propuesta rechazada todavía puede recibir «la sigo evaluando» / «no, gracias» (por
 		// ejemplo, desde un correo anterior al rechazo): no es un error, se anota y se avisa a Luis
 		// sin cambiar el estado.

@@ -279,10 +279,13 @@ function at_pa_guardar(): string {
 
         $wpdb->update($table_name, $update_data, ['id' => $id]);
 
-        if (!empty($bloqueo_envio)) {
-            $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: una propuesta v3 solo se envía cuando está <strong>lista</strong> (versión final verificada).</p></div>';
-        } elseif (!empty($bloqueo_envio_aceptada) && $actual && (string) $actual->status === 'archivada') {
+        // T14 ronda 1 (2ª revisión), hallazgo 2: el aviso de archivada va primero, en cualquier flujo. En
+        // una v3 archivada la guarda de v3 corta antes ($bloqueo_envio) y su aviso («solo se envía cuando
+        // está lista») no explicaba por qué no salió.
+        if ((!empty($bloqueo_envio) || !empty($bloqueo_envio_aceptada)) && $actual && (string) $actual->status === 'archivada') {
             $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: esta propuesta está archivada. Desarchívala en «Respuesta del cliente» para volver a enviarla.</p></div>';
+        } elseif (!empty($bloqueo_envio)) {
+            $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: una propuesta v3 solo se envía cuando está <strong>lista</strong> (versión final verificada).</p></div>';
         } elseif (!empty($bloqueo_envio_aceptada)) {
             // Ronda 2, hallazgo 2: el aviso ya no asume "ya aceptó"; describe el estado real
             // ('aceptada', 'evaluando' o 'rechazada') para que Luis entienda por qué no se envió.

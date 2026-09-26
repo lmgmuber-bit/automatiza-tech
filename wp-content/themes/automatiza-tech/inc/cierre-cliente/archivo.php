@@ -46,6 +46,11 @@ function at_cc_archivar_propuesta(object $p, int $usuario_id = 0): array {
 		(int) $p->id,
 		$desde
 	));
+	// T14 ronda 1 (2ª revisión), hallazgo 3: false es un error de la base (se registra), no una carrera.
+	if ($n === false) {
+		error_log('at_cc: no se pudo archivar la propuesta ' . (int) $p->id . ': ' . $wpdb->last_error);
+		return ['ok' => false, 'mensaje' => 'No se pudo guardar: inténtalo de nuevo.'];
+	}
 	if ($n !== 1) {
 		return ['ok' => false, 'mensaje' => 'La propuesta cambió mientras la archivabas: recarga la ficha e inténtalo de nuevo.'];
 	}
@@ -96,6 +101,15 @@ function at_cc_estado_antes_de_archivar(int $propuesta_id): string {
 	return 'sent';
 }
 
+/** ¿Luis puede registrar a mano la aceptación de esta propuesta? T14 ronda 1 (2ª revisión), hallazgo 1:
+ *  una archivada solo si el estado en que estaba antes de archivarla también lo permitía (lo decide
+ *  at_cc_transicion_respuesta_valida() en puras.php); si no, hay que desarchivarla para trabajarla. */
+function at_cc_se_puede_aceptar_a_mano(object $p): bool {
+	$estado = (string) $p->status;
+	$antes = $estado === 'archivada' ? at_cc_estado_antes_de_archivar((int) $p->id) : '';
+	return at_cc_transicion_respuesta_valida($estado, 'aceptada', true, $antes);
+}
+
 /** Rastro interno cuando el cliente intenta responder una propuesta archivada (T14 ronda 1, hallazgo 2):
  *  la respuesta no se aplica, pero Luis la ve en Seguimiento (tipo interno 'aviso_operativo', no sale en
  *  las vistas públicas) y puede registrar una aceptación a mano si corresponde. La descripción no lleva
@@ -124,6 +138,10 @@ function at_cc_desarchivar_propuesta(object $p, int $usuario_id = 0): array {
 		(int) $p->id,
 		'archivada'
 	));
+	if ($n === false) {
+		error_log('at_cc: no se pudo desarchivar la propuesta ' . (int) $p->id . ': ' . $wpdb->last_error);
+		return ['ok' => false, 'mensaje' => 'No se pudo guardar: inténtalo de nuevo.'];
+	}
 	if ($n !== 1) {
 		return ['ok' => false, 'mensaje' => 'La propuesta cambió mientras la desarchivabas: recarga la ficha e inténtalo de nuevo.'];
 	}

@@ -199,8 +199,9 @@ function at_cc_accion_registrar_aceptacion(): void {
 	if ($estado === 'aceptada') {
 		$volver(['tipo' => 'ok', 'texto' => 'La propuesta ya estaba aceptada: no se repitió nada.']);
 	}
-	if (!at_cc_transicion_respuesta_valida($estado, 'aceptada', true)) {
-		$volver(['tipo' => 'error', 'texto' => 'Esta propuesta no está esperando respuesta.']);
+	// T14 ronda 1 (2ª revisión), hallazgo 1: una archivada desde borrador (o draft/error) no se acepta a mano.
+	if (!at_cc_se_puede_aceptar_a_mano($p)) {
+		$volver(['tipo' => 'error', 'texto' => $estado === 'archivada' ? 'Esta propuesta no estaba lista ni enviada cuando se archivó: desarchívala para trabajarla.' : 'Esta propuesta no está esperando respuesta.']);
 	}
 	$fecha = at_cc_fecha_declarada(sanitize_text_field(wp_unslash($_POST['fecha'] ?? '')), current_time('Y-m-d'));
 	$ev = at_cc_guardar_evidencias($id, at_cc_archivos_normalizados($_FILES['evidencia'] ?? []));
@@ -278,8 +279,10 @@ function at_cc_render_panel_respuesta(object $p): void {
 		echo ' <button type="submit" class="button button-secondary" form="at-cc-f-archivar" onclick="return confirm(\'¿Archivar esta propuesta? El cliente ya no podrá responderla desde su enlace. Puedes desarchivarla cuando quieras.\');">🗄️ Archivar</button>';
 	}
 	echo '</p>';
-	if (!at_cc_transicion_respuesta_valida($estado, 'aceptada', true)) {
-		echo '<p class="description">La aceptación se registra cuando la propuesta está lista o enviada.</p></div>';
+	// T14 ronda 1 (2ª revisión), hallazgo 1: en una archivada, el registro a mano solo aparece si el estado
+	// en que estaba antes de archivarla lo permitía; si no (p. ej. una v3 en borrador), hay que desarchivarla.
+	if (!at_cc_se_puede_aceptar_a_mano($p)) {
+		echo '<p class="description">' . ($estado === 'archivada' ? 'Desarchívala para trabajarla.' : 'La aceptación se registra cuando la propuesta está lista o enviada.') . '</p></div>';
 		return;
 	}
 	$hoy = current_time('Y-m-d');

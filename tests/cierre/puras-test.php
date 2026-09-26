@@ -34,7 +34,17 @@ foreach (['aceptada', 'contracted', 'ajustando', 'archivada', 'generando', '', '
 foreach (['aceptada', 'evaluando', 'rechazada'] as $hacia) {
 	ok(!at_cc_transicion_respuesta_valida('archivada', $hacia), "el cliente no responde una archivada (archivada -> {$hacia})");
 }
-ok(at_cc_transicion_respuesta_valida('archivada', 'aceptada', true), 'a mano sí se registra la aceptación de una archivada');
+// T14 ronda 1 (2ª revisión), hallazgo 1: a mano, una archivada se acepta solo si el estado en que
+// estaba antes de archivarla (4º argumento) también lo permitía. Un borrador archivado (v3 sin versión
+// final, precios «Por confirmar») nunca se pudo aceptar a mano, y archivarlo no debe habilitarlo.
+foreach (['sent', 'evaluando', 'rechazada', 'pending', 'lista'] as $antes) {
+	ok(at_cc_transicion_respuesta_valida('archivada', 'aceptada', true, $antes), "a mano sí se registra la aceptación de una archivada desde {$antes}");
+}
+foreach (['borrador', 'draft', 'error', '', 'archivada', 'aceptada', 'raro'] as $antes) {
+	ok(!at_cc_transicion_respuesta_valida('archivada', 'aceptada', true, $antes), "a mano no se acepta una archivada desde «{$antes}»");
+}
+ok(!at_cc_transicion_respuesta_valida('archivada', 'aceptada', true), 'a mano, sin decir desde qué estado se archivó, no se acepta una archivada');
+ok(!at_cc_transicion_respuesta_valida('archivada', 'aceptada', false, 'sent'), 'el cliente no acepta una archivada aunque se haya archivado desde sent');
 ok(!at_cc_transicion_respuesta_valida('archivada', 'evaluando', true) && !at_cc_transicion_respuesta_valida('archivada', 'rechazada', true), 'a mano, desde archivada solo se registra aceptación');
 ok(!at_cc_transicion_respuesta_valida('sent', 'archivada') && !at_cc_transicion_respuesta_valida('sent', 'archivada', true), 'una respuesta nunca archiva (eso es solo de Luis)');
 ok(!at_cc_puede_pedir_respuesta('archivada'), 'no se pide respuesta de una archivada (sin barra pública ni «Pedir respuesta»)');

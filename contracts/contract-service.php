@@ -69,15 +69,17 @@ class ContractService {
         return 'CONTRATO DE PRESTACIÓN DE SERVICIOS, CESIÓN DE PROPIEDAD INTELECTUAL Y SOPORTE TÉCNICO POST-PROYECTO';
     }
 
-    /** Campos que AT ajusta antes de firmar un contrato de servicios: clave => [etiqueta, 'tipo'|'linea'|'texto']. */
+    /** Campos que AT ajusta antes de firmar un contrato de servicios: clave => [etiqueta, 'tipo'|'documento'|'linea'|'texto']. */
     public static function campos_revision() {
         return array(
             'tipo_cliente'                 => array('Tipo de cliente', 'tipo'),
             'razon_social_cliente'         => array('Cliente (razón social o nombre)', 'linea'),
-            'rut_cliente'                  => array('RUT del cliente', 'linea'),
+            'tipo_documento_cliente'       => array('Tipo de documento del cliente', 'documento'),
+            'rut_cliente'                  => array('Documento del cliente (RUT si es empresa)', 'linea'),
             'domicilio_cliente'            => array('Domicilio del cliente', 'linea'),
             'representante_cliente_nombre' => array('Representante (solo si es empresa)', 'linea'),
-            'representante_cliente_rut'    => array('RUT del representante (solo si es empresa)', 'linea'),
+            'tipo_documento_representante' => array('Tipo de documento del representante', 'documento'),
+            'representante_cliente_rut'    => array('Documento del representante (solo si es empresa)', 'linea'),
             'servicios_contratados'        => array('Servicios contratados (uno por línea, empezando con «- »)', 'texto'),
             'alcance'                      => array('Alcance', 'texto'),
             'entregables'                  => array('Entregables (uno por línea, empezando con «- »)', 'texto'),
@@ -93,6 +95,22 @@ class ContractService {
             'persona' => 'Persona natural (a su nombre)',
             'empresa' => 'Empresa o persona jurídica',
         );
+    }
+    /**
+     * Task 15: tipos de documento del cliente y del representante: valor => texto del selector. Sin
+     * tipo guardado (contratos anteriores) cuenta como RUT. La lista vive en at_cc_tipos_documento()
+     * (cierre de cliente); esta copia es para cuando el módulo no está cargado.
+     */
+    public static function tipos_documento() {
+        if (function_exists('at_cc_tipos_documento')) return at_cc_tipos_documento();
+        return array('rut' => 'RUT', 'dni' => 'DNI', 'pasaporte' => 'Pasaporte');
+    }
+    /** El número vale para su tipo (vacío = RUT). Sin el módulo de cierre, solo se valida el RUT si se puede. */
+    private static function documento_valido($tipo, $numero) {
+        $tipo = (string) $tipo !== '' ? (string) $tipo : 'rut';
+        if (function_exists('at_cc_documento_valido')) return at_cc_documento_valido($tipo, (string) $numero);
+        if ($tipo === 'rut' && function_exists('at_cc_rut_valido')) return at_cc_rut_valido((string) $numero);
+        return array_key_exists($tipo, self::tipos_documento());
     }
     /** Un contrato de servicios no se firma hasta que AT guarda su revisión. */
     public static function necesita_revision($c) {
@@ -110,14 +128,15 @@ class ContractService {
         $campos = self::campos_revision();
         $tipo = (string) ($ph['tipo_cliente'] ?? '');
         $exigidos = array();
+        // Task 15: el número de la persona y el del representante pueden ser RUT, DNI o pasaporte.
         if ($tipo === 'persona') {
-            $exigidos = array('razon_social_cliente' => 'Nombre completo del cliente', 'rut_cliente' => 'RUT del cliente');
+            $exigidos = array('razon_social_cliente' => 'Nombre completo del cliente', 'rut_cliente' => 'Documento del cliente');
         } elseif ($tipo === 'empresa') {
             $exigidos = array(
                 'razon_social_cliente'         => 'Razón social',
                 'rut_cliente'                  => 'RUT de la empresa',
                 'representante_cliente_nombre' => $campos['representante_cliente_nombre'][0],
-                'representante_cliente_rut'    => $campos['representante_cliente_rut'][0],
+                'representante_cliente_rut'    => 'Documento del representante',
             );
         } else {
             // Sin tipo: se exige elegirlo y, mientras, se listan también los datos comunes.
@@ -126,12 +145,18 @@ class ContractService {
         foreach (array('domicilio_cliente', 'monto_total', 'forma_pago') as $k) {
             $exigidos[$k] = $campos[$k][0];
         }
+        // Tipo con que se valida cada número (vacío = RUT, contratos anteriores a la Task 15). El RUT de
+        // una empresa siempre se valida como RUT, diga lo que diga tipo_documento_cliente.
+        $tipo_de = array(
+            'rut_cliente'               => $tipo === 'empresa' ? 'rut' : (string) ($ph['tipo_documento_cliente'] ?? ''),
+            'representante_cliente_rut' => (string) ($ph['tipo_documento_representante'] ?? ''),
+        );
         $faltan = array_key_exists($tipo, self::tipos_cliente()) ? array() : array($campos['tipo_cliente'][0]);
         foreach ($exigidos as $k => $etiqueta) {
             $v = trim((string) ($ph[$k] ?? ''));
             if ($v === '') {
                 $faltan[] = $etiqueta;
-            } elseif (in_array($k, array('rut_cliente', 'representante_cliente_rut'), true) && function_exists('at_cc_rut_valido') && !at_cc_rut_valido($v)) {
+            } elseif (array_key_exists($k, $tipo_de) && !self::documento_valido($tipo_de[$k], $v)) {
                 $faltan[] = $etiqueta . ' (no es válido)';
             }
         }
@@ -162,15 +187,27 @@ class ContractService {
      * al generar el PDF desde los marcadores; nunca se guarda. Vacíos = '_______', como el resto del PDF.
      */
     public static function comparecencia_cliente(array $ph) {
-        $val = function ($k) use ($ph) {
+        $limpio = function ($k) use ($ph) {
             // Una sola línea de Markdown: sin saltos ni asteriscos que rompan las negritas.
-            $s = trim((string) preg_replace('/\s+/u', ' ', str_replace('*', '', (string) ($ph[$k] ?? ''))));
+            return trim((string) preg_replace('/\s+/u', ' ', str_replace('*', '', (string) ($ph[$k] ?? ''))));
+        };
+        $val = function ($k) use ($limpio) {
+            $s = $limpio($k);
             return $s !== '' ? $s : '_______';
         };
+        // Task 15: 'RUT **n**', 'DNI N° **n**' o 'pasaporte N° **n**' según el tipo guardado (vacío = RUT).
+        $documento = function ($k_tipo, $k_numero) use ($ph, $limpio, $val) {
+            if (!function_exists('at_cc_documento_texto')) {
+                return 'RUT **' . $val($k_numero) . '**';
+            }
+            return at_cc_documento_texto((string) ($ph[$k_tipo] ?? ''), $limpio($k_numero));
+        };
         $tipo = (string) ($ph['tipo_cliente'] ?? '');
-        $t = '**' . $val('razon_social_cliente') . '** (en adelante "**EL CLIENTE**"), RUT **' . $val('rut_cliente') . '**';
+        // La empresa siempre muestra RUT para su propio número; la persona (o sin tipo), su documento.
+        $doc_cliente = $tipo === 'empresa' ? 'RUT **' . $val('rut_cliente') . '**' : $documento('tipo_documento_cliente', 'rut_cliente');
+        $t = '**' . $val('razon_social_cliente') . '** (en adelante "**EL CLIENTE**"), ' . $doc_cliente;
         if ($tipo === 'empresa') {
-            $t .= ', representada por **' . $val('representante_cliente_nombre') . '**, RUT **' . $val('representante_cliente_rut') . '**';
+            $t .= ', representada por **' . $val('representante_cliente_nombre') . '**, ' . $documento('tipo_documento_representante', 'representante_cliente_rut');
         }
         $t .= ', correo ' . $val('email_cliente') . ', teléfono ' . $val('telefono_cliente') . ', con domicilio en ' . $val('domicilio_cliente');
         if ($tipo === 'persona') {
@@ -195,16 +232,34 @@ class ContractService {
         $v = str_replace(array("\r\n", "\r"), "\n", $v);
         return trim($v);
     }
-    /** Persona natural = sus datos de la aceptación: nombre y RUT vacíos se toman de quien aceptó. */
+    /**
+     * Persona natural = sus datos de la aceptación: nombre y documento vacíos se toman de quien aceptó.
+     * Task 15: el tipo de documento viaja con el número (un DNI copiado no queda rotulado como RUT).
+     */
     private static function persona_con_datos_de_aceptacion(array $ph) {
         if (($ph['tipo_cliente'] ?? '') !== 'persona') return $ph;
         $origen = array('razon_social_cliente' => 'representante_cliente_nombre', 'rut_cliente' => 'representante_cliente_rut');
         foreach ($origen as $k => $de) {
             if (trim((string) ($ph[$k] ?? '')) === '' && trim((string) ($ph[$de] ?? '')) !== '') {
                 $ph[$k] = $ph[$de];
+                if ($k === 'rut_cliente') {
+                    $tipo_repr = trim((string) ($ph['tipo_documento_representante'] ?? ''));
+                    if ($tipo_repr !== '') $ph['tipo_documento_cliente'] = $tipo_repr; else unset($ph['tipo_documento_cliente']);
+                }
             }
         }
         return $ph;
+    }
+    /** Task 15: '' si el tipo de documento es válido (rut, dni, pasaporte o vacío); si no, el error. */
+    private static function error_tipo_documento(array $cambios) {
+        foreach (array('tipo_documento_cliente', 'tipo_documento_representante') as $k) {
+            if (!array_key_exists($k, $cambios)) continue;
+            $v = self::limpiar_texto($cambios[$k]);
+            if ($v !== '' && !array_key_exists($v, self::tipos_documento())) {
+                return new WP_Error('tipo_documento_invalido', 'El tipo de documento debe ser RUT, DNI o pasaporte.');
+            }
+        }
+        return '';
     }
     /** Normaliza un nombre para comparar: sin mayúsculas ni espacios de más. */
     private static function normalizar_nombre($s) {
@@ -267,6 +322,8 @@ class ContractService {
                 return new WP_Error('tipo_cliente_invalido', 'El tipo de cliente debe ser persona natural o empresa.');
             }
         }
+        $error_doc = self::error_tipo_documento($cambios);
+        if (is_wp_error($error_doc)) return $error_doc;
         $ph_original = json_decode($c->placeholders, true) ?: array();
         $ph = $ph_original;
         foreach (self::campos_revision() as $k => $_) {
@@ -298,12 +355,16 @@ class ContractService {
             return new WP_Error('ya_revisado', 'AutomatizaTech ya revisó el contrato: los cambios de datos se ven directamente con nosotros.');
         }
         $nuevos = array();
-        foreach (array('tipo_cliente', 'razon_social_cliente', 'rut_cliente', 'domicilio_cliente') as $k) {
+        // Task 15: tipo_documento_cliente acompaña a rut_cliente (una empresa lo manda como 'rut').
+        foreach (array('tipo_cliente', 'razon_social_cliente', 'tipo_documento_cliente', 'rut_cliente', 'domicilio_cliente') as $k) {
             if (!array_key_exists($k, $datos)) continue;
             $v = self::limpiar_texto($datos[$k]);
             if ($v === '') continue; // Lo que el cliente deja en blanco no borra lo que ya había.
             if ($k === 'tipo_cliente' && !array_key_exists($v, self::tipos_cliente())) {
                 return new WP_Error('tipo_cliente_invalido', 'El tipo de cliente debe ser persona natural o empresa.');
+            }
+            if ($k === 'tipo_documento_cliente' && !array_key_exists($v, self::tipos_documento())) {
+                return new WP_Error('tipo_documento_invalido', 'El tipo de documento debe ser RUT, DNI o pasaporte.');
             }
             $nuevos[$k] = $v;
         }

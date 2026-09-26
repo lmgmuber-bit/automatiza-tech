@@ -120,6 +120,19 @@ ok($u && $u['salida'] === 'acepta', 'última respuesta es la aceptación');
 $fila_resp = $wpdb->get_row($wpdb->prepare("SELECT description, metadata FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente' ORDER BY id DESC LIMIT 1", $p->id));
 ok($fila_resp && strpos($fila_resp->description, '11.111.111-1') === false && strpos($fila_resp->description, 'pidió factura') === false && strpos($fila_resp->description, 'Ana Prueba') === false, 'la descripción pública no lleva el RUT, el nombre ni la nota interna');
 ok($fila_resp && strpos($fila_resp->metadata, '11.111.111-1') !== false && strpos($fila_resp->metadata, 'pidió factura') !== false, 'la metadata interna sí lleva el RUT y la nota');
+// Task 15: quien registra solo con 'rut' (como antes) sigue funcionando: queda como RUT en la metadata,
+// en el contrato y en el aviso a Luis («Documento: RUT …»).
+$meta_rut = $fila_resp ? (json_decode((string) $fila_resp->metadata, true) ?: []) : [];
+ok(($meta_rut['tipo_documento'] ?? null) === 'rut' && ($meta_rut['documento'] ?? null) === '11.111.111-1' && ($meta_rut['rut'] ?? null) === '11.111.111-1', 'T15: una aceptación con solo «rut» queda con tipo_documento=rut y el número');
+ok(($ph['tipo_documento_representante'] ?? '') === 'rut' && ($ph['tipo_documento_cliente'] ?? '') === 'rut', 'T15: su contrato nace con los dos tipos de documento en RUT');
+$aviso_luis_rut = array_values(array_filter($correos, function ($x) { return $x['to'] === get_option('admin_email') && strpos((string) $x['subject'], 'aceptó la propuesta') !== false; }));
+ok($aviso_luis_rut && strpos((string) $aviso_luis_rut[0]['message'], 'Documento: RUT 11.111.111-1') !== false, 'T15: el aviso a Luis dice «Documento: RUT 11.111.111-1»');
+// Una respuesta guardada antes de la Task 15 (metadata sin tipo_documento ni documento) se lee como RUT.
+$wpdb->insert($det, ['propuesta_id' => (int) $p->id, 'detail_type' => 'respuesta_cliente', 'title' => 'Aceptó la propuesta', 'description' => 'Cómo: en la página de la propuesta', 'status' => 'completed', 'completed_date' => current_time('Y-m-d'), 'metadata' => wp_json_encode(['salida' => 'acepta', 'canal' => 'pagina', 'nombre' => 'Ana Prueba', 'rut' => '11.111.111-1', 'filas' => $filas]), 'created_at' => current_time('mysql')]);
+$id_vieja = (int) $wpdb->insert_id;
+$u_vieja = at_cc_ultima_respuesta((int) $p->id, 'acepta');
+ok($u_vieja && $u_vieja['tipo_documento'] === 'rut' && $u_vieja['documento'] === '11.111.111-1' && $u_vieja['rut'] === '11.111.111-1', 'T15: una respuesta vieja con solo «rut» se lee como RUT (tipo y número)');
+$wpdb->delete($det, ['id' => $id_vieja]);
 $fila_resp_cols = $wpdb->get_row($wpdb->prepare("SELECT attachment_url, attachment_name FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente' ORDER BY id DESC LIMIT 1", $p->id));
 ok($fila_resp_cols && $fila_resp_cols->attachment_url === null && $fila_resp_cols->attachment_name === null, 'la fila no llena attachment_url/attachment_name con la evidencia');
 

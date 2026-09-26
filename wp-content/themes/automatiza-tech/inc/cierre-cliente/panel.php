@@ -177,10 +177,19 @@ function at_cc_accion_registrar_aceptacion(): void {
 	}
 	// Ronda 2, hallazgo 3: un RUT con dígito verificador equivocado se descartaba en silencio
 	// (quedaba '' sin avisar), y la aceptación se registraba igual en verde, con el contrato sin RUT.
-	$rut = sanitize_text_field(wp_unslash($_POST['rut'] ?? ''));
-	if ($rut !== '' && !at_cc_rut_valido($rut)) {
-		$volver(['tipo' => 'error', 'texto' => 'El RUT no es válido: corrígelo o déjalo en blanco.']);
+	// Task 15: el documento puede ser RUT, DNI o pasaporte (solo el RUT lleva dígito verificador). Sigue
+	// siendo opcional; si viene, se valida aquí, antes de guardar evidencias. Un formulario abierto desde
+	// antes del cambio manda solo 'rut': se toma como RUT.
+	$tipo_doc = sanitize_key(wp_unslash($_POST['tipo_documento'] ?? 'rut'));
+	$documento = trim(sanitize_text_field(wp_unslash($_POST['documento'] ?? '')));
+	if (!isset($_POST['tipo_documento']) && !isset($_POST['documento']) && isset($_POST['rut'])) {
+		$tipo_doc = 'rut';
+		$documento = trim(sanitize_text_field(wp_unslash($_POST['rut'])));
 	}
+	if ($documento !== '' && (!isset(at_cc_tipos_documento()[$tipo_doc]) || !at_cc_documento_valido($tipo_doc, $documento))) {
+		$volver(['tipo' => 'error', 'texto' => 'El documento no es válido: corrígelo o déjalo en blanco.']);
+	}
+	$documento = $documento !== '' ? at_cc_documento_formato($tipo_doc, $documento) : '';
 	// Ronda 2, hallazgo 2: la página pública exige al menos una fila aceptada cuando la propuesta tiene
 	// filas (pagina.php, at_cc_procesar_respuesta_publica()); el camino manual no lo exigía, así que
 	// desmarcar la única casilla dejaba la propuesta aceptada sin servicios contratados, sin monto y
@@ -209,7 +218,9 @@ function at_cc_accion_registrar_aceptacion(): void {
 		'canal'        => 'manual',
 		'canal_manual' => $canal,
 		'nombre'       => sanitize_text_field(wp_unslash($_POST['nombre'] ?? '')),
-		'rut'          => $rut !== '' ? at_cc_rut_formato($rut) : '',
+		'tipo_documento' => $documento !== '' ? $tipo_doc : '',
+		'documento'    => $documento,
+		'rut'          => ($documento !== '' && $tipo_doc === 'rut') ? $documento : '',
 		'comentario'   => $nota,
 		'filas'        => $filas,
 		'fecha'        => $fecha !== '' ? $fecha : current_time('mysql'),
@@ -304,7 +315,13 @@ function at_cc_render_panel_respuesta(object $p): void {
 		echo '</td></tr>';
 	}
 	echo '<tr><th>¿Quién aceptó?</th><td><input type="text" class="regular-text" name="nombre" form="at-cc-f-aceptar" value="' . esc_attr((string) $p->client_name) . '"></td></tr>';
-	echo '<tr><th>RUT (si lo tienes)</th><td><input type="text" class="regular-text" name="rut" form="at-cc-f-aceptar" placeholder="12.345.678-9"></td></tr>';
+	// Task 15: RUT, DNI o pasaporte (mismo name="tipo_documento" que la página pública).
+	echo '<tr><th>Documento</th><td><select name="tipo_documento" form="at-cc-f-aceptar">';
+	foreach (at_cc_tipos_documento() as $k => $t) {
+		echo '<option value="' . esc_attr($k) . '"' . ($k === 'rut' ? ' selected' : '') . '>' . esc_html($t) . '</option>';
+	}
+	echo '</select></td></tr>';
+	echo '<tr><th>Número (si lo tienes)</th><td><input type="text" class="regular-text" name="documento" form="at-cc-f-aceptar" placeholder="12.345.678-9"></td></tr>';
 	echo '<tr><th>¿Qué dijo el cliente?</th><td><textarea name="nota" form="at-cc-f-aceptar" rows="3" class="large-text" required placeholder="Ej.: Me escribió por WhatsApp: sí, partamos con la fase 1."></textarea></td></tr>';
 	echo '<tr><th>Evidencia</th><td><input type="file" name="evidencia[]" form="at-cc-f-aceptar" accept="image/jpeg,image/png,image/webp" multiple>'
 		. '<p class="description">Hasta 3 imágenes (JPG, PNG o WEBP, 5 MB cada una), por ejemplo la captura del WhatsApp. Se guardan en privado: solo se ven desde el panel.</p></td></tr>';
@@ -414,6 +431,6 @@ function at_cc_render_formularios_respuesta(object $p): void {
 	// y apuntan aquí con form="…", así que se deshabilitan por ese atributo, no por closest('form').
 	// Revisión final (26-sep), hallazgo 2: solo los BOTONES. El navegador arma los datos del envío
 	// después del evento submit y omite los controles deshabilitados: deshabilitar también los campos
-	// con form="…" (canal, nota, filas, RUT, evidencia…) hacía que nunca llegaran al servidor.
+	// con form="…" (canal, nota, filas, documento, evidencia…) hacía que nunca llegaran al servidor.
 	echo "<script>(function(){function candado(id){var f=document.getElementById(id);if(!f){return;}var enviando=false;f.addEventListener('submit',function(e){if(enviando){e.preventDefault();return;}enviando=true;document.querySelectorAll('button[form=\"'+id+'\"], #'+id+' button').forEach(function(b){b.disabled=true;});});}candado('at-cc-f-pedir');candado('at-cc-f-aceptar');candado('at-cc-f-completar');candado('at-cc-f-archivar');candado('at-cc-f-desarchivar');})();</script>";
 }

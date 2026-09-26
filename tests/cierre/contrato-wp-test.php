@@ -56,14 +56,36 @@ $completo_empresa = ['tipo_cliente' => 'empresa', 'razon_social_cliente' => '[PR
 ok(in_array('Tipo de cliente', ContractService::faltantes($ct(array_diff_key($completo_persona, ['tipo_cliente' => 1]))), true), 'sin tipo: falta «Tipo de cliente»');
 ok(in_array('Tipo de cliente', ContractService::faltantes($ct(['tipo_cliente' => 'sociedad'] + $completo_persona)), true), 'un tipo desconocido cuenta como sin tipo');
 ok(ContractService::faltantes($ct($completo_persona)) === [], 'persona completa: no falta nada');
-ok(ContractService::faltantes($ct(['tipo_cliente' => 'persona'])) === ['Nombre completo del cliente', 'RUT del cliente', 'Domicilio del cliente', 'Precio total, IVA incluido', 'Forma de pago'], 'persona vacía: faltan sus datos, con las etiquetas de persona');
+// Task 15: las etiquetas del número de la persona y del representante pasan a «Documento del cliente»
+// y «Documento del representante» (puede ser RUT, DNI o pasaporte); el de la empresa sigue siendo RUT.
+ok(ContractService::faltantes($ct(['tipo_cliente' => 'persona'])) === ['Nombre completo del cliente', 'Documento del cliente', 'Domicilio del cliente', 'Precio total, IVA incluido', 'Forma de pago'], 'persona vacía: faltan sus datos, con las etiquetas de persona');
 ok(ContractService::faltantes($ct($completo_empresa)) === [], 'empresa completa: no falta nada');
-ok(ContractService::faltantes($ct(array_diff_key($completo_empresa, ['representante_cliente_nombre' => 1, 'representante_cliente_rut' => 1]))) === ['Representante (solo si es empresa)', 'RUT del representante (solo si es empresa)'], 'empresa sin representante: lo lista');
-ok(ContractService::faltantes($ct(['tipo_cliente' => 'empresa'])) === ['Razón social', 'RUT de la empresa', 'Representante (solo si es empresa)', 'RUT del representante (solo si es empresa)', 'Domicilio del cliente', 'Precio total, IVA incluido', 'Forma de pago'], 'empresa vacía: faltan sus datos, con las etiquetas de empresa');
-ok(ContractService::faltantes($ct(['rut_cliente' => '11.111.111-2'] + $completo_persona)) === ['RUT del cliente (no es válido)'], 'RUT inválido: cuenta como faltante');
-ok(ContractService::faltantes($ct(['representante_cliente_rut' => '11.111.111-2'] + $completo_empresa)) === ['RUT del representante (solo si es empresa) (no es válido)'], 'RUT del representante inválido: cuenta como faltante');
+ok(ContractService::faltantes($ct(array_diff_key($completo_empresa, ['representante_cliente_nombre' => 1, 'representante_cliente_rut' => 1]))) === ['Representante (solo si es empresa)', 'Documento del representante'], 'empresa sin representante: lo lista');
+ok(ContractService::faltantes($ct(['tipo_cliente' => 'empresa'])) === ['Razón social', 'RUT de la empresa', 'Representante (solo si es empresa)', 'Documento del representante', 'Domicilio del cliente', 'Precio total, IVA incluido', 'Forma de pago'], 'empresa vacía: faltan sus datos, con las etiquetas de empresa');
+ok(ContractService::faltantes($ct(['rut_cliente' => '11.111.111-2'] + $completo_persona)) === ['Documento del cliente (no es válido)'], 'RUT inválido: cuenta como faltante');
+ok(ContractService::faltantes($ct(['representante_cliente_rut' => '11.111.111-2'] + $completo_empresa)) === ['Documento del representante (no es válido)'], 'RUT del representante inválido: cuenta como faltante');
 ok(ContractService::faltantes($ct(['domicilio_cliente' => '   '] + $completo_persona)) === ['Domicilio del cliente'], 'un dato con solo espacios cuenta como vacío');
 ok(ContractService::faltantes($ct([], 'soporte')) === [], 'contrato de soporte: no aplica');
+
+// ---------- Task 15: tipo de documento (RUT, DNI o pasaporte) de la persona y del representante ----------
+$per_dni = ['tipo_documento_cliente' => 'dni', 'rut_cliente' => '12345678'] + $per_datos;
+ok(ContractService::comparecencia_cliente($per_dni) === '**Ana Prueba** (en adelante "**EL CLIENTE**"), DNI N° **12345678**, correo ana@example.com, teléfono +56 9 1111 1111, con domicilio en Calle Falsa 123, Santiago, para su proyecto «Tienda en línea».', 'T15: persona con DNI: comparece con «DNI N° **…**»');
+ok(strpos(ContractService::comparecencia_cliente(['tipo_documento_cliente' => 'pasaporte', 'rut_cliente' => 'AB123456'] + $per_datos), 'pasaporte N° **AB123456**, correo') !== false, 'T15: persona con pasaporte: comparece con «pasaporte N° **…**»');
+$emp_pas = ContractService::comparecencia_cliente(['tipo_cliente' => 'empresa', 'tipo_documento_representante' => 'pasaporte', 'representante_cliente_rut' => 'AB123456'] + $datos);
+ok($emp_pas === '**[PRUEBA] Muebles SpA** (en adelante "**EL CLIENTE**"), RUT **10.000.013-K**, representada por **Ana Prueba**, pasaporte N° **AB123456**, correo ana@example.com, teléfono +56 9 1111 1111, con domicilio en Calle Falsa 123, Santiago.', 'T15: empresa con representante con pasaporte: «representada por **X**, pasaporte N° **…**»');
+ok(strpos(ContractService::comparecencia_cliente(['tipo_cliente' => 'empresa', 'tipo_documento_cliente' => 'dni'] + $datos), '"**EL CLIENTE**"), RUT **10.000.013-K**, representada') !== false, 'T15: la empresa siempre muestra RUT para su propio número');
+ok(ContractService::comparecencia_cliente(['tipo_cliente' => 'empresa', 'tipo_documento_representante' => 'dni']) === '**_______** (en adelante "**EL CLIENTE**"), RUT **_______**, representada por **_______**, DNI N° **_______**, correo _______, teléfono _______, con domicilio en _______.', 'T15: sin número, el rótulo del tipo con _______');
+ok($per === ContractService::comparecencia_cliente(['tipo_documento_cliente' => 'rut'] + $per_datos) && $emp === ContractService::comparecencia_cliente(['tipo_cliente' => 'empresa', 'tipo_documento_representante' => 'rut'] + $datos), 'T15: sin tipo de documento (contratos viejos) sale igual que con RUT');
+$completo_persona_dni = ['tipo_documento_cliente' => 'dni', 'rut_cliente' => '12345678'] + $completo_persona;
+ok(ContractService::faltantes($ct($completo_persona_dni)) === [], 'T15: persona con DNI y los demás datos: no falta nada');
+ok(ContractService::faltantes($ct(['rut_cliente' => '123'] + $completo_persona_dni)) === ['Documento del cliente (no es válido)'], 'T15: DNI de 3 caracteres no es válido');
+ok(ContractService::faltantes($ct(['tipo_documento_cliente' => 'pasaporte', 'rut_cliente' => 'AB123456'] + $completo_persona)) === [], 'T15: persona con pasaporte válido: no falta nada');
+ok(ContractService::faltantes($ct(['rut_cliente' => '12345678'] + $completo_persona)) === ['Documento del cliente (no es válido)'], 'T15: sin tipo de documento (contrato viejo) se valida como RUT');
+$completo_empresa_pas = ['tipo_documento_representante' => 'pasaporte', 'representante_cliente_rut' => 'AB123456'] + $completo_empresa;
+ok(ContractService::faltantes($ct($completo_empresa_pas)) === [], 'T15: empresa con representante con pasaporte: no falta nada');
+ok(ContractService::faltantes($ct(['representante_cliente_rut' => 'AB'] + $completo_empresa_pas)) === ['Documento del representante (no es válido)'], 'T15: pasaporte del representante inválido: cuenta como faltante');
+ok(ContractService::faltantes($ct(['tipo_documento_cliente' => 'dni', 'rut_cliente' => '12345678'] + $completo_empresa)) === ['RUT de la empresa (no es válido)'], 'T15: el RUT de la empresa sigue validándose como RUT aunque el tipo del cliente diga DNI');
+ok(ContractService::faltantes($ct(['tipo_documento_cliente' => 'cedula', 'rut_cliente' => '12345678'] + $completo_persona)) === ['Documento del cliente (no es válido)'], 'T15: un tipo de documento desconocido no valida');
 
 $c = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Muebles', 'monto_total' => '$1.000'], 'created_by' => 0]);
 ok(is_object($c) && $c->type === 'servicios' && $c->template_id === 'servicios_v1' && $c->status === 'at_pending', 'contrato de servicios creado en at_pending');
@@ -207,6 +229,48 @@ $r10 = ContractService::guardar_revision($c9->id, ['aceptante_nombre' => 'Otra P
 $ph10 = is_wp_error($r10) ? [] : json_decode($r10->placeholders, true);
 ok(!is_wp_error($r10) && ($ph10['aceptante_nombre'] ?? '') === 'Ana Prueba', 'guardar_revision() no cambia aceptante_nombre aunque venga en $cambios');
 
+// ---------- Task 15: revisión de AT y datos del cliente con tipo de documento ----------
+$cr = ContractService::campos_revision();
+ok(array_slice(array_keys($cr), 0, 8) === ['tipo_cliente', 'razon_social_cliente', 'tipo_documento_cliente', 'rut_cliente', 'domicilio_cliente', 'representante_cliente_nombre', 'tipo_documento_representante', 'representante_cliente_rut'], 'T15: cada tipo de documento va justo antes de su número en la revisión');
+ok($cr['tipo_documento_cliente'] === ['Tipo de documento del cliente', 'documento'] && $cr['tipo_documento_representante'] === ['Tipo de documento del representante', 'documento'], 'T15: campos de tipo de documento con su etiqueta y el tipo «documento»');
+ok($cr['rut_cliente'][0] === 'Documento del cliente (RUT si es empresa)' && $cr['representante_cliente_rut'][0] === 'Documento del representante (solo si es empresa)', 'T15: etiquetas de los números: «Documento del cliente (RUT si es empresa)» y «Documento del representante (solo si es empresa)»');
+ok(ContractService::tipos_documento() === ['rut' => 'RUT', 'dni' => 'DNI', 'pasaporte' => 'Pasaporte'], 'T15: tipos de documento del selector');
+// Aceptó con DNI (marcadores como los arma at_cc_marcadores_servicios()) y el cliente deja sus datos como persona.
+$ph_dni = ['razon_social_cliente' => '[PRUEBA] Marca Muebles', 'nombre_proyecto' => '[PRUEBA] Marca Muebles', 'representante_cliente_nombre' => 'Ana Prueba', 'aceptante_nombre' => 'Ana Prueba', 'tipo_documento_cliente' => 'rut', 'tipo_documento_representante' => 'dni', 'representante_cliente_rut' => '12345678'] + $marca_precio;
+$c10 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => $ph_dni, 'created_by' => 0]);
+$u10 = ContractService::actualizar_datos_cliente($c10->id, ['tipo_cliente' => 'persona', 'domicilio_cliente' => 'Calle Falsa 123, Santiago']);
+$ph10 = is_wp_error($u10) ? [] : json_decode($u10->placeholders, true);
+ok(($ph10['rut_cliente'] ?? '') === '12345678' && ($ph10['tipo_documento_cliente'] ?? '') === 'dni' && ($ph10['razon_social_cliente'] ?? '') === 'Ana Prueba', 'T15: persona natural: el contrato toma el tipo y el número de documento de quien aceptó');
+ok(!is_wp_error($u10) && ContractService::faltantes($u10) === [], 'T15: persona con DNI y los demás datos: faltantes() vacío');
+$txt10 = texto_pdf(pdf_de($c10));
+ok(strpos($txt10, 'DNI N° 12345678') !== false && strpos($txt10, 'RUT 12345678') === false, 'T15: el PDF de la persona dice «DNI N° 12345678»');
+$antes10 = ContractService::get_by_id($c10->id)->placeholders;
+$u10x = ContractService::actualizar_datos_cliente($c10->id, ['tipo_documento_cliente' => 'cedula', 'domicilio_cliente' => 'Otra 1']);
+ok(is_wp_error($u10x) && ContractService::get_by_id($c10->id)->placeholders === $antes10, 'T15: datos del cliente con un tipo de documento desconocido: se rechaza y no cambia nada');
+$u10b = ContractService::actualizar_datos_cliente($c10->id, ['tipo_cliente' => 'empresa', 'razon_social_cliente' => '[PRUEBA] Muebles SpA', 'rut_cliente' => '10.000.013-K', 'tipo_documento_cliente' => 'rut']);
+$ph10b = is_wp_error($u10b) ? [] : json_decode($u10b->placeholders, true);
+ok(($ph10b['tipo_documento_cliente'] ?? '') === 'rut' && ($ph10b['rut_cliente'] ?? '') === '10.000.013-K' && ($ph10b['tipo_documento_representante'] ?? '') === 'dni', 'T15: empresa: el cliente es RUT y el representante conserva su DNI');
+$txt10b = texto_pdf(pdf_de($c10));
+ok(strpos($txt10b, 'RUT 10.000.013-K') !== false && strpos($txt10b, 'representada por') !== false && strpos($txt10b, 'DNI N° 12345678') !== false, 'T15: el PDF de la empresa: RUT de la empresa y DNI del representante');
+// Revisión de AT cambiando el tipo: un número de DNI guardado como RUT no es válido hasta elegir DNI.
+$c11 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['tipo_cliente' => 'persona', 'razon_social_cliente' => 'Ana Prueba', 'rut_cliente' => '12345678', 'domicilio_cliente' => 'Calle Falsa 123, Santiago'] + $marca_precio, 'created_by' => 0]);
+$r11 = ContractService::guardar_revision($c11->id, ['plazo' => 'Ocho semanas']);
+ok(!is_wp_error($r11) && ContractService::faltantes($r11) === ['Documento del cliente (no es válido)'], 'T15: contrato sin tipo de documento: el número se valida como RUT');
+$r11b = ContractService::guardar_revision($c11->id, ['tipo_documento_cliente' => 'dni']);
+$ph11b = is_wp_error($r11b) ? [] : json_decode($r11b->placeholders, true);
+ok(($ph11b['tipo_documento_cliente'] ?? '') === 'dni' && !is_wp_error($r11b) && ContractService::faltantes($r11b) === [], 'T15: AT elige DNI en la revisión: se guarda y ya no falta nada');
+ok(strpos(texto_pdf(pdf_de($c11)), 'DNI N° 12345678') !== false, 'T15: el PDF regenerado dice «DNI N° 12345678»');
+$antes11 = ContractService::get_by_id($c11->id)->placeholders;
+$r11x = ContractService::guardar_revision($c11->id, ['tipo_documento_cliente' => 'cedula']);
+$r11y = ContractService::guardar_revision($c11->id, ['tipo_documento_representante' => 'RUT']);
+ok(is_wp_error($r11x) && is_wp_error($r11y) && ContractService::get_by_id($c11->id)->placeholders === $antes11, 'T15: la revisión solo acepta rut, dni o pasaporte como tipo de documento');
+// Persona con el documento del cliente en blanco: la revisión toma el tipo y el número de quien aceptó,
+// aunque el selector del cliente llegue en RUT (su valor por defecto en la página).
+$c12 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => 'Ana Prueba', 'representante_cliente_nombre' => 'Ana Prueba', 'tipo_documento_representante' => 'pasaporte', 'representante_cliente_rut' => 'AB123456'] + $marca_precio, 'created_by' => 0]);
+$r12 = ContractService::guardar_revision($c12->id, ['tipo_cliente' => 'persona', 'tipo_documento_cliente' => 'rut', 'rut_cliente' => '', 'domicilio_cliente' => 'Calle Falsa 123, Santiago']);
+$ph12 = is_wp_error($r12) ? [] : json_decode($r12->placeholders, true);
+ok(($ph12['rut_cliente'] ?? '') === 'AB123456' && ($ph12['tipo_documento_cliente'] ?? '') === 'pasaporte' && !is_wp_error($r12) && ContractService::faltantes($r12) === [], 'T15: persona con el documento en blanco: toma el pasaporte de quien aceptó (tipo y número)');
+
 // ---------- Task 5b: la página de revisión (contracts/at-sign-contract.php) ----------
 function pagina_revision(string $token, ?array $post = null): string {
 	$_GET = ['token' => $token];
@@ -223,6 +287,10 @@ $h = pagina_revision($c3->at_review_token);
 ok(strpos($h, '<select name="rev[tipo_cliente]"') !== false && strpos($h, '— Elegir —') !== false && strpos($h, 'Persona natural (a su nombre)') !== false && strpos($h, 'Empresa o persona jurídica') !== false, 'la página pide el tipo de cliente con un selector');
 ok(strpos($h, 'Representante (solo si es empresa)') !== false && strpos($h, 'Fases siguientes (una por línea, empezando con «- »)') !== false, 'la página muestra los campos nuevos de la revisión');
 ok(strpos($h, 'Para firmar, primero guarda la revisión.') !== false && strpos($h, 'id="signForm"') === false, 'sin revisión no hay bloque de firma');
+// Task 15: los tipos de documento se eligen con un selector RUT/DNI/Pasaporte; sin tipo guardado, RUT.
+ok(strpos($h, '<select name="rev[tipo_documento_cliente]"') !== false && strpos($h, '<select name="rev[tipo_documento_representante]"') !== false, 'T15: la página pide los tipos de documento con un selector');
+ok(substr_count($h, "value=\"rut\" selected='selected'>RUT</option>") === 2 && substr_count($h, '<option value="dni">DNI</option>') === 2 && substr_count($h, '<option value="pasaporte">Pasaporte</option>') === 2, 'T15: el selector ofrece RUT, DNI y Pasaporte, con RUT elegido en un contrato sin tipo');
+ok(strpos($h, 'Tipo de documento del cliente') !== false && strpos($h, 'Documento del cliente (RUT si es empresa)') !== false && strpos($h, 'Documento del representante (solo si es empresa)') !== false, 'T15: la página muestra las etiquetas nuevas');
 // WordPress agrega barras a $_POST (magic quotes): se simulan para comprobar que la página las quita y no limpia de más.
 $h = pagina_revision($c3->at_review_token, ['_at_nonce' => wp_create_nonce('at_sign_' . $c3->id), 'action' => 'revisar', 'rev' => wp_slash(['tipo_cliente' => 'empresa', 'plazo' => $plazo])]);
 $ph_pag = json_decode(ContractService::get_by_id($c3->id)->placeholders, true);
@@ -233,6 +301,15 @@ ok(strpos($h, 'Antes de firmar completa: Razón social') === false && strpos($h,
 ContractService::guardar_revision($c3->id, ['rut_cliente' => '10.000.013-K', 'representante_cliente_nombre' => 'Ana Prueba', 'representante_cliente_rut' => '11.111.111-1', 'domicilio_cliente' => 'Calle Falsa 123, Santiago', 'monto_total' => '$1.000', 'forma_pago' => 'Contado.']);
 $h = pagina_revision($c3->at_review_token);
 ok(strpos($h, 'id="signForm"') !== false && strpos($h, 'Antes de firmar completa') === false, 'con los datos completos aparece el bloque de firma');
+// Task 15: la página guarda el tipo de documento del representante y lo muestra elegido.
+$c13 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => ['razon_social_cliente' => '[PRUEBA] Muebles SpA'] + $marca_precio, 'created_by' => 0]);
+$rev13 = ['tipo_cliente' => 'empresa', 'razon_social_cliente' => '[PRUEBA] Muebles SpA', 'tipo_documento_cliente' => 'rut', 'rut_cliente' => '10.000.013-K', 'domicilio_cliente' => 'Calle Falsa 123, Santiago', 'representante_cliente_nombre' => 'Ana Prueba', 'tipo_documento_representante' => 'pasaporte', 'representante_cliente_rut' => 'AB123456', 'monto_total' => '$1.000', 'forma_pago' => 'Contado.'];
+$h13 = pagina_revision($c13->at_review_token, ['_at_nonce' => wp_create_nonce('at_sign_' . $c13->id), 'action' => 'revisar', 'rev' => wp_slash($rev13)]);
+$ph13 = json_decode(ContractService::get_by_id($c13->id)->placeholders, true);
+ok(($ph13['tipo_documento_representante'] ?? '') === 'pasaporte' && ($ph13['representante_cliente_rut'] ?? '') === 'AB123456', 'T15: la página guarda el pasaporte del representante');
+ok(strpos($h13, "value=\"pasaporte\" selected='selected'>Pasaporte</option>") !== false && strpos($h13, 'id="signForm"') !== false && strpos($h13, 'Antes de firmar completa') === false, 'T15: el selector muestra el pasaporte elegido y el contrato se puede firmar');
+$h13x = pagina_revision($c13->at_review_token, ['_at_nonce' => wp_create_nonce('at_sign_' . $c13->id), 'action' => 'revisar', 'rev' => wp_slash(['tipo_documento_representante' => 'cedula'] + $rev13)]);
+ok(strpos($h13x, 'El tipo de documento debe ser RUT, DNI o pasaporte.') !== false && (json_decode(ContractService::get_by_id($c13->id)->placeholders, true)['tipo_documento_representante'] ?? '') === 'pasaporte', 'T15: un tipo de documento desconocido desde la página: aviso y no cambia nada');
 wp_set_current_user(0);
 
 // Revisión final (26-sep), hallazgo 5: el contrato de servicios vencía 30 días después de la
@@ -263,4 +340,11 @@ ok(ContractService::get_by_id($sop->id)->expires_at === '2026-01-01 00:00:00', '
 
 $wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE id IN (%d, %d, %d, %d, %d, %d, %d, %d)", $c->id, $sop->id, $c2->id, $c3->id, $c4->id, $c5->id, $c6->id, $c7->id));
 foreach ([$c, $sop, $c2, $c3, $c4, $c5, $c6, $c7] as $x) { @unlink(pdf_de($x)); }
+// Task 15: sus contratos de prueba.
+foreach ([$c10, $c11, $c12, $c13] as $x) {
+	if (is_object($x)) {
+		$wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE id = %d", $x->id));
+		@unlink(pdf_de($x));
+	}
+}
 fin();

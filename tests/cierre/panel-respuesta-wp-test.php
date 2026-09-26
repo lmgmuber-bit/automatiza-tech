@@ -59,6 +59,12 @@ if (preg_match('/href="([^"]+)"/', $h_sent, $m_href) && preg_match('/[?&]text=([
 	ok(false, 'panel.php: no se pudo extraer el parámetro text= del botón de wa.me');
 }
 
+// Task 15: «Registrar aceptación a mano» pide el tipo de documento (RUT, DNI o pasaporte) y el número.
+ok(strpos($h_sent, '<tr><th>Documento</th><td><select name="tipo_documento" form="at-cc-f-aceptar">') !== false, 'T15: el panel pide «Documento» con un selector name="tipo_documento" del formulario de aceptar');
+ok(strpos($h_sent, '<option value="rut" selected>RUT</option>') !== false && strpos($h_sent, '<option value="dni">DNI</option>') !== false && strpos($h_sent, '<option value="pasaporte">Pasaporte</option>') !== false, 'T15: el selector del panel ofrece RUT (elegido), DNI y Pasaporte');
+ok(strpos($h_sent, '<tr><th>Número (si lo tienes)</th><td><input type="text" class="regular-text" name="documento" form="at-cc-f-aceptar"') !== false, 'T15: el número va en «Número (si lo tienes)» (name="documento")');
+ok(strpos($h_sent, 'name="rut"') === false && strpos($h_sent, 'RUT (si lo tienes)') === false, 'T15: el panel ya no pide «RUT (si lo tienes)»');
+
 foreach (['lista', 'pending', 'borrador', 'generando', 'ajustando', 'error', 'contracted'] as $estado_sin_barra) {
 	$q = crear_propuesta_panel($marca, $estado_sin_barra, $creadas);
 	$h = render_panel($q);

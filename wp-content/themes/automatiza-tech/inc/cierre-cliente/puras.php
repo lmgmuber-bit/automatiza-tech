@@ -136,6 +136,57 @@ function at_cc_rut_formato(string $rut): string {
 	return number_format((int) substr($r, 0, -1), 0, ',', '.') . '-' . substr($r, -1);
 }
 
+/** Task 15 (aprobada por Luis el 26-sep): documentos con que se acepta y se firma. Un cliente
+ *  extranjero no tiene RUT; solo el RUT se valida con dígito verificador. */
+function at_cc_tipos_documento(): array {
+	return ['rut' => 'RUT', 'dni' => 'DNI', 'pasaporte' => 'Pasaporte'];
+}
+
+/** RUT: dígito verificador. DNI y pasaporte: sin espacios, de 5 a 20 letras (sin tilde ni ñ, como en
+ *  los documentos de viaje), dígitos, puntos o guiones. Un tipo desconocido no es válido. */
+function at_cc_documento_valido(string $tipo, string $numero): bool {
+	if ($tipo === 'rut') {
+		return at_cc_rut_valido($numero);
+	}
+	if (!isset(at_cc_tipos_documento()[$tipo])) {
+		return false;
+	}
+	return (bool) preg_match('/^[A-Za-z0-9.\-]{5,20}$/', (string) preg_replace('/\s+/u', '', $numero));
+}
+
+/** Número como se guarda: el RUT con puntos y guion; DNI y pasaporte recortados, en mayúsculas y sin espacios. */
+function at_cc_documento_formato(string $tipo, string $numero): string {
+	if ($tipo === 'rut') {
+		return at_cc_rut_formato($numero);
+	}
+	return strtoupper((string) preg_replace('/\s+/u', '', $numero));
+}
+
+/** Documento como va en el contrato: 'RUT **n**', 'DNI N° **n**' o 'pasaporte N° **n**'; sin número,
+ *  el rótulo con '**_______**'. Tipo vacío o desconocido = RUT (contratos anteriores a la Task 15). */
+function at_cc_documento_texto(string $tipo, string $numero): string {
+	$rotulos = ['rut' => 'RUT', 'dni' => 'DNI N°', 'pasaporte' => 'pasaporte N°'];
+	// Una sola línea de Markdown: sin saltos ni asteriscos que rompan las negritas.
+	$n = trim((string) preg_replace('/\s+/u', ' ', str_replace('*', '', $numero)));
+	return ($rotulos[$tipo] ?? $rotulos['rut']) . ' **' . ($n !== '' ? $n : '_______') . '**';
+}
+
+/** Tipo y número del documento de una respuesta (sus datos o su metadata). Las anteriores a la Task 15
+ *  solo traen 'rut' y cuentan como RUT; un tipo desconocido con número también (como en el contrato).
+ *  Sin número: ['tipo' => '', 'numero' => '']. */
+function at_cc_documento_de_datos(array $d): array {
+	$numero = trim((string) ($d['documento'] ?? ''));
+	$tipo = (string) ($d['tipo_documento'] ?? '');
+	if ($numero === '') {
+		$numero = trim((string) ($d['rut'] ?? ''));
+		$tipo = 'rut';
+	}
+	if ($numero === '') {
+		return ['tipo' => '', 'numero' => ''];
+	}
+	return ['tipo' => isset(at_cc_tipos_documento()[$tipo]) ? $tipo : 'rut', 'numero' => $numero];
+}
+
 /** Teléfono chileno en dígitos con 56 adelante ('+56 9 1234 5678' y '912345678' => '56912345678'). */
 function at_cc_telefono_normalizado(string $t): string {
 	$d = (string) preg_replace('/\D/', '', $t);
@@ -281,7 +332,7 @@ function at_cc_claves_contrato_servicios(): array {
 		'email_cliente', 'telefono_cliente', 'domicilio_cliente', 'propuesta_codigo', 'fecha_propuesta',
 		'fecha_aceptacion', 'canal_aceptacion', 'nombre_proyecto', 'servicios_contratados', 'alcance',
 		'entregables', 'plazo', 'monto_total', 'forma_pago', 'fases_siguientes', 'garantia_meses_servicio',
-		'tipo_cliente', 'aceptante_nombre',
+		'tipo_cliente', 'aceptante_nombre', 'tipo_documento_cliente', 'tipo_documento_representante',
 	];
 }
 
@@ -312,15 +363,23 @@ function at_cc_marcadores_servicios(array $d): array {
 	$siguientes = at_cc_servicios_markdown((array) ($d['filas_siguientes'] ?? []));
 	// Opcional: 'persona' (a su nombre) o 'empresa'. Sin tipo (o desconocido) queda sin elegir.
 	$tipo = (string) ($d['tipo_cliente'] ?? '');
+	// Task 15: tipo de documento de cada número (RUT por defecto). El del representante es el de quien
+	// aceptó; el del cliente queda en RUT hasta saber si es persona natural: entonces ContractService
+	// le copia el tipo y el número de quien aceptó (mismo criterio que con el RUT).
+	$tipos_doc = at_cc_tipos_documento();
+	$doc_cliente = (string) ($d['tipo_documento_cliente'] ?? '');
+	$doc_repr = (string) ($d['tipo_documento_representante'] ?? '');
 	$ph = [
 		'tipo_cliente'                 => in_array($tipo, ['persona', 'empresa'], true) ? $tipo : '',
 		'razon_social_cliente'         => $empresa !== '' ? $empresa : $repr,
+		'tipo_documento_cliente'       => isset($tipos_doc[$doc_cliente]) ? $doc_cliente : 'rut',
 		'rut_cliente'                  => (string) ($d['rut_cliente'] ?? ''),
 		// Inmutable: nombre de quien aceptó, escrito una sola vez aquí y nunca en campos_revision(),
 		// para que ContractService sepa a quién pertenece el contrato aunque representante_cliente_nombre
 		// se borre después en la revisión (ese campo dice «solo si es empresa» y es natural borrarlo).
 		'aceptante_nombre'             => $repr,
 		'representante_cliente_nombre' => $repr,
+		'tipo_documento_representante' => isset($tipos_doc[$doc_repr]) ? $doc_repr : 'rut',
 		'representante_cliente_rut'    => (string) ($d['rut_representante'] ?? ''),
 		'email_cliente'                => (string) ($d['email'] ?? ''),
 		'telefono_cliente'             => (string) ($d['telefono'] ?? ''),
@@ -356,7 +415,7 @@ function at_cc_mensaje_respuesta(string $clave): ?array {
 		'evaluando' => ['ok', 'Gracias por contarnos. Te escribimos pronto para resolver tus dudas.'],
 		'rechazada' => ['ok', 'Gracias por tu respuesta. Si algo cambia, aquí estamos.'],
 		'recibida'  => ['ok', 'Recibimos tu respuesta. Gracias.'],
-		'datos'     => ['aviso', 'Revisa tu nombre y tu RUT, marca lo que aceptas y la casilla «Acepto la propuesta».'],
+		'datos'     => ['aviso', 'Revisa tu nombre y tu documento, marca lo que aceptas y la casilla «Acepto la propuesta».'],
 		'datos_ok'        => ['ok', '¡Listo! Con estos datos preparamos tu contrato.'],
 		'datos_recibidos' => ['ok', 'Recibimos tus datos. Luis los revisa junto con tu contrato.'],
 		'datos_contrato'  => ['aviso', 'Revisa los datos del contrato: la dirección y, si es una empresa, su razón social y un RUT válido.'],

@@ -169,6 +169,14 @@ hr{border:0;border-top:1px solid #e5e9f0;margin:16px 0}
                     <option value="<?= esc_attr($valor) ?>"<?php selected((string) ($ph[$k] ?? ''), (string) $valor); ?>><?= esc_html($texto) ?></option>
                   <?php endforeach; ?>
                 </select>
+              <?php elseif ($campo[1] === 'documento'): ?>
+                <?php // Task 15: RUT, DNI o pasaporte; sin tipo guardado (contratos anteriores) queda RUT. ?>
+                <?php $doc_actual = (string) ($ph[$k] ?? ''); if (!array_key_exists($doc_actual, ContractService::tipos_documento())) $doc_actual = 'rut'; ?>
+                <select name="rev[<?= esc_attr($k) ?>]">
+                  <?php foreach (ContractService::tipos_documento() as $valor => $texto): ?>
+                    <option value="<?= esc_attr($valor) ?>"<?php selected($doc_actual, (string) $valor); ?>><?= esc_html($texto) ?></option>
+                  <?php endforeach; ?>
+                </select>
               <?php elseif ($campo[1] === 'texto'): ?>
                 <textarea name="rev[<?= esc_attr($k) ?>]" rows="4" style="width:100%"><?= esc_textarea($ph[$k] ?? '') ?></textarea>
               <?php else: ?>

@@ -81,6 +81,31 @@ ok(at_cc_telefono_normalizado('912345678') === '56912345678', 'teléfono de 9 d�
 ok(at_cc_telefono_normalizado('56912345678') === '56912345678', 'teléfono ya normalizado');
 ok(at_cc_telefono_normalizado('') === '', 'teléfono vacío');
 
+// Task 15 (aprobada por Luis el 26-sep): tipo de documento RUT, DNI o pasaporte. Solo el RUT se valida
+// con dígito verificador; DNI y pasaporte, por largo y caracteres.
+ok(at_cc_tipos_documento() === ['rut' => 'RUT', 'dni' => 'DNI', 'pasaporte' => 'Pasaporte'], 'T15: tipos de documento');
+ok(at_cc_documento_valido('rut', '11.111.111-1') && at_cc_documento_valido('rut', '10000013k'), 'T15: RUT válido');
+ok(!at_cc_documento_valido('rut', '11.111.111-2') && !at_cc_documento_valido('rut', '12345678'), 'T15: RUT con dígito verificador equivocado no es válido');
+ok(at_cc_documento_valido('dni', '12345678') && at_cc_documento_valido('dni', '12.345.678') && at_cc_documento_valido('dni', ' 12 345 678 '), 'T15: DNI válido (con puntos o espacios)');
+ok(at_cc_documento_valido('pasaporte', 'AB123456') && at_cc_documento_valido('pasaporte', 'x-12.34') && at_cc_documento_valido('pasaporte', '12345'), 'T15: pasaporte válido (letras, dígitos, punto y guion; 5 caracteres)');
+ok(at_cc_documento_valido('pasaporte', str_repeat('A', 20)) && !at_cc_documento_valido('pasaporte', str_repeat('A', 21)), 'T15: pasaporte de 20 caracteres sí, de 21 no');
+ok(!at_cc_documento_valido('pasaporte', 'X12') && !at_cc_documento_valido('dni', '1234') && !at_cc_documento_valido('dni', ''), 'T15: menos de 5 caracteres no es válido');
+ok(!at_cc_documento_valido('dni', '1234#5678') && !at_cc_documento_valido('pasaporte', 'AB/123456') && !at_cc_documento_valido('dni', 'ÑANDÚ1234'), 'T15: caracteres fuera de letras (sin tilde ni ñ, como en los documentos de viaje), dígitos, punto y guion no son válidos');
+ok(!at_cc_documento_valido('cedula', '12345678') && !at_cc_documento_valido('', '11.111.111-1') && !at_cc_documento_valido('RUT', '11.111.111-1'), 'T15: tipo desconocido no es válido');
+ok(at_cc_documento_formato('rut', '111111111') === '11.111.111-1' && at_cc_documento_formato('rut', '10000013k') === '10.000.013-K', 'T15: formato de RUT');
+ok(at_cc_documento_formato('dni', ' 12 345 678 ') === '12345678' && at_cc_documento_formato('pasaporte', ' ab-123.456 ') === 'AB-123.456', 'T15: DNI y pasaporte recortados, en mayúsculas y sin espacios');
+ok(at_cc_documento_texto('rut', '11.111.111-1') === 'RUT **11.111.111-1**', 'T15: texto del contrato con RUT');
+ok(at_cc_documento_texto('dni', '12345678') === 'DNI N° **12345678**', 'T15: texto del contrato con DNI');
+ok(at_cc_documento_texto('pasaporte', 'AB123456') === 'pasaporte N° **AB123456**', 'T15: texto del contrato con pasaporte');
+ok(at_cc_documento_texto('rut', '') === 'RUT **_______**' && at_cc_documento_texto('dni', '') === 'DNI N° **_______**' && at_cc_documento_texto('pasaporte', '  ') === 'pasaporte N° **_______**', 'T15: sin número, el mismo rótulo con _______');
+ok(at_cc_documento_texto('', '11.111.111-1') === 'RUT **11.111.111-1**' && at_cc_documento_texto('cedula', '123') === 'RUT **123**', 'T15: tipo vacío o desconocido cuenta como RUT');
+// Documento de una respuesta: las anteriores a la Task 15 solo traen 'rut' y cuentan como RUT.
+ok(at_cc_documento_de_datos(['tipo_documento' => 'dni', 'documento' => '12345678']) === ['tipo' => 'dni', 'numero' => '12345678'], 'T15: documento de una respuesta con tipo y número');
+ok(at_cc_documento_de_datos(['rut' => '11.111.111-1']) === ['tipo' => 'rut', 'numero' => '11.111.111-1'], 'T15: respuesta vieja con solo RUT cuenta como RUT');
+ok(at_cc_documento_de_datos(['tipo_documento' => 'rut', 'documento' => '11.111.111-1', 'rut' => '11.111.111-1']) === ['tipo' => 'rut', 'numero' => '11.111.111-1'], 'T15: respuesta nueva con RUT');
+ok(at_cc_documento_de_datos([]) === ['tipo' => '', 'numero' => ''] && at_cc_documento_de_datos(['tipo_documento' => 'dni', 'documento' => '', 'rut' => '']) === ['tipo' => '', 'numero' => ''], 'T15: sin número, sin documento');
+ok(at_cc_documento_de_datos(['tipo_documento' => 'cedula', 'documento' => '123456']) === ['tipo' => 'rut', 'numero' => '123456'], 'T15: tipo desconocido con número cuenta como RUT (mismo criterio que el contrato)');
+
 // Payload y filas
 $json = '{"pricing_rows":[{"service":"A","price_label":"$1"}]}';
 ok(at_cc_json_de_payload($json)['pricing_rows'][0]['service'] === 'A', 'JSON normal');
@@ -147,10 +172,19 @@ $m5 = at_cc_marcadores_servicios(['representante' => 'Ana', 'tipo_cliente' => 'o
 ok(($m3['tipo_cliente'] ?? '') === 'persona' && ($m4['tipo_cliente'] ?? '') === 'empresa', 'tipo_cliente persona o empresa pasa al marcador');
 ok(!isset($m5['tipo_cliente']), 'un tipo desconocido no pasa al marcador');
 ok(array_diff(array_keys($m4), at_cc_claves_contrato_servicios()) === [], 'con tipo, solo claves conocidas');
+// Task 15: tipo de documento del cliente y del representante (RUT por defecto).
+ok(in_array('tipo_documento_cliente', at_cc_claves_contrato_servicios(), true) && in_array('tipo_documento_representante', at_cc_claves_contrato_servicios(), true), 'T15: tipo_documento_cliente y tipo_documento_representante son marcadores conocidos');
+ok(($m['tipo_documento_cliente'] ?? '') === 'rut' && ($m['tipo_documento_representante'] ?? '') === 'rut' && ($m2['tipo_documento_representante'] ?? '') === 'rut', 'T15: sin tipo de documento, los dos marcadores son rut');
+$m6 = at_cc_marcadores_servicios(['representante' => 'Ana', 'rut_representante' => '12345678', 'tipo_documento_representante' => 'dni']);
+ok(($m6['tipo_documento_representante'] ?? '') === 'dni' && ($m6['representante_cliente_rut'] ?? '') === '12345678' && ($m6['tipo_documento_cliente'] ?? '') === 'rut', 'T15: DNI de quien aceptó pasa al representante; el del cliente sigue en rut hasta saber si es persona');
+$m7 = at_cc_marcadores_servicios(['representante' => 'Ana', 'tipo_documento_cliente' => 'pasaporte', 'tipo_documento_representante' => 'cedula']);
+ok(($m7['tipo_documento_cliente'] ?? '') === 'pasaporte' && ($m7['tipo_documento_representante'] ?? '') === 'rut', 'T15: un tipo de documento desconocido queda en rut');
+ok(array_diff(array_keys($m6), at_cc_claves_contrato_servicios()) === [] && array_diff(array_keys($m7), at_cc_claves_contrato_servicios()) === [], 'T15: con tipo de documento, solo claves conocidas');
 
 // Mensajes de la página
 ok(at_cc_mensaje_respuesta('aceptada')['tipo'] === 'ok' && at_cc_mensaje_respuesta('datos')['tipo'] === 'aviso' && at_cc_mensaje_respuesta('error')['tipo'] === 'error', 'mensajes');
 ok(at_cc_mensaje_respuesta('inventado') === null, 'mensaje desconocido');
+ok(at_cc_mensaje_respuesta('datos') === ['tipo' => 'aviso', 'texto' => 'Revisa tu nombre y tu documento, marca lo que aceptas y la casilla «Acepto la propuesta».'], 'T15: mensaje datos habla del documento, no del RUT');
 // Task 7 (ajuste): mensajes de «Datos para tu contrato».
 ok(at_cc_mensaje_respuesta('datos_ok') === ['tipo' => 'ok', 'texto' => '¡Listo! Con estos datos preparamos tu contrato.'], 'mensaje datos_ok');
 ok(at_cc_mensaje_respuesta('datos_recibidos') === ['tipo' => 'ok', 'texto' => 'Recibimos tus datos. Luis los revisa junto con tu contrato.'], 'mensaje datos_recibidos');

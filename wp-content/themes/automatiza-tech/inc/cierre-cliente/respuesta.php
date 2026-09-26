@@ -44,7 +44,7 @@ function at_cc_anotar_simple(object $p, string $tipo, string $titulo, string $de
 }
 
 /** Registro de la respuesta en Seguimiento. La descripción es lo que puede ver el cliente (llega a
- *  la línea de tiempo de su portal, «Ver mi portal»): salida, canal, fecha y filas aceptadas. Nombre, RUT, comentario/nota interna y evidencias quedan solo en
+ *  la línea de tiempo de su portal, «Ver mi portal»): salida, canal, fecha y filas aceptadas. Nombre, documento (RUT, DNI o pasaporte), comentario/nota interna y evidencias quedan solo en
  *  metadata (de ahí los leen at_cc_ultima_respuesta y el panel), y attachment_url/attachment_name no
  *  se llenan con la evidencia para que el archivo no aparezca en esa misma línea de tiempo pública. */
 function at_cc_anotar_respuesta(object $p, string $salida, array $d, bool $cambio_estado): int {
@@ -57,9 +57,13 @@ function at_cc_anotar_respuesta(object $p, string $salida, array $d, bool $cambi
 	if (!$cambio_estado) {
 		$lineas[] = '(Sin cambio de estado)';
 	}
+	// Task 15: tipo y número de documento (RUT, DNI o pasaporte); 'rut' se sigue llenando cuando el
+	// documento es un RUT, para lo que ya leía ese campo.
+	$doc = at_cc_documento_de_datos($d);
 	$meta = [
 		'salida' => $salida, 'canal' => (string) ($d['canal'] ?? ''), 'canal_manual' => (string) ($d['canal_manual'] ?? ''),
-		'nombre' => (string) ($d['nombre'] ?? ''), 'rut' => (string) ($d['rut'] ?? ''), 'comentario' => (string) ($d['comentario'] ?? ''), 'filas' => (array) ($d['filas'] ?? []),
+		'nombre' => (string) ($d['nombre'] ?? ''), 'tipo_documento' => $doc['tipo'], 'documento' => $doc['numero'], 'rut' => $doc['tipo'] === 'rut' ? $doc['numero'] : '',
+		'comentario' => (string) ($d['comentario'] ?? ''), 'filas' => (array) ($d['filas'] ?? []),
 		'fecha_declarada' => (string) ($d['fecha'] ?? ''), 'ip' => (string) ($d['ip'] ?? ''), 'ip_reenviada' => (string) ($d['ip_reenviada'] ?? ''), 'agente' => (string) ($d['agente'] ?? ''),
 		'telefono' => (string) ($d['telefono'] ?? ''), 'wamid' => (string) ($d['wamid'] ?? ''),
 		'huella' => at_cc_huella((string) $p->gamma_prompt_text), 'evidencias' => (array) ($d['evidencias'] ?? []),
@@ -98,6 +102,8 @@ function at_cc_ultima_respuesta(int $propuesta_id, ?string $salida = null): ?arr
 		if ($s === '' || ($salida !== null && $s !== $salida)) {
 			continue;
 		}
+		// Task 15: las respuestas anteriores solo guardaban 'rut' y cuentan como RUT.
+		$doc = at_cc_documento_de_datos($m);
 		return [
 			'titulo'     => (string) $f->title,
 			'fecha'      => (string) $f->created_at,
@@ -109,6 +115,8 @@ function at_cc_ultima_respuesta(int $propuesta_id, ?string $salida = null): ?arr
 			'canal_manual'    => (string) ($m['canal_manual'] ?? ''),
 			'nombre'          => (string) ($m['nombre'] ?? ''),
 			'rut'             => (string) ($m['rut'] ?? ''),
+			'tipo_documento'  => $doc['tipo'],
+			'documento'       => $doc['numero'],
 			'fecha_declarada' => (string) ($m['fecha_declarada'] ?? ''),
 		];
 	}
@@ -236,11 +244,14 @@ function at_cc_ejecutar_cierre(object $p, array $d): array {
 	}
 	$contrato_id = null;
 	try {
+		$doc = at_cc_documento_de_datos($d);
 		$contrato = at_cc_crear_contrato_servicios($p, $cli['tech_id'], $filas, [
-			'nombre'      => (string) ($d['nombre'] ?? ''),
-			'rut'         => (string) ($d['rut'] ?? ''),
-			'fecha'       => (string) ($d['fecha'] ?? current_time('mysql')),
-			'canal_texto' => at_cc_canal_texto($d),
+			'nombre'         => (string) ($d['nombre'] ?? ''),
+			'rut'            => (string) ($d['rut'] ?? ''),
+			'tipo_documento' => $doc['tipo'],
+			'documento'      => $doc['numero'],
+			'fecha'          => (string) ($d['fecha'] ?? current_time('mysql')),
+			'canal_texto'    => at_cc_canal_texto($d),
 		]);
 		if (is_wp_error($contrato)) {
 			$avisos[] = 'El contrato no se creó: ' . $contrato->get_error_message();
@@ -307,14 +318,16 @@ function at_cc_completar_cierre(object $p, bool $bienvenida): array {
 		return array_merge($base, ['mensaje' => 'No hay una aceptación registrada en Seguimiento para esta propuesta.']);
 	}
 	$d = [
-		'canal'        => $u['canal'],
-		'canal_manual' => $u['canal_manual'],
-		'nombre'       => $u['nombre'],
-		'rut'          => $u['rut'],
-		'filas'        => $u['filas'],
-		'fecha'        => $u['fecha_declarada'] !== '' ? $u['fecha_declarada'] : $u['fecha'],
-		'bienvenida'   => $bienvenida,
-		'reintento'    => true,
+		'canal'          => $u['canal'],
+		'canal_manual'   => $u['canal_manual'],
+		'nombre'         => $u['nombre'],
+		'rut'            => $u['rut'],
+		'tipo_documento' => $u['tipo_documento'],
+		'documento'      => $u['documento'],
+		'filas'          => $u['filas'],
+		'fecha'          => $u['fecha_declarada'] !== '' ? $u['fecha_declarada'] : $u['fecha'],
+		'bienvenida'     => $bienvenida,
+		'reintento'      => true,
 	];
 	$r = array_merge($base, ['ok' => true, 'mensaje' => 'completado'], at_cc_ejecutar_cierre($p, $d));
 	if (!empty($r['avisos'])) {
@@ -334,10 +347,16 @@ function at_cc_avisar_luis(object $p, string $salida, array $d, array $r): void 
 	$titulos = ['acepta' => 'aceptó la propuesta ✅', 'evalua' => 'la sigue evaluando 🤔', 'rechaza' => 'no aceptó la propuesta ❌'];
 	$quien = trim((string) $p->company_name) !== '' ? (string) $p->company_name : (string) $p->client_name;
 	$lineas = ['Cómo: ' . at_cc_canal_texto($d)];
-	foreach (['nombre' => 'Nombre', 'rut' => 'RUT', 'comentario' => 'Comentario'] as $k => $t) {
-		if (!empty($d[$k])) {
-			$lineas[] = $t . ': ' . $d[$k];
-		}
+	if (!empty($d['nombre'])) {
+		$lineas[] = 'Nombre: ' . $d['nombre'];
+	}
+	// Task 15: «Documento: DNI 12345678» (o «RUT 11.111.111-1», o «Pasaporte …»).
+	$doc = at_cc_documento_de_datos($d);
+	if ($doc['numero'] !== '') {
+		$lineas[] = 'Documento: ' . at_cc_tipos_documento()[$doc['tipo']] . ' ' . $doc['numero'];
+	}
+	if (!empty($d['comentario'])) {
+		$lineas[] = 'Comentario: ' . $d['comentario'];
 	}
 	if (!empty($d['filas'])) {
 		$lineas[] = 'Acepta: ' . implode('; ', array_map(function ($f) { return trim(($f['service'] ?? '') . ' · ' . ($f['price_label'] ?? '')); }, $d['filas']));

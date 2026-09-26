@@ -7,6 +7,9 @@ if (!defined('ABSPATH')) {
 /** Datos del contrato desde la propuesta, lo aceptado y quién aceptó. */
 function at_cc_datos_contrato(object $p, array $filas_aceptadas, array $aceptante): array {
 	$payload = at_cc_json_de_payload((string) $p->gamma_prompt_text) ?? [];
+	// Task 15: documento de quien aceptó (RUT, DNI o pasaporte). Quien llame solo con 'rut' (antes de
+	// la Task 15) sigue funcionando: cuenta como RUT.
+	$doc = at_cc_documento_de_datos($aceptante);
 	$todas = at_cc_filas_de_propuesta($p);
 	$siguientes = array_values(array_filter($todas, function ($f) use ($filas_aceptadas) { return !in_array($f, $filas_aceptadas, true); }));
 	$entregables = [];
@@ -24,7 +27,8 @@ function at_cc_datos_contrato(object $p, array $filas_aceptadas, array $aceptant
 	return [
 		'empresa'           => (string) $p->company_name,
 		'representante'     => trim((string) ($aceptante['nombre'] ?? '')) !== '' ? (string) $aceptante['nombre'] : (string) $p->client_name,
-		'rut_representante' => (string) ($aceptante['rut'] ?? ''),
+		'tipo_documento_representante' => $doc['tipo'] !== '' ? $doc['tipo'] : 'rut',
+		'rut_representante' => $doc['numero'],
 		'email'             => (string) $p->client_email,
 		'telefono'          => (string) $p->phone,
 		'codigo_propuesta'  => (string) $p->unique_link_id,

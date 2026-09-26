@@ -116,13 +116,25 @@ function at_cc_procesar_respuesta_publica(): void {
 		'usuario_id' => get_current_user_id(),
 	];
 	if ($salida === 'acepta') {
-		$rut = sanitize_text_field(wp_unslash($_POST['rut'] ?? ''));
+		// Task 15 (aprobada por Luis el 26-sep): tipo de documento (RUT, DNI o pasaporte) y número; solo
+		// el RUT se valida con dígito verificador. Una página abierta desde antes del cambio manda solo
+		// 'rut': se toma como RUT, para no rebotar a quien ya tenía el formulario abierto.
+		$tipo_doc = sanitize_key(wp_unslash($_POST['tipo_documento'] ?? ''));
+		$documento = trim(sanitize_text_field(wp_unslash($_POST['documento'] ?? '')));
+		if (!isset($_POST['tipo_documento']) && !isset($_POST['documento']) && isset($_POST['rut'])) {
+			$tipo_doc = 'rut';
+			$documento = trim(sanitize_text_field(wp_unslash($_POST['rut'])));
+		}
 		$todas = at_cc_filas_de_propuesta($p);
 		$d['filas'] = at_cc_filas_aceptadas($todas, array_map('sanitize_text_field', (array) wp_unslash($_POST['filas'] ?? [])));
-		if (mb_strlen(trim($d['nombre'])) < 3 || !at_cc_rut_valido($rut) || empty($_POST['acepto']) || ($todas && !$d['filas'])) {
+		if (mb_strlen(trim($d['nombre'])) < 3 || !isset(at_cc_tipos_documento()[$tipo_doc]) || !at_cc_documento_valido($tipo_doc, $documento) || empty($_POST['acepto']) || ($todas && !$d['filas'])) {
 			$volver('datos');
 		}
-		$d['rut'] = at_cc_rut_formato($rut);
+		$d['tipo_documento'] = $tipo_doc;
+		$d['documento'] = at_cc_documento_formato($tipo_doc, $documento);
+		if ($tipo_doc === 'rut') {
+			$d['rut'] = $d['documento']; // Compatibilidad con lo que ya leía 'rut'.
+		}
 	}
 	// T14 ronda 1, hallazgo 2: un cliente con la página abierta desde antes del archivo manda el
 	// formulario. at_cc_registrar_respuesta() la rechaza (redirige al error de siempre), pero el intento
@@ -131,6 +143,8 @@ function at_cc_procesar_respuesta_publica(): void {
 		at_cc_anotar_intento_archivada($p, $salida, 'pagina', [
 			'nombre'     => $d['nombre'],
 			'rut'        => (string) ($d['rut'] ?? ''),
+			'tipo_documento' => (string) ($d['tipo_documento'] ?? ''),
+			'documento'  => (string) ($d['documento'] ?? ''),
 			'comentario' => $d['comentario'],
 			'ip'         => $d['ip'],
 		]);
@@ -196,6 +210,7 @@ function at_cc_guardar_datos_contrato(object $p, array $post): string {
 		}
 		$rut_empresa = at_cc_rut_formato($rut_crudo);
 		$datos['razon_social_cliente'] = $razon;
+		$datos['tipo_documento_cliente'] = 'rut'; // Task 15: una empresa siempre se identifica con RUT.
 		$datos['rut_cliente'] = $rut_empresa;
 	}
 	if (!at_cc_cargar_contract_service()) {
@@ -331,7 +346,8 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 .at-cc-dlg h2{margin:0 0 6px;font-size:19px}
 .at-cc-dlg p{margin:6px 0;font-size:14px;color:#334155}
 .at-cc-dlg label{display:block;margin:12px 0 4px;font-size:14px;font-weight:600}
-.at-cc-dlg input[type=text],.at-cc-dlg textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:15px;font-family:inherit}
+.at-cc-dlg input[type=text],.at-cc-dlg textarea,.at-cc-dlg select{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:15px;font-family:inherit}
+.at-cc-dlg select{background:#fff;color:#0f172a}
 .at-cc-dlg label.at-cc-fila{display:flex;gap:8px;align-items:flex-start;font-weight:400;margin:6px 0}
 .at-cc-dlg .at-cc-acciones{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
 .at-cc-trampa{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
@@ -366,8 +382,14 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 		<?php endif; ?>
 		<label for="at-cc-nombre">Tu nombre completo</label>
 		<input type="text" id="at-cc-nombre" name="nombre" required minlength="3" autocomplete="name" value="<?php echo esc_attr((string) $p->client_name); ?>">
-		<label for="at-cc-rut">Tu RUT</label>
-		<input type="text" id="at-cc-rut" name="rut" required placeholder="12.345.678-9" autocomplete="off">
+		<label for="at-cc-tipo-doc">Tu documento</label>
+		<select id="at-cc-tipo-doc" name="tipo_documento">
+			<?php foreach (at_cc_tipos_documento() as $valor_doc => $texto_doc): ?>
+				<option value="<?php echo esc_attr($valor_doc); ?>"<?php echo $valor_doc === 'rut' ? ' selected' : ''; ?>><?php echo esc_html($texto_doc); ?></option>
+			<?php endforeach; ?>
+		</select>
+		<label for="at-cc-documento">Número de documento</label>
+		<input type="text" id="at-cc-documento" name="documento" required placeholder="12.345.678-9" autocomplete="off">
 		<label class="at-cc-fila"><input type="checkbox" name="acepto" value="1" required> <span>Acepto la propuesta y sus condiciones.</span></label>
 		<div class="at-cc-acciones">
 			<button type="button" class="at-cc-btn at-cc-sec" data-cerrar>Volver</button>

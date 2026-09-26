@@ -100,6 +100,39 @@ $meta3 = json_decode((string) $nota3->metadata, true) ?: [];
 ok(strpos((string) $nota3->description, 'Muebles SpA') === false && strpos((string) $nota3->description, '10.000.013-K') === false && strpos((string) $nota3->description, 'Calle Uno 1') === false, 'empresa completa: la descripción pública (Seguimiento) no lleva razón social, RUT ni dirección');
 ok(($meta3['razon_social'] ?? '') === '[PRUEBA] Muebles SpA' && ($meta3['rut'] ?? '') === '10.000.013-K' && ($meta3['direccion'] ?? '') === 'Calle Uno 1, Ñuñoa', 'empresa completa: razón social, RUT y dirección quedan en metadata');
 
+// ---------- Task 15: persona que aceptó con DNI ----------
+$p10 = crear_propuesta_datos($marca . '-persona-dni', $payload, $creadas);
+$r10 = at_cc_registrar_respuesta($p10, 'acepta', [
+	'canal' => 'pagina', 'nombre' => 'Ana Prueba', 'tipo_documento' => 'dni', 'documento' => '12345678',
+	'filas' => at_cc_filas_aceptadas(at_cc_filas_de_propuesta($p10), [0]), 'fecha' => current_time('mysql'), 'bienvenida' => false,
+]);
+ok($r10['ok'] && $r10['estado'] === 'aceptada' && $r10['contrato_id'], 'T15: aceptación con DNI: aceptada y con contrato');
+$p10 = at_cc_propuesta_por_id($p10->id);
+$ph10_antes = json_decode(ContractService::get_by_id((int) $r10['contrato_id'])->placeholders, true);
+ok(($ph10_antes['tipo_documento_representante'] ?? '') === 'dni' && ($ph10_antes['representante_cliente_rut'] ?? '') === '12345678' && ($ph10_antes['tipo_documento_cliente'] ?? '') === 'rut', 'T15: el contrato nace con el DNI de quien aceptó como documento del representante');
+$clave10 = at_cc_guardar_datos_contrato($p10, ['tipo' => 'persona', 'direccion' => 'Av. Siempre Viva 742, Providencia']);
+ok($clave10 === 'datos_ok', 'T15: persona con DNI + dirección: datos_ok');
+$c10 = ContractService::get_by_id((int) $r10['contrato_id']);
+$ph10 = json_decode($c10->placeholders, true);
+ok(($ph10['tipo_documento_cliente'] ?? '') === 'dni' && ($ph10['rut_cliente'] ?? '') === '12345678' && ($ph10['razon_social_cliente'] ?? '') === 'Ana Prueba', 'T15: persona natural: el contrato toma el tipo y el número de documento de quien aceptó');
+ok(strpos(ContractService::comparecencia_cliente($ph10), '**Ana Prueba** (en adelante "**EL CLIENTE**"), DNI N° **12345678**, correo ') === 0, 'T15: la comparecencia dice «DNI N° **12345678**»');
+ok(ContractService::faltantes($c10) === [], 'T15: con los demás datos del contrato, faltantes() queda vacío');
+$fila_tech_10 = $wpdb->get_row($wpdb->prepare("SELECT tax_id FROM {$tech} WHERE id = %d", (int) $c10->client_id));
+ok($fila_tech_10 && $fila_tech_10->tax_id === '12345678', 'T15: la ficha operativa recibe el número de documento (tax_id acepta RUT, DNI o pasaporte, como el formulario de contacto)');
+
+// ---------- Task 15: empresa cuyo representante aceptó con pasaporte ----------
+$p11 = crear_propuesta_datos($marca . '-empresa-pasaporte', $payload, $creadas);
+$r11 = at_cc_registrar_respuesta($p11, 'acepta', [
+	'canal' => 'pagina', 'nombre' => 'Ana Prueba', 'tipo_documento' => 'pasaporte', 'documento' => 'AB123456',
+	'filas' => at_cc_filas_aceptadas(at_cc_filas_de_propuesta($p11), [0]), 'fecha' => current_time('mysql'), 'bienvenida' => false,
+]);
+$p11 = at_cc_propuesta_por_id($p11->id);
+$clave11 = at_cc_guardar_datos_contrato($p11, ['tipo' => 'empresa', 'direccion' => 'Calle Uno 1, Ñuñoa', 'razon_social' => '[PRUEBA] Muebles SpA', 'rut_empresa' => '10.000.013-K']);
+$ph11 = json_decode(ContractService::get_by_id((int) $r11['contrato_id'])->placeholders, true);
+ok($clave11 === 'datos_ok' && ($ph11['tipo_documento_cliente'] ?? '') === 'rut' && ($ph11['rut_cliente'] ?? '') === '10.000.013-K' && ($ph11['tipo_documento_representante'] ?? '') === 'pasaporte', 'T15: empresa: el cliente queda con RUT y el representante con su pasaporte');
+ok(strpos(ContractService::comparecencia_cliente($ph11), 'RUT **10.000.013-K**, representada por **Ana Prueba**, pasaporte N° **AB123456**, correo') !== false, 'T15: la comparecencia de la empresa: «representada por **Ana Prueba**, pasaporte N° **AB123456**»');
+ok(ContractService::faltantes(ContractService::get_by_id((int) $r11['contrato_id'])) === [], 'T15: empresa con representante con pasaporte: faltantes() vacío');
+
 // ---------- billing_address y tax_id ya poblados: no se pisan (T7 ronda 1, hallazgo 4) ----------
 $p5 = crear_propuesta_datos($marca . '-ficha-poblada', $payload, $creadas);
 $r5 = aceptar_para_prueba($p5);

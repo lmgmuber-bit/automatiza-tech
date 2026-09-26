@@ -138,7 +138,9 @@ correr_r2('aceptar', [
 	'filas' => ['0'], 'bienvenida' => '0',
 ], $admin_id);
 $aviso3 = get_transient('at_cc_aviso_' . $admin_id);
-ok(is_array($aviso3) && ($aviso3['tipo'] ?? '') === 'error' && strpos((string) ($aviso3['texto'] ?? ''), 'RUT no es válido') !== false, 'RUT con dígito verificador equivocado: aviso "El RUT no es válido…"' . (is_array($aviso3) ? ': ' . $aviso3['texto'] : ''));
+// Task 15: el aviso pasa a hablar del documento (RUT, DNI o pasaporte). Este envío trae solo 'rut'
+// (el formulario anterior): se valida como RUT.
+ok(is_array($aviso3) && ($aviso3['tipo'] ?? '') === 'error' && ($aviso3['texto'] ?? '') === 'El documento no es válido: corrígelo o déjalo en blanco.', 'RUT con dígito verificador equivocado: aviso "El documento no es válido…"' . (is_array($aviso3) ? ': ' . $aviso3['texto'] : ''));
 ok(at_cc_propuesta_por_id($prop3->id)->status === 'sent', 'la propuesta NO quedó aceptada con el RUT inválido');
 $filas3 = $wpdb->get_results($wpdb->prepare("SELECT id FROM {$det} WHERE propuesta_id = %d", $prop3->id), ARRAY_A);
 ok(count($filas3) === 0, 'ninguna nota de Seguimiento se creó: el chequeo de RUT corrió antes de registrar');
@@ -153,6 +155,43 @@ correr_r2('aceptar', [
 $aviso3b = get_transient('at_cc_aviso_' . $admin_id);
 ok(is_array($aviso3b) && in_array($aviso3b['tipo'] ?? '', ['ok', 'aviso'], true), 'RUT vacío sigue siendo válido: la aceptación se registra' . (is_array($aviso3b) ? ': tipo=' . $aviso3b['tipo'] . ' ' . implode(' | ', (array) ($aviso3b['detalles'] ?? [])) : ''));
 ok(at_cc_propuesta_por_id($prop3->id)->status === 'aceptada', 'de paso, esta sí quedó aceptada (RUT en blanco es válido)');
+
+// ================= Task 15: aceptación a mano con DNI o pasaporte =================
+// Pasaporte inválido (2 caracteres): se rechaza ANTES de guardar evidencias o registrar nada.
+$prop15x = crear_propuesta_r2($marca, 'sent', $creadas);
+delete_transient('at_cc_aviso_' . $admin_id);
+correr_r2('aceptar', [
+	'action' => 'at_cc_registrar_aceptacion', 'proposal_id' => (string) $prop15x->id, 'canal' => 'whatsapp',
+	'nota' => 'Dijo que sí (prueba T15).', 'nombre' => 'Cliente Prueba', 'tipo_documento' => 'pasaporte', 'documento' => 'AB', 'fecha' => current_time('Y-m-d'),
+	'filas' => ['0'], 'bienvenida' => '0',
+], $admin_id);
+$aviso15x = get_transient('at_cc_aviso_' . $admin_id);
+ok(is_array($aviso15x) && ($aviso15x['tipo'] ?? '') === 'error' && ($aviso15x['texto'] ?? '') === 'El documento no es válido: corrígelo o déjalo en blanco.', 'T15: pasaporte de 2 caracteres: aviso «El documento no es válido: corrígelo o déjalo en blanco.»' . (is_array($aviso15x) ? ': ' . $aviso15x['texto'] : ''));
+ok(at_cc_propuesta_por_id($prop15x->id)->status === 'sent' && (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d", $prop15x->id)) === 0, 'T15: con el documento inválido no se registra nada');
+// Tipo desconocido con número: tampoco.
+delete_transient('at_cc_aviso_' . $admin_id);
+correr_r2('aceptar', [
+	'action' => 'at_cc_registrar_aceptacion', 'proposal_id' => (string) $prop15x->id, 'canal' => 'whatsapp',
+	'nota' => 'Dijo que sí (prueba T15).', 'nombre' => 'Cliente Prueba', 'tipo_documento' => 'cedula', 'documento' => '12345678', 'fecha' => current_time('Y-m-d'),
+	'filas' => ['0'], 'bienvenida' => '0',
+], $admin_id);
+$aviso15y = get_transient('at_cc_aviso_' . $admin_id);
+ok(is_array($aviso15y) && ($aviso15y['texto'] ?? '') === 'El documento no es válido: corrígelo o déjalo en blanco.' && at_cc_propuesta_por_id($prop15x->id)->status === 'sent', 'T15: tipo de documento desconocido: mismo aviso y no se registra');
+// DNI válido: se registra, con el tipo y el número en la metadata y en el contrato.
+$prop15 = crear_propuesta_r2($marca, 'sent', $creadas);
+delete_transient('at_cc_aviso_' . $admin_id);
+correr_r2('aceptar', [
+	'action' => 'at_cc_registrar_aceptacion', 'proposal_id' => (string) $prop15->id, 'canal' => 'whatsapp',
+	'nota' => 'Dijo que sí (prueba T15).', 'nombre' => 'Cliente Prueba', 'tipo_documento' => 'dni', 'documento' => '12.345.678', 'fecha' => current_time('Y-m-d'),
+	'filas' => ['0'], 'bienvenida' => '0',
+], $admin_id);
+$aviso15 = get_transient('at_cc_aviso_' . $admin_id);
+ok(is_array($aviso15) && in_array($aviso15['tipo'] ?? '', ['ok', 'aviso'], true) && at_cc_propuesta_por_id($prop15->id)->status === 'aceptada', 'T15: aceptación a mano con DNI: se registra' . (is_array($aviso15) ? ': ' . $aviso15['texto'] : ''));
+$meta15 = json_decode((string) $wpdb->get_var($wpdb->prepare("SELECT metadata FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente' ORDER BY id DESC LIMIT 1", $prop15->id)), true) ?: [];
+ok(($meta15['tipo_documento'] ?? null) === 'dni' && ($meta15['documento'] ?? null) === '12.345.678' && ($meta15['rut'] ?? null) === '', 'T15: la metadata de la aceptación a mano guarda tipo_documento=dni y el número, sin RUT');
+$c15 = at_cc_contrato_de_propuesta((int) $prop15->id);
+$ph15 = $c15 ? (json_decode((string) $c15->placeholders, true) ?: []) : [];
+ok(($ph15['tipo_documento_representante'] ?? '') === 'dni' && ($ph15['representante_cliente_rut'] ?? '') === '12.345.678', 'T15: el contrato de la aceptación a mano recibe el DNI');
 
 // ================= Hallazgo 4: estado inválido para aceptar a mano =================
 $prop4 = crear_propuesta_r2($marca, 'contracted', $creadas);
@@ -198,10 +237,12 @@ delete_transient('at_cc_aviso_' . $admin_id);
 foreach ($creadas as $pid) {
 	delete_transient('at_cc_pedido_' . $pid);
 }
-$c3 = at_cc_contrato_de_propuesta((int) $prop3->id);
-if ($c3) {
-	@unlink(ContractService::storage_dir() . '/' . $c3->contract_number . '.pdf');
-	$wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE id = %d", $c3->id));
+foreach ([$prop3, $prop15, $prop15x] as $px) {
+	$c3 = at_cc_contrato_de_propuesta((int) $px->id);
+	if ($c3) {
+		@unlink(ContractService::storage_dir() . '/' . $c3->contract_number . '.pdf');
+		$wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE id = %d", $c3->id));
+	}
 }
 $ids = implode(',', array_map('intval', $creadas));
 $emails = $wpdb->get_col("SELECT client_email FROM {$wpdb->prefix}automatiza_propuestas WHERE id IN ({$ids})");

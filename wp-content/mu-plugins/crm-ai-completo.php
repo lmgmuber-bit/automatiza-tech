@@ -4388,6 +4388,11 @@ class AutomatizaTech_CRM_AI {
                 if ($propuesta_id && $wpdb->get_var("SHOW TABLES LIKE '$table_propuestas_details'") == $table_propuestas_details) {
                     $prospect_details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_propuestas_details WHERE propuesta_id = %d", $propuesta_id), ARRAY_A);
                     foreach ($prospect_details as $d) {
+                        // T6 ronda 1, hallazgo 5: aviso interno de un cierre a medias (correo inválido,
+                        // contrato que no se creó, etc.); nunca a la línea de tiempo pública del cliente.
+                        if (($d['detail_type'] ?? '') === 'cierre_incompleto') {
+                            continue;
+                        }
                         $d['source'] = 'prospect';
                         // Prioridad de fecha: completed_date > scheduled_date > created_at
                         if (!empty($d['completed_date'])) {
@@ -7659,12 +7664,19 @@ class AutomatizaTech_CRM_AI {
     }
     
     private function _enviar_correo_bienvenida($cliente_id) {
-        // Cierre de cliente: bienvenida con la lista de arranque (inc/cierre-cliente/bienvenida.php).
-        // Solo clientes: si es prospecto (o no se pudo enviar), sigue la bienvenida de siempre.
-        if (function_exists('at_cc_enviar_bienvenida') && at_cc_enviar_bienvenida((int) $cliente_id)) {
-            return;
-        }
         global $wpdb;
+        // Cierre de cliente: bienvenida con la lista de arranque (inc/cierre-cliente/bienvenida.php).
+        // T6 ronda 1, hallazgo 3: se decide por el tipo del registro en el CRM, nunca por lo que
+        // devuelva at_cc_enviar_bienvenida() — wp_mail() puede volver false porque PHPMailer rechazó
+        // un Bcc aunque el correo principal sí haya llegado, y eso no debe mandar además la
+        // bienvenida antigua (el cliente recibiría dos). Un prospecto sigue con la de siempre.
+        if ($cliente_id && function_exists('at_cc_enviar_bienvenida')) {
+            $tipo_cliente = $wpdb->get_var($wpdb->prepare("SELECT tipo FROM {$this->tabla_clientes} WHERE id = %d", (int) $cliente_id));
+            if ((string) $tipo_cliente === 'cliente') {
+                at_cc_enviar_bienvenida((int) $cliente_id);
+                return;
+            }
+        }
 
         if (!$cliente_id) {
             return;

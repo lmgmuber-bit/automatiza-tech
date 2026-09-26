@@ -31,8 +31,10 @@ function at_cc_enviar_bienvenida(int $crm_id, ?object $p = null, array $filas = 
 			at_cc_email_normalizado((string) $c->email)
 		)) ?: null;
 		if ($p) {
-			$u = at_cc_ultima_respuesta((int) $p->id);
-			$filas = ($u && $u['salida'] === 'acepta') ? (array) ($u['filas'] ?? []) : [];
+			// T6 ronda 1, hallazgo 1: la última con salida 'acepta', ignorando notas simples con el
+			// mismo detail_type (widget de Seguimiento, at_cc_anotar_simple() de las Tasks 10/10b).
+			$u = at_cc_ultima_respuesta((int) $p->id, 'acepta');
+			$filas = $u ? (array) ($u['filas'] ?? []) : [];
 		}
 	}
 	$html = at_cc_bienvenida_html([

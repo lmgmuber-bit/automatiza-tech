@@ -27,6 +27,13 @@ function crear_propuesta(string $marca, string $status, array $payload, array &$
 	return at_cc_propuesta_por_id((int) $wpdb->insert_id);
 }
 $det = $wpdb->prefix . 'automatiza_propuestas_details';
+// T6 ronda 1 (revisión), hallazgo 4: datos bancarios completos por defecto para que el flujo normal
+// de aceptación no traiga el aviso nuevo; el bloque "sin banco" más abajo los vacía a propósito.
+update_option('at_cc_banco', 'Banco de Prueba');
+update_option('at_cc_tipo_cuenta', 'Cuenta Corriente');
+update_option('at_cc_numero_cuenta', '000000000');
+update_option('at_cc_titular', 'AutomatizaTech SpA');
+update_option('at_cc_rut_titular', '11.111.111-1');
 
 // Lectura
 $p = crear_propuesta($marca, 'sent', $payload, $creadas);
@@ -92,7 +99,7 @@ ok(count(array_filter($correos, function ($x) { return $x['to'] === get_option('
 $correos = [];
 $p = at_cc_propuesta_por_id($p->id);
 $filas = at_cc_filas_aceptadas(at_cc_filas_de_propuesta($p), [0]);
-$r = at_cc_registrar_respuesta($p, 'acepta', ['canal' => 'pagina', 'nombre' => 'Ana Prueba', 'rut' => '11.111.111-1', 'filas' => $filas, 'fecha' => current_time('mysql'), 'bienvenida' => true, 'ip' => '127.0.0.1']);
+$r = at_cc_registrar_respuesta($p, 'acepta', ['canal' => 'pagina', 'nombre' => 'Ana Prueba', 'rut' => '11.111.111-1', 'comentario' => 'Nota interna: pidió factura a nombre de la empresa', 'filas' => $filas, 'fecha' => current_time('mysql'), 'bienvenida' => true, 'ip' => '127.0.0.1']);
 ok($r['ok'] && $r['estado'] === 'aceptada' && at_cc_propuesta_por_id($p->id)->status === 'aceptada', 'acepta: propuesta aceptada');
 ok($r['crm_id'] > 0 && $wpdb->get_var($wpdb->prepare("SELECT tipo FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $r['crm_id'])) === 'cliente', 'acepta: pasa a cliente');
 ok(at_cc_tech_de_crm((int) $r['crm_id']) !== null, 'acepta: con ficha operativa enlazada');
@@ -106,6 +113,25 @@ ok($r['avisos'] === [], 'acepta: sin avisos' . ($r['avisos'] ? ': ' . implode(' 
 $u = at_cc_ultima_respuesta((int) $p->id);
 ok($u && $u['salida'] === 'acepta', 'última respuesta es la aceptación');
 
+// T6 ronda 1 (revisión), hallazgo 2: el RUT y la nota interna no van en la descripción (la lee la
+// línea de tiempo pública del cliente, «Ver mi portal», protegida solo por un token calculable);
+// quedan solo en la metadata, que es de donde los lee el panel interno.
+$fila_resp = $wpdb->get_row($wpdb->prepare("SELECT description, metadata FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente' ORDER BY id DESC LIMIT 1", $p->id));
+ok($fila_resp && strpos($fila_resp->description, '11.111.111-1') === false && strpos($fila_resp->description, 'pidió factura') === false && strpos($fila_resp->description, 'Ana Prueba') === false, 'la descripción pública no lleva el RUT, el nombre ni la nota interna');
+ok($fila_resp && strpos($fila_resp->metadata, '11.111.111-1') !== false && strpos($fila_resp->metadata, 'pidió factura') !== false, 'la metadata interna sí lleva el RUT y la nota');
+$fila_resp_cols = $wpdb->get_row($wpdb->prepare("SELECT attachment_url, attachment_name FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente' ORDER BY id DESC LIMIT 1", $p->id));
+ok($fila_resp_cols && $fila_resp_cols->attachment_url === null && $fila_resp_cols->attachment_name === null, 'la fila no llena attachment_url/attachment_name con la evidencia');
+
+// T6 ronda 1 (revisión), hallazgo 1: una nota simple con el mismo detail_type (el widget de
+// Seguimiento o at_cc_anotar_simple(), Tasks 10/10b) no tiene 'salida' en su metadata y no debe
+// tapar la aceptación real al pedir la última respuesta ni al mandar la bienvenida.
+at_cc_anotar_simple($p, 'respuesta_cliente', 'Nota de Luis', 'Sin relación con la aceptación');
+$u_tras_nota = at_cc_ultima_respuesta((int) $p->id);
+ok($u_tras_nota && $u_tras_nota['salida'] === 'acepta' && $u_tras_nota['filas'] === $filas, 'una nota simple posterior no tapa la última aceptación real');
+$correos = [];
+$bienvenida_2 = at_cc_enviar_bienvenida((int) $r['crm_id']);
+ok($bienvenida_2 && count($correos) === 1 && strpos($correos[0]['message'], '$1.000.000') !== false, 'la bienvenida sigue con el anticipo aunque haya una nota simple después');
+
 // Idempotente
 $r2 = at_cc_registrar_respuesta(at_cc_propuesta_por_id($p->id), 'acepta', ['canal' => 'pagina', 'filas' => $filas]);
 ok($r2['ok'] && $r2['mensaje'] === 'ya_aceptada' && (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM " . ContractService::table() . " WHERE proposal_id = %d", $p->id)) === 1, 'aceptar dos veces no repite nada');
@@ -113,6 +139,26 @@ ok($r2['ok'] && $r2['mensaje'] === 'ya_aceptada' && (int) $wpdb->get_var($wpdb->
 // Borrador: no se acepta desde la página
 $b = crear_propuesta($marca, 'borrador', $payload, $creadas);
 ok(!at_cc_registrar_respuesta($b, 'acepta', ['canal' => 'pagina'])['ok'] && at_cc_propuesta_por_id($b->id)->status === 'borrador', 'borrador no se acepta');
+
+// T6 ronda 1 (revisión), hallazgo 5: un paso del cierre que falla (aquí, correo inválido: no se
+// pudo pasar a cliente) queda en Seguimiento además de en el aviso a Luis; antes solo quedaba el
+// registro genérico de "Aceptó la propuesta", sin rastro del fallo.
+$wpdb->insert($wpdb->prefix . 'automatiza_propuestas', [
+	'client_email' => 'correo-invalido-sin-arroba', 'unique_link_id' => substr(md5($marca . '-invalido' . microtime(true)), 0, 12),
+	'client_name' => 'Cliente Prueba', 'company_name' => '[PRUEBA] Muebles', 'phone' => '+56 9 2222 2222',
+	'status' => 'sent', 'flujo' => 'v3', 'gamma_prompt_text' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
+	'transcript_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql'),
+]);
+$creadas[] = (int) $wpdb->insert_id;
+$pi = at_cc_propuesta_por_id((int) $wpdb->insert_id);
+$r_pi = at_cc_registrar_respuesta($pi, 'acepta', ['canal' => 'pagina', 'filas' => at_cc_filas_aceptadas(at_cc_filas_de_propuesta($pi), [0])]);
+ok($r_pi['ok'] && at_cc_propuesta_por_id($pi->id)->status === 'aceptada' && strpos(implode(' | ', $r_pi['avisos']), 'No se pudo pasar a cliente') !== false, 'correo inválido: aceptada con el aviso');
+ok($r_pi['contrato_id'] === null && at_cc_contrato_de_propuesta((int) $pi->id) === null, 'correo inválido: sin contrato');
+ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'cierre_incompleto'", $pi->id)) === 1, 'correo inválido: el fallo queda en Seguimiento');
+$fila_ci = $wpdb->get_row($wpdb->prepare("SELECT description FROM {$det} WHERE propuesta_id = %d AND detail_type = 'cierre_incompleto' LIMIT 1", $pi->id));
+ok($fila_ci && strpos($fila_ci->description, 'No se pudo pasar a cliente') !== false, 'correo inválido: el registro de Seguimiento trae el aviso');
+$r_pi2 = at_cc_registrar_respuesta(at_cc_propuesta_por_id($pi->id), 'acepta', ['canal' => 'pagina']);
+ok($r_pi2['ok'] && $r_pi2['mensaje'] === 'ya_aceptada', 'correo inválido: el reintento no repite nada');
 
 // A mano desde pending, sin bienvenida
 $correos = [];
@@ -124,6 +170,16 @@ ok(count(array_filter($correos, function ($x) { return strpos((string) $x['subje
 $ph_m = json_decode(at_cc_contrato_de_propuesta((int) $m->id)->placeholders, true);
 ok(($ph_m['monto_total'] ?? '') === '$4.500.000' && strpos($ph_m['canal_aceptacion'] ?? '', 'por WhatsApp') === 0, 'a mano: contrato con lo marcado y el canal');
 
+// T6 ronda 1 (revisión), hallazgo 6: la aceptación manual también se ejercita de punta a punta desde
+// 'lista' (antes solo se probaba desde 'pending').
+$correos = [];
+$l = crear_propuesta($marca, 'lista', $payload, $creadas);
+$r_l = at_cc_registrar_respuesta($l, 'acepta', ['canal' => 'manual', 'canal_manual' => 'whatsapp', 'nombre' => 'Cliente Prueba', 'comentario' => 'Dijo que sí por WhatsApp', 'filas' => at_cc_filas_aceptadas(at_cc_filas_de_propuesta($l), [0, 1]), 'fecha' => '2026-09-20 12:00:00', 'bienvenida' => false, 'usuario_id' => 1]);
+ok($r_l['ok'] && at_cc_propuesta_por_id($l->id)->status === 'aceptada', 'a mano desde lista');
+ok(count(array_filter($correos, function ($x) use ($l) { return $x['to'] === $l->client_email; })) === 0, 'a mano desde lista sin bienvenida: no escribe al cliente');
+$ph_l = json_decode(at_cc_contrato_de_propuesta((int) $l->id)->placeholders, true);
+ok(($ph_l['monto_total'] ?? '') === '$4.500.000' && strpos($ph_l['canal_aceptacion'] ?? '', 'por WhatsApp') === 0, 'a mano desde lista: contrato con lo marcado y el canal');
+
 // Pedir respuesta y bienvenida sin banco
 $correos = [];
 $s = crear_propuesta($marca, 'sent', $payload, $creadas);
@@ -131,12 +187,41 @@ ok(at_cc_enviar_pedido_respuesta($s) && strpos($correos[0]['message'], 'Aceptar 
 foreach (['at_cc_banco', 'at_cc_tipo_cuenta', 'at_cc_numero_cuenta', 'at_cc_titular', 'at_cc_rut_titular'] as $o) { delete_option($o); }
 ok(!at_cc_banco_completo(at_cc_datos_banco()), 'sin datos bancarios');
 
+// T6 ronda 1 (revisión), hallazgo 4: si salió la bienvenida y faltan los datos bancarios, el aviso a
+// Luis lo dice (antes: la bienvenida decía «los datos de transferencia van por separado» y Luis no
+// se enteraba de que tenía que mandarlos él mismo).
+$correos = [];
+$sb = crear_propuesta($marca . '-banco', 'sent', $payload, $creadas);
+$r_sb = at_cc_registrar_respuesta($sb, 'acepta', ['canal' => 'pagina', 'nombre' => 'Cliente Sin Banco', 'filas' => at_cc_filas_aceptadas(at_cc_filas_de_propuesta($sb), [0]), 'fecha' => current_time('mysql'), 'bienvenida' => true]);
+ok($r_sb['ok'] && at_cc_propuesta_por_id($sb->id)->status === 'aceptada', 'sin banco: igual queda aceptada');
+ok(in_array('Faltan los datos bancarios (Propuestas › Ajustes del cierre): envíale al cliente los datos de transferencia.', $r_sb['avisos'], true), 'sin banco: el aviso a Luis dice que faltan los datos bancarios' . ($r_sb['avisos'] ? ': ' . implode(' | ', $r_sb['avisos']) : ''));
+ok(count(array_filter($correos, function ($x) use ($sb) { return $x['to'] === $sb->client_email; })) === 1, 'sin banco: la bienvenida igual sale');
+
 // Un prospecto no recibe la bienvenida de cliente
 $antes = count($correos);
 $wpdb->insert($wpdb->prefix . 'crm_clientes', ['nombre' => 'Prospecto Prueba', 'email' => 'prueba-cierre-prospecto@example.com', 'tipo' => 'prospecto']);
 $prospecto = (int) $wpdb->insert_id;
 ok(at_cc_enviar_bienvenida($prospecto) === false && count($correos) === $antes, 'un prospecto no recibe la bienvenida de cliente');
 $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $prospecto));
+
+// T6 ronda 1 (revisión), hallazgo 3: un Bcc rechazado hace que wp_mail() devuelva false aunque el
+// correo principal sí llegó; el controlador (_enviar_correo_bienvenida, disparado por «Convertir a
+// Cliente») decide por el tipo del registro en el CRM, no por ese valor, para no mandar además la
+// bienvenida antigua (el cliente recibiría dos correos de bienvenida).
+$correos = [];
+$correo_bcc = 'prueba-cierre-bcc-rechazado@example.com';
+$wpdb->insert($wpdb->prefix . 'crm_clientes', ['nombre' => 'Cliente Bcc Rechazado', 'email' => $correo_bcc, 'tipo' => 'cliente']);
+$cliente_bcc = (int) $wpdb->insert_id;
+$filtro_bcc_falla = function ($preempt, $atts) use ($correo_bcc) {
+	return $atts['to'] === $correo_bcc ? false : $preempt;
+};
+add_filter('pre_wp_mail', $filtro_bcc_falla, 20, 2);
+$m_bienvenida_ctrl = new ReflectionMethod($GLOBALS['at_crm_ai'], '_enviar_correo_bienvenida');
+$m_bienvenida_ctrl->setAccessible(true);
+$m_bienvenida_ctrl->invoke($GLOBALS['at_crm_ai'], $cliente_bcc);
+remove_filter('pre_wp_mail', $filtro_bcc_falla, 20);
+ok(count($correos) === 1 && strpos((string) $correos[0]['subject'], 'bienvenida') !== false, 'Bcc rechazado en un cliente: no manda además la bienvenida antigua' . ' (correos: ' . count($correos) . ')');
+$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $cliente_bcc));
 
 // Limpieza
 $ids = implode(',', array_map('intval', $creadas));

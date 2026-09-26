@@ -40,35 +40,29 @@ function at_cc_anotar_simple(object $p, string $tipo, string $titulo, string $de
 	return (int) $wpdb->insert_id;
 }
 
-/** Registro de la respuesta en Seguimiento, con todo lo que prueba qué y cómo respondió. */
+/** Registro de la respuesta en Seguimiento. La descripción es lo que puede ver el cliente (llega a
+ *  la línea de tiempo pública de «Ver mi portal», protegida solo por un token calculable): salida,
+ *  canal, fecha y filas aceptadas. Nombre, RUT, comentario/nota interna y evidencias quedan solo en
+ *  metadata (de ahí los leen at_cc_ultima_respuesta y el panel), y attachment_url/attachment_name no
+ *  se llenan con la evidencia para que el archivo no aparezca en esa misma línea de tiempo pública. */
 function at_cc_anotar_respuesta(object $p, string $salida, array $d, bool $cambio_estado): int {
 	global $wpdb;
 	$titulos = ['acepta' => 'Aceptó la propuesta', 'evalua' => 'La sigue evaluando', 'rechaza' => 'No aceptó la propuesta'];
 	$lineas = ['Cómo: ' . at_cc_canal_texto($d)];
-	if (!empty($d['nombre'])) {
-		$lineas[] = 'Nombre: ' . $d['nombre'];
-	}
-	if (!empty($d['rut'])) {
-		$lineas[] = 'RUT: ' . $d['rut'];
-	}
 	if (!empty($d['filas'])) {
 		$lineas[] = 'Acepta: ' . implode('; ', array_map(function ($f) { return trim(($f['service'] ?? '') . ' · ' . ($f['price_label'] ?? '')); }, $d['filas']));
-	}
-	if (!empty($d['comentario'])) {
-		$lineas[] = 'Comentario: ' . $d['comentario'];
 	}
 	if (!$cambio_estado) {
 		$lineas[] = '(Sin cambio de estado)';
 	}
 	$meta = [
 		'salida' => $salida, 'canal' => (string) ($d['canal'] ?? ''), 'canal_manual' => (string) ($d['canal_manual'] ?? ''),
-		'nombre' => (string) ($d['nombre'] ?? ''), 'rut' => (string) ($d['rut'] ?? ''), 'filas' => (array) ($d['filas'] ?? []),
+		'nombre' => (string) ($d['nombre'] ?? ''), 'rut' => (string) ($d['rut'] ?? ''), 'comentario' => (string) ($d['comentario'] ?? ''), 'filas' => (array) ($d['filas'] ?? []),
 		'fecha_declarada' => (string) ($d['fecha'] ?? ''), 'ip' => (string) ($d['ip'] ?? ''), 'agente' => (string) ($d['agente'] ?? ''),
 		'telefono' => (string) ($d['telefono'] ?? ''), 'wamid' => (string) ($d['wamid'] ?? ''),
 		'huella' => at_cc_huella((string) $p->gamma_prompt_text), 'evidencias' => (array) ($d['evidencias'] ?? []),
 		'cambio_estado' => $cambio_estado, 'registrado_por' => (int) ($d['usuario_id'] ?? 0),
 	];
-	$ev = $meta['evidencias'][0] ?? null;
 	$wpdb->insert($wpdb->prefix . 'automatiza_propuestas_details', [
 		'propuesta_id'    => (int) $p->id,
 		'detail_type'     => 'respuesta_cliente',
@@ -76,9 +70,9 @@ function at_cc_anotar_respuesta(object $p, string $salida, array $d, bool $cambi
 		'description'     => implode("\n", $lineas),
 		'status'          => 'completed',
 		'completed_date'  => substr((string) ($d['fecha'] ?? current_time('mysql')), 0, 10),
-		'attachment_url'  => $ev['url'] ?? null,
-		'attachment_name' => $ev['nombre'] ?? null,
-		'attachment_type' => $ev['tipo'] ?? null,
+		'attachment_url'  => null,
+		'attachment_name' => null,
+		'attachment_type' => null,
 		'metadata'        => wp_json_encode($meta, JSON_UNESCAPED_UNICODE),
 		'created_by'      => ((int) ($d['usuario_id'] ?? 0)) ?: null,
 		'created_at'      => current_time('mysql'),
@@ -86,24 +80,31 @@ function at_cc_anotar_respuesta(object $p, string $salida, array $d, bool $cambi
 	return (int) $wpdb->insert_id;
 }
 
-/** Última respuesta del cliente registrada en Seguimiento. */
-function at_cc_ultima_respuesta(int $propuesta_id): ?array {
+/** Última respuesta REAL del cliente registrada en Seguimiento: ignora las notas simples con el
+ *  mismo detail_type (las agrega Luis a mano desde el widget de Seguimiento, o at_cc_anotar_simple()
+ *  en las Tasks 10/10b), que no traen 'salida' en su metadata y no deben tapar la respuesta real. Con
+ *  $salida se exige además que coincida (bienvenida y panel piden la última con salida 'acepta'). */
+function at_cc_ultima_respuesta(int $propuesta_id, ?string $salida = null): ?array {
 	global $wpdb;
-	$f = $wpdb->get_row($wpdb->prepare(
-		"SELECT title, created_at, metadata FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente' ORDER BY id DESC LIMIT 1",
+	$filas = $wpdb->get_results($wpdb->prepare(
+		"SELECT title, created_at, metadata FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente' ORDER BY id DESC",
 		$propuesta_id
 	));
-	if (!$f) {
-		return null;
+	foreach ((array) $filas as $f) {
+		$m = json_decode((string) $f->metadata, true) ?: [];
+		$s = (string) ($m['salida'] ?? '');
+		if ($s === '' || ($salida !== null && $s !== $salida)) {
+			continue;
+		}
+		return [
+			'titulo'     => (string) $f->title,
+			'fecha'      => (string) $f->created_at,
+			'salida'     => $s,
+			'filas'      => (array) ($m['filas'] ?? []),
+			'evidencias' => (array) ($m['evidencias'] ?? []),
+		];
 	}
-	$m = json_decode((string) $f->metadata, true) ?: [];
-	return [
-		'titulo'     => (string) $f->title,
-		'fecha'      => (string) $f->created_at,
-		'salida'     => (string) ($m['salida'] ?? ''),
-		'filas'      => (array) ($m['filas'] ?? []),
-		'evidencias' => (array) ($m['evidencias'] ?? []),
-	];
+	return null;
 }
 
 /** Registra la respuesta y, si acepta, ejecuta el cierre. Idempotente frente a una segunda aceptación. */
@@ -148,6 +149,13 @@ function at_cc_registrar_respuesta(object $p, string $salida, array $d): array {
 	if ($salida === 'acepta') {
 		$r = array_merge($r, at_cc_ejecutar_cierre($p, $d));
 	}
+	if (!empty($r['avisos'])) {
+		// Un paso del cierre falló (p. ej. correo inválido: no se pudo pasar a cliente): además del
+		// correo a Luis (que un canal manual ni manda), queda un rastro en Seguimiento. Tipo propio
+		// para no romper at_cc_ultima_respuesta() ni aparecer en la línea de tiempo pública del
+		// cliente (excluido en crm-ai-completo.php).
+		at_cc_anotar_simple($p, 'cierre_incompleto', 'Cierre incompleto', implode("\n", $r['avisos']));
+	}
 	at_cc_avisar_luis($p, $salida, $d, $r);
 	return $r;
 }
@@ -191,6 +199,8 @@ function at_cc_ejecutar_cierre(object $p, array $d): array {
 		try {
 			if (!at_cc_enviar_bienvenida($cli['crm_id'], $p, $filas)) {
 				$avisos[] = 'El correo de bienvenida no salió (revisa el SMTP).';
+			} elseif (!at_cc_banco_completo(at_cc_datos_banco())) {
+				$avisos[] = 'Faltan los datos bancarios (Propuestas › Ajustes del cierre): envíale al cliente los datos de transferencia.';
 			}
 		} catch (\Throwable $e) {
 			$avisos[] = 'El correo de bienvenida no salió: ' . $e->getMessage();

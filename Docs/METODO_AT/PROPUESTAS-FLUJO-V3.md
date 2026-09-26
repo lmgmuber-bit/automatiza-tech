@@ -145,6 +145,13 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   respaldos/cierre-cliente-antes-20260926-133408.tar.gz`; (3) borrar `inc/cierre-cliente/` y la plantilla nueva. La
   columna `crm_cliente_id` puede quedarse (admite nulos) y el `.htaccess` de contratos conviene dejarlo. El script
   de despliegue y reversión está anotado en la bóveda privada (nota del despliegue del 26-sep).
+- **Segunda subida (26-sep 20:13, tareas 16 y 17, autorizada por Luis):** 5 archivos (`inc/cierre-cliente/ajustes.php`,
+  `bienvenida.php`, `respuesta.php`, `whatsapp.php` y `mu-plugins/crm-ai-completo.php`). El portal y la ficha del CRM leen las notas
+  del cliente por su ficha operativa enlazada (`at_cc_techs_de_crm()`), nunca por el id del CRM; y Ajustes del cierre suma
+  «Correo principal del cierre» (hoy `contacto@automatizatech.cl`) y «Copia oculta», que va en los avisos a Luis, la bienvenida
+  y «Pedir respuesta». Las respuestas de los clientes llegan solo al principal. Respaldo
+  `~/respaldos/cierre-t16-t17-antes-20260926-201327.tar.gz` (rollback: `tar xzf` de ese archivo desde `~` y borrar las
+  opciones `at_cc_correo_avisos` y `at_cc_correo_copia`). Código en PROD: commit `793e995`.
 
 ## Fotos por rubro (regla de Luis, 2026-09-24)
 

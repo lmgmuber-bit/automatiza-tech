@@ -407,7 +407,8 @@ function at_pa_guardar(): string {
                             <br>
                             <a href="' . esc_url($link_demo) . '" class="btn btn-secondary">🤖 Probar Demo Chatbot</a>
                         </div>
-                        
+                        ' . (function_exists('at_cc_bloque_aceptar_html') ? at_cc_bloque_aceptar_html(at_cc_url_respuesta(get_site_url(), (string) $proposal->unique_link_id, 'aceptar'), at_cc_url_respuesta(get_site_url(), (string) $proposal->unique_link_id, 'evaluar')) : '') . '
+
                         ' . (!empty($attachments)
                             ? '<p style="font-size: 14px; color: #666; text-align: center;">Adjunto encontrará también una copia en PDF de la presentación para su archivo.</p>'
                             : '<p style="font-size: 14px; color: #666; text-align: center;">Puede descargar la presentación en PDF desde el botón del final de la presentación.</p>') . '
@@ -455,6 +456,9 @@ function at_pa_guardar(): string {
                     $attachment_msg = ' (sin PDF adjunto)';
                 }
                 $message = '<div class="notice notice-success is-dismissible"><p>Propuesta actualizada y correo enviado a ' . esc_html($to) . esc_html($attachment_msg) . '</p></div>';
+                if (function_exists('at_cc_tras_envio')) {
+                    $message .= at_cc_tras_envio($proposal, !empty($_POST['at_cc_whatsapp']));
+                }
             } else {
                 // Intentar obtener detalles del error (si están disponibles en global $phpmailer)
                 $error_details = '';

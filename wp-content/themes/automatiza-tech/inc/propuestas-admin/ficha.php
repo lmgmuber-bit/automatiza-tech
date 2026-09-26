@@ -234,6 +234,11 @@ function at_pa_render_ficha($p, string $message): void {
               <span>📧 Enviar correo con la propuesta al cliente</span>
             </label>
             <p>Si desmarcas esta opción, solo se guardarán los datos sin enviar el correo.</p>
+            <label style="display:block;margin-top:8px">
+              <input type="checkbox" name="at_cc_whatsapp" value="1" <?php checked(trim((string) $p->phone) !== ''); ?> <?php disabled(trim((string) $p->phone) === ''); ?>>
+              <span>💬 También por WhatsApp (con el enlace para aceptar)</span>
+            </label>
+            <p class="description">El correo lleva el botón «Aceptar la propuesta». El WhatsApp sale desde tu teléfono hasta que Meta apruebe la plantilla con botones.</p>
             <?php if (at_pa_url_pdf_renderer((string) $p->gamma_iframe_url, (string) $p->pdf_path) !== ''): ?>
             <p class="description">Se adjunta el PDF que subas en «Cliente y enlaces»; si no subiste uno, se adjunta el de la presentación (hasta 15 MB). Si pesa más, el correo lleva solo los botones.</p>
             <?php else: ?>

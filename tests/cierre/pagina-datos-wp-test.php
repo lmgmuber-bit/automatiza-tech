@@ -100,6 +100,55 @@ $meta3 = json_decode((string) $nota3->metadata, true) ?: [];
 ok(strpos((string) $nota3->description, 'Muebles SpA') === false && strpos((string) $nota3->description, '10.000.013-K') === false && strpos((string) $nota3->description, 'Calle Uno 1') === false, 'empresa completa: la descripción pública (Seguimiento) no lleva razón social, RUT ni dirección');
 ok(($meta3['razon_social'] ?? '') === '[PRUEBA] Muebles SpA' && ($meta3['rut'] ?? '') === '10.000.013-K' && ($meta3['direccion'] ?? '') === 'Calle Uno 1, Ñuñoa', 'empresa completa: razón social, RUT y dirección quedan en metadata');
 
+// ---------- billing_address y tax_id ya poblados: no se pisan (T7 ronda 1, hallazgo 4) ----------
+$p5 = crear_propuesta_datos($marca . '-ficha-poblada', $payload, $creadas);
+$r5 = aceptar_para_prueba($p5);
+$p5 = at_cc_propuesta_por_id($p5->id);
+$c5 = ContractService::get_by_id((int) $r5['contrato_id']);
+$wpdb->update($tech, ['billing_address' => 'Dirección ya existente 99, Santiago', 'tax_id' => '9.999.999-9'], ['id' => (int) $c5->client_id]);
+$clave5 = at_cc_guardar_datos_contrato($p5, ['tipo' => 'persona', 'direccion' => 'Dirección nueva 100']);
+ok($clave5 === 'datos_ok', 'ficha ya con billing_address y tax_id: datos_ok');
+$fila_tech_5 = $wpdb->get_row($wpdb->prepare("SELECT billing_address, tax_id FROM {$tech} WHERE id = %d", (int) $c5->client_id));
+ok($fila_tech_5 && $fila_tech_5->billing_address === 'Dirección ya existente 99, Santiago', 'ficha ya con billing_address: no se pisa');
+ok($fila_tech_5 && $fila_tech_5->tax_id === '9.999.999-9', 'ficha ya con tax_id: no se pisa');
+
+// ---------- contrato ya firmado (bad_status del servicio): no es un error de validación del cliente (T7 ronda 1, hallazgo 3) ----------
+$p7 = crear_propuesta_datos($marca . '-firmado', $payload, $creadas);
+$r7 = aceptar_para_prueba($p7);
+$p7 = at_cc_propuesta_por_id($p7->id);
+$wpdb->update(ContractService::table(), ['status' => 'signed'], ['id' => (int) $r7['contrato_id']]);
+$ph7_antes = ContractService::get_by_id((int) $r7['contrato_id'])->placeholders;
+$clave7 = at_cc_guardar_datos_contrato($p7, ['tipo' => 'persona', 'direccion' => 'Calle Firmado 7']);
+ok($clave7 === 'datos_recibidos', 'contrato ya firmado (bad_status): datos_recibidos, no el falso aviso de validación "datos_contrato"');
+ok(ContractService::get_by_id((int) $r7['contrato_id'])->placeholders === $ph7_antes, 'contrato ya firmado: el contrato no cambia');
+
+// ---------- FPDF no puede escribir el PDF al guardar los datos: no es un error fatal (T7 ronda 1, hallazgo 2) ----------
+$p8 = crear_propuesta_datos($marca . '-pdf-falla', $payload, $creadas);
+$r8 = aceptar_para_prueba($p8);
+$p8 = at_cc_propuesta_por_id($p8->id);
+$notas_8_antes = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'cierre_incompleto'", $p8->id));
+// Mismo truco que en cierre-wp-test.php (T6 ronda 1, hallazgo 1): la carpeta de contratos es en
+// realidad un archivo, así que FPDF no puede escribir el PDF y ContractService::guardar_marcadores()
+// lanza una excepción.
+$dir_falla_8 = sys_get_temp_dir() . '/at-cc-test-pdf-falla-datos-' . getmypid();
+if (file_exists($dir_falla_8)) { @unlink($dir_falla_8 . '/automatiza-tech-contracts'); @rmdir($dir_falla_8); }
+mkdir($dir_falla_8, 0777, true);
+file_put_contents($dir_falla_8 . '/automatiza-tech-contracts', 'esto no es una carpeta');
+$filtro_pdf_falla_8 = function ($u) use ($dir_falla_8) {
+	$u['basedir'] = $dir_falla_8;
+	$u['baseurl'] = 'http://example.invalid/at-cc-test-pdf-falla-datos';
+	return $u;
+};
+add_filter('upload_dir', $filtro_pdf_falla_8);
+$clave8 = at_cc_guardar_datos_contrato($p8, ['tipo' => 'persona', 'direccion' => 'Calle PDF Falla 8']);
+remove_filter('upload_dir', $filtro_pdf_falla_8);
+@unlink($dir_falla_8 . '/automatiza-tech-contracts');
+@rmdir($dir_falla_8);
+ok($clave8 === 'datos_recibidos', 'PDF falla al guardar los datos: datos_recibidos, sin error fatal');
+ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d AND detail_type = 'cierre_incompleto'", $p8->id)) === $notas_8_antes + 1, 'PDF falla al guardar los datos: queda una nota de cierre_incompleto en Seguimiento');
+$nota8 = $wpdb->get_row($wpdb->prepare("SELECT description FROM {$det} WHERE propuesta_id = %d AND detail_type = 'cierre_incompleto' ORDER BY id DESC LIMIT 1", $p8->id));
+ok($nota8 && strpos((string) $nota8->description, 'datos del contrato') !== false, 'PDF falla al guardar los datos: la nota trae el mensaje de la excepción');
+
 // ---------- con la revisión de Luis ya guardada ----------
 $p4 = crear_propuesta_datos($marca . '-revisado', $payload, $creadas);
 $r4 = aceptar_para_prueba($p4);

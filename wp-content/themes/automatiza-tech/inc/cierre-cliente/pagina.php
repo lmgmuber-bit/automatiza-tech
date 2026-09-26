@@ -9,8 +9,21 @@ add_action('admin_post_at_cc_responder', 'at_cc_procesar_respuesta_publica');
 add_action('admin_post_nopriv_at_cc_datos_contrato', 'at_cc_procesar_datos_contrato_publica');
 add_action('admin_post_at_cc_datos_contrato', 'at_cc_procesar_datos_contrato_publica');
 
+/** IP real del cliente, para la evidencia de la respuesta y para el límite amplio por conexión:
+ *  siempre REMOTE_ADDR, nunca una cabecera que el propio cliente puede mandar. automatizatech.cl está
+ *  detrás del CDN de Hostinger (Server: hcdn), no de Cloudflare: CF-Connecting-IP y X-Forwarded-For no
+ *  vienen de un proxy de confianza, así que cualquiera puede ponerles el valor que quiera y, con uno
+ *  distinto en cada envío, saltarse un límite basado en esas cabeceras y falsificar la IP que queda
+ *  como evidencia de la aceptación (T7 ronda 1, hallazgo 1). */
 function at_cc_ip(): string {
-	foreach (['HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'] as $k) {
+	$ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+	return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : '';
+}
+
+/** Lo que el cliente pudo declarar en CF-Connecting-IP / X-Forwarded-For: puramente informativo (lo
+ *  ve Luis en el panel). Nunca se usa como clave de límite ni como evidencia; ver at_cc_ip(). */
+function at_cc_ip_reenviada(): string {
+	foreach (['HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR'] as $k) {
 		if (empty($_SERVER[$k])) {
 			continue;
 		}
@@ -22,9 +35,26 @@ function at_cc_ip(): string {
 	return '';
 }
 
-/** Límite suave de intentos por IP y acción. */
+/** Límite amplio de intentos por IP real (REMOTE_ADDR) y acción: cubre un ataque que prueba muchos
+ *  códigos de propuesta distintos desde la misma conexión. Por sí solo no basta -varias personas
+ *  pueden compartir una IP real (NAT, red móvil, oficina) y no hay que bloquearlas entre sí para una
+ *  sola propuesta-, así que siempre se usa junto con at_cc_limite_codigo_ok(). */
 function at_cc_limite_ip_ok(string $accion, int $max, int $segundos): bool {
 	$clave = 'at_cc_lim_' . md5($accion . '|' . at_cc_ip());
+	$n = (int) get_transient($clave);
+	if ($n >= $max) {
+		return false;
+	}
+	set_transient($clave, $n + 1, $segundos);
+	return true;
+}
+
+/** Límite de intentos por acción y código de propuesta: no depende de ninguna IP ni cabecera, así que
+ *  cambiar CF-Connecting-IP/X-Forwarded-For entre envíos (o compartir REMOTE_ADDR con otra conexión)
+ *  no lo evita. Es el límite principal contra un mismo código (T7 ronda 1, hallazgo 1); el amplio por
+ *  IP (at_cc_limite_ip_ok) es el respaldo contra un ataque que prueba muchos códigos distintos. */
+function at_cc_limite_codigo_ok(string $accion, string $codigo, int $max, int $segundos): bool {
+	$clave = 'at_cc_lim_cod_' . md5($accion . '|' . $codigo);
 	$n = (int) get_transient($clave);
 	if ($n >= $max) {
 		return false;
@@ -48,7 +78,11 @@ function at_cc_procesar_respuesta_publica(): void {
 	if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'] ?? '')), 'at_cc_responder_' . $codigo)) {
 		$volver('vencida');
 	}
-	if (!at_cc_limite_ip_ok('responder', 10, HOUR_IN_SECONDS)) {
+	// Límite por código (principal, no lo evita cambiar de IP/cabecera) + límite amplio por IP real
+	// (respaldo contra un ataque que prueba muchos códigos): T7 ronda 1, hallazgo 1.
+	$limite_codigo_ok = at_cc_limite_codigo_ok('responder', $codigo, 10, HOUR_IN_SECONDS);
+	$limite_ip_ok = at_cc_limite_ip_ok('responder', 60, HOUR_IN_SECONDS);
+	if (!$limite_codigo_ok || !$limite_ip_ok) {
 		$volver('limite');
 	}
 	$p = at_cc_propuesta_por_codigo($codigo);
@@ -61,6 +95,7 @@ function at_cc_procesar_respuesta_publica(): void {
 		'nombre'     => sanitize_text_field(wp_unslash($_POST['nombre'] ?? '')),
 		'comentario' => sanitize_textarea_field(wp_unslash($_POST['comentario'] ?? '')),
 		'ip'         => at_cc_ip(),
+		'ip_reenviada' => at_cc_ip_reenviada(),
 		'agente'     => mb_substr(sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'] ?? '')), 0, 300),
 		'fecha'      => current_time('mysql'),
 		'bienvenida' => true,
@@ -141,7 +176,20 @@ function at_cc_guardar_datos_contrato(object $p, array $post): string {
 	if (!at_cc_cargar_contract_service()) {
 		return 'recibida';
 	}
-	$r = ContractService::actualizar_datos_cliente((int) $c->id, $datos);
+	try {
+		$r = ContractService::actualizar_datos_cliente((int) $c->id, $datos);
+	} catch (\Throwable $e) {
+		// Igual que at_cc_crear_contrato_servicios(): actualizar_datos_cliente() guarda los
+		// marcadores y recién después regenera el PDF (ContractService::guardar_marcadores()); si
+		// FPDF no puede escribirlo (cuota de disco, permisos), lanza una excepción con los
+		// marcadores ya guardados pero el PDF desactualizado. No se deja escapar -el cliente vería
+		// un error crítico y ni la nota en Seguimiento ni la actualización de la ficha quedarían-,
+		// y queda como 'cierre_incompleto' (mismo tipo que usa at_cc_ejecutar_cierre(), excluido de
+		// la línea de tiempo pública en crm-ai-completo.php) para que Luis revise el PDF (T7 ronda
+		// 1, hallazgo 2).
+		at_cc_anotar_simple($p, 'cierre_incompleto', 'Datos del contrato no se guardaron del todo', 'No se pudo terminar de guardar los datos del contrato: ' . $e->getMessage());
+		return 'datos_recibidos';
+	}
 	// Descripción genérica a propósito: llega a la línea de tiempo pública del cliente (token
 	// calculable, ver crm-ai-completo.php). El tipo, la razón social, el RUT y la dirección solo
 	// debe verlos Luis, así que van en metadata (la lee el panel interno, nunca la vista pública).
@@ -152,7 +200,13 @@ function at_cc_guardar_datos_contrato(object $p, array $post): string {
 	}
 	at_cc_anotar_simple($p, 'respuesta_cliente', 'Datos para el contrato', 'El cliente dejó sus datos para el contrato.', $meta);
 	if (is_wp_error($r)) {
-		return $r->get_error_code() === 'ya_revisado' ? 'datos_recibidos' : 'datos_contrato';
+		// Ninguno de los códigos que el servicio puede devolver a esta altura es un error de
+		// validación del cliente: tipo, dirección y (si aplica) razón social/RUT de empresa ya se
+		// validaron arriba. 'ya_revisado', 'bad_status' (contrato ya firmado), 'bad_type' o
+		// 'not_found' son todos "esto ya no se puede tocar", no "escribiste mal algo": devolver
+		// 'datos_contrato' aquí sería un falso aviso de validación (el cliente creería que se
+		// equivocó y, al recargar, ni siquiera vuelve a ver el botón). T7 ronda 1, hallazgo 3.
+		return 'datos_recibidos';
 	}
 	// Ficha operativa (wp_automatiza_tech_clients): completa solo lo que estaba vacío.
 	$ph = json_decode((string) $r->placeholders, true) ?: [];
@@ -192,7 +246,10 @@ function at_cc_procesar_datos_contrato_publica(): void {
 	if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'] ?? '')), 'at_cc_datos_contrato_' . $codigo)) {
 		$volver('vencida');
 	}
-	if (!at_cc_limite_ip_ok('datos_contrato', 10, HOUR_IN_SECONDS)) {
+	// Mismo esquema de límite que at_cc_procesar_respuesta_publica(): T7 ronda 1, hallazgo 1.
+	$limite_codigo_ok = at_cc_limite_codigo_ok('datos_contrato', $codigo, 10, HOUR_IN_SECONDS);
+	$limite_ip_ok = at_cc_limite_ip_ok('datos_contrato', 60, HOUR_IN_SECONDS);
+	if (!$limite_codigo_ok || !$limite_ip_ok) {
 		$volver('limite');
 	}
 	$p = at_cc_propuesta_por_codigo($codigo);

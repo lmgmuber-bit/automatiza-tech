@@ -61,7 +61,7 @@ function at_cc_anotar_respuesta(object $p, string $salida, array $d, bool $cambi
 	$meta = [
 		'salida' => $salida, 'canal' => (string) ($d['canal'] ?? ''), 'canal_manual' => (string) ($d['canal_manual'] ?? ''),
 		'nombre' => (string) ($d['nombre'] ?? ''), 'rut' => (string) ($d['rut'] ?? ''), 'comentario' => (string) ($d['comentario'] ?? ''), 'filas' => (array) ($d['filas'] ?? []),
-		'fecha_declarada' => (string) ($d['fecha'] ?? ''), 'ip' => (string) ($d['ip'] ?? ''), 'agente' => (string) ($d['agente'] ?? ''),
+		'fecha_declarada' => (string) ($d['fecha'] ?? ''), 'ip' => (string) ($d['ip'] ?? ''), 'ip_reenviada' => (string) ($d['ip_reenviada'] ?? ''), 'agente' => (string) ($d['agente'] ?? ''),
 		'telefono' => (string) ($d['telefono'] ?? ''), 'wamid' => (string) ($d['wamid'] ?? ''),
 		'huella' => at_cc_huella((string) $p->gamma_prompt_text), 'evidencias' => (array) ($d['evidencias'] ?? []),
 		'cambio_estado' => $cambio_estado, 'registrado_por' => (int) ($d['usuario_id'] ?? 0),

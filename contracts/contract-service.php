@@ -47,14 +47,70 @@ class ContractService {
     }
 
     /* ---------- Template ---------- */
+    /** Archivo de plantilla según el id; lo desconocido cae en la de soporte, como antes. */
+    public static function archivo_plantilla($template_id) {
+        $mapa = array('servicios_v1' => 'CONTRATO_SERVICIO_DESARROLLO.md');
+        return $mapa[(string) $template_id] ?? 'CONTRATO_SOPORTE_POSTPROYECTO.md';
+    }
     public static function load_template($template_id = 'soporte_v2') {
+        $archivo = self::archivo_plantilla($template_id);
         $candidates = array(
-            ABSPATH . 'Docs/CONTRATO_SOPORTE_POSTPROYECTO.md',
-            dirname(ABSPATH) . '/Docs/CONTRATO_SOPORTE_POSTPROYECTO.md',
-            dirname(__DIR__) . '/Docs/CONTRATO_SOPORTE_POSTPROYECTO.md',
+            ABSPATH . 'Docs/' . $archivo,
+            dirname(ABSPATH) . '/Docs/' . $archivo,
+            dirname(__DIR__) . '/Docs/' . $archivo,
         );
         foreach ($candidates as $p) if (file_exists($p)) return file_get_contents($p);
         return '';
+    }
+    public static function titulo_por_tipo($type) {
+        if ($type === 'servicios') {
+            return 'CONTRATO DE PRESTACIÓN DE SERVICIOS DE DESARROLLO E IMPLEMENTACIÓN';
+        }
+        return 'CONTRATO DE PRESTACIÓN DE SERVICIOS, CESIÓN DE PROPIEDAD INTELECTUAL Y SOPORTE TÉCNICO POST-PROYECTO';
+    }
+
+    /** Campos que AT ajusta antes de firmar un contrato de servicios: clave => [etiqueta, 'linea'|'texto']. */
+    public static function campos_revision() {
+        return array(
+            'razon_social_cliente'  => array('Cliente (razón social o nombre)', 'linea'),
+            'rut_cliente'           => array('RUT del cliente', 'linea'),
+            'domicilio_cliente'     => array('Domicilio del cliente', 'linea'),
+            'servicios_contratados' => array('Servicios contratados (uno por línea, empezando con «- »)', 'texto'),
+            'alcance'               => array('Alcance', 'texto'),
+            'entregables'           => array('Entregables (uno por línea, empezando con «- »)', 'texto'),
+            'plazo'                 => array('Plazo', 'texto'),
+            'monto_total'           => array('Precio total, IVA incluido', 'linea'),
+            'forma_pago'            => array('Forma de pago', 'texto'),
+        );
+    }
+    /** Un contrato de servicios no se firma hasta que AT guarda su revisión. */
+    public static function necesita_revision($c) {
+        if (!$c || $c->type !== 'servicios') return false;
+        $ph = json_decode($c->placeholders, true) ?: array();
+        return empty($ph['revision_at']);
+    }
+    /** Guarda la revisión de AT (solo antes de firmar) y regenera el PDF. */
+    public static function guardar_revision($contract_id, array $cambios) {
+        global $wpdb;
+        $c = self::get_by_id($contract_id);
+        if (!$c) return new WP_Error('not_found', 'Contrato no encontrado');
+        if (!in_array($c->status, array('draft', 'at_pending'), true)) {
+            return new WP_Error('bad_status', 'El contrato ya fue firmado: no se puede editar.');
+        }
+        $ph = json_decode($c->placeholders, true) ?: array();
+        foreach (self::campos_revision() as $k => $_) {
+            if (array_key_exists($k, $cambios)) {
+                $v = trim((string) $cambios[$k]);
+                if ($v === '') unset($ph[$k]); else $ph[$k] = $v;
+            }
+        }
+        $ph['revision_at'] = current_time('mysql');
+        $wpdb->update(self::table(), array('placeholders' => wp_json_encode($ph, JSON_UNESCAPED_UNICODE)), array('id' => $c->id));
+        $pdf = self::render_pdf($c->id);
+        if ($pdf) {
+            $wpdb->update(self::table(), array('pdf_url' => self::path_to_url($pdf), 'document_hash' => hash_file('sha256', $pdf)), array('id' => $c->id));
+        }
+        return self::get_by_id($c->id);
     }
 
     /* ---------- Defaults compañía ---------- */
@@ -106,7 +162,7 @@ class ContractService {
         $expires_at      = date('Y-m-d H:i:s', strtotime('+' . intval($a['expires_in_days']) . ' days'));
 
         $ph['contract_number']  = $contract_number;
-        $ph['contract_title']   = 'CONTRATO DE PRESTACIÓN DE SERVICIOS, CESIÓN DE PROPIEDAD INTELECTUAL Y SOPORTE TÉCNICO POST-PROYECTO';
+        $ph['contract_title']   = self::titulo_por_tipo($a['type']);
         $ph['fecha_firma_larga']= self::fecha_larga(date('Y-m-d'));
 
         $wpdb->insert(self::table(), array(
@@ -154,6 +210,9 @@ class ContractService {
         if (!$c) return new WP_Error('not_found','Contrato no encontrado');
         if (!in_array($c->status, array('draft','at_pending'))) {
             return new WP_Error('bad_status','El contrato ya fue firmado por AT o por el cliente');
+        }
+        if (self::necesita_revision($c)) {
+            return new WP_Error('sin_revision', 'Guarda la revisión del contrato antes de firmarlo.');
         }
         foreach (array('signer_name','signer_rut','signer_email','method') as $r) {
             if (empty($data[$r])) return new WP_Error('missing_'.$r, "Falta: $r");

@@ -55,6 +55,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             // E4: at_review_token rotated — refresh local $token so PDF iframe still works
             $token = $c->at_review_token;
         }
+    } elseif ($_POST['action'] === 'revisar') {
+        $cambios = array();
+        foreach (ContractService::campos_revision() as $k => $_) {
+            if (isset($_POST['rev'][$k])) {
+                $cambios[$k] = sanitize_textarea_field(wp_unslash($_POST['rev'][$k]));
+            }
+        }
+        $r = ContractService::guardar_revision($c->id, $cambios);
+        if (is_wp_error($r)) { $flash = $r->get_error_message(); $flash_type = 'error'; }
+        else { $flash = 'Revisión guardada y PDF actualizado. Revísalo y firma cuando esté listo.'; $flash_type = 'ok'; $c = $r; }
     } elseif ($_POST['action'] === 'send') {
         $email = sanitize_email($_POST['client_email'] ?? '');
         $name  = sanitize_text_field($_POST['client_name'] ?? '');
@@ -125,13 +135,34 @@ hr{border:0;border-top:1px solid #e5e9f0;margin:16px 0}
   <div class="grid">
     <div class="card">
       <h3 style="margin:0 0 10px 0">📄 Vista previa del contrato</h3>
-      <iframe src="<?= esc_url($pdf_url) ?>?v=<?= time() ?>"></iframe>
+      <iframe src="<?= esc_url(add_query_arg('v', time(), $pdf_url)) ?>"></iframe>
       <p class="muted" style="margin-top:8px">Si modificas placeholders o vuelves a firmar, el PDF se regenera automáticamente.</p>
     </div>
 
     <div class="card">
 
       <?php if (in_array($c->status, array('draft','at_pending'))): ?>
+        <?php if ($c->type === 'servicios'): ?>
+          <h3 style="margin:0 0 6px 0">✏️ Ajustar el contrato</h3>
+          <p class="muted" style="margin:0 0 12px 0">Viene armado con los datos de la propuesta aceptada. Ajusta lo que corresponda a este cliente y guarda: el PDF de la izquierda se regenera. La firma se habilita después de guardar.</p>
+          <form method="post">
+            <?php wp_nonce_field('at_sign_' . $c->id, '_at_nonce'); ?>
+            <input type="hidden" name="action" value="revisar">
+            <?php foreach (ContractService::campos_revision() as $k => $campo): ?>
+              <label><?= esc_html($campo[0]) ?></label>
+              <?php if ($campo[1] === 'texto'): ?>
+                <textarea name="rev[<?= esc_attr($k) ?>]" rows="4" style="width:100%"><?= esc_textarea($ph[$k] ?? '') ?></textarea>
+              <?php else: ?>
+                <input type="text" name="rev[<?= esc_attr($k) ?>]" value="<?= esc_attr($ph[$k] ?? '') ?>">
+              <?php endif; ?>
+            <?php endforeach; ?>
+            <button type="submit">💾 Guardar revisión y regenerar PDF</button>
+          </form>
+          <hr>
+        <?php endif; ?>
+        <?php if (ContractService::necesita_revision($c)): ?>
+          <p class="muted"><strong>Para firmar, primero guarda la revisión.</strong></p>
+        <?php else: ?>
         <h3 style="margin:0 0 6px 0">🖋️ Firmar como representante AT</h3>
         <p class="muted" style="margin:0 0 12px 0">Tu firma se aplicará al contrato y luego podrás enviarlo al cliente.</p>
 
@@ -172,6 +203,7 @@ hr{border:0;border-top:1px solid #e5e9f0;margin:16px 0}
           <button type="submit">✅ Firmar contrato como AT</button>
         </form>
 
+        <?php endif; ?>
       <?php elseif ($c->status === 'at_signed'): ?>
         <h3 style="margin:0 0 6px 0">📤 Enviar al cliente</h3>
         <p class="muted" style="margin:0 0 12px 0">Tu firma ya quedó registrada. Confirma los datos del cliente y envía el contrato.</p>

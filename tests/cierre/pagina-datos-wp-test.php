@@ -209,7 +209,19 @@ ob_start();
 at_cc_render_barra(at_cc_propuesta_por_id($p1->id));
 $html_p1_abre = (string) ob_get_clean();
 unset($_GET['respuesta']);
-ok(strpos($html_p1_abre, '"at-cc-datos"') !== false && strpos($html_p1_abre, 'var inicial = "at-cc-datos"') !== false, 'con respuesta=aceptada el diálogo se abre solo');
+// Task 18 (revisión): $p1 ya tiene dirección, así que tras aceptar el diálogo NO se abre solo (pedía los datos
+// dos veces y, guardado sin mirar, podía pasar a persona un contrato de empresa). El botón sigue para corregir.
+ok(strpos($html_p1_abre, 'var inicial = ""') !== false && strpos($html_p1_abre, 'id="at-cc-datos"') !== false, 'T18: con respuesta=aceptada y el contrato con dirección, el diálogo de datos no se abre solo (el botón sigue)');
+ok(preg_match('/name="tipo"[^>]*checked/', $html_p1_abre) === 0 && substr_count($html_p1_abre, 'data-at-cc-tipo required>') === 2, 'T18: en «Datos para tu contrato» ninguna opción viene marcada y elegir es obligatorio');
+// Aceptada sin dirección (a mano o por WhatsApp): el diálogo sí se abre solo.
+$p5 = crear_propuesta_datos($marca . '-sin-direccion', $payload, $creadas);
+aceptar_para_prueba($p5);
+$_GET['respuesta'] = 'aceptada';
+ob_start();
+at_cc_render_barra(at_cc_propuesta_por_id($p5->id));
+$html_p5_abre = (string) ob_get_clean();
+unset($_GET['respuesta']);
+ok(strpos($html_p5_abre, 'var inicial = "at-cc-datos"') !== false, 'con respuesta=aceptada y el contrato sin dirección, el diálogo se abre solo');
 // Task 18: si «Datos para tu contrato» vuelve por un dato mal escrito, su diálogo se reabre con el aviso adentro.
 $_GET['respuesta'] = 'datos_contrato';
 ob_start();

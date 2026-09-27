@@ -355,8 +355,14 @@ function at_cc_render_barra(object $p): void {
 	$filas = at_cc_filas_de_propuesta($p);
 	$accion = admin_url('admin-post.php');
 	$nonce = wp_create_nonce('at_cc_responder_' . $codigo);
-	$mostrar_datos_contrato = $estado === 'aceptada' && at_cc_contrato_admite_datos_cliente(at_cc_contrato_de_propuesta((int) $p->id));
-	if ($abrir === '' && $mostrar_datos_contrato && $respuesta_clave === 'aceptada') {
+	$c_datos = $estado === 'aceptada' ? at_cc_contrato_de_propuesta((int) $p->id) : null;
+	$mostrar_datos_contrato = $estado === 'aceptada' && at_cc_contrato_admite_datos_cliente($c_datos);
+	// Task 18 (revisión, 27-sep): tras aceptar, «Datos para tu contrato» se abre solo únicamente si al
+	// contrato le falta la dirección (aceptación por WhatsApp o a mano). Si ya la dejó al aceptar, abrirlo
+	// le pedía los datos dos veces y, guardado sin mirar, podía pasar a persona un contrato de empresa.
+	$ph_datos = $c_datos ? (json_decode((string) $c_datos->placeholders, true) ?: []) : [];
+	$contrato_sin_direccion = trim((string) ($ph_datos['domicilio_cliente'] ?? '')) === '';
+	if ($abrir === '' && $mostrar_datos_contrato && $respuesta_clave === 'aceptada' && $contrato_sin_direccion) {
 		$abrir = 'at-cc-datos';
 	}
 	// Task 18: si el formulario volvió por datos que faltan o no son válidos, su diálogo se reabre
@@ -505,8 +511,9 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 		<h2>Datos para tu contrato</h2>
 		<p>Opcional: si nos dejas estos datos ahora, tu contrato llega listo para firmar.</p>
 		<p><strong>¿A nombre de quién va el contrato?</strong></p>
-		<label class="at-cc-fila"><input type="radio" name="tipo" value="persona" data-at-cc-tipo checked> <span>A mi nombre (persona natural)</span></label>
-		<label class="at-cc-fila"><input type="radio" name="tipo" value="empresa" data-at-cc-tipo> <span>De una empresa</span></label>
+		<?php // Task 18 (revisión): sin opción marcada, como al aceptar: guardar sin mirar no cambia el tipo del contrato. ?>
+		<label class="at-cc-fila"><input type="radio" name="tipo" value="persona" data-at-cc-tipo required> <span>A mi nombre (persona natural)</span></label>
+		<label class="at-cc-fila"><input type="radio" name="tipo" value="empresa" data-at-cc-tipo required> <span>De una empresa</span></label>
 		<div data-at-cc-campos-empresa hidden>
 			<label for="at-cc-razon">Razón social de la empresa</label>
 			<input type="text" id="at-cc-razon" name="razon_social" maxlength="200">

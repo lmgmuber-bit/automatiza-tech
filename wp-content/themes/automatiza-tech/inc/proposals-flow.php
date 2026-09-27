@@ -104,7 +104,13 @@ function at_propuesta_agregar_comentario(?string $log_json, string $comentario, 
 	return json_encode($log, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
 
-/** Fotos que pedirá el flujo Final y su costo de lista (Soul 2: US$0,0032 c/u, 2026-09-20). */
+/**
+ * Fotos que pedirá el flujo Final y su costo de lista: Soul 2, US$0,0032 c/u (2026-09-20), más la revisión de texto
+ * de «3 Final» (27-sep): una consulta a GPT-4o con las fotos, ≈ US$0,026 con 9 fotos 16:9 en detail high (tarifa y
+ * conteo de imágenes de la documentación de OpenAI, no medido en una factura; build_3_final.py). 'usd_lista' es lo
+ * esperado (fotos + una revisión); 'usd_max', si hay que rehacerlas por texto (una segunda revisión y cada foto otra
+ * vez). Si cambia el modelo o la tarifa, cambiar los dos lados.
+ */
 function at_propuesta_costo_fotos(array $payload): array {
 	$n = 0;
 	foreach ($payload['image_briefs'] ?? [] as $b) {
@@ -112,7 +118,13 @@ function at_propuesta_costo_fotos(array $payload): array {
 			$n++;
 		}
 	}
-	return ['fotos' => $n, 'usd_lista' => round($n * 0.0032, 4)];
+	$revision = $n > 0 ? 0.026 : 0.0;
+	return [
+		'fotos'        => $n,
+		'usd_lista'    => round($n * 0.0032 + $revision, 4),
+		'usd_revision' => $revision,
+		'usd_max'      => round($n * 0.0032 * 2 + $revision * 2, 4),
+	];
 }
 
 /** Mismos campos obligatorios que renderer/src/schema.js. */

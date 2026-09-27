@@ -880,8 +880,8 @@ function automatiza_tech_proposals_page_clasico() {
                                   <p>
                                     <button type="submit" name="at_v3_accion" value="cambios" class="button">✏️ Pedir cambios (sin costo)</button>
                                     <button type="submit" name="at_v3_accion" value="aprobar" class="button button-primary"
-                                      onclick="return confirm('Se generarán <?php echo (int) $costo['fotos']; ?> fotos (≈ US$<?php echo esc_js(number_format($costo['usd_lista'], 4, ',', '.')); ?> de lista) y la versión final. ¿Aprobar?');">
-                                      ✅ Aprobar y generar versión final (<?php echo (int) $costo['fotos']; ?> fotos ≈ US$<?php echo esc_html(number_format($costo['usd_lista'], 4, ',', '.')); ?>)</button>
+                                      onclick="return confirm('Se generarán <?php echo (int) $costo['fotos']; ?> fotos, se revisará que no tengan texto (≈ US$<?php echo esc_js(number_format($costo['usd_lista'], 4, ',', '.')); ?> de lista; hasta US$<?php echo esc_js(number_format($costo['usd_max'], 4, ',', '.')); ?> si hay que rehacerlas) y la versión final. ¿Aprobar?');">
+                                      ✅ Aprobar y generar versión final (<?php echo (int) $costo['fotos']; ?> fotos + revisión ≈ US$<?php echo esc_html(number_format($costo['usd_lista'], 4, ',', '.')); ?>)</button>
                                     <?php if (in_array($edit_proposal->status, ['ajustando', 'generando'], true)): ?>
                                     <button type="submit" name="at_v3_accion" value="destrabar" class="button"
                                       onclick="return confirm('¿Destrabar esta propuesta? Va a quedar en estado «error» para poder reintentar. No se llama a n8n ni se tocan precios.');">

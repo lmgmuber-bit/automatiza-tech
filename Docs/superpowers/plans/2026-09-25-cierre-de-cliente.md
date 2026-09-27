@@ -3616,7 +3616,7 @@ No se delega: modifica el bot principal de PROD (`WhatsApp Tech - Principal (PRO
 
 ---
 
-## Tareas agregadas después del plan (26-sep, todas EN PROD)
+## Tareas agregadas después del plan (14 a 17 EN PROD el 26-sep; 18 LOCAL)
 
 Sus briefs completos quedaron en el espacio de trabajo local (fuera del repo); aquí queda lo que hace cada una.
 
@@ -3643,7 +3643,9 @@ Sus briefs completos quedaron en el espacio de trabajo local (fuera del repo); a
   `at_cc_datos_contrato_de_post()`, y una sola forma de aplicarlos, `at_cc_aplicar_datos_contrato()` (contrato + ficha operativa,
   solo lo vacío), para los dos formularios y el cierre; si aplicarlos falla, el cierre sigue con un aviso. Los datos van en la
   metadata de la nota de aceptación (`datos_contrato`) y en el correo a Luis, nunca en la descripción. «Datos para tu contrato»
-  se mantiene para las aceptaciones a mano o por WhatsApp y para corregir. Pruebas: `pagina-wp-test.php`,
+  se mantiene para las aceptaciones a mano o por WhatsApp y para corregir; tras aceptar se abre solo únicamente si al contrato le
+  falta la dirección, y sus radios tampoco vienen marcados (commit `ef5b345`: antes venía «persona natural» marcado y, guardado
+  sin mirar, pasaba a persona un contrato de empresa). Pruebas: `pagina-wp-test.php`,
   `pagina-datos-wp-test.php`, `puras-test.php` y `archivo-wp-test.php`. En la misma tanda quedó el arreglo del visor de la
   página de firma del cliente (commit `0765a01`, EN PROD el 27-sep): `sign-contract.php` pegaba `?v=` a una URL que ya tenía
   `?`, el token llegaba roto y el visor decía «Acceso denegado»; ahora usa `add_query_arg()`. Prueba

@@ -103,7 +103,8 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   cliente en la ficha única (`wp_automatiza_tech_clients.crm_cliente_id` enlaza con `wp_crm_clientes`); correo de
   bienvenida; contrato de servicios en borrador (`servicios_v1`) con los datos del contrato ya puestos, y correo
   «Revisar y firmar» a Luis. Después de aceptar, el cliente sigue viendo «Datos para tu contrato» (mismas reglas),
-  que sirve para las aceptaciones a mano o por WhatsApp y para corregir. «La sigo evaluando» y «No, gracias» cambian
+  que sirve para las aceptaciones a mano o por WhatsApp y para corregir; se abre solo únicamente si al contrato le falta
+  la dirección, y a nombre de quién va tampoco viene marcado. «La sigo evaluando» y «No, gracias» cambian
   el estado y avisan a Luis.
 - **Task 18: datos del contrato obligatorios al aceptar en la página (27-sep, LOCAL, rama `claude/cierre-cliente`, sin
   desplegar).** En el primer contrato real el cliente aceptó sin llenar el formulario opcional y hubo que pedirle la

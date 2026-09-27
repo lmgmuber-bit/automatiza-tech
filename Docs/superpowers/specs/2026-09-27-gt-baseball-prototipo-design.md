@@ -70,3 +70,41 @@ cuando el cliente diga qué lleva), ni compartir el Sheet con el cliente sin el 
 Autorizado por Luis el 27-sep: subir `demos/gt-baseball/` a `public_html/demos/gt-baseball/` por SFTP
 (carpeta nueva, sin sobrescribir nada) y crear y activar el flujo nuevo en n8n. Verificar desde afuera
 antes de reportar.
+
+---
+
+## Versión 2 (diseño aprobado por Luis el 27-sep, noche)
+
+La v1 quedó congelada: etiqueta git `gt-baseball-v1`, tar de lo publicado y JSON del flujo en
+`C:\Users\luis_\respaldos\deploy-scripts\2026-09-27-gt-baseball\v1\` y `~/respaldos/gt-baseball-v1-20260927.tar.gz`.
+
+**Lectura de diseño:** portada y formulario de inscripción para apoderados venezolanos que llegan por un QR
+desde el celular; lenguaje deportivo sobrio con el negro y dorado de la marca; HTML/CSS/JS nativos (Hostinger
+estático, sin build). Diales: variación 5, movimiento 4, densidad 4. Skills usadas: `ui-ux-pro-max`
+(instalada para Claude ese día), `design-taste-frontend` (solo portada: la skill excluye formularios de varios
+pasos), `frontend-design` y las guías `harden`, `polish` y `clarify` de impeccable.
+
+**Auditoría medida de la v1 (motivo de cada cambio):** botón principal bajo el pliegue en 360×640 (682 px);
+borde de campos 1,49:1 (mínimo 3:1), placeholder 3,75:1 y pie 4,07:1 (mínimo 4,5:1); subtítulo de 25 palabras;
+validación solo al enviar y errores sin anunciar; en escritorio, columna de celular con los costados vacíos;
+íconos dibujados a mano (WhatsApp no oficial); guiones largos en la edad.
+
+**Cambios:**
+1. Portada: botón visible sin bajar en cualquier teléfono; subtítulo de 20 palabras o menos; «Cómo funciona» y
+   «Qué necesitas a mano» en secciones propias; dos columnas en escritorio con el logo grande (imagen elegida).
+2. Fecha de nacimiento con tres listas (día, mes, año) y control de fechas imposibles.
+3. Foto con «Tomar foto» y «Elegir de la galería», más consejo de encuadre.
+4. Pasos con nombre (Atleta, Contacto, Béisbol, Enviar); validación al salir de cada campo; errores con
+   `aria-invalid`, `aria-describedby` y región `aria-live`.
+5. Borrador en el teléfono (localStorage, con try/catch): se ofrece continuar; se borra al enviar.
+6. Envío con XHR y barra de progreso real; aviso sin conexión, sin perder datos.
+7. Final: «Compartir planilla» (Web Share con archivo, si el teléfono lo permite) y «Descargar planilla».
+8. Tipografía Barlow Condensed + Barlow; íconos Tabler (una familia) y WhatsApp de Simple Icons; contrastes
+   corregidos; transiciones de 250 ms o menos, apagadas con `prefers-reduced-motion`.
+9. Tema oscuro por defecto (marca) y **botón para cambiar a modo claro**, recordado en el teléfono; se aplica
+   antes de pintar para que no parpadee.
+10. **Todo responsivo:** 360, 375, 768, 1024 y 1440 px, en los dos temas; el cartel se ve completo en pantalla.
+11. Planilla PDF: se quitan los caracteres que la fuente del PDF no puede dibujar (emojis).
+
+Se mantienen los nombres de los campos y el formato del envío: el flujo de n8n no cambia.
+Publicación: primero en local con capturas; se sube a PROD solo con el ok de Luis.

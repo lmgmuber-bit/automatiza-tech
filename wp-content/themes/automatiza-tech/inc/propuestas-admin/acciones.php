@@ -464,10 +464,15 @@ function at_pa_guardar(): string {
             $sender_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
             $headers[] = 'From: Automatiza Tech <' . $sender_email . '>';
             // Agregar Reply-To para que el cliente responda al admin real
-            $admin_email = get_option('admin_email');
+            // (26-sep) Igual que los correos del cierre: el correo principal de «Ajustes del cierre».
+            $admin_email = function_exists('at_cc_correo_avisos') ? at_cc_correo_avisos() : get_option('admin_email');
             $headers[] = 'Reply-To: ' . $admin_email;
             // Copia oculta para registro interno
             $headers[] = 'Bcc: automatizacionesbotcore@gmail.com';
+            // Y la copia oculta de «Ajustes del cierre», si hay una y no es el mismo cliente.
+            if (function_exists('at_cc_cabecera_copia')) {
+                $headers = array_merge($headers, at_cc_cabecera_copia((string) $to));
+            }
 
             // Capturar errores de envío
             global $phpmailer;

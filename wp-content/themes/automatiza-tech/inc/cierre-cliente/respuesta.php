@@ -193,7 +193,7 @@ function at_cc_registrar_respuesta(object $p, string $salida, array $d): array {
 	return $r;
 }
 
-/** Cliente oficial, Seguimiento migrado, bienvenida y contrato. Cada paso que falla queda como aviso,
+/** Cliente oficial, Seguimiento migrado, contrato y bienvenida. Cada paso que falla queda como aviso,
  *  incluida una excepción (p. ej. FPDF sin poder escribir el PDF): nunca se deja escapar, o
  *  at_cc_avisar_luis() (que corre justo después, en at_cc_registrar_respuesta) no llegaría a correr.
  *  'avisos' son pasos que realmente fallaron; 'avisos_operativos' son recordatorios de configuración
@@ -238,17 +238,6 @@ function at_cc_ejecutar_cierre(object $p, array $d): array {
 	} catch (\Throwable $e) {
 		$avisos[] = 'No se pudo anotar el historial del CRM: ' . $e->getMessage();
 	}
-	if (!empty($d['bienvenida']) && !($reintento && at_cc_bienvenida_enviada((int) $cli['crm_id']))) {
-		try {
-			if (!at_cc_enviar_bienvenida($cli['crm_id'], $p, $filas)) {
-				$avisos[] = 'El correo de bienvenida no salió (revisa el SMTP).';
-			} elseif (!at_cc_banco_completo(at_cc_datos_banco())) {
-				$avisos_operativos[] = 'Faltan los datos bancarios (Propuestas › Ajustes del cierre): envíale al cliente los datos de transferencia.';
-			}
-		} catch (\Throwable $e) {
-			$avisos[] = 'El correo de bienvenida no salió: ' . $e->getMessage();
-		}
-	}
 	$contrato_id = null;
 	try {
 		$doc = at_cc_documento_de_datos($d);
@@ -290,6 +279,19 @@ function at_cc_ejecutar_cierre(object $p, array $d): array {
 			}
 		} catch (\Throwable $e) {
 			$avisos[] = 'Los datos del contrato que dejó el cliente no se aplicaron del todo (' . $e->getMessage() . '): están en la nota de la aceptación; revisa el contrato y su PDF.';
+		}
+	}
+	// 27-sep: la bienvenida sale al final, con el contrato ya creado y con los datos que dejó el
+	// cliente aplicados: así sabe si falta la dirección y, en ese caso, trae el botón a «Datos para tu contrato».
+	if (!empty($d['bienvenida']) && !($reintento && at_cc_bienvenida_enviada((int) $cli['crm_id']))) {
+		try {
+			if (!at_cc_enviar_bienvenida($cli['crm_id'], $p, $filas)) {
+				$avisos[] = 'El correo de bienvenida no salió (revisa el SMTP).';
+			} elseif (!at_cc_banco_completo(at_cc_datos_banco())) {
+				$avisos_operativos[] = 'Faltan los datos bancarios (Propuestas › Ajustes del cierre): envíale al cliente los datos de transferencia.';
+			}
+		} catch (\Throwable $e) {
+			$avisos[] = 'El correo de bienvenida no salió: ' . $e->getMessage();
 		}
 	}
 	return ['avisos' => $avisos, 'avisos_operativos' => $avisos_operativos, 'crm_id' => $cli['crm_id'], 'contrato_id' => $contrato_id];

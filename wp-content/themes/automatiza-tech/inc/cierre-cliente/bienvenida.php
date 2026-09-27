@@ -55,6 +55,9 @@ function at_cc_enviar_bienvenida(int $crm_id, ?object $p = null, array $filas = 
 		'url_portal'    => function_exists('at_crm_url_portal') ? at_crm_url_portal($crm_id) : '',
 		'logo'          => AT_CC_LOGO,
 		'con_propuesta' => (bool) $p,
+		// 27-sep: si el contrato de la propuesta todavía admite los datos del cliente y le falta la dirección
+		// (aceptó a mano o por WhatsApp), la bienvenida trae el botón a «Datos para tu contrato».
+		'url_datos'     => $p && function_exists('at_cc_url_datos_contrato') ? at_cc_url_datos_contrato($p) : '',
 	]);
 	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
 	$headers = array_merge([

@@ -523,10 +523,12 @@ function at_cc_banco_completo(array $b): bool {
 
 /**
  * Correo de bienvenida con la lista de arranque.
- * $v: nombre, empresa, anticipo (?int), banco (array), correo_pago, whatsapp, url_portal, logo, con_propuesta (bool).
+ * $v: nombre, empresa, anticipo (?int), banco (array), correo_pago, whatsapp, url_portal, logo, con_propuesta (bool),
+ * url_datos (enlace a «Datos para tu contrato» si al contrato le faltan; '' si no).
  */
 function at_cc_bienvenida_html(array $v): string {
 	$h = function ($s) { return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8'); };
+	$url_datos = trim((string) ($v['url_datos'] ?? ''));
 	$nombre = trim((string) ($v['nombre'] ?? ''));
 	$empresa = trim((string) ($v['empresa'] ?? ''));
 	$pasos = [];
@@ -571,7 +573,12 @@ function at_cc_bienvenida_html(array $v): string {
 		. ($portal !== '' ? '<p style="text-align:center;margin:26px 0"><a href="' . $h($portal) . '" style="background:#059669;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:24px;font-weight:bold">Ver mi portal</a></p>'
 			. '<p style="font-size:13px;color:#555">En tu portal vas a ver el avance de tu proyecto y la historia de lo que hemos hecho juntos.</p>' : '')
 		. (!empty($v['con_propuesta'])
-			? '<p>Para preparar tu contrato necesitamos saber a nombre de quién va (tú o tu empresa), el RUT y la dirección. Si ya los completaste en la página de la propuesta, no tienes que hacer nada; si no, respóndenos este correo con esos datos.</p>'
+			? ($url_datos !== ''
+				// 27-sep: quien aceptó a mano o por WhatsApp no dejó esos datos; en vez de pedirle que
+				// responda el correo, el botón lo lleva a «Datos para tu contrato».
+				? '<p>Para preparar tu contrato nos falta saber a nombre de quién va (tú o tu empresa) y tu dirección. Te toma un minuto:</p>'
+					. '<p style="text-align:center;margin:22px 0"><a href="' . $h($url_datos) . '" style="background:#1e40af;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:24px;font-weight:bold">Completar mis datos del contrato</a></p>'
+				: '<p>Para preparar tu contrato necesitamos saber a nombre de quién va (tú o tu empresa), el RUT y la dirección. Si ya los completaste en la página de la propuesta, no tienes que hacer nada; si no, respóndenos este correo con esos datos.</p>')
 			: '')
 		. '<p>Cualquier duda, responde este correo.</p><p>Un abrazo,<br><strong>El equipo de AutomatizaTech</strong></p></div>'
 		. '<div style="background:#f1f1f1;color:#777;text-align:center;font-size:12px;padding:14px">© ' . date('Y') . ' AutomatizaTech · automatizatech.cl</div>'

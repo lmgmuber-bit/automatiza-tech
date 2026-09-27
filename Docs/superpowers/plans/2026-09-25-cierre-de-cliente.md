@@ -3564,7 +3564,7 @@ No se delega: usa el navegador y el servidor local de la tarea 0.
 
 No se delega: usa credenciales, n8n de PROD y la cuenta de Meta.
 
-**Estado al 26-sep:** Step 1 a medias: `propuesta_respuesta` y `propuesta_respuesta_v2` (sin precio) están enviadas a Meta; las dos siguen en revisión y Meta las dejó como MARKETING, aunque la v2 se envió como Utility. Step 2: el flujo n8n «Propuestas v3 · 4 WhatsApp» (`Ex5wZac9VCc66WOm`) está creado e inactivo. Steps 3 a 5 pendientes hasta que Meta responda. Mientras tanto el panel ofrece «Enviar por mi WhatsApp» (`wa.me`).
+**Estado al 27-sep:** Meta aprobó `propuesta_respuesta` y `propuesta_respuesta_v2`, las dos como MARKETING; Luis decidió usar `propuesta_respuesta` (dice lo propuesto). El flujo n8n «Propuestas v3 · 4 WhatsApp» (`Ex5wZac9VCc66WOm`) quedó publicado y activo con esa plantilla (27-sep 00:46) y Luis puso `AT_N8N_CC_WHATSAPP` en el `wp-config.php` de PROD. Primera prueba real (00:48, propuesta de prueba y número de prueba de Luis): Meta aceptó el envío pero no lo entregó, error 131049 (límite por usuario de Marketing). La opción `at_cc_wa_plantilla_activa` quedó en `0` porque el panel diría «enviado» aunque Meta no entregue. Pendiente antes de encenderla: aviso a Luis cuando Meta no entrega, enlace a «Datos para tu contrato» cuando el cliente acepta por WhatsApp, y evaluar una plantilla de Utilidad. Mientras tanto el panel ofrece «Enviar por mi WhatsApp» (`wa.me`).
 
 - [ ] **Step 1:** Con el ok de Luis, crear en Meta la plantilla `propuesta_respuesta` (`es`, categoría Utility, sin emojis en botones): cuerpo con `{{1}}` nombre, `{{2}}` empresa, `{{3}}` lo propuesto; tres respuestas rápidas «Acepto la propuesta», «La sigo evaluando», «No, gracias» y un botón de enlace «Ver la propuesta» con sufijo dinámico al código. Esperar `APPROVED`; si Meta la reclasifica como Marketing, informar a Luis antes de seguir. Las cargas de las respuestas rápidas se definen al enviar: `btn_propuesta_acepta_<código>`, `btn_propuesta_evalua_<código>`, `btn_propuesta_rechaza_<código>`.
 - [ ] **Step 2:** Crear en n8n el flujo «Propuesta · WhatsApp»: webhook con autenticación por cabecera `X-AT-Secret` (credencial con el valor de `AT_REST_SECRET`, que n8n ya usa para llamar a WordPress) → envío de la plantilla con la credencial de WhatsApp de Meta de los recordatorios. Respaldo del JSON en `C:\Users\luis_\respaldos\n8n\`.
@@ -3578,7 +3578,7 @@ No se delega: usa credenciales, n8n de PROD y la cuenta de Meta.
 
 No se delega: modifica el bot principal de PROD (`WhatsApp Tech - Principal (PROD)`, `bBcNlFgBzQ0766Mq`). Aprobada por Luis el 25-sep junto con la Task 12. Se aplica **después** de la Task 13, cuando `at/v1/propuesta-contexto` (Task 10b) ya responde en PROD.
 
-**Estado al 26-sep:** pendiente, se aplica junto con la Task 12. El aplicador y el código de «Sumar Contexto» están listos fuera del repo, sin aplicar; la ruta `at/v1/propuesta-contexto` ya está EN PROD.
+**Estado al 27-sep:** aplicado en el bot principal (00:47): la ruta de los botones `btn_propuesta_*` y el contexto de la propuesta, con respaldo previo del bot; ajustes del bot intactos. Sin probar con un toque real (el mensaje de prueba no se entregó, ver Task 12).
 
 - [ ] **Step 1: Ubicar el punto único** donde se arma el `chatInput` del agente `Agente IA - Tech WhatsApp` (hoy `Merge Data`, `Merge Audio Data` y `Merge Image Data`; confirmar leyendo las conexiones del bot publicado). Respaldo previo del bot fuera del repo (bóveda).
 - [ ] **Step 2: Nodos nuevos entre ese punto y el agente:**
@@ -3616,7 +3616,7 @@ No se delega: modifica el bot principal de PROD (`WhatsApp Tech - Principal (PRO
 
 ---
 
-## Tareas agregadas después del plan (14 a 17 EN PROD el 26-sep; 18 LOCAL)
+## Tareas agregadas después del plan (14 a 17 EN PROD el 26-sep; 18 EN PROD el 26/27-sep)
 
 Sus briefs completos quedaron en el espacio de trabajo local (fuera del repo); aquí queda lo que hace cada una.
 
@@ -3635,7 +3635,7 @@ Sus briefs completos quedaron en el espacio de trabajo local (fuera del repo); a
   los avisos a Luis y es el `Reply-To` de la bienvenida y de «Pedir respuesta»; la copia oculta va en todos esos correos. Vacíos,
   todo queda como antes (correo de administrador de WordPress). Las respuestas de los clientes llegan solo al principal. Prueba
   `tests/cierre/correos-cierre-wp-test.php`.
-- **Task 18: datos del contrato obligatorios al aceptar en la página** (decisión de Luis, 27-sep; LOCAL, sin desplegar). En el
+- **Task 18: datos del contrato obligatorios al aceptar en la página** (decisión de Luis, 26-sep; EN PROD desde el 26-sep 23:59, revisión completa el 27-sep 01:25). En el
   primer contrato real el cliente aceptó sin llenar «Datos para tu contrato» (era opcional y aparte) y hubo que pedirle la
   dirección y el tipo de cliente por privado para firmar. El diálogo «Aceptar la propuesta» pide ahora a nombre de quién va el
   contrato (persona natural o empresa, sin opción marcada), la dirección y, si es empresa, razón social y RUT; faltando algo vuelve
@@ -3649,8 +3649,12 @@ Sus briefs completos quedaron en el espacio de trabajo local (fuera del repo); a
   `pagina-datos-wp-test.php`, `puras-test.php` y `archivo-wp-test.php`. En la misma tanda quedó el arreglo del visor de la
   página de firma del cliente (commit `0765a01`, EN PROD el 27-sep): `sign-contract.php` pegaba `?v=` a una URL que ya tenía
   `?`, el token llegaba roto y el visor decía «Acceso denegado»; ahora usa `add_query_arg()`. Prueba
-  `tests/cierre/firma-cliente-visor-wp-test.php`.
+  `tests/cierre/firma-cliente-visor-wp-test.php`. La revisión completa (commit `2a4940c`) agregó: al rebotar por un dato vuelven 
+  lo escrito y los servicios marcados (`sessionStorage` de la pestaña, probado en Chrome), un contrato creado a medias igual 
+  recibe los datos, un formulario viejo a una propuesta ya aceptada no se queda en «datos», y `fieldset` en las opciones de tipo.
 
 **Despliegues:** Tasks 1 a 15 el 26-sep a las 13:36 (commit `547f08d`); Tasks 16 y 17 a las 20:13 (commit `793e995`). Cotejo del
-26-sep por la noche: los 29 archivos del cierre en PROD son idénticos a esta rama. Detalle, respaldos y rollback en la sección
+26-sep por la noche: los 29 archivos del cierre en PROD eran idénticos a esta rama. Después: visor de firma el 26-sep a las 
+23:31 (`0765a01`), Task 18 con el correo de envío y las firmas del detalle a las 23:59 (`ef5b345`) y la revisión completa 
+con el costo de la versión final el 27-sep a las 01:25 (`211fbd1`). Detalle, respaldos y rollback en la sección
 «Cierre de cliente» de `Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`.

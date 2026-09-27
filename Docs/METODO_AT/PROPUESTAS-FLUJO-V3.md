@@ -87,7 +87,8 @@ Diseño: `Docs/superpowers/specs/2026-09-24-modulo-propuestas-admin-design.md`; 
 ## Cierre de cliente (EN PROD desde el 2026-09-26 13:36)
 
 Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
-`Docs/superpowers/plans/2026-09-25-cierre-de-cliente.md`; rama `claude/cierre-cliente`. Código en PROD: commit `547f08d`.
+`Docs/superpowers/plans/2026-09-25-cierre-de-cliente.md`; rama `claude/cierre-cliente`. Código en PROD: commit `211fbd1`
+(27-sep 01:25; el detalle de cada subida está al final de esta sección).
 
 - **Responder la propuesta.** `ver-presentacion.php` lleva abajo una barra con «Acepto la propuesta», «La sigo
   evaluando» y «No, gracias» mientras la propuesta está `sent` o `evaluando`. Si está `rechazada`, solo ofrece
@@ -106,8 +107,8 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   que sirve para las aceptaciones a mano o por WhatsApp y para corregir; se abre solo únicamente si al contrato le falta
   la dirección, y a nombre de quién va tampoco viene marcado. «La sigo evaluando» y «No, gracias» cambian
   el estado y avisan a Luis.
-- **Task 18: datos del contrato obligatorios al aceptar en la página (27-sep, LOCAL, rama `claude/cierre-cliente`, sin
-  desplegar).** En el primer contrato real el cliente aceptó sin llenar el formulario opcional y hubo que pedirle la
+- **Task 18: datos del contrato obligatorios al aceptar en la página (EN PROD desde el 26-sep 23:59; revisión completa
+  EN PROD el 27-sep 01:25).** En el primer contrato real el cliente aceptó sin llenar el formulario opcional y hubo que pedirle la
   dirección y el tipo de cliente por privado para poder firmar como AT. Ahora el diálogo «Aceptar la propuesta» los
   pide (campos `tipo`, `direccion`, `razon_social`, `rut_empresa`, los mismos del formulario de datos) y los valida con
   una sola función, `at_cc_datos_contrato_de_post()` (`pagina.php`); un formulario abierto desde antes del cambio vuelve
@@ -117,10 +118,18 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   Completar un cierre a medias los vuelve a aplicar si el contrato todavía no tiene dirección. Los datos van en la
   metadata de la nota de aceptación (`datos_contrato`) y en el correo a Luis, nunca en la descripción, que el cliente
   puede ver en su portal. El diálogo se desplaza en el celular (`max-height` con `dvh`). La aceptación a mano y la de
-  WhatsApp no cambian. Archivos para PROD: `inc/cierre-cliente/pagina.php`, `respuesta.php` y `puras.php`, sin
-  migración. Pruebas: `tests/cierre/pagina-wp-test.php`, `pagina-datos-wp-test.php`, `puras-test.php` y
-  `archivo-wp-test.php`.
-- **Visor de la página de firma del cliente (commit `0765a01`, EN PROD el 27-sep según el cierre de esa subida):**
+  WhatsApp no cambian. La revisión completa (27-sep) agregó: si la aceptación rebota por un dato, lo que el cliente
+  escribió y los servicios que marcó vuelven solos (se guardan en su pestaña con `sessionStorage` y se borran al
+  leerlos; antes «¿Qué aceptas?» volvía con solo la primera fila y podía aceptar menos sin notarlo; probado en Chrome);
+  si el contrato quedó creado a medias igual recibe los datos (o el aviso dice dónde quedaron); un formulario viejo
+  enviado a una propuesta ya aceptada o archivada ya no se queda en «datos»; y las opciones de tipo van en un
+  `fieldset`. Sin migración. Pruebas: `tests/cierre/pagina-wp-test.php`, `pagina-datos-wp-test.php`,
+  `puras-test.php` y `archivo-wp-test.php`. Pendiente: probarlo en un celular real.
+- **Correo de envío de la propuesta (EN PROD desde el 26-sep 23:59, commit `35bfc24`):** `acciones.php` y
+  `clasico.php` responden al correo principal del cierre y llevan la copia oculta de «Ajustes del cierre», además de
+  la copia de registro de siempre, igual que los correos del cierre. Prueba `tests/cierre/correo-envio-propuesta-wp-test.php`.
+- **Visor de la página de firma del cliente (commit `0765a01`, EN PROD desde el 26-sep 23:31, verificado con el
+  contrato real que falló: antes «Acceso denegado», después el PDF completo):**
   `contracts/sign-contract.php` pegaba `?v=` a la URL del PDF, que ya traía `?action=…&token=…`; el token llegaba roto y
   el visor decía «Acceso denegado», así que el cliente no podía leer el contrato antes de firmarlo. Ahora usa
   `add_query_arg()`, como la página de revisión de AT. Prueba `tests/cierre/firma-cliente-visor-wp-test.php`.
@@ -140,8 +149,9 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   comparecencia sale según el tipo de cliente y el documento. Luis la ajusta en la revisión de AT
   (`contracts/at-sign-contract.php`) y no se puede firmar con datos esenciales en blanco. Los PDF se bajan por
   `admin-ajax.php?action=at_download_contract` con token o sesión. Las carpetas privadas de contratos y evidencias
-  bloquean el acceso directo (403, verificado al desplegar); por eso las imágenes de firma del detalle de un contrato
-  en el admin ya no se ven (el PDF sí las trae). 🔴 La plantilla sigue marcada «borrador para revisión de un
+  bloquean el acceso directo (403, verificado al desplegar); por eso el detalle de un contrato en el admin incrusta
+  las imágenes de firma leídas en el servidor (`data:` URI, solo archivos de `signatures/` PNG o JPEG; commit `290a4cb`,
+  EN PROD desde el 26-sep 23:59; prueba `tests/cierre/firmas-detalle-admin-wp-test.php`). 🔴 La plantilla sigue marcada «borrador para revisión de un
   abogado»: que un abogado la revise antes del primer contrato de servicios real, y la versión corregida se sube
   también a `domains/automatizatech.cl/Docs/`.
 - **Ajustes del cierre** (Propuestas › Ajustes del cierre): banco, tipo y número de cuenta, titular y su RUT,
@@ -151,10 +161,20 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   interna «Revisar datos bancarios»; el recordatorio llega en el correo a Luis cuando el cliente acepta por la página
   o por WhatsApp, y en el aviso del panel cuando Luis registra la aceptación a mano. Sin correo para el pago, la
   bienvenida pide avisar respondiendo el correo; sin WhatsApp de AT, se usa el número público de AT.
-- **WhatsApp automático: listo pero apagado** hasta la Task 12 del plan. Se enciende con cuatro cosas juntas:
+- **WhatsApp automático: instalado, pero APAGADO a propósito (27-sep).** Se enciende con cuatro cosas juntas:
   plantilla de Meta aprobada, flujo n8n `Ex5wZac9VCc66WOm` activo, constante `AT_N8N_CC_WHATSAPP` en `wp-config.php`
   y opción `at_cc_wa_plantilla_activa` = `1`; además `AT_REST_SECRET` (ya definida en PROD) viaja como `X-AT-Secret`.
-  Mientras tanto el panel ofrece «Enviar por mi WhatsApp». Las rutas `POST /wp-json/at/v1/propuesta-respuesta` y
+  Estado real: Meta aprobó `propuesta_respuesta` y `propuesta_respuesta_v2`, las dos como **Marketing**; el flujo está
+  publicado y activo con `propuesta_respuesta` (la que dice lo propuesto, decisión de Luis; 27-sep 00:46); el bot
+  principal tiene la ruta de los botones y el contexto de la propuesta (00:47); Luis puso la constante en PROD. La
+  primera prueba real (00:48, una propuesta de prueba y el número de prueba de Luis) salió de WordPress y n8n, y Meta
+  la aceptó pero **no la entregó: error 131049**, el límite por usuario de mensajes de Marketing
+  ([Meta](https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/marketing-templates/per-user-limits/):
+  esperar 24 h antes de reintentar). Como el panel diría «WhatsApp enviado» aunque Meta no lo entregue, la opción quedó
+  en `0`. Antes de volver a encenderla: detectar los mensajes que Meta no entrega y avisarle a Luis, que el bot le
+  mande al cliente que acepta por WhatsApp el enlace para dejar los datos del contrato (esa vía no los pide), y
+  evaluar una plantilla de Utilidad (sin ese límite). Respaldos de n8n en
+  `C:/Users/luis_/respaldos/n8n/2026-09-26-wa-plantilla/`. Mientras tanto el panel ofrece «Enviar por mi WhatsApp». Las rutas `POST /wp-json/at/v1/propuesta-respuesta` y
   `/propuesta-contexto` (para el bot) exigen la cabecera `X-AT-Secret` igual a `AT_REST_SECRET`: sin ella responden
   401 (500 si la constante faltara).
 - **Código y pruebas:** `inc/cierre-cliente/` (lo carga `inc/admin-proposals.php` vía `cargar.php`; `puras.php` sin
@@ -175,6 +195,22 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   y «Pedir respuesta». Las respuestas de los clientes llegan solo al principal. Respaldo
   `~/respaldos/cierre-t16-t17-antes-20260926-201327.tar.gz` (rollback: `tar xzf` de ese archivo desde `~` y borrar las
   opciones `at_cc_correo_avisos` y `at_cc_correo_copia`). Código en PROD: commit `793e995`.
+- **Subidas del 26 y 27-sep (noche, con el primer contrato real; autorizadas por Luis):** cada una cotejó PROD por
+  huella, respaldó, subió con `php -l` antes de reemplazar y verificó desde afuera y con el panel como administrador.
+  (1) 26-sep 23:31, visor de firma: `contracts/sign-contract.php`, respaldo
+  `~/respaldos/visor-firma-antes-20260926-233134.tar.gz`. (2) 26-sep 23:59, Task 18 + correo de envío + firmas del
+  detalle: `inc/cierre-cliente/puras.php`, `respuesta.php`, `pagina.php`, `inc/propuestas-admin/acciones.php`,
+  `clasico.php` y `contracts/admin-contracts.php`, respaldo `~/respaldos/cierre-pendientes-antes-20260926-235907.tar.gz`.
+  (3) 27-sep 01:25, revisión completa de la Task 18 y costo de la versión final con la revisión de texto de las
+  fotos: `respuesta.php`, `pagina.php`, `inc/proposals-flow.php`, `ficha.php` y `clasico.php`, respaldo
+  `~/respaldos/cierre-pendientes-antes-20260927-012502.tar.gz`. Rollback de cualquiera: `cd ~ && tar xzf <respaldo>`
+  (en orden inverso si se deshacen varias). El mismo 27-sep `wp-content/debug.log` (74 MB) quedó comprimido en
+  `~/respaldos/debug-log-20260927-042647.log.gz` y vacío; desde afuera responde 403.
+- **Primera propuesta real aceptada (id 53), aceptación anulada el 26-sep 23:59** para que el cliente la repita con el
+  formulario nuevo (decisión de Luis): la propuesta volvió a `sent`, su fila del CRM a prospecto, y se borraron el
+  contrato sin firma del cliente, la ficha operativa creada al aceptar con sus notas copiadas, las dos entradas del
+  historial del CRM y la nota de la aceptación. Quedó una nota interna en Seguimiento y el respaldo completo (filas y
+  archivos) en `~/respaldos/revertir-53-20260926-235947/`.
 
 ## Fotos por rubro (regla de Luis, 2026-09-24)
 

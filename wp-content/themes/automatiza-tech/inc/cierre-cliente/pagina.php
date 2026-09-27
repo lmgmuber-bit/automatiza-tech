@@ -490,6 +490,8 @@ function at_cc_render_barra(object $p): void {
 			. '<div class="at-cc-trampa" aria-hidden="true"><label>Sitio web <input type="text" name="sitio_web" tabindex="-1" autocomplete="off"></label></div>';
 	};
 	$nonce_datos = wp_create_nonce('at_cc_datos_contrato_' . $codigo);
+	// 27-sep: cada diálogo parte con el logo real de AutomatizaTech (el mismo de los correos).
+	$cabecera = '<div class="at-cc-dlg-cab"><img src="' . esc_url(defined('AT_CC_LOGO') ? AT_CC_LOGO : home_url('/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png')) . '" alt="" width="53" height="44"><span>AutomatizaTech</span></div>';
 	$ocultos_datos = '<input type="hidden" name="action" value="at_cc_datos_contrato">'
 		. '<input type="hidden" name="codigo" value="' . esc_attr($codigo) . '">'
 		. '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce_datos) . '">'
@@ -499,24 +501,33 @@ function at_cc_render_barra(object $p): void {
 html,body{height:100%}
 body{display:flex;flex-direction:column}
 body>iframe{flex:1 1 auto;height:auto;min-height:0}
-.at-cc-barra{flex:0 0 auto;background:#0f172a;color:#f8fafc;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:10px 16px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
+/* 27-sep: colores del logo de AutomatizaTech (marino #063f76 del círculo, turquesa #17b7b1 de la flecha, verde #4abc9b de los puntos) y el azul noche de la marca (#0a1628). */
+.at-cc-barra,dialog.at-cc-dlg{--at-marino:#063f76;--at-turquesa:#17b7b1;--at-verde:#4abc9b;--at-noche:#0a1628}
+.at-cc-barra{flex:0 0 auto;background:var(--at-noche);border-top:3px solid var(--at-turquesa);color:#f8fafc;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:10px 16px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
 .at-cc-barra p{margin:0;font-size:15px}
 .at-cc-btn{border:0;border-radius:999px;padding:11px 20px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
-.at-cc-si{background:#10b981;color:#052e16}
-.at-cc-sec{background:#1e293b;color:#e2e8f0;border:1px solid #334155}
+.at-cc-si{background:var(--at-turquesa);color:var(--at-noche)}
+.at-cc-sec{background:transparent;color:#e2e8f0;border:1px solid #2c4f78}
 .at-cc-msg{width:100%;text-align:center;padding:8px 12px;border-radius:8px;font-size:14px}
 .at-cc-msg--ok{background:#064e3b;color:#d1fae5}.at-cc-msg--aviso{background:#78350f;color:#fef3c7}.at-cc-msg--error{background:#7f1d1d;color:#fee2e2}
 dialog.at-cc-dlg{border:0;border-radius:14px;padding:0;max-width:440px;width:calc(100% - 32px);max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#0f172a}
 .at-cc-dlg .at-cc-msg{box-sizing:border-box;margin:0 0 12px;text-align:left}
 .at-cc-dlg .at-cc-grupo{border:0;padding:0;margin:10px 0 0;min-width:0}
-.at-cc-dlg .at-cc-grupo legend{padding:0;margin:0 0 2px;font-size:14px;font-weight:700;color:#334155}
-dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
+.at-cc-dlg .at-cc-grupo legend{padding:0;margin:0 0 2px;font-size:14px;font-weight:700;color:var(--at-marino)}
+dialog.at-cc-dlg::backdrop{background:rgba(10,22,40,.75)}
+.at-cc-dlg-cab{display:flex;align-items:center;gap:10px;padding:16px 22px 12px;border-bottom:4px solid var(--at-turquesa);border-image:linear-gradient(90deg,var(--at-marino),var(--at-turquesa),var(--at-verde)) 1}
+.at-cc-dlg-cab img{height:44px;width:auto;display:block}
+.at-cc-dlg-cab span{font-weight:700;font-size:17px;color:var(--at-marino);letter-spacing:.2px}
 .at-cc-dlg form{padding:22px}
-.at-cc-dlg h2{margin:0 0 6px;font-size:19px}
+.at-cc-dlg h2{margin:0 0 6px;font-size:19px;color:var(--at-marino)}
 .at-cc-dlg p{margin:6px 0;font-size:14px;color:#334155}
 .at-cc-dlg label{display:block;margin:12px 0 4px;font-size:14px;font-weight:600}
 .at-cc-dlg input[type=text],.at-cc-dlg textarea,.at-cc-dlg select{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:15px;font-family:inherit}
 .at-cc-dlg select{background:#fff;color:#0f172a}
+.at-cc-dlg input[type=text]:focus,.at-cc-dlg textarea:focus,.at-cc-dlg select:focus{outline:2px solid var(--at-turquesa);outline-offset:1px;border-color:var(--at-turquesa)}
+.at-cc-dlg input[type=radio],.at-cc-dlg input[type=checkbox]{accent-color:var(--at-marino)}
+.at-cc-dlg .at-cc-si{background:var(--at-marino);color:#fff}
+.at-cc-dlg .at-cc-sec{background:#fff;color:var(--at-marino);border:1px solid #b9c8d8}
 .at-cc-dlg label.at-cc-fila{display:flex;gap:8px;align-items:flex-start;font-weight:400;margin:6px 0}
 .at-cc-dlg .at-cc-acciones{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
 .at-cc-trampa{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
@@ -539,6 +550,7 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 </div>
 <?php if ($estado !== 'aceptada'): ?>
 <dialog class="at-cc-dlg" id="at-cc-acepta">
+	<?php echo $cabecera; ?>
 	<form method="post" action="<?php echo esc_url($accion); ?>">
 		<?php echo $ocultos('acepta'); ?>
 		<?php echo $aviso_dialogo('at-cc-acepta'); ?>
@@ -582,6 +594,7 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 </dialog>
 <?php if ($estado !== 'rechazada'): ?>
 <dialog class="at-cc-dlg" id="at-cc-evalua">
+	<?php echo $cabecera; ?>
 	<form method="post" action="<?php echo esc_url($accion); ?>">
 		<?php echo $ocultos('evalua'); ?>
 		<h2>La sigo evaluando</h2>
@@ -594,6 +607,7 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 	</form>
 </dialog>
 <dialog class="at-cc-dlg" id="at-cc-rechaza">
+	<?php echo $cabecera; ?>
 	<form method="post" action="<?php echo esc_url($accion); ?>">
 		<?php echo $ocultos('rechaza'); ?>
 		<h2>No, gracias</h2>
@@ -609,6 +623,7 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 <?php endif; ?>
 <?php if ($mostrar_datos_contrato): ?>
 <dialog class="at-cc-dlg" id="at-cc-datos">
+	<?php echo $cabecera; ?>
 	<form method="post" action="<?php echo esc_url($accion); ?>">
 		<?php echo $ocultos_datos; ?>
 		<?php echo $aviso_dialogo('at-cc-datos'); ?>

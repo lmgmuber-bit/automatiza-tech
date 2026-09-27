@@ -1,6 +1,6 @@
 # CONTRATO DE PRESTACIÓN DE SERVICIOS, CESIÓN DE PROPIEDAD INTELECTUAL Y SOPORTE TÉCNICO POST-PROYECTO
 
-> **Plantilla legal — versión 2.0 (Chile) — BLINDADA**
+> **Plantilla legal — versión 2.1 (Chile) — BLINDADA**
 > Esta plantilla cubre el **traspaso completo de propiedad** del Proyecto al CLIENTE una vez pagado, la **entrega obligatoria de credenciales y código fuente** en caso de salida hacia otro proveedor, y blinda al PROVEEDOR (AutomatizaTech) frente a uso indebido, modificaciones de terceros, y reclamos de propiedad intelectual sobre componentes preexistentes y `know-how`.
 >
 > **Antes de usar productivamente, validar con asesoría legal.** Las cláusulas marcadas 🛡️ son las de blindaje principal.
@@ -228,6 +228,16 @@ Ambas partes, en adelante e indistintamente, "**LAS PARTES**", acuerdan celebrar
 11.3. EL CLIENTE es **responsable del tratamiento** y declara contar con la base legal y consentimientos necesarios para los datos que carga, almacena o procesa a través del Proyecto. EL CLIENTE indemnizará a EL PROVEEDOR ante cualquier reclamo derivado de la falta de dichos consentimientos o bases legales.
 
 11.4. Al término del Contrato, EL PROVEEDOR devolverá o eliminará los datos personales del CLIENTE dentro de **30 días corridos**, salvo obligación legal de conservación, dejando constancia escrita.
+
+---
+
+## CLÁUSULA UNDÉCIMA BIS — Uso de inteligencia artificial
+
+11A.1. EL PROVEEDOR presta los servicios de este Contrato con su equipo de profesionales, que se apoya en herramientas de inteligencia artificial para tareas como diagnosticar incidentes, escribir y revisar código, redactar documentación y analizar información.
+
+11A.2. Una persona del equipo de EL PROVEEDOR revisa todo lo que se produce con apoyo de esas herramientas antes de aplicarlo en el Proyecto o entregarlo. EL PROVEEDOR responde por ese trabajo en los términos de este Contrato, incluida la limitación de responsabilidad de la cláusula novena, cualquiera sea la herramienta con que se hizo.
+
+11A.3. Al usar esas herramientas, EL PROVEEDOR cumple las cláusulas décima y undécima: ingresa solo la información necesaria para cada tarea y, cuando es posible, sin datos que identifiquen a personas.
 
 ---
 

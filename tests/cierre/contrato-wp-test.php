@@ -139,6 +139,8 @@ ok(($phu['monto_total'] ?? '') === '$1.000' && ($phu['representante_cliente_nomb
 ok(!isset($phu['revision_at']) && !is_wp_error($u) && ContractService::necesita_revision($u), 'no marca la revisión: Luis igual la revisa');
 $txtu = texto_pdf(pdf_de($c2));
 ok(strpos($txtu, 'representada por') !== false && strpos($txtu, 'Negocio SpA') !== false && strpos($txtu, 'con domicilio en Calle Falsa 123, Santiago.') !== false, 'el PDF regenerado trae el párrafo de empresa');
+// 27-sep: la cláusula de uso de inteligencia artificial sale en el PDF, con la garantía corrida a la decimotercera.
+ok(strpos($txtu, 'Uso de inteligencia artificial') !== false && strpos($txtu, '12.1. EL PROVEEDOR ejecuta el Proyecto con su equipo de profesionales') !== false && strpos($txtu, '13.1. EL PROVEEDOR corrige sin costo') !== false, 'el PDF trae la cláusula de inteligencia artificial y la garantía como 13.1');
 $u2 = ContractService::actualizar_datos_cliente($c2->id, ['tipo_cliente' => 'persona', 'domicilio_cliente' => 'Calle Falsa 123, Santiago']);
 $phu2 = is_wp_error($u2) ? [] : json_decode($u2->placeholders, true);
 ok(($phu2['tipo_cliente'] ?? '') === 'persona' && ($phu2['razon_social_cliente'] ?? '') === 'Ana Prueba' && ($phu2['rut_cliente'] ?? '') === '11.111.111-1', 'persona natural: el contrato va a nombre y RUT de quien aceptó, no de la marca');

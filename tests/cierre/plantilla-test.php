@@ -26,7 +26,20 @@ ok($faltan === [], 'usa los datos del acuerdo' . ($faltan ? ': faltan ' . implod
 ok(strpos($cuerpo, '{{comparecencia_cliente}}') !== false, 'el cliente comparece con el párrafo según su tipo');
 ok(strpos($md, 'representada por **{{') === false, 'la plantilla ya no fija «representada por» para todo cliente');
 ok(strpos($md, "\n{{comparecencia_cliente}}\n") !== false && strpos($md, "**Y POR LA OTRA:**\n{{comparecencia_cliente}}") !== false, 'el párrafo del cliente va solo en su línea, después de «Y POR LA OTRA»');
-ok(strpos($md, '14.1. Fases siguientes de la propuesta (precios referenciales que se confirman al iniciar cada una):') !== false, 'cláusula 14.1 con el texto aprobado');
+ok(strpos($md, '15.1. Fases siguientes de la propuesta (precios referenciales que se confirman al iniciar cada una):') !== false, 'cláusula de fases siguientes (15.1 desde la cláusula de IA) con el texto aprobado');
+// 27-sep: cláusula de uso de inteligencia artificial (pedido de Luis), antes de la garantía; las siguientes se corren en uno.
+ok(strpos($md, "## CLÁUSULA DUODÉCIMA — Uso de inteligencia artificial
+
+12.1. EL PROVEEDOR ejecuta el Proyecto con su equipo de profesionales, que se apoya en herramientas de inteligencia artificial") !== false, 'cláusula duodécima: el equipo de profesionales se apoya en inteligencia artificial');
+ok(strpos($md, 'Una persona del equipo de EL PROVEEDOR revisa todo lo que se produce con apoyo de esas herramientas antes de entregarlo') !== false, 'la IA no entrega sola: una persona revisa');
+$titulos = preg_match_all('/^## CLÁUSULA ([A-ZÁÉÍÓÚ]+) —/mu', $md, $tt) ? $tt[1] : [];
+ok($titulos === ['PRIMERA', 'SEGUNDA', 'TERCERA', 'CUARTA', 'QUINTA', 'SEXTA', 'SÉPTIMA', 'OCTAVA', 'NOVENA', 'DÉCIMA', 'UNDÉCIMA', 'DUODÉCIMA', 'DECIMOTERCERA', 'DECIMOCUARTA', 'DECIMOQUINTA', 'DECIMOSEXTA', 'DECIMOSÉPTIMA'], 'las cláusulas van en orden y sin saltos: ' . implode(', ', $titulos));
+foreach ([12 => 'DUODÉCIMA', 13 => 'DECIMOTERCERA', 14 => 'DECIMOCUARTA', 15 => 'DECIMOQUINTA', 16 => 'DECIMOSEXTA', 17 => 'DECIMOSÉPTIMA'] as $n => $t) {
+	ok(preg_match('/^## CLÁUSULA ' . $t . ' —[^
+]*
+
+' . $n . '\.1\. /mu', $md) === 1, "la cláusula $t numera sus párrafos como $n.x");
+}
 ok(strpos($md, 'La propuesta incluye además las siguientes fases') === false, 'la 14.1 vieja ya no está');
 $nota = '> Nota para la revisión legal: si EL CLIENTE es persona natural, revisar la aplicación de la Ley 19.496 (y de la Ley 20.416 para micro y pequeñas empresas) sobre las cláusulas de responsabilidad, término anticipado, domicilio y jurisdicción.';
 $pos_nota = strpos($md, $nota);

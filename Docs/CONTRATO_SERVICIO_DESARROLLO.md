@@ -1,6 +1,6 @@
 # CONTRATO DE PRESTACIÓN DE SERVICIOS DE DESARROLLO E IMPLEMENTACIÓN
 
-> **Plantilla legal — versión 1.0 (Chile) — BORRADOR**
+> **Plantilla legal — versión 1.1 (Chile) — BORRADOR**
 > Borrador para revisión de un abogado antes de su uso productivo. AutomatizaTech revisa y ajusta cada contrato antes de firmarlo, según el cliente y los servicios.
 
 ---
@@ -113,35 +113,47 @@ Ambas partes, en adelante "**LAS PARTES**", acuerdan el siguiente contrato (en a
 
 ---
 
-## CLÁUSULA DUODÉCIMA — Garantía
+## CLÁUSULA DUODÉCIMA — Uso de inteligencia artificial
 
-12.1. EL PROVEEDOR corrige sin costo los errores del Proyecto que aparezcan dentro de los **{{garantia_meses_servicio}} meses** siguientes a la entrega final, siempre que no se deban a cambios hechos por terceros o por EL CLIENTE.
+12.1. EL PROVEEDOR ejecuta el Proyecto con su equipo de profesionales, que se apoya en herramientas de inteligencia artificial para tareas como redactar textos, generar imágenes, escribir y revisar código y analizar información.
+
+12.2. Una persona del equipo de EL PROVEEDOR revisa todo lo que se produce con apoyo de esas herramientas antes de entregarlo. EL PROVEEDOR responde por los entregables en los términos de este Contrato, cualquiera sea la herramienta con que se hicieron.
+
+12.3. Al usar esas herramientas, EL PROVEEDOR cumple las cláusulas décima y undécima: ingresa solo la información necesaria para cada tarea y, cuando es posible, sin datos que identifiquen a personas.
+
+12.4. Si el Proyecto incluye un asistente virtual u otra función que responde con inteligencia artificial, sus respuestas se basan en la información que entrega EL CLIENTE y pueden contener errores. EL PROVEEDOR la configura y la prueba antes de entregarla, y corrige sus fallas según la cláusula decimotercera; EL CLIENTE mantiene al día la información que le entrega.
 
 ---
 
-## CLÁUSULA DECIMOTERCERA — Término anticipado
+## CLÁUSULA DECIMOTERCERA — Garantía
 
-13.1. Cualquiera de LAS PARTES puede terminar el Contrato con un aviso escrito de 15 días. EL CLIENTE paga el trabajo hecho hasta la fecha del término y EL PROVEEDOR entrega lo avanzado.
+13.1. EL PROVEEDOR corrige sin costo los errores del Proyecto que aparezcan dentro de los **{{garantia_meses_servicio}} meses** siguientes a la entrega final, siempre que no se deban a cambios hechos por terceros o por EL CLIENTE.
 
 ---
 
-## CLÁUSULA DECIMOCUARTA — Fases siguientes
+## CLÁUSULA DECIMOCUARTA — Término anticipado
 
-14.1. Fases siguientes de la propuesta (precios referenciales que se confirman al iniciar cada una):
+14.1. Cualquiera de LAS PARTES puede terminar el Contrato con un aviso escrito de 15 días. EL CLIENTE paga el trabajo hecho hasta la fecha del término y EL PROVEEDOR entrega lo avanzado.
+
+---
+
+## CLÁUSULA DECIMOQUINTA — Fases siguientes
+
+15.1. Fases siguientes de la propuesta (precios referenciales que se confirman al iniciar cada una):
 
 {{fases_siguientes}}
 
 ---
 
-## CLÁUSULA DECIMOQUINTA — Firma electrónica
+## CLÁUSULA DECIMOSEXTA — Firma electrónica
 
-15.1. LAS PARTES aceptan firmar este Contrato con firma electrónica simple, conforme a la Ley N° 19.799, con plena validez entre ellas.
+16.1. LAS PARTES aceptan firmar este Contrato con firma electrónica simple, conforme a la Ley N° 19.799, con plena validez entre ellas.
 
 ---
 
-## CLÁUSULA DECIMOSEXTA — Domicilio y jurisdicción
+## CLÁUSULA DECIMOSÉPTIMA — Domicilio y jurisdicción
 
-16.1. Para todos los efectos de este Contrato, LAS PARTES fijan domicilio en la ciudad de {{ciudad_jurisdiccion}} y se someten a la competencia de sus tribunales ordinarios de justicia.
+17.1. Para todos los efectos de este Contrato, LAS PARTES fijan domicilio en la ciudad de {{ciudad_jurisdiccion}} y se someten a la competencia de sus tribunales ordinarios de justicia.
 
 ---
 

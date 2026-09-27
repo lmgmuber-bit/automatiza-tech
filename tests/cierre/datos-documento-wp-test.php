@@ -59,6 +59,14 @@ aceptar_a_mano_ddoc($p);
 $dlg = dialogo_datos_ddoc($p);
 ok($dlg !== '' && strpos($dlg, 'name="documento"') !== false && strpos($dlg, 'name="tipo_documento"') !== false && preg_match('/name="nombre"[^>]*value="Ana Prueba"/', $dlg) === 1, '1) sin documento: el diálogo pide nombre (con el de quien aceptó) y documento');
 ok(preg_match('/name="documento"[^>]*required/', $dlg) === 1 && strpos($dlg, '>Pasaporte<') !== false, '1) el documento es obligatorio y admite RUT, DNI o pasaporte');
+// 27-sep: el diálogo lleva el logo real de AutomatizaTech y los colores del logo.
+ok(strpos($dlg, 'class="at-cc-dlg-cab"') !== false && strpos($dlg, 'logo-automatiza-tech.png') !== false && strpos($dlg, '<span>AutomatizaTech</span>') !== false, '1) el diálogo parte con el logo de AutomatizaTech');
+$_GET['respuesta'] = 'aceptada';
+ob_start();
+at_cc_render_barra(at_cc_propuesta_por_id($p->id));
+$barra = (string) ob_get_clean();
+unset($_GET['respuesta']);
+ok(strpos($barra, '--at-marino:#063f76') !== false && strpos($barra, '--at-turquesa:#17b7b1') !== false && strpos($barra, '#10b981') === false, '1) usa los colores del logo (marino y turquesa), no el verde genérico de antes');
 ok(at_cc_guardar_datos_contrato(at_cc_propuesta_por_id($p->id), ['tipo' => 'persona', 'direccion' => 'Calle Uno 1, Providencia', 'nombre' => 'Ana Prueba']) === 'datos_contrato', '1) sin documento no guarda: vuelve con el aviso');
 ok(trim((string) ($ph_de($p)['domicilio_cliente'] ?? '')) === '', '1) y el contrato no cambió');
 ok(at_cc_guardar_datos_contrato(at_cc_propuesta_por_id($p->id), ['tipo' => 'persona', 'direccion' => 'Calle Uno 1, Providencia', 'nombre' => 'Ana Prueba', 'tipo_documento' => 'rut', 'documento' => '11.111.111-2']) === 'datos_contrato', '1) RUT con dígito verificador malo: vuelve con el aviso');

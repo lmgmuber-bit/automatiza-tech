@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inscripciones · GT Baseball Academy</title>
+<meta name="description" content="Inscribe a tu hijo o hija en GT Baseball Academy (García Training) desde el celular.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0e1216">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css?v=20260927b">
+</head>
+<body>
+<div class="app" id="app" data-endpoint="https://n8n-n8n.kchiba.easypanel.host/webhook/gt-baseball-inscripcion" data-whatsapp="">
+
+  <!-- Portada -->
+  <section class="vista" id="vista-portada" aria-labelledby="titulo-portada">
+    <div class="portada">
+      <div class="marca">
+        <img src="assets/logo-gt-512.jpg" width="112" height="112" alt="Logo de GT Baseball Academy" class="marca__logo">
+        <div>
+          <p class="marca__nombre">GT Baseball Academy</p>
+          <p class="marca__sub">García Training</p>
+        </div>
+      </div>
+      <p class="etiqueta-prueba" id="etiqueta-prueba" hidden>Modo prueba</p>
+      <h1 id="titulo-portada" class="portada__titulo">Inscripciones abiertas</h1>
+      <p class="portada__texto">Inscribe a tu hijo o hija desde el celular en unos minutos. Al terminar, la academia recibe la planilla y tú puedes descargarla para imprimir.</p>
+      <ol class="pasos">
+        <li><span class="pasos__n">1</span><span><strong>Llena la planilla</strong> con los datos del atleta y del representante.</span></li>
+        <li><span class="pasos__n">2</span><span><strong>Agrega una foto</strong> del atleta desde tu galería o la cámara.</span></li>
+        <li><span class="pasos__n">3</span><span><strong>Envía y descarga</strong> tu planilla lista para imprimir.</span></li>
+      </ol>
+      <button type="button" class="boton boton--principal boton--grande" id="btn-empezar">Inscribir a un atleta</button>
+      <a class="boton boton--whatsapp boton--grande" data-whatsapp-link hidden target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>
+        <span>Escríbenos por WhatsApp</span>
+      </a>
+      <p class="nota">Los datos son para uso interno y exclusivo de la academia.</p>
+    </div>
+  </section>
+
+  <!-- Formulario -->
+  <section class="vista" id="vista-formulario" hidden aria-labelledby="titulo-paso">
+    <header class="barra">
+      <button type="button" class="barra__volver" id="btn-atras" aria-label="Volver">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="barra__centro">
+        <p class="barra__paso" id="texto-paso">Paso 1 de 4</p>
+        <div class="progreso" aria-hidden="true"><span id="barra-progreso"></span></div>
+      </div>
+      <img src="assets/logo-gt-256.jpg" width="36" height="36" alt="" class="barra__logo">
+    </header>
+
+    <form id="formulario" novalidate autocomplete="on">
+      <input type="text" name="gt_hp_x9" id="hp" tabindex="-1" autocomplete="new-password" class="trampa" aria-hidden="true">
+
+      <!-- Paso 1 -->
+      <fieldset class="paso" data-paso="1">
+        <legend id="titulo-paso" class="paso__titulo">Datos del atleta</legend>
+
+        <div class="campo campo--foto">
+          <span class="campo__label">Foto del atleta <span class="req" aria-hidden="true">*</span></span>
+          <label class="foto" for="foto">
+            <img id="foto-preview" alt="Foto del atleta" hidden>
+            <span class="foto__vacio" id="foto-vacio">
+              <svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+              <span>Agregar foto</span>
+            </span>
+          </label>
+          <input type="file" id="foto" accept="image/*" class="foto__input">
+          <p class="campo__ayuda" id="foto-ayuda">Una foto de frente, como la de un carnet.</p>
+          <p class="campo__error" data-error-para="foto"></p>
+        </div>
+
+        <div class="campo">
+          <label for="nombre">Nombre completo <span class="req" aria-hidden="true">*</span></label>
+          <input id="nombre" name="nombre" type="text" maxlength="120" autocomplete="off" required>
+          <p class="campo__error" data-error-para="nombre"></p>
+        </div>
+
+        <div class="fila">
+          <div class="campo">
+            <label for="fecha_nac">Fecha de nacimiento <span class="req" aria-hidden="true">*</span></label>
+            <input id="fecha_nac" name="fecha_nac" type="date" required>
+            <p class="campo__error" data-error-para="fecha_nac"></p>
+          </div>
+          <div class="campo campo--edad">
+            <span class="campo__label">Edad</span>
+            <output id="edad" class="edad">—</output>
+          </div>
+        </div>
+
+        <div class="campo">
+          <label for="documento">Cédula o pasaporte</label>
+          <input id="documento" name="documento" type="text" maxlength="30" inputmode="text" autocomplete="off">
+          <p class="campo__ayuda">Si todavía no tiene, déjalo en blanco.</p>
+        </div>
+
+        <div class="campo">
+          <label for="nacionalidad">Nacionalidad <span class="req" aria-hidden="true">*</span></label>
+          <input id="nacionalidad" name="nacionalidad" type="text" maxlength="60" list="lista-nacionalidades" value="Venezolana" required>
+          <datalist id="lista-nacionalidades">
+            <option value="Venezolana"><option value="Colombiana"><option value="Dominicana"><option value="Cubana">
+            <option value="Panameña"><option value="Peruana"><option value="Ecuatoriana"><option value="Otra">
+          </datalist>
+          <p class="campo__error" data-error-para="nacionalidad"></p>
+        </div>
+      </fieldset>
+
+      <!-- Paso 2 -->
+      <fieldset class="paso" data-paso="2" hidden>
+        <legend class="paso__titulo">Contacto y representante</legend>
+
+        <div class="campo">
+          <label for="direccion">Dirección <span class="req" aria-hidden="true">*</span></label>
+          <textarea id="direccion" name="direccion" rows="2" maxlength="250" autocomplete="street-address" required></textarea>
+          <p class="campo__error" data-error-para="direccion"></p>
+        </div>
+
+        <div class="campo">
+          <label for="telefono">Teléfono del atleta</label>
+          <input id="telefono" name="telefono" type="tel" maxlength="30" inputmode="tel" autocomplete="off" placeholder="Ej: 0412 123 4567">
+          <p class="campo__error" data-error-para="telefono"></p>
+        </div>
+
+        <div class="campo">
+          <label for="correo">Correo electrónico</label>
+          <input id="correo" name="correo" type="email" maxlength="120" inputmode="email" autocomplete="email">
+          <p class="campo__error" data-error-para="correo"></p>
+        </div>
+
+        <h2 class="subtitulo">Representante</h2>
+
+        <div class="campo">
+          <label for="rep_nombre">Nombre y apellido del representante <span class="req" aria-hidden="true">*</span></label>
+          <input id="rep_nombre" name="rep_nombre" type="text" maxlength="120" autocomplete="name" required>
+          <p class="campo__error" data-error-para="rep_nombre"></p>
+        </div>
+
+        <div class="campo">
+          <label for="rep_telefono">Teléfono del representante <span class="req" aria-hidden="true">*</span></label>
+          <input id="rep_telefono" name="rep_telefono" type="tel" maxlength="30" inputmode="tel" autocomplete="tel" placeholder="Ej: 0414 765 4321" required>
+          <p class="campo__error" data-error-para="rep_telefono"></p>
+        </div>
+      </fieldset>
+
+      <!-- Paso 3 -->
+      <fieldset class="paso" data-paso="3" hidden>
+        <legend class="paso__titulo">Datos de béisbol</legend>
+
+        <div class="campo">
+          <label for="liga">Liga o programa donde juega</label>
+          <input id="liga" name="liga" type="text" maxlength="120" placeholder="Si no juega en ninguna, déjalo en blanco">
+        </div>
+
+        <div class="campo">
+          <label for="posicion">Posición <span class="req" aria-hidden="true">*</span></label>
+          <select id="posicion" name="posicion" required>
+            <option value="">Elige una posición</option>
+            <option>Lanzador</option><option>Receptor</option><option>Primera base</option><option>Segunda base</option>
+            <option>Tercera base</option><option>Campocorto</option><option>Jardinero izquierdo</option>
+            <option>Jardinero central</option><option>Jardinero derecho</option><option>Utility</option>
+            <option>Aún no definida</option>
+          </select>
+          <p class="campo__error" data-error-para="posicion"></p>
+        </div>
+
+        <div class="campo" role="radiogroup" aria-labelledby="lbl-batea">
+          <span class="campo__label" id="lbl-batea">Batea <span class="req" aria-hidden="true">*</span></span>
+          <div class="opciones">
+            <label class="opcion"><input type="radio" name="batea" value="Derecha"><span>Derecha</span></label>
+            <label class="opcion"><input type="radio" name="batea" value="Izquierda"><span>Izquierda</span></label>
+            <label class="opcion"><input type="radio" name="batea" value="Ambas"><span>Ambas</span></label>
+          </div>
+          <p class="campo__error" data-error-para="batea"></p>
+        </div>
+
+        <div class="campo" role="radiogroup" aria-labelledby="lbl-lanza">
+          <span class="campo__label" id="lbl-lanza">Lanza <span class="req" aria-hidden="true">*</span></span>
+          <div class="opciones">
+            <label class="opcion"><input type="radio" name="lanza" value="Derecha"><span>Derecha</span></label>
+            <label class="opcion"><input type="radio" name="lanza" value="Izquierda"><span>Izquierda</span></label>
+          </div>
+          <p class="campo__error" data-error-para="lanza"></p>
+        </div>
+
+        <div class="fila">
+          <div class="campo">
+            <label for="estatura">Estatura</label>
+            <input id="estatura" name="estatura" type="text" maxlength="20" placeholder="Ej: 1,65 m">
+          </div>
+          <div class="campo">
+            <label for="peso">Peso</label>
+            <input id="peso" name="peso" type="text" maxlength="20" placeholder="Ej: 55 kg">
+          </div>
+        </div>
+
+        <div class="fila">
+          <div class="campo">
+            <label for="millas">Referencia millas</label>
+            <input id="millas" name="millas" type="text" maxlength="10" inputmode="decimal" placeholder="Opcional">
+          </div>
+          <div class="campo">
+            <label for="anio_firma">Año de firma</label>
+            <input id="anio_firma" name="anio_firma" type="text" maxlength="10" inputmode="numeric" placeholder="Opcional">
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Paso 4 -->
+      <fieldset class="paso" data-paso="4" hidden>
+        <legend class="paso__titulo">Revisa y envía</legend>
+        <div class="resumen" id="resumen"></div>
+        <label class="acepto">
+          <input type="checkbox" id="acepta" name="acepta">
+          <span>Autorizo a la academia a usar estos datos de forma interna y exclusiva, para fines de inscripción y evaluación.</span>
+        </label>
+        <p class="campo__error" data-error-para="acepta"></p>
+      </fieldset>
+
+      <div class="acciones">
+        <button type="button" class="boton boton--principal boton--grande" id="btn-siguiente">Siguiente</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Resultado -->
+  <section class="vista" id="vista-listo" hidden aria-live="polite">
+    <div class="listo">
+      <div class="listo__icono" id="listo-icono" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="44" height="44"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h2 class="listo__titulo" id="listo-titulo">¡Inscripción enviada!</h2>
+      <p class="listo__texto" id="listo-texto"></p>
+      <button type="button" class="boton boton--principal boton--grande" id="btn-pdf">Descargar planilla (PDF)</button>
+      <button type="button" class="boton boton--secundario boton--grande" id="btn-reintentar" hidden>Intentar de nuevo</button>
+      <button type="button" class="boton boton--texto" id="btn-otro">Inscribir a otro atleta</button>
+      <a class="boton boton--texto" data-whatsapp-link hidden target="_blank" rel="noopener">¿Dudas? Escríbenos por WhatsApp</a>
+      <p class="nota" id="listo-id"></p>
+    </div>
+  </section>
+
+  <footer class="pie">Formulario digital hecho por <a href="https://automatizatech.cl" target="_blank" rel="noopener">AutomatizaTech</a></footer>
+</div>
+
+<div class="enviando" id="enviando" hidden role="status" aria-live="assertive">
+  <div class="enviando__caja"><span class="girador" aria-hidden="true"></span><p>Enviando la inscripción…</p></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js" integrity="sha512-plOdviVmws4Y3JAvbnpfKb2hVxKM1lCwsi3vmElYRj+tiDLffZ4FVUj5a8vyKJ9pIgl8JCAHEJ4D1iUKBecswg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="assets/planilla.js?v=20260927b"></script>
+<script src="assets/app.js?v=20260927b"></script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cartel QR · GT Baseball Academy</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #d9dde2; font-family: 'Inter', Arial, sans-serif; color: #111418; }
+  .hoja { width: 210mm; height: 297mm; margin: 12px auto; background: #fff; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 6px 30px rgba(0,0,0,.18); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cabeza { background: #0e1216; color: #fff; padding: 16mm 16mm 12mm; display: flex; align-items: center; gap: 9mm; }
+  .cabeza img { width: 42mm; height: 42mm; border-radius: 6mm; box-shadow: 0 0 0 1.2mm rgba(244,169,28,.55); }
+  .cabeza h1 { margin: 0; font: 700 21mm/0.95 'Oswald', 'Arial Narrow', sans-serif; text-transform: uppercase; }
+  .cabeza p { margin: 3mm 0 0; color: #f4a91c; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 5mm; }
+  .franja { height: 3mm; background: linear-gradient(90deg, #f4a91c, #ffc54d); }
+  .cuerpo { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10mm 16mm; text-align: center; }
+  .cuerpo h2 { margin: 0 0 3mm; font: 700 12mm/1 'Oswald', sans-serif; text-transform: uppercase; }
+  .cuerpo .sub { margin: 0 0 9mm; font-size: 6mm; color: #3a414a; }
+  .qr { width: 118mm; height: 118mm; padding: 5mm; border: 1.4mm solid #f4a91c; border-radius: 6mm; }
+  .qr img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+  .url { margin: 6mm 0 0; font-size: 4.6mm; color: #5a626c; }
+  .pasos { display: flex; gap: 6mm; margin: 10mm 0 0; }
+  .pasos div { flex: 1; font-size: 4.4mm; color: #22272e; }
+  .pasos b { display: grid; place-items: center; width: 10mm; height: 10mm; margin: 0 auto 2.5mm; border-radius: 50%; background: #f4a91c; color: #1a1204; font: 700 5.5mm 'Oswald', sans-serif; }
+  .pie { padding: 6mm 16mm 9mm; text-align: center; font-size: 3.4mm; color: #8a929c; }
+  .imprimir { position: fixed; right: 16px; bottom: 16px; padding: 14px 20px; border: 0; border-radius: 12px; background: #f4a91c; color: #1a1204; font: 700 16px 'Inter', sans-serif; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,.2); }
+  @media print { html, body { background: #fff; } .hoja { margin: 0; box-shadow: none; } .imprimir { display: none; } }
+  @media screen and (max-width: 820px) { .hoja { transform: scale(calc(100vw / 820px * 0.98)); transform-origin: top left; } }
+</style>
+</head>
+<body>
+<main class="hoja">
+  <header class="cabeza">
+    <img src="assets/logo-gt-512.jpg" alt="GT Baseball Academy">
+    <div>
+      <h1>Inscripciones<br>abiertas</h1>
+      <p>GT Baseball Academy · García Training</p>
+    </div>
+  </header>
+  <div class="franja"></div>
+  <section class="cuerpo">
+    <h2>Escanea e inscribe a tu hijo</h2>
+    <p class="sub">Abre la cámara de tu celular y apunta al código</p>
+    <div class="qr"><img src="assets/qr-inscripcion.svg" alt="Código QR del formulario de inscripción"></div>
+    <p class="url">automatizatech.cl/demos/gt-baseball</p>
+    <div class="pasos">
+      <div><b>1</b>Llena la planilla desde el celular</div>
+      <div><b>2</b>Agrega una foto del atleta</div>
+      <div><b>3</b>Envía y descarga tu planilla</div>
+    </div>
+  </section>
+  <footer class="pie">Los datos son para uso interno y exclusivo de la academia · Formulario digital de AutomatizaTech</footer>
+</main>
+<button class="imprimir" type="button" onclick="window.print()">Imprimir cartel</button>
+</body>
+</html>

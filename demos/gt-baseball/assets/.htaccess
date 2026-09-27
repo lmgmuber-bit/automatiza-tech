@@ -1,0 +1,11 @@
+# Recursos del formulario GT Baseball (logo, QR, íconos).
+#
+# El CDN de Hostinger entrega a los navegadores Android las imágenes achicadas y en WebP
+# (visto con CumpleClick el 2026-09-10). Aquí importa más: app.js baja logo-gt-pdf.jpg para
+# meterlo en la planilla PDF, y planilla.js además detecta el formato real por si el CDN
+# ignora esta cabecera.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(png|jpe?g|webp|gif|svg)$">
+    Header merge Cache-Control "no-transform"
+  </FilesMatch>
+</IfModule>

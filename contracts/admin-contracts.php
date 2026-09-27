@@ -206,6 +206,24 @@ class AT_Contracts_Admin {
     }
 
     /* -------- DETALLE -------- */
+    /**
+     * Imagen de una firma para el detalle. Las firmas viven en automatiza-tech-contracts/signatures/,
+     * carpeta con «Deny from all» (403 por URL, a propósito), así que se leen en el servidor y se
+     * incrustan como data: URI; solo si el archivo está dentro de signatures/ y es PNG o JPEG.
+     */
+    private static function firma_img($url) {
+        require_once ABSPATH . 'at-path-safe.php';
+        $up   = wp_upload_dir();
+        $dir  = rtrim($up['basedir'], '/') . '/automatiza-tech-contracts/signatures';
+        $path = at_path_inside(str_replace($up['baseurl'], $up['basedir'], (string) $url), $dir);
+        $info = ($path && is_file($path) && filesize($path) <= 2 * 1024 * 1024) ? @getimagesize($path) : false;
+        if (!$info || !in_array($info['mime'], array('image/png', 'image/jpeg'), true)) {
+            return '<p><small><em>Imagen de la firma no disponible.</em></small></p>';
+        }
+        $src = 'data:' . $info['mime'] . ';base64,' . base64_encode((string) file_get_contents($path));
+        return "<img src='" . esc_attr($src) . "' alt='Firma' style='max-height:80px;border:1px solid #ddd;padding:4px;background:#fff'>";
+    }
+
     private static function render_detail($id) {
         $c = ContractService::get_by_id($id);
         if (!$c) { echo '<div class="notice notice-error"><p>Contrato no encontrado.</p></div>'; return; }
@@ -255,7 +273,7 @@ class AT_Contracts_Admin {
             echo '<p><strong>' . esc_html($c->at_signer_name) . '</strong> — RUT ' . esc_html($c->at_signer_rut) . '<br>';
             echo '<small>' . esc_html($c->at_signed_at) . ' · IP ' . esc_html($c->at_signer_ip) . '</small></p>';
             if ($c->at_signature_image_url) {
-                echo "<img src='" . esc_url($c->at_signature_image_url) . "' style='max-height:80px;border:1px solid #ddd;padding:4px;background:#fff'>";
+                echo self::firma_img($c->at_signature_image_url);
             }
         } else {
             echo '<p><em>Pendiente</em></p>';
@@ -267,7 +285,7 @@ class AT_Contracts_Admin {
             echo esc_html($c->signer_email) . '<br>';
             echo '<small>' . esc_html($c->signed_at) . ' · IP ' . esc_html($c->signer_ip) . '</small></p>';
             if ($c->signature_image_url) {
-                echo "<img src='" . esc_url($c->signature_image_url) . "' style='max-height:80px;border:1px solid #ddd;padding:4px;background:#fff'>";
+                echo self::firma_img($c->signature_image_url);
             }
         } else {
             echo '<p><em>Pendiente</em></p>';

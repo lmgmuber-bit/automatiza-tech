@@ -76,7 +76,78 @@ const vistas = new Set();
 const briefs = (Array.isArray(p.image_briefs) ? p.image_briefs : [])
   .filter((b) => b && validas.has(b.slide) && !vistas.has(b.slide) && vistas.add(b.slide));
 const r = limpiarFotos(briefs);
-return [{ json: { unique_id: e.unique_id, payload: Object.assign({}, p, { image_briefs: r.limpias }), fotos_reemplazadas: r.reemplazadas } }];"""
+// Una foto rehecha por texto en una corrida anterior («Decidir retoma») quedó en el renderer con la descripción
+// + RETOMA, pero WordPress guarda solo la original. Sin esto, la siguiente corrida (Destrabar y reintentar, o
+// Pedir cambios y Aprobar sin tocar esa lámina) mandaba la original: otro hash, el renderer volvía a pagar la foto,
+// podía volver a salir con texto y reemplazaba la que ya estaba limpia (revisión 2026-09-27). El manifest guarda
+// el sha256 de la última descripción de cada lámina: si calza con la original + RETOMA, se pide esa y se reutiliza.
+// Si la lámina cambió en «2 Cambios», su descripción nueva no calza y se genera como siempre.
+let previo = $json && $json.statusCode === 200 ? $json.body : null;
+if (typeof previo === 'string') { try { previo = JSON.parse(previo); } catch (err) { previo = null; } }
+if (!previo || typeof previo !== 'object' || Array.isArray(previo)) previo = {};
+const retomadasAntes = [];
+const limpias = r.limpias.map((b) => {
+  const ent = Object.prototype.hasOwnProperty.call(previo, b.slide) ? previo[b.slide] : null;
+  if (ent && typeof ent === 'object' && typeof ent.hash === 'string' && ent.hash === sha256(b.prompt + __RETOMA__)) {
+    retomadasAntes.push(b.slide);
+    return { slide: b.slide, prompt: b.prompt + __RETOMA__ };
+  }
+  return b;
+});
+return [{ json: { unique_id: e.unique_id, payload: Object.assign({}, p, { image_briefs: limpias }), fotos_reemplazadas: r.reemplazadas,
+  fotos_retomadas_antes: retomadasAntes } }];"""
+
+# sha256 en JavaScript puro (el mismo que calcula el renderer con node:crypto sobre el texto en UTF-8): el nodo Code de
+# n8n no garantiza require('crypto') sin NODE_FUNCTION_ALLOW_BUILTIN. probar_revision_fotos.py lo coteja con node:crypto.
+JS_SHA256 = r"""
+const sha256 = (() => {
+  const K = [];
+  const H0 = [];
+  const frac = (x) => ((x - Math.floor(x)) * 0x100000000) >>> 0;
+  for (let n = 2; K.length < 64; n++) {
+    let primo = true;
+    for (let d = 2; d * d <= n; d++) if (n % d === 0) { primo = false; break; }
+    if (!primo) continue;
+    if (H0.length < 8) H0.push(frac(Math.pow(n, 1 / 2)));
+    K.push(frac(Math.pow(n, 1 / 3)));
+  }
+  const rot = (x, k) => (x >>> k) | (x << (32 - k));
+  return (texto) => {
+    const b = [];
+    for (const ch of String(texto)) {
+      let c = ch.codePointAt(0);
+      if (c >= 0xd800 && c <= 0xdfff) c = 0xfffd;  // sustituto suelto: node lo codifica como U+FFFD
+      if (c < 0x80) b.push(c);
+      else if (c < 0x800) b.push(0xc0 | (c >> 6), 0x80 | (c & 63));
+      else if (c < 0x10000) b.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      else b.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+    }
+    const bits = b.length * 8;
+    b.push(0x80);
+    while (b.length % 64 !== 56) b.push(0);
+    const alto = Math.floor(bits / 0x100000000);
+    for (const v of [alto, bits >>> 0]) b.push((v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255);
+    const H = H0.slice();
+    const w = new Array(64);
+    for (let i = 0; i < b.length; i += 64) {
+      for (let j = 0; j < 16; j++) w[j] = (b[i + 4 * j] << 24) | (b[i + 4 * j + 1] << 16) | (b[i + 4 * j + 2] << 8) | b[i + 4 * j + 3];
+      for (let j = 16; j < 64; j++) {
+        const s0 = rot(w[j - 15], 7) ^ rot(w[j - 15], 18) ^ (w[j - 15] >>> 3);
+        const s1 = rot(w[j - 2], 17) ^ rot(w[j - 2], 19) ^ (w[j - 2] >>> 10);
+        w[j] = (w[j - 16] + s0 + w[j - 7] + s1) | 0;
+      }
+      let [a, bb, c, d, e, f, g, h] = H;
+      for (let j = 0; j < 64; j++) {
+        const t1 = (h + (rot(e, 6) ^ rot(e, 11) ^ rot(e, 25)) + ((e & f) ^ (~e & g)) + K[j] + w[j]) | 0;
+        const t2 = ((rot(a, 2) ^ rot(a, 13) ^ rot(a, 22)) + ((a & bb) ^ (a & c) ^ (bb & c))) | 0;
+        h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = bb; bb = a; a = (t1 + t2) | 0;
+      }
+      [a, bb, c, d, e, f, g, h].forEach((v, k) => { H[k] = (H[k] + v) | 0; });
+    }
+    return H.map((v) => (v >>> 0).toString(16).padStart(8, '0')).join('');
+  };
+})();
+"""
 
 MAX_RENDERS = 3
 MAX_RENDERS_RETOMA = 2
@@ -100,8 +171,11 @@ return [{ json: Object.assign({}, base, { reintentar: faltan && (intento - previ
 # Revisión de texto en las fotos (2026-09-26). En la propuesta 53 el modelo de imagen inventó leyendas blancas
 # como subtítulos de película y hojas con garabatos, aunque el prompt dice «no text». GPT-4o mira las fotos
 # guardadas; las que tengan texto se piden UNA vez más con otra descripción y lo que siga con texto se avisa
-# en el correo (no pasa la propuesta a «error»: Luis la revisa antes de enviarla). Gasto por versión final:
-# una consulta de GPT-4o con las fotos (~US$0,03) y US$0,0032 por foto rehecha.
+# en el correo (no pasa la propuesta a «error»: Luis la revisa antes de enviarla). Gasto por versión final, según
+# la revisión del 2026-09-27 (tarifa y conteo de imágenes de la documentación de OpenAI; no medido en una factura):
+# ~US$0,025 por consulta con 9 fotos 16:9 en detail high (~1.105 tokens de entrada por foto a US$2,50 por millón),
+# hasta DOS consultas si hay retoma, más US$0,0032 por foto rehecha. El panel lo suma al costo que Luis aprueba
+# (at_propuesta_costo_fotos en inc/proposals-flow.php): si cambia el modelo o la tarifa, cambiar los dos lados.
 INSTRUCCION_TEXTO = ('You are checking photos for a sales presentation. Report every photo in which ANY written '
                      'characters are visible: letters, words, numbers, subtitles or captions over the image, signs, '
                      'labels, stickers, papers or screens with writing, or scribbles that look like writing, even '
@@ -166,12 +240,16 @@ if (r.statusCode === 200) {
   fallo = r.statusCode ? 'OpenAI respondió HTTP ' + r.statusCode : 'OpenAI no respondió' + (r.error && r.error.message ? ': ' + r.error.message : '');
 }
 const vig = prep.vigente;
-if (conTexto && conTexto.length && prep.ronda === 0) {
-  const briefs = ((vig.payload && vig.payload.image_briefs) || []).map((b) =>
-    conTexto.includes(b.slide) ? { slide: b.slide, prompt: b.prompt + __RETOMA__ } : b);
+const vigentes = (vig.payload && vig.payload.image_briefs) || [];
+// Cada foto se rehace UNA vez por texto, también entre corridas: la que ya trae RETOMA (rehecha en una corrida
+// anterior y reutilizada por «Revisar fotos») no se vuelve a pagar; si sigue con texto, solo se avisa.
+const nuevas = (conTexto || []).filter((s) => vigentes.some((b) => b && b.slide === s && !String(b.prompt).endsWith(__RETOMA__)));
+if (nuevas.length && prep.ronda === 0) {
+  const briefs = vigentes.map((b) =>
+    nuevas.includes(b.slide) ? { slide: b.slide, prompt: b.prompt + __RETOMA__ } : b);
   return [{ json: Object.assign({}, vig, {
     payload: Object.assign({}, vig.payload, { image_briefs: briefs }),
-    rehacer: true, fotos_retomadas: conTexto, renders_previos: vig.intento || 0,
+    rehacer: true, fotos_retomadas: nuevas, renders_previos: vig.intento || 0,
   }) }];
 }
 return [{ json: { rehacer: false, fotos_con_texto: conTexto || [], revision_fallo: fallo } }];""".replace(
@@ -223,8 +301,13 @@ nodes = [
     http('f2', 'Leer estado', [220, 0], 'GET', f"={WP}/proposal/{{{{ $json.body.id }}}}/state"),
     iff('f3', '¿Estado leído?', [440, 0], '={{ $json.statusCode === 200 }}'),
     # Revisar fotos: último filtro antes de gastar. No guarda nada; solo decide qué se le pide al renderer.
+    # Leer fotos previas: el manifest de la corrida anterior, para reutilizar las fotos rehechas por texto (ver
+    # CODE_REVISAR). Sin manifest (primera versión final: 404) o si falla, se piden las descripciones de WordPress.
+    http('f3a', 'Leer fotos previas', [495, -240], 'GET',
+         "={{ 'https://n8n-propuesta-renderer.kchiba.easypanel.host/p/' + $('Leer estado').first().json.body.unique_id + '/img/manifest.json' }}",
+         cred=False, timeout=30000),
     node('f3b', 'Revisar fotos', 'n8n-nodes-base.code', 2, [550, -120],
-         {'jsCode': JS_LIMPIAR_FOTOS + CODE_REVISAR}),
+         {'jsCode': JS_LIMPIAR_FOTOS + JS_SHA256 + CODE_REVISAR.replace('__RETOMA__', json.dumps(RETOMA))}),
     # Render final: aquí SÍ se piden las fotos (image_briefs del payload). El renderer se da ~210 s para fotos + render;
     # si faltan fotos, «¿Reintentar render?» vuelve a llamarlo (hasta MAX_RENDERS) y el renderer reutiliza las ya guardadas.
     node('f4', 'Render final', 'n8n-nodes-base.httpRequest', 4.2, [660, -120],
@@ -280,7 +363,8 @@ def link(a, b, output=0):
 connections = {}
 link('Webhook', 'Leer estado')
 link('Leer estado', '¿Estado leído?')
-link('¿Estado leído?', 'Revisar fotos', 0)
+link('¿Estado leído?', 'Leer fotos previas', 0)
+link('Leer fotos previas', 'Revisar fotos')
 link('Revisar fotos', 'Render final')
 link('¿Estado leído?', 'Motivo lectura', 1)
 link('Render final', '¿Reintentar render?')

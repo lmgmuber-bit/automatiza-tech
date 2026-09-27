@@ -25,13 +25,13 @@ def ok(cond, msg, detalle=''):
 
 
 def constantes():
-    """RETOMA, MAX_RENDERS y MAX_RENDERS_RETOMA de build_3_final.py sin ejecutarlo (ejecutarlo reescribe el JSON)."""
+    """RETOMA, MAX_RENDERS, MAX_RENDERS_RETOMA y JS_SHA256 de build_3_final.py sin ejecutarlo (ejecutarlo reescribe el JSON)."""
     arbol = ast.parse(open(os.path.join(AQUI, 'build_3_final.py'), encoding='utf-8').read())
     valores = {}
     for n in arbol.body:
         if isinstance(n, ast.Assign) and len(n.targets) == 1 and isinstance(n.targets[0], ast.Name):
             nombre = n.targets[0].id
-            if nombre in ('RETOMA', 'MAX_RENDERS', 'MAX_RENDERS_RETOMA'):
+            if nombre in ('RETOMA', 'MAX_RENDERS', 'MAX_RENDERS_RETOMA', 'JS_SHA256'):
                 valores[nombre] = ast.literal_eval(n.value)
     return valores
 
@@ -48,9 +48,9 @@ const { wf, esc: E } = DATOS;
 const sha = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
 const nodos = Object.fromEntries(wf.nodes.map((n) => [n.name, n]));
 const runData = {};
-const T = { pasos: [], renders: [], pagos: {}, consultas: [], lecturas: [], preparaciones: [], decisiones: [],
+const T = { pasos: [], renders: [], pagos: {}, consultas: [], lecturas: [], lecturas_previas: [], preparaciones: [], decisiones: [],
             guardar: null, verificar: null, resultado: null, correo: null, error: null };
-let manifest = {};
+let manifest = E.manifest_inicial ? JSON.parse(JSON.stringify(E.manifest_inicial)) : {};
 let llamadasOpenai = 0;
 
 const $ = (n) => ({
@@ -106,6 +106,12 @@ function http(nombre, url, cuerpo) {
   switch (nombre) {
     case 'Leer estado': return E.estado || { statusCode: 200, body: { id: 999, unique_id: E.uid, company_name: '[PRUEBA] Empresa', payload: E.payload } };
     case 'Render final': return renderer(cuerpo);
+    case 'Leer fotos previas': {
+      T.lecturas_previas.push(url);
+      if (E.manifest_previo) return E.manifest_previo;
+      // Como el static del renderer: sin manifest.json todavía (primera versión final), 404.
+      return Object.keys(manifest).length ? { statusCode: 200, body: JSON.parse(JSON.stringify(manifest)) } : { statusCode: 404, body: 'Not Found' };
+    }
     case 'Leer fotos': {
       T.lecturas.push(url);
       if (E.manifest) return E.manifest;
@@ -174,6 +180,7 @@ try {
 } catch (e) {
   T.error = e.message;
 }
+T.manifest = manifest;
 console.log(JSON.stringify(T));
 """.replace('__RENDER__', RENDER)
 
@@ -430,6 +437,85 @@ t = simular(openai=[{'con_texto': []}])
 html = (t.get('correo') or {}).get('html') or ''
 ok(html and 'tienen texto' not in html and 'tenían texto' not in html and 'No se revisó' not in html,
    '9: sin avisos, el correo no menciona texto en las fotos')
+
+# 10. Segunda corrida de «3 Final» sobre el mismo unique_id (Destrabar y reintentar, o Pedir cambios y Aprobar sin
+# tocar la lámina): la foto rehecha por texto se reutiliza, no se vuelve a pagar ni se reemplaza (revisión 2026-09-27).
+t1 = simular(openai=[{'con_texto': ['solution']}, {'con_texto': []}])
+ok(t1['pagos'].get('solution') == 2 and t1['manifest']['solution']['file'] == 'solution.jpg', '10: la primera corrida rehízo «solution»',
+   str(t1['pagos']))
+M1 = t1['manifest']
+t = simular(manifest_inicial=M1, openai=[{'con_texto': []}])
+sin_error(t, '10a')
+ok(t['lecturas_previas'] == [f'{RENDER}/p/{UID}/img/manifest.json'], '10a: lee el manifest del renderer antes de renderizar',
+   str(t['lecturas_previas']))
+ok(len(t['renders']) == 1 and t['renders'][0]['prompts']['solution'].endswith(RETOMA)
+   and t['renders'][0]['prompts']['solution'].count(RETOMA) == 1,
+   '10a: la segunda corrida pide «solution» con la descripción de la retoma (RETOMA una sola vez)',
+   t['renders'][0]['prompts']['solution'][-80:] if t['renders'] else 'sin render')
+ok(t['pagos'] == {}, '10a: la segunda corrida no le paga a Higgsfield ninguna foto', str(t['pagos']))
+ok(t['renders'] and all(t['renders'][0]['prompts'][s] == t1['renders'][0]['prompts'][s] for s in SLIDES if s != 'solution'),
+   '10a: las demás láminas van con su descripción original')
+ok(estado(t) == 'lista' and avisos(t) == [], '10a: «lista» y sin avisos de fotos', f'{estado(t)} {avisos(t)}')
+# La foto ya rehecha sigue con texto: no se paga otra retoma, solo se avisa.
+t = simular(manifest_inicial=M1, openai=[{'con_texto': ['solution']}])
+sin_error(t, '10b')
+ok(len(t['renders']) == 1 and t['pagos'] == {} and t['decisiones'] and t['decisiones'][0].get('rehacer') is False,
+   '10b: la foto rehecha antes que sigue con texto no se rehace otra vez', f"renders={len(t['renders'])} pagos={t['pagos']}")
+ok(any('todavía pueden tener texto' in a and 'solución' in a for a in avisos(t)), '10b: se avisa en el correo', str(avisos(t)))
+# Otra foto con texto sí se rehace, una vez; la rehecha antes queda intacta.
+t = simular(manifest_inicial=M1, openai=[{'con_texto': ['solution', 'pricing']}, {'con_texto': []}])
+sin_error(t, '10c')
+ok(len(t['renders']) == 2 and t['pagos'] == {'pricing': 1}, '10c: solo «pricing» se rehace y se paga',
+   f"renders={len(t['renders'])} pagos={t['pagos']}")
+ok(t['decisiones'] and t['decisiones'][0].get('fotos_retomadas') == ['pricing'], '10c: la retoma nombra solo «pricing»',
+   str(t['decisiones'][:1])[:200])
+ok(all(r['prompts']['solution'].count(RETOMA) == 1 for r in t['renders']), '10c: «solution» no acumula otra RETOMA')
+ok(avisos(t) == ['Fotos rehechas porque tenían texto: inversión'], '10c: el aviso nombra solo la rehecha en esta corrida', str(avisos(t)))
+# «2 Cambios» cambió esa lámina: la descripción nueva no calza con la retoma y se genera como siempre.
+PAYLOAD_CAMBIADO = dict(PAYLOAD, image_briefs=[dict(b, prompt='potter shaping a clay bowl on a wheel, warm studio light')
+                                                if b['slide'] == 'solution' else b for b in PAYLOAD['image_briefs']])
+t = simular(manifest_inicial=M1, payload=PAYLOAD_CAMBIADO, openai=[{'con_texto': []}])
+sin_error(t, '10d')
+ok(t['pagos'] == {'solution': 1} and t['renders'] and RETOMA not in t['renders'][0]['prompts']['solution'],
+   '10d: la lámina cambiada se genera con su descripción nueva, sin RETOMA', str(t['pagos']))
+# Manifest previo ilegible, raro o caído: se piden las descripciones de WordPress (la foto se rehace, sin romper nada).
+for nombre, man in (
+    ('404', {'statusCode': 404, 'body': 'Not Found'}),
+    ('sin respuesta', {'error': {'message': 'ECONNRESET'}}),
+    ('HTML con 200', {'statusCode': 200, 'body': '<html>error</html>'}),
+    ('arreglo', {'statusCode': 200, 'body': [M1['solution']]}),
+    ('null', {'statusCode': 200, 'body': None}),
+    ('hash que no es texto', {'statusCode': 200, 'body': {'solution': {'file': 'solution.jpg', 'hash': 123}}}),
+    ('entrada que no es objeto', {'statusCode': 200, 'body': {'solution': 'solution.jpg'}}),
+    ('__proto__', {'statusCode': 200, 'body': json.loads('{"__proto__": {"hash": "x"}, "solution": null}')}),
+    ('texto JSON', {'statusCode': 200, 'body': json.dumps(M1)}),
+):
+    t = simular(manifest_inicial=M1, manifest_previo=man, openai=[{'con_texto': []}])
+    sin_error(t, f'10e {nombre}')
+    sol = t['renders'][0]['prompts']['solution'] if t['renders'] else ''
+    esperado = nombre == 'texto JSON'
+    ok(estado(t) == 'lista' and sol.endswith(RETOMA) == esperado and t['pagos'] == ({} if esperado else {'solution': 1}),
+       f'10e: manifest previo {nombre} → ' + ('se lee igual' if esperado else 'descripción original, sin romper'),
+       f'{estado(t)} pagos={t["pagos"]}')
+# Descripción con acentos y eñes: el sha256 del nodo tiene que calzar con el del renderer (UTF-8).
+PAYLOAD_ACENTOS = dict(PAYLOAD, image_briefs=[dict(b, prompt='barista pouring café au lait next to a sunny window in Ñuñoa, piña on the counter')
+                                               if b['slide'] == 'solution' else b for b in PAYLOAD['image_briefs']])
+t1 = simular(payload=PAYLOAD_ACENTOS, openai=[{'con_texto': ['solution']}, {'con_texto': []}])
+t = simular(payload=PAYLOAD_ACENTOS, manifest_inicial=t1['manifest'], openai=[{'con_texto': []}])
+ok(t1['pagos'].get('solution') == 2 and t['pagos'] == {}, '10f: con acentos y eñes la retoma también se reutiliza', str(t['pagos']))
+# El sha256 en JavaScript puro de «Revisar fotos» calza con node:crypto en los bordes del relleno y fuera del ASCII.
+PRUEBA_SHA = K['JS_SHA256'] + r"""
+const crypto = require('node:crypto');
+const casos = ['', 'a', 'abc', 'x'.repeat(55), 'x'.repeat(56), 'x'.repeat(63), 'x'.repeat(64), 'x'.repeat(65),
+  'x'.repeat(1000), 'café ñandú Ñuñoa', '\u{1F304} amanecer \u{1F304}', 'ab\uD800cd', 'z\uDC00', 'x'.repeat(119) + 'é'];
+const malos = casos.filter((c) => sha256(c) !== crypto.createHash('sha256').update(c).digest('hex'));
+console.log(JSON.stringify({ total: casos.length, malos: malos.map((c) => c.slice(0, 20) + ' (' + c.length + ')') }));
+"""
+r = subprocess.run(['node', '-'], input=PRUEBA_SHA, capture_output=True, text=True, encoding='utf-8')
+res = json.loads(r.stdout) if r.returncode == 0 else {'malos': [r.stderr[-200:]]}
+ok(res['malos'] == [], f"10g: sha256 del nodo = node:crypto en {res.get('total')} textos", str(res['malos']))
+w_revisar = next(n for n in WF['nodes'] if n['name'] == 'Revisar fotos')['parameters']['jsCode']
+ok(K['JS_SHA256'] in w_revisar and json.dumps(RETOMA) in w_revisar, '10g: el nodo publicado lleva ese sha256 y la RETOMA vigente')
 
 print('TODO OK' if not fallas else f'{len(fallas)} FALLA(S)')
 sys.exit(1 if fallas else 0)

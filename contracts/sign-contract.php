@@ -124,7 +124,8 @@ hr{border:0;border-top:1px solid #e5e9f0;margin:14px 0}
     <div class="grid">
       <div class="card">
         <h3 style="margin:0 0 10px 0">📄 Lee el contrato</h3>
-        <iframe src="<?= esc_url($pdf_url) ?>?v=<?= time() ?>"></iframe>
+        <?php /* 27-sep: con «$pdf_url?v=…» el token llegaba como «<hex>?v=…» y la descarga decía «Acceso denegado». */ ?>
+        <iframe src="<?= esc_url(add_query_arg('v', time(), $pdf_url)) ?>"></iframe>
         <p class="muted" style="margin-top:8px">Tómate el tiempo necesario para revisarlo. Puedes descargarlo desde el visor.</p>
       </div>
       <div class="card">

@@ -187,6 +187,7 @@ $ip_pagina = '198.51.100.214';
 $codigo_p = (string) $p->unique_link_id;
 $post_pagina = [
 	'action' => 'at_cc_responder', 'codigo' => $codigo_p, 'salida' => 'acepta', 'nombre' => 'Cliente Prueba', 'rut' => '11.111.111-1',
+	'tipo' => 'persona', 'direccion' => 'Calle Prueba 123, Santiago', // Task 18: obligatorios al aceptar.
 	'acepto' => '1', 'filas' => ['0'], 'comentario' => 'Acepto la de siempre (prueba).', '_wpnonce' => wp_create_nonce('at_cc_responder_' . $codigo_p),
 ];
 $rp = ar_responder_pagina($post_pagina, $ip_pagina);

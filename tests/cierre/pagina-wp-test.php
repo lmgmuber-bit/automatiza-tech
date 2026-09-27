@@ -76,12 +76,15 @@ function t15_crear(string $marca, array &$creadas): object {
 	$creadas[] = (int) $wpdb->insert_id;
 	return at_cc_propuesta_por_id((int) $wpdb->insert_id);
 }
+/** Task 18: por defecto manda también los datos del contrato (persona + dirección), que ahora son
+ *  obligatorios; un campo en null se quita del POST (para simular un formulario sin él). */
 function t15_aceptar(object $p, array $campos): array {
-	$post = array_merge([
+	$post = array_filter(array_merge([
 		'action' => 'at_cc_responder', 'codigo' => (string) $p->unique_link_id, 'salida' => 'acepta',
 		'nombre' => 'Ana Prueba', 'acepto' => '1', 'filas' => ['0'],
+		'tipo' => 'persona', 'direccion' => 'Calle Prueba 123, Santiago',
 		'_wpnonce' => wp_create_nonce('at_cc_responder_' . $p->unique_link_id),
-	], $campos);
+	], $campos), function ($v) { return $v !== null; });
 	$proc = proc_open([PHP_BINARY, __DIR__ . '/pagina-respuesta-publica-wp-test-run.php', 'responder', 'POST', json_encode($post), '{}'], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
 	if (!is_resource($proc)) { fwrite(STDERR, "No se pudo lanzar el proceso hijo de la prueba.\n"); exit(2); }
 	$out = stream_get_contents($pipes[1]);
@@ -144,12 +147,140 @@ foreach ([
 	ok(strpos($rq['redirect'], 'respuesta=datos') !== false && at_cc_propuesta_por_id((int) $q->id)->status === 'sent' && $nq === 0, "T15: {$caso}: vuelve con «datos» y no registra nada: " . $rq['redirect']);
 }
 
-// Compatibilidad: una página abierta desde antes (manda solo 'rut') se acepta como RUT.
+// Compatibilidad: el campo 'rut' de antes de la Task 15 se sigue tomando como RUT (con los datos del
+// contrato que exige la Task 18).
 $t15_viejo = t15_crear($marca, $creadas);
 $r15v = t15_aceptar($t15_viejo, ['rut' => '11.111.111-1']);
 $m15v = t15_meta((int) $t15_viejo->id);
-ok(strpos($r15v['redirect'], 'respuesta=aceptada') !== false && ($m15v['tipo_documento'] ?? null) === 'rut' && ($m15v['documento'] ?? null) === '11.111.111-1' && ($m15v['rut'] ?? null) === '11.111.111-1', 'T15: el formulario anterior (solo «rut») se acepta como RUT: ' . $r15v['redirect']);
+ok(strpos($r15v['redirect'], 'respuesta=aceptada') !== false && ($m15v['tipo_documento'] ?? null) === 'rut' && ($m15v['documento'] ?? null) === '11.111.111-1' && ($m15v['rut'] ?? null) === '11.111.111-1', 'T15: el campo «rut» de antes se acepta como RUT: ' . $r15v['redirect']);
 ok(strpos(t15_correo_luis($r15v['correos']), 'Documento: RUT 11.111.111-1') !== false, 'T15: el aviso a Luis dice «Documento: RUT 11.111.111-1»');
+
+// ================= Task 18: los datos del contrato son obligatorios al aceptar en la página =================
+// 27-sep, primer contrato real: el cliente aceptó sin dejar «Datos para tu contrato» (era un diálogo
+// aparte y opcional) y hubo que pedirle la dirección y el tipo de cliente por privado para firmar.
+
+// El diálogo de aceptar trae los radios obligatorios sin marcar, los campos de empresa ocultos y la
+// dirección obligatoria; el de datos no se dibuja (la propuesta no está aceptada).
+ok(strpos($h15, '<input type="radio" name="tipo" value="persona" data-at-cc-tipo required>') !== false && strpos($h15, '<input type="radio" name="tipo" value="empresa" data-at-cc-tipo required>') !== false, 'T18: el diálogo de aceptar pide «¿A nombre de quién va el contrato?» con dos radios obligatorios');
+ok(preg_match('/name="tipo"[^>]*checked/', $h15) === 0, 'T18: ningún radio viene marcado por defecto');
+ok(strpos($h15, '<div data-at-cc-campos-empresa hidden>') !== false && strpos($h15, 'name="razon_social" maxlength="200"') !== false && strpos($h15, 'name="rut_empresa"') !== false, 'T18: razón social y RUT de la empresa, ocultos hasta elegir empresa');
+ok(preg_match('/name="(razon_social|rut_empresa)"[^>]*required/', $h15) === 0, 'T18: los campos de empresa no son obligatorios en el HTML (el script los exige solo cuando se ven)');
+ok(strpos($h15, '<input type="text" id="at-cc-a-direccion" name="direccion" required maxlength="300"') !== false && strpos($h15, 'Dirección (calle, número, comuna y ciudad)') !== false, 'T18: la dirección es obligatoria');
+ok(strpos($h15, 'id="at-cc-datos"') === false, 'T18: el diálogo de datos no se dibuja junto al de aceptar (comparten los nombres de campo)');
+ok(strpos($h15, 'max-height:calc(100dvh - 32px)') !== false && strpos($h15, 'overflow-y:auto') !== false, 'T18: el diálogo se puede desplazar en un celular (max-height con dvh y overflow)');
+ok(strpos($h15, 'var inicial = ""') !== false && strpos($h15, 'role="alert"') === false, 'T18: sin respuesta=datos el diálogo no se abre solo ni trae aviso');
+
+// Con respuesta=datos, el diálogo de aceptar se reabre solo y trae el aviso adentro (y en la barra).
+$_GET['respuesta'] = 'datos';
+ob_start();
+at_cc_render_barra($t15_render);
+$h18_datos = (string) ob_get_clean();
+unset($_GET['respuesta']);
+$texto_datos = esc_html(at_cc_mensaje_respuesta('datos')['texto']);
+ok(strpos($h18_datos, 'var inicial = "at-cc-acepta"') !== false, 'T18: con respuesta=datos el diálogo de aceptar se abre solo');
+$pos_dlg = strpos($h18_datos, '<dialog class="at-cc-dlg" id="at-cc-acepta">');
+$pos_aviso = strpos($h18_datos, '<div class="at-cc-msg at-cc-msg--aviso" role="alert">' . $texto_datos . '</div>');
+ok($pos_dlg !== false && $pos_aviso !== false && $pos_aviso > $pos_dlg && $pos_aviso < strpos($h18_datos, '</dialog>', $pos_dlg), 'T18: el aviso de «datos» va dentro del diálogo de aceptar');
+ok(substr_count($h18_datos, $texto_datos) === 2, 'T18: el aviso también sigue en la barra');
+
+/** Contrato de la propuesta, sus marcadores y la nota de aceptación. */
+function t18_contrato(int $id): array {
+	$c = at_cc_contrato_de_propuesta($id);
+	return [$c, $c ? (json_decode((string) $c->placeholders, true) ?: []) : []];
+}
+function t18_nota(int $id): ?object {
+	global $wpdb, $det;
+	return $wpdb->get_row($wpdb->prepare("SELECT description, metadata FROM {$det} WHERE propuesta_id = %d AND detail_type = 'respuesta_cliente' ORDER BY id DESC LIMIT 1", $id));
+}
+
+// Sin tipo, sin dirección, empresa sin razón social o con RUT inválido, tipo inventado o un formulario
+// viejo (abierto antes del cambio, sin estos campos): vuelve con 'datos' y nada cambia.
+foreach ([
+	'sin tipo'                   => ['tipo' => null],
+	'sin dirección'              => ['direccion' => '   '],
+	'tipo inventado'             => ['tipo' => 'fundacion'],
+	'empresa sin razón social'   => ['tipo' => 'empresa', 'razon_social' => '', 'rut_empresa' => '10.000.013-K'],
+	'empresa con RUT inválido'   => ['tipo' => 'empresa', 'razon_social' => '[PRUEBA] Empresa SpA', 'rut_empresa' => '10.000.013-1'],
+	'formulario viejo (T15)'     => ['tipo' => null, 'direccion' => null, 'tipo_documento' => 'rut', 'documento' => '11.111.111-1'],
+	'formulario viejo (solo rut)' => ['tipo' => null, 'direccion' => null, 'tipo_documento' => null, 'documento' => null, 'rut' => '11.111.111-1'],
+] as $caso => $campos) {
+	$q = t15_crear($marca, $creadas);
+	$rq = t15_aceptar($q, array_merge(['tipo_documento' => 'rut', 'documento' => '11.111.111-1'], $campos));
+	$nq = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d", $q->id));
+	ok(strpos($rq['redirect'], 'respuesta=datos') !== false && at_cc_propuesta_por_id((int) $q->id)->status === 'sent' && $nq === 0 && at_cc_contrato_de_propuesta((int) $q->id) === null && !$rq['correos'], "T18: {$caso}: vuelve con «datos», sin cambio de estado, sin nota, sin contrato ni correo: " . $rq['redirect'] . ' ' . $rq['stderr']);
+}
+
+// Persona + dirección: el contrato queda a nombre de quien aceptó, con su documento y la dirección,
+// listo para que AT lo revise (faltantes() vacío); la ficha operativa recibe la dirección y el documento.
+$t18_persona = t15_crear($marca, $creadas);
+$r18p = t15_aceptar($t18_persona, ['tipo_documento' => 'rut', 'documento' => '11.111.111-1', 'direccion' => '  Av. Siempre Viva 742, Providencia, Santiago  ']);
+ok(strpos($r18p['redirect'], 'respuesta=aceptada') !== false && at_cc_propuesta_por_id((int) $t18_persona->id)->status === 'aceptada', 'T18: persona + dirección: aceptada: ' . $r18p['redirect'] . ' ' . $r18p['stderr']);
+[$c18p, $ph18p] = t18_contrato((int) $t18_persona->id);
+ok($c18p && ($ph18p['tipo_cliente'] ?? '') === 'persona' && ($ph18p['domicilio_cliente'] ?? '') === 'Av. Siempre Viva 742, Providencia, Santiago', 'T18: persona: el contrato queda con tipo_cliente persona y la dirección');
+ok(($ph18p['razon_social_cliente'] ?? '') === 'Ana Prueba' && ($ph18p['rut_cliente'] ?? '') === '11.111.111-1' && ($ph18p['tipo_documento_cliente'] ?? '') === 'rut', 'T18: persona: razón social = nombre de quien aceptó y su documento');
+ok($c18p && ContractService::faltantes($c18p) === [], 'T18: persona: faltantes() vacío: ' . ($c18p ? implode(', ', ContractService::faltantes($c18p)) : 'sin contrato'));
+ok($c18p && ContractService::necesita_revision($c18p), 'T18: persona: sigue esperando la revisión de AT (los datos del cliente no la marcan)');
+$f18p = $c18p ? $wpdb->get_row($wpdb->prepare("SELECT billing_address, tax_id FROM {$wpdb->prefix}automatiza_tech_clients WHERE id = %d", (int) $c18p->client_id)) : null;
+ok($f18p && $f18p->billing_address === 'Av. Siempre Viva 742, Providencia, Santiago' && $f18p->tax_id === '11.111.111-1', 'T18: persona: la ficha operativa recibe billing_address y tax_id');
+$n18p = t18_nota((int) $t18_persona->id);
+$m18p = json_decode((string) ($n18p->metadata ?? ''), true) ?: [];
+ok(($m18p['datos_contrato'] ?? null) === ['tipo' => 'persona', 'direccion' => 'Av. Siempre Viva 742, Providencia, Santiago'], 'T18: persona: la metadata de la nota de aceptación trae los datos del contrato: ' . wp_json_encode($m18p['datos_contrato'] ?? null, JSON_UNESCAPED_UNICODE));
+ok($n18p && strpos((string) $n18p->description, 'Siempre Viva') === false && strpos((string) $n18p->description, 'persona') === false, 'T18: persona: la descripción (la puede ver el cliente) no lleva los datos del contrato: ' . str_replace("\n", ' | ', (string) ($n18p->description ?? '')));
+$luis18p = t15_correo_luis($r18p['correos']);
+ok(strpos($luis18p, 'Contrato a nombre de: persona natural (quien aceptó)') !== false && strpos($luis18p, 'Dirección: Av. Siempre Viva 742, Providencia, Santiago') !== false, 'T18: persona: el aviso a Luis trae a nombre de quién va y la dirección');
+ok(strpos($luis18p, '⚠️') === false, 'T18: persona: el cierre no deja avisos: ' . wp_strip_all_tags($luis18p));
+
+// Empresa: el contrato queda con la razón social y el RUT de la empresa; el representante es quien aceptó.
+$t18_empresa = t15_crear($marca, $creadas);
+$r18e = t15_aceptar($t18_empresa, ['tipo_documento' => 'dni', 'documento' => '12345678', 'tipo' => 'empresa', 'razon_social' => '[PRUEBA] Empresa <b>SpA</b>', 'rut_empresa' => '10000013k', 'direccion' => 'Calle Uno 1, Ñuñoa']);
+ok(strpos($r18e['redirect'], 'respuesta=aceptada') !== false, 'T18: empresa: aceptada: ' . $r18e['redirect'] . ' ' . $r18e['stderr']);
+[$c18e, $ph18e] = t18_contrato((int) $t18_empresa->id);
+ok(($ph18e['tipo_cliente'] ?? '') === 'empresa' && ($ph18e['razon_social_cliente'] ?? '') === '[PRUEBA] Empresa SpA' && ($ph18e['rut_cliente'] ?? '') === '10.000.013-K' && ($ph18e['tipo_documento_cliente'] ?? '') === 'rut', 'T18: empresa: razón social y RUT (formateado) de la empresa: ' . wp_json_encode(array_intersect_key($ph18e, ['razon_social_cliente' => 1, 'rut_cliente' => 1]), JSON_UNESCAPED_UNICODE));
+ok(($ph18e['representante_cliente_nombre'] ?? '') === 'Ana Prueba' && ($ph18e['representante_cliente_rut'] ?? '') === '12345678' && ($ph18e['tipo_documento_representante'] ?? '') === 'dni', 'T18: empresa: el representante es quien aceptó, con su documento');
+ok(($ph18e['domicilio_cliente'] ?? '') === 'Calle Uno 1, Ñuñoa' && $c18e && ContractService::faltantes($c18e) === [], 'T18: empresa: con la dirección, faltantes() vacío: ' . ($c18e ? implode(', ', ContractService::faltantes($c18e)) : 'sin contrato'));
+$f18e = $c18e ? $wpdb->get_row($wpdb->prepare("SELECT billing_address, tax_id FROM {$wpdb->prefix}automatiza_tech_clients WHERE id = %d", (int) $c18e->client_id)) : null;
+ok($f18e && $f18e->billing_address === 'Calle Uno 1, Ñuñoa' && $f18e->tax_id === '10.000.013-K', 'T18: empresa: la ficha operativa recibe la dirección y el RUT de la empresa');
+$n18e = t18_nota((int) $t18_empresa->id);
+$m18e = json_decode((string) ($n18e->metadata ?? ''), true) ?: [];
+// == y no ===: la columna metadata es JSON en MySQL y ordena las claves a su manera.
+ok(($m18e['datos_contrato'] ?? null) == ['tipo' => 'empresa', 'direccion' => 'Calle Uno 1, Ñuñoa', 'razon_social' => '[PRUEBA] Empresa SpA', 'rut_empresa' => '10.000.013-K'], 'T18: empresa: la metadata trae tipo, dirección, razón social y RUT de la empresa: ' . wp_json_encode($m18e['datos_contrato'] ?? null, JSON_UNESCAPED_UNICODE));
+ok($n18e && strpos((string) $n18e->description, 'Empresa SpA') === false && strpos((string) $n18e->description, '10.000.013-K') === false && strpos((string) $n18e->description, 'Calle Uno') === false, 'T18: empresa: la descripción no lleva razón social, RUT ni dirección');
+ok(strpos(t15_correo_luis($r18e['correos']), 'Contrato a nombre de: empresa [PRUEBA] Empresa SpA, RUT 10.000.013-K') !== false, 'T18: empresa: el aviso a Luis trae la empresa y su RUT');
+
+// Si aplicar los datos falla, el cierre sigue (cliente, contrato, aviso a Luis) y queda el aviso. Estas
+// dos corren en este mismo proceso: el aviso a Luis no sale de verdad.
+add_filter('pre_wp_mail', '__return_true');
+$t18_falla = t15_crear($marca, $creadas);
+$r18f = at_cc_registrar_respuesta($t18_falla, 'acepta', [
+	'canal' => 'pagina', 'nombre' => 'Ana Prueba', 'tipo_documento' => 'rut', 'documento' => '11.111.111-1', 'rut' => '11.111.111-1',
+	'filas' => at_cc_filas_aceptadas(at_cc_filas_de_propuesta($t18_falla), [0]), 'fecha' => current_time('mysql'), 'bienvenida' => false,
+	'datos_contrato' => ['tipo_cliente' => 'fundacion', 'domicilio_cliente' => 'Calle Falla 1'],
+]);
+ok($r18f['ok'] && $r18f['estado'] === 'aceptada' && $r18f['contrato_id'] && $r18f['crm_id'], 'T18: datos que el servicio rechaza: el cierre igual queda (aceptada, cliente y contrato)');
+ok(count(array_filter((array) $r18f['avisos'], function ($a) { return strpos($a, 'Los datos del contrato que dejó el cliente no se aplicaron') === 0; })) === 1, 'T18: datos que el servicio rechaza: queda un aviso claro: ' . implode(' | ', (array) $r18f['avisos']));
+
+// Aceptación a mano (sin datos_contrato): el contrato nace como siempre, sin tipo ni dirección y sin avisos.
+$t18_manual = t15_crear($marca, $creadas);
+$r18m = at_cc_registrar_respuesta($t18_manual, 'acepta', [
+	'canal' => 'manual', 'canal_manual' => 'whatsapp', 'nombre' => 'Ana Prueba', 'tipo_documento' => 'rut', 'documento' => '11.111.111-1', 'rut' => '11.111.111-1',
+	'filas' => at_cc_filas_aceptadas(at_cc_filas_de_propuesta($t18_manual), [0]), 'fecha' => current_time('mysql'), 'bienvenida' => false,
+]);
+[$c18m, $ph18m] = t18_contrato((int) $t18_manual->id);
+ok($r18m['ok'] && empty($r18m['avisos']) && ($ph18m['tipo_cliente'] ?? '') === '' && ($ph18m['domicilio_cliente'] ?? '') === '', 'T18: aceptación a mano: sin datos del contrato, todo sigue igual (sin tipo ni dirección, sin avisos)');
+$m18m = json_decode((string) (t18_nota((int) $t18_manual->id)->metadata ?? ''), true) ?: [];
+ok(!array_key_exists('datos_contrato', $m18m), 'T18: aceptación a mano: la metadata no trae datos del contrato');
+
+// Completar un cierre a medias (el contrato no quedó): el reintento aplica los datos guardados en la
+// nota de la aceptación. Con el contrato ya creado y otra dirección (el cliente la corrigió), no la pisa.
+@unlink(ContractService::storage_dir() . '/' . $c18e->contract_number . '.pdf');
+$wpdb->query($wpdb->prepare("DELETE FROM " . ContractService::table() . " WHERE proposal_id = %d", (int) $t18_empresa->id));
+$rc18 = at_cc_completar_cierre(at_cc_propuesta_por_id((int) $t18_empresa->id), false);
+[$c18c, $ph18c] = t18_contrato((int) $t18_empresa->id);
+ok($rc18['ok'] && empty($rc18['avisos']) && $c18c && ($ph18c['razon_social_cliente'] ?? '') === '[PRUEBA] Empresa SpA' && ($ph18c['domicilio_cliente'] ?? '') === 'Calle Uno 1, Ñuñoa', 'T18: completar el cierre: el contrato nuevo recibe los datos de la aceptación: ' . implode(' | ', (array) $rc18['avisos']));
+ContractService::actualizar_datos_cliente((int) $c18c->id, ['domicilio_cliente' => 'Calle Corregida 2, Ñuñoa']);
+$rc18b = at_cc_completar_cierre(at_cc_propuesta_por_id((int) $t18_empresa->id), false);
+[, $ph18d] = t18_contrato((int) $t18_empresa->id);
+ok($rc18b['ok'] && empty($rc18b['avisos']) && ($ph18d['domicilio_cliente'] ?? '') === 'Calle Corregida 2, Ñuñoa', 'T18: completar de nuevo con el contrato ya creado: no pisa la dirección corregida');
 
 // Limpieza Task 15: contratos y PDF, Seguimiento, cliente CRM, propuestas y los límites de intentos.
 $ids = implode(',', array_map('intval', $creadas));

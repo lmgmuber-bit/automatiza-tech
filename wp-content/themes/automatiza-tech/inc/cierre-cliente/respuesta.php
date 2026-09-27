@@ -69,6 +69,11 @@ function at_cc_anotar_respuesta(object $p, string $salida, array $d, bool $cambi
 		'huella' => at_cc_huella((string) $p->gamma_prompt_text), 'evidencias' => (array) ($d['evidencias'] ?? []),
 		'cambio_estado' => $cambio_estado, 'registrado_por' => (int) ($d['usuario_id'] ?? 0),
 	];
+	if (!empty($d['datos_contrato'])) {
+		// Task 18: a nombre de quién va el contrato, dirección y, si es empresa, razón social y RUT
+		// (aceptación en la página). Solo en metadata: la descripción la puede ver el cliente.
+		$meta['datos_contrato'] = at_cc_campos_de_datos_contrato((array) $d['datos_contrato']);
+	}
 	$wpdb->insert($wpdb->prefix . 'automatiza_propuestas_details', [
 		'propuesta_id'    => (int) $p->id,
 		'detail_type'     => 'respuesta_cliente',
@@ -118,6 +123,8 @@ function at_cc_ultima_respuesta(int $propuesta_id, ?string $salida = null): ?arr
 			'tipo_documento'  => $doc['tipo'],
 			'documento'       => $doc['numero'],
 			'fecha_declarada' => (string) ($m['fecha_declarada'] ?? ''),
+			// Task 18: datos del contrato de una aceptación en la página (campos del formulario).
+			'datos_contrato'  => (array) ($m['datos_contrato'] ?? []),
 		];
 	}
 	return null;
@@ -261,6 +268,25 @@ function at_cc_ejecutar_cierre(object $p, array $d): array {
 	} catch (\Throwable $e) {
 		$avisos[] = 'El contrato no se creó: ' . $e->getMessage();
 	}
+	// Task 18: los datos del contrato que dejó el cliente al aceptar en la página (a nombre de quién
+	// va, dirección y, si es empresa, razón social y RUT) se aplican al contrato recién creado, con la
+	// misma función que «Datos para tu contrato» (también completa la ficha operativa). Sin ellos
+	// (aceptación a mano o por WhatsApp) todo sigue igual. En un reintento solo si el contrato todavía
+	// no tiene dirección: no se pisa una corrección posterior del cliente. Un fallo no corta el cierre.
+	if ($contrato_id && !empty($d['datos_contrato'])) {
+		try {
+			$c = at_cc_contrato_de_propuesta((int) $p->id);
+			$ph = $c ? (json_decode((string) $c->placeholders, true) ?: []) : [];
+			if ($c && (!$reintento || trim((string) ($ph['domicilio_cliente'] ?? '')) === '')) {
+				$rd = at_cc_aplicar_datos_contrato($c, (array) $d['datos_contrato']);
+				if (is_wp_error($rd)) {
+					$avisos[] = 'Los datos del contrato que dejó el cliente no se aplicaron (' . $rd->get_error_message() . '): están en la nota de la aceptación, cárgalos al revisar el contrato.';
+				}
+			}
+		} catch (\Throwable $e) {
+			$avisos[] = 'Los datos del contrato que dejó el cliente no se aplicaron del todo (' . $e->getMessage() . '): están en la nota de la aceptación; revisa el contrato y su PDF.';
+		}
+	}
 	return ['avisos' => $avisos, 'avisos_operativos' => $avisos_operativos, 'crm_id' => $cli['crm_id'], 'contrato_id' => $contrato_id];
 }
 
@@ -329,6 +355,11 @@ function at_cc_completar_cierre(object $p, bool $bienvenida): array {
 		'bienvenida'     => $bienvenida,
 		'reintento'      => true,
 	];
+	// Task 18: si la aceptación trajo los datos del contrato, el reintento también los aplica (se
+	// vuelven a validar tal cual se guardaron; at_cc_ejecutar_cierre() no pisa un contrato que ya los tenga).
+	if ($u['datos_contrato']) {
+		$d['datos_contrato'] = at_cc_datos_contrato_de_post($u['datos_contrato']);
+	}
 	$r = array_merge($base, ['ok' => true, 'mensaje' => 'completado'], at_cc_ejecutar_cierre($p, $d));
 	if (!empty($r['avisos'])) {
 		at_cc_anotar_simple($p, 'cierre_incompleto', 'Cierre incompleto (al completarlo desde el panel)', implode("\n", $r['avisos']));
@@ -354,6 +385,15 @@ function at_cc_avisar_luis(object $p, string $salida, array $d, array $r): void 
 	$doc = at_cc_documento_de_datos($d);
 	if ($doc['numero'] !== '') {
 		$lineas[] = 'Documento: ' . at_cc_tipos_documento()[$doc['tipo']] . ' ' . $doc['numero'];
+	}
+	// Task 18: datos del contrato de una aceptación en la página (el correo es solo para Luis; se
+	// escapan con el resto de las líneas).
+	if (!empty($d['datos_contrato'])) {
+		$dc = at_cc_campos_de_datos_contrato((array) $d['datos_contrato']);
+		$lineas[] = $dc['tipo'] === 'empresa'
+			? 'Contrato a nombre de: empresa ' . $dc['razon_social'] . ', RUT ' . $dc['rut_empresa']
+			: 'Contrato a nombre de: persona natural (quien aceptó)';
+		$lineas[] = 'Dirección: ' . $dc['direccion'];
 	}
 	if (!empty($d['comentario'])) {
 		$lineas[] = 'Comentario: ' . $d['comentario'];

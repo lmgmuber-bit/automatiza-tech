@@ -188,7 +188,10 @@ ok(array_diff(array_keys($m6), at_cc_claves_contrato_servicios()) === [] && arra
 // Mensajes de la página
 ok(at_cc_mensaje_respuesta('aceptada')['tipo'] === 'ok' && at_cc_mensaje_respuesta('datos')['tipo'] === 'aviso' && at_cc_mensaje_respuesta('error')['tipo'] === 'error', 'mensajes');
 ok(at_cc_mensaje_respuesta('inventado') === null, 'mensaje desconocido');
-ok(at_cc_mensaje_respuesta('datos') === ['tipo' => 'aviso', 'texto' => 'Revisa tu nombre y tu documento, marca lo que aceptas y la casilla «Acepto la propuesta».'], 'T15: mensaje datos habla del documento, no del RUT');
+ok(at_cc_mensaje_respuesta('datos') === ['tipo' => 'aviso', 'texto' => 'Revisa tu nombre y tu documento, a nombre de quién va el contrato y la dirección (si es una empresa, también su razón social y un RUT válido), marca lo que aceptas y la casilla «Acepto la propuesta».'], 'T15/T18: mensaje datos habla del documento, de a nombre de quién va el contrato y de la dirección');
+// Task 18: los datos del contrato validados vuelven a los nombres de campo del formulario.
+ok(at_cc_campos_de_datos_contrato(['tipo_cliente' => 'persona', 'domicilio_cliente' => 'Calle 1, Santiago']) === ['tipo' => 'persona', 'direccion' => 'Calle 1, Santiago'], 'T18: campos del contrato de una persona: tipo y dirección');
+ok(at_cc_campos_de_datos_contrato(['tipo_cliente' => 'empresa', 'domicilio_cliente' => 'Calle 1', 'razon_social_cliente' => '[PRUEBA] SpA', 'tipo_documento_cliente' => 'rut', 'rut_cliente' => '10.000.013-K']) === ['tipo' => 'empresa', 'direccion' => 'Calle 1', 'razon_social' => '[PRUEBA] SpA', 'rut_empresa' => '10.000.013-K'], 'T18: campos del contrato de una empresa: con razón social y RUT de la empresa');
 // Task 7 (ajuste): mensajes de «Datos para tu contrato».
 ok(at_cc_mensaje_respuesta('datos_ok') === ['tipo' => 'ok', 'texto' => '¡Listo! Con estos datos preparamos tu contrato.'], 'mensaje datos_ok');
 ok(at_cc_mensaje_respuesta('datos_recibidos') === ['tipo' => 'ok', 'texto' => 'Recibimos tus datos. Luis los revisa junto con tu contrato.'], 'mensaje datos_recibidos');

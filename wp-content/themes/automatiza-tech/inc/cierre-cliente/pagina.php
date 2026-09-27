@@ -127,9 +127,16 @@ function at_cc_procesar_respuesta_publica(): void {
 		}
 		$todas = at_cc_filas_de_propuesta($p);
 		$d['filas'] = at_cc_filas_aceptadas($todas, array_map('sanitize_text_field', (array) wp_unslash($_POST['filas'] ?? [])));
-		if (mb_strlen(trim($d['nombre'])) < 3 || !isset(at_cc_tipos_documento()[$tipo_doc]) || !at_cc_documento_valido($tipo_doc, $documento) || empty($_POST['acepto']) || ($todas && !$d['filas'])) {
+		// Task 18 (decisión de Luis, 27-sep): los datos del contrato (a nombre de quién va, dirección y,
+		// si es empresa, razón social y RUT) son obligatorios al aceptar. En el primer contrato real el
+		// cliente aceptó sin dejarlos -el diálogo aparte era opcional- y hubo que pedírselos por privado
+		// para poder firmar. Un formulario abierto desde antes del cambio no los trae y también vuelve
+		// con 'datos': al recargar ya ve el formulario nuevo.
+		$datos_contrato = at_cc_datos_contrato_de_post(wp_unslash($_POST));
+		if (mb_strlen(trim($d['nombre'])) < 3 || !isset(at_cc_tipos_documento()[$tipo_doc]) || !at_cc_documento_valido($tipo_doc, $documento) || empty($_POST['acepto']) || ($todas && !$d['filas']) || $datos_contrato === null) {
 			$volver('datos');
 		}
+		$d['datos_contrato'] = $datos_contrato;
 		$d['tipo_documento'] = $tipo_doc;
 		$d['documento'] = at_cc_documento_formato($tipo_doc, $documento);
 		if ($tipo_doc === 'rut') {
@@ -176,14 +183,88 @@ function at_cc_contrato_admite_datos_cliente(?object $c): bool {
 }
 
 /**
- * Datos que deja el cliente después de aceptar para armar su contrato (opcional). Devuelve la
- * clave del mensaje que ve en la página. La propuesta debe estar aceptada y tener contrato; el
- * tipo debe ser persona o empresa, y la dirección es obligatoria. Si es empresa, la razón social
- * y un RUT válido también son obligatorios. Con la revisión de Luis ya guardada, el contrato no
- * cambia pero igual queda la nota en Seguimiento.
+ * Task 18: una sola validación de los datos del contrato para los dos formularios de la página
+ * («Aceptar la propuesta» y «Datos para tu contrato»), con los mismos nombres de campo: tipo,
+ * direccion, razon_social y rut_empresa. El tipo debe ser persona o empresa y la dirección es
+ * obligatoria (hasta 300 caracteres); si es empresa, también la razón social (hasta 200) y un RUT
+ * válido, que se guarda formateado. Devuelve los datos para ContractService::actualizar_datos_cliente()
+ * o null si algo falta o no es válido. $post ya viene sin barras (wp_unslash).
+ */
+function at_cc_datos_contrato_de_post(array $post): ?array {
+	// Un campo que llega como arreglo (tipo[]=…) cuenta como vacío, sin el aviso de PHP al convertirlo.
+	$campo = function (string $k) use ($post): string {
+		return is_scalar($post[$k] ?? null) ? (string) $post[$k] : '';
+	};
+	$tipo = sanitize_key($campo('tipo'));
+	if (!in_array($tipo, ['persona', 'empresa'], true)) {
+		return null;
+	}
+	$direccion = mb_substr(trim(sanitize_text_field($campo('direccion'))), 0, 300);
+	if ($direccion === '') {
+		return null;
+	}
+	$datos = ['tipo_cliente' => $tipo, 'domicilio_cliente' => $direccion];
+	if ($tipo === 'empresa') {
+		$razon = mb_substr(trim(sanitize_text_field($campo('razon_social'))), 0, 200);
+		$rut_crudo = sanitize_text_field($campo('rut_empresa'));
+		if ($razon === '' || !at_cc_rut_valido($rut_crudo)) {
+			return null;
+		}
+		$datos['razon_social_cliente'] = $razon;
+		$datos['tipo_documento_cliente'] = 'rut'; // Task 15: una empresa siempre se identifica con RUT.
+		$datos['rut_cliente'] = at_cc_rut_formato($rut_crudo);
+	}
+	return $datos;
+}
+
+/**
+ * Task 18: aplica los datos del contrato (ya validados con at_cc_datos_contrato_de_post()) y completa
+ * la ficha operativa (wp_automatiza_tech_clients) solo en lo que estaba vacío: billing_address, tax_id
+ * y company. La usan «Datos para tu contrato» y el cierre de una aceptación en la página. Devuelve el
+ * contrato actualizado o el WP_Error del servicio (ya revisado, ya firmado…); si FPDF no puede
+ * escribir el PDF lanza una excepción con los marcadores ya guardados, y quien llama decide cómo
+ * dejarlo anotado.
+ */
+function at_cc_aplicar_datos_contrato(object $c, array $datos) {
+	global $wpdb;
+	if (!at_cc_cargar_contract_service()) {
+		return new WP_Error('sin_contratos', 'El módulo de contratos no está instalado.');
+	}
+	$r = ContractService::actualizar_datos_cliente((int) $c->id, $datos);
+	if (is_wp_error($r)) {
+		return $r;
+	}
+	$tipo = (string) ($datos['tipo_cliente'] ?? '');
+	$ph = json_decode((string) $r->placeholders, true) ?: [];
+	$rut_ficha = $tipo === 'empresa' ? (string) ($datos['rut_cliente'] ?? '') : trim((string) ($ph['representante_cliente_rut'] ?? ''));
+	$tech = $wpdb->prefix . 'automatiza_tech_clients';
+	$fila = $wpdb->get_row($wpdb->prepare("SELECT billing_address, tax_id, company FROM {$tech} WHERE id = %d", (int) $c->client_id));
+	if ($fila) {
+		$cambios = [];
+		if (trim((string) $fila->billing_address) === '') {
+			$cambios['billing_address'] = (string) ($datos['domicilio_cliente'] ?? '');
+		}
+		if ($rut_ficha !== '' && trim((string) $fila->tax_id) === '') {
+			$cambios['tax_id'] = $rut_ficha;
+		}
+		if ($tipo === 'empresa' && trim((string) $fila->company) === '') {
+			$cambios['company'] = (string) ($datos['razon_social_cliente'] ?? '');
+		}
+		if ($cambios) {
+			$wpdb->update($tech, $cambios, ['id' => (int) $c->client_id], array_fill(0, count($cambios), '%s'), ['%d']);
+		}
+	}
+	return $r;
+}
+
+/**
+ * Datos que deja el cliente después de aceptar para armar su contrato. Desde la Task 18 se piden al
+ * aceptar en la página; este formulario queda para las aceptaciones por WhatsApp o a mano y para
+ * corregir. Devuelve la clave del mensaje que ve en la página. La propuesta debe estar aceptada y
+ * tener contrato; la validación es at_cc_datos_contrato_de_post(). Con la revisión de Luis ya
+ * guardada, el contrato no cambia pero igual queda la nota en Seguimiento.
  */
 function at_cc_guardar_datos_contrato(object $p, array $post): string {
-	global $wpdb;
 	if ((string) $p->status !== 'aceptada') {
 		return 'recibida';
 	}
@@ -191,33 +272,15 @@ function at_cc_guardar_datos_contrato(object $p, array $post): string {
 	if (!$c) {
 		return 'recibida';
 	}
-	$tipo = sanitize_key((string) ($post['tipo'] ?? ''));
-	if (!in_array($tipo, ['persona', 'empresa'], true)) {
+	$datos = at_cc_datos_contrato_de_post($post);
+	if ($datos === null) {
 		return 'datos_contrato';
-	}
-	$direccion = mb_substr(trim(sanitize_text_field((string) ($post['direccion'] ?? ''))), 0, 300);
-	if ($direccion === '') {
-		return 'datos_contrato';
-	}
-	$datos = ['tipo_cliente' => $tipo, 'domicilio_cliente' => $direccion];
-	$razon = '';
-	$rut_empresa = '';
-	if ($tipo === 'empresa') {
-		$razon = mb_substr(trim(sanitize_text_field((string) ($post['razon_social'] ?? ''))), 0, 200);
-		$rut_crudo = sanitize_text_field((string) ($post['rut_empresa'] ?? ''));
-		if ($razon === '' || !at_cc_rut_valido($rut_crudo)) {
-			return 'datos_contrato';
-		}
-		$rut_empresa = at_cc_rut_formato($rut_crudo);
-		$datos['razon_social_cliente'] = $razon;
-		$datos['tipo_documento_cliente'] = 'rut'; // Task 15: una empresa siempre se identifica con RUT.
-		$datos['rut_cliente'] = $rut_empresa;
 	}
 	if (!at_cc_cargar_contract_service()) {
 		return 'recibida';
 	}
 	try {
-		$r = ContractService::actualizar_datos_cliente((int) $c->id, $datos);
+		$r = at_cc_aplicar_datos_contrato($c, $datos);
 	} catch (\Throwable $e) {
 		// Igual que at_cc_crear_contrato_servicios(): actualizar_datos_cliente() guarda los
 		// marcadores y recién después regenera el PDF (ContractService::guardar_marcadores()); si
@@ -233,10 +296,10 @@ function at_cc_guardar_datos_contrato(object $p, array $post): string {
 	// Descripción genérica a propósito: la descripción puede verla el cliente en su portal. El tipo,
 	// la razón social, el RUT y la dirección solo debe verlos Luis, así que van en metadata (la lee el
 	// panel interno, nunca la vista del cliente).
-	$meta = ['tipo' => $tipo, 'direccion' => $direccion];
-	if ($tipo === 'empresa') {
-		$meta['razon_social'] = $razon;
-		$meta['rut'] = $rut_empresa;
+	$meta = ['tipo' => $datos['tipo_cliente'], 'direccion' => $datos['domicilio_cliente']];
+	if ($datos['tipo_cliente'] === 'empresa') {
+		$meta['razon_social'] = $datos['razon_social_cliente'];
+		$meta['rut'] = $datos['rut_cliente'];
 	}
 	at_cc_anotar_simple($p, 'respuesta_cliente', 'Datos para el contrato', 'El cliente dejó sus datos para el contrato.', $meta);
 	if (is_wp_error($r)) {
@@ -247,26 +310,6 @@ function at_cc_guardar_datos_contrato(object $p, array $post): string {
 		// 'datos_contrato' aquí sería un falso aviso de validación (el cliente creería que se
 		// equivocó y, al recargar, ni siquiera vuelve a ver el botón). T7 ronda 1, hallazgo 3.
 		return 'datos_recibidos';
-	}
-	// Ficha operativa (wp_automatiza_tech_clients): completa solo lo que estaba vacío.
-	$ph = json_decode((string) $r->placeholders, true) ?: [];
-	$rut_ficha = $tipo === 'empresa' ? $rut_empresa : trim((string) ($ph['representante_cliente_rut'] ?? ''));
-	$tech = $wpdb->prefix . 'automatiza_tech_clients';
-	$fila = $wpdb->get_row($wpdb->prepare("SELECT billing_address, tax_id, company FROM {$tech} WHERE id = %d", (int) $c->client_id));
-	if ($fila) {
-		$cambios = [];
-		if (trim((string) $fila->billing_address) === '') {
-			$cambios['billing_address'] = $direccion;
-		}
-		if ($rut_ficha !== '' && trim((string) $fila->tax_id) === '') {
-			$cambios['tax_id'] = $rut_ficha;
-		}
-		if ($tipo === 'empresa' && trim((string) $fila->company) === '') {
-			$cambios['company'] = $razon;
-		}
-		if ($cambios) {
-			$wpdb->update($tech, $cambios, ['id' => (int) $c->client_id], array_fill(0, count($cambios), '%s'), ['%d']);
-		}
 	}
 	return 'datos_ok';
 }
@@ -316,6 +359,22 @@ function at_cc_render_barra(object $p): void {
 	if ($abrir === '' && $mostrar_datos_contrato && $respuesta_clave === 'aceptada') {
 		$abrir = 'at-cc-datos';
 	}
+	// Task 18: si el formulario volvió por datos que faltan o no son válidos, su diálogo se reabre
+	// solo y muestra el aviso adentro (además de la barra): antes el aviso quedaba chico en la barra,
+	// el diálogo cerrado, y el cliente creía haber dejado sus datos. Solo si ese diálogo se dibuja
+	// (el de aceptar mientras no esté aceptada; el de datos mientras el contrato los admita).
+	$aviso_en = '';
+	if ($msg && $respuesta_clave === 'datos' && $estado !== 'aceptada') {
+		$aviso_en = 'at-cc-acepta';
+	} elseif ($msg && $respuesta_clave === 'datos_contrato' && $mostrar_datos_contrato) {
+		$aviso_en = 'at-cc-datos';
+	}
+	if ($aviso_en !== '') {
+		$abrir = $aviso_en;
+	}
+	$aviso_dialogo = function (string $id) use ($aviso_en, $msg): string {
+		return $aviso_en === $id ? '<div class="at-cc-msg at-cc-msg--aviso" role="alert">' . esc_html($msg['texto']) . '</div>' : '';
+	};
 	$ocultos = function (string $salida) use ($codigo, $nonce): string {
 		return '<input type="hidden" name="action" value="at_cc_responder">'
 			. '<input type="hidden" name="salida" value="' . esc_attr($salida) . '">'
@@ -340,7 +399,8 @@ body>iframe{flex:1 1 auto;height:auto;min-height:0}
 .at-cc-sec{background:#1e293b;color:#e2e8f0;border:1px solid #334155}
 .at-cc-msg{width:100%;text-align:center;padding:8px 12px;border-radius:8px;font-size:14px}
 .at-cc-msg--ok{background:#064e3b;color:#d1fae5}.at-cc-msg--aviso{background:#78350f;color:#fef3c7}.at-cc-msg--error{background:#7f1d1d;color:#fee2e2}
-dialog.at-cc-dlg{border:0;border-radius:14px;padding:0;max-width:440px;width:calc(100% - 32px);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#0f172a}
+dialog.at-cc-dlg{border:0;border-radius:14px;padding:0;max-width:440px;width:calc(100% - 32px);max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#0f172a}
+.at-cc-dlg .at-cc-msg{box-sizing:border-box;margin:0 0 12px;text-align:left}
 dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 .at-cc-dlg form{padding:22px}
 .at-cc-dlg h2{margin:0 0 6px;font-size:19px}
@@ -372,6 +432,7 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 <dialog class="at-cc-dlg" id="at-cc-acepta">
 	<form method="post" action="<?php echo esc_url($accion); ?>">
 		<?php echo $ocultos('acepta'); ?>
+		<?php echo $aviso_dialogo('at-cc-acepta'); ?>
 		<h2>Aceptar la propuesta</h2>
 		<p>Con tu aceptación te enviamos el contrato para firmar y los primeros pasos para partir.</p>
 		<?php if ($filas): ?>
@@ -390,6 +451,18 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 		</select>
 		<label for="at-cc-documento">Número de documento</label>
 		<input type="text" id="at-cc-documento" name="documento" required placeholder="12.345.678-9" autocomplete="off">
+		<?php // Task 18: los datos del contrato van aquí y son obligatorios; sin opción marcada, para que el cliente elija. ?>
+		<p><strong>¿A nombre de quién va el contrato?</strong></p>
+		<label class="at-cc-fila"><input type="radio" name="tipo" value="persona" data-at-cc-tipo required> <span>A mi nombre (persona natural)</span></label>
+		<label class="at-cc-fila"><input type="radio" name="tipo" value="empresa" data-at-cc-tipo required> <span>De una empresa</span></label>
+		<div data-at-cc-campos-empresa hidden>
+			<label for="at-cc-a-razon">Razón social de la empresa</label>
+			<input type="text" id="at-cc-a-razon" name="razon_social" maxlength="200" autocomplete="organization">
+			<label for="at-cc-a-rut-empresa">RUT de la empresa</label>
+			<input type="text" id="at-cc-a-rut-empresa" name="rut_empresa" placeholder="12.345.678-9" autocomplete="off">
+		</div>
+		<label for="at-cc-a-direccion">Dirección (calle, número, comuna y ciudad)</label>
+		<input type="text" id="at-cc-a-direccion" name="direccion" required maxlength="300" autocomplete="street-address">
 		<label class="at-cc-fila"><input type="checkbox" name="acepto" value="1" required> <span>Acepto la propuesta y sus condiciones.</span></label>
 		<div class="at-cc-acciones">
 			<button type="button" class="at-cc-btn at-cc-sec" data-cerrar>Volver</button>
@@ -428,12 +501,13 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 <dialog class="at-cc-dlg" id="at-cc-datos">
 	<form method="post" action="<?php echo esc_url($accion); ?>">
 		<?php echo $ocultos_datos; ?>
+		<?php echo $aviso_dialogo('at-cc-datos'); ?>
 		<h2>Datos para tu contrato</h2>
 		<p>Opcional: si nos dejas estos datos ahora, tu contrato llega listo para firmar.</p>
 		<p><strong>¿A nombre de quién va el contrato?</strong></p>
 		<label class="at-cc-fila"><input type="radio" name="tipo" value="persona" data-at-cc-tipo checked> <span>A mi nombre (persona natural)</span></label>
 		<label class="at-cc-fila"><input type="radio" name="tipo" value="empresa" data-at-cc-tipo> <span>De una empresa</span></label>
-		<div id="at-cc-campos-empresa" hidden>
+		<div data-at-cc-campos-empresa hidden>
 			<label for="at-cc-razon">Razón social de la empresa</label>
 			<input type="text" id="at-cc-razon" name="razon_social" maxlength="200">
 			<label for="at-cc-rut-empresa">RUT de la empresa</label>
@@ -453,13 +527,19 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 	function abrir(id) { var d = document.getElementById(id); if (d && d.showModal) { d.showModal(); } }
 	document.querySelectorAll('[data-abrir]').forEach(function (b) { b.addEventListener('click', function () { abrir(b.getAttribute('data-abrir')); }); });
 	document.querySelectorAll('dialog.at-cc-dlg [data-cerrar]').forEach(function (b) { b.addEventListener('click', function () { b.closest('dialog').close(); }); });
-	function actualizarTipo() {
-		var campos = document.getElementById('at-cc-campos-empresa');
-		var marcado = document.querySelector('[data-at-cc-tipo]:checked');
-		if (campos) { campos.hidden = !marcado || marcado.value !== 'empresa'; }
+	// Task 18: cada formulario (aceptar y datos del contrato) muestra sus propios campos de empresa, y
+	// solo los exige mientras se ven: un campo obligatorio oculto bloquearía el envío sin decir por qué.
+	function actualizarTipo(form) {
+		var campos = form.querySelector('[data-at-cc-campos-empresa]');
+		var marcado = form.querySelector('[data-at-cc-tipo]:checked');
+		if (!campos) { return; }
+		campos.hidden = !marcado || marcado.value !== 'empresa';
+		campos.querySelectorAll('input').forEach(function (i) { i.required = !campos.hidden; });
 	}
-	document.querySelectorAll('[data-at-cc-tipo]').forEach(function (r) { r.addEventListener('change', actualizarTipo); });
-	actualizarTipo();
+	document.querySelectorAll('dialog.at-cc-dlg form').forEach(function (form) {
+		form.querySelectorAll('[data-at-cc-tipo]').forEach(function (r) { r.addEventListener('change', function () { actualizarTipo(form); }); });
+		actualizarTipo(form);
+	});
 	var inicial = <?php echo wp_json_encode($abrir); ?>;
 	if (inicial) { abrir(inicial); }
 })();

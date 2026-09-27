@@ -210,6 +210,20 @@ at_cc_render_barra(at_cc_propuesta_por_id($p1->id));
 $html_p1_abre = (string) ob_get_clean();
 unset($_GET['respuesta']);
 ok(strpos($html_p1_abre, '"at-cc-datos"') !== false && strpos($html_p1_abre, 'var inicial = "at-cc-datos"') !== false, 'con respuesta=aceptada el diálogo se abre solo');
+// Task 18: si «Datos para tu contrato» vuelve por un dato mal escrito, su diálogo se reabre con el aviso adentro.
+$_GET['respuesta'] = 'datos_contrato';
+ob_start();
+at_cc_render_barra(at_cc_propuesta_por_id($p1->id));
+$html_p1_error = (string) ob_get_clean();
+unset($_GET['respuesta']);
+$aviso_dc = '<div class="at-cc-msg at-cc-msg--aviso" role="alert">' . esc_html(at_cc_mensaje_respuesta('datos_contrato')['texto']) . '</div>';
+$pos_dlg_dc = strpos($html_p1_error, '<dialog class="at-cc-dlg" id="at-cc-datos">');
+$pos_aviso_dc = strpos($html_p1_error, $aviso_dc);
+ok(strpos($html_p1_error, 'var inicial = "at-cc-datos"') !== false && $pos_dlg_dc !== false && $pos_aviso_dc > $pos_dlg_dc, 'T18: con respuesta=datos_contrato el diálogo de datos se reabre con el aviso adentro');
+ok(strpos($html_p1_error, 'id="at-cc-acepta"') === false, 'T18: aceptada: el diálogo de aceptar no se dibuja (comparte los nombres de campo con el de datos)');
+// Un campo que llega como arreglo (tipo[]=…) no es válido, sin avisos de PHP.
+ok(at_cc_datos_contrato_de_post(['tipo' => ['persona'], 'direccion' => 'Calle 1']) === null && at_cc_datos_contrato_de_post(['tipo' => 'persona', 'direccion' => ['Calle 1']]) === null, 'T18: tipo o dirección como arreglo: no válido');
+ok(at_cc_datos_contrato_de_post(['tipo' => 'empresa', 'direccion' => str_repeat('d', 350), 'razon_social' => str_repeat('r', 250), 'rut_empresa' => '10000013-k']) === ['tipo_cliente' => 'empresa', 'domicilio_cliente' => str_repeat('d', 300), 'razon_social_cliente' => str_repeat('r', 200), 'tipo_documento_cliente' => 'rut', 'rut_cliente' => '10.000.013-K'], 'T18: la validación compartida recorta la dirección a 300 y la razón social a 200, y formatea el RUT');
 ob_start();
 at_cc_render_barra(at_cc_propuesta_por_id($p4->id));
 $html_p4 = (string) ob_get_clean();

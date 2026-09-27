@@ -410,6 +410,18 @@ function at_cc_marcadores_servicios(array $d): array {
 	return $r;
 }
 
+/** Task 18: los datos del contrato ya validados (formato de ContractService::actualizar_datos_cliente(),
+ *  ver at_cc_datos_contrato_de_post()) de vuelta con los nombres de campo del formulario: así quedan
+ *  en la metadata de la nota de aceptación, y un reintento del cierre los vuelve a validar tal cual. */
+function at_cc_campos_de_datos_contrato(array $datos): array {
+	$campos = ['tipo' => (string) ($datos['tipo_cliente'] ?? ''), 'direccion' => (string) ($datos['domicilio_cliente'] ?? '')];
+	if ($campos['tipo'] === 'empresa') {
+		$campos['razon_social'] = (string) ($datos['razon_social_cliente'] ?? '');
+		$campos['rut_empresa'] = (string) ($datos['rut_cliente'] ?? '');
+	}
+	return $campos;
+}
+
 /** Mensaje que ve el cliente después de responder en la página. */
 function at_cc_mensaje_respuesta(string $clave): ?array {
 	$m = [
@@ -417,7 +429,7 @@ function at_cc_mensaje_respuesta(string $clave): ?array {
 		'evaluando' => ['ok', 'Gracias por contarnos. Te escribimos pronto para resolver tus dudas.'],
 		'rechazada' => ['ok', 'Gracias por tu respuesta. Si algo cambia, aquí estamos.'],
 		'recibida'  => ['ok', 'Recibimos tu respuesta. Gracias.'],
-		'datos'     => ['aviso', 'Revisa tu nombre y tu documento, marca lo que aceptas y la casilla «Acepto la propuesta».'],
+		'datos'     => ['aviso', 'Revisa tu nombre y tu documento, a nombre de quién va el contrato y la dirección (si es una empresa, también su razón social y un RUT válido), marca lo que aceptas y la casilla «Acepto la propuesta».'],
 		'datos_ok'        => ['ok', '¡Listo! Con estos datos preparamos tu contrato.'],
 		'datos_recibidos' => ['ok', 'Recibimos tus datos. Luis los revisa junto con tu contrato.'],
 		'datos_contrato'  => ['aviso', 'Revisa los datos del contrato: la dirección y, si es una empresa, su razón social y un RUT válido.'],

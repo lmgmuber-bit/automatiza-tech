@@ -3667,6 +3667,14 @@ Sus briefs completos quedaron en el espacio de trabajo local (fuera del repo); a
   `pagina.php`). **Queda para el orquestador (n8n):** que el bot principal reenvíe a la ruta nueva los estados `failed` del
   webhook de Meta y que use `url_datos` en su mensaje al cliente que acepta. Prueba `tests/cierre/whatsapp-estado-wp-test.php`
   (más `puras-test.php` y `panel-timeline-wp-test.php`, por la lista de tipos internos).
+  **Revisión (27-sep):** `whatsapp_no_entregado` entra a `get_detail_types()` de `inc/client-details-module.php` (si no, editar
+  la nota la volvía pública) y RF9 de `clientes-wp-test.php` recorre `at_cc_tipos_internos()`; `mensaje_whatsapp` lleva
+  «(interno)» en su etiqueta. `at_cc_registrar_fallo_whatsapp()` toma un candado por `wamid` (`add_option()`) para que dos
+  llamadas simultáneas no avisen dos veces. Un `failed` sin nota queda 15 minutos en espera
+  (`at_cc_clave_fallo_pendiente()`) y `at_cc_anotar_envio_whatsapp()` lo avisa al anotar el envío. Con un 131049 de menos de
+  24 horas (`at_cc_whatsapp_limitado_por_meta()`), el envío y «Pedir respuesta» no mandan otra plantilla. Pruebas nuevas:
+  `wamid` en otra caja o con `_`, candado, fallo antes que la nota, límite de 24 horas, archivada sin aviso, `url_datos` solo
+  al aceptar, códigos fuera de rango y ninguna consulta a la base con un `wamid` inválido.
 
 **Despliegues:** Tasks 1 a 15 el 26-sep a las 13:36 (commit `547f08d`); Tasks 16 y 17 a las 20:13 (commit `793e995`). Cotejo del
 26-sep por la noche: los 29 archivos del cierre en PROD eran idénticos a esta rama. Después: visor de firma el 26-sep a las 

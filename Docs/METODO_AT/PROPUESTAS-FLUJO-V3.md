@@ -197,6 +197,14 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   sin contrato, ya revisado o con dirección, no viene. **La parte de n8n la hace el orquestador:** que el bot principal
   reenvíe a la ruta nueva los estados `failed` del webhook de Meta y que ponga `url_datos` en su respuesta al «Acepto».
   Prueba `tests/cierre/whatsapp-estado-wp-test.php`.
+  **Revisión de la Task 19 (27-sep, LOCAL):** (a) `whatsapp_no_entregado` quedó en la lista de tipos de Seguimiento
+  (`get_detail_types()`, «📵 WhatsApp no entregado (interno)»): sin eso, editar la nota con ✏️ la guardaba como
+  `propuesta_enviada`, que es pública; la prueba RF9 ahora recorre `at_cc_tipos_internos()` entero. (b) Dos llamadas
+  simultáneas con el mismo `wamid` ya no avisan dos veces (candado con `add_option()`). (c) Si el `failed` llega antes que
+  la nota del envío, queda en espera 15 minutos y se avisa al anotar el envío (para el bot sigue contando como
+  `ignorados`). (d) Con un 131049 de menos de 24 horas en esa propuesta, ni el envío ni «Pedir respuesta» mandan otra
+  plantilla: el aviso ofrece «Enviar por mi WhatsApp». (e) `url_datos` solo con `salida` = `acepta` y estado `aceptada`.
+  (f) El `wamid` se compara exacto: el LIKE de la base no distingue mayúsculas y el `wamid` es base64.
 - **Código y pruebas:** `inc/cierre-cliente/` (lo carga `inc/admin-proposals.php` vía `cargar.php`; `puras.php` sin
   WordPress), `contracts/`, `lib/contract-pdf-fpdf.php`, `mu-plugins/crm-ai-completo.php` (pestaña «📜 Contratos y
   operación» del CRM) y `ver-presentacion.php`. Pruebas: `tests/cierre/` y `tests/propuestas/`.

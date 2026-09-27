@@ -159,9 +159,10 @@ class AutomatizaTech_Client_Details {
                 'color' => '#059669'
             ),
             // Task 10b (ajuste del controlador 26-sep): mensaje de texto del cliente al bot de
-            // WhatsApp sobre su propuesta; nota interna, nunca cambia el estado.
+            // WhatsApp sobre su propuesta; nota interna, nunca cambia el estado. Con «(interno)» en la
+            // etiqueta desde la Task 19, como las demás de at_cc_tipos_internos().
             'mensaje_whatsapp' => array(
-                'label' => '💬 Mensaje por WhatsApp',
+                'label' => '💬 Mensaje por WhatsApp (interno)',
                 'icon' => '💬',
                 'color' => '#0f766e'
             ),
@@ -182,6 +183,13 @@ class AutomatizaTech_Client_Details {
                 'label' => 'ℹ️ Aviso operativo (interno)',
                 'icon' => 'ℹ️',
                 'color' => '#64748b'
+            ),
+            // Task 19 (27-sep): Meta no entregó el WhatsApp automático de la propuesta. Mismo motivo
+            // que las de arriba: sin esta entrada, editarla con ✏️ la dejaba como 'propuesta_enviada'.
+            'whatsapp_no_entregado' => array(
+                'label' => '📵 WhatsApp no entregado (interno)',
+                'icon' => '📵',
+                'color' => '#b91c1c'
             ),
             'cotizacion' => array(
                 'label' => '💰 Cotización',

@@ -17,7 +17,7 @@ if (!defined('WP_ADMIN')) {
 require __DIR__ . '/wp-bootstrap.php';
 global $wpdb;
 
-foreach (['at_cc_enviar_whatsapp_plantilla_detalle', 'at_cc_rest_estado_whatsapp', 'at_cc_whatsapp_no_entregado_ultimo', 'at_cc_url_datos_contrato', 'at_cc_render_panel_respuesta'] as $fn) {
+foreach (['at_cc_enviar_whatsapp_plantilla_detalle', 'at_cc_rest_estado_whatsapp', 'at_cc_registrar_fallo_whatsapp', 'at_cc_clave_fallo_pendiente', 'at_cc_whatsapp_limitado_por_meta','at_cc_whatsapp_no_entregado_ultimo', 'at_cc_url_datos_contrato', 'at_cc_render_panel_respuesta'] as $fn) {
 	if (!function_exists($fn)) {
 		fwrite(STDERR, "$fn() no está definida: revisa whatsapp.php, pagina.php y panel.php.\n");
 		exit(2);
@@ -171,6 +171,17 @@ $res = wa_estado_pedir($ruta, ['estados' => [
 ]], AT_REST_SECRET);
 ok($res->get_status() === 200 && $res->get_data() === ['ok' => true, 'avisados' => 0, 'ignorados' => 4], 'wamid desconocido y sent/delivered/read: todos ignorados');
 ok(wa_estado_total_notas('whatsapp_no_entregado') === $total_fallos && count($correos) === 1, 'sin nota ni correo por lo ignorado');
+// Revisión: el LIKE de la base no distingue mayúsculas (utf8mb4_unicode_520_ci) y el wamid es base64,
+// donde sí importan. Un wamid igual al de B salvo en la caja, o con '_' (comodín de LIKE, válido en un
+// wamid) en lugar de una letra, pasa el prefiltro o casi; lo que lo frena es la comparación exacta.
+$wamid_b_caja = strtolower($wamid_b);
+$wamid_b_comodin = substr_replace($wamid_b, '_', strpos($wamid_b, 'UlVFQ') + 4, 1);
+$desconocidos = [$wamid_x, $wamid_b_caja, $wamid_b_comodin];
+foreach (['otra caja' => $wamid_b_caja, 'comodín _' => $wamid_b_comodin] as $nombre => $w) {
+	$res = wa_estado_pedir($ruta, ['estados' => [['wamid' => $w, 'estado' => 'failed', 'codigo' => 131049]]], AT_REST_SECRET);
+	ok(at_cc_wamid_valido($w) && $res->get_data() === ['ok' => true, 'avisados' => 0, 'ignorados' => 1], "wamid de B con {$nombre}: no se confunde con el de B");
+}
+ok(!wa_estado_notas((int) $pb->id, 'whatsapp_no_entregado') && count($correos) === 1, 'un wamid parecido al de B no le deja nota ni manda correo por B');
 
 // ---------- 6) Cuerpos raros: 200 y nada indebido ----------
 $raros = [
@@ -180,17 +191,38 @@ $raros = [
 	'estados con basura'     => ['estados' => ['texto', null, 5, ['wamid' => ['x'], 'estado' => ['failed']], ['wamid' => 12345678901, 'estado' => 'failed']]],
 	'wamid de 5 KB'          => ['estados' => [['wamid' => 'wamid.' . str_repeat('A', 5120), 'estado' => 'failed', 'codigo' => 131049]]],
 	'wamid con salto'        => ['estados' => [['wamid' => $wamid_b . "\n", 'estado' => 'failed']]],
-	'wamid de B con comodín' => ['estados' => [['wamid' => 'wamid.HBgLNTY5MTExMTMzMzMVAgARGBJQUlVF%', 'estado' => 'failed']]],
+	'wamid con % (inválido)' => ['estados' => [['wamid' => 'wamid.HBgLNTY5MTExMTMzMzMVAgARGBJQUlVF%', 'estado' => 'failed']]],
 ];
+// Un wamid con forma inválida ni siquiera llega a buscarse en la base (ni queda en espera). Se parte sin
+// esas esperas por si una corrida anterior (p. ej. con una mutación) las dejó.
+$invalidos = [$wamid_b . "\n", 'wamid.' . str_repeat('A', 5120)];
+foreach ($invalidos as $w) {
+	delete_transient(at_cc_clave_fallo_pendiente($w));
+	$desconocidos[] = $w;
+}
+$consultas_wamid = [];
+$espia = function ($q) use (&$consultas_wamid) {
+	if (strpos($q, 'pedido_respuesta') !== false && stripos($q, 'LIKE') !== false) {
+		$consultas_wamid[] = $q;
+	}
+	return $q;
+};
+add_filter('query', $espia);
 foreach ($raros as $nombre => $cuerpo) {
 	$res = wa_estado_pedir($ruta, $cuerpo, AT_REST_SECRET);
 	ok($res->get_status() === 200 && ($res->get_data()['ok'] ?? null) === true && ($res->get_data()['avisados'] ?? -1) === 0, "cuerpo raro ({$nombre}): 200 sin avisos");
 }
+remove_filter('query', $espia);
+ok(!$consultas_wamid, 'cuerpos raros con wamid inválido: no se busca ninguna nota en la base (' . count($consultas_wamid) . ' consultas)');
+ok(get_transient(at_cc_clave_fallo_pendiente($invalidos[0])) === false && get_transient(at_cc_clave_fallo_pendiente($invalidos[1])) === false, 'un wamid inválido no queda en espera');
 // 50 estados: solo se miran los primeros 20. Los 20 primeros son desconocidos y el wamid de B (que sí
 // existe) va del 21 en adelante, así que no se toca.
 $cincuenta = [];
 for ($i = 0; $i < 50; $i++) {
 	$cincuenta[] = ['wamid' => $i < 20 ? 'wamid.DESCONOCIDO' . str_pad((string) $i, 10, '0', STR_PAD_LEFT) : $wamid_b, 'estado' => 'failed', 'codigo' => 131049];
+	if ($i < 20) {
+		$desconocidos[] = $cincuenta[$i]['wamid'];
+	}
 }
 $res = wa_estado_pedir($ruta, ['estados' => $cincuenta], AT_REST_SECRET);
 ok($res->get_status() === 200 && $res->get_data() === ['ok' => true, 'avisados' => 0, 'ignorados' => 50], '50 estados: solo se revisan 20, el resto se ignora');
@@ -221,6 +253,8 @@ $meta_fb = $fallos_b ? json_decode((string) $fallos_b[0]->metadata, true) : [];
 ok($res->get_data()['avisados'] === 1 && (int) ($meta_fb['codigo'] ?? -1) === 0 && mb_strlen((string) ($meta_fb['titulo'] ?? '')) <= 200, 'código absurdo queda en 0 y el título se recorta a 200');
 ok(strpos(wa_estado_panel($pb), 'Meta dijo: «Título largo') !== false, 'panel: con un código desconocido muestra el título de Meta');
 // Un envío nuevo a A deja atrás el aviso del anterior; y si ese envío nuevo falla, vuelve a aparecer.
+// El fallo de A es un 131049 y, desde la revisión, frena el automático 24 horas: se da por viejo.
+$wpdb->update($wpdb->prefix . 'automatiza_propuestas_details', ['created_at' => wp_date('Y-m-d H:i:s', time() - DAY_IN_SECONDS - HOUR_IN_SECONDS)], ['propuesta_id' => (int) $pa->id, 'detail_type' => 'whatsapp_no_entregado']);
 $flujo = ['code' => 200, 'body' => wp_json_encode(['ok' => true, 'wamid' => $wamid_a2])];
 at_cc_whatsapp_tras_pedido($pa);
 ok(strpos(wa_estado_panel($pa), 'at-cc-wa-no-entregado') === false, 'panel: tras un envío nuevo, el aviso del anterior desaparece');
@@ -231,7 +265,13 @@ $h_a2 = wa_estado_panel($pa);
 ok(strpos($h_a2, 'at-cc-wa-no-entregado') !== false && strpos($h_a2, 'no tiene WhatsApp') !== false, 'panel: si el envío nuevo falla, vuelve el aviso con su motivo (131026)');
 // Aceptada: el aviso ya no importa.
 $wpdb->update($wpdb->prefix . 'automatiza_propuestas', ['status' => 'aceptada'], ['id' => (int) $pb->id]);
-ok(strpos(wa_estado_panel($pb), 'at-cc-wa-no-entregado') === false, 'panel: en una propuesta aceptada no se muestra el aviso');
+ok(strpos(wa_estado_panel($pb), 'at-cc-wa-no-entregado') === false, 'panel: en una propuesta aceptada no se muestra el aviso (el panel corta antes)');
+// Archivada: el cliente ya no puede responder (Task 14). Esta es la que defiende la guarda $puede_pedir:
+// A tiene un fallo avisado y, sin la guarda, mostraría el aviso con «Enviar por mi WhatsApp».
+$wpdb->update($wpdb->prefix . 'automatiza_propuestas', ['status' => 'archivada'], ['id' => (int) $pa->id]);
+ok(strpos(wa_estado_panel($pa), 'at-cc-wa-no-entregado') === false, 'panel: en una propuesta archivada no se muestra el aviso aunque el último WhatsApp no llegó');
+$wpdb->update($wpdb->prefix . 'automatiza_propuestas', ['status' => 'sent'], ['id' => (int) $pa->id]);
+ok(strpos(wa_estado_panel($pa), 'at-cc-wa-no-entregado') !== false, 'panel: de vuelta en enviada, el aviso vuelve');
 
 // ---------- 9) url_datos al aceptar por WhatsApp ----------
 function wa_estado_responder(array $cuerpo) {
@@ -258,8 +298,89 @@ ok(($r['ok'] ?? false) === true && !array_key_exists('url_datos', $r), 'sin cont
 $pe = wa_estado_crear($marca, 'e', '+56 9 1111 6666', $creadas);
 $r = wa_estado_responder(['salida' => 'evalua', 'codigo' => $pe->unique_link_id, 'telefono' => '56911116666', 'wamid' => 'wamid.EVALUA00000001']);
 ok(($r['estado'] ?? '') === 'evaluando' && !array_key_exists('url_datos', $r), '«La sigo evaluando»: sin url_datos');
+// Revisión: la regla es salida 'acepta' Y aceptada. Con un contrato draft sin dirección (quedó de una
+// aceptación anterior), «La sigo evaluando», «No, gracias» o un «Acepto» que no se aplica no mandan
+// url_datos: el enlace lleva respuesta=aceptada y el cliente no aceptó.
+$pd2 = wa_estado_crear($marca, 'd2', '+56 9 1111 0000', $creadas);
+$r = wa_estado_responder(['salida' => 'acepta', 'codigo' => $pd2->unique_link_id, 'telefono' => '56911110000', 'wamid' => 'wamid.ACEPTAD2000001']);
+ok(isset($r['url_datos']), 'contrato draft sin dirección para las pruebas siguientes');
+$wpdb->update($wpdb->prefix . 'automatiza_propuestas', ['status' => 'sent'], ['id' => (int) $pd2->id]);
+ok(at_cc_url_datos_contrato(at_cc_propuesta_por_id((int) $pd2->id)) !== '', 'de vuelta en enviada, el contrato sigue admitiendo url_datos (lo que frena es la regla)');
+$r = wa_estado_responder(['salida' => 'evalua', 'codigo' => $pd2->unique_link_id, 'telefono' => '56911110000', 'wamid' => 'wamid.EVALUA20000001']);
+ok(($r['ok'] ?? false) === true && ($r['estado'] ?? '') === 'evaluando' && !array_key_exists('url_datos', $r), 'con contrato sin dirección, «La sigo evaluando»: sin url_datos');
+$wpdb->update($wpdb->prefix . 'automatiza_propuestas', ['status' => 'sent'], ['id' => (int) $pd2->id]);
+$r = wa_estado_responder(['salida' => 'rechaza', 'codigo' => $pd2->unique_link_id, 'telefono' => '56911110000', 'wamid' => 'wamid.RECHAZ20000001']);
+ok(($r['ok'] ?? false) === true && ($r['estado'] ?? '') === 'rechazada' && !array_key_exists('url_datos', $r), 'con contrato sin dirección, «No, gracias»: sin url_datos');
+$wpdb->update($wpdb->prefix . 'automatiza_propuestas', ['status' => 'archivada'], ['id' => (int) $pd2->id]);
+$r = wa_estado_responder(['salida' => 'acepta', 'codigo' => $pd2->unique_link_id, 'telefono' => '56911110000', 'wamid' => 'wamid.ACEPTAD2000002']);
+ok(($r['ok'] ?? true) === false && !array_key_exists('url_datos', $r), 'con contrato sin dirección, «Acepto» en una archivada (no se aplica): sin url_datos');
+
+// ---------- 10) Revisión de la Task 19 ----------
+// Candado: si otra llamada está avisando el mismo wamid, esta no repite nota ni correo.
+$pf = wa_estado_crear($marca, 'f', '+56 9 1111 7777', $creadas);
+$wamid_f = 'wamid.HBgLNTY5MTExMTc3NzcVAgARGBJGRkZGRkZGRkZGRkZGRkZGAA==';
+$flujo = ['code' => 200, 'body' => wp_json_encode(['ok' => true, 'wamid' => $wamid_f])];
+at_cc_whatsapp_tras_pedido($pf);
+$candado_f = 'at_cc_wa_fallo_' . md5($wamid_f);
+add_option($candado_f, '1', '', false);
+$n_correos = count($correos);
+$res = wa_estado_pedir($ruta, ['estados' => [['wamid' => $wamid_f, 'estado' => 'failed', 'codigo' => 131049]]], AT_REST_SECRET);
+ok($res->get_data() === ['ok' => true, 'avisados' => 0, 'ignorados' => 1] && !wa_estado_notas((int) $pf->id, 'whatsapp_no_entregado') && count($correos) === $n_correos, 'candado tomado por otra llamada con el mismo wamid: esta no avisa');
+delete_option($candado_f);
+$res = wa_estado_pedir($ruta, ['estados' => [['wamid' => $wamid_f, 'estado' => 'failed', 'codigo' => 131049]]], AT_REST_SECRET);
+ok($res->get_data() === ['ok' => true, 'avisados' => 1, 'ignorados' => 0] && count(wa_estado_notas((int) $pf->id, 'whatsapp_no_entregado')) === 1 && count($correos) === $n_correos + 1, 'libre el candado: avisa una vez');
+ok(get_option($candado_f, 'no-existe') === 'no-existe', 'el candado no queda guardado después de avisar');
+
+// 131049 hace menos de 24 horas: ni «Pedir respuesta» ni el envío mandan otra plantilla.
+$http_antes = count($pedidos_http);
+$notas_f = count(wa_estado_notas((int) $pf->id, 'pedido_respuesta'));
+$det_f = at_cc_whatsapp_tras_pedido($pf);
+ok(count($pedidos_http) === $http_antes && count(wa_estado_notas((int) $pf->id, 'pedido_respuesta')) === $notas_f, '131049 reciente: «Pedir respuesta» no llama al flujo ni anota otro envío');
+ok(strpos($det_f[0] ?? '', 'No se mandó el WhatsApp automático') !== false && strpos($det_f[0] ?? '', 'Enviar por mi WhatsApp') !== false, '131049 reciente: el detalle lo explica y ofrece «Enviar por mi WhatsApp»');
+$aviso_f = at_cc_tras_envio($pf, true);
+ok(count($pedidos_http) === $http_antes && strpos($aviso_f, 'No se mandó el WhatsApp automático') !== false && strpos($aviso_f, 'wa.me/56911117777') !== false, '131049 reciente: al enviar la propuesta tampoco sale la plantilla, y trae el botón');
+$wpdb->update($wpdb->prefix . 'automatiza_propuestas_details', ['created_at' => wp_date('Y-m-d H:i:s', time() - DAY_IN_SECONDS - HOUR_IN_SECONDS)], ['propuesta_id' => (int) $pf->id, 'detail_type' => 'whatsapp_no_entregado']);
+$flujo = ['code' => 200, 'body' => wp_json_encode(['ok' => true, 'wamid' => 'wamid.HBgLNTY5MTExMTc3NzcVAgARGBJGRkZGRkZGRkZGRkZGRkYyAA=='])];
+at_cc_whatsapp_tras_pedido($pf);
+ok(count($pedidos_http) === $http_antes + 1, 'pasadas 24 horas del 131049: vuelve a mandar la plantilla');
+
+// El 'failed' llega antes que la nota del envío: queda en espera y se avisa al anotar el envío.
+$pg = wa_estado_crear($marca, 'g', '+56 9 1111 8888', $creadas);
+$wamid_g = 'wamid.HBgLNTY5MTExMTg4ODgVAgARGBJHR0dHR0dHR0dHR0dHR0dHAA==';
+$desconocidos[] = $wamid_g;
+$res = wa_estado_pedir($ruta, ['estados' => [['wamid' => $wamid_g, 'estado' => 'failed', 'codigo' => 131026]]], AT_REST_SECRET);
+ok($res->get_data() === ['ok' => true, 'avisados' => 0, 'ignorados' => 1] && !wa_estado_notas((int) $pg->id, 'whatsapp_no_entregado') && is_array(get_transient(at_cc_clave_fallo_pendiente($wamid_g))), 'failed antes que la nota: cuenta como ignorado y queda en espera');
+$n_correos = count($correos);
+$flujo = ['code' => 200, 'body' => wp_json_encode(['ok' => true, 'wamid' => $wamid_g])];
+$aviso_g = at_cc_tras_envio($pg, true);
+$fallos_g = wa_estado_notas((int) $pg->id, 'whatsapp_no_entregado');
+ok(count($fallos_g) === 1 && (int) (json_decode((string) $fallos_g[0]->metadata, true)['codigo'] ?? 0) === 131026 && count($correos) === $n_correos + 1 && get_transient(at_cc_clave_fallo_pendiente($wamid_g)) === false, 'al anotar el envío, el fallo en espera se avisa (nota y correo) y sale de la espera');
+ok(strpos($aviso_g, 'no se lo entregó al cliente') !== false && strpos($aviso_g, 'wa.me/56911118888') !== false, 'el aviso tras enviar dice que Meta no lo entregó y ofrece el botón');
+ok(strpos(wa_estado_panel($pg), 'at-cc-wa-no-entregado') !== false, 'panel: muestra el aviso del fallo que llegó antes');
+$res = wa_estado_pedir($ruta, ['estados' => [['wamid' => $wamid_g, 'estado' => 'failed', 'codigo' => 131026]]], AT_REST_SECRET);
+ok($res->get_data() === ['ok' => true, 'avisados' => 0, 'ignorados' => 1] && count($correos) === $n_correos + 1, 'el mismo failed otra vez: ya avisado, no se repite');
+// Un fallo con otro código (131026) no frena el automático: solo el 131049 pide esperar 24 horas.
+$http_antes = count($pedidos_http);
+$flujo = ['code' => 200, 'body' => wp_json_encode(['ok' => true, 'wamid' => 'wamid.HBgLNTY5MTExMTg4ODgVAgARGBJHR0dHR0dHR0dHR0dHR0cyAA=='])];
+at_cc_whatsapp_tras_pedido($pg);
+ok(count($pedidos_http) === $http_antes + 1, 'un fallo con otro código (131026) no frena el automático');
+
+// Códigos fuera de rango (negativo o gigante) se guardan como 0.
+$ph = wa_estado_crear($marca, 'h', '+56 9 1111 9999', $creadas);
+$wamid_h1 = 'wamid.HBgLNTY5MTExMTk5OTkVAgARGBJISEhISEhISEhISEhISEgxAA==';
+$wamid_h2 = 'wamid.HBgLNTY5MTExMTk5OTkVAgARGBJISEhISEhISEhISEhISEgyAA==';
+foreach ([$wamid_h1, $wamid_h2] as $w) {
+	$flujo = ['code' => 200, 'body' => wp_json_encode(['ok' => true, 'wamid' => $w])];
+	at_cc_whatsapp_tras_pedido($ph);
+}
+$res = wa_estado_pedir($ruta, ['estados' => [['wamid' => $wamid_h1, 'estado' => 'failed', 'codigo' => -5], ['wamid' => $wamid_h2, 'estado' => 'failed', 'codigo' => 99999999999]]], AT_REST_SECRET);
+$codigos_h = array_map(function ($n) { return json_decode((string) $n->metadata, true)['codigo'] ?? null; }, wa_estado_notas((int) $ph->id, 'whatsapp_no_entregado'));
+ok($res->get_data()['avisados'] === 2 && $codigos_h === [0, 0], 'código negativo o gigante: se guarda como 0 (' . wp_json_encode($codigos_h) . ')');
 
 // ---------- Limpieza ----------
+foreach ($desconocidos as $w) {
+	delete_transient(at_cc_clave_fallo_pendiente($w));
+}
 foreach ($creadas as $id) {
 	$email = (string) $wpdb->get_var($wpdb->prepare("SELECT client_email FROM {$wpdb->prefix}automatiza_propuestas WHERE id = %d", $id));
 	$crm = $email !== '' ? at_cc_crm_de_email($email) : null;

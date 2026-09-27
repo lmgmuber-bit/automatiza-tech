@@ -43,9 +43,14 @@ function at_cc_tras_envio(object $p, bool $pidio_whatsapp): string {
 		return '<div class="notice notice-warning"><p>No se mandó WhatsApp: la propuesta no tiene teléfono.</p></div>';
 	}
 	if (at_cc_whatsapp_plantilla_activa()) {
+		if (at_cc_whatsapp_limitado_por_meta((int) $p->id)) {
+			return '<div class="notice notice-warning"><p>' . esc_html(at_cc_texto_whatsapp_limitado()) . ' Mándalo desde tu teléfono: ' . at_cc_boton_wa_me($p) . '</p></div>';
+		}
 		$envio = at_cc_enviar_whatsapp_plantilla_detalle($p);
 		if ($envio['error'] === '') {
-			at_cc_anotar_simple($p, 'pedido_respuesta', 'WhatsApp enviado a Meta con la plantilla', '', at_cc_metadata_envio_whatsapp($envio));
+			if (at_cc_anotar_envio_whatsapp($p, 'WhatsApp enviado a Meta con la plantilla', $envio)) {
+				return '<div class="notice notice-warning"><p>' . esc_html(at_cc_texto_whatsapp_fallo_inmediato()) . ' Mándalo desde tu teléfono: ' . at_cc_boton_wa_me($p) . '</p></div>';
+			}
 			return '<div class="notice notice-success"><p>' . esc_html(at_cc_texto_whatsapp_enviado($envio)) . '</p></div>';
 		}
 		return '<div class="notice notice-warning"><p>El WhatsApp automático falló (' . esc_html($envio['error']) . '). Mándalo desde tu teléfono: ' . at_cc_boton_wa_me($p) . '</p></div>';
@@ -59,9 +64,14 @@ function at_cc_whatsapp_tras_pedido(object $p): array {
 		return ['Sin teléfono: no se mandó WhatsApp.'];
 	}
 	if (at_cc_whatsapp_plantilla_activa()) {
+		if (at_cc_whatsapp_limitado_por_meta((int) $p->id)) {
+			return [at_cc_texto_whatsapp_limitado() . ' Usa «Enviar por mi WhatsApp».'];
+		}
 		$envio = at_cc_enviar_whatsapp_plantilla_detalle($p);
 		if ($envio['error'] === '') {
-			at_cc_anotar_simple($p, 'pedido_respuesta', 'Se le pidió la respuesta por WhatsApp (plantilla enviada a Meta)', '', at_cc_metadata_envio_whatsapp($envio));
+			if (at_cc_anotar_envio_whatsapp($p, 'Se le pidió la respuesta por WhatsApp (plantilla enviada a Meta)', $envio)) {
+				return [at_cc_texto_whatsapp_fallo_inmediato() . ' Usa «Enviar por mi WhatsApp».'];
+			}
 			return [at_cc_texto_whatsapp_enviado($envio)];
 		}
 		return ['El WhatsApp automático falló (' . $envio['error'] . '): usa «Enviar por mi WhatsApp».'];
@@ -86,6 +96,65 @@ function at_cc_texto_whatsapp_enviado(array $envio): string {
  *  (at_cc_rest_estado_whatsapp) encuentra la propuesta por este wamid. */
 function at_cc_metadata_envio_whatsapp(array $envio): array {
 	return ['wamid' => (string) ($envio['wamid'] ?? ''), 'telefono' => (string) ($envio['telefono'] ?? '')];
+}
+
+/**
+ * Task 19, revisión: anota el envío automático en 'pedido_respuesta' (con wamid y teléfono) y revisa si
+ * el 'failed' de Meta llegó ANTES que esta nota. Meta avisa por otro camino (su webhook, el bot y la
+ * ruta de estados) y puede ganarle a la vuelta del flujo de n8n; en ese caso la ruta dejó el fallo en
+ * espera unos minutos (at_cc_clave_fallo_pendiente()) y aquí se avisa. true = ese fallo se avisó ahora.
+ */
+function at_cc_anotar_envio_whatsapp(object $p, string $titulo, array $envio): bool {
+	at_cc_anotar_simple($p, 'pedido_respuesta', $titulo, '', at_cc_metadata_envio_whatsapp($envio));
+	$wamid = (string) ($envio['wamid'] ?? '');
+	if ($wamid === '') {
+		return false;
+	}
+	$clave = at_cc_clave_fallo_pendiente($wamid);
+	$pendiente = get_transient($clave);
+	if (!is_array($pendiente)) {
+		return false;
+	}
+	delete_transient($clave);
+	return at_cc_registrar_fallo_whatsapp($p, $wamid, (int) ($pendiente['codigo'] ?? 0), (string) ($pendiente['titulo'] ?? ''));
+}
+
+/** Task 19, revisión: nombre del transient donde espera un 'failed' que llegó sin nota de envío. */
+function at_cc_clave_fallo_pendiente(string $wamid): string {
+	return 'at_cc_wa_fallo_pend_' . md5($wamid);
+}
+
+/** Task 19, revisión: el aviso que se muestra cuando el fallo de Meta ya había llegado al anotar el envío. */
+function at_cc_texto_whatsapp_fallo_inmediato(): string {
+	return 'Meta recibió el WhatsApp pero avisó que no se lo entregó al cliente: te llegó un correo con el motivo y quedó anotado en Seguimiento.';
+}
+
+/**
+ * Task 19, revisión: Meta rechazó por el límite de mensajes de marketing (131049) un WhatsApp automático
+ * de esta propuesta hace menos de 24 horas. El aviso a Luis dice «no lo reintentes por el automático
+ * antes de 24 horas», así que el envío y «Pedir respuesta» no mandan la plantilla en ese plazo (sería
+ * otro rechazo seguro, con otro correo de «no le llegó»).
+ */
+function at_cc_whatsapp_limitado_por_meta(int $propuesta_id): bool {
+	global $wpdb;
+	$desde = wp_date('Y-m-d H:i:s', time() - DAY_IN_SECONDS); // Misma zona que current_time('mysql').
+	$metadatas = $wpdb->get_col($wpdb->prepare(
+		"SELECT metadata FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d AND detail_type = 'whatsapp_no_entregado' AND created_at >= %s AND metadata IS NOT NULL",
+		$propuesta_id,
+		$desde
+	));
+	foreach ((array) $metadatas as $m) {
+		$d = json_decode((string) $m, true);
+		if (is_array($d) && (int) ($d['codigo'] ?? 0) === 131049) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/** Task 19, revisión: texto cuando no se manda la plantilla por el límite de Meta (131049). */
+function at_cc_texto_whatsapp_limitado(): string {
+	return 'No se mandó el WhatsApp automático: hace menos de 24 horas Meta no se lo entregó a este cliente por su límite de mensajes de marketing, y otro intento se rechazaría igual.';
 }
 
 /**
@@ -310,21 +379,56 @@ function at_cc_rest_estado_whatsapp(WP_REST_Request $r) {
 			$ignorados++;
 			continue;
 		}
+		// Se acota antes de convertir: un 1e400 del JSON llega como INF y (int) INF no es un código; un
+		// negativo o uno gigante tampoco lo son.
+		$codigo = is_numeric($e['codigo'] ?? null) && (float) $e['codigo'] >= 0 && (float) $e['codigo'] <= 9999999 ? (int) $e['codigo'] : 0;
+		$titulo = is_scalar($e['titulo'] ?? null) ? mb_substr(trim(sanitize_text_field((string) $e['titulo'])), 0, 200) : '';
 		$nota = at_cc_nota_envio_por_wamid($wamid);
 		$p = $nota ? at_cc_propuesta_por_id((int) $nota->propuesta_id) : null;
-		if (!$p || at_cc_wamid_ya_avisado((int) $p->id, $wamid, 'whatsapp_no_entregado')) {
+		if (!$p) {
+			// Revisión de la Task 19: el 'failed' puede llegar antes que la nota del envío (la nota se
+			// escribe cuando vuelve el flujo de n8n). Queda en espera 15 minutos y lo avisa
+			// at_cc_anotar_envio_whatsapp() si aparece la nota; si no aparece, era de otro flujo (p. ej.
+			// los recordatorios) y el transient vence solo. Para el bot sigue contando como ignorado.
+			set_transient(at_cc_clave_fallo_pendiente($wamid), ['codigo' => $codigo, 'titulo' => $titulo], 15 * MINUTE_IN_SECONDS);
 			$ignorados++;
 			continue;
 		}
-		// Se acota antes de convertir: un 1e400 del JSON llega como INF y (int) INF no es un código.
-		$codigo = is_numeric($e['codigo'] ?? null) && (float) $e['codigo'] >= 0 && (float) $e['codigo'] <= 9999999 ? (int) $e['codigo'] : 0;
-		$titulo = is_scalar($e['titulo'] ?? null) ? mb_substr(trim(sanitize_text_field((string) $e['titulo'])), 0, 200) : '';
+		if (at_cc_registrar_fallo_whatsapp($p, $wamid, $codigo, $titulo)) {
+			$avisados++;
+		} else {
+			$ignorados++;
+		}
+	}
+	return ['ok' => true, 'avisados' => $avisados, 'ignorados' => $ignorados];
+}
+
+/**
+ * Task 19: nota interna 'whatsapp_no_entregado' y correo a Luis por un 'failed' de Meta, una sola vez por
+ * wamid. false si ya se había avisado o si otra llamada lo está avisando en este momento.
+ * Revisión: revisar la nota y después escribirla no aguanta dos llamadas simultáneas (dos ejecuciones de
+ * n8n con el mismo estado, o un reintento por tiempo agotado): las dos pasaban la revisión y salían dos
+ * correos. add_option() es atómico gracias a la clave única de option_name (con el mismo valor, el
+ * INSERT … ON DUPLICATE KEY no cambia filas y devuelve false), así que solo una llamada entra. El candado
+ * se suelta al terminar; desde ahí la nota ya escrita evita el repetido. Si PHP muere a la mitad, el
+ * candado queda y ese wamid ya no se avisa: se acepta, es un mensaje puntual.
+ */
+function at_cc_registrar_fallo_whatsapp(object $p, string $wamid, int $codigo, string $titulo): bool {
+	$candado = 'at_cc_wa_fallo_' . md5($wamid);
+	if (!add_option($candado, '1', '', false)) {
+		return false;
+	}
+	try {
+		if (at_cc_wamid_ya_avisado((int) $p->id, $wamid, 'whatsapp_no_entregado')) {
+			return false;
+		}
 		$motivo = at_cc_motivo_whatsapp_no_entregado($codigo, $titulo);
 		at_cc_anotar_simple($p, 'whatsapp_no_entregado', 'El WhatsApp automático no le llegó al cliente', $motivo, ['wamid' => $wamid, 'codigo' => $codigo, 'titulo' => $titulo]);
 		at_cc_avisar_whatsapp_no_entregado($p, $motivo);
-		$avisados++;
+		return true;
+	} finally {
+		delete_option($candado);
 	}
-	return ['ok' => true, 'avisados' => $avisados, 'ignorados' => $ignorados];
 }
 
 /** Task 19: correo a Luis cuando Meta no entregó el WhatsApp de la propuesta (mismo formato y

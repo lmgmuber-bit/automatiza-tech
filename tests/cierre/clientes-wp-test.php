@@ -166,8 +166,10 @@ ok(isset($tipos['respuesta_cliente']), 'T4R1: respuesta_cliente sigue disponible
 
 // Revisión final (26-sep), hallazgo 9: las notas internas del cierre están en la lista (si no, al
 // editarlas con ✏️ el <select> caía en la primera opción, 'propuesta_enviada', que es pública), con
-// la marca «(interno)» y ninguna como primera opción.
-foreach (['pedido_respuesta', 'cierre_incompleto', 'aviso_operativo'] as $tipo_interno) {
+// la marca «(interno)» y ninguna como primera opción. Recorre at_cc_tipos_internos() y no una lista fija:
+// en la Task 19 'whatsapp_no_entregado' quedó fuera de get_detail_types() y esta prueba no lo vio.
+ok(count(at_cc_tipos_internos()) >= 5, 'RF9: at_cc_tipos_internos() trae todos los tipos internos');
+foreach (at_cc_tipos_internos() as $tipo_interno) {
 	ok(isset($tipos[$tipo_interno]) && strpos($tipos[$tipo_interno]['label'], '(interno)') !== false, "RF9: {$tipo_interno} está en get_detail_types() con la etiqueta «(interno)»");
 	ok($claves_tipos[0] !== $tipo_interno, "RF9: {$tipo_interno} no es la primera opción del select");
 }

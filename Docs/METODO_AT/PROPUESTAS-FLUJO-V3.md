@@ -123,7 +123,29 @@ Reglas que aplica `N8N/propuestas-v3/fotos_guard.py` (compartido por Borrador y 
   computadores, oficinas ni reuniones); el prompt de Borrador dice qué mostrar por lámina.
 - La portada va siempre en primer plano con el fondo desenfocado; se reemplaza si pide estadio, fachada, calle o muro.
 - Los reemplazos son escenas neutras que sirven para cualquier rubro, nunca las de otro cliente.
-- Siempre se agrega el cierre `no signs, no labels, no text, no lettering, no logos, no watermarks`.
+- Siempre se agrega el cierre `no signs, no labels, no text, no lettering, no logos, no watermarks, no subtitles,
+  no captions` (los dos últimos desde el 27-sep).
+
+**Fotos sin texto (EN PROD en n8n desde el 2026-09-27 01:27, autorizado por Luis).** En una propuesta real el modelo
+de imagen inventó leyendas blancas como subtítulos de película y hojas con garabatos, aunque el prompt dice «no
+text». Tres cambios:
+- **Filtro** (`fotos_guard.py`): prohíbe hojas con dibujos técnicos, planos, bocetos, instrucciones o manuales y notas
+  adhesivas (solo como papel: «terapia manual», «un barista dibujando en el café» o «una enfermera tomando sangre»
+  siguen pasando), y las escenas de tienda, sala de ventas o supermercado van en primer plano con el fondo desenfocado.
+- **Revisión automática en «3 Final»** (`build_3_final.py`): con las fotos ya guardadas, GPT-4o revisa todas en una
+  sola consulta; las que tengan letras, números, subtítulos o garabatos se piden **una vez** más con otra descripción
+  (el renderer reutiliza una foto solo si su descripción no cambió) y lo que siga con texto llega como aviso en el
+  correo a Luis, sin pasar la propuesta a «error». Una foto rehecha no se vuelve a pagar en corridas siguientes:
+  «Leer fotos previas» compara el sha256 del manifest del renderer. Costo según la documentación de OpenAI (no medido
+  en una factura): ≈ US$0,025 por consulta con 9 fotos, hasta dos consultas, más US$0,0032 por foto rehecha; el
+  botón «Aprobar y generar versión final» lo suma. Pruebas: `probar_revision_fotos.py` (139 comprobaciones, recorre el
+  grafo real del flujo con el código de sus nodos) y `probar_fotos.py`.
+- **«2 Cambios»** sabe cómo se numeran las láminas (1 portada, 2 desafío, 3 solución, 4 beneficios, 5 cómo funciona,
+  las extras, inversión, próximos pasos): «cambia la foto de la lámina 3» ya no crea una extra que no existe.
+
+Respaldo de lo que corría antes: `C:/Users/luis_/respaldos/n8n/2026-09-27-fotos-sin-texto/` (los tres flujos);
+rollback = volver a publicar esos JSON con `deploy.py`. Verificado después de publicar: la versión activa de «1
+Borrador», «2 Cambios» y «3 Final» es idéntica a los JSON del repo.
 
 Revisar una foto siempre **dentro de la plantilla** (la capa oscura tapa detalles en las láminas interiores,
 no en la portada), con `renderProposalHtml` y Playwright en local, sin gastar.

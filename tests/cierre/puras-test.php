@@ -203,7 +203,7 @@ ok(at_cc_campos_de_datos_contrato(['tipo_cliente' => 'empresa', 'domicilio_clien
 // Task 7 (ajuste): mensajes de «Datos para tu contrato».
 ok(at_cc_mensaje_respuesta('datos_ok') === ['tipo' => 'ok', 'texto' => '¡Listo! Con estos datos preparamos tu contrato.'], 'mensaje datos_ok');
 ok(at_cc_mensaje_respuesta('datos_recibidos') === ['tipo' => 'ok', 'texto' => 'Recibimos tus datos. Luis los revisa junto con tu contrato.'], 'mensaje datos_recibidos');
-ok(at_cc_mensaje_respuesta('datos_contrato') === ['tipo' => 'aviso', 'texto' => 'Revisa los datos del contrato: la dirección y, si es una empresa, su razón social y un RUT válido.'], 'mensaje datos_contrato');
+ok(at_cc_mensaje_respuesta('datos_contrato') === ['tipo' => 'aviso', 'texto' => 'Revisa los datos del contrato: tu nombre y tu documento, la dirección y, si es una empresa, su razón social y un RUT válido.'], 'mensaje datos_contrato');
 
 // Evidencia
 $tmp = sys_get_temp_dir() . '/at-cc-prueba-' . getmypid();

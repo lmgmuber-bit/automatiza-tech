@@ -356,14 +356,20 @@ class ContractService {
         }
         $nuevos = array();
         // Task 15: tipo_documento_cliente acompaña a rut_cliente (una empresa lo manda como 'rut').
-        foreach (array('tipo_cliente', 'razon_social_cliente', 'tipo_documento_cliente', 'rut_cliente', 'domicilio_cliente') as $k) {
+        // 27-sep: también el nombre y el documento de quien firma por el cliente, que una aceptación
+        // a mano o por WhatsApp no trae; si el contrato va a su nombre, persona_con_datos_de_aceptacion() los copia.
+        // Solo completan: si el contrato ya tiene ese documento (el de quien aceptó), se ignoran como antes.
+        $repr = array('representante_cliente_nombre', 'tipo_documento_representante', 'representante_cliente_rut');
+        $repr_completo = trim((string) ($ph['representante_cliente_rut'] ?? '')) !== '';
+        foreach (array_merge(array('tipo_cliente', 'razon_social_cliente', 'tipo_documento_cliente', 'rut_cliente', 'domicilio_cliente'), $repr) as $k) {
             if (!array_key_exists($k, $datos)) continue;
+            if ($repr_completo && in_array($k, $repr, true)) continue;
             $v = self::limpiar_texto($datos[$k]);
             if ($v === '') continue; // Lo que el cliente deja en blanco no borra lo que ya había.
             if ($k === 'tipo_cliente' && !array_key_exists($v, self::tipos_cliente())) {
                 return new WP_Error('tipo_cliente_invalido', 'El tipo de cliente debe ser persona natural o empresa.');
             }
-            if ($k === 'tipo_documento_cliente' && !array_key_exists($v, self::tipos_documento())) {
+            if (($k === 'tipo_documento_cliente' || $k === 'tipo_documento_representante') && !array_key_exists($v, self::tipos_documento())) {
                 return new WP_Error('tipo_documento_invalido', 'El tipo de documento debe ser RUT, DNI o pasaporte.');
             }
             $nuevos[$k] = $v;

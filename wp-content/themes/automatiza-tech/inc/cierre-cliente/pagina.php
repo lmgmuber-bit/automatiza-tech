@@ -192,6 +192,69 @@ function at_cc_contrato_sin_direccion(?object $c): bool {
 	return trim((string) ($ph['domicilio_cliente'] ?? '')) === '';
 }
 
+/** 27-sep: al contrato le falta el documento de quien firma por el cliente (la persona, si va a
+ *  su nombre; el representante, si va a nombre de una empresa: en los dos casos es representante_cliente_rut).
+ *  Pasa cuando la aceptación fue a mano sin el número o por WhatsApp; «Datos para tu contrato» entonces lo pide. */
+function at_cc_contrato_sin_documento(?object $c): bool {
+	$ph = $c ? (json_decode((string) $c->placeholders, true) ?: []) : [];
+	return trim((string) ($ph['representante_cliente_rut'] ?? '')) === '';
+}
+
+/** 27-sep: nombre y documento de quien firma por el cliente, del formulario «Datos para tu contrato» (campos
+ *  nombre, tipo_documento y documento, los mismos del de aceptar). Null si falta algo o el documento no es
+ *  válido; si no, los marcadores para ContractService::actualizar_datos_cliente(). */
+function at_cc_firmante_de_post(array $post): ?array {
+	$campo = function (string $k) use ($post): string {
+		return is_scalar($post[$k] ?? null) ? (string) $post[$k] : '';
+	};
+	$nombre = mb_substr(trim(sanitize_text_field($campo('nombre'))), 0, 160);
+	$tipo = sanitize_key($campo('tipo_documento'));
+	$tipo = $tipo !== '' ? $tipo : 'rut';
+	$numero = trim(sanitize_text_field($campo('documento')));
+	if (mb_strlen($nombre) < 3 || !at_cc_documento_valido($tipo, $numero)) {
+		return null;
+	}
+	return [
+		'representante_cliente_nombre' => $nombre,
+		'tipo_documento_representante' => $tipo,
+		'representante_cliente_rut'    => at_cc_documento_formato($tipo, $numero),
+	];
+}
+
+/** 27-sep: aviso a Luis cuando el cliente deja sus datos para el contrato (antes solo quedaba la nota en
+ *  Seguimiento y había que ir a mirar). Dice si el contrato quedó listo para revisar y firmar o qué falta. No
+ *  lleva el número del documento de la persona. */
+function at_cc_avisar_datos_contrato(object $p, array $datos, bool $aplicado): void {
+	$quien = trim((string) $p->company_name) !== '' ? (string) $p->company_name : (string) $p->client_name;
+	$dc = at_cc_campos_de_datos_contrato($datos);
+	$lineas = [$dc['tipo'] === 'empresa'
+		? 'Contrato a nombre de: empresa ' . $dc['razon_social'] . ', RUT ' . $dc['rut_empresa']
+		: 'Contrato a nombre de: persona natural'];
+	if (!empty($datos['representante_cliente_nombre'])) {
+		$lineas[] = ($dc['tipo'] === 'empresa' ? 'Representante: ' : 'Nombre: ') . $datos['representante_cliente_nombre']
+			. (!empty($datos['tipo_documento_representante']) ? ' (dejó su ' . (at_cc_tipos_documento()[$datos['tipo_documento_representante']] ?? 'documento') . ')' : '');
+	}
+	$lineas[] = 'Dirección: ' . $dc['direccion'];
+	$c = at_cc_contrato_de_propuesta((int) $p->id);
+	$faltan = ($c && at_cc_cargar_contract_service()) ? ContractService::faltantes($c) : [];
+	if (!$aplicado) {
+		$lineas[] = 'No se aplicaron al contrato porque ya lo revisaste o ya está firmado: quedaron en la nota de Seguimiento.';
+	} elseif ($faltan) {
+		$lineas[] = 'Todavía falta: ' . implode(', ', $faltan) . '. Complétalo al revisar el contrato.';
+	} else {
+		$lineas[] = 'El contrato está listo para que lo revises y lo firmes.';
+	}
+	$html = '<p>' . implode('<br>', array_map('esc_html', $lineas)) . '</p>'
+		. '<p><a href="' . esc_url(admin_url('admin.php?page=automatiza-proposals&edit_id=' . (int) $p->id . '&tab=envio')) . '">Abrir la propuesta en el panel</a></p>';
+	if ($c && in_array($c->status, ['draft', 'at_pending'], true)) {
+		$html .= '<p><a href="' . esc_url(home_url('/contracts/at-sign-contract.php?token=' . $c->at_review_token)) . '">Revisar, ajustar y firmar el contrato</a></p>';
+	}
+	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+	$destinatario = at_cc_correo_avisos();
+	$headers = array_merge(['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $from . '>'], at_cc_cabecera_copia($destinatario));
+	wp_mail($destinatario, $quien . ' dejó sus datos para el contrato 📝', $html, $headers);
+}
+
 /** Task 19: enlace a «Datos para tu contrato» (la página de la propuesta con respuesta=aceptada, que
  *  abre ese diálogo sola) cuando el contrato los admite y le falta la dirección; '' si no. Quien acepta
  *  por WhatsApp no deja la dirección ni el tipo de cliente: el bot le manda este enlace. */
@@ -300,6 +363,15 @@ function at_cc_guardar_datos_contrato(object $p, array $post): string {
 	if (!at_cc_cargar_contract_service()) {
 		return 'recibida';
 	}
+	// 27-sep: si al contrato le falta el documento de quien firma (aceptó a mano sin el número o
+	// por WhatsApp), el formulario lo pide y aquí es obligatorio: sin él Luis no puede firmar el contrato.
+	if (at_cc_contrato_admite_datos_cliente($c) && at_cc_contrato_sin_documento($c)) {
+		$firmante = at_cc_firmante_de_post($post);
+		if ($firmante === null) {
+			return 'datos_contrato';
+		}
+		$datos = array_merge($datos, $firmante);
+	}
 	try {
 		$r = at_cc_aplicar_datos_contrato($c, $datos);
 	} catch (\Throwable $e) {
@@ -322,7 +394,12 @@ function at_cc_guardar_datos_contrato(object $p, array $post): string {
 		$meta['razon_social'] = $datos['razon_social_cliente'];
 		$meta['rut'] = $datos['rut_cliente'];
 	}
+	if (!empty($datos['representante_cliente_rut'])) {
+		$meta['firmante'] = $datos['representante_cliente_nombre'];
+		$meta['documento_firmante'] = (at_cc_tipos_documento()[$datos['tipo_documento_representante']] ?? '') . ' ' . $datos['representante_cliente_rut'];
+	}
 	at_cc_anotar_simple($p, 'respuesta_cliente', 'Datos para el contrato', 'El cliente dejó sus datos para el contrato.', $meta);
+	at_cc_avisar_datos_contrato($p, $datos, !is_wp_error($r));
 	if (is_wp_error($r)) {
 		// Ninguno de los códigos que el servicio puede devolver a esta altura es un error de
 		// validación del cliente: tipo, dirección y (si aplica) razón social/RUT de empresa ya se
@@ -378,6 +455,10 @@ function at_cc_render_barra(object $p): void {
 	$nonce = wp_create_nonce('at_cc_responder_' . $codigo);
 	$c_datos = $estado === 'aceptada' ? at_cc_contrato_de_propuesta((int) $p->id) : null;
 	$mostrar_datos_contrato = $estado === 'aceptada' && at_cc_contrato_admite_datos_cliente($c_datos);
+	// 27-sep: si falta el documento de quien firma, el diálogo también pide nombre y documento.
+	$pedir_documento = $mostrar_datos_contrato && at_cc_contrato_sin_documento($c_datos);
+	$ph_datos = $c_datos ? (json_decode((string) $c_datos->placeholders, true) ?: []) : [];
+	$nombre_firmante = trim((string) ($ph_datos['representante_cliente_nombre'] ?? '')) !== '' ? (string) $ph_datos['representante_cliente_nombre'] : (string) $p->client_name;
 	// Task 18 (revisión, 27-sep): tras aceptar, «Datos para tu contrato» se abre solo únicamente si al
 	// contrato le falta la dirección (aceptación por WhatsApp o a mano). Si ya la dejó al aceptar, abrirlo
 	// le pedía los datos dos veces y, guardado sin mirar, podía pasar a persona un contrato de empresa.
@@ -544,6 +625,19 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 			<label for="at-cc-rut-empresa">RUT de la empresa</label>
 			<input type="text" id="at-cc-rut-empresa" name="rut_empresa" placeholder="12.345.678-9">
 		</div>
+		<?php if ($pedir_documento): ?>
+		<p>Quién firma el contrato: tú o, si va a nombre de una empresa, tú como su representante.</p>
+		<label for="at-cc-d-nombre">Tu nombre completo</label>
+		<input type="text" id="at-cc-d-nombre" name="nombre" required minlength="3" maxlength="160" autocomplete="name" value="<?php echo esc_attr($nombre_firmante); ?>">
+		<label for="at-cc-d-tipo-doc">Tu documento</label>
+		<select id="at-cc-d-tipo-doc" name="tipo_documento">
+			<?php foreach (at_cc_tipos_documento() as $valor_doc => $texto_doc): ?>
+				<option value="<?php echo esc_attr($valor_doc); ?>"<?php echo $valor_doc === 'rut' ? ' selected' : ''; ?>><?php echo esc_html($texto_doc); ?></option>
+			<?php endforeach; ?>
+		</select>
+		<label for="at-cc-d-documento">Número de documento</label>
+		<input type="text" id="at-cc-d-documento" name="documento" required placeholder="12.345.678-9" autocomplete="off">
+		<?php endif; ?>
 		<label for="at-cc-direccion">Dirección (calle, número, comuna y ciudad)</label>
 		<input type="text" id="at-cc-direccion" name="direccion" required maxlength="300">
 		<div class="at-cc-acciones">

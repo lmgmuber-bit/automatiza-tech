@@ -459,7 +459,7 @@ function at_cc_mensaje_respuesta(string $clave): ?array {
 		'datos'     => ['aviso', 'Revisa tu nombre y tu documento, a nombre de quién va el contrato y la dirección (si es una empresa, también su razón social y un RUT válido), marca lo que aceptas y la casilla «Acepto la propuesta».'],
 		'datos_ok'        => ['ok', '¡Listo! Con estos datos preparamos tu contrato.'],
 		'datos_recibidos' => ['ok', 'Recibimos tus datos. Luis los revisa junto con tu contrato.'],
-		'datos_contrato'  => ['aviso', 'Revisa los datos del contrato: la dirección y, si es una empresa, su razón social y un RUT válido.'],
+		'datos_contrato'  => ['aviso', 'Revisa los datos del contrato: tu nombre y tu documento, la dirección y, si es una empresa, su razón social y un RUT válido.'],
 		'vencida'   => ['aviso', 'La página estuvo abierta mucho rato. Recárgala e inténtalo de nuevo.'],
 		'limite'    => ['aviso', 'Recibimos muchos intentos desde tu conexión. Espera un rato y vuelve a intentarlo.'],
 		'error'     => ['error', 'No pudimos registrar tu respuesta. Escríbenos por WhatsApp y lo vemos.'],

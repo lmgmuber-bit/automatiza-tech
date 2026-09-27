@@ -177,6 +177,26 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   `C:/Users/luis_/respaldos/n8n/2026-09-26-wa-plantilla/`. Mientras tanto el panel ofrece «Enviar por mi WhatsApp». Las rutas `POST /wp-json/at/v1/propuesta-respuesta` y
   `/propuesta-contexto` (para el bot) exigen la cabecera `X-AT-Secret` igual a `AT_REST_SECRET`: sin ella responden
   401 (500 si la constante faltara).
+  **Task 19 (27-sep, LOCAL en `claude/cierre-cliente`, sin desplegar): avisos de entrega y enlace para los datos.**
+  (1) Cada envío automático guarda en su nota interna `pedido_respuesta` el `wamid` que devuelve el flujo
+  (`{"ok":true,"wamid":"wamid.…"}`) y el teléfono normalizado (`at_cc_enviar_whatsapp_plantilla_detalle()`; la función
+  de siempre sigue devolviendo solo el motivo del error). El panel ya no dice «Meta confirma la entrega después»: dice
+  «WhatsApp enviado a Meta. Si no se lo entrega al cliente, te llega un aviso por correo y queda anotado en Seguimiento».
+  (2) Ruta nueva `POST /wp-json/at/v1/propuesta-whatsapp-estado`, con la misma clave `X-AT-Secret`. Cuerpo:
+  `{"estados":[{"wamid":"wamid.…","estado":"failed","codigo":131049,"titulo":"…","telefono":"569…"}]}` (hasta 20 por
+  llamada; lo demás se ignora). Solo cuenta `failed` de un `wamid` que tenga su nota `pedido_respuesta`; el resto
+  (otros flujos, `sent`, `delivered`, `read`, cuerpos raros) se ignora sin error. Por cada fallo nuevo queda la nota
+  interna `whatsapp_no_entregado` (motivo, `wamid`, código y título de Meta) y sale un correo a Luis con el motivo en
+  simple (131049: límite de mensajes de marketing por persona, no reintentar antes de 24 horas; 131026: el número no
+  puede recibirlo; 131047: pasaron más de 24 horas desde el último mensaje del cliente; otro: el texto de Meta), la
+  aclaración de que la propuesta no cambió de estado y el enlace a la ficha para «Enviar por mi WhatsApp». Un mismo
+  `wamid` avisa una sola vez. Responde `{"ok":true,"avisados":n,"ignorados":m}`. (3) En «Respuesta del cliente», si el
+  último envío automático quedó sin entregar, aparece un aviso con el motivo y el botón «Enviar por mi WhatsApp».
+  (4) Cuando el cliente acepta por WhatsApp, `/propuesta-respuesta` agrega `url_datos` (la página de la propuesta con
+  `respuesta=aceptada`, que abre «Datos para tu contrato») mientras el contrato admita datos y le falte la dirección;
+  sin contrato, ya revisado o con dirección, no viene. **La parte de n8n la hace el orquestador:** que el bot principal
+  reenvíe a la ruta nueva los estados `failed` del webhook de Meta y que ponga `url_datos` en su respuesta al «Acepto».
+  Prueba `tests/cierre/whatsapp-estado-wp-test.php`.
 - **Código y pruebas:** `inc/cierre-cliente/` (lo carga `inc/admin-proposals.php` vía `cargar.php`; `puras.php` sin
   WordPress), `contracts/`, `lib/contract-pdf-fpdf.php`, `mu-plugins/crm-ai-completo.php` (pestaña «📜 Contratos y
   operación» del CRM) y `ver-presentacion.php`. Pruebas: `tests/cierre/` y `tests/propuestas/`.

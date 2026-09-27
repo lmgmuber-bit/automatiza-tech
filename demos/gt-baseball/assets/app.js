@@ -62,6 +62,49 @@
     document.querySelectorAll('[data-whatsapp-link]').forEach(function (a) { a.href = enlaceWa; a.hidden = false; });
   }
 
+  // ---------- Logo de la portada: inclinación con el mouse, giro al tocar, pausa fuera de pantalla ----------
+  (function logoWow() {
+    var zona = $('logo-wow');
+    var giro = zona && zona.querySelector('.logo3d__giro');
+    if (!zona || !giro) return;
+    var menosMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var punteroFino = window.matchMedia('(hover: hover) and (pointer: fine)');
+    var pendiente = 0, rx = 0, ry = 0, px = 30, py = 25;
+    function pintar() {
+      pendiente = 0;
+      giro.style.setProperty('--rx', rx.toFixed(2) + 'deg');
+      giro.style.setProperty('--ry', ry.toFixed(2) + 'deg');
+      giro.style.setProperty('--px', px.toFixed(1) + '%');
+      giro.style.setProperty('--py', py.toFixed(1) + '%');
+    }
+    zona.addEventListener('pointermove', function (e) {
+      if (menosMovimiento.matches || !punteroFino.matches || e.pointerType !== 'mouse') return;
+      var r = zona.getBoundingClientRect();
+      var x = Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) - 0.5;
+      var y = Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1) - 0.5;
+      rx = -y * 16; ry = x * 18; px = (x + 0.5) * 100; py = (y + 0.5) * 100;
+      zona.classList.add('con-mouse');
+      if (!pendiente) pendiente = requestAnimationFrame(pintar);
+    });
+    zona.addEventListener('pointerleave', function () {
+      rx = 0; ry = 0;
+      zona.classList.remove('con-mouse');
+      if (!pendiente) pendiente = requestAnimationFrame(pintar);
+    });
+    zona.addEventListener('click', function () {
+      if (menosMovimiento.matches) return;
+      giro.classList.remove('girando');
+      void giro.offsetWidth; // reinicia la animación si se toca seguido
+      giro.classList.add('girando');
+    });
+    giro.addEventListener('animationend', function (e) { if (e.animationName === 'moneda') giro.classList.remove('girando'); });
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entradas) {
+        zona.classList.toggle('en-pausa', !entradas[0].isIntersecting);
+      }).observe(zona);
+    }
+  })();
+
   // Logo para la planilla PDF.
   fetch('assets/logo-gt-pdf.jpg').then(function (r) { return r.blob(); }).then(leerComoDataUrl)
     .then(function (u) { estado.logo = u; }).catch(function () { estado.logo = null; });

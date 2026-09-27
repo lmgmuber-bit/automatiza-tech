@@ -9,7 +9,15 @@ function ok($cond, $msg) { global $fallas; if ($cond) { echo "ok   $msg\n"; } el
 ok(at_cc_salidas() === ['acepta' => 'aceptada', 'evalua' => 'evaluando', 'rechaza' => 'rechazada'], 'salidas');
 // Task 8 (ajuste del controlador): tipos de Seguimiento que crm-ai-completo.php debe excluir de
 // las dos líneas de tiempo públicas (cliente y prospecto).
-ok(at_cc_tipos_internos() === ['cierre_incompleto', 'aviso_operativo', 'pedido_respuesta', 'mensaje_whatsapp'], 'tipos internos: nunca a una página pública');
+ok(at_cc_tipos_internos() === ['cierre_incompleto', 'aviso_operativo', 'pedido_respuesta', 'mensaje_whatsapp', 'whatsapp_no_entregado'], 'tipos internos: nunca a una página pública');
+// Task 19: wamid con forma razonable y motivo en simple de un WhatsApp que Meta no entregó.
+ok(at_cc_wamid_valido('wamid.HBgLNTY5MTExMTIyMjIVAgARGBI5QTNDQTVCM0I0Q0Q2RTdGOAA=') && at_cc_wamid_valido('wamid.abc+/=_-12345'), 'wamid válido');
+ok(!at_cc_wamid_valido('') && !at_cc_wamid_valido('w1') && !at_cc_wamid_valido('wamid.') && !at_cc_wamid_valido('wamid.' . str_repeat('A', 5000)) && !at_cc_wamid_valido("wamid.ABCDEFGH\n") && !at_cc_wamid_valido('wamid.ABC DEFGHI') && !at_cc_wamid_valido("wamid.ABCDEFGH'"), 'wamid inválido: vacío, corto, gigante, con salto de línea, espacio o comilla');
+ok(strpos(at_cc_motivo_whatsapp_no_entregado(131049, 'x'), 'marketing') !== false && strpos(at_cc_motivo_whatsapp_no_entregado(131049, ''), '24 horas') !== false, 'motivo 131049: límite de marketing, no reintentar antes de 24 horas');
+ok(strpos(at_cc_motivo_whatsapp_no_entregado(131026, ''), 'no tiene WhatsApp') !== false, 'motivo 131026: el número no puede recibirlo');
+ok(strpos(at_cc_motivo_whatsapp_no_entregado(131047, ''), 'más de 24 horas') !== false, 'motivo 131047: pasaron más de 24 horas');
+ok(at_cc_motivo_whatsapp_no_entregado(130472, 'User is part of an experiment') === 'Meta dijo: «User is part of an experiment» (código 130472).', 'motivo desconocido: el título que manda Meta, con el código');
+ok(at_cc_motivo_whatsapp_no_entregado(0, '') === 'Meta no dio el motivo.', 'motivo sin código ni título');
 ok(at_cc_transicion_respuesta_valida('sent', 'aceptada'), 'sent -> aceptada');
 ok(at_cc_transicion_respuesta_valida('sent', 'evaluando') && at_cc_transicion_respuesta_valida('sent', 'rechazada'), 'sent -> evaluando / rechazada');
 ok(at_cc_transicion_respuesta_valida('evaluando', 'aceptada') && at_cc_transicion_respuesta_valida('evaluando', 'rechazada'), 'evaluando -> aceptada / rechazada');

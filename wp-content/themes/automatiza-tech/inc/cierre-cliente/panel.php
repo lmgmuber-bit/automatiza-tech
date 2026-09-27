@@ -263,8 +263,21 @@ function at_cc_render_panel_respuesta(object $p): void {
 		echo '</div>';
 		return;
 	}
-	echo '<p>';
 	$puede_pedir = at_cc_puede_pedir_respuesta($estado);
+	// Task 19: Meta aceptó el último WhatsApp automático pero no se lo entregó al cliente (la ruta
+	// at/v1/propuesta-whatsapp-estado dejó la nota 'whatsapp_no_entregado'). Solo mientras se le pueda
+	// pedir la respuesta: aceptada o archivada ya no importa.
+	$no_entregado = ($puede_pedir && function_exists('at_cc_whatsapp_no_entregado_ultimo')) ? at_cc_whatsapp_no_entregado_ultimo((int) $p->id) : null;
+	if ($no_entregado) {
+		echo '<div class="notice notice-error inline at-cc-wa-no-entregado" style="margin:8px 0;padding:8px 12px">';
+		echo '<p style="margin:0 0 6px"><strong>⚠️ El último WhatsApp automático no le llegó al cliente</strong> (' . esc_html(at_pa_fecha_corta($no_entregado['fecha'])) . '). '
+			. 'Motivo: ' . esc_html($no_entregado['motivo']) . ' La propuesta no cambió de estado.</p>';
+		echo $wa !== ''
+			? '<p style="margin:0"><a class="button button-primary" target="_blank" rel="noopener" href="' . esc_attr($wa) . '">💬 Enviar por mi WhatsApp</a></p>'
+			: '<p style="margin:0" class="description">Sin teléfono: agrégalo en «Cliente y enlaces» para mandarlo desde tu WhatsApp.</p>';
+		echo '</div>';
+	}
+	echo '<p>';
 	if ($puede_pedir) {
 		echo '<button type="submit" class="button" form="at-cc-f-pedir">📧 Pedir respuesta por correo</button> ';
 	}

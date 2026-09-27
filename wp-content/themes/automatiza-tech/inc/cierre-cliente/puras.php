@@ -19,8 +19,35 @@ function at_cc_salidas(): array {
 // 'mensaje_whatsapp' (Task 10b, ajuste del controlador 26-sep): el mensaje de texto que el cliente le
 // escribe al bot de WhatsApp sobre su propuesta. Es una nota interna, no una respuesta real (no cambia
 // el estado), así que no puede compartir el tipo público 'respuesta_cliente'.
+// 'whatsapp_no_entregado' (Task 19, 27-sep): Meta aceptó el WhatsApp automático pero después no se lo
+// entregó al cliente (p. ej. error 131049). Es solo para Luis, con el motivo y el wamid.
 function at_cc_tipos_internos(): array {
-	return ['cierre_incompleto', 'aviso_operativo', 'pedido_respuesta', 'mensaje_whatsapp'];
+	return ['cierre_incompleto', 'aviso_operativo', 'pedido_respuesta', 'mensaje_whatsapp', 'whatsapp_no_entregado'];
+}
+
+/** Task 19: id de mensaje de WhatsApp Cloud API con forma razonable ('wamid.' + base64, hasta 250
+ *  caracteres). Filtra lo que llega a la ruta de estados antes de tocar la base. '\z' y no '$': en PHP,
+ *  '$' también calza antes de un salto de línea final. */
+function at_cc_wamid_valido(string $w): bool {
+	return (bool) preg_match('#^wamid\.[A-Za-z0-9+/=_-]{8,250}\z#', $w);
+}
+
+/** Task 19: por qué Meta no entregó el WhatsApp, en simple, según su código de error. $titulo es el
+ *  texto (en inglés) que manda Meta; solo se usa cuando el código no es uno de los conocidos. */
+function at_cc_motivo_whatsapp_no_entregado(int $codigo, string $titulo): string {
+	$conocidos = [
+		131049 => 'Meta limita cuántos mensajes de marketing le entrega a cada persona, y este cliente llegó a ese límite. No lo reintentes por el automático antes de 24 horas.',
+		131026 => 'El número no puede recibir el mensaje; por ejemplo, no tiene WhatsApp.',
+		131047 => 'Pasaron más de 24 horas desde el último mensaje del cliente.',
+	];
+	if (isset($conocidos[$codigo])) {
+		return $conocidos[$codigo];
+	}
+	$titulo = trim($titulo);
+	if ($titulo !== '') {
+		return 'Meta dijo: «' . $titulo . '»' . ($codigo > 0 ? ' (código ' . $codigo . ').' : '.');
+	}
+	return 'Meta no dio el motivo' . ($codigo > 0 ? ' (código ' . $codigo . ').' : '.');
 }
 
 /** Transiciones de una respuesta. A mano (Luis) también se acepta una propuesta en pending, lista o

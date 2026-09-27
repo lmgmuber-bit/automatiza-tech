@@ -185,6 +185,24 @@ function at_cc_contrato_admite_datos_cliente(?object $c): bool {
 	return at_cc_cargar_contract_service() && ContractService::necesita_revision($c);
 }
 
+/** Al contrato le falta la dirección del cliente (domicilio vacío o solo espacios). La usan la barra
+ *  pública (Task 18) y la respuesta a una aceptación por WhatsApp (url_datos, Task 19). */
+function at_cc_contrato_sin_direccion(?object $c): bool {
+	$ph = $c ? (json_decode((string) $c->placeholders, true) ?: []) : [];
+	return trim((string) ($ph['domicilio_cliente'] ?? '')) === '';
+}
+
+/** Task 19: enlace a «Datos para tu contrato» (la página de la propuesta con respuesta=aceptada, que
+ *  abre ese diálogo sola) cuando el contrato los admite y le falta la dirección; '' si no. Quien acepta
+ *  por WhatsApp no deja la dirección ni el tipo de cliente: el bot le manda este enlace. */
+function at_cc_url_datos_contrato(object $p): string {
+	$c = at_cc_contrato_de_propuesta((int) $p->id);
+	if (!at_cc_contrato_admite_datos_cliente($c) || !at_cc_contrato_sin_direccion($c)) {
+		return '';
+	}
+	return add_query_arg('respuesta', 'aceptada', at_cc_url_respuesta(get_site_url(), (string) $p->unique_link_id));
+}
+
 /**
  * Task 18: una sola validación de los datos del contrato para los dos formularios de la página
  * («Aceptar la propuesta» y «Datos para tu contrato»), con los mismos nombres de campo: tipo,
@@ -363,8 +381,7 @@ function at_cc_render_barra(object $p): void {
 	// Task 18 (revisión, 27-sep): tras aceptar, «Datos para tu contrato» se abre solo únicamente si al
 	// contrato le falta la dirección (aceptación por WhatsApp o a mano). Si ya la dejó al aceptar, abrirlo
 	// le pedía los datos dos veces y, guardado sin mirar, podía pasar a persona un contrato de empresa.
-	$ph_datos = $c_datos ? (json_decode((string) $c_datos->placeholders, true) ?: []) : [];
-	$contrato_sin_direccion = trim((string) ($ph_datos['domicilio_cliente'] ?? '')) === '';
+	$contrato_sin_direccion = at_cc_contrato_sin_direccion($c_datos);
 	if ($abrir === '' && $mostrar_datos_contrato && $respuesta_clave === 'aceptada' && $contrato_sin_direccion) {
 		$abrir = 'at-cc-datos';
 	}

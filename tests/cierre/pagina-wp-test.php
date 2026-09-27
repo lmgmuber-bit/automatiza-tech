@@ -182,6 +182,12 @@ $pos_dlg = strpos($h18_datos, '<dialog class="at-cc-dlg" id="at-cc-acepta">');
 $pos_aviso = strpos($h18_datos, '<div class="at-cc-msg at-cc-msg--aviso" role="alert">' . $texto_datos . '</div>');
 ok($pos_dlg !== false && $pos_aviso !== false && $pos_aviso > $pos_dlg && $pos_aviso < strpos($h18_datos, '</dialog>', $pos_dlg), 'T18: el aviso de «datos» va dentro del diálogo de aceptar');
 ok(substr_count($h18_datos, $texto_datos) === 2, 'T18: el aviso también sigue en la barra');
+// Revisión (27-sep): lo que el cliente envió se restaura solo en el rebote por 'datos' (sessionStorage de su pestaña,
+// con clave por código); sin rebote, no. El comportamiento en el navegador se probó aparte (Chrome del panel).
+$clave_js = "'at-cc-acepta-' + " . wp_json_encode((string) $t15_render->unique_link_id);
+ok(strpos($h18_datos, $clave_js) !== false && strpos($h18_datos, "typeof guardado === 'object' && true)") !== false, 'T18: con respuesta=datos el script restaura lo enviado (clave por código de propuesta)');
+ok(strpos($h15, "typeof guardado === 'object' && false)") !== false && strpos($h15, 'sessionStorage.setItem(claveAcepta') !== false, 'T18: sin rebote no restaura nada, pero guarda lo enviado al confirmar');
+ok(substr_count($h15, '<fieldset class="at-cc-grupo"><legend>¿A nombre de quién va el contrato?</legend>') === 1, 'T18: las opciones de tipo van agrupadas con fieldset y legend');
 
 /** Contrato de la propuesta, sus marcadores y la nota de aceptación. */
 function t18_contrato(int $id): array {
@@ -209,6 +215,14 @@ foreach ([
 	$nq = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$det} WHERE propuesta_id = %d", $q->id));
 	ok(strpos($rq['redirect'], 'respuesta=datos') !== false && at_cc_propuesta_por_id((int) $q->id)->status === 'sent' && $nq === 0 && at_cc_contrato_de_propuesta((int) $q->id) === null && !$rq['correos'], "T18: {$caso}: vuelve con «datos», sin cambio de estado, sin nota, sin contrato ni correo: " . $rq['redirect'] . ' ' . $rq['stderr']);
 }
+
+// Revisión (27-sep): un formulario viejo (sin los datos del contrato) a una propuesta YA aceptada no queda en 'datos'
+// sin salida: at_cc_registrar_respuesta() la resuelve como siempre («ya aceptada») y no crea nada nuevo.
+$q_ya = t15_crear($marca, $creadas);
+t15_aceptar($q_ya, ['tipo_documento' => 'rut', 'documento' => '11.111.111-1']);
+$contratos_ya = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM " . ContractService::table() . " WHERE proposal_id = %d", $q_ya->id));
+$r_ya = t15_aceptar($q_ya, ['tipo' => null, 'direccion' => null, 'tipo_documento' => 'rut', 'documento' => '11.111.111-1']);
+ok(strpos($r_ya['redirect'], 'respuesta=aceptada') !== false && (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM " . ContractService::table() . " WHERE proposal_id = %d", $q_ya->id)) === $contratos_ya, 'T18: formulario viejo a una propuesta ya aceptada: vuelve como aceptada, sin contrato nuevo: ' . $r_ya['redirect']);
 
 // Persona + dirección: el contrato queda a nombre de quien aceptó, con su documento y la dirección,
 // listo para que AT lo revise (faltantes() vacío); la ficha operativa recibe la dirección y el documento.

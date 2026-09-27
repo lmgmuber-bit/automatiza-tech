@@ -133,7 +133,10 @@ function at_cc_procesar_respuesta_publica(): void {
 		// para poder firmar. Un formulario abierto desde antes del cambio no los trae y también vuelve
 		// con 'datos': al recargar ya ve el formulario nuevo.
 		$datos_contrato = at_cc_datos_contrato_de_post(wp_unslash($_POST));
-		if (mb_strlen(trim($d['nombre'])) < 3 || !isset(at_cc_tipos_documento()[$tipo_doc]) || !at_cc_documento_valido($tipo_doc, $documento) || empty($_POST['acepto']) || ($todas && !$d['filas']) || $datos_contrato === null) {
+		// Revisión (27-sep): a una propuesta ya aceptada o archivada no se le exigen (at_cc_registrar_respuesta()
+		// la resuelve igual: «ya aceptada» o el error de archivada). Antes volvía con 'datos' y un aviso sin salida.
+		$exigir_datos = !in_array((string) $p->status, ['aceptada', 'archivada'], true);
+		if (mb_strlen(trim($d['nombre'])) < 3 || !isset(at_cc_tipos_documento()[$tipo_doc]) || !at_cc_documento_valido($tipo_doc, $documento) || empty($_POST['acepto']) || ($todas && !$d['filas']) || ($datos_contrato === null && $exigir_datos)) {
 			$volver('datos');
 		}
 		$d['datos_contrato'] = $datos_contrato;
@@ -407,6 +410,8 @@ body>iframe{flex:1 1 auto;height:auto;min-height:0}
 .at-cc-msg--ok{background:#064e3b;color:#d1fae5}.at-cc-msg--aviso{background:#78350f;color:#fef3c7}.at-cc-msg--error{background:#7f1d1d;color:#fee2e2}
 dialog.at-cc-dlg{border:0;border-radius:14px;padding:0;max-width:440px;width:calc(100% - 32px);max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#0f172a}
 .at-cc-dlg .at-cc-msg{box-sizing:border-box;margin:0 0 12px;text-align:left}
+.at-cc-dlg .at-cc-grupo{border:0;padding:0;margin:10px 0 0;min-width:0}
+.at-cc-dlg .at-cc-grupo legend{padding:0;margin:0 0 2px;font-size:14px;font-weight:700;color:#334155}
 dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 .at-cc-dlg form{padding:22px}
 .at-cc-dlg h2{margin:0 0 6px;font-size:19px}
@@ -458,9 +463,10 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 		<label for="at-cc-documento">Número de documento</label>
 		<input type="text" id="at-cc-documento" name="documento" required placeholder="12.345.678-9" autocomplete="off">
 		<?php // Task 18: los datos del contrato van aquí y son obligatorios; sin opción marcada, para que el cliente elija. ?>
-		<p><strong>¿A nombre de quién va el contrato?</strong></p>
+		<fieldset class="at-cc-grupo"><legend>¿A nombre de quién va el contrato?</legend>
 		<label class="at-cc-fila"><input type="radio" name="tipo" value="persona" data-at-cc-tipo required> <span>A mi nombre (persona natural)</span></label>
 		<label class="at-cc-fila"><input type="radio" name="tipo" value="empresa" data-at-cc-tipo required> <span>De una empresa</span></label>
+		</fieldset>
 		<div data-at-cc-campos-empresa hidden>
 			<label for="at-cc-a-razon">Razón social de la empresa</label>
 			<input type="text" id="at-cc-a-razon" name="razon_social" maxlength="200" autocomplete="organization">
@@ -510,10 +516,11 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 		<?php echo $aviso_dialogo('at-cc-datos'); ?>
 		<h2>Datos para tu contrato</h2>
 		<p>Opcional: si nos dejas estos datos ahora, tu contrato llega listo para firmar.</p>
-		<p><strong>¿A nombre de quién va el contrato?</strong></p>
 		<?php // Task 18 (revisión): sin opción marcada, como al aceptar: guardar sin mirar no cambia el tipo del contrato. ?>
+		<fieldset class="at-cc-grupo"><legend>¿A nombre de quién va el contrato?</legend>
 		<label class="at-cc-fila"><input type="radio" name="tipo" value="persona" data-at-cc-tipo required> <span>A mi nombre (persona natural)</span></label>
 		<label class="at-cc-fila"><input type="radio" name="tipo" value="empresa" data-at-cc-tipo required> <span>De una empresa</span></label>
+		</fieldset>
 		<div data-at-cc-campos-empresa hidden>
 			<label for="at-cc-razon">Razón social de la empresa</label>
 			<input type="text" id="at-cc-razon" name="razon_social" maxlength="200">
@@ -547,6 +554,34 @@ dialog.at-cc-dlg::backdrop{background:rgba(15,23,42,.7)}
 		form.querySelectorAll('[data-at-cc-tipo]').forEach(function (r) { r.addEventListener('change', function () { actualizarTipo(form); }); });
 		actualizarTipo(form);
 	});
+	// Task 18 (revisión, 27-sep): si la aceptación vuelve con 'datos', el diálogo se dibuja de nuevo desde el
+	// servidor y se perdía lo escrito; lo peor, «¿Qué aceptas?» volvía con solo la primera fila marcada y el
+	// cliente podía aceptar menos servicios sin notarlo. Lo que envió se guarda en esta pestaña (sessionStorage)
+	// y se restaura solo en ese rebote; se borra en cuanto se lee. Sin sessionStorage, el diálogo vuelve vacío.
+	var formAcepta = document.querySelector('#at-cc-acepta form');
+	var claveAcepta = 'at-cc-acepta-' + <?php echo wp_json_encode($codigo); ?>;
+	var guardado = null;
+	try { guardado = JSON.parse(sessionStorage.getItem(claveAcepta) || 'null'); sessionStorage.removeItem(claveAcepta); } catch (e) { guardado = null; }
+	var camposTexto = ['nombre', 'tipo_documento', 'documento', 'razon_social', 'rut_empresa', 'direccion'];
+	if (formAcepta && guardado && typeof guardado === 'object' && <?php echo wp_json_encode($aviso_en === 'at-cc-acepta'); ?>) {
+		var filas = Array.isArray(guardado.filas) ? guardado.filas.map(String) : null;
+		if (filas) { formAcepta.querySelectorAll('input[name="filas[]"]').forEach(function (c) { c.checked = filas.indexOf(c.value) !== -1; }); }
+		camposTexto.forEach(function (n) { var i = formAcepta.querySelector('[name="' + n + '"]'); if (i && typeof guardado[n] === 'string') { i.value = guardado[n]; } });
+		formAcepta.querySelectorAll('[data-at-cc-tipo]').forEach(function (r) { r.checked = r.value === guardado.tipo; });
+		actualizarTipo(formAcepta);
+	}
+	if (formAcepta) {
+		formAcepta.addEventListener('submit', function () {
+			try {
+				var d = { filas: [], tipo: '' };
+				formAcepta.querySelectorAll('input[name="filas[]"]:checked').forEach(function (c) { d.filas.push(c.value); });
+				camposTexto.forEach(function (n) { var i = formAcepta.querySelector('[name="' + n + '"]'); d[n] = i ? i.value : ''; });
+				var t = formAcepta.querySelector('[data-at-cc-tipo]:checked');
+				d.tipo = t ? t.value : '';
+				sessionStorage.setItem(claveAcepta, JSON.stringify(d));
+			} catch (e) {}
+		});
+	}
 	var inicial = <?php echo wp_json_encode($abrir); ?>;
 	if (inicial) { abrir(inicial); }
 })();

@@ -273,11 +273,16 @@ function at_cc_ejecutar_cierre(object $p, array $d): array {
 	// misma función que «Datos para tu contrato» (también completa la ficha operativa). Sin ellos
 	// (aceptación a mano o por WhatsApp) todo sigue igual. En un reintento solo si el contrato todavía
 	// no tiene dirección: no se pisa una corrección posterior del cliente. Un fallo no corta el cierre.
-	if ($contrato_id && !empty($d['datos_contrato'])) {
+	// Revisión (27-sep): también si el contrato quedó creado a medias (la fila existe pero la creación lanzó, p. ej.
+	// FPDF sin poder escribir el PDF): antes los datos no se aplicaban y no había cómo reintentarlo (el cierre ya no
+	// figura incompleto porque el contrato existe). Si no hay ninguna fila, el aviso dice dónde quedaron.
+	if (!empty($d['datos_contrato'])) {
 		try {
 			$c = at_cc_contrato_de_propuesta((int) $p->id);
 			$ph = $c ? (json_decode((string) $c->placeholders, true) ?: []) : [];
-			if ($c && (!$reintento || trim((string) ($ph['domicilio_cliente'] ?? '')) === '')) {
+			if (!$c) {
+				$avisos[] = 'Los datos del contrato que dejó el cliente (a nombre de quién va y dirección) están en la nota de la aceptación: cárgalos al crear o revisar el contrato.';
+			} elseif (!$reintento || trim((string) ($ph['domicilio_cliente'] ?? '')) === '') {
 				$rd = at_cc_aplicar_datos_contrato($c, (array) $d['datos_contrato']);
 				if (is_wp_error($rd)) {
 					$avisos[] = 'Los datos del contrato que dejó el cliente no se aplicaron (' . $rd->get_error_message() . '): están en la nota de la aceptación, cárgalos al revisar el contrato.';

@@ -11,6 +11,19 @@
   var M = 15; // margen
   var ANCHO = 210 - M * 2;
 
+  // La fuente estándar del PDF (WinAnsi) no dibuja emojis ni la mayoría de los caracteres fuera del latín:
+  // saldrían como símbolos rotos. Se quitan antes de escribir; el correo y el Sheet guardan el texto original.
+  var WINANSI_EXTRA = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ';
+  function limpiar(s) {
+    var t = String(s == null ? '' : s).normalize ? String(s == null ? '' : s).normalize('NFC') : String(s == null ? '' : s);
+    var out = '';
+    for (var i = 0; i < t.length; i++) {
+      var c = t.charAt(i), code = t.charCodeAt(i);
+      if ((code >= 32 && code <= 126) || (code >= 160 && code <= 255) || WINANSI_EXTRA.indexOf(c) !== -1) out += c;
+    }
+    return out.replace(/\s+/g, ' ').trim();
+  }
+
   // El CDN puede entregar WebP aunque el archivo sea .jpg: el formato sale del data URL, no del nombre.
   function formato(dataUrl) {
     var m = /^data:image\/(png|webp|jpe?g)/i.exec(dataUrl || '');
@@ -22,7 +35,8 @@
   function crear(o) {
     var jsPDF = global.jspdf && global.jspdf.jsPDF;
     if (!jsPDF) throw new Error('jsPDF no cargó');
-    var d = o.datos;
+    var d = {};
+    Object.keys(o.datos).forEach(function (k) { d[k] = limpiar(o.datos[k]); });
     var doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
     doc.setProperties({ title: 'Planilla de inscripción - ' + d.nombre, author: 'GT Baseball Academy', creator: 'AutomatizaTech' });
 
@@ -84,11 +98,12 @@
     fila([['Fecha de nacimiento', d.fecha_nac_txt, 0.6], ['Edad', o.edad !== '' ? o.edad + ' años' : '', 0.4]]);
     fila([['Cédula o pasaporte', d.documento, 0.5], ['Nacionalidad', d.nacionalidad, 0.5]]);
     fila([['Dirección', d.direccion, 1]]);
-    fila([['Teléfono', d.telefono, 0.4], ['Correo electrónico', d.correo, 0.6]]);
+    fila([['Teléfono del atleta', d.telefono, 0.5]]);
 
     y += 2;
     seccion('DATOS DEL REPRESENTANTE');
     fila([['Nombre y apellido', d.rep_nombre, 0.6], ['Teléfono', d.rep_telefono, 0.4]]);
+    fila([['Correo electrónico', d.correo, 1]]);
 
     y += 2;
     seccion('DATOS DE BÉISBOL');

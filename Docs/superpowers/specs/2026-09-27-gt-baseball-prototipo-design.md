@@ -108,3 +108,19 @@ validación solo al enviar y errores sin anunciar; en escritorio, columna de cel
 
 Se mantienen los nombres de los campos y el formato del envío: el flujo de n8n no cambia.
 Publicación: primero en local con capturas; se sube a PROD solo con el ok de Luis.
+
+**Agregado durante la construcción de la v2 (pedidos de Luis el 27-sep):**
+- Mientras procesa, una pelota de béisbol girando dentro de un anillo dorado con el avance real de la subida.
+- Dos correos por inscripción: al apoderado (resumen y planilla; responder a la academia) y a la academia
+  (todos los datos, planilla y foto). El correo del representante pasa a ser obligatorio. Límite de envíos por
+  IP y por correo contra el uso del formulario para mandar correos a terceros.
+- Validación de cada campo, también de los opcionales, repetida en el servidor: nombres con letras y apellido,
+  teléfonos de 10 a 15 dígitos, cédula o pasaporte, correo con aviso de dominios mal escritos, estatura, peso,
+  millas y año de firma en rangos razonables; teléfonos, millas y año no aceptan letras al escribir.
+- Flujo aparte en n8n («GT Baseball · Inscripciones v2», webhook `gt-baseball-inscripcion-v2`) para no romper
+  la v1 publicada; se activa con el ok de Luis junto con la publicación.
+
+**Verificado en local:** 50 combinaciones (5 tamaños × 2 temas × 5 pantallas) sin desborde horizontal ni errores;
+17 casos de reglas del servidor y 23 del navegador; pantallas de error (límite, servidor, sin correo, sin
+conexión) conservando el borrador. Hallazgos corregidos: la barra fija de abajo tapaba toques en el celular
+(`pointer-events` y `scroll-padding`, WCAG 2.4.11) y una regla de etiquetas pisaba los botones de foto.

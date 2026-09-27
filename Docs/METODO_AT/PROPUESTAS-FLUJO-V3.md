@@ -93,14 +93,36 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   evaluando» y «No, gracias» mientras la propuesta está `sent` o `evaluando`. Si está `rechazada`, solo ofrece
   «Acepto la propuesta»; si está `aceptada`, muestra la confirmación y, mientras el contrato admita datos, «Datos para
   tu contrato». En los demás estados (incluida `archivada`) no hay barra. Al aceptar, el cliente escribe su nombre,
-  elige su documento (RUT, que se valida con dígito verificador, DNI o pasaporte) y marca lo que acepta. El correo de
+  elige su documento (RUT, que se valida con dígito verificador, DNI o pasaporte), marca lo que acepta y, desde la
+  Task 18, deja obligatoriamente los datos del contrato: a nombre de quién va (persona natural o empresa, sin opción
+  marcada por defecto), la dirección y, si es empresa, su razón social y RUT. Si algo falta o no es válido, la página
+  vuelve con el diálogo abierto y el aviso adentro. El correo de
   la propuesta trae el mismo botón «Aceptar la propuesta». La página no se guarda en caché (formularios con nonce).
 - **Al aceptar, todo es automático:** nota en Seguimiento («Aceptó la propuesta», tipo `respuesta_cliente`) con lo
   que el cliente aceptó y la huella SHA-256 del contenido completo de la propuesta; propuesta `aceptada`; prospecto →
   cliente en la ficha única (`wp_automatiza_tech_clients.crm_cliente_id` enlaza con `wp_crm_clientes`); correo de
-  bienvenida; contrato de servicios en borrador (`servicios_v1`) y correo «Revisar y firmar» a Luis. El cliente ve
-  además el formulario opcional «Datos para tu contrato» (persona natural o empresa, domicilio; la empresa con razón
-  social y RUT). «La sigo evaluando» y «No, gracias» cambian el estado y avisan a Luis.
+  bienvenida; contrato de servicios en borrador (`servicios_v1`) con los datos del contrato ya puestos, y correo
+  «Revisar y firmar» a Luis. Después de aceptar, el cliente sigue viendo «Datos para tu contrato» (mismas reglas),
+  que sirve para las aceptaciones a mano o por WhatsApp y para corregir. «La sigo evaluando» y «No, gracias» cambian
+  el estado y avisan a Luis.
+- **Task 18: datos del contrato obligatorios al aceptar en la página (27-sep, LOCAL, rama `claude/cierre-cliente`, sin
+  desplegar).** En el primer contrato real el cliente aceptó sin llenar el formulario opcional y hubo que pedirle la
+  dirección y el tipo de cliente por privado para poder firmar como AT. Ahora el diálogo «Aceptar la propuesta» los
+  pide (campos `tipo`, `direccion`, `razon_social`, `rut_empresa`, los mismos del formulario de datos) y los valida con
+  una sola función, `at_cc_datos_contrato_de_post()` (`pagina.php`); un formulario abierto desde antes del cambio vuelve
+  con «datos». El cierre los aplica al contrato recién creado con `at_cc_aplicar_datos_contrato()`, la misma que usa
+  «Datos para tu contrato» (también completa en la ficha operativa solo lo vacío: dirección de facturación, documento y
+  empresa); si fallan, el cierre sigue y queda el aviso «Los datos del contrato que dejó el cliente no se aplicaron».
+  Completar un cierre a medias los vuelve a aplicar si el contrato todavía no tiene dirección. Los datos van en la
+  metadata de la nota de aceptación (`datos_contrato`) y en el correo a Luis, nunca en la descripción, que el cliente
+  puede ver en su portal. El diálogo se desplaza en el celular (`max-height` con `dvh`). La aceptación a mano y la de
+  WhatsApp no cambian. Archivos para PROD: `inc/cierre-cliente/pagina.php`, `respuesta.php` y `puras.php`, sin
+  migración. Pruebas: `tests/cierre/pagina-wp-test.php`, `pagina-datos-wp-test.php`, `puras-test.php` y
+  `archivo-wp-test.php`.
+- **Visor de la página de firma del cliente (commit `0765a01`, EN PROD el 27-sep según el cierre de esa subida):**
+  `contracts/sign-contract.php` pegaba `?v=` a la URL del PDF, que ya traía `?action=…&token=…`; el token llegaba roto y
+  el visor decía «Acceso denegado», así que el cliente no podía leer el contrato antes de firmarlo. Ahora usa
+  `add_query_arg()`, como la página de revisión de AT. Prueba `tests/cierre/firma-cliente-visor-wp-test.php`.
 - **Panel** (ficha › pestaña Envío › «Respuesta del cliente»): estado y última respuesta; «📧 Pedir respuesta por
   correo» (candado de 60 s contra el doble clic) y «Enviar por mi WhatsApp» (`wa.me` con el mensaje y el enlace
   ya escritos); «Registrar aceptación a mano» para cuando el cliente dijo que sí por otro lado, con documento

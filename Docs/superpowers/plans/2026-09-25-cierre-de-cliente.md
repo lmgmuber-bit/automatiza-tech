@@ -3635,6 +3635,19 @@ Sus briefs completos quedaron en el espacio de trabajo local (fuera del repo); a
   los avisos a Luis y es el `Reply-To` de la bienvenida y de «Pedir respuesta»; la copia oculta va en todos esos correos. Vacíos,
   todo queda como antes (correo de administrador de WordPress). Las respuestas de los clientes llegan solo al principal. Prueba
   `tests/cierre/correos-cierre-wp-test.php`.
+- **Task 18: datos del contrato obligatorios al aceptar en la página** (decisión de Luis, 27-sep; LOCAL, sin desplegar). En el
+  primer contrato real el cliente aceptó sin llenar «Datos para tu contrato» (era opcional y aparte) y hubo que pedirle la
+  dirección y el tipo de cliente por privado para firmar. El diálogo «Aceptar la propuesta» pide ahora a nombre de quién va el
+  contrato (persona natural o empresa, sin opción marcada), la dirección y, si es empresa, razón social y RUT; faltando algo vuelve
+  con «datos», con el diálogo reabierto y el aviso adentro (igual el de datos con «datos_contrato»). Una sola validación,
+  `at_cc_datos_contrato_de_post()`, y una sola forma de aplicarlos, `at_cc_aplicar_datos_contrato()` (contrato + ficha operativa,
+  solo lo vacío), para los dos formularios y el cierre; si aplicarlos falla, el cierre sigue con un aviso. Los datos van en la
+  metadata de la nota de aceptación (`datos_contrato`) y en el correo a Luis, nunca en la descripción. «Datos para tu contrato»
+  se mantiene para las aceptaciones a mano o por WhatsApp y para corregir. Pruebas: `pagina-wp-test.php`,
+  `pagina-datos-wp-test.php`, `puras-test.php` y `archivo-wp-test.php`. En la misma tanda quedó el arreglo del visor de la
+  página de firma del cliente (commit `0765a01`, EN PROD el 27-sep): `sign-contract.php` pegaba `?v=` a una URL que ya tenía
+  `?`, el token llegaba roto y el visor decía «Acceso denegado»; ahora usa `add_query_arg()`. Prueba
+  `tests/cierre/firma-cliente-visor-wp-test.php`.
 
 **Despliegues:** Tasks 1 a 15 el 26-sep a las 13:36 (commit `547f08d`); Tasks 16 y 17 a las 20:13 (commit `793e995`). Cotejo del
 26-sep por la noche: los 29 archivos del cierre en PROD son idénticos a esta rama. Detalle, respaldos y rollback en la sección

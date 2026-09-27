@@ -8,7 +8,10 @@ Plan de implementación: `Docs/superpowers/plans/2026-09-23-flujo-propuestas-v3.
 
 1. **Llamada con el cliente** → Google Meet deja la transcripción en Drive › Transcripciones
    (`14Qy7majCZlelxzkyUcjyJZjZ0mgMoGWW`) → workflow «Google Meet → Propuesta» (`FrWZcgbizlipK5pb`) la lee y la
-   manda a `POST /webhook/propuesta-v3-borrador` con `{transcript, client_email, drive_file_id}`.
+   manda a `POST /webhook/propuesta-v3-borrador` con `{transcript, client_email, drive_file_id}`. Revisa la carpeta
+   **cada 5 minutos** desde el 27-sep (antes cada minuto; pedido de Luis tras un corte momentáneo de Google a las
+   11:06, sin transcripciones perdidas). Para ese cambio, la carpeta se vació antes (lo procesado va a
+   «Transcripciones procesadas»); respaldo del flujo en `C:/Users/luis_/respaldos/n8n/2026-09-27-meet-cada-5/`.
    Si no encuentra el correo del cliente, avisa a Luis y no crea nada.
 2. **«Propuestas v3 · 1 Borrador»** (`7hglMG2j17HdOh6U`): GPT-4o redacta con la plantilla, precios «Por confirmar»,
    fotos descritas por rubro (ver abajo), asistente de demo; crea la fila en WordPress (`borrador`, `flujo='v3'`),

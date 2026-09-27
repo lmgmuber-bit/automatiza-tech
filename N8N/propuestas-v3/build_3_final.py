@@ -116,12 +116,20 @@ CODE_PREPARAR_TEXTO = r"""// Arma UNA consulta a GPT-4o con las fotos pedidas qu
 const vig = $('¿Reintentar render?').first().json;
 const uid = String(vig.unique_id || '');
 const pedidas = new Set(((vig.payload && vig.payload.image_briefs) || []).map((b) => b && b.slide).filter(Boolean));
+// El manifest conserva la entrada vieja de una foto que esta vez no salió (o quedó remota): esa foto no está en
+// la presentación y revisarla haría rehacer o avisar por una imagen que nadie ve (probar_revision_fotos.py, 2b).
+const rf = $('Render final').first().json || {};
+const img = rf.images && typeof rf.images === 'object' ? rf.images : null;
+const fuera = new Set(img ? [...(img.missing || []), ...(img.kept_remote || [])] : []);
 let m = $json.body;
 if (typeof m === 'string') { try { m = JSON.parse(m); } catch (e) { m = null; } }
 const leida = $json.statusCode === 200 && m && typeof m === 'object' && !Array.isArray(m);
-const fotos = leida && /^[A-Za-z0-9_-]{6,40}$/.test(uid)
-  ? Object.keys(m).filter((s) => pedidas.has(s) && m[s] && typeof m[s].file === 'string' && /^[A-Za-z0-9._-]+$/.test(m[s].file))
-      .map((s) => ({ slide: s, url: '__RENDER__/p/' + uid + '/img/' + m[s].file }))
+// Nombre de archivo como los que guarda el renderer (<lámina>.<ext>): sin «..», sin archivos ocultos ni barras.
+// ?v= cambia en cada ronda: la foto rehecha se guarda con el MISMO nombre y así nadie entrega una copia guardada.
+const fotos = leida && rf.view_url && img && /^[A-Za-z0-9_-]{6,40}$/.test(uid)
+  ? Object.keys(m).filter((s) => pedidas.has(s) && !fuera.has(s) && m[s] && typeof m[s].file === 'string'
+      && /^[A-Za-z0-9_-]+\.[A-Za-z0-9]{2,5}$/.test(m[s].file))
+      .map((s) => ({ slide: s, url: '__RENDER__/p/' + uid + '/img/' + m[s].file + '?v=' + (Number(vig.intento) || 0) }))
   : [];
 const contenido = [{ type: 'text', text: __INSTRUCCION__ }];
 for (const f of fotos) {
@@ -133,7 +141,8 @@ return [{ json: {
   slides: fotos.map((f) => f.slide),
   ronda: Array.isArray(vig.fotos_retomadas) ? 1 : 0,
   vigente: vig,
-  motivo_sin_revision: fotos.length ? '' : (leida ? 'no hay fotos guardadas' : 'no se pudo leer la lista de fotos (' + ($json.statusCode ? 'HTTP ' + $json.statusCode : 'sin respuesta') + ')'),
+  motivo_sin_revision: fotos.length ? '' : (!rf.view_url || !img ? 'el renderer no devolvió la presentación'
+    : leida ? 'no hay fotos guardadas' : 'no se pudo leer la lista de fotos (' + ($json.statusCode ? 'HTTP ' + $json.statusCode : 'sin respuesta') + ')'),
   cuerpo: { model: 'gpt-4o', temperature: 0, max_tokens: 200, response_format: { type: 'json_object' },
             messages: [{ role: 'user', content: contenido }] },
 } }];""".replace('__RENDER__', 'https://n8n-propuesta-renderer.kchiba.easypanel.host').replace(

@@ -171,13 +171,15 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   la aceptó pero **no la entregó: error 131049**, el límite por usuario de mensajes de Marketing
   ([Meta](https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/marketing-templates/per-user-limits/):
   esperar 24 h antes de reintentar). Como el panel diría «WhatsApp enviado» aunque Meta no lo entregue, la opción quedó
-  en `0`. Antes de volver a encenderla: detectar los mensajes que Meta no entrega y avisarle a Luis, que el bot le
-  mande al cliente que acepta por WhatsApp el enlace para dejar los datos del contrato (esa vía no los pide), y
-  evaluar una plantilla de Utilidad (sin ese límite). Respaldos de n8n en
+  en `0`. Las tres condiciones para volver a encenderla quedaron el 27-sep: el aviso de mensajes no entregados y el
+  enlace para los datos del contrato (Task 19, EN PROD) y la plantilla de Utilidad `propuesta_estado_revision`
+  (nombre, número de propuesta y empresa), enviada a Meta como UTILITY y en revisión (el flujo ya la sabe armar:
+  cambiar `PLANTILLA` en su nodo «Preparar plantilla»). Encenderla es decisión de Luis. Una segunda prueba real al
+  número de prueba nuevo de Luis (27-sep 08:30) sí salió (`sent`, cobrable como marketing). Respaldos de n8n en
   `C:/Users/luis_/respaldos/n8n/2026-09-26-wa-plantilla/`. Mientras tanto el panel ofrece «Enviar por mi WhatsApp». Las rutas `POST /wp-json/at/v1/propuesta-respuesta` y
   `/propuesta-contexto` (para el bot) exigen la cabecera `X-AT-Secret` igual a `AT_REST_SECRET`: sin ella responden
   401 (500 si la constante faltara).
-  **Task 19 (27-sep, LOCAL en `claude/cierre-cliente`, sin desplegar): avisos de entrega y enlace para los datos.**
+  **Task 19 (EN PROD desde el 27-sep 09:07 en WordPress y 09:08 en el bot): avisos de entrega y enlace para los datos.**
   (1) Cada envío automático guarda en su nota interna `pedido_respuesta` el `wamid` que devuelve el flujo
   (`{"ok":true,"wamid":"wamid.…"}`) y el teléfono normalizado (`at_cc_enviar_whatsapp_plantilla_detalle()`; la función
   de siempre sigue devolviendo solo el motivo del error). El panel ya no dice «Meta confirma la entrega después»: dice
@@ -194,10 +196,15 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   último envío automático quedó sin entregar, aparece un aviso con el motivo y el botón «Enviar por mi WhatsApp».
   (4) Cuando el cliente acepta por WhatsApp, `/propuesta-respuesta` agrega `url_datos` (la página de la propuesta con
   `respuesta=aceptada`, que abre «Datos para tu contrato») mientras el contrato admita datos y le falte la dirección;
-  sin contrato, ya revisado o con dirección, no viene. **La parte de n8n la hace el orquestador:** que el bot principal
-  reenvíe a la ruta nueva los estados `failed` del webhook de Meta y que ponga `url_datos` en su respuesta al «Acepto».
-  Prueba `tests/cierre/whatsapp-estado-wp-test.php`.
-  **Revisión de la Task 19 (27-sep, LOCAL):** (a) `whatsapp_no_entregado` quedó en la lista de tipos de Seguimiento
+  sin contrato, ya revisado o con dirección, no viene. **En n8n (bot principal `bBcNlFgBzQ0766Mq`, 27-sep 09:08):** la
+  salida falsa de «Has Message?» (lo que llega sin mensajes, es decir, los estados de Meta) va a «Extraer Estados
+  Fallidos», que junta solo los `failed` (hasta 20) y los manda por «Avisar Estado Propuesta» a la ruta nueva; «Armar
+  Respuesta Propuesta» pone `url_datos` en su mensaje al «Acepto» (solo si es de automatizatech.cl). Probado de punta a
+  punta en PROD: un `failed` 131049 simulado con el formato real de Meta entró al bot, WordPress respondió
+  `avisados: 1`, quedó la nota y salió el correo; repetido, no avisó otra vez. Respaldo del bot
+  `bot_principal_antes_estados_20260927-090826.json` en la carpeta de respaldos de n8n. Pruebas:
+  `tests/cierre/whatsapp-estado-wp-test.php` (WordPress) y las de los nodos del bot fuera del repo.
+  **Revisión de la Task 19 (27-sep, EN PROD):** (a) `whatsapp_no_entregado` quedó en la lista de tipos de Seguimiento
   (`get_detail_types()`, «📵 WhatsApp no entregado (interno)»): sin eso, editar la nota con ✏️ la guardaba como
   `propuesta_enviada`, que es pública; la prueba RF9 ahora recorre `at_cc_tipos_internos()` entero. (b) Dos llamadas
   simultáneas con el mismo `wamid` ya no avisan dos veces (candado con `add_option()`). (c) Si el `failed` llega antes que

@@ -3653,7 +3653,7 @@ Sus briefs completos quedaron en el espacio de trabajo local (fuera del repo); a
   lo escrito y los servicios marcados (`sessionStorage` de la pestaña, probado en Chrome), un contrato creado a medias igual 
   recibe los datos, un formulario viejo a una propuesta ya aceptada no se queda en «datos», y `fieldset` en las opciones de tipo.
 - **Task 19: avisar cuando Meta no entrega el WhatsApp automático y mandar el enlace de los datos a quien acepta por WhatsApp**
-  (aprobada por Luis el 27-sep; LOCAL, sin desplegar). En la primera prueba real Meta aceptó el envío (hubo `wamid`) pero no lo
+  (aprobada por Luis el 27-sep; EN PROD el 27-sep a las 09:07 en WordPress y 09:08 en el bot). En la primera prueba real Meta aceptó el envío (hubo `wamid`) pero no lo
   entregó (error 131049, límite por persona de los mensajes de Marketing) y el panel habría dicho «WhatsApp enviado». Ahora:
   el envío guarda `wamid` y teléfono normalizado en la metadata de la nota `pedido_respuesta`
   (`at_cc_enviar_whatsapp_plantilla_detalle()`; `at_cc_enviar_whatsapp_plantilla()` sigue devolviendo el texto del error); los
@@ -3664,8 +3664,10 @@ Sus briefs completos quedaron en el espacio de trabajo local (fuera del repo); a
   un aviso con el motivo y «Enviar por mi WhatsApp» si el último envío automático no se entregó
   (`at_cc_whatsapp_no_entregado_ultimo()`); y `/propuesta-respuesta` devuelve `url_datos` al aceptar por WhatsApp mientras el
   contrato admita datos y le falte la dirección (`at_cc_url_datos_contrato()`, `at_cc_contrato_sin_direccion()` en
-  `pagina.php`). **Queda para el orquestador (n8n):** que el bot principal reenvíe a la ruta nueva los estados `failed` del
-  webhook de Meta y que use `url_datos` en su mensaje al cliente que acepta. Prueba `tests/cierre/whatsapp-estado-wp-test.php`
+  `pagina.php`). **n8n (hecho por el orquestador, 09:08):** el bot principal reenvía a la ruta nueva los estados `failed` del
+  webhook de Meta y usa `url_datos` en su mensaje al cliente que acepta; probado en PROD con un 131049 simulado (nota, correo
+  y sin repetir). Plantilla de Utilidad `propuesta_estado_revision` enviada a Meta (en revisión). La opción del envío
+  automático sigue en 0 hasta que Luis decida encenderlo. Prueba `tests/cierre/whatsapp-estado-wp-test.php`
   (más `puras-test.php` y `panel-timeline-wp-test.php`, por la lista de tipos internos).
   **Revisión (27-sep):** `whatsapp_no_entregado` entra a `get_detail_types()` de `inc/client-details-module.php` (si no, editar
   la nota la volvía pública) y RF9 de `clientes-wp-test.php` recorre `at_cc_tipos_internos()`; `mensaje_whatsapp` lleva
@@ -3679,5 +3681,6 @@ Sus briefs completos quedaron en el espacio de trabajo local (fuera del repo); a
 **Despliegues:** Tasks 1 a 15 el 26-sep a las 13:36 (commit `547f08d`); Tasks 16 y 17 a las 20:13 (commit `793e995`). Cotejo del
 26-sep por la noche: los 29 archivos del cierre en PROD eran idénticos a esta rama. Después: visor de firma el 26-sep a las 
 23:31 (`0765a01`), Task 18 con el correo de envío y las firmas del detalle a las 23:59 (`ef5b345`) y la revisión completa 
-con el costo de la versión final el 27-sep a las 01:25 (`211fbd1`). Detalle, respaldos y rollback en la sección
+con el costo de la versión final el 27-sep a las 01:25 (`211fbd1`); Task 19 el 27-sep a las 09:07 (`5759d2e`, respaldo
+`~/respaldos/cierre-pendientes-antes-20260927-090737.tar.gz`). Detalle, respaldos y rollback en la sección
 «Cierre de cliente» de `Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`.

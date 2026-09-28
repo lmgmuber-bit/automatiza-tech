@@ -27,7 +27,8 @@ from n8n_api import call
 
 NOMBRE = 'GT Baseball · Inscripciones v2'
 PATH = 'gt-baseball-inscripcion-v2'
-ORIGENES = 'https://automatizatech.cl,http://localhost:8771'
+# La v2 vive en gtbaseball.com (dominio propio); se deja automatizatech.cl mientras las direcciones viejas redirigen.
+ORIGENES = 'https://gtbaseball.com,https://www.gtbaseball.com,https://automatizatech.cl,http://localhost:8771'
 DRIVE = {'googleDriveOAuth2Api': {'id': 'fXrMhILaDWpAj8Ue', 'name': 'Google Drive account'}}
 SHEETS = {'googleSheetsOAuth2Api': {'id': 'xWQj9WmGzqGKwQtb', 'name': 'Google Sheets PROD'}}
 SMTP = {'smtp': {'id': 'dyhVFWmjRNC45ccA', 'name': 'SMTP account PROD'}}
@@ -213,7 +214,7 @@ const esc = t => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 const fila = (k, v) => `<tr><td style="padding:6px 10px;color:#6b7280;font-size:13px;white-space:nowrap;vertical-align:top">${esc(k)}</td><td style="padding:6px 10px;font-size:14px;color:#111827">${esc(v) || '<span style="color:#9ca3af">Sin dato</span>'}</td></tr>`;
 const seccion = t => `<tr><td colspan="2" style="padding:14px 10px 4px;font-size:12px;letter-spacing:.08em;color:#b45309;font-weight:bold">${esc(t)}</td></tr>`;
 const cabecera = t => `<div style="background:#111418;padding:18px 20px;border-radius:10px 10px 0 0">
-<img src="https://automatizatech.cl/demos/gt-baseball/assets/logo-gt-256.jpg" width="56" height="56" alt="GT Baseball Academy" style="border-radius:8px;vertical-align:middle">
+<img src="https://gtbaseball.com/assets/logo-gt-256.jpg" width="56" height="56" alt="GT Baseball Academy" style="border-radius:8px;vertical-align:middle">
 <span style="color:#fbbf24;font-size:18px;font-weight:bold;margin-left:12px;vertical-align:middle">${t}</span></div>`;
 const caja = c => `<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;color:#111827">${c}</div>`;
 const cuerpo = c => `<div style="border:1px solid #e5e7eb;border-top:0;border-radius:0 0 10px 10px;padding:8px 10px 16px">${c}</div>`;

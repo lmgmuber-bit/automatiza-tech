@@ -1,11 +1,15 @@
-# Cabeceras de seguridad de la página de inscripción (v2). Este archivo se sube a /v2/ y cubre la carpeta.
-# Defensa en profundidad: los datos ya son privados (Drive y el Sheet piden sesión), esto endurece el navegador.
-# HSTS y una CSP estricta se dejan para el dominio propio (gtbaseball.com), porque son políticas de todo el host.
+# Cabeceras de seguridad del sitio de inscripción, ya en su dominio propio (gtbaseball.com).
+# Defensa en profundidad: los datos son privados (Drive y el Sheet piden sesión); esto endurece el navegador.
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "DENY"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set Permissions-Policy "geolocation=(), microphone=(), payment=()"
+  # Dominio propio: se puede exigir HTTPS a nivel de host.
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  # CSP a la medida de la página: propios + la fuente de Google, jsPDF por CDN y el webhook de n8n (envío).
+  # 'unsafe-inline' en script/style por el <script> de arranque y los estilos en línea del SVG; sin datos de usuario en línea.
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://n8n-n8n.kchiba.easypanel.host; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; upgrade-insecure-requests"
 </IfModule>
 
 # Sin listado de directorios.

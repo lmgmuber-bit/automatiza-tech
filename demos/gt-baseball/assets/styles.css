@@ -134,7 +134,7 @@ main { flex: 1; outline: none; }
 .boton--texto .ico { fill: currentColor; stroke: none; }
 .boton--chico { min-height: 44px; padding: 9px 14px; font-size: 15px; }
 .boton--ancho-auto { width: 100%; }
-:is(.boton, .tema, .progreso__volver, .opcion input, .acepto input, .resumen__editar):focus-visible,
+:is(.boton, .tema, .progreso__volver, .opcion input, .acepto input, .resumen__editar, .copiar, .adjunto__quitar):focus-visible,
 .foto__input:focus-visible + * { outline: 3px solid var(--foco); outline-offset: 2px; }
 
 /* Portada */
@@ -189,8 +189,9 @@ main { flex: 1; outline: none; }
 .progreso__volver { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; border: 1.5px solid var(--borde); background: var(--sup); color: var(--texto); cursor: pointer; }
 .progreso__texto { margin: 0; font-weight: 600; color: var(--suave); }
 .progreso__texto strong { color: var(--texto); }
-.progreso__lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.progreso__lista li { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--tenue); }
+.progreso__lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.progreso__lista li { display: grid; gap: 6px; min-width: 0; font-size: 13px; font-weight: 600; color: var(--tenue); }
+.progreso__nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .progreso__lista li::before { content: ''; height: 5px; border-radius: 3px; background: var(--sup-2); transition: background-color .25s ease; }
 .progreso__lista li.hecho::before, .progreso__lista li[aria-current="step"]::before { background: var(--oro); }
 .progreso__lista li[aria-current="step"] { color: var(--texto); }
@@ -257,6 +258,49 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .acepto { display: flex; gap: 12px; align-items: flex-start; margin: 0 !important; padding: 14px 16px; border-radius: 16px; background: var(--sup); border: 1.5px solid var(--borde-suave); font-weight: 500 !important; cursor: pointer; }
 .acepto input { flex: none; width: 24px; height: 24px; margin: 1px 0 0; accent-color: var(--oro); }
 
+/* Pago: forma de pago en tarjetas, datos con «Copiar» y comprobante adjunto */
+.paso__intro { margin: -6px 0 18px; color: var(--suave); }
+.pago-monto { margin: -8px 0 18px; font-weight: 700; color: var(--acento); }
+.metodos { display: grid; gap: 10px; }
+.metodo { position: relative; display: block; margin: 0 !important; }
+.metodo input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer; }
+.metodo__caja { display: grid; grid-template-columns: 44px minmax(0, 1fr) 24px; gap: 12px; align-items: center; min-height: 68px; padding: 10px 14px; border-radius: 16px; border: 1.5px solid var(--borde); background: var(--sup); cursor: pointer; transition: border-color .2s ease, box-shadow .2s ease; }
+.metodo__ico { width: 44px; height: 44px; padding: 10px; border-radius: 12px; background: var(--chip); color: var(--acento); }
+.metodo__texto { display: grid; gap: 2px; min-width: 0; }
+.metodo__nombre { font-weight: 700; }
+.metodo__detalle { font-size: 15px; color: var(--suave); }
+.metodo__marca { width: 24px; height: 24px; color: var(--anillo); opacity: 0; transform: scale(.6); transition: opacity .2s ease, transform .2s var(--curva); }
+.metodo:hover .metodo__caja { border-color: var(--acento); }
+.metodo input:checked + .metodo__caja { border-color: var(--anillo); box-shadow: inset 0 0 0 1px var(--anillo); }
+.metodo input:checked + .metodo__caja .metodo__marca { opacity: 1; transform: none; }
+.metodo input:focus-visible + .metodo__caja { outline: 3px solid var(--foco); outline-offset: 2px; }
+.campo--error .metodo__caja { border-color: var(--error); }
+
+.pago-caja { margin: 0 0 18px; padding: 14px 16px; border-radius: 16px; background: var(--sup); border: 1.5px solid var(--borde-suave); animation: entrar .24s var(--curva) both; }
+.pago-caja__titulo { margin: 0 0 6px; font: 700 19px/1.1 var(--titulos); text-transform: uppercase; color: var(--acento); }
+.pago-caja__texto { margin: 0; }
+.datos-pago { display: grid; }
+/* Etiqueta y «Copiar» en una línea; el valor abajo, a todo el ancho, para que un correo largo quepa. */
+.dato { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "etq btn" "val val"; column-gap: 12px; row-gap: 2px; align-items: center; padding: 10px 0; border-top: 1px solid var(--borde-suave); }
+.dato:first-child { border-top: 0; }
+.dato__etiqueta { grid-area: etq; font-size: 14px; color: var(--suave); }
+.dato__valor { grid-area: val; font-size: 18px; font-weight: 700; overflow-wrap: anywhere; -webkit-user-select: all; user-select: all; }
+.copiar { grid-area: btn; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1.5px solid var(--borde); background: var(--sup-2); color: var(--texto); font: 600 15px var(--cuerpo); cursor: pointer; transition: border-color .2s ease, color .2s ease; }
+.copiar .ico { width: 18px; height: 18px; }
+.copiar:hover { border-color: var(--acento); }
+.copiar.copiado { border-color: var(--ok); color: var(--ok); }
+
+.campo--comprobante .boton { margin-top: 2px; }
+.adjunto { display: grid; grid-template-columns: 56px minmax(0, 1fr) 44px; gap: 12px; align-items: center; margin: 0 0 12px; padding: 10px; border-radius: 14px; background: var(--sup); border: 1.5px solid var(--anillo); }
+.adjunto__vista { width: 56px; height: 72px; border-radius: 10px; overflow: hidden; display: grid; place-items: center; background: var(--sup-2); color: var(--acento); }
+.adjunto__vista img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.adjunto__vista .ico { width: 30px; height: 30px; stroke-width: 1.6; }
+.adjunto__nombre { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+.adjunto__peso { margin: 2px 0 0; font-size: 14px; color: var(--suave); }
+.adjunto__quitar { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; border: 1.5px solid var(--borde); background: var(--sup-2); color: var(--texto); cursor: pointer; }
+.adjunto__quitar:hover { border-color: var(--error); color: var(--error); }
+.acepto--despues { margin-top: 14px !important; font-size: 16px; }
+
 .acciones { position: sticky; bottom: 0; z-index: 20; margin: 0 -16px; padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, transparent, var(--fondo) 28%); pointer-events: none; }
 .acciones .boton { width: 100%; pointer-events: auto; }
 /* Con las barras fijas del celular, lo enfocado o desplazado no queda tapado (WCAG 2.4.11). */
@@ -272,6 +316,12 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .listo__texto { margin: 0 0 12px; color: var(--suave); }
 .listo__correo { display: flex; gap: 10px; align-items: flex-start; justify-content: center; margin: 0 0 22px; padding: 12px 14px; border-radius: 12px; background: var(--sup); border: 1.5px solid var(--borde-suave); text-align: left; font-size: 16px; }
 .listo__correo .ico { color: var(--acento); margin-top: 2px; }
+.listo__pago { margin: 0 0 22px; padding: 16px; border-radius: 16px; background: var(--sup); border: 1.5px solid var(--anillo); text-align: left; }
+.listo__pago-titulo { display: flex; gap: 10px; align-items: center; margin: 0 0 8px; font: 700 22px/1.1 var(--titulos); text-transform: uppercase; }
+.listo__pago-titulo .ico { color: var(--acento); }
+.listo__pago-texto { margin: 0; color: var(--suave); font-size: 16px; }
+.listo__pago .datos-pago { margin: 12px 0 0; padding: 2px 14px; border-radius: 12px; background: var(--fondo); }
+.listo__pago .boton { width: 100%; margin-top: 14px; }
 .listo__acciones { display: grid; gap: 12px; margin-bottom: 6px; }
 .nota { margin: 14px 0 0; color: var(--tenue); font-size: 14px; }
 
@@ -352,7 +402,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
   .progreso__lista li.hecho .progreso__num, .progreso__lista li[aria-current="step"] .progreso__num { background: var(--oro); border-color: var(--oro); color: var(--oro-texto); }
   .formulario { padding: 28px 36px 8px; border-radius: 20px; background: var(--sup); border: 1.5px solid var(--borde-suave); box-shadow: var(--sombra); }
   .formulario input[type=text], .formulario input[type=tel], .formulario input[type=email], .formulario select, .formulario textarea, .formulario .opcion span, .formulario .foto__marco { background: var(--fondo); }
-  .formulario .resumen__bloque, .formulario .acepto { background: var(--fondo); }
+  .formulario .resumen__bloque, .formulario .acepto, .formulario .metodo__caja, .formulario .pago-caja, .formulario .adjunto { background: var(--fondo); }
+  .formulario .copiar, .formulario .adjunto__quitar, .formulario .adjunto__vista { background: var(--sup-2); }
   .acciones { position: static; margin: 8px 0 0; padding: 18px 0 24px; background: none; display: flex; justify-content: flex-end; }
   .acciones .boton { width: auto; min-width: 220px; }
   .listo { padding-top: 64px; }

@@ -124,3 +124,44 @@ Publicación: primero en local con capturas; se sube a PROD solo con el ok de Lu
 17 casos de reglas del servidor y 23 del navegador; pantallas de error (límite, servidor, sin correo, sin
 conexión) conservando el borrador. Hallazgos corregidos: la barra fija de abajo tapaba toques en el celular
 (`pointer-events` y `scroll-padding`, WCAG 2.4.11) y una regla de etiquetas pisaba los botones de foto.
+
+## Paso de pago y v2 en su propia dirección (27-sep, noche)
+
+**Pedido.** Jeffer, por audio (27-sep, 20:16; transcrito en local con Whisper): que el apoderado envíe el
+comprobante de la inscripción junto con la planilla; la academia corrobora el pago y recién ahí lo agrega al
+grupo de WhatsApp; «por ahora» mostrar los datos de pago móvil, Zelle y efectivo al finalizar la planilla.
+Luis: agregar ese paso al final y que el correo también lo indique.
+
+**Diseño.**
+- Paso 4 «Pago», entre «Béisbol» y «Enviar» (el formulario pasa a 5 pasos). Formas de pago en tarjetas;
+  al elegir una se ven sus datos con «Copiar» (cédula y teléfono sin puntos ni guion, listos para la app
+  del banco). Banco de Venezuela con su código 0102, verificado en la lista de códigos de pago móvil.
+- Comprobante: captura (se achica a 2000 px por el lado largo y va en JPEG) o PDF de hasta 3 MB.
+  Si todavía no pagó, puede marcar «lo envío después» (respondiendo el correo o por WhatsApp): la
+  inscripción no se frena y el control lo hace la academia al agregar al grupo. `permitir_despues: false`
+  en la configuración lo vuelve obligatorio. El efectivo se paga en la oficina y no pide comprobante.
+- Resumen con el pago; pantalla final con el próximo paso según el caso: «Pago en revisión», «Falta el
+  comprobante» (con los datos y un botón de WhatsApp con el mensaje escrito) o el efectivo en la oficina.
+- Correos: a la academia, el siguiente paso arriba (verificar y agregar al representante, con su teléfono,
+  al grupo de WhatsApp), el comprobante adjunto y el estado del pago en el asunto; al apoderado, el paso
+  del pago arriba con los datos para pagar cuando falta el comprobante.
+- Sheet: dos columnas nuevas al final, «Forma de pago» y «Comprobante» (enlace, Pendiente o No aplica).
+- Los datos de pago son personales (cédula, teléfono, correo de Zelle) y el repo es público: viven en el
+  bloque `pago` de `gt-config.json`, que el despliegue pone en la página (`#datos-pago`) y `build.py` en el
+  flujo. Una sola fuente para la página y los correos.
+
+**v2 aparte.** Luis pidió que la v2 no reemplace a la v1: la v1 sigue en `/demos/gt-baseball/` (la
+dirección que ya tiene Jeffer) con su flujo activo, y la v2 va en `/demos/gt-baseball/v2/` con su flujo
+propio. El despliegue compara la huella md5 de cada archivo de la v1 antes y después de subir, y la
+verificación revisa la v1 contra su respaldo congelado. El cartel y el QR de la v2 apuntan a `/v2/`.
+
+**Verificado en local** (copia armada con los datos como en PROD y receptor simulado): 45 comprobaciones
+del paso de pago en el navegador (formas de pago, copiar, validaciones, captura, PDF, PDF falso o de más
+de 3 MB, borrador, tres finales, otro atleta); 14 reglas de pago y 22 comprobaciones de fila, adjuntos,
+asuntos y correos en el código de los nodos; las 17 reglas anteriores; 60 combinaciones (5 tamaños ×
+2 temas × 6 pantallas) y 17 anchos de 320 a 1920 px sin desborde ni errores; contraste de lo nuevo en los
+dos temas (el borde de la tarjeta elegida usa el dorado oscuro en modo claro: 3,9:1).
+
+**Pendiente:** publicar con el ok de Luis (flujo v2 primero, después la página en `/v2/`, prueba real con
+`?prueba=1`); agregar en el Sheet los encabezados de las dos columnas nuevas; preguntar a Jeffer el monto
+de la inscripción y si el comprobante debe ser obligatorio.

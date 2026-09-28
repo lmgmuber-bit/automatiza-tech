@@ -1,7 +1,8 @@
 /* Formulario de inscripción GT Baseball Academy (v2, AutomatizaTech).
  * Pasos con nombre, validación al salir de cada campo, borrador en el teléfono, planilla PDF armada aquí,
- * envío con avance real (XHR) y resultado con compartir o descargar. Con ?prueba=1 n8n marca PRUEBA y
- * avisa solo a AutomatizaTech. El número de WhatsApp lo pone el despliegue en data-whatsapp. */
+ * paso de pago con comprobante, envío con avance real (XHR) y resultado con compartir o descargar.
+ * Con ?prueba=1 n8n marca PRUEBA y avisa solo a AutomatizaTech. El número de WhatsApp (data-whatsapp) y las
+ * formas de pago (#datos-pago) los pone el despliegue: el repositorio es público y no los guarda. */
 (function () {
   'use strict';
 
@@ -15,8 +16,8 @@
     if (otro) ENDPOINT = decodeURIComponent(otro[1]);
   }
   var PRUEBA = /[?&]prueba=1\b/.test(location.search);
-  var TOTAL = 4;
-  var NOMBRES = ['Atleta', 'Contacto', 'Béisbol', 'Enviar'];
+  var TOTAL = 5;
+  var NOMBRES = ['Atleta', 'Contacto', 'Béisbol', 'Pago', 'Enviar'];
   var MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   var CLAVE_BORRADOR = 'gt-inscripcion-borrador-v2';
   var CLAVE_TEMA = 'gt-tema';
@@ -25,7 +26,14 @@
 
   var form = $('formulario');
   var vistas = { portada: $('vista-portada'), formulario: $('vista-formulario'), listo: $('vista-listo') };
-  var estado = { paso: 1, foto: null, logo: null, id: null, pdf: null, enviado: false, enviando: false };
+  var estado = { paso: 1, foto: null, logo: null, id: null, pdf: null, comprobante: null, enviado: false, enviando: false };
+
+  // Formas de pago: {monto, permitir_despues, metodos: [{id, nombre, detalle, comprobante, datos: [{etiqueta, valor, copiar}], texto}]}.
+  var PAGO = {};
+  try { PAGO = JSON.parse($('datos-pago').textContent || '{}') || {}; } catch (e) { PAGO = {}; }
+  var METODOS = (Array.isArray(PAGO.metodos) ? PAGO.metodos : []).filter(function (m) { return m && m.id && m.nombre; });
+  var PERMITIR_DESPUES = PAGO.permitir_despues !== false;
+  var ICONOS_PAGO = { pago_movil: 'i-device-mobile', zelle: 'i-currency-dollar', efectivo: 'i-cash-banknote' };
 
   // ---------- Almacenamiento del teléfono (puede no existir: incógnito, sin espacio) ----------
   function guardar(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
@@ -259,6 +267,12 @@
       if (!v) return '';
       return /^\d{4}$/.test(v) && +v >= y - 1 && +v <= y + 20 ? '' : 'Escribe un año de 4 dígitos. Ej: ' + (y + 2) + '.';
     },
+    pago_metodo: function () { return !METODOS.length || metodoElegido() ? '' : 'Elige cómo vas a pagar.'; },
+    comprobante: function () {
+      if (!pideComprobante() || estado.comprobante) return '';
+      if (PERMITIR_DESPUES && $('pago_despues').checked) return '';
+      return PERMITIR_DESPUES ? 'Adjunta el comprobante o marca que lo envías después.' : 'Adjunta el comprobante del pago.';
+    },
     acepta: function () { return $('acepta').checked ? '' : 'Para enviar, marca la autorización.'; }
   };
 
@@ -266,7 +280,8 @@
     1: ['foto', 'nombre', 'fecha_nac', 'documento', 'nacionalidad'],
     2: ['direccion', 'telefono', 'rep_nombre', 'rep_telefono', 'correo'],
     3: ['liga', 'posicion', 'batea', 'lanza', 'estatura', 'peso', 'millas', 'anio_firma'],
-    4: ['acepta']
+    4: ['pago_metodo', 'comprobante'],
+    5: ['acepta']
   };
 
   // Filtro al escribir: en teléfonos, millas y año no entran letras.
@@ -284,6 +299,7 @@
   function controlDe(nombre) {
     if (nombre === 'foto') return $('foto-camara');
     if (nombre === 'fecha_nac') return $('fn-dia');
+    if (nombre === 'comprobante') return $('comp-archivo');
     var el = form.elements[nombre];
     if (el && typeof RadioNodeList !== 'undefined' && el instanceof RadioNodeList) return el[0];
     return el;
@@ -292,6 +308,7 @@
   function nombreDe(el) {
     if (!el) return '';
     if (el.id === 'foto-camara' || el.id === 'foto-galeria') return 'foto';
+    if (el.id === 'comp-archivo') return 'comprobante';
     if (el.getAttribute && el.getAttribute('data-fecha')) return 'fecha_nac';
     return el.name || '';
   }
@@ -345,6 +362,12 @@
       if ($('fn-dia').value && $('fn-mes').value && $('fn-anio').value) validarCampo('fecha_nac');
     } else if (n === 'batea' || n === 'lanza' || n === 'acepta' || n === 'posicion') {
       validarCampo(n);
+    } else if (n === 'pago_metodo') {
+      mostrarMetodo();
+      validarCampo('pago_metodo');
+      marcar('comprobante', '');
+    } else if (n === 'pago_despues') {
+      if (form.querySelector('[data-campo="comprobante"].campo--error')) validarCampo('comprobante');
     }
     programarBorrador();
   });
@@ -454,6 +477,158 @@
     });
   }
 
+  // ---------- Pago: forma de pago, datos para copiar y comprobante ----------
+  function metodoElegido() { var r = form.querySelector('input[name="pago_metodo"]:checked'); return r ? r.value : ''; }
+  function metodoActual() {
+    var id = metodoElegido();
+    return METODOS.filter(function (m) { return m.id === id; })[0] || null;
+  }
+  function pideComprobante() { var m = metodoActual(); return !!(m && m.comprobante); }
+  // 'adjunto' | 'despues' | 'no_aplica' (se paga sin comprobante, como el efectivo) | '' (sin forma de pago)
+  function estadoPago() {
+    var m = metodoActual();
+    if (!m) return '';
+    if (!m.comprobante) return 'no_aplica';
+    return estado.comprobante ? 'adjunto' : 'despues';
+  }
+
+  // Filas de datos para pagar. Fuera del paso (pantalla final) llevan además la forma de pago y el monto.
+  function htmlDatosPago(m, fueraDelPaso) {
+    function fila(etiqueta, valor, copiar) {
+      var boton = copiar ? '<button type="button" class="copiar" data-copiar="' + esc(copiar) + '" data-que="' + esc(etiqueta) + '"' +
+        ' aria-label="Copiar ' + esc(String(etiqueta).toLowerCase()) + ': ' + esc(valor) + '">' +
+        '<svg class="ico" aria-hidden="true"><use href="#i-copy"></use></svg><span>Copiar</span></button>' : '';
+      // Un correo largo se corta antes de la @ y no a mitad de palabra.
+      return '<div class="dato"><span class="dato__etiqueta">' + esc(etiqueta) + '</span>' + boton +
+        '<span class="dato__valor">' + esc(valor).replace(/@/g, '<wbr>@') + '</span></div>';
+    }
+    var filas = (m.datos || []).map(function (d) { return fila(d.etiqueta, d.valor, d.copiar); });
+    if (fueraDelPaso) {
+      if (PAGO.monto) filas.unshift(fila('Monto', PAGO.monto));
+      filas.unshift(fila('Forma de pago', m.nombre + (m.detalle ? ' · ' + m.detalle : '')));
+    }
+    return (filas.length ? '<div class="datos-pago">' + filas.join('') + '</div>' : '') +
+      (m.texto ? '<p class="pago-caja__texto">' + esc(m.texto) + '</p>' : '');
+  }
+
+  (function pintarMetodos() {
+    if (!METODOS.length) {
+      // Sin datos de pago (solo pasa en desarrollo, sin el despliegue): el paso avisa y no pide nada.
+      $('pago-intro').textContent = 'La academia te indicará cómo pagar la inscripción. Cuando verifique el pago, te agregará al grupo de WhatsApp.';
+      form.querySelector('[data-campo="pago_metodo"]').hidden = true;
+      return;
+    }
+    $('pago-metodos').innerHTML = METODOS.map(function (m) {
+      return '<label class="metodo"><input type="radio" name="pago_metodo" value="' + esc(m.id) + '">' +
+        '<span class="metodo__caja"><svg class="ico metodo__ico" aria-hidden="true"><use href="#' + (ICONOS_PAGO[m.id] || 'i-receipt') + '"></use></svg>' +
+        '<span class="metodo__texto"><span class="metodo__nombre">' + esc(m.nombre) + '</span>' +
+        (m.detalle ? '<span class="metodo__detalle">' + esc(m.detalle) + '</span>' : '') + '</span>' +
+        '<svg class="ico metodo__marca" aria-hidden="true"><use href="#i-circle-check"></use></svg></span></label>';
+    }).join('');
+    if (PAGO.monto) { $('pago-monto').textContent = 'Monto de la inscripción: ' + PAGO.monto; $('pago-monto').hidden = false; }
+    if (!PERMITIR_DESPUES) $('comp-despues').hidden = true;
+  })();
+
+  function mostrarMetodo() {
+    var m = metodoActual();
+    $('pago-caja').hidden = !m;
+    $('bloque-comprobante').hidden = !(m && m.comprobante);
+    if (!m) return;
+    $('pago-caja-titulo').textContent = m.nombre;
+    $('pago-datos').innerHTML = htmlDatosPago(m, false);
+  }
+
+  function copiarTexto(t) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(t);
+    return new Promise(function (ok, mal) {
+      var a = document.createElement('textarea');
+      a.value = t; a.setAttribute('readonly', ''); a.style.position = 'fixed'; a.style.top = '0'; a.style.opacity = '0';
+      document.body.appendChild(a); a.select();
+      var hecho = false;
+      try { hecho = document.execCommand('copy'); } catch (e) { hecho = false; }
+      document.body.removeChild(a);
+      if (hecho) ok(); else mal(new Error('copiar'));
+    });
+  }
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest ? ev.target.closest('.copiar') : null;
+    if (!b) return;
+    var texto = b.querySelector('span'), uso = b.querySelector('use');
+    copiarTexto(b.getAttribute('data-copiar')).then(function () {
+      b.classList.add('copiado'); texto.textContent = 'Copiado'; uso.setAttribute('href', '#i-check');
+      anunciar('Copiado: ' + String(b.getAttribute('data-que')).toLowerCase());
+      clearTimeout(b._reloj);
+      b._reloj = setTimeout(function () { b.classList.remove('copiado'); texto.textContent = 'Copiar'; uso.setAttribute('href', '#i-copy'); }, 2200);
+    }).catch(function () { anunciar('No se pudo copiar. Mantén presionado el dato para copiarlo.'); });
+  });
+
+  var MAX_PDF = 3 * 1024 * 1024;
+  function tamano(bytes) {
+    return bytes < 1048576 ? Math.max(1, Math.round(bytes / 1024)) + ' KB' : (bytes / 1048576).toFixed(1).replace('.', ',') + ' MB';
+  }
+  // Capturas del banco: se achican a 2000 px por el lado largo (el texto sigue legible) y van en JPEG.
+  function prepararComprobante(file) {
+    return cargarImagen(file).then(function (img) {
+      var k = Math.min(1, 2000 / Math.max(img.width, img.height));
+      var c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      var ctx = c.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      if (img.close) img.close();
+      return c.toDataURL('image/jpeg', 0.85);
+    });
+  }
+  function ponerComprobante(c) {
+    estado.comprobante = c;
+    var vista = $('comp-vista');
+    vista.innerHTML = c.tipo === 'pdf' ? '<svg class="ico" aria-hidden="true"><use href="#i-file-type-pdf"></use></svg>' : '<img alt="" src="' + c.url + '">';
+    $('comp-nombre').textContent = c.tipo === 'pdf' ? (c.nombre || 'Comprobante.pdf') : 'Captura del pago';
+    $('comp-peso').textContent = (c.tipo === 'pdf' ? 'PDF · ' : 'Imagen · ') + tamano(c.peso);
+    $('comp-adjunto').hidden = false;
+    $('comp-boton-texto').textContent = 'Cambiar comprobante';
+    $('pago_despues').checked = false;
+    $('comp-despues').hidden = true;
+  }
+  function quitarComprobante() {
+    estado.comprobante = null;
+    $('comp-adjunto').hidden = true;
+    $('comp-vista').innerHTML = '';
+    $('comp-boton-texto').textContent = 'Adjuntar captura o PDF';
+    $('comp-despues').hidden = !PERMITIR_DESPUES;
+  }
+  $('comp-archivo').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    this.value = '';
+    if (!f) return;
+    var esPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
+    var esImagen = /^image\//.test(f.type) || /\.(jpe?g|png|heic|heif|webp)$/i.test(f.name);
+    if (!esPdf && !esImagen) { marcar('comprobante', 'Adjunta una imagen (la captura del pago) o un PDF.'); return; }
+    if (esPdf && f.size > MAX_PDF) { marcar('comprobante', 'Ese PDF pesa más de 3 MB. Envía mejor una captura de pantalla del pago.'); return; }
+    $('comp-boton-texto').textContent = 'Preparando…';
+    var listo = esPdf ? leerComoDataUrl(f).then(function (u) {
+      var datos64 = String(u).split(',')[1] || '';
+      if (datos64.slice(0, 5) !== 'JVBER') throw new Error('pdf'); // debe empezar con %PDF
+      return 'data:application/pdf;base64,' + datos64;
+    }) : prepararComprobante(f);
+    listo.then(function (url) {
+      ponerComprobante({ url: url, tipo: esPdf ? 'pdf' : 'imagen', nombre: f.name, peso: esPdf ? f.size : Math.round((url.length - 23) * 0.75) });
+      marcar('comprobante', '');
+      anunciar('Comprobante adjuntado.');
+      guardarBorrador();
+    }).catch(function () {
+      $('comp-boton-texto').textContent = estado.comprobante ? 'Cambiar comprobante' : 'Adjuntar captura o PDF';
+      marcar('comprobante', esPdf ? 'No pudimos leer ese PDF. Prueba con una captura de pantalla del pago.' : 'No pudimos leer esa imagen. Prueba con otra captura.');
+    });
+  });
+  $('comp-quitar').addEventListener('click', function () {
+    quitarComprobante();
+    anunciar('Comprobante quitado.');
+    guardarBorrador();
+    $('comp-archivo').focus();
+  });
+
   // ---------- Borrador en el teléfono ----------
   var relojBorrador;
   function programarBorrador() { clearTimeout(relojBorrador); relojBorrador = setTimeout(guardarBorrador, 400); }
@@ -466,7 +641,15 @@
     d.campos.lanza = valor('lanza');
     d.campos.fn = [$('fn-dia').value, $('fn-mes').value, $('fn-anio').value];
     d.campos.acepta = $('acepta').checked;
-    if (!guardar(CLAVE_BORRADOR, JSON.stringify(d))) { d.foto = null; guardar(CLAVE_BORRADOR, JSON.stringify(d)); }
+    d.campos.pago_metodo = metodoElegido();
+    d.campos.pago_despues = $('pago_despues').checked;
+    // El comprobante se guarda si cabe; si el teléfono no tiene espacio, primero se suelta él y después la foto.
+    d.comp = estado.comprobante && estado.comprobante.url.length < 1500000 ? estado.comprobante : null;
+    if (guardar(CLAVE_BORRADOR, JSON.stringify(d))) return;
+    d.comp = null;
+    if (guardar(CLAVE_BORRADOR, JSON.stringify(d))) return;
+    d.foto = null;
+    guardar(CLAVE_BORRADOR, JSON.stringify(d));
   }
 
   function leerBorrador() {
@@ -489,6 +672,10 @@
     $('acepta').checked = !!d.campos.acepta;
     estado.id = d.id || nuevoId();
     if (d.foto) ponerFoto(d.foto);
+    form.querySelectorAll('input[name="pago_metodo"]').forEach(function (r) { r.checked = r.value === d.campos.pago_metodo; });
+    if (d.comp && typeof d.comp.url === 'string') ponerComprobante(d.comp);
+    else $('pago_despues').checked = !!d.campos.pago_despues;
+    mostrarMetodo();
     pintarEdad();
   }
 
@@ -545,7 +732,15 @@
       bloque('Contacto', 2, lista([['Dirección', d.direccion], ['Teléfono', d.telefono], ['Representante', d.rep_nombre],
         ['Teléfono', d.rep_telefono], ['Correo', d.correo]])) +
       bloque('Béisbol', 3, lista([['Liga', d.liga], ['Posición', d.posicion], ['Batea', d.batea], ['Lanza', d.lanza],
-        ['Estatura', d.estatura], ['Peso', d.peso], ['Millas', d.millas], ['Año de firma', d.anio_firma]]));
+        ['Estatura', d.estatura], ['Peso', d.peso], ['Millas', d.millas], ['Año de firma', d.anio_firma]])) +
+      (METODOS.length ? bloque('Pago', 4, lista(filasPago())) : '');
+  }
+
+  function filasPago() {
+    var m = metodoActual(), ep = estadoPago();
+    if (!m) return [];
+    var comp = { adjunto: estado.comprobante && estado.comprobante.tipo === 'pdf' ? 'PDF adjunto' : 'Captura adjunta', despues: 'Lo envías después' }[ep];
+    return [['Forma de pago', m.nombre + (m.detalle ? ' · ' + m.detalle : '')], ['Comprobante', comp || '']];
   }
 
   $('resumen').addEventListener('click', function (ev) {
@@ -593,7 +788,7 @@
   }
   function avance(pct) {
     anillo.style.strokeDashoffset = String(100 - pct);
-    $('enviando-detalle').textContent = 'Subiendo la foto y la planilla: ' + pct + ' %';
+    $('enviando-detalle').textContent = 'Subiendo ' + (estado.subiendo || 'la foto y la planilla') + ': ' + pct + ' %';
   }
   function procesando() {
     anillo.style.strokeDashoffset = '';
@@ -614,9 +809,15 @@
       var cuerpo;
       try {
         estado.pdf = armarPdf();
-        var d = datos();
+        var d = datos(), m = metodoActual(), ep = estadoPago();
         d.acepta = true;
-        cuerpo = JSON.stringify({ v: 2, id: estado.id, prueba: PRUEBA, hp: $('hp').value, datos: d, foto: estado.foto, pdf: estado.pdf.output('datauristring') });
+        d.pago_metodo = m ? m.id : '';
+        d.pago_despues = ep === 'despues';
+        // El comprobante solo viaja si la forma de pago lo pide (con efectivo no se manda aunque haya quedado uno).
+        var comp = ep === 'adjunto' ? estado.comprobante.url : '';
+        estado.subiendo = comp ? 'la foto, la planilla y el comprobante' : 'la foto y la planilla';
+        cuerpo = JSON.stringify({ v: 2, id: estado.id, prueba: PRUEBA, hp: $('hp').value, datos: d, foto: estado.foto,
+          pdf: estado.pdf.output('datauristring'), comprobante: comp });
       } catch (e) { fin(false, { tipo: 'pdf' }); return; }
       var xhr = new XMLHttpRequest();
       xhr.open('POST', ENDPOINT);
@@ -690,6 +891,7 @@
       $('listo-texto').textContent = m[1];
       correo.hidden = true;
     }
+    pintarPagoFinal(ok, d);
     $('btn-reintentar').hidden = ok;
     $('btn-reintentar').querySelector('span').textContent = estado.ultimo === 'datos' ? 'Revisar datos' : 'Intentar de nuevo';
     $('btn-compartir').hidden = !ok || !puedeCompartir();
@@ -699,6 +901,33 @@
     mostrar('listo');
     $('listo-titulo').focus({ preventScroll: true });
     anunciar($('listo-titulo').textContent + '. ' + $('listo-texto').textContent);
+  }
+
+  // Próximo paso del pago en la pantalla final: lo mismo que dice el correo de confirmación.
+  var GRUPO = 'Cuando la academia verifique el pago, te agregará al grupo de WhatsApp.';
+  function pintarPagoFinal(ok, d) {
+    var caja = $('listo-pago'), m = metodoActual(), ep = estadoPago(), wa = $('listo-pago-wa');
+    caja.hidden = !ok || !m;
+    if (caja.hidden) return;
+    var titulo, texto, datosHtml = '';
+    if (ep === 'adjunto') {
+      titulo = 'Pago en revisión';
+      texto = 'Recibimos tu comprobante. ' + GRUPO;
+    } else if (ep === 'despues') {
+      titulo = 'Falta el comprobante';
+      texto = 'Paga con estos datos y envía la captura del pago respondiendo el correo de confirmación o por WhatsApp. ' + GRUPO;
+      datosHtml = htmlDatosPago(m, true);
+    } else {
+      titulo = m.nombre + (m.detalle ? ' · ' + m.detalle : '');
+      texto = (m.texto ? m.texto + ' ' : '') + GRUPO;
+    }
+    $('listo-pago-titulo').textContent = titulo;
+    $('listo-pago-texto').textContent = texto;
+    $('listo-pago-datos').innerHTML = datosHtml;
+    wa.hidden = !(ep === 'despues' && WHATSAPP.length >= 8);
+    if (!wa.hidden) {
+      wa.href = 'https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent('Hola, envío el comprobante de pago de la inscripción de ' + d.nombre + ' (N.º ' + estado.id + ').');
+    }
   }
 
   $('btn-reintentar').addEventListener('click', function () {
@@ -718,6 +947,8 @@
     form.querySelectorAll('.campo--error').forEach(function (c) { c.classList.remove('campo--error'); });
     form.querySelectorAll('.campo__error').forEach(function (p) { p.textContent = ''; });
     quitarFoto();
+    quitarComprobante();
+    mostrarMetodo();
     estado.pdf = null; estado.enviado = false; estado.id = nuevoId();
     pintarEdad();
     mostrar('formulario');

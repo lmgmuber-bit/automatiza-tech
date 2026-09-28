@@ -81,7 +81,8 @@ MANDATORY: All on-screen text, UI elements, app interfaces, phone screens, email
 - **GT Baseball Academy (García Training) — inscripción con QR EN PROD, v1 y v2 (rama `claude/gt-baseball-prototipo`):**
   - **Origen:** el cliente de la propuesta 42 no la aceptó (USD 500 queda como fase 2) y el 24-sep se acordó por audio una fase 1 chica.
   - **v1** (27-sep, la dirección que ya tiene Jeffer; congelada con la etiqueta `gt-baseball-v1`): `https://automatizatech.cl/demos/gt-baseball/` y flujo n8n `1ooWxClFzc6vGb3W`.
-  - **v2** (desde el 28-sep, 00:33; es el código actual del repo): `…/demos/gt-baseball/v2/` y `v2/cartel.html`, con el flujo «GT Baseball · Inscripciones v2» (`jsqxDfoWvJbDVAUa`). Trae:
+  - 🟢 **EN PROD en su DOMINIO PROPIO desde el 28-sep 21:56: `https://gtbaseball.com/`** (carpeta `domains/gtbaseball.com/public_html`, aislada; despliega `deploy_dominio.py`, con candado a esa carpeta). Cartel en `…/cartel.html`, QR al dominio. Las viejas `/demos/gt-baseball/` y `/v2/` **redirigen 301** al dominio (la v1 y su flujo siguen intactos). Cabeceras con HSTS y CSP a la medida. Falta: video para representantes y Cloudflare Turnstile (anti-ráfaga; necesita la cuenta de Luis).
+  - **v2** (el código actual del repo; ahora servido desde gtbaseball.com), con el flujo «GT Baseball · Inscripciones v2» (`jsqxDfoWvJbDVAUa`, CORS con gtbaseball.com; exige `v:2` y anti-duplicado por id). Trae:
     - 5 pasos con pago: pago móvil, Zelle o efectivo, 25 $; comprobante o «lo envío después»;
     - firma del atleta desde los 15 años;
     - campos blindados (teléfonos venezolanos de 11 dígitos);

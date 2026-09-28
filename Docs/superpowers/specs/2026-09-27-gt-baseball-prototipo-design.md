@@ -324,3 +324,23 @@ ni correos; borrado al terminar):
 **Recomendado para el dominio (no bloquea, pero cierra la ráfaga):** Cloudflare Turnstile (gratis, casi invisible)
 como barrera anti-bot en el borde. Es la capa que frena una ráfaga simultánea antes de llegar a n8n; el límite de
 n8n queda como mejor-esfuerzo para repeticiones sueltas. Necesita la cuenta de Cloudflare de Luis y una clave.
+
+## Mudanza al dominio propio gtbaseball.com (28-sep, EN PROD)
+
+Jeffer compró el dominio en Hostinger; Luis lo agregó al mismo plan (Business, 7/50 sitios) como sitio «Sube tu
+PHP o HTML», con su **carpeta propia** `domains/gtbaseball.com/public_html`, aislada de los otros seis dominios.
+
+- **Despliegue:** `deploy_dominio.py` (en los respaldos), con la carpeta destino FIJA y un candado que aborta si la
+  ruta real no es la de gtbaseball.com; respalda y quita el `default.php` de Hostinger solo de esa carpeta. 17
+  archivos, iguales por md5. El sitio queda en la **raíz** de `https://gtbaseball.com/` (no en `/v2/`).
+- **Cambios del dominio:** QR y cartel al dominio (QR v2, 25 módulos, decodifica `https://gtbaseball.com/`); `ORIGENES`
+  del flujo v2 con gtbaseball.com + www; logo de los correos al dominio; cabeceras completas con **HSTS** y una **CSP**
+  a la medida (propios + Google Fonts + jsPDF por cdnjs + el webhook de n8n en `connect-src`).
+- **Redirecciones:** las viejas `/demos/gt-baseball/` (v1) y `/v2/` dan **301** a `https://gtbaseball.com/` (un
+  `.htaccess` con `RewriteRule` en cada carpeta; respaldo en `~/respaldos/gt-redirect-*`; no había `.htaccess`
+  antes). La v1 y su flujo quedan intactos, solo redirigen.
+- **Verificado desde afuera:** 16 archivos iguales por md5; las seis cabeceras de seguridad presentes; `.htaccess`
+  bloqueado (403); envío real `GT-MULSF0R6OP` en el dominio con respuesta 200, **sin bloqueos de CSP ni CORS ni
+  errores**, y los dos correos recibidos (con el logo del dominio); redirects 301 sin bucle.
+- **Pendiente:** el video para los representantes apuntando al dominio (borrador `guion-guia.json`) y Cloudflare
+  Turnstile (necesita la cuenta de Cloudflare de Luis).

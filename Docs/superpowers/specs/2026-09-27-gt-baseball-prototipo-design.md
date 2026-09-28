@@ -196,3 +196,19 @@ bloque `pago` de `gt-config.json`:
 Sigue sin poder saltarse el pago: elegir la forma de pago es obligatorio y, por pago móvil o Zelle, hay que
 adjuntar el comprobante o marcar «lo envío después» (página y servidor). Verificado: 49 comprobaciones en el
 navegador, 44 en el código de los nodos, 17 reglas, 6 de la firma, 17 anchos y 60 combinaciones.
+
+## Portada con preguntas, 5 pasos y botón «Salir» (27-sep, noche)
+
+- «¿Cómo funciona?» y «¿Qué necesitas a mano?» llevan sus signos de pregunta (Luis).
+- «¿Cómo funciona?» pasó de 3 pasos a los 5 del formulario, con los mismos nombres de la barra (Paso 1 · Atleta,
+  Paso 2 · Contacto, Paso 3 · Béisbol, Paso 4 · Pago, Paso 5 · Enviar) y una línea de en qué consiste cada uno;
+  el paso 4 dice el monto (desde la configuración), las tres formas de pago y que el comprobante se puede enviar
+  después. En escritorio, título a la izquierda y pasos en vertical a la derecha.
+- «Salir» en la barra de pasos (bajo la lista en escritorio): pregunta «¿Deseas salir de la inscripción?», guarda
+  el borrador y el inicio ofrece continuar o empezar de nuevo. Pedido de Luis: desde el paso 3 había que tocar
+  «atrás» varias veces para volver al inicio.
+- Video del recorrido con la voz de Alice (ElevenLabs): la frase del pago dice Zelle, efectivo o bolívares por pago
+  móvil, a la tasa oficial del Banco Central de Venezuela (Luis). 102 s; guion y tomas fuera del repo.
+
+Verificado: 18 comprobaciones de «Salir» (celular, 320 px y escritorio) y las pruebas anteriores (49 + 44 + 17 + 6,
+17 anchos, 60 combinaciones).

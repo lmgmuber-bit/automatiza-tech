@@ -10840,8 +10840,8 @@
     "semantic_hash": ""
   },
   "N8N/gt-baseball/build.py": {
-    "mtime": 1790559144.8587184,
-    "ast_hash": "04e33c07f6f9cc3fdf89403bfb75b3a9",
+    "mtime": 1790560213.348745,
+    "ast_hash": "bd7718e75a61dd9fc946f053a954c0bf",
     "semantic_hash": ""
   },
   "N8N/gt-baseball/n8n_api.py": {
@@ -10850,8 +10850,8 @@
     "semantic_hash": ""
   },
   "demos/gt-baseball/assets/app.js": {
-    "mtime": 1790559144.686262,
-    "ast_hash": "8c1aa4d9fb164d505e0b4e5ad6ae1286",
+    "mtime": 1790560147.367537,
+    "ast_hash": "ac24d6fa42a8fc751edf48b9445f2590",
     "semantic_hash": ""
   },
   "demos/gt-baseball/assets/planilla.js": {
@@ -10860,13 +10860,13 @@
     "semantic_hash": ""
   },
   "Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo-design.md": {
-    "mtime": 1790559463.9436908,
-    "ast_hash": "0ac57bd52514f251a7c4e6ea1aa57a9f",
+    "mtime": 1790560583.806777,
+    "ast_hash": "4b45e71c2bc0bff2a7fad588b3c46b6e",
     "semantic_hash": ""
   },
   "N8N/gt-baseball/README.md": {
-    "mtime": 1790559463.9687643,
-    "ast_hash": "946aee3738c9fe6a1e4301f09260bc70",
+    "mtime": 1790560213.349749,
+    "ast_hash": "153f8bde5db0658735d96decfd8c988e",
     "semantic_hash": ""
   },
   "demos/gt-baseball/cartel.html": {
@@ -10875,8 +10875,8 @@
     "semantic_hash": ""
   },
   "demos/gt-baseball/index.html": {
-    "mtime": 1790559161.6578188,
-    "ast_hash": "fc95194147f59fa49ee4652b70c515fa",
+    "mtime": 1790560171.5717328,
+    "ast_hash": "029347440a7c870e8e47b411fea91bb8",
     "semantic_hash": ""
   },
   "CumpleBooth/sitio/assets/img/og-cumpleclick.jpg": {

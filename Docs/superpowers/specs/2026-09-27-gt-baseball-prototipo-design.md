@@ -231,3 +231,42 @@ que la planilla sea lo más fidedigna posible. Mismas reglas en la página y en 
 
 Verificado: 31 casos del servidor y 33 del navegador para estas reglas; las pruebas anteriores siguen pasando
 (49 + 44 + 17 + 6 + 18); 17 anchos y 60 combinaciones sin desborde ni errores; cartel en una hoja con el QR legible.
+
+## Video guía, secciones de la academia y publicación de la v2 (28-sep)
+
+**Video guía de ejemplo.** Luis: montar el video del recorrido en la plataforma como guía, sin hacer uno nuevo;
+el definitivo, pensado para los representantes, se graba cuando la plataforma pase al dominio comprado.
+- En la portada, un enlace en el encabezado («Mira el video guía (1:42)») y una tarjeta en «¿Cómo funciona?».
+- Se abre en un diálogo. No se descarga hasta abrirlo (`preload="none"`) y se pausa al cerrar con la X, con Esc
+  o tocando fuera.
+- Los subtítulos están disponibles pero apagados, porque el video ya trae el texto en pantalla.
+- El video muestra los datos de pago, así que no va al repo: `deploy_gt.py` lo publica desde `archivos_extra`
+  de `gt-config.json`.
+
+**Secciones de la academia.** «¿Quiénes somos?» (texto, misión y visión) y «¿Dónde estamos?» (dirección, pago
+en efectivo en la oficina y WhatsApp). Llevan la etiqueta «Texto de ejemplo» o «Dirección de ejemplo» hasta que
+Jeffer mande lo real. Si la dirección es de una casa particular, se pone desde la configuración y no desde el repo.
+
+**Publicación (28-sep, con el ok de Luis).**
+- Flujo «GT Baseball · Inscripciones v2» (`jsqxDfoWvJbDVAUa`, 17 nodos) activo; no guarda las ejecuciones que
+  salen bien. El flujo de la v1 sigue activo.
+- Sheet: encabezados X1 «Forma de pago» e Y1 «Comprobante», escritos solo después de confirmar que la fila 1
+  llegaba hasta la W.
+- 16 archivos en `/demos/gt-baseball/v2/`, iguales a los locales por md5; son los 13 del repo más los 3 del video
+  guía. La v1 tiene sus 13 archivos con la misma huella antes y después de subir, e iguales a su respaldo congelado.
+- Verificación desde afuera: todo responde 200. El video sale como `video/mp4`, los subtítulos como `text/vtt`, y
+  el `.htaccess` está bloqueado (403).
+- Prueba real con `?prueba=1` (inscripción `GT-MUKP0MF9PL`, atleta de 16 años, pago móvil con comprobante):
+  - respuesta 200 en 16,2 s;
+  - pantalla final «Pago en revisión», con el aviso de la firma;
+  - fila 12 del Sheet, con la forma de pago y el enlace del comprobante;
+  - dos correos, fuera de spam: el de la academia con la planilla, la foto y el comprobante, y el del
+    representante con la planilla y la frase de la firma.
+
+**Dominio.** Luis quiere un .com y eligió `gtbaseball.com`. Al 28-sep está libre: el RDAP de Verisign responde 404
+(con `google.com` como control, que responde 200) y el DNS da NXDOMAIN. Falta comprarlo. Al mudar hay que cambiar:
+- la dirección de la página, el QR y el cartel;
+- `ORIGENES` (CORS) en `build.py`;
+- la URL del logo en los correos;
+- las redirecciones desde `/demos/gt-baseball/` y `/v2/`.
+El video definitivo se graba ahí.

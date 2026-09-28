@@ -6,7 +6,7 @@ Flujos n8n que reciben el formulario de `demos/gt-baseball/`. Diseño, auditorí
 | Versión | Página | Flujo en n8n | Webhook | Estado |
 |---|---|---|---|---|
 | v1 | `https://automatizatech.cl/demos/gt-baseball/` (la que tiene Jeffer) | «GT Baseball · Inscripciones (prototipo)» (`1ooWxClFzc6vGb3W`) | `gt-baseball-inscripcion` | En PROD y activa. Congelada: etiqueta git `gt-baseball-v1` y JSON en los respaldos. No se toca |
-| v2 | `https://automatizatech.cl/demos/gt-baseball/v2/` | «GT Baseball · Inscripciones v2» | `gt-baseball-inscripcion-v2` | La construye `build.py`; se publica solo con el ok de Luis |
+| v2 | `https://automatizatech.cl/demos/gt-baseball/v2/` | «GT Baseball · Inscripciones v2» (`jsqxDfoWvJbDVAUa`) | `gt-baseball-inscripcion-v2` | En PROD y activa desde el 28-sep (con el ok de Luis). La construye `build.py` |
 
 La v2 va en su propia carpeta y su propio flujo para que la v1 siga funcionando en la dirección que ya se
 le pasó al cliente (pedido de Luis, 27-sep). El código del repo en `demos/gt-baseball/` es la v2.
@@ -35,7 +35,7 @@ Webhook POST /webhook/gt-baseball-inscripcion-v2
   «responder a» del apoderado también. Los reales van a Luis y al cliente.
 - La v2 exige el correo del representante y la forma de pago; un envío `v: 1` sigue aceptándose sin ellos.
 - Sheet: las 23 columnas de la v1 y, al final, «Forma de pago» y «Comprobante» (enlace de Drive,
-  `Pendiente` o `No aplica`). Los encabezados de esas dos columnas se agregan en el Sheet al publicar.
+  `Pendiente` o `No aplica`). Los encabezados de esas dos columnas (X e Y) se escribieron el 28-sep, al publicar.
 - Pago: después de verificar el pago, la academia agrega al representante al grupo de WhatsApp
   (lo pidió Jeffer por audio el 27-sep). La página y los dos correos lo dicen.
 - Firma: desde los 15 años el atleta también firma la planilla (línea propia en el PDF) y el correo al

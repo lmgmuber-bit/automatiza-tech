@@ -1,4 +1,4 @@
-const { escapeHtml } = require('./escape');
+const { escapeHtml, linkify } = require('./escape');
 
 const LOGO_URL =
   'https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech%20+%20slogan.png';
@@ -84,7 +84,7 @@ function renderContentSlide({ index, eyebrow, title, bodyHtml, imageUrl }) {
 }
 
 function renderParagraphBody(text) {
-  return `<p class="body-text">${escapeHtml(text)}</p>`;
+  return `<p class="body-text">${linkify(escapeHtml(text))}</p>`;
 }
 
 function renderBulletListBody(items, formatter) {
@@ -115,7 +115,10 @@ function renderPricingBody(rows, note) {
     )
     .join('');
   const noteHtml = note ? `<p class="pricing-note">${escapeHtml(note)}</p>` : '';
-  return `<table class="pricing-table"><tbody>${trs}</tbody></table>${noteHtml}`;
+  // Six rows fill the column at the normal size; past that the table would
+  // run off the slide, so it steps down one size instead of being cut.
+  const dense = rows.length > 6 ? ' is-dense' : '';
+  return `<table class="pricing-table${dense}"><tbody>${trs}</tbody></table>${noteHtml}`;
 }
 
 function renderClosingSlide() {
@@ -203,6 +206,10 @@ const STYLE = `
   .pricing-table tr.is-total td { color: #fff; font-weight: 800; font-size: 30px; padding-top: 20px; border-bottom: 0; }
   .pricing-table tr.is-total td:last-child { color: #00d9c0; }
   .pricing-note { color: #9fb3c8; font-size: 18px; margin-top: 16px; }
+  .pricing-table.is-dense td { font-size: 20px; line-height: 1.3; padding: 8px 0; }
+  .pricing-table.is-dense tr.is-total td { font-size: 23px; padding-top: 12px; border-bottom: 1px solid rgba(255,255,255,.12); }
+  .pricing-table.is-dense + .pricing-note { font-size: 16px; margin-top: 10px; line-height: 1.4; }
+  .body-text a, .body-list a { color: #00d9c0; text-decoration: underline; text-underline-offset: 4px; word-break: break-all; }
   .slide-closing { display: flex; }
   .closing-left { width: 42%; background: #0a1420; display: flex; align-items: center; justify-content: center; }
   .closing-logo { width: 340px; max-width: 72%; display: block; }
@@ -550,7 +557,7 @@ function renderProposalHtml(data, images = {}) {
     data.how_it_works,
     (s) => `<strong>${escapeHtml(s.step_title)}:</strong> ${escapeHtml(s.step_text)}`
   );
-  const nextStepsBody = renderBulletListBody(data.next_steps, (s) => escapeHtml(s));
+  const nextStepsBody = renderBulletListBody(data.next_steps, (s) => linkify(escapeHtml(s)));
   const pricingBody = renderPricingBody(data.pricing_rows, data.pricing_note);
 
   // Optional extra sections, so a rich meeting gets the slides it deserves

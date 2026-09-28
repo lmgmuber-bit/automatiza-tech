@@ -1,0 +1,14 @@
+# Cabeceras de seguridad de la página de inscripción (v2). Este archivo se sube a /v2/ y cubre la carpeta.
+# Defensa en profundidad: los datos ya son privados (Drive y el Sheet piden sesión), esto endurece el navegador.
+# HSTS y una CSP estricta se dejan para el dominio propio (gtbaseball.com), porque son políticas de todo el host.
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(), microphone=(), payment=()"
+</IfModule>
+
+# Sin listado de directorios.
+<IfModule mod_autoindex.c>
+  Options -Indexes
+</IfModule>

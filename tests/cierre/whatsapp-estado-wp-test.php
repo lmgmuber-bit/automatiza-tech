@@ -278,10 +278,10 @@ function wa_estado_responder(array $cuerpo) {
 	return wa_estado_pedir('/at/v1/propuesta-respuesta', $cuerpo, AT_REST_SECRET)->get_data();
 }
 $pd = wa_estado_crear($marca, 'd', '+56 9 1111 5555', $creadas);
-$esperada = add_query_arg('respuesta', 'aceptada', at_cc_url_respuesta(get_site_url(), (string) $pd->unique_link_id));
+$esperada = add_query_arg('respuesta', 'completar', at_cc_url_respuesta(get_site_url(), (string) $pd->unique_link_id));
 $r = wa_estado_responder(['salida' => 'acepta', 'codigo' => $pd->unique_link_id, 'telefono' => '56911115555', 'wamid' => 'wamid.ACEPTAD0000001']);
 ok(($r['ok'] ?? false) === true && ($r['estado'] ?? '') === 'aceptada' && at_cc_contrato_de_propuesta((int) $pd->id) !== null, 'acepta por WhatsApp: queda aceptada con contrato');
-ok(($r['url_datos'] ?? '') === $esperada && strpos($esperada, 'ver-presentacion.php?id=' . $pd->unique_link_id . '&respuesta=aceptada') !== false, 'acepta por WhatsApp sin dirección: devuelve url_datos a «Datos para tu contrato»');
+ok(($r['url_datos'] ?? '') === $esperada && strpos($esperada, 'ver-presentacion.php?id=' . $pd->unique_link_id . '&respuesta=completar') !== false, 'acepta por WhatsApp sin dirección: devuelve url_datos a «Datos para tu contrato»');
 $r = wa_estado_responder(['salida' => 'acepta', 'codigo' => $pd->unique_link_id, 'telefono' => '56911115555', 'wamid' => 'wamid.ACEPTAD0000002']);
 ok(($r['motivo'] ?? '') === 'ya_aceptada' && ($r['url_datos'] ?? '') === $esperada, 'segundo «Acepto» mientras falte la dirección: vuelve a mandar url_datos');
 $c = at_cc_contrato_de_propuesta((int) $pd->id);
@@ -300,7 +300,7 @@ $r = wa_estado_responder(['salida' => 'evalua', 'codigo' => $pe->unique_link_id,
 ok(($r['estado'] ?? '') === 'evaluando' && !array_key_exists('url_datos', $r), '«La sigo evaluando»: sin url_datos');
 // Revisión: la regla es salida 'acepta' Y aceptada. Con un contrato draft sin dirección (quedó de una
 // aceptación anterior), «La sigo evaluando», «No, gracias» o un «Acepto» que no se aplica no mandan
-// url_datos: el enlace lleva respuesta=aceptada y el cliente no aceptó.
+// url_datos: el enlace abre «Datos para tu contrato» y el cliente no aceptó.
 $pd2 = wa_estado_crear($marca, 'd2', '+56 9 1111 0000', $creadas);
 $r = wa_estado_responder(['salida' => 'acepta', 'codigo' => $pd2->unique_link_id, 'telefono' => '56911110000', 'wamid' => 'wamid.ACEPTAD2000001']);
 ok(isset($r['url_datos']), 'contrato draft sin dirección para las pruebas siguientes');

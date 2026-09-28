@@ -255,7 +255,7 @@ function at_cc_avisar_datos_contrato(object $p, array $datos, bool $aplicado): v
 	wp_mail($destinatario, $quien . ' dejó sus datos para el contrato 📝', $html, $headers);
 }
 
-/** Task 19: enlace a «Datos para tu contrato» (la página de la propuesta con respuesta=aceptada, que
+/** Task 19: enlace a «Datos para tu contrato» (la página de la propuesta con respuesta=completar, que
  *  abre ese diálogo sola) cuando el contrato los admite y le falta la dirección; '' si no. Quien acepta
  *  por WhatsApp no deja la dirección ni el tipo de cliente: el bot le manda este enlace. */
 function at_cc_url_datos_contrato(object $p): string {
@@ -263,7 +263,9 @@ function at_cc_url_datos_contrato(object $p): string {
 	if (!at_cc_contrato_admite_datos_cliente($c) || !at_cc_contrato_sin_direccion($c)) {
 		return '';
 	}
-	return add_query_arg('respuesta', 'aceptada', at_cc_url_respuesta(get_site_url(), (string) $p->unique_link_id));
+	// 27-sep: con su propio valor ('completar'), no 'aceptada': ese muestra «¡Gracias! Recibimos tu aceptación…», que es
+	// para quien acaba de aceptar en la página y confunde a quien llega días después desde el correo o el WhatsApp.
+	return add_query_arg('respuesta', 'completar', at_cc_url_respuesta(get_site_url(), (string) $p->unique_link_id));
 }
 
 /**
@@ -463,7 +465,8 @@ function at_cc_render_barra(object $p): void {
 	// contrato le falta la dirección (aceptación por WhatsApp o a mano). Si ya la dejó al aceptar, abrirlo
 	// le pedía los datos dos veces y, guardado sin mirar, podía pasar a persona un contrato de empresa.
 	$contrato_sin_direccion = at_cc_contrato_sin_direccion($c_datos);
-	if ($abrir === '' && $mostrar_datos_contrato && $respuesta_clave === 'aceptada' && $contrato_sin_direccion) {
+	// 'completar' es el enlace del correo de bienvenida y del WhatsApp; 'aceptada' sigue abriéndolo para los enlaces ya enviados.
+	if ($abrir === '' && $mostrar_datos_contrato && in_array($respuesta_clave, ['aceptada', 'completar'], true) && $contrato_sin_direccion) {
 		$abrir = 'at-cc-datos';
 	}
 	// Task 18: si el formulario volvió por datos que faltan o no son válidos, su diálogo se reabre

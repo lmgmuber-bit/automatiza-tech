@@ -34,8 +34,8 @@ $al_cliente = function (object $p) use (&$correos): array {
 $respondenos = 'respóndenos este correo con esos datos';
 
 // 1) Puro: con url_datos, botón a «Datos para tu contrato» en vez de pedir que responda el correo.
-$h = at_cc_bienvenida_html(['nombre' => 'Ana', 'con_propuesta' => true, 'url_datos' => 'https://e.cl/ver-presentacion.php?id=abc&respuesta=aceptada']);
-ok(strpos($h, 'href="https://e.cl/ver-presentacion.php?id=abc&amp;respuesta=aceptada"') !== false && strpos($h, 'Completar mis datos del contrato') !== false, '1) con url_datos: botón «Completar mis datos del contrato» con el enlace escapado');
+$h = at_cc_bienvenida_html(['nombre' => 'Ana', 'con_propuesta' => true, 'url_datos' => 'https://e.cl/ver-presentacion.php?id=abc&respuesta=completar']);
+ok(strpos($h, 'href="https://e.cl/ver-presentacion.php?id=abc&amp;respuesta=completar"') !== false && strpos($h, 'Completar mis datos del contrato') !== false, '1) con url_datos: botón «Completar mis datos del contrato» con el enlace escapado');
 ok(strpos($h, $respondenos) === false, '1) con url_datos: ya no le pide responder el correo con los datos');
 $h_sin = at_cc_bienvenida_html(['nombre' => 'Ana', 'con_propuesta' => true]);
 ok(strpos($h_sin, $respondenos) !== false && strpos($h_sin, 'Completar mis datos') === false, '1) sin url_datos: sigue el texto de siempre');
@@ -49,7 +49,7 @@ $r = at_cc_registrar_respuesta($m, 'acepta', ['canal' => 'manual', 'canal_manual
 $b = $al_cliente($m);
 $esperado = htmlspecialchars(at_cc_url_datos_contrato(at_cc_propuesta_por_id($m->id)), ENT_QUOTES, 'UTF-8');
 ok($r['ok'] && count($b) === 1, '2) a mano con bienvenida: sale una bienvenida al cliente');
-ok($esperado !== '' && strpos($esperado, 'respuesta=aceptada') !== false && strpos($esperado, $m->unique_link_id) !== false, '2) el contrato quedó sin dirección, así que hay enlace de datos');
+ok($esperado !== '' && strpos($esperado, 'respuesta=completar') !== false && strpos($esperado, $m->unique_link_id) !== false, '2) el contrato quedó sin dirección, así que hay enlace de datos');
 ok($b && strpos($b[0]['message'], 'href="' . $esperado . '"') !== false && strpos($b[0]['message'], 'Completar mis datos del contrato') !== false, '2) la bienvenida trae el botón con ese enlace');
 ok($b && strpos($b[0]['message'], '$125.000') !== false, '2) y sigue con el anticipo (50 % de lo único aceptado)');
 
@@ -58,7 +58,7 @@ $correos = [];
 $pg = crear_propuesta_bd($marca, 'pagina', $payload, $creadas);
 $r = at_cc_registrar_respuesta($pg, 'acepta', ['canal' => 'pagina', 'nombre' => 'Cliente Prueba', 'filas' => at_cc_filas_aceptadas(at_cc_filas_de_propuesta($pg), [0]), 'fecha' => current_time('mysql'), 'bienvenida' => true, 'datos_contrato' => ['tipo_cliente' => 'persona', 'domicilio_cliente' => 'Calle Prueba 123, Santiago']]);
 $b = $al_cliente($pg);
-ok($r['ok'] && count($b) === 1 && strpos($b[0]['message'], 'respuesta=aceptada') === false && strpos($b[0]['message'], 'Completar mis datos') === false, '3) aceptó en la página con sus datos: la bienvenida no trae el botón');
+ok($r['ok'] && count($b) === 1 && strpos($b[0]['message'], 'respuesta=completar') === false && strpos($b[0]['message'], 'Completar mis datos') === false, '3) aceptó en la página con sus datos: la bienvenida no trae el botón');
 
 // 4) Bienvenida reenviada después, con el contrato ya revisado por AT: tampoco hay botón (el formulario ya no lo aceptaría).
 $c = at_cc_contrato_de_propuesta((int) $m->id);

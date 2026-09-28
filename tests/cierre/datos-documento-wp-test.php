@@ -38,7 +38,7 @@ function aceptar_a_mano_ddoc(object $p, string $documento = ''): void {
 }
 /** El diálogo «Datos para tu contrato» tal como lo ve el cliente al abrir el enlace del correo. */
 function dialogo_datos_ddoc(object $p): string {
-	$_GET['respuesta'] = 'aceptada';
+	$_GET['respuesta'] = 'completar';
 	ob_start();
 	at_cc_render_barra(at_cc_propuesta_por_id($p->id));
 	$h = (string) ob_get_clean();
@@ -61,11 +61,13 @@ ok($dlg !== '' && strpos($dlg, 'name="documento"') !== false && strpos($dlg, 'na
 ok(preg_match('/name="documento"[^>]*required/', $dlg) === 1 && strpos($dlg, '>Pasaporte<') !== false, '1) el documento es obligatorio y admite RUT, DNI o pasaporte');
 // 27-sep: el diálogo lleva el logo real de AutomatizaTech y los colores del logo.
 ok(strpos($dlg, 'class="at-cc-dlg-cab"') !== false && strpos($dlg, 'logo-automatiza-tech.png') !== false && strpos($dlg, '<span>AutomatizaTech</span>') !== false, '1) el diálogo parte con el logo de AutomatizaTech');
-$_GET['respuesta'] = 'aceptada';
+$_GET['respuesta'] = 'completar';
 ob_start();
 at_cc_render_barra(at_cc_propuesta_por_id($p->id));
 $barra = (string) ob_get_clean();
 unset($_GET['respuesta']);
+// 27-sep: el enlace del correo (respuesta=completar) abre el formulario solo y sin el «¡Gracias! Recibimos tu aceptación».
+ok(strpos($barra, 'var inicial = "at-cc-datos"') !== false && strpos($barra, 'Recibimos tu aceptación') === false, '1) el enlace del correo abre el formulario solo, sin el mensaje de gracias de quien recién acepta');
 ok(strpos($barra, '--at-marino:#063f76') !== false && strpos($barra, '--at-turquesa:#17b7b1') !== false && strpos($barra, '#10b981') === false, '1) usa los colores del logo (marino y turquesa), no el verde genérico de antes');
 ok(at_cc_guardar_datos_contrato(at_cc_propuesta_por_id($p->id), ['tipo' => 'persona', 'direccion' => 'Calle Uno 1, Providencia', 'nombre' => 'Ana Prueba']) === 'datos_contrato', '1) sin documento no guarda: vuelve con el aviso');
 ok(trim((string) ($ph_de($p)['domicilio_cliente'] ?? '')) === '', '1) y el contrato no cambió');

@@ -212,3 +212,22 @@ navegador, 44 en el código de los nodos, 17 reglas, 6 de la firma, 17 anchos y 
 
 Verificado: 18 comprobaciones de «Salir» (celular, 320 px y escritorio) y las pruebas anteriores (49 + 44 + 17 + 6,
 17 anchos, 60 combinaciones).
+
+## Campos blindados y cartel con 5 pasos (28-sep, madrugada)
+
+Pedido de Luis: el teléfono debe ser un número venezolano válido de 11 dígitos, y blindar los demás campos para
+que la planilla sea lo más fidedigna posible. Mismas reglas en la página y en el servidor:
+- Teléfono: 11 dígitos con el 0. Celulares 0412 y 0422 (Digitel; el 0422 desde julio de 2025, según la sala de
+  prensa de Digitel), 0414 y 0424 (Movistar), 0416 y 0426 (Movilnet); fijos 02XX. Se acepta sin el 0 o con +58 y
+  queda como 0412-1234567. El del representante debe ser celular (es el WhatsApp del grupo) o un número de otro
+  país con + y su código (hay representantes con WhatsApp de afuera); el del atleta acepta además fijos.
+- Nombres: nombre y apellido completos, sin iniciales («Juan P.» no pasa); «de», «la», «del»… no cuentan como
+  palabra. Todo en minúsculas o todo en mayúsculas se ordena al salir del campo.
+- Cédula: V o E y 6 a 8 números, queda V-30.123.456; si no, pasaporte de 6 a 12 letras y números con algún número.
+- Dirección: al menos dos palabras y 10 caracteres. Correo en minúsculas y más errores típicos detectados.
+- Estatura y peso quedan uniformes («1,65 m», «55 kg» o «120 lb»). La foto de menos de 300 px por lado se rechaza.
+- Los datos ordenados son los que van al resumen, la planilla, el envío, los correos y el Sheet.
+- Cartel A4: los 5 pasos con los nombres del formulario (Atleta, Contacto, Béisbol, Pago, Enviar).
+
+Verificado: 31 casos del servidor y 33 del navegador para estas reglas; las pruebas anteriores siguen pasando
+(49 + 44 + 17 + 6 + 18); 17 anchos y 60 combinaciones sin desborde ni errores; cartel en una hoja con el QR legible.

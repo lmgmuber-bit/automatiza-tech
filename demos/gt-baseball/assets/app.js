@@ -183,27 +183,87 @@
   var CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   var LETRAS = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñÀ-ÿ' .-]+$/;
   var DOMINIOS_MAL = { 'gmial.com': 'gmail.com', 'gmai.com': 'gmail.com', 'gamil.com': 'gmail.com', 'gmail.co': 'gmail.com',
-    'gmail.con': 'gmail.com', 'gmail.cm': 'gmail.com', 'hotmial.com': 'hotmail.com', 'hotmal.com': 'hotmail.com',
-    'hotmail.co': 'hotmail.com', 'hotmail.con': 'hotmail.com', 'yaho.com': 'yahoo.com', 'yahoo.co': 'yahoo.com',
-    'yahoo.con': 'yahoo.com', 'outlok.com': 'outlook.com', 'outlook.co': 'outlook.com', 'outlook.con': 'outlook.com' };
-  function digitos(t) { return (String(t).match(/\d/g) || []).length; }
-  function telefonoOk(t) { return /^[0-9+()\-\s.]+$/.test(t) && digitos(t) >= 10 && digitos(t) <= 15; }
+    'gmail.con': 'gmail.com', 'gmail.cm': 'gmail.com', 'gmail.comm': 'gmail.com', 'gmal.com': 'gmail.com', 'gmil.com': 'gmail.com',
+    'gmaill.com': 'gmail.com', 'hotmial.com': 'hotmail.com', 'hotmal.com': 'hotmail.com', 'hotmai.com': 'hotmail.com',
+    'hotmail.co': 'hotmail.com', 'hotmail.con': 'hotmail.com', 'hotmail.comm': 'hotmail.com', 'yaho.com': 'yahoo.com',
+    'yahoo.co': 'yahoo.com', 'yahoo.con': 'yahoo.com', 'yahoo.comm': 'yahoo.com', 'outlok.com': 'outlook.com',
+    'outlook.co': 'outlook.com', 'outlook.con': 'outlook.com', 'icloud.co': 'icloud.com', 'icloud.con': 'icloud.com',
+    'iclod.com': 'icloud.com', 'icoud.com': 'icloud.com' };
   function numero(t) { var m = String(t).replace(',', '.').match(/\d+(\.\d+)?/); return m ? parseFloat(m[0]) : NaN; }
+
+  // Teléfonos de Venezuela: 11 dígitos con el 0 (0412-1234567). Celulares 0412 y 0422 (Digitel), 0414 y 0424
+  // (Movistar), 0416 y 0426 (Movilnet); fijos 02XX. Se acepta sin el 0 o con +58 y queda escrito como 0412-1234567.
+  // Un número de otro país va con + y el código del país (8 a 15 dígitos): hay representantes con WhatsApp de afuera.
+  var CELULARES_VE = ['412', '414', '416', '422', '424', '426'];
+  function analizarTelefono(t) {
+    var s = String(t || '').trim(), d = s.replace(/\D/g, '');
+    if (!s) return { tipo: 'vacio' };
+    if (!/^[0-9+()\-\s.]+$/.test(s)) return { tipo: 'malo' };
+    if (/^\+|^00/.test(s)) {
+      d = d.replace(/^00/, '');
+      if (d.indexOf('58') !== 0) return d.length >= 8 && d.length <= 15 ? { tipo: 'extranjero', texto: s.replace(/\s+/g, ' ') } : { tipo: 'largo' };
+      d = d.slice(2);
+    } else if (d.length === 12 && d.indexOf('58') === 0) {
+      d = d.slice(2);
+    }
+    if (d.length === 10 && d.charAt(0) !== '0') d = '0' + d;
+    if (d.length !== 11 || d.charAt(0) !== '0') return { tipo: 'largo' };
+    var cod = d.slice(1, 4), texto = d.slice(0, 4) + '-' + d.slice(4);
+    if (CELULARES_VE.indexOf(cod) !== -1) return { tipo: 'celular', texto: texto };
+    if (cod.charAt(0) === '2') return { tipo: 'fijo', texto: texto };
+    return { tipo: 'codigo', codigo: '0' + cod };
+  }
+  function reglaTelefono(t, soloCelular) {
+    var a = analizarTelefono(t);
+    if (a.tipo === 'vacio' || a.tipo === 'celular' || a.tipo === 'extranjero') return '';
+    if (a.tipo === 'fijo') return soloCelular ? 'Escribe un celular con WhatsApp (0412, 0414, 0416, 0422, 0424 o 0426): ahí te agrega la academia al grupo.' : '';
+    if (a.tipo === 'codigo') return 'El ' + a.codigo + ' no es un código de Venezuela. Los celulares empiezan por 0412, 0414, 0416, 0422, 0424 o 0426.';
+    if (a.tipo === 'malo') return 'Usa solo números. Ej: 0412-1234567.';
+    return 'El número debe tener 11 dígitos, con el código: 0412-1234567. Si es de otro país, empieza con + y el código del país.';
+  }
+
+  // Nombre y apellido completos: al menos dos palabras de 2 letras o más, sin contar «de», «la», «del»…
+  var CONECTORES = ['de', 'del', 'la', 'las', 'los', 'y', 'e', 'da', 'das', 'do', 'dos', 'van', 'von', 'di'];
   function nombrePersona(v, vacio) {
     if (!v) return vacio;
     if (!LETRAS.test(v)) return 'Usa solo letras, sin números ni símbolos.';
-    if (v.split(/\s+/).filter(Boolean).length < 2) return 'Escribe nombre y apellido.';
-    return '';
+    var llenas = v.split(/\s+/).filter(function (p) { return p.replace(/[.'-]/g, '').length >= 2 && CONECTORES.indexOf(p.toLowerCase()) === -1; });
+    return llenas.length >= 2 ? '' : 'Escribe nombre y apellido completos, sin iniciales.';
+  }
+  // Todo en minúsculas o todo en mayúsculas se ordena («maría de los ángeles» → «María de los Ángeles»); lo demás se respeta.
+  function capitalizar(v) {
+    if (!v || (v !== v.toLowerCase() && v !== v.toUpperCase())) return v;
+    return v.toLowerCase().split(/(\s+|-)/).map(function (p, i) {
+      if (!p || /^\s+$|^-$/.test(p) || (i > 0 && CONECTORES.indexOf(p) !== -1)) return p;
+      return p.charAt(0).toUpperCase() + p.slice(1);
+    }).join('');
+  }
+
+  // Cédula venezolana: V o E y 6 a 8 números, escrita V-30.123.456. Pasaporte: 6 a 12 letras y números, con algún número.
+  function analizarDocumento(v) {
+    var s = String(v || '').toUpperCase().replace(/[\s.\-]/g, '');
+    if (!s) return { tipo: 'vacio' };
+    var m = /^([VE])?(\d{6,8})$/.exec(s);
+    if (m) return { tipo: 'cedula', texto: (m[1] || 'V') + '-' + m[2].replace(/\B(?=(\d{3})+(?!\d))/g, '.') };
+    if (/^(?=.*\d)[A-Z0-9]{6,12}$/.test(s)) return { tipo: 'pasaporte', texto: s };
+    return { tipo: 'malo' };
+  }
+  function normalizarEstatura(v) {
+    var n = numero(v);
+    if (!v || /['′"″]/.test(v) || isNaN(n)) return v;
+    return ((/cm/i.test(v) || n > 3 ? n : n * 100) / 100).toFixed(2).replace('.', ',') + ' m';
+  }
+  function normalizarPeso(v) {
+    var n = numero(v);
+    if (!v || isNaN(n)) return v;
+    return String(n).replace('.', ',') + (/lb|libra/i.test(v) ? ' lb' : ' kg');
   }
 
   var reglas = {
     foto: function () { return estado.foto ? '' : 'Agrega una foto del atleta.'; },
     nombre: function () { return nombrePersona(valor('nombre'), 'Escribe el nombre completo.'); },
     documento: function () {
-      var v = valor('documento');
-      if (!v) return '';
-      var limpio = v.replace(/[\s.\-]/g, '');
-      return /^[VEJPGvejpg]?\d{6,9}$/.test(limpio) || /^[A-Za-z0-9]{6,12}$/.test(limpio) ? '' : 'Revisa el documento. Ej: V-30123456 o el número del pasaporte.';
+      return analizarDocumento(valor('documento')).tipo === 'malo' ? 'Revisa el documento: la cédula lleva 6 a 8 números (V-30.123.456); el pasaporte, letras y números.' : '';
     },
     fecha_nac: function () {
       var f = fechaIso();
@@ -220,17 +280,12 @@
     direccion: function () {
       var v = valor('direccion');
       if (!v) return 'Escribe la dirección.';
-      return v.length >= 8 && /[A-Za-zÁÉÍÓÚÑáéíóúñ]/.test(v) ? '' : 'Escribe la dirección completa: calle o sector y ciudad.';
+      return v.length >= 10 && v.split(/\s+/).length >= 2 && /[A-Za-zÁÉÍÓÚÑáéíóúñ]/.test(v) ? '' : 'Escribe la dirección completa: calle o sector y ciudad.';
     },
-    telefono: function () {
-      var t = valor('telefono');
-      return !t || telefonoOk(t) ? '' : 'Revisa el número: debe tener entre 10 y 15 dígitos. Ej: 0412 123 4567.';
-    },
+    telefono: function () { return reglaTelefono(valor('telefono'), false); },
     rep_nombre: function () { return nombrePersona(valor('rep_nombre'), 'Escribe tu nombre y apellido.'); },
     rep_telefono: function () {
-      var t = valor('rep_telefono');
-      if (!t) return 'Escribe un teléfono de contacto.';
-      return telefonoOk(t) ? '' : 'Revisa el número: debe tener entre 10 y 15 dígitos. Ej: 0414 765 4321.';
+      return valor('rep_telefono') ? reglaTelefono(valor('rep_telefono'), true) : 'Escribe tu celular: ahí te agrega la academia al grupo de WhatsApp.';
     },
     correo: function () {
       var c = valor('correo').toLowerCase();
@@ -343,12 +398,31 @@
 
   // Premiar pronto, castigar tarde: al salir de un campo con datos se valida; un campo con error se
   // revalida mientras se escribe; los obligatorios vacíos se marcan al tocar «Siguiente».
+  // Al salir de un campo válido, el dato queda escrito siempre igual: así llega parejo a la planilla, al correo y al Sheet.
+  var NORMALIZAR = {
+    nombre: capitalizar, rep_nombre: capitalizar, nacionalidad: capitalizar, liga: capitalizar,
+    telefono: function (v) { return analizarTelefono(v).texto || v; },
+    rep_telefono: function (v) { return analizarTelefono(v).texto || v; },
+    documento: function (v) { return analizarDocumento(v).texto || v; },
+    correo: function (v) { return v.trim().toLowerCase(); },
+    direccion: function (v) { return v.replace(/\s+/g, ' ').trim(); },
+    estatura: normalizarEstatura, peso: normalizarPeso
+  };
+  function limpio(k) {
+    var v = valor(k);
+    return v && NORMALIZAR[k] && !reglas[k]() ? NORMALIZAR[k](v) : v;
+  }
+
   form.addEventListener('focusout', function (ev) {
     var n = nombreDe(ev.target);
     if (!n || !reglas[n] || n === 'fecha_nac' || ev.target.type === 'radio' || ev.target.type === 'checkbox') return;
     var tieneDato = ev.target.value && String(ev.target.value).trim();
     var conError = form.querySelector('[data-campo="' + n + '"].campo--error');
-    if (tieneDato || conError) validarCampo(n);
+    if (!tieneDato && !conError) return;
+    if (validarCampo(n) && tieneDato && NORMALIZAR[n]) {
+      var nuevo = NORMALIZAR[n](ev.target.value);
+      if (nuevo !== ev.target.value) { ev.target.value = nuevo; programarBorrador(); }
+    }
   });
   form.addEventListener('input', function (ev) {
     var n = nombreDe(ev.target);
@@ -420,9 +494,10 @@
       ponerFoto(url);
       marcar('foto', '');
       guardarBorrador();
-    }).catch(function () {
+    }).catch(function (e) {
       $('foto-ayuda').textContent = 'De frente y con buena luz, como para un carnet.';
-      marcar('foto', 'No pudimos leer esa foto. Prueba con otra.');
+      marcar('foto', e && e.message === 'chica' ? 'La foto es muy pequeña y saldría borrosa en la planilla. Toma una nueva o elige otra de mejor calidad.'
+        : 'No pudimos leer esa foto. Prueba con otra.');
     });
   }
   $('foto-camara').addEventListener('change', alElegirFoto);
@@ -461,8 +536,11 @@
       img.src = url;
     });
   }
+  // Menos de 300 px por el lado corto saldría borrosa en la planilla (la foto se agranda a 600x800).
+  var FOTO_MINIMA = 300;
   function prepararFoto(file) {
     return cargarImagen(file).then(function (img) {
+      if (Math.min(img.width, img.height) < FOTO_MINIMA) { if (img.close) img.close(); throw new Error('chica'); }
       var w = img.width, h = img.height, objetivo = 3 / 4, sw = w, sh = h;
       if (w / h > objetivo) sw = h * objetivo; else sh = w / objetivo;
       var sx = (w - sw) / 2, sy = (h - sh) / 2 * 0.6; // un poco hacia arriba: la cara suele estar arriba
@@ -746,11 +824,12 @@
   // ---------- Resumen ----------
   function datos() {
     var iso = fechaIso(), fn = iso && iso !== 'invalida' ? iso.split('-') : [];
+    // limpio(): el mismo formato del campo al salir, aunque la persona no haya salido de él (autocompletar).
     return {
-      nombre: valor('nombre'), fecha_nac: iso === 'invalida' ? '' : iso, fecha_nac_txt: fn.length === 3 ? fn[2] + '/' + fn[1] + '/' + fn[0] : '',
-      documento: valor('documento'), nacionalidad: valor('nacionalidad'), telefono: valor('telefono'), correo: valor('correo'),
-      direccion: valor('direccion'), rep_nombre: valor('rep_nombre'), rep_telefono: valor('rep_telefono'), liga: valor('liga'),
-      posicion: valor('posicion'), batea: valor('batea'), lanza: valor('lanza'), estatura: valor('estatura'), peso: valor('peso'),
+      nombre: limpio('nombre'), fecha_nac: iso === 'invalida' ? '' : iso, fecha_nac_txt: fn.length === 3 ? fn[2] + '/' + fn[1] + '/' + fn[0] : '',
+      documento: limpio('documento'), nacionalidad: limpio('nacionalidad'), telefono: limpio('telefono'), correo: limpio('correo'),
+      direccion: limpio('direccion'), rep_nombre: limpio('rep_nombre'), rep_telefono: limpio('rep_telefono'), liga: limpio('liga'),
+      posicion: valor('posicion'), batea: valor('batea'), lanza: valor('lanza'), estatura: limpio('estatura'), peso: limpio('peso'),
       millas: valor('millas'), anio_firma: valor('anio_firma')
     };
   }

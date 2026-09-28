@@ -274,7 +274,7 @@
 
             <div class="campo" data-campo="telefono">
               <label for="telefono">Teléfono del atleta</label>
-              <input id="telefono" name="telefono" type="tel" maxlength="30" inputmode="tel" autocomplete="off" placeholder="Ej: 0412 123 4567" aria-describedby="err-telefono">
+              <input id="telefono" name="telefono" type="tel" maxlength="20" inputmode="tel" autocomplete="off" placeholder="Ej: 0412-1234567" aria-describedby="err-telefono">
               <p class="campo__error" id="err-telefono" data-error-para="telefono"></p>
             </div>
 
@@ -289,7 +289,8 @@
             <div class="fila">
               <div class="campo" data-campo="rep_telefono">
                 <label for="rep_telefono">Teléfono <span class="req" aria-hidden="true">*</span></label>
-                <input id="rep_telefono" name="rep_telefono" type="tel" maxlength="30" inputmode="tel" autocomplete="tel" placeholder="Ej: 0414 765 4321" required aria-describedby="err-rep_telefono">
+                <input id="rep_telefono" name="rep_telefono" type="tel" maxlength="20" inputmode="tel" autocomplete="tel" placeholder="Ej: 0414-1234567" required aria-describedby="ayuda-rep_telefono err-rep_telefono">
+                <p class="campo__ayuda" id="ayuda-rep_telefono">Tu celular con WhatsApp: ahí te agrega la academia al grupo.</p>
                 <p class="campo__error" id="err-rep_telefono" data-error-para="rep_telefono"></p>
               </div>
               <div class="campo" data-campo="correo">
@@ -501,6 +502,6 @@
 <script type="application/json" id="datos-pago">{}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js" integrity="sha512-plOdviVmws4Y3JAvbnpfKb2hVxKM1lCwsi3vmElYRj+tiDLffZ4FVUj5a8vyKJ9pIgl8JCAHEJ4D1iUKBecswg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="assets/planilla.js?v=4"></script>
-<script src="assets/app.js?v=6"></script>
+<script src="assets/app.js?v=7"></script>
 </body>
 </html>

@@ -75,20 +75,37 @@ if (x.lanza && !['Derecha', 'Izquierda'].includes(x.lanza)) errores.push('lanza'
 if (x.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(x.correo)) errores.push('correo');
 // Mismas reglas que el formulario (app.js): el navegador se puede saltar.
 const LETRAS = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñÀ-ÿ' .-]+$/;
-const dig = t => (String(t).match(/\d/g) || []).length;
-const telOk = t => /^[0-9+()\-\s.]+$/.test(t) && dig(t) >= 10 && dig(t) <= 15;
-const persona = t => LETRAS.test(t) && t.split(' ').filter(Boolean).length >= 2;
+// Teléfono: celular o fijo de Venezuela (11 dígitos con el 0; sin el 0 o con +58 también) o número de otro país con +.
+// Celulares 0412 y 0422 (Digitel), 0414 y 0424 (Movistar), 0416 y 0426 (Movilnet); fijos 02XX. Igual que app.js.
+const CELULARES = ['412', '414', '416', '422', '424', '426'];
+const tipoTel = t => {
+  const s = String(t).trim(); let n = s.replace(/\D/g, '');
+  if (!/^[0-9+()\-\s.]+$/.test(s)) return 'malo';
+  if (/^\+|^00/.test(s)) {
+    n = n.replace(/^00/, '');
+    if (!n.startsWith('58')) return n.length >= 8 && n.length <= 15 ? 'extranjero' : 'malo';
+    n = n.slice(2);
+  } else if (n.length === 12 && n.startsWith('58')) n = n.slice(2);
+  if (n.length === 10 && n[0] !== '0') n = '0' + n;
+  if (n.length !== 11 || n[0] !== '0') return 'malo';
+  return CELULARES.includes(n.slice(1, 4)) ? 'celular' : (n[1] === '2' ? 'fijo' : 'malo');
+};
+// Nombre y apellido completos: dos palabras de 2 letras o más, sin contar «de», «la», «del»…
+const CONECTORES = ['de', 'del', 'la', 'las', 'los', 'y', 'e', 'da', 'das', 'do', 'dos', 'van', 'von', 'di'];
+const persona = t => LETRAS.test(t) && t.split(' ').filter(p => p.replace(/[.'-]/g, '').length >= 2 && !CONECTORES.includes(p.toLowerCase())).length >= 2;
 const num = t => { const q = String(t).replace(',', '.').match(/\d+(\.\d+)?/); return q ? parseFloat(q[0]) : NaN; };
 if (v2) {
   if (x.nombre && !persona(x.nombre)) errores.push('nombre');
   if (x.rep_nombre && !persona(x.rep_nombre)) errores.push('representante');
   if (x.nacionalidad && !(LETRAS.test(x.nacionalidad) && x.nacionalidad.length >= 3)) errores.push('nacionalidad');
-  if (x.direccion && !(x.direccion.length >= 8 && /[A-Za-zÁÉÍÓÚÑáéíóúñ]/.test(x.direccion))) errores.push('dirección');
-  if (x.rep_telefono && !telOk(x.rep_telefono)) errores.push('teléfono del representante');
-  if (x.telefono && !telOk(x.telefono)) errores.push('teléfono');
+  if (x.direccion && !(x.direccion.length >= 10 && x.direccion.split(' ').length >= 2 && /[A-Za-zÁÉÍÓÚÑáéíóúñ]/.test(x.direccion))) errores.push('dirección');
+  // El del representante es el WhatsApp donde lo agregan al grupo: celular o número de otro país, no un fijo.
+  if (x.rep_telefono && !['celular', 'extranjero'].includes(tipoTel(x.rep_telefono))) errores.push('teléfono del representante');
+  if (x.telefono && tipoTel(x.telefono) === 'malo') errores.push('teléfono');
   if (x.documento) {
-    const l = x.documento.replace(/[\s.\-]/g, '');
-    if (!/^[VEJPGvejpg]?\d{6,9}$/.test(l) && !/^[A-Za-z0-9]{6,12}$/.test(l)) errores.push('documento');
+    // Cédula: V o E y 6 a 8 números. Pasaporte: 6 a 12 letras y números, con algún número.
+    const l = x.documento.toUpperCase().replace(/[\s.\-]/g, '');
+    if (!/^[VE]?\d{6,8}$/.test(l) && !/^(?=.*\d)[A-Z0-9]{6,12}$/.test(l)) errores.push('documento');
   }
   if (x.millas && !(/^\d{2,3}([.,]\d)?$/.test(x.millas) && num(x.millas) >= 20 && num(x.millas) <= 110)) errores.push('millas');
   if (x.anio_firma && !(/^\d{4}$/.test(x.anio_firma) && +x.anio_firma >= new Date().getFullYear() - 1 && +x.anio_firma <= new Date().getFullYear() + 20)) errores.push('año de firma');

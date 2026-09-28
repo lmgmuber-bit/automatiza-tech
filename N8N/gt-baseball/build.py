@@ -15,7 +15,7 @@ se leen de un JSON local.
     python N8N/gt-baseball/build.py <ruta>/gt-config.json --publicar # además lo publica y lo activa
 gt-config.json: {"folder_id", "sheet_id", "sheet_url", "destinatarios": [...], "destinatarios_prueba": [...],
                  "responder_a": "<correo de la academia>", "whatsapp": "<dígitos>",
-                 "pago": {"monto": "", "permitir_despues": true, "metodos": [{"id", "nombre", "detalle",
+                 "pago": {"monto", "permitir_despues": true, "metodos": [{"id", "nombre", "detalle", "monto",
                           "comprobante": bool, "datos": [{"etiqueta", "valor", "copiar"}], "texto"}]}}
 El bloque "pago" es el mismo que el despliegue pone en la página (#datos-pago): una sola fuente.
 Columnas del Sheet: las 23 de la v1 y, al final, «Forma de pago» y «Comprobante» (enlace, Pendiente o No aplica).
@@ -197,6 +197,9 @@ const whatsapp = __WHATSAPP__;
 // Pago: el siguiente paso va en un recuadro arriba de cada correo; los datos para pagar salen de gt-config.json.
 const PAGO = __PAGO__;
 const metodo = (Array.isArray(PAGO.metodos) ? PAGO.metodos : []).find(m => m.id === x.pago_metodo) || null;
+// Monto de la forma de pago elegida (por pago móvil, en bolívares a la tasa oficial); si no trae, el general.
+const montoPago = (metodo && metodo.monto) || PAGO.monto || '';
+const montoFila = montoPago ? fila('Monto a pagar', montoPago) : '';
 const recuadro = c => `<div style="margin:14px 10px 4px;padding:12px 14px;border-radius:8px;background:#fff7e6;border:1px solid #f4c46a;font-size:14px;line-height:1.5;color:#1f2937">${c}</div>`;
 const grupo = 'Cuando la academia verifique el pago, te agregará al grupo de WhatsApp.';
 const rep = `${esc(x.rep_nombre)} (${esc(x.rep_telefono)})`;
@@ -218,7 +221,7 @@ ${fila('Dirección', x.direccion)}
 ${seccion('REPRESENTANTE')}${fila('Nombre y apellido', x.rep_nombre)}${fila('Teléfono', x.rep_telefono)}${fila('Correo', x.correo)}
 ${seccion('BÉISBOL')}${fila('Liga o programa', x.liga)}${fila('Posición', x.posicion)}${fila('Batea', x.batea)}
 ${fila('Lanza', x.lanza)}${fila('Estatura', x.estatura)}${fila('Peso', x.peso)}${fila('Referencia millas', x.millas)}${fila('Año de firma', x.anio_firma)}
-${pagoTxt ? seccion('PAGO') + fila('Forma de pago', pagoTxt) + fila('Comprobante', compAcademia) : ''}
+${pagoTxt ? seccion('PAGO') + fila('Forma de pago', pagoTxt) + montoFila + fila('Comprobante', compAcademia) : ''}
 </table>
 <p style="font-size:13px;color:#374151;margin:16px 10px 0">Adjuntos: la planilla lista para imprimir (PDF), la foto del atleta${x.pago_estado === 'adjunto' ? ' y el comprobante de pago' : ''}. Al representante le llega una confirmación con la planilla y el paso del pago; si responde, su respuesta llega a este correo.</p>
 ${x.prueba ? `<p style="font-size:13px;margin:8px 10px 0"><a href="${esc(hojaUrl)}">Ver todas las inscripciones en el Google Sheet</a></p>` : ''}
@@ -229,12 +232,11 @@ const falta = x.pago_estado === 'despues';
 const waTexto = falta ? `Hola, envío el comprobante de pago de la inscripción de ${x.nombre} (N.º ${x.id}).`
   : `Hola, inscribí a ${x.nombre} en GT Baseball Academy y tengo una consulta.`;
 const waLink = whatsapp ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(waTexto)}` : '';
-const montoFila = PAGO.monto ? fila('Monto', PAGO.monto) : '';
 const pasoApoderado = {
   adjunto: `<strong>Recibimos tu comprobante de pago.</strong> ${grupo}`,
   despues: `<strong>Falta el comprobante de pago.</strong> Paga con estos datos y responde este correo con la captura del pago${whatsapp ? ' (o envíala por WhatsApp)' : ''}. ${grupo}
 <table style="border-collapse:collapse;width:100%;margin-top:8px">${fila('Forma de pago', pagoTxt)}${montoFila}${filasDatos(metodo)}</table>`,
-  no_aplica: `<strong>Forma de pago: ${esc(pagoTxt)}.</strong> ${metodo && metodo.texto ? esc(metodo.texto) + ' ' : ''}${grupo}`,
+  no_aplica: `<strong>Forma de pago: ${esc(pagoTxt)}.</strong> ${montoPago ? 'Monto a pagar: ' + esc(montoPago) + '. ' : ''}${metodo && metodo.texto ? esc(metodo.texto) + ' ' : ''}${grupo}`,
 }[x.pago_estado] || '';
 const compApoderado = { adjunto: 'Recibido', despues: 'Pendiente' }[x.pago_estado] || '';
 // Desde los __EDAD_FIRMA__ años el atleta también firma la planilla (la línea la dibuja planilla.js con la misma edad).
@@ -248,7 +250,7 @@ ${pasoApoderado ? recuadro(pasoApoderado) : ''}
 ${seccion('ATLETA')}${fila('Nombre completo', x.nombre)}${fila('Fecha de nacimiento', x.fecha_nac_txt)}${fila('Edad', x.edad + ' años')}
 ${fila('Posición', x.posicion)}${fila('Batea', x.batea)}${fila('Lanza', x.lanza)}
 ${seccion('REPRESENTANTE')}${fila('Nombre y apellido', x.rep_nombre)}${fila('Teléfono', x.rep_telefono)}${fila('Correo', x.correo)}
-${pagoTxt ? seccion('PAGO') + fila('Forma de pago', pagoTxt) + (compApoderado ? fila('Comprobante', compApoderado) : '') : ''}
+${pagoTxt ? seccion('PAGO') + fila('Forma de pago', pagoTxt) + montoFila + (compApoderado ? fila('Comprobante', compApoderado) : '') : ''}
 </table>
 ${waLink ? `<p style="margin:18px 10px 4px"><a href="${esc(waLink)}" style="display:inline-block;background:#25d366;color:#0a2e1a;font-weight:bold;font-size:14px;text-decoration:none;padding:11px 18px;border-radius:8px">${falta ? 'Enviar comprobante por WhatsApp' : 'Escríbenos por WhatsApp'}</a></p>` : ''}
 <p style="font-size:13px;color:#374151;margin:12px 10px 0">Si tienes dudas, también puedes responder este correo.</p>

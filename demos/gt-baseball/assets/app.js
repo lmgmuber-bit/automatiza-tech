@@ -492,21 +492,24 @@
     return estado.comprobante ? 'adjunto' : 'despues';
   }
 
-  // Filas de datos para pagar. Fuera del paso (pantalla final) llevan además la forma de pago y el monto.
+  // Monto de cada forma de pago (por pago móvil, en bolívares a la tasa oficial); si no trae, el general.
+  function montoDe(m) { return (m && m.monto) || PAGO.monto || ''; }
+
+  function filaDato(etiqueta, valor, copiar) {
+    var boton = copiar ? '<button type="button" class="copiar" data-copiar="' + esc(copiar) + '" data-que="' + esc(etiqueta) + '"' +
+      ' aria-label="Copiar ' + esc(String(etiqueta).toLowerCase()) + ': ' + esc(valor) + '">' +
+      '<svg class="ico" aria-hidden="true"><use href="#i-copy"></use></svg><span>Copiar</span></button>' : '';
+    // Un correo largo se corta antes de la @ y no a mitad de palabra.
+    return '<div class="dato"><span class="dato__etiqueta">' + esc(etiqueta) + '</span>' + boton +
+      '<span class="dato__valor">' + esc(valor).replace(/@/g, '<wbr>@') + '</span></div>';
+  }
+
+  // Filas para pagar: el monto primero y después los datos. Fuera del paso (pantalla final) van con la forma de pago.
   function htmlDatosPago(m, fueraDelPaso) {
-    function fila(etiqueta, valor, copiar) {
-      var boton = copiar ? '<button type="button" class="copiar" data-copiar="' + esc(copiar) + '" data-que="' + esc(etiqueta) + '"' +
-        ' aria-label="Copiar ' + esc(String(etiqueta).toLowerCase()) + ': ' + esc(valor) + '">' +
-        '<svg class="ico" aria-hidden="true"><use href="#i-copy"></use></svg><span>Copiar</span></button>' : '';
-      // Un correo largo se corta antes de la @ y no a mitad de palabra.
-      return '<div class="dato"><span class="dato__etiqueta">' + esc(etiqueta) + '</span>' + boton +
-        '<span class="dato__valor">' + esc(valor).replace(/@/g, '<wbr>@') + '</span></div>';
-    }
-    var filas = (m.datos || []).map(function (d) { return fila(d.etiqueta, d.valor, d.copiar); });
-    if (fueraDelPaso) {
-      if (PAGO.monto) filas.unshift(fila('Monto', PAGO.monto));
-      filas.unshift(fila('Forma de pago', m.nombre + (m.detalle ? ' · ' + m.detalle : '')));
-    }
+    var filas = [];
+    if (fueraDelPaso) filas.push(filaDato('Forma de pago', m.nombre + (m.detalle ? ' · ' + m.detalle : '')));
+    if (montoDe(m)) filas.push(filaDato('Monto a pagar', montoDe(m)));
+    (m.datos || []).forEach(function (d) { filas.push(filaDato(d.etiqueta, d.valor, d.copiar)); });
     return (filas.length ? '<div class="datos-pago">' + filas.join('') + '</div>' : '') +
       (m.texto ? '<p class="pago-caja__texto">' + esc(m.texto) + '</p>' : '');
   }
@@ -525,7 +528,11 @@
         (m.detalle ? '<span class="metodo__detalle">' + esc(m.detalle) + '</span>' : '') + '</span>' +
         '<svg class="ico metodo__marca" aria-hidden="true"><use href="#i-circle-check"></use></svg></span></label>';
     }).join('');
-    if (PAGO.monto) { $('pago-monto').textContent = 'Monto de la inscripción: ' + PAGO.monto; $('pago-monto').hidden = false; }
+    if (PAGO.monto) {
+      $('pago-monto').textContent = 'Monto de la inscripción: ' + PAGO.monto;
+      $('pago-monto').hidden = false;
+      $('portada-monto').textContent = 'La inscripción es de ' + PAGO.monto + '. ';
+    }
     if (!PERMITIR_DESPUES) $('comp-despues').hidden = true;
   })();
 
@@ -923,6 +930,7 @@
     } else {
       titulo = m.nombre + (m.detalle ? ' · ' + m.detalle : '');
       texto = (m.texto ? m.texto + ' ' : '') + GRUPO;
+      datosHtml = montoDe(m) ? '<div class="datos-pago">' + filaDato('Monto a pagar', montoDe(m)) + '</div>' : '';
     }
     $('listo-pago-titulo').textContent = titulo;
     $('listo-pago-texto').textContent = texto;

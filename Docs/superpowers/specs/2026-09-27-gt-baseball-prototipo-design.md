@@ -177,3 +177,22 @@ representante («Como Santiago tiene 16 años, al imprimirla la firma también, 
 `EDAD_FIRMA_ATLETA` en `assets/planilla.js` (página) y en `build.py` (correo). Verificado con planillas de
 12, 14, 15 y 16 años, una con datos muy largos (la nota queda 10 mm sobre el pie, todo en una hoja) y los
 PDF de envíos reales de 13 y 16 años; las pruebas anteriores siguen pasando.
+
+## Monto de la inscripción (27-sep, noche)
+
+Luis: la inscripción es de 25 $ (dólares); Zelle también se usa en Venezuela (no decir «desde Estados Unidos»);
+por el Banco de Venezuela son 25 $ a la tasa oficial, y eso debe quedar escrito y claro. Quedó así, desde el
+bloque `pago` de `gt-config.json`:
+- Portada: «La inscripción es de 25 $ (dólares).» Paso de pago: «Monto de la inscripción: 25 $ (dólares)».
+- Tarjetas: pago móvil «Banco de Venezuela, en bolívares a tasa oficial»; Zelle «En dólares»; efectivo «En la
+  oficina de la academia».
+- Al elegir, la primera fila es «Monto a pagar»: por pago móvil «El equivalente a 25 $ en bolívares, a la tasa
+  oficial del BCV del día» (el BCV publica a diario el tipo de cambio oficial); por Zelle y en efectivo «25 $».
+- La misma fila va en la pantalla final, en el recuadro del correo al representante cuando falta el comprobante
+  o paga en efectivo, y en la sección «PAGO» de los dos correos.
+- Supuesto a confirmar con Jeffer: en efectivo, 25 $ (dólares); si también acepta bolívares, se cambia en la
+  configuración.
+
+Sigue sin poder saltarse el pago: elegir la forma de pago es obligatorio y, por pago móvil o Zelle, hay que
+adjuntar el comprobante o marcar «lo envío después» (página y servidor). Verificado: 49 comprobaciones en el
+navegador, 44 en el código de los nodos, 17 reglas, 6 de la firma, 17 anchos y 60 combinaciones.

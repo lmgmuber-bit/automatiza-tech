@@ -49,9 +49,10 @@ El repositorio es público: los destinatarios, los ids de la carpeta y del Sheet
 academia, su WhatsApp y los datos para pagar (cédula, teléfono de pago móvil, correo de Zelle) viven en
 un `gt-config.json` local, nunca aquí. Claves: `folder_id`, `sheet_id`, `sheet_url`, `destinatarios`,
 `destinatarios_prueba`, `responder_a`, `whatsapp` y `pago`
-(`{monto, permitir_despues, metodos: [{id, nombre, detalle, comprobante, datos: [{etiqueta, valor, copiar}], texto}]}`).
-Con `permitir_despues: false` el comprobante pasa a ser obligatorio en la página y en el flujo; con
-`monto` lleno, el monto aparece en el paso de pago y en los correos. La copia durable está junto a los
+(`{monto, permitir_despues, metodos: [{id, nombre, detalle, monto, comprobante, datos: [{etiqueta, valor, copiar}], texto}]}`).
+Monto (27-sep): 25 $; por pago móvil, el equivalente en bolívares a la tasa oficial del BCV del día (el `monto`
+de cada método gana sobre el general y sale en el paso de pago, la pantalla final y los dos correos).
+Con `permitir_despues: false` el comprobante pasa a ser obligatorio en la página y en el flujo. La copia durable está junto a los
 scripts de despliegue, en `C:\Users\luis_\respaldos\deploy-scripts\2026-09-27-gt-baseball\`.
 
 ```

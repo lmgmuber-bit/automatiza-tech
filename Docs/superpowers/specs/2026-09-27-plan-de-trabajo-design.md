@@ -74,7 +74,7 @@ Tabla nueva `wp_automatiza_planes_trabajo` (creada con `dbDelta`, como las demá
 `comentarios` (último pedido de cambios), `view_url`, `pdf_url`, `created_at`, `updated_at`, `enviado_at`.
 Las notas del historial van al Seguimiento de la propuesta, con los tipos internos del cierre.
 
-JSON del plan (`payload`):
+JSON del plan (`payload`; ejemplo abreviado: «…» son más elementos del mismo tipo):
 
 ```json
 {
@@ -117,7 +117,9 @@ la corrija antes de usarla**:
 | Automatización (flujo n8n) | 2 | 5 | 2 | 1 | 15 d.h. | supuesto |
 | Google Ads (puesta en marcha) | 2 | 3 | 1 | 1 | 12 d.h. + mensual | supuesto |
 
-«Arranque» fijo: reunión de inicio 1 día y entrega de insumos por el cliente 3 días hábiles (cláusula 4.2).
+«Arranque» fijo, que se suma a los totales de la tabla: reunión de inicio 1 día y entrega de insumos por el cliente 3 días
+hábiles (cláusula 4.2). Si el proyecto combina servicios, cada fase suma las actividades de todos, en secuencia salvo las
+marcadas «en paralelo».
 
 ### 4. Borrador con IA (n8n «Plan 1 Borrador»)
 
@@ -128,7 +130,8 @@ la corrija antes de usarla**:
   asigna a cada una un `servicio` de la tabla; no inventa duraciones si la actividad calza con la tabla.
 - WordPress valida el JSON (tipos, responsables, días enteros de 1 a 60, fases conocidas), **pone los días de la tabla** donde
   calza y marca `origen: ia` donde no, y calcula las **fechas** en días hábiles desde `fecha_inicio` (por defecto, el lunes
-  hábil siguiente a la firma más los días de arranque), saltando los feriados que ya usa la agenda (`appointments-config`).
+  hábil siguiente a la firma; Luis la cambia en el panel), saltando los feriados que ya usa la agenda (`appointments-config`).
+  El primer bloque es el arranque.
   Fases en secuencia; actividades de una fase en secuencia salvo las que Luis marque «en paralelo».
 - Vista previa sin fotos nuevas (renderer, `document_type: "plan"`) y correo a Luis «Borrador del plan de trabajo listo».
 - «Plan 2 Cambios»: webhook `plan-v1-cambios`; la IA aplica los comentarios de Luis sin tocar los días `origen: luis`.

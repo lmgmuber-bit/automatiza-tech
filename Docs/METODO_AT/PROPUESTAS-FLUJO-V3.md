@@ -90,8 +90,8 @@ Diseño: `Docs/superpowers/specs/2026-09-24-modulo-propuestas-admin-design.md`; 
 ## Cierre de cliente (EN PROD desde el 2026-09-26 13:36)
 
 Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
-`Docs/superpowers/plans/2026-09-25-cierre-de-cliente.md`; rama `claude/cierre-cliente`. Código en PROD: commit `211fbd1`
-(27-sep 01:25; el detalle de cada subida está al final de esta sección).
+`Docs/superpowers/plans/2026-09-25-cierre-de-cliente.md`; rama `claude/cierre-cliente`. Código en PROD: commit `fb14b0a`
+(27-sep 22:08; el detalle de cada subida está al final de esta sección).
 
 - **Responder la propuesta.** `ver-presentacion.php` lleva abajo una barra con «Acepto la propuesta», «La sigo
   evaluando» y «No, gracias» mientras la propuesta está `sent` o `evaluando`. Si está `rechazada`, solo ofrece
@@ -148,7 +148,9 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   que desarchivarla primero. Una reevaluación se hace con una propuesta nueva. Vista «Archivadas» en la lista.
   Archivadas al desplegar (decisión de Luis): 11, 12, 14, 16, 21, 22 y 26; la 42 y la 43 siguen `sent`.
 - **Contrato de servicio:** plantilla `CONTRATO_SERVICIO_DESARROLLO.md`, que en PROD vive en
-  `domains/automatizatech.cl/Docs/` (fuera de `public_html`; `ContractService::load_template()` la busca ahí). La
+  `domains/automatizatech.cl/Docs/` (fuera de `public_html`; `ContractService::load_template()` la busca ahí). La de
+  soporte (`CONTRATO_SOPORTE_POSTPROYECTO.md`) PROD la lee de `public_html/Docs/` y difiere del repositorio en 4.1 y 19.4:
+  al cambiarla, partir de la copia de PROD. La
   comparecencia sale según el tipo de cliente y el documento. Luis la ajusta en la revisión de AT
   (`contracts/at-sign-contract.php`) y no se puede firmar con datos esenciales en blanco. Los PDF se bajan por
   `admin-ajax.php?action=at_download_contract` con token o sesión. Las carpetas privadas de contratos y evidencias
@@ -198,7 +200,7 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   `wamid` avisa una sola vez. Responde `{"ok":true,"avisados":n,"ignorados":m}`. (3) En «Respuesta del cliente», si el
   último envío automático quedó sin entregar, aparece un aviso con el motivo y el botón «Enviar por mi WhatsApp».
   (4) Cuando el cliente acepta por WhatsApp, `/propuesta-respuesta` agrega `url_datos` (la página de la propuesta con
-  `respuesta=aceptada`, que abre «Datos para tu contrato») mientras el contrato admita datos y le falte la dirección;
+  `respuesta=completar` desde el 27-sep 22:08, antes `respuesta=aceptada`, que abre «Datos para tu contrato») mientras el contrato admita datos y le falte la dirección;
   sin contrato, ya revisado o con dirección, no viene. **En n8n (bot principal `bBcNlFgBzQ0766Mq`, 27-sep 09:08):** la
   salida falsa de «Has Message?» (lo que llega sin mensajes, es decir, los estados de Meta) va a «Extraer Estados
   Fallidos», que junta solo los `failed` (hasta 20) y los manda por «Avisar Estado Propuesta» a la ruta nueva; «Armar
@@ -244,6 +246,24 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   `~/respaldos/cierre-pendientes-antes-20260927-012502.tar.gz`. Rollback de cualquiera: `cd ~ && tar xzf <respaldo>`
   (en orden inverso si se deshacen varias). El mismo 27-sep `wp-content/debug.log` (74 MB) quedó comprimido en
   `~/respaldos/debug-log-20260927-042647.log.gz` y vacío; desde afuera responde 403.
+- **Subida del 27-sep 22:08 (autorizada por Luis; commit `fb14b0a`), pensada para registrar a mano la aceptación de
+  la 43:** (1) la bienvenida sale después de crear el contrato y, si al contrato le falta la dirección, trae el botón
+  «Completar mis datos del contrato» (antes pedía responder el correo con los datos); (2) «Datos para tu contrato» pide
+  nombre y documento (RUT, DNI o pasaporte) de quien firma cuando al contrato le falta (aceptación a mano sin el número o
+  por WhatsApp), obligatorios; `ContractService::actualizar_datos_cliente()` los acepta solo para completar, nunca para
+  sobrescribir al que aceptó; (3) cuando el cliente deja sus datos a Luis le llega «… dejó sus datos para el contrato»,
+  que dice si el contrato quedó listo para revisar y firmar o qué falta, sin el número del documento; (4) el enlace a
+  «Datos para tu contrato» (bienvenida y WhatsApp) usa `respuesta=completar`, que abre el formulario sin el «¡Gracias!
+  Recibimos tu aceptación», reservado a quien acaba de aceptar en la página (`aceptada` sigue abriéndolo para enlaces
+  viejos); (5) la barra y los diálogos de `ver-presentacion.php` llevan el logo real y los colores del logo (marino
+  `#063f76`, turquesa `#17b7b1`, verde `#4abc9b`, noche `#0a1628`); (6) cláusula «Uso de inteligencia artificial»
+  (pedido de Luis): duodécima en el contrato de servicios v1.1 (las siguientes se corren en uno: garantía 13.1, fases
+  15.1) y undécima bis en el de soporte v2.1. Archivos: `puras.php`, `respuesta.php`, `bienvenida.php`, `pagina.php`,
+  `contracts/contract-service.php` y las dos plantillas. Respaldos `~/respaldos/cierre-pendientes-antes-20260927-220751.tar.gz`
+  y `~/respaldos/plantillas-contrato-antes-20260927-220847/`. Verificado: huellas, `php -l`, panel y formulario como
+  administrador, la página de la 43 desde afuera (tres diálogos con logo, sin el verde de antes) y PROD cargando la
+  cláusula en las dos plantillas. Pruebas: `bienvenida-datos-wp-test.php`, `datos-documento-wp-test.php`,
+  `plantilla-test.php`, `contrato-wp-test.php` (33 grupos, 1300 comprobaciones). Pendiente: verlo en un celular real.
 - **Primera propuesta real aceptada (id 53), aceptación anulada el 26-sep 23:59** para que el cliente la repita con el
   formulario nuevo (decisión de Luis): la propuesta volvió a `sent`, su fila del CRM a prospecto, y se borraron el
   contrato sin firma del cliente, la ficha operativa creada al aceptar con sus notas copiadas, las dos entradas del

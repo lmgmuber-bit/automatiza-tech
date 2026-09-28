@@ -48,6 +48,8 @@ const errores = [];
 const s = (v, max) => (typeof v === 'string' ? v.trim().replace(/\s+/g, ' ') : '').slice(0, max);
 const req = (k, max, etiqueta) => { const v = s(d[k], max); if (!v) errores.push(etiqueta); return v; };
 if (body.hp) errores.push('trampa');
+// Este flujo solo atiende la v2 (la página siempre manda v:2). Un envío con otro formato se rechaza.
+if (body.v !== 2) errores.push('versión');
 const id = (typeof body.id === 'string' && /^GT-[A-Z0-9]{6,16}$/.test(body.id)) ? body.id : '';
 if (!id) errores.push('id');
 const x = {
@@ -159,6 +161,12 @@ const huella = (t) => { let h = 5381; for (const ch of String(t)) h = ((h << 5) 
 const sd = $getWorkflowStaticData('global');
 const ahoraMs = Date.now();
 sd.envios = (Array.isArray(sd.envios) ? sd.envios : []).filter(e => ahoraMs - e.t < 86400000).slice(-500);
+// Duplicados: si la red va lenta el celular se rinde a los 90 s aunque el servidor sí guardó, y el apoderado
+// reintenta con el mismo id. Se recuerda cada id ya procesado por 10 minutos y el reintento se responde ok
+// sin volver a guardar la fila ni mandar los correos.
+sd.ids = (sd.ids && typeof sd.ids === 'object') ? sd.ids : {};
+for (const k in sd.ids) if (ahoraMs - sd.ids[k] > 600000) delete sd.ids[k];
+if (sd.ids[id]) return [{ json: { ok: false, errores: ['duplicado'], id } }];
 const cab = entrada.headers || {};
 const ip = String(cab['x-forwarded-for'] || cab['x-real-ip'] || '').split(',')[0].trim();
 const kIp = ip ? huella('ip:' + ip) : '';
@@ -166,6 +174,7 @@ const kCo = x.correo ? huella('co:' + x.correo.toLowerCase()) : '';
 const porIp = kIp ? sd.envios.filter(e => e.i === kIp && ahoraMs - e.t < 3600000).length : 0;
 const porCorreo = kCo ? sd.envios.filter(e => e.c === kCo).length : 0;
 if (porIp >= __LIMITE_IP__ || porCorreo >= __LIMITE_CORREO__) return [{ json: { ok: false, errores: ['limite'] } }];
+sd.ids[id] = ahoraMs;
 sd.envios.push({ t: ahoraMs, i: kIp, c: kCo });
 
 const prueba = body.prueba === true;
@@ -351,9 +360,13 @@ def construir(cfg):
               'options': {'allowedOrigins': ORIGENES}}, webhookId='8b1d2c4e-3f5a-4c6b-9d7e-2a1f0c9b8e71'),
         code('g2', 'Validar', [220, 0], validar),
         si('g3', '¿Válido?', [440, 0], '={{ $json.ok }}'),
+        # Un reintento del mismo id (duplicado) se responde 200 ok sin guardar de nuevo; los demás errores, 400.
         node('g4', 'Responder error', 'n8n-nodes-base.respondToWebhook', 1.1, [660, 200],
-             {'respondWith': 'json', 'responseBody': '={{ JSON.stringify({ ok: false, errores: $json.errores }) }}',
-              'options': {'responseCode': 400}}),
+             {'respondWith': 'json',
+              'responseBody': "={{ ($json.errores && $json.errores[0] === 'duplicado') "
+                              "? JSON.stringify({ ok: true, id: $json.id, duplicado: true }) "
+                              ": JSON.stringify({ ok: false, errores: $json.errores }) }}",
+              'options': {'responseCode': "={{ ($json.errores && $json.errores[0] === 'duplicado') ? 200 : 400 }}"}}),
         subir('g5', 'Subir foto', [660, -100], 'foto', cfg['folder_id']),
         code('g6', 'Pasar planilla', [880, -100], JS_PASAR_BINARIOS),
         subir('g7', 'Subir planilla', [1100, -100], 'planilla', cfg['folder_id']),

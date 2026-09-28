@@ -289,3 +289,38 @@ El video definitivo se graba ahí.
   - 26 comprobaciones de la portada;
   - de 320 a 1440 px sin desborde, en modo oscuro y claro, con contraste de 7,3:1 o más;
   - publicado en `/v2/` con respaldo previo de la v2; la v1 quedó igual a su respaldo congelado.
+
+## Pruebas exhaustivas antes del dominio (28-sep)
+
+Jeffer compró el dominio; antes de mudar, se corrió una batería amplia.
+
+**Sin efectos, todo verde:** las suites anteriores (224 comprobaciones) más `probar-seguridad.cjs` (30): inyección
+(honeypot, id con `<script>`, HTML en nombres → rechazados), **escape del correo** (la dirección no filtra `< >`,
+pero los dos correos la escapan: sin XSS almacenado), tamaños y bytes mágicos (foto > 2 MB, PNG disfrazado de foto,
+planilla sin `%PDF`, comprobante que no es JPEG ni PDF → rechazados), campos gigantes recortados, rangos de edad,
+posición y forma de pago fuera de lista.
+
+**Seguridad desde afuera:** el Sheet responde 401 y los archivos de Drive redirigen a iniciar sesión (los datos y
+las fotos de menores **no son públicos**); el listado de carpetas está apagado (403). Falta endurecer cabeceras:
+se agregó `demos/gt-baseball/.htaccess` (se despliega a `/v2/.htaccess`) con `X-Content-Type-Options`,
+`X-Frame-Options: DENY`, `Referrer-Policy` y `Permissions-Policy`. HSTS y una CSP estricta se dejan para el dominio
+propio (son políticas de todo el host).
+
+**Concurrencia** (`carga-concurrencia.py`: flujo temporal aislado con el código real de «Validar», sin Drive, Sheet
+ni correos; borrado al terminar):
+- **20 inscripciones distintas a la vez → las 20 se guardan con id único.** El caso real de un día de inscripciones
+  funciona: la escritura del Sheet (`values:append` con `INSERT_ROWS`) es atómica y no pierde filas.
+- 🔴 **El límite por IP/correo y el anti-duplicado NO frenan una ráfaga simultánea:** 5 envíos del mismo id a la vez
+  pasaron los 5, y 15 desde una misma IP a la vez pasaron las 15. Es una carrera de los datos estáticos de n8n: las
+  ejecuciones corren en paralelo y todas leen el contador antes de que alguna lo escriba. Sí funcionan cuando los
+  envíos llegan **separados** (el reintento tras timeout —el caso común— queda cubierto por el dedupe de 10 min).
+
+**Correcciones aplicadas (en `build.py`, sin publicar aún):**
+- **Solo v2:** el flujo v2 ahora rechaza cualquier envío que no sea `v:2` (antes aceptaba el formato viejo, más laxo).
+- **Anti-duplicado por id (10 min):** un reintento del mismo id se responde `ok` sin volver a guardar la fila ni
+  mandar los correos; «Responder error» devuelve 200 en ese caso.
+- Las dos, verificadas en `probar-seguridad.cjs`; las 110 comprobaciones del flujo siguen verdes.
+
+**Recomendado para el dominio (no bloquea, pero cierra la ráfaga):** Cloudflare Turnstile (gratis, casi invisible)
+como barrera anti-bot en el borde. Es la capa que frena una ráfaga simultánea antes de llegar a n8n; el límite de
+n8n queda como mejor-esfuerzo para repeticiones sueltas. Necesita la cuenta de Cloudflare de Luis y una clave.

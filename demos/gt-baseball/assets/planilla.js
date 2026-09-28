@@ -1,6 +1,6 @@
 /* Planilla de inscripción en PDF (A4), dibujada con jsPDF a partir de los datos del formulario.
  * Sigue la planilla de papel de la academia: foto arriba a la izquierda, logo a la derecha, campos con
- * línea y firma en blanco para firmar a mano al imprimir.
+ * línea y firma en blanco para firmar a mano al imprimir (la del atleta también, desde los 15 años).
  * Uso: GTPlanilla.crear({ datos, edad, foto, logo, id, fecha }) → documento jsPDF. */
 (function (global) {
   'use strict';
@@ -10,6 +10,9 @@
   var TINTA = [20, 22, 26];
   var M = 15; // margen
   var ANCHO = 210 - M * 2;
+  // Desde esta edad el atleta también firma la planilla, junto a su representante (pedido de la academia, 27-sep).
+  // app.js la usa para avisarlo en la pantalla final; el correo de n8n repite el mismo número (build.py).
+  var EDAD_FIRMA_ATLETA = 15;
 
   // La fuente estándar del PDF (WinAnsi) no dibuja emojis ni la mayoría de los caracteres fuera del latín:
   // saldrían como símbolos rotos. Se quitan antes de escribir; el correo y el Sheet guardan el texto original.
@@ -112,14 +115,23 @@
     fila([['Estatura', d.estatura, 0.34], ['Peso', d.peso, 0.33], ['Referencia millas', d.millas, 0.33]]);
     fila([['Año de firma', d.anio_firma, 0.34]]);
 
-    // Firma a mano al imprimir
-    var yf = Math.max(y + 16, 245);
+    // Firma a mano al imprimir. Desde los 15 años firma también el atleta: tres líneas en la misma fila y una
+    // nota que lo explica. La fila no baja de 268 mm, para que la nota nunca pise el pie.
+    var firmaAtleta = typeof o.edad === 'number' && o.edad >= EDAD_FIRMA_ATLETA;
+    var yf = Math.min(Math.max(y + 16, 245), 268);
+    var firmas = firmaAtleta
+      ? [['FIRMA DEL REPRESENTANTE', M, 65], ['FIRMA DEL ATLETA', M + 73, 65], ['FECHA', M + 146, 34]]
+      : [['FIRMA DEL REPRESENTANTE', M, 105], ['FECHA', M + 120, 60]];
     doc.setDrawColor(90, 94, 100); doc.setLineWidth(0.35);
-    doc.line(M, yf, M + 105, yf);
-    doc.line(M + 120, yf, 210 - M, yf);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor.apply(doc, GRIS);
-    doc.text('FIRMA DEL REPRESENTANTE', M, yf + 4.5);
-    doc.text('FECHA', M + 120, yf + 4.5);
+    firmas.forEach(function (f) {
+      doc.line(f[1], yf, f[1] + f[2], yf);
+      doc.text(f[0], f[1], yf + 4.5);
+    });
+    if (firmaAtleta) {
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor.apply(doc, TINTA);
+      doc.text('A partir de los ' + EDAD_FIRMA_ATLETA + ' años, el atleta también firma la planilla, junto a su representante.', M, yf + 10.5);
+    }
 
     // Pie
     doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor.apply(doc, GRIS);
@@ -129,5 +141,5 @@
     return doc;
   }
 
-  global.GTPlanilla = { crear: crear };
+  global.GTPlanilla = { crear: crear, EDAD_FIRMA_ATLETA: EDAD_FIRMA_ATLETA };
 })(window);

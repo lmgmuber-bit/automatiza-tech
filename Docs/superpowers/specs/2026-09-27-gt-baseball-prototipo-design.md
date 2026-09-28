@@ -165,3 +165,15 @@ dos temas (el borde de la tarjeta elegida usa el dorado oscuro en modo claro: 3,
 **Pendiente:** publicar con el ok de Luis (flujo v2 primero, después la página en `/v2/`, prueba real con
 `?prueba=1`); agregar en el Sheet los encabezados de las dos columnas nuevas; preguntar a Jeffer el monto
 de la inscripción y si el comprobante debe ser obligatorio.
+
+## Firma del atleta desde los 15 años (27-sep, noche)
+
+Pedido de Luis: desde los 15 años el atleta también firma la planilla, junto a su representante, y hay que
+indicarlo. Con 15 años o más (edad a la fecha de la inscripción), la fila de firmas pasa a tener tres líneas
+(«Firma del representante», «Firma del atleta» y «Fecha») y debajo la nota «A partir de los 15 años, el
+atleta también firma la planilla, junto a su representante». Con menos de 15 queda como antes. El correo al
+representante («Como Santiago tiene 16 años, al imprimirla la firma también, junto a ti») y la pantalla final
+(«Al imprimirla, la firman Santiago y su representante») lo avisan. La edad límite es una constante:
+`EDAD_FIRMA_ATLETA` en `assets/planilla.js` (página) y en `build.py` (correo). Verificado con planillas de
+12, 14, 15 y 16 años, una con datos muy largos (la nota queda 10 mm sobre el pie, todo en una hoja) y los
+PDF de envíos reales de 13 y 16 años; las pruebas anteriores siguen pasando.

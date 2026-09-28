@@ -875,7 +875,10 @@
     var correo = $('listo-correo');
     if (ok) {
       $('listo-titulo').textContent = '¡Inscripción enviada!';
-      $('listo-texto').textContent = 'GT Baseball Academy ya recibió la planilla de ' + d.nombre + '.';
+      // Desde los 15 años el atleta también firma la planilla (la línea la pone planilla.js con la misma edad).
+      var edadFirma = calcularEdad(d.fecha_nac), limiteFirma = window.GTPlanilla ? window.GTPlanilla.EDAD_FIRMA_ATLETA : 15;
+      $('listo-texto').textContent = 'GT Baseball Academy ya recibió la planilla de ' + d.nombre + '.' +
+        (edadFirma !== '' && edadFirma >= limiteFirma ? ' Al imprimirla, la firman ' + d.nombre.split(' ')[0] + ' y su representante.' : '');
       if (info.correo_apoderado === true) {
         correo.innerHTML = '<svg class="ico" aria-hidden="true"><use href="#i-mail"></use></svg><span>Te enviamos la confirmación con la planilla a <strong>' + esc(d.correo) + '</strong>. Si no la ves, revisa la carpeta de spam.</span>';
         correo.hidden = false;

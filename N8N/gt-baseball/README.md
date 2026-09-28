@@ -38,6 +38,8 @@ Webhook POST /webhook/gt-baseball-inscripcion-v2
   `Pendiente` o `No aplica`). Los encabezados de esas dos columnas se agregan en el Sheet al publicar.
 - Pago: después de verificar el pago, la academia agrega al representante al grupo de WhatsApp
   (lo pidió Jeffer por audio el 27-sep). La página y los dos correos lo dicen.
+- Firma: desde los 15 años el atleta también firma la planilla (línea propia en el PDF) y el correo al
+  representante lo avisa. La edad es `EDAD_FIRMA_ATLETA`, igual en `build.py` y en `assets/planilla.js`.
 - `saveDataSuccessExecution: none`: cada envío trae la foto de un menor y a veces un comprobante de pago;
   n8n no guarda las ejecuciones que salen bien. Si hay que depurar, cambiarlo por un rato y volver a publicar.
 

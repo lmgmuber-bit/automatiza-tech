@@ -36,6 +36,8 @@ POSICIONES = ['Lanzador', 'Receptor', 'Primera base', 'Segunda base', 'Tercera b
 # Límites contra el uso del formulario para mandar correos a terceros: por IP y hora, y por correo y día.
 LIMITE_IP_HORA = 10
 LIMITE_CORREO_DIA = 6
+# Desde esta edad el atleta también firma la planilla; la misma que EDAD_FIRMA_ATLETA de assets/planilla.js.
+EDAD_FIRMA_ATLETA = 15
 
 JS_VALIDAR = r"""
 const entrada = $input.first().json;
@@ -235,9 +237,12 @@ const pasoApoderado = {
   no_aplica: `<strong>Forma de pago: ${esc(pagoTxt)}.</strong> ${metodo && metodo.texto ? esc(metodo.texto) + ' ' : ''}${grupo}`,
 }[x.pago_estado] || '';
 const compApoderado = { adjunto: 'Recibido', despues: 'Pendiente' }[x.pago_estado] || '';
+// Desde los __EDAD_FIRMA__ años el atleta también firma la planilla (la línea la dibuja planilla.js con la misma edad).
+const firmaAtleta = Number(x.edad) >= __EDAD_FIRMA__;
+const primerNombre = String(x.nombre).split(' ')[0];
 const htmlApoderado = caja(cabecera('Inscripción recibida') + cuerpo(`
 <p style="font-size:15px;margin:14px 10px 6px">Hola ${esc(x.rep_nombre)}:</p>
-<p style="font-size:15px;line-height:1.5;margin:0 10px 10px">GT Baseball Academy recibió la inscripción de <strong>${esc(x.nombre)}</strong>. Te adjuntamos la planilla en PDF para que la guardes o la imprimas.</p>
+<p style="font-size:15px;line-height:1.5;margin:0 10px 10px">GT Baseball Academy recibió la inscripción de <strong>${esc(x.nombre)}</strong>. Te adjuntamos la planilla en PDF para que la guardes o la imprimas.${firmaAtleta ? ` Como ${esc(primerNombre)} tiene ${esc(x.edad)} años, al imprimirla la firma también, junto a ti.` : ''}</p>
 ${pasoApoderado ? recuadro(pasoApoderado) : ''}
 <table style="border-collapse:collapse;width:100%">
 ${seccion('ATLETA')}${fila('Nombre completo', x.nombre)}${fila('Fecha de nacimiento', x.fecha_nac_txt)}${fila('Edad', x.edad + ' años')}
@@ -316,6 +321,7 @@ def construir(cfg):
     armar = (JS_ARMAR.replace('__SHEET_URL__', json.dumps(cfg['sheet_url']))
              .replace('__WHATSAPP__', json.dumps(str(cfg.get('whatsapp') or '')))
              .replace('__PAGO__', pago)
+             .replace('__EDAD_FIRMA__', str(EDAD_FIRMA_ATLETA))
              .replace('__PRUEBA__', json.dumps(cfg['destinatarios_prueba']))
              .replace('__DESTINATARIOS__', json.dumps(cfg['destinatarios']))
              .replace('__RESPONDER_A__', json.dumps(cfg['responder_a'])))

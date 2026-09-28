@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/styles.css?v=5">
+<link rel="stylesheet" href="assets/styles.css?v=7">
 </head>
 <body>
 <!-- Íconos: Tabler Icons 3.48.0 (MIT) y WhatsApp de Simple Icons 16.33.0 (CC0). -->
@@ -55,6 +55,7 @@
 <symbol id="i-file-type-pdf" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4"/><path d="M5 18h1.5a1.5 1.5 0 0 0 0 -3h-1.5v6"/><path d="M17 18h2"/><path d="M20 15h-3v6"/><path d="M11 15v6h1a2 2 0 0 0 2 -2v-2a2 2 0 0 0 -2 -2h-1"/></symbol>
 <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></symbol>
 <symbol id="i-users-group" viewBox="0 0 24 24"><path d="M10 13a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M8 21v-1a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v1"/><path d="M15 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M17 10h2a2 2 0 0 1 2 2v1"/><path d="M5 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M3 13v-1a2 2 0 0 1 2 -2h2"/></symbol>
+<symbol id="i-door-exit" viewBox="0 0 24 24"><path d="M13 12v.01"/><path d="M3 21h18"/><path d="M5 21v-16a2 2 0 0 1 2 -2h7.5m2.5 10.5v7.5"/><path d="M14 7h7m-3 -3l3 3l-3 3"/></symbol>
 <symbol id="i-whatsapp" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></symbol>
 </svg>
 <a class="saltar" href="#contenido">Saltar al contenido</a>
@@ -118,26 +119,40 @@
         </div>
       </div>
 
+      <!-- Los mismos 5 pasos, con los mismos nombres, que muestra la barra del formulario. -->
       <section class="bloque" aria-labelledby="t-como">
-        <h2 class="bloque__titulo" id="t-como">Cómo funciona</h2>
+        <div class="bloque__cabeza">
+          <h2 class="bloque__titulo" id="t-como">¿Cómo funciona?</h2>
+          <p class="bloque__intro">Son 5 pasos, los mismos que verás en el formulario.</p>
+        </div>
         <ol class="linea">
           <li class="linea__paso">
-            <span class="linea__marca"><svg class="ico" aria-hidden="true"><use href="#i-clipboard-text"></use></svg></span>
-            <div><h3>Llena los datos</h3><p>Del atleta y del representante, con una foto del atleta.</p></div>
+            <span class="linea__marca"><svg class="ico" aria-hidden="true"><use href="#i-camera"></use></svg></span>
+            <div><p class="linea__num">Paso 1</p><h3>Atleta</h3><p>Agregas una foto del atleta, su nombre y su fecha de nacimiento.</p></div>
+          </li>
+          <li class="linea__paso">
+            <span class="linea__marca"><svg class="ico" aria-hidden="true"><use href="#i-user"></use></svg></span>
+            <div><p class="linea__num">Paso 2</p><h3>Contacto</h3><p>Escribes tu dirección, tu teléfono y tu correo, donde te llega la confirmación.</p></div>
+          </li>
+          <li class="linea__paso">
+            <span class="linea__marca"><svg class="ico" aria-hidden="true"><use href="#i-ball-baseball"></use></svg></span>
+            <div><p class="linea__num">Paso 3</p><h3>Béisbol</h3><p>Indicas su liga, su posición y con qué mano batea y lanza.</p></div>
           </li>
           <li class="linea__paso">
             <span class="linea__marca"><svg class="ico" aria-hidden="true"><use href="#i-receipt"></use></svg></span>
-            <div><h3>Paga la inscripción</h3><p><span id="portada-monto"></span>Por pago móvil o Zelle, y adjunta el comprobante. También puedes pagar en efectivo en la oficina.</p></div>
+            <div><p class="linea__num">Paso 4</p><h3>Pago</h3><p><span id="portada-monto"></span>Pagas con pago móvil (en bolívares a tasa oficial) o Zelle y adjuntas el comprobante<span id="portada-despues">, o lo envías después</span>. También puedes pagar en efectivo en la oficina.</p></div>
           </li>
           <li class="linea__paso">
             <span class="linea__marca"><svg class="ico" aria-hidden="true"><use href="#i-send"></use></svg></span>
-            <div><h3>Envía y listo</h3><p>Te llega la planilla por correo. Cuando la academia verifique el pago, te agregará al grupo de WhatsApp.</p></div>
+            <div><p class="linea__num">Paso 5</p><h3>Enviar</h3><p>Revisas el resumen y envías. Te llega la planilla por correo y, cuando la academia verifique el pago, te agrega al grupo de WhatsApp.</p></div>
           </li>
         </ol>
       </section>
 
       <section class="bloque bloque--necesitas" aria-labelledby="t-nec">
-        <h2 class="bloque__titulo" id="t-nec">Qué necesitas a mano</h2>
+        <div class="bloque__cabeza">
+          <h2 class="bloque__titulo" id="t-nec">¿Qué necesitas a mano?</h2>
+        </div>
         <ul class="necesitas">
           <li><svg class="ico" aria-hidden="true"><use href="#i-photo"></use></svg><span>Una foto del atleta</span></li>
           <li><svg class="ico" aria-hidden="true"><use href="#i-calendar"></use></svg><span>Su fecha de nacimiento</span></li>
@@ -158,6 +173,9 @@
               <svg class="ico" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
             </button>
             <p class="progreso__texto" id="texto-paso">Paso 1 de 5</p>
+            <button type="button" class="salir salir--barra" data-accion="salir" aria-label="Salir al inicio">
+              <svg class="ico" aria-hidden="true"><use href="#i-door-exit"></use></svg><span class="salir__texto">Salir</span>
+            </button>
           </div>
           <ol class="progreso__lista">
             <li data-paso="1"><span class="progreso__num">1</span><span class="progreso__nombre">Atleta</span></li>
@@ -166,6 +184,9 @@
             <li data-paso="4"><span class="progreso__num">4</span><span class="progreso__nombre">Pago</span></li>
             <li data-paso="5"><span class="progreso__num">5</span><span class="progreso__nombre">Enviar</span></li>
           </ol>
+          <button type="button" class="salir salir--lista" data-accion="salir">
+            <svg class="ico" aria-hidden="true"><use href="#i-door-exit"></use></svg><span>Salir al inicio</span>
+          </button>
         </nav>
 
         <form id="formulario" class="formulario" novalidate autocomplete="on">
@@ -464,12 +485,22 @@
   </div>
 </div>
 
+<!-- Salir de la inscripción: pregunta antes; lo escrito queda en el borrador del teléfono. -->
+<dialog class="dialogo" id="dialogo-salir" aria-labelledby="dialogo-salir-titulo" aria-describedby="dialogo-salir-texto">
+  <h2 class="dialogo__titulo" id="dialogo-salir-titulo">¿Deseas salir de la inscripción?</h2>
+  <p class="dialogo__texto" id="dialogo-salir-texto">Lo que llevas queda guardado en este teléfono: desde el inicio puedes continuar o empezar de nuevo.</p>
+  <div class="dialogo__acciones">
+    <button type="button" class="boton boton--secundario" id="btn-quedarse" autofocus>Seguir inscribiendo</button>
+    <button type="button" class="boton boton--principal" id="btn-salir-si">Sí, salir</button>
+  </div>
+</dialog>
+
 <p class="sr-only" id="anuncio" aria-live="polite"></p>
 
 <!-- Formas de pago de la academia: el despliegue reemplaza {} con el bloque "pago" de gt-config.json. -->
 <script type="application/json" id="datos-pago">{}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js" integrity="sha512-plOdviVmws4Y3JAvbnpfKb2hVxKM1lCwsi3vmElYRj+tiDLffZ4FVUj5a8vyKJ9pIgl8JCAHEJ4D1iUKBecswg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="assets/planilla.js?v=4"></script>
-<script src="assets/app.js?v=4"></script>
+<script src="assets/app.js?v=6"></script>
 </body>
 </html>

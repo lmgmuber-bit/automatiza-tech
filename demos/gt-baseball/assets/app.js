@@ -401,7 +401,7 @@
   document.querySelectorAll('[data-accion="empezar"]').forEach(function (b) { b.addEventListener('click', empezar); });
 
   $('btn-atras').addEventListener('click', function () {
-    if (estado.paso > 1) irAPaso(estado.paso - 1); else mostrar('portada');
+    if (estado.paso > 1) irAPaso(estado.paso - 1); else volverAlInicio();
   });
 
   $('btn-siguiente').addEventListener('click', function () {
@@ -533,7 +533,7 @@
       $('pago-monto').hidden = false;
       $('portada-monto').textContent = 'La inscripción es de ' + PAGO.monto + '. ';
     }
-    if (!PERMITIR_DESPUES) $('comp-despues').hidden = true;
+    if (!PERMITIR_DESPUES) { $('comp-despues').hidden = true; $('portada-despues').hidden = true; }
   })();
 
   function mostrarMetodo() {
@@ -686,23 +686,62 @@
     pintarEdad();
   }
 
-  (function ofrecerBorrador() {
+  // Aviso de inscripción sin terminar: al abrir la página y cada vez que se vuelve al inicio desde el formulario.
+  function ofrecerBorrador() {
     var d = leerBorrador();
-    if (!d || !(d.campos.nombre || d.foto || d.campos.rep_nombre)) return;
-    $('borrador-titulo').textContent = 'Tienes una inscripción sin terminar' + (d.campos.nombre ? ' de ' + d.campos.nombre : '') + '.';
-    $('borrador').hidden = false;
-    $('btn-continuar').addEventListener('click', function () {
-      restaurar(d);
-      $('borrador').hidden = true;
-      mostrar('formulario');
-      irAPaso(Math.min(Math.max(Number(d.paso) || 1, 1), TOTAL));
-    });
-    $('btn-descartar').addEventListener('click', function () {
-      borrar(CLAVE_BORRADOR);
-      $('borrador').hidden = true;
-      anunciar('Borrador descartado.');
-    });
-  })();
+    var hay = !!(d && (d.campos.nombre || d.foto || d.campos.rep_nombre));
+    if (hay) $('borrador-titulo').textContent = 'Tienes una inscripción sin terminar' + (d.campos.nombre ? ' de ' + d.campos.nombre : '') + '.';
+    $('borrador').hidden = !hay;
+  }
+  $('btn-continuar').addEventListener('click', function () {
+    var d = leerBorrador();
+    $('borrador').hidden = true;
+    if (!d) return;
+    restaurar(d);
+    mostrar('formulario');
+    irAPaso(Math.min(Math.max(Number(d.paso) || 1, 1), TOTAL));
+  });
+  $('btn-descartar').addEventListener('click', function () {
+    borrar(CLAVE_BORRADOR);
+    limpiarFormulario([]);
+    estado.id = null;
+    $('borrador').hidden = true;
+    anunciar('Borrador descartado.');
+  });
+  ofrecerBorrador();
+
+  // Deja el formulario en blanco; conserva los campos que se le pidan (los del representante, para un hermano).
+  function limpiarFormulario(conservar) {
+    var copia = {};
+    conservar.forEach(function (k) { copia[k] = valor(k); });
+    form.reset();
+    conservar.forEach(function (k) { form.elements[k].value = copia[k]; });
+    form.querySelectorAll('.campo--error').forEach(function (c) { c.classList.remove('campo--error'); });
+    form.querySelectorAll('.campo__error').forEach(function (p) { p.textContent = ''; });
+    form.querySelectorAll('[aria-invalid="true"]').forEach(function (c) { c.setAttribute('aria-invalid', 'false'); });
+    $('aviso-error').hidden = true;
+    quitarFoto();
+    quitarComprobante();
+    mostrarMetodo();
+    estado.pdf = null;
+    pintarEdad();
+  }
+
+  // Salir al inicio: pregunta antes. Lo escrito queda en el borrador y el inicio ofrece continuar o empezar de nuevo.
+  function volverAlInicio() {
+    guardarBorrador();
+    mostrar('portada');
+    ofrecerBorrador();
+    anunciar('Volviste al inicio.');
+  }
+  var dialogoSalir = $('dialogo-salir');
+  function pedirSalir() {
+    if (dialogoSalir && typeof dialogoSalir.showModal === 'function') { dialogoSalir.showModal(); return; }
+    if (window.confirm('¿Deseas salir de la inscripción? Lo que llevas queda guardado en este teléfono.')) volverAlInicio();
+  }
+  document.querySelectorAll('[data-accion="salir"]').forEach(function (b) { b.addEventListener('click', pedirSalir); });
+  $('btn-quedarse').addEventListener('click', function () { dialogoSalir.close(); });
+  $('btn-salir-si').addEventListener('click', function () { dialogoSalir.close(); volverAlInicio(); });
 
   // ---------- Resumen ----------
   function datos() {
@@ -950,18 +989,8 @@
 
   // Otro atleta: conserva los datos del representante (hermanos).
   $('btn-otro').addEventListener('click', function () {
-    var conservar = ['direccion', 'rep_nombre', 'rep_telefono', 'correo'];
-    var copia = {};
-    conservar.forEach(function (k) { copia[k] = valor(k); });
-    form.reset();
-    conservar.forEach(function (k) { form.elements[k].value = copia[k]; });
-    form.querySelectorAll('.campo--error').forEach(function (c) { c.classList.remove('campo--error'); });
-    form.querySelectorAll('.campo__error').forEach(function (p) { p.textContent = ''; });
-    quitarFoto();
-    quitarComprobante();
-    mostrarMetodo();
-    estado.pdf = null; estado.enviado = false; estado.id = nuevoId();
-    pintarEdad();
+    limpiarFormulario(['direccion', 'rep_nombre', 'rep_telefono', 'correo']);
+    estado.enviado = false; estado.id = nuevoId();
     mostrar('formulario');
     irAPaso(1);
   });

@@ -134,7 +134,7 @@ main { flex: 1; outline: none; }
 .boton--texto .ico { fill: currentColor; stroke: none; }
 .boton--chico { min-height: 44px; padding: 9px 14px; font-size: 15px; }
 .boton--ancho-auto { width: 100%; }
-:is(.boton, .tema, .progreso__volver, .opcion input, .acepto input, .resumen__editar, .copiar, .adjunto__quitar):focus-visible,
+:is(.boton, .tema, .progreso__volver, .opcion input, .acepto input, .resumen__editar, .copiar, .adjunto__quitar, .salir):focus-visible,
 .foto__input:focus-visible + * { outline: 3px solid var(--foco); outline-offset: 2px; }
 
 /* Portada */
@@ -176,8 +176,11 @@ main { flex: 1; outline: none; }
 .linea::before { content: ''; position: absolute; left: 21px; top: 22px; bottom: 22px; width: 2px; background: linear-gradient(var(--oro), transparent); opacity: .5; }
 .linea__paso { display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: start; align-content: start; position: relative; }
 .linea__marca { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--oro); color: var(--oro-texto); box-shadow: 0 0 0 6px var(--fondo); }
-.linea__paso h3 { margin: 2px 0 4px; font: 700 22px/1.1 var(--titulos); text-transform: uppercase; }
+.linea__paso h3 { margin: 0 0 4px; font: 700 22px/1.1 var(--titulos); text-transform: uppercase; }
 .linea__paso p { margin: 0; color: var(--suave); }
+/* «Paso 1»… sobre el nombre del paso: los mismos 5 que la barra del formulario. */
+.linea__paso .linea__num { margin: 0 0 2px; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--acento); }
+.bloque__intro { margin: -8px 0 22px; max-width: 42ch; color: var(--suave); }
 .necesitas { list-style: none; margin: 0 0 24px; padding: 0; display: grid; gap: 12px; }
 .necesitas li { display: flex; align-items: center; gap: 14px; font-weight: 500; }
 .necesitas .ico { width: 44px; height: 44px; padding: 10px; border-radius: 12px; background: var(--chip); color: var(--acento); }
@@ -196,6 +199,19 @@ main { flex: 1; outline: none; }
 .progreso__lista li.hecho::before, .progreso__lista li[aria-current="step"]::before { background: var(--oro); }
 .progreso__lista li[aria-current="step"] { color: var(--texto); }
 .progreso__num { display: none; }
+/* Salir al inicio: en la barra del celular (solo ícono si la pantalla es muy angosta) y bajo la lista en escritorio. */
+.salir { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1.5px solid var(--borde); background: var(--sup); color: var(--texto); font: 600 15px var(--cuerpo); cursor: pointer; transition: border-color .2s ease; }
+.salir .ico { width: 20px; height: 20px; }
+.salir--barra { margin-left: auto; flex: none; }
+.salir--lista { display: none; }
+@media (hover: hover) and (pointer: fine) { .salir:hover { border-color: var(--acento); } }
+@media (max-width: 379px) { .salir--barra { padding: 0; } .salir--barra .salir__texto { display: none; } }
+.dialogo { width: min(420px, calc(100% - 32px)); margin: auto; padding: 24px; border: 1.5px solid var(--borde-suave); border-radius: 20px; background: var(--sup); color: var(--texto); box-shadow: var(--sombra); }
+.dialogo[open] { animation: aparecer .2s ease both; }
+.dialogo::backdrop { background: var(--velo); }
+.dialogo__titulo { margin: 0 0 10px; font: 700 26px/1.05 var(--titulos); text-transform: uppercase; }
+.dialogo__texto { margin: 0 0 20px; color: var(--suave); }
+.dialogo__acciones { display: grid; gap: 10px; }
 
 .formulario { padding: 8px 0 0; }
 .paso { border: 0; margin: 0; padding: 0; min-width: 0; animation: entrar .24s var(--curva) both; }
@@ -385,17 +401,19 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 @media (min-width: 768px) {
   .hero { grid-template-columns: 1.15fr .85fr; padding: 36px 0 48px; min-height: min(640px, 72dvh); }
   .hero__visual { width: min(440px, 100%); order: 0; justify-self: center; margin: 0; }
-  .linea { grid-template-columns: repeat(3, 1fr); gap: 28px; }
-  .linea::before { left: 22px; right: 22px; top: 21px; bottom: auto; width: auto; height: 2px; background: linear-gradient(90deg, var(--oro), transparent); }
-  .linea__paso { grid-template-columns: 1fr; }
   .bloque { padding: 48px 0; }
 }
 
 /* Escritorio: 1000 px */
 @media (min-width: 1000px) {
+  /* Portada: título a la izquierda y contenido a la derecha (los 5 pasos en vertical, la lista y el botón). */
+  .vista--portada .bloque { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); column-gap: 64px; align-items: start; }
+  .vista--portada .bloque > .boton { grid-column: 2; justify-self: start; }
   .form-layout { grid-template-columns: 240px minmax(0, 680px); gap: 48px; justify-content: center; padding: 28px 0 56px; align-items: start; }
   .progreso { position: sticky; top: 24px; margin: 0; padding: 0; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; border: 0; }
   .progreso__cabeza { margin-bottom: 22px; }
+  .salir--barra { display: none; }
+  .salir--lista { display: inline-flex; margin-top: 18px; }
   .progreso__lista { grid-template-columns: 1fr; gap: 0; }
   .progreso__lista li { grid-template-columns: 36px 1fr; align-items: center; gap: 12px; padding: 10px 0; font-size: 17px; }
   .progreso__lista li::before { display: none; }

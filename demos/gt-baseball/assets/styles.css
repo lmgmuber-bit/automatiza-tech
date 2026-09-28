@@ -270,7 +270,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .metodo__nombre { font-weight: 700; }
 .metodo__detalle { font-size: 15px; color: var(--suave); }
 .metodo__marca { width: 24px; height: 24px; color: var(--anillo); opacity: 0; transform: scale(.6); transition: opacity .2s ease, transform .2s var(--curva); }
-.metodo:hover .metodo__caja { border-color: var(--acento); }
+/* Solo con mouse: en el celular el «hover» queda pegado donde estaba el dedo y la tarjeta parece elegida. */
+@media (hover: hover) and (pointer: fine) { .metodo:hover .metodo__caja { border-color: var(--acento); } }
 .metodo input:checked + .metodo__caja { border-color: var(--anillo); box-shadow: inset 0 0 0 1px var(--anillo); }
 .metodo input:checked + .metodo__caja .metodo__marca { opacity: 1; transform: none; }
 .metodo input:focus-visible + .metodo__caja { outline: 3px solid var(--foco); outline-offset: 2px; }

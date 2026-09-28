@@ -821,6 +821,26 @@
   $('btn-quedarse').addEventListener('click', function () { dialogoSalir.close(); });
   $('btn-salir-si').addEventListener('click', function () { dialogoSalir.close(); volverAlInicio(); });
 
+  // Video guía: se abre en una ventana y parte con el mismo toque (el navegador deja sonar un video que la persona pidió).
+  // No se descarga hasta ese momento (preload="none"); al cerrar se pausa. Sin <dialog>, se abre el archivo aparte.
+  var dialogoVideo = $('dialogo-video'), videoGuia = $('video-guia');
+  function abrirVideo() {
+    if (!dialogoVideo || typeof dialogoVideo.showModal !== 'function') {
+      window.open(videoGuia.querySelector('source').src, '_blank', 'noopener');
+      return;
+    }
+    dialogoVideo.showModal();
+    var promesa = videoGuia.play();
+    if (promesa && promesa.catch) promesa.catch(function () { /* queda con los controles para darle play */ });
+  }
+  // La pausa va antes de cerrar: el aviso «close» del navegador llega después, y el sonido seguiría un instante.
+  function cerrarVideo() { videoGuia.pause(); dialogoVideo.close(); }
+  document.querySelectorAll('[data-accion="video"]').forEach(function (b) { b.addEventListener('click', abrirVideo); });
+  $('btn-cerrar-video').addEventListener('click', cerrarVideo);
+  dialogoVideo.addEventListener('cancel', function () { videoGuia.pause(); }); // Esc
+  dialogoVideo.addEventListener('close', function () { videoGuia.pause(); });
+  dialogoVideo.addEventListener('click', function (ev) { if (ev.target === dialogoVideo) cerrarVideo(); });
+
   // ---------- Resumen ----------
   function datos() {
     var iso = fechaIso(), fn = iso && iso !== 'invalida' ? iso.split('-') : [];

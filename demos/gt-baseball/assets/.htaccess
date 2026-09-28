@@ -9,3 +9,10 @@
     Header merge Cache-Control "no-transform"
   </FilesMatch>
 </IfModule>
+
+# Video guía (assets/guia/, lo pone el despliegue: no está en el repo). El servidor puede no conocer
+# .vtt (subtítulos): sin text/vtt el navegador no los carga. El .mp4 se declara por las dudas.
+<IfModule mod_mime.c>
+  AddType text/vtt .vtt
+  AddType video/mp4 .mp4
+</IfModule>

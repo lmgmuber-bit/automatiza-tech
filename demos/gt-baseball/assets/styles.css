@@ -134,7 +134,7 @@ main { flex: 1; outline: none; }
 .boton--texto .ico { fill: currentColor; stroke: none; }
 .boton--chico { min-height: 44px; padding: 9px 14px; font-size: 15px; }
 .boton--ancho-auto { width: 100%; }
-:is(.boton, .tema, .progreso__volver, .opcion input, .acepto input, .resumen__editar, .copiar, .adjunto__quitar, .salir):focus-visible,
+:is(.boton, .tema, .progreso__volver, .opcion input, .acepto input, .resumen__editar, .copiar, .adjunto__quitar, .salir, .guia-enlace, .video-tarjeta, .dialogo-video__cerrar):focus-visible,
 .foto__input:focus-visible + * { outline: 3px solid var(--foco); outline-offset: 2px; }
 
 /* Portada */
@@ -212,6 +212,36 @@ main { flex: 1; outline: none; }
 .dialogo__titulo { margin: 0 0 10px; font: 700 26px/1.05 var(--titulos); text-transform: uppercase; }
 .dialogo__texto { margin: 0 0 20px; color: var(--suave); }
 .dialogo__acciones { display: grid; gap: 10px; }
+
+/* Video guía: enlace bajo los botones de la portada, tarjeta en «¿Cómo funciona?» y ventana con el video. */
+.guia-enlace { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin: 10px 0 0; padding: 0 2px; border: 0; background: none; color: var(--acento); font: 600 16px var(--cuerpo); cursor: pointer; }
+.guia-enlace .ico { width: 18px; height: 18px; fill: currentColor; stroke: none; }
+.video-tarjeta { display: flex; align-items: center; gap: 14px; width: 100%; max-width: 420px; margin: 0 0 24px; padding: 10px; border: 1.5px solid var(--borde-suave); border-radius: 16px; background: var(--sup); color: var(--texto); font: inherit; text-align: left; cursor: pointer; transition: border-color .2s ease; }
+.video-tarjeta__imagen { position: relative; flex: none; width: 64px; aspect-ratio: 9 / 16; border-radius: 10px; overflow: hidden; background: #000; }
+.video-tarjeta__imagen img { width: 100%; height: 100%; object-fit: cover; }
+.video-tarjeta__play { position: absolute; inset: 0; display: grid; place-items: center; }
+.video-tarjeta__play .ico { width: 32px; height: 32px; padding: 8px 7px 8px 9px; border-radius: 50%; background: var(--oro); color: var(--oro-texto); fill: currentColor; stroke: none; }
+.video-tarjeta__texto { display: grid; gap: 2px; }
+.video-tarjeta__texto strong { font: 700 21px/1.1 var(--titulos); text-transform: uppercase; }
+.video-tarjeta__texto span { color: var(--suave); font-size: 15px; }
+@media (hover: hover) and (pointer: fine) { .video-tarjeta:hover { border-color: var(--acento); } }
+.dialogo--video { width: min(440px, calc(100vw - 24px)); padding: 12px; }
+.dialogo-video__cabeza { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 10px; padding-left: 6px; }
+.dialogo-video__cabeza .dialogo__titulo { margin: 0; font-size: 22px; }
+.dialogo-video__cerrar { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; border: 1.5px solid var(--borde); background: var(--sup-2); color: var(--texto); cursor: pointer; }
+#video-guia { display: block; width: 100%; height: auto; max-height: calc(100dvh - 110px); aspect-ratio: 9 / 16; border-radius: 12px; background: #000; object-fit: contain; }
+
+/* Quiénes somos y dónde estamos (textos de ejemplo marcados hasta tener los reales) */
+.etiqueta-ejemplo { display: inline-block; margin: -8px 0 18px; padding: 4px 10px; border-radius: 999px; border: 1.5px dashed var(--acento); color: var(--acento); font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.nosotros__texto { margin: 0 0 18px; max-width: 62ch; color: var(--suave); font-size: 18px; }
+.nosotros__tarjetas { display: grid; gap: 12px; }
+.tarjeta-valor { padding: 16px; border-radius: 16px; background: var(--sup); border: 1.5px solid var(--borde-suave); }
+.tarjeta-valor .ico { width: 44px; height: 44px; padding: 10px; border-radius: 12px; background: var(--chip); color: var(--acento); }
+.tarjeta-valor h3 { margin: 10px 0 4px; font: 700 22px/1.1 var(--titulos); text-transform: uppercase; }
+.tarjeta-valor p { margin: 0; color: var(--suave); }
+.donde__direccion { display: flex; gap: 12px; align-items: center; margin: 0 0 10px; font-size: 18px; font-weight: 500; }
+.donde__direccion .ico { flex: none; width: 44px; height: 44px; padding: 10px; border-radius: 12px; background: var(--chip); color: var(--acento); }
+.donde__nota { margin: 0 0 18px; color: var(--suave); }
 
 .formulario { padding: 8px 0 0; }
 .paso { border: 0; margin: 0; padding: 0; min-width: 0; animation: entrar .24s var(--curva) both; }
@@ -391,6 +421,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
   .fila { grid-template-columns: 1fr 1fr; }
   .fila--cuatro { grid-template-columns: repeat(4, 1fr); }
   .necesitas { grid-template-columns: 1fr 1fr; gap: 16px 28px; }
+  .nosotros__tarjetas { grid-template-columns: 1fr 1fr; }
   .listo__acciones { grid-template-columns: 1fr 1fr; }
   .listo__acciones .boton:only-child { grid-column: 1 / -1; }
   .progreso { margin: 0 -28px; padding-inline: 28px; }
@@ -409,6 +440,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
   /* Portada: título a la izquierda y contenido a la derecha (los 5 pasos en vertical, la lista y el botón). */
   .vista--portada .bloque { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); column-gap: 64px; align-items: start; }
   .vista--portada .bloque > .boton { grid-column: 2; justify-self: start; }
+  .video-tarjeta { flex-direction: column; align-items: stretch; max-width: 220px; margin-top: 4px; }
+  .video-tarjeta__imagen { width: 100%; }
+  .video-tarjeta__play .ico { width: 56px; height: 56px; padding: 15px 13px 15px 17px; }
   .form-layout { grid-template-columns: 240px minmax(0, 680px); gap: 48px; justify-content: center; padding: 28px 0 56px; align-items: start; }
   .progreso { position: sticky; top: 24px; margin: 0; padding: 0; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; border: 0; }
   .progreso__cabeza { margin-bottom: 22px; }

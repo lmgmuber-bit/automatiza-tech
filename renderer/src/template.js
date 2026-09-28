@@ -206,9 +206,9 @@ const STYLE = `
   .pricing-table tr.is-total td { color: #fff; font-weight: 800; font-size: 30px; padding-top: 20px; border-bottom: 0; }
   .pricing-table tr.is-total td:last-child { color: #00d9c0; }
   .pricing-note { color: #9fb3c8; font-size: 18px; margin-top: 16px; }
-  .pricing-table.is-dense td { font-size: 20px; line-height: 1.3; padding: 8px 0; }
-  .pricing-table.is-dense tr.is-total td { font-size: 23px; padding-top: 12px; border-bottom: 1px solid rgba(255,255,255,.12); }
-  .pricing-table.is-dense + .pricing-note { font-size: 16px; margin-top: 10px; line-height: 1.4; }
+  .pricing-table.is-dense td { font-size: 19px; line-height: 1.25; padding: 6px 0; }
+  .pricing-table.is-dense tr.is-total td { font-size: 22px; padding-top: 10px; border-bottom: 1px solid rgba(255,255,255,.12); }
+  .pricing-table.is-dense + .pricing-note { font-size: 15px; margin-top: 8px; line-height: 1.35; }
   .body-text a, .body-list a { color: #00d9c0; text-decoration: underline; text-underline-offset: 4px; word-break: break-all; }
   .slide-closing { display: flex; }
   .closing-left { width: 42%; background: #0a1420; display: flex; align-items: center; justify-content: center; }

@@ -90,8 +90,8 @@ Diseño: `Docs/superpowers/specs/2026-09-24-modulo-propuestas-admin-design.md`; 
 ## Cierre de cliente (EN PROD desde el 2026-09-26 13:36)
 
 Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
-`Docs/superpowers/plans/2026-09-25-cierre-de-cliente.md`; rama `claude/cierre-cliente`. Código en PROD: commit `fb14b0a`
-(27-sep 22:08; el detalle de cada subida está al final de esta sección).
+`Docs/superpowers/plans/2026-09-25-cierre-de-cliente.md`; rama `claude/cierre-cliente`. Código en PROD: commit `7e7c3bf`
+(27-sep 22:14; el detalle de cada subida está al final de esta sección).
 
 - **Responder la propuesta.** `ver-presentacion.php` lleva abajo una barra con «Acepto la propuesta», «La sigo
   evaluando» y «No, gracias» mientras la propuesta está `sent` o `evaluando`. Si está `rechazada`, solo ofrece
@@ -246,7 +246,7 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   `~/respaldos/cierre-pendientes-antes-20260927-012502.tar.gz`. Rollback de cualquiera: `cd ~ && tar xzf <respaldo>`
   (en orden inverso si se deshacen varias). El mismo 27-sep `wp-content/debug.log` (74 MB) quedó comprimido en
   `~/respaldos/debug-log-20260927-042647.log.gz` y vacío; desde afuera responde 403.
-- **Subida del 27-sep 22:08 (autorizada por Luis; commit `fb14b0a`), pensada para registrar a mano la aceptación de
+- **Subida del 27-sep 22:08 (autorizada por Luis; commit `7e7c3bf`), pensada para registrar a mano la aceptación de
   la 43:** (1) la bienvenida sale después de crear el contrato y, si al contrato le falta la dirección, trae el botón
   «Completar mis datos del contrato» (antes pedía responder el correo con los datos); (2) «Datos para tu contrato» pide
   nombre y documento (RUT, DNI o pasaporte) de quien firma cuando al contrato le falta (aceptación a mano sin el número o
@@ -260,7 +260,8 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   (pedido de Luis): duodécima en el contrato de servicios v1.1 (las siguientes se corren en uno: garantía 13.1, fases
   15.1) y undécima bis en el de soporte v2.1. Archivos: `puras.php`, `respuesta.php`, `bienvenida.php`, `pagina.php`,
   `contracts/contract-service.php` y las dos plantillas. Respaldos `~/respaldos/cierre-pendientes-antes-20260927-220751.tar.gz`
-  y `~/respaldos/plantillas-contrato-antes-20260927-220847/`. Verificado: huellas, `php -l`, panel y formulario como
+  y `~/respaldos/plantillas-contrato-antes-20260927-220847/`; a las 22:14 se resubieron cuatro de esos archivos solo con
+  comentarios sin nombres de clientes (el repositorio es público), respaldo `~/respaldos/cierre-pendientes-antes-20260927-221417.tar.gz`. Verificado: huellas, `php -l`, panel y formulario como
   administrador, la página de la 43 desde afuera (tres diálogos con logo, sin el verde de antes) y PROD cargando la
   cláusula en las dos plantillas. Pruebas: `bienvenida-datos-wp-test.php`, `datos-documento-wp-test.php`,
   `plantilla-test.php`, `contrato-wp-test.php` (33 grupos, 1300 comprobaciones). Pendiente: verlo en un celular real.

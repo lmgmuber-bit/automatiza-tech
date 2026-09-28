@@ -270,3 +270,22 @@ Jeffer mande lo real. Si la dirección es de una casa particular, se pone desde 
 - la URL del logo en los correos;
 - las redirecciones desde `/demos/gt-baseball/` y `/v2/`.
 El video definitivo se graba ahí.
+
+## Textos de la academia y dirección real (28-sep, tarde)
+
+- **Quiénes somos, misión y visión.** Jeffer no los tenía y Luis pidió que los redactara AutomatizaTech, de acuerdo
+  con el servicio. Salen de lo que Jeffer contó en sus audios y de su planilla, sin inventar años de experiencia,
+  logros ni cifras:
+  - es una academia familiar (él y su esposa);
+  - entrena a niños y jóvenes;
+  - la planilla lleva posición, estatura, peso, velocidad en millas y año de firma: de ahí salen el seguimiento de
+    cada atleta y la proyección al béisbol profesional.
+  La academia puede ajustarlos.
+- **Dirección**, enviada por la academia: Av. 19, calle 8, Sierra Maestra, Maracaibo, estado Zulia; detrás del Centro
+  Clínico Sergio Pérez. El nombre de la clínica no aparece en internet, así que no se agregó un botón de mapa: se
+  agrega cuando la academia mande su ubicación exacta.
+- Se quitaron las etiquetas de ejemplo, y la descripción de la página ahora nombra la ciudad.
+- **Verificado:**
+  - 26 comprobaciones de la portada;
+  - de 320 a 1440 px sin desborde, en modo oscuro y claro, con contraste de 7,3:1 o más;
+  - publicado en `/v2/` con respaldo previo de la v2; la v1 quedó igual a su respaldo congelado.

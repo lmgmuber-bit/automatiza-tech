@@ -86,7 +86,7 @@ MANDATORY: All on-screen text, UI elements, app interfaces, phone screens, email
     - firma del atleta desde los 15 años;
     - campos blindados (teléfonos venezolanos de 11 dígitos);
     - video guía;
-    - secciones de la academia con textos de ejemplo.
+    - secciones de la academia: quiénes somos, misión y visión redactados por AT (Jeffer no los tenía) y la dirección real en Sierra Maestra, Maracaibo (desde el 28-sep, 17:54).
   - **Qué hacen los dos flujos:** suben la foto, la planilla y, si hay, el comprobante a una carpeta de Drive de `contacto@automatizatech.cl`; agregan la fila al Sheet y mandan los correos. `?prueba=1` va solo a Luis y marca PRUEBA.
   - 🔴 **Repo público:** destinatarios, ids de Drive y Sheet, el WhatsApp, los datos de pago y el video guía viven fuera del repo. Están en `gt-config.json`, en `C:\Users\luis_\respaldos\deploy-scripts\2026-09-27-gt-baseball\`, junto a `deploy_gt.py`, que los pone solo en PROD y compara la v1 antes y después de subir.
   - 🔴 **Nunca subir a mano el `index.html` del repo:** trae esos huecos vacíos.

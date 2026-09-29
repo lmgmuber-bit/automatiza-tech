@@ -203,3 +203,145 @@ function at_pt_arranque(): array {
 		],
 	];
 }
+
+/* ---------- Topes, textos, JSON de la IA y días por bloque (Task 2) ---------- */
+
+// Topes del plan (Review Focus 6). Con 14 bloques, el Arranque incluido, la carta Gantt tiene como máximo 28 barras
+// (cada bloque más su «Tu revisión»); con 130 días hábiles, unas 26 semanas más los feriados (peor caso medido en
+// tests/plan/cronograma-test.php: 27 barras y 130 días hábiles en 27 semanas). Es lo que el renderer debe dejar
+// legible en 1920×1080 y en el PDF. Más que eso es un plan roto o un proyecto que hay que dividir. La tabla de tiempos
+// puede subir los días: por eso el plan se valida otra vez después de aplicarla.
+const AT_PT_MAX_BLOQUES = 14;
+const AT_PT_MAX_ACTIVIDADES_BLOQUE = 10;
+const AT_PT_MAX_ACTIVIDADES = 60;
+const AT_PT_MAX_DIAS_PLAN = 130;
+// Cláusula 6.1 del contrato de servicios (Docs/CONTRATO_SERVICIO_DESARROLLO.md:74): el cliente tiene 5 días hábiles
+// para aprobar cada avance. Se suma una vez después de cada bloque con entrega.
+const AT_PT_DIAS_REVISION = 5;
+
+/** Un valor que mandó la IA, corto y legible para un mensaje de error. */
+function at_pt_mostrar(mixed $v): string {
+	if ($v === null || $v === '') {
+		return 'vacío';
+	}
+	if (is_bool($v)) {
+		return $v ? 'true' : 'false';
+	}
+	if (!is_scalar($v)) {
+		return 'una lista';
+	}
+	$s = (string) $v;
+	if (!mb_check_encoding($s, 'UTF-8')) {
+		return 'texto ilegible';
+	}
+	$s = trim((string) preg_replace('/\s+/u', ' ', $s));
+	return mb_strlen($s, 'UTF-8') > 40 ? mb_substr($s, 0, 39, 'UTF-8') . '…' : $s;
+}
+
+/** Nombre para comparar: sin espacios de más y en minúsculas («  Diseño » y «diseño» son el mismo bloque). */
+function at_pt_clave_nombre(string $s): string {
+	$t = preg_replace('/\s+/u', ' ', $s);
+	return mb_strtolower(trim(is_string($t) ? $t : $s), 'UTF-8');
+}
+
+/** Sí o no de la IA o de un formulario: true, 1, '1', 'true', 'si', 'sí' u 'on' son sí; lo demás, no. */
+function at_pt_booleano(mixed $v): bool {
+	if (is_bool($v)) {
+		return $v;
+	}
+	if (is_int($v)) {
+		return $v === 1;
+	}
+	if (is_string($v)) {
+		return in_array(mb_strtolower(trim($v), 'UTF-8'), ['1', 'true', 'si', 'sí', 'on'], true);
+	}
+	return false;
+}
+
+/** Texto limpio de un campo del plan: sin caracteres de control (el salto de línea se queda solo si $multilinea), sin
+ *  espacios de más y con tope. Hasta 4 veces el tope se acorta con aviso; más que eso es un texto roto de la IA y es
+ *  error, igual que un valor que no es texto ni número. $que dice dónde está el campo, para el mensaje. */
+function at_pt_texto(mixed $v, int $max, string $que, array &$errores, array &$avisos, bool $multilinea = false): string {
+	if ($v === null) {
+		return '';
+	}
+	if (is_int($v) || is_float($v)) {
+		$v = (string) $v;
+	}
+	if (!is_string($v)) {
+		$errores[] = "{$que}: no es texto.";
+		return '';
+	}
+	if (!mb_check_encoding($v, 'UTF-8')) {
+		$errores[] = "{$que}: el texto no es UTF-8 válido.";
+		return '';
+	}
+	$t = str_replace(["\r\n", "\r"], "\n", $v);
+	if ($multilinea) {
+		$t = (string) preg_replace('/[^\P{Cc}\n]/u', ' ', $t);
+		$t = (string) preg_replace('/[ ]+/u', ' ', $t);
+		$t = (string) preg_replace("/ ?\n ?/u", "\n", $t);
+		$t = trim((string) preg_replace("/\n{3,}/u", "\n\n", $t));
+	} else {
+		$t = trim((string) preg_replace('/[\p{Cc}\s]+/u', ' ', $t));
+	}
+	$largo = mb_strlen($t, 'UTF-8');
+	if ($largo > 4 * $max) {
+		$errores[] = "{$que}: el texto es demasiado largo (" . number_format($largo, 0, ',', '.') . " caracteres; máximo {$max}).";
+		return '';
+	}
+	if ($largo > $max) {
+		$avisos[] = "{$que}: se acortó a {$max} caracteres.";
+		$t = rtrim(mb_substr($t, 0, $max - 1, 'UTF-8')) . '…';
+	}
+	return $t;
+}
+
+/** El plan desde el texto de la IA: JSON puro, con cerco ```json o con texto alrededor (del primer «{» al último «}»).
+ *  null si no hay un objeto JSON (texto suelto, JSON roto, una lista —aunque envuelva un objeto— o un objeto vacío). */
+function at_pt_plan_de_json(string $texto): ?array {
+	$t = trim((string) preg_replace('/^\xEF\xBB\xBF/', '', $texto));
+	$t = trim((string) preg_replace('/^```[a-zA-Z]*\s*|\s*```$/', '', $t));
+	$intentos = [$t];
+	$a = strpos($t, '{');
+	$b = strrpos($t, '}');
+	if ($a !== false && $b !== false && $b > $a && !str_starts_with($t, '[')) {
+		$intentos[] = substr($t, $a, $b - $a + 1);
+	}
+	foreach ($intentos as $intento) {
+		$d = json_decode($intento, true);
+		if (is_array($d) && $d !== [] && !array_is_list($d)) {
+			return $d;
+		}
+	}
+	return null;
+}
+
+/** «Qué necesitamos de ti» cuando la IA no trae nada (cláusula 4.2: logo, textos y accesos). */
+function at_pt_necesitamos_defecto(): array {
+	return ['Logo y colores de tu marca', 'Textos e información de tu negocio', 'Accesos que el proyecto necesite (dominio, hosting o cuentas)'];
+}
+
+/** Reuniones cuando la IA no trae ninguna (spec §2). */
+function at_pt_reuniones_defecto(): array {
+	return [
+		['nombre' => 'Reunión de inicio', 'detalle' => ''],
+		['nombre' => 'Llamada de seguimiento del plan', 'detalle' => ''],
+		['nombre' => 'Entrega y capacitación', 'detalle' => ''],
+	];
+}
+
+/** Días hábiles que ocupa un bloque en secuencia (sin su revisión): la misma regla de at_pt_calcular_fechas(),
+ *  contada en días hábiles (los feriados alargan el calendario, no los días hábiles). */
+function at_pt_dias_bloque(array $bloque): int {
+	$fin = -1;
+	$inicio_anterior = 0;
+	$primera = true;
+	foreach (($bloque['actividades'] ?? []) as $a) {
+		$inicio = $primera ? 0 : (!empty($a['en_paralelo']) ? $inicio_anterior : $fin + 1);
+		$fin = max($fin, $inicio + max(1, (int) ($a['dias_habiles'] ?? 1)) - 1);
+		$inicio_anterior = $inicio;
+		$primera = false;
+	}
+	return $fin + 1;
+}

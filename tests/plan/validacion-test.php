@@ -56,4 +56,39 @@ ok($arr['actividades'][1]['nombre'] === 'Entrega de logo, textos y accesos' && $
 ok($arr['actividades'][0]['etapa'] === 'arranque' && $arr['actividades'][1]['origen'] === 'tabla' && $arr['actividades'][1]['en_paralelo'] === false, 'arranque: etapa arranque, origen tabla, sin paralelo');
 ok(array_keys($arr['actividades'][0]) === ['nombre', 'detalle', 'responsable', 'dias_habiles', 'servicio', 'etapa', 'origen', 'en_paralelo', 'desde', 'hasta'], 'actividad con las diez claves del contrato, en orden');
 
+// Review Focus 2: del texto de la IA solo sale un plan si es un objeto JSON; lo demás es null y no llega a validarse.
+ok(at_pt_plan_de_json('esto no es JSON') === null && at_pt_plan_de_json('{"fases": [') === null && at_pt_plan_de_json('[1, 2]') === null && at_pt_plan_de_json('[{"proyecto": "X"}]') === null && at_pt_plan_de_json('{}') === null && at_pt_plan_de_json('') === null, 'JSON inválido, una lista (aunque envuelva un objeto) u objeto vacío: null');
+ok(at_pt_plan_de_json("```json\n{\"proyecto\": \"X\", \"fases\": []}\n```") === ['proyecto' => 'X', 'fases' => []], 'JSON con cerco ```json');
+ok(at_pt_plan_de_json("Aquí va el plan:\n{\"proyecto\": \"X\"}\nSaludos") === ['proyecto' => 'X'] && at_pt_plan_de_json("\xEF\xBB\xBF{\"proyecto\": \"Y\"}") === ['proyecto' => 'Y'], 'JSON con texto alrededor o con BOM');
+
+// Ayudas para comparar nombres y leer sí o no
+ok(at_pt_clave_nombre("  Diseño \t Web ") === 'diseño web' && at_pt_clave_nombre('ARRANQUE') === 'arranque', 'nombres para comparar: minúsculas y espacios simples');
+ok(at_pt_booleano(true) && at_pt_booleano(1) && at_pt_booleano('Sí') && at_pt_booleano(' on ') && at_pt_booleano('true'), 'sí: true, 1, «Sí», «on» y «true»');
+ok(!at_pt_booleano(false) && !at_pt_booleano(0) && !at_pt_booleano(2) && !at_pt_booleano('no') && !at_pt_booleano(null) && !at_pt_booleano([1]), 'no: false, 0, 2, «no», null o una lista');
+
+// Valores mostrados en un mensaje de error
+ok(at_pt_mostrar(null) === 'vacío' && at_pt_mostrar('') === 'vacío' && at_pt_mostrar(false) === 'false' && at_pt_mostrar([1]) === 'una lista' && at_pt_mostrar(2.5) === '2.5' && at_pt_mostrar("dos\n  líneas") === 'dos líneas', 'valores de la IA mostrados cortos y en una línea');
+ok(at_pt_mostrar(str_repeat('x', 50)) === str_repeat('x', 39) . '…' && at_pt_mostrar("\xFF") === 'texto ilegible', 'lo largo se corta a 40 caracteres y lo que no es UTF-8 no se muestra');
+
+// Texto limpio con tope: se acorta con aviso hasta 4 veces el tope; más largo es error
+$e = [];
+$w = [];
+ok(at_pt_texto("  Hola\t mundo \x07 ", 20, 'Campo', $e, $w) === 'Hola mundo' && $e === [] && $w === [], 'una línea: sin caracteres de control ni espacios de más');
+ok(at_pt_texto("Uno\r\n\r\n\r\nDos ", 20, 'Campo', $e, $w, true) === "Uno\n\nDos" && at_pt_texto(42, 20, 'Campo', $e, $w) === '42' && at_pt_texto(null, 20, 'Campo', $e, $w) === '' && $e === [], 'multilínea: conserva el párrafo; un número pasa a texto; null queda vacío');
+ok(at_pt_texto(str_repeat('a', 25), 20, 'Campo', $e, $w) === str_repeat('a', 19) . '…' && $w === ['Campo: se acortó a 20 caracteres.'], 'hasta 4 veces el tope: se acorta con «…» y aviso');
+ok(at_pt_texto(str_repeat('a', 81), 20, 'Campo', $e, $w) === '' && $e === ['Campo: el texto es demasiado largo (81 caracteres; máximo 20).'], 'más de 4 veces el tope: error legible');
+$e = [];
+ok(at_pt_texto(['x'], 20, 'Campo', $e, $w) === '' && at_pt_texto("\xFF", 20, 'Campo', $e, $w) === '' && $e === ['Campo: no es texto.', 'Campo: el texto no es UTF-8 válido.'], 'una lista o bytes que no son UTF-8: error');
+
+// Listas de siempre y topes de la carta Gantt
+ok(count(at_pt_necesitamos_defecto()) === 3 && array_column(at_pt_reuniones_defecto(), 'nombre') === ['Reunión de inicio', 'Llamada de seguimiento del plan', 'Entrega y capacitación'], 'listas de siempre para lo que la IA deje vacío');
+ok(AT_PT_MAX_BLOQUES === 14 && AT_PT_MAX_ACTIVIDADES_BLOQUE === 10 && AT_PT_MAX_ACTIVIDADES === 60 && AT_PT_MAX_DIAS_PLAN === 130 && AT_PT_DIAS_REVISION === 5, 'topes de la carta Gantt y 5 días hábiles de revisión (cláusula 6.1)');
+
+// Días hábiles de un bloque en secuencia (sin su revisión)
+$paralelas = at_pt_dias_bloque(['actividades' => [
+	['dias_habiles' => 5], ['dias_habiles' => 2, 'en_paralelo' => true], ['dias_habiles' => 1], ['dias_habiles' => 3, 'en_paralelo' => true],
+]]);
+ok($paralelas === 8, 'días de un bloque con paralelas: 5 (con 2 en paralelo) + 3 (con 1 en paralelo) = 8');
+ok(at_pt_dias_bloque(['actividades' => [['dias_habiles' => 1, 'en_paralelo' => true], ['dias_habiles' => 2]]]) === 3 && at_pt_dias_bloque(['actividades' => []]) === 0, 'la primera nunca es paralela; bloque vacío: 0');
+
 fin();

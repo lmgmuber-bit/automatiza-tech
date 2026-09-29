@@ -249,5 +249,5 @@ el portal del cliente mostrando el plan (posible fase siguiente: enlazar el plan
 
 1. Corregir la tabla de tiempos de referencia (sección 3) antes de la primera generación.
 2. Revisar este documento (con los ajustes del 29-sep) y dar el ok para empezar la etapa 1.
-4. Decidir si el PR #50 (cierre de cliente) se mergea antes de empezar: esta rama parte de él.
-3. Etapa 3: plantilla de Meta y ok para tocar el bot.
+3. Decidir si el PR #50 (cierre de cliente) se mergea antes de empezar: esta rama parte de él.
+4. Etapa 3: plantilla de Meta y ok para tocar el bot.

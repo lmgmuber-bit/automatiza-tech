@@ -327,7 +327,7 @@ add_action('rest_api_init', function () {
 
 /**
  * Task 19: nota 'pedido_respuesta' (envío automático) cuyo metadata.wamid es exactamente $wamid; null si
- * no hay (p. ej. el wamid es de otro flujo, como los recordatorios). El LIKE es solo un prefiltro: se
+ * no hay (p. ej. el wamid es de un recordatorio o de ARGOS). El LIKE es solo un prefiltro: se
  * busca el wamid tal como quedó escrito en el JSON (wp_json_encode escapa '/' como '\/', y un wamid en
  * base64 puede traer '/'), y después se compara exacto tras decodificar.
  */
@@ -356,6 +356,7 @@ function at_cc_nota_envio_por_wamid(string $wamid): ?object {
  * no se lo entregó al cliente (p. ej. 131049, límite de mensajes de marketing por persona). Por cada uno
  * con una nota 'pedido_respuesta' de ese wamid, queda una nota interna 'whatsapp_no_entregado' y un
  * correo a Luis; nunca cambia el estado de la propuesta. Idempotente por wamid (Meta y n8n reintentan).
+ * Desde el 29-sep avisa igual los recordatorios de WhatsApp que anotan sus flujos (whatsapp-recordatorios.php).
  * Cuerpo: {"estados":[{"wamid":"wamid.…","estado":"failed","codigo":131049,"titulo":"…","telefono":"569…"}]}.
  * Un cuerpo raro nunca da 500: lo que no calza se cuenta en 'ignorados'. Máximo 20 estados por llamada.
  */
@@ -386,10 +387,22 @@ function at_cc_rest_estado_whatsapp(WP_REST_Request $r) {
 		$nota = at_cc_nota_envio_por_wamid($wamid);
 		$p = $nota ? at_cc_propuesta_por_id((int) $nota->propuesta_id) : null;
 		if (!$p) {
+			// 29-sep (decisión de Luis): si el wamid es de un recordatorio que anotó su flujo
+			// (whatsapp-recordatorios.php), el aviso sale aquí, una vez por wamid.
+			$envio_rec = function_exists('at_cc_envio_recordatorio_por_wamid') ? at_cc_envio_recordatorio_por_wamid($wamid) : null;
+			if ($envio_rec !== null) {
+				if (at_cc_registrar_fallo_recordatorio($envio_rec, $wamid, $codigo, $titulo)) {
+					$avisados++;
+				} else {
+					$ignorados++;
+				}
+				continue;
+			}
 			// Revisión de la Task 19: el 'failed' puede llegar antes que la nota del envío (la nota se
 			// escribe cuando vuelve el flujo de n8n). Queda en espera 15 minutos y lo avisa
-			// at_cc_anotar_envio_whatsapp() si aparece la nota; si no aparece, era de otro flujo (p. ej.
-			// los recordatorios) y el transient vence solo. Para el bot sigue contando como ignorado.
+			// at_cc_anotar_envio_whatsapp() o at_cc_rest_envio_recordatorio() si aparece el envío; si no
+			// aparece, era de otro mensaje (p. ej. de ARGOS) y el transient vence solo. Para el bot sigue
+			// contando como ignorado.
 			set_transient(at_cc_clave_fallo_pendiente($wamid), ['codigo' => $codigo, 'titulo' => $titulo], 15 * MINUTE_IN_SECONDS);
 			$ignorados++;
 			continue;

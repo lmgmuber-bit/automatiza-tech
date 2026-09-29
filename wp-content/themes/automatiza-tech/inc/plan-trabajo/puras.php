@@ -911,3 +911,112 @@ function at_pt_luis_perdidas(array $anterior, array $nuevo): array {
 	}
 	return $avisos;
 }
+
+/* ---------- Fechas y cronograma de la carta Gantt (Task 3) ---------- */
+
+/** Semanas de calendario (de lunes a domingo) que toca el rango; 0 si una fecha es inválida o el rango está al revés. */
+function at_pt_semanas(string $desde, string $hasta): int {
+	$a = at_pt_ymd($desde);
+	$b = at_pt_ymd($hasta);
+	if ($a === '' || $b === '' || $b < $a) {
+		return 0;
+	}
+	$lunes = static function (string $f): DateTimeImmutable {
+		$d = at_pt_dia($f);
+		return $d->modify('-' . ((int) $d->format('N') - 1) . ' days');
+	};
+	return intdiv((int) $lunes($a)->diff($lunes($b))->days, 7) + 1;
+}
+
+/** Llena desde y hasta de cada actividad, la fecha de cada hito, fecha_inicio y el cronograma de la carta Gantt.
+ *  Secuencia: fases, bloques y actividades en su orden. La primera actividad de un bloque parte en el cursor; cada
+ *  siguiente parte el hábil siguiente al mayor «hasta» del bloque, salvo en_paralelo, que parte el mismo día que la
+ *  anterior. Un bloque con entrega suma «Tu revisión» (5 días hábiles, del cliente) desde el hábil siguiente a su fin,
+ *  y el cursor sigue después de la revisión. Barras: una por bloque (responsable común o 'ambos') y una por revisión.
+ *  Hitos: fin de la revisión del bloque despues_de (o su fin si no tiene entrega); se agrega siempre «Entrega
+ *  estimada» = fin del último bloque de implementación (o fin del cronograma si no hay esa fase). Un $inicio que no es
+ *  hábil parte el hábil siguiente (Review Focus 1). Con $inicio inválido devuelve el plan sin tocar. */
+function at_pt_calcular_fechas(array $plan, string $inicio, array $feriados): array {
+	$cursor = at_pt_sumar_habiles($inicio, 1, $feriados);
+	if ($cursor === '' || !is_array($plan['fases'] ?? null)) {
+		return $plan;
+	}
+	$plan['fecha_inicio'] = $cursor;
+	$barras = [];
+	$fecha_hito = [];
+	$fin_implementacion = '';
+	$fin = $cursor;
+	foreach ($plan['fases'] as $fi => $fase) {
+		$clave_fase = (string) ($fase['clave'] ?? '');
+		foreach (($fase['bloques'] ?? []) as $bi => $bloque) {
+			$actividades = $bloque['actividades'] ?? [];
+			if (!is_array($actividades) || $actividades === []) {
+				continue;
+			}
+			$inicio_bloque = $cursor;
+			$fin_bloque = '';
+			$desde_anterior = $cursor;
+			$responsables = [];
+			$primera = true;
+			foreach ($actividades as $ai => $a) {
+				if ($primera) {
+					$desde = $cursor;
+				} elseif (!empty($a['en_paralelo'])) {
+					$desde = $desde_anterior;
+				} else {
+					$desde = at_pt_siguiente_habil($fin_bloque, $feriados);
+				}
+				$hasta = at_pt_sumar_habiles($desde, max(1, (int) ($a['dias_habiles'] ?? 1)), $feriados);
+				$plan['fases'][$fi]['bloques'][$bi]['actividades'][$ai]['desde'] = $desde;
+				$plan['fases'][$fi]['bloques'][$bi]['actividades'][$ai]['hasta'] = $hasta;
+				$fin_bloque = max($fin_bloque, $hasta);
+				$desde_anterior = $desde;
+				$responsables[(string) ($a['responsable'] ?? 'ambos')] = true;
+				$primera = false;
+			}
+			$barras[] = [
+				'fase'        => $clave_fase,
+				'etiqueta'    => (string) ($bloque['nombre'] ?? ''),
+				'tipo'        => 'trabajo',
+				'responsable' => count($responsables) === 1 ? (string) array_key_first($responsables) : 'ambos',
+				'desde'       => $inicio_bloque,
+				'hasta'       => $fin_bloque,
+			];
+			$termina = $fin_bloque;
+			if (!empty($bloque['entrega'])) {
+				$revision_desde = at_pt_siguiente_habil($fin_bloque, $feriados);
+				$termina = at_pt_sumar_habiles($revision_desde, AT_PT_DIAS_REVISION, $feriados);
+				$barras[] = ['fase' => $clave_fase, 'etiqueta' => 'Tu revisión', 'tipo' => 'revision', 'responsable' => 'cliente', 'desde' => $revision_desde, 'hasta' => $termina];
+			}
+			$fecha_hito[at_pt_clave_nombre((string) ($bloque['nombre'] ?? ''))] ??= $termina;
+			if ($clave_fase === 'implementacion') {
+				$fin_implementacion = $fin_bloque;
+			}
+			$fin = max($fin, $termina);
+			$cursor = at_pt_siguiente_habil($termina, $feriados);
+		}
+	}
+	$hitos_plan = [];
+	$hitos = [];
+	foreach (($plan['hitos'] ?? []) as $h) {
+		$nombre = is_array($h) ? (string) ($h['nombre'] ?? '') : '';
+		$clave = at_pt_clave_nombre(is_array($h) ? (string) ($h['despues_de'] ?? '') : '');
+		if ($nombre === '' || !isset($fecha_hito[$clave]) || at_pt_clave_nombre($nombre) === 'entrega estimada') {
+			continue; // la validación ya avisó; aquí se descarta sin ruido
+		}
+		$h['fecha'] = $fecha_hito[$clave];
+		$hitos_plan[] = $h;
+		$hitos[] = ['nombre' => $nombre, 'fecha' => $fecha_hito[$clave]];
+	}
+	$hitos[] = ['nombre' => 'Entrega estimada', 'fecha' => $fin_implementacion !== '' ? $fin_implementacion : $fin];
+	usort($hitos, static fn(array $x, array $y): int => strcmp($x['fecha'], $y['fecha'])); // estable: a igual fecha, en su orden
+	$plan['hitos'] = $hitos_plan;
+	$plan['cronograma'] = [
+		'inicio'  => $plan['fecha_inicio'],
+		'fin'     => $fin,
+		'semanas' => at_pt_semanas($plan['fecha_inicio'], $fin),
+		'barras'  => $barras,
+		'hitos'   => $hitos,
+	];
+	return $plan;
+}

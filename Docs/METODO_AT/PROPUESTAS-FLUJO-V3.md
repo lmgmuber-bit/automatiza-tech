@@ -84,6 +84,26 @@ Diseño: `Docs/superpowers/specs/2026-09-24-modulo-propuestas-admin-design.md`; 
   repo; respaldo previo en `C:/Users/luis_/respaldos/n8n/2026-09-24-correo-precargado/` (rollback: volver a
   publicar esos JSON).
 
+## Precios, reaprobación y enlaces (lecciones del 2026-09-28)
+
+- **Guardar no guarda precios.** Las filas de la tabla de inversión solo se guardan con «Pedir cambios» o
+  «Aprobar». Si Luis cambia precios y aprieta Guardar, se pierden.
+- **Aprobar manda las filas que están en pantalla**, no las de la base. Si un agente cambió los precios por script
+  mientras el panel estaba abierto, Luis tiene que **recargar el panel** antes de Aprobar o pisa los precios nuevos
+  con los viejos.
+- **Desde `lista` no se puede Aprobar de nuevo** (`lista → ajustando|sent`): para rehacer la versión final hay que
+  «Pedir cambios» (vuelve a `borrador`) y después Aprobar. Un agente puede reabrirla por script, siempre respaldando
+  el payload en `~/respaldos/propuesta-<id>-antes-*.json`.
+- **Cómo se presenta la inversión para que se entienda** (pedido de Luis): tres bloques con su total destacado
+  (`emphasis`): A) pago único de la fase 1, B) mensual desde el mes 1, C) anual al costo (dominio y hosting); después
+  lo que cambia desde el 2.º año y la fase 2 «no incluida, desde». Sin paréntesis que confundan como «(mínimo 6 meses)».
+- **Tabla de más de 6 filas:** el renderer la dibuja en modo denso (`.pricing-table.is-dense`, 19 px) para que la
+  lámina no se desborde.
+- **URLs como enlace:** desde el 28-sep el renderer convierte en enlace cualquier `https://…` de los párrafos y de los
+  próximos pasos (`linkify()` después de escapar el HTML). El enlace de un demo va como **primer** próximo paso.
+- **Cambio del renderer = redespliegue en Easypanel** (ver `renderer/DEPLOY.md`); afecta a todas las propuestas que
+  se rendericen después, no a las ya publicadas.
+
 ## Fotos por rubro (regla de Luis, 2026-09-24)
 
 Las fotos son del rubro de cada cliente, como las de Jeffer (béisbol) y Orly (funeraria): su gente, sus clientes,

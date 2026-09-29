@@ -91,3 +91,31 @@ function at_pt_pedir_render(int $plan_id, string $modo, bool $aviso): string {
 	}
 	return $motivo;
 }
+
+/**
+ * Escucha at_contrato_firmado, que ContractService::sign_as_client() dispara después de mandar las
+ * copias. Contrato de servicios sin plan → crea el plan y pide el borrador. Firma repetida → nada.
+ * Nunca lanza: un fallo del plan no afecta la firma (queda en el log y, si n8n no recibe el aviso,
+ * el plan en «error», desde donde el panel ofrece «Reintentar borrador»). El aviso espera a lo más 5 s:
+ * va dentro de la petición en que el cliente firma y el webhook contesta apenas lo recibe.
+ */
+function at_pt_al_firmar(?object $contrato): void {
+	try {
+		if (!$contrato || (string) ($contrato->type ?? '') !== 'servicios') {
+			return;
+		}
+		$cid = (int) ($contrato->id ?? 0);
+		if ($cid <= 0 || at_pt_plan_de_contrato($cid)) {
+			return;
+		}
+		$id = at_pt_crear_plan($cid);
+		if (is_wp_error($id)) {
+			error_log('at_pt_al_firmar (contrato ' . $cid . '): ' . $id->get_error_message());
+			return;
+		}
+		at_pt_iniciar_borrador($id, 5);
+	} catch (\Throwable $e) {
+		error_log('at_pt_al_firmar: ' . $e->getMessage());
+	}
+}
+add_action('at_contrato_firmado', 'at_pt_al_firmar');

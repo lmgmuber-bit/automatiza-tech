@@ -1,0 +1,179 @@
+<?php
+/**
+ * Plan de trabajo: tabla propia (wp_automatiza_planes_trabajo), lecturas y escrituras.
+ * Un contrato de servicios firmado tiene a lo más un plan (índice único uniq_contrato).
+ * Lo contratado sale del contrato; la propuesta, si existe, solo aporta extracto de la reunión y fotos.
+ */
+if (!defined('ABSPATH')) {
+	exit;
+}
+
+function at_pt_tabla(): string {
+	global $wpdb;
+	return $wpdb->prefix . 'automatiza_planes_trabajo';
+}
+
+/**
+ * Crea la tabla con dbDelta. Idempotente (opción at_plan_schema = '1'). Si falla (tabla bloqueada,
+ * sin privilegio en el hosting), espera 5 minutos antes de reintentar, igual que at_cc_migrar_esquema().
+ */
+function at_pt_migrar_esquema(): void {
+	if (get_option('at_plan_schema') === '1' || get_transient('at_pt_migrar_intento')) {
+		return;
+	}
+	global $wpdb;
+	$t = at_pt_tabla();
+	$charset = $wpdb->get_charset_collate();
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+	dbDelta("CREATE TABLE {$t} (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  contrato_id BIGINT UNSIGNED NOT NULL,
+  crm_cliente_id BIGINT UNSIGNED NULL,
+  tech_id BIGINT UNSIGNED NULL,
+  propuesta_id BIGINT UNSIGNED NULL,
+  codigo CHAR(12) NOT NULL,
+  estado VARCHAR(20) NOT NULL DEFAULT 'generando',
+  fecha_inicio DATE NULL,
+  payload LONGTEXT NULL,
+  comentarios TEXT NULL,
+  nota TEXT NULL,
+  view_url VARCHAR(500) NULL,
+  pdf_url VARCHAR(500) NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  enviado_at DATETIME NULL,
+  PRIMARY KEY  (id),
+  UNIQUE KEY uniq_contrato (contrato_id),
+  UNIQUE KEY uniq_codigo (codigo),
+  KEY idx_crm (crm_cliente_id)
+) {$charset};");
+	if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($t))) !== $t) {
+		set_transient('at_pt_migrar_intento', 1, 5 * MINUTE_IN_SECONDS);
+		error_log('at_pt: no se pudo crear ' . $t . ': ' . $wpdb->last_error);
+		return;
+	}
+	update_option('at_plan_schema', '1');
+}
+add_action('admin_init', 'at_pt_migrar_esquema');
+
+/** Un plan por id; null si no existe. */
+function at_pt_plan(int $id): ?object {
+	if ($id <= 0) {
+		return null;
+	}
+	at_pt_migrar_esquema();
+	global $wpdb;
+	$f = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . at_pt_tabla() . ' WHERE id = %d', $id));
+	return $f ?: null;
+}
+
+/** Un plan por su código (12 letras o números, distingue mayúsculas); null si no existe. */
+function at_pt_plan_por_codigo(string $codigo): ?object {
+	if (!preg_match('/^[A-Za-z0-9]{12}$/', $codigo)) {
+		return null;
+	}
+	at_pt_migrar_esquema();
+	global $wpdb;
+	$f = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . at_pt_tabla() . ' WHERE codigo = %s', $codigo));
+	// La columna compara sin distinguir mayúsculas (collation *_ci): se exige el código exacto.
+	return ($f && hash_equals((string) $f->codigo, $codigo)) ? $f : null;
+}
+
+/** El plan de un contrato (hay a lo más uno); null si no tiene. */
+function at_pt_plan_de_contrato(int $contrato_id): ?object {
+	if ($contrato_id <= 0) {
+		return null;
+	}
+	at_pt_migrar_esquema();
+	global $wpdb;
+	$f = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . at_pt_tabla() . ' WHERE contrato_id = %d LIMIT 1', $contrato_id));
+	return $f ?: null;
+}
+
+/**
+ * Planes de un cliente del CRM, del más nuevo al más viejo. Manda el enlace actual de la ficha
+ * operativa (si la ficha se enlazó después de crear el plan, el plan igual aparece); si la ficha
+ * no está enlazada, el cliente que quedó anotado en el plan.
+ */
+function at_pt_planes_de_crm(int $crm_id): array {
+	if ($crm_id <= 0) {
+		return [];
+	}
+	at_pt_migrar_esquema();
+	global $wpdb;
+	return (array) $wpdb->get_results($wpdb->prepare(
+		'SELECT p.* FROM ' . at_pt_tabla() . " p LEFT JOIN {$wpdb->prefix}automatiza_tech_clients t ON t.id = p.tech_id
+		 WHERE COALESCE(t.crm_cliente_id, p.crm_cliente_id) = %d ORDER BY p.id DESC",
+		$crm_id
+	));
+}
+
+/** El contenido del plan como arreglo; [] si está vacío o no es un objeto JSON. */
+function at_pt_payload(object $fila): array {
+	$d = json_decode((string) ($fila->payload ?? ''), true);
+	return is_array($d) ? $d : [];
+}
+
+/** Fila del contrato (tabla de contracts/contract-service.php) sin cargar ContractService; null si no existe. */
+function at_pt_db_contrato(int $id): ?object {
+	if ($id <= 0) {
+		return null;
+	}
+	global $wpdb;
+	$c = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}automatiza_contracts WHERE id = %d", $id));
+	return $c ?: null;
+}
+
+/**
+ * Crea el plan de un contrato de servicios firmado, en «generando». Idempotente: si el contrato ya
+ * tiene plan, devuelve su id. Devuelve el id o WP_Error con un motivo legible.
+ */
+function at_pt_crear_plan(int $contrato_id): int|WP_Error {
+	at_pt_migrar_esquema();
+	$existente = at_pt_plan_de_contrato($contrato_id);
+	if ($existente) {
+		return (int) $existente->id;
+	}
+	$c = at_pt_db_contrato($contrato_id);
+	if (!$c) {
+		return new WP_Error('at_pt_sin_contrato', 'El contrato no existe.');
+	}
+	if ((string) $c->type !== 'servicios') {
+		return new WP_Error('at_pt_no_servicios', 'El plan de trabajo es solo para contratos de servicios.');
+	}
+	if ((string) $c->status !== 'signed') {
+		return new WP_Error('at_pt_sin_firma', 'El contrato todavía no está firmado por el cliente.');
+	}
+	global $wpdb;
+	$tech_id = (int) $c->client_id;
+	$crm_id = 0;
+	if ($tech_id > 0) {
+		$crm_id = (int) $wpdb->get_var($wpdb->prepare("SELECT crm_cliente_id FROM {$wpdb->prefix}automatiza_tech_clients WHERE id = %d", $tech_id));
+	}
+	$propuesta_id = (int) ($c->proposal_id ?? 0);
+	for ($intento = 0; $intento < 5; $intento++) {
+		$codigo = wp_generate_password(12, false);
+		// El renderer publica en /p/<código>/, la misma carpeta que usan las propuestas: nunca repetir uno.
+		$usado = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}automatiza_propuestas WHERE unique_link_id = %s", $codigo));
+		if ($usado > 0 || !preg_match('/^[A-Za-z0-9]{12}$/', $codigo)) {
+			continue;
+		}
+		$ok = $wpdb->insert(at_pt_tabla(), [
+			'contrato_id'    => $contrato_id,
+			'crm_cliente_id' => $crm_id > 0 ? $crm_id : null,
+			'tech_id'        => $tech_id > 0 ? $tech_id : null,
+			'propuesta_id'   => $propuesta_id > 0 ? $propuesta_id : null,
+			'codigo'         => $codigo,
+			'estado'         => 'generando',
+		]);
+		if ($ok) {
+			return (int) $wpdb->insert_id;
+		}
+		// Otro proceso pudo crear el plan de este contrato al mismo tiempo (índice único uniq_contrato).
+		$existente = at_pt_plan_de_contrato($contrato_id);
+		if ($existente) {
+			return (int) $existente->id;
+		}
+	}
+	return new WP_Error('at_pt_insert', 'No se pudo crear el plan: ' . $wpdb->last_error);
+}

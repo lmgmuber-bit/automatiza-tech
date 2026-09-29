@@ -3590,8 +3590,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/data/planes.json": {
-    "mtime": 1790296722.596543,
-    "ast_hash": "bd3149c5e47149a5b7efe5d8f28093d7",
+    "mtime": 1790677270.444061,
+    "ast_hash": "8c82d4870b9381fa2554198e1fdc74e1",
     "semantic_hash": ""
   },
   "CumpleBooth/public/data/themes.json": {
@@ -4155,8 +4155,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/sitio/index.php": {
-    "mtime": 1790296728.1241598,
-    "ast_hash": "ef7201b8471dc02bbca395a867f73a4f",
+    "mtime": 1790677270.4540594,
+    "ast_hash": "1b88860da853a6b7c96fafa77d9275bc",
     "semantic_hash": ""
   },
   "CumpleBooth/sitio/js/globo3d.js": {
@@ -4705,8 +4705,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1790296716.4606643,
-    "ast_hash": "233d467a804f12f1a22b1989f37c0a3e",
+    "mtime": 1790677270.4336016,
+    "ast_hash": "83d32410093a8d6b8ab56dbabac9bf32",
     "semantic_hash": ""
   },
   "AUDITORIA_OPENAI_N8N.md": {
@@ -4715,8 +4715,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1790367004.2373736,
-    "ast_hash": "dcc33f1d683cbb03ce108639499f8ec8",
+    "mtime": 1790677353.382653,
+    "ast_hash": "4aabe545a857af7acda8d1e4729e7dab",
     "semantic_hash": ""
   },
   "CONTEXTO_COMPLETO.md": {
@@ -5290,8 +5290,8 @@
     "semantic_hash": ""
   },
   "CumpleBooth/docs/FTP-MANIFEST.md": {
-    "mtime": 1790367004.259838,
-    "ast_hash": "baef523834233f46f15e82918d256e34",
+    "mtime": 1790677270.4430597,
+    "ast_hash": "5cff55d412d18aa62b15a8a973fe1361",
     "semantic_hash": ""
   },
   "CumpleBooth/docs/HIGGSFIELD-PROMPTS-CUMPLECLICK-MARCA-DE-AGUA-2026-08-11.md": {
@@ -5705,8 +5705,8 @@
     "semantic_hash": ""
   },
   "Docs/METODO_AT/README.md": {
-    "mtime": 1790367004.3074913,
-    "ast_hash": "2c9728551fcff5bfbe6c7445f3cb47a4",
+    "mtime": 1790677270.4610162,
+    "ast_hash": "8374f73c8ed71e9c4278b7b87aa0646a",
     "semantic_hash": ""
   },
   "Docs/METODO_AT/SERVICIOS_Y_CASOS_DE_USO.md": {
@@ -10435,8 +10435,8 @@
     "semantic_hash": ""
   },
   "renderer/src/escape.js": {
-    "mtime": 1790367004.434073,
-    "ast_hash": "9b45a44f72bcb82ff087ae1548e527dc",
+    "mtime": 1790677270.4630349,
+    "ast_hash": "c533ce97d2ab41a3b706fd26ab18890b",
     "semantic_hash": ""
   },
   "renderer/src/higgsfield.js": {
@@ -10475,8 +10475,8 @@
     "semantic_hash": ""
   },
   "renderer/src/template.js": {
-    "mtime": 1790367004.44871,
-    "ast_hash": "5c9ff24281e70777e35f49c3a8197f1d",
+    "mtime": 1790677270.4650333,
+    "ast_hash": "ef2d5737ac13c80d439ceb48bdc3f105",
     "semantic_hash": ""
   },
   "renderer/test/escape.test.js": {
@@ -10530,8 +10530,8 @@
     "semantic_hash": ""
   },
   "renderer/test/template.test.js": {
-    "mtime": 1790367004.4636538,
-    "ast_hash": "161fa6517d4ac827d542a87e0ac499eb",
+    "mtime": 1790677270.4670472,
+    "ast_hash": "9e7f99251c9fcaee91017899f3772ca2",
     "semantic_hash": ""
   },
   "scratchpad/higgsfield-api/hf_api.py": {
@@ -10595,8 +10595,8 @@
     "semantic_hash": ""
   },
   "Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md": {
-    "mtime": 1790367004.3074913,
-    "ast_hash": "cb84d089f03bf9f041060db229bcb43c",
+    "mtime": 1790677270.4570053,
+    "ast_hash": "54c395e4b7b0058e5893ba57a76bbbcb",
     "semantic_hash": ""
   },
   "Docs/superpowers/plans/2026-09-23-flujo-propuestas-v3.md": {
@@ -10620,8 +10620,8 @@
     "semantic_hash": ""
   },
   "renderer/DEPLOY.md": {
-    "mtime": 1790367004.431963,
-    "ast_hash": "d89ac2a0164fbc3facccc527f2c3ae7f",
+    "mtime": 1790677270.4620194,
+    "ast_hash": "a8533753966735d5de7625b461b1a937",
     "semantic_hash": ""
   },
   "scratchpad/higgsfield-api/PROMPT-AGENTE.md": {
@@ -10960,13 +10960,43 @@
     "semantic_hash": ""
   },
   "N8N/PROD/wa-plantillas-2026-09-24/README.md": {
-    "mtime": 1790366792.1293578,
-    "ast_hash": "f69a8b373990a98a53b405aa90c40b15",
+    "mtime": 1790677313.5900102,
+    "ast_hash": "e98169d7368fee1f3f906d4c520c6b99",
     "semantic_hash": ""
   },
   "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/argos_url_historial.txt": {
     "mtime": 1790296731.0586438,
     "ast_hash": "7c2e9da00546a10a347346aa84247482",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/design/generadores/og/og_cumpleclick.py": {
+    "mtime": 1790677270.4390311,
+    "ast_hash": "829ca2675077b9aa5671312576846f6c",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/sitio/api/chat.php": {
+    "mtime": 1790677270.4460585,
+    "ast_hash": "09e490be278bc344b0bfd76bc7b2b34b",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/sitio/js/chat.js": {
+    "mtime": 1790677270.455058,
+    "ast_hash": "dfa0d5a9cdd8e54157b3eb4bd77df0be",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/diagnostico/wa_verificar_envios.py": {
+    "mtime": 1790677329.9495866,
+    "ast_hash": "6bfcb920d4eeb87985f4a1dcea369c8c",
+    "semantic_hash": ""
+  },
+  "Docs/METODO_AT/PROTOTIPOS-Y-DEMOS.md": {
+    "mtime": 1790677270.4590168,
+    "ast_hash": "d649b6952c2e20560d0550d3db258900",
+    "semantic_hash": ""
+  },
+  "CumpleBooth/sitio/assets/img/og-cumpleclick.jpg": {
+    "mtime": 1790677270.4490635,
+    "ast_hash": "59b684d9f40249232836659c1d420e6c",
     "semantic_hash": ""
   }
 }

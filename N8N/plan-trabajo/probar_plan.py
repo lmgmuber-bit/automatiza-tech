@@ -571,6 +571,173 @@ def prueba_correos():
            f'correo sin vista {flujo}: botón a la pestaña del plan, proyecto escapado y ejecución')
 
 
+@seccion('borrador')
+def prueba_borrador():
+    from build_plan_1_borrador import PROMPT_PLAN  # noqa: F401  (vuelve a escribir plan-1-borrador.json)
+    revisar_workflow('plan-1-borrador.json', 'Plan de trabajo · 1 Borrador', 'plan-v1-borrador')
+    ok('easypanel' not in json.dumps(cargar('plan-1-borrador.json')), '1 Borrador: no toca el renderer ni enlaza a *.easypanel.host')
+    faltan = [x for x in TOPES_PROMPT if x not in PROMPT_PLAN]
+    ok(not faltan, 'PROMPT_PLAN: dice los topes que valida WordPress (13 bloques, 10 por bloque, 58 actividades, 1 a 60 días, '
+       '130 días hábiles, 10 hitos, claves) y pide no mandar el «Arranque»', faltan)
+    GUARDADO_OK = {'statusCode': 200, 'body': {'ok': True, 'errores': [], 'avisos': []}}
+    MARCADO = {'statusCode': 200, 'body': {'ok': True}}
+    hook = {'id': 9, 'codigo': 'PRUEBAplan01'}
+
+    # 1. Contrato con propuesta: el plan se guarda en WordPress sin Arranque, con origen «ia» y solo fotos nuevas.
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto()}],
+                'Guardar borrador': [GUARDADO_OK]}, openai={'Redactar plan': [{'content': json.dumps(PLAN_IA, ensure_ascii=False)}]})
+    sin_error(t, 'B1')
+    g = llamadas(t, 'Guardar borrador')
+    ok(len(g) == 1 and g[0]['url'] == WP + '/plan/9/borrador' and g[0]['body']['origen'] == 'borrador',
+       'B1: un solo POST /plan/9/borrador con origen «borrador»', g)
+    plan = g[0]['body']['plan'] if g else {}
+    ok([b['nombre'] for b in plan.get('fases', [{}])[0].get('bloques', [])] == ['Diseño', 'Desarrollo'], 'B1: sin el Arranque del modelo')
+    ok([b['slide'] for b in plan.get('image_briefs', [])] == NUEVAS, 'B1: con propuesta, solo las 8 fotos nuevas', plan.get('image_briefs'))
+    ok(llamadas(t, 'Leer contexto')[0]['url'] == WP + '/plan/9/contexto', 'B1: lee el contexto del plan 9')
+    ok(not llamadas(t, 'Marcar error') and not t['correos'], 'B1: sin error ni correo (el aviso lo manda «3 Render»)')
+    o = t['openai'].get('Redactar plan', [{}])[0]
+    ok(o.get('model') == 'gpt-4o' and o.get('temperature') == 0.3 and o.get('system') == PROMPT_PLAN,
+       'B1: gpt-4o, temperatura 0,3 y PROMPT_PLAN', {k: o.get(k) for k in ('model', 'temperature')})
+    pedido = json.loads(o.get('user') or '{}')
+    ok(set(pedido) == {'proyecto', 'empresa', 'rubro', 'contrato', 'propuesta', 'tabla', 'slides_foto'} and pedido.get('rubro') == '[PRUEBA] Panadería',
+       'B1: el modelo recibe proyecto, empresa, rubro (de la ficha del CRM), contrato, propuesta, tabla y láminas (ni el nombre de la persona ni fechas)', sorted(pedido))
+    ok(pedido.get('slides_foto') == NUEVAS and pedido.get('contrato') == CONTRATO and pedido.get('tabla') == TABLA,
+       'B1: lo contratado sale del contrato y las láminas pedidas son las nuevas')
+    ok((pedido.get('contrato') or {}).get('garantia_meses') == 6,
+       'B1: el modelo recibe los meses de garantía del contrato (contrato.garantia_meses, D7)', pedido.get('contrato'))
+
+    # 2. Contrato sin propuesta: portada y cierre piden foto nueva.
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto(propuesta=None, rubro='')}],
+                'Guardar borrador': [GUARDADO_OK]}, openai={'Redactar plan': [{'content': json.dumps(PLAN_IA, ensure_ascii=False)}]})
+    sin_error(t, 'B2')
+    g = llamadas(t, 'Guardar borrador')
+    slides = [b['slide'] for b in (g[0]['body']['plan'].get('image_briefs', []) if g else [])]
+    ok(slides == TODAS, 'B2: sin propuesta, el plan pide también portada y cierre', slides)
+    pedido = json.loads(t['openai'].get('Redactar plan', [{}])[0].get('user') or '{}')
+    ok(pedido.get('propuesta') is None and pedido.get('rubro') == '' and pedido.get('slides_foto') == TODAS, 'B2: el modelo sabe que no hay propuesta y qué láminas describir')
+
+    # 3. Respuesta que no es JSON → «error» con motivo legible y correo; nunca se guarda un plan roto.
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto()}],
+                'Marcar error': [MARCADO]}, openai={'Redactar plan': [{'content': 'Aquí va el plan:\n' + json.dumps(PLAN_IA)}]})
+    sin_error(t, 'B3')
+    me = llamadas(t, 'Marcar error')
+    ok(not llamadas(t, 'Guardar borrador'), 'B3: no guarda nada en WordPress')
+    ok(len(me) == 1 and me[0]['url'] == WP + '/plan/9/error' and me[0]['body']['nota'].startswith('La respuesta del modelo no es un JSON válido')
+       and me[0]['body']['nota'].endswith('(ejecución SIM-1)'), 'B3: POST /plan/9/error con el motivo y la ejecución', me)
+    ok(len(t['correos']) == 1 and t['correos'][0]['asunto'] == '⚠️ [PRUEBA] Sitio de la panadería · no se pudo generar el borrador del plan'
+       and 'automatiza-crm-ficha&amp;id=5&amp;pt=9#tab-plan' in t['correos'][0]['html'] and 'easypanel' not in t['correos'][0]['html'],
+       'B3: correo a Luis con el enlace a la pestaña del plan', [c['asunto'] for c in t['correos']])
+
+    # 4. Ninguna actividad (solo el Arranque del modelo) → error.
+    vacio = {'fases': [{'clave': 'diseno_desarrollo', 'bloques': [PLAN_IA['fases'][0]['bloques'][0]]}, {'clave': 'implementacion', 'bloques': []}]}
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto()}], 'Marcar error': [MARCADO]},
+                openai={'Redactar plan': [{'content': json.dumps(vacio)}]})
+    me = llamadas(t, 'Marcar error')
+    ok(me and me[0]['body']['nota'].startswith('El modelo no propuso ninguna actividad') and not llamadas(t, 'Guardar borrador'),
+       'B4: sin actividades → «error», sin guardar', me)
+
+    # 5. Fases desconocidas, días 0 y 200 y un texto enorme: n8n no los corrige (lo decide WordPress, que responde 422).
+    raro = json.loads(json.dumps(PLAN_IA))
+    raro['fases'].append({'clave': 'marketing', 'descripcion': '', 'bloques': [{'nombre': 'Campaña', 'actividades': [act('Anuncios', 'at', 200)]}]})
+    raro['fases'][0]['bloques'][1]['actividades'][0]['dias_habiles'] = 0
+    raro['fases'][0]['bloques'][1]['actividades'][0]['detalle'] = 'x' * 5000
+    rechazo = {'statusCode': 422, 'body': {'ok': False, 'errores': ['Fase desconocida: marketing', 'Días hábiles fuera de rango (1 a 60) en «Anuncios»: 200'], 'avisos': []}}
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto()}],
+                'Guardar borrador': [rechazo], 'Marcar error': [MARCADO]}, openai={'Redactar plan': [{'content': json.dumps(raro)}]})
+    sin_error(t, 'B5')
+    g = llamadas(t, 'Guardar borrador')
+    enviado = g[0]['body']['plan'] if g else {}
+    ok(enviado and [f['clave'] for f in enviado['fases']][-1] == 'marketing'
+       and actividad(enviado, 'Diseño de la portada')['dias_habiles'] == 0 and len(actividad(enviado, 'Diseño de la portada')['detalle']) == 5000,
+       'B5: n8n manda el plan tal cual y WordPress (at_pt_validar_plan) decide')
+    me = llamadas(t, 'Marcar error')
+    ok(me and me[0]['body']['nota'].startswith('WordPress rechazó el plan: Fase desconocida: marketing · Días hábiles fuera de rango'),
+       'B5: el 422 de WordPress queda como motivo legible en la nota', me)
+    ok(len(t['correos']) == 1 and 'Fase desconocida: marketing' in t['correos'][0]['html'], 'B5: el correo trae los errores de WordPress')
+
+    # 6. WordPress no encuentra el plan: ni se llama a OpenAI.
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 404, 'body': {'code': 'at_pt_no_existe', 'message': 'Plan no encontrado'}}],
+                'Marcar error': [{'statusCode': 404, 'body': {}}]}, openai={})
+    sin_error(t, 'B6')
+    me = llamadas(t, 'Marcar error')
+    ok(not t['openai'] and me and me[0]['body']['nota'].startswith('No se pudo leer el contexto del plan en WordPress (HTTP 404) — Plan no encontrado'),
+       'B6: contexto ilegible → motivo con el HTTP y sin gastar en OpenAI', me)
+    ok(t['correos'] and 'Tampoco se pudo marcar el plan como error' in t['correos'][0]['html'] and 'plan 9' in t['correos'][0]['asunto'],
+       'B6: el correo avisa que tampoco se pudo marcar el error', [c['asunto'] for c in t['correos']])
+
+    # 7. OpenAI caído; 8. WordPress caído al marcar el error.
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto()}], 'Marcar error': [{'error': {'message': 'ECONNRESET'}}]},
+                openai={'Redactar plan': [{'error': {'message': 'Rate limit reached'}}]})
+    sin_error(t, 'B7')
+    me = llamadas(t, 'Marcar error')
+    ok(me and me[0]['body']['nota'].startswith('El modelo no respondió: Rate limit reached'), 'B7: OpenAI caído → motivo legible', me)
+    ok(t['correos'] and 'sin respuesta' in t['correos'][0]['html'] and '«generando»' in t['correos'][0]['html'],
+       'B8: si WordPress tampoco responde, el correo dice que el plan puede seguir en «generando»')
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto()}], 'Marcar error': [MARCADO]},
+                openai={'Redactar plan': [{}]})
+    me = llamadas(t, 'Marcar error')
+    ok(me and me[0]['body']['nota'].startswith('El modelo no respondió (ejecución SIM-1)') and len(t['correos']) == 1,
+       'B7b: OpenAI falla sin detalle ({}, el error queda fuera de json) → «error» legible y correo', me)
+
+    # 9. Llave de más al final y 10. respuesta envuelta: se aceptan.
+    for caso, contenido in (('B9 llave de más', json.dumps(PLAN_IA) + '}'), ('B10 envuelta', json.dumps({'plan': PLAN_IA}))):
+        t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto()}], 'Guardar borrador': [GUARDADO_OK]},
+                    openai={'Redactar plan': [{'content': contenido}]})
+        ok(len(llamadas(t, 'Guardar borrador')) == 1 and not t['correos'], f'{caso}: se guarda el plan')
+
+    # 11. WordPress guarda pero no confirma (5xx): error.
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto()}],
+                'Guardar borrador': [{'statusCode': 500, 'body': {'message': 'Error crítico'}}], 'Marcar error': [MARCADO]},
+                openai={'Redactar plan': [{'content': json.dumps(PLAN_IA)}]})
+    me = llamadas(t, 'Marcar error')
+    ok(me and me[0]['body']['nota'].startswith('WordPress no guardó el plan (HTTP 500) — Error crítico'), 'B11: un 500 al guardar → error legible', me)
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto()}],
+                'Guardar borrador': [{'statusCode': 500, 'body': {'ok': False, 'errores': ['No se pudo guardar el plan.'], 'avisos': []}}],
+                'Marcar error': [MARCADO]}, openai={'Redactar plan': [{'content': json.dumps(PLAN_IA)}]})
+    me = llamadas(t, 'Marcar error')
+    ok(me and me[0]['body']['nota'].startswith('WordPress no guardó el plan (HTTP 500): No se pudo guardar el plan.'),
+       'B11b: el 500 propio de /borrador trae su motivo en «errores» y llega a la nota', me)
+
+    # 12. Llegó tarde (el plan ya siguió: otra ejecución lo guardó, Luis lo destrabó y volvió al borrador, etc.):
+    #     no se gasta en OpenAI, no se toca el plan y no se escribe. Con el plan en «error» sí se trabaja (WordPress lo acepta).
+    for estado in ('borrador', 'aprobando', 'listo'):
+        t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto(estado=estado)}]}, openai={})
+        sin_error(t, f'B12 {estado}')
+        ok(not t['openai'] and not llamadas(t, 'Guardar borrador') and not llamadas(t, 'Marcar error') and not t['correos'],
+           f'B12: plan en «{estado}» → el borrador no se pide, no se guarda, no se marca error ni se escribe')
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto(estado='error')}],
+                'Guardar borrador': [GUARDADO_OK]}, openai={'Redactar plan': [{'content': json.dumps(PLAN_IA)}]})
+    ok(len(llamadas(t, 'Guardar borrador')) == 1 and not t['correos'], 'B12: plan en «error» (Destrabar antes de que llegue n8n) → se genera y se guarda')
+    # D5: en «error» CON contenido, WordPress responde 409 a un borrador (nunca pisa lo que Luis editó): ni se pide.
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto(estado='error', plan_actual=PLAN_GUARDADO)}]},
+                openai={})
+    sin_error(t, 'B12 error con contenido')
+    ok(not t['openai'] and not llamadas(t, 'Guardar borrador') and not llamadas(t, 'Marcar error') and not t['correos'],
+       'B12: plan en «error» que ya tiene contenido → el borrador no se pide (WordPress respondería 409)')
+
+    # 13. WordPress responde 409 al guardar («llegó tarde y no se aplica»): no se pasa a «error» un plan que ya siguió.
+    tarde = {'statusCode': 409, 'body': {'ok': False, 'errores': ['El plan está en «aprobando»: este borrador llegó tarde y no se aplica.'], 'avisos': []}}
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto()}],
+                'Guardar borrador': [tarde]}, openai={'Redactar plan': [{'content': json.dumps(PLAN_IA)}]})
+    sin_error(t, 'B13')
+    ok(len(llamadas(t, 'Guardar borrador')) == 1 and not llamadas(t, 'Marcar error') and not t['correos'],
+       'B13: un borrador tardío (409) no pasa a «error» un plan que Luis ya está usando ni le escribe')
+
+    # 14. WordPress guardó pero no pudo pedir la vista previa: correo a Luis (si no, esperaría el «borrador listo»).
+    sin_vista = {'statusCode': 200, 'body': {'ok': True, 'errores': [], 'avisos': ['No se pudo pedir la vista previa: HTTP 404']}}
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto()}],
+                'Guardar borrador': [sin_vista]}, openai={'Redactar plan': [{'content': json.dumps(PLAN_IA)}]})
+    sin_error(t, 'B14')
+    ok(not llamadas(t, 'Marcar error') and len(t['correos']) == 1
+       and t['correos'][0]['asunto'] == '⚠️ [PRUEBA] Sitio de la panadería · borrador del plan guardado sin vista previa'
+       and 'Guardar y recalcular' in t['correos'][0]['html'] and 'automatiza-crm-ficha&amp;id=5&amp;pt=9#tab-plan' in t['correos'][0]['html'],
+       'B14: guardado sin vista previa → correo a Luis con «Guardar y recalcular», sin marcar error', [c['asunto'] for c in t['correos']])
+    otro_aviso = {'statusCode': 200, 'body': {'ok': True, 'errores': [], 'avisos': ['La IA mandó su propio bloque «Arranque»: se usó el fijo.']}}
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto()}],
+                'Guardar borrador': [otro_aviso]}, openai={'Redactar plan': [{'content': json.dumps(PLAN_IA)}]})
+    ok(not t['correos'], 'B14: otros avisos de WordPress no mandan correo (los muestra el panel)')
+
+
 # ==== Las tareas siguientes agregan sus secciones justo antes de esta línea ====
 
 if __name__ == '__main__':

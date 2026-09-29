@@ -215,3 +215,10 @@ test('pricing table gets is-dense only past six rows', () => {
   assert.ok(six.includes('<table class="pricing-table">'));
   assert.ok(seven.includes('<table class="pricing-table is-dense">'));
 });
+
+test('the deck tells the embedding page which slide the client is on (only slide number and total)', () => {
+  const html = renderProposalHtml(DATA, {});
+  assert.ok(html.includes("window.parent.postMessage({ type: 'at-deck-lamina', lamina: k + 1, total: slides.length }, '*')"));
+  assert.ok(html.includes('if (window.parent === window || k === ultimaAvisada) return;'));
+  assert.ok(html.includes('.observe(slides[slides.length - 1])'));
+});

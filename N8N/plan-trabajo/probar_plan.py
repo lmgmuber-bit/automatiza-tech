@@ -1031,6 +1031,70 @@ console.log(JSON.stringify(R));
        'leerRespuestaRender: un 401 no se reintenta; una salida vacía cuenta como falla de red')
 
 
+@seccion('correos_render')
+def prueba_correos_render():
+    from correos_plan import correo_render
+    codigo = correo_render()
+
+    def correr(v, g):
+        js = ("const $ = (n) => ({ isExecuted: n in DATOS, first: () => ({ json: DATOS[n] }) });\n"
+              "const salida = (function () {\n" + codigo + "\n})();\nconsole.log(JSON.stringify(salida[0].json));")
+        return node_js(js, {'Resultado del render': v, 'Guardar vista': g})
+
+    base = {'id': 9, 'crm': 5, 'exec': '888', 'proyecto': '[PRUEBA] Sitio <i>panadería</i>', 'view_url': VISTA, 'pdf_url': PDF,
+            'faltan': [], 'problemas': [], 'avisos': [], 'resumen': []}
+    g_listo = {'statusCode': 200, 'body': {'ok': True, 'estado': 'listo'}}
+    g_error = {'statusCode': 200, 'body': {'ok': True, 'estado': 'error'}}
+    g_borr = {'statusCode': 200, 'body': {'ok': True, 'estado': 'borrador'}}
+    p = '[PRUEBA] Sitio <i>panadería</i>'
+    sin_guardar = '⚠️ ' + p + ' · el resultado del plan no quedó guardado en WordPress'
+    # (nombre, resultado, respuesta de /vista, enviar, asunto, frases que debe traer, frases que no debe traer)
+    casos = [
+        ('final ok', dict(base, modo='final', aviso=False, ok=True,
+                          resumen=['Presentación y PDF generados', '8 de 8 fotos nuevas guardadas junto al plan',
+                                   'Con las fotos de la propuesta, sin costo: portada, cierre'],
+                          avisos=['la propuesta no tiene foto guardada para cierre: esas láminas van sin foto']), g_listo,
+         True, '✅ ' + p + ' · plan de trabajo listo',
+         ['Con las fotos de la propuesta, sin costo', '⚠️ la propuesta no tiene foto', '>Listo<', 'quedó <strong>listo</strong>'], ['«aprobando»']),
+        ('final con problemas', dict(base, modo='final', aviso=False, ok=False,
+                                     problemas=['fotos que no se generaron tras 3 intentos: carta Gantt']), g_error,
+         True, '⚠️ ' + p + ' · la versión final del plan tiene problemas', ['carta Gantt', 'no se vuelven a pagar', 'Con problemas'], ['>Listo<']),
+        ('final ok con el plan en error', dict(base, modo='final', aviso=False, ok=True, resumen=['Presentación y PDF generados']), g_error,
+         True, '⚠️ ' + p + ' · la versión final salió, pero el plan quedó en «error»',
+         ['dejó el plan en «error»', 'no se vuelven a pagar', 'Con problemas'], ['quedó <strong>listo</strong>', '>Listo<']),
+        ('borrador con aviso', dict(base, modo='draft', aviso=True, ok=True, resumen=['Vista previa generada (sin fotos)']), g_borr,
+         True, p + ' · borrador del plan listo para revisar', ['solo al «Aprobar»', 'Borrador'], []),
+        ('borrador sin aviso', dict(base, modo='draft', aviso=False, ok=True), g_borr, False, None, [], []),
+        ('borrador que falló', dict(base, modo='draft', aviso=False, ok=False,
+                                    problemas=['el renderer no devolvió la presentación (timeout)']), g_borr,
+         True, '⚠️ ' + p + ' · la vista previa del plan no se pudo generar', ['Guardar y recalcular', 'timeout'], []),
+        ('final sin guardar en WordPress', dict(base, modo='final', aviso=False, ok=True), {'statusCode': 500, 'body': {}},
+         True, sin_guardar, ['No se pudo guardar el resultado en WordPress', 'HTTP 500', '«aprobando»', 'Destrabar', 'Con problemas',
+                             'La presentación salió bien'], ['quedó <strong>listo</strong>', '>Listo<']),
+        ('borrador sin guardar en WordPress', dict(base, modo='draft', aviso=False, ok=True), {'error': {'message': 'ECONNRESET'}},
+         True, sin_guardar, ['No se pudo guardar el resultado en WordPress', 'sin respuesta', 'Con problemas'], ['>Borrador<']),
+    ]
+    for nombre, v, g, enviar, asunto, frases, ausentes in casos:
+        r, err = correr(v, g)
+        ok(r is not None, f'correo render {nombre}: el código corre', err)
+        if r is None:
+            continue
+        ok(r['enviar'] is enviar, f'correo render {nombre}: enviar = {enviar}', r['enviar'])
+        if asunto:
+            ok(r['asunto'] == asunto, f'correo render {nombre}: asunto', r['asunto'])
+        h = r['html']
+        ok('easypanel' not in h, f'correo render {nombre}: no enlaza a *.easypanel.host (ni la vista ni el PDF)')
+        ok('automatiza-crm-ficha&amp;id=5&amp;pt=9#tab-plan' in h and 'Plan de trabajo · aviso interno' in h,
+           f'correo render {nombre}: botón a la pestaña del plan y rótulo del plan')
+        ok('&lt;i&gt;panadería&lt;/i&gt;' in h and '<i>panadería</i>' not in h, f'correo render {nombre}: escapa el proyecto')
+        faltan = [f for f in frases if f not in h]
+        ok(not faltan, f'correo render {nombre}: trae lo que debe decir', faltan)
+        sobran = [f for f in ausentes if f in h]
+        ok(not sobran, f'correo render {nombre}: no dice lo que no corresponde', sobran)
+    r, _ = correr(dict(base, modo='final', aviso=False, ok=True, proyecto='x'), g_listo)
+    ok(r and '«aprobando»' not in r['html'], 'correo render: si WordPress guardó, no habla de un plan trabado')
+
+
 # ==== Las tareas siguientes agregan sus secciones justo antes de esta línea ====
 
 if __name__ == '__main__':

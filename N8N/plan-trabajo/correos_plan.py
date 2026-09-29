@@ -108,3 +108,67 @@ const exec = String($execution.id);"""
               + nota('Ejecución de n8n: ${esc(exec)}. Nada de esto le llegó al cliente.'))
     return js_correo_plan(prep, "'⚠️ ' + proyecto + ' · " + que + "'", 'Vista previa sin pedir: ${esc(proyecto)}',
                           etiqueta('Borrador', 'borrador'), cuerpo)
+
+
+
+def correo_render():
+    """Correo de «3 Render»: vista previa lista (solo si WordPress pidió aviso), versión final lista o con problemas.
+
+    Además de {asunto, html} devuelve {enviar}: sin aviso, una vista previa que salió bien y quedó guardada no manda
+    correo (Luis está mirando el panel, por ejemplo tras «Guardar y recalcular»). Solo dice «listo» si WordPress guardó
+    el resultado y dejó el plan en «listo» (POST /vista responde {ok, estado}).
+    """
+    prep = """const v = $('Resultado del render').first().json;
+const g = $('Guardar vista').first().json;
+const guardado = g.statusCode === 200;
+const ok = v.ok === true;
+const final = v.modo === 'final';
+// Una versión final que salió bien deja el plan «listo» solo si seguía «aprobando»: si Luis lo destrabó mientras
+// tanto, WordPress guarda los enlaces pero el plan sigue en «error». Sin «estado» en la respuesta, se asume «listo».
+const estadoWp = g.body && typeof g.body.estado === 'string' ? g.body.estado : '';
+const quedoListo = !final || estadoWp === '' || estadoWp === 'listo';
+const bien = ok && guardado && quedoListo;
+const enviar = v.aviso === true || final || !ok || !guardado;
+const panel = urlPanel(v.crm, v.id);
+const que = !guardado ? 'el resultado del plan no quedó guardado en WordPress'
+  : final ? (!ok ? 'la versión final del plan tiene problemas'
+    : (quedoListo ? 'plan de trabajo listo' : 'la versión final salió, pero el plan quedó en «' + estadoWp + '»'))
+  : (ok ? 'borrador del plan listo para revisar' : 'la vista previa del plan no se pudo generar');
+const titular = que.charAt(0).toUpperCase() + que.slice(1).replace(' para revisar', '');
+const li = (t) => `<li style="margin:0 0 6px;">${t}</li>`;
+const lista = (l, pre) => (Array.isArray(l) ? l : []).map((t) => li(pre + esc(t))).join('');"""
+    ul = '<ul style="margin:0;padding-left:18px;">'
+    no_guardado = caja('<strong>No se pudo guardar el resultado en WordPress</strong> '
+                       '(${esc(g.statusCode ? "HTTP " + g.statusCode : "sin respuesta")}).'
+                       '${final ? " El plan puede haber quedado en «aprobando»: revísalo en el panel y usa «Destrabar»." : ""}',
+                       'error')
+    no_quedo_listo = caja('La versión final salió bien, pero WordPress dejó el plan en «${esc(estadoWp)}» (por ejemplo, si '
+                          'lo destrabaste mientras se generaba): no quedó «listo». Revísalo en el panel: puedes volver al '
+                          'borrador o aprobarlo de nuevo, y las fotos que ya salieron no se vuelven a pagar.', 'aviso')
+    final_ok = (caja(ul + '${lista(v.resumen, "")}${lista(v.avisos, "⚠️ ")}</ul>', 'ok')
+                + "${!guardado ? `" + parrafo('La presentación salió bien, pero WordPress no registró el resultado.')
+                + "` : (quedoListo ? `" + parrafo('El plan quedó <strong>listo</strong>. Revísalo en el panel: nada se le '
+                                                  'envió al cliente.')
+                + "` : `" + no_quedo_listo + "`)}")
+    final_mal = (caja(ul + '${lista(v.problemas, "")}${lista(v.avisos, "⚠️ ")}</ul>', 'error')
+                 + parrafo('El plan quedó en <strong>error</strong>. Desde el panel puedes volver al borrador o aprobarlo de '
+                           'nuevo: las fotos que ya salieron no se vuelven a pagar.'))
+    borrador_ok = (parrafo('${guardado ? "La vista previa del plan (sin fotos) quedó lista." : "La vista previa del plan '
+                           '(sin fotos) se generó, pero el panel no la tiene: «Guardar y recalcular» la vuelve a pedir."} '
+                           'En la pestaña «Plan de trabajo» de la ficha del cliente ves las actividades, los días y las '
+                           'fechas: ahí los editas, pides cambios o lo apruebas.')
+                   + "${(v.avisos || []).length ? `" + caja(ul + '${lista(v.avisos, "⚠️ ")}</ul>', 'aviso') + "` : ''}"
+                   + parrafo('Las fotos nuevas se generan solo al «Aprobar»; su cantidad y su costo aparecen en el panel antes.'))
+    borrador_mal = (caja(ul + '${lista(v.problemas, "")}</ul>', 'error')
+                    + parrafo('El plan sigue en borrador. «Guardar y recalcular» en el panel vuelve a generar la vista previa.'))
+    cuerpo = ("${guardado ? '' : `" + no_guardado + "`}"
+              + "${ok ? (final ? `" + final_ok + "` : `" + borrador_ok + "`) : (final ? `" + final_mal + "` : `"
+              + borrador_mal + "`)}"
+              + '<div style="margin:6px 0 4px;">' + boton('${esc(panel)}', '✏️ Abrir el plan en el panel') + '</div>'
+              + nota('Ejecución de n8n: ${esc(v.exec)}. La presentación y el PDF se abren desde el panel. '
+                     'Nada de esto le llegó al cliente.'))
+    etiquetas = ("${bien ? (final ? `" + etiqueta('Listo', 'lista') + "` : `" + etiqueta('Borrador', 'borrador') + "`) : `"
+                 + etiqueta('Con problemas', 'error') + "`}")
+    asunto = "(bien ? (final ? '✅ ' : '') : '⚠️ ') + v.proyecto + ' · ' + que"
+    titulo = '${esc(titular)}: ${esc(v.proyecto)}'
+    return js_correo_plan(prep, asunto, titulo, etiquetas, cuerpo, extra='enviar')

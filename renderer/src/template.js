@@ -375,6 +375,14 @@ const SCRIPT = `
       : Math.min(window.innerWidth / 1920, 1);
     document.documentElement.style.setProperty('--zoom', z);
   }
+  // Avisa a la página que la muestra (ver-presentacion.php, otro dominio) en qué lámina va el cliente,
+  // para que el diálogo de aceptar se abra al llegar al final y no antes. Solo número de lámina y total.
+  var ultimaAvisada = -1;
+  function avisar(k) {
+    if (window.parent === window || k === ultimaAvisada) return;
+    ultimaAvisada = k;
+    try { window.parent.postMessage({ type: 'at-deck-lamina', lamina: k + 1, total: slides.length }, '*'); } catch (e) {}
+  }
   function show(n) {
     var next = Math.max(0, Math.min(slides.length - 1, n));
     // Direction drives which way the incoming slide travels, so going back
@@ -386,6 +394,13 @@ const SCRIPT = `
     }
     if (counter) counter.textContent = (i + 1) + ' / ' + slides.length;
     if (fill) fill.style.width = ((i + 1) / slides.length) * 100 + '%';
+    if (isDeck()) avisar(i);
+  }
+  // En «Ver todo» (lista con scroll) cuenta como leída al asomar la última lámina.
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting && !isDeck()) avisar(slides.length - 1); });
+    }, { threshold: 0.5 }).observe(slides[slides.length - 1]);
   }
   function setMode(deck) {
     body.classList.toggle('mode-deck', deck);

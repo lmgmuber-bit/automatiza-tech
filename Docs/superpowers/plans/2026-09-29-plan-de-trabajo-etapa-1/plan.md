@@ -8,8 +8,9 @@ ficha del cliente en el CRM, con la misma plantilla de la propuesta. En la Etapa
 
 **Architecture:** Módulo WordPress independiente `inc/plan-trabajo/` (datos, cálculos puros de días hábiles y Gantt,
 REST para n8n, pestaña en la ficha del CRM y ajustes con la tabla de tiempos) que se dispara con un hook nuevo al
-firmar el contrato. Tres flujos n8n (borrador con GPT-4o, cambios con GPT-4o y render) y un tipo de documento nuevo
-`document_type: "plan"` en el propuesta-renderer (Node + Playwright) con la carta Gantt en CSS.
+firmar el contrato. Tres flujos n8n (borrador con GPT-4o, cambios con GPT-4o y render, que en la versión final revisa
+con GPT-4o que las fotos no tengan texto, como las propuestas) y un tipo de documento nuevo `document_type: "plan"` en
+el propuesta-renderer (Node + Playwright) con la carta Gantt en CSS.
 
 **Tech Stack:** PHP 8 + WordPress (tema `automatiza-tech`, mu-plugin del CRM), n8n (builders Python que generan JSON de
 workflows con nodos Code en JavaScript), Node 22 + Express + Playwright (renderer), pruebas PHP propias sin framework,
@@ -40,7 +41,10 @@ workflows con nodos Code en JavaScript), Node 22 + Express + Playwright (rendere
 - Etapa 1 = solo Luis ve: cero correos o WhatsApp al cliente; los correos de n8n van solo a Luis y enlazan solo a
   `automatizatech.cl` (nunca a `*.easypanel.host`).
 - Fotos: portada y cierre reutilizan las de la propuesta si existe; las láminas nuevas piden fotos nuevas solo al
-  «Aprobar», con cantidad y costo (US$0,0032 c/u de lista, máximo x2) a la vista.
+  «Aprobar», con cantidad y costo a la vista (US$0,0032 c/u de lista más ≈ US$0,026 de la revisión de texto con
+  GPT-4o; máximo x2). La versión final revisa con GPT-4o que las fotos nuevas no tengan texto, rehace una vez las que
+  lo tengan y avisa lo que quede, sin pasar el plan a `error` (decisión D18, cambiada por Luis el 29-sep; Tasks 4, 9
+  y 14).
 - Todo lo que despliega a PROD, Easypanel o n8n lo autoriza Luis paso a paso (Task 16).
 - Commits en español terminados en `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
@@ -58,6 +62,9 @@ workflows con nodos Code en JavaScript), Node 22 + Express + Playwright (rendere
    queda en `error` con «Reintentar» (Tasks 5 y 6).
 6. Carta Gantt larga (plataforma a medida + soporte, 10 a 14 semanas, 15 o más barras): cabe y se lee en 1920×1080 y
    en el PDF (Task 12).
+7. Fotos con texto en la versión final: GPT-4o las revisa en una consulta, se rehacen una vez dentro del mismo tope
+   de 3 renders y lo que siga con texto llega como aviso en la nota y en el correo, nunca como `error`; una foto ya
+   rehecha no se vuelve a pagar al aprobar de nuevo (Task 14, ciclo D; costo a la vista en las Tasks 4 y 9).
 
 ## Orden de ejecución
 
@@ -2261,7 +2268,8 @@ cd /c/wamp64/www/automatiza-tech/.worktrees/plan-trabajo && git add wp-content/t
 - Produces:
   - `at_pt_transiciones(): array` y `at_pt_transicion_valida(string $de, string $a): bool` — el mapa del esqueleto; un estado desconocido no pasa a ninguno.
   - `AT_PT_USD_POR_FOTO = 0.0032` — copia de la tarifa de `at_propuesta_costo_fotos()` (`inc/proposals-flow.php:108` y `:124`); no se hace `require` de `proposals-flow.php`.
-  - `at_pt_costo_fotos(array $image_briefs, bool $hay_propuesta): array` → `['fotos' => int, 'usd_lista' => float, 'usd_max' => float]` (un brief válido por lámina; con propuesta, `cover` y `cierre` no cuentan; `usd_max` = x2).
+  - `AT_PT_USD_REVISION = 0.026` — copia de la cifra de la revisión de texto con GPT-4o que suma `at_propuesta_costo_fotos()` (`inc/proposals-flow.php:121`; ≈ US$0,026 por consulta según la documentación de OpenAI, no medido en una factura; decisión D18).
+  - `at_pt_costo_fotos(array $image_briefs, bool $hay_propuesta): array` → `['fotos' => int, 'usd_lista' => float, 'usd_revision' => float, 'usd_max' => float]` (un brief válido por lámina; con propuesta, `cover` y `cierre` no cuentan; con al menos una foto nueva, `usd_lista` = fotos + una revisión y `usd_max` = fotos x2 + dos revisiones, el mismo criterio de `at_propuesta_costo_fotos()`; sin fotos nuevas, todo 0).
   - `at_pt_texto_whatsapp_agenda(string $codigo): string` → «Hola Tech, quiero agendar la llamada de seguimiento de mi plan de trabajo (código XXXX)».
   - `at_pt_armar_render(array $plan, array $datos, bool $final): array` — el cuerpo del esqueleto, con las claves en su orden (las mismas que lee `renderPlanHtml` y valida `validatePlanPayload` en la Task 11). `$datos` = `['codigo', 'company_name', 'client_name', 'portal_url', 'whatsapp', 'fecha_firma', 'garantia_meses']` (lo arma `at_pt_datos_render()` de la Task 5; `whatsapp` = `at_cc_whatsapp_at()`):
     - `company_name` (decisión D9): el nombre que se muestra, que la Task 5 ya arma en este orden: `company_name` de la propuesta (nombre comercial) → `nombre_proyecto` o `razon_social_cliente` del contrato → nombre del cliente. Aquí se usa tal cual; el respaldo solo actúa si llega vacío: nombre del cliente → el proyecto, porque `validatePlanPayload` del renderer lo exige no vacío (esqueleto.md:349-350; hoy `validatePayload` rechaza `company_name` vacío en `origin/main:renderer/src/schema.js:1-9`).
@@ -2272,7 +2280,7 @@ cd /c/wamp64/www/automatiza-tech/.worktrees/plan-trabajo && git add wp-content/t
 
 **Ciclo A — estados y costo de fotos**
 
-- [ ] **Step 1: Escribir la prueba que falla** — crear `tests/plan/render-test.php` (Write, archivo nuevo, UTF-8 sin BOM) con las transiciones y el costo de fotos (8 fotos = US$0,0256 con propuesta; 10 = US$0,032 sin propuesta):
+- [ ] **Step 1: Escribir la prueba que falla** — crear `tests/plan/render-test.php` (Write, archivo nuevo, UTF-8 sin BOM) con las transiciones y el costo de fotos con la revisión de texto (con propuesta, 8 fotos + revisión = US$0,0516; sin propuesta, 10 fotos + revisión = US$0,058):
 
 ````php
 <?php
@@ -2294,17 +2302,17 @@ ok(!at_pt_transicion_valida('borrador', 'enviado') && at_pt_transicion_valida('l
 ok(at_pt_transiciones()['enviado'] === [] && !at_pt_transicion_valida('enviado', 'borrador') && !at_pt_transicion_valida('enviado', 'error'), 'enviado no cambia en la Etapa 1');
 ok(!at_pt_transicion_valida('raro', 'borrador') && !at_pt_transicion_valida('', 'error') && !at_pt_transicion_valida('borrador', 'raro'), 'estados desconocidos: no');
 
-// Costo de fotos nuevas (US$0,0032 por foto, x2 con reintentos)
+// Costo de fotos nuevas (US$0,0032 por foto) + revisión de texto con GPT-4o (≈ US$0,026 por consulta, D18); máximo: x2
 $todas = array_map(fn($s) => ['slide' => $s, 'prompt' => "escena del rubro para {$s}"], at_pt_slides_foto());
-ok(at_pt_costo_fotos($todas, true) === ['fotos' => 8, 'usd_lista' => 0.0256, 'usd_max' => 0.0512], 'con propuesta: 10 láminas, portada y cierre se reutilizan -> 8 fotos, US$0,0256 (máximo 0,0512)');
-ok(at_pt_costo_fotos($todas, false) === ['fotos' => 10, 'usd_lista' => 0.032, 'usd_max' => 0.064], 'Review Focus 4: sin propuesta, portada y cierre también son nuevas -> 10 fotos, US$0,032');
+ok(at_pt_costo_fotos($todas, true) === ['fotos' => 8, 'usd_lista' => 0.0516, 'usd_revision' => 0.026, 'usd_max' => 0.1032], 'con propuesta: 10 láminas, portada y cierre se reutilizan -> 8 fotos + revisión = US$0,0516 (máximo 0,1032)');
+ok(at_pt_costo_fotos($todas, false) === ['fotos' => 10, 'usd_lista' => 0.058, 'usd_revision' => 0.026, 'usd_max' => 0.116], 'Review Focus 4: sin propuesta, portada y cierre también son nuevas -> 10 fotos + revisión = US$0,058 (máximo 0,116)');
 $sucias = [
 	['slide' => 'metodo', 'prompt' => 'a'], ['slide' => 'metodo', 'prompt' => 'b'], ['slide' => 'inventada', 'prompt' => 'c'],
 	['slide' => 'gantt', 'prompt' => '  '], ['slide' => 'cover', 'prompt' => 'd'], 'no es brief', ['prompt' => 'sin lámina'],
 ];
-ok(at_pt_costo_fotos($sucias, true) === ['fotos' => 1, 'usd_lista' => 0.0032, 'usd_max' => 0.0064], 'cuenta una por lámina válida con descripción (sin repetidas, inventadas ni vacías)');
-ok(at_pt_costo_fotos($sucias, false)['fotos'] === 2 && at_pt_costo_fotos([], false) === ['fotos' => 0, 'usd_lista' => 0.0, 'usd_max' => 0.0], 'sin propuesta la portada cuenta; sin briefs, costo 0');
-ok(AT_PT_USD_POR_FOTO === 0.0032, 'tarifa por foto igual a la de at_propuesta_costo_fotos (inc/proposals-flow.php:124)');
+ok(at_pt_costo_fotos($sucias, true) === ['fotos' => 1, 'usd_lista' => 0.0292, 'usd_revision' => 0.026, 'usd_max' => 0.0584], 'cuenta una por lámina válida con descripción (sin repetidas, inventadas ni vacías); con una sola foto la revisión igual se cobra');
+ok(at_pt_costo_fotos($sucias, false)['fotos'] === 2 && at_pt_costo_fotos([], false) === ['fotos' => 0, 'usd_lista' => 0.0, 'usd_revision' => 0.0, 'usd_max' => 0.0], 'sin propuesta la portada cuenta; sin briefs no hay fotos ni revisión: costo 0');
+ok(AT_PT_USD_POR_FOTO === 0.0032 && AT_PT_USD_REVISION === 0.026, 'tarifas iguales a las de at_propuesta_costo_fotos (inc/proposals-flow.php): US$0,0032 por foto y US$0,026 por revisión');
 
 fin();
 ````
@@ -2355,10 +2363,20 @@ function at_pt_transicion_valida(string $de, string $a): bool {
 // el modelo o la tarifa (spec §5: qwen-image o recraft se decide al implementar), cambiar los dos lados.
 const AT_PT_USD_POR_FOTO = 0.0032;
 
+// Revisión de texto de las fotos en «3 Render» (decisión D18, cambiada por Luis el 29-sep): una consulta a GPT-4o con
+// las fotos nuevas. Es la misma cifra que suma at_propuesta_costo_fotos() para «3 Final» de las propuestas
+// (inc/proposals-flow.php:121, 27-sep): ≈ US$0,026 por consulta con 9 fotos 16:9 en detail high, según la tarifa y
+// el conteo de imágenes de la documentación de OpenAI, NO medido en una factura; con 8 o 10 fotos se usa la misma cifra
+// (el mismo criterio que el panel de propuestas). Hasta dos consultas si hay que rehacer fotos. Si cambia el modelo o
+// la tarifa, cambiar aquí, en inc/proposals-flow.php y en los docstrings de build_3_final.py y build_plan_3_render.py.
+const AT_PT_USD_REVISION = 0.026;
+
 /** Fotos nuevas del plan y su costo, para mostrar antes de «Aprobar» (decisión 7). Cuenta un brief válido por lámina
  *  (lámina de at_pt_slides_foto() y descripción no vacía). Si hay propuesta, 'cover' y 'cierre' no cuentan: se
- *  reutilizan sus fotos. 'usd_max' = cada foto dos veces (reintentos), como at_propuesta_costo_fotos(); el plan no
- *  tiene revisión de texto con GPT-4o en la Etapa 1. */
+ *  reutilizan sus fotos y no se vuelven a revisar (las propuestas generadas desde el 27-sep ya pasaron por la misma
+ *  revisión en «3 Final»). Con al menos una foto nueva se suma la revisión de texto (D18): 'usd_lista' = fotos + una
+ *  consulta; 'usd_max' = cada foto dos veces (rehecha por texto) y dos consultas, como at_propuesta_costo_fotos(). Sin
+ *  fotos nuevas no hay revisión ni costo. */
 function at_pt_costo_fotos(array $image_briefs, bool $hay_propuesta): array {
 	$slides = at_pt_slides_foto();
 	$reutilizadas = $hay_propuesta ? ['cover', 'cierre'] : [];
@@ -2371,7 +2389,13 @@ function at_pt_costo_fotos(array $image_briefs, bool $hay_propuesta): array {
 		}
 	}
 	$n = count($nuevas);
-	return ['fotos' => $n, 'usd_lista' => round($n * AT_PT_USD_POR_FOTO, 4), 'usd_max' => round($n * AT_PT_USD_POR_FOTO * 2, 4)];
+	$revision = $n > 0 ? AT_PT_USD_REVISION : 0.0;
+	return [
+		'fotos'        => $n,
+		'usd_lista'    => round($n * AT_PT_USD_POR_FOTO + $revision, 4),
+		'usd_revision' => $revision,
+		'usd_max'      => round($n * AT_PT_USD_POR_FOTO * 2 + $revision * 2, 4),
+	];
 }
 ````
 
@@ -2480,7 +2504,8 @@ cd /c/wamp64/www/automatiza-tech/.worktrees/plan-trabajo && /c/wamp64/bin/php/ph
 - [ ] **Step 8: Implementar** — agregar el armado del cuerpo del render al final de `wp-content/themes/automatiza-tech/inc/plan-trabajo/puras.php`. Edit con `old_string` = el final actual del archivo (estas líneas, que aparecen una sola vez):
 
 ````text
-	return ['fotos' => $n, 'usd_lista' => round($n * AT_PT_USD_POR_FOTO, 4), 'usd_max' => round($n * AT_PT_USD_POR_FOTO * 2, 4)];
+		'usd_max'      => round($n * AT_PT_USD_POR_FOTO * 2 + $revision * 2, 4),
+	];
 }
 ````
 
@@ -6039,7 +6064,7 @@ EOF
 La pestaña va en la ficha del cliente oficial (decisión 6), después de «📜 Contratos y operación», solo para quien
 tiene `manage_options`. Muestra estado, fechas y documento; la tabla editable (bloque, actividad, responsable, días,
 «en paralelo», origen de cada duración y fechas); los textos de las láminas; y los botones «Crear plan de trabajo»,
-«Guardar y recalcular», «Pedir cambios», «Aprobar (N fotos ≈ US$X)», «Destrabar», «Reintentar borrador» / «Volver al
+«Guardar y recalcular», «Pedir cambios», «Aprobar (N fotos + revisión ≈ US$X)», «Destrabar», «Reintentar borrador» / «Volver al
 borrador» y «Agendar llamada de seguimiento». Todo lo que sale en el documento se edita aquí sin gastar IA (decisión 11):
 nombre, detalle, responsable y días de cada actividad; bloques con su entregable; descripción de cada fase; qué
 necesitamos, reuniones, hitos y servicios mensuales. La garantía se muestra de solo lectura con la leyenda «Viene del
@@ -6078,7 +6103,8 @@ Dos hechos del código que esta tarea resuelve (medidos en el sitio local):
   - Task 1: `at_pt_es_habil(string $f, array $feriados): bool`, `at_pt_siguiente_habil(string $f, array $feriados): string`,
     `at_pt_inicio_por_defecto(string $fecha_firma, array $feriados): string`
   - Task 3: `at_pt_calcular_fechas(array $plan, string $inicio, array $feriados): array`
-  - Task 4: `at_pt_costo_fotos(array $image_briefs, bool $hay_propuesta): array` (`['fotos', 'usd_lista', 'usd_max']`),
+  - Task 4: `at_pt_costo_fotos(array $image_briefs, bool $hay_propuesta): array` (`['fotos', 'usd_lista', 'usd_revision',
+    'usd_max']`; con fotos nuevas suma la revisión de texto con GPT-4o, decisión D18),
     `at_pt_transicion_valida(string $de, string $a): bool`
   - Task 5: `at_pt_tabla(): string`, `at_pt_plan(int $id): ?object`, `at_pt_plan_de_contrato(int $contrato_id): ?object`,
     `at_pt_planes_de_crm(int $crm_id): array`, `at_pt_payload(object $fila): array`,
@@ -6444,7 +6470,7 @@ ok(strpos($h, 'class="at-pt-plan-json"') !== false && strpos($h, 'value="at_pt_g
 ok(strpos($h, 'value="at_pt_cambios"') !== false && strpos($h, 'name="comentarios"') !== false, '«Pedir cambios» con sus comentarios');
 $costo = at_pt_costo_fotos(at_pt_payload(at_pt_plan((int) $f2->id))['image_briefs'] ?? [], true);
 ok((int) $costo['fotos'] === 8, 'con propuesta cuentan 8 fotos nuevas (portada y cierre se reutilizan): ' . $costo['fotos']);
-$etiqueta = '(8 fotos ≈ US$' . number_format((float) $costo['usd_lista'], 4, ',', '.') . ')';
+$etiqueta = '(8 fotos + revisión ≈ US$' . number_format((float) $costo['usd_lista'], 4, ',', '.') . ')';
 ok(strpos($h, 'Aprobar y generar versión final ' . $etiqueta) !== false, 'el botón Aprobar muestra ' . $etiqueta);
 ok(preg_match('/<form[^>]*class="at-pt-form-aprobar at-pt-requiere-guardado"[^>]*onsubmit="return confirm\(&quot;Se generarán 8 fotos nuevas/u', $h) === 1, 'Aprobar pide confirm() con la cantidad de fotos y el costo');
 ok(strpos($h, 'page=automatiza-followup') !== false && strpos($h, 'pt_plan=' . $f2->id) !== false && strpos($h, 'Agendar llamada de seguimiento') !== false, '«Agendar llamada de seguimiento» abre el formulario de seguimiento con pt_plan');
@@ -6457,7 +6483,7 @@ $k3 = ptc_contrato($c3['tech'], $m . 'd', null);
 $f3 = ptc_plan($k3);
 ptc_sembrar((int) $f3->id);
 $h = pestana($c3['crm']);
-ok(strpos($h, '(10 fotos ≈ US$0,0320)') !== false, 'sin propuesta: portada y cierre también son fotos nuevas (10 fotos ≈ US$0,0320)');
+ok(strpos($h, '(10 fotos + revisión ≈ US$0,0580)') !== false, 'sin propuesta: portada y cierre también son fotos nuevas (10 fotos + revisión ≈ US$0,0580)');
 ok(strpos($h, 'saldrá sin enlace al portal') !== false, 'sin correo: avisa que «Sigue tu proyecto» sale sin enlace, y la pestaña se dibuja igual');
 ok(strpos($h, 'no tiene propuesta') !== false, 'sin propuesta: lo avisa');
 
@@ -6931,9 +6957,10 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 				$n = (int) $costo['fotos'];
 				$lista = number_format((float) $costo['usd_lista'], 4, ',', '.');
 				$maximo = number_format((float) $costo['usd_max'], 4, ',', '.');
-				$etiqueta_costo = '(' . $n . ($n === 1 ? ' foto' : ' fotos') . ' ≈ US$' . $lista . ')';
+				// Con fotos nuevas, el costo incluye la revisión de texto con GPT-4o de «3 Render» (D18), como el panel de propuestas.
+				$etiqueta_costo = '(' . $n . ($n === 1 ? ' foto' : ' fotos') . ($n > 0 ? ' + revisión' : '') . ' ≈ US$' . $lista . ')';
 				$confirmar = $n > 0
-					? sprintf('Se generarán %d fotos nuevas (≈ US$%s de lista; hasta US$%s si hay que rehacerlas) y la versión final del plan. ¿Aprobar?', $n, $lista, $maximo)
+					? sprintf('Se generarán %d fotos nuevas, se revisará que no tengan texto (≈ US$%s de lista; hasta US$%s si hay que rehacerlas) y la versión final del plan. ¿Aprobar?', $n, $lista, $maximo)
 					: 'No hay fotos nuevas que generar. Se generará la versión final del plan. ¿Aprobar?';
 				$ultimo = trim((string) ($fila->comentarios ?? ''));
 			?>
@@ -7432,8 +7459,8 @@ cd /c/wamp64/www/automatiza-tech/.worktrees/plan-trabajo; PHP=/c/wamp64/bin/php/
 Expected: 15 líneas `ok …` (entre ellas `ok   serializar() arma exactamente el plan_json que espera el servidor (…)`,
 `ok   con cambios sin guardar, «Aprobar» se bloquea con un aviso antes de confirmar` y `ok   «+ Actividad» agrega una
 fila de Luis: 1 día, AutomatizaTech, no en paralelo`), `TODO OK`, `exit=0` (tarda unos segundos: abre el navegador una
-vez); y la prueba de la pestaña, `TODO OK` (33 `ok`: entre ellas `ok   el botón Aprobar muestra (8 fotos ≈ US$0,0256)`,
-`ok   sin propuesta: portada y cierre también son fotos nuevas (10 fotos ≈ US$0,0320)`, `ok   sin correo: avisa que
+vez); y la prueba de la pestaña, `TODO OK` (33 `ok`: entre ellas `ok   el botón Aprobar muestra (8 fotos + revisión ≈ US$0,0516)`,
+`ok   sin propuesta: portada y cierre también son fotos nuevas (10 fotos + revisión ≈ US$0,0580)`, `ok   sin correo: avisa que
 «Sigue tu proyecto» sale sin enlace, y la pestaña se dibuja igual` y `ok   error sin plan: «Reintentar borrador» con el
 motivo (Review Focus 5)`).
 
@@ -8320,8 +8347,9 @@ Escritorio (`resize_window` 1366×900 y después 1920×1080), mirar exactamente:
 - Poner de fecha de inicio un sábado y «Guardar y recalcular»: vuelve a la pestaña con «Guardado y recalculado…» (o
   «…no se pudo pedir la vista previa a n8n…» si el simulador de n8n no está arriba), la fecha pasa al lunes hábil y la
   actividad editada dice «Editado por Luis».
-- «Aprobar»: el botón dice «(10 fotos ≈ US$0,0320)» y el `confirm` «Se generarán 10 fotos nuevas (≈ US$0,0320 de lista;
-  hasta US$0,0640 si hay que rehacerlas) y la versión final del plan. ¿Aprobar?». Cancelar: no se envía.
+- «Aprobar»: el botón dice «(10 fotos + revisión ≈ US$0,0580)» y el `confirm` «Se generarán 10 fotos nuevas, se revisará
+  que no tengan texto (≈ US$0,0580 de lista; hasta US$0,1160 si hay que rehacerlas) y la versión final del plan.
+  ¿Aprobar?». Cancelar: no se envía.
 
 Celular (`resize_window` 390×844, recargar):
 ```js
@@ -13927,7 +13955,7 @@ python N8N/plan-trabajo/build_plan_1_borrador.py > /dev/null && python N8N/plan-
 ```
 Expected: la última línea es `JSON commiteados = builders` (lo que se despliega en la Task 16 es lo que se probó).
 
-### Task 14: n8n — flujo «3 Render» (fotos de la propuesta reutilizadas, reintentos, vista y correos)
+### Task 14: n8n — flujo «3 Render» (fotos de la propuesta reutilizadas, reintentos, revisión de texto de las fotos, vista y correos)
 
 Un flujo que arma la presentación del plan con el renderer y le cuenta el resultado a WordPress:
 - **draft** (tras el borrador, los cambios o «Guardar y recalcular»): vista previa SIN fotos, venga lo que venga en
@@ -13950,6 +13978,10 @@ Un flujo que arma la presentación del plan con el renderer y le cuenta el resul
   en «aprobando»). Siempre escribe a Luis en final, y solo dice «listo» si WordPress guardó el resultado y respondió
   `estado: 'listo'` (si Luis destrabó el plan mientras se generaba, WordPress guarda los enlaces pero el plan sigue en
   «error», y el correo lo dice).
+- **Revisión de texto de las fotos** (ciclo D, Steps 16-21; decisión D18, cambiada por Luis el 29-sep): en la versión
+  final completa, GPT-4o revisa en una consulta las fotos nuevas guardadas; las que tengan texto se piden una vez más
+  con la descripción + `RETOMA` (dentro del mismo tope de 3 renders) y lo que siga con texto va como aviso en la nota
+  y en el correo, sin estado `error`. Es la revisión de «3 Final» de las propuestas, con sus mismos textos.
 - La base de WordPress ya trae `?rest_route=`, así que el modo va con `&modo=` (con `?modo=` PHP lo deja dentro de
   `rest_route` y la ruta no calza; probado con `parse_str` de PHP 8.4.15).
 - Nunca enlaza `view_url`, `pdf_url` ni el renderer en el correo: el botón abre la pestaña del plan en el panel, con el
@@ -13970,8 +14002,12 @@ debe usar ese máximo.
 - Modify: `N8N/plan-trabajo/plan_js.py` (agregar al final `RENDERER_BASE` y `JS_RENDER`)
 - Modify: `N8N/plan-trabajo/correos_plan.py` (agregar al final `correo_render()`)
 - Create: `N8N/plan-trabajo/build_plan_3_render.py` → genera y se commitea `N8N/plan-trabajo/plan-3-render.json`
+  (Step 13; el ciclo D, Step 19, lo reemplaza entero con la revisión de texto)
+- Modify (ciclo D): `N8N/plan-trabajo/plan_js.py` (agregar al final `INSTRUCCION_TEXTO`, `RETOMA`, `JS_SHA256` y
+  `JS_REVISION`)
 - Test: `N8N/plan-trabajo/probar_plan.py` (insertar las secciones `render_puras`, `correos_render` y `render`, cada una
   en su paso rojo, justo antes de la línea marcador `# ==== Las tareas siguientes agregan sus secciones justo antes de esta línea ====`)
+- Test (ciclo D): `N8N/plan-trabajo/probar_revision_plan.py` (nuevo)
 
 **Interfaces:**
 - Consumes:
@@ -13993,6 +14029,9 @@ debe usar ese máximo.
     reintenta) o 502 `{error: 'render failed', details: string}` (se reintenta); `images: {slide: url}` gana sobre
     generar la foto; `GET /p/<uid>/img/manifest.json` → `{slide: {file, hash}}` (`origin/main:renderer/src/server.js`,
     `photo-manifest.js`; grupo-D.md, Task 11).
+  - Ciclo D: `N8N/propuestas-v3/build_3_final.py` (traído por la Task 0 con el PR #51): `INSTRUCCION_TEXTO`, `RETOMA` y
+    `JS_SHA256`, leídos con `ast` sin ejecutarlo; credencial OpenAI `g52IEXpRfN5r7jKw` (la de las propuestas); Task 4:
+    `at_pt_costo_fotos()` ya suma la revisión (≈ US$0,026 por consulta) en lo que Luis aprueba.
 - Produces:
   - `plan_js.RENDERER_BASE = 'https://n8n-propuesta-renderer.kchiba.easypanel.host'` (solo para n8n; nunca en un correo).
   - `plan_js.JS_RENDER` (JavaScript): `NOMBRES_LAMINAS`, `nombresLaminas(l) → string`,
@@ -14000,9 +14039,14 @@ debe usar ese máximo.
     `ESTADOS_SIN_VISTA_PREVIA = ['aprobando', 'listo', 'enviado']`,
     `leerRespuestaRender(x) → {status, cuerpo, view_url, pdf_url, images, missing, detalles, fallo, reintentable}`.
   - `correos_plan.correo_render() -> str` (nodo que devuelve `{asunto, html, enviar}`).
-  - `build_plan_3_render.MAX_RENDERS = 3`; workflow «Plan de trabajo · 3 Render» (webhook `plan-v1-render`, 15 nodos,
-    `settings.errorWorkflow = 'm7TOfKznVSBGz4Nd'`). La Task 15 simula estas mismas llamadas (con `&modo=`) y la Task 16
-    lo despliega.
+  - `build_plan_3_render.MAX_RENDERS = 3` (renders en total por corrida, contando la retoma por texto); workflow «Plan de
+    trabajo · 3 Render» (webhook `plan-v1-render`, 15 nodos tras el Step 13 y 24 tras el ciclo D,
+    `settings.errorWorkflow = 'm7TOfKznVSBGz4Nd'`). La Task 15 simula estas mismas llamadas (con `&modo=`, sin la
+    revisión de texto) y la Task 16 lo despliega.
+  - Ciclo D: `plan_js.INSTRUCCION_TEXTO`, `plan_js.RETOMA`, `plan_js.JS_SHA256` (los de `build_3_final.py`) y
+    `plan_js.JS_REVISION` (JavaScript): `retomasPrevias(briefs, manifest) → {briefs, retomadas}`,
+    `fotosParaRevisar(pedidas, manifest, images, uid, base, v) → [{slide, url}]`, `cuerpoRevision(fotos)` y
+    `leerRevision(r, mostradas) → {con_texto: string[] | null, fallo}`.
 
 - [ ] **Step 1: Insertar los datos del render y la sección `render_puras` (todavía falla)**
 
@@ -14075,6 +14119,10 @@ MANIFEST_PROP = {'statusCode': 200, 'body': {'cover': {'file': 'cover.jpg', 'has
 # Respuesta de POST /plan/{id}/vista (Task 7): {ok, estado}. La versión final completa deja el plan «listo».
 VISTA_LISTO = [{'statusCode': 200, 'body': {'ok': True, 'estado': 'listo'}}]
 VISTA_BORRADOR = [{'statusCode': 200, 'body': {'ok': True, 'estado': 'borrador'}}]
+# Manifest del plan en el renderer (todas sus láminas guardadas) y GPT-4o que no ve texto: los usan los valores por
+# defecto de sim() en la sección `render` para los nodos de la revisión de texto de las fotos (ciclo D, D18).
+MANIFEST_PLAN = {'statusCode': 200, 'body': {s: {'file': s + '.jpg', 'hash': 'd' * 64} for s in TODAS}}
+SIN_TEXTO = {'statusCode': 200, 'body': {'choices': [{'message': {'content': '{"con_texto": []}'}}]}}
 
 
 @seccion('render_puras')
@@ -14478,6 +14526,12 @@ def prueba_render():
 
     def sim(webhook, **http):
         http.setdefault('Guardar vista', VISTA_LISTO if webhook.get('modo') == 'final' else VISTA_BORRADOR)
+        # Revisión de texto de las fotos (ciclo D de esta tarea, D18; hasta el Step 19 estos nodos no existen y no se
+        # usan): sin manifest previo del plan, las fotos guardadas y GPT-4o sin texto. Estos casos miran el render; la
+        # revisión la prueba probar_revision_plan.py.
+        http.setdefault('Fotos previas del plan', [{'statusCode': 404, 'body': 'Not Found'}])
+        http.setdefault('Leer fotos del plan', [MANIFEST_PLAN])
+        http.setdefault('Buscar texto en fotos', [SIN_TEXTO])
         return simular('plan-3-render.json', webhook=webhook, http=http, openai={})
 
     # R1. Vista previa con aviso: sin fotos aunque WordPress mande alguna, un solo render, correo «borrador listo».
@@ -14669,7 +14723,8 @@ FALLA render: la sección lanzó ModuleNotFoundError: No module named 'build_pla
 exit=1
 ```
 
-- [ ] **Step 13: Escribir `N8N/plan-trabajo/build_plan_3_render.py`**
+- [ ] **Step 13: Escribir `N8N/plan-trabajo/build_plan_3_render.py`** (versión sin la revisión de texto; el ciclo D,
+Step 19, la reemplaza entera)
 ```python
 """Construye el workflow n8n «Plan de trabajo · 3 Render» y lo guarda en plan-3-render.json.
 
@@ -14948,13 +15003,1082 @@ python N8N/plan-trabajo/build_plan_1_borrador.py > /dev/null && python N8N/plan-
 Expected: la última línea es `JSON commiteados = builders`. `git log --oneline` muestra los 7 commits de las Tasks 13
 y 14, y después de cada uno `python N8N/plan-trabajo/probar_plan.py` termina en `TODO OK`.
 
+**Ciclo D — revisión de texto de las fotos con GPT-4o (decisión D18, cambiada por Luis el 29-sep)** (los Steps 1-15 son
+los tres primeros ciclos: `render_puras`, `correos_render` y `render`)
+
+La versión final del plan lleva la misma revisión que «3 Final» de las propuestas (en PROD desde el 27-sep:
+`N8N/propuestas-v3/build_3_final.py`, sección «Fotos sin texto» de `Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`). Qué cambia
+en el flujo y por qué:
+- **Solo en `final` y solo con la versión completa** (presentación y todas las fotos): si faltan fotos tras los renders,
+  el plan queda en «error» y la revisión corre cuando Luis lo apruebe de nuevo; así no se paga una consulta, ni una
+  retoma, sobre una versión que no queda. La vista previa (`draft`) nunca revisa ni lee manifests: no lleva fotos.
+- **Qué fotos:** las nuevas del plan (`render.image_briefs` después de `reutilizarFotosPlan`), guardadas según
+  `/p/<codigo>/img/manifest.json` del renderer y que salieron en el último render. Portada y cierre de la propuesta no se
+  revisan de nuevo (vienen de `/p/<uid>/img/` de la propuesta, que desde el 27-sep pasa por la misma revisión).
+- **Una consulta** a `gpt-4o` (temperatura 0, JSON, `detail: high`) con la instrucción de las propuestas. Las fotos con
+  texto se piden **una vez** más con la descripción + `RETOMA` (el renderer reutiliza por hash las demás) y se vuelve a
+  renderizar; una segunda consulta solo informa. Lo que siga con texto va como aviso en la nota de `/vista` y en el
+  correo a Luis; **nunca** pasa el plan a «error». La nota se corta en 500 caracteres en WordPress (Task 7); el correo
+  trae la lista completa. Con la revisión limpia, el resumen dice «Fotos revisadas con GPT-4o: sin texto» (es la
+  evidencia que busca la Task 16).
+- **Tope de renders (D11 + D18):** `MAX_RENDERS = 3` sigue siendo el total por corrida y **la retoma cuenta dentro**: se
+  pide solo si queda al menos un render, y sus reintentos gastan del mismo tope (con las descripciones de la retoma, no
+  con las originales). Si el render normal ya gastó los 3, la foto con texto solo se avisa («no quedaban renders para
+  rehacerlas»). Las propuestas le dan a la retoma un tope propio de 2 (hasta 5 renders); el plan se queda en 3 para
+  respetar D11 y no alargar la ejecución (cada render espera hasta 290 s).
+- **Una foto rehecha no se vuelve a pagar** al aprobar de nuevo: «Fotos previas del plan» lee el manifest del plan antes
+  del render y, si la lámina tiene el sha256 de «descripción + RETOMA», la pide así (va después de `fotosDelPlan`,
+  porque el filtro de `fotos_guard` descarta una descripción con RETOMA: dice «papers» y «drawings»).
+- **Textos compartidos:** `INSTRUCCION_TEXTO`, `RETOMA` y `JS_SHA256` se leen de `build_3_final.py` con `ast`, sin
+  ejecutarlo (ejecutarlo reescribe `3-final.json`), en vez de duplicarlos: una sola fuente para las dos revisiones. El
+  costo: si allá cambia `RETOMA`, una foto que el plan rehízo antes se paga una vez más (su sha256 deja de calzar). La
+  instrucción dice «sales presentation»; no cambia lo que se busca (letras en la foto) y se deja igual para no separar
+  las dos revisiones.
+- **Credencial:** la misma de OpenAI de las propuestas (`g52IEXpRfN5r7jKw`), en un nodo HTTP con respuesta completa
+  (`fullResponse` + `neverError`, 120 s) que nunca corta el flujo.
+- **Costo** (el que muestra el panel, Task 4): ≈ US$0,026 por consulta (cifra de `at_propuesta_costo_fotos()`, de la
+  documentación de OpenAI para 9 fotos en `detail: high`; no medida en una factura), hasta dos consultas, más
+  US$0,0032 por foto rehecha.
+
+- [ ] **Step 16: Crear la prueba de la revisión (todavía falla)**
+
+`N8N/plan-trabajo/probar_revision_plan.py` (Write, archivo nuevo). Recorre `plan-3-render.json` con un renderer
+simulado que reutiliza por sha256 como el de verdad y un GPT-4o simulado; reutiliza los datos de `probar_plan.py`
+(`BRIEFS_NUEVAS`, `cuerpo_render`, `MANIFEST_PROP`…):
+```python
+"""Prueba local de la revisión de texto en las fotos de «Plan de trabajo · 3 Render» (decisión D18, 29-sep).
+
+Uso: python N8N/plan-trabajo/probar_revision_plan.py   (sale con código 1 si algo falla)
+Como N8N/propuestas-v3/probar_revision_fotos.py (la misma revisión en las propuestas): no llama a OpenAI, al renderer,
+a WordPress ni a n8n; recorre el grafo de plan-3-render.json con node, como una pequeña máquina de estados. Los nodos
+Code corren con su jsCode REAL (el que se publica); los HTTP, el webhook y el correo son simulados. El renderer
+simulado se porta como el de verdad (renderer/src/server.js y photo-manifest.js): reutiliza una foto solo si el sha256
+de su descripción no cambió, guarda `img/<lámina>.jpg`, su manifest.json conserva las entradas viejas aunque la foto
+nueva no salga y no anota las fotos que llegan hechas en `images` (portada y cierre de la propuesta).
+
+$('Nodo').first() devuelve la ÚLTIMA pasada del nodo (como n8n sin runIndex) y lanza si el nodo no corrió; $runIndex
+es cuántas veces corrió antes el nodo; las expresiones ={{ … }} de los HTTP y de los IF se evalúan igual que en n8n.
+Datos inventados («Cliente Prueba», «[PRUEBA] …»): el repositorio es público.
+"""
+import json, os, re, subprocess, sys
+
+sys.stdout.reconfigure(encoding='utf-8')
+AQUI = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(AQUI, '..', 'propuestas-v3'))
+sys.path.insert(0, AQUI)
+from probar_plan import (BASE_R, BRIEF_CIERRE, BRIEF_COVER, BRIEFS_NUEVAS, MANIFEST_PROP, NUEVAS, TODAS,  # noqa: E402
+                         brief, cuerpo_render)
+from plan_js import INSTRUCCION_TEXTO, JS_SHA256, RETOMA  # noqa: E402
+import build_plan_3_render as B  # noqa: E402  (vuelve a escribir plan-3-render.json)
+
+fallas = []
+
+
+def ok(cond, msg, detalle=''):
+    print(('ok    ' if cond else 'FALLA ') + msg + ('' if cond or not detalle else f' ({str(detalle)[:300]})'))
+    if not cond:
+        fallas.append(msg)
+
+
+with open(os.path.join(AQUI, 'plan-3-render.json'), encoding='utf-8') as fh:
+    WF = json.load(fh)
+UID = 'PRUEBAplan01'
+MAX_R = B.MAX_RENDERS
+
+SIM = r"""
+const crypto = require('node:crypto');
+const { wf, esc: E } = DATOS;
+const sha = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
+const nodos = Object.fromEntries(wf.nodes.map((n) => [n.name, n]));
+const runData = {};
+const T = { pasos: [], renders: [], pagos: {}, consultas: [], lecturas: [], lecturas_previas: [], preparaciones: [],
+            decisiones: [], vista: null, resultado: null, correo: null, error: null };
+let manifest = E.manifest_inicial ? JSON.parse(JSON.stringify(E.manifest_inicial)) : {};
+let llamadasOpenai = 0;
+const $ = (n) => ({
+  get isExecuted() { return !!(runData[n] && runData[n].length); },
+  first: () => {
+    if (!runData[n] || !runData[n].length) throw new Error(`Nodo sin ejecutar: ${n}`);
+    return runData[n][runData[n].length - 1][0];
+  },
+});
+const $execution = { id: 'SIM-1' };
+function evaluar(expr, $json, $input) {
+  if (typeof expr !== 'string' || !expr.startsWith('=')) return expr;
+  const s = expr.slice(1);
+  const uno = s.match(/^\{\{([\s\S]*)\}\}$/);
+  const ev = (code) => new Function('$', '$json', '$input', '$execution', 'return (' + code + ');')($, $json, $input, $execution);
+  if (uno && !uno[1].includes('{{')) return ev(uno[1]);
+  return s.replace(/\{\{([\s\S]*?)\}\}/g, (_, code) => String(ev(code)));
+}
+// Salida del nodo «Render» con fullResponse: {statusCode, body}. E.http_render[n-1] fuerza otra respuesta en el render n.
+function renderer(cuerpo) {
+  const n = T.renders.length + 1;
+  const briefs = Array.isArray(cuerpo.image_briefs) ? cuerpo.image_briefs : [];
+  T.renders.push({ n, unique_id: cuerpo.unique_id, draft: cuerpo.draft, images: cuerpo.images,
+                   prompts: Object.fromEntries(briefs.map((b) => [b.slide, b.prompt])) });
+  const forzada = (E.http_render || [])[n - 1];
+  if (forzada) return forzada;
+  const fallan = (E.fallan && E.fallan[n - 1]) || E.fallan_siempre || [];
+  const missing = [];
+  let reused = 0;
+  for (const b of briefs) {
+    const e = manifest[b.slide];
+    if (e && e.hash === sha(b.prompt)) { reused++; continue; }
+    if (fallan.includes(b.slide)) { missing.push(b.slide); continue; }
+    T.pagos[b.slide] = (T.pagos[b.slide] || 0) + 1;
+    manifest[b.slide] = { file: b.slide + '.jpg', hash: sha(b.prompt) };
+  }
+  const r = { images: { requested: briefs.length, stored_local: briefs.length - missing.length, kept_remote: [], missing, reused } };
+  if (!(E.sin_vista || []).includes(n)) Object.assign(r, { view_url: '__BASE__/p/' + cuerpo.unique_id + '/index.html',
+                                                          pdf_url: '__BASE__/p/' + cuerpo.unique_id + '/presentation.pdf' });
+  return { statusCode: 200, body: r, headers: {} };
+}
+function openai(cuerpo) {
+  T.consultas.push(cuerpo);
+  const lista = E.openai || [];
+  const m = llamadasOpenai < lista.length ? lista[llamadasOpenai] : E.openai_siempre;
+  llamadasOpenai++;
+  if (!m) return { statusCode: 200, body: { choices: [{ message: { content: '{"con_texto": []}' } }] } };
+  if (m.raw) return m.raw;
+  const content = 'contenido' in m ? m.contenido : JSON.stringify({ con_texto: m.con_texto });
+  return { statusCode: 200, body: { choices: [{ message: { content } }] } };
+}
+function http(nombre, url, cuerpo) {
+  switch (nombre) {
+    case 'Leer render': return E.leer_render;
+    case 'Fotos de la propuesta': return E.manifest_propuesta || { statusCode: 404, body: 'Not Found' };
+    case 'Fotos previas del plan': {
+      T.lecturas_previas.push(url);
+      if (E.manifest_previo) return E.manifest_previo;
+      // Como el static del renderer: sin manifest.json todavía (primera versión final), 404.
+      return Object.keys(manifest).length ? { statusCode: 200, body: JSON.parse(JSON.stringify(manifest)) } : { statusCode: 404, body: 'Not Found' };
+    }
+    case 'Render': return renderer(cuerpo);
+    case 'Leer fotos del plan': {
+      T.lecturas.push(url);
+      if (E.manifest) return E.manifest;
+      return { statusCode: 200, body: Object.assign({}, manifest, E.manifest_extra || {}) };
+    }
+    case 'Buscar texto en fotos': return openai(cuerpo);
+    case 'Guardar vista': {
+      T.vista = cuerpo;
+      return { statusCode: 200, body: { ok: true, estado: cuerpo.modo === 'final' ? (cuerpo.ok ? 'listo' : 'error') : 'borrador' } };
+    }
+    default: throw new Error('HTTP sin simular: ' + nombre);
+  }
+}
+function correr(nombre, items) {
+  const n = nodos[nombre];
+  if (!n) throw new Error('Conexión a un nodo que no existe: ' + nombre);
+  const $json = items[0] ? items[0].json : {};
+  const $input = { first: () => items[0], all: () => items, item: items[0] };
+  const $runIndex = (runData[nombre] || []).length;
+  const p = n.parameters;
+  let salidas;
+  if (n.type === 'n8n-nodes-base.webhook') {
+    salidas = [[{ json: { headers: {}, body: E.webhook } }]];
+  } else if (n.type === 'n8n-nodes-base.code') {
+    const fn = new Function('$', '$json', '$input', '$runIndex', '$execution', p.jsCode);
+    salidas = [fn($, $json, $input, $runIndex, $execution)];
+  } else if (n.type === 'n8n-nodes-base.httpRequest') {
+    const url = evaluar(p.url, $json, $input);
+    const cuerpo = p.sendBody ? JSON.parse(evaluar(p.jsonBody, $json, $input)) : undefined;
+    salidas = [[{ json: http(nombre, url, cuerpo) }]];
+  } else if (n.type === 'n8n-nodes-base.if') {
+    const v = evaluar(p.conditions.conditions[0].leftValue, $json, $input);
+    salidas = (v === true || v === 'true') ? [items, []] : [[], items];
+  } else if (n.type === 'n8n-nodes-base.emailSend') {
+    T.correo = { asunto: evaluar(p.subject, $json, $input), html: evaluar(p.html, $json, $input) };
+    salidas = [items];
+  } else {
+    throw new Error('tipo sin simular: ' + n.type);
+  }
+  runData[nombre] = runData[nombre] || [];
+  runData[nombre].push(salidas.flat());
+  return salidas;
+}
+try {
+  const cola = [['Webhook', [{ json: {} }]]];
+  let pasos = 0;
+  while (cola.length) {
+    if (++pasos > 300) throw new Error('el flujo no termina (más de 300 pasos)');
+    const [nombre, items] = cola.shift();
+    T.pasos.push(nombre);
+    const salidas = correr(nombre, items);
+    const ult = runData[nombre][runData[nombre].length - 1];
+    if (nombre === 'Preparar revisión de texto') T.preparaciones.push(ult[0].json);
+    if (nombre === 'Decidir retoma') T.decisiones.push(ult[0].json);
+    if (nombre === 'Resultado del render') T.resultado = ult[0].json;
+    const con = (wf.connections[nombre] || { main: [] }).main;
+    salidas.forEach((its, i) => {
+      if (!its || !its.length) return;
+      for (const d of con[i] || []) cola.push([d.node, its]);
+    });
+  }
+} catch (e) {
+  T.error = e.message;
+}
+T.manifest = manifest;
+console.log(JSON.stringify(T));
+""".replace('__BASE__', BASE_R)
+
+RENDER_CON = cuerpo_render(True, unique_id=UID, image_briefs=[BRIEF_COVER] + BRIEFS_NUEVAS + [BRIEF_CIERRE])
+RENDER_SIN = cuerpo_render(True, unique_id=UID, image_briefs=[BRIEF_COVER] + BRIEFS_NUEVAS + [BRIEF_CIERRE])
+
+
+def leido(render, uid='PRUEBAprop01', estado=None):
+    if estado is None:
+        estado = 'borrador' if render.get('draft') else 'aprobando'
+    return {'statusCode': 200, 'body': {'ok': True, 'render': render, 'propuesta_uid': uid, 'crm_cliente_id': 5, 'estado': estado}}
+
+
+def simular(**esc):
+    esc.setdefault('webhook', {'id': 9, 'codigo': UID, 'modo': 'final', 'aviso': False})
+    if 'leer_render' not in esc:
+        con_propuesta = esc.pop('con_propuesta', True)
+        render = esc.pop('render', RENDER_CON if con_propuesta else RENDER_SIN)
+        esc['leer_render'] = leido(render, uid='PRUEBAprop01' if con_propuesta else '')
+        if con_propuesta:
+            esc.setdefault('manifest_propuesta', MANIFEST_PROP)
+    prog = 'const DATOS = ' + json.dumps({'wf': WF, 'esc': esc}, ensure_ascii=False) + ';\n' + SIM
+    r = subprocess.run(['node', '-'], input=prog, capture_output=True, text=True, encoding='utf-8')
+    if r.returncode != 0:
+        return {'error': (r.stderr.strip().splitlines() or ['node sin mensaje'])[-1], 'renders': [], 'consultas': [], 'pagos': {},
+                'decisiones': [], 'preparaciones': [], 'lecturas': [], 'lecturas_previas': [], 'manifest': {}}
+    return json.loads(r.stdout)
+
+
+URL_SEGURA = re.compile(r'^' + re.escape(BASE_R) + r'/p/' + re.escape(UID) + r'/img/[A-Za-z0-9_-]+\.[A-Za-z0-9]{2,5}\?v=\d+$')
+
+
+def urls(consulta):
+    return [c['image_url']['url'] for c in consulta['messages'][0]['content'] if c.get('type') == 'image_url']
+
+
+def slides_de(consulta):
+    return [u.rsplit('/', 1)[1].split('.')[0] for u in urls(consulta)]
+
+
+def avisos(t):
+    return (t.get('resultado') or {}).get('avisos') or []
+
+
+def estado(t):
+    v = t.get('vista') or {}
+    return ('listo' if v.get('ok') else 'error') if v.get('modo') == 'final' else v.get('modo')
+
+
+def nota(t):
+    return (t.get('vista') or {}).get('nota') or ''
+
+
+def sin_error(t, caso):
+    ok(not t.get('error') and t.get('vista') and t.get('correo'), f'{caso}: el recorrido llega a /vista y al correo sin lanzar',
+       t.get('error') or 'no llegó al correo')
+
+
+# 0. Estructura: la credencial de OpenAI de las propuestas, respuesta completa y nunca corta el flujo.
+nd = {n['name']: n for n in WF['nodes']}
+g = nd.get('Buscar texto en fotos', {})
+gp = g.get('parameters', {})
+ok(g.get('credentials', {}).get('openAiApi', {}).get('id') == 'g52IEXpRfN5r7jKw' and gp.get('nodeCredentialType') == 'openAiApi'
+   and gp.get('authentication') == 'predefinedCredentialType' and gp.get('url') == 'https://api.openai.com/v1/chat/completions'
+   and g.get('onError') == 'continueRegularOutput' and gp.get('options', {}).get('timeout') == 120000
+   and gp.get('options', {}).get('response', {}).get('response') == {'fullResponse': True, 'neverError': True},
+   '0: «Buscar texto en fotos» usa la credencial de OpenAI de las propuestas (g52IEXpRfN5r7jKw), 120 s y nunca corta el flujo')
+ok(all('credentials' not in nd[x] and nd[x].get('onError') == 'continueRegularOutput' for x in ('Fotos previas del plan', 'Leer fotos del plan')),
+   '0: los manifest del plan se leen sin credenciales y nunca cortan el flujo')
+ok(len(WF['nodes']) == 24 and MAX_R == 3, '0: 24 nodos y MAX_RENDERS = 3 (tope total, retoma incluida)', len(WF['nodes']))
+w_prep = nd['Preparar render']['parameters']['jsCode']
+ok(JS_SHA256 in w_prep and json.dumps(RETOMA) in w_prep and json.dumps(INSTRUCCION_TEXTO) in nd['Preparar revisión de texto']['parameters']['jsCode'],
+   '0: los nodos publicados llevan el sha256, la RETOMA y la instrucción de build_3_final.py (las de las propuestas)')
+
+# 1. Con propuesta, versión completa y GPT-4o dice [] → una consulta con las 8 fotos nuevas (no portada ni cierre).
+t = simular(openai=[{'con_texto': []}])
+sin_error(t, '1')
+ok(len(t['renders']) == 1, '1: un solo render', f"renders={len(t['renders'])}")
+ok(len(t['consultas']) == 1 and slides_de(t['consultas'][0]) == NUEVAS,
+   '1: una sola consulta a GPT-4o con las 8 fotos nuevas, sin la portada ni el cierre de la propuesta', [slides_de(c) for c in t['consultas']])
+ok(avisos(t) == [] and estado(t) == 'listo', '1: sin avisos de fotos y el plan queda «listo»', f'{estado(t)} {avisos(t)}')
+ok('Fotos revisadas con GPT-4o: sin texto' in nota(t), '1: la nota de /vista dice que se revisaron (evidencia para la prueba real)', nota(t))
+ok(t['pagos'] == {s: 1 for s in NUEVAS}, '1: cada foto nueva se pagó una vez', t['pagos'])
+c0 = t['consultas'][0] if t['consultas'] else {}
+ok(c0.get('model') == 'gpt-4o' and c0.get('temperature') == 0 and c0.get('response_format') == {'type': 'json_object'}
+   and c0.get('max_tokens') == 200, '1: la consulta es gpt-4o, temperatura 0, JSON y 200 tokens de salida')
+cont = c0.get('messages', [{}])[0].get('content', [])
+ok(cont and cont[0] == {'type': 'text', 'text': INSTRUCCION_TEXTO} and all(c['image_url']['detail'] == 'high' for c in cont if c['type'] == 'image_url'),
+   '1: la instrucción es la de las propuestas y cada foto va en detail high')
+ok(all(URL_SEGURA.match(u) for c in t['consultas'] for u in urls(c)) and all(u.endswith('?v=1') for u in urls(c0)),
+   '1: todas las URL son del plan en el renderer, seguras y con ?v= del render', [u for c in t['consultas'] for u in urls(c)])
+ok(t['lecturas_previas'] == [f'{BASE_R}/p/{UID}/img/manifest.json'] and t['lecturas'] == [f'{BASE_R}/p/{UID}/img/manifest.json'],
+   '1: lee el manifest del plan antes del render y después, para la revisión', (t['lecturas_previas'], t['lecturas']))
+
+# 2. Ronda 0 con ['fase_2'] → se rehace solo esa foto, con RETOMA una sola vez; las demás idénticas.
+t = simular(openai=[{'con_texto': ['fase_2']}, {'con_texto': []}])
+sin_error(t, '2')
+ok(len(t['renders']) == 2, '2: dos renders (el normal y la retoma)', f"renders={len(t['renders'])}")
+if len(t['renders']) == 2:
+    p0, p1 = t['renders'][0]['prompts'], t['renders'][1]['prompts']
+    ok(p1['fase_2'] == p0['fase_2'] + RETOMA and p1['fase_2'].count(RETOMA) == 1, '2: la foto con texto se pide con su descripción + RETOMA, una vez')
+    ok(all(p1[s] == p0[s] for s in NUEVAS if s != 'fase_2') and set(p1) == set(p0),
+       '2: las demás descripciones son idénticas (mismo hash: el renderer las reutiliza)')
+    ok(t['renders'][1]['images'] == t['renders'][0]['images'] and set(t['renders'][1]['images']) == {'cover', 'cierre'},
+       '2: la retoma conserva la portada y el cierre de la propuesta', t['renders'][1]['images'])
+ok(t['pagos'] == {**{s: 1 for s in NUEVAS}, 'fase_2': 2}, '2: solo la foto rehecha se paga de nuevo', t['pagos'])
+ok(t['decisiones'] and t['decisiones'][0].get('rehacer') is True and t['decisiones'][0].get('fotos_retomadas') == ['fase_2'],
+   '2: «Decidir retoma» pide rehacer solo «fase_2»', str(t['decisiones'][:1])[:300])
+ok(len(t['consultas']) == 2 and t['preparaciones'][1]['ronda'] == 1, '2: la segunda revisión es la ronda 1')
+if len(t['consultas']) == 2:
+    u0 = dict(zip(slides_de(t['consultas'][0]), urls(t['consultas'][0])))
+    u1 = dict(zip(slides_de(t['consultas'][1]), urls(t['consultas'][1])))
+    ok(u0.get('fase_2') != u1.get('fase_2'), '2: la ronda 1 pide la foto rehecha con otra URL (mismo archivo sobrescrito)')
+ok(estado(t) == 'listo' and avisos(t) == ['Fotos rehechas porque tenían texto: fase 2'], '2: «listo», con el aviso de la foto rehecha', avisos(t))
+ok('2 renders' in nota(t) and 'Fotos rehechas porque tenían texto: fase 2' in nota(t), '2: la nota de /vista cuenta los 2 renders y la retoma', nota(t))
+html = (t.get('correo') or {}).get('html') or ''
+ok('⚠️ Fotos rehechas porque tenían texto: fase 2' in html and 'easypanel' not in html, '2: el correo a Luis lo avisa y no enlaza al renderer')
+
+# 2b. La foto rehecha no sale nunca: la retoma gasta del mismo tope de 3 renders y el plan queda en «error».
+t = simular(openai=[{'con_texto': ['fase_2']}], fallan=[[], ['fase_2'], ['fase_2'], ['fase_2'], ['fase_2']])
+sin_error(t, '2b')
+ok(len(t['renders']) == MAX_R, f'2b: la retoma cuenta dentro del tope: {MAX_R} renders en total', f"renders={len(t['renders'])}")
+ok(all(r['prompts']['fase_2'].endswith(RETOMA) and r['prompts']['fase_2'].count(RETOMA) == 1 for r in t['renders'][1:]),
+   '2b: cada reintento de la retoma usa la descripción de la retoma, no la original')
+ok(len(t['consultas']) == 1, '2b: sin versión completa no hay segunda revisión (no se revisa una foto que no salió)', len(t['consultas']))
+ok(estado(t) == 'error' and 'fotos que no se generaron tras 3 intentos: fase 2' in nota(t) and 'Fotos rehechas porque tenían texto: fase 2' in nota(t),
+   '2b: la foto que no salió deja el plan en «error», y la nota dice que se intentó rehacer', nota(t))
+
+# 2c. El render normal gasta los 3 renders: no queda ninguno para la retoma; solo se avisa.
+t = simular(openai=[{'con_texto': ['fase_2']}], fallan=[['gantt'], ['gantt'], []])
+sin_error(t, '2c')
+ok(len(t['renders']) == MAX_R and len(t['consultas']) == 1 and t['pagos'].get('fase_2') == 1,
+   '2c: con los 3 renders gastados no se rehace nada (ni se paga otra foto)', f"renders={len(t['renders'])} pagos={t['pagos']}")
+ok(estado(t) == 'listo' and any('todavía pueden tener texto' in a and 'fase 2' in a and 'no quedaban renders' in a for a in avisos(t)),
+   '2c: «listo» con el aviso de la foto con texto y el motivo', avisos(t))
+
+# 2d. El render normal usó 2: la retoma es el 3.º y, si su foto sale, hay segunda revisión.
+t = simular(openai=[{'con_texto': ['fase_2']}, {'con_texto': []}], fallan=[['gantt'], [], []])
+sin_error(t, '2d')
+ok(len(t['renders']) == 3 and len(t['consultas']) == 2 and estado(t) == 'listo' and '3 renders' in nota(t),
+   '2d: 2 renders + la retoma = 3, segunda revisión y «listo»', f"renders={len(t['renders'])} {nota(t)}")
+
+# 3. La ronda 1 todavía ve texto → no hay tercer render; avisa las dos cosas, en español.
+t = simular(openai=[{'con_texto': ['fase_2', 'necesitamos']}, {'con_texto': ['necesitamos']}])
+sin_error(t, '3')
+ok(len(t['renders']) == 2 and len(t['decisiones']) == 2 and t['decisiones'][1].get('rehacer') is False, '3: la ronda 1 no pide rehacer')
+av = avisos(t)
+ok(any(a.startswith('Fotos rehechas porque tenían texto: ') and 'fase 2' in a and 'qué necesitamos de ti' in a for a in av),
+   '3: avisa «rehechas» con los nombres en español', av)
+ok(any('todavía pueden tener texto' in a and 'qué necesitamos de ti' in a and 'no quedaban' not in a for a in av), '3: avisa «todavía pueden tener texto»', av)
+ok(not any(re.search(r'\b(fase_2|necesitamos)\b', a.replace('qué necesitamos de ti', '')) for a in av), '3: ningún nombre de lámina en clave', av)
+ok(estado(t) == 'listo' and 'todavía pueden tener texto' in nota(t), '3: sigue «listo» y la nota lo dice')
+
+# 4. OpenAI con error HTTP, sin respuesta o con JSON ilegible → «No se pudo revisar» y sigue «listo».
+for nombre, resp, pista in (
+    ('HTTP 500', {'raw': {'statusCode': 500, 'body': {'error': {'message': 'server'}}}}, 'HTTP 500'),
+    ('HTTP 429', {'raw': {'statusCode': 429, 'body': 'rate limit'}}, 'HTTP 429'),
+    ('sin respuesta (timeout)', {'raw': {'error': {'message': 'timeout of 120000ms exceeded'}}}, 'no respondió'),
+    ('sin respuesta y sin mensaje', {'raw': {}}, 'no respondió'),
+    ('contenido que no es JSON', {'contenido': 'No veo texto.'}, 'ilegible'),
+    ('JSON sin con_texto', {'contenido': '{"fotos": []}'}, 'ilegible'),
+    ('con_texto que no es lista', {'contenido': '{"con_texto": "fase_2"}'}, 'ilegible'),
+    ('null', {'contenido': 'null'}, 'ilegible'),
+    ('200 con cuerpo de texto', {'raw': {'statusCode': 200, 'body': '<html>proxy</html>'}}, 'ilegible'),
+    ('200 sin choices', {'raw': {'statusCode': 200, 'body': {'choices': []}}}, 'ilegible'),
+):
+    t = simular(openai=[resp])
+    av = avisos(t)
+    ok(not t.get('error') and estado(t) == 'listo' and len(t['renders']) == 1 and any(a.startswith('No se pudo revisar') and pista in a for a in av),
+       f'4: OpenAI {nombre} → «No se pudo revisar» y sigue «listo»', f"{t.get('error')} {estado(t)} {av}")
+t = simular(openai=[{'con_texto': ['fase_2']}, {'raw': {'statusCode': 503, 'body': ''}}])
+av = avisos(t)
+ok(estado(t) == 'listo' and any(a.startswith('Fotos rehechas') for a in av) and any('No se pudo revisar' in a for a in av),
+   '4: falla de OpenAI en la ronda 1 → avisa la retoma y que no se pudo revisar', av)
+
+# 5. Manifest del plan que no se puede leer → no se consulta a OpenAI y se avisa; sin presentación no se revisa.
+for nombre, man in (
+    ('404', {'statusCode': 404, 'body': 'Not Found'}),
+    ('HTML con 200', {'statusCode': 200, 'body': '<html>error</html>'}),
+    ('arreglo', {'statusCode': 200, 'body': [{'file': 'metodo.jpg'}]}),
+    ('null', {'statusCode': 200, 'body': None}),
+    ('sin respuesta', {'error': {'message': 'ECONNRESET'}}),
+):
+    t = simular(manifest=man)
+    ok(not t.get('error') and t['consultas'] == [] and estado(t) == 'listo'
+       and any(a.startswith('No se revisó si las fotos tienen texto: no se pudo leer la lista de fotos') for a in avisos(t)),
+       f'5: manifest del plan {nombre} → sin consulta a OpenAI, «listo» y con aviso', f"{t.get('error')} {len(t['consultas'])} {avisos(t)}")
+t = simular(manifest={'statusCode': 200, 'body': json.dumps({'metodo': {'file': 'metodo.jpg', 'hash': 'x'}})})
+ok(len(t['consultas']) == 1 and slides_de(t['consultas'][0]) == ['metodo'], '5: un manifest que llega como texto JSON se lee igual',
+   [slides_de(c) for c in t['consultas']])
+t = simular(manifest={'statusCode': 200, 'body': {}})
+ok(t['consultas'] == [] and any('no hay fotos guardadas' in a for a in avisos(t)), '5: manifest vacío → «no hay fotos guardadas»', avisos(t))
+t = simular(sin_vista=list(range(1, 10)))
+ok(t['consultas'] == [] and t['lecturas'] == [] and estado(t) == 'error' and len(t['renders']) == MAX_R,
+   '5: sin presentación no se revisan fotos (el manifest puede ser de una versión anterior)', f"{len(t['consultas'])} {estado(t)}")
+t = simular(http_render=[{'statusCode': 400, 'body': {'error': 'invalid payload', 'details': ['fases debe traer al menos una fase']}}])
+ok(len(t['renders']) == 1 and t['consultas'] == [] and estado(t) == 'error', '5: un 400 del esquema no se reintenta ni se revisa (D11)')
+t = simular(fallan_siempre=['gantt'])
+ok(len(t['renders']) == MAX_R and t['consultas'] == [] and estado(t) == 'error',
+   '5: si faltan fotos tras los 3 renders, no se paga la revisión: el plan queda en «error» y se revisa al aprobarlo de nuevo')
+
+# 6. Nombres de archivo raros, láminas que no se pidieron o unique_id inválido → nunca entran a la consulta.
+RAROS = {'metodo': {'file': '../../etc/passwd', 'hash': 'x'}, 'gantt': {'file': 'a/b.jpg', 'hash': 'x'},
+         'fase_1': {'file': 'x\\y.jpg', 'hash': 'x'}, 'fase_2': {'file': '..', 'hash': 'x'}, 'fase_3': {'file': '.htaccess', 'hash': 'x'},
+         'necesitamos': {'file': 'foto con espacio.jpg', 'hash': 'x'}, 'reuniones': {'file': 'reuniones.jpg?x=1', 'hash': 'x'},
+         'portal': 'portal.jpg', 'cover': {'file': 'cover.jpg', 'hash': 'x'}, 'cierre': {'file': 'cierre.jpg', 'hash': 'x'},
+         '__proto__': {'file': 'proto.jpg', 'hash': 'x'}}
+t = simular(manifest={'statusCode': 200, 'body': RAROS})
+ok(not t.get('error') and t['consultas'] == [] and any('no hay fotos guardadas' in a for a in avisos(t)),
+   '6: ningún nombre raro ni lámina no pedida (portada y cierre de la propuesta) entra a la consulta', [urls(c) for c in t['consultas']])
+t = simular(manifest_extra={'cover': {'file': 'cover.jpg', 'hash': 'x'}, 'cierre': {'file': 'cierre.jpg', 'hash': 'x'},
+                            'challenge': {'file': 'challenge.jpg', 'hash': 'x'}})
+ok(len(t['consultas']) == 1 and slides_de(t['consultas'][0]) == NUEVAS, '6: láminas del manifest que no se pidieron quedan fuera',
+   [slides_de(c) for c in t['consultas']])
+for uid_malo in ('../x', 'ab', 'con espacio12', 'a' * 65):
+    r = cuerpo_render(True, unique_id=uid_malo, image_briefs=BRIEFS_NUEVAS)
+    t = simular(render=r)
+    ok(not t.get('error') and t['consultas'] == [] and any(a.startswith('No se revisó si las fotos tienen texto') for a in avisos(t)),
+       f'6: unique_id inválido {uid_malo!r} → no se consulta a OpenAI', f"{t.get('error')} {len(t['consultas'])} {avisos(t)}")
+
+# 7. El modelo devuelve láminas que no existen, repetidas o que no se le mostraron → se ignoran / se deduplican.
+t = simular(openai=[{'con_texto': ['fase_2', 'fase_2', 'inventada', 'metodo', '../metodo', 3, None, 'cover', 'cierre']}, {'con_texto': []}])
+sin_error(t, '7')
+ok(t['decisiones'] and t['decisiones'][0].get('fotos_retomadas') == ['fase_2', 'metodo'],
+   '7: repetidas se deduplican; inventadas, portada y cierre (no se le mostraron) se ignoran', str(t['decisiones'][:1])[:200])
+if len(t['renders']) == 2:
+    ok(t['renders'][1]['prompts']['fase_2'].count(RETOMA) == 1 and t['renders'][1]['prompts']['metodo'].count(RETOMA) == 1
+       and 'cover' not in t['renders'][1]['prompts'], '7: RETOMA una sola vez y la portada sigue viniendo de la propuesta')
+t = simular(openai=[{'con_texto': ['inventada', 'cover']}])
+ok(len(t['renders']) == 1 and t['decisiones'] and t['decisiones'][0].get('rehacer') is False and avisos(t) == [],
+   '7: solo láminas que no se revisaron → no se rehace nada y no hay aviso', f"renders={len(t['renders'])} {avisos(t)}")
+
+# 8. Terminación: en ningún camino hay más de MAX_RENDERS llamadas al renderer, ni más de 2 consultas ni 2 pagos por foto.
+peor = 0
+for fallan in ([], ['fase_2'], ['gantt'], NUEVAS):
+    for sin_vista in ([], list(range(1, 20))):
+        for gpt in ({'con_texto': NUEVAS}, {'con_texto': ['fase_2']}, {'raw': {'statusCode': 500}}, {'con_texto': []}):
+            t = simular(fallan_siempre=fallan, sin_vista=sin_vista, openai_siempre=gpt)
+            n = len(t['renders'])
+            peor = max(peor, n)
+            if t.get('error') or n > MAX_R or estado(t) not in ('listo', 'error') or len(t['consultas']) > 2 or any(v > 2 for v in t['pagos'].values()):
+                ok(False, f'8: termina con fallan={fallan} sin_vista={bool(sin_vista)} gpt={gpt}',
+                   f"renders={n} consultas={len(t['consultas'])} estado={estado(t)} pagos={t['pagos']} error={t.get('error')}")
+ok(peor <= MAX_R, f'8: 32 combinaciones terminan; el peor caso hace {peor} llamadas al renderer (tope {MAX_R}, retoma incluida)')
+t = simular(openai_siempre={'con_texto': NUEVAS})
+ok(len(t['renders']) == 2 and len(t['consultas']) == 2 and all(v == 2 for v in t['pagos'].values()) and estado(t) == 'listo',
+   '8: si todas tienen texto: una retoma de las 8 (cada una pagada 2 veces como máximo) y «listo» con aviso', t['pagos'])
+
+# 9. El correo a Luis muestra los avisos de fotos, escapados.
+t = simular(openai=[{'con_texto': ['fase_2']}, {'raw': {'error': {'message': '<b>caída</b> & "otra" <script>x</script>'}}}])
+sin_error(t, '9')
+html = (t.get('correo') or {}).get('html') or ''
+ok('Fotos rehechas porque tenían texto: fase 2' in html and 'No se pudo revisar si las fotos tienen texto' in html,
+   '9: el correo muestra la foto rehecha y que no se pudo revisar')
+ok('&lt;b&gt;caída&lt;/b&gt; &amp;' in html and '<script>' not in html and '<b>caída' not in html, '9: el texto del error viene escapado')
+t = simular(openai=[{'con_texto': []}])
+html = (t.get('correo') or {}).get('html') or ''
+ok(html and 'tenían texto' not in html and 'No se revisó' not in html and 'todavía pueden' not in html and 'sin texto' in html,
+   '9: sin avisos, el correo solo dice que las fotos se revisaron sin texto')
+
+# 10. Segunda versión final sobre el mismo plan (aprobar de nuevo desde «listo» o «error»): la foto rehecha se reutiliza.
+t1 = simular(openai=[{'con_texto': ['fase_2']}, {'con_texto': []}])
+M1 = t1['manifest']
+ok(t1['pagos'].get('fase_2') == 2 and M1['fase_2']['file'] == 'fase_2.jpg', '10: la primera corrida rehízo «fase_2»', t1['pagos'])
+t = simular(manifest_inicial=M1, openai=[{'con_texto': []}])
+sin_error(t, '10a')
+ok(len(t['renders']) == 1 and t['renders'][0]['prompts']['fase_2'].endswith(RETOMA) and t['renders'][0]['prompts']['fase_2'].count(RETOMA) == 1,
+   '10a: la segunda corrida pide «fase_2» con la descripción de la retoma (RETOMA una sola vez)')
+ok(t['pagos'] == {} and estado(t) == 'listo' and avisos(t) == [], '10a: no le paga ninguna foto a Higgsfield; «listo» y sin avisos', t['pagos'])
+ok(all(t['renders'][0]['prompts'][s] == t1['renders'][0]['prompts'][s] for s in NUEVAS if s != 'fase_2'),
+   '10a: las demás láminas van con su descripción original')
+t = simular(manifest_inicial=M1, openai=[{'con_texto': ['fase_2']}])
+ok(len(t['renders']) == 1 and t['pagos'] == {} and any('todavía pueden tener texto' in a and 'fase 2' in a for a in avisos(t)),
+   '10b: la foto ya rehecha que sigue con texto no se rehace otra vez; se avisa', f"renders={len(t['renders'])} {avisos(t)}")
+t = simular(manifest_inicial=M1, openai=[{'con_texto': ['fase_2', 'portal']}, {'con_texto': []}])
+ok(len(t['renders']) == 2 and t['pagos'] == {'portal': 1} and avisos(t) == ['Fotos rehechas porque tenían texto: sigue tu proyecto'],
+   '10c: otra foto con texto sí se rehace (solo esa se paga) y «fase_2» no acumula otra RETOMA',
+   f"pagos={t['pagos']} {avisos(t)}")
+ok(all(r['prompts']['fase_2'].count(RETOMA) == 1 for r in t['renders']), '10c: «fase_2» lleva RETOMA una sola vez en los dos renders')
+CAMBIADO = cuerpo_render(True, unique_id=UID, image_briefs=[BRIEF_COVER] + [
+    brief('fase_2', 'potter shaping a clay bowl on a wheel, warm studio light') if b['slide'] == 'fase_2' else b
+    for b in BRIEFS_NUEVAS] + [BRIEF_CIERRE])
+t = simular(manifest_inicial=M1, render=CAMBIADO, openai=[{'con_texto': []}])
+ok(t['pagos'] == {'fase_2': 1} and t['renders'] and RETOMA not in t['renders'][0]['prompts']['fase_2'],
+   '10d: si Luis cambió esa lámina, la descripción nueva se genera como siempre, sin RETOMA', t['pagos'])
+for nombre, man in (
+    ('404', {'statusCode': 404, 'body': 'Not Found'}),
+    ('sin respuesta', {'error': {'message': 'ECONNRESET'}}),
+    ('HTML con 200', {'statusCode': 200, 'body': '<html>error</html>'}),
+    ('arreglo', {'statusCode': 200, 'body': [M1['fase_2']]}),
+    ('null', {'statusCode': 200, 'body': None}),
+    ('hash que no es texto', {'statusCode': 200, 'body': {'fase_2': {'file': 'fase_2.jpg', 'hash': 123}}}),
+    ('entrada que no es objeto', {'statusCode': 200, 'body': {'fase_2': 'fase_2.jpg'}}),
+    ('__proto__', {'statusCode': 200, 'body': json.loads('{"__proto__": {"hash": "x"}, "fase_2": null}')}),
+    ('texto JSON', {'statusCode': 200, 'body': json.dumps(M1)}),
+):
+    t = simular(manifest_inicial=M1, manifest_previo=man, openai=[{'con_texto': []}])
+    f2 = t['renders'][0]['prompts']['fase_2'] if t['renders'] else ''
+    esperado = nombre == 'texto JSON'
+    ok(not t.get('error') and estado(t) == 'listo' and f2.endswith(RETOMA) == esperado and t['pagos'] == ({} if esperado else {'fase_2': 1}),
+       f'10e: manifest previo {nombre} → ' + ('se lee igual' if esperado else 'descripción de WordPress, sin romper'), f"{estado(t)} pagos={t['pagos']}")
+ACENTOS = cuerpo_render(True, unique_id=UID, image_briefs=[BRIEF_COVER] + [
+    brief('fase_2', 'barista pouring café au lait next to a sunny window in Ñuñoa, piña on the counter') if b['slide'] == 'fase_2' else b
+    for b in BRIEFS_NUEVAS] + [BRIEF_CIERRE])
+t1 = simular(render=ACENTOS, openai=[{'con_texto': ['fase_2']}, {'con_texto': []}])
+t = simular(render=ACENTOS, manifest_inicial=t1['manifest'], openai=[{'con_texto': []}])
+ok(t1['pagos'].get('fase_2') == 2 and t['pagos'] == {}, '10f: con acentos y eñes la retoma también se reutiliza (sha256 en UTF-8)', t['pagos'])
+PRUEBA_SHA = JS_SHA256 + r"""
+const crypto = require('node:crypto');
+const casos = ['', 'a', 'abc', 'x'.repeat(55), 'x'.repeat(56), 'x'.repeat(64), 'x'.repeat(1000), 'café ñandú Ñuñoa', '\u{1F304} amanecer'];
+console.log(JSON.stringify(casos.filter((c) => sha256(c) !== crypto.createHash('sha256').update(c).digest('hex')).length));
+"""
+r = subprocess.run(['node', '-'], input=PRUEBA_SHA, capture_output=True, text=True, encoding='utf-8')
+ok(r.returncode == 0 and r.stdout.strip() == '0', '10g: el sha256 de los nodos calza con node:crypto (también fuera del ASCII)', r.stderr[-200:])
+
+# 11. Vista previa: nunca revisa ni lee manifests; sin propuesta: se revisan también portada y cierre.
+t = simular(webhook={'id': 9, 'codigo': UID, 'modo': 'draft', 'aviso': True},
+            leer_render=leido(cuerpo_render(False, unique_id=UID), estado='borrador'))
+ok(not t.get('error') and len(t['renders']) == 1 and t['renders'][0]['draft'] is True and t['consultas'] == []
+   and t['lecturas'] == [] and t['lecturas_previas'] == [] and (t.get('vista') or {}).get('ok') is True,
+   '11: la vista previa no lee manifests ni consulta a GPT-4o (no lleva fotos)', t.get('error') or t['pasos'])
+t = simular(con_propuesta=False, openai=[{'con_texto': ['cover']}, {'con_texto': []}])
+sin_error(t, '11 sin propuesta')
+ok(t['consultas'] and slides_de(t['consultas'][0]) == TODAS and t['pagos'] == {**{s: 1 for s in TODAS}, 'cover': 2},
+   '11: sin propuesta se revisan las 10 fotos y la portada con texto se rehace', t['pagos'])
+ok(estado(t) == 'listo' and avisos(t) == ['Fotos rehechas porque tenían texto: portada'], '11: «listo» con el aviso de la portada', avisos(t))
+
+print('TODO OK' if not fallas else f'{len(fallas)} FALLA(S)')
+sys.exit(1 if fallas else 0)
+```
+
+- [ ] **Step 17: Correrla y verla fallar**
+
+```bash
+python N8N/plan-trabajo/probar_revision_plan.py; echo "exit=$?"
+```
+Expected: la traza termina en
+```
+ImportError: cannot import name 'INSTRUCCION_TEXTO' from 'plan_js' (…\N8N\plan-trabajo\plan_js.py)
+exit=1
+```
+
+- [ ] **Step 18: Agregar al final de `N8N/plan-trabajo/plan_js.py`**
+```python
+
+
+
+# Task 14, ciclo D — revisión de texto de las fotos con GPT-4o (decisión D18, cambiada por Luis el 29-sep: el plan
+# lleva la misma revisión que las propuestas). La instrucción al modelo, la frase de la retoma y el sha256 se leen de
+# N8N/propuestas-v3/build_3_final.py (el «3 Final» de las propuestas, en PROD desde el 27-sep) con ast y SIN ejecutarlo
+# (ejecutarlo reescribe 3-final.json): una sola fuente. Si allá cambian, el plan los toma al reconstruir su flujo; una
+# RETOMA distinta solo hace que una foto rehecha antes se vuelva a pagar una vez (su sha256 ya no calza).
+import ast as _ast
+import json as _json
+import os as _os
+
+
+def _de_build_3_final(*nombres):
+    ruta = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', 'propuestas-v3', 'build_3_final.py')
+    with open(ruta, encoding='utf-8') as fh:
+        arbol = _ast.parse(fh.read())
+    valores = {}
+    for n in arbol.body:
+        if (isinstance(n, _ast.Assign) and len(n.targets) == 1 and isinstance(n.targets[0], _ast.Name)
+                and n.targets[0].id in nombres):
+            valores[n.targets[0].id] = _ast.literal_eval(n.value)
+    faltan = [x for x in nombres if x not in valores]
+    if faltan:
+        raise ImportError('build_3_final.py no define ' + ', '.join(faltan) + ' (¿falta el merge del PR #51 de la Task 0?)')
+    return [valores[x] for x in nombres]
+
+
+INSTRUCCION_TEXTO, RETOMA, JS_SHA256 = _de_build_3_final('INSTRUCCION_TEXTO', 'RETOMA', 'JS_SHA256')
+
+# Necesita antes, en el mismo nodo: JS_LEER_JSON (esObjetoPlano), JS_SHA256 (sha256) y JS_RENDER (leerRespuestaRender).
+JS_REVISION = ('const RETOMA = ' + _json.dumps(RETOMA) + ';\nconst INSTRUCCION_TEXTO = ' + _json.dumps(INSTRUCCION_TEXTO)
+               + ';\n' + r"""
+// Una foto rehecha por texto en una corrida anterior quedó en el renderer con la descripción + RETOMA, pero WordPress
+// guarda solo la original. Si el manifest del plan (/p/<codigo>/img/manifest.json) tiene para esa lámina el sha256 de
+// «original + RETOMA», se pide esa descripción y el renderer reutiliza la foto limpia en vez de pagar otra (que podría
+// volver a salir con texto). Una lámina que cambió no calza y se genera como siempre. Va DESPUÉS de fotosDelPlan: el
+// filtro de fotos_guard descarta una descripción con RETOMA («papers», «drawings»). Nunca lanza; no cambia `briefs`.
+function retomasPrevias(briefs, manifest) {
+  let m = manifest;
+  if (typeof m === 'string') { try { m = JSON.parse(m); } catch (e) { m = null; } }
+  if (!esObjetoPlano(m)) m = {};
+  const retomadas = [];
+  const salida = (Array.isArray(briefs) ? briefs : []).map((b) => {
+    if (!esObjetoPlano(b) || typeof b.prompt !== 'string' || b.prompt.endsWith(RETOMA)) return b;
+    const e = Object.prototype.hasOwnProperty.call(m, b.slide) ? m[b.slide] : null;
+    if (esObjetoPlano(e) && typeof e.hash === 'string' && e.hash === sha256(b.prompt + RETOMA)) {
+      retomadas.push(b.slide);
+      return { slide: b.slide, prompt: b.prompt + RETOMA };
+    }
+    return b;
+  });
+  return { briefs: salida, retomadas };
+}
+
+// Fotos que se le muestran a GPT-4o: las pedidas en esta versión (image_briefs, nunca la portada ni el cierre que vienen
+// de la propuesta), guardadas junto al plan según su manifest y que salieron en el último render (ni faltantes ni
+// enlazadas afuera: el manifest conserva la entrada vieja de una foto que esta vez no salió, y esa no está en el
+// documento). Solo archivos <lámina>.<ext> como los guarda el renderer: sin «..», barras ni archivos ocultos. ?v=
+// cambia en cada render: la foto rehecha se guarda con el MISMO nombre y así nadie entrega una copia guardada.
+function fotosParaRevisar(pedidas, manifest, images, uid, base, v) {
+  const m = esObjetoPlano(manifest) ? manifest : {};
+  const img = esObjetoPlano(images) ? images : {};
+  const fuera = new Set([...(Array.isArray(img.missing) ? img.missing : []), ...(Array.isArray(img.kept_remote) ? img.kept_remote : [])].map(String));
+  if (!/^[A-Za-z0-9_-]{6,64}$/.test(String(uid || '')) || !/^https?:\/\/[A-Za-z0-9.-]+(:\d+)?$/.test(String(base || ''))) return [];
+  const vistas = new Set();
+  return (Array.isArray(pedidas) ? pedidas : []).map(String).filter((s) => {
+    if (vistas.has(s) || fuera.has(s) || !Object.prototype.hasOwnProperty.call(m, s)) return false;
+    vistas.add(s);
+    const e = m[s];
+    return esObjetoPlano(e) && typeof e.file === 'string' && /^[A-Za-z0-9_-]+\.[A-Za-z0-9]{2,5}$/.test(e.file);
+  }).map((s) => ({ slide: s, url: base + '/p/' + uid + '/img/' + m[s].file + '?v=' + (Number(v) || 0) }));
+}
+
+// UNA consulta con todas las fotos (la misma forma que «3 Final» de las propuestas): gpt-4o, temperatura 0, JSON.
+function cuerpoRevision(fotos) {
+  const contenido = [{ type: 'text', text: INSTRUCCION_TEXTO }];
+  for (const f of fotos) {
+    contenido.push({ type: 'text', text: 'Photo "' + f.slide + '":' });
+    contenido.push({ type: 'image_url', image_url: { url: f.url, detail: 'high' } });
+  }
+  return { model: 'gpt-4o', temperature: 0, max_tokens: 200, response_format: { type: 'json_object' },
+    messages: [{ role: 'user', content: contenido }] };
+}
+
+// Salida del nodo «Buscar texto en fotos» (fullResponse + neverError; {error} si se cortó la red). Devuelve las láminas
+// con texto, sin repetidas y solo entre las que se le mostraron al modelo, o null con el motivo de la falla. Nunca lanza.
+function leerRevision(r, mostradas) {
+  const x = esObjetoPlano(r) ? r : {};
+  if (x.statusCode !== 200) {
+    const e = x.error;
+    const msg = e && typeof e === 'object' ? e.message : e;
+    return { con_texto: null, fallo: x.statusCode ? 'OpenAI respondió HTTP ' + x.statusCode : 'OpenAI no respondió' + (msg ? ': ' + String(msg).slice(0, 200) : '') };
+  }
+  try {
+    const j = JSON.parse(x.body.choices[0].message.content);
+    if (!esObjetoPlano(j) || !Array.isArray(j.con_texto)) throw new Error('sin con_texto');
+    const l = Array.isArray(mostradas) ? mostradas : [];
+    return { con_texto: [...new Set(j.con_texto.map(String))].filter((s) => l.includes(s)), fallo: '' };
+  } catch (e) {
+    return { con_texto: null, fallo: 'respuesta ilegible del modelo' };
+  }
+}
+""")
+```
+
+- [ ] **Step 19: Reemplazar entero `N8N/plan-trabajo/build_plan_3_render.py`** (Write; es el del Step 13 con los nodos
+de la revisión: «¿Versión final?», «Fotos previas del plan», «¿Revisar texto?», «Leer fotos del plan», «Preparar
+revisión de texto», «¿Hay fotos que revisar?», «Buscar texto en fotos», «Decidir retoma» y «¿Rehacer fotos?»; «Preparar
+render», «¿Reintentar render?» y «Resultado del render» cambian como se explica arriba; «¿Reutilizar fotos?» y «Fotos
+de la propuesta» leen `propuesta_uid` de «Leer render» porque ahora las precede «Fotos previas del plan»)
+```python
+"""Construye el workflow n8n «Plan de trabajo · 3 Render» y lo guarda en plan-3-render.json.
+
+Diseño: Docs/superpowers/specs/2026-09-27-plan-de-trabajo-design.md; Task 14 del plan de implementación (Etapa 1).
+Lo llama WordPress (at_pt_pedir_render) con {id, codigo, modo: 'draft'|'final', aviso} y X-AT-Secret:
+- draft: vista previa SIN fotos (tras el borrador, los cambios o «Guardar y recalcular»). No cambia el estado del
+  plan; si falla, solo deja la nota. Correo a Luis solo si WordPress pidió aviso o si algo falló. Si GET /render dice
+  que el plan ya está «aprobando», «listo» o «enviado», no la dibuja (pisaría la versión final): termina sin más.
+  Nunca revisa fotos (no hay).
+- final: al «Aprobar» (plan en «aprobando»). Portada y cierre reutilizan las fotos de la propuesta (sin costo); las
+  láminas nuevas piden fotos nuevas (gasto: US$0,0032 c/u de lista). Si faltan fotos, no hubo presentación, se cortó
+  la red o el renderer dio un 5xx, vuelve a llamarlo (el renderer reutiliza las fotos ya guardadas con el mismo prompt
+  y no las vuelve a cobrar). Un 4xx (el 400 del esquema) no se reintenta y sus motivos van a la nota.
+  Revisión de texto (decisión D18, 29-sep; la misma de «3 Final» de las propuestas): con la versión completa, GPT-4o
+  mira en UNA consulta las fotos nuevas guardadas; las que tengan texto se piden UNA vez más con la descripción +
+  RETOMA y se vuelve a renderizar; lo que siga con texto va como aviso en la nota de /vista y en el correo, sin pasar
+  el plan a «error». Gasto de lista (documentación de OpenAI, no medido en una factura): ≈ US$0,026 por consulta,
+  hasta dos, más US$0,0032 por foto rehecha; el panel lo suma antes de «Aprobar» (at_pt_costo_fotos, Task 4).
+  Tope: MAX_RENDERS = 3 renders EN TOTAL por corrida, contando el de la retoma (decisiones D11 y D18): la retoma solo
+  se pide si queda al menos un render, y sus reintentos gastan del mismo tope.
+  Termina SIEMPRE con POST /vista: WordPress pasa el plan a «listo» o a «error»; nunca queda trabado en «aprobando».
+  Siempre le escribe a Luis.
+Solo referencia credenciales por id; no contiene secretos.
+"""
+import json, os, sys
+
+AQUI = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(AQUI, '..', 'propuestas-v3'))
+from fotos_guard import JS_LIMPIAR_FOTOS  # noqa: E402
+from json_guard import JS_LEER_JSON  # noqa: E402
+from correos_plan import correo_render  # noqa: E402
+from plan_js import JS_PLAN, JS_RENDER, JS_REVISION, JS_SHA256, RENDERER_BASE  # noqa: E402
+
+CRED_SMTP = {'smtp': {'id': 'dyhVFWmjRNC45ccA', 'name': 'SMTP account PROD'}}
+CRED_OPENAI = {'openAiApi': {'id': 'g52IEXpRfN5r7jKw', 'name': 'OpenAi account'}}  # la misma de las propuestas
+CRED_WP = {'httpHeaderAuth': {'id': '1NI0sJKc0kC430pb', 'name': 'AT REST Secret (header)'}}
+CRED_RENDER = {'httpHeaderAuth': {'id': 'fj2orzbsjlnHaiLd', 'name': 'X-AT-Render-Key'}}  # clave de /render del renderer
+WP = 'https://automatizatech.cl/?rest_route=/automatiza-tech/v1'
+RENDERER = RENDERER_BASE + '/render'
+LUIS = 'lmgm.0303@gmail.com'
+FULL = {'response': {'response': {'fullResponse': True, 'neverError': True}}}
+MAX_RENDERS = 3
+LIB = (JS_LEER_JSON + '\n' + JS_LIMPIAR_FOTOS + '\n' + JS_PLAN + '\n' + JS_RENDER + '\n' + JS_SHA256 + '\n' + JS_REVISION + '\n'
+       + 'const RENDERER_BASE = ' + json.dumps(RENDERER_BASE) + ';\nconst MAX_RENDERS = ' + str(MAX_RENDERS) + ';\n')
+
+JS_AVISO = r"""const avisoPedido = (v) => v === true || v === 1 || v === '1' || v === 'true';
+"""
+
+CODE_PREPARAR = r"""// Arma el cuerpo que va al renderer. Nunca lanza.
+const hook = $('Webhook').first().json.body || {};
+const lr = ($('Leer render').first().json || {}).body || {};
+const id = parseInt(hook.id, 10) || 0;
+const modo = hook.modo === 'final' ? 'final' : 'draft';
+const uid = /^[A-Za-z0-9_-]{6,64}$/.test(String(lr.propuesta_uid || '')) ? String(lr.propuesta_uid) : '';
+let render = esObjetoPlano(lr.render) ? lr.render : {};
+let reutilizadas = [];
+let sin_foto = [];
+let retomadas_antes = [];
+if (modo === 'final') {
+  let manifest = null;
+  if ($('Fotos de la propuesta').isExecuted) {
+    const fp = $('Fotos de la propuesta').first().json || {};
+    if (fp.statusCode === 200) manifest = fp.body;
+  }
+  const x = reutilizarFotosPlan(render, manifest, RENDERER_BASE, uid);
+  render = x.render;
+  reutilizadas = x.reutilizadas;
+  sin_foto = x.sin_foto;
+  // Último filtro antes de gastar (idempotente, no cambia el hash de una foto ya guardada): solo láminas del plan,
+  // una por lámina, reglas de fotos_guard; con propuesta, nunca portada ni cierre.
+  render.image_briefs = fotosDelPlan(render.image_briefs, Array.isArray(render.fases) ? render.fases.length : 0, uid !== '');
+  // D18: una foto que una corrida anterior rehízo por texto se pide con su descripción + RETOMA, y el renderer la
+  // reutiliza sin cobrarla (manifest del plan; sin manifest, 404 o ilegible, se piden las de WordPress).
+  let previo = null;
+  if ($('Fotos previas del plan').isExecuted) {
+    const pp = $('Fotos previas del plan').first().json || {};
+    if (pp.statusCode === 200) previo = pp.body;
+  }
+  const rp = retomasPrevias(render.image_briefs, previo);
+  render.image_briefs = rp.briefs;
+  retomadas_antes = rp.retomadas;
+  render.draft = false;
+} else {
+  // La vista previa nunca paga fotos, venga lo que venga de WordPress.
+  render = Object.assign({}, render, { draft: true, image_briefs: [] });
+}
+return [{ json: { id, modo, aviso: avisoPedido(hook.aviso), render, reutilizadas, sin_foto, retomadas_antes,
+  crm: parseInt(lr.crm_cliente_id, 10) || 0,
+  proyecto: String(render.proyecto || render.company_name || ('plan ' + id)) } }];"""
+
+CODE_REINTENTAR = r"""// Tras cada render: en la versión final se vuelve a llamar al renderer solo si puede salir distinto (D11): la red o
+// el tiempo, un 5xx, o un 200 sin presentación o con fotos faltantes. Un 4xx (el 400 del esquema con details) da lo
+// mismo cada vez: no se reintenta. El renderer reutiliza las fotos ya guardadas con el mismo prompt
+// (img/manifest.json del plan) y solo pide las que faltan: un reintento no vuelve a pagar las que ya salieron.
+// Tope: MAX_RENDERS llamadas EN TOTAL, contando la retoma por texto (D18): si «Decidir retoma» pidió rehacer fotos,
+// los reintentos siguen con SUS descripciones (con las originales, el renderer volvería a pedir la foto con texto).
+// La revisión de texto corre solo con la versión final completa (presentación y todas las fotos): si faltan fotos,
+// el plan queda en «error» y la revisión corre cuando Luis lo apruebe de nuevo. Nunca lanza.
+const retoma = $('Decidir retoma').isExecuted && $('Decidir retoma').first().json.rehacer === true;
+const base = retoma ? $('Decidir retoma').first().json : $('Preparar render').first().json;
+const r = $input.first().json || {};
+const intento = $runIndex + 1;
+const lr = leerRespuestaRender(r);
+const final = base.modo === 'final';
+return [{ json: Object.assign({}, base, { resultado: r, intento,
+  reintentar: final && lr.reintentable && intento < MAX_RENDERS,
+  revisar_texto: final && lr.status === 200 && !!lr.view_url && lr.missing.length === 0 }) }];"""
+
+CODE_PREPARAR_TEXTO = r"""// Arma UNA consulta a GPT-4o con las fotos nuevas del plan que quedaron guardadas (img/manifest.json del plan en el
+// renderer). Nunca lanza: sin fotos que mostrar no se consulta y «Resultado del render» lo avisa.
+const vig = $('¿Reintentar render?').first().json;
+const render = esObjetoPlano(vig.render) ? vig.render : {};
+const lr = leerRespuestaRender(vig.resultado);
+const pedidas = (Array.isArray(render.image_briefs) ? render.image_briefs : []).map((b) => (esObjetoPlano(b) ? b.slide : '')).filter(Boolean);
+let m = $json.statusCode === 200 ? $json.body : null;
+if (typeof m === 'string') { try { m = JSON.parse(m); } catch (e) { m = null; } }
+const leida = esObjetoPlano(m);
+const fotos = leida ? fotosParaRevisar(pedidas, m, lr.images, render.unique_id, RENDERER_BASE, vig.intento) : [];
+return [{ json: {
+  revisar: fotos.length > 0,
+  slides: fotos.map((f) => f.slide),
+  ronda: Array.isArray(vig.fotos_retomadas) ? 1 : 0,
+  vigente: vig,
+  // Sin fotos nuevas pedidas (todo viene de la propuesta) no hay nada que revisar ni que avisar.
+  motivo_sin_revision: fotos.length || !pedidas.length ? '' : (leida ? 'no hay fotos guardadas'
+    : 'no se pudo leer la lista de fotos (' + ($json.statusCode ? 'HTTP ' + $json.statusCode : 'sin respuesta') + ')'),
+  cuerpo: cuerpoRevision(fotos),
+} }];"""
+
+CODE_DECIDIR_RETOMA = r"""// Lee la respuesta de GPT-4o. En la primera ronda, las fotos con texto se vuelven a pedir con otra descripción
+// (el renderer reutiliza una foto solo si su descripción no cambió), si queda al menos un render del tope. En la
+// segunda, o sin renders, solo informa. Cada foto se rehace UNA vez, también entre corridas: la que ya trae RETOMA
+// (rehecha antes y reutilizada por «Preparar render») no se vuelve a pagar. Nunca lanza.
+const prep = $('Preparar revisión de texto').first().json;
+const rev = leerRevision($json, prep.slides);
+const vig = prep.vigente;
+const render = vig.render;
+const vigentes = Array.isArray(render.image_briefs) ? render.image_briefs : [];
+const nuevas = (rev.con_texto || []).filter((s) => vigentes.some((b) => b && b.slide === s && !String(b.prompt).endsWith(RETOMA)));
+const quedan = (Number(vig.intento) || 0) < MAX_RENDERS;
+if (nuevas.length && prep.ronda === 0 && quedan) {
+  const briefs = vigentes.map((b) => (nuevas.includes(b.slide) ? { slide: b.slide, prompt: b.prompt + RETOMA } : b));
+  return [{ json: Object.assign({}, vig, { render: Object.assign({}, render, { image_briefs: briefs }),
+    rehacer: true, fotos_retomadas: nuevas }) }];
+}
+return [{ json: { rehacer: false, fotos_con_texto: rev.con_texto || [], revision_fallo: rev.fallo,
+  sin_renders: nuevas.length > 0 && prep.ronda === 0 && !quedan } }];"""
+
+CODE_RESULTADO = r"""// Resume lo que pasó para WordPress (POST /vista) y para el correo. Nunca lanza.
+const hook = $('Webhook').first().json.body || {};
+const id = parseInt(hook.id, 10) || 0;
+const modo = hook.modo === 'final' ? 'final' : 'draft';
+const exec = String($execution.id);
+const vacio = { id, modo, aviso: avisoPedido(hook.aviso), exec, ok: false, view_url: '', pdf_url: '', faltan: [],
+  problemas: [], avisos: [], resumen: [], nota: '', crm: 0, proyecto: 'plan ' + id, renders: 0 };
+if (!$('Preparar render').isExecuted) {
+  const lr = $('Leer render').first().json || {};
+  const b = esObjetoPlano(lr.body) ? lr.body : {};
+  const motivo = 'No se pudo leer el plan en WordPress (' + (lr.statusCode ? 'HTTP ' + lr.statusCode
+    : 'sin respuesta' + (lr.error && lr.error.message ? ': ' + lr.error.message : '')) + ')' + (b.message ? ' — ' + b.message : '');
+  return [{ json: Object.assign(vacio, { problemas: [motivo], nota: motivo + ' (ejecución ' + exec + ')' }) }];
+}
+// La última pasada del bucle de renders (llega aquí también desde la revisión de texto).
+const v = $('¿Reintentar render?').first().json || {};
+const lr = leerRespuestaRender(v.resultado);
+const img = lr.images;
+const intento = Number(v.intento) || 1;
+const veces = intento + ' ' + (intento === 1 ? 'intento' : 'intentos');
+const missing = lr.missing;
+const remotas = Array.isArray(img.kept_remote) ? img.kept_remote.map(String) : [];
+const pedidas = Number(img.requested) || 0;
+const problemas = [];
+const avisos = [];
+if (!lr.view_url) {
+  // D11: los motivos del renderer (details del 400 del esquema o del 502) van a la nota, que WordPress guarda.
+  const motivo = lr.detalles.length ? lr.detalles.join('; ') : String(lr.cuerpo.error || '').slice(0, 200);
+  const rechazo = lr.status >= 400 && lr.status < 500;
+  const det = lr.status === 0 ? lr.fallo : (lr.status !== 200 ? 'HTTP ' + lr.status + (motivo ? ': ' + motivo : '') : '');
+  problemas.push((rechazo ? 'el renderer rechazó el plan' : 'el renderer no devolvió la presentación') + (det ? ' (' + det + ')' : '')
+    + (modo === 'final' && !rechazo ? ' tras ' + veces : ''));
+}
+if (modo === 'final' && missing.length) problemas.push('fotos que no se generaron tras ' + veces + ': ' + nombresLaminas(missing));
+if (remotas.length) avisos.push('fotos que no se pudieron guardar junto al plan (quedaron enlazadas): ' + nombresLaminas(remotas));
+if (Array.isArray(v.sin_foto) && v.sin_foto.length) {
+  avisos.push('la propuesta no tiene foto guardada para ' + nombresLaminas(v.sin_foto) + ': esas láminas van sin foto');
+}
+// Revisión de texto en las fotos (D18): nunca pasa el plan a «error»; solo avisa en la nota y en el correo.
+let revisionLimpia = false;
+if (Array.isArray(v.fotos_retomadas) && v.fotos_retomadas.length) {
+  avisos.push('Fotos rehechas porque tenían texto: ' + nombresLaminas(v.fotos_retomadas));
+}
+if (modo === 'final' && v.revisar_texto === true) {
+  const prep = $('Preparar revisión de texto').isExecuted ? $('Preparar revisión de texto').first().json : null;
+  const qa = $('Decidir retoma').isExecuted ? $('Decidir retoma').first().json : null;
+  if (!prep) avisos.push('No se revisó si las fotos tienen texto');
+  else if (!prep.revisar) { if (prep.motivo_sin_revision) avisos.push('No se revisó si las fotos tienen texto: ' + prep.motivo_sin_revision); }
+  else if (qa && !qa.rehacer && qa.revision_fallo) avisos.push('No se pudo revisar si las fotos tienen texto (' + qa.revision_fallo + ')');
+  else if (qa && !qa.rehacer && (qa.fotos_con_texto || []).length) {
+    avisos.push('Fotos que todavía pueden tener texto (revísalas o pide cambios): ' + nombresLaminas(qa.fotos_con_texto)
+      + (qa.sin_renders ? ' (no quedaban renders para rehacerlas)' : ''));
+  } else if (qa && !qa.rehacer) revisionLimpia = true;
+}
+const ok = problemas.length === 0;
+const resumen = [];
+if (ok && modo === 'final') {
+  resumen.push('Presentación y PDF generados');
+  resumen.push((pedidas - missing.length) + ' de ' + pedidas + ' fotos nuevas guardadas junto al plan');
+  if (Array.isArray(v.reutilizadas) && v.reutilizadas.length) resumen.push('Con las fotos de la propuesta, sin costo: ' + nombresLaminas(v.reutilizadas));
+  resumen.push(intento + ' ' + (intento === 1 ? 'render' : 'renders'));
+  if (revisionLimpia) resumen.push('Fotos revisadas con GPT-4o: sin texto');
+} else if (ok) {
+  resumen.push('Vista previa generada (sin fotos)');
+}
+const extra = avisos.length ? ' · ' + avisos.join(' · ') : '';
+const nota = ok ? (modo === 'final' ? 'Versión final verificada: ' : 'Vista previa lista: ') + resumen.join(' · ') + extra
+  : problemas.join(' · ') + extra + ' (ejecución ' + exec + ')';
+return [{ json: Object.assign(vacio, { ok, view_url: lr.view_url, pdf_url: lr.pdf_url,
+  faltan: modo === 'final' ? missing : [], problemas, avisos, resumen, nota, crm: v.crm || 0, proyecto: v.proyecto || vacio.proyecto,
+  renders: intento }) }];"""
+
+
+def node(id_, name, type_, version, pos, params, **extra):
+    n = {'id': id_, 'name': name, 'type': type_, 'typeVersion': version, 'position': pos, 'parameters': params}
+    n.update(extra)
+    return n
+
+
+def http(id_, name, pos, method, url, body_expr=None, cred=True, timeout=30000):
+    params = {'method': method, 'url': url, 'options': dict(FULL, timeout=timeout)}
+    if cred:
+        params.update({'authentication': 'genericCredentialType', 'genericAuthType': 'httpHeaderAuth'})
+    if body_expr:
+        params.update({'sendBody': True, 'specifyBody': 'json', 'jsonBody': body_expr})
+    extra = {'credentials': CRED_WP} if cred else {}
+    # neverError no cubre timeouts ni conexiones cortadas: con continueRegularOutput pasa {error} sin statusCode y
+    # el flujo sigue hasta POST /vista (el plan nunca queda trabado en «aprobando»).
+    return node(id_, name, 'n8n-nodes-base.httpRequest', 4.2, pos, params, onError='continueRegularOutput', **extra)
+
+
+def iff(id_, name, pos, left):
+    return node(id_, name, 'n8n-nodes-base.if', 2.2, pos, {
+        'conditions': {'options': {'caseSensitive': True, 'leftValue': '', 'typeValidation': 'loose', 'version': 2},
+                       'conditions': [{'id': id_ + '-c', 'leftValue': left, 'rightValue': True,
+                                       'operator': {'type': 'boolean', 'operation': 'true', 'singleValue': True}}],
+                       'combinator': 'and'},
+        'options': {}})
+
+
+nodes = [
+    node('r1', 'Webhook', 'n8n-nodes-base.webhook', 2, [0, 0],
+         {'httpMethod': 'POST', 'path': 'plan-v1-render', 'authentication': 'headerAuth',
+          'responseMode': 'onReceived', 'options': {}},
+         webhookId='plan-v1-render', credentials=CRED_WP),
+    # La base de WP ya trae «?rest_route=», así que el modo va con «&».
+    http('r2', 'Leer render', [220, 0], 'GET',
+         f"={WP}/plan/{{{{ $json.body.id }}}}/render&modo={{{{ $json.body.modo === 'final' ? 'final' : 'draft' }}}}"),
+    iff('r3', '¿Render leído?', [440, 0],
+        "={{ $json.statusCode === 200 && !!$json.body && $json.body.ok === true && !!$json.body.render"
+        " && typeof $json.body.render === 'object' }}"),
+    # D10: una vista previa con el plan ya «aprobando», «listo» o «enviado» pisaría en /p/<codigo>/ la versión final.
+    # Falso termina aquí: sin renderer, sin /vista y sin correo (el webhook ya respondió al recibir).
+    iff('r15', '¿Toca renderizar?', [660, 0],
+        "={{ $('Webhook').first().json.body.modo === 'final' || !" + json.dumps(['aprobando', 'listo', 'enviado'])
+        + ".includes(String($json.body.estado)) }}"),
+    # Solo la versión final lee manifests (la vista previa no lleva fotos).
+    iff('r16', '¿Versión final?', [770, 0], "={{ $('Webhook').first().json.body.modo === 'final' }}"),
+    # D18: manifest del propio plan, para reutilizar sin costo las fotos rehechas por texto en una corrida anterior.
+    # Nunca falla: sin manifest (404, primera versión final) o con error, se piden las descripciones de WordPress.
+    http('r17', 'Fotos previas del plan', [880, -240], 'GET',
+         "={{ '" + RENDERER_BASE + "/p/' + encodeURIComponent(String(($('Leer render').first().json.body.render || {}).unique_id || ''))"
+         " + '/img/manifest.json' }}", cred=False),
+    iff('r4', '¿Reutilizar fotos?', [990, -120],
+        "={{ String($('Leer render').first().json.body.propuesta_uid || '').length >= 6 }}"),
+    # Nunca falla: sin manifest (404) o con error, «Preparar render» deja portada y cierre sin foto y lo avisa.
+    http('r5', 'Fotos de la propuesta', [1100, -240], 'GET',
+         "={{ '" + RENDERER_BASE + "/p/' + encodeURIComponent($('Leer render').first().json.body.propuesta_uid) + '/img/manifest.json' }}",
+         cred=False),
+    node('r6', 'Preparar render', 'n8n-nodes-base.code', 2, [1320, -120], {'jsCode': LIB + JS_AVISO + CODE_PREPARAR}),
+    # Respuesta completa (código HTTP y cuerpo) para distinguir un 400 del esquema, que no se reintenta, de un 5xx (D11).
+    node('r7', 'Render', 'n8n-nodes-base.httpRequest', 4.2, [1540, -120],
+         {'method': 'POST', 'url': RENDERER, 'authentication': 'genericCredentialType', 'genericAuthType': 'httpHeaderAuth',
+          'sendBody': True, 'specifyBody': 'json', 'jsonBody': '={{ JSON.stringify($json.render) }}',
+          'options': dict(FULL, timeout=290000)},
+         onError='continueRegularOutput', credentials=CRED_RENDER),
+    node('r8', '¿Reintentar render?', 'n8n-nodes-base.code', 2, [1760, -240], {'jsCode': LIB + CODE_REINTENTAR}),
+    iff('r9', '¿Faltan fotos?', [1980, -240], '={{ $json.reintentar === true }}'),
+    # Revisión de texto en las fotos (D18): ver el docstring.
+    iff('r18', '¿Revisar texto?', [2090, -360], '={{ $json.revisar_texto === true }}'),
+    http('r19', 'Leer fotos del plan', [2200, -480], 'GET',
+         "={{ '" + RENDERER_BASE + "/p/' + encodeURIComponent(String(($json.render || {}).unique_id || '')) + '/img/manifest.json' }}",
+         cred=False),
+    node('r20', 'Preparar revisión de texto', 'n8n-nodes-base.code', 2, [2310, -480], {'jsCode': LIB + CODE_PREPARAR_TEXTO}),
+    iff('r21', '¿Hay fotos que revisar?', [2420, -480], '={{ $json.revisar === true }}'),
+    node('r22', 'Buscar texto en fotos', 'n8n-nodes-base.httpRequest', 4.2, [2530, -600],
+         {'method': 'POST', 'url': 'https://api.openai.com/v1/chat/completions',
+          'authentication': 'predefinedCredentialType', 'nodeCredentialType': 'openAiApi',
+          'sendBody': True, 'specifyBody': 'json', 'jsonBody': '={{ JSON.stringify($json.cuerpo) }}',
+          'options': dict(FULL, timeout=120000)},
+         onError='continueRegularOutput', credentials=CRED_OPENAI),
+    node('r23', 'Decidir retoma', 'n8n-nodes-base.code', 2, [2640, -600], {'jsCode': LIB + CODE_DECIDIR_RETOMA}),
+    iff('r24', '¿Rehacer fotos?', [2750, -600], '={{ $json.rehacer === true }}'),
+    node('r10', 'Resultado del render', 'n8n-nodes-base.code', 2, [2860, 0], {'jsCode': LIB + JS_AVISO + CODE_RESULTADO}),
+    http('r11', 'Guardar vista', [3080, 0], 'POST', f"={WP}/plan/{{{{ $json.id }}}}/vista",
+         "={{ JSON.stringify({ modo: $json.modo, ok: $json.ok, view_url: $json.view_url, pdf_url: $json.pdf_url,"
+         " faltan: $json.faltan, nota: $json.nota }) }}"),
+    node('r12', 'Armar correo', 'n8n-nodes-base.code', 2, [3300, 0], {'jsCode': correo_render()}),
+    iff('r13', '¿Avisar a Luis?', [3520, 0], '={{ $json.enviar === true }}'),
+    node('r14', 'Correo a Luis', 'n8n-nodes-base.emailSend', 1, [3740, -120],
+         {'fromEmail': 'contacto@automatizatech.cl', 'toEmail': LUIS,
+          'subject': '={{ $json.asunto }}', 'html': '={{ $json.html }}', 'options': {}},
+         credentials=CRED_SMTP),
+]
+
+connections = {}
+
+
+def link(a, b, output=0):
+    connections.setdefault(a, {'main': []})
+    while len(connections[a]['main']) <= output:
+        connections[a]['main'].append([])
+    connections[a]['main'][output].append({'node': b, 'type': 'main', 'index': 0})
+
+
+link('Webhook', 'Leer render')
+link('Leer render', '¿Render leído?')
+link('¿Render leído?', '¿Toca renderizar?', 0)
+link('¿Render leído?', 'Resultado del render', 1)
+# ¿Toca renderizar? falso (vista previa atrasada, D10): termina aquí.
+link('¿Toca renderizar?', '¿Versión final?', 0)
+link('¿Versión final?', 'Fotos previas del plan', 0)
+link('¿Versión final?', 'Preparar render', 1)
+link('Fotos previas del plan', '¿Reutilizar fotos?')
+link('¿Reutilizar fotos?', 'Fotos de la propuesta', 0)
+link('¿Reutilizar fotos?', 'Preparar render', 1)
+link('Fotos de la propuesta', 'Preparar render')
+link('Preparar render', 'Render')
+link('Render', '¿Reintentar render?')
+link('¿Reintentar render?', '¿Faltan fotos?')
+link('¿Faltan fotos?', 'Render', 0)
+link('¿Faltan fotos?', '¿Revisar texto?', 1)
+link('¿Revisar texto?', 'Leer fotos del plan', 0)
+link('¿Revisar texto?', 'Resultado del render', 1)
+link('Leer fotos del plan', 'Preparar revisión de texto')
+link('Preparar revisión de texto', '¿Hay fotos que revisar?')
+link('¿Hay fotos que revisar?', 'Buscar texto en fotos', 0)
+link('¿Hay fotos que revisar?', 'Resultado del render', 1)
+link('Buscar texto en fotos', 'Decidir retoma')
+link('Decidir retoma', '¿Rehacer fotos?')
+link('¿Rehacer fotos?', 'Render', 0)
+link('¿Rehacer fotos?', 'Resultado del render', 1)
+link('Resultado del render', 'Guardar vista')
+link('Guardar vista', 'Armar correo')
+link('Armar correo', '¿Avisar a Luis?')
+link('¿Avisar a Luis?', 'Correo a Luis', 0)
+
+wf = {'name': 'Plan de trabajo · 3 Render', 'nodes': nodes, 'connections': connections,
+      # Si el flujo se cae sin llegar a su propio aviso, «Propuestas v3 · 0 Avisar error» le escribe a Luis.
+      'settings': {'executionOrder': 'v1', 'errorWorkflow': 'm7TOfKznVSBGz4Nd'}}
+out = os.path.join(AQUI, 'plan-3-render.json')
+with open(out, 'w', encoding='utf-8') as fh:
+    json.dump(wf, fh, ensure_ascii=False, indent=2)
+print('escrito', out, len(nodes), 'nodos')
+```
+
+- [ ] **Step 20: Construir el flujo y correr las dos pruebas**
+
+```bash
+python N8N/plan-trabajo/build_plan_3_render.py
+```
+```bash
+SAL=$(python N8N/plan-trabajo/probar_plan.py 2>&1); echo "exit=$?"
+echo "$SAL" | grep -c '^ok '; echo "$SAL" | grep -c '^FALLA'; echo "$SAL" | tail -1
+```
+```bash
+SAL=$(python N8N/plan-trabajo/probar_revision_plan.py 2>&1); echo "exit=$?"
+echo "$SAL" | grep -c '^ok '; echo "$SAL" | grep -c '^FALLA'; echo "$SAL" | tail -1
+```
+Expected: `escrito …plan-3-render.json 24 nodos`; `probar_plan.py`: `exit=0`, `341`, `0`, `TODO OK` (la sección `render`
+sigue con sus 61: los valores por defecto de `sim()` del Step 11 dan un manifest del plan con las fotos y un GPT-4o sin
+texto, así que R1-R15 no cambian); `probar_revision_plan.py`: `exit=0`, `103`, `0`, `TODO OK` (entre ellas «1: una sola
+consulta a GPT-4o con las 8 fotos nuevas, sin la portada ni el cierre de la propuesta», «2b: la retoma cuenta dentro del
+tope: 3 renders en total», «2c: con los 3 renders gastados no se rehace nada (ni se paga otra foto)», «8: 32
+combinaciones terminan; el peor caso hace 3 llamadas al renderer (tope 3, retoma incluida)» y «10a: no le paga ninguna
+foto a Higgsfield; «listo» y sin avisos»). Cada prueba tarda cerca de un minuto y medio (82 s y 89 s medidos el 29-sep):
+cada caso arranca `node`. Si una falla, se corrige el código, no la prueba.
+
+- [ ] **Step 21: Commit y comprobar que los JSON commiteados son los que generan los builders**
+
+```bash
+git add N8N/plan-trabajo/plan_js.py N8N/plan-trabajo/build_plan_3_render.py N8N/plan-trabajo/plan-3-render.json N8N/plan-trabajo/probar_revision_plan.py
+git commit -m "feat(plan-n8n): revisión de texto de las fotos con GPT-4o en «3 Render», como en las propuestas (D18)" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+python N8N/plan-trabajo/build_plan_1_borrador.py > /dev/null && python N8N/plan-trabajo/build_plan_2_cambios.py > /dev/null && python N8N/plan-trabajo/build_plan_3_render.py > /dev/null && git diff --exit-code -- N8N/plan-trabajo/ && echo "JSON commiteados = builders"
+```
+Expected: la última línea es `JSON commiteados = builders`; `git log --oneline` muestra los 8 commits de las Tasks 13
+y 14.
+
 Nota para la Task 16 (no se ejecuta aquí: desplegar lo autoriza Luis). `deploy.py` une su propia carpeta con el
 argumento (`os.path.join(os.path.dirname(__file__), sys.argv[1])`), así que sirven la ruta relativa a su carpeta
 (`python N8N/propuestas-v3/deploy.py ../plan-trabajo/plan-3-render.json`) y la absoluta: desde Git Bash,
 `"$(pwd)/N8N/plan-trabajo/plan-3-render.json"` llega a Python como `C:/…` (conversión de rutas de MSYS, probado el
 29-sep). Orden obligatorio (decisión D17): primero `plan-3-render.json` y después `plan-1-borrador.json` y
 `plan-2-cambios.json`: WordPress llama a «3 Render» apenas guarda un borrador (si no existe, el borrador queda guardado
-sin vista previa y «1 Borrador» le escribe a Luis).
+sin vista previa y «1 Borrador» le escribe a Luis). Antes de desplegar, `probar_plan.py` y `probar_revision_plan.py`
+deben terminar en `TODO OK`.
 
 
 ### Task 15: Prueba de punta a punta en local (WordPress + renderer + simulador de n8n)
@@ -14962,6 +16086,8 @@ sin vista previa y «1 Borrador» le escribe a Luis).
 Objetivo: recorrer el ciclo completo sin tocar PROD ni gastar créditos: firma → borrador → vista previa → editar y
 recalcular → pedir cambios → aprobar → versión final; más los casos 4 y 5 del Review Focus. El simulador hace las
 mismas llamadas HTTP que los tres flujos n8n, con un plan fijo en vez de GPT-4o y una foto local en vez de Higgsfield.
+No hace la revisión de texto de las fotos (no llama a OpenAI, y la foto de relleno es la misma en todas las láminas):
+esa parte la prueban `probar_revision_plan.py` (Task 14, ciclo D) y la prueba real de la Task 16, Step 6.
 Nada de esto va al repo: vive en `<SCR>/plan-trabajo/e2e/`.
 
 **Files (fuera del repo):**
@@ -15246,7 +16372,7 @@ Expected: `estado: "borrador"`, `view_url` de `localhost:5202`, `inicio` = lunes
 1. Abrir `http://localhost:8093/wp-admin/?at_admin=1` y luego
    `http://localhost:8093/wp-admin/admin.php?page=automatiza-crm-ficha&id=<crm>&pt=<plan>#tab-plan`.
 2. Comprobar: pestaña «🗓️ Plan de trabajo» visible; estado «Borrador»; enlace a la vista previa; tabla con las
-   actividades, su origen y sus fechas; «✅ Aprobar y generar versión final (8 fotos ≈ US$0,0256)» (con propuesta: cover y cierre no cuentan).
+   actividades, su origen y sus fechas; «✅ Aprobar y generar versión final (8 fotos + revisión ≈ US$0,0516)» (con propuesta: cover y cierre no cuentan; 8 × US$0,0032 + US$0,026 de la revisión de texto).
 3. Cambiar «Construcción del sitio» de sus días a 12 y la fecha de inicio a un sábado; «Guardar y recalcular».
    `estado.php` debe mostrar esa actividad `12/luis`, el inicio movido al lunes hábil siguiente y una vista nueva.
 4. «Pedir cambios» con un comentario. Tras ~10 s: estado `borrador`, `desc_fase_1` termina en «(revisado)» y la
@@ -15266,7 +16392,7 @@ Expected: `estado: "borrador"`, `view_url` de `localhost:5202`, `inicio` = lunes
 "$PHP" datos.php sin_propuesta sin_correo
 sleep 10; "$PHP" estado.php <plan2>
 ```
-Expected: estado `borrador`. En la pestaña: «✅ Aprobar y generar versión final (10 fotos ≈ US$0,032)» (portada y cierre también se generan). La vista
+Expected: estado `borrador`. En la pestaña: «✅ Aprobar y generar versión final (10 fotos + revisión ≈ US$0,0580)» (portada y cierre también se generan: 10 × US$0,0032 + US$0,026). La vista
 muestra «Sigue tu proyecto» sin enlace y sin error.
 
 - [ ] **Step 8: n8n caído al firmar (Review Focus 5)**
@@ -15319,7 +16445,7 @@ Luis lo sube a Easypanel. Verificar `GET /health` → 200 y que una propuesta ya
 ```bash
 cd /c/wamp64/www/automatiza-tech/.worktrees/plan-trabajo
 python N8N/plan-trabajo/build_plan_1_borrador.py && python N8N/plan-trabajo/build_plan_2_cambios.py && python N8N/plan-trabajo/build_plan_3_render.py
-python N8N/plan-trabajo/probar_plan.py
+python N8N/plan-trabajo/probar_plan.py && python N8N/plan-trabajo/probar_revision_plan.py
 python N8N/propuestas-v3/deploy.py "$(pwd)/N8N/plan-trabajo/plan-3-render.json"   # primero: WordPress lo llama apenas guarda un borrador
 python N8N/propuestas-v3/deploy.py "$(pwd)/N8N/plan-trabajo/plan-1-borrador.json"
 python N8N/propuestas-v3/deploy.py "$(pwd)/N8N/plan-trabajo/plan-2-cambios.json"
@@ -15349,11 +16475,17 @@ hacer); anotar sus ids en la memoria.
 Sonda que cuenta las fechas de `automatiza_chat_schedule['holidays']` por año. Si 2026 y 2027 no están completos,
 avisar a Luis para que los cargue en «Ajustes del chat» (no inventar la lista).
 
-- [ ] **Step 6: Prueba real** (ok de Luis; gasta ~US$0,02 de GPT-4o por borrador y fotos solo si aprueba)
+- [ ] **Step 6: Prueba real** (ok de Luis; gasta ~US$0,02 de GPT-4o por borrador; solo si aprueba, las fotos y la
+revisión de texto: ≈ US$0,0516 con propuesta (8 fotos) o ≈ US$0,058 sin ella (10), hasta el doble si hay que
+rehacerlas; es lo que muestra el botón)
 
-Antes del primer «Aprobar», recordarle a Luis la decisión D18: en la Etapa 1 las fotos nuevas salen con Soul 2 y **sin**
-la revisión de texto con GPT-4o que tienen las propuestas; Soul 2 a veces imprime letras en prendas y envases. Si
-prefiere, se suma esa revisión al flujo 3 antes de aprobar (tarea aparte).
+Si Luis aprueba, verificar que la revisión de texto corrió (decisión D18): en n8n, la ejecución de «Plan de trabajo ·
+3 Render» pasa por «Leer fotos del plan», «Preparar revisión de texto», «Buscar texto en fotos» (HTTP 200) y «Decidir
+retoma»; la nota del plan en el panel y el correo a Luis dicen «Fotos revisadas con GPT-4o: sin texto» o traen el
+aviso («Fotos rehechas porque tenían texto: …», «Fotos que todavía pueden tener texto …» o «No se pudo revisar …»).
+Si una foto se rehízo, mirar esa lámina en la vista final: ya no debe tener letras. Si la nota dice «No se revisó …»,
+aclarar el motivo antes de dar la Etapa por cerrada. Anotar en la memoria el gasto real de esa ejecución según el
+panel de uso de OpenAI: la cifra de US$0,026 por consulta sale de la documentación y no está medida en una factura.
 
 Luis elige el contrato firmado para probar y usa «Crear plan de trabajo» en la ficha de ese cliente. Verificar el
 borrador, la vista previa, editar y recalcular, «Pedir cambios» y, si Luis lo decide, «Aprobar» con el costo a la
@@ -15361,7 +16493,8 @@ vista. Nada se envía al cliente (el envío es la Etapa 2).
 
 - [ ] **Step 7: Documentación y memoria**
 
-`Docs/METODO_AT/PLAN-DE-TRABAJO.md`: qué es, estados, rutas, flujos n8n y sus ids, tabla de tiempos, cómo destrabar,
+`Docs/METODO_AT/PLAN-DE-TRABAJO.md`: qué es, estados, rutas, flujos n8n y sus ids, tabla de tiempos, revisión de texto
+de las fotos y su costo (D18), cómo destrabar,
 despliegue, respaldos y rollback (sin datos de clientes). Puntero en `Docs/METODO_AT/README.md`, `CLAUDE.md` y
 `AGENTS.md`. Memoria y bóveda con fechas, respaldos, ids y pendientes (Etapa 2: envío al cliente, `ver-plan.php` y agenda
 web; Etapa 3: plantilla Meta y Tech en el bot). Lista FTP para Luis según `CLAUDE.md` («Entrega obligatoria para FTP»).

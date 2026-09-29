@@ -244,8 +244,11 @@ agendar la llamada de seguimiento de mi plan de trabajo (código XXXX)». `porta
 - `at_pt_armar_render(array $plan, array $datos, bool $final): array` — `$datos` = `['codigo','company_name',
   'client_name','portal_url','whatsapp','fecha_firma']`
 - `at_pt_costo_fotos(array $image_briefs, bool $hay_propuesta): array` → `['fotos' => int, 'usd_lista' => float,
-  'usd_max' => float]` (cuenta los briefs válidos; si hay propuesta, `cover` y `cierre` no cuentan porque se
-  reutilizan; US$0,0032 por foto de lista y el máximo con reintentos = x2, como `at_propuesta_costo_fotos`)
+  'usd_revision' => float, 'usd_max' => float]` (cuenta los briefs válidos; si hay propuesta, `cover` y `cierre` no
+  cuentan porque se reutilizan; US$0,0032 por foto de lista (`AT_PT_USD_POR_FOTO`) más, si hay al menos una foto,
+  la revisión de texto con GPT-4o (`AT_PT_USD_REVISION` = 0.026 por consulta, D18); `usd_max` = fotos x2 + dos
+  revisiones. Mismo criterio y cifras que `at_propuesta_costo_fotos` de `claude/cierre-cliente`. Con propuesta:
+  8 fotos = US$0,0516 (máx. 0,1032); sin propuesta: 10 fotos = US$0,058 (máx. 0,116))
 
 `inc/plan-trabajo/datos.php` (WordPress):
 - `at_pt_tabla(): string`, `at_pt_migrar_esquema(): void` (hook `admin_init` y llamada perezosa desde las funciones de
@@ -331,13 +334,20 @@ WhatsApp con las casillas de siempre; lo decide Luis en ese formulario).
   manifest, base, uid)`: `cover` ← foto `cover` de la propuesta, `cierre` ← foto `next_steps`; las pone en
   `render.images` como URL absoluta y quita esos slides de `render.image_briefs`) → POST renderer (credencial
   «X-AT-Render-Key» `fj2orzbsjlnHaiLd`, timeout 290000) → si `final` y faltan fotos o no hay view_url, reintenta hasta
-  3 renders en total → POST `{WP}/plan/{id}/vista {modo, ok, view_url, pdf_url, faltan, nota}` → correo a Luis si
-  `aviso` o `final` o error.
+  3 renders en total → en `final` con la versión completa, revisión de texto de las fotos (D18): GET
+  `{RENDERER_BASE}/p/{codigo}/img/manifest.json` → UNA consulta a `gpt-4o` (HTTP a `api.openai.com`, credencial
+  `g52IEXpRfN5r7jKw`, la de las propuestas) con las fotos nuevas → las que tengan texto se piden una vez más con la
+  descripción + `RETOMA` (dentro de los mismos 3 renders) → segunda consulta que solo informa; antes del render, el
+  manifest del plan («Fotos previas del plan») hace que una foto ya rehecha no se vuelva a pagar → POST
+  `{WP}/plan/{id}/vista {modo, ok, view_url, pdf_url, faltan, nota}` (los avisos de texto van en `nota`, nunca como
+  `ok: false`) → correo a Luis si `aviso` o `final` o error. 24 nodos.
 - `correos_plan.py`: correos de marca a Luis reutilizando `N8N/propuestas-v3/email_tpl.py` (import con `sys.path`),
   enlazando SOLO a `automatizatech.cl` (nunca a `*.easypanel.host`, regla SMTP): panel =
   `https://automatizatech.cl/wp-admin/admin.php?page=automatiza-crm-ficha&id=<crm>&pt=<plan>#tab-plan`; vista previa =
   el mismo panel (la vista se abre desde ahí).
 - `probar_plan.py`: prueba con `node` el JS embebido (leer plan, reutilizar fotos, reintentos) sin llamar a OpenAI ni n8n.
+- `probar_revision_plan.py`: la revisión de texto del flujo 3 (como `N8N/propuestas-v3/probar_revision_fotos.py`), con un
+  renderer simulado que reutiliza por sha256 y un GPT-4o simulado.
 - Despliegue con `python N8N/propuestas-v3/deploy.py <ruta absoluta al json>` (crea si no existe; activa). No se
   despliega en la Etapa de código: lo autoriza Luis (Task final).
 
@@ -383,7 +393,8 @@ WhatsApp con las casillas de siempre; lo decide Luis en ese formulario).
 - Task 11 — Renderer: exportaciones, esquema y servidor para `document_type: 'plan'`. (Grupo D)
 - Task 12 — Renderer: `template-plan.js` con las 8 láminas y la carta Gantt. (D)
 - Task 13 — n8n: builders 1 Borrador y 2 Cambios, `correos_plan.py`, prompts, `probar_plan.py`. (Grupo E)
-- Task 14 — n8n: builder 3 Render (reutilizar fotos, reintentos, vista, correos) + pruebas. (E)
+- Task 14 — n8n: builder 3 Render (reutilizar fotos, reintentos, revisión de texto de las fotos, vista, correos) +
+  pruebas. (E)
 - Task 15 — Prueba de punta a punta en local (WP local + renderer local + simulador de n8n que hace las mismas
   llamadas HTTP) y verificación visual (celular 390 px y escritorio). (orquestador)
 - Task 16 — Despliegue con autorización de Luis (renderer zip → WP PROD por SSH con respaldo → flujos n8n) y prueba
@@ -421,7 +432,7 @@ D10. `GET /plan/{id}/render` responde `{ok, render, propuesta_uid, crm_cliente_i
     `enviado` (responde al webhook y termina sin tocar `/p/<codigo>/`), y `POST /vista` con `modo: 'draft'` **no guarda**
     `view_url`/`pdf_url` si el plan está en `aprobando`, `listo` o `enviado`. `POST /vista` responde `{ok, estado}`.
 D11. Flujo 3: un 400 del renderer con `details` no se reintenta y `details` va a la nota; solo se reintentan 5xx, errores de
-    red y fotos faltantes (máximo 3 renders).
+    red y fotos faltantes (máximo 3 renders en total por corrida, contando la retoma por texto de D18).
 D12. Prompts (Task 13): incluyen los topes que valida WordPress (13 bloques, 10 actividades por bloque, 58 actividades en
     total, 1 a 60 días por actividad, 130 días hábiles con 5 de revisión por bloque con entrega, 10 hitos, fases y
     responsables por su clave) y piden **no** mandar el bloque «Arranque» (lo pone WordPress).
@@ -434,8 +445,18 @@ D16. Herramientas: `tests/plan/panel-js-wp-test.php` necesita Chrome o Edge (var
     exit 2 si no hay). Los scripts con barras invertidas se crean con la herramienta Write, no con heredoc.
 D17. Despliegue n8n: primero «3 Render», luego 1 y 2.
 
-D18. Fotos en la Etapa 1: Soul 2 del renderer, sin revisión de texto con GPT-4o (la de las propuestas desde el 27-sep).
-    Es una decisión que Luis confirma antes del primer «Aprobar» (Task 16, Step 6); sumarla al flujo 3 es tarea aparte.
+D18. (Cambiada por Luis el 29-sep; reemplaza la versión «sin revisión de texto».) Fotos en la Etapa 1: Soul 2 del
+    renderer **con la misma revisión de texto con GPT-4o que las propuestas** («3 Final», en PROD desde el 27-sep). En
+    el flujo 3, solo en `final` y con la versión completa (presentación y todas las fotos): una consulta a `gpt-4o` con
+    las fotos nuevas del plan (nunca la portada ni el cierre que vienen de la propuesta); las que tengan texto se piden
+    UNA vez más con la descripción + `RETOMA` y se vuelve a renderizar; una segunda consulta solo informa; lo que siga
+    con texto va como aviso en la nota de `/vista` y en el correo a Luis, **nunca** como `error`. La retoma cuenta dentro
+    del tope de 3 renders de D11 (solo si queda uno; si no, se avisa). Una foto rehecha no se vuelve a pagar al aprobar
+    de nuevo (sha256 del manifest del plan). `INSTRUCCION_TEXTO`, `RETOMA` y `JS_SHA256` se leen de
+    `N8N/propuestas-v3/build_3_final.py` con `ast` (una sola fuente). Costo que muestra el panel antes de «Aprobar»
+    (`at_pt_costo_fotos`): fotos x US$0,0032 + US$0,026 por consulta (cifra de `at_propuesta_costo_fotos`, de la
+    documentación de OpenAI; no medida en una factura); máximo = fotos x2 + dos consultas. En la Task 16 se verifica
+    que la revisión corrió y se anota el gasto real.
 D19. Diferencias con el spec aceptadas: «Ajustes del plan» cuelga del menú CRM (el plan vive en la ficha del cliente,
     decisión 6); las notas del plan viven en su propia columna `nota` y no en el Seguimiento de la propuesta (el módulo es
     independiente, decisión 10); «Destrabar» actúa sobre generando/cambios/aprobando y desde error se ofrece

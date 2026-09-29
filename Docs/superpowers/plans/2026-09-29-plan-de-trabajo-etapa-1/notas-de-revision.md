@@ -768,3 +768,31 @@ corren en PROD (`N8N/propuestas-v3`, `FULL`), pero con este nodo «Render» nunc
 texto, `leerRespuestaRender` lo parsea (probado); si llegara como `{error}` sin código, se trata como falla de red y se
 reintenta (3 renders en vez de 1), sin trabar el plan. Se comprueba en la Task 16 con un POST real mal formado al
 renderer desde el flujo.
+
+#### Enmienda D18 (29-sep): revisión de texto de las fotos con GPT-4o en el flujo 3
+
+Luis cambió D18: el plan lleva la misma revisión de texto que las propuestas. Lo que se enmendó y cómo se probó:
+- **Task 14, ciclo D (Steps 16-21):** `probar_revision_plan.py` (nuevo), `plan_js.py` (`INSTRUCCION_TEXTO`, `RETOMA` y
+  `JS_SHA256` leídos con `ast` de `N8N/propuestas-v3/build_3_final.py`, más `JS_REVISION`) y `build_plan_3_render.py`
+  entero (24 nodos). En los Steps 1 y 11, `MANIFEST_PLAN`, `SIN_TEXTO` y tres valores por defecto de `sim()` para que la
+  sección `render` siga igual con los nodos nuevos. Materializados desde el plan en una carpeta temporal (con
+  `N8N/propuestas-v3` de `origin/main` = PR #51) y corridos el 29-sep: `probar_plan.py` 341 `ok` y `TODO OK` antes y
+  después del ciclo D; `probar_revision_plan.py` 103 `ok` y `TODO OK`; sin el Step 18 falla con el `ImportError` del
+  Step 17. Mutaciones que la prueba detecta: quitar la condición «queda un render», quitar `retomasPrevias` o revisar
+  con fotos faltantes (15 fallas).
+- **Decisiones del ciclo D:** la retoma cuenta dentro de los 3 renders de D11 (las propuestas le dan 2 más); se revisa
+  solo la versión completa; portada y cierre de la propuesta no se revisan de nuevo; los textos se importan, no se
+  duplican.
+- **Task 4:** `AT_PT_USD_REVISION = 0.026` y `usd_revision` en el retorno de `at_pt_costo_fotos` (la forma de
+  `at_propuesta_costo_fotos` en `claude/cierre-cliente`, `inc/proposals-flow.php:114-128`). Con propuesta: 8 fotos =
+  0,0256 + 0,026 = US$0,0516 (máximo 0,0512 + 0,052 = 0,1032); sin propuesta: 10 fotos = 0,032 + 0,026 = US$0,058
+  (máximo 0,116). Las cinco aserciones del ciclo A se corrieron con PHP 8.4.15 contra el bloque nuevo (con
+  `at_pt_slides_foto()` de 10 láminas): `TODO OK`; siguen siendo 14 `ok` en el ciclo A y 43 en el archivo.
+- **Task 9:** etiqueta «(N fotos + revisión ≈ US$X)» y `confirm` «…, se revisará que no tengan texto (…)», como el panel
+  de propuestas; las cadenas se generaron con PHP: «(8 fotos + revisión ≈ US$0,0516)» y «(10 fotos + revisión ≈
+  US$0,0580)». Sin fotos nuevas, la etiqueta queda «(0 fotos ≈ US$0,0000)».
+- **Tasks 15 y 16:** textos del botón; el simulador de la Task 15 no hace la revisión (lo dice); la Task 16 corre
+  `probar_revision_plan.py` antes de desplegar y, en la prueba real, verifica que la revisión corrió y anota el gasto.
+- **Supuesto:** la cifra de US$0,026 por consulta es la de las propuestas (documentación de OpenAI para 9 fotos en
+  `detail: high`, no medida en una factura); con 8 o 10 fotos se usa la misma, como en el panel de propuestas. Se mide
+  en la Task 16.
